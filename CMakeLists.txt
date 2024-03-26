@@ -13,10 +13,19 @@ option(PBA_CORE_USE_SUITESPARSE
     "Link to SuiteSparse for sparse matrix decompositions. Overrides Intel MKL." 
     OFF)
 
+# Global settings
+set_property(GLOBAL PROPERTY USE_FOLDERS ON)
+
 # Core library
 set(pba_core "pba-core")
-add_library(${pba_core})
-add_library(${pba_core}::${pba_core} ALIAS ${pba_core})
+
+# If we want to support both static and shared library builds, we need to 
+# handle them separately, since doctest behaves differently for static vs 
+# shared. In the static case, we need to create an object library and make 
+# the doctest executable depend on those objects so that our library tests 
+# get registered. 
+# See https://github.com/doctest/doctest/blob/master/doc/markdown/faq.md#why-are-my-tests-in-a-static-library-not-getting-registered.
+add_library(${pba_core} SHARED)
 target_include_directories(${pba_core} 
 PUBLIC 
     $<INSTALL_INTERFACE:include>
@@ -111,13 +120,22 @@ if (PBA_CORE_BUILD_PYTHON_BINDINGS)
         MODULE 
         EXCLUDE_FROM_ALL 
         ${_pba_core_bindings_all})
+
+    target_link_libraries(${pba_core_python_bindings} 
+    PRIVATE 
+        ${pba_core})
 endif()
 
 if (PBA_CORE_BUILD_TESTS)
     set(pba_core_tests "pba-core-tests")
-    add_executable(${pba_core_tests})
-    target_sources(${pba_core_tests} PRIVATE ${CMAKE_CURRENT_LIST_DIR}/tests/tests.cpp)
-    target_link_libraries(${pba_core_tests} PRIVATE ${pba_core})
+    # target_compile_definitions(${pba_core} 
+    # PRIVATE 
+    #     DOCTEST_CONFIG_IMPLEMENTATION_IN_DLL 
+    #     DOCTEST_CONFIG_IMPLEMENT)
+    add_executable(${pba_core_tests} ${CMAKE_CURRENT_LIST_DIR}/tests/tests.cpp)
+    target_link_libraries(${pba_core_tests} 
+    PRIVATE 
+        ${pba_core})
     set_target_properties(${pba_core_tests} PROPERTIES FOLDER "tests")
     add_custom_command(TARGET ${pba_core_tests} POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_if_different 
