@@ -4,7 +4,7 @@
 int main(int argc, char** argv)
 {
     // force the use of a symbol from the dll so tests from it get registered
-    pba::force_load_dll();
+    pba::ForceLoadDLL();
 
     doctest::Context context(argc, argv);
     int res = context.run();

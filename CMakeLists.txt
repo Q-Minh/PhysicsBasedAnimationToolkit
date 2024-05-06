@@ -192,7 +192,11 @@ if (PBA_CORE_USE_SUITESPARSE)
     target_link_libraries(${pba_core} 
     PRIVATE 
         SuiteSparse::suitesparseconfig
+        SuiteSparse::amd
         SuiteSparse::cholmod
+        SuiteSparse::colamd
+        SuiteSparse::ccolamd
+        SuiteSparse::camd
         SuiteSparse::ldl
         SuiteSparse::umfpack
         SuiteSparse::spqr)

@@ -33,3 +33,9 @@
 
 # Compilation output folder
 build
+
+# Python module cache
+__pycache__
+
+# Visual Studio Code
+.vscode

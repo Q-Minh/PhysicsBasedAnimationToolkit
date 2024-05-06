@@ -11,7 +11,7 @@
 
 namespace pba {
 
-void force_load_dll()
+void ForceLoadDLL()
 {
     // no-op, just force linking binary to load this DLL
 }

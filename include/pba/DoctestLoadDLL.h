@@ -3,7 +3,7 @@
 
 namespace pba {
 
-void force_load_dll();
+void ForceLoadDLL();
 
 } // namespace pba
 
