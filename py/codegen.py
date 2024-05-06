@@ -3,6 +3,7 @@ from sympy.printing.cxx import CXX17CodePrinter
 from sympy.codegen.ast import Assignment
 from sympy.core import S
 
+
 class CXXPrinter(CXX17CodePrinter):
 
     def __init__(self):
@@ -34,12 +35,12 @@ class CXXPrinter(CXX17CodePrinter):
         }
         super().__init__()
 
+
     def _print_Pow(self, expr):
         if expr.exp.is_integer and expr.exp > 0 and expr.exp <= 4:
             return "*".join([self._print(expr.base) for i in range(expr.exp)])
         else:
             return super()._print_Pow(expr)
-        
     
 
 def codegen(exprs, lhs=None, use_cse=True, csesymbol="a"):
@@ -56,6 +57,7 @@ def codegen(exprs, lhs=None, use_cse=True, csesymbol="a"):
         return "\n".join([vars, outputs]) if len(lines) > 0 else outputs
     
     return cppgen.doprint(exprs, assign_to=lhs)
+
 
 if __name__ == "__main__":
     pass
