@@ -21,10 +21,6 @@
             "version>=": "3.4.0"
         },
         {
-            "name": "gmp",
-            "version>=": "6.3.0"
-        },
-        {
             "name": "tbb",
             "version>=": "2021.11.0"
         },

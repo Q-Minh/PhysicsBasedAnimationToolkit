@@ -1,6 +1,8 @@
 #ifndef PBA_COMMON_CONCEPTS_H
 #define PBA_COMMON_CONCEPTS_H
 
+#include "pba/aliases.h"
+
 #include <concepts>
 #include <iterator>
 #include <ranges>
@@ -31,6 +33,19 @@ concept ArithmeticRange = std::ranges::range<R> && Arithmetic<RangeValueType<R>>
 template <class R>
 concept ContiguousArithmeticRange =
     ArithmeticRange<R> && std::ranges::sized_range<R> && std::ranges::contiguous_range<R>;
+
+template <class R>
+concept ContiguousMatrixRange = requires(R r)
+{
+    requires std::ranges::range<R>;
+    requires std::ranges::sized_range<R>;
+    requires std::ranges::contiguous_range<R>;
+    { std::ranges::data(r)[0][0] } -> Arithmetic;
+    { RangeValueType<R>::RowsAtCompileTime } -> std::integral;
+    { RangeValueType<R>::ColsAtCompileTime } -> std::integral;
+    { RangeValueType<R>::Scalar } -> Arithmetic;
+    { RangeValueType<R>::Flags };
+};
 
 } // namespace common
 } // namespace pba

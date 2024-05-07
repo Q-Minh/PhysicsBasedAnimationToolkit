@@ -169,7 +169,7 @@ class {0}<{1}, {2}>
     inline static constexpr std::size_t Order = {2};
     inline static constexpr std::size_t Size = {3};
 
-    Vector<Size> eval(Vector<{1}> const& X) const 
+    [[maybe_unused]] Vector<Size> eval([[maybe_unused]] Vector<{1}> const& X) const 
     {{
         Vector<Size> P;
 """.format(classname, nvariables, order, dimV))
@@ -184,9 +184,10 @@ class {0}<{1}, {2}>
 
     file.write("""
                
-    Matrix<Dims, Size> derivatives(Vector<{0}> const& X) const
+    [[maybe_unused]] Matrix<Dims, Size> derivatives([[maybe_unused]] Vector<{0}> const& X) const
     {{
-        Matrix<Dims, Size> G;
+        Matrix<Dims, Size> Gm;
+        Scalar* G = Gm.data();
 """.format(nvariables))
 
     GV = V.jacobian(X)
@@ -195,14 +196,15 @@ class {0}<{1}, {2}>
 
     file.write(
 """
-        return G;
+        return Gm;
     }""")
 
     file.write("""
                
-    Matrix<Size, Dims> antiderivatives(Vector<{0}> const& X) const
+    [[maybe_unused]] Matrix<Size, Dims> antiderivatives([[maybe_unused]] Vector<{0}> const& X) const
     {{
-        Matrix<Size, Dims> P;
+        Matrix<Size, Dims> Pm;
+        Scalar* P = Pm.data();
 """.format(nvariables))
     
     AV = sp.Matrix([[sp.integrate(V[i], X[d]) for i in range(len(V))] for d in range(len(X))])
@@ -211,7 +213,7 @@ class {0}<{1}, {2}>
 
     file.write(
 """
-        return P;
+        return Pm;
     }""")
 
     file.write("""
@@ -233,9 +235,10 @@ class {0}<{1}, {2}>
     inline static constexpr std::size_t Order = {2};
     inline static constexpr std::size_t Size = {3};
 
-    Matrix<Size, Dims> eval(Vector<{1}> const& X) const 
+    [[maybe_unused]] Matrix<Size, Dims> eval([[maybe_unused]] Vector<{1}> const& X) const 
     {{
-        Matrix<Size, Dims> P;
+        Matrix<Size, Dims> Pm;
+        Scalar* P = Pm.data();
 """.format(classname, nvariables, order, dimF))
     
     F = sp.Matrix(F).transpose()
@@ -244,7 +247,7 @@ class {0}<{1}, {2}>
 
     file.write(
 """
-        return P;
+        return Pm;
     }
 };
 """)
