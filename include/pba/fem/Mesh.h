@@ -15,37 +15,6 @@
 namespace pba {
 namespace fem {
 
-// template <int Order>
-// struct Line;
-
-// template <int Order>
-// struct Triangle;
-
-// template <int Order>
-// struct Quadrilateral;
-
-// template <int Order>
-// struct Tetrahedron;
-
-// template <int Order>
-// struct Hexahedron;
-
-// #include <array>
-
-// template <>
-// struct Tetrahedron<1>
-// {
-//     static int constexpr Order = 1;
-//     static int constexpr Dims  = 3;
-//     static int constexpr Nodes = 4;
-//     static int constexpr Vertices = 4;
-//     static std::array<int, Nodes * Dims> constexpr Coordinates =
-//         {0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1};
-
-//     Vector<Nodes> N(Vector<Dims> const& X) const;
-//     Matrix<Nodes, Dims> GradN(Vector<Dims> const& X) const;
-// };
-
 template <Element TElement, int Dims>
 struct Mesh
 {
@@ -57,9 +26,10 @@ struct Mesh
 
     MatrixX X;      ///< Dims x |Nodes| nodal positions
     IndexMatrixX E; ///< |#nodes per element| x |Elements| element nodal indices
-    MatrixX J;    ///< Element::Dims x Dims element linear mappings stacked horizontally |Elements|
+    MatrixX J;    ///< Dims x Element::Dims element linear mappings stacked horizontally |Elements|
                   ///< times, i.e. the reference -> domain transforms
-    MatrixX Jinv; ///< Dims x Element::Dims inverse element linear mappings stacked horizontally
+    VectorX detJ; ///< |Elements| determinants of reference -> domain transforms
+    MatrixX Jinv; ///< Element::Dims x Dims inverse element linear mappings stacked horizontally
                   ///< |Elements| times, i.e. the domain -> reference transforms
 };
 
@@ -128,6 +98,7 @@ Mesh<TElement, Dims>::Mesh(
     Eigen::Ref<MatrixX const> const& V,
     Eigen::Ref<IndexMatrixX const> const& C)
 {
+    static_assert(Dims >= TElement::Dims, "Element TElement does not exist in Dims dimensions");
     assert(C.rows() == TElement::Vertices);
 
     auto const NumberOfCells    = C.cols();
@@ -169,6 +140,10 @@ Mesh<TElement, Dims>::Mesh(
                 auto const NodeIdx = static_cast<Index>(Nodes.size());
                 auto const RealCoordinates =
                     Coordinates.cast<Scalar>() / static_cast<Scalar>(TElement::Order);
+                // WARNING: Only works for simplex elements.
+                // TODO: Add customization point for non-simplex elements (i.e. quadrilateral,
+                // hexahedron)
+                assert(CellVertexPositions.cols() == RealCoordinates.rows());
                 Vector<Dims> const Xi = CellVertexPositions * RealCoordinates;
                 Nodes.push_back(Xi);
                 bool inserted{};
@@ -185,16 +160,37 @@ Mesh<TElement, Dims>::Mesh(
     // Compute element mappings
     J.resize(TElement::Dims, Dims * NumberOfCells);
     Jinv.resize(Dims, TElement::Dims * NumberOfCells);
+    detJ.resize(NumberOfCells);
     for (auto c = 0; c < NumberOfCells; ++c)
     {
         Matrix<Dims, TElement::Vertices> const CellVertexPositions = V(Eigen::all, C.col(c));
+        assert(CellVertexPositions.cols() == TElement::Dims - 1);
         // Compute affine map from reference element to domain
-        Matrix<TElement::Dims, Dims> const Jc      = TElement::AffineMap(CellVertexPositions);
-        J.block(0, c * Dims, TElement::Dims, Dims) = Jc;
+        // WARNING: Only works for simplex elements.
+        // TODO: Add the following customization point
+        // Matrix<TElement::Dims, Dims> const Jc = TElement::AffineMap(CellVertexPositions);
+        Matrix<Dims, TElement::Dims> const Jc =
+            CellVertexPositions.rightCols(TElement::Dims).colwise() - CellVertexPositions.col(0);
+        J.block(0, c * TElement::Dims, Dims, TElement::Dims) = Jc;
+    }
+    for (auto c = 0; c < NumberOfCells; ++c)
+    {
         // Jinv = (Jc^T Jc)^{-1} Jc^T (i.e. normal equations) using stable QR factorization
-        Matrix<Dims, TElement::Dims> const JcInv =
+        auto const Jc = J.block(0, c * TElement::Dims, Dims, TElement::Dims);
+        Matrix<TElement::Dims, Dims> const JcInv =
             (Jc.transpose() * Jc).fullPivHouseholderQr().solve(Jc.transpose());
-        Jinv.block(0, c * TElement::Dims, Dims, TElement::Dims) = JcInv;
+        Jinv.block(0, c * Dims, TElement::Dims, Dims) = JcInv;
+    }
+    for (auto c = 0; c < NumberOfCells; ++c)
+    {
+        // In the general case, we want to compute sqrt(det(J^T J)) to measure the
+        // rate of generalized volume change induced by the local map J. To do this,
+        // let J = U*E*V^T, then J^T J = V*E*E*V^T, such that det(J^T J) = det(E)^2.
+        // Because E is diagonal, det(E) = \prod_i \sigma_i where \sigma_i is the
+        // i^{th} singular value J. We thus have that sqrt(det(J^T J)) = \prod_i \sigma_i.
+        // NOTE: Negative determinant means inverted element.
+        auto const Jc = J.block(0, c * TElement::Dims, Dims, TElement::Dims);
+        detJ(c)       = Jc.jacobiSvd().singularValues().prod();
     }
 }
 
