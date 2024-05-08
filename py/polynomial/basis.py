@@ -146,12 +146,7 @@ def footer(file):
 #endif // PBA_CORE_MATH_POLYNOMIAL_BASIS_H
 """
     )
-
-def tabulate(code, spaces=8):
-        prefix = "".join([" " for _ in range(spaces)])
-        code = code.split("\n")
-        code = ["{}{}".format(prefix, statement) for statement in code]
-        return "\n".join(code)
+    
 
 def codegen(file, V: list, X: list, order: int, orthonormal=False):
     dimV = len(V)
@@ -175,7 +170,7 @@ class {0}<{1}, {2}>
 """.format(classname, nvariables, order, dimV))
     
     code = cg.codegen(V, lhs=sp.MatrixSymbol("P", len(V), 1))
-    file.write(tabulate(code, spaces=8))
+    file.write(cg.tabulate(code, spaces=8))
     
     file.write(
 """
@@ -192,7 +187,7 @@ class {0}<{1}, {2}>
 
     GV = V.jacobian(X)
     code = cg.codegen(GV, lhs=sp.MatrixSymbol("G", *GV.shape))
-    file.write(tabulate(code, spaces=8))
+    file.write(cg.tabulate(code, spaces=8))
 
     file.write(
 """
@@ -209,7 +204,7 @@ class {0}<{1}, {2}>
     
     AV = sp.Matrix([[sp.integrate(V[i], X[d]) for i in range(len(V))] for d in range(len(X))])
     code = cg.codegen(AV, lhs=sp.MatrixSymbol("P", *AV.shape))
-    file.write(tabulate(code, spaces=8))
+    file.write(cg.tabulate(code, spaces=8))
 
     file.write(
 """
@@ -243,7 +238,7 @@ class {0}<{1}, {2}>
     
     F = sp.Matrix(F).transpose()
     code = cg.codegen(F, lhs=sp.MatrixSymbol("P", *F.shape))
-    file.write(tabulate(code, spaces=8))
+    file.write(cg.tabulate(code, spaces=8))
 
     file.write(
 """

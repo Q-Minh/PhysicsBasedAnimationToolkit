@@ -10,11 +10,11 @@ class CXXPrinter(CXX17CodePrinter):
         from sympy.codegen.cfunctions import log2, Sqrt, log10
         from sympy.functions.elementary.exponential import log
         from sympy.functions.elementary.miscellaneous import sqrt
-        
-        # In the C89CodePrinter class, we transform the following 
+
+        # In the C89CodePrinter class, we transform the following
         # expressions into macros that major compilers typically expose.
         # However, since C++20, these numeric constants are accessible
-        # through the <numbers> header, but the highest C++ standard 
+        # through the <numbers> header, but the highest C++ standard
         # that sympy supports is C++17 through the CXX17CodePrinter.
         self.math_macros = {
             S.Exp1: "std::numbers::e_v<Scalar>",
@@ -35,28 +35,39 @@ class CXXPrinter(CXX17CodePrinter):
         }
         super().__init__()
 
-
     def _print_Pow(self, expr):
         if expr.exp.is_integer and expr.exp > 0 and expr.exp <= 4:
             return "*".join([self._print(expr.base) for i in range(expr.exp)])
         else:
             return super()._print_Pow(expr)
-    
+
 
 def codegen(exprs, lhs=None, use_cse=True, csesymbol="a"):
     cppgen = CXXPrinter()
     if use_cse:
         subexprs, exprs = sp.cse(
-            exprs, symbols=sp.numbered_symbols(csesymbol)
+            exprs, symbols=sp.numbered_symbols(
+                csesymbol)
         )
         lines = []
         for var, subexpr in subexprs:
-            lines.append("Scalar const " + cppgen.doprint(Assignment(var, subexpr)))
+            lines.append(
+                "Scalar const " + cppgen.doprint(Assignment(var, subexpr)))
         vars = "\n".join(lines)
-        outputs = cppgen.doprint(exprs if len(exprs) > 1 else exprs[0], assign_to=lhs)
+        outputs = cppgen.doprint(exprs if len(
+            exprs) > 1 else exprs[0], assign_to=lhs)
         return "\n".join([vars, outputs]) if len(lines) > 0 else outputs
-    
+
     return cppgen.doprint(exprs, assign_to=lhs)
+
+
+def tabulate(code, spaces=8):
+    prefix = "".join(
+        [" " for _ in range(spaces)])
+    code = code.split("\n")
+    code = ["{}{}".format(
+        prefix, statement) for statement in code]
+    return "\n".join(code)
 
 
 if __name__ == "__main__":

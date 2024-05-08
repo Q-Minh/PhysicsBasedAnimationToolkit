@@ -28,7 +28,8 @@ def I3(F):
 
 
 def stvk(F, mu, llambda):
-    E = (F.transpose() * F - sp.eye(F.shape[0])) / 2
+    E = (F.transpose() * F -
+         sp.eye(F.shape[0])) / 2
     return mu*(E.transpose()*E).trace() + (llambda / 2) * E.trace()**2
 
 
@@ -41,10 +42,13 @@ def neohookean(F, mu, llambda):
 if __name__ == "__main__":
     din, dout = 3, 3
     ne = 4
-    mu, llambda = sp.symbols("\\mu \\lambda", real=True)
-    F = sp.Matrix(sp.MatrixSymbol("F", din, dout))
-    S = sp.Matrix(sp.MatrixSymbol("S", din, dout))
-    u = sp.Matrix(sp.MatrixSymbol("u", dout, ne))
-    gradphi = sp.Matrix(sp.MatrixSymbol("GN", ne, din))
-
-    
+    mu, llambda = sp.symbols(
+        "\\mu \\lambda", real=True)
+    F = sp.Matrix(
+        sp.MatrixSymbol("F", din, dout))
+    S = sp.Matrix(
+        sp.MatrixSymbol("S", din, dout))
+    u = sp.Matrix(
+        sp.MatrixSymbol("u", dout, ne))
+    gradphi = sp.Matrix(
+        sp.MatrixSymbol("GN", ne, din))
