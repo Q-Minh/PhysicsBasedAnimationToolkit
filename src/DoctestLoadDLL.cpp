@@ -1,5 +1,6 @@
 #include "pba/DoctestLoadDLL.h"
 
+#ifdef PBA_CORE_HAS_DOCTEST
 /**
  * These compile definitions need to be declared only once.
  * See
@@ -7,6 +8,7 @@
  */
 #define DOCTEST_CONFIG_IMPLEMENTATION_IN_DLL
 #define DOCTEST_CONFIG_IMPLEMENT
+#endif // PBA_CORE_HAS_DOCTEST
 #include <doctest/doctest.h>
 
 namespace pba {
