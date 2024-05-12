@@ -12,18 +12,31 @@ namespace fem {
 template <class T>
 concept Element = requires(T t)
 {
-    requires std::integral<decltype(std::declval<T>().Order)>;
-    requires std::integral<decltype(T::Dims)>;
-    requires std::integral<decltype(T::Nodes)>;
-    requires std::integral<decltype(T::Vertices)>;
-    requires common::ContiguousIndexRange<decltype(std::declval<T>().Coordinates)>;
+    {T::AffineBase};
+    {
+        T::Order
+    } -> std::integral;
+    {
+        T::Dims
+    } -> std::integral;
+    {
+        T::Nodes
+    } -> std::integral;
+    {
+        T::Vertices
+    } -> std::integral;
+    {
+        T::Coordinates
+    } -> common::ContiguousIndexRange;
     {
         t.N(Vector<T::Dims>{})
     } -> std::same_as<Vector<T::Nodes>>;
     {
         t.GradN(Vector<T::Dims>{})
     } -> std::same_as<Matrix<T::Nodes, T::Dims>>;
-    // TODO: Also add constraint for an AffineMap(...) member function
+    {
+        t.Jacobian(Vector<T::Dims>{}, Matrix<T::Dims, T::Nodes>{})
+    } -> std::same_as<Matrix<T::Dims, T::Dims>>;
 };
 
 } // namespace fem

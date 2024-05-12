@@ -9,9 +9,9 @@
 
 #include <Eigen/QR>
 #include <algorithm>
+#include <map>
 #include <numeric>
 #include <ranges>
-#include <unordered_map>
 
 namespace pba {
 namespace fem {
@@ -30,63 +30,75 @@ struct Mesh
 };
 
 template <Element TElement>
-struct NodalKey
+class NodalKey
 {
+  public:
     NodalKey(
-        IndexVector<TElement::Vertices> const& InCellVertices,
-        IndexVector<TElement::Vertices> const& InSortOrder,
-        IndexVector<TElement::Vertices> const& InCoordinates)
-        : CellVertices(InCellVertices), SortOrder(InSortOrder), Coordinates(InCoordinates), Size()
+        IndexVector<TElement::Vertices> const& cellVertices,
+        IndexVector<TElement::Vertices> const& sortOrder,
+        Eigen::Vector<math::Rational, TElement::Vertices> const& N)
+        : mCellVertices(cellVertices), mSortOrder(sortOrder), mN(N), mSize()
     {
-        // Remove vertices whose corresponding coordinate is zero
-        auto it = std::remove_if(SortOrder.begin(), SortOrder.end(), [](Index o) {
-            return Coordinates[o] == 0;
+        // Remove vertices whose corresponding shape function is zero
+        auto it = std::remove_if(mSortOrder.begin(), mSortOrder.end(), [this](Index o) {
+            return mN[o] == 0;
         });
-        // Count number of non-zero coordinates into Size
-        Size = std::distance(SortOrder.begin(), it);
+        // Count number of non-zero shape functions into Size
+        mSize = std::distance(mSortOrder.begin(), it);
     }
 
     bool operator==(NodalKey const& rhs) const
     {
-        if (Size != rhs.Size)
+        // Sizes must match
+        if (mSize != rhs.mSize)
             return false;
-
-        for (auto i = 0u; i < Size; ++i)
+        for (auto i = 0u; i < mSize; ++i)
         {
-            Index const LhsVertex = CellVertices[SortOrder[i]];
-            Index const RhsVertex = rhs.CellVertices[rhs.SortOrder[i]];
-            if (LhsVertex != RhsVertex)
+            // Vertices involved in affine map must match
+            Index const lhsVertex = mCellVertices[mSortOrder[i]];
+            Index const rhsVertex = rhs.mCellVertices[rhs.mSortOrder[i]];
+            if (lhsVertex != rhsVertex)
                 return false;
-            Index const LhsCoordinate = Coordinates[SortOrder[i]];
-            Index const RhsCoordinate = rhs.Coordinates[rhs.SortOrder[i]];
-            if (LhsCoordinate != RhsCoordinate)
+            // Affine weights at matching vertices must match
+            Index const lhsN = mN[mSortOrder[i]];
+            Index const rhsN = rhs.mN[rhs.mSortOrder[i]];
+            if (lhsN != rhsN)
                 return false;
         }
+        // Everything matches, (*this) and rhs must represent same node
         return true;
     }
 
-    IndexVector<TElement::Vertices> CellVertices; ///< Cell vertex indices
-    IndexVector<TElement::Vertices> SortOrder;    ///< Ordering of the cell vertices
-    IndexVector<TElement::Vertices> Coordinates;  ///< Node's integer coordinates
-    int Size;
-};
-
-template <Element TElement>
-struct NodalKeyHash
-{
-    std::size_t operator()(NodalKey<TElement> const& Key) const
+    bool operator<(NodalKey const& rhs) const
     {
-        // Hopefully, this is an acceptable hash function for a NodalKey
-        std::size_t seed{Key.Size};
-        for (auto i = 0u; i < Key.Size; ++i)
+        // Sort by size first
+        if (mSize != rhs.mSize)
+            return mSize < rhs.mSize;
+        // Then sort by vertex indices
+        for (auto i = 0; i < mSize; ++i)
         {
-            Index const Vertex = Key.Cell[Key.SortOrder[i]];
-            common::hash_combine_accumulate(seed, Vertex);
-            Index const Coordinate = Key.Coordinates[Key.SortOrder[i]];
-            common::hash_combine_accumulate(seed, Coordinate);
+            Index const lhsVertex = mCellVertices[mSortOrder[i]];
+            Index const rhsVertex = rhs.mCellVertices[rhs.mSortOrder[i]];
+            if (lhsVertex != rhsVertex)
+                return lhsVertex < rhsVertex;
         }
-        return seed;
+        // Then sort by coordinates
+        for (auto i = 0; i < mSize; ++i)
+        {
+            Index const lhsN = mN[mSortOrder[i]];
+            Index const rhsN = rhs.mN[rhs.mSortOrder[i]];
+            if (lhsN != rhsN)
+                return lhsN < rhsN;
+        }
+        // (*this) == rhs is true, so (*this) is not less than rhs
+        return false;
     }
+
+  private:
+    IndexVector<TElement::Vertices> mCellVertices;        ///< Cell vertex indices
+    IndexVector<TElement::Vertices> mSortOrder;           ///< Ordering of the cell vertices
+    Eigen::Vector<math::Rational, TElement::Vertices> mN; ///< Node's affine shape function values
+    int mSize; ///< Number of non-zero affine shape function values
 };
 
 // WARNING: Do not use, class is not yet usable.
@@ -97,71 +109,59 @@ Mesh<TElement, Dims>::Mesh(
 {
     static_assert(Dims >= TElement::Dims, "Element TElement does not exist in Dims dimensions");
     assert(C.rows() == TElement::Vertices);
+
     using AffineElement = TElement::AffineBase;
+    using NodeMap       = std::map<NodalKey<TElement>, Index>;
 
-    auto const NumberOfCells    = C.cols();
-    auto const NumberOfVertices = V.cols();
+    auto const numberOfCells    = C.cols();
+    auto const numberOfVertices = V.cols();
 
-    using NodeMap = std::unordered_map<NodalKey<TElement>, Index, NodalKeyHash<TElement>>;
-    NodeMap N{};
-    N.reserve(NumberOfCells * TElement::Nodes);
-    std::vector<Vector<Dims>> Nodes{};
-    Nodes.reserve(NumberOfVertices);
+    NodeMap nodeMap{};
+    std::vector<Vector<Dims>> nodes{};
+    nodes.reserve(numberOfVertices);
 
     // Construct mesh topology, i.e. assign mesh nodes to elements,
     // ensuring that adjacent elements share their common nodes.
-    E.resize(TElement::Nodes, NumberOfCells);
-    for (auto c = 0; c < NumberOfCells; ++c)
+    E.resize(TElement::Nodes, numberOfCells);
+    for (auto c = 0; c < numberOfCells; ++c)
     {
-        IndexVector<TElement::Vertices> const CellVertices         = C.col(c);
-        Matrix<Dims, TElement::Vertices> const CellVertexPositions = V(Eigen::all, CellVertices);
+        IndexVector<TElement::Vertices> const cellVertices = C.col(c);
+        Matrix<Dims, TElement::Vertices> const Xe          = V(Eigen::all, cellVertices);
 
         // Sort based on cell vertex index
-        IndexVector<TElement::Vertices> SortOrder{};
-        std::iota(SortOrder.begin(), SortOrder.end(), 0);
-        std::ranges::sort(SortOrder, [&](Index i, Index j) {
-            return CellVertices[i] < CellVertices[j];
+        IndexVector<TElement::Vertices> sortOrder{};
+        std::iota(sortOrder.begin(), sortOrder.end(), 0);
+        std::ranges::sort(sortOrder, [&](Index i, Index j) {
+            return cellVertices[i] < cellVertices[j];
         });
         // Loop over nodes of element and create the node on first visit
-        auto const NodalCoordinates =
+        auto const nodalCoordinates =
             common::ToEigen(TElement::Coordinates).reshape(TElement::Dims, TElement::Nodes);
-        for (auto i = 0; i < TElement::Nodes; ++i)
+        for (auto i = 0; i < nodalCoordinates.cols(); ++i)
         {
             // Use exact rational arithmetic to evaluate affine element shape functions at the node
-            // to get its exact coordinates
-            Eigen::Vector<math::Rational, TElement::Dims> Xi{};
-            for (auto j = 0; j < NodalCoordinates.rows(); ++j)
-                Xi(j) = math::Rational(NodalCoordinates(j,i), TElement::Order);
-            Eigen::Vector<math::Rational, AffineElement::Nodes> N = AffineElement::N(Xi);
-            for (auto j = 0; j < N.size(); ++j)
-                N(j).rebase(TElement::Order);
-            IndexVector<TElement::Vertices> Coordinates{};
-            Coordinates(0) = TElement::Order - NodalCoordinates.col(i).sum();
-            Coordinates.segment(1, TElement::Dims) = NodalCoordinates.col(i);
-            NodalKey<TElement> const Key{CellVertices, SortOrder, Coordinates};
-            auto it                       = N.find(Key);
-            bool const NodeAlreadyCreated = it != N.end();
-            if (!NodeAlreadyCreated)
+            // to get its exact affine coordinates
+            Eigen::Vector<math::Rational, TElement::Dims> const Xi =
+                nodalCoordinates.col(i).cast<math::Rational>() / TElement::Order;
+            auto const N = AffineElement::N(Xi);
+            NodalKey<TElement> const key{cellVertices, sortOrder, N};
+            auto it                        = nodeMap.find(key);
+            bool const bNodeAlreadyCreated = it != nodeMap.end();
+            if (!bNodeAlreadyCreated)
             {
-                auto const NodeIdx = static_cast<Index>(Nodes.size());
-                auto const RealCoordinates =
-                    Coordinates.cast<Scalar>() / static_cast<Scalar>(TElement::Order);
-                // WARNING: Only works for simplex elements.
-                // TODO: Add customization point for non-simplex elements (i.e. quadrilateral,
-                // hexahedron)
-                assert(CellVertexPositions.cols() == RealCoordinates.rows());
-                Vector<Dims> const Xi = CellVertexPositions * RealCoordinates;
-                Nodes.push_back(Xi);
-                bool inserted{};
-                std::tie(it, inserted) = N.insert({Key, NodeIdx});
-                assert(inserted);
+                auto const nodeIdx    = static_cast<Index>(nodes.size());
+                Vector<Dims> const Xi = Xe * N.cast<Scalar>();
+                nodes.push_back(Xi);
+                bool bInserted{};
+                std::tie(it, bInserted) = nodeMap.insert({key, nodeIdx});
+                assert(bInserted);
             }
-            Index const Node = it->second;
-            E(i, c)          = Node;
+            Index const node = it->second;
+            E(i, c)          = node;
         }
     }
     // Collect node positions
-    X = common::ToEigen(Nodes);
+    X = common::ToEigen(nodes);
 
     // TODO: Move this code to any LinearOperator acting on an fem::Mesh that needs to evaluate
     // jacobians at quadrature points. auto const NumberOfElements = E.cols();

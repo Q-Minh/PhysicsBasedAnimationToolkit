@@ -1,6 +1,8 @@
 #ifndef PBA_CORE_MATH_RATIONAL_H
 #define PBA_CORE_MATH_RATIONAL_H
 
+#include "pba/aliases.h"
+
 #include <cstdint>
 #include <tuple>
 
@@ -83,7 +85,13 @@ struct Rational
      * @return true
      * @return false
      */
-    bool rebase(std::int64_t denominator);
+    bool Rebase(std::int64_t denominator);
+    /**
+     * @brief
+     *
+     * @return Scalar
+     */
+    operator Scalar() const;
 
     std::int64_t a; ///< Numerator
     std::int64_t b; ///< Denominator

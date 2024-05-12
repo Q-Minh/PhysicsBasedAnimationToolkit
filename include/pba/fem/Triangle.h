@@ -25,7 +25,7 @@ struct Triangle<1>
         {0,0,1,0,0,1}; ///< Divide coordinates by Order to obtain actual coordinates in the reference element
       
     template <class Derived, class TScalar = typename Derived::Scalar>
-    [[maybe_unused]] static Eigen::Vector<Scalar, Nodes> N([[maybe_unused]] Eigen::DenseBase<Derived> const& X)
+    [[maybe_unused]] static Eigen::Vector<TScalar, Nodes> N([[maybe_unused]] Eigen::DenseBase<Derived> const& X)
     {
         Eigen::Vector<TScalar, Nodes> Nm;
         Nm[0] = -X[0] - X[1] + 1;

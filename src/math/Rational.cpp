@@ -1,6 +1,5 @@
 #include "pba/math/Rational.h"
 
-#include "Rational.h"
 #include "pba/math/IntegerArithmeticChecks.h"
 
 #include <numeric>
@@ -77,7 +76,7 @@ bool Rational::operator<(Rational const& rhs) const
     return numerator1 < numerator2;
 }
 
-bool Rational::rebase(std::int64_t denominator)
+bool Rational::Rebase(std::int64_t denominator)
 {
     auto const prod       = a * denominator;
     bool const can_divide = (prod % b) == 0;
@@ -86,6 +85,11 @@ bool Rational::rebase(std::int64_t denominator)
     a = prod / b;
     b = denominator;
     return true;
+}
+
+Rational::operator Scalar() const
+{
+    return static_cast<Scalar>(a) / static_cast<Scalar>(b);
 }
 
 } // namespace math
