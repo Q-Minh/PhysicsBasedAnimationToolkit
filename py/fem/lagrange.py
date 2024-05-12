@@ -228,16 +228,19 @@ struct {1};
 template <>
 struct {0}<{1}>
 {{
+    using AffineBase = {0}<1>;
+    
     static int constexpr Order = {1};
     static int constexpr Dims  = {2};
     static int constexpr Nodes = {3};
     static int constexpr Vertices = {4};
     static std::array<int, Nodes * Dims> constexpr Coordinates =
         {{{5}}}; ///< Divide coordinates by Order to obtain actual coordinates in the reference element
-        
-    [[maybe_unused]] static Vector<Nodes> N([[maybe_unused]] Vector<Dims> const& X)
+      
+    template <class Derived, class TScalar = typename Derived::Scalar>
+    [[maybe_unused]] static Eigen::Vector<Scalar, Nodes> N([[maybe_unused]] Eigen::DenseBase<Derived> const& X)
     {{
-        Vector<Nodes> Nm;
+        Eigen::Vector<TScalar, Nodes> Nm;
 {6}
         return Nm;
     }}
@@ -249,9 +252,20 @@ struct {0}<{1}>
 {7}
         return GNm;
     }}
+    
+    template <class Derived>
+    [[maybe_unused]] static Matrix<Derived::RowsAtCompileTime, Dims> Jacobian(
+        [[maybe_unused]] Vector<Dims> const& X, 
+        [[maybe_unused]] Eigen::DenseBase<Derived> const& x)
+    {{
+        static_assert(Derived::RowsAtCompileTime != Eigen::Dynamic);
+        assert(x.cols() == Nodes);
+        auto constexpr DimsOut = Derived::RowsAtCompileTime;
+        Matrix<DimsOut, Dims> const J = x * GradN(X);
+        return J;
+    }}
 }};    
 """
-
     with open("{}.h".format(element), 'w', encoding="utf-8") as file:
         file.write(
             header.format(element.upper(), element))
@@ -265,9 +279,10 @@ struct {0}<{1}>
             coordinates = ",".join(
                 [str(xi[d]*order) for xi in x for d in range(dims)])
             codeN = cg.tabulate(cg.codegen(N, lhs=sp.MatrixSymbol(
-                "Nm", *N.shape)), spaces=8)
+                "Nm", *N.shape), scalar_type="auto"), spaces=8)
             codeGN = cg.tabulate(cg.codegen(gradNT, lhs=sp.MatrixSymbol(
                 "GNp", *gradNT.shape)), spaces=8)
+
             file.write(template_specialization.format(element,
                                                       order,
                                                       dims,

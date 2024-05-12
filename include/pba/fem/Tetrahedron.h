@@ -15,16 +15,19 @@ struct Tetrahedron;
 template <>
 struct Tetrahedron<1>
 {
+    using AffineBase = Tetrahedron<1>;
+    
     static int constexpr Order = 1;
     static int constexpr Dims  = 3;
     static int constexpr Nodes = 4;
     static int constexpr Vertices = 4;
     static std::array<int, Nodes * Dims> constexpr Coordinates =
         {0,0,0,1,0,0,0,1,0,0,0,1}; ///< Divide coordinates by Order to obtain actual coordinates in the reference element
-        
-    [[maybe_unused]] static Vector<Nodes> N([[maybe_unused]] Vector<Dims> const& X)
+      
+    template <class Derived, class TScalar = typename Derived::Scalar>
+    [[maybe_unused]] static Eigen::Vector<Scalar, Nodes> N([[maybe_unused]] Eigen::DenseBase<Derived> const& X)
     {
-        Vector<Nodes> Nm;
+        Eigen::Vector<TScalar, Nodes> Nm;
         Nm[0] = -X[0] - X[1] - X[2] + 1;
         Nm[1] = X[0];
         Nm[2] = X[1];
@@ -50,27 +53,42 @@ struct Tetrahedron<1>
         GNp[11] = 1;
         return GNm;
     }
+    
+    template <class Derived>
+    [[maybe_unused]] static Matrix<Derived::RowsAtCompileTime, Dims> Jacobian(
+        [[maybe_unused]] Vector<Dims> const& X, 
+        [[maybe_unused]] Eigen::DenseBase<Derived> const& x)
+    {
+        static_assert(Derived::RowsAtCompileTime != Eigen::Dynamic);
+        assert(x.cols() == Nodes);
+        auto constexpr DimsOut = Derived::RowsAtCompileTime;
+        Matrix<DimsOut, Dims> const J = x * GradN(X);
+        return J;
+    }
 };    
 
 template <>
 struct Tetrahedron<2>
 {
+    using AffineBase = Tetrahedron<1>;
+    
     static int constexpr Order = 2;
     static int constexpr Dims  = 3;
     static int constexpr Nodes = 10;
     static int constexpr Vertices = 10;
     static std::array<int, Nodes * Dims> constexpr Coordinates =
         {0,0,0,1,0,0,2,0,0,0,1,0,1,1,0,0,2,0,0,0,1,1,0,1,0,1,1,0,0,2}; ///< Divide coordinates by Order to obtain actual coordinates in the reference element
-        
-    [[maybe_unused]] static Vector<Nodes> N([[maybe_unused]] Vector<Dims> const& X)
+      
+    template <class Derived, class TScalar = typename Derived::Scalar>
+    [[maybe_unused]] static Eigen::Vector<Scalar, Nodes> N([[maybe_unused]] Eigen::DenseBase<Derived> const& X)
     {
-        Vector<Nodes> Nm;
-        Scalar const a0 = X[0] + X[1] + X[2] - 1;
-        Scalar const a1 = 2*X[1];
-        Scalar const a2 = 2*X[2];
-        Scalar const a3 = 2*X[0] - 1;
-        Scalar const a4 = 4*a0;
-        Scalar const a5 = 4*X[0];
+        Eigen::Vector<TScalar, Nodes> Nm;
+        auto const a0 = X[0] + X[1] + X[2] - 1;
+        auto const a1 = 2*X[1];
+        auto const a2 = 2*X[2];
+        auto const a3 = 2*X[0] - 1;
+        auto const a4 = 4*a0;
+        auto const a5 = 4*X[0];
         Nm[0] = a0*(a1 + a2 + a3);
         Nm[1] = -a4*X[0];
         Nm[2] = a3*X[0];
@@ -88,15 +106,15 @@ struct Tetrahedron<2>
     {
         Matrix<Nodes, Dims> GNm;
         Scalar* GNp = GNm.data();
-        Scalar const a0 = 4*X[0];
-        Scalar const a1 = 4*X[1];
-        Scalar const a2 = 4*X[2];
-        Scalar const a3 = a1 + a2;
-        Scalar const a4 = a0 + a3 - 3;
-        Scalar const a5 = -a1;
-        Scalar const a6 = -a2;
-        Scalar const a7 = -a0;
-        Scalar const a8 = a0 - 4;
+        auto const a0 = 4*X[0];
+        auto const a1 = 4*X[1];
+        auto const a2 = 4*X[2];
+        auto const a3 = a1 + a2;
+        auto const a4 = a0 + a3 - 3;
+        auto const a5 = -a1;
+        auto const a6 = -a2;
+        auto const a7 = -a0;
+        auto const a8 = a0 - 4;
         GNp[0] = a4;
         GNp[1] = -a3 - 8*X[0] + 4;
         GNp[2] = a0 - 1;
@@ -128,6 +146,18 @@ struct Tetrahedron<2>
         GNp[28] = a1;
         GNp[29] = a2 - 1;
         return GNm;
+    }
+    
+    template <class Derived>
+    [[maybe_unused]] static Matrix<Derived::RowsAtCompileTime, Dims> Jacobian(
+        [[maybe_unused]] Vector<Dims> const& X, 
+        [[maybe_unused]] Eigen::DenseBase<Derived> const& x)
+    {
+        static_assert(Derived::RowsAtCompileTime != Eigen::Dynamic);
+        assert(x.cols() == Nodes);
+        auto constexpr DimsOut = Derived::RowsAtCompileTime;
+        Matrix<DimsOut, Dims> const J = x * GradN(X);
+        return J;
     }
 };    
 

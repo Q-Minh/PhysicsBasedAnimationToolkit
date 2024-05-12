@@ -1,1 +1,1 @@
-#include <pba/math/SymmetricQuadratureRules.h>
+#include "pba/math/SymmetricQuadratureRules.h"

@@ -5,6 +5,7 @@
 #include "pba/aliases.h"
 #include "pba/common/Eigen.h"
 #include "pba/common/Hash.h"
+#include "pba/math/Rational.h"
 
 #include <Eigen/QR>
 #include <algorithm>
@@ -26,11 +27,6 @@ struct Mesh
 
     MatrixX X;      ///< Dims x |Nodes| nodal positions
     IndexMatrixX E; ///< |#nodes per element| x |Elements| element nodal indices
-    MatrixX J;    ///< Dims x Element::Dims element linear mappings stacked horizontally |Elements|
-                  ///< times, i.e. the reference -> domain transforms
-    VectorX detJ; ///< |Elements| determinants of reference -> domain transforms
-    MatrixX Jinv; ///< Element::Dims x Dims inverse element linear mappings stacked horizontally
-                  ///< |Elements| times, i.e. the domain -> reference transforms
 };
 
 template <Element TElement>
@@ -93,6 +89,7 @@ struct NodalKeyHash
     }
 };
 
+// WARNING: Do not use, class is not yet usable.
 template <Element TElement, int Dims>
 Mesh<TElement, Dims>::Mesh(
     Eigen::Ref<MatrixX const> const& V,
@@ -100,6 +97,7 @@ Mesh<TElement, Dims>::Mesh(
 {
     static_assert(Dims >= TElement::Dims, "Element TElement does not exist in Dims dimensions");
     assert(C.rows() == TElement::Vertices);
+    using AffineElement = TElement::AffineBase;
 
     auto const NumberOfCells    = C.cols();
     auto const NumberOfVertices = V.cols();
@@ -129,6 +127,14 @@ Mesh<TElement, Dims>::Mesh(
             common::ToEigen(TElement::Coordinates).reshape(TElement::Dims, TElement::Nodes);
         for (auto i = 0; i < TElement::Nodes; ++i)
         {
+            // Use exact rational arithmetic to evaluate affine element shape functions at the node
+            // to get its exact coordinates
+            Eigen::Vector<math::Rational, TElement::Dims> Xi{};
+            for (auto j = 0; j < NodalCoordinates.rows(); ++j)
+                Xi(j) = math::Rational(NodalCoordinates(j,i), TElement::Order);
+            Eigen::Vector<math::Rational, AffineElement::Nodes> N = AffineElement::N(Xi);
+            for (auto j = 0; j < N.size(); ++j)
+                N(j).rebase(TElement::Order);
             IndexVector<TElement::Vertices> Coordinates{};
             Coordinates(0) = TElement::Order - NodalCoordinates.col(i).sum();
             Coordinates.segment(1, TElement::Dims) = NodalCoordinates.col(i);
@@ -157,41 +163,38 @@ Mesh<TElement, Dims>::Mesh(
     // Collect node positions
     X = common::ToEigen(Nodes);
 
-    // Compute element mappings
-    J.resize(TElement::Dims, Dims * NumberOfCells);
-    Jinv.resize(Dims, TElement::Dims * NumberOfCells);
-    detJ.resize(NumberOfCells);
-    for (auto c = 0; c < NumberOfCells; ++c)
-    {
-        Matrix<Dims, TElement::Vertices> const CellVertexPositions = V(Eigen::all, C.col(c));
-        assert(CellVertexPositions.cols() == TElement::Dims - 1);
-        // Compute affine map from reference element to domain
-        // WARNING: Only works for simplex elements.
-        // TODO: Add the following customization point
-        // Matrix<TElement::Dims, Dims> const Jc = TElement::AffineMap(CellVertexPositions);
-        Matrix<Dims, TElement::Dims> const Jc =
-            CellVertexPositions.rightCols(TElement::Dims).colwise() - CellVertexPositions.col(0);
-        J.block(0, c * TElement::Dims, Dims, TElement::Dims) = Jc;
-    }
-    for (auto c = 0; c < NumberOfCells; ++c)
-    {
-        // Jinv = (Jc^T Jc)^{-1} Jc^T (i.e. normal equations) using stable QR factorization
-        auto const Jc = J.block(0, c * TElement::Dims, Dims, TElement::Dims);
-        Matrix<TElement::Dims, Dims> const JcInv =
-            (Jc.transpose() * Jc).fullPivHouseholderQr().solve(Jc.transpose());
-        Jinv.block(0, c * Dims, TElement::Dims, Dims) = JcInv;
-    }
-    for (auto c = 0; c < NumberOfCells; ++c)
-    {
-        // In the general case, we want to compute sqrt(det(J^T J)) to measure the
-        // rate of generalized volume change induced by the local map J. To do this,
-        // let J = U*E*V^T, then J^T J = V*E*E*V^T, such that det(J^T J) = det(E)^2.
-        // Because E is diagonal, det(E) = \prod_i \sigma_i where \sigma_i is the
-        // i^{th} singular value J. We thus have that sqrt(det(J^T J)) = \prod_i \sigma_i.
-        // NOTE: Negative determinant means inverted element.
-        auto const Jc = J.block(0, c * TElement::Dims, Dims, TElement::Dims);
-        detJ(c)       = Jc.jacobiSvd().singularValues().prod();
-    }
+    // TODO: Move this code to any LinearOperator acting on an fem::Mesh that needs to evaluate
+    // jacobians at quadrature points. auto const NumberOfElements = E.cols();
+    // // Compute element mappings
+    // J.resize(TElement::Dims, Dims * NumberOfElements);
+    // Jinv.resize(Dims, TElement::Dims * NumberOfElements);
+    // detJ.resize(NumberOfElements);
+    // for (auto e = 0; e < NumberOfElements; ++e)
+    // {
+    //     Matrix<Dims, TElement::Nodes> const CellNodalPositions = X(Eigen::all, E.col(e));
+    //     // Compute jacobian of map from reference element to domain
+    //     Matrix<Dims, TElement::Dims> const Jc = TElement::Jacobian()
+    //     J.block(0, c * TElement::Dims, Dims, TElement::Dims) = Jc;
+    // }
+    // for (auto c = 0; c < NumberOfCells; ++c)
+    // {
+    //     // Jinv = (Jc^T Jc)^{-1} Jc^T (i.e. normal equations) using stable QR factorization
+    //     auto const Jc = J.block(0, c * TElement::Dims, Dims, TElement::Dims);
+    //     Matrix<TElement::Dims, Dims> const JcInv =
+    //         (Jc.transpose() * Jc).fullPivHouseholderQr().solve(Jc.transpose());
+    //     Jinv.block(0, c * Dims, TElement::Dims, Dims) = JcInv;
+    // }
+    // for (auto c = 0; c < NumberOfCells; ++c)
+    // {
+    //     // In the general case, we want to compute sqrt(det(J^T J)) to measure the
+    //     // rate of generalized volume change induced by the local map J. To do this,
+    //     // let J = U*E*V^T, then J^T J = V*E*E*V^T, such that det(J^T J) = det(E)^2.
+    //     // Because E is diagonal, det(E) = \prod_i \sigma_i where \sigma_i is the
+    //     // i^{th} singular value J. We thus have that sqrt(det(J^T J)) = \prod_i \sigma_i.
+    //     // NOTE: Negative determinant means inverted element.
+    //     auto const Jc = J.block(0, c * TElement::Dims, Dims, TElement::Dims);
+    //     detJ(c)       = Jc.jacobiSvd().singularValues().prod();
+    // }
 }
 
 } // namespace fem

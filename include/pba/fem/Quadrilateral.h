@@ -15,18 +15,21 @@ struct Quadrilateral;
 template <>
 struct Quadrilateral<1>
 {
+    using AffineBase = Quadrilateral<1>;
+    
     static int constexpr Order = 1;
     static int constexpr Dims  = 2;
     static int constexpr Nodes = 4;
     static int constexpr Vertices = 4;
     static std::array<int, Nodes * Dims> constexpr Coordinates =
         {0,0,1,0,0,1,1,1}; ///< Divide coordinates by Order to obtain actual coordinates in the reference element
-        
-    [[maybe_unused]] static Vector<Nodes> N([[maybe_unused]] Vector<Dims> const& X)
+      
+    template <class Derived, class TScalar = typename Derived::Scalar>
+    [[maybe_unused]] static Eigen::Vector<Scalar, Nodes> N([[maybe_unused]] Eigen::DenseBase<Derived> const& X)
     {
-        Vector<Nodes> Nm;
-        Scalar const a0 = X[0] - 1;
-        Scalar const a1 = X[1] - 1;
+        Eigen::Vector<TScalar, Nodes> Nm;
+        auto const a0 = X[0] - 1;
+        auto const a1 = X[1] - 1;
         Nm[0] = a0*a1;
         Nm[1] = -a1*X[0];
         Nm[2] = -a0*X[1];
@@ -38,8 +41,8 @@ struct Quadrilateral<1>
     {
         Matrix<Nodes, Dims> GNm;
         Scalar* GNp = GNm.data();
-        Scalar const a0 = X[1] - 1;
-        Scalar const a1 = X[0] - 1;
+        auto const a0 = X[1] - 1;
+        auto const a1 = X[0] - 1;
         GNp[0] = a0;
         GNp[1] = -a0;
         GNp[2] = -X[1];
@@ -50,32 +53,47 @@ struct Quadrilateral<1>
         GNp[7] = X[0];
         return GNm;
     }
+    
+    template <class Derived>
+    [[maybe_unused]] static Matrix<Derived::RowsAtCompileTime, Dims> Jacobian(
+        [[maybe_unused]] Vector<Dims> const& X, 
+        [[maybe_unused]] Eigen::DenseBase<Derived> const& x)
+    {
+        static_assert(Derived::RowsAtCompileTime != Eigen::Dynamic);
+        assert(x.cols() == Nodes);
+        auto constexpr DimsOut = Derived::RowsAtCompileTime;
+        Matrix<DimsOut, Dims> const J = x * GradN(X);
+        return J;
+    }
 };    
 
 template <>
 struct Quadrilateral<2>
 {
+    using AffineBase = Quadrilateral<1>;
+    
     static int constexpr Order = 2;
     static int constexpr Dims  = 2;
     static int constexpr Nodes = 9;
     static int constexpr Vertices = 4;
     static std::array<int, Nodes * Dims> constexpr Coordinates =
         {0,0,1,0,2,0,0,1,1,1,2,1,0,2,1,2,2,2}; ///< Divide coordinates by Order to obtain actual coordinates in the reference element
-        
-    [[maybe_unused]] static Vector<Nodes> N([[maybe_unused]] Vector<Dims> const& X)
+      
+    template <class Derived, class TScalar = typename Derived::Scalar>
+    [[maybe_unused]] static Eigen::Vector<Scalar, Nodes> N([[maybe_unused]] Eigen::DenseBase<Derived> const& X)
     {
-        Vector<Nodes> Nm;
-        Scalar const a0 = 2*X[0] - 1;
-        Scalar const a1 = 2*X[1] - 1;
-        Scalar const a2 = a0*a1;
-        Scalar const a3 = X[0] - 1;
-        Scalar const a4 = X[1] - 1;
-        Scalar const a5 = a3*a4;
-        Scalar const a6 = 4*a5;
-        Scalar const a7 = a1*X[0];
-        Scalar const a8 = a2*X[0];
-        Scalar const a9 = a0*X[1];
-        Scalar const a10 = a3*X[1];
+        Eigen::Vector<TScalar, Nodes> Nm;
+        auto const a0 = 2*X[0] - 1;
+        auto const a1 = 2*X[1] - 1;
+        auto const a2 = a0*a1;
+        auto const a3 = X[0] - 1;
+        auto const a4 = X[1] - 1;
+        auto const a5 = a3*a4;
+        auto const a6 = 4*a5;
+        auto const a7 = a1*X[0];
+        auto const a8 = a2*X[0];
+        auto const a9 = a0*X[1];
+        auto const a10 = a3*X[1];
         Nm[0] = a2*a5;
         Nm[1] = -a6*a7;
         Nm[2] = a4*a8;
@@ -92,28 +110,28 @@ struct Quadrilateral<2>
     {
         Matrix<Nodes, Dims> GNm;
         Scalar* GNp = GNm.data();
-        Scalar const a0 = 4*X[1] - 2;
-        Scalar const a1 = X[1] - 1;
-        Scalar const a2 = X[0] - 1;
-        Scalar const a3 = a1*a2;
-        Scalar const a4 = (2*X[0] - 1)*(2*X[1] - 1);
-        Scalar const a5 = a1*a4;
-        Scalar const a6 = 8*X[1];
-        Scalar const a7 = 4 - a6;
-        Scalar const a8 = a1*X[0];
-        Scalar const a9 = 8*X[0];
-        Scalar const a10 = 4 - a9;
-        Scalar const a11 = a1*X[1];
-        Scalar const a12 = a10*a11;
-        Scalar const a13 = 8 - a9;
-        Scalar const a14 = X[0]*X[1];
-        Scalar const a15 = 16*X[0] - 16;
-        Scalar const a16 = a2*X[1];
-        Scalar const a17 = a4*X[1];
-        Scalar const a18 = 4*X[0] - 2;
-        Scalar const a19 = a2*a4;
-        Scalar const a20 = a2*a7*X[0];
-        Scalar const a21 = a4*X[0];
+        auto const a0 = 4*X[1] - 2;
+        auto const a1 = X[1] - 1;
+        auto const a2 = X[0] - 1;
+        auto const a3 = a1*a2;
+        auto const a4 = (2*X[0] - 1)*(2*X[1] - 1);
+        auto const a5 = a1*a4;
+        auto const a6 = 8*X[1];
+        auto const a7 = 4 - a6;
+        auto const a8 = a1*X[0];
+        auto const a9 = 8*X[0];
+        auto const a10 = 4 - a9;
+        auto const a11 = a1*X[1];
+        auto const a12 = a10*a11;
+        auto const a13 = 8 - a9;
+        auto const a14 = X[0]*X[1];
+        auto const a15 = 16*X[0] - 16;
+        auto const a16 = a2*X[1];
+        auto const a17 = a4*X[1];
+        auto const a18 = 4*X[0] - 2;
+        auto const a19 = a2*a4;
+        auto const a20 = a2*a7*X[0];
+        auto const a21 = a4*X[0];
         GNp[0] = a0*a3 + a5;
         GNp[1] = a3*a7 + a7*a8;
         GNp[2] = a0*a8 + a5;
@@ -133,6 +151,18 @@ struct Quadrilateral<2>
         GNp[16] = a13*a14 + a20;
         GNp[17] = a14*a18 + a21;
         return GNm;
+    }
+    
+    template <class Derived>
+    [[maybe_unused]] static Matrix<Derived::RowsAtCompileTime, Dims> Jacobian(
+        [[maybe_unused]] Vector<Dims> const& X, 
+        [[maybe_unused]] Eigen::DenseBase<Derived> const& x)
+    {
+        static_assert(Derived::RowsAtCompileTime != Eigen::Dynamic);
+        assert(x.cols() == Nodes);
+        auto constexpr DimsOut = Derived::RowsAtCompileTime;
+        Matrix<DimsOut, Dims> const J = x * GradN(X);
+        return J;
     }
 };    
 

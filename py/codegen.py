@@ -42,7 +42,7 @@ class CXXPrinter(CXX17CodePrinter):
             return super()._print_Pow(expr)
 
 
-def codegen(exprs, lhs=None, use_cse=True, csesymbol="a"):
+def codegen(exprs, lhs=None, use_cse=True, csesymbol="a", scalar_type="Scalar"):
     cppgen = CXXPrinter()
     if use_cse:
         subexprs, exprs = sp.cse(
@@ -52,7 +52,7 @@ def codegen(exprs, lhs=None, use_cse=True, csesymbol="a"):
         lines = []
         for var, subexpr in subexprs:
             lines.append(
-                "Scalar const " + cppgen.doprint(Assignment(var, subexpr)))
+                "{} const {}".format(scalar_type, cppgen.doprint(Assignment(var, subexpr))))
         vars = "\n".join(lines)
         outputs = cppgen.doprint(exprs if len(
             exprs) > 1 else exprs[0], assign_to=lhs)
