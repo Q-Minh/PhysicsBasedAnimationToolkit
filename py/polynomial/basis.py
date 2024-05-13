@@ -160,13 +160,13 @@ template <>
 class {0}<{1}, {2}>
 {{
   public:
-    inline static constexpr std::size_t Dims = {1};
-    inline static constexpr std::size_t Order = {2};
-    inline static constexpr std::size_t Size = {3};
+    inline static constexpr std::size_t kDims = {1};
+    inline static constexpr std::size_t kOrder = {2};
+    inline static constexpr std::size_t kSize = {3};
 
-    [[maybe_unused]] Vector<Size> eval([[maybe_unused]] Vector<{1}> const& X) const 
+    [[maybe_unused]] Vector<kSize> eval([[maybe_unused]] Vector<kDims> const& X) const 
     {{
-        Vector<Size> P;
+        Vector<kSize> P;
 """.format(classname, nvariables, order, dimV))
     
     code = cg.codegen(V, lhs=sp.MatrixSymbol("P", len(V), 1))
@@ -179,9 +179,9 @@ class {0}<{1}, {2}>
 
     file.write("""
                
-    [[maybe_unused]] Matrix<Dims, Size> derivatives([[maybe_unused]] Vector<{0}> const& X) const
+    [[maybe_unused]] Matrix<kDims, kSize> derivatives([[maybe_unused]] Vector<kDims> const& X) const
     {{
-        Matrix<Dims, Size> Gm;
+        Matrix<kDims, kSize> Gm;
         Scalar* G = Gm.data();
 """.format(nvariables))
 
@@ -196,9 +196,9 @@ class {0}<{1}, {2}>
 
     file.write("""
                
-    [[maybe_unused]] Matrix<Size, Dims> antiderivatives([[maybe_unused]] Vector<{0}> const& X) const
+    [[maybe_unused]] Matrix<kSize, kDims> antiderivatives([[maybe_unused]] Vector<kDims> const& X) const
     {{
-        Matrix<Size, Dims> Pm;
+        Matrix<kSize, kDims> Pm;
         Scalar* P = Pm.data();
 """.format(nvariables))
     
@@ -226,13 +226,13 @@ template <>
 class {0}<{1}, {2}>
 {{
   public:
-    inline static constexpr std::size_t Dims = {1};
-    inline static constexpr std::size_t Order = {2};
-    inline static constexpr std::size_t Size = {3};
+    inline static constexpr std::size_t kDims = {1};
+    inline static constexpr std::size_t kOrder = {2};
+    inline static constexpr std::size_t kSize = {3};
 
-    [[maybe_unused]] Matrix<Size, Dims> eval([[maybe_unused]] Vector<{1}> const& X) const 
+    [[maybe_unused]] Matrix<kSize, kDims> eval([[maybe_unused]] Vector<kDims> const& X) const 
     {{
-        Matrix<Size, Dims> Pm;
+        Matrix<kSize, kDims> Pm;
         Scalar* P = Pm.data();
 """.format(classname, nvariables, order, dimF))
     

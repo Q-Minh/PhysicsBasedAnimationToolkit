@@ -12,44 +12,59 @@ namespace math {
 template <class T>
 concept PolynomialBasis = requires(T t)
 {
-    requires std::integral<decltype(T::Dims)>;
-    requires std::integral<decltype(T::Order)>;
-    requires std::integral<decltype(T::Size)>;
+    requires std::is_integral_v<decltype(T::kDims)>;
+    requires std::is_integral_v<decltype(T::kOrder)>;
+    requires std::is_integral_v<decltype(T::kSize)>;
     {
-        t.eval(Vector<T::Dims>{})
-    } -> std::same_as<Vector<T::Size>>;
+        t.eval(Vector<T::kDims>{})
+    } -> std::same_as<Vector<T::kSize>>;
     {
-        t.derivatives(Vector<T::Dims>{})
-    } -> std::same_as<Matrix<T::Dims, T::Size>>;
+        t.derivatives(Vector<T::kDims>{})
+    } -> std::same_as<Matrix<T::kDims, T::kSize>>;
     {
-        t.antiderivatives(Vector<T::Dims>{})
-    } -> std::same_as<Matrix<T::Size, T::Dims>>;
+        t.antiderivatives(Vector<T::kDims>{})
+    } -> std::same_as<Matrix<T::kSize, T::kDims>>;
+};
+
+template <class T>
+concept VectorPolynomialBasis = requires(T t)
+{
+    requires std::is_integral_v<decltype(T::kDims)>;
+    requires std::is_integral_v<decltype(T::kOrder)>;
+    requires std::is_integral_v<decltype(T::kSize)>;
+    {
+        t.eval(Vector<T::kDims>{})
+    } -> std::same_as<Matrix<T::kSize, T::kDims>>;
 };
 
 template <class Q>
 concept QuadratureRule = requires(Q q)
 {
-    requires std::integral<decltype(Q::Dims)>;
+    requires std::integral<decltype(Q::kDims)>;
     requires common::ContiguousArithmeticRange<decltype(q.points)>;
     requires common::ContiguousArithmeticRange<decltype(q.weights)>;
-    { q.points.size() } -> std::integral;
-    { q.weights.size() } -> std::integral;
+    {
+        q.points.size()
+    } -> std::convertible_to<int>;
+    {
+        q.weights.size()
+    } -> std::convertible_to<int>;
 };
 
 template <class Q>
 concept FixedPointQuadratureRule = requires(Q q)
 {
     requires QuadratureRule<Q>;
-    requires std::integral<decltype(Q::npoints)>;
-    { q.points.size() / q.weights.size() == Q::Dims };
-    { q.weights.size() == Q::npoints };
+    requires std::is_integral_v<decltype(Q::kPoints)>;
+    {q.points.size() / q.weights.size() == Q::kDims};
+    {q.weights.size() == Q::kPoints};
 };
 
 template <class Q>
 concept PolynomialQuadratureRule = requires(Q q)
 {
     requires QuadratureRule<Q>;
-    requires std::integral<decltype(Q::Order)>;
+    requires std::is_integral_v<decltype(Q::kOrder)>;
 };
 
 } // namespace math

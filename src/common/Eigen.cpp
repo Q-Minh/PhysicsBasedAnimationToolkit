@@ -13,13 +13,13 @@ TEST_CASE("[common] Conversions from STL to Eigen")
         for (auto i = 0u; i < veigen.size(); ++i)
             CHECK_EQ(v[i], veigen(i));
     }
-    SUBCASE("Matrix range")
+    SUBCASE("Matrix arithmetic range")
     {
         std::vector<Vector<3>> v{{1., 2., 3.}, {4., 5., 6.}};
-        auto const veigen = common::ToEigen(v).reshaped(3, v.size());
-        CHECK_EQ(veigen.cols(), v.size());
-        for (auto j = 0u; j < veigen.cols(); ++j)
-            for (auto i = 0u; i < veigen.rows(); ++i)
-                CHECK_EQ(v[j](i), veigen(i, j));
+        auto const ve = common::ToEigen(v).reshaped(3, v.size());
+        CHECK_EQ(ve.cols(), v.size());
+        for (auto j = 0u; j < ve.cols(); ++j)
+            for (auto i = 0u; i < ve.rows(); ++i)
+                CHECK_EQ(v[j](i), ve(i, j));
     }
 }

@@ -16,11 +16,11 @@
 namespace pba {
 namespace fem {
 
-template <Element TElement, int Dims>
+template <CElement TElement, int Dims>
 struct Mesh
 {
-    using Element             = TElement; ///< Underlying finite element type
-    static int constexpr Dims = Dims;     ///< Embedding dimensions of the mesh
+    using ElementType          = TElement; ///< Underlying finite element type
+    static int constexpr kDims = Dims;     ///< Embedding dimensions of the mesh
 
     Mesh() = default;
     /**
@@ -35,17 +35,17 @@ struct Mesh
     IndexMatrixX E; ///< Element::Nodes x |#elements| element nodal indices
 };
 
-template <Element TElement>
+template <CElement TElement>
 class NodalKey
 {
   public:
-    using SelfType                = NodalKey<TElement>;
-    static int constexpr Vertices = TElement::AffineBase::Nodes;
+    using SelfType                 = NodalKey<TElement>;
+    static int constexpr kVertices = TElement::AffineBaseType::kNodes;
 
     NodalKey(
-        IndexVector<Vertices> const& cellVertices,
-        IndexVector<Vertices> const& sortOrder,
-        Eigen::Vector<math::Rational, Vertices> const& N)
+        IndexVector<kVertices> const& cellVertices,
+        IndexVector<kVertices> const& sortOrder,
+        Eigen::Vector<math::Rational, kVertices> const& N)
         : mCellVertices(cellVertices), mSortOrder(sortOrder), mN(N), mSize()
     {
         // Remove vertices whose corresponding shape function is zero
@@ -104,40 +104,42 @@ class NodalKey
     }
 
   private:
-    IndexVector<Vertices> mCellVertices;        ///< Cell vertex indices
-    IndexVector<Vertices> mSortOrder;           ///< Ordering of the cell vertices
-    Eigen::Vector<math::Rational, Vertices> mN; ///< Node's affine shape function values
-    int mSize;                                  ///< Number of non-zero affine shape function values
+    IndexVector<kVertices> mCellVertices;        ///< Cell vertex indices
+    IndexVector<kVertices> mSortOrder;           ///< Ordering of the cell vertices
+    Eigen::Vector<math::Rational, kVertices> mN; ///< Node's affine shape function values
+    int mSize; ///< Number of non-zero affine shape function values
 };
 
-template <Element TElement, int Dims>
+template <CElement TElement, int Dims>
 Mesh<TElement, Dims>::Mesh(
     Eigen::Ref<MatrixX const> const& V,
     Eigen::Ref<IndexMatrixX const> const& C)
 {
-    using AffineElement             = TElement::AffineBase;
-    auto constexpr kVerticesPerCell = AffineElement::Nodes;
+    using AffineElementType         = typename ElementType::AffineBaseType;
+    auto constexpr kVerticesPerCell = AffineElementType::kNodes;
 
-    static_assert(Dims >= TElement::Dims, "Element TElement does not exist in Dims dimensions");
+    static_assert(
+        kDims >= ElementType::kDims,
+        "Element TElement does not exist in Dims dimensions");
     assert(C.rows() == kVerticesPerCell);
-    assert(V.rows() == Dims);
+    assert(V.rows() == kDims);
 
-    using NodeMap = std::map<NodalKey<TElement>, Index>;
+    using NodeMap = std::map<NodalKey<ElementType>, Index>;
 
     auto const numberOfCells    = C.cols();
     auto const numberOfVertices = V.cols();
 
     NodeMap nodeMap{};
-    std::vector<Vector<Dims>> nodes{};
+    std::vector<Vector<kDims>> nodes{};
     nodes.reserve(static_cast<std::size_t>(numberOfVertices));
 
     // Construct mesh topology, i.e. assign mesh nodes to elements,
     // ensuring that adjacent elements share their common nodes.
-    E.resize(TElement::Nodes, numberOfCells);
+    E.resize(ElementType::kNodes, numberOfCells);
     for (auto c = 0; c < numberOfCells; ++c)
     {
         IndexVector<kVerticesPerCell> const cellVertices = C.col(c);
-        Matrix<Dims, kVerticesPerCell> const Xc          = V(Eigen::all, cellVertices);
+        Matrix<kDims, kVerticesPerCell> const Xc         = V(Eigen::all, cellVertices);
 
         // Sort based on cell vertex index
         IndexVector<kVerticesPerCell> sortOrder{};
@@ -146,23 +148,23 @@ Mesh<TElement, Dims>::Mesh(
             return cellVertices[i] < cellVertices[j];
         });
         // Loop over nodes of element and create the node on first visit
-        auto const nodalCoordinates = common::ToEigen(TElement::Coordinates)
-                                          .reshaped(TElement::Dims, TElement::Nodes)
+        auto const nodalCoordinates = common::ToEigen(ElementType::kCoordinates)
+                                          .reshaped(ElementType::kDims, ElementType::kNodes)
                                           .cast<math::Rational>() /
-                                      TElement::Order;
+                                      ElementType::kOrder;
         for (auto i = 0; i < nodalCoordinates.cols(); ++i)
         {
             // Use exact rational arithmetic to evaluate affine element shape functions at the node
             // to get its exact affine coordinates
             auto const Xi = nodalCoordinates.col(i);
-            auto const N  = AffineElement::N(Xi);
-            NodalKey<TElement> const key{cellVertices, sortOrder, N};
+            auto const N  = AffineElementType::N(Xi);
+            NodalKey<ElementType> const key{cellVertices, sortOrder, N};
             auto it                        = nodeMap.find(key);
             bool const bNodeAlreadyCreated = it != nodeMap.end();
             if (!bNodeAlreadyCreated)
             {
-                auto const nodeIdx    = static_cast<Index>(nodes.size());
-                Vector<Dims> const xi = Xc * N.cast<Scalar>();
+                auto const nodeIdx     = static_cast<Index>(nodes.size());
+                Vector<kDims> const xi = Xc * N.cast<Scalar>();
                 nodes.push_back(xi);
                 bool bInserted{};
                 std::tie(it, bInserted) = nodeMap.insert({key, nodeIdx});

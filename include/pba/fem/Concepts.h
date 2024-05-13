@@ -10,30 +10,47 @@ namespace pba {
 namespace fem {
 
 template <class T>
-concept Element = requires(T t)
+concept CElement = requires(T t)
 {
-    typename T::AffineBase;
+    typename T::AffineBaseType;
     {
-        T::Order
+        T::kOrder
     } -> std::convertible_to<int>;
     {
-        T::Dims
+        T::kDims
     } -> std::convertible_to<int>;
     {
-        T::Nodes
+        T::kNodes
     } -> std::convertible_to<int>;
     {
-        T::Coordinates
+        T::kCoordinates
     } -> common::ContiguousIndexRange;
     {
-        t.N(Vector<T::Dims>{})
-    } -> std::same_as<Vector<T::Nodes>>;
+        t.N(Vector<T::kDims>{})
+    } -> std::same_as<Vector<T::kNodes>>;
     {
-        t.GradN(Vector<T::Dims>{})
-    } -> std::same_as<Matrix<T::Nodes, T::Dims>>;
+        t.GradN(Vector<T::kDims>{})
+    } -> std::same_as<Matrix<T::kNodes, T::kDims>>;
     {
-        t.Jacobian(Vector<T::Dims>{}, Matrix<T::Dims, T::Nodes>{})
-    } -> std::same_as<Matrix<T::Dims, T::Dims>>;
+        t.Jacobian(Vector<T::kDims>{}, Matrix<T::kDims, T::kNodes>{})
+    } -> std::same_as<Matrix<T::kDims, T::kDims>>;
+};
+
+template <class M>
+concept CMesh = requires(M m)
+{
+    {
+        M::ElementType
+    } -> CElement;
+    {
+        M::kDims
+    } -> std::convertible_to<int>;
+    {
+        m.X
+    } -> std::same_as<MatrixX>;
+    {
+        m.E
+    } -> std::same_as<IndexMatrixX>;
 };
 
 } // namespace fem

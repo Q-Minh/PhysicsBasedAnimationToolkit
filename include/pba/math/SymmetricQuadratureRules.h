@@ -10,16 +10,16 @@ namespace pba {
 namespace math {
 
 template <class TBasis, class Quad>
-Matrix<TBasis::Size, Quad::npoints> reference_moment_fitting_matrix(TBasis const& Pb, Quad const& Q)
+Matrix<TBasis::kSize, Quad::kPoints> ReferenceMomentFittingMatrix(TBasis const& Pb, Quad const& Q)
 {
     static_assert(
-        TBasis::Dims == Quad::dim,
+        TBasis::kDims == Quad::kDims,
         "Dimensions of the quadrature rule and the polynomial basis must match, i.e. a 2D "
         "polynomial must be fit in a 2D integration domain");
-    Matrix<TBasis::Size, Quad::npoints> P{};
-    Eigen::Map<Matrix<Quad::dim + 1, Quad::npoints> const> Xg(Q.points.data());
-    for (auto g = 0u; g < Quad::npoints; ++g)
-        P.col(g) = Pb.eval(Xg.col(g).segment(1, Quad::dim));
+    Matrix<TBasis::kSize, Quad::kPoints> P{};
+    Eigen::Map<Matrix<Quad::kDims + 1, Quad::kPoints> const> Xg(Q.points.data());
+    for (auto g = 0u; g < Quad::kPoints; ++g)
+        P.col(g) = Pb.eval(Xg.col(g).segment(1, Quad::kDims));
     return P;
 }
 
@@ -31,9 +31,9 @@ Matrix<TBasis::Size, Quad::npoints> reference_moment_fitting_matrix(TBasis const
 template <class Quad>
 struct ModifiableQuadratureScheme
 {
-    inline static std::uint8_t constexpr Dims     = Quad::dim;
-    inline static std::uint16_t constexpr npoints = Quad::npoints;
-    inline static std::uint8_t constexpr Order    = Quad::porder;
+    inline static std::uint8_t constexpr kDims    = Quad::kDims;
+    inline static std::uint16_t constexpr kPoints = Quad::kPoints;
+    inline static std::uint8_t constexpr kOrder   = Quad::kOrder;
     ModifiableQuadratureScheme() : points(Quad::points), weights(Quad::weights) {}
 
     decltype(Quad::points) points;
@@ -42,27 +42,27 @@ struct ModifiableQuadratureScheme
 
 struct Quad1DP1
 {
-    inline static std::uint8_t constexpr Dims             = 1;
-    inline static std::uint16_t constexpr npoints         = 1;
-    inline static std::uint8_t constexpr Order            = 1;
+    inline static std::uint8_t constexpr kDims            = 1;
+    inline static std::uint16_t constexpr kPoints         = 1;
+    inline static std::uint8_t constexpr kOrder           = 1;
     inline static std::array<Scalar, 2> constexpr points  = {0.5, 0.5};
     inline static std::array<Scalar, 1> constexpr weights = {1};
 };
 
 struct Quad1DP3
 {
-    inline static std::uint8_t constexpr Dims            = 1;
-    inline static std::uint16_t constexpr npoints        = 2;
-    inline static std::uint8_t constexpr Order           = 3;
+    inline static std::uint8_t constexpr kDims           = 1;
+    inline static std::uint16_t constexpr kPoints        = 2;
+    inline static std::uint8_t constexpr kOrder          = 3;
     inline static std::array<Scalar, 4> constexpr points = {0.211325, 0.788675, 0.788675, 0.211325};
     inline static std::array<Scalar, 2> constexpr weights = {0.5, 0.5};
 };
 
 struct Quad1DP5
 {
-    inline static std::uint8_t constexpr Dims     = 1;
-    inline static std::uint16_t constexpr npoints = 3;
-    inline static std::uint8_t constexpr Order    = 5;
+    inline static std::uint8_t constexpr kDims    = 1;
+    inline static std::uint16_t constexpr kPoints = 3;
+    inline static std::uint8_t constexpr kOrder   = 5;
     inline static std::array<Scalar, 6> constexpr points =
         {0.112702, 0.887298, 0.887298, 0.112702, 0.5, 0.5};
     inline static std::array<Scalar, 3> constexpr weights = {0.277778, 0.277778, 0.444444};
@@ -70,9 +70,9 @@ struct Quad1DP5
 
 struct Quad1DP7
 {
-    inline static std::uint8_t constexpr Dims     = 1;
-    inline static std::uint16_t constexpr npoints = 4;
-    inline static std::uint8_t constexpr Order    = 7;
+    inline static std::uint8_t constexpr kDims    = 1;
+    inline static std::uint16_t constexpr kPoints = 4;
+    inline static std::uint8_t constexpr kOrder   = 7;
     inline static std::array<Scalar, 8> constexpr points =
         {0.0694318, 0.930568, 0.930568, 0.0694318, 0.330009, 0.669991, 0.669991, 0.330009};
     inline static std::array<Scalar, 4> constexpr weights =
@@ -81,9 +81,9 @@ struct Quad1DP7
 
 struct Quad1DP9
 {
-    inline static std::uint8_t constexpr Dims     = 1;
-    inline static std::uint16_t constexpr npoints = 5;
-    inline static std::uint8_t constexpr Order    = 9;
+    inline static std::uint8_t constexpr kDims    = 1;
+    inline static std::uint16_t constexpr kPoints = 5;
+    inline static std::uint8_t constexpr kOrder   = 9;
     inline static std::array<Scalar, 10> constexpr points =
         {0.5, 0.5, 0.0469101, 0.95309, 0.95309, 0.0469101, 0.230765, 0.769235, 0.769235, 0.230765};
     inline static std::array<Scalar, 5> constexpr weights =
@@ -92,9 +92,9 @@ struct Quad1DP9
 
 struct Quad1DP11
 {
-    inline static std::uint8_t constexpr Dims             = 1;
-    inline static std::uint16_t constexpr npoints         = 6;
-    inline static std::uint8_t constexpr Order            = 11;
+    inline static std::uint8_t constexpr kDims            = 1;
+    inline static std::uint16_t constexpr kPoints         = 6;
+    inline static std::uint8_t constexpr kOrder           = 11;
     inline static std::array<Scalar, 12> constexpr points = {
         0.966235,
         0.0337652,
@@ -114,9 +114,9 @@ struct Quad1DP11
 
 struct Quad1DP13
 {
-    inline static std::uint8_t constexpr Dims             = 1;
-    inline static std::uint16_t constexpr npoints         = 7;
-    inline static std::uint8_t constexpr Order            = 13;
+    inline static std::uint8_t constexpr kDims            = 1;
+    inline static std::uint16_t constexpr kPoints         = 7;
+    inline static std::uint8_t constexpr kOrder           = 13;
     inline static std::array<Scalar, 14> constexpr points = {
         0.974554,
         0.025446,
@@ -138,9 +138,9 @@ struct Quad1DP13
 
 struct Quad1DP15
 {
-    inline static std::uint8_t constexpr Dims             = 1;
-    inline static std::uint16_t constexpr npoints         = 8;
-    inline static std::uint8_t constexpr Order            = 15;
+    inline static std::uint8_t constexpr kDims            = 1;
+    inline static std::uint16_t constexpr kPoints         = 8;
+    inline static std::uint8_t constexpr kOrder           = 15;
     inline static std::array<Scalar, 16> constexpr points = {
         0.980145,
         0.0198551,
@@ -164,9 +164,9 @@ struct Quad1DP15
 
 struct Quad1DP17
 {
-    inline static std::uint8_t constexpr Dims             = 1;
-    inline static std::uint16_t constexpr npoints         = 9;
-    inline static std::uint8_t constexpr Order            = 17;
+    inline static std::uint8_t constexpr kDims            = 1;
+    inline static std::uint16_t constexpr kPoints         = 9;
+    inline static std::uint8_t constexpr kOrder           = 17;
     inline static std::array<Scalar, 18> constexpr points = {
         0.98408,
         0.0159199,
@@ -200,9 +200,9 @@ struct Quad1DP17
 
 struct Quad1DP19
 {
-    inline static std::uint8_t constexpr Dims             = 1;
-    inline static std::uint16_t constexpr npoints         = 10;
-    inline static std::uint8_t constexpr Order            = 19;
+    inline static std::uint8_t constexpr kDims            = 1;
+    inline static std::uint16_t constexpr kPoints         = 10;
+    inline static std::uint8_t constexpr kOrder           = 19;
     inline static std::array<Scalar, 20> constexpr points = {
         0.986953, 0.0130467, 0.0130467, 0.986953, 0.932532, 0.0674683, 0.0674683,
         0.932532, 0.839705,  0.160295,  0.160295, 0.839705, 0.716698,  0.283302,
@@ -222,9 +222,9 @@ struct Quad1DP19
 
 struct Quad1DP21
 {
-    inline static std::uint8_t constexpr Dims             = 1;
-    inline static std::uint16_t constexpr npoints         = 11;
-    inline static std::uint8_t constexpr Order            = 21;
+    inline static std::uint8_t constexpr kDims            = 1;
+    inline static std::uint16_t constexpr kPoints         = 11;
+    inline static std::uint8_t constexpr kOrder           = 21;
     inline static std::array<Scalar, 22> constexpr points = {
         0.989114, 0.0108857, 0.0108857, 0.989114, 0.943531, 0.0564687, 0.0564687, 0.943531,
         0.865076, 0.134924,  0.134924,  0.865076, 0.759548, 0.240452,  0.240452,  0.759548,
@@ -245,18 +245,18 @@ struct Quad1DP21
 
 struct Quad2DP1
 {
-    inline static std::uint8_t constexpr Dims             = 2;
-    inline static std::uint16_t constexpr npoints         = 1;
-    inline static std::uint8_t constexpr Order            = 1;
+    inline static std::uint8_t constexpr kDims            = 2;
+    inline static std::uint16_t constexpr kPoints         = 1;
+    inline static std::uint8_t constexpr kOrder           = 1;
     inline static std::array<Scalar, 3> constexpr points  = {0.333333, 0.333333, 0.333333};
     inline static std::array<Scalar, 1> constexpr weights = {0.5};
 };
 
 struct Quad2DP2
 {
-    inline static std::uint8_t constexpr Dims     = 2;
-    inline static std::uint16_t constexpr npoints = 3;
-    inline static std::uint8_t constexpr Order    = 2;
+    inline static std::uint8_t constexpr kDims    = 2;
+    inline static std::uint16_t constexpr kPoints = 3;
+    inline static std::uint8_t constexpr kOrder   = 2;
     inline static std::array<Scalar, 9> constexpr points =
         {0.666667, 0.166667, 0.166667, 0.166667, 0.666667, 0.166667, 0.166667, 0.166667, 0.666667};
     inline static std::array<Scalar, 3> constexpr weights = {0.166667, 0.166667, 0.166667};
@@ -264,9 +264,9 @@ struct Quad2DP2
 
 struct Quad2DP3
 {
-    inline static std::uint8_t constexpr Dims             = 2;
-    inline static std::uint16_t constexpr npoints         = 6;
-    inline static std::uint8_t constexpr Order            = 3;
+    inline static std::uint8_t constexpr kDims            = 2;
+    inline static std::uint16_t constexpr kPoints         = 6;
+    inline static std::uint8_t constexpr kOrder           = 3;
     inline static std::array<Scalar, 18> constexpr points = {
         0.674234,
         0.162883,
@@ -292,9 +292,9 @@ struct Quad2DP3
 
 struct Quad2DP4
 {
-    inline static std::uint8_t constexpr Dims             = 2;
-    inline static std::uint16_t constexpr npoints         = 6;
-    inline static std::uint8_t constexpr Order            = 4;
+    inline static std::uint8_t constexpr kDims            = 2;
+    inline static std::uint16_t constexpr kPoints         = 6;
+    inline static std::uint8_t constexpr kOrder           = 4;
     inline static std::array<Scalar, 18> constexpr points = {
         0.108103,
         0.445948,
@@ -320,9 +320,9 @@ struct Quad2DP4
 
 struct Quad2DP5
 {
-    inline static std::uint8_t constexpr Dims             = 2;
-    inline static std::uint16_t constexpr npoints         = 7;
-    inline static std::uint8_t constexpr Order            = 5;
+    inline static std::uint8_t constexpr kDims            = 2;
+    inline static std::uint16_t constexpr kPoints         = 7;
+    inline static std::uint8_t constexpr kOrder           = 5;
     inline static std::array<Scalar, 21> constexpr points = {
         0.797427, 0.101287, 0.101287,  0.101287,  0.797427, 0.101287, 0.101287,
         0.101287, 0.797427, 0.0597159, 0.470142,  0.470142, 0.470142, 0.0597159,
@@ -333,9 +333,9 @@ struct Quad2DP5
 
 struct Quad2DP6
 {
-    inline static std::uint8_t constexpr Dims             = 2;
-    inline static std::uint16_t constexpr npoints         = 12;
-    inline static std::uint8_t constexpr Order            = 6;
+    inline static std::uint8_t constexpr kDims            = 2;
+    inline static std::uint16_t constexpr kPoints         = 12;
+    inline static std::uint8_t constexpr kOrder           = 6;
     inline static std::array<Scalar, 36> constexpr points = {
         0.873822, 0.063089, 0.063089, 0.063089, 0.873822, 0.063089, 0.063089, 0.063089, 0.873822,
         0.501427, 0.249287, 0.249287, 0.249287, 0.501427, 0.249287, 0.249287, 0.249287, 0.501427,
@@ -358,9 +358,9 @@ struct Quad2DP6
 
 struct Quad2DP7
 {
-    inline static std::uint8_t constexpr Dims             = 2;
-    inline static std::uint16_t constexpr npoints         = 15;
-    inline static std::uint8_t constexpr Order            = 7;
+    inline static std::uint8_t constexpr kDims            = 2;
+    inline static std::uint16_t constexpr kPoints         = 15;
+    inline static std::uint8_t constexpr kOrder           = 7;
     inline static std::array<Scalar, 45> constexpr points = {
         0.943472,  0.0282639, 0.0282639, 0.0282639, 0.943472,  0.0282639, 0.0282639, 0.0282639,
         0.943472,  0.0513774, 0.474311,  0.474311,  0.474311,  0.0513774, 0.474311,  0.474311,
@@ -388,9 +388,9 @@ struct Quad2DP7
 
 struct Quad2DP8
 {
-    inline static std::uint8_t constexpr Dims             = 2;
-    inline static std::uint16_t constexpr npoints         = 16;
-    inline static std::uint8_t constexpr Order            = 8;
+    inline static std::uint8_t constexpr kDims            = 2;
+    inline static std::uint16_t constexpr kPoints         = 16;
+    inline static std::uint8_t constexpr kOrder           = 8;
     inline static std::array<Scalar, 48> constexpr points = {
         0.333333, 0.333333,  0.333333,  0.658861,   0.170569,   0.170569,  0.170569,   0.658861,
         0.170569, 0.170569,  0.170569,  0.658861,   0.898906,   0.0505472, 0.0505472,  0.0505472,
@@ -419,9 +419,9 @@ struct Quad2DP8
 
 struct Quad2DP9
 {
-    inline static std::uint8_t constexpr Dims             = 2;
-    inline static std::uint16_t constexpr npoints         = 19;
-    inline static std::uint8_t constexpr Order            = 9;
+    inline static std::uint8_t constexpr kDims            = 2;
+    inline static std::uint16_t constexpr kPoints         = 19;
+    inline static std::uint8_t constexpr kOrder           = 9;
     inline static std::array<Scalar, 57> constexpr points = {
         0.333333, 0.333333,  0.333333,  0.020635,  0.489683, 0.489683,  0.489683,  0.020635,
         0.489683, 0.489683,  0.489683,  0.020635,  0.910541, 0.0447295, 0.0447295, 0.0447295,
@@ -455,9 +455,9 @@ struct Quad2DP9
 
 struct Quad2DP10
 {
-    inline static std::uint8_t constexpr Dims             = 2;
-    inline static std::uint16_t constexpr npoints         = 25;
-    inline static std::uint8_t constexpr Order            = 10;
+    inline static std::uint8_t constexpr kDims            = 2;
+    inline static std::uint16_t constexpr kPoints         = 25;
+    inline static std::uint8_t constexpr kOrder           = 10;
     inline static std::array<Scalar, 75> constexpr points = {
         0.333333,  0.333333,  0.333333,  0.145454,  0.427273,  0.427273,  0.427273,  0.145454,
         0.427273,  0.427273,  0.427273,  0.145454,  0.633802,  0.183099,  0.183099,  0.183099,
@@ -478,9 +478,9 @@ struct Quad2DP10
 
 struct Quad2DP11
 {
-    inline static std::uint8_t constexpr Dims             = 2;
-    inline static std::uint16_t constexpr npoints         = 28;
-    inline static std::uint8_t constexpr Order            = 11;
+    inline static std::uint8_t constexpr kDims            = 2;
+    inline static std::uint16_t constexpr kPoints         = 28;
+    inline static std::uint8_t constexpr kOrder           = 11;
     inline static std::array<Scalar, 84> constexpr points = {
         0.333333,  0.333333,   0.333333,  0.938123, 0.0309384, 0.0309384,  0.0309384, 0.938123,
         0.0309384, 0.0309384,  0.0309384, 0.938123, 0.127004,  0.436498,   0.436498,  0.436498,
@@ -502,9 +502,9 @@ struct Quad2DP11
 
 struct Quad2DP12
 {
-    inline static std::uint8_t constexpr Dims             = 2;
-    inline static std::uint16_t constexpr npoints         = 33;
-    inline static std::uint8_t constexpr Order            = 12;
+    inline static std::uint8_t constexpr kDims            = 2;
+    inline static std::uint16_t constexpr kPoints         = 33;
+    inline static std::uint8_t constexpr kOrder           = 12;
     inline static std::array<Scalar, 99> constexpr points = {
         0.957365,  0.0213174, 0.0213174, 0.0213174, 0.957365,  0.0213174, 0.0213174, 0.0213174,
         0.957365,  0.457579,  0.27121,   0.27121,   0.27121,   0.457579,  0.27121,   0.27121,
@@ -529,9 +529,9 @@ struct Quad2DP12
 
 struct Quad2DP13
 {
-    inline static std::uint8_t constexpr Dims              = 2;
-    inline static std::uint16_t constexpr npoints          = 37;
-    inline static std::uint8_t constexpr Order             = 13;
+    inline static std::uint8_t constexpr kDims             = 2;
+    inline static std::uint16_t constexpr kPoints          = 37;
+    inline static std::uint8_t constexpr kOrder            = 13;
     inline static std::array<Scalar, 111> constexpr points = {
         0.333333,  0.333333,   0.333333,  0.146117,  0.426941,   0.426941,   0.426941,  0.146117,
         0.426941,  0.426941,   0.426941,  0.146117,  0.557255,   0.221372,   0.221372,  0.221372,
@@ -557,9 +557,9 @@ struct Quad2DP13
 
 struct Quad2DP14
 {
-    inline static std::uint8_t constexpr Dims              = 2;
-    inline static std::uint16_t constexpr npoints          = 42;
-    inline static std::uint8_t constexpr Order             = 14;
+    inline static std::uint8_t constexpr kDims             = 2;
+    inline static std::uint16_t constexpr kPoints          = 42;
+    inline static std::uint8_t constexpr kOrder            = 14;
     inline static std::array<Scalar, 126> constexpr points = {
         0.645589,  0.177206,   0.177206,   0.177206,  0.645589,   0.177206,   0.177206,  0.177206,
         0.645589,  0.961218,   0.019391,   0.019391,  0.019391,   0.961218,   0.019391,  0.019391,
@@ -588,9 +588,9 @@ struct Quad2DP14
 
 struct Quad2DP15
 {
-    inline static std::uint8_t constexpr Dims              = 2;
-    inline static std::uint16_t constexpr npoints          = 49;
-    inline static std::uint8_t constexpr Order             = 15;
+    inline static std::uint8_t constexpr kDims             = 2;
+    inline static std::uint16_t constexpr kPoints          = 49;
+    inline static std::uint8_t constexpr kOrder            = 15;
     inline static std::array<Scalar, 147> constexpr points = {
         0.333333,    0.333333,    0.333333,    0.779555,  0.110222,  0.110222,    0.110222,
         0.779555,    0.110222,    0.110222,    0.110222,  0.779555,  0.896047,    0.0519764,
@@ -625,9 +625,9 @@ struct Quad2DP15
 
 struct Quad2DP16
 {
-    inline static std::uint8_t constexpr Dims              = 2;
-    inline static std::uint16_t constexpr npoints          = 55;
-    inline static std::uint8_t constexpr Order             = 16;
+    inline static std::uint8_t constexpr kDims             = 2;
+    inline static std::uint16_t constexpr kPoints          = 55;
+    inline static std::uint8_t constexpr kOrder            = 16;
     inline static std::array<Scalar, 165> constexpr points = {
         0.333333,   0.333333,   0.333333,  0.83641,   0.081795,   0.081795,   0.081795,  0.83641,
         0.081795,   0.081795,   0.081795,  0.83641,   0.669399,   0.165301,   0.165301,  0.165301,
@@ -663,9 +663,9 @@ struct Quad2DP16
 
 struct Quad2DP17
 {
-    inline static std::uint8_t constexpr Dims              = 2;
-    inline static std::uint16_t constexpr npoints          = 60;
-    inline static std::uint8_t constexpr Order             = 17;
+    inline static std::uint8_t constexpr kDims             = 2;
+    inline static std::uint16_t constexpr kPoints          = 60;
+    inline static std::uint8_t constexpr kOrder            = 17;
     inline static std::array<Scalar, 180> constexpr points = {
         0.518874,  0.240563,  0.240563,   0.240563,  0.518874,  0.240563,  0.240563,   0.240563,
         0.518874,  0.838154,  0.0809232,  0.0809232, 0.0809232, 0.838154,  0.0809232,  0.0809232,
@@ -704,9 +704,9 @@ struct Quad2DP17
 
 struct Quad2DP18
 {
-    inline static std::uint8_t constexpr Dims              = 2;
-    inline static std::uint16_t constexpr npoints          = 67;
-    inline static std::uint8_t constexpr Order             = 18;
+    inline static std::uint8_t constexpr kDims             = 2;
+    inline static std::uint16_t constexpr kPoints          = 67;
+    inline static std::uint8_t constexpr kOrder            = 18;
     inline static std::array<Scalar, 201> constexpr points = {
         0.333333,   0.333333,   0.333333,   0.696723,   0.151639,  0.151639,   0.151639,
         0.696723,   0.151639,   0.151639,   0.151639,   0.696723,  0.855123,   0.0724387,
@@ -752,9 +752,9 @@ struct Quad2DP18
 
 struct Quad2DP19
 {
-    inline static std::uint8_t constexpr Dims              = 2;
-    inline static std::uint16_t constexpr npoints          = 73;
-    inline static std::uint8_t constexpr Order             = 19;
+    inline static std::uint8_t constexpr kDims             = 2;
+    inline static std::uint16_t constexpr kPoints          = 73;
+    inline static std::uint8_t constexpr kOrder            = 19;
     inline static std::array<Scalar, 219> constexpr points = {
         0.333333,  0.333333,  0.333333,   0.02078,    0.48961,   0.48961,    0.48961,   0.02078,
         0.48961,   0.48961,   0.48961,    0.02078,    0.0909262, 0.454537,   0.454537,  0.454537,
@@ -800,9 +800,9 @@ struct Quad2DP19
 
 struct Quad2DP20
 {
-    inline static std::uint8_t constexpr Dims              = 2;
-    inline static std::uint16_t constexpr npoints          = 82;
-    inline static std::uint8_t constexpr Order             = 20;
+    inline static std::uint8_t constexpr kDims             = 2;
+    inline static std::uint16_t constexpr kPoints          = 82;
+    inline static std::uint8_t constexpr kOrder            = 20;
     inline static std::array<Scalar, 246> constexpr points = {
         0.333333,   0.333333,   0.333333,   0.0549206,  0.47254,    0.47254,    0.47254,
         0.0549206,  0.47254,    0.47254,    0.47254,    0.0549206,  0.128816,   0.435592,
@@ -857,9 +857,9 @@ struct Quad2DP20
 
 struct Quad2DP21
 {
-    inline static std::uint8_t constexpr Dims              = 2;
-    inline static std::uint16_t constexpr npoints          = 87;
-    inline static std::uint8_t constexpr Order             = 21;
+    inline static std::uint8_t constexpr kDims             = 2;
+    inline static std::uint16_t constexpr kPoints          = 87;
+    inline static std::uint8_t constexpr kOrder            = 21;
     inline static std::array<Scalar, 261> constexpr points = {
         0.978339,   0.0108306,  0.0108306,  0.0108306,  0.978339,   0.0108306,  0.0108306,
         0.0108306,  0.978339,   0.00263766, 0.498681,   0.498681,   0.498681,   0.00263766,
@@ -917,9 +917,9 @@ struct Quad2DP21
 
 struct Quad2DP22
 {
-    inline static std::uint8_t constexpr Dims              = 2;
-    inline static std::uint16_t constexpr npoints          = 96;
-    inline static std::uint8_t constexpr Order             = 22;
+    inline static std::uint8_t constexpr kDims             = 2;
+    inline static std::uint16_t constexpr kPoints          = 96;
+    inline static std::uint8_t constexpr kOrder            = 22;
     inline static std::array<Scalar, 288> constexpr points = {
         0.985544,    0.00722824, 0.00722824,  0.00722824,  0.985544,   0.00722824, 0.00722824,
         0.00722824,  0.985544,   0.000570167, 0.499715,    0.499715,   0.499715,   0.000570167,
@@ -982,9 +982,9 @@ struct Quad2DP22
 
 struct Quad2DP23
 {
-    inline static std::uint8_t constexpr Dims              = 2;
-    inline static std::uint16_t constexpr npoints          = 102;
-    inline static std::uint8_t constexpr Order             = 23;
+    inline static std::uint8_t constexpr kDims             = 2;
+    inline static std::uint16_t constexpr kPoints          = 102;
+    inline static std::uint8_t constexpr kOrder            = 23;
     inline static std::array<Scalar, 306> constexpr points = {
         0.982314,   0.00884309, 0.00884309, 0.00884309, 0.982314,   0.00884309, 0.00884309,
         0.00884309, 0.982314,   0.00191536, 0.499042,   0.499042,   0.499042,   0.00191536,
@@ -1050,9 +1050,9 @@ struct Quad2DP23
 
 struct Quad2DP24
 {
-    inline static std::uint8_t constexpr Dims              = 2;
-    inline static std::uint16_t constexpr npoints          = 112;
-    inline static std::uint8_t constexpr Order             = 24;
+    inline static std::uint8_t constexpr kDims             = 2;
+    inline static std::uint16_t constexpr kPoints          = 112;
+    inline static std::uint8_t constexpr kOrder            = 24;
     inline static std::array<Scalar, 336> constexpr points = {
         0.333333,   0.333333,   0.333333,   0.98471,    0.00764482, 0.00764482, 0.00764482,
         0.98471,    0.00764482, 0.00764482, 0.00764482, 0.98471,    0.00975347, 0.495123,
@@ -1123,9 +1123,9 @@ struct Quad2DP24
 
 struct Quad2DP25
 {
-    inline static std::uint8_t constexpr Dims              = 2;
-    inline static std::uint16_t constexpr npoints          = 126;
-    inline static std::uint8_t constexpr Order             = 25;
+    inline static std::uint8_t constexpr kDims             = 2;
+    inline static std::uint16_t constexpr kPoints          = 126;
+    inline static std::uint8_t constexpr kOrder            = 25;
     inline static std::array<Scalar, 378> constexpr points = {
         0.0279465,  0.486027,   0.486027,   0.486027,   0.0279465,  0.486027,   0.486027,
         0.486027,   0.0279465,  0.131179,   0.434411,   0.434411,   0.434411,   0.131179,
@@ -1204,9 +1204,9 @@ struct Quad2DP25
 
 struct Quad2DP26
 {
-    inline static std::uint8_t constexpr Dims              = 2;
-    inline static std::uint16_t constexpr npoints          = 133;
-    inline static std::uint8_t constexpr Order             = 26;
+    inline static std::uint8_t constexpr kDims             = 2;
+    inline static std::uint16_t constexpr kPoints          = 133;
+    inline static std::uint8_t constexpr kOrder            = 26;
     inline static std::array<Scalar, 399> constexpr points = {
         0.333333,   0.333333,   0.333333,   0.145238,   0.427381,   0.427381,   0.427381,
         0.145238,   0.427381,   0.427381,   0.427381,   0.145238,   0.226017,   0.386992,
@@ -1289,9 +1289,9 @@ struct Quad2DP26
 
 struct Quad2DP27
 {
-    inline static std::uint8_t constexpr Dims              = 2;
-    inline static std::uint16_t constexpr npoints          = 145;
-    inline static std::uint8_t constexpr Order             = 27;
+    inline static std::uint8_t constexpr kDims             = 2;
+    inline static std::uint16_t constexpr kPoints          = 145;
+    inline static std::uint8_t constexpr kOrder            = 27;
     inline static std::array<Scalar, 435> constexpr points = {
         0.333333,   0.333333,   0.333333,   0.0714583,  0.464271,   0.464271,   0.464271,
         0.0714583,  0.464271,   0.464271,   0.464271,   0.0714583,  0.135403,   0.432298,
@@ -1382,9 +1382,9 @@ struct Quad2DP27
 
 struct Quad2DP28
 {
-    inline static std::uint8_t constexpr Dims              = 2;
-    inline static std::uint16_t constexpr npoints          = 154;
-    inline static std::uint8_t constexpr Order             = 28;
+    inline static std::uint8_t constexpr kDims             = 2;
+    inline static std::uint16_t constexpr kPoints          = 154;
+    inline static std::uint8_t constexpr kOrder            = 28;
     inline static std::array<Scalar, 462> constexpr points = {
         0.333333,   0.333333,   0.333333,   0.00329317, 0.498353,   0.498353,   0.498353,
         0.00329317, 0.498353,   0.498353,   0.498353,   0.00329317, 0.0228745,  0.488563,
@@ -1479,9 +1479,9 @@ struct Quad2DP28
 
 struct Quad2DP29
 {
-    inline static std::uint8_t constexpr Dims              = 2;
-    inline static std::uint16_t constexpr npoints          = 166;
-    inline static std::uint8_t constexpr Order             = 29;
+    inline static std::uint8_t constexpr kDims             = 2;
+    inline static std::uint16_t constexpr kPoints          = 166;
+    inline static std::uint8_t constexpr kOrder            = 29;
     inline static std::array<Scalar, 498> constexpr points = {
         0.333333,   0.333333,   0.333333,   0.00116747, 0.499416,   0.499416,   0.499416,
         0.00116747, 0.499416,   0.499416,   0.499416,   0.00116747, 0.0210331,  0.489483,
@@ -1584,18 +1584,18 @@ struct Quad2DP29
 
 struct Quad3DP1
 {
-    inline static std::uint8_t constexpr Dims             = 3;
-    inline static std::uint16_t constexpr npoints         = 1;
-    inline static std::uint8_t constexpr Order            = 1;
+    inline static std::uint8_t constexpr kDims            = 3;
+    inline static std::uint16_t constexpr kPoints         = 1;
+    inline static std::uint8_t constexpr kOrder           = 1;
     inline static std::array<Scalar, 4> constexpr points  = {0.25, 0.25, 0.25, 0.25};
     inline static std::array<Scalar, 1> constexpr weights = {0.166667};
 };
 
 struct Quad3DP2
 {
-    inline static std::uint8_t constexpr Dims             = 3;
-    inline static std::uint16_t constexpr npoints         = 4;
-    inline static std::uint8_t constexpr Order            = 2;
+    inline static std::uint8_t constexpr kDims            = 3;
+    inline static std::uint16_t constexpr kPoints         = 4;
+    inline static std::uint8_t constexpr kOrder           = 2;
     inline static std::array<Scalar, 16> constexpr points = {
         0.58541,
         0.138197,
@@ -1619,9 +1619,9 @@ struct Quad3DP2
 
 struct Quad3DP3
 {
-    inline static std::uint8_t constexpr Dims             = 3;
-    inline static std::uint16_t constexpr npoints         = 8;
-    inline static std::uint8_t constexpr Order            = 3;
+    inline static std::uint8_t constexpr kDims            = 3;
+    inline static std::uint16_t constexpr kPoints         = 8;
+    inline static std::uint8_t constexpr kOrder           = 3;
     inline static std::array<Scalar, 32> constexpr points = {
         0.0158359, 0.328055, 0.328055,  0.328055, 0.328055, 0.0158359, 0.328055, 0.328055,
         0.328055,  0.328055, 0.0158359, 0.328055, 0.328055, 0.328055,  0.328055, 0.0158359,
@@ -1633,9 +1633,9 @@ struct Quad3DP3
 
 struct Quad3DP4
 {
-    inline static std::uint8_t constexpr Dims             = 3;
-    inline static std::uint16_t constexpr npoints         = 14;
-    inline static std::uint8_t constexpr Order            = 4;
+    inline static std::uint8_t constexpr kDims            = 3;
+    inline static std::uint16_t constexpr kPoints         = 14;
+    inline static std::uint8_t constexpr kOrder           = 4;
     inline static std::array<Scalar, 56> constexpr points = {
         0.721794,  0.0927353, 0.0927353, 0.0927353, 0.0927353, 0.721794,  0.0927353, 0.0927353,
         0.0927353, 0.0927353, 0.721794,  0.0927353, 0.0927353, 0.0927353, 0.0927353, 0.721794,
@@ -1663,9 +1663,9 @@ struct Quad3DP4
 
 struct Quad3DP5
 {
-    inline static std::uint8_t constexpr Dims             = 3;
-    inline static std::uint16_t constexpr npoints         = 14;
-    inline static std::uint8_t constexpr Order            = 5;
+    inline static std::uint8_t constexpr kDims            = 3;
+    inline static std::uint16_t constexpr kPoints         = 14;
+    inline static std::uint8_t constexpr kOrder           = 5;
     inline static std::array<Scalar, 56> constexpr points = {
         0.0673422, 0.310886,  0.310886,  0.310886,  0.310886,  0.0673422, 0.310886,  0.310886,
         0.310886,  0.310886,  0.0673422, 0.310886,  0.310886,  0.310886,  0.310886,  0.0673422,
@@ -1693,9 +1693,9 @@ struct Quad3DP5
 
 struct Quad3DP6
 {
-    inline static std::uint8_t constexpr Dims             = 3;
-    inline static std::uint16_t constexpr npoints         = 24;
-    inline static std::uint8_t constexpr Order            = 6;
+    inline static std::uint8_t constexpr kDims            = 3;
+    inline static std::uint16_t constexpr kPoints         = 24;
+    inline static std::uint8_t constexpr kOrder           = 6;
     inline static std::array<Scalar, 96> constexpr points = {
         0.356191,  0.214603, 0.214603,  0.214603, 0.214603, 0.356191,  0.214603, 0.214603,
         0.214603,  0.214603, 0.356191,  0.214603, 0.214603, 0.214603,  0.214603, 0.356191,
@@ -1718,9 +1718,9 @@ struct Quad3DP6
 
 struct Quad3DP7
 {
-    inline static std::uint8_t constexpr Dims              = 3;
-    inline static std::uint16_t constexpr npoints          = 35;
-    inline static std::uint8_t constexpr Order             = 7;
+    inline static std::uint8_t constexpr kDims             = 3;
+    inline static std::uint16_t constexpr kPoints          = 35;
+    inline static std::uint8_t constexpr kOrder            = 7;
     inline static std::array<Scalar, 140> constexpr points = {
         0.25,      0.25,      0.25,      0.25,      0.0528966, 0.315701,  0.315701,  0.315701,
         0.315701,  0.0528966, 0.315701,  0.315701,  0.315701,  0.315701,  0.0528966, 0.315701,
@@ -1750,9 +1750,9 @@ struct Quad3DP7
 
 struct Quad3DP8
 {
-    inline static std::uint8_t constexpr Dims              = 3;
-    inline static std::uint16_t constexpr npoints          = 46;
-    inline static std::uint8_t constexpr Order             = 8;
+    inline static std::uint8_t constexpr kDims             = 3;
+    inline static std::uint16_t constexpr kPoints          = 46;
+    inline static std::uint8_t constexpr kOrder            = 8;
     inline static std::array<Scalar, 184> constexpr points = {
         0.880974,  0.0396754, 0.0396754, 0.0396754, 0.0396754, 0.880974,  0.0396754, 0.0396754,
         0.0396754, 0.0396754, 0.880974,  0.0396754, 0.0396754, 0.0396754, 0.0396754, 0.880974,
@@ -1789,9 +1789,9 @@ struct Quad3DP8
 
 struct Quad3DP9
 {
-    inline static std::uint8_t constexpr Dims              = 3;
-    inline static std::uint16_t constexpr npoints          = 59;
-    inline static std::uint8_t constexpr Order             = 9;
+    inline static std::uint8_t constexpr kDims             = 3;
+    inline static std::uint16_t constexpr kPoints          = 59;
+    inline static std::uint8_t constexpr kOrder            = 9;
     inline static std::array<Scalar, 236> constexpr points = {
         0.25,       0.25,       0.25,       0.25,       0.886435,   0.037855,   0.037855,
         0.037855,   0.037855,   0.886435,   0.037855,   0.037855,   0.037855,   0.037855,
@@ -1841,9 +1841,9 @@ struct Quad3DP9
 
 struct Quad3DP10
 {
-    inline static std::uint8_t constexpr Dims              = 3;
-    inline static std::uint16_t constexpr npoints          = 79;
-    inline static std::uint8_t constexpr Order             = 10;
+    inline static std::uint8_t constexpr kDims             = 3;
+    inline static std::uint16_t constexpr kPoints          = 79;
+    inline static std::uint8_t constexpr kOrder            = 10;
     inline static std::array<Scalar, 316> constexpr points = {
         0.25,      0.25,      0.25,      0.25,      0.657244,  0.114252,  0.114252,  0.114252,
         0.114252,  0.657244,  0.114252,  0.114252,  0.114252,  0.114252,  0.657244,  0.114252,
@@ -1902,9 +1902,9 @@ struct Quad3DP10
 
 struct Quad3DP11
 {
-    inline static std::uint8_t constexpr Dims              = 3;
-    inline static std::uint16_t constexpr npoints          = 96;
-    inline static std::uint8_t constexpr Order             = 11;
+    inline static std::uint8_t constexpr kDims             = 3;
+    inline static std::uint16_t constexpr kPoints          = 96;
+    inline static std::uint8_t constexpr kOrder            = 11;
     inline static std::array<Scalar, 384> constexpr points = {
         0.626183,    0.124606,    0.124606,    0.124606,    0.124606,    0.626183,    0.124606,
         0.124606,    0.124606,    0.124606,    0.626183,    0.124606,    0.124606,    0.124606,
@@ -1980,9 +1980,9 @@ struct Quad3DP11
 
 struct Quad3DP12
 {
-    inline static std::uint8_t constexpr Dims              = 3;
-    inline static std::uint16_t constexpr npoints          = 127;
-    inline static std::uint8_t constexpr Order             = 12;
+    inline static std::uint8_t constexpr kDims             = 3;
+    inline static std::uint16_t constexpr kPoints          = 127;
+    inline static std::uint8_t constexpr kOrder            = 12;
     inline static std::array<Scalar, 508> constexpr points = {
         0.25,      0.25,      0.25,      0.25,      0.420438,  0.193187,  0.193187,  0.193187,
         0.193187,  0.420438,  0.193187,  0.193187,  0.193187,  0.193187,  0.420438,  0.193187,
@@ -2072,9 +2072,9 @@ struct Quad3DP12
 
 struct Quad3DP13
 {
-    inline static std::uint8_t constexpr Dims              = 3;
-    inline static std::uint16_t constexpr npoints          = 149;
-    inline static std::uint8_t constexpr Order             = 13;
+    inline static std::uint8_t constexpr kDims             = 3;
+    inline static std::uint16_t constexpr kPoints          = 149;
+    inline static std::uint8_t constexpr kOrder            = 13;
     inline static std::array<Scalar, 596> constexpr points = {
         0.25,       0.25,       0.25,       0.25,       0.70194,    0.0993534,  0.0993534,
         0.0993534,  0.0993534,  0.70194,    0.0993534,  0.0993534,  0.0993534,  0.0993534,
@@ -2189,9 +2189,9 @@ struct Quad3DP13
 
 struct Quad3DP14
 {
-    inline static std::uint8_t constexpr Dims              = 3;
-    inline static std::uint16_t constexpr npoints          = 194;
-    inline static std::uint8_t constexpr Order             = 14;
+    inline static std::uint8_t constexpr kDims             = 3;
+    inline static std::uint16_t constexpr kPoints          = 194;
+    inline static std::uint8_t constexpr kOrder            = 14;
     inline static std::array<Scalar, 776> constexpr points = {
         0.618897,    0.127034,    0.127034,    0.127034,    0.127034,    0.618897,    0.127034,
         0.127034,    0.127034,    0.127034,    0.618897,    0.127034,    0.127034,    0.127034,
@@ -2337,9 +2337,9 @@ struct Quad3DP14
 
 struct Quad3DP15
 {
-    inline static std::uint8_t constexpr Dims              = 3;
-    inline static std::uint16_t constexpr npoints          = 246;
-    inline static std::uint8_t constexpr Order             = 15;
+    inline static std::uint8_t constexpr kDims             = 3;
+    inline static std::uint16_t constexpr kPoints          = 246;
+    inline static std::uint8_t constexpr kOrder            = 15;
     inline static std::array<Scalar, 984> constexpr points = {
         0.156278,    0.281241,    0.281241,    0.281241,    0.281241,    0.156278,    0.281241,
         0.281241,    0.281241,    0.281241,    0.156278,    0.281241,    0.281241,    0.281241,
@@ -2523,9 +2523,9 @@ struct Quad3DP15
 
 struct Quad3DP16
 {
-    inline static std::uint8_t constexpr Dims               = 3;
-    inline static std::uint16_t constexpr npoints           = 304;
-    inline static std::uint8_t constexpr Order              = 16;
+    inline static std::uint8_t constexpr kDims              = 3;
+    inline static std::uint16_t constexpr kPoints           = 304;
+    inline static std::uint8_t constexpr kOrder             = 16;
     inline static std::array<Scalar, 1216> constexpr points = {
         0.0109856,  0.329671,   0.329671,   0.329671,   0.329671,   0.0109856,  0.329671,
         0.329671,   0.329671,   0.329671,   0.0109856,  0.329671,   0.329671,   0.329671,
@@ -2750,9 +2750,9 @@ struct Quad3DP16
 
 struct Quad3DP17
 {
-    inline static std::uint8_t constexpr Dims               = 3;
-    inline static std::uint16_t constexpr npoints           = 364;
-    inline static std::uint8_t constexpr Order              = 17;
+    inline static std::uint8_t constexpr kDims              = 3;
+    inline static std::uint16_t constexpr kPoints           = 364;
+    inline static std::uint8_t constexpr kOrder             = 17;
     inline static std::array<Scalar, 1456> constexpr points = {
         0.672222,   0.109259,   0.109259,   0.109259,   0.109259,   0.672222,   0.109259,
         0.109259,   0.109259,   0.109259,   0.672222,   0.109259,   0.109259,   0.109259,
@@ -3019,9 +3019,9 @@ struct Quad3DP17
 
 struct Quad3DP18
 {
-    inline static std::uint8_t constexpr Dims               = 3;
-    inline static std::uint16_t constexpr npoints           = 436;
-    inline static std::uint8_t constexpr Order              = 18;
+    inline static std::uint8_t constexpr kDims              = 3;
+    inline static std::uint16_t constexpr kPoints           = 436;
+    inline static std::uint8_t constexpr kOrder             = 18;
     inline static std::array<Scalar, 1744> constexpr points = {
         0.380883,   0.206372,   0.206372,   0.206372,   0.206372,   0.380883,   0.206372,
         0.206372,   0.206372,   0.206372,   0.380883,   0.206372,   0.206372,   0.206372,
@@ -3341,9 +3341,9 @@ struct Quad3DP18
 
 struct Quad3DP19
 {
-    inline static std::uint8_t constexpr Dims               = 3;
-    inline static std::uint16_t constexpr npoints           = 487;
-    inline static std::uint8_t constexpr Order              = 19;
+    inline static std::uint8_t constexpr kDims              = 3;
+    inline static std::uint16_t constexpr kPoints           = 487;
+    inline static std::uint8_t constexpr kOrder             = 19;
     inline static std::array<Scalar, 1948> constexpr points = {
         0.25,       0.25,       0.25,       0.25,       0.7113,     0.0962335,  0.0962335,
         0.0962335,  0.0962335,  0.7113,     0.0962335,  0.0962335,  0.0962335,  0.0962335,
@@ -3699,9 +3699,9 @@ struct Quad3DP19
 
 struct Quad3DP20
 {
-    inline static std::uint8_t constexpr Dims               = 3;
-    inline static std::uint16_t constexpr npoints           = 552;
-    inline static std::uint8_t constexpr Order              = 20;
+    inline static std::uint8_t constexpr kDims              = 3;
+    inline static std::uint16_t constexpr kPoints           = 552;
+    inline static std::uint8_t constexpr kOrder             = 20;
     inline static std::array<Scalar, 2208> constexpr points = {
         0.109672,   0.296776,   0.296776,   0.296776,   0.296776,   0.109672,   0.296776,
         0.296776,   0.296776,   0.296776,   0.109672,   0.296776,   0.296776,   0.296776,

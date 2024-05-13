@@ -34,30 +34,30 @@ template <>
 class MonomialBasis<1, 1>
 {
   public:
-    inline static constexpr std::size_t Dims = 1;
-    inline static constexpr std::size_t Order = 1;
-    inline static constexpr std::size_t Size = 2;
+    inline static constexpr std::size_t kDims = 1;
+    inline static constexpr std::size_t kOrder = 1;
+    inline static constexpr std::size_t kSize = 2;
 
-    [[maybe_unused]] Vector<Size> eval([[maybe_unused]] Vector<1> const& X) const 
+    [[maybe_unused]] Vector<kSize> eval([[maybe_unused]] Vector<kDims> const& X) const 
     {
-        Vector<Size> P;
+        Vector<kSize> P;
         P[0] = 1;
         P[1] = X[0];
         return P;
     }
                
-    [[maybe_unused]] Matrix<Dims, Size> derivatives([[maybe_unused]] Vector<1> const& X) const
+    [[maybe_unused]] Matrix<kDims, kSize> derivatives([[maybe_unused]] Vector<kDims> const& X) const
     {
-        Matrix<Dims, Size> Gm;
+        Matrix<kDims, kSize> Gm;
         Scalar* G = Gm.data();
         G[0] = 0;
         G[1] = 1;
         return Gm;
     }
                
-    [[maybe_unused]] Matrix<Size, Dims> antiderivatives([[maybe_unused]] Vector<1> const& X) const
+    [[maybe_unused]] Matrix<kSize, kDims> antiderivatives([[maybe_unused]] Vector<kDims> const& X) const
     {
-        Matrix<Size, Dims> Pm;
+        Matrix<kSize, kDims> Pm;
         Scalar* P = Pm.data();
         P[0] = X[0];
         P[1] = (1.0/2.0)*X[0]*X[0];
@@ -69,22 +69,22 @@ template <>
 class MonomialBasis<1, 2>
 {
   public:
-    inline static constexpr std::size_t Dims = 1;
-    inline static constexpr std::size_t Order = 2;
-    inline static constexpr std::size_t Size = 3;
+    inline static constexpr std::size_t kDims = 1;
+    inline static constexpr std::size_t kOrder = 2;
+    inline static constexpr std::size_t kSize = 3;
 
-    [[maybe_unused]] Vector<Size> eval([[maybe_unused]] Vector<1> const& X) const 
+    [[maybe_unused]] Vector<kSize> eval([[maybe_unused]] Vector<kDims> const& X) const 
     {
-        Vector<Size> P;
+        Vector<kSize> P;
         P[0] = 1;
         P[1] = X[0];
         P[2] = X[0]*X[0];
         return P;
     }
                
-    [[maybe_unused]] Matrix<Dims, Size> derivatives([[maybe_unused]] Vector<1> const& X) const
+    [[maybe_unused]] Matrix<kDims, kSize> derivatives([[maybe_unused]] Vector<kDims> const& X) const
     {
-        Matrix<Dims, Size> Gm;
+        Matrix<kDims, kSize> Gm;
         Scalar* G = Gm.data();
         G[0] = 0;
         G[1] = 1;
@@ -92,9 +92,9 @@ class MonomialBasis<1, 2>
         return Gm;
     }
                
-    [[maybe_unused]] Matrix<Size, Dims> antiderivatives([[maybe_unused]] Vector<1> const& X) const
+    [[maybe_unused]] Matrix<kSize, kDims> antiderivatives([[maybe_unused]] Vector<kDims> const& X) const
     {
-        Matrix<Size, Dims> Pm;
+        Matrix<kSize, kDims> Pm;
         Scalar* P = Pm.data();
         P[0] = X[0];
         P[1] = (1.0/2.0)*X[0]*X[0];
@@ -107,13 +107,13 @@ template <>
 class MonomialBasis<1, 3>
 {
   public:
-    inline static constexpr std::size_t Dims = 1;
-    inline static constexpr std::size_t Order = 3;
-    inline static constexpr std::size_t Size = 4;
+    inline static constexpr std::size_t kDims = 1;
+    inline static constexpr std::size_t kOrder = 3;
+    inline static constexpr std::size_t kSize = 4;
 
-    [[maybe_unused]] Vector<Size> eval([[maybe_unused]] Vector<1> const& X) const 
+    [[maybe_unused]] Vector<kSize> eval([[maybe_unused]] Vector<kDims> const& X) const 
     {
-        Vector<Size> P;
+        Vector<kSize> P;
         P[0] = 1;
         P[1] = X[0];
         P[2] = X[0]*X[0];
@@ -121,9 +121,9 @@ class MonomialBasis<1, 3>
         return P;
     }
                
-    [[maybe_unused]] Matrix<Dims, Size> derivatives([[maybe_unused]] Vector<1> const& X) const
+    [[maybe_unused]] Matrix<kDims, kSize> derivatives([[maybe_unused]] Vector<kDims> const& X) const
     {
-        Matrix<Dims, Size> Gm;
+        Matrix<kDims, kSize> Gm;
         Scalar* G = Gm.data();
         G[0] = 0;
         G[1] = 1;
@@ -132,9 +132,9 @@ class MonomialBasis<1, 3>
         return Gm;
     }
                
-    [[maybe_unused]] Matrix<Size, Dims> antiderivatives([[maybe_unused]] Vector<1> const& X) const
+    [[maybe_unused]] Matrix<kSize, kDims> antiderivatives([[maybe_unused]] Vector<kDims> const& X) const
     {
-        Matrix<Size, Dims> Pm;
+        Matrix<kSize, kDims> Pm;
         Scalar* P = Pm.data();
         P[0] = X[0];
         P[1] = (1.0/2.0)*X[0]*X[0];
@@ -148,13 +148,13 @@ template <>
 class MonomialBasis<1, 4>
 {
   public:
-    inline static constexpr std::size_t Dims = 1;
-    inline static constexpr std::size_t Order = 4;
-    inline static constexpr std::size_t Size = 5;
+    inline static constexpr std::size_t kDims = 1;
+    inline static constexpr std::size_t kOrder = 4;
+    inline static constexpr std::size_t kSize = 5;
 
-    [[maybe_unused]] Vector<Size> eval([[maybe_unused]] Vector<1> const& X) const 
+    [[maybe_unused]] Vector<kSize> eval([[maybe_unused]] Vector<kDims> const& X) const 
     {
-        Vector<Size> P;
+        Vector<kSize> P;
         P[0] = 1;
         P[1] = X[0];
         P[2] = X[0]*X[0];
@@ -163,9 +163,9 @@ class MonomialBasis<1, 4>
         return P;
     }
                
-    [[maybe_unused]] Matrix<Dims, Size> derivatives([[maybe_unused]] Vector<1> const& X) const
+    [[maybe_unused]] Matrix<kDims, kSize> derivatives([[maybe_unused]] Vector<kDims> const& X) const
     {
-        Matrix<Dims, Size> Gm;
+        Matrix<kDims, kSize> Gm;
         Scalar* G = Gm.data();
         G[0] = 0;
         G[1] = 1;
@@ -175,9 +175,9 @@ class MonomialBasis<1, 4>
         return Gm;
     }
                
-    [[maybe_unused]] Matrix<Size, Dims> antiderivatives([[maybe_unused]] Vector<1> const& X) const
+    [[maybe_unused]] Matrix<kSize, kDims> antiderivatives([[maybe_unused]] Vector<kDims> const& X) const
     {
-        Matrix<Size, Dims> Pm;
+        Matrix<kSize, kDims> Pm;
         Scalar* P = Pm.data();
         P[0] = X[0];
         P[1] = (1.0/2.0)*X[0]*X[0];
@@ -196,22 +196,22 @@ template <>
 class MonomialBasis<2, 1>
 {
   public:
-    inline static constexpr std::size_t Dims = 2;
-    inline static constexpr std::size_t Order = 1;
-    inline static constexpr std::size_t Size = 3;
+    inline static constexpr std::size_t kDims = 2;
+    inline static constexpr std::size_t kOrder = 1;
+    inline static constexpr std::size_t kSize = 3;
 
-    [[maybe_unused]] Vector<Size> eval([[maybe_unused]] Vector<2> const& X) const 
+    [[maybe_unused]] Vector<kSize> eval([[maybe_unused]] Vector<kDims> const& X) const 
     {
-        Vector<Size> P;
+        Vector<kSize> P;
         P[0] = 1;
         P[1] = X[0];
         P[2] = X[1];
         return P;
     }
                
-    [[maybe_unused]] Matrix<Dims, Size> derivatives([[maybe_unused]] Vector<2> const& X) const
+    [[maybe_unused]] Matrix<kDims, kSize> derivatives([[maybe_unused]] Vector<kDims> const& X) const
     {
-        Matrix<Dims, Size> Gm;
+        Matrix<kDims, kSize> Gm;
         Scalar* G = Gm.data();
         G[0] = 0;
         G[1] = 0;
@@ -222,9 +222,9 @@ class MonomialBasis<2, 1>
         return Gm;
     }
                
-    [[maybe_unused]] Matrix<Size, Dims> antiderivatives([[maybe_unused]] Vector<2> const& X) const
+    [[maybe_unused]] Matrix<kSize, kDims> antiderivatives([[maybe_unused]] Vector<kDims> const& X) const
     {
-        Matrix<Size, Dims> Pm;
+        Matrix<kSize, kDims> Pm;
         Scalar* P = Pm.data();
         Scalar const a0 = X[0]*X[1];
         P[0] = X[0];
@@ -241,13 +241,13 @@ template <>
 class MonomialBasis<2, 2>
 {
   public:
-    inline static constexpr std::size_t Dims = 2;
-    inline static constexpr std::size_t Order = 2;
-    inline static constexpr std::size_t Size = 6;
+    inline static constexpr std::size_t kDims = 2;
+    inline static constexpr std::size_t kOrder = 2;
+    inline static constexpr std::size_t kSize = 6;
 
-    [[maybe_unused]] Vector<Size> eval([[maybe_unused]] Vector<2> const& X) const 
+    [[maybe_unused]] Vector<kSize> eval([[maybe_unused]] Vector<kDims> const& X) const 
     {
-        Vector<Size> P;
+        Vector<kSize> P;
         P[0] = 1;
         P[1] = X[0];
         P[2] = X[0]*X[0];
@@ -257,9 +257,9 @@ class MonomialBasis<2, 2>
         return P;
     }
                
-    [[maybe_unused]] Matrix<Dims, Size> derivatives([[maybe_unused]] Vector<2> const& X) const
+    [[maybe_unused]] Matrix<kDims, kSize> derivatives([[maybe_unused]] Vector<kDims> const& X) const
     {
-        Matrix<Dims, Size> Gm;
+        Matrix<kDims, kSize> Gm;
         Scalar* G = Gm.data();
         G[0] = 0;
         G[1] = 0;
@@ -276,9 +276,9 @@ class MonomialBasis<2, 2>
         return Gm;
     }
                
-    [[maybe_unused]] Matrix<Size, Dims> antiderivatives([[maybe_unused]] Vector<2> const& X) const
+    [[maybe_unused]] Matrix<kSize, kDims> antiderivatives([[maybe_unused]] Vector<kDims> const& X) const
     {
-        Matrix<Size, Dims> Pm;
+        Matrix<kSize, kDims> Pm;
         Scalar* P = Pm.data();
         Scalar const a0 = X[0]*X[0];
         Scalar const a1 = (1.0/2.0)*a0;
@@ -305,13 +305,13 @@ template <>
 class MonomialBasis<2, 3>
 {
   public:
-    inline static constexpr std::size_t Dims = 2;
-    inline static constexpr std::size_t Order = 3;
-    inline static constexpr std::size_t Size = 10;
+    inline static constexpr std::size_t kDims = 2;
+    inline static constexpr std::size_t kOrder = 3;
+    inline static constexpr std::size_t kSize = 10;
 
-    [[maybe_unused]] Vector<Size> eval([[maybe_unused]] Vector<2> const& X) const 
+    [[maybe_unused]] Vector<kSize> eval([[maybe_unused]] Vector<kDims> const& X) const 
     {
-        Vector<Size> P;
+        Vector<kSize> P;
         Scalar const a0 = X[0]*X[0];
         Scalar const a1 = X[1]*X[1];
         P[0] = 1;
@@ -327,9 +327,9 @@ class MonomialBasis<2, 3>
         return P;
     }
                
-    [[maybe_unused]] Matrix<Dims, Size> derivatives([[maybe_unused]] Vector<2> const& X) const
+    [[maybe_unused]] Matrix<kDims, kSize> derivatives([[maybe_unused]] Vector<kDims> const& X) const
     {
-        Matrix<Dims, Size> Gm;
+        Matrix<kDims, kSize> Gm;
         Scalar* G = Gm.data();
         Scalar const a0 = 2*X[0];
         Scalar const a1 = X[0]*X[0];
@@ -358,9 +358,9 @@ class MonomialBasis<2, 3>
         return Gm;
     }
                
-    [[maybe_unused]] Matrix<Size, Dims> antiderivatives([[maybe_unused]] Vector<2> const& X) const
+    [[maybe_unused]] Matrix<kSize, kDims> antiderivatives([[maybe_unused]] Vector<kDims> const& X) const
     {
-        Matrix<Size, Dims> Pm;
+        Matrix<kSize, kDims> Pm;
         Scalar* P = Pm.data();
         Scalar const a0 = X[0]*X[0];
         Scalar const a1 = (1.0/2.0)*a0;
@@ -400,13 +400,13 @@ template <>
 class MonomialBasis<2, 4>
 {
   public:
-    inline static constexpr std::size_t Dims = 2;
-    inline static constexpr std::size_t Order = 4;
-    inline static constexpr std::size_t Size = 15;
+    inline static constexpr std::size_t kDims = 2;
+    inline static constexpr std::size_t kOrder = 4;
+    inline static constexpr std::size_t kSize = 15;
 
-    [[maybe_unused]] Vector<Size> eval([[maybe_unused]] Vector<2> const& X) const 
+    [[maybe_unused]] Vector<kSize> eval([[maybe_unused]] Vector<kDims> const& X) const 
     {
-        Vector<Size> P;
+        Vector<kSize> P;
         Scalar const a0 = X[0]*X[0];
         Scalar const a1 = X[0]*X[0]*X[0];
         Scalar const a2 = X[1]*X[1];
@@ -429,9 +429,9 @@ class MonomialBasis<2, 4>
         return P;
     }
                
-    [[maybe_unused]] Matrix<Dims, Size> derivatives([[maybe_unused]] Vector<2> const& X) const
+    [[maybe_unused]] Matrix<kDims, kSize> derivatives([[maybe_unused]] Vector<kDims> const& X) const
     {
-        Matrix<Dims, Size> Gm;
+        Matrix<kDims, kSize> Gm;
         Scalar* G = Gm.data();
         Scalar const a0 = 2*X[0];
         Scalar const a1 = X[0]*X[0];
@@ -475,9 +475,9 @@ class MonomialBasis<2, 4>
         return Gm;
     }
                
-    [[maybe_unused]] Matrix<Size, Dims> antiderivatives([[maybe_unused]] Vector<2> const& X) const
+    [[maybe_unused]] Matrix<kSize, kDims> antiderivatives([[maybe_unused]] Vector<kDims> const& X) const
     {
-        Matrix<Size, Dims> Pm;
+        Matrix<kSize, kDims> Pm;
         Scalar* P = Pm.data();
         Scalar const a0 = X[0]*X[0];
         Scalar const a1 = (1.0/2.0)*a0;
@@ -537,13 +537,13 @@ template <>
 class MonomialBasis<3, 1>
 {
   public:
-    inline static constexpr std::size_t Dims = 3;
-    inline static constexpr std::size_t Order = 1;
-    inline static constexpr std::size_t Size = 4;
+    inline static constexpr std::size_t kDims = 3;
+    inline static constexpr std::size_t kOrder = 1;
+    inline static constexpr std::size_t kSize = 4;
 
-    [[maybe_unused]] Vector<Size> eval([[maybe_unused]] Vector<3> const& X) const 
+    [[maybe_unused]] Vector<kSize> eval([[maybe_unused]] Vector<kDims> const& X) const 
     {
-        Vector<Size> P;
+        Vector<kSize> P;
         P[0] = 1;
         P[1] = X[0];
         P[2] = X[1];
@@ -551,9 +551,9 @@ class MonomialBasis<3, 1>
         return P;
     }
                
-    [[maybe_unused]] Matrix<Dims, Size> derivatives([[maybe_unused]] Vector<3> const& X) const
+    [[maybe_unused]] Matrix<kDims, kSize> derivatives([[maybe_unused]] Vector<kDims> const& X) const
     {
-        Matrix<Dims, Size> Gm;
+        Matrix<kDims, kSize> Gm;
         Scalar* G = Gm.data();
         G[0] = 0;
         G[1] = 0;
@@ -570,9 +570,9 @@ class MonomialBasis<3, 1>
         return Gm;
     }
                
-    [[maybe_unused]] Matrix<Size, Dims> antiderivatives([[maybe_unused]] Vector<3> const& X) const
+    [[maybe_unused]] Matrix<kSize, kDims> antiderivatives([[maybe_unused]] Vector<kDims> const& X) const
     {
-        Matrix<Size, Dims> Pm;
+        Matrix<kSize, kDims> Pm;
         Scalar* P = Pm.data();
         Scalar const a0 = X[0]*X[1];
         Scalar const a1 = X[0]*X[2];
@@ -597,13 +597,13 @@ template <>
 class MonomialBasis<3, 2>
 {
   public:
-    inline static constexpr std::size_t Dims = 3;
-    inline static constexpr std::size_t Order = 2;
-    inline static constexpr std::size_t Size = 10;
+    inline static constexpr std::size_t kDims = 3;
+    inline static constexpr std::size_t kOrder = 2;
+    inline static constexpr std::size_t kSize = 10;
 
-    [[maybe_unused]] Vector<Size> eval([[maybe_unused]] Vector<3> const& X) const 
+    [[maybe_unused]] Vector<kSize> eval([[maybe_unused]] Vector<kDims> const& X) const 
     {
-        Vector<Size> P;
+        Vector<kSize> P;
         P[0] = 1;
         P[1] = X[0];
         P[2] = X[0]*X[0];
@@ -617,9 +617,9 @@ class MonomialBasis<3, 2>
         return P;
     }
                
-    [[maybe_unused]] Matrix<Dims, Size> derivatives([[maybe_unused]] Vector<3> const& X) const
+    [[maybe_unused]] Matrix<kDims, kSize> derivatives([[maybe_unused]] Vector<kDims> const& X) const
     {
-        Matrix<Dims, Size> Gm;
+        Matrix<kDims, kSize> Gm;
         Scalar* G = Gm.data();
         G[0] = 0;
         G[1] = 0;
@@ -654,9 +654,9 @@ class MonomialBasis<3, 2>
         return Gm;
     }
                
-    [[maybe_unused]] Matrix<Size, Dims> antiderivatives([[maybe_unused]] Vector<3> const& X) const
+    [[maybe_unused]] Matrix<kSize, kDims> antiderivatives([[maybe_unused]] Vector<kDims> const& X) const
     {
-        Matrix<Size, Dims> Pm;
+        Matrix<kSize, kDims> Pm;
         Scalar* P = Pm.data();
         Scalar const a0 = X[0]*X[0];
         Scalar const a1 = (1.0/2.0)*a0;
@@ -708,13 +708,13 @@ template <>
 class MonomialBasis<3, 3>
 {
   public:
-    inline static constexpr std::size_t Dims = 3;
-    inline static constexpr std::size_t Order = 3;
-    inline static constexpr std::size_t Size = 20;
+    inline static constexpr std::size_t kDims = 3;
+    inline static constexpr std::size_t kOrder = 3;
+    inline static constexpr std::size_t kSize = 20;
 
-    [[maybe_unused]] Vector<Size> eval([[maybe_unused]] Vector<3> const& X) const 
+    [[maybe_unused]] Vector<kSize> eval([[maybe_unused]] Vector<kDims> const& X) const 
     {
-        Vector<Size> P;
+        Vector<kSize> P;
         Scalar const a0 = X[0]*X[0];
         Scalar const a1 = X[0]*X[1];
         Scalar const a2 = X[1]*X[1];
@@ -742,9 +742,9 @@ class MonomialBasis<3, 3>
         return P;
     }
                
-    [[maybe_unused]] Matrix<Dims, Size> derivatives([[maybe_unused]] Vector<3> const& X) const
+    [[maybe_unused]] Matrix<kDims, kSize> derivatives([[maybe_unused]] Vector<kDims> const& X) const
     {
-        Matrix<Dims, Size> Gm;
+        Matrix<kDims, kSize> Gm;
         Scalar* G = Gm.data();
         Scalar const a0 = 2*X[0];
         Scalar const a1 = X[0]*X[0];
@@ -817,9 +817,9 @@ class MonomialBasis<3, 3>
         return Gm;
     }
                
-    [[maybe_unused]] Matrix<Size, Dims> antiderivatives([[maybe_unused]] Vector<3> const& X) const
+    [[maybe_unused]] Matrix<kSize, kDims> antiderivatives([[maybe_unused]] Vector<kDims> const& X) const
     {
-        Matrix<Size, Dims> Pm;
+        Matrix<kSize, kDims> Pm;
         Scalar* P = Pm.data();
         Scalar const a0 = X[0]*X[0];
         Scalar const a1 = (1.0/2.0)*a0;
@@ -917,13 +917,13 @@ template <>
 class MonomialBasis<3, 4>
 {
   public:
-    inline static constexpr std::size_t Dims = 3;
-    inline static constexpr std::size_t Order = 4;
-    inline static constexpr std::size_t Size = 35;
+    inline static constexpr std::size_t kDims = 3;
+    inline static constexpr std::size_t kOrder = 4;
+    inline static constexpr std::size_t kSize = 35;
 
-    [[maybe_unused]] Vector<Size> eval([[maybe_unused]] Vector<3> const& X) const 
+    [[maybe_unused]] Vector<kSize> eval([[maybe_unused]] Vector<kDims> const& X) const 
     {
-        Vector<Size> P;
+        Vector<kSize> P;
         Scalar const a0 = X[0]*X[0];
         Scalar const a1 = X[0]*X[0]*X[0];
         Scalar const a2 = X[0]*X[1];
@@ -971,9 +971,9 @@ class MonomialBasis<3, 4>
         return P;
     }
                
-    [[maybe_unused]] Matrix<Dims, Size> derivatives([[maybe_unused]] Vector<3> const& X) const
+    [[maybe_unused]] Matrix<kDims, kSize> derivatives([[maybe_unused]] Vector<kDims> const& X) const
     {
-        Matrix<Dims, Size> Gm;
+        Matrix<kDims, kSize> Gm;
         Scalar* G = Gm.data();
         Scalar const a0 = 2*X[0];
         Scalar const a1 = X[0]*X[0];
@@ -1102,9 +1102,9 @@ class MonomialBasis<3, 4>
         return Gm;
     }
                
-    [[maybe_unused]] Matrix<Size, Dims> antiderivatives([[maybe_unused]] Vector<3> const& X) const
+    [[maybe_unused]] Matrix<kSize, kDims> antiderivatives([[maybe_unused]] Vector<kDims> const& X) const
     {
-        Matrix<Size, Dims> Pm;
+        Matrix<kSize, kDims> Pm;
         Scalar* P = Pm.data();
         Scalar const a0 = X[0]*X[0];
         Scalar const a1 = (1.0/2.0)*a0;
@@ -1269,30 +1269,30 @@ template <>
 class OrthonormalPolynomialBasis<1, 1>
 {
   public:
-    inline static constexpr std::size_t Dims = 1;
-    inline static constexpr std::size_t Order = 1;
-    inline static constexpr std::size_t Size = 2;
+    inline static constexpr std::size_t kDims = 1;
+    inline static constexpr std::size_t kOrder = 1;
+    inline static constexpr std::size_t kSize = 2;
 
-    [[maybe_unused]] Vector<Size> eval([[maybe_unused]] Vector<1> const& X) const 
+    [[maybe_unused]] Vector<kSize> eval([[maybe_unused]] Vector<kDims> const& X) const 
     {
-        Vector<Size> P;
+        Vector<kSize> P;
         P[0] = 1;
         P[1] = std::numbers::sqrt3_v<Scalar>*(2*X[0] - 1);
         return P;
     }
                
-    [[maybe_unused]] Matrix<Dims, Size> derivatives([[maybe_unused]] Vector<1> const& X) const
+    [[maybe_unused]] Matrix<kDims, kSize> derivatives([[maybe_unused]] Vector<kDims> const& X) const
     {
-        Matrix<Dims, Size> Gm;
+        Matrix<kDims, kSize> Gm;
         Scalar* G = Gm.data();
         G[0] = 0;
         G[1] = 2*std::numbers::sqrt3_v<Scalar>;
         return Gm;
     }
                
-    [[maybe_unused]] Matrix<Size, Dims> antiderivatives([[maybe_unused]] Vector<1> const& X) const
+    [[maybe_unused]] Matrix<kSize, kDims> antiderivatives([[maybe_unused]] Vector<kDims> const& X) const
     {
-        Matrix<Size, Dims> Pm;
+        Matrix<kSize, kDims> Pm;
         Scalar* P = Pm.data();
         Scalar const a0 = std::numbers::sqrt3_v<Scalar>;
         P[0] = X[0];
@@ -1305,22 +1305,22 @@ template <>
 class OrthonormalPolynomialBasis<1, 2>
 {
   public:
-    inline static constexpr std::size_t Dims = 1;
-    inline static constexpr std::size_t Order = 2;
-    inline static constexpr std::size_t Size = 3;
+    inline static constexpr std::size_t kDims = 1;
+    inline static constexpr std::size_t kOrder = 2;
+    inline static constexpr std::size_t kSize = 3;
 
-    [[maybe_unused]] Vector<Size> eval([[maybe_unused]] Vector<1> const& X) const 
+    [[maybe_unused]] Vector<kSize> eval([[maybe_unused]] Vector<kDims> const& X) const 
     {
-        Vector<Size> P;
+        Vector<kSize> P;
         P[0] = 1;
         P[1] = std::numbers::sqrt3_v<Scalar>*(2*X[0] - 1);
         P[2] = std::sqrt(5)*(6*X[0]*X[0] - 6*X[0] + 1);
         return P;
     }
                
-    [[maybe_unused]] Matrix<Dims, Size> derivatives([[maybe_unused]] Vector<1> const& X) const
+    [[maybe_unused]] Matrix<kDims, kSize> derivatives([[maybe_unused]] Vector<kDims> const& X) const
     {
-        Matrix<Dims, Size> Gm;
+        Matrix<kDims, kSize> Gm;
         Scalar* G = Gm.data();
         G[0] = 0;
         G[1] = 2*std::numbers::sqrt3_v<Scalar>;
@@ -1328,9 +1328,9 @@ class OrthonormalPolynomialBasis<1, 2>
         return Gm;
     }
                
-    [[maybe_unused]] Matrix<Size, Dims> antiderivatives([[maybe_unused]] Vector<1> const& X) const
+    [[maybe_unused]] Matrix<kSize, kDims> antiderivatives([[maybe_unused]] Vector<kDims> const& X) const
     {
-        Matrix<Size, Dims> Pm;
+        Matrix<kSize, kDims> Pm;
         Scalar* P = Pm.data();
         Scalar const a0 = std::numbers::sqrt3_v<Scalar>;
         Scalar const a1 = X[0]*X[0];
@@ -1346,13 +1346,13 @@ template <>
 class OrthonormalPolynomialBasis<1, 3>
 {
   public:
-    inline static constexpr std::size_t Dims = 1;
-    inline static constexpr std::size_t Order = 3;
-    inline static constexpr std::size_t Size = 4;
+    inline static constexpr std::size_t kDims = 1;
+    inline static constexpr std::size_t kOrder = 3;
+    inline static constexpr std::size_t kSize = 4;
 
-    [[maybe_unused]] Vector<Size> eval([[maybe_unused]] Vector<1> const& X) const 
+    [[maybe_unused]] Vector<kSize> eval([[maybe_unused]] Vector<kDims> const& X) const 
     {
-        Vector<Size> P;
+        Vector<kSize> P;
         Scalar const a0 = 2*X[0] - 1;
         Scalar const a1 = X[0]*X[0];
         P[0] = 1;
@@ -1362,9 +1362,9 @@ class OrthonormalPolynomialBasis<1, 3>
         return P;
     }
                
-    [[maybe_unused]] Matrix<Dims, Size> derivatives([[maybe_unused]] Vector<1> const& X) const
+    [[maybe_unused]] Matrix<kDims, kSize> derivatives([[maybe_unused]] Vector<kDims> const& X) const
     {
-        Matrix<Dims, Size> Gm;
+        Matrix<kDims, kSize> Gm;
         Scalar* G = Gm.data();
         Scalar const a0 = std::sqrt(7);
         G[0] = 0;
@@ -1374,9 +1374,9 @@ class OrthonormalPolynomialBasis<1, 3>
         return Gm;
     }
                
-    [[maybe_unused]] Matrix<Size, Dims> antiderivatives([[maybe_unused]] Vector<1> const& X) const
+    [[maybe_unused]] Matrix<kSize, kDims> antiderivatives([[maybe_unused]] Vector<kDims> const& X) const
     {
-        Matrix<Size, Dims> Pm;
+        Matrix<kSize, kDims> Pm;
         Scalar* P = Pm.data();
         Scalar const a0 = std::numbers::sqrt3_v<Scalar>;
         Scalar const a1 = X[0]*X[0];
@@ -1395,13 +1395,13 @@ template <>
 class OrthonormalPolynomialBasis<1, 4>
 {
   public:
-    inline static constexpr std::size_t Dims = 1;
-    inline static constexpr std::size_t Order = 4;
-    inline static constexpr std::size_t Size = 5;
+    inline static constexpr std::size_t kDims = 1;
+    inline static constexpr std::size_t kOrder = 4;
+    inline static constexpr std::size_t kSize = 5;
 
-    [[maybe_unused]] Vector<Size> eval([[maybe_unused]] Vector<1> const& X) const 
+    [[maybe_unused]] Vector<kSize> eval([[maybe_unused]] Vector<kDims> const& X) const 
     {
-        Vector<Size> P;
+        Vector<kSize> P;
         Scalar const a0 = 2*X[0] - 1;
         Scalar const a1 = X[0]*X[0];
         P[0] = 1;
@@ -1412,9 +1412,9 @@ class OrthonormalPolynomialBasis<1, 4>
         return P;
     }
                
-    [[maybe_unused]] Matrix<Dims, Size> derivatives([[maybe_unused]] Vector<1> const& X) const
+    [[maybe_unused]] Matrix<kDims, kSize> derivatives([[maybe_unused]] Vector<kDims> const& X) const
     {
-        Matrix<Dims, Size> Gm;
+        Matrix<kDims, kSize> Gm;
         Scalar* G = Gm.data();
         Scalar const a0 = std::sqrt(7);
         Scalar const a1 = X[0]*X[0];
@@ -1426,9 +1426,9 @@ class OrthonormalPolynomialBasis<1, 4>
         return Gm;
     }
                
-    [[maybe_unused]] Matrix<Size, Dims> antiderivatives([[maybe_unused]] Vector<1> const& X) const
+    [[maybe_unused]] Matrix<kSize, kDims> antiderivatives([[maybe_unused]] Vector<kDims> const& X) const
     {
-        Matrix<Size, Dims> Pm;
+        Matrix<kSize, kDims> Pm;
         Scalar* P = Pm.data();
         Scalar const a0 = std::numbers::sqrt3_v<Scalar>;
         Scalar const a1 = X[0]*X[0];
@@ -1453,22 +1453,22 @@ template <>
 class OrthonormalPolynomialBasis<2, 1>
 {
   public:
-    inline static constexpr std::size_t Dims = 2;
-    inline static constexpr std::size_t Order = 1;
-    inline static constexpr std::size_t Size = 3;
+    inline static constexpr std::size_t kDims = 2;
+    inline static constexpr std::size_t kOrder = 1;
+    inline static constexpr std::size_t kSize = 3;
 
-    [[maybe_unused]] Vector<Size> eval([[maybe_unused]] Vector<2> const& X) const 
+    [[maybe_unused]] Vector<kSize> eval([[maybe_unused]] Vector<kDims> const& X) const 
     {
-        Vector<Size> P;
+        Vector<kSize> P;
         P[0] = std::numbers::sqrt2_v<Scalar>;
         P[1] = 2*(3*X[0] - 1);
         P[2] = 2*std::numbers::sqrt3_v<Scalar>*(X[0] + 2*X[1] - 1);
         return P;
     }
                
-    [[maybe_unused]] Matrix<Dims, Size> derivatives([[maybe_unused]] Vector<2> const& X) const
+    [[maybe_unused]] Matrix<kDims, kSize> derivatives([[maybe_unused]] Vector<kDims> const& X) const
     {
-        Matrix<Dims, Size> Gm;
+        Matrix<kDims, kSize> Gm;
         Scalar* G = Gm.data();
         Scalar const a0 = std::numbers::sqrt3_v<Scalar>;
         G[0] = 0;
@@ -1480,9 +1480,9 @@ class OrthonormalPolynomialBasis<2, 1>
         return Gm;
     }
                
-    [[maybe_unused]] Matrix<Size, Dims> antiderivatives([[maybe_unused]] Vector<2> const& X) const
+    [[maybe_unused]] Matrix<kSize, kDims> antiderivatives([[maybe_unused]] Vector<kDims> const& X) const
     {
-        Matrix<Size, Dims> Pm;
+        Matrix<kSize, kDims> Pm;
         Scalar* P = Pm.data();
         Scalar const a0 = std::numbers::sqrt2_v<Scalar>;
         Scalar const a1 = 2*X[0];
@@ -1504,13 +1504,13 @@ template <>
 class OrthonormalPolynomialBasis<2, 2>
 {
   public:
-    inline static constexpr std::size_t Dims = 2;
-    inline static constexpr std::size_t Order = 2;
-    inline static constexpr std::size_t Size = 6;
+    inline static constexpr std::size_t kDims = 2;
+    inline static constexpr std::size_t kOrder = 2;
+    inline static constexpr std::size_t kSize = 6;
 
-    [[maybe_unused]] Vector<Size> eval([[maybe_unused]] Vector<2> const& X) const 
+    [[maybe_unused]] Vector<kSize> eval([[maybe_unused]] Vector<kDims> const& X) const 
     {
-        Vector<Size> P;
+        Vector<kSize> P;
         Scalar const a0 = std::numbers::sqrt2_v<Scalar>;
         Scalar const a1 = X[0] + 2*X[1] - 1;
         Scalar const a2 = X[0]*X[0];
@@ -1524,9 +1524,9 @@ class OrthonormalPolynomialBasis<2, 2>
         return P;
     }
                
-    [[maybe_unused]] Matrix<Dims, Size> derivatives([[maybe_unused]] Vector<2> const& X) const
+    [[maybe_unused]] Matrix<kDims, kSize> derivatives([[maybe_unused]] Vector<kDims> const& X) const
     {
-        Matrix<Dims, Size> Gm;
+        Matrix<kDims, kSize> Gm;
         Scalar* G = Gm.data();
         Scalar const a0 = std::numbers::sqrt3_v<Scalar>;
         Scalar const a1 = std::numbers::sqrt2_v<Scalar>;
@@ -1547,9 +1547,9 @@ class OrthonormalPolynomialBasis<2, 2>
         return Gm;
     }
                
-    [[maybe_unused]] Matrix<Size, Dims> antiderivatives([[maybe_unused]] Vector<2> const& X) const
+    [[maybe_unused]] Matrix<kSize, kDims> antiderivatives([[maybe_unused]] Vector<kDims> const& X) const
     {
-        Matrix<Size, Dims> Pm;
+        Matrix<kSize, kDims> Pm;
         Scalar* P = Pm.data();
         Scalar const a0 = std::numbers::sqrt2_v<Scalar>;
         Scalar const a1 = a0*X[0];
@@ -1588,13 +1588,13 @@ template <>
 class OrthonormalPolynomialBasis<2, 3>
 {
   public:
-    inline static constexpr std::size_t Dims = 2;
-    inline static constexpr std::size_t Order = 3;
-    inline static constexpr std::size_t Size = 10;
+    inline static constexpr std::size_t kDims = 2;
+    inline static constexpr std::size_t kOrder = 3;
+    inline static constexpr std::size_t kSize = 10;
 
-    [[maybe_unused]] Vector<Size> eval([[maybe_unused]] Vector<2> const& X) const 
+    [[maybe_unused]] Vector<kSize> eval([[maybe_unused]] Vector<kDims> const& X) const 
     {
-        Vector<Size> P;
+        Vector<kSize> P;
         Scalar const a0 = std::numbers::sqrt2_v<Scalar>;
         Scalar const a1 = X[0] + 2*X[1] - 1;
         Scalar const a2 = 2*a1;
@@ -1618,9 +1618,9 @@ class OrthonormalPolynomialBasis<2, 3>
         return P;
     }
                
-    [[maybe_unused]] Matrix<Dims, Size> derivatives([[maybe_unused]] Vector<2> const& X) const
+    [[maybe_unused]] Matrix<kDims, kSize> derivatives([[maybe_unused]] Vector<kDims> const& X) const
     {
-        Matrix<Dims, Size> Gm;
+        Matrix<kDims, kSize> Gm;
         Scalar* G = Gm.data();
         Scalar const a0 = std::numbers::sqrt3_v<Scalar>;
         Scalar const a1 = std::sqrt(6);
@@ -1667,9 +1667,9 @@ class OrthonormalPolynomialBasis<2, 3>
         return Gm;
     }
                
-    [[maybe_unused]] Matrix<Size, Dims> antiderivatives([[maybe_unused]] Vector<2> const& X) const
+    [[maybe_unused]] Matrix<kSize, kDims> antiderivatives([[maybe_unused]] Vector<kDims> const& X) const
     {
-        Matrix<Size, Dims> Pm;
+        Matrix<kSize, kDims> Pm;
         Scalar* P = Pm.data();
         Scalar const a0 = std::numbers::sqrt2_v<Scalar>;
         Scalar const a1 = a0*X[0];
@@ -1742,13 +1742,13 @@ template <>
 class OrthonormalPolynomialBasis<2, 4>
 {
   public:
-    inline static constexpr std::size_t Dims = 2;
-    inline static constexpr std::size_t Order = 4;
-    inline static constexpr std::size_t Size = 15;
+    inline static constexpr std::size_t kDims = 2;
+    inline static constexpr std::size_t kOrder = 4;
+    inline static constexpr std::size_t kSize = 15;
 
-    [[maybe_unused]] Vector<Size> eval([[maybe_unused]] Vector<2> const& X) const 
+    [[maybe_unused]] Vector<kSize> eval([[maybe_unused]] Vector<kDims> const& X) const 
     {
-        Vector<Size> P;
+        Vector<kSize> P;
         Scalar const a0 = std::numbers::sqrt2_v<Scalar>;
         Scalar const a1 = X[0] + 2*X[1] - 1;
         Scalar const a2 = 2*a1;
@@ -1786,9 +1786,9 @@ class OrthonormalPolynomialBasis<2, 4>
         return P;
     }
                
-    [[maybe_unused]] Matrix<Dims, Size> derivatives([[maybe_unused]] Vector<2> const& X) const
+    [[maybe_unused]] Matrix<kDims, kSize> derivatives([[maybe_unused]] Vector<kDims> const& X) const
     {
-        Matrix<Dims, Size> Gm;
+        Matrix<kDims, kSize> Gm;
         Scalar* G = Gm.data();
         Scalar const a0 = std::numbers::sqrt3_v<Scalar>;
         Scalar const a1 = std::sqrt(6);
@@ -1866,9 +1866,9 @@ class OrthonormalPolynomialBasis<2, 4>
         return Gm;
     }
                
-    [[maybe_unused]] Matrix<Size, Dims> antiderivatives([[maybe_unused]] Vector<2> const& X) const
+    [[maybe_unused]] Matrix<kSize, kDims> antiderivatives([[maybe_unused]] Vector<kDims> const& X) const
     {
-        Matrix<Size, Dims> Pm;
+        Matrix<kSize, kDims> Pm;
         Scalar* P = Pm.data();
         Scalar const a0 = std::numbers::sqrt2_v<Scalar>;
         Scalar const a1 = a0*X[0];
@@ -1990,13 +1990,13 @@ template <>
 class OrthonormalPolynomialBasis<3, 1>
 {
   public:
-    inline static constexpr std::size_t Dims = 3;
-    inline static constexpr std::size_t Order = 1;
-    inline static constexpr std::size_t Size = 4;
+    inline static constexpr std::size_t kDims = 3;
+    inline static constexpr std::size_t kOrder = 1;
+    inline static constexpr std::size_t kSize = 4;
 
-    [[maybe_unused]] Vector<Size> eval([[maybe_unused]] Vector<3> const& X) const 
+    [[maybe_unused]] Vector<kSize> eval([[maybe_unused]] Vector<kDims> const& X) const 
     {
-        Vector<Size> P;
+        Vector<kSize> P;
         Scalar const a0 = X[0] - 1;
         P[0] = std::sqrt(6);
         P[1] = std::sqrt(10)*(4*X[0] - 1);
@@ -2005,9 +2005,9 @@ class OrthonormalPolynomialBasis<3, 1>
         return P;
     }
                
-    [[maybe_unused]] Matrix<Dims, Size> derivatives([[maybe_unused]] Vector<3> const& X) const
+    [[maybe_unused]] Matrix<kDims, kSize> derivatives([[maybe_unused]] Vector<kDims> const& X) const
     {
-        Matrix<Dims, Size> Gm;
+        Matrix<kDims, kSize> Gm;
         Scalar* G = Gm.data();
         Scalar const a0 = std::sqrt(5);
         Scalar const a1 = std::sqrt(15);
@@ -2027,9 +2027,9 @@ class OrthonormalPolynomialBasis<3, 1>
         return Gm;
     }
                
-    [[maybe_unused]] Matrix<Size, Dims> antiderivatives([[maybe_unused]] Vector<3> const& X) const
+    [[maybe_unused]] Matrix<kSize, kDims> antiderivatives([[maybe_unused]] Vector<kDims> const& X) const
     {
-        Matrix<Size, Dims> Pm;
+        Matrix<kSize, kDims> Pm;
         Scalar* P = Pm.data();
         Scalar const a0 = std::sqrt(6);
         Scalar const a1 = std::sqrt(10);
@@ -2065,13 +2065,13 @@ template <>
 class OrthonormalPolynomialBasis<3, 2>
 {
   public:
-    inline static constexpr std::size_t Dims = 3;
-    inline static constexpr std::size_t Order = 2;
-    inline static constexpr std::size_t Size = 10;
+    inline static constexpr std::size_t kDims = 3;
+    inline static constexpr std::size_t kOrder = 2;
+    inline static constexpr std::size_t kSize = 10;
 
-    [[maybe_unused]] Vector<Size> eval([[maybe_unused]] Vector<3> const& X) const 
+    [[maybe_unused]] Vector<kSize> eval([[maybe_unused]] Vector<kDims> const& X) const 
     {
-        Vector<Size> P;
+        Vector<kSize> P;
         Scalar const a0 = X[0] - 1;
         Scalar const a1 = 2*a0 + 6*X[1];
         Scalar const a2 = a0 + X[1] + 2*X[2];
@@ -2098,9 +2098,9 @@ class OrthonormalPolynomialBasis<3, 2>
         return P;
     }
                
-    [[maybe_unused]] Matrix<Dims, Size> derivatives([[maybe_unused]] Vector<3> const& X) const
+    [[maybe_unused]] Matrix<kDims, kSize> derivatives([[maybe_unused]] Vector<kDims> const& X) const
     {
-        Matrix<Dims, Size> Gm;
+        Matrix<kDims, kSize> Gm;
         Scalar* G = Gm.data();
         Scalar const a0 = std::sqrt(5);
         Scalar const a1 = std::sqrt(15);
@@ -2155,9 +2155,9 @@ class OrthonormalPolynomialBasis<3, 2>
         return Gm;
     }
                
-    [[maybe_unused]] Matrix<Size, Dims> antiderivatives([[maybe_unused]] Vector<3> const& X) const
+    [[maybe_unused]] Matrix<kSize, kDims> antiderivatives([[maybe_unused]] Vector<kDims> const& X) const
     {
-        Matrix<Size, Dims> Pm;
+        Matrix<kSize, kDims> Pm;
         Scalar* P = Pm.data();
         Scalar const a0 = std::sqrt(6);
         Scalar const a1 = std::sqrt(10);
@@ -2260,13 +2260,13 @@ template <>
 class OrthonormalPolynomialBasis<3, 3>
 {
   public:
-    inline static constexpr std::size_t Dims = 3;
-    inline static constexpr std::size_t Order = 3;
-    inline static constexpr std::size_t Size = 20;
+    inline static constexpr std::size_t kDims = 3;
+    inline static constexpr std::size_t kOrder = 3;
+    inline static constexpr std::size_t kSize = 20;
 
-    [[maybe_unused]] Vector<Size> eval([[maybe_unused]] Vector<3> const& X) const 
+    [[maybe_unused]] Vector<kSize> eval([[maybe_unused]] Vector<kDims> const& X) const 
     {
-        Vector<Size> P;
+        Vector<kSize> P;
         Scalar const a0 = std::sqrt(6);
         Scalar const a1 = std::sqrt(10);
         Scalar const a2 = X[0] - 1;
@@ -2322,9 +2322,9 @@ class OrthonormalPolynomialBasis<3, 3>
         return P;
     }
                
-    [[maybe_unused]] Matrix<Dims, Size> derivatives([[maybe_unused]] Vector<3> const& X) const
+    [[maybe_unused]] Matrix<kDims, kSize> derivatives([[maybe_unused]] Vector<kDims> const& X) const
     {
-        Matrix<Dims, Size> Gm;
+        Matrix<kDims, kSize> Gm;
         Scalar* G = Gm.data();
         Scalar const a0 = std::sqrt(10);
         Scalar const a1 = std::sqrt(5);
@@ -2460,9 +2460,9 @@ class OrthonormalPolynomialBasis<3, 3>
         return Gm;
     }
                
-    [[maybe_unused]] Matrix<Size, Dims> antiderivatives([[maybe_unused]] Vector<3> const& X) const
+    [[maybe_unused]] Matrix<kSize, kDims> antiderivatives([[maybe_unused]] Vector<kDims> const& X) const
     {
-        Matrix<Size, Dims> Pm;
+        Matrix<kSize, kDims> Pm;
         Scalar* P = Pm.data();
         Scalar const a0 = std::sqrt(6);
         Scalar const a1 = a0*X[0];
@@ -2724,13 +2724,13 @@ template <>
 class OrthonormalPolynomialBasis<3, 4>
 {
   public:
-    inline static constexpr std::size_t Dims = 3;
-    inline static constexpr std::size_t Order = 4;
-    inline static constexpr std::size_t Size = 35;
+    inline static constexpr std::size_t kDims = 3;
+    inline static constexpr std::size_t kOrder = 4;
+    inline static constexpr std::size_t kSize = 35;
 
-    [[maybe_unused]] Vector<Size> eval([[maybe_unused]] Vector<3> const& X) const 
+    [[maybe_unused]] Vector<kSize> eval([[maybe_unused]] Vector<kDims> const& X) const 
     {
-        Vector<Size> P;
+        Vector<kSize> P;
         Scalar const a0 = std::sqrt(6);
         Scalar const a1 = std::sqrt(10);
         Scalar const a2 = 4*X[0];
@@ -2839,9 +2839,9 @@ class OrthonormalPolynomialBasis<3, 4>
         return P;
     }
                
-    [[maybe_unused]] Matrix<Dims, Size> derivatives([[maybe_unused]] Vector<3> const& X) const
+    [[maybe_unused]] Matrix<kDims, kSize> derivatives([[maybe_unused]] Vector<kDims> const& X) const
     {
-        Matrix<Dims, Size> Gm;
+        Matrix<kDims, kSize> Gm;
         Scalar* G = Gm.data();
         Scalar const a0 = std::sqrt(10);
         Scalar const a1 = std::sqrt(5);
@@ -3126,9 +3126,9 @@ class OrthonormalPolynomialBasis<3, 4>
         return Gm;
     }
                
-    [[maybe_unused]] Matrix<Size, Dims> antiderivatives([[maybe_unused]] Vector<3> const& X) const
+    [[maybe_unused]] Matrix<kSize, kDims> antiderivatives([[maybe_unused]] Vector<kDims> const& X) const
     {
-        Matrix<Size, Dims> Pm;
+        Matrix<kSize, kDims> Pm;
         Scalar* P = Pm.data();
         Scalar const a0 = std::sqrt(6);
         Scalar const a1 = a0*X[0];
@@ -3738,13 +3738,13 @@ template <>
 class DivergenceFreePolynomialBasis<1, 1>
 {
   public:
-    inline static constexpr std::size_t Dims = 1;
-    inline static constexpr std::size_t Order = 1;
-    inline static constexpr std::size_t Size = 1;
+    inline static constexpr std::size_t kDims = 1;
+    inline static constexpr std::size_t kOrder = 1;
+    inline static constexpr std::size_t kSize = 1;
 
-    [[maybe_unused]] Matrix<Size, Dims> eval([[maybe_unused]] Vector<1> const& X) const 
+    [[maybe_unused]] Matrix<kSize, kDims> eval([[maybe_unused]] Vector<kDims> const& X) const 
     {
-        Matrix<Size, Dims> Pm;
+        Matrix<kSize, kDims> Pm;
         Scalar* P = Pm.data();
         P[0] = 1;
         return Pm;
@@ -3755,13 +3755,13 @@ template <>
 class DivergenceFreePolynomialBasis<1, 2>
 {
   public:
-    inline static constexpr std::size_t Dims = 1;
-    inline static constexpr std::size_t Order = 2;
-    inline static constexpr std::size_t Size = 1;
+    inline static constexpr std::size_t kDims = 1;
+    inline static constexpr std::size_t kOrder = 2;
+    inline static constexpr std::size_t kSize = 1;
 
-    [[maybe_unused]] Matrix<Size, Dims> eval([[maybe_unused]] Vector<1> const& X) const 
+    [[maybe_unused]] Matrix<kSize, kDims> eval([[maybe_unused]] Vector<kDims> const& X) const 
     {
-        Matrix<Size, Dims> Pm;
+        Matrix<kSize, kDims> Pm;
         Scalar* P = Pm.data();
         P[0] = 1;
         return Pm;
@@ -3772,13 +3772,13 @@ template <>
 class DivergenceFreePolynomialBasis<1, 3>
 {
   public:
-    inline static constexpr std::size_t Dims = 1;
-    inline static constexpr std::size_t Order = 3;
-    inline static constexpr std::size_t Size = 1;
+    inline static constexpr std::size_t kDims = 1;
+    inline static constexpr std::size_t kOrder = 3;
+    inline static constexpr std::size_t kSize = 1;
 
-    [[maybe_unused]] Matrix<Size, Dims> eval([[maybe_unused]] Vector<1> const& X) const 
+    [[maybe_unused]] Matrix<kSize, kDims> eval([[maybe_unused]] Vector<kDims> const& X) const 
     {
-        Matrix<Size, Dims> Pm;
+        Matrix<kSize, kDims> Pm;
         Scalar* P = Pm.data();
         P[0] = 1;
         return Pm;
@@ -3789,13 +3789,13 @@ template <>
 class DivergenceFreePolynomialBasis<1, 4>
 {
   public:
-    inline static constexpr std::size_t Dims = 1;
-    inline static constexpr std::size_t Order = 4;
-    inline static constexpr std::size_t Size = 1;
+    inline static constexpr std::size_t kDims = 1;
+    inline static constexpr std::size_t kOrder = 4;
+    inline static constexpr std::size_t kSize = 1;
 
-    [[maybe_unused]] Matrix<Size, Dims> eval([[maybe_unused]] Vector<1> const& X) const 
+    [[maybe_unused]] Matrix<kSize, kDims> eval([[maybe_unused]] Vector<kDims> const& X) const 
     {
-        Matrix<Size, Dims> Pm;
+        Matrix<kSize, kDims> Pm;
         Scalar* P = Pm.data();
         P[0] = 1;
         return Pm;
@@ -3810,13 +3810,13 @@ template <>
 class DivergenceFreePolynomialBasis<2, 1>
 {
   public:
-    inline static constexpr std::size_t Dims = 2;
-    inline static constexpr std::size_t Order = 1;
-    inline static constexpr std::size_t Size = 5;
+    inline static constexpr std::size_t kDims = 2;
+    inline static constexpr std::size_t kOrder = 1;
+    inline static constexpr std::size_t kSize = 5;
 
-    [[maybe_unused]] Matrix<Size, Dims> eval([[maybe_unused]] Vector<2> const& X) const 
+    [[maybe_unused]] Matrix<kSize, kDims> eval([[maybe_unused]] Vector<kDims> const& X) const 
     {
-        Matrix<Size, Dims> Pm;
+        Matrix<kSize, kDims> Pm;
         Scalar* P = Pm.data();
         Scalar const a0 = std::numbers::sqrt2_v<Scalar>;
         Scalar const a1 = std::numbers::sqrt3_v<Scalar>;
@@ -3838,13 +3838,13 @@ template <>
 class DivergenceFreePolynomialBasis<2, 2>
 {
   public:
-    inline static constexpr std::size_t Dims = 2;
-    inline static constexpr std::size_t Order = 2;
-    inline static constexpr std::size_t Size = 9;
+    inline static constexpr std::size_t kDims = 2;
+    inline static constexpr std::size_t kOrder = 2;
+    inline static constexpr std::size_t kSize = 9;
 
-    [[maybe_unused]] Matrix<Size, Dims> eval([[maybe_unused]] Vector<2> const& X) const 
+    [[maybe_unused]] Matrix<kSize, kDims> eval([[maybe_unused]] Vector<kDims> const& X) const 
     {
-        Matrix<Size, Dims> Pm;
+        Matrix<kSize, kDims> Pm;
         Scalar* P = Pm.data();
         Scalar const a0 = std::numbers::sqrt2_v<Scalar>;
         Scalar const a1 = 6*X[0];
@@ -3880,13 +3880,13 @@ template <>
 class DivergenceFreePolynomialBasis<2, 3>
 {
   public:
-    inline static constexpr std::size_t Dims = 2;
-    inline static constexpr std::size_t Order = 3;
-    inline static constexpr std::size_t Size = 14;
+    inline static constexpr std::size_t kDims = 2;
+    inline static constexpr std::size_t kOrder = 3;
+    inline static constexpr std::size_t kSize = 14;
 
-    [[maybe_unused]] Matrix<Size, Dims> eval([[maybe_unused]] Vector<2> const& X) const 
+    [[maybe_unused]] Matrix<kSize, kDims> eval([[maybe_unused]] Vector<kDims> const& X) const 
     {
-        Matrix<Size, Dims> Pm;
+        Matrix<kSize, kDims> Pm;
         Scalar* P = Pm.data();
         Scalar const a0 = std::numbers::sqrt2_v<Scalar>;
         Scalar const a1 = 6*X[0];
@@ -3945,13 +3945,13 @@ template <>
 class DivergenceFreePolynomialBasis<2, 4>
 {
   public:
-    inline static constexpr std::size_t Dims = 2;
-    inline static constexpr std::size_t Order = 4;
-    inline static constexpr std::size_t Size = 20;
+    inline static constexpr std::size_t kDims = 2;
+    inline static constexpr std::size_t kOrder = 4;
+    inline static constexpr std::size_t kSize = 20;
 
-    [[maybe_unused]] Matrix<Size, Dims> eval([[maybe_unused]] Vector<2> const& X) const 
+    [[maybe_unused]] Matrix<kSize, kDims> eval([[maybe_unused]] Vector<kDims> const& X) const 
     {
-        Matrix<Size, Dims> Pm;
+        Matrix<kSize, kDims> Pm;
         Scalar* P = Pm.data();
         Scalar const a0 = std::numbers::sqrt2_v<Scalar>;
         Scalar const a1 = 6*X[0];
@@ -4047,13 +4047,13 @@ template <>
 class DivergenceFreePolynomialBasis<3, 1>
 {
   public:
-    inline static constexpr std::size_t Dims = 3;
-    inline static constexpr std::size_t Order = 1;
-    inline static constexpr std::size_t Size = 11;
+    inline static constexpr std::size_t kDims = 3;
+    inline static constexpr std::size_t kOrder = 1;
+    inline static constexpr std::size_t kSize = 11;
 
-    [[maybe_unused]] Matrix<Size, Dims> eval([[maybe_unused]] Vector<3> const& X) const 
+    [[maybe_unused]] Matrix<kSize, kDims> eval([[maybe_unused]] Vector<kDims> const& X) const 
     {
-        Matrix<Size, Dims> Pm;
+        Matrix<kSize, kDims> Pm;
         Scalar* P = Pm.data();
         Scalar const a0 = std::sqrt(6);
         Scalar const a1 = 4*X[0] - 1;
@@ -4105,13 +4105,13 @@ template <>
 class DivergenceFreePolynomialBasis<3, 2>
 {
   public:
-    inline static constexpr std::size_t Dims = 3;
-    inline static constexpr std::size_t Order = 2;
-    inline static constexpr std::size_t Size = 26;
+    inline static constexpr std::size_t kDims = 3;
+    inline static constexpr std::size_t kOrder = 2;
+    inline static constexpr std::size_t kSize = 26;
 
-    [[maybe_unused]] Matrix<Size, Dims> eval([[maybe_unused]] Vector<3> const& X) const 
+    [[maybe_unused]] Matrix<kSize, kDims> eval([[maybe_unused]] Vector<kDims> const& X) const 
     {
-        Matrix<Size, Dims> Pm;
+        Matrix<kSize, kDims> Pm;
         Scalar* P = Pm.data();
         Scalar const a0 = std::sqrt(6);
         Scalar const a1 = 4*X[0] - 1;
@@ -4240,13 +4240,13 @@ template <>
 class DivergenceFreePolynomialBasis<3, 3>
 {
   public:
-    inline static constexpr std::size_t Dims = 3;
-    inline static constexpr std::size_t Order = 3;
-    inline static constexpr std::size_t Size = 50;
+    inline static constexpr std::size_t kDims = 3;
+    inline static constexpr std::size_t kOrder = 3;
+    inline static constexpr std::size_t kSize = 50;
 
-    [[maybe_unused]] Matrix<Size, Dims> eval([[maybe_unused]] Vector<3> const& X) const 
+    [[maybe_unused]] Matrix<kSize, kDims> eval([[maybe_unused]] Vector<kDims> const& X) const 
     {
-        Matrix<Size, Dims> Pm;
+        Matrix<kSize, kDims> Pm;
         Scalar* P = Pm.data();
         Scalar const a0 = std::sqrt(6);
         Scalar const a1 = std::sqrt(10);
@@ -4509,13 +4509,13 @@ template <>
 class DivergenceFreePolynomialBasis<3, 4>
 {
   public:
-    inline static constexpr std::size_t Dims = 3;
-    inline static constexpr std::size_t Order = 4;
-    inline static constexpr std::size_t Size = 85;
+    inline static constexpr std::size_t kDims = 3;
+    inline static constexpr std::size_t kOrder = 4;
+    inline static constexpr std::size_t kSize = 85;
 
-    [[maybe_unused]] Matrix<Size, Dims> eval([[maybe_unused]] Vector<3> const& X) const 
+    [[maybe_unused]] Matrix<kSize, kDims> eval([[maybe_unused]] Vector<kDims> const& X) const 
     {
-        Matrix<Size, Dims> Pm;
+        Matrix<kSize, kDims> Pm;
         Scalar* P = Pm.data();
         Scalar const a0 = std::sqrt(6);
         Scalar const a1 = std::sqrt(10);

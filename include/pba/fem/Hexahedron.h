@@ -15,18 +15,18 @@ struct Hexahedron;
 template <>
 struct Hexahedron<1>
 {
-    using AffineBase = Hexahedron<1>;
+    using AffineBaseType = Hexahedron<1>;
     
-    static int constexpr Order = 1;
-    static int constexpr Dims  = 3;
-    static int constexpr Nodes = 8;
-    static std::array<int, Nodes * Dims> constexpr Coordinates =
-        {0,0,0,1,0,0,0,1,0,1,1,0,0,0,1,1,0,1,0,1,1,1,1,1}; ///< Divide coordinates by Order to obtain actual coordinates in the reference element
+    static int constexpr kOrder = 1;
+    static int constexpr kDims  = 3;
+    static int constexpr kNodes = 8;
+    static std::array<int, kNodes * kDims> constexpr kCoordinates =
+        {0,0,0,1,0,0,0,1,0,1,1,0,0,0,1,1,0,1,0,1,1,1,1,1}; ///< Divide coordinates by kOrder to obtain actual coordinates in the reference element
       
     template <class Derived, class TScalar = typename Derived::Scalar>
-    [[maybe_unused]] static Eigen::Vector<TScalar, Nodes> N([[maybe_unused]] Eigen::DenseBase<Derived> const& X)
+    [[maybe_unused]] static Eigen::Vector<TScalar, kNodes> N([[maybe_unused]] Eigen::DenseBase<Derived> const& X)
     {
-        Eigen::Vector<TScalar, Nodes> Nm;
+        Eigen::Vector<TScalar, kNodes> Nm;
         auto const a0 = X[0] - 1;
         auto const a1 = X[1] - 1;
         auto const a2 = X[2] - 1;
@@ -45,9 +45,9 @@ struct Hexahedron<1>
         return Nm;
     }
     
-    [[maybe_unused]] static Matrix<Nodes, Dims> GradN([[maybe_unused]] Vector<Dims> const& X)
+    [[maybe_unused]] static Matrix<kNodes, kDims> GradN([[maybe_unused]] Vector<kDims> const& X)
     {
-        Matrix<Nodes, Dims> GNm;
+        Matrix<kNodes, kDims> GNm;
         Scalar* GNp = GNm.data();
         Scalar const a0 = X[2] - 1;
         Scalar const a1 = X[1] - 1;
@@ -86,14 +86,14 @@ struct Hexahedron<1>
     }
     
     template <class Derived>
-    [[maybe_unused]] static Matrix<Derived::RowsAtCompileTime, Dims> Jacobian(
-        [[maybe_unused]] Vector<Dims> const& X, 
+    [[maybe_unused]] static Matrix<Derived::RowsAtCompileTime, kDims> Jacobian(
+        [[maybe_unused]] Vector<kDims> const& X, 
         [[maybe_unused]] Eigen::DenseBase<Derived> const& x)
     {
         static_assert(Derived::RowsAtCompileTime != Eigen::Dynamic);
-        assert(x.cols() == Nodes);
-        auto constexpr DimsOut = Derived::RowsAtCompileTime;
-        Matrix<DimsOut, Dims> const J = x * GradN(X);
+        assert(x.cols() == kNodes);
+        auto constexpr kDimsOut = Derived::RowsAtCompileTime;
+        Matrix<kDimsOut, kDims> const J = x * GradN(X);
         return J;
     }
 };    
@@ -101,18 +101,18 @@ struct Hexahedron<1>
 template <>
 struct Hexahedron<2>
 {
-    using AffineBase = Hexahedron<1>;
+    using AffineBaseType = Hexahedron<1>;
     
-    static int constexpr Order = 2;
-    static int constexpr Dims  = 3;
-    static int constexpr Nodes = 27;
-    static std::array<int, Nodes * Dims> constexpr Coordinates =
-        {0,0,0,1,0,0,2,0,0,0,1,0,1,1,0,2,1,0,0,2,0,1,2,0,2,2,0,0,0,1,1,0,1,2,0,1,0,1,1,1,1,1,2,1,1,0,2,1,1,2,1,2,2,1,0,0,2,1,0,2,2,0,2,0,1,2,1,1,2,2,1,2,0,2,2,1,2,2,2,2,2}; ///< Divide coordinates by Order to obtain actual coordinates in the reference element
+    static int constexpr kOrder = 2;
+    static int constexpr kDims  = 3;
+    static int constexpr kNodes = 27;
+    static std::array<int, kNodes * kDims> constexpr kCoordinates =
+        {0,0,0,1,0,0,2,0,0,0,1,0,1,1,0,2,1,0,0,2,0,1,2,0,2,2,0,0,0,1,1,0,1,2,0,1,0,1,1,1,1,1,2,1,1,0,2,1,1,2,1,2,2,1,0,0,2,1,0,2,2,0,2,0,1,2,1,1,2,2,1,2,0,2,2,1,2,2,2,2,2}; ///< Divide coordinates by kOrder to obtain actual coordinates in the reference element
       
     template <class Derived, class TScalar = typename Derived::Scalar>
-    [[maybe_unused]] static Eigen::Vector<TScalar, Nodes> N([[maybe_unused]] Eigen::DenseBase<Derived> const& X)
+    [[maybe_unused]] static Eigen::Vector<TScalar, kNodes> N([[maybe_unused]] Eigen::DenseBase<Derived> const& X)
     {
-        Eigen::Vector<TScalar, Nodes> Nm;
+        Eigen::Vector<TScalar, kNodes> Nm;
         auto const a0 = 2*X[0] - 1;
         auto const a1 = 2*X[1] - 1;
         auto const a2 = 2*X[2] - 1;
@@ -173,9 +173,9 @@ struct Hexahedron<2>
         return Nm;
     }
     
-    [[maybe_unused]] static Matrix<Nodes, Dims> GradN([[maybe_unused]] Vector<Dims> const& X)
+    [[maybe_unused]] static Matrix<kNodes, kDims> GradN([[maybe_unused]] Vector<kDims> const& X)
     {
-        Matrix<Nodes, Dims> GNm;
+        Matrix<kNodes, kDims> GNm;
         Scalar* GNp = GNm.data();
         Scalar const a0 = 4*X[1] - 2;
         Scalar const a1 = X[0] - 1;
@@ -378,14 +378,14 @@ struct Hexahedron<2>
     }
     
     template <class Derived>
-    [[maybe_unused]] static Matrix<Derived::RowsAtCompileTime, Dims> Jacobian(
-        [[maybe_unused]] Vector<Dims> const& X, 
+    [[maybe_unused]] static Matrix<Derived::RowsAtCompileTime, kDims> Jacobian(
+        [[maybe_unused]] Vector<kDims> const& X, 
         [[maybe_unused]] Eigen::DenseBase<Derived> const& x)
     {
         static_assert(Derived::RowsAtCompileTime != Eigen::Dynamic);
-        assert(x.cols() == Nodes);
-        auto constexpr DimsOut = Derived::RowsAtCompileTime;
-        Matrix<DimsOut, Dims> const J = x * GradN(X);
+        assert(x.cols() == kNodes);
+        auto constexpr kDimsOut = Derived::RowsAtCompileTime;
+        Matrix<kDimsOut, kDims> const J = x * GradN(X);
         return J;
     }
 };    
@@ -393,18 +393,18 @@ struct Hexahedron<2>
 template <>
 struct Hexahedron<3>
 {
-    using AffineBase = Hexahedron<1>;
+    using AffineBaseType = Hexahedron<1>;
     
-    static int constexpr Order = 3;
-    static int constexpr Dims  = 3;
-    static int constexpr Nodes = 64;
-    static std::array<int, Nodes * Dims> constexpr Coordinates =
-        {0,0,0,1,0,0,2,0,0,3,0,0,0,1,0,1,1,0,2,1,0,3,1,0,0,2,0,1,2,0,2,2,0,3,2,0,0,3,0,1,3,0,2,3,0,3,3,0,0,0,1,1,0,1,2,0,1,3,0,1,0,1,1,1,1,1,2,1,1,3,1,1,0,2,1,1,2,1,2,2,1,3,2,1,0,3,1,1,3,1,2,3,1,3,3,1,0,0,2,1,0,2,2,0,2,3,0,2,0,1,2,1,1,2,2,1,2,3,1,2,0,2,2,1,2,2,2,2,2,3,2,2,0,3,2,1,3,2,2,3,2,3,3,2,0,0,3,1,0,3,2,0,3,3,0,3,0,1,3,1,1,3,2,1,3,3,1,3,0,2,3,1,2,3,2,2,3,3,2,3,0,3,3,1,3,3,2,3,3,3,3,3}; ///< Divide coordinates by Order to obtain actual coordinates in the reference element
+    static int constexpr kOrder = 3;
+    static int constexpr kDims  = 3;
+    static int constexpr kNodes = 64;
+    static std::array<int, kNodes * kDims> constexpr kCoordinates =
+        {0,0,0,1,0,0,2,0,0,3,0,0,0,1,0,1,1,0,2,1,0,3,1,0,0,2,0,1,2,0,2,2,0,3,2,0,0,3,0,1,3,0,2,3,0,3,3,0,0,0,1,1,0,1,2,0,1,3,0,1,0,1,1,1,1,1,2,1,1,3,1,1,0,2,1,1,2,1,2,2,1,3,2,1,0,3,1,1,3,1,2,3,1,3,3,1,0,0,2,1,0,2,2,0,2,3,0,2,0,1,2,1,1,2,2,1,2,3,1,2,0,2,2,1,2,2,2,2,2,3,2,2,0,3,2,1,3,2,2,3,2,3,3,2,0,0,3,1,0,3,2,0,3,3,0,3,0,1,3,1,1,3,2,1,3,3,1,3,0,2,3,1,2,3,2,2,3,3,2,3,0,3,3,1,3,3,2,3,3,3,3,3}; ///< Divide coordinates by kOrder to obtain actual coordinates in the reference element
       
     template <class Derived, class TScalar = typename Derived::Scalar>
-    [[maybe_unused]] static Eigen::Vector<TScalar, Nodes> N([[maybe_unused]] Eigen::DenseBase<Derived> const& X)
+    [[maybe_unused]] static Eigen::Vector<TScalar, kNodes> N([[maybe_unused]] Eigen::DenseBase<Derived> const& X)
     {
-        Eigen::Vector<TScalar, Nodes> Nm;
+        Eigen::Vector<TScalar, kNodes> Nm;
         auto const a0 = X[0] - 1;
         auto const a1 = X[1] - 1;
         auto const a2 = X[2] - 1;
@@ -556,9 +556,9 @@ struct Hexahedron<3>
         return Nm;
     }
     
-    [[maybe_unused]] static Matrix<Nodes, Dims> GradN([[maybe_unused]] Vector<Dims> const& X)
+    [[maybe_unused]] static Matrix<kNodes, kDims> GradN([[maybe_unused]] Vector<kDims> const& X)
     {
-        Matrix<Nodes, Dims> GNm;
+        Matrix<kNodes, kDims> GNm;
         Scalar* GNp = GNm.data();
         Scalar const a0 = (9.0/8.0)*X[1] - 3.0/8.0;
         Scalar const a1 = -a0;
@@ -1151,14 +1151,14 @@ struct Hexahedron<3>
     }
     
     template <class Derived>
-    [[maybe_unused]] static Matrix<Derived::RowsAtCompileTime, Dims> Jacobian(
-        [[maybe_unused]] Vector<Dims> const& X, 
+    [[maybe_unused]] static Matrix<Derived::RowsAtCompileTime, kDims> Jacobian(
+        [[maybe_unused]] Vector<kDims> const& X, 
         [[maybe_unused]] Eigen::DenseBase<Derived> const& x)
     {
         static_assert(Derived::RowsAtCompileTime != Eigen::Dynamic);
-        assert(x.cols() == Nodes);
-        auto constexpr DimsOut = Derived::RowsAtCompileTime;
-        Matrix<DimsOut, Dims> const J = x * GradN(X);
+        assert(x.cols() == kNodes);
+        auto constexpr kDimsOut = Derived::RowsAtCompileTime;
+        Matrix<kDimsOut, kDims> const J = x * GradN(X);
         return J;
     }
 };    
