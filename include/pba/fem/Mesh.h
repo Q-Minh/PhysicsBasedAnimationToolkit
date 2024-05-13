@@ -52,7 +52,7 @@ class NodalKey
             return mN[o] == 0;
         });
         // Count number of non-zero shape functions into Size
-        mSize = std::distance(mSortOrder.begin(), it);
+        mSize = static_cast<decltype(mSize)>(std::distance(mSortOrder.begin(), it));
     }
 
     bool operator==(SelfType const& rhs) const
@@ -126,7 +126,7 @@ Mesh<TElement, Dims>::Mesh(
 
     NodeMap nodeMap{};
     std::vector<Vector<Dims>> nodes{};
-    nodes.reserve(numberOfVertices);
+    nodes.reserve(static_cast<std::size_t>(numberOfVertices));
 
     // Construct mesh topology, i.e. assign mesh nodes to elements,
     // ensuring that adjacent elements share their common nodes.
@@ -159,8 +159,8 @@ Mesh<TElement, Dims>::Mesh(
             if (!bNodeAlreadyCreated)
             {
                 auto const nodeIdx    = static_cast<Index>(nodes.size());
-                Vector<Dims> const Xi = Xc * N.cast<Scalar>();
-                nodes.push_back(Xi);
+                Vector<Dims> const xi = Xc * N.cast<Scalar>();
+                nodes.push_back(xi);
                 bool bInserted{};
                 std::tie(it, bInserted) = nodeMap.insert({key, nodeIdx});
                 assert(bInserted);

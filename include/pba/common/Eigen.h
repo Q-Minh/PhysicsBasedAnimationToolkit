@@ -41,7 +41,7 @@ ToEigen(R&& r)
     using ValueType = std::ranges::range_value_t<R>;
     auto Rows       = ValueType::RowsAtCompileTime;
     auto Cols       = ValueType::ColsAtCompileTime;
-    if (ValueType::Flags & Eigen::RowMajorBit)
+    if constexpr (ValueType::Flags & Eigen::RowMajorBit)
         std::swap(Rows, Cols);
 
     return Eigen::Map<
