@@ -23,6 +23,12 @@ struct Mesh
     static int constexpr Dims = Dims;
 
     Mesh() = default;
+    /**
+     * @brief Constructs a finite element mesh given some input geometric mesh. The cells of the
+     * input mesh should list its vertices in Lagrange order.
+     * @param V
+     * @param C
+     */
     Mesh(Eigen::Ref<MatrixX const> const& V, Eigen::Ref<IndexMatrixX const> const& C);
 
     MatrixX X;      ///< Dims x |Nodes| nodal positions
@@ -33,6 +39,8 @@ template <Element TElement>
 class NodalKey
 {
   public:
+    using SelfType = NodalKey<TElement>;
+
     NodalKey(
         IndexVector<TElement::Vertices> const& cellVertices,
         IndexVector<TElement::Vertices> const& sortOrder,
@@ -47,7 +55,7 @@ class NodalKey
         mSize = std::distance(mSortOrder.begin(), it);
     }
 
-    bool operator==(NodalKey const& rhs) const
+    bool operator==(SelfType const& rhs) const
     {
         // Sizes must match
         if (mSize != rhs.mSize)
@@ -60,8 +68,8 @@ class NodalKey
             if (lhsVertex != rhsVertex)
                 return false;
             // Affine weights at matching vertices must match
-            Index const lhsN = mN[mSortOrder[i]];
-            Index const rhsN = rhs.mN[rhs.mSortOrder[i]];
+            math::Rational const lhsN = mN[mSortOrder[i]];
+            math::Rational const rhsN = rhs.mN[rhs.mSortOrder[i]];
             if (lhsN != rhsN)
                 return false;
         }
@@ -69,7 +77,7 @@ class NodalKey
         return true;
     }
 
-    bool operator<(NodalKey const& rhs) const
+    bool operator<(SelfType const& rhs) const
     {
         // Sort by size first
         if (mSize != rhs.mSize)
@@ -85,8 +93,8 @@ class NodalKey
         // Then sort by coordinates
         for (auto i = 0; i < mSize; ++i)
         {
-            Index const lhsN = mN[mSortOrder[i]];
-            Index const rhsN = rhs.mN[rhs.mSortOrder[i]];
+            math::Rational const lhsN = mN[mSortOrder[i]];
+            math::Rational const rhsN = rhs.mN[rhs.mSortOrder[i]];
             if (lhsN != rhsN)
                 return lhsN < rhsN;
         }
@@ -109,6 +117,7 @@ Mesh<TElement, Dims>::Mesh(
 {
     static_assert(Dims >= TElement::Dims, "Element TElement does not exist in Dims dimensions");
     assert(C.rows() == TElement::Vertices);
+    assert(V.rows() == Dims);
 
     using AffineElement = TElement::AffineBase;
     using NodeMap       = std::map<NodalKey<TElement>, Index>;
@@ -135,15 +144,18 @@ Mesh<TElement, Dims>::Mesh(
             return cellVertices[i] < cellVertices[j];
         });
         // Loop over nodes of element and create the node on first visit
-        auto const nodalCoordinates =
-            common::ToEigen(TElement::Coordinates).reshape(TElement::Dims, TElement::Nodes);
+        auto const nodalCoordinates = common::ToEigen(TElement::Coordinates)
+                                          .reshaped(TElement::Dims, TElement::Nodes)
+                                          .cast<math::Rational>() /
+                                      TElement::Order;
         for (auto i = 0; i < nodalCoordinates.cols(); ++i)
         {
             // Use exact rational arithmetic to evaluate affine element shape functions at the node
             // to get its exact affine coordinates
-            Eigen::Vector<math::Rational, TElement::Dims> const Xi =
-                nodalCoordinates.col(i).cast<math::Rational>() / TElement::Order;
-            auto const N = AffineElement::N(Xi);
+            /*Eigen::Vector<math::Rational, TElement::Dims> const Xi =
+                nodalCoordinates.col(i).cast<math::Rational>() / TElement::Order;*/
+            auto const Xi = nodalCoordinates.col(i);
+            auto const N  = AffineElement::N(Xi);
             NodalKey<TElement> const key{cellVertices, sortOrder, N};
             auto it                        = nodeMap.find(key);
             bool const bNodeAlreadyCreated = it != nodeMap.end();
@@ -161,6 +173,7 @@ Mesh<TElement, Dims>::Mesh(
         }
     }
     // Collect node positions
+    // X = Eigen::Map<MatrixX const>(std::addressof(nodes[0][0]), Dims, nodes.size());
     X = common::ToEigen(nodes);
 
     // TODO: Move this code to any LinearOperator acting on an fem::Mesh that needs to evaluate

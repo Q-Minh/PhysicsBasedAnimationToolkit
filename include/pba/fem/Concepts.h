@@ -12,31 +12,31 @@ namespace fem {
 template <class T>
 concept Element = requires(T t)
 {
-    {T::AffineBase};
+    //{T::AffineBase};
     {
         T::Order
-    } -> std::integral;
+    } -> std::convertible_to<int>;
     {
         T::Dims
-    } -> std::integral;
+    } -> std::convertible_to<int>;
     {
         T::Nodes
-    } -> std::integral;
+    } -> std::convertible_to<int>;
     {
         T::Vertices
-    } -> std::integral;
+    } -> std::convertible_to<int>;
     {
         T::Coordinates
     } -> common::ContiguousIndexRange;
-    {
-        t.N(Vector<T::Dims>{})
-    } -> std::same_as<Vector<T::Nodes>>;
-    {
-        t.GradN(Vector<T::Dims>{})
-    } -> std::same_as<Matrix<T::Nodes, T::Dims>>;
-    {
-        t.Jacobian(Vector<T::Dims>{}, Matrix<T::Dims, T::Nodes>{})
-    } -> std::same_as<Matrix<T::Dims, T::Dims>>;
+    //{
+    //    t.N(Vector<T::Dims>{})
+    //} -> std::same_as<Vector<T::Nodes>>;
+    //{
+    //    t.GradN(Vector<T::Dims>{})
+    //} -> std::same_as<Matrix<T::Nodes, T::Dims>>;
+    //{
+    //    t.Jacobian(Vector<T::Dims>{}, Matrix<T::Dims, T::Nodes>{})
+    //} -> std::same_as<Matrix<T::Dims, T::Dims>>;
 };
 
 } // namespace fem

@@ -91,7 +91,7 @@ struct Rational
      *
      * @return Scalar
      */
-    operator Scalar() const;
+    explicit operator Scalar() const;
 
     std::int64_t a; ///< Numerator
     std::int64_t b; ///< Denominator

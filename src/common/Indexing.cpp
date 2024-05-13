@@ -9,7 +9,7 @@
 namespace pba {
 namespace common {
 
-TEST_CASE("Cumulative sums are computable from any integral range type")
+TEST_CASE("[common] Cumulative sums are computable from any integral range type")
 {
     std::array<Index, 3> v{5, 10, 15};
     auto const cs = cumsum(v);

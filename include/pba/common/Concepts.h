@@ -15,36 +15,33 @@ template <class T>
 concept Arithmetic = std::is_arithmetic_v<T>;
 
 template <class R>
-using RangeIteratorType = decltype(std::ranges::begin(std::declval<R>()));
-
-template <class R>
-using RangeValueType = std::iterator_traits<RangeIteratorType<R>>::value_type;
-
-template <class R>
-concept IndexRange = std::ranges::range<R> && std::is_integral_v<RangeValueType<R>>;
+concept IndexRange = std::ranges::range<R> && std::is_integral_v<std::ranges::range_value_t<R>>;
 
 template <class R>
 concept ContiguousIndexRange =
     IndexRange<R> && std::ranges::sized_range<R> && std::ranges::contiguous_range<R>;
 
 template <class R>
-concept ArithmeticRange = std::ranges::range<R> && Arithmetic<RangeValueType<R>>;
+concept ArithmeticRange = std::ranges::range<R> && Arithmetic<std::ranges::range_value_t<R>>;
 
 template <class R>
 concept ContiguousArithmeticRange =
     ArithmeticRange<R> && std::ranges::sized_range<R> && std::ranges::contiguous_range<R>;
 
 template <class R>
-concept ContiguousMatrixRange = requires(R r)
+concept ContiguousArithmeticMatrixRange = requires(R r)
 {
     requires std::ranges::range<R>;
     requires std::ranges::sized_range<R>;
     requires std::ranges::contiguous_range<R>;
-    { std::ranges::data(r)[0][0] } -> Arithmetic;
-    { RangeValueType<R>::RowsAtCompileTime } -> std::integral;
-    { RangeValueType<R>::ColsAtCompileTime } -> std::integral;
-    { RangeValueType<R>::Scalar } -> Arithmetic;
-    { RangeValueType<R>::Flags };
+    {
+        std::ranges::range_value_t<R>::RowsAtCompileTime
+    } -> std::convertible_to<int>;
+    {
+        std::ranges::range_value_t<R>::ColsAtCompileTime
+    } -> std::convertible_to<int>;
+    requires std::is_arithmetic_v<typename std::ranges::range_value_t<R>::Scalar>;
+    {std::ranges::range_value_t<R>::Flags};
 };
 
 } // namespace common
