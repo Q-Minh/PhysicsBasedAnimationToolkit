@@ -19,7 +19,7 @@ namespace fem {
 template <Element TElement, int Dims>
 struct Mesh
 {
-    using ElementType         = TElement;
+    using Element             = TElement;
     static int constexpr Dims = Dims;
 
     Mesh() = default;
@@ -152,8 +152,6 @@ Mesh<TElement, Dims>::Mesh(
         {
             // Use exact rational arithmetic to evaluate affine element shape functions at the node
             // to get its exact affine coordinates
-            /*Eigen::Vector<math::Rational, TElement::Dims> const Xi =
-                nodalCoordinates.col(i).cast<math::Rational>() / TElement::Order;*/
             auto const Xi = nodalCoordinates.col(i);
             auto const N  = AffineElement::N(Xi);
             NodalKey<TElement> const key{cellVertices, sortOrder, N};
@@ -173,7 +171,6 @@ Mesh<TElement, Dims>::Mesh(
         }
     }
     // Collect node positions
-    // X = Eigen::Map<MatrixX const>(std::addressof(nodes[0][0]), Dims, nodes.size());
     X = common::ToEigen(nodes);
 
     // TODO: Move this code to any LinearOperator acting on an fem::Mesh that needs to evaluate
