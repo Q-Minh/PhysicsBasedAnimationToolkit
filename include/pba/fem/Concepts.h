@@ -23,9 +23,6 @@ concept Element = requires(T t)
         T::Nodes
     } -> std::convertible_to<int>;
     {
-        T::Vertices
-    } -> std::convertible_to<int>;
-    {
         T::Coordinates
     } -> common::ContiguousIndexRange;
     {

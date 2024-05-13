@@ -27,7 +27,7 @@ struct Mesh
      * @brief Constructs a finite element mesh given some input geometric mesh. The cells of the
      * input mesh should list its vertices in Lagrange order.
      * @param V Dims x |#vertices| matrix of vertex positions
-     * @param C Element::Vertices x |#cells| matrix of cell vertex indices into V
+     * @param C Element::AffineBase::Vertices x |#cells| matrix of cell vertex indices into V
      */
     Mesh(Eigen::Ref<MatrixX const> const& V, Eigen::Ref<IndexMatrixX const> const& C);
 
@@ -39,12 +39,13 @@ template <Element TElement>
 class NodalKey
 {
   public:
-    using SelfType = NodalKey<TElement>;
+    using SelfType                = NodalKey<TElement>;
+    static int constexpr Vertices = TElement::AffineBase::Nodes;
 
     NodalKey(
-        IndexVector<TElement::Vertices> const& cellVertices,
-        IndexVector<TElement::Vertices> const& sortOrder,
-        Eigen::Vector<math::Rational, TElement::Vertices> const& N)
+        IndexVector<Vertices> const& cellVertices,
+        IndexVector<Vertices> const& sortOrder,
+        Eigen::Vector<math::Rational, Vertices> const& N)
         : mCellVertices(cellVertices), mSortOrder(sortOrder), mN(N), mSize()
     {
         // Remove vertices whose corresponding shape function is zero
@@ -103,10 +104,10 @@ class NodalKey
     }
 
   private:
-    IndexVector<TElement::Vertices> mCellVertices;        ///< Cell vertex indices
-    IndexVector<TElement::Vertices> mSortOrder;           ///< Ordering of the cell vertices
-    Eigen::Vector<math::Rational, TElement::Vertices> mN; ///< Node's affine shape function values
-    int mSize; ///< Number of non-zero affine shape function values
+    IndexVector<Vertices> mCellVertices;        ///< Cell vertex indices
+    IndexVector<Vertices> mSortOrder;           ///< Ordering of the cell vertices
+    Eigen::Vector<math::Rational, Vertices> mN; ///< Node's affine shape function values
+    int mSize;                                  ///< Number of non-zero affine shape function values
 };
 
 template <Element TElement, int Dims>
@@ -114,12 +115,14 @@ Mesh<TElement, Dims>::Mesh(
     Eigen::Ref<MatrixX const> const& V,
     Eigen::Ref<IndexMatrixX const> const& C)
 {
+    using AffineElement             = TElement::AffineBase;
+    auto constexpr kVerticesPerCell = AffineElement::Nodes;
+
     static_assert(Dims >= TElement::Dims, "Element TElement does not exist in Dims dimensions");
-    assert(C.rows() == TElement::Vertices);
+    assert(C.rows() == kVerticesPerCell);
     assert(V.rows() == Dims);
 
-    using AffineElement = TElement::AffineBase;
-    using NodeMap       = std::map<NodalKey<TElement>, Index>;
+    using NodeMap = std::map<NodalKey<TElement>, Index>;
 
     auto const numberOfCells    = C.cols();
     auto const numberOfVertices = V.cols();
@@ -133,11 +136,11 @@ Mesh<TElement, Dims>::Mesh(
     E.resize(TElement::Nodes, numberOfCells);
     for (auto c = 0; c < numberOfCells; ++c)
     {
-        IndexVector<TElement::Vertices> const cellVertices = C.col(c);
-        Matrix<Dims, TElement::Vertices> const Xc          = V(Eigen::all, cellVertices);
+        IndexVector<kVerticesPerCell> const cellVertices = C.col(c);
+        Matrix<Dims, kVerticesPerCell> const Xc          = V(Eigen::all, cellVertices);
 
         // Sort based on cell vertex index
-        IndexVector<TElement::Vertices> sortOrder{};
+        IndexVector<kVerticesPerCell> sortOrder{};
         std::iota(sortOrder.begin(), sortOrder.end(), 0);
         std::ranges::sort(sortOrder, [&](Index i, Index j) {
             return cellVertices[i] < cellVertices[j];

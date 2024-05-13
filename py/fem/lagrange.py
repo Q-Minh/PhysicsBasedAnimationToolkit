@@ -30,8 +30,8 @@ def tetrahedron(p=1):
         p (int, optional): Polynomial order. Defaults to 1.
 
     Returns:
-        tuple: The 5-tuple (X, x, N, gradN, V) of variables, data points, shape 
-        functions, shape function derivatives, and vertices, respectively.
+        tuple: The 4-tuple (X, x, N, gradN) of variables, data points, shape 
+        functions, and shape function derivatives, respectively.
     """
     dims = 3
     X = sp.Matrix(
@@ -54,9 +54,7 @@ def tetrahedron(p=1):
     N = lagrange_shape_functions(
         X, x, monomials)
     gradN = N.jacobian(X)
-    V = [x[i] for i in range(len(x)) if [
-        x[i][d] for d in range(dims)].count(1) <= 1]
-    return (X, x, N, gradN, V)
+    return (X, x, N, gradN)
 
 
 def hexahedron(p=1):
@@ -67,8 +65,8 @@ def hexahedron(p=1):
         p (int, optional): Polynomial order. Defaults to 1.
 
     Returns:
-        tuple: The 5-tuple (X, x, N, gradN, V) of variables, data points, shape 
-        functions, shape function derivatives, and vertices, respectively.
+        tuple: The 4-tuple (X, x, N, gradN) of variables, data points, shape 
+        functions, and shape function derivatives, respectively.
     """
     dims = 3
     X = sp.Matrix(
@@ -89,9 +87,7 @@ def hexahedron(p=1):
     N = lagrange_shape_functions(
         X, x, monomials)
     gradN = N.jacobian(X)
-    V = [x[i] for i in range(len(x)) if all(
-        [x[i][d] == 0 or x[i][d] == 1 for d in range(dims)])]
-    return (X, x, N, gradN, V)
+    return (X, x, N, gradN)
 
 
 def triangle(p=1):
@@ -102,8 +98,8 @@ def triangle(p=1):
         p (int, optional): Polynomial order. Defaults to 1.
 
     Returns:
-        tuple: The 5-tuple (X, x, N, gradN, V) of variables, data points, shape 
-        functions, shape function derivatives, and vertices, respectively.
+        tuple: The 4-tuple (X, x, N, gradN) of variables, data points, shape 
+        functions, and shape function derivatives, respectively.
     """
     dims = 2
     X = sp.Matrix(
@@ -124,9 +120,7 @@ def triangle(p=1):
     N = lagrange_shape_functions(
         X, x, monomials)
     gradN = N.jacobian(X)
-    V = [x[i] for i in range(len(x)) if [
-        x[i][d] for d in range(dims)].count(1) <= 1]
-    return (X, x, N, gradN, V)
+    return (X, x, N, gradN)
 
 
 def quadrilateral(p=1):
@@ -137,8 +131,8 @@ def quadrilateral(p=1):
         p (int, optional): Polynomial order. Defaults to 1.
 
     Returns:
-        tuple: The 5-tuple (X, x, N, gradN, V) of variables, data points, shape 
-        functions, shape function derivatives, and vertices, respectively.
+        tuple: The 4-tuple (X, x, N, gradN) of variables, data points, shape 
+        functions, and shape function derivatives, respectively.
     """
     dims = 2
     X = sp.Matrix(
@@ -157,9 +151,7 @@ def quadrilateral(p=1):
     N = lagrange_shape_functions(
         X, x, monomials)
     gradN = N.jacobian(X)
-    V = [x[i] for i in range(len(x)) if all(
-        [x[i][d] == 0 or x[i][d] == 1 for d in range(dims)])]
-    return (X, x, N, gradN, V)
+    return (X, x, N, gradN)
 
 
 def line(p=1):
@@ -170,8 +162,8 @@ def line(p=1):
         p (int, optional): Polynomial order. Defaults to 1.
 
     Returns:
-        tuple: The 5-tuple (X, x, N, gradN, V) of variables, data points, shape 
-        functions, shape function derivatives, and vertices, respectively.
+        tuple: The 4-tuple (X, x, N, gradN) of variables, data points, shape 
+        functions, and shape function derivatives, respectively.
     """
     dims = 1
     X = sp.Matrix(
@@ -189,8 +181,7 @@ def line(p=1):
     N = lagrange_shape_functions(
         X, x, monomials)
     gradN = N.jacobian(X)
-    V = [[0], [1]]
-    return (X, x, N, gradN, V)
+    return (X, x, N, gradN)
 
 
 def codegen(felement, p: int, element: str):
@@ -233,15 +224,14 @@ struct {0}<{1}>
     static int constexpr Order = {1};
     static int constexpr Dims  = {2};
     static int constexpr Nodes = {3};
-    static int constexpr Vertices = {4};
     static std::array<int, Nodes * Dims> constexpr Coordinates =
-        {{{5}}}; ///< Divide coordinates by Order to obtain actual coordinates in the reference element
+        {{{4}}}; ///< Divide coordinates by Order to obtain actual coordinates in the reference element
       
     template <class Derived, class TScalar = typename Derived::Scalar>
     [[maybe_unused]] static Eigen::Vector<TScalar, Nodes> N([[maybe_unused]] Eigen::DenseBase<Derived> const& X)
     {{
         Eigen::Vector<TScalar, Nodes> Nm;
-{6}
+{5}
         return Nm;
     }}
     
@@ -249,7 +239,7 @@ struct {0}<{1}>
     {{
         Matrix<Nodes, Dims> GNm;
         Scalar* GNp = GNm.data();
-{7}
+{6}
         return GNm;
     }}
     
@@ -270,12 +260,11 @@ struct {0}<{1}>
         file.write(
             header.format(element.upper(), element))
         for order in range(1, p+1):
-            X, x, N, gradN, V = felement(
+            X, x, N, gradN = felement(
                 order)
             gradNT = gradN.transpose()
             dims = X.shape[0]
             nodes = len(x)
-            vertices = len(V)
             coordinates = ",".join(
                 [str(xi[d]*order) for xi in x for d in range(dims)])
             codeN = cg.tabulate(cg.codegen(N, lhs=sp.MatrixSymbol(
@@ -287,7 +276,6 @@ struct {0}<{1}>
                                                       order,
                                                       dims,
                                                       nodes,
-                                                      vertices,
                                                       coordinates,
                                                       codeN,
                                                       codeGN))
