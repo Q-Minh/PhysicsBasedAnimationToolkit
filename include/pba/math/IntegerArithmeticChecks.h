@@ -45,19 +45,23 @@ bool add_overflows(Integer a, Integer b)
 template <std::integral Integer>
 bool multiply_overflows(Integer a, Integer b)
 {
-    auto constexpr max = std::numeric_limits<Integer>::max();
-    auto constexpr min = std::numeric_limits<Integer>::lowest();
-    if ((a >= 0 && b >= 0) or (a < 0 && b < 0))
+    if (a == 0 or b == 0)
+        return false;
+
+    auto constexpr max  = std::numeric_limits<Integer>::max();
+    auto constexpr min  = std::numeric_limits<Integer>::lowest();
+    bool const sameSign = (a > 0 && b > 0) or (a < 0 && b < 0);
+    if (sameSign)
     {
         // multiplying 2 same-sign numbers may overflow
-        // a*b > max <=> overflow
-        return a > (max / b);
+        // |a|*|b| > max <=> overflow
+        return std::abs(a) > std::abs(max / b);
     }
     else
     {
         // multiplying different sign numbers may underflow
-        // a*b < min <=> underflow
-        return a < (min / b);
+        // -|a|*|b| < min <=> underflow
+        return -std::abs(a) < (min / std::abs(b));
     }
 }
 
