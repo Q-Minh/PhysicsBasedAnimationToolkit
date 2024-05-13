@@ -38,17 +38,17 @@ Eigen::Map<Eigen::Matrix<
 ToEigen(R&& r)
 {
     namespace rng   = std::ranges;
-    using ValueType = std::ranges::range_value_t<R>;
-    auto Rows       = ValueType::RowsAtCompileTime;
-    auto Cols       = ValueType::ColsAtCompileTime;
+    using ValueType = rng::range_value_t<R>;
+    auto rows       = ValueType::RowsAtCompileTime;
+    auto cols       = ValueType::ColsAtCompileTime;
     if constexpr (ValueType::Flags & Eigen::RowMajorBit)
-        std::swap(Rows, Cols);
+        std::swap(rows, cols);
 
     return Eigen::Map<
         Eigen::Matrix<typename ValueType::Scalar, Eigen::Dynamic, Eigen::Dynamic> const>(
         static_cast<Scalar const*>(std::addressof(rng::data(r)[0][0])),
-        Rows,
-        static_cast<Eigen::Index>(rng::size(r) * Cols));
+        rows,
+        static_cast<Eigen::Index>(rng::size(r) * cols));
 }
 
 } // namespace common

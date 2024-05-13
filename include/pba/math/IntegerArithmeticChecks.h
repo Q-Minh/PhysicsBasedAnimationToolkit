@@ -17,8 +17,11 @@ namespace math {
  * @return
  */
 template <std::integral Integer>
-bool add_overflows(Integer a, Integer b)
+bool AddOverflows(Integer a, Integer b)
 {
+    if (a == 0 || b == 0)
+        return false;
+
     auto constexpr max = std::numeric_limits<Integer>::max();
     auto constexpr min = std::numeric_limits<Integer>::lowest();
     if (a < 0 && b < 0)
@@ -26,7 +29,7 @@ bool add_overflows(Integer a, Integer b)
         // adding negative numbers may underflow, i.e. a+b < min
         return a < (min - b);
     }
-    if (a >= 0 && b >= 0)
+    if (a > 0 && b > 0)
     {
         // a+b > max <=> overflow
         return a > (max - b);
@@ -43,15 +46,15 @@ bool add_overflows(Integer a, Integer b)
  * @return
  */
 template <std::integral Integer>
-bool multiply_overflows(Integer a, Integer b)
+bool MultiplyOverflows(Integer a, Integer b)
 {
     if (a == 0 or b == 0)
         return false;
 
-    auto constexpr max  = std::numeric_limits<Integer>::max();
-    auto constexpr min  = std::numeric_limits<Integer>::lowest();
-    bool const sameSign = (a > 0 && b > 0) or (a < 0 && b < 0);
-    if (sameSign)
+    auto constexpr max   = std::numeric_limits<Integer>::max();
+    auto constexpr min   = std::numeric_limits<Integer>::lowest();
+    bool const bSameSign = (a > 0 && b > 0) or (a < 0 && b < 0);
+    if (bSameSign)
     {
         // multiplying 2 same-sign numbers may overflow
         // |a|*|b| > max <=> overflow
@@ -73,7 +76,7 @@ bool multiply_overflows(Integer a, Integer b)
  * @return
  */
 template <std::integral Integer>
-bool negation_overflows(Integer a)
+bool NegationOverflows(Integer a)
 {
     auto constexpr max = std::numeric_limits<Integer>::max();
     if constexpr (std::is_signed_v<Integer>)
@@ -103,19 +106,19 @@ struct OverflowChecked
     Integer const& operator*() const { return value; }
     SelfType operator-() const
     {
-        if (negation_overflows(value))
+        if (NegationOverflows(value))
             throw std::overflow_error("Negation overflow");
         return SelfType{-value};
     }
     SelfType operator+(SelfType rhs) const
     {
-        if (add_overflows(value, rhs.value))
+        if (AddOverflows(value, rhs.value))
             throw std::overflow_error("Addition overflow");
         return SelfType{value + rhs.value};
     }
     SelfType operator*(SelfType rhs) const
     {
-        if (multiply_overflows(value, rhs.value))
+        if (MultiplyOverflows(value, rhs.value))
             throw std::overflow_error("Multiplication overflow");
         return SelfType{value * rhs.value};
     }
