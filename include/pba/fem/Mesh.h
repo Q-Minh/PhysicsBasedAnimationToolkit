@@ -19,20 +19,20 @@ namespace fem {
 template <Element TElement, int Dims>
 struct Mesh
 {
-    using Element             = TElement;
-    static int constexpr Dims = Dims;
+    using Element             = TElement; ///< Underlying finite element type
+    static int constexpr Dims = Dims;     ///< Embedding dimensions of the mesh
 
     Mesh() = default;
     /**
      * @brief Constructs a finite element mesh given some input geometric mesh. The cells of the
      * input mesh should list its vertices in Lagrange order.
-     * @param V
-     * @param C
+     * @param V Dims x |#vertices| matrix of vertex positions
+     * @param C Element::Vertices x |#cells| matrix of cell vertex indices into V
      */
     Mesh(Eigen::Ref<MatrixX const> const& V, Eigen::Ref<IndexMatrixX const> const& C);
 
-    MatrixX X;      ///< Dims x |Nodes| nodal positions
-    IndexMatrixX E; ///< |#nodes per element| x |Elements| element nodal indices
+    MatrixX X;      ///< Dims x |#nodes| nodal positions
+    IndexMatrixX E; ///< Element::Nodes x |#elements| element nodal indices
 };
 
 template <Element TElement>
@@ -109,7 +109,6 @@ class NodalKey
     int mSize; ///< Number of non-zero affine shape function values
 };
 
-// WARNING: Do not use, class is not yet usable.
 template <Element TElement, int Dims>
 Mesh<TElement, Dims>::Mesh(
     Eigen::Ref<MatrixX const> const& V,
@@ -135,7 +134,7 @@ Mesh<TElement, Dims>::Mesh(
     for (auto c = 0; c < numberOfCells; ++c)
     {
         IndexVector<TElement::Vertices> const cellVertices = C.col(c);
-        Matrix<Dims, TElement::Vertices> const Xe          = V(Eigen::all, cellVertices);
+        Matrix<Dims, TElement::Vertices> const Xc          = V(Eigen::all, cellVertices);
 
         // Sort based on cell vertex index
         IndexVector<TElement::Vertices> sortOrder{};
@@ -160,7 +159,7 @@ Mesh<TElement, Dims>::Mesh(
             if (!bNodeAlreadyCreated)
             {
                 auto const nodeIdx    = static_cast<Index>(nodes.size());
-                Vector<Dims> const Xi = Xe * N.cast<Scalar>();
+                Vector<Dims> const Xi = Xc * N.cast<Scalar>();
                 nodes.push_back(Xi);
                 bool bInserted{};
                 std::tie(it, bInserted) = nodeMap.insert({key, nodeIdx});

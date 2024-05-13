@@ -10,11 +10,7 @@ namespace pba {
 namespace math {
 
 /**
- * @brief
- *
- * WARNING: We are not checking for overflow/underflow in the implementation.
- *
- * TODO: Add checks for overflow/underflow in implementation and throw exceptions when checks fail.
+ * @brief Fixed size rational number representation using std::int64_t as numerator and denominator.
  *
  */
 struct Rational
@@ -30,13 +26,20 @@ struct Rational
      * @param a
      * @param b
      */
-    Rational(std::int64_t a, std::int64_t b);
+    template <std::integral Integer>
+    Rational(Integer a, Integer b)
+        : a(static_cast<std::int64_t>(a)), b(static_cast<std::int64_t>(b))
+    {
+    }
     /**
      * @brief Construct a new Rational object
      *
      * @param value
      */
-    Rational(std::int64_t value);
+    template <std::integral Integer>
+    Rational(Integer value) : a(static_cast<std::int64_t>(value)), b(1)
+    {
+    }
     /**
      * @brief
      * @param
@@ -92,6 +95,10 @@ struct Rational
      * @return Scalar
      */
     explicit operator Scalar() const;
+    /**
+     * @brief Attempts to reduce magnitude of a,b by eliminating common divisor
+     */
+    void simplify();
 
     std::int64_t a; ///< Numerator
     std::int64_t b; ///< Denominator

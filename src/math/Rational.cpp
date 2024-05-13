@@ -9,29 +9,18 @@ namespace math {
 
 Rational::Rational() : a(0), b(1) {}
 
-Rational::Rational(std::int64_t a, std::int64_t b) : a(a), b(b)
-{
-    if (this->a >= 0 && this->b < 0)
-    {
-        this->a = -a;
-        this->b = -b;
-    }
-    auto const gcd = std::gcd(a, b);
-    this->a /= gcd;
-    this->b /= gcd;
-}
-
-Rational::Rational(std::int64_t value) : a(value), b(1) {}
-
 Rational Rational::operator+(Rational const& rhs) const
 {
+    auto const oc = [](auto value) {
+        return OverflowChecked{value};
+    };
     // a1/b1 + a2/b2 = a1*b2/b1*b2 + a2*b1/b1*b2
     auto const gcd         = std::gcd(b, rhs.b);
     auto const b1          = b / gcd;
     auto const b2          = rhs.b / gcd;
-    auto const denominator = b1 * b2 * gcd;
-    auto const numerator   = a * b2 + rhs.a * b1;
-    return Rational(numerator, denominator);
+    auto const denominator = oc(b1) * oc(b2 * gcd);
+    auto const numerator   = oc(a) * oc(b2) + oc(rhs.a) * oc(b1);
+    return Rational(*numerator, *denominator);
 }
 
 Rational Rational::operator-(Rational const& rhs) const
@@ -41,44 +30,64 @@ Rational Rational::operator-(Rational const& rhs) const
 
 Rational Rational::operator-() const
 {
-    return Rational(-a, b);
+    auto const na = -OverflowChecked{a};
+    return Rational(*na, b);
 }
 
 Rational Rational::operator*(Rational const& rhs) const
 {
+    auto const oc = [](auto value) {
+        return OverflowChecked{value};
+    };
     // a1/b1 * a2/b2 = a1*a2 / b1*b2
-    return Rational(a * rhs.a, b * rhs.b);
+    auto const num = oc(a) * oc(rhs.a);
+    auto const den = oc(b) * oc(rhs.b);
+    return Rational(*num, *den);
 }
 
 Rational Rational::operator/(Rational const& rhs) const
 {
+    auto const oc = [](auto value) {
+        return OverflowChecked{value};
+    };
     // (a1/b1) / (a2/b2) = a1*b2 / b1*a2
-    return Rational(a * rhs.b, b * rhs.a);
+    auto const num = oc(a) * oc(rhs.b);
+    auto const den = oc(b) * oc(rhs.a);
+    return Rational(*num, *den);
 }
 
 bool Rational::operator==(Rational const& rhs) const
 {
+    auto const oc = [](auto value) {
+        return OverflowChecked{value};
+    };
     auto const gcd        = std::gcd(b, rhs.b);
-    auto const b1         = b / gcd;
-    auto const b2         = rhs.b / gcd;
-    auto const numerator1 = a * b2;
-    auto const numerator2 = rhs.a * b1;
+    auto const b1         = oc(b) / gcd;
+    auto const b2         = oc(rhs.b) / gcd;
+    auto const numerator1 = oc(a) * b2;
+    auto const numerator2 = oc(rhs.a) * b1;
     return numerator1 == numerator2;
 }
 
 bool Rational::operator<(Rational const& rhs) const
 {
+    auto const oc = [](auto value) {
+        return OverflowChecked{value};
+    };
     auto const gcd        = std::gcd(b, rhs.b);
-    auto const b1         = b / gcd;
-    auto const b2         = rhs.b / gcd;
-    auto const numerator1 = a * b2;
-    auto const numerator2 = rhs.a * b1;
+    auto const b1         = oc(b) / gcd;
+    auto const b2         = oc(rhs.b) / gcd;
+    auto const numerator1 = oc(a) * b2;
+    auto const numerator2 = oc(rhs.a) * b1;
     return numerator1 < numerator2;
 }
 
 bool Rational::Rebase(std::int64_t denominator)
 {
-    auto const prod       = a * denominator;
+    auto const oc = [](auto value) {
+        return OverflowChecked{value};
+    };
+    auto const prod       = oc(a) * oc(denominator);
     bool const can_divide = (prod % b) == 0;
     if (!can_divide)
         return false;
@@ -90,6 +99,18 @@ bool Rational::Rebase(std::int64_t denominator)
 Rational::operator Scalar() const
 {
     return static_cast<Scalar>(a) / static_cast<Scalar>(b);
+}
+
+void Rational::simplify()
+{
+    if (a >= 0 && b < 0)
+    {
+        a = -OverflowChecked{a};
+        b = -OverflowChecked{b};
+    }
+    auto const gcd = std::gcd(a, b);
+    a /= gcd;
+    b /= gcd;
 }
 
 } // namespace math

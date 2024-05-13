@@ -9,6 +9,12 @@
 namespace pba {
 namespace common {
 
+/**
+ * @brief Map a range of scalars to an eigen vector of such scalars
+ * @tparam R
+ * @param r
+ * @return
+ */
 template <ContiguousArithmeticRange R>
 Eigen::Map<Eigen::Vector<std::ranges::range_value_t<R>, Eigen::Dynamic> const> ToEigen(R&& r)
 {
@@ -18,6 +24,12 @@ Eigen::Map<Eigen::Vector<std::ranges::range_value_t<R>, Eigen::Dynamic> const> T
         static_cast<Eigen::Index>(rng::size(r)));
 }
 
+/**
+ * @brief Map a range of scalar matrices to an eigen vector of such scalars
+ * @tparam R
+ * @param r
+ * @return
+ */
 template <ContiguousArithmeticMatrixRange R>
 Eigen::Map<Eigen::Matrix<
     typename std::ranges::range_value_t<R>::Scalar,
