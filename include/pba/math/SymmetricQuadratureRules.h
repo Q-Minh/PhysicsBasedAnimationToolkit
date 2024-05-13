@@ -40,7 +40,11 @@ struct ModifiableQuadratureScheme
     decltype(Quad::weights) weights;
 };
 
-struct Quad1DP1
+template <int Dims, int Order>
+struct SymmetricPolynomialQuadratureRule;
+
+template <>
+struct SymmetricPolynomialQuadratureRule<1, 1>
 {
     inline static std::uint8_t constexpr kDims            = 1;
     inline static std::uint16_t constexpr kPoints         = 1;
@@ -49,7 +53,8 @@ struct Quad1DP1
     inline static std::array<Scalar, 1> constexpr weights = {1};
 };
 
-struct Quad1DP3
+template <>
+struct SymmetricPolynomialQuadratureRule<1, 3>
 {
     inline static std::uint8_t constexpr kDims           = 1;
     inline static std::uint16_t constexpr kPoints        = 2;
@@ -58,7 +63,8 @@ struct Quad1DP3
     inline static std::array<Scalar, 2> constexpr weights = {0.5, 0.5};
 };
 
-struct Quad1DP5
+template <>
+struct SymmetricPolynomialQuadratureRule<1, 5>
 {
     inline static std::uint8_t constexpr kDims    = 1;
     inline static std::uint16_t constexpr kPoints = 3;
@@ -68,7 +74,8 @@ struct Quad1DP5
     inline static std::array<Scalar, 3> constexpr weights = {0.277778, 0.277778, 0.444444};
 };
 
-struct Quad1DP7
+template <>
+struct SymmetricPolynomialQuadratureRule<1, 7>
 {
     inline static std::uint8_t constexpr kDims    = 1;
     inline static std::uint16_t constexpr kPoints = 4;
@@ -79,7 +86,8 @@ struct Quad1DP7
         {0.173927, 0.173927, 0.326073, 0.326073};
 };
 
-struct Quad1DP9
+template <>
+struct SymmetricPolynomialQuadratureRule<1, 9>
 {
     inline static std::uint8_t constexpr kDims    = 1;
     inline static std::uint16_t constexpr kPoints = 5;
@@ -90,7 +98,8 @@ struct Quad1DP9
         {0.284444, 0.118463, 0.118463, 0.239314, 0.239314};
 };
 
-struct Quad1DP11
+template <>
+struct SymmetricPolynomialQuadratureRule<1, 11>
 {
     inline static std::uint8_t constexpr kDims            = 1;
     inline static std::uint16_t constexpr kPoints         = 6;
@@ -112,7 +121,8 @@ struct Quad1DP11
         {0.0856622, 0.0856622, 0.180381, 0.180381, 0.233957, 0.233957};
 };
 
-struct Quad1DP13
+template <>
+struct SymmetricPolynomialQuadratureRule<1, 13>
 {
     inline static std::uint8_t constexpr kDims            = 1;
     inline static std::uint16_t constexpr kPoints         = 7;
@@ -136,7 +146,8 @@ struct Quad1DP13
         {0.0647425, 0.0647425, 0.139853, 0.139853, 0.190915, 0.190915, 0.20898};
 };
 
-struct Quad1DP15
+template <>
+struct SymmetricPolynomialQuadratureRule<1, 15>
 {
     inline static std::uint8_t constexpr kDims            = 1;
     inline static std::uint16_t constexpr kPoints         = 8;
@@ -162,7 +173,8 @@ struct Quad1DP15
         {0.0506143, 0.0506143, 0.111191, 0.111191, 0.156853, 0.156853, 0.181342, 0.181342};
 };
 
-struct Quad1DP17
+template <>
+struct SymmetricPolynomialQuadratureRule<1, 17>
 {
     inline static std::uint8_t constexpr kDims            = 1;
     inline static std::uint16_t constexpr kPoints         = 9;
@@ -198,7 +210,8 @@ struct Quad1DP17
         0.16512};
 };
 
-struct Quad1DP19
+template <>
+struct SymmetricPolynomialQuadratureRule<1, 19>
 {
     inline static std::uint8_t constexpr kDims            = 1;
     inline static std::uint16_t constexpr kPoints         = 10;
@@ -220,7 +233,8 @@ struct Quad1DP19
         0.147762};
 };
 
-struct Quad1DP21
+template <>
+struct SymmetricPolynomialQuadratureRule<1, 21>
 {
     inline static std::uint8_t constexpr kDims            = 1;
     inline static std::uint16_t constexpr kPoints         = 11;
@@ -243,7 +257,8 @@ struct Quad1DP21
         0.136463};
 };
 
-struct Quad2DP1
+template <>
+struct SymmetricPolynomialQuadratureRule<2, 1>
 {
     inline static std::uint8_t constexpr kDims            = 2;
     inline static std::uint16_t constexpr kPoints         = 1;
@@ -252,7 +267,8 @@ struct Quad2DP1
     inline static std::array<Scalar, 1> constexpr weights = {0.5};
 };
 
-struct Quad2DP2
+template <>
+struct SymmetricPolynomialQuadratureRule<2, 2>
 {
     inline static std::uint8_t constexpr kDims    = 2;
     inline static std::uint16_t constexpr kPoints = 3;
@@ -262,7 +278,8 @@ struct Quad2DP2
     inline static std::array<Scalar, 3> constexpr weights = {0.166667, 0.166667, 0.166667};
 };
 
-struct Quad2DP3
+template <>
+struct SymmetricPolynomialQuadratureRule<2, 3>
 {
     inline static std::uint8_t constexpr kDims            = 2;
     inline static std::uint16_t constexpr kPoints         = 6;
@@ -290,7 +307,8 @@ struct Quad2DP3
         {0.140575, 0.140575, 0.140575, 0.0260918, 0.0260918, 0.0260918};
 };
 
-struct Quad2DP4
+template <>
+struct SymmetricPolynomialQuadratureRule<2, 4>
 {
     inline static std::uint8_t constexpr kDims            = 2;
     inline static std::uint16_t constexpr kPoints         = 6;
@@ -318,7 +336,8 @@ struct Quad2DP4
         {0.111691, 0.111691, 0.111691, 0.0549759, 0.0549759, 0.0549759};
 };
 
-struct Quad2DP5
+template <>
+struct SymmetricPolynomialQuadratureRule<2, 5>
 {
     inline static std::uint8_t constexpr kDims            = 2;
     inline static std::uint16_t constexpr kPoints         = 7;
@@ -331,7 +350,8 @@ struct Quad2DP5
         {0.0629696, 0.0629696, 0.0629696, 0.0661971, 0.0661971, 0.0661971, 0.1125};
 };
 
-struct Quad2DP6
+template <>
+struct SymmetricPolynomialQuadratureRule<2, 6>
 {
     inline static std::uint8_t constexpr kDims            = 2;
     inline static std::uint16_t constexpr kPoints         = 12;
@@ -356,7 +376,8 @@ struct Quad2DP6
         0.0414255};
 };
 
-struct Quad2DP7
+template <>
+struct SymmetricPolynomialQuadratureRule<2, 7>
 {
     inline static std::uint8_t constexpr kDims            = 2;
     inline static std::uint16_t constexpr kPoints         = 15;
@@ -386,7 +407,8 @@ struct Quad2DP7
         0.0280601};
 };
 
-struct Quad2DP8
+template <>
+struct SymmetricPolynomialQuadratureRule<2, 8>
 {
     inline static std::uint8_t constexpr kDims            = 2;
     inline static std::uint16_t constexpr kPoints         = 16;
@@ -417,7 +439,8 @@ struct Quad2DP8
         0.0136152};
 };
 
-struct Quad2DP9
+template <>
+struct SymmetricPolynomialQuadratureRule<2, 9>
 {
     inline static std::uint8_t constexpr kDims            = 2;
     inline static std::uint16_t constexpr kPoints         = 19;
@@ -453,7 +476,8 @@ struct Quad2DP9
         0.0216418};
 };
 
-struct Quad2DP10
+template <>
+struct SymmetricPolynomialQuadratureRule<2, 10>
 {
     inline static std::uint8_t constexpr kDims            = 2;
     inline static std::uint16_t constexpr kPoints         = 25;
@@ -476,7 +500,8 @@ struct Quad2DP10
         0.0134747,  0.0134747,  0.0134747,  0.0134747};
 };
 
-struct Quad2DP11
+template <>
+struct SymmetricPolynomialQuadratureRule<2, 11>
 {
     inline static std::uint8_t constexpr kDims            = 2;
     inline static std::uint16_t constexpr kPoints         = 28;
@@ -500,7 +525,8 @@ struct Quad2DP11
         0.00738114, 0.020364,   0.020364,   0.020364,   0.020364,   0.020364,   0.020364};
 };
 
-struct Quad2DP12
+template <>
+struct SymmetricPolynomialQuadratureRule<2, 12>
 {
     inline static std::uint8_t constexpr kDims            = 2;
     inline static std::uint16_t constexpr kPoints         = 33;
@@ -527,7 +553,8 @@ struct Quad2DP12
         0.0201858,  0.0201858,  0.0201858,  0.0201858,  0.0201858};
 };
 
-struct Quad2DP13
+template <>
+struct SymmetricPolynomialQuadratureRule<2, 13>
 {
     inline static std::uint8_t constexpr kDims             = 2;
     inline static std::uint16_t constexpr kPoints          = 37;
@@ -555,7 +582,8 @@ struct Quad2DP13
         0.00479534, 0.00479534, 0.00479534, 0.00479534, 0.00479534};
 };
 
-struct Quad2DP14
+template <>
+struct SymmetricPolynomialQuadratureRule<2, 14>
 {
     inline static std::uint8_t constexpr kDims             = 2;
     inline static std::uint16_t constexpr kPoints          = 42;
@@ -586,7 +614,8 @@ struct Quad2DP14
         0.00721815, 0.00250511, 0.00250511, 0.00250511, 0.00250511, 0.00250511, 0.00250511};
 };
 
-struct Quad2DP15
+template <>
+struct SymmetricPolynomialQuadratureRule<2, 15>
 {
     inline static std::uint8_t constexpr kDims             = 2;
     inline static std::uint16_t constexpr kPoints          = 49;
@@ -623,7 +652,8 @@ struct Quad2DP15
         0.00782393, 0.0170854,  0.0170854,  0.0170854,  0.0170854,  0.0170854,  0.0170854};
 };
 
-struct Quad2DP16
+template <>
+struct SymmetricPolynomialQuadratureRule<2, 16>
 {
     inline static std::uint8_t constexpr kDims             = 2;
     inline static std::uint16_t constexpr kPoints          = 55;
@@ -661,7 +691,8 @@ struct Quad2DP16
         0.0036499,  0.0036499,  0.0036499,  0.0036499,  0.0036499,  0.0036499};
 };
 
-struct Quad2DP17
+template <>
+struct SymmetricPolynomialQuadratureRule<2, 17>
 {
     inline static std::uint8_t constexpr kDims             = 2;
     inline static std::uint16_t constexpr kPoints          = 60;
@@ -702,7 +733,8 @@ struct Quad2DP17
         0.00151507,  0.00151507,  0.00151507, 0.00151507};
 };
 
-struct Quad2DP18
+template <>
+struct SymmetricPolynomialQuadratureRule<2, 18>
 {
     inline static std::uint8_t constexpr kDims             = 2;
     inline static std::uint16_t constexpr kPoints          = 67;
@@ -750,7 +782,8 @@ struct Quad2DP18
         0.00766413,  0.00766413,  0.00766413,  0.00766413};
 };
 
-struct Quad2DP19
+template <>
+struct SymmetricPolynomialQuadratureRule<2, 19>
 {
     inline static std::uint8_t constexpr kDims             = 2;
     inline static std::uint16_t constexpr kPoints          = 73;
@@ -798,7 +831,8 @@ struct Quad2DP19
         0.00189996, 0.00189996, 0.00189996};
 };
 
-struct Quad2DP20
+template <>
+struct SymmetricPolynomialQuadratureRule<2, 20>
 {
     inline static std::uint8_t constexpr kDims             = 2;
     inline static std::uint16_t constexpr kPoints          = 82;
@@ -855,7 +889,8 @@ struct Quad2DP20
         0.00955271,  0.00955271, 0.00955271, 0.00955271, 0.00955271};
 };
 
-struct Quad2DP21
+template <>
+struct SymmetricPolynomialQuadratureRule<2, 21>
 {
     inline static std::uint8_t constexpr kDims             = 2;
     inline static std::uint16_t constexpr kPoints          = 87;
@@ -915,7 +950,8 @@ struct Quad2DP21
         0.00980945,  0.00980945,  0.00980945};
 };
 
-struct Quad2DP22
+template <>
+struct SymmetricPolynomialQuadratureRule<2, 22>
 {
     inline static std::uint8_t constexpr kDims             = 2;
     inline static std::uint16_t constexpr kPoints          = 96;
@@ -980,7 +1016,8 @@ struct Quad2DP22
         0.0108924,   0.0108924,   0.0108924,   0.0108924,   0.0108924};
 };
 
-struct Quad2DP23
+template <>
+struct SymmetricPolynomialQuadratureRule<2, 23>
 {
     inline static std::uint8_t constexpr kDims             = 2;
     inline static std::uint16_t constexpr kPoints          = 102;
@@ -1048,7 +1085,8 @@ struct Quad2DP23
         0.0102045,   0.0102045,   0.0102045,   0.0102045};
 };
 
-struct Quad2DP24
+template <>
+struct SymmetricPolynomialQuadratureRule<2, 24>
 {
     inline static std::uint8_t constexpr kDims             = 2;
     inline static std::uint16_t constexpr kPoints          = 112;
@@ -1121,7 +1159,8 @@ struct Quad2DP24
         0.00749925,  0.00961539,  0.00961539,  0.00961539,  0.00961539,  0.00961539,  0.00961539};
 };
 
-struct Quad2DP25
+template <>
+struct SymmetricPolynomialQuadratureRule<2, 25>
 {
     inline static std::uint8_t constexpr kDims             = 2;
     inline static std::uint16_t constexpr kPoints          = 126;
@@ -1202,7 +1241,8 @@ struct Quad2DP25
         0.00707722,  0.00744069,  0.00744069,  0.00744069,  0.00744069,  0.00744069,  0.00744069};
 };
 
-struct Quad2DP26
+template <>
+struct SymmetricPolynomialQuadratureRule<2, 26>
 {
     inline static std::uint8_t constexpr kDims             = 2;
     inline static std::uint16_t constexpr kPoints          = 133;
@@ -1287,7 +1327,8 @@ struct Quad2DP26
         0.00655739,  0.00647017,  0.00647017,  0.00647017,  0.00647017,  0.00647017, 0.00647017};
 };
 
-struct Quad2DP27
+template <>
+struct SymmetricPolynomialQuadratureRule<2, 27>
 {
     inline static std::uint8_t constexpr kDims             = 2;
     inline static std::uint16_t constexpr kPoints          = 145;
@@ -1380,7 +1421,8 @@ struct Quad2DP27
         0.00648855,  0.00648855,  0.00648855,  0.00648855,  0.00648855};
 };
 
-struct Quad2DP28
+template <>
+struct SymmetricPolynomialQuadratureRule<2, 28>
 {
     inline static std::uint8_t constexpr kDims             = 2;
     inline static std::uint16_t constexpr kPoints          = 154;
@@ -1477,7 +1519,8 @@ struct Quad2DP28
         0.00625322,  0.00634924,  0.00634924,  0.00634924,  0.00634924,  0.00634924,  0.00634924};
 };
 
-struct Quad2DP29
+template <>
+struct SymmetricPolynomialQuadratureRule<2, 29>
 {
     inline static std::uint8_t constexpr kDims             = 2;
     inline static std::uint16_t constexpr kPoints          = 166;
@@ -1582,7 +1625,8 @@ struct Quad2DP29
         0.00634059,  0.00634059,  0.00634059,  0.00634059,  0.00634059};
 };
 
-struct Quad3DP1
+template <>
+struct SymmetricPolynomialQuadratureRule<3, 1>
 {
     inline static std::uint8_t constexpr kDims            = 3;
     inline static std::uint16_t constexpr kPoints         = 1;
@@ -1591,7 +1635,8 @@ struct Quad3DP1
     inline static std::array<Scalar, 1> constexpr weights = {0.166667};
 };
 
-struct Quad3DP2
+template <>
+struct SymmetricPolynomialQuadratureRule<3, 2>
 {
     inline static std::uint8_t constexpr kDims            = 3;
     inline static std::uint16_t constexpr kPoints         = 4;
@@ -1617,7 +1662,8 @@ struct Quad3DP2
         {0.0416667, 0.0416667, 0.0416667, 0.0416667};
 };
 
-struct Quad3DP3
+template <>
+struct SymmetricPolynomialQuadratureRule<3, 3>
 {
     inline static std::uint8_t constexpr kDims            = 3;
     inline static std::uint16_t constexpr kPoints         = 8;
@@ -1631,7 +1677,8 @@ struct Quad3DP3
         {0.023088, 0.023088, 0.023088, 0.023088, 0.0185787, 0.0185787, 0.0185787, 0.0185787};
 };
 
-struct Quad3DP4
+template <>
+struct SymmetricPolynomialQuadratureRule<3, 4>
 {
     inline static std::uint8_t constexpr kDims            = 3;
     inline static std::uint16_t constexpr kPoints         = 14;
@@ -1661,7 +1708,8 @@ struct Quad3DP4
         0.007091};
 };
 
-struct Quad3DP5
+template <>
+struct SymmetricPolynomialQuadratureRule<3, 5>
 {
     inline static std::uint8_t constexpr kDims            = 3;
     inline static std::uint16_t constexpr kPoints         = 14;
@@ -1691,7 +1739,8 @@ struct Quad3DP5
         0.007091};
 };
 
-struct Quad3DP6
+template <>
+struct SymmetricPolynomialQuadratureRule<3, 6>
 {
     inline static std::uint8_t constexpr kDims            = 3;
     inline static std::uint16_t constexpr kPoints         = 24;
@@ -1716,7 +1765,8 @@ struct Quad3DP6
         0.00803571, 0.00803571, 0.00803571, 0.00803571, 0.00803571, 0.00803571};
 };
 
-struct Quad3DP7
+template <>
+struct SymmetricPolynomialQuadratureRule<3, 7>
 {
     inline static std::uint8_t constexpr kDims             = 3;
     inline static std::uint16_t constexpr kPoints          = 35;
@@ -1748,7 +1798,8 @@ struct Quad3DP7
         0.0013518,  0.0013518,  0.0013518,  0.0013518,  0.0013518,  0.0013518,  0.0013518};
 };
 
-struct Quad3DP8
+template <>
+struct SymmetricPolynomialQuadratureRule<3, 8>
 {
     inline static std::uint8_t constexpr kDims             = 3;
     inline static std::uint16_t constexpr kPoints          = 46;
@@ -1787,7 +1838,8 @@ struct Quad3DP8
         0.0027287,  0.0027287,  0.0027287,  0.0027287};
 };
 
-struct Quad3DP9
+template <>
+struct SymmetricPolynomialQuadratureRule<3, 9>
 {
     inline static std::uint8_t constexpr kDims             = 3;
     inline static std::uint16_t constexpr kPoints          = 59;
@@ -1839,7 +1891,8 @@ struct Quad3DP9
         0.0036012,  0.0036012,   0.0036012};
 };
 
-struct Quad3DP10
+template <>
+struct SymmetricPolynomialQuadratureRule<3, 10>
 {
     inline static std::uint8_t constexpr kDims             = 3;
     inline static std::uint16_t constexpr kPoints          = 79;
@@ -1900,7 +1953,8 @@ struct Quad3DP10
         0.00102665,  0.00102665};
 };
 
-struct Quad3DP11
+template <>
+struct SymmetricPolynomialQuadratureRule<3, 11>
 {
     inline static std::uint8_t constexpr kDims             = 3;
     inline static std::uint16_t constexpr kPoints          = 96;
@@ -1978,7 +2032,8 @@ struct Quad3DP11
         0.00105548,  0.00105548,  0.00105548,  0.00105548,  0.00105548};
 };
 
-struct Quad3DP12
+template <>
+struct SymmetricPolynomialQuadratureRule<3, 12>
 {
     inline static std::uint8_t constexpr kDims             = 3;
     inline static std::uint16_t constexpr kPoints          = 127;
@@ -2070,7 +2125,8 @@ struct Quad3DP12
         0.00126653};
 };
 
-struct Quad3DP13
+template <>
+struct SymmetricPolynomialQuadratureRule<3, 13>
 {
     inline static std::uint8_t constexpr kDims             = 3;
     inline static std::uint16_t constexpr kPoints          = 149;
@@ -2187,7 +2243,8 @@ struct Quad3DP13
         0.000522431, 0.000522431};
 };
 
-struct Quad3DP14
+template <>
+struct SymmetricPolynomialQuadratureRule<3, 14>
 {
     inline static std::uint8_t constexpr kDims             = 3;
     inline static std::uint16_t constexpr kPoints          = 194;
@@ -2335,7 +2392,8 @@ struct Quad3DP14
         0.000153006, 0.000153006, 0.000153006, 0.000153006, 0.000153006};
 };
 
-struct Quad3DP15
+template <>
+struct SymmetricPolynomialQuadratureRule<3, 15>
 {
     inline static std::uint8_t constexpr kDims             = 3;
     inline static std::uint16_t constexpr kPoints          = 246;
@@ -2521,7 +2579,8 @@ struct Quad3DP15
         0.000793778};
 };
 
-struct Quad3DP16
+template <>
+struct SymmetricPolynomialQuadratureRule<3, 16>
 {
     inline static std::uint8_t constexpr kDims              = 3;
     inline static std::uint16_t constexpr kPoints           = 304;
@@ -2748,7 +2807,8 @@ struct Quad3DP16
         0.000654882, 0.000654882, 0.000654882};
 };
 
-struct Quad3DP17
+template <>
+struct SymmetricPolynomialQuadratureRule<3, 17>
 {
     inline static std::uint8_t constexpr kDims              = 3;
     inline static std::uint16_t constexpr kPoints           = 364;
@@ -3017,7 +3077,8 @@ struct Quad3DP17
         0.000953815, 0.000953815, 0.000953815, 0.000953815, 0.000953815, 0.000953815, 0.000953815};
 };
 
-struct Quad3DP18
+template <>
+struct SymmetricPolynomialQuadratureRule<3, 18>
 {
     inline static std::uint8_t constexpr kDims              = 3;
     inline static std::uint16_t constexpr kPoints           = 436;
@@ -3339,7 +3400,8 @@ struct Quad3DP18
         0.000604796, 0.000604796};
 };
 
-struct Quad3DP19
+template <>
+struct SymmetricPolynomialQuadratureRule<3, 19>
 {
     inline static std::uint8_t constexpr kDims              = 3;
     inline static std::uint16_t constexpr kPoints           = 487;
@@ -3697,7 +3759,8 @@ struct Quad3DP19
         0.000290799, 0.000290799, 0.000290799, 0.000290799};
 };
 
-struct Quad3DP20
+template <>
+struct SymmetricPolynomialQuadratureRule<3, 20>
 {
     inline static std::uint8_t constexpr kDims              = 3;
     inline static std::uint16_t constexpr kPoints           = 552;
