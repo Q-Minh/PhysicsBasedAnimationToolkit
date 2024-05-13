@@ -72,7 +72,7 @@ TEST_CASE("[math] SymmetricQuadratureRules")
         pm::Quad3DP18,
         pm::Quad3DP19,
         pm::Quad3DP20>([]<class T>() {
-        CHECK(pm::PolynomialQuadratureRule<T>);
-        CHECK(pm::FixedPointQuadratureRule<T>);
+        CHECK(pm::CPolynomialQuadratureRule<T>);
+        CHECK(pm::CFixedPointQuadratureRule<T>);
     });
 }

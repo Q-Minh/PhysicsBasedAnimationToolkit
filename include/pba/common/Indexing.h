@@ -11,10 +11,7 @@
 namespace pba {
 namespace common {
 
-template <ContiguousIndexRange R>
-std::vector<Index> cumsum(R&& sizes);
-
-template <ContiguousIndexRange R>
+template <CContiguousIndexRange R>
 std::vector<Index> cumsum(R&& sizes)
 {
     namespace rng = std::ranges;

@@ -11,25 +11,23 @@
 namespace pba {
 namespace common {
 
-template <class T>
-concept Arithmetic = std::is_arithmetic_v<T>;
+template <class R>
+concept CIndexRange = std::ranges::range<R> && std::is_integral_v<std::ranges::range_value_t<R>>;
 
 template <class R>
-concept IndexRange = std::ranges::range<R> && std::is_integral_v<std::ranges::range_value_t<R>>;
+concept CContiguousIndexRange =
+    CIndexRange<R> && std::ranges::sized_range<R> && std::ranges::contiguous_range<R>;
 
 template <class R>
-concept ContiguousIndexRange =
-    IndexRange<R> && std::ranges::sized_range<R> && std::ranges::contiguous_range<R>;
+concept CArithmeticRange =
+    std::ranges::range<R> && std::is_arithmetic_v<std::ranges::range_value_t<R>>;
 
 template <class R>
-concept ArithmeticRange = std::ranges::range<R> && Arithmetic<std::ranges::range_value_t<R>>;
+concept CContiguousArithmeticRange =
+    CArithmeticRange<R> && std::ranges::sized_range<R> && std::ranges::contiguous_range<R>;
 
 template <class R>
-concept ContiguousArithmeticRange =
-    ArithmeticRange<R> && std::ranges::sized_range<R> && std::ranges::contiguous_range<R>;
-
-template <class R>
-concept ContiguousArithmeticMatrixRange = requires(R r)
+concept CContiguousArithmeticMatrixRange = requires(R r)
 {
     requires std::ranges::range<R>;
     requires std::ranges::sized_range<R>;

@@ -15,7 +15,7 @@ namespace common {
  * @param r
  * @return
  */
-template <ContiguousArithmeticRange R>
+template <CContiguousArithmeticRange R>
 Eigen::Map<Eigen::Vector<std::ranges::range_value_t<R>, Eigen::Dynamic> const> ToEigen(R&& r)
 {
     namespace rng = std::ranges;
@@ -30,7 +30,7 @@ Eigen::Map<Eigen::Vector<std::ranges::range_value_t<R>, Eigen::Dynamic> const> T
  * @param r
  * @return
  */
-template <ContiguousArithmeticMatrixRange R>
+template <CContiguousArithmeticMatrixRange R>
 Eigen::Map<Eigen::Matrix<
     typename std::ranges::range_value_t<R>::Scalar,
     Eigen::Dynamic,

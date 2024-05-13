@@ -10,7 +10,7 @@ namespace pba {
 namespace math {
 
 template <class T>
-concept PolynomialBasis = requires(T t)
+concept CPolynomialBasis = requires(T t)
 {
     requires std::is_integral_v<decltype(T::kDims)>;
     requires std::is_integral_v<decltype(T::kOrder)>;
@@ -27,7 +27,7 @@ concept PolynomialBasis = requires(T t)
 };
 
 template <class T>
-concept VectorPolynomialBasis = requires(T t)
+concept CVectorPolynomialBasis = requires(T t)
 {
     requires std::is_integral_v<decltype(T::kDims)>;
     requires std::is_integral_v<decltype(T::kOrder)>;
@@ -38,11 +38,11 @@ concept VectorPolynomialBasis = requires(T t)
 };
 
 template <class Q>
-concept QuadratureRule = requires(Q q)
+concept CQuadratureRule = requires(Q q)
 {
     requires std::integral<decltype(Q::kDims)>;
-    requires common::ContiguousArithmeticRange<decltype(q.points)>;
-    requires common::ContiguousArithmeticRange<decltype(q.weights)>;
+    requires common::CContiguousArithmeticRange<decltype(q.points)>;
+    requires common::CContiguousArithmeticRange<decltype(q.weights)>;
     {
         q.points.size()
     } -> std::convertible_to<int>;
@@ -52,18 +52,18 @@ concept QuadratureRule = requires(Q q)
 };
 
 template <class Q>
-concept FixedPointQuadratureRule = requires(Q q)
+concept CFixedPointQuadratureRule = requires(Q q)
 {
-    requires QuadratureRule<Q>;
+    requires CQuadratureRule<Q>;
     requires std::is_integral_v<decltype(Q::kPoints)>;
     {q.points.size() / q.weights.size() == Q::kDims};
     {q.weights.size() == Q::kPoints};
 };
 
 template <class Q>
-concept PolynomialQuadratureRule = requires(Q q)
+concept CPolynomialQuadratureRule = requires(Q q)
 {
-    requires QuadratureRule<Q>;
+    requires CQuadratureRule<Q>;
     requires std::is_integral_v<decltype(Q::kOrder)>;
 };
 

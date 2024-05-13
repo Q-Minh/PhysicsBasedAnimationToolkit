@@ -24,7 +24,7 @@ concept CElement = requires(T t)
     } -> std::convertible_to<int>;
     {
         T::kCoordinates
-    } -> common::ContiguousIndexRange;
+    } -> common::CContiguousIndexRange;
     {
         t.N(Vector<T::kDims>{})
     } -> std::same_as<Vector<T::kNodes>>;
