@@ -37,7 +37,7 @@
             "name": "dev-windows-msvc-warnings",
             "binaryDir": "${sourceDir}/build",
             "cacheVariables": {
-                "CMAKE_CXX_FLAGS": "/permissive- /W4 /WX /w44061 /w44062 /w34191 /w44242 /w44254 /w44263 /w14264 /w34265 /w44266 /w34287 /w44289 /w44296 /w44339 /w44355 /w44365 /w44388 /w44437 /w44471 /w44514 /w14545 /w14546 /w14547 /w14548 /w14549 /w14555 /w44582 /w44583 /w44596 /w44623 /w44625 /w44626 /w34640 /w44643 /w44710 /w34738 /w44774 /w44777 /w44800 /w14822 /w24826 /w14928 /w14946 /w44988 /w15022 /w15023 /w45024 /w45025 /w15026 /w15027 /EHsc",
+                "CMAKE_CXX_FLAGS": "/permissive- /W4 /WX /w44061 /w44062 /w34191 /w44242 /w44254 /w44263 /w14264 /w34265 /w44266 /w34287 /w44289 /w44296 /w44339 /w44355 /w44365 /w44388 /w44437 /w44471 /w44514 /w14545 /w14546 /w14547 /w14548 /w14549 /w14555 /w44582 /w44583 /w44596 /w44623 /w44625 /w44626 /w34640 /w44643 /w34738 /w44774 /w44777 /w44800 /w14822 /w24826 /w14928 /w14946 /w44988 /w15022 /w15023 /w45024 /w45025 /w15026 /w15027 /EHsc",
                 "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
                 "VCPKG_MANIFEST_FEATURES": "suitesparse;mkl;python",
                 "PBA_CORE_ENABLE_PROFILER": "ON",
@@ -67,7 +67,7 @@
             "name": "dev-unix-gcc-clang-warnings",
             "binaryDir": "${sourceDir}/build",
             "cacheVariables": {
-                "CMAKE_CXX_FLAGS": "-Werror -Wall -Wextra -Wshadow -Wnon-virtual-dtor -Wpedantic -Wold-style-cast -Wcast-align -Wunused -Woverloaded-virtual -Wconversion -Wsign-conversion -Wmisleading-indentation -Wduplicated-cond -Wduplicated-branches -Wlogical-op -Wnull-dereference -Wuseless-cast -Wdouble-promotion -Wformat=2 -Wlifetime -Wimplicit-fallthrough",
+                "CMAKE_CXX_FLAGS": "-Werror -Wall -Wextra -Wshadow -Wnon-virtual-dtor -Wpedantic -Wold-style-cast -Wcast-align -Wunused -Woverloaded-virtual -Wconversion -Wsign-conversion -Wmisleading-indentation -Wduplicated-cond -Wduplicated-branches -Wlogical-op -Wnull-dereference -Wuseless-cast -Wdouble-promotion -Wformat=2 -Wlifetime -Wimplicit-fallthrough -Wno-inline",
                 "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
                 "VCPKG_MANIFEST_FEATURES": "suitesparse;mkl;python",
                 "PBA_CORE_ENABLE_PROFILER": "ON",

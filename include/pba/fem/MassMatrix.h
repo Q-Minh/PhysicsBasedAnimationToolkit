@@ -66,7 +66,7 @@ inline void MassMatrix<TMesh, Dims>::ComputeElementMassMatrices(MeshType const& 
     for (auto e = 0; e < numberOfElements; ++e)
     {
         auto me = Me.block(0, e * ElementType::kNodes, ElementType::kNodes, ElementType::kNodes);
-        for (auto g = 0; g < Q.kPoints; ++g)
+        for (auto g = 0; g < QuadratureRuleType::kPoints; ++g)
         {
             Vector<ElementType::kNodes> const Ng = ElementType::N(Xg.col(g));
             for (auto j = 0; j < ElementType::kNodes; ++j)
