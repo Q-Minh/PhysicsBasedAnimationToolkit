@@ -15,7 +15,7 @@ struct MassMatrix
     using MeshType    = TMesh;
     using ElementType = typename TMesh::ElementType;
     using QuadratureRuleType =
-        math::SymmetricPolynomialQuadratureRule<ElementType::kDims, 2 * ElementType::kOrder>;
+        math::SymmetricSimplexPolynomialQuadratureRule<ElementType::kDims, 2 * ElementType::kOrder>;
     static int constexpr kDims  = Dims;
     static int constexpr kOrder = 2 * ElementType::kOrder;
 

@@ -12,16 +12,22 @@ TEST_CASE("[math] SymmetricQuadratureRules")
     ForRange<1, 22>([]<auto Order>() {
         if constexpr (Order % 2 == 1)
         {
-            CHECK(pm::CPolynomialQuadratureRule<pm::SymmetricPolynomialQuadratureRule<1, Order>>);
-            CHECK(pm::CFixedPointQuadratureRule<pm::SymmetricPolynomialQuadratureRule<1, Order>>);
+            CHECK(pm::CPolynomialQuadratureRule<
+                  pm::SymmetricSimplexPolynomialQuadratureRule<1, Order>>);
+            CHECK(pm::CFixedPointQuadratureRule<
+                  pm::SymmetricSimplexPolynomialQuadratureRule<1, Order>>);
         }
     });
     ForRange<1, 30>([]<auto Order>() {
-        CHECK(pm::CPolynomialQuadratureRule<pm::SymmetricPolynomialQuadratureRule<2, Order>>);
-        CHECK(pm::CFixedPointQuadratureRule<pm::SymmetricPolynomialQuadratureRule<2, Order>>);
+        CHECK(
+            pm::CPolynomialQuadratureRule<pm::SymmetricSimplexPolynomialQuadratureRule<2, Order>>);
+        CHECK(
+            pm::CFixedPointQuadratureRule<pm::SymmetricSimplexPolynomialQuadratureRule<2, Order>>);
     });
     ForRange<1, 21>([]<auto Order>() {
-        CHECK(pm::CPolynomialQuadratureRule<pm::SymmetricPolynomialQuadratureRule<3, Order>>);
-        CHECK(pm::CFixedPointQuadratureRule<pm::SymmetricPolynomialQuadratureRule<3, Order>>);
+        CHECK(
+            pm::CPolynomialQuadratureRule<pm::SymmetricSimplexPolynomialQuadratureRule<3, Order>>);
+        CHECK(
+            pm::CFixedPointQuadratureRule<pm::SymmetricSimplexPolynomialQuadratureRule<3, Order>>);
     });
 }

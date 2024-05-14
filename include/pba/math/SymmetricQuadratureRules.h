@@ -41,10 +41,10 @@ struct ModifiableQuadratureScheme
 };
 
 template <int Dims, int Order>
-struct SymmetricPolynomialQuadratureRule;
+struct SymmetricSimplexPolynomialQuadratureRule;
 
 template <>
-struct SymmetricPolynomialQuadratureRule<1, 1>
+struct SymmetricSimplexPolynomialQuadratureRule<1, 1>
 {
     inline static std::uint8_t constexpr kDims            = 1;
     inline static std::uint16_t constexpr kPoints         = 1;
@@ -54,7 +54,7 @@ struct SymmetricPolynomialQuadratureRule<1, 1>
 };
 
 template <>
-struct SymmetricPolynomialQuadratureRule<1, 3>
+struct SymmetricSimplexPolynomialQuadratureRule<1, 3>
 {
     inline static std::uint8_t constexpr kDims           = 1;
     inline static std::uint16_t constexpr kPoints        = 2;
@@ -64,7 +64,7 @@ struct SymmetricPolynomialQuadratureRule<1, 3>
 };
 
 template <>
-struct SymmetricPolynomialQuadratureRule<1, 5>
+struct SymmetricSimplexPolynomialQuadratureRule<1, 5>
 {
     inline static std::uint8_t constexpr kDims    = 1;
     inline static std::uint16_t constexpr kPoints = 3;
@@ -75,7 +75,7 @@ struct SymmetricPolynomialQuadratureRule<1, 5>
 };
 
 template <>
-struct SymmetricPolynomialQuadratureRule<1, 7>
+struct SymmetricSimplexPolynomialQuadratureRule<1, 7>
 {
     inline static std::uint8_t constexpr kDims    = 1;
     inline static std::uint16_t constexpr kPoints = 4;
@@ -87,7 +87,7 @@ struct SymmetricPolynomialQuadratureRule<1, 7>
 };
 
 template <>
-struct SymmetricPolynomialQuadratureRule<1, 9>
+struct SymmetricSimplexPolynomialQuadratureRule<1, 9>
 {
     inline static std::uint8_t constexpr kDims    = 1;
     inline static std::uint16_t constexpr kPoints = 5;
@@ -99,7 +99,7 @@ struct SymmetricPolynomialQuadratureRule<1, 9>
 };
 
 template <>
-struct SymmetricPolynomialQuadratureRule<1, 11>
+struct SymmetricSimplexPolynomialQuadratureRule<1, 11>
 {
     inline static std::uint8_t constexpr kDims            = 1;
     inline static std::uint16_t constexpr kPoints         = 6;
@@ -122,7 +122,7 @@ struct SymmetricPolynomialQuadratureRule<1, 11>
 };
 
 template <>
-struct SymmetricPolynomialQuadratureRule<1, 13>
+struct SymmetricSimplexPolynomialQuadratureRule<1, 13>
 {
     inline static std::uint8_t constexpr kDims            = 1;
     inline static std::uint16_t constexpr kPoints         = 7;
@@ -147,7 +147,7 @@ struct SymmetricPolynomialQuadratureRule<1, 13>
 };
 
 template <>
-struct SymmetricPolynomialQuadratureRule<1, 15>
+struct SymmetricSimplexPolynomialQuadratureRule<1, 15>
 {
     inline static std::uint8_t constexpr kDims            = 1;
     inline static std::uint16_t constexpr kPoints         = 8;
@@ -174,7 +174,7 @@ struct SymmetricPolynomialQuadratureRule<1, 15>
 };
 
 template <>
-struct SymmetricPolynomialQuadratureRule<1, 17>
+struct SymmetricSimplexPolynomialQuadratureRule<1, 17>
 {
     inline static std::uint8_t constexpr kDims            = 1;
     inline static std::uint16_t constexpr kPoints         = 9;
@@ -211,7 +211,7 @@ struct SymmetricPolynomialQuadratureRule<1, 17>
 };
 
 template <>
-struct SymmetricPolynomialQuadratureRule<1, 19>
+struct SymmetricSimplexPolynomialQuadratureRule<1, 19>
 {
     inline static std::uint8_t constexpr kDims            = 1;
     inline static std::uint16_t constexpr kPoints         = 10;
@@ -234,7 +234,7 @@ struct SymmetricPolynomialQuadratureRule<1, 19>
 };
 
 template <>
-struct SymmetricPolynomialQuadratureRule<1, 21>
+struct SymmetricSimplexPolynomialQuadratureRule<1, 21>
 {
     inline static std::uint8_t constexpr kDims            = 1;
     inline static std::uint16_t constexpr kPoints         = 11;
@@ -258,7 +258,7 @@ struct SymmetricPolynomialQuadratureRule<1, 21>
 };
 
 template <>
-struct SymmetricPolynomialQuadratureRule<2, 1>
+struct SymmetricSimplexPolynomialQuadratureRule<2, 1>
 {
     inline static std::uint8_t constexpr kDims            = 2;
     inline static std::uint16_t constexpr kPoints         = 1;
@@ -268,7 +268,7 @@ struct SymmetricPolynomialQuadratureRule<2, 1>
 };
 
 template <>
-struct SymmetricPolynomialQuadratureRule<2, 2>
+struct SymmetricSimplexPolynomialQuadratureRule<2, 2>
 {
     inline static std::uint8_t constexpr kDims    = 2;
     inline static std::uint16_t constexpr kPoints = 3;
@@ -279,7 +279,7 @@ struct SymmetricPolynomialQuadratureRule<2, 2>
 };
 
 template <>
-struct SymmetricPolynomialQuadratureRule<2, 3>
+struct SymmetricSimplexPolynomialQuadratureRule<2, 3>
 {
     inline static std::uint8_t constexpr kDims            = 2;
     inline static std::uint16_t constexpr kPoints         = 6;
@@ -308,7 +308,7 @@ struct SymmetricPolynomialQuadratureRule<2, 3>
 };
 
 template <>
-struct SymmetricPolynomialQuadratureRule<2, 4>
+struct SymmetricSimplexPolynomialQuadratureRule<2, 4>
 {
     inline static std::uint8_t constexpr kDims            = 2;
     inline static std::uint16_t constexpr kPoints         = 6;
@@ -337,7 +337,7 @@ struct SymmetricPolynomialQuadratureRule<2, 4>
 };
 
 template <>
-struct SymmetricPolynomialQuadratureRule<2, 5>
+struct SymmetricSimplexPolynomialQuadratureRule<2, 5>
 {
     inline static std::uint8_t constexpr kDims            = 2;
     inline static std::uint16_t constexpr kPoints         = 7;
@@ -351,7 +351,7 @@ struct SymmetricPolynomialQuadratureRule<2, 5>
 };
 
 template <>
-struct SymmetricPolynomialQuadratureRule<2, 6>
+struct SymmetricSimplexPolynomialQuadratureRule<2, 6>
 {
     inline static std::uint8_t constexpr kDims            = 2;
     inline static std::uint16_t constexpr kPoints         = 12;
@@ -377,7 +377,7 @@ struct SymmetricPolynomialQuadratureRule<2, 6>
 };
 
 template <>
-struct SymmetricPolynomialQuadratureRule<2, 7>
+struct SymmetricSimplexPolynomialQuadratureRule<2, 7>
 {
     inline static std::uint8_t constexpr kDims            = 2;
     inline static std::uint16_t constexpr kPoints         = 15;
@@ -408,7 +408,7 @@ struct SymmetricPolynomialQuadratureRule<2, 7>
 };
 
 template <>
-struct SymmetricPolynomialQuadratureRule<2, 8>
+struct SymmetricSimplexPolynomialQuadratureRule<2, 8>
 {
     inline static std::uint8_t constexpr kDims            = 2;
     inline static std::uint16_t constexpr kPoints         = 16;
@@ -440,7 +440,7 @@ struct SymmetricPolynomialQuadratureRule<2, 8>
 };
 
 template <>
-struct SymmetricPolynomialQuadratureRule<2, 9>
+struct SymmetricSimplexPolynomialQuadratureRule<2, 9>
 {
     inline static std::uint8_t constexpr kDims            = 2;
     inline static std::uint16_t constexpr kPoints         = 19;
@@ -477,7 +477,7 @@ struct SymmetricPolynomialQuadratureRule<2, 9>
 };
 
 template <>
-struct SymmetricPolynomialQuadratureRule<2, 10>
+struct SymmetricSimplexPolynomialQuadratureRule<2, 10>
 {
     inline static std::uint8_t constexpr kDims            = 2;
     inline static std::uint16_t constexpr kPoints         = 25;
@@ -501,7 +501,7 @@ struct SymmetricPolynomialQuadratureRule<2, 10>
 };
 
 template <>
-struct SymmetricPolynomialQuadratureRule<2, 11>
+struct SymmetricSimplexPolynomialQuadratureRule<2, 11>
 {
     inline static std::uint8_t constexpr kDims            = 2;
     inline static std::uint16_t constexpr kPoints         = 28;
@@ -526,7 +526,7 @@ struct SymmetricPolynomialQuadratureRule<2, 11>
 };
 
 template <>
-struct SymmetricPolynomialQuadratureRule<2, 12>
+struct SymmetricSimplexPolynomialQuadratureRule<2, 12>
 {
     inline static std::uint8_t constexpr kDims            = 2;
     inline static std::uint16_t constexpr kPoints         = 33;
@@ -554,7 +554,7 @@ struct SymmetricPolynomialQuadratureRule<2, 12>
 };
 
 template <>
-struct SymmetricPolynomialQuadratureRule<2, 13>
+struct SymmetricSimplexPolynomialQuadratureRule<2, 13>
 {
     inline static std::uint8_t constexpr kDims             = 2;
     inline static std::uint16_t constexpr kPoints          = 37;
@@ -583,7 +583,7 @@ struct SymmetricPolynomialQuadratureRule<2, 13>
 };
 
 template <>
-struct SymmetricPolynomialQuadratureRule<2, 14>
+struct SymmetricSimplexPolynomialQuadratureRule<2, 14>
 {
     inline static std::uint8_t constexpr kDims             = 2;
     inline static std::uint16_t constexpr kPoints          = 42;
@@ -615,7 +615,7 @@ struct SymmetricPolynomialQuadratureRule<2, 14>
 };
 
 template <>
-struct SymmetricPolynomialQuadratureRule<2, 15>
+struct SymmetricSimplexPolynomialQuadratureRule<2, 15>
 {
     inline static std::uint8_t constexpr kDims             = 2;
     inline static std::uint16_t constexpr kPoints          = 49;
@@ -653,7 +653,7 @@ struct SymmetricPolynomialQuadratureRule<2, 15>
 };
 
 template <>
-struct SymmetricPolynomialQuadratureRule<2, 16>
+struct SymmetricSimplexPolynomialQuadratureRule<2, 16>
 {
     inline static std::uint8_t constexpr kDims             = 2;
     inline static std::uint16_t constexpr kPoints          = 55;
@@ -692,7 +692,7 @@ struct SymmetricPolynomialQuadratureRule<2, 16>
 };
 
 template <>
-struct SymmetricPolynomialQuadratureRule<2, 17>
+struct SymmetricSimplexPolynomialQuadratureRule<2, 17>
 {
     inline static std::uint8_t constexpr kDims             = 2;
     inline static std::uint16_t constexpr kPoints          = 60;
@@ -734,7 +734,7 @@ struct SymmetricPolynomialQuadratureRule<2, 17>
 };
 
 template <>
-struct SymmetricPolynomialQuadratureRule<2, 18>
+struct SymmetricSimplexPolynomialQuadratureRule<2, 18>
 {
     inline static std::uint8_t constexpr kDims             = 2;
     inline static std::uint16_t constexpr kPoints          = 67;
@@ -783,7 +783,7 @@ struct SymmetricPolynomialQuadratureRule<2, 18>
 };
 
 template <>
-struct SymmetricPolynomialQuadratureRule<2, 19>
+struct SymmetricSimplexPolynomialQuadratureRule<2, 19>
 {
     inline static std::uint8_t constexpr kDims             = 2;
     inline static std::uint16_t constexpr kPoints          = 73;
@@ -832,7 +832,7 @@ struct SymmetricPolynomialQuadratureRule<2, 19>
 };
 
 template <>
-struct SymmetricPolynomialQuadratureRule<2, 20>
+struct SymmetricSimplexPolynomialQuadratureRule<2, 20>
 {
     inline static std::uint8_t constexpr kDims             = 2;
     inline static std::uint16_t constexpr kPoints          = 82;
@@ -890,7 +890,7 @@ struct SymmetricPolynomialQuadratureRule<2, 20>
 };
 
 template <>
-struct SymmetricPolynomialQuadratureRule<2, 21>
+struct SymmetricSimplexPolynomialQuadratureRule<2, 21>
 {
     inline static std::uint8_t constexpr kDims             = 2;
     inline static std::uint16_t constexpr kPoints          = 87;
@@ -951,7 +951,7 @@ struct SymmetricPolynomialQuadratureRule<2, 21>
 };
 
 template <>
-struct SymmetricPolynomialQuadratureRule<2, 22>
+struct SymmetricSimplexPolynomialQuadratureRule<2, 22>
 {
     inline static std::uint8_t constexpr kDims             = 2;
     inline static std::uint16_t constexpr kPoints          = 96;
@@ -1017,7 +1017,7 @@ struct SymmetricPolynomialQuadratureRule<2, 22>
 };
 
 template <>
-struct SymmetricPolynomialQuadratureRule<2, 23>
+struct SymmetricSimplexPolynomialQuadratureRule<2, 23>
 {
     inline static std::uint8_t constexpr kDims             = 2;
     inline static std::uint16_t constexpr kPoints          = 102;
@@ -1086,7 +1086,7 @@ struct SymmetricPolynomialQuadratureRule<2, 23>
 };
 
 template <>
-struct SymmetricPolynomialQuadratureRule<2, 24>
+struct SymmetricSimplexPolynomialQuadratureRule<2, 24>
 {
     inline static std::uint8_t constexpr kDims             = 2;
     inline static std::uint16_t constexpr kPoints          = 112;
@@ -1160,7 +1160,7 @@ struct SymmetricPolynomialQuadratureRule<2, 24>
 };
 
 template <>
-struct SymmetricPolynomialQuadratureRule<2, 25>
+struct SymmetricSimplexPolynomialQuadratureRule<2, 25>
 {
     inline static std::uint8_t constexpr kDims             = 2;
     inline static std::uint16_t constexpr kPoints          = 126;
@@ -1242,7 +1242,7 @@ struct SymmetricPolynomialQuadratureRule<2, 25>
 };
 
 template <>
-struct SymmetricPolynomialQuadratureRule<2, 26>
+struct SymmetricSimplexPolynomialQuadratureRule<2, 26>
 {
     inline static std::uint8_t constexpr kDims             = 2;
     inline static std::uint16_t constexpr kPoints          = 133;
@@ -1328,7 +1328,7 @@ struct SymmetricPolynomialQuadratureRule<2, 26>
 };
 
 template <>
-struct SymmetricPolynomialQuadratureRule<2, 27>
+struct SymmetricSimplexPolynomialQuadratureRule<2, 27>
 {
     inline static std::uint8_t constexpr kDims             = 2;
     inline static std::uint16_t constexpr kPoints          = 145;
@@ -1422,7 +1422,7 @@ struct SymmetricPolynomialQuadratureRule<2, 27>
 };
 
 template <>
-struct SymmetricPolynomialQuadratureRule<2, 28>
+struct SymmetricSimplexPolynomialQuadratureRule<2, 28>
 {
     inline static std::uint8_t constexpr kDims             = 2;
     inline static std::uint16_t constexpr kPoints          = 154;
@@ -1520,7 +1520,7 @@ struct SymmetricPolynomialQuadratureRule<2, 28>
 };
 
 template <>
-struct SymmetricPolynomialQuadratureRule<2, 29>
+struct SymmetricSimplexPolynomialQuadratureRule<2, 29>
 {
     inline static std::uint8_t constexpr kDims             = 2;
     inline static std::uint16_t constexpr kPoints          = 166;
@@ -1626,7 +1626,7 @@ struct SymmetricPolynomialQuadratureRule<2, 29>
 };
 
 template <>
-struct SymmetricPolynomialQuadratureRule<3, 1>
+struct SymmetricSimplexPolynomialQuadratureRule<3, 1>
 {
     inline static std::uint8_t constexpr kDims            = 3;
     inline static std::uint16_t constexpr kPoints         = 1;
@@ -1636,7 +1636,7 @@ struct SymmetricPolynomialQuadratureRule<3, 1>
 };
 
 template <>
-struct SymmetricPolynomialQuadratureRule<3, 2>
+struct SymmetricSimplexPolynomialQuadratureRule<3, 2>
 {
     inline static std::uint8_t constexpr kDims            = 3;
     inline static std::uint16_t constexpr kPoints         = 4;
@@ -1663,7 +1663,7 @@ struct SymmetricPolynomialQuadratureRule<3, 2>
 };
 
 template <>
-struct SymmetricPolynomialQuadratureRule<3, 3>
+struct SymmetricSimplexPolynomialQuadratureRule<3, 3>
 {
     inline static std::uint8_t constexpr kDims            = 3;
     inline static std::uint16_t constexpr kPoints         = 8;
@@ -1678,7 +1678,7 @@ struct SymmetricPolynomialQuadratureRule<3, 3>
 };
 
 template <>
-struct SymmetricPolynomialQuadratureRule<3, 4>
+struct SymmetricSimplexPolynomialQuadratureRule<3, 4>
 {
     inline static std::uint8_t constexpr kDims            = 3;
     inline static std::uint16_t constexpr kPoints         = 14;
@@ -1709,7 +1709,7 @@ struct SymmetricPolynomialQuadratureRule<3, 4>
 };
 
 template <>
-struct SymmetricPolynomialQuadratureRule<3, 5>
+struct SymmetricSimplexPolynomialQuadratureRule<3, 5>
 {
     inline static std::uint8_t constexpr kDims            = 3;
     inline static std::uint16_t constexpr kPoints         = 14;
@@ -1740,7 +1740,7 @@ struct SymmetricPolynomialQuadratureRule<3, 5>
 };
 
 template <>
-struct SymmetricPolynomialQuadratureRule<3, 6>
+struct SymmetricSimplexPolynomialQuadratureRule<3, 6>
 {
     inline static std::uint8_t constexpr kDims            = 3;
     inline static std::uint16_t constexpr kPoints         = 24;
@@ -1766,7 +1766,7 @@ struct SymmetricPolynomialQuadratureRule<3, 6>
 };
 
 template <>
-struct SymmetricPolynomialQuadratureRule<3, 7>
+struct SymmetricSimplexPolynomialQuadratureRule<3, 7>
 {
     inline static std::uint8_t constexpr kDims             = 3;
     inline static std::uint16_t constexpr kPoints          = 35;
@@ -1799,7 +1799,7 @@ struct SymmetricPolynomialQuadratureRule<3, 7>
 };
 
 template <>
-struct SymmetricPolynomialQuadratureRule<3, 8>
+struct SymmetricSimplexPolynomialQuadratureRule<3, 8>
 {
     inline static std::uint8_t constexpr kDims             = 3;
     inline static std::uint16_t constexpr kPoints          = 46;
@@ -1839,7 +1839,7 @@ struct SymmetricPolynomialQuadratureRule<3, 8>
 };
 
 template <>
-struct SymmetricPolynomialQuadratureRule<3, 9>
+struct SymmetricSimplexPolynomialQuadratureRule<3, 9>
 {
     inline static std::uint8_t constexpr kDims             = 3;
     inline static std::uint16_t constexpr kPoints          = 59;
@@ -1892,7 +1892,7 @@ struct SymmetricPolynomialQuadratureRule<3, 9>
 };
 
 template <>
-struct SymmetricPolynomialQuadratureRule<3, 10>
+struct SymmetricSimplexPolynomialQuadratureRule<3, 10>
 {
     inline static std::uint8_t constexpr kDims             = 3;
     inline static std::uint16_t constexpr kPoints          = 79;
@@ -1954,7 +1954,7 @@ struct SymmetricPolynomialQuadratureRule<3, 10>
 };
 
 template <>
-struct SymmetricPolynomialQuadratureRule<3, 11>
+struct SymmetricSimplexPolynomialQuadratureRule<3, 11>
 {
     inline static std::uint8_t constexpr kDims             = 3;
     inline static std::uint16_t constexpr kPoints          = 96;
@@ -2033,7 +2033,7 @@ struct SymmetricPolynomialQuadratureRule<3, 11>
 };
 
 template <>
-struct SymmetricPolynomialQuadratureRule<3, 12>
+struct SymmetricSimplexPolynomialQuadratureRule<3, 12>
 {
     inline static std::uint8_t constexpr kDims             = 3;
     inline static std::uint16_t constexpr kPoints          = 127;
@@ -2126,7 +2126,7 @@ struct SymmetricPolynomialQuadratureRule<3, 12>
 };
 
 template <>
-struct SymmetricPolynomialQuadratureRule<3, 13>
+struct SymmetricSimplexPolynomialQuadratureRule<3, 13>
 {
     inline static std::uint8_t constexpr kDims             = 3;
     inline static std::uint16_t constexpr kPoints          = 149;
@@ -2244,7 +2244,7 @@ struct SymmetricPolynomialQuadratureRule<3, 13>
 };
 
 template <>
-struct SymmetricPolynomialQuadratureRule<3, 14>
+struct SymmetricSimplexPolynomialQuadratureRule<3, 14>
 {
     inline static std::uint8_t constexpr kDims             = 3;
     inline static std::uint16_t constexpr kPoints          = 194;
@@ -2393,7 +2393,7 @@ struct SymmetricPolynomialQuadratureRule<3, 14>
 };
 
 template <>
-struct SymmetricPolynomialQuadratureRule<3, 15>
+struct SymmetricSimplexPolynomialQuadratureRule<3, 15>
 {
     inline static std::uint8_t constexpr kDims             = 3;
     inline static std::uint16_t constexpr kPoints          = 246;
@@ -2580,7 +2580,7 @@ struct SymmetricPolynomialQuadratureRule<3, 15>
 };
 
 template <>
-struct SymmetricPolynomialQuadratureRule<3, 16>
+struct SymmetricSimplexPolynomialQuadratureRule<3, 16>
 {
     inline static std::uint8_t constexpr kDims              = 3;
     inline static std::uint16_t constexpr kPoints           = 304;
@@ -2808,7 +2808,7 @@ struct SymmetricPolynomialQuadratureRule<3, 16>
 };
 
 template <>
-struct SymmetricPolynomialQuadratureRule<3, 17>
+struct SymmetricSimplexPolynomialQuadratureRule<3, 17>
 {
     inline static std::uint8_t constexpr kDims              = 3;
     inline static std::uint16_t constexpr kPoints           = 364;
@@ -3078,7 +3078,7 @@ struct SymmetricPolynomialQuadratureRule<3, 17>
 };
 
 template <>
-struct SymmetricPolynomialQuadratureRule<3, 18>
+struct SymmetricSimplexPolynomialQuadratureRule<3, 18>
 {
     inline static std::uint8_t constexpr kDims              = 3;
     inline static std::uint16_t constexpr kPoints           = 436;
@@ -3401,7 +3401,7 @@ struct SymmetricPolynomialQuadratureRule<3, 18>
 };
 
 template <>
-struct SymmetricPolynomialQuadratureRule<3, 19>
+struct SymmetricSimplexPolynomialQuadratureRule<3, 19>
 {
     inline static std::uint8_t constexpr kDims              = 3;
     inline static std::uint16_t constexpr kPoints           = 487;
@@ -3760,7 +3760,7 @@ struct SymmetricPolynomialQuadratureRule<3, 19>
 };
 
 template <>
-struct SymmetricPolynomialQuadratureRule<3, 20>
+struct SymmetricSimplexPolynomialQuadratureRule<3, 20>
 {
     inline static std::uint8_t constexpr kDims              = 3;
     inline static std::uint16_t constexpr kPoints           = 552;
