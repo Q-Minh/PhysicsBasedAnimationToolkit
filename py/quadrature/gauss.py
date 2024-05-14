@@ -49,7 +49,7 @@ struct GaussLegendreQuadrature<{0},{1}>
 {{
     inline static std::uint8_t constexpr kDims = {0};
     inline static std::uint8_t constexpr kOrder = {1};
-    inline static std::uint8_t constexpr kPoints = {2};
+    inline static int constexpr kPoints = {2};
     inline static std::array<Scalar, (kDims+1)*kPoints> constexpr points = {{{3}}};
     inline static std::array<Scalar, kPoints> constexpr weights = {{{4}}};
 }};
