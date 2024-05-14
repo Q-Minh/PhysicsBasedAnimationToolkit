@@ -40,6 +40,13 @@ struct ModifiableQuadratureScheme
     decltype(Quad::weights) weights;
 };
 
+/**
+ * @brief Symmetric quadrature rule for reference simplices in 1,2,3 dimensions, i.e. with vertices
+ * having coordinate values 0 or 1.
+ *
+ * @tparam Dims
+ * @tparam Order
+ */
 template <int Dims, int Order>
 struct SymmetricSimplexPolynomialQuadratureRule;
 

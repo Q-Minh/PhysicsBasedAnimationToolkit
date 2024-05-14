@@ -10,6 +10,12 @@
 namespace pba {
 namespace math {
 
+/**
+ * @brief Shifted Gauss Legendre quadrature scheme over the unit box [0,1] in Dims dimensions.
+ *
+ * @tparam Dims
+ * @tparam Order
+ */
 template <int Dims, int Order>
 struct GaussLegendreQuadrature;
 
