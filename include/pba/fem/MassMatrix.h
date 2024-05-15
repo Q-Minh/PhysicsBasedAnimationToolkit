@@ -67,10 +67,10 @@ inline void MassMatrix<TMesh, Dims>::ComputeElementMassMatrices(MeshType const& 
         auto constexpr kColsJ           = AffineElementType::kNodes;
         Matrix<kRowsJ, kColsJ> const Ve = mesh.X(Eigen::all, vertices);
         auto me = Me.block(0, e * ElementType::kNodes, ElementType::kNodes, ElementType::kNodes);
-        Scalar detJ = 1.;
+        Scalar detJ{};
         if constexpr (AffineElementType::bHasConstantJacobian)
             detJ = DeterminantOfJacobian(Jacobian<AffineElementType>({}, Ve));
-            
+
         auto const wg = common::ToEigen(QuadratureRuleType::weights);
         for (auto g = 0; g < QuadratureRuleType::kPoints; ++g)
         {
