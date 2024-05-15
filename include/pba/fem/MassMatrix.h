@@ -4,9 +4,7 @@
 #include "Concepts.h"
 #include "Jacobian.h"
 #include "pba/common/Eigen.h"
-#include "pba/math/SymmetricQuadratureRules.h"
 
-#include <Eigen/SVD>
 #include <cmath>
 #include <tbb/parallel_for.h>
 
@@ -55,7 +53,7 @@ inline MassMatrix<TMesh, Dims>::MassMatrix(
 template <CMesh TMesh, int Dims>
 inline void MassMatrix<TMesh, Dims>::ComputeElementMassMatrices(MeshType const& mesh)
 {
-    using AffineElement = typename ElementType::AffineBaseType;
+    using AffineElementType = typename ElementType::AffineBaseType;
 
     Me.setZero();
     auto const Xg = common::ToEigen(QuadratureRuleType::points)
@@ -63,22 +61,28 @@ inline void MassMatrix<TMesh, Dims>::ComputeElementMassMatrices(MeshType const& 
                         .bottomRows(QuadratureRuleType::kDims);
     auto const numberOfElements = mesh.E.cols();
     tbb::parallel_for(0, numberOfElements, [&](std::size_t e) {
-        auto const nodes    = mesh.E.col(e);
-        auto const vertices = nodes(ElementType::Vertices);
-        auto const Ve       = mesh.X(Eigen::all, vertices);
-        Scalar const detJ   = DeterminantOfJacobian(Jacobian(
-            Xg.col(0) /*Any point will do, since jacobian of affine map is constant*/,
-            Ve));
-        auto const wg       = detJ * common::ToEigen(QuadratureRuleType::weights);
+        auto const nodes                = mesh.E.col(e);
+        auto const vertices             = nodes(ElementType::Vertices);
+        auto constexpr kRowsJ           = MeshType::kDims;
+        auto constexpr kColsJ           = AffineElementType::kNodes;
+        Matrix<kRowsJ, kColsJ> const Ve = mesh.X(Eigen::all, vertices);
         auto me = Me.block(0, e * ElementType::kNodes, ElementType::kNodes, ElementType::kNodes);
+        Scalar detJ = 1.;
+        if constexpr (AffineElementType::bHasConstantJacobian)
+            detJ = DeterminantOfJacobian(Jacobian<AffineElementType>({}, Ve));
+            
+        auto const wg = common::ToEigen(QuadratureRuleType::weights);
         for (auto g = 0; g < QuadratureRuleType::kPoints; ++g)
         {
+            if constexpr (!AffineElementType::bHasConstantJacobian)
+                detJ = DeterminantOfJacobian(Jacobian<AffineElementType>(Xg.col(g), Ve));
+
             Vector<ElementType::kNodes> const Ng = ElementType::N(Xg.col(g));
             for (auto j = 0; j < ElementType::kNodes; ++j)
             {
                 for (auto i = 0; i < ElementType::kNodes; ++i)
                 {
-                    me(i, j) += wg(g) * rho(e) * Ng(i) * Ng(j);
+                    me(i, j) += wg(g) * rho(e) * Ng(i) * Ng(j) * detJ;
                 }
             }
         }

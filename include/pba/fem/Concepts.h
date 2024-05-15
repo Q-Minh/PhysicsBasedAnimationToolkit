@@ -13,6 +13,9 @@ template <class T>
 concept CElement = requires(T t)
 {
     typename T::AffineBaseType;
+    {
+        T::bHasConstantJacobian
+    } -> std::convertible_to<bool>;
     // Should be valid for argument > 1 as well, but we don't check that.
     typename T::template QuadratureType<1>;
     {

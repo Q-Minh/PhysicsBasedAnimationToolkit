@@ -2,13 +2,13 @@
 #define PBA_CORE_FEM_MESH_H
 
 #include "Concepts.h"
+#include "Jacobian.h"
 #include "pba/aliases.h"
 #include "pba/common/Eigen.h"
-#include "pba/common/Hash.h"
 #include "pba/math/Rational.h"
 
-#include <Eigen/QR>
 #include <algorithm>
+#include <exception>
 #include <map>
 #include <numeric>
 #include <ranges>

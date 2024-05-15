@@ -4,35 +4,33 @@
 #include "Concepts.h"
 #include "pba/aliases.h"
 
+#include <Eigen/LU>
 #include <Eigen/SVD>
-#include <cmath>
 
 namespace pba {
 namespace fem {
 
 template <CElement TElement, class TDerived>
 [[maybe_unused]] Matrix<TDerived::RowsAtCompileTime, TElement::kDims>
-Jacobian(Vector<TElement::kDims> const& X, Eigen::DenseBase<TDerived> const& x)
+Jacobian(Vector<TElement::kDims> const& X, Eigen::MatrixBase<TDerived> const& x)
 {
-    static_assert(TDerived::RowsAtCompileTime != Eigen::Dynamic);
     assert(x.cols() == TElement::kNodes);
     auto constexpr kDimsOut                   = TDerived::RowsAtCompileTime;
-    Matrix<kDimsOut, TElement::kDims> const J = x * GradN(X);
+    Matrix<kDimsOut, TElement::kDims> const J = x * TElement::GradN(X);
     return J;
 }
 
 template <class TDerived>
 [[maybe_unused]] Scalar DeterminantOfJacobian(Eigen::MatrixBase<TDerived> const& J)
 {
-    bool constexpr bIsSquare = J.rows() == J.cols();
-    if constexpr (bIsSquare)
+    bool const bIsSquare = J.rows() == J.cols();
+    Scalar const detJ    = bIsSquare ? J.determinant() : J.jacobiSvd().singularValues().prod();
+    // TODO: Should define a numerical zero somewhere
+    if (detJ <= 0.)
     {
-        return J.determinant();
+        throw std::runtime_error("Inverted or singular jacobian");
     }
-    else
-    {
-        return std::abs(J.jacobiSvd().singularValues().prod());
-    }
+    return detJ;
 }
 
 } // namespace fem

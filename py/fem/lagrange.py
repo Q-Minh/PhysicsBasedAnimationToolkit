@@ -275,6 +275,7 @@ struct {0}<{1}>
     static std::array<int, kNodes * kDims> constexpr Coordinates =
         {{{4}}}; ///< Divide coordinates by kOrder to obtain actual coordinates in the reference element
     static std::array<int, AffineBaseType::kNodes> constexpr Vertices = {{{8}}}; ///< Indices into nodes [0,kNodes-1] revealing vertices of the element
+    static bool constexpr bHasConstantJacobian = {9};
     
     template <int PolynomialOrder>
     using QuadratureType = math::{5}<kDims, PolynomialOrder>;
@@ -314,6 +315,11 @@ struct {0}<{1}>
                 "GNp", *gradNT.shape)), spaces=8)
             vertices = ",".join([str(v)
                                 for v in element.vertices])
+
+            symX = list(X.atoms(sp.MatrixSymbol))[0]
+            has_constant_jacobian = symX not in gradN.atoms(
+                sp.MatrixSymbol)
+            Jconst = str(has_constant_jacobian).lower()
             file.write(template_specialization.format(element_name,
                                                       order,
                                                       dims,
@@ -322,7 +328,8 @@ struct {0}<{1}>
                                                       quad,
                                                       codeN,
                                                       codeGN,
-                                                      vertices))
+                                                      vertices,
+                                                      Jconst))
 
         file.write(
             footer.format(element_name.upper()))

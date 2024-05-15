@@ -24,6 +24,7 @@ struct Hexahedron<1>
     static std::array<int, kNodes * kDims> constexpr Coordinates =
         {0,0,0,1,0,0,0,1,0,1,1,0,0,0,1,1,0,1,0,1,1,1,1,1}; ///< Divide coordinates by kOrder to obtain actual coordinates in the reference element
     static std::array<int, AffineBaseType::kNodes> constexpr Vertices = {0,1,2,3,4,5,6,7}; ///< Indices into nodes [0,kNodes-1] revealing vertices of the element
+    static bool constexpr bHasConstantJacobian = false;
     
     template <int PolynomialOrder>
     using QuadratureType = math::GaussLegendreQuadrature<kDims, PolynomialOrder>;
@@ -102,6 +103,7 @@ struct Hexahedron<2>
     static std::array<int, kNodes * kDims> constexpr Coordinates =
         {0,0,0,1,0,0,2,0,0,0,1,0,1,1,0,2,1,0,0,2,0,1,2,0,2,2,0,0,0,1,1,0,1,2,0,1,0,1,1,1,1,1,2,1,1,0,2,1,1,2,1,2,2,1,0,0,2,1,0,2,2,0,2,0,1,2,1,1,2,2,1,2,0,2,2,1,2,2,2,2,2}; ///< Divide coordinates by kOrder to obtain actual coordinates in the reference element
     static std::array<int, AffineBaseType::kNodes> constexpr Vertices = {0,2,6,8,18,20,24,26}; ///< Indices into nodes [0,kNodes-1] revealing vertices of the element
+    static bool constexpr bHasConstantJacobian = false;
     
     template <int PolynomialOrder>
     using QuadratureType = math::GaussLegendreQuadrature<kDims, PolynomialOrder>;
