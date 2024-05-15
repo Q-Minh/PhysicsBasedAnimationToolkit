@@ -47,9 +47,9 @@ struct LoadVector
 template <CMesh TMesh, int Dims>
 template <class TDerived>
 inline LoadVector<TMesh, Dims>::LoadVector(
-    MeshType const& mesh,
+    MeshType const& meshIn,
     Eigen::DenseBase<TDerived> const& load)
-    : mesh(mesh), fe(), N()
+    : mesh(meshIn), fe(), N()
 {
     MeshType const& M           = mesh.get();
     auto const numberOfElements = M.E.cols();
@@ -62,7 +62,7 @@ inline LoadVector<TMesh, Dims>::LoadVector(
             load.rows());
         throw std::invalid_argument(what);
     }
-    if (load.cols() != 1 || load.cols() != numberOfElements)
+    if (load.cols() != 1 && load.cols() != numberOfElements)
     {
         std::string const what = std::format(
             "Input load vector must be constant or piecewise element constant, but size was {}",
@@ -89,9 +89,9 @@ inline VectorX LoadVector<TMesh, Dims>::ToVector() const
     for (auto e = 0; e < numberOfElements; ++e)
     {
         auto const nodes = M.E.col(e);
-        for (auto i = 0; i < nodes.size(); ++e)
+        for (auto i = 0; i < nodes.size(); ++i)
         {
-            f.segment(kDims * nodes(i), kDims) += N(i, e) * fe.col(e);
+            f.segment<kDims>(kDims * nodes(i)) += N(i, e) * fe.col(e);
         }
     }
     return f;
@@ -109,7 +109,7 @@ inline void LoadVector<TMesh, Dims>::IntegrateShapeFunctions()
     auto const Xg = common::ToEigen(QuadratureRuleType::points)
                         .reshaped(QuadratureRuleType::kDims + 1, QuadratureRuleType::kPoints)
                         .bottomRows(QuadratureRuleType::kDims);
-    tbb::parallel_for(0, numberOfElements, [&](std::size_t e) {
+    tbb::parallel_for(Index{0}, Index{numberOfElements}, [&](Index e) {
         auto const nodes                = M.E.col(e);
         auto const vertices             = nodes(ElementType::Vertices);
         auto constexpr kRowsJ           = MeshType::kDims;
