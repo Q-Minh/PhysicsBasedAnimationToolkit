@@ -35,6 +35,8 @@ TEST_CASE("[fem] Mesh")
 
             Mesh M(V, C);
 
+            CHECK(fem::CElement<Element>);
+            CHECK(fem::CMesh<Mesh>);
             CHECK_EQ(M.E.cols(), C.cols());
             CHECK_EQ(M.X.cols(), kExpectedNumberOfNodes);
             CHECK(V(Eigen::all, nodeOrdering) == M.X);
@@ -60,6 +62,8 @@ TEST_CASE("[fem] Mesh")
             auto const kExpectedNumberOfNodes = 14;
             Mesh M(V, C);
 
+            CHECK(fem::CElement<Element>);
+            CHECK(fem::CMesh<Mesh>);
             CHECK_EQ(M.E.cols(), C.cols());
             CHECK_EQ(M.X.cols(), kExpectedNumberOfNodes);
         }
@@ -93,6 +97,8 @@ TEST_CASE("[fem] Mesh")
             nodeOrdering << 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11;
             Mesh M(V, C);
 
+            CHECK(fem::CElement<Element>);
+            CHECK(fem::CMesh<Mesh>);
             CHECK_EQ(M.E.cols(), C.cols());
             CHECK_EQ(M.X.cols(), kExpectedNumberOfNodes);
             CHECK(V(Eigen::all, nodeOrdering) == M.X);
@@ -106,6 +112,8 @@ TEST_CASE("[fem] Mesh")
             auto constexpr kExpectedNumberOfNodes = 45;
             Mesh M(V, C);
 
+            CHECK(fem::CElement<Element>);
+            CHECK(fem::CMesh<Mesh>);
             CHECK_EQ(M.E.cols(), C.cols());
             CHECK_EQ(M.X.cols(), kExpectedNumberOfNodes);
         }

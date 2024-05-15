@@ -148,7 +148,7 @@ Mesh<TElement, Dims>::Mesh(
             return cellVertices[i] < cellVertices[j];
         });
         // Loop over nodes of element and create the node on first visit
-        auto const nodalCoordinates = common::ToEigen(ElementType::kCoordinates)
+        auto const nodalCoordinates = common::ToEigen(ElementType::Coordinates)
                                           .reshaped(ElementType::kDims, ElementType::kNodes)
                                           .cast<math::Rational>() /
                                       ElementType::kOrder;

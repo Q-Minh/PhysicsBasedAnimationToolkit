@@ -1,5 +1,11 @@
 import sympy as sp
 from .. import codegen as cg
+from enum import StrEnum
+
+
+class Quadrature(StrEnum):
+    SIMPLEX = "SymmetricSimplexPolynomialQuadratureRule"
+    GAUSS = "GaussLegendreQuadrature"
 
 
 def lagrange_shape_functions(X, x, p):
@@ -22,6 +28,45 @@ def lagrange_shape_functions(X, x, p):
     return N
 
 
+def vertices_from_nodes(x):
+    vertices = []
+    for i in range(len(x)):
+        is_vertex_coordinate = [
+            (x[i][d] == 0 or x[i][d] == 1) for d in range(len(x[i]))]
+        is_vertex = is_vertex_coordinate.count(False) == 0
+        if is_vertex:
+            vertices.append(i)
+    return vertices
+
+
+class Element:
+    """
+    Holds information necessary to code generate an FEM element type in C++
+    """
+
+    def __init__(self, X: sp.Matrix,
+                 x: list,
+                 N: sp.Matrix,
+                 gradN: sp.Matrix,
+                 quad: Quadrature):
+        """Standard constructor
+
+        Args:
+            X (sp.Matrix): Material space variables
+            x (list): Lagrange nodal coordinates
+            N (sp.Matrix): Nodal shape functions
+            gradN (sp.Matrix): Nodal shape function gradients (i.e. the Jacobian)
+            quad (Quadrature): Quadrature scheme to use for this element
+            vertices (list): Indices into nodes x revealing vertices of the element's simplex
+        """
+        self.X = X
+        self.x = x
+        self.N = N
+        self.gradN = gradN
+        self.quad = quad
+        self.vertices = vertices_from_nodes(x)
+
+
 def tetrahedron(p=1):
     """Lagrange tetrahedron (i+j+k) <= p, where p is the polynomial order 
     of the element's function space
@@ -30,8 +75,7 @@ def tetrahedron(p=1):
         p (int, optional): Polynomial order. Defaults to 1.
 
     Returns:
-        tuple: The 4-tuple (X, x, N, gradN) of variables, data points, shape 
-        functions, and shape function derivatives, respectively.
+        Element: 
     """
     dims = 3
     X = sp.Matrix(
@@ -54,7 +98,9 @@ def tetrahedron(p=1):
     N = lagrange_shape_functions(
         X, x, monomials)
     gradN = N.jacobian(X)
-    return (X, x, N, gradN)
+    quad = Quadrature.SIMPLEX
+
+    return Element(X, x, N, gradN, quad)
 
 
 def hexahedron(p=1):
@@ -65,8 +111,7 @@ def hexahedron(p=1):
         p (int, optional): Polynomial order. Defaults to 1.
 
     Returns:
-        tuple: The 4-tuple (X, x, N, gradN) of variables, data points, shape 
-        functions, and shape function derivatives, respectively.
+        Element: 
     """
     dims = 3
     X = sp.Matrix(
@@ -87,7 +132,8 @@ def hexahedron(p=1):
     N = lagrange_shape_functions(
         X, x, monomials)
     gradN = N.jacobian(X)
-    return (X, x, N, gradN)
+    quad = Quadrature.GAUSS
+    return Element(X, x, N, gradN, quad)
 
 
 def triangle(p=1):
@@ -98,8 +144,7 @@ def triangle(p=1):
         p (int, optional): Polynomial order. Defaults to 1.
 
     Returns:
-        tuple: The 4-tuple (X, x, N, gradN) of variables, data points, shape 
-        functions, and shape function derivatives, respectively.
+        Element: 
     """
     dims = 2
     X = sp.Matrix(
@@ -120,7 +165,8 @@ def triangle(p=1):
     N = lagrange_shape_functions(
         X, x, monomials)
     gradN = N.jacobian(X)
-    return (X, x, N, gradN)
+    quad = Quadrature.SIMPLEX
+    return Element(X, x, N, gradN, quad)
 
 
 def quadrilateral(p=1):
@@ -131,8 +177,7 @@ def quadrilateral(p=1):
         p (int, optional): Polynomial order. Defaults to 1.
 
     Returns:
-        tuple: The 4-tuple (X, x, N, gradN) of variables, data points, shape 
-        functions, and shape function derivatives, respectively.
+        Element: 
     """
     dims = 2
     X = sp.Matrix(
@@ -151,7 +196,8 @@ def quadrilateral(p=1):
     N = lagrange_shape_functions(
         X, x, monomials)
     gradN = N.jacobian(X)
-    return (X, x, N, gradN)
+    quad = Quadrature.GAUSS
+    return Element(X, x, N, gradN, quad)
 
 
 def line(p=1):
@@ -162,8 +208,7 @@ def line(p=1):
         p (int, optional): Polynomial order. Defaults to 1.
 
     Returns:
-        tuple: The 4-tuple (X, x, N, gradN) of variables, data points, shape 
-        functions, and shape function derivatives, respectively.
+        Element: 
     """
     dims = 1
     X = sp.Matrix(
@@ -181,10 +226,12 @@ def line(p=1):
     N = lagrange_shape_functions(
         X, x, monomials)
     gradN = N.jacobian(X)
-    return (X, x, N, gradN)
+    # Could also be simplex, doesn't matter for 1D case
+    quad = Quadrature.GAUSS
+    return Element(X, x, N, gradN, quad)
 
 
-def codegen(felement, p: int, element: str):
+def codegen(felement, p: int, element_name: str):
     """Generate C++ header file containing implementations of the given element up to order p.
 
     Args:
@@ -198,6 +245,7 @@ def codegen(felement, p: int, element: str):
 #define PBA_CORE_FEM_{0}_H
 
 #include "pba/aliases.h"
+#include "QuadratureRules.h"
 
 #include <array>
 
@@ -224,14 +272,18 @@ struct {0}<{1}>
     static int constexpr kOrder = {1};
     static int constexpr kDims  = {2};
     static int constexpr kNodes = {3};
-    static std::array<int, kNodes * kDims> constexpr kCoordinates =
+    static std::array<int, kNodes * kDims> constexpr Coordinates =
         {{{4}}}; ///< Divide coordinates by kOrder to obtain actual coordinates in the reference element
+    static std::array<int, AffineBaseType::kNodes> constexpr Vertices = {{{8}}}; ///< Indices into nodes [0,kNodes-1] revealing vertices of the element
+    
+    template <int PolynomialOrder>
+    using QuadratureType = math::{5}<kDims, PolynomialOrder>;
       
     template <class Derived, class TScalar = typename Derived::Scalar>
     [[maybe_unused]] static Eigen::Vector<TScalar, kNodes> N([[maybe_unused]] Eigen::DenseBase<Derived> const& X)
     {{
         Eigen::Vector<TScalar, kNodes> Nm;
-{5}
+{6}
         return Nm;
     }}
     
@@ -239,7 +291,7 @@ struct {0}<{1}>
     {{
         Matrix<kNodes, kDims> GNm;
         Scalar* GNp = GNm.data();
-{6}
+{7}
         return GNm;
     }}
     
@@ -256,12 +308,13 @@ struct {0}<{1}>
     }}
 }};    
 """
-    with open("{}.h".format(element), 'w', encoding="utf-8") as file:
+    with open("{}.h".format(element_name), 'w', encoding="utf-8") as file:
         file.write(
-            header.format(element.upper(), element))
+            header.format(element_name.upper(), element_name))
         for order in range(1, p+1):
-            X, x, N, gradN = felement(
+            element = felement(
                 order)
+            X, x, N, gradN, quad = element.X, element.x, element.N, element.gradN, element.quad
             gradNT = gradN.transpose()
             dims = X.shape[0]
             nodes = len(x)
@@ -271,17 +324,20 @@ struct {0}<{1}>
                 "Nm", *N.shape), scalar_type="auto"), spaces=8)
             codeGN = cg.tabulate(cg.codegen(gradNT, lhs=sp.MatrixSymbol(
                 "GNp", *gradNT.shape)), spaces=8)
-
-            file.write(template_specialization.format(element,
+            vertices = ",".join([str(v)
+                                for v in element.vertices])
+            file.write(template_specialization.format(element_name,
                                                       order,
                                                       dims,
                                                       nodes,
                                                       coordinates,
+                                                      quad,
                                                       codeN,
-                                                      codeGN))
+                                                      codeGN,
+                                                      vertices))
 
         file.write(
-            footer.format(element.upper()))
+            footer.format(element_name.upper()))
 
 
 if __name__ == "__main__":

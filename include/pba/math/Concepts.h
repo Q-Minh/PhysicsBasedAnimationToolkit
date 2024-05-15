@@ -17,13 +17,13 @@ concept CPolynomialBasis = requires(T t)
     requires std::is_integral_v<decltype(T::kSize)>;
     {
         t.eval(Vector<T::kDims>{})
-    } -> std::same_as<Vector<T::kSize>>;
+    } -> std::convertible_to<Vector<T::kSize>>;
     {
         t.derivatives(Vector<T::kDims>{})
-    } -> std::same_as<Matrix<T::kDims, T::kSize>>;
+    } -> std::convertible_to<Matrix<T::kDims, T::kSize>>;
     {
         t.antiderivatives(Vector<T::kDims>{})
-    } -> std::same_as<Matrix<T::kSize, T::kDims>>;
+    } -> std::convertible_to<Matrix<T::kSize, T::kDims>>;
 };
 
 template <class T>
@@ -34,7 +34,7 @@ concept CVectorPolynomialBasis = requires(T t)
     requires std::is_integral_v<decltype(T::kSize)>;
     {
         t.eval(Vector<T::kDims>{})
-    } -> std::same_as<Matrix<T::kSize, T::kDims>>;
+    } -> std::convertible_to<Matrix<T::kSize, T::kDims>>;
 };
 
 template <class Q>

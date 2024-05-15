@@ -13,6 +13,8 @@ template <class T>
 concept CElement = requires(T t)
 {
     typename T::AffineBaseType;
+    // Should be valid for argument > 1 as well, but we don't check that.
+    typename T::template QuadratureType<1>;
     {
         T::kOrder
     } -> std::convertible_to<int>;
@@ -22,35 +24,32 @@ concept CElement = requires(T t)
     {
         T::kNodes
     } -> std::convertible_to<int>;
-    {
-        T::kCoordinates
-    } -> common::CContiguousIndexRange;
+    requires common::CContiguousIndexRange<decltype(T::Coordinates)>;
+    requires common::CContiguousIndexRange<decltype(T::Vertices)>;
     {
         t.N(Vector<T::kDims>{})
-    } -> std::same_as<Vector<T::kNodes>>;
+    } -> std::convertible_to<Vector<T::kNodes>>;
     {
         t.GradN(Vector<T::kDims>{})
-    } -> std::same_as<Matrix<T::kNodes, T::kDims>>;
+    } -> std::convertible_to<Matrix<T::kNodes, T::kDims>>;
     {
         t.Jacobian(Vector<T::kDims>{}, Matrix<T::kDims, T::kNodes>{})
-    } -> std::same_as<Matrix<T::kDims, T::kDims>>;
+    } -> std::convertible_to<Matrix<T::kDims, T::kDims>>;
 };
 
 template <class M>
 concept CMesh = requires(M m)
 {
-    {
-        M::ElementType
-    } -> CElement;
+    requires CElement<typename M::ElementType>;
     {
         M::kDims
     } -> std::convertible_to<int>;
     {
         m.X
-    } -> std::same_as<MatrixX>;
+    } -> std::convertible_to<MatrixX>;
     {
         m.E
-    } -> std::same_as<IndexMatrixX>;
+    } -> std::convertible_to<IndexMatrixX>;
 };
 
 } // namespace fem
