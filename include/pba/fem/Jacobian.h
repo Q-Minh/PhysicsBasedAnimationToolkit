@@ -28,7 +28,7 @@ template <class TDerived>
     // TODO: Should define a numerical zero somewhere
     if (detJ <= 0.)
     {
-        throw std::runtime_error("Inverted or singular jacobian");
+        throw std::invalid_argument("Inverted or singular jacobian");
     }
     return detJ;
 }

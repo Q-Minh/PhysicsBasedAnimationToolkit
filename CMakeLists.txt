@@ -188,6 +188,36 @@ if(PBA_CORE_USE_INTEL_MKL)
         PRIVATE
         EIGEN_USE_MKL_ALL
         PBA_CORE_USE_INTEL_MKL)
+
+    # For some reason, the vcpkg intel MKL package does not expose the mkl_def shared library 
+    # executable, which is needed for linking. We write a patch to find the mkl_def executable 
+    # in the same directory as mkl_core and then copy it to our binary folder on build.
+    get_target_property(_mkl_imported_location MKL::mkl_core IMPORTED_LOCATION)
+    message(STATUS "MKL IMPORTED LOCATION=${_mkl_imported_location}")
+    cmake_path(
+        GET _mkl_imported_location
+        PARENT_PATH _mkl_shared_library_directory)
+    message(STATUS "MKL SHARED LIBRARY DIRECTORY=${_mkl_shared_library_directory}")
+    file(
+        GLOB _external_shared_libraries
+        LIST_DIRECTORIES FALSE
+        CONFIGURE_DEPENDS
+        # Are there other possible names for shared libraries on other platforms?
+        "${_mkl_shared_library_directory}/mkl_def.2.dll"
+        "${_mkl_shared_library_directory}/mkl_def.2.so"
+        "${_mkl_shared_library_directory}/libmkl_def.2.so")
+        message(STATUS "MKL DEF LIBRARIES=${_external_shared_libraries}")
+    list(GET _external_shared_libraries 0 _mkl_def_shared_library)
+    message(STATUS "MKL DEF SHARED LIBRARY=${_mkl_def_shared_library}")
+    cmake_path(
+        APPEND _mkl_shared_library_directory _mkl_def_shared_library
+        OUTPUT_VARIABLE _path_to_mkl_def)
+    add_custom_command(TARGET ${pba_core_tests} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        ${_mkl_def_shared_library}
+        $<TARGET_FILE_DIR:${pba_core_tests}>
+        COMMAND_EXPAND_LISTS
+    )
 endif()
 
 if(PBA_CORE_USE_SUITESPARSE)
