@@ -2,6 +2,7 @@
 #define PBA_CORE_FEM_MASS_MATRIX_H
 
 #include "Concepts.h"
+#include "Jacobian.h"
 #include "pba/common/Eigen.h"
 #include "pba/math/SymmetricQuadratureRules.h"
 
@@ -65,8 +66,9 @@ inline void MassMatrix<TMesh, Dims>::ComputeElementMassMatrices(MeshType const& 
         auto const nodes    = mesh.E.col(e);
         auto const vertices = nodes(ElementType::Vertices);
         auto const Ve       = mesh.X(Eigen::all, vertices);
-        auto const J        = AffineElement::Jacobian(Ve);
-        Scalar const detJ   = std::abs(J.jacobiSvd().singularValues().prod());
+        Scalar const detJ   = DeterminantOfJacobian(Jacobian(
+            Xg.col(0) /*Any point will do, since jacobian of affine map is constant*/,
+            Ve));
         auto const wg       = detJ * common::ToEigen(QuadratureRuleType::weights);
         auto me = Me.block(0, e * ElementType::kNodes, ElementType::kNodes, ElementType::kNodes);
         for (auto g = 0; g < QuadratureRuleType::kPoints; ++g)

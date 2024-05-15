@@ -28,8 +28,8 @@ struct Hexahedron<1>
     template <int PolynomialOrder>
     using QuadratureType = math::GaussLegendreQuadrature<kDims, PolynomialOrder>;
       
-    template <class Derived, class TScalar = typename Derived::Scalar>
-    [[maybe_unused]] static Eigen::Vector<TScalar, kNodes> N([[maybe_unused]] Eigen::DenseBase<Derived> const& X)
+    template <class TDerived, class TScalar = typename TDerived::Scalar>
+    [[maybe_unused]] static Eigen::Vector<TScalar, kNodes> N([[maybe_unused]] Eigen::DenseBase<TDerived> const& X)
     {
         Eigen::Vector<TScalar, kNodes> Nm;
         auto const a0 = X[0] - 1;
@@ -89,18 +89,6 @@ struct Hexahedron<1>
         GNp[23] = a8;
         return GNm;
     }
-    
-    template <class Derived>
-    [[maybe_unused]] static Matrix<Derived::RowsAtCompileTime, kDims> Jacobian(
-        [[maybe_unused]] Vector<kDims> const& X, 
-        [[maybe_unused]] Eigen::DenseBase<Derived> const& x)
-    {
-        static_assert(Derived::RowsAtCompileTime != Eigen::Dynamic);
-        assert(x.cols() == kNodes);
-        auto constexpr kDimsOut = Derived::RowsAtCompileTime;
-        Matrix<kDimsOut, kDims> const J = x * GradN(X);
-        return J;
-    }
 };    
 
 template <>
@@ -118,8 +106,8 @@ struct Hexahedron<2>
     template <int PolynomialOrder>
     using QuadratureType = math::GaussLegendreQuadrature<kDims, PolynomialOrder>;
       
-    template <class Derived, class TScalar = typename Derived::Scalar>
-    [[maybe_unused]] static Eigen::Vector<TScalar, kNodes> N([[maybe_unused]] Eigen::DenseBase<Derived> const& X)
+    template <class TDerived, class TScalar = typename TDerived::Scalar>
+    [[maybe_unused]] static Eigen::Vector<TScalar, kNodes> N([[maybe_unused]] Eigen::DenseBase<TDerived> const& X)
     {
         Eigen::Vector<TScalar, kNodes> Nm;
         auto const a0 = 2*X[0] - 1;
@@ -384,18 +372,6 @@ struct Hexahedron<2>
         GNp[79] = a106 + a90*a94;
         GNp[80] = a107*a60 + a108;
         return GNm;
-    }
-    
-    template <class Derived>
-    [[maybe_unused]] static Matrix<Derived::RowsAtCompileTime, kDims> Jacobian(
-        [[maybe_unused]] Vector<kDims> const& X, 
-        [[maybe_unused]] Eigen::DenseBase<Derived> const& x)
-    {
-        static_assert(Derived::RowsAtCompileTime != Eigen::Dynamic);
-        assert(x.cols() == kNodes);
-        auto constexpr kDimsOut = Derived::RowsAtCompileTime;
-        Matrix<kDimsOut, kDims> const J = x * GradN(X);
-        return J;
     }
 };    
 

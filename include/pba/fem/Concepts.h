@@ -32,9 +32,6 @@ concept CElement = requires(T t)
     {
         t.GradN(Vector<T::kDims>{})
     } -> std::convertible_to<Matrix<T::kNodes, T::kDims>>;
-    {
-        t.Jacobian(Vector<T::kDims>{}, Matrix<T::kDims, T::kNodes>{})
-    } -> std::convertible_to<Matrix<T::kDims, T::kDims>>;
 };
 
 template <class M>
