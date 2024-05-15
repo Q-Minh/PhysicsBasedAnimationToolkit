@@ -3,9 +3,10 @@
 
 #include "Concepts.h"
 #include "Jacobian.h"
+#include "pba/aliases.h"
 #include "pba/common/Eigen.h"
 
-#include <cmath>
+#include <functional>
 #include <tbb/parallel_for.h>
 
 namespace pba {
@@ -23,35 +24,115 @@ struct MassMatrix
 
     MassMatrix(MeshType const& mesh, Scalar rho = 1.);
 
-    template <class Derived>
-    MassMatrix(MeshType const& mesh, Eigen::DenseBase<Derived> const& rho);
+    template <class TDerived>
+    MassMatrix(MeshType const& mesh, Eigen::DenseBase<TDerived> const& rho);
 
-    void ComputeElementMassMatrices(MeshType const& mesh);
+    /**
+     * @brief Applies this mass matrix as a linear operator on x, adding result to y.
+     *
+     * @tparam TDerivedIn
+     * @tparam TDerivedOut
+     * @param x
+     * @param y
+     */
+    template <class TDerivedIn, class TDerivedOut>
+    void Apply(Eigen::MatrixBase<TDerivedIn> const& x, Eigen::DenseBase<TDerivedOut>& y) const;
 
+    /**
+     * @brief Transforms this matrix-free mass matrix representation into sparse compressed format.
+     * @return
+     */
+    SparseMatrix ToMatrix() const;
+
+    void ComputeElementMassMatrices();
+
+    std::reference_wrapper<MeshType const> mesh; ///< The finite element mesh
     VectorX rho; ///< |#elements| x 1 piecewise constant mass density
     MatrixX Me;  ///< |ElementType::Nodes|x|ElementType::Nodes * |#elements| element mass matrices
+                 ///< for 1-dimensional problems. For d-dimensional problems, these mass matrices
+                 ///< should be Kroneckered with the d-dimensional identity matrix.
 };
 
 template <CMesh TMesh, int Dims>
 inline MassMatrix<TMesh, Dims>::MassMatrix(MeshType const& mesh, Scalar rho)
-    : rho(VectorX::Constant(rho, mesh.E.cols())),
-      Me(ElementType::kNodes, ElementType::kNodes * mesh.E.cols())
+    : MassMatrix<TMesh, Dims>(mesh, VectorX::Constant(rho, mesh.E.cols()))
 {
-    ComputeElementMassMatrices(mesh);
 }
 
 template <CMesh TMesh, int Dims>
-template <class Derived>
+template <class TDerived>
 inline MassMatrix<TMesh, Dims>::MassMatrix(
     MeshType const& mesh,
-    Eigen::DenseBase<Derived> const& rho)
-    : rho(rho), Me(ElementType::kNodes, ElementType::kNodes * mesh.E.cols())
+    Eigen::DenseBase<TDerived> const& rho)
+    : mesh(mesh), rho(rho), Me(ElementType::kNodes, ElementType::kNodes * mesh.E.cols())
 {
-    ComputeElementMassMatrices(mesh);
+    ComputeElementMassMatrices();
 }
 
 template <CMesh TMesh, int Dims>
-inline void MassMatrix<TMesh, Dims>::ComputeElementMassMatrices(MeshType const& mesh)
+template <class TDerivedIn, class TDerivedOut>
+inline void MassMatrix<TMesh, Dims>::Apply(
+    Eigen::MatrixBase<TDerivedIn> const& x,
+    Eigen::DenseBase<TDerivedOut>& y) const
+{
+    auto const numberOfNodes    = mesh.X.cols();
+    auto const numberOfElements = mesh.E.cols();
+    assert((Me.cols() / ElementType::kNodes) == numberOfElements);
+    auto const n = kDims * numberOfNodes;
+    assert(x.rows() == n);
+    assert(y.rows() == n);
+    assert(y.cols() == x.cols());
+
+    // NOTE: Could parallelize over columns, if there are many.
+    for (auto col = 0; col < y.cols(); ++col)
+    {
+        for (auto e = 0; e < numberOfElements; ++e)
+        {
+            auto const nodes = mesh.E.col(e).array();
+            auto const me =
+                Me.block(0, e * ElementType::kNodes, ElementType::kNodes, ElementType::kNodes);
+            for (auto d = 0; d < kDims; ++d)
+                y(kDims * nodes + d, col) += me * x(kDims * nodes + d, col);
+        }
+    }
+}
+
+template <CMesh TMesh, int Dims>
+inline SparseMatrix MassMatrix<TMesh, Dims>::ToMatrix() const
+{
+    auto const numberOfNodes    = mesh.X.cols();
+    auto const numberOfElements = mesh.E.cols();
+    assert((Me.cols() / ElementType::kNodes) == numberOfElements);
+    auto const n      = kDims * numberOfNodes;
+    using SparseIndex = typename SparseMatrix::StorageIndex;
+    using Triplet     = Eigen::Triplet<Scalar, SparseIndex>;
+    std::vector<Triplet> triplets{};
+    triplets.reserve(Me.size() * kDims * kDims);
+    for (auto e = 0; e < numberOfElements; ++e)
+    {
+        auto const nodes = mesh.E.col(e);
+        auto const me =
+            Me.block(0, e * ElementType::kNodes, ElementType::kNodes, ElementType::kNodes);
+        for (auto j = 0; j < me.cols(); ++j)
+        {
+            for (auto i = 0; i < me.rows(); ++i)
+            {
+                for (auto d = 0; d < kDims; ++d)
+                {
+                    auto const ni = static_cast<SparseIndex>(kDims * nodes(i) + d);
+                    auto const nj = static_cast<SparseIndex>(kDims * nodes(j) + d);
+                    triplets.push_back(Triplet(ni, nj, me(i, j)));
+                }
+            }
+        }
+    }
+    SparseMatrix M(n, n);
+    M.setFromTriplets(triplets.begin(), triplets.end());
+    return M;
+}
+
+template <CMesh TMesh, int Dims>
+inline void MassMatrix<TMesh, Dims>::ComputeElementMassMatrices()
 {
     using AffineElementType = typename ElementType::AffineBaseType;
 
@@ -78,9 +159,9 @@ inline void MassMatrix<TMesh, Dims>::ComputeElementMassMatrices(MeshType const& 
                 detJ = DeterminantOfJacobian(Jacobian<AffineElementType>(Xg.col(g), Ve));
 
             Vector<ElementType::kNodes> const Ng = ElementType::N(Xg.col(g));
-            for (auto j = 0; j < ElementType::kNodes; ++j)
+            for (auto j = 0; j < me.cols(); ++j)
             {
-                for (auto i = 0; i < ElementType::kNodes; ++i)
+                for (auto i = 0; i < me.rows(); ++i)
                 {
                     me(i, j) += wg(g) * rho(e) * Ng(i) * Ng(j) * detJ;
                 }

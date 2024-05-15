@@ -2,6 +2,7 @@
 #define PBA_CORE_ALIASES_H
 
 #include <Eigen/Core>
+#include <Eigen/Sparse>
 #include <cstddef>
 
 namespace pba {
@@ -25,6 +26,10 @@ using IndexMatrix = Eigen::Matrix<Index, Rows, Cols>;
 
 using IndexVectorX = Eigen::Vector<Index, Eigen::Dynamic>;
 using IndexMatrixX = Eigen::Matrix<Index, Eigen::Dynamic, Eigen::Dynamic>;
+
+// NOTE: We should evaluate RowMajor storage, as matrix multiplication is trivially parallelized for
+// compressed row storage sparse matrices.
+using SparseMatrix = Eigen::SparseMatrix<Scalar, Eigen::ColMajor>;
 
 } // namespace pba
 
