@@ -71,6 +71,12 @@ class CompositeLinearOperator
 };
 
 template <CLinearOperator... TLinearOperators>
+CompositeLinearOperator<TLinearOperators...> ComposeLinearOperators(TLinearOperators const&... inOps)
+{
+    return CompositeLinearOperator(inOps...);
+}
+
+template <CLinearOperator... TLinearOperators>
 inline CompositeLinearOperator<TLinearOperators...>::CompositeLinearOperator(
     TLinearOperators const&... inOps)
     : ops(std::make_tuple(std::cref(inOps)...))

@@ -37,16 +37,11 @@ TEST_CASE("[math] LinearOperator")
     using namespace pba;
     CHECK(math::CLinearOperator<test::IdentityOperator>);
 
-    using CompositeLinearOperator = math::CompositeLinearOperator<
-        test::IdentityOperator,
-        test::IdentityOperator,
-        test::IdentityOperator>;
-
     auto constexpr nOperators = 3;
     auto constexpr n          = 5;
     auto constexpr zero       = 0.;
     test::IdentityOperator I{n};
-    CompositeLinearOperator cop{I, test::IdentityOperator{n}, I};
+    auto const cop = math::ComposeLinearOperators(I, test::IdentityOperator{n}, I);
 
     Vector<n> const x = Vector<n>::Ones();
     Vector<n> y       = Vector<n>::Zero();
