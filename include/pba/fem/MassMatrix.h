@@ -8,7 +8,6 @@
 
 #include <exception>
 #include <format>
-#include <functional>
 #include <tbb/parallel_for.h>
 
 namespace pba {
@@ -18,6 +17,7 @@ template <CMesh TMesh, int Dims>
 struct MassMatrix
 {
   public:
+    using SelfType              = MassMatrix<TMesh, Dims>;
     using MeshType              = TMesh;
     using ElementType           = typename TMesh::ElementType;
     using QuadratureRuleType    = ElementType::template QuadratureType<2 * ElementType::kOrder>;
@@ -28,6 +28,8 @@ struct MassMatrix
 
     template <class TDerived>
     MassMatrix(MeshType const& mesh, Eigen::DenseBase<TDerived> const& rho);
+
+    SelfType& operator=(SelfType const&) = delete;
 
     /**
      * @brief Applies this mass matrix as a linear operator on x, adding result to y.
@@ -51,11 +53,11 @@ struct MassMatrix
 
     void ComputeElementMassMatrices();
 
-    std::reference_wrapper<MeshType const> mesh; ///< The finite element mesh
-    VectorX rho; ///< |#elements| x 1 piecewise constant mass density
-    MatrixX Me;  ///< |ElementType::Nodes|x|ElementType::Nodes * |#elements| element mass matrices
-                 ///< for 1-dimensional problems. For d-dimensional problems, these mass matrices
-                 ///< should be Kroneckered with the d-dimensional identity matrix.
+    MeshType const& mesh; ///< The finite element mesh
+    VectorX rho;          ///< |#elements| x 1 piecewise constant mass density
+    MatrixX Me; ///< |ElementType::Nodes|x|ElementType::Nodes * |#elements| element mass matrices
+                ///< for 1-dimensional problems. For d-dimensional problems, these mass matrices
+                ///< should be Kroneckered with the d-dimensional identity matrix.
 };
 
 template <CMesh TMesh, int Dims>
@@ -99,14 +101,13 @@ inline void MassMatrix<TMesh, Dims>::Apply(
         throw std::invalid_argument(what);
     }
 
-    MeshType const& M           = mesh.get();
-    auto const numberOfElements = M.E.cols();
+    auto const numberOfElements = mesh.E.cols();
     // NOTE: Could parallelize over columns, if there are many.
     for (auto col = 0; col < y.cols(); ++col)
     {
         for (auto e = 0; e < numberOfElements; ++e)
         {
-            auto const nodes = M.E.col(e).array();
+            auto const nodes = mesh.E.col(e).array();
             auto const me =
                 Me.block(0, e * ElementType::kNodes, ElementType::kNodes, ElementType::kNodes);
             for (auto d = 0; d < kDims; ++d)
@@ -118,16 +119,14 @@ inline void MassMatrix<TMesh, Dims>::Apply(
 template <CMesh TMesh, int Dims>
 inline SparseMatrix MassMatrix<TMesh, Dims>::ToMatrix() const
 {
-    MeshType const& M           = mesh.get();
-    auto const numberOfNodes    = M.X.cols();
-    auto const numberOfElements = M.E.cols();
+    auto const numberOfElements = mesh.E.cols();
     using SparseIndex           = typename SparseMatrix::StorageIndex;
     using Triplet               = Eigen::Triplet<Scalar, SparseIndex>;
     std::vector<Triplet> triplets{};
     triplets.reserve(static_cast<std::size_t>(Me.size() * kDims * kDims));
     for (auto e = 0; e < numberOfElements; ++e)
     {
-        auto const nodes = M.E.col(e);
+        auto const nodes = mesh.E.col(e);
         auto const me =
             Me.block(0, e * ElementType::kNodes, ElementType::kNodes, ElementType::kNodes);
         for (auto j = 0; j < me.cols(); ++j)
@@ -154,18 +153,17 @@ inline void MassMatrix<TMesh, Dims>::ComputeElementMassMatrices()
 {
     using AffineElementType = typename ElementType::AffineBaseType;
 
-    MeshType const& M = mesh.get();
     Me.setZero();
     auto const Xg = common::ToEigen(QuadratureRuleType::points)
                         .reshaped(QuadratureRuleType::kDims + 1, QuadratureRuleType::kPoints)
                         .bottomRows(QuadratureRuleType::kDims);
-    auto const numberOfElements = M.E.cols();
+    auto const numberOfElements = mesh.E.cols();
     tbb::parallel_for(Index{0}, Index{numberOfElements}, [&](Index e) {
-        auto const nodes                = M.E.col(e);
+        auto const nodes                = mesh.E.col(e);
         auto const vertices             = nodes(ElementType::Vertices);
         auto constexpr kRowsJ           = MeshType::kDims;
         auto constexpr kColsJ           = AffineElementType::kNodes;
-        Matrix<kRowsJ, kColsJ> const Ve = M.X(Eigen::all, vertices);
+        Matrix<kRowsJ, kColsJ> const Ve = mesh.X(Eigen::all, vertices);
         auto me = Me.block(0, e * ElementType::kNodes, ElementType::kNodes, ElementType::kNodes);
         Scalar detJ{};
         if constexpr (AffineElementType::bHasConstantJacobian)

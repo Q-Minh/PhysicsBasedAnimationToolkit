@@ -8,7 +8,6 @@
 
 #include <exception>
 #include <format>
-#include <functional>
 #include <tbb/parallel_for.h>
 
 namespace pba {
@@ -18,6 +17,7 @@ template <CMesh TMesh, int Dims>
 struct LoadVector
 {
   public:
+    using SelfType              = LoadVector<TMesh, Dims>;
     using MeshType              = TMesh;
     using ElementType           = typename TMesh::ElementType;
     using QuadratureRuleType    = ElementType::template QuadratureType<ElementType::kOrder>;
@@ -26,6 +26,8 @@ struct LoadVector
 
     template <class TDerived>
     LoadVector(MeshType const& mesh, Eigen::DenseBase<TDerived> const& f);
+
+    SelfType& operator=(SelfType const&) = delete;
 
     /**
      * @brief Transforms this matrix-free mass matrix representation into sparse compressed format.
@@ -38,8 +40,8 @@ struct LoadVector
      */
     void IntegrateShapeFunctions();
 
-    std::reference_wrapper<MeshType const> mesh; ///< The finite element mesh
-    MatrixX fe;                                  ///< kDims x |#elements| piecewise constant load
+    MeshType const& mesh; ///< The finite element mesh
+    MatrixX fe;           ///< kDims x |#elements| piecewise constant load
     MatrixX N; ///< |ElementType::kNodes|x|#elements| integrated element shape functions. To
                ///< obtain the element force vectors, compute Neint \kron I_{kDims} * f
 };
@@ -51,8 +53,7 @@ inline LoadVector<TMesh, Dims>::LoadVector(
     Eigen::DenseBase<TDerived> const& load)
     : mesh(meshIn), fe(), N()
 {
-    MeshType const& M           = mesh.get();
-    auto const numberOfElements = M.E.cols();
+    auto const numberOfElements = mesh.E.cols();
     if (load.rows() != kDims)
     {
         std::string const what = std::format(
@@ -82,13 +83,12 @@ inline LoadVector<TMesh, Dims>::LoadVector(
 template <CMesh TMesh, int Dims>
 inline VectorX LoadVector<TMesh, Dims>::ToVector() const
 {
-    MeshType const& M           = mesh.get();
-    auto const n                = M.X.cols() * kDims;
-    auto const numberOfElements = M.E.cols();
+    auto const n                = mesh.X.cols() * kDims;
+    auto const numberOfElements = mesh.E.cols();
     VectorX f                   = VectorX::Zero(n);
     for (auto e = 0; e < numberOfElements; ++e)
     {
-        auto const nodes = M.E.col(e);
+        auto const nodes = mesh.E.col(e);
         for (auto i = 0; i < nodes.size(); ++i)
         {
             f.segment<kDims>(kDims * nodes(i)) += N(i, e) * fe.col(e);
@@ -102,19 +102,17 @@ inline void LoadVector<TMesh, Dims>::IntegrateShapeFunctions()
 {
     using AffineElementType = typename ElementType::AffineBaseType;
 
-    MeshType const& M           = mesh.get();
-    auto const numberOfElements = M.E.cols();
-
+    auto const numberOfElements = mesh.E.cols();
     N.setZero(ElementType::kNodes, numberOfElements);
     auto const Xg = common::ToEigen(QuadratureRuleType::points)
                         .reshaped(QuadratureRuleType::kDims + 1, QuadratureRuleType::kPoints)
                         .bottomRows(QuadratureRuleType::kDims);
     tbb::parallel_for(Index{0}, Index{numberOfElements}, [&](Index e) {
-        auto const nodes                = M.E.col(e);
+        auto const nodes                = mesh.E.col(e);
         auto const vertices             = nodes(ElementType::Vertices);
         auto constexpr kRowsJ           = MeshType::kDims;
         auto constexpr kColsJ           = AffineElementType::kNodes;
-        Matrix<kRowsJ, kColsJ> const Ve = M.X(Eigen::all, vertices);
+        Matrix<kRowsJ, kColsJ> const Ve = mesh.X(Eigen::all, vertices);
         Scalar detJ{};
         if constexpr (AffineElementType::bHasConstantJacobian)
             detJ = DeterminantOfJacobian(Jacobian<AffineElementType>({}, Ve));
