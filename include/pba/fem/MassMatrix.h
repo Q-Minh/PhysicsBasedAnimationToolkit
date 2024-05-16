@@ -46,6 +46,9 @@ struct MassMatrix
      */
     SparseMatrix ToMatrix() const;
 
+    Index InputDimensions() const { return kDims * mesh.X.cols(); }
+    Index OutputDimensions() const { return InputDimensions(); }
+
     void ComputeElementMassMatrices();
 
     std::reference_wrapper<MeshType const> mesh; ///< The finite element mesh
@@ -83,11 +86,8 @@ inline void MassMatrix<TMesh, Dims>::Apply(
     Eigen::MatrixBase<TDerivedIn> const& x,
     Eigen::DenseBase<TDerivedOut>& y) const
 {
-    MeshType const& M           = mesh.get();
-    auto const numberOfNodes    = M.X.cols();
-    auto const numberOfElements = M.E.cols();
-    auto const n                = kDims * numberOfNodes;
-    if (x.rows() != n || y.rows() != n || y.cols() != x.cols())
+    if ((x.rows() != InputDimensions()) or (y.rows() != InputDimensions()) or
+        (y.cols() != x.cols()))
     {
         std::string const what = std::format(
             "Expected input x and output y with matching dimensions, but got {}x{} input and {}x{} "
@@ -99,6 +99,8 @@ inline void MassMatrix<TMesh, Dims>::Apply(
         throw std::invalid_argument(what);
     }
 
+    MeshType const& M           = mesh.get();
+    auto const numberOfElements = M.E.cols();
     // NOTE: Could parallelize over columns, if there are many.
     for (auto col = 0; col < y.cols(); ++col)
     {
@@ -119,7 +121,6 @@ inline SparseMatrix MassMatrix<TMesh, Dims>::ToMatrix() const
     MeshType const& M           = mesh.get();
     auto const numberOfNodes    = M.X.cols();
     auto const numberOfElements = M.E.cols();
-    auto const n                = kDims * numberOfNodes;
     using SparseIndex           = typename SparseMatrix::StorageIndex;
     using Triplet               = Eigen::Triplet<Scalar, SparseIndex>;
     std::vector<Triplet> triplets{};
@@ -142,6 +143,7 @@ inline SparseMatrix MassMatrix<TMesh, Dims>::ToMatrix() const
             }
         }
     }
+    auto const n = InputDimensions();
     SparseMatrix Mmat(n, n);
     Mmat.setFromTriplets(triplets.begin(), triplets.end());
     return Mmat;
