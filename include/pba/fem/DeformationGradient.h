@@ -46,9 +46,9 @@ Matrix<TElement::kNodes, TDerivedX::RowsAtCompileTime> BasisFunctionGradients(
  * @param GP Basis function gradients
  * @return
  */
-template <CElement TElement, class TDerivedU, class TDerivedX>
-Matrix<TDerivedU::RowsAtCompileTime, TElement::kDims>
-DeformationGradient(Eigen::MatrixBase<TDerivedU> const& x, Eigen::MatrixBase<TDerivedX> const& GP)
+template <CElement TElement, class TDerivedx, class TDerivedX>
+Matrix<TDerivedx::RowsAtCompileTime, TElement::kDims>
+DeformationGradient(Eigen::MatrixBase<TDerivedx> const& x, Eigen::MatrixBase<TDerivedX> const& GP)
 {
     return x * GP;
 }
