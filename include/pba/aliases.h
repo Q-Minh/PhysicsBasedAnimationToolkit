@@ -27,9 +27,8 @@ using IndexMatrix = Eigen::Matrix<Index, Rows, Cols>;
 using IndexVectorX = Eigen::Vector<Index, Eigen::Dynamic>;
 using IndexMatrixX = Eigen::Matrix<Index, Eigen::Dynamic, Eigen::Dynamic>;
 
-// NOTE: We should evaluate RowMajor storage, as matrix multiplication is trivially parallelized for
-// compressed row storage sparse matrices.
-using SparseMatrix = Eigen::SparseMatrix<Scalar, Eigen::ColMajor>;
+using CSCMatrix = Eigen::SparseMatrix<Scalar, Eigen::ColMajor>;
+using CSRMatrix = Eigen::SparseMatrix<Scalar, Eigen::RowMajor>;
 
 } // namespace pba
 

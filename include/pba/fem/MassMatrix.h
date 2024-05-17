@@ -46,7 +46,7 @@ struct MassMatrix
      * @brief Transforms this matrix-free mass matrix representation into sparse compressed format.
      * @return
      */
-    SparseMatrix ToMatrix() const;
+    CSCMatrix ToMatrix() const;
 
     Index InputDimensions() const { return kDims * mesh.X.cols(); }
     Index OutputDimensions() const { return InputDimensions(); }
@@ -117,13 +117,14 @@ inline void MassMatrix<TMesh, Dims>::Apply(
 }
 
 template <CMesh TMesh, int Dims>
-inline SparseMatrix MassMatrix<TMesh, Dims>::ToMatrix() const
+inline CSCMatrix MassMatrix<TMesh, Dims>::ToMatrix() const
 {
-    auto const numberOfElements = mesh.E.cols();
-    using SparseIndex           = typename SparseMatrix::StorageIndex;
-    using Triplet               = Eigen::Triplet<Scalar, SparseIndex>;
+    using SparseIndex = typename CSCMatrix::StorageIndex;
+    using Triplet     = Eigen::Triplet<Scalar, SparseIndex>;
+
     std::vector<Triplet> triplets{};
     triplets.reserve(static_cast<std::size_t>(Me.size() * kDims * kDims));
+    auto const numberOfElements = mesh.E.cols();
     for (auto e = 0; e < numberOfElements; ++e)
     {
         auto const nodes = mesh.E.col(e);
@@ -142,8 +143,9 @@ inline SparseMatrix MassMatrix<TMesh, Dims>::ToMatrix() const
             }
         }
     }
+
     auto const n = InputDimensions();
-    SparseMatrix Mmat(n, n);
+    CSCMatrix Mmat(n, n);
     Mmat.setFromTriplets(triplets.begin(), triplets.end());
     return Mmat;
 }

@@ -33,7 +33,7 @@ concept CLinearOperator = requires(T t)
     {t.Apply(MatrixX{}, std::declval<MatrixX&>())};
     {
         t.ToMatrix()
-    } -> std::convertible_to<SparseMatrix>;
+    } -> std::convertible_to<CSCMatrix>;
 };
 
 template <CLinearOperator... TLinearOperators>
@@ -61,7 +61,7 @@ class CompositeLinearOperator
      * @brief Construct the matrix of all underlying matrices obtained by Lops.
      * @return
      */
-    SparseMatrix ToMatrix() const;
+    CSCMatrix ToMatrix() const;
 
     Index OutputDimensions() const;
     Index InputDimensions() const;
@@ -71,7 +71,8 @@ class CompositeLinearOperator
 };
 
 template <CLinearOperator... TLinearOperators>
-CompositeLinearOperator<TLinearOperators...> ComposeLinearOperators(TLinearOperators const&... inOps)
+CompositeLinearOperator<TLinearOperators...>
+ComposeLinearOperators(TLinearOperators const&... inOps)
 {
     return CompositeLinearOperator(inOps...);
 }
@@ -108,10 +109,10 @@ inline void CompositeLinearOperator<TLinearOperators...>::Apply(
 }
 
 template <CLinearOperator... TLinearOperators>
-inline SparseMatrix CompositeLinearOperator<TLinearOperators...>::ToMatrix() const
+inline CSCMatrix CompositeLinearOperator<TLinearOperators...>::ToMatrix() const
 {
-    SparseMatrix const M =
-        std::apply([&](auto... op) -> SparseMatrix { return (op.ToMatrix() + ...); }, ops);
+    CSCMatrix const M =
+        std::apply([&](auto... op) -> CSCMatrix { return (op.ToMatrix() + ...); }, ops);
     return M;
 }
 

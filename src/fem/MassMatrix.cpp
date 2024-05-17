@@ -38,7 +38,7 @@ TEST_CASE("[fem] MassMatrix")
             CHECK(math::CLinearOperator<MassMatrix>);
             MassMatrix matrixFreeMass(mesh, 1.);
 
-            SparseMatrix const M = matrixFreeMass.ToMatrix();
+            CSCMatrix const M = matrixFreeMass.ToMatrix();
             CHECK_EQ(M.rows(), n);
             CHECK_EQ(M.cols(), n);
 

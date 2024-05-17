@@ -16,9 +16,9 @@ struct IdentityOperator
         y += x;
     }
 
-    pba::SparseMatrix ToMatrix() const
+    pba::CSCMatrix ToMatrix() const
     {
-        pba::SparseMatrix I(n, n);
+        pba::CSCMatrix I(n, n);
         I.setIdentity();
         return I;
     }
@@ -51,7 +51,7 @@ TEST_CASE("[math] LinearOperator")
     Scalar const yError       = (yExpected - y).norm() / yExpected.norm();
     CHECK_LE(yError, zero);
 
-    SparseMatrix const I3    = cop.ToMatrix();
+    CSCMatrix const I3       = cop.ToMatrix();
     Scalar const matrixError = (I3 - Matrix<n, n>::Identity().sparseView() * 3.).squaredNorm();
     CHECK_LE(matrixError, zero);
 
