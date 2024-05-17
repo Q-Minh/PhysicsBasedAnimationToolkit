@@ -176,13 +176,7 @@ inline void MassMatrix<TMesh, Dims>::ComputeElementMassMatrices()
                 detJ = DeterminantOfJacobian(Jacobian<AffineElementType>(Xg.col(g), Ve));
 
             Vector<ElementType::kNodes> const Ng = ElementType::N(Xg.col(g));
-            for (auto j = 0; j < me.cols(); ++j)
-            {
-                for (auto i = 0; i < me.rows(); ++i)
-                {
-                    me(i, j) += wg(g) * rho(e) * Ng(i) * Ng(j) * detJ;
-                }
-            }
+            me += (wg(g) * rho(e) * detJ) * (Ng * Ng.transpose());
         }
     });
 }
