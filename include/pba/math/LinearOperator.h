@@ -37,12 +37,66 @@ concept CLinearOperator = requires(T t)
 };
 
 template <CLinearOperator... TLinearOperators>
-class CompositeLinearOperator
+class LinearOperator;
+
+} // namespace math
+} // namespace pba
+
+namespace Eigen {
+namespace internal {
+
+template <pba::math::CLinearOperator... TLinearOperators>
+struct traits<pba::math::LinearOperator<TLinearOperators...>>
+{
+    using Scalar       = pba::Scalar;
+    using StorageIndex = pba::CSCMatrix::StorageIndex;
+    using StorageKind  = Sparse;
+    using XprKind      = MatrixXpr;
+    enum {
+        RowsAtCompileTime    = Dynamic,
+        ColsAtCompileTime    = Dynamic,
+        MaxRowsAtCompileTime = Dynamic,
+        MaxColsAtCompileTime = Dynamic,
+        Flags                = 0
+    };
+};
+
+} // namespace internal
+} // namespace Eigen
+
+namespace pba {
+namespace math {
+
+/**
+ * @brief Zero-overhead composite type satisfying the CLinearOperator concept. Provides
+ * interoperability with the Eigen API, i.e. can be used in product expression, and is usable in any
+ * IterativeLinearSolver (with suitable preconditioner, i.e. the preconditioner should not be
+ * constructible by analyzing matrix coefficients, since LinearOperator does not require storing any
+ * matrix).
+ *
+ * @tparam ...TLinearOperators
+ */
+template <CLinearOperator... TLinearOperators>
+class LinearOperator : public Eigen::EigenBase<LinearOperator<TLinearOperators...>>
 {
   public:
-    using SelfType = CompositeLinearOperator<TLinearOperators...>;
+    using SelfType = LinearOperator<TLinearOperators...>;
+    using BaseType = Eigen::EigenBase<SelfType>;
 
-    CompositeLinearOperator(TLinearOperators const&... inOps);
+    /**
+     * @brief Typedefs for Eigen compatibility
+     */
+    using Scalar           = pba::Scalar;
+    using RealScalar       = pba::Scalar;
+    using StorageIndex     = typename CSCMatrix::StorageIndex;
+    using NestedExpression = SelfType;
+    enum {
+        ColsAtCompileTime    = Eigen::Dynamic,
+        MaxColsAtCompileTime = Eigen::Dynamic,
+        IsRowMajor           = false
+    };
+
+    LinearOperator(TLinearOperators const&... inOps);
 
     SelfType& operator=(SelfType const&) = delete;
 
@@ -63,23 +117,31 @@ class CompositeLinearOperator
      */
     CSCMatrix ToMatrix() const;
 
-    Index OutputDimensions() const;
-    Index InputDimensions() const;
+    pba::Index OutputDimensions() const;
+    pba::Index InputDimensions() const;
+
+    // For Eigen compatibility
+    BaseType::Index rows() const { return static_cast<BaseType::Index>(OutputDimensions()); }
+    BaseType::Index cols() const { return static_cast<BaseType::Index>(InputDimensions()); }
+    template <class Rhs>
+    Eigen::Product<SelfType, Rhs, Eigen::AliasFreeProduct>
+    operator*(Eigen::MatrixBase<Rhs> const& x) const
+    {
+        return Eigen::Product<SelfType, Rhs, Eigen::AliasFreeProduct>(*this, x.derived());
+    }
 
   private:
     std::tuple<TLinearOperators const&...> ops;
 };
 
 template <CLinearOperator... TLinearOperators>
-CompositeLinearOperator<TLinearOperators...>
-ComposeLinearOperators(TLinearOperators const&... inOps)
+LinearOperator<TLinearOperators...> ComposeLinearOperators(TLinearOperators const&... inOps)
 {
-    return CompositeLinearOperator(inOps...);
+    return LinearOperator(inOps...);
 }
 
 template <CLinearOperator... TLinearOperators>
-inline CompositeLinearOperator<TLinearOperators...>::CompositeLinearOperator(
-    TLinearOperators const&... inOps)
+inline LinearOperator<TLinearOperators...>::LinearOperator(TLinearOperators const&... inOps)
     : ops(std::make_tuple(std::cref(inOps)...))
 {
     bool const bInputDimensionsMatch = std::apply(
@@ -101,7 +163,7 @@ inline CompositeLinearOperator<TLinearOperators...>::CompositeLinearOperator(
 
 template <CLinearOperator... TLinearOperators>
 template <class TDerivedIn, class TDerivedOut>
-inline void CompositeLinearOperator<TLinearOperators...>::Apply(
+inline void LinearOperator<TLinearOperators...>::Apply(
     Eigen::MatrixBase<TDerivedIn> const& x,
     Eigen::DenseBase<TDerivedOut>& y) const
 {
@@ -109,7 +171,7 @@ inline void CompositeLinearOperator<TLinearOperators...>::Apply(
 }
 
 template <CLinearOperator... TLinearOperators>
-inline CSCMatrix CompositeLinearOperator<TLinearOperators...>::ToMatrix() const
+inline CSCMatrix LinearOperator<TLinearOperators...>::ToMatrix() const
 {
     CSCMatrix const M =
         std::apply([&](auto... op) -> CSCMatrix { return (op.ToMatrix() + ...); }, ops);
@@ -117,18 +179,60 @@ inline CSCMatrix CompositeLinearOperator<TLinearOperators...>::ToMatrix() const
 }
 
 template <CLinearOperator... TLinearOperators>
-inline Index CompositeLinearOperator<TLinearOperators...>::OutputDimensions() const
+inline Index LinearOperator<TLinearOperators...>::OutputDimensions() const
 {
     return std::get<0>(ops).OutputDimensions();
 }
 
 template <CLinearOperator... TLinearOperators>
-inline Index CompositeLinearOperator<TLinearOperators...>::InputDimensions() const
+inline Index LinearOperator<TLinearOperators...>::InputDimensions() const
 {
     return std::get<0>(ops).InputDimensions();
 }
 
 } // namespace math
 } // namespace pba
+
+namespace Eigen {
+namespace internal {
+
+/**
+ * @brief
+ *
+ * See Eigen/src/Core/util/Constants.h, we want to specialize all product types.
+ *
+ * enum ProductImplType {
+ *     DefaultProduct = 0,
+ *     LazyProduct,
+ *     AliasFreeProduct,
+ *     CoeffBasedProductMode,
+ *     LazyCoeffBasedProductMode,
+ *     OuterProduct,
+ *     InnerProduct,
+ *     GemvProduct,
+ *     GemmProduct
+ * };
+ *
+ * This way, our matrix-free linear operators will be able to operate on all kinds of
+ * matrix/vector arguments, not just dynamic sized ones, as the GemvProduct denotes.
+ *
+ * @tparam Rhs
+ * @tparam Lhs
+ */
+template <pba::math::CLinearOperator Lhs, typename Rhs, int ProductType>
+struct generic_product_impl<Lhs, Rhs, SparseShape, DenseShape, ProductType>
+    : generic_product_impl_base<Lhs, Rhs, generic_product_impl<Lhs, Rhs>>
+{
+    typedef typename Product<Lhs, Rhs>::Scalar Scalar;
+
+    template <typename Dst>
+    static void scaleAndAddTo(Dst& dst, Lhs const& lhs, Rhs const& rhs, Scalar const& alpha)
+    {
+        lhs.Apply(alpha * rhs, dst);
+    }
+};
+
+} // namespace internal
+} // namespace Eigen
 
 #endif // PBA_CORE_MATH_LINEAR_OPERATOR_H

@@ -51,6 +51,23 @@ TEST_CASE("[math] LinearOperator")
     Scalar const yError       = (yExpected - y).norm() / yExpected.norm();
     CHECK_LE(yError, zero);
 
+    // Our LinearOperator is supposed to be Eigen compatible. However, we only support Eigen matrix
+    // operations on dynamic-size vectors/matrices. This is because internally, Eigen uses a
+    // compile-time trick to select
+    Vector<n> const xEigenExpected{x};
+    Vector<n> const yEigen   = cop * xEigenExpected;
+    Scalar const yEigenError = (yExpected - yEigen).norm() / yExpected.norm();
+    CHECK_LE(yEigenError, zero);
+    using CGSolver = Eigen::ConjugateGradient<
+        decltype(cop),
+        Eigen::Lower | Eigen::Upper,
+        Eigen::IdentityPreconditioner>;
+    CGSolver cg;
+    cg.compute(cop);
+    Vector<n> const xEigen   = cg.solve(yEigen);
+    Scalar const xEigenError = (xEigenExpected - xEigen).norm() / xEigenExpected.norm();
+    CHECK_LE(xEigenError, zero);
+
     CSCMatrix const I3       = cop.ToMatrix();
     Scalar const matrixError = (I3 - Matrix<n, n>::Identity().sparseView() * 3.).squaredNorm();
     CHECK_LE(matrixError, zero);
