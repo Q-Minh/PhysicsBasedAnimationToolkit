@@ -5,7 +5,6 @@
 #include "Jacobian.h"
 #include "pba/aliases.h"
 
-#include <Eigen/QR>
 #include <Eigen/SVD>
 
 namespace pba {

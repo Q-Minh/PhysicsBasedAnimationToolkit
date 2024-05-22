@@ -96,6 +96,8 @@ template <>
 struct {energy_name}<{d}>
 {{
     public:
+        static auto constexpr kDims = {d};
+    
         template <class Derived>
         Scalar
         eval(Eigen::DenseBase<Derived> const& F, Scalar mu, Scalar lambda) const;
