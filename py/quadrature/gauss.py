@@ -53,18 +53,6 @@ struct GaussLegendreQuadrature;
 #endif // PBA_CORE_MATH_GAUSS_QUADRATURE_H
     """
 
-    template = """
-template <>
-struct GaussLegendreQuadrature<{0},{1}>
-{{
-    inline static std::uint8_t constexpr kDims = {0};
-    inline static std::uint8_t constexpr kOrder = {1};
-    inline static int constexpr kPoints = {2};
-    inline static std::array<Scalar, (kDims+1)*kPoints> constexpr points = {{{3}}};
-    inline static std::array<Scalar, kPoints> constexpr weights = {{{4}}};
-}};
-    """
-
     with open("GaussQuadrature.h", "w") as file:
         file.write(header)
         for d in [1, 2, 3]:
@@ -75,6 +63,16 @@ struct GaussLegendreQuadrature<{0},{1}>
                 points = ",".join(
                     [str(xi[j]) for j in range(d+1) for xi in x])
                 weights = ",".join([str(wi) for wi in w])
-                file.write(template.format(
-                    d, order, len(x), points, weights))
+                impl = f"""
+template <>
+struct GaussLegendreQuadrature<{d},{order}>
+{{
+    inline static std::uint8_t constexpr kDims = {d};
+    inline static std::uint8_t constexpr kOrder = {order};
+    inline static int constexpr kPoints = {len(x)};
+    inline static std::array<Scalar, (kDims+1)*kPoints> constexpr points = {{{points}}};
+    inline static std::array<Scalar, kPoints> constexpr weights = {{{weights}}};
+}};
+    """
+                file.write(impl)
         file.write(footer)

@@ -154,65 +154,44 @@ def codegen(file, V: list, X: list, order: int, orthonormal=False):
     V = sp.Matrix(V)
 
     classname = "OrthonormalPolynomialBasis" if orthonormal else "MonomialBasis"
+    code = cg.codegen(V, lhs=sp.MatrixSymbol("P", len(V), 1))
+    GV = V.jacobian(X)
+    jaccode = cg.codegen(GV, lhs=sp.MatrixSymbol("G", *GV.shape))
+    AV = sp.Matrix([[sp.integrate(V[i], X[d]) for i in range(len(V))] for d in range(len(X))])
+    antiderivscode = cg.codegen(AV, lhs=sp.MatrixSymbol("P", *AV.shape))
     file.write(
-"""
+f"""
 template <>
-class {0}<{1}, {2}>
+class {classname}<{nvariables}, {order}>
 {{
   public:
-    inline static constexpr std::size_t kDims = {1};
-    inline static constexpr std::size_t kOrder = {2};
-    inline static constexpr std::size_t kSize = {3};
+    inline static constexpr std::size_t kDims = {nvariables};
+    inline static constexpr std::size_t kOrder = {order};
+    inline static constexpr std::size_t kSize = {dimV};
 
     [[maybe_unused]] Vector<kSize> eval([[maybe_unused]] Vector<kDims> const& X) const 
     {{
         Vector<kSize> P;
-""".format(classname, nvariables, order, dimV))
-    
-    code = cg.codegen(V, lhs=sp.MatrixSymbol("P", len(V), 1))
-    file.write(cg.tabulate(code, spaces=8))
-    
-    file.write(
-"""
+{cg.tabulate(code, spaces=8)}
         return P;
-    }""")
-
-    file.write("""
-               
+    }}         
+    
     [[maybe_unused]] Matrix<kDims, kSize> derivatives([[maybe_unused]] Vector<kDims> const& X) const
     {{
         Matrix<kDims, kSize> Gm;
         Scalar* G = Gm.data();
-""".format(nvariables))
-
-    GV = V.jacobian(X)
-    code = cg.codegen(GV, lhs=sp.MatrixSymbol("G", *GV.shape))
-    file.write(cg.tabulate(code, spaces=8))
-
-    file.write(
-"""
+{cg.tabulate(jaccode, spaces=8)}
         return Gm;
-    }""")
-
-    file.write("""
-               
+    }}
+    
     [[maybe_unused]] Matrix<kSize, kDims> antiderivatives([[maybe_unused]] Vector<kDims> const& X) const
     {{
         Matrix<kSize, kDims> Pm;
         Scalar* P = Pm.data();
-""".format(nvariables))
-    
-    AV = sp.Matrix([[sp.integrate(V[i], X[d]) for i in range(len(V))] for d in range(len(X))])
-    code = cg.codegen(AV, lhs=sp.MatrixSymbol("P", *AV.shape))
-    file.write(cg.tabulate(code, spaces=8))
-
-    file.write(
-"""
+{cg.tabulate(antiderivscode, spaces=8)}
         return Pm;
-    }""")
-
-    file.write("""
-};
+    }}
+}};
 """)
 
 
@@ -220,31 +199,26 @@ def div_free_codegen(file, F: list, X: list, order: int):
     nvariables = len(X)
     dimF = len(F)
     classname = "DivergenceFreePolynomialBasis"
+    F = sp.Matrix(F).transpose()
+    code = cg.codegen(F, lhs=sp.MatrixSymbol("P", *F.shape))
     file.write(
-"""
+f"""
 template <>
-class {0}<{1}, {2}>
+class {classname}<{nvariables}, {order}>
 {{
   public:
-    inline static constexpr std::size_t kDims = {1};
-    inline static constexpr std::size_t kOrder = {2};
-    inline static constexpr std::size_t kSize = {3};
+    inline static constexpr std::size_t kDims = {nvariables};
+    inline static constexpr std::size_t kOrder = {order};
+    inline static constexpr std::size_t kSize = {dimF};
 
     [[maybe_unused]] Matrix<kSize, kDims> eval([[maybe_unused]] Vector<kDims> const& X) const 
     {{
         Matrix<kSize, kDims> Pm;
         Scalar* P = Pm.data();
-""".format(classname, nvariables, order, dimF))
-    
-    F = sp.Matrix(F).transpose()
-    code = cg.codegen(F, lhs=sp.MatrixSymbol("P", *F.shape))
-    file.write(cg.tabulate(code, spaces=8))
-
-    file.write(
-"""
+{cg.tabulate(code, spaces=8)}
         return Pm;
-    }
-};
+    }}
+}};
 """)
 
 if __name__ == "__main__":

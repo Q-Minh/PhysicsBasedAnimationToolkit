@@ -240,9 +240,9 @@ def codegen(felement, p: int, element_name: str):
         element (str): Textual name of element
     """
 
-    header = """
-#ifndef PBA_CORE_FEM_{0}_H    
-#define PBA_CORE_FEM_{0}_H
+    header = f"""
+#ifndef PBA_CORE_FEM_{element_name.upper()}_H
+#define PBA_CORE_FEM_{element_name.upper()}_H
 
 #include "pba/aliases.h"
 #include "QuadratureRules.h"
@@ -251,55 +251,20 @@ def codegen(felement, p: int, element_name: str):
 
 namespace pba {{
 namespace fem {{
-    
+
 template <int Order>
-struct {1};
+struct {element_name};
 """
 
-    footer = """
+    footer = f"""
 }} // fem
 }} // pba
 
-#endif // PBA_CORE_FEM_{0}_H
+#endif // PBA_CORE_FEM_{element_name.upper()}_H
 """
 
-    template_specialization = """
-template <>
-struct {0}<{1}>
-{{
-    using AffineBaseType = {0}<1>;
-    
-    static int constexpr kOrder = {1};
-    static int constexpr kDims  = {2};
-    static int constexpr kNodes = {3};
-    static std::array<int, kNodes * kDims> constexpr Coordinates =
-        {{{4}}}; ///< Divide coordinates by kOrder to obtain actual coordinates in the reference element
-    static std::array<int, AffineBaseType::kNodes> constexpr Vertices = {{{8}}}; ///< Indices into nodes [0,kNodes-1] revealing vertices of the element
-    static bool constexpr bHasConstantJacobian = {9};
-    
-    template <int PolynomialOrder>
-    using QuadratureType = math::{5}<kDims, PolynomialOrder>;
-      
-    template <class TDerived, class TScalar = typename TDerived::Scalar>
-    [[maybe_unused]] static Eigen::Vector<TScalar, kNodes> N([[maybe_unused]] Eigen::DenseBase<TDerived> const& X)
-    {{
-        Eigen::Vector<TScalar, kNodes> Nm;
-{6}
-        return Nm;
-    }}
-    
-    [[maybe_unused]] static Matrix<kNodes, kDims> GradN([[maybe_unused]] Vector<kDims> const& X)
-    {{
-        Matrix<kNodes, kDims> GNm;
-        Scalar* GNp = GNm.data();
-{7}
-        return GNm;
-    }}
-}};    
-"""
     with open("{}.h".format(element_name), 'w', encoding="utf-8") as file:
-        file.write(
-            header.format(element_name.upper(), element_name))
+        file.write(header)
         for order in range(1, p+1):
             element = felement(
                 order)
@@ -320,19 +285,44 @@ struct {0}<{1}>
             has_constant_jacobian = symX not in gradN.atoms(
                 sp.MatrixSymbol)
             Jconst = str(has_constant_jacobian).lower()
-            file.write(template_specialization.format(element_name,
-                                                      order,
-                                                      dims,
-                                                      nodes,
-                                                      coordinates,
-                                                      quad,
-                                                      codeN,
-                                                      codeGN,
-                                                      vertices,
-                                                      Jconst))
+            template_specialization = f"""
+template <>
+struct {element_name}<{order}>
+{{
+    using AffineBaseType = {element_name}<1>;
+
+    static int constexpr kOrder = {order};
+    static int constexpr kDims  = {dims};
+    static int constexpr kNodes = {nodes};
+    static std::array<int, kNodes * kDims> constexpr Coordinates =
+        {{{coordinates}}}; ///< Divide coordinates by kOrder to obtain actual coordinates in the reference element
+    static std::array<int, AffineBaseType::kNodes> constexpr Vertices = {{{vertices}}}; ///< Indices into nodes [0,kNodes-1] revealing vertices of the element
+    static bool constexpr bHasConstantJacobian = {Jconst};
+
+    template <int PolynomialOrder>
+    using QuadratureType = math::{quad}<kDims, PolynomialOrder>;
+
+    template <class TDerived, class TScalar = typename TDerived::Scalar>
+    [[maybe_unused]] static Eigen::Vector<TScalar, kNodes> N([[maybe_unused]] Eigen::DenseBase<TDerived> const& X)
+    {{
+        Eigen::Vector<TScalar, kNodes> Nm;
+{codeN}
+        return Nm;
+    }}
+
+    [[maybe_unused]] static Matrix<kNodes, kDims> GradN([[maybe_unused]] Vector<kDims> const& X)
+    {{
+        Matrix<kNodes, kDims> GNm;
+        Scalar* GNp = GNm.data();
+{codeGN}
+        return GNm;
+    }}
+}};
+"""
+            file.write(template_specialization)
 
         file.write(
-            footer.format(element_name.upper()))
+            footer)
 
 
 if __name__ == "__main__":

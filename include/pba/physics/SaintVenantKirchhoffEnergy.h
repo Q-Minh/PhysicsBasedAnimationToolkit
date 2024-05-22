@@ -45,8 +45,10 @@ SaintVenantKirchhoffEnergy<1>::eval(Eigen::DenseBase<Derived> const& F, Scalar m
     const
 {
     Scalar psi;
-    Scalar const a0 = (1.0 / 2.0) * F[0] * F[0] - 1.0 / 2.0 * (1.0 / 2.0) * F[0] * F[0] - 1.0 / 2.0;
-    psi             = (1.0 / 2.0) * a0 * lambda + a0 * mu;
+    Scalar const a0 =
+        (((1.0 / 2.0) * ((F[0]) * (F[0])) - 1.0 / 2.0) *
+         ((1.0 / 2.0) * ((F[0]) * (F[0])) - 1.0 / 2.0));
+    psi = (1.0 / 2.0) * a0 * lambda + a0 * mu;
     return psi;
 }
 
@@ -56,8 +58,9 @@ SaintVenantKirchhoffEnergy<1>::grad(Eigen::DenseBase<Derived> const& F, Scalar m
     const
 {
     Vector<1> G;
-    Scalar const a0 = ((1.0 / 2.0) * F[0] * F[0] - 1.0 / 2.0) * F[0];
-    G[0]            = a0 * lambda + 2 * a0 * mu;
+    auto vecG       = G.reshaped();
+    Scalar const a0 = ((1.0 / 2.0) * ((F[0]) * (F[0])) - 1.0 / 2.0) * F[0];
+    vecG[0]         = a0 * lambda + 2 * a0 * mu;
     return G;
 }
 
@@ -67,10 +70,11 @@ SaintVenantKirchhoffEnergy<1>::hessian(Eigen::DenseBase<Derived> const& F, Scala
     const
 {
     Matrix<1, 1> H;
-    Scalar const a0 = F[0] * F[0];
+    auto vecH       = H.reshaped();
+    Scalar const a0 = ((F[0]) * (F[0]));
     Scalar const a1 = 2 * mu;
     Scalar const a2 = (1.0 / 2.0) * a0 - 1.0 / 2.0;
-    H[0]            = a0 * a1 + a0 * lambda + a1 * a2 + a2 * lambda;
+    vecH[0]         = a0 * a1 + a0 * lambda + a1 * a2 + a2 * lambda;
     return H;
 }
 
@@ -82,11 +86,12 @@ std::tuple<Scalar, Vector<1>> SaintVenantKirchhoffEnergy<1>::evalWithGrad(
 {
     Scalar psi;
     Vector<1> G;
-    Scalar const a0 = (1.0 / 2.0) * F[0] * F[0] - 1.0 / 2.0;
-    Scalar const a1 = a0 * a0;
+    auto vecG       = G.reshaped();
+    Scalar const a0 = (1.0 / 2.0) * ((F[0]) * (F[0])) - 1.0 / 2.0;
+    Scalar const a1 = ((a0) * (a0));
     Scalar const a2 = a0 * F[0];
     psi             = (1.0 / 2.0) * a1 * lambda + a1 * mu;
-    G[0]            = a2 * lambda + 2 * a2 * mu;
+    vecG[0]         = a2 * lambda + 2 * a2 * mu;
     return {psi, G};
 }
 
@@ -99,15 +104,17 @@ std::tuple<Scalar, Vector<1>, Matrix<1, 1>> SaintVenantKirchhoffEnergy<1>::evalW
     Scalar psi;
     Vector<1> G;
     Matrix<1, 1> H;
-    Scalar const a0 = F[0] * F[0];
+    auto vecG       = G.reshaped();
+    auto vecH       = H.reshaped();
+    Scalar const a0 = ((F[0]) * (F[0]));
     Scalar const a1 = (1.0 / 2.0) * a0 - 1.0 / 2.0;
-    Scalar const a2 = a1 * a1;
+    Scalar const a2 = ((a1) * (a1));
     Scalar const a3 = a1 * lambda;
     Scalar const a4 = 2 * mu;
     Scalar const a5 = a1 * a4;
     psi             = (1.0 / 2.0) * a2 * lambda + a2 * mu;
-    G[0]            = a3 * F[0] + a5 * F[0];
-    H[0]            = a0 * a4 + a0 * lambda + a3 + a5;
+    vecG[0]         = a3 * F[0] + a5 * F[0];
+    vecH[0]         = a0 * a4 + a0 * lambda + a3 + a5;
     return {psi, G, H};
 }
 
@@ -119,13 +126,15 @@ std::tuple<Vector<1>, Matrix<1, 1>> SaintVenantKirchhoffEnergy<1>::gradAndHessia
 {
     Vector<1> G;
     Matrix<1, 1> H;
-    Scalar const a0 = F[0] * F[0];
+    auto vecG       = G.reshaped();
+    auto vecH       = H.reshaped();
+    Scalar const a0 = ((F[0]) * (F[0]));
     Scalar const a1 = (1.0 / 2.0) * a0 - 1.0 / 2.0;
     Scalar const a2 = a1 * lambda;
     Scalar const a3 = 2 * mu;
     Scalar const a4 = a1 * a3;
-    G[0]            = a2 * F[0] + a4 * F[0];
-    H[0]            = a0 * a3 + a0 * lambda + a2 + a4;
+    vecG[0]         = a2 * F[0] + a4 * F[0];
+    vecH[0]         = a0 * a3 + a0 * lambda + a2 + a4;
     return {G, H};
 }
 
@@ -161,12 +170,12 @@ SaintVenantKirchhoffEnergy<2>::eval(Eigen::DenseBase<Derived> const& F, Scalar m
     const
 {
     Scalar psi;
-    Scalar const a0 = (1.0 / 2.0) * F[0] * F[0] + (1.0 / 2.0) * F[1] * F[1];
-    Scalar const a1 = (1.0 / 2.0) * F[2] * F[2] + (1.0 / 2.0) * F[3] * F[3];
-    psi             = (1.0 / 2.0) * lambda * a0 + a1 - 1 * a0 + a1 - 1 +
-          mu * (a0 - 1.0 / 2.0 * a0 - 1.0 / 2.0 + a1 - 1.0 / 2.0 * a1 - 1.0 / 2.0 +
-                2 * (1.0 / 2.0) * F[0] * F[2] +
-                (1.0 / 2.0) * F[1] * F[3] * (1.0 / 2.0) * F[0] * F[2] + (1.0 / 2.0) * F[1] * F[3]);
+    Scalar const a0 = (1.0 / 2.0) * ((F[0]) * (F[0])) + (1.0 / 2.0) * ((F[1]) * (F[1]));
+    Scalar const a1 = (1.0 / 2.0) * ((F[2]) * (F[2])) + (1.0 / 2.0) * ((F[3]) * (F[3]));
+    psi             = (1.0 / 2.0) * lambda * ((a0 + a1 - 1) * (a0 + a1 - 1)) +
+          mu * (((a0 - 1.0 / 2.0) * (a0 - 1.0 / 2.0)) + ((a1 - 1.0 / 2.0) * (a1 - 1.0 / 2.0)) +
+                2 * (((1.0 / 2.0) * F[0] * F[2] + (1.0 / 2.0) * F[1] * F[3]) *
+                     ((1.0 / 2.0) * F[0] * F[2] + (1.0 / 2.0) * F[1] * F[3])));
     return psi;
 }
 
@@ -176,16 +185,17 @@ SaintVenantKirchhoffEnergy<2>::grad(Eigen::DenseBase<Derived> const& F, Scalar m
     const
 {
     Vector<4> G;
-    Scalar const a0 = (1.0 / 2.0) * F[0] * F[0] + (1.0 / 2.0) * F[1] * F[1];
-    Scalar const a1 = (1.0 / 2.0) * F[2] * F[2] + (1.0 / 2.0) * F[3] * F[3];
+    auto vecG       = G.reshaped();
+    Scalar const a0 = (1.0 / 2.0) * ((F[0]) * (F[0])) + (1.0 / 2.0) * ((F[1]) * (F[1]));
+    Scalar const a1 = (1.0 / 2.0) * ((F[2]) * (F[2])) + (1.0 / 2.0) * ((F[3]) * (F[3]));
     Scalar const a2 = lambda * (a0 + a1 - 1);
     Scalar const a3 = 2 * a0 - 1;
     Scalar const a4 = F[0] * F[2] + F[1] * F[3];
     Scalar const a5 = 2 * a1 - 1;
-    G[0]            = a2 * F[0] + mu * (a3 * F[0] + a4 * F[2]);
-    G[1]            = a2 * F[1] + mu * (a3 * F[1] + a4 * F[3]);
-    G[2]            = a2 * F[2] + mu * (a4 * F[0] + a5 * F[2]);
-    G[3]            = a2 * F[3] + mu * (a4 * F[1] + a5 * F[3]);
+    vecG[0]         = a2 * F[0] + mu * (a3 * F[0] + a4 * F[2]);
+    vecG[1]         = a2 * F[1] + mu * (a3 * F[1] + a4 * F[3]);
+    vecG[2]         = a2 * F[2] + mu * (a4 * F[0] + a5 * F[2]);
+    vecG[3]         = a2 * F[3] + mu * (a4 * F[1] + a5 * F[3]);
     return G;
 }
 
@@ -195,11 +205,12 @@ SaintVenantKirchhoffEnergy<2>::hessian(Eigen::DenseBase<Derived> const& F, Scala
     const
 {
     Matrix<4, 4> H;
-    Scalar const a0 = F[0] * F[0];
-    Scalar const a1 = F[1] * F[1];
-    Scalar const a2 = F[2] * F[2];
+    auto vecH       = H.reshaped();
+    Scalar const a0 = ((F[0]) * (F[0]));
+    Scalar const a1 = ((F[1]) * (F[1]));
+    Scalar const a2 = ((F[2]) * (F[2]));
     Scalar const a3 = a1 + a2 - 1;
-    Scalar const a4 = F[3] * F[3];
+    Scalar const a4 = ((F[3]) * (F[3]));
     Scalar const a5 =
         lambda * ((1.0 / 2.0) * a0 + (1.0 / 2.0) * a1 + (1.0 / 2.0) * a2 + (1.0 / 2.0) * a4 - 1);
     Scalar const a6  = F[0] * F[1];
@@ -215,22 +226,22 @@ SaintVenantKirchhoffEnergy<2>::hessian(Eigen::DenseBase<Derived> const& F, Scala
     Scalar const a16 = a12 * mu + a13 * lambda;
     Scalar const a17 = a10 * lambda + mu * (2 * a10 + a9);
     Scalar const a18 = a7 * lambda + mu * (a6 + 2 * a7);
-    H[0]             = a0 * lambda + a5 + mu * (3 * a0 + a3);
-    H[1]             = a8;
-    H[2]             = a11;
-    H[3]             = a14;
-    H[4]             = a8;
-    H[5]             = a1 * lambda + a5 + mu * (3 * a1 + a15);
-    H[6]             = a16;
-    H[7]             = a17;
-    H[8]             = a11;
-    H[9]             = a16;
-    H[10]            = a2 * lambda + a5 + mu * (a15 + 3 * a2);
-    H[11]            = a18;
-    H[12]            = a14;
-    H[13]            = a17;
-    H[14]            = a18;
-    H[15]            = a4 * lambda + a5 + mu * (a3 + 3 * a4);
+    vecH[0]          = a0 * lambda + a5 + mu * (3 * a0 + a3);
+    vecH[1]          = a8;
+    vecH[2]          = a11;
+    vecH[3]          = a14;
+    vecH[4]          = a8;
+    vecH[5]          = a1 * lambda + a5 + mu * (3 * a1 + a15);
+    vecH[6]          = a16;
+    vecH[7]          = a17;
+    vecH[8]          = a11;
+    vecH[9]          = a16;
+    vecH[10]         = a2 * lambda + a5 + mu * (a15 + 3 * a2);
+    vecH[11]         = a18;
+    vecH[12]         = a14;
+    vecH[13]         = a17;
+    vecH[14]         = a18;
+    vecH[15]         = a4 * lambda + a5 + mu * (a3 + 3 * a4);
     return H;
 }
 
@@ -242,8 +253,9 @@ std::tuple<Scalar, Vector<4>> SaintVenantKirchhoffEnergy<2>::evalWithGrad(
 {
     Scalar psi;
     Vector<4> G;
-    Scalar const a0 = (1.0 / 2.0) * F[0] * F[0] + (1.0 / 2.0) * F[1] * F[1];
-    Scalar const a1 = (1.0 / 2.0) * F[2] * F[2] + (1.0 / 2.0) * F[3] * F[3];
+    auto vecG       = G.reshaped();
+    Scalar const a0 = (1.0 / 2.0) * ((F[0]) * (F[0])) + (1.0 / 2.0) * ((F[1]) * (F[1]));
+    Scalar const a1 = (1.0 / 2.0) * ((F[2]) * (F[2])) + (1.0 / 2.0) * ((F[3]) * (F[3]));
     Scalar const a2 = a0 + a1 - 1;
     Scalar const a3 = a0 - 1.0 / 2.0;
     Scalar const a4 = a1 - 1.0 / 2.0;
@@ -252,11 +264,12 @@ std::tuple<Scalar, Vector<4>> SaintVenantKirchhoffEnergy<2>::evalWithGrad(
     Scalar const a7 = 2 * a3;
     Scalar const a8 = 2 * a5;
     Scalar const a9 = 2 * a4;
-    psi             = (1.0 / 2.0) * a2 * a2 * lambda + mu * (a3 * a3 + a4 * a4 + 2 * a5 * a5);
-    G[0]            = a6 * F[0] + mu * (a7 * F[0] + a8 * F[2]);
-    G[1]            = a6 * F[1] + mu * (a7 * F[1] + a8 * F[3]);
-    G[2]            = a6 * F[2] + mu * (a8 * F[0] + a9 * F[2]);
-    G[3]            = a6 * F[3] + mu * (a8 * F[1] + a9 * F[3]);
+    psi             = (1.0 / 2.0) * ((a2) * (a2)) * lambda +
+          mu * (((a3) * (a3)) + ((a4) * (a4)) + 2 * ((a5) * (a5)));
+    vecG[0] = a6 * F[0] + mu * (a7 * F[0] + a8 * F[2]);
+    vecG[1] = a6 * F[1] + mu * (a7 * F[1] + a8 * F[3]);
+    vecG[2] = a6 * F[2] + mu * (a8 * F[0] + a9 * F[2]);
+    vecG[3] = a6 * F[3] + mu * (a8 * F[1] + a9 * F[3]);
     return {psi, G};
 }
 
@@ -269,11 +282,13 @@ std::tuple<Scalar, Vector<4>, Matrix<4, 4>> SaintVenantKirchhoffEnergy<2>::evalW
     Scalar psi;
     Vector<4> G;
     Matrix<4, 4> H;
-    Scalar const a0  = F[0] * F[0];
-    Scalar const a1  = F[1] * F[1];
+    auto vecG        = G.reshaped();
+    auto vecH        = H.reshaped();
+    Scalar const a0  = ((F[0]) * (F[0]));
+    Scalar const a1  = ((F[1]) * (F[1]));
     Scalar const a2  = (1.0 / 2.0) * a0 + (1.0 / 2.0) * a1;
-    Scalar const a3  = F[2] * F[2];
-    Scalar const a4  = F[3] * F[3];
+    Scalar const a3  = ((F[2]) * (F[2]));
+    Scalar const a4  = ((F[3]) * (F[3]));
     Scalar const a5  = (1.0 / 2.0) * a3 + (1.0 / 2.0) * a4;
     Scalar const a6  = a2 + a5 - 1;
     Scalar const a7  = a2 - 1.0 / 2.0;
@@ -297,27 +312,28 @@ std::tuple<Scalar, Vector<4>, Matrix<4, 4>> SaintVenantKirchhoffEnergy<2>::evalW
     Scalar const a25 = a21 * mu + a22 * lambda;
     Scalar const a26 = a10 * lambda + mu * (2 * a10 + a9);
     Scalar const a27 = a18 * lambda + mu * (a17 + 2 * a18);
-    psi              = (1.0 / 2.0) * a6 * a6 * lambda + mu * (2 * a11 * a11 + a7 * a7 + a8 * a8);
-    G[0]             = a12 * F[0] + mu * (a13 * F[0] + a14 * F[2]);
-    G[1]             = a12 * F[1] + mu * (a13 * F[1] + a14 * F[3]);
-    G[2]             = a12 * F[2] + mu * (a14 * F[0] + a15 * F[2]);
-    G[3]             = a12 * F[3] + mu * (a14 * F[1] + a15 * F[3]);
-    H[0]             = a0 * lambda + a12 + mu * (3 * a0 + a16);
-    H[1]             = a19;
-    H[2]             = a20;
-    H[3]             = a23;
-    H[4]             = a19;
-    H[5]             = a1 * lambda + a12 + mu * (3 * a1 + a24);
-    H[6]             = a25;
-    H[7]             = a26;
-    H[8]             = a20;
-    H[9]             = a25;
-    H[10]            = a12 + a3 * lambda + mu * (a24 + 3 * a3);
-    H[11]            = a27;
-    H[12]            = a23;
-    H[13]            = a26;
-    H[14]            = a27;
-    H[15]            = a12 + a4 * lambda + mu * (a16 + 3 * a4);
+    psi              = (1.0 / 2.0) * ((a6) * (a6)) * lambda +
+          mu * (2 * ((a11) * (a11)) + ((a7) * (a7)) + ((a8) * (a8)));
+    vecG[0]  = a12 * F[0] + mu * (a13 * F[0] + a14 * F[2]);
+    vecG[1]  = a12 * F[1] + mu * (a13 * F[1] + a14 * F[3]);
+    vecG[2]  = a12 * F[2] + mu * (a14 * F[0] + a15 * F[2]);
+    vecG[3]  = a12 * F[3] + mu * (a14 * F[1] + a15 * F[3]);
+    vecH[0]  = a0 * lambda + a12 + mu * (3 * a0 + a16);
+    vecH[1]  = a19;
+    vecH[2]  = a20;
+    vecH[3]  = a23;
+    vecH[4]  = a19;
+    vecH[5]  = a1 * lambda + a12 + mu * (3 * a1 + a24);
+    vecH[6]  = a25;
+    vecH[7]  = a26;
+    vecH[8]  = a20;
+    vecH[9]  = a25;
+    vecH[10] = a12 + a3 * lambda + mu * (a24 + 3 * a3);
+    vecH[11] = a27;
+    vecH[12] = a23;
+    vecH[13] = a26;
+    vecH[14] = a27;
+    vecH[15] = a12 + a4 * lambda + mu * (a16 + 3 * a4);
     return {psi, G, H};
 }
 
@@ -329,11 +345,13 @@ std::tuple<Vector<4>, Matrix<4, 4>> SaintVenantKirchhoffEnergy<2>::gradAndHessia
 {
     Vector<4> G;
     Matrix<4, 4> H;
-    Scalar const a0  = F[0] * F[0];
-    Scalar const a1  = F[1] * F[1];
+    auto vecG        = G.reshaped();
+    auto vecH        = H.reshaped();
+    Scalar const a0  = ((F[0]) * (F[0]));
+    Scalar const a1  = ((F[1]) * (F[1]));
     Scalar const a2  = (1.0 / 2.0) * a0 + (1.0 / 2.0) * a1;
-    Scalar const a3  = F[2] * F[2];
-    Scalar const a4  = F[3] * F[3];
+    Scalar const a3  = ((F[2]) * (F[2]));
+    Scalar const a4  = ((F[3]) * (F[3]));
     Scalar const a5  = (1.0 / 2.0) * a3 + (1.0 / 2.0) * a4;
     Scalar const a6  = lambda * (a2 + a5 - 1);
     Scalar const a7  = 2 * a2 - 1;
@@ -353,26 +371,26 @@ std::tuple<Vector<4>, Matrix<4, 4>> SaintVenantKirchhoffEnergy<2>::gradAndHessia
     Scalar const a21 = a17 * mu + a18 * lambda;
     Scalar const a22 = a9 * lambda + mu * (a8 + 2 * a9);
     Scalar const a23 = a14 * lambda + mu * (a13 + 2 * a14);
-    G[0]             = a6 * F[0] + mu * (a10 * F[2] + a7 * F[0]);
-    G[1]             = a6 * F[1] + mu * (a10 * F[3] + a7 * F[1]);
-    G[2]             = a6 * F[2] + mu * (a10 * F[0] + a11 * F[2]);
-    G[3]             = a6 * F[3] + mu * (a10 * F[1] + a11 * F[3]);
-    H[0]             = a0 * lambda + a6 + mu * (3 * a0 + a12);
-    H[1]             = a15;
-    H[2]             = a16;
-    H[3]             = a19;
-    H[4]             = a15;
-    H[5]             = a1 * lambda + a6 + mu * (3 * a1 + a20);
-    H[6]             = a21;
-    H[7]             = a22;
-    H[8]             = a16;
-    H[9]             = a21;
-    H[10]            = a3 * lambda + a6 + mu * (a20 + 3 * a3);
-    H[11]            = a23;
-    H[12]            = a19;
-    H[13]            = a22;
-    H[14]            = a23;
-    H[15]            = a4 * lambda + a6 + mu * (a12 + 3 * a4);
+    vecG[0]          = a6 * F[0] + mu * (a10 * F[2] + a7 * F[0]);
+    vecG[1]          = a6 * F[1] + mu * (a10 * F[3] + a7 * F[1]);
+    vecG[2]          = a6 * F[2] + mu * (a10 * F[0] + a11 * F[2]);
+    vecG[3]          = a6 * F[3] + mu * (a10 * F[1] + a11 * F[3]);
+    vecH[0]          = a0 * lambda + a6 + mu * (3 * a0 + a12);
+    vecH[1]          = a15;
+    vecH[2]          = a16;
+    vecH[3]          = a19;
+    vecH[4]          = a15;
+    vecH[5]          = a1 * lambda + a6 + mu * (3 * a1 + a20);
+    vecH[6]          = a21;
+    vecH[7]          = a22;
+    vecH[8]          = a16;
+    vecH[9]          = a21;
+    vecH[10]         = a3 * lambda + a6 + mu * (a20 + 3 * a3);
+    vecH[11]         = a23;
+    vecH[12]         = a19;
+    vecH[13]         = a22;
+    vecH[14]         = a23;
+    vecH[15]         = a4 * lambda + a6 + mu * (a12 + 3 * a4);
     return {G, H};
 }
 
@@ -408,22 +426,24 @@ SaintVenantKirchhoffEnergy<3>::eval(Eigen::DenseBase<Derived> const& F, Scalar m
     const
 {
     Scalar psi;
-    Scalar const a0 =
-        (1.0 / 2.0) * F[0] * F[0] + (1.0 / 2.0) * F[1] * F[1] + (1.0 / 2.0) * F[2] * F[2];
-    Scalar const a1 =
-        (1.0 / 2.0) * F[3] * F[3] + (1.0 / 2.0) * F[4] * F[4] + (1.0 / 2.0) * F[5] * F[5];
-    Scalar const a2 =
-        (1.0 / 2.0) * F[6] * F[6] + (1.0 / 2.0) * F[7] * F[7] + (1.0 / 2.0) * F[8] * F[8];
+    Scalar const a0 = (1.0 / 2.0) * ((F[0]) * (F[0])) + (1.0 / 2.0) * ((F[1]) * (F[1])) +
+                      (1.0 / 2.0) * ((F[2]) * (F[2]));
+    Scalar const a1 = (1.0 / 2.0) * ((F[3]) * (F[3])) + (1.0 / 2.0) * ((F[4]) * (F[4])) +
+                      (1.0 / 2.0) * ((F[5]) * (F[5]));
+    Scalar const a2 = (1.0 / 2.0) * ((F[6]) * (F[6])) + (1.0 / 2.0) * ((F[7]) * (F[7])) +
+                      (1.0 / 2.0) * ((F[8]) * (F[8]));
     Scalar const a3 = (1.0 / 2.0) * F[0];
     Scalar const a4 = (1.0 / 2.0) * F[1];
     Scalar const a5 = (1.0 / 2.0) * F[2];
-    psi             = (1.0 / 2.0) * lambda * a0 + a1 + a2 - 3.0 / 2.0 * a0 + a1 + a2 - 3.0 / 2.0 +
-          mu * (a0 - 1.0 / 2.0 * a0 - 1.0 / 2.0 + a1 - 1.0 / 2.0 * a1 - 1.0 / 2.0 + a2 -
-                1.0 / 2.0 * a2 - 1.0 / 2.0 + 2 * a3 * F[3] + a4 * F[4] + a5 * F[5] * a3 * F[3] +
-                a4 * F[4] + a5 * F[5] + 2 * a3 * F[6] + a4 * F[7] + a5 * F[8] * a3 * F[6] +
-                a4 * F[7] + a5 * F[8] + 2 * (1.0 / 2.0) * F[3] * F[6] + (1.0 / 2.0) * F[4] * F[7] +
-                (1.0 / 2.0) * F[5] * F[8] * (1.0 / 2.0) * F[3] * F[6] + (1.0 / 2.0) * F[4] * F[7] +
-                (1.0 / 2.0) * F[5] * F[8]);
+    psi = (1.0 / 2.0) * lambda * ((a0 + a1 + a2 - 3.0 / 2.0) * (a0 + a1 + a2 - 3.0 / 2.0)) +
+          mu * (((a0 - 1.0 / 2.0) * (a0 - 1.0 / 2.0)) + ((a1 - 1.0 / 2.0) * (a1 - 1.0 / 2.0)) +
+                ((a2 - 1.0 / 2.0) * (a2 - 1.0 / 2.0)) +
+                2 * ((a3 * F[3] + a4 * F[4] + a5 * F[5]) * (a3 * F[3] + a4 * F[4] + a5 * F[5])) +
+                2 * ((a3 * F[6] + a4 * F[7] + a5 * F[8]) * (a3 * F[6] + a4 * F[7] + a5 * F[8])) +
+                2 * (((1.0 / 2.0) * F[3] * F[6] + (1.0 / 2.0) * F[4] * F[7] +
+                      (1.0 / 2.0) * F[5] * F[8]) *
+                     ((1.0 / 2.0) * F[3] * F[6] + (1.0 / 2.0) * F[4] * F[7] +
+                      (1.0 / 2.0) * F[5] * F[8])));
     return psi;
 }
 
@@ -433,12 +453,13 @@ SaintVenantKirchhoffEnergy<3>::grad(Eigen::DenseBase<Derived> const& F, Scalar m
     const
 {
     Vector<9> G;
-    Scalar const a0 =
-        (1.0 / 2.0) * F[0] * F[0] + (1.0 / 2.0) * F[1] * F[1] + (1.0 / 2.0) * F[2] * F[2];
-    Scalar const a1 =
-        (1.0 / 2.0) * F[3] * F[3] + (1.0 / 2.0) * F[4] * F[4] + (1.0 / 2.0) * F[5] * F[5];
-    Scalar const a2 =
-        (1.0 / 2.0) * F[6] * F[6] + (1.0 / 2.0) * F[7] * F[7] + (1.0 / 2.0) * F[8] * F[8];
+    auto vecG       = G.reshaped();
+    Scalar const a0 = (1.0 / 2.0) * ((F[0]) * (F[0])) + (1.0 / 2.0) * ((F[1]) * (F[1])) +
+                      (1.0 / 2.0) * ((F[2]) * (F[2]));
+    Scalar const a1 = (1.0 / 2.0) * ((F[3]) * (F[3])) + (1.0 / 2.0) * ((F[4]) * (F[4])) +
+                      (1.0 / 2.0) * ((F[5]) * (F[5]));
+    Scalar const a2 = (1.0 / 2.0) * ((F[6]) * (F[6])) + (1.0 / 2.0) * ((F[7]) * (F[7])) +
+                      (1.0 / 2.0) * ((F[8]) * (F[8]));
     Scalar const a3  = lambda * (a0 + a1 + a2 - 3.0 / 2.0);
     Scalar const a4  = 2 * a0 - 1;
     Scalar const a5  = (1.0 / 2.0) * F[0];
@@ -449,15 +470,15 @@ SaintVenantKirchhoffEnergy<3>::grad(Eigen::DenseBase<Derived> const& F, Scalar m
     Scalar const a10 = 2 * a1 - 1;
     Scalar const a11 = F[3] * F[6] + F[4] * F[7] + F[5] * F[8];
     Scalar const a12 = 2 * a2 - 1;
-    G[0]             = a3 * F[0] + mu * (a4 * F[0] + a8 * F[3] + a9 * F[6]);
-    G[1]             = a3 * F[1] + mu * (a4 * F[1] + a8 * F[4] + a9 * F[7]);
-    G[2]             = a3 * F[2] + mu * (a4 * F[2] + a8 * F[5] + a9 * F[8]);
-    G[3]             = a3 * F[3] + mu * (a10 * F[3] + a11 * F[6] + a8 * F[0]);
-    G[4]             = a3 * F[4] + mu * (a10 * F[4] + a11 * F[7] + a8 * F[1]);
-    G[5]             = a3 * F[5] + mu * (a10 * F[5] + a11 * F[8] + a8 * F[2]);
-    G[6]             = a3 * F[6] + mu * (a11 * F[3] + a12 * F[6] + a9 * F[0]);
-    G[7]             = a3 * F[7] + mu * (a11 * F[4] + a12 * F[7] + a9 * F[1]);
-    G[8]             = a3 * F[8] + mu * (a11 * F[5] + a12 * F[8] + a9 * F[2]);
+    vecG[0]          = a3 * F[0] + mu * (a4 * F[0] + a8 * F[3] + a9 * F[6]);
+    vecG[1]          = a3 * F[1] + mu * (a4 * F[1] + a8 * F[4] + a9 * F[7]);
+    vecG[2]          = a3 * F[2] + mu * (a4 * F[2] + a8 * F[5] + a9 * F[8]);
+    vecG[3]          = a3 * F[3] + mu * (a10 * F[3] + a11 * F[6] + a8 * F[0]);
+    vecG[4]          = a3 * F[4] + mu * (a10 * F[4] + a11 * F[7] + a8 * F[1]);
+    vecG[5]          = a3 * F[5] + mu * (a10 * F[5] + a11 * F[8] + a8 * F[2]);
+    vecG[6]          = a3 * F[6] + mu * (a11 * F[3] + a12 * F[6] + a9 * F[0]);
+    vecG[7]          = a3 * F[7] + mu * (a11 * F[4] + a12 * F[7] + a9 * F[1]);
+    vecG[8]          = a3 * F[8] + mu * (a11 * F[5] + a12 * F[8] + a9 * F[2]);
     return G;
 }
 
@@ -467,18 +488,19 @@ SaintVenantKirchhoffEnergy<3>::hessian(Eigen::DenseBase<Derived> const& F, Scala
     const
 {
     Matrix<9, 9> H;
-    Scalar const a0  = F[0] * F[0];
-    Scalar const a1  = F[1] * F[1];
-    Scalar const a2  = F[3] * F[3];
+    auto vecH        = H.reshaped();
+    Scalar const a0  = ((F[0]) * (F[0]));
+    Scalar const a1  = ((F[1]) * (F[1]));
+    Scalar const a2  = ((F[3]) * (F[3]));
     Scalar const a3  = a1 + a2;
-    Scalar const a4  = F[6] * F[6];
-    Scalar const a5  = F[2] * F[2];
+    Scalar const a4  = ((F[6]) * (F[6]));
+    Scalar const a5  = ((F[2]) * (F[2]));
     Scalar const a6  = a5 - 1;
     Scalar const a7  = a4 + a6;
-    Scalar const a8  = F[4] * F[4];
-    Scalar const a9  = F[5] * F[5];
-    Scalar const a10 = F[7] * F[7];
-    Scalar const a11 = F[8] * F[8];
+    Scalar const a8  = ((F[4]) * (F[4]));
+    Scalar const a9  = ((F[5]) * (F[5]));
+    Scalar const a10 = ((F[7]) * (F[7]));
+    Scalar const a11 = ((F[8]) * (F[8]));
     Scalar const a12 =
         lambda * ((1.0 / 2.0) * a0 + (1.0 / 2.0) * a1 + (1.0 / 2.0) * a10 + (1.0 / 2.0) * a11 +
                   (1.0 / 2.0) * a2 + (1.0 / 2.0) * a4 + (1.0 / 2.0) * a5 + (1.0 / 2.0) * a8 +
@@ -553,87 +575,87 @@ SaintVenantKirchhoffEnergy<3>::hessian(Eigen::DenseBase<Derived> const& F, Scala
     Scalar const a80 = a15 * lambda + mu * (a13 + a14 + 2 * a15);
     Scalar const a81 = a19 * lambda + mu * (a17 + a18 + 2 * a19);
     Scalar const a82 = a39 * lambda + mu * (a37 + a38 + 2 * a39);
-    H[0]             = a0 * lambda + a12 + mu * (3 * a0 + a3 + a7);
-    H[1]             = a16;
-    H[2]             = a20;
-    H[3]             = a24;
-    H[4]             = a27;
-    H[5]             = a28;
-    H[6]             = a32;
-    H[7]             = a34;
-    H[8]             = a35;
-    H[9]             = a16;
-    H[10]            = a1 * lambda + a12 + mu * (3 * a1 + a10 + a36 + a6);
-    H[11]            = a40;
-    H[12]            = a43;
-    H[13]            = a44;
-    H[14]            = a45;
-    H[15]            = a47;
-    H[16]            = a48;
-    H[17]            = a49;
-    H[18]            = a20;
-    H[19]            = a40;
-    H[20]            = a12 + a5 * lambda + mu * (a1 + 3 * a5 + a50 + a51);
-    H[21]            = a54;
-    H[22]            = a55;
-    H[23]            = a56;
-    H[24]            = a58;
-    H[25]            = a59;
-    H[26]            = a60;
-    H[27]            = a24;
-    H[28]            = a43;
-    H[29]            = a54;
-    H[30]            = a12 + a2 * lambda + mu * (3 * a2 + a36 + a4 + a50);
-    H[31]            = a61;
-    H[32]            = a62;
-    H[33]            = a66;
-    H[34]            = a68;
-    H[35]            = a69;
-    H[36]            = a27;
-    H[37]            = a44;
-    H[38]            = a55;
-    H[39]            = a61;
-    H[40]            = a12 + a8 * lambda + mu * (a10 + a3 + a50 + 3 * a8);
-    H[41]            = a70;
-    H[42]            = a72;
-    H[43]            = a73;
-    H[44]            = a74;
-    H[45]            = a28;
-    H[46]            = a45;
-    H[47]            = a56;
-    H[48]            = a62;
-    H[49]            = a70;
-    H[50]            = a12 + a9 * lambda + mu * (a2 + a6 + a75 + 3 * a9);
-    H[51]            = a77;
-    H[52]            = a78;
-    H[53]            = a79;
-    H[54]            = a32;
-    H[55]            = a47;
-    H[56]            = a58;
-    H[57]            = a66;
-    H[58]            = a72;
-    H[59]            = a77;
-    H[60]            = a12 + a4 * lambda + mu * (a10 + a2 + 3 * a4 + a51 - 1);
-    H[61]            = a80;
-    H[62]            = a81;
-    H[63]            = a34;
-    H[64]            = a48;
-    H[65]            = a59;
-    H[66]            = a68;
-    H[67]            = a73;
-    H[68]            = a78;
-    H[69]            = a80;
-    H[70]            = a10 * lambda + a12 + mu * (a1 + 3 * a10 + a4 + a75 - 1);
-    H[71]            = a82;
-    H[72]            = a35;
-    H[73]            = a49;
-    H[74]            = a60;
-    H[75]            = a69;
-    H[76]            = a74;
-    H[77]            = a79;
-    H[78]            = a81;
-    H[79]            = a82;
-    H[80]            = a11 * lambda + a12 + mu * (a10 + 3 * a11 + a7 + a9);
+    vecH[0]          = a0 * lambda + a12 + mu * (3 * a0 + a3 + a7);
+    vecH[1]          = a16;
+    vecH[2]          = a20;
+    vecH[3]          = a24;
+    vecH[4]          = a27;
+    vecH[5]          = a28;
+    vecH[6]          = a32;
+    vecH[7]          = a34;
+    vecH[8]          = a35;
+    vecH[9]          = a16;
+    vecH[10]         = a1 * lambda + a12 + mu * (3 * a1 + a10 + a36 + a6);
+    vecH[11]         = a40;
+    vecH[12]         = a43;
+    vecH[13]         = a44;
+    vecH[14]         = a45;
+    vecH[15]         = a47;
+    vecH[16]         = a48;
+    vecH[17]         = a49;
+    vecH[18]         = a20;
+    vecH[19]         = a40;
+    vecH[20]         = a12 + a5 * lambda + mu * (a1 + 3 * a5 + a50 + a51);
+    vecH[21]         = a54;
+    vecH[22]         = a55;
+    vecH[23]         = a56;
+    vecH[24]         = a58;
+    vecH[25]         = a59;
+    vecH[26]         = a60;
+    vecH[27]         = a24;
+    vecH[28]         = a43;
+    vecH[29]         = a54;
+    vecH[30]         = a12 + a2 * lambda + mu * (3 * a2 + a36 + a4 + a50);
+    vecH[31]         = a61;
+    vecH[32]         = a62;
+    vecH[33]         = a66;
+    vecH[34]         = a68;
+    vecH[35]         = a69;
+    vecH[36]         = a27;
+    vecH[37]         = a44;
+    vecH[38]         = a55;
+    vecH[39]         = a61;
+    vecH[40]         = a12 + a8 * lambda + mu * (a10 + a3 + a50 + 3 * a8);
+    vecH[41]         = a70;
+    vecH[42]         = a72;
+    vecH[43]         = a73;
+    vecH[44]         = a74;
+    vecH[45]         = a28;
+    vecH[46]         = a45;
+    vecH[47]         = a56;
+    vecH[48]         = a62;
+    vecH[49]         = a70;
+    vecH[50]         = a12 + a9 * lambda + mu * (a2 + a6 + a75 + 3 * a9);
+    vecH[51]         = a77;
+    vecH[52]         = a78;
+    vecH[53]         = a79;
+    vecH[54]         = a32;
+    vecH[55]         = a47;
+    vecH[56]         = a58;
+    vecH[57]         = a66;
+    vecH[58]         = a72;
+    vecH[59]         = a77;
+    vecH[60]         = a12 + a4 * lambda + mu * (a10 + a2 + 3 * a4 + a51 - 1);
+    vecH[61]         = a80;
+    vecH[62]         = a81;
+    vecH[63]         = a34;
+    vecH[64]         = a48;
+    vecH[65]         = a59;
+    vecH[66]         = a68;
+    vecH[67]         = a73;
+    vecH[68]         = a78;
+    vecH[69]         = a80;
+    vecH[70]         = a10 * lambda + a12 + mu * (a1 + 3 * a10 + a4 + a75 - 1);
+    vecH[71]         = a82;
+    vecH[72]         = a35;
+    vecH[73]         = a49;
+    vecH[74]         = a60;
+    vecH[75]         = a69;
+    vecH[76]         = a74;
+    vecH[77]         = a79;
+    vecH[78]         = a81;
+    vecH[79]         = a82;
+    vecH[80]         = a11 * lambda + a12 + mu * (a10 + 3 * a11 + a7 + a9);
     return H;
 }
 
@@ -645,12 +667,13 @@ std::tuple<Scalar, Vector<9>> SaintVenantKirchhoffEnergy<3>::evalWithGrad(
 {
     Scalar psi;
     Vector<9> G;
-    Scalar const a0 =
-        (1.0 / 2.0) * F[0] * F[0] + (1.0 / 2.0) * F[1] * F[1] + (1.0 / 2.0) * F[2] * F[2];
-    Scalar const a1 =
-        (1.0 / 2.0) * F[3] * F[3] + (1.0 / 2.0) * F[4] * F[4] + (1.0 / 2.0) * F[5] * F[5];
-    Scalar const a2 =
-        (1.0 / 2.0) * F[6] * F[6] + (1.0 / 2.0) * F[7] * F[7] + (1.0 / 2.0) * F[8] * F[8];
+    auto vecG       = G.reshaped();
+    Scalar const a0 = (1.0 / 2.0) * ((F[0]) * (F[0])) + (1.0 / 2.0) * ((F[1]) * (F[1])) +
+                      (1.0 / 2.0) * ((F[2]) * (F[2]));
+    Scalar const a1 = (1.0 / 2.0) * ((F[3]) * (F[3])) + (1.0 / 2.0) * ((F[4]) * (F[4])) +
+                      (1.0 / 2.0) * ((F[5]) * (F[5]));
+    Scalar const a2 = (1.0 / 2.0) * ((F[6]) * (F[6])) + (1.0 / 2.0) * ((F[7]) * (F[7])) +
+                      (1.0 / 2.0) * ((F[8]) * (F[8]));
     Scalar const a3  = a0 + a1 + a2 - 3.0 / 2.0;
     Scalar const a4  = a0 - 1.0 / 2.0;
     Scalar const a5  = a1 - 1.0 / 2.0;
@@ -669,17 +692,18 @@ std::tuple<Scalar, Vector<9>> SaintVenantKirchhoffEnergy<3>::evalWithGrad(
     Scalar const a17 = 2 * a5;
     Scalar const a18 = 2 * a12;
     Scalar const a19 = 2 * a6;
-    psi              = (1.0 / 2.0) * a3 * a3 * lambda +
-          mu * (2 * a10 * a10 + 2 * a11 * a11 + 2 * a12 * a12 + a4 * a4 + a5 * a5 + a6 * a6);
-    G[0] = a13 * F[0] + mu * (a14 * F[0] + a15 * F[3] + a16 * F[6]);
-    G[1] = a13 * F[1] + mu * (a14 * F[1] + a15 * F[4] + a16 * F[7]);
-    G[2] = a13 * F[2] + mu * (a14 * F[2] + a15 * F[5] + a16 * F[8]);
-    G[3] = a13 * F[3] + mu * (a15 * F[0] + a17 * F[3] + a18 * F[6]);
-    G[4] = a13 * F[4] + mu * (a15 * F[1] + a17 * F[4] + a18 * F[7]);
-    G[5] = a13 * F[5] + mu * (a15 * F[2] + a17 * F[5] + a18 * F[8]);
-    G[6] = a13 * F[6] + mu * (a16 * F[0] + a18 * F[3] + a19 * F[6]);
-    G[7] = a13 * F[7] + mu * (a16 * F[1] + a18 * F[4] + a19 * F[7]);
-    G[8] = a13 * F[8] + mu * (a16 * F[2] + a18 * F[5] + a19 * F[8]);
+    psi              = (1.0 / 2.0) * ((a3) * (a3)) * lambda +
+          mu * (2 * ((a10) * (a10)) + 2 * ((a11) * (a11)) + 2 * ((a12) * (a12)) + ((a4) * (a4)) +
+                ((a5) * (a5)) + ((a6) * (a6)));
+    vecG[0] = a13 * F[0] + mu * (a14 * F[0] + a15 * F[3] + a16 * F[6]);
+    vecG[1] = a13 * F[1] + mu * (a14 * F[1] + a15 * F[4] + a16 * F[7]);
+    vecG[2] = a13 * F[2] + mu * (a14 * F[2] + a15 * F[5] + a16 * F[8]);
+    vecG[3] = a13 * F[3] + mu * (a15 * F[0] + a17 * F[3] + a18 * F[6]);
+    vecG[4] = a13 * F[4] + mu * (a15 * F[1] + a17 * F[4] + a18 * F[7]);
+    vecG[5] = a13 * F[5] + mu * (a15 * F[2] + a17 * F[5] + a18 * F[8]);
+    vecG[6] = a13 * F[6] + mu * (a16 * F[0] + a18 * F[3] + a19 * F[6]);
+    vecG[7] = a13 * F[7] + mu * (a16 * F[1] + a18 * F[4] + a19 * F[7]);
+    vecG[8] = a13 * F[8] + mu * (a16 * F[2] + a18 * F[5] + a19 * F[8]);
     return {psi, G};
 }
 
@@ -692,17 +716,19 @@ std::tuple<Scalar, Vector<9>, Matrix<9, 9>> SaintVenantKirchhoffEnergy<3>::evalW
     Scalar psi;
     Vector<9> G;
     Matrix<9, 9> H;
-    Scalar const a0  = F[0] * F[0];
-    Scalar const a1  = F[1] * F[1];
-    Scalar const a2  = F[2] * F[2];
+    auto vecG        = G.reshaped();
+    auto vecH        = H.reshaped();
+    Scalar const a0  = ((F[0]) * (F[0]));
+    Scalar const a1  = ((F[1]) * (F[1]));
+    Scalar const a2  = ((F[2]) * (F[2]));
     Scalar const a3  = (1.0 / 2.0) * a0 + (1.0 / 2.0) * a1 + (1.0 / 2.0) * a2;
-    Scalar const a4  = F[3] * F[3];
-    Scalar const a5  = F[4] * F[4];
-    Scalar const a6  = F[5] * F[5];
+    Scalar const a4  = ((F[3]) * (F[3]));
+    Scalar const a5  = ((F[4]) * (F[4]));
+    Scalar const a6  = ((F[5]) * (F[5]));
     Scalar const a7  = (1.0 / 2.0) * a4 + (1.0 / 2.0) * a5 + (1.0 / 2.0) * a6;
-    Scalar const a8  = F[6] * F[6];
-    Scalar const a9  = F[7] * F[7];
-    Scalar const a10 = F[8] * F[8];
+    Scalar const a8  = ((F[6]) * (F[6]));
+    Scalar const a9  = ((F[7]) * (F[7]));
+    Scalar const a10 = ((F[8]) * (F[8]));
     Scalar const a11 = (1.0 / 2.0) * a10 + (1.0 / 2.0) * a8 + (1.0 / 2.0) * a9;
     Scalar const a12 = a11 + a3 + a7 - 3.0 / 2.0;
     Scalar const a13 = a3 - 1.0 / 2.0;
@@ -791,98 +817,99 @@ std::tuple<Scalar, Vector<9>, Matrix<9, 9>> SaintVenantKirchhoffEnergy<3>::evalW
     Scalar const a96 = a40 * lambda + mu * (a38 + a39 + 2 * a40);
     Scalar const a97 = a44 * lambda + mu * (a42 + a43 + 2 * a44);
     Scalar const a98 = a58 * lambda + mu * (a56 + a57 + 2 * a58);
-    psi              = (1.0 / 2.0) * a12 * a12 * lambda +
-          mu * (a13 * a13 + a14 * a14 + a15 * a15 + 2 * a19 * a19 + 2 * a23 * a23 + 2 * a27 * a27);
-    G[0]  = a28 * F[0] + mu * (a29 * F[0] + a30 * F[3] + a31 * F[6]);
-    G[1]  = a28 * F[1] + mu * (a29 * F[1] + a30 * F[4] + a31 * F[7]);
-    G[2]  = a28 * F[2] + mu * (a29 * F[2] + a30 * F[5] + a31 * F[8]);
-    G[3]  = a28 * F[3] + mu * (a30 * F[0] + a32 * F[3] + a33 * F[6]);
-    G[4]  = a28 * F[4] + mu * (a30 * F[1] + a32 * F[4] + a33 * F[7]);
-    G[5]  = a28 * F[5] + mu * (a30 * F[2] + a32 * F[5] + a33 * F[8]);
-    G[6]  = a28 * F[6] + mu * (a31 * F[0] + a33 * F[3] + a34 * F[6]);
-    G[7]  = a28 * F[7] + mu * (a31 * F[1] + a33 * F[4] + a34 * F[7]);
-    G[8]  = a28 * F[8] + mu * (a31 * F[2] + a33 * F[5] + a34 * F[8]);
-    H[0]  = a0 * lambda + a28 + mu * (3 * a0 + a35 + a37);
-    H[1]  = a41;
-    H[2]  = a45;
-    H[3]  = a46;
-    H[4]  = a49;
-    H[5]  = a50;
-    H[6]  = a51;
-    H[7]  = a53;
-    H[8]  = a54;
-    H[9]  = a41;
-    H[10] = a1 * lambda + a28 + mu * (3 * a1 + a36 + a55 + a9);
-    H[11] = a59;
-    H[12] = a62;
-    H[13] = a63;
-    H[14] = a64;
-    H[15] = a66;
-    H[16] = a67;
-    H[17] = a68;
-    H[18] = a45;
-    H[19] = a59;
-    H[20] = a2 * lambda + a28 + mu * (a1 + 3 * a2 + a69 + a70);
-    H[21] = a73;
-    H[22] = a74;
-    H[23] = a75;
-    H[24] = a77;
-    H[25] = a78;
-    H[26] = a79;
-    H[27] = a46;
-    H[28] = a62;
-    H[29] = a73;
-    H[30] = a28 + a4 * lambda + mu * (3 * a4 + a55 + a69 + a8);
-    H[31] = a80;
-    H[32] = a81;
-    H[33] = a82;
-    H[34] = a84;
-    H[35] = a85;
-    H[36] = a49;
-    H[37] = a63;
-    H[38] = a74;
-    H[39] = a80;
-    H[40] = a28 + a5 * lambda + mu * (a35 + 3 * a5 + a69 + a9);
-    H[41] = a86;
-    H[42] = a88;
-    H[43] = a89;
-    H[44] = a90;
-    H[45] = a50;
-    H[46] = a64;
-    H[47] = a75;
-    H[48] = a81;
-    H[49] = a86;
-    H[50] = a28 + a6 * lambda + mu * (a36 + a4 + 3 * a6 + a91);
-    H[51] = a93;
-    H[52] = a94;
-    H[53] = a95;
-    H[54] = a51;
-    H[55] = a66;
-    H[56] = a77;
-    H[57] = a82;
-    H[58] = a88;
-    H[59] = a93;
-    H[60] = a28 + a8 * lambda + mu * (a4 + a70 + 3 * a8 + a9 - 1);
-    H[61] = a96;
-    H[62] = a97;
-    H[63] = a53;
-    H[64] = a67;
-    H[65] = a78;
-    H[66] = a84;
-    H[67] = a89;
-    H[68] = a94;
-    H[69] = a96;
-    H[70] = a28 + a9 * lambda + mu * (a1 + a8 + 3 * a9 + a91 - 1);
-    H[71] = a98;
-    H[72] = a54;
-    H[73] = a68;
-    H[74] = a79;
-    H[75] = a85;
-    H[76] = a90;
-    H[77] = a95;
-    H[78] = a97;
-    H[79] = a98;
-    H[80] = a10 * lambda + a28 + mu * (3 * a10 + a37 + a6 + a9);
+    psi              = (1.0 / 2.0) * ((a12) * (a12)) * lambda +
+          mu * (((a13) * (a13)) + ((a14) * (a14)) + ((a15) * (a15)) + 2 * ((a19) * (a19)) +
+                2 * ((a23) * (a23)) + 2 * ((a27) * (a27)));
+    vecG[0]  = a28 * F[0] + mu * (a29 * F[0] + a30 * F[3] + a31 * F[6]);
+    vecG[1]  = a28 * F[1] + mu * (a29 * F[1] + a30 * F[4] + a31 * F[7]);
+    vecG[2]  = a28 * F[2] + mu * (a29 * F[2] + a30 * F[5] + a31 * F[8]);
+    vecG[3]  = a28 * F[3] + mu * (a30 * F[0] + a32 * F[3] + a33 * F[6]);
+    vecG[4]  = a28 * F[4] + mu * (a30 * F[1] + a32 * F[4] + a33 * F[7]);
+    vecG[5]  = a28 * F[5] + mu * (a30 * F[2] + a32 * F[5] + a33 * F[8]);
+    vecG[6]  = a28 * F[6] + mu * (a31 * F[0] + a33 * F[3] + a34 * F[6]);
+    vecG[7]  = a28 * F[7] + mu * (a31 * F[1] + a33 * F[4] + a34 * F[7]);
+    vecG[8]  = a28 * F[8] + mu * (a31 * F[2] + a33 * F[5] + a34 * F[8]);
+    vecH[0]  = a0 * lambda + a28 + mu * (3 * a0 + a35 + a37);
+    vecH[1]  = a41;
+    vecH[2]  = a45;
+    vecH[3]  = a46;
+    vecH[4]  = a49;
+    vecH[5]  = a50;
+    vecH[6]  = a51;
+    vecH[7]  = a53;
+    vecH[8]  = a54;
+    vecH[9]  = a41;
+    vecH[10] = a1 * lambda + a28 + mu * (3 * a1 + a36 + a55 + a9);
+    vecH[11] = a59;
+    vecH[12] = a62;
+    vecH[13] = a63;
+    vecH[14] = a64;
+    vecH[15] = a66;
+    vecH[16] = a67;
+    vecH[17] = a68;
+    vecH[18] = a45;
+    vecH[19] = a59;
+    vecH[20] = a2 * lambda + a28 + mu * (a1 + 3 * a2 + a69 + a70);
+    vecH[21] = a73;
+    vecH[22] = a74;
+    vecH[23] = a75;
+    vecH[24] = a77;
+    vecH[25] = a78;
+    vecH[26] = a79;
+    vecH[27] = a46;
+    vecH[28] = a62;
+    vecH[29] = a73;
+    vecH[30] = a28 + a4 * lambda + mu * (3 * a4 + a55 + a69 + a8);
+    vecH[31] = a80;
+    vecH[32] = a81;
+    vecH[33] = a82;
+    vecH[34] = a84;
+    vecH[35] = a85;
+    vecH[36] = a49;
+    vecH[37] = a63;
+    vecH[38] = a74;
+    vecH[39] = a80;
+    vecH[40] = a28 + a5 * lambda + mu * (a35 + 3 * a5 + a69 + a9);
+    vecH[41] = a86;
+    vecH[42] = a88;
+    vecH[43] = a89;
+    vecH[44] = a90;
+    vecH[45] = a50;
+    vecH[46] = a64;
+    vecH[47] = a75;
+    vecH[48] = a81;
+    vecH[49] = a86;
+    vecH[50] = a28 + a6 * lambda + mu * (a36 + a4 + 3 * a6 + a91);
+    vecH[51] = a93;
+    vecH[52] = a94;
+    vecH[53] = a95;
+    vecH[54] = a51;
+    vecH[55] = a66;
+    vecH[56] = a77;
+    vecH[57] = a82;
+    vecH[58] = a88;
+    vecH[59] = a93;
+    vecH[60] = a28 + a8 * lambda + mu * (a4 + a70 + 3 * a8 + a9 - 1);
+    vecH[61] = a96;
+    vecH[62] = a97;
+    vecH[63] = a53;
+    vecH[64] = a67;
+    vecH[65] = a78;
+    vecH[66] = a84;
+    vecH[67] = a89;
+    vecH[68] = a94;
+    vecH[69] = a96;
+    vecH[70] = a28 + a9 * lambda + mu * (a1 + a8 + 3 * a9 + a91 - 1);
+    vecH[71] = a98;
+    vecH[72] = a54;
+    vecH[73] = a68;
+    vecH[74] = a79;
+    vecH[75] = a85;
+    vecH[76] = a90;
+    vecH[77] = a95;
+    vecH[78] = a97;
+    vecH[79] = a98;
+    vecH[80] = a10 * lambda + a28 + mu * (3 * a10 + a37 + a6 + a9);
     return {psi, G, H};
 }
 
@@ -894,17 +921,19 @@ std::tuple<Vector<9>, Matrix<9, 9>> SaintVenantKirchhoffEnergy<3>::gradAndHessia
 {
     Vector<9> G;
     Matrix<9, 9> H;
-    Scalar const a0  = F[0] * F[0];
-    Scalar const a1  = F[1] * F[1];
-    Scalar const a2  = F[2] * F[2];
+    auto vecG        = G.reshaped();
+    auto vecH        = H.reshaped();
+    Scalar const a0  = ((F[0]) * (F[0]));
+    Scalar const a1  = ((F[1]) * (F[1]));
+    Scalar const a2  = ((F[2]) * (F[2]));
     Scalar const a3  = (1.0 / 2.0) * a0 + (1.0 / 2.0) * a1 + (1.0 / 2.0) * a2;
-    Scalar const a4  = F[3] * F[3];
-    Scalar const a5  = F[4] * F[4];
-    Scalar const a6  = F[5] * F[5];
+    Scalar const a4  = ((F[3]) * (F[3]));
+    Scalar const a5  = ((F[4]) * (F[4]));
+    Scalar const a6  = ((F[5]) * (F[5]));
     Scalar const a7  = (1.0 / 2.0) * a4 + (1.0 / 2.0) * a5 + (1.0 / 2.0) * a6;
-    Scalar const a8  = F[6] * F[6];
-    Scalar const a9  = F[7] * F[7];
-    Scalar const a10 = F[8] * F[8];
+    Scalar const a8  = ((F[6]) * (F[6]));
+    Scalar const a9  = ((F[7]) * (F[7]));
+    Scalar const a10 = ((F[8]) * (F[8]));
     Scalar const a11 = (1.0 / 2.0) * a10 + (1.0 / 2.0) * a8 + (1.0 / 2.0) * a9;
     Scalar const a12 = lambda * (a11 + a3 + a7 - 3.0 / 2.0);
     Scalar const a13 = 2 * a3 - 1;
@@ -986,96 +1015,96 @@ std::tuple<Vector<9>, Matrix<9, 9>> SaintVenantKirchhoffEnergy<3>::gradAndHessia
     Scalar const a89 = a33 * lambda + mu * (a31 + a32 + 2 * a33);
     Scalar const a90 = a37 * lambda + mu * (a35 + a36 + 2 * a37);
     Scalar const a91 = a51 * lambda + mu * (a49 + a50 + 2 * a51);
-    G[0]             = a12 * F[0] + mu * (a13 * F[0] + a17 * F[3] + a21 * F[6]);
-    G[1]             = a12 * F[1] + mu * (a13 * F[1] + a17 * F[4] + a21 * F[7]);
-    G[2]             = a12 * F[2] + mu * (a13 * F[2] + a17 * F[5] + a21 * F[8]);
-    G[3]             = a12 * F[3] + mu * (a17 * F[0] + a22 * F[3] + a26 * F[6]);
-    G[4]             = a12 * F[4] + mu * (a17 * F[1] + a22 * F[4] + a26 * F[7]);
-    G[5]             = a12 * F[5] + mu * (a17 * F[2] + a22 * F[5] + a26 * F[8]);
-    G[6]             = a12 * F[6] + mu * (a21 * F[0] + a26 * F[3] + a27 * F[6]);
-    G[7]             = a12 * F[7] + mu * (a21 * F[1] + a26 * F[4] + a27 * F[7]);
-    G[8]             = a12 * F[8] + mu * (a21 * F[2] + a26 * F[5] + a27 * F[8]);
-    H[0]             = a0 * lambda + a12 + mu * (3 * a0 + a28 + a30);
-    H[1]             = a34;
-    H[2]             = a38;
-    H[3]             = a39;
-    H[4]             = a42;
-    H[5]             = a43;
-    H[6]             = a44;
-    H[7]             = a46;
-    H[8]             = a47;
-    H[9]             = a34;
-    H[10]            = a1 * lambda + a12 + mu * (3 * a1 + a29 + a48 + a9);
-    H[11]            = a52;
-    H[12]            = a55;
-    H[13]            = a56;
-    H[14]            = a57;
-    H[15]            = a59;
-    H[16]            = a60;
-    H[17]            = a61;
-    H[18]            = a38;
-    H[19]            = a52;
-    H[20]            = a12 + a2 * lambda + mu * (a1 + 3 * a2 + a62 + a63);
-    H[21]            = a66;
-    H[22]            = a67;
-    H[23]            = a68;
-    H[24]            = a70;
-    H[25]            = a71;
-    H[26]            = a72;
-    H[27]            = a39;
-    H[28]            = a55;
-    H[29]            = a66;
-    H[30]            = a12 + a4 * lambda + mu * (3 * a4 + a48 + a62 + a8);
-    H[31]            = a73;
-    H[32]            = a74;
-    H[33]            = a75;
-    H[34]            = a77;
-    H[35]            = a78;
-    H[36]            = a42;
-    H[37]            = a56;
-    H[38]            = a67;
-    H[39]            = a73;
-    H[40]            = a12 + a5 * lambda + mu * (a28 + 3 * a5 + a62 + a9);
-    H[41]            = a79;
-    H[42]            = a81;
-    H[43]            = a82;
-    H[44]            = a83;
-    H[45]            = a43;
-    H[46]            = a57;
-    H[47]            = a68;
-    H[48]            = a74;
-    H[49]            = a79;
-    H[50]            = a12 + a6 * lambda + mu * (a29 + a4 + 3 * a6 + a84);
-    H[51]            = a86;
-    H[52]            = a87;
-    H[53]            = a88;
-    H[54]            = a44;
-    H[55]            = a59;
-    H[56]            = a70;
-    H[57]            = a75;
-    H[58]            = a81;
-    H[59]            = a86;
-    H[60]            = a12 + a8 * lambda + mu * (a4 + a63 + 3 * a8 + a9 - 1);
-    H[61]            = a89;
-    H[62]            = a90;
-    H[63]            = a46;
-    H[64]            = a60;
-    H[65]            = a71;
-    H[66]            = a77;
-    H[67]            = a82;
-    H[68]            = a87;
-    H[69]            = a89;
-    H[70]            = a12 + a9 * lambda + mu * (a1 + a8 + a84 + 3 * a9 - 1);
-    H[71]            = a91;
-    H[72]            = a47;
-    H[73]            = a61;
-    H[74]            = a72;
-    H[75]            = a78;
-    H[76]            = a83;
-    H[77]            = a88;
-    H[78]            = a90;
-    H[79]            = a91;
-    H[80]            = a10 * lambda + a12 + mu * (3 * a10 + a30 + a6 + a9);
+    vecG[0]          = a12 * F[0] + mu * (a13 * F[0] + a17 * F[3] + a21 * F[6]);
+    vecG[1]          = a12 * F[1] + mu * (a13 * F[1] + a17 * F[4] + a21 * F[7]);
+    vecG[2]          = a12 * F[2] + mu * (a13 * F[2] + a17 * F[5] + a21 * F[8]);
+    vecG[3]          = a12 * F[3] + mu * (a17 * F[0] + a22 * F[3] + a26 * F[6]);
+    vecG[4]          = a12 * F[4] + mu * (a17 * F[1] + a22 * F[4] + a26 * F[7]);
+    vecG[5]          = a12 * F[5] + mu * (a17 * F[2] + a22 * F[5] + a26 * F[8]);
+    vecG[6]          = a12 * F[6] + mu * (a21 * F[0] + a26 * F[3] + a27 * F[6]);
+    vecG[7]          = a12 * F[7] + mu * (a21 * F[1] + a26 * F[4] + a27 * F[7]);
+    vecG[8]          = a12 * F[8] + mu * (a21 * F[2] + a26 * F[5] + a27 * F[8]);
+    vecH[0]          = a0 * lambda + a12 + mu * (3 * a0 + a28 + a30);
+    vecH[1]          = a34;
+    vecH[2]          = a38;
+    vecH[3]          = a39;
+    vecH[4]          = a42;
+    vecH[5]          = a43;
+    vecH[6]          = a44;
+    vecH[7]          = a46;
+    vecH[8]          = a47;
+    vecH[9]          = a34;
+    vecH[10]         = a1 * lambda + a12 + mu * (3 * a1 + a29 + a48 + a9);
+    vecH[11]         = a52;
+    vecH[12]         = a55;
+    vecH[13]         = a56;
+    vecH[14]         = a57;
+    vecH[15]         = a59;
+    vecH[16]         = a60;
+    vecH[17]         = a61;
+    vecH[18]         = a38;
+    vecH[19]         = a52;
+    vecH[20]         = a12 + a2 * lambda + mu * (a1 + 3 * a2 + a62 + a63);
+    vecH[21]         = a66;
+    vecH[22]         = a67;
+    vecH[23]         = a68;
+    vecH[24]         = a70;
+    vecH[25]         = a71;
+    vecH[26]         = a72;
+    vecH[27]         = a39;
+    vecH[28]         = a55;
+    vecH[29]         = a66;
+    vecH[30]         = a12 + a4 * lambda + mu * (3 * a4 + a48 + a62 + a8);
+    vecH[31]         = a73;
+    vecH[32]         = a74;
+    vecH[33]         = a75;
+    vecH[34]         = a77;
+    vecH[35]         = a78;
+    vecH[36]         = a42;
+    vecH[37]         = a56;
+    vecH[38]         = a67;
+    vecH[39]         = a73;
+    vecH[40]         = a12 + a5 * lambda + mu * (a28 + 3 * a5 + a62 + a9);
+    vecH[41]         = a79;
+    vecH[42]         = a81;
+    vecH[43]         = a82;
+    vecH[44]         = a83;
+    vecH[45]         = a43;
+    vecH[46]         = a57;
+    vecH[47]         = a68;
+    vecH[48]         = a74;
+    vecH[49]         = a79;
+    vecH[50]         = a12 + a6 * lambda + mu * (a29 + a4 + 3 * a6 + a84);
+    vecH[51]         = a86;
+    vecH[52]         = a87;
+    vecH[53]         = a88;
+    vecH[54]         = a44;
+    vecH[55]         = a59;
+    vecH[56]         = a70;
+    vecH[57]         = a75;
+    vecH[58]         = a81;
+    vecH[59]         = a86;
+    vecH[60]         = a12 + a8 * lambda + mu * (a4 + a63 + 3 * a8 + a9 - 1);
+    vecH[61]         = a89;
+    vecH[62]         = a90;
+    vecH[63]         = a46;
+    vecH[64]         = a60;
+    vecH[65]         = a71;
+    vecH[66]         = a77;
+    vecH[67]         = a82;
+    vecH[68]         = a87;
+    vecH[69]         = a89;
+    vecH[70]         = a12 + a9 * lambda + mu * (a1 + a8 + a84 + 3 * a9 - 1);
+    vecH[71]         = a91;
+    vecH[72]         = a47;
+    vecH[73]         = a61;
+    vecH[74]         = a72;
+    vecH[75]         = a78;
+    vecH[76]         = a83;
+    vecH[77]         = a88;
+    vecH[78]         = a90;
+    vecH[79]         = a91;
+    vecH[80]         = a10 * lambda + a12 + mu * (3 * a10 + a30 + a6 + a9);
     return {G, H};
 }
 

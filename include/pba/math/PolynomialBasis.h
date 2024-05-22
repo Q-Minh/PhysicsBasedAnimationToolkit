@@ -60,7 +60,7 @@ class MonomialBasis<1, 1>
         Matrix<kSize, kDims> Pm;
         Scalar* P = Pm.data();
         P[0] = X[0];
-        P[1] = (1.0/2.0)*X[0]*X[0];
+        P[1] = (1.0/2.0)*((X[0])*(X[0]));
         return Pm;
     }
 };
@@ -78,7 +78,7 @@ class MonomialBasis<1, 2>
         Vector<kSize> P;
         P[0] = 1;
         P[1] = X[0];
-        P[2] = X[0]*X[0];
+        P[2] = ((X[0])*(X[0]));
         return P;
     }
                
@@ -97,8 +97,8 @@ class MonomialBasis<1, 2>
         Matrix<kSize, kDims> Pm;
         Scalar* P = Pm.data();
         P[0] = X[0];
-        P[1] = (1.0/2.0)*X[0]*X[0];
-        P[2] = (1.0/3.0)*X[0]*X[0]*X[0];
+        P[1] = (1.0/2.0)*((X[0])*(X[0]));
+        P[2] = (1.0/3.0)*((X[0])*(X[0])*(X[0]));
         return Pm;
     }
 };
@@ -116,8 +116,8 @@ class MonomialBasis<1, 3>
         Vector<kSize> P;
         P[0] = 1;
         P[1] = X[0];
-        P[2] = X[0]*X[0];
-        P[3] = X[0]*X[0]*X[0];
+        P[2] = ((X[0])*(X[0]));
+        P[3] = ((X[0])*(X[0])*(X[0]));
         return P;
     }
                
@@ -128,7 +128,7 @@ class MonomialBasis<1, 3>
         G[0] = 0;
         G[1] = 1;
         G[2] = 2*X[0];
-        G[3] = 3*X[0]*X[0];
+        G[3] = 3*((X[0])*(X[0]));
         return Gm;
     }
                
@@ -137,9 +137,9 @@ class MonomialBasis<1, 3>
         Matrix<kSize, kDims> Pm;
         Scalar* P = Pm.data();
         P[0] = X[0];
-        P[1] = (1.0/2.0)*X[0]*X[0];
-        P[2] = (1.0/3.0)*X[0]*X[0]*X[0];
-        P[3] = (1.0/4.0)*X[0]*X[0]*X[0]*X[0];
+        P[1] = (1.0/2.0)*((X[0])*(X[0]));
+        P[2] = (1.0/3.0)*((X[0])*(X[0])*(X[0]));
+        P[3] = (1.0/4.0)*((X[0])*(X[0])*(X[0])*(X[0]));
         return Pm;
     }
 };
@@ -157,9 +157,9 @@ class MonomialBasis<1, 4>
         Vector<kSize> P;
         P[0] = 1;
         P[1] = X[0];
-        P[2] = X[0]*X[0];
-        P[3] = X[0]*X[0]*X[0];
-        P[4] = X[0]*X[0]*X[0]*X[0];
+        P[2] = ((X[0])*(X[0]));
+        P[3] = ((X[0])*(X[0])*(X[0]));
+        P[4] = ((X[0])*(X[0])*(X[0])*(X[0]));
         return P;
     }
                
@@ -170,8 +170,8 @@ class MonomialBasis<1, 4>
         G[0] = 0;
         G[1] = 1;
         G[2] = 2*X[0];
-        G[3] = 3*X[0]*X[0];
-        G[4] = 4*X[0]*X[0]*X[0];
+        G[3] = 3*((X[0])*(X[0]));
+        G[4] = 4*((X[0])*(X[0])*(X[0]));
         return Gm;
     }
                
@@ -180,9 +180,9 @@ class MonomialBasis<1, 4>
         Matrix<kSize, kDims> Pm;
         Scalar* P = Pm.data();
         P[0] = X[0];
-        P[1] = (1.0/2.0)*X[0]*X[0];
-        P[2] = (1.0/3.0)*X[0]*X[0]*X[0];
-        P[3] = (1.0/4.0)*X[0]*X[0]*X[0]*X[0];
+        P[1] = (1.0/2.0)*((X[0])*(X[0]));
+        P[2] = (1.0/3.0)*((X[0])*(X[0])*(X[0]));
+        P[3] = (1.0/4.0)*((X[0])*(X[0])*(X[0])*(X[0]));
         P[4] = (1.0/5.0)*std::pow(X[0], 5);
         return Pm;
     }
@@ -228,11 +228,11 @@ class MonomialBasis<2, 1>
         Scalar* P = Pm.data();
         Scalar const a0 = X[0]*X[1];
         P[0] = X[0];
-        P[1] = (1.0/2.0)*X[0]*X[0];
+        P[1] = (1.0/2.0)*((X[0])*(X[0]));
         P[2] = a0;
         P[3] = X[1];
         P[4] = a0;
-        P[5] = (1.0/2.0)*X[1]*X[1];
+        P[5] = (1.0/2.0)*((X[1])*(X[1]));
         return Pm;
     }
 };
@@ -250,10 +250,10 @@ class MonomialBasis<2, 2>
         Vector<kSize> P;
         P[0] = 1;
         P[1] = X[0];
-        P[2] = X[0]*X[0];
+        P[2] = ((X[0])*(X[0]));
         P[3] = X[1];
         P[4] = X[0]*X[1];
-        P[5] = X[1]*X[1];
+        P[5] = ((X[1])*(X[1]));
         return P;
     }
                
@@ -280,14 +280,14 @@ class MonomialBasis<2, 2>
     {
         Matrix<kSize, kDims> Pm;
         Scalar* P = Pm.data();
-        Scalar const a0 = X[0]*X[0];
+        Scalar const a0 = ((X[0])*(X[0]));
         Scalar const a1 = (1.0/2.0)*a0;
         Scalar const a2 = X[0]*X[1];
-        Scalar const a3 = X[1]*X[1];
+        Scalar const a3 = ((X[1])*(X[1]));
         Scalar const a4 = a3*X[0];
         P[0] = X[0];
         P[1] = a1;
-        P[2] = (1.0/3.0)*X[0]*X[0]*X[0];
+        P[2] = (1.0/3.0)*((X[0])*(X[0])*(X[0]));
         P[3] = a2;
         P[4] = a1*X[1];
         P[5] = a4;
@@ -296,7 +296,7 @@ class MonomialBasis<2, 2>
         P[8] = a0*X[1];
         P[9] = (1.0/2.0)*a3;
         P[10] = (1.0/2.0)*a4;
-        P[11] = (1.0/3.0)*X[1]*X[1]*X[1];
+        P[11] = (1.0/3.0)*((X[1])*(X[1])*(X[1]));
         return Pm;
     }
 };
@@ -312,18 +312,18 @@ class MonomialBasis<2, 3>
     [[maybe_unused]] Vector<kSize> eval([[maybe_unused]] Vector<kDims> const& X) const 
     {
         Vector<kSize> P;
-        Scalar const a0 = X[0]*X[0];
-        Scalar const a1 = X[1]*X[1];
+        Scalar const a0 = ((X[0])*(X[0]));
+        Scalar const a1 = ((X[1])*(X[1]));
         P[0] = 1;
         P[1] = X[0];
         P[2] = a0;
-        P[3] = X[0]*X[0]*X[0];
+        P[3] = ((X[0])*(X[0])*(X[0]));
         P[4] = X[1];
         P[5] = X[0]*X[1];
         P[6] = a0*X[1];
         P[7] = a1;
         P[8] = a1*X[0];
-        P[9] = X[1]*X[1]*X[1];
+        P[9] = ((X[1])*(X[1])*(X[1]));
         return P;
     }
                
@@ -332,9 +332,9 @@ class MonomialBasis<2, 3>
         Matrix<kDims, kSize> Gm;
         Scalar* G = Gm.data();
         Scalar const a0 = 2*X[0];
-        Scalar const a1 = X[0]*X[0];
+        Scalar const a1 = ((X[0])*(X[0]));
         Scalar const a2 = a0*X[1];
-        Scalar const a3 = X[1]*X[1];
+        Scalar const a3 = ((X[1])*(X[1]));
         G[0] = 0;
         G[1] = 0;
         G[2] = 1;
@@ -362,20 +362,20 @@ class MonomialBasis<2, 3>
     {
         Matrix<kSize, kDims> Pm;
         Scalar* P = Pm.data();
-        Scalar const a0 = X[0]*X[0];
+        Scalar const a0 = ((X[0])*(X[0]));
         Scalar const a1 = (1.0/2.0)*a0;
-        Scalar const a2 = X[0]*X[0]*X[0];
+        Scalar const a2 = ((X[0])*(X[0])*(X[0]));
         Scalar const a3 = (1.0/3.0)*a2;
         Scalar const a4 = X[0]*X[1];
-        Scalar const a5 = X[1]*X[1];
+        Scalar const a5 = ((X[1])*(X[1]));
         Scalar const a6 = a5*X[0];
         Scalar const a7 = a1*a5;
-        Scalar const a8 = X[1]*X[1]*X[1];
+        Scalar const a8 = ((X[1])*(X[1])*(X[1]));
         Scalar const a9 = a8*X[0];
         P[0] = X[0];
         P[1] = a1;
         P[2] = a3;
-        P[3] = (1.0/4.0)*X[0]*X[0]*X[0]*X[0];
+        P[3] = (1.0/4.0)*((X[0])*(X[0])*(X[0])*(X[0]));
         P[4] = a4;
         P[5] = a1*X[1];
         P[6] = a3*X[1];
@@ -391,7 +391,7 @@ class MonomialBasis<2, 3>
         P[16] = a7;
         P[17] = (1.0/3.0)*a8;
         P[18] = (1.0/3.0)*a9;
-        P[19] = (1.0/4.0)*X[1]*X[1]*X[1]*X[1];
+        P[19] = (1.0/4.0)*((X[1])*(X[1])*(X[1])*(X[1]));
         return Pm;
     }
 };
@@ -407,15 +407,15 @@ class MonomialBasis<2, 4>
     [[maybe_unused]] Vector<kSize> eval([[maybe_unused]] Vector<kDims> const& X) const 
     {
         Vector<kSize> P;
-        Scalar const a0 = X[0]*X[0];
-        Scalar const a1 = X[0]*X[0]*X[0];
-        Scalar const a2 = X[1]*X[1];
-        Scalar const a3 = X[1]*X[1]*X[1];
+        Scalar const a0 = ((X[0])*(X[0]));
+        Scalar const a1 = ((X[0])*(X[0])*(X[0]));
+        Scalar const a2 = ((X[1])*(X[1]));
+        Scalar const a3 = ((X[1])*(X[1])*(X[1]));
         P[0] = 1;
         P[1] = X[0];
         P[2] = a0;
         P[3] = a1;
-        P[4] = X[0]*X[0]*X[0]*X[0];
+        P[4] = ((X[0])*(X[0])*(X[0])*(X[0]));
         P[5] = X[1];
         P[6] = X[0]*X[1];
         P[7] = a0*X[1];
@@ -425,7 +425,7 @@ class MonomialBasis<2, 4>
         P[11] = a0*a2;
         P[12] = a3;
         P[13] = a3*X[0];
-        P[14] = X[1]*X[1]*X[1]*X[1];
+        P[14] = ((X[1])*(X[1])*(X[1])*(X[1]));
         return P;
     }
                
@@ -434,14 +434,14 @@ class MonomialBasis<2, 4>
         Matrix<kDims, kSize> Gm;
         Scalar* G = Gm.data();
         Scalar const a0 = 2*X[0];
-        Scalar const a1 = X[0]*X[0];
+        Scalar const a1 = ((X[0])*(X[0]));
         Scalar const a2 = 3*a1;
-        Scalar const a3 = X[0]*X[0]*X[0];
+        Scalar const a3 = ((X[0])*(X[0])*(X[0]));
         Scalar const a4 = a0*X[1];
         Scalar const a5 = 2*X[1];
-        Scalar const a6 = X[1]*X[1];
+        Scalar const a6 = ((X[1])*(X[1]));
         Scalar const a7 = 3*a6;
-        Scalar const a8 = X[1]*X[1]*X[1];
+        Scalar const a8 = ((X[1])*(X[1])*(X[1]));
         G[0] = 0;
         G[1] = 0;
         G[2] = 1;
@@ -479,19 +479,19 @@ class MonomialBasis<2, 4>
     {
         Matrix<kSize, kDims> Pm;
         Scalar* P = Pm.data();
-        Scalar const a0 = X[0]*X[0];
+        Scalar const a0 = ((X[0])*(X[0]));
         Scalar const a1 = (1.0/2.0)*a0;
-        Scalar const a2 = X[0]*X[0]*X[0];
+        Scalar const a2 = ((X[0])*(X[0])*(X[0]));
         Scalar const a3 = (1.0/3.0)*a2;
-        Scalar const a4 = X[0]*X[0]*X[0]*X[0];
+        Scalar const a4 = ((X[0])*(X[0])*(X[0])*(X[0]));
         Scalar const a5 = (1.0/4.0)*a4;
         Scalar const a6 = X[0]*X[1];
-        Scalar const a7 = X[1]*X[1];
+        Scalar const a7 = ((X[1])*(X[1]));
         Scalar const a8 = a7*X[0];
         Scalar const a9 = a1*a7;
-        Scalar const a10 = X[1]*X[1]*X[1];
+        Scalar const a10 = ((X[1])*(X[1])*(X[1]));
         Scalar const a11 = a10*X[0];
-        Scalar const a12 = X[1]*X[1]*X[1]*X[1];
+        Scalar const a12 = ((X[1])*(X[1])*(X[1])*(X[1]));
         Scalar const a13 = a12*X[0];
         Scalar const a14 = (1.0/2.0)*a7;
         Scalar const a15 = (1.0/3.0)*a10;
@@ -578,17 +578,17 @@ class MonomialBasis<3, 1>
         Scalar const a1 = X[0]*X[2];
         Scalar const a2 = X[1]*X[2];
         P[0] = X[0];
-        P[1] = (1.0/2.0)*X[0]*X[0];
+        P[1] = (1.0/2.0)*((X[0])*(X[0]));
         P[2] = a0;
         P[3] = a1;
         P[4] = X[1];
         P[5] = a0;
-        P[6] = (1.0/2.0)*X[1]*X[1];
+        P[6] = (1.0/2.0)*((X[1])*(X[1]));
         P[7] = a2;
         P[8] = X[2];
         P[9] = a1;
         P[10] = a2;
-        P[11] = (1.0/2.0)*X[2]*X[2];
+        P[11] = (1.0/2.0)*((X[2])*(X[2]));
         return Pm;
     }
 };
@@ -606,14 +606,14 @@ class MonomialBasis<3, 2>
         Vector<kSize> P;
         P[0] = 1;
         P[1] = X[0];
-        P[2] = X[0]*X[0];
+        P[2] = ((X[0])*(X[0]));
         P[3] = X[1];
         P[4] = X[0]*X[1];
-        P[5] = X[1]*X[1];
+        P[5] = ((X[1])*(X[1]));
         P[6] = X[2];
         P[7] = X[0]*X[2];
         P[8] = X[1]*X[2];
-        P[9] = X[2]*X[2];
+        P[9] = ((X[2])*(X[2]));
         return P;
     }
                
@@ -658,21 +658,21 @@ class MonomialBasis<3, 2>
     {
         Matrix<kSize, kDims> Pm;
         Scalar* P = Pm.data();
-        Scalar const a0 = X[0]*X[0];
+        Scalar const a0 = ((X[0])*(X[0]));
         Scalar const a1 = (1.0/2.0)*a0;
         Scalar const a2 = X[0]*X[1];
-        Scalar const a3 = X[1]*X[1];
+        Scalar const a3 = ((X[1])*(X[1]));
         Scalar const a4 = a3*X[0];
         Scalar const a5 = X[0]*X[2];
         Scalar const a6 = a2*X[2];
-        Scalar const a7 = X[2]*X[2];
+        Scalar const a7 = ((X[2])*(X[2]));
         Scalar const a8 = a7*X[0];
         Scalar const a9 = (1.0/2.0)*a3;
         Scalar const a10 = X[1]*X[2];
         Scalar const a11 = a7*X[1];
         P[0] = X[0];
         P[1] = a1;
-        P[2] = (1.0/3.0)*X[0]*X[0]*X[0];
+        P[2] = (1.0/3.0)*((X[0])*(X[0])*(X[0]));
         P[3] = a2;
         P[4] = a1*X[1];
         P[5] = a4;
@@ -685,7 +685,7 @@ class MonomialBasis<3, 2>
         P[12] = a0*X[1];
         P[13] = a9;
         P[14] = (1.0/2.0)*a4;
-        P[15] = (1.0/3.0)*X[1]*X[1]*X[1];
+        P[15] = (1.0/3.0)*((X[1])*(X[1])*(X[1]));
         P[16] = a10;
         P[17] = a6;
         P[18] = a9*X[2];
@@ -699,7 +699,7 @@ class MonomialBasis<3, 2>
         P[26] = (1.0/2.0)*a7;
         P[27] = (1.0/2.0)*a8;
         P[28] = (1.0/2.0)*a11;
-        P[29] = (1.0/3.0)*X[2]*X[2]*X[2];
+        P[29] = (1.0/3.0)*((X[2])*(X[2])*(X[2]));
         return Pm;
     }
 };
@@ -715,20 +715,20 @@ class MonomialBasis<3, 3>
     [[maybe_unused]] Vector<kSize> eval([[maybe_unused]] Vector<kDims> const& X) const 
     {
         Vector<kSize> P;
-        Scalar const a0 = X[0]*X[0];
+        Scalar const a0 = ((X[0])*(X[0]));
         Scalar const a1 = X[0]*X[1];
-        Scalar const a2 = X[1]*X[1];
-        Scalar const a3 = X[2]*X[2];
+        Scalar const a2 = ((X[1])*(X[1]));
+        Scalar const a3 = ((X[2])*(X[2]));
         P[0] = 1;
         P[1] = X[0];
         P[2] = a0;
-        P[3] = X[0]*X[0]*X[0];
+        P[3] = ((X[0])*(X[0])*(X[0]));
         P[4] = X[1];
         P[5] = a1;
         P[6] = a0*X[1];
         P[7] = a2;
         P[8] = a2*X[0];
-        P[9] = X[1]*X[1]*X[1];
+        P[9] = ((X[1])*(X[1])*(X[1]));
         P[10] = X[2];
         P[11] = X[0]*X[2];
         P[12] = a0*X[2];
@@ -738,7 +738,7 @@ class MonomialBasis<3, 3>
         P[16] = a3;
         P[17] = a3*X[0];
         P[18] = a3*X[1];
-        P[19] = X[2]*X[2]*X[2];
+        P[19] = ((X[2])*(X[2])*(X[2]));
         return P;
     }
                
@@ -747,13 +747,13 @@ class MonomialBasis<3, 3>
         Matrix<kDims, kSize> Gm;
         Scalar* G = Gm.data();
         Scalar const a0 = 2*X[0];
-        Scalar const a1 = X[0]*X[0];
+        Scalar const a1 = ((X[0])*(X[0]));
         Scalar const a2 = a0*X[1];
         Scalar const a3 = 2*X[1];
-        Scalar const a4 = X[1]*X[1];
+        Scalar const a4 = ((X[1])*(X[1]));
         Scalar const a5 = a0*X[2];
         Scalar const a6 = a3*X[2];
-        Scalar const a7 = X[2]*X[2];
+        Scalar const a7 = ((X[2])*(X[2]));
         G[0] = 0;
         G[1] = 0;
         G[2] = 0;
@@ -821,25 +821,25 @@ class MonomialBasis<3, 3>
     {
         Matrix<kSize, kDims> Pm;
         Scalar* P = Pm.data();
-        Scalar const a0 = X[0]*X[0];
+        Scalar const a0 = ((X[0])*(X[0]));
         Scalar const a1 = (1.0/2.0)*a0;
-        Scalar const a2 = X[0]*X[0]*X[0];
+        Scalar const a2 = ((X[0])*(X[0])*(X[0]));
         Scalar const a3 = (1.0/3.0)*a2;
         Scalar const a4 = X[0]*X[1];
-        Scalar const a5 = X[1]*X[1];
+        Scalar const a5 = ((X[1])*(X[1]));
         Scalar const a6 = a5*X[0];
         Scalar const a7 = a1*a5;
-        Scalar const a8 = X[1]*X[1]*X[1];
+        Scalar const a8 = ((X[1])*(X[1])*(X[1]));
         Scalar const a9 = a8*X[0];
         Scalar const a10 = X[0]*X[2];
         Scalar const a11 = a4*X[2];
         Scalar const a12 = X[1]*X[2];
         Scalar const a13 = a6*X[2];
-        Scalar const a14 = X[2]*X[2];
+        Scalar const a14 = ((X[2])*(X[2]));
         Scalar const a15 = a14*X[0];
         Scalar const a16 = a1*a14;
         Scalar const a17 = a14*a4;
-        Scalar const a18 = X[2]*X[2]*X[2];
+        Scalar const a18 = ((X[2])*(X[2])*(X[2]));
         Scalar const a19 = a18*X[0];
         Scalar const a20 = a0*X[1];
         Scalar const a21 = (1.0/2.0)*a5;
@@ -852,7 +852,7 @@ class MonomialBasis<3, 3>
         P[0] = X[0];
         P[1] = a1;
         P[2] = a3;
-        P[3] = (1.0/4.0)*X[0]*X[0]*X[0]*X[0];
+        P[3] = (1.0/4.0)*((X[0])*(X[0])*(X[0])*(X[0]));
         P[4] = a4;
         P[5] = a1*X[1];
         P[6] = a3*X[1];
@@ -878,7 +878,7 @@ class MonomialBasis<3, 3>
         P[26] = a7;
         P[27] = a22;
         P[28] = (1.0/3.0)*a9;
-        P[29] = (1.0/4.0)*X[1]*X[1]*X[1]*X[1];
+        P[29] = (1.0/4.0)*((X[1])*(X[1])*(X[1])*(X[1]));
         P[30] = a12;
         P[31] = a11;
         P[32] = a23;
@@ -908,7 +908,7 @@ class MonomialBasis<3, 3>
         P[56] = (1.0/3.0)*a18;
         P[57] = (1.0/3.0)*a19;
         P[58] = (1.0/3.0)*a26;
-        P[59] = (1.0/4.0)*X[2]*X[2]*X[2]*X[2];
+        P[59] = (1.0/4.0)*((X[2])*(X[2])*(X[2])*(X[2]));
         return Pm;
     }
 };
@@ -924,20 +924,20 @@ class MonomialBasis<3, 4>
     [[maybe_unused]] Vector<kSize> eval([[maybe_unused]] Vector<kDims> const& X) const 
     {
         Vector<kSize> P;
-        Scalar const a0 = X[0]*X[0];
-        Scalar const a1 = X[0]*X[0]*X[0];
+        Scalar const a0 = ((X[0])*(X[0]));
+        Scalar const a1 = ((X[0])*(X[0])*(X[0]));
         Scalar const a2 = X[0]*X[1];
         Scalar const a3 = a0*X[1];
-        Scalar const a4 = X[1]*X[1];
+        Scalar const a4 = ((X[1])*(X[1]));
         Scalar const a5 = a4*X[0];
-        Scalar const a6 = X[1]*X[1]*X[1];
-        Scalar const a7 = X[2]*X[2];
-        Scalar const a8 = X[2]*X[2]*X[2];
+        Scalar const a6 = ((X[1])*(X[1])*(X[1]));
+        Scalar const a7 = ((X[2])*(X[2]));
+        Scalar const a8 = ((X[2])*(X[2])*(X[2]));
         P[0] = 1;
         P[1] = X[0];
         P[2] = a0;
         P[3] = a1;
-        P[4] = X[0]*X[0]*X[0]*X[0];
+        P[4] = ((X[0])*(X[0])*(X[0])*(X[0]));
         P[5] = X[1];
         P[6] = a2;
         P[7] = a3;
@@ -947,7 +947,7 @@ class MonomialBasis<3, 4>
         P[11] = a0*a4;
         P[12] = a6;
         P[13] = a6*X[0];
-        P[14] = X[1]*X[1]*X[1]*X[1];
+        P[14] = ((X[1])*(X[1])*(X[1])*(X[1]));
         P[15] = X[2];
         P[16] = X[0]*X[2];
         P[17] = a0*X[2];
@@ -967,7 +967,7 @@ class MonomialBasis<3, 4>
         P[31] = a8;
         P[32] = a8*X[0];
         P[33] = a8*X[1];
-        P[34] = X[2]*X[2]*X[2]*X[2];
+        P[34] = ((X[2])*(X[2])*(X[2])*(X[2]));
         return P;
     }
                
@@ -976,24 +976,24 @@ class MonomialBasis<3, 4>
         Matrix<kDims, kSize> Gm;
         Scalar* G = Gm.data();
         Scalar const a0 = 2*X[0];
-        Scalar const a1 = X[0]*X[0];
+        Scalar const a1 = ((X[0])*(X[0]));
         Scalar const a2 = 3*a1;
-        Scalar const a3 = X[0]*X[0]*X[0];
+        Scalar const a3 = ((X[0])*(X[0])*(X[0]));
         Scalar const a4 = a0*X[1];
         Scalar const a5 = 2*X[1];
-        Scalar const a6 = X[1]*X[1];
+        Scalar const a6 = ((X[1])*(X[1]));
         Scalar const a7 = 3*a6;
-        Scalar const a8 = X[1]*X[1]*X[1];
+        Scalar const a8 = ((X[1])*(X[1])*(X[1]));
         Scalar const a9 = a0*X[2];
         Scalar const a10 = X[1]*X[2];
         Scalar const a11 = a0*a10;
         Scalar const a12 = a1*X[2];
         Scalar const a13 = a5*X[2];
         Scalar const a14 = a6*X[2];
-        Scalar const a15 = X[2]*X[2];
+        Scalar const a15 = ((X[2])*(X[2]));
         Scalar const a16 = a15*X[1];
         Scalar const a17 = a15*X[0];
-        Scalar const a18 = X[2]*X[2]*X[2];
+        Scalar const a18 = ((X[2])*(X[2])*(X[2]));
         G[0] = 0;
         G[1] = 0;
         G[2] = 0;
@@ -1106,19 +1106,19 @@ class MonomialBasis<3, 4>
     {
         Matrix<kSize, kDims> Pm;
         Scalar* P = Pm.data();
-        Scalar const a0 = X[0]*X[0];
+        Scalar const a0 = ((X[0])*(X[0]));
         Scalar const a1 = (1.0/2.0)*a0;
-        Scalar const a2 = X[0]*X[0]*X[0];
+        Scalar const a2 = ((X[0])*(X[0])*(X[0]));
         Scalar const a3 = (1.0/3.0)*a2;
-        Scalar const a4 = X[0]*X[0]*X[0]*X[0];
+        Scalar const a4 = ((X[0])*(X[0])*(X[0])*(X[0]));
         Scalar const a5 = (1.0/4.0)*a4;
         Scalar const a6 = X[0]*X[1];
-        Scalar const a7 = X[1]*X[1];
+        Scalar const a7 = ((X[1])*(X[1]));
         Scalar const a8 = a7*X[0];
         Scalar const a9 = a1*a7;
-        Scalar const a10 = X[1]*X[1]*X[1];
+        Scalar const a10 = ((X[1])*(X[1])*(X[1]));
         Scalar const a11 = a10*X[0];
-        Scalar const a12 = X[1]*X[1]*X[1]*X[1];
+        Scalar const a12 = ((X[1])*(X[1])*(X[1])*(X[1]));
         Scalar const a13 = a12*X[0];
         Scalar const a14 = X[0]*X[2];
         Scalar const a15 = a6*X[2];
@@ -1127,16 +1127,16 @@ class MonomialBasis<3, 4>
         Scalar const a18 = a7*X[2];
         Scalar const a19 = a1*a18;
         Scalar const a20 = a11*X[2];
-        Scalar const a21 = X[2]*X[2];
+        Scalar const a21 = ((X[2])*(X[2]));
         Scalar const a22 = a21*X[0];
         Scalar const a23 = a1*a21;
         Scalar const a24 = a21*a6;
         Scalar const a25 = a21*X[1];
         Scalar const a26 = a1*a25;
-        Scalar const a27 = X[2]*X[2]*X[2];
+        Scalar const a27 = ((X[2])*(X[2])*(X[2]));
         Scalar const a28 = a27*X[0];
         Scalar const a29 = a27*a6;
-        Scalar const a30 = X[2]*X[2]*X[2]*X[2];
+        Scalar const a30 = ((X[2])*(X[2])*(X[2])*(X[2]));
         Scalar const a31 = a30*X[0];
         Scalar const a32 = a0*X[1];
         Scalar const a33 = a2*X[1];
@@ -1296,7 +1296,7 @@ class OrthonormalPolynomialBasis<1, 1>
         Scalar* P = Pm.data();
         Scalar const a0 = std::numbers::sqrt3_v<Scalar>;
         P[0] = X[0];
-        P[1] = a0*X[0]*X[0] - a0*X[0];
+        P[1] = a0*((X[0])*(X[0])) - a0*X[0];
         return Pm;
     }
 };
@@ -1314,7 +1314,7 @@ class OrthonormalPolynomialBasis<1, 2>
         Vector<kSize> P;
         P[0] = 1;
         P[1] = std::numbers::sqrt3_v<Scalar>*(2*X[0] - 1);
-        P[2] = std::sqrt(5)*(6*X[0]*X[0] - 6*X[0] + 1);
+        P[2] = std::sqrt(5)*(6*((X[0])*(X[0])) - 6*X[0] + 1);
         return P;
     }
                
@@ -1333,11 +1333,11 @@ class OrthonormalPolynomialBasis<1, 2>
         Matrix<kSize, kDims> Pm;
         Scalar* P = Pm.data();
         Scalar const a0 = std::numbers::sqrt3_v<Scalar>;
-        Scalar const a1 = X[0]*X[0];
+        Scalar const a1 = ((X[0])*(X[0]));
         Scalar const a2 = std::sqrt(5);
         P[0] = X[0];
         P[1] = a0*a1 - a0*X[0];
-        P[2] = -3*a1*a2 + 2*a2*X[0]*X[0]*X[0] + a2*X[0];
+        P[2] = -3*a1*a2 + 2*a2*((X[0])*(X[0])*(X[0])) + a2*X[0];
         return Pm;
     }
 };
@@ -1354,7 +1354,7 @@ class OrthonormalPolynomialBasis<1, 3>
     {
         Vector<kSize> P;
         Scalar const a0 = 2*X[0] - 1;
-        Scalar const a1 = X[0]*X[0];
+        Scalar const a1 = ((X[0])*(X[0]));
         P[0] = 1;
         P[1] = std::numbers::sqrt3_v<Scalar>*a0;
         P[2] = std::sqrt(5)*(6*a1 - 6*X[0] + 1);
@@ -1370,7 +1370,7 @@ class OrthonormalPolynomialBasis<1, 3>
         G[0] = 0;
         G[1] = 2*std::numbers::sqrt3_v<Scalar>;
         G[2] = std::sqrt(5)*(12*X[0] - 6);
-        G[3] = a0*(2*X[0] - 1)*(20*X[0] - 10) + 2*a0*(10*X[0]*X[0] - 10*X[0] + 1);
+        G[3] = a0*(2*X[0] - 1)*(20*X[0] - 10) + 2*a0*(10*((X[0])*(X[0])) - 10*X[0] + 1);
         return Gm;
     }
                
@@ -1379,14 +1379,14 @@ class OrthonormalPolynomialBasis<1, 3>
         Matrix<kSize, kDims> Pm;
         Scalar* P = Pm.data();
         Scalar const a0 = std::numbers::sqrt3_v<Scalar>;
-        Scalar const a1 = X[0]*X[0];
+        Scalar const a1 = ((X[0])*(X[0]));
         Scalar const a2 = std::sqrt(5);
-        Scalar const a3 = X[0]*X[0]*X[0];
+        Scalar const a3 = ((X[0])*(X[0])*(X[0]));
         Scalar const a4 = std::sqrt(7);
         P[0] = X[0];
         P[1] = a0*a1 - a0*X[0];
         P[2] = -3*a1*a2 + 2*a2*a3 + a2*X[0];
-        P[3] = 6*a1*a4 - 10*a3*a4 + 5*a4*X[0]*X[0]*X[0]*X[0] - a4*X[0];
+        P[3] = 6*a1*a4 - 10*a3*a4 + 5*a4*((X[0])*(X[0])*(X[0])*(X[0])) - a4*X[0];
         return Pm;
     }
 };
@@ -1403,12 +1403,12 @@ class OrthonormalPolynomialBasis<1, 4>
     {
         Vector<kSize> P;
         Scalar const a0 = 2*X[0] - 1;
-        Scalar const a1 = X[0]*X[0];
+        Scalar const a1 = ((X[0])*(X[0]));
         P[0] = 1;
         P[1] = std::numbers::sqrt3_v<Scalar>*a0;
         P[2] = std::sqrt(5)*(6*a1 - 6*X[0] + 1);
         P[3] = std::sqrt(7)*a0*(10*a1 - 10*X[0] + 1);
-        P[4] = 270*a1 + 210*X[0]*X[0]*X[0]*X[0] - 420*X[0]*X[0]*X[0] - 60*X[0] + 3;
+        P[4] = 270*a1 + 210*((X[0])*(X[0])*(X[0])*(X[0])) - 420*((X[0])*(X[0])*(X[0])) - 60*X[0] + 3;
         return P;
     }
                
@@ -1417,12 +1417,12 @@ class OrthonormalPolynomialBasis<1, 4>
         Matrix<kDims, kSize> Gm;
         Scalar* G = Gm.data();
         Scalar const a0 = std::sqrt(7);
-        Scalar const a1 = X[0]*X[0];
+        Scalar const a1 = ((X[0])*(X[0]));
         G[0] = 0;
         G[1] = 2*std::numbers::sqrt3_v<Scalar>;
         G[2] = std::sqrt(5)*(12*X[0] - 6);
         G[3] = a0*(2*X[0] - 1)*(20*X[0] - 10) + 2*a0*(10*a1 - 10*X[0] + 1);
-        G[4] = -1260*a1 + 840*X[0]*X[0]*X[0] + 540*X[0] - 60;
+        G[4] = -1260*a1 + 840*((X[0])*(X[0])*(X[0])) + 540*X[0] - 60;
         return Gm;
     }
                
@@ -1431,11 +1431,11 @@ class OrthonormalPolynomialBasis<1, 4>
         Matrix<kSize, kDims> Pm;
         Scalar* P = Pm.data();
         Scalar const a0 = std::numbers::sqrt3_v<Scalar>;
-        Scalar const a1 = X[0]*X[0];
+        Scalar const a1 = ((X[0])*(X[0]));
         Scalar const a2 = std::sqrt(5);
-        Scalar const a3 = X[0]*X[0]*X[0];
+        Scalar const a3 = ((X[0])*(X[0])*(X[0]));
         Scalar const a4 = std::sqrt(7);
-        Scalar const a5 = X[0]*X[0]*X[0]*X[0];
+        Scalar const a5 = ((X[0])*(X[0])*(X[0])*(X[0]));
         P[0] = X[0];
         P[1] = a0*a1 - a0*X[0];
         P[2] = -3*a1*a2 + 2*a2*a3 + a2*X[0];
@@ -1486,7 +1486,7 @@ class OrthonormalPolynomialBasis<2, 1>
         Scalar* P = Pm.data();
         Scalar const a0 = std::numbers::sqrt2_v<Scalar>;
         Scalar const a1 = 2*X[0];
-        Scalar const a2 = X[0]*X[0];
+        Scalar const a2 = ((X[0])*(X[0]));
         Scalar const a3 = std::numbers::sqrt3_v<Scalar>;
         Scalar const a4 = 2*a3;
         Scalar const a5 = -a4;
@@ -1495,7 +1495,7 @@ class OrthonormalPolynomialBasis<2, 1>
         P[2] = a2*a3 + (4*a3*X[1] + a5)*X[0];
         P[3] = a0*X[1];
         P[4] = 2*(3*X[0] - 1)*X[1];
-        P[5] = a4*X[1]*X[1] + (a1*a3 + a5)*X[1];
+        P[5] = a4*((X[1])*(X[1])) + (a1*a3 + a5)*X[1];
         return Pm;
     }
 };
@@ -1513,14 +1513,14 @@ class OrthonormalPolynomialBasis<2, 2>
         Vector<kSize> P;
         Scalar const a0 = std::numbers::sqrt2_v<Scalar>;
         Scalar const a1 = X[0] + 2*X[1] - 1;
-        Scalar const a2 = X[0]*X[0];
+        Scalar const a2 = ((X[0])*(X[0]));
         Scalar const a3 = 6*X[1];
         P[0] = a0;
         P[1] = 2*(3*X[0] - 1);
         P[2] = 2*std::numbers::sqrt3_v<Scalar>*a1;
         P[3] = std::sqrt(6)*(10*a2 - 8*X[0] + 1);
         P[4] = 3*a0*a1*(5*X[0] - 1);
-        P[5] = std::sqrt(30)*(a2 + a3*X[0] - a3 - 2*X[0] + 6*X[1]*X[1] + 1);
+        P[5] = std::sqrt(30)*(a2 + a3*X[0] - a3 - 2*X[0] + 6*((X[1])*(X[1])) + 1);
         return P;
     }
                
@@ -1554,19 +1554,19 @@ class OrthonormalPolynomialBasis<2, 2>
         Scalar const a0 = std::numbers::sqrt2_v<Scalar>;
         Scalar const a1 = a0*X[0];
         Scalar const a2 = 2*X[0];
-        Scalar const a3 = X[0]*X[0];
+        Scalar const a3 = ((X[0])*(X[0]));
         Scalar const a4 = std::numbers::sqrt3_v<Scalar>;
         Scalar const a5 = 2*a4;
         Scalar const a6 = -a5;
         Scalar const a7 = std::sqrt(6);
-        Scalar const a8 = X[0]*X[0]*X[0];
+        Scalar const a8 = ((X[0])*(X[0])*(X[0]));
         Scalar const a9 = 3*a0;
         Scalar const a10 = -a9;
         Scalar const a11 = a0*X[1];
         Scalar const a12 = std::sqrt(30);
         Scalar const a13 = 3*a12;
         Scalar const a14 = 6*a12;
-        Scalar const a15 = X[1]*X[1];
+        Scalar const a15 = ((X[1])*(X[1]));
         Scalar const a16 = 3*X[0];
         P[0] = a1;
         P[1] = -a2 + 3*a3;
@@ -1579,7 +1579,7 @@ class OrthonormalPolynomialBasis<2, 2>
         P[8] = a15*a5 + (a2*a4 + a6)*X[1];
         P[9] = a7*(10*a3 - 8*X[0] + 1)*X[1];
         P[10] = a15*(15*a1 + a10) + (15*a0*a3 - 18*a1 + a9)*X[1];
-        P[11] = 2*a12*X[1]*X[1]*X[1] + a15*(a12*a16 - a13) + (-a12*a2 + a12*a3 + a12)*X[1];
+        P[11] = 2*a12*((X[1])*(X[1])*(X[1])) + a15*(a12*a16 - a13) + (-a12*a2 + a12*a3 + a12)*X[1];
         return Pm;
     }
 };
@@ -1599,9 +1599,9 @@ class OrthonormalPolynomialBasis<2, 3>
         Scalar const a1 = X[0] + 2*X[1] - 1;
         Scalar const a2 = 2*a1;
         Scalar const a3 = std::sqrt(6);
-        Scalar const a4 = X[0]*X[0];
+        Scalar const a4 = ((X[0])*(X[0]));
         Scalar const a5 = 6*X[1];
-        Scalar const a6 = X[1]*X[1];
+        Scalar const a6 = ((X[1])*(X[1]));
         Scalar const a7 = a4 - 2*X[0] + 1;
         Scalar const a8 = a5*X[0] - a5 + 6*a6 + a7;
         Scalar const a9 = 10*X[1];
@@ -1611,7 +1611,7 @@ class OrthonormalPolynomialBasis<2, 3>
         P[3] = a3*(10*a4 - 8*X[0] + 1);
         P[4] = 3*a0*a1*(5*X[0] - 1);
         P[5] = std::sqrt(30)*a8;
-        P[6] = 2*a0*(-45*a4 + 35*X[0]*X[0]*X[0] + 15*X[0] - 1);
+        P[6] = 2*a0*(-45*a4 + 35*((X[0])*(X[0])*(X[0])) + 15*X[0] - 1);
         P[7] = a2*a3*(21*a4 - 12*X[0] + 1);
         P[8] = 2*std::sqrt(10)*a8*(7*X[0] - 1);
         P[9] = std::sqrt(14)*a2*(10*a6 + a7 + a9*X[0] - a9);
@@ -1633,12 +1633,12 @@ class OrthonormalPolynomialBasis<2, 3>
         Scalar const a8 = a7 - 2;
         Scalar const a9 = a6 + a8;
         Scalar const a10 = 6*X[0] + 12*X[1] - 6;
-        Scalar const a11 = X[0]*X[0];
+        Scalar const a11 = ((X[0])*(X[0]));
         Scalar const a12 = a1*(21*a11 - 12*X[0] + 1);
         Scalar const a13 = 2*a4;
         Scalar const a14 = std::sqrt(10);
         Scalar const a15 = 2*a14*(7*X[0] - 1);
-        Scalar const a16 = X[1]*X[1];
+        Scalar const a16 = ((X[1])*(X[1]));
         Scalar const a17 = a11 - a7 + 1;
         Scalar const a18 = 10*X[1];
         Scalar const a19 = std::sqrt(14);
@@ -1674,7 +1674,7 @@ class OrthonormalPolynomialBasis<2, 3>
         Scalar const a0 = std::numbers::sqrt2_v<Scalar>;
         Scalar const a1 = a0*X[0];
         Scalar const a2 = 2*X[0];
-        Scalar const a3 = X[0]*X[0];
+        Scalar const a3 = ((X[0])*(X[0]));
         Scalar const a4 = std::numbers::sqrt3_v<Scalar>;
         Scalar const a5 = 2*a4;
         Scalar const a6 = -a5;
@@ -1682,7 +1682,7 @@ class OrthonormalPolynomialBasis<2, 3>
         Scalar const a8 = std::sqrt(6);
         Scalar const a9 = a8*X[0];
         Scalar const a10 = a3*a8;
-        Scalar const a11 = X[0]*X[0]*X[0];
+        Scalar const a11 = ((X[0])*(X[0])*(X[0]));
         Scalar const a12 = a11*a8;
         Scalar const a13 = a0*a11;
         Scalar const a14 = 3*a0;
@@ -1691,9 +1691,9 @@ class OrthonormalPolynomialBasis<2, 3>
         Scalar const a17 = std::sqrt(30);
         Scalar const a18 = 3*a17;
         Scalar const a19 = 6*a17;
-        Scalar const a20 = X[1]*X[1];
+        Scalar const a20 = ((X[1])*(X[1]));
         Scalar const a21 = 15*a0*a3;
-        Scalar const a22 = X[0]*X[0]*X[0]*X[0];
+        Scalar const a22 = ((X[0])*(X[0])*(X[0])*(X[0]));
         Scalar const a23 = 2*a8;
         Scalar const a24 = -a23;
         Scalar const a25 = a8*X[1];
@@ -1707,7 +1707,7 @@ class OrthonormalPolynomialBasis<2, 3>
         Scalar const a33 = a30*X[1];
         Scalar const a34 = 24*a33;
         Scalar const a35 = a20*a30;
-        Scalar const a36 = X[1]*X[1]*X[1];
+        Scalar const a36 = ((X[1])*(X[1])*(X[1]));
         Scalar const a37 = 3*X[0];
         Scalar const a38 = a26*X[0];
         Scalar const a39 = a26*a3;
@@ -1733,7 +1733,7 @@ class OrthonormalPolynomialBasis<2, 3>
         P[16] = 2*a16*(35*a11 - 45*a3 + 15*X[0] - 1);
         P[17] = a20*(42*a10 + a23 - 24*a9) + (-66*a10 + 42*a12 + a24 + 26*a9)*X[1];
         P[18] = a20*(6*a26 - 48*a38 + 42*a39) + a36*(-4*a26 + 28*a38) + (14*a11*a26 - a28 + 18*a38 - 30*a39)*X[1];
-        P[19] = a20*(a3*a41 + a41 - 24*a42) + 10*a30*X[1]*X[1]*X[1]*X[1] + a36*(a40*X[0] - a40) + (a11*a31 - 6*a3*a30 + a32 + 6*a42)*X[1];
+        P[19] = a20*(a3*a41 + a41 - 24*a42) + 10*a30*((X[1])*(X[1])*(X[1])*(X[1])) + a36*(a40*X[0] - a40) + (a11*a31 - 6*a3*a30 + a32 + 6*a42)*X[1];
         return Pm;
     }
 };
@@ -1753,20 +1753,20 @@ class OrthonormalPolynomialBasis<2, 4>
         Scalar const a1 = X[0] + 2*X[1] - 1;
         Scalar const a2 = 2*a1;
         Scalar const a3 = std::sqrt(6);
-        Scalar const a4 = X[0]*X[0];
+        Scalar const a4 = ((X[0])*(X[0]));
         Scalar const a5 = std::sqrt(30);
         Scalar const a6 = 6*X[1];
-        Scalar const a7 = X[1]*X[1];
+        Scalar const a7 = ((X[1])*(X[1]));
         Scalar const a8 = a4 - 2*X[0] + 1;
         Scalar const a9 = a6*X[0] - a6 + 6*a7 + a8;
-        Scalar const a10 = X[0]*X[0]*X[0];
+        Scalar const a10 = ((X[0])*(X[0])*(X[0]));
         Scalar const a11 = std::sqrt(10);
         Scalar const a12 = 10*X[1];
         Scalar const a13 = a12*X[0] - a12 + 10*a7 + a8;
-        Scalar const a14 = X[0]*X[0]*X[0]*X[0];
+        Scalar const a14 = ((X[0])*(X[0])*(X[0])*(X[0]));
         Scalar const a15 = 20*X[1];
         Scalar const a16 = 90*a7;
-        Scalar const a17 = 140*X[1]*X[1]*X[1];
+        Scalar const a17 = 140*((X[1])*(X[1])*(X[1]));
         Scalar const a18 = 60*X[1];
         P[0] = a0;
         P[1] = 2*(3*X[0] - 1);
@@ -1782,7 +1782,7 @@ class OrthonormalPolynomialBasis<2, 4>
         P[11] = a1*a5*(84*a10 - 84*a4 + 21*X[0] - 1);
         P[12] = 5*a0*a9*(36*a4 - 16*X[0] + 1);
         P[13] = std::sqrt(70)*a1*a13*(9*X[0] - 1);
-        P[14] = 3*a11*(a10*a15 - 4*a10 + a14 - a15 + a16*a4 + a16 + a17*X[0] - a17 - a18*a4 + a18*X[0] + 6*a4 - 180*a7*X[0] - 4*X[0] + 70*X[1]*X[1]*X[1]*X[1] + 1);
+        P[14] = 3*a11*(a10*a15 - 4*a10 + a14 - a15 + a16*a4 + a16 + a17*X[0] - a17 - a18*a4 + a18*X[0] + 6*a4 - 180*a7*X[0] - 4*X[0] + 70*((X[1])*(X[1])*(X[1])*(X[1])) + 1);
         return P;
     }
                
@@ -1801,13 +1801,13 @@ class OrthonormalPolynomialBasis<2, 4>
         Scalar const a8 = a7 - 2;
         Scalar const a9 = a6 + a8;
         Scalar const a10 = 6*X[0] + 12*X[1] - 6;
-        Scalar const a11 = X[0]*X[0];
+        Scalar const a11 = ((X[0])*(X[0]));
         Scalar const a12 = 12*X[0];
         Scalar const a13 = a1*(21*a11 - a12 + 1);
         Scalar const a14 = 2*a4;
         Scalar const a15 = std::sqrt(10);
         Scalar const a16 = 2*a15*(7*X[0] - 1);
-        Scalar const a17 = X[1]*X[1];
+        Scalar const a17 = ((X[1])*(X[1]));
         Scalar const a18 = a11 - a7 + 1;
         Scalar const a19 = 6*a17 + a18 + a6*X[0] - a6;
         Scalar const a20 = 10*X[1];
@@ -1817,7 +1817,7 @@ class OrthonormalPolynomialBasis<2, 4>
         Scalar const a24 = 10*a17 + a18 + a20*X[0] - a20;
         Scalar const a25 = a22*a24;
         Scalar const a26 = 10*X[0] + 20*X[1] - 10;
-        Scalar const a27 = X[0]*X[0]*X[0];
+        Scalar const a27 = ((X[0])*(X[0])*(X[0]));
         Scalar const a28 = a5*(-84*a11 + 84*a27 + 21*X[0] - 1);
         Scalar const a29 = 5*a2;
         Scalar const a30 = a29*(36*a11 - 16*X[0] + 1);
@@ -1828,7 +1828,7 @@ class OrthonormalPolynomialBasis<2, 4>
         Scalar const a35 = a32*a34;
         Scalar const a36 = 60*X[1];
         Scalar const a37 = 180*a17;
-        Scalar const a38 = X[1]*X[1]*X[1];
+        Scalar const a38 = ((X[1])*(X[1])*(X[1]));
         Scalar const a39 = X[0]*X[1];
         Scalar const a40 = 3*a15;
         Scalar const a41 = 180*X[1];
@@ -1873,7 +1873,7 @@ class OrthonormalPolynomialBasis<2, 4>
         Scalar const a0 = std::numbers::sqrt2_v<Scalar>;
         Scalar const a1 = a0*X[0];
         Scalar const a2 = 2*X[0];
-        Scalar const a3 = X[0]*X[0];
+        Scalar const a3 = ((X[0])*(X[0]));
         Scalar const a4 = std::numbers::sqrt3_v<Scalar>;
         Scalar const a5 = 2*a4;
         Scalar const a6 = -a5;
@@ -1881,7 +1881,7 @@ class OrthonormalPolynomialBasis<2, 4>
         Scalar const a8 = std::sqrt(6);
         Scalar const a9 = a8*X[0];
         Scalar const a10 = a3*a8;
-        Scalar const a11 = X[0]*X[0]*X[0];
+        Scalar const a11 = ((X[0])*(X[0])*(X[0]));
         Scalar const a12 = a11*a8;
         Scalar const a13 = 5*a0;
         Scalar const a14 = 3*a0;
@@ -1892,11 +1892,11 @@ class OrthonormalPolynomialBasis<2, 4>
         Scalar const a19 = -a17;
         Scalar const a20 = 3*a17;
         Scalar const a21 = 6*a17;
-        Scalar const a22 = X[1]*X[1];
+        Scalar const a22 = ((X[1])*(X[1]));
         Scalar const a23 = 15*a0;
         Scalar const a24 = a23*a3;
         Scalar const a25 = 30*a0;
-        Scalar const a26 = X[0]*X[0]*X[0]*X[0];
+        Scalar const a26 = ((X[0])*(X[0])*(X[0])*(X[0]));
         Scalar const a27 = a0*a26;
         Scalar const a28 = 2*a8;
         Scalar const a29 = -a28;
@@ -1912,7 +1912,7 @@ class OrthonormalPolynomialBasis<2, 4>
         Scalar const a39 = a36*X[1];
         Scalar const a40 = 24*a39;
         Scalar const a41 = a22*a36;
-        Scalar const a42 = X[1]*X[1]*X[1];
+        Scalar const a42 = ((X[1])*(X[1])*(X[1]));
         Scalar const a43 = a31*X[0];
         Scalar const a44 = a3*a31;
         Scalar const a45 = a11*a31;
@@ -1933,7 +1933,7 @@ class OrthonormalPolynomialBasis<2, 4>
         Scalar const a60 = 90*a31;
         Scalar const a61 = 270*a35;
         Scalar const a62 = a31*a42;
-        Scalar const a63 = X[1]*X[1]*X[1]*X[1];
+        Scalar const a63 = ((X[1])*(X[1])*(X[1])*(X[1]));
         Scalar const a64 = 3*X[0];
         Scalar const a65 = a17*a3;
         Scalar const a66 = 30*a31;
@@ -2033,7 +2033,7 @@ class OrthonormalPolynomialBasis<3, 1>
         Scalar* P = Pm.data();
         Scalar const a0 = std::sqrt(6);
         Scalar const a1 = std::sqrt(10);
-        Scalar const a2 = X[0]*X[0];
+        Scalar const a2 = ((X[0])*(X[0]));
         Scalar const a3 = std::sqrt(5);
         Scalar const a4 = 2*a3;
         Scalar const a5 = -a4;
@@ -2043,7 +2043,7 @@ class OrthonormalPolynomialBasis<3, 1>
         Scalar const a9 = -a7;
         Scalar const a10 = 4*a6*X[2] + a9;
         Scalar const a11 = a1*(4*X[0] - 1);
-        Scalar const a12 = X[1]*X[1];
+        Scalar const a12 = ((X[1])*(X[1]));
         Scalar const a13 = a7*X[0];
         P[0] = a0*X[0];
         P[1] = 2*a1*a2 - a1*X[0];
@@ -2056,7 +2056,7 @@ class OrthonormalPolynomialBasis<3, 1>
         P[8] = a0*X[2];
         P[9] = a11*X[2];
         P[10] = a4*(X[0] + 3*X[1] - 1)*X[2];
-        P[11] = a7*X[2]*X[2] + (a13 + a8 + a9)*X[2];
+        P[11] = a7*((X[2])*(X[2])) + (a13 + a8 + a9)*X[2];
         return Pm;
     }
 };
@@ -2077,11 +2077,11 @@ class OrthonormalPolynomialBasis<3, 2>
         Scalar const a2 = a0 + X[1] + 2*X[2];
         Scalar const a3 = 2*a2;
         Scalar const a4 = std::sqrt(14);
-        Scalar const a5 = X[0]*X[0];
+        Scalar const a5 = ((X[0])*(X[0]));
         Scalar const a6 = 6*X[0];
         Scalar const a7 = a6 - 1;
         Scalar const a8 = 8*X[1];
-        Scalar const a9 = X[1]*X[1];
+        Scalar const a9 = ((X[1])*(X[1]));
         Scalar const a10 = 2*X[0];
         Scalar const a11 = -a10 + a5 + 1;
         Scalar const a12 = 6*X[2];
@@ -2094,7 +2094,7 @@ class OrthonormalPolynomialBasis<3, 2>
         P[6] = std::sqrt(42)*(a11 + a8*X[0] - a8 + 10*a9);
         P[7] = std::sqrt(21)*a3*a7;
         P[8] = 3*a2*a4*(a0 + 5*X[1]);
-        P[9] = std::sqrt(210)*(a10*X[1] + a11 + a12*X[1] - a12 + a6*X[2] + a9 - 2*X[1] + 6*X[2]*X[2]);
+        P[9] = std::sqrt(210)*(a10*X[1] + a11 + a12*X[1] - a12 + a6*X[2] + a9 - 2*X[1] + 6*((X[2])*(X[2])));
         return P;
     }
                
@@ -2161,7 +2161,7 @@ class OrthonormalPolynomialBasis<3, 2>
         Scalar* P = Pm.data();
         Scalar const a0 = std::sqrt(6);
         Scalar const a1 = std::sqrt(10);
-        Scalar const a2 = X[0]*X[0];
+        Scalar const a2 = ((X[0])*(X[0]));
         Scalar const a3 = std::sqrt(5);
         Scalar const a4 = 2*a3;
         Scalar const a5 = -a4;
@@ -2175,7 +2175,7 @@ class OrthonormalPolynomialBasis<3, 2>
         Scalar const a13 = std::sqrt(14);
         Scalar const a14 = a13*X[0];
         Scalar const a15 = 5*a13;
-        Scalar const a16 = X[0]*X[0]*X[0];
+        Scalar const a16 = ((X[0])*(X[0])*(X[0]));
         Scalar const a17 = a13*a16;
         Scalar const a18 = std::sqrt(7);
         Scalar const a19 = 4*a16;
@@ -2184,7 +2184,7 @@ class OrthonormalPolynomialBasis<3, 2>
         Scalar const a22 = (1.0/3.0)*a16;
         Scalar const a23 = 4*a21;
         Scalar const a24 = 8*X[1];
-        Scalar const a25 = X[1]*X[1];
+        Scalar const a25 = ((X[1])*(X[1]));
         Scalar const a26 = 10*a25;
         Scalar const a27 = std::sqrt(21);
         Scalar const a28 = 2*a27;
@@ -2203,7 +2203,7 @@ class OrthonormalPolynomialBasis<3, 2>
         Scalar const a41 = a40*X[1];
         Scalar const a42 = 3*a40;
         Scalar const a43 = -a40 + a42*X[2];
-        Scalar const a44 = X[2]*X[2];
+        Scalar const a44 = ((X[2])*(X[2]));
         Scalar const a45 = -a36*a40 + 6*a40*a44 + a40;
         Scalar const a46 = a25*a40 - 2*a41;
         Scalar const a47 = 4*X[0];
@@ -2212,7 +2212,7 @@ class OrthonormalPolynomialBasis<3, 2>
         Scalar const a50 = a13*(15*a2 - 10*X[0] + 1);
         Scalar const a51 = a18*X[0];
         Scalar const a52 = 2*a18;
-        Scalar const a53 = X[1]*X[1]*X[1];
+        Scalar const a53 = ((X[1])*(X[1])*(X[1]));
         Scalar const a54 = 2*X[0];
         Scalar const a55 = 6*X[0];
         Scalar const a56 = a27*X[0];
@@ -2251,7 +2251,7 @@ class OrthonormalPolynomialBasis<3, 2>
         P[26] = a21*(a2 + a24*X[0] - a24 + a26 - a54 + 1)*X[2];
         P[27] = a44*(a29 + a62) + (-a30 + a57 + a62*X[1])*X[2];
         P[28] = a44*(3*a14 + a34 + a38*X[1]) + (a14*a20 + a33 + a39 + a58)*X[2];
-        P[29] = 2*a40*X[2]*X[2]*X[2] + a44*(3*a41 - a42 + 3*a59) + (a40 + a41*a54 + a46 + a60)*X[2];
+        P[29] = 2*a40*((X[2])*(X[2])*(X[2])) + a44*(3*a41 - a42 + 3*a59) + (a40 + a41*a54 + a46 + a60)*X[2];
         return Pm;
     }
 };
@@ -2276,23 +2276,23 @@ class OrthonormalPolynomialBasis<3, 3>
         Scalar const a6 = 2*a5;
         Scalar const a7 = std::sqrt(14);
         Scalar const a8 = 10*X[0];
-        Scalar const a9 = X[0]*X[0];
+        Scalar const a9 = ((X[0])*(X[0]));
         Scalar const a10 = 15*a9;
         Scalar const a11 = 6*X[0];
         Scalar const a12 = a11 - 1;
         Scalar const a13 = 8*X[1];
-        Scalar const a14 = X[1]*X[1];
+        Scalar const a14 = ((X[1])*(X[1]));
         Scalar const a15 = 2*X[0];
         Scalar const a16 = -a15 + a9 + 1;
         Scalar const a17 = a13*X[0] - a13 + 10*a14 + a16;
         Scalar const a18 = a2 + 5*X[1];
         Scalar const a19 = a5*a7;
         Scalar const a20 = 6*X[2];
-        Scalar const a21 = X[2]*X[2];
+        Scalar const a21 = ((X[2])*(X[2]));
         Scalar const a22 = a14 + a15*X[1] + a16 - 2*X[1];
         Scalar const a23 = a11*X[2] + a20*X[1] - a20 + 6*a21 + a22;
         Scalar const a24 = std::numbers::sqrt2_v<Scalar>;
-        Scalar const a25 = X[0]*X[0]*X[0];
+        Scalar const a25 = ((X[0])*(X[0])*(X[0]));
         Scalar const a26 = 168*a9 - 84*X[0] + 6;
         Scalar const a27 = 8*X[0] - 1;
         Scalar const a28 = 3*a27;
@@ -2312,7 +2312,7 @@ class OrthonormalPolynomialBasis<3, 3>
         P[10] = 3*a24*(56*a25 - 63*a9 + 18*X[0] - 1);
         P[11] = a26*a3;
         P[12] = a0*a17*a28;
-        P[13] = 6*a24*(a10*X[1] + a25 + a29*X[0] - a29 - 3*a9 - 30*X[0]*X[1] + 3*X[0] + 35*X[1]*X[1]*X[1] + 15*X[1] - 1);
+        P[13] = 6*a24*(a10*X[1] + a25 + a29*X[0] - a29 - 3*a9 - 30*X[0]*X[1] + 3*X[0] + 35*((X[1])*(X[1])*(X[1])) + 15*X[1] - 1);
         P[14] = std::numbers::sqrt3_v<Scalar>*a26*a5;
         P[15] = 9*a18*a24*a27*a5;
         P[16] = 6*a0*a5*(21*a14 + a16 + a30*X[0] - a30);
@@ -2362,13 +2362,13 @@ class OrthonormalPolynomialBasis<3, 3>
         Scalar const a33 = a28*a32;
         Scalar const a34 = a7 + 6*X[1] + 12*X[2] - 6;
         Scalar const a35 = std::numbers::sqrt2_v<Scalar>;
-        Scalar const a36 = X[0]*X[0];
+        Scalar const a36 = ((X[0])*(X[0]));
         Scalar const a37 = 168*a36;
         Scalar const a38 = std::sqrt(6);
         Scalar const a39 = a17 - 1;
         Scalar const a40 = 3*a39;
         Scalar const a41 = a38*a40;
-        Scalar const a42 = X[1]*X[1];
+        Scalar const a42 = ((X[1])*(X[1]));
         Scalar const a43 = -a14 + a36 + 1;
         Scalar const a44 = 6*a35;
         Scalar const a45 = 90*X[1];
@@ -2387,7 +2387,7 @@ class OrthonormalPolynomialBasis<3, 3>
         Scalar const a58 = std::sqrt(30);
         Scalar const a59 = a40*a58;
         Scalar const a60 = a32*a59;
-        Scalar const a61 = X[2]*X[2];
+        Scalar const a61 = ((X[2])*(X[2]));
         Scalar const a62 = a14*X[1] - a30 + a42 + a43;
         Scalar const a63 = a29*X[1] - a29 + 6*a61 + a62 + a7*X[2];
         Scalar const a64 = 6*a0*(a10 + 7*X[1]);
@@ -2468,7 +2468,7 @@ class OrthonormalPolynomialBasis<3, 3>
         Scalar const a1 = a0*X[0];
         Scalar const a2 = std::sqrt(10);
         Scalar const a3 = a2*X[0];
-        Scalar const a4 = X[0]*X[0];
+        Scalar const a4 = ((X[0])*(X[0]));
         Scalar const a5 = a2*a4;
         Scalar const a6 = std::sqrt(5);
         Scalar const a7 = 2*a6;
@@ -2483,7 +2483,7 @@ class OrthonormalPolynomialBasis<3, 3>
         Scalar const a16 = std::sqrt(14);
         Scalar const a17 = a16*X[0];
         Scalar const a18 = 5*a16;
-        Scalar const a19 = X[0]*X[0]*X[0];
+        Scalar const a19 = ((X[0])*(X[0])*(X[0]));
         Scalar const a20 = a16*a19;
         Scalar const a21 = std::sqrt(7);
         Scalar const a22 = 4*a19;
@@ -2492,7 +2492,7 @@ class OrthonormalPolynomialBasis<3, 3>
         Scalar const a25 = (1.0/3.0)*a19;
         Scalar const a26 = 4*a24;
         Scalar const a27 = 8*X[1];
-        Scalar const a28 = X[1]*X[1];
+        Scalar const a28 = ((X[1])*(X[1]));
         Scalar const a29 = 10*a28;
         Scalar const a30 = std::sqrt(21);
         Scalar const a31 = 2*a30;
@@ -2517,14 +2517,14 @@ class OrthonormalPolynomialBasis<3, 3>
         Scalar const a50 = -a47 + a49*X[2];
         Scalar const a51 = 6*X[2];
         Scalar const a52 = 6*a47;
-        Scalar const a53 = X[2]*X[2];
+        Scalar const a53 = ((X[2])*(X[2]));
         Scalar const a54 = a47 + a52*a53 - a52*X[2];
         Scalar const a55 = a28*a47 - 2*a48;
         Scalar const a56 = std::numbers::sqrt2_v<Scalar>;
         Scalar const a57 = 3*X[0];
         Scalar const a58 = 27*a56;
         Scalar const a59 = a19*a56;
-        Scalar const a60 = X[0]*X[0]*X[0]*X[0];
+        Scalar const a60 = ((X[0])*(X[0])*(X[0])*(X[0]));
         Scalar const a61 = 42*a60;
         Scalar const a62 = 168*X[1];
         Scalar const a63 = 6*a0;
@@ -2539,7 +2539,7 @@ class OrthonormalPolynomialBasis<3, 3>
         Scalar const a72 = 90*a56;
         Scalar const a73 = a72*X[1];
         Scalar const a74 = a28*a56;
-        Scalar const a75 = X[1]*X[1]*X[1];
+        Scalar const a75 = ((X[1])*(X[1])*(X[1]));
         Scalar const a76 = std::numbers::sqrt3_v<Scalar>;
         Scalar const a77 = 6*a76;
         Scalar const a78 = a77*X[1];
@@ -2593,7 +2593,7 @@ class OrthonormalPolynomialBasis<3, 3>
         Scalar const a126 = 144*X[1];
         Scalar const a127 = 72*X[2];
         Scalar const a128 = 180*a124;
-        Scalar const a129 = X[2]*X[2]*X[2];
+        Scalar const a129 = ((X[2])*(X[2])*(X[2]));
         Scalar const a130 = a121 + a123 - a128 + 120*a129*a16;
         Scalar const a131 = a41*a75 + a43 - 18*a45;
         Scalar const a132 = 4*X[0];
@@ -2622,7 +2622,7 @@ class OrthonormalPolynomialBasis<3, 3>
         Scalar const a155 = 168*a19;
         Scalar const a156 = a0*a4;
         Scalar const a157 = 24*a19;
-        Scalar const a158 = X[1]*X[1]*X[1]*X[1];
+        Scalar const a158 = ((X[1])*(X[1])*(X[1])*(X[1]));
         Scalar const a159 = a154*a56;
         Scalar const a160 = a4*a56;
         Scalar const a161 = -a153*a76 + a154*a76 + a155*a76;
@@ -2715,7 +2715,7 @@ class OrthonormalPolynomialBasis<3, 3>
         P[56] = a53*(-12*a1 + 72*a188 + a4*a63 + a63 + 126*a66 - a94) + (198*a1*a28 + a167 - 156*a188 + a4*a91 + a89 + a97)*X[2];
         P[57] = a129*(48*a169 - a99) + a53*(-81*a169 - a170*X[1] + a170 + 72*a171 + 72*a189) + (48*a100*a4 - a103 + 24*a106*X[0] + a172 - 54*a189 + a99*X[1])*X[2];
         P[58] = a129*(-a110 + 84*a111 + 12*a3) + a53*(a116 - a117 + 126*a118 + a126*a3 - a175 + a176) + (a109 + a120 + a177 + 90*a28*a3 - 108*a3*X[1] + 54*a5*X[1])*X[2];
-        P[59] = a129*(60*a17 + a190*X[1] - a190) + 30*a16*X[2]*X[2]*X[2]*X[2] + a53*(-72*a137 + a179*X[1] - a179 + a191*a28 + a191*a4 + a191) + (a121 + a131 - 36*a17*X[1] + a178*a28 + a180 + a4*a43)*X[2];
+        P[59] = a129*(60*a17 + a190*X[1] - a190) + 30*a16*((X[2])*(X[2])*(X[2])*(X[2])) + a53*(-72*a137 + a179*X[1] - a179 + a191*a28 + a191*a4 + a191) + (a121 + a131 - 36*a17*X[1] + a178*a28 + a180 + a4*a43)*X[2];
         return Pm;
     }
 };
@@ -2741,12 +2741,12 @@ class OrthonormalPolynomialBasis<3, 4>
         Scalar const a7 = 2*a6;
         Scalar const a8 = std::sqrt(14);
         Scalar const a9 = 10*X[0];
-        Scalar const a10 = X[0]*X[0];
+        Scalar const a10 = ((X[0])*(X[0]));
         Scalar const a11 = 15*a10;
         Scalar const a12 = 6*X[0];
         Scalar const a13 = a12 - 1;
         Scalar const a14 = 8*X[1];
-        Scalar const a15 = X[1]*X[1];
+        Scalar const a15 = ((X[1])*(X[1]));
         Scalar const a16 = 2*X[0];
         Scalar const a17 = a10 - a16 + 1;
         Scalar const a18 = a14*X[0] - a14 + 10*a15 + a17;
@@ -2754,16 +2754,16 @@ class OrthonormalPolynomialBasis<3, 4>
         Scalar const a20 = a3 + 5*X[1];
         Scalar const a21 = 3*a20;
         Scalar const a22 = 6*X[2];
-        Scalar const a23 = X[2]*X[2];
+        Scalar const a23 = ((X[2])*(X[2]));
         Scalar const a24 = a15 + a16*X[1] + a17 - 2*X[1];
         Scalar const a25 = a12*X[2] + a22*X[1] - a22 + 6*a23 + a24;
         Scalar const a26 = std::numbers::sqrt2_v<Scalar>;
-        Scalar const a27 = X[0]*X[0]*X[0];
+        Scalar const a27 = ((X[0])*(X[0])*(X[0]));
         Scalar const a28 = 168*a10 - 84*X[0] + 6;
         Scalar const a29 = 8*X[0] - 1;
         Scalar const a30 = 3*a29;
         Scalar const a31 = 45*a15;
-        Scalar const a32 = X[1]*X[1]*X[1];
+        Scalar const a32 = ((X[1])*(X[1])*(X[1]));
         Scalar const a33 = X[0]*X[1];
         Scalar const a34 = 3*X[0] - 1;
         Scalar const a35 = -3*a10 + a27 + a34;
@@ -2775,7 +2775,7 @@ class OrthonormalPolynomialBasis<3, 4>
         Scalar const a41 = 10*X[2];
         Scalar const a42 = 10*a23 + a24 + a41*X[1] - a41 + a9*X[2];
         Scalar const a43 = std::sqrt(22);
-        Scalar const a44 = X[0]*X[0]*X[0]*X[0];
+        Scalar const a44 = ((X[0])*(X[0])*(X[0])*(X[0]));
         Scalar const a45 = -108*a10 + 120*a27 + 24*X[0] - 1;
         Scalar const a46 = std::sqrt(66);
         Scalar const a47 = a34*(15*X[0] - 1);
@@ -2785,7 +2785,7 @@ class OrthonormalPolynomialBasis<3, 4>
         Scalar const a51 = 224*a32;
         Scalar const a52 = 24*X[1];
         Scalar const a53 = 126*a15;
-        Scalar const a54 = X[1]*X[1]*X[1]*X[1];
+        Scalar const a54 = ((X[1])*(X[1])*(X[1])*(X[1]));
         Scalar const a55 = a15*X[0];
         Scalar const a56 = a10*X[1];
         Scalar const a57 = 4*a27;
@@ -2796,7 +2796,7 @@ class OrthonormalPolynomialBasis<3, 4>
         Scalar const a62 = 84*a15;
         Scalar const a63 = 21*X[1];
         Scalar const a64 = 16*X[1];
-        Scalar const a65 = 140*X[2]*X[2]*X[2];
+        Scalar const a65 = 140*((X[2])*(X[2])*(X[2]));
         Scalar const a66 = 20*X[2];
         Scalar const a67 = 90*a23;
         Scalar const a68 = 180*a23;
@@ -2835,7 +2835,7 @@ class OrthonormalPolynomialBasis<3, 4>
         P[31] = 5*a25*a43*(36*a15 + a17 + a64*X[0] - a64);
         P[32] = std::sqrt(154)*a42*a60;
         P[33] = std::sqrt(770)*a42*a6*(a3 + 9*X[1]);
-        P[34] = 3*a50*(-a10*a37 + a10*a67 - a10*a69 + a15*a58 + a15*a67 - a15*a69 + 6*a15 + a2*a32 + a27*a66 + a32*a66 - 4*a32 + a33*a68 - 120*a33*X[2] + a38 + a54 + a55*a69 - 12*a55 + a56*a69 + a57*X[1] + a59 + a65*X[0] + a65*X[1] - a65 - a66 + a67 - a68*X[0] - a68*X[1] + a69*X[0] + a69*X[1] - 4*X[1] + 70*X[2]*X[2]*X[2]*X[2]);
+        P[34] = 3*a50*(-a10*a37 + a10*a67 - a10*a69 + a15*a58 + a15*a67 - a15*a69 + 6*a15 + a2*a32 + a27*a66 + a32*a66 - 4*a32 + a33*a68 - 120*a33*X[2] + a38 + a54 + a55*a69 - 12*a55 + a56*a69 + a57*X[1] + a59 + a65*X[0] + a65*X[1] - a65 - a66 + a67 - a68*X[0] - a68*X[1] + a69*X[0] + a69*X[1] - 4*X[1] + 70*((X[2])*(X[2])*(X[2])*(X[2])));
         return P;
     }
                
@@ -2879,7 +2879,7 @@ class OrthonormalPolynomialBasis<3, 4>
         Scalar const a33 = a28*a32;
         Scalar const a34 = a7 + 6*X[1] + 12*X[2] - 6;
         Scalar const a35 = std::numbers::sqrt2_v<Scalar>;
-        Scalar const a36 = X[0]*X[0];
+        Scalar const a36 = ((X[0])*(X[0]));
         Scalar const a37 = 168*a36;
         Scalar const a38 = 84*X[0];
         Scalar const a39 = 336*X[0];
@@ -2888,7 +2888,7 @@ class OrthonormalPolynomialBasis<3, 4>
         Scalar const a42 = a17 - 1;
         Scalar const a43 = 3*a42;
         Scalar const a44 = a41*a43;
-        Scalar const a45 = X[1]*X[1];
+        Scalar const a45 = ((X[1])*(X[1]));
         Scalar const a46 = -a14 + a36 + 1;
         Scalar const a47 = a13*X[0] - a13 + 10*a45 + a46;
         Scalar const a48 = 45*a45;
@@ -2920,7 +2920,7 @@ class OrthonormalPolynomialBasis<3, 4>
         Scalar const a74 = std::sqrt(30);
         Scalar const a75 = a43*a74;
         Scalar const a76 = a32*a75;
-        Scalar const a77 = X[2]*X[2];
+        Scalar const a77 = ((X[2])*(X[2]));
         Scalar const a78 = a14*X[1] - a30 + a45 + a46;
         Scalar const a79 = a29*X[1] - a29 + a7*X[2] + 6*a77 + a78;
         Scalar const a80 = a10 + 7*X[1];
@@ -2937,7 +2937,7 @@ class OrthonormalPolynomialBasis<3, 4>
         Scalar const a91 = 10*X[0];
         Scalar const a92 = a91 + 10*X[1] + 20*X[2] - 10;
         Scalar const a93 = std::sqrt(22);
-        Scalar const a94 = X[0]*X[0]*X[0];
+        Scalar const a94 = ((X[0])*(X[0])*(X[0]));
         Scalar const a95 = std::sqrt(11);
         Scalar const a96 = 24*X[0];
         Scalar const a97 = -108*a36 + 120*a94 + a96 - 1;
@@ -2954,7 +2954,7 @@ class OrthonormalPolynomialBasis<3, 4>
         Scalar const a108 = a91 - 1;
         Scalar const a109 = 2*a108;
         Scalar const a110 = a109*a93;
-        Scalar const a111 = X[1]*X[1]*X[1];
+        Scalar const a111 = ((X[1])*(X[1])*(X[1]));
         Scalar const a112 = a102 - a50 + a94;
         Scalar const a113 = std::sqrt(110);
         Scalar const a114 = 72*X[1];
@@ -3009,7 +3009,7 @@ class OrthonormalPolynomialBasis<3, 4>
         Scalar const a163 = a153*a162 + a161;
         Scalar const a164 = 180*a77;
         Scalar const a165 = 60*X[2];
-        Scalar const a166 = X[2]*X[2]*X[2];
+        Scalar const a166 = ((X[2])*(X[2])*(X[2]));
         Scalar const a167 = 120*X[2];
         Scalar const a168 = 3*a113;
         Scalar const a169 = a168*(4*a111 + a116*a167 + a117 + a164*X[0] + a164*X[1] - a164 + a165*a36 + a165*a45 + a165 + 140*a166 - a167*X[0] - a167*X[1] + a36*a65 + a45*a71 - 12*a45 + a65 - a96*X[1]);
@@ -3134,7 +3134,7 @@ class OrthonormalPolynomialBasis<3, 4>
         Scalar const a1 = a0*X[0];
         Scalar const a2 = std::sqrt(10);
         Scalar const a3 = a2*X[0];
-        Scalar const a4 = X[0]*X[0];
+        Scalar const a4 = ((X[0])*(X[0]));
         Scalar const a5 = a2*a4;
         Scalar const a6 = std::sqrt(5);
         Scalar const a7 = 2*a6;
@@ -3149,7 +3149,7 @@ class OrthonormalPolynomialBasis<3, 4>
         Scalar const a16 = std::sqrt(14);
         Scalar const a17 = a16*X[0];
         Scalar const a18 = 5*a16;
-        Scalar const a19 = X[0]*X[0]*X[0];
+        Scalar const a19 = ((X[0])*(X[0])*(X[0]));
         Scalar const a20 = a16*a19;
         Scalar const a21 = std::sqrt(7);
         Scalar const a22 = 4*a19;
@@ -3158,7 +3158,7 @@ class OrthonormalPolynomialBasis<3, 4>
         Scalar const a25 = (1.0/3.0)*a19;
         Scalar const a26 = 4*a24;
         Scalar const a27 = 8*X[1];
-        Scalar const a28 = X[1]*X[1];
+        Scalar const a28 = ((X[1])*(X[1]));
         Scalar const a29 = 10*a28;
         Scalar const a30 = std::sqrt(21);
         Scalar const a31 = 2*a30;
@@ -3183,14 +3183,14 @@ class OrthonormalPolynomialBasis<3, 4>
         Scalar const a50 = -a47 + a49*X[2];
         Scalar const a51 = 6*X[2];
         Scalar const a52 = 6*a47;
-        Scalar const a53 = X[2]*X[2];
+        Scalar const a53 = ((X[2])*(X[2]));
         Scalar const a54 = a47 + a52*a53 - a52*X[2];
         Scalar const a55 = a28*a47 - 2*a48;
         Scalar const a56 = std::numbers::sqrt2_v<Scalar>;
         Scalar const a57 = 3*X[0];
         Scalar const a58 = 27*a56;
         Scalar const a59 = a19*a56;
-        Scalar const a60 = X[0]*X[0]*X[0]*X[0];
+        Scalar const a60 = ((X[0])*(X[0])*(X[0])*(X[0]));
         Scalar const a61 = 42*a60;
         Scalar const a62 = 126*X[1];
         Scalar const a63 = 168*X[1];
@@ -3206,7 +3206,7 @@ class OrthonormalPolynomialBasis<3, 4>
         Scalar const a73 = 90*a56;
         Scalar const a74 = a73*X[1];
         Scalar const a75 = a28*a56;
-        Scalar const a76 = X[1]*X[1]*X[1];
+        Scalar const a76 = ((X[1])*(X[1])*(X[1]));
         Scalar const a77 = 210*a76;
         Scalar const a78 = std::numbers::sqrt3_v<Scalar>;
         Scalar const a79 = 6*a78;
@@ -3263,7 +3263,7 @@ class OrthonormalPolynomialBasis<3, 4>
         Scalar const a130 = -a128 + 90*a129 + a38;
         Scalar const a131 = 72*X[2];
         Scalar const a132 = 180*a129;
-        Scalar const a133 = X[2]*X[2]*X[2];
+        Scalar const a133 = ((X[2])*(X[2])*(X[2]));
         Scalar const a134 = a126 + a128 - a132 + 120*a133*a16;
         Scalar const a135 = a41*a76 + a43 - 18*a45;
         Scalar const a136 = std::sqrt(22);
@@ -3301,7 +3301,7 @@ class OrthonormalPolynomialBasis<3, 4>
         Scalar const a168 = a156*a167;
         Scalar const a169 = a156*a76;
         Scalar const a170 = 224*a76;
-        Scalar const a171 = X[1]*X[1]*X[1]*X[1];
+        Scalar const a171 = ((X[1])*(X[1])*(X[1])*(X[1]));
         Scalar const a172 = 126*a171;
         Scalar const a173 = std::sqrt(33);
         Scalar const a174 = 2*a173;
@@ -3443,7 +3443,7 @@ class OrthonormalPolynomialBasis<3, 4>
         Scalar const a310 = a133*a156;
         Scalar const a311 = a307 + a308 - a309 + 210*a310;
         Scalar const a312 = 420*a310;
-        Scalar const a313 = X[2]*X[2]*X[2]*X[2];
+        Scalar const a313 = ((X[2])*(X[2])*(X[2])*(X[2]));
         Scalar const a314 = 210*a156*a313 + a295 + a309 - a312;
         Scalar const a315 = a229*a76;
         Scalar const a316 = a171*a295 + a304 - a315;
@@ -3850,10 +3850,10 @@ class DivergenceFreePolynomialBasis<2, 2>
         Scalar const a1 = 6*X[0];
         Scalar const a2 = std::numbers::sqrt3_v<Scalar>;
         Scalar const a3 = X[0] + 2*X[1] - 1;
-        Scalar const a4 = X[0]*X[0];
+        Scalar const a4 = ((X[0])*(X[0]));
         Scalar const a5 = 30*a4;
         Scalar const a6 = std::sqrt(30);
-        Scalar const a7 = X[1]*X[1];
+        Scalar const a7 = ((X[1])*(X[1]));
         P[0] = a0;
         P[1] = 0;
         P[2] = 0;
@@ -3895,16 +3895,16 @@ class DivergenceFreePolynomialBasis<2, 3>
         Scalar const a4 = X[0] + 2*X[1] - 1;
         Scalar const a5 = 2*a4;
         Scalar const a6 = std::sqrt(6);
-        Scalar const a7 = X[0]*X[0];
+        Scalar const a7 = ((X[0])*(X[0]));
         Scalar const a8 = 12*X[0];
         Scalar const a9 = 30*a7;
         Scalar const a10 = std::sqrt(30);
-        Scalar const a11 = X[1]*X[1];
+        Scalar const a11 = ((X[1])*(X[1]));
         Scalar const a12 = 10*a11 + 1;
         Scalar const a13 = -6*X[1];
         Scalar const a14 = a7 - 2*X[0];
         Scalar const a15 = a1*X[1] + 6*a11 + a13 + a14 + 1;
-        Scalar const a16 = X[0]*X[0]*X[0];
+        Scalar const a16 = ((X[0])*(X[0])*(X[0]));
         Scalar const a17 = std::sqrt(10);
         Scalar const a18 = 210*a16;
         Scalar const a19 = std::sqrt(14);
@@ -3933,7 +3933,7 @@ class DivergenceFreePolynomialBasis<2, 3>
         P[21] = a5*a6*(21*a7 - a8 + 1);
         P[22] = (2.0/15.0)*a17*(-a13 - a18 - 630*a7*X[1] + 360*a7 + 180*X[0]*X[1] - 90*X[0] - 5);
         P[23] = 2*a15*a17*(7*X[0] - 1);
-        P[24] = (8.0/7.0)*a19*(-45*a11 + 35*X[1]*X[1]*X[1] + 15*X[1] - 1);
+        P[24] = (8.0/7.0)*a19*(-45*a11 + 35*((X[1])*(X[1])*(X[1])) + 15*X[1] - 1);
         P[25] = 0;
         P[26] = (4.0/105.0)*a19*(-3150*a11*X[0] + 450*a11 - a18 - 1575*a7*X[1] + 630*a7 + 3150*X[0]*X[1] - 630*X[0] - 465*X[1] + 101);
         P[27] = a19*a5*(a12 + a14 + a20*X[0] - a20);
@@ -3960,11 +3960,11 @@ class DivergenceFreePolynomialBasis<2, 4>
         Scalar const a4 = X[0] + 2*X[1] - 1;
         Scalar const a5 = 2*a4;
         Scalar const a6 = std::sqrt(6);
-        Scalar const a7 = X[0]*X[0];
+        Scalar const a7 = ((X[0])*(X[0]));
         Scalar const a8 = 12*X[0];
         Scalar const a9 = 30*a7;
         Scalar const a10 = std::sqrt(30);
-        Scalar const a11 = X[1]*X[1];
+        Scalar const a11 = ((X[1])*(X[1]));
         Scalar const a12 = 10*a11 + 1;
         Scalar const a13 = -24*X[1];
         Scalar const a14 = X[0]*X[1];
@@ -3972,19 +3972,19 @@ class DivergenceFreePolynomialBasis<2, 4>
         Scalar const a16 = a7 - 2*X[0];
         Scalar const a17 = a1*X[1] + 6*a11 + a15 + a16 + 1;
         Scalar const a18 = 90*a7;
-        Scalar const a19 = X[0]*X[0]*X[0];
+        Scalar const a19 = ((X[0])*(X[0])*(X[0]));
         Scalar const a20 = std::sqrt(10);
         Scalar const a21 = 210*a19;
         Scalar const a22 = 630*a7;
         Scalar const a23 = std::sqrt(14);
-        Scalar const a24 = X[1]*X[1]*X[1];
+        Scalar const a24 = ((X[1])*(X[1])*(X[1]));
         Scalar const a25 = -a22;
         Scalar const a26 = -450*a11;
         Scalar const a27 = a11*X[0];
         Scalar const a28 = a7*X[1];
         Scalar const a29 = 10*X[1];
         Scalar const a30 = a12 + a16 + a29*X[0] - a29;
-        Scalar const a31 = X[0]*X[0]*X[0]*X[0];
+        Scalar const a31 = ((X[0])*(X[0])*(X[0])*(X[0]));
         Scalar const a32 = 60*X[0];
         Scalar const a33 = 1260*a31;
         Scalar const a34 = 11340*a31;
@@ -3992,7 +3992,7 @@ class DivergenceFreePolynomialBasis<2, 4>
         Scalar const a36 = std::sqrt(70);
         Scalar const a37 = -5040*X[0];
         Scalar const a38 = a11*a7;
-        Scalar const a39 = X[1]*X[1]*X[1]*X[1];
+        Scalar const a39 = ((X[1])*(X[1])*(X[1])*(X[1]));
         Scalar const a40 = 20*X[1];
         Scalar const a41 = 140*a24;
         P[0] = a0;
@@ -4127,13 +4127,13 @@ class DivergenceFreePolynomialBasis<3, 2>
         Scalar const a11 = a6 + X[1] + 2*X[2];
         Scalar const a12 = 2*a11*a9;
         Scalar const a13 = std::sqrt(14);
-        Scalar const a14 = X[0]*X[0];
+        Scalar const a14 = ((X[0])*(X[0]));
         Scalar const a15 = a13*(15*a14 - 10*X[0] + 1);
         Scalar const a16 = std::sqrt(7);
         Scalar const a17 = a5 - 1;
         Scalar const a18 = a16*a17*a7;
         Scalar const a19 = std::sqrt(42);
-        Scalar const a20 = X[1]*X[1];
+        Scalar const a20 = ((X[1])*(X[1]));
         Scalar const a21 = 15*a20;
         Scalar const a22 = X[0]*X[1];
         Scalar const a23 = 600*a22 - 100*X[1];
@@ -4151,7 +4151,7 @@ class DivergenceFreePolynomialBasis<3, 2>
         Scalar const a35 = 5*X[1];
         Scalar const a36 = 3*a11*a13*(a35 + a6);
         Scalar const a37 = std::sqrt(210);
-        Scalar const a38 = X[2]*X[2];
+        Scalar const a38 = ((X[2])*(X[2]));
         Scalar const a39 = a25*X[1] + a5*X[2];
         Scalar const a40 = a37*(a20 + a27 + 6*a38 + a39 + a4*X[2] - 2*X[1] - 6*X[2]);
         P[0] = a0;
@@ -4265,7 +4265,7 @@ class DivergenceFreePolynomialBasis<3, 3>
         Scalar const a14 = 2*a11*a13;
         Scalar const a15 = std::sqrt(14);
         Scalar const a16 = 10*X[0];
-        Scalar const a17 = X[0]*X[0];
+        Scalar const a17 = ((X[0])*(X[0]));
         Scalar const a18 = 15*a17;
         Scalar const a19 = a15*(-a16 + a18 + 1);
         Scalar const a20 = std::sqrt(7);
@@ -4273,7 +4273,7 @@ class DivergenceFreePolynomialBasis<3, 3>
         Scalar const a22 = a20*a21*a9;
         Scalar const a23 = std::sqrt(42);
         Scalar const a24 = 10*X[1];
-        Scalar const a25 = X[1]*X[1];
+        Scalar const a25 = ((X[1])*(X[1]));
         Scalar const a26 = 15*a25;
         Scalar const a27 = -100*X[1];
         Scalar const a28 = X[0]*X[1];
@@ -4297,7 +4297,7 @@ class DivergenceFreePolynomialBasis<3, 3>
         Scalar const a46 = a13*a15;
         Scalar const a47 = 3*a45*a46;
         Scalar const a48 = std::sqrt(210);
-        Scalar const a49 = X[2]*X[2];
+        Scalar const a49 = ((X[2])*(X[2]));
         Scalar const a50 = 18*X[1];
         Scalar const a51 = a31*X[1];
         Scalar const a52 = a51 + a6*X[2];
@@ -4307,7 +4307,7 @@ class DivergenceFreePolynomialBasis<3, 3>
         Scalar const a56 = -3*a17;
         Scalar const a57 = std::numbers::sqrt2_v<Scalar>;
         Scalar const a58 = -189*a17;
-        Scalar const a59 = X[0]*X[0]*X[0];
+        Scalar const a59 = ((X[0])*(X[0])*(X[0]));
         Scalar const a60 = 168*a59;
         Scalar const a61 = a57*(a58 + a60 + 54*X[0] - 3);
         Scalar const a62 = 168*a17 - 84*X[0] + 6;
@@ -4319,7 +4319,7 @@ class DivergenceFreePolynomialBasis<3, 3>
         Scalar const a68 = 8*X[0] - 1;
         Scalar const a69 = 3*a68;
         Scalar const a70 = a0*a34*a69;
-        Scalar const a71 = X[1]*X[1]*X[1];
+        Scalar const a71 = ((X[1])*(X[1])*(X[1]));
         Scalar const a72 = 56*a71;
         Scalar const a73 = a25*X[0];
         Scalar const a74 = 840*X[0];
@@ -4492,7 +4492,7 @@ class DivergenceFreePolynomialBasis<3, 3>
         P[138] = (3.0/70.0)*a1*(-a76 - 11760*a89 - a95 - a98*X[2] + 6720*X[0]*X[1] + 1470*X[1]*X[2] - 855*X[1] - 205*X[2] + 104);
         P[139] = 0;
         P[140] = a99;
-        P[141] = a100*(-210*a49 + a50 + 8*a71 + a86 + 96*a87 - a91 + 240*a96 + 160*X[2]*X[2]*X[2] + 72*X[2] - 5);
+        P[141] = a100*(-210*a49 + a50 + 8*a71 + a86 + 96*a87 - a91 + 240*a96 + 160*((X[2])*(X[2])*(X[2])) + 72*X[2] - 5);
         P[142] = 0;
         P[143] = 0;
         P[144] = a100*(-a101*a25 - a101 - 24*a17*X[1] + 24*a17 + 3*a25 - 240*a49*X[0] + 30*a49 - a5 - 8*a59 - 96*a83 - 192*a89 + 48*X[0]*X[1] + 192*X[0]*X[2] + 24*X[1]*X[2] - 24*X[2] + 3);
@@ -4538,7 +4538,7 @@ class DivergenceFreePolynomialBasis<3, 4>
         Scalar const a18 = a12*a17;
         Scalar const a19 = std::sqrt(14);
         Scalar const a20 = 10*X[0];
-        Scalar const a21 = X[0]*X[0];
+        Scalar const a21 = ((X[0])*(X[0]));
         Scalar const a22 = 15*a21;
         Scalar const a23 = a19*(-a20 + a22 + 1);
         Scalar const a24 = std::sqrt(7);
@@ -4546,7 +4546,7 @@ class DivergenceFreePolynomialBasis<3, 4>
         Scalar const a26 = a10*a24*a25;
         Scalar const a27 = std::sqrt(42);
         Scalar const a28 = 10*X[1];
-        Scalar const a29 = X[1]*X[1];
+        Scalar const a29 = ((X[1])*(X[1]));
         Scalar const a30 = 15*a29;
         Scalar const a31 = -100*X[1];
         Scalar const a32 = X[0]*X[1];
@@ -4574,7 +4574,7 @@ class DivergenceFreePolynomialBasis<3, 4>
         Scalar const a54 = 3*a53;
         Scalar const a55 = a51*a54;
         Scalar const a56 = std::sqrt(210);
-        Scalar const a57 = X[2]*X[2];
+        Scalar const a57 = ((X[2])*(X[2]));
         Scalar const a58 = 18*X[1];
         Scalar const a59 = a35*X[1];
         Scalar const a60 = a59 + a7*X[2];
@@ -4585,7 +4585,7 @@ class DivergenceFreePolynomialBasis<3, 4>
         Scalar const a65 = -3*a21;
         Scalar const a66 = std::numbers::sqrt2_v<Scalar>;
         Scalar const a67 = -189*a21;
-        Scalar const a68 = X[0]*X[0]*X[0];
+        Scalar const a68 = ((X[0])*(X[0])*(X[0]));
         Scalar const a69 = 168*a68;
         Scalar const a70 = a66*(a67 + a69 + 54*X[0] - 3);
         Scalar const a71 = 168*a21 - 84*X[0] + 6;
@@ -4597,7 +4597,7 @@ class DivergenceFreePolynomialBasis<3, 4>
         Scalar const a77 = 8*X[0] - 1;
         Scalar const a78 = 3*a77;
         Scalar const a79 = a0*a38*a78;
-        Scalar const a80 = X[1]*X[1]*X[1];
+        Scalar const a80 = ((X[1])*(X[1])*(X[1]));
         Scalar const a81 = 56*a80;
         Scalar const a82 = -735*a29;
         Scalar const a83 = a29*X[0];
@@ -4647,7 +4647,7 @@ class DivergenceFreePolynomialBasis<3, 4>
         Scalar const a127 = a63*(a8 + 7*X[1]);
         Scalar const a128 = 6*a1*a127;
         Scalar const a129 = -1470*X[1]*X[2];
-        Scalar const a130 = X[2]*X[2]*X[2];
+        Scalar const a130 = ((X[2])*(X[2])*(X[2]));
         Scalar const a131 = (3.0/4.0)*a19;
         Scalar const a132 = 24*X[0];
         Scalar const a133 = a20*X[2] + a28*X[2] + 10*a57 + a59 + a62 - 10*X[2];
@@ -4659,7 +4659,7 @@ class DivergenceFreePolynomialBasis<3, 4>
         Scalar const a139 = 8400*a32;
         Scalar const a140 = -210*a29 - 1050*a57 - 1050*X[1]*X[2];
         Scalar const a141 = std::sqrt(22);
-        Scalar const a142 = X[0]*X[0]*X[0]*X[0];
+        Scalar const a142 = ((X[0])*(X[0])*(X[0])*(X[0]));
         Scalar const a143 = a141*(a115 + 210*a142 - 336*a68 - 28*X[0] + 1);
         Scalar const a144 = std::sqrt(11);
         Scalar const a145 = 72*a21;
@@ -4678,7 +4678,7 @@ class DivergenceFreePolynomialBasis<3, 4>
         Scalar const a158 = a20 - 1;
         Scalar const a159 = 2*a158;
         Scalar const a160 = a141*a159*a90;
-        Scalar const a161 = X[1]*X[1]*X[1]*X[1];
+        Scalar const a161 = ((X[1])*(X[1])*(X[1])*(X[1]));
         Scalar const a162 = std::sqrt(110);
         Scalar const a163 = (3.0/5.0)*a162;
         Scalar const a164 = 90720*a21;
@@ -4737,7 +4737,7 @@ class DivergenceFreePolynomialBasis<3, 4>
         Scalar const a217 = 450*a208 - 14*X[1];
         Scalar const a218 = a130*X[0];
         Scalar const a219 = a133*a16*a215*(a8 + 9*X[1]);
-        Scalar const a220 = X[2]*X[2]*X[2]*X[2];
+        Scalar const a220 = ((X[2])*(X[2])*(X[2])*(X[2]));
         Scalar const a221 = 30*a21;
         Scalar const a222 = 90*a57;
         Scalar const a223 = 60*a100 + a222 + 6*a29;

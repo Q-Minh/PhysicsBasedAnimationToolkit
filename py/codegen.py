@@ -37,7 +37,10 @@ class CXXPrinter(CXX17CodePrinter):
 
     def _print_Pow(self, expr):
         if expr.exp.is_integer and expr.exp > 0 and expr.exp <= 4:
-            return "*".join([self._print(expr.base) for i in range(expr.exp)])
+            expansion = "*".join([f"({self._print(expr.base)})"
+                                 for i in range(expr.exp)])
+            code = f"({expansion})"
+            return code
         else:
             return super()._print_Pow(expr)
 
@@ -51,8 +54,9 @@ def codegen(exprs, lhs=None, use_cse=True, csesymbol="a", scalar_type="Scalar"):
         )
         lines = []
         for var, subexpr in subexprs:
+            assignment = cppgen.doprint(Assignment(var, subexpr))
             lines.append(
-                "{} const {}".format(scalar_type, cppgen.doprint(Assignment(var, subexpr))))
+                f"{scalar_type} const {assignment}")
         vars = "\n".join(lines)
         outputs = cppgen.doprint(exprs if len(
             exprs) > 1 else exprs[0], assign_to=lhs)
@@ -65,8 +69,7 @@ def tabulate(code, spaces=8):
     prefix = "".join(
         [" " for _ in range(spaces)])
     code = code.split("\n")
-    code = ["{}{}".format(
-        prefix, statement) for statement in code]
+    code = [f"{prefix}{statement}" for statement in code]
     return "\n".join(code)
 
 

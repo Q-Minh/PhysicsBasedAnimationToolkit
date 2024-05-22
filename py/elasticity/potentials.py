@@ -28,20 +28,24 @@ def I3(F):
 
 
 def stvk(F, mu, llambda):
-    E = (F.transpose() * F -
-         sp.eye(F.shape[0])) / 2
-    return mu*(E.transpose()*E).trace() + (llambda / 2) * E.trace()**2
+    I = sp.eye(F.shape[0])
+    FtF = F.transpose() * F
+    E = (FtF - I) / 2
+    trE = E.trace()
+    EtE = E.transpose() * E
+    EddotE = EtE.trace()
+    return mu*EddotE + (llambda / 2) * trE**2
 
 
 def neohookean(F, mu, llambda):
-    gamma = 1 + mu/llambda
+    alpha = 1 + mu/llambda
     d = F.shape[0]
-    return (mu/2) * (I2(F) - d) + (llambda / 2) * (I3(F) - gamma)**2
+    return (mu/2) * (I2(F) - d) + (llambda / 2) * (I3(F) - alpha)**2
 
 
 def codegen(fpsi, energy_name: str):
     source = []
-    
+
     header = f"""
 #ifndef PBA_CORE_PHYSICS_{energy_name.upper()}_H
 #define PBA_CORE_PHYSICS_{energy_name.upper()}_H
@@ -59,7 +63,7 @@ struct {energy_name};
 """
     source.append(header)
 
-    for d in range(1,3+1):
+    for d in range(1, 3+1):
         mu, llambda = sp.symbols(
             "mu lambda", real=True)
         vecF = sp.Matrix(
@@ -67,18 +71,26 @@ struct {energy_name};
         F = vecF.reshape(d, d).transpose()
         psi = fpsi(F, mu, llambda)
         gradpsi = sp.derive_by_array(psi, vecF)
-        hesspsi = sp.derive_by_array(gradpsi, vecF)[:, 0, :, 0]
+        hesspsi = sp.derive_by_array(
+            gradpsi, vecF)[:, 0, :, 0]
         psicode = cg.codegen(psi, lhs=sp.Symbol("psi"))
         gradpsicode = cg.codegen(
-            gradpsi, lhs=sp.MatrixSymbol("G", *gradpsi.shape))
+            gradpsi, lhs=sp.MatrixSymbol("vecG", *gradpsi.shape))
         hesspsicode = cg.codegen(hesspsi.transpose(
-        ), lhs=sp.MatrixSymbol("H", vecF.shape[0], vecF.shape[0]))
+        ), lhs=sp.MatrixSymbol("vecH", vecF.shape[0], vecF.shape[0]))
         evalgradpsi = cg.codegen([psi, gradpsi], lhs=[sp.Symbol(
-            "psi"), sp.MatrixSymbol("G", *gradpsi.shape)])
-        evalgradhesspsi = cg.codegen([psi, gradpsi, hesspsi], lhs=[sp.Symbol(
-            "psi"), sp.MatrixSymbol("G", *gradpsi.shape), sp.MatrixSymbol("H", vecF.shape[0], vecF.shape[0])])
-        gradhesspsi = cg.codegen([gradpsi, hesspsi], lhs=[sp.MatrixSymbol(
-            "G", *gradpsi.shape), sp.MatrixSymbol("H", vecF.shape[0], vecF.shape[0])])
+            "psi"), sp.MatrixSymbol("vecG", *gradpsi.shape)])
+        evalgradhesspsi = cg.codegen([psi, gradpsi, hesspsi], lhs=[
+            sp.Symbol("psi"),
+            sp.MatrixSymbol("vecG", *gradpsi.shape),
+            sp.MatrixSymbol(
+                "vecH", vecF.shape[0], vecF.shape[0])
+        ])
+        gradhesspsi = cg.codegen([gradpsi, hesspsi], lhs=[
+            sp.MatrixSymbol("vecG", *gradpsi.shape),
+            sp.MatrixSymbol(
+                "vecH", vecF.shape[0], vecF.shape[0])
+        ])
         impl = f"""
 template <>
 struct {energy_name}<{d}>
@@ -129,6 +141,7 @@ Vector<{vecF.shape[0]}>
     Scalar lambda) const
 {{
     Vector<{vecF.shape[0]}> G;
+    auto vecG = G.reshaped();
 {cg.tabulate(gradpsicode, spaces=4)}
     return G;
 }}
@@ -141,6 +154,7 @@ Matrix<{vecF.shape[0]},{vecF.shape[0]}>
     Scalar lambda) const
 {{
     Matrix<{vecF.shape[0]},{vecF.shape[0]}> H;
+    auto vecH = H.reshaped();
 {cg.tabulate(hesspsicode, spaces=4)}
     return H;
 }}
@@ -154,6 +168,7 @@ std::tuple<Scalar, Vector<{vecF.shape[0]}>>
 {{
     Scalar psi;
     Vector<{vecF.shape[0]}> G;
+    auto vecG = G.reshaped();
 {cg.tabulate(evalgradpsi, spaces=4)}
     return {{psi, G}};
 }}
@@ -168,6 +183,8 @@ std::tuple<Scalar, Vector<{vecF.shape[0]}>, Matrix<{vecF.shape[0]},{vecF.shape[0
     Scalar psi;
     Vector<{vecF.shape[0]}> G;
     Matrix<{vecF.shape[0]},{vecF.shape[0]}> H;
+    auto vecG = G.reshaped();
+    auto vecH = H.reshaped();
 {cg.tabulate(evalgradhesspsi, spaces=4)}
     return {{psi, G, H}};
 }}
@@ -178,6 +195,8 @@ std::tuple<Vector<{vecF.shape[0]}>, Matrix<{vecF.shape[0]},{vecF.shape[0]}>>
 {{
     Vector<{vecF.shape[0]}> G;
     Matrix<{vecF.shape[0]},{vecF.shape[0]}> H;
+    auto vecG = G.reshaped();
+    auto vecH = H.reshaped();
 {cg.tabulate(gradhesspsi, spaces=4)}
     return {{G, H}};
 }}
