@@ -40,28 +40,9 @@ def neohookean(F, mu, llambda):
 
 
 def codegen(fpsi, energy_name: str):
-    d = 3
-    mu, llambda = sp.symbols(
-        "mu lambda", real=True)
-    vecF = sp.Matrix(
-        sp.MatrixSymbol("F", d*d, 1))
-    F = vecF.reshape(d, d).transpose()
-    psi = fpsi(F, mu, llambda)
-    gradpsi = sp.derive_by_array(psi, vecF)
-    hesspsi = sp.derive_by_array(gradpsi, vecF)[:, 0, :, 0]
-    psicode = cg.codegen(psi, lhs=sp.Symbol("psi"))
-    gradpsicode = cg.codegen(
-        gradpsi, lhs=sp.MatrixSymbol("G", *gradpsi.shape))
-    hesspsicode = cg.codegen(hesspsi.transpose(
-    ), lhs=sp.MatrixSymbol("H", vecF.shape[0], vecF.shape[0]))
-    evalgradpsi = cg.codegen([psi, gradpsi], lhs=[sp.Symbol(
-        "psi"), sp.MatrixSymbol("G", *gradpsi.shape)])
-    evalgradhesspsi = cg.codegen([psi, gradpsi, hesspsi], lhs=[sp.Symbol(
-        "psi"), sp.MatrixSymbol("G", *gradpsi.shape), sp.MatrixSymbol("H", vecF.shape[0], vecF.shape[0])])
-    gradhesspsi = cg.codegen([gradpsi, hesspsi], lhs=[sp.MatrixSymbol(
-        "G", *gradpsi.shape), sp.MatrixSymbol("H", vecF.shape[0], vecF.shape[0])])
-
-    source = f"""
+    source = []
+    
+    header = f"""
 #ifndef PBA_CORE_PHYSICS_{energy_name.upper()}_H
 #define PBA_CORE_PHYSICS_{energy_name.upper()}_H
 
@@ -73,7 +54,34 @@ def codegen(fpsi, energy_name: str):
 namespace pba {{
 namespace physics {{
 
-struct {energy_name}
+template <int Dims>
+struct {energy_name};
+"""
+    source.append(header)
+
+    for d in range(1,3+1):
+        mu, llambda = sp.symbols(
+            "mu lambda", real=True)
+        vecF = sp.Matrix(
+            sp.MatrixSymbol("F", d*d, 1))
+        F = vecF.reshape(d, d).transpose()
+        psi = fpsi(F, mu, llambda)
+        gradpsi = sp.derive_by_array(psi, vecF)
+        hesspsi = sp.derive_by_array(gradpsi, vecF)[:, 0, :, 0]
+        psicode = cg.codegen(psi, lhs=sp.Symbol("psi"))
+        gradpsicode = cg.codegen(
+            gradpsi, lhs=sp.MatrixSymbol("G", *gradpsi.shape))
+        hesspsicode = cg.codegen(hesspsi.transpose(
+        ), lhs=sp.MatrixSymbol("H", vecF.shape[0], vecF.shape[0]))
+        evalgradpsi = cg.codegen([psi, gradpsi], lhs=[sp.Symbol(
+            "psi"), sp.MatrixSymbol("G", *gradpsi.shape)])
+        evalgradhesspsi = cg.codegen([psi, gradpsi, hesspsi], lhs=[sp.Symbol(
+            "psi"), sp.MatrixSymbol("G", *gradpsi.shape), sp.MatrixSymbol("H", vecF.shape[0], vecF.shape[0])])
+        gradhesspsi = cg.codegen([gradpsi, hesspsi], lhs=[sp.MatrixSymbol(
+            "G", *gradpsi.shape), sp.MatrixSymbol("H", vecF.shape[0], vecF.shape[0])])
+        impl = f"""
+template <>
+struct {energy_name}<{d}>
 {{
     public:
         template <class Derived>
@@ -103,7 +111,7 @@ struct {energy_name}
 
 template <class Derived>
 Scalar
-{energy_name}::eval(
+{energy_name}<{d}>::eval(
     Eigen::DenseBase<Derived> const& F,
     Scalar mu,
     Scalar lambda) const
@@ -115,7 +123,7 @@ Scalar
 
 template <class Derived>
 Vector<{vecF.shape[0]}>
-{energy_name}::grad(
+{energy_name}<{d}>::grad(
     Eigen::DenseBase<Derived> const& F,
     Scalar mu,
     Scalar lambda) const
@@ -127,7 +135,7 @@ Vector<{vecF.shape[0]}>
 
 template <class Derived>
 Matrix<{vecF.shape[0]},{vecF.shape[0]}>
-{energy_name}::hessian(
+{energy_name}<{d}>::hessian(
     Eigen::DenseBase<Derived> const& F,
     Scalar mu,
     Scalar lambda) const
@@ -139,7 +147,7 @@ Matrix<{vecF.shape[0]},{vecF.shape[0]}>
 
 template <class Derived>
 std::tuple<Scalar, Vector<{vecF.shape[0]}>>
-{energy_name}::evalWithGrad(
+{energy_name}<{d}>::evalWithGrad(
     Eigen::DenseBase<Derived> const& F,
     Scalar mu,
     Scalar lambda) const
@@ -152,7 +160,7 @@ std::tuple<Scalar, Vector<{vecF.shape[0]}>>
 
 template <class Derived>
 std::tuple<Scalar, Vector<{vecF.shape[0]}>, Matrix<{vecF.shape[0]},{vecF.shape[0]}>>
-{energy_name}::evalWithGradAndHessian(
+{energy_name}<{d}>::evalWithGradAndHessian(
     Eigen::DenseBase<Derived> const& F,
     Scalar mu,
     Scalar lambda) const
@@ -166,22 +174,27 @@ std::tuple<Scalar, Vector<{vecF.shape[0]}>, Matrix<{vecF.shape[0]},{vecF.shape[0
 
 template <class Derived>
 std::tuple<Vector<{vecF.shape[0]}>, Matrix<{vecF.shape[0]},{vecF.shape[0]}>>
-{energy_name}::gradAndHessian(Eigen::DenseBase<Derived> const& F, Scalar mu, Scalar lambda) const
+{energy_name}<{d}>::gradAndHessian(Eigen::DenseBase<Derived> const& F, Scalar mu, Scalar lambda) const
 {{
     Vector<{vecF.shape[0]}> G;
     Matrix<{vecF.shape[0]},{vecF.shape[0]}> H;
 {cg.tabulate(gradhesspsi, spaces=4)}
     return {{G, H}};
 }}
+"""
+        source.append(impl)
 
+    footer = f"""
 }} // physics
 }} // pba
 
 #endif // PBA_CORE_PHYSICS_{energy_name.upper()}_H
 """
 
+    source.append(footer)
+
     with open(f"{energy_name}.h", mode="w") as file:
-        file.write(source)
+        file.write("".join(source))
 
 
 if __name__ == "__main__":

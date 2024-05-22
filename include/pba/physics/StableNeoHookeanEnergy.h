@@ -10,7 +10,301 @@
 namespace pba {
 namespace physics {
 
-struct StableNeoHookeanEnergy
+template <int Dims>
+struct StableNeoHookeanEnergy;
+
+template <>
+struct StableNeoHookeanEnergy<1>
+{
+  public:
+    template <class Derived>
+    Scalar eval(Eigen::DenseBase<Derived> const& F, Scalar mu, Scalar lambda) const;
+
+    template <class Derived>
+    Vector<1> grad(Eigen::DenseBase<Derived> const& F, Scalar mu, Scalar lambda) const;
+
+    template <class Derived>
+    Matrix<1, 1> hessian(Eigen::DenseBase<Derived> const& F, Scalar mu, Scalar lambda) const;
+
+    template <class Derived>
+    std::tuple<Scalar, Vector<1>>
+    evalWithGrad(Eigen::DenseBase<Derived> const& F, Scalar mu, Scalar lambda) const;
+
+    template <class Derived>
+    std::tuple<Scalar, Vector<1>, Matrix<1, 1>>
+    evalWithGradAndHessian(Eigen::DenseBase<Derived> const& F, Scalar mu, Scalar lambda) const;
+
+    template <class Derived>
+    std::tuple<Vector<1>, Matrix<1, 1>>
+    gradAndHessian(Eigen::DenseBase<Derived> const& F, Scalar mu, Scalar lambda) const;
+};
+
+template <class Derived>
+Scalar
+StableNeoHookeanEnergy<1>::eval(Eigen::DenseBase<Derived> const& F, Scalar mu, Scalar lambda) const
+{
+    Scalar psi;
+    psi = (1.0 / 2.0) * lambda * F[0] - 1 - mu / lambda * F[0] - 1 - mu / lambda +
+          (1.0 / 2.0) * mu * (F[0] * F[0] - 1);
+    return psi;
+}
+
+template <class Derived>
+Vector<1>
+StableNeoHookeanEnergy<1>::grad(Eigen::DenseBase<Derived> const& F, Scalar mu, Scalar lambda) const
+{
+    Vector<1> G;
+    G[0] = (1.0 / 2.0) * lambda * (2 * F[0] - 2 - 2 * mu / lambda) + mu * F[0];
+    return G;
+}
+
+template <class Derived>
+Matrix<1, 1>
+StableNeoHookeanEnergy<1>::hessian(Eigen::DenseBase<Derived> const& F, Scalar mu, Scalar lambda)
+    const
+{
+    Matrix<1, 1> H;
+    H[0] = lambda + mu;
+    return H;
+}
+
+template <class Derived>
+std::tuple<Scalar, Vector<1>> StableNeoHookeanEnergy<1>::evalWithGrad(
+    Eigen::DenseBase<Derived> const& F,
+    Scalar mu,
+    Scalar lambda) const
+{
+    Scalar psi;
+    Vector<1> G;
+    Scalar const a0 = mu / lambda;
+    Scalar const a1 = (1.0 / 2.0) * lambda;
+    psi             = a1 * -a0 + F[0] - 1 * -a0 + F[0] - 1 + (1.0 / 2.0) * mu * (F[0] * F[0] - 1);
+    G[0]            = a1 * (-2 * a0 + 2 * F[0] - 2) + mu * F[0];
+    return {psi, G};
+}
+
+template <class Derived>
+std::tuple<Scalar, Vector<1>, Matrix<1, 1>> StableNeoHookeanEnergy<1>::evalWithGradAndHessian(
+    Eigen::DenseBase<Derived> const& F,
+    Scalar mu,
+    Scalar lambda) const
+{
+    Scalar psi;
+    Vector<1> G;
+    Matrix<1, 1> H;
+    Scalar const a0 = mu / lambda;
+    Scalar const a1 = (1.0 / 2.0) * lambda;
+    psi             = a1 * -a0 + F[0] - 1 * -a0 + F[0] - 1 + (1.0 / 2.0) * mu * (F[0] * F[0] - 1);
+    G[0]            = a1 * (-2 * a0 + 2 * F[0] - 2) + mu * F[0];
+    H[0]            = lambda + mu;
+    return {psi, G, H};
+}
+
+template <class Derived>
+std::tuple<Vector<1>, Matrix<1, 1>> StableNeoHookeanEnergy<1>::gradAndHessian(
+    Eigen::DenseBase<Derived> const& F,
+    Scalar mu,
+    Scalar lambda) const
+{
+    Vector<1> G;
+    Matrix<1, 1> H;
+    G[0] = (1.0 / 2.0) * lambda * (2 * F[0] - 2 - 2 * mu / lambda) + mu * F[0];
+    H[0] = lambda + mu;
+    return {G, H};
+}
+
+template <>
+struct StableNeoHookeanEnergy<2>
+{
+  public:
+    template <class Derived>
+    Scalar eval(Eigen::DenseBase<Derived> const& F, Scalar mu, Scalar lambda) const;
+
+    template <class Derived>
+    Vector<4> grad(Eigen::DenseBase<Derived> const& F, Scalar mu, Scalar lambda) const;
+
+    template <class Derived>
+    Matrix<4, 4> hessian(Eigen::DenseBase<Derived> const& F, Scalar mu, Scalar lambda) const;
+
+    template <class Derived>
+    std::tuple<Scalar, Vector<4>>
+    evalWithGrad(Eigen::DenseBase<Derived> const& F, Scalar mu, Scalar lambda) const;
+
+    template <class Derived>
+    std::tuple<Scalar, Vector<4>, Matrix<4, 4>>
+    evalWithGradAndHessian(Eigen::DenseBase<Derived> const& F, Scalar mu, Scalar lambda) const;
+
+    template <class Derived>
+    std::tuple<Vector<4>, Matrix<4, 4>>
+    gradAndHessian(Eigen::DenseBase<Derived> const& F, Scalar mu, Scalar lambda) const;
+};
+
+template <class Derived>
+Scalar
+StableNeoHookeanEnergy<2>::eval(Eigen::DenseBase<Derived> const& F, Scalar mu, Scalar lambda) const
+{
+    Scalar psi;
+    psi = (1.0 / 2.0) * lambda * F[0] * F[3] - F[1] * F[2] - 1 - mu / lambda * F[0] * F[3] -
+          F[1] * F[2] - 1 - mu / lambda +
+          (1.0 / 2.0) * mu * (F[0] * F[0] + F[1] * F[1] + F[2] * F[2] + F[3] * F[3] - 2);
+    return psi;
+}
+
+template <class Derived>
+Vector<4>
+StableNeoHookeanEnergy<2>::grad(Eigen::DenseBase<Derived> const& F, Scalar mu, Scalar lambda) const
+{
+    Vector<4> G;
+    Scalar const a0 = lambda * (F[0] * F[3] - F[1] * F[2] - 1 - mu / lambda);
+    G[0]            = a0 * F[3] + mu * F[0];
+    G[1]            = -a0 * F[2] + mu * F[1];
+    G[2]            = -a0 * F[1] + mu * F[2];
+    G[3]            = a0 * F[0] + mu * F[3];
+    return G;
+}
+
+template <class Derived>
+Matrix<4, 4>
+StableNeoHookeanEnergy<2>::hessian(Eigen::DenseBase<Derived> const& F, Scalar mu, Scalar lambda)
+    const
+{
+    Matrix<4, 4> H;
+    Scalar const a0 = lambda * F[3];
+    Scalar const a1 = -a0 * F[2];
+    Scalar const a2 = -a0 * F[1];
+    Scalar const a3 = lambda * (F[0] * F[3] - F[1] * F[2] - 1 - mu / lambda);
+    Scalar const a4 = a3 + lambda * F[0] * F[3];
+    Scalar const a5 = -a3 + lambda * F[1] * F[2];
+    Scalar const a6 = lambda * F[0];
+    Scalar const a7 = -a6 * F[2];
+    Scalar const a8 = -a6 * F[1];
+    H[0]            = lambda * F[3] * F[3] + mu;
+    H[1]            = a1;
+    H[2]            = a2;
+    H[3]            = a4;
+    H[4]            = a1;
+    H[5]            = lambda * F[2] * F[2] + mu;
+    H[6]            = a5;
+    H[7]            = a7;
+    H[8]            = a2;
+    H[9]            = a5;
+    H[10]           = lambda * F[1] * F[1] + mu;
+    H[11]           = a8;
+    H[12]           = a4;
+    H[13]           = a7;
+    H[14]           = a8;
+    H[15]           = lambda * F[0] * F[0] + mu;
+    return H;
+}
+
+template <class Derived>
+std::tuple<Scalar, Vector<4>> StableNeoHookeanEnergy<2>::evalWithGrad(
+    Eigen::DenseBase<Derived> const& F,
+    Scalar mu,
+    Scalar lambda) const
+{
+    Scalar psi;
+    Vector<4> G;
+    Scalar const a0 = F[0] * F[3] - F[1] * F[2] - 1 - mu / lambda;
+    Scalar const a1 = a0 * lambda;
+    psi             = (1.0 / 2.0) * a0 * a0 * lambda +
+          (1.0 / 2.0) * mu * (F[0] * F[0] + F[1] * F[1] + F[2] * F[2] + F[3] * F[3] - 2);
+    G[0] = a1 * F[3] + mu * F[0];
+    G[1] = -a1 * F[2] + mu * F[1];
+    G[2] = -a1 * F[1] + mu * F[2];
+    G[3] = a1 * F[0] + mu * F[3];
+    return {psi, G};
+}
+
+template <class Derived>
+std::tuple<Scalar, Vector<4>, Matrix<4, 4>> StableNeoHookeanEnergy<2>::evalWithGradAndHessian(
+    Eigen::DenseBase<Derived> const& F,
+    Scalar mu,
+    Scalar lambda) const
+{
+    Scalar psi;
+    Vector<4> G;
+    Matrix<4, 4> H;
+    Scalar const a0  = F[0] * F[0];
+    Scalar const a1  = F[1] * F[1];
+    Scalar const a2  = F[2] * F[2];
+    Scalar const a3  = F[3] * F[3];
+    Scalar const a4  = F[0] * F[3] - F[1] * F[2] - 1 - mu / lambda;
+    Scalar const a5  = a4 * lambda;
+    Scalar const a6  = lambda * F[3];
+    Scalar const a7  = -a6 * F[2];
+    Scalar const a8  = -a6 * F[1];
+    Scalar const a9  = a5 + lambda * F[0] * F[3];
+    Scalar const a10 = -a5 + lambda * F[1] * F[2];
+    Scalar const a11 = lambda * F[0];
+    Scalar const a12 = -a11 * F[2];
+    Scalar const a13 = -a11 * F[1];
+    psi              = (1.0 / 2.0) * a4 * a4 * lambda + (1.0 / 2.0) * mu * (a0 + a1 + a2 + a3 - 2);
+    G[0]             = a5 * F[3] + mu * F[0];
+    G[1]             = -a5 * F[2] + mu * F[1];
+    G[2]             = -a5 * F[1] + mu * F[2];
+    G[3]             = a5 * F[0] + mu * F[3];
+    H[0]             = a3 * lambda + mu;
+    H[1]             = a7;
+    H[2]             = a8;
+    H[3]             = a9;
+    H[4]             = a7;
+    H[5]             = a2 * lambda + mu;
+    H[6]             = a10;
+    H[7]             = a12;
+    H[8]             = a8;
+    H[9]             = a10;
+    H[10]            = a1 * lambda + mu;
+    H[11]            = a13;
+    H[12]            = a9;
+    H[13]            = a12;
+    H[14]            = a13;
+    H[15]            = a0 * lambda + mu;
+    return {psi, G, H};
+}
+
+template <class Derived>
+std::tuple<Vector<4>, Matrix<4, 4>> StableNeoHookeanEnergy<2>::gradAndHessian(
+    Eigen::DenseBase<Derived> const& F,
+    Scalar mu,
+    Scalar lambda) const
+{
+    Vector<4> G;
+    Matrix<4, 4> H;
+    Scalar const a0 = lambda * (F[0] * F[3] - F[1] * F[2] - 1 - mu / lambda);
+    Scalar const a1 = lambda * F[3];
+    Scalar const a2 = -a1 * F[2];
+    Scalar const a3 = -a1 * F[1];
+    Scalar const a4 = a0 + lambda * F[0] * F[3];
+    Scalar const a5 = -a0 + lambda * F[1] * F[2];
+    Scalar const a6 = lambda * F[0];
+    Scalar const a7 = -a6 * F[2];
+    Scalar const a8 = -a6 * F[1];
+    G[0]            = a0 * F[3] + mu * F[0];
+    G[1]            = -a0 * F[2] + mu * F[1];
+    G[2]            = -a0 * F[1] + mu * F[2];
+    G[3]            = a0 * F[0] + mu * F[3];
+    H[0]            = lambda * F[3] * F[3] + mu;
+    H[1]            = a2;
+    H[2]            = a3;
+    H[3]            = a4;
+    H[4]            = a2;
+    H[5]            = lambda * F[2] * F[2] + mu;
+    H[6]            = a5;
+    H[7]            = a7;
+    H[8]            = a3;
+    H[9]            = a5;
+    H[10]           = lambda * F[1] * F[1] + mu;
+    H[11]           = a8;
+    H[12]           = a4;
+    H[13]           = a7;
+    H[14]           = a8;
+    H[15]           = lambda * F[0] * F[0] + mu;
+    return {G, H};
+}
+
+template <>
+struct StableNeoHookeanEnergy<3>
 {
   public:
     template <class Derived>
@@ -37,7 +331,7 @@ struct StableNeoHookeanEnergy
 
 template <class Derived>
 Scalar
-StableNeoHookeanEnergy::eval(Eigen::DenseBase<Derived> const& F, Scalar mu, Scalar lambda) const
+StableNeoHookeanEnergy<3>::eval(Eigen::DenseBase<Derived> const& F, Scalar mu, Scalar lambda) const
 {
     Scalar psi;
     psi = (1.0 / 2.0) * lambda * F[0] * F[4] * F[8] - F[0] * F[5] * F[7] - F[1] * F[3] * F[8] +
@@ -52,7 +346,7 @@ StableNeoHookeanEnergy::eval(Eigen::DenseBase<Derived> const& F, Scalar mu, Scal
 
 template <class Derived>
 Vector<9>
-StableNeoHookeanEnergy::grad(Eigen::DenseBase<Derived> const& F, Scalar mu, Scalar lambda) const
+StableNeoHookeanEnergy<3>::grad(Eigen::DenseBase<Derived> const& F, Scalar mu, Scalar lambda) const
 {
     Vector<9> G;
     Scalar const a0 = F[5] * F[7];
@@ -79,7 +373,8 @@ StableNeoHookeanEnergy::grad(Eigen::DenseBase<Derived> const& F, Scalar mu, Scal
 
 template <class Derived>
 Matrix<9, 9>
-StableNeoHookeanEnergy::hessian(Eigen::DenseBase<Derived> const& F, Scalar mu, Scalar lambda) const
+StableNeoHookeanEnergy<3>::hessian(Eigen::DenseBase<Derived> const& F, Scalar mu, Scalar lambda)
+    const
 {
     Matrix<9, 9> H;
     Scalar const a0  = F[4] * F[8];
@@ -220,9 +515,10 @@ StableNeoHookeanEnergy::hessian(Eigen::DenseBase<Derived> const& F, Scalar mu, S
 }
 
 template <class Derived>
-std::tuple<Scalar, Vector<9>>
-StableNeoHookeanEnergy::evalWithGrad(Eigen::DenseBase<Derived> const& F, Scalar mu, Scalar lambda)
-    const
+std::tuple<Scalar, Vector<9>> StableNeoHookeanEnergy<3>::evalWithGrad(
+    Eigen::DenseBase<Derived> const& F,
+    Scalar mu,
+    Scalar lambda) const
 {
     Scalar psi;
     Vector<9> G;
@@ -253,7 +549,7 @@ StableNeoHookeanEnergy::evalWithGrad(Eigen::DenseBase<Derived> const& F, Scalar 
 }
 
 template <class Derived>
-std::tuple<Scalar, Vector<9>, Matrix<9, 9>> StableNeoHookeanEnergy::evalWithGradAndHessian(
+std::tuple<Scalar, Vector<9>, Matrix<9, 9>> StableNeoHookeanEnergy<3>::evalWithGradAndHessian(
     Eigen::DenseBase<Derived> const& F,
     Scalar mu,
     Scalar lambda) const
@@ -413,9 +709,10 @@ std::tuple<Scalar, Vector<9>, Matrix<9, 9>> StableNeoHookeanEnergy::evalWithGrad
 }
 
 template <class Derived>
-std::tuple<Vector<9>, Matrix<9, 9>>
-StableNeoHookeanEnergy::gradAndHessian(Eigen::DenseBase<Derived> const& F, Scalar mu, Scalar lambda)
-    const
+std::tuple<Vector<9>, Matrix<9, 9>> StableNeoHookeanEnergy<3>::gradAndHessian(
+    Eigen::DenseBase<Derived> const& F,
+    Scalar mu,
+    Scalar lambda) const
 {
     Vector<9> G;
     Matrix<9, 9> H;
