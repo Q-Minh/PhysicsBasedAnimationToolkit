@@ -34,7 +34,7 @@ struct SparsityPattern
     CSCMatrix ToMatrix(TNonZeroRange&& nonZeros) const;
 
     std::vector<Index>
-        ij;      ///< Maps non-zero index k to its corresponding index into the unique non-zero list
+        ij;      ///< Maps (triplet/duplicate) non-zero index k to its corresponding index into the unique non-zero list
     CSCMatrix A; ///< Sparsity pattern + unique non-zeros
 };
 
