@@ -58,6 +58,8 @@ def codegen(fpsi, energy_name: str):
         "psi"), sp.MatrixSymbol("G", *gradpsi.shape)])
     evalgradhesspsi = cg.codegen([psi, gradpsi, hesspsi], lhs=[sp.Symbol(
         "psi"), sp.MatrixSymbol("G", *gradpsi.shape), sp.MatrixSymbol("H", vecF.shape[0], vecF.shape[0])])
+    gradhesspsi = cg.codegen([gradpsi, hesspsi], lhs=[sp.MatrixSymbol(
+        "G", *gradpsi.shape), sp.MatrixSymbol("H", vecF.shape[0], vecF.shape[0])])
 
     source = f"""
 #ifndef PBA_CORE_PHYSICS_{energy_name.upper()}_H
@@ -93,6 +95,10 @@ struct {energy_name}
         template <class Derived>
         std::tuple<Scalar, Vector<{vecF.shape[0]}>, Matrix<{vecF.shape[0]},{vecF.shape[0]}>>
         evalWithGradAndHessian(Eigen::DenseBase<Derived> const& F, Scalar mu, Scalar lambda) const;
+
+        template <class Derived>
+        std::tuple<Vector<{vecF.shape[0]}>, Matrix<{vecF.shape[0]},{vecF.shape[0]}>>
+        gradAndHessian(Eigen::DenseBase<Derived> const& F, Scalar mu, Scalar lambda) const;
 }};
 
 template <class Derived>
@@ -156,6 +162,16 @@ std::tuple<Scalar, Vector<{vecF.shape[0]}>, Matrix<{vecF.shape[0]},{vecF.shape[0
     Matrix<{vecF.shape[0]},{vecF.shape[0]}> H;
 {cg.tabulate(evalgradhesspsi, spaces=4)}
     return {{psi, G, H}};
+}}
+
+template <class Derived>
+std::tuple<Vector<{vecF.shape[0]}>, Matrix<{vecF.shape[0]},{vecF.shape[0]}>>
+{energy_name}::gradAndHessian(Eigen::DenseBase<Derived> const& F, Scalar mu, Scalar lambda) const
+{{
+    Vector<{vecF.shape[0]}> G;
+    Matrix<{vecF.shape[0]},{vecF.shape[0]}> H;
+{cg.tabulate(gradhesspsi, spaces=4)}
+    return {{G, H}};
 }}
 
 }} // physics

@@ -10,7 +10,7 @@
 namespace pba {
 namespace physics {
 
-class SaintVenantKirchhoffEnergy
+struct SaintVenantKirchhoffEnergy
 {
     public:
         template <class Derived>
@@ -32,7 +32,10 @@ class SaintVenantKirchhoffEnergy
         template <class Derived>
         std::tuple<Scalar, Vector<9>, Matrix<9,9>>
         evalWithGradAndHessian(Eigen::DenseBase<Derived> const& F, Scalar mu, Scalar lambda) const;
-    private:
+
+        template <class Derived>
+        std::tuple<Vector<9>, Matrix<9,9>>
+        gradAndHessian(Eigen::DenseBase<Derived> const& F, Scalar mu, Scalar lambda) const;
 };
 
 template <class Derived>
@@ -504,6 +507,197 @@ SaintVenantKirchhoffEnergy::evalWithGradAndHessian(
     H[79] = a98;
     H[80] = a10*lambda + a28 + mu*(3*a10 + a37 + a6 + a9);
     return {psi, G, H};
+}
+
+template <class Derived>
+std::tuple<Vector<9>, Matrix<9,9>>
+SaintVenantKirchhoffEnergy::gradAndHessian(Eigen::DenseBase<Derived> const& F, Scalar mu, Scalar lambda) const
+{
+    Vector<9> G;
+    Matrix<9,9> H;
+    Scalar const a0 = F[0]*F[0];
+    Scalar const a1 = F[1]*F[1];
+    Scalar const a2 = F[2]*F[2];
+    Scalar const a3 = (1.0/2.0)*a0 + (1.0/2.0)*a1 + (1.0/2.0)*a2;
+    Scalar const a4 = F[3]*F[3];
+    Scalar const a5 = F[4]*F[4];
+    Scalar const a6 = F[5]*F[5];
+    Scalar const a7 = (1.0/2.0)*a4 + (1.0/2.0)*a5 + (1.0/2.0)*a6;
+    Scalar const a8 = F[6]*F[6];
+    Scalar const a9 = F[7]*F[7];
+    Scalar const a10 = F[8]*F[8];
+    Scalar const a11 = (1.0/2.0)*a10 + (1.0/2.0)*a8 + (1.0/2.0)*a9;
+    Scalar const a12 = lambda*(a11 + a3 + a7 - 3.0/2.0);
+    Scalar const a13 = 2*a3 - 1;
+    Scalar const a14 = F[0]*F[3];
+    Scalar const a15 = F[1]*F[4];
+    Scalar const a16 = F[2]*F[5];
+    Scalar const a17 = a14 + a15 + a16;
+    Scalar const a18 = F[0]*F[6];
+    Scalar const a19 = F[1]*F[7];
+    Scalar const a20 = F[2]*F[8];
+    Scalar const a21 = a18 + a19 + a20;
+    Scalar const a22 = 2*a7 - 1;
+    Scalar const a23 = F[3]*F[6];
+    Scalar const a24 = F[4]*F[7];
+    Scalar const a25 = F[5]*F[8];
+    Scalar const a26 = a23 + a24 + a25;
+    Scalar const a27 = 2*a11 - 1;
+    Scalar const a28 = a1 + a4;
+    Scalar const a29 = a2 - 1;
+    Scalar const a30 = a29 + a8;
+    Scalar const a31 = F[0]*F[1];
+    Scalar const a32 = F[3]*F[4];
+    Scalar const a33 = F[6]*F[7];
+    Scalar const a34 = a31*lambda + mu*(2*a31 + a32 + a33);
+    Scalar const a35 = F[0]*F[2];
+    Scalar const a36 = F[3]*F[5];
+    Scalar const a37 = F[6]*F[8];
+    Scalar const a38 = a35*lambda + mu*(2*a35 + a36 + a37);
+    Scalar const a39 = a14*lambda + mu*(2*a14 + a15 + a16);
+    Scalar const a40 = lambda*F[0];
+    Scalar const a41 = mu*F[3];
+    Scalar const a42 = a40*F[4] + a41*F[1];
+    Scalar const a43 = a40*F[5] + a41*F[2];
+    Scalar const a44 = a18*lambda + mu*(2*a18 + a19 + a20);
+    Scalar const a45 = mu*F[6];
+    Scalar const a46 = a40*F[7] + a45*F[1];
+    Scalar const a47 = a40*F[8] + a45*F[2];
+    Scalar const a48 = a0 + a5;
+    Scalar const a49 = F[1]*F[2];
+    Scalar const a50 = F[4]*F[5];
+    Scalar const a51 = F[7]*F[8];
+    Scalar const a52 = a49*lambda + mu*(2*a49 + a50 + a51);
+    Scalar const a53 = lambda*F[1];
+    Scalar const a54 = mu*F[4];
+    Scalar const a55 = a53*F[3] + a54*F[0];
+    Scalar const a56 = a15*lambda + mu*(a14 + 2*a15 + a16);
+    Scalar const a57 = a53*F[5] + a54*F[2];
+    Scalar const a58 = mu*F[7];
+    Scalar const a59 = a53*F[6] + a58*F[0];
+    Scalar const a60 = a19*lambda + mu*(a18 + 2*a19 + a20);
+    Scalar const a61 = a53*F[8] + a58*F[2];
+    Scalar const a62 = a6 - 1;
+    Scalar const a63 = a0 + a10;
+    Scalar const a64 = lambda*F[2];
+    Scalar const a65 = mu*F[5];
+    Scalar const a66 = a64*F[3] + a65*F[0];
+    Scalar const a67 = a64*F[4] + a65*F[1];
+    Scalar const a68 = a16*lambda + mu*(a14 + a15 + 2*a16);
+    Scalar const a69 = mu*F[8];
+    Scalar const a70 = a64*F[6] + a69*F[0];
+    Scalar const a71 = a64*F[7] + a69*F[1];
+    Scalar const a72 = a20*lambda + mu*(a18 + a19 + 2*a20);
+    Scalar const a73 = a32*lambda + mu*(a31 + 2*a32 + a33);
+    Scalar const a74 = a36*lambda + mu*(a35 + 2*a36 + a37);
+    Scalar const a75 = a23*lambda + mu*(2*a23 + a24 + a25);
+    Scalar const a76 = lambda*F[3];
+    Scalar const a77 = a45*F[4] + a76*F[7];
+    Scalar const a78 = a45*F[5] + a76*F[8];
+    Scalar const a79 = a50*lambda + mu*(a49 + 2*a50 + a51);
+    Scalar const a80 = lambda*F[4];
+    Scalar const a81 = a41*F[7] + a80*F[6];
+    Scalar const a82 = a24*lambda + mu*(a23 + 2*a24 + a25);
+    Scalar const a83 = a58*F[5] + a80*F[8];
+    Scalar const a84 = a10 + a5;
+    Scalar const a85 = lambda*F[5];
+    Scalar const a86 = a41*F[8] + a85*F[6];
+    Scalar const a87 = a54*F[8] + a85*F[7];
+    Scalar const a88 = a25*lambda + mu*(a23 + a24 + 2*a25);
+    Scalar const a89 = a33*lambda + mu*(a31 + a32 + 2*a33);
+    Scalar const a90 = a37*lambda + mu*(a35 + a36 + 2*a37);
+    Scalar const a91 = a51*lambda + mu*(a49 + a50 + 2*a51);
+    G[0] = a12*F[0] + mu*(a13*F[0] + a17*F[3] + a21*F[6]);
+    G[1] = a12*F[1] + mu*(a13*F[1] + a17*F[4] + a21*F[7]);
+    G[2] = a12*F[2] + mu*(a13*F[2] + a17*F[5] + a21*F[8]);
+    G[3] = a12*F[3] + mu*(a17*F[0] + a22*F[3] + a26*F[6]);
+    G[4] = a12*F[4] + mu*(a17*F[1] + a22*F[4] + a26*F[7]);
+    G[5] = a12*F[5] + mu*(a17*F[2] + a22*F[5] + a26*F[8]);
+    G[6] = a12*F[6] + mu*(a21*F[0] + a26*F[3] + a27*F[6]);
+    G[7] = a12*F[7] + mu*(a21*F[1] + a26*F[4] + a27*F[7]);
+    G[8] = a12*F[8] + mu*(a21*F[2] + a26*F[5] + a27*F[8]);
+    H[0] = a0*lambda + a12 + mu*(3*a0 + a28 + a30);
+    H[1] = a34;
+    H[2] = a38;
+    H[3] = a39;
+    H[4] = a42;
+    H[5] = a43;
+    H[6] = a44;
+    H[7] = a46;
+    H[8] = a47;
+    H[9] = a34;
+    H[10] = a1*lambda + a12 + mu*(3*a1 + a29 + a48 + a9);
+    H[11] = a52;
+    H[12] = a55;
+    H[13] = a56;
+    H[14] = a57;
+    H[15] = a59;
+    H[16] = a60;
+    H[17] = a61;
+    H[18] = a38;
+    H[19] = a52;
+    H[20] = a12 + a2*lambda + mu*(a1 + 3*a2 + a62 + a63);
+    H[21] = a66;
+    H[22] = a67;
+    H[23] = a68;
+    H[24] = a70;
+    H[25] = a71;
+    H[26] = a72;
+    H[27] = a39;
+    H[28] = a55;
+    H[29] = a66;
+    H[30] = a12 + a4*lambda + mu*(3*a4 + a48 + a62 + a8);
+    H[31] = a73;
+    H[32] = a74;
+    H[33] = a75;
+    H[34] = a77;
+    H[35] = a78;
+    H[36] = a42;
+    H[37] = a56;
+    H[38] = a67;
+    H[39] = a73;
+    H[40] = a12 + a5*lambda + mu*(a28 + 3*a5 + a62 + a9);
+    H[41] = a79;
+    H[42] = a81;
+    H[43] = a82;
+    H[44] = a83;
+    H[45] = a43;
+    H[46] = a57;
+    H[47] = a68;
+    H[48] = a74;
+    H[49] = a79;
+    H[50] = a12 + a6*lambda + mu*(a29 + a4 + 3*a6 + a84);
+    H[51] = a86;
+    H[52] = a87;
+    H[53] = a88;
+    H[54] = a44;
+    H[55] = a59;
+    H[56] = a70;
+    H[57] = a75;
+    H[58] = a81;
+    H[59] = a86;
+    H[60] = a12 + a8*lambda + mu*(a4 + a63 + 3*a8 + a9 - 1);
+    H[61] = a89;
+    H[62] = a90;
+    H[63] = a46;
+    H[64] = a60;
+    H[65] = a71;
+    H[66] = a77;
+    H[67] = a82;
+    H[68] = a87;
+    H[69] = a89;
+    H[70] = a12 + a9*lambda + mu*(a1 + a8 + a84 + 3*a9 - 1);
+    H[71] = a91;
+    H[72] = a47;
+    H[73] = a61;
+    H[74] = a72;
+    H[75] = a78;
+    H[76] = a83;
+    H[77] = a88;
+    H[78] = a90;
+    H[79] = a91;
+    H[80] = a10*lambda + a12 + mu*(3*a10 + a30 + a6 + a9);
+    return {G, H};
 }
 
 } // physics
