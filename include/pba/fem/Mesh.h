@@ -176,39 +176,6 @@ Mesh<TElement, Dims>::Mesh(
     }
     // Collect node positions
     X = common::ToEigen(nodes);
-
-    // TODO: Move this code to any LinearOperator acting on an fem::Mesh that needs to evaluate
-    // jacobians at quadrature points. auto const NumberOfElements = E.cols();
-    // // Compute element mappings
-    // J.resize(TElement::Dims, Dims * NumberOfElements);
-    // Jinv.resize(Dims, TElement::Dims * NumberOfElements);
-    // detJ.resize(NumberOfElements);
-    // for (auto e = 0; e < NumberOfElements; ++e)
-    // {
-    //     Matrix<Dims, TElement::Nodes> const CellNodalPositions = X(Eigen::all, E.col(e));
-    //     // Compute jacobian of map from reference element to domain
-    //     Matrix<Dims, TElement::Dims> const Jc = TElement::Jacobian()
-    //     J.block(0, c * TElement::Dims, Dims, TElement::Dims) = Jc;
-    // }
-    // for (auto c = 0; c < NumberOfCells; ++c)
-    // {
-    //     // Jinv = (Jc^T Jc)^{-1} Jc^T (i.e. normal equations) using stable QR factorization
-    //     auto const Jc = J.block(0, c * TElement::Dims, Dims, TElement::Dims);
-    //     Matrix<TElement::Dims, Dims> const JcInv =
-    //         (Jc.transpose() * Jc).fullPivHouseholderQr().solve(Jc.transpose());
-    //     Jinv.block(0, c * Dims, TElement::Dims, Dims) = JcInv;
-    // }
-    // for (auto c = 0; c < NumberOfCells; ++c)
-    // {
-    //     // In the general case, we want to compute sqrt(det(J^T J)) to measure the
-    //     // rate of generalized volume change induced by the local map J. To do this,
-    //     // let J = U*E*V^T, then J^T J = V*E*E*V^T, such that det(J^T J) = det(E)^2.
-    //     // Because E is diagonal, det(E) = \prod_i \sigma_i where \sigma_i is the
-    //     // i^{th} singular value J. We thus have that sqrt(det(J^T J)) = \prod_i \sigma_i.
-    //     // NOTE: Negative determinant means inverted element.
-    //     auto const Jc = J.block(0, c * TElement::Dims, Dims, TElement::Dims);
-    //     detJ(c)       = Jc.jacobiSvd().singularValues().prod();
-    // }
 }
 
 } // namespace fem
