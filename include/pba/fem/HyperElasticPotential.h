@@ -155,6 +155,37 @@ inline void HyperElasticPotential<TMesh, THyperElasticEnergy>::ComputeElementEla
 }
 
 template <CMesh TMesh, physics::CHyperElasticEnergy THyperElasticEnergy>
+template <class TDerivedIn, class TDerivedOut>
+inline void HyperElasticPotential<TMesh, THyperElasticEnergy>::Apply(
+    Eigen::MatrixBase<TDerivedIn> const& x,
+    Eigen::DenseBase<TDerivedOut>& y) const
+{
+    auto const numberOfNodes = mesh.X.cols();
+    auto const numberOfDofs  = kDims * numberOfNodes;
+    if (x.cols() != numberOfDofs and y.cols() != numberOfDofs)
+    {
+        std::string const what = std::format(
+            "Expected inputs and outputs to have size |#nodes|*kDims={}, but got sizes x,y={},{}",
+            numberOfDofs,
+            x.cols(),
+            y.cols());
+        throw std::invalid_argument(what);
+    }
+
+    auto constexpr kDofsPerElement = kDims * ElementType::kNodes;
+    auto const numberOfElements    = mesh.E.cols();
+    // NOTE: Could be parallelized using graph coloring, if it's worth it.
+    for (auto e = 0; e < numberOfElements; ++e)
+    {
+        auto const nodes = mesh.E.col(e);
+        auto const he    = He.block<kDofsPerElement, kDofsPerElement>(0, e * kDofsPerElement);
+        auto const xe    = x.reshaped(kDims, x.size() / kDims)(Eigen::all, nodes);
+        auto ye          = y.reshaped(kDims, y.size() / kDims)(Eigen::all, nodes);
+        ye.reshaped() += he * xe.reshaped();
+    }
+}
+
+template <CMesh TMesh, physics::CHyperElasticEnergy THyperElasticEnergy>
 inline void HyperElasticPotential<TMesh, THyperElasticEnergy>::PrecomputeShapeFunctionGradients()
 {
     using AffineElementType         = typename ElementType::AffineBaseType;
