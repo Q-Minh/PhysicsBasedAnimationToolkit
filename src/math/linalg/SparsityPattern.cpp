@@ -22,6 +22,7 @@ TEST_CASE("[math][linalg] SparsityPattern")
     std::vector<Scalar> nonZeros(10, 1.);
 
     math::linalg::SparsityPattern const sparsityPattern(nRows, nCols, rowIndices, colIndices);
+    CHECK_FALSE(sparsityPattern.IsEmpty());
     CSCMatrix const A = sparsityPattern.ToMatrix(nonZeros);
     CHECK_EQ(A.rows(), nRows);
     CHECK_EQ(A.cols(), nCols);

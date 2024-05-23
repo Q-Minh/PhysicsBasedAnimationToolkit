@@ -21,6 +21,8 @@ namespace linalg {
 
 struct SparsityPattern
 {
+    SparsityPattern() = default;
+
     template <
         common::CContiguousIndexRange TRowIndexRange,
         common::CContiguousIndexRange TColIndexRange>
@@ -30,12 +32,20 @@ struct SparsityPattern
         TRowIndexRange&& rowIndices,
         TColIndexRange&& colIndices);
 
+    template <
+        common::CContiguousIndexRange TRowIndexRange,
+        common::CContiguousIndexRange TColIndexRange>
+    void
+    Compute(Index nRows, Index nCols, TRowIndexRange&& rowIndices, TColIndexRange&& colIndices);
+
     template <common::CArithmeticRange TNonZeroRange>
     CSCMatrix ToMatrix(TNonZeroRange&& nonZeros) const;
 
-    std::vector<Index>
-        ij;      ///< Maps (triplet/duplicate) non-zero index k to its corresponding index into the unique non-zero list
-    CSCMatrix A; ///< Sparsity pattern + unique non-zeros
+    bool IsEmpty() const { return ij.empty(); }
+
+    std::vector<Index> ij; ///< Maps (triplet/duplicate) non-zero index k to its corresponding index
+                           ///< into the unique non-zero list
+    CSCMatrix A;           ///< Sparsity pattern + unique non-zeros
 };
 
 template <
@@ -46,12 +56,30 @@ SparsityPattern::SparsityPattern(
     Index nCols,
     TRowIndexRange&& rowIndices,
     TColIndexRange&& colIndices)
-    : ij(std::ranges::size(rowIndices), Index{0}), A(nRows, nCols)
+{
+    Compute(
+        nRows,
+        nCols,
+        std::forward<TRowIndexRange>(rowIndices),
+        std::forward<TColIndexRange>(colIndices));
+}
+
+template <
+    common::CContiguousIndexRange TRowIndexRange,
+    common::CContiguousIndexRange TColIndexRange>
+inline void SparsityPattern::Compute(
+    Index nRows,
+    Index nCols,
+    TRowIndexRange&& rowIndices,
+    TColIndexRange&& colIndices)
 {
     namespace srng   = std::ranges;
     namespace sviews = std::views;
     namespace rng    = ranges;
     namespace views  = rng::views;
+
+    A = CSCMatrix(nRows, nCols);
+    ij.resize(srng::size(rowIndices), Index{0});
 
     auto const [rowMin, rowMax] = srng::minmax_element(rowIndices);
     auto const [colMin, colMax] = srng::minmax_element(colIndices);
