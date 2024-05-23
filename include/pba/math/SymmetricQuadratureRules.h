@@ -19,7 +19,7 @@ Matrix<TBasis::kSize, Quad::kPoints> ReferenceMomentFittingMatrix(TBasis const& 
     Matrix<TBasis::kSize, Quad::kPoints> P{};
     Eigen::Map<Matrix<Quad::kDims + 1, Quad::kPoints> const> Xg(Q.points.data());
     for (auto g = 0u; g < Quad::kPoints; ++g)
-        P.col(g) = Pb.eval(Xg.col(g).segment(1, Quad::kDims));
+        P.col(g) = Pb.eval(Xg.col(g).segment<Quad::kDims>(1));
     return P;
 }
 
@@ -42,10 +42,10 @@ struct ModifiableQuadratureScheme
 
 /**
  * @brief Symmetric quadrature rule for reference simplices in 1,2,3 dimensions, i.e. with vertices
- * having coordinate values 0 or 1. 
- * 
- * The points are specified as (kDims+1) coordinate tuples in affine 
- * coordinates, i.e. the first coordinate = 1 - sum(other kDims coordinates). This is not necessary, 
+ * having coordinate values 0 or 1.
+ *
+ * The points are specified as (kDims+1) coordinate tuples in affine
+ * coordinates, i.e. the first coordinate = 1 - sum(other kDims coordinates). This is not necessary,
  * and can be removed, but for now, we leave it as is.
  *
  * @tparam Dims
