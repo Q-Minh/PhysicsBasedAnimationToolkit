@@ -30,6 +30,15 @@ DeformationGradient(Eigen::MatrixBase<TDerivedx> const& x, Eigen::MatrixBase<TDe
     return x * GP;
 }
 
+/**
+ * @brief Computes gradients of FEM basis functions in reference element
+ * @tparam TDerivedXi
+ * @tparam TDerivedX
+ * @tparam TElement
+ * @param Xi Point in reference element at which to evaluate the gradients
+ * @param X Element vertices, i.e. nodes of affine element
+ * @return |#nodes|x|Dims| matrix of basis function gradients in rows
+ */
 template <CElement TElement, class TDerivedXi, class TDerivedX>
 Matrix<TElement::kNodes, TDerivedX::RowsAtCompileTime> BasisFunctionGradients(
     Eigen::MatrixBase<TDerivedXi> const& Xi,
@@ -53,7 +62,8 @@ Matrix<TElement::kNodes, TDerivedX::RowsAtCompileTime> BasisFunctionGradients(
 }
 
 /**
- * @brief
+ * @brief Computes gradient w.r.t. FEM degrees of freedom x of some function of deformation gradient
+ * F, U(F(x)) via chain rule. This is effectively a rank-3 to rank-1 tensor contraction.
  *
  * dF/dxi = d/dxi xi gi^T, xi \in R^d, gi \in R^d
  *
@@ -68,9 +78,9 @@ Matrix<TElement::kNodes, TDerivedX::RowsAtCompileTime> BasisFunctionGradients(
  * @tparam TDerivedF
  * @tparam TDerivedGP
  * @tparam TElement
- * @tparam Dims
- * @param GF
- * @param GP
+ * @tparam Dims Problem dimensionality
+ * @param GF Gradient w.r.t. vectorized deformation gradient vec(F)
+ * @param GP Basis function gradients
  * @return
  */
 template <CElement TElement, int Dims, class TDerivedF, class TDerivedGP>
@@ -86,16 +96,18 @@ GradientWrtDofs(Eigen::DenseBase<TDerivedF> const& GF, Eigen::DenseBase<TDerived
 }
 
 /**
- * @brief
+ * @brief Computes hessian w.r.t. FEM degrees of freedom x of some function of deformation gradient
+ * F, U(F(x)) via chain rule. This is effectively a rank-4 to rank-2 tensor contraction.
  *
- *
+ * dPsi/dxi = \sum_{k=1}^{d} dpk_{d x 1} * gik (see GradientWrtDofs)
+ * d^2 Psi / dxi dxj = \sum_{ki=1}^{d} \sum_{kj=1}^{d} d^2 gi_{ki} p_{ki,kj}  gj_{kj}
  *
  * @tparam TDerivedF
  * @tparam TDerivedGP
  * @tparam TElement
- * @tparam Dims
- * @param HF
- * @param GP
+ * @tparam Dims Problem dimensionality
+ * @param HF Hessian of energy w.r.t. vectorized deformation gradient vec(F)
+ * @param GP Basis function gradients
  * @return
  */
 template <CElement TElement, int Dims, class TDerivedF, class TDerivedGP>
@@ -105,8 +117,8 @@ HessianWrtDofs(Eigen::DenseBase<TDerivedF> const& HF, Eigen::DenseBase<TDerivedG
     auto const kRows              = TElement::kNodes * Dims;
     auto const kCols              = TElement::kNodes * Dims;
     Matrix<kRows, kCols> d2Psidx2 = Matrix<kRows, kCols>::Zero();
-    for (auto ki = 0; ki < Dims; ++ki)
-        for (auto kj = 0; kj < Dims; ++kj)
+    for (auto kj = 0; kj < Dims; ++kj)
+        for (auto ki = 0; ki < Dims; ++ki)
             for (auto j = 0; j < TElement::kNodes; ++j)
                 for (auto i = 0; i < TElement::kNodes; ++i)
                     d2Psidx2.block<Dims, Dims>(i * Dims, j * Dims) +=
