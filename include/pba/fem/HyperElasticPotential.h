@@ -190,26 +190,34 @@ inline void HyperElasticPotential<TMesh, THyperElasticEnergy>::Apply(
 {
     auto const numberOfNodes = mesh.X.cols();
     auto const numberOfDofs  = kDims * numberOfNodes;
-    if (x.cols() != numberOfDofs and y.cols() != numberOfDofs)
+    if (x.rows() != numberOfDofs or y.rows() != numberOfDofs or x.cols() != y.cols())
     {
         std::string const what = std::format(
-            "Expected inputs and outputs to have size |#nodes|*kDims={}, but got sizes x,y={},{}",
+            "Expected inputs and outputs to have rows |#nodes*kDims|={} and same number of "
+            "columns, but got dimensions "
+            "x,y=({},{}), ({},{})",
             numberOfDofs,
+            x.rows(),
             x.cols(),
+            y.rows(),
             y.cols());
         throw std::invalid_argument(what);
     }
 
     auto constexpr kDofsPerElement = kDims * ElementType::kNodes;
     auto const numberOfElements    = mesh.E.cols();
-    // NOTE: Could be parallelized using graph coloring, if it's worth it.
-    for (auto e = 0; e < numberOfElements; ++e)
+    // NOTE: Outer loop could be parallelized over columns, and using graph coloring, inner loop
+    // could also be parallelized, if it's worth it.
+    for (auto c = 0; c < x.cols(); ++c)
     {
-        auto const nodes = mesh.E.col(e);
-        auto const he    = He.block<kDofsPerElement, kDofsPerElement>(0, e * kDofsPerElement);
-        auto const xe    = x.reshaped(kDims, x.size() / kDims)(Eigen::all, nodes);
-        auto ye          = y.reshaped(kDims, y.size() / kDims)(Eigen::all, nodes);
-        ye.reshaped() += he * xe.reshaped();
+        for (auto e = 0; e < numberOfElements; ++e)
+        {
+            auto const nodes = mesh.E.col(e);
+            auto const he    = He.block<kDofsPerElement, kDofsPerElement>(0, e * kDofsPerElement);
+            auto const xe    = x.col(c).reshaped(kDims, x.size() / kDims)(Eigen::all, nodes);
+            auto ye          = y.col(c).reshaped(kDims, y.size() / kDims)(Eigen::all, nodes);
+            ye.reshaped() += he * xe.reshaped();
+        }
     }
 }
 

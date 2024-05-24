@@ -3,6 +3,7 @@
 #include "pba/common/ConstexprFor.h"
 #include "pba/fem/Mesh.h"
 #include "pba/fem/Tetrahedron.h"
+#include "pba/math/LinearOperator.h"
 #include "pba/physics/HyperElasticity.h"
 #include "pba/physics/StableNeoHookeanEnergy.h"
 
@@ -34,6 +35,9 @@ TEST_CASE("[fem] HyperElasticPotential")
         using MeshType             = fem::Mesh<ElementType, kDims>;
         using ElasticPotentialType = fem::HyperElasticPotential<MeshType, ElasticEnergyType>;
         using QuadratureType       = ElasticPotentialType::QuadratureRuleType;
+
+        CHECK(math::CLinearOperator<ElasticPotentialType>);
+
         // For order-k basis functions, our quadrature should be order k-1, otherwise 1
         if constexpr (kOrder == 1)
         {
@@ -71,5 +75,13 @@ TEST_CASE("[fem] HyperElasticPotential")
         // NOTE: Also invariant to rotations. We can likewise verify that the energy itself, and its
         // gradient are also invariant to translations and rotations, and are not invariant to
         // scaling, stretching, shearing, etc...
+
+        // Check linearity of matrix-free operator
+        Scalar constexpr k = -3.;
+        VectorX y          = VectorX::Zero(x.size());
+        VectorX yExpected  = k * H * x + H*x;
+        U.Apply(k * x + x, y);
+        Scalar const linearityError = (y - yExpected).norm() / yExpected.norm();
+        CHECK_LE(linearityError, zero);
     });
 }
