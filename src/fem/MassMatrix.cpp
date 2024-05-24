@@ -5,6 +5,7 @@
 #include "pba/fem/Tetrahedron.h"
 #include "pba/math/LinearOperator.h"
 
+#include <Eigen/Eigenvalues>
 #include <doctest/doctest.h>
 
 TEST_CASE("[fem] MassMatrix")
@@ -41,6 +42,14 @@ TEST_CASE("[fem] MassMatrix")
             CSCMatrix const M = matrixFreeMass.ToMatrix();
             CHECK_EQ(M.rows(), n);
             CHECK_EQ(M.cols(), n);
+
+            CSCMatrix const MT     = M.transpose();
+            Scalar const Esymmetry = (MT - M).squaredNorm() / M.squaredNorm();
+            CHECK_LE(Esymmetry, zero);
+            Eigen::SelfAdjointEigenSolver<CSCMatrix> eigs(M);
+            bool const bIsPositiveDefinite = (eigs.info() == Eigen::ComputationInfo::Success) and
+                                             (eigs.eigenvalues().minCoeff() >= 0.);
+            CHECK(bIsPositiveDefinite);
 
             // Check that matrix-free matrix multiplication has same result as matrix
             // multiplication
