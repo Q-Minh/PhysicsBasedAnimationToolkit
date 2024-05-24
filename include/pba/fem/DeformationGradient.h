@@ -110,7 +110,7 @@ HessianWrtDofs(Eigen::DenseBase<TDerivedF> const& HF, Eigen::DenseBase<TDerivedG
             for (auto j = 0; j < TElement::kNodes; ++j)
                 for (auto i = 0; i < TElement::kNodes; ++i)
                     d2Psidx2.block<Dims, Dims>(i * Dims, j * Dims) +=
-                        GP(i, ki) * GP(i, kj) * HF.block<Dims, Dims>(ki * Dims, kj * Dims);
+                        GP(i, ki) * GP(j, kj) * HF.block<Dims, Dims>(ki * Dims, kj * Dims);
     return d2Psidx2;
 }
 
