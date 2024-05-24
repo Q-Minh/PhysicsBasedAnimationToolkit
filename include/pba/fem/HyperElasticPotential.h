@@ -11,11 +11,9 @@
 
 #include <exception>
 #include <format>
-#include <ranges>
 #include <span>
 #include <string>
 #include <tbb/parallel_for.h>
-#include <utility>
 
 namespace pba {
 namespace fem {
@@ -50,7 +48,18 @@ struct HyperElasticPotential
     SelfType& operator=(SelfType const&) = delete;
 
     template <class TDerived>
-    HyperElasticPotential(MeshType const& mesh, Eigen::MatrixBase<TDerived> const& x);
+    HyperElasticPotential(
+        MeshType const& mesh,
+        Eigen::MatrixBase<TDerived> const& x,
+        Scalar Y,
+        Scalar nu);
+
+    template <class TDerivedx, class TDerivedY, class TDerivednu>
+    HyperElasticPotential(
+        MeshType const& mesh,
+        Eigen::MatrixBase<TDerivedx> const& x,
+        Eigen::DenseBase<TDerivedY> const& Y,
+        Eigen::DenseBase<TDerivednu> const& nu);
 
     void PrecomputeShapeFunctionGradients();
     void PrecomputeJacobianDeterminants();
@@ -82,11 +91,13 @@ struct HyperElasticPotential
     Index OutputDimensions() const;
 
     MeshType const& mesh; ///< The finite element mesh
+    VectorX mue;          ///< Element-wise 1st Lame coefficient
+    VectorX lambdae;      ///< Element-wise 2nd Lame coefficient
     MatrixX He;           ///< |(ElementType::kNodes*kDims)| x |#elements *
                           ///< (ElementType::kNodes*kDims)| element hessian matrices
     MatrixX Ge;           ///< |ElementType::kNodes*kDims| x |#elements| element gradient vectors
     VectorX Ue;           ///< |#elements| x 1 element elastic potentials
-    MatrixX GNe;   ///< |MeshType::kDims| x |ElementType::kNodes * # element quadrature points *
+    MatrixX GNe;   ///< |ElementType::kNodes| x |MeshType::kDims * # element quadrature points *
                    ///< #elements| element shape function gradients
     MatrixX detJe; ///< |# element quadrature points| x |#elements| matrix of jacobian determinants
                    ///< at element quadrature points
@@ -97,9 +108,27 @@ template <CMesh TMesh, physics::CHyperElasticEnergy THyperElasticEnergy>
 template <class TDerived>
 inline HyperElasticPotential<TMesh, THyperElasticEnergy>::HyperElasticPotential(
     MeshType const& meshIn,
-    Eigen::MatrixBase<TDerived> const& x)
-    : mesh(meshIn), He(), Ge(), Ue(), GH()
+    Eigen::MatrixBase<TDerived> const& x,
+    Scalar Y,
+    Scalar nu)
+    : HyperElasticPotential<TMesh, THyperElasticEnergy>(
+          meshIn,
+          x,
+          VectorX::Constant(meshIn.E.cols(), Y),
+          VectorX::Constant(meshIn.E.cols(), nu))
 {
+}
+
+template <CMesh TMesh, physics::CHyperElasticEnergy THyperElasticEnergy>
+template <class TDerivedx, class TDerivedY, class TDerivednu>
+inline HyperElasticPotential<TMesh, THyperElasticEnergy>::HyperElasticPotential(
+    MeshType const& meshIn,
+    Eigen::MatrixBase<TDerivedx> const& x,
+    Eigen::DenseBase<TDerivedY> const& Y,
+    Eigen::DenseBase<TDerivednu> const& nu)
+    : mesh(meshIn), mue(), lambdae()
+{
+    std::tie(mue, lambdae) = physics::LameCoefficients(Y, nu);
     PrecomputeShapeFunctionGradients();
     PrecomputeJacobianDeterminants();
     PrecomputeHessianSparsity();
@@ -140,12 +169,12 @@ inline void HyperElasticPotential<TMesh, THyperElasticEnergy>::ComputeElementEla
         auto const wg = common::ToEigen(QuadratureRuleType::weights);
         for (auto g = 0; g < QuadratureRuleType::kPoints; ++g)
         {
-            Matrix<MeshType::kDims, kNodesPerElement> const gradPhi =
-                GNe.block<MeshType::kDims, kNodesPerElement>(
-                    0,
-                    e * kNodesPerElement + g * MeshType::kDims);
-            Matrix<kDims, kDims> const F          = xe * gradPhi;
-            auto const [psiF, gradPsiF, hessPsiF] = ElasticEnergyType{}.evalWithGradAndHessian(F);
+            auto constexpr kStride = MeshType::kDims * QuadratureRuleType::kPoints;
+            Matrix<kNodesPerElement, MeshType::kDims> const gradPhi =
+                GNe.block<kNodesPerElement, MeshType::kDims>(0, e * kStride + g * MeshType::kDims);
+            Matrix<kDims, kDims> const F = xe * gradPhi;
+            auto const [psiF, gradPsiF, hessPsiF] =
+                ElasticEnergyType{}.evalWithGradAndHessian(F.reshaped(), mue(e), lambdae(e));
             Ue(e) += (wg(g) * detJe(g, e)) * psiF;
             ge += (wg(g) * detJe(g, e)) * GradientWrtDofs<ElementType, kDims>(gradPsiF, gradPhi);
             he += (wg(g) * detJe(g, e)) * HessianWrtDofs<ElementType, kDims>(hessPsiF, gradPhi);
@@ -193,7 +222,7 @@ inline void HyperElasticPotential<TMesh, THyperElasticEnergy>::PrecomputeShapeFu
     auto const Xg                   = common::ToEigen(QuadratureRuleType::points)
                         .reshaped(QuadratureRuleType::kDims + 1, QuadratureRuleType::kPoints)
                         .bottomRows<ElementType::kDims>();
-    GNe.resize(MeshType::kDims, kNodesPerElement * numberOfElements * QuadratureRuleType::kPoints);
+    GNe.resize(kNodesPerElement, numberOfElements * MeshType::kDims * QuadratureRuleType::kPoints);
     tbb::parallel_for(Index{0}, Index{numberOfElements}, [&](Index e) {
         auto const nodes                = mesh.E.col(e);
         auto const vertices             = nodes(ElementType::Vertices);
@@ -202,10 +231,10 @@ inline void HyperElasticPotential<TMesh, THyperElasticEnergy>::PrecomputeShapeFu
         Matrix<kRowsJ, kColsJ> const Ve = mesh.X(Eigen::all, vertices);
         for (auto g = 0; g < QuadratureRuleType::kPoints; ++g)
         {
-            auto const gradPhi = BasisFunctionGradients<ElementType>(Xg.col(g), Ve);
-            GNe.block<MeshType::kDims, kNodesPerElement>(
-                0,
-                e * kNodesPerElement + g * QuadratureRuleType::kPoints) = gradPhi;
+            auto const gradPhi     = BasisFunctionGradients<ElementType>(Xg.col(g), Ve);
+            auto constexpr kStride = MeshType::kDims * QuadratureRuleType::kPoints;
+            GNe.block<kNodesPerElement, MeshType::kDims>(0, e * kStride + g * MeshType::kDims) =
+                gradPhi;
         }
     });
 }
@@ -219,25 +248,35 @@ inline void HyperElasticPotential<TMesh, THyperElasticEnergy>::PrecomputeJacobia
 template <CMesh TMesh, physics::CHyperElasticEnergy THyperElasticEnergy>
 inline void HyperElasticPotential<TMesh, THyperElasticEnergy>::PrecomputeHessianSparsity()
 {
-    using IndexPair = std::pair<Index, Index>;
-    std::vector<IndexPair> nonZeroIndices{};
     auto const numberOfElements = mesh.E.cols();
     auto const kNodesPerElement = ElementType::kNodes;
     auto const kDofsPerElement  = kNodesPerElement * kDims;
-    nonZeroIndices.reserve(kDofsPerElement * kDofsPerElement * numberOfElements);
+    std::vector<Index> nonZeroRowIndices{};
+    std::vector<Index> nonZeroColIndices{};
+    nonZeroRowIndices.reserve(
+        static_cast<std::size_t>(kDofsPerElement * kDofsPerElement * numberOfElements));
+    nonZeroColIndices.reserve(
+        static_cast<std::size_t>(kDofsPerElement * kDofsPerElement * numberOfElements));
     // Insert non-zero indices in the storage order of our He matrix of element hessians
     for (auto e = 0; e < numberOfElements; ++e)
     {
         auto const nodes = mesh.E.col(e);
         for (auto j = 0; j < kNodesPerElement; ++j)
+        {
             for (auto dj = 0; dj < kDims; ++dj)
+            {
                 for (auto i = 0; i < kNodesPerElement; ++i)
+                {
                     for (auto di = 0; di < kDims; ++di)
-                        nonZeroIndices.push_back({kDims * nodes(i) + di, kDims * nodes(j) + dj});
+                    {
+                        nonZeroRowIndices.push_back(kDims * nodes(i) + di);
+                        nonZeroColIndices.push_back(kDims * nodes(j) + dj);
+                    }
+                }
+            }
+        }
     }
-    auto const i = std::views::elements<0>(nonZeroIndices);
-    auto const j = std::views::elements<1>(nonZeroIndices);
-    GH.Compute(OutputDimensions(), InputDimensions(), i, j);
+    GH.Compute(OutputDimensions(), InputDimensions(), nonZeroRowIndices, nonZeroColIndices);
 }
 
 template <CMesh TMesh, physics::CHyperElasticEnergy THyperElasticEnergy>
@@ -245,7 +284,9 @@ inline CSCMatrix HyperElasticPotential<TMesh, THyperElasticEnergy>::ToMatrix() c
 {
     if (!GH.IsEmpty())
     {
-        return GH.ToMatrix(std::span<Scalar const>(He.data(), He.size()));
+        using SpanType = std::span<Scalar const>;
+        using SizeType = typename SpanType::size_type;
+        return GH.ToMatrix(SpanType(He.data(), static_cast<SizeType>(He.size())));
     }
     else
     {
@@ -266,8 +307,8 @@ inline CSCMatrix HyperElasticPotential<TMesh, THyperElasticEnergy>::ToMatrix() c
                     for (auto i = 0; i < ElementType::kNodes; ++i)
                         for (auto di = 0; di < kDims; ++di)
                             triplets.push_back(Triplet{
-                                kDims * nodes(i) + di,
-                                kDims * nodes(j) + dj,
+                                static_cast<SparseIndex>(kDims * nodes(i) + di),
+                                static_cast<SparseIndex>(kDims * nodes(j) + dj),
                                 he(kDims * i + di, kDims * j + dj)});
         }
 

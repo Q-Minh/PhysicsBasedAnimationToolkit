@@ -12,7 +12,8 @@ namespace pba {
 namespace common {
 
 template <class R>
-concept CIndexRange = std::ranges::range<R> && std::is_integral_v<std::ranges::range_value_t<R>>;
+concept CIndexRange =
+    std::ranges::range<R> && std::is_convertible_v<std::ranges::range_value_t<R>, int>;
 
 template <class R>
 concept CContiguousIndexRange =

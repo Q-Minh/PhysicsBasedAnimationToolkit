@@ -67,5 +67,18 @@ struct HyperElasticEnergy
 
 TEST_CASE("[physics] HyperElasticity")
 {
-    CHECK(pba::physics::CHyperElasticEnergy<pba::test::HyperElasticEnergy>);
+    using namespace pba;
+    CHECK(physics::CHyperElasticEnergy<test::HyperElasticEnergy>);
+    Scalar constexpr Y                   = 1e6;
+    Scalar constexpr nu                  = 0.45;
+    auto const [mu, lambda]              = physics::LameCoefficients(Y, nu);
+    auto constexpr kNumberOfCoefficients = 5;
+    auto const [mus, lambdas]            = physics::LameCoefficients(
+        VectorX::Constant(kNumberOfCoefficients, Y),
+        VectorX::Constant(kNumberOfCoefficients, nu));
+    CHECK_EQ(mus.size(), kNumberOfCoefficients);
+    CHECK_EQ(lambdas.size(), kNumberOfCoefficients);
+    bool const bAreCoefficientsSame =
+        (mus.array() == mu).all() and (lambdas.array() == lambda).all();
+    CHECK(bAreCoefficientsSame);
 }
