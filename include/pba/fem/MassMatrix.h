@@ -52,12 +52,15 @@ struct MassMatrix
     Index OutputDimensions() const { return InputDimensions(); }
 
     void ComputeElementMassMatrices();
+    void PrecomputeJacobianDeterminants();
 
     MeshType const& mesh; ///< The finite element mesh
     VectorX rho;          ///< |#elements| x 1 piecewise constant mass density
-    MatrixX Me; ///< |ElementType::Nodes|x|ElementType::Nodes * |#elements| element mass matrices
-                ///< for 1-dimensional problems. For d-dimensional problems, these mass matrices
-                ///< should be Kroneckered with the d-dimensional identity matrix.
+    MatrixX Me;    ///< |ElementType::Nodes|x|ElementType::Nodes * |#elements| element mass matrices
+                   ///< for 1-dimensional problems. For d-dimensional problems, these mass matrices
+                   ///< should be Kroneckered with the d-dimensional identity matrix.
+    MatrixX detJe; ///< |# element quadrature points| x |# elements| matrix of jacobian determinants
+                   ///< at element quadrature points
 };
 
 template <CMesh TMesh, int Dims>
@@ -71,7 +74,7 @@ template <class TDerived>
 inline MassMatrix<TMesh, Dims>::MassMatrix(
     MeshType const& mesh,
     Eigen::DenseBase<TDerived> const& rho)
-    : mesh(mesh), rho(rho), Me(ElementType::kNodes, ElementType::kNodes * mesh.E.cols())
+    : mesh(mesh), rho(rho), Me()
 {
     if (rho.size() != mesh.E.cols())
     {
@@ -79,6 +82,7 @@ inline MassMatrix<TMesh, Dims>::MassMatrix(
             std::format("Expected element-piecewise mass density rho, but size was {}", rho.size());
         throw std::invalid_argument(what);
     }
+    PrecomputeJacobianDeterminants();
     ComputeElementMassMatrices();
 }
 
@@ -156,32 +160,30 @@ inline void MassMatrix<TMesh, Dims>::ComputeElementMassMatrices()
 {
     using AffineElementType = typename ElementType::AffineBaseType;
 
-    Me.setZero();
     auto const Xg = common::ToEigen(QuadratureRuleType::points)
                         .reshaped(QuadratureRuleType::kDims + 1, QuadratureRuleType::kPoints)
                         .bottomRows<QuadratureRuleType::kDims>();
-    auto const numberOfElements = mesh.E.cols();
+    auto const numberOfElements     = mesh.E.cols();
+    auto constexpr kNodesPerElement = ElementType::kNodes;
+    Me.setZero(kNodesPerElement, kNodesPerElement * numberOfElements);
     tbb::parallel_for(Index{0}, Index{numberOfElements}, [&](Index e) {
-        auto const nodes                      = mesh.E.col(e);
-        auto const vertices                   = nodes(ElementType::Vertices);
-        auto constexpr kMeshDims              = MeshType::kDims;
-        auto constexpr kVertices              = AffineElementType::kNodes;
-        Matrix<kMeshDims, kVertices> const Ve = mesh.X(Eigen::all, vertices);
+        auto const nodes    = mesh.E.col(e);
+        auto const vertices = nodes(ElementType::Vertices);
         auto me = Me.block<ElementType::kNodes, ElementType::kNodes>(0, e * ElementType::kNodes);
-        Scalar detJ{};
-        if constexpr (AffineElementType::bHasConstantJacobian)
-            detJ = DeterminantOfJacobian(Jacobian<AffineElementType>({}, Ve));
-
         auto const wg = common::ToEigen(QuadratureRuleType::weights);
         for (auto g = 0; g < QuadratureRuleType::kPoints; ++g)
         {
-            if constexpr (!AffineElementType::bHasConstantJacobian)
-                detJ = DeterminantOfJacobian(Jacobian<AffineElementType>(Xg.col(g), Ve));
-
+            Scalar const detJ                    = detJe(g, e);
             Vector<ElementType::kNodes> const Ng = ElementType::N(Xg.col(g));
             me += (wg(g) * rho(e) * detJ) * (Ng * Ng.transpose());
         }
     });
+}
+
+template <CMesh TMesh, int Dims>
+inline void MassMatrix<TMesh, Dims>::PrecomputeJacobianDeterminants()
+{
+    detJe = DeterminantOfJacobian<kOrder>(mesh);
 }
 
 } // namespace fem

@@ -3,9 +3,11 @@
 
 #include "Concepts.h"
 #include "pba/aliases.h"
+#include "pba/common/Eigen.h"
 
 #include <Eigen/LU>
 #include <Eigen/SVD>
+#include <tbb/parallel_for.h>
 
 namespace pba {
 namespace fem {
@@ -31,6 +33,44 @@ template <class TDerived>
         throw std::invalid_argument("Inverted or singular jacobian");
     }
     return detJ;
+}
+
+template <int QuadratureOrder, CMesh TMesh>
+MatrixX DeterminantOfJacobian(TMesh const& mesh)
+{
+    using ElementType        = typename TMesh::ElementType;
+    using AffineElementType  = typename ElementType::AffineBaseType;
+    using QuadratureRuleType = typename ElementType::template QuadratureType<QuadratureOrder>;
+
+    auto const Xg = common::ToEigen(QuadratureRuleType::points)
+                        .reshaped(QuadratureRuleType::kDims + 1, QuadratureRuleType::kPoints)
+                        .bottomRows<ElementType::kDims>();
+
+    auto const numberOfElements = mesh.E.cols();
+    MatrixX detJe(QuadratureRuleType::kPoints, numberOfElements);
+    tbb::parallel_for(Index{0}, Index{numberOfElements}, [&](Index e) {
+        auto const nodes                = mesh.E.col(e);
+        auto const vertices             = nodes(ElementType::Vertices);
+        auto constexpr kRowsJ           = TMesh::kDims;
+        auto constexpr kColsJ           = AffineElementType::kNodes;
+        Matrix<kRowsJ, kColsJ> const Ve = mesh.X(Eigen::all, vertices);
+        if constexpr (AffineElementType::bHasConstantJacobian)
+        {
+            Scalar const detJ = DeterminantOfJacobian(Jacobian<AffineElementType>({}, Ve));
+            detJe.col(e).setConstant(detJ);
+        }
+        else
+        {
+            auto const wg = common::ToEigen(QuadratureRuleType::weights);
+            for (auto g = 0; g < QuadratureRuleType::kPoints; ++g)
+            {
+                Scalar const detJ =
+                    DeterminantOfJacobian(Jacobian<AffineElementType>(Xg.col(g), Ve));
+                detJe(g, e) = detJ;
+            }
+        }
+    });
+    return detJe;
 }
 
 } // namespace fem

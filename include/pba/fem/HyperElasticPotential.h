@@ -11,7 +11,6 @@
 
 #include <exception>
 #include <format>
-#include <memory>
 #include <ranges>
 #include <span>
 #include <string>
@@ -214,34 +213,7 @@ inline void HyperElasticPotential<TMesh, THyperElasticEnergy>::PrecomputeShapeFu
 template <CMesh TMesh, physics::CHyperElasticEnergy THyperElasticEnergy>
 inline void HyperElasticPotential<TMesh, THyperElasticEnergy>::PrecomputeJacobianDeterminants()
 {
-    using AffineElementType     = typename ElementType::AffineBaseType;
-    auto const numberOfElements = mesh.E.cols();
-    auto const Xg               = common::ToEigen(QuadratureRuleType::points)
-                        .reshaped<QuadratureRuleType::kDims + 1, QuadratureRuleType::kPoints>()
-                        .bottomRows<ElementType::kDims>();
-    detJe.resize(QuadratureRuleType::kPoints, numberOfElements);
-    tbb::parallel_for(Index{0}, Index{numberOfElements}, [&](Index e) {
-        auto const nodes                = mesh.E.col(e);
-        auto const vertices             = nodes(ElementType::Vertices);
-        auto constexpr kRowsJ           = MeshType::kDims;
-        auto constexpr kColsJ           = AffineElementType::kNodes;
-        Matrix<kRowsJ, kColsJ> const Ve = mesh.X(Eigen::all, vertices);
-        if constexpr (AffineElementType::bHasConstantJacobian)
-        {
-            Scalar const detJ = DeterminantOfJacobian(Jacobian<AffineElementType>({}, Ve));
-            detJe.col(e).setConstant(detJ);
-        }
-        else
-        {
-            auto const wg = common::ToEigen(QuadratureRuleType::weights);
-            for (auto g = 0; g < QuadratureRuleType::kPoints; ++g)
-            {
-                Scalar const detJ =
-                    DeterminantOfJacobian(Jacobian<AffineElementType>(Xg.col(g), Ve));
-                detJe(g, e) = detJ;
-            }
-        }
-    });
+    detJe = DeterminantOfJacobian<QuadratureRuleType::kOrder>(mesh);
 }
 
 template <CMesh TMesh, physics::CHyperElasticEnergy THyperElasticEnergy>

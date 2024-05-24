@@ -40,10 +40,14 @@ struct LoadVector
      */
     void IntegrateShapeFunctions();
 
+    void PrecomputeJacobianDeterminants();
+
     MeshType const& mesh; ///< The finite element mesh
     MatrixX fe;           ///< kDims x |#elements| piecewise constant load
-    MatrixX N; ///< |ElementType::kNodes|x|#elements| integrated element shape functions. To
-               ///< obtain the element force vectors, compute Neint \kron I_{kDims} * f
+    MatrixX N;     ///< |ElementType::kNodes|x|#elements| integrated element shape functions. To
+                   ///< obtain the element force vectors, compute Neint \kron I_{kDims} * f
+    MatrixX detJe; ///< |# element quadrature points|x|#elements| matrix of jacobian determinants at
+                   ///< element quadrature points
 };
 
 template <CMesh TMesh, int Dims>
@@ -77,6 +81,7 @@ inline LoadVector<TMesh, Dims>::LoadVector(
     else // load.cols() == numberOfElements
         fe = load;
 
+    PrecomputeJacobianDeterminants();
     IntegrateShapeFunctions();
 }
 
@@ -108,25 +113,22 @@ inline void LoadVector<TMesh, Dims>::IntegrateShapeFunctions()
                         .reshaped(QuadratureRuleType::kDims + 1, QuadratureRuleType::kPoints)
                         .bottomRows(QuadratureRuleType::kDims);
     tbb::parallel_for(Index{0}, Index{numberOfElements}, [&](Index e) {
-        auto const nodes                = mesh.E.col(e);
-        auto const vertices             = nodes(ElementType::Vertices);
-        auto constexpr kRowsJ           = MeshType::kDims;
-        auto constexpr kColsJ           = AffineElementType::kNodes;
-        Matrix<kRowsJ, kColsJ> const Ve = mesh.X(Eigen::all, vertices);
-        Scalar detJ{};
-        if constexpr (AffineElementType::bHasConstantJacobian)
-            detJ = DeterminantOfJacobian(Jacobian<AffineElementType>({}, Ve));
-
-        auto const wg = common::ToEigen(QuadratureRuleType::weights);
+        auto const nodes    = mesh.E.col(e);
+        auto const vertices = nodes(ElementType::Vertices);
+        auto const wg       = common::ToEigen(QuadratureRuleType::weights);
         for (auto g = 0; g < QuadratureRuleType::kPoints; ++g)
         {
-            if constexpr (!AffineElementType::bHasConstantJacobian)
-                detJ = DeterminantOfJacobian(Jacobian<AffineElementType>(Xg.col(g), Ve));
-
+            Scalar const detJ                    = detJe(g, e);
             Vector<ElementType::kNodes> const Ng = ElementType::N(Xg.col(g));
             N.col(e) += (wg(g) * detJ) * Ng;
         }
     });
+}
+
+template <CMesh TMesh, int Dims>
+inline void LoadVector<TMesh, Dims>::PrecomputeJacobianDeterminants()
+{
+    detJe = DeterminantOfJacobian<kOrder>(mesh);
 }
 
 } // namespace fem
