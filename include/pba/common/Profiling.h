@@ -1,0 +1,16 @@
+#ifndef PBA_CORE_COMMON_PROFILING_H
+#define PBA_CORE_COMMON_PROFILING_H
+
+#ifdef PBA_CORE_HAS_TRACY_PROFILER
+    #include <tracy/Tracy.hpp>
+#endif // PBA_CORE_HAS_TRACY_PROFILER
+
+#ifdef PBA_CORE_HAS_TRACY_PROFILER
+    #define PBA_PROFILE_SCOPE ZoneScoped
+    #define PBA_PROFILE_NAMED_SCOPE(name) ZoneScopedN(name)
+#elif
+    #define PBA_PROFILE_SCOPE 
+    #define PBA_PROFILE_NAMED_SCOPE(name) 
+#endif // PBA_CORE_HAS_TRACY_PROFILER
+
+#endif // PBA_CORE_COMMON_PROFILING_H

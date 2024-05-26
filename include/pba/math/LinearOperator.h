@@ -2,6 +2,7 @@
 #define PBA_CORE_MATH_LINEAR_OPERATOR_H
 
 #include "pba/aliases.h"
+#include "pba/common/Profiling.h"
 
 #include <concepts>
 #include <exception>
@@ -167,12 +168,14 @@ inline void LinearOperator<TLinearOperators...>::Apply(
     Eigen::MatrixBase<TDerivedIn> const& x,
     Eigen::DenseBase<TDerivedOut>& y) const
 {
+    PBA_PROFILE_NAMED_SCOPE("math::LinearOperator::Apply");
     std::apply([&](auto... op) { (op.Apply(x, y), ...); }, ops);
 }
 
 template <CLinearOperator... TLinearOperators>
 inline CSCMatrix LinearOperator<TLinearOperators...>::ToMatrix() const
 {
+    PBA_PROFILE_NAMED_SCOPE("math::LinearOperator::ToMatrix");
     CSCMatrix const M =
         std::apply([&](auto... op) -> CSCMatrix { return (op.ToMatrix() + ...); }, ops);
     return M;

@@ -5,6 +5,7 @@
 #include "Jacobian.h"
 #include "pba/aliases.h"
 #include "pba/common/Eigen.h"
+#include "pba/common/Profiling.h"
 
 #include <exception>
 #include <format>
@@ -76,6 +77,7 @@ inline MassMatrix<TMesh, Dims>::MassMatrix(
     Eigen::DenseBase<TDerived> const& rho)
     : mesh(mesh), rho(rho), Me()
 {
+    PBA_PROFILE_NAMED_SCOPE("Construct fem::MassMatrix");
     if (rho.size() != mesh.E.cols())
     {
         std::string const what =
@@ -92,6 +94,7 @@ inline void MassMatrix<TMesh, Dims>::Apply(
     Eigen::MatrixBase<TDerivedIn> const& x,
     Eigen::DenseBase<TDerivedOut>& y) const
 {
+    PBA_PROFILE_SCOPE;
     if ((x.rows() != InputDimensions()) or (y.rows() != InputDimensions()) or
         (y.cols() != x.cols()))
     {
@@ -124,6 +127,7 @@ inline void MassMatrix<TMesh, Dims>::Apply(
 template <CMesh TMesh, int Dims>
 inline CSCMatrix MassMatrix<TMesh, Dims>::ToMatrix() const
 {
+    PBA_PROFILE_SCOPE;
     using SparseIndex = typename CSCMatrix::StorageIndex;
     using Triplet     = Eigen::Triplet<Scalar, SparseIndex>;
 
@@ -158,6 +162,7 @@ inline CSCMatrix MassMatrix<TMesh, Dims>::ToMatrix() const
 template <CMesh TMesh, int Dims>
 inline void MassMatrix<TMesh, Dims>::ComputeElementMassMatrices()
 {
+    PBA_PROFILE_SCOPE;
     using AffineElementType = typename ElementType::AffineBaseType;
 
     auto const Xg = common::ToEigen(QuadratureRuleType::points)

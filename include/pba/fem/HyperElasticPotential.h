@@ -5,6 +5,7 @@
 #include "Jacobian.h"
 #include "pba/aliases.h"
 #include "pba/common/Eigen.h"
+#include "pba/common/Profiling.h"
 #include "pba/fem/DeformationGradient.h"
 #include "pba/math/linalg/SparsityPattern.h"
 #include "pba/physics/HyperElasticity.h"
@@ -128,10 +129,10 @@ inline HyperElasticPotential<TMesh, THyperElasticEnergy>::HyperElasticPotential(
     Eigen::DenseBase<TDerivednu> const& nu)
     : mesh(meshIn), mue(), lambdae()
 {
+    PBA_PROFILE_NAMED_SCOPE("Construct fem::HyperElasticPotential");
     std::tie(mue, lambdae) = physics::LameCoefficients(Y, nu);
     PrecomputeShapeFunctionGradients();
     PrecomputeJacobianDeterminants();
-    PrecomputeHessianSparsity();
     ComputeElementElasticity(x);
 }
 
@@ -140,6 +141,7 @@ template <class TDerived>
 inline void HyperElasticPotential<TMesh, THyperElasticEnergy>::ComputeElementElasticity(
     Eigen::MatrixBase<TDerived> const& x)
 {
+    PBA_PROFILE_SCOPE;
     using AffineElementType     = typename ElementType::AffineBaseType;
     auto const numberOfElements = mesh.E.cols();
     auto const numberOfNodes    = mesh.X.cols();
@@ -188,6 +190,7 @@ inline void HyperElasticPotential<TMesh, THyperElasticEnergy>::Apply(
     Eigen::MatrixBase<TDerivedIn> const& x,
     Eigen::DenseBase<TDerivedOut>& y) const
 {
+    PBA_PROFILE_SCOPE;
     auto const numberOfNodes = mesh.X.cols();
     auto const numberOfDofs  = kDims * numberOfNodes;
     if (x.rows() != numberOfDofs or y.rows() != numberOfDofs or x.cols() != y.cols())
@@ -224,6 +227,7 @@ inline void HyperElasticPotential<TMesh, THyperElasticEnergy>::Apply(
 template <CMesh TMesh, physics::CHyperElasticEnergy THyperElasticEnergy>
 inline void HyperElasticPotential<TMesh, THyperElasticEnergy>::PrecomputeShapeFunctionGradients()
 {
+    PBA_PROFILE_SCOPE;
     using AffineElementType         = typename ElementType::AffineBaseType;
     auto const numberOfElements     = mesh.E.cols();
     auto constexpr kNodesPerElement = ElementType::kNodes;
@@ -256,6 +260,7 @@ inline void HyperElasticPotential<TMesh, THyperElasticEnergy>::PrecomputeJacobia
 template <CMesh TMesh, physics::CHyperElasticEnergy THyperElasticEnergy>
 inline void HyperElasticPotential<TMesh, THyperElasticEnergy>::PrecomputeHessianSparsity()
 {
+    PBA_PROFILE_SCOPE;
     auto const numberOfElements = mesh.E.cols();
     auto const kNodesPerElement = ElementType::kNodes;
     auto const kDofsPerElement  = kNodesPerElement * kDims;
@@ -290,6 +295,7 @@ inline void HyperElasticPotential<TMesh, THyperElasticEnergy>::PrecomputeHessian
 template <CMesh TMesh, physics::CHyperElasticEnergy THyperElasticEnergy>
 inline CSCMatrix HyperElasticPotential<TMesh, THyperElasticEnergy>::ToMatrix() const
 {
+    PBA_PROFILE_SCOPE;
     if (!GH.IsEmpty())
     {
         using SpanType = std::span<Scalar const>;

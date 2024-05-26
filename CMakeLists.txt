@@ -172,12 +172,10 @@ if(PBA_CORE_ENABLE_PROFILER)
         )
     endif()
 
-    # Making TRACY_ENABLE public so that we can profile the core library
-    # when it is used by some downstream code.
+    # TRACY_ENABLE and TRACY_IMPORTS are already set in the linked-to Tracy::TracyClient from 
+    # the tracyvcpkg port, so we should not set them ourselves.
     target_compile_definitions(${pba_core}
         PUBLIC
-        TRACY_ENABLE
-        TRACY_IMPORTS
         PBA_CORE_HAS_TRACY_PROFILER)
 endif()
 

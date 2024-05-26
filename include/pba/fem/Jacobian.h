@@ -4,6 +4,7 @@
 #include "Concepts.h"
 #include "pba/aliases.h"
 #include "pba/common/Eigen.h"
+#include "pba/common/Profiling.h"
 
 #include <Eigen/LU>
 #include <Eigen/SVD>
@@ -38,6 +39,8 @@ template <class TDerived>
 template <int QuadratureOrder, CMesh TMesh>
 MatrixX DeterminantOfJacobian(TMesh const& mesh)
 {
+    PBA_PROFILE_SCOPE;
+
     using ElementType        = typename TMesh::ElementType;
     using AffineElementType  = typename ElementType::AffineBaseType;
     using QuadratureRuleType = typename ElementType::template QuadratureType<QuadratureOrder>;

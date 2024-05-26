@@ -5,6 +5,7 @@
 #include "Jacobian.h"
 #include "pba/aliases.h"
 #include "pba/common/Eigen.h"
+#include "pba/common/Profiling.h"
 #include "pba/math/Rational.h"
 
 #include <algorithm>
@@ -115,6 +116,8 @@ Mesh<TElement, Dims>::Mesh(
     Eigen::Ref<MatrixX const> const& V,
     Eigen::Ref<IndexMatrixX const> const& C)
 {
+    PBA_PROFILE_NAMED_SCOPE("Construct fem::Mesh");
+
     using AffineElementType         = typename ElementType::AffineBaseType;
     auto constexpr kVerticesPerCell = AffineElementType::kNodes;
 

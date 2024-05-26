@@ -5,6 +5,7 @@
 #include "Jacobian.h"
 #include "pba/aliases.h"
 #include "pba/common/Eigen.h"
+#include "pba/common/Profiling.h"
 
 #include <exception>
 #include <format>
@@ -57,6 +58,7 @@ inline LoadVector<TMesh, Dims>::LoadVector(
     Eigen::DenseBase<TDerived> const& load)
     : mesh(meshIn), fe(), N()
 {
+    PBA_PROFILE_NAMED_SCOPE("Construct fem::LoadVector");
     auto const numberOfElements = mesh.E.cols();
     if (load.rows() != kDims)
     {
@@ -88,6 +90,7 @@ inline LoadVector<TMesh, Dims>::LoadVector(
 template <CMesh TMesh, int Dims>
 inline VectorX LoadVector<TMesh, Dims>::ToVector() const
 {
+    PBA_PROFILE_SCOPE;
     auto const n                = mesh.X.cols() * kDims;
     auto const numberOfElements = mesh.E.cols();
     VectorX f                   = VectorX::Zero(n);
@@ -105,6 +108,7 @@ inline VectorX LoadVector<TMesh, Dims>::ToVector() const
 template <CMesh TMesh, int Dims>
 inline void LoadVector<TMesh, Dims>::IntegrateShapeFunctions()
 {
+    PBA_PROFILE_SCOPE;
     using AffineElementType = typename ElementType::AffineBaseType;
 
     auto const numberOfElements = mesh.E.cols();

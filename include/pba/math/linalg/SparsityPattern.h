@@ -3,6 +3,7 @@
 
 #include "pba/aliases.h"
 #include "pba/common/Concepts.h"
+#include "pba/common/Profiling.h"
 
 #include <exception>
 #include <format>
@@ -73,6 +74,7 @@ inline void SparsityPattern::Compute(
     TRowIndexRange&& rowIndices,
     TColIndexRange&& colIndices)
 {
+    PBA_PROFILE_NAMED_SCOPE("Compute math::linalg::SparsityPattern");
     namespace srng   = std::ranges;
     namespace sviews = std::views;
     namespace rng    = ranges;
@@ -151,6 +153,7 @@ inline void SparsityPattern::Compute(
 template <common::CArithmeticRange TNonZeroRange>
 CSCMatrix SparsityPattern::ToMatrix(TNonZeroRange&& nonZeros) const
 {
+    PBA_PROFILE_SCOPE;
     static_assert(
         std::is_same_v<Scalar, std::ranges::range_value_t<TNonZeroRange>>,
         "Only Scalar non-zero values are accepted");
