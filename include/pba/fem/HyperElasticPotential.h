@@ -32,10 +32,10 @@ struct HyperElasticPotential
     static auto constexpr kDims = THyperElasticEnergy::kDims;
     static int constexpr kOrder = ElementType::kOrder - 1;
 
-    template <int OrderPrivate>
+    template <int ShapeFunctionOrder>
     struct OrderSelector
     {
-        static auto constexpr kOrder = OrderPrivate - 1;
+        static auto constexpr kOrder = ShapeFunctionOrder - 1;
     };
 
     template <>
@@ -63,8 +63,6 @@ struct HyperElasticPotential
         Eigen::DenseBase<TDerivedY> const& Y,
         Eigen::DenseBase<TDerivednu> const& nu);
 
-    void PrecomputeShapeFunctionGradients();
-    void PrecomputeJacobianDeterminants();
     void PrecomputeHessianSparsity();
 
     template <class TDerived>
@@ -132,8 +130,8 @@ inline HyperElasticPotential<TMesh, THyperElasticEnergy>::HyperElasticPotential(
 {
     PBA_PROFILE_NAMED_SCOPE("Construct fem::HyperElasticPotential");
     std::tie(mue, lambdae) = physics::LameCoefficients(Y, nu);
-    PrecomputeShapeFunctionGradients();
-    PrecomputeJacobianDeterminants();
+    GNe                    = ShapeFunctionGradients<QuadratureRuleType::kOrder>(mesh);
+    detJe                  = DeterminantOfJacobian<QuadratureRuleType::kOrder>(mesh);
     ComputeElementElasticity(x);
 }
 
@@ -161,23 +159,21 @@ inline void HyperElasticPotential<TMesh, THyperElasticEnergy>::ComputeElementEla
     Ue.setZero(numberOfElements);
     Ge.setZero(kDofsPerElement, numberOfElements);
     He.setZero(kDofsPerElement, kDofsPerElement * numberOfElements);
+    ElasticEnergyType Psi{};
     tbb::parallel_for(Index{0}, Index{numberOfElements}, [&](Index e) {
-        auto const nodes                      = mesh.E.col(e);
-        auto const vertices                   = nodes(ElementType::Vertices);
-        auto constexpr kMeshDims              = MeshType::kDims;
-        auto constexpr kVertices              = AffineElementType::kNodes;
-        Matrix<kMeshDims, kVertices> const Ve = mesh.X(Eigen::all, vertices);
-        auto ge                               = Ge.col(e);
-        auto he       = He.block<kDofsPerElement, kDofsPerElement>(0, e * kDofsPerElement);
-        auto const xe = x.reshaped(kDims, numberOfNodes)(Eigen::all, nodes);
+        auto const nodes    = mesh.E.col(e);
+        auto const vertices = nodes(ElementType::Vertices);
+        auto ge             = Ge.col(e);
+        auto he             = He.block<kDofsPerElement, kDofsPerElement>(0, e * kDofsPerElement);
+        auto const xe       = x.reshaped(kDims, numberOfNodes)(Eigen::all, nodes);
         for (auto g = 0; g < QuadratureRuleType::kPoints; ++g)
         {
             auto constexpr kStride = MeshType::kDims * QuadratureRuleType::kPoints;
-            Matrix<kNodesPerElement, MeshType::kDims> const gradPhi =
+            auto const gradPhi =
                 GNe.block<kNodesPerElement, MeshType::kDims>(0, e * kStride + g * MeshType::kDims);
-            Matrix<kDims, kDims> const F = xe * gradPhi;
+            auto const F = xe * gradPhi;
             auto const [psiF, gradPsiF, hessPsiF] =
-                ElasticEnergyType{}.evalWithGradAndHessian(F.reshaped(), mue(e), lambdae(e));
+                Psi.evalWithGradAndHessian(F.reshaped(), mue(e), lambdae(e));
             Ue(e) += (wg(g) * detJe(g, e)) * psiF;
             ge += (wg(g) * detJe(g, e)) * GradientWrtDofs<ElementType, kDims>(gradPsiF, gradPhi);
             he += (wg(g) * detJe(g, e)) * HessianWrtDofs<ElementType, kDims>(hessPsiF, gradPhi);
@@ -192,7 +188,7 @@ inline void HyperElasticPotential<TMesh, THyperElasticEnergy>::Apply(
     Eigen::DenseBase<TDerivedOut>& y) const
 {
     PBA_PROFILE_SCOPE;
-    auto const numberOfDofs  = InputDimensions();
+    auto const numberOfDofs = InputDimensions();
     if (x.rows() != numberOfDofs or y.rows() != numberOfDofs or x.cols() != y.cols())
     {
         std::string const what = std::format(
@@ -222,39 +218,6 @@ inline void HyperElasticPotential<TMesh, THyperElasticEnergy>::Apply(
             ye.reshaped() += he * xe.reshaped();
         }
     }
-}
-
-template <CMesh TMesh, physics::CHyperElasticEnergy THyperElasticEnergy>
-inline void HyperElasticPotential<TMesh, THyperElasticEnergy>::PrecomputeShapeFunctionGradients()
-{
-    PBA_PROFILE_SCOPE;
-    using AffineElementType         = typename ElementType::AffineBaseType;
-    auto const numberOfElements     = mesh.E.cols();
-    auto constexpr kNodesPerElement = ElementType::kNodes;
-    auto const Xg                   = common::ToEigen(QuadratureRuleType::points)
-                        .reshaped(QuadratureRuleType::kDims + 1, QuadratureRuleType::kPoints)
-                        .bottomRows<ElementType::kDims>();
-    GNe.resize(kNodesPerElement, numberOfElements * MeshType::kDims * QuadratureRuleType::kPoints);
-    tbb::parallel_for(Index{0}, Index{numberOfElements}, [&](Index e) {
-        auto const nodes                = mesh.E.col(e);
-        auto const vertices             = nodes(ElementType::Vertices);
-        auto constexpr kRowsJ           = MeshType::kDims;
-        auto constexpr kColsJ           = AffineElementType::kNodes;
-        Matrix<kRowsJ, kColsJ> const Ve = mesh.X(Eigen::all, vertices);
-        for (auto g = 0; g < QuadratureRuleType::kPoints; ++g)
-        {
-            auto const gradPhi     = ShapeFunctionGradients<ElementType>(Xg.col(g), Ve);
-            auto constexpr kStride = MeshType::kDims * QuadratureRuleType::kPoints;
-            GNe.block<kNodesPerElement, MeshType::kDims>(0, e * kStride + g * MeshType::kDims) =
-                gradPhi;
-        }
-    });
-}
-
-template <CMesh TMesh, physics::CHyperElasticEnergy THyperElasticEnergy>
-inline void HyperElasticPotential<TMesh, THyperElasticEnergy>::PrecomputeJacobianDeterminants()
-{
-    detJe = DeterminantOfJacobian<QuadratureRuleType::kOrder>(mesh);
 }
 
 template <CMesh TMesh, physics::CHyperElasticEnergy THyperElasticEnergy>

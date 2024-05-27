@@ -53,7 +53,6 @@ struct MassMatrix
     Index OutputDimensions() const { return InputDimensions(); }
 
     void ComputeElementMassMatrices();
-    void PrecomputeJacobianDeterminants();
 
     MeshType const& mesh; ///< The finite element mesh
     VectorX rho;          ///< |#elements| x 1 piecewise constant mass density
@@ -75,7 +74,7 @@ template <class TDerived>
 inline MassMatrix<TMesh, Dims>::MassMatrix(
     MeshType const& mesh,
     Eigen::DenseBase<TDerived> const& rho)
-    : mesh(mesh), rho(rho), Me()
+    : mesh(mesh), rho(rho), Me(), detJe()
 {
     PBA_PROFILE_NAMED_SCOPE("Construct fem::MassMatrix");
     if (rho.size() != mesh.E.cols())
@@ -84,7 +83,7 @@ inline MassMatrix<TMesh, Dims>::MassMatrix(
             std::format("Expected element-piecewise mass density rho, but size was {}", rho.size());
         throw std::invalid_argument(what);
     }
-    PrecomputeJacobianDeterminants();
+    detJe = DeterminantOfJacobian<QuadratureRuleType::kOrder>(mesh);
     ComputeElementMassMatrices();
 }
 
@@ -185,12 +184,6 @@ inline void MassMatrix<TMesh, Dims>::ComputeElementMassMatrices()
             me += (wg(g) * rho(e) * detJ) * (Ng * Ng.transpose());
         }
     });
-}
-
-template <CMesh TMesh, int Dims>
-inline void MassMatrix<TMesh, Dims>::PrecomputeJacobianDeterminants()
-{
-    detJe = DeterminantOfJacobian<kOrder>(mesh);
 }
 
 } // namespace fem

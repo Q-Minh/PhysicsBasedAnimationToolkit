@@ -19,9 +19,11 @@ template <CMesh TMesh>
 struct SymmetricLaplacianMatrix
 {
   public:
-    using SelfType    = SymmetricLaplacianMatrix<TMesh>;
-    using MeshType    = TMesh;
-    using ElementType = typename TMesh::ElementType;
+    using SelfType              = SymmetricLaplacianMatrix<TMesh>;
+    using MeshType              = TMesh;
+    using ElementType           = typename TMesh::ElementType;
+    static int constexpr kOrder = 2 * (ElementType::kOrder - 1);
+    static int constexpr kDims  = 1;
 
     template <int ShapeFunctionOrder>
     struct OrderSelector
@@ -40,8 +42,8 @@ struct SymmetricLaplacianMatrix
         static auto constexpr kOrder = 1;
     };
 
-    static int constexpr kOrder = OrderSelector<ElementType::kOrder>::kOrder;
-    using QuadratureRuleType    = ElementType::template QuadratureType<kOrder>;
+    using QuadratureRuleType =
+        ElementType::template QuadratureType<OrderSelector<ElementType::kOrder>::kOrder>;
 
     SymmetricLaplacianMatrix(MeshType const& mesh);
 
@@ -77,6 +79,7 @@ struct SymmetricLaplacianMatrix
 template <CMesh TMesh>
 inline SymmetricLaplacianMatrix<TMesh>::SymmetricLaplacianMatrix(MeshType const& mesh) : mesh(mesh)
 {
+    PBA_PROFILE_NAMED_SCOPE("Construct fem::SymmetricLaplacianMatrix");
     ComputeElementLaplacians();
 }
 
@@ -121,7 +124,8 @@ inline void SymmetricLaplacianMatrix<TMesh>::ComputeElementLaplacians()
                         .bottomRows<QuadratureRuleType::kDims>();
     auto const wg                   = common::ToEigen(QuadratureRuleType::weights);
     auto constexpr kNodesPerElement = ElementType::kNodes;
-    MatrixX const detJe             = DeterminantOfJacobian<kOrder>(mesh);
+    MatrixX const detJe             = DeterminantOfJacobian<QuadratureRuleType::kOrder>(mesh);
+    MatrixX const GNe               = ShapeFunctionGradients<QuadratureRuleType::kOrder>(mesh);
     auto const numberOfElements     = mesh.E.cols();
     deltaE.setZero(kNodesPerElement, kNodesPerElement * numberOfElements);
     tbb::parallel_for(Index{0}, Index{numberOfElements}, [&](Index e) {
@@ -134,8 +138,11 @@ inline void SymmetricLaplacianMatrix<TMesh>::ComputeElementLaplacians()
             // Use multivariable integration by parts (i.e. Green's identity), and retain only the
             // symmetric part, i.e.
             // Lij = -\int_{\Omega} \nabla \phi_i(X) \cdot \nabla \phi_j(X) \partial \Omega.
-            Matrix<kNodesPerElement, MeshType::kDims> const GP =
-                ShapeFunctionGradients<ElementType>(Xg.col(g), Ve);
+            // Matrix<kNodesPerElement, MeshType::kDims> const GP =
+            //    ShapeFunctionGradients<ElementType>(Xg.col(g), Ve);
+            auto const kStride = MeshType::kDims * QuadratureRuleType::kPoints;
+            auto const GP =
+                GNe.block<kNodesPerElement, MeshType::kDims>(0, e * kStride + g * MeshType::kDims);
             Le -= (wg(g) * detJe(g, e)) * GP * GP.transpose();
         }
     });

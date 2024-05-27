@@ -41,8 +41,6 @@ struct LoadVector
      */
     void IntegrateShapeFunctions();
 
-    void PrecomputeJacobianDeterminants();
-
     MeshType const& mesh; ///< The finite element mesh
     MatrixX fe;           ///< kDims x |#elements| piecewise constant load
     MatrixX N;     ///< |ElementType::kNodes|x|#elements| integrated element shape functions. To
@@ -56,7 +54,7 @@ template <class TDerived>
 inline LoadVector<TMesh, Dims>::LoadVector(
     MeshType const& meshIn,
     Eigen::DenseBase<TDerived> const& load)
-    : mesh(meshIn), fe(), N()
+    : mesh(meshIn), fe(), N(), detJe()
 {
     PBA_PROFILE_NAMED_SCOPE("Construct fem::LoadVector");
     auto const numberOfElements = mesh.E.cols();
@@ -83,7 +81,7 @@ inline LoadVector<TMesh, Dims>::LoadVector(
     else // load.cols() == numberOfElements
         fe = load;
 
-    PrecomputeJacobianDeterminants();
+    detJe = DeterminantOfJacobian<QuadratureRuleType::kOrder>(mesh);
     IntegrateShapeFunctions();
 }
 
@@ -109,8 +107,6 @@ template <CMesh TMesh, int Dims>
 inline void LoadVector<TMesh, Dims>::IntegrateShapeFunctions()
 {
     PBA_PROFILE_SCOPE;
-    using AffineElementType = typename ElementType::AffineBaseType;
-
     auto const numberOfElements = mesh.E.cols();
     N.setZero(ElementType::kNodes, numberOfElements);
     auto const Xg = common::ToEigen(QuadratureRuleType::points)
@@ -122,17 +118,10 @@ inline void LoadVector<TMesh, Dims>::IntegrateShapeFunctions()
         auto const vertices = nodes(ElementType::Vertices);
         for (auto g = 0; g < QuadratureRuleType::kPoints; ++g)
         {
-            Scalar const detJ                    = detJe(g, e);
             Vector<ElementType::kNodes> const Ng = ElementType::N(Xg.col(g));
-            N.col(e) += (wg(g) * detJ) * Ng;
+            N.col(e) += (wg(g) * detJe(g, e)) * Ng;
         }
     });
-}
-
-template <CMesh TMesh, int Dims>
-inline void LoadVector<TMesh, Dims>::PrecomputeJacobianDeterminants()
-{
-    detJe = DeterminantOfJacobian<kOrder>(mesh);
 }
 
 } // namespace fem

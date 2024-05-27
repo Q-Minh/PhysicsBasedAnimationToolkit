@@ -4,8 +4,10 @@
 #include "Concepts.h"
 #include "Jacobian.h"
 #include "pba/aliases.h"
+#include "pba/common/Profiling.h"
 
 #include <Eigen/SVD>
+#include <tbb/parallel_for.h>
 
 namespace pba {
 namespace fem {
@@ -39,6 +41,45 @@ Matrix<TElement::kNodes, TDerivedX::RowsAtCompileTime> ShapeFunctionGradients(
     auto JinvT = JT.jacobiSvd(Eigen::ComputeFullU | Eigen::ComputeFullV);
     Matrix<TElement::kNodes, kOutputDims> const GP = JinvT.solve(GN.transpose()).transpose();
     return GP;
+}
+
+/**
+ * @brief Computes nodal shape function gradients at each element quadrature point.
+ * @tparam Order
+ * @tparam TMesh
+ * @param mesh
+ * @return |ElementType::kNodes| x |MeshType::kDims *
+ * ElementType::QuadratureType<QuadratureOrder>::kPoints * #elements| matrix of shape functions
+ */
+template <int QuadratureOrder, CMesh TMesh>
+MatrixX ShapeFunctionGradients(TMesh const& mesh)
+{
+    PBA_PROFILE_SCOPE;
+    using MeshType              = TMesh;
+    using ElementType           = typename MeshType::ElementType;
+    using QuadratureRuleType    = typename ElementType::template QuadratureType<QuadratureOrder>;
+    using AffineElementType     = typename ElementType::AffineBaseType;
+    auto const numberOfElements = mesh.E.cols();
+    auto constexpr kNodesPerElement = ElementType::kNodes;
+    auto const Xg                   = common::ToEigen(QuadratureRuleType::points)
+                        .reshaped(QuadratureRuleType::kDims + 1, QuadratureRuleType::kPoints)
+                        .bottomRows<ElementType::kDims>();
+    MatrixX GNe(kNodesPerElement, numberOfElements * MeshType::kDims * QuadratureRuleType::kPoints);
+    tbb::parallel_for(Index{0}, Index{numberOfElements}, [&](Index e) {
+        auto const nodes                = mesh.E.col(e);
+        auto const vertices             = nodes(ElementType::Vertices);
+        auto constexpr kRowsJ           = MeshType::kDims;
+        auto constexpr kColsJ           = AffineElementType::kNodes;
+        Matrix<kRowsJ, kColsJ> const Ve = mesh.X(Eigen::all, vertices);
+        for (auto g = 0; g < QuadratureRuleType::kPoints; ++g)
+        {
+            auto const gradPhi     = ShapeFunctionGradients<ElementType>(Xg.col(g), Ve);
+            auto constexpr kStride = MeshType::kDims * QuadratureRuleType::kPoints;
+            GNe.block<kNodesPerElement, MeshType::kDims>(0, e * kStride + g * MeshType::kDims) =
+                gradPhi;
+        }
+    });
+    return GNe;
 }
 
 } // namespace fem
