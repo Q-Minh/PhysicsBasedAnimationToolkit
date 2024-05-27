@@ -57,11 +57,9 @@ TEST_CASE("[fem] HyperElasticPotential")
         Eigen::SelfAdjointEigenSolver<CSCMatrix> eigs(H);
         // The hessian is generally rank-deficient, due to its invariance to translations and
         // rotations. The zero eigenvalues can manifest as numerically negative, but close to zero.
-        Scalar const numericalMinEigenValue = eigs.eigenvalues().minCoeff();
-        Scalar const minEigenValue =
-            (std::abs(numericalMinEigenValue) <= zero) ? 0. : numericalMinEigenValue;
+        Scalar const minEigenValue = eigs.eigenvalues().minCoeff();
         bool const bIsPositiveSemiDefinite =
-            (eigs.info() == Eigen::ComputationInfo::Success) and (minEigenValue >= 0.);
+            (eigs.info() == Eigen::ComputationInfo::Success) and (minEigenValue > -zero);
         CHECK(bIsPositiveSemiDefinite);
 
         // Elastic energy is invariant to translations

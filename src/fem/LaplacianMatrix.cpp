@@ -47,11 +47,9 @@ TEST_CASE("[fem] LaplacianMatrix")
         CHECK_LE(Esymmetry, zero);
 
         Eigen::SelfAdjointEigenSolver<CSCMatrix> eigs(L);
-        Scalar const numericalMinEigenValue = eigs.eigenvalues().minCoeff();
-        Scalar const minEigenValue =
-            (std::abs(numericalMinEigenValue) <= zero) ? 0. : numericalMinEigenValue;
+        Scalar const maxEigenValue = eigs.eigenvalues().maxCoeff();
         bool const bIsNegativeSemiDefinite =
-            (eigs.info() == Eigen::ComputationInfo::Success) and (minEigenValue <= 0.);
+            (eigs.info() == Eigen::ComputationInfo::Success) and (maxEigenValue < zero);
         CHECK(bIsNegativeSemiDefinite);
 
         // Check that matrix-free matrix multiplication has same result as matrix
