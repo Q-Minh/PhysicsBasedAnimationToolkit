@@ -7,6 +7,7 @@
 #include "pba/common/Eigen.h"
 #include "pba/common/Profiling.h"
 #include "pba/fem/DeformationGradient.h"
+#include "pba/fem/ShapeFunctionGradients.h"
 #include "pba/math/linalg/SparsityPattern.h"
 #include "pba/physics/HyperElasticity.h"
 
@@ -156,6 +157,7 @@ inline void HyperElasticPotential<TMesh, THyperElasticEnergy>::ComputeElementEla
     }
     auto constexpr kNodesPerElement = ElementType::kNodes;
     auto constexpr kDofsPerElement  = kNodesPerElement * kDims;
+    auto const wg                   = common::ToEigen(QuadratureRuleType::weights);
     Ue.setZero(numberOfElements);
     Ge.setZero(kDofsPerElement, numberOfElements);
     He.setZero(kDofsPerElement, kDofsPerElement * numberOfElements);
@@ -168,7 +170,6 @@ inline void HyperElasticPotential<TMesh, THyperElasticEnergy>::ComputeElementEla
         auto ge                               = Ge.col(e);
         auto he       = He.block<kDofsPerElement, kDofsPerElement>(0, e * kDofsPerElement);
         auto const xe = x.reshaped(kDims, numberOfNodes)(Eigen::all, nodes);
-        auto const wg = common::ToEigen(QuadratureRuleType::weights);
         for (auto g = 0; g < QuadratureRuleType::kPoints; ++g)
         {
             auto constexpr kStride = MeshType::kDims * QuadratureRuleType::kPoints;
@@ -191,8 +192,7 @@ inline void HyperElasticPotential<TMesh, THyperElasticEnergy>::Apply(
     Eigen::DenseBase<TDerivedOut>& y) const
 {
     PBA_PROFILE_SCOPE;
-    auto const numberOfNodes = mesh.X.cols();
-    auto const numberOfDofs  = kDims * numberOfNodes;
+    auto const numberOfDofs  = InputDimensions();
     if (x.rows() != numberOfDofs or y.rows() != numberOfDofs or x.cols() != y.cols())
     {
         std::string const what = std::format(
@@ -243,7 +243,7 @@ inline void HyperElasticPotential<TMesh, THyperElasticEnergy>::PrecomputeShapeFu
         Matrix<kRowsJ, kColsJ> const Ve = mesh.X(Eigen::all, vertices);
         for (auto g = 0; g < QuadratureRuleType::kPoints; ++g)
         {
-            auto const gradPhi     = BasisFunctionGradients<ElementType>(Xg.col(g), Ve);
+            auto const gradPhi     = ShapeFunctionGradients<ElementType>(Xg.col(g), Ve);
             auto constexpr kStride = MeshType::kDims * QuadratureRuleType::kPoints;
             GNe.block<kNodesPerElement, MeshType::kDims>(0, e * kStride + g * MeshType::kDims) =
                 gradPhi;

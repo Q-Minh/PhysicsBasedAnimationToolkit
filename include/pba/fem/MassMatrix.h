@@ -95,12 +95,14 @@ inline void MassMatrix<TMesh, Dims>::Apply(
     Eigen::DenseBase<TDerivedOut>& y) const
 {
     PBA_PROFILE_SCOPE;
-    if ((x.rows() != InputDimensions()) or (y.rows() != InputDimensions()) or
-        (y.cols() != x.cols()))
+    auto const numberOfDofs = InputDimensions();
+    if (x.rows() != numberOfDofs or y.rows() != numberOfDofs or x.cols() != y.cols())
     {
         std::string const what = std::format(
-            "Expected input x and output y with matching dimensions, but got {}x{} input and {}x{} "
-            "output",
+            "Expected inputs and outputs to have rows |#nodes*kDims|={} and same number of "
+            "columns, but got dimensions "
+            "x,y=({},{}), ({},{})",
+            numberOfDofs,
             x.rows(),
             x.cols(),
             y.rows(),
@@ -168,6 +170,7 @@ inline void MassMatrix<TMesh, Dims>::ComputeElementMassMatrices()
     auto const Xg = common::ToEigen(QuadratureRuleType::points)
                         .reshaped(QuadratureRuleType::kDims + 1, QuadratureRuleType::kPoints)
                         .bottomRows<QuadratureRuleType::kDims>();
+    auto const wg                   = common::ToEigen(QuadratureRuleType::weights);
     auto const numberOfElements     = mesh.E.cols();
     auto constexpr kNodesPerElement = ElementType::kNodes;
     Me.setZero(kNodesPerElement, kNodesPerElement * numberOfElements);
@@ -175,7 +178,6 @@ inline void MassMatrix<TMesh, Dims>::ComputeElementMassMatrices()
         auto const nodes    = mesh.E.col(e);
         auto const vertices = nodes(ElementType::Vertices);
         auto me = Me.block<ElementType::kNodes, ElementType::kNodes>(0, e * ElementType::kNodes);
-        auto const wg = common::ToEigen(QuadratureRuleType::weights);
         for (auto g = 0; g < QuadratureRuleType::kPoints; ++g)
         {
             Scalar const detJ                    = detJe(g, e);

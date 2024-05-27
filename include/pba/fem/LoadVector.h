@@ -116,10 +116,10 @@ inline void LoadVector<TMesh, Dims>::IntegrateShapeFunctions()
     auto const Xg = common::ToEigen(QuadratureRuleType::points)
                         .reshaped(QuadratureRuleType::kDims + 1, QuadratureRuleType::kPoints)
                         .bottomRows(QuadratureRuleType::kDims);
+    auto const wg = common::ToEigen(QuadratureRuleType::weights);
     tbb::parallel_for(Index{0}, Index{numberOfElements}, [&](Index e) {
         auto const nodes    = mesh.E.col(e);
         auto const vertices = nodes(ElementType::Vertices);
-        auto const wg       = common::ToEigen(QuadratureRuleType::weights);
         for (auto g = 0; g < QuadratureRuleType::kPoints; ++g)
         {
             Scalar const detJ                    = detJe(g, e);
