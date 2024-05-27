@@ -25,11 +25,11 @@ TEST_CASE("[fem] HyperElasticPotential")
             3, 0, 6, 5, 3,
             5, 6, 0, 3, 6;
     // clang-format on
-    auto constexpr kDims  = 3;
     Scalar constexpr zero = 1e-8;
     Scalar constexpr Y    = 1e6;
     Scalar constexpr nu   = 0.45;
     common::ForValues<1, 2, 3>([&]<auto kOrder>() {
+        auto constexpr kDims       = 3;
         using ElasticEnergyType    = physics::StableNeoHookeanEnergy<3>;
         using ElementType          = fem::Tetrahedron<kOrder>;
         using MeshType             = fem::Mesh<ElementType, kDims>;
@@ -79,7 +79,7 @@ TEST_CASE("[fem] HyperElasticPotential")
         // Check linearity of matrix-free operator
         Scalar constexpr k = -3.;
         VectorX y          = VectorX::Zero(x.size());
-        VectorX yExpected  = k * H * x + H*x;
+        VectorX yExpected  = k * H * x + H * x;
         U.Apply(k * x + x, y);
         Scalar const linearityError = (y - yExpected).norm() / yExpected.norm();
         CHECK_LE(linearityError, zero);

@@ -41,7 +41,7 @@ TEST_CASE("[math] LinearOperator")
     auto constexpr n          = 5;
     auto constexpr zero       = 0.;
     test::IdentityOperator I{n};
-    auto const cop = math::ComposeLinearOperators(I, test::IdentityOperator{n}, I);
+    auto const cop = math::ComposeLinearOperators(I, I, I);
 
     Vector<n> const x = Vector<n>::Ones();
     Vector<n> y       = Vector<n>::Zero();
@@ -68,8 +68,9 @@ TEST_CASE("[math] LinearOperator")
     Scalar const xEigenError = (xEigenExpected - xEigen).norm() / xEigenExpected.norm();
     CHECK_LE(xEigenError, zero);
 
-    CSCMatrix const I3       = cop.ToMatrix();
-    Scalar const matrixError = (I3 - Matrix<n, n>::Identity().sparseView() * 3.).squaredNorm();
+    CSCMatrix const I3         = cop.ToMatrix();
+    CSCMatrix const I3expected = 3. * Matrix<n, n>::Identity().sparseView();
+    Scalar const matrixError   = (I3 - I3expected).squaredNorm();
     CHECK_LE(matrixError, zero);
 
     Vector<n> yScaled = Vector<n>::Zero();
