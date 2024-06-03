@@ -39,3 +39,6 @@ __pycache__
 
 # Visual Studio Code
 .vscode
+
+# CMake
+CMakeUserPresets.json

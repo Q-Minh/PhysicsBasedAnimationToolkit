@@ -241,15 +241,15 @@ def codegen(felement, p: int, element_name: str):
     """
 
     header = f"""
-#ifndef PBA_CORE_FEM_{element_name.upper()}_H
-#define PBA_CORE_FEM_{element_name.upper()}_H
+#ifndef PBAT_FEM_{element_name.upper()}_H
+#define PBAT_FEM_{element_name.upper()}_H
 
-#include "pba/aliases.h"
+#include "pbat/aliases.h"
 #include "QuadratureRules.h"
 
 #include <array>
 
-namespace pba {{
+namespace pbat {{
 namespace fem {{
 
 template <int Order>
@@ -257,10 +257,10 @@ struct {element_name};
 """
 
     footer = f"""
-}} // fem
-}} // pba
+}} // namespace fem
+}} // namespace pbat
 
-#endif // PBA_CORE_FEM_{element_name.upper()}_H
+#endif // PBAT_FEM_{element_name.upper()}_H
 """
 
     with open("{}.h".format(element_name), 'w', encoding="utf-8") as file:

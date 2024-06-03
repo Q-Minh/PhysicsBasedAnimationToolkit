@@ -47,15 +47,15 @@ def codegen(fpsi, energy_name: str):
     source = []
 
     header = f"""
-#ifndef PBA_CORE_PHYSICS_{energy_name.upper()}_H
-#define PBA_CORE_PHYSICS_{energy_name.upper()}_H
+#ifndef PBAT_PHYSICS_{energy_name.upper()}_H
+#define PBAT_PHYSICS_{energy_name.upper()}_H
 
-#include "pba/aliases.h"
+#include "pbat/aliases.h"
 
 #include <cmath>
 #include <tuple>
 
-namespace pba {{
+namespace pbat {{
 namespace physics {{
 
 template <int Dims>
@@ -206,10 +206,10 @@ std::tuple<Vector<{vecF.shape[0]}>, Matrix<{vecF.shape[0]},{vecF.shape[0]}>>
         source.append(impl)
 
     footer = f"""
-}} // physics
-}} // pba
+}} // namespace physics
+}} // namespace pbat
 
-#endif // PBA_CORE_PHYSICS_{energy_name.upper()}_H
+#endif // PBAT_PHYSICS_{energy_name.upper()}_H
 """
 
     source.append(footer)

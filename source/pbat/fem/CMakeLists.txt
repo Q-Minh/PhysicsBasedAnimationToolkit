@@ -1,0 +1,32 @@
+target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
+    PUBLIC
+    FILE_SET api
+    FILES
+    "Concepts.h"
+    "DeformationGradient.h"
+    "DivergenceVector.h"
+    "Hexahedron.h"
+    "HyperElasticPotential.h"
+    "Jacobian.h"
+    "LaplacianMatrix.h"
+    "Line.h"
+    "LoadVector.h"
+    "MassMatrix.h"
+    "Mesh.h"
+    "QuadratureRules.h"
+    "Quadrilateral.h"
+    "ShapeFunctionGradients.h"
+    "Tetrahedron.h"
+    "Triangle.h"
+)
+target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
+    PRIVATE
+    "DeformationGradient.cpp"
+    "DivergenceVector.cpp"
+    "HyperElasticPotential.cpp"
+    "LaplacianMatrix.cpp"
+    "LoadVector.cpp"
+    "MassMatrix.cpp"
+    "Mesh.cpp"
+    "ShapeFunctionGradients.cpp"
+)

@@ -107,8 +107,8 @@ def divergence_free_basis(V: list, dims: int, x: list, a: list, b: list):
 
 def header(file):
     file.write(
-"""#ifndef PBA_CORE_MATH_POLYNOMIAL_BASIS_H
-#define PBA_CORE_MATH_POLYNOMIAL_BASIS_H
+"""#ifndef PBAT_MATH_POLYNOMIAL_BASIS_H
+#define PBAT_MATH_POLYNOMIAL_BASIS_H
 
 /**
 * @file PolynomialBasis.h
@@ -118,12 +118,12 @@ def header(file):
 *
 */
 
-#include "pba/aliases.h"
+#include "pbat/aliases.h"
 
 #include <cmath>
 #include <numbers>
 
-namespace pba {
+namespace pbat {
 namespace math {
 
 template <int Dims, int Order>
@@ -141,9 +141,9 @@ def footer(file):
     file.write(
 """
 } // namespace math
-} // namespace pba
+} // namespace pbat
 
-#endif // PBA_CORE_MATH_POLYNOMIAL_BASIS_H
+#endif // PBAT_MATH_POLYNOMIAL_BASIS_H
 """
     )
     

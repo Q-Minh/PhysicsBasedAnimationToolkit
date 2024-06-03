@@ -22,14 +22,14 @@ def shifted_gauss_quadrature(order: int, dims: int = 1, ndigits=10):
 
 if __name__ == "__main__":
     header = """
-#ifndef PBA_CORE_MATH_GAUSS_QUADRATURE_H
-#define PBA_CORE_MATH_GAUSS_QUADRATURE_H
+#ifndef PBAT_MATH_GAUSS_QUADRATURE_H
+#define PBAT_MATH_GAUSS_QUADRATURE_H
 
-#include "pba/aliases.h"
+#include "pbat/aliases.h"
 #include <array>
 #include <cstdint>
 
-namespace pba {
+namespace pbat {
 namespace math {
 
 /**
@@ -47,10 +47,10 @@ struct GaussLegendreQuadrature;
     """
 
     footer = """
-} // math
-} // pba
+} // namespace math
+} // namespace pbat
     
-#endif // PBA_CORE_MATH_GAUSS_QUADRATURE_H
+#endif // PBAT_MATH_GAUSS_QUADRATURE_H
     """
 
     with open("GaussQuadrature.h", "w") as file:

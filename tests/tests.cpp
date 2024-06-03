@@ -1,10 +1,11 @@
+#define DOCTEST_CONFIG_IMPLEMENTATION_IN_DLL
 #include <doctest/doctest.h>
-#include <pba/DoctestLoadDLL.h>
+#include <pbat/DoctestLoadDLL.h>
 
 int main(int argc, char** argv)
 {
     // force the use of a symbol from the dll so tests from it get registered
-    pba::ForceLoadDLL();
+    pbat::ForceLoadDLL();
 
     doctest::Context context(argc, argv);
     int res = context.run();
