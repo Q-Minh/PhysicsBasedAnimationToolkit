@@ -1,6 +1,7 @@
 #ifndef PBA_PHYSICS_HYPER_ELASTICITY_H
 #define PBA_PHYSICS_HYPER_ELASTICITY_H
 
+#include "PhysicsBasedAnimationToolkitExport.h"
 #include "pbat/aliases.h"
 
 #include <concepts>
@@ -12,7 +13,7 @@
 namespace pbat {
 namespace physics {
 
-std::pair<Scalar, Scalar> LameCoefficients(Scalar Y, Scalar nu);
+PBAT_API std::pair<Scalar, Scalar> LameCoefficients(Scalar Y, Scalar nu);
 
 template <class TDerivedY, class TDerivednu>
 std::pair<VectorX, VectorX>
@@ -39,12 +40,13 @@ concept CHyperElasticEnergy = requires(T t)
     {
         t.evalWithGradAndHessian(Matrix<T::kDims, T::kDims>{}.reshaped(), Scalar{}, Scalar{})
     } -> std::convertible_to<std::tuple<
-        Scalar,
-        Vector<T::kDims * T::kDims>,
-        Matrix<T::kDims * T::kDims, T::kDims * T::kDims>>>;
+          Scalar,
+          Vector<T::kDims * T::kDims>,
+          Matrix<T::kDims * T::kDims, T::kDims * T::kDims>>>;
     {
         t.gradAndHessian(Matrix<T::kDims, T::kDims>{}.reshaped(), Scalar{}, Scalar{})
-    } -> std::convertible_to<
+    }
+    -> std::convertible_to<
         std::tuple<Vector<T::kDims * T::kDims>, Matrix<T::kDims * T::kDims, T::kDims * T::kDims>>>;
 };
 

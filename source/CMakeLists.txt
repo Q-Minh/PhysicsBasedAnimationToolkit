@@ -76,6 +76,8 @@ include(GenerateExportHeader)
 generate_export_header(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     EXPORT_MACRO_NAME "PBAT_API"
     EXPORT_FILE_NAME "PhysicsBasedAnimationToolkitExport.h"
+    DEPRECATED_MACRO_NAME "PBAT_DEPRECATED"
+    STATIC_DEFINE "PBAT_STATIC_DEFINE"
 )
 target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     PUBLIC
