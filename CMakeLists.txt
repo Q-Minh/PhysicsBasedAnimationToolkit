@@ -17,8 +17,6 @@ option(PBAT_BUILD_SHARED_LIBS "Build as shared library" OFF)
 
 # Global settings
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
-set(CMAKE_CXX_VISIBILITY_PRESET "hidden")
-set(CMAKE_VISIBILITY_INLINES_HIDDEN ON)
 list(APPEND CMAKE_MODULE_PATH "cmake")
 
 # Build as static or shared
