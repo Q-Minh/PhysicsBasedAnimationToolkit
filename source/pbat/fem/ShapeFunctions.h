@@ -1,5 +1,5 @@
-#ifndef PBAT_FEM_SHAPE_FUNCTION_GRADIENTS_H
-#define PBAT_FEM_SHAPE_FUNCTION_GRADIENTS_H
+#ifndef PBAT_FEM_SHAPE_FUNCTIONS_H
+#define PBAT_FEM_SHAPE_FUNCTIONS_H
 
 #include "Concepts.h"
 #include "Jacobian.h"
@@ -11,6 +11,31 @@
 
 namespace pbat {
 namespace fem {
+
+/**
+ * @brief Computes shape functions at element quadrature points for a polynomial quadrature rule of
+ * order QuadratureOrder
+ * @tparam TElement
+ * @tparam QuadratureOrder
+ * @return The shape function values of each node at quadrature points, stored in a matrix
+ * of dimensions |#element nodes| x |#quad.pts.|
+ */
+template <CElement TElement, int QuadratureOrder>
+Matrix<TElement::kNodes, TElement::template QuadratureType<QuadratureOrder>::kPoints>
+ShapeFunctions()
+{
+    using QuadratureRuleType = TElement::template QuadratureType<QuadratureOrder>;
+    using ElementType        = TElement;
+    auto const Xg            = common::ToEigen(QuadratureRuleType::points)
+                        .reshaped(QuadratureRuleType::kDims + 1, QuadratureRuleType::kPoints)
+                        .bottomRows<QuadratureRuleType::kDims>();
+    Matrix<ElementType::kNodes, QuadratureRuleType::kPoints> Ng{};
+    for (auto g = 0; g < QuadratureRuleType::kPoints; ++g)
+    {
+        Ng.col(g) = ElementType::N(Xg.col(g));
+    }
+    return Ng;
+}
 
 /**
  * @brief Computes gradients of FEM basis functions in reference element
@@ -85,4 +110,4 @@ MatrixX ShapeFunctionGradients(TMesh const& mesh)
 } // namespace fem
 } // namespace pbat
 
-#endif // PBAT_FEM_SHAPE_FUNCTION_GRADIENTS_H
+#endif // PBAT_FEM_SHAPE_FUNCTIONS_H

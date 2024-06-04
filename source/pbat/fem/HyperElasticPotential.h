@@ -7,7 +7,7 @@
 #include "pbat/common/Eigen.h"
 #include "pbat/profiling/Profiling.h"
 #include "pbat/fem/DeformationGradient.h"
-#include "pbat/fem/ShapeFunctionGradients.h"
+#include "pbat/fem/ShapeFunctions.h"
 #include "pbat/math/linalg/SparsityPattern.h"
 #include "pbat/physics/HyperElasticity.h"
 

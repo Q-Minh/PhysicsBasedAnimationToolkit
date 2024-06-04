@@ -15,7 +15,7 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     "Mesh.h"
     "QuadratureRules.h"
     "Quadrilateral.h"
-    "ShapeFunctionGradients.h"
+    "ShapeFunctions.h"
     "Tetrahedron.h"
     "Triangle.h"
 )
@@ -28,5 +28,5 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     "LoadVector.cpp"
     "MassMatrix.cpp"
     "Mesh.cpp"
-    "ShapeFunctionGradients.cpp"
+    "ShapeFunctions.cpp"
 )

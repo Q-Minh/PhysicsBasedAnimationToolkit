@@ -1,5 +1,6 @@
 #include "pbat/fem/MassMatrix.h"
 
+#include "Jacobian.h"
 #include "pbat/common/ConstexprFor.h"
 #include "pbat/fem/Mesh.h"
 #include "pbat/fem/Tetrahedron.h"
@@ -25,6 +26,7 @@ TEST_CASE("[fem] MassMatrix")
             5, 6, 0, 3, 6;
     // clang-format on
 
+    Scalar constexpr rho = 1.;
     common::ForRange<1, 3>([&]<auto kOrder>() {
         common::ForRange<1, 4>([&]<auto OutDims> {
             using Element        = fem::Tetrahedron<kOrder>;
@@ -35,9 +37,11 @@ TEST_CASE("[fem] MassMatrix")
             Scalar constexpr zero = 1e-10;
             auto const n          = N * OutDims;
 
-            using MassMatrix = fem::MassMatrix<Mesh, OutDims>;
+            auto constexpr kQuadratureOrder = 2 * kOrder;
+            using MassMatrix                = fem::MassMatrix<Mesh, OutDims, kQuadratureOrder>;
             CHECK(math::CLinearOperator<MassMatrix>);
-            MassMatrix matrixFreeMass(mesh, 1.);
+            MatrixX const detJe = fem::DeterminantOfJacobian<kQuadratureOrder>(mesh);
+            MassMatrix matrixFreeMass(mesh, detJe, rho);
 
             CSCMatrix const M = matrixFreeMass.ToMatrix();
             CHECK_EQ(M.rows(), n);

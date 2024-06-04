@@ -2,11 +2,12 @@
 #define PBAT_FEM_MASS_MATRIX_H
 
 #include "Concepts.h"
-#include "Jacobian.h"
+#include "ShapeFunctions.h"
 #include "pbat/aliases.h"
 #include "pbat/common/Eigen.h"
 #include "pbat/profiling/Profiling.h"
 
+#include <array>
 #include <exception>
 #include <format>
 #include <tbb/parallel_for.h>
@@ -14,21 +15,40 @@
 namespace pbat {
 namespace fem {
 
-template <CMesh TMesh, int Dims>
+template <CMesh TMesh, int Dims, int QuadratureOrder>
 struct MassMatrix
 {
   public:
-    using SelfType              = MassMatrix<TMesh, Dims>;
-    using MeshType              = TMesh;
-    using ElementType           = typename TMesh::ElementType;
-    using QuadratureRuleType    = ElementType::template QuadratureType<2 * ElementType::kOrder>;
-    static int constexpr kDims  = Dims;
-    static int constexpr kOrder = 2 * ElementType::kOrder;
+    using SelfType                        = MassMatrix<TMesh, Dims, QuadratureOrder>;
+    using MeshType                        = TMesh;
+    using ElementType                     = typename TMesh::ElementType;
+    using QuadratureRuleType              = ElementType::template QuadratureType<QuadratureOrder>;
+    static int constexpr kDims            = Dims;
+    static int constexpr kOrder           = 2 * ElementType::kOrder;
+    static int constexpr kQuadratureOrder = QuadratureOrder;
 
-    MassMatrix(MeshType const& mesh, Scalar rho = 1.);
+    /**
+     * @brief
+     * @param mesh
+     * @param detJe |#quad.pts.|x|#elements| affine element jacobian determinants at quadrature
+     * points
+     * @param rho Uniform mass density
+     */
+    MassMatrix(MeshType const& mesh, Eigen::Ref<MatrixX const> const& detJe, Scalar rho = 1.);
 
+    /**
+     * @brief
+     * @tparam TDerived
+     * @param mesh
+     * @param detJe |#quad.pts.|x|#elements| affine element jacobian determinants at quadrature
+     * points
+     * @param rho |#elements| x 1 piecewise constant mass density
+     */
     template <class TDerived>
-    MassMatrix(MeshType const& mesh, Eigen::DenseBase<TDerived> const& rho);
+    MassMatrix(
+        MeshType const& mesh,
+        Eigen::Ref<MatrixX const> const& detJe,
+        Eigen::DenseBase<TDerived> const& rho);
 
     SelfType& operator=(SelfType const&) = delete;
 
@@ -52,44 +72,46 @@ struct MassMatrix
     Index InputDimensions() const { return kDims * mesh.X.cols(); }
     Index OutputDimensions() const { return InputDimensions(); }
 
-    void ComputeElementMassMatrices();
+    /**
+     * @brief
+     * @tparam TDerived
+     * @param rho |#elements| x 1 piecewise constant mass density
+     */
+    template <class TDerived>
+    void ComputeElementMassMatrices(Eigen::DenseBase<TDerived> const& rho);
 
-    MeshType const& mesh; ///< The finite element mesh
-    VectorX rho;          ///< |#elements| x 1 piecewise constant mass density
-    MatrixX Me;    ///< |ElementType::Nodes|x|ElementType::Nodes * |#elements| element mass matrices
-                   ///< for 1-dimensional problems. For d-dimensional problems, these mass matrices
-                   ///< should be Kroneckered with the d-dimensional identity matrix.
-    MatrixX detJe; ///< |# element quadrature points| x |# elements| matrix of jacobian determinants
-                   ///< at element quadrature points
+    MeshType const& mesh;            ///< The finite element mesh
+    Eigen::Ref<MatrixX const> detJe; ///< |# element quadrature points| x |# elements| matrix of
+                                     ///< jacobian determinants at element quadrature points
+    MatrixX Me; ///< |ElementType::Nodes|x|ElementType::Nodes * |#elements| element mass matrices
+                ///< for 1-dimensional problems. For d-dimensional problems, these mass matrices
+                ///< should be Kroneckered with the d-dimensional identity matrix.
 };
 
-template <CMesh TMesh, int Dims>
-inline MassMatrix<TMesh, Dims>::MassMatrix(MeshType const& mesh, Scalar rho)
-    : MassMatrix<TMesh, Dims>(mesh, VectorX::Constant(mesh.E.cols(), rho))
+template <CMesh TMesh, int Dims, int QuadratureOrder>
+inline MassMatrix<TMesh, Dims, QuadratureOrder>::MassMatrix(
+    MeshType const& mesh,
+    Eigen::Ref<MatrixX const> const& detJe,
+    Scalar rho)
+    : MassMatrix<TMesh, Dims, QuadratureOrder>(mesh, detJe, VectorX::Constant(mesh.E.cols(), rho))
 {
 }
 
-template <CMesh TMesh, int Dims>
+template <CMesh TMesh, int Dims, int QuadratureOrder>
 template <class TDerived>
-inline MassMatrix<TMesh, Dims>::MassMatrix(
+inline MassMatrix<TMesh, Dims, QuadratureOrder>::MassMatrix(
     MeshType const& mesh,
+    Eigen::Ref<MatrixX const> const& detJe,
     Eigen::DenseBase<TDerived> const& rho)
-    : mesh(mesh), rho(rho), Me(), detJe()
+    : mesh(mesh), detJe(detJe), Me()
 {
     PBA_PROFILE_NAMED_SCOPE("Construct fem::MassMatrix");
-    if (rho.size() != mesh.E.cols())
-    {
-        std::string const what =
-            std::format("Expected element-piecewise mass density rho, but size was {}", rho.size());
-        throw std::invalid_argument(what);
-    }
-    detJe = DeterminantOfJacobian<QuadratureRuleType::kOrder>(mesh);
-    ComputeElementMassMatrices();
+    ComputeElementMassMatrices(rho);
 }
 
-template <CMesh TMesh, int Dims>
+template <CMesh TMesh, int Dims, int QuadratureOrder>
 template <class TDerivedIn, class TDerivedOut>
-inline void MassMatrix<TMesh, Dims>::Apply(
+inline void MassMatrix<TMesh, Dims, QuadratureOrder>::Apply(
     Eigen::MatrixBase<TDerivedIn> const& x,
     Eigen::DenseBase<TDerivedOut>& y) const
 {
@@ -125,8 +147,8 @@ inline void MassMatrix<TMesh, Dims>::Apply(
     }
 }
 
-template <CMesh TMesh, int Dims>
-inline CSCMatrix MassMatrix<TMesh, Dims>::ToMatrix() const
+template <CMesh TMesh, int Dims, int QuadratureOrder>
+inline CSCMatrix MassMatrix<TMesh, Dims, QuadratureOrder>::ToMatrix() const
 {
     PBA_PROFILE_SCOPE;
     using SparseIndex = typename CSCMatrix::StorageIndex;
@@ -160,28 +182,44 @@ inline CSCMatrix MassMatrix<TMesh, Dims>::ToMatrix() const
     return Mmat;
 }
 
-template <CMesh TMesh, int Dims>
-inline void MassMatrix<TMesh, Dims>::ComputeElementMassMatrices()
+template <CMesh TMesh, int Dims, int QuadratureOrder>
+template <class TDerived>
+inline void MassMatrix<TMesh, Dims, QuadratureOrder>::ComputeElementMassMatrices(
+    Eigen::DenseBase<TDerived> const& rho)
 {
     PBA_PROFILE_SCOPE;
-    using AffineElementType = typename ElementType::AffineBaseType;
+    auto const numberOfElements = mesh.E.cols();
+    bool const bRhoDimensionsAreCorrect =
+        (rho.size() == numberOfElements) and ((rho.rows() == 1) or (rho.cols() == 1));
+    if (bRhoDimensionsAreCorrect)
+    {
+        std::string const what = std::format(
+            "Expected element-piecewise mass density rho of dimensions {}x1, but dimensions were "
+            "{}x{}",
+            numberOfElements,
+            rho.rows(),
+            rho.cols());
+        throw std::invalid_argument(what);
+    }
 
-    auto const Xg = common::ToEigen(QuadratureRuleType::points)
-                        .reshaped(QuadratureRuleType::kDims + 1, QuadratureRuleType::kPoints)
-                        .bottomRows<QuadratureRuleType::kDims>();
-    auto const wg                   = common::ToEigen(QuadratureRuleType::weights);
-    auto const numberOfElements     = mesh.E.cols();
-    auto constexpr kNodesPerElement = ElementType::kNodes;
+    auto constexpr kNodesPerElement   = ElementType::kNodes;
+    auto constexpr kQuadPtsPerElement = QuadratureRuleType::kPoints;
+
+    // Precompute element shape function outer products
+    auto const N = ShapeFunctions<ElementType, kQuadratureOrder>();
+    std::array<Matrix<kNodesPerElement, kNodesPerElement>, kQuadPtsPerElement> NgOuterNg{};
+    auto const wg = common::ToEigen(QuadratureRuleType::weights);
+    for (auto g = 0; g < kQuadPtsPerElement; ++g)
+    {
+        NgOuterNg[static_cast<std::size_t>(g)] = wg(g) * (N.col(g) * N.col(g).transpose());
+    }
+    // Compute element mass matrices
     Me.setZero(kNodesPerElement, kNodesPerElement * numberOfElements);
     tbb::parallel_for(Index{0}, Index{numberOfElements}, [&](Index e) {
-        auto const nodes    = mesh.E.col(e);
-        auto const vertices = nodes(ElementType::Vertices);
-        auto me = Me.block<ElementType::kNodes, ElementType::kNodes>(0, e * ElementType::kNodes);
-        for (auto g = 0; g < QuadratureRuleType::kPoints; ++g)
+        auto me = Me.block<kNodesPerElement, kNodesPerElement>(0, e * kNodesPerElement);
+        for (auto g = 0; g < kQuadPtsPerElement; ++g)
         {
-            Scalar const detJ                    = detJe(g, e);
-            Vector<ElementType::kNodes> const Ng = ElementType::N(Xg.col(g));
-            me += (wg(g) * rho(e) * detJ) * (Ng * Ng.transpose());
+            me += (rho(e) * detJe(g, e)) * NgOuterNg[static_cast<std::size_t>(g)];
         }
     });
 }

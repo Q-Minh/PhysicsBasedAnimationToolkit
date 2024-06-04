@@ -4,7 +4,7 @@
 #include "pbat/fem/Hexahedron.h"
 #include "pbat/fem/Line.h"
 #include "pbat/fem/Mesh.h"
-#include "pbat/fem/ShapeFunctionGradients.h"
+#include "pbat/fem/ShapeFunctions.h"
 #include "pbat/fem/Tetrahedron.h"
 #include "pbat/fem/Triangle.h"
 

@@ -6,7 +6,7 @@
 #include "pbat/aliases.h"
 #include "pbat/common/Eigen.h"
 #include "pbat/profiling/Profiling.h"
-#include "pbat/fem/ShapeFunctionGradients.h"
+#include "pbat/fem/ShapeFunctions.h"
 
 #include <exception>
 #include <format>

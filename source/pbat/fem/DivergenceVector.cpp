@@ -3,7 +3,7 @@
 #include "pbat/common/ConstexprFor.h"
 #include "pbat/fem/Jacobian.h"
 #include "pbat/fem/Mesh.h"
-#include "pbat/fem/ShapeFunctionGradients.h"
+#include "pbat/fem/ShapeFunctions.h"
 #include "pbat/fem/Tetrahedron.h"
 
 #include <doctest/doctest.h>
