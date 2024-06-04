@@ -2,8 +2,6 @@
 #define PBAT_FEM_DIVERGENCE_VECTOR_H
 
 #include "Concepts.h"
-#include "Jacobian.h"
-#include "ShapeFunctionGradients.h"
 #include "pbat/aliases.h"
 #include "pbat/common/Eigen.h"
 #include "pbat/profiling/Profiling.h"
@@ -15,33 +13,24 @@
 namespace pbat {
 namespace fem {
 
-template <CMesh TMesh, int Dims>
+template <CMesh TMesh, int Dims, int QuadratureOrder>
 struct DivergenceVector
 {
   public:
-    using SelfType              = DivergenceVector<TMesh, Dims>;
+    using SelfType              = DivergenceVector<TMesh, Dims, QuadratureOrder>;
     using MeshType              = TMesh;
     using ElementType           = typename TMesh::ElementType;
     static int constexpr kDims  = Dims;
     static int constexpr kOrder = ElementType::kOrder - 1;
 
-    template <int ShapeFunctionOrder>
-    struct OrderSelector
-    {
-        static auto constexpr kOrder = ShapeFunctionOrder - 1;
-    };
-
-    template <>
-    struct OrderSelector<1>
-    {
-        static auto constexpr kOrder = 1;
-    };
-
-    using QuadratureRuleType =
-        ElementType::template QuadratureType<OrderSelector<ElementType::kOrder>::kOrder>;
+    using QuadratureRuleType = ElementType::template QuadratureType<QuadratureOrder>;
 
     template <class TDerived>
-    DivergenceVector(MeshType const& mesh, Eigen::DenseBase<TDerived> const& Fe);
+    DivergenceVector(
+        MeshType const& mesh,
+        Eigen::Ref<MatrixX const> const& detJe,
+        Eigen::Ref<MatrixX const> const& GNe,
+        Eigen::DenseBase<TDerived> const& Fe);
 
     SelfType& operator=(SelfType const&) = delete;
 
@@ -57,26 +46,64 @@ struct DivergenceVector
     template <class TDerivedF>
     void ComputeElementDivergence(Eigen::DenseBase<TDerivedF> const& Fe);
 
-    MeshType const& mesh; ///< The finite element mesh
-    MatrixX GNe;   ///< |ElementType::kNodes|x|kDims * QuadratureRuleType::kPoints * #elements|
-                   ///< matrix of element shape function gradients at quadrature points
-    MatrixX detJe; ///< |# element quadrature points|x|#elements| matrix of jacobian determinants at
-                   ///< element quadrature points
+    MeshType const& mesh;            ///< The finite element mesh
+    Eigen::Ref<MatrixX const> detJe; ///< |# element quadrature points|x|#elements| matrix of
+                                     ///< jacobian determinants at element quadrature points
+    Eigen::Ref<MatrixX const>
+        GNe; ///< |ElementType::kNodes|x|kDims * QuadratureRuleType::kPoints * #elements|
+             ///< matrix of element shape function gradients at quadrature points
     /*
      * div(F) = div(\sum F_i \phi_i) = \sum div(F_i \phi_i) = \sum \sum F_id d(\phi_i) / d(X_d)
      */
     MatrixX divE; ///< |ElementType::kNodes|x|#elements| matrix of element divergences at nodes
 };
 
-template <CMesh TMesh, int Dims>
+template <CMesh TMesh, int Dims, int QuadratureOrder>
 template <class TDerived>
-inline DivergenceVector<TMesh, Dims>::DivergenceVector(
+inline DivergenceVector<TMesh, Dims, QuadratureOrder>::DivergenceVector(
     MeshType const& meshIn,
+    Eigen::Ref<MatrixX const> const& detJe,
+    Eigen::Ref<MatrixX const> const& GNe,
     Eigen::DenseBase<TDerived> const& Fe)
-    : mesh(meshIn), GNe(), detJe()
+    : mesh(meshIn), GNe(GNe), detJe(detJe)
 {
     PBA_PROFILE_NAMED_SCOPE("Construct fem::DivergenceVector");
-    auto const numberOfNodes = mesh.X.cols();
+    auto const numberOfNodes          = mesh.X.cols();
+    auto const numberOfElements       = mesh.E.cols();
+    auto constexpr kExpectedDetJeRows = QuadratureRuleType::kPoints;
+    auto const expectedDetJeCols      = numberOfElements;
+    bool const bDeterminantsHaveCorrectDimensions =
+        (detJe.rows() == kExpectedDetJeRows) and (detJe.cols() == expectedDetJeCols);
+    if (not bDeterminantsHaveCorrectDimensions)
+    {
+        std::string const what = std::format(
+            "Expected determinants at element quadrature points of dimensions #quad.pts.={} x "
+            "#elements={} for polynomial "
+            "quadrature order={}, but got {}x{} instead.",
+            kExpectedDetJeRows,
+            expectedDetJeCols,
+            QuadratureOrder,
+            detJe.rows(),
+            detJe.cols());
+        throw std::invalid_argument(what);
+    }
+    auto constexpr kExpectedGNeRows = ElementType::kNodes;
+    auto const expectedGNeCols = MeshType::kDims * QuadratureRuleType::kPoints * numberOfElements;
+    bool const bShapeFunctionGradientsHaveCorrectDimensions =
+        (GNe.rows() == kExpectedGNeRows) and (GNe.cols() == expectedGNeCols);
+    if (not bShapeFunctionGradientsHaveCorrectDimensions)
+    {
+        std::string const what = std::format(
+            "Expected shape function gradients at element quadrature points of dimensions "
+            "|#nodes-per-element|={} x |#mesh-dims * #quad.pts. * #elemens|={} for polynomiail "
+            "quadrature order={}, but got {}x{} instead",
+            kExpectedGNeRows,
+            expectedGNeCols,
+            QuadratureOrder,
+            GNe.rows(),
+            GNe.cols());
+        throw std::invalid_argument(what);
+    }
     if (Fe.rows() != kDims)
     {
         std::string const what = std::format(
@@ -93,15 +120,13 @@ inline DivergenceVector<TMesh, Dims>::DivergenceVector(
             Fe.cols());
         throw std::invalid_argument(what);
     }
-    GNe   = ShapeFunctionGradients<QuadratureRuleType::kOrder>(mesh);
-    detJe = DeterminantOfJacobian<QuadratureRuleType::kOrder>(mesh);
     ComputeElementDivergence(Fe);
 }
 
-template <CMesh TMesh, int Dims>
+template <CMesh TMesh, int Dims, int QuadratureOrder>
 template <class TDerivedF>
-inline void
-DivergenceVector<TMesh, Dims>::ComputeElementDivergence(Eigen::DenseBase<TDerivedF> const& Fe)
+inline void DivergenceVector<TMesh, Dims, QuadratureOrder>::ComputeElementDivergence(
+    Eigen::DenseBase<TDerivedF> const& Fe)
 {
     PBA_PROFILE_SCOPE;
     auto const numberOfElements = mesh.E.cols();
@@ -124,8 +149,8 @@ DivergenceVector<TMesh, Dims>::ComputeElementDivergence(Eigen::DenseBase<TDerive
     });
 }
 
-template <CMesh TMesh, int Dims>
-inline VectorX DivergenceVector<TMesh, Dims>::ToVector() const
+template <CMesh TMesh, int Dims, int QuadratureOrder>
+inline VectorX DivergenceVector<TMesh, Dims, QuadratureOrder>::ToVector() const
 {
     PBA_PROFILE_SCOPE;
     auto const numberOfNodes    = mesh.X.cols();
