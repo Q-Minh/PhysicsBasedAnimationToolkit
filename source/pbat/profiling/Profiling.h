@@ -24,6 +24,8 @@ PBAT_API void BeginFrame(std::string_view name);
 
 PBAT_API void EndFrame(std::string_view name);
 
+PBAT_API bool IsConnectedToServer();
+
 } // namespace profiling
 } // namespace pbat
 

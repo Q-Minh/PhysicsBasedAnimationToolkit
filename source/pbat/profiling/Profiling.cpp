@@ -29,5 +29,10 @@ void EndFrame(std::string_view name)
     FrameMarkEnd(buf.data());
 }
 
+bool IsConnectedToServer()
+{
+    return TracyIsConnected;
+}
+
 } // namespace profiling
 } // namespace pbat
