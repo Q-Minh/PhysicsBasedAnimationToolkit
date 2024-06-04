@@ -19,31 +19,31 @@ struct SaintVenantKirchhoffEnergy<1>
   public:
     static auto constexpr kDims = 1;
 
-    template <class Derived>
-    Scalar eval(Eigen::DenseBase<Derived> const& F, Scalar mu, Scalar lambda) const;
+    template <class TDerived>
+    Scalar eval(Eigen::DenseBase<TDerived> const& F, Scalar mu, Scalar lambda) const;
 
-    template <class Derived>
-    Vector<1> grad(Eigen::DenseBase<Derived> const& F, Scalar mu, Scalar lambda) const;
+    template <class TDerived>
+    Vector<1> grad(Eigen::DenseBase<TDerived> const& F, Scalar mu, Scalar lambda) const;
 
-    template <class Derived>
-    Matrix<1, 1> hessian(Eigen::DenseBase<Derived> const& F, Scalar mu, Scalar lambda) const;
+    template <class TDerived>
+    Matrix<1, 1> hessian(Eigen::DenseBase<TDerived> const& F, Scalar mu, Scalar lambda) const;
 
-    template <class Derived>
+    template <class TDerived>
     std::tuple<Scalar, Vector<1>>
-    evalWithGrad(Eigen::DenseBase<Derived> const& F, Scalar mu, Scalar lambda) const;
+    evalWithGrad(Eigen::DenseBase<TDerived> const& F, Scalar mu, Scalar lambda) const;
 
-    template <class Derived>
+    template <class TDerived>
     std::tuple<Scalar, Vector<1>, Matrix<1, 1>>
-    evalWithGradAndHessian(Eigen::DenseBase<Derived> const& F, Scalar mu, Scalar lambda) const;
+    evalWithGradAndHessian(Eigen::DenseBase<TDerived> const& F, Scalar mu, Scalar lambda) const;
 
-    template <class Derived>
+    template <class TDerived>
     std::tuple<Vector<1>, Matrix<1, 1>>
-    gradAndHessian(Eigen::DenseBase<Derived> const& F, Scalar mu, Scalar lambda) const;
+    gradAndHessian(Eigen::DenseBase<TDerived> const& F, Scalar mu, Scalar lambda) const;
 };
 
-template <class Derived>
+template <class TDerived>
 Scalar
-SaintVenantKirchhoffEnergy<1>::eval(Eigen::DenseBase<Derived> const& F, Scalar mu, Scalar lambda)
+SaintVenantKirchhoffEnergy<1>::eval(Eigen::DenseBase<TDerived> const& F, Scalar mu, Scalar lambda)
     const
 {
     Scalar psi;
@@ -54,9 +54,9 @@ SaintVenantKirchhoffEnergy<1>::eval(Eigen::DenseBase<Derived> const& F, Scalar m
     return psi;
 }
 
-template <class Derived>
+template <class TDerived>
 Vector<1>
-SaintVenantKirchhoffEnergy<1>::grad(Eigen::DenseBase<Derived> const& F, Scalar mu, Scalar lambda)
+SaintVenantKirchhoffEnergy<1>::grad(Eigen::DenseBase<TDerived> const& F, Scalar mu, Scalar lambda)
     const
 {
     Vector<1> G;
@@ -66,10 +66,11 @@ SaintVenantKirchhoffEnergy<1>::grad(Eigen::DenseBase<Derived> const& F, Scalar m
     return G;
 }
 
-template <class Derived>
-Matrix<1, 1>
-SaintVenantKirchhoffEnergy<1>::hessian(Eigen::DenseBase<Derived> const& F, Scalar mu, Scalar lambda)
-    const
+template <class TDerived>
+Matrix<1, 1> SaintVenantKirchhoffEnergy<1>::hessian(
+    Eigen::DenseBase<TDerived> const& F,
+    Scalar mu,
+    Scalar lambda) const
 {
     Matrix<1, 1> H;
     auto vecH       = H.reshaped();
@@ -80,9 +81,9 @@ SaintVenantKirchhoffEnergy<1>::hessian(Eigen::DenseBase<Derived> const& F, Scala
     return H;
 }
 
-template <class Derived>
+template <class TDerived>
 std::tuple<Scalar, Vector<1>> SaintVenantKirchhoffEnergy<1>::evalWithGrad(
-    Eigen::DenseBase<Derived> const& F,
+    Eigen::DenseBase<TDerived> const& F,
     Scalar mu,
     Scalar lambda) const
 {
@@ -97,9 +98,9 @@ std::tuple<Scalar, Vector<1>> SaintVenantKirchhoffEnergy<1>::evalWithGrad(
     return {psi, G};
 }
 
-template <class Derived>
+template <class TDerived>
 std::tuple<Scalar, Vector<1>, Matrix<1, 1>> SaintVenantKirchhoffEnergy<1>::evalWithGradAndHessian(
-    Eigen::DenseBase<Derived> const& F,
+    Eigen::DenseBase<TDerived> const& F,
     Scalar mu,
     Scalar lambda) const
 {
@@ -120,9 +121,9 @@ std::tuple<Scalar, Vector<1>, Matrix<1, 1>> SaintVenantKirchhoffEnergy<1>::evalW
     return {psi, G, H};
 }
 
-template <class Derived>
+template <class TDerived>
 std::tuple<Vector<1>, Matrix<1, 1>> SaintVenantKirchhoffEnergy<1>::gradAndHessian(
-    Eigen::DenseBase<Derived> const& F,
+    Eigen::DenseBase<TDerived> const& F,
     Scalar mu,
     Scalar lambda) const
 {
@@ -146,31 +147,31 @@ struct SaintVenantKirchhoffEnergy<2>
   public:
     static auto constexpr kDims = 2;
 
-    template <class Derived>
-    Scalar eval(Eigen::DenseBase<Derived> const& F, Scalar mu, Scalar lambda) const;
+    template <class TDerived>
+    Scalar eval(Eigen::DenseBase<TDerived> const& F, Scalar mu, Scalar lambda) const;
 
-    template <class Derived>
-    Vector<4> grad(Eigen::DenseBase<Derived> const& F, Scalar mu, Scalar lambda) const;
+    template <class TDerived>
+    Vector<4> grad(Eigen::DenseBase<TDerived> const& F, Scalar mu, Scalar lambda) const;
 
-    template <class Derived>
-    Matrix<4, 4> hessian(Eigen::DenseBase<Derived> const& F, Scalar mu, Scalar lambda) const;
+    template <class TDerived>
+    Matrix<4, 4> hessian(Eigen::DenseBase<TDerived> const& F, Scalar mu, Scalar lambda) const;
 
-    template <class Derived>
+    template <class TDerived>
     std::tuple<Scalar, Vector<4>>
-    evalWithGrad(Eigen::DenseBase<Derived> const& F, Scalar mu, Scalar lambda) const;
+    evalWithGrad(Eigen::DenseBase<TDerived> const& F, Scalar mu, Scalar lambda) const;
 
-    template <class Derived>
+    template <class TDerived>
     std::tuple<Scalar, Vector<4>, Matrix<4, 4>>
-    evalWithGradAndHessian(Eigen::DenseBase<Derived> const& F, Scalar mu, Scalar lambda) const;
+    evalWithGradAndHessian(Eigen::DenseBase<TDerived> const& F, Scalar mu, Scalar lambda) const;
 
-    template <class Derived>
+    template <class TDerived>
     std::tuple<Vector<4>, Matrix<4, 4>>
-    gradAndHessian(Eigen::DenseBase<Derived> const& F, Scalar mu, Scalar lambda) const;
+    gradAndHessian(Eigen::DenseBase<TDerived> const& F, Scalar mu, Scalar lambda) const;
 };
 
-template <class Derived>
+template <class TDerived>
 Scalar
-SaintVenantKirchhoffEnergy<2>::eval(Eigen::DenseBase<Derived> const& F, Scalar mu, Scalar lambda)
+SaintVenantKirchhoffEnergy<2>::eval(Eigen::DenseBase<TDerived> const& F, Scalar mu, Scalar lambda)
     const
 {
     Scalar psi;
@@ -183,9 +184,9 @@ SaintVenantKirchhoffEnergy<2>::eval(Eigen::DenseBase<Derived> const& F, Scalar m
     return psi;
 }
 
-template <class Derived>
+template <class TDerived>
 Vector<4>
-SaintVenantKirchhoffEnergy<2>::grad(Eigen::DenseBase<Derived> const& F, Scalar mu, Scalar lambda)
+SaintVenantKirchhoffEnergy<2>::grad(Eigen::DenseBase<TDerived> const& F, Scalar mu, Scalar lambda)
     const
 {
     Vector<4> G;
@@ -203,10 +204,11 @@ SaintVenantKirchhoffEnergy<2>::grad(Eigen::DenseBase<Derived> const& F, Scalar m
     return G;
 }
 
-template <class Derived>
-Matrix<4, 4>
-SaintVenantKirchhoffEnergy<2>::hessian(Eigen::DenseBase<Derived> const& F, Scalar mu, Scalar lambda)
-    const
+template <class TDerived>
+Matrix<4, 4> SaintVenantKirchhoffEnergy<2>::hessian(
+    Eigen::DenseBase<TDerived> const& F,
+    Scalar mu,
+    Scalar lambda) const
 {
     Matrix<4, 4> H;
     auto vecH       = H.reshaped();
@@ -249,9 +251,9 @@ SaintVenantKirchhoffEnergy<2>::hessian(Eigen::DenseBase<Derived> const& F, Scala
     return H;
 }
 
-template <class Derived>
+template <class TDerived>
 std::tuple<Scalar, Vector<4>> SaintVenantKirchhoffEnergy<2>::evalWithGrad(
-    Eigen::DenseBase<Derived> const& F,
+    Eigen::DenseBase<TDerived> const& F,
     Scalar mu,
     Scalar lambda) const
 {
@@ -277,9 +279,9 @@ std::tuple<Scalar, Vector<4>> SaintVenantKirchhoffEnergy<2>::evalWithGrad(
     return {psi, G};
 }
 
-template <class Derived>
+template <class TDerived>
 std::tuple<Scalar, Vector<4>, Matrix<4, 4>> SaintVenantKirchhoffEnergy<2>::evalWithGradAndHessian(
-    Eigen::DenseBase<Derived> const& F,
+    Eigen::DenseBase<TDerived> const& F,
     Scalar mu,
     Scalar lambda) const
 {
@@ -341,9 +343,9 @@ std::tuple<Scalar, Vector<4>, Matrix<4, 4>> SaintVenantKirchhoffEnergy<2>::evalW
     return {psi, G, H};
 }
 
-template <class Derived>
+template <class TDerived>
 std::tuple<Vector<4>, Matrix<4, 4>> SaintVenantKirchhoffEnergy<2>::gradAndHessian(
-    Eigen::DenseBase<Derived> const& F,
+    Eigen::DenseBase<TDerived> const& F,
     Scalar mu,
     Scalar lambda) const
 {
@@ -404,31 +406,31 @@ struct SaintVenantKirchhoffEnergy<3>
   public:
     static auto constexpr kDims = 3;
 
-    template <class Derived>
-    Scalar eval(Eigen::DenseBase<Derived> const& F, Scalar mu, Scalar lambda) const;
+    template <class TDerived>
+    Scalar eval(Eigen::DenseBase<TDerived> const& F, Scalar mu, Scalar lambda) const;
 
-    template <class Derived>
-    Vector<9> grad(Eigen::DenseBase<Derived> const& F, Scalar mu, Scalar lambda) const;
+    template <class TDerived>
+    Vector<9> grad(Eigen::DenseBase<TDerived> const& F, Scalar mu, Scalar lambda) const;
 
-    template <class Derived>
-    Matrix<9, 9> hessian(Eigen::DenseBase<Derived> const& F, Scalar mu, Scalar lambda) const;
+    template <class TDerived>
+    Matrix<9, 9> hessian(Eigen::DenseBase<TDerived> const& F, Scalar mu, Scalar lambda) const;
 
-    template <class Derived>
+    template <class TDerived>
     std::tuple<Scalar, Vector<9>>
-    evalWithGrad(Eigen::DenseBase<Derived> const& F, Scalar mu, Scalar lambda) const;
+    evalWithGrad(Eigen::DenseBase<TDerived> const& F, Scalar mu, Scalar lambda) const;
 
-    template <class Derived>
+    template <class TDerived>
     std::tuple<Scalar, Vector<9>, Matrix<9, 9>>
-    evalWithGradAndHessian(Eigen::DenseBase<Derived> const& F, Scalar mu, Scalar lambda) const;
+    evalWithGradAndHessian(Eigen::DenseBase<TDerived> const& F, Scalar mu, Scalar lambda) const;
 
-    template <class Derived>
+    template <class TDerived>
     std::tuple<Vector<9>, Matrix<9, 9>>
-    gradAndHessian(Eigen::DenseBase<Derived> const& F, Scalar mu, Scalar lambda) const;
+    gradAndHessian(Eigen::DenseBase<TDerived> const& F, Scalar mu, Scalar lambda) const;
 };
 
-template <class Derived>
+template <class TDerived>
 Scalar
-SaintVenantKirchhoffEnergy<3>::eval(Eigen::DenseBase<Derived> const& F, Scalar mu, Scalar lambda)
+SaintVenantKirchhoffEnergy<3>::eval(Eigen::DenseBase<TDerived> const& F, Scalar mu, Scalar lambda)
     const
 {
     Scalar psi;
@@ -453,9 +455,9 @@ SaintVenantKirchhoffEnergy<3>::eval(Eigen::DenseBase<Derived> const& F, Scalar m
     return psi;
 }
 
-template <class Derived>
+template <class TDerived>
 Vector<9>
-SaintVenantKirchhoffEnergy<3>::grad(Eigen::DenseBase<Derived> const& F, Scalar mu, Scalar lambda)
+SaintVenantKirchhoffEnergy<3>::grad(Eigen::DenseBase<TDerived> const& F, Scalar mu, Scalar lambda)
     const
 {
     Vector<9> G;
@@ -488,10 +490,11 @@ SaintVenantKirchhoffEnergy<3>::grad(Eigen::DenseBase<Derived> const& F, Scalar m
     return G;
 }
 
-template <class Derived>
-Matrix<9, 9>
-SaintVenantKirchhoffEnergy<3>::hessian(Eigen::DenseBase<Derived> const& F, Scalar mu, Scalar lambda)
-    const
+template <class TDerived>
+Matrix<9, 9> SaintVenantKirchhoffEnergy<3>::hessian(
+    Eigen::DenseBase<TDerived> const& F,
+    Scalar mu,
+    Scalar lambda) const
 {
     Matrix<9, 9> H;
     auto vecH        = H.reshaped();
@@ -665,9 +668,9 @@ SaintVenantKirchhoffEnergy<3>::hessian(Eigen::DenseBase<Derived> const& F, Scala
     return H;
 }
 
-template <class Derived>
+template <class TDerived>
 std::tuple<Scalar, Vector<9>> SaintVenantKirchhoffEnergy<3>::evalWithGrad(
-    Eigen::DenseBase<Derived> const& F,
+    Eigen::DenseBase<TDerived> const& F,
     Scalar mu,
     Scalar lambda) const
 {
@@ -713,9 +716,9 @@ std::tuple<Scalar, Vector<9>> SaintVenantKirchhoffEnergy<3>::evalWithGrad(
     return {psi, G};
 }
 
-template <class Derived>
+template <class TDerived>
 std::tuple<Scalar, Vector<9>, Matrix<9, 9>> SaintVenantKirchhoffEnergy<3>::evalWithGradAndHessian(
-    Eigen::DenseBase<Derived> const& F,
+    Eigen::DenseBase<TDerived> const& F,
     Scalar mu,
     Scalar lambda) const
 {
@@ -919,9 +922,9 @@ std::tuple<Scalar, Vector<9>, Matrix<9, 9>> SaintVenantKirchhoffEnergy<3>::evalW
     return {psi, G, H};
 }
 
-template <class Derived>
+template <class TDerived>
 std::tuple<Vector<9>, Matrix<9, 9>> SaintVenantKirchhoffEnergy<3>::gradAndHessian(
-    Eigen::DenseBase<Derived> const& F,
+    Eigen::DenseBase<TDerived> const& F,
     Scalar mu,
     Scalar lambda) const
 {

@@ -21,42 +21,42 @@ struct HyperElasticEnergy
 {
     static auto constexpr kDims = 3;
 
-    template <class Derived>
-    Scalar eval(Eigen::DenseBase<Derived> const& F, Scalar mu, Scalar lambda) const
+    template <class TDerived>
+    Scalar eval(Eigen::DenseBase<TDerived> const& F, Scalar mu, Scalar lambda) const
     {
         return {};
     }
 
-    template <class Derived>
-    Vector<kDims * kDims> grad(Eigen::DenseBase<Derived> const& F, Scalar mu, Scalar lambda) const
+    template <class TDerived>
+    Vector<kDims * kDims> grad(Eigen::DenseBase<TDerived> const& F, Scalar mu, Scalar lambda) const
     {
         return {};
     }
 
-    template <class Derived>
+    template <class TDerived>
     Matrix<kDims * kDims, kDims * kDims>
-    hessian(Eigen::DenseBase<Derived> const& F, Scalar mu, Scalar lambda) const
+    hessian(Eigen::DenseBase<TDerived> const& F, Scalar mu, Scalar lambda) const
     {
         return {};
     }
 
-    template <class Derived>
+    template <class TDerived>
     std::tuple<Scalar, Vector<kDims * kDims>>
-    evalWithGrad(Eigen::DenseBase<Derived> const& F, Scalar mu, Scalar lambda) const
+    evalWithGrad(Eigen::DenseBase<TDerived> const& F, Scalar mu, Scalar lambda) const
     {
         return {};
     }
 
-    template <class Derived>
+    template <class TDerived>
     std::tuple<Scalar, Vector<kDims * kDims>, Matrix<kDims * kDims, kDims * kDims>>
-    evalWithGradAndHessian(Eigen::DenseBase<Derived> const& F, Scalar mu, Scalar lambda) const
+    evalWithGradAndHessian(Eigen::DenseBase<TDerived> const& F, Scalar mu, Scalar lambda) const
     {
         return {};
     }
 
-    template <class Derived>
+    template <class TDerived>
     std::tuple<Vector<kDims * kDims>, Matrix<kDims * kDims, kDims * kDims>>
-    gradAndHessian(Eigen::DenseBase<Derived> const& F, Scalar mu, Scalar lambda) const
+    gradAndHessian(Eigen::DenseBase<TDerived> const& F, Scalar mu, Scalar lambda) const
     {
         return {};
     }
