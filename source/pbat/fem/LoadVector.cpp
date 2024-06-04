@@ -1,6 +1,7 @@
 #include "pbat/fem/LoadVector.h"
 
 #include "pbat/common/ConstexprFor.h"
+#include "pbat/fem/Jacobian.h"
 #include "pbat/fem/Mesh.h"
 #include "pbat/fem/Tetrahedron.h"
 
@@ -25,15 +26,17 @@ TEST_CASE("[fem] LoadVector")
 
     common::ForRange<1, 3>([&]<auto kOrder>() {
         common::ForRange<1, 4>([&]<auto OutDims> {
-            using Element        = fem::Tetrahedron<kOrder>;
-            auto constexpr kDims = 3;
-            using Mesh           = fem::Mesh<Element, kDims>;
+            using Element                   = fem::Tetrahedron<kOrder>;
+            auto constexpr kQuadratureOrder = kOrder;
+            auto constexpr kDims            = 3;
+            using Mesh                      = fem::Mesh<Element, kDims>;
             Mesh mesh(V, C);
             auto const N = mesh.X.cols();
             auto const n = N * OutDims;
 
-            using LoadVector = fem::LoadVector<Mesh, OutDims>;
-            LoadVector loadVector(mesh, Vector<OutDims>::Ones());
+            using LoadVector    = fem::LoadVector<Mesh, OutDims, kQuadratureOrder>;
+            MatrixX const detJe = fem::DeterminantOfJacobian<kQuadratureOrder>(mesh);
+            LoadVector loadVector(mesh, detJe, Vector<OutDims>::Ones());
 
             VectorX const f = loadVector.ToVector();
             CHECK_EQ(f.rows(), n);

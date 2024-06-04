@@ -17,11 +17,12 @@ template <CMesh TMesh, int Dims, int QuadratureOrder>
 struct DivergenceVector
 {
   public:
-    using SelfType              = DivergenceVector<TMesh, Dims, QuadratureOrder>;
-    using MeshType              = TMesh;
-    using ElementType           = typename TMesh::ElementType;
-    static int constexpr kDims  = Dims;
-    static int constexpr kOrder = ElementType::kOrder - 1;
+    using SelfType                        = DivergenceVector<TMesh, Dims, QuadratureOrder>;
+    using MeshType                        = TMesh;
+    using ElementType                     = typename TMesh::ElementType;
+    static int constexpr kDims            = Dims;
+    static int constexpr kOrder           = ElementType::kOrder - 1;
+    static int constexpr kQuadratureOrder = QuadratureOrder;
 
     using QuadratureRuleType = ElementType::template QuadratureType<QuadratureOrder>;
 
@@ -46,6 +47,8 @@ struct DivergenceVector
     template <class TDerivedF>
     void ComputeElementDivergence(Eigen::DenseBase<TDerivedF> const& Fe);
 
+    void CheckValidState();
+
     MeshType const& mesh;            ///< The finite element mesh
     Eigen::Ref<MatrixX const> detJe; ///< |# element quadrature points|x|#elements| matrix of
                                      ///< jacobian determinants at element quadrature points
@@ -68,7 +71,70 @@ inline DivergenceVector<TMesh, Dims, QuadratureOrder>::DivergenceVector(
     : mesh(meshIn), GNe(GNe), detJe(detJe)
 {
     PBA_PROFILE_NAMED_SCOPE("Construct fem::DivergenceVector");
-    auto const numberOfNodes          = mesh.X.cols();
+    auto const numberOfNodes = mesh.X.cols();
+    if (Fe.rows() != kDims)
+    {
+        std::string const what = std::format(
+            "LoadVector<TMesh,{0}> discretizes a {0}-dimensional load, but received "
+            "{1}-dimensional input load",
+            kDims,
+            Fe.rows());
+        throw std::invalid_argument(what);
+    }
+    if (Fe.cols() != numberOfNodes)
+    {
+        std::string const what = std::format(
+            "Input load vector must be discretized at mesh nodes, but size was {}",
+            Fe.cols());
+        throw std::invalid_argument(what);
+    }
+    ComputeElementDivergence(Fe);
+}
+
+template <CMesh TMesh, int Dims, int QuadratureOrder>
+template <class TDerivedF>
+inline void DivergenceVector<TMesh, Dims, QuadratureOrder>::ComputeElementDivergence(
+    Eigen::DenseBase<TDerivedF> const& Fe)
+{
+    PBA_PROFILE_SCOPE;
+    CheckValidState();
+    auto const numberOfElements = mesh.E.cols();
+    divE.setZero(ElementType::kNodes, numberOfElements);
+    auto const wg = common::ToEigen(QuadratureRuleType::weights);
+    tbb::parallel_for(Index{0}, Index{numberOfElements}, [&](Index e) {
+        auto const nodes = mesh.E.col(e);
+        for (auto g = 0; g < QuadratureRuleType::kPoints; ++g)
+        {
+            auto constexpr kStride          = MeshType::kDims * QuadratureRuleType::kPoints;
+            auto constexpr kNodesPerElement = ElementType::kNodes;
+            auto const gradPhi =
+                GNe.block<kNodesPerElement, MeshType::kDims>(0, e * kStride + g * MeshType::kDims);
+            auto const F = Fe(Eigen::all, nodes);
+            // div(F) = \sum_i \sum_d F_id d(\phi_i) / d(X_d)
+            divE.col(e) =
+                (wg(g) * detJe(g, e)) * (F.array().transpose() * gradPhi.array()).rowwise().sum();
+        }
+    });
+}
+
+template <CMesh TMesh, int Dims, int QuadratureOrder>
+inline VectorX DivergenceVector<TMesh, Dims, QuadratureOrder>::ToVector() const
+{
+    PBA_PROFILE_SCOPE;
+    auto const numberOfNodes    = mesh.X.cols();
+    auto const numberOfElements = mesh.E.cols();
+    VectorX div                 = VectorX::Zero(numberOfNodes);
+    for (auto e = 0; e < numberOfElements; ++e)
+    {
+        auto const nodes = mesh.E.col(e);
+        div(nodes) += divE.col(e);
+    }
+    return div;
+}
+
+template <CMesh TMesh, int Dims, int QuadratureOrder>
+inline void DivergenceVector<TMesh, Dims, QuadratureOrder>::CheckValidState()
+{
     auto const numberOfElements       = mesh.E.cols();
     auto constexpr kExpectedDetJeRows = QuadratureRuleType::kPoints;
     auto const expectedDetJeCols      = numberOfElements;
@@ -104,64 +170,6 @@ inline DivergenceVector<TMesh, Dims, QuadratureOrder>::DivergenceVector(
             GNe.cols());
         throw std::invalid_argument(what);
     }
-    if (Fe.rows() != kDims)
-    {
-        std::string const what = std::format(
-            "LoadVector<TMesh,{0}> discretizes a {0}-dimensional load, but received "
-            "{1}-dimensional input load",
-            kDims,
-            Fe.rows());
-        throw std::invalid_argument(what);
-    }
-    if (Fe.cols() != numberOfNodes)
-    {
-        std::string const what = std::format(
-            "Input load vector must be discretized at mesh nodes, but size was {}",
-            Fe.cols());
-        throw std::invalid_argument(what);
-    }
-    ComputeElementDivergence(Fe);
-}
-
-template <CMesh TMesh, int Dims, int QuadratureOrder>
-template <class TDerivedF>
-inline void DivergenceVector<TMesh, Dims, QuadratureOrder>::ComputeElementDivergence(
-    Eigen::DenseBase<TDerivedF> const& Fe)
-{
-    PBA_PROFILE_SCOPE;
-    auto const numberOfElements = mesh.E.cols();
-    divE.setZero(ElementType::kNodes, numberOfElements);
-    auto const wg = common::ToEigen(QuadratureRuleType::weights);
-    tbb::parallel_for(Index{0}, Index{numberOfElements}, [&](Index e) {
-        auto const nodes    = mesh.E.col(e);
-        auto const vertices = nodes(ElementType::Vertices);
-        for (auto g = 0; g < QuadratureRuleType::kPoints; ++g)
-        {
-            auto constexpr kStride          = MeshType::kDims * QuadratureRuleType::kPoints;
-            auto constexpr kNodesPerElement = ElementType::kNodes;
-            auto const gradPhi =
-                GNe.block<kNodesPerElement, MeshType::kDims>(0, e * kStride + g * MeshType::kDims);
-            auto const F = Fe(Eigen::all, nodes);
-            // div(F) = \sum_i \sum_d F_id d(\phi_i) / d(X_d)
-            divE.col(e) =
-                (wg(g) * detJe(g, e)) * (F.array().transpose() * gradPhi.array()).rowwise().sum();
-        }
-    });
-}
-
-template <CMesh TMesh, int Dims, int QuadratureOrder>
-inline VectorX DivergenceVector<TMesh, Dims, QuadratureOrder>::ToVector() const
-{
-    PBA_PROFILE_SCOPE;
-    auto const numberOfNodes    = mesh.X.cols();
-    auto const numberOfElements = mesh.E.cols();
-    VectorX div                 = VectorX::Zero(numberOfNodes);
-    for (auto e = 0; e < numberOfElements; ++e)
-    {
-        auto const nodes = mesh.E.col(e);
-        div(nodes) += divE.col(e);
-    }
-    return div;
 }
 
 } // namespace fem

@@ -1,7 +1,9 @@
 #include "pbat/fem/LaplacianMatrix.h"
 
 #include "pbat/common/ConstexprFor.h"
+#include "pbat/fem/Jacobian.h"
 #include "pbat/fem/Mesh.h"
+#include "pbat/fem/ShapeFunctions.h"
 #include "pbat/fem/Tetrahedron.h"
 #include "pbat/math/LinearOperator.h"
 
@@ -30,13 +32,21 @@ TEST_CASE("[fem] LaplacianMatrix")
         auto constexpr kDims = Element::kDims;
         using Mesh           = fem::Mesh<Element, kDims>;
         Mesh mesh(V, C);
-        auto const N          = mesh.X.cols();
-        Scalar constexpr zero = 1e-10;
-        auto const n          = N;
+        auto const N                    = mesh.X.cols();
+        Scalar constexpr zero           = 1e-10;
+        auto const n                    = N;
+        auto constexpr kQuadratureOrder = [&]() {
+            if constexpr (kOrder == 1)
+                return 1;
+            else
+                return (kOrder - 1) + (kOrder - 1);
+        }();
 
-        using LaplacianMatrix = fem::SymmetricLaplacianMatrix<Mesh>;
+        using LaplacianMatrix = fem::SymmetricLaplacianMatrix<Mesh, kQuadratureOrder>;
+        MatrixX const detJe   = fem::DeterminantOfJacobian<kQuadratureOrder>(mesh);
+        MatrixX const GNe     = fem::ShapeFunctionGradients<kQuadratureOrder>(mesh);
         CHECK(math::CLinearOperator<LaplacianMatrix>);
-        LaplacianMatrix matrixFreeLaplacian(mesh);
+        LaplacianMatrix matrixFreeLaplacian(mesh, detJe, GNe);
 
         CSCMatrix const L = matrixFreeLaplacian.ToMatrix();
         CHECK_EQ(L.rows(), n);

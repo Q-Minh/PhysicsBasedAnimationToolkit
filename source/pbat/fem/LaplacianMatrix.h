@@ -2,11 +2,9 @@
 #define PBAT_FEM_LAPLACIAN_MATRIX_H
 
 #include "Concepts.h"
-#include "Jacobian.h"
 #include "pbat/aliases.h"
 #include "pbat/common/Eigen.h"
 #include "pbat/profiling/Profiling.h"
-#include "pbat/fem/ShapeFunctions.h"
 
 #include <exception>
 #include <format>
@@ -15,37 +13,23 @@
 namespace pbat {
 namespace fem {
 
-template <CMesh TMesh>
+template <CMesh TMesh, int QuadratureOrder>
 struct SymmetricLaplacianMatrix
 {
   public:
-    using SelfType              = SymmetricLaplacianMatrix<TMesh>;
-    using MeshType              = TMesh;
-    using ElementType           = typename TMesh::ElementType;
-    static int constexpr kOrder = 2 * (ElementType::kOrder - 1);
-    static int constexpr kDims  = 1;
+    using SelfType           = SymmetricLaplacianMatrix<TMesh, QuadratureOrder>;
+    using MeshType           = TMesh;
+    using ElementType        = typename TMesh::ElementType;
+    using QuadratureRuleType = ElementType::template QuadratureType<QuadratureOrder>;
 
-    template <int ShapeFunctionOrder>
-    struct OrderSelector
-    {
-        // The symmetric part of the Laplacian matrix's element i,j is
-        // -\int_{\Omega} \nabla \phi_i(X) \cdot \nabla \phi_j(X) \partial \Omega.
-        static auto constexpr kOrder = 2 * (ShapeFunctionOrder - 1);
-    };
+    static int constexpr kOrder           = 2 * (ElementType::kOrder - 1);
+    static int constexpr kDims            = 1;
+    static int constexpr kQuadratureOrder = QuadratureOrder;
 
-    template <>
-    struct OrderSelector<1>
-    {
-        // For linear basis functions, the Laplacian vanishes. The integrand is order 0, but
-        // there is no order 0 quadrature rule, so we default to an order 1 quadrature rule, which
-        // will simply pick 1 point (and the point will actually not matter in computations).
-        static auto constexpr kOrder = 1;
-    };
-
-    using QuadratureRuleType =
-        ElementType::template QuadratureType<OrderSelector<ElementType::kOrder>::kOrder>;
-
-    SymmetricLaplacianMatrix(MeshType const& mesh);
+    SymmetricLaplacianMatrix(
+        MeshType const& mesh,
+        Eigen::Ref<MatrixX const> const& detJe,
+        Eigen::Ref<MatrixX const> const& GNe);
 
     SelfType& operator=(SelfType const&) = delete;
 
@@ -71,20 +55,30 @@ struct SymmetricLaplacianMatrix
 
     void ComputeElementLaplacians();
 
-    MeshType const& mesh; ///< The finite element mesh
+    void CheckValidState();
+
+    MeshType const& mesh;            ///< The finite element mesh
+    Eigen::Ref<MatrixX const> detJe; ///< |#quad.pts.|x|#elements| affine element jacobian
+                                     ///< determinants at quadrature points
+    Eigen::Ref<MatrixX const>
+        GNe;        ///< |ElementType::kNodes|x|kDims * QuadratureRuleType::kPoints * #elements|
+                    ///< matrix of element shape function gradients at quadrature points
     MatrixX deltaE; ///< |ElementType::kNodes| x |ElementType::kNodes * #elements| matrix element
                     ///< laplacians
 };
 
-template <CMesh TMesh>
-inline SymmetricLaplacianMatrix<TMesh>::SymmetricLaplacianMatrix(MeshType const& mesh) : mesh(mesh)
+template <CMesh TMesh, int QuadratureOrder>
+inline SymmetricLaplacianMatrix<TMesh, QuadratureOrder>::SymmetricLaplacianMatrix(
+    MeshType const& mesh,
+    Eigen::Ref<MatrixX const> const& detJe,
+    Eigen::Ref<MatrixX const> const& GNe)
+    : mesh(mesh), detJe(detJe), GNe(GNe), deltaE()
 {
-    PBA_PROFILE_NAMED_SCOPE("Construct fem::SymmetricLaplacianMatrix");
     ComputeElementLaplacians();
 }
 
-template <CMesh TMesh>
-inline CSCMatrix SymmetricLaplacianMatrix<TMesh>::ToMatrix() const
+template <CMesh TMesh, int QuadratureOrder>
+inline CSCMatrix SymmetricLaplacianMatrix<TMesh, QuadratureOrder>::ToMatrix() const
 {
     PBA_PROFILE_SCOPE;
     CSCMatrix L(OutputDimensions(), InputDimensions());
@@ -113,25 +107,17 @@ inline CSCMatrix SymmetricLaplacianMatrix<TMesh>::ToMatrix() const
     return L;
 }
 
-template <CMesh TMesh>
-inline void SymmetricLaplacianMatrix<TMesh>::ComputeElementLaplacians()
+template <CMesh TMesh, int QuadratureOrder>
+inline void SymmetricLaplacianMatrix<TMesh, QuadratureOrder>::ComputeElementLaplacians()
 {
     PBA_PROFILE_SCOPE;
-    using AffineElementType = typename ElementType::AffineBaseType;
-
-    auto const Xg = common::ToEigen(QuadratureRuleType::points)
-                        .reshaped(QuadratureRuleType::kDims + 1, QuadratureRuleType::kPoints)
-                        .bottomRows<QuadratureRuleType::kDims>();
+    CheckValidState();
+    // Compute element laplacians
     auto const wg                   = common::ToEigen(QuadratureRuleType::weights);
     auto constexpr kNodesPerElement = ElementType::kNodes;
-    MatrixX const detJe             = DeterminantOfJacobian<QuadratureRuleType::kOrder>(mesh);
-    MatrixX const GNe               = ShapeFunctionGradients<QuadratureRuleType::kOrder>(mesh);
     auto const numberOfElements     = mesh.E.cols();
     deltaE.setZero(kNodesPerElement, kNodesPerElement * numberOfElements);
     tbb::parallel_for(Index{0}, Index{numberOfElements}, [&](Index e) {
-        auto const nodes    = mesh.E.col(e);
-        auto const vertices = nodes(ElementType::Vertices);
-        auto const Ve       = mesh.X(Eigen::all, vertices);
         auto Le = deltaE.block(0, e * kNodesPerElement, kNodesPerElement, kNodesPerElement);
         for (auto g = 0; g < QuadratureRuleType::kPoints; ++g)
         {
@@ -143,20 +129,62 @@ inline void SymmetricLaplacianMatrix<TMesh>::ComputeElementLaplacians()
             auto const kStride = MeshType::kDims * QuadratureRuleType::kPoints;
             auto const GP =
                 GNe.block<kNodesPerElement, MeshType::kDims>(0, e * kStride + g * MeshType::kDims);
-            Le -= (wg(g) * detJe(g, e)) * GP * GP.transpose();
+            Le -= (wg(g) * detJe(g, e)) * (GP * GP.transpose());
         }
     });
 }
 
-template <CMesh TMesh>
+template <CMesh TMesh, int QuadratureOrder>
+inline void SymmetricLaplacianMatrix<TMesh, QuadratureOrder>::CheckValidState()
+{
+    auto const numberOfElements       = mesh.E.cols();
+    auto constexpr kExpectedDetJeRows = QuadratureRuleType::kPoints;
+    auto const expectedDetJeCols      = numberOfElements;
+    bool const bDeterminantsHaveCorrectDimensions =
+        (detJe.rows() == kExpectedDetJeRows) and (detJe.cols() == expectedDetJeCols);
+    if (not bDeterminantsHaveCorrectDimensions)
+    {
+        std::string const what = std::format(
+            "Expected determinants at element quadrature points of dimensions #quad.pts.={} x "
+            "#elements={} for polynomial "
+            "quadrature order={}, but got {}x{} instead.",
+            kExpectedDetJeRows,
+            expectedDetJeCols,
+            QuadratureOrder,
+            detJe.rows(),
+            detJe.cols());
+        throw std::invalid_argument(what);
+    }
+    auto constexpr kExpectedGNeRows = ElementType::kNodes;
+    auto const expectedGNeCols = MeshType::kDims * QuadratureRuleType::kPoints * numberOfElements;
+    bool const bShapeFunctionGradientsHaveCorrectDimensions =
+        (GNe.rows() == kExpectedGNeRows) and (GNe.cols() == expectedGNeCols);
+    if (not bShapeFunctionGradientsHaveCorrectDimensions)
+    {
+        std::string const what = std::format(
+            "Expected shape function gradients at element quadrature points of dimensions "
+            "|#nodes-per-element|={} x |#mesh-dims * #quad.pts. * #elemens|={} for polynomiail "
+            "quadrature order={}, but got {}x{} instead",
+            kExpectedGNeRows,
+            expectedGNeCols,
+            QuadratureOrder,
+            GNe.rows(),
+            GNe.cols());
+        throw std::invalid_argument(what);
+    }
+}
+
+template <CMesh TMesh, int QuadratureOrder>
 template <class TDerivedIn, class TDerivedOut>
-inline void SymmetricLaplacianMatrix<TMesh>::Apply(
+inline void SymmetricLaplacianMatrix<TMesh, QuadratureOrder>::Apply(
     Eigen::MatrixBase<TDerivedIn> const& x,
     Eigen::DenseBase<TDerivedOut>& y) const
 {
     PBA_PROFILE_SCOPE;
     auto const numberOfDofs = InputDimensions();
-    if ((x.rows() != numberOfDofs) or (y.rows() != numberOfDofs) or (y.cols() != x.cols()))
+    bool const bAreInputOutputValid =
+        (x.rows() != numberOfDofs) or (y.rows() != numberOfDofs) or (y.cols() != x.cols());
+    if (bAreInputOutputValid)
     {
         std::string const what = std::format(
             "Expected input x and output y with matching dimensions and {} rows, but got {}x{} "

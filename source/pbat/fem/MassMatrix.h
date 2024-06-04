@@ -80,6 +80,8 @@ struct MassMatrix
     template <class TDerived>
     void ComputeElementMassMatrices(Eigen::DenseBase<TDerived> const& rho);
 
+    void CheckValidState();
+
     MeshType const& mesh;            ///< The finite element mesh
     Eigen::Ref<MatrixX const> detJe; ///< |# element quadrature points| x |# elements| matrix of
                                      ///< jacobian determinants at element quadrature points
@@ -105,7 +107,6 @@ inline MassMatrix<TMesh, Dims, QuadratureOrder>::MassMatrix(
     Eigen::DenseBase<TDerived> const& rho)
     : mesh(mesh), detJe(detJe), Me()
 {
-    PBA_PROFILE_NAMED_SCOPE("Construct fem::MassMatrix");
     ComputeElementMassMatrices(rho);
 }
 
@@ -183,15 +184,42 @@ inline CSCMatrix MassMatrix<TMesh, Dims, QuadratureOrder>::ToMatrix() const
 }
 
 template <CMesh TMesh, int Dims, int QuadratureOrder>
+inline void MassMatrix<TMesh, Dims, QuadratureOrder>::CheckValidState()
+{
+    auto const numberOfElements       = mesh.E.cols();
+    auto constexpr kExpectedDetJeRows = QuadratureRuleType::kPoints;
+    auto const expectedDetJeCols      = numberOfElements;
+    bool const bDeterminantsHaveCorrectDimensions =
+        (detJe.rows() == kExpectedDetJeRows) and (detJe.cols() == expectedDetJeCols);
+    if (not bDeterminantsHaveCorrectDimensions)
+    {
+        std::string const what = std::format(
+            "Expected determinants at element quadrature points of dimensions #quad.pts.={} x "
+            "#elements={} for polynomial "
+            "quadrature order={}, but got {}x{} instead.",
+            kExpectedDetJeRows,
+            expectedDetJeCols,
+            QuadratureOrder,
+            detJe.rows(),
+            detJe.cols());
+        throw std::invalid_argument(what);
+    }
+}
+
+template <CMesh TMesh, int Dims, int QuadratureOrder>
 template <class TDerived>
 inline void MassMatrix<TMesh, Dims, QuadratureOrder>::ComputeElementMassMatrices(
     Eigen::DenseBase<TDerived> const& rho)
 {
     PBA_PROFILE_SCOPE;
-    auto const numberOfElements = mesh.E.cols();
+    // Check inputs before proceeding
+    CheckValidState();
+    auto const numberOfElements       = mesh.E.cols();
+    auto constexpr kNodesPerElement   = ElementType::kNodes;
+    auto constexpr kQuadPtsPerElement = QuadratureRuleType::kPoints;
     bool const bRhoDimensionsAreCorrect =
         (rho.size() == numberOfElements) and ((rho.rows() == 1) or (rho.cols() == 1));
-    if (bRhoDimensionsAreCorrect)
+    if (not bRhoDimensionsAreCorrect)
     {
         std::string const what = std::format(
             "Expected element-piecewise mass density rho of dimensions {}x1, but dimensions were "
@@ -201,10 +229,6 @@ inline void MassMatrix<TMesh, Dims, QuadratureOrder>::ComputeElementMassMatrices
             rho.cols());
         throw std::invalid_argument(what);
     }
-
-    auto constexpr kNodesPerElement   = ElementType::kNodes;
-    auto constexpr kQuadPtsPerElement = QuadratureRuleType::kPoints;
-
     // Precompute element shape function outer products
     auto const N = ShapeFunctions<ElementType, kQuadratureOrder>();
     std::array<Matrix<kNodesPerElement, kNodesPerElement>, kQuadPtsPerElement> NgOuterNg{};
