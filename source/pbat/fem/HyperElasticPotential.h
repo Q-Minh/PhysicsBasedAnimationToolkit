@@ -2,14 +2,12 @@
 #define PBA_FEM_HYPER_ELASTIC_POTENTIAL_H
 
 #include "Concepts.h"
-#include "Jacobian.h"
 #include "pbat/aliases.h"
 #include "pbat/common/Eigen.h"
-#include "pbat/profiling/Profiling.h"
 #include "pbat/fem/DeformationGradient.h"
-#include "pbat/fem/ShapeFunctions.h"
 #include "pbat/math/linalg/SparsityPattern.h"
 #include "pbat/physics/HyperElasticity.h"
+#include "pbat/profiling/Profiling.h"
 
 #include <exception>
 #include <format>
@@ -20,38 +18,27 @@
 namespace pbat {
 namespace fem {
 
-template <CMesh TMesh, physics::CHyperElasticEnergy THyperElasticEnergy>
+template <CMesh TMesh, physics::CHyperElasticEnergy THyperElasticEnergy, int QuadratureOrder>
 struct HyperElasticPotential
 {
   public:
-    using SelfType          = HyperElasticPotential<TMesh, THyperElasticEnergy>;
-    using MeshType          = TMesh;
-    using ElementType       = typename TMesh::ElementType;
-    using ElasticEnergyType = THyperElasticEnergy;
+    using SelfType           = HyperElasticPotential<TMesh, THyperElasticEnergy, QuadratureOrder>;
+    using MeshType           = TMesh;
+    using ElementType        = typename TMesh::ElementType;
+    using ElasticEnergyType  = THyperElasticEnergy;
+    using QuadratureRuleType = ElementType::template QuadratureType<QuadratureOrder>;
 
-    static auto constexpr kDims = THyperElasticEnergy::kDims;
-    static int constexpr kOrder = ElementType::kOrder - 1;
-
-    template <int ShapeFunctionOrder>
-    struct OrderSelector
-    {
-        static auto constexpr kOrder = ShapeFunctionOrder - 1;
-    };
-
-    template <>
-    struct OrderSelector<1>
-    {
-        static auto constexpr kOrder = 1;
-    };
-
-    using QuadratureRuleType =
-        ElementType::template QuadratureType<OrderSelector<ElementType::kOrder>::kOrder>;
+    static auto constexpr kDims           = THyperElasticEnergy::kDims;
+    static int constexpr kOrder           = ElementType::kOrder - 1;
+    static int constexpr kQuadratureOrder = QuadratureOrder;
 
     SelfType& operator=(SelfType const&) = delete;
 
     template <class TDerived>
     HyperElasticPotential(
         MeshType const& mesh,
+        Eigen::Ref<MatrixX const> const& detJe,
+        Eigen::Ref<MatrixX const> const& GNe,
         Eigen::MatrixBase<TDerived> const& x,
         Scalar Y,
         Scalar nu);
@@ -59,6 +46,8 @@ struct HyperElasticPotential
     template <class TDerivedx, class TDerivedY, class TDerivednu>
     HyperElasticPotential(
         MeshType const& mesh,
+        Eigen::Ref<MatrixX const> const& detJe,
+        Eigen::Ref<MatrixX const> const& GNe,
         Eigen::MatrixBase<TDerivedx> const& x,
         Eigen::DenseBase<TDerivedY> const& Y,
         Eigen::DenseBase<TDerivednu> const& nu);
@@ -90,58 +79,68 @@ struct HyperElasticPotential
     Index InputDimensions() const;
     Index OutputDimensions() const;
 
+    void CheckValidState();
+
     MeshType const& mesh; ///< The finite element mesh
-    VectorX mue;          ///< Element-wise 1st Lame coefficient
-    VectorX lambdae;      ///< Element-wise 2nd Lame coefficient
-    MatrixX He;           ///< |(ElementType::kNodes*kDims)| x |#elements *
-                          ///< (ElementType::kNodes*kDims)| element hessian matrices
-    MatrixX Ge;           ///< |ElementType::kNodes*kDims| x |#elements| element gradient vectors
-    VectorX Ue;           ///< |#elements| x 1 element elastic potentials
-    MatrixX GNe;   ///< |ElementType::kNodes| x |MeshType::kDims * # element quadrature points *
-                   ///< #elements| element shape function gradients
-    MatrixX detJe; ///< |# element quadrature points| x |#elements| matrix of jacobian determinants
-                   ///< at element quadrature points
+    Eigen::Ref<MatrixX const>
+        GNe; ///< |ElementType::kNodes| x |MeshType::kDims * # element quadrature points *
+             ///< #elements| element shape function gradients
+    Eigen::Ref<MatrixX const> detJe; ///< |# element quadrature points| x |#elements| matrix of
+                                     ///< jacobian determinants at element quadrature points
+
+    VectorX mue;     ///< Element-wise 1st Lame coefficient
+    VectorX lambdae; ///< Element-wise 2nd Lame coefficient
+    MatrixX He;      ///< |(ElementType::kNodes*kDims)| x |#elements *
+                     ///< (ElementType::kNodes*kDims)| element hessian matrices
+    MatrixX Ge;      ///< |ElementType::kNodes*kDims| x |#elements| element gradient vectors
+    VectorX Ue;      ///< |#elements| x 1 element elastic potentials
     math::linalg::SparsityPattern GH; ///< Directed adjacency graph of hessian
 };
 
-template <CMesh TMesh, physics::CHyperElasticEnergy THyperElasticEnergy>
+template <CMesh TMesh, physics::CHyperElasticEnergy THyperElasticEnergy, int QuadratureOrder>
 template <class TDerived>
-inline HyperElasticPotential<TMesh, THyperElasticEnergy>::HyperElasticPotential(
+inline HyperElasticPotential<TMesh, THyperElasticEnergy, QuadratureOrder>::HyperElasticPotential(
     MeshType const& meshIn,
+    Eigen::Ref<MatrixX const> const& detJe,
+    Eigen::Ref<MatrixX const> const& GNe,
     Eigen::MatrixBase<TDerived> const& x,
     Scalar Y,
     Scalar nu)
-    : HyperElasticPotential<TMesh, THyperElasticEnergy>(
+    : HyperElasticPotential<TMesh, THyperElasticEnergy, QuadratureOrder>(
           meshIn,
+          detJe,
+          GNe,
           x,
           VectorX::Constant(meshIn.E.cols(), Y),
           VectorX::Constant(meshIn.E.cols(), nu))
 {
 }
 
-template <CMesh TMesh, physics::CHyperElasticEnergy THyperElasticEnergy>
+template <CMesh TMesh, physics::CHyperElasticEnergy THyperElasticEnergy, int QuadratureOrder>
 template <class TDerivedx, class TDerivedY, class TDerivednu>
-inline HyperElasticPotential<TMesh, THyperElasticEnergy>::HyperElasticPotential(
+inline HyperElasticPotential<TMesh, THyperElasticEnergy, QuadratureOrder>::HyperElasticPotential(
     MeshType const& meshIn,
+    Eigen::Ref<MatrixX const> const& detJe,
+    Eigen::Ref<MatrixX const> const& GNe,
     Eigen::MatrixBase<TDerivedx> const& x,
     Eigen::DenseBase<TDerivedY> const& Y,
     Eigen::DenseBase<TDerivednu> const& nu)
-    : mesh(meshIn), mue(), lambdae()
+    : mesh(meshIn), detJe(detJe), GNe(GNe), mue(), lambdae(), He(), Ge(), Ue(), GH()
 {
     PBA_PROFILE_NAMED_SCOPE("Construct fem::HyperElasticPotential");
     std::tie(mue, lambdae) = physics::LameCoefficients(Y, nu);
-    GNe                    = ShapeFunctionGradients<QuadratureRuleType::kOrder>(mesh);
-    detJe                  = DeterminantOfJacobian<QuadratureRuleType::kOrder>(mesh);
     ComputeElementElasticity(x);
 }
 
-template <CMesh TMesh, physics::CHyperElasticEnergy THyperElasticEnergy>
+template <CMesh TMesh, physics::CHyperElasticEnergy THyperElasticEnergy, int QuadratureOrder>
 template <class TDerived>
-inline void HyperElasticPotential<TMesh, THyperElasticEnergy>::ComputeElementElasticity(
+inline void
+HyperElasticPotential<TMesh, THyperElasticEnergy, QuadratureOrder>::ComputeElementElasticity(
     Eigen::MatrixBase<TDerived> const& x)
 {
     PBA_PROFILE_SCOPE;
-    using AffineElementType     = typename ElementType::AffineBaseType;
+    // Check inputs
+    CheckValidState();
     auto const numberOfElements = mesh.E.cols();
     auto const numberOfNodes    = mesh.X.cols();
     if (x.size() != numberOfNodes * kDims)
@@ -153,6 +152,7 @@ inline void HyperElasticPotential<TMesh, THyperElasticEnergy>::ComputeElementEla
             x.size());
         throw std::invalid_argument(what);
     }
+    // Compute element elastic energies and their derivatives
     auto constexpr kNodesPerElement = ElementType::kNodes;
     auto constexpr kDofsPerElement  = kNodesPerElement * kDims;
     auto const wg                   = common::ToEigen(QuadratureRuleType::weights);
@@ -161,11 +161,10 @@ inline void HyperElasticPotential<TMesh, THyperElasticEnergy>::ComputeElementEla
     He.setZero(kDofsPerElement, kDofsPerElement * numberOfElements);
     ElasticEnergyType Psi{};
     tbb::parallel_for(Index{0}, Index{numberOfElements}, [&](Index e) {
-        auto const nodes    = mesh.E.col(e);
-        auto const vertices = nodes(ElementType::Vertices);
-        auto ge             = Ge.col(e);
-        auto he             = He.block<kDofsPerElement, kDofsPerElement>(0, e * kDofsPerElement);
-        auto const xe       = x.reshaped(kDims, numberOfNodes)(Eigen::all, nodes);
+        auto const nodes = mesh.E.col(e);
+        auto const xe    = x.reshaped(kDims, numberOfNodes)(Eigen::all, nodes);
+        auto ge          = Ge.col(e);
+        auto he          = He.block<kDofsPerElement, kDofsPerElement>(0, e * kDofsPerElement);
         for (auto g = 0; g < QuadratureRuleType::kPoints; ++g)
         {
             auto constexpr kStride = MeshType::kDims * QuadratureRuleType::kPoints;
@@ -181,9 +180,9 @@ inline void HyperElasticPotential<TMesh, THyperElasticEnergy>::ComputeElementEla
     });
 }
 
-template <CMesh TMesh, physics::CHyperElasticEnergy THyperElasticEnergy>
+template <CMesh TMesh, physics::CHyperElasticEnergy THyperElasticEnergy, int QuadratureOrder>
 template <class TDerivedIn, class TDerivedOut>
-inline void HyperElasticPotential<TMesh, THyperElasticEnergy>::Apply(
+inline void HyperElasticPotential<TMesh, THyperElasticEnergy, QuadratureOrder>::Apply(
     Eigen::MatrixBase<TDerivedIn> const& x,
     Eigen::DenseBase<TDerivedOut>& y) const
 {
@@ -220,8 +219,9 @@ inline void HyperElasticPotential<TMesh, THyperElasticEnergy>::Apply(
     }
 }
 
-template <CMesh TMesh, physics::CHyperElasticEnergy THyperElasticEnergy>
-inline void HyperElasticPotential<TMesh, THyperElasticEnergy>::PrecomputeHessianSparsity()
+template <CMesh TMesh, physics::CHyperElasticEnergy THyperElasticEnergy, int QuadratureOrder>
+inline void
+HyperElasticPotential<TMesh, THyperElasticEnergy, QuadratureOrder>::PrecomputeHessianSparsity()
 {
     PBA_PROFILE_SCOPE;
     auto const numberOfElements = mesh.E.cols();
@@ -255,8 +255,9 @@ inline void HyperElasticPotential<TMesh, THyperElasticEnergy>::PrecomputeHessian
     GH.Compute(OutputDimensions(), InputDimensions(), nonZeroRowIndices, nonZeroColIndices);
 }
 
-template <CMesh TMesh, physics::CHyperElasticEnergy THyperElasticEnergy>
-inline CSCMatrix HyperElasticPotential<TMesh, THyperElasticEnergy>::ToMatrix() const
+template <CMesh TMesh, physics::CHyperElasticEnergy THyperElasticEnergy, int QuadratureOrder>
+inline CSCMatrix
+HyperElasticPotential<TMesh, THyperElasticEnergy, QuadratureOrder>::ToMatrix() const
 {
     PBA_PROFILE_SCOPE;
     if (!GH.IsEmpty())
@@ -296,18 +297,75 @@ inline CSCMatrix HyperElasticPotential<TMesh, THyperElasticEnergy>::ToMatrix() c
     }
 }
 
-template <CMesh TMesh, physics::CHyperElasticEnergy THyperElasticEnergy>
-inline Index HyperElasticPotential<TMesh, THyperElasticEnergy>::InputDimensions() const
+template <CMesh TMesh, physics::CHyperElasticEnergy THyperElasticEnergy, int QuadratureOrder>
+inline Index
+HyperElasticPotential<TMesh, THyperElasticEnergy, QuadratureOrder>::InputDimensions() const
 {
     auto const numberOfNodes = mesh.X.cols();
     auto const numberOfDofs  = numberOfNodes * kDims;
     return numberOfDofs;
 }
 
-template <CMesh TMesh, physics::CHyperElasticEnergy THyperElasticEnergy>
-inline Index HyperElasticPotential<TMesh, THyperElasticEnergy>::OutputDimensions() const
+template <CMesh TMesh, physics::CHyperElasticEnergy THyperElasticEnergy, int QuadratureOrder>
+inline Index
+HyperElasticPotential<TMesh, THyperElasticEnergy, QuadratureOrder>::OutputDimensions() const
 {
     return InputDimensions();
+}
+
+template <CMesh TMesh, physics::CHyperElasticEnergy THyperElasticEnergy, int QuadratureOrder>
+inline void HyperElasticPotential<TMesh, THyperElasticEnergy, QuadratureOrder>::CheckValidState()
+{
+    auto const numberOfElements       = mesh.E.cols();
+    auto constexpr kExpectedDetJeRows = QuadratureRuleType::kPoints;
+    auto const expectedDetJeCols      = numberOfElements;
+    bool const bDeterminantsHaveCorrectDimensions =
+        (detJe.rows() == kExpectedDetJeRows) and (detJe.cols() == expectedDetJeCols);
+    if (not bDeterminantsHaveCorrectDimensions)
+    {
+        std::string const what = std::format(
+            "Expected determinants at element quadrature points of dimensions #quad.pts.={} x "
+            "#elements={} for polynomial "
+            "quadrature order={}, but got {}x{} instead.",
+            kExpectedDetJeRows,
+            expectedDetJeCols,
+            QuadratureOrder,
+            detJe.rows(),
+            detJe.cols());
+        throw std::invalid_argument(what);
+    }
+    auto constexpr kExpectedGNeRows = ElementType::kNodes;
+    auto const expectedGNeCols = MeshType::kDims * QuadratureRuleType::kPoints * numberOfElements;
+    bool const bShapeFunctionGradientsHaveCorrectDimensions =
+        (GNe.rows() == kExpectedGNeRows) and (GNe.cols() == expectedGNeCols);
+    if (not bShapeFunctionGradientsHaveCorrectDimensions)
+    {
+        std::string const what = std::format(
+            "Expected shape function gradients at element quadrature points of dimensions "
+            "|#nodes-per-element|={} x |#mesh-dims * #quad.pts. * #elemens|={} for polynomiail "
+            "quadrature order={}, but got {}x{} instead",
+            kExpectedGNeRows,
+            expectedGNeCols,
+            QuadratureOrder,
+            GNe.rows(),
+            GNe.cols());
+        throw std::invalid_argument(what);
+    }
+    bool const bLameCoefficientsHaveCorrectDimensions =
+        (mue.rows() == numberOfElements) and (mue.cols() == 1) and
+        (lambdae.rows() == numberOfElements) and (lambdae.cols() == 1);
+    if (not bLameCoefficientsHaveCorrectDimensions)
+    {
+        std::string const what = std::format(
+            "Expected piecewise element constant lame coefficients with dimensions {0}x1 and {0}x1 "
+            "for mue and lambdae, but got {1}x{2} and {3}x{4}",
+            numberOfElements,
+            mue.rows(),
+            mue.cols(),
+            lambdae.rows(),
+            lambdae.cols());
+        throw std::invalid_argument(what);
+    }
 }
 
 } // namespace fem

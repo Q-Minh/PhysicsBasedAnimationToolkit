@@ -1,7 +1,9 @@
 #include "pbat/fem/HyperElasticPotential.h"
 
 #include "pbat/common/ConstexprFor.h"
+#include "pbat/fem/Jacobian.h"
 #include "pbat/fem/Mesh.h"
+#include "pbat/fem/ShapeFunctions.h"
 #include "pbat/fem/Tetrahedron.h"
 #include "pbat/math/LinearOperator.h"
 #include "pbat/physics/HyperElasticity.h"
@@ -29,27 +31,27 @@ TEST_CASE("[fem] HyperElasticPotential")
     Scalar constexpr Y    = 1e6;
     Scalar constexpr nu   = 0.45;
     common::ForValues<1, 2, 3>([&]<auto kOrder>() {
-        auto constexpr kDims       = 3;
-        using ElasticEnergyType    = physics::StableNeoHookeanEnergy<3>;
-        using ElementType          = fem::Tetrahedron<kOrder>;
-        using MeshType             = fem::Mesh<ElementType, kDims>;
-        using ElasticPotentialType = fem::HyperElasticPotential<MeshType, ElasticEnergyType>;
-        using QuadratureType       = ElasticPotentialType::QuadratureRuleType;
+        auto constexpr kDims            = 3;
+        auto constexpr kQuadratureOrder = [&]() {
+            if constexpr (kOrder == 1)
+                return 1;
+            else
+                return kOrder - 1;
+        }();
+        using ElasticEnergyType = physics::StableNeoHookeanEnergy<3>;
+        using ElementType       = fem::Tetrahedron<kOrder>;
+        using MeshType          = fem::Mesh<ElementType, kDims>;
+        using ElasticPotentialType =
+            fem::HyperElasticPotential<MeshType, ElasticEnergyType, kQuadratureOrder>;
+        using QuadratureType = ElasticPotentialType::QuadratureRuleType;
 
         CHECK(math::CLinearOperator<ElasticPotentialType>);
 
-        // For order-k basis functions, our quadrature should be order k-1, otherwise 1
-        if constexpr (kOrder == 1)
-        {
-            CHECK_EQ(QuadratureType::kOrder, 1);
-        }
-        else
-        {
-            CHECK_EQ(QuadratureType::kOrder, kOrder - 1);
-        }
         MeshType const M(V, C);
-        VectorX const x = M.X.reshaped();
-        ElasticPotentialType U(M, x, Y, nu);
+        VectorX const x     = M.X.reshaped();
+        MatrixX const detJe = fem::DeterminantOfJacobian<kQuadratureOrder>(M);
+        MatrixX const GNe   = fem::ShapeFunctionGradients<kQuadratureOrder>(M);
+        ElasticPotentialType U(M, detJe, GNe, x, Y, nu);
         CSCMatrix const H      = U.ToMatrix();
         CSCMatrix const HT     = H.transpose();
         Scalar const Esymmetry = (HT - H).squaredNorm() / H.squaredNorm();
