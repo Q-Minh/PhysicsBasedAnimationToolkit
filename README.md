@@ -1,1 +1,1 @@
-# pba-core
+# Physics Based Animation Toolkit
