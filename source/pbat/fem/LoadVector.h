@@ -49,19 +49,12 @@ struct LoadVector
     VectorX ToVector() const;
 
     /**
-     * @brief Computes element shape function integrals
-     */
-    void IntegrateShapeFunctions();
-
-    /**
      * @brief
      * @tparam TDerived
      * @param fe |kDims|x|#elements| piecewise element constant load, or |kDims|x1 constant load
      */
     template <class TDerived>
     void SetLoad(Eigen::DenseBase<TDerived> const& fe);
-
-    void CheckValidState();
 
     MeshType const& mesh; ///< The finite element mesh
     MatrixX fe;           ///< |kDims|x|#elements| piecewise element constant load
@@ -80,7 +73,7 @@ inline LoadVector<TMesh, Dims, QuadratureOrder>::LoadVector(
     : mesh(meshIn), fe(), N(), detJe(detJe)
 {
     SetLoad(load);
-    IntegrateShapeFunctions();
+    N = IntegratedShapeFunctions<kQuadratureOrder>(mesh, detJe);
 }
 
 template <CMesh TMesh, int Dims, int QuadratureOrder>
@@ -99,50 +92,6 @@ inline VectorX LoadVector<TMesh, Dims, QuadratureOrder>::ToVector() const
         }
     }
     return f;
-}
-
-template <CMesh TMesh, int Dims, int QuadratureOrder>
-inline void LoadVector<TMesh, Dims, QuadratureOrder>::IntegrateShapeFunctions()
-{
-    PBA_PROFILE_SCOPE;
-    CheckValidState();
-    // Precompute element shape functions
-    auto constexpr kNodesPerElement             = ElementType::kNodes;
-    auto constexpr kQuadPts                     = QuadratureRuleType::kPoints;
-    Matrix<kNodesPerElement, kQuadPts> const Ng = ShapeFunctions<ElementType, kQuadratureOrder>();
-    // Integrate shape functions
-    auto const numberOfElements = mesh.E.cols();
-    N.setZero(kNodesPerElement, numberOfElements);
-    auto const wg = common::ToEigen(QuadratureRuleType::weights);
-    tbb::parallel_for(Index{0}, Index{numberOfElements}, [&](Index e) {
-        for (auto g = 0; g < QuadratureRuleType::kPoints; ++g)
-        {
-            N.col(e) += (wg(g) * detJe(g, e)) * Ng.col(g);
-        }
-    });
-}
-
-template <CMesh TMesh, int Dims, int QuadratureOrder>
-inline void LoadVector<TMesh, Dims, QuadratureOrder>::CheckValidState()
-{
-    auto const numberOfElements       = mesh.E.cols();
-    auto constexpr kExpectedDetJeRows = QuadratureRuleType::kPoints;
-    auto const expectedDetJeCols      = numberOfElements;
-    bool const bDeterminantsHaveCorrectDimensions =
-        (detJe.rows() == kExpectedDetJeRows) and (detJe.cols() == expectedDetJeCols);
-    if (not bDeterminantsHaveCorrectDimensions)
-    {
-        std::string const what = std::format(
-            "Expected determinants at element quadrature points of dimensions #quad.pts.={} x "
-            "#elements={} for polynomial "
-            "quadrature order={}, but got {}x{} instead.",
-            kExpectedDetJeRows,
-            expectedDetJeCols,
-            QuadratureOrder,
-            detJe.rows(),
-            detJe.cols());
-        throw std::invalid_argument(what);
-    }
 }
 
 template <CMesh TMesh, int Dims, int QuadratureOrder>

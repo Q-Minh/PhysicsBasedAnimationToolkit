@@ -85,7 +85,7 @@ struct MassMatrix
     MeshType const& mesh;            ///< The finite element mesh
     Eigen::Ref<MatrixX const> detJe; ///< |# element quadrature points| x |# elements| matrix of
                                      ///< jacobian determinants at element quadrature points
-    MatrixX Me; ///< |ElementType::Nodes|x|ElementType::Nodes * |#elements| element mass matrices
+    MatrixX Me; ///< |#element nodes|x|#element nodes * #elements| element mass matrices
                 ///< for 1-dimensional problems. For d-dimensional problems, these mass matrices
                 ///< should be Kroneckered with the d-dimensional identity matrix.
 };
@@ -177,8 +177,7 @@ inline CSCMatrix MassMatrix<TMesh, Dims, QuadratureOrder>::ToMatrix() const
         }
     }
 
-    auto const n = InputDimensions();
-    CSCMatrix Mmat(n, n);
+    CSCMatrix Mmat(OutputDimensions(), InputDimensions());
     Mmat.setFromTriplets(triplets.begin(), triplets.end());
     return Mmat;
 }

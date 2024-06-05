@@ -7,6 +7,8 @@
 #include "pbat/profiling/Profiling.h"
 
 #include <Eigen/SVD>
+#include <exception>
+#include <format>
 #include <tbb/parallel_for.h>
 
 namespace pbat {
@@ -35,6 +37,53 @@ ShapeFunctions()
         Ng.col(g) = ElementType::N(Xg.col(g));
     }
     return Ng;
+}
+
+/**
+ * @brief Integrate shape functions on each element
+ * @tparam TDerived
+ * @tparam TMesh
+ * @tparam QuadratureOrder
+ * @param mesh
+ * @param detJe
+ * @return |#element nodes|x|#elements|
+ */
+template <int QuadratureOrder, CMesh TMesh, class TDerived>
+MatrixX IntegratedShapeFunctions(TMesh const& mesh, Eigen::DenseBase<TDerived> const& detJe)
+{
+    PBA_PROFILE_SCOPE;
+    using MeshType           = TMesh;
+    using ElementType        = typename MeshType::ElementType;
+    using QuadratureRuleType = typename ElementType::template QuadratureType<QuadratureOrder>;
+    auto constexpr kQuadPts  = QuadratureRuleType::kPoints;
+    auto constexpr kQuadratureOrder = QuadratureOrder;
+    auto const numberOfElements     = mesh.E.cols();
+    bool const bHasDeterminants = (detJe.rows() == kQuadPts) and (detJe.cols() == numberOfElements);
+    if (not bHasDeterminants)
+    {
+        std::string const what = std::format(
+            "Expected element jacobian determinants of dimensions {}x{} for element quadrature of "
+            "order={}, but got {}x{}",
+            kQuadPts,
+            numberOfElements,
+            kQuadratureOrder,
+            detJe.rows(),
+            detJe.cols());
+        throw std::invalid_argument(what);
+    }
+    // Precompute element shape functions
+    auto constexpr kNodesPerElement             = ElementType::kNodes;
+    Matrix<kNodesPerElement, kQuadPts> const Ng = ShapeFunctions<ElementType, kQuadratureOrder>();
+    // Integrate shape functions
+    MatrixX N     = MatrixX::Zero(kNodesPerElement, numberOfElements);
+    auto const wg = common::ToEigen(QuadratureRuleType::weights);
+    tbb::parallel_for(Index{0}, Index{numberOfElements}, [&](Index e) {
+        for (auto g = 0; g < QuadratureRuleType::kPoints; ++g)
+        {
+            N.col(e) += (wg(g) * detJe(g, e)) * Ng.col(g);
+        }
+    });
+    return N;
 }
 
 /**
@@ -73,8 +122,7 @@ Matrix<TElement::kNodes, TDerivedX::RowsAtCompileTime> ShapeFunctionGradients(
  * @tparam Order
  * @tparam TMesh
  * @param mesh
- * @return |ElementType::kNodes| x |MeshType::kDims *
- * ElementType::QuadratureType<QuadratureOrder>::kPoints * #elements| matrix of shape functions
+ * @return |#element nodes| x |#dims * #quad.pts. * #elements| matrix of shape functions
  */
 template <int QuadratureOrder, CMesh TMesh>
 MatrixX ShapeFunctionGradients(TMesh const& mesh)

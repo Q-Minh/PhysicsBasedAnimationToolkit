@@ -5,6 +5,7 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     "Concepts.h"
     "DeformationGradient.h"
     "DivergenceVector.h"
+    "Gradient.h"
     "Hexahedron.h"
     "HyperElasticPotential.h"
     "Jacobian.h"
@@ -23,6 +24,7 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     PRIVATE
     "DeformationGradient.cpp"
     "DivergenceVector.cpp"
+    "Gradient.cpp"
     "HyperElasticPotential.cpp"
     "LaplacianMatrix.cpp"
     "LoadVector.cpp"
