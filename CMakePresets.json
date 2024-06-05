@@ -12,7 +12,7 @@
             }
         },
         {
-            "name": "shared-library",
+            "name": "shared",
             "hidden": true,
             "cacheVariables": {
                 "PBAT_BUILD_SHARED_LIBS": {
@@ -89,7 +89,7 @@
             }
         },
         {
-            "name": "python-bindings",
+            "name": "python",
             "hidden": true,
             "cacheVariables": {
                 "VCPKG_MANIFEST_FEATURES": "python",
