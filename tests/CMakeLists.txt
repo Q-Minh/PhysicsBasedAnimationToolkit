@@ -20,7 +20,7 @@ endif()
 
 set_target_properties(PhysicsBasedAnimationToolkit_Tests
     PROPERTIES
-    FOLDER "tests"
+    FOLDER "PhysicsBasedAnimationToolkit/tests"
     OUTPUT_NAME "PhysicsBasedAnimationToolkitTests"
     EXPORT_NAME "Tests"
 )
