@@ -112,8 +112,11 @@ Matrix<TElement::kNodes, TDerivedX::RowsAtCompileTime> ShapeFunctionGradients(
     using AffineElementType                       = typename TElement::AffineBaseType;
     Matrix<TElement::kNodes, kInputDims> const GN = TElement::GradN(Xi);
     Matrix<kInputDims, kOutputDims> const JT      = Jacobian<AffineElementType>(Xi, X).transpose();
-    auto JinvT = JT.jacobiSvd(Eigen::ComputeFullU | Eigen::ComputeFullV);
-    Matrix<TElement::kNodes, kOutputDims> const GP = JinvT.solve(GN.transpose()).transpose();
+    auto const JinvT = JT.jacobiSvd(Eigen::ComputeThinU | Eigen::ComputeThinV);
+    Matrix<TElement::kNodes, kOutputDims> GP;
+    // GP.transpose() = JinvT.solve(GN.transpose());
+    for (auto i = 0; i < TElement::kNodes; ++i)
+        GP.row(i).transpose() = JinvT.solve(GN.row(i).transpose());
     return GP;
 }
 
