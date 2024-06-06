@@ -37,3 +37,13 @@ source_group(
     PREFIX "headers"
     FILES ${_pbat_python_headers}
 )
+
+# Make sure DLL dependencies end up together with python module
+add_custom_command(
+    TARGET PhysicsBasedAnimationToolkit_Python
+    POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+    $<TARGET_RUNTIME_DLLS:PhysicsBasedAnimationToolkit_Python>
+    $<TARGET_FILE_DIR:PhysicsBasedAnimationToolkit_Python>
+    COMMAND_EXPAND_LISTS
+)

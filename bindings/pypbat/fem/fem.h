@@ -1,9 +1,11 @@
 #include <pybind11/pybind11.h>
 
-namespace py = pybind11;
+namespace pbat {
+namespace py {
+namespace fem {
 
-namespace pypbat {
+void bind(pybind11::module& m);
 
-void bind_fem(py::module& m);
-
-} // namespace pypbat
+} // namespace fem
+} // namespace py
+} // namespace pbat

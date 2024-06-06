@@ -2,20 +2,26 @@
 
 #include "pbat/profiling/Profiling.h"
 
-namespace pypbat {
+namespace pbat {
+namespace py {
+namespace profiling {
 
-void bind_profiling(py::module& m)
+namespace pyb = pybind11;
+
+void bind(pyb::module& m)
 {
     m.def(
         "begin_frame",
         &pbat::profiling::BeginFrame,
         "Start new profiling frame",
-        py::arg("name"));
-    m.def("end_frame", &pbat::profiling::EndFrame, "End current profiling frame", py::arg("name"));
+        pyb::arg("name"));
+    m.def("end_frame", &pbat::profiling::EndFrame, "End current profiling frame", pyb::arg("name"));
     m.def(
         "is_connected_to_server",
         &pbat::profiling::IsConnectedToServer,
         "Check if profiler has connected to profiling server");
 }
 
-} // namespace pypbat
+} // namespace profiling
+} // namespace py
+} // namespace pbat

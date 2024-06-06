@@ -1,6 +1,7 @@
 #ifndef PBAT_MATH_RATIONAL_H
 #define PBAT_MATH_RATIONAL_H
 
+#include "PhysicsBasedAnimationToolkitExport.h"
 #include "pbat/aliases.h"
 
 #include <cstdint>
@@ -13,7 +14,7 @@ namespace math {
  * @brief Fixed size rational number representation using std::int64_t as numerator and denominator.
  *
  */
-struct Rational
+struct PBAT_API Rational
 {
     /**
      * @brief Construct a new Rational object
@@ -106,5 +107,29 @@ struct Rational
 
 } // namespace math
 } // namespace pbat
+
+template <std::integral Integer>
+pbat::math::Rational operator-(Integer a, pbat::math::Rational const& b)
+{
+    return (-b) + a;
+}
+
+template <std::integral Integer>
+pbat::math::Rational operator+(Integer a, pbat::math::Rational const& b)
+{
+    return b + a;
+}
+
+template <std::integral Integer>
+pbat::math::Rational operator*(Integer a, pbat::math::Rational const& b)
+{
+    return b * a;
+}
+
+template <std::integral Integer>
+pbat::math::Rational operator/(Integer a, pbat::math::Rational const& b)
+{
+    return pbat::math::Rational{a} / b;
+}
 
 #endif // PBAT_MATH_RATIONAL_H

@@ -3,13 +3,13 @@
 
 #include <pybind11/pybind11.h>
 
-namespace py = pybind11;
+namespace pyb = pybind11;
 
 PYBIND11_MODULE(pypbat, m)
 {
     m.doc()         = "Physics Based Animation Toolkit's python bindings";
     auto mprofiling = m.def_submodule("profiling");
-    pypbat::bind_profiling(mprofiling);
+    pbat::py::profiling::bind(mprofiling);
     auto mfem = m.def_submodule("fem");
-    pypbat::bind_fem(mfem);
+    pbat::py::fem::bind(mfem);
 }
