@@ -5,8 +5,8 @@
 #include "Jacobian.h"
 #include "pbat/aliases.h"
 #include "pbat/common/Eigen.h"
-#include "pbat/profiling/Profiling.h"
 #include "pbat/math/Rational.h"
+#include "pbat/profiling/Profiling.h"
 
 #include <algorithm>
 #include <exception>
@@ -20,8 +20,9 @@ namespace fem {
 template <CElement TElement, int Dims>
 struct Mesh
 {
-    using ElementType          = TElement; ///< Underlying finite element type
-    static int constexpr kDims = Dims;     ///< Embedding dimensions of the mesh
+    using ElementType           = TElement;            ///< Underlying finite element type
+    static int constexpr kDims  = Dims;                ///< Embedding dimensions of the mesh
+    static int constexpr kOrder = ElementType::kOrder; ///< Shape function order
 
     Mesh() = default;
     /**

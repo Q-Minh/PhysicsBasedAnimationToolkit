@@ -11,6 +11,7 @@ target_sources(PhysicsBasedAnimationToolkit_Python
     "MassMatrix.h"
     "Mesh.h"
     "ShapeFunctions.h"
+    "For.h"
 )
 
 target_sources(PhysicsBasedAnimationToolkit_Python
