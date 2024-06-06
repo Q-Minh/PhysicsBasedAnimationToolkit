@@ -7,7 +7,7 @@ namespace pbat {
 namespace py {
 namespace fem {
 
-void bind(pybind11::module& m);
+void Bind(pybind11::module& m);
 
 } // namespace fem
 } // namespace py

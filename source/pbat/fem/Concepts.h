@@ -45,6 +45,9 @@ concept CMesh = requires(M m)
         M::kDims
     } -> std::convertible_to<int>;
     {
+        M::kOrder
+    } -> std::convertible_to<int>;
+    {
         m.X
     } -> std::convertible_to<MatrixX>;
     {

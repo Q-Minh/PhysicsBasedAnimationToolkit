@@ -4,7 +4,7 @@ namespace pbat {
 namespace py {
 namespace profiling {
 
-void bind(pybind11::module& m);
+void Bind(pybind11::module& m);
 
 } // namespace profiling
 } // namespace py

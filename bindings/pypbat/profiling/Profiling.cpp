@@ -8,7 +8,7 @@ namespace profiling {
 
 namespace pyb = pybind11;
 
-void bind(pyb::module& m)
+void Bind(pyb::module& m)
 {
     m.def(
         "begin_frame",

@@ -9,7 +9,7 @@ PYBIND11_MODULE(pypbat, m)
 {
     m.doc()         = "Physics Based Animation Toolkit's python bindings";
     auto mprofiling = m.def_submodule("profiling");
-    pbat::py::profiling::bind(mprofiling);
+    pbat::py::profiling::Bind(mprofiling);
     auto mfem = m.def_submodule("fem");
-    pbat::py::fem::bind(mfem);
+    pbat::py::fem::Bind(mfem);
 }

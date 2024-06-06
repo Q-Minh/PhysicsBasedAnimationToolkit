@@ -1,5 +1,6 @@
 #include "fem.h"
 
+#include "MassMatrix.h"
 #include "Mesh.h"
 
 namespace pbat {
@@ -8,10 +9,11 @@ namespace fem {
 
 namespace pyb = pybind11;
 
-void bind(pyb::module& m)
+void Bind(pyb::module& m)
 {
     m.doc() = "Finite Element Method module";
-    bind_mesh(m);
+    BindMesh(m);
+    BindMassMatrix(m);
 }
 
 } // namespace fem
