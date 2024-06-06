@@ -19,11 +19,9 @@ namespace pyb = pybind11;
 
 void bind_mesh(pyb::module& m)
 {
-    auto constexpr kOrder   = 1;
-    using ElementType       = pbat::fem::Tetrahedron<kOrder>;
-    auto constexpr kDimsMax = 3;
-
-    pbat::common::ForRange<1, 4>([&]<auto Order>() {
+    auto constexpr kOrderMax = 3;
+    auto constexpr kDimsMax  = 3;
+    pbat::common::ForRange<1, kOrderMax + 1>([&]<auto Order>() {
         pbat::common::ForTypes<
             pbat::fem::Line<Order>,
             pbat::fem::Triangle<Order>,
