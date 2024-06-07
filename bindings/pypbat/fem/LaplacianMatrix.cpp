@@ -6,7 +6,7 @@
 #include <pbat/common/ConstexprFor.h>
 #include <pbat/fem/LaplacianMatrix.h>
 #include <pybind11/eigen.h>
-#include <utility>
+#include <tuple>
 
 namespace pbat {
 namespace py {
@@ -46,7 +46,7 @@ void BindLaplacianMatrix(pybind11::module& m)
                 .def_property_readonly(
                     "shape",
                     [](LaplacianMatrixType const& L) {
-                        return std::make_pair(L.OutputDimensions(), L.InputDimensions());
+                        return std::make_tuple(L.OutputDimensions(), L.InputDimensions());
                     })
                 .def_readonly("deltae", &LaplacianMatrixType::deltaE);
         });

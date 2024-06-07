@@ -76,6 +76,18 @@ struct HyperElasticPotential
      */
     CSCMatrix ToMatrix() const;
 
+    /**
+     * @brief Transforms this element-wise gradient representation into the global gradient.
+     * @return
+     */
+    VectorX ToVector() const;
+
+    /**
+     * @brief Computes the elastic potential
+     * @return
+     */
+    Scalar Eval() const;
+
     Index InputDimensions() const;
     Index OutputDimensions() const;
 
@@ -295,6 +307,31 @@ HyperElasticPotential<TMesh, THyperElasticEnergy, QuadratureOrder>::ToMatrix() c
         H.setFromTriplets(triplets.begin(), triplets.end());
         return H;
     }
+}
+
+template <CMesh TMesh, physics::CHyperElasticEnergy THyperElasticEnergy, int QuadratureOrder>
+inline VectorX HyperElasticPotential<TMesh, THyperElasticEnergy, QuadratureOrder>::ToVector() const
+{
+    PBA_PROFILE_SCOPE;
+    auto constexpr kNodesPerElement = ElementType::kNodes;
+    auto const numberOfElements     = mesh.E.cols();
+    auto const numberOfNodes        = mesh.X.cols();
+    auto const n                    = InputDimensions();
+    VectorX g                       = VectorX::Zero(n);
+    for (auto e = 0; e < numberOfElements; ++e)
+    {
+        auto const nodes = mesh.E.col(e);
+        auto const ge    = Ge.col(e).reshaped(kDims, kNodesPerElement);
+        auto gi          = g.reshaped(kDims, numberOfNodes)(Eigen::all, nodes);
+        gi += ge;
+    }
+    return g;
+}
+
+template <CMesh TMesh, physics::CHyperElasticEnergy THyperElasticEnergy, int QuadratureOrder>
+inline Scalar HyperElasticPotential<TMesh, THyperElasticEnergy, QuadratureOrder>::Eval() const
+{
+    return Ue.sum();
 }
 
 template <CMesh TMesh, physics::CHyperElasticEnergy THyperElasticEnergy, int QuadratureOrder>

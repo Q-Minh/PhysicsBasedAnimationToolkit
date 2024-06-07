@@ -1,5 +1,6 @@
 #include "fem.h"
 
+#include "HyperElasticPotential.h"
 #include "Jacobian.h"
 #include "LaplacianMatrix.h"
 #include "LoadVector.h"
@@ -16,6 +17,7 @@ namespace pyb = pybind11;
 void Bind(pyb::module& m)
 {
     m.doc() = "Finite Element Method module";
+    BindHyperElasticPotential(m);
     BindJacobian(m);
     BindLaplacianMatrix(m);
     BindLoadVector(m);

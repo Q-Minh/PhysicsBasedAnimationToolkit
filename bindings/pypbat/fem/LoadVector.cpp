@@ -27,10 +27,11 @@ void BindLoadVector(pyb::module& m)
                     std::to_string(QuadratureOrder) + "_" + MeshTypeName<MeshType>();
                 pyb::class_<LoadVectorType>(m, className.data())
                     .def(
-                        pyb::init(
-                            [](MeshType const& mesh,
-                               Eigen::Ref<MatrixX const> const& detJe,
-                               VectorX const& fe) { return LoadVectorType(mesh, detJe, fe); }),
+                        pyb::init([](MeshType const& mesh,
+                                     Eigen::Ref<MatrixX const> const& detJe,
+                                     Eigen::Ref<VectorX const> const& fe) {
+                            return LoadVectorType(mesh, detJe, fe);
+                        }),
                         pyb::arg("mesh"),
                         pyb::arg("detJe"),
                         pyb::arg("fe"))
@@ -50,7 +51,9 @@ void BindLoadVector(pyb::module& m)
                     .def("to_vector", &LoadVectorType::ToVector)
                     .def(
                         "set_load",
-                        [](LoadVectorType& f, VectorX const& fe) { f.SetLoad(fe); },
+                        [](LoadVectorType& f, Eigen::Ref<VectorX const> const& fe) {
+                            f.SetLoad(fe);
+                        },
                         pyb::arg("fe"))
                     .def_readonly("N", &LoadVectorType::N);
             });

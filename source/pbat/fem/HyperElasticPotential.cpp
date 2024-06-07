@@ -52,11 +52,13 @@ TEST_CASE("[fem] HyperElasticPotential")
         MatrixX const detJe = fem::DeterminantOfJacobian<kQuadratureOrder>(M);
         MatrixX const GNe   = fem::ShapeFunctionGradients<kQuadratureOrder>(M);
         ElasticPotentialType U(M, detJe, GNe, x, Y, nu);
-        CSCMatrix const H      = U.ToMatrix();
-        CSCMatrix const HT     = H.transpose();
-        Scalar const Esymmetry = (HT - H).squaredNorm() / H.squaredNorm();
+        Scalar const UMaterial      = U.Eval();
+        VectorX const gradUMaterial = U.ToVector();
+        CSCMatrix const HMaterial   = U.ToMatrix();
+        CSCMatrix const HMaterialT  = HMaterial.transpose();
+        Scalar const Esymmetry = (HMaterialT - HMaterial).squaredNorm() / HMaterial.squaredNorm();
         CHECK_LE(Esymmetry, zero);
-        Eigen::SelfAdjointEigenSolver<CSCMatrix> eigs(H);
+        Eigen::SelfAdjointEigenSolver<CSCMatrix> eigs(HMaterial);
         // The hessian is generally rank-deficient, due to its invariance to translations and
         // rotations. The zero eigenvalues can manifest as numerically negative, but close to zero.
         Scalar const minEigenValue = eigs.eigenvalues().minCoeff();
@@ -67,9 +69,15 @@ TEST_CASE("[fem] HyperElasticPotential")
         // Elastic energy is invariant to translations
         Scalar constexpr t = 2.;
         U.ComputeElementElasticity(VectorX{x.array() + t});
+        Scalar const UTranslated       = U.Eval();
+        Scalar const UTranslationError = std::abs(UTranslated - UMaterial);
+        CHECK_LE(UTranslationError, zero);
+        VectorX const gradUTranslated      = U.ToVector();
+        Scalar const gradUTranslationError = (gradUTranslated - gradUMaterial).norm();
+        CHECK_LE(gradUTranslationError, zero);
         CSCMatrix const Htranslated = U.ToMatrix();
         Scalar const hessianTranslationInvarianceError =
-            (Htranslated - H).squaredNorm() / H.squaredNorm();
+            (Htranslated - HMaterial).squaredNorm() / HMaterial.squaredNorm();
         CHECK_LE(hessianTranslationInvarianceError, zero);
 
         // NOTE: Also invariant to rotations. We can likewise verify that the energy itself, and its
@@ -79,7 +87,7 @@ TEST_CASE("[fem] HyperElasticPotential")
         // Check linearity of matrix-free operator
         Scalar constexpr k = -3.;
         VectorX y          = VectorX::Zero(x.size());
-        VectorX yExpected  = k * H * x + H * x;
+        VectorX yExpected  = k * HMaterial * x + HMaterial * x;
         U.Apply(k * x + x, y);
         Scalar const linearityError = (y - yExpected).norm() / yExpected.norm();
         CHECK_LE(linearityError, zero);

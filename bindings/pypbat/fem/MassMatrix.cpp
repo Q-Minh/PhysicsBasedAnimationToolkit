@@ -6,7 +6,7 @@
 #include <pbat/common/ConstexprFor.h>
 #include <pbat/fem/MassMatrix.h>
 #include <pybind11/eigen.h>
-#include <utility>
+#include <tuple>
 
 namespace pbat {
 namespace py {
@@ -60,7 +60,7 @@ void BindMassMatrix(pyb::module& m)
                     .def_property_readonly(
                         "shape",
                         [](MassMatrixType const& M) {
-                            return std::make_pair(M.OutputDimensions(), M.InputDimensions());
+                            return std::make_tuple(M.OutputDimensions(), M.InputDimensions());
                         })
                     .def("to_matrix", &MassMatrixType::ToMatrix)
                     .def(
