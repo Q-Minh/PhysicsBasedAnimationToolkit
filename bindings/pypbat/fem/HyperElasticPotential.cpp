@@ -56,15 +56,13 @@ void BindHyperElasticPotential(pybind11::module& m)
                                 pyb::init([](MeshType const& mesh,
                                              Eigen::Ref<MatrixX const> const& detJe,
                                              Eigen::Ref<MatrixX const> const& GNe,
-                                             Eigen::Ref<VectorX const> const& x,
-                                             Scalar Y,
-                                             Scalar nu) {
-                                    return ElasticPotentialType(mesh, detJe, GNe, x, Y, nu);
+                                             Eigen::Ref<VectorX const> const& Y,
+                                             Eigen::Ref<VectorX const> const& nu) {
+                                    return ElasticPotentialType(mesh, detJe, GNe, Y, nu);
                                 }),
                                 pyb::arg("mesh"),
                                 pyb::arg("detJe"),
                                 pyb::arg("GNe"),
-                                pyb::arg("x"),
                                 pyb::arg("Y"),
                                 pyb::arg("nu"))
                             .def(

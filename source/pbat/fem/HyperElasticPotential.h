@@ -34,6 +34,21 @@ struct HyperElasticPotential
 
     SelfType& operator=(SelfType const&) = delete;
 
+    HyperElasticPotential(
+        MeshType const& mesh,
+        Eigen::Ref<MatrixX const> const& detJe,
+        Eigen::Ref<MatrixX const> const& GNe,
+        Scalar Y,
+        Scalar nu);
+
+    template <class TDerivedY, class TDerivednu>
+    HyperElasticPotential(
+        MeshType const& mesh,
+        Eigen::Ref<MatrixX const> const& detJe,
+        Eigen::Ref<MatrixX const> const& GNe,
+        Eigen::DenseBase<TDerivedY> const& Y,
+        Eigen::DenseBase<TDerivednu> const& nu);
+
     template <class TDerived>
     HyperElasticPotential(
         MeshType const& mesh,
@@ -108,6 +123,35 @@ struct HyperElasticPotential
     VectorX Ue;      ///< |#elements| x 1 element elastic potentials
     math::linalg::SparsityPattern GH; ///< Directed adjacency graph of hessian
 };
+
+template <CMesh TMesh, physics::CHyperElasticEnergy THyperElasticEnergy, int QuadratureOrder>
+inline HyperElasticPotential<TMesh, THyperElasticEnergy, QuadratureOrder>::HyperElasticPotential(
+    MeshType const& meshIn,
+    Eigen::Ref<MatrixX const> const& detJe,
+    Eigen::Ref<MatrixX const> const& GNe,
+    Scalar Y,
+    Scalar nu)
+    : HyperElasticPotential<TMesh, THyperElasticEnergy, QuadratureOrder>(
+          meshIn,
+          detJe,
+          GNe,
+          VectorX::Constant(meshIn.E.cols(), Y),
+          VectorX::Constant(meshIn.E.cols(), nu))
+{
+}
+
+template <CMesh TMesh, physics::CHyperElasticEnergy THyperElasticEnergy, int QuadratureOrder>
+template <class TDerivedY, class TDerivednu>
+inline HyperElasticPotential<TMesh, THyperElasticEnergy, QuadratureOrder>::HyperElasticPotential(
+    MeshType const& meshIn,
+    Eigen::Ref<MatrixX const> const& detJe,
+    Eigen::Ref<MatrixX const> const& GNe,
+    Eigen::DenseBase<TDerivedY> const& Y,
+    Eigen::DenseBase<TDerivednu> const& nu)
+    : mesh(meshIn), detJe(detJe), GNe(GNe), mue(), lambdae(), He(), Ge(), Ue(), GH()
+{
+    std::tie(mue, lambdae) = physics::LameCoefficients(Y, nu);
+}
 
 template <CMesh TMesh, physics::CHyperElasticEnergy THyperElasticEnergy, int QuadratureOrder>
 template <class TDerived>

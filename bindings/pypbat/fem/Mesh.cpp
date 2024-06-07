@@ -31,7 +31,7 @@ void BindMesh(pybind11::module& m)
                 "order",
                 [](pyb::object /*self*/) { return MeshType::kOrder; })
             .def_property_readonly_static(
-                "element_type",
+                "element",
                 [=](pyb::object /*self*/) { return elementTypeName; })
             .def_readwrite("E", &MeshType::E)
             .def_readwrite("X", &MeshType::X);
