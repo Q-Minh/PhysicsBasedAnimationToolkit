@@ -47,6 +47,15 @@ void BindMassMatrix(pyb::module& m)
                         pyb::arg("mesh"),
                         pyb::arg("detJe"),
                         pyb::arg("rhoe"))
+                    .def_property_readonly_static(
+                        "dims",
+                        [](pyb::object /*self*/) { return MassMatrixType::kDims; })
+                    .def_property_readonly_static(
+                        "order",
+                        [](pyb::object /*self*/) { return MassMatrixType::kOrder; })
+                    .def_property_readonly_static(
+                        "quadrature_order",
+                        [](pyb::object /*self*/) { return MassMatrixType::kQuadratureOrder; })
                     .def_readonly("Me", &MassMatrixType::Me)
                     .def_property_readonly(
                         "shape",
