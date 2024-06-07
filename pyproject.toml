@@ -1,0 +1,40 @@
+[build-system]
+requires = ["scikit-build-core", "pybind11"]
+build-backend = "scikit_build_core.build"
+
+[project]
+name = "pbatoolkit"
+version = "0.0.1"
+description = "Physics Based Animation Toolkit"
+readme = "README.md"
+authors = [
+    { name = "Quoc-Minh Ton-That", email = "tonthat.quocminh@gmail.com" },
+]
+requires-python = ">=3.10"
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+
+[tool.scikit-build]
+minimum-version = "0.9"
+wheel.packages = ["python/pbatoolkit"]
+wheel.exclude = ["include", "lib", "share"]
+cmake.version = ">=3.26"
+cmake.build-type = "Release"
+cmake.targets = ["PhysicsBasedAnimationToolkit_Python"]
+# NOTE: To be set on the command line as environment variable 
+# SKBUILD_CMAKE_ARGS="-D<arg1>=<value1>;-D<arg2>=<value2>".
+# cmake.args = [
+#     "-DCMAKE_TOOLCHAIN_FILE:FILEPATH=$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+#     "-DVCPKG_MANIFEST_FEATURES=python",
+#     "-DPBAT_BUILD_SHARED_LIBS:BOOL=OFF",
+#     "-DPBAT_ENABLE_PROFILER:BOOL=ON",
+#     "-DPBAT_BUILD_PYTHON_BINDINGS:BOOL=ON",
+#     "-DPBAT_BUILD_TESTS:BOOL=OFF"
+# ]
+build-dir = "build/{wheel_tag}"

@@ -12,10 +12,9 @@ namespace pbat {
 namespace py {
 namespace fem {
 
-namespace pyb = pybind11;
-
-void BindMassMatrix(pyb::module& m)
+void BindMassMatrix(pybind11::module& m)
 {
+    namespace pyb = pybind11;
     ForMeshTypes([&]<class MeshType>() {
         auto constexpr kDimsMax            = 3;
         auto constexpr kQuadratureOrderMax = 6;

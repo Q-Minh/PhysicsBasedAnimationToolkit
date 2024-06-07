@@ -12,9 +12,7 @@ namespace pbat {
 namespace py {
 namespace fem {
 
-namespace pyb = pybind11;
-
-void Bind(pyb::module& m)
+void Bind(pybind11::module& m)
 {
     m.doc() = "Finite Element Method module";
     BindHyperElasticPotential(m);

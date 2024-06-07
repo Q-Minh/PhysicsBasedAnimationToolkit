@@ -11,10 +11,9 @@ namespace pbat {
 namespace py {
 namespace fem {
 
-namespace pyb = pybind11;
-
-void BindMesh(pyb::module& m)
+void BindMesh(pybind11::module& m)
 {
+    namespace pyb = pybind11;
     ForMeshTypes([&]<class MeshType>() {
         std::string const className       = MeshTypeName<MeshType>();
         std::string const elementTypeName = ElementTypeName<typename MeshType::ElementType>();

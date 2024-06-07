@@ -5,7 +5,7 @@ find_package(range-v3 CONFIG REQUIRED)
 find_package(TBB CONFIG REQUIRED)
 
 if(PBAT_BUILD_PYTHON_BINDINGS)
-    find_package(Python COMPONENTS Interpreter Development REQUIRED)
+    find_package(Python COMPONENTS Interpreter Development.Module REQUIRED)
     find_package(pybind11 CONFIG REQUIRED)
 endif()
 

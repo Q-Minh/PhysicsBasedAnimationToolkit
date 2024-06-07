@@ -6,10 +6,9 @@ namespace pbat {
 namespace py {
 namespace profiling {
 
-namespace pyb = pybind11;
-
-void Bind(pyb::module& m)
+void Bind(pybind11::module& m)
 {
+    namespace pyb = pybind11;
     m.def(
         "begin_frame",
         &pbat::profiling::BeginFrame,

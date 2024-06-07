@@ -5,7 +5,7 @@ pybind11_add_module(PhysicsBasedAnimationToolkit_Python
 
 set_target_properties(PhysicsBasedAnimationToolkit_Python
     PROPERTIES
-    OUTPUT_NAME "pypbat"
+    OUTPUT_NAME "pbat"
     EXPORT_NAME "Python"
     FOLDER "PhysicsBasedAnimationToolkit/bindings"
 )
@@ -46,4 +46,22 @@ add_custom_command(
     $<TARGET_RUNTIME_DLLS:PhysicsBasedAnimationToolkit_Python>
     $<TARGET_FILE_DIR:PhysicsBasedAnimationToolkit_Python>
     COMMAND_EXPAND_LISTS
+)
+
+# Install rules for scikit-build-core. Note that we only support building
+# the python bindings with static linking to
+# PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit. Otherwise, we
+# need to handle installing the transitive DLL dependencies of our bindings.
+include(GNUInstallDirs)
+install(
+    TARGETS PhysicsBasedAnimationToolkit_Python
+    LIBRARY DESTINATION "pbatoolkit/internal"
+)
+
+# TBB is supposed to be used as a dynamic library, so we need to install it
+# beside our bindings.
+install(
+    IMPORTED_RUNTIME_ARTIFACTS TBB::tbb
+    RUNTIME DESTINATION "pbatoolkit/internal"
+    LIBRARY DESTINATION "pbatoolkit/internal"
 )
