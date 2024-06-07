@@ -117,7 +117,7 @@ Mesh<TElement, Dims>::Mesh(
     Eigen::Ref<MatrixX const> const& V,
     Eigen::Ref<IndexMatrixX const> const& C)
 {
-    PBA_PROFILE_NAMED_SCOPE("Construct fem::Mesh");
+    PBA_PROFILE_SCOPE;
 
     using AffineElementType         = typename ElementType::AffineBaseType;
     auto constexpr kVerticesPerCell = AffineElementType::kNodes;

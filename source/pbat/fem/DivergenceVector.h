@@ -70,7 +70,6 @@ inline DivergenceVector<TMesh, Dims, QuadratureOrder>::DivergenceVector(
     Eigen::DenseBase<TDerived> const& Fe)
     : mesh(meshIn), GNe(GNe), detJe(detJe)
 {
-    PBA_PROFILE_NAMED_SCOPE("Construct fem::DivergenceVector");
     auto const numberOfNodes = mesh.X.cols();
     if (Fe.rows() != kDims)
     {

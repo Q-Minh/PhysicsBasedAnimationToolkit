@@ -139,7 +139,6 @@ inline HyperElasticPotential<TMesh, THyperElasticEnergy, QuadratureOrder>::Hyper
     Eigen::DenseBase<TDerivednu> const& nu)
     : mesh(meshIn), detJe(detJe), GNe(GNe), mue(), lambdae(), He(), Ge(), Ue(), GH()
 {
-    PBA_PROFILE_NAMED_SCOPE("Construct fem::HyperElasticPotential");
     std::tie(mue, lambdae) = physics::LameCoefficients(Y, nu);
     ComputeElementElasticity(x);
 }
@@ -331,6 +330,7 @@ inline VectorX HyperElasticPotential<TMesh, THyperElasticEnergy, QuadratureOrder
 template <CMesh TMesh, physics::CHyperElasticEnergy THyperElasticEnergy, int QuadratureOrder>
 inline Scalar HyperElasticPotential<TMesh, THyperElasticEnergy, QuadratureOrder>::Eval() const
 {
+    PBA_PROFILE_SCOPE;
     return Ue.sum();
 }
 
