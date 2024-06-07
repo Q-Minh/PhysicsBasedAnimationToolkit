@@ -3,7 +3,7 @@
 
 #include <pybind11/pybind11.h>
 
-PYBIND11_MODULE(pbat, m)
+PYBIND11_MODULE(_pbat, m)
 {
     namespace pyb = pybind11;
     m.doc()         = "Physics Based Animation Toolkit's python bindings";

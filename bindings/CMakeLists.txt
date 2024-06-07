@@ -5,7 +5,7 @@ pybind11_add_module(PhysicsBasedAnimationToolkit_Python
 
 set_target_properties(PhysicsBasedAnimationToolkit_Python
     PROPERTIES
-    OUTPUT_NAME "pbat"
+    OUTPUT_NAME "_pbat"
     EXPORT_NAME "Python"
     FOLDER "PhysicsBasedAnimationToolkit/bindings"
 )
@@ -55,13 +55,13 @@ add_custom_command(
 include(GNUInstallDirs)
 install(
     TARGETS PhysicsBasedAnimationToolkit_Python
-    LIBRARY DESTINATION "pbatoolkit/internal"
+    LIBRARY DESTINATION "pbatoolkit"
 )
 
 # TBB is supposed to be used as a dynamic library, so we need to install it
 # beside our bindings.
 install(
     IMPORTED_RUNTIME_ARTIFACTS TBB::tbb
-    RUNTIME DESTINATION "pbatoolkit/internal"
-    LIBRARY DESTINATION "pbatoolkit/internal"
+    RUNTIME DESTINATION "pbatoolkit"
+    LIBRARY DESTINATION "pbatoolkit"
 )
