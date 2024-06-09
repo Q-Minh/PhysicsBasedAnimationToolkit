@@ -29,15 +29,16 @@ class HyperElasticEnergy(Enum):
 
 
 def hyper_elastic_potential(
-        mesh, 
-        detJe: np.ndarray, 
-        GNe: np.ndarray, 
+        mesh,
+        detJe: np.ndarray,
+        GNe: np.ndarray,
         Y: np.ndarray,
         nu: np.ndarray,
-        psi: HyperElasticEnergy = HyperElasticEnergy.StableNeohookean, 
-        quadrature_order: int = 1, 
+        psi: HyperElasticEnergy = HyperElasticEnergy.StableNeohookean,
+        quadrature_order: int = 1,
         dims: int = 3):
-    mesh_name = _mesh_type_name(mesh.element, mesh.order, mesh.dims)
+    mesh_name = _mesh_type_name(
+        mesh.element, mesh.order, mesh.dims)
     class_name = f"HyperElasticPotential_{psi.name}_QuadratureOrder_{quadrature_order}_Dims_{dims}_{mesh_name}"
     class_ = getattr(_pbat, class_name)
     return class_(mesh, detJe, GNe, Y, nu)
