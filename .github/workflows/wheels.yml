@@ -21,12 +21,13 @@ jobs:
         os: [ubuntu-24.04, macos-13, windows-2022]
 
     steps:
+    - uses: actions/checkout@v4
+
     - name: Setup vcpkg
       uses: lukka/run-vcpkg@v11
       with:
+        vcpkgDirectory: ${{ github.workspace }}/vcpkg
         vcpkgGitCommitId: 055721089e8037d4d617250814d11f881e557549
-
-    - uses: actions/checkout@v4
 
     - uses: pypa/cibuildwheel@v2.19.0
       env: 
