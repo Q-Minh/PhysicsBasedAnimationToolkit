@@ -38,7 +38,6 @@ target_link_libraries(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     PUBLIC
     doctest::doctest
     Eigen3::Eigen
-    OpenMP::OpenMP_CXX
     range-v3::concepts
     range-v3::meta
     range-v3::range-v3
