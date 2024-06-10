@@ -58,10 +58,14 @@ install(
     LIBRARY DESTINATION "pbatoolkit"
 )
 
-# TBB is supposed to be used as a dynamic library, so we need to install it
-# beside our bindings.
-install(
-    IMPORTED_RUNTIME_ARTIFACTS TBB::tbb
-    RUNTIME DESTINATION "pbatoolkit"
-    LIBRARY DESTINATION "pbatoolkit"
-)
+foreach(_pbat_dependency IN ITEMS TBB::tbb)
+    # WARNING: TBB::tbb not recognized as an executable, library or module in the 
+    # macos-13 github runner using vcpkg, for some reason. Gotta check it out.
+    # get_target_property(_imported ${_pbat_dependency} IMPORTED)
+    # get_target_property(_library_type ${_pbat_dependency} TYPE)
+    install(
+        IMPORTED_RUNTIME_ARTIFACTS ${_pbat_dependency}
+        RUNTIME DESTINATION "pbatoolkit"
+        LIBRARY DESTINATION "pbatoolkit"
+    )
+endforeach()

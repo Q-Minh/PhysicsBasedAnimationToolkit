@@ -37,6 +37,8 @@ cmake.targets = ["PhysicsBasedAnimationToolkit_Python"]
 #     "-DPBAT_BUILD_PYTHON_BINDINGS:BOOL=ON",
 #     "-DPBAT_BUILD_TESTS:BOOL=OFF"
 # ]
+cmake.verbose = true
+logging.level = "INFO"
 build-dir = "build/{wheel_tag}"
 
 [project.urls]
