@@ -1,4 +1,4 @@
-#include "pbat/physics/HyperElasticity.h"
+#include "HyperElasticity.h"
 
 #include <doctest/doctest.h>
 

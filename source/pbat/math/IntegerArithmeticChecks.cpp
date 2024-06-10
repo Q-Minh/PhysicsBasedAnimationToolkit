@@ -1,4 +1,4 @@
-#include "pbat/math/IntegerArithmeticChecks.h"
+#include "IntegerArithmeticChecks.h"
 
 namespace pbat {
 namespace math {

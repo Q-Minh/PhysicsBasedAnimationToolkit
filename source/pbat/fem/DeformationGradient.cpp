@@ -1,14 +1,14 @@
-#include "pbat/fem/DeformationGradient.h"
+#include "DeformationGradient.h"
 
-#include "pbat/common/ConstexprFor.h"
-#include "pbat/fem/Hexahedron.h"
-#include "pbat/fem/Line.h"
-#include "pbat/fem/Mesh.h"
-#include "pbat/fem/ShapeFunctions.h"
-#include "pbat/fem/Tetrahedron.h"
-#include "pbat/fem/Triangle.h"
+#include "Hexahedron.h"
+#include "Line.h"
+#include "Mesh.h"
+#include "ShapeFunctions.h"
+#include "Tetrahedron.h"
+#include "Triangle.h"
 
 #include <doctest/doctest.h>
+#include <pbat/common/ConstexprFor.h>
 
 TEST_CASE("[fem] DeformationGradient")
 {

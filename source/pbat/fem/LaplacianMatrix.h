@@ -2,12 +2,12 @@
 #define PBAT_FEM_LAPLACIAN_MATRIX_H
 
 #include "Concepts.h"
-#include "pbat/aliases.h"
-#include "pbat/common/Eigen.h"
-#include "pbat/profiling/Profiling.h"
 
 #include <exception>
 #include <format>
+#include <pbat/aliases.h>
+#include <pbat/common/Eigen.h>
+#include <pbat/profiling/Profiling.h>
 #include <tbb/parallel_for.h>
 
 namespace pbat {

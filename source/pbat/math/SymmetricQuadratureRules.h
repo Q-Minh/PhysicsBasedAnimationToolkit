@@ -1,10 +1,9 @@
 #ifndef PBAT_MATH_SYMMETRIC_QUADRATURE_RULES_H
 #define PBAT_MATH_SYMMETRIC_QUADRATURE_RULES_H
 
-#include "pbat/aliases.h"
-
 #include <array>
 #include <cstdint>
+#include <pbat/aliases.h>
 
 namespace pbat {
 namespace math {

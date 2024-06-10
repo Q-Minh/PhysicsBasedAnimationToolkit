@@ -1,9 +1,9 @@
-#include "pbat/math/GaussQuadrature.h"
+#include "GaussQuadrature.h"
 
-#include "pbat/common/ConstexprFor.h"
-#include "pbat/math/Concepts.h"
+#include "Concepts.h"
 
 #include <doctest/doctest.h>
+#include <pbat/common/ConstexprFor.h>
 
 TEST_CASE("[math] GaussQuadrature")
 {

@@ -1,5 +1,5 @@
-#include "pypbat/fem/fem.h"
-#include "pypbat/profiling/Profiling.h"
+#include "fem/fem.h"
+#include "profiling/Profiling.h"
 
 #include <pybind11/pybind11.h>
 

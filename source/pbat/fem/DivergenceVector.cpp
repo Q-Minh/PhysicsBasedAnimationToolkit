@@ -1,12 +1,12 @@
-#include "pbat/fem/DivergenceVector.h"
+#include "DivergenceVector.h"
 
-#include "pbat/common/ConstexprFor.h"
-#include "pbat/fem/Jacobian.h"
-#include "pbat/fem/Mesh.h"
-#include "pbat/fem/ShapeFunctions.h"
-#include "pbat/fem/Tetrahedron.h"
+#include "Jacobian.h"
+#include "Mesh.h"
+#include "ShapeFunctions.h"
+#include "Tetrahedron.h"
 
 #include <doctest/doctest.h>
+#include <pbat/common/ConstexprFor.h>
 
 TEST_CASE("[fem] DivergenceVector")
 {

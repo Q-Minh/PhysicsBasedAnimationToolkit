@@ -2,9 +2,9 @@
 #define PBAT_COMMON_INDEXING_H
 
 #include "Concepts.h"
-#include "pbat/aliases.h"
 
 #include <numeric>
+#include <pbat/aliases.h>
 #include <ranges>
 #include <vector>
 

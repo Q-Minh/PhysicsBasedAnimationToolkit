@@ -2,11 +2,11 @@
 #define PBA_PHYSICS_HYPER_ELASTICITY_H
 
 #include "PhysicsBasedAnimationToolkitExport.h"
-#include "pbat/aliases.h"
 
 #include <concepts>
 #include <exception>
 #include <format>
+#include <pbat/aliases.h>
 #include <string>
 #include <tuple>
 
@@ -40,13 +40,12 @@ concept CHyperElasticEnergy = requires(T t)
     {
         t.evalWithGradAndHessian(Matrix<T::kDims, T::kDims>{}.reshaped(), Scalar{}, Scalar{})
     } -> std::convertible_to<std::tuple<
-          Scalar,
-          Vector<T::kDims * T::kDims>,
-          Matrix<T::kDims * T::kDims, T::kDims * T::kDims>>>;
+        Scalar,
+        Vector<T::kDims * T::kDims>,
+        Matrix<T::kDims * T::kDims, T::kDims * T::kDims>>>;
     {
         t.gradAndHessian(Matrix<T::kDims, T::kDims>{}.reshaped(), Scalar{}, Scalar{})
-    }
-    -> std::convertible_to<
+    } -> std::convertible_to<
         std::tuple<Vector<T::kDims * T::kDims>, Matrix<T::kDims * T::kDims, T::kDims * T::kDims>>>;
 };
 

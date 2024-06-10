@@ -2,12 +2,12 @@
 #define PBAT_FEM_JACOBIAN_H
 
 #include "Concepts.h"
-#include "pbat/aliases.h"
-#include "pbat/common/Eigen.h"
-#include "pbat/profiling/Profiling.h"
 
 #include <Eigen/LU>
 #include <Eigen/SVD>
+#include <pbat/aliases.h>
+#include <pbat/common/Eigen.h>
+#include <pbat/profiling/Profiling.h>
 #include <tbb/parallel_for.h>
 
 namespace pbat {

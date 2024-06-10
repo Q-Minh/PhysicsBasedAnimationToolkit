@@ -3,9 +3,9 @@
 #define PBAT_FEM_HEXAHEDRON_H
 
 #include "QuadratureRules.h"
-#include "pbat/aliases.h"
 
 #include <array>
+#include <pbat/aliases.h>
 
 namespace pbat {
 namespace fem {
@@ -22,9 +22,9 @@ struct Hexahedron<1>
     static int constexpr kDims                                   = 3;
     static int constexpr kNodes                                  = 8;
     static std::array<int, kNodes * kDims> constexpr Coordinates = {
-        0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 1, 0, 0,
-        0, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1}; ///< Divide coordinates by kOrder to obtain actual
-                                          ///< coordinates in the reference element
+        0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 1, 0,
+        0, 0, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1}; ///< Divide coordinates by kOrder to obtain actual
+                                             ///< coordinates in the reference element
     static std::array<int, AffineBaseType::kNodes> constexpr Vertices = {
         0,
         1,

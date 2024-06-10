@@ -1,11 +1,11 @@
-#include "pbat/fem/LoadVector.h"
+#include "LoadVector.h"
 
-#include "pbat/common/ConstexprFor.h"
-#include "pbat/fem/Jacobian.h"
-#include "pbat/fem/Mesh.h"
-#include "pbat/fem/Tetrahedron.h"
+#include "Jacobian.h"
+#include "Mesh.h"
+#include "Tetrahedron.h"
 
 #include <doctest/doctest.h>
+#include <pbat/common/ConstexprFor.h>
 
 TEST_CASE("[fem] LoadVector")
 {

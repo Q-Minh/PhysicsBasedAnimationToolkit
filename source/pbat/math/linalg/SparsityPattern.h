@@ -2,12 +2,12 @@
 #define PBAT_MATH_LINALG_SPARSITY_PATTERN_H
 
 #include "PhysicsBasedAnimationToolkitExport.h"
-#include "pbat/aliases.h"
-#include "pbat/common/Concepts.h"
-#include "pbat/profiling/Profiling.h"
 
 #include <exception>
 #include <format>
+#include <pbat/aliases.h>
+#include <pbat/common/Concepts.h>
+#include <pbat/profiling/Profiling.h>
 #include <range/v3/action/sort.hpp>
 #include <range/v3/range/conversion.hpp>
 #include <range/v3/view/iota.hpp>

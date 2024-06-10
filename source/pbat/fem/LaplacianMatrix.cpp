@@ -1,14 +1,14 @@
-#include "pbat/fem/LaplacianMatrix.h"
+#include "LaplacianMatrix.h"
 
-#include "pbat/common/ConstexprFor.h"
-#include "pbat/fem/Jacobian.h"
-#include "pbat/fem/Mesh.h"
-#include "pbat/fem/ShapeFunctions.h"
-#include "pbat/fem/Tetrahedron.h"
-#include "pbat/math/LinearOperator.h"
+#include "Jacobian.h"
+#include "Mesh.h"
+#include "ShapeFunctions.h"
+#include "Tetrahedron.h"
 
 #include <Eigen/Eigenvalues>
 #include <doctest/doctest.h>
+#include <pbat/common/ConstexprFor.h>
+#include <pbat/math/LinearOperator.h>
 
 TEST_CASE("[fem] LaplacianMatrix")
 {

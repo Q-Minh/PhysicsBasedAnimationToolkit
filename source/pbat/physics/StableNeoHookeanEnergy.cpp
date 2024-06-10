@@ -1,10 +1,10 @@
-#include "pbat/physics/StableNeoHookeanEnergy.h"
+#include "StableNeoHookeanEnergy.h"
 
-#include "pbat/common/ConstexprFor.h"
-#include "pbat/physics/HyperElasticity.h"
+#include "HyperElasticity.h"
 
 #include <Eigen/LU>
 #include <doctest/doctest.h>
+#include <pbat/common/ConstexprFor.h>
 
 TEST_CASE("[physics] StableNeoHookeanEnergy")
 {

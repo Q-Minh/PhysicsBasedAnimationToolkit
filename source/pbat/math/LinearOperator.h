@@ -1,11 +1,10 @@
 #ifndef PBAT_MATH_LINEAR_OPERATOR_H
 #define PBAT_MATH_LINEAR_OPERATOR_H
 
-#include "pbat/aliases.h"
-#include "pbat/profiling/Profiling.h"
-
 #include <concepts>
 #include <exception>
+#include <pbat/aliases.h>
+#include <pbat/profiling/Profiling.h>
 #include <tuple>
 
 namespace pbat {

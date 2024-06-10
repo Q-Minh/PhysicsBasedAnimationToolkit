@@ -1,6 +1,6 @@
-#include "pbat/math/Rational.h"
+#include "Rational.h"
 
-#include "pbat/math/IntegerArithmeticChecks.h"
+#include "IntegerArithmeticChecks.h"
 
 #include <numeric>
 

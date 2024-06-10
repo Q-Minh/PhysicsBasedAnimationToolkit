@@ -1,4 +1,4 @@
-#include "pbat/common/Eigen.h"
+#include "Eigen.h"
 
 #include <doctest/doctest.h>
 

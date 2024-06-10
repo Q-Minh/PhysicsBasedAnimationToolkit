@@ -2,9 +2,8 @@
 #ifndef PBAT_PHYSICS_SAINTVENANTKIRCHHOFFENERGY_H
 #define PBAT_PHYSICS_SAINTVENANTKIRCHHOFFENERGY_H
 
-#include "pbat/aliases.h"
-
 #include <cmath>
+#include <pbat/aliases.h>
 #include <tuple>
 
 namespace pbat {

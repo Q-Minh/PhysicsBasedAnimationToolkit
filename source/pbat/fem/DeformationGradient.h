@@ -3,9 +3,9 @@
 
 #include "Concepts.h"
 #include "Jacobian.h"
-#include "pbat/aliases.h"
 
 #include <Eigen/SVD>
+#include <pbat/aliases.h>
 
 namespace pbat {
 namespace fem {

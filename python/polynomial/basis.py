@@ -118,7 +118,7 @@ def header(file):
 *
 */
 
-#include "pbat/aliases.h"
+#include <pbat/aliases.h>
 
 #include <cmath>
 #include <numbers>

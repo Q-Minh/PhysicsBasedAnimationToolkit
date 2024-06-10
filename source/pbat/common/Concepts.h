@@ -1,10 +1,9 @@
 #ifndef PBAT_COMMON_CONCEPTS_H
 #define PBAT_COMMON_CONCEPTS_H
 
-#include "pbat/aliases.h"
-
 #include <concepts>
 #include <iterator>
+#include <pbat/aliases.h>
 #include <ranges>
 #include <type_traits>
 

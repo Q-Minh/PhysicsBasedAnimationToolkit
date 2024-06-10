@@ -1,4 +1,4 @@
-#include "pbat/math/linalg/SparsityPattern.h"
+#include "SparsityPattern.h"
 
 namespace pbat {
 namespace math {

@@ -3,9 +3,9 @@
 #define PBAT_FEM_LINE_H
 
 #include "QuadratureRules.h"
-#include "pbat/aliases.h"
 
 #include <array>
+#include <pbat/aliases.h>
 
 namespace pbat {
 namespace fem {

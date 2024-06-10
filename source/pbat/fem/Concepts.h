@@ -1,10 +1,9 @@
 #ifndef PBAT_FEM_CONCEPTS_H
 #define PBAT_FEM_CONCEPTS_H
 
-#include "pbat/aliases.h"
-#include "pbat/common/Concepts.h"
-
 #include <concepts>
+#include <pbat/aliases.h>
+#include <pbat/common/Concepts.h>
 
 namespace pbat {
 namespace fem {

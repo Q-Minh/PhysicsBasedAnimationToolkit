@@ -2,10 +2,9 @@
 #ifndef PBAT_MATH_GAUSS_QUADRATURE_H
 #define PBAT_MATH_GAUSS_QUADRATURE_H
 
-#include "pbat/aliases.h"
-
 #include <array>
 #include <cstdint>
+#include <pbat/aliases.h>
 
 namespace pbat {
 namespace math {
@@ -13,10 +12,10 @@ namespace math {
 /**
  * @brief Shifted Gauss Legendre quadrature scheme over the unit box [0,1] in Dims dimensions.
  *
- * The points are specified as (kDims+1) coordinate tuples in affine 
- * coordinates, i.e. the first coordinate = 1 - sum(other kDims coordinates). This is not necessary, 
+ * The points are specified as (kDims+1) coordinate tuples in affine
+ * coordinates, i.e. the first coordinate = 1 - sum(other kDims coordinates). This is not necessary,
  * and can be removed, but for now, we leave it as is.
- * 
+ *
  * @tparam Dims
  * @tparam Order
  */

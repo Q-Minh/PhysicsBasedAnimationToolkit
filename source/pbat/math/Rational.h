@@ -2,9 +2,9 @@
 #define PBAT_MATH_RATIONAL_H
 
 #include "PhysicsBasedAnimationToolkitExport.h"
-#include "pbat/aliases.h"
 
 #include <cstdint>
+#include <pbat/aliases.h>
 #include <tuple>
 
 namespace pbat {

@@ -2,15 +2,15 @@
 #define PBA_FEM_HYPER_ELASTIC_POTENTIAL_H
 
 #include "Concepts.h"
-#include "pbat/aliases.h"
-#include "pbat/common/Eigen.h"
-#include "pbat/fem/DeformationGradient.h"
-#include "pbat/math/linalg/SparsityPattern.h"
-#include "pbat/physics/HyperElasticity.h"
-#include "pbat/profiling/Profiling.h"
+#include "DeformationGradient.h"
 
 #include <exception>
 #include <format>
+#include <pbat/aliases.h>
+#include <pbat/common/Eigen.h>
+#include <pbat/math/linalg/SparsityPattern.h>
+#include <pbat/physics/HyperElasticity.h>
+#include <pbat/profiling/Profiling.h>
 #include <span>
 #include <string>
 #include <tbb/parallel_for.h>

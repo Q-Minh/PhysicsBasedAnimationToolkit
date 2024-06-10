@@ -1,6 +1,6 @@
 #include "Profiling.h"
 
-#include "pbat/profiling/Profiling.h"
+#include <pbat/profiling/Profiling.h>
 
 namespace pbat {
 namespace py {

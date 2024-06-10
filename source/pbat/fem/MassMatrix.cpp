@@ -1,13 +1,13 @@
-#include "pbat/fem/MassMatrix.h"
+#include "MassMatrix.h"
 
 #include "Jacobian.h"
-#include "pbat/common/ConstexprFor.h"
-#include "pbat/fem/Mesh.h"
-#include "pbat/fem/Tetrahedron.h"
-#include "pbat/math/LinearOperator.h"
+#include "Mesh.h"
+#include "Tetrahedron.h"
 
 #include <Eigen/Eigenvalues>
 #include <doctest/doctest.h>
+#include <pbat/common/ConstexprFor.h>
+#include <pbat/math/LinearOperator.h>
 
 TEST_CASE("[fem] MassMatrix")
 {

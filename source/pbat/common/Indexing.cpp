@@ -1,9 +1,8 @@
-#include "pbat/common/Indexing.h"
+#include "Indexing.h"
 
 #include <Eigen/Core>
 #include <array>
 #include <doctest/doctest.h>
-#include <iostream>
 #include <ranges>
 
 namespace pbat {

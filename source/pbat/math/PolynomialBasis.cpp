@@ -1,9 +1,9 @@
-#include "pbat/math/PolynomialBasis.h"
+#include "PolynomialBasis.h"
 
-#include "pbat/common/ConstexprFor.h"
-#include "pbat/math/Concepts.h"
+#include "Concepts.h"
 
 #include <doctest/doctest.h>
+#include <pbat/common/ConstexprFor.h>
 
 using namespace pbat;
 

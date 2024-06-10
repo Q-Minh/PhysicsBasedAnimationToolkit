@@ -1,4 +1,4 @@
-#include "pbat/math/LinearOperator.h"
+#include "LinearOperator.h"
 
 #include <doctest/doctest.h>
 

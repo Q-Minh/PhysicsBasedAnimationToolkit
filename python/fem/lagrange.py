@@ -244,7 +244,7 @@ def codegen(felement, p: int, element_name: str):
 #ifndef PBAT_FEM_{element_name.upper()}_H
 #define PBAT_FEM_{element_name.upper()}_H
 
-#include "pbat/aliases.h"
+#include <pbat/aliases.h>
 #include "QuadratureRules.h"
 
 #include <array>

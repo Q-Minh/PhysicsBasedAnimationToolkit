@@ -1,7 +1,7 @@
-#include "pbat/fem/Mesh.h"
+#include "Mesh.h"
 
-#include "pbat/fem/Hexahedron.h"
-#include "pbat/fem/Tetrahedron.h"
+#include "Hexahedron.h"
+#include "Tetrahedron.h"
 
 #include <doctest/doctest.h>
 
