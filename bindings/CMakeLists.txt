@@ -38,7 +38,7 @@ source_group(
     FILES ${_pbat_python_headers}
 )
 
-# Make sure DLL dependencies end up together with python module
+# Make sure DLL dependencies end up together with python module in build tree
 add_custom_command(
     TARGET PhysicsBasedAnimationToolkit_Python
     POST_BUILD
@@ -46,6 +46,13 @@ add_custom_command(
     $<TARGET_RUNTIME_DLLS:PhysicsBasedAnimationToolkit_Python>
     $<TARGET_FILE_DIR:PhysicsBasedAnimationToolkit_Python>
     COMMAND_EXPAND_LISTS
+)
+
+# Make sure Python module can find shared library dependencies (i.e. TBB) 
+# in install tree on non-Windows platforms.
+set_target_properties(PhysicsBasedAnimationToolkit_Python
+    PROPERTIES
+    INSTALL_RPATH "$ORIGIN"
 )
 
 # Install rules for scikit-build-core. Note that we only support building
@@ -58,14 +65,7 @@ install(
     LIBRARY DESTINATION "pbatoolkit"
 )
 
-foreach(_pbat_dependency IN ITEMS TBB::tbb)
-    # WARNING: TBB::tbb not recognized as an executable, library or module in the 
-    # macos-13 github runner using vcpkg, for some reason. Gotta check it out.
-    # get_target_property(_imported ${_pbat_dependency} IMPORTED)
-    # get_target_property(_library_type ${_pbat_dependency} TYPE)
-    install(
-        IMPORTED_RUNTIME_ARTIFACTS ${_pbat_dependency}
-        RUNTIME DESTINATION "pbatoolkit"
-        LIBRARY DESTINATION "pbatoolkit"
-    )
-endforeach()
+# NOTE: Our Python bindings only support static library dependencies, 
+# however, TBB only comes as a dynamic library. We handle this special 
+# case, unfortunately.
+install(FILES $<TARGET_FILE:TBB::tbb> DESTINATION "pbatoolkit")
