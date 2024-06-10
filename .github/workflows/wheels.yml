@@ -42,7 +42,7 @@ jobs:
     name: Upload release
     needs: [build_wheels]
     runs-on: ubuntu-latest
-    if: github.event_name == 'release' && github.event.action == 'published'
+    if: (github.event_name == 'release' && github.event.action == 'published') || (github.event_name == 'workflow_dispatch')
     # or, alternatively, upload to PyPI on every tag starting with 'v' (remove on: release above to use this)
     # if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
     environment: pypi
