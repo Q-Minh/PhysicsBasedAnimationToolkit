@@ -7,7 +7,7 @@
 #include <Eigen/SVD>
 #include <exception>
 #include <format>
-#include <pbat/aliases.h>
+#include <pbat/Aliases.h>
 #include <pbat/profiling/Profiling.h>
 #include <tbb/parallel_for.h>
 

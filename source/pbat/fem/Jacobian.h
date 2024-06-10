@@ -5,7 +5,7 @@
 
 #include <Eigen/LU>
 #include <Eigen/SVD>
-#include <pbat/aliases.h>
+#include <pbat/Aliases.h>
 #include <pbat/common/Eigen.h>
 #include <pbat/profiling/Profiling.h>
 #include <tbb/parallel_for.h>

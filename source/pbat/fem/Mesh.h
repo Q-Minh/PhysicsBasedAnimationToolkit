@@ -8,7 +8,7 @@
 #include <exception>
 #include <map>
 #include <numeric>
-#include <pbat/aliases.h>
+#include <pbat/Aliases.h>
 #include <pbat/common/Eigen.h>
 #include <pbat/math/Rational.h>
 #include <pbat/profiling/Profiling.h>

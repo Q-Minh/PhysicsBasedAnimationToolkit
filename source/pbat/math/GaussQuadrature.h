@@ -4,7 +4,7 @@
 
 #include <array>
 #include <cstdint>
-#include <pbat/aliases.h>
+#include <pbat/Aliases.h>
 
 namespace pbat {
 namespace math {

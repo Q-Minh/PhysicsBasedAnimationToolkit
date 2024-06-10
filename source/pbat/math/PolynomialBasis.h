@@ -11,7 +11,7 @@
 
 #include <cmath>
 #include <numbers>
-#include <pbat/aliases.h>
+#include <pbat/Aliases.h>
 
 namespace pbat {
 namespace math {

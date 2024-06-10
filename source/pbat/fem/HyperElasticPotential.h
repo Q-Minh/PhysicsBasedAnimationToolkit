@@ -6,7 +6,7 @@
 
 #include <exception>
 #include <format>
-#include <pbat/aliases.h>
+#include <pbat/Aliases.h>
 #include <pbat/common/Eigen.h>
 #include <pbat/math/linalg/SparsityPattern.h>
 #include <pbat/physics/HyperElasticity.h>

@@ -2,7 +2,7 @@
 #define PBAT_FEM_CONCEPTS_H
 
 #include <concepts>
-#include <pbat/aliases.h>
+#include <pbat/Aliases.h>
 #include <pbat/common/Concepts.h>
 
 namespace pbat {

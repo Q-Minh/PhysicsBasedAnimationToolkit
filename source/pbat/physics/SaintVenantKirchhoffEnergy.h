@@ -3,7 +3,7 @@
 #define PBAT_PHYSICS_SAINTVENANTKIRCHHOFFENERGY_H
 
 #include <cmath>
-#include <pbat/aliases.h>
+#include <pbat/Aliases.h>
 #include <tuple>
 
 namespace pbat {

@@ -7,7 +7,7 @@
 #include <array>
 #include <exception>
 #include <format>
-#include <pbat/aliases.h>
+#include <pbat/Aliases.h>
 #include <pbat/common/Eigen.h>
 #include <pbat/profiling/Profiling.h>
 #include <tbb/parallel_for.h>

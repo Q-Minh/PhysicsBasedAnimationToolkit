@@ -3,7 +3,7 @@
 #define PBAT_PHYSICS_STABLENEOHOOKEANENERGY_H
 
 #include <cmath>
-#include <pbat/aliases.h>
+#include <pbat/Aliases.h>
 #include <tuple>
 
 namespace pbat {

@@ -4,7 +4,7 @@
 #include "Concepts.h"
 
 #include <numeric>
-#include <pbat/aliases.h>
+#include <pbat/Aliases.h>
 #include <ranges>
 #include <vector>
 

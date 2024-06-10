@@ -4,7 +4,7 @@
 #include "PhysicsBasedAnimationToolkitExport.h"
 
 #include <cstdint>
-#include <pbat/aliases.h>
+#include <pbat/Aliases.h>
 #include <tuple>
 
 namespace pbat {

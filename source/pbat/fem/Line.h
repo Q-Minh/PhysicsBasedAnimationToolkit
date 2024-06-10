@@ -5,7 +5,7 @@
 #include "QuadratureRules.h"
 
 #include <array>
-#include <pbat/aliases.h>
+#include <pbat/Aliases.h>
 
 namespace pbat {
 namespace fem {

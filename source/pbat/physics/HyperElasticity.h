@@ -6,7 +6,7 @@
 #include <concepts>
 #include <exception>
 #include <format>
-#include <pbat/aliases.h>
+#include <pbat/Aliases.h>
 #include <string>
 #include <tuple>
 

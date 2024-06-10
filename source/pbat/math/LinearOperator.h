@@ -3,7 +3,7 @@
 
 #include <concepts>
 #include <exception>
-#include <pbat/aliases.h>
+#include <pbat/Aliases.h>
 #include <pbat/profiling/Profiling.h>
 #include <tuple>
 

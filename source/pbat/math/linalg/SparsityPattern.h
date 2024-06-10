@@ -5,7 +5,7 @@
 
 #include <exception>
 #include <format>
-#include <pbat/aliases.h>
+#include <pbat/Aliases.h>
 #include <pbat/common/Concepts.h>
 #include <pbat/profiling/Profiling.h>
 #include <range/v3/action/sort.hpp>
