@@ -38,3 +38,6 @@ cmake.targets = ["PhysicsBasedAnimationToolkit_Python"]
 #     "-DPBAT_BUILD_TESTS:BOOL=OFF"
 # ]
 build-dir = "build/{wheel_tag}"
+
+[project.urls]
+Homepage = "https://github.com/Q-Minh/PhysicsBasedAnimationToolkit"
