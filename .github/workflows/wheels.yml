@@ -31,7 +31,7 @@ jobs:
 
     - uses: pypa/cibuildwheel@v2.19.0
       env:
-        SKBUILD_CMAKE_ARGS: -DCMAKE_TOOLCHAIN_FILE=${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake;-DVCPKG_MANIFEST_FEATURES=python;-DPBAT_BUILD_SHARED_LIBS:BOOL=OFF;-DPBAT_ENABLE_PROFILER:BOOL=ON;-DPBAT_BUILD_PYTHON_BINDINGS:BOOL=ON;-DPBAT_BUILD_TESTS:BOOL=OFF
+        SKBUILD_CMAKE_ARGS: "-DCMAKE_TOOLCHAIN_FILE=${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake;-DVCPKG_MANIFEST_FEATURES=python;-DPBAT_BUILD_SHARED_LIBS:BOOL=OFF;-DPBAT_ENABLE_PROFILER:BOOL=ON;-DPBAT_BUILD_PYTHON_BINDINGS:BOOL=ON;-DPBAT_BUILD_TESTS:BOOL=OFF"
 
     - uses: actions/upload-artifact@v4
       with:
