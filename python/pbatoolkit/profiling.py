@@ -1,4 +1,4 @@
-from ._pbat import profiling
+from ._pbat import profiling as _profiling
 
 import time
 
@@ -8,7 +8,7 @@ class Profiler:
 
     @property
     def is_connected_to_server(self):
-        return profiling.is_connected_to_server()
+        return _profiling.is_connected_to_server()
 
     def wait_for_server_connection(self, timeout=10, retry=0.1):
         start = time.time()
@@ -17,7 +17,7 @@ class Profiler:
         return self.is_connected_to_server
 
     def begin_frame(self, frame_name: str):
-        profiling.begin_frame(frame_name)
+        _profiling.begin_frame(frame_name)
 
     def end_frame(self, frame_name: str):
-        profiling.end_frame(frame_name)
+        _profiling.end_frame(frame_name)

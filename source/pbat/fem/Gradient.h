@@ -108,6 +108,7 @@ inline CSCMatrix GalerkinGradient<TMesh, QuadratureOrder>::ToMatrix() const
     triplets.reserve(static_cast<std::size_t>(Ge.size()));
     auto constexpr kNodesPerElement = ElementType::kNodes;
     auto const numberOfElements     = mesh.E.cols();
+    auto const numberOfNodes        = mesh.X.cols();
     for (auto e = 0; e < numberOfElements; ++e)
     {
         auto const nodes = mesh.E.col(e);
@@ -120,7 +121,7 @@ inline CSCMatrix GalerkinGradient<TMesh, QuadratureOrder>::ToMatrix() const
             {
                 for (auto i = 0; i < Ged.rows(); ++i)
                 {
-                    auto const ni = static_cast<SparseIndex>(d * numberOfElements + nodes(i));
+                    auto const ni = static_cast<SparseIndex>(d * numberOfNodes + nodes(i));
                     auto const nj = static_cast<SparseIndex>(nodes(j));
                     triplets.push_back(Triplet(ni, nj, Ged(i, j)));
                 }

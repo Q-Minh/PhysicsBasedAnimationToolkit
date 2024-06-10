@@ -103,13 +103,8 @@ void BindHyperElasticPotential(pybind11::module& m)
                             .def("to_matrix", &ElasticPotentialType::ToMatrix)
                             .def("to_vector", &ElasticPotentialType::ToVector)
                             .def("eval", &ElasticPotentialType::Eval)
-                            .def_property_readonly(
-                                "shape",
-                                [](ElasticPotentialType const& U) {
-                                    return std::make_tuple(
-                                        U.OutputDimensions(),
-                                        U.InputDimensions());
-                                })
+                            .def("rows", &ElasticPotentialType::OutputDimensions)
+                            .def("cols", &ElasticPotentialType::InputDimensions)
                             .def_readwrite("mue", &ElasticPotentialType::mue)
                             .def_readwrite("lambdae", &ElasticPotentialType::lambdae)
                             .def_readonly("He", &ElasticPotentialType::He)

@@ -42,3 +42,8 @@ __pycache__
 
 # CMake
 CMakeUserPresets.json
+
+# PBAT
+data
+.polyscope.ini
+imgui.ini

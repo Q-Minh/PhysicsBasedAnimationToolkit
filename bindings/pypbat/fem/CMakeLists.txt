@@ -4,6 +4,7 @@ target_sources(PhysicsBasedAnimationToolkit_Python
     FILES
     "DivergenceVector.h"
     "fem.h"
+    "Gradient.h"
     "HyperElasticPotential.h"
     "Jacobian.h"
     "LaplacianMatrix.h"
@@ -18,6 +19,7 @@ target_sources(PhysicsBasedAnimationToolkit_Python
     PRIVATE
     "DivergenceVector.cpp"
     "fem.cpp"
+    "Gradient.cpp"
     "HyperElasticPotential.cpp"
     "Jacobian.cpp"
     "LaplacianMatrix.cpp"

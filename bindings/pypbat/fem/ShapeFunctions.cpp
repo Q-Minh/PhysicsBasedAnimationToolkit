@@ -67,7 +67,7 @@ void BindShapeFunctions(pybind11::module& m)
                 return R;
             },
             pyb::arg("mesh"),
-            pyb::arg("qorder"));
+            pyb::arg("quadrature_order"));
     });
 }
 

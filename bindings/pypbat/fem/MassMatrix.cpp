@@ -18,12 +18,12 @@ void BindMassMatrix(pybind11::module& m)
     ForMeshTypes([&]<class MeshType>() {
         auto constexpr kDimsMax            = 3;
         auto constexpr kQuadratureOrderMax = 6;
-        pbat::common::ForRange<1, kDimsMax + 1>([&]<auto Dims>() {
-            pbat::common::ForRange<1, kQuadratureOrderMax + 1>([&]<auto QuadratureOrder>() {
-                using MassMatrixType = pbat::fem::MassMatrix<MeshType, Dims, QuadratureOrder>;
+        pbat::common::ForRange<1, kDimsMax + 1>([&]<auto kDims>() {
+            pbat::common::ForRange<1, kQuadratureOrderMax + 1>([&]<auto kQuadratureOrder>() {
+                using MassMatrixType = pbat::fem::MassMatrix<MeshType, kDims, kQuadratureOrder>;
                 std::string const className =
-                    "MassMatrix_Dims_" + std::to_string(Dims) + "_QuadratureOrder_" +
-                    std::to_string(QuadratureOrder) + "_" + MeshTypeName<MeshType>();
+                    "MassMatrix_Dims_" + std::to_string(kDims) + "_QuadratureOrder_" +
+                    std::to_string(kQuadratureOrder) + "_" + MeshTypeName<MeshType>();
                 pyb::class_<MassMatrixType>(m, className.data())
                     .def(
                         pyb::init([](MeshType const& mesh, Eigen::Ref<MatrixX const> const& detJe) {
@@ -56,11 +56,8 @@ void BindMassMatrix(pybind11::module& m)
                         "quadrature_order",
                         [](pyb::object /*self*/) { return MassMatrixType::kQuadratureOrder; })
                     .def_readonly("Me", &MassMatrixType::Me)
-                    .def_property_readonly(
-                        "shape",
-                        [](MassMatrixType const& M) {
-                            return std::make_tuple(M.OutputDimensions(), M.InputDimensions());
-                        })
+                    .def("rows", &MassMatrixType::OutputDimensions)
+                    .def("cols", &MassMatrixType::InputDimensions)
                     .def("to_matrix", &MassMatrixType::ToMatrix)
                     .def(
                         "compute_element_mass_matrices",

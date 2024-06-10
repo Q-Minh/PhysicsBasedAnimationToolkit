@@ -119,7 +119,7 @@ LoadVector<TMesh, Dims, QuadratureOrder>::SetLoad(Eigen::DenseBase<TDerived> con
 
     fe.resize(kDims, numberOfElements);
     if (load.cols() == 1)
-        fe.colwise() = load;
+        fe.colwise() = load.col(0);
     else // load.cols() == numberOfElements
         fe = load;
 }

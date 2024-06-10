@@ -1,10 +1,10 @@
-#include "LaplacianMatrix.h"
+#include "Gradient.h"
 
 #include "For.h"
 #include "Mesh.h"
 
 #include <pbat/common/ConstexprFor.h>
-#include <pbat/fem/LaplacianMatrix.h>
+#include <pbat/fem/Gradient.h>
 #include <pybind11/eigen.h>
 #include <tuple>
 
@@ -12,40 +12,39 @@ namespace pbat {
 namespace py {
 namespace fem {
 
-void BindLaplacianMatrix(pybind11::module& m)
+void BindGradient(pybind11::module& m)
 {
     namespace pyb = pybind11;
     ForMeshTypes([&]<class MeshType>() {
-        auto constexpr kQuadratureOrderMax = 6;
+        auto constexpr kQuadratureOrderMax = 5;
         pbat::common::ForRange<1, kQuadratureOrderMax + 1>([&]<auto QuadratureOrder>() {
-            using LaplacianMatrixType =
-                pbat::fem::SymmetricLaplacianMatrix<MeshType, QuadratureOrder>;
-            std::string const className = "SymmetricLaplacianMatrix_QuadratureOrder_" +
+            using GradientMatrixType    = pbat::fem::GalerkinGradient<MeshType, QuadratureOrder>;
+            std::string const className = "GalerkinGradientMatrix_QuadratureOrder_" +
                                           std::to_string(QuadratureOrder) + "_" +
                                           MeshTypeName<MeshType>();
-            pyb::class_<LaplacianMatrixType>(m, className.data())
+            pyb::class_<GradientMatrixType>(m, className.data())
                 .def(
                     pyb::init([](MeshType const& mesh,
                                  Eigen::Ref<MatrixX const> const& detJe,
                                  Eigen::Ref<MatrixX const> const& GNe) {
-                        return LaplacianMatrixType(mesh, detJe, GNe);
+                        return GradientMatrixType(mesh, detJe, GNe);
                     }),
                     pyb::arg("mesh"),
                     pyb::arg("detJe"),
                     pyb::arg("GNe"))
                 .def_property_readonly_static(
                     "dims",
-                    [](pyb::object /*self*/) { return LaplacianMatrixType::kDims; })
+                    [](pyb::object /*self*/) { return GradientMatrixType::kDims; })
                 .def_property_readonly_static(
                     "order",
-                    [](pyb::object /*self*/) { return LaplacianMatrixType::kOrder; })
+                    [](pyb::object /*self*/) { return GradientMatrixType::kOrder; })
                 .def_property_readonly_static(
                     "quadrature_order",
-                    [](pyb::object /*self*/) { return LaplacianMatrixType::kQuadratureOrder; })
-                .def("to_matrix", &LaplacianMatrixType::ToMatrix)
-                .def("rows", &LaplacianMatrixType::OutputDimensions)
-                .def("cols", &LaplacianMatrixType::InputDimensions)
-                .def_readonly("deltae", &LaplacianMatrixType::deltaE);
+                    [](pyb::object /*self*/) { return GradientMatrixType::kQuadratureOrder; })
+                .def("rows", &GradientMatrixType::OutputDimensions)
+                .def("cols", &GradientMatrixType::InputDimensions)
+                .def("to_matrix", &GradientMatrixType::ToMatrix)
+                .def_readonly("Ge", &GradientMatrixType::Ge);
         });
     });
 }

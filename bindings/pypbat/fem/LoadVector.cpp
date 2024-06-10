@@ -28,7 +28,7 @@ void BindLoadVector(pybind11::module& m)
                     .def(
                         pyb::init([](MeshType const& mesh,
                                      Eigen::Ref<MatrixX const> const& detJe,
-                                     Eigen::Ref<VectorX const> const& fe) {
+                                     Eigen::Ref<MatrixX const> const& fe) {
                             return LoadVectorType(mesh, detJe, fe);
                         }),
                         pyb::arg("mesh"),
@@ -44,9 +44,6 @@ void BindLoadVector(pybind11::module& m)
                         "quadrature_order",
                         [](pyb::object /*self*/) { return LoadVectorType::kQuadratureOrder; })
                     .def_readonly("fe", &LoadVectorType::fe)
-                    .def_property_readonly(
-                        "shape",
-                        [](LoadVectorType const& f) { return std::make_tuple(f.mesh.X.cols()); })
                     .def("to_vector", &LoadVectorType::ToVector)
                     .def(
                         "set_load",
