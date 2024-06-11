@@ -109,25 +109,25 @@ struct PBAT_API Rational
 } // namespace pbat
 
 template <std::integral Integer>
-pbat::math::Rational operator-(Integer a, pbat::math::Rational const& b)
+inline pbat::math::Rational operator-(Integer a, pbat::math::Rational const& b)
 {
     return (-b) + a;
 }
 
 template <std::integral Integer>
-pbat::math::Rational operator+(Integer a, pbat::math::Rational const& b)
+inline pbat::math::Rational operator+(Integer a, pbat::math::Rational const& b)
 {
     return b + a;
 }
 
 template <std::integral Integer>
-pbat::math::Rational operator*(Integer a, pbat::math::Rational const& b)
+inline pbat::math::Rational operator*(Integer a, pbat::math::Rational const& b)
 {
     return b * a;
 }
 
 template <std::integral Integer>
-pbat::math::Rational operator/(Integer a, pbat::math::Rational const& b)
+inline pbat::math::Rational operator/(Integer a, pbat::math::Rational const& b)
 {
     return pbat::math::Rational{a} / b;
 }

@@ -15,15 +15,14 @@ jobs:
       matrix:
         include:
           # The macos-13 image's default compiler is AppleClang, and I prefer clang.
-          # On windows-2022, CMake will choose MSVC by default with VS2022, whereas for the 
+          # On windows-2022, CMake will choose MSVC by default with VS2022, whereas for the
           # ubuntu-24.04 build, the compiler toolchain is taken from the manylinux image.
-          # We choose to use manylinux_2_28, which has the GCC12 toolchain (quite old and does 
+          # We choose to use manylinux_2_28, which has the GCC12 toolchain (quite old and does
           # not support std::format yet, so we need to use fmtlib).
           - os: ubuntu-24.04
             cibw_build: cp310-manylinux_x86_64 cp311-manylinux_x86_64 cp312-manylinux_x86_64
           - os: macos-13
             cibw_build: cp310-macosx_x86_64 cp310_macosx_universal2 cp311-macosx_x86_64 cp311_macosx_universal2 cp312-macosx_x86_64 cp312_macosx_universal2
-            # cxx_compiler: $(brew --prefix llvm@15)/bin/clang
           - os: windows-2022
             cibw_build: cp310-win_amd64 cp311-win_amd64 cp312-win_amd64
 
@@ -36,6 +35,16 @@ jobs:
           vcpkgDirectory: ${{ github.workspace }}/vcpkg
           vcpkgGitCommitId: 055721089e8037d4d617250814d11f881e557549
 
+        # Environment variables can be read directly on Windows and MacOS, but not Linux.
+        # See https://cibuildwheel.pypa.io/en/stable/options/#environment-pass
+      - name: Set CMake args
+        run: echo 'SKBUILD_CMAKE_ARGS="-DCMAKE_TOOLCHAIN_FILE=${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake;-DVCPKG_MANIFEST_FEATURES=python;-DPBAT_BUILD_SHARED_LIBS:BOOL=OFF;-DPBAT_ENABLE_PROFILER:BOOL=ON;-DPBAT_BUILD_PYTHON_BINDINGS:BOOL=ON;-DPBAT_BUILD_TESTS:BOOL=OFF"' >> $GITHUB_ENV
+
+        # MacOS's default compiler is AppleClang, let's change it to clang 15, which has better standard compliance.
+      - name: Specify macOS compiler
+        if: matrix.os == 'macos-13'
+        run: echo "SKBUILD_CMAKE_ARGS=$SKBUILD_CMAKE_ARGS;-DCMAKE_CXX_COMPILER=$(brew --prefix llvm@15)/bin/clang" >> $GITHUB_ENV
+
       - uses: pypa/cibuildwheel@v2.19.0
         env:
           MACOSX_DEPLOYMENT_TARGET: "13.0"
@@ -44,9 +53,6 @@ jobs:
           CIBW_ARCHS_WINDOWS: AMD64
           CIBW_BUILD: ${{ matrix.cibw_build }}
           CIBW_MANYLINUX_X86_64_IMAGE: quay.io/pypa/manylinux_2_28_x86_64
-          # Environment variables can be read directly on Windows and MacOS, but not Linux.
-          # See https://cibuildwheel.pypa.io/en/stable/options/#environment-pass
-          SKBUILD_CMAKE_ARGS: "-DCMAKE_TOOLCHAIN_FILE=${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake;-DVCPKG_MANIFEST_FEATURES=python;-DPBAT_BUILD_SHARED_LIBS:BOOL=OFF;-DPBAT_ENABLE_PROFILER:BOOL=ON;-DPBAT_BUILD_PYTHON_BINDINGS:BOOL=ON;-DPBAT_BUILD_TESTS:BOOL=OFF"
           # By default, cibuildwheel will perform a volume mount from the current root / to /host/ in the linux container.
           CIBW_ENVIRONMENT_LINUX: SKBUILD_CMAKE_ARGS="-DCMAKE_TOOLCHAIN_FILE=/host/${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake;-DVCPKG_MANIFEST_FEATURES=python;-DPBAT_BUILD_SHARED_LIBS:BOOL=OFF;-DPBAT_ENABLE_PROFILER:BOOL=ON;-DPBAT_BUILD_PYTHON_BINDINGS:BOOL=ON;-DPBAT_BUILD_TESTS:BOOL=OFF"
 
