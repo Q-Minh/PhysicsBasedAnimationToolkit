@@ -38,6 +38,7 @@ jobs:
 
       - uses: pypa/cibuildwheel@v2.19.0
         env:
+          MACOSX_DEPLOYMENT_TARGET: "13.0"
           CIBW_ARCHS_MACOS: x86_64 universal2
           CIBW_ARCHS_LINUX: x86_64
           CIBW_ARCHS_WINDOWS: AMD64

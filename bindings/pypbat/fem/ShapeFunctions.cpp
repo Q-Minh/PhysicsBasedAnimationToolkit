@@ -19,7 +19,7 @@ void BindShapeFunctions(pybind11::module& m)
     namespace pyb = pybind11;
     ForMeshTypes([&]<class MeshType>() {
         auto constexpr kMaxQuadratureOrder = 6u;
-        auto const throw_bad_quad_order    = [](int qorder) {
+        auto const throw_bad_quad_order    = [&](int qorder) {
             std::string const what = fmt::format(
                 "Invalid quadrature order={}, supported orders are [1,{}]",
                 qorder,
