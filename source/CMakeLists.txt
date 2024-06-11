@@ -8,7 +8,8 @@ set_target_properties(
     FOLDER "PhysicsBasedAnimationToolkit"
     DEBUG_POSTFIX "_d"
     CXX_VISIBILITY_PRESET "hidden"
-    VISIBILITY_INLINES_HIDDEN ON
+    VISIBILITY_INLINES_HIDDEN ON 
+    POSITION_INDEPENDENT_CODE ON
 )
 
 # Most of our implementation code is templated, so we expose transitive dependencies (i.e. PUBLIC)
