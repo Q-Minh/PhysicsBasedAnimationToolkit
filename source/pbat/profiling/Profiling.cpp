@@ -7,9 +7,9 @@ namespace pbat {
 namespace profiling {
 namespace detail {
 
-std::array<char, 64>& buffer()
+std::array<char, 256>& buffer()
 {
-    static std::array<char, 64> buf{};
+    static std::array<char, 256> buf{};
     return buf;
 }
 
@@ -18,14 +18,18 @@ std::array<char, 64>& buffer()
 void BeginFrame(std::string_view name)
 {
     auto& buf = detail::buffer();
-    std::memcpy(buf.data(), name.data(), std::min(buf.size(), name.size()));
+    auto const size = std::min(buf.size(), name.size());
+    std::memcpy(buf.data(), name.data(), size);
+    buf[size - 1] = '\0';
     FrameMarkStart(buf.data());
 }
 
 void EndFrame(std::string_view name)
 {
     auto& buf = detail::buffer();
+    auto const size = std::min(buf.size(), name.size());
     std::memcpy(buf.data(), name.data(), std::min(buf.size(), name.size()));
+    buf[size - 1] = '\0';
     FrameMarkEnd(buf.data());
 }
 
