@@ -36,10 +36,16 @@ jobs:
       - name: Set macOS environment variables
         if: startsWith(matrix.os, 'mac')
         shell: bash
+        # To use compiler other than AppleClang, use -DCMAKE_CXX_COMPILER. See available compilers at https://github.com/actions/runner-images/blob/main/images/macos/macos-13-Readme.md .
+        # For example,
+        # run:
+        #   echo "SKBUILD_CMAKE_ARGS=-DCMAKE_CXX_COMPILER=gcc-13;-DCMAKE_TOOLCHAIN_FILE=${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake;-DVCPKG_MANIFEST_FEATURES=python;-DPBAT_BUILD_SHARED_LIBS:BOOL=OFF;-DPBAT_ENABLE_PROFILER:BOOL=ON;-DPBAT_BUILD_PYTHON_BINDINGS:BOOL=ON;-DPBAT_BUILD_TESTS:BOOL=OFF" >> $GITHUB_ENV
+        # For now, it seems that TracyClient does not compile successfully on MacOS using GCC 13, and Clang 15 is not modern enough to support std::ranges::sort.
+
         # Environment variables can be read directly on Windows and MacOS, but not Linux.
         # See https://cibuildwheel.pypa.io/en/stable/options/#environment-pass
         run: |
-          echo "SKBUILD_CMAKE_ARGS=-DCMAKE_CXX_COMPILER=gcc-13;-DCMAKE_TOOLCHAIN_FILE=${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake;-DVCPKG_MANIFEST_FEATURES=python;-DPBAT_BUILD_SHARED_LIBS:BOOL=OFF;-DPBAT_ENABLE_PROFILER:BOOL=ON;-DPBAT_BUILD_PYTHON_BINDINGS:BOOL=ON;-DPBAT_BUILD_TESTS:BOOL=OFF" >> $GITHUB_ENV
+          echo "SKBUILD_CMAKE_ARGS=-DCMAKE_TOOLCHAIN_FILE=${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake;-DVCPKG_MANIFEST_FEATURES=python;-DPBAT_BUILD_SHARED_LIBS:BOOL=OFF;-DPBAT_ENABLE_PROFILER:BOOL=ON;-DPBAT_BUILD_PYTHON_BINDINGS:BOOL=ON;-DPBAT_BUILD_TESTS:BOOL=OFF" >> $GITHUB_ENV
 
       - uses: pypa/cibuildwheel@v2.19.0
         if: startsWith(matrix.os, 'mac')
