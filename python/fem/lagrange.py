@@ -244,10 +244,10 @@ def codegen(felement, p: int, element_name: str):
 #ifndef PBAT_FEM_{element_name.upper()}_H
 #define PBAT_FEM_{element_name.upper()}_H
 
-#include <pbat/aliases.h>
 #include "QuadratureRules.h"
 
 #include <array>
+#include <pbat/Aliases.h>
 
 namespace pbat {{
 namespace fem {{
@@ -305,6 +305,7 @@ struct {element_name}<{order}>
     template <class TDerived, class TScalar = typename TDerived::Scalar>
     [[maybe_unused]] static Eigen::Vector<TScalar, kNodes> N([[maybe_unused]] Eigen::DenseBase<TDerived> const& X)
     {{
+        using namespace pbat::math;
         Eigen::Vector<TScalar, kNodes> Nm;
 {codeN}
         return Nm;

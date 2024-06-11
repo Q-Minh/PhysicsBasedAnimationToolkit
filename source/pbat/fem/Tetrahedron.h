@@ -35,6 +35,7 @@ struct Tetrahedron<1>
     [[maybe_unused]] static Eigen::Vector<TScalar, kNodes>
     N([[maybe_unused]] Eigen::DenseBase<TDerived> const& X)
     {
+        using namespace pbat::math;
         Eigen::Vector<TScalar, kNodes> Nm;
         Nm[0] = -X[0] - X[1] - X[2] + 1;
         Nm[1] = X[0];
@@ -72,10 +73,9 @@ struct Tetrahedron<2>
     static int constexpr kDims                                   = 3;
     static int constexpr kNodes                                  = 10;
     static std::array<int, kNodes * kDims> constexpr Coordinates = {
-        0, 0, 0, 1, 0, 0, 2, 0, 0, 0, 1, 0, 1, 1, 0,
-        0, 2, 0, 0, 0, 1, 1, 0, 1, 0, 1, 1, 0, 0, 2}; ///< Divide coordinates by kOrder to obtain
-                                                      ///< actual coordinates in the reference
-                                                      ///< element
+        0, 0, 0, 1, 0, 0, 2, 0, 0, 0, 1, 0, 1, 1, 0, 0,
+        2, 0, 0, 0, 1, 1, 0, 1, 0, 1, 1, 0, 0, 2}; ///< Divide coordinates by kOrder to obtain
+                                                   ///< actual coordinates in the reference element
     static std::array<int, AffineBaseType::kNodes> constexpr Vertices =
         {0, 2, 5, 9}; ///< Indices into nodes [0,kNodes-1] revealing vertices of the element
     static bool constexpr bHasConstantJacobian = false;
@@ -87,6 +87,7 @@ struct Tetrahedron<2>
     [[maybe_unused]] static Eigen::Vector<TScalar, kNodes>
     N([[maybe_unused]] Eigen::DenseBase<TDerived> const& X)
     {
+        using namespace pbat::math;
         Eigen::Vector<TScalar, kNodes> Nm;
         auto const a0 = X[0] + X[1] + X[2] - 1;
         auto const a1 = 2 * X[1];
@@ -179,6 +180,7 @@ struct Tetrahedron<3>
     [[maybe_unused]] static Eigen::Vector<TScalar, kNodes>
     N([[maybe_unused]] Eigen::DenseBase<TDerived> const& X)
     {
+        using namespace pbat::math;
         Eigen::Vector<TScalar, kNodes> Nm;
         auto const a0  = 3 * X[0];
         auto const a1  = a0 - 1;

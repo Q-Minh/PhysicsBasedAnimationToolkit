@@ -36,6 +36,7 @@ struct Line<1>
     [[maybe_unused]] static Eigen::Vector<TScalar, kNodes>
     N([[maybe_unused]] Eigen::DenseBase<TDerived> const& X)
     {
+        using namespace pbat::math;
         Eigen::Vector<TScalar, kNodes> Nm;
         Nm[0] = 1 - X[0];
         Nm[1] = X[0];
@@ -76,6 +77,7 @@ struct Line<2>
     [[maybe_unused]] static Eigen::Vector<TScalar, kNodes>
     N([[maybe_unused]] Eigen::DenseBase<TDerived> const& X)
     {
+        using namespace pbat::math;
         Eigen::Vector<TScalar, kNodes> Nm;
         auto const a0 = X[0] - 1;
         auto const a1 = 2 * X[0] - 1;
@@ -122,6 +124,7 @@ struct Line<3>
     [[maybe_unused]] static Eigen::Vector<TScalar, kNodes>
     N([[maybe_unused]] Eigen::DenseBase<TDerived> const& X)
     {
+        using namespace pbat::math;
         Eigen::Vector<TScalar, kNodes> Nm;
         auto const a0 = X[0] - 1;
         auto const a1 = 3 * X[0];

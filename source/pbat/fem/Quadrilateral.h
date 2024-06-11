@@ -41,6 +41,7 @@ struct Quadrilateral<1>
     [[maybe_unused]] static Eigen::Vector<TScalar, kNodes>
     N([[maybe_unused]] Eigen::DenseBase<TDerived> const& X)
     {
+        using namespace pbat::math;
         Eigen::Vector<TScalar, kNodes> Nm;
         auto const a0 = X[0] - 1;
         auto const a1 = X[1] - 1;
@@ -107,6 +108,7 @@ struct Quadrilateral<2>
     [[maybe_unused]] static Eigen::Vector<TScalar, kNodes>
     N([[maybe_unused]] Eigen::DenseBase<TDerived> const& X)
     {
+        using namespace pbat::math;
         Eigen::Vector<TScalar, kNodes> Nm;
         auto const a0  = 2 * X[0] - 1;
         auto const a1  = 2 * X[1] - 1;
@@ -188,10 +190,10 @@ struct Quadrilateral<3>
     static int constexpr kDims                                   = 2;
     static int constexpr kNodes                                  = 16;
     static std::array<int, kNodes * kDims> constexpr Coordinates = {
-        0, 0, 1, 0, 2, 0, 3, 0, 0, 1, 1, 1, 2, 1, 3, 1,
-        0, 2, 1, 2, 2, 2, 3, 2, 0, 3, 1, 3, 2, 3, 3, 3}; ///< Divide coordinates by kOrder to obtain
-                                                         ///< actual coordinates in the reference
-                                                         ///< element
+        0, 0, 1, 0, 2, 0, 3, 0, 0, 1, 1, 1, 2, 1, 3, 1, 0,
+        2, 1, 2, 2, 2, 3, 2, 0, 3, 1, 3, 2, 3, 3, 3}; ///< Divide coordinates by kOrder to obtain
+                                                      ///< actual coordinates in the reference
+                                                      ///< element
     static std::array<int, AffineBaseType::kNodes> constexpr Vertices =
         {0, 3, 12, 15}; ///< Indices into nodes [0,kNodes-1] revealing vertices of the element
     static bool constexpr bHasConstantJacobian = false;
@@ -203,6 +205,7 @@ struct Quadrilateral<3>
     [[maybe_unused]] static Eigen::Vector<TScalar, kNodes>
     N([[maybe_unused]] Eigen::DenseBase<TDerived> const& X)
     {
+        using namespace pbat::math;
         Eigen::Vector<TScalar, kNodes> Nm;
         auto const a0  = X[0] - 1;
         auto const a1  = X[1] - 1;

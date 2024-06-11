@@ -25,7 +25,7 @@ if __name__ == "__main__":
 #ifndef PBAT_MATH_GAUSS_QUADRATURE_H
 #define PBAT_MATH_GAUSS_QUADRATURE_H
 
-#include <pbat/aliases.h>
+#include <pbat/Aliases.h>
 #include <array>
 #include <cstdint>
 

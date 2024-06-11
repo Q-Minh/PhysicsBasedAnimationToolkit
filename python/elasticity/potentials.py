@@ -50,7 +50,7 @@ def codegen(fpsi, energy_name: str):
 #ifndef PBAT_PHYSICS_{energy_name.upper()}_H
 #define PBAT_PHYSICS_{energy_name.upper()}_H
 
-#include <pbat/aliases.h>
+#include <pbat/Aliases.h>
 
 #include <cmath>
 #include <tuple>
