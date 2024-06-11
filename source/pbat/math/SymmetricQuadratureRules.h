@@ -18,7 +18,7 @@ Matrix<TBasis::kSize, Quad::kPoints> ReferenceMomentFittingMatrix(TBasis const& 
     Matrix<TBasis::kSize, Quad::kPoints> P{};
     Eigen::Map<Matrix<Quad::kDims + 1, Quad::kPoints> const> Xg(Q.points.data());
     for (auto g = 0u; g < Quad::kPoints; ++g)
-        P.col(g) = Pb.eval(Xg.col(g).segment<Quad::kDims>(1));
+        P.col(g) = Pb.eval(Xg.col(g).template segment<Quad::kDims>(1));
     return P;
 }
 

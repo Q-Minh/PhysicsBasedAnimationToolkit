@@ -47,7 +47,7 @@ MatrixX DeterminantOfJacobian(TMesh const& mesh)
 
     auto const Xg = common::ToEigen(QuadratureRuleType::points)
                         .reshaped(QuadratureRuleType::kDims + 1, QuadratureRuleType::kPoints)
-                        .bottomRows<ElementType::kDims>();
+                        .template bottomRows<ElementType::kDims>();
 
     auto const numberOfElements = mesh.E.cols();
     MatrixX detJe(QuadratureRuleType::kPoints, numberOfElements);

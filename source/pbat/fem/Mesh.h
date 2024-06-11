@@ -154,7 +154,7 @@ Mesh<TElement, Dims>::Mesh(
         // Loop over nodes of element and create the node on first visit
         auto const nodalCoordinates = common::ToEigen(ElementType::Coordinates)
                                           .reshaped(ElementType::kDims, ElementType::kNodes)
-                                          .cast<math::Rational>() /
+                                          .template cast<math::Rational>() /
                                       ElementType::kOrder;
         for (auto i = 0; i < nodalCoordinates.cols(); ++i)
         {
@@ -168,7 +168,7 @@ Mesh<TElement, Dims>::Mesh(
             if (!bNodeAlreadyCreated)
             {
                 auto const nodeIdx     = static_cast<Index>(nodes.size());
-                Vector<kDims> const xi = Xc * N.cast<Scalar>();
+                Vector<kDims> const xi = Xc * N.template cast<Scalar>();
                 nodes.push_back(xi);
                 bool bInserted{};
                 std::tie(it, bInserted) = nodeMap.insert({key, nodeIdx});

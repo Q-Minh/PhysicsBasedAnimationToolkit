@@ -30,7 +30,7 @@ ShapeFunctions()
     using ElementType        = TElement;
     auto const Xg            = common::ToEigen(QuadratureRuleType::points)
                         .reshaped(QuadratureRuleType::kDims + 1, QuadratureRuleType::kPoints)
-                        .bottomRows<QuadratureRuleType::kDims>();
+                        .template bottomRows<QuadratureRuleType::kDims>();
     Matrix<ElementType::kNodes, QuadratureRuleType::kPoints> Ng{};
     for (auto g = 0; g < QuadratureRuleType::kPoints; ++g)
     {
@@ -139,7 +139,7 @@ MatrixX ShapeFunctionGradients(TMesh const& mesh)
     auto constexpr kNodesPerElement = ElementType::kNodes;
     auto const Xg                   = common::ToEigen(QuadratureRuleType::points)
                         .reshaped(QuadratureRuleType::kDims + 1, QuadratureRuleType::kPoints)
-                        .bottomRows<ElementType::kDims>();
+                        .template bottomRows<ElementType::kDims>();
     MatrixX GNe(kNodesPerElement, numberOfElements * MeshType::kDims * QuadratureRuleType::kPoints);
     tbb::parallel_for(Index{0}, Index{numberOfElements}, [&](Index e) {
         auto const nodes                = mesh.E.col(e);

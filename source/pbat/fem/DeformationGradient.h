@@ -56,11 +56,12 @@ template <CElement TElement, int Dims, class TDerivedF, class TDerivedGP>
 Vector<TElement::kNodes * Dims>
 GradientWrtDofs(Eigen::DenseBase<TDerivedF> const& GF, Eigen::DenseBase<TDerivedGP> const& GP)
 {
-    auto const kRows     = TElement::kNodes * Dims;
+    auto constexpr kRows = TElement::kNodes * Dims;
     Vector<kRows> dPsidx = Vector<kRows>::Zero();
     for (auto k = 0; k < Dims; ++k)
         for (auto i = 0; i < TElement::kNodes; ++i)
-            dPsidx.segment<Dims>(i * Dims) += GP(i, k) * GF.segment<Dims>(k * Dims);
+            dPsidx.template segment<Dims>(i * Dims) +=
+                GP(i, k) * GF.template segment<Dims>(k * Dims);
     return dPsidx;
 }
 
@@ -83,15 +84,15 @@ template <CElement TElement, int Dims, class TDerivedF, class TDerivedGP>
 Matrix<TElement::kNodes * Dims, TElement::kNodes * Dims>
 HessianWrtDofs(Eigen::DenseBase<TDerivedF> const& HF, Eigen::DenseBase<TDerivedGP> const& GP)
 {
-    auto const kRows              = TElement::kNodes * Dims;
-    auto const kCols              = TElement::kNodes * Dims;
+    auto constexpr kRows          = TElement::kNodes * Dims;
+    auto constexpr kCols          = TElement::kNodes * Dims;
     Matrix<kRows, kCols> d2Psidx2 = Matrix<kRows, kCols>::Zero();
     for (auto kj = 0; kj < Dims; ++kj)
         for (auto ki = 0; ki < Dims; ++ki)
             for (auto j = 0; j < TElement::kNodes; ++j)
                 for (auto i = 0; i < TElement::kNodes; ++i)
-                    d2Psidx2.block<Dims, Dims>(i * Dims, j * Dims) +=
-                        GP(i, ki) * GP(j, kj) * HF.block<Dims, Dims>(ki * Dims, kj * Dims);
+                    d2Psidx2.template block<Dims, Dims>(i * Dims, j * Dims) +=
+                        GP(i, ki) * GP(j, kj) * HF.template block<Dims, Dims>(ki * Dims, kj * Dims);
     return d2Psidx2;
 }
 
