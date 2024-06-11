@@ -19,6 +19,7 @@ if(PBAT_ENABLE_PROFILER)
         GIT_PROGRESS TRUE
     )
     FetchContent_MakeAvailable(tracy)
+    set_target_properties(TracyClient PROPERTIES POSITION_INDEPENDENT_CODE ON)
 endif()
 
 if(PBAT_USE_INTEL_MKL)
