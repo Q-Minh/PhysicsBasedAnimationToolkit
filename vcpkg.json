@@ -13,6 +13,10 @@
             "version>=": "0.12.0"
         },
         {
+            "name": "fmt",
+            "version>=": "10.2.1"
+        },
+        {
             "name": "eigen3",
             "version>=": "3.4.0"
         },

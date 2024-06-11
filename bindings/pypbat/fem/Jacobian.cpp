@@ -4,7 +4,7 @@
 #include "Mesh.h"
 
 #include <exception>
-#include <format>
+#include <fmt/core.h>
 #include <pbat/common/ConstexprFor.h>
 #include <pbat/fem/Jacobian.h>
 #include <pybind11/eigen.h>
@@ -20,7 +20,7 @@ void BindJacobian(pybind11::module& m)
     ForMeshTypes([&]<class MeshType>() {
         auto constexpr kMaxQuadratureOrder = 6u;
         auto const throw_bad_quad_order    = [](int qorder) {
-            std::string const what = std::format(
+            std::string const what = fmt::format(
                 "Invalid quadrature order={}, supported orders are [1,{}]",
                 qorder,
                 kMaxQuadratureOrder);

@@ -5,7 +5,7 @@
 #include "DeformationGradient.h"
 
 #include <exception>
-#include <format>
+#include <fmt/core.h>
 #include <pbat/Aliases.h>
 #include <pbat/common/Eigen.h>
 #include <pbat/math/linalg/SparsityPattern.h>
@@ -200,7 +200,7 @@ HyperElasticPotential<TMesh, THyperElasticEnergy, QuadratureOrder>::ComputeEleme
     auto const numberOfNodes    = mesh.X.cols();
     if (x.size() != numberOfNodes * kDims)
     {
-        std::string const what = std::format(
+        std::string const what = fmt::format(
             "Generalized coordinate vector must have dimensions |#nodes|*kDims={}, but got "
             "x.size()={}",
             numberOfNodes * kDims,
@@ -245,7 +245,7 @@ inline void HyperElasticPotential<TMesh, THyperElasticEnergy, QuadratureOrder>::
     auto const numberOfDofs = InputDimensions();
     if (x.rows() != numberOfDofs or y.rows() != numberOfDofs or x.cols() != y.cols())
     {
-        std::string const what = std::format(
+        std::string const what = fmt::format(
             "Expected inputs and outputs to have rows |#nodes*kDims|={} and same number of "
             "columns, but got dimensions "
             "x,y=({},{}), ({},{})",
@@ -404,7 +404,7 @@ inline void HyperElasticPotential<TMesh, THyperElasticEnergy, QuadratureOrder>::
         (detJe.rows() == kExpectedDetJeRows) and (detJe.cols() == expectedDetJeCols);
     if (not bDeterminantsHaveCorrectDimensions)
     {
-        std::string const what = std::format(
+        std::string const what = fmt::format(
             "Expected determinants at element quadrature points of dimensions #quad.pts.={} x "
             "#elements={} for polynomial "
             "quadrature order={}, but got {}x{} instead.",
@@ -421,7 +421,7 @@ inline void HyperElasticPotential<TMesh, THyperElasticEnergy, QuadratureOrder>::
         (GNe.rows() == kExpectedGNeRows) and (GNe.cols() == expectedGNeCols);
     if (not bShapeFunctionGradientsHaveCorrectDimensions)
     {
-        std::string const what = std::format(
+        std::string const what = fmt::format(
             "Expected shape function gradients at element quadrature points of dimensions "
             "|#nodes-per-element|={} x |#mesh-dims * #quad.pts. * #elemens|={} for polynomiail "
             "quadrature order={}, but got {}x{} instead",
@@ -437,7 +437,7 @@ inline void HyperElasticPotential<TMesh, THyperElasticEnergy, QuadratureOrder>::
         (lambdae.rows() == numberOfElements) and (lambdae.cols() == 1);
     if (not bLameCoefficientsHaveCorrectDimensions)
     {
-        std::string const what = std::format(
+        std::string const what = fmt::format(
             "Expected piecewise element constant lame coefficients with dimensions {0}x1 and {0}x1 "
             "for mue and lambdae, but got {1}x{2} and {3}x{4}",
             numberOfElements,

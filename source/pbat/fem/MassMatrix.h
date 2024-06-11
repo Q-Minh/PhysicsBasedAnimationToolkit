@@ -6,7 +6,7 @@
 
 #include <array>
 #include <exception>
-#include <format>
+#include <fmt/core.h>
 #include <pbat/Aliases.h>
 #include <pbat/common/Eigen.h>
 #include <pbat/profiling/Profiling.h>
@@ -120,7 +120,7 @@ inline void MassMatrix<TMesh, Dims, QuadratureOrder>::Apply(
     auto const numberOfDofs = InputDimensions();
     if (x.rows() != numberOfDofs or y.rows() != numberOfDofs or x.cols() != y.cols())
     {
-        std::string const what = std::format(
+        std::string const what = fmt::format(
             "Expected inputs and outputs to have rows |#nodes*kDims|={} and same number of "
             "columns, but got dimensions "
             "x,y=({},{}), ({},{})",
@@ -192,7 +192,7 @@ inline void MassMatrix<TMesh, Dims, QuadratureOrder>::CheckValidState()
         (detJe.rows() == kExpectedDetJeRows) and (detJe.cols() == expectedDetJeCols);
     if (not bDeterminantsHaveCorrectDimensions)
     {
-        std::string const what = std::format(
+        std::string const what = fmt::format(
             "Expected determinants at element quadrature points of dimensions #quad.pts.={} x "
             "#elements={} for polynomial "
             "quadrature order={}, but got {}x{} instead.",
@@ -220,7 +220,7 @@ inline void MassMatrix<TMesh, Dims, QuadratureOrder>::ComputeElementMassMatrices
         (rho.size() == numberOfElements) and ((rho.rows() == 1) or (rho.cols() == 1));
     if (not bRhoDimensionsAreCorrect)
     {
-        std::string const what = std::format(
+        std::string const what = fmt::format(
             "Expected element-piecewise mass density rho of dimensions {}x1, but dimensions were "
             "{}x{}",
             numberOfElements,

@@ -1,5 +1,6 @@
 find_package(doctest CONFIG REQUIRED)
 find_package(Eigen3 CONFIG REQUIRED)
+find_package(fmt CONFIG REQUIRED)
 find_package(range-v3 CONFIG REQUIRED)
 find_package(TBB CONFIG REQUIRED)
 

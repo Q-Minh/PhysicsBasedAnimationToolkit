@@ -5,7 +5,7 @@
 #include "ShapeFunctions.h"
 
 #include <exception>
-#include <format>
+#include <fmt/core.h>
 #include <pbat/Aliases.h>
 #include <pbat/common/Eigen.h>
 #include <pbat/profiling/Profiling.h>
@@ -102,7 +102,7 @@ LoadVector<TMesh, Dims, QuadratureOrder>::SetLoad(Eigen::DenseBase<TDerived> con
     auto const numberOfElements = mesh.E.cols();
     if (load.rows() != kDims)
     {
-        std::string const what = std::format(
+        std::string const what = fmt::format(
             "LoadVector<TMesh,{0}> discretizes a {0}-dimensional load, but received "
             "{1}-dimensional input load",
             kDims,
@@ -111,7 +111,7 @@ LoadVector<TMesh, Dims, QuadratureOrder>::SetLoad(Eigen::DenseBase<TDerived> con
     }
     if (load.cols() != 1 && load.cols() != numberOfElements)
     {
-        std::string const what = std::format(
+        std::string const what = fmt::format(
             "Input load vector must be constant or piecewise element constant, but size was {}",
             load.cols());
         throw std::invalid_argument(what);

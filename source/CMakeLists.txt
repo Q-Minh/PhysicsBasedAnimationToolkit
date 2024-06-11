@@ -42,6 +42,7 @@ target_link_libraries(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     range-v3::meta
     range-v3::range-v3
     TBB::tbb
+    $<TARGET_NAME_IF_EXISTS:fmt::fmt>
     $<TARGET_NAME_IF_EXISTS:MKL::MKL>
     $<TARGET_NAME_IF_EXISTS:SuiteSparse::suitesparseconfig>
     $<TARGET_NAME_IF_EXISTS:SuiteSparse::amd>

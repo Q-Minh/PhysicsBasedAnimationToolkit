@@ -4,7 +4,7 @@
 #include "Concepts.h"
 
 #include <exception>
-#include <format>
+#include <fmt/core.h>
 #include <pbat/Aliases.h>
 #include <pbat/common/Eigen.h>
 #include <pbat/profiling/Profiling.h>
@@ -73,7 +73,7 @@ inline DivergenceVector<TMesh, Dims, QuadratureOrder>::DivergenceVector(
     auto const numberOfNodes = mesh.X.cols();
     if (Fe.rows() != kDims)
     {
-        std::string const what = std::format(
+        std::string const what = fmt::format(
             "LoadVector<TMesh,{0}> discretizes a {0}-dimensional load, but received "
             "{1}-dimensional input load",
             kDims,
@@ -82,7 +82,7 @@ inline DivergenceVector<TMesh, Dims, QuadratureOrder>::DivergenceVector(
     }
     if (Fe.cols() != numberOfNodes)
     {
-        std::string const what = std::format(
+        std::string const what = fmt::format(
             "Input load vector must be discretized at mesh nodes, but size was {}",
             Fe.cols());
         throw std::invalid_argument(what);
@@ -141,7 +141,7 @@ inline void DivergenceVector<TMesh, Dims, QuadratureOrder>::CheckValidState()
         (detJe.rows() == kExpectedDetJeRows) and (detJe.cols() == expectedDetJeCols);
     if (not bDeterminantsHaveCorrectDimensions)
     {
-        std::string const what = std::format(
+        std::string const what = fmt::format(
             "Expected determinants at element quadrature points of dimensions #quad.pts.={} x "
             "#elements={} for polynomial "
             "quadrature order={}, but got {}x{} instead.",
@@ -158,7 +158,7 @@ inline void DivergenceVector<TMesh, Dims, QuadratureOrder>::CheckValidState()
         (GNe.rows() == kExpectedGNeRows) and (GNe.cols() == expectedGNeCols);
     if (not bShapeFunctionGradientsHaveCorrectDimensions)
     {
-        std::string const what = std::format(
+        std::string const what = fmt::format(
             "Expected shape function gradients at element quadrature points of dimensions "
             "|#nodes-per-element|={} x |#mesh-dims * #quad.pts. * #elemens|={} for polynomiail "
             "quadrature order={}, but got {}x{} instead",

@@ -4,7 +4,7 @@
 #include "Concepts.h"
 
 #include <exception>
-#include <format>
+#include <fmt/core.h>
 #include <pbat/Aliases.h>
 #include <pbat/common/Eigen.h>
 #include <pbat/profiling/Profiling.h>
@@ -144,7 +144,7 @@ inline void SymmetricLaplacianMatrix<TMesh, QuadratureOrder>::CheckValidState()
         (detJe.rows() == kExpectedDetJeRows) and (detJe.cols() == expectedDetJeCols);
     if (not bDeterminantsHaveCorrectDimensions)
     {
-        std::string const what = std::format(
+        std::string const what = fmt::format(
             "Expected determinants at element quadrature points of dimensions #quad.pts.={} x "
             "#elements={} for polynomial "
             "quadrature order={}, but got {}x{} instead.",
@@ -161,7 +161,7 @@ inline void SymmetricLaplacianMatrix<TMesh, QuadratureOrder>::CheckValidState()
         (GNe.rows() == kExpectedGNeRows) and (GNe.cols() == expectedGNeCols);
     if (not bShapeFunctionGradientsHaveCorrectDimensions)
     {
-        std::string const what = std::format(
+        std::string const what = fmt::format(
             "Expected shape function gradients at element quadrature points of dimensions "
             "|#nodes-per-element|={} x |#mesh-dims * #quad.pts. * #elemens|={} for polynomiail "
             "quadrature order={}, but got {}x{} instead",
@@ -186,7 +186,7 @@ inline void SymmetricLaplacianMatrix<TMesh, QuadratureOrder>::Apply(
         (x.rows() != numberOfDofs) or (y.rows() != numberOfDofs) or (y.cols() != x.cols());
     if (bAreInputOutputValid)
     {
-        std::string const what = std::format(
+        std::string const what = fmt::format(
             "Expected input x and output y with matching dimensions and {} rows, but got {}x{} "
             "input and {}x{} output",
             numberOfDofs,

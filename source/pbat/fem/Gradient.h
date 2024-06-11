@@ -5,7 +5,7 @@
 #include "ShapeFunctions.h"
 
 #include <exception>
-#include <format>
+#include <fmt/core.h>
 #include <pbat/Aliases.h>
 #include <pbat/common/Eigen.h>
 #include <pbat/profiling/Profiling.h>
@@ -170,7 +170,7 @@ inline void GalerkinGradient<TMesh, QuadratureOrder>::CheckValidState()
     bool const bHasDeterminants = (detJe.rows() == kQuadPts) and (detJe.cols() == numberOfElements);
     if (not bHasDeterminants)
     {
-        std::string const what = std::format(
+        std::string const what = fmt::format(
             "Expected element jacobian determinants of dimensions {}x{} for element quadrature of "
             "order={}, but got {}x{}",
             kQuadPts,
@@ -186,7 +186,7 @@ inline void GalerkinGradient<TMesh, QuadratureOrder>::CheckValidState()
         (GNe.rows() == kExpectedGNeRows) and (GNe.cols() == expectedGNeCols);
     if (not bShapeFunctionGradientsHaveCorrectDimensions)
     {
-        std::string const what = std::format(
+        std::string const what = fmt::format(
             "Expected shape function gradients at element quadrature points of dimensions "
             "|#nodes-per-element|={} x |#mesh-dims * #quad.pts. * #elemens|={} for polynomiail "
             "quadrature order={}, but got {}x{} instead",
@@ -211,7 +211,7 @@ inline void GalerkinGradient<TMesh, QuadratureOrder>::Apply(
                                   (y.rows() == OutputDimensions());
     if (not bDimensionsMatch)
     {
-        std::string const what = std::format(
+        std::string const what = fmt::format(
             "Expected input to have rows={} and output to have rows={}, and same number of "
             "columns, but got dimensions "
             "x,y=({},{}), ({},{})",

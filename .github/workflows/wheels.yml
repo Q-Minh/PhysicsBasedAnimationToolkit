@@ -7,36 +7,52 @@ on:
       - published
 
 jobs:
-
   build_wheels:
     name: Wheels on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-24.04, macos-13, windows-2022]
+        include:
+          # The macos-13 image's default compiler is AppleClang, and I prefer clang.
+          # On windows-2022, CMake will choose MSVC by default with VS2022, whereas for the 
+          # ubuntu-24.04 build, the compiler toolchain is taken from the manylinux image.
+          # We choose to use manylinux_2_28, which has the GCC12 toolchain (quite old and does 
+          # not support std::format yet, so we need to use fmtlib).
+          - os: ubuntu-24.04
+            cibw_build: cp310-manylinux_x86_64 cp311-manylinux_x86_64 cp312-manylinux_x86_64
+          - os: macos-13
+            cibw_build: cp310-macosx_x86_64 cp310_macosx_universal2 cp311-macosx_x86_64 cp311_macosx_universal2 cp312-macosx_x86_64 cp312_macosx_universal2
+            # cxx_compiler: $(brew --prefix llvm@15)/bin/clang
+          - os: windows-2022
+            cibw_build: cp310-win_amd64 cp311-win_amd64 cp312-win_amd64
 
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Setup vcpkg
-      uses: lukka/run-vcpkg@v11
-      with:
-        vcpkgDirectory: ${{ github.workspace }}/vcpkg
-        vcpkgGitCommitId: 055721089e8037d4d617250814d11f881e557549
+      - name: Setup vcpkg
+        uses: lukka/run-vcpkg@v11
+        with:
+          vcpkgDirectory: ${{ github.workspace }}/vcpkg
+          vcpkgGitCommitId: 055721089e8037d4d617250814d11f881e557549
 
-    - uses: pypa/cibuildwheel@v2.19.0
-      env:
-        # Environment variables can be read directly on Windows and MacOS, but not Linux.
-        # See https://cibuildwheel.pypa.io/en/stable/options/#environment-pass
-        SKBUILD_CMAKE_ARGS: "-DCMAKE_TOOLCHAIN_FILE=${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake;-DVCPKG_MANIFEST_FEATURES=python;-DPBAT_BUILD_SHARED_LIBS:BOOL=OFF;-DPBAT_ENABLE_PROFILER:BOOL=ON;-DPBAT_BUILD_PYTHON_BINDINGS:BOOL=ON;-DPBAT_BUILD_TESTS:BOOL=OFF"
-        # By default, cibuildwheel will perform a volume mount from the current root / to /host/ in the linux container.
-        CIBW_ENVIRONMENT_LINUX: SKBUILD_CMAKE_ARGS="-DCMAKE_TOOLCHAIN_FILE=/host/${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake;-DVCPKG_MANIFEST_FEATURES=python;-DPBAT_BUILD_SHARED_LIBS:BOOL=OFF;-DPBAT_ENABLE_PROFILER:BOOL=ON;-DPBAT_BUILD_PYTHON_BINDINGS:BOOL=ON;-DPBAT_BUILD_TESTS:BOOL=OFF"
+      - uses: pypa/cibuildwheel@v2.19.0
+        env:
+          CIBW_ARCHS_MACOS: x86_64 universal2
+          CIBW_ARCHS_LINUX: x86_64
+          CIBW_ARCHS_WINDOWS: AMD64
+          CIBW_BUILD: ${{ matrix.cibw_build }}
+          CIBW_MANYLINUX_X86_64_IMAGE: quay.io/pypa/manylinux_2_28_x86_64
+          # Environment variables can be read directly on Windows and MacOS, but not Linux.
+          # See https://cibuildwheel.pypa.io/en/stable/options/#environment-pass
+          SKBUILD_CMAKE_ARGS: "-DCMAKE_TOOLCHAIN_FILE=${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake;-DVCPKG_MANIFEST_FEATURES=python;-DPBAT_BUILD_SHARED_LIBS:BOOL=OFF;-DPBAT_ENABLE_PROFILER:BOOL=ON;-DPBAT_BUILD_PYTHON_BINDINGS:BOOL=ON;-DPBAT_BUILD_TESTS:BOOL=OFF"
+          # By default, cibuildwheel will perform a volume mount from the current root / to /host/ in the linux container.
+          CIBW_ENVIRONMENT_LINUX: SKBUILD_CMAKE_ARGS="-DCMAKE_TOOLCHAIN_FILE=/host/${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake;-DVCPKG_MANIFEST_FEATURES=python;-DPBAT_BUILD_SHARED_LIBS:BOOL=OFF;-DPBAT_ENABLE_PROFILER:BOOL=ON;-DPBAT_BUILD_PYTHON_BINDINGS:BOOL=ON;-DPBAT_BUILD_TESTS:BOOL=OFF"
 
-    - uses: actions/upload-artifact@v4
-      with:
-        name: cibw-wheels-${{ matrix.os }}
-        path: wheelhouse/*.whl
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cibw-wheels-${{ matrix.os }}
+          path: wheelhouse/*.whl
 
   upload_all:
     name: Upload release
@@ -49,10 +65,10 @@ jobs:
     permissions:
       id-token: write
     steps:
-    - uses: actions/download-artifact@v4
-      with:
-        pattern: cibw-*
-        path: dist
-        merge-multiple: true
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: cibw-*
+          path: dist
+          merge-multiple: true
 
-    - uses: pypa/gh-action-pypi-publish@release/v1
+      - uses: pypa/gh-action-pypi-publish@release/v1

@@ -6,7 +6,7 @@
 
 #include <Eigen/SVD>
 #include <exception>
-#include <format>
+#include <fmt/core.h>
 #include <pbat/Aliases.h>
 #include <pbat/profiling/Profiling.h>
 #include <tbb/parallel_for.h>
@@ -61,7 +61,7 @@ MatrixX IntegratedShapeFunctions(TMesh const& mesh, Eigen::DenseBase<TDerived> c
     bool const bHasDeterminants = (detJe.rows() == kQuadPts) and (detJe.cols() == numberOfElements);
     if (not bHasDeterminants)
     {
-        std::string const what = std::format(
+        std::string const what = fmt::format(
             "Expected element jacobian determinants of dimensions {}x{} for element quadrature of "
             "order={}, but got {}x{}",
             kQuadPts,

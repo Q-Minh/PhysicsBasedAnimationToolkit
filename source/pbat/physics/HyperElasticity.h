@@ -5,7 +5,7 @@
 
 #include <concepts>
 #include <exception>
-#include <format>
+#include <fmt/core.h>
 #include <pbat/Aliases.h>
 #include <string>
 #include <tuple>
@@ -58,7 +58,7 @@ LameCoefficients(Eigen::DenseBase<TDerivedY> const& Y, Eigen::DenseBase<TDerived
     bool const bHaveSameDimensions      = Y.size() == nu.size();
     if (not(bYHasExpectedDimensions and bNuHasExpectedDimensions and bHaveSameDimensions))
     {
-        std::string const what = std::format(
+        std::string const what = fmt::format(
             "Expected equivalent dimensions in Y and nu, with Y and nu being 1D arrays, but got "
             "size(Y)={}, size(nu)={}",
             Y.size(),

@@ -4,7 +4,7 @@
 #include "PhysicsBasedAnimationToolkitExport.h"
 
 #include <exception>
-#include <format>
+#include <fmt/core.h>
 #include <pbat/Aliases.h>
 #include <pbat/common/Concepts.h>
 #include <pbat/profiling/Profiling.h>
@@ -92,7 +92,7 @@ inline void SparsityPattern::Compute(
     bool const bColsInBounds    = (*colMin >= 0) && (*colMax < nCols);
     if (not(bRowsInBounds and bColsInBounds))
     {
-        std::string const what = std::format(
+        std::string const what = fmt::format(
             "Out of bounds min (row,col)=({},{}) and max (row,col)=({},{}), while "
             "(nRows,nCols)=({},{})",
             *rowMin,
@@ -108,7 +108,7 @@ inline void SparsityPattern::Compute(
     auto const nColIndices = srng::size(colIndices);
     if (nRowIndices != nColIndices)
     {
-        std::string const what = std::format(
+        std::string const what = fmt::format(
             "Expected same number of row indices and column indices, but got {} row indices "
             "and {} column indices",
             nRowIndices,
@@ -165,7 +165,7 @@ CSCMatrix SparsityPattern::ToMatrix(TNonZeroRange&& nonZeros) const
     auto const nnz = rng::size(nonZeros);
     if (nnz != ij.size())
     {
-        std::string const what = std::format("Expected {} non zeros, got {}", ij.size(), nnz);
+        std::string const what = fmt::format("Expected {} non zeros, got {}", ij.size(), nnz);
         throw std::invalid_argument(what);
     }
 
