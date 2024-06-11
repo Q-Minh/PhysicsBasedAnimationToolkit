@@ -27,12 +27,12 @@ template <CMesh TMesh, int QuadratureOrder>
 struct GalerkinGradient
 {
   public:
-    using SelfType                        = GalerkinGradient<TMesh, QuadratureOrder>;
-    using MeshType                        = TMesh;
-    using ElementType                     = typename TMesh::ElementType;
-    using QuadratureRuleType              = ElementType::template QuadratureType<QuadratureOrder>;
-    static int constexpr kDims            = MeshType::kDims;
-    static int constexpr kOrder           = 2 * ElementType::kOrder - 1;
+    using SelfType              = GalerkinGradient<TMesh, QuadratureOrder>;
+    using MeshType              = TMesh;
+    using ElementType           = typename TMesh::ElementType;
+    using QuadratureRuleType    = typename ElementType::template QuadratureType<QuadratureOrder>;
+    static int constexpr kDims  = MeshType::kDims;
+    static int constexpr kOrder = 2 * ElementType::kOrder - 1;
     static int constexpr kQuadratureOrder = QuadratureOrder;
 
     /**

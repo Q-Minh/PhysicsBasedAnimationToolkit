@@ -19,12 +19,12 @@ template <CMesh TMesh, int Dims, int QuadratureOrder>
 struct MassMatrix
 {
   public:
-    using SelfType                        = MassMatrix<TMesh, Dims, QuadratureOrder>;
-    using MeshType                        = TMesh;
-    using ElementType                     = typename TMesh::ElementType;
-    using QuadratureRuleType              = ElementType::template QuadratureType<QuadratureOrder>;
-    static int constexpr kDims            = Dims;
-    static int constexpr kOrder           = 2 * ElementType::kOrder;
+    using SelfType              = MassMatrix<TMesh, Dims, QuadratureOrder>;
+    using MeshType              = TMesh;
+    using ElementType           = typename TMesh::ElementType;
+    using QuadratureRuleType    = typename ElementType::template QuadratureType<QuadratureOrder>;
+    static int constexpr kDims  = Dims;
+    static int constexpr kOrder = 2 * ElementType::kOrder;
     static int constexpr kQuadratureOrder = QuadratureOrder;
 
     /**

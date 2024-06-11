@@ -20,7 +20,7 @@ struct SymmetricLaplacianMatrix
     using SelfType           = SymmetricLaplacianMatrix<TMesh, QuadratureOrder>;
     using MeshType           = TMesh;
     using ElementType        = typename TMesh::ElementType;
-    using QuadratureRuleType = ElementType::template QuadratureType<QuadratureOrder>;
+    using QuadratureRuleType = typename ElementType::template QuadratureType<QuadratureOrder>;
 
     static int constexpr kOrder           = 2 * (ElementType::kOrder - 1);
     static int constexpr kDims            = 1;

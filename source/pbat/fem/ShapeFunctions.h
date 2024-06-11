@@ -26,7 +26,7 @@ template <CElement TElement, int QuadratureOrder>
 Matrix<TElement::kNodes, TElement::template QuadratureType<QuadratureOrder>::kPoints>
 ShapeFunctions()
 {
-    using QuadratureRuleType = TElement::template QuadratureType<QuadratureOrder>;
+    using QuadratureRuleType = typename TElement::template QuadratureType<QuadratureOrder>;
     using ElementType        = TElement;
     auto const Xg            = common::ToEigen(QuadratureRuleType::points)
                         .reshaped(QuadratureRuleType::kDims + 1, QuadratureRuleType::kPoints)

@@ -39,7 +39,7 @@ jobs:
         # Environment variables can be read directly on Windows and MacOS, but not Linux.
         # See https://cibuildwheel.pypa.io/en/stable/options/#environment-pass
         run: |
-          echo "SKBUILD_CMAKE_ARGS=-DCMAKE_CXX_COMPILER=$(brew --prefix llvm@15)/bin/clang;-DCMAKE_TOOLCHAIN_FILE=${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake;-DVCPKG_MANIFEST_FEATURES=python;-DPBAT_BUILD_SHARED_LIBS:BOOL=OFF;-DPBAT_ENABLE_PROFILER:BOOL=ON;-DPBAT_BUILD_PYTHON_BINDINGS:BOOL=ON;-DPBAT_BUILD_TESTS:BOOL=OFF" >> $GITHUB_ENV
+          echo "SKBUILD_CMAKE_ARGS=-DCMAKE_CXX_COMPILER=gcc-13;-DCMAKE_TOOLCHAIN_FILE=${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake;-DVCPKG_MANIFEST_FEATURES=python;-DPBAT_BUILD_SHARED_LIBS:BOOL=OFF;-DPBAT_ENABLE_PROFILER:BOOL=ON;-DPBAT_BUILD_PYTHON_BINDINGS:BOOL=ON;-DPBAT_BUILD_TESTS:BOOL=OFF" >> $GITHUB_ENV
 
       - uses: pypa/cibuildwheel@v2.19.0
         if: startsWith(matrix.os, 'mac')

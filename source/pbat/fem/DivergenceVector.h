@@ -24,7 +24,7 @@ struct DivergenceVector
     static int constexpr kOrder           = ElementType::kOrder - 1;
     static int constexpr kQuadratureOrder = QuadratureOrder;
 
-    using QuadratureRuleType = ElementType::template QuadratureType<QuadratureOrder>;
+    using QuadratureRuleType = typename ElementType::template QuadratureType<QuadratureOrder>;
 
     template <class TDerived>
     DivergenceVector(

@@ -18,12 +18,12 @@ template <CMesh TMesh, int Dims, int QuadratureOrder>
 struct LoadVector
 {
   public:
-    using SelfType                        = LoadVector<TMesh, Dims, QuadratureOrder>;
-    using MeshType                        = TMesh;
-    using ElementType                     = typename TMesh::ElementType;
-    using QuadratureRuleType              = ElementType::template QuadratureType<QuadratureOrder>;
-    static int constexpr kDims            = Dims;
-    static int constexpr kOrder           = ElementType::kOrder;
+    using SelfType              = LoadVector<TMesh, Dims, QuadratureOrder>;
+    using MeshType              = TMesh;
+    using ElementType           = typename TMesh::ElementType;
+    using QuadratureRuleType    = typename ElementType::template QuadratureType<QuadratureOrder>;
+    static int constexpr kDims  = Dims;
+    static int constexpr kOrder = ElementType::kOrder;
     static int constexpr kQuadratureOrder = QuadratureOrder;
 
     /**

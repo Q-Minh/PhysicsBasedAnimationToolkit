@@ -26,7 +26,7 @@ struct HyperElasticPotential
     using MeshType           = TMesh;
     using ElementType        = typename TMesh::ElementType;
     using ElasticEnergyType  = THyperElasticEnergy;
-    using QuadratureRuleType = ElementType::template QuadratureType<QuadratureOrder>;
+    using QuadratureRuleType = typename ElementType::template QuadratureType<QuadratureOrder>;
 
     static auto constexpr kDims           = THyperElasticEnergy::kDims;
     static int constexpr kOrder           = ElementType::kOrder - 1;
