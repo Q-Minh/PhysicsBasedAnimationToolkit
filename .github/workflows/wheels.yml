@@ -37,7 +37,7 @@ jobs:
           CIBW_MANYLINUX_X86_64_IMAGE: quay.io/pypa/manylinux_2_28_x86_64
           # By default, cibuildwheel will perform a volume mount from the current root / to /host/ in the linux container, 
           # see see https://cibuildwheel.pypa.io/en/stable/options/#container-engine .
-          CIBW_ENVIRONMENT_LINUX: SKBUILD_CMAKE_ARGS="-DCMAKE_TOOLCHAIN_FILE=/host/${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake;-DVCPKG_MANIFEST_FEATURES=python;-DPBAT_BUILD_SHARED_LIBS:BOOL=OFF;-DPBAT_ENABLE_PROFILER:BOOL=ON;-DPBAT_BUILD_PYTHON_BINDINGS:BOOL=ON;-DPBAT_BUILD_TESTS:BOOL=OFF"
+          CIBW_ENVIRONMENT_LINUX: SKBUILD_CMAKE_ARGS="-DCMAKE_TOOLCHAIN_FILE=/host/${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake;-DVCPKG_MANIFEST_FEATURES=python;-DPBAT_BUILD_SHARED_LIBS:BOOL=OFF;-DPBAT_ENABLE_PROFILER:BOOL=ON;-DPBAT_BUILD_PYTHON_BINDINGS:BOOL=ON;-DPBAT_BUILD_TESTS:BOOL=OFF;-DCMAKE_POSITION_INDEPENDENT_CODE:BOOL=ON"
 
       - name: Set macOS environment variables
         if: startsWith(matrix.os, 'mac')
@@ -52,7 +52,7 @@ jobs:
         # Environment variables can be read directly on Windows and MacOS, but not Linux.
         # See https://cibuildwheel.pypa.io/en/stable/options/#environment-pass
         run: |
-          echo "SKBUILD_CMAKE_ARGS=-DCMAKE_TOOLCHAIN_FILE=${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake;-DVCPKG_MANIFEST_FEATURES=python;-DPBAT_BUILD_SHARED_LIBS:BOOL=OFF;-DPBAT_ENABLE_PROFILER:BOOL=ON;-DPBAT_BUILD_PYTHON_BINDINGS:BOOL=ON;-DPBAT_BUILD_TESTS:BOOL=OFF" >> $GITHUB_ENV
+          echo "SKBUILD_CMAKE_ARGS=-DCMAKE_TOOLCHAIN_FILE=${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake;-DVCPKG_MANIFEST_FEATURES=python;-DPBAT_BUILD_SHARED_LIBS:BOOL=OFF;-DPBAT_ENABLE_PROFILER:BOOL=ON;-DPBAT_BUILD_PYTHON_BINDINGS:BOOL=ON;-DPBAT_BUILD_TESTS:BOOL=OFF;-DCMAKE_POSITION_INDEPENDENT_CODE:BOOL=ON" >> $GITHUB_ENV
 
       - uses: pypa/cibuildwheel@v2.19.0
         if: startsWith(matrix.os, 'mac')
@@ -68,7 +68,7 @@ jobs:
           CIBW_BUILD: cp310-win_amd64 cp311-win_amd64 cp312-win_amd64
           # Environment variables can be read directly on Windows and MacOS, but not Linux.
           # See https://cibuildwheel.pypa.io/en/stable/options/#environment-pass
-          SKBUILD_CMAKE_ARGS: -DCMAKE_TOOLCHAIN_FILE=${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake;-DVCPKG_MANIFEST_FEATURES=python;-DPBAT_BUILD_SHARED_LIBS:BOOL=OFF;-DPBAT_ENABLE_PROFILER:BOOL=ON;-DPBAT_BUILD_PYTHON_BINDINGS:BOOL=ON;-DPBAT_BUILD_TESTS:BOOL=OFF
+          SKBUILD_CMAKE_ARGS: -DCMAKE_TOOLCHAIN_FILE=${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake;-DVCPKG_MANIFEST_FEATURES=python;-DPBAT_BUILD_SHARED_LIBS:BOOL=OFF;-DPBAT_ENABLE_PROFILER:BOOL=ON;-DPBAT_BUILD_PYTHON_BINDINGS:BOOL=ON;-DPBAT_BUILD_TESTS:BOOL=OFF;-DCMAKE_POSITION_INDEPENDENT_CODE:BOOL=ON
 
       - uses: actions/upload-artifact@v4
         with:
