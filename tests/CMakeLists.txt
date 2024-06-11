@@ -24,13 +24,17 @@ set_target_properties(PhysicsBasedAnimationToolkit_Tests
     OUTPUT_NAME "PhysicsBasedAnimationToolkitTests"
     EXPORT_NAME "Tests"
 )
-add_custom_command(
-    TARGET PhysicsBasedAnimationToolkit_Tests
-    POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-    $<TARGET_RUNTIME_DLLS:PhysicsBasedAnimationToolkit_Tests>
-    $<TARGET_FILE_DIR:PhysicsBasedAnimationToolkit_Tests>
-    COMMAND_EXPAND_LISTS
-)
+
+if(WIN32)
+    add_custom_command(
+        TARGET PhysicsBasedAnimationToolkit_Tests
+        POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        $<TARGET_RUNTIME_DLLS:PhysicsBasedAnimationToolkit_Tests>
+        $<TARGET_FILE_DIR:PhysicsBasedAnimationToolkit_Tests>
+        COMMAND_EXPAND_LISTS
+    )
+endif()
+
 include(doctest)
 doctest_discover_tests(PhysicsBasedAnimationToolkit_Tests)

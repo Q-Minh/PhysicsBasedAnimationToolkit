@@ -38,15 +38,16 @@ source_group(
     FILES ${_pbat_python_headers}
 )
 
+# NOTE: We assume that Python bindings link to statically built dependencies.
 # Make sure DLL dependencies end up together with python module in build tree
-add_custom_command(
-    TARGET PhysicsBasedAnimationToolkit_Python
-    POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-    $<TARGET_RUNTIME_DLLS:PhysicsBasedAnimationToolkit_Python>
-    $<TARGET_FILE_DIR:PhysicsBasedAnimationToolkit_Python>
-    COMMAND_EXPAND_LISTS
-)
+# add_custom_command(
+#     TARGET PhysicsBasedAnimationToolkit_Python
+#     POST_BUILD
+#     COMMAND ${CMAKE_COMMAND} -E copy_if_different
+#     $<TARGET_RUNTIME_DLLS:PhysicsBasedAnimationToolkit_Python>
+#     $<TARGET_FILE_DIR:PhysicsBasedAnimationToolkit_Python>
+#     COMMAND_EXPAND_LISTS
+# )
 
 # Make sure Python module can find shared library dependencies (i.e. TBB) 
 # in install tree on non-Windows platforms.
