@@ -17,7 +17,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-24.04, macos-13, windows-2022]
+        os: [ubuntu-24.04, windows-2022] # add macos-13 for macOS wheels
 
     steps:
       - uses: actions/checkout@v4
