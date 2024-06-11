@@ -6,6 +6,10 @@ on:
     types:
       - published
 
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: true
+
 jobs:
   build_wheels:
     name: Wheels on ${{ matrix.os }}
