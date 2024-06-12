@@ -163,7 +163,7 @@ def load_vector(mesh, detJe: np.ndarray, fe: np.ndarray, quadrature_order: int =
 
 class HyperElasticEnergy(Enum):
     StVk = 0
-    StableNeohookean = 1
+    StableNeoHookean = 1
 
 
 def hyper_elastic_potential(
@@ -172,9 +172,8 @@ def hyper_elastic_potential(
         GNe: np.ndarray,
         Y: np.ndarray,
         nu: np.ndarray,
-        psi: HyperElasticEnergy = HyperElasticEnergy.StableNeohookean,
-        quadrature_order: int = 1,
-        dims: int = 3):
+        psi: HyperElasticEnergy = HyperElasticEnergy.StableNeoHookean,
+        quadrature_order: int = 1):
     """Constructs the input mesh's hyper elastic potential, which can be used to evaluate 
     the potential, its gradient given some state vector (i.e. the DOFs).
 
@@ -193,6 +192,6 @@ def hyper_elastic_potential(
         A hyper elastic potential instance
     """
     mesh_name = _mesh_type_name(mesh)
-    class_name = f"HyperElasticPotential_{psi.name}_QuadratureOrder_{quadrature_order}_Dims_{dims}_{mesh_name}"
+    class_name = f"HyperElasticPotential_{psi.name}_QuadratureOrder_{quadrature_order}_Dims_{mesh.dims}_{mesh_name}"
     class_ = getattr(_fem, class_name)
     return class_(mesh, detJe, GNe, Y, nu)

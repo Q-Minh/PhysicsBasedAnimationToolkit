@@ -1,12 +1,114 @@
+
 #include "LaplacianMatrix.h"
 
-#include "For.h"
-#include "Mesh.h"
-
-#include <pbat/common/ConstexprFor.h>
-#include <pbat/fem/LaplacianMatrix.h>
-#include <pybind11/eigen.h>
-#include <tuple>
+#include "pbatautogen/LaplacianMatrix_1_Mesh_line_Order_1_Dims_1.h"
+#include "pbatautogen/LaplacianMatrix_1_Mesh_line_Order_1_Dims_2.h"
+#include "pbatautogen/LaplacianMatrix_1_Mesh_line_Order_1_Dims_3.h"
+#include "pbatautogen/LaplacianMatrix_1_Mesh_line_Order_2_Dims_1.h"
+#include "pbatautogen/LaplacianMatrix_1_Mesh_line_Order_2_Dims_2.h"
+#include "pbatautogen/LaplacianMatrix_1_Mesh_line_Order_2_Dims_3.h"
+#include "pbatautogen/LaplacianMatrix_1_Mesh_line_Order_3_Dims_1.h"
+#include "pbatautogen/LaplacianMatrix_1_Mesh_line_Order_3_Dims_2.h"
+#include "pbatautogen/LaplacianMatrix_1_Mesh_line_Order_3_Dims_3.h"
+#include "pbatautogen/LaplacianMatrix_1_Mesh_triangle_Order_1_Dims_2.h"
+#include "pbatautogen/LaplacianMatrix_1_Mesh_triangle_Order_1_Dims_3.h"
+#include "pbatautogen/LaplacianMatrix_1_Mesh_triangle_Order_2_Dims_2.h"
+#include "pbatautogen/LaplacianMatrix_1_Mesh_triangle_Order_2_Dims_3.h"
+#include "pbatautogen/LaplacianMatrix_1_Mesh_triangle_Order_3_Dims_2.h"
+#include "pbatautogen/LaplacianMatrix_1_Mesh_triangle_Order_3_Dims_3.h"
+#include "pbatautogen/LaplacianMatrix_1_Mesh_quadrilateral_Order_1_Dims_2.h"
+#include "pbatautogen/LaplacianMatrix_1_Mesh_quadrilateral_Order_1_Dims_3.h"
+#include "pbatautogen/LaplacianMatrix_1_Mesh_quadrilateral_Order_2_Dims_2.h"
+#include "pbatautogen/LaplacianMatrix_1_Mesh_quadrilateral_Order_2_Dims_3.h"
+#include "pbatautogen/LaplacianMatrix_1_Mesh_quadrilateral_Order_3_Dims_2.h"
+#include "pbatautogen/LaplacianMatrix_1_Mesh_quadrilateral_Order_3_Dims_3.h"
+#include "pbatautogen/LaplacianMatrix_1_Mesh_tetrahedron_Order_1_Dims_3.h"
+#include "pbatautogen/LaplacianMatrix_1_Mesh_tetrahedron_Order_2_Dims_3.h"
+#include "pbatautogen/LaplacianMatrix_1_Mesh_tetrahedron_Order_3_Dims_3.h"
+#include "pbatautogen/LaplacianMatrix_1_Mesh_hexahedron_Order_1_Dims_3.h"
+#include "pbatautogen/LaplacianMatrix_1_Mesh_hexahedron_Order_2_Dims_3.h"
+#include "pbatautogen/LaplacianMatrix_1_Mesh_hexahedron_Order_3_Dims_3.h"
+#include "pbatautogen/LaplacianMatrix_2_Mesh_line_Order_1_Dims_1.h"
+#include "pbatautogen/LaplacianMatrix_2_Mesh_line_Order_1_Dims_2.h"
+#include "pbatautogen/LaplacianMatrix_2_Mesh_line_Order_1_Dims_3.h"
+#include "pbatautogen/LaplacianMatrix_2_Mesh_line_Order_2_Dims_1.h"
+#include "pbatautogen/LaplacianMatrix_2_Mesh_line_Order_2_Dims_2.h"
+#include "pbatautogen/LaplacianMatrix_2_Mesh_line_Order_2_Dims_3.h"
+#include "pbatautogen/LaplacianMatrix_2_Mesh_line_Order_3_Dims_1.h"
+#include "pbatautogen/LaplacianMatrix_2_Mesh_line_Order_3_Dims_2.h"
+#include "pbatautogen/LaplacianMatrix_2_Mesh_line_Order_3_Dims_3.h"
+#include "pbatautogen/LaplacianMatrix_2_Mesh_triangle_Order_1_Dims_2.h"
+#include "pbatautogen/LaplacianMatrix_2_Mesh_triangle_Order_1_Dims_3.h"
+#include "pbatautogen/LaplacianMatrix_2_Mesh_triangle_Order_2_Dims_2.h"
+#include "pbatautogen/LaplacianMatrix_2_Mesh_triangle_Order_2_Dims_3.h"
+#include "pbatautogen/LaplacianMatrix_2_Mesh_triangle_Order_3_Dims_2.h"
+#include "pbatautogen/LaplacianMatrix_2_Mesh_triangle_Order_3_Dims_3.h"
+#include "pbatautogen/LaplacianMatrix_2_Mesh_quadrilateral_Order_1_Dims_2.h"
+#include "pbatautogen/LaplacianMatrix_2_Mesh_quadrilateral_Order_1_Dims_3.h"
+#include "pbatautogen/LaplacianMatrix_2_Mesh_quadrilateral_Order_2_Dims_2.h"
+#include "pbatautogen/LaplacianMatrix_2_Mesh_quadrilateral_Order_2_Dims_3.h"
+#include "pbatautogen/LaplacianMatrix_2_Mesh_quadrilateral_Order_3_Dims_2.h"
+#include "pbatautogen/LaplacianMatrix_2_Mesh_quadrilateral_Order_3_Dims_3.h"
+#include "pbatautogen/LaplacianMatrix_2_Mesh_tetrahedron_Order_1_Dims_3.h"
+#include "pbatautogen/LaplacianMatrix_2_Mesh_tetrahedron_Order_2_Dims_3.h"
+#include "pbatautogen/LaplacianMatrix_2_Mesh_tetrahedron_Order_3_Dims_3.h"
+#include "pbatautogen/LaplacianMatrix_2_Mesh_hexahedron_Order_1_Dims_3.h"
+#include "pbatautogen/LaplacianMatrix_2_Mesh_hexahedron_Order_2_Dims_3.h"
+#include "pbatautogen/LaplacianMatrix_2_Mesh_hexahedron_Order_3_Dims_3.h"
+#include "pbatautogen/LaplacianMatrix_3_Mesh_line_Order_1_Dims_1.h"
+#include "pbatautogen/LaplacianMatrix_3_Mesh_line_Order_1_Dims_2.h"
+#include "pbatautogen/LaplacianMatrix_3_Mesh_line_Order_1_Dims_3.h"
+#include "pbatautogen/LaplacianMatrix_3_Mesh_line_Order_2_Dims_1.h"
+#include "pbatautogen/LaplacianMatrix_3_Mesh_line_Order_2_Dims_2.h"
+#include "pbatautogen/LaplacianMatrix_3_Mesh_line_Order_2_Dims_3.h"
+#include "pbatautogen/LaplacianMatrix_3_Mesh_line_Order_3_Dims_1.h"
+#include "pbatautogen/LaplacianMatrix_3_Mesh_line_Order_3_Dims_2.h"
+#include "pbatautogen/LaplacianMatrix_3_Mesh_line_Order_3_Dims_3.h"
+#include "pbatautogen/LaplacianMatrix_3_Mesh_triangle_Order_1_Dims_2.h"
+#include "pbatautogen/LaplacianMatrix_3_Mesh_triangle_Order_1_Dims_3.h"
+#include "pbatautogen/LaplacianMatrix_3_Mesh_triangle_Order_2_Dims_2.h"
+#include "pbatautogen/LaplacianMatrix_3_Mesh_triangle_Order_2_Dims_3.h"
+#include "pbatautogen/LaplacianMatrix_3_Mesh_triangle_Order_3_Dims_2.h"
+#include "pbatautogen/LaplacianMatrix_3_Mesh_triangle_Order_3_Dims_3.h"
+#include "pbatautogen/LaplacianMatrix_3_Mesh_quadrilateral_Order_1_Dims_2.h"
+#include "pbatautogen/LaplacianMatrix_3_Mesh_quadrilateral_Order_1_Dims_3.h"
+#include "pbatautogen/LaplacianMatrix_3_Mesh_quadrilateral_Order_2_Dims_2.h"
+#include "pbatautogen/LaplacianMatrix_3_Mesh_quadrilateral_Order_2_Dims_3.h"
+#include "pbatautogen/LaplacianMatrix_3_Mesh_quadrilateral_Order_3_Dims_2.h"
+#include "pbatautogen/LaplacianMatrix_3_Mesh_quadrilateral_Order_3_Dims_3.h"
+#include "pbatautogen/LaplacianMatrix_3_Mesh_tetrahedron_Order_1_Dims_3.h"
+#include "pbatautogen/LaplacianMatrix_3_Mesh_tetrahedron_Order_2_Dims_3.h"
+#include "pbatautogen/LaplacianMatrix_3_Mesh_tetrahedron_Order_3_Dims_3.h"
+#include "pbatautogen/LaplacianMatrix_3_Mesh_hexahedron_Order_1_Dims_3.h"
+#include "pbatautogen/LaplacianMatrix_3_Mesh_hexahedron_Order_2_Dims_3.h"
+#include "pbatautogen/LaplacianMatrix_3_Mesh_hexahedron_Order_3_Dims_3.h"
+#include "pbatautogen/LaplacianMatrix_4_Mesh_line_Order_1_Dims_1.h"
+#include "pbatautogen/LaplacianMatrix_4_Mesh_line_Order_1_Dims_2.h"
+#include "pbatautogen/LaplacianMatrix_4_Mesh_line_Order_1_Dims_3.h"
+#include "pbatautogen/LaplacianMatrix_4_Mesh_line_Order_2_Dims_1.h"
+#include "pbatautogen/LaplacianMatrix_4_Mesh_line_Order_2_Dims_2.h"
+#include "pbatautogen/LaplacianMatrix_4_Mesh_line_Order_2_Dims_3.h"
+#include "pbatautogen/LaplacianMatrix_4_Mesh_line_Order_3_Dims_1.h"
+#include "pbatautogen/LaplacianMatrix_4_Mesh_line_Order_3_Dims_2.h"
+#include "pbatautogen/LaplacianMatrix_4_Mesh_line_Order_3_Dims_3.h"
+#include "pbatautogen/LaplacianMatrix_4_Mesh_triangle_Order_1_Dims_2.h"
+#include "pbatautogen/LaplacianMatrix_4_Mesh_triangle_Order_1_Dims_3.h"
+#include "pbatautogen/LaplacianMatrix_4_Mesh_triangle_Order_2_Dims_2.h"
+#include "pbatautogen/LaplacianMatrix_4_Mesh_triangle_Order_2_Dims_3.h"
+#include "pbatautogen/LaplacianMatrix_4_Mesh_triangle_Order_3_Dims_2.h"
+#include "pbatautogen/LaplacianMatrix_4_Mesh_triangle_Order_3_Dims_3.h"
+#include "pbatautogen/LaplacianMatrix_4_Mesh_quadrilateral_Order_1_Dims_2.h"
+#include "pbatautogen/LaplacianMatrix_4_Mesh_quadrilateral_Order_1_Dims_3.h"
+#include "pbatautogen/LaplacianMatrix_4_Mesh_quadrilateral_Order_2_Dims_2.h"
+#include "pbatautogen/LaplacianMatrix_4_Mesh_quadrilateral_Order_2_Dims_3.h"
+#include "pbatautogen/LaplacianMatrix_4_Mesh_quadrilateral_Order_3_Dims_2.h"
+#include "pbatautogen/LaplacianMatrix_4_Mesh_quadrilateral_Order_3_Dims_3.h"
+#include "pbatautogen/LaplacianMatrix_4_Mesh_tetrahedron_Order_1_Dims_3.h"
+#include "pbatautogen/LaplacianMatrix_4_Mesh_tetrahedron_Order_2_Dims_3.h"
+#include "pbatautogen/LaplacianMatrix_4_Mesh_tetrahedron_Order_3_Dims_3.h"
+#include "pbatautogen/LaplacianMatrix_4_Mesh_hexahedron_Order_1_Dims_3.h"
+#include "pbatautogen/LaplacianMatrix_4_Mesh_hexahedron_Order_2_Dims_3.h"
+#include "pbatautogen/LaplacianMatrix_4_Mesh_hexahedron_Order_3_Dims_3.h"
 
 namespace pbat {
 namespace py {
@@ -14,40 +116,114 @@ namespace fem {
 
 void BindLaplacianMatrix(pybind11::module& m)
 {
-    namespace pyb = pybind11;
-    ForMeshTypes([&]<class MeshType>() {
-        auto constexpr kQuadratureOrderMax = 6;
-        pbat::common::ForRange<1, kQuadratureOrderMax + 1>([&]<auto QuadratureOrder>() {
-            using LaplacianMatrixType =
-                pbat::fem::SymmetricLaplacianMatrix<MeshType, QuadratureOrder>;
-            std::string const className = "SymmetricLaplacianMatrix_QuadratureOrder_" +
-                                          std::to_string(QuadratureOrder) + "_" +
-                                          MeshTypeName<MeshType>();
-            pyb::class_<LaplacianMatrixType>(m, className.data())
-                .def(
-                    pyb::init([](MeshType const& mesh,
-                                 Eigen::Ref<MatrixX const> const& detJe,
-                                 Eigen::Ref<MatrixX const> const& GNe) {
-                        return LaplacianMatrixType(mesh, detJe, GNe);
-                    }),
-                    pyb::arg("mesh"),
-                    pyb::arg("detJe"),
-                    pyb::arg("GNe"))
-                .def_property_readonly_static(
-                    "dims",
-                    [](pyb::object /*self*/) { return LaplacianMatrixType::kDims; })
-                .def_property_readonly_static(
-                    "order",
-                    [](pyb::object /*self*/) { return LaplacianMatrixType::kOrder; })
-                .def_property_readonly_static(
-                    "quadrature_order",
-                    [](pyb::object /*self*/) { return LaplacianMatrixType::kQuadratureOrder; })
-                .def("to_matrix", &LaplacianMatrixType::ToMatrix)
-                .def("rows", &LaplacianMatrixType::OutputDimensions)
-                .def("cols", &LaplacianMatrixType::InputDimensions)
-                .def_readonly("deltae", &LaplacianMatrixType::deltaE);
-        });
-    });
+    BindLaplacianMatrix_1_Mesh_line_Order_1_Dims_1(m);
+BindLaplacianMatrix_1_Mesh_line_Order_1_Dims_2(m);
+BindLaplacianMatrix_1_Mesh_line_Order_1_Dims_3(m);
+BindLaplacianMatrix_1_Mesh_line_Order_2_Dims_1(m);
+BindLaplacianMatrix_1_Mesh_line_Order_2_Dims_2(m);
+BindLaplacianMatrix_1_Mesh_line_Order_2_Dims_3(m);
+BindLaplacianMatrix_1_Mesh_line_Order_3_Dims_1(m);
+BindLaplacianMatrix_1_Mesh_line_Order_3_Dims_2(m);
+BindLaplacianMatrix_1_Mesh_line_Order_3_Dims_3(m);
+BindLaplacianMatrix_1_Mesh_triangle_Order_1_Dims_2(m);
+BindLaplacianMatrix_1_Mesh_triangle_Order_1_Dims_3(m);
+BindLaplacianMatrix_1_Mesh_triangle_Order_2_Dims_2(m);
+BindLaplacianMatrix_1_Mesh_triangle_Order_2_Dims_3(m);
+BindLaplacianMatrix_1_Mesh_triangle_Order_3_Dims_2(m);
+BindLaplacianMatrix_1_Mesh_triangle_Order_3_Dims_3(m);
+BindLaplacianMatrix_1_Mesh_quadrilateral_Order_1_Dims_2(m);
+BindLaplacianMatrix_1_Mesh_quadrilateral_Order_1_Dims_3(m);
+BindLaplacianMatrix_1_Mesh_quadrilateral_Order_2_Dims_2(m);
+BindLaplacianMatrix_1_Mesh_quadrilateral_Order_2_Dims_3(m);
+BindLaplacianMatrix_1_Mesh_quadrilateral_Order_3_Dims_2(m);
+BindLaplacianMatrix_1_Mesh_quadrilateral_Order_3_Dims_3(m);
+BindLaplacianMatrix_1_Mesh_tetrahedron_Order_1_Dims_3(m);
+BindLaplacianMatrix_1_Mesh_tetrahedron_Order_2_Dims_3(m);
+BindLaplacianMatrix_1_Mesh_tetrahedron_Order_3_Dims_3(m);
+BindLaplacianMatrix_1_Mesh_hexahedron_Order_1_Dims_3(m);
+BindLaplacianMatrix_1_Mesh_hexahedron_Order_2_Dims_3(m);
+BindLaplacianMatrix_1_Mesh_hexahedron_Order_3_Dims_3(m);
+BindLaplacianMatrix_2_Mesh_line_Order_1_Dims_1(m);
+BindLaplacianMatrix_2_Mesh_line_Order_1_Dims_2(m);
+BindLaplacianMatrix_2_Mesh_line_Order_1_Dims_3(m);
+BindLaplacianMatrix_2_Mesh_line_Order_2_Dims_1(m);
+BindLaplacianMatrix_2_Mesh_line_Order_2_Dims_2(m);
+BindLaplacianMatrix_2_Mesh_line_Order_2_Dims_3(m);
+BindLaplacianMatrix_2_Mesh_line_Order_3_Dims_1(m);
+BindLaplacianMatrix_2_Mesh_line_Order_3_Dims_2(m);
+BindLaplacianMatrix_2_Mesh_line_Order_3_Dims_3(m);
+BindLaplacianMatrix_2_Mesh_triangle_Order_1_Dims_2(m);
+BindLaplacianMatrix_2_Mesh_triangle_Order_1_Dims_3(m);
+BindLaplacianMatrix_2_Mesh_triangle_Order_2_Dims_2(m);
+BindLaplacianMatrix_2_Mesh_triangle_Order_2_Dims_3(m);
+BindLaplacianMatrix_2_Mesh_triangle_Order_3_Dims_2(m);
+BindLaplacianMatrix_2_Mesh_triangle_Order_3_Dims_3(m);
+BindLaplacianMatrix_2_Mesh_quadrilateral_Order_1_Dims_2(m);
+BindLaplacianMatrix_2_Mesh_quadrilateral_Order_1_Dims_3(m);
+BindLaplacianMatrix_2_Mesh_quadrilateral_Order_2_Dims_2(m);
+BindLaplacianMatrix_2_Mesh_quadrilateral_Order_2_Dims_3(m);
+BindLaplacianMatrix_2_Mesh_quadrilateral_Order_3_Dims_2(m);
+BindLaplacianMatrix_2_Mesh_quadrilateral_Order_3_Dims_3(m);
+BindLaplacianMatrix_2_Mesh_tetrahedron_Order_1_Dims_3(m);
+BindLaplacianMatrix_2_Mesh_tetrahedron_Order_2_Dims_3(m);
+BindLaplacianMatrix_2_Mesh_tetrahedron_Order_3_Dims_3(m);
+BindLaplacianMatrix_2_Mesh_hexahedron_Order_1_Dims_3(m);
+BindLaplacianMatrix_2_Mesh_hexahedron_Order_2_Dims_3(m);
+BindLaplacianMatrix_2_Mesh_hexahedron_Order_3_Dims_3(m);
+BindLaplacianMatrix_3_Mesh_line_Order_1_Dims_1(m);
+BindLaplacianMatrix_3_Mesh_line_Order_1_Dims_2(m);
+BindLaplacianMatrix_3_Mesh_line_Order_1_Dims_3(m);
+BindLaplacianMatrix_3_Mesh_line_Order_2_Dims_1(m);
+BindLaplacianMatrix_3_Mesh_line_Order_2_Dims_2(m);
+BindLaplacianMatrix_3_Mesh_line_Order_2_Dims_3(m);
+BindLaplacianMatrix_3_Mesh_line_Order_3_Dims_1(m);
+BindLaplacianMatrix_3_Mesh_line_Order_3_Dims_2(m);
+BindLaplacianMatrix_3_Mesh_line_Order_3_Dims_3(m);
+BindLaplacianMatrix_3_Mesh_triangle_Order_1_Dims_2(m);
+BindLaplacianMatrix_3_Mesh_triangle_Order_1_Dims_3(m);
+BindLaplacianMatrix_3_Mesh_triangle_Order_2_Dims_2(m);
+BindLaplacianMatrix_3_Mesh_triangle_Order_2_Dims_3(m);
+BindLaplacianMatrix_3_Mesh_triangle_Order_3_Dims_2(m);
+BindLaplacianMatrix_3_Mesh_triangle_Order_3_Dims_3(m);
+BindLaplacianMatrix_3_Mesh_quadrilateral_Order_1_Dims_2(m);
+BindLaplacianMatrix_3_Mesh_quadrilateral_Order_1_Dims_3(m);
+BindLaplacianMatrix_3_Mesh_quadrilateral_Order_2_Dims_2(m);
+BindLaplacianMatrix_3_Mesh_quadrilateral_Order_2_Dims_3(m);
+BindLaplacianMatrix_3_Mesh_quadrilateral_Order_3_Dims_2(m);
+BindLaplacianMatrix_3_Mesh_quadrilateral_Order_3_Dims_3(m);
+BindLaplacianMatrix_3_Mesh_tetrahedron_Order_1_Dims_3(m);
+BindLaplacianMatrix_3_Mesh_tetrahedron_Order_2_Dims_3(m);
+BindLaplacianMatrix_3_Mesh_tetrahedron_Order_3_Dims_3(m);
+BindLaplacianMatrix_3_Mesh_hexahedron_Order_1_Dims_3(m);
+BindLaplacianMatrix_3_Mesh_hexahedron_Order_2_Dims_3(m);
+BindLaplacianMatrix_3_Mesh_hexahedron_Order_3_Dims_3(m);
+BindLaplacianMatrix_4_Mesh_line_Order_1_Dims_1(m);
+BindLaplacianMatrix_4_Mesh_line_Order_1_Dims_2(m);
+BindLaplacianMatrix_4_Mesh_line_Order_1_Dims_3(m);
+BindLaplacianMatrix_4_Mesh_line_Order_2_Dims_1(m);
+BindLaplacianMatrix_4_Mesh_line_Order_2_Dims_2(m);
+BindLaplacianMatrix_4_Mesh_line_Order_2_Dims_3(m);
+BindLaplacianMatrix_4_Mesh_line_Order_3_Dims_1(m);
+BindLaplacianMatrix_4_Mesh_line_Order_3_Dims_2(m);
+BindLaplacianMatrix_4_Mesh_line_Order_3_Dims_3(m);
+BindLaplacianMatrix_4_Mesh_triangle_Order_1_Dims_2(m);
+BindLaplacianMatrix_4_Mesh_triangle_Order_1_Dims_3(m);
+BindLaplacianMatrix_4_Mesh_triangle_Order_2_Dims_2(m);
+BindLaplacianMatrix_4_Mesh_triangle_Order_2_Dims_3(m);
+BindLaplacianMatrix_4_Mesh_triangle_Order_3_Dims_2(m);
+BindLaplacianMatrix_4_Mesh_triangle_Order_3_Dims_3(m);
+BindLaplacianMatrix_4_Mesh_quadrilateral_Order_1_Dims_2(m);
+BindLaplacianMatrix_4_Mesh_quadrilateral_Order_1_Dims_3(m);
+BindLaplacianMatrix_4_Mesh_quadrilateral_Order_2_Dims_2(m);
+BindLaplacianMatrix_4_Mesh_quadrilateral_Order_2_Dims_3(m);
+BindLaplacianMatrix_4_Mesh_quadrilateral_Order_3_Dims_2(m);
+BindLaplacianMatrix_4_Mesh_quadrilateral_Order_3_Dims_3(m);
+BindLaplacianMatrix_4_Mesh_tetrahedron_Order_1_Dims_3(m);
+BindLaplacianMatrix_4_Mesh_tetrahedron_Order_2_Dims_3(m);
+BindLaplacianMatrix_4_Mesh_tetrahedron_Order_3_Dims_3(m);
+BindLaplacianMatrix_4_Mesh_hexahedron_Order_1_Dims_3(m);
+BindLaplacianMatrix_4_Mesh_hexahedron_Order_2_Dims_3(m);
+BindLaplacianMatrix_4_Mesh_hexahedron_Order_3_Dims_3(m);  
 }
 
 } // namespace fem

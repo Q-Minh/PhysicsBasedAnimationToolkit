@@ -1,11 +1,33 @@
+
 #include "Mesh.h"
 
-#include "For.h"
-
-#include <pbat/fem/Mesh.h>
-#include <pybind11/eigen.h>
-#include <string>
-#include <type_traits>
+#include "pbatautogen/Mesh_Mesh_line_Order_1_Dims_1.h"
+#include "pbatautogen/Mesh_Mesh_line_Order_1_Dims_2.h"
+#include "pbatautogen/Mesh_Mesh_line_Order_1_Dims_3.h"
+#include "pbatautogen/Mesh_Mesh_line_Order_2_Dims_1.h"
+#include "pbatautogen/Mesh_Mesh_line_Order_2_Dims_2.h"
+#include "pbatautogen/Mesh_Mesh_line_Order_2_Dims_3.h"
+#include "pbatautogen/Mesh_Mesh_line_Order_3_Dims_1.h"
+#include "pbatautogen/Mesh_Mesh_line_Order_3_Dims_2.h"
+#include "pbatautogen/Mesh_Mesh_line_Order_3_Dims_3.h"
+#include "pbatautogen/Mesh_Mesh_triangle_Order_1_Dims_2.h"
+#include "pbatautogen/Mesh_Mesh_triangle_Order_1_Dims_3.h"
+#include "pbatautogen/Mesh_Mesh_triangle_Order_2_Dims_2.h"
+#include "pbatautogen/Mesh_Mesh_triangle_Order_2_Dims_3.h"
+#include "pbatautogen/Mesh_Mesh_triangle_Order_3_Dims_2.h"
+#include "pbatautogen/Mesh_Mesh_triangle_Order_3_Dims_3.h"
+#include "pbatautogen/Mesh_Mesh_quadrilateral_Order_1_Dims_2.h"
+#include "pbatautogen/Mesh_Mesh_quadrilateral_Order_1_Dims_3.h"
+#include "pbatautogen/Mesh_Mesh_quadrilateral_Order_2_Dims_2.h"
+#include "pbatautogen/Mesh_Mesh_quadrilateral_Order_2_Dims_3.h"
+#include "pbatautogen/Mesh_Mesh_quadrilateral_Order_3_Dims_2.h"
+#include "pbatautogen/Mesh_Mesh_quadrilateral_Order_3_Dims_3.h"
+#include "pbatautogen/Mesh_Mesh_tetrahedron_Order_1_Dims_3.h"
+#include "pbatautogen/Mesh_Mesh_tetrahedron_Order_2_Dims_3.h"
+#include "pbatautogen/Mesh_Mesh_tetrahedron_Order_3_Dims_3.h"
+#include "pbatautogen/Mesh_Mesh_hexahedron_Order_1_Dims_3.h"
+#include "pbatautogen/Mesh_Mesh_hexahedron_Order_2_Dims_3.h"
+#include "pbatautogen/Mesh_Mesh_hexahedron_Order_3_Dims_3.h"
 
 namespace pbat {
 namespace py {
@@ -13,29 +35,33 @@ namespace fem {
 
 void BindMesh(pybind11::module& m)
 {
-    namespace pyb = pybind11;
-    ForMeshTypes([&]<class MeshType>() {
-        std::string const className       = MeshTypeName<MeshType>();
-        std::string const elementTypeName = ElementTypeName<typename MeshType::ElementType>();
-        pyb::class_<MeshType>(m, className.data())
-            .def(pyb::init<>())
-            .def(
-                pyb::
-                    init<Eigen::Ref<MatrixX const> const&, Eigen::Ref<IndexMatrixX const> const&>(),
-                pyb::arg("V"),
-                pyb::arg("C"))
-            .def_property_readonly_static(
-                "dims",
-                [](pyb::object /*self*/) { return MeshType::kDims; })
-            .def_property_readonly_static(
-                "order",
-                [](pyb::object /*self*/) { return MeshType::kOrder; })
-            .def_property_readonly_static(
-                "element",
-                [=](pyb::object /*self*/) { return elementTypeName; })
-            .def_readwrite("E", &MeshType::E)
-            .def_readwrite("X", &MeshType::X);
-    });
+    BindMesh_Mesh_line_Order_1_Dims_1(m);
+BindMesh_Mesh_line_Order_1_Dims_2(m);
+BindMesh_Mesh_line_Order_1_Dims_3(m);
+BindMesh_Mesh_line_Order_2_Dims_1(m);
+BindMesh_Mesh_line_Order_2_Dims_2(m);
+BindMesh_Mesh_line_Order_2_Dims_3(m);
+BindMesh_Mesh_line_Order_3_Dims_1(m);
+BindMesh_Mesh_line_Order_3_Dims_2(m);
+BindMesh_Mesh_line_Order_3_Dims_3(m);
+BindMesh_Mesh_triangle_Order_1_Dims_2(m);
+BindMesh_Mesh_triangle_Order_1_Dims_3(m);
+BindMesh_Mesh_triangle_Order_2_Dims_2(m);
+BindMesh_Mesh_triangle_Order_2_Dims_3(m);
+BindMesh_Mesh_triangle_Order_3_Dims_2(m);
+BindMesh_Mesh_triangle_Order_3_Dims_3(m);
+BindMesh_Mesh_quadrilateral_Order_1_Dims_2(m);
+BindMesh_Mesh_quadrilateral_Order_1_Dims_3(m);
+BindMesh_Mesh_quadrilateral_Order_2_Dims_2(m);
+BindMesh_Mesh_quadrilateral_Order_2_Dims_3(m);
+BindMesh_Mesh_quadrilateral_Order_3_Dims_2(m);
+BindMesh_Mesh_quadrilateral_Order_3_Dims_3(m);
+BindMesh_Mesh_tetrahedron_Order_1_Dims_3(m);
+BindMesh_Mesh_tetrahedron_Order_2_Dims_3(m);
+BindMesh_Mesh_tetrahedron_Order_3_Dims_3(m);
+BindMesh_Mesh_hexahedron_Order_1_Dims_3(m);
+BindMesh_Mesh_hexahedron_Order_2_Dims_3(m);
+BindMesh_Mesh_hexahedron_Order_3_Dims_3(m);  
 }
 
 } // namespace fem

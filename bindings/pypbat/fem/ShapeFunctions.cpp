@@ -1,14 +1,33 @@
+
 #include "ShapeFunctions.h"
 
-#include "For.h"
-#include "Mesh.h"
-
-#include <exception>
-#include <fmt/core.h>
-#include <pbat/common/ConstexprFor.h>
-#include <pbat/fem/ShapeFunctions.h>
-#include <pybind11/eigen.h>
-#include <string>
+#include "pbatautogen/ShapeFunctions_Mesh_line_Order_1_Dims_1.h"
+#include "pbatautogen/ShapeFunctions_Mesh_line_Order_1_Dims_2.h"
+#include "pbatautogen/ShapeFunctions_Mesh_line_Order_1_Dims_3.h"
+#include "pbatautogen/ShapeFunctions_Mesh_line_Order_2_Dims_1.h"
+#include "pbatautogen/ShapeFunctions_Mesh_line_Order_2_Dims_2.h"
+#include "pbatautogen/ShapeFunctions_Mesh_line_Order_2_Dims_3.h"
+#include "pbatautogen/ShapeFunctions_Mesh_line_Order_3_Dims_1.h"
+#include "pbatautogen/ShapeFunctions_Mesh_line_Order_3_Dims_2.h"
+#include "pbatautogen/ShapeFunctions_Mesh_line_Order_3_Dims_3.h"
+#include "pbatautogen/ShapeFunctions_Mesh_triangle_Order_1_Dims_2.h"
+#include "pbatautogen/ShapeFunctions_Mesh_triangle_Order_1_Dims_3.h"
+#include "pbatautogen/ShapeFunctions_Mesh_triangle_Order_2_Dims_2.h"
+#include "pbatautogen/ShapeFunctions_Mesh_triangle_Order_2_Dims_3.h"
+#include "pbatautogen/ShapeFunctions_Mesh_triangle_Order_3_Dims_2.h"
+#include "pbatautogen/ShapeFunctions_Mesh_triangle_Order_3_Dims_3.h"
+#include "pbatautogen/ShapeFunctions_Mesh_quadrilateral_Order_1_Dims_2.h"
+#include "pbatautogen/ShapeFunctions_Mesh_quadrilateral_Order_1_Dims_3.h"
+#include "pbatautogen/ShapeFunctions_Mesh_quadrilateral_Order_2_Dims_2.h"
+#include "pbatautogen/ShapeFunctions_Mesh_quadrilateral_Order_2_Dims_3.h"
+#include "pbatautogen/ShapeFunctions_Mesh_quadrilateral_Order_3_Dims_2.h"
+#include "pbatautogen/ShapeFunctions_Mesh_quadrilateral_Order_3_Dims_3.h"
+#include "pbatautogen/ShapeFunctions_Mesh_tetrahedron_Order_1_Dims_3.h"
+#include "pbatautogen/ShapeFunctions_Mesh_tetrahedron_Order_2_Dims_3.h"
+#include "pbatautogen/ShapeFunctions_Mesh_tetrahedron_Order_3_Dims_3.h"
+#include "pbatautogen/ShapeFunctions_Mesh_hexahedron_Order_1_Dims_3.h"
+#include "pbatautogen/ShapeFunctions_Mesh_hexahedron_Order_2_Dims_3.h"
+#include "pbatautogen/ShapeFunctions_Mesh_hexahedron_Order_3_Dims_3.h"
 
 namespace pbat {
 namespace py {
@@ -16,59 +35,33 @@ namespace fem {
 
 void BindShapeFunctions(pybind11::module& m)
 {
-    namespace pyb = pybind11;
-    ForMeshTypes([&]<class MeshType>() {
-        auto constexpr kMaxQuadratureOrder = 6u;
-        auto const throw_bad_quad_order    = [&](int qorder) {
-            std::string const what = fmt::format(
-                "Invalid quadrature order={}, supported orders are [1,{}]",
-                qorder,
-                kMaxQuadratureOrder);
-            throw std::invalid_argument(what);
-        };
-        std::string const meshTypeName = MeshTypeName<MeshType>();
-
-        std::string const integratedShapeFunctionsName =
-            "integrated_shape_functions_" + meshTypeName;
-        m.def(
-            integratedShapeFunctionsName.data(),
-            [&](MeshType const& mesh,
-                Eigen::Ref<MatrixX const> const& detJe,
-                int qorder) -> MatrixX {
-                MatrixX R;
-                pbat::common::ForRange<1, kMaxQuadratureOrder + 1>([&]<auto QuadratureOrder>() {
-                    if (qorder == QuadratureOrder)
-                    {
-                        R = pbat::fem::IntegratedShapeFunctions<QuadratureOrder, MeshType>(
-                            mesh,
-                            detJe);
-                    }
-                });
-                if (R.size() == 0)
-                    throw_bad_quad_order(qorder);
-                return R;
-            },
-            pyb::arg("mesh"),
-            pyb::arg("detJe"),
-            pyb::arg("quadrature_order"));
-        std::string const shapeFunctionGradientsName = "shape_function_gradients_" + meshTypeName;
-        m.def(
-            shapeFunctionGradientsName.data(),
-            [&](MeshType const& mesh, int qorder) -> MatrixX {
-                MatrixX R;
-                pbat::common::ForRange<1, kMaxQuadratureOrder + 1>([&]<auto QuadratureOrder>() {
-                    if (qorder == QuadratureOrder)
-                    {
-                        R = pbat::fem::ShapeFunctionGradients<QuadratureOrder>(mesh);
-                    }
-                });
-                if (R.size() == 0)
-                    throw_bad_quad_order(qorder);
-                return R;
-            },
-            pyb::arg("mesh"),
-            pyb::arg("quadrature_order"));
-    });
+    BindShapeFunctions_Mesh_line_Order_1_Dims_1(m);
+BindShapeFunctions_Mesh_line_Order_1_Dims_2(m);
+BindShapeFunctions_Mesh_line_Order_1_Dims_3(m);
+BindShapeFunctions_Mesh_line_Order_2_Dims_1(m);
+BindShapeFunctions_Mesh_line_Order_2_Dims_2(m);
+BindShapeFunctions_Mesh_line_Order_2_Dims_3(m);
+BindShapeFunctions_Mesh_line_Order_3_Dims_1(m);
+BindShapeFunctions_Mesh_line_Order_3_Dims_2(m);
+BindShapeFunctions_Mesh_line_Order_3_Dims_3(m);
+BindShapeFunctions_Mesh_triangle_Order_1_Dims_2(m);
+BindShapeFunctions_Mesh_triangle_Order_1_Dims_3(m);
+BindShapeFunctions_Mesh_triangle_Order_2_Dims_2(m);
+BindShapeFunctions_Mesh_triangle_Order_2_Dims_3(m);
+BindShapeFunctions_Mesh_triangle_Order_3_Dims_2(m);
+BindShapeFunctions_Mesh_triangle_Order_3_Dims_3(m);
+BindShapeFunctions_Mesh_quadrilateral_Order_1_Dims_2(m);
+BindShapeFunctions_Mesh_quadrilateral_Order_1_Dims_3(m);
+BindShapeFunctions_Mesh_quadrilateral_Order_2_Dims_2(m);
+BindShapeFunctions_Mesh_quadrilateral_Order_2_Dims_3(m);
+BindShapeFunctions_Mesh_quadrilateral_Order_3_Dims_2(m);
+BindShapeFunctions_Mesh_quadrilateral_Order_3_Dims_3(m);
+BindShapeFunctions_Mesh_tetrahedron_Order_1_Dims_3(m);
+BindShapeFunctions_Mesh_tetrahedron_Order_2_Dims_3(m);
+BindShapeFunctions_Mesh_tetrahedron_Order_3_Dims_3(m);
+BindShapeFunctions_Mesh_hexahedron_Order_1_Dims_3(m);
+BindShapeFunctions_Mesh_hexahedron_Order_2_Dims_3(m);
+BindShapeFunctions_Mesh_hexahedron_Order_3_Dims_3(m);  
 }
 
 } // namespace fem
