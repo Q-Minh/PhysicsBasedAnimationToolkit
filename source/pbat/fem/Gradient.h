@@ -75,7 +75,7 @@ struct GalerkinGradient
      */
     void ComputeElementGalerkinGradientMatrices();
 
-    void CheckValidState();
+    void CheckValidState() const;
 
     MeshType const& mesh;            ///< The finite element mesh
     Eigen::Ref<MatrixX const> detJe; ///< |# element quadrature points| x |# elements| matrix of
@@ -163,7 +163,7 @@ inline void GalerkinGradient<TMesh, QuadratureOrder>::ComputeElementGalerkinGrad
 }
 
 template <CMesh TMesh, int QuadratureOrder>
-inline void GalerkinGradient<TMesh, QuadratureOrder>::CheckValidState()
+inline void GalerkinGradient<TMesh, QuadratureOrder>::CheckValidState() const
 {
     auto constexpr kQuadPts     = QuadratureRuleType::kPoints;
     auto const numberOfElements = mesh.E.cols();

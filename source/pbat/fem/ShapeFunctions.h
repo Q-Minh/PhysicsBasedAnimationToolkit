@@ -112,7 +112,16 @@ Matrix<TElement::kNodes, TDerivedX::RowsAtCompileTime> ShapeFunctionGradients(
     using AffineElementType                       = typename TElement::AffineBaseType;
     Matrix<TElement::kNodes, kInputDims> const GN = TElement::GradN(Xi);
     Matrix<kInputDims, kOutputDims> const JT      = Jacobian<AffineElementType>(Xi, X).transpose();
-    auto const JinvT = JT.jacobiSvd(Eigen::ComputeThinU | Eigen::ComputeThinV);
+    int constexpr kComputationOptions             = []() {
+        // TDerivedX::RowsAtCompileTime being dynamic means that JT has a dynamic number of columns.
+        // ThinU and ThinV SVD options are only supported when input matrix is dynamic (in
+        // #columns).
+        if constexpr (TDerivedX::RowsAtCompileTime == Eigen::Dynamic)
+            return Eigen::ComputeThinU | Eigen::ComputeThinV;
+        else
+            return Eigen::ComputeFullU | Eigen::ComputeFullV;
+    }();
+    auto const JinvT = JT.jacobiSvd(kComputationOptions);
     Matrix<TElement::kNodes, kOutputDims> GP;
     // GP.transpose() = JinvT.solve(GN.transpose());
     for (auto i = 0; i < TElement::kNodes; ++i)

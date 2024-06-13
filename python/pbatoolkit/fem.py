@@ -114,7 +114,7 @@ def shape_function_gradients(mesh, quadrature_order: int = 1) -> np.ndarray:
     return function_(mesh, quadrature_order)
 
 
-def laplacian_matrix(mesh, detJe: np.ndarray, GNe: np.ndarray, quadrature_order: int = 1):
+def laplacian_matrix(mesh, detJe: np.ndarray, GNe: np.ndarray, dims: int = 1, quadrature_order: int = 1):
     """Computes the input mesh's (negative semi-definite) symmetric part of the Laplacian matrix. 
 
     Args:
@@ -123,6 +123,7 @@ def laplacian_matrix(mesh, detJe: np.ndarray, GNe: np.ndarray, quadrature_order:
         quadrature.
         GNe (np.ndarray): The shape function gradients evaluated at points of the specified
         quadrature.
+        dims (int, optional): Image dimensionality of FEM function space. Defaults to 1.
         quadrature_order (int, optional): Polynomial quadrature rule to use. Defaults to 1.
 
     Returns:
@@ -131,7 +132,9 @@ def laplacian_matrix(mesh, detJe: np.ndarray, GNe: np.ndarray, quadrature_order:
     mesh_name = _mesh_type_name(mesh)
     class_name = f"SymmetricLaplacianMatrix_QuadratureOrder_{quadrature_order}_{mesh_name}"
     class_ = getattr(_fem, class_name)
-    return class_(mesh, detJe, GNe)
+    L = class_(mesh, detJe, GNe)
+    L.dims = dims
+    return L
 
 
 def mass_matrix(mesh, detJe: np.ndarray, rho: float = 1., dims: int = 3, quadrature_order: int = 2):
@@ -141,24 +144,26 @@ def mass_matrix(mesh, detJe: np.ndarray, rho: float = 1., dims: int = 3, quadrat
         mesh: The FEM mesh
         detJe (np.ndarray): Element jacobian determinants at quadrature points
         rho (float, optional): Uniform mass density (float) or per-element mass density (np.ndarray). Defaults to 1.
-        dims (int, optional): Problem dimensions. Defaults to 3.
+        dims (int, optional): dims (int, optional): Image dimensionality of FEM function space. Defaults to 3.
         quadrature_order (int, optional): Polynomial quadrature order to use for mass matrix computation. Defaults to 2.
 
     Returns:
         The mass matrix operator
     """
     mesh_name = _mesh_type_name(mesh)
-    class_name = f"MassMatrix_Dims_{dims}_QuadratureOrder_{quadrature_order}_{mesh_name}"
+    class_name = f"MassMatrix_QuadratureOrder_{quadrature_order}_{mesh_name}"
     class_ = getattr(_fem, class_name)
-    return class_(mesh, detJe, rho)
+    M = class_(mesh, detJe, rho)
+    M.dims = dims
+    return M
 
 
 def load_vector(mesh, detJe: np.ndarray, fe: np.ndarray, quadrature_order: int = 1):
     mesh_name = _mesh_type_name(mesh)
     dims = fe.shape[0]
-    class_name = f"LoadVector_Dims_{dims}_QuadratureOrder_{quadrature_order}_{mesh_name}"
+    class_name = f"LoadVector_QuadratureOrder_{quadrature_order}_{mesh_name}"
     class_ = getattr(_fem, class_name)
-    return class_(mesh, detJe, fe)
+    return class_(mesh, detJe, fe, dims)
 
 
 class HyperElasticEnergy(Enum):

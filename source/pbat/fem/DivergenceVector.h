@@ -47,7 +47,7 @@ struct DivergenceVector
     template <class TDerivedF>
     void ComputeElementDivergence(Eigen::DenseBase<TDerivedF> const& Fe);
 
-    void CheckValidState();
+    void CheckValidState() const;
 
     MeshType const& mesh;            ///< The finite element mesh
     Eigen::Ref<MatrixX const> detJe; ///< |# element quadrature points|x|#elements| matrix of
@@ -132,7 +132,7 @@ inline VectorX DivergenceVector<TMesh, Dims, QuadratureOrder>::ToVector() const
 }
 
 template <CMesh TMesh, int Dims, int QuadratureOrder>
-inline void DivergenceVector<TMesh, Dims, QuadratureOrder>::CheckValidState()
+inline void DivergenceVector<TMesh, Dims, QuadratureOrder>::CheckValidState() const
 {
     auto const numberOfElements       = mesh.E.cols();
     auto constexpr kExpectedDetJeRows = QuadratureRuleType::kPoints;

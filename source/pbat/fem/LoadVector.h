@@ -14,15 +14,14 @@
 namespace pbat {
 namespace fem {
 
-template <CMesh TMesh, int Dims, int QuadratureOrder>
+template <CMesh TMesh, int QuadratureOrder>
 struct LoadVector
 {
   public:
-    using SelfType              = LoadVector<TMesh, Dims, QuadratureOrder>;
+    using SelfType              = LoadVector<TMesh, QuadratureOrder>;
     using MeshType              = TMesh;
     using ElementType           = typename TMesh::ElementType;
     using QuadratureRuleType    = typename ElementType::template QuadratureType<QuadratureOrder>;
-    static int constexpr kDims  = Dims;
     static int constexpr kOrder = ElementType::kOrder;
     static int constexpr kQuadratureOrder = QuadratureOrder;
 
@@ -32,13 +31,14 @@ struct LoadVector
      * @param mesh
      * @param detJe |#quad.pts.|x|#elements| affine element jacobian determinants at quadrature
      * points
-     * @param fe |kDims|x|#elements| piecewise element constant load, or |kDims|x1 constant load
+     * @param fe |dims|x|#elements| piecewise element constant load, or |dims|x1 constant load
      */
     template <class TDerived>
     LoadVector(
         MeshType const& mesh,
         Eigen::Ref<MatrixX const> const& detJe,
-        Eigen::DenseBase<TDerived> const& fe);
+        Eigen::DenseBase<TDerived> const& fe,
+        int dims = 1);
 
     SelfType& operator=(SelfType const&) = delete;
 
@@ -51,36 +51,42 @@ struct LoadVector
     /**
      * @brief
      * @tparam TDerived
-     * @param fe |kDims|x|#elements| piecewise element constant load, or |kDims|x1 constant load
+     * @param fe |dims|x|#elements| piecewise element constant load, or |dims|x1 constant load
      */
     template <class TDerived>
     void SetLoad(Eigen::DenseBase<TDerived> const& fe);
 
+    void CheckValidState() const;
+
     MeshType const& mesh; ///< The finite element mesh
-    MatrixX fe;           ///< |kDims|x|#elements| piecewise element constant load
+    MatrixX fe;           ///< |dims|x|#elements| piecewise element constant load
     MatrixX N; ///< |ElementType::kNodes|x|#elements| integrated element shape functions. To
-               ///< obtain the element force vectors, compute Neint \kron I_{kDims} * f
+               ///< obtain the element force vectors, compute Neint \kron I_{dims} * f
     Eigen::Ref<MatrixX const> detJe; ///< |# element quadrature points|x|#elements| matrix of
                                      ///< jacobian determinants at element quadrature points
+    int dims; ///< ///< Dimensionality of image of FEM function space, i.e. this load vector is
+              ///< actually f \kronecker 1_{dims \times dims}. Should be >= 1.
 };
 
-template <CMesh TMesh, int Dims, int QuadratureOrder>
+template <CMesh TMesh, int QuadratureOrder>
 template <class TDerived>
-inline LoadVector<TMesh, Dims, QuadratureOrder>::LoadVector(
+inline LoadVector<TMesh, QuadratureOrder>::LoadVector(
     MeshType const& meshIn,
     Eigen::Ref<MatrixX const> const& detJe,
-    Eigen::DenseBase<TDerived> const& load)
-    : mesh(meshIn), fe(), N(), detJe(detJe)
+    Eigen::DenseBase<TDerived> const& load,
+    int dims)
+    : mesh(meshIn), fe(), N(), detJe(detJe), dims(dims)
 {
     SetLoad(load);
     N = IntegratedShapeFunctions<kQuadratureOrder>(mesh, detJe);
 }
 
-template <CMesh TMesh, int Dims, int QuadratureOrder>
-inline VectorX LoadVector<TMesh, Dims, QuadratureOrder>::ToVector() const
+template <CMesh TMesh, int QuadratureOrder>
+inline VectorX LoadVector<TMesh, QuadratureOrder>::ToVector() const
 {
     PBA_PROFILE_SCOPE;
-    auto const n                = mesh.X.cols() * kDims;
+    CheckValidState();
+    auto const n                = mesh.X.cols() * dims;
     auto const numberOfElements = mesh.E.cols();
     VectorX f                   = VectorX::Zero(n);
     for (auto e = 0; e < numberOfElements; ++e)
@@ -88,24 +94,34 @@ inline VectorX LoadVector<TMesh, Dims, QuadratureOrder>::ToVector() const
         auto const nodes = mesh.E.col(e);
         for (auto i = 0; i < nodes.size(); ++i)
         {
-            f.segment<kDims>(kDims * nodes(i)) += N(i, e) * fe.col(e);
+            f.segment(dims * nodes(i), dims) += N(i, e) * fe.col(e);
         }
     }
     return f;
 }
 
-template <CMesh TMesh, int Dims, int QuadratureOrder>
+template <CMesh TMesh, int QuadratureOrder>
+inline void LoadVector<TMesh, QuadratureOrder>::CheckValidState() const
+{
+    if (dims < 1)
+    {
+        std::string const what =
+            fmt::format("Expected output dimensionality >= 1, got {} instead", dims);
+        throw std::invalid_argument(what);
+    }
+}
+
+template <CMesh TMesh, int QuadratureOrder>
 template <class TDerived>
-inline void
-LoadVector<TMesh, Dims, QuadratureOrder>::SetLoad(Eigen::DenseBase<TDerived> const& load)
+inline void LoadVector<TMesh, QuadratureOrder>::SetLoad(Eigen::DenseBase<TDerived> const& load)
 {
     auto const numberOfElements = mesh.E.cols();
-    if (load.rows() != kDims)
+    if (load.rows() != dims)
     {
         std::string const what = fmt::format(
             "LoadVector<TMesh,{0}> discretizes a {0}-dimensional load, but received "
             "{1}-dimensional input load",
-            kDims,
+            dims,
             load.rows());
         throw std::invalid_argument(what);
     }
@@ -117,7 +133,7 @@ LoadVector<TMesh, Dims, QuadratureOrder>::SetLoad(Eigen::DenseBase<TDerived> con
         throw std::invalid_argument(what);
     }
 
-    fe.resize(kDims, numberOfElements);
+    fe.resize(dims, numberOfElements);
     if (load.cols() == 1)
         fe.colwise() = load.col(0);
     else // load.cols() == numberOfElements

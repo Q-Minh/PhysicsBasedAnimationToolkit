@@ -27,6 +27,9 @@ struct HyperElasticPotential
     using ElementType        = typename TMesh::ElementType;
     using ElasticEnergyType  = THyperElasticEnergy;
     using QuadratureRuleType = typename ElementType::template QuadratureType<QuadratureOrder>;
+    static_assert(
+        MeshType::kDims == ElasticEnergyType::kDims,
+        "Embedding dimensions of mesh must match dimensionality of hyper elastic energy.");
 
     static auto constexpr kDims           = THyperElasticEnergy::kDims;
     static int constexpr kOrder           = ElementType::kOrder - 1;
@@ -106,7 +109,7 @@ struct HyperElasticPotential
     Index InputDimensions() const;
     Index OutputDimensions() const;
 
-    void CheckValidState();
+    void CheckValidState() const;
 
     MeshType const& mesh; ///< The finite element mesh
     Eigen::Ref<MatrixX const>
@@ -395,7 +398,8 @@ HyperElasticPotential<TMesh, THyperElasticEnergy, QuadratureOrder>::OutputDimens
 }
 
 template <CMesh TMesh, physics::CHyperElasticEnergy THyperElasticEnergy, int QuadratureOrder>
-inline void HyperElasticPotential<TMesh, THyperElasticEnergy, QuadratureOrder>::CheckValidState()
+inline void
+HyperElasticPotential<TMesh, THyperElasticEnergy, QuadratureOrder>::CheckValidState() const
 {
     auto const numberOfElements       = mesh.E.cols();
     auto constexpr kExpectedDetJeRows = QuadratureRuleType::kPoints;

@@ -15,15 +15,14 @@
 namespace pbat {
 namespace fem {
 
-template <CMesh TMesh, int Dims, int QuadratureOrder>
+template <CMesh TMesh, int QuadratureOrder>
 struct MassMatrix
 {
   public:
-    using SelfType              = MassMatrix<TMesh, Dims, QuadratureOrder>;
+    using SelfType              = MassMatrix<TMesh, QuadratureOrder>;
     using MeshType              = TMesh;
     using ElementType           = typename TMesh::ElementType;
     using QuadratureRuleType    = typename ElementType::template QuadratureType<QuadratureOrder>;
-    static int constexpr kDims  = Dims;
     static int constexpr kOrder = 2 * ElementType::kOrder;
     static int constexpr kQuadratureOrder = QuadratureOrder;
 
@@ -34,7 +33,11 @@ struct MassMatrix
      * points
      * @param rho Uniform mass density
      */
-    MassMatrix(MeshType const& mesh, Eigen::Ref<MatrixX const> const& detJe, Scalar rho = 1.);
+    MassMatrix(
+        MeshType const& mesh,
+        Eigen::Ref<MatrixX const> const& detJe,
+        Scalar rho = 1.,
+        int dims   = 1);
 
     /**
      * @brief
@@ -48,7 +51,8 @@ struct MassMatrix
     MassMatrix(
         MeshType const& mesh,
         Eigen::Ref<MatrixX const> const& detJe,
-        Eigen::DenseBase<TDerived> const& rho);
+        Eigen::DenseBase<TDerived> const& rho,
+        int dims = 1);
 
     SelfType& operator=(SelfType const&) = delete;
 
@@ -69,7 +73,7 @@ struct MassMatrix
      */
     CSCMatrix ToMatrix() const;
 
-    Index InputDimensions() const { return kDims * mesh.X.cols(); }
+    Index InputDimensions() const { return dims * mesh.X.cols(); }
     Index OutputDimensions() const { return InputDimensions(); }
 
     /**
@@ -80,7 +84,7 @@ struct MassMatrix
     template <class TDerived>
     void ComputeElementMassMatrices(Eigen::DenseBase<TDerived> const& rho);
 
-    void CheckValidState();
+    void CheckValidState() const;
 
     MeshType const& mesh;            ///< The finite element mesh
     Eigen::Ref<MatrixX const> detJe; ///< |# element quadrature points| x |# elements| matrix of
@@ -88,40 +92,45 @@ struct MassMatrix
     MatrixX Me; ///< |#element nodes|x|#element nodes * #elements| element mass matrices
                 ///< for 1-dimensional problems. For d-dimensional problems, these mass matrices
                 ///< should be Kroneckered with the d-dimensional identity matrix.
+    int dims; ///< Dimensionality of image of FEM function space, i.e. this mass matrix is actually
+              ///< M \kronecker I_{dims \times dims}. Should be >= 1.
 };
 
-template <CMesh TMesh, int Dims, int QuadratureOrder>
-inline MassMatrix<TMesh, Dims, QuadratureOrder>::MassMatrix(
+template <CMesh TMesh, int QuadratureOrder>
+inline MassMatrix<TMesh, QuadratureOrder>::MassMatrix(
     MeshType const& mesh,
     Eigen::Ref<MatrixX const> const& detJe,
-    Scalar rho)
-    : MassMatrix<TMesh, Dims, QuadratureOrder>(mesh, detJe, VectorX::Constant(mesh.E.cols(), rho))
+    Scalar rho,
+    int dims)
+    : MassMatrix<TMesh, QuadratureOrder>(mesh, detJe, VectorX::Constant(mesh.E.cols(), rho), dims)
 {
 }
 
-template <CMesh TMesh, int Dims, int QuadratureOrder>
+template <CMesh TMesh, int QuadratureOrder>
 template <class TDerived>
-inline MassMatrix<TMesh, Dims, QuadratureOrder>::MassMatrix(
+inline MassMatrix<TMesh, QuadratureOrder>::MassMatrix(
     MeshType const& mesh,
     Eigen::Ref<MatrixX const> const& detJe,
-    Eigen::DenseBase<TDerived> const& rho)
-    : mesh(mesh), detJe(detJe), Me()
+    Eigen::DenseBase<TDerived> const& rho,
+    int dims)
+    : mesh(mesh), detJe(detJe), Me(), dims(dims)
 {
     ComputeElementMassMatrices(rho);
 }
 
-template <CMesh TMesh, int Dims, int QuadratureOrder>
+template <CMesh TMesh, int QuadratureOrder>
 template <class TDerivedIn, class TDerivedOut>
-inline void MassMatrix<TMesh, Dims, QuadratureOrder>::Apply(
+inline void MassMatrix<TMesh, QuadratureOrder>::Apply(
     Eigen::MatrixBase<TDerivedIn> const& x,
     Eigen::DenseBase<TDerivedOut>& y) const
 {
     PBA_PROFILE_SCOPE;
+    CheckValidState();
     auto const numberOfDofs = InputDimensions();
     if (x.rows() != numberOfDofs or y.rows() != numberOfDofs or x.cols() != y.cols())
     {
         std::string const what = fmt::format(
-            "Expected inputs and outputs to have rows |#nodes*kDims|={} and same number of "
+            "Expected inputs and outputs to have rows |#nodes*dims|={} and same number of "
             "columns, but got dimensions "
             "x,y=({},{}), ({},{})",
             numberOfDofs,
@@ -141,22 +150,23 @@ inline void MassMatrix<TMesh, Dims, QuadratureOrder>::Apply(
             auto const nodes = mesh.E.col(e).array();
             auto const me =
                 Me.block<ElementType::kNodes, ElementType::kNodes>(0, e * ElementType::kNodes);
-            auto ye       = y.col(c).reshaped(kDims, y.size() / kDims)(Eigen::all, nodes);
-            auto const xe = x.col(c).reshaped(kDims, x.size() / kDims)(Eigen::all, nodes);
+            auto ye       = y.col(c).reshaped(dims, y.size() / dims)(Eigen::all, nodes);
+            auto const xe = x.col(c).reshaped(dims, x.size() / dims)(Eigen::all, nodes);
             ye += xe * me /*.transpose() technically, but mass matrix is symmetric*/;
         }
     }
 }
 
-template <CMesh TMesh, int Dims, int QuadratureOrder>
-inline CSCMatrix MassMatrix<TMesh, Dims, QuadratureOrder>::ToMatrix() const
+template <CMesh TMesh, int QuadratureOrder>
+inline CSCMatrix MassMatrix<TMesh, QuadratureOrder>::ToMatrix() const
 {
     PBA_PROFILE_SCOPE;
+    CheckValidState();
     using SparseIndex = typename CSCMatrix::StorageIndex;
     using Triplet     = Eigen::Triplet<Scalar, SparseIndex>;
 
     std::vector<Triplet> triplets{};
-    triplets.reserve(static_cast<std::size_t>(Me.size() * kDims * kDims));
+    triplets.reserve(static_cast<std::size_t>(Me.size() * dims));
     auto const numberOfElements = mesh.E.cols();
     for (auto e = 0; e < numberOfElements; ++e)
     {
@@ -167,10 +177,10 @@ inline CSCMatrix MassMatrix<TMesh, Dims, QuadratureOrder>::ToMatrix() const
         {
             for (auto i = 0; i < me.rows(); ++i)
             {
-                for (auto d = 0; d < kDims; ++d)
+                for (auto d = 0; d < dims; ++d)
                 {
-                    auto const ni = static_cast<SparseIndex>(kDims * nodes(i) + d);
-                    auto const nj = static_cast<SparseIndex>(kDims * nodes(j) + d);
+                    auto const ni = static_cast<SparseIndex>(dims * nodes(i) + d);
+                    auto const nj = static_cast<SparseIndex>(dims * nodes(j) + d);
                     triplets.push_back(Triplet(ni, nj, me(i, j)));
                 }
             }
@@ -182,8 +192,8 @@ inline CSCMatrix MassMatrix<TMesh, Dims, QuadratureOrder>::ToMatrix() const
     return Mmat;
 }
 
-template <CMesh TMesh, int Dims, int QuadratureOrder>
-inline void MassMatrix<TMesh, Dims, QuadratureOrder>::CheckValidState()
+template <CMesh TMesh, int QuadratureOrder>
+inline void MassMatrix<TMesh, QuadratureOrder>::CheckValidState() const
 {
     auto const numberOfElements       = mesh.E.cols();
     auto constexpr kExpectedDetJeRows = QuadratureRuleType::kPoints;
@@ -203,15 +213,20 @@ inline void MassMatrix<TMesh, Dims, QuadratureOrder>::CheckValidState()
             detJe.cols());
         throw std::invalid_argument(what);
     }
+    if (dims < 1)
+    {
+        std::string const what =
+            fmt::format("Expected output dimensionality >= 1, got {} instead", dims);
+        throw std::invalid_argument(what);
+    }
 }
 
-template <CMesh TMesh, int Dims, int QuadratureOrder>
+template <CMesh TMesh, int QuadratureOrder>
 template <class TDerived>
-inline void MassMatrix<TMesh, Dims, QuadratureOrder>::ComputeElementMassMatrices(
+inline void MassMatrix<TMesh, QuadratureOrder>::ComputeElementMassMatrices(
     Eigen::DenseBase<TDerived> const& rho)
 {
     PBA_PROFILE_SCOPE;
-    // Check inputs before proceeding
     CheckValidState();
     auto const numberOfElements       = mesh.E.cols();
     auto constexpr kNodesPerElement   = ElementType::kNodes;

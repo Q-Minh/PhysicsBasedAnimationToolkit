@@ -23,13 +23,13 @@ struct SymmetricLaplacianMatrix
     using QuadratureRuleType = typename ElementType::template QuadratureType<QuadratureOrder>;
 
     static int constexpr kOrder           = 2 * (ElementType::kOrder - 1);
-    static int constexpr kDims            = 1;
     static int constexpr kQuadratureOrder = QuadratureOrder;
 
     SymmetricLaplacianMatrix(
         MeshType const& mesh,
         Eigen::Ref<MatrixX const> const& detJe,
-        Eigen::Ref<MatrixX const> const& GNe);
+        Eigen::Ref<MatrixX const> const& GNe,
+        int dims = 1);
 
     SelfType& operator=(SelfType const&) = delete;
 
@@ -50,12 +50,12 @@ struct SymmetricLaplacianMatrix
      */
     CSCMatrix ToMatrix() const;
 
-    Index InputDimensions() const { return mesh.X.cols(); }
+    Index InputDimensions() const { return dims * mesh.X.cols(); }
     Index OutputDimensions() const { return InputDimensions(); }
 
     void ComputeElementLaplacians();
 
-    void CheckValidState();
+    void CheckValidState() const;
 
     MeshType const& mesh;            ///< The finite element mesh
     Eigen::Ref<MatrixX const> detJe; ///< |#quad.pts.|x|#elements| affine element jacobian
@@ -65,14 +65,17 @@ struct SymmetricLaplacianMatrix
                     ///< matrix of element shape function gradients at quadrature points
     MatrixX deltaE; ///< |ElementType::kNodes| x |ElementType::kNodes * #elements| matrix element
                     ///< laplacians
+    int dims; ///< Dimensionality of image of FEM function space, i.e. this Laplacian matrix is
+              ///< actually L \kronecker I_{dims \times dims}. Should be >= 1.
 };
 
 template <CMesh TMesh, int QuadratureOrder>
 inline SymmetricLaplacianMatrix<TMesh, QuadratureOrder>::SymmetricLaplacianMatrix(
     MeshType const& mesh,
     Eigen::Ref<MatrixX const> const& detJe,
-    Eigen::Ref<MatrixX const> const& GNe)
-    : mesh(mesh), detJe(detJe), GNe(GNe), deltaE()
+    Eigen::Ref<MatrixX const> const& GNe,
+    int dims)
+    : mesh(mesh), detJe(detJe), GNe(GNe), deltaE(), dims(dims)
 {
     ComputeElementLaplacians();
 }
@@ -81,12 +84,13 @@ template <CMesh TMesh, int QuadratureOrder>
 inline CSCMatrix SymmetricLaplacianMatrix<TMesh, QuadratureOrder>::ToMatrix() const
 {
     PBA_PROFILE_SCOPE;
+    CheckValidState();
     CSCMatrix L(OutputDimensions(), InputDimensions());
     using SparseIndex = typename CSCMatrix::StorageIndex;
     using Triplet     = Eigen::Triplet<Scalar, SparseIndex>;
 
     std::vector<Triplet> triplets{};
-    triplets.reserve(static_cast<std::size_t>(deltaE.size()));
+    triplets.reserve(static_cast<std::size_t>(deltaE.size() * dims));
     auto const numberOfElements = mesh.E.cols();
     for (auto e = 0; e < numberOfElements; ++e)
     {
@@ -97,9 +101,12 @@ inline CSCMatrix SymmetricLaplacianMatrix<TMesh, QuadratureOrder>::ToMatrix() co
         {
             for (auto i = 0; i < Le.rows(); ++i)
             {
-                auto const ni = static_cast<SparseIndex>(nodes(i));
-                auto const nj = static_cast<SparseIndex>(nodes(j));
-                triplets.push_back(Triplet(ni, nj, Le(i, j)));
+                for (auto d = 0; d < dims; ++d)
+                {
+                    auto const ni = static_cast<SparseIndex>(dims * nodes(i) + d);
+                    auto const nj = static_cast<SparseIndex>(dims * nodes(j) + d);
+                    triplets.push_back(Triplet(ni, nj, Le(i, j)));
+                }
             }
         }
     }
@@ -135,7 +142,7 @@ inline void SymmetricLaplacianMatrix<TMesh, QuadratureOrder>::ComputeElementLapl
 }
 
 template <CMesh TMesh, int QuadratureOrder>
-inline void SymmetricLaplacianMatrix<TMesh, QuadratureOrder>::CheckValidState()
+inline void SymmetricLaplacianMatrix<TMesh, QuadratureOrder>::CheckValidState() const
 {
     auto const numberOfElements       = mesh.E.cols();
     auto constexpr kExpectedDetJeRows = QuadratureRuleType::kPoints;
@@ -172,6 +179,12 @@ inline void SymmetricLaplacianMatrix<TMesh, QuadratureOrder>::CheckValidState()
             GNe.cols());
         throw std::invalid_argument(what);
     }
+    if (dims < 1)
+    {
+        std::string const what =
+            fmt::format("Expected output dimensionality >= 1, got {} instead", dims);
+        throw std::invalid_argument(what);
+    }
 }
 
 template <CMesh TMesh, int QuadratureOrder>
@@ -181,6 +194,7 @@ inline void SymmetricLaplacianMatrix<TMesh, QuadratureOrder>::Apply(
     Eigen::DenseBase<TDerivedOut>& y) const
 {
     PBA_PROFILE_SCOPE;
+    CheckValidState();
     auto const numberOfDofs = InputDimensions();
     bool const bAreInputOutputValid =
         (x.rows() != numberOfDofs) or (y.rows() != numberOfDofs) or (y.cols() != x.cols());
@@ -206,9 +220,9 @@ inline void SymmetricLaplacianMatrix<TMesh, QuadratureOrder>::Apply(
             auto constexpr kNodesPerElement = ElementType::kNodes;
             auto const Le =
                 deltaE.block(0, e * kNodesPerElement, kNodesPerElement, kNodesPerElement);
-            auto ye       = y.col(c)(nodes);
-            auto const xe = x.col(c)(nodes);
-            ye += Le * xe;
+            auto ye       = y.col(c).reshaped(dims, y.size() / dims)(Eigen::all, nodes);
+            auto const xe = x.col(c).reshaped(dims, x.size() / dims)(Eigen::all, nodes);
+            ye += xe * Le /*.transpose() technically, but Laplacian matrix is symmetric*/;
         }
     }
 }

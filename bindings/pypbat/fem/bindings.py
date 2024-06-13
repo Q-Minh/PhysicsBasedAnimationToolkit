@@ -1,5 +1,6 @@
 autogendir = "pbatautogen"
 
+
 def mesh_types_of(max_order=3):
     elements = ["Line", "Triangle",
                 "Quadrilateral", "Tetrahedron", "Hexahedron"]
@@ -543,9 +544,6 @@ void BindLaplacianMatrix_{qorder}_{mesh_type_py}(pybind11::module& m)
             pyb::arg("detJe"),
             pyb::arg("GNe"))
         .def_property_readonly_static(
-            "dims",
-            [](pyb::object /*self*/) {{ return LaplacianMatrixType::kDims; }})
-        .def_property_readonly_static(
             "order",
             [](pyb::object /*self*/) {{ return LaplacianMatrixType::kOrder; }})
         .def_property_readonly_static(
@@ -554,7 +552,8 @@ void BindLaplacianMatrix_{qorder}_{mesh_type_py}(pybind11::module& m)
         .def("to_matrix", &LaplacianMatrixType::ToMatrix)
         .def("rows", &LaplacianMatrixType::OutputDimensions)
         .def("cols", &LaplacianMatrixType::InputDimensions)
-        .def_readonly("deltae", &LaplacianMatrixType::deltaE);
+        .def_readonly("deltae", &LaplacianMatrixType::deltaE)
+        .def_readwrite("dims", &LaplacianMatrixType::dims);
 }}
 
 }} // namespace fem
@@ -622,18 +621,17 @@ void BindLaplacianMatrix(pybind11::module& m)
     return (headers, sources)
 
 
-def bind_load_vector(mesh_types: list, max_dims: int = 3, max_qorder: int = 3):
+def bind_load_vector(mesh_types: list, max_qorder: int = 3):
     headers = []
     sources = []
 
     for mesh_type, mesh_type_py, mesh_includes in mesh_types:
-        for dims in range(1, max_dims+1):
-            for qorder in range(1, max_qorder+1):
-                header = f"{autogendir}/LoadVector_{dims}_{qorder}_{mesh_type_py}.h"
-                with open(header, 'w', encoding="utf-8") as file:
-                    code = f"""
-#ifndef PYPBAT_FEM_LOAD_VECTOR_{dims}_{qorder}_{mesh_type_py}_H
-#define PYPBAT_FEM_LOAD_VECTOR_{dims}_{qorder}_{mesh_type_py}_H
+        for qorder in range(1, max_qorder+1):
+            header = f"{autogendir}/LoadVector_{qorder}_{mesh_type_py}.h"
+            with open(header, 'w', encoding="utf-8") as file:
+                code = f"""
+#ifndef PYPBAT_FEM_LOAD_VECTOR_{qorder}_{mesh_type_py}_H
+#define PYPBAT_FEM_LOAD_VECTOR_{qorder}_{mesh_type_py}_H
 
 #include <pybind11/pybind11.h>
 
@@ -641,20 +639,20 @@ namespace pbat {{
 namespace py {{
 namespace fem {{
 
-void BindLoadVector_{dims}_{qorder}_{mesh_type_py}(pybind11::module& m);
+void BindLoadVector_{qorder}_{mesh_type_py}(pybind11::module& m);
 
 }} // namespace fem
 }} // namespace py
 }} // namespace pbat
 
-#endif // PYPBAT_FEM_LOAD_VECTOR_{dims}_{qorder}_{mesh_type_py}_H
+#endif // PYPBAT_FEM_LOAD_VECTOR_{qorder}_{mesh_type_py}_H
 """
-                    file.write(code)
+                file.write(code)
 
-                source = f"{autogendir}/LoadVector_{dims}_{qorder}_{mesh_type_py}.cpp"
-                with open(source, 'w', encoding="utf-8") as file:
-                    code = f"""
-#include "LoadVector_{dims}_{qorder}_{mesh_type_py}.h"
+            source = f"{autogendir}/LoadVector_{qorder}_{mesh_type_py}.cpp"
+            with open(source, 'w', encoding="utf-8") as file:
+                code = f"""
+#include "LoadVector_{qorder}_{mesh_type_py}.h"
 
 {mesh_includes}
 #include <pbat/fem/LoadVector.h>
@@ -665,28 +663,26 @@ namespace pbat {{
 namespace py {{
 namespace fem {{
 
-void BindLoadVector_{dims}_{qorder}_{mesh_type_py}(pybind11::module& m)
+void BindLoadVector_{qorder}_{mesh_type_py}(pybind11::module& m)
 {{
     namespace pyb = pybind11;
     using MeshType = {mesh_type};
-    auto constexpr Dims = {dims};
     auto constexpr QuadratureOrder = {qorder};
-    using LoadVectorType = pbat::fem::LoadVector<MeshType, Dims, QuadratureOrder>;
+    using LoadVectorType = pbat::fem::LoadVector<MeshType, QuadratureOrder>;
     std::string const className =
-        "LoadVector_Dims_{dims}_QuadratureOrder_{qorder}_{mesh_type_py}";
+        "LoadVector_QuadratureOrder_{qorder}_{mesh_type_py}";
     pyb::class_<LoadVectorType>(m, className.data())
         .def(
             pyb::init([](MeshType const& mesh,
                             Eigen::Ref<MatrixX const> const& detJe,
-                            Eigen::Ref<MatrixX const> const& fe) {{
-                return LoadVectorType(mesh, detJe, fe);
+                            Eigen::Ref<MatrixX const> const& fe,
+                            int dims) {{
+                return LoadVectorType(mesh, detJe, fe, dims);
             }}),
             pyb::arg("mesh"),
             pyb::arg("detJe"),
-            pyb::arg("fe"))
-        .def_property_readonly_static(
-            "dims",
-            [](pyb::object /*self*/) {{ return LoadVectorType::kDims; }})
+            pyb::arg("fe"),
+            pyb::arg("dims"))
         .def_property_readonly_static(
             "order",
             [](pyb::object /*self*/) {{ return LoadVectorType::kOrder; }})
@@ -701,17 +697,18 @@ void BindLoadVector_{dims}_{qorder}_{mesh_type_py}(pybind11::module& m)
                 f.SetLoad(fe);
             }},
             pyb::arg("fe"))
-        .def_readonly("N", &LoadVectorType::N);
+        .def_readonly("N", &LoadVectorType::N)
+        .def_readwrite("dims", &LoadVectorType::dims);
 }}
 
 }} // namespace fem
 }} // namespace py
 }} // namespace pbat
 """
-                    file.write(code)
+                file.write(code)
 
-                headers.append(header)
-                sources.append(source)
+            headers.append(header)
+            sources.append(source)
 
     header = """
 #ifndef PYPBAT_FEM_LOAD_VECTOR_H
@@ -732,14 +729,12 @@ void BindLoadVector(pybind11::module& m);
 #endif // PYPBAT_FEM_LOAD_VECTOR_H
 """
 
-    includes = "\n".join([f"#include \"LoadVector_{dims}_{qorder}_{mesh_type_py}.h\""
+    includes = "\n".join([f"#include \"LoadVector_{qorder}_{mesh_type_py}.h\""
                           for qorder in range(1, max_qorder+1)
-                          for dims in range(1, max_dims+1)
                           for mesh_type, mesh_type_py, mesh_includes in mesh_types])
 
-    bind_calls = "\n".join([f"BindLoadVector_{dims}_{qorder}_{mesh_type_py}(m);"
+    bind_calls = "\n".join([f"BindLoadVector_{qorder}_{mesh_type_py}(m);"
                             for qorder in range(1, max_qorder+1)
-                            for dims in range(1, max_dims+1)
                             for mesh_type, mesh_type_py, mesh_includes in mesh_types])
 
     source = f"""
@@ -771,18 +766,17 @@ void BindLoadVector(pybind11::module& m)
     return (headers, sources)
 
 
-def bind_mass_matrix(mesh_types: list, max_dims: int = 3, max_qorder: int = 6):
+def bind_mass_matrix(mesh_types: list, max_qorder: int = 6):
     headers = []
     sources = []
 
     for mesh_type, mesh_type_py, mesh_includes in mesh_types:
-        for dims in range(1, max_dims+1):
-            for qorder in range(1, max_qorder+1):
-                header = f"{autogendir}/MassMatrix_{dims}_{qorder}_{mesh_type_py}.h"
-                with open(header, 'w', encoding="utf-8") as file:
-                    code = f"""
-#ifndef PYPBAT_FEM_MASS_MATRIX_{dims}_{qorder}_{mesh_type_py}_H
-#define PYPBAT_FEM_MASS_MATRIX_{dims}_{qorder}_{mesh_type_py}_H
+        for qorder in range(1, max_qorder+1):
+            header = f"{autogendir}/MassMatrix_{qorder}_{mesh_type_py}.h"
+            with open(header, 'w', encoding="utf-8") as file:
+                code = f"""
+#ifndef PYPBAT_FEM_MASS_MATRIX_{qorder}_{mesh_type_py}_H
+#define PYPBAT_FEM_MASS_MATRIX_{qorder}_{mesh_type_py}_H
 
 #include <pybind11/pybind11.h>
 
@@ -790,20 +784,20 @@ namespace pbat {{
 namespace py {{
 namespace fem {{
 
-void BindMassMatrix_{dims}_{qorder}_{mesh_type_py}(pybind11::module& m);
+void BindMassMatrix_{qorder}_{mesh_type_py}(pybind11::module& m);
 
 }} // namespace fem
 }} // namespace py
 }} // namespace pbat
 
-#endif // PYPBAT_FEM_MASS_MATRIX_{dims}_{qorder}_{mesh_type_py}_H
+#endif // PYPBAT_FEM_MASS_MATRIX_{qorder}_{mesh_type_py}_H
 """
-                    file.write(code)
+                file.write(code)
 
-                source = f"{autogendir}/MassMatrix_{dims}_{qorder}_{mesh_type_py}.cpp"
-                with open(source, 'w', encoding="utf-8") as file:
-                    code = f"""
-#include "MassMatrix_{dims}_{qorder}_{mesh_type_py}.h"
+            source = f"{autogendir}/MassMatrix_{qorder}_{mesh_type_py}.cpp"
+            with open(source, 'w', encoding="utf-8") as file:
+                code = f"""
+#include "MassMatrix_{qorder}_{mesh_type_py}.h"
 
 {mesh_includes}
 #include <pbat/fem/MassMatrix.h>
@@ -814,66 +808,63 @@ namespace pbat {{
 namespace py {{
 namespace fem {{
 
-void BindMassMatrix_{dims}_{qorder}_{mesh_type_py}(pybind11::module& m)
+void BindMassMatrix_{qorder}_{mesh_type_py}(pybind11::module& m)
 {{
-    namespace pyb = pybind11;
-    using MeshType = {mesh_type};
-    auto constexpr kDims = {dims};
-    auto constexpr kQuadratureOrder = {qorder};
-    using MassMatrixType = pbat::fem::MassMatrix<MeshType, kDims, kQuadratureOrder>;
-    std::string const className =
-        "MassMatrix_Dims_{dims}_QuadratureOrder_{qorder}_{mesh_type_py}";
-    pyb::class_<MassMatrixType>(m, className.data())
-        .def(
-            pyb::init([](MeshType const& mesh, Eigen::Ref<MatrixX const> const& detJe) {{
-                return MassMatrixType(mesh, detJe);
-            }}),
-            pyb::arg("mesh"),
-            pyb::arg("detJe"))
-        .def(
-            pyb::init([](MeshType const& mesh,
-                            Eigen::Ref<MatrixX const> const& detJe,
-                            Scalar rho) {{ return MassMatrixType(mesh, detJe, rho); }}),
-            pyb::arg("mesh"),
-            pyb::arg("detJe"),
-            pyb::arg("rho"))
-        .def(
-            pyb::init(
-                [](MeshType const& mesh,
-                    Eigen::Ref<MatrixX const> const& detJe,
-                    VectorX const& rhoe) {{ return MassMatrixType(mesh, detJe, rhoe); }}),
-            pyb::arg("mesh"),
-            pyb::arg("detJe"),
-            pyb::arg("rhoe"))
-        .def_property_readonly_static(
-            "dims",
-            [](pyb::object /*self*/) {{ return MassMatrixType::kDims; }})
-        .def_property_readonly_static(
-            "order",
-            [](pyb::object /*self*/) {{ return MassMatrixType::kOrder; }})
-        .def_property_readonly_static(
-            "quadrature_order",
-            [](pyb::object /*self*/) {{ return MassMatrixType::kQuadratureOrder; }})
-        .def_readonly("Me", &MassMatrixType::Me)
-        .def("rows", &MassMatrixType::OutputDimensions)
-        .def("cols", &MassMatrixType::InputDimensions)
-        .def("to_matrix", &MassMatrixType::ToMatrix)
-        .def(
-            "compute_element_mass_matrices",
-            [](MassMatrixType& M, VectorX const& rhoe) {{
-                M.ComputeElementMassMatrices(rhoe);
-            }},
-            pyb::arg("rhoe"));
+namespace pyb = pybind11;
+using MeshType = {mesh_type};
+auto constexpr kQuadratureOrder = {qorder};
+using MassMatrixType = pbat::fem::MassMatrix<MeshType, kQuadratureOrder>;
+std::string const className =
+    "MassMatrix_QuadratureOrder_{qorder}_{mesh_type_py}";
+pyb::class_<MassMatrixType>(m, className.data())
+    .def(
+        pyb::init([](MeshType const& mesh, Eigen::Ref<MatrixX const> const& detJe) {{
+            return MassMatrixType(mesh, detJe);
+        }}),
+        pyb::arg("mesh"),
+        pyb::arg("detJe"))
+    .def(
+        pyb::init([](MeshType const& mesh,
+                        Eigen::Ref<MatrixX const> const& detJe,
+                        Scalar rho) {{ return MassMatrixType(mesh, detJe, rho); }}),
+        pyb::arg("mesh"),
+        pyb::arg("detJe"),
+        pyb::arg("rho"))
+    .def(
+        pyb::init(
+            [](MeshType const& mesh,
+                Eigen::Ref<MatrixX const> const& detJe,
+                VectorX const& rhoe) {{ return MassMatrixType(mesh, detJe, rhoe); }}),
+        pyb::arg("mesh"),
+        pyb::arg("detJe"),
+        pyb::arg("rhoe"))
+    .def_property_readonly_static(
+        "order",
+        [](pyb::object /*self*/) {{ return MassMatrixType::kOrder; }})
+    .def_property_readonly_static(
+        "quadrature_order",
+        [](pyb::object /*self*/) {{ return MassMatrixType::kQuadratureOrder; }})
+    .def_readonly("Me", &MassMatrixType::Me)
+    .def("rows", &MassMatrixType::OutputDimensions)
+    .def("cols", &MassMatrixType::InputDimensions)
+    .def("to_matrix", &MassMatrixType::ToMatrix)
+    .def(
+        "compute_element_mass_matrices",
+        [](MassMatrixType& M, VectorX const& rhoe) {{
+            M.ComputeElementMassMatrices(rhoe);
+        }},
+        pyb::arg("rhoe"))
+    .def_readwrite("dims", &MassMatrixType::dims);
 }}
 
 }} // namespace fem
 }} // namespace py
 }} // namespace pbat
 """
-                    file.write(code)
+                file.write(code)
 
-                headers.append(header)
-                sources.append(source)
+            headers.append(header)
+            sources.append(source)
 
     header = """
 #ifndef PYPBAT_FEM_MASS_MATRIX_H
@@ -894,14 +885,12 @@ void BindMassMatrix(pybind11::module& m);
 #endif // PYPBAT_FEM_MASS_MATRIX_H
 """
 
-    includes = "\n".join([f"#include \"MassMatrix_{dims}_{qorder}_{mesh_type_py}.h\""
+    includes = "\n".join([f"#include \"MassMatrix_{qorder}_{mesh_type_py}.h\""
                           for qorder in range(1, max_qorder+1)
-                          for dims in range(1, max_dims+1)
                           for mesh_type, mesh_type_py, mesh_includes in mesh_types])
 
-    bind_calls = "\n".join([f"BindMassMatrix_{dims}_{qorder}_{mesh_type_py}(m);"
+    bind_calls = "\n".join([f"BindMassMatrix_{qorder}_{mesh_type_py}(m);"
                             for qorder in range(1, max_qorder+1)
-                            for dims in range(1, max_dims+1)
                             for mesh_type, mesh_type_py, mesh_includes in mesh_types])
 
     source = f"""
@@ -1261,9 +1250,9 @@ if __name__ == "__main__":
     if args.type == "LaplacianMatrix":
         headers, sources = bind_laplacian_matrix(meshes, max_qorder=4)
     if args.type == "LoadVector":
-        headers, sources = bind_load_vector(meshes, max_dims=3, max_qorder=3)
+        headers, sources = bind_load_vector(meshes, max_qorder=3)
     if args.type == "MassMatrix":
-        headers, sources = bind_mass_matrix(meshes, max_dims=3, max_qorder=6)
+        headers, sources = bind_mass_matrix(meshes, max_qorder=6)
     if args.type == "Mesh":
         headers, sources = bind_mesh(meshes)
     if args.type == "ShapeFunctions":

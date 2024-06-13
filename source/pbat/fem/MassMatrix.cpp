@@ -28,20 +28,21 @@ TEST_CASE("[fem] MassMatrix")
 
     Scalar constexpr rho = 1.;
     common::ForRange<1, 3>([&]<auto kOrder>() {
-        common::ForRange<1, 4>([&]<auto OutDims> {
+        for (auto outDims = 1; outDims < 4; ++outDims)
+        {
             using Element        = fem::Tetrahedron<kOrder>;
             auto constexpr kDims = 3;
             using Mesh           = fem::Mesh<Element, kDims>;
             Mesh mesh(V, C);
             auto const N          = mesh.X.cols();
             Scalar constexpr zero = 1e-10;
-            auto const n          = N * OutDims;
+            auto const n          = N * outDims;
 
             auto constexpr kQuadratureOrder = 2 * kOrder;
-            using MassMatrix                = fem::MassMatrix<Mesh, OutDims, kQuadratureOrder>;
+            using MassMatrix                = fem::MassMatrix<Mesh, kQuadratureOrder>;
             CHECK(math::CLinearOperator<MassMatrix>);
             MatrixX const detJe = fem::DeterminantOfJacobian<kQuadratureOrder>(mesh);
-            MassMatrix matrixFreeMass(mesh, detJe, rho);
+            MassMatrix matrixFreeMass(mesh, detJe, rho, outDims);
 
             CSCMatrix const M = matrixFreeMass.ToMatrix();
             CHECK_EQ(M.rows(), n);
@@ -77,6 +78,6 @@ TEST_CASE("[fem] MassMatrix")
 
             // TODO: We should probably check that the mass matrices actually have the
             // right values... But this is probably best done in a separate test.
-        });
+        }
     });
 }

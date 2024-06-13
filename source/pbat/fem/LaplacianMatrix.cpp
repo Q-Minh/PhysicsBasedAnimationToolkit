@@ -28,60 +28,63 @@ TEST_CASE("[fem] LaplacianMatrix")
     // clang-format on
 
     common::ForRange<1, 3>([&]<auto kOrder>() {
-        using Element        = fem::Tetrahedron<kOrder>;
-        auto constexpr kDims = Element::kDims;
-        using Mesh           = fem::Mesh<Element, kDims>;
-        Mesh mesh(V, C);
-        auto const N                    = mesh.X.cols();
-        Scalar constexpr zero           = 1e-10;
-        auto const n                    = N;
-        auto constexpr kQuadratureOrder = [&]() {
-            if constexpr (kOrder == 1)
-                return 1;
-            else
-                return (kOrder - 1) + (kOrder - 1);
-        }();
+        for (auto outDims = 1; outDims < 4; ++outDims)
+        {
+            using Element        = fem::Tetrahedron<kOrder>;
+            auto constexpr kDims = Element::kDims;
+            using Mesh           = fem::Mesh<Element, kDims>;
+            Mesh mesh(V, C);
+            auto const N                    = mesh.X.cols();
+            Scalar constexpr zero           = 1e-10;
+            auto const n                    = N * outDims;
+            auto constexpr kQuadratureOrder = [&]() {
+                if constexpr (kOrder == 1)
+                    return 1;
+                else
+                    return (kOrder - 1) + (kOrder - 1);
+            }();
 
-        using LaplacianMatrix = fem::SymmetricLaplacianMatrix<Mesh, kQuadratureOrder>;
-        MatrixX const detJe   = fem::DeterminantOfJacobian<kQuadratureOrder>(mesh);
-        MatrixX const GNe     = fem::ShapeFunctionGradients<kQuadratureOrder>(mesh);
-        CHECK(math::CLinearOperator<LaplacianMatrix>);
-        LaplacianMatrix matrixFreeLaplacian(mesh, detJe, GNe);
+            using LaplacianMatrix = fem::SymmetricLaplacianMatrix<Mesh, kQuadratureOrder>;
+            MatrixX const detJe   = fem::DeterminantOfJacobian<kQuadratureOrder>(mesh);
+            MatrixX const GNe     = fem::ShapeFunctionGradients<kQuadratureOrder>(mesh);
+            CHECK(math::CLinearOperator<LaplacianMatrix>);
+            LaplacianMatrix matrixFreeLaplacian(mesh, detJe, GNe, outDims);
 
-        CSCMatrix const L = matrixFreeLaplacian.ToMatrix();
-        CHECK_EQ(L.rows(), n);
-        CHECK_EQ(L.cols(), n);
+            CSCMatrix const L = matrixFreeLaplacian.ToMatrix();
+            CHECK_EQ(L.rows(), n);
+            CHECK_EQ(L.cols(), n);
 
-        CSCMatrix const LT     = L.transpose();
-        Scalar const Esymmetry = (LT - L).squaredNorm() / L.squaredNorm();
-        CHECK_LE(Esymmetry, zero);
+            CSCMatrix const LT     = L.transpose();
+            Scalar const Esymmetry = (LT - L).squaredNorm() / L.squaredNorm();
+            CHECK_LE(Esymmetry, zero);
 
-        Eigen::SelfAdjointEigenSolver<CSCMatrix> eigs(L);
-        Scalar const maxEigenValue = eigs.eigenvalues().maxCoeff();
-        bool const bIsNegativeSemiDefinite =
-            (eigs.info() == Eigen::ComputationInfo::Success) and (maxEigenValue < zero);
-        CHECK(bIsNegativeSemiDefinite);
+            Eigen::SelfAdjointEigenSolver<CSCMatrix> eigs(L);
+            Scalar const maxEigenValue = eigs.eigenvalues().maxCoeff();
+            bool const bIsNegativeSemiDefinite =
+                (eigs.info() == Eigen::ComputationInfo::Success) and (maxEigenValue < zero);
+            CHECK(bIsNegativeSemiDefinite);
 
-        // Check that matrix-free matrix multiplication has same result as matrix
-        // multiplication
-        VectorX const x = VectorX::Ones(n);
-        VectorX yFree   = VectorX::Zero(n);
-        matrixFreeLaplacian.Apply(x, yFree);
-        VectorX y           = L * x;
-        Scalar const yError = (y - yFree).squaredNorm();
-        CHECK_LE(yError, zero);
-        // Laplacian of constant function should be zero
-        CHECK_LE(yFree.squaredNorm(), zero);
-        CHECK_LE(y.squaredNorm(), zero);
+            // Check that matrix-free matrix multiplication has same result as matrix
+            // multiplication
+            VectorX const x = VectorX::Ones(n);
+            VectorX yFree   = VectorX::Zero(n);
+            matrixFreeLaplacian.Apply(x, yFree);
+            VectorX y           = L * x;
+            Scalar const yError = (y - yFree).squaredNorm();
+            CHECK_LE(yError, zero);
+            // Laplacian of constant function should be zero
+            CHECK_LE(yFree.squaredNorm(), zero);
+            CHECK_LE(y.squaredNorm(), zero);
 
-        // Check linearity M(kx) = kM(x)
-        VectorX yInputScaled  = VectorX::Zero(n);
-        VectorX yOutputScaled = VectorX::Zero(n);
-        Scalar constexpr k    = -2.;
-        matrixFreeLaplacian.Apply(k * x, yInputScaled);
-        matrixFreeLaplacian.Apply(x, yOutputScaled);
-        yOutputScaled *= k;
-        Scalar const yLinearityError = (yInputScaled - yOutputScaled).norm() / yOutputScaled.norm();
-        CHECK_LE(yLinearityError, zero);
+            // Check linearity M(kx) = kM(x)
+            VectorX yInputScaled  = VectorX::Zero(n);
+            VectorX yOutputScaled = VectorX::Zero(n);
+            Scalar constexpr k    = -2.;
+            matrixFreeLaplacian.Apply(k * x, yInputScaled);
+            matrixFreeLaplacian.Apply(x, yOutputScaled);
+            yOutputScaled *= k;
+            Scalar const yLinearityError = (yInputScaled - yOutputScaled).norm() / yOutputScaled.norm();
+            CHECK_LE(yLinearityError, zero);
+        }
     });
 }

@@ -25,21 +25,22 @@ TEST_CASE("[fem] LoadVector")
     // clang-format on
 
     common::ForRange<1, 3>([&]<auto kOrder>() {
-        common::ForRange<1, 4>([&]<auto OutDims> {
+        for (auto outDims = 1; outDims < 4; ++outDims)
+        {
             using Element                   = fem::Tetrahedron<kOrder>;
             auto constexpr kQuadratureOrder = kOrder;
             auto constexpr kDims            = 3;
             using Mesh                      = fem::Mesh<Element, kDims>;
             Mesh mesh(V, C);
             auto const N = mesh.X.cols();
-            auto const n = N * OutDims;
+            auto const n = N * outDims;
 
-            using LoadVector    = fem::LoadVector<Mesh, OutDims, kQuadratureOrder>;
+            using LoadVector    = fem::LoadVector<Mesh, kQuadratureOrder>;
             MatrixX const detJe = fem::DeterminantOfJacobian<kQuadratureOrder>(mesh);
-            LoadVector loadVector(mesh, detJe, Vector<OutDims>::Ones());
+            LoadVector loadVector(mesh, detJe, VectorX::Ones(outDims), outDims);
 
             VectorX const f = loadVector.ToVector();
             CHECK_EQ(f.rows(), n);
-        });
+        }
     });
 }
