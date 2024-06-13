@@ -69,7 +69,7 @@ jobs:
           # Environment variables can be read directly on Windows and MacOS, but not Linux.
           # See https://cibuildwheel.pypa.io/en/stable/options/#environment-pass
           SKBUILD_BUILD_TOOL_ARGS: /p:CL_MPCount=4
-          SKBUILD_CMAKE_ARGS: -DCMAKE_TOOLCHAIN_FILE=${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake;-DVCPKG_MANIFEST_FEATURES=python;-DPBAT_BUILD_SHARED_LIBS:BOOL=OFF;-DPBAT_ENABLE_PROFILER:BOOL=ON;-DPBAT_BUILD_PYTHON_BINDINGS:BOOL=ON;-DPBAT_BUILD_TESTS:BOOL=OFF;-DCMAKE_POSITION_INDEPENDENT_CODE:BOOL=ON;-DCMAKE_CXX_FLAGS="/EHsc /MP4 /bigobj"
+          SKBUILD_CMAKE_ARGS: -DCMAKE_TOOLCHAIN_FILE=${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake;-DVCPKG_MANIFEST_FEATURES=python;-DPBAT_BUILD_SHARED_LIBS:BOOL=OFF;-DPBAT_ENABLE_PROFILER:BOOL=ON;-DPBAT_BUILD_PYTHON_BINDINGS:BOOL=ON;-DPBAT_BUILD_TESTS:BOOL=OFF;-DCMAKE_POSITION_INDEPENDENT_CODE:BOOL=ON;-DCMAKE_CXX_FLAGS="/EHsc /MP /bigobj"
 
       - uses: actions/upload-artifact@v4
         with:
