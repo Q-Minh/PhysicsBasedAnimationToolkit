@@ -13,7 +13,7 @@ class Element(Enum):
 
 def _mesh_type_name(mesh, element: str = None, order: int = None, dims: int = None):
     if mesh is not None:
-        return f"Mesh_{mesh.element}_Order_{mesh.order}_Dims_{mesh.dims}"
+        return f"Mesh_{mesh.element.lower()}_Order_{mesh.order}_Dims_{mesh.dims}"
     class_name = f"Mesh_{element.lower()}_Order_{order}_Dims_{dims}"
     return class_name
 

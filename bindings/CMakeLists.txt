@@ -43,11 +43,11 @@ source_group(
 
 # Make sure Python module can find shared library dependencies (i.e. TBB)
 # in install tree on non-Windows platforms.
-include(GNUInstallDirs)
+# include(GNUInstallDirs)
 list(APPEND _pbat_python_rpaths
     "$ORIGIN"
-    "$ORIGIN/${CMAKE_INSTALL_LIBDIR}"
-    "$ORIGIN/${CMAKE_INSTALL_BINDIR}"
+    # "$ORIGIN/${CMAKE_INSTALL_LIBDIR}"
+    # "$ORIGIN/${CMAKE_INSTALL_BINDIR}"
 )
 set_target_properties(PhysicsBasedAnimationToolkit_Python
     PROPERTIES
@@ -63,7 +63,12 @@ install(
     LIBRARY DESTINATION "pbatoolkit"
 )
 
-# NOTE: Install shared dependencies
+# Install shared dependencies
 foreach(_pbat_dependency IN ITEMS TBB::tbb fmt::fmt)
-    install(FILES $<TARGET_FILE:${_pbat_dependency}> DESTINATION "pbatoolkit")
+    get_target_property(_pbat_dependency_type ${_pbat_dependency} TYPE)
+    message(VERBOSE "PBAT: Library type of ${_pbat_dependency} is ${_pbat_dependency_type}")
+    if (_pbat_dependency_type STREQUAL "SHARED_LIBRARY")
+        message(VERBOSE "PBAT: Generating install rule for ${_pbat_dependency}")    
+        install(FILES $<TARGET_FILE:${_pbat_dependency}> DESTINATION "pbatoolkit")
+    endif()
 endforeach()
