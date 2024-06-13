@@ -16,7 +16,7 @@ target_sources(PhysicsBasedAnimationToolkit_Python
 
 target_link_libraries(PhysicsBasedAnimationToolkit_Python
     PRIVATE
-    PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit 
+    PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     pybind11::headers
 )
 
@@ -41,35 +41,29 @@ source_group(
     FILES ${_pbat_python_headers}
 )
 
-# NOTE: We assume that Python bindings link to statically built dependencies.
-# Make sure DLL dependencies end up together with python module in build tree
-# add_custom_command(
-#     TARGET PhysicsBasedAnimationToolkit_Python
-#     POST_BUILD
-#     COMMAND ${CMAKE_COMMAND} -E copy_if_different
-#     $<TARGET_RUNTIME_DLLS:PhysicsBasedAnimationToolkit_Python>
-#     $<TARGET_FILE_DIR:PhysicsBasedAnimationToolkit_Python>
-#     COMMAND_EXPAND_LISTS
-# )
-
-# Make sure Python module can find shared library dependencies (i.e. TBB) 
+# Make sure Python module can find shared library dependencies (i.e. TBB)
 # in install tree on non-Windows platforms.
+include(GNUInstallDirs)
+list(APPEND _pbat_python_rpaths
+    "$ORIGIN"
+    "$ORIGIN/${CMAKE_INSTALL_LIBDIR}"
+    "$ORIGIN/${CMAKE_INSTALL_BINDIR}"
+)
 set_target_properties(PhysicsBasedAnimationToolkit_Python
     PROPERTIES
-    INSTALL_RPATH "$ORIGIN"
+    INSTALL_RPATH ${_pbat_python_rpaths}
 )
 
 # Install rules for scikit-build-core. Note that we only support building
 # the python bindings with static linking to
 # PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit. Otherwise, we
 # need to handle installing the transitive DLL dependencies of our bindings.
-include(GNUInstallDirs)
 install(
     TARGETS PhysicsBasedAnimationToolkit_Python
     LIBRARY DESTINATION "pbatoolkit"
 )
 
-# NOTE: Our Python bindings only support static library dependencies, 
-# however, TBB only comes as a dynamic library. We handle this special 
-# case, unfortunately.
-install(FILES $<TARGET_FILE:TBB::tbb> DESTINATION "pbatoolkit")
+# NOTE: Install shared dependencies
+foreach(_pbat_dependency IN ITEMS TBB::tbb fmt::fmt)
+    install(FILES $<TARGET_FILE:${_pbat_dependency}> DESTINATION "pbatoolkit")
+endforeach()
