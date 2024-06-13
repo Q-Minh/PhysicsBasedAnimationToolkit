@@ -12,16 +12,19 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     "DoctestLoadDLL.cpp"
 )
 
-if(BUILD_SHARED_LIBS AND PBAT_BUILD_TESTS)
-    #[[
-        These compile definitions need to be declared only once.
-        See
-        https://github.com/doctest/doctest/blob/master/examples/executable_dll_and_plugin/implementation_2.cpp
-    ]]
+if(PBAT_BUILD_TESTS)
+    # Regardless of static or shared build, PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
+    # will host the implementation of doctest.
+    list(APPEND _pbat_doctest_macros "DOCTEST_CONFIG_IMPLEMENT")
+    
+    if(BUILD_SHARED_LIBS)
+        list(APPEND _pbat_doctest_macros "DOCTEST_CONFIG_IMPLEMENTATION_IN_DLL")
+    endif()
+
     set_source_files_properties("DoctestLoadDLL.cpp"
         TARGET_DIRECTORY PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
         PROPERTIES
-        COMPILE_DEFINITIONS "DOCTEST_CONFIG_IMPLEMENTATION_IN_DLL;DOCTEST_CONFIG_IMPLEMENT")
+        COMPILE_DEFINITIONS ${_pbat_doctest_macros})
 endif()
 
 add_subdirectory(common)
