@@ -1,4 +1,8 @@
 add_library(PhysicsBasedAnimationToolkit_Python_Fem)
+set_target_properties(PhysicsBasedAnimationToolkit_Python_Fem
+    PROPERTIES
+    FOLDER "PhysicsBasedAnimationToolkit/bindings/fem"
+)
 
 list(APPEND _pbat_fem_types
     "Gradient"
@@ -12,16 +16,21 @@ list(APPEND _pbat_fem_types
 )
 
 set(_pbat_python_autogen_dir "pbatautogen")
+
 foreach(_pbat_fem_type IN ITEMS ${_pbat_fem_types})
     set(_pbat_python_fem_target "PhysicsBasedAnimationToolkit_Python_Fem_${_pbat_fem_type}")
     add_library(${_pbat_python_fem_target})
+    set_target_properties(${_pbat_python_fem_target}
+        PROPERTIES
+        FOLDER "PhysicsBasedAnimationToolkit/bindings/fem/${_pbat_fem_type}"
+    )
     target_link_libraries(${_pbat_python_fem_target}
         PRIVATE
         PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
         Python::Module
         pybind11::headers
     )
-    
+
     execute_process(
         COMMAND ${Python_EXECUTABLE} bindings.py --cmake=1 --type=${_pbat_fem_type}
         WORKING_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}"
