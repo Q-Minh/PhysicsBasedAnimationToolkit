@@ -1,7 +1,4 @@
-pybind11_add_module(PhysicsBasedAnimationToolkit_Python
-    MODULE
-    EXCLUDE_FROM_ALL
-)
+Python_add_library(PhysicsBasedAnimationToolkit_Python MODULE WITH_SOABI)
 
 set_target_properties(PhysicsBasedAnimationToolkit_Python
     PROPERTIES
@@ -19,8 +16,14 @@ target_sources(PhysicsBasedAnimationToolkit_Python
 
 target_link_libraries(PhysicsBasedAnimationToolkit_Python
     PRIVATE
-    PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
+    PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit 
+    pybind11::headers
 )
+
+if(NOT MSVC AND NOT ${CMAKE_BUILD_TYPE} MATCHES Debug|RelWithDebInfo)
+    # Strip unnecessary sections of the binary on Linux/macOS
+    pybind11_strip(PhysicsBasedAnimationToolkit_Python)
+endif()
 
 add_subdirectory(pypbat)
 
