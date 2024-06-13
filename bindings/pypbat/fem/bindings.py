@@ -1,3 +1,5 @@
+autogendir = "pbatautogen"
+
 def mesh_types_of(max_order=3):
     elements = ["Line", "Triangle",
                 "Quadrilateral", "Tetrahedron", "Hexahedron"]
@@ -19,7 +21,7 @@ def bind_gradient(mesh_types: list, max_qorder=6):
     sources = []
     for mesh_type, mesh_type_py, mesh_includes in mesh_types:
         for qorder in range(1, max_qorder+1):
-            header = f"pbatautogen/Gradient_{qorder}_{mesh_type_py}.h"
+            header = f"{autogendir}/Gradient_{qorder}_{mesh_type_py}.h"
             with open(header, 'w', encoding="utf-8") as file:
                 code = f"""
 #ifndef PYPBAT_FEM_GRADIENT_{qorder}_{mesh_type_py}_H
@@ -41,7 +43,7 @@ void BindGradient_{qorder}_{mesh_type_py}(pybind11::module& m);
                 """
                 file.write(code)
 
-            source = f"pbatautogen/Gradient_{qorder}_{mesh_type_py}.cpp"
+            source = f"{autogendir}/Gradient_{qorder}_{mesh_type_py}.cpp"
             with open(source, 'w', encoding="utf-8") as file:
                 code = f"""
 #include "Gradient_{qorder}_{mesh_type_py}.h"
@@ -114,7 +116,7 @@ void BindGradient(pybind11::module& m);
 #endif // PYPBAT_FEM_GRADIENT_H
 """
 
-    includes = "\n".join([f"#include \"pbatautogen/Gradient_{qorder}_{mesh_type_py}.h\"" for qorder in range(
+    includes = "\n".join([f"#include \"Gradient_{qorder}_{mesh_type_py}.h\"" for qorder in range(
         1, max_qorder+1) for mesh_type, mesh_type_py, mesh_includes in mesh_types])
 
     bind_calls = "\n".join([f"BindGradient_{qorder}_{mesh_type_py}(m);" for qorder in range(
@@ -139,13 +141,13 @@ void BindGradient(pybind11::module& m)
 }} // namespace pbat
 """
 
-    with open("Gradient.h", 'w', encoding="utf-8") as fheader:
+    with open(f"{autogendir}/Gradient.h", 'w', encoding="utf-8") as fheader:
         fheader.write(header)
-    with open("Gradient.cpp", 'w', encoding="utf-8") as fsource:
+    with open(f"{autogendir}/Gradient.cpp", 'w', encoding="utf-8") as fsource:
         fsource.write(source)
 
-    # headers.append("Gradient.h")
-    # sources.append("Gradient.cpp")
+    headers.append(f"{autogendir}/Gradient.h")
+    sources.append(f"{autogendir}/Gradient.cpp")
     return (headers, sources)
 
 
@@ -163,7 +165,7 @@ def bind_hyper_elastic_potential(mesh_types: list, max_qorder: int = 6):
 
         for (psi_type, psi_type_py) in psi_types:
             for qorder in range(1, max_qorder+1):
-                header = f"pbatautogen/HyperElasticPotential_{psi_type_py}_{qorder}_{mesh_type_py}.h"
+                header = f"{autogendir}/HyperElasticPotential_{psi_type_py}_{qorder}_{mesh_type_py}.h"
                 with open(header, 'w', encoding="utf-8") as file:
                     code = f"""
 #ifndef PYPBAT_FEM_HYPER_ELASTIC_POTENTIAL_{psi_type_py}_{qorder}_{mesh_type_py}_H
@@ -185,7 +187,7 @@ void BindHyperElasticPotential_{psi_type_py}_{qorder}_{mesh_type_py}(pybind11::m
 """
                     file.write(code)
 
-                source = f"pbatautogen/HyperElasticPotential_{psi_type_py}_{qorder}_{mesh_type_py}.cpp"
+                source = f"{autogendir}/HyperElasticPotential_{psi_type_py}_{qorder}_{mesh_type_py}.cpp"
                 with open(source, 'w', encoding="utf-8") as file:
                     code = f"""
 #include "HyperElasticPotential_{psi_type_py}_{qorder}_{mesh_type_py}.h"
@@ -301,7 +303,7 @@ void BindHyperElasticPotential(pybind11::module& m);
 #endif // PYPBAT_FEM_HYPER_ELASTIC_POTENTIAL_H
 """
 
-    includes = "\n".join([f"#include \"pbatautogen/HyperElasticPotential_{psi_type_py}_{qorder}_{mesh_type_py}.h\""
+    includes = "\n".join([f"#include \"HyperElasticPotential_{psi_type_py}_{qorder}_{mesh_type_py}.h\""
                           for (psi_type, psi_type_py) in psi_types
                           for qorder in range(1, max_qorder+1)
                           for mesh_type, mesh_type_py, mesh_includes in mesh_types
@@ -332,13 +334,13 @@ void BindHyperElasticPotential(pybind11::module& m)
 }} // namespace pbat
 """
 
-    with open(f"HyperElasticPotential.h", 'w', encoding="utf-8") as fheader:
+    with open(f"{autogendir}/HyperElasticPotential.h", 'w', encoding="utf-8") as fheader:
         fheader.write(header)
-    with open(f"HyperElasticPotential.cpp", 'w', encoding="utf-8") as fsource:
+    with open(f"{autogendir}/HyperElasticPotential.cpp", 'w', encoding="utf-8") as fsource:
         fsource.write(source)
 
-    # headers.append("HyperElasticPotential.h")
-    # sources.append("HyperElasticPotential.cpp")
+    headers.append(f"{autogendir}/HyperElasticPotential.h")
+    sources.append(f"{autogendir}/HyperElasticPotential.cpp")
     return (headers, sources)
 
 
@@ -347,7 +349,7 @@ def bind_jacobian(mesh_types: list, max_qorder: int = 6):
     sources = []
 
     for mesh_type, mesh_type_py, mesh_includes in mesh_types:
-        header = f"pbatautogen/Jacobian_{mesh_type_py}.h"
+        header = f"{autogendir}/Jacobian_{mesh_type_py}.h"
         with open(header, 'w', encoding="utf-8") as file:
             code = f"""
 #ifndef PYPBAT_FEM_JACOBIAN_{mesh_type_py}_H
@@ -369,7 +371,7 @@ void BindJacobian_{mesh_type_py}(pybind11::module& m);
 """
             file.write(code)
 
-        source = f"pbatautogen/Jacobian_{mesh_type_py}.cpp"
+        source = f"{autogendir}/Jacobian_{mesh_type_py}.cpp"
         with open(source, 'w', encoding="utf-8") as file:
             code = f"""
 #include "Jacobian_{mesh_type_py}.h"
@@ -445,7 +447,7 @@ void BindJacobian(pybind11::module& m);
 #endif // PYPBAT_FEM_JACOBIAN_H
 """
 
-    includes = "\n".join([f"#include \"pbatautogen/Jacobian_{mesh_type_py}.h\""
+    includes = "\n".join([f"#include \"Jacobian_{mesh_type_py}.h\""
                           for mesh_type, mesh_type_py, mesh_includes in mesh_types])
 
     bind_calls = "\n".join([f"BindJacobian_{mesh_type_py}(m);"
@@ -470,13 +472,13 @@ void BindJacobian(pybind11::module& m)
 }} // namespace pbat
 """
 
-    with open("Jacobian.h", 'w', encoding="utf-8") as fheader:
+    with open(f"{autogendir}/Jacobian.h", 'w', encoding="utf-8") as fheader:
         fheader.write(header)
-    with open("Jacobian.cpp", 'w', encoding="utf-8") as fsource:
+    with open(f"{autogendir}/Jacobian.cpp", 'w', encoding="utf-8") as fsource:
         fsource.write(source)
 
-    # headers.append("Jacobian.h")
-    # sources.append("Jacobian.cpp")
+    headers.append(f"{autogendir}/Jacobian.h")
+    sources.append(f"{autogendir}/Jacobian.cpp")
     return (headers, sources)
 
 
@@ -486,7 +488,7 @@ def bind_laplacian_matrix(mesh_types: list, max_qorder: int = 6):
 
     for mesh_type, mesh_type_py, mesh_includes in mesh_types:
         for qorder in range(1, max_qorder+1):
-            header = f"pbatautogen/LaplacianMatrix_{qorder}_{mesh_type_py}.h"
+            header = f"{autogendir}/LaplacianMatrix_{qorder}_{mesh_type_py}.h"
             with open(header, 'w', encoding="utf-8") as file:
                 code = f"""
 #ifndef PYPBAT_FEM_LAPLACIAN_MATRIX_{qorder}_{mesh_type_py}_H
@@ -508,7 +510,7 @@ void BindLaplacianMatrix_{qorder}_{mesh_type_py}(pybind11::module& m);
 """
                 file.write(code)
 
-            source = f"pbatautogen/LaplacianMatrix_{qorder}_{mesh_type_py}.cpp"
+            source = f"{autogendir}/LaplacianMatrix_{qorder}_{mesh_type_py}.cpp"
             with open(source, 'w', encoding="utf-8") as file:
                 code = f"""
 #include "LaplacianMatrix_{qorder}_{mesh_type_py}.h"
@@ -583,7 +585,7 @@ void BindLaplacianMatrix(pybind11::module& m);
 #endif // PYPBAT_FEM_LAPLACIAN_MATRIX_H
 """
 
-    includes = "\n".join([f"#include \"pbatautogen/LaplacianMatrix_{qorder}_{mesh_type_py}.h\""
+    includes = "\n".join([f"#include \"LaplacianMatrix_{qorder}_{mesh_type_py}.h\""
                           for qorder in range(1, max_qorder+1)
                           for mesh_type, mesh_type_py, mesh_includes in mesh_types])
 
@@ -610,13 +612,13 @@ void BindLaplacianMatrix(pybind11::module& m)
 }} // namespace pbat
 """
 
-    with open("LaplacianMatrix.h", 'w', encoding="utf-8") as fheader:
+    with open(f"{autogendir}/LaplacianMatrix.h", 'w', encoding="utf-8") as fheader:
         fheader.write(header)
-    with open("LaplacianMatrix.cpp", 'w', encoding="utf-8") as fsource:
+    with open(f"{autogendir}/LaplacianMatrix.cpp", 'w', encoding="utf-8") as fsource:
         fsource.write(source)
 
-    # headers.append("LaplacianMatrix.h")
-    # sources.append("LaplacianMatrix.cpp")
+    headers.append(f"{autogendir}/LaplacianMatrix.h")
+    sources.append(f"{autogendir}/LaplacianMatrix.cpp")
     return (headers, sources)
 
 
@@ -627,7 +629,7 @@ def bind_load_vector(mesh_types: list, max_dims: int = 3, max_qorder: int = 3):
     for mesh_type, mesh_type_py, mesh_includes in mesh_types:
         for dims in range(1, max_dims+1):
             for qorder in range(1, max_qorder+1):
-                header = f"pbatautogen/LoadVector_{dims}_{qorder}_{mesh_type_py}.h"
+                header = f"{autogendir}/LoadVector_{dims}_{qorder}_{mesh_type_py}.h"
                 with open(header, 'w', encoding="utf-8") as file:
                     code = f"""
 #ifndef PYPBAT_FEM_LOAD_VECTOR_{dims}_{qorder}_{mesh_type_py}_H
@@ -649,7 +651,7 @@ void BindLoadVector_{dims}_{qorder}_{mesh_type_py}(pybind11::module& m);
 """
                     file.write(code)
 
-                source = f"pbatautogen/LoadVector_{dims}_{qorder}_{mesh_type_py}.cpp"
+                source = f"{autogendir}/LoadVector_{dims}_{qorder}_{mesh_type_py}.cpp"
                 with open(source, 'w', encoding="utf-8") as file:
                     code = f"""
 #include "LoadVector_{dims}_{qorder}_{mesh_type_py}.h"
@@ -730,7 +732,7 @@ void BindLoadVector(pybind11::module& m);
 #endif // PYPBAT_FEM_LOAD_VECTOR_H
 """
 
-    includes = "\n".join([f"#include \"pbatautogen/LoadVector_{dims}_{qorder}_{mesh_type_py}.h\""
+    includes = "\n".join([f"#include \"LoadVector_{dims}_{qorder}_{mesh_type_py}.h\""
                           for qorder in range(1, max_qorder+1)
                           for dims in range(1, max_dims+1)
                           for mesh_type, mesh_type_py, mesh_includes in mesh_types])
@@ -759,13 +761,13 @@ void BindLoadVector(pybind11::module& m)
 }} // namespace pbat
 """
 
-    with open("LoadVector.h", 'w', encoding="utf-8") as fheader:
+    with open(f"{autogendir}/LoadVector.h", 'w', encoding="utf-8") as fheader:
         fheader.write(header)
-    with open("LoadVector.cpp", 'w', encoding="utf-8") as fsource:
+    with open(f"{autogendir}/LoadVector.cpp", 'w', encoding="utf-8") as fsource:
         fsource.write(source)
 
-    # headers.append("LoadVector.h")
-    # sources.append("LoadVector.cpp")
+    headers.append(f"{autogendir}/LoadVector.h")
+    sources.append(f"{autogendir}/LoadVector.cpp")
     return (headers, sources)
 
 
@@ -776,7 +778,7 @@ def bind_mass_matrix(mesh_types: list, max_dims: int = 3, max_qorder: int = 6):
     for mesh_type, mesh_type_py, mesh_includes in mesh_types:
         for dims in range(1, max_dims+1):
             for qorder in range(1, max_qorder+1):
-                header = f"pbatautogen/MassMatrix_{dims}_{qorder}_{mesh_type_py}.h"
+                header = f"{autogendir}/MassMatrix_{dims}_{qorder}_{mesh_type_py}.h"
                 with open(header, 'w', encoding="utf-8") as file:
                     code = f"""
 #ifndef PYPBAT_FEM_MASS_MATRIX_{dims}_{qorder}_{mesh_type_py}_H
@@ -798,7 +800,7 @@ void BindMassMatrix_{dims}_{qorder}_{mesh_type_py}(pybind11::module& m);
 """
                     file.write(code)
 
-                source = f"pbatautogen/MassMatrix_{dims}_{qorder}_{mesh_type_py}.cpp"
+                source = f"{autogendir}/MassMatrix_{dims}_{qorder}_{mesh_type_py}.cpp"
                 with open(source, 'w', encoding="utf-8") as file:
                     code = f"""
 #include "MassMatrix_{dims}_{qorder}_{mesh_type_py}.h"
@@ -892,7 +894,7 @@ void BindMassMatrix(pybind11::module& m);
 #endif // PYPBAT_FEM_MASS_MATRIX_H
 """
 
-    includes = "\n".join([f"#include \"pbatautogen/MassMatrix_{dims}_{qorder}_{mesh_type_py}.h\""
+    includes = "\n".join([f"#include \"MassMatrix_{dims}_{qorder}_{mesh_type_py}.h\""
                           for qorder in range(1, max_qorder+1)
                           for dims in range(1, max_dims+1)
                           for mesh_type, mesh_type_py, mesh_includes in mesh_types])
@@ -921,13 +923,13 @@ void BindMassMatrix(pybind11::module& m)
 }} // namespace pbat
 """
 
-    with open("MassMatrix.h", 'w', encoding="utf-8") as fheader:
+    with open(f"{autogendir}/MassMatrix.h", 'w', encoding="utf-8") as fheader:
         fheader.write(header)
-    with open("MassMatrix.cpp", 'w', encoding="utf-8") as fsource:
+    with open(f"{autogendir}/MassMatrix.cpp", 'w', encoding="utf-8") as fsource:
         fsource.write(source)
 
-    # headers.append("MassMatrix.h")
-    # sources.append("MassMatrix.cpp")
+    headers.append(f"{autogendir}/MassMatrix.h")
+    sources.append(f"{autogendir}/MassMatrix.cpp")
     return (headers, sources)
 
 
@@ -936,7 +938,7 @@ def bind_mesh(mesh_types: list):
     sources = []
 
     for mesh_type, mesh_type_py, mesh_includes in mesh_types:
-        header = f"pbatautogen/Mesh_{mesh_type_py}.h"
+        header = f"{autogendir}/Mesh_{mesh_type_py}.h"
         with open(header, 'w', encoding="utf-8") as file:
             code = f"""
 #ifndef PYPBAT_FEM_MESH_{mesh_type_py}_H
@@ -958,7 +960,7 @@ void BindMesh_{mesh_type_py}(pybind11::module& m);
 """
             file.write(code)
 
-        source = f"pbatautogen/Mesh_{mesh_type_py}.cpp"
+        source = f"{autogendir}/Mesh_{mesh_type_py}.cpp"
         with open(source, 'w', encoding="utf-8") as file:
             code = f"""
 #include "Mesh_{mesh_type_py}.h"
@@ -1026,7 +1028,7 @@ void BindMesh(pybind11::module& m);
 #endif // PYPBAT_FEM_MESH_H
 """
 
-    includes = "\n".join([f"#include \"pbatautogen/Mesh_{mesh_type_py}.h\""
+    includes = "\n".join([f"#include \"Mesh_{mesh_type_py}.h\""
                           for mesh_type, mesh_type_py, mesh_includes in mesh_types])
 
     bind_calls = "\n".join([f"BindMesh_{mesh_type_py}(m);"
@@ -1051,13 +1053,13 @@ void BindMesh(pybind11::module& m)
 }} // namespace pbat
 """
 
-    with open("Mesh.h", 'w', encoding="utf-8") as fheader:
+    with open(f"{autogendir}/Mesh.h", 'w', encoding="utf-8") as fheader:
         fheader.write(header)
-    with open("Mesh.cpp", 'w', encoding="utf-8") as fsource:
+    with open(f"{autogendir}/Mesh.cpp", 'w', encoding="utf-8") as fsource:
         fsource.write(source)
 
-    # headers.append("Mesh.h")
-    # sources.append("Mesh.cpp")
+    headers.append(f"{autogendir}/Mesh.h")
+    sources.append(f"{autogendir}/Mesh.cpp")
     return (headers, sources)
 
 
@@ -1066,7 +1068,7 @@ def bind_shape_functions(mesh_types: list, max_qorder: int = 6):
     sources = []
 
     for mesh_type, mesh_type_py, mesh_includes in mesh_types:
-        header = f"pbatautogen/ShapeFunctions_{mesh_type_py}.h"
+        header = f"{autogendir}/ShapeFunctions_{mesh_type_py}.h"
         with open(header, 'w', encoding="utf-8") as file:
             code = f"""
 #ifndef PYPBAT_FEM_SHAPE_FUNCTIONS_{mesh_type_py}_H
@@ -1088,7 +1090,7 @@ void BindShapeFunctions_{mesh_type_py}(pybind11::module& m);
 """
             file.write(code)
 
-        source = f"pbatautogen/ShapeFunctions_{mesh_type_py}.cpp"
+        source = f"{autogendir}/ShapeFunctions_{mesh_type_py}.cpp"
         with open(source, 'w', encoding="utf-8") as file:
             code = f"""
 #include "ShapeFunctions_{mesh_type_py}.h"
@@ -1189,7 +1191,7 @@ void BindShapeFunctions(pybind11::module& m);
 #endif // PYPBAT_FEM_SHAPE_FUNCTIONS_H
 """
 
-    includes = "\n".join([f"#include \"pbatautogen/ShapeFunctions_{mesh_type_py}.h\""
+    includes = "\n".join([f"#include \"ShapeFunctions_{mesh_type_py}.h\""
                           for mesh_type, mesh_type_py, mesh_includes in mesh_types])
 
     bind_calls = "\n".join([f"BindShapeFunctions_{mesh_type_py}(m);"
@@ -1214,13 +1216,13 @@ void BindShapeFunctions(pybind11::module& m)
 }} // namespace pbat
 """
 
-    with open("ShapeFunctions.h", 'w', encoding="utf-8") as fheader:
+    with open(f"{autogendir}/ShapeFunctions.h", 'w', encoding="utf-8") as fheader:
         fheader.write(header)
-    with open("ShapeFunctions.cpp", 'w', encoding="utf-8") as fsource:
+    with open(f"{autogendir}/ShapeFunctions.cpp", 'w', encoding="utf-8") as fsource:
         fsource.write(source)
 
-    # headers.append("ShapeFunctions.h")
-    # sources.append("ShapeFunctions.cpp")
+    headers.append(f"{autogendir}/ShapeFunctions.h")
+    sources.append(f"{autogendir}/ShapeFunctions.cpp")
     return (headers, sources)
 
 
@@ -1236,6 +1238,12 @@ if __name__ == "__main__":
         help="Prints generated files to CMake via stdout",
         type=bool,
         dest="cmake")
+    parser.add_argument(
+        "-t",
+        "--type",
+        help="The type whose instantiations should be generated",
+        type=str,
+        dest="type")
     args = parser.parse_args()
 
     import os
@@ -1243,19 +1251,23 @@ if __name__ == "__main__":
         os.mkdir("pbatautogen")
 
     meshes = mesh_types_of(max_order=3)
-    (gradient_headers, gradient_sources) = bind_gradient(meshes, max_qorder=5)
-    (hyper_elastic_potential_headers,
-     hyper_elastic_potential_sources) = bind_hyper_elastic_potential(meshes, max_qorder=6)
-    (jacobian_headers, jacobian_sources) = bind_jacobian(meshes, max_qorder=6)
-    (laplacian_matrix_headers, laplacian_matrix_sources) = bind_laplacian_matrix(
-        meshes, max_qorder=4)
-    (load_vector_headers, load_vector_sources) = bind_load_vector(
-        meshes, max_dims=3, max_qorder=3)
-    (mass_matrix_headers, mass_matrix_sources) = bind_mass_matrix(
-        meshes, max_dims=3, max_qorder=6)
-    (mesh_headers, mesh_sources) = bind_mesh(meshes)
-    (shape_functions_headers, shape_functions_sources) = bind_shape_functions(
-        meshes, max_qorder=6)
+    headers, sources = None, None
+    if args.type == "Gradient":
+        header, sources = bind_gradient(meshes, max_qorder=5)
+    if args.type == "HyperElasticPotential":
+        headers, sources = bind_hyper_elastic_potential(meshes, max_qorder=6)
+    if args.type == "Jacobian":
+        headers, sources = bind_jacobian(meshes, max_qorder=6)
+    if args.type == "LaplacianMatrix":
+        headers, sources = bind_laplacian_matrix(meshes, max_qorder=4)
+    if args.type == "LoadVector":
+        headers, sources = bind_load_vector(meshes, max_dims=3, max_qorder=3)
+    if args.type == "MassMatrix":
+        headers, sources = bind_mass_matrix(meshes, max_dims=3, max_qorder=6)
+    if args.type == "Mesh":
+        headers, sources = bind_mesh(meshes)
+    if args.type == "ShapeFunctions":
+        headers, sources = bind_shape_functions(meshes, max_qorder=6)
 
     # headers = "\n".join([
     #     "\n".join(gradient_headers),
@@ -1269,14 +1281,5 @@ if __name__ == "__main__":
     # ])
     if args.cmake:
         import sys
-        sources = ";".join([
-            ";".join(gradient_sources),
-            ";".join(hyper_elastic_potential_sources),
-            ";".join(jacobian_sources),
-            ";".join(laplacian_matrix_sources),
-            ";".join(load_vector_sources),
-            ";".join(mass_matrix_sources),
-            ";".join(mesh_sources),
-            ";".join(shape_functions_sources)
-        ])
-        sys.stdout.write(sources)
+        cmake_target_sources = ";".join(sources)
+        sys.stdout.write(cmake_target_sources)

@@ -1,13 +1,13 @@
 #include "fem.h"
 
-#include "Gradient.h"
-#include "HyperElasticPotential.h"
-#include "Jacobian.h"
-#include "LaplacianMatrix.h"
-#include "LoadVector.h"
-#include "MassMatrix.h"
-#include "Mesh.h"
-#include "ShapeFunctions.h"
+#include "pbatautogen/Gradient.h"
+#include "pbatautogen/HyperElasticPotential.h"
+#include "pbatautogen/Jacobian.h"
+#include "pbatautogen/LaplacianMatrix.h"
+#include "pbatautogen/LoadVector.h"
+#include "pbatautogen/MassMatrix.h"
+#include "pbatautogen/Mesh.h"
+#include "pbatautogen/ShapeFunctions.h"
 
 namespace pbat {
 namespace py {
