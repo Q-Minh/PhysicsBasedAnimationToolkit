@@ -1,5 +1,5 @@
-add_library(PhysicsBasedAnimationToolkit_Python_Fem)
-set_target_properties(PhysicsBasedAnimationToolkit_Python_Fem
+add_library(PBAT_PyFem)
+set_target_properties(PBAT_PyFem
     PROPERTIES
     FOLDER "PhysicsBasedAnimationToolkit/bindings/fem"
 )
@@ -15,10 +15,9 @@ list(APPEND _pbat_fem_types
     "ShapeFunctions"
 )
 
-set(_pbat_python_autogen_dir "pbatautogen")
-
+set(_pbat_python_autogen_dir "gen")
 foreach(_pbat_fem_type IN ITEMS ${_pbat_fem_types})
-    set(_pbat_python_fem_target "PhysicsBasedAnimationToolkit_Python_Fem_${_pbat_fem_type}")
+    set(_pbat_python_fem_target "PBAT_PyFem_${_pbat_fem_type}")
     add_library(${_pbat_python_fem_target})
     set_target_properties(${_pbat_python_fem_target}
         PROPERTIES
@@ -63,7 +62,7 @@ foreach(_pbat_fem_type IN ITEMS ${_pbat_fem_types})
         ${_pbat_fem_bindings_impl}
     )
 
-    target_link_libraries(PhysicsBasedAnimationToolkit_Python_Fem
+    target_link_libraries(PBAT_PyFem
         PRIVATE
         ${_pbat_python_fem_target}
         Python::Module
@@ -71,27 +70,27 @@ foreach(_pbat_fem_type IN ITEMS ${_pbat_fem_types})
     )
 endforeach()
 
-target_link_libraries(PhysicsBasedAnimationToolkit_Python_Fem
+target_link_libraries(PBAT_PyFem
     PRIVATE
     PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     Python::Module
     pybind11::headers
 )
-target_sources(PhysicsBasedAnimationToolkit_Python_Fem
+target_sources(PBAT_PyFem
     PUBLIC
     FILE_SET api
     TYPE HEADERS
     BASE_DIRS ${CMAKE_CURRENT_LIST_DIR}
 )
 
-target_sources(PhysicsBasedAnimationToolkit_Python_Fem
+target_sources(PBAT_PyFem
     PUBLIC
     FILE_SET api
     FILES
     "fem.h"
 )
 
-target_sources(PhysicsBasedAnimationToolkit_Python_Fem
+target_sources(PBAT_PyFem
     PRIVATE
     "fem.cpp"
 )

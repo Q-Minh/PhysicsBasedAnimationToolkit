@@ -8,7 +8,7 @@ add_subdirectory(profiling)
 
 target_link_libraries(PhysicsBasedAnimationToolkit_Python
     PRIVATE
-    PhysicsBasedAnimationToolkit_Python_Fem
+    PBAT_PyFem
     Python::Module
     pybind11::headers
 )

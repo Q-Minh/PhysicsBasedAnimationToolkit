@@ -47,4 +47,4 @@ CMakeUserPresets.json
 data
 .polyscope.ini
 imgui.ini
-pbatautogen
+bindings/**/gen
