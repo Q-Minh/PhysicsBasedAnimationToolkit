@@ -36,6 +36,8 @@ foreach(_pbat_fem_type IN ITEMS ${_pbat_fem_types})
         OUTPUT_VARIABLE _pbat_fem_bindings_impl
         ERROR_VARIABLE _pbat_fem_bindings_error
         RESULT_VARIABLE _pbat_bindings_exit_code
+        ECHO_OUTPUT_VARIABLE
+        ECHO_ERROR_VARIABLE
     )
 
     if(NOT _pbat_bindings_exit_code EQUAL 0)
