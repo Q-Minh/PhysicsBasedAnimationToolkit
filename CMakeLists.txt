@@ -42,6 +42,10 @@ endif()
 
 # Install
 include(GNUInstallDirs)
+set_target_properties(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
+    PROPERTIES
+    INSTALL_RPATH ${CMAKE_INSTALL_LIBDIR}
+)
 install(
     TARGETS
     PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
