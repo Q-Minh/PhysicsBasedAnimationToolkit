@@ -81,6 +81,7 @@ $ l, V = sp.sparse.eigsh(HU, k=30, M=M, which='SM')
 
 In Python script:
 ```
+import pbatoolkit.profiling
 profiler = pbatoolkit.profiling.Profiler()
 connected = profiler.wait_for_server_connection(timeout=10)
 # Check connected...
