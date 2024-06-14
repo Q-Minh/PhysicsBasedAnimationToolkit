@@ -10,10 +10,10 @@ def mesh_types_of(max_order=3):
     for e, element in enumerate(elements):
         for order in range(1, max_order+1):
             for dims in range(ldims[e], udims+1):
-                mesh_type = f"pbat::fem::Mesh<pbat::fem::{
-                    element}<{order}>,{dims}>"
-                mesh_type_py = f"Mesh_{element.lower()}_Order_{
-                    order}_Dims_{dims}"
+                mesh_type = f"""pbat::fem::Mesh<pbat::fem::{
+                    element}<{order}>,{dims}>"""
+                mesh_type_py = f"""Mesh_{element.lower()}_Order_{
+                    order}_Dims_{dims}"""
                 includes = f"""#include <pbat/fem/{
                     element}.h>\n#include <pbat/fem/Mesh.h>\n"""
                 mesh_type_filename = f"M{element[:3].lower()}{order}_{dims}"
