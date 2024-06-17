@@ -55,7 +55,7 @@ TEST_CASE("[fem] ShapeFunctions")
         Matrix<Element::kDims, Element::kNodes> const XiRef =
             common::ToEigen(Element::Coordinates)
                 .reshaped(Element::kDims, Element::kNodes)
-                .cast<Scalar>() /
+                .template cast<Scalar>() /
             static_cast<Scalar>(Element::kOrder);
 
         auto const numberOfElements = mesh.E.cols();
