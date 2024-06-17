@@ -92,7 +92,7 @@ for t in range(timesteps):
 ```
 All calls to pbat will be profiled on a per-frame basis in the Tracy profiler server GUI.
 
-> *Use method `profiler` of `pbatoolkit.profiling.Profiler` to profile code external to PBAT, allowing for an integrated profiling experience while using various scientific computing packages*.
+> *Use method `profile` of `pbatoolkit.profiling.Profiler` to profile code external to PBAT, allowing for an integrated profiling experience while using various scientific computing packages*.
 
 ## Contributing
 
