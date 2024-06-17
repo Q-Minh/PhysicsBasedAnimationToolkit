@@ -37,10 +37,10 @@ CMake build targets:
 ## Install
 
 From command line:
-```
-$ cd path/to/PhysicsBasedAnimationToolkit
-$ cmake -S . -B build -A x64 -DPBAT_ENABLE_PROFILER:BOOL=ON -DPBAT_BUILD_TESTS:BOOL=ON
-$ cmake --install build --config Release
+```bash
+cd path/to/PhysicsBasedAnimationToolkit
+cmake -S . -B build -A x64 -DPBAT_ENABLE_PROFILER:BOOL=ON -DPBAT_BUILD_TESTS:BOOL=ON
+cmake --install build --config Release
 ```
 
 ## Quick start
@@ -54,8 +54,8 @@ Take a look at the unit tests, found in the library's source (`.cpp`) files.
 ### Python
 
 In command line:
-```
-$ pip install pbatoolkit libigl numpy scipy
+```bash
+pip install pbatoolkit libigl numpy scipy
 ```
 
 In Python:
