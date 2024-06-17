@@ -25,8 +25,8 @@ TEST_CASE("[fem] Mesh")
                  3, 0, 6, 5, 3,
                  5, 6, 0, 3, 6;
             // clang-format on
-            auto const kOrder                 = 1;
-            auto const kDims                  = 3;
+            auto constexpr kOrder             = 1;
+            auto constexpr kDims              = 3;
             using Element                     = fem::Tetrahedron<kOrder>;
             using Mesh                        = fem::Mesh<Element, kDims>;
             auto const kExpectedNumberOfNodes = 8;

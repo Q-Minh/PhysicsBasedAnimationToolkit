@@ -26,6 +26,7 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     "DivergenceVector.cpp"
     "Gradient.cpp"
     "HyperElasticPotential.cpp"
+    "Jacobian.cpp"
     "LaplacianMatrix.cpp"
     "LoadVector.cpp"
     "MassMatrix.cpp"
