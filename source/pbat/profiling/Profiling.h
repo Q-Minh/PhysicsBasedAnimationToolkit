@@ -16,6 +16,7 @@
 #endif // PBAT_HAS_TRACY_PROFILER
 
 #include <string_view>
+#include <type_traits>
 
 namespace pbat {
 namespace profiling {
@@ -25,6 +26,14 @@ PBAT_API void BeginFrame(std::string_view name);
 PBAT_API void EndFrame(std::string_view name);
 
 PBAT_API bool IsConnectedToServer();
+
+template <class Func, class... Args>
+std::invoke_result_t<Func, Args...> Profile(std::string_view zoneName, Func&& f, Args&&... args)
+{
+    PBA_PROFILE_SCOPE;
+    ZoneName(zoneName.data(), zoneName.size());
+    return f(std::forward<Args>(args...));
+}
 
 } // namespace profiling
 } // namespace pbat

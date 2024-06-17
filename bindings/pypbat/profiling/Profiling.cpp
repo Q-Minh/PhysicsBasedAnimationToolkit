@@ -1,6 +1,8 @@
 #include "Profiling.h"
 
+#include <functional>
 #include <pbat/profiling/Profiling.h>
+#include <string_view>
 
 namespace pbat {
 namespace py {
@@ -19,6 +21,12 @@ void Bind(pybind11::module& m)
         "is_connected_to_server",
         &pbat::profiling::IsConnectedToServer,
         "Check if profiler has connected to profiling server");
+    m.def(
+        "profile",
+        [](std::function<void()> const& f, std::string_view zoneName) {
+            pbat::profiling::Profile(zoneName, f);
+        },
+        "Profile input function evaluation");
 }
 
 } // namespace profiling
