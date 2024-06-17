@@ -9,6 +9,7 @@
 #include <fmt/core.h>
 #include <pbat/Aliases.h>
 #include <pbat/profiling/Profiling.h>
+#include <string>
 #include <tbb/parallel_for.h>
 
 namespace pbat {
@@ -37,6 +38,27 @@ ShapeFunctions()
         Ng.col(g) = ElementType::N(Xg.col(g));
     }
     return Ng;
+}
+
+template <CElement TElement, class TDerivedXi>
+MatrixX
+ShapeFunctionsAt(Eigen::DenseBase<TDerivedXi> const& Xi)
+{
+    PBA_PROFILE_SCOPE;
+    using ElementType = TElement;
+    if (Xi.rows() != ElementType::kDims)
+    {
+        std::string const what = fmt::format(
+            "Expected evaluation points in d={} dimensions, but got Xi.rows()={}",
+            ElementType::kDims,
+            Xi.rows());
+        throw std::invalid_argument(what);
+    }
+    MatrixX N(ElementType::kNodes, Xi.cols());
+    tbb::parallel_for(Index{0}, Index{Xi.cols()}, [&](Index i) {
+        N.col(i) = ElementType::N(Xi.col(i));
+    });
+    return N;
 }
 
 /**
