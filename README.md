@@ -76,7 +76,7 @@ $ hep.precompute_hessian_sparsity()
 $ x = mesh.X.rehape(mesh.X.shape[0]*mesh.X.shape[1], order='f')
 $ hep.compute_element_elasticity(x)
 $ U, gradU, HU = hep.eval(), hep.to_vector(), hep.to_matrix()
-$ l, V = sp.sparse.eigsh(HU, k=30, M=M, which='SM')
+$ l, V = sp.sparse.linalg.eigsh(HU, k=30, M=M, which='SM')
 ```
 
 In Python script:
