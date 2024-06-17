@@ -51,7 +51,7 @@ TEST_CASE("[fem] Jacobian")
             Matrix<Element::kDims, Element::kNodes> const XiExpected =
                 common::ToEigen(Element::Coordinates)
                     .reshaped(Element::kDims, Element::kNodes)
-                    .cast<Scalar>() /
+                    .template cast<Scalar>() /
                 static_cast<Scalar>(Element::kOrder);
 
             // Compute reference positions
