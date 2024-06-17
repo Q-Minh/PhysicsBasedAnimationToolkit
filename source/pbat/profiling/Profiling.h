@@ -8,11 +8,11 @@
 #endif // PBAT_HAS_TRACY_PROFILER
 
 #ifdef PBAT_HAS_TRACY_PROFILER
-    #define PBA_PROFILE_SCOPE             ZoneScoped
-    #define PBA_PROFILE_NAMED_SCOPE(name) ZoneScopedN(name)
+    #define PBAT_PROFILE_SCOPE             ZoneScoped
+    #define PBAT_PROFILE_NAMED_SCOPE(name) ZoneScopedN(name)
 #else
-    #define PBA_PROFILE_SCOPE
-    #define PBA_PROFILE_NAMED_SCOPE(name)
+    #define PBAT_PROFILE_SCOPE
+    #define PBAT_PROFILE_NAMED_SCOPE(name)
 #endif // PBAT_HAS_TRACY_PROFILER
 
 #include <string_view>
@@ -30,9 +30,9 @@ PBAT_API bool IsConnectedToServer();
 template <class Func, class... Args>
 std::invoke_result_t<Func, Args...> Profile(std::string_view zoneName, Func&& f, Args&&... args)
 {
-    PBA_PROFILE_SCOPE;
+    PBAT_PROFILE_SCOPE;
     ZoneName(zoneName.data(), zoneName.size());
-    return f(std::forward<Args>(args...));
+    return f(std::forward<Args>(args)...);
 }
 
 } // namespace profiling

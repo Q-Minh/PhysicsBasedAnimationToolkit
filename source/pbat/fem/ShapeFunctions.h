@@ -43,7 +43,7 @@ ShapeFunctions()
 template <CElement TElement, class TDerivedXi>
 MatrixX ShapeFunctionsAt(Eigen::DenseBase<TDerivedXi> const& Xi)
 {
-    PBA_PROFILE_SCOPE;
+    PBAT_PROFILE_NAMED_SCOPE("fem::ShapeFunctionsAt");
     using ElementType = TElement;
     if (Xi.rows() != ElementType::kDims)
     {
@@ -72,7 +72,7 @@ MatrixX ShapeFunctionsAt(Eigen::DenseBase<TDerivedXi> const& Xi)
 template <int QuadratureOrder, CMesh TMesh, class TDerived>
 MatrixX IntegratedShapeFunctions(TMesh const& mesh, Eigen::DenseBase<TDerived> const& detJe)
 {
-    PBA_PROFILE_SCOPE;
+    PBAT_PROFILE_NAMED_SCOPE("fem::IntegratedShapeFunctions");
     using MeshType           = TMesh;
     using ElementType        = typename MeshType::ElementType;
     using QuadratureRuleType = typename ElementType::template QuadratureType<QuadratureOrder>;
@@ -166,7 +166,7 @@ Matrix<TElement::kNodes, TDerivedX::RowsAtCompileTime> ShapeFunctionGradients(
 template <int QuadratureOrder, CMesh TMesh>
 MatrixX ShapeFunctionGradients(TMesh const& mesh)
 {
-    PBA_PROFILE_SCOPE;
+    PBAT_PROFILE_NAMED_SCOPE("fem::ShapeFunctionGradients");
     using MeshType              = TMesh;
     using ElementType           = typename MeshType::ElementType;
     using QuadratureRuleType    = typename ElementType::template QuadratureType<QuadratureOrder>;

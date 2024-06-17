@@ -83,7 +83,7 @@ inline SymmetricLaplacianMatrix<TMesh, QuadratureOrder>::SymmetricLaplacianMatri
 template <CMesh TMesh, int QuadratureOrder>
 inline CSCMatrix SymmetricLaplacianMatrix<TMesh, QuadratureOrder>::ToMatrix() const
 {
-    PBA_PROFILE_SCOPE;
+    PBAT_PROFILE_NAMED_SCOPE("fem::SymmetricLaplacianMatrix::ToMatrix");
     CheckValidState();
     CSCMatrix L(OutputDimensions(), InputDimensions());
     using SparseIndex = typename CSCMatrix::StorageIndex;
@@ -117,7 +117,7 @@ inline CSCMatrix SymmetricLaplacianMatrix<TMesh, QuadratureOrder>::ToMatrix() co
 template <CMesh TMesh, int QuadratureOrder>
 inline void SymmetricLaplacianMatrix<TMesh, QuadratureOrder>::ComputeElementLaplacians()
 {
-    PBA_PROFILE_SCOPE;
+    PBAT_PROFILE_NAMED_SCOPE("fem::SymmetricLaplacianMatrix::ComputeElementLaplacians");
     CheckValidState();
     // Compute element laplacians
     auto const wg                   = common::ToEigen(QuadratureRuleType::weights);
@@ -193,7 +193,7 @@ inline void SymmetricLaplacianMatrix<TMesh, QuadratureOrder>::Apply(
     Eigen::MatrixBase<TDerivedIn> const& x,
     Eigen::DenseBase<TDerivedOut>& y) const
 {
-    PBA_PROFILE_SCOPE;
+    PBAT_PROFILE_NAMED_SCOPE("fem::SymmetricLaplacianMatrix::Apply");
     CheckValidState();
     auto const numberOfDofs = InputDimensions();
     bool const bAreInputOutputValid =

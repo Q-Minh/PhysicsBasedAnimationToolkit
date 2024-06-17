@@ -84,7 +84,7 @@ inline LoadVector<TMesh, QuadratureOrder>::LoadVector(
 template <CMesh TMesh, int QuadratureOrder>
 inline VectorX LoadVector<TMesh, QuadratureOrder>::ToVector() const
 {
-    PBA_PROFILE_SCOPE;
+    PBAT_PROFILE_NAMED_SCOPE("fem::LoadVector::ToVector");
     CheckValidState();
     auto const n                = mesh.X.cols() * dims;
     auto const numberOfElements = mesh.E.cols();
