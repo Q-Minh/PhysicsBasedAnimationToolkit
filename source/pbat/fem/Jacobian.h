@@ -100,7 +100,7 @@ Vector<TElement::kDims> ReferencePosition(
     // Initial guess is element's barycenter.
     auto const coords = common::ToEigen(ElementType::Coordinates).reshaped(kDims, kNodes);
     auto const vertexLagrangePositions =
-        (coords(Eigen::all, ElementType::Vertices).cast<Scalar>() /
+        (coords(Eigen::all, ElementType::Vertices).template cast<Scalar>() /
          static_cast<Scalar>(ElementType::kOrder));
     Vector<kDims> Xik =
         vertexLagrangePositions.rowwise().sum() / static_cast<Scalar>(ElementType::Vertices.size());
@@ -118,7 +118,7 @@ Vector<TElement::kDims> ReferencePosition(
     // Do up to maxIterations Gauss Newton iterations
     for (auto k = 0; k < maxIterations; ++k)
     {
-        if (rk.lpNorm<1>() <= eps)
+        if (rk.template lpNorm<1>() <= eps)
             break;
 
         // Non-constant jacobians need to be updated
