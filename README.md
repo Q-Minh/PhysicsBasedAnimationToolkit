@@ -58,22 +58,22 @@ In command line:
 $ pip install pbatoolkit libigl numpy scipy
 ```
 
-To profile PBAT, connect to `python.exe` in `Tracy` profiler server GUI before relevant calls to `pbatoolkit` functions/methods.
+To profile relevant calls to `pbatoolkit` functions/methods, connect to `python.exe` in the `Tracy` profiler server GUI.
 
 In Python interactive shell:
 ```
 $ import pbatoolkit as pbat, pbatoolkit.fem, igl, numpy as np, scipy as sp
 $ V, C, F = igl.read_mesh("path/to/mesh.mesh")
 $ mesh = pbat.fem.mesh(V.T, C.T, element=pbat.fem.Element.Tetrahedron, order=1)
+$ x = mesh.X.reshape(mesh.X.shape[0]*mesh.X.shape[1], order='f')
 $ detJeM = pbat.fem.jacobian_determinants(mesh, quadrature_order=2)
 $ M = pbat.fem.mass_matrix(mesh, detJeM, rho=1000., dims=3, quadrature_order=2).to_matrix()
 $ detJeU = pbat.fem.jacobian_determinants(mesh, quadrature_order=1)
 $ GNeU = pbat.fem.shape_function_gradients(mesh, quadrature_order=1)
 $ Y = np.full(mesh.E.shape[1], 1e6)
 $ nu = np.full(mesh.E.shape[1], 0.45)
-$ hep = pbat.fem.hyper_elastic_potential(mesh, detJeU, GNeU, Y, nu, psi= pbat.fem.HyperElasticEnergy.StableNeohookean, quadrature_order=1)
+$ hep = pbat.fem.hyper_elastic_potential(mesh, detJeU, GNeU, Y, nu, psi= pbat.fem.HyperElasticEnergy.StableNeoHookean, quadrature_order=1)
 $ hep.precompute_hessian_sparsity()
-$ x = mesh.X.rehape(mesh.X.shape[0]*mesh.X.shape[1], order='f')
 $ hep.compute_element_elasticity(x)
 $ U, gradU, HU = hep.eval(), hep.to_vector(), hep.to_matrix()
 $ l, V = sp.sparse.linalg.eigsh(HU, k=30, M=M, which='SM')
@@ -92,7 +92,7 @@ for t in range(timesteps):
 ```
 All calls to pbat will be profiled on a per-frame basis in the Tracy profiler server GUI.
 
-> *Use methods `begin_zone` and `end_zone` in `pbatoolkit.profiling.Profiler` to profile code external to PBAT, allowing for an integrated profiling experience while using various scientific computing packages*.
+> *Use method `profiler` of `pbatoolkit.profiling.Profiler` to profile code external to PBAT, allowing for an integrated profiling experience while using various scientific computing packages*.
 
 ## Contributing
 

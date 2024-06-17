@@ -15,6 +15,8 @@
     #define PBAT_PROFILE_NAMED_SCOPE(name)
 #endif // PBAT_HAS_TRACY_PROFILER
 
+#include <map>
+#include <string>
 #include <string_view>
 #include <type_traits>
 
@@ -28,10 +30,35 @@ PBAT_API void EndFrame(std::string_view name);
 PBAT_API bool IsConnectedToServer();
 
 template <class Func, class... Args>
-std::invoke_result_t<Func, Args...> Profile(std::string_view zoneName, Func&& f, Args&&... args)
+std::invoke_result_t<Func, Args...> Profile(std::string const& zoneName, Func&& f, Args&&... args)
 {
-    PBAT_PROFILE_SCOPE;
-    ZoneName(zoneName.data(), zoneName.size());
+    static auto constexpr line = (uint32_t)TracyLine;
+    struct SourceLocationData
+    {
+        SourceLocationData(std::string_view zoneNameView)
+            : name(zoneNameView), function(TracyFunction), file(TracyFile), data()
+        {
+            data.name     = name.data();
+            data.function = function.data();
+            data.file     = file.data();
+            data.line     = line;
+            data.color    = 0;
+        }
+        std::string name;
+        std::string function;
+        std::string file;
+        tracy::SourceLocationData data;
+    };
+    static std::map<std::string, SourceLocationData> zones{};
+    auto it = zones.find(zoneName);
+    if (it == zones.end())
+    {
+        bool inserted{false};
+        std::tie(it, inserted) = zones.insert({zoneName, SourceLocationData(zoneName)});
+        assert(inserted);
+    }
+    SourceLocationData const& data = it->second;
+    tracy::ScopedZone zone(&(data.data));
     return f(std::forward<Args>(args)...);
 }
 
