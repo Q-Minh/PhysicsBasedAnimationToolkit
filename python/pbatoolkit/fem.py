@@ -75,6 +75,25 @@ def jacobian_determinants(mesh, quadrature_order: int = 1) -> np.ndarray:
     return function_(mesh, quadrature_order)
 
 
+def reference_positions(mesh, E: np.ndarray, X: np.ndarray, max_iterations: int = 5, epsilon: float = 1e-10):
+    """Computes reference positions of domain positions X in corresponding elements E, using Gauss-Newton.
+
+    Args:
+        mesh: The FEM mesh
+        E (np.ndarray): 1D index array of element indices
+        X (np.ndarray): |#dims|x|E.shape[0]| matrix of domain positions in corresponding elements in E
+        max_iterations (int, optional): Max number of Gauss-Newton iterations. Defaults to 5.
+        epsilon (float, optional): Residual early out. Defaults to 1e-10.
+
+    Returns:
+        np.ndarray: The reference positions in elements E corresponding to domain positions X in the mesh.
+    """
+    mesh_name = _mesh_type_name(mesh)
+    function_name = f"reference_positions_{mesh_name}"
+    function_ = getattr(_fem, function_name)
+    return function_(mesh, E, X, max_iterations, epsilon)
+
+
 def integrated_shape_functions(mesh, detJe: np.ndarray, quadrature_order: int = 1) -> np.ndarray:
     """Integrates all element shape functions via polynomial quadrature rule
 
@@ -96,7 +115,10 @@ def integrated_shape_functions(mesh, detJe: np.ndarray, quadrature_order: int = 
 
 
 def shape_function_gradients(mesh, quadrature_order: int = 1) -> np.ndarray:
-    """Computes shape function gradients at all quadrature points.
+    """Computes shape function gradients at all quadrature points. 
+    Note that the mesh elements need to be linear transformations on the 
+    reference elements for this method to work properly, even if elements 
+    themselves support higher order shape functions.
 
     Args:
         mesh: The FEM mesh
@@ -112,6 +134,19 @@ def shape_function_gradients(mesh, quadrature_order: int = 1) -> np.ndarray:
     function_name = f"shape_function_gradients_{mesh_name}"
     function_ = getattr(_fem, function_name)
     return function_(mesh, quadrature_order)
+
+
+def shape_functions_at(mesh, Xi: np.ndarray):
+    """Computes shape functions at reference positions Xi (i.e. positions in element space) for the given mesh.
+
+    Args:
+        mesh: The FEM mesh
+        Xi (np.ndarray): Positions in element reference space
+    """
+    mesh_name = _mesh_type_name(mesh)
+    function_name = f"shape_functions_at_{mesh_name}"
+    function_ = getattr(_fem, function_name)
+    return function_(mesh, Xi)
 
 
 def laplacian_matrix(mesh, detJe: np.ndarray, GNe: np.ndarray, dims: int = 1, quadrature_order: int = 1):

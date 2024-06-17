@@ -41,8 +41,7 @@ ShapeFunctions()
 }
 
 template <CElement TElement, class TDerivedXi>
-MatrixX
-ShapeFunctionsAt(Eigen::DenseBase<TDerivedXi> const& Xi)
+MatrixX ShapeFunctionsAt(Eigen::DenseBase<TDerivedXi> const& Xi)
 {
     PBA_PROFILE_SCOPE;
     using ElementType = TElement;
@@ -109,7 +108,13 @@ MatrixX IntegratedShapeFunctions(TMesh const& mesh, Eigen::DenseBase<TDerived> c
 }
 
 /**
- * @brief Computes gradients of FEM basis functions in reference element
+ * @brief Computes gradients of FEM basis functions in reference element. Only works for linear
+ * maps, but we do not emit an error when TElement::bHasConstantJacobian is false, since the
+ * element's function space might be non-linear, while its current configuration induces a linear
+ * map. I.e., a kth order element that is purely a rigid transformation on the reference element
+ * still induces a linear map, even if the element's function space is kth order. It is up to the
+ * user to give the right inputs, and we cannot/won't check those.
+ *
  * @tparam TDerivedXi
  * @tparam TDerivedX
  * @tparam TElement

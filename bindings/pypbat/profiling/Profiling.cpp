@@ -2,6 +2,7 @@
 
 #include <functional>
 #include <pbat/profiling/Profiling.h>
+#include <pybind11/functional.h>
 #include <string_view>
 
 namespace pbat {
@@ -23,7 +24,7 @@ void Bind(pybind11::module& m)
         "Check if profiler has connected to profiling server");
     m.def(
         "profile",
-        [](std::function<void()> const& f, std::string_view zoneName) {
+        [](std::string_view zoneName, std::function<void()> const& f) {
             pbat::profiling::Profile(zoneName, f);
         },
         "Profile input function evaluation");

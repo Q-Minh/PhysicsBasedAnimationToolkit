@@ -162,7 +162,7 @@ def bind_hyper_elastic_potential(mesh_types: list, max_qorder: int = 6):
     sources = []
 
     psi_types = [
-        ("SaintVenantKirchhoffEnergy", "StVk", "StVk"), ("StableNeoHookeanEnergy", "StableNeoHookean", "SH")]
+        ("SaintVenantKirchhoffEnergy", "StVk", "StVk"), ("StableNeoHookeanEnergy", "StableNeoHookean", "SNH")]
     for mesh_type, mesh_type_py, mesh_includes, mesh_type_filename in mesh_types:
         # Order 3 hexahedron element has too many DOFs to be stack allocated
         # by Eigen in the fem::HessianWrtDofs calls, so skip it.
@@ -425,6 +425,22 @@ void BindJacobian_{mesh_type_py}(pybind11::module& m)
         }},
         pyb::arg("mesh"),
         pyb::arg("quadrature_order"));
+        
+        std::string const referencePositionsName = "reference_positions_{mesh_type_py}";
+        m.def(
+            referencePositionsName.data(),
+            [&](MeshType const& mesh,
+                Eigen::Ref<IndexVectorX const> const& E,
+                Eigen::Ref<MatrixX const> const& X,
+                int maxIterations,
+                Scalar eps) -> MatrixX {{
+                return pbat::fem::ReferencePositions<MeshType>(mesh, E, X, maxIterations, eps);
+            }},
+            pyb::arg("mesh"),
+            pyb::arg("E"),
+            pyb::arg("X"),
+            pyb::arg("max_iterations"),
+            pyb::arg("epsilon"));
 }}
 
 }} // namespace fem
@@ -1157,6 +1173,15 @@ void BindShapeFunctions_{mesh_type_py}(pybind11::module& m)
         }},
         pyb::arg("mesh"),
         pyb::arg("quadrature_order"));
+        
+    std::string const shapeFunctionsAtName = "shape_functions_at_" + meshTypeName;
+    m.def(
+        shapeFunctionsAtName.data(),
+        [&](MeshType const& mesh, Eigen::Ref<MatrixX const> const& Xi) -> MatrixX {{
+            return pbat::fem::ShapeFunctionsAt<typename MeshType::ElementType>(Xi);
+        }}, 
+        pyb::arg("mesh"),
+        pyb::arg("Xi"));
 }}
 
 }} // namespace fem

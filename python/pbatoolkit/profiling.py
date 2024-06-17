@@ -21,3 +21,6 @@ class Profiler:
 
     def end_frame(self, frame_name: str):
         _profiling.end_frame(frame_name)
+        
+    def profile(self, zone_name: str, func):
+        _profiling.profile(zone_name, func)
