@@ -2,7 +2,7 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     PUBLIC
     FILE_SET api
     FILES 
-        "common.h"
+        "Common.h"
         "Concepts.h"
         "ConstexprFor.h"
         "Eigen.h"

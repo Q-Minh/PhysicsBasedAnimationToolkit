@@ -3,6 +3,7 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     FILE_SET api
     FILES
     "HyperElasticity.h"
+    "Physics.h"
     "SaintVenantKirchhoffEnergy.h"
     "StableNeoHookeanEnergy.h"
 )

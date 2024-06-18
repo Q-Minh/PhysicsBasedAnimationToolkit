@@ -2,10 +2,10 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     PUBLIC
     FILE_SET api
     FILES
-    "LinAlg.h"
-    "SparsityPattern.h"
+    "BoundingVolumeHierarchy.h"
+    "Geometry.h"
 )
 target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     PRIVATE
-    "SparsityPattern.cpp"
+    "BoundingVolumeHierarchy.cpp"
 )

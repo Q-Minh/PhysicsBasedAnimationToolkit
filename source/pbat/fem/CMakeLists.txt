@@ -5,6 +5,7 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     "Concepts.h"
     "DeformationGradient.h"
     "DivergenceVector.h"
+    "Fem.h"
     "Gradient.h"
     "Hexahedron.h"
     "HyperElasticPotential.h"

@@ -6,6 +6,7 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     "GaussQuadrature.h"
     "IntegerArithmeticChecks.h"
     "LinearOperator.h"
+    "Math.h"
     "PolynomialBasis.h"
     "Rational.h"
     "SymmetricQuadratureRules.h"
