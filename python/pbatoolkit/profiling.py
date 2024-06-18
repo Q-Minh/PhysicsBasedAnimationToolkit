@@ -23,4 +23,4 @@ class Profiler:
         _profiling.end_frame(frame_name)
         
     def profile(self, zone_name: str, func):
-        _profiling.profile(zone_name, func)
+        return _profiling.profile(zone_name, func)
