@@ -4,7 +4,10 @@
 
 #include <Eigen/Geometry>
 #include <array>
-#include <pbat/aliases.h>
+#include <exception>
+#include <fmt/format.h>
+#include <pbat/Aliases.h>
+#include <string>
 
 namespace pbat {
 namespace geometry {
@@ -26,31 +29,66 @@ class AxisAlignedBoundingBox : public Eigen::AlignedBox<Scalar, Dims>
     AxisAlignedBoundingBox(BaseType&& box);
     AxisAlignedBoundingBox& operator=(BaseType const& box);
     AxisAlignedBoundingBox& operator=(BaseType&& box);
-    AxisAlignedBoundingBox(Vector<Dims> const& min, Vector<Dims> const& max);
+
+    template <class TDerivedMin, class TDerivedMax>
+    AxisAlignedBoundingBox(
+        Eigen::DenseBase<TDerivedMin> const& min,
+        Eigen::DenseBase<TDerivedMax> const& max);
 
     template <class TDerived>
     AxisAlignedBoundingBox(Eigen::DenseBase<TDerived> const& P);
 };
 
-/**
- * @brief
- * @tparam Vector3Iterator
- * @param begin
- * @param end
- * @return
- */
-template <class Vector3Iterator>
-AxisAlignedBoundingBox aabb_of(Vector3Iterator begin, Vector3Iterator end)
+template <int Dims>
+inline AxisAlignedBoundingBox<Dims>::AxisAlignedBoundingBox(BaseType const& box) : BaseType(box)
 {
-    AxisAlignedBoundingBox aabb{};
-    for (auto it = begin; it != end; ++it)
+}
+
+template <int Dims>
+inline AxisAlignedBoundingBox<Dims>::AxisAlignedBoundingBox(BaseType&& box) : BaseType(box)
+{
+}
+
+template <int Dims>
+inline AxisAlignedBoundingBox<Dims>& AxisAlignedBoundingBox<Dims>::operator=(BaseType const& box)
+{
+    BaseType::operator=(box);
+    return *this;
+}
+
+template <int Dims>
+inline AxisAlignedBoundingBox<Dims>& AxisAlignedBoundingBox<Dims>::operator=(BaseType&& box)
+{
+    BaseType::operator=(box);
+    return *this;
+}
+
+template <int Dims>
+template <class TDerivedMin, class TDerivedMax>
+inline AxisAlignedBoundingBox<Dims>::AxisAlignedBoundingBox(
+    Eigen::DenseBase<TDerivedMin> const& min,
+    Eigen::DenseBase<TDerivedMax> const& max)
+    : BaseType(min, max)
+{
+}
+
+template <int Dims>
+template <class TDerived>
+inline AxisAlignedBoundingBox<Dims>::AxisAlignedBoundingBox(Eigen::DenseBase<TDerived> const& P)
+{
+    if (P.rows() != Dims)
     {
-        aabb.extend(*it);
+        std::string const what = fmt::format(
+            "Expected points P of dimensions {}x|#points|, but got {}x{}",
+            Dims,
+            P.rows(),
+            P.cols());
+        throw std::invalid_argument(what);
     }
-    Vector3 const e = Vector3::Ones() * eps();
-    aabb.extend(aabb.min() - e);
-    aabb.extend(aabb.max() + e);
-    return aabb;
+    for (auto i = 0; i < P.cols(); ++i)
+    {
+        this->extend(P.col(i));
+    }
 }
 
 } // namespace geometry
