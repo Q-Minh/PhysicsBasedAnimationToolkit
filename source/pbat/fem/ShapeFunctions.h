@@ -127,13 +127,30 @@ Matrix<TElement::kNodes, TDerivedX::RowsAtCompileTime> ShapeFunctionGradients(
     Eigen::MatrixBase<TDerivedXi> const& Xi,
     Eigen::MatrixBase<TDerivedX> const& X)
 {
-    // \phi(X) = N(J^{-1} X) = N(\Xi)
+    // NOTE:
+    // \phi(X) = N(\Xi(X))
+    // So to be mathematically precise, what we should compute is:
+    // -> \nabla \phi(X) = \nabla \Xi N(\Xi(X)) J_X \Xi(X)
+    // ->                = grad N * J_X \Xi(X)
+    // This requires the Jacobian of the inverse map taking domain element to reference element.
+    // Because this map is potentially non-linear, we compute it via Gauss-Newton iterations in
+    // Jacobian.h. Hence, to get the jacobian of that map, we also need to compute derivatives of
+    // the Gauss-Newton iterations in Jacobian.h.
+    //
+    // However, we assume that domain elements are linear transformations of reference elements,
+    // so that the inverse map is linear, i.e. the Jacobian is constant. Hence,
+    // \phi(X) = N(J^{-1} (X - X_0)) = N(\Xi)
     // grad_X \phi(X) = d N(\Xi) / d\Xi d \Xi / dX
     //                = grad_\Xi N * J^{-1}
     // If we transpose that equation, we get
     // [ grad_X \phi(X) ]^T = J^{-T} * grad_\Xi N^T
     // Recall that the pseudoinverse of J is J^{-1} = U \Sigma^{-1} V^T
     // We pseudoinvert its transpose directly, J^{-T} = V \Sigma^{-1} U^T
+    //
+    // For non-linear elements, like hexahedra or quadrilaterals, the accuracy of the gradients
+    // might be unacceptable, but will be exact, if domain hex or quad elements are linear
+    // transformations on reference hex/quad elements. This is the case for axis-aligned elements,
+    // for example, which would arise when constructing a mesh from an octree or quadtree.
     auto constexpr kInputDims                     = TElement::kDims;
     auto constexpr kOutputDims                    = TDerivedX::RowsAtCompileTime;
     using AffineElementType                       = typename TElement::AffineBaseType;
