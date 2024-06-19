@@ -2,6 +2,7 @@
 #define PBAT_GEOMETRY_DISTANCE_QUERIES_H
 
 #include "ClosestPointQueries.h"
+#include "OverlapQueries.h"
 
 #include <pbat/Aliases.h>
 
@@ -38,6 +39,28 @@ Scalar PointTriangle(
     Eigen::MatrixBase<TDerivedA> const& A,
     Eigen::MatrixBase<TDerivedB> const& B,
     Eigen::MatrixBase<TDerivedC> const& C);
+
+/**
+ * @brief
+ * @tparam TDerivedP
+ * @tparam TDerivedA
+ * @tparam TDerivedB
+ * @tparam TDerivedC
+ * @tparam TDerivedD
+ * @param P
+ * @param A
+ * @param B
+ * @param C
+ * @param D
+ * @return
+ */
+template <class TDerivedP, class TDerivedA, class TDerivedB, class TDerivedC, class TDerivedD>
+Scalar PointTetrahedron(
+    Eigen::MatrixBase<TDerivedP> const& P,
+    Eigen::MatrixBase<TDerivedA> const& A,
+    Eigen::MatrixBase<TDerivedB> const& B,
+    Eigen::MatrixBase<TDerivedC> const& C,
+    Eigen::MatrixBase<TDerivedC> const& D);
 
 /**
  * @brief Obtains the signed distance of X w.r.t. plane (P,n)
@@ -101,6 +124,27 @@ Scalar PointTriangle(
     Vector<TDerivedP::RowsAtCompileTime> const PP =
         ClosestPointQueries::PointInTriangle(P, A, B, C);
     return (P - PP).norm();
+}
+
+template <class TDerivedP, class TDerivedA, class TDerivedB, class TDerivedC, class TDerivedD>
+Scalar PointTetrahedron(
+    Eigen::MatrixBase<TDerivedP> const& P,
+    Eigen::MatrixBase<TDerivedA> const& A,
+    Eigen::MatrixBase<TDerivedB> const& B,
+    Eigen::MatrixBase<TDerivedC> const& C,
+    Eigen::MatrixBase<TDerivedC> const& D)
+{
+    bool const bPointInTetrahedron = OverlapQueries::PointTetrahedron(P, A, B, C, D);
+    if (bPointInTetrahedron)
+        return 0.;
+
+    Vector<4> sd{
+        PointTriangle(P, A, B, D),
+        PointTriangle(P, B, C, D),
+        PointTriangle(P, C, A, D),
+        PointTriangle(P, A, C, B)};
+    Scalar const min = sd.minCoeff();
+    return min;
 }
 
 template <class TDerivedX, class TDerivedP, class TDerivedN>
