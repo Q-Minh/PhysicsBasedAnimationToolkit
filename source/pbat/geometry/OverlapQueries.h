@@ -435,7 +435,7 @@ bool LineSegmentTriangle(
     Eigen::MatrixBase<TDerivedB> const& B,
     Eigen::MatrixBase<TDerivedC> const& C)
 {
-    return false;
+    return IntersectionQueries::UvwLineSegmentTriangle(P, Q, A, B, C).has_value();
 }
 
 template <class TDerivedP, class TDerivedn, class TDerivedL, class TDerivedU>
