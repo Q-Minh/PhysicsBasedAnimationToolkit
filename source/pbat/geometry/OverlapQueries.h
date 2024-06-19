@@ -13,7 +13,7 @@ namespace geometry {
 namespace OverlapQueries {
 
 /**
- * @brief Checks if point P is contained in tetrahedron ABCD
+ * @brief Checks if point P is contained in tetrahedron ABCD, in at least 3D.
  * @param P
  * @param A
  * @param B
@@ -30,7 +30,7 @@ bool PointTetrahedron(
     Eigen::MatrixBase<TDerivedD> const& D);
 
 /**
- * @brief Tests for overlap between sphere (c1,r1) and sphere (c2,r2)
+ * @brief Tests for overlap between sphere (C1,R1) and sphere (C2,R2).
  * @param c1
  * @param r1
  * @param c2
@@ -62,10 +62,10 @@ bool AxisAlignedBoundingBoxes(
 
 /**
  * @brief Tests for overlap between sphere (c,r) and axis-aligned bounding box (low,up)
- * @param c
- * @param r
- * @param low
- * @param up
+ * @param C
+ * @param R
+ * @param L
+ * @param U
  * @return
  */
 template <class TDerivedC, class TDerivedL, class TDerivedU>
@@ -106,7 +106,7 @@ bool LineSegmentAxisAlignedBoundingBox(
     Eigen::MatrixBase<TDerivedU> const& U);
 
 /**
- * @brief
+ * @brief Detects if the line segment PQ passes through the triangle ABC, in 3D.
  * @param P
  * @param Q
  * @param A
@@ -155,7 +155,8 @@ bool TriangleAxisAlignedBoundingBox(
     Eigen::MatrixBase<TDerivedU> const& U);
 
 /**
- * @brief Tests for overlap between tetrahedron ABCD and axis-aligned bounding box (low,up)
+ * @brief Tests for overlap between tetrahedron ABCD and axis-aligned bounding box (L,U), in at
+ * least 3D.
  * @param A
  * @param B
  * @param C
@@ -180,7 +181,7 @@ bool TetrahedronAxisAlignedBoundingBox(
     Eigen::MatrixBase<TDerivedU> const& U);
 
 /**
- * @brief Tests for overlap between triangle A1B1C1 and triangle A2B2C2
+ * @brief Tests for overlap between triangle A1B1C1 and triangle A2B2C2, in 3D.
  * @param A1
  * @param B1
  * @param C1
@@ -205,7 +206,7 @@ bool UvwTriangles(
     Eigen::MatrixBase<TDerivedC2> const& C2);
 
 /**
- * @brief Tests for overlap between triangle ABC and tetrahedron IJKL
+ * @brief Tests for overlap between triangle ABC and tetrahedron IJKL, in at least 3D.
  * @param A
  * @param B
  * @param C
@@ -233,7 +234,7 @@ bool TriangleTetrahedron(
     Eigen::MatrixBase<TDerivedL> const& L);
 
 /**
- * @brief Tests for overlap between tetrahedron A1B1C1D1 and tetrahedron A2B2C2D2
+ * @brief Tests for overlap between tetrahedron A1B1C1D1 and tetrahedron A2B2C2D2, in at least 3D.
  * @param A1
  * @param B1
  * @param C1
@@ -264,7 +265,7 @@ bool Tetrahedra(
     Eigen::MatrixBase<TDerivedD2> const& D2);
 
 /**
- * @brief Tests for overlap between a triangle ABC and a sphere with center c of radius r
+ * @brief Tests for overlap between a triangle ABC and a sphere with center C of radius R
  * @param A
  * @param B
  * @param C
@@ -281,7 +282,7 @@ bool TriangleSphere(
     Scalar R);
 
 /**
- * @brief Tests for overlap between a tetrahedron ABCD and a sphere with center c of radius r
+ * @brief Tests for overlap between a tetrahedron ABCD and a sphere with center C of radius R
  * @param A
  * @param B
  * @param C

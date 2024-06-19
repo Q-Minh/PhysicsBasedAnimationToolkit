@@ -40,6 +40,21 @@ std::optional<Vector<TDerivedP::RowsAtCompileTime>> LineSegmentSphere(
     Eigen::MatrixBase<TDerivedC> const& C,
     Scalar R);
 
+/**
+ * @brief Computes the intersection point, if any, between a line including points P,Q and the
+ * plane spanned by triangle ABC, in 3D.
+ * @tparam TDerivedQ
+ * @tparam TDerivedA
+ * @tparam TDerivedB
+ * @tparam TDerivedC
+ * @tparam TDerivedP
+ * @param P
+ * @param Q
+ * @param A
+ * @param B
+ * @param C
+ * @return
+ */
 template <class TDerivedP, class TDerivedQ, class TDerivedA, class TDerivedB, class TDerivedC>
 std::optional<Vector<TDerivedP::RowsAtCompileTime>> LineSegmentPlane(
     Eigen::MatrixBase<TDerivedP> const& P,
@@ -48,6 +63,18 @@ std::optional<Vector<TDerivedP::RowsAtCompileTime>> LineSegmentPlane(
     Eigen::MatrixBase<TDerivedB> const& B,
     Eigen::MatrixBase<TDerivedC> const& C);
 
+/**
+ * @brief Computes the intersection point, if any, between a line including points P,Q and the
+ * plane (n,d), in 3D.
+ * @tparam TDerivedP
+ * @tparam TDerivedQ
+ * @tparam TDerivedn
+ * @param P
+ * @param Q
+ * @param n
+ * @param d
+ * @return
+ */
 template <class TDerivedP, class TDerivedQ, class TDerivedn>
 std::optional<Vector<TDerivedP::RowsAtCompileTime>> LineSegmentPlane(
     Eigen::MatrixBase<TDerivedP> const& P,
@@ -57,13 +84,12 @@ std::optional<Vector<TDerivedP::RowsAtCompileTime>> LineSegmentPlane(
 
 /**
  * @brief Computes the intersection point, if any, between a line including points P,Q and a
- * triangle ABC.
+ * triangle ABC, in 3D.
  * @param P
  * @param Q
  * @param A
  * @param B
  * @param C
- * @param request_uvw
  * @return
  */
 template <class TDerivedP, class TDerivedQ, class TDerivedA, class TDerivedB, class TDerivedC>
@@ -76,7 +102,7 @@ std::optional<Vector<3>> UvwLineTriangle(
 
 /**
  * @brief Computes the intersection point, if any, between a line segment delimited by points
- * P,Q and a triangle ABC.
+ * P,Q and a triangle ABC, in 3D.
  * @param P
  * @param Q
  * @param A
@@ -95,7 +121,7 @@ std::optional<Vector<3>> UvwLineSegmentTriangle(
 /**
  * @brief Computes intersection points between 3 edges (as line segments) of triangle A1B1C1 and
  * triangle A2B2C2, and intersection points between 3 edges (as line segments) of triangle
- * A2B2C2 and triangle A1B1C1.
+ * A2B2C2 and triangle A1B1C1, in 3D.
  * @param A1
  * @param B1
  * @param C1
