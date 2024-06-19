@@ -30,6 +30,7 @@ endif()
 
 add_subdirectory(common)
 add_subdirectory(fem)
+add_subdirectory(geometry)
 add_subdirectory(math)
 add_subdirectory(physics)
 add_subdirectory(profiling)

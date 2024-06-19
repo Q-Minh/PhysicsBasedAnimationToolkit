@@ -2,10 +2,22 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     PUBLIC
     FILE_SET api
     FILES
+    "AxisAlignedBoundingBox.h"
     "BoundingVolumeHierarchy.h"
+    "ClosestPointQueries.h"
+    "DistanceQueries.h"
     "Geometry.h"
+    "IntersectionQueries.h"
+    "KdTree.h"
+    "OverlapQueries.h"
 )
 target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     PRIVATE
+    "AxisAlignedBoundingBox.cpp"
     "BoundingVolumeHierarchy.cpp"
+    "ClosestPointQueries.cpp"
+    "DistanceQueries.cpp"
+    "IntersectionQueries.cpp"
+    "KdTree.cpp"
+    "OverlapQueries.cpp"
 )
