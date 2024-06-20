@@ -71,7 +71,7 @@ class BoundingVolumeHierarchy
      * @param K Number of nearest neighbours to query
      * @return
      */
-    template <class T, class FDistanceToBoundingVolume, class FDistanceToPrimitive>
+    template <class FDistanceToBoundingVolume, class FDistanceToPrimitive>
     std::vector<Index>
     NearestPrimitivesTo(FDistanceToBoundingVolume&& db, FDistanceToPrimitive&& dp, std::size_t K)
         const;
@@ -82,7 +82,7 @@ class BoundingVolumeHierarchy
     void Update();
 
     // Static virtual functions (CRTP)
-    PrimitiveType const& Primitive(Index p) const
+    PrimitiveType Primitive(Index p) const
     {
         return static_cast<TDerived const*>(this)->Primitive(p);
     }
@@ -107,7 +107,7 @@ class BoundingVolumeHierarchy
         class FPrimitivesAreAdjacent>
     IndexMatrixX OverlappingPrimitivesImpl(
         BoundingVolumeHierarchy<TDerived2, TBoundingVolume2, TPrimitive2, Dims2> const& other,
-        FBoundingVolumesOverlap& bvo,
+        FBoundingVolumesOverlap&& bvo,
         FPrimitivesOverlap&& po,
         FPrimitivesAreAdjacent&& PrimitivesAreAdjacent =
             [](PrimitiveType const& p1, TPrimitive2 const& p2) -> bool { return false; },
@@ -180,7 +180,8 @@ BoundingVolumeHierarchy<TDerived, TBoundingVolume, TPrimitive, Dims>::Primitives
         }
         else
         {
-            BoundingVolumeType const& bv = mBoundingVolumes[bvIdx];
+            auto const bvIdxStl          = static_cast<std::size_t>(bvIdx);
+            BoundingVolumeType const& bv = mBoundingVolumes[bvIdxStl];
             return ibv(bv); ///< Visit deeper if this bounding volume overlaps with the
                             ///< queried shape
         }
@@ -190,7 +191,7 @@ BoundingVolumeHierarchy<TDerived, TBoundingVolume, TPrimitive, Dims>::Primitives
 }
 
 template <class TDerived, class TBoundingVolume, class TPrimitive, int Dims>
-template <class T, class FDistanceToBoundingVolume, class FDistanceToPrimitive>
+template <class FDistanceToBoundingVolume, class FDistanceToPrimitive>
 inline std::vector<Index>
 BoundingVolumeHierarchy<TDerived, TBoundingVolume, TPrimitive, Dims>::NearestPrimitivesTo(
     FDistanceToBoundingVolume&& db,
@@ -210,7 +211,8 @@ BoundingVolumeHierarchy<TDerived, TBoundingVolume, TPrimitive, Dims>::NearestPri
         Scalar sd;       ///< Squared distance from this QueueItem to p
     };
     auto const MakeVolumeQueueItem = [&](Index bvIdx) {
-        BoundingVolumeType const& bv = mBoundingVolumes[bvIdx];
+        auto const bvIdxStl          = static_cast<std::size_t>(bvIdx);
+        BoundingVolumeType const& bv = mBoundingVolumes[bvIdxStl];
         Scalar const sd              = db(bv);
         QueueItem const q{EQueueItem::Volume, bvIdx, sd};
         return q;
@@ -235,7 +237,8 @@ BoundingVolumeHierarchy<TDerived, TBoundingVolume, TPrimitive, Dims>::NearestPri
         queue.pop();
         if (q.type == EQueueItem::Volume)
         {
-            KdTreeNode const& node = nodes[q.idx];
+            auto const qIdxStl     = static_cast<std::size_t>(q.idx);
+            KdTreeNode const& node = nodes[qIdxStl];
             if (node.IsLeafNode())
             {
                 for (auto const pIdx : mKdTree.PointsInNode(node))
@@ -277,7 +280,7 @@ template <
 inline IndexMatrixX
 BoundingVolumeHierarchy<TDerived, TBoundingVolume, TPrimitive, Dims>::OverlappingPrimitivesImpl(
     BoundingVolumeHierarchy<TDerived2, TBoundingVolume2, TPrimitive2, Dims2> const& other,
-    FBoundingVolumesOverlap& bvo,
+    FBoundingVolumesOverlap&& bvo,
     FPrimitivesOverlap&& po,
     FPrimitivesAreAdjacent&& pa,
     std::size_t reserve) const
@@ -295,14 +298,16 @@ BoundingVolumeHierarchy<TDerived, TBoundingVolume, TPrimitive, Dims>::Overlappin
     while (!stack.empty())
     {
         auto const [n1, n2] = stack.top();
+        auto const n1Stl    = static_cast<std::size_t>(n1);
+        auto const n2Stl    = static_cast<std::size_t>(n2);
         stack.pop();
-        BoundingVolumeType const& bv1  = mBoundingVolumes[n1];
-        BoundingVolumeType2 const& bv2 = other.mBoundingVolumes[n2];
+        BoundingVolumeType const& bv1  = mBoundingVolumes[n1Stl];
+        BoundingVolumeType2 const& bv2 = other.mBoundingVolumes[n2Stl];
         if (!bvo(bv1, bv2))
             continue;
 
-        KdTreeNode const& node1 = nodes1[n1];
-        KdTreeNode const& node2 = nodes2[n2];
+        KdTreeNode const& node1 = nodes1[n1Stl];
+        KdTreeNode const& node2 = nodes2[n2Stl];
         bool const bIsNode1Leaf = node1.IsLeafNode();
         bool const bIsNode2Leaf = node2.IsLeafNode();
         if (bIsNode1Leaf and bIsNode2Leaf)

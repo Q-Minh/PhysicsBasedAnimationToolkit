@@ -60,7 +60,7 @@ Scalar PointTetrahedron(
     Eigen::MatrixBase<TDerivedA> const& A,
     Eigen::MatrixBase<TDerivedB> const& B,
     Eigen::MatrixBase<TDerivedC> const& C,
-    Eigen::MatrixBase<TDerivedC> const& D);
+    Eigen::MatrixBase<TDerivedD> const& D);
 
 /**
  * @brief Obtains the signed distance of X w.r.t. plane (P,n)
@@ -132,7 +132,7 @@ Scalar PointTetrahedron(
     Eigen::MatrixBase<TDerivedA> const& A,
     Eigen::MatrixBase<TDerivedB> const& B,
     Eigen::MatrixBase<TDerivedC> const& C,
-    Eigen::MatrixBase<TDerivedC> const& D)
+    Eigen::MatrixBase<TDerivedD> const& D)
 {
     bool const bPointInTetrahedron = OverlapQueries::PointTetrahedron(P, A, B, C, D);
     if (bPointInTetrahedron)

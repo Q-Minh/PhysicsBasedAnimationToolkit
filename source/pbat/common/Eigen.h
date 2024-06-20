@@ -51,6 +51,27 @@ ToEigen(R&& r)
         static_cast<Eigen::Index>(rng::size(r) * cols));
 }
 
+namespace detail {
+
+template <std::ranges::random_access_range R>
+struct Slice
+{
+    Slice(R&& r) : r(std::forward<R>(r)) {}
+
+    Index size() const { return static_cast<Index>(std::ranges::size(r)); }
+    Index operator[](Index i) const { return static_cast<Index>(r[i]); }
+
+    std::remove_cvref_t<R> r;
+};
+
+} // namespace detail
+
+template <std::ranges::random_access_range R>
+auto Slice(R&& r)
+{
+    return detail::Slice<R>(std::forward<R>(r));
+}
+
 } // namespace common
 } // namespace pbat
 

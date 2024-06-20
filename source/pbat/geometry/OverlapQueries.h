@@ -307,7 +307,7 @@ bool PointTetrahedron(
     Eigen::MatrixBase<TDerivedB> const& B,
     Eigen::MatrixBase<TDerivedC> const& C,
     Eigen::MatrixBase<TDerivedD> const& D)
-{
+{    
     auto const PointOutsidePlane = [](auto const& p, auto const& a, auto const& b, auto const& c) {
         Scalar const d = (p - a).dot((b - a).cross(c - a));
         return d > 0.;

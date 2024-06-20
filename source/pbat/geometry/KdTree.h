@@ -40,19 +40,20 @@ class KdTree
     template <class TDerivedP>
     KdTree(Eigen::DenseBase<TDerivedP> const& P, std::size_t maxPointsInLeaf = 10);
 
+  private:
+    inline static auto const fStopDefault = [](auto, auto) {
+        return false;
+    };
+
+  public:
     /**
      * @brief
      * @param visit Returns true if the node's children should be visited, false otherwise
      * @param stop Returns true if the search should stop
      * @param root
      */
-    template <class FVisit, class FStop>
-    void BreadthFirstSearch(
-        FVisit&& visit,
-        FStop&& stop = [](Index /*node_index*/, KdTreeNode const& /*node*/) -> bool {
-            return false;
-        },
-        Index root = 0) const;
+    template <class FVisit, class FStop = decltype(fStopDefault)>
+    void BreadthFirstSearch(FVisit visit, FStop stop = fStopDefault, Index root = 0) const;
 
     /**
      * @brief
@@ -60,13 +61,8 @@ class KdTree
      * @param stop Returns true if the search should stop
      * @param root
      */
-    template <class FVisit, class FStop>
-    void DepthFirstSearch(
-        FVisit&& visit,
-        FStop&& stop = [](Index /*node_index*/, KdTreeNode const& /*node*/) -> bool {
-            return false;
-        },
-        Index root = 0) const;
+    template <class FVisit, class FStop = decltype(fStopDefault)>
+    void DepthFirstSearch(FVisit visit, FStop stop = fStopDefault, Index root = 0) const;
 
     template <class TDerivedP>
     void Construct(Eigen::DenseBase<TDerivedP> const& P, std::size_t maxPointsInLeaf);
@@ -107,14 +103,15 @@ inline KdTree<Dims>::KdTree(Eigen::DenseBase<TDerivedP> const& P, std::size_t ma
 
 template <int Dims>
 template <class FVisit, class FStop>
-inline void KdTree<Dims>::BreadthFirstSearch(FVisit&& visit, FStop&& stop, Index root) const
+inline void KdTree<Dims>::BreadthFirstSearch(FVisit visit, FStop stop, Index root) const
 {
     std::queue<Index> bfs{};
     bfs.push(root);
     while (!bfs.empty())
     {
         auto const nodeIdx     = bfs.front();
-        KdTreeNode const& node = mNodes[nodeIdx];
+        auto const nodeIdxStl  = static_cast<std::size_t>(nodeIdx);
+        KdTreeNode const& node = mNodes[nodeIdxStl];
         bfs.pop();
         if (stop(nodeIdx, node))
             break;
@@ -132,15 +129,16 @@ inline void KdTree<Dims>::BreadthFirstSearch(FVisit&& visit, FStop&& stop, Index
 
 template <int Dims>
 template <class FVisit, class FStop>
-inline void KdTree<Dims>::DepthFirstSearch(FVisit&& visit, FStop&& stop, Index root) const
+inline void KdTree<Dims>::DepthFirstSearch(FVisit visit, FStop stop, Index root) const
 {
     std::stack<Index> dfs{};
     dfs.push(root);
     while (!dfs.empty())
     {
-        auto const nodeIdx = dfs.top();
+        auto const nodeIdx    = dfs.top();
+        auto const nodeIdxStl = static_cast<std::size_t>(nodeIdx);
         dfs.pop();
-        KdTreeNode const& node = mNodes[nodeIdx];
+        KdTreeNode const& node = mNodes[nodeIdxStl];
 
         if (stop(nodeIdx, node))
             break;
@@ -184,7 +182,7 @@ inline void KdTree<Dims>::DoConstruct(
     std::size_t const n,
     std::size_t maxPointsInLeaf)
 {
-    if (n < maxPointsInLeaf)
+    if (n <= maxPointsInLeaf)
         return;
 
     Eigen::Index dimension{};
@@ -219,7 +217,7 @@ inline void KdTree<Dims>::DoConstruct(
 template <int Dims>
 inline auto KdTree<Dims>::PointsInNode(Index const nodeIdx) const
 {
-    auto const& node = mNodes[nodeIdx];
+    auto const& node = mNodes[static_cast<std::size_t>(nodeIdx)];
     return PointsInNode(node);
 }
 
