@@ -5,6 +5,7 @@
 #include "BoundingVolumeHierarchy.h"
 #include "DistanceQueries.h"
 #include "OverlapQueries.h"
+#include "PhysicsBasedAnimationToolkitExport.h"
 
 #include <pbat/Aliases.h>
 #include <pbat/common/Eigen.h>
@@ -22,7 +23,7 @@ class TetrahedralAabbHierarchy : public BoundingVolumeHierarchy<
   public:
     static auto constexpr kDims = 3;
 
-    TetrahedralAabbHierarchy(
+    PBAT_API TetrahedralAabbHierarchy(
         Eigen::Ref<MatrixX const> const& V,
         Eigen::Ref<IndexMatrixX const> const& T,
         std::size_t maxPointsInLeaf = 10ULL);
@@ -34,7 +35,7 @@ class TetrahedralAabbHierarchy : public BoundingVolumeHierarchy<
     template <class RPrimitiveIndices>
     BoundingVolumeType BoundingVolumeOf(RPrimitiveIndices&& pinds) const;
 
-    IndexMatrixX OverlappingPrimitives(
+    PBAT_API IndexMatrixX OverlappingPrimitives(
         TetrahedralAabbHierarchy const& tetbbh,
         std::size_t reserve = 1000ULL) const;
 
@@ -47,6 +48,14 @@ class TetrahedralAabbHierarchy : public BoundingVolumeHierarchy<
     std::vector<Index> NearestPrimitivesToPoints(
         Eigen::MatrixBase<TDerivedP> const& P,
         bool bParallelize = false) const;
+
+    template <class TDerivedP>
+    void SetV(Eigen::MatrixBase<TDerivedP> const& P)
+    {
+        V = P;
+    }
+
+    PBAT_API auto GetV() const { return V; }
 
     Eigen::Ref<MatrixX const> V;
     Eigen::Ref<IndexMatrixX const> T;
