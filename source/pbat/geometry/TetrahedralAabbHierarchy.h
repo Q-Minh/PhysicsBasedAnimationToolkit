@@ -49,6 +49,8 @@ class TetrahedralAabbHierarchy : public BoundingVolumeHierarchy<
         Eigen::MatrixBase<TDerivedP> const& P,
         bool bParallelize = false) const;
 
+    PBAT_API auto GetBoundingVolumes() const { return mBoundingVolumes; }
+
     template <class TDerivedP>
     void SetV(Eigen::MatrixBase<TDerivedP> const& P)
     {

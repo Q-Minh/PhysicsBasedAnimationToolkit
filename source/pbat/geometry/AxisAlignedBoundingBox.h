@@ -19,6 +19,8 @@ class AxisAlignedBoundingBox : public Eigen::AlignedBox<Scalar, Dims>
     using BaseType = Eigen::AlignedBox<Scalar, Dims>;
     using SelfType = AxisAlignedBoundingBox;
 
+    static auto constexpr kDims = Dims;
+
     AxisAlignedBoundingBox()                = default;
     AxisAlignedBoundingBox(SelfType const&) = default;
     AxisAlignedBoundingBox(SelfType&&)      = default;

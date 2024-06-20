@@ -4,6 +4,7 @@ target_sources(PhysicsBasedAnimationToolkit_Python
 )
 
 add_subdirectory(fem)
+add_subdirectory(geometry)
 add_subdirectory(profiling)
 
 target_link_libraries(PhysicsBasedAnimationToolkit_Python
