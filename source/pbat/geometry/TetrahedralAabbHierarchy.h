@@ -72,14 +72,17 @@ inline std::vector<Index> TetrahedralAabbHierarchy::PrimitivesContainingPoints(
             [&](PrimitiveType const& T) -> bool {
                 auto const VT = V(Eigen::all, T);
                 return OverlapQueries::PointTetrahedron(
-                    P.col(i).head<3>(),
-                    VT.col(0).head<3>(),
-                    VT.col(1).head<3>(),
-                    VT.col(2).head<3>(),
-                    VT.col(3).head<3>());
+                    P.col(i).head<kDims>(),
+                    VT.col(0).head<kDims>(),
+                    VT.col(1).head<kDims>(),
+                    VT.col(2).head<kDims>(),
+                    VT.col(3).head<kDims>());
             });
         if (not intersectingPrimitives.empty())
-            p[static_cast<std::size_t>(i)] = intersectingPrimitives.front();
+        {
+            auto const iStl = static_cast<std::size_t>(i);
+            p[iStl]         = intersectingPrimitives.front();
+        }
     };
     if (bParallelize)
     {
@@ -108,14 +111,15 @@ inline std::vector<Index> TetrahedralAabbHierarchy::NearestPrimitivesToPoints(
             [&](PrimitiveType const& T) -> Scalar {
                 auto const VT = V(Eigen::all, T);
                 return DistanceQueries::PointTetrahedron(
-                    P.col(i).head<3>(),
-                    VT.col(0).head<3>(),
-                    VT.col(1).head<3>(),
-                    VT.col(2).head<3>(),
-                    VT.col(3).head<3>());
+                    P.col(i).head<kDims>(),
+                    VT.col(0).head<kDims>(),
+                    VT.col(1).head<kDims>(),
+                    VT.col(2).head<kDims>(),
+                    VT.col(3).head<kDims>());
             },
             K);
-        p[static_cast<std::size_t>(i)] = nearestPrimitives.front();
+        auto const iStl = static_cast<std::size_t>(i);
+        p[iStl]         = nearestPrimitives.front();
     };
     if (bParallelize)
     {
