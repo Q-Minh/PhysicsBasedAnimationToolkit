@@ -1,4 +1,4 @@
-#include "fem.h"
+#include "Fem.h"
 
 #include "gen/Gradient.h"
 #include "gen/HyperElasticPotential.h"

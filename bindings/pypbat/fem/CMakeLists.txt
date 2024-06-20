@@ -88,10 +88,10 @@ target_sources(PBAT_PyFem
     PUBLIC
     FILE_SET api
     FILES
-    "fem.h"
+    "Fem.h"
 )
 
 target_sources(PBAT_PyFem
     PRIVATE
-    "fem.cpp"
+    "Fem.cpp"
 )
