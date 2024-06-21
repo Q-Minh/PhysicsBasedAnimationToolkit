@@ -8,7 +8,7 @@
 
 The Physics Based Animation Toolkit (PBAT) is a (mostly templated) cross-platform C++20 library of algorithms and data structures commonly used in computer graphics research on physically-based simulation in dimensions `1,2,3`. For most use cases, we recommend using our library via its Python interface, enabling seamless integration into Python's ecosystem of powerful scientific computing packages. 
 
-> *Our Python bindings are currently *not* available on MacOS*.
+> *Our Python bindings are currently *not* available on MacOS* via PyPI.
 
 ## Dependencies
 
@@ -55,9 +55,14 @@ Take a look at the unit tests, found in the library's source (`.cpp`) files.
 
 ### Python
 
-In command line:
+To download and install from PyPI, run in command line:
 ```bash
 pip install pbatoolkit libigl numpy scipy
+```
+
+To install locally, run in command line:
+```bash
+pip install .
 ```
 
 In Python:
