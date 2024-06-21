@@ -598,9 +598,9 @@ bool TriangleAxisAlignedBoundingBox(
     };
 
     // 1. Test edge pairs
-    auto constexpr eps                = 1e-15;
     auto const IsEdgePairIntersecting = [&TestAxis](auto const& a, auto const& b, auto dim) {
-        auto const ab = b - a;
+        auto constexpr eps = 1e-15;
+        auto const ab      = b - a;
         // Construct natural unit vector in axis dim
         auto const u = Vector<kDims>::Unit(dim);
         auto axis    = ab.cross(u /* - zero*/).normalized();
@@ -705,9 +705,9 @@ bool TetrahedronAxisAlignedBoundingBox(
     };
 
     // 1. Test edge pairs
-    auto constexpr eps                = 1e-15;
     auto const IsEdgePairIntersecting = [&TestAxis](auto const& a, auto const& b, auto dim) {
-        auto const ab = b - a;
+        auto constexpr eps = 1e-15;
+        auto const ab      = b - a;
         // Construct natural unit vector in axis dim
         auto const u = Vector<kDims>::Unit(dim);
         auto axis    = ab.cross(u /* - zero*/).normalized();
@@ -902,9 +902,9 @@ bool TriangleTetrahedron(
         auto const [low2, up2] = ProjectTetrahedron(a);
         return AreDisjoint(low1, up1, low2, up2);
     };
-    auto constexpr eps = 1e-15;
     auto const IsEdgePairSeparating =
         [&TestAxis](auto const& a, auto const& b, auto const& c, auto const& d) {
+            auto constexpr eps = 1e-15;
             auto const ab      = b - a;
             Vector<kDims> axis = ab.cross(d - c).normalized();
             if (!axis.isZero(eps))
@@ -1047,9 +1047,9 @@ bool Tetrahedra(
         };
 
     // 1. Test edge pairs
-    auto constexpr eps = 1e-15;
     auto const IsEdgePairSeparating =
         [&TestAxis](auto const& a, auto const& b, auto const& c, auto const& d) {
+            auto constexpr eps = 1e-15;
             auto const ab      = b - a;
             Vector<kDims> axis = ab.cross(d - c).normalized();
             if (!axis.isZero(eps))
