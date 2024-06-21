@@ -51,13 +51,13 @@ TEST_CASE("[geometry] Lines intersecting triangles are detected")
             auto constexpr eps = 1e-15;
             CHECK(intersection.isApprox(expected_intersection, eps));
         };
-        auto const uvwIntersection1 = geometry::IntersectionQueries::UvwLineTriangle(P, Q, A, B, C);
+        auto const uvwIntersection1 = geometry::IntersectionQueries::UvwLineTriangle3D(P, Q, A, B, C);
         do_assert(uvwIntersection1);
-        auto const uvwIntersection2 = geometry::IntersectionQueries::UvwLineTriangle(Q, P, A, B, C);
+        auto const uvwIntersection2 = geometry::IntersectionQueries::UvwLineTriangle3D(Q, P, A, B, C);
         do_assert(uvwIntersection2);
-        auto const uvwIntersection3 = geometry::IntersectionQueries::UvwLineTriangle(P, Q, A, C, B);
+        auto const uvwIntersection3 = geometry::IntersectionQueries::UvwLineTriangle3D(P, Q, A, C, B);
         do_assert(uvwIntersection3);
-        auto const uvwIntersection4 = geometry::IntersectionQueries::UvwLineTriangle(Q, P, A, C, B);
+        auto const uvwIntersection4 = geometry::IntersectionQueries::UvwLineTriangle3D(Q, P, A, C, B);
         do_assert(uvwIntersection4);
     }
     SUBCASE("Line through PQ translated in triangle normal direction passes through the triangle T")
@@ -74,16 +74,16 @@ TEST_CASE("[geometry] Lines intersecting triangles are detected")
         Vector<3> const P2 = P + t;
         Vector<3> const Q2 = Q + t;
         auto const uvwIntersection1 =
-            geometry::IntersectionQueries::UvwLineTriangle(P2, Q2, A, B, C);
+            geometry::IntersectionQueries::UvwLineTriangle3D(P2, Q2, A, B, C);
         do_assert(uvwIntersection1);
         auto const uvwIntersection2 =
-            geometry::IntersectionQueries::UvwLineTriangle(Q2, P2, A, B, C);
+            geometry::IntersectionQueries::UvwLineTriangle3D(Q2, P2, A, B, C);
         do_assert(uvwIntersection2);
         auto const uvwIntersection3 =
-            geometry::IntersectionQueries::UvwLineTriangle(P2, Q2, A, C, B);
+            geometry::IntersectionQueries::UvwLineTriangle3D(P2, Q2, A, C, B);
         do_assert(uvwIntersection3);
         auto const uvwIntersection4 =
-            geometry::IntersectionQueries::UvwLineTriangle(Q2, P2, A, C, B);
+            geometry::IntersectionQueries::UvwLineTriangle3D(Q2, P2, A, C, B);
         do_assert(uvwIntersection4);
     }
     SUBCASE(
@@ -97,16 +97,16 @@ TEST_CASE("[geometry] Lines intersecting triangles are detected")
         Vector<3> const P2 = P + t;
         Vector<3> const Q2 = Q + t;
         auto const uvwIntersection1 =
-            geometry::IntersectionQueries::UvwLineTriangle(P2, Q2, A, B, C);
+            geometry::IntersectionQueries::UvwLineTriangle3D(P2, Q2, A, B, C);
         do_assert(uvwIntersection1);
         auto const uvwIntersection2 =
-            geometry::IntersectionQueries::UvwLineTriangle(Q2, P2, A, B, C);
+            geometry::IntersectionQueries::UvwLineTriangle3D(Q2, P2, A, B, C);
         do_assert(uvwIntersection2);
         auto const uvwIntersection3 =
-            geometry::IntersectionQueries::UvwLineTriangle(P2, Q2, A, C, B);
+            geometry::IntersectionQueries::UvwLineTriangle3D(P2, Q2, A, C, B);
         do_assert(uvwIntersection3);
         auto const uvwIntersection4 =
-            geometry::IntersectionQueries::UvwLineTriangle(Q2, P2, A, C, B);
+            geometry::IntersectionQueries::UvwLineTriangle3D(Q2, P2, A, C, B);
         do_assert(uvwIntersection4);
     }
 }
@@ -131,16 +131,16 @@ TEST_CASE("[geometry] Line segments intersecting triangles are detected")
             CHECK(intersection.isApprox(expected_intersection, eps));
         };
         auto const uvwIntersection1 =
-            geometry::IntersectionQueries::UvwLineSegmentTriangle(P, Q, A, B, C);
+            geometry::IntersectionQueries::UvwLineSegmentTriangle3D(P, Q, A, B, C);
         do_assert(uvwIntersection1);
         auto const uvwIntersection2 =
-            geometry::IntersectionQueries::UvwLineSegmentTriangle(Q, P, A, B, C);
+            geometry::IntersectionQueries::UvwLineSegmentTriangle3D(Q, P, A, B, C);
         do_assert(uvwIntersection2);
         auto const uvwIntersection3 =
-            geometry::IntersectionQueries::UvwLineSegmentTriangle(P, Q, A, C, B);
+            geometry::IntersectionQueries::UvwLineSegmentTriangle3D(P, Q, A, C, B);
         do_assert(uvwIntersection3);
         auto const uvwIntersection4 =
-            geometry::IntersectionQueries::UvwLineSegmentTriangle(Q, P, A, C, B);
+            geometry::IntersectionQueries::UvwLineSegmentTriangle3D(Q, P, A, C, B);
         do_assert(uvwIntersection4);
     }
     SUBCASE("Line segment PQ does not pass through the triangle T")
@@ -152,16 +152,16 @@ TEST_CASE("[geometry] Line segments intersecting triangles are detected")
         Vector<3> const P2 = P + t;
         Vector<3> const Q2 = Q + t;
         auto const uvwIntersection1 =
-            geometry::IntersectionQueries::UvwLineSegmentTriangle(P2, Q2, A, B, C);
+            geometry::IntersectionQueries::UvwLineSegmentTriangle3D(P2, Q2, A, B, C);
         do_assert(uvwIntersection1);
         auto const uvwIntersection2 =
-            geometry::IntersectionQueries::UvwLineSegmentTriangle(Q2, P2, A, B, C);
+            geometry::IntersectionQueries::UvwLineSegmentTriangle3D(Q2, P2, A, B, C);
         do_assert(uvwIntersection2);
         auto const uvwIntersection3 =
-            geometry::IntersectionQueries::UvwLineSegmentTriangle(P2, Q2, A, C, B);
+            geometry::IntersectionQueries::UvwLineSegmentTriangle3D(P2, Q2, A, C, B);
         do_assert(uvwIntersection3);
         auto const uvwIntersection4 =
-            geometry::IntersectionQueries::UvwLineSegmentTriangle(Q2, P2, A, C, B);
+            geometry::IntersectionQueries::UvwLineSegmentTriangle3D(Q2, P2, A, C, B);
         do_assert(uvwIntersection4);
     }
 }

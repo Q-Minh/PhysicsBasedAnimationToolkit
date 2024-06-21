@@ -231,13 +231,17 @@ Vector<TDerivedP::RowsAtCompileTime> PointInTetrahedron(
     Eigen::MatrixBase<TDerivedC> const& C,
     Eigen::MatrixBase<TDerivedD> const& D)
 {
+    auto constexpr Rows  = TDerivedP::RowsAtCompileTime;
+    auto constexpr kDims = 3;
+    static_assert(Rows == kDims, "This overlap test is specialized for 3D");
+
     /**
      * Ericson, Christer. Real-time collision detection. Crc Press, 2004. section 5.1.6
      */
 
     // Start out assuming point inside all halfspaces, so closest to itself
-    Vector<TDerivedP::RowsAtCompileTime> X = P;
-    Scalar d2min                           = std::numeric_limits<Scalar>::max();
+    Vector<kDims> X = P;
+    Scalar d2min    = std::numeric_limits<Scalar>::max();
 
     auto const PointOutsidePlane = [](auto const& p, auto const& a, auto const& b, auto const& c) {
         Scalar const d = (p - a).dot((b - a).cross(c - a));

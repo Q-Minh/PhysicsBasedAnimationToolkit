@@ -82,7 +82,7 @@ inline std::vector<Index> TetrahedralAabbHierarchy::PrimitivesContainingPoints(
             [&](BoundingVolumeType const& bv) -> bool { return bv.contains(P.col(i)); },
             [&](PrimitiveType const& T) -> bool {
                 auto const VT = V(Eigen::all, T);
-                return OverlapQueries::PointTetrahedron(
+                return OverlapQueries::PointTetrahedron3D(
                     P.col(i).head<kDims>(),
                     VT.col(0).head<kDims>(),
                     VT.col(1).head<kDims>(),

@@ -15,7 +15,7 @@ TEST_CASE("[geometry] Point overlap with tetrahedron can be obtained")
     {
         Vector<3> const P{0.2, 0.2, 0.2};
         // Act
-        bool const PContainedInABCD = geometry::OverlapQueries::PointTetrahedron(P, A, B, C, D);
+        bool const PContainedInABCD = geometry::OverlapQueries::PointTetrahedron3D(P, A, B, C, D);
         // Assert
         CHECK(PContainedInABCD);
     }
@@ -23,7 +23,7 @@ TEST_CASE("[geometry] Point overlap with tetrahedron can be obtained")
     {
         Vector<3> const P{1., 1., 1.};
         // Act
-        bool const PContainedInABCD = geometry::OverlapQueries::PointTetrahedron(P, A, B, C, D);
+        bool const PContainedInABCD = geometry::OverlapQueries::PointTetrahedron3D(P, A, B, C, D);
         // Assert
         CHECK_FALSE(PContainedInABCD);
     }

@@ -13,6 +13,22 @@ namespace geometry {
 namespace OverlapQueries {
 
 /**
+ * @brief
+ * @tparam TDerivedP
+ * @tparam TDerivedL
+ * @tparam TDerivedU
+ * @param P
+ * @param L
+ * @param U
+ * @return
+ */
+template <class TDerivedP, class TDerivedL, class TDerivedU>
+bool PointAxisAlignedBoundingBox(
+    Eigen::MatrixBase<TDerivedP> const& P,
+    Eigen::MatrixBase<TDerivedL> const& L,
+    Eigen::MatrixBase<TDerivedU> const& U);
+
+/**
  * @brief Checks if point P is contained in tetrahedron ABCD, in at least 3D.
  * @param P
  * @param A
@@ -22,7 +38,7 @@ namespace OverlapQueries {
  * @return
  */
 template <class TDerivedP, class TDerivedA, class TDerivedB, class TDerivedC, class TDerivedD>
-bool PointTetrahedron(
+bool PointTetrahedron3D(
     Eigen::MatrixBase<TDerivedP> const& P,
     Eigen::MatrixBase<TDerivedA> const& A,
     Eigen::MatrixBase<TDerivedB> const& B,
@@ -115,7 +131,7 @@ bool LineSegmentAxisAlignedBoundingBox(
  * @return
  */
 template <class TDerivedP, class TDerivedQ, class TDerivedA, class TDerivedB, class TDerivedC>
-bool LineSegmentTriangle(
+bool LineSegmentTriangle3D(
     Eigen::MatrixBase<TDerivedP> const& P,
     Eigen::MatrixBase<TDerivedQ> const& Q,
     Eigen::MatrixBase<TDerivedA> const& A,
@@ -197,7 +213,7 @@ template <
     class TDerivedA2,
     class TDerivedB2,
     class TDerivedC2>
-bool UvwTriangles(
+bool UvwTriangles3D(
     Eigen::MatrixBase<TDerivedA1> const& A1,
     Eigen::MatrixBase<TDerivedB1> const& B1,
     Eigen::MatrixBase<TDerivedC1> const& C1,
@@ -300,14 +316,37 @@ bool TetrahedronSphere(
     Eigen::MatrixBase<TDerivedSC> const& SC,
     Scalar R);
 
+template <class TDerivedP, class TDerivedL, class TDerivedU>
+bool PointAxisAlignedBoundingBox(
+    Eigen::MatrixBase<TDerivedP> const& P,
+    Eigen::MatrixBase<TDerivedL> const& L,
+    Eigen::MatrixBase<TDerivedU> const& U)
+{
+    bool bIsInsideBox{true};
+    auto const dims = L.rows();
+    for (auto dim = 0; dim < dims; ++dim)
+    {
+        if (P(dims) < L(dims) or P(dims) > U(dims))
+        {
+            bIsInsideBox = false;
+            break;
+        }
+    }
+    return bIsInsideBox;
+}
+
 template <class TDerivedP, class TDerivedA, class TDerivedB, class TDerivedC, class TDerivedD>
-bool PointTetrahedron(
+bool PointTetrahedron3D(
     Eigen::MatrixBase<TDerivedP> const& P,
     Eigen::MatrixBase<TDerivedA> const& A,
     Eigen::MatrixBase<TDerivedB> const& B,
     Eigen::MatrixBase<TDerivedC> const& C,
     Eigen::MatrixBase<TDerivedD> const& D)
 {
+    auto constexpr Rows  = TDerivedP::RowsAtCompileTime;
+    auto constexpr kDims = 3;
+    static_assert(Rows == kDims, "This overlap test is specialized for 3D");
+
     auto const PointOutsidePlane = [](auto const& p, auto const& a, auto const& b, auto const& c) {
         Scalar const d = (p - a).dot((b - a).cross(c - a));
         return d > 0.;
@@ -429,14 +468,14 @@ bool LineSegmentAxisAlignedBoundingBox(
 }
 
 template <class TDerivedP, class TDerivedQ, class TDerivedA, class TDerivedB, class TDerivedC>
-bool LineSegmentTriangle(
+bool LineSegmentTriangle3D(
     Eigen::MatrixBase<TDerivedP> const& P,
     Eigen::MatrixBase<TDerivedQ> const& Q,
     Eigen::MatrixBase<TDerivedA> const& A,
     Eigen::MatrixBase<TDerivedB> const& B,
     Eigen::MatrixBase<TDerivedC> const& C)
 {
-    return IntersectionQueries::UvwLineSegmentTriangle(P, Q, A, B, C).has_value();
+    return IntersectionQueries::UvwLineSegmentTriangle3D(P, Q, A, B, C).has_value();
 }
 
 template <class TDerivedP, class TDerivedn, class TDerivedL, class TDerivedU>
@@ -469,13 +508,15 @@ bool TriangleAxisAlignedBoundingBox(
      * Ericson, Christer. Real-time collision detection. Crc Press, 2004. section 5.2.9
      */
 
-    auto constexpr Rows = TDerivedL::RowsAtCompileTime;
+    auto constexpr Rows  = TDerivedL::RowsAtCompileTime;
+    auto constexpr kDims = 3;
+    static_assert(Rows == kDims, "This overlap test is specialized for 3D");
     // Transform triangle into reference space of AABB
-    Vector<Rows> const O  = 0.5 * (L + U);
-    Vector<Rows> const e  = U - O;
-    Vector<Rows> const AO = A - O;
-    Vector<Rows> const BO = B - O;
-    Vector<Rows> const CO = C - O;
+    Vector<kDims> const O  = 0.5 * (L + U);
+    Vector<kDims> const e  = U - O;
+    Vector<kDims> const AO = A - O;
+    Vector<kDims> const BO = B - O;
+    Vector<kDims> const CO = C - O;
 
     /*
      * Separating axis' to test are:
@@ -501,61 +542,47 @@ bool TriangleAxisAlignedBoundingBox(
     };
 
     // 1. Test edge pairs
-    auto constexpr eps = 1e-15;
-    auto const IsEdgePairIntersecting =
-        [&TestAxis](auto const& a, auto const& b, auto const& c, auto const& d) {
-            auto const ab = b - a;
-            auto axis     = ab.cross(d - c).normalized();
+    auto constexpr eps                = 1e-15;
+    auto const IsEdgePairIntersecting = [&TestAxis](auto const& a, auto const& b, auto dim) {
+        auto const ab = b - a;
+        // Construct natural unit vector in axis dim
+        auto const u = Vector<kDims>::Unit(dim);
+        auto axis    = ab.cross(u /* - zero*/).normalized();
+        if (!axis.isZero(eps))
+        {
+            return TestAxis(axis);
+        }
+        else
+        {
+            // Edges ab and cd are numerically parallel
+            auto const n = ab.cross(/*zero */ -a);
+            // Try a separating axis perpendicular to ab lying in the plane containing ab and cd
+            axis = ab.cross(n).normalized();
             if (!axis.isZero(eps))
-            {
                 return TestAxis(axis);
-            }
-            else
-            {
-                // Edges ab and cd are numerically parallel
-                auto const n = ab.cross(c - a);
-                // Try a separating axis perpendicular to ab lying in the plane containing ab and cd
-                axis = ab.cross(n).normalized();
-                if (!axis.isZero(eps))
-                    return TestAxis(axis);
-                // ab and ac parallel too, so edges ab and cd are colinear and will not be a
-                // separating axis
-            }
-            return false;
-        };
+            // ab and ac parallel too, so edges ab and cd are colinear and will not be a
+            // separating axis
+        }
+        return false;
+    };
     /**
      * Our implementation is super inefficient for AABBs, because of all the known zeros that we
      * are not exploiting. Because AABBs are axis aligned, their edges have many zeros, and
      * cross product and dot product operations with these edges could save many floating point
      * operations, but we don't do it... Fortunately, this implementation is valid for OBBs.
      */
-    auto const dims = L.rows();
-    Vector<Rows> zero;
-    if constexpr (Rows == Eigen::Dynamic)
-        zero.setZero(dims);
-    else
-        zero.setZero();
-
-    for (auto dim = 0; dim < dims; ++dim)
+    for (auto dim = 0; dim < kDims; ++dim)
     {
-        // Construct natural unit vector in axis dim
-        Vector<Rows> u;
-        if constexpr (Rows == Eigen::Dynamic)
-            u.setZero(dims);
-        else
-            u.setZero();
-        u(dim) = 1.;
-
-        if (IsEdgePairIntersecting(AO, BO, zero, u))
+        if (IsEdgePairIntersecting(AO, BO, dim))
             return false;
-        if (IsEdgePairIntersecting(BO, CO, zero, u))
+        if (IsEdgePairIntersecting(BO, CO, dim))
             return false;
-        if (IsEdgePairIntersecting(CO, AO, zero, u))
+        if (IsEdgePairIntersecting(CO, AO, dim))
             return false;
     }
 
     // 2. Test AABB face normals
-    for (auto dim = 0; dim < dims; ++dim)
+    for (auto dim = 0; dim < kDims; ++dim)
     {
         Scalar const max = std::max({AO(dim), BO(dim), CO(dim)});
         Scalar const min = std::min({AO(dim), BO(dim), CO(dim)});
@@ -564,7 +591,7 @@ bool TriangleAxisAlignedBoundingBox(
     }
 
     // 3. Test triangle face normal
-    Vector<Rows> const n = (B - A).cross(C - A).normalized();
+    Vector<kDims> const n = (B - A).cross(C - A).normalized();
     return PlaneAxisAlignedBoundingBox(A, n, L, U);
 }
 
@@ -583,14 +610,17 @@ bool TetrahedronAxisAlignedBoundingBox(
     Eigen::MatrixBase<TDerivedL> const& L,
     Eigen::MatrixBase<TDerivedU> const& U)
 {
-    auto constexpr Rows = TDerivedL::RowsAtCompileTime;
+    auto constexpr Rows  = TDerivedL::RowsAtCompileTime;
+    auto constexpr kDims = 3;
+    static_assert(Rows == kDims, "This overlap test is specialized for 3D");
+
     // Transform tetrahedron into reference space of AABB
-    Vector<Rows> const O  = 0.5 * (L + U);
-    Vector<Rows> const e  = U - O;
-    Vector<Rows> const AO = A - O;
-    Vector<Rows> const BO = B - O;
-    Vector<Rows> const CO = C - O;
-    Vector<Rows> const DO = D - O;
+    Vector<kDims> const O  = 0.5 * (L + U);
+    Vector<kDims> const e  = U - O;
+    Vector<kDims> const AO = A - O;
+    Vector<kDims> const BO = B - O;
+    Vector<kDims> const CO = C - O;
+    Vector<kDims> const DO = D - O;
 
     /*
      * Separating axis' to test are:
@@ -619,73 +649,59 @@ bool TetrahedronAxisAlignedBoundingBox(
     };
 
     // 1. Test edge pairs
-    auto constexpr eps = 1e-15;
-    auto const IsEdgePairIntersecting =
-        [&TestAxis](auto const& a, auto const& b, auto const& c, auto const& d) {
-            auto const ab = b - a;
-            auto axis     = ab.cross(d - c).normalized();
+    auto constexpr eps                = 1e-15;
+    auto const IsEdgePairIntersecting = [&TestAxis](auto const& a, auto const& b, auto dim) {
+        auto const ab = b - a;
+        // Construct natural unit vector in axis dim
+        auto const u = Vector<kDims>::Unit(dim);
+        auto axis    = ab.cross(u /* - zero*/).normalized();
+        if (!axis.isZero(eps))
+        {
+            return TestAxis(axis);
+        }
+        else
+        {
+            // Edges ab and cd are numerically parallel
+            auto const n = ab.cross(/*zero */ -a);
+            // Try a separating axis perpendicular to ab lying in the plane containing ab and cd
+            axis = ab.cross(n).normalized();
             if (!axis.isZero(eps))
-            {
                 return TestAxis(axis);
-            }
-            else
-            {
-                // Edges ab and cd are numerically parallel
-                auto const n = ab.cross(c - a);
-                // Try a separating axis perpendicular to ab lying in the plane containing ab and cd
-                axis = ab.cross(n).normalized();
-                if (!axis.isZero(eps))
-                    return TestAxis(axis);
-                // ab and ac parallel too, so edges ab and cd are colinear and will not be a
-                // separating axis
-            }
-            return false;
-        };
+            // ab and ac parallel too, so edges ab and cd are colinear and will not be a
+            // separating axis
+        }
+        return false;
+    };
     /**
      * Our implementation is super inefficient for AABBs, because of all the known zeros that we
      * are not exploiting. Because AABBs are axis aligned, their edges have many zeros, and
      * cross product and dot product operations with these edges could save many floating point
      * operations, but we don't do it... Fortunately, this implementation is valid for OBBs.
      */
-    auto const dims = L.rows();
-    Vector<Rows> zero;
-    if constexpr (Rows == Eigen::Dynamic)
-        zero.setZero(dims);
-    else
-        zero.setZero();
-
-    for (auto dim = 0; dim < dims; ++dim)
+    for (auto dim = 0; dim < kDims; ++dim)
     {
-        // Construct natural unit vector in axis dim
-        Vector<Rows> u;
-        if constexpr (Rows == Eigen::Dynamic)
-            u.setZero(dims);
-        else
-            u.setZero();
-        u(dim) = 1.;
-
         // Edges of tetrahedron are: AB, BC, CA, AD, BD, CD
-        if (IsEdgePairIntersecting(A, B, zero, u))
+        if (IsEdgePairIntersecting(A, B, dim))
             return false;
 
-        if (IsEdgePairIntersecting(B, C, zero, u))
+        if (IsEdgePairIntersecting(B, C, dim))
             return false;
 
-        if (IsEdgePairIntersecting(C, A, zero, u))
+        if (IsEdgePairIntersecting(C, A, dim))
             return false;
 
-        if (IsEdgePairIntersecting(A, D, zero, u))
+        if (IsEdgePairIntersecting(A, D, dim))
             return false;
 
-        if (IsEdgePairIntersecting(B, D, zero, u))
+        if (IsEdgePairIntersecting(B, D, dim))
             return false;
 
-        if (IsEdgePairIntersecting(C, D, zero, u))
+        if (IsEdgePairIntersecting(C, D, dim))
             return false;
     }
 
     // 2. Test AABB face normals
-    for (auto dim = 0; dim < dims; ++dim)
+    for (auto dim = 0; dim < kDims; ++dim)
     {
         Scalar const max = std::max({AO(dim), BO(dim), CO(dim), DO(dim)});
         Scalar const min = std::min({AO(dim), BO(dim), CO(dim), DO(dim)});
@@ -695,7 +711,7 @@ bool TetrahedronAxisAlignedBoundingBox(
 
     // 3. Test tetrahedron face normals
     // Tetrahedron faces are: ABD, BCD, CAD, ACB
-    Vector<Rows> n = (B - A).cross(D - A).normalized();
+    Vector<kDims> n = (B - A).cross(D - A).normalized();
     if (!PlaneAxisAlignedBoundingBox(A, n, L, U))
         return false;
     n = (C - B).cross(D - B).normalized();
@@ -715,7 +731,7 @@ template <
     class TDerivedA2,
     class TDerivedB2,
     class TDerivedC2>
-bool UvwTriangles(
+bool UvwTriangles3D(
     Eigen::MatrixBase<TDerivedA1> const& A1,
     Eigen::MatrixBase<TDerivedB1> const& B1,
     Eigen::MatrixBase<TDerivedC1> const& C1,
@@ -723,7 +739,7 @@ bool UvwTriangles(
     Eigen::MatrixBase<TDerivedB2> const& B2,
     Eigen::MatrixBase<TDerivedC2> const& C2)
 {
-    auto const intersections = IntersectionQueries::UvwTriangles(A1, B1, C1, A2, B2, C2);
+    auto const intersections = IntersectionQueries::UvwTriangles3D(A1, B1, C1, A2, B2, C2);
     for (auto const& intersection : intersections)
         if (intersection.has_value())
             return true;
@@ -754,7 +770,9 @@ bool TriangleTetrahedron(
      * - Face normals of tetrahedron (4 tests)
      * - Face normal of triangle (1 test)
      */
-    auto constexpr Rows = TDerivedA::RowsAtCompileTime;
+    auto constexpr Rows  = TDerivedA::RowsAtCompileTime;
+    auto constexpr kDims = 3;
+    static_assert(Rows == kDims, "This overlap test is specialized for 3D");
 
     // 1. Test edge pairs
     auto const ProjectTriangle = [&](auto const& a) -> std::pair<Scalar, Scalar> {
@@ -778,8 +796,8 @@ bool TriangleTetrahedron(
     auto constexpr eps = 1e-15;
     auto const IsEdgePairSeparating =
         [&TestAxis](auto const& a, auto const& b, auto const& c, auto const& d) {
-            auto const ab     = b - a;
-            Vector<Rows> axis = ab.cross(d - c).normalized();
+            auto const ab      = b - a;
+            Vector<kDims> axis = ab.cross(d - c).normalized();
             if (!axis.isZero(eps))
             {
                 return TestAxis(axis);
@@ -843,13 +861,13 @@ bool TriangleTetrahedron(
         return false;
 
     // 2. Test tetrahedron face normals
-    Vector<Rows> const IJ = J - I;
-    Vector<Rows> const JK = K - J;
-    Vector<Rows> const KI = I - K;
-    Vector<Rows> const IL = L - I;
-    Vector<Rows> const JL = L - J;
-    Vector<Rows> const KL = L - K;
-    Vector<Rows> n        = IJ.cross(IL).normalized();
+    Vector<kDims> const IJ = J - I;
+    Vector<kDims> const JK = K - J;
+    Vector<kDims> const KI = I - K;
+    Vector<kDims> const IL = L - I;
+    Vector<kDims> const JL = L - J;
+    Vector<kDims> const KL = L - K;
+    Vector<kDims> n        = IJ.cross(IL).normalized();
     if (TestAxis(n))
         return false;
     n = JK.cross(JL).normalized();
@@ -858,8 +876,8 @@ bool TriangleTetrahedron(
     n = KI.cross(KL).normalized();
     if (TestAxis(n))
         return false;
-    Vector<Rows> const IK = K - I;
-    n                     = IK.cross(IJ).normalized();
+    Vector<kDims> const IK = K - I;
+    n                      = IK.cross(IJ).normalized();
     if (TestAxis(n))
         return false;
 
@@ -893,7 +911,9 @@ bool Tetrahedra(
      * edges (36 tests)
      * - Face normals of tetrahedron (4+4=8 tests)
      */
-    auto constexpr Rows = TDerivedA1::RowsAtCompileTime;
+    auto constexpr Rows  = TDerivedA1::RowsAtCompileTime;
+    auto constexpr kDims = 3;
+    static_assert(Rows == kDims, "This overlap test is specialized for 3D");
 
     auto const ProjectTetrahedron1 = [&](auto const& a) -> std::pair<Scalar, Scalar> {
         Vector<4> const p{A1.dot(a), B1.dot(a), C1.dot(a), D1.dot(a)};
@@ -921,8 +941,8 @@ bool Tetrahedra(
     auto constexpr eps = 1e-15;
     auto const IsEdgePairSeparating =
         [&TestAxis](auto const& a, auto const& b, auto const& c, auto const& d) {
-            auto const ab     = b - a;
-            Vector<Rows> axis = ab.cross(d - c).normalized();
+            auto const ab      = b - a;
+            Vector<kDims> axis = ab.cross(d - c).normalized();
             if (!axis.isZero(eps))
             {
                 return TestAxis(axis);
@@ -1026,7 +1046,7 @@ bool Tetrahedra(
     // 2. Test face normals:
     // Tetrahedron 1 faces are: A1B1D1, B1C1D1, C1A1D1, A1C1B1
     // Tetrahedron 2 faces are: A2B2D2, B2C2D2, C2A2D2, A2C2B2
-    Vector<Rows> n = (B1 - A1).cross(D1 - A1).normalized();
+    Vector<kDims> n = (B1 - A1).cross(D1 - A1).normalized();
     if (TestAxis(n))
         return false;
     n = (C1 - B1).cross(D1 - B1).normalized();

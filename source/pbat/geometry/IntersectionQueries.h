@@ -56,7 +56,7 @@ std::optional<Vector<TDerivedP::RowsAtCompileTime>> LineSegmentSphere(
  * @return
  */
 template <class TDerivedP, class TDerivedQ, class TDerivedA, class TDerivedB, class TDerivedC>
-std::optional<Vector<TDerivedP::RowsAtCompileTime>> LineSegmentPlane(
+std::optional<Vector<TDerivedP::RowsAtCompileTime>> LineSegmentPlane3D(
     Eigen::MatrixBase<TDerivedP> const& P,
     Eigen::MatrixBase<TDerivedQ> const& Q,
     Eigen::MatrixBase<TDerivedA> const& A,
@@ -76,7 +76,7 @@ std::optional<Vector<TDerivedP::RowsAtCompileTime>> LineSegmentPlane(
  * @return
  */
 template <class TDerivedP, class TDerivedQ, class TDerivedn>
-std::optional<Vector<TDerivedP::RowsAtCompileTime>> LineSegmentPlane(
+std::optional<Vector<TDerivedP::RowsAtCompileTime>> LineSegmentPlane3D(
     Eigen::MatrixBase<TDerivedP> const& P,
     Eigen::MatrixBase<TDerivedQ> const& Q,
     Eigen::MatrixBase<TDerivedn> const& n,
@@ -93,7 +93,7 @@ std::optional<Vector<TDerivedP::RowsAtCompileTime>> LineSegmentPlane(
  * @return
  */
 template <class TDerivedP, class TDerivedQ, class TDerivedA, class TDerivedB, class TDerivedC>
-std::optional<Vector<3>> UvwLineTriangle(
+std::optional<Vector<3>> UvwLineTriangle3D(
     Eigen::MatrixBase<TDerivedP> const& P,
     Eigen::MatrixBase<TDerivedQ> const& Q,
     Eigen::MatrixBase<TDerivedA> const& A,
@@ -111,7 +111,7 @@ std::optional<Vector<3>> UvwLineTriangle(
  * @return
  */
 template <class TDerivedP, class TDerivedQ, class TDerivedA, class TDerivedB, class TDerivedC>
-std::optional<Vector<3>> UvwLineSegmentTriangle(
+std::optional<Vector<3>> UvwLineSegmentTriangle3D(
     Eigen::MatrixBase<TDerivedP> const& P,
     Eigen::MatrixBase<TDerivedQ> const& Q,
     Eigen::MatrixBase<TDerivedA> const& A,
@@ -137,7 +137,7 @@ template <
     class TDerivedA2,
     class TDerivedB2,
     class TDerivedC2>
-std::array<std::optional<Vector<3>>, 6u> UvwTriangles(
+std::array<std::optional<Vector<3>>, 6u> UvwTriangles3D(
     Eigen::MatrixBase<TDerivedA1> const& A1,
     Eigen::MatrixBase<TDerivedB1> const& B1,
     Eigen::MatrixBase<TDerivedC1> const& C1,
@@ -193,23 +193,25 @@ std::optional<Vector<TDerivedP::RowsAtCompileTime>> LineSegmentSphere(
 }
 
 template <class TDerivedP, class TDerivedQ, class TDerivedA, class TDerivedB, class TDerivedC>
-std::optional<Vector<TDerivedP::RowsAtCompileTime>> LineSegmentPlane(
+std::optional<Vector<TDerivedP::RowsAtCompileTime>> LineSegmentPlane3D(
     Eigen::MatrixBase<TDerivedP> const& P,
     Eigen::MatrixBase<TDerivedQ> const& Q,
     Eigen::MatrixBase<TDerivedA> const& A,
     Eigen::MatrixBase<TDerivedB> const& B,
     Eigen::MatrixBase<TDerivedC> const& C)
 {
-    auto constexpr Rows = TDerivedP::RowsAtCompileTime;
+    auto constexpr Rows  = TDerivedP::RowsAtCompileTime;
+    auto constexpr kDims = 3;
+    static_assert(Rows == kDims, "This overlap test is specialized for 3D");
     // Intersect segment ab against plane of triangle def. If intersecting,
     // return t value and position q of intersection
     Vector<Rows> const n = (B - A).cross(C - A);
     Scalar const d       = n.dot(A);
-    return LineSegmentPlane(P, Q, n, d);
+    return LineSegmentPlane3D(P, Q, n, d);
 }
 
 template <class TDerivedP, class TDerivedQ, class TDerivedn>
-std::optional<Vector<TDerivedP::RowsAtCompileTime>> LineSegmentPlane(
+std::optional<Vector<TDerivedP::RowsAtCompileTime>> LineSegmentPlane3D(
     Eigen::MatrixBase<TDerivedP> const& P,
     Eigen::MatrixBase<TDerivedQ> const& Q,
     Eigen::MatrixBase<TDerivedn> const& n,
@@ -230,28 +232,28 @@ std::optional<Vector<TDerivedP::RowsAtCompileTime>> LineSegmentPlane(
 }
 
 template <class TDerivedP, class TDerivedQ, class TDerivedA, class TDerivedB, class TDerivedC>
-std::optional<Vector<3>> UvwLineTriangle(
+std::optional<Vector<3>> UvwLineTriangle3D(
     Eigen::MatrixBase<TDerivedP> const& P,
     Eigen::MatrixBase<TDerivedQ> const& Q,
     Eigen::MatrixBase<TDerivedA> const& A,
     Eigen::MatrixBase<TDerivedB> const& B,
     Eigen::MatrixBase<TDerivedC> const& C)
 {
-    auto constexpr Rows = TDerivedP::RowsAtCompileTime;
+    auto constexpr Rows  = TDerivedP::RowsAtCompileTime;
+    auto constexpr kDims = 3;
+    static_assert(Rows == kDims, "This overlap test is specialized for 3D");
     /**
      * Ericson, Christer. Real-time collision detection. Crc Press, 2004. section 5.3.4
      */
-    Vector<Rows> const PQ = Q - P;
-    Vector<Rows> const PA = A - P;
-    Vector<Rows> const PB = B - P;
-    Vector<Rows> const PC = C - P;
+    Vector<kDims> const PQ = Q - P;
+    Vector<kDims> const PA = A - P;
+    Vector<kDims> const PB = B - P;
+    Vector<kDims> const PC = C - P;
     // Test if pq is inside the edges bc, ca and ab. Done by testing
     // that the signed tetrahedral volumes, computed using scalar triple
     // products, are all non-zero
-    Vector<Rows> const m = PQ.cross(PC);
-    Vector<Rows> uvw{};
-    if constexpr (Rows == Eigen::Dynamic)
-        uvw.setZero(P.rows());
+    Vector<kDims> const m = PQ.cross(PC);
+    Vector<kDims> uvw     = Vector<kDims>::Zero();
 
     Scalar& u           = uvw(0);
     Scalar& v           = uvw(1);
@@ -291,18 +293,20 @@ std::optional<Vector<3>> UvwLineTriangle(
 }
 
 template <class TDerivedP, class TDerivedQ, class TDerivedA, class TDerivedB, class TDerivedC>
-std::optional<Vector<3>> UvwLineSegmentTriangle(
+std::optional<Vector<3>> UvwLineSegmentTriangle3D(
     Eigen::MatrixBase<TDerivedP> const& P,
     Eigen::MatrixBase<TDerivedQ> const& Q,
     Eigen::MatrixBase<TDerivedA> const& A,
     Eigen::MatrixBase<TDerivedB> const& B,
     Eigen::MatrixBase<TDerivedC> const& C)
 {
-    auto constexpr Rows   = TDerivedP::RowsAtCompileTime;
-    Vector<Rows> const AB = B - A;
-    Vector<Rows> const AC = C - A;
-    Vector<Rows> const PQ = Q - P;
-    Vector<Rows> const n  = AB.cross(AC);
+    auto constexpr Rows  = TDerivedP::RowsAtCompileTime;
+    auto constexpr kDims = 3;
+    static_assert(Rows == kDims, "This overlap test is specialized for 3D");
+    Vector<kDims> const AB = B - A;
+    Vector<kDims> const AC = C - A;
+    Vector<kDims> const PQ = Q - P;
+    Vector<kDims> const n  = AB.cross(AC);
     // Compute denominator d. If d == 0, segment is parallel to triangle, so exit early
     auto constexpr eps                      = 1e-15;
     Scalar const d                          = PQ.dot(n);
@@ -317,21 +321,21 @@ std::optional<Vector<3>> UvwLineSegmentTriangle(
         return {};
     // Compute barycentric coordinate components and test if within bounds
     auto const BarycentricCoordinatesOf = [&](auto const& P) {
-        Vector<Rows> const v0 = B - A;
-        Vector<Rows> const v1 = C - A;
-        Vector<Rows> const v2 = P - A;
-        Scalar const d00      = v0.dot(v0);
-        Scalar const d01      = v0.dot(v1);
-        Scalar const d11      = v1.dot(v1);
-        Scalar const d20      = v2.dot(v0);
-        Scalar const d21      = v2.dot(v1);
-        Scalar const denom    = d00 * d11 - d01 * d01;
-        Scalar const v        = (d11 * d20 - d01 * d21) / denom;
-        Scalar const w        = (d00 * d21 - d01 * d20) / denom;
-        Scalar const u        = 1. - v - w;
+        Vector<kDims> const v0 = B - A;
+        Vector<kDims> const v1 = C - A;
+        Vector<kDims> const v2 = P - A;
+        Scalar const d00       = v0.dot(v0);
+        Scalar const d01       = v0.dot(v1);
+        Scalar const d11       = v1.dot(v1);
+        Scalar const d20       = v2.dot(v0);
+        Scalar const d21       = v2.dot(v1);
+        Scalar const denom     = d00 * d11 - d01 * d01;
+        Scalar const v         = (d11 * d20 - d01 * d21) / denom;
+        Scalar const w         = (d00 * d21 - d01 * d20) / denom;
+        Scalar const u         = 1. - v - w;
         return Vector<3>{u, v, w};
     };
-    Vector<Rows> const I         = P + t * PQ;
+    Vector<kDims> const I        = P + t * PQ;
     Vector<3> const uvw          = BarycentricCoordinatesOf(I);
     bool const bIsInsideTriangle = (uvw.array() >= 0.).all() and (uvw.array() <= 1.).all();
     if (!bIsInsideTriangle)
@@ -347,7 +351,7 @@ template <
     class TDerivedA2,
     class TDerivedB2,
     class TDerivedC2>
-std::array<std::optional<Vector<3>>, 6u> UvwTriangles(
+std::array<std::optional<Vector<3>>, 6u> UvwTriangles3D(
     Eigen::MatrixBase<TDerivedA1> const& A1,
     Eigen::MatrixBase<TDerivedB1> const& B1,
     Eigen::MatrixBase<TDerivedC1> const& C1,
@@ -355,9 +359,12 @@ std::array<std::optional<Vector<3>>, 6u> UvwTriangles(
     Eigen::MatrixBase<TDerivedB2> const& B2,
     Eigen::MatrixBase<TDerivedC2> const& C2)
 {
-    auto constexpr Rows              = TDerivedA1::RowsAtCompileTime;
-    Vector<Rows> const n1            = (B1 - A1).cross(C1 - A1).normalized();
-    Vector<Rows> const n2            = (B2 - A2).cross(C2 - A2).normalized();
+    auto constexpr Rows  = TDerivedA1::RowsAtCompileTime;
+    auto constexpr kDims = 3;
+    static_assert(Rows == kDims, "This overlap test is specialized for 3D");
+
+    Vector<kDims> const n1           = (B1 - A1).cross(C1 - A1).normalized();
+    Vector<kDims> const n2           = (B2 - A2).cross(C2 - A2).normalized();
     auto constexpr eps               = 1e-15;
     bool const bAreTrianglesCoplanar = (1. - std::abs(n1.dot(n2))) < eps();
     if (bAreTrianglesCoplanar)
@@ -375,12 +382,12 @@ std::array<std::optional<Vector<3>>, 6u> UvwTriangles(
 
     // Test 3 edges of each triangle against the other triangle
     std::array<std::optional<Vector<3>>, 6u> intersections{
-        UvwLineSegmentTriangle(A1, B1, A2, B2, C2),
-        UvwLineSegmentTriangle(B1, C1, A2, B2, C2),
-        UvwLineSegmentTriangle(C1, A1, A2, B2, C2),
-        UvwLineSegmentTriangle(A2, B2, A1, B1, C1),
-        UvwLineSegmentTriangle(B2, C2, A1, B1, C1),
-        UvwLineSegmentTriangle(C2, A2, A1, B1, C1)};
+        UvwLineSegmentTriangle3D(A1, B1, A2, B2, C2),
+        UvwLineSegmentTriangle3D(B1, C1, A2, B2, C2),
+        UvwLineSegmentTriangle3D(C1, A1, A2, B2, C2),
+        UvwLineSegmentTriangle3D(A2, B2, A1, B1, C1),
+        UvwLineSegmentTriangle3D(B2, C2, A1, B1, C1),
+        UvwLineSegmentTriangle3D(C2, A2, A1, B1, C1)};
     return intersections;
 }
 

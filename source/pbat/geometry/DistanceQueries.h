@@ -26,6 +26,22 @@ Scalar AxisAlignedBoundingBoxes(
     Eigen::MatrixBase<TDerivedU2> const& U2);
 
 /**
+ * @brief
+ * @tparam TDerivedP
+ * @tparam TDerivedL
+ * @tparam TDerivedU
+ * @param P
+ * @param L
+ * @param U
+ * @return
+ */
+template <class TDerivedP, class TDerivedL, class TDerivedU>
+Scalar PointAxisAlignedBoundingBox(
+    Eigen::MatrixBase<TDerivedP> const& P,
+    Eigen::MatrixBase<TDerivedL> const& L,
+    Eigen::MatrixBase<TDerivedU> const& U);
+
+/**
  * @brief Obtain squared distance between point P and triangle ABC
  * @param P
  * @param A
@@ -114,6 +130,21 @@ Scalar AxisAlignedBoundingBoxes(
     return d2;
 }
 
+template <class TDerivedP, class TDerivedL, class TDerivedU>
+Scalar PointAxisAlignedBoundingBox(
+    Eigen::MatrixBase<TDerivedP> const& P,
+    Eigen::MatrixBase<TDerivedL> const& L,
+    Eigen::MatrixBase<TDerivedU> const& U)
+{
+    // If point is inside AABB, then distance is 0.
+    bool const bIsInsideBox = OverlapQueries::PointAxisAlignedBoundingBox(P, L, U);
+    if (bIsInsideBox)
+        return 0.;
+    // Otherwise compute distance to boundary
+    auto const CP = ClosestPointQueries::PointOnAxisAlignedBoundingBox(P, L, U);
+    return (P - CP).norm();
+}
+
 template <class TDerivedP, class TDerivedA, class TDerivedB, class TDerivedC>
 Scalar PointTriangle(
     Eigen::MatrixBase<TDerivedP> const& P,
@@ -134,7 +165,7 @@ Scalar PointTetrahedron(
     Eigen::MatrixBase<TDerivedC> const& C,
     Eigen::MatrixBase<TDerivedD> const& D)
 {
-    bool const bPointInTetrahedron = OverlapQueries::PointTetrahedron(P, A, B, C, D);
+    bool const bPointInTetrahedron = OverlapQueries::PointTetrahedron3D(P, A, B, C, D);
     if (bPointInTetrahedron)
         return 0.;
 
