@@ -20,8 +20,8 @@ void BindTetrahedralAabbHierarchy(pybind11::module& m)
                          std::size_t maxPointsInLeaf) {
                 return TetrahedralAabbHierarchy(V, T, maxPointsInLeaf);
             }),
-            pyb::arg("V"),
-            pyb::arg("T"),
+            pyb::arg("V").noconvert(),
+            pyb::arg("T").noconvert(),
             pyb::arg("max_points_in_leaf") = 10ULL)
         .def_property_readonly_static(
             "dims",

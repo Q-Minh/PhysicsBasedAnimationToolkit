@@ -139,4 +139,22 @@ TEST_CASE("[geometry] TetrahedralAabbHierarchy")
         auto const primitiveIdx = nearestPrimitivesToP[static_cast<std::size_t>(i)];
         CHECK_GT(primitiveIdx, Index{-1});
     }
+
+    geometry::TetrahedralAabbHierarchy const otherBvh{bvh};
+    IndexMatrix<2, Eigen::Dynamic> const overlappingP = bvh.OverlappingPrimitives(otherBvh);
+    auto const nPrimitives                            = static_cast<std::size_t>(C.cols());
+    std::vector<std::size_t> overlapCounts(nPrimitives, 0ULL);
+    for (auto p : overlappingP.row(0))
+    {
+        auto const pStl = static_cast<std::size_t>(p);
+        ++overlapCounts[pStl];
+    }
+    bool const bAllPrimitivesHaveAnOverlap =
+        std::ranges::all_of(overlapCounts, [](std::size_t c) { return c > 0; });
+    CHECK(bAllPrimitivesHaveAnOverlap);
+
+    // Adjacent primitives of the same mesh will touch each other, but they should not count as
+    // overlapping.
+    auto const nSelfOverlappingPrimitives = bvh.OverlappingPrimitives(bvh).size();
+    CHECK_EQ(nSelfOverlappingPrimitives, 0);
 }

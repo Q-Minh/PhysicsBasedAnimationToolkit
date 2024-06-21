@@ -27,8 +27,8 @@ struct KdTreeNode
 
     bool HasLeftChild() const { return lc > -1; }
     bool HasRightChild() const { return rc > -1; }
-    [[maybe_unused]] bool IsLeafNode() const { return !HasLeftChild() && !HasRightChild(); }
-    [[maybe_unused]] bool IsInternalNode() const { return HasLeftChild() || HasRightChild(); }
+    [[maybe_unused]] bool IsLeafNode() const { return (not HasLeftChild()) and (not HasRightChild()); }
+    [[maybe_unused]] bool IsInternalNode() const { return HasLeftChild() or HasRightChild(); }
 };
 
 template <int Dims>
