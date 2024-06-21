@@ -307,7 +307,7 @@ bool PointTetrahedron(
     Eigen::MatrixBase<TDerivedB> const& B,
     Eigen::MatrixBase<TDerivedC> const& C,
     Eigen::MatrixBase<TDerivedD> const& D)
-{    
+{
     auto const PointOutsidePlane = [](auto const& p, auto const& a, auto const& b, auto const& c) {
         Scalar const d = (p - a).dot((b - a).cross(c - a));
         return d > 0.;
@@ -343,7 +343,7 @@ bool AxisAlignedBoundingBoxes(
     Eigen::MatrixBase<TDerivedL2> const& L2,
     Eigen::MatrixBase<TDerivedU2> const& U2)
 {
-    return (L1.array() <= U2.array()).all() && (L2.array() <= U1.array()).all();
+    return (L1.array() <= U2.array()).all() and (L2.array() <= U1.array()).all();
 }
 
 template <class TDerivedC, class TDerivedL, class TDerivedU>
@@ -372,7 +372,7 @@ bool LineSegmentSphere(
     Scalar const b       = m.dot(d);
     Scalar const c       = m.dot(m) - R * R;
     // Exit if r's origin outside s (c > 0) and r pointing away from s (b > 0)
-    if (c > 0. && b > 0.)
+    if (c > 0. and b > 0.)
         return false;
     Scalar const discr = b * b - c;
     // A negative discriminant corresponds to ray missing sphere
@@ -492,7 +492,7 @@ bool TriangleAxisAlignedBoundingBox(
         return (e.array() * a.array().abs()).sum();
     };
     auto const AreDisjoint = [](Scalar ABCprojlow, Scalar ABCprojup, Scalar AABBproj) {
-        return (AABBproj < ABCprojlow) || (ABCprojup < -AABBproj);
+        return (AABBproj < ABCprojlow) or (ABCprojup < -AABBproj);
     };
     auto const TestAxis = [&ProjectTriangle, &ProjectAabb, &AreDisjoint](auto const& axis) {
         auto const [ABCmin, ABCmax] = ProjectTriangle(axis);
@@ -559,7 +559,7 @@ bool TriangleAxisAlignedBoundingBox(
     {
         Scalar const max = std::max({AO(dim), BO(dim), CO(dim)});
         Scalar const min = std::min({AO(dim), BO(dim), CO(dim)});
-        if (max < -e(dim) || min > e(dim))
+        if (max < -e(dim) or min > e(dim))
             return false;
     }
 
@@ -610,7 +610,7 @@ bool TetrahedronAxisAlignedBoundingBox(
         return (e.array() * a.array().abs()).sum();
     };
     auto const AreDisjoint = [](Scalar low, Scalar up, Scalar r) {
-        return (up < -r) || (r < low);
+        return (up < -r) or (r < low);
     };
     auto const TestAxis = [&ProjectTetrahedron, &ProjectAabb, &AreDisjoint](auto const& axis) {
         auto const [low, up] = ProjectTetrahedron(axis);
@@ -689,7 +689,7 @@ bool TetrahedronAxisAlignedBoundingBox(
     {
         Scalar const max = std::max({AO(dim), BO(dim), CO(dim), DO(dim)});
         Scalar const min = std::min({AO(dim), BO(dim), CO(dim), DO(dim)});
-        if (max < -e(dim) || min > e(dim))
+        if (max < -e(dim) or min > e(dim))
             return false;
     }
 
@@ -768,7 +768,7 @@ bool TriangleTetrahedron(
             std::max({p(0), p(1), p(2), p(3)}));
     };
     auto const AreDisjoint = [](Scalar low1, Scalar up1, Scalar low2, Scalar up2) {
-        return (up1 < low2) || (up2 < low1);
+        return (up1 < low2) or (up2 < low1);
     };
     auto const TestAxis = [&ProjectTriangle, &ProjectTetrahedron, &AreDisjoint](auto const& a) {
         auto const [low1, up1] = ProjectTriangle(a);
@@ -908,7 +908,7 @@ bool Tetrahedra(
             std::max({p(0), p(1), p(2), p(3)}));
     };
     auto const AreDisjoint = [](Scalar low1, Scalar up1, Scalar low2, Scalar up2) {
-        return (up1 < low2) || (up2 < low1);
+        return (up1 < low2) or (up2 < low1);
     };
     auto const TestAxis =
         [&ProjectTetrahedron1, &ProjectTetrahedron2, &AreDisjoint](auto const& a) {

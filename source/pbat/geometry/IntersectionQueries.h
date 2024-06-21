@@ -173,7 +173,7 @@ std::optional<Vector<TDerivedP::RowsAtCompileTime>> LineSegmentSphere(
     Scalar const b        = m.dot(d);
     Scalar const c        = m.dot(m) - (R * R);
     // Exit if r's origin outside s (c > 0) and r pointing away from s (b > 0)
-    if (c > 0. && b > 0.)
+    if (c > 0. and b > 0.)
         return {};
     Scalar const discr = b * b - c;
     // A negative discriminant corresponds to ray missing sphere
@@ -220,7 +220,7 @@ std::optional<Vector<TDerivedP::RowsAtCompileTime>> LineSegmentPlane(
     Vector<Rows> const PQ = Q - P;
     Scalar const t        = (d - n.dot(P)) / n.dot(PQ);
     // If t in [0..1] compute and return intersection point
-    if (t >= 0. && t <= 1.)
+    if (t >= 0. and t <= 1.)
     {
         auto const I = P + t * PQ;
         return I;
@@ -313,7 +313,7 @@ std::optional<Vector<3>> UvwLineSegmentTriangle(
     // intersects iff 0 <= t. Segment intersects iff 0 <= t <= 1. Delay
     // dividing by d until intersection has been found to pierce triangle
     Scalar const t = n.dot(A - P) / d;
-    if (t < 0. || t > 1.)
+    if (t < 0. or t > 1.)
         return {};
     // Compute barycentric coordinate components and test if within bounds
     auto const BarycentricCoordinatesOf = [&](auto const& P) {
@@ -333,7 +333,7 @@ std::optional<Vector<3>> UvwLineSegmentTriangle(
     };
     Vector<Rows> const I         = P + t * PQ;
     Vector<3> const uvw          = BarycentricCoordinatesOf(I);
-    bool const bIsInsideTriangle = (uvw.array() >= 0.).all() && (uvw.array() <= 1.).all();
+    bool const bIsInsideTriangle = (uvw.array() >= 0.).all() and (uvw.array() <= 1.).all();
     if (!bIsInsideTriangle)
         return {};
 
