@@ -2,6 +2,7 @@
 
 #include "AxisAlignedBoundingBox.h"
 #include "TetrahedralAabbHierarchy.h"
+#include "TriangleAabbHierarchy.h"
 
 namespace pbat {
 namespace py {
@@ -11,6 +12,7 @@ void Bind(pybind11::module& m)
 {
     BindAxisAlignedBoundingBox(m);
     BindTetrahedralAabbHierarchy(m);
+    BindTriangleAabbHierarchy(m);
 }
 
 } // namespace geometry

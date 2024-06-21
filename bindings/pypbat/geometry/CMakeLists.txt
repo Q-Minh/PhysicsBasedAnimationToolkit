@@ -5,6 +5,7 @@ target_sources(PhysicsBasedAnimationToolkit_Python
     "AxisAlignedBoundingBox.h"
     "Geometry.h"
     "TetrahedralAabbHierarchy.h"
+    "TriangleAabbHierarchy.h"
 )
 
 target_sources(PhysicsBasedAnimationToolkit_Python
@@ -12,4 +13,5 @@ target_sources(PhysicsBasedAnimationToolkit_Python
     "AxisAlignedBoundingBox.cpp"
     "Geometry.cpp"
     "TetrahedralAabbHierarchy.cpp"
+    "TriangleAabbHierarchy.cpp"
 )
