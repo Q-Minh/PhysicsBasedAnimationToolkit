@@ -12,6 +12,42 @@ namespace geometry {
 namespace IntersectionQueries {
 
 /**
+ * @brief
+ * @tparam TDerivedP
+ * @tparam TDerivedA
+ * @tparam TDerivedB
+ * @tparam TDerivedC
+ * @param P Point from which to compute barycentric coordinates. Must be in the plane spanned by
+ * triangle ABC.
+ * @param A
+ * @param B
+ * @param C
+ * @return
+ */
+template <class TDerivedP, class TDerivedA, class TDerivedB, class TDerivedC>
+Vector<3> TriangleBarycentricCoordinates(
+    Eigen::MatrixBase<TDerivedP> const& P,
+    Eigen::MatrixBase<TDerivedA> const& A,
+    Eigen::MatrixBase<TDerivedB> const& B,
+    Eigen::MatrixBase<TDerivedC> const& C)
+{
+    auto constexpr kRows   = TDerivedP::RowsAtCompileTime;
+    Vector<kRows> const v0 = B - A;
+    Vector<kRows> const v1 = C - A;
+    Vector<kRows> const v2 = P - A;
+    Scalar const d00       = v0.dot(v0);
+    Scalar const d01       = v0.dot(v1);
+    Scalar const d11       = v1.dot(v1);
+    Scalar const d20       = v2.dot(v0);
+    Scalar const d21       = v2.dot(v1);
+    Scalar const denom     = d00 * d11 - d01 * d01;
+    Scalar const v         = (d11 * d20 - d01 * d21) / denom;
+    Scalar const w         = (d00 * d21 - d01 * d20) / denom;
+    Scalar const u         = 1. - v - w;
+    return Vector<3>{u, v, w};
+};
+
+/**
  * @brief Computes the intersection volume between 2 axis aligned bounding boxes
  * @param aabb1
  * @param aabb2
@@ -23,6 +59,25 @@ Matrix<TDerivedL1::Rows, 2> AxisAlignedBoundingBoxes(
     Eigen::MatrixBase<TDerivedU1> const& U1,
     Eigen::MatrixBase<TDerivedL2> const& L2,
     Eigen::MatrixBase<TDerivedU2> const& U2);
+
+/**
+ * @brief
+ * @tparam TDerivedP
+ * @tparam TDerivedA
+ * @tparam TDerivedB
+ * @tparam TDerivedC
+ * @param P
+ * @param A
+ * @param B
+ * @param C
+ * @return
+ */
+template <class TDerivedP, class TDerivedA, class TDerivedB, class TDerivedC>
+Vector<3> UvwPointTriangle(
+    Eigen::MatrixBase<TDerivedP> const& P,
+    Eigen::MatrixBase<TDerivedA> const& A,
+    Eigen::MatrixBase<TDerivedB> const& B,
+    Eigen::MatrixBase<TDerivedC> const& C);
 
 /**
  * @brief Computes the intersection point, if any, between a line segment PQ and a sphere (C,r).
@@ -165,13 +220,13 @@ std::optional<Vector<TDerivedP::RowsAtCompileTime>> LineSegmentSphere(
     Eigen::MatrixBase<TDerivedC> const& C,
     Scalar R)
 {
-    auto constexpr Rows   = TDerivedP::RowsAtCompileTime;
-    Vector<Rows> const PQ = (Q - P);
-    Scalar const len      = PQ.norm();
-    Vector<Rows> const d  = PQ / len;
-    Vector<Rows> const m  = P - C;
-    Scalar const b        = m.dot(d);
-    Scalar const c        = m.dot(m) - (R * R);
+    auto constexpr kRows   = TDerivedP::RowsAtCompileTime;
+    Vector<kRows> const PQ = (Q - P);
+    Scalar const len       = PQ.norm();
+    Vector<kRows> const d  = PQ / len;
+    Vector<kRows> const m  = P - C;
+    Scalar const b         = m.dot(d);
+    Scalar const c         = m.dot(m) - (R * R);
     // Exit if r's origin outside s (c > 0) and r pointing away from s (b > 0)
     if (c > 0. and b > 0.)
         return {};
@@ -188,7 +243,7 @@ std::optional<Vector<TDerivedP::RowsAtCompileTime>> LineSegmentSphere(
     if (t > len)
         return {};
 
-    Vector<Rows> const I = P + t * d;
+    Vector<kRows> const I = P + t * d;
     return I;
 }
 
@@ -200,13 +255,13 @@ std::optional<Vector<TDerivedP::RowsAtCompileTime>> LineSegmentPlane3D(
     Eigen::MatrixBase<TDerivedB> const& B,
     Eigen::MatrixBase<TDerivedC> const& C)
 {
-    auto constexpr Rows  = TDerivedP::RowsAtCompileTime;
+    auto constexpr kRows = TDerivedP::RowsAtCompileTime;
     auto constexpr kDims = 3;
-    static_assert(Rows == kDims, "This overlap test is specialized for 3D");
+    static_assert(kRows == kDims, "This overlap test is specialized for 3D");
     // Intersect segment ab against plane of triangle def. If intersecting,
     // return t value and position q of intersection
-    Vector<Rows> const n = (B - A).cross(C - A);
-    Scalar const d       = n.dot(A);
+    Vector<kRows> const n = (B - A).cross(C - A);
+    Scalar const d        = n.dot(A);
     return LineSegmentPlane3D(P, Q, n, d);
 }
 
@@ -217,10 +272,10 @@ std::optional<Vector<TDerivedP::RowsAtCompileTime>> LineSegmentPlane3D(
     Eigen::MatrixBase<TDerivedn> const& n,
     Scalar d)
 {
-    auto constexpr Rows = TDerivedP::RowsAtCompileTime;
+    auto constexpr kRows = TDerivedP::RowsAtCompileTime;
     // Compute the t value for the directed line ab intersecting the plane
-    Vector<Rows> const PQ = Q - P;
-    Scalar const t        = (d - n.dot(P)) / n.dot(PQ);
+    Vector<kRows> const PQ = Q - P;
+    Scalar const t         = (d - n.dot(P)) / n.dot(PQ);
     // If t in [0..1] compute and return intersection point
     if (t >= 0. and t <= 1.)
     {
@@ -239,9 +294,9 @@ std::optional<Vector<3>> UvwLineTriangle3D(
     Eigen::MatrixBase<TDerivedB> const& B,
     Eigen::MatrixBase<TDerivedC> const& C)
 {
-    auto constexpr Rows  = TDerivedP::RowsAtCompileTime;
+    auto constexpr kRows = TDerivedP::RowsAtCompileTime;
     auto constexpr kDims = 3;
-    static_assert(Rows == kDims, "This overlap test is specialized for 3D");
+    static_assert(kRows == kDims, "This overlap test is specialized for 3D");
     /**
      * Ericson, Christer. Real-time collision detection. Crc Press, 2004. section 5.3.4
      */
@@ -300,9 +355,9 @@ std::optional<Vector<3>> UvwLineSegmentTriangle3D(
     Eigen::MatrixBase<TDerivedB> const& B,
     Eigen::MatrixBase<TDerivedC> const& C)
 {
-    auto constexpr Rows  = TDerivedP::RowsAtCompileTime;
+    auto constexpr kRows = TDerivedP::RowsAtCompileTime;
     auto constexpr kDims = 3;
-    static_assert(Rows == kDims, "This overlap test is specialized for 3D");
+    static_assert(kRows == kDims, "This overlap test is specialized for 3D");
     Vector<kDims> const AB = B - A;
     Vector<kDims> const AC = C - A;
     Vector<kDims> const PQ = Q - P;
@@ -320,27 +375,11 @@ std::optional<Vector<3>> UvwLineSegmentTriangle3D(
     if (t < 0. or t > 1.)
         return {};
     // Compute barycentric coordinate components and test if within bounds
-    auto const BarycentricCoordinatesOf = [&](auto const& P) {
-        Vector<kDims> const v0 = B - A;
-        Vector<kDims> const v1 = C - A;
-        Vector<kDims> const v2 = P - A;
-        Scalar const d00       = v0.dot(v0);
-        Scalar const d01       = v0.dot(v1);
-        Scalar const d11       = v1.dot(v1);
-        Scalar const d20       = v2.dot(v0);
-        Scalar const d21       = v2.dot(v1);
-        Scalar const denom     = d00 * d11 - d01 * d01;
-        Scalar const v         = (d11 * d20 - d01 * d21) / denom;
-        Scalar const w         = (d00 * d21 - d01 * d20) / denom;
-        Scalar const u         = 1. - v - w;
-        return Vector<3>{u, v, w};
-    };
     Vector<kDims> const I        = P + t * PQ;
-    Vector<3> const uvw          = BarycentricCoordinatesOf(I);
+    Vector<3> const uvw          = TriangleBarycentricCoordinates(I, A, B, C);
     bool const bIsInsideTriangle = (uvw.array() >= 0.).all() and (uvw.array() <= 1.).all();
     if (!bIsInsideTriangle)
         return {};
-
     return uvw;
 }
 
@@ -359,14 +398,14 @@ std::array<std::optional<Vector<3>>, 6u> UvwTriangles3D(
     Eigen::MatrixBase<TDerivedB2> const& B2,
     Eigen::MatrixBase<TDerivedC2> const& C2)
 {
-    auto constexpr Rows  = TDerivedA1::RowsAtCompileTime;
+    auto constexpr kRows = TDerivedA1::RowsAtCompileTime;
     auto constexpr kDims = 3;
-    static_assert(Rows == kDims, "This overlap test is specialized for 3D");
+    static_assert(kRows == kDims, "This overlap test is specialized for 3D");
 
     Vector<kDims> const n1           = (B1 - A1).cross(C1 - A1).normalized();
     Vector<kDims> const n2           = (B2 - A2).cross(C2 - A2).normalized();
     auto constexpr eps               = 1e-15;
-    bool const bAreTrianglesCoplanar = (1. - std::abs(n1.dot(n2))) < eps();
+    bool const bAreTrianglesCoplanar = (1. - std::abs(n1.dot(n2))) < eps;
     if (bAreTrianglesCoplanar)
     {
         // NOTE: If triangles are coplanar and vertex of one triangle is in the plane of the other

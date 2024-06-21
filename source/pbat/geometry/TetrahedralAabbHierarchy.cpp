@@ -11,30 +11,30 @@ namespace geometry {
 
 TetrahedralAabbHierarchy::TetrahedralAabbHierarchy(
     Eigen::Ref<MatrixX const> const& V,
-    Eigen::Ref<IndexMatrixX const> const& T,
+    Eigen::Ref<IndexMatrixX const> const& C,
     std::size_t maxPointsInLeaf)
-    : V(V), T(T)
+    : V(V), C(C)
 {
-    auto constexpr kRowsT = static_cast<int>(PrimitiveType::RowsAtCompileTime);
-    if (V.rows() != kDims and T.rows() != kRowsT)
+    auto constexpr kRowsC = static_cast<int>(PrimitiveType::RowsAtCompileTime);
+    if (V.rows() != kDims and C.rows() != kRowsC)
     {
         std::string const what = fmt::format(
             "Expected vertex positions V of dimensions {}x|#verts| and tetrahedral vertex indices "
             "T of dimensions {}x|#tets|, but got V={}x{} and T={}x{}.",
             kDims,
-            kRowsT,
+            kRowsC,
             V.rows(),
             V.cols(),
-            T.rows(),
-            T.cols());
+            C.rows(),
+            C.cols());
         throw std::invalid_argument(what);
     }
-    Construct(static_cast<std::size_t>(T.cols()), maxPointsInLeaf);
+    Construct(static_cast<std::size_t>(C.cols()), maxPointsInLeaf);
 }
 
 TetrahedralAabbHierarchy::PrimitiveType TetrahedralAabbHierarchy::Primitive(Index p) const
 {
-    PrimitiveType const inds = T.col(p);
+    PrimitiveType const inds = C.col(p);
     return inds;
 }
 
@@ -45,7 +45,7 @@ TetrahedralAabbHierarchy::PrimitiveLocation(PrimitiveType const& primitive) cons
 }
 
 IndexMatrixX TetrahedralAabbHierarchy::OverlappingPrimitives(
-    TetrahedralAabbHierarchy const& tetbbh,
+    TetrahedralAabbHierarchy const& bvh,
     std::size_t reserve) const
 {
     return this->OverlappingPrimitivesImpl<
@@ -53,7 +53,7 @@ IndexMatrixX TetrahedralAabbHierarchy::OverlappingPrimitives(
         BoundingVolumeType,
         PrimitiveType,
         kDims>(
-        tetbbh,
+        bvh,
         [](BoundingVolumeType const& bv1, BoundingVolumeType const& bv2) -> bool {
             return OverlapQueries::AxisAlignedBoundingBoxes(
                 bv1.min(),
@@ -62,20 +62,20 @@ IndexMatrixX TetrahedralAabbHierarchy::OverlappingPrimitives(
                 bv2.max());
         },
         [&](PrimitiveType const& p1, PrimitiveType const& p2) -> bool {
-            Matrix<kDims, 4> const V1 = V(Eigen::all, p1);
-            Matrix<kDims, 4> const V2 = tetbbh.V(Eigen::all, p2);
+            auto const V1 = V(Eigen::all, p1);
+            auto const V2 = bvh.V(Eigen::all, p2);
             return OverlapQueries::Tetrahedra(
-                V1.col(0),
-                V1.col(1),
-                V1.col(2),
-                V1.col(3),
-                V2.col(0),
-                V2.col(1),
-                V2.col(2),
-                V2.col(3));
+                V1.col(0).head<kDims>(),
+                V1.col(1).head<kDims>(),
+                V1.col(2).head<kDims>(),
+                V1.col(3).head<kDims>(),
+                V2.col(0).head<kDims>(),
+                V2.col(1).head<kDims>(),
+                V2.col(2).head<kDims>(),
+                V2.col(3).head<kDims>());
         },
         [&](PrimitiveType const& p1, PrimitiveType const& p2) -> bool {
-            if (this == &tetbbh)
+            if (this == &bvh)
             {
                 for (auto i : p1)
                     for (auto j : p2)
@@ -113,13 +113,15 @@ TEST_CASE("[geometry] TetrahedralAabbHierarchy")
     geometry::TetrahedralAabbHierarchy const bvh(V, C, kMaxPointsInLeaf);
     CHECK_EQ(bvh.V.rows(), V.rows());
     CHECK_EQ(bvh.V.cols(), V.cols());
-    CHECK_EQ(bvh.T.rows(), C.rows());
-    CHECK_EQ(bvh.T.cols(), C.cols());
+    CHECK_EQ(bvh.C.rows(), C.rows());
+    CHECK_EQ(bvh.C.cols(), C.cols());
     auto constexpr kPoints                         = 20;
     Matrix<3, Eigen::Dynamic> P                    = Matrix<3, Eigen::Dynamic>::Random(3, kPoints);
     std::vector<Index> const primitivesContainingP = bvh.PrimitivesContainingPoints(P);
     CHECK_EQ(primitivesContainingP.size(), P.cols());
-    geometry::AxisAlignedBoundingBox<3> const domain(Vector<3>::Zero(), Vector<3>::Ones());
+    geometry::AxisAlignedBoundingBox<3> const domain(
+        V.rowwise().minCoeff(),
+        V.rowwise().maxCoeff());
     for (auto i = 0; i < P.cols(); ++i)
     {
         auto const primitiveIdx = primitivesContainingP[static_cast<std::size_t>(i)];

@@ -11,6 +11,7 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     "KdTree.h"
     "OverlapQueries.h"
     "TetrahedralAabbHierarchy.h"
+    "TriangleAabbHierarchy.h"
 )
 target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     PRIVATE
@@ -22,4 +23,5 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     "KdTree.cpp"
     "OverlapQueries.cpp"
     "TetrahedralAabbHierarchy.cpp"
+    "TriangleAabbHierarchy.cpp"
 )

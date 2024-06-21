@@ -29,6 +29,25 @@ bool PointAxisAlignedBoundingBox(
     Eigen::MatrixBase<TDerivedU> const& U);
 
 /**
+ * @brief
+ * @tparam TDerivedP
+ * @tparam TDerivedA
+ * @tparam TDerivedB
+ * @tparam TDerivedC
+ * @param P
+ * @param A
+ * @param B
+ * @param C
+ * @return
+ */
+template <class TDerivedP, class TDerivedA, class TDerivedB, class TDerivedC>
+bool PointTriangle(
+    Eigen::MatrixBase<TDerivedP> const& P,
+    Eigen::MatrixBase<TDerivedA> const& A,
+    Eigen::MatrixBase<TDerivedB> const& B,
+    Eigen::MatrixBase<TDerivedC> const& C);
+
+/**
  * @brief Checks if point P is contained in tetrahedron ABCD, in at least 3D.
  * @param P
  * @param A
@@ -197,6 +216,31 @@ bool TetrahedronAxisAlignedBoundingBox(
     Eigen::MatrixBase<TDerivedU> const& U);
 
 /**
+ * @brief Tests for overlap between triangle A1B1C1 and triangle A2B2C2, in 2D.
+ * @param A1
+ * @param B1
+ * @param C1
+ * @param A2
+ * @param B2
+ * @param C2
+ * @return
+ */
+template <
+    class TDerivedA1,
+    class TDerivedB1,
+    class TDerivedC1,
+    class TDerivedA2,
+    class TDerivedB2,
+    class TDerivedC2>
+bool Triangles2D(
+    Eigen::MatrixBase<TDerivedA1> const& A1,
+    Eigen::MatrixBase<TDerivedB1> const& B1,
+    Eigen::MatrixBase<TDerivedC1> const& C1,
+    Eigen::MatrixBase<TDerivedA2> const& A2,
+    Eigen::MatrixBase<TDerivedB2> const& B2,
+    Eigen::MatrixBase<TDerivedC2> const& C2);
+
+/**
  * @brief Tests for overlap between triangle A1B1C1 and triangle A2B2C2, in 3D.
  * @param A1
  * @param B1
@@ -213,7 +257,7 @@ template <
     class TDerivedA2,
     class TDerivedB2,
     class TDerivedC2>
-bool UvwTriangles3D(
+bool Triangles3D(
     Eigen::MatrixBase<TDerivedA1> const& A1,
     Eigen::MatrixBase<TDerivedB1> const& B1,
     Eigen::MatrixBase<TDerivedC1> const& C1,
@@ -335,6 +379,18 @@ bool PointAxisAlignedBoundingBox(
     return bIsInsideBox;
 }
 
+template <class TDerivedP, class TDerivedA, class TDerivedB, class TDerivedC>
+bool PointTriangle(
+    Eigen::MatrixBase<TDerivedP> const& P,
+    Eigen::MatrixBase<TDerivedA> const& A,
+    Eigen::MatrixBase<TDerivedB> const& B,
+    Eigen::MatrixBase<TDerivedC> const& C)
+{
+    Vector<3> const uvw          = IntersectionQueries::TriangleBarycentricCoordinates(P, A, B, C);
+    bool const bIsInsideTriangle = (uvw.array() >= 0.).all() and (uvw.array() <= 1.).all();
+    return bIsInsideTriangle;
+}
+
 template <class TDerivedP, class TDerivedA, class TDerivedB, class TDerivedC, class TDerivedD>
 bool PointTetrahedron3D(
     Eigen::MatrixBase<TDerivedP> const& P,
@@ -343,9 +399,9 @@ bool PointTetrahedron3D(
     Eigen::MatrixBase<TDerivedC> const& C,
     Eigen::MatrixBase<TDerivedD> const& D)
 {
-    auto constexpr Rows  = TDerivedP::RowsAtCompileTime;
+    auto constexpr kRows = TDerivedP::RowsAtCompileTime;
     auto constexpr kDims = 3;
-    static_assert(Rows == kDims, "This overlap test is specialized for 3D");
+    static_assert(kRows == kDims, "This overlap test is specialized for 3D");
 
     auto const PointOutsidePlane = [](auto const& p, auto const& a, auto const& b, auto const& c) {
         Scalar const d = (p - a).dot((b - a).cross(c - a));
@@ -405,11 +461,11 @@ bool LineSegmentSphere(
     Eigen::MatrixBase<TDerivedC> const& C,
     Scalar R)
 {
-    auto constexpr Rows  = TDerivedP::RowsAtCompileTime;
-    Vector<Rows> const d = Q - P;
-    Vector<Rows> const m = P - C;
-    Scalar const b       = m.dot(d);
-    Scalar const c       = m.dot(m) - R * R;
+    auto constexpr kRows  = TDerivedP::RowsAtCompileTime;
+    Vector<kRows> const d = Q - P;
+    Vector<kRows> const m = P - C;
+    Scalar const b        = m.dot(d);
+    Scalar const c        = m.dot(m) - R * R;
     // Exit if r's origin outside s (c > 0) and r pointing away from s (b > 0)
     if (c > 0. and b > 0.)
         return false;
@@ -431,18 +487,18 @@ bool LineSegmentAxisAlignedBoundingBox(
     Eigen::MatrixBase<TDerivedL> const& L,
     Eigen::MatrixBase<TDerivedU> const& U)
 {
-    auto constexpr Rows  = TDerivedP::RowsAtCompileTime;
-    Vector<Rows> const c = 0.5 * (L + U);
-    Vector<Rows> const e = U - L;
-    Vector<Rows> const d = Q - P;
-    Vector<Rows> m       = P + Q - L - U;
-    m                    = m - c; // Translate box and segment to origin
+    auto constexpr kRows  = TDerivedP::RowsAtCompileTime;
+    Vector<kRows> const c = 0.5 * (L + U);
+    Vector<kRows> const e = U - L;
+    Vector<kRows> const d = Q - P;
+    Vector<kRows> m       = P + Q - L - U;
+    m                     = m - c; // Translate box and segment to origin
 
     // Try world coordinate axes as separating axes
     auto const dims = c.rows();
-    Vector<Rows> ad{};
+    Vector<kRows> ad{};
     // Should not happen, hopefully...
-    if constexpr (Rows == Eigen::Dynamic)
+    if constexpr (kRows == Eigen::Dynamic)
         ad.resize(dims);
 
     for (auto dim = 0; dim < dims; ++dim)
@@ -485,9 +541,9 @@ bool PlaneAxisAlignedBoundingBox(
     Eigen::MatrixBase<TDerivedL> const& L,
     Eigen::MatrixBase<TDerivedU> const& U)
 {
-    auto constexpr Rows  = TDerivedP::RowsAtCompileTime;
-    Vector<Rows> const C = 0.5 * (L + U); // Compute AABB center
-    Vector<Rows> const e = U - C;         // Compute positive extents
+    auto constexpr kRows  = TDerivedP::RowsAtCompileTime;
+    Vector<kRows> const C = 0.5 * (L + U); // Compute AABB center
+    Vector<kRows> const e = U - C;         // Compute positive extents
     // Compute the projection interval radius of b onto L(t) = C + t * n
     Scalar const r = (e.array() * n.array().abs()).sum();
     // Compute distance of box center from plane
@@ -508,9 +564,9 @@ bool TriangleAxisAlignedBoundingBox(
      * Ericson, Christer. Real-time collision detection. Crc Press, 2004. section 5.2.9
      */
 
-    auto constexpr Rows  = TDerivedL::RowsAtCompileTime;
+    auto constexpr kRows = TDerivedL::RowsAtCompileTime;
     auto constexpr kDims = 3;
-    static_assert(Rows == kDims, "This overlap test is specialized for 3D");
+    static_assert(kRows == kDims, "This overlap test is specialized for 3D");
     // Transform triangle into reference space of AABB
     Vector<kDims> const O  = 0.5 * (L + U);
     Vector<kDims> const e  = U - O;
@@ -610,9 +666,9 @@ bool TetrahedronAxisAlignedBoundingBox(
     Eigen::MatrixBase<TDerivedL> const& L,
     Eigen::MatrixBase<TDerivedU> const& U)
 {
-    auto constexpr Rows  = TDerivedL::RowsAtCompileTime;
+    auto constexpr kRows = TDerivedL::RowsAtCompileTime;
     auto constexpr kDims = 3;
-    static_assert(Rows == kDims, "This overlap test is specialized for 3D");
+    static_assert(kRows == kDims, "This overlap test is specialized for 3D");
 
     // Transform tetrahedron into reference space of AABB
     Vector<kDims> const O  = 0.5 * (L + U);
@@ -731,7 +787,60 @@ template <
     class TDerivedA2,
     class TDerivedB2,
     class TDerivedC2>
-bool UvwTriangles3D(
+bool Triangles2D(
+    Eigen::MatrixBase<TDerivedA1> const& A1,
+    Eigen::MatrixBase<TDerivedB1> const& B1,
+    Eigen::MatrixBase<TDerivedC1> const& C1,
+    Eigen::MatrixBase<TDerivedA2> const& A2,
+    Eigen::MatrixBase<TDerivedB2> const& B2,
+    Eigen::MatrixBase<TDerivedC2> const& C2)
+{
+    auto constexpr kRows = TDerivedA1::RowsAtCompileTime;
+    auto constexpr kDims = 2;
+    static_assert(kRows == kDims, "This overlap test is specialized for 2D");
+
+    // Separating axis' to test are all 6 triangle edges
+    auto const ProjectTriangle = [&](auto const& a,
+                                     auto const& b,
+                                     auto const& c,
+                                     auto const& axis) -> std::pair<Scalar, Scalar> {
+        Vector<3> const p{a.dot(axis), b.dot(axis), c.dot(axis)};
+        return std::make_pair(std::min({p(0), p(1), p(2)}), std::max({p(0), p(1), p(2)}));
+    };
+    auto const AreDisjoint = [](Scalar low1, Scalar up1, Scalar low2, Scalar up2) {
+        return (up1 < low2) or (up2 < low1);
+    };
+    auto const TestAxis = [&](auto const& axis) {
+        auto const [low1, up1] = ProjectTriangle(A1, B1, C1, axis);
+        auto const [low2, up2] = ProjectTriangle(A2, B2, C2, axis);
+        return AreDisjoint(low1, up1, low2, up2);
+    };
+    auto const EdgeNormal = [](auto e) {
+        return Vector<kDims>{-e(1), e(0)}.normalized();
+    };
+    if (TestAxis(EdgeNormal(B1 - A1)))
+        return false;
+    if (TestAxis(EdgeNormal(C1 - B1)))
+        return false;
+    if (TestAxis(EdgeNormal(A1 - C1)))
+        return false;
+    if (TestAxis(EdgeNormal(B2 - A2)))
+        return false;
+    if (TestAxis(EdgeNormal(C2 - B2)))
+        return false;
+    if (TestAxis(EdgeNormal(A2 - C2)))
+        return false;
+    return true;
+}
+
+template <
+    class TDerivedA1,
+    class TDerivedB1,
+    class TDerivedC1,
+    class TDerivedA2,
+    class TDerivedB2,
+    class TDerivedC2>
+bool Triangles3D(
     Eigen::MatrixBase<TDerivedA1> const& A1,
     Eigen::MatrixBase<TDerivedB1> const& B1,
     Eigen::MatrixBase<TDerivedC1> const& C1,
@@ -770,9 +879,9 @@ bool TriangleTetrahedron(
      * - Face normals of tetrahedron (4 tests)
      * - Face normal of triangle (1 test)
      */
-    auto constexpr Rows  = TDerivedA::RowsAtCompileTime;
+    auto constexpr kRows = TDerivedA::RowsAtCompileTime;
     auto constexpr kDims = 3;
-    static_assert(Rows == kDims, "This overlap test is specialized for 3D");
+    static_assert(kRows == kDims, "This overlap test is specialized for 3D");
 
     // 1. Test edge pairs
     auto const ProjectTriangle = [&](auto const& a) -> std::pair<Scalar, Scalar> {
@@ -911,9 +1020,9 @@ bool Tetrahedra(
      * edges (36 tests)
      * - Face normals of tetrahedron (4+4=8 tests)
      */
-    auto constexpr Rows  = TDerivedA1::RowsAtCompileTime;
+    auto constexpr kRows = TDerivedA1::RowsAtCompileTime;
     auto constexpr kDims = 3;
-    static_assert(Rows == kDims, "This overlap test is specialized for 3D");
+    static_assert(kRows == kDims, "This overlap test is specialized for 3D");
 
     auto const ProjectTetrahedron1 = [&](auto const& a) -> std::pair<Scalar, Scalar> {
         Vector<4> const p{A1.dot(a), B1.dot(a), C1.dot(a), D1.dot(a)};

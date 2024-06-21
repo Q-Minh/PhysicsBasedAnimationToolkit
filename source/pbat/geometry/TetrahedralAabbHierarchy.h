@@ -25,7 +25,7 @@ class TetrahedralAabbHierarchy : public BoundingVolumeHierarchy<
 
     PBAT_API TetrahedralAabbHierarchy(
         Eigen::Ref<MatrixX const> const& V,
-        Eigen::Ref<IndexMatrixX const> const& T,
+        Eigen::Ref<IndexMatrixX const> const& C,
         std::size_t maxPointsInLeaf = 10ULL);
 
     PrimitiveType Primitive(Index p) const;
@@ -35,9 +35,8 @@ class TetrahedralAabbHierarchy : public BoundingVolumeHierarchy<
     template <class RPrimitiveIndices>
     BoundingVolumeType BoundingVolumeOf(RPrimitiveIndices&& pinds) const;
 
-    PBAT_API IndexMatrixX OverlappingPrimitives(
-        TetrahedralAabbHierarchy const& tetbbh,
-        std::size_t reserve = 1000ULL) const;
+    PBAT_API IndexMatrixX
+    OverlappingPrimitives(TetrahedralAabbHierarchy const& bvh, std::size_t reserve = 1000ULL) const;
 
     template <class TDerivedP>
     std::vector<Index> PrimitivesContainingPoints(
@@ -60,14 +59,14 @@ class TetrahedralAabbHierarchy : public BoundingVolumeHierarchy<
     PBAT_API auto GetV() const { return V; }
 
     Eigen::Ref<MatrixX const> V;
-    Eigen::Ref<IndexMatrixX const> T;
+    Eigen::Ref<IndexMatrixX const> C;
 };
 
 template <class RPrimitiveIndices>
 inline TetrahedralAabbHierarchy::BoundingVolumeType
 TetrahedralAabbHierarchy::BoundingVolumeOf(RPrimitiveIndices&& pinds) const
 {
-    auto vertices = T(Eigen::all, common::Slice(pinds)).reshaped();
+    auto vertices = C(Eigen::all, common::Slice(pinds)).reshaped();
     return BoundingVolumeType(V(Eigen::all, vertices));
 }
 

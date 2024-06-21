@@ -231,9 +231,9 @@ Vector<TDerivedP::RowsAtCompileTime> PointInTetrahedron(
     Eigen::MatrixBase<TDerivedC> const& C,
     Eigen::MatrixBase<TDerivedD> const& D)
 {
-    auto constexpr Rows  = TDerivedP::RowsAtCompileTime;
+    auto constexpr kRows = TDerivedP::RowsAtCompileTime;
     auto constexpr kDims = 3;
-    static_assert(Rows == kDims, "This overlap test is specialized for 3D");
+    static_assert(kRows == kDims, "This overlap test is specialized for 3D");
 
     /**
      * Ericson, Christer. Real-time collision detection. Crc Press, 2004. section 5.1.6
