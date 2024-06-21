@@ -148,7 +148,7 @@ template <class TDerived, class TBoundingVolume, class TPrimitive, int Dims>
 inline void BoundingVolumeHierarchy<TDerived, TBoundingVolume, TPrimitive, Dims>::Update()
 {
     auto const& nodes = mKdTree.Nodes();
-    tbb::parallel_for(std::size_t{0ULL}, nodes.size(), [this](std::size_t bvIdx) {
+    tbb::parallel_for(std::size_t{0ULL}, nodes.size(), [&](std::size_t bvIdx) {
         KdTreeNode const& node  = nodes[bvIdx];
         mBoundingVolumes[bvIdx] = BoundingVolumeOf(mKdTree.PointsInNode(node));
     });
