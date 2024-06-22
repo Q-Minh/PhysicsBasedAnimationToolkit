@@ -118,7 +118,7 @@ TEST_CASE("[geometry] TetrahedralAabbHierarchy")
     // clang-format on
 
     std::size_t constexpr kMaxPointsInLeaf = 1ULL;
-    geometry::TetrahedralAabbHierarchy const bvh(V, C, kMaxPointsInLeaf);
+    geometry::TetrahedralAabbHierarchy bvh(V, C, kMaxPointsInLeaf);
     CHECK_EQ(bvh.V.rows(), V.rows());
     CHECK_EQ(bvh.V.cols(), V.cols());
     CHECK_EQ(bvh.C.rows(), C.rows());
@@ -167,4 +167,25 @@ TEST_CASE("[geometry] TetrahedralAabbHierarchy")
     // overlapping.
     auto const nSelfOverlappingPrimitives = bvh.OverlappingPrimitives(bvh).size();
     CHECK_EQ(nSelfOverlappingPrimitives, 0);
+
+    // If points haven't changed, update should preserve the same volumes.
+    std::vector<geometry::TetrahedralAabbHierarchy::BoundingVolumeType> const bvsExpected =
+        bvh.GetBoundingVolumes();
+    bvh.Update();
+    auto const nBvs = bvh.GetBoundingVolumes().size();
+    for (auto b = std::size_t{0}; b < nBvs; ++b)
+    {
+        auto const& bv         = bvh.GetBoundingVolumes().at(b);
+        auto const& bvExpected = bvsExpected.at(b);
+        CHECK(bv.min().isApprox(bvExpected.min()));
+        CHECK(bv.max().isApprox(bvExpected.max()));
+    }
+
+    // The root volume should contain all the primitive locations
+    auto const& rootBv = bvh.GetBoundingVolumes().front();
+    for (auto p = 0; p < bvh.C.cols(); ++p)
+    {
+        auto const X = bvh.PrimitiveLocation(bvh.Primitive(p));
+        CHECK(rootBv.contains(X));
+    }
 }

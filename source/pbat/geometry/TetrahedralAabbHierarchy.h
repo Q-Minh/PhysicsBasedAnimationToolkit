@@ -54,7 +54,7 @@ class TetrahedralAabbHierarchy : public BoundingVolumeHierarchy<
         Eigen::MatrixBase<TDerivedP> const& P,
         bool bParallelize = false) const;
 
-    PBAT_API auto GetBoundingVolumes() const { return mBoundingVolumes; }
+    auto const& GetBoundingVolumes() const { return mBoundingVolumes; }
 
     template <class TDerivedP>
     void SetV(Eigen::MatrixBase<TDerivedP> const& P)
@@ -62,7 +62,7 @@ class TetrahedralAabbHierarchy : public BoundingVolumeHierarchy<
         V = P;
     }
 
-    PBAT_API auto GetV() const { return V; }
+    [[maybe_unused]] auto GetV() const { return V; }
 
     Eigen::Ref<MatrixX const> V;
     Eigen::Ref<IndexMatrixX const> C;

@@ -63,7 +63,7 @@ class TriangleAabbHierarchy<3> : public BoundingVolumeHierarchy<
         Eigen::MatrixBase<TDerivedP> const& P,
         bool bParallelize = false) const;
 
-    [[maybe_unused]] auto GetBoundingVolumes() const { return mBoundingVolumes; }
+    auto const& GetBoundingVolumes() const { return mBoundingVolumes; }
 
     template <class TDerivedP>
     void SetV(Eigen::MatrixBase<TDerivedP> const& P)
@@ -284,7 +284,7 @@ class TriangleAabbHierarchy<2> : public BoundingVolumeHierarchy<
         Eigen::MatrixBase<TDerivedP> const& P,
         bool bParallelize = false) const;
 
-    [[maybe_unused]] auto GetBoundingVolumes() const { return mBoundingVolumes; }
+    auto const& GetBoundingVolumes() const { return mBoundingVolumes; }
 
     template <class TDerivedP>
     void SetV(Eigen::MatrixBase<TDerivedP> const& P)
