@@ -34,7 +34,7 @@ struct SymmetricLaplacianMatrix
     SelfType& operator=(SelfType const&) = delete;
 
     /**
-     * @brief Applies this mass matrix as a linear operator on x, adding result to y.
+     * @brief Applies this matrix as a linear operator on x, adding result to y.
      *
      * @tparam TDerivedIn
      * @tparam TDerivedOut
@@ -45,7 +45,7 @@ struct SymmetricLaplacianMatrix
     void Apply(Eigen::MatrixBase<TDerivedIn> const& x, Eigen::DenseBase<TDerivedOut>& y) const;
 
     /**
-     * @brief Transforms this matrix-free mass matrix representation into sparse compressed format.
+     * @brief Transforms this matrix-free matrix representation into sparse compressed format.
      * @return
      */
     CSCMatrix ToMatrix() const;
