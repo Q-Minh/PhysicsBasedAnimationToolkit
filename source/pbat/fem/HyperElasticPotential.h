@@ -196,7 +196,7 @@ inline void
 HyperElasticPotential<TMesh, THyperElasticEnergy, QuadratureOrder>::ComputeElementElasticity(
     Eigen::MatrixBase<TDerived> const& x)
 {
-    PBAT_PROFILE_NAMED_SCOPE("fem::HyperElasticPotential::ComputeElementElasticity");
+    PBAT_PROFILE_NAMED_SCOPE("fem.HyperElasticPotential.ComputeElementElasticity");
     // Check inputs
     CheckValidState();
     auto const numberOfElements = mesh.E.cols();
@@ -244,7 +244,7 @@ inline void HyperElasticPotential<TMesh, THyperElasticEnergy, QuadratureOrder>::
     Eigen::MatrixBase<TDerivedIn> const& x,
     Eigen::DenseBase<TDerivedOut>& y) const
 {
-    PBAT_PROFILE_NAMED_SCOPE("fem::HyperElasticPotential::Apply");
+    PBAT_PROFILE_NAMED_SCOPE("fem.HyperElasticPotential.Apply");
     auto const numberOfDofs = InputDimensions();
     if (x.rows() != numberOfDofs or y.rows() != numberOfDofs or x.cols() != y.cols())
     {
@@ -281,7 +281,7 @@ template <CMesh TMesh, physics::CHyperElasticEnergy THyperElasticEnergy, int Qua
 inline void
 HyperElasticPotential<TMesh, THyperElasticEnergy, QuadratureOrder>::PrecomputeHessianSparsity()
 {
-    PBAT_PROFILE_NAMED_SCOPE("fem::HyperElasticPotential::PrecomputeHessianSparsity");
+    PBAT_PROFILE_NAMED_SCOPE("fem.HyperElasticPotential.PrecomputeHessianSparsity");
     auto const numberOfElements = mesh.E.cols();
     auto const kNodesPerElement = ElementType::kNodes;
     auto const kDofsPerElement  = kNodesPerElement * kDims;
@@ -317,7 +317,7 @@ template <CMesh TMesh, physics::CHyperElasticEnergy THyperElasticEnergy, int Qua
 inline CSCMatrix
 HyperElasticPotential<TMesh, THyperElasticEnergy, QuadratureOrder>::ToMatrix() const
 {
-    PBAT_PROFILE_NAMED_SCOPE("fem::HyperElasticPotential::ToMatrix");
+    PBAT_PROFILE_NAMED_SCOPE("fem.HyperElasticPotential.ToMatrix");
     if (!GH.IsEmpty())
     {
         using SpanType = std::span<Scalar const>;
@@ -358,7 +358,7 @@ HyperElasticPotential<TMesh, THyperElasticEnergy, QuadratureOrder>::ToMatrix() c
 template <CMesh TMesh, physics::CHyperElasticEnergy THyperElasticEnergy, int QuadratureOrder>
 inline VectorX HyperElasticPotential<TMesh, THyperElasticEnergy, QuadratureOrder>::ToVector() const
 {
-    PBAT_PROFILE_NAMED_SCOPE("fem::HyperElasticPotential::ToVector");
+    PBAT_PROFILE_NAMED_SCOPE("fem.HyperElasticPotential.ToVector");
     auto constexpr kNodesPerElement = ElementType::kNodes;
     auto const numberOfElements     = mesh.E.cols();
     auto const numberOfNodes        = mesh.X.cols();
@@ -377,7 +377,7 @@ inline VectorX HyperElasticPotential<TMesh, THyperElasticEnergy, QuadratureOrder
 template <CMesh TMesh, physics::CHyperElasticEnergy THyperElasticEnergy, int QuadratureOrder>
 inline Scalar HyperElasticPotential<TMesh, THyperElasticEnergy, QuadratureOrder>::Eval() const
 {
-    PBAT_PROFILE_NAMED_SCOPE("fem::HyperElasticPotential::Eval");
+    PBAT_PROFILE_NAMED_SCOPE("fem.HyperElasticPotential.Eval");
     return Ue.sum();
 }
 

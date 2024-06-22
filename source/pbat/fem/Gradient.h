@@ -100,7 +100,7 @@ inline GalerkinGradient<TMesh, QuadratureOrder>::GalerkinGradient(
 template <CMesh TMesh, int QuadratureOrder>
 inline CSCMatrix GalerkinGradient<TMesh, QuadratureOrder>::ToMatrix() const
 {
-    PBAT_PROFILE_NAMED_SCOPE("fem::GalerkinGradient::ToMatrix");
+    PBAT_PROFILE_NAMED_SCOPE("fem.GalerkinGradient.ToMatrix");
     using SparseIndex = typename CSCMatrix::StorageIndex;
     using Triplet     = Eigen::Triplet<Scalar, SparseIndex>;
 
@@ -136,7 +136,7 @@ inline CSCMatrix GalerkinGradient<TMesh, QuadratureOrder>::ToMatrix() const
 template <CMesh TMesh, int QuadratureOrder>
 inline void GalerkinGradient<TMesh, QuadratureOrder>::ComputeElementGalerkinGradientMatrices()
 {
-    PBAT_PROFILE_NAMED_SCOPE("fem::GalerkinGradient::ComputeElementGalerkinGradientMatrices");
+    PBAT_PROFILE_NAMED_SCOPE("fem.GalerkinGradient.ComputeElementGalerkinGradientMatrices");
     CheckValidState();
     // Expand into per-element matrices
     // [\sum_e \int_{\Omega^e} \nabla \phi_j(X) \phi_i(X) \partial \Omega^e]
@@ -205,7 +205,7 @@ inline void GalerkinGradient<TMesh, QuadratureOrder>::Apply(
     Eigen::MatrixBase<TDerivedIn> const& x,
     Eigen::DenseBase<TDerivedOut>& y) const
 {
-    PBAT_PROFILE_NAMED_SCOPE("fem::GalerkinGradient::Apply");
+    PBAT_PROFILE_NAMED_SCOPE("fem.GalerkinGradient.Apply");
     // Check inputs
     bool const bDimensionsMatch = (x.cols() == y.cols()) and (x.rows() == InputDimensions()) and
                                   (y.rows() == OutputDimensions());

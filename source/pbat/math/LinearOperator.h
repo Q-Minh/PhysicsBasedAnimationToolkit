@@ -167,14 +167,14 @@ inline void LinearOperator<TLinearOperators...>::Apply(
     Eigen::MatrixBase<TDerivedIn> const& x,
     Eigen::DenseBase<TDerivedOut>& y) const
 {
-    PBAT_PROFILE_NAMED_SCOPE("math::LinearOperator::Apply");
+    PBAT_PROFILE_NAMED_SCOPE("math.LinearOperator.Apply");
     std::apply([&](auto... op) { (op.Apply(x, y), ...); }, ops);
 }
 
 template <CLinearOperator... TLinearOperators>
 inline CSCMatrix LinearOperator<TLinearOperators...>::ToMatrix() const
 {
-    PBAT_PROFILE_NAMED_SCOPE("math::LinearOperator::ToMatrix");
+    PBAT_PROFILE_NAMED_SCOPE("math.LinearOperator.ToMatrix");
     CSCMatrix M(OutputDimensions(), InputDimensions());
     std::apply([&](auto... op) { ((M += op.ToMatrix()), ...); }, ops);
     return M;

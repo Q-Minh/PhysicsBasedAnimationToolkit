@@ -40,7 +40,7 @@ template <class TDerived>
 template <int QuadratureOrder, CMesh TMesh>
 MatrixX DeterminantOfJacobian(TMesh const& mesh)
 {
-    PBAT_PROFILE_NAMED_SCOPE("fem::DeterminantOfJacobian");
+    PBAT_PROFILE_NAMED_SCOPE("fem.DeterminantOfJacobian");
 
     using ElementType        = typename TMesh::ElementType;
     using AffineElementType  = typename ElementType::AffineBaseType;
@@ -142,7 +142,7 @@ MatrixX ReferencePositions(
     int maxIterations = 5,
     Scalar eps        = 1e-10)
 {
-    PBAT_PROFILE_NAMED_SCOPE("fem::ReferencePositions");
+    PBAT_PROFILE_NAMED_SCOPE("fem.ReferencePositions");
     using MeshType    = TMesh;
     using ElementType = typename MeshType::ElementType;
     MatrixX Xi(ElementType::kDims, E.size());
