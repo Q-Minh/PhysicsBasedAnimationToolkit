@@ -45,6 +45,7 @@ void BindTetrahedralAabbHierarchy(pybind11::module& m)
                bool bParallelize) { return self.NearestPrimitivesToPoints(P, bParallelize); },
             pyb::arg("P"),
             pyb::arg("parallelize") = false)
+        .def("update", &TetrahedralAabbHierarchy::Update)
         .def_property_readonly("bounding_volumes", [](TetrahedralAabbHierarchy const& self) {
             return self.GetBoundingVolumes();
         });

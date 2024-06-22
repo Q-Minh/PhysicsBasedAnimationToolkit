@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <pbat/Aliases.h>
+#include <pbat/profiling/Profiling.h>
 #include <queue>
 #include <ranges>
 #include <stack>
@@ -27,7 +28,10 @@ struct KdTreeNode
 
     bool HasLeftChild() const { return lc > -1; }
     bool HasRightChild() const { return rc > -1; }
-    [[maybe_unused]] bool IsLeafNode() const { return (not HasLeftChild()) and (not HasRightChild()); }
+    [[maybe_unused]] bool IsLeafNode() const
+    {
+        return (not HasLeftChild()) and (not HasRightChild());
+    }
     [[maybe_unused]] bool IsInternalNode() const { return HasLeftChild() or HasRightChild(); }
 };
 
@@ -105,6 +109,7 @@ template <int Dims>
 template <class FVisit, class FStop>
 inline void KdTree<Dims>::BreadthFirstSearch(FVisit visit, FStop stop, Index root) const
 {
+    PBAT_PROFILE_NAMED_SCOPE("geometry.KdTree.BreadthFirstSearch");
     std::queue<Index> bfs{};
     bfs.push(root);
     while (!bfs.empty())
@@ -131,6 +136,7 @@ template <int Dims>
 template <class FVisit, class FStop>
 inline void KdTree<Dims>::DepthFirstSearch(FVisit visit, FStop stop, Index root) const
 {
+    PBAT_PROFILE_NAMED_SCOPE("geometry.KdTree.DepthFirstSearch");
     std::stack<Index> dfs{};
     dfs.push(root);
     while (!dfs.empty())
@@ -159,6 +165,7 @@ template <class TDerivedP>
 inline void
 KdTree<Dims>::Construct(Eigen::DenseBase<TDerivedP> const& P, std::size_t maxPointsInLeaf)
 {
+    PBAT_PROFILE_NAMED_SCOPE("geometry.KdTree.Construct");
     std::size_t const n = static_cast<std::size_t>(P.cols());
     mNodes.clear();
     mNodes.reserve(n);

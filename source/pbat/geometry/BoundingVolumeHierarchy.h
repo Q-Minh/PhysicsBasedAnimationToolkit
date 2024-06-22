@@ -6,7 +6,6 @@
 #include <pbat/Aliases.h>
 #include <pbat/common/Eigen.h>
 #include <queue>
-#include <ranges>
 #include <stack>
 #include <tbb/parallel_for.h>
 #include <vector>
@@ -128,12 +127,11 @@ inline void BoundingVolumeHierarchy<TDerived, TBoundingVolume, TPrimitive, Dims>
         P.col(p) = PrimitiveLocation(Primitive(p));
     }
     mKdTree.Construct(P, maxPointsInLeaf);
-    namespace rng = std::ranges;
-    namespace vi  = std::views;
-    auto bvRange  = mKdTree.Nodes() | vi::transform([this](KdTreeNode const& node) {
-                       return BoundingVolumeOf(mKdTree.PointsInNode(node));
-                   });
-    mBoundingVolumes.assign(rng::begin(bvRange), rng::end(bvRange));
+    std::size_t const nBoundingVolumes = mKdTree.Nodes().size();
+    mBoundingVolumes.resize(nBoundingVolumes);
+    tbb::parallel_for(std::size_t{0ULL}, nBoundingVolumes, [this](std::size_t b) {
+        mBoundingVolumes[b] = BoundingVolumeOf(mKdTree.PointsInNode(static_cast<Index>(b)));
+    });
 }
 
 template <class TDerived, class TBoundingVolume, class TPrimitive, int Dims>
@@ -141,7 +139,8 @@ inline auto
 BoundingVolumeHierarchy<TDerived, TBoundingVolume, TPrimitive, Dims>::PrimitivesInBoundingVolume(
     Index bvIdx) const
 {
-    return mKdTree.PointsInNode(mKdTree.Nodes()[bvIdx]);
+    std::size_t const bvIdxStl = static_cast<std::size_t>(bvIdx);
+    return mKdTree.PointsInNode(mKdTree.Nodes()[bvIdxStl]);
 }
 
 template <class TDerived, class TBoundingVolume, class TPrimitive, int Dims>

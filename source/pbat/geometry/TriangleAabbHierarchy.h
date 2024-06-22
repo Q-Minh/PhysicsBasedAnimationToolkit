@@ -9,6 +9,7 @@
 
 #include <pbat/Aliases.h>
 #include <pbat/common/Eigen.h>
+#include <pbat/profiling/Profiling.h>
 #include <tbb/parallel_for.h>
 
 namespace pbat {
@@ -48,6 +49,8 @@ class TriangleAabbHierarchy<3> : public BoundingVolumeHierarchy<
     template <class RPrimitiveIndices>
     BoundingVolumeType BoundingVolumeOf(RPrimitiveIndices&& pinds) const;
 
+    void Update();
+
     IndexMatrixX OverlappingPrimitives(SelfType const& bvh, std::size_t reserve = 1000ULL) const;
 
     template <class TDerivedP>
@@ -80,6 +83,7 @@ inline TriangleAabbHierarchy<3>::TriangleAabbHierarchy(
     std::size_t maxPointsInLeaf)
     : V(V), C(C)
 {
+    PBAT_PROFILE_NAMED_SCOPE("geometry.TriangleAabbHierarchy3D.Construct");
     auto constexpr kRowsC = static_cast<int>(PrimitiveType::RowsAtCompileTime);
     if (V.rows() != kDims and C.rows() != kRowsC)
     {
@@ -109,9 +113,16 @@ TriangleAabbHierarchy<3>::PrimitiveLocation(PrimitiveType const& primitive) cons
     return V(Eigen::all, primitive).rowwise().mean();
 }
 
+inline void TriangleAabbHierarchy<3>::Update()
+{
+    PBAT_PROFILE_NAMED_SCOPE("geometry.TriangleAabbHierarchy3D.Update");
+    BaseType::Update();
+}
+
 inline IndexMatrixX
 TriangleAabbHierarchy<3>::OverlappingPrimitives(SelfType const& bvh, std::size_t reserve) const
 {
+    PBAT_PROFILE_NAMED_SCOPE("geometry.TriangleAabbHierarchy3D.OverlappingPrimitives");
     return this->OverlappingPrimitivesImpl<SelfType, BoundingVolumeType, PrimitiveType, kDims>(
         bvh,
         [](BoundingVolumeType const& bv1, BoundingVolumeType const& bv2) -> bool {
@@ -158,6 +169,7 @@ inline std::vector<Index> TriangleAabbHierarchy<3>::PrimitivesContainingPoints(
     Eigen::MatrixBase<TDerivedP> const& P,
     bool bParallelize) const
 {
+    PBAT_PROFILE_NAMED_SCOPE("geometry.TriangleAabbHierarchy3D.PrimitivesContainingPoints");
     std::vector<Index> p(static_cast<std::size_t>(P.cols()), -1);
     auto const FindContainingPrimitive = [&](Index i) {
         std::vector<Index> const intersectingPrimitives = this->PrimitivesIntersecting(
@@ -195,6 +207,7 @@ inline std::vector<Index> TriangleAabbHierarchy<3>::NearestPrimitivesToPoints(
     Eigen::MatrixBase<TDerivedP> const& P,
     bool bParallelize) const
 {
+    PBAT_PROFILE_NAMED_SCOPE("geometry.TriangleAabbHierarchy3D.NearestPrimitivesToPoints");
     std::vector<Index> p(static_cast<std::size_t>(P.cols()), -1);
     auto const FindNearestPrimitive = [&](Index i) {
         std::size_t constexpr K{1};
@@ -257,6 +270,8 @@ class TriangleAabbHierarchy<2> : public BoundingVolumeHierarchy<
     template <class RPrimitiveIndices>
     BoundingVolumeType BoundingVolumeOf(RPrimitiveIndices&& pinds) const;
 
+    void Update();
+
     IndexMatrixX OverlappingPrimitives(SelfType const& bvh, std::size_t reserve = 1000ULL) const;
 
     template <class TDerivedP>
@@ -289,6 +304,7 @@ inline TriangleAabbHierarchy<2>::TriangleAabbHierarchy(
     std::size_t maxPointsInLeaf)
     : V(V), C(C)
 {
+    PBAT_PROFILE_NAMED_SCOPE("geometry.TriangleAabbHierarchy2D.Construct");
     auto constexpr kRowsC = static_cast<int>(PrimitiveType::RowsAtCompileTime);
     if (V.rows() != kDims and C.rows() != kRowsC)
     {
@@ -318,9 +334,16 @@ TriangleAabbHierarchy<2>::PrimitiveLocation(PrimitiveType const& primitive) cons
     return V(Eigen::all, primitive).rowwise().mean();
 }
 
+inline void TriangleAabbHierarchy<2>::Update()
+{
+    PBAT_PROFILE_NAMED_SCOPE("geometry.TriangleAabbHierarchy2D.Update");
+    BaseType::Update();
+}
+
 inline IndexMatrixX
 TriangleAabbHierarchy<2>::OverlappingPrimitives(SelfType const& bvh, std::size_t reserve) const
 {
+    PBAT_PROFILE_NAMED_SCOPE("geometry.TriangleAabbHierarchy2D.OverlappingPrimitives");
     return this->OverlappingPrimitivesImpl<SelfType, BoundingVolumeType, PrimitiveType, kDims>(
         bvh,
         [](BoundingVolumeType const& bv1, BoundingVolumeType const& bv2) -> bool {
@@ -367,6 +390,7 @@ inline std::vector<Index> TriangleAabbHierarchy<2>::PrimitivesContainingPoints(
     Eigen::MatrixBase<TDerivedP> const& P,
     bool bParallelize) const
 {
+    PBAT_PROFILE_NAMED_SCOPE("geometry.TriangleAabbHierarchy2D.PrimitivesContainingPoints");
     std::vector<Index> p(static_cast<std::size_t>(P.cols()), -1);
     auto const FindContainingPrimitive = [&](Index i) {
         std::vector<Index> const intersectingPrimitives = this->PrimitivesIntersecting(
@@ -402,6 +426,7 @@ inline std::vector<Index> TriangleAabbHierarchy<2>::NearestPrimitivesToPoints(
     Eigen::MatrixBase<TDerivedP> const& P,
     bool bParallelize) const
 {
+    PBAT_PROFILE_NAMED_SCOPE("geometry.TriangleAabbHierarchy2D.NearestPrimitivesToPoints");
     std::vector<Index> p(static_cast<std::size_t>(P.cols()), -1);
     auto const FindNearestPrimitive = [&](Index i) {
         std::size_t constexpr K{1};

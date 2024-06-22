@@ -15,6 +15,7 @@ TetrahedralAabbHierarchy::TetrahedralAabbHierarchy(
     std::size_t maxPointsInLeaf)
     : V(V), C(C)
 {
+    PBAT_PROFILE_NAMED_SCOPE("geometry.TetrahedralAabbHierarchy.Construct");
     auto constexpr kRowsC = static_cast<int>(PrimitiveType::RowsAtCompileTime);
     if (V.rows() != kDims and C.rows() != kRowsC)
     {
@@ -44,10 +45,17 @@ TetrahedralAabbHierarchy::PrimitiveLocation(PrimitiveType const& primitive) cons
     return V(Eigen::all, primitive).rowwise().mean();
 }
 
+void TetrahedralAabbHierarchy::Update()
+{
+    PBAT_PROFILE_NAMED_SCOPE("geometry.TetrahedralAabbHierarchy.Update");
+    BaseType::Update();
+}
+
 IndexMatrixX TetrahedralAabbHierarchy::OverlappingPrimitives(
     TetrahedralAabbHierarchy const& bvh,
     std::size_t reserve) const
 {
+    PBAT_PROFILE_NAMED_SCOPE("geometry.TetrahedralAabbHierarchy.OverlappingPrimitives");
     return this->OverlappingPrimitivesImpl<
         TetrahedralAabbHierarchy,
         BoundingVolumeType,

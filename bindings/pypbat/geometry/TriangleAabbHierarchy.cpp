@@ -49,6 +49,7 @@ void BindTriangleAabbHierarchy(pybind11::module& m)
                 },
                 pyb::arg("P"),
                 pyb::arg("parallelize") = false)
+            .def("update", &BvhType::Update)
             .def_property_readonly("bounding_volumes", [](BvhType const& self) {
                 return self.GetBoundingVolumes();
             });

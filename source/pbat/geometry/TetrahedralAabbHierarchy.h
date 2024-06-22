@@ -9,6 +9,7 @@
 
 #include <pbat/Aliases.h>
 #include <pbat/common/Eigen.h>
+#include <pbat/profiling/Profiling.h>
 #include <tbb/parallel_for.h>
 
 namespace pbat {
@@ -22,6 +23,9 @@ class TetrahedralAabbHierarchy : public BoundingVolumeHierarchy<
 {
   public:
     static auto constexpr kDims = 3;
+    using SelfType              = TetrahedralAabbHierarchy;
+    using BaseType =
+        BoundingVolumeHierarchy<SelfType, AxisAlignedBoundingBox<kDims>, IndexVector<4>, kDims>;
 
     PBAT_API TetrahedralAabbHierarchy(
         Eigen::Ref<MatrixX const> const& V,
@@ -34,6 +38,8 @@ class TetrahedralAabbHierarchy : public BoundingVolumeHierarchy<
 
     template <class RPrimitiveIndices>
     BoundingVolumeType BoundingVolumeOf(RPrimitiveIndices&& pinds) const;
+
+    PBAT_API void Update();
 
     PBAT_API IndexMatrixX
     OverlappingPrimitives(TetrahedralAabbHierarchy const& bvh, std::size_t reserve = 1000ULL) const;
@@ -75,6 +81,7 @@ inline std::vector<Index> TetrahedralAabbHierarchy::PrimitivesContainingPoints(
     Eigen::MatrixBase<TDerivedP> const& P,
     bool bParallelize) const
 {
+    PBAT_PROFILE_NAMED_SCOPE("geometry.TetrahedralAabbHierarchy.PrimitivesContainingPoints");
     std::vector<Index> p(static_cast<std::size_t>(P.cols()), -1);
     auto const FindContainingPrimitive = [&](Index i) {
         std::vector<Index> const intersectingPrimitives = this->PrimitivesIntersecting(
@@ -111,6 +118,7 @@ inline std::vector<Index> TetrahedralAabbHierarchy::NearestPrimitivesToPoints(
     Eigen::MatrixBase<TDerivedP> const& P,
     bool bParallelize) const
 {
+    PBAT_PROFILE_NAMED_SCOPE("geometry.TetrahedralAabbHierarchy.NearestPrimitivesToPoints");
     std::vector<Index> p(static_cast<std::size_t>(P.cols()), -1);
     auto const FindNearestPrimitive = [&](Index i) {
         std::size_t constexpr K{1};
