@@ -73,7 +73,10 @@ struct HyperElasticPotential
     void PrecomputeHessianSparsity();
 
     template <class TDerived>
-    void ComputeElementElasticity(Eigen::MatrixBase<TDerived> const& x);
+    void ComputeElementElasticity(
+        Eigen::MatrixBase<TDerived> const& x,
+        bool bWithGradient = true,
+        bool bWithHessian  = true);
 
     /**
      * @brief Applies the hessian matrix of this potential as a linear operator on x, adding result
@@ -153,7 +156,13 @@ inline HyperElasticPotential<TMesh, THyperElasticEnergy, QuadratureOrder>::Hyper
     Eigen::DenseBase<TDerivednu> const& nu)
     : mesh(meshIn), detJe(detJe), GNe(GNe), mue(), lambdae(), He(), Ge(), Ue(), GH()
 {
-    std::tie(mue, lambdae) = physics::LameCoefficients(Y, nu);
+    std::tie(mue, lambdae)          = physics::LameCoefficients(Y, nu);
+    auto const numberOfElements     = mesh.E.cols();
+    auto constexpr kNodesPerElement = ElementType::kNodes;
+    auto constexpr kDofsPerElement  = kNodesPerElement * kDims;
+    Ue.setZero(numberOfElements);
+    Ge.setZero(kDofsPerElement, numberOfElements);
+    He.setZero(kDofsPerElement, kDofsPerElement * numberOfElements);
 }
 
 template <CMesh TMesh, physics::CHyperElasticEnergy THyperElasticEnergy, int QuadratureOrder>
@@ -184,9 +193,8 @@ inline HyperElasticPotential<TMesh, THyperElasticEnergy, QuadratureOrder>::Hyper
     Eigen::MatrixBase<TDerivedx> const& x,
     Eigen::DenseBase<TDerivedY> const& Y,
     Eigen::DenseBase<TDerivednu> const& nu)
-    : mesh(meshIn), detJe(detJe), GNe(GNe), mue(), lambdae(), He(), Ge(), Ue(), GH()
+    : HyperElasticPotential<TMesh, THyperElasticEnergy, QuadratureOrder>(meshIn, detJe, GNe, Y, nu)
 {
-    std::tie(mue, lambdae) = physics::LameCoefficients(Y, nu);
     ComputeElementElasticity(x);
 }
 
@@ -194,7 +202,9 @@ template <CMesh TMesh, physics::CHyperElasticEnergy THyperElasticEnergy, int Qua
 template <class TDerived>
 inline void
 HyperElasticPotential<TMesh, THyperElasticEnergy, QuadratureOrder>::ComputeElementElasticity(
-    Eigen::MatrixBase<TDerived> const& x)
+    Eigen::MatrixBase<TDerived> const& x,
+    bool bWithGradient,
+    bool bWithHessian)
 {
     PBAT_PROFILE_NAMED_SCOPE("fem.HyperElasticPotential.ComputeElementElasticity");
     // Check inputs
@@ -210,14 +220,19 @@ HyperElasticPotential<TMesh, THyperElasticEnergy, QuadratureOrder>::ComputeEleme
             x.size());
         throw std::invalid_argument(what);
     }
+
+    Ue.setZero();
+    if (bWithGradient)
+        Ge.setZero();
+    if (bWithHessian)
+        He.setZero();
+
+    ElasticEnergyType Psi{};
+
     // Compute element elastic energies and their derivatives
     auto constexpr kNodesPerElement = ElementType::kNodes;
     auto constexpr kDofsPerElement  = kNodesPerElement * kDims;
     auto const wg                   = common::ToEigen(QuadratureRuleType::weights);
-    Ue.setZero(numberOfElements);
-    Ge.setZero(kDofsPerElement, numberOfElements);
-    He.setZero(kDofsPerElement, kDofsPerElement * numberOfElements);
-    ElasticEnergyType Psi{};
     tbb::parallel_for(Index{0}, Index{numberOfElements}, [&](Index e) {
         auto const nodes = mesh.E.col(e);
         auto const xe    = x.reshaped(kDims, numberOfNodes)(Eigen::all, nodes);
@@ -229,11 +244,34 @@ HyperElasticPotential<TMesh, THyperElasticEnergy, QuadratureOrder>::ComputeEleme
             auto const gradPhi =
                 GNe.block<kNodesPerElement, MeshType::kDims>(0, e * kStride + g * MeshType::kDims);
             auto const F = xe * gradPhi;
-            auto const [psiF, gradPsiF, hessPsiF] =
-                Psi.evalWithGradAndHessian(F.reshaped(), mue(e), lambdae(e));
-            Ue(e) += (wg(g) * detJe(g, e)) * psiF;
-            ge += (wg(g) * detJe(g, e)) * GradientWrtDofs<ElementType, kDims>(gradPsiF, gradPhi);
-            he += (wg(g) * detJe(g, e)) * HessianWrtDofs<ElementType, kDims>(hessPsiF, gradPhi);
+            if (not bWithGradient and not bWithHessian)
+            {
+                auto psiF = Psi.eval(F.reshaped(), mue(e), lambdae(e));
+                Ue(e) += (wg(g) * detJe(g, e)) * psiF;
+            }
+            else if (bWithGradient and not bWithHessian)
+            {
+                auto [psiF, gradPsiF] = Psi.evalWithGrad(F.reshaped(), mue(e), lambdae(e));
+                Ue(e) += (wg(g) * detJe(g, e)) * psiF;
+                ge +=
+                    (wg(g) * detJe(g, e)) * GradientWrtDofs<ElementType, kDims>(gradPsiF, gradPhi);
+            }
+            else if (not bWithGradient and bWithHessian)
+            {
+                auto psiF     = Psi.eval(F.reshaped(), mue(e), lambdae(e));
+                auto hessPsiF = Psi.hessian(F.reshaped(), mue(e), lambdae(e));
+                Ue(e) += (wg(g) * detJe(g, e)) * psiF;
+                he += (wg(g) * detJe(g, e)) * HessianWrtDofs<ElementType, kDims>(hessPsiF, gradPhi);
+            }
+            else
+            {
+                auto [psiF, gradPsiF, hessPsiF] =
+                    Psi.evalWithGradAndHessian(F.reshaped(), mue(e), lambdae(e));
+                Ue(e) += (wg(g) * detJe(g, e)) * psiF;
+                ge +=
+                    (wg(g) * detJe(g, e)) * GradientWrtDofs<ElementType, kDims>(gradPsiF, gradPhi);
+                he += (wg(g) * detJe(g, e)) * HessianWrtDofs<ElementType, kDims>(hessPsiF, gradPhi);
+            }
         }
     });
 }

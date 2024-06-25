@@ -267,10 +267,13 @@ void BindHyperElasticPotential_{psi_type_py}_{qorder}_{mesh_type_py}(pybind11::m
             &ElasticPotentialType::PrecomputeHessianSparsity)
         .def(
             "compute_element_elasticity",
-            [](ElasticPotentialType& U, Eigen::Ref<VectorX const> const& x) {{
-                U.ComputeElementElasticity(x);
-            }},
-            pyb::arg("x"))
+            [](ElasticPotentialType& U,
+               Eigen::Ref<VectorX const> const& x,
+               bool bWithGradient,
+               bool bWithHessian) {{ U.ComputeElementElasticity(x, bWithGradient, bWithHessian); }},
+            pyb::arg("x"),
+            pyb::arg("grad") = true,
+            pyb::arg("hess") = true)
         .def("to_matrix", &ElasticPotentialType::ToMatrix)
         .def("to_vector", &ElasticPotentialType::ToVector)
         .def("eval", &ElasticPotentialType::Eval)

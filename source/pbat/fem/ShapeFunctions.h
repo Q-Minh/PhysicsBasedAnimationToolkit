@@ -164,14 +164,14 @@ Matrix<TElement::kNodes, TDerivedX::RowsAtCompileTime> ShapeFunctionGradients(
         else
             return Eigen::ComputeFullU | Eigen::ComputeFullV;
     }();
-    auto const JinvT                               = JT.jacobiSvd(kComputationOptions);
-    Matrix<kInputDims, TElement::kNodes> const GNT = TElement::GradN(Xi).transpose();
+    auto const JinvT                              = JT.jacobiSvd(kComputationOptions);
+    Matrix<TElement::kNodes, kInputDims> const GN = TElement::GradN(Xi);
     Matrix<TElement::kNodes, kOutputDims> GP;
     // Would like to write
     // GP.transpose() = JinvT.solve(GNT);
     // but apparently SVD solver only solves for vectors.
     for (auto i = 0; i < TElement::kNodes; ++i)
-        GP.row(i).transpose() = JinvT.solve(GNT.col(i));
+        GP.row(i).transpose() = JinvT.solve(GN.row(i).transpose());
     return GP;
 }
 
