@@ -8,6 +8,7 @@
 #include <fmt/format.h>
 #include <pbat/Aliases.h>
 #include <string>
+#include <vector>
 
 namespace pbat {
 namespace geometry {
@@ -39,6 +40,9 @@ class AxisAlignedBoundingBox : public Eigen::AlignedBox<Scalar, Dims>
 
     template <class TDerived>
     AxisAlignedBoundingBox(Eigen::DenseBase<TDerived> const& P);
+
+    template <class TDerived>
+    std::vector<Index> contained(Eigen::MatrixBase<TDerived> const& P) const;
 };
 
 template <int Dims>
@@ -54,14 +58,14 @@ inline AxisAlignedBoundingBox<Dims>::AxisAlignedBoundingBox(BaseType&& box) : Ba
 template <int Dims>
 inline AxisAlignedBoundingBox<Dims>& AxisAlignedBoundingBox<Dims>::operator=(BaseType const& box)
 {
-    BaseType::operator=(box);
+    BaseType::template operator=(box);
     return *this;
 }
 
 template <int Dims>
 inline AxisAlignedBoundingBox<Dims>& AxisAlignedBoundingBox<Dims>::operator=(BaseType&& box)
 {
-    BaseType::operator=(box);
+    BaseType::template operator=(box);
     return *this;
 }
 
@@ -89,8 +93,25 @@ inline AxisAlignedBoundingBox<Dims>::AxisAlignedBoundingBox(Eigen::DenseBase<TDe
     }
     for (auto i = 0; i < P.cols(); ++i)
     {
-        this->extend(P.col(i));
+        BaseType::template extend(P.col(i));
     }
+}
+
+template <int Dims>
+template <class TDerived>
+inline std::vector<Index>
+AxisAlignedBoundingBox<Dims>::contained(Eigen::MatrixBase<TDerived> const& P) const
+{
+    std::vector<Index> inds{};
+    inds.reserve(P.cols());
+    for (auto i = 0; i < P.cols(); ++i)
+    {
+        if (BaseType::template contains(P.col(i)))
+        {
+            inds.push_back(static_cast<Index>(i));
+        }
+    }
+    return inds;
 }
 
 } // namespace geometry

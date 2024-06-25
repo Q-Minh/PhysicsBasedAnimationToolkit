@@ -61,9 +61,9 @@ struct SymmetricLaplacianMatrix
     Eigen::Ref<MatrixX const> detJe; ///< |#quad.pts.|x|#elements| affine element jacobian
                                      ///< determinants at quadrature points
     Eigen::Ref<MatrixX const>
-        GNe;        ///< |ElementType::kNodes|x|kDims * QuadratureRuleType::kPoints * #elements|
+        GNe;        ///< |#element nodes|x|#dims * #quad.pts. * #elements|
                     ///< matrix of element shape function gradients at quadrature points
-    MatrixX deltaE; ///< |ElementType::kNodes| x |ElementType::kNodes * #elements| matrix element
+    MatrixX deltaE; ///< |#element nodes| x |#element nodes * #elements| matrix element
                     ///< laplacians
     int dims; ///< Dimensionality of image of FEM function space, i.e. this Laplacian matrix is
               ///< actually L \kronecker I_{dims \times dims}. Should be >= 1.
@@ -122,20 +122,19 @@ inline void SymmetricLaplacianMatrix<TMesh, QuadratureOrder>::ComputeElementLapl
     // Compute element laplacians
     auto const wg                   = common::ToEigen(QuadratureRuleType::weights);
     auto constexpr kNodesPerElement = ElementType::kNodes;
+    auto constexpr kQuadPts         = QuadratureRuleType::kPoints;
+    auto constexpr kDims            = MeshType::kDims;
+    auto constexpr kStride          = kDims * kQuadPts;
     auto const numberOfElements     = mesh.E.cols();
     deltaE.setZero(kNodesPerElement, kNodesPerElement * numberOfElements);
     tbb::parallel_for(Index{0}, Index{numberOfElements}, [&](Index e) {
-        auto Le = deltaE.block(0, e * kNodesPerElement, kNodesPerElement, kNodesPerElement);
-        for (auto g = 0; g < QuadratureRuleType::kPoints; ++g)
+        auto Le = deltaE.block<kNodesPerElement, kNodesPerElement>(0, e * kNodesPerElement);
+        for (auto g = 0; g < kQuadPts; ++g)
         {
             // Use multivariable integration by parts (i.e. Green's identity), and retain only the
             // symmetric part, i.e.
             // Lij = -\int_{\Omega} \nabla \phi_i(X) \cdot \nabla \phi_j(X) \partial \Omega.
-            // Matrix<kNodesPerElement, MeshType::kDims> const GP =
-            //    ShapeFunctionGradients<ElementType>(Xg.col(g), Ve);
-            auto const kStride = MeshType::kDims * QuadratureRuleType::kPoints;
-            auto const GP =
-                GNe.block<kNodesPerElement, MeshType::kDims>(0, e * kStride + g * MeshType::kDims);
+            auto const GP = GNe.block<kNodesPerElement, kDims>(0, e * kStride + g * kDims);
             Le -= (wg(g) * detJe(g, e)) * (GP * GP.transpose());
         }
     });

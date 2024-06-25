@@ -3,6 +3,7 @@
 #include <pbat/common/ConstexprFor.h>
 #include <pbat/geometry/AxisAlignedBoundingBox.h>
 #include <pybind11/eigen.h>
+#include <pybind11/stl.h>
 #include <string>
 
 namespace pbat {
@@ -47,6 +48,11 @@ void BindAxisAlignedBoundingBox(pybind11::module& m)
                 "contains",
                 [](AabbType const& self, Eigen::Ref<Vector<Dims> const> const& P) -> bool {
                     return self.contains(P);
+                })
+            .def(
+                "contained",
+                [](AabbType const& self, Eigen::Ref<MatrixX const> const& P) -> std::vector<Index> {
+                    return self.contained(P);
                 })
             .def(
                 "intersection",

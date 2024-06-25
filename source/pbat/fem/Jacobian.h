@@ -29,8 +29,8 @@ template <class TDerived>
 {
     bool const bIsSquare = J.rows() == J.cols();
     Scalar const detJ    = bIsSquare ? J.determinant() : J.jacobiSvd().singularValues().prod();
-    // TODO: Should define a numerical zero somewhere
-    if (detJ <= 0.)
+    auto constexpr eps   = 1e-10;
+    if (detJ <= eps)
     {
         throw std::invalid_argument("Inverted or singular jacobian");
     }

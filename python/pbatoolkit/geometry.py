@@ -2,6 +2,12 @@ from ._pbat import geometry as _geometry
 import numpy as np
 from enum import Enum
 
+def aabb(P: np.ndarray):
+    dims = P.shape[0]
+    if dims != 2 and dims != 3:
+        raise ValueError(f"Expected points P with dimensions (i.e. rows) 2 or 3, but got {dims}")
+    class_ = getattr(_geometry, f"AxisAlignedBoundingBox{dims}")
+    return class_(P)
 
 class Cell(Enum):
     Triangle = 0

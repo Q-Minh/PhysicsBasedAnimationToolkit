@@ -6,6 +6,7 @@
 
 #include <doctest/doctest.h>
 #include <pbat/common/ConstexprFor.h>
+#include <pbat/math/PolynomialBasis.h>
 
 TEST_CASE("[fem] ShapeFunctions")
 {
@@ -83,4 +84,51 @@ TEST_CASE("[fem] ShapeFunctions")
             CHECK_LE(error, zero);
         }
     });
+}
+
+TEST_CASE("[fem] ShapeFunctionGradients")
+{
+    using namespace pbat;
+    auto constexpr kOrder = 1;
+    using ElementType     = fem::Tetrahedron<kOrder>;
+    auto constexpr kDims  = ElementType::kDims;
+    auto constexpr kNodes = ElementType::kNodes;
+    // Some scaled and translated tetrahedron
+    Matrix<kDims, 4> X;
+    // clang-format off
+    X << 0., 1., 0., 0.,
+         0., 0., 1., 0.,
+         0., 0., 0., 1.;
+    // clang-format on
+    Scalar constexpr scale          = 2.;
+    Vector<kDims> const translation = Vector<kDims>::Ones();
+    X *= scale;
+    X.colwise() += translation;
+    // We will test the gradients at barycenter
+    Vector<kDims> const Xi{0.25, 0.25, 0.25};
+    Vector<kDims + 1> BXi{};
+    BXi(0)                = 1. - Xi.sum();
+    BXi.segment(1, kDims) = Xi;
+
+    Matrix<kNodes, kDims> const GP = fem::ShapeFunctionGradients<ElementType>(Xi, X);
+
+    // Numerically compute basis functions and their gradients.
+    // We know that the basis functions are interpolating polynomials,
+    // thus we simply need to solve for the polynomials which yield the
+    // Kronecker delta at nodes, i.e.:
+    // P(X_i)^T a_j = \delta_{ij} ,
+    // where a_j is the j^{th} column of some matrix of polynomial coefficients A.
+    // This amounts to computing the inverse of P(X)^T .
+    math::MonomialBasis<kDims, kOrder> const P{};
+    Matrix<kNodes, kNodes> PXT{};
+    for (auto i = 0; i < kNodes; ++i)
+        PXT.row(i) = P.eval(X.col(i)).transpose();
+    Matrix<kNodes, kNodes> const A = PXT.inverse();
+    // Knowing that the i^{th} basis function is a_i^T P(X),
+    // its gradient is thus a_i^T \nabla P(X).
+    Matrix<kNodes, kDims> const GPnumeric = (P.derivatives(X * BXi) * A).transpose();
+    Matrix<kNodes, kDims> const GPerror   = GP - GPnumeric;
+    Scalar const GPerrorMagnitude         = GPerror.squaredNorm();
+    auto constexpr eps                    = 1e-14;
+    CHECK_LE(GPerrorMagnitude, eps);
 }

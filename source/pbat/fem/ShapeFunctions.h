@@ -151,12 +151,11 @@ Matrix<TElement::kNodes, TDerivedX::RowsAtCompileTime> ShapeFunctionGradients(
     // might be unacceptable, but will be exact, if domain hex or quad elements are linear
     // transformations on reference hex/quad elements. This is the case for axis-aligned elements,
     // for example, which would arise when constructing a mesh from an octree or quadtree.
-    auto constexpr kInputDims                     = TElement::kDims;
-    auto constexpr kOutputDims                    = TDerivedX::RowsAtCompileTime;
-    using AffineElementType                       = typename TElement::AffineBaseType;
-    Matrix<TElement::kNodes, kInputDims> const GN = TElement::GradN(Xi);
-    Matrix<kInputDims, kOutputDims> const JT      = Jacobian<AffineElementType>(Xi, X).transpose();
-    int constexpr kComputationOptions             = []() {
+    auto constexpr kInputDims                = TElement::kDims;
+    auto constexpr kOutputDims               = TDerivedX::RowsAtCompileTime;
+    using AffineElementType                  = typename TElement::AffineBaseType;
+    Matrix<kInputDims, kOutputDims> const JT = (X * AffineElementType::GradN(Xi)).transpose();
+    int constexpr kComputationOptions        = []() {
         // TDerivedX::RowsAtCompileTime being dynamic means that JT has a dynamic number of columns.
         // ThinU and ThinV SVD options are only supported when input matrix is dynamic (in
         // #columns).
@@ -165,11 +164,14 @@ Matrix<TElement::kNodes, TDerivedX::RowsAtCompileTime> ShapeFunctionGradients(
         else
             return Eigen::ComputeFullU | Eigen::ComputeFullV;
     }();
-    auto const JinvT = JT.jacobiSvd(kComputationOptions);
+    auto const JinvT                               = JT.jacobiSvd(kComputationOptions);
+    Matrix<kInputDims, TElement::kNodes> const GNT = TElement::GradN(Xi).transpose();
     Matrix<TElement::kNodes, kOutputDims> GP;
-    // GP.transpose() = JinvT.solve(GN.transpose());
+    // Would like to write
+    // GP.transpose() = JinvT.solve(GNT);
+    // but apparently SVD solver only solves for vectors.
     for (auto i = 0; i < TElement::kNodes; ++i)
-        GP.row(i).transpose() = JinvT.solve(GN.row(i).transpose());
+        GP.row(i).transpose() = JinvT.solve(GNT.col(i));
     return GP;
 }
 
@@ -202,10 +204,9 @@ MatrixX ShapeFunctionGradients(TMesh const& mesh)
         Matrix<kRowsJ, kColsJ> const Ve = mesh.X(Eigen::all, vertices);
         for (auto g = 0; g < QuadratureRuleType::kPoints; ++g)
         {
-            auto const gradPhi     = ShapeFunctionGradients<ElementType>(Xg.col(g), Ve);
+            auto const GP          = ShapeFunctionGradients<ElementType>(Xg.col(g), Ve);
             auto constexpr kStride = MeshType::kDims * QuadratureRuleType::kPoints;
-            GNe.block<kNodesPerElement, MeshType::kDims>(0, e * kStride + g * MeshType::kDims) =
-                gradPhi;
+            GNe.block<kNodesPerElement, MeshType::kDims>(0, e * kStride + g * MeshType::kDims) = GP;
         }
     });
     return GNe;
