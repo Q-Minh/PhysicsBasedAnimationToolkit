@@ -73,7 +73,7 @@ TEST_CASE("[fem] HyperElasticPotential")
         Scalar const UTranslationError = std::abs(UTranslated - UMaterial);
         CHECK_LE(UTranslationError, zero);
         VectorX const gradUTranslated      = U.ToVector();
-        Scalar const gradUTranslationError = (gradUTranslated - gradUMaterial).norm();
+        Scalar const gradUTranslationError = (gradUTranslated - gradUMaterial).squaredNorm();
         CHECK_LE(gradUTranslationError, zero);
         CSCMatrix const Htranslated = U.ToMatrix();
         Scalar const hessianTranslationInvarianceError =

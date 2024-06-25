@@ -66,15 +66,12 @@ TEST_CASE("[fem] LaplacianMatrix")
 
             // Check that matrix-free matrix multiplication has same result as matrix
             // multiplication
-            VectorX const x = VectorX::Ones(n);
+            VectorX const x = VectorX::Random(n);
             VectorX yFree   = VectorX::Zero(n);
             matrixFreeLaplacian.Apply(x, yFree);
             VectorX y           = L * x;
             Scalar const yError = (y - yFree).squaredNorm();
             CHECK_LE(yError, zero);
-            // Laplacian of constant function should be zero
-            CHECK_LE(yFree.squaredNorm(), zero);
-            CHECK_LE(y.squaredNorm(), zero);
 
             // Check linearity M(kx) = kM(x)
             VectorX yInputScaled  = VectorX::Zero(n);
@@ -83,8 +80,15 @@ TEST_CASE("[fem] LaplacianMatrix")
             matrixFreeLaplacian.Apply(k * x, yInputScaled);
             matrixFreeLaplacian.Apply(x, yOutputScaled);
             yOutputScaled *= k;
-            Scalar const yLinearityError = (yInputScaled - yOutputScaled).norm() / yOutputScaled.norm();
+            Scalar const yLinearityError =
+                (yInputScaled - yOutputScaled).squaredNorm() / yOutputScaled.squaredNorm();
             CHECK_LE(yLinearityError, zero);
+
+            // Laplacian of constant function should be 0
+            VectorX const xconst = VectorX::Ones(n);
+            VectorX yconst       = VectorX::Zero(n);
+            matrixFreeLaplacian.Apply(xconst, yconst);
+            CHECK_LE(yconst.squaredNorm(), zero);
         }
     });
 }

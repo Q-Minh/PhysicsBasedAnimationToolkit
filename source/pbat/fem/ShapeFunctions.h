@@ -4,7 +4,8 @@
 #include "Concepts.h"
 #include "Jacobian.h"
 
-#include <Eigen/SVD>
+#include <Eigen/Cholesky>
+#include <Eigen/LU>
 #include <exception>
 #include <fmt/core.h>
 #include <pbat/Aliases.h>
@@ -40,6 +41,13 @@ ShapeFunctions()
     return Ng;
 }
 
+/**
+ * @brief Compute shape functions at the given reference space positions
+ * @tparam TDerivedXi
+ * @tparam TElement
+ * @param Xi
+ * @return
+ */
 template <CElement TElement, class TDerivedXi>
 MatrixX ShapeFunctionsAt(Eigen::DenseBase<TDerivedXi> const& Xi)
 {
@@ -139,39 +147,53 @@ Matrix<TElement::kNodes, TDerivedX::RowsAtCompileTime> ShapeFunctionGradients(
     //
     // However, we assume that domain elements are linear transformations of reference elements,
     // so that the inverse map is linear, i.e. the Jacobian is constant. Hence,
-    // \phi(X) = N(J^{-1} (X - X_0)) = N(\Xi)
-    // grad_X \phi(X) = d N(\Xi) / d\Xi d \Xi / dX
-    //                = grad_\Xi N * J^{-1}
-    // If we transpose that equation, we get
-    // [ grad_X \phi(X) ]^T = J^{-T} * grad_\Xi N^T
-    // Recall that the pseudoinverse of J is J^{-1} = U \Sigma^{-1} V^T
-    // We pseudoinvert its transpose directly, J^{-T} = V \Sigma^{-1} U^T
+    //
+    // X(\Xi) = X * N(\Xi) -> J = X * grad_\Xi N
+    // -> X(\Xi) = X_0 + J*\Xi
+    // -> J \Xi = X - X_0
+    //
+    // If J is square, then \Xi = J^{-1} (X - X_0)
+    // -> grad_X N(\Xi(X)) = grad_\Xi N * J^{-1}
+    // -> [grad_X \phi]^T = J^-T [grad_\Xi N]^T
+    // -> GP.transpose() = JinvT * GN.transpose()
+    //
+    // If J is rectangular, then (J^T J) \Xi = J^T (X - X_0)
+    // -> \Xi = (J^T J)^{-1} J^T (X - X_0)
+    // -> grad_X N(\Xi(X)) = grad_\Xi N * (J^T J)^{-1} J^T
+    // -> [grad_X \phi]^T = J (J^T J)^{-1} [grad_\Xi N]^T
+    // -> GP.transpose() = J * JTJinv.solve(GN.transpose())
     //
     // For non-linear elements, like hexahedra or quadrilaterals, the accuracy of the gradients
     // might be unacceptable, but will be exact, if domain hex or quad elements are linear
     // transformations on reference hex/quad elements. This is the case for axis-aligned elements,
     // for example, which would arise when constructing a mesh from an octree or quadtree.
-    auto constexpr kInputDims                = TElement::kDims;
-    auto constexpr kOutputDims               = TDerivedX::RowsAtCompileTime;
-    using AffineElementType                  = typename TElement::AffineBaseType;
-    Matrix<kInputDims, kOutputDims> const JT = (X * AffineElementType::GradN(Xi)).transpose();
-    int constexpr kComputationOptions        = []() {
-        // TDerivedX::RowsAtCompileTime being dynamic means that JT has a dynamic number of columns.
-        // ThinU and ThinV SVD options are only supported when input matrix is dynamic (in
-        // #columns).
-        if constexpr (TDerivedX::RowsAtCompileTime == Eigen::Dynamic)
-            return Eigen::ComputeThinU | Eigen::ComputeThinV;
-        else
-            return Eigen::ComputeFullU | Eigen::ComputeFullV;
-    }();
-    auto const JinvT                              = JT.jacobiSvd(kComputationOptions);
-    Matrix<TElement::kNodes, kInputDims> const GN = TElement::GradN(Xi);
-    Matrix<TElement::kNodes, kOutputDims> GP;
-    // Would like to write
-    // GP.transpose() = JinvT.solve(GNT);
-    // but apparently SVD solver only solves for vectors.
-    for (auto i = 0; i < TElement::kNodes; ++i)
-        GP.row(i).transpose() = JinvT.solve(GN.row(i).transpose());
+    auto constexpr kInputDims           = TElement::kDims;
+    auto constexpr kOutputDims          = TDerivedX::RowsAtCompileTime;
+    auto constexpr kNodes               = TElement::kNodes;
+    using AffineElementType             = typename TElement::AffineBaseType;
+    Matrix<kNodes, kInputDims> const GN = TElement::GradN(Xi);
+    Matrix<kOutputDims, kInputDims> J;
+    Matrix<kNodes, kOutputDims> GP;
+
+    bool constexpr bIsElementLinear = std::is_same_v<TElement, AffineElementType>;
+    if constexpr (bIsElementLinear)
+    {
+        J = X * GN;
+    }
+    else
+    {
+        J = X * AffineElementType::GradN(Xi);
+    }
+    bool constexpr bIsJacobianSquare = kInputDims == kOutputDims;
+    if (bIsJacobianSquare)
+    {
+        GP.transpose() = J.transpose().fullPivLu().solve(GN.transpose());
+    }
+    else
+    {
+        Matrix<kInputDims, kInputDims> const JTJ = J.transpose() * J;
+        GP.transpose()                           = J * JTJ.ldlt().solve(GN.transpose());
+    }
     return GP;
 }
 
