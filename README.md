@@ -57,52 +57,24 @@ Take a look at the unit tests, found in the library's source (`.cpp`) files.
 
 To download and install from PyPI, run in command line:
 ```bash
-pip install pbatoolkit libigl numpy scipy
+pip install pbatoolkit
 ```
 
-To install locally, run in command line:
+To install locally and get the most up to date features, run in command line:
 ```bash
 pip install .
 ```
 
-In Python:
-```python
-import pbatoolkit as pbat, pbatoolkit.fem, igl, numpy as np, scipy as sp
-V, C, F = igl.read_mesh("path/to/mesh.mesh")
-mesh = pbat.fem.mesh(V.T, C.T, element=pbat.fem.Element.Tetrahedron, order=1)
-x = mesh.X.reshape(mesh.X.shape[0]*mesh.X.shape[1], order='f')
-detJeM = pbat.fem.jacobian_determinants(mesh, quadrature_order=2)
-M = pbat.fem.mass_matrix(mesh, detJeM, rho=1000., dims=3, quadrature_order=2).to_matrix()
-detJeU = pbat.fem.jacobian_determinants(mesh, quadrature_order=1)
-GNeU = pbat.fem.shape_function_gradients(mesh, quadrature_order=1)
-Y = np.full(mesh.E.shape[1], 1e6)
-nu = np.full(mesh.E.shape[1], 0.45)
-hep = pbat.fem.hyper_elastic_potential(mesh, detJeU, GNeU, Y, nu, psi= pbat.fem.HyperElasticEnergy.StableNeoHookean, quadrature_order=1)
-hep.precompute_hessian_sparsity()
-hep.compute_element_elasticity(x)
-U, gradU, HU = hep.eval(), hep.to_vector(), hep.to_matrix()
-l, V = sp.sparse.linalg.eigsh(HU, k=30, M=M, which='SM')
-```
+Example code can be found [here](./python/examples/).
 
-Profiling is also accessible via the Python interface:
-```python
-import pbatoolkit.profiling
-profiler = pbatoolkit.profiling.Profiler()
-connected = profiler.wait_for_server_connection(timeout=10)
-# Check connected...
-for t in range(timesteps):
-    profiler.begin_frame("physics")
-    # Physics time integration goes here...
-    profiler.end_frame("physics")
-```
 To profile relevant calls to `pbatoolkit` functions/methods, connect to `python.exe` in the `Tracy` profiler server GUI.
 All calls to pbat will be profiled on a per-frame basis in the Tracy profiler server GUI.
 
 > *Use method `profile` of `pbatoolkit.profiling.Profiler` to profile code external to PBAT, allowing for an integrated profiling experience while using various scientific computing packages*.
 > ```python
-> def modes_from_stiffness_matrix():
->     l, V = sp.sparse.linalg.eigsh(HU, k=30, M=M, which='SM')
-> profiler.profile("Compute stiffness' low frequency modes", modes_from_stiffness_matrix)
+> def expensive_external_computation():
+>     # Some expensive computation
+> profiler.profile("My expensive external computation", expensive_external_computation)
 > ```
 
 ## Contributing
