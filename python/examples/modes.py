@@ -16,7 +16,7 @@ def signal(w: float, v: np.ndarray, t: float, c: float, k: float):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        prog="Heat geodesics demo",
+        prog="Elastic stiffness modal decomposition demo",
     )
     parser.add_argument("-i", "--input", help="Path to input tetrahedral mesh", type=str,
                         dest="input", required=True)

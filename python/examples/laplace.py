@@ -53,7 +53,7 @@ def harmonic_field(V: np.ndarray, C: np.ndarray, order: int):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        prog="Heat geodesics demo",
+        prog="Higher order FEM demo",
     )
     parser.add_argument("-i", "--input", help="Path to input tetrahedral mesh", type=str,
                         dest="input", required=True)
