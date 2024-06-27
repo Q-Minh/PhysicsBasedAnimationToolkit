@@ -34,10 +34,11 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     if args.mesh_type == "tri":
-        V, F = igl.read_triangle_mesh(args.input)
+        imesh = meshio.read(args.input)
+        V, F = imesh.points, imesh.cells_dict["triangle"]
         V, F = subdivide(V, F, args.algorithm, args.k)
-        mesh = meshio.Mesh(V, [("triangle", F)])
-        meshio.write(args.output, mesh)
+        omesh = meshio.Mesh(V, [("triangle", F)])
+        meshio.write(args.output, omesh)
     elif args.mesh_type == "tet":
         mesh = meshio.read(args.input)
         V, C = mesh.points, mesh.cells_dict["tetra"]
