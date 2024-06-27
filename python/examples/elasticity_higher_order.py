@@ -13,10 +13,12 @@ import argparse
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        prog="Simple 3D elastic simulation using linear FEM tetrahedra",
+        prog="Simple 3D elastic simulation using quadratic FEM tetrahedra",
     )
     parser.add_argument("-i", "--input", help="Path to input mesh", type=str,
                         dest="input", required=True)
+    parser.add_argument("-r", "--refined-input", help="Path to refined input mesh", type=str,
+                        dest="rinput", required=True)
     parser.add_argument("-m", "--mass-density", help="Mass density", type=float,
                         dest="rho", default=1000.)
     parser.add_argument("-Y", "--young-modulus", help="Young's modulus", type=float,
@@ -25,40 +27,44 @@ if __name__ == "__main__":
                         dest="nu", default=0.45)
     args = parser.parse_args()
     
-    # Construct FEM quantities for simulation
+    # Load domain and visual meshes
     imesh = meshio.read(args.input)
     V, C = imesh.points, imesh.cells_dict["tetra"]
+    V = V.astype(np.float64, order='c')
+    C = C.astype(np.int64, order='c')
+    rimesh = meshio.read(args.rinput)
+    VR, FR = rimesh.points, rimesh.cells_dict["triangle"]
+    VR = VR.astype(np.float64, order='c')
+    FR = FR.astype(np.int64, order='c')
+    
+    # Construct FEM quantities for simulation
     mesh = pbat.fem.mesh(
-        V.T, C.T, element=pbat.fem.Element.Tetrahedron, order=1)
+        V.T, C.T, element=pbat.fem.Element.Tetrahedron, order=2)
     x = mesh.X.reshape(math.prod(mesh.X.shape), order='f')
     v = np.zeros(x.shape[0])
-    detJeM = pbat.fem.jacobian_determinants(mesh, quadrature_order=2)
+    detJeM = pbat.fem.jacobian_determinants(mesh, quadrature_order=4)
     rho = args.rho
     M = pbat.fem.mass_matrix(mesh, detJeM, rho=rho,
-                             dims=3, quadrature_order=2).to_matrix()
+                             dims=3, quadrature_order=4).to_matrix()
     Minv = pbat.math.linalg.ldlt(M)
     Minv.compute(M)
-    # Could also lump the mass matrix like this
-    # lumpedm = M.sum(axis=0)
-    # M = sp.sparse.spdiags(lumpedm, np.array([0]), m=M.shape[0], n=M.shape[0])
-    # Minv = sp.sparse.spdiags(
-    #     1./lumpedm, np.array([0]), m=M.shape[0], n=M.shape[0])
 
     # Construct load vector from gravity field
-    detJeU = pbat.fem.jacobian_determinants(mesh, quadrature_order=1)
-    GNeU = pbat.fem.shape_function_gradients(mesh, quadrature_order=1)
     g = np.zeros(mesh.dims)
     g[-1] = -9.81
+    detJef = pbat.fem.jacobian_determinants(mesh, quadrature_order=2)
     fe = np.tile(rho*g[:, np.newaxis], mesh.E.shape[1])
-    f = pbat.fem.load_vector(mesh, detJeU, fe, quadrature_order=1).to_vector()
+    f = pbat.fem.load_vector(mesh, detJef, fe, quadrature_order=2).to_vector()
     a = Minv.solve(f).squeeze()
 
     # Create hyper elastic potential
+    detJeU = pbat.fem.jacobian_determinants(mesh, quadrature_order=4)
+    GNeU = pbat.fem.shape_function_gradients(mesh, quadrature_order=4)
     Y = np.full(mesh.E.shape[1], args.Y)
     nu = np.full(mesh.E.shape[1], args.nu)
     psi = pbat.fem.HyperElasticEnergy.StableNeoHookean
     hep = pbat.fem.hyper_elastic_potential(
-        mesh, detJeU, GNeU, Y, nu, psi=psi, quadrature_order=1)
+        mesh, detJeU, GNeU, Y, nu, psi=psi, quadrature_order=4)
     hep.precompute_hessian_sparsity()
 
     # Set Dirichlet boundary conditions
@@ -80,6 +86,12 @@ if __name__ == "__main__":
     Hdd = hep.to_matrix()[:, dofs].tocsr()[dofs, :]
     Hddinv = pbat.math.linalg.ldlt(Hdd)
     Hddinv.analyze(Hdd)
+    
+    # Setup visual mesh
+    bvh = pbat.geometry.bvh(V.T, C.T, cell=pbat.geometry.Cell.Tetrahedron)
+    e = bvh.nearest_primitives_to_points(VR.T)
+    Xi = pbat.fem.reference_positions(mesh, e, VR.T)
+    phi = pbat.fem.shape_functions_at(mesh, Xi)
 
     ps.set_verbosity(0)
     ps.set_up_dir("z_up")
@@ -88,7 +100,8 @@ if __name__ == "__main__":
     ps.set_ground_plane_height_factor(0.5)
     ps.set_program_name("Elasticity")
     ps.init()
-    vm = ps.register_volume_mesh("world model", mesh.X.T, mesh.E.T)
+    vm = ps.register_volume_mesh("Domain", V, C)
+    sm = ps.register_surface_mesh("Visual", VR, FR)
     pc = ps.register_point_cloud("Dirichlet", mesh.X[:, vdbc].T)
     dt = 0.01
     animate = False
@@ -121,7 +134,8 @@ if __name__ == "__main__":
 
             # Update visuals
             X = x.reshape(mesh.X.shape[0], mesh.X.shape[1], order='f')
-            vm.update_vertex_positions(X.T)
+            xv = (X[:,mesh.E[:,e]] * phi).sum(axis=1)
+            sm.update_vertex_positions(xv.T)
 
     ps.set_user_callback(callback)
     ps.show()
