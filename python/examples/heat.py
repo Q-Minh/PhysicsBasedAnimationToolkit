@@ -19,6 +19,7 @@ if __name__ == "__main__":
     
     imesh = meshio.read(args.input)
     V, C = imesh.points, imesh.cells_dict["tetra"]
+    
     gamma = [0]
     # Construct Galerkin laplacian, mass and gradient operators
     mesh = pbat.fem.mesh(
@@ -37,31 +38,15 @@ if __name__ == "__main__":
     dt = h**2
     k = 2
     A = M - k*dt*L
-    # n = mesh.X.shape[1]
-    # u0 = np.zeros(n)
-    # u0[gamma] = 1
-    # b = M @ u0
     # Precompute linear solvers
     Ainv = pbat.math.linalg.ldlt(A)
     Ainv.compute(A)
     Linv = pbat.math.linalg.ldlt(L)
     Linv.compute(L)
-    # # Compute heat and its gradient
-    # u = Ainv.solve(b).squeeze()
-    # gradu = (G @ u).reshape(int(G.shape[0]/3), 3)
-    # # Stable normalize gradient
-    # gradnorm = sp.linalg.norm(gradu, axis=1, keepdims=True)
-    # gradu = gradu / gradnorm
-    # # Solve Poisson problem to reconstruct geodesic distance field, knowing that phi[0] = 0
-    # divGu = -G.T @ gradu.reshape(G.shape[0])
-    # phi = Linv.solve(divGu).squeeze()
-    # # Laplacian is invariant to scale+translation, i.e. L(kx+t) = L(x).
-    # # This means that our solution can be shifted and/or reflected.
-    # # We handle this by flipping signs if a reflexion is "detected",
-    # # and shifting such that the smallest "distance" is 0.
-    # if phi[gamma].mean() > phi.mean():
-    #     phi = -phi
-    # phi -= phi.min()
+    # Setup isoline visuals
+    niso = 5
+    F = igl.boundary_facets(mesh.E.T)
+    F[:,:2] = np.roll(F[:,:2], shift=1, axis=1)
 
     ps.set_up_dir("z_up")
     ps.set_front_dir("neg_y_front")
@@ -69,12 +54,13 @@ if __name__ == "__main__":
     ps.init()
     
     def callback():
-        global k, dt, Ainv, Linv, G, M, L, gamma
+        global k, dt, Ainv, Linv, G, M, L, gamma, niso
         kchanged, k = imgui.InputFloat("k", k)
         if kchanged:
             A = M - k*dt*L
             Ainv.factorize(A)
-        
+            
+        _, niso = imgui.InputInt("# iso", niso)
         _, gamma[0] = imgui.InputInt("source", gamma[0])
         if imgui.Button("Compute"):
             # Compute heat and its gradient
@@ -97,7 +83,11 @@ if __name__ == "__main__":
             if phi[gamma].mean() > phi.mean():
                 phi = -phi
             phi -= phi.min()
-            
+                        
+            Viso, Eiso = igl.isolines(mesh.X.T, F, phi, niso)
+            cn = ps.register_curve_network("distance contours", Viso, Eiso)
+            cn.set_color((0, 0, 0))
+            cn.set_radius(0.002)
             vm = ps.get_volume_mesh("model")
             vm.add_scalar_quantity("heat", u, cmap="reds")
             vm.add_scalar_quantity("distance", phi, cmap="reds", enabled=True)
