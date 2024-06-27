@@ -69,7 +69,11 @@ if __name__ == "__main__":
     
     def callback():
         global k, dt, Ainv, Linv, G, M, L, gamma
-        _, k = imgui.SliderFloat("k", k, v_min=0, v_max=5)
+        kchanged, k = imgui.InputFloat("k", k)
+        if kchanged:
+            A = M - k*dt*L
+            Ainv.factorize(A)
+        
         _, gamma[0] = imgui.InputInt("source", gamma[0])
         if imgui.Button("Compute"):
             # Compute heat and its gradient

@@ -5,6 +5,7 @@ import tetgen as tg
 import meshio
 import argparse
 
+
 def subdivide(V, F, algorithm, k):
     if args.algorithm == "upsample":
         V, F = igl.upsample(V, F, k)
@@ -14,6 +15,7 @@ def subdivide(V, F, algorithm, k):
     if args.algorithm == "loop":
         V, F = igl.loop(V, F, k)
     return V, F
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
@@ -26,7 +28,7 @@ if __name__ == "__main__":
     parser.add_argument("-m", "--mesh-type", help="tri | tet",
                         type=str, dest="mesh_type", required=True)
     parser.add_argument("-k", "--num-refinement-pass", help="Number of refinement passes", type=int,
-                        dest="k")
+                        dest="k", default=1)
     parser.add_argument("-a", "--algorithm", help="Triangle mesh subdivision algorithm used, one of upsample | barycentric | loop", type=str,
                         dest="algorithm", default="upsample")
     args = parser.parse_args()
@@ -55,4 +57,3 @@ if __name__ == "__main__":
         meshio.write(args.output, mesh)
     else:
         print(f"Could not refine unknown mesh type {args.mesh_type}")
-
