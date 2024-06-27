@@ -51,6 +51,9 @@ if __name__ == "__main__":
     leigs[leigs <= 0] = 0
     w = np.sqrt(leigs)
 
+    ps.set_up_dir("z_up")
+    ps.set_front_dir("neg_y_front")
+    ps.set_ground_plane_mode("shadow_only")
     ps.init()
     vm = ps.register_volume_mesh("model", mesh.X.T, mesh.E.T)
     mode = 6

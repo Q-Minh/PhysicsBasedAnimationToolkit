@@ -63,7 +63,8 @@ if __name__ == "__main__":
     
     imesh = meshio.read(args.input)
     V, C, = imesh.points, imesh.cells_dict["tetra"]
-    C = C.astype(np.int64)
+    V = np.copy(V, order='c')
+    C = C.astype(np.int64, order='c')
     u1, mesh1 = harmonic_field(V, C, order=1)
     u2, mesh2 = harmonic_field(V, C, order=2)
     bvh = pbat.geometry.bvh(V.T, C.T, cell=pbat.geometry.Cell.Tetrahedron)
@@ -80,6 +81,7 @@ if __name__ == "__main__":
     
     ps.set_up_dir("z_up")
     ps.set_front_dir("neg_y_front")
+    ps.set_ground_plane_mode("shadow_only")
     ps.init()
     ps.register_volume_mesh("domain", V, C)
     vm = ps.register_volume_mesh("domain refined", Vrefined, Crefined)

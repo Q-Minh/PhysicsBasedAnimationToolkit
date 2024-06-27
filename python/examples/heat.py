@@ -65,6 +65,7 @@ if __name__ == "__main__":
 
     ps.set_up_dir("z_up")
     ps.set_front_dir("neg_y_front")
+    ps.set_ground_plane_mode("shadow_only")
     ps.init()
     
     def callback():

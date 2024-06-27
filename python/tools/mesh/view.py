@@ -10,6 +10,9 @@ if __name__ == "__main__":
                         dest="inputs", required=True)
     args = parser.parse_args()
     
+    ps.set_up_dir("z_up")
+    ps.set_front_dir("neg_y_front")
+    ps.set_ground_plane_mode("shadow_only")
     ps.init()
     for input in args.inputs:
         mesh = meshio.read(input)

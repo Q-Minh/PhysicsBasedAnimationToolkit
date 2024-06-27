@@ -1,0 +1,5 @@
+meshio
+libigl
+polyscope
+numpy
+scipy
