@@ -4,3 +4,4 @@ libigl
 polyscope
 numpy
 scipy
+fast-simplification
