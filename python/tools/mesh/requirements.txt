@@ -5,3 +5,5 @@ polyscope
 numpy
 scipy
 fast-simplification
+gpytoolbox
+pymeshfix

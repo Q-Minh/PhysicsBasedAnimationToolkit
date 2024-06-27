@@ -1,7 +1,3 @@
-import igl
-import polyscope as ps
-import numpy as np
-import tetgen as tg
 import meshio
 import argparse
 import fast_simplification as fs
