@@ -110,14 +110,14 @@ All calls to pbat will be profiled on a per-frame basis in the Tracy profiler se
 Below, we show a few examples of what can be done in just a few lines of code using `pbatoolkit` and Python. Code can be found [here](./python/examples/).
 
 ##### Harmonic interpolation
-A smooth (harmonic) function is constructed on [Entei](https://bulbapedia.bulbagarden.net/wiki/Entei_(Pok%C3%A9mon)), required to evaluate to `1` on its paws, and `0` at the top of its tail, using piece-wise linear (left) and quadratic (right) shape functions.
+A smooth (harmonic) function is constructed on [Entei](https://bulbapedia.bulbagarden.net/wiki/Entei_(Pok%C3%A9mon)), required to evaluate to `1` on its paws, and `0` at the top of its tail, using piece-wise linear (left) and quadratic (right) shape functions. Its isolines are displayed as black curves.
 <p float="left">
   <img src="doc/imgs/entei.harmonic.interpolation.order.1.png" width="250" alt="Harmonic interpolation on Entei model using linear shape functions" />
   <img src="doc/imgs/entei.harmonic.interpolation.order.2.png" width="250" alt="Harmonic interpolation on Entei model using quadratic shape functions" /> 
 </p>
 
 ##### Heat method for geodesic distance computation
-Approximate geodesic distances are computed from the top center vertex of [Metagross](https://bulbapedia.bulbagarden.net/wiki/Metagross_(Pok%C3%A9mon)) by diffusing heat from it (left), and recovering a function whose gradient matches the normalized heat's negative gradient.
+Approximate geodesic distances are computed from the top center vertex of [Metagross](https://bulbapedia.bulbagarden.net/wiki/Metagross_(Pok%C3%A9mon)) by diffusing heat from it (left), and recovering a function whose gradient matches the normalized heat's negative gradient. Its isolines are displayed as black curves.
 <p float="left">
   <img src="doc/imgs/metagross.heat.source.png" width="250" alt="Heat source on top center of metagross model" />
   <img src="doc/imgs/metagross.heat.geodesics.png" width="250" alt="Reconstructed single source geodesic distance" /> 
