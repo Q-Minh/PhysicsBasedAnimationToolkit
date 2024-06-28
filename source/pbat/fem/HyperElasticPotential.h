@@ -233,38 +233,69 @@ HyperElasticPotential<TMesh, THyperElasticEnergy, QuadratureOrder>::ComputeEleme
     auto constexpr kNodesPerElement = ElementType::kNodes;
     auto constexpr kDofsPerElement  = kNodesPerElement * kDims;
     auto const wg                   = common::ToEigen(QuadratureRuleType::weights);
-    tbb::parallel_for(Index{0}, Index{numberOfElements}, [&](Index e) {
-        auto const nodes = mesh.E.col(e);
-        auto const xe    = x.reshaped(kDims, numberOfNodes)(Eigen::all, nodes);
-        auto ge          = Ge.col(e);
-        auto he          = He.block<kDofsPerElement, kDofsPerElement>(0, e * kDofsPerElement);
-        for (auto g = 0; g < QuadratureRuleType::kPoints; ++g)
-        {
-            auto constexpr kStride = MeshType::kDims * QuadratureRuleType::kPoints;
-            auto const gradPhi =
-                GNe.block<kNodesPerElement, MeshType::kDims>(0, e * kStride + g * MeshType::kDims);
-            auto const F = xe * gradPhi;
-            if (not bWithGradient and not bWithHessian)
+    if (not bWithGradient and not bWithHessian)
+    {
+        tbb::parallel_for(Index{0}, Index{numberOfElements}, [&](Index e) {
+            auto const nodes = mesh.E.col(e);
+            auto const xe    = x.reshaped(kDims, numberOfNodes)(Eigen::all, nodes);
+            for (auto g = 0; g < QuadratureRuleType::kPoints; ++g)
             {
+                auto constexpr kStride = MeshType::kDims * QuadratureRuleType::kPoints;
+                auto const gradPhi =
+                    GNe.block<kNodesPerElement, MeshType::kDims>(0, e * kStride + g * MeshType::kDims);
+                auto const F = xe * gradPhi;
                 auto psiF = Psi.eval(F.reshaped(), mue(e), lambdae(e));
                 Ue(e) += (wg(g) * detJe(g, e)) * psiF;
             }
-            else if (bWithGradient and not bWithHessian)
+        });
+    }
+    else if (bWithGradient and not bWithHessian)
+    {
+        tbb::parallel_for(Index{0}, Index{numberOfElements}, [&](Index e) {
+            auto const nodes = mesh.E.col(e);
+            auto const xe    = x.reshaped(kDims, numberOfNodes)(Eigen::all, nodes);
+            for (auto g = 0; g < QuadratureRuleType::kPoints; ++g)
             {
+                auto constexpr kStride = MeshType::kDims * QuadratureRuleType::kPoints;
+                auto const gradPhi =
+                    GNe.block<kNodesPerElement, MeshType::kDims>(0, e * kStride + g * MeshType::kDims);
+                auto const F = xe * gradPhi;
                 auto [psiF, gradPsiF] = Psi.evalWithGrad(F.reshaped(), mue(e), lambdae(e));
                 Ue(e) += (wg(g) * detJe(g, e)) * psiF;
                 ge +=
                     (wg(g) * detJe(g, e)) * GradientWrtDofs<ElementType, kDims>(gradPsiF, gradPhi);
             }
-            else if (not bWithGradient and bWithHessian)
+        });
+    }
+    else if (not bWithGradient and bWithHessian)
+    {
+        tbb::parallel_for(Index{0}, Index{numberOfElements}, [&](Index e) {
+            auto const nodes = mesh.E.col(e);
+            auto const xe    = x.reshaped(kDims, numberOfNodes)(Eigen::all, nodes);
+            for (auto g = 0; g < QuadratureRuleType::kPoints; ++g)
             {
+                auto constexpr kStride = MeshType::kDims * QuadratureRuleType::kPoints;
+                auto const gradPhi =
+                    GNe.block<kNodesPerElement, MeshType::kDims>(0, e * kStride + g * MeshType::kDims);
+                auto const F = xe * gradPhi;
                 auto psiF     = Psi.eval(F.reshaped(), mue(e), lambdae(e));
                 auto hessPsiF = Psi.hessian(F.reshaped(), mue(e), lambdae(e));
                 Ue(e) += (wg(g) * detJe(g, e)) * psiF;
                 he += (wg(g) * detJe(g, e)) * HessianWrtDofs<ElementType, kDims>(hessPsiF, gradPhi);
             }
-            else
+        });
+    }
+    else
+    {
+        tbb::parallel_for(Index{0}, Index{numberOfElements}, [&](Index e) {
+            auto const nodes = mesh.E.col(e);
+            auto const xe    = x.reshaped(kDims, numberOfNodes)(Eigen::all, nodes);
+            for (auto g = 0; g < QuadratureRuleType::kPoints; ++g)
             {
+                auto constexpr kStride = MeshType::kDims * QuadratureRuleType::kPoints;
+                auto const gradPhi =
+                    GNe.block<kNodesPerElement, MeshType::kDims>(0, e * kStride + g * MeshType::kDims);
+                auto const F = xe * gradPhi;
                 auto [psiF, gradPsiF, hessPsiF] =
                     Psi.evalWithGradAndHessian(F.reshaped(), mue(e), lambdae(e));
                 Ue(e) += (wg(g) * detJe(g, e)) * psiF;
@@ -272,8 +303,8 @@ HyperElasticPotential<TMesh, THyperElasticEnergy, QuadratureOrder>::ComputeEleme
                     (wg(g) * detJe(g, e)) * GradientWrtDofs<ElementType, kDims>(gradPsiF, gradPhi);
                 he += (wg(g) * detJe(g, e)) * HessianWrtDofs<ElementType, kDims>(hessPsiF, gradPhi);
             }
-        }
-    });
+        });
+    }
 }
 
 template <CMesh TMesh, physics::CHyperElasticEnergy THyperElasticEnergy, int QuadratureOrder>
