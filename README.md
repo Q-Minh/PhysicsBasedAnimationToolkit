@@ -16,7 +16,7 @@ The Physics Based Animation Toolkit (PBAT) is a (mostly templated) cross-platfor
   - Dimensions `1,2,3`
   - Lagrange shape functions of order `1,2,3`
   - Line, triangle, quadrilateral, tetrahedron and hexahedron elements
-- Hyper elastic materal models
+- Hyper elastic material models
   - Saint-Venant Kirchhoff
   - Stable Neo-Hookean
 - Polynomial quadrature rules
