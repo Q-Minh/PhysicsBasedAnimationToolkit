@@ -8,7 +8,26 @@
 
 The Physics Based Animation Toolkit (PBAT) is a (mostly templated) cross-platform C++20 library of algorithms and data structures commonly used in computer graphics research on physically-based simulation in dimensions `1,2,3`. For most use cases, we recommend using our library via its Python interface, enabling seamless integration into Python's ecosystem of powerful scientific computing packages. 
 
-> *Our Python bindings are currently *not* available on MacOS* via PyPI.
+> *Our Python bindings are currently *not* available on MacOS* via PyPI. For now, we recommend MacOS users to build `pbatoolkit` locally.
+
+### Features
+
+- Finite Element Method (FEM) meshes and operators
+  - Dimensions `1,2,3`
+  - Lagrange shape functions of order `1,2,3`
+  - Line, triangle, quadrilateral, tetrahedron and hexahedron elements
+- Hyper elastic materal models
+  - Saint-Venant Kirchhoff
+  - Stable Neo-Hookean
+- Polynomial quadrature rules
+  - Simplices in dimensions `1,2,3`
+  - Gauss-Legendre quadrature
+- Spatial query acceleration data structures
+  - Bounding volume hierarchy for triangles (2D+3D) and tetrahedra (3D)
+    - Nearest neighbours
+    - Overlapping primitive pairs
+    - Point containment
+- Seamless profiling integration via [Tracy](https://github.com/wolfpld/tracy)
 
 ## Dependencies
 
@@ -60,12 +79,21 @@ To download and install from PyPI, run in command line:
 pip install pbatoolkit
 ```
 
-To install locally and get the most up to date features, run in command line:
+Our Python bindings build relies on [Scikit-build-core](https://scikit-build-core.readthedocs.io/en/latest/index.html), which relies on CMake's [`install`](https://cmake.org/cmake/help/latest/command/install.html) mechanism. As such, you can configure the installation as you typically would using the CMake CLI directly, via the `SKBUILD_CMAKE_ARGS` environment/shell variable. See our [wheels workflow](.github/workflows/wheels.yml) for working examples of setting `SKBUILD_CMAKE_ARGS` on Linux, MacOS and Windows. Then, assuming `SKBUILD_CMAKE_ARGS` contains at least `-DPBAT_BUILD_PYTHON_BINDINGS:BOOL=ON` and that external dependencies are found via CMake's [`find_package`](https://cmake.org/cmake/help/latest/command/find_package.html), you can install our Python package `pbatoolkit` locally and get the most up to date features, by running in command line:
 ```bash
 pip install .
 ```
 
-Example code can be found [here](./python/examples/).
+Verify `pbatoolkit`'s contents:
+```python
+import pbatoolkit as pbat
+import pbatoolkit.fem, pbatoolkit.geometry, pbatoolkit.profiling
+import pbatoolkit.math.linalg
+help(pbat.fem)
+help(pbat.geometry)
+help(pbat.profiling)
+help(pbat.math.linalg)
+```
 
 To profile relevant calls to `pbatoolkit` functions/methods, connect to `python.exe` in the `Tracy` profiler server GUI.
 All calls to pbat will be profiled on a per-frame basis in the Tracy profiler server GUI.
@@ -76,6 +104,50 @@ All calls to pbat will be profiled on a per-frame basis in the Tracy profiler se
 >     # Some expensive computation
 > profiler.profile("My expensive external computation", expensive_external_computation)
 > ```
+
+## Gallery
+
+Below, we show a few examples of what can be done in just a few lines of code using `pbatoolkit` and Python. Code can be found [here](./python/examples/).
+
+##### Harmonic interpolation
+A smooth (harmonic) function is constructed on [Entei](https://bulbapedia.bulbagarden.net/wiki/Entei_(Pok%C3%A9mon)), required to evaluate to `1` on its paws, and `0` at the top of its tail, using piece-wise linear (left) and quadratic (right) shape functions.
+<p float="left">
+  <img src="doc/imgs/entei.harmonic.interpolation.order.1.png" width="250" alt="Harmonic interpolation on Entei model using linear shape functions" />
+  <img src="doc/imgs/entei.harmonic.interpolation.order.2.png" width="250" alt="Harmonic interpolation on Entei model using quadratic shape functions" /> 
+</p>
+
+##### Heat method for geodesic distance computation
+Approximate geodesic distances are computed from the top center vertex of [Metagross](https://bulbapedia.bulbagarden.net/wiki/Metagross_(Pok%C3%A9mon)) by diffusing heat from it (left), and recovering a function whose gradient matches the normalized heat's negative gradient.
+<p float="left">
+  <img src="doc/imgs/metagross.heat.source.png" width="250" alt="Heat source on top center of metagross model" />
+  <img src="doc/imgs/metagross.heat.geodesics.png" width="250" alt="Reconstructed single source geodesic distance" /> 
+</p>
+
+##### Mesh smoothing via diffusion
+Fine details of Godzilla's skin are smoothed out by diffusing `x,y,z` coordinates in time.
+<p float="left">
+    <img src="doc/imgs/godzilla.diffusion.smoothing.gif" width="250" alt="Godzilla model with fine details being smoothed out via diffusion" />
+</p>
+
+##### Hyper elastic simulation
+Linear (left) and quadratic (right) shape functions are compared on a hyper elastic simulation of the beam model, whose left side is fixed. Quadratic shape functions result in visually smoother and softer bending.
+<p float="left">
+  <img src="doc/imgs/beam.bending.order.1.png" width="250" alt="Bending beam FEM elastic simulation using linear shape functions" />
+  <img src="doc/imgs/beam.bending.order.2.png" width="250" alt="Bending beam FEM elastic simulation using quadratic shape functions" /> 
+</p>
+
+##### Modal analysis
+The hyper elastic beam's representative deformation modes, i.e. its low frequency eigen vectors, 
+are animated as time continuous signals.
+<p float="left">
+    <img src="doc/imgs/beam.modes.gif" width="250" alt="Unconstrained hyper elastic beam's eigen frequencies" />
+</p>
+
+##### Profiling statistics
+Computation details are gathered when using `pbatoolkit` and consulted in the [Tracy](https://github.com/wolfpld/tracy) profiling server GUI.
+<p float="left">
+    <img src="doc/imgs/profiling.statistics.png" alt="Profiling statistics widget in Tracy server" />
+</p>
 
 ## Contributing
 
