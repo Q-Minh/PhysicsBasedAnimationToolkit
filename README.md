@@ -84,7 +84,7 @@ Our Python bindings build relies on [Scikit-build-core](https://scikit-build-cor
 pip install .
 ```
 
-Verify `pbatoolkit`'s contents:
+Verify `pbatoolkit`'s contents in Python shell:
 ```python
 import pbatoolkit as pbat
 import pbatoolkit.fem, pbatoolkit.geometry, pbatoolkit.profiling
