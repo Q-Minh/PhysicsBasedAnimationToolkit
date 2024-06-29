@@ -23,4 +23,13 @@ class Profiler:
         _profiling.end_frame(frame_name)
         
     def profile(self, zone_name: str, func):
+        """Profile function evaluation of func
+
+        Args:
+            zone_name (str): Tracy zone name to display in profiler
+            func: Callable taking 0 arguments and returning tuples of matrices (numpy arrays)
+
+        Returns:
+            The return value of a single call to func
+        """
         return _profiling.profile(zone_name, func)

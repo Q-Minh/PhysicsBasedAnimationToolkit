@@ -86,7 +86,7 @@ def reference_positions(mesh, E: np.ndarray, X: np.ndarray, max_iterations: int 
         epsilon (float, optional): Residual early out. Defaults to 1e-10.
 
     Returns:
-        np.ndarray: The reference positions in elements E corresponding to domain positions X in the mesh.
+        np.ndarray: |#reference dims|x|E.shape[0]| The reference positions in elements E corresponding to domain positions X in the mesh.
     """
     mesh_name = _mesh_type_name(mesh)
     function_name = f"reference_positions_{mesh_name}"
@@ -142,6 +142,9 @@ def shape_functions_at(mesh, Xi: np.ndarray):
     Args:
         mesh: The FEM mesh
         Xi (np.ndarray): Positions in element reference space
+        
+    Returns:
+        np.ndarray: |#element nodes|x|Xi.shape[0]| matrix of nodal shape function values at reference positions Xi
     """
     mesh_name = _mesh_type_name(mesh)
     function_name = f"shape_functions_at_{mesh_name}"
@@ -194,6 +197,17 @@ def mass_matrix(mesh, detJe: np.ndarray, rho: float = 1., dims: int = 3, quadrat
 
 
 def load_vector(mesh, detJe: np.ndarray, fe: np.ndarray, quadrature_order: int = 1):
+    """Computes a load vector on the input mesh's
+
+    Args:
+        mesh: The FEM mesh
+        detJe (np.ndarray): Element jacobian determinants at quadrature points
+        fe (np.ndarray): |#load dims|x|#elements| per-element load
+        quadrature_order (int, optional): Polynomial quadrature order to use for load vector computation. Defaults to 1.
+
+    Returns:
+        The load vector
+    """
     mesh_name = _mesh_type_name(mesh)
     dims = fe.shape[0]
     class_name = f"LoadVector_QuadratureOrder_{quadrature_order}_{mesh_name}"
