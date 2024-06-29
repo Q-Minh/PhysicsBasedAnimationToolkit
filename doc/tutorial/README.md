@@ -6,6 +6,7 @@ We compile a set of tutorials/workshops on various topics related to physics bas
 - Ease the development of baseline algorithms upon which one could build on for research.
 
 These tutorials are categorized in the following relevant topics:
+- [Contact Simulation](./Contact/README.md)
 - [Elasticity](./Elasticity/README.md)
 - [Finite Element Method](./FEM/README.md)
 - [Geometry](./Geometry/README.md)
