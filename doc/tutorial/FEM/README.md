@@ -86,7 +86,7 @@ This section showed how a hard-to-solve space-dependent continuous problem defin
 Although our motivating example shows how, armed with basis functions $\phi_i$, continuous problems reduce to discrete ones, we have yet to explicitly define such functions. However, we did *implicitly* define them by stating that they must satisfy the following properties
 1. $\phi_i$ is a polynomial
 2. $\phi_i(X_j) = \delta_{ij}$
-3. $\phi_i(X) = \begin{cases}N_i^e(X) & X \in \Omega^e, \text{node} \;i\; \text{and element} \;e\; \text{are adjacent}\\ 0 & \text{otherwise}\end{cases}$
+3. $`\phi_i(X) = \begin{cases}N_i^e(X) & X \in \Omega^e, \text{node} \;i\; \text{and element} \;e\; \text{are adjacent}\\ 0 & \text{otherwise}\end{cases}`$
 
 The third property introduces $\Omega^e$, which refers to the domain of element $e$, i.e. the space it occupies. Naturally, meshes are made of non-overlapping geometric primitives (i.e. the "elements" $\Omega^e$), connected through their boundaries. This means that evaluating $\phi_i(X)$ is achieved by the following steps.
 1. Find which element $e$ contains the point $X$. 
@@ -94,20 +94,20 @@ The third property introduces $\Omega^e$, which refers to the domain of element 
 
 Fortunately, our shape functions have $C^0$ continuity at element boundaries, meaning $N_i^e(X) = N_i^{e'}(X)$ on the boundary between adjacent elements $e$ and $e'$. Hence, if a point $X$ lies on the boundary between 2 or more elements, we can pick any of these elements in step 1.
 
-We now focus on the secret sauce, the element shape functions $N_i^e(X)$. Properties 1. and 3. state that $\phi_i(X)$ is a polynomial and evaluates to $N_i^e(X)$ on the element $e$. Thus, $N_i^e(X)$ is a polynomial on the element $e$. Polynomials can be written as linear combinations of basis polynomials $P_k(X)$. Suppose that $n^e = |\text{nodes}(e)|$, then if we have $n^e$ such basis polynomials $P_k(X)$, we have that $N_i^e(X) = \sum_{j \in \text{nodes}(e)} \alpha_{ij} P_j(X) $. More compactly,
+We now focus on the secret sauce, the element shape functions $N_i^e(X)$. Properties 1. and 3. state that $\phi_i(X)$ is a polynomial and evaluates to $N_i^e(X)$ on the element $e$. Thus, $N_i^e(X)$ is a polynomial on the element $e$. Polynomials can be written as linear combinations of basis polynomials $P_k(X)$. Suppose that $n^e = |\text{nodes}(e)|$, then if we have $n^e$ such basis polynomials $P_k(X)$, and we have that $N_i^e(X) = \sum_{j \in \text{nodes}(e)} \alpha_{ij} P_j(X) $. More compactly,
 
 $$
 N_i^e(X) = P(X)^T \alpha_i ,
 $$
 
-where $P(X) = \begin{bmatrix} P_1(X) & \dots & P_{n^e}(X) \end{bmatrix}^T$ and $\alpha_i = \begin{bmatrix} \alpha_{i1} & \dots & \alpha_{in^e} \end{bmatrix}^T$. Property 2, i.e. the Kronecker delta property, thus translates into $N_i^e(X_j) = \delta_{ij}$ on element e. Substituting $N_i^e(X_j)$ for its polynomial expansion in the Kronecker delta property yields
+where $`P(X) = \begin{bmatrix} P_1(X) & \dots & P_{n^e}(X) \end{bmatrix}^T`$ and $`\alpha_i = \begin{bmatrix} \alpha_{i1} & \dots & \alpha_{in^e} \end{bmatrix}^T`$. Property 2, i.e. the Kronecker delta property, thus translates into $N_i^e(X_j) = \delta_{ij}$ on element $e$. Substituting $N_i^e(X_j)$ for its polynomial expansion in the Kronecker delta property yields
 
 $$
-\begin{bmatrix} P(X_1)^T \\ \vdots \\ P(X_{n^e})^T \end{bmatrix} \begin{bmatrix} \alpha_1 & \dots & \alpha_{n^e} \end{bmatrix} = I_{n^e \times n^e} 
+\begin{bmatrix} P(X_1) & \dots & P(X_{n^e}) \end{bmatrix}^T \begin{bmatrix} \alpha_1 & \dots & \alpha_{n^e} \end{bmatrix} = I_{n^e \times n^e} 
 $$
 
 $$
-P^T \Alpha = I_{n^e \times n^e} ,
+P^T \alpha = I_{n^e \times n^e} ,
 $$
 
 where we have conveniently numbered the nodes of element $e$ as $l=1,2,\dots,n^e$. This numbering choice is often referred to as the "local" indexing of the nodes of element $e$. The "global" indexing of these same nodes refers to the actual nodal indices $i$ corresponding to local nodal indices $l$.
@@ -115,17 +115,17 @@ where we have conveniently numbered the nodes of element $e$ as $l=1,2,\dots,n^e
 The polynomial basis generally has a quite simple analytical form. For example, taking the monomial basis in 1D for a quadratic polynomial yields $P_1(X) = 1, P_2(X) = X, P_3(X) = X^2$. A linear monomial basis in 3D yields $P_1(X)=1, P_2(X) = X_1, P_3(X) = X_2, P_4(X)=X_3$. These basis polynomials are thus super easy to evaluate, differentiate or integrate in code. What we really need is to find the coefficients $\alpha_{ij}$ that will finalize our definition of the shape functions $N_i^e(X)$. Fortunately, solving the Kronecker equation above amounts to computing the inverse of the transposed matrix of polynomials $P^T$ 
 
 $$
-\Alpha = P^{-T} .
+\alpha = P^{-T} .
 $$ 
 
 Armed with each matrix $A$ stored for its corresponding element in an FEM computer program, we can easily evaluate $\phi_i(X)$ by finding an element $e$ containing point $X$, converting global node index $i$ into its corresponding local index $l$, and returning $P(X)^T \alpha_{l}$. Fortunately, these polynomial coefficient matrices $A$ are to be precomputed only once, in parallel, for each element.
 
-Unfortunately, $P^T$ can easily become [ill-conditioned](https://en.wikipedia.org/wiki/Condition_number), which makes its inversion [numerically unstable](https://en.wikipedia.org/wiki/Numerical_stability), especially for higher-order polynomial basis', depending on the geometry of the mesh elements, i.e. the positions of the nodes $X_i$. Intuitively, ill-conditioning of $P^T$ means that some of its cofficients are really large (in magnitude), and some of them are really small (in magnitude). Taking as an example the 1D quadratic monomial evaluated at some element's node with position $X=1000$, we get that its corresponding row in $P^T$ would be $\begin{bmatrix}1 & 1000 & 1000000\end{bmatrix}$. Clearly, this is ill-conditioned. 
+Unfortunately, $P^T$ can easily become [ill-conditioned](https://en.wikipedia.org/wiki/Condition_number), which makes its inversion [numerically unstable](https://en.wikipedia.org/wiki/Numerical_stability), especially for higher-order polynomial basis', depending on the geometry of the mesh elements, i.e. the positions of the nodes $X_i$. Intuitively, ill-conditioning of $P^T$ means that some of its cofficients are really large (in magnitude), and some of them are really small (in magnitude). Taking as an example the 1D quadratic monomial evaluated at some element's node with position $X=1000$, we get that its corresponding row in $P^T$ would be $`\begin{bmatrix}1 & 1000 & 1000000\end{bmatrix}`$. Clearly, this is ill-conditioned. 
 
-To address this issue, it is common in practice to define some map $X(\xi)$ that takes points in some *reference* space to the domain $\Omega$, and its inverse $\xi(X) = X^{-1}(\xi)$ such that we can construct shape functions in the reference space, where the geometry of the elements will yield well-conditioned $P^T$. In fact, this concept leads to defining the so-called *reference elements*. The maps $X(\xi)$ and $\xi(X)$ are then defined per-element, and always map from and to the reference element, respectively. Reference shape functions are then defined on the reference element and constructed only once. Evaluating a basis function $\phi_i(X)$ on element $e$ then amounts to mapping $X$ to $\xi$ using element $e$'s inverse map $\xi(X)$, and then evaluating the reference shape function associated with node $i$ of element $e$. Mathematically, assuming that $N_i^e(\xi)$ is now defined on the reference element
+To address this issue, it is common in practice to define some map $X(\xi)$ that takes points in some *reference* space to the domain $\Omega$, and its inverse $\xi(X) = X^{-1}(\xi)$ such that we can construct shape functions in the reference space, where the geometry of the elements will yield well-conditioned $P^T$. In fact, this concept leads to defining the so-called *reference elements*. The maps $X(\xi)$ and $\xi(X)$ are then defined per-element, and always map from and to the reference element, respectively. Reference shape functions are subsequently defined on the reference element and constructed only once. Evaluating a basis function $\phi_i(X)$ on element $e$ thus amounts to mapping $X$ to $\xi$ using element $e$'s inverse map $\xi(X)$, and then evaluating the reference shape function associated with node $i$ of element $e$. Mathematically, assuming that $N_l(\xi)$ is the shape function for domain node $i$ associated with reference node $l$ on the reference element, we have that
 
 $$
-\phi_i(X) = N_i^e(\xi(X)) .
+\phi_i(X) = N_l(\xi(X)) .
 $$
 
 [Chapter 9.3 of Hans Petter Langtangen's FEM book](https://hplgit.github.io/INF5620/doc/pub/main_fem.pdf#page=81.67) (highly recommend that book) provides the following pedagogical visuals, in which dots represent nodes of a quadratic FEM triangular element.
@@ -136,8 +136,8 @@ $$
 
 #### Lagrange elements
 
-Perhaps the simplest and/or most popular type of reference element is the [Lagrange element](https://doc.comsol.com/5.3/doc/com.comsol.help.comsol/comsol_api_xmesh.40.4.html). This type of element places its nodes at coordinates $\frac{X}{p}$, where $p$ is a polynomial order used to construct the shape functions. As described above, there must be as many polynomial basis' as nodes for the inverse of $P^T$ to exist, i.e. $P^T$ must be square. Lagrange elements in 3D thus define their nodes with coordinates $\xi_l \in \left\{ \left(\frac{a}{p}, \frac{b}{p}, \frac{c}{p}\right) \right\}$
-and corresponding polynomial basis functions $P_l \in \left\{ \xi_x^a \xi_y^b \xi_z^c \right\}$ for integer values $0 \leq a,b,c \leq p$, where they are used as powers. In 2D, we only use $a$ and $b$. In 1D, we reduce further to simply using $a$. Simplex elements, such as line segments, triangles and tetrahedra have the additional constraint $a+b+c \leq p$, wheras quadrilaterals and hexahedra do not.
+Perhaps the simplest and/or most popular type of reference element is the [Lagrange element](https://doc.comsol.com/5.3/doc/com.comsol.help.comsol/comsol_api_xmesh.40.4.html). This type of element places its nodes at coordinates $\frac{\xi}{p}$, where $p$ is a polynomial order used to construct the shape functions. As described above, there must be as many polynomial basis' as nodes for the inverse of $P^T$ to exist, i.e. $P^T$ must be square. Lagrange elements in 3D thus define their nodes with coordinates $`\xi_l \in \left\{ \left(\frac{a}{p}, \frac{b}{p}, \frac{c}{p}\right) \right\}`$
+and corresponding polynomial basis functions $`P_l \in \left\{ \xi_x^a \xi_y^b \xi_z^c \right\}`$ for integer values $0 \leq a,b,c \leq p$, where they are used as powers. In 2D, we only use $a$ and $b$. In 1D, we reduce further to simply using $a$. Simplex elements, such as triangles and tetrahedra have the additional constraint $a+b+c \leq p$, wheras quadrilaterals and hexahedra do not.
 
 Taken once again from [chapter 9.3 of Hans Petter Langtangen's FEM book](https://hplgit.github.io/INF5620/doc/pub/main_fem.pdf#page=81.67), here are examples of Lagrange elements and their nodes in dimensions `1,2,3`.
 
@@ -153,7 +153,7 @@ $$
 X(\xi) = X^e N(\xi) ,
 $$
 
-where $X^e = \begin{bmatrix} X_1 & \dots & X_{n^e} \end{bmatrix} \in \mathbb{R}^{d \times n^e}$ are element $e$'s nodes' positions, $N(\xi) = \begin{bmatrix} N_1(\xi) & \dots & N_{n^e}(\xi) \end{bmatrix}^T \in \mathbb{R}^{n^e}$ are the reference shape functions evaluated at $\xi$, and $d$ is the number of embedding dimensions for element $e$'s node positions $X_i$. 
+where $`X^e = \begin{bmatrix} X_1 & \dots & X_{n^e} \end{bmatrix} \in \mathbb{R}^{d \times n^e}`$ are element $e$'s nodes' positions, $`N(\xi) = \begin{bmatrix} N_1(\xi) & \dots & N_{n^e}(\xi) \end{bmatrix}^T \in \mathbb{R}^{n^e}`$ are the reference shape functions evaluated at $\xi$, and $d$ is the number of embedding dimensions for element $e$'s node positions $X_i$. 
 
 The inverse map $\xi(X)$ is, however, not so trivial in the general case. One way to obtain $\xi(X)$ numerically is by solving the non-linear least-squares problem
 
@@ -186,6 +186,7 @@ Computing derivatives of basis functions $\phi_i(X)$ also amounts to computing d
 $$
 \nabla_X \phi_i(X) = \nabla_X N_i^e(X) = \nabla_\xi N_l(\xi(X)) \nabla_X \xi(X) 
 $$
+
 for $X \in \Omega^e$.
 
 The gradient of the reference shape functions with respect to reference positions is easy enough to compute, since we just need to differentiate polynomials $\xi_x^a \xi_y^b \xi_z^c$. The jacobian $\nabla_X \xi(X)$ of the inverse map is, again, not so trivial in the general case. If a Gauss-Newton algorithm is used to compute $\xi(X)$ as described above, we need to compute and accumulate gradients of the Gauss-Newton iterations by chain rule. Once again, though, if the map is linear, we can use the previous derivations of the linear inverse map to get $\nabla_X \xi(X)$ as 
