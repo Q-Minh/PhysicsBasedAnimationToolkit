@@ -77,6 +77,8 @@ where $A \in \mathbb{R}^{n \times n}$ and $f \in \mathbb{R}^n$. We can thus solv
 
 > Interestingly, the Galerkin method is essentially a residual minimization procedure in function space, much like it is often possible to minimize the residual $r=Ax-b$ for solving linear systems of equations approximately. Given some functional equation $L(u(X))=0$, we know that approximating $u(X) \approx \Phi^T u$ will yield some error, which manifests as a residual when passing through the functional $L$, i.e. $L(\Phi^T u) = r$. The Galerkin method then requires that $\langle r, \phi_i \rangle = 0$ for each basis function $\phi_i$. In other words, we ask that the residual be orthogonal (i.e. perpendicular) to the function space spanned by $\phi_i$, i.e. any other function $\Phi^T v$ in this space would yield a worse residual than our solution $\Phi^T u$.
 
+To summarize, this section showed how a hard-to-solve space-dependent continuous problem defined on a complex domain could be solved accurately using existing numerical techniques using FEM, thus motivating its usefulness in practice. The approach used in our example is called Galerkin FEM, which projects the approximated problem onto the function space used to discretize the solution. Petrov-Galerkin methods allow projecting the approximated problem onto a different function space, i.e. there are two sets of basis functions $\phi_i$ and $\psi_i$, for discretizing the solution and the problem, respectively. In some cases, a projection is not required, i.e. the problem itself already reveals the required number of equations.
+
 ### Shape functions
 
 ### Spatial integration
