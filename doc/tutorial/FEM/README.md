@@ -32,32 +32,47 @@ Such a discrete functional representation allows one to accurately map continuou
 ### Motivation
 
 As a motivating example, consider a well-known partial differential equation (PDE), the Poisson equation, 
+
 $$
 \Delta u(X) = f(X) ,
 $$
+
 defined on some domain $\Omega$, where $\Delta$ is the [Laplacian](https://en.wikipedia.org/wiki/Laplace_operator#:~:text=In%20mathematics%2C%20the%20Laplace%20operator,scalar%20function%20on%20Euclidean%20space.) and $f(X)$ is some known function in space. In other words, we wish to solve for some function $u(X)$ whose Laplacian is given by $f(X)$ everywhere in $\Omega$ (i.e. $`\;\forall\; X \in \Omega`$). Without further analytical specification on the domain $\Omega$, there is little we can do to solve such a general problem. In fact, most domains that we care about and that appear in real life don't have an analytical description. Even if we did have such a description of the domain, it might still be very hard to solve such a problem by hand. We do, however, have powerful meshing tools which can take human-authored complex geometry as input, and produce meshes accurately approximating the domain as output.
 
 Assuming we have such a mesh at hand, we can discretize the solution $u(X)$ as described in the previous section, obtaining
+
 $$
-\Delta \left[ \sum_j u_j \phi_j(X) \right] = f(X) \\
+\Delta \left[ \sum_j u_j \phi_j(X) \right] = f(X) 
+$$
+
+$$
 \sum_j u_j \Delta \phi_j(X) = f(X) ,
 $$
+
 since only the basis functions $\phi_j(X)$ are space-dependent. Unfortunately, there are now $n=|I|$ unknowns for a single equation, which is an under-determined problem. However, we can transform this single equation into $n$ equations by an operator called the Galerkin projection 
+
 $$
 \int_{\Omega} \sum_j u_j \Delta \phi_j(X) \phi_i(X) \partial \Omega = \int_{\Omega} f(X) \phi_i(X) \partial \Omega .
 $$
+
 Much like the dot product $\langle a, b \rangle = a^T b$ for vectors $a$ and $b$, $\langle f, g \rangle = \int_{\Omega} f(X)g(X) \partial \Omega$ for functions $f$ and $g$. In this sense, much like we say that $a^T b$ projects the vector $a$ onto the vector $b$, then $\int_{\Omega} f(X) g(X) \partial \Omega$ projects the function $f$ onto the function $g$. Thus, omitting the dependence on $X$ to simplify notation, such a projection reveals the $n$ equations
+
 $$
 \sum_j u_j \langle \phi_i, \Delta \phi_j \rangle = \langle f, \phi_i \rangle
 $$
+
 for $i=1,2,\dots,n$, matching the $n$ unknowns $u_j$ for $j=1,2,\dots,n$. The FEM's functional discretization of $u$ and the Galerkin projection thus yield a linear system of equations 
+
 $$
 \sum_j A_{ij} u_j = f_i
 $$
+
 where $A_{ij} = \int_{\Omega} \phi_i \Delta \phi_j \partial \Omega$ and $f_i = \int_{\Omega} f \phi_i \partial \Omega$. Thus, in matrix notation, 
+
 $$
 Au=f ,
 $$
+
 where $A \in \mathbb{R}^{n \times n}$ and $f \in \mathbb{R}^n$. We can thus solve for $u$ using one of the many available implementations of numerical algorithms for solving linear systems of equations.
 
 
