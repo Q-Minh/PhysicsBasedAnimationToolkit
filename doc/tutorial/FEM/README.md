@@ -257,7 +257,72 @@ def integrate_domain(mesh, wg, Xig, F):
 
 ### Operators
 
+Now that we know how to compute shape functions, their derivatives and their integrals, we present a handful of FEM operators used to discretize common problems.
+
+#### Load vector
+
+In the motivating example, we showed how the Poisson equation $\Delta u(X) = f(X)$ became a linear system $Au=f$ after FEM discretization, where $f_i = \int_{\Omega} f(X) \phi_i(X) \partial \Omega$. However, this form is impractical, because for every different forcing function $f(X)$, a different integral expression would have to be generated to compute $f$. Instead, we will often discretize "known" forcing functions, i.e. load vectors as these piece-wise (per element) constant functions $f(X) = f_e(X) = \text{const}$ for $X \in \Omega^e$. This allows us to compute the *load vector* $f$ as
+
+$$
+f_i = \int_{\Omega} f(X) \phi_i(X) \partial \Omega = \sum_e f_e(X) \int_{\Omega^e} \phi_i(X) \partial \Omega^e ,
+$$
+since the $f_e(X)$ are constant in their corresponding element. The basis function integrals $\int_{\Omega^e} \phi_i(X) \partial \Omega^e$ in each element can thus be precomputed and re-used for any new piece-wise constant forcing function $f(X) = f_e(X)$. The integrand is a polynomial of order $p$ if $\phi_i(X)$ is order $p$. Thus, the load vector can be computed exactly using a polynomial quadrature rule of order $p$.
+
+#### Mass matrix
+
+Another approach is to directly discretize the forcing function $f(X) \approx \sum_j f_j \phi_j(X)$ in the same function space as the FEM solution. Under the Galerkin projection, we would thus get 
+
+$$
+\int_{\Omega} f(X) \partial \Omega = \sum_j f_j \int_{\Omega} \phi_i(X) \phi_j(X) \partial \Omega .
+$$
+
+In matrix notation, this is exactly $Mf$, where $M \in \mathbb{R}^{n \times n}$ and $f \in \mathbb{R}^{n \times n}$ and the entries $M_{ij} = \int_{\Omega} \phi_i(X) \phi_j(X) \partial \Omega$. The forcing function $f(X)$ may thus be user-defined purely by specifying function values $f_i$ at the mesh nodes $i$, rather than at mesh elements $e$ as in the previous section. If $\phi_i(X)$ is a polynomial of order $p$, then mass matrix's entries have polynomial integrands of order $2p$. Thus, the mass matrix can be computed exactly using a polynomial quadrature rule of order $2p$.
+
+Using this approach, the earlier Poisson problem would be discretized into $Au = Mf$. Many other PDEs involving known functions make the mass matrix appear. The dot product $u(X)^T v(X)$ of 2 functions $u(X) = \sum_i u_i \phi_i(X)$ and $v(X) = \sum_i v_i \phi_i(X)$ discretized in FEM's solution space, with coefficients vectors $u$ and $v$, will similarly make the mass matrix appear as $u(X)^T v(X) = u^T M v$. We can thus think of the mass matrix as a suitable inner product matrix which enjoys the desirable property of being symmetric and positive definite.
+
+#### Gradient matrix
+
+Computing the gradient $\nabla u(X)$ amounts to simply $\sum_i u_i \nabla \phi_i(X)$. However, if the gradient appears in the problem (i.e. PDE or other) itself, and the problem has been closed under Galerkin projection, we must now compute the "Galerkin" version of the gradient, i.e. $\int_{\Omega} \nabla u(X) \phi_i(X) \partial \Omega$. By approximation and linearity of the gradient operator, such an expression becomes 
+
+$$
+\int_{\Omega} \nabla u(X) \phi_i(X) \partial \Omega = \sum_j u_j \int_{\Omega} \phi_i(X) \nabla \phi_j(X) \partial \Omega .
+$$
+
+This leads to defining the Galerkin gradient matrix by dimensions $d$ of $X$, as 
+
+$$
+G^k_{ij} = \int_{\Omega} \phi_i(X) \frac{\partial \phi_j(X)}{\partial X_k} \partial \Omega 
+$$
+
+for $k=1,2,\dots,d$.
+
+The full Galerkin gradient matrix $G$ then stacks the matrices $G^k \in \mathbb{R}^{n \times n}$ vertically, such that $G \in \mathbb{R}^{dn \times n}$. This operator $G$ thus takes FEM functions $u \in \mathbb{R}^n$ and maps them to $d$ vectors $G^k u \in \mathbb{R}^n$ stacked vertically.
+
+#### Laplacian matrix
+
+The Poisson problem discretized the Laplacian matrix into $A$ where $A_{ij} = \int_{\Omega} \phi_i(X) \Delta \phi_j(X) \partial \Omega$. However, this results in requiring shape functions of order $p \geq 2$, meaning we wouldn't be able to use linear shape functions to solve a problem involving the Laplacian of the solution. Thus, in practice, we will make use of multivariable integration by parts, i.e. [Green's identities](https://en.wikipedia.org/wiki/Green%27s_identities), to transform $\Delta u(X)$ into
+
+$$
+\sum_j u_j \int_{\Omega} \phi_i(X) \Delta \phi_j(X) \partial \Omega = \sum_j u_j \left[ \underbrace{\int_{\Omega} -\nabla \phi_i(X) \cdot \nabla \phi_j(X) \partial \Omega}_{L_{ij}} + \underbrace{\int_{\partial \Omega} \phi_i(X) \nabla \phi_j(X) \cdot n \partial S}_{N_{ij}} \right] .
+$$
+
+$$
+Au = Lu + Nu
+$$
+
+Here, $\int_{\partial \Omega} \partial S$ is to be interpreted as a boundary integral (over $\Omega$'s boundary) with $n$ being the boundary's normal. The integration by parts reveals the symmetric Laplacian matrix $L \in \mathbb{R}^{n \times n}$, and the Neumann matrix $N \in \mathbb{R}^{n \times n}$. In fact, $L$ is desirably both symmetric and negative semi-definite (with only rank-1 deficiency). If Neumann boundary conditions have been specified as a known function 
+
+$$
+g(X) = \nabla u(X) \cdot n 
+$$ 
+
+on the domain's boundary, i.e. $X \in \partial \Omega$, then we replace $Nu$ by $g \in \mathbb{R}^{n \times n}$ such that $g_i = \int_{\partial \Omega} g(X) \phi_i(X) \partial S$. Because this integral is defined over the boundary of the FEM meshing of $\Omega$, we can similarly extract the boundary mesh for $\partial \Omega$, preserving node indexing. We can then discretize $g(X)$ on this boundary mesh using FEM once again as either a load vector if $g(X)$ is defined on boundary faces, or as $Mg$ using the boundary mesh's mass matrix $M$ and coefficients $g$ defined on boundary vertices. There are many cases where the Neumann boundary conditions are even simpler, however, i.e. when $g(X) = \nabla u(X) \cdot n = 0$, in which case the Laplacian matrix is exactly $L$. The resulting Poisson problem would then be $Lu=f$, which is a symmetric negative semi-definite linear system which can be solved efficiently.
+
+The matrix $L$ is quite famous and is equivalent to the so-called ["cotangent Laplacian"](https://en.wikipedia.org/wiki/Discrete_Laplace_operator#Mesh_Laplacians) or the "Laplace-Beltrami" operator mentioned in the literature. Instead of the general derivation presented in this document, when assuming linear shape functions, it is possible to derive quite elegant analytic expressions involving the cotangent function to compute its entries. In our Physics Based Animation Toolkit, we also like to refer to $L$ as the symmetric part of the Laplacian matrix.
+
 ### Boundary conditions
+
+These Neumann boundary conditions are often called "natural" boundary conditions, because they are implicitly encoded in the problem (where a laplacian appears) and appear "naturally" when applying Green's identities, i.e. we can enforce them simply by introducing an extra forcing vector in the discretized linear system.
 
 ### Solving
 
