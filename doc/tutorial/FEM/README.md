@@ -268,6 +268,14 @@ f_i = \int_{\Omega} f(X) \phi_i(X) \partial \Omega = \sum_e f_e(X) \int_{\Omega^
 $$
 since the $f_e(X)$ are constant in their corresponding element. The basis function integrals $\int_{\Omega^e} \phi_i(X) \partial \Omega^e$ in each element can thus be precomputed and re-used for any new piece-wise constant forcing function $f(X) = f_e(X)$. The integrand is a polynomial of order $p$ if $\phi_i(X)$ is order $p$. Thus, the load vector can be computed exactly using a polynomial quadrature rule of order $p$.
 
+Because each element uniquely contributes to its nodes' basis function integrals, we can compute and store per-element load vectors independently as 
+
+$$
+f_e = f_e(X) \begin{bmatrix} \int_{\Omega^e} \phi_1(X) \partial \Omega^e \\ \vdots \\ \int_{\Omega^e} \phi_{n^e}(X) \partial \Omega^e \end{bmatrix} ,
+$$
+
+using local node indices $l=1,2,\dots,n^e$ which are then accumulated (i.e. summed) into the global load vector $f$ by mapping local indices $l$ into corresponding global indices $i$. We call these the element load vectors.
+
 #### Mass matrix
 
 Another approach is to directly discretize the forcing function $f(X) \approx \sum_j f_j \phi_j(X)$ in the same function space as the FEM solution. Under the Galerkin projection, we would thus get 
@@ -279,6 +287,14 @@ $$
 In matrix notation, this is exactly $Mf$, where $M \in \mathbb{R}^{n \times n}$ and $f \in \mathbb{R}^{n \times n}$ and the entries $M_{ij} = \int_{\Omega} \phi_i(X) \phi_j(X) \partial \Omega$. The forcing function $f(X)$ may thus be user-defined purely by specifying function values $f_i$ at the mesh nodes $i$, rather than at mesh elements $e$ as in the previous section. If $\phi_i(X)$ is a polynomial of order $p$, then mass matrix's entries have polynomial integrands of order $2p$. Thus, the mass matrix can be computed exactly using a polynomial quadrature rule of order $2p$.
 
 Using this approach, the earlier Poisson problem would be discretized into $Au = Mf$. Many other PDEs involving known functions make the mass matrix appear. The dot product $u(X)^T v(X)$ of 2 functions $u(X) = \sum_i u_i \phi_i(X)$ and $v(X) = \sum_i v_i \phi_i(X)$ discretized in FEM's solution space, with coefficients vectors $u$ and $v$, will similarly make the mass matrix appear as $u(X)^T v(X) = u^T M v$. We can thus think of the mass matrix as a suitable inner product matrix which enjoys the desirable property of being symmetric and positive definite.
+
+Again, because each element uniquely contributes to its nodes' basis function integrals, we can compute and store per-element mass matrices independently as 
+
+$$
+M_e = \begin{bmatrix} \int_{\Omega^e} \phi_1 \phi_1 \partial \Omega^e & \dots & \int_{\Omega^e} \phi_1 \phi_{n^e} \partial \Omega^e \\ \vdots &  & \vdots \\ \int_{\Omega^e} \phi_{n^e} \phi_1 \partial \Omega^e & \dots & \int_{\Omega^e} \phi_{n^e} \phi_{n^e} \partial \Omega^e \end{bmatrix} ,
+$$
+
+using local node indices $l=1,2,\dots,n^e$ which are then accumulated (i.e. summed) into the global mass matrix $M$ by mapping local indices $l$ into corresponding global indices $i$ and $j$ for rows and columns. We call these the element mass matrices.
 
 #### Gradient matrix
 
@@ -297,6 +313,12 @@ $$
 for $k=1,2,\dots,d$.
 
 The full Galerkin gradient matrix $G$ then stacks the matrices $G^k \in \mathbb{R}^{n \times n}$ vertically, such that $G \in \mathbb{R}^{dn \times n}$. This operator $G$ thus takes FEM functions $u \in \mathbb{R}^n$ and maps them to $d$ vectors $G^k u \in \mathbb{R}^n$ stacked vertically.
+
+The element Galerkin matrices per dimensions $k$ are
+
+$$
+G^{ke} = \begin{bmatrix} \int_{\Omega^e} \phi_1 \frac{\phi_1}{\partial X_k} \partial \Omega^e & \dots & \int_{\Omega^e} \phi_1 \frac{\phi_{n^e}}{\partial X_k} \partial \Omega^e \\ \vdots &  & \vdots \\ \int_{\Omega^e} \phi_{n^e} \frac{\phi_1}{\partial X_k} \partial \Omega^e & \dots & \int_{\Omega^e} \phi_{n^e} \frac{\phi_{n^e}}{\partial X_k} \partial \Omega^e \end{bmatrix} .
+$$
 
 #### Laplacian matrix
 
@@ -319,6 +341,12 @@ $$
 on the domain's boundary, i.e. $X \in \partial \Omega$, then we replace $Nu$ by $g \in \mathbb{R}^{n \times n}$ such that $g_i = \int_{\partial \Omega} g(X) \phi_i(X) \partial S$. Because this integral is defined over the boundary of the FEM meshing of $\Omega$, we can similarly extract the boundary mesh for $\partial \Omega$, preserving node indexing. We can then discretize $g(X)$ on this boundary mesh using FEM once again as either a load vector if $g(X)$ is defined on boundary faces, or as $Mg$ using the boundary mesh's mass matrix $M$ and coefficients $g$ defined on boundary vertices. There are many cases where the Neumann boundary conditions are even simpler, however, i.e. when $g(X) = \nabla u(X) \cdot n = 0$, in which case the Laplacian matrix is exactly $L$. The resulting Poisson problem would then be $Lu=f$, which is a symmetric negative semi-definite linear system which can be solved efficiently.
 
 The matrix $L$ is quite famous and is equivalent to the so-called ["cotangent Laplacian"](https://en.wikipedia.org/wiki/Discrete_Laplace_operator#Mesh_Laplacians) or the "Laplace-Beltrami" operator mentioned in the literature. Instead of the general derivation presented in this document, when assuming linear shape functions, it is possible to derive quite elegant analytic expressions involving the cotangent function to compute its entries. In our Physics Based Animation Toolkit, we also like to refer to $L$ as the symmetric part of the Laplacian matrix.
+
+The element Laplacian matrices are
+
+$$
+L_e = -\begin{bmatrix} \int_{\Omega^e} \nabla \phi_1 \nabla \phi_1 \partial \Omega^e & \dots & \int_{\Omega^e} \nabla \phi_1 \nabla \phi_{n^e} \partial \Omega^e \\ \vdots &  & \vdots \\ \int_{\Omega^e} \nabla \phi_{n^e} \nabla \phi_1 \partial \Omega^e & \dots & \int_{\Omega^e} \nabla \phi_{n^e} \nabla \phi_{n^e} \partial \Omega^e \end{bmatrix}
+$$
 
 ### Boundary conditions
 
