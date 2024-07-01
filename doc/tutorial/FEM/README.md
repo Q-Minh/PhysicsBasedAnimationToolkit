@@ -266,12 +266,18 @@ In the motivating example, we showed how the Poisson equation $\Delta u(X) = f(X
 $$
 f_i = \int_{\Omega} f(X) \phi_i(X) \partial \Omega = \sum_e f_e(X) \int_{\Omega^e} \phi_i(X) \partial \Omega^e ,
 $$
+
 since the $f_e(X)$ are constant in their corresponding element. The basis function integrals $\int_{\Omega^e} \phi_i(X) \partial \Omega^e$ in each element can thus be precomputed and re-used for any new piece-wise constant forcing function $f(X) = f_e(X)$. The integrand is a polynomial of order $p$ if $\phi_i(X)$ is order $p$. Thus, the load vector can be computed exactly using a polynomial quadrature rule of order $p$.
 
 Because each element uniquely contributes to its nodes' basis function integrals, we can compute and store per-element load vectors independently as 
 
 $$
-f_e = f_e(X) \begin{bmatrix} \int_{\Omega^e} \phi_1(X) \partial \Omega^e \\ \vdots \\ \int_{\Omega^e} \phi_{n^e}(X) \partial \Omega^e \end{bmatrix} ,
+f^e = f_e(X) 
+\begin{bmatrix} 
+\int_{\Omega^e} \phi_1(X) \partial \Omega^e \\ 
+\vdots \\ 
+\int_{\Omega^e} \phi_{n^e}(X) \partial \Omega^e 
+\end{bmatrix} ,
 $$
 
 using local node indices $l=1,2,\dots,n^e$ which are then accumulated (i.e. summed) into the global load vector $f$ by mapping local indices $l$ into corresponding global indices $i$. We call these the element load vectors.
@@ -291,7 +297,12 @@ Using this approach, the earlier Poisson problem would be discretized into $Au =
 Again, because each element uniquely contributes to its nodes' basis function integrals, we can compute and store per-element mass matrices independently as 
 
 $$
-M_e = \begin{bmatrix} \int_{\Omega^e} \phi_1 \phi_1 \partial \Omega^e & \dots & \int_{\Omega^e} \phi_1 \phi_{n^e} \partial \Omega^e \\ \vdots &  & \vdots \\ \int_{\Omega^e} \phi_{n^e} \phi_1 \partial \Omega^e & \dots & \int_{\Omega^e} \phi_{n^e} \phi_{n^e} \partial \Omega^e \end{bmatrix} ,
+M^e = 
+\begin{bmatrix} 
+\int_{\Omega^e} \phi_1 \phi_1 \partial \Omega^e & \dots & \int_{\Omega^e} \phi_1 \phi_{n^e} \partial \Omega^e \\ 
+\vdots &  & \vdots \\ 
+\int_{\Omega^e} \phi_{n^e} \phi_1 \partial \Omega^e & \dots & \int_{\Omega^e} \phi_{n^e} \phi_{n^e} \partial \Omega^e 
+\end{bmatrix} ,
 $$
 
 using local node indices $l=1,2,\dots,n^e$ which are then accumulated (i.e. summed) into the global mass matrix $M$ by mapping local indices $l$ into corresponding global indices $i$ and $j$ for rows and columns. We call these the element mass matrices.
@@ -317,7 +328,12 @@ The full Galerkin gradient matrix $G$ then stacks the matrices $G^k \in \mathbb{
 The element Galerkin matrices per dimensions $k$ are
 
 $$
-G^{ke} = \begin{bmatrix} \int_{\Omega^e} \phi_1 \frac{\phi_1}{\partial X_k} \partial \Omega^e & \dots & \int_{\Omega^e} \phi_1 \frac{\phi_{n^e}}{\partial X_k} \partial \Omega^e \\ \vdots &  & \vdots \\ \int_{\Omega^e} \phi_{n^e} \frac{\phi_1}{\partial X_k} \partial \Omega^e & \dots & \int_{\Omega^e} \phi_{n^e} \frac{\phi_{n^e}}{\partial X_k} \partial \Omega^e \end{bmatrix} .
+G^{ke} = 
+\begin{bmatrix} 
+\int_{\Omega^e} \phi_1 \frac{\phi_1}{\partial X_k} \partial \Omega^e & \dots & \int_{\Omega^e} \phi_1 \frac{\phi_{n^e}}{\partial X_k} \partial \Omega^e \\ 
+\vdots &  & \vdots \\ 
+\int_{\Omega^e} \phi_{n^e} \frac{\phi_1}{\partial X_k} \partial \Omega^e & \dots & \int_{\Omega^e} \phi_{n^e} \frac{\phi_{n^e}}{\partial X_k} \partial \Omega^e 
+\end{bmatrix} .
 $$
 
 #### Laplacian matrix
@@ -325,7 +341,11 @@ $$
 The Poisson problem discretized the Laplacian matrix into $A$ where $A_{ij} = \int_{\Omega} \phi_i(X) \Delta \phi_j(X) \partial \Omega$. However, this results in requiring shape functions of order $p \geq 2$, meaning we wouldn't be able to use linear shape functions to solve a problem involving the Laplacian of the solution. Thus, in practice, we will make use of multivariable integration by parts, i.e. [Green's identities](https://en.wikipedia.org/wiki/Green%27s_identities), to transform $\Delta u(X)$ into
 
 $$
-\sum_j u_j \int_{\Omega} \phi_i(X) \Delta \phi_j(X) \partial \Omega = \sum_j u_j \left[ \underbrace{\int_{\Omega} -\nabla \phi_i(X) \cdot \nabla \phi_j(X) \partial \Omega}_{L_{ij}} + \underbrace{\int_{\partial \Omega} \phi_i(X) \nabla \phi_j(X) \cdot n \partial S}_{N_{ij}} \right] .
+\sum_j u_j \int_{\Omega} \phi_i(X) \Delta \phi_j(X) \partial \Omega = \sum_j u_j 
+\left[
+\int_{\Omega} -\nabla \phi_i(X) \cdot \nabla \phi_j(X) \partial \Omega + 
+\int_{\partial \Omega} \phi_i(X) \nabla \phi_j(X) \cdot n \partial S
+\right] .
 $$
 
 $$
@@ -345,7 +365,12 @@ The matrix $L$ is quite famous and is equivalent to the so-called ["cotangent La
 The element Laplacian matrices are
 
 $$
-L_e = -\begin{bmatrix} \int_{\Omega^e} \nabla \phi_1 \nabla \phi_1 \partial \Omega^e & \dots & \int_{\Omega^e} \nabla \phi_1 \nabla \phi_{n^e} \partial \Omega^e \\ \vdots &  & \vdots \\ \int_{\Omega^e} \nabla \phi_{n^e} \nabla \phi_1 \partial \Omega^e & \dots & \int_{\Omega^e} \nabla \phi_{n^e} \nabla \phi_{n^e} \partial \Omega^e \end{bmatrix}
+L^e = 
+-\begin{bmatrix} 
+\int_{\Omega^e} \nabla \phi_1 \nabla \phi_1 \partial \Omega^e & \dots & \int_{\Omega^e} \nabla \phi_1 \nabla \phi_{n^e} \partial \Omega^e \\ 
+\vdots &  & \vdots \\ 
+\int_{\Omega^e} \nabla \phi_{n^e} \nabla \phi_1 \partial \Omega^e & \dots & \int_{\Omega^e} \nabla \phi_{n^e} \nabla \phi_{n^e} \partial \Omega^e 
+\end{bmatrix} .
 $$
 
 ### Boundary conditions
