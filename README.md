@@ -105,6 +105,10 @@ All calls to pbat will be profiled on a per-frame basis in the Tracy profiler se
 > profiler.profile("My expensive external computation", expensive_external_computation)
 > ```
 
+### Tutorials
+
+Head over to our hands-on [tutorials section](./doc/tutorial/) to learn more about physics based animation in both theory and practice!
+
 ## Gallery
 
 Below, we show a few examples of what can be done in just a few lines of code using `pbatoolkit` and Python. Code can be found [here](./python/examples/).
