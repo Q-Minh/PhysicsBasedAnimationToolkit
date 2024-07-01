@@ -416,6 +416,36 @@ $$
 
 where $Du_D - d_D = 0$ discretizes the continuous constraint $\int_{\partial \Omega^D} u(X) \partial S - d(X) = 0$ using FEM.
 
+### Vector-valued functions
+
+In many cases, we might want to discretize vector-valued functions using FEM. For example, we might want to model some displacement field in the domain, as is the case in elasticity/deformation. Suppose that $u(X): \Omega \longrightarrow \mathbb{R}^d$ for some $d$, i.e. $u(X)$ maps domain positions to some $d$-dimensional quantity. In this case, we can simply consider each scalar component $u_k(X)$ of $u(X)$ as a function. Thus, we can discretize each $u_k(X)$ using FEM and obtain $d$ coefficient vectors $u_k \in \mathbb{R}^n$. All the operators that we have already defined can then directly be applied to each $u_k$ independently. In matrix notation, we may horizontally stack the $u_k$ as columns into some matrix $U \in \mathbb{R}^{n \times d}$, and multiply $U$ from the left using operators $M,L,G$. The product $LU$ would compute the Laplacian of each scalar component $u_k(X)$ of $u(X)$, while $GU$ would compute their gradients. The load vector can similarly be defined as considering each $u_k(X)$ as its own separate forcing function, resulting in a matrix $F \in \mathbb{R}^{n \times d}$ after discretization.
+
+In other situations, however we may wish to concatenate the coefficients $u_k$ into a single vector $u \in \mathbb{R}^{nd}$. This leads to 2 options:
+
+1. Stack each $u_k$ vertically.
+2. Interleave all the $u_k$.
+
+By interleaving, we mean that if the $k^{\text{th}}$ coefficient vector $u_k$ has coefficients $u_{ik}$, then the resulting "interleaved" vector $u = \begin{bmatrix} u_{11} & \dots & u_{n1} & \dots & u_{1d} & \dots & u_{nd} \end{bmatrix}^T$. Practically, this just means that option 1 flattens the matrix $U \in \mathbb{R}^{n \times d}$ by stacking its column vertically, and option 2 flattens $U$ by stacking its transposed rows vertically. For both options, our FEM operators $M,L,G$ and the load vector $f$ can adjust to $u$ by using the [Kronecker product](https://en.wikipedia.org/wiki/Kronecker_product). Our new operators $A = M, L, G$ take the following forms for the corresponding options 
+
+1. $A_{nd \times nd} = I_{d \times d} \otimes A$ 
+2. $A_{nd \times nd} = A \otimes I_{d \times d}$ 
+
+The new load vector $f \in \mathbb{R}^{nd}$ can be obtained from $F$ in the same way as $u$ was obtained from $U$.
+
+In the continuous setting, FEM discretized functions (i.e. solution, forcing function, etc.) are now written in the following equivalent forms
+
+$$
+u(X) = \sum_i \left[I_{d \times d} \otimes \phi_i(X)\right] u_i = \sum_i \phi_i(X) u_i,
+$$
+
+and their gradients/jacobians become 
+
+$$
+\nabla u(X) = \sum_i u_i \nabla \phi_i(X) ,
+$$
+
+where $u_i$ is a column vector, while the gradient $\nabla \phi_i(X)$ is a row vector, i.e. $u_i \nabla \phi_i(X)$ is their outer product.
+
 ## Limitations
 
 While FEM remains an invaluable tool for scientific computing, it is not without its drawbacks. One of its main drawbacks is FEM's reliance on an appropriate meshing of the domain. Indeed, for FEM discretized problems to be well-conditioned, its element geometries must be "regular". The well-known paper [What is a good linear finite element?](https://people.eecs.berkeley.edu/~jrs/papers/elemj.pdf) details this phenomenon in depth. Current meshing tools may take enormous amounts of computational resources (memory, runtime) to produce acceptable outputs. Additionally, it is not guaranteed that any domain *can* be meshed with current tools. In the realm of computer graphics, geometries are extremely complex, i.e. they exhibit fine details, are high resolution, have highly varying structural qualities (like thin structures, high curvatures) in different regions, and may be poorly authored (among other potential obstacles). In such cases, current tools may break down, or FEM will likely struggle with the quality of their output. Even if high quality meshes of such complex geometries are obtained, their resolution may be so high that solving linear systems of equations arising from FEM will be extremely slow. Modern approaches such as [Monte Carlo Geometry Processing](https://www.cs.cmu.edu/~kmcrane/Projects/MonteCarloGeometryProcessing/paper.pdf) and its extensions, [Monte Carlo Fluids](https://riouxld21.github.io/research/publication/2022-mcfluid/) tackle this exact problem. [Meshless methods](https://en.wikipedia.org/wiki/Meshfree_methods) also exist to sidestep the mesh generation preprocess to FEM, among other such alternative approaches that I am simply not aware of.
