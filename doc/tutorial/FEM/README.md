@@ -307,6 +307,8 @@ $$
 
 using local node indices $l=1,2,\dots,n^e$ which are then accumulated (i.e. summed) into the global mass matrix $M$ by mapping local indices $l$ into corresponding global indices $i$ and $j$ for rows and columns. We call these the element mass matrices.
 
+It is possible to associate physical meaning to the mass matrix by injecting into its integral form a measure of mass density (i.e. grams per unit volume). If the mass density is specified as piece-wise constant (per element), then we simply scale each element mass matrix as $\rho_e M^e$ and sum the scaled element mass matrices into the global mass matrix $M$.
+
 #### Gradient matrix
 
 Computing the gradient $\nabla u(X)$ amounts to simply $\sum_i u_i \nabla \phi_i(X)$. However, if the gradient appears in the problem (i.e. PDE or other) itself, and the problem has been closed under Galerkin projection, we must now compute the "Galerkin" version of the gradient, i.e. $\int_{\Omega} \nabla u(X) \phi_i(X) \partial \Omega$. By approximation and linearity of the gradient operator, such an expression becomes 
@@ -325,7 +327,7 @@ for $k=1,2,\dots,d$.
 
 The full Galerkin gradient matrix $G$ then stacks the matrices $G^k \in \mathbb{R}^{n \times n}$ vertically, such that $G \in \mathbb{R}^{dn \times n}$. This operator $G$ thus takes FEM functions $u \in \mathbb{R}^n$ and maps them to $d$ vectors $G^k u \in \mathbb{R}^n$ stacked vertically.
 
-The element Galerkin matrices per dimensions $k$ are
+The element Galerkin gradient matrices per dimensions $k$ are
 
 $$
 G^{ke} = 
@@ -380,7 +382,18 @@ Neumann boundary conditions are imposed values on the gradient of the problem's 
 Dirichlet boundary conditions, i.e. "essential" boundary conditions, are imposed on the problem's solution itself (as opposed to its derivatives) and are necessary to make our PDEs well-determined (i.e. not rank-deficient). It is often the case that we can impose Dirichlet boundary conditions directly on the FEM mesh's nodes $i$, by simplying constraining its associated coefficients $u_i = d_i$ for some known value $d_i$. This is the same as saying, in the continuous case, that $u(X_i) = d_i$. This approach makes it particularly easy to enforce Dirichlet boundary conditions numerically, as it essentially removes degrees of freedom out of a matrix equation. Consider the linear system $Ax=b$ discretizing some problem via FEM. Assume that the vector $x$ has been partitioned into a vector of unknowns $x_u$ and known values $x_k = d_k$ for Dirichlet imposed values $d_k$. The same partitioning may be applied to the rows and columns of matrix $A$ and similarly to the right-hand side vector $b$. We thus get that 
 
 $$
-Ax = b \Leftrightarrow \begin{bmatrix} A_{uu} & A_{uk} \\ A_{ku} & A_{kk} \end{bmatrix} \begin{bmatrix} x_u \\x_k \end{bmatrix} = \begin{bmatrix} b_u \\ b_k \end{bmatrix} .
+\begin{bmatrix} 
+A_{uu} & A_{uk} \\ 
+A_{ku} & A_{kk} 
+\end{bmatrix} 
+\begin{bmatrix} 
+ x_u \\
+ x_k 
+\end{bmatrix} = 
+\begin{bmatrix} 
+b_u \\ 
+b_k 
+\end{bmatrix} .
 $$
 
 The unknown are thus obtained by solving a reduced problem
@@ -394,7 +407,9 @@ The matrix $A_{uu}$ preserves symmetry if $A$ is symmetric, and similarly for po
 In the general case, however, it might be the case that Dirichlet boundary conditions cannot be imposed at the nodes. In this case, we might need to enforce Dirichlet boundary conditions as constraints to an optimization problem. For example, our discretized Poisson problem could become the equality constrained minimization
 
 $$
-Au = f \longrightarrow \min_u \frac{1}{2}||Au - f||_2^2 \;\text{s.t.}\; Du_D - d_D = 0 ,
+Au = f \longrightarrow \min_u \frac{1}{2}||Au - f||_2^2 
+\quad\text{ s.t. }\quad
+Du_D - d_D = 0 ,
 $$
 
 where $Du_D - d_D = 0$ discretizes the continuous constraint $\int_{\partial \Omega^D} u(X) \partial S - d(X) = 0$ using FEM.
