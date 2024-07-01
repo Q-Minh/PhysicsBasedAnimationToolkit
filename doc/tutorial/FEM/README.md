@@ -103,10 +103,10 @@ $$
 where $`P(X) = \begin{bmatrix} P_1(X) & \dots & P_{n^e}(X) \end{bmatrix}^T`$ and $`\alpha_i = \begin{bmatrix} \alpha_{i1} & \dots & \alpha_{in^e} \end{bmatrix}^T`$. Property 2, i.e. the Kronecker delta property, thus translates into $N_i^e(X_j) = \delta_{ij}$ on element $e$. Substituting $N_i^e(X_j)$ for its polynomial expansion in the Kronecker delta property yields
 
 $$
-\begin{bmatrix} P(X_1) & \dots & P(X_{n^e}) \end{bmatrix}^T \begin{bmatrix} \alpha_1 & \dots & \alpha_{n^e} \end{bmatrix} = I_{n^e \times n^e} .
+\begin{bmatrix} P(X_1) & \dots & P(X_{n^e}) \end{bmatrix}^T \begin{bmatrix} \alpha_1 & \dots & \alpha_{n^e} \end{bmatrix} = I_{n^e \times n^e} ,
 $$
 
-In matrix notation,
+where $I_{n^e \times n^e} \in \mathbb{R}^{n^e \times n^e}$ is the identity matrix. In matrix notation,
 
 $$
 P^T \alpha = I_{n^e \times n^e} ,
