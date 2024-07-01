@@ -322,9 +322,29 @@ The matrix $L$ is quite famous and is equivalent to the so-called ["cotangent La
 
 ### Boundary conditions
 
-These Neumann boundary conditions are often called "natural" boundary conditions, because they are implicitly encoded in the problem (where a laplacian appears) and appear "naturally" when applying Green's identities, i.e. we can enforce them simply by introducing an extra forcing vector in the discretized linear system.
+Neumann boundary conditions are imposed values on the gradient of the problem's solution. These Neumann boundary conditions are often called "natural" boundary conditions, because they are implicitly encoded in the problem (where a laplacian appears) and appear "naturally" when applying Green's identities (see previous subsection), i.e. we can enforce them simply by introducing an extra forcing vector in the discretized linear system.
 
-### Solving
+Dirichlet boundary conditions, i.e. "essential" boundary conditions, are imposed on the problem's solution itself (as opposed to its derivatives) and are necessary to make our PDEs well-determined (i.e. not rank-deficient). It is often the case that we can impose Dirichlet boundary conditions directly on the FEM mesh's nodes $i$, by simplying constraining its associated coefficients $u_i = d_i$ for some known value $d_i$. This is the same as saying, in the continuous case, that $u(X_i) = d_i$. This approach makes it particularly easy to enforce Dirichlet boundary conditions numerically, as it essentially removes degrees of freedom out of a matrix equation. Consider the linear system $Ax=b$ discretizing some problem via FEM. Assume that the vector $x$ has been partitioned into a vector of unknowns $x_u$ and known values $x_k = d_k$ for Dirichlet imposed values $d_k$. The same partitioning may be applied to the rows and columns of matrix $A$ and similarly to the right-hand side vector $b$. We thus get that 
+
+$$
+Ax = b \Leftrightarrow \begin{bmatrix} A_{uu} & A_{uk} \\ A_{ku} & A_{kk} \end{bmatrix} \begin{bmatrix} x_u \\x_k \end{bmatrix} = \begin{bmatrix} b_u \\ b_k \end{bmatrix} .
+$$
+
+The unknown are thus obtained by solving a reduced problem
+
+$$
+A_{uu} x_u = b_u - A_{uk} d_k .
+$$
+
+The matrix $A_{uu}$ preserves symmetry if $A$ is symmetric, and similarly for positive (or negative) (semi-)definiteness.
+
+In the general case, however, it might be the case that Dirichlet boundary conditions cannot be imposed at the nodes. In this case, we might need to enforce Dirichlet boundary conditions as constraints to an optimization problem. For example, our discretized Poisson problem could become the equality constrained minimization
+
+$$
+Au = f \longrightarrow \min_u \frac{1}{2}||Au - f||_2^2 \;\text{s.t.}\; Du_D - d_D = 0 ,
+$$
+
+where $Du_D - d_D = 0$ discretizes the continuous constraint $\int_{\partial \Omega^D} u(X) \partial S - d(X) = 0$ using FEM.
 
 ## Limitations
 
