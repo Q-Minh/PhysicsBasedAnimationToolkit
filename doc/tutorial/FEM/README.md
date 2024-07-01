@@ -292,7 +292,7 @@ $$
 \int_{\Omega} f(X) \partial \Omega = \sum_j f_j \int_{\Omega} \phi_i(X) \phi_j(X) \partial \Omega .
 $$
 
-In matrix notation, this is exactly $Mf$, where $M \in \mathbb{R}^{n \times n}$ and $f \in \mathbb{R}^{n \times n}$ and the entries $M_{ij} = \int_{\Omega} \phi_i(X) \phi_j(X) \partial \Omega$. The forcing function $f(X)$ may thus be user-defined purely by specifying function values $f_i$ at the mesh nodes $i$, rather than at mesh elements $e$ as in the previous section. If $\phi_i(X)$ is a polynomial of order $p$, then mass matrix's entries have polynomial integrands of order $2p$. Thus, the mass matrix can be computed exactly using a polynomial quadrature rule of order $2p$.
+In matrix notation, this is exactly $Mf$, where $M \in \mathbb{R}^{n \times n}$ and $f \in \mathbb{R}^{n \times n}$ and the entries $M_{ij} = \int_{\Omega} \phi_i(X) \phi_j(X) \partial \Omega$. The forcing function $f(X)$ may thus be user-defined purely by specifying function values $f_i$ at the mesh nodes $i$, rather than at mesh elements $e$ as in the previous section. If $\phi_i(X)$ is a polynomial of order $p$, then mass matrix entries have polynomial integrands of order $2p$. Thus, the mass matrix can be computed exactly using a polynomial quadrature rule of order $2p$.
 
 Using this approach, the earlier Poisson problem would be discretized into $Au = Mf$. Many other PDEs involving known functions make the mass matrix appear. The dot product $u(X)^T v(X)$ of 2 functions $u(X) = \sum_i u_i \phi_i(X)$ and $v(X) = \sum_i v_i \phi_i(X)$ discretized in FEM's solution space, with coefficients vectors $u$ and $v$, will similarly make the mass matrix appear as $u(X)^T v(X) = u^T M v$. We can thus think of the mass matrix as a suitable inner product matrix which enjoys the desirable property of being symmetric and positive definite.
 
@@ -327,7 +327,7 @@ $$
 
 for $k=1,2,\dots,d$.
 
-The full Galerkin gradient matrix $G$ then stacks the matrices $G^k \in \mathbb{R}^{n \times n}$ vertically, such that $G \in \mathbb{R}^{dn \times n}$. This operator $G$ thus takes FEM functions $u \in \mathbb{R}^n$ and maps them to $d$ vectors $G^k u \in \mathbb{R}^n$ stacked vertically. If $\phi_i(X)$ is polynomial of order $p$, then Galerkin gradient integrands are polynomials of order $2p - 1$. Thus, for exact integration, use a polynomial quadrature rule of order $2p - 1$.
+The full Galerkin gradient matrix $G$ then stacks the matrices $G^k \in \mathbb{R}^{n \times n}$ vertically, such that $G \in \mathbb{R}^{dn \times n}$. This operator $G$ thus takes FEM functions $u \in \mathbb{R}^n$ and maps them to $d$ vectors $G^k u \in \mathbb{R}^n$ stacked vertically. If $\phi_i(X)$ is a polynomial of order $p$, then Galerkin gradient integrands are polynomials of order $2p - 1$. Thus, for exact integration, use a polynomial quadrature rule of order $2p - 1$.
 
 The element Galerkin gradient matrices per dimensions $k$ are
 
