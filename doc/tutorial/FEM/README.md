@@ -12,8 +12,8 @@ The Finite Element Method (FEM) is an approach to discretizing space-dependent c
 
 ## Method
 
-Given some space-dependent problem whose solution $u^{*}(X)$ is defined on some 
-continuous domain $\Omega$, FEM first requires a *geometric mesh* $(V,C) \approx \Omega$, where $C$ is a set of cells whose vertices are in $V$. From $(V,C)$, we then construct the *FEM mesh* $(I,E)$, where $I$ is the set of FEM *nodes* and $E$ is the set of FEM *elements*. 
+Given some space-dependent problem whose solution $u(X)$ is defined on some 
+continuous domain $\Omega$, FEM first requires a *geometric mesh* $(V,C) \approx \Omega$, where $C$ is a set of cells whose vertices are in $V$. From $(V,C)$, we then construct the *FEM mesh* $(I,E)$, where $I$ is the set of FEM *nodes* and $E$ is the set of FEM *elements*. We now assume that the geometric mesh is the domain itself $(V,C)=\Omega$.
 
 Nodes $i \in I$ have corresponding positions $X_i \in \Omega$ and associated *basis functions* $\phi_i(X): \Omega \longrightarrow \mathbb{R}$ such that $\phi_i(X_j) = \delta_{ij}$, where $\delta_{ij}$ is the [Kronecker delta](https://en.wikipedia.org/wiki/Kronecker_delta). Such basis functions are defined element-wise by so-called *shape functions* $N_i^e(X)$ for pairs $(i,e)$ of adjacent node and element, and vanish in non-adjacent elements. In other words, the support of $\phi_i(X)$ is the union of its adjacent elements, and evaluating $\phi_i(X)$ amounts to finding the element $e$ containing the evaluation point $X$, and evaluating $N_i^e(X)$ there. It is common to refer to this choice of basis function $\phi_i(X)$ as the "hat" function, because its tip (i.e. its maximal value of $1$) is located on node $i$, "centered" in its support, while it smoothly decreases to 0 at surrounding nodes. It is also common to refer to these elements as "PK Lagrange elements", because their shape functions $N_i^e(X)$ are interpolating polynomials of degree $K$.
 
@@ -21,7 +21,7 @@ Nodes $i \in I$ have corresponding positions $X_i \in \Omega$ and associated *ba
 |:--:| 
 | Geometric mesh (left) versus FEM meshes discretized with linear (middle) and quadratic (right) Lagrange elements. |
 
-FEM restricts $u(X)$ to the class of functions $u(X) = \sum_{i=1}^{|I|} u_i \phi_i(X)$, i.e. linear combinations of coefficients $u_i$ and basis functions $\phi_i$ associated with nodes $i$. More compactly, $u(X) = \Phi^T u$, where $`u = \begin{bmatrix}u_1 & \dots & u_{|I|} \end{bmatrix}^T \in \mathbb{R}^{|I|}`$ and $`\Phi = \begin{bmatrix} \phi_1(X) & \dots & \phi_{|I|}(X) \end{bmatrix}^T \in \mathbb{R}^{|I|}`$. We say that the basis functions $\phi_i$ span the function space $`\{ \Phi^T u \;\forall\; u \in \mathbb{R}^{|I|} \}`$, much like basis vectors $v_i$ span vector spaces $V$. Functions in the FEM function space, i.e. the space spanned by $\phi_i$, are uniquely represented by their vector of coefficients $u$, much like vectors $v = v_1 \overrightarrow{i} + v_2\overrightarrow{j} + v_3 \overrightarrow{k}$ in $\mathbb{R}^3$ are uniquely represented by their coefficients $`\begin{bmatrix} v_1 & v_2 & v_3 \end{bmatrix}`$. 
+With $n=|I|$, FEM restricts $u(X)$ to the class of functions $u(X) = \sum_{i=1}^{n} u_i \phi_i(X)$, i.e. linear combinations of coefficients $u_i$ and basis functions $\phi_i$ associated with nodes $i$. More compactly, $u(X) = \Phi^T u$, where $`u = \begin{bmatrix}u_1 & \dots & u_{n} \end{bmatrix}^T \in \mathbb{R}^{n}`$ and $`\Phi = \begin{bmatrix} \phi_1(X) & \dots & \phi_{n}(X) \end{bmatrix}^T \in \mathbb{R}^{n}`$. We say that the basis functions $\phi_i$ span the function space $`\{ \Phi^T u \;\forall\; u \in \mathbb{R}^{n} \}`$, much like basis vectors $v_i$ span vector spaces $V$. Functions in the FEM function space, i.e. the space spanned by $\phi_i$, are uniquely represented by their vector of coefficients $u$, much like vectors $v = v_1 \overrightarrow{i} + v_2\overrightarrow{j} + v_3 \overrightarrow{k}$ in $\mathbb{R}^3$ are uniquely represented by their coefficients $`\begin{bmatrix} v_1 & v_2 & v_3 \end{bmatrix}`$. 
 
 | ![FEM function space 1D](./media/fem1D.gif) | 
 |:--:| 
@@ -37,7 +37,7 @@ $$
 \Delta u(X) = f(X) ,
 $$
 
-defined on some domain $\Omega$, where $\Delta$ is the [Laplacian](https://en.wikipedia.org/wiki/Laplace_operator#:~:text=In%20mathematics%2C%20the%20Laplace%20operator,scalar%20function%20on%20Euclidean%20space.) and $f(X)$ is some known function in space. In other words, we wish to solve for some function $u(X)$ whose Laplacian is given by $f(X)$ everywhere in $\Omega$ (i.e. $`\;\forall\; X \in \Omega`$). Without further analytical specification on the domain $\Omega$, there is little we can do to solve such a general problem. In fact, most domains that we care about and that appear in real life don't have an analytical description. Even if we did have such a description of the domain, it might still be very hard to solve such a problem by hand. We do, however, have powerful meshing tools which can take human-authored complex geometry as input, and produce meshes accurately approximating the domain as output.
+defined on some domain $\Omega$, where $\Delta$ is the [Laplacian](https://en.wikipedia.org/wiki/Laplace_operator#:~:text=In%20mathematics%2C%20the%20Laplace%20operator,scalar%20function%20on%20Euclidean%20space.) and $f(X)$ is some known function in space. In other words, we wish to solve for some function $u(X)$ whose Laplacian is given by $f(X)$ everywhere in $\Omega$ (i.e. $`\;\forall\; X \in \Omega`$). Without further analytical specification on the domain $\Omega$, there is little we can do to solve such a general problem. In fact, most domains that we care about and that appear in real life don't have an analytical description. Even if we did have such a description of the domain, it might still be very hard to solve such a problem by hand. We do, however, have powerful meshing tools which can take human-authored complex geometry as input, and produce meshes that accurately approximate the domain as output.
 
 Assuming we have such a mesh at hand, we can discretize the solution $u(X)$ as described in the previous section, obtaining
 
@@ -49,7 +49,7 @@ $$
 \sum_j u_j \Delta \phi_j(X) = f(X) ,
 $$
 
-since only the basis functions $\phi_j(X)$ are space-dependent. Unfortunately, there are now $n=|I|$ unknowns for a single equation, which is an under-determined problem. However, we can transform this single equation into $n$ equations by an operator called the Galerkin projection 
+since only the basis functions $\phi_j(X)$ are space-dependent. Unfortunately, there are now $n$ unknowns for a single equation, which is an under-determined problem. However, we can transform this single equation into $n$ equations by an operator called the Galerkin projection 
 
 $$
 \int_{\Omega} \sum_j u_j \Delta \phi_j(X) \phi_i(X) \partial \Omega = \int_{\Omega} f(X) \phi_i(X) \partial \Omega .
@@ -92,7 +92,7 @@ The third property introduces $\Omega^e$, which refers to the domain of element 
 1. Find which element $e$ contains the point $X$. 
 2. Evaluate $N_i^e(X)$.
 
-Fortunately, our shape functions have $C^0$ continuity at element boundaries, meaning $N_i^e(X) = N_i^{e'}(X)$ on the boundary between adjacent elements $e$ and $e'$. Hence, if a point $X$ lies on the boundary between 2 or more elements, we can pick any of these elements in step 1.
+Fortunately, our shape functions have $C^0$ continuity at element boundaries, meaning $N_i^e(X) = N_i^{e'}(X)$ on the boundary between adjacent elements $e$ and $e'$ (due to uniqueness of interpolating polynomials). Hence, if a point $X$ lies on the boundary between 2 or more elements, we can pick any of these elements in step 1.
 
 We now focus on the secret sauce, the element shape functions $N_i^e(X)$. Properties 1. and 3. state that $\phi_i(X)$ is a polynomial and evaluates to $N_i^e(X)$ on the element $e$. Thus, $N_i^e(X)$ is a polynomial on the element $e$. Polynomials can be written as linear combinations of basis polynomials $P_k(X)$. Suppose that $n^e = |\text{nodes}(e)|$, then if we have $n^e$ such basis polynomials $P_k(X)$, and we have that $N_i^e(X) = \sum_{j \in \text{nodes}(e)} \alpha_{ij} P_j(X) $. More compactly,
 
@@ -103,8 +103,10 @@ $$
 where $`P(X) = \begin{bmatrix} P_1(X) & \dots & P_{n^e}(X) \end{bmatrix}^T`$ and $`\alpha_i = \begin{bmatrix} \alpha_{i1} & \dots & \alpha_{in^e} \end{bmatrix}^T`$. Property 2, i.e. the Kronecker delta property, thus translates into $N_i^e(X_j) = \delta_{ij}$ on element $e$. Substituting $N_i^e(X_j)$ for its polynomial expansion in the Kronecker delta property yields
 
 $$
-\begin{bmatrix} P(X_1) & \dots & P(X_{n^e}) \end{bmatrix}^T \begin{bmatrix} \alpha_1 & \dots & \alpha_{n^e} \end{bmatrix} = I_{n^e \times n^e} 
+\begin{bmatrix} P(X_1) & \dots & P(X_{n^e}) \end{bmatrix}^T \begin{bmatrix} \alpha_1 & \dots & \alpha_{n^e} \end{bmatrix} = I_{n^e \times n^e} .
 $$
+
+In matrix notation,
 
 $$
 P^T \alpha = I_{n^e \times n^e} ,
@@ -120,9 +122,9 @@ $$
 
 Armed with each matrix $A$ stored for its corresponding element in an FEM computer program, we can easily evaluate $\phi_i(X)$ by finding an element $e$ containing point $X$, converting global node index $i$ into its corresponding local index $l$, and returning $P(X)^T \alpha_{l}$. Fortunately, these polynomial coefficient matrices $A$ are to be precomputed only once, in parallel, for each element.
 
-Unfortunately, $P^T$ can easily become [ill-conditioned](https://en.wikipedia.org/wiki/Condition_number), which makes its inversion [numerically unstable](https://en.wikipedia.org/wiki/Numerical_stability), especially for higher-order polynomial basis', depending on the geometry of the mesh elements, i.e. the positions of the nodes $X_i$. Intuitively, ill-conditioning of $P^T$ means that some of its cofficients are really large (in magnitude), and some of them are really small (in magnitude). Taking as an example the 1D quadratic monomial evaluated at some element's node with position $X=1000$, we get that its corresponding row in $P^T$ would be $`\begin{bmatrix}1 & 1000 & 1000000\end{bmatrix}`$. Clearly, this is ill-conditioned. 
+Unfortunately, $P^T$ can easily become [ill-conditioned](https://en.wikipedia.org/wiki/Condition_number), which makes its inversion [numerically unstable](https://en.wikipedia.org/wiki/Numerical_stability), especially for higher-order polynomial basis'. This phenomenon depends on the geometry of the mesh elements, i.e. the positions of the nodes $X_i$. Intuitively, ill-conditioning of $P^T$ means that some of its cofficients are really large (in magnitude), and some of them are really small (in magnitude). Taking as an example the 1D quadratic monomial evaluated at some element's node with position $X=1000$, we get that its corresponding row in $P^T$ would be $`\begin{bmatrix}1 & 1000 & 1000000\end{bmatrix}`$. Clearly, this is ill-conditioned. 
 
-To address this issue, it is common in practice to define some map $X(\xi)$ that takes points in some *reference* space to the domain $\Omega$, and its inverse $\xi(X) = X^{-1}(\xi)$ such that we can construct shape functions in the reference space, where the geometry of the elements will yield well-conditioned $P^T$. In fact, this concept leads to defining the so-called *reference elements*. The maps $X(\xi)$ and $\xi(X)$ are then defined per-element, and always map from and to the reference element, respectively. Reference shape functions are subsequently defined on the reference element and constructed only once. Evaluating a basis function $\phi_i(X)$ on element $e$ thus amounts to mapping $X$ to $\xi$ using element $e$'s inverse map $\xi(X)$, and then evaluating the reference shape function associated with node $i$ of element $e$. Mathematically, assuming that $N_l(\xi)$ is the shape function for domain node $i$ associated with reference node $l$ on the reference element, we have that
+To address this issue, it is common in practice to define some map $X(\xi)$ that takes points in some *reference* space to the domain $\Omega$, and its inverse $\xi(X) = X^{-1}(\xi)$ such that we can construct shape functions in the reference space, where the geometry of the elements will yield well-conditioned $P^T$. In fact, this concept leads to defining the so-called *reference elements*. The maps $X(\xi)$ and $\xi(X)$ are then defined per-element, and always map from and to the reference element, respectively. Reference shape functions are subsequently defined on the reference element and constructed only once. Evaluating a basis function $\phi_i(X)$ on element $e$ thus amounts to mapping $X$ to $\xi$ using element $e$'s inverse map $\xi(X)$, and then evaluating the reference shape function associated with node $i$ of element $e$. Mathematically, assuming that $N_l(\xi)$ is the reference shape function for domain node $i$ associated with reference node $l$ on the reference element, we have that
 
 $$
 \phi_i(X) = N_l(\xi(X)) .
@@ -136,8 +138,8 @@ $$
 
 #### Lagrange elements
 
-Perhaps the simplest and/or most popular type of reference element is the [Lagrange element](https://doc.comsol.com/5.3/doc/com.comsol.help.comsol/comsol_api_xmesh.40.4.html). This type of element places its nodes at coordinates $\frac{\xi}{p}$, where $p$ is a polynomial order used to construct the shape functions. As described above, there must be as many polynomial basis' as nodes for the inverse of $P^T$ to exist, i.e. $P^T$ must be square. Lagrange elements in 3D thus define their nodes with coordinates $`\xi_l \in \left\{ \left(\frac{a}{p}, \frac{b}{p}, \frac{c}{p}\right) \right\}`$
-and corresponding polynomial basis functions $`P_l \in \left\{ \xi_x^a \xi_y^b \xi_z^c \right\}`$ for integer values $0 \leq a,b,c \leq p$, where they are used as powers. In 2D, we only use $a$ and $b$. In 1D, we reduce further to simply using $a$. Simplex elements, such as triangles and tetrahedra have the additional constraint $a+b+c \leq p$, wheras quadrilaterals and hexahedra do not.
+Perhaps the simplest and/or most popular type of reference element is the [Lagrange element](https://doc.comsol.com/5.3/doc/com.comsol.help.comsol/comsol_api_xmesh.40.4.html). This type of element is defined by a polynomial order $p$ used to construct the shape functions. As described above, there must be as many polynomial basis' as nodes for the inverse of $P^T$ to exist, i.e. $P^T$ must be square. Lagrange elements in 3D thus define their nodes with coordinates $`\xi_l \in \left\{ \left(\frac{a}{p}, \frac{b}{p}, \frac{c}{p}\right) \right\}`$
+and corresponding polynomial basis functions $`P_l \in \left\{ \xi_x^a \xi_y^b \xi_z^c \right\}`$ for integer values $0 \leq a,b,c \leq p$, where they are used as powers. In 2D, we only use $a$ and $b$. In 1D, we reduce further to simply using $a$. Simplex elements, such as triangles and tetrahedra have the additional constraint $a+b+c \leq p$, wheras line segments, quadrilaterals and hexahedra do not.
 
 Taken once again from [chapter 9.3 of Hans Petter Langtangen's FEM book](https://hplgit.github.io/INF5620/doc/pub/main_fem.pdf#page=81.67), here are examples of Lagrange elements and their nodes in dimensions `1,2,3`.
 
@@ -147,13 +149,13 @@ Taken once again from [chapter 9.3 of Hans Petter Langtangen's FEM book](https:/
 
 #### Mapping from/to reference
 
-Given exact reference node placements $\xi_l$ and the polynomial basis functions $P_l(\xi)$, we can obtain our reference shape functions $N_l(\xi) = P(\xi)^T \alpha_l$. We can recover the map $X(\xi)$ easily by simple interpolation of domain positions $X_i$ of domain nodes $i$ in domain elements $e$ stored on corresponding reference nodes $l$ with positions $\xi_l$ and shape functions $N_l(\xi)$ on the reference element. Mathematically, we write the map as
+Given exact reference node placements $\xi_l$ and the polynomial basis functions $P_l(\xi)$, we can obtain our reference shape functions $N_l(\xi) = P(\xi)^T \alpha_l$. We can recover the map $X(\xi)$ easily by simple interpolation of domain positions $X_i$ of domain nodes and elements, $i$ and $e$, stored on corresponding reference nodes $l$ with positions $\xi_l$ and shape functions $N_l(\xi)$ on the reference element. Mathematically, we write the map as
 
 $$
 X(\xi) = X^e N(\xi) ,
 $$
 
-where $`X^e = \begin{bmatrix} X_1 & \dots & X_{n^e} \end{bmatrix} \in \mathbb{R}^{d \times n^e}`$ are element $e$'s nodes' positions, $`N(\xi) = \begin{bmatrix} N_1(\xi) & \dots & N_{n^e}(\xi) \end{bmatrix}^T \in \mathbb{R}^{n^e}`$ are the reference shape functions evaluated at $\xi$, and $d$ is the number of embedding dimensions for element $e$'s node positions $X_i$. 
+where $`X^e = \begin{bmatrix} X_1 & \dots & X_{n^e} \end{bmatrix} \in \mathbb{R}^{d \times n^e}`$ are element $e$'s nodes' positions $X_i$, $`N(\xi) = \begin{bmatrix} N_1(\xi) & \dots & N_{n^e}(\xi) \end{bmatrix}^T \in \mathbb{R}^{n^e}`$ are the reference shape functions evaluated at $\xi$, and $d$ is the number of embedding dimensions for $X_i$. 
 
 The inverse map $\xi(X)$ is, however, not so trivial in the general case. One way to obtain $\xi(X)$ numerically is by solving the non-linear least-squares problem
 
@@ -161,7 +163,7 @@ $$
 \min_{\xi} || X - X(\xi) ||_2^2 ,
 $$
 
-for which we can use a [Gauss-Newton algorithm](https://en.wikipedia.org/wiki/Gauss%E2%80%93Newton_algorithm). If the map $X(\xi)$ is linear, however, its jacobian $J$ must be constant. We can choose an arbitrary point around which to perform a Taylor expansion of $X(\xi)$, for example, the reference space's origin $0$, revealing 
+for which we can use a [Gauss-Newton algorithm](https://en.wikipedia.org/wiki/Gauss%E2%80%93Newton_algorithm). If the map $X(\xi)$ is linear, however, its jacobian $J$ must be constant. We can choose an arbitrary point around which to perform a Taylor expansion of $X(\xi)$, for example, the reference space's origin $\xi_1 = 0$, which we know is mapped to $X_1$ in Lagrange elements, revealing 
 
 $$
 X(\xi) = X_1 + J \xi .
@@ -181,7 +183,7 @@ $$
 
 #### Derivatives
 
-Computing derivatives of basis functions $\phi_i(X)$ also amounts to computing derivatives of shape functions $N_i^e(X)$. Because our shape functions are now defined in reference space, we must use the [chain rule of differentiation](https://en.wikipedia.org/wiki/Chain_rule) to compute $\nabla N_i^e(X) = N_l(\xi(X))$, such that 
+Computing derivatives of basis functions $\phi_i(X)$ also amounts to computing derivatives of shape functions $N_i^e(X)$. Because our shape functions are now defined in reference space, we must use the [chain rule of differentiation](https://en.wikipedia.org/wiki/Chain_rule) to compute $\nabla_X N_i^e(X) = \nabla_X N_l(\xi(X))$, such that 
 
 $$
 \nabla_X \phi_i(X) = \nabla_X N_i^e(X) = \nabla_\xi N_l(\xi(X)) \nabla_X \xi(X) 
@@ -237,7 +239,7 @@ Such weights $w_g$ and points $\xi_g$ are often provided in the form of tables b
 
 #### Summary
 
-In FEM, integrals over the domain $\Omega$ are equivalent to the sum of integrals over elements $\Omega^e$. These element integrals, in turn, can be computed in the reference element using the map $X(\xi)$ and the change of variables technique, because reference elements have fixed and known bounds. The key ingredients to implementing integrals on a computer are to first obtain tables of quadrature weights and points $(w_g, \xi_g)$ for the specific element and integrands, the integrand $F(X)$, the map $X(\xi)$ and the determinant of its jacobian $|\det \nabla_\xi X|$. In pseudocode,
+In FEM, integrals over the domain $\Omega$ are equivalent to the sum of integrals over elements $\Omega^e$. These element integrals, in turn, can be computed in the reference element using the map $X(\xi)$ and the change of variables technique, because reference elements have fixed and known bounds. The key ingredients to implementing integrals on a computer are to first obtain tables of quadrature weights and points $(w_g, \xi_g)$ for the specific element and integrand, the integrand $F(X)$, the map $X(\xi)$ and the determinant of its jacobian $|\det \nabla_\xi X|$. In pseudocode,
 
 ```python
 def integrate_element(wg, Xig, F, X, detJ):
@@ -307,7 +309,7 @@ $$
 
 using local node indices $l=1,2,\dots,n^e$ which are then accumulated (i.e. summed) into the global mass matrix $M$ by mapping local indices $l$ into corresponding global indices $i$ and $j$ for rows and columns. We call these the element mass matrices.
 
-It is possible to associate physical meaning to the mass matrix by injecting into its integral form a measure of mass density (i.e. grams per unit volume). If the mass density is specified as piece-wise constant (per element), then we simply scale each element mass matrix as $\rho_e M^e$ and sum the scaled element mass matrices into the global mass matrix $M$.
+It is possible to associate physical meaning to the mass matrix by injecting into its integral form a measure of mass density $\rho$ (i.e. grams per unit volume). If the mass density is specified as piece-wise constants (per element) $\rho_e$, then we simply scale each element mass matrix as $\rho_e M^e$ and sum the scaled element mass matrices into the global mass matrix $M$.
 
 #### Gradient matrix
 
@@ -325,7 +327,7 @@ $$
 
 for $k=1,2,\dots,d$.
 
-The full Galerkin gradient matrix $G$ then stacks the matrices $G^k \in \mathbb{R}^{n \times n}$ vertically, such that $G \in \mathbb{R}^{dn \times n}$. This operator $G$ thus takes FEM functions $u \in \mathbb{R}^n$ and maps them to $d$ vectors $G^k u \in \mathbb{R}^n$ stacked vertically.
+The full Galerkin gradient matrix $G$ then stacks the matrices $G^k \in \mathbb{R}^{n \times n}$ vertically, such that $G \in \mathbb{R}^{dn \times n}$. This operator $G$ thus takes FEM functions $u \in \mathbb{R}^n$ and maps them to $d$ vectors $G^k u \in \mathbb{R}^n$ stacked vertically. If $\phi_i(X)$ is polynomial of order $p$, then Galerkin gradient integrands are polynomials of order $2p - 1$. Thus, for exact integration, use a polynomial quadrature rule of order $2p - 1$.
 
 The element Galerkin gradient matrices per dimensions $k$ are
 
@@ -362,7 +364,7 @@ $$
 
 on the domain's boundary, i.e. $X \in \partial \Omega$, then we replace $Nu$ by $g \in \mathbb{R}^{n \times n}$ such that $g_i = \int_{\partial \Omega} g(X) \phi_i(X) \partial S$. Because this integral is defined over the boundary of the FEM meshing of $\Omega$, we can similarly extract the boundary mesh for $\partial \Omega$, preserving node indexing. We can then discretize $g(X)$ on this boundary mesh using FEM once again as either a load vector if $g(X)$ is defined on boundary faces, or as $Mg$ using the boundary mesh's mass matrix $M$ and coefficients $g$ defined on boundary vertices. There are many cases where the Neumann boundary conditions are even simpler, however, i.e. when $g(X) = \nabla u(X) \cdot n = 0$, in which case the Laplacian matrix is exactly $L$. The resulting Poisson problem would then be $Lu=f$, which is a symmetric negative semi-definite linear system which can be solved efficiently.
 
-The matrix $L$ is quite famous and is equivalent to the so-called ["cotangent Laplacian"](https://en.wikipedia.org/wiki/Discrete_Laplace_operator#Mesh_Laplacians) or the "Laplace-Beltrami" operator mentioned in the literature. Instead of the general derivation presented in this document, when assuming linear shape functions, it is possible to derive quite elegant analytic expressions involving the cotangent function to compute its entries. In our Physics Based Animation Toolkit, we also like to refer to $L$ as the symmetric part of the Laplacian matrix.
+The matrix $L$ is quite famous and is equivalent to the so-called ["cotangent Laplacian"](https://en.wikipedia.org/wiki/Discrete_Laplace_operator#Mesh_Laplacians) or the "Laplace-Beltrami" operator mentioned in the literature. Instead of the general derivation presented in this document, when assuming linear shape functions, it is possible to derive quite elegant analytic expressions involving the cotangent function to compute its entries. In our Physics Based Animation Toolkit, we also like to refer to $L$ as the symmetric part of the Laplacian matrix. If $\phi_i(X)$ is of polynomial order $p$, then $L$'s integrands are polynomials of order $2(p-1)$. A polynomial quadrature rule of order $2(p-1)$ is thus sufficient for exact computation of $L$.
 
 The element Laplacian matrices are
 
@@ -379,7 +381,7 @@ $$
 
 Neumann boundary conditions are imposed values on the gradient of the problem's solution. These Neumann boundary conditions are often called "natural" boundary conditions, because they are implicitly encoded in the problem (where a laplacian appears) and appear "naturally" when applying Green's identities (see previous subsection), i.e. we can enforce them simply by introducing an extra forcing vector in the discretized linear system.
 
-Dirichlet boundary conditions, i.e. "essential" boundary conditions, are imposed on the problem's solution itself (as opposed to its derivatives) and are necessary to make our PDEs well-determined (i.e. not rank-deficient). It is often the case that we can impose Dirichlet boundary conditions directly on the FEM mesh's nodes $i$, by simplying constraining its associated coefficients $u_i = d_i$ for some known value $d_i$. This is the same as saying, in the continuous case, that $u(X_i) = d_i$. This approach makes it particularly easy to enforce Dirichlet boundary conditions numerically, as it essentially removes degrees of freedom out of a matrix equation. Consider the linear system $Ax=b$ discretizing some problem via FEM. Assume that the vector $x$ has been partitioned into a vector of unknowns $x_u$ and known values $x_k = d_k$ for Dirichlet imposed values $d_k$. The same partitioning may be applied to the rows and columns of matrix $A$ and similarly to the right-hand side vector $b$. We thus get that 
+Dirichlet boundary conditions, i.e. "essential" boundary conditions, are imposed on the problem's solution itself (as opposed to its derivatives) and are necessary to make our PDEs well-determined (i.e. not rank-deficient). It is often the case that we can impose Dirichlet boundary conditions directly on the FEM mesh's nodes $i$, by simply constraining its associated coefficients $u_i = d_i$ for some known value $d_i$. This is the same as saying, in the continuous case, that $u(X_i) = d_i$. This approach makes it particularly easy to enforce Dirichlet boundary conditions numerically, as it essentially removes degrees of freedom out of a matrix equation. Consider the linear system $Ax=b$ discretizing some problem via FEM. Assume that the vector $x$ has been partitioned into a vector of unknowns $x_u$ and known values $x_k = d_k$ for Dirichlet imposed values $d_k$. The same partitioning may be applied to the rows and columns of matrix $A$ and similarly to the right-hand side vector $b$. We thus get that 
 
 $$
 \begin{bmatrix} 
@@ -396,7 +398,7 @@ b_k
 \end{bmatrix} .
 $$
 
-The unknown are thus obtained by solving a reduced problem
+The unknowns are thus obtained by solving a reduced problem
 
 $$
 A_{uu} x_u = b_u - A_{uk} d_k .
