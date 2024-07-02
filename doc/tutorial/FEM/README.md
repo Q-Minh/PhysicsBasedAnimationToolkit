@@ -342,7 +342,7 @@ $$
 
 #### Divergence matrix
 
-Interestingly, horizontally stacking the (Galerkin) gradient matrix blocks $G^k$ happens to reveal a matrix $D \in \mathbb{R}^{n \times dn}$ computing the [divergence](https://en.wikipedia.org/wiki/Divergence) of some FEM discretized vector field $F(X) \in \mathbb{R}^d$ in the Galerkin sense. Intuitively, $D$ applies each $G^k$ to the FEM discretized $k^\text{th}$ component of $F(X)$ and sums the $d$ resulting gradients, i.e. it computes the divergence of $F(X)$.
+Interestingly, we can discretize the [divergence](https://en.wikipedia.org/wiki/Divergence) operator by simply transposing the gradient matrix, i.e. $D = G^T \in \mathbb{R}^{n \times dn}$.
 
 #### Laplacian matrix
 
