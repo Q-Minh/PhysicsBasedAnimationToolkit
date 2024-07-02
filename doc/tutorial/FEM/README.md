@@ -340,6 +340,10 @@ G^{ke} =
 \end{bmatrix} .
 $$
 
+#### Divergence matrix
+
+Interestingly, horizontally stacking the (Galerkin) gradient matrix blocks $G^k$ happens to reveal a matrix $D \in \mathbb{R}^{n \times dn}$ computing the [divergence](https://en.wikipedia.org/wiki/Divergence) of some FEM discretized vector field $F(X) \in \mathbb{R}^d$ in the Galerkin sense. Intuitively, $D$ applies each $G^k$ to the FEM discretized $k^\text{th}$ component of $F(X)$ and sums the $d$ resulting gradients, i.e. it computes the divergence of $F(X)$.
+
 #### Laplacian matrix
 
 The Poisson problem discretized the Laplacian matrix into $A$ where $A_{ij} = \int_{\Omega} \phi_i(X) \Delta \phi_j(X) \partial \Omega$. However, this results in requiring shape functions of order $p \geq 2$, meaning we wouldn't be able to use linear shape functions to solve a problem involving the Laplacian of the solution. Thus, in practice, we will make use of multivariable integration by parts, i.e. [Green's identities](https://en.wikipedia.org/wiki/Green%27s_identities), to transform $\Delta u(X)$ into
@@ -449,3 +453,12 @@ where $u_i$ is a column vector, while the gradient $\nabla \phi_i(X)$ is a row v
 ## Limitations
 
 While FEM remains an invaluable tool for scientific computing, it is not without its drawbacks. One of its main drawbacks is FEM's reliance on an appropriate meshing of the domain. Indeed, for FEM discretized problems to be well-conditioned, its element geometries must be "regular". The well-known paper [What is a good linear finite element?](https://people.eecs.berkeley.edu/~jrs/papers/elemj.pdf) details this phenomenon in depth. Current meshing tools may take enormous amounts of computational resources (memory, runtime) to produce acceptable outputs. Additionally, it is not guaranteed that any domain *can* be meshed with current tools. In the realm of computer graphics, geometries are extremely complex, i.e. they exhibit fine details, are high resolution, have highly varying structural qualities (like thin structures, high curvatures) in different regions, and may be poorly authored (among other potential obstacles). In such cases, current tools may break down, or FEM will likely struggle with the quality of their output. Even if high quality meshes of such complex geometries are obtained, their resolution may be so high that solving linear systems of equations arising from FEM will be extremely slow. Modern approaches such as [Monte Carlo Geometry Processing](https://www.cs.cmu.edu/~kmcrane/Projects/MonteCarloGeometryProcessing/paper.pdf) and its extensions, [Monte Carlo Fluids](https://riouxld21.github.io/research/publication/2022-mcfluid/) tackle this exact problem. [Meshless methods](https://en.wikipedia.org/wiki/Meshfree_methods) also exist to sidestep the mesh generation preprocess to FEM, among other such alternative approaches that I am simply not aware of.
+
+## Workshops
+
+1. [pbatoolkit.fem](./W1.ipynb)
+2. [Heat diffusion](./W2.ipynb)
+3. [Harmonic solutions](./W3.ipynb)
+4. [Least squares and Poisson problems](./W4.ipynb)
+5. [Lagrange elements](./W5.ipynb)
+6. [Operator assembly](./W6.ipynb)
