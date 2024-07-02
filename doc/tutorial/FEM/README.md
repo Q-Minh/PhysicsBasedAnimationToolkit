@@ -429,7 +429,7 @@ In other situations, however we may wish to concatenate the coefficients $u_k$ i
 1. Stack each $u_k$ vertically.
 2. Interleave all the $u_k$.
 
-By interleaving, we mean that if the $k^{\text{th}}$ coefficient vector $u_k$ has coefficients $u_{ik}$, then the resulting "interleaved" vector $u = \begin{bmatrix} u_{11} & \dots & u_{n1} & \dots & u_{1d} & \dots & u_{nd} \end{bmatrix}^T$. Practically, this just means that option 1 flattens the matrix $U \in \mathbb{R}^{n \times d}$ by stacking its column vertically, and option 2 flattens $U$ by stacking its transposed rows vertically. For both options, our FEM operators $M,L,G$ and the load vector $f$ can adjust to $u$ by using the [Kronecker product](https://en.wikipedia.org/wiki/Kronecker_product). Our new operators $A = M, L, G$ take the following forms for the corresponding options 
+By interleaving, we mean that if the $k^{\text{th}}$ coefficient vector $u_k$ has coefficients $u_{ik}$, then the resulting "interleaved" vector $`u = \begin{bmatrix} u_{11} & \dots & u_{n1} & \dots & u_{1d} & \dots & u_{nd} \end{bmatrix}^T`$. Practically, this just means that option 1 flattens the matrix $U \in \mathbb{R}^{n \times d}$ by stacking its column vertically, and option 2 flattens $U$ by stacking its transposed rows vertically. For both options, our FEM operators $M,L,G$ can adjust to $u$ by using the [Kronecker product](https://en.wikipedia.org/wiki/Kronecker_product). Our new operators $A = M, L, G$ take the following forms for the corresponding options 
 
 1. $A_{nd \times nd} = I_{d \times d} \otimes A$ 
 2. $A_{nd \times nd} = A \otimes I_{d \times d}$ 
