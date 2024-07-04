@@ -65,7 +65,6 @@ MatrixX DeterminantOfJacobian(TMesh const& mesh)
         }
         else
         {
-            auto const wg = common::ToEigen(QuadratureRuleType::weights);
             for (auto g = 0; g < QuadratureRuleType::kPoints; ++g)
             {
                 Scalar const detJ =
@@ -74,6 +73,20 @@ MatrixX DeterminantOfJacobian(TMesh const& mesh)
             }
         }
     });
+    return detJe;
+}
+
+/**
+ *
+ */
+template <int QuadratureOrder, CMesh TMesh>
+MatrixX InnerProductWeights(TMesh const& mesh)
+{
+    MatrixX const detJe      = DeterminantOfJacobian(mesh);
+    using ElementType        = typename TMesh::ElementType;
+    using QuadratureRuleType = typename ElementType::template QuadratureType<QuadratureOrder>;
+    auto const wg            = common::ToEigen(QuadratureRuleType::weights);
+    detJe.colwise() *= wg;
     return detJe;
 }
 

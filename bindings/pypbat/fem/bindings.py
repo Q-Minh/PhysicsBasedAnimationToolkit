@@ -429,21 +429,39 @@ void BindJacobian_{mesh_type_py}(pybind11::module& m)
         pyb::arg("mesh"),
         pyb::arg("quadrature_order"));
         
-        std::string const referencePositionsName = "reference_positions_{mesh_type_py}";
-        m.def(
-            referencePositionsName.data(),
-            [&](MeshType const& mesh,
-                Eigen::Ref<IndexVectorX const> const& E,
-                Eigen::Ref<MatrixX const> const& X,
-                int maxIterations,
-                Scalar eps) -> MatrixX {{
-                return pbat::fem::ReferencePositions<MeshType>(mesh, E, X, maxIterations, eps);
-            }},
-            pyb::arg("mesh"),
-            pyb::arg("E"),
-            pyb::arg("X"),
-            pyb::arg("max_iterations"),
-            pyb::arg("epsilon"));
+    std::string const referencePositionsName = "reference_positions_{mesh_type_py}";
+    m.def(
+        referencePositionsName.data(),
+        [&](MeshType const& mesh,
+            Eigen::Ref<IndexVectorX const> const& E,
+            Eigen::Ref<MatrixX const> const& X,
+            int maxIterations,
+            Scalar eps) -> MatrixX {{
+            return pbat::fem::ReferencePositions<MeshType>(mesh, E, X, maxIterations, eps);
+        }},
+        pyb::arg("mesh"),
+        pyb::arg("E"),
+        pyb::arg("X"),
+        pyb::arg("max_iterations"),
+        pyb::arg("epsilon"));
+        
+    std::string const innerProductWeights = "inner_product_weights_{mesh_type_py}";
+    m.def(
+        innerProductWeights.data(),
+        [&](MeshType const& mesh, int qorder) -> MatrixX {{
+            MatrixX R;
+            pbat::common::ForRange<1, kMaxQuadratureOrder + 1>([&]<auto QuadratureOrder>() {{
+                if (qorder == QuadratureOrder)
+                {{
+                    R = pbat::fem::InnerProductWeights<QuadratureOrder, MeshType>(mesh);
+                }}
+            }});
+            if (R.size() == 0)
+                throw_bad_quad_order(qorder);
+            return R;
+        }},
+        pyb::arg("mesh"),
+        pyb::arg("quadrature_order"));
 }}
 
 }} // namespace fem
