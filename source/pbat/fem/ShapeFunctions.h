@@ -42,6 +42,38 @@ ShapeFunctions()
 }
 
 /**
+ *
+ */
+template <int QuadratureOrder, CMesh TMesh>
+CSRMatrix ShapeFunctionMatrix(TMesh const& mesh)
+{
+    using ElementType = typename TMesh::ElementType;
+    auto const Ng = ShapeFunctions<ElementType, QuadratureOrder>();
+    auto const numberOfNodes = mesh.X.cols();
+    auto const numberOfElements = mesh.E.cols();
+    auto const numberOfQuadPoints = Ng.cols();
+    auto const m = numberOfQuadPoints*numberOfElements;
+    auto const n = numberOfNodes;
+    auto constexpr kNodesPerElement = ElementType::kNodes;
+    CSRMatrix N(m, n);
+    N.reserve(IndexVectorX::Constant(m, kNodesPerElement));
+    for (auto e = 0; e < numberOfElements; ++e)
+    {
+        auto const nodes = mesh.E.col(e);
+        for (auto g = 0; g < numberOfQuadPoints; ++g)
+        {
+            auto const row = e*numberOfQuadPoints + g;
+            for (auto i = 0; i < Ng.rows(); ++i)
+            {
+                auto const col = nodes(i);
+                N.insert(row, col) = Ng(i,g);
+            }
+        }
+    }
+    return N;
+}
+
+/**
  * @brief Compute shape functions at the given reference space positions
  * @tparam TDerivedXi
  * @tparam TElement

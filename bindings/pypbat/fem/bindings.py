@@ -1185,6 +1185,23 @@ void BindShapeFunctions_{mesh_type_py}(pybind11::module& m)
         }}, 
         pyb::arg("mesh"),
         pyb::arg("Xi"));
+        
+    std::string const shapeFunctionMatrixName = "shape_function_matrix_" + meshTypeName;
+    m.def(
+        shapeFunctionMatrixName.data(),
+        [&](MeshType const& mesh, int qorder) -> CSRMatrix {{
+            CSRMatrix N;
+            pbat::common::ForRange<1, kMaxQuadratureOrder + 1>([&]<auto QuadratureOrder>() {{
+                if (qorder == QuadratureOrder)
+                {{
+                    N = pbat::fem::ShapeFunctionMatrix<QuadratureOrder>(mesh);
+                }}
+            }});
+            if (N.size() == 0)
+                throw_bad_quad_order(qorder);
+            return N;
+        }}, 
+        pyb::arg("mesh"));
 }}
 
 }} // namespace fem
