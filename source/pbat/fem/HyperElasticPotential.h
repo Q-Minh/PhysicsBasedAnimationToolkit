@@ -241,10 +241,11 @@ HyperElasticPotential<TMesh, THyperElasticEnergy, QuadratureOrder>::ComputeEleme
             for (auto g = 0; g < QuadratureRuleType::kPoints; ++g)
             {
                 auto constexpr kStride = MeshType::kDims * QuadratureRuleType::kPoints;
-                auto const gradPhi =
-                    GNe.block<kNodesPerElement, MeshType::kDims>(0, e * kStride + g * MeshType::kDims);
+                auto const gradPhi     = GNe.block<kNodesPerElement, MeshType::kDims>(
+                    0,
+                    e * kStride + g * MeshType::kDims);
                 auto const F = xe * gradPhi;
-                auto psiF = Psi.eval(F.reshaped(), mue(e), lambdae(e));
+                auto psiF    = Psi.eval(F.reshaped(), mue(e), lambdae(e));
                 Ue(e) += (wg(g) * detJe(g, e)) * psiF;
             }
         });
@@ -254,12 +255,14 @@ HyperElasticPotential<TMesh, THyperElasticEnergy, QuadratureOrder>::ComputeEleme
         tbb::parallel_for(Index{0}, Index{numberOfElements}, [&](Index e) {
             auto const nodes = mesh.E.col(e);
             auto const xe    = x.reshaped(kDims, numberOfNodes)(Eigen::all, nodes);
+            auto ge          = Ge.col(e);
             for (auto g = 0; g < QuadratureRuleType::kPoints; ++g)
             {
                 auto constexpr kStride = MeshType::kDims * QuadratureRuleType::kPoints;
-                auto const gradPhi =
-                    GNe.block<kNodesPerElement, MeshType::kDims>(0, e * kStride + g * MeshType::kDims);
-                auto const F = xe * gradPhi;
+                auto const gradPhi     = GNe.block<kNodesPerElement, MeshType::kDims>(
+                    0,
+                    e * kStride + g * MeshType::kDims);
+                auto const F          = xe * gradPhi;
                 auto [psiF, gradPsiF] = Psi.evalWithGrad(F.reshaped(), mue(e), lambdae(e));
                 Ue(e) += (wg(g) * detJe(g, e)) * psiF;
                 ge +=
@@ -272,12 +275,14 @@ HyperElasticPotential<TMesh, THyperElasticEnergy, QuadratureOrder>::ComputeEleme
         tbb::parallel_for(Index{0}, Index{numberOfElements}, [&](Index e) {
             auto const nodes = mesh.E.col(e);
             auto const xe    = x.reshaped(kDims, numberOfNodes)(Eigen::all, nodes);
+            auto he          = He.block<kDofsPerElement, kDofsPerElement>(0, e * kDofsPerElement);
             for (auto g = 0; g < QuadratureRuleType::kPoints; ++g)
             {
                 auto constexpr kStride = MeshType::kDims * QuadratureRuleType::kPoints;
-                auto const gradPhi =
-                    GNe.block<kNodesPerElement, MeshType::kDims>(0, e * kStride + g * MeshType::kDims);
-                auto const F = xe * gradPhi;
+                auto const gradPhi     = GNe.block<kNodesPerElement, MeshType::kDims>(
+                    0,
+                    e * kStride + g * MeshType::kDims);
+                auto const F  = xe * gradPhi;
                 auto psiF     = Psi.eval(F.reshaped(), mue(e), lambdae(e));
                 auto hessPsiF = Psi.hessian(F.reshaped(), mue(e), lambdae(e));
                 Ue(e) += (wg(g) * detJe(g, e)) * psiF;
@@ -290,11 +295,14 @@ HyperElasticPotential<TMesh, THyperElasticEnergy, QuadratureOrder>::ComputeEleme
         tbb::parallel_for(Index{0}, Index{numberOfElements}, [&](Index e) {
             auto const nodes = mesh.E.col(e);
             auto const xe    = x.reshaped(kDims, numberOfNodes)(Eigen::all, nodes);
+            auto ge          = Ge.col(e);
+            auto he          = He.block<kDofsPerElement, kDofsPerElement>(0, e * kDofsPerElement);
             for (auto g = 0; g < QuadratureRuleType::kPoints; ++g)
             {
                 auto constexpr kStride = MeshType::kDims * QuadratureRuleType::kPoints;
-                auto const gradPhi =
-                    GNe.block<kNodesPerElement, MeshType::kDims>(0, e * kStride + g * MeshType::kDims);
+                auto const gradPhi     = GNe.block<kNodesPerElement, MeshType::kDims>(
+                    0,
+                    e * kStride + g * MeshType::kDims);
                 auto const F = xe * gradPhi;
                 auto [psiF, gradPsiF, hessPsiF] =
                     Psi.evalWithGradAndHessian(F.reshaped(), mue(e), lambdae(e));

@@ -16,37 +16,33 @@ namespace fem {
 
 /**
  * @brief Represents an FEM gradient operator that takes some function discretized at mesh nodes,
- * and returns its gradient in the Galerkin sense, i.e. the gradient at the i^{th} node is:
+ * and returns its gradient at element quadrature points:
  *
- * \sum_j u_j [\sum_e \int_{\Omega^e} \nabla \phi_j(X) \phi_i(X) \partial \Omega^e]
+ * \sum_j u_j \nabla \phi_j(X_g) ] \forall e \in E
  *
  * @tparam TMesh
  * @tparam QuadratureOrder
  */
 template <CMesh TMesh, int QuadratureOrder>
-struct GalerkinGradient
+struct Gradient
 {
   public:
-    using SelfType              = GalerkinGradient<TMesh, QuadratureOrder>;
+    using SelfType              = Gradient<TMesh, QuadratureOrder>;
     using MeshType              = TMesh;
     using ElementType           = typename TMesh::ElementType;
     using QuadratureRuleType    = typename ElementType::template QuadratureType<QuadratureOrder>;
     static int constexpr kDims  = MeshType::kDims;
-    static int constexpr kOrder = 2 * ElementType::kOrder - 1;
+    static int constexpr kOrder = (ElementType::kOrder > 1) ? (ElementType::kOrder - 1) : 1;
     static int constexpr kQuadratureOrder = QuadratureOrder;
 
     /**
      * @brief
      * @param mesh
-     * @param detJe |#quad.pts.|x|#elements| affine element jacobian determinants at quadrature
      * @param GNe |#element nodes|x|#dims * #quad.pts. * #elements|
                     ///< matrix of element shape function gradients at quadrature points
      * points
      */
-    GalerkinGradient(
-        MeshType const& mesh,
-        Eigen::Ref<MatrixX const> const& detJe,
-        Eigen::Ref<MatrixX const> const& GNe);
+    Gradient(MeshType const& mesh, Eigen::Ref<MatrixX const> const& GNe);
 
     SelfType& operator=(SelfType const&) = delete;
 
@@ -68,62 +64,51 @@ struct GalerkinGradient
     CSCMatrix ToMatrix() const;
 
     Index InputDimensions() const { return mesh.X.cols(); }
-    Index OutputDimensions() const { return kDims * InputDimensions(); }
-
-    /**
-     * @brief
-     */
-    void ComputeElementGalerkinGradientMatrices();
+    Index OutputDimensions() const { return kDims * mesh.E.cols() * QuadratureRuleType::kPoints; }
 
     void CheckValidState() const;
 
-    MeshType const& mesh;            ///< The finite element mesh
-    Eigen::Ref<MatrixX const> detJe; ///< |# element quadrature points| x |# elements| matrix of
-                                     ///< jacobian determinants at element quadrature points
+    MeshType const& mesh; ///< The finite element mesh
     Eigen::Ref<MatrixX const>
-        GNe;    ///< |#element nodes|x|#dims * #quad.pts. * #elements|
-                ///< matrix of element shape function gradients at quadrature points
-    MatrixX Ge; ///< |#element nodes|x|#element nodes * #dims * #elements| matrix of element
-                ///< Galerkin gradient matrices
+        GNe; ///< |#element nodes|x|#dims * #quad.pts. * #elements|
+             ///< matrix of element shape function gradients at quadrature points
 };
 
 template <CMesh TMesh, int QuadratureOrder>
-inline GalerkinGradient<TMesh, QuadratureOrder>::GalerkinGradient(
+inline Gradient<TMesh, QuadratureOrder>::Gradient(
     MeshType const& mesh,
-    Eigen::Ref<MatrixX const> const& detJe,
     Eigen::Ref<MatrixX const> const& GNe)
-    : mesh(mesh), detJe(detJe), GNe(GNe), Ge()
+    : mesh(mesh), GNe(GNe)
 {
-    ComputeElementGalerkinGradientMatrices();
 }
 
 template <CMesh TMesh, int QuadratureOrder>
-inline CSCMatrix GalerkinGradient<TMesh, QuadratureOrder>::ToMatrix() const
+inline CSCMatrix Gradient<TMesh, QuadratureOrder>::ToMatrix() const
 {
-    PBAT_PROFILE_NAMED_SCOPE("fem.GalerkinGradient.ToMatrix");
+    PBAT_PROFILE_NAMED_SCOPE("fem.Gradient.ToMatrix");
     using SparseIndex = typename CSCMatrix::StorageIndex;
     using Triplet     = Eigen::Triplet<Scalar, SparseIndex>;
 
     std::vector<Triplet> triplets{};
-    triplets.reserve(static_cast<std::size_t>(Ge.size()));
-    auto constexpr kNodesPerElement = ElementType::kNodes;
-    auto const numberOfElements     = mesh.E.cols();
-    auto const numberOfNodes        = mesh.X.cols();
+    triplets.reserve(static_cast<std::size_t>(GNe.size()));
+    auto const numberOfElements                = mesh.E.cols();
+    auto constexpr kNodesPerElement            = ElementType::kNodes;
+    auto constexpr kQuadPts                    = QuadratureRuleType::kPoints;
+    auto const numberOfElementQuadraturePoints = numberOfElements * kQuadPts;
     for (auto e = 0; e < numberOfElements; ++e)
     {
         auto const nodes = mesh.E.col(e);
-        for (auto d = 0; d < kDims; ++d)
+        auto const Ge    = GNe.block<kNodesPerElement, kQuadPts * kDims>(0, e * kQuadPts * kDims);
+        for (auto g = 0; g < kQuadPts; ++g)
         {
-            auto const Ged = Ge.block<kNodesPerElement, kNodesPerElement>(
-                0,
-                e * kDims * kNodesPerElement + d * kNodesPerElement);
-            for (auto j = 0; j < Ged.cols(); ++j)
+            for (auto d = 0; d < kDims; ++d)
             {
-                for (auto i = 0; i < Ged.rows(); ++i)
+                for (auto j = 0; j < Ge.rows(); ++j)
                 {
-                    auto const ni = static_cast<SparseIndex>(d * numberOfNodes + nodes(i));
+                    auto const ni = static_cast<SparseIndex>(
+                        d * numberOfElementQuadraturePoints + e * kQuadPts + g);
                     auto const nj = static_cast<SparseIndex>(nodes(j));
-                    triplets.push_back(Triplet(ni, nj, Ged(i, j)));
+                    triplets.push_back(Triplet(ni, nj, Ge(j, g * kDims + d)));
                 }
             }
         }
@@ -134,54 +119,12 @@ inline CSCMatrix GalerkinGradient<TMesh, QuadratureOrder>::ToMatrix() const
 }
 
 template <CMesh TMesh, int QuadratureOrder>
-inline void GalerkinGradient<TMesh, QuadratureOrder>::ComputeElementGalerkinGradientMatrices()
+inline void Gradient<TMesh, QuadratureOrder>::CheckValidState() const
 {
-    PBAT_PROFILE_NAMED_SCOPE("fem.GalerkinGradient.ComputeElementGalerkinGradientMatrices");
-    CheckValidState();
-    // Expand into per-element matrices
-    // [\sum_e \int_{\Omega^e} \nabla \phi_j(X) \phi_i(X) \partial \Omega^e]
-    auto constexpr kNodesPerElement = ElementType::kNodes;
+    auto constexpr kQuadPts         = QuadratureRuleType::kPoints;
     auto const numberOfElements     = mesh.E.cols();
-    Ge.setZero(kNodesPerElement, kNodesPerElement * kDims * numberOfElements);
-    auto constexpr kQuadPts                    = QuadratureRuleType::kPoints;
-    Matrix<kNodesPerElement, kQuadPts> const N = ShapeFunctions<ElementType, kQuadratureOrder>();
-    auto const wg                              = common::ToEigen(QuadratureRuleType::weights);
-    tbb::parallel_for(Index{0}, numberOfElements, [&](Index e) {
-        for (auto d = 0; d < kDims; ++d)
-        {
-            auto Ged = Ge.block<kNodesPerElement, kNodesPerElement>(
-                0,
-                e * kDims * kNodesPerElement + d * kNodesPerElement);
-            for (auto g = 0; g < kQuadPts; ++g)
-            {
-                auto const GPd = GNe.col(e * kDims * kQuadPts + g * kDims + d);
-                auto const Ng  = N.col(g);
-                Ged += (wg(g) * detJe(g, e)) * Ng * GPd.transpose();
-            }
-        }
-    });
-}
-
-template <CMesh TMesh, int QuadratureOrder>
-inline void GalerkinGradient<TMesh, QuadratureOrder>::CheckValidState() const
-{
-    auto constexpr kQuadPts     = QuadratureRuleType::kPoints;
-    auto const numberOfElements = mesh.E.cols();
-    bool const bHasDeterminants = (detJe.rows() == kQuadPts) and (detJe.cols() == numberOfElements);
-    if (not bHasDeterminants)
-    {
-        std::string const what = fmt::format(
-            "Expected element jacobian determinants of dimensions {}x{} for element quadrature of "
-            "order={}, but got {}x{}",
-            kQuadPts,
-            numberOfElements,
-            kQuadratureOrder,
-            detJe.rows(),
-            detJe.cols());
-        throw std::invalid_argument(what);
-    }
     auto constexpr kExpectedGNeRows = ElementType::kNodes;
-    auto const expectedGNeCols = MeshType::kDims * QuadratureRuleType::kPoints * numberOfElements;
+    auto const expectedGNeCols      = kDims * kQuadPts * numberOfElements;
     bool const bShapeFunctionGradientsHaveCorrectDimensions =
         (GNe.rows() == kExpectedGNeRows) and (GNe.cols() == expectedGNeCols);
     if (not bShapeFunctionGradientsHaveCorrectDimensions)
@@ -201,11 +144,11 @@ inline void GalerkinGradient<TMesh, QuadratureOrder>::CheckValidState() const
 
 template <CMesh TMesh, int QuadratureOrder>
 template <class TDerivedIn, class TDerivedOut>
-inline void GalerkinGradient<TMesh, QuadratureOrder>::Apply(
+inline void Gradient<TMesh, QuadratureOrder>::Apply(
     Eigen::MatrixBase<TDerivedIn> const& x,
     Eigen::DenseBase<TDerivedOut>& y) const
 {
-    PBAT_PROFILE_NAMED_SCOPE("fem.GalerkinGradient.Apply");
+    PBAT_PROFILE_NAMED_SCOPE("fem.Gradient.Apply");
     // Check inputs
     bool const bDimensionsMatch = (x.cols() == y.cols()) and (x.rows() == InputDimensions()) and
                                   (y.rows() == OutputDimensions());
@@ -225,6 +168,7 @@ inline void GalerkinGradient<TMesh, QuadratureOrder>::Apply(
     }
     // Compute gradient
     auto constexpr kNodesPerElement = ElementType::kNodes;
+    auto constexpr kQuadPts         = QuadratureRuleType::kPoints;
     auto const numberOfElements     = mesh.E.cols();
     for (auto c = 0; c < x.cols(); ++c)
     {
@@ -232,13 +176,18 @@ inline void GalerkinGradient<TMesh, QuadratureOrder>::Apply(
         {
             auto const nodes = mesh.E.col(e);
             auto const xe    = x.col(c)(nodes);
+            auto const Ge = GNe.block<kNodesPerElement, kDims * kQuadPts>(0, e * kQuadPts * kDims);
             for (auto d = 0; d < kDims; ++d)
             {
-                auto ye        = y.col(c).segment(d * numberOfElements, numberOfElements)(nodes);
-                auto const Ged = Ge.block<kNodesPerElement, kNodesPerElement>(
-                    0,
-                    e * kDims * kNodesPerElement + d * kNodesPerElement);
-                ye += Ged * xe;
+                auto ye =
+                    y.col(c).segment(d * numberOfElements * kQuadPts + e * kQuadPts, kQuadPts);
+                for (auto g = 0; g < kQuadPts; ++g)
+                {
+                    for (auto i = 0; i < nodes.size(); ++i)
+                    {
+                        ye(g) += Ge(i, d + g * kDims) * xe(i);
+                    }
+                }
             }
         }
     }
