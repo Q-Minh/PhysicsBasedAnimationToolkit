@@ -35,16 +35,15 @@ TEST_CASE("[fem] Gradient")
         using Mesh                      = fem::Mesh<Element, kDims>;
         Mesh mesh(V, C);
 
-        MatrixX const detJe = fem::DeterminantOfJacobian<kQuadratureOrder>(mesh);
-        MatrixX const GNe   = fem::ShapeFunctionGradients<kQuadratureOrder>(mesh);
-        using GradientType  = fem::Gradient<Mesh, kQuadratureOrder>;
+        MatrixX const GNe  = fem::ShapeFunctionGradients<kQuadratureOrder>(mesh);
+        using GradientType = fem::Gradient<Mesh, kQuadratureOrder>;
         CHECK(math::CLinearOperator<GradientType>);
         GradientType G{mesh, GNe};
 
         auto const n                = G.InputDimensions();
         auto const m                = G.OutputDimensions();
         auto const numberOfElements = mesh.E.cols();
-        auto const kQuadPts         = detJe.rows();
+        auto constexpr kQuadPts     = GradientType::QuadratureRuleType::kPoints;
         CHECK_EQ(m, kDims * kQuadPts * numberOfElements);
 
         VectorX const ones = VectorX::Ones(n);
@@ -67,8 +66,9 @@ TEST_CASE("[fem] Gradient")
         CSCMatrix Ik(kDims, kDims);
         Ik.setIdentity();
         CSCMatrix const NThat = Eigen::kroneckerProduct(NT, Ik);
-        auto const Ihat       = detJe.reshaped().replicate<kDims, 1>();
-        CSCMatrix const GG    = NThat * Ihat.asDiagonal() * GM;
+        VectorX const Ihat =
+            fem::InnerProductWeights<kQuadratureOrder>(mesh).reshaped().replicate<kDims, 1>();
+        CSCMatrix const GG = NThat * Ihat.asDiagonal() * GM;
         CHECK_EQ(GG.rows(), kDims * n);
         CHECK_EQ(GG.cols(), n);
         VectorX const galerkinGradOnes                      = GG * ones;

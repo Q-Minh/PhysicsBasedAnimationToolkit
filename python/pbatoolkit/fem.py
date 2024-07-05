@@ -36,24 +36,23 @@ def mesh(V: np.ndarray, C: np.ndarray, element: Element, order: int = 1):
     return class_(V, C)
 
 
-def galerkin_gradient_matrix(mesh, detJe: np.ndarray, GNe: np.ndarray, quadrature_order: int = 1):
-    """Computes the Galerkin gradient operator acting on the FEM mesh's function space.
+def gradient_matrix(mesh, GNe: np.ndarray, quadrature_order: int = 1):
+    """Computes the gradient operator acting on the FEM mesh's function space and returning gradients at all element quadrature points.
 
     Args:
         mesh: The FEM mesh
-        detJe (np.ndarray): The jacobian determinants evaluated at points of the specified 
-        quadrature.
         GNe (np.ndarray): The shape function gradients evaluated at points of the specified
         quadrature.
         quadrature_order (int, optional): Polynomial quadrature to use. Defaults to 1.
 
     Returns:
-        The Galerkin gradient operator
+        The gradient operator
     """
     mesh_name = _mesh_type_name(mesh)
-    class_name = f"GalerkinGradientMatrix_QuadratureOrder_{quadrature_order}_{mesh_name}"
+    class_name = f"GradientMatrix_QuadratureOrder_{
+        quadrature_order}_{mesh_name}"
     class_ = getattr(_fem, class_name)
-    return class_(mesh, detJe, GNe)
+    return class_(mesh, GNe)
 
 
 def jacobian_determinants(mesh, quadrature_order: int = 1) -> np.ndarray:
@@ -142,7 +141,7 @@ def shape_functions_at(mesh, Xi: np.ndarray):
     Args:
         mesh: The FEM mesh
         Xi (np.ndarray): Positions in element reference space
-        
+
     Returns:
         np.ndarray: |#element nodes|x|Xi.shape[0]| matrix of nodal shape function values at reference positions Xi
     """
@@ -168,7 +167,8 @@ def laplacian_matrix(mesh, detJe: np.ndarray, GNe: np.ndarray, dims: int = 1, qu
         The negative semi-definite symmetric part of the FEM mesh's Laplacian matrix
     """
     mesh_name = _mesh_type_name(mesh)
-    class_name = f"SymmetricLaplacianMatrix_QuadratureOrder_{quadrature_order}_{mesh_name}"
+    class_name = f"SymmetricLaplacianMatrix_QuadratureOrder_{
+        quadrature_order}_{mesh_name}"
     class_ = getattr(_fem, class_name)
     L = class_(mesh, detJe, GNe)
     L.dims = dims
@@ -246,6 +246,7 @@ def hyper_elastic_potential(
         A hyper elastic potential instance
     """
     mesh_name = _mesh_type_name(mesh)
-    class_name = f"HyperElasticPotential_{psi.name}_QuadratureOrder_{quadrature_order}_Dims_{mesh.dims}_{mesh_name}"
+    class_name = f"HyperElasticPotential_{psi.name}_QuadratureOrder_{
+        quadrature_order}_Dims_{mesh.dims}_{mesh_name}"
     class_ = getattr(_fem, class_name)
     return class_(mesh, detJe, GNe, Y, nu)

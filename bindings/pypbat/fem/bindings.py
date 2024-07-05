@@ -68,17 +68,15 @@ void BindGradient_{qorder}_{mesh_type_py}(pybind11::module& m)
     namespace pyb = pybind11;
     auto constexpr QuadratureOrder = {qorder};
     using MeshType = {mesh_type};
-    using GradientMatrixType    = pbat::fem::GalerkinGradient<MeshType, QuadratureOrder>;
-    std::string const className = "GalerkinGradientMatrix_QuadratureOrder_{qorder}_{mesh_type_py}";
+    using GradientMatrixType    = pbat::fem::Gradient<MeshType, QuadratureOrder>;
+    std::string const className = "GradientMatrix_QuadratureOrder_{qorder}_{mesh_type_py}";
     pyb::class_<GradientMatrixType>(m, className.data())
         .def(
             pyb::init([](MeshType const& mesh,
-                            Eigen::Ref<MatrixX const> const& detJe,
                             Eigen::Ref<MatrixX const> const& GNe) {{
-                return GradientMatrixType(mesh, detJe, GNe);
+                return GradientMatrixType(mesh, GNe);
             }}),
             pyb::arg("mesh"),
-            pyb::arg("detJe"),
             pyb::arg("GNe"))
         .def_property_readonly_static(
             "dims",
@@ -91,8 +89,7 @@ void BindGradient_{qorder}_{mesh_type_py}(pybind11::module& m)
             [](pyb::object /*self*/) {{ return GradientMatrixType::kQuadratureOrder; }})
         .def("rows", &GradientMatrixType::OutputDimensions)
         .def("cols", &GradientMatrixType::InputDimensions)
-        .def("to_matrix", &GradientMatrixType::ToMatrix)
-        .def_readonly("Ge", &GradientMatrixType::Ge);
+        .def("to_matrix", &GradientMatrixType::ToMatrix);
 }}
 
 }} // namespace fem
@@ -1219,7 +1216,8 @@ void BindShapeFunctions_{mesh_type_py}(pybind11::module& m)
                 throw_bad_quad_order(qorder);
             return N;
         }}, 
-        pyb::arg("mesh"));
+        pyb::arg("mesh"),
+        pyb::arg("quadrature_order"));
 }}
 
 }} // namespace fem

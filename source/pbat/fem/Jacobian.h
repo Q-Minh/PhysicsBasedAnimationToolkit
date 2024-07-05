@@ -6,9 +6,11 @@
 #include <Eigen/Cholesky>
 #include <Eigen/LU>
 #include <Eigen/SVD>
+#include <fmt/core.h>
 #include <pbat/Aliases.h>
 #include <pbat/common/Eigen.h>
 #include <pbat/profiling/Profiling.h>
+#include <string>
 #include <tbb/parallel_for.h>
 
 namespace pbat {
@@ -77,17 +79,53 @@ MatrixX DeterminantOfJacobian(TMesh const& mesh)
 }
 
 /**
+ * @brief
  *
+ * @tparam QuadratureOrder
+ * @tparam TMesh
+ * @param mesh
+ * @return MatrixX
  */
 template <int QuadratureOrder, CMesh TMesh>
 MatrixX InnerProductWeights(TMesh const& mesh)
 {
-    MatrixX const detJe      = DeterminantOfJacobian(mesh);
+    MatrixX detJe            = DeterminantOfJacobian<QuadratureOrder>(mesh);
     using ElementType        = typename TMesh::ElementType;
     using QuadratureRuleType = typename ElementType::template QuadratureType<QuadratureOrder>;
     auto const wg            = common::ToEigen(QuadratureRuleType::weights);
-    detJe.colwise() *= wg;
+    detJe.array().colwise() *= wg.array();
     return detJe;
+}
+
+/**
+ * @brief
+ *
+ * @tparam QuadratureOrder
+ * @tparam TMesh
+ * @tparam TDerivedDetJe
+ * @param mesh
+ * @param detJe
+ * @return MatrixX
+ */
+template <int QuadratureOrder, CMesh TMesh, class TDerivedDetJe>
+MatrixX InnerProductWeights(TMesh const& mesh, Eigen::MatrixBase<TDerivedDetJe> const& detJe)
+{
+    using ElementType        = typename TMesh::ElementType;
+    using QuadratureRuleType = typename ElementType::template QuadratureType<QuadratureOrder>;
+    auto const wg            = common::ToEigen(QuadratureRuleType::weights);
+    if (wg.size() != detJe.rows() or detJe.cols() != mesh.E.cols())
+    {
+        std::string const what = fmt::format(
+            "detJe of invalid dimensions {}x{}, expected {}x{}",
+            detJe.rows(),
+            detJe.cols(),
+            wg.size(),
+            mesh.E.cols());
+        throw std::invalid_argument(what);
+    }
+    MatrixX Ihat = detJe;
+    Ihat.array().colwise() *= wg.array();
+    return Ihat;
 }
 
 template <CElement TElement, class TDerivedX, class TDerivedx>
