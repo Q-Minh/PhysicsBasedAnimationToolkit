@@ -89,8 +89,16 @@ if __name__ == "__main__":
     vm.add_scalar_quantity("Order 1 harmonic solution", u1ref, enabled=True, cmap="turbo")
     vm.add_scalar_quantity("Order 2 harmonic solution", u2ref, cmap="turbo")
     niso = 15
-    Viso1, Eiso1 = igl.isolines(Vrefined, Frefined, u1ref, niso)
-    Viso2, Eiso2 = igl.isolines(Vrefined, Frefined, u2ref, niso)
+    def isolines(V, F, u, niso):
+        # Code for libigl 2.5.1
+        diso = (u.max() - u.min()) / (niso+2)
+        isovalues = np.array([(i+1)*diso for i in range(niso)])
+        Viso, Eiso, Iiso = igl.isolines(V, F, u, isovalues)
+        # Uncomment for libigl 2.4.1
+        # Viso1, Eiso1 = igl.isolines(V, F, u, niso)
+        return Viso, Eiso
+    Viso1, Eiso1 = isolines(Vrefined, Frefined, u1ref, niso)
+    Viso2, Eiso2 = isolines(Vrefined, Frefined, u2ref, niso)
     cn1 = ps.register_curve_network("Order 1 contours", Viso1, Eiso1)
     cn1.set_radius(0.002)
     cn1.set_color((0, 0, 0))

@@ -74,6 +74,24 @@ def jacobian_determinants(mesh, quadrature_order: int = 1) -> np.ndarray:
     return function_(mesh, quadrature_order)
 
 
+def inner_product_weights(mesh, quadrature_order: int = 1) -> np.ndarray:
+    """Computes weights such that element integrals may be computed on reference element quantities, i.e. weights weg = wg(g) * detJe(g,e)
+
+    Args:
+        mesh: The FEM mesh
+        quadrature_order (int, optional): Specifies the polynomial quadrature 
+        to use, such that the jacobian determinants and quadrature weights are computed at each quadrature 
+        point. Defaults to 1.
+
+    Returns:
+        np.ndarray: |#elements * #quadrature points| vector of inner product weights
+    """
+    mesh_name = _mesh_type_name(mesh)
+    function_name = f"inner_product_weights_{mesh_name}"
+    function_ = getattr(_fem, function_name)
+    return function_(mesh, quadrature_order)
+
+
 def reference_positions(mesh, E: np.ndarray, X: np.ndarray, max_iterations: int = 5, epsilon: float = 1e-10):
     """Computes reference positions of domain positions X in corresponding elements E, using Gauss-Newton.
 
@@ -111,6 +129,23 @@ def integrated_shape_functions(mesh, detJe: np.ndarray, quadrature_order: int = 
     function_name = f"integrated_shape_functions_{mesh_name}"
     function_ = getattr(_fem, function_name)
     return function_(mesh, detJe, quadrature_order)
+
+
+def shape_function_matrix(mesh, quadrature_order: int = 1):
+    """Computes the matrix N of shape functions values evaluated at element quadrature points 
+    such that N.T @ u evaluates the field u at all element quadrature points
+
+    Args:
+        mesh: The FEM mesh
+        quadrature_order (int, optional): Polynomial quadrature rule to use in each element. Defaults to 1.
+
+    Returns:
+        scipy.sparse.csr_matrix: |#elements * #quadrature points|x|#nodes| sparse matrix
+    """
+    mesh_name = _mesh_type_name(mesh)
+    function_name = f"shape_function_matrix_{mesh_name}"
+    function_ = getattr(_fem, function_name)
+    return function_(mesh, quadrature_order)
 
 
 def shape_function_gradients(mesh, quadrature_order: int = 1) -> np.ndarray:
