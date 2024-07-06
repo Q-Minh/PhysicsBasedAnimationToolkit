@@ -99,11 +99,11 @@ inline CSCMatrix Gradient<TMesh, QuadratureOrder>::ToMatrix() const
     {
         auto const nodes = mesh.E.col(e);
         auto const Ge    = GNe.block<kNodesPerElement, kQuadPts * kDims>(0, e * kQuadPts * kDims);
-        for (auto g = 0; g < kQuadPts; ++g)
+        for (auto d = 0; d < kDims; ++d)
         {
-            for (auto d = 0; d < kDims; ++d)
+            for (auto g = 0; g < kQuadPts; ++g)
             {
-                for (auto j = 0; j < Ge.rows(); ++j)
+                for (auto j = 0; j < kNodesPerElement; ++j)
                 {
                     auto const ni = static_cast<SparseIndex>(
                         d * numberOfElementQuadraturePoints + e * kQuadPts + g);
