@@ -1,0 +1,6 @@
+meshio
+libigl
+polyscope
+numpy
+scipy
+pbatoolkit
