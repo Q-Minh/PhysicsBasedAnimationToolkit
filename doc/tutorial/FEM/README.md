@@ -276,11 +276,11 @@ $$
 where $q$ is the number of quadrature points and $n$ is the number of FEM nodes. Compact storage of $N_e$ would store only the shape function values $`\begin{bmatrix} N_l^e(X(\xi_g)) \end{bmatrix} \in \mathbb{R}^{q \times n^e}`$ in a dense matrix using local node indexing $l$. These local dense matrices are often named using the prefix "element", as in "element shape function matrix", or "element hessian" and so on and so forth.
 
 Our full shape function matrix $N \in \mathbb{R}^{|E|q \times n}$ is thus sparse, and its application to $u$ 
-computes $u(X^e(\xi_g))$, yielding a vector $N u \in \mathbb{|E|q \times 1}$.
+computes $u(X^e(\xi_g))$, yielding a vector $N u \in \mathbb{R}^{|E|q \times 1}$.
 
 #### Quadrature matrix
 
-We introduce a second operator that will enable computing integrals of FEM quantities using matrix operations. Recall from the section on spatial integration that using numerical quadrature, any integral in any element $e$ with polynomial integrands of order $p$ can be computed exactly given the quadrature weights $w_g$ and the jacobian determinants $|\det \nabla_\xi X(\xi_g)|$ for a polynomial quadrature rule $(w_g, \xi_g)$ of order greater than or equal to $p$. Hence, any integrand evaluated at $X(\xi_g)$ simply needs to be multiplied by $w_g |\det \nabla_\xi X(\xi_g)|$ to be integrated. This hints the diagonal matrix $Q \in \mathbb{R}^{|E|q \times |E|q}$, which we will name the "Quadrature" matrix, whose diagonal blocks are 
+We introduce a second operator that will enable computing integrals of FEM quantities using matrix operations. Recall from the section on spatial integration that using numerical quadrature, any integral in any element $e$ with polynomial integrands of order $p$ can be computed exactly given the quadrature weights $w_g$ and the jacobian determinants $|\det \nabla_\xi X(\xi_g)|$ for a polynomial quadrature rule $(w_g, \xi_g)$ of order greater than or equal to $p$. Hence, any integrand evaluated at $X(\xi_g)$ simply needs to be multiplied by $w_g |\det \nabla_\xi X(\xi_g)|$ to be integrated. This hints at the diagonal matrix $Q \in \mathbb{R}^{|E|q \times |E|q}$, which we will name the "Quadrature" matrix, whose diagonal blocks are 
 
 $$
 Q_e = \begin{bmatrix}
@@ -292,7 +292,9 @@ $$
 
 for every element $e$.
 
-This quadrature matrix $Q$ is essentially a discrete analog of the inner product $\langle u, v \rangle = \int_\Omega u v \partial \Omega$ of functions $u, v$ defined on the FEM mesh. For instance, the volume of each domain can be computed easily by the inner product of the unit function, i.e. $\langle 1, 1 \rangle = \int_\Omega \partial \Omega = 1_{|E|q}^T Q 1_{|E|q}$, where we have used the vector of all ones $1_{|E|q} \in \mathbb{R}^{|E|q}$. The volume of individual elements $e$ can similarly be computed by the same operation, restricted to submatrices of $Q$ and subvectors of $1_{|E|q}$ corresponding to $e$ only.
+This quadrature matrix $Q$ is essentially a discrete analog of the inner product $\langle u, v \rangle = \int_\Omega u v \partial \Omega$ of functions $u, v$ defined on the FEM mesh. For instance, the volume of each domain can be computed easily by the inner product of the unit function, i.e. $\langle 1, 1 \rangle = \int_\Omega \partial \Omega = 1_{|E|q}^T Q 1_{|E|q}$, where we have used the vector of all ones $1_{|E|q} \in \mathbb{R}^{|E|q}$. The volume of individual elements $e$ can similarly be computed as $\left[ 
+I_{|E| \times |E|} \otimes 1_{q} \right]^T Q \left[ 
+I_{|E| \times |E|} \otimes 1_{q} \right] $, where $\otimes$ is the [Kronecker product](https://en.wikipedia.org/wiki/Kronecker_product).
 
 Galerkin projections $\langle f, \phi \rangle$ also become easy to compute. Consider some function $f$ discretized at element quadrature points into matrix $F$, then we can compute its Galerkin projection as $N^T Q F$. 
 
@@ -393,7 +395,7 @@ G^d
 \end{bmatrix} \in \mathbb{R}^{d|E|q \times n} .
 $$ 
 
-The application of $G$ onto $u$ thus computes each spatial derivative of $u$ at element quadrature points. Each $G^k u$ computes the $k^\text{th}$ spatial derivative at all element quadrature points, and each $G^k_e u$ computes the $k^\text{th}$ spatial derivative at element $e$'s quadrature points.
+The application of $G$ onto $u$ thus computes each spatial derivative of $u$ at element quadrature points. Each $G^k u$ computes the $k^\text{th}$ spatial derivative of $u(X)$ at all element quadrature points, and each $G^k_e u$ computes its $k^\text{th}$ spatial derivative at element $e$'s quadrature points.
 
 If the gradient appears in the problem (i.e. PDE or other) itself, and the problem has been closed under Galerkin projection, we must now compute the "Galerkin" version of the gradient, i.e. $\int_{\Omega} \nabla u(X) \phi_i(X) \partial \Omega = \langle \nabla u, \phi_i \rangle$. By approximation and linearity of the gradient operator, such an expression becomes 
 
@@ -404,10 +406,10 @@ $$
 If $\phi_i$ has order $p$, then $\phi_i \nabla \phi_j$ has order $2p - 1$. Thus, armed with the quadrature matrix $Q$ and shape function matrix $N$ of quadrature order $2p - 1$, 
 
 $$
-N^T \left[ I_{d \times d} \otimes Q \right] G u = \bar{G} u
+\left[ I_{d \times d} \otimes N^T Q \right] G u = \bar{G} u
 $$
 
-computes the gradient in the Galerkin sense, where $I_{d \times d}$ is the identity matrix, $\otimes$ is the [Kronecker product](https://en.wikipedia.org/wiki/Kronecker_product), and $\bar{G}$ is the Galerkin projected gradient operator. Its entries are 
+computes the gradient in the Galerkin sense, where $I_{d \times d}$ is the identity matrix and $\bar{G}$ is the Galerkin projected gradient operator. Its entries are 
 
 $$
 \bar{G}^k_{ij} = \int_{\Omega} \phi_i(X) \frac{\partial \phi_j(X)}{\partial X_k} \partial \Omega 
@@ -471,7 +473,7 @@ $$
 computes its divergence. However, in the previous construction of the Laplacian, or more precisely, the symmetric part of the Galerkin projected Laplacian, we had that 
 
 $$
-L = -G^T \left[ I_{d \times d} \otimes Q \right] G = \left[ -D Q \right] G ,
+L = -G^T \left[ I_{d \times d} \otimes Q \right] G = \left[ -D \left(I_{d \times d} \otimes Q \right) \right] G ,
 $$
 
 where the divergence operator $D$ must act on the gradient $G$ of an FEM function through integration. As such, when solving problems involving divergence, such as least-squares gradient matching problems, i.e. the Poisson problem
