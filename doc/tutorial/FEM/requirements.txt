@@ -4,3 +4,4 @@ polyscope
 numpy
 scipy
 pbatoolkit
+sympy
