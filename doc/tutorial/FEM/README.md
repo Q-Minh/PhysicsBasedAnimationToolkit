@@ -564,4 +564,3 @@ While FEM remains an invaluable tool for scientific computing, it is not without
 3. [Harmonic solutions](./W3.ipynb)
 4. [Least squares and Poisson problems](./W4.ipynb)
 5. [Lagrange elements](./W5.ipynb)
-6. [Operator assembly](./W6.ipynb)

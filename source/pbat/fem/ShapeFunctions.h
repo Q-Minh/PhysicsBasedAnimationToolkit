@@ -47,13 +47,14 @@ ShapeFunctions()
 template <int QuadratureOrder, CMesh TMesh>
 CSRMatrix ShapeFunctionMatrix(TMesh const& mesh)
 {
-    using ElementType = typename TMesh::ElementType;
-    auto const Ng = ShapeFunctions<ElementType, QuadratureOrder>();
-    auto const numberOfNodes = mesh.X.cols();
-    auto const numberOfElements = mesh.E.cols();
-    auto const numberOfQuadPoints = Ng.cols();
-    auto const m = numberOfQuadPoints*numberOfElements;
-    auto const n = numberOfNodes;
+    PBAT_PROFILE_NAMED_SCOPE("fem.ShapeFunctionMatrix");
+    using ElementType               = typename TMesh::ElementType;
+    auto const Ng                   = ShapeFunctions<ElementType, QuadratureOrder>();
+    auto const numberOfNodes        = mesh.X.cols();
+    auto const numberOfElements     = mesh.E.cols();
+    auto const numberOfQuadPoints   = Ng.cols();
+    auto const m                    = numberOfQuadPoints * numberOfElements;
+    auto const n                    = numberOfNodes;
     auto constexpr kNodesPerElement = ElementType::kNodes;
     CSRMatrix N(m, n);
     N.reserve(IndexVectorX::Constant(m, kNodesPerElement));
@@ -62,11 +63,11 @@ CSRMatrix ShapeFunctionMatrix(TMesh const& mesh)
         auto const nodes = mesh.E.col(e);
         for (auto g = 0; g < numberOfQuadPoints; ++g)
         {
-            auto const row = e*numberOfQuadPoints + g;
+            auto const row = e * numberOfQuadPoints + g;
             for (auto i = 0; i < Ng.rows(); ++i)
             {
-                auto const col = nodes(i);
-                N.insert(row, col) = Ng(i,g);
+                auto const col     = nodes(i);
+                N.insert(row, col) = Ng(i, g);
             }
         }
     }
@@ -262,6 +263,42 @@ MatrixX ShapeFunctionGradients(TMesh const& mesh)
             auto constexpr kStride = MeshType::kDims * QuadratureRuleType::kPoints;
             GNe.block<kNodesPerElement, MeshType::kDims>(0, e * kStride + g * MeshType::kDims) = GP;
         }
+    });
+    return GNe;
+}
+
+/**
+ * @brief Computes nodal shape function gradients at reference points Xi.
+ * @tparam TDerivedE
+ * @tparam TDerivedXi
+ * @tparam TMesh
+ * @param mesh
+ * @param E
+ * @param Xi
+ * @return
+ */
+template <CMesh TMesh, class TDerivedE, class TDerivedXi>
+MatrixX ShapeFunctionGradientsAt(
+    TMesh const& mesh,
+    Eigen::DenseBase<TDerivedE> const& E,
+    Eigen::DenseBase<TDerivedXi> const& Xi)
+{
+    PBAT_PROFILE_NAMED_SCOPE("fem.ShapeFunctionGradientsAt");
+    using MeshType                      = TMesh;
+    using ElementType                   = typename MeshType::ElementType;
+    using AffineElementType             = typename ElementType::AffineBaseType;
+    auto const numberOfEvaluationPoints = Xi.cols();
+    auto constexpr kNodesPerElement     = ElementType::kNodes;
+    MatrixX GNe(kNodesPerElement, numberOfEvaluationPoints * MeshType::kDims);
+    tbb::parallel_for(Index{0}, Index{numberOfEvaluationPoints}, [&](Index g) {
+        auto const e                    = E(g);
+        auto const nodes                = mesh.E.col(e);
+        auto const vertices             = nodes(ElementType::Vertices);
+        auto constexpr kRowsJ           = MeshType::kDims;
+        auto constexpr kColsJ           = AffineElementType::kNodes;
+        Matrix<kRowsJ, kColsJ> const Ve = mesh.X(Eigen::all, vertices);
+        auto const GP                   = ShapeFunctionGradients<ElementType>(Xi.col(g), Ve);
+        GNe.block<kNodesPerElement, MeshType::kDims>(0, g * MeshType::kDims) = GP;
     });
     return GNe;
 }

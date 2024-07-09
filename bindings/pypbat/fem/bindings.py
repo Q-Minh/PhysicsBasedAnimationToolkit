@@ -967,6 +967,8 @@ def bind_mesh(mesh_types: list):
     headers = []
     sources = []
 
+    max_qorder = 8
+
     for mesh_type, mesh_type_py, mesh_includes, mesh_type_filename in mesh_types:
         header = f"{autogendir}/{mesh_type_filename}.h"
         with open(header, 'w', encoding="utf-8") as file:
@@ -997,6 +999,7 @@ void BindMesh_{mesh_type_py}(pybind11::module& m);
 
 {mesh_includes}
 #include <pbat/fem/Mesh.h>
+#include <pbat/common/ConstexprFor.h>
 #include <pybind11/eigen.h>
 #include <string>
 
@@ -1010,6 +1013,16 @@ void BindMesh_{mesh_type_py}(pybind11::module& m)
     using MeshType = {mesh_type};
     std::string const elementTypeName = "{str(mesh_type_py).split("_")[1].capitalize()}";
     std::string const className = "{mesh_type_py}";
+        
+    auto constexpr kMaxQuadratureOrder = {max_qorder};
+    auto const throw_bad_quad_order    = [&](int qorder) {{
+        std::string const what = fmt::format(
+            "Invalid quadrature order={{}}, supported orders are [1,{{}}]",
+            qorder,
+            kMaxQuadratureOrder);
+        throw std::invalid_argument(what);
+    }};
+        
     pyb::class_<MeshType>(m, className.data())
         .def(pyb::init<>())
         .def(
@@ -1017,6 +1030,35 @@ void BindMesh_{mesh_type_py}(pybind11::module& m)
                 init<Eigen::Ref<MatrixX const> const&, Eigen::Ref<IndexMatrixX const> const&>(),
             pyb::arg("V"),
             pyb::arg("C"))
+        .def("quadrature_points", 
+            [&](MeshType const& self, int qorder) -> MatrixX {{
+                MatrixX R;
+                pbat::common::ForRange<1, kMaxQuadratureOrder + 1>([&]<auto QuadratureOrder>() {{
+                    if (qorder == QuadratureOrder)
+                    {{
+                        R = self.QuadraturePoints<QuadratureOrder>();
+                    }}
+                }});
+                if (R.size() == 0)
+                    throw_bad_quad_order(qorder);
+                return R;
+            }},
+            pyb::arg("quadrature_order"))
+        .def(
+            "quadrature_weights",
+            [&](MeshType const& self, int qorder) -> VectorX {{
+                VectorX R;
+                pbat::common::ForRange<1, kMaxQuadratureOrder + 1>([&]<auto QuadratureOrder>() {{
+                    if (qorder == QuadratureOrder)
+                    {{
+                        R = self.QuadratureWeights<QuadratureOrder>();
+                    }}
+                }});
+                if (R.size() == 0)
+                    throw_bad_quad_order(qorder);
+                return R;
+            }},
+            pyb::arg("quadrature_order"))
         .def_property_readonly_static(
             "dims",
             [](pyb::object /*self*/) {{ return MeshType::kDims; }})
@@ -1199,6 +1241,18 @@ void BindShapeFunctions_{mesh_type_py}(pybind11::module& m)
             return pbat::fem::ShapeFunctionsAt<typename MeshType::ElementType>(Xi);
         }}, 
         pyb::arg("mesh"),
+        pyb::arg("Xi"));
+        
+    std::string const shapeFunctionGradientsAtName = "shape_function_gradients_at_" + meshTypeName;
+    m.def(
+        shapeFunctionGradientsAtName.data(),
+        [&](MeshType const& mesh, 
+            Eigen::Ref<IndexVectorX const> const& E, 
+            Eigen::Ref<MatrixX const> const& Xi) -> MatrixX {{
+            return pbat::fem::ShapeFunctionGradientsAt(mesh, E, Xi);
+        }}, 
+        pyb::arg("mesh"),
+        pyb::arg("E"),
         pyb::arg("Xi"));
         
     std::string const shapeFunctionMatrixName = "shape_function_matrix_" + meshTypeName;

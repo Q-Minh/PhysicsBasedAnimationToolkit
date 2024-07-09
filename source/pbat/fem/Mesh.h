@@ -33,6 +33,21 @@ struct Mesh
      */
     Mesh(Eigen::Ref<MatrixX const> const& V, Eigen::Ref<IndexMatrixX const> const& C);
 
+    /**
+     * @brief Compute quadrature points in domain space for on this mesh.
+     * @tparam QuadratureOrder
+     * @return
+     */
+    template <int QuadratureOrder>
+    MatrixX QuadraturePoints() const;
+    /**
+     * @brief Obtain quadrature weights on the reference element of this mesh
+     * @tparam QuadratureOrder
+     * @return
+     */
+    template <int QuadratureOrder>
+    Vector<TElement::template QuadratureType<QuadratureOrder>::kPoints> QuadratureWeights() const;
+
     MatrixX X;      ///< Dims x |#nodes| nodal positions
     IndexMatrixX E; ///< Element::Nodes x |#elements| element nodal indices
 };
@@ -180,6 +195,43 @@ Mesh<TElement, Dims>::Mesh(
     }
     // Collect node positions
     X = common::ToEigen(nodes);
+}
+
+template <CElement TElement, int Dims>
+template <int QuadratureOrder>
+inline MatrixX Mesh<TElement, Dims>::QuadraturePoints() const
+{
+    using AffineElementType     = typename ElementType::AffineBaseType;
+    using QuadratureRuleType    = typename ElementType::template QuadratureType<QuadratureOrder>;
+    auto constexpr kQuadPts     = QuadratureRuleType::kPoints;
+    auto const numberOfElements = E.cols();
+    auto const XgRef            = common::ToEigen(QuadratureRuleType::points)
+                           .reshaped(QuadratureRuleType::kDims + 1, kQuadPts);
+    MatrixX Xg(kDims, numberOfElements * kQuadPts);
+    for (auto e = 0; e < numberOfElements; ++e)
+    {
+        auto const nodes                = E.col(e);
+        auto const vertices             = nodes(ElementType::Vertices);
+        auto constexpr kRowsJ           = kDims;
+        auto constexpr kColsJ           = AffineElementType::kNodes;
+        Matrix<kRowsJ, kColsJ> const Ve = X(Eigen::all, vertices);
+        for (auto g = 0; g < kQuadPts; ++g)
+        {
+            Xg.col(e * kQuadPts + g) = Ve * XgRef;
+        }
+    }
+    return Xg;
+}
+
+template <CElement TElement, int Dims>
+template <int QuadratureOrder>
+inline Vector<TElement::template QuadratureType<QuadratureOrder>::kPoints>
+Mesh<TElement, Dims>::QuadratureWeights() const
+{
+    using QuadratureRuleType  = typename ElementType::template QuadratureType<QuadratureOrder>;
+    auto constexpr kQuadPts   = QuadratureRuleType::kPoints;
+    Vector<kQuadPts> const wg = common::ToEigen(QuadratureRuleType::weights);
+    return wg;
 }
 
 } // namespace fem

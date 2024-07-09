@@ -178,10 +178,27 @@ def shape_functions_at(mesh, Xi: np.ndarray):
         Xi (np.ndarray): Positions in element reference space
 
     Returns:
-        np.ndarray: |#element nodes|x|Xi.shape[0]| matrix of nodal shape function values at reference positions Xi
+        np.ndarray: |#element nodes|x|Xi.shape[1]| matrix of nodal shape function values at reference positions Xi
     """
     mesh_name = _mesh_type_name(mesh)
     function_name = f"shape_functions_at_{mesh_name}"
+    function_ = getattr(_fem, function_name)
+    return function_(mesh, Xi)
+
+
+def shape_function_gradients_at(mesh, E: np.ndarray, Xi: np.ndarray):
+    """Computes shape function gradients at reference positions Xi (i.e. positions in element space) in elements E for the given mesh.
+
+    Args:
+        mesh: The FEM mesh
+        E: Elements in which columns of Xi reside
+        Xi (np.ndarray): Positions in element reference space
+
+    Returns:
+        np.ndarray: |#element nodes|x|Xi.shape[1] * mesh.dims| matrix of nodal shape function gradients at reference positions Xi
+    """
+    mesh_name = _mesh_type_name(mesh)
+    function_name = f"shape_function_gradients_at_{mesh_name}"
     function_ = getattr(_fem, function_name)
     return function_(mesh, Xi)
 
