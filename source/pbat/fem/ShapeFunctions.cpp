@@ -132,3 +132,49 @@ TEST_CASE("[fem] ShapeFunctionGradients")
     auto constexpr eps                    = 1e-14;
     CHECK_LE(GPerrorMagnitude, eps);
 }
+
+TEST_CASE("[fem] ShapeFunctionGradientsAt")
+{
+    using namespace pbat;
+
+    // Cube mesh
+    MatrixX V(3, 8);
+    IndexMatrixX C(4, 5);
+    // clang-format off
+    V << 0., 1., 0., 1., 0., 1., 0., 1.,
+            0., 0., 1., 1., 0., 0., 1., 1.,
+            0., 0., 0., 0., 1., 1., 1., 1.;
+    C << 0, 3, 5, 6, 0,
+            1, 2, 4, 7, 5,
+            3, 0, 6, 5, 3,
+            5, 6, 0, 3, 6;
+    // clang-format on
+    common::ForRange<1, 4>([&]<auto PolynomialOrder>() {
+        auto constexpr kDims = 3;
+        using ElementType    = fem::Tetrahedron<PolynomialOrder>;
+        using MeshType       = fem::Mesh<ElementType, kDims>;
+        MeshType const mesh{V, C};
+        auto constexpr kQuadratureOrder = PolynomialOrder;
+        using QuadratureRuleType = typename ElementType::template QuadratureType<kQuadratureOrder>;
+        auto constexpr kQuadPts  = QuadratureRuleType::kPoints;
+        auto const numberOfElements = mesh.E.cols();
+        MatrixX Xi(kDims, kQuadPts * numberOfElements);
+        IndexVectorX Ei(kQuadPts * numberOfElements);
+        auto const Xg = common::ToEigen(QuadratureRuleType::points)
+                            .reshaped(QuadratureRuleType::kDims + 1, QuadratureRuleType::kPoints)
+                            .template bottomRows<ElementType::kDims>();
+        for (auto e = 0; e < numberOfElements; ++e)
+        {
+            Ei.segment<kQuadPts>(e * kQuadPts).setConstant(e);
+            for (auto g = 0; g < kQuadPts; ++g)
+            {
+                Xi.col(e * kQuadPts + g) = Xg.col(g);
+            }
+        }
+        MatrixX const GNe         = fem::ShapeFunctionGradientsAt(mesh, Ei, Xi);
+        MatrixX const GNeExpected = fem::ShapeFunctionGradients<kQuadratureOrder>(mesh);
+        Scalar const GNeError     = (GNe - GNeExpected).squaredNorm();
+        Scalar constexpr zero     = 1e-15;
+        CHECK_LE(GNeError, zero);
+    });
+}
