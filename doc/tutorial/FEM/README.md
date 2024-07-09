@@ -464,7 +464,7 @@ $$
 
 #### Divergence matrix
 
-Interestingly, we can discretize the [divergence](https://en.wikipedia.org/wiki/Divergence) operator by simply transposing the gradient matrix, i.e. $D = G^T \in \mathbb{R}^{n \times d|E|q}$. Given some vector field $F(X)$ discretized at element quadrature points $X(\xi_g)$, where each scalar field component $F_k(X)$ of $F(X)$ has been discretized into $F_k \in \mathbb{|E|q \times 1}$ and stacked into $F \in \mathbb{d|E|q \times 1}$, 
+Interestingly, we can discretize the [divergence](https://en.wikipedia.org/wiki/Divergence) operator by simply transposing the gradient matrix, i.e. $D = G^T \in \mathbb{R}^{n \times d|E|q}$. Given some vector field $F(X)$ discretized at element quadrature points $X(\xi_g)$, where each scalar field component $F_k(X)$ of $F(X)$ has been discretized into $F_k \in \mathbb{R}^{|E|q \times 1}$ and stacked into $F \in \mathbb{R}^{d|E|q \times 1}$, 
 
 $$
 DF = G^T F \in \mathbb{R}^{n \times 1}
