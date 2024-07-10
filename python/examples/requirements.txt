@@ -3,3 +3,4 @@ libigl==v2.4.1
 polyscope
 numpy
 scipy
+ilupp

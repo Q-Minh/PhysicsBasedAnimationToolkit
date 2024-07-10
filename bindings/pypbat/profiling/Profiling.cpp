@@ -12,17 +12,17 @@ namespace pbat {
 namespace py {
 namespace profiling {
 
-template <class... Args>
-inline void BindProfile(pybind11::module& m)
-{
-    using TupleType = std::tuple<Args...>;
-    m.def(
-        "profile",
-        [](std::string const& zoneName, std::function<TupleType()> const& f) -> TupleType {
-            return pbat::profiling::Profile(zoneName, f);
-        },
-        "Profile input function evaluation");
-}
+// template <class... Args>
+// inline void BindProfile(pybind11::module& m)
+// {
+//     using TupleType = std::tuple<Args...>;
+//     m.def(
+//         "profile",
+//         [](std::string const& zoneName, std::function<TupleType()> const& f) -> TupleType {
+//             return pbat::profiling::Profile(zoneName, f);
+//         },
+//         "Profile input function evaluation");
+// }
 
 void Bind(pybind11::module& m)
 {
@@ -44,21 +44,21 @@ void Bind(pybind11::module& m)
         },
         "Profile input function evaluation");
 
-    // As a syntactic sugar thing for the Python interface, generate bindings for probable return
-    // types. Otherwise, just use the void *f() overload of profile, but might not be super
-    // 'pythonic'.
+    // // As a syntactic sugar thing for the Python interface, generate bindings for probable return
+    // // types. Otherwise, just use the void *f() overload of profile, but might not be super
+    // // 'pythonic'.
 
-    // These return types typically result from linear solves, or dense matrix decompositions.
-    BindProfile<MatrixX>(m);
-    BindProfile<MatrixX, MatrixX>(m);
-    BindProfile<MatrixX, MatrixX, MatrixX>(m);
-    BindProfile<MatrixX, MatrixX, MatrixX, MatrixX>(m);
+    // // These return types typically result from linear solves, or dense matrix decompositions.
+    // BindProfile<MatrixX>(m);
+    // BindProfile<MatrixX, MatrixX>(m);
+    // BindProfile<MatrixX, MatrixX, MatrixX>(m);
+    // BindProfile<MatrixX, MatrixX, MatrixX, MatrixX>(m);
 
-    // These return types might result from graph partitionings, or graph constructions
-    BindProfile<IndexVectorX>(m);
-    BindProfile<IndexMatrixX>(m);
-    BindProfile<CSCMatrix>(m);
-    BindProfile<CSRMatrix>(m);
+    // // These return types might result from graph partitionings, or graph constructions
+    // BindProfile<IndexVectorX>(m);
+    // BindProfile<IndexMatrixX>(m);
+    // BindProfile<CSCMatrix>(m);
+    // BindProfile<CSRMatrix>(m);
 }
 
 } // namespace profiling

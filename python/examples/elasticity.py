@@ -3,6 +3,7 @@ import pbatoolkit.fem
 import pbatoolkit.geometry
 import pbatoolkit.profiling
 import pbatoolkit.math.linalg
+import ilupp
 import meshio
 import numpy as np
 import scipy as sp
@@ -24,7 +25,7 @@ if __name__ == "__main__":
     parser.add_argument("-n", "--poisson-ratio", help="Poisson's ratio", type=float,
                         dest="nu", default=0.45)
     args = parser.parse_args()
-    
+
     # Construct FEM quantities for simulation
     imesh = meshio.read(args.input)
     V, C = imesh.points, imesh.cells_dict["tetra"]
@@ -78,8 +79,9 @@ if __name__ == "__main__":
 
     # Setup linear solver
     Hdd = hep.to_matrix()[:, dofs].tocsr()[dofs, :]
-    Hddinv = pbat.math.linalg.ldlt(Hdd)
-    Hddinv.analyze(Hdd)
+    Mdd = M[:, dofs].tocsr()[dofs, :]
+    Addinv = pbat.math.linalg.ldlt(Hdd)
+    Addinv.analyze(Hdd)
 
     ps.set_verbosity(0)
     ps.set_up_dir("z_up")
@@ -92,14 +94,32 @@ if __name__ == "__main__":
     pc = ps.register_point_cloud("Dirichlet", mesh.X[:, vdbc].T)
     dt = 0.01
     animate = False
+    use_direct_solver = False
+    cg_fill_in = 0.01
+    cg_drop_tolerance = 1e-4
+    cg_residual = 1e-5
+    cg_maxiter = 100
     dx = np.zeros(n)
 
     profiler = pbat.profiling.Profiler()
 
     def callback():
-        global x, v, dx, hep, dt, M, Minv, f, animate, step, profiler
+        global x, v, dx, hep, dt, M, Minv, f
+        global cg_fill_in, cg_drop_tolerance, cg_residual, cg_maxiter
+        global animate, step, use_direct_solver
+        global profiler
+
         changed, dt = imgui.InputFloat("dt", dt)
+        changed, cg_fill_in = imgui.InputFloat(
+            "IC column fill in", cg_fill_in, format="%.4f")
+        changed, cg_drop_tolerance = imgui.InputFloat(
+            "IC drop tolerance", cg_drop_tolerance, format="%.8f")
+        changed, cg_residual = imgui.InputFloat(
+            "PCG residual", cg_residual, format="%.8f")
+        changed, cg_maxiter = imgui.InputInt(
+            "PCG max iterations", cg_maxiter)
         changed, animate = imgui.Checkbox("animate", animate)
+        changed, use_direct_solver = imgui.Checkbox("Use direct solver", use_direct_solver)
         step = imgui.Button("step")
 
         if animate or step:
@@ -108,13 +128,32 @@ if __name__ == "__main__":
             hep.compute_element_elasticity(x, grad=True, hess=True)
             gradU, HU = hep.to_vector(), hep.to_matrix()
             dt2 = dt**2
-            xtilde = x + dt*v + dt2*a
-            A = M + dt2 * HU
-            b = -(M @ (x - xtilde) + dt2*gradU)
-            Add = A.tocsc()[:, dofs].tocsr()[dofs, :]
-            bd = b[dofs]
-            Hddinv.factorize(Add)
-            dx[dofs] = Hddinv.solve(bd).squeeze()
+
+            bd, Add = None, None
+            def setup():
+                global bd, Add
+                xtilde = x + dt*v + dt2*a
+                A = M + dt2 * HU
+                b = -(M @ (x - xtilde) + dt2*gradU)
+                Add = A.tocsc()[:, dofs].tocsr()[dofs, :]
+                bd = b[dofs]
+
+            profiler.profile("Setup Linear System", setup)
+
+            def solve():
+                global dx, Add, bd
+                global cg_fill_in, cg_drop_tolerance, cg_maxiter, cg_residual
+                global use_direct_solver
+                if use_direct_solver:
+                    Addinv.factorize(Add)
+                    dx[dofs] = Addinv.solve(bd).squeeze()
+                else:
+                    P = ilupp.ICholTPreconditioner(
+                        Add, add_fill_in=int(Add.shape[0]*cg_fill_in), threshold=cg_drop_tolerance)
+                    dx[dofs], cginfo = sp.sparse.linalg.cg(
+                        Add, bd, rtol=cg_residual, maxiter=cg_maxiter, M=P)
+
+            profiler.profile("Solve Linear System", solve)
             v = dx / dt
             x = x + dx
             profiler.end_frame("Physics")
