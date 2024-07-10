@@ -142,7 +142,7 @@ TEST_CASE("[fem] Mesh quadrature points")
             using MeshType       = fem::Mesh<ElementType, kDims>;
 
             MeshType mesh{V, E};
-            MatrixX const Xg = mesh.QuadraturePoints<kQuadratureOrder>();
+            MatrixX const Xg = mesh.template QuadraturePoints<kQuadratureOrder>();
             using QuadratureRuleType =
                 typename ElementType::template QuadratureType<kQuadratureOrder>;
             auto constexpr kQuadPts = QuadratureRuleType::kPoints;
