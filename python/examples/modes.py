@@ -38,6 +38,7 @@ if __name__ == "__main__":
     detJeM = pbat.fem.jacobian_determinants(mesh, quadrature_order=2)
     M = pbat.fem.mass_matrix(mesh, detJeM, rho=args.rho,
                              dims=3, quadrature_order=2).to_matrix()
+
     detJeU = pbat.fem.jacobian_determinants(mesh, quadrature_order=1)
     GNeU = pbat.fem.shape_function_gradients(mesh, quadrature_order=1)
     Y = np.full(mesh.E.shape[1], args.Y)
@@ -47,7 +48,9 @@ if __name__ == "__main__":
     hep.precompute_hessian_sparsity()
     hep.compute_element_elasticity(x)
     U, gradU, HU = hep.eval(), hep.to_vector(), hep.to_matrix()
-    leigs, Veigs = sp.sparse.linalg.eigsh(HU, k=args.modes, M=M, which='SM')
+    sigma = -1e-5
+    leigs, Veigs = sp.sparse.linalg.eigsh(HU, k=args.modes, M=M, sigma=-1e-5, which='LM')
+    Veigs = Veigs / sp.linalg.norm(Veigs, axis=0, keepdims=True)
     leigs[leigs <= 0] = 0
     w = np.sqrt(leigs)
 
@@ -65,8 +68,8 @@ if __name__ == "__main__":
     def callback():
         global mode, c, k
         changed, mode = imgui.InputInt("mode", mode)
-        changed, c = imgui.SliderFloat("c", c, v_min=0, v_max=10)
-        changed, k = imgui.SliderFloat("k", k, v_min=0, v_max=1)
+        changed, c = imgui.InputFloat("c", c)
+        changed, k = imgui.InputFloat("k", k)
 
         t = time.time() - t0
         X = mesh.X.T + signal(w[mode], Veigs[:, mode],
