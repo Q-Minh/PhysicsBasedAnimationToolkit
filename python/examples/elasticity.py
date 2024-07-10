@@ -95,6 +95,7 @@ if __name__ == "__main__":
     dt = 0.01
     animate = False
     use_direct_solver = False
+    newton_maxiter = 1
     cg_fill_in = 0.01
     cg_drop_tolerance = 1e-4
     cg_residual = 1e-5
@@ -107,9 +108,12 @@ if __name__ == "__main__":
         global x, v, dx, hep, dt, M, Minv, f
         global cg_fill_in, cg_drop_tolerance, cg_residual, cg_maxiter
         global animate, step, use_direct_solver
+        global newton_maxiter
         global profiler
 
         changed, dt = imgui.InputFloat("dt", dt)
+        changed, newton_maxiter = imgui.InputInt(
+            "Newton max iterations", newton_maxiter)
         changed, cg_fill_in = imgui.InputFloat(
             "IC column fill in", cg_fill_in, format="%.4f")
         changed, cg_drop_tolerance = imgui.InputFloat(
@@ -119,43 +123,54 @@ if __name__ == "__main__":
         changed, cg_maxiter = imgui.InputInt(
             "PCG max iterations", cg_maxiter)
         changed, animate = imgui.Checkbox("animate", animate)
-        changed, use_direct_solver = imgui.Checkbox("Use direct solver", use_direct_solver)
+        changed, use_direct_solver = imgui.Checkbox(
+            "Use direct solver", use_direct_solver)
         step = imgui.Button("step")
 
         if animate or step:
             profiler.begin_frame("Physics")
-            # 1 Newton step
-            hep.compute_element_elasticity(x, grad=True, hess=True)
-            gradU, HU = hep.to_vector(), hep.to_matrix()
+            # Newton solve
             dt2 = dt**2
+            xtilde = x + dt*v + dt2*a
+            xk = x
+            for k in range(newton_maxiter):
+                hep.compute_element_elasticity(xk, grad=True, hess=True)
+                gradU, HU = hep.to_vector(), hep.to_matrix()
 
-            bd, Add = None, None
-            def setup():
                 global bd, Add
-                xtilde = x + dt*v + dt2*a
-                A = M + dt2 * HU
-                b = -(M @ (x - xtilde) + dt2*gradU)
-                Add = A.tocsc()[:, dofs].tocsr()[dofs, :]
-                bd = b[dofs]
 
-            profiler.profile("Setup Linear System", setup)
+                def setup():
+                    global bd, Add
+                    A = M + dt2 * HU
+                    b = -(M @ (xk - xtilde) + dt2*gradU)
+                    Add = A.tocsc()[:, dofs].tocsr()[dofs, :]
+                    bd = b[dofs]
 
-            def solve():
-                global dx, Add, bd
-                global cg_fill_in, cg_drop_tolerance, cg_maxiter, cg_residual
-                global use_direct_solver
-                if use_direct_solver:
-                    Addinv.factorize(Add)
-                    dx[dofs] = Addinv.solve(bd).squeeze()
-                else:
-                    P = ilupp.ICholTPreconditioner(
-                        Add, add_fill_in=int(Add.shape[0]*cg_fill_in), threshold=cg_drop_tolerance)
-                    dx[dofs], cginfo = sp.sparse.linalg.cg(
-                        Add, bd, rtol=cg_residual, maxiter=cg_maxiter, M=P)
+                profiler.profile("Setup Linear System", setup)
 
-            profiler.profile("Solve Linear System", solve)
-            v = dx / dt
-            x = x + dx
+                if k > 0:
+                    gradnorm = np.linalg.norm(bd, 1)
+                    if gradnorm < 1e-3:
+                        break
+
+                def solve():
+                    global dx, Add, bd
+                    global cg_fill_in, cg_drop_tolerance, cg_maxiter, cg_residual
+                    global use_direct_solver
+                    if use_direct_solver:
+                        Addinv.factorize(Add)
+                        dx[dofs] = Addinv.solve(bd).squeeze()
+                    else:
+                        P = ilupp.ICholTPreconditioner(
+                            Add, add_fill_in=int(Add.shape[0]*cg_fill_in), threshold=cg_drop_tolerance)
+                        dx[dofs], cginfo = sp.sparse.linalg.cg(
+                            Add, bd, rtol=cg_residual, maxiter=cg_maxiter, M=P)
+
+                profiler.profile("Solve Linear System", solve)
+                xk = xk + dx
+
+            v = (xk - x) / dt
+            x = xk
             profiler.end_frame("Physics")
 
             # Update visuals
