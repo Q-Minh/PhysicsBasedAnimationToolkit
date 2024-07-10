@@ -68,7 +68,7 @@ TEST_CASE("[fem] Gradient")
         Ik.setIdentity();
         CSCMatrix const NThat = Eigen::kroneckerProduct(NT, Ik);
         VectorX const Ihat =
-            fem::InnerProductWeights<kQuadratureOrder>(mesh).reshaped().replicate<kDims, 1>();
+            fem::InnerProductWeights<kQuadratureOrder>(mesh).reshaped().template replicate<kDims, 1>();
         CSCMatrix const GG = NThat * Ihat.asDiagonal() * GM;
         CHECK_EQ(GG.rows(), kDims * n);
         CHECK_EQ(GG.cols(), n);
