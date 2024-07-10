@@ -217,7 +217,7 @@ inline MatrixX Mesh<TElement, Dims>::QuadraturePoints() const
         Matrix<kRowsJ, kColsJ> const Ve = X(Eigen::all, vertices);
         for (auto g = 0; g < kQuadPts; ++g)
         {
-            Xg.col(e * kQuadPts + g) = Ve * XgRef;
+            Xg.col(e * kQuadPts + g) = Ve * XgRef.col(g);
         }
     }
     return Xg;

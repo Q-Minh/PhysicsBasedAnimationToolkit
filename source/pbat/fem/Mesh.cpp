@@ -4,6 +4,7 @@
 #include "Tetrahedron.h"
 
 #include <doctest/doctest.h>
+#include <pbat/common/ConstexprFor.h>
 
 TEST_CASE("[fem] Mesh")
 {
@@ -118,4 +119,46 @@ TEST_CASE("[fem] Mesh")
             CHECK_EQ(M.X.cols(), kExpectedNumberOfNodes);
         }
     }
+}
+
+TEST_CASE("[fem] Mesh quadrature points")
+{
+    using namespace pbat;
+
+    // Reference tetrahedron mesh
+    Matrix<3, 4> V = Matrix<3, 4>::Zero();
+    V.rightCols(3).setIdentity();
+    IndexMatrix<4, 1> E;
+    E.col(0).setLinSpaced(0, 3);
+
+    // Translate tetrahedron
+    Vector<3> const t{1., 2., 3.};
+    V.colwise() += t;
+
+    common::ForRange<1, 4>([&]<auto kPolynomialOrder>() {
+        common::ForRange<1, 4>([&]<auto kQuadratureOrder>() {
+            auto constexpr kDims = 3;
+            using ElementType    = fem::Tetrahedron<kPolynomialOrder>;
+            using MeshType       = fem::Mesh<ElementType, kDims>;
+
+            MeshType mesh{V, E};
+            MatrixX const Xg = mesh.QuadraturePoints<kQuadratureOrder>();
+            using QuadratureRuleType =
+                typename ElementType::template QuadratureType<kQuadratureOrder>;
+            auto constexpr kQuadPts = QuadratureRuleType::kPoints;
+            auto const XgRef        = common::ToEigen(QuadratureRuleType::points)
+                                   .reshaped(QuadratureRuleType::kDims + 1, kQuadPts)
+                                   .template bottomRows<kDims>();
+            CHECK_EQ(Xg.cols(), kQuadPts);
+            CHECK_EQ(Xg.rows(), kDims);
+            Scalar constexpr zero = 1e-10;
+            for (auto g = 0; g < kQuadPts; ++g)
+            {
+                Vector<3> const XgComputed = Xg.col(g);
+                Vector<3> const XgExpected = XgRef.col(g) + t;
+                Scalar const XgError       = (XgComputed - XgExpected).squaredNorm();
+                CHECK_LE(XgError, zero);
+            }
+        });
+    });
 }
