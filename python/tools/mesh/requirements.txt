@@ -1,9 +1,9 @@
-meshio
-tetgen
-libigl
-polyscope
 numpy
 scipy
-fast-simplification
-gpytoolbox
-pymeshfix
+meshio==5.3.5
+tetgen==0.6.4
+libigl==v2.5.1
+polyscope==2.2.1
+gpytoolbox==0.3.1
+pymeshfix==0.17.0
+fast-simplification==0.1.7

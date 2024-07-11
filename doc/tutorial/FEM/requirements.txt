@@ -1,7 +1,7 @@
-meshio
-libigl
-polyscope
 numpy
 scipy
-pbatoolkit
 sympy
+meshio==5.3.5
+libigl==v2.5.1
+polyscope==2.2.1
+pbatoolkit>=0.0.4

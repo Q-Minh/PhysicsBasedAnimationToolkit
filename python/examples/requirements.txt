@@ -1,7 +1,7 @@
-meshio
-libigl==v2.4.1
-polyscope
 numpy
 scipy
-ilupp
-ipctk
+meshio==5.3.5
+libigl==v2.5.1
+polyscope==2.2.1
+ilupp==1.0.2
+ipctk==1.2.0
