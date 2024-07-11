@@ -49,8 +49,7 @@ def gradient_matrix(mesh, GNe: np.ndarray, quadrature_order: int = 1):
         The gradient operator
     """
     mesh_name = _mesh_type_name(mesh)
-    class_name = f"GradientMatrix_QuadratureOrder_{
-        quadrature_order}_{mesh_name}"
+    class_name = f"GradientMatrix_QuadratureOrder_{quadrature_order}_{mesh_name}"
     class_ = getattr(_fem, class_name)
     return class_(mesh, GNe)
 
@@ -219,8 +218,7 @@ def laplacian_matrix(mesh, detJe: np.ndarray, GNe: np.ndarray, dims: int = 1, qu
         The negative semi-definite symmetric part of the FEM mesh's Laplacian matrix
     """
     mesh_name = _mesh_type_name(mesh)
-    class_name = f"SymmetricLaplacianMatrix_QuadratureOrder_{
-        quadrature_order}_{mesh_name}"
+    class_name = f"SymmetricLaplacianMatrix_QuadratureOrder_{quadrature_order}_{mesh_name}"
     class_ = getattr(_fem, class_name)
     L = class_(mesh, detJe, GNe)
     L.dims = dims
@@ -298,7 +296,6 @@ def hyper_elastic_potential(
         A hyper elastic potential instance
     """
     mesh_name = _mesh_type_name(mesh)
-    class_name = f"HyperElasticPotential_{psi.name}_QuadratureOrder_{
-        quadrature_order}_Dims_{mesh.dims}_{mesh_name}"
+    class_name = f"HyperElasticPotential_{psi.name}_QuadratureOrder_{quadrature_order}_Dims_{mesh.dims}_{mesh_name}"
     class_ = getattr(_fem, class_name)
     return class_(mesh, detJe, GNe, Y, nu)
