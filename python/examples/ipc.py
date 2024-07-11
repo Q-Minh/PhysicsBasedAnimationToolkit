@@ -4,7 +4,6 @@ import pbatoolkit.geometry
 import pbatoolkit.profiling
 import pbatoolkit.math.linalg
 import igl
-import ilupp
 import ipctk
 import meshio
 import numpy as np
@@ -16,13 +15,13 @@ import argparse
 import itertools
 
 
-def combine(V: list, F: list):
+def combine(V: list, C: list):
     Vsizes = [Vi.shape[0] for Vi in V]
     offsets = list(itertools.accumulate(Vsizes))
-    F = [F[i] + offsets[i] - Vsizes[i] for i in range(len(F))]
-    F = np.vstack(F)
+    C = [C[i] + offsets[i] - Vsizes[i] for i in range(len(C))]
+    C = np.vstack(C)
     V = np.vstack(V)
-    return V, F
+    return V, C
 
 
 if __name__ == "__main__":
@@ -54,7 +53,7 @@ if __name__ == "__main__":
     R = sp.spatial.transform.Rotation.from_quat(
         [0, 0, np.sin(np.pi/4), np.cos(np.pi/4)]).as_matrix()
     V2 = (V[0] - V[0].mean(axis=0)) @ R.T
-    V2[:, 2] += (V[0][:, 2].max() - V[0][:, 2].min()) + 2*1e-3
+    V2[:, 2] += (V[0][:, 2].max() - V[0][:, 2].min()) + 5*1e-3
     # V2[:, 2] += 1
     C2 = C[0]
     V.append(V2)
@@ -108,9 +107,11 @@ if __name__ == "__main__":
     cconstraints = ipctk.CollisionConstraints()
     fconstraints = ipctk.FrictionConstraints()
     avgmass = lumpedm.mean()
-    mu = 0.1
+    mu = 0.3
     epsv = 1e-4
     dmin = 1e-4
+    BX = cmesh.map_displacements(X)
+    BXdot = cmesh.map_displacements(Xdot)
 
     # Fix bottom of the input models as Dirichlet boundary conditions
     Xmin = mesh.X.min(axis=1)
@@ -137,19 +138,15 @@ if __name__ == "__main__":
     pc = ps.register_point_cloud("Dirichlet", mesh.X[:, vdbc].T)
     dt = 0.01
     animate = False
-    cg_fill_in = 0.01
-    cg_drop_tolerance = 1e-4
-    cg_residual = 1e-5
-    cg_maxiter = 100
     newton_maxiter = 5
     dx = np.zeros(n)
 
     profiler = pbat.profiling.Profiler()
+    ipctk.set_logger_level(ipctk.LoggerLevel.trace)
 
     def callback():
         global x, v, a, dx, hep, dt, M, f
-        global cmesh, cconstraints, fconstraints, X, Xdot, dmin, dhat, mu, epsv, avgmass
-        global cg_fill_in, cg_drop_tolerance, cg_residual, cg_maxiter
+        global cmesh, cconstraints, fconstraints, X, Xdot, BX, BXdot, dmin, dhat, mu, epsv, avgmass
         global newton_maxiter
         global animate, step
         global profiler
@@ -159,14 +156,6 @@ if __name__ == "__main__":
             "IPC activation distance", dhat, format="%.6f")
         changed, mu = imgui.InputFloat(
             "Coulomb friction coeff", mu, format="%.2f")
-        changed, cg_fill_in = imgui.InputFloat(
-            "IC column fill in", cg_fill_in, format="%.4f")
-        changed, cg_drop_tolerance = imgui.InputFloat(
-            "IC drop tolerance", cg_drop_tolerance, format="%.8f")
-        changed, cg_residual = imgui.InputFloat(
-            "PCG residual", cg_residual, format="%.8f")
-        changed, cg_maxiter = imgui.InputInt(
-            "PCG max iterations", cg_maxiter)
         changed, newton_maxiter = imgui.InputInt(
             "Newton max iterations", newton_maxiter)
         changed, animate = imgui.Checkbox("animate", animate)
@@ -181,10 +170,15 @@ if __name__ == "__main__":
             # Newton solve
             for k in range(newton_maxiter):
                 # Compute collision constraints
-                cconstraints.build(cmesh, X, dhat, dmin=dmin)
-                gradB = cconstraints.compute_potential_gradient(cmesh, X, dhat)
+                cconstraints.build(cmesh, BX, dhat, dmin=dmin)
+                is_intersecting = ipctk.has_intersections(cmesh, BX)
+                if is_intersecting:
+                    print("Mesh is self intersecting!")
+                    break
+                gradB = cconstraints.compute_potential_gradient(
+                    cmesh, BX, dhat)
                 gradB = cmesh.to_full_dof(gradB)
-                hessB = cconstraints.compute_potential_hessian(cmesh, X, dhat)
+                hessB = cconstraints.compute_potential_hessian(cmesh, BX, dhat)
                 hessB = cmesh.to_full_dof(hessB)
 
                 # Compute elasticity
@@ -192,22 +186,22 @@ if __name__ == "__main__":
                 gradU, HU = hep.to_vector(), hep.to_matrix()
 
                 # Compute adaptive barrier stiffness
-                bboxdiag = ipctk.world_bbox_diagonal_length(X)
+                bboxdiag = ipctk.world_bbox_diagonal_length(BX)
                 kB, maxkB = ipctk.initial_barrier_stiffness(
                     bboxdiag, dhat, avgmass, gradU, gradB, dmin=dmin)
-                dprev = cconstraints.compute_minimum_distance(cmesh, X)
+                dprev = cconstraints.compute_minimum_distance(cmesh, BX)
 
                 # Compute lagged friction constraints
-                fconstraints.build(cmesh, X, cconstraints, dhat, kB, mu)
+                fconstraints.build(cmesh, BX, cconstraints, dhat, kB, mu)
                 gradF = fconstraints.compute_potential_gradient(
-                    cmesh, Xdot, epsv)
+                    cmesh, BXdot, epsv)
                 gradF = cmesh.to_full_dof(gradF)
                 hessF = fconstraints.compute_potential_hessian(
-                    cmesh, Xdot, epsv)
+                    cmesh, BXdot, epsv)
                 hessF = cmesh.to_full_dof(hessF)
 
+                # Setup and solve for Newton search direction
                 global bd, Add
-
                 def setup():
                     global bd, Add
                     A = M + dt2 * HU + kB * hessB + hessF
@@ -224,27 +218,23 @@ if __name__ == "__main__":
 
                 def solve():
                     global dx, Add, bd
-                    global cg_fill_in, cg_drop_tolerance, cg_maxiter, cg_residual
-                    P = ilupp.ICholTPreconditioner(
-                        Add, add_fill_in=int(Add.shape[0]*cg_fill_in), threshold=cg_drop_tolerance)
-                    dx[dofs], cginfo = sp.sparse.linalg.cg(
-                        Add, bd, rtol=cg_residual, maxiter=cg_maxiter, M=P)
+                    Addinv = pbat.math.linalg.ldlt(Add)
+                    Addinv.compute(Add)
+                    dx[dofs] = Addinv.solve(bd).squeeze()
 
                 profiler.profile("Solve Linear System", solve)
 
                 # CCD step truncation
-                Xt0 = X
-                Xt1 = (xk + dx).reshape(mesh.X.shape[0],
-                                        mesh.X.shape[1], order='F').T
-                # WARNING:
-                # This step is so memory intensive, bad allocation exceptions occur!
+                BXt0 = BX
+                BXt1 = BX + cmesh.map_displacements(
+                    dx.reshape(mesh.X.shape[0],
+                               mesh.X.shape[1], order='F').T)
                 max_alpha = ipctk.compute_collision_free_stepsize(
                     cmesh,
-                    Xt0,
-                    Xt1,
+                    BXt0,
+                    BXt1,
                     broad_phase_method=ipctk.BroadPhaseMethod.HASH_GRID,
-                    min_distance=dmin,
-                    max_iterations=10
+                    min_distance=dmin
                 )
                 dx *= max_alpha
 
@@ -254,9 +244,11 @@ if __name__ == "__main__":
                 X = xk.reshape(mesh.X.shape[0], mesh.X.shape[1], order='F').T
                 Xdot = vk.reshape(
                     mesh.X.shape[0], mesh.X.shape[1], order='F').T
+                BX = cmesh.map_displacements(X)
+                BXdot = cmesh.map_displacements(Xdot)
 
                 # Update barrier stiffness
-                dcurrent = cconstraints.compute_minimum_distance(cmesh, X)
+                dcurrent = cconstraints.compute_minimum_distance(cmesh, BX)
                 kB = ipctk.update_barrier_stiffness(
                     dprev, dcurrent, maxkB, kB, bboxdiag, dmin=dmin)
                 dprev = dcurrent
