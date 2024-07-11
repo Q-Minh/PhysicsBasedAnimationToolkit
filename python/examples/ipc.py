@@ -54,8 +54,8 @@ if __name__ == "__main__":
     R = sp.spatial.transform.Rotation.from_quat(
         [0, 0, np.sin(np.pi/4), np.cos(np.pi/4)]).as_matrix()
     V2 = (V[0] - V[0].mean(axis=0)) @ R.T
-    # V2[:, 2] += (V[0][:, 2].max() - V[0][:, 2].min()) + 2*1e-3
-    V2[:, 2] += 1
+    V2[:, 2] += (V[0][:, 2].max() - V[0][:, 2].min()) + 2*1e-3
+    # V2[:, 2] += 1
     C2 = C[0]
     V.append(V2)
     C.append(C2)
@@ -103,7 +103,7 @@ if __name__ == "__main__":
     F = igl.boundary_facets(C)
     F[:, :2] = np.roll(F[:, :2], shift=1, axis=1)
     E = ipctk.edges(F)
-    cmesh = ipctk.CollisionMesh(V, E, F)
+    cmesh = ipctk.CollisionMesh.build_from_full_mesh(V, E, F)
     dhat = 1e-3
     cconstraints = ipctk.CollisionConstraints()
     fconstraints = ipctk.FrictionConstraints()
@@ -141,7 +141,7 @@ if __name__ == "__main__":
     cg_drop_tolerance = 1e-4
     cg_residual = 1e-5
     cg_maxiter = 100
-    newton_maxiter = 1
+    newton_maxiter = 5
     dx = np.zeros(n)
 
     profiler = pbat.profiling.Profiler()
@@ -183,7 +183,9 @@ if __name__ == "__main__":
                 # Compute collision constraints
                 cconstraints.build(cmesh, X, dhat, dmin=dmin)
                 gradB = cconstraints.compute_potential_gradient(cmesh, X, dhat)
+                gradB = cmesh.to_full_dof(gradB)
                 hessB = cconstraints.compute_potential_hessian(cmesh, X, dhat)
+                hessB = cmesh.to_full_dof(hessB)
 
                 # Compute elasticity
                 hep.compute_element_elasticity(xk, grad=True, hess=True)
@@ -199,8 +201,10 @@ if __name__ == "__main__":
                 fconstraints.build(cmesh, X, cconstraints, dhat, kB, mu)
                 gradF = fconstraints.compute_potential_gradient(
                     cmesh, Xdot, epsv)
+                gradF = cmesh.to_full_dof(gradF)
                 hessF = fconstraints.compute_potential_hessian(
                     cmesh, Xdot, epsv)
+                hessF = cmesh.to_full_dof(hessF)
 
                 global bd, Add
 
