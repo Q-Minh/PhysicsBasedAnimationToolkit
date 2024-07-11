@@ -236,6 +236,8 @@ if __name__ == "__main__":
                 Xt0 = X
                 Xt1 = (xk + dx).reshape(mesh.X.shape[0],
                                         mesh.X.shape[1], order='F').T
+                # WARNING:
+                # This step is so memory intensive, bad allocation exceptions occur!
                 max_alpha = ipctk.compute_collision_free_stepsize(
                     cmesh,
                     Xt0,
@@ -250,7 +252,8 @@ if __name__ == "__main__":
                 vk = (xk - x) / dt
                 xk = xk + dx
                 X = xk.reshape(mesh.X.shape[0], mesh.X.shape[1], order='F').T
-                Xdot = vk.reshape(mesh.X.shape[0], mesh.X.shape[1], order='F').T
+                Xdot = vk.reshape(
+                    mesh.X.shape[0], mesh.X.shape[1], order='F').T
 
                 # Update barrier stiffness
                 dcurrent = cconstraints.compute_minimum_distance(cmesh, X)
