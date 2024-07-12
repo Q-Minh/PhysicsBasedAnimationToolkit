@@ -24,6 +24,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+
+      - name: Print environment
         if: startsWith(matrix.os, 'ubuntu') || startsWith(matrix.os, 'macos')
         run: printenv
 
