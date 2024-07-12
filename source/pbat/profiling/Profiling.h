@@ -32,6 +32,7 @@ PBAT_API bool IsConnectedToServer();
 template <class Func, class... Args>
 std::invoke_result_t<Func, Args...> Profile(std::string const& zoneName, Func&& f, Args&&... args)
 {
+#ifdef PBAT_HAS_TRACY_PROFILER
     static auto constexpr line = (uint32_t)TracyLine;
     struct SourceLocationData
     {
@@ -59,6 +60,7 @@ std::invoke_result_t<Func, Args...> Profile(std::string const& zoneName, Func&& 
     }
     SourceLocationData const& data = it->second;
     tracy::ScopedZone zone(&(data.data));
+#endif // PBAT_HAS_TRACY_PROFILER
     return f(std::forward<Args>(args)...);
 }
 

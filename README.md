@@ -40,6 +40,7 @@ See [`vcpkg.json`](./vcpkg.json) for a versioned list of our dependencies, avail
 | `PBAT_BUILD_PYTHON_BINDINGS` | `ON,OFF` | `OFF` | Enable `PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit` Python bindings. Generates the CMake target `PhysicsBasedAnimationToolkit_Python`, an extension module for Python, built by this project. |
 | `PBAT_BUILD_TESTS` | `ON,OFF` | `OFF` | Enable `PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit` unit tests. Generates the CMake target executable `PhysicsBasedAnimationToolkit_Tests`, built by this project. |
 | `PBAT_ENABLE_PROFILER` | `ON,OFF` | `OFF` | Enable [`Tracy`](https://github.com/wolfpld/tracy) instrumentation profiling in built `PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit`. |
+| `PBAT_PROFILE_ON_DEMAND` | `ON,OFF` | `OFF` | Activate Tracy's on-demand profiling when `PBAT_ENABLE_PROFILER` is `ON`. |
 | `PBAT_USE_INTEL_MKL` | `ON,OFF` | `OFF` | Link to user-provided [Intel MKL](https://www.intel.com/content/www/us/en/developer/tools/oneapi/onemkl.html) installation via CMake's [`find_package`](https://cmake.org/cmake/help/latest/command/find_package.html). |
 | `PBAT_USE_SUITESPARSE` | `ON,OFF` | `OFF` | Link to user-provided [SuiteSparse](https://github.com/DrTimothyAldenDavis/SuiteSparse) installation via CMake's [`find_package`](https://cmake.org/cmake/help/latest/command/find_package.html). |
 | `PBAT_BUILD_SHARED_LIBS` | `ON,OFF` | `OFF` | Build project's library targets as shared/dynamic. |
@@ -79,10 +80,14 @@ To download and install from PyPI, run in command line:
 pip install pbatoolkit
 ```
 
-Our Python bindings build relies on [Scikit-build-core](https://scikit-build-core.readthedocs.io/en/latest/index.html), which relies on CMake's [`install`](https://cmake.org/cmake/help/latest/command/install.html) mechanism. As such, you can configure the installation as you typically would using the CMake CLI directly, via the `SKBUILD_CMAKE_ARGS` environment/shell variable. See our [wheels workflow](.github/workflows/wheels.yml) for working examples of setting `SKBUILD_CMAKE_ARGS` on Linux, MacOS and Windows. Then, assuming `SKBUILD_CMAKE_ARGS` contains at least `-DPBAT_BUILD_PYTHON_BINDINGS:BOOL=ON` and that external dependencies are found via CMake's [`find_package`](https://cmake.org/cmake/help/latest/command/find_package.html), you can install our Python package `pbatoolkit` locally and get the most up to date features, by running in command line:
+For a local installation, which builds from source, our Python bindings build relies on [Scikit-build-core](https://scikit-build-core.readthedocs.io/en/latest/index.html), which relies on CMake's [`install`](https://cmake.org/cmake/help/latest/command/install.html) mechanism. As such, you can configure the installation as you typically would when using the CMake CLI directly, by now passing the corresponding CMake arguments in the `pip`'s `config-settings` parameter, or via the `SKBUILD_CMAKE_ARGS` environment variable. See our [wheels workflow](.github/workflows/wheels.yml) for working examples of setting `SKBUILD_CMAKE_ARGS` on Linux, MacOS and Windows. Then, assuming that external dependencies are found via CMake's [`find_package`](https://cmake.org/cmake/help/latest/command/find_package.html), you can build and install our Python package `pbatoolkit` locally and get the most up to date features. Consider using a [Python virtual environment](https://docs.python.org/3/library/venv.html) for this step. 
+
+As an example, using [`vcpkg`](https://github.com/microsoft/vcpkg) for external dependencies, run in command line:
 ```bash
-pip install .
+pip install . --config-settings=cmake.args="-DPBAT_BUILD_PYTHON_BINDINGS:BOOL=ON;-DPBAT_BUILD_TESTS:BOOL=OFF;-DPBAT_ENABLE_PROFILER:BOOL=ON;-DPBAT_PROFILE_ON_DEMAND:BOOL=ON;-DPBAT_BUILD_SHARED_LIBS:BOOL=OFF;-DPOSITION_INDEPENDENT_CODE:BOOL=ON;-DCMAKE_TOOLCHAIN_FILE='path/to/vcpkg/scripts/buildsystems/vcpkg.cmake';-DVCPKG_MANIFEST_FEATURES=python" -vvv
 ```
+
+For parallel builds on Unix systems, you can add the `build.tool-args=-j<# threads>` to the `confg-settings` parameter, where `<# threads<` is the number of compilation jobs to run simultaneously. On Windows, using `MSBuild`, you may specify `build.tool-args=/p:CL_MPCount=<# threads>` instead. This assumes that parallel builds were enabled, meaning `/MP` may need to be appended to `CMAKE_CXX_FLAGS` through `cmake.args`. Otherwise, `CMAKE_BUILD_PARALLEL_LEVEL=<# threads>`may be usable, again through the `cmake.args` parameter of `config-settings`.
 
 Verify `pbatoolkit`'s contents in Python shell:
 ```python
