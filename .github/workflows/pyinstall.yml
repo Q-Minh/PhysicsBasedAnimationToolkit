@@ -22,7 +22,7 @@ jobs:
             # cmake_cxx_compiler: -DCMAKE_CXX_COMPILER=
           - os: macos-14
             # cmake_cxx_compiler: -DCMAKE_CXX_COMPILER=
-      max-parallel: 3
+      max-parallel: 4
 
     steps:
       - uses: actions/checkout@v4
