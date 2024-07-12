@@ -8,8 +8,6 @@
 
 The Physics Based Animation Toolkit (PBAT) is a (mostly templated) cross-platform C++20 library of algorithms and data structures commonly used in computer graphics research on physically-based simulation in dimensions `1,2,3`. For most use cases, we recommend using our library via its Python interface, enabling seamless integration into Python's ecosystem of powerful scientific computing packages. 
 
-> *Our Python bindings are currently *not* available on MacOS* via PyPI. For now, we recommend MacOS users to build `pbatoolkit` locally.
-
 ### Features
 
 - Finite Element Method (FEM) meshes and operators
