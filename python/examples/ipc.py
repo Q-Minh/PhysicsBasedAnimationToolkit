@@ -138,16 +138,17 @@ if __name__ == "__main__":
     pc = ps.register_point_cloud("Dirichlet", mesh.X[:, vdbc].T)
     dt = 0.01
     animate = False
-    newton_maxiter = 5
+    newton_maxiter = 10
+    newton_rtol = 1e-5
     dx = np.zeros(n)
 
     profiler = pbat.profiling.Profiler()
-    ipctk.set_logger_level(ipctk.LoggerLevel.trace)
+    # ipctk.set_logger_level(ipctk.LoggerLevel.trace)
 
     def callback():
         global x, v, a, dx, hep, dt, M, f
         global cmesh, cconstraints, fconstraints, X, Xdot, BX, BXdot, dmin, dhat, mu, epsv, avgmass
-        global newton_maxiter
+        global newton_maxiter, newton_rtol
         global animate, step
         global profiler
 
@@ -171,19 +172,17 @@ if __name__ == "__main__":
             for k in range(newton_maxiter):
                 # Compute collision constraints
                 cconstraints.build(cmesh, BX, dhat, dmin=dmin)
-                is_intersecting = ipctk.has_intersections(cmesh, BX)
-                if is_intersecting:
-                    print("Mesh is self intersecting!")
-                    break
+                EB = cconstraints.compute_potential(cmesh, BX, dhat)
                 gradB = cconstraints.compute_potential_gradient(
                     cmesh, BX, dhat)
                 gradB = cmesh.to_full_dof(gradB)
-                hessB = cconstraints.compute_potential_hessian(cmesh, BX, dhat)
+                hessB = cconstraints.compute_potential_hessian(
+                    cmesh, BX, dhat, project_hessian_to_psd=True)
                 hessB = cmesh.to_full_dof(hessB)
 
                 # Compute elasticity
                 hep.compute_element_elasticity(xk, grad=True, hess=True)
-                gradU, HU = hep.to_vector(), hep.to_matrix()
+                U, gradU, HU = hep.eval(), hep.to_vector(), hep.to_matrix()
 
                 # Compute adaptive barrier stiffness
                 bboxdiag = ipctk.world_bbox_diagonal_length(BX)
@@ -193,17 +192,19 @@ if __name__ == "__main__":
 
                 # Compute lagged friction constraints
                 fconstraints.build(cmesh, BX, cconstraints, dhat, kB, mu)
+                EF = fconstraints.compute_potential(cmesh, BXdot, epsv)
                 gradF = fconstraints.compute_potential_gradient(
                     cmesh, BXdot, epsv)
                 gradF = cmesh.to_full_dof(gradF)
                 hessF = fconstraints.compute_potential_hessian(
-                    cmesh, BXdot, epsv)
+                    cmesh, BXdot, epsv, project_hessian_to_psd=True)
                 hessF = cmesh.to_full_dof(hessF)
 
                 # Setup and solve for Newton search direction
-                global bd, Add
+                global bd, Add, b
+
                 def setup():
-                    global bd, Add
+                    global bd, Add, b
                     A = M + dt2 * HU + kB * hessB + hessF
                     b = -(M @ (xk - xtilde) + dt2*gradU + kB * gradB + gradF)
                     Add = A.tocsc()[:, dofs].tocsr()[dofs, :]
@@ -213,7 +214,7 @@ if __name__ == "__main__":
 
                 if k > 0:
                     gradnorm = np.linalg.norm(bd, 1)
-                    if gradnorm < 1e-4:
+                    if gradnorm < newton_rtol:
                         break
 
                 def solve():
@@ -236,7 +237,37 @@ if __name__ == "__main__":
                     broad_phase_method=ipctk.BroadPhaseMethod.HASH_GRID,
                     min_distance=dmin
                 )
-                dx *= max_alpha
+                alpha = max_alpha
+
+                def E(xt, x):
+                    hep.compute_element_elasticity(x, grad=False, hess=False)
+                    U = hep.eval()
+                    X = x.reshape(mesh.X.shape[0],
+                                  mesh.X.shape[1], order='F').T
+                    v = (x - xt) / dt
+                    Xdot = v.reshape(
+                        mesh.X.shape[0], mesh.X.shape[1], order='F').T
+                    BX = cmesh.map_displacements(X)
+                    BXdot = cmesh.map_displacements(Xdot)
+                    cconstraints.build(cmesh, BX, dhat, dmin=dmin)
+                    fconstraints.build(cmesh, BX, cconstraints, dhat, kB, mu)
+                    EB = cconstraints.compute_potential(cmesh, BX, dhat)
+                    EF = fconstraints.compute_potential(cmesh, BXdot, epsv)
+                    return 0.5 * (x - xtilde).T @ M @ (x - xtilde) + dt2*U + kB * EB + EF
+
+                tau = 0.5
+                c = 1e-4
+                DEdx = -b.dot(dx)
+                Exk = 0.5 * (xk - xtilde).T @ M @ (xk -
+                                                   xtilde) + dt2*U + kB * EB + EF
+                for j in range(20):
+                    Ex = E(x, xk+alpha*dx)
+                    Exlinear = Exk + alpha * c * DEdx
+                    if Ex <= Exlinear:
+                        break
+                    alpha = tau*alpha
+
+                dx *= alpha
 
                 # Update Newton iterate
                 vk = (xk - x) / dt
