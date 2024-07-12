@@ -1,4 +1,4 @@
-name: Wheels
+name: Local pip install
 
 on:
   workflow_dispatch:
