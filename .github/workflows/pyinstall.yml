@@ -25,10 +25,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Print environment
-        if: startsWith(matrix.os, 'ubuntu') || startsWith(matrix.os, 'macos')
-        run: printenv
-
       - uses: lukka/get-cmake@latest
         with:
           cmakeVersion: "3.26.0"

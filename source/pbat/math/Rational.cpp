@@ -3,6 +3,7 @@
 #include "IntegerArithmeticChecks.h"
 
 #include <numeric>
+#include <type_traits>
 
 namespace pbat {
 namespace math {
@@ -12,7 +13,8 @@ Rational::Rational() : a(0), b(1) {}
 Rational Rational::operator+(Rational const& rhs) const
 {
     auto const oc = [](auto value) {
-        return OverflowChecked{value};
+        using IntegerType = std::remove_cvref_t<decltype(value)>;
+        return OverflowChecked<IntegerType>{value};
     };
     // a1/b1 + a2/b2 = a1*b2/b1*b2 + a2*b1/b1*b2
     auto const gcd         = std::gcd(b, rhs.b);
@@ -30,14 +32,16 @@ Rational Rational::operator-(Rational const& rhs) const
 
 Rational Rational::operator-() const
 {
-    auto const na = -OverflowChecked{a};
+    using IntegerType = std::remove_cvref_t<decltype(a)>;
+    auto const na = -OverflowChecked<IntegerType>{a};
     return Rational(*na, b);
 }
 
 Rational Rational::operator*(Rational const& rhs) const
 {
     auto const oc = [](auto value) {
-        return OverflowChecked{value};
+        using IntegerType = std::remove_cvref_t<decltype(value)>;
+        return OverflowChecked<IntegerType>{value};
     };
     // a1/b1 * a2/b2 = a1*a2 / b1*b2
     auto const num = oc(a) * oc(rhs.a);
@@ -48,7 +52,8 @@ Rational Rational::operator*(Rational const& rhs) const
 Rational Rational::operator/(Rational const& rhs) const
 {
     auto const oc = [](auto value) {
-        return OverflowChecked{value};
+        using IntegerType = std::remove_cvref_t<decltype(value)>;
+        return OverflowChecked<IntegerType>{value};
     };
     // (a1/b1) / (a2/b2) = a1*b2 / b1*a2
     auto const num = oc(a) * oc(rhs.b);
@@ -59,7 +64,8 @@ Rational Rational::operator/(Rational const& rhs) const
 bool Rational::operator==(Rational const& rhs) const
 {
     auto const oc = [](auto value) {
-        return OverflowChecked{value};
+        using IntegerType = std::remove_cvref_t<decltype(value)>;
+        return OverflowChecked<IntegerType>{value};
     };
     auto const gcd        = std::gcd(b, rhs.b);
     auto const b1         = oc(b) / gcd;
@@ -72,7 +78,8 @@ bool Rational::operator==(Rational const& rhs) const
 bool Rational::operator<(Rational const& rhs) const
 {
     auto const oc = [](auto value) {
-        return OverflowChecked{value};
+        using IntegerType = std::remove_cvref_t<decltype(value)>;
+        return OverflowChecked<IntegerType>{value};
     };
     auto const gcd        = std::gcd(b, rhs.b);
     auto const b1         = oc(b) / gcd;
@@ -85,7 +92,8 @@ bool Rational::operator<(Rational const& rhs) const
 bool Rational::Rebase(std::int64_t denominator)
 {
     auto const oc = [](auto value) {
-        return OverflowChecked{value};
+        using IntegerType = std::remove_cvref_t<decltype(value)>;
+        return OverflowChecked<IntegerType>{value};
     };
     auto const prod       = oc(a) * oc(denominator);
     bool const can_divide = (prod % b) == 0;
@@ -105,8 +113,9 @@ void Rational::simplify()
 {
     if (a >= 0 && b < 0)
     {
-        a = -OverflowChecked{a};
-        b = -OverflowChecked{b};
+        using IntegerType = std::remove_cvref_t<decltype(a)>;
+        a = -OverflowChecked<IntegerType>{a};
+        b = -OverflowChecked<IntegerType>{b};
     }
     auto const gcd = std::gcd(a, b);
     a /= gcd;
