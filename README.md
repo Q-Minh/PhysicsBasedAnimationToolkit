@@ -82,7 +82,7 @@ For a local installation, which builds from source, our Python bindings build re
 
 As an example, using [`vcpkg`](https://github.com/microsoft/vcpkg) for external dependencies, run in command line:
 ```bash
-pip install . --config-settings=cmake.args="-DPBAT_BUILD_PYTHON_BINDINGS:BOOL=ON;-DPBAT_BUILD_TESTS:BOOL=OFF;-DPBAT_ENABLE_PROFILER:BOOL=ON;-DPBAT_PROFILE_ON_DEMAND:BOOL=ON;-DPBAT_BUILD_SHARED_LIBS:BOOL=OFF;-DPOSITION_INDEPENDENT_CODE:BOOL=ON;-DCMAKE_TOOLCHAIN_FILE='path/to/vcpkg/scripts/buildsystems/vcpkg.cmake';-DVCPKG_MANIFEST_FEATURES=python" -vvv
+pip install . --config-settings=cmake.args="-DPBAT_BUILD_PYTHON_BINDINGS:BOOL=ON;-DPBAT_BUILD_TESTS:BOOL=OFF;-DPBAT_ENABLE_PROFILER:BOOL=ON;-DPBAT_PROFILE_ON_DEMAND:BOOL=ON;-DPBAT_BUILD_SHARED_LIBS:BOOL=OFF;-DCMAKE_POSITION_INDEPENDENT_CODE:BOOL=ON;-DCMAKE_TOOLCHAIN_FILE='path/to/vcpkg/scripts/buildsystems/vcpkg.cmake';-DVCPKG_MANIFEST_FEATURES=python" -vvv
 ```
 
 For parallel builds on Unix systems, you can add the `build.tool-args=-j<# threads>` to the `confg-settings` parameter, where `<# threads<` is the number of compilation jobs to run simultaneously. On Windows, using `MSBuild`, you may specify `build.tool-args=/p:CL_MPCount=<# threads>` instead. This assumes that parallel builds were enabled, meaning `/MP` may need to be appended to `CMAKE_CXX_FLAGS` through `cmake.args`. Otherwise, `CMAKE_BUILD_PARALLEL_LEVEL=<# threads>`may be usable, again through the `cmake.args` parameter of `config-settings`.
