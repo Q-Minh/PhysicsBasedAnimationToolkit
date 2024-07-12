@@ -38,8 +38,8 @@ jobs:
           CIBW_MANYLINUX_X86_64_IMAGE: quay.io/pypa/manylinux_2_28_x86_64
           # By default, cibuildwheel will perform a volume mount from the current root / to /host/ in the linux container, 
           # see see https://cibuildwheel.pypa.io/en/stable/options/#container-engine .
-          CIBW_CONFIG_SETTINGS_LINUX: "cmake.args=-DPBAT_BUILD_PYTHON_BINDINGS:BOOL=ON;-DPBAT_BUILD_TESTS:BOOL=OFF;-DPBAT_ENABLE_PROFILER:BOOL=ON;-DPBAT_PROFILE_ON_DEMAND:BOOL=ON;-DPBAT_BUILD_SHARED_LIBS:BOOL=OFF;-DPOSITION_INDEPENDENT_CODE:BOOL=ON;-DCMAKE_TOOLCHAIN_FILE='/host/${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake';-DVCPKG_MANIFEST_FEATURES=python;-DPBAT_PROFILE_ON_DEMAND:BOOL=ON;${{ matrix.cmake_cxx_compiler }} build.tool-args=-j4"
           # CIBW_ENVIRONMENT_LINUX: SKBUILD_BUILD_TOOL_ARGS="-j 4" SKBUILD_CMAKE_ARGS="-DCMAKE_TOOLCHAIN_FILE=/host/${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake;-DVCPKG_MANIFEST_FEATURES=python;-DPBAT_BUILD_SHARED_LIBS:BOOL=OFF;-DPBAT_ENABLE_PROFILER:BOOL=ON;-DPBAT_BUILD_PYTHON_BINDINGS:BOOL=ON;-DPBAT_BUILD_TESTS:BOOL=OFF;-DCMAKE_POSITION_INDEPENDENT_CODE:BOOL=ON;-DCMAKE_BUILD_TYPE=Release;-DPBAT_PROFILE_ON_DEMAND:BOOL=ON"
+          CIBW_CONFIG_SETTINGS_LINUX: "cmake.args=-DPBAT_BUILD_PYTHON_BINDINGS:BOOL=ON;-DPBAT_BUILD_TESTS:BOOL=OFF;-DPBAT_ENABLE_PROFILER:BOOL=ON;-DPBAT_PROFILE_ON_DEMAND:BOOL=ON;-DPBAT_BUILD_SHARED_LIBS:BOOL=OFF;-DPOSITION_INDEPENDENT_CODE:BOOL=ON;-DCMAKE_TOOLCHAIN_FILE='/host/${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake';-DVCPKG_MANIFEST_FEATURES=python;-DPBAT_PROFILE_ON_DEMAND:BOOL=ON;${{ matrix.cmake_cxx_compiler }} build.tool-args=-j4"
 
       # - name: Set macOS environment variables
       #   if: startsWith(matrix.os, 'mac')
@@ -52,22 +52,22 @@ jobs:
       - uses: pypa/cibuildwheel@v2.19.0
         if: startsWith(matrix.os, 'macos-13')
         env:
+          # SKBUILD_BUILD_TOOL_ARGS: -j 4
           MACOSX_DEPLOYMENT_TARGET: "13.0"
           CIBW_ARCHS_MACOS: x86_64 universal2
           CIBW_BUILD: cp310-macosx_x86_64 cp311-macosx_x86_64 cp312-macosx_x86_64 cp310_macosx_universal2 cp311_macosx_universal2 cp312_macosx_universal2
           CIBW_BUILD_VERBOSITY_MACOS: 1
           CIBW_CONFIG_SETTINGS_MACOS: "cmake.args=-DPBAT_BUILD_PYTHON_BINDINGS:BOOL=ON;-DPBAT_BUILD_TESTS:BOOL=OFF;-DPBAT_ENABLE_PROFILER:BOOL=ON;-DPBAT_PROFILE_ON_DEMAND:BOOL=ON;-DPBAT_BUILD_SHARED_LIBS:BOOL=OFF;-DPOSITION_INDEPENDENT_CODE:BOOL=ON;-DCMAKE_TOOLCHAIN_FILE='${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake';-DVCPKG_MANIFEST_FEATURES=python;-DPBAT_PROFILE_ON_DEMAND:BOOL=ON;${{ matrix.cmake_cxx_compiler }} build.tool-args=-j4"
-          # SKBUILD_BUILD_TOOL_ARGS: -j 4
 
       - uses: pypa/cibuildwheel@v2.19.0
         if: startsWith(matrix.os, 'macos-14')
         env:
+          # SKBUILD_BUILD_TOOL_ARGS: -j 4
           MACOSX_DEPLOYMENT_TARGET: "14.0"
           CIBW_ARCHS_MACOS: arm64 universal2
           CIBW_BUILD: cp310-macosx_arm64 cp311-macosx_arm64 cp312-macosx_arm64 cp310_macosx_universal2 cp311_macosx_universal2 cp312_macosx_universal2
           CIBW_BUILD_VERBOSITY_MACOS: 1
           CIBW_CONFIG_SETTINGS_MACOS: "cmake.args=-DPBAT_BUILD_PYTHON_BINDINGS:BOOL=ON;-DPBAT_BUILD_TESTS:BOOL=OFF;-DPBAT_ENABLE_PROFILER:BOOL=ON;-DPBAT_PROFILE_ON_DEMAND:BOOL=ON;-DPBAT_BUILD_SHARED_LIBS:BOOL=OFF;-DPOSITION_INDEPENDENT_CODE:BOOL=ON;-DCMAKE_TOOLCHAIN_FILE='${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake';-DVCPKG_MANIFEST_FEATURES=python;-DPBAT_PROFILE_ON_DEMAND:BOOL=ON;${{ matrix.cmake_cxx_compiler }} build.tool-args=-j4"
-          # SKBUILD_BUILD_TOOL_ARGS: -j 4
 
       - uses: pypa/cibuildwheel@v2.19.0
         if: startsWith(matrix.os, 'windows')
@@ -77,9 +77,9 @@ jobs:
           CIBW_BUILD_VERBOSITY_WINDOWS: 1
           # Environment variables can be read directly on Windows and MacOS, but not Linux.
           # See https://cibuildwheel.pypa.io/en/stable/options/#environment-pass
-          CIBW_CONFIG_SETTINGS_WINDOWS: "cmake.args=-DPBAT_BUILD_PYTHON_BINDINGS:BOOL=ON;-DPBAT_BUILD_TESTS:BOOL=OFF;-DPBAT_ENABLE_PROFILER:BOOL=ON;-DPBAT_PROFILE_ON_DEMAND:BOOL=ON;-DPBAT_BUILD_SHARED_LIBS:BOOL=OFF;-DPOSITION_INDEPENDENT_CODE:BOOL=ON;-DCMAKE_TOOLCHAIN_FILE='${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake';-DVCPKG_MANIFEST_FEATURES=python;-DPBAT_PROFILE_ON_DEMAND:BOOL=ON;-DCMAKE_CXX_FLAGS="/EHsc /MP /bigobj;${{ matrix.cmake_cxx_compiler }} build.tool-args=/p:CL_MPCount=4"
           # SKBUILD_BUILD_TOOL_ARGS: /p:CL_MPCount=4
           # SKBUILD_CMAKE_ARGS: -DCMAKE_TOOLCHAIN_FILE=${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake;-DVCPKG_MANIFEST_FEATURES=python;-DPBAT_BUILD_SHARED_LIBS:BOOL=OFF;-DPBAT_ENABLE_PROFILER:BOOL=ON;-DPBAT_BUILD_PYTHON_BINDINGS:BOOL=ON;-DPBAT_BUILD_TESTS:BOOL=OFF;-DCMAKE_POSITION_INDEPENDENT_CODE:BOOL=ON;-DCMAKE_CXX_FLAGS="/EHsc /MP /bigobj;-DPBAT_PROFILE_ON_DEMAND:BOOL=ON"
+          CIBW_CONFIG_SETTINGS_WINDOWS: "cmake.args=-DPBAT_BUILD_PYTHON_BINDINGS:BOOL=ON;-DPBAT_BUILD_TESTS:BOOL=OFF;-DPBAT_ENABLE_PROFILER:BOOL=ON;-DPBAT_PROFILE_ON_DEMAND:BOOL=ON;-DPBAT_BUILD_SHARED_LIBS:BOOL=OFF;-DPOSITION_INDEPENDENT_CODE:BOOL=ON;-DCMAKE_TOOLCHAIN_FILE='${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake';-DVCPKG_MANIFEST_FEATURES=python;-DPBAT_PROFILE_ON_DEMAND:BOOL=ON;-DCMAKE_CXX_FLAGS="/EHsc /MP /bigobj;${{ matrix.cmake_cxx_compiler }} build.tool-args=/p:CL_MPCount=4"
 
       - uses: actions/upload-artifact@v4
         with:
