@@ -20,6 +20,8 @@ jobs:
           - os: windows-2022
           - os: macos-13
             # cmake_cxx_compiler: -DCMAKE_CXX_COMPILER=
+          - os: macos-14
+            # cmake_cxx_compiler: -DCMAKE_CXX_COMPILER=
       max-parallel: 3
 
     steps:
