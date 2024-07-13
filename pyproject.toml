@@ -19,6 +19,10 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
 ]
+dependencies = [
+    "numpy >= 1, < 2",
+    "scipy >= 1"
+]
 
 [tool.scikit-build]
 minimum-version = "0.9"
@@ -27,16 +31,6 @@ wheel.exclude = ["include", "lib", "share"]
 cmake.version = ">=3.26"
 cmake.build-type = "Release"
 cmake.targets = ["PhysicsBasedAnimationToolkit_Python"]
-# NOTE: To be set on the command line as environment variable 
-# SKBUILD_CMAKE_ARGS="-D<arg1>=<value1>;-D<arg2>=<value2>".
-# cmake.args = [
-#     "-DCMAKE_TOOLCHAIN_FILE:FILEPATH=$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
-#     "-DVCPKG_MANIFEST_FEATURES=python",
-#     "-DPBAT_BUILD_SHARED_LIBS:BOOL=OFF",
-#     "-DPBAT_ENABLE_PROFILER:BOOL=ON",
-#     "-DPBAT_BUILD_PYTHON_BINDINGS:BOOL=ON",
-#     "-DPBAT_BUILD_TESTS:BOOL=OFF"
-# ]
 cmake.verbose = true
 logging.level = "INFO"
 build-dir = "build/{wheel_tag}"
