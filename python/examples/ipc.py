@@ -53,7 +53,8 @@ if __name__ == "__main__":
     R = sp.spatial.transform.Rotation.from_quat(
         [0, 0, np.sin(np.pi/4), np.cos(np.pi/4)]).as_matrix()
     V2 = (V[0] - V[0].mean(axis=0)) @ R.T
-    V2[:, 2] += (V[0][:, 2].max() - V[0][:, 2].min()) + 5*1e-3
+    # V2[:, 2] += (V[0][:, 2].max() - V[0][:, 2].min()) + 5*1e-3
+    V2[:, 2] += (V[0][:, 2].max() - V[0][:, 2].min()) + 0.3
     # V2[:, 2] += 1
     C2 = C[0]
     V.append(V2)
@@ -205,8 +206,8 @@ if __name__ == "__main__":
 
                 def setup():
                     global bd, Add, b
-                    A = M + dt2 * HU + kB * hessB + hessF
-                    b = -(M @ (xk - xtilde) + dt2*gradU + kB * gradB + gradF)
+                    A = M + dt2 * HU + kB * hessB + dt2*hessF
+                    b = -(M @ (xk - xtilde) + dt2*gradU + kB * gradB + dt2*gradF)
                     Add = A.tocsc()[:, dofs].tocsr()[dofs, :]
                     bd = b[dofs]
 
@@ -253,13 +254,13 @@ if __name__ == "__main__":
                     fconstraints.build(cmesh, BX, cconstraints, dhat, kB, mu)
                     EB = cconstraints.compute_potential(cmesh, BX, dhat)
                     EF = fconstraints.compute_potential(cmesh, BXdot, epsv)
-                    return 0.5 * (x - xtilde).T @ M @ (x - xtilde) + dt2*U + kB * EB + EF
+                    return 0.5 * (x - xtilde).T @ M @ (x - xtilde) + dt2*U + kB * EB + dt2*EF
 
                 tau = 0.5
                 c = 1e-4
                 DEdx = -b.dot(dx)
                 Exk = 0.5 * (xk - xtilde).T @ M @ (xk -
-                                                   xtilde) + dt2*U + kB * EB + EF
+                                                   xtilde) + dt2*U + kB * EB + dt2*EF
                 for j in range(20):
                     Ex = E(x, xk+alpha*dx)
                     Exlinear = Exk + alpha * c * DEdx
