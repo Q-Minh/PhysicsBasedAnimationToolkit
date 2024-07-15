@@ -7,53 +7,18 @@ namespace pbat {
 namespace math {
 namespace linalg {
 
-Cholmod::Cholmod() : mCholmodCommon{}, mCholmodA(NULL), mCholmodL(NULL), mbFactorized{false}
+Cholmod::Cholmod() : mCholmodCommon{}, mCholmodL(NULL)
 {
     cholmod_start(&mCholmodCommon);
 }
 
-void Cholmod::analyze()
+MatrixX Cholmod::Solve(Eigen::Ref<MatrixX const> const& B) const
 {
-    if (mCholmodL != NULL)
-        return;
-
-    mCholmodL = cholmod_analyze(mCholmodA, &mCholmodCommon);
-
-    if (mCholmodL == NULL)
-        throw std::runtime_error("Symbolic analysis of Cholesky factor failed");
-
-    mbFactorized = false;
-}
-
-bool Cholmod::factorize()
-{
-    if (mCholmodA == NULL)
-        throw std::runtime_error("Cannot factorize matrix A, which was not set.");
-
-    if (mCholmodL == NULL)
-        analyze();
-
-    int const ec = cholmod_factorize(mCholmodA, mCholmodL, &mCholmodCommon);
-    if (ec == 1)
-    {
-        mbFactorized = true;
-        return true;
-    }
-    return false;
-}
-
-MatrixX Cholmod::solve(Eigen::Ref<MatrixX const> const& B) const
-{
-    if (!mbFactorized)
-    {
-        throw std::runtime_error("Cannot solve unfactorized system.");
-    }
-
-    if (mCholmodA->ncol != static_cast<size_t>(B.rows()))
+    if (mCholmodL->n != static_cast<size_t>(B.rows()))
     {
         std::string const what = fmt::format(
             "Expected right-hand side B to have {} rows, but got {} instead",
-            mCholmodA->ncol,
+            mCholmodL->n,
             B.rows());
         throw std::invalid_argument(what);
     }
@@ -75,27 +40,22 @@ MatrixX Cholmod::solve(Eigen::Ref<MatrixX const> const& B) const
 
     return Eigen::Map<MatrixX const>(
         static_cast<Scalar*>(cholmod_X->x),
-        static_cast<Eigen::Index>(mCholmodA->nrow),
+        static_cast<Eigen::Index>(mCholmodL->n),
         B.cols());
 }
 
 Cholmod::~Cholmod()
 {
-    deallocate();
+    Deallocate();
     cholmod_finish(&mCholmodCommon);
 }
 
-void Cholmod::deallocate()
+void Cholmod::Deallocate()
 {
-    if (mCholmodA != NULL)
-    {
-        cholmod_free_sparse(&mCholmodA, &mCholmodCommon);
-    }
     if (mCholmodL != NULL)
     {
         cholmod_free_factor(&mCholmodL, &mCholmodCommon);
     }
-    mbFactorized = false;
 }
 
 } // namespace linalg
@@ -107,31 +67,56 @@ void Cholmod::deallocate()
 TEST_CASE("[math][linalg] Cholmod")
 {
     using namespace pbat;
-    auto constexpr n = 10;
-    MatrixX const R  = MatrixX::Random(n, n);
-    CSCMatrix A      = (R.transpose() * R).sparseView();
-    A                = A.triangularView<Eigen::Lower>();
-    math::linalg::Cholmod LLT{};
-    SUBCASE("Can solve SPD linear systems")
-    {
-        LLT.analyze(A);
-        bool const bFactorized = LLT.factorize();
-        CHECK(bFactorized);
-        auto constexpr m        = 3;
-        MatrixX const X         = MatrixX::Random(n, m);
-        MatrixX const B         = A.selfadjointView<Eigen::Lower>() * X;
-        MatrixX const Xcomputed = LLT.solve(B);
-        Scalar const error      = (X - Xcomputed).squaredNorm();
-        auto constexpr zero     = 1e-15;
-        CHECK_LE(error, zero);
+    // Arrange
+    auto constexpr n    = 10;
+    auto constexpr zero = 1e-15;
+    auto constexpr m    = 3;
+    MatrixX const X     = MatrixX::Random(n, m);
+    MatrixX const R     = MatrixX::Random(n, n);
+    CSCMatrix A         = (R.transpose() * R).sparseView();
+    A                   = A.triangularView<Eigen::Lower>();
+    MatrixX const B     = A.selfadjointView<Eigen::Lower>() * X;
 
-        VectorX const u = VectorX::Random(n);
-        A += (u * u.transpose()).sparseView();
-        bool const bFactorized2 = LLT.compute(A);
-        CHECK(bFactorized2);
-        MatrixX const B2         = A.selfadjointView<Eigen::Lower>() * X;
-        MatrixX const Xcomputed2 = LLT.solve(B2);
-        Scalar const error2      = (X - Xcomputed2).squaredNorm();
-        CHECK_LE(error2, zero);
+    math::linalg::Cholmod LLT{};
+    SUBCASE("Can solve SPD linear systems via Analyze+Factorize")
+    {
+        LLT.Analyze(A);
+        bool const bFactorized = LLT.Factorize(A);
+        CHECK(bFactorized);
+        MatrixX const Xcomputed = LLT.Solve(B);
+        Scalar const error      = (X - Xcomputed).squaredNorm();
+        CHECK_LE(error, zero);
+    }
+    SUBCASE("Can solve SPD linear systems via Compute")
+    {
+        bool const bFactorized = LLT.Compute(A);
+        CHECK(bFactorized);
+        MatrixX const Xcomputed = LLT.Solve(B);
+        Scalar const error      = (X - Xcomputed).squaredNorm();
+        CHECK_LE(error, zero);
+    }
+    SUBCASE("Can update Cholesky factors")
+    {
+        CSCMatrix const U      = MatrixX::Random(n, m).sparseView();
+        bool const bFactorized = LLT.Compute(A);
+        CHECK(bFactorized);
+        bool const bFactorizationUpdated = LLT.Update(U);
+        CHECK(bFactorizationUpdated);
+        CSCMatrix UT            = U.transpose();
+        MatrixX const Bup       = (A.selfadjointView<Eigen::Lower>()) * X + U * UT * X;
+        MatrixX const Xcomputed = LLT.Solve(Bup);
+        Scalar const error      = (X - Xcomputed).squaredNorm();
+        CHECK_LE(error, zero);
+    }
+    SUBCASE("Can downdate Cholesky factors")
+    {
+        CSCMatrix const U      = MatrixX::Zero(n, m).sparseView();
+        bool const bFactorized = LLT.Compute(A);
+        CHECK(bFactorized);
+        bool const bFactorizationUpdated = LLT.Downdate(U);
+        CHECK(bFactorizationUpdated);
+        MatrixX const Xcomputed = LLT.Solve(B);
+        Scalar const error      = (X - Xcomputed).squaredNorm();
+        CHECK_LE(error, zero);
     }
 }

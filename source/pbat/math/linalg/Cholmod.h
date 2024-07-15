@@ -21,96 +21,141 @@ class Cholmod
         std::is_same_v<CSCMatrix::StorageIndex, std::int32_t>,
         "Cholmod implementation uses 32-bit integer indices");
 
+    enum class ESparseStorage {
+        SymmetricLowerTriangular = -1,
+        Unsymmetric              = 0,
+        SymmetricUpperTriangular = 1
+    };
+
     Cholmod();
 
     template <class Derived>
-    Cholmod(Eigen::SparseCompressedBase<Derived> const& A);
+    void Analyze(
+        Eigen::SparseCompressedBase<Derived> const& A,
+        ESparseStorage storage = ESparseStorage::SymmetricLowerTriangular);
 
     template <class Derived>
-    void analyze(Eigen::SparseCompressedBase<Derived> const& A);
+    bool Factorize(
+        Eigen::SparseCompressedBase<Derived> const& A,
+        ESparseStorage storage = ESparseStorage::SymmetricLowerTriangular);
 
     template <class Derived>
-    bool compute(Eigen::SparseCompressedBase<Derived> const& A);
+    bool Compute(
+        Eigen::SparseCompressedBase<Derived> const& A,
+        ESparseStorage storage = ESparseStorage::SymmetricLowerTriangular);
 
-    void analyze();
-    bool factorize();
+    template <class Derived>
+    bool Update(Eigen::SparseCompressedBase<Derived> const& U);
 
-    MatrixX solve(Eigen::Ref<MatrixX const> const& B) const;
+    template <class Derived>
+    bool Downdate(Eigen::SparseCompressedBase<Derived> const& U);
+
+    MatrixX Solve(Eigen::Ref<MatrixX const> const& B) const;
 
     ~Cholmod();
 
   private:
     template <class Derived>
-    void allocate(Eigen::SparseCompressedBase<Derived> const& A);
+    void ToCholmodView(
+        Eigen::SparseCompressedBase<Derived> const& A,
+        ESparseStorage storage,
+        cholmod_sparse& cholmod_A) const;
 
-    void deallocate();
+    void Deallocate();
 
     cholmod_common mCholmodCommon;
-    cholmod_sparse* mCholmodA;
     cholmod_factor* mCholmodL;
-    bool mbFactorized;
 };
 
 template <class Derived>
-inline Cholmod::Cholmod(Eigen::SparseCompressedBase<Derived> const& A) : Cholmod()
+inline void Cholmod::Analyze(Eigen::SparseCompressedBase<Derived> const& A, ESparseStorage storage)
 {
-    allocate(A);
+    Deallocate();
+    cholmod_sparse cholmod_A{};
+    ToCholmodView(A, storage, cholmod_A);
+    mCholmodL = cholmod_analyze(&cholmod_A, &mCholmodCommon);
+    if (mCholmodL == NULL)
+        throw std::runtime_error("Symbolic analysis of Cholesky factor failed");
 }
 
 template <class Derived>
-inline void Cholmod::analyze(Eigen::SparseCompressedBase<Derived> const& A)
+inline bool
+Cholmod::Factorize(Eigen::SparseCompressedBase<Derived> const& A, ESparseStorage storage)
 {
-    deallocate();
-    allocate(A);
-    analyze();
+    if (mCholmodL == NULL)
+        Analyze(A, storage);
+
+    cholmod_sparse cholmod_A;
+    ToCholmodView(A, storage, cholmod_A);
+    int const ec = cholmod_factorize(&cholmod_A, mCholmodL, &mCholmodCommon);
+    return ec == 1;
 }
 
 template <class Derived>
-inline bool Cholmod::compute(Eigen::SparseCompressedBase<Derived> const& A)
+inline bool Cholmod::Compute(Eigen::SparseCompressedBase<Derived> const& A, ESparseStorage storage)
 {
-    analyze(A);
-    return factorize();
+    return Factorize(A, storage);
 }
 
 template <class Derived>
-inline void Cholmod::allocate(Eigen::SparseCompressedBase<Derived> const& A)
+inline bool Cholmod::Update(Eigen::SparseCompressedBase<Derived> const& U)
 {
-    if (A.rows() != A.cols())
-    {
-        throw std::invalid_argument("Input sparse matrix must be square");
-    }
-    if (!A.isCompressed())
-    {
-        throw std::invalid_argument("Input sparse matrix must be compressed");
-    }
-
-    // Store only the lower triangular part of A
-    mCholmodA = cholmod_allocate_sparse(
-        static_cast<size_t>(A.innerSize()),
-        static_cast<size_t>(A.outerSize()),
-        static_cast<size_t>(A.nonZeros()),
-        true /*columns are sorted*/,
-        true /*A is packed (i.e. compressed)*/,
-        -1 /*tril, i.e. lower triangular part of A is stored*/,
-        CHOLMOD_DOUBLE + CHOLMOD_REAL,
+    cholmod_sparse cholmod_U{};
+    ToCholmodView(U, ESparseStorage::Unsymmetric, cholmod_U);
+    cholmod_sparse* cholmod_PU = cholmod_submatrix(
+        &cholmod_U,
+        static_cast<std::int32_t*>(mCholmodL->Perm) /*Fill-reducing permutation*/,
+        static_cast<long long>(mCholmodL->n) /*Number of rows*/,
+        NULL /*No column permutation*/,
+        -1 /*all columns*/,
+        1 /*TRUE*/,
+        1 /*TRUE*/,
         &mCholmodCommon);
-    if (mCholmodA == NULL)
-    {
-        throw std::runtime_error("Failed to allocate sparse matrix");
-    }
-    // cholmod_allocate_sparse probably already set this as default, but I still set it to be
-    // sure.
-    mCholmodA->itype = CHOLMOD_INT;
+    int const ec = cholmod_updown(1 /*TRUE == update*/, cholmod_PU, mCholmodL, &mCholmodCommon);
+    cholmod_free_sparse(&cholmod_PU, &mCholmodCommon);
+    return ec == 1 /*success*/;
+}
 
-    Scalar const* values = A.valuePtr();
-    using IndexType      = Eigen::SparseCompressedBase<Derived>::StorageIndex;
-    static_assert(std::is_same_v<IndexType, std::int32_t>, "CHOLMOD compiled with int32 indices");
-    IndexType const* innerInds = A.innerIndexPtr();
-    IndexType const* outerInds = A.outerIndexPtr();
+template <class Derived>
+inline bool Cholmod::Downdate(Eigen::SparseCompressedBase<Derived> const& U)
+{
+    // NOTE: Implementation copied from Update, except that FALSE is passed to cholmod_update(...)
+    cholmod_sparse cholmod_U{};
+    ToCholmodView(U, ESparseStorage::Unsymmetric, cholmod_U);
+    cholmod_sparse* cholmod_PU = cholmod_submatrix(
+        &cholmod_U,
+        static_cast<std::int32_t*>(mCholmodL->Perm) /*Fill-reducing permutation*/,
+        static_cast<long long>(mCholmodL->n) /*Number of rows*/,
+        NULL /*No column permutation*/,
+        -1 /*all columns*/,
+        1 /*TRUE*/,
+        1 /*TRUE*/,
+        &mCholmodCommon);
+    int const ec = cholmod_updown(0 /*FALSE == downdate*/, cholmod_PU, mCholmodL, &mCholmodCommon);
+    cholmod_free_sparse(&cholmod_PU, &mCholmodCommon);
+    return ec == 1 /*success*/;
+}
 
-    std::memcpy(mCholmodA->p, outerInds, sizeof(IndexType) * (A.outerSize() + 1));
-    std::memcpy(mCholmodA->i, innerInds, sizeof(IndexType) * A.nonZeros());
-    std::memcpy(mCholmodA->x, values, sizeof(Scalar) * A.nonZeros());
+template <class Derived>
+inline void Cholmod::ToCholmodView(
+    Eigen::SparseCompressedBase<Derived> const& A,
+    ESparseStorage storage,
+    cholmod_sparse& cholmod_A) const
+{
+    // Store only the lower triangular part of A
+    cholmod_A.nrow   = static_cast<size_t>(A.innerSize());
+    cholmod_A.ncol   = static_cast<size_t>(A.outerSize());
+    cholmod_A.nzmax  = static_cast<size_t>(A.nonZeros());
+    cholmod_A.p      = const_cast<std::int32_t*>(A.outerIndexPtr());
+    cholmod_A.i      = const_cast<std::int32_t*>(A.innerIndexPtr());
+    cholmod_A.nz     = NULL;
+    cholmod_A.x      = const_cast<Scalar*>(A.valuePtr());
+    cholmod_A.z      = NULL;
+    cholmod_A.stype  = static_cast<std::int32_t>(storage);
+    cholmod_A.itype  = CHOLMOD_INT;
+    cholmod_A.xtype  = CHOLMOD_REAL;
+    cholmod_A.sorted = 1 /*TRUE*/;
+    cholmod_A.packed = 1 /*TRUE*/;
 }
 
 } // namespace linalg
