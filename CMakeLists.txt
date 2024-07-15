@@ -27,6 +27,10 @@ if(PBAT_BUILD_SHARED_LIBS)
     set(BUILD_SHARED_LIBS ON)
 endif()
 
+if (WIN32)
+    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
+endif()
+
 # Dependencies
 # Note that this call must come after we have set BUILD_SHARED_LIBS
 # in order to propagate the variable to our dependencies (i.e. Tracy).

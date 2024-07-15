@@ -25,8 +25,31 @@ endif()
 
 if(PBAT_USE_INTEL_MKL)
     find_package(MKL CONFIG REQUIRED)
+
+    # Many of the MKL DLLs are not exposed as transitive dependencies of MKL::MKL
+    # and MKL::mkl_core, but our library target PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
+    # needs them. Thus, we manually search for the missing DLLs (i.e. all of them) and
+    # append them to some global variable PBAT_INTERNAL_MKL_DLLS. Targets which needs
+    # those DLLs can link to those missing dependencies by using this variable.
+    get_target_property(_mkl_imported_location MKL::mkl_core IMPORTED_LOCATION)
+    cmake_path(GET _mkl_imported_location PARENT_PATH _mkl_shared_library_directory)
+    cmake_path(APPEND _mkl_shared_library_directory "mkl_*" OUTPUT_VARIABLE _mkl_libs_glob)
+    file(
+        GLOB _mkl_shared_libraries
+        LIST_DIRECTORIES OFF
+        CONFIGURE_DEPENDS "${_mkl_libs_glob}")
+    set(PBAT_INTERNAL_MKL_DLLS ${_mkl_shared_libraries})
+    message(VERBOSE "Found MKL libraries: ${PBAT_INTERNAL_MKL_DLLS}")
 endif()
 
 if(PBAT_USE_SUITESPARSE)
+    # find_package(metis CONFIG)
+    # if (${metis_FOUND})
+    # get_target_property(_metis_configurations metis IMPORTED_CONFIGURATIONS)
+    # foreach(_metis_configuration IN ITEMS ${_metis_configurations})
+    # get_target_property(_metis_location metis IMPORTED_LOCATION_${_metis_configuration})
+    # message(STATUS "Found metis: ${_metis_location}")
+    # endforeach()
+    # endif()
     find_package(suitesparse CONFIG REQUIRED)
 endif()

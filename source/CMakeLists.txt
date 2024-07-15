@@ -8,7 +8,7 @@ set_target_properties(
     FOLDER "PhysicsBasedAnimationToolkit"
     DEBUG_POSTFIX "_d"
     CXX_VISIBILITY_PRESET "hidden"
-    VISIBILITY_INLINES_HIDDEN ON 
+    VISIBILITY_INLINES_HIDDEN ON
 )
 
 # Most of our implementation code is templated, so we expose transitive dependencies (i.e. PUBLIC)
@@ -55,6 +55,25 @@ target_link_libraries(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     $<TARGET_NAME_IF_EXISTS:SuiteSparse::spqr>
     $<TARGET_NAME_IF_EXISTS:Tracy::TracyClient>
 )
+
+# On Windows, make sure DLL dependencies (i.e. runtime artifacts)
+# end up in runtime output directory. For some reason, many of the 
+# MKL DLLs are not copied to the output directory, so we enforce it. 
+# Only mkl_core.2.dll and mkl_intel_thread.2.dll are copied. 
+# WARNING: 
+# On Unix systems, I assume that the rpath mechanism will handle 
+# transitive shared library dependencies correctly, but this is to be
+# determined.
+if(WIN32 AND PBAT_USE_INTEL_MKL)
+    add_custom_command(
+        TARGET PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
+        COMMAND
+        ${CMAKE_COMMAND} -E copy_if_different
+        ${PBAT_INTERNAL_MKL_DLLS}
+        $<TARGET_FILE_DIR:PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit>
+        COMMAND_EXPAND_LISTS
+    )
+endif()
 
 # Make source tree appear as on file system in IDEs
 get_target_property(_pbat_sources PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit SOURCES)
