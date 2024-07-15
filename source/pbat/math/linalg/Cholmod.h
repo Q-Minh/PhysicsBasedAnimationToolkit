@@ -29,6 +29,9 @@ class Cholmod
     template <class Derived>
     void analyze(Eigen::SparseCompressedBase<Derived> const& A);
 
+    template <class Derived>
+    bool compute(Eigen::SparseCompressedBase<Derived> const& A);
+
     void analyze();
     bool factorize();
 
@@ -60,6 +63,13 @@ inline void Cholmod::analyze(Eigen::SparseCompressedBase<Derived> const& A)
     deallocate();
     allocate(A);
     analyze();
+}
+
+template <class Derived>
+inline bool Cholmod::compute(Eigen::SparseCompressedBase<Derived> const& A)
+{
+    analyze(A);
+    return factorize();
 }
 
 template <class Derived>

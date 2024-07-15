@@ -34,7 +34,7 @@ bool Cholmod::factorize()
         analyze();
 
     int const ec = cholmod_factorize(mCholmodA, mCholmodL, &mCholmodCommon);
-    if (ec == CHOLMOD_OK)
+    if (ec == 1)
     {
         mbFactorized = true;
         return true;
@@ -112,14 +112,26 @@ TEST_CASE("[math][linalg] Cholmod")
     CSCMatrix A      = (R.transpose() * R).sparseView();
     A                = A.triangularView<Eigen::Lower>();
     math::linalg::Cholmod LLT{};
-    LLT.analyze(A);
-    bool const bFactorized = LLT.factorize();
-    CHECK(bFactorized);
-    auto constexpr m        = 3;
-    MatrixX const X         = MatrixX::Random(n, m);
-    MatrixX const B         = A.selfadjointView<Eigen::Lower>() * X;
-    MatrixX const Xcomputed = LLT.solve(B);
-    Scalar const error      = (X - Xcomputed).squaredNorm();
-    auto constexpr zero     = 1e-15;
-    CHECK_LE(error, zero);
+    SUBCASE("Can solve SPD linear systems")
+    {
+        LLT.analyze(A);
+        bool const bFactorized = LLT.factorize();
+        CHECK(bFactorized);
+        auto constexpr m        = 3;
+        MatrixX const X         = MatrixX::Random(n, m);
+        MatrixX const B         = A.selfadjointView<Eigen::Lower>() * X;
+        MatrixX const Xcomputed = LLT.solve(B);
+        Scalar const error      = (X - Xcomputed).squaredNorm();
+        auto constexpr zero     = 1e-15;
+        CHECK_LE(error, zero);
+
+        VectorX const u = VectorX::Random(n);
+        A += (u * u.transpose()).sparseView();
+        bool const bFactorized2 = LLT.compute(A);
+        CHECK(bFactorized2);
+        MatrixX const B2         = A.selfadjointView<Eigen::Lower>() * X;
+        MatrixX const Xcomputed2 = LLT.solve(B2);
+        Scalar const error2      = (X - Xcomputed2).squaredNorm();
+        CHECK_LE(error2, zero);
+    }
 }
