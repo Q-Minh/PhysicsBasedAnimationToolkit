@@ -33,13 +33,13 @@ if(PBAT_USE_INTEL_MKL)
     # those DLLs can link to those missing dependencies by using this variable.
     get_target_property(_mkl_imported_location MKL::mkl_core IMPORTED_LOCATION)
     cmake_path(GET _mkl_imported_location PARENT_PATH _mkl_shared_library_directory)
-    cmake_path(APPEND _mkl_shared_library_directory "mkl_*" OUTPUT_VARIABLE _mkl_libs_glob)
+    cmake_path(APPEND _mkl_shared_library_directory "mkl_*.dll" OUTPUT_VARIABLE _mkl_dlls_glob)
     file(
         GLOB _mkl_shared_libraries
         LIST_DIRECTORIES OFF
-        CONFIGURE_DEPENDS "${_mkl_libs_glob}")
+        "${_mkl_dlls_glob}")
     set(PBAT_INTERNAL_MKL_DLLS ${_mkl_shared_libraries})
-    message(VERBOSE "Found MKL libraries: ${PBAT_INTERNAL_MKL_DLLS}")
+    message(VERBOSE "Found MKL DLLs: ${PBAT_INTERNAL_MKL_DLLS}")
 endif()
 
 if(PBAT_USE_SUITESPARSE)

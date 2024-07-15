@@ -65,14 +65,16 @@ target_link_libraries(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
 # transitive shared library dependencies correctly, but this is to be
 # determined.
 if(WIN32 AND PBAT_USE_INTEL_MKL)
-    add_custom_command(
-        TARGET PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
-        COMMAND
-        ${CMAKE_COMMAND} -E copy_if_different
-        ${PBAT_INTERNAL_MKL_DLLS}
-        $<TARGET_FILE_DIR:PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit>
-        COMMAND_EXPAND_LISTS
-    )
+    if (PBAT_INTERNAL_MKL_DLLS)
+        add_custom_command(
+            TARGET PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
+            COMMAND
+            ${CMAKE_COMMAND} -E copy_if_different
+            ${PBAT_INTERNAL_MKL_DLLS}
+            $<TARGET_FILE_DIR:PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit>
+            COMMAND_EXPAND_LISTS
+        )
+    endif()
 endif()
 
 # Make source tree appear as on file system in IDEs
