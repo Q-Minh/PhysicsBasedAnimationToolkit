@@ -4,6 +4,7 @@ target_sources(PhysicsBasedAnimationToolkit_Python
     FILES
     "Cholmod.h"
     "LinAlg.h"
+    "Pardiso.h"
     "SimplicialLDLT.h"
 )
 
@@ -11,5 +12,6 @@ target_sources(PhysicsBasedAnimationToolkit_Python
     PRIVATE
     "Cholmod.cpp"
     "LinAlg.cpp"
+    "Pardiso.cpp"
     "SimplicialLDLT.cpp"
 )

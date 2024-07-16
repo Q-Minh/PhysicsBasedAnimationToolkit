@@ -66,7 +66,7 @@ class Cholmod
         ESparseStorage storage,
         cholmod_sparse& cholmod_A) const;
 
-    void Deallocate();
+    PBAT_API void Deallocate();
 
     cholmod_common mCholmodCommon;
     cholmod_factor* mCholmodL;

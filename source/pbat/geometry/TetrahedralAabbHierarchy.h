@@ -32,9 +32,9 @@ class TetrahedralAabbHierarchy : public BoundingVolumeHierarchy<
         Eigen::Ref<IndexMatrixX const> const& C,
         std::size_t maxPointsInLeaf = 10ULL);
 
-    PrimitiveType Primitive(Index p) const;
+    PBAT_API PrimitiveType Primitive(Index p) const;
 
-    Vector<kDims> PrimitiveLocation(PrimitiveType const& primitive) const;
+    PBAT_API Vector<kDims> PrimitiveLocation(PrimitiveType const& primitive) const;
 
     template <class RPrimitiveIndices>
     BoundingVolumeType BoundingVolumeOf(RPrimitiveIndices&& pinds) const;

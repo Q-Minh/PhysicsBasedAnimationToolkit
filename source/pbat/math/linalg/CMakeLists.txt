@@ -4,12 +4,10 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     FILES
     "Cholmod.h"
     "LinAlg.h"
-    "Pardiso.h"
     "SparsityPattern.h"
 )
 target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     PRIVATE
     "Cholmod.cpp"
-    "Pardiso.cpp"
     "SparsityPattern.cpp"
 )
