@@ -1237,7 +1237,7 @@ void BindShapeFunctions_{mesh_type_py}(pybind11::module& m)
     std::string const shapeFunctionsAtName = "shape_functions_at_" + meshTypeName;
     m.def(
         shapeFunctionsAtName.data(),
-        [&](MeshType const& mesh, Eigen::Ref<MatrixX const> const& Xi) -> MatrixX {{
+        [&]([[maybe_unused]] MeshType const& mesh, Eigen::Ref<MatrixX const> const& Xi) -> MatrixX {{
             return pbat::fem::ShapeFunctionsAt<typename MeshType::ElementType>(Xi);
         }}, 
         pyb::arg("mesh"),

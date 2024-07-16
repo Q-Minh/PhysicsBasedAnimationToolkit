@@ -103,7 +103,7 @@ inline std::vector<Index>
 AxisAlignedBoundingBox<Dims>::contained(Eigen::MatrixBase<TDerived> const& P) const
 {
     std::vector<Index> inds{};
-    inds.reserve(P.cols());
+    inds.reserve(static_cast<std::size_t>(P.cols()));
     for (auto i = 0; i < P.cols(); ++i)
     {
         if (BaseType::template contains(P.col(i)))

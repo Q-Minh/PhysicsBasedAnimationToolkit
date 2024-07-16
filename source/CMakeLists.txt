@@ -38,23 +38,35 @@ target_link_libraries(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     PUBLIC
     doctest::doctest
     Eigen3::Eigen
+    fmt::fmt
     range-v3::concepts
     range-v3::meta
     range-v3::range-v3
     TBB::tbb
-    $<TARGET_NAME_IF_EXISTS:fmt::fmt>
-    $<TARGET_NAME_IF_EXISTS:MKL::MKL>
-    $<TARGET_NAME_IF_EXISTS:SuiteSparse::suitesparseconfig>
-    $<TARGET_NAME_IF_EXISTS:SuiteSparse::amd>
-    $<TARGET_NAME_IF_EXISTS:SuiteSparse::cholmod>
-    $<TARGET_NAME_IF_EXISTS:SuiteSparse::colamd>
-    $<TARGET_NAME_IF_EXISTS:SuiteSparse::ccolamd>
-    $<TARGET_NAME_IF_EXISTS:SuiteSparse::camd>
-    $<TARGET_NAME_IF_EXISTS:SuiteSparse::ldl>
-    $<TARGET_NAME_IF_EXISTS:SuiteSparse::umfpack>
-    $<TARGET_NAME_IF_EXISTS:SuiteSparse::spqr>
-    $<TARGET_NAME_IF_EXISTS:Tracy::TracyClient>
+    Tracy::TracyClient
 )
+
+if(PBAT_USE_INTEL_MKL)
+    target_link_libraries(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
+        PUBLIC
+        MKL::MKL
+    )
+endif()
+
+if(PBAT_USE_SUITESPARSE)
+    target_link_libraries(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
+        PUBLIC
+        SuiteSparse::suitesparseconfig
+        SuiteSparse::amd
+        SuiteSparse::cholmod
+        SuiteSparse::colamd
+        SuiteSparse::ccolamd
+        SuiteSparse::camd
+        SuiteSparse::ldl
+        SuiteSparse::umfpack
+        SuiteSparse::spqr
+    )
+endif()
 
 # Make source tree appear as on file system in IDEs
 get_target_property(_pbat_sources PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit SOURCES)

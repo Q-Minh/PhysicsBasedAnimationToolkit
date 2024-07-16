@@ -60,7 +60,6 @@ void BindSimplicialLDLT(pybind11::module& m)
                     return "SimplicialLdlt_Csr_AMD";
                 if constexpr (std::is_same_v<SimplicialLdltType, LdltCsrColamd>)
                     return "SimplicialLdlt_Csr_COLAMD";
-                return "";
             }();
 
             pyb::class_<SimplicialLdltType>(m, className.data())

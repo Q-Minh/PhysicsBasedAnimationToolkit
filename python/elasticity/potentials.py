@@ -126,9 +126,9 @@ struct {energy_name}<{d}>
 template <class TDerived>
 Scalar
 {energy_name}<{d}>::eval(
-    Eigen::DenseBase<TDerived> const& F,
-    Scalar mu,
-    Scalar lambda) const
+    [[maybe_unused]] Eigen::DenseBase<TDerived> const& F,
+    [[maybe_unused]] Scalar mu,
+    [[maybe_unused]] Scalar lambda) const
 {{
     Scalar psi;
 {cg.tabulate(psicode, spaces=4)}
@@ -138,9 +138,9 @@ Scalar
 template <class TDerived>
 Vector<{vecF.shape[0]}>
 {energy_name}<{d}>::grad(
-    Eigen::DenseBase<TDerived> const& F,
-    Scalar mu,
-    Scalar lambda) const
+    [[maybe_unused]] Eigen::DenseBase<TDerived> const& F,
+    [[maybe_unused]] Scalar mu,
+    [[maybe_unused]] Scalar lambda) const
 {{
     Vector<{vecF.shape[0]}> G;
     auto vecG = G.reshaped();
@@ -151,9 +151,9 @@ Vector<{vecF.shape[0]}>
 template <class TDerived>
 Matrix<{vecF.shape[0]},{vecF.shape[0]}>
 {energy_name}<{d}>::hessian(
-    Eigen::DenseBase<TDerived> const& F,
-    Scalar mu,
-    Scalar lambda) const
+    [[maybe_unused]] Eigen::DenseBase<TDerived> const& F,
+    [[maybe_unused]] Scalar mu,
+    [[maybe_unused]] Scalar lambda) const
 {{
     Matrix<{vecF.shape[0]},{vecF.shape[0]}> H;
     auto vecH = H.reshaped();
@@ -164,9 +164,9 @@ Matrix<{vecF.shape[0]},{vecF.shape[0]}>
 template <class TDerived>
 std::tuple<Scalar, Vector<{vecF.shape[0]}>>
 {energy_name}<{d}>::evalWithGrad(
-    Eigen::DenseBase<TDerived> const& F,
-    Scalar mu,
-    Scalar lambda) const
+    [[maybe_unused]] Eigen::DenseBase<TDerived> const& F,
+    [[maybe_unused]] Scalar mu,
+    [[maybe_unused]] Scalar lambda) const
 {{
     Scalar psi;
     Vector<{vecF.shape[0]}> G;
@@ -178,9 +178,9 @@ std::tuple<Scalar, Vector<{vecF.shape[0]}>>
 template <class TDerived>
 std::tuple<Scalar, Vector<{vecF.shape[0]}>, Matrix<{vecF.shape[0]},{vecF.shape[0]}>>
 {energy_name}<{d}>::evalWithGradAndHessian(
-    Eigen::DenseBase<TDerived> const& F,
-    Scalar mu,
-    Scalar lambda) const
+    [[maybe_unused]] Eigen::DenseBase<TDerived> const& F,
+    [[maybe_unused]] Scalar mu,
+    [[maybe_unused]] Scalar lambda) const
 {{
     Scalar psi;
     Vector<{vecF.shape[0]}> G;
@@ -193,7 +193,10 @@ std::tuple<Scalar, Vector<{vecF.shape[0]}>, Matrix<{vecF.shape[0]},{vecF.shape[0
 
 template <class TDerived>
 std::tuple<Vector<{vecF.shape[0]}>, Matrix<{vecF.shape[0]},{vecF.shape[0]}>>
-{energy_name}<{d}>::gradAndHessian(Eigen::DenseBase<TDerived> const& F, Scalar mu, Scalar lambda) const
+{energy_name}<{d}>::gradAndHessian(
+    [[maybe_unused]] Eigen::DenseBase<TDerived> const& F, 
+    [[maybe_unused]] Scalar mu, 
+    [[maybe_unused]] Scalar lambda) const
 {{
     Vector<{vecF.shape[0]}> G;
     Matrix<{vecF.shape[0]},{vecF.shape[0]}> H;

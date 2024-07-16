@@ -2,6 +2,7 @@ add_library(PBAT_PyFem)
 set_target_properties(PBAT_PyFem
     PROPERTIES
     FOLDER "PhysicsBasedAnimationToolkit/bindings/fem"
+    WINDOWS_EXPORT_ALL_SYMBOLS ON
 )
 
 list(APPEND _pbat_fem_types
@@ -16,18 +17,21 @@ list(APPEND _pbat_fem_types
 )
 
 set(_pbat_python_autogen_dir "gen")
+
 foreach(_pbat_fem_type IN ITEMS ${_pbat_fem_types})
     set(_pbat_python_fem_target "PBAT_PyFem_${_pbat_fem_type}")
     add_library(${_pbat_python_fem_target})
     set_target_properties(${_pbat_python_fem_target}
         PROPERTIES
         FOLDER "PhysicsBasedAnimationToolkit/bindings/fem/${_pbat_fem_type}"
+        WINDOWS_EXPORT_ALL_SYMBOLS ON
     )
     target_link_libraries(${_pbat_python_fem_target}
+        PUBLIC
+        pybind11::headers
+        Python::Module
         PRIVATE
         PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
-        Python::Module
-        pybind11::headers
     )
 
     execute_process(
@@ -66,16 +70,15 @@ foreach(_pbat_fem_type IN ITEMS ${_pbat_fem_types})
     target_link_libraries(PBAT_PyFem
         PRIVATE
         ${_pbat_python_fem_target}
-        Python::Module
-        pybind11::headers
     )
 endforeach()
 
 target_link_libraries(PBAT_PyFem
+    PUBLIC
+    pybind11::headers
+    Python::Module
     PRIVATE
     PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
-    Python::Module
-    pybind11::headers
 )
 target_sources(PBAT_PyFem
     PUBLIC

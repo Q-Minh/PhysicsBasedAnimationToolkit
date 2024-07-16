@@ -1,7 +1,9 @@
 #include "Cholmod.h"
-
+// clang-format off
+#ifdef PBAT_USE_SUITESPARSE
 #include <fmt/core.h>
 #include <string>
+// clang-format on
 
 namespace pbat {
 namespace math {
@@ -62,7 +64,7 @@ void Cholmod::Deallocate()
 } // namespace math
 } // namespace pbat
 
-#include <doctest/doctest.h>
+    #include <doctest/doctest.h>
 
 TEST_CASE("[math][linalg] Cholmod")
 {
@@ -120,3 +122,5 @@ TEST_CASE("[math][linalg] Cholmod")
         CHECK_LE(error, zero);
     }
 }
+
+#endif // PBAT_USE_SUITESPARSE

@@ -24,11 +24,10 @@ void BindCholmod(pybind11::module& m)
                 return "Cholmod_Csc";
             if constexpr (std::is_same_v<SparseMatrixType, CSRMatrix>)
                 return "Cholmod_Csr";
-            return "";
         }();
         using CholmodType = pbat::math::linalg::Cholmod;
-        pyb::class_<CholmodType>(m, className.data())
-            .def(
+        pyb::class_<CholmodType> chol(m, className.data());
+        chol.def(
                 "analyze",
                 [](CholmodType& llt,
                    SparseMatrixType const& A,
@@ -67,30 +66,24 @@ void BindCholmod(pybind11::module& m)
                 pyb::arg("storage") = CholmodType::ESparseStorage::SymmetricLowerTriangular)
             .def(
                 "update",
-                [](CholmodType& llt,
-                   SparseMatrixType const& U,
-                   CholmodType::ESparseStorage storage) {
+                [](CholmodType& llt, SparseMatrixType const& U) {
                     bool const bUpdated =
                         pbat::profiling::Profile("math.linalg.Cholmod.Update", [&]() {
                             return llt.Update(U);
                         });
                     return bUpdated;
                 },
-                pyb::arg("U"),
-                pyb::arg("storage") = CholmodType::ESparseStorage::SymmetricLowerTriangular)
+                pyb::arg("U"))
             .def(
                 "downdate",
-                [](CholmodType& llt,
-                   SparseMatrixType const& U,
-                   CholmodType::ESparseStorage storage) {
+                [](CholmodType& llt, SparseMatrixType const& U) {
                     bool const bDowndated =
                         pbat::profiling::Profile("math.linalg.Cholmod.Downdate", [&]() {
                             return llt.Downdate(U);
                         });
                     return bDowndated;
                 },
-                pyb::arg("U"),
-                pyb::arg("storage") = CholmodType::ESparseStorage::SymmetricLowerTriangular)
+                pyb::arg("U"))
             .def(
                 "solve",
                 [](CholmodType& llt, Eigen::Ref<MatrixX const> const& B) {
@@ -100,6 +93,16 @@ void BindCholmod(pybind11::module& m)
                     });
                 },
                 pyb::arg("B"));
+
+        pyb::enum_<CholmodType::ESparseStorage>(chol, "SparseStorage")
+            .value(
+                "SymmetricLowerTriangular",
+                CholmodType::ESparseStorage::SymmetricLowerTriangular)
+            .value(
+                "SymmetricUpperTriangular",
+                CholmodType::ESparseStorage::SymmetricUpperTriangular)
+            .value("Unsymmetric", CholmodType::ESparseStorage::Unsymmetric)
+            .export_values();
     });
 #endif // PBAT_USE_SUITESPARSE
 }
