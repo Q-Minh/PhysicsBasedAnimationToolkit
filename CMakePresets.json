@@ -148,52 +148,16 @@
             }
         },
         {
-            "name": "linux-dev-pip",
+            "name": "dev-pip",
             "inherits": [
                 "dev",
-                "gcc",
                 "vcpkg-all-features"
             ]
         },
         {
-            "name": "macos-dev-pip",
+            "name": "dev-pip-shared",
             "inherits": [
                 "dev",
-                "clang",
-                "vcpkg-all-features"
-            ]
-        },
-        {
-            "name": "windows-dev-pip",
-            "inherits": [
-                "dev",
-                "msvc",
-                "vcpkg-all-features"
-            ]
-        },
-        {
-            "name": "linux-dev-pip-shared",
-            "inherits": [
-                "dev",
-                "gcc",
-                "vcpkg-all-features",
-                "shared"
-            ]
-        },
-        {
-            "name": "macos-dev-pip-shared",
-            "inherits": [
-                "dev",
-                "clang",
-                "vcpkg-all-features",
-                "shared"
-            ]
-        },
-        {
-            "name": "windows-dev-pip-shared",
-            "inherits": [
-                "dev",
-                "msvc",
                 "vcpkg-all-features",
                 "shared"
             ]

@@ -16,13 +16,9 @@ jobs:
       matrix:
         include:
           - os: ubuntu-24.04
-            cmake_configure_preset: linux-dev-pip
           - os: windows-2022
-            cmake_configure_preset: windows-dev-pip
           - os: macos-13
-            cmake_configure_preset: macos-dev-pip
           - os: macos-14
-            cmake_configure_preset: macos-dev-pip
       max-parallel: 4
 
     steps:
@@ -44,4 +40,4 @@ jobs:
       
       - name: Build and install PBAT Python bindings
         run: |
-          pip install . --config-settings=cmake.args="--preset=${{ matrix.cmake_configure_preset }}" -v
+          pip install . --config-settings=cmake.args="--preset=dev-pip" -v
