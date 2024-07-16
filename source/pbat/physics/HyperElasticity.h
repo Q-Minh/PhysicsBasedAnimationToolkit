@@ -1,5 +1,5 @@
-#ifndef PBA_PHYSICS_HYPER_ELASTICITY_H
-#define PBA_PHYSICS_HYPER_ELASTICITY_H
+#ifndef PBAT_PHYSICS_HYPER_ELASTICITY_H
+#define PBAT_PHYSICS_HYPER_ELASTICITY_H
 
 #include "PhysicsBasedAnimationToolkitExport.h"
 
@@ -77,4 +77,4 @@ LameCoefficients(Eigen::DenseBase<TDerivedY> const& Y, Eigen::DenseBase<TDerived
 } // namespace physics
 } // namespace pbat
 
-#endif // PBA_PHYSICS_HYPER_ELASTICITY_H
+#endif // PBAT_PHYSICS_HYPER_ELASTICITY_H

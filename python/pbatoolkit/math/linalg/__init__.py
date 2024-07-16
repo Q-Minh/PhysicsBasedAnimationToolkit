@@ -16,6 +16,42 @@ class SolverBackend(Enum):
     IntelMKL = 2
 
 
+def chol(A, solver: SolverBackend = SolverBackend.Eigen):
+    """Returns an instance to an LLT (Cholesky) factorization suitable for matrices of 
+    the same type as A. The instance returned by this function should be used to factorize A,
+    i.e. this function does not actually compute the factorization. If the SolverBackend is 
+    Eigen, we return an LDLT factorization.
+
+    Args:
+        A: Input sparse matrix to decompose, either scipy.sparse.csc_matrix or scipy.sparse.csr_matrix
+        solver (SolverBackend, optional): The LLT implementation to use. Defaults to SolverBackend.Eigen.
+
+    Raises:
+        TypeError: A must be either scipy.sparse.csc_matrix or scipy.sparse.csr_matrix
+        ValueError: SuiteSparse backend is currently not supported.
+        ValueError: Intel MKL backend is currently not supported.
+
+    Returns:
+        An uninitialized LLT factorization of A
+    """
+    mtype = None
+    if isinstance(A, sp.sparse.csc_matrix):
+        mtype = "Csc"
+    if isinstance(A, sp.sparse.csr_matrix):
+        mtype = "Csr"
+    if mtype is None:
+        raise TypeError(
+            "Argument A should be either of scipy.sparse.csc_matrix or scipy.sparse.csr_matrix")
+
+    if solver == SolverBackend.Eigen:
+        return ldlt(A, solver=SolverBackend.Eigen)
+    if solver == SolverBackend.SuiteSparse:
+        class_ = getattr(_linalg, f"Cholmod_{mtype}")
+        return class_()
+    if solver == SolverBackend.IntelMKL:
+        raise ValueError("IntelMKL backend not yet supported")
+
+
 def ldlt(A, ordering: Ordering = Ordering.AMD, solver: SolverBackend = SolverBackend.Eigen):
     """Returns an instance to an LDLT (Bunch-Kaufman) factorization suitable for matrices of 
     the same type as A. The instance returned by this function should be used to factorize A,
@@ -47,6 +83,7 @@ def ldlt(A, ordering: Ordering = Ordering.AMD, solver: SolverBackend = SolverBac
         class_ = getattr(_linalg, f"SimplicialLdlt_{mtype}_{ordering.name}")
         return class_()
     if solver == SolverBackend.SuiteSparse:
-        raise ValueError("SuiteSparse backend not yet supported")
+        raise ValueError(
+            "Cholmod's LDLT factorization is simplicial just like Eigen's. Use SolverBackend.Eigen instead")
     if solver == SolverBackend.IntelMKL:
         raise ValueError("IntelMKL backend not yet supported")

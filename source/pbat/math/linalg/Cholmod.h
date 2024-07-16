@@ -1,11 +1,16 @@
-#ifndef PBA_MATH_LINALG_CHOLMOD_H
-#define PBA_MATH_LINALG_CHOLMOD_H
+// clang-format off
+#ifdef PBAT_USE_SUITESPARSE
+
+#ifndef PBAT_MATH_LINALG_CHOLMOD_H
+#define PBAT_MATH_LINALG_CHOLMOD_H
 
 #include "pbat/Aliases.h"
+#include "PhysicsBasedAnimationToolkitExport.h"
 
-#include <algorithm>
 #include <exception>
 #include <suitesparse/cholmod.h>
+#include <type_traits>
+// clang-format on
 
 namespace pbat {
 namespace math {
@@ -27,7 +32,7 @@ class Cholmod
         SymmetricUpperTriangular = 1
     };
 
-    Cholmod();
+    PBAT_API Cholmod();
 
     template <class Derived>
     void Analyze(
@@ -50,9 +55,9 @@ class Cholmod
     template <class Derived>
     bool Downdate(Eigen::SparseCompressedBase<Derived> const& U);
 
-    MatrixX Solve(Eigen::Ref<MatrixX const> const& B) const;
+    PBAT_API MatrixX Solve(Eigen::Ref<MatrixX const> const& B) const;
 
-    ~Cholmod();
+    PBAT_API ~Cholmod();
 
   private:
     template <class Derived>
@@ -162,4 +167,7 @@ inline void Cholmod::ToCholmodView(
 } // namespace math
 } // namespace pbat
 
-#endif // PBA_MATH_LINALG_CHOLMOD_H
+    // clang-format off
+#endif // PBAT_MATH_LINALG_CHOLMOD_H
+#endif // PBAT_USE_SUITESPARSE
+// clang-format on
