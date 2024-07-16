@@ -44,4 +44,4 @@ jobs:
       
       - name: Build and install PBAT Python bindings
         run: |
-          pip install . --config-settings="cmake.args='--preset=${{ matrix.cmake_configure_preset }}'" -v
+          pip install . --config-settings=cmake.args="--preset=${{ matrix.cmake_configure_preset }}" -v
