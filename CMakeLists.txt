@@ -27,9 +27,9 @@ if(PBAT_BUILD_SHARED_LIBS)
     set(BUILD_SHARED_LIBS ON)
 endif()
 
-if (WIN32)
-    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
-endif()
+# No matter the platform, we decide the structure of our build tree. This should
+# have no side-effect on library users.
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 
 # Dependencies
 # Note that this call must come after we have set BUILD_SHARED_LIBS

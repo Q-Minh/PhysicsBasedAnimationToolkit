@@ -39,7 +39,7 @@ if(PBAT_USE_INTEL_MKL)
         LIST_DIRECTORIES OFF
         "${_mkl_dlls_glob}")
     set(PBAT_INTERNAL_MKL_DLLS ${_mkl_shared_libraries})
-    message(VERBOSE "Found MKL DLLs: ${PBAT_INTERNAL_MKL_DLLS}")
+    message(STATUS "Found MKL DLLs: ${PBAT_INTERNAL_MKL_DLLS}")
 endif()
 
 if(PBAT_USE_SUITESPARSE)
