@@ -12,17 +12,29 @@
             }
         },
         {
-            "name": "dev",
-            "inherits": "default",
-            "architecture": {
-                "value": "x64",
-                "strategy": "external"
-            },
+            "name": "profile",
             "cacheVariables": {
                 "PBAT_ENABLE_PROFILER": {
                     "type": "BOOL",
                     "value": "ON"
                 },
+                "PBAT_PROFILE_ON_DEMAND": {
+                    "type": "BOOL",
+                    "value": "ON"
+                }
+            }
+        },
+        {
+            "name": "dev",
+            "inherits": [
+                "default",
+                "profile"
+            ],
+            "architecture": {
+                "value": "x64",
+                "strategy": "external"
+            },
+            "cacheVariables": {
                 "PBAT_BUILD_TESTS": {
                     "type": "BOOL",
                     "value": "ON"
@@ -40,6 +52,16 @@
                 "PBAT_BUILD_SHARED_LIBS": {
                     "type": "BOOL",
                     "value": "ON"
+                }
+            }
+        },
+        {
+            "name": "static",
+            "hidden": true,
+            "cacheVariables": {
+                "PBAT_BUILD_SHARED_LIBS": {
+                    "type": "BOOL",
+                    "value": "OFF"
                 }
             }
         },
@@ -74,15 +96,22 @@
             }
         },
         {
-            "name": "fast-linear-solvers",
+            "name": "suitesparse",
             "hidden": true,
             "cacheVariables": {
-                "VCPKG_MANIFEST_FEATURES": "mkl;suitesparse",
-                "PBAT_USE_INTEL_MKL": {
+                "VCPKG_MANIFEST_FEATURES": "suitesparse",
+                "PBAT_USE_SUITESPARSE": {
                     "type": "BOOL",
                     "value": "ON"
-                },
-                "PBAT_USE_SUITESPARSE": {
+                }
+            }
+        },
+        {
+            "name": "mkl",
+            "hidden": true,
+            "cacheVariables": {
+                "VCPKG_MANIFEST_FEATURES": "mkl",
+                "PBAT_USE_INTEL_MKL": {
                     "type": "BOOL",
                     "value": "ON"
                 }
@@ -113,6 +142,71 @@
                     "value": "ON"
                 },
                 "PBAT_BUILD_PYTHON_BINDINGS": {
+                    "type": "BOOL",
+                    "value": "ON"
+                }
+            }
+        },
+        {
+            "name": "linux-dev-pip",
+            "inherits": [
+                "dev",
+                "gcc",
+                "vcpkg-all-features"
+            ]
+        },
+        {
+            "name": "macos-dev-pip",
+            "inherits": [
+                "dev",
+                "clang",
+                "vcpkg-all-features"
+            ]
+        },
+        {
+            "name": "windows-dev-pip",
+            "inherits": [
+                "dev",
+                "msvc",
+                "vcpkg-all-features"
+            ]
+        },
+        {
+            "name": "linux-dev-pip-shared",
+            "inherits": [
+                "dev",
+                "gcc",
+                "vcpkg-all-features",
+                "shared"
+            ]
+        },
+        {
+            "name": "macos-dev-pip-shared",
+            "inherits": [
+                "dev",
+                "clang",
+                "vcpkg-all-features",
+                "shared"
+            ]
+        },
+        {
+            "name": "windows-dev-pip-shared",
+            "inherits": [
+                "dev",
+                "msvc",
+                "vcpkg-all-features",
+                "shared"
+            ]
+        },
+        {
+            "name": "ci-wheels",
+            "inherits": [
+                "default",
+                "profile",
+                "python"
+            ],
+            "cacheVariables": {
+                "CMAKE_POSITION_INDEPENDENT_CODE": {
                     "type": "BOOL",
                     "value": "ON"
                 }

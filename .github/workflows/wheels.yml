@@ -59,7 +59,7 @@ jobs:
           CIBW_ARCHS: ${{ matrix.cibw_archs }}
           CIBW_BUILD: ${{ matrix.cibw_build }}
           CIBW_BUILD_VERBOSITY: 1
-          CIBW_CONFIG_SETTINGS: "cmake.args=-DPBAT_BUILD_PYTHON_BINDINGS:BOOL=ON;-DPBAT_BUILD_TESTS:BOOL=OFF;-DPBAT_ENABLE_PROFILER:BOOL=ON;-DPBAT_PROFILE_ON_DEMAND:BOOL=ON;-DPBAT_BUILD_SHARED_LIBS:BOOL=OFF;-DCMAKE_POSITION_INDEPENDENT_CODE:BOOL=ON;-DCMAKE_TOOLCHAIN_FILE='${{ matrix.vcpkg_root }}/scripts/buildsystems/vcpkg.cmake';-DVCPKG_MANIFEST_FEATURES=python;-DPBAT_PROFILE_ON_DEMAND:BOOL=ON;${{ matrix.cmake_cxx_compiler }} build.tool-args=${{ matrix.build_tool_args }}"
+          CIBW_CONFIG_SETTINGS: "cmake.args='--preset=ci-wheels' build.tool-args=${{ matrix.build_tool_args }}"
 
       - uses: actions/upload-artifact@v4
         with:
