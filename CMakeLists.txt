@@ -22,6 +22,9 @@ option(PBAT_BUILD_SHARED_LIBS "Build as shared library" OFF)
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 list(APPEND CMAKE_MODULE_PATH "cmake")
 
+# Platform specific settings
+include(platform)
+
 # Build as static or shared
 if(PBAT_BUILD_SHARED_LIBS)
     set(BUILD_SHARED_LIBS ON)
