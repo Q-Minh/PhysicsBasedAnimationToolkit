@@ -51,7 +51,7 @@ jobs:
       - uses: pypa/cibuildwheel@v2.19.0
         env:
           MACOSX_DEPLOYMENT_TARGET: ${{ matrix.macosx_deployment_target }}
-          CIBW_ENVIRONMENT_PASS_LINUX: VCPKG_ROOT=/host/${{ github.workspace }}/vcpkg
+          CIBW_ENVIRONMENT_LINUX: VCPKG_ROOT=/host/${{ github.workspace }}/vcpkg
           CIBW_MANYLINUX_X86_64_IMAGE: ${{ matrix.cibw_image }}
           CIBW_ARCHS: ${{ matrix.cibw_archs }}
           CIBW_BUILD: ${{ matrix.cibw_build }}
