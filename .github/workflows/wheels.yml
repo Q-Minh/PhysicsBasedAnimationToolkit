@@ -19,24 +19,20 @@ jobs:
       matrix:
         include:
           - os: ubuntu-24.04
-            vcpkg_root: /host/${{ github.workspace }}/vcpkg
             build_tool_args: -j4
             cibw_image: quay.io/pypa/manylinux_2_28_x86_64
             cibw_archs: x86_64
             cibw_build: cp310-manylinux_x86_64 cp311-manylinux_x86_64 cp312-manylinux_x86_64
           - os: windows-2022
-            vcpkg_root: ${{ github.workspace }}/vcpkg
             build_tool_args: /p:CL_MPCount=4
             cibw_archs: AMD64
             cibw_build: cp310-win_amd64 cp311-win_amd64 cp312-win_amd64
           - os: macos-13
-            vcpkg_root: ${{ github.workspace }}/vcpkg
             build_tool_args: -j4
             cibw_archs: x86_64 universal2
             cibw_build: cp310-macosx_x86_64 cp311-macosx_x86_64 cp312-macosx_x86_64 cp310_macosx_universal2 cp311_macosx_universal2 cp312_macosx_universal2
             macosx_deployment_target: "13.0"
           - os: macos-14
-            vcpkg_root: ${{ github.workspace }}/vcpkg
             build_tool_args: -j4
             cibw_archs: arm64 universal2
             cibw_build: cp310-macosx_arm64 cp311-macosx_arm64 cp312-macosx_arm64 cp310_macosx_universal2 cp311_macosx_universal2 cp312_macosx_universal2
@@ -55,7 +51,7 @@ jobs:
       - uses: pypa/cibuildwheel@v2.19.0
         env:
           MACOSX_DEPLOYMENT_TARGET: ${{ matrix.macosx_deployment_target }}
-          CIBW_ENVIRONMENT: VCPKG_ROOT=${{ matrix.vcpkg_root }}
+          CIBW_ENVIRONMENT_PASS_LINUX: VCPKG_ROOT=/host/${{ github.workspace }}/vcpkg
           CIBW_MANYLINUX_X86_64_IMAGE: ${{ matrix.cibw_image }}
           CIBW_ARCHS: ${{ matrix.cibw_archs }}
           CIBW_BUILD: ${{ matrix.cibw_build }}
