@@ -3,7 +3,7 @@ import numpy as np
 import scipy as sp
 from enum import Enum
 
-if getattr(_linalg, "Cholmod") is not None:
+if hasattr(_linalg, "Cholmod"):
     Cholmod = _linalg.Cholmod
 
 
