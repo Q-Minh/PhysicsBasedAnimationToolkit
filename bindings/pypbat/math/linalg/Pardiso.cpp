@@ -1,6 +1,10 @@
 #include "Pardiso.h"
 
 #ifdef PBAT_USE_INTEL_MKL
+    #include <cstdint>
+    // NOTE: The default Eigen::SparseMatrix::StorageIndex is int, see
+    // Eigen/src/SparseCore/SparseUtil.h line 52.
+    #define MKL_INT int
     #include <Eigen/PardisoSupport>
     #include <pbat/Aliases.h>
     #include <pbat/common/ConstexprFor.h>
@@ -19,7 +23,6 @@ namespace linalg {
 void BindPardiso(pybind11::module& m)
 {
     namespace pyb = pybind11;
-
 #ifdef PBAT_USE_INTEL_MKL
     using PardisoLuCsc   = Eigen::PardisoLU<CSCMatrix>;
     using PardisoLuCsr   = Eigen::PardisoLU<CSRMatrix>;

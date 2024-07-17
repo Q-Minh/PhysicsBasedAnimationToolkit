@@ -66,16 +66,17 @@ void BindSimplicialLDLT(pybind11::module& m)
                 .def(pyb::init<>())
                 .def(
                     "analyze",
-                    [](SimplicialLdltType& ldlt, SparseMatrixType const& A) {
-                        pbat::profiling::Profile("math.linalg.SimplicialLDLT.analyze", [&]() {
+                    [=](SimplicialLdltType& ldlt, SparseMatrixType const& A) {
+                        pbat::profiling::Profile("math.linalg." + className + ".analyze", [&]() {
                             ldlt.analyzePattern(A);
                         });
                     },
                     pyb::arg("A"))
                 .def(
                     "compute",
-                    [](SimplicialLdltType& ldlt, SparseMatrixType const& A) -> SimplicialLdltType& {
-                        pbat::profiling::Profile("math.linalg.SimplicialLDLT.compute", [&]() {
+                    [=](SimplicialLdltType& ldlt,
+                        SparseMatrixType const& A) -> SimplicialLdltType& {
+                        pbat::profiling::Profile("math.linalg." + className + ".compute", [&]() {
                             ldlt.compute(A);
                         });
                         return ldlt;
@@ -85,8 +86,8 @@ void BindSimplicialLDLT(pybind11::module& m)
                 .def_property_readonly("determinant", &SimplicialLdltType::determinant)
                 .def(
                     "factorize",
-                    [](SimplicialLdltType& ldlt, SparseMatrixType const& A) {
-                        pbat::profiling::Profile("math.linalg.SimplicialLDLT.factorize", [&]() {
+                    [=](SimplicialLdltType& ldlt, SparseMatrixType const& A) {
+                        pbat::profiling::Profile("math.linalg." + className + ".factorize", [&]() {
                             ldlt.factorize(A);
                         });
                     },
@@ -117,12 +118,14 @@ void BindSimplicialLDLT(pybind11::module& m)
                     pyb::arg("scale"))
                 .def(
                     "solve",
-                    [](SimplicialLdltType const& ldlt,
-                       Eigen::Ref<MatrixX const> const& B) -> MatrixX {
-                        return pbat::profiling::Profile("math.linalg.SimplicialLDLT.solve", [&]() {
-                            MatrixX X = ldlt.solve(B);
-                            return X;
-                        });
+                    [=](SimplicialLdltType const& ldlt,
+                        Eigen::Ref<MatrixX const> const& B) -> MatrixX {
+                        return pbat::profiling::Profile(
+                            "math.linalg." + className + ".solve",
+                            [&]() {
+                                MatrixX X = ldlt.solve(B);
+                                return X;
+                            });
                     },
                     pyb::arg("B"))
                 .def_property_readonly("status", [](SimplicialLdltType const& ldlt) -> std::string {

@@ -18,15 +18,34 @@ void BindCholmod(pybind11::module& m)
 #ifdef PBAT_USE_SUITESPARSE
     namespace pyb = pybind11;
 
+    std::string const className = "Cholmod";
+    using CholmodType           = pbat::math::linalg::Cholmod;
+    pyb::class_<CholmodType> chol(m, className.data());
+    chol.def(pyb::init<>());
+
+    pyb::enum_<CholmodType::ESparseStorage>(chol, "SparseStorage")
+        .value("SymmetricLowerTriangular", CholmodType::ESparseStorage::SymmetricLowerTriangular)
+        .value("SymmetricUpperTriangular", CholmodType::ESparseStorage::SymmetricUpperTriangular)
+        .value("Unsymmetric", CholmodType::ESparseStorage::Unsymmetric)
+        .export_values();
+
+    chol.def(
+        "solve",
+        [](CholmodType& llt, Eigen::Ref<MatrixX const> const& B) {
+            return pbat::profiling::Profile("math.linalg.Cholmod.Solve", [&]() {
+                MatrixX X = llt.Solve(B);
+                return X;
+            });
+        },
+        pyb::arg("B"));
+
+    chol.doc() =
+        "Cholmod Cholesky or Bunch-Kaufmann decompositions of matrix A, stored in compressed "
+        "sparse column format. If A is stored in compressed row format, then its transpose is "
+        "decomposed instead. If A is unsymmetric, then A AT is decomposed (or AT A if A is stored "
+        "in CSR format).";
+
     common::ForTypes<CSCMatrix, CSRMatrix>([&]<class SparseMatrixType>() {
-        std::string const className = []() {
-            if constexpr (std::is_same_v<SparseMatrixType, CSCMatrix>)
-                return "Cholmod_Csc";
-            if constexpr (std::is_same_v<SparseMatrixType, CSRMatrix>)
-                return "Cholmod_Csr";
-        }();
-        using CholmodType = pbat::math::linalg::Cholmod;
-        pyb::class_<CholmodType> chol(m, className.data());
         chol.def(
                 "analyze",
                 [](CholmodType& llt,
@@ -37,7 +56,7 @@ void BindCholmod(pybind11::module& m)
                     });
                 },
                 pyb::arg("A"),
-                pyb::arg("storage") = CholmodType::ESparseStorage::SymmetricLowerTriangular)
+                pyb::arg("storage"))
             .def(
                 "factorize",
                 [](CholmodType& llt,
@@ -50,7 +69,7 @@ void BindCholmod(pybind11::module& m)
                     return bFactorized;
                 },
                 pyb::arg("A"),
-                pyb::arg("storage") = CholmodType::ESparseStorage::SymmetricLowerTriangular)
+                pyb::arg("storage"))
             .def(
                 "compute",
                 [](CholmodType& llt,
@@ -63,7 +82,7 @@ void BindCholmod(pybind11::module& m)
                     return bFactorized;
                 },
                 pyb::arg("A"),
-                pyb::arg("storage") = CholmodType::ESparseStorage::SymmetricLowerTriangular)
+                pyb::arg("storage"))
             .def(
                 "update",
                 [](CholmodType& llt, SparseMatrixType const& U) {
@@ -83,26 +102,7 @@ void BindCholmod(pybind11::module& m)
                         });
                     return bDowndated;
                 },
-                pyb::arg("U"))
-            .def(
-                "solve",
-                [](CholmodType& llt, Eigen::Ref<MatrixX const> const& B) {
-                    return pbat::profiling::Profile("math.linalg.Cholmod.Solve", [&]() {
-                        MatrixX X = llt.Solve(B);
-                        return X;
-                    });
-                },
-                pyb::arg("B"));
-
-        pyb::enum_<CholmodType::ESparseStorage>(chol, "SparseStorage")
-            .value(
-                "SymmetricLowerTriangular",
-                CholmodType::ESparseStorage::SymmetricLowerTriangular)
-            .value(
-                "SymmetricUpperTriangular",
-                CholmodType::ESparseStorage::SymmetricUpperTriangular)
-            .value("Unsymmetric", CholmodType::ESparseStorage::Unsymmetric)
-            .export_values();
+                pyb::arg("U"));
     });
 #endif // PBAT_USE_SUITESPARSE
 }

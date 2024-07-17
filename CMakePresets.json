@@ -25,15 +25,18 @@
             }
         },
         {
+            "name": "x64",
+            "architecture": {
+                "value": "x64",
+                "strategy": "external"
+            }
+        },
+        {
             "name": "dev",
             "inherits": [
                 "default",
                 "profile"
             ],
-            "architecture": {
-                "value": "x64",
-                "strategy": "external"
-            },
             "cacheVariables": {
                 "PBAT_BUILD_TESTS": {
                     "type": "BOOL",
@@ -148,17 +151,50 @@
             }
         },
         {
-            "name": "dev-pip",
+            "name": "pic",
+            "hidden": true,
+            "cacheVariables": {
+                "CMAKE_POSITION_INDEPENDENT_CODE": {
+                    "type": "BOOL",
+                    "value": "ON"
+                }
+            }
+        },
+        {
+            "name": "pip",
             "inherits": [
-                "dev",
-                "vcpkg-all-features"
+                "default",
+                "profile",
+                "python",
+                "pic"
             ]
         },
         {
-            "name": "dev-pip-shared",
+            "name": "pip-shared",
             "inherits": [
-                "dev",
+                "default",
+                "profile",
+                "python",
+                "shared",
+                "pic"
+            ]
+        },
+        {
+            "name": "pip-local",
+            "inherits": [
+                "default",
+                "profile",
                 "vcpkg-all-features",
+                "pic"
+            ]
+        },
+        {
+            "name": "pip-local-shared",
+            "inherits": [
+                "default",
+                "profile",
+                "vcpkg-all-features",
+                "pic",
                 "shared"
             ]
         },
@@ -167,14 +203,9 @@
             "inherits": [
                 "default",
                 "profile",
-                "python"
-            ],
-            "cacheVariables": {
-                "CMAKE_POSITION_INDEPENDENT_CODE": {
-                    "type": "BOOL",
-                    "value": "ON"
-                }
-            }
+                "python",
+                "pic"
+            ]
         }
     ]
 }

@@ -16,9 +16,13 @@ jobs:
       matrix:
         include:
           - os: ubuntu-24.04
+            build_tool_args: -j4
           - os: windows-2022
+            build_tool_args: /p:CL_MPCount=4
           - os: macos-13
+            build_tool_args: -j4
           - os: macos-14
+            build_tool_args: -j4
       max-parallel: 4
 
     steps:
@@ -40,4 +44,4 @@ jobs:
       
       - name: Build and install PBAT Python bindings
         run: |
-          pip install . --config-settings=cmake.args="--preset=dev-pip" -v
+          pip install . --config-settings=cmake.args="--preset=pip" --config-settings=build.tool-args="${{ matrix.build_tool_args }}" -v

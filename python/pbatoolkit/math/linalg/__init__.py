@@ -3,6 +3,9 @@ import numpy as np
 import scipy as sp
 from enum import Enum
 
+if getattr(_linalg, "Cholmod") is not None:
+    Cholmod = _linalg.Cholmod
+
 
 class Ordering(Enum):
     Natural = 0
@@ -14,6 +17,7 @@ class SolverBackend(Enum):
     Eigen = 0
     SuiteSparse = 1
     IntelMKL = 2
+
 
 def lu(A, solver: SolverBackend = SolverBackend.IntelMKL):
     """Returns an instance to an LU factorization suitable for matrices of 
@@ -63,7 +67,7 @@ def chol(A, solver: SolverBackend = SolverBackend.Eigen):
     Eigen, we return an LDLT factorization.
 
     Args:
-        A: Input sparse matrix to decompose, either scipy.sparse.csc_matrix or scipy.sparse.csr_matrix
+        A: Input sparse matrix to decompose, either scipy.sparse.csc_matrix or scipy.sparse.csr_matrix.
         solver (SolverBackend, optional): The LLT implementation to use. Defaults to SolverBackend.Eigen.
 
     Raises:
@@ -86,7 +90,7 @@ def chol(A, solver: SolverBackend = SolverBackend.Eigen):
     if solver == SolverBackend.Eigen:
         return ldlt(A, solver=SolverBackend.Eigen)
     if solver == SolverBackend.SuiteSparse:
-        class_ = getattr(_linalg, f"Cholmod_{mtype}")
+        class_ = getattr(_linalg, f"Cholmod")
         if class_ is None:
             raise ValueError(
                 "pbatoolkit was not built with SuiteSparse support")

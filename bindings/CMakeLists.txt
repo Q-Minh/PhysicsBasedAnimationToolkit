@@ -56,30 +56,16 @@ set_target_properties(PhysicsBasedAnimationToolkit_Python
 )
 
 # Install rules for scikit-build-core.
+
+# Because our build tree puts all binaries in CMAKE_RUNTIME_OUTPUT_DIRECTORY_<CONFIG>, 
+# we can install our Python bindings by directly copying the binaries.
 install(
-    TARGETS PhysicsBasedAnimationToolkit_Python
-    LIBRARY DESTINATION "pbatoolkit"
+    DIRECTORY "$<TARGET_FILE_DIR:PhysicsBasedAnimationToolkit_Python>/" 
+    DESTINATION "pbatoolkit"
+    # On windows, only .dll is required at runtime, i.e. .lib and .exp files are not needed.
+    PATTERN "*.exp" EXCLUDE
+    PATTERN "*.lib" EXCLUDE
 )
-
-# Install shared dependencies
-function(install_transitive_dependencies target)
-    get_target_property(_link_libraries ${target} LINK_LIBRARIES)
-    message(VERBOSE "PBAT[python] -- ${target} LINK_LIBRARIES = ${_link_libraries}")
-
-    foreach(_dependency IN ITEMS ${_link_libraries})
-        if(TARGET ${_dependency})
-            get_target_property(_library_type ${_dependency} TYPE)
-
-            if(_library_type STREQUAL "SHARED_LIBRARY")
-                message(VERBOSE "PBAT[python] -- Generating install rule for shared library ${_dependency}")
-                install(FILES $<TARGET_FILE:${_dependency}> DESTINATION "pbatoolkit")
-            endif()
-        endif()
-    endforeach()
-endfunction()
-
-install_transitive_dependencies(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit)
-install_transitive_dependencies(PhysicsBasedAnimationToolkit_Python)
 
 if(PBAT_USE_INTEL_MKL)
     message(VERBOSE "PBAT[python] -- Generating install rule for MKL DLLs ${PBAT_INTERNAL_MKL_DLLS}")
