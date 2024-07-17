@@ -6,7 +6,7 @@
         "tonthat.quocminh@gmail.com"
     ],
     "name": "pbatoolkit",
-    "version": "0.0.5",
+    "version": "0.0.6",
     "dependencies": [
         {
             "name": "range-v3",
