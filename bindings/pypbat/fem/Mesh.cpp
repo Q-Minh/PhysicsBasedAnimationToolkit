@@ -25,9 +25,9 @@ void BindMesh(pybind11::module& m)
             pyb::init<
                 Eigen::Ref<MatrixX const> const&,
                 Eigen::Ref<IndexMatrixX const> const&,
+                EElement,
                 int,
-                int,
-                EElement>(),
+                int>(),
             pyb::arg("V"),
             pyb::arg("C"),
             pyb::arg("element"),
@@ -56,54 +56,30 @@ Mesh::Mesh(
     int dims)
     : eElement(element), kOrder(order), kDims(dims), mMesh(nullptr)
 {
-    Apply([]<class MeshType>([[maybe_unused]] MeshType* mesh) { mMesh = new MeshType(V, C); });
+    Apply([&]<class MeshType>([[maybe_unused]] MeshType* mesh) { mMesh = new MeshType(V, C); });
 }
 
 MatrixX Mesh::QuadraturePoints(int qOrder) const
 {
     static auto constexpr kMaxQuadratureOrder = 8;
-    if (qOrder > kMaxQuadratureOrder or qOrder < 1)
-    {
-        std::string const what = fmt::format(
-            "Invalid quadrature order={}, supported orders are [1,{}]",
-            qOrder,
-            kMaxQuadratureOrder);
-        throw std::invalid_argument(what);
-    }
-
     MatrixX XG{};
-    Apply([&]<class MeshType>(MeshType* mesh) {
-        pbat::common::ForRange<1, kMaxQuadratureOrder + 1>([&]<auto QuadratureOrder>() {
-            if (qOrder == QuadratureOrder)
-            {
-                XG = mesh->template QuadraturePoints<QuadratureOrder>();
-            }
-        });
-    });
+    ApplyWithQuadrature<kMaxQuadratureOrder>(
+        [&]<class MeshType, auto QuadratureOrder>(MeshType* mesh) {
+            XG = mesh->template QuadraturePoints<QuadratureOrder>();
+        },
+        qOrder);
     return XG;
 }
 
 VectorX Mesh::QuadratureWeights(int qOrder) const
 {
     static auto constexpr kMaxQuadratureOrder = 8;
-    if (qOrder > kMaxQuadratureOrder or qOrder < 1)
-    {
-        std::string const what = fmt::format(
-            "Invalid quadrature order={}, supported orders are [1,{}]",
-            qOrder,
-            kMaxQuadratureOrder);
-        throw std::invalid_argument(what);
-    }
-
     VectorX WG{};
-    Apply([&]<class MeshType>(MeshType* mesh) {
-        pbat::common::ForRange<1, kMaxQuadratureOrder + 1>([&]<auto QuadratureOrder>() {
-            if (qOrder == QuadratureOrder)
-            {
-                WG = mesh->template QuadratureWeights<QuadratureOrder>();
-            }
-        });
-    });
+    ApplyWithQuadrature<kMaxQuadratureOrder>(
+        [&]<class MeshType, auto QuadratureOrder>(MeshType* mesh) {
+            WG = mesh->template QuadratureWeights<QuadratureOrder>();
+        },
+        qOrder);
     return WG;
 }
 

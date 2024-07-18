@@ -69,7 +69,7 @@ inline void Mesh::Apply(Func&& f) const
             Quadrilateral<Order>,
             Tetrahedron<Order>,
             Hexahedron<Order>>([&]<CElement ElementType>() {
-            EElement constexpr eElementCandidate = []() {
+            EElement const eElementCandidate = []() {
                 if constexpr (std::is_same_v<ElementType, Line<Order>>)
                     return EElement::Line;
                 if constexpr (std::is_same_v<ElementType, Triangle<Order>>)
@@ -98,12 +98,12 @@ inline void Mesh::Apply(Func&& f) const
 template <auto MaxQuadratureOrder, class Func>
 inline void Mesh::ApplyWithQuadrature(Func&& f, int qOrder) const
 {
-    if (qOrder > kMaxQuadratureOrder or qOrder < 1)
+    if (qOrder > MaxQuadratureOrder or qOrder < 1)
     {
         std::string const what = fmt::format(
             "Invalid quadrature order={}, supported orders are [1,{}]",
             qOrder,
-            kMaxQuadratureOrder);
+            MaxQuadratureOrder);
         throw std::invalid_argument(what);
     }
     Apply([&]<class MeshType>(MeshType* mesh) {
