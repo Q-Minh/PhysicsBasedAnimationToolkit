@@ -182,7 +182,11 @@ void BindHyperElasticPotential(pybind11::module& m)
             pyb::arg("Y")                = 1e6,
             pyb::arg("nu")               = 0.45,
             pyb::arg("energy")           = EHyperElasticEnergy::StableNeoHookean,
-            pyb::arg("quadrature_order") = 1)
+            pyb::arg("quadrature_order") = 1,
+            "Construct a HyperElasticPotential on mesh mesh, given precomputed jacobian "
+            "determinants detJe and shape function gradients GNe at mesh element quadrature points "
+            "given by quadrature rule of order quadrature_order. The corresponding energy has "
+            "Young's modulus Y and Poisson's ratio nu.")
         .def(
             pyb::init<
                 Mesh const&,
@@ -198,9 +202,13 @@ void BindHyperElasticPotential(pybind11::module& m)
             pyb::arg("Y"),
             pyb::arg("nu"),
             pyb::arg("energy")           = EHyperElasticEnergy::StableNeoHookean,
-            pyb::arg("quadrature_order") = 1)
+            pyb::arg("quadrature_order") = 1,
+            "Construct a HyperElasticPotential on mesh mesh, given precomputed jacobian "
+            "determinants detJe and shape function gradients GNe at mesh element quadrature points "
+            "given by quadrature rule of order quadrature_order. The corresponding energy has "
+            "piecewise constant (at elements) Young's modulus Y and Poisson's ratio nu.")
         .def_readonly("dims", &HyperElasticPotential::mDims)
-        .def_readonly("order", &HyperElasticPotential::mOrder)
+        //.def_readonly("order", &HyperElasticPotential::mOrder)
         .def_readonly("quadrature_order", &HyperElasticPotential::mQuadratureOrder)
         .def("precompute_hessian_sparsity", &HyperElasticPotential::PrecomputeHessianSparsity)
         .def(
@@ -215,22 +223,30 @@ void BindHyperElasticPotential(pybind11::module& m)
         .def_property(
             "mue",
             [](HyperElasticPotential const& M) { return M.mue(); },
-            [](HyperElasticPotential& M, Eigen::Ref<VectorX const> const& mue) { M.mue() = mue; })
+            [](HyperElasticPotential& M, Eigen::Ref<VectorX const> const& mue) { M.mue() = mue; },
+            "Piecewise constant (per-element) vector of first Lame coefficients")
         .def_property(
             "lambdae",
             [](HyperElasticPotential const& M) { return M.mue(); },
             [](HyperElasticPotential& M, Eigen::Ref<VectorX const> const& lambdae) {
                 M.lambdae() = lambdae;
-            })
+            },
+            "Piecewise constant (per-element) vector of second Lame coefficients")
         .def_property_readonly(
             "UE",
-            [](HyperElasticPotential const& M) { return M.ElementPotentials(); })
+            [](HyperElasticPotential const& M) { return M.ElementPotentials(); },
+            "|#elements| vector of element hyper elastic potentials")
         .def_property_readonly(
             "GE",
-            [](HyperElasticPotential const& M) { return M.ElementGradients(); })
+            [](HyperElasticPotential const& M) { return M.ElementGradients(); },
+            "|#element nodes * dims|x|#elements| matrix of element hyper elastic potential "
+            "gradients")
         .def_property_readonly(
             "HE",
-            [](HyperElasticPotential const& M) { return M.ElementHessians(); })
+            [](HyperElasticPotential const& M) { return M.ElementHessians(); },
+            "|#element nodes * dims|x|#elements nodes * dims * #elements| matrix of element hyper "
+            "elastic "
+            "potential hessians")
         .def_property_readonly("shape", &HyperElasticPotential::Shape)
         .def("to_matrix", &HyperElasticPotential::ToMatrix);
 }

@@ -64,7 +64,12 @@ void BindLaplacian(pybind11::module& m)
             pyb::arg("detJe"),
             pyb::arg("GNe"),
             pyb::arg("dims")             = 1,
-            pyb::arg("quadrature_order") = 1)
+            pyb::arg("quadrature_order") = 1,
+            "Construct the symmetric part of the Laplacian operator on mesh mesh, using "
+            "precomputed jacobian determinants detJe and shape function gradients GNe evaluated at "
+            "quadrature points given by the quadrature rule of order quadrature_order. The "
+            "discretization is based on Galerkin projection. The dimensions dims can be set to "
+            "accommodate vector-valued functions.")
         .def_property(
             "dims",
             [](Laplacian const& L) { return L.dims(); },
@@ -76,7 +81,8 @@ void BindLaplacian(pybind11::module& m)
             [](Laplacian const& L) { return L.ElementLaplacians(); },
             [](Laplacian& L, Eigen::Ref<MatrixX const> const& deltaE) {
                 L.ElementLaplacians() = deltaE;
-            })
+            },
+            "|#element nodes|x|#element nodes * #elements| matrix of element Laplacians")
         .def_property_readonly("shape", &Laplacian::Shape)
         .def("to_matrix", &Laplacian::ToMatrix);
 }

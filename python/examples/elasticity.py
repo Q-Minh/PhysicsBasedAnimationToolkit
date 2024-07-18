@@ -1,5 +1,4 @@
 import pbatoolkit as pbat
-import pbatoolkit.fem
 import pbatoolkit.geometry
 import pbatoolkit.profiling
 import pbatoolkit.math.linalg
@@ -29,14 +28,14 @@ if __name__ == "__main__":
     # Construct FEM quantities for simulation
     imesh = meshio.read(args.input)
     V, C = imesh.points, imesh.cells_dict["tetra"]
-    mesh = pbat.fem.mesh(
+    mesh = pbat.fem.Mesh(
         V.T, C.T, element=pbat.fem.Element.Tetrahedron, order=1)
     x = mesh.X.reshape(math.prod(mesh.X.shape), order='f')
     v = np.zeros(x.shape[0])
     detJeM = pbat.fem.jacobian_determinants(mesh, quadrature_order=2)
     rho = args.rho
-    M = pbat.fem.mass_matrix(mesh, detJeM, rho=rho,
-                             dims=3, quadrature_order=2).to_matrix()
+    M = pbat.fem.MassMatrix(mesh, detJeM, rho=rho,
+                            dims=3, quadrature_order=2).to_matrix()
     Minv = pbat.math.linalg.ldlt(M)
     Minv.compute(M)
     # Could also lump the mass matrix like this
@@ -48,18 +47,23 @@ if __name__ == "__main__":
     # Construct load vector from gravity field
     detJeU = pbat.fem.jacobian_determinants(mesh, quadrature_order=1)
     GNeU = pbat.fem.shape_function_gradients(mesh, quadrature_order=1)
+    qgf = pbat.fem.inner_product_weights(
+        mesh, quadrature_order=1).flatten(order="F")
+    Qf = sp.sparse.diags_array([qgf], offsets=[0])
+    Nf = pbat.fem.shape_function_matrix(mesh, quadrature_order=1)
     g = np.zeros(mesh.dims)
     g[-1] = -9.81
     fe = np.tile(rho*g[:, np.newaxis], mesh.E.shape[1])
-    f = pbat.fem.load_vector(mesh, detJeU, fe, quadrature_order=1).to_vector()
+    f = fe @ Qf @ Nf
+    f = f.reshape(math.prod(f.shape), order="F")
     a = Minv.solve(f).squeeze()
 
     # Create hyper elastic potential
     Y = np.full(mesh.E.shape[1], args.Y)
     nu = np.full(mesh.E.shape[1], args.nu)
     psi = pbat.fem.HyperElasticEnergy.StableNeoHookean
-    hep = pbat.fem.hyper_elastic_potential(
-        mesh, detJeU, GNeU, Y, nu, psi=psi, quadrature_order=1)
+    hep = pbat.fem.HyperElasticPotential(
+        mesh, detJeU, GNeU, Y, nu, energy=psi, quadrature_order=1)
     hep.precompute_hessian_sparsity()
 
     # Set Dirichlet boundary conditions
@@ -80,7 +84,8 @@ if __name__ == "__main__":
     # Setup linear solver
     Hdd = hep.to_matrix()[:, dofs].tocsr()[dofs, :]
     Mdd = M[:, dofs].tocsr()[dofs, :]
-    Addinv = pbat.math.linalg.ldlt(Hdd)
+    Addinv = pbat.math.linalg.ldlt(
+        Hdd, solver=pbat.math.linalg.SolverBackend.Eigen)
     Addinv.analyze(Hdd)
 
     ps.set_verbosity(0)
@@ -134,8 +139,8 @@ if __name__ == "__main__":
             xtilde = x + dt*v + dt2*a
             xk = x
             for k in range(newton_maxiter):
-                hep.compute_element_elasticity(xk, grad=True, hess=True)
-                gradU, HU = hep.to_vector(), hep.to_matrix()
+                hep.compute_element_elasticity(xk, grad=True, hessian=True)
+                gradU, HU = hep.gradient(), hep.hessian()
 
                 global bd, Add
 

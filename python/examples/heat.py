@@ -1,5 +1,4 @@
 import pbatoolkit as pbat
-import pbatoolkit.fem
 import pbatoolkit.math.linalg
 import igl
 import polyscope as ps
@@ -21,7 +20,7 @@ if __name__ == "__main__":
     mesh = None
     if "tetra" in imesh.cells_dict.keys():
         V, C = imesh.points, imesh.cells_dict["tetra"]
-        mesh = pbat.fem.mesh(
+        mesh = pbat.fem.Mesh(
             V.T, C.T, element=pbat.fem.Element.Tetrahedron, order=1)
     if "triangle" in imesh.cells_dict.keys():
         V, C = imesh.points, imesh.cells_dict["triangle"]
@@ -30,7 +29,7 @@ if __name__ == "__main__":
 
     V, C = mesh.X.T, mesh.E.T
     F = C
-    if mesh.element == "Tetrahedron":
+    if mesh.element == pbat.fem.Element.Tetrahedron:
         F = igl.boundary_facets(C)
         F[:, :2] = np.roll(F[:, :2], shift=1, axis=1)
 
@@ -43,7 +42,7 @@ if __name__ == "__main__":
     NM = pbat.fem.shape_function_matrix(mesh, quadrature_order=2)
     M = NM.T @ QM @ NM
     GNeL = pbat.fem.shape_function_gradients(mesh, quadrature_order=1)
-    G = pbat.fem.gradient_matrix(
+    G = pbat.fem.Gradient(
         mesh, GNeL, quadrature_order=1).to_matrix()
     qgL = pbat.fem.inner_product_weights(
         mesh, quadrature_order=1).flatten(order="F")
@@ -110,17 +109,17 @@ if __name__ == "__main__":
             cn.set_color((0, 0, 0))
             cn.set_radius(0.002)
             vm = ps.get_volume_mesh(
-                "model") if mesh.element == "Tetrahedron" else ps.get_surface_mesh("model")
+                "model") if mesh.element == pbat.fem.Element.Tetrahedron else ps.get_surface_mesh("model")
             vm.add_scalar_quantity("heat", u, cmap="reds")
             vm.add_scalar_quantity("distance", phi, cmap="reds", enabled=True)
-            grad_defined_on = "cells" if mesh.element == "Tetrahedron" else "faces"
+            grad_defined_on = "cells" if mesh.element == pbat.fem.Element.Tetrahedron else "faces"
             vm.add_vector_quantity("normalized heat grad",
                                    gradu, defined_on=grad_defined_on)
             vm.add_scalar_quantity("div unit gradient", divGu)
 
-    if mesh.element == "Tetrahedron":
+    if mesh.element == pbat.fem.Element.Tetrahedron:
         ps.register_volume_mesh("model", V, C)
-    if mesh.element == "Triangle":
+    if mesh.element == pbat.fem.Element.Triangle:
         ps.register_surface_mesh("model", V, C)
     ps.set_user_callback(callback)
     ps.show()

@@ -1,5 +1,4 @@
 import pbatoolkit as pbat
-import pbatoolkit.fem
 import pbatoolkit.math.linalg
 import igl
 import polyscope as ps
@@ -22,15 +21,15 @@ if __name__ == "__main__":
     V, F = V.astype(np.float64, order='c'), F.astype(np.int64, order='c')
     
     # Construct Galerkin laplacian, mass and gradient operators
-    mesh = pbat.fem.mesh(
+    mesh = pbat.fem.Mesh(
         V.T, F.T, element=pbat.fem.Element.Triangle, order=1)
     V, F = mesh.X.T, mesh.E.T
     detJeL = pbat.fem.jacobian_determinants(mesh, quadrature_order=1)
     GNeL = pbat.fem.shape_function_gradients(mesh, quadrature_order=1)
-    L = pbat.fem.laplacian_matrix(
+    L = pbat.fem.Laplacian(
         mesh, detJeL, GNeL, quadrature_order=1).to_matrix()
     detJeM = pbat.fem.jacobian_determinants(mesh, quadrature_order=2)
-    M = pbat.fem.mass_matrix(mesh, detJeM, dims=1,
+    M = pbat.fem.MassMatrix(mesh, detJeM, dims=1,
                              quadrature_order=2).to_matrix()
     # Setup heat diffusion
     dt = 0.016

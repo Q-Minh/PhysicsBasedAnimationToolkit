@@ -26,7 +26,9 @@ void BindJacobian(pybind11::module& m)
             return detJe;
         },
         pyb::arg("mesh"),
-        pyb::arg("quadrature_order") = 1);
+        pyb::arg("quadrature_order") = 1,
+        "|#quad.pts.|x|#elements| matrix of element jacobian determinants at element quadrature "
+        "points");
 
     m.def(
         "inner_product_weights",
@@ -41,7 +43,9 @@ void BindJacobian(pybind11::module& m)
             return I;
         },
         pyb::arg("mesh"),
-        pyb::arg("quadrature_order") = 1);
+        pyb::arg("quadrature_order") = 1,
+        "|#quad.pts.|x|#elements| matrix of quadrature weights multiplied by jacobian determinants "
+        "at element quadrature points ");
 
     m.def(
         "inner_product_weights",
@@ -57,10 +61,12 @@ void BindJacobian(pybind11::module& m)
         },
         pyb::arg("mesh"),
         pyb::arg("detJe"),
-        pyb::arg("quadrature_order") = 1);
+        pyb::arg("quadrature_order") = 1,
+        "|#quad.pts.|x|#elements| matrix of quadrature weights multiplied by jacobian determinants "
+        "at element quadrature points");
 
     m.def(
-        "inner_product_weights",
+        "reference_positions",
         [](Mesh const& M,
            Eigen::Ref<IndexVectorX const> const& E,
            Eigen::Ref<MatrixX const> const& X,
@@ -76,7 +82,9 @@ void BindJacobian(pybind11::module& m)
         pyb::arg("E"),
         pyb::arg("X"),
         pyb::arg("max_iters") = 5,
-        pyb::arg("eps")       = 1e-10);
+        pyb::arg("eps")       = 1e-10,
+        "|#element dims| x |X.cols()| matrix of reference positions associated with domain points "
+        "X in corresponding elements E ");
 }
 
 } // namespace fem

@@ -1,5 +1,4 @@
 import pbatoolkit as pbat
-import pbatoolkit.fem
 import numpy as np
 import scipy as sp
 import polyscope as ps
@@ -32,22 +31,22 @@ if __name__ == "__main__":
 
     imesh = meshio.read(args.input)
     V, C = imesh.points, imesh.cells_dict["tetra"]
-    mesh = pbat.fem.mesh(
+    mesh = pbat.fem.Mesh(
         V.T, C.T, element=pbat.fem.Element.Tetrahedron, order=1)
     x = mesh.X.reshape(mesh.X.shape[0]*mesh.X.shape[1], order='f')
     detJeM = pbat.fem.jacobian_determinants(mesh, quadrature_order=2)
-    M = pbat.fem.mass_matrix(mesh, detJeM, rho=args.rho,
+    M = pbat.fem.MassMatrix(mesh, detJeM, rho=args.rho,
                              dims=3, quadrature_order=2).to_matrix()
 
     detJeU = pbat.fem.jacobian_determinants(mesh, quadrature_order=1)
     GNeU = pbat.fem.shape_function_gradients(mesh, quadrature_order=1)
     Y = np.full(mesh.E.shape[1], args.Y)
     nu = np.full(mesh.E.shape[1], args.nu)
-    hep = pbat.fem.hyper_elastic_potential(
-        mesh, detJeU, GNeU, Y, nu, psi=pbat.fem.HyperElasticEnergy.StableNeoHookean, quadrature_order=1)
+    hep = pbat.fem.HyperElasticPotential(
+        mesh, detJeU, GNeU, Y, nu, energy=pbat.fem.HyperElasticEnergy.StableNeoHookean, quadrature_order=1)
     hep.precompute_hessian_sparsity()
     hep.compute_element_elasticity(x)
-    U, gradU, HU = hep.eval(), hep.to_vector(), hep.to_matrix()
+    U, gradU, HU = hep.eval(), hep.gradient(), hep.hessian()
     sigma = -1e-5
     leigs, Veigs = sp.sparse.linalg.eigsh(HU, k=args.modes, M=M, sigma=-1e-5, which='LM')
     Veigs = Veigs / sp.linalg.norm(Veigs, axis=0, keepdims=True)

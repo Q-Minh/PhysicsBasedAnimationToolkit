@@ -1,5 +1,4 @@
 import pbatoolkit as pbat
-import pbatoolkit.fem
 import pbatoolkit.geometry
 import pbatoolkit.profiling
 import pbatoolkit.math.linalg
@@ -61,7 +60,7 @@ if __name__ == "__main__":
     C.append(C2)
 
     V, C = combine(V, C)
-    mesh = pbat.fem.mesh(
+    mesh = pbat.fem.Mesh(
         V.T, C.T, element=pbat.fem.Element.Tetrahedron, order=1)
     V, C = mesh.X.T, mesh.E.T
 
@@ -74,7 +73,7 @@ if __name__ == "__main__":
 
     detJeM = pbat.fem.jacobian_determinants(mesh, quadrature_order=2)
     rho = args.rho
-    M = pbat.fem.mass_matrix(mesh, detJeM, rho=rho,
+    M = pbat.fem.MassMatrix(mesh, detJeM, rho=rho,
                              dims=3, quadrature_order=2).to_matrix()
     # Lump mass matrix
     lumpedm = M.sum(axis=0)
@@ -85,18 +84,23 @@ if __name__ == "__main__":
     # Construct load vector from gravity field
     detJeU = pbat.fem.jacobian_determinants(mesh, quadrature_order=1)
     GNeU = pbat.fem.shape_function_gradients(mesh, quadrature_order=1)
+    qgf = pbat.fem.inner_product_weights(
+        mesh, quadrature_order=1).flatten(order="F")
+    Qf = sp.sparse.diags_array([qgf], offsets=[0])
+    Nf = pbat.fem.shape_function_matrix(mesh, quadrature_order=1)
     g = np.zeros(mesh.dims)
     g[-1] = -9.81
     fe = np.tile(rho*g[:, np.newaxis], mesh.E.shape[1])
-    f = pbat.fem.load_vector(mesh, detJeU, fe, quadrature_order=1).to_vector()
+    f = fe @ Qf @ Nf
+    f = f.reshape(math.prod(f.shape), order="F")
     a = Minv @ f
 
     # Create hyper elastic potential
     Y = np.full(mesh.E.shape[1], args.Y)
     nu = np.full(mesh.E.shape[1], args.nu)
     psi = pbat.fem.HyperElasticEnergy.StableNeoHookean
-    hep = pbat.fem.hyper_elastic_potential(
-        mesh, detJeU, GNeU, Y, nu, psi=psi, quadrature_order=1)
+    hep = pbat.fem.HyperElasticPotential(
+        mesh, detJeU, GNeU, Y, nu, energy=psi, quadrature_order=1)
     hep.precompute_hessian_sparsity()
 
     # Setup IPC contact handling
@@ -183,7 +187,7 @@ if __name__ == "__main__":
 
                 # Compute elasticity
                 hep.compute_element_elasticity(xk, grad=True, hess=True)
-                U, gradU, HU = hep.eval(), hep.to_vector(), hep.to_matrix()
+                U, gradU, HU = hep.eval(), hep.gradient(), hep.hessian()
 
                 # Compute adaptive barrier stiffness
                 bboxdiag = ipctk.world_bbox_diagonal_length(BX)

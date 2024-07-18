@@ -42,7 +42,11 @@ ShapeFunctions()
 }
 
 /**
- *
+ * @brief
+ * @tparam QuadratureOrder
+ * @tparam TMesh
+ * @param mesh
+ * @return |#elements * #quad.pts.| x |#nodes| shape function matrix
  */
 template <int QuadratureOrder, CMesh TMesh>
 CSRMatrix ShapeFunctionMatrix(TMesh const& mesh)
@@ -79,7 +83,7 @@ CSRMatrix ShapeFunctionMatrix(TMesh const& mesh)
  * @tparam TDerivedXi
  * @tparam TElement
  * @param Xi
- * @return
+ * @return |#element nodes| x |Xi.cols()| matrix of nodal shape functions at reference points Xi
  */
 template <CElement TElement, class TDerivedXi>
 MatrixX ShapeFunctionsAt(Eigen::DenseBase<TDerivedXi> const& Xi)
@@ -275,7 +279,8 @@ MatrixX ShapeFunctionGradients(TMesh const& mesh)
  * @param mesh
  * @param E
  * @param Xi
- * @return
+ * @return |#element nodes| x |E.size() * mesh.dims| nodal shape function gradients at reference
+ * points Xi
  */
 template <CMesh TMesh, class TDerivedE, class TDerivedXi>
 MatrixX ShapeFunctionGradientsAt(

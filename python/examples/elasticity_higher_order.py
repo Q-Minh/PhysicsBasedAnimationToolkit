@@ -1,5 +1,4 @@
 import pbatoolkit as pbat
-import pbatoolkit.fem
 import pbatoolkit.geometry
 import pbatoolkit.profiling
 import pbatoolkit.math.linalg
@@ -38,13 +37,13 @@ if __name__ == "__main__":
     FR = FR.astype(np.int64, order='c')
     
     # Construct FEM quantities for simulation
-    mesh = pbat.fem.mesh(
+    mesh = pbat.fem.Mesh(
         V.T, C.T, element=pbat.fem.Element.Tetrahedron, order=2)
     x = mesh.X.reshape(math.prod(mesh.X.shape), order='f')
     v = np.zeros(x.shape[0])
     detJeM = pbat.fem.jacobian_determinants(mesh, quadrature_order=4)
     rho = args.rho
-    M = pbat.fem.mass_matrix(mesh, detJeM, rho=rho,
+    M = pbat.fem.MassMatrix(mesh, detJeM, rho=rho,
                              dims=3, quadrature_order=4).to_matrix()
     Minv = pbat.math.linalg.ldlt(M)
     Minv.compute(M)
@@ -53,8 +52,14 @@ if __name__ == "__main__":
     g = np.zeros(mesh.dims)
     g[-1] = -9.81
     detJef = pbat.fem.jacobian_determinants(mesh, quadrature_order=2)
-    fe = np.tile(rho*g[:, np.newaxis], mesh.E.shape[1])
-    f = pbat.fem.load_vector(mesh, detJef, fe, quadrature_order=2).to_vector()
+    nquadpts = mesh.E.shape[1] * mesh.quadrature_weights(2).shape[0]
+    fe = np.tile(rho*g[:, np.newaxis], nquadpts)
+    qgf = pbat.fem.inner_product_weights(
+        mesh, quadrature_order=2).flatten(order="F")
+    Qf = sp.sparse.diags_array([qgf], offsets=[0])
+    Nf = pbat.fem.shape_function_matrix(mesh, quadrature_order=2)
+    f = fe @ Qf @ Nf
+    f = f.reshape(math.prod(f.shape), order="F")
     a = Minv.solve(f).squeeze()
 
     # Create hyper elastic potential
@@ -63,8 +68,8 @@ if __name__ == "__main__":
     Y = np.full(mesh.E.shape[1], args.Y)
     nu = np.full(mesh.E.shape[1], args.nu)
     psi = pbat.fem.HyperElasticEnergy.StableNeoHookean
-    hep = pbat.fem.hyper_elastic_potential(
-        mesh, detJeU, GNeU, Y, nu, psi=psi, quadrature_order=4)
+    hep = pbat.fem.HyperElasticPotential(
+        mesh, detJeU, GNeU, Y, nu, energy=psi, quadrature_order=4)
     hep.precompute_hessian_sparsity()
 
     # Set Dirichlet boundary conditions
@@ -118,8 +123,8 @@ if __name__ == "__main__":
         if animate or step:
             profiler.begin_frame("Physics")
             # 1 Newton step
-            hep.compute_element_elasticity(x, grad=True, hess=True)
-            gradU, HU = hep.to_vector(), hep.to_matrix()
+            hep.compute_element_elasticity(x, grad=True, hessian=True)
+            gradU, HU = hep.gradient(), hep.hessian()
             dt2 = dt**2
             xtilde = x + dt*v + dt2*a
             A = M + dt2 * HU

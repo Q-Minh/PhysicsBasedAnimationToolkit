@@ -26,7 +26,9 @@ void BindShapeFunctions(pybind11::module& m)
             return GN;
         },
         pyb::arg("mesh"),
-        pyb::arg("quadrature_order") = 1);
+        pyb::arg("quadrature_order") = 1,
+        "|#element nodes| x |#dims * #quad.pts. * #elements| matrix of shape functions at each "
+        "element quadrature point");
 
     m.def(
         "shape_function_gradients_at",
@@ -41,7 +43,9 @@ void BindShapeFunctions(pybind11::module& m)
         },
         pyb::arg("mesh"),
         pyb::arg("E"),
-        pyb::arg("Xi"));
+        pyb::arg("Xi"),
+        "|#element nodes| x |E.size() * mesh.dims| nodal shape function gradients at reference "
+        "points Xi");
 
     m.def(
         "shape_function_matrix",
@@ -56,7 +60,8 @@ void BindShapeFunctions(pybind11::module& m)
             return N;
         },
         pyb::arg("mesh"),
-        pyb::arg("quadrature_order") = 1);
+        pyb::arg("quadrature_order") = 1,
+        "|#elements * #quad.pts.| x |#nodes| shape function matrix");
 
     m.def(
         "shape_functions_at",
@@ -69,7 +74,8 @@ void BindShapeFunctions(pybind11::module& m)
             return N;
         },
         pyb::arg("mesh"),
-        pyb::arg("Xi"));
+        pyb::arg("Xi"),
+        "|#element nodes| x |Xi.cols()| matrix of nodal shape functions at reference points Xi");
 }
 
 } // namespace fem

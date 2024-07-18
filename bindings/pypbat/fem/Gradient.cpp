@@ -47,9 +47,11 @@ void BindGradient(pybind11::module& m)
             pyb::init<Mesh const&, Eigen::Ref<MatrixX const> const&, int>(),
             pyb::arg("mesh"),
             pyb::arg("GNe"),
-            pyb::arg("quadrature_order") = 1)
+            pyb::arg("quadrature_order") = 1,
+            "Construct Gradient operator from mesh mesh, using precomputed shape function "
+            "gradients GNe at quadrature points given by quadrature rule of order quadrature_order")
         .def_readonly("dims", &Gradient::mDims)
-        .def_readonly("order", &Gradient::mOrder)
+        .def_readonly("order", &Gradient::mOrder, "Polynomial order of the gradient")
         .def_readonly("quadrature_order", &Gradient::mQuadratureOrder)
         .def_property_readonly("shape", &Gradient::Shape)
         .def("to_matrix", &Gradient::ToMatrix);

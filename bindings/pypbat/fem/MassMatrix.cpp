@@ -64,9 +64,14 @@ void BindMassMatrix(pybind11::module& m)
             pyb::init<Mesh const&, Eigen::Ref<MatrixX const> const&, Scalar, int, int>(),
             pyb::arg("mesh"),
             pyb::arg("detJe"),
-            pyb::arg("rho"),
-            pyb::arg("dims"),
-            pyb::arg("quadrature_order") = 1)
+            pyb::arg("rho") = 1.,
+            pyb::arg("dims") = 1,
+            pyb::arg("quadrature_order") = 1,
+            "Construct the mass matrix operator on mesh mesh, using "
+            "precomputed jacobian determinants detJe evaluated at "
+            "quadrature points given by the quadrature rule of order quadrature_order. The "
+            "dimensions dims can be set to accommodate vector-valued functions. rho is a uniform "
+            "mass density.")
         .def(
             pyb::init<
                 Mesh const&,
@@ -76,9 +81,14 @@ void BindMassMatrix(pybind11::module& m)
                 int>(),
             pyb::arg("mesh"),
             pyb::arg("detJe"),
-            pyb::arg("rho"),
-            pyb::arg("dims"),
-            pyb::arg("quadrature_order") = 1)
+            pyb::arg("rho") = 1.,
+            pyb::arg("dims") = 1,
+            pyb::arg("quadrature_order") = 1,
+            "Construct the mass matrix operator on mesh mesh, using "
+            "precomputed jacobian determinants detJe evaluated at "
+            "quadrature points given by the quadrature rule of order quadrature_order. The "
+            "dimensions dims can be set to accommodate vector-valued functions. rho is a piecewise "
+            "constant (per element) mass density.")
         .def_property(
             "dims",
             [](MassMatrix const& L) { return L.dims(); },
@@ -90,7 +100,8 @@ void BindMassMatrix(pybind11::module& m)
             [](MassMatrix const& M) { return M.ElementMassMatrices(); },
             [](MassMatrix& M, Eigen::Ref<MatrixX const> const& ME) {
                 M.ElementMassMatrices() = ME;
-            })
+            },
+            "|#element nodes| x |#elements nodes * #elements| matrix of element mass matrices")
         .def_property_readonly("shape", &MassMatrix::Shape)
         .def("to_matrix", &MassMatrix::ToMatrix);
 }

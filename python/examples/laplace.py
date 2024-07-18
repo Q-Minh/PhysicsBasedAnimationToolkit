@@ -1,5 +1,4 @@
 import pbatoolkit as pbat
-import pbatoolkit.fem
 import pbatoolkit.math.linalg
 import pbatoolkit.geometry
 import igl
@@ -11,14 +10,14 @@ import argparse
 
 def harmonic_field(V: np.ndarray, C: np.ndarray, order: int, eps: float = 0.1):
     # Construct order order mesh and its Laplacian
-    mesh = pbat.fem.mesh(
+    mesh = pbat.fem.Mesh(
         V.T, C.T, element=pbat.fem.Element.Tetrahedron, order=order)
     quadrature_order = max(int(2*(order-1)), 1)
     detJeL = pbat.fem.jacobian_determinants(
         mesh, quadrature_order=quadrature_order)
     GNeL = pbat.fem.shape_function_gradients(
         mesh, quadrature_order=quadrature_order)
-    L = pbat.fem.laplacian_matrix(
+    L = pbat.fem.Laplacian(
         mesh, detJeL, GNeL, quadrature_order=quadrature_order).to_matrix()
     # Set Dirichlet boundary conditions at bottom and top of the model
     Xmin = mesh.X.min(axis=1)

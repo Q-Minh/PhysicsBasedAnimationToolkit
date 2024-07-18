@@ -39,6 +39,14 @@ template <class TDerived>
     return detJ;
 }
 
+/**
+ * @brief
+ * @tparam QuadratureOrder
+ * @tparam TMesh
+ * @param mesh
+ * @return |#quad.pts.|x|#elements| matrix of element jacobian determinants at element quadrature
+ * points
+ */
 template <int QuadratureOrder, CMesh TMesh>
 MatrixX DeterminantOfJacobian(TMesh const& mesh)
 {
@@ -105,7 +113,8 @@ MatrixX InnerProductWeights(TMesh const& mesh)
  * @tparam TDerivedDetJe
  * @param mesh
  * @param detJe
- * @return MatrixX
+ * @return |#quad.pts.|x|#elements| matrix of quadrature weights multiplied by jacobian determinants
+ * at element quadrature points
  */
 template <int QuadratureOrder, CMesh TMesh, class TDerivedDetJe>
 MatrixX InnerProductWeights(TMesh const& mesh, Eigen::MatrixBase<TDerivedDetJe> const& detJe)
@@ -185,6 +194,19 @@ Vector<TElement::kDims> ReferencePosition(
     return Xik;
 }
 
+/**
+ * @brief
+ * @tparam TDerivedE
+ * @tparam TDerivedX
+ * @tparam TMesh
+ * @param mesh
+ * @param E
+ * @param X
+ * @param maxIterations
+ * @param eps
+ * @return |#element dims| x |X.cols()| matrix of reference positions associated with domain points
+ * X in corresponding elements E
+ */
 template <CMesh TMesh, class TDerivedE, class TDerivedX>
 MatrixX ReferencePositions(
     TMesh const& mesh,
