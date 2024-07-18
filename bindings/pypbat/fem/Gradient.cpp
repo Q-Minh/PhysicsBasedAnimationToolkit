@@ -25,6 +25,7 @@ class Gradient
     EElement eMeshElement;
     int mMeshDims;
     int mMeshOrder;
+    int mDims;
     int mOrder;
     int mQuadratureOrder;
 
@@ -44,7 +45,7 @@ void BindGradient(pybind11::module& m)
             pyb::arg("mesh"),
             pyb::arg("GNe"),
             pyb::arg("quadrature_order") = 1)
-        .def_readonly("dims", &Gradient::mMeshDims)
+        .def_readonly("dims", &Gradient::mDims)
         .def_readonly("order", &Gradient::mOrder)
         .def_readonly("quadrature_order", &Gradient::mQuadratureOrder)
         .def_property_readonly("shape", &Gradient::Shape)
@@ -55,14 +56,18 @@ Gradient::Gradient(Mesh const& M, Eigen::Ref<MatrixX const> const& GNe, int qOrd
     : eMeshElement(M.eElement),
       mMeshDims(M.mDims),
       mMeshOrder(M.mOrder),
-      mOrder(M.mOrder > 1 ? M.mOrder - 1 : 1),
-      mQuadratureOrder(qOrder),
+      mDims(),
+      mOrder(),
+      mQuadratureOrder(),
       mGradient(nullptr)
 {
     M.ApplyWithQuadrature<kMaxQuadratureOrder>(
         [&]<pbat::fem::CMesh MeshType, auto QuadratureOrder>(MeshType* mesh) {
             using GradientType = pbat::fem::Gradient<MeshType, QuadratureOrder>;
             mGradient          = new GradientType(*mesh, GNe);
+            mDims              = GradientType::kDims;
+            mOrder             = GradientType::kOrder;
+            mQuadratureOrder   = GradientType::kQuadratureOrder;
         },
         qOrder);
 }

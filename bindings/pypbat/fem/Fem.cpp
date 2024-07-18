@@ -17,6 +17,7 @@ void Bind(pybind11::module& m)
     // Bind mesh first, since all FEM operators depend on it
     BindMesh(m);
     BindGradient(m);
+    BindLaplacian(m);
 }
 
 } // namespace fem
