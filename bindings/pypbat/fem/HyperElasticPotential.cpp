@@ -7,6 +7,7 @@
 #include <pbat/physics/StableNeoHookeanEnergy.h>
 #include <pybind11/eigen.h>
 #include <tuple>
+#include <type_traits>
 
 namespace pbat {
 namespace py {

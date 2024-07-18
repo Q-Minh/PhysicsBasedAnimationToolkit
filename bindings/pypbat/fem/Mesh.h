@@ -12,6 +12,7 @@
 #include <pbat/fem/Tetrahedron.h>
 #include <pbat/fem/Triangle.h>
 #include <pybind11/pybind11.h>
+#include <type_traits>
 
 namespace pbat {
 namespace py {

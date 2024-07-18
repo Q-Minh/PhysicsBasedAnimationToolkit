@@ -1,7 +1,6 @@
 #include "Mesh.h"
 
 #include <pybind11/eigen.h>
-#include <pybind11/stl.h>
 #include <string>
 
 namespace pbat {

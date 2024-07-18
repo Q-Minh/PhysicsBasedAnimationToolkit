@@ -1,6 +1,7 @@
 #include "Fem.h"
 
 #include "Gradient.h"
+#include "HyperElasticPotential.h"
 #include "Jacobian.h"
 #include "Laplacian.h"
 #include "MassMatrix.h"
@@ -17,8 +18,11 @@ void Bind(pybind11::module& m)
     // Bind mesh first, since all FEM operators depend on it
     BindMesh(m);
     BindGradient(m);
+    BindHyperElasticPotential(m);
+    BindJacobian(m);
     BindLaplacian(m);
     BindMassMatrix(m);
+    BindShapeFunctions(m);
 }
 
 } // namespace fem
