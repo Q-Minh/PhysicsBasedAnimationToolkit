@@ -44,8 +44,8 @@ void BindMesh(pybind11::module& m)
             [](Mesh const& M) { return M.E(); },
             [](Mesh& M, Eigen::Ref<IndexMatrixX const> const& E) { M.E() = E; })
         .def_readonly("element", &Mesh::eElement)
-        .def_readonly("order", &Mesh::kOrder)
-        .def_readonly("dims", &Mesh::kDims);
+        .def_readonly("order", &Mesh::mOrder)
+        .def_readonly("dims", &Mesh::mDims);
 }
 
 Mesh::Mesh(
@@ -54,7 +54,7 @@ Mesh::Mesh(
     EElement element,
     int order,
     int dims)
-    : eElement(element), kOrder(order), kDims(dims), mMesh(nullptr)
+    : eElement(element), mOrder(order), mDims(dims), mMesh(nullptr)
 {
     Apply([&]<class MeshType>([[maybe_unused]] MeshType* mesh) { mMesh = new MeshType(V, C); });
 }
