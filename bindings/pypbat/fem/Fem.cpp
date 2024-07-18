@@ -18,6 +18,7 @@ void Bind(pybind11::module& m)
     BindMesh(m);
     BindGradient(m);
     BindLaplacian(m);
+    BindMassMatrix(m);
 }
 
 } // namespace fem

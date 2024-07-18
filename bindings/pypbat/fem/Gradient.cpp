@@ -15,6 +15,9 @@ class Gradient
   public:
     Gradient(Mesh const& M, Eigen::Ref<MatrixX const> const& GNe, int qOrder);
 
+    Gradient(Gradient const&)            = delete;
+    Gradient& operator=(Gradient const&) = delete;
+
     template <class Func>
     void Apply(Func&& f) const;
 

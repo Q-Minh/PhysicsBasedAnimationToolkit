@@ -17,7 +17,11 @@ class Laplacian
         Mesh const& M,
         Eigen::Ref<MatrixX const> const& detJe,
         Eigen::Ref<MatrixX const> const& GNe,
+        int dims,
         int qOrder);
+
+    Laplacian(Laplacian const&)            = delete;
+    Laplacian& operator=(Laplacian const&) = delete;
 
     template <class Func>
     void Apply(Func&& f) const;
@@ -54,10 +58,12 @@ void BindLaplacian(pybind11::module& m)
                 Mesh const&,
                 Eigen::Ref<MatrixX const> const&,
                 Eigen::Ref<MatrixX const> const&,
+                int,
                 int>(),
             pyb::arg("mesh"),
             pyb::arg("detJe"),
             pyb::arg("GNe"),
+            pyb::arg("dims")             = 1,
             pyb::arg("quadrature_order") = 1)
         .def_property(
             "dims",
@@ -79,6 +85,7 @@ Laplacian::Laplacian(
     Mesh const& M,
     Eigen::Ref<MatrixX const> const& detJe,
     Eigen::Ref<MatrixX const> const& GNe,
+    int dims,
     int qOrder)
     : eMeshElement(M.eElement),
       mMeshDims(M.mDims),
@@ -90,7 +97,7 @@ Laplacian::Laplacian(
     M.ApplyWithQuadrature<kMaxQuadratureOrder>(
         [&]<pbat::fem::CMesh MeshType, auto QuadratureOrder>(MeshType* mesh) {
             using LaplacianType = pbat::fem::SymmetricLaplacianMatrix<MeshType, QuadratureOrder>;
-            mLaplacian          = new LaplacianType(*mesh, detJe, GNe);
+            mLaplacian          = new LaplacianType(*mesh, detJe, GNe, dims);
             mOrder              = LaplacianType::kOrder;
             mQuadratureOrder    = LaplacianType::kQuadratureOrder;
         },
