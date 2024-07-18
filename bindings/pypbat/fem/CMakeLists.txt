@@ -105,6 +105,7 @@ target_sources(PhysicsBasedAnimationToolkit_Python
     FILES
     "Fem.h"
     "Gradient.h"
+    "HyperElasticPotential.h"
     "Jacobian.h"
     "Laplacian.h"
     "MassMatrix.h"
@@ -117,6 +118,7 @@ target_sources(PhysicsBasedAnimationToolkit_Python
     "Fem.cpp"
     "Gradient.cpp"
     "Jacobian.cpp"
+    "HyperElasticPotential.cpp"
     "Laplacian.cpp"
     "MassMatrix.cpp"
     "Mesh.cpp"

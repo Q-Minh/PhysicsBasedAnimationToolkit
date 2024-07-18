@@ -49,7 +49,7 @@ class MassMatrix
     int mOrder;
     int mQuadratureOrder;
 
-    static auto constexpr kMaxQuadratureOrder = 4;
+    static auto constexpr kMaxQuadratureOrder = 6;
 
   private:
     void* mMassMatrix;
@@ -209,9 +209,9 @@ void MassMatrix::Apply(Func&& f) const
         eMeshElement,
         mQuadratureOrder,
         [&]<pbat::fem::CMesh MeshType, auto QuadratureOrder>() {
-            using MassMatrixType      = pbat::fem::MassMatrix<MeshType, QuadratureOrder>;
-            MassMatrixType* laplacian = reinterpret_cast<MassMatrixType*>(mMassMatrix);
-            f.template operator()<MassMatrixType>(laplacian);
+            using MassMatrixType       = pbat::fem::MassMatrix<MeshType, QuadratureOrder>;
+            MassMatrixType* massMatrix = reinterpret_cast<MassMatrixType*>(mMassMatrix);
+            f.template operator()<MassMatrixType>(massMatrix);
         });
 }
 
