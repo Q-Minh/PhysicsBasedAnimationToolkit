@@ -12,7 +12,7 @@ endif()
 include(FetchContent)
 
 if(PBAT_ENABLE_PROFILER)
-    option(TRACY_ON_DEMAND "" ${PBAT_PROFILE_ON_DEMAND})
+    set(TRACY_ON_DEMAND ${PBAT_PROFILE_ON_DEMAND} CACHE BOOL "")
     FetchContent_Declare(
         tracy
         GIT_REPOSITORY https://github.com/wolfpld/tracy.git
