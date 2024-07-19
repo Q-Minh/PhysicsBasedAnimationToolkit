@@ -27,7 +27,6 @@ def combine(V: list, C: list):
 def line_search(alpha0: float,
                 xk: np.ndarray,
                 dx: np.ndarray,
-                fk: float,
                 gk: np.ndarray,
                 f: Callable[[np.ndarray], float],
                 maxiters: int = 20,
@@ -35,6 +34,7 @@ def line_search(alpha0: float,
                 tau: float = 0.5):
     alphaj = alpha0
     Dfk = gk.dot(dx)
+    fk = f(xk)
     for j in range(maxiters):
         fx = f(xk + alphaj*dx)
         flinear = fk + alphaj * c * Dfk
@@ -61,8 +61,7 @@ def newton(x0: np.ndarray,
             break
         Hk = hess(xk)
         dx = lsolver(Hk, -gk)
-        fk = f(xk)
-        alpha = line_search(alpha0(xk, dx), xk, dx, fk, gk, f)
+        alpha = line_search(alpha0(xk, dx), xk, dx, gk, f)
         xk = xk + alpha*dx
         gk = grad(xk)
         if callback is not None:
@@ -183,6 +182,7 @@ class Gradient():
         BX = to_surface(x, mesh, cmesh)
         cconstraints.build(cmesh, BX, dhat, dmin=dmin)
         gB = cconstraints.compute_potential_gradient(cmesh, BX, dhat)
+        gB = cmesh.to_full_dof(gB)
 
         # Cannot compute gradient without barrier stiffness
         if self.params.kB is None:
@@ -193,6 +193,7 @@ class Gradient():
         BXdot = to_surface(v, mesh, cmesh)
         fconstraints.build(cmesh, BX, cconstraints, dhat, kB, mu)
         gF = fconstraints.compute_potential_gradient(cmesh, BXdot, epsv)
+        gF = cmesh.to_full_dof(gF)
         g = M @ (x - xtilde) + dt2*gU + kB * gB + dt*gF
         return g
 
@@ -222,10 +223,10 @@ class Hessian():
         v = (x - xt) / dt
         BX = to_surface(x, mesh, cmesh)
         BXdot = to_surface(v, mesh, cmesh)
-        cconstraints.build(cmesh, BX, dhat, dmin=dmin)
-        fconstraints.build(cmesh, BX, cconstraints, dhat, kB, mu)
         HB = cconstraints.compute_potential_hessian(cmesh, BX, dhat)
+        HB = cmesh.to_full_dof(HB)
         HF = fconstraints.compute_potential_hessian(cmesh, BXdot, epsv)
+        HF = cmesh.to_full_dof(HF)
         H = M + dt2*HU + kB * HB + HF
         return H
 
@@ -350,8 +351,6 @@ if __name__ == "__main__":
     x = mesh.X.reshape(math.prod(mesh.X.shape), order='F')
     n = x.shape[0]
     v = np.zeros(n)
-    X = V
-    Xdot = v.reshape(mesh.X.shape[0], mesh.X.shape[1], order='F').T
 
     detJeM = pbat.fem.jacobian_determinants(mesh, quadrature_order=2)
     rho = args.rho
@@ -393,12 +392,9 @@ if __name__ == "__main__":
     dhat = 1e-3
     cconstraints = ipctk.CollisionConstraints()
     fconstraints = ipctk.FrictionConstraints()
-    avgmass = lumpedm.mean()
     mu = 0.3
     epsv = 1e-4
     dmin = 1e-4
-    BX = cmesh.map_displacements(X)
-    BXdot = cmesh.map_displacements(Xdot)
 
     # Fix bottom of the input models as Dirichlet boundary conditions
     Xmin = mesh.X.min(axis=1)
@@ -422,27 +418,28 @@ if __name__ == "__main__":
     ps.set_ground_plane_height_factor(0.5)
     ps.set_program_name("Elasticity")
     ps.init()
-    vm = ps.register_volume_mesh("world model", mesh.X.T, mesh.E.T)
+    vm = ps.register_surface_mesh(
+        "Visual mesh", cmesh.rest_positions, cmesh.faces)
     pc = ps.register_point_cloud("Dirichlet", mesh.X[:, vdbc].T)
     dt = 0.01
     animate = False
     newton_maxiter = 10
     newton_rtol = 1e-5
-    dx = np.zeros(n)
 
     profiler = pbat.profiling.Profiler()
     # ipctk.set_logger_level(ipctk.LoggerLevel.trace)
 
     def callback():
-        global x, v, a, dx, hep, dt, M, f
-        global cmesh, cconstraints, fconstraints, X, Xdot, BX, BXdot, dmin, dhat, mu, epsv, avgmass
+        global x, v, dt
+        global dhat, dmin, mu
         global newton_maxiter, newton_rtol
         global animate, step
-        global profiler
 
         changed, dt = imgui.InputFloat("dt", dt)
         changed, dhat = imgui.InputFloat(
             "IPC activation distance", dhat, format="%.6f")
+        changed, dmin = imgui.InputFloat(
+            "IPC minimum distance", dmin, format="%.6f")
         changed, mu = imgui.InputFloat(
             "Coulomb friction coeff", mu, format="%.2f")
         changed, newton_maxiter = imgui.InputInt(
@@ -462,15 +459,15 @@ if __name__ == "__main__":
             solver = LinearSolver(dofs)
             ccd = CCD(params)
             updater = BarrierUpdater(params)
-            xtp1 = newton(x, f, g, H, solver, ccd, newton_maxiter,
-                          newton_rtol, updater)
+            xtp1 = newton(x, f, g, H, solver, ccd,
+                          newton_maxiter, newton_rtol, updater)
             v = (xtp1 - x) / dt
             x = xtp1
-            X = to_surface(x, mesh, cmesh)
+            BX = to_surface(x, mesh, cmesh)
             profiler.end_frame("Physics")
 
             # Update visuals
-            vm.update_vertex_positions(X)
+            vm.update_vertex_positions(BX)
 
     ps.set_user_callback(callback)
     ps.show()
