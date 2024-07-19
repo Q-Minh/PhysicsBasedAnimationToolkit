@@ -334,12 +334,6 @@ void HyperElasticPotential::ComputeElementElasticity(
     bool bWithHessian)
 {
     Apply([&]<class HyperElasticPotentialType>(HyperElasticPotentialType* hyperElasticPotential) {
-        using MeshType               = typename HyperElasticPotentialType::MeshType;
-        using ElementType            = typename MeshType::ElementType;
-        static auto constexpr kOrder = ElementType::kOrder;
-        if constexpr (std::is_same_v<ElementType, pbat::fem::Hexahedron<kOrder>> and kOrder >= 3)
-            return;
-
         hyperElasticPotential->template ComputeElementElasticity<Eigen::Ref<VectorX const>>(
             x,
             bWithGradient,

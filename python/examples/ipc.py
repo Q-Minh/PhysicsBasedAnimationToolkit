@@ -27,8 +27,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         prog="3D elastic simulation of linear FEM tetrahedra using Incremental Potential Contact",
     )
-    # parser.add_argument("-i", "--input", help="Paths to input mesh", nargs="+",
-    #                     dest="inputs", required=True)
+    parser.add_argument(
+        "-i", "--input", help="Path to input mesh", dest="input", required=True)
     parser.add_argument("-m", "--mass-density", help="Mass density", type=float,
                         dest="rho", default=1000.)
     parser.add_argument("-Y", "--young-modulus", help="Young's modulus", type=float,
@@ -39,22 +39,14 @@ if __name__ == "__main__":
 
     # Load input meshes and combine them into 1 mesh
     V, C = [], []
-    # for input in args.inputs:
-    #     imesh = meshio.read(args.input)
-    #     V, C = imesh.points, imesh.cells_dict["tetra"]
-    #     V = np.copy(V, order='C')
-    #     C = C.astype(np.int64, order='C')
 
-    # Test scenario, one fix bar on bottom, and another bar on top, rotated 90 degrees around the z axis
-    imesh = meshio.read("data/bar.mesh")
+    imesh = meshio.read(args.input)
     V.append(imesh.points.astype(np.float64, order='C'))
     C.append(imesh.cells_dict["tetra"].astype(np.int64, order='C'))
     R = sp.spatial.transform.Rotation.from_quat(
         [0, 0, np.sin(np.pi/4), np.cos(np.pi/4)]).as_matrix()
-    V2 = (V[0] - V[0].mean(axis=0)) @ R.T
-    # V2[:, 2] += (V[0][:, 2].max() - V[0][:, 2].min()) + 5*1e-3
-    V2[:, 2] += (V[0][:, 2].max() - V[0][:, 2].min()) + 0.3
-    # V2[:, 2] += 1
+    V2 = (V[0] - V[0].mean(axis=0)) @ R.T + V[0].mean(axis=0)
+    V2[:, 2] += (V[0][:, 2].max() - V[0][:, 2].min()) + 0.1
     C2 = C[0]
     V.append(V2)
     C.append(C2)
@@ -74,7 +66,7 @@ if __name__ == "__main__":
     detJeM = pbat.fem.jacobian_determinants(mesh, quadrature_order=2)
     rho = args.rho
     M = pbat.fem.MassMatrix(mesh, detJeM, rho=rho,
-                             dims=3, quadrature_order=2).to_matrix()
+                            dims=3, quadrature_order=2).to_matrix()
     # Lump mass matrix
     lumpedm = M.sum(axis=0)
     M = sp.sparse.spdiags(lumpedm, np.array([0]), m=M.shape[0], n=M.shape[0])
@@ -186,7 +178,7 @@ if __name__ == "__main__":
                 hessB = cmesh.to_full_dof(hessB)
 
                 # Compute elasticity
-                hep.compute_element_elasticity(xk, grad=True, hess=True)
+                hep.compute_element_elasticity(xk, grad=True, hessian=True)
                 U, gradU, HU = hep.eval(), hep.gradient(), hep.hessian()
 
                 # Compute adaptive barrier stiffness
@@ -210,8 +202,9 @@ if __name__ == "__main__":
 
                 def setup():
                     global bd, Add, b
-                    A = M + dt2 * HU + kB * hessB + dt2*hessF
-                    b = -(M @ (xk - xtilde) + dt2*gradU + kB * gradB + dt2*gradF)
+                    A = M + dt2 * HU + kB * hessB + dt2*dt2*hessF
+                    b = -(M @ (xk - xtilde) + dt2*gradU +
+                          kB * gradB + dt2*dt*gradF)
                     Add = A.tocsc()[:, dofs].tocsr()[dofs, :]
                     bd = b[dofs]
 
@@ -245,7 +238,7 @@ if __name__ == "__main__":
                 alpha = max_alpha
 
                 def E(xt, x):
-                    hep.compute_element_elasticity(x, grad=False, hess=False)
+                    hep.compute_element_elasticity(x, grad=False, hessian=False)
                     U = hep.eval()
                     X = x.reshape(mesh.X.shape[0],
                                   mesh.X.shape[1], order='F').T

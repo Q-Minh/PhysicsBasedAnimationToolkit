@@ -43,6 +43,8 @@ See [`vcpkg.json`](./vcpkg.json) for a versioned list of our dependencies, avail
 | `PBAT_USE_SUITESPARSE` | `ON,OFF` | `OFF` | Link to user-provided [SuiteSparse](https://github.com/DrTimothyAldenDavis/SuiteSparse) installation via CMake's [`find_package`](https://cmake.org/cmake/help/latest/command/find_package.html). |
 | `PBAT_BUILD_SHARED_LIBS` | `ON,OFF` | `OFF` | Build project's library targets as shared/dynamic. |
 
+Our project provides [configuration presets](./CMakePresets.json) that capture typical use configurations. Refer to the [CMake presets documentation](https://cmake.org/cmake/help/latest/manual/cmake-presets.7.html) for more information.
+
 ## Build
 
 Build transparently across platforms using the [cmake build CLI](https://cmake.org/cmake/help/latest/manual/cmake.1.html#build-a-project). 
@@ -59,7 +61,7 @@ CMake build targets:
 From command line:
 ```bash
 cd path/to/PhysicsBasedAnimationToolkit
-cmake -S . -B build -A x64 -DPBAT_ENABLE_PROFILER:BOOL=ON -DPBAT_BUILD_TESTS:BOOL=ON
+cmake --preset=default # or other preset
 cmake --install build --config Release
 ```
 
@@ -82,7 +84,7 @@ For a local installation, which builds from source, our Python bindings build re
 
 As an example, using [`vcpkg`](https://github.com/microsoft/vcpkg) for external dependencies, run in command line:
 ```bash
-pip install . --config-settings=cmake.args="-DPBAT_BUILD_PYTHON_BINDINGS:BOOL=ON;-DPBAT_BUILD_TESTS:BOOL=OFF;-DPBAT_ENABLE_PROFILER:BOOL=ON;-DPBAT_PROFILE_ON_DEMAND:BOOL=ON;-DPBAT_BUILD_SHARED_LIBS:BOOL=OFF;-DCMAKE_POSITION_INDEPENDENT_CODE:BOOL=ON;-DCMAKE_TOOLCHAIN_FILE='path/to/vcpkg/scripts/buildsystems/vcpkg.cmake';-DVCPKG_MANIFEST_FEATURES=python;-DPBAT_PROFILE_ON_DEMAND:BOOL=ON" -v
+pip install . --config-settings=cmake.args="--preset=pip-local" -v
 ```
 
 For parallel builds on Unix systems, you can add the `build.tool-args=-j<# threads>` to the `config-settings` parameter, where `<# threads>` is the number of compilation jobs to run simultaneously. On Windows, using `MSBuild`, you may specify `build.tool-args=/p:CL_MPCount=<# threads>` instead. This assumes that parallel builds were enabled, meaning `/MP` may need to be appended to `CMAKE_CXX_FLAGS` through `cmake.args`. Otherwise, `CMAKE_BUILD_PARALLEL_LEVEL=<# threads>`may be usable, again through the `cmake.args` parameter of `config-settings`.
@@ -90,7 +92,7 @@ For parallel builds on Unix systems, you can add the `build.tool-args=-j<# threa
 Verify `pbatoolkit`'s contents in Python shell:
 ```python
 import pbatoolkit as pbat
-import pbatoolkit.fem, pbatoolkit.geometry, pbatoolkit.profiling
+import pbatoolkit.geometry, pbatoolkit.profiling
 import pbatoolkit.math.linalg
 help(pbat.fem)
 help(pbat.geometry)

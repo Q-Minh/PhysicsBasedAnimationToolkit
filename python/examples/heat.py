@@ -24,7 +24,7 @@ if __name__ == "__main__":
             V.T, C.T, element=pbat.fem.Element.Tetrahedron, order=1)
     if "triangle" in imesh.cells_dict.keys():
         V, C = imesh.points, imesh.cells_dict["triangle"]
-        mesh = pbat.fem.mesh(
+        mesh = pbat.fem.Mesh(
             V.T, C.T, element=pbat.fem.Element.Triangle, order=1)
 
     V, C = mesh.X.T, mesh.E.T

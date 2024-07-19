@@ -67,7 +67,7 @@ void BindShapeFunctions(pybind11::module& m)
         "shape_functions_at",
         [](Mesh const& M, Eigen::Ref<MatrixX const> const& Xi) {
             MatrixX N;
-            M.Apply([&]<class MeshType>(MeshType* mesh) {
+            M.Apply([&]<class MeshType>([[maybe_unused]] MeshType* mesh) {
                 using ElementType = typename MeshType::ElementType;
                 N                 = pbat::fem::ShapeFunctionsAt<ElementType>(Xi);
             });

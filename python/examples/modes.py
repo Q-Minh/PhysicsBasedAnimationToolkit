@@ -66,9 +66,9 @@ if __name__ == "__main__":
 
     def callback():
         global mode, c, k
-        changed, mode = imgui.InputInt("mode", mode)
-        changed, c = imgui.InputFloat("c", c)
-        changed, k = imgui.InputFloat("k", k)
+        changed, mode = imgui.InputInt("Mode", mode)
+        changed, c = imgui.InputFloat("Wave amplitude", c)
+        changed, k = imgui.InputFloat("Wave frequency", k)
 
         t = time.time() - t0
         X = mesh.X.T + signal(w[mode], Veigs[:, mode],
