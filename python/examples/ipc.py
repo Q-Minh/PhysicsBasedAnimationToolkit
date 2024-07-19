@@ -12,6 +12,7 @@ import polyscope.imgui as imgui
 import math
 import argparse
 import itertools
+from collections.abc import Callable
 
 
 def combine(V: list, C: list):
@@ -21,6 +22,17 @@ def combine(V: list, C: list):
     C = np.vstack(C)
     V = np.vstack(V)
     return V, C
+
+
+# def newton(x0: np.ndarray,
+#            f: Callable[[np.ndarray], float],
+#            grad: Callable[[np.ndarray], np.ndarray],
+#            hess: Callable[[np.ndarray], sp.sparse.csc_matrix],
+#            lsolver: Callable[[np.ndarray], [sp.sparse.csc_matrix, np.ndarray]],
+#            maxiters: int = 10,
+#            rtol: float = 1e-5,
+#            ):
+#     pass
 
 
 if __name__ == "__main__":
@@ -74,8 +86,6 @@ if __name__ == "__main__":
         1./lumpedm, np.array([0]), m=M.shape[0], n=M.shape[0])
 
     # Construct load vector from gravity field
-    detJeU = pbat.fem.jacobian_determinants(mesh, quadrature_order=1)
-    GNeU = pbat.fem.shape_function_gradients(mesh, quadrature_order=1)
     qgf = pbat.fem.inner_product_weights(
         mesh, quadrature_order=1).flatten(order="F")
     Qf = sp.sparse.diags_array([qgf], offsets=[0])
@@ -88,6 +98,8 @@ if __name__ == "__main__":
     a = Minv @ f
 
     # Create hyper elastic potential
+    detJeU = pbat.fem.jacobian_determinants(mesh, quadrature_order=1)
+    GNeU = pbat.fem.shape_function_gradients(mesh, quadrature_order=1)
     Y = np.full(mesh.E.shape[1], args.Y)
     nu = np.full(mesh.E.shape[1], args.nu)
     psi = pbat.fem.HyperElasticEnergy.StableNeoHookean
@@ -202,9 +214,9 @@ if __name__ == "__main__":
 
                 def setup():
                     global bd, Add, b
-                    A = M + dt2 * HU + kB * hessB + dt2*dt2*hessF
+                    A = M + dt2 * HU + kB * hessB + hessF
                     b = -(M @ (xk - xtilde) + dt2*gradU +
-                          kB * gradB + dt2*dt*gradF)
+                          kB * gradB + dt*gradF)
                     Add = A.tocsc()[:, dofs].tocsr()[dofs, :]
                     bd = b[dofs]
 
