@@ -223,9 +223,11 @@ class Hessian():
         v = (x - xt) / dt
         BX = to_surface(x, mesh, cmesh)
         BXdot = to_surface(v, mesh, cmesh)
-        HB = cconstraints.compute_potential_hessian(cmesh, BX, dhat)
+        HB = cconstraints.compute_potential_hessian(
+            cmesh, BX, dhat, project_hessian_to_psd=True)
         HB = cmesh.to_full_dof(HB)
-        HF = fconstraints.compute_potential_hessian(cmesh, BXdot, epsv)
+        HF = fconstraints.compute_potential_hessian(
+            cmesh, BXdot, epsv, project_hessian_to_psd=True)
         HF = cmesh.to_full_dof(HF)
         H = M + dt2*HU + kB * HB + HF
         return H
@@ -242,6 +244,11 @@ class LinearSolver():
         bd = b[dofs]
         Addinv = pbat.math.linalg.ldlt(Add)
         Addinv.compute(Add)
+        # NOTE: If built from source with SuiteSparse, use faster chol
+        # Addinv = pbat.math.linalg.chol(
+        #     Add, solver=pbat.math.linalg.SolverBackend.SuiteSparse)
+        # Addinv.compute(sp.sparse.tril(
+        #     Add), pbat.math.linalg.Cholmod.SparseStorage.SymmetricLowerTriangular)
         x = np.zeros_like(b)
         x[dofs] = Addinv.solve(bd).squeeze()
         return x
