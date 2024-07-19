@@ -330,6 +330,8 @@ if __name__ == "__main__":
         "-i", "--input", help="Path to input mesh", dest="input", required=True)
     parser.add_argument("-t", "--translation", help="Vertical translation", type=float,
                         dest="translation", default=0.1)
+    parser.add_argument("--percent-fixed", help="Percentage of input mesh's bottom to fix", type=float,
+                        dest="percent_fixed", default=0.1)
     parser.add_argument("-m", "--mass-density", help="Mass density", type=float,
                         dest="rho", default=1000.)
     parser.add_argument("-Y", "--young-modulus", help="Young's modulus", type=float,
@@ -403,11 +405,12 @@ if __name__ == "__main__":
     epsv = 1e-4
     dmin = 1e-4
 
-    # Fix bottom of the input models as Dirichlet boundary conditions
+    # Fix some percentage of bottom of the input models as Dirichlet boundary conditions
     Xmin = mesh.X.min(axis=1)
     Xmax = mesh.X.max(axis=1)
-    Xmax[-1] = Xmin[-1]+1e-4
-    Xmin[-1] = Xmin[-1]-1e-4
+    dX = Xmax - Xmin
+    Xmax[-1] = Xmin[-1] + args.percent_fixed*dX[-1]
+    Xmin[-1] = Xmin[-1] - 1e-4
     aabb = pbat.geometry.aabb(np.vstack((Xmin, Xmax)).T)
     vdbc = aabb.contained(mesh.X)
     dbcs = np.array(vdbc)[:, np.newaxis]
@@ -452,7 +455,7 @@ if __name__ == "__main__":
         changed, newton_maxiter = imgui.InputInt(
             "Newton max iterations", newton_maxiter)
         changed, newton_rtol = imgui.InputFloat(
-            "Newton convergence residual", newton_rtol)
+            "Newton convergence residual", newton_rtol, format="%.8f")
         changed, animate = imgui.Checkbox("animate", animate)
         step = imgui.Button("step")
 
