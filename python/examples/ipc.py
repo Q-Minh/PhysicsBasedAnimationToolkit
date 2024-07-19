@@ -115,6 +115,8 @@ class Parameters():
         self.maxkB = None
         self.dprev = None
         self.dcurrent = None
+        BX = to_surface(xt, mesh, cmesh)
+        self.bboxdiag = ipctk.world_bbox_diagonal_length(BX)
         self.gU = None
         self.gB = None
 
@@ -281,9 +283,9 @@ class BarrierInitializer():
         dhat = self.params.dhat
         dmin = self.params.dmin
         avgmass = self.params.avgmass
+        bboxdiag = self.params.bboxdiag
         # Compute adaptive barrier stiffness
         BX = to_surface(x, mesh, cmesh)
-        bboxdiag = ipctk.world_bbox_diagonal_length(BX)
         kB, maxkB = ipctk.initial_barrier_stiffness(
             bboxdiag, dhat, avgmass, gU, gB, dmin=dmin)
         dprev = cconstraints.compute_minimum_distance(cmesh, BX)
@@ -303,9 +305,9 @@ class BarrierUpdater():
         kB = self.params.kB
         maxkB = self.params.maxkB
         dprev = self.params.dprev
+        bboxdiag = self.params.bboxdiag
 
         BX = to_surface(xk, mesh, cmesh)
-        bboxdiag = ipctk.world_bbox_diagonal_length(BX)
         dcurrent = cconstraints.compute_minimum_distance(cmesh, BX)
         self.params.kB = ipctk.update_barrier_stiffness(
             dprev, dcurrent, maxkB, kB, bboxdiag, dmin=dmin)
