@@ -151,6 +151,16 @@
             }
         },
         {
+            "name": "cuda",
+            "hidden": true,
+            "cacheVariables": {
+                "PBAT_USE_CUDA": {
+                    "type": "BOOL",
+                    "value": "ON"
+                }
+            }
+        },
+        {
             "name": "pic",
             "hidden": true,
             "cacheVariables": {

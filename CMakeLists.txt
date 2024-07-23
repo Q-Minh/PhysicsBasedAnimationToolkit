@@ -17,10 +17,11 @@ option(PBAT_USE_SUITESPARSE
     "Link to SuiteSparse for sparse matrix decompositions. Overrides Intel MKL."
     OFF)
 option(PBAT_BUILD_SHARED_LIBS "Build as shared library" OFF)
+option(PBAT_USE_CUDA "Link to CUDA Toolkit for GPU API" OFF)
 
 # Global settings
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
-list(APPEND CMAKE_MODULE_PATH "cmake")
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 
 # Platform specific settings
 include(platform)

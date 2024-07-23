@@ -21,15 +21,22 @@ target_compile_definitions(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToo
     $<$<BOOL:${PBAT_USE_INTEL_MKL}>:EIGEN_USE_MKL_ALL>
     $<$<BOOL:${PBAT_USE_INTEL_MKL}>:PBAT_USE_INTEL_MKL>
     $<$<BOOL:${PBAT_USE_SUITESPARSE}>:PBAT_USE_SUITESPARSE>
+    $<$<BOOL:${PBAT_USE_CUDA}>:PBAT_USE_CUDA>
     PBAT_ROOT="${PROJECT_SOURCE_DIR}"
 )
 
-# Define header file set
+# Define header file sets
 target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     PUBLIC
     FILE_SET api
     TYPE HEADERS
     BASE_DIRS ${CMAKE_CURRENT_LIST_DIR} ${CMAKE_CURRENT_BINARY_DIR}
+)
+target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
+    PRIVATE
+    FILE_SET implementation
+    TYPE HEADERS
+    BASE_DIRS ${CMAKE_CURRENT_LIST_DIR}
 )
 
 # Define sources+targets for our library and link to every dependency
@@ -68,9 +75,25 @@ if(PBAT_USE_SUITESPARSE)
     )
 endif()
 
+if(PBAT_USE_CUDA)
+    target_link_libraries(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
+        PRIVATE
+        CUDA::toolkit
+        CUDA::cudart
+    )
+    set_target_properties(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
+        PROPERTIES
+        CUDA_ARCHITECTURES native
+        CUDA_SEPARABLE_COMPILATION ON
+        CUDA_RESOLVE_DEVICE_SYMBOLS ON
+    )
+endif()
+
 # Make source tree appear as on file system in IDEs
 get_target_property(_pbat_sources PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit SOURCES)
 get_target_property(_pbat_headers PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit HEADER_SET_api)
+get_target_property(_pbat_private_headers PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit HEADER_SET_implementation)
+list(APPEND _pbat_headers ${_pbat_private_headers})
 source_group(
     TREE ${CMAKE_CURRENT_SOURCE_DIR}
     PREFIX "source"
