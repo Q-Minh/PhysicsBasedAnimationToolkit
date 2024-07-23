@@ -32,4 +32,12 @@ using CSRMatrix = Eigen::SparseMatrix<Scalar, Eigen::RowMajor>;
 
 } // namespace pbat
 
+#ifdef PBAT_USE_CUDA
+#define PBAT_CUDA_HOST __host__
+#define PBAT_CUDA_DEVICE __device__
+#else
+#define PBAT_CUDA_HOST
+#define PBAT_CUDA_DEVICE
+#endif // PBAT_USE_CUDA
+
 #endif // PBAT_ALIASES_H
