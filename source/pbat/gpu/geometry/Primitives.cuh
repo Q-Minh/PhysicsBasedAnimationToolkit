@@ -30,6 +30,11 @@ struct Simplices
 
     Simplices(Eigen::Ref<IndexMatrixX const> const& C);
 
+    GpuIndex NumberOfSimplices() const
+    {
+        return static_cast<GpuIndex>(inds.size()) / static_cast<GpuIndex>(eSimplexType);
+    }
+
     ESimplexType eSimplexType;            ///< Type of simplex stored in inds
     thrust::device_vector<GpuIndex> inds; ///< Flattened array of simplex indices, where the range
                                           ///< [ inds[i*eSimplexType], inds[(i+1)*eSimplexType] )
