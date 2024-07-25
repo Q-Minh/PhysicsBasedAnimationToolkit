@@ -119,7 +119,8 @@ class HyperElasticPotential
     void ComputeElementElasticity(
         Eigen::Ref<VectorX const> const& x,
         bool bWithGradient,
-        bool bWithHessian);
+        bool bWithHessian,
+        bool bWithSpdProjection);
 
     Scalar Eval() const;
     VectorX ToVector() const;
@@ -216,7 +217,8 @@ void BindHyperElasticPotential(pybind11::module& m)
             &HyperElasticPotential::ComputeElementElasticity,
             pyb::arg("x"),
             pyb::arg("grad")    = true,
-            pyb::arg("hessian") = true)
+            pyb::arg("hessian") = true,
+            pyb::arg("spd")     = true)
         .def("eval", &HyperElasticPotential::Eval)
         .def("gradient", &HyperElasticPotential::ToVector)
         .def("hessian", &HyperElasticPotential::ToMatrix)
@@ -331,13 +333,15 @@ void HyperElasticPotential::PrecomputeHessianSparsity()
 void HyperElasticPotential::ComputeElementElasticity(
     Eigen::Ref<VectorX const> const& x,
     bool bWithGradient,
-    bool bWithHessian)
+    bool bWithHessian,
+    bool bWithSpdProjection)
 {
     Apply([&]<class HyperElasticPotentialType>(HyperElasticPotentialType* hyperElasticPotential) {
         hyperElasticPotential->template ComputeElementElasticity<Eigen::Ref<VectorX const>>(
             x,
             bWithGradient,
-            bWithHessian);
+            bWithHessian,
+            bWithSpdProjection);
     });
 }
 

@@ -4,6 +4,7 @@
 #include "Concepts.h"
 #include "DeformationGradient.h"
 
+#include <Eigen/SVD>
 #include <exception>
 #include <fmt/core.h>
 #include <pbat/Aliases.h>
@@ -75,8 +76,9 @@ struct HyperElasticPotential
     template <class TDerived>
     void ComputeElementElasticity(
         Eigen::MatrixBase<TDerived> const& x,
-        bool bWithGradient = true,
-        bool bWithHessian  = true);
+        bool bWithGradient     = true,
+        bool bWithHessian      = true,
+        bool bUseSpdProjection = true);
 
     /**
      * @brief Applies the hessian matrix of this potential as a linear operator on x, adding result
@@ -204,7 +206,8 @@ inline void
 HyperElasticPotential<TMesh, THyperElasticEnergy, QuadratureOrder>::ComputeElementElasticity(
     Eigen::MatrixBase<TDerived> const& x,
     bool bWithGradient,
-    bool bWithHessian)
+    bool bWithHessian,
+    bool bUseSpdProjection)
 {
     PBAT_PROFILE_NAMED_SCOPE("fem.HyperElasticPotential.ComputeElementElasticity");
     // Check inputs
@@ -311,6 +314,22 @@ HyperElasticPotential<TMesh, THyperElasticEnergy, QuadratureOrder>::ComputeEleme
                     (wg(g) * detJe(g, e)) * GradientWrtDofs<ElementType, kDims>(gradPsiF, gradPhi);
                 he += (wg(g) * detJe(g, e)) * HessianWrtDofs<ElementType, kDims>(hessPsiF, gradPhi);
             }
+        });
+    }
+    if (bWithHessian and bUseSpdProjection)
+    {
+        tbb::parallel_for(Index{0}, Index{numberOfElements}, [&](Index e) {
+            auto he = He.block<kDofsPerElement, kDofsPerElement>(0, e * kDofsPerElement);
+            Eigen::JacobiSVD<Matrix<kDofsPerElement, kDofsPerElement>> SVD{};
+            SVD.compute(he, Eigen::ComputeThinU | Eigen::ComputeThinV);
+            Vector<kDofsPerElement> sigma = SVD.singularValues();
+            for (auto s = sigma.size() - 1; s >= 0; --s)
+            {
+                if (sigma(s) >= 0.)
+                    break;
+                sigma(s) = -sigma(s);
+            }
+            he = SVD.matrixU() * sigma.asDiagonal() * SVD.matrixV().transpose();
         });
     }
 }
