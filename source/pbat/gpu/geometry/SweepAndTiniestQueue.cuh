@@ -2,6 +2,7 @@
 #define PBAT_GPU_SWEEP_AND_TINIEST_QUEUE_CUH
 
 #include "AxisAlignedBoundingBoxes.cuh"
+#include "pbat/gpu/Aliases.h"
 
 #include <cuda/atomic>
 #include <cuda/std/utility>
@@ -14,11 +15,9 @@ namespace geometry {
 class SweepAndTiniestQueue
 {
   public:
-    using ScalarType       = float;
-    using IndexType        = int;
-    using AtomicSizeType   = cuda::atomic<int, cuda::thread_scope_device>;
-    using AtomicScalarType = cuda::atomic<ScalarType, cuda::thread_scope_device>;
-    using OverlapType      = cuda::std::pair<IndexType, IndexType>;
+    using AtomicSizeType   = cuda::atomic<GpuIndex, cuda::thread_scope_device>;
+    using AtomicScalarType = cuda::atomic<GpuScalar, cuda::thread_scope_device>;
+    using OverlapType      = cuda::std::pair<GpuIndex, GpuIndex>;
 
     /**
      * @brief Construct a new Sweep And Tiniest Queue object
@@ -39,9 +38,9 @@ class SweepAndTiniestQueue
     ~SweepAndTiniestQueue();
 
   private:
-    thrust::device_ptr<IndexType> inds;                          ///< Box indices
-    thrust::device_ptr<ScalarType> bx, by, bz;                   ///< Box beginnings
-    thrust::device_ptr<ScalarType> ex, ey, ez;                   ///< Box ends
+    thrust::device_ptr<GpuIndex> inds;                           ///< Box indices
+    thrust::device_ptr<GpuScalar> bx, by, bz;                    ///< Box beginnings
+    thrust::device_ptr<GpuScalar> ex, ey, ez;                    ///< Box ends
     thrust::device_ptr<AtomicScalarType> mux, muy, muz;          ///< Box center mean
     thrust::device_ptr<AtomicScalarType> sigmax, sigmay, sigmaz; ///< Box center variance
     thrust::device_ptr<AtomicSizeType> no;                       ///< Number of overlaps

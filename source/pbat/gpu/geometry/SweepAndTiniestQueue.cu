@@ -10,13 +10,13 @@ namespace gpu {
 namespace geometry {
 
 SweepAndTiniestQueue::SweepAndTiniestQueue(std::size_t nPrimitives, std::size_t nOverlaps)
-    : inds(thrust::device_malloc<IndexType>(nPrimitives)),
-      bx(thrust::device_malloc<ScalarType>(nPrimitives)),
-      by(thrust::device_malloc<ScalarType>(nPrimitives)),
-      bz(thrust::device_malloc<ScalarType>(nPrimitives)),
-      ex(thrust::device_malloc<ScalarType>(nPrimitives)),
-      ey(thrust::device_malloc<ScalarType>(nPrimitives)),
-      ez(thrust::device_malloc<ScalarType>(nPrimitives)),
+    : inds(thrust::device_malloc<GpuIndex>(nPrimitives)),
+      bx(thrust::device_malloc<GpuScalar>(nPrimitives)),
+      by(thrust::device_malloc<GpuScalar>(nPrimitives)),
+      bz(thrust::device_malloc<GpuScalar>(nPrimitives)),
+      ex(thrust::device_malloc<GpuScalar>(nPrimitives)),
+      ey(thrust::device_malloc<GpuScalar>(nPrimitives)),
+      ez(thrust::device_malloc<GpuScalar>(nPrimitives)),
       mux(thrust::device_malloc<AtomicScalarType>(1)),
       muy(thrust::device_malloc<AtomicScalarType>(1)),
       muz(thrust::device_malloc<AtomicScalarType>(1)),
