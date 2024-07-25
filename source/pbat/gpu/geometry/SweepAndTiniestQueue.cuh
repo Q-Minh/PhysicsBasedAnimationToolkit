@@ -1,9 +1,11 @@
 #ifndef PBAT_GPU_SWEEP_AND_TINIEST_QUEUE_CUH
 #define PBAT_GPU_SWEEP_AND_TINIEST_QUEUE_CUH
 
+#include "AxisAlignedBoundingBoxes.cuh"
+
 #include <cuda/atomic>
 #include <cuda/std/utility>
-#include <thrust/device_vector.h>
+#include <thrust/device_ptr.h>
 
 namespace pbat {
 namespace gpu {
@@ -16,27 +18,34 @@ class SweepAndTiniestQueue
     using IndexType        = int;
     using AtomicSizeType   = cuda::atomic<int, cuda::thread_scope_device>;
     using AtomicScalarType = cuda::atomic<ScalarType, cuda::thread_scope_device>;
+    using OverlapType      = cuda::std::pair<IndexType, IndexType>;
 
-    // SweepAndTiniestQueue(std::size_t nPrimitives, std::size_t nOverlaps);
+    /**
+     * @brief Construct a new Sweep And Tiniest Queue object
+     *
+     * @param nPrimitives
+     * @param nOverlaps
+     */
+    SweepAndTiniestQueue(std::size_t nPrimitives, std::size_t nOverlaps);
 
-    // ~SweepAndTiniestQueue();
+    /**
+     * @brief
+     *
+     * @param lb
+     * @param rb
+     */
+    // void SortAndSweep(AxisAlignedBoundingBoxes const& lb, AxisAlignedBoundingBoxes const& rb);
+
+    ~SweepAndTiniestQueue();
 
   private:
-    thrust::device_vector<IndexType> inds;       ///< Box indices
-    thrust::device_vector<ScalarType> bx;        ///< Boxes begin along x-axis
-    thrust::device_vector<ScalarType> by;        ///< Boxes begin along y-axis
-    thrust::device_vector<ScalarType> bz;        ///< Boxes begin along z-axis
-    thrust::device_vector<ScalarType> ex;        ///< Boxes end along x-axis
-    thrust::device_vector<ScalarType> ey;        ///< Boxes end along y-axis
-    thrust::device_vector<ScalarType> ez;        ///< Boxes end along z-axis
-    thrust::device_ptr<AtomicScalarType> mux;    ///< Box center mean in x-axis
-    thrust::device_ptr<AtomicScalarType> muy;    ///< Box center mean in y-axis
-    thrust::device_ptr<AtomicScalarType> muz;    ///< Box center mean in z-axis
-    thrust::device_ptr<AtomicScalarType> sigmax; ///< Box center variance in x-axis
-    thrust::device_ptr<AtomicScalarType> sigmay; ///< Box center variance in y-axis
-    thrust::device_ptr<AtomicScalarType> sigmaz; ///< Box center variance in z-axis
-    thrust::device_vector<cuda::std::pair<IndexType, IndexType>> o; ///< Overlaps
-    thrust::device_ptr<AtomicSizeType> no;                          ///< Number of overlaps
+    thrust::device_ptr<IndexType> inds;                          ///< Box indices
+    thrust::device_ptr<ScalarType> bx, by, bz;                   ///< Box beginnings
+    thrust::device_ptr<ScalarType> ex, ey, ez;                   ///< Box ends
+    thrust::device_ptr<AtomicScalarType> mux, muy, muz;          ///< Box center mean
+    thrust::device_ptr<AtomicScalarType> sigmax, sigmay, sigmaz; ///< Box center variance
+    thrust::device_ptr<AtomicSizeType> no;                       ///< Number of overlaps
+    thrust::device_ptr<OverlapType> o;                           ///< Overlaps
 };
 
 } // namespace geometry

@@ -88,10 +88,14 @@ if(PBAT_USE_CUDA)
         CUDA_RESOLVE_DEVICE_SYMBOLS ON
     )
     get_target_property(_pbat_sources PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit SOURCES)
+
     foreach(_source IN ITEMS ${_pbat_sources})
         get_filename_component(_extension ${_source} LAST_EXT)
-        if (_extension STREQUAL ".cu")
-            set_source_files_properties(${_source} PROPERTIES COMPILE_OPTIONS "--expt-relaxed-constexpr")
+
+        if(_extension STREQUAL ".cu")
+            set_source_files_properties(${_source}
+                PROPERTIES
+                COMPILE_OPTIONS "--expt-relaxed-constexpr;--extended-lambda")
         endif()
     endforeach()
 endif()
