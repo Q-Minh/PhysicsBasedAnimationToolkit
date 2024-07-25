@@ -1,7 +1,11 @@
 #ifndef PBAT_COMMON_H
 #define PBAT_COMMON_H
 
+#include "pbat/Aliases.h"
+
 #include <cstddef>
+#include <tuple>
+#include <utility>
 
 namespace pbat {
 namespace common {
@@ -22,5 +26,54 @@ std::size_t HashCombine(const Types&... args)
 
 } // namespace common
 } // namespace pbat
+
+namespace std {
+
+template <>
+struct hash<pair<pbat::Index, pbat::Index>>
+{
+    std::size_t operator()(pair<pbat::Index, pbat::Index> const& inds) const
+    {
+        return pbat::common::HashCombine(inds.first, inds.second);
+    }
+};
+
+template <>
+struct hash<tuple<pbat::Index, pbat::Index>>
+{
+    std::size_t operator()(tuple<pbat::Index, pbat::Index> const& inds) const
+    {
+        return pbat::common::HashCombine(get<0>(inds), get<1>(inds));
+    }
+};
+
+template <>
+struct hash<tuple<pbat::Index, pbat::Index, pbat::Index>>
+{
+    std::size_t operator()(tuple<pbat::Index, pbat::Index, pbat::Index> const& inds) const
+    {
+        return pbat::common::HashCombine(get<0>(inds), get<1>(inds), get<2>(inds));
+    }
+};
+
+template <>
+struct hash<pbat::IndexVector<2>>
+{
+    std::size_t operator()(pbat::IndexVector<2> const& inds) const
+    {
+        return pbat::common::HashCombine(inds(0), inds(1));
+    }
+};
+
+template <>
+struct hash<pbat::IndexVector<3>>
+{
+    std::size_t operator()(pbat::IndexVector<3> const& inds) const
+    {
+        return pbat::common::HashCombine(inds(0), inds(1), inds(2));
+    }
+};
+
+} // namespace std
 
 #endif // PBAT_COMMON_H
