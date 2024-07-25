@@ -103,7 +103,7 @@ if __name__ == "__main__":
     ps.set_front_dir("neg_y_front")
     ps.set_ground_plane_mode("shadow_only")
     ps.set_ground_plane_height_factor(0.5)
-    ps.set_program_name("Elasticity")
+    ps.set_program_name("Higher Order Elasticity")
     ps.init()
     vm = ps.register_volume_mesh("Domain", V, C)
     sm = ps.register_surface_mesh("Visual", VR, FR)

@@ -338,6 +338,8 @@ if __name__ == "__main__":
                         dest="Y", default=1e6)
     parser.add_argument("-n", "--poisson-ratio", help="Poisson's ratio", type=float,
                         dest="nu", default=0.45)
+    parser.add_argument(
+        "-c", "--copy", help="Number of copies of input model", type=int, dest="ncopy", default=1)
     args = parser.parse_args()
 
     # Load input meshes and combine them into 1 mesh
@@ -345,13 +347,18 @@ if __name__ == "__main__":
     imesh = meshio.read(args.input)
     V1 = imesh.points.astype(np.float64, order='C')
     C1 = imesh.cells_dict["tetra"].astype(np.int64, order='C')
-    R = sp.spatial.transform.Rotation.from_quat(
-        [0, 0, np.sin(np.pi/4), np.cos(np.pi/4)]).as_matrix()
-    V2 = (V1 - V1.mean(axis=0)) @ R.T + V1.mean(axis=0)
-    V2[:, 2] += (V2[:, 2].max() - V2[:, 2].min()) + args.translation
-    C2 = C1
+    V.append(V1)
+    C.append(C1)
+    for c in range(args.ncopy):
+        R = sp.spatial.transform.Rotation.from_quat(
+            [0, 0, np.sin(np.pi/4), np.cos(np.pi/4)]).as_matrix()
+        V2 = (V[-1] - V[-1].mean(axis=0)) @ R.T + V[-1].mean(axis=0)
+        V2[:, 2] += (V2[:, 2].max() - V2[:, 2].min()) + args.translation
+        C2 = C[-1]
+        V.append(V2)
+        C.append(C2)
 
-    V, C = combine([V1, V2], [C1, C2])
+    V, C = combine(V, C)
     mesh = pbat.fem.Mesh(
         V.T, C.T, element=pbat.fem.Element.Tetrahedron, order=1)
     V, C = mesh.X.T, mesh.E.T
@@ -426,7 +433,7 @@ if __name__ == "__main__":
     ps.set_front_dir("neg_y_front")
     ps.set_ground_plane_mode("shadow_only")
     ps.set_ground_plane_height_factor(0.5)
-    ps.set_program_name("Elasticity")
+    ps.set_program_name("IPC")
     ps.init()
     vm = ps.register_surface_mesh(
         "Visual mesh", cmesh.rest_positions, cmesh.faces)
@@ -460,6 +467,7 @@ if __name__ == "__main__":
         step = imgui.Button("step")
 
         if animate or step:
+            ps.screenshot()
             profiler.begin_frame("Physics")
             params = Parameters(mesh, x, v, a, M, hep, dt, cmesh,
                                 cconstraints, fconstraints, dhat, dmin, mu, epsv)
