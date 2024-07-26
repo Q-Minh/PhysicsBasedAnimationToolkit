@@ -28,7 +28,7 @@ include(platform)
 
 # Build as static or shared
 if(PBAT_BUILD_SHARED_LIBS)
-    set(BUILD_SHARED_LIBS ON)
+    set(BUILD_SHARED_LIBS ON CACHE BOOL "" FORCE)
 endif()
 
 # No matter the platform, we decide the structure of our build tree. This should
