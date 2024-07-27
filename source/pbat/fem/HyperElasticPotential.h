@@ -321,7 +321,7 @@ HyperElasticPotential<TMesh, THyperElasticEnergy, QuadratureOrder>::ComputeEleme
         tbb::parallel_for(Index{0}, Index{numberOfElements}, [&](Index e) {
             auto he = He.block<kDofsPerElement, kDofsPerElement>(0, e * kDofsPerElement);
             Eigen::JacobiSVD<Matrix<kDofsPerElement, kDofsPerElement>> SVD{};
-            SVD.compute(he, Eigen::ComputeThinU | Eigen::ComputeThinV);
+            SVD.compute(he, Eigen::ComputeFullU | Eigen::ComputeFullV);
             Vector<kDofsPerElement> sigma = SVD.singularValues();
             for (auto s = sigma.size() - 1; s >= 0; --s)
             {
