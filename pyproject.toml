@@ -7,10 +7,12 @@ name = "pbatoolkit"
 version = "0.0.6"
 description = "Physics Based Animation Toolkit"
 readme = "README.md"
+readme-content-type = "text/markdown"
 authors = [
     { name = "Quoc-Minh Ton-That", email = "tonthat.quocminh@gmail.com" },
 ]
 requires-python = ">=3.10"
+license = { text = "BSL-1.0" }
 classifiers = [
     "Development Status :: 4 - Beta",
     "License :: OSI Approved :: MIT License",
@@ -37,3 +39,16 @@ build-dir = "build/{wheel_tag}"
 
 [project.urls]
 Homepage = "https://github.com/Q-Minh/PhysicsBasedAnimationToolkit"
+Documentation = "https://github.com/Q-Minh/PhysicsBasedAnimationToolkit#readme"
+Source = "https://github.com/Q-Minh/PhysicsBasedAnimationToolkit"
+Tracker = "https://github.com/Q-Minh/PhysicsBasedAnimationToolkit/issues"
+
+[tool.cmake]
+# Example of CMake options that might be configured
+# Change or add more options as needed
+options = [
+    "-DPBAT_BUILD_PYTHON_BINDINGS=ON",
+    "-DPBAT_ENABLE_PROFILER=OFF",
+    "-DPBAT_USE_INTEL_MKL=OFF",
+    "-DPBAT_USE_SUITESPARSE=OFF"
+]
