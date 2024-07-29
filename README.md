@@ -1,6 +1,10 @@
 # Physics Based Animation Toolkit
 
 [![Wheels](https://github.com/Q-Minh/PhysicsBasedAnimationToolkit/actions/workflows/wheels.yml/badge.svg?event=release)](https://github.com/Q-Minh/PhysicsBasedAnimationToolkit/actions/workflows/wheels.yml)
+[![License](https://img.shields.io/github/license/Q-Minh/PhysicsBasedAnimationToolkit)](./LICENSE)
+[![Downloads](https://img.shields.io/pypi/dm/pbatoolkit)](https://pypi.org/project/pbatoolkit/)
+[![PyPI - Python Version](https://img.shields.io/pypi/pyversions/pbatoolkit)](https://pypi.org/project/pbatoolkit/)
+
 
 > *We recommend exploring the official [CMake documentation](https://cmake.org/cmake/help/latest/) to beginner CMake users*.
 
