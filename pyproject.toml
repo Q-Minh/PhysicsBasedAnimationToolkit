@@ -44,8 +44,6 @@ Source = "https://github.com/Q-Minh/PhysicsBasedAnimationToolkit"
 Tracker = "https://github.com/Q-Minh/PhysicsBasedAnimationToolkit/issues"
 
 [tool.cmake]
-# Example of CMake options that might be configured
-# Change or add more options as needed
 options = [
     "-DPBAT_BUILD_PYTHON_BINDINGS=ON",
     "-DPBAT_ENABLE_PROFILER=OFF",

@@ -6,7 +6,7 @@ enable_testing()
 option(PBAT_BUILD_PYTHON_BINDINGS "Include Python binding module" OFF)
 option(PBAT_BUILD_TESTS "Build tests" ${PROJECT_IS_TOP_LEVEL})
 option(PBAT_ENABLE_PROFILER
-    "Enable Tracy profiler client. Note that Microsoft Visual Studio users 
+    "Enable Tracy profiler client. Note that Microsoft Visual Studio users
     need to disable the 'Edit And Continue' feature."
     OFF)
 option(PBAT_PROFILE_ON_DEMAND
