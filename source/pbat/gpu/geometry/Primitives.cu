@@ -1,5 +1,4 @@
 #include "Primitives.cuh"
-#include "pbat/profiling/Profiling.h"
 
 #include <array>
 #include <exception>
@@ -13,8 +12,6 @@ namespace geometry {
 
 Points::Points(Eigen::Ref<MatrixX const> const& V) : x(V.cols()), y(V.cols()), z(V.cols())
 {
-    PBAT_PROFILE_NAMED_SCOPE("gpu.geometry.Points.Construct");
-
     auto const Vgpu = V.cast<GpuScalar>().eval();
     std::array<thrust::device_vector<GpuScalar>*, 3> dcoords{&x, &y, &z};
     for (auto d = 0; d < 3; ++d)
@@ -25,8 +22,6 @@ Points::Points(Eigen::Ref<MatrixX const> const& V) : x(V.cols()), y(V.cols()), z
 
 Simplices::Simplices(Eigen::Ref<IndexMatrixX const> const& C) : eSimplexType(), inds()
 {
-    PBAT_PROFILE_NAMED_SCOPE("gpu.geometry.Simplices.Construct");
-
     if ((C.rows() < static_cast<int>(ESimplexType::Vertex)) or
         (C.rows() > static_cast<int>(ESimplexType::Tetrahedron)))
     {

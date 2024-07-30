@@ -26,11 +26,23 @@ class SweepAndTiniestQueue
     SweepAndTiniestQueue(std::size_t nPrimitives, std::size_t nOverlaps);
 
     /**
-     * @brief Compute overlapping, topologically non-adjacent simplices in S
+     * @brief Compute overlapping, topologically non-adjacent simplices between S1 and S2
      * @param P
-     * @param S
+     * @param S1
+     * @param S2
      */
-    void SortAndSweep(Points const& P, Simplices const& S);
+    void SortAndSweep(Points const& P, Simplices const& S1, Simplices const& S2);
+
+    /**
+     * @brief Obtains the maximum number of simplices that can be tested for overlap.
+     * @return 
+    */
+    std::size_t NumberOfAllocatedBoxes() const;
+    /**
+     * @brief Obtains the maximum number of overlaps that can be detected.
+     * @return 
+    */
+    std::size_t NumberOfAllocatedOverlaps() const;
 
   private:
     thrust::device_vector<GpuIndex> binds;                ///< Box indices

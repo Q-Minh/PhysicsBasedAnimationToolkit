@@ -1,8 +1,9 @@
 #include "SweepAndTiniestQueue.cuh"
-#include "pbat/profiling/Profiling.h"
 
 #include <cuda/atomic>
 #include <cuda/std/cmath>
+#include <exception>
+#include <string>
 #include <thrust/async/copy.h>
 #include <thrust/async/for_each.h>
 #include <thrust/execution_policy.h>
@@ -62,6 +63,7 @@ struct FComputeAabb
                 b[d][s] = cuda::std::fminf(b[d][s], x[d][inds[i]]);
                 e[d][s] = cuda::std::fmaxf(b[d][s], x[d][inds[i]]);
             }
+            // TODO: Add some inflation to bounding box endpoints to support activation distance
         }
     }
 
@@ -146,23 +148,112 @@ struct FComputeVariance
     GpuIndex nBoxes;
 };
 
-void SweepAndTiniestQueue::SortAndSweep(Points const& P, Simplices const& S)
+__device__ bool AreSimplicesAdjacent(
+    GpuIndex* sinds1,
+    int nSimplexVertices1,
+    GpuIndex s1,
+    GpuIndex* sinds2,
+    int nSimplexVertices2,
+    GpuIndex s2)
 {
-    PBAT_PROFILE_NAMED_SCOPE("gpu.geometry.SweepAndTiniestQueue.SortAndSweep");
+    auto const begin1 = s1 * nSimplexVertices1;
+    auto const end1   = begin1 + nSimplexVertices1;
+    auto const begin2 = s2 * nSimplexVertices2;
+    auto const end2   = begin2 + nSimplexVertices2;
+    bool bAreAdjacent{false};
+    for (auto i = begin1; (i < end1) and not bAreAdjacent; ++i)
+    {
+        for (auto j = begin2; j < end2; ++j)
+        {
+            if (sinds1[i] == sinds2[j])
+            {
+                bAreAdjacent = true;
+                break;
+            }
+        }
+    }
+    return bAreAdjacent;
+}
 
-    auto const nBoxes     = S.NumberOfSimplices();
-    auto const boxesBegin = thrust::make_counting_iterator(0);
-    auto const boxesEnd   = thrust::make_counting_iterator(nBoxes);
-    // 1. Compute bounding boxes of S
-    FComputeAabb fComputeAabb(
-        {P.x.data(), P.y.data(), P.z.data()},
-        S,
-        {b[0].data(), b[1].data(), b[2].data()},
-        {e[0].data(), e[1].data(), e[2].data()});
-    thrust::device_event eComputeAabb =
-        thrust::async::for_each(thrust::device, boxesBegin, boxesEnd, fComputeAabb);
+//__global__ void SweepImpl(
+//    GpuIndex* binds,
+//    GpuScalar* b[3],
+//    GpuScalar* e[3],
+//    GpuIndex nSimplices1,
+//    GpuIndex* sinds1,
+//    int nSimplexVertices1,
+//    GpuIndex* sinds2,
+//    int nSimplexVertices2,
+//    GpuIndex saxis,
+//    GpuIndex axis[2],
+//    GpuIndex nBoxes,
+//    GpuIndex* no,
+//    cuda::std::pair<GpuIndex, GpuIndex>* o)
+//{
+//    cuda::atomic_ref<GpuIndex, cuda::thread_scope_device> ano{*no};
+//    GpuIndex const t = threadIdx.x + blockIdx.x * blockDim.x;
+//    if (t >= nBoxes)
+//        return;
+//
+//    GpuIndex tp = t + 1;
+//    while (tp >= nBoxes and e[saxis][t] > b[saxis][tp])
+//    {
+//        GpuIndex const s1                         = binds[t];
+//        bool const bAreSimplicesFromDifferentSets = binds[tp] > nSimplices1;
+//        if (bAreSimplicesFromDifferentSets)
+//        {
+//            GpuIndex const s2 =
+//                bAreSimplicesFromDifferentSets ? binds[tp] - nSimplices1 : binds[tp];
+//            bool const bAreAdjacent =
+//                AreSimplicesAdjacent(sinds1, nSimplexVertices1, s1, sinds2, nSimplexVertices2, s2);
+//            bool const bAreOverlapping =
+//                e[axis[0]][t] > b[axis[0]][tp] and e[axis[1]][t] > b[axis[1]][tp];
+//            if (bAreOverlapping and not bAreAdjacent)
+//            {
+//                GpuIndex const oid = ano++;
+//                o[oid]             = {s1, s2};
+//            }
+//        }
+//        ++tp;
+//    }
+//}
+
+void SweepAndTiniestQueue::SortAndSweep(Points const& P, Simplices const& S1, Simplices const& S2)
+{
+    auto const nSimplices1 = S1.NumberOfSimplices();
+    auto const nSimplices2 = S2.NumberOfSimplices();
+    auto const nBoxes      = nSimplices1 + nSimplices2;
+    if (NumberOfAllocatedBoxes() < nBoxes)
+    {
+        std::string const what = "Allocated memory for " +
+                                 std::to_string(NumberOfAllocatedBoxes()) +
+                                 " boxes, but received " + std::to_string(nBoxes) + " simplices.";
+        throw std::invalid_argument(what);
+    }
+
+    // 1. Compute bounding boxes of S1 and S2
+    thrust::device_event computeAabbEvent1 = thrust::async::for_each(
+        thrust::device,
+        thrust::make_counting_iterator(0),
+        thrust::make_counting_iterator(nSimplices1),
+        FComputeAabb(
+            {P.x.data(), P.y.data(), P.z.data()},
+            S1,
+            {b[0].data(), b[1].data(), b[2].data()},
+            {e[0].data(), e[1].data(), e[2].data()}));
+    thrust::device_event computeAabbEvent2 = thrust::async::for_each(
+        thrust::device,
+        thrust::make_counting_iterator(0),
+        thrust::make_counting_iterator(nSimplices2),
+        FComputeAabb(
+            {P.x.data(), P.y.data(), P.z.data()},
+            S2,
+            {b[0].data() + nSimplices1, b[1].data() + nSimplices1, b[2].data() + nSimplices1},
+            {e[0].data() + nSimplices1, e[1].data() + nSimplices1, e[2].data() + nSimplices1}));
 
     // 2. Compute mean and variance of bounding box centers
+    auto const boxesBegin = thrust::make_counting_iterator(0);
+    auto const boxesEnd   = thrust::make_counting_iterator(nBoxes);
     thrust::fill(mu.begin(), mu.end(), 0.f);
     thrust::fill(sigma.begin(), sigma.end(), 0.f);
     FComputeMean fComputeMean(
@@ -170,8 +261,8 @@ void SweepAndTiniestQueue::SortAndSweep(Points const& P, Simplices const& S)
         {e[0].data(), e[1].data(), e[2].data()},
         mu.data(),
         nBoxes);
-    thrust::device_event eComputeMean = thrust::async::for_each(
-        thrust::device.after(eComputeAabb),
+    thrust::device_event computeMeanEvent = thrust::async::for_each(
+        thrust::device.after(computeAabbEvent1, computeAabbEvent2),
         boxesBegin,
         boxesEnd,
         fComputeMean);
@@ -181,12 +272,12 @@ void SweepAndTiniestQueue::SortAndSweep(Points const& P, Simplices const& S)
         mu.data(),
         sigma.data(),
         nBoxes);
-    thrust::device_event eComputeVariance = thrust::async::for_each(
-        thrust::device.after(eComputeMean),
+    thrust::device_event computeVarianceEvent = thrust::async::for_each(
+        thrust::device.after(computeMeanEvent),
         boxesBegin,
         boxesEnd,
         fComputeVariance);
-    eComputeVariance.wait();
+    computeVarianceEvent.wait();
 
     // 3. Sort bounding boxes along largest variance axis
     GpuIndex const saxis =
@@ -205,7 +296,21 @@ void SweepAndTiniestQueue::SortAndSweep(Points const& P, Simplices const& S)
             e[axis[1]].begin()));
 
     // 4. Sweep to find overlaps
+    thrust::fill(no.begin(), no.end(), 0);
+    auto const nThreadsPerBlock = 32;
+    auto const nBlocks          = (nBoxes - 1) / nThreadsPerBlock + 1;
+    //SweepImpl<<<nBlocks, nThreadsPerBlock>>>();
     // TODO: ...
+}
+
+std::size_t SweepAndTiniestQueue::NumberOfAllocatedBoxes() const
+{
+    return binds.size();
+}
+
+std::size_t SweepAndTiniestQueue::NumberOfAllocatedOverlaps() const
+{
+    return o.size();
 }
 
 } // namespace geometry
@@ -233,5 +338,5 @@ TEST_CASE("[gpu][geometry] Sweep and tiniest queue")
     gpu::geometry::Simplices S(E);
 
     gpu::geometry::SweepAndTiniestQueue stq(3, 2);
-    stq.SortAndSweep(P, S);
+    // stq.SortAndSweep(P, S);
 }
