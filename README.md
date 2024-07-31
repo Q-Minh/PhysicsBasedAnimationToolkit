@@ -61,13 +61,15 @@ CMake build targets:
 From command line:
 ```bash
 cd path/to/PhysicsBasedAnimationToolkit
-cmake --preset=default # or other preset
+cmake -S . -B build # -D<option>=<value> ...
 cmake --install build --config Release
 ```
 
+Alternatively, if [`vcpkg`](https://github.com/microsoft/vcpkg) is installed and `VCPKG_ROOT=path/to/vcpkg` is set as an environment variable, you can select one of our available presets, for example `cmake --preset=default` and then install.
+
 ## Quick start
 
-> *We recommend downloading the [Tracy](https://github.com/wolfpld/tracy) profiler server to analyze execution of PBAT algorithms, available as [precompiled executable](https://github.com/wolfpld/tracy/releases)*.
+> *We recommend downloading the [Tracy](https://github.com/wolfpld/tracy) profiler server to analyze execution of PBAT algorithms, available as [precompiled executable](https://github.com/wolfpld/tracy/releases). PBAT currently supports [Tracy 0.10](https://github.com/wolfpld/tracy/releases/tag/v0.10).*
 
 ### C++
 
@@ -82,7 +84,7 @@ pip install pbatoolkit
 
 For a local installation, which builds from source, our Python bindings build relies on [Scikit-build-core](https://scikit-build-core.readthedocs.io/en/latest/index.html), which relies on CMake's [`install`](https://cmake.org/cmake/help/latest/command/install.html) mechanism. As such, you can configure the installation as you typically would when using the CMake CLI directly, by now passing the corresponding CMake arguments in the `pip`'s `config-settings` parameter, or via the `SKBUILD_*` environment variables. See our [pyinstall workflow](.github/workflows/pyinstall.yml) for working examples of building from source on Linux, MacOS and Windows. Then, assuming that external dependencies are found via CMake's [`find_package`](https://cmake.org/cmake/help/latest/command/find_package.html), you can build and install our Python package `pbatoolkit` locally and get the most up to date features. Consider using a [Python virtual environment](https://docs.python.org/3/library/venv.html) for this step. 
 
-As an example, using [`vcpkg`](https://github.com/microsoft/vcpkg) for external dependencies, run in command line:
+As an example, using [`vcpkg`](https://github.com/microsoft/vcpkg) for external dependencies with `VCPKG_ROOT` set, run in command line:
 ```bash
 pip install . --config-settings=cmake.args="--preset=pip-local" -v
 ```
