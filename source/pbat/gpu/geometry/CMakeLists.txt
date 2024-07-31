@@ -8,10 +8,10 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     FILE_SET implementation
     FILES
     "Primitives.cuh"
-    "SweepAndTiniestQueue.cuh"
+    "SweepAndPruneImpl.cuh"
 )
 target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     PRIVATE
     "Primitives.cu"
-    "SweepAndTiniestQueue.cu"
+    "SweepAndPruneImpl.cu"
 )

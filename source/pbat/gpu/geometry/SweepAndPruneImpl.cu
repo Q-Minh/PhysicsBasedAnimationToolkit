@@ -1,4 +1,4 @@
-#include "SweepAndTiniestQueue.cuh"
+#include "SweepAndPruneImpl.cuh"
 
 #include <cuda/atomic>
 #include <cuda/std/cmath>
@@ -14,7 +14,7 @@ namespace pbat {
 namespace gpu {
 namespace geometry {
 
-SweepAndTiniestQueue::SweepAndTiniestQueue(std::size_t nPrimitives, std::size_t nOverlaps)
+SweepAndPruneImpl::SweepAndPruneImpl(std::size_t nPrimitives, std::size_t nOverlaps)
     : binds(nPrimitives),
       b({thrust::device_vector<GpuScalar>(nPrimitives),
          thrust::device_vector<GpuScalar>(nPrimitives),
@@ -205,7 +205,8 @@ __device__ bool AreSimplicesAdjacent(
 //            GpuIndex const s2 =
 //                bAreSimplicesFromDifferentSets ? binds[tp] - nSimplices1 : binds[tp];
 //            bool const bAreAdjacent =
-//                AreSimplicesAdjacent(sinds1, nSimplexVertices1, s1, sinds2, nSimplexVertices2, s2);
+//                AreSimplicesAdjacent(sinds1, nSimplexVertices1, s1, sinds2, nSimplexVertices2,
+//                s2);
 //            bool const bAreOverlapping =
 //                e[axis[0]][t] > b[axis[0]][tp] and e[axis[1]][t] > b[axis[1]][tp];
 //            if (bAreOverlapping and not bAreAdjacent)
@@ -218,7 +219,7 @@ __device__ bool AreSimplicesAdjacent(
 //    }
 //}
 
-void SweepAndTiniestQueue::SortAndSweep(Points const& P, Simplices const& S1, Simplices const& S2)
+void SweepAndPruneImpl::SortAndSweep(Points const& P, Simplices const& S1, Simplices const& S2)
 {
     auto const nSimplices1 = S1.NumberOfSimplices();
     auto const nSimplices2 = S2.NumberOfSimplices();
@@ -299,16 +300,16 @@ void SweepAndTiniestQueue::SortAndSweep(Points const& P, Simplices const& S1, Si
     thrust::fill(no.begin(), no.end(), 0);
     auto const nThreadsPerBlock = 32;
     auto const nBlocks          = (nBoxes - 1) / nThreadsPerBlock + 1;
-    //SweepImpl<<<nBlocks, nThreadsPerBlock>>>();
-    // TODO: ...
+    // SweepImpl<<<nBlocks, nThreadsPerBlock>>>();
+    //  TODO: ...
 }
 
-std::size_t SweepAndTiniestQueue::NumberOfAllocatedBoxes() const
+std::size_t SweepAndPruneImpl::NumberOfAllocatedBoxes() const
 {
     return binds.size();
 }
 
-std::size_t SweepAndTiniestQueue::NumberOfAllocatedOverlaps() const
+std::size_t SweepAndPruneImpl::NumberOfAllocatedOverlaps() const
 {
     return o.size();
 }
@@ -318,7 +319,6 @@ std::size_t SweepAndTiniestQueue::NumberOfAllocatedOverlaps() const
 } // namespace pbat
 
 #include <doctest/doctest.h>
-#include <thrust/host_vector.h>
 
 TEST_CASE("[gpu][geometry] Sweep and tiniest queue")
 {
@@ -337,6 +337,6 @@ TEST_CASE("[gpu][geometry] Sweep and tiniest queue")
     gpu::geometry::Points P(V);
     gpu::geometry::Simplices S(E);
 
-    gpu::geometry::SweepAndTiniestQueue stq(3, 2);
+    gpu::geometry::SweepAndPruneImpl stq(3, 2);
     // stq.SortAndSweep(P, S);
 }

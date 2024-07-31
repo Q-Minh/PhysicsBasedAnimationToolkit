@@ -1,5 +1,5 @@
-#ifndef PBAT_GPU_SWEEP_AND_TINIEST_QUEUE_CUH
-#define PBAT_GPU_SWEEP_AND_TINIEST_QUEUE_CUH
+#ifndef PBAT_GPU_SWEEP_AND_PRUNE_IMPL_CUH
+#define PBAT_GPU_SWEEP_AND_PRUNE_IMPL_CUH
 
 #include "Primitives.cuh"
 #include "pbat/gpu/Aliases.h"
@@ -12,7 +12,7 @@ namespace pbat {
 namespace gpu {
 namespace geometry {
 
-class SweepAndTiniestQueue
+class SweepAndPruneImpl
 {
   public:
     using OverlapType = cuda::std::pair<GpuIndex, GpuIndex>;
@@ -23,7 +23,7 @@ class SweepAndTiniestQueue
      * @param nPrimitives
      * @param nOverlaps
      */
-    SweepAndTiniestQueue(std::size_t nPrimitives, std::size_t nOverlaps);
+    SweepAndPruneImpl(std::size_t nPrimitives, std::size_t nOverlaps);
 
     /**
      * @brief Compute overlapping, topologically non-adjacent simplices between S1 and S2
@@ -56,4 +56,4 @@ class SweepAndTiniestQueue
 } // namespace gpu
 } // namespace pbat
 
-#endif // PBAT_GPU_SWEEP_AND_TINIEST_QUEUE_CUH
+#endif // PBAT_GPU_SWEEP_AND_PRUNE_IMPL_CUH
