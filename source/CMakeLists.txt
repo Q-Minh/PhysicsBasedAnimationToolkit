@@ -80,6 +80,7 @@ if(PBAT_USE_CUDA)
         PRIVATE
         CUDA::toolkit
         CUDA::cudart
+        cuda-api-wrappers::runtime-and-driver
     )
     set_target_properties(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
         PROPERTIES

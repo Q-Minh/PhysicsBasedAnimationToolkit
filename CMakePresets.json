@@ -154,6 +154,7 @@
             "name": "cuda",
             "hidden": true,
             "cacheVariables": {
+                "VCPKG_MANIFEST_FEATURES": "cuda",
                 "PBAT_USE_CUDA": {
                     "type": "BOOL",
                     "value": "ON"
