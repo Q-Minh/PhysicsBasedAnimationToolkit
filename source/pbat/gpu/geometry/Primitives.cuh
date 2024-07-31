@@ -26,7 +26,7 @@ struct Simplices
      * @brief Type of mesh simplex. The enum's integer value reveals the number of vertices which
      * form the simplex.
      */
-    enum class ESimplexType : int { Edge = 2, Triangle = 3, Tetrahedron = 4 };
+    enum class ESimplexType : int { Vertex = 1, Edge = 2, Triangle = 3, Tetrahedron = 4 };
 
     Simplices(Eigen::Ref<IndexMatrixX const> const& C);
 

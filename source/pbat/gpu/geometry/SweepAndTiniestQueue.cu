@@ -1,212 +1,342 @@
 #include "SweepAndTiniestQueue.cuh"
 
+#include <cuda/atomic>
 #include <cuda/std/cmath>
+#include <exception>
+#include <string>
+#include <thrust/async/copy.h>
 #include <thrust/async/for_each.h>
-#include <thrust/device_free.h>
-#include <thrust/device_malloc.h>
 #include <thrust/execution_policy.h>
-#include <thrust/uninitialized_fill.h>
+#include <thrust/sequence.h>
+#include <thrust/sort.h>
 
 namespace pbat {
 namespace gpu {
 namespace geometry {
 
 SweepAndTiniestQueue::SweepAndTiniestQueue(std::size_t nPrimitives, std::size_t nOverlaps)
-    : binds(thrust::device_malloc<GpuIndex>(nPrimitives)),
-      bx(thrust::device_malloc<GpuScalar>(nPrimitives)),
-      by(thrust::device_malloc<GpuScalar>(nPrimitives)),
-      bz(thrust::device_malloc<GpuScalar>(nPrimitives)),
-      ex(thrust::device_malloc<GpuScalar>(nPrimitives)),
-      ey(thrust::device_malloc<GpuScalar>(nPrimitives)),
-      ez(thrust::device_malloc<GpuScalar>(nPrimitives)),
-      mux(thrust::device_malloc<AtomicScalarType>(1)),
-      muy(thrust::device_malloc<AtomicScalarType>(1)),
-      muz(thrust::device_malloc<AtomicScalarType>(1)),
-      sigmax(thrust::device_malloc<AtomicScalarType>(1)),
-      sigmay(thrust::device_malloc<AtomicScalarType>(1)),
-      sigmaz(thrust::device_malloc<AtomicScalarType>(1)),
-      saxis(thrust::device_malloc<GpuIndex>(1)),
-      no(thrust::device_malloc<AtomicSizeType>(1)),
-      o(thrust::device_malloc<OverlapType>(nOverlaps))
+    : binds(nPrimitives),
+      b({thrust::device_vector<GpuScalar>(nPrimitives),
+         thrust::device_vector<GpuScalar>(nPrimitives),
+         thrust::device_vector<GpuScalar>(nPrimitives)}),
+      e({thrust::device_vector<GpuScalar>(nPrimitives),
+         thrust::device_vector<GpuScalar>(nPrimitives),
+         thrust::device_vector<GpuScalar>(nPrimitives)}),
+      mu(3, 0.f),
+      sigma(3, 0.f),
+      no(1),
+      o(nOverlaps)
 {
-    thrust::uninitialized_fill(thrust::device, mux, mux + 1, 0.f);
-    thrust::uninitialized_fill(thrust::device, muy, muy + 1, 0.f);
-    thrust::uninitialized_fill(thrust::device, muz, muz + 1, 0.f);
-    thrust::uninitialized_fill(thrust::device, sigmax, sigmax + 1, 0.f);
-    thrust::uninitialized_fill(thrust::device, sigmay, sigmay + 1, 0.f);
-    thrust::uninitialized_fill(thrust::device, sigmaz, sigmaz + 1, 0.f);
-    thrust::uninitialized_fill(thrust::device, no, no + 1, 0);
 }
 
-struct FComputeAABBMin
+struct FComputeAabb
 {
-    FComputeAABBMin(
-        thrust::device_ptr<GpuScalar const> xin,
-        Simplices const& S,
-        thrust::device_ptr<GpuScalar> bx)
-        : xin(xin), S(S), bx(bx)
+    FComputeAabb(
+        std::array<thrust::device_ptr<GpuScalar const>, 3> xIn,
+        Simplices const& SIn,
+        std::array<thrust::device_ptr<GpuScalar>, 3> bIn,
+        std::array<thrust::device_ptr<GpuScalar>, 3> eIn)
+        : x({thrust::raw_pointer_cast(xIn[0]),
+             thrust::raw_pointer_cast(xIn[1]),
+             thrust::raw_pointer_cast(xIn[2])}),
+          nSimplexVertices(static_cast<int>(SIn.eSimplexType)),
+          inds(thrust::raw_pointer_cast(SIn.inds.data())),
+          b({thrust::raw_pointer_cast(bIn[0]),
+             thrust::raw_pointer_cast(bIn[1]),
+             thrust::raw_pointer_cast(bIn[2])}),
+          e({thrust::raw_pointer_cast(eIn[0]),
+             thrust::raw_pointer_cast(eIn[1]),
+             thrust::raw_pointer_cast(eIn[2])})
     {
     }
 
     __device__ void operator()(int s)
     {
-        auto const nSimplexVertices = static_cast<int>(S.eSimplexType);
-        auto const begin            = s * nSimplexVertices;
-        auto const end              = begin + nSimplexVertices;
-        bx[s]                       = xin[begin];
-        for (auto i = begin + 1; i < end; ++i)
-            bx[s] = cuda::std::fminf(bx[s], xin[i]);
+        auto const begin = s * nSimplexVertices;
+        auto const end   = begin + nSimplexVertices;
+        for (auto d = 0; d < 3; ++d)
+        {
+            b[d][s] = x[d][inds[begin]];
+            e[d][s] = x[d][inds[begin]];
+            for (auto i = begin + 1; i < end; ++i)
+            {
+                b[d][s] = cuda::std::fminf(b[d][s], x[d][inds[i]]);
+                e[d][s] = cuda::std::fmaxf(b[d][s], x[d][inds[i]]);
+            }
+            // TODO: Add some inflation to bounding box endpoints to support activation distance
+        }
     }
 
-    thrust::device_ptr<GpuScalar const> xin;
-    Simplices const& S;
-    thrust::device_ptr<GpuScalar> bx;
+    std::array<GpuScalar const*, 3> x;
+    int nSimplexVertices;
+    GpuIndex const* inds;
+    std::array<GpuScalar*, 3> b;
+    std::array<GpuScalar*, 3> e;
 };
 
-struct FComputeAABBMax
+struct FComputeMean
 {
-    FComputeAABBMax(
-        thrust::device_ptr<GpuScalar const> xin,
-        Simplices const& S,
-        thrust::device_ptr<GpuScalar> ex)
-        : xin(xin), S(S), ex(ex)
+    FComputeMean(
+        std::array<thrust::device_ptr<GpuScalar const>, 3> bIn,
+        std::array<thrust::device_ptr<GpuScalar const>, 3> eIn,
+        thrust::device_ptr<GpuScalar> muIn,
+        GpuIndex nBoxesIn)
+        : b({thrust::raw_pointer_cast(bIn[0]),
+             thrust::raw_pointer_cast(bIn[1]),
+             thrust::raw_pointer_cast(bIn[2])}),
+          e({thrust::raw_pointer_cast(eIn[0]),
+             thrust::raw_pointer_cast(eIn[1]),
+             thrust::raw_pointer_cast(eIn[2])}),
+          mu(thrust::raw_pointer_cast(muIn)),
+          nBoxes(nBoxesIn)
     {
     }
 
     __device__ void operator()(int s)
     {
-        auto const nSimplexVertices = static_cast<int>(S.eSimplexType);
-        auto const begin            = s * nSimplexVertices;
-        auto const end              = begin + nSimplexVertices;
-        ex[s]                       = xin[begin];
-        for (auto i = begin + 1; i < end; ++i)
-            ex[s] = cuda::std::fmaxf(ex[s], xin[i]);
+        cuda::atomic_ref<GpuScalar, cuda::thread_scope_device> amu[3] = {mu[0], mu[1], mu[2]};
+        for (auto d = 0; d < 3; ++d)
+        {
+            amu[d] += (b[d][s] + e[d][s]) / (2.f * static_cast<GpuScalar>(nBoxes));
+        }
     }
 
-    thrust::device_ptr<GpuScalar const> xin;
-    Simplices const& S;
-    thrust::device_ptr<GpuScalar> ex;
+    std::array<GpuScalar const*, 3> b;
+    std::array<GpuScalar const*, 3> e;
+    GpuScalar* mu;
+    GpuIndex nBoxes;
 };
 
-void SweepAndTiniestQueue::SortAndSweep(Points const& P, Simplices const& S)
+struct FComputeVariance
 {
-    // 1. Compute bounding boxes of S
-    using ComputeAabbArgs =
-        std::tuple<thrust::device_ptr<GpuScalar const>, thrust::device_ptr<GpuScalar>>;
-    std::array<ComputeAabbArgs, 6> aabbArgs{
-        std::make_tuple(P.x.data(), bx),
-        std::make_tuple(P.y.data(), by),
-        std::make_tuple(P.z.data(), bz),
-        std::make_tuple(P.x.data(), ex),
-        std::make_tuple(P.y.data(), ey),
-        std::make_tuple(P.z.data(), ez)};
-    std::array<thrust::device_event, 6> aabbEvents{};
-    for (auto i = 0; i < aabbArgs.size(); ++i)
+    FComputeVariance(
+        std::array<thrust::device_ptr<GpuScalar const>, 3> bIn,
+        std::array<thrust::device_ptr<GpuScalar const>, 3> eIn,
+        thrust::device_ptr<GpuScalar> muIn,
+        thrust::device_ptr<GpuScalar> sigmaIn,
+        GpuIndex nBoxesIn)
+        : b({thrust::raw_pointer_cast(bIn[0]),
+             thrust::raw_pointer_cast(bIn[1]),
+             thrust::raw_pointer_cast(bIn[2])}),
+          e({thrust::raw_pointer_cast(eIn[0]),
+             thrust::raw_pointer_cast(eIn[1]),
+             thrust::raw_pointer_cast(eIn[2])}),
+          mu(muIn),
+          sigma(thrust::raw_pointer_cast(sigmaIn)),
+          nBoxes(nBoxesIn)
     {
-        auto args     = aabbArgs[i];
-        aabbEvents[i] = thrust::async::for_each(
-            thrust::device,
-            thrust::make_counting_iterator(0),
-            thrust::make_counting_iterator(S.NumberOfSimplices()),
-            FComputeAABBMin(std::get<0>(args), S, std::get<1>(args)));
     }
-    for (auto i = 0; i < aabbEvents.size(); ++i)
+
+    __device__ void operator()(int s)
     {
-        aabbEvents[i].wait();
+        cuda::atomic_ref<GpuScalar, cuda::thread_scope_device> asigma[3] = {
+            sigma[0],
+            sigma[1],
+            sigma[2]};
+        for (auto d = 0; d < 3; ++d)
+        {
+            GpuScalar const cd = (b[d][s] + e[d][s]) / 2.f;
+            GpuScalar const dx = cd - mu[d];
+            asigma[d] += dx * dx / static_cast<GpuScalar>(nBoxes);
+        }
     }
+
+    std::array<GpuScalar const*, 3> b;
+    std::array<GpuScalar const*, 3> e;
+    thrust::device_ptr<GpuScalar const> mu;
+    GpuScalar* sigma;
+    GpuIndex nBoxes;
+};
+
+__device__ bool AreSimplicesAdjacent(
+    GpuIndex* sinds1,
+    int nSimplexVertices1,
+    GpuIndex s1,
+    GpuIndex* sinds2,
+    int nSimplexVertices2,
+    GpuIndex s2)
+{
+    auto const begin1 = s1 * nSimplexVertices1;
+    auto const end1   = begin1 + nSimplexVertices1;
+    auto const begin2 = s2 * nSimplexVertices2;
+    auto const end2   = begin2 + nSimplexVertices2;
+    bool bAreAdjacent{false};
+    for (auto i = begin1; (i < end1) and not bAreAdjacent; ++i)
+    {
+        for (auto j = begin2; j < end2; ++j)
+        {
+            if (sinds1[i] == sinds2[j])
+            {
+                bAreAdjacent = true;
+                break;
+            }
+        }
+    }
+    return bAreAdjacent;
+}
+
+//__global__ void SweepImpl(
+//    GpuIndex* binds,
+//    GpuScalar* b[3],
+//    GpuScalar* e[3],
+//    GpuIndex nSimplices1,
+//    GpuIndex* sinds1,
+//    int nSimplexVertices1,
+//    GpuIndex* sinds2,
+//    int nSimplexVertices2,
+//    GpuIndex saxis,
+//    GpuIndex axis[2],
+//    GpuIndex nBoxes,
+//    GpuIndex* no,
+//    cuda::std::pair<GpuIndex, GpuIndex>* o)
+//{
+//    cuda::atomic_ref<GpuIndex, cuda::thread_scope_device> ano{*no};
+//    GpuIndex const t = threadIdx.x + blockIdx.x * blockDim.x;
+//    if (t >= nBoxes)
+//        return;
+//
+//    GpuIndex tp = t + 1;
+//    while (tp >= nBoxes and e[saxis][t] > b[saxis][tp])
+//    {
+//        GpuIndex const s1                         = binds[t];
+//        bool const bAreSimplicesFromDifferentSets = binds[tp] > nSimplices1;
+//        if (bAreSimplicesFromDifferentSets)
+//        {
+//            GpuIndex const s2 =
+//                bAreSimplicesFromDifferentSets ? binds[tp] - nSimplices1 : binds[tp];
+//            bool const bAreAdjacent =
+//                AreSimplicesAdjacent(sinds1, nSimplexVertices1, s1, sinds2, nSimplexVertices2, s2);
+//            bool const bAreOverlapping =
+//                e[axis[0]][t] > b[axis[0]][tp] and e[axis[1]][t] > b[axis[1]][tp];
+//            if (bAreOverlapping and not bAreAdjacent)
+//            {
+//                GpuIndex const oid = ano++;
+//                o[oid]             = {s1, s2};
+//            }
+//        }
+//        ++tp;
+//    }
+//}
+
+void SweepAndTiniestQueue::SortAndSweep(Points const& P, Simplices const& S1, Simplices const& S2)
+{
+    auto const nSimplices1 = S1.NumberOfSimplices();
+    auto const nSimplices2 = S2.NumberOfSimplices();
+    auto const nBoxes      = nSimplices1 + nSimplices2;
+    if (NumberOfAllocatedBoxes() < nBoxes)
+    {
+        std::string const what = "Allocated memory for " +
+                                 std::to_string(NumberOfAllocatedBoxes()) +
+                                 " boxes, but received " + std::to_string(nBoxes) + " simplices.";
+        throw std::invalid_argument(what);
+    }
+
+    // 1. Compute bounding boxes of S1 and S2
+    thrust::device_event computeAabbEvent1 = thrust::async::for_each(
+        thrust::device,
+        thrust::make_counting_iterator(0),
+        thrust::make_counting_iterator(nSimplices1),
+        FComputeAabb(
+            {P.x.data(), P.y.data(), P.z.data()},
+            S1,
+            {b[0].data(), b[1].data(), b[2].data()},
+            {e[0].data(), e[1].data(), e[2].data()}));
+    thrust::device_event computeAabbEvent2 = thrust::async::for_each(
+        thrust::device,
+        thrust::make_counting_iterator(0),
+        thrust::make_counting_iterator(nSimplices2),
+        FComputeAabb(
+            {P.x.data(), P.y.data(), P.z.data()},
+            S2,
+            {b[0].data() + nSimplices1, b[1].data() + nSimplices1, b[2].data() + nSimplices1},
+            {e[0].data() + nSimplices1, e[1].data() + nSimplices1, e[2].data() + nSimplices1}));
 
     // 2. Compute mean and variance of bounding box centers
-    // TODO: ...
+    auto const boxesBegin = thrust::make_counting_iterator(0);
+    auto const boxesEnd   = thrust::make_counting_iterator(nBoxes);
+    thrust::fill(mu.begin(), mu.end(), 0.f);
+    thrust::fill(sigma.begin(), sigma.end(), 0.f);
+    FComputeMean fComputeMean(
+        {b[0].data(), b[1].data(), b[2].data()},
+        {e[0].data(), e[1].data(), e[2].data()},
+        mu.data(),
+        nBoxes);
+    thrust::device_event computeMeanEvent = thrust::async::for_each(
+        thrust::device.after(computeAabbEvent1, computeAabbEvent2),
+        boxesBegin,
+        boxesEnd,
+        fComputeMean);
+    FComputeVariance fComputeVariance(
+        {b[0].data(), b[1].data(), b[2].data()},
+        {e[0].data(), e[1].data(), e[2].data()},
+        mu.data(),
+        sigma.data(),
+        nBoxes);
+    thrust::device_event computeVarianceEvent = thrust::async::for_each(
+        thrust::device.after(computeMeanEvent),
+        boxesBegin,
+        boxesEnd,
+        fComputeVariance);
+    computeVarianceEvent.wait();
 
     // 3. Sort bounding boxes along largest variance axis
-    // TODO: ...
+    GpuIndex const saxis =
+        (sigma[0] > sigma[1]) ? (sigma[0] > sigma[2] ? 0 : 2) : (sigma[1] > sigma[2] ? 1 : 2);
+    thrust::sequence(thrust::device, binds.begin(), binds.end());
+    GpuIndex const axis[2] = {(saxis + 1) % 3, (saxis + 2) % 3};
+    thrust::sort_by_key(
+        thrust::device,
+        b[saxis].begin(),
+        b[saxis].end(),
+        thrust::make_zip_iterator(
+            binds.begin(),
+            b[axis[0]].begin(),
+            b[axis[1]].begin(),
+            e[axis[0]].begin(),
+            e[axis[1]].begin()));
 
     // 4. Sweep to find overlaps
+    thrust::fill(no.begin(), no.end(), 0);
+    auto const nThreadsPerBlock = 32;
+    auto const nBlocks          = (nBoxes - 1) / nThreadsPerBlock + 1;
+    //SweepImpl<<<nBlocks, nThreadsPerBlock>>>();
     // TODO: ...
 }
 
-SweepAndTiniestQueue::~SweepAndTiniestQueue()
+std::size_t SweepAndTiniestQueue::NumberOfAllocatedBoxes() const
 {
-    thrust::device_free(binds);
-    thrust::device_free(bx);
-    thrust::device_free(by);
-    thrust::device_free(bz);
-    thrust::device_free(ex);
-    thrust::device_free(ey);
-    thrust::device_free(ez);
-    thrust::device_free(mux);
-    thrust::device_free(muy);
-    thrust::device_free(muz);
-    thrust::device_free(sigmax);
-    thrust::device_free(sigmay);
-    thrust::device_free(sigmaz);
-    thrust::device_free(saxis);
-    thrust::device_free(no);
-    thrust::device_free(o);
+    return binds.size();
+}
+
+std::size_t SweepAndTiniestQueue::NumberOfAllocatedOverlaps() const
+{
+    return o.size();
 }
 
 } // namespace geometry
 } // namespace gpu
 } // namespace pbat
 
-#include <cuda/std/atomic>
 #include <doctest/doctest.h>
-#include <thrust/async/copy.h>
-#include <thrust/async/reduce.h>
-#include <thrust/device_delete.h>
-#include <thrust/device_new.h>
 #include <thrust/host_vector.h>
 
-struct CountOp
+TEST_CASE("[gpu][geometry] Sweep and tiniest queue")
 {
-    using AtomicSizeType = cuda::atomic<int, cuda::thread_scope_device>;
+    using namespace pbat;
+    MatrixX V(3, 4);
+    // clang-format off
+    V << 0., 1., 2., 3.,
+         0., 0., 0., 0.,
+         0., 10., 20., 30.;
+    // clang-format on
+    IndexMatrixX E(2, 3);
+    // clang-format off
+    E << 1, 0, 2,
+         2, 1, 3;
+    // clang-format on
+    gpu::geometry::Points P(V);
+    gpu::geometry::Simplices S(E);
 
-    __host__ __device__ CountOp(thrust::device_ptr<AtomicSizeType> ptr) : ac(ptr) {}
-    __host__ __device__ CountOp(CountOp const& other) : ac(other.ac) {}
-    __host__ __device__ CountOp& operator=(CountOp const& other)
-    {
-        ac = other.ac;
-        return *this;
-    }
-
-    __host__ __device__ void operator()(int i) { ac->fetch_add(i); }
-
-    thrust::device_ptr<AtomicSizeType> ac;
-};
-
-struct TransformOp
-{
-    using AtomicSizeType = cuda::atomic<int, cuda::thread_scope_device>;
-
-    __host__ __device__ int operator()(AtomicSizeType const& ac) const { return ac.load(); }
-};
-
-TEST_CASE("[gpu] Sweep and tiniest queue")
-{
-    thrust::device_vector<int> d_inds(10);
-    thrust::device_event eSequence = thrust::async::copy(
-        thrust::device,
-        thrust::make_counting_iterator(0),
-        thrust::make_counting_iterator(10),
-        d_inds.begin());
-    eSequence.wait();
-    thrust::host_vector<int> h_inds = d_inds;
-    for (int i = 0; i < 10; ++i)
-    {
-        CHECK_EQ(h_inds[i], i);
-    }
-
-    using AtomicSizeType = typename CountOp::AtomicSizeType;
-
-    thrust::device_ptr<AtomicSizeType> countPtr = thrust::device_malloc<AtomicSizeType>(1);
-    thrust::uninitialized_fill(thrust::device, countPtr, countPtr + 1, 0);
-    CountOp op{countPtr};
-    thrust::device_event eCount =
-        thrust::async::for_each(thrust::device, d_inds.begin(), d_inds.end(), op);
-    eCount.wait();
-    AtomicSizeType ac;
-    cudaMemcpy(&ac, countPtr.get(), sizeof(AtomicSizeType), cudaMemcpyDeviceToHost);
-    int count = ac.load();
-    thrust::device_free(countPtr);
-    CHECK_EQ(count, 45);
+    gpu::geometry::SweepAndTiniestQueue stq(3, 2);
+    // stq.SortAndSweep(P, S);
 }
