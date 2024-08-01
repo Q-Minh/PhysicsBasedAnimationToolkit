@@ -5,6 +5,7 @@ import torch.nn.functional as f
 import torch.optim as optim
 import torch
 from torch.utils.data import Dataset, DataLoader, random_split
+from torch.utils.tensorboard import SummaryWriter
 import meshio
 import os
 import random
@@ -133,7 +134,7 @@ class CROM(nn.Module):
         return g
 
 
-if __name__ == "__main__":
+def parse_cli():
     parser = argparse.ArgumentParser(
         prog="Continuous Reduced Order Model",
     )
@@ -162,22 +163,28 @@ if __name__ == "__main__":
     parser.add_argument("--batch-size", help="Training batch size", type=int,
                         dest="batch_size", default=32)
     args = parser.parse_args()
+    return args
 
+
+if __name__ == "__main__":
+    args = parse_cli()
+    
+    # Setup reproducible training
     seed = 0
     torch.manual_seed(seed)
     torch.use_deterministic_algorithms(True)
     random.seed(seed)
     np.random.seed(seed)
     os.environ["CUBLAS_WORKSPACE_CONFIG"] = ":2048:8"
-
     def seed_worker(worker_id):
         worker_seed = torch.initial_seed() % 2**32
         np.random.seed(worker_seed)
         random.seed(worker_seed)
     worker_init_fn = seed_worker
-
-    dataset = ShapeDataset(args.input)
     generator = torch.Generator().manual_seed(seed)
+
+    # Load data
+    dataset = ShapeDataset(args.input)
     # train, test = random_split(dataset, [0.8, 0.2], generator=generator)
     # train = DataLoader(train, batch_size=args.batch_size,
     #                    shuffle=True, worker_init_fn=worker_init_fn)
@@ -185,6 +192,7 @@ if __name__ == "__main__":
                        shuffle=True, worker_init_fn=worker_init_fn)
     p = dataset.V[0].shape[0]
 
+    # Build encoder/decoder joint training network
     encoder = Encoder(p, args.odims, args.ldims,
                       conv_kernel_size=args.encoder_conv_kernel_size, conv_stride_size=args.encoder_conv_stride_size)
     decoder = Decoder(args.idims, args.odims, args.ldims,
@@ -192,13 +200,17 @@ if __name__ == "__main__":
     crom = CROM(encoder, decoder)
     optimizer = optim.Adam(
         [{"params": encoder.parameters(), "lr": args.learning_rate}, {"params": decoder.parameters(), "lr": args.learning_rate}])
-
     criterion = nn.MSELoss()
+
+    # Train encoder/decoder via simple L2 reconstruction error
+    writer = SummaryWriter(args.output)
     for epoch in range(args.epochs):
-        for fb, Xb in train:
+        for b, (fb, Xb) in enumerate(train):
             optimizer.zero_grad()
             gb = crom(fb, Xb)
             fb = fb.swapaxes(1, 2).flatten(0, 1)
             L = criterion(gb, fb)
             L.backward()
             optimizer.step()
+            writer.add_scalar("Train MSE Loss", L, epoch + b / len(train))
+    writer.close()
