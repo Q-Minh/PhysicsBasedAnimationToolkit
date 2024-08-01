@@ -4,11 +4,45 @@ import torch.nn as nn
 import torch.nn.functional as f
 import torch.optim as optim
 import torch
+from torch.utils.data import Dataset, DataLoader, random_split
+import meshio
+import os
+import random
+
+
+class ShapeDataset(Dataset):
+    def __init__(self, mesh_path):
+        mesh_files = [file for file in os.listdir(mesh_path) if not os.path.isdir(
+            file) and (file.endswith(".mesh") or file.endswith(".msh"))]
+        mesh_files.sort()
+        meshes = [meshio.read(os.path.join(mesh_path, file))
+                  for file in mesh_files]
+        V, C = [mesh.points for mesh in meshes], [
+            mesh.cells_dict["tetra"] for mesh in meshes]
+        # have_valid_topology = len(
+        #     [Vi for Vi in V if Vi.shape == V[0].shape]) == 0
+        # assert (have_valid_topology)
+        self.V = V
+
+    def __len__(self):
+        return len(self.V)
+
+    def __getitem__(self, idx):
+        return self.V[idx].T, self.V[idx].T
 
 
 class Encoder(nn.Module):
 
     def __init__(self, p: int, d: int, r: int, conv_kernel_size: int = 6, conv_stride_size: int = 4):
+        """
+
+        Args:
+            p (int): Number of samples of the PDE solution
+            d (int): PDE solution's output dimensions
+            r (int): Latent dimensions
+            conv_kernel_size (int, optional): 1D convolution kernel size. Defaults to 6.
+            conv_stride_size (int, optional): 1D convolution stride size. Defaults to 4.
+        """
         super().__init__()
         self.p = p
         self.d = d
@@ -16,7 +50,8 @@ class Encoder(nn.Module):
         self.k = conv_kernel_size
         self.s = conv_stride_size
 
-        self.layers = []
+        self.convolution = []
+        self.linear = []
         L = p
         # See CROM paper for the value 32
         while L > 32:
@@ -25,43 +60,35 @@ class Encoder(nn.Module):
             if L <= 32:
                 break
 
-            L = Lout
-            self.layers.append(nn.Conv1d(self.d, self.d, self.k, self.s))
-            self.layers.append(nn.ELU())
+            L = int(Lout)
+            self.convolution.append(nn.Conv1d(self.d, self.d, self.k, self.s))
+            self.convolution.append(nn.ELU())
 
-        self.layers.append(nn.Linear(L * self.d, 32))
-        self.layers.append(nn.ELU())
-        self.layers.append(nn.Linear(32, self.r))
+        self.linear.append(nn.Linear(L * self.d, 32))
+        self.linear.append(nn.ELU())
+        self.linear.append(nn.Linear(32, self.r))
 
     def forward(self, X: torch.Tensor):
-        for layer in self.layers:
+        for layer in self.convolution:
+            X = layer(X)
+        X = X.flatten(1, 2)
+        for layer in self.linear:
             X = layer(X)
         return X
-
-    @property
-    def p(self):
-        return self.p
-
-    @property
-    def d(self):
-        return self.d
-
-    @property
-    def r(self):
-        return self.r
-
-    @property
-    def k(self):
-        return self.k
-
-    @property
-    def s(self):
-        return self.s
 
 
 class Decoder(nn.Module):
 
     def __init__(self, din: int, dout: int, r: int, nlayers: int = 5, beta: int = 512):
+        """
+
+        Args:
+            din (int): PDE solution's input dimensions
+            dout (int): PDE solution's output dimensions
+            r (int): Latent dimensions
+            nlayers (int, optional): Number of MLP layers. Defaults to 5.
+            beta (int, optional): Learning capacity. Defaults to 512.
+        """
         super().__init__()
 
         self.din = din
@@ -82,26 +109,6 @@ class Decoder(nn.Module):
             X = layer(X)
         return X
 
-    @property
-    def din(self):
-        return self.din
-
-    @property
-    def dout(self):
-        return self.dout
-
-    @property
-    def r(self):
-        return self.r
-
-    @property
-    def beta(self):
-        return self.beta
-
-    @property
-    def nlayers(self):
-        return len(self.layers)
-
 
 class CROM(nn.Module):
 
@@ -109,31 +116,21 @@ class CROM(nn.Module):
         super().__init__()
         self.encoder = encoder
         self.decoder = decoder
-        self.loss = nn.MSELoss()
 
-    def forward(self, X: torch.Tensor):
-        din = self.decoder.din
-        dout = self.decoder.dout
-        T = int(X.shape[1] / (din + dout))
-        finds = [din + t*(din+dout) + j
-                 for j in range(dout)
-                 for t in range(T)]
-        Xinds = [t*(din+dout) + j
-                 for j in range(din)
-                 for t in range(T)]
-        # X is #samples x |decoder.din + decoder.dout|
-        Q = self.encoder(X[:, finds])
-        loss = []
-        for sample in range(self.encoder.p):
-            # WARNING: Check that this reshape is column order!
-            Xt = X[sample, Xinds].reshape(din, T)
-            Xhat = torch.cat((Xt, Q), dim=-1)
-            gt = self.decoder(Xhat)
-            ft = X[sample, finds].reshape(dout, T)
-            loss.append(self.loss(gt, ft))
-
-        mu = sum(loss) / len(loss)
-        return mu
+    def forward(self, f: torch.Tensor, X: torch.Tensor):
+        Q = self.encoder(f)
+        # Q = |#batch|x|#latent|
+        Q = Q[:, :, torch.newaxis].expand(-1, -1, self.encoder.p)
+        Q = torch.swapaxes(Q, 1, 2)
+        X = torch.swapaxes(X, 1, 2)
+        # Q = |#batch|x|#samples|x|#latent|
+        # X = |#batch|x|#samples|x|#din|
+        Xhat = torch.cat((X, Q), dim=-1)
+        # Xhat = |#batch|x|#samples|x|#din + #latent|
+        Xhat = Xhat.flatten(0, 1)
+        # Xhat = |#batch * #samples|x|#din + #latent|
+        g = self.decoder(Xhat)
+        return g
 
 
 if __name__ == "__main__":
@@ -166,24 +163,42 @@ if __name__ == "__main__":
                         dest="batch_size", default=32)
     args = parser.parse_args()
 
-    # TODO: Construct dataset from simulation data!
-    X = []
-    p = X.shape[0]
-    # TODO: Compute number of data points from data set
-    ndata = X.shape[1]
-    bsize = args.batch_size
+    seed = 0
+    torch.manual_seed(seed)
+    torch.use_deterministic_algorithms(True)
+    random.seed(seed)
+    np.random.seed(seed)
+    os.environ["CUBLAS_WORKSPACE_CONFIG"] = ":2048:8"
+
+    def seed_worker(worker_id):
+        worker_seed = torch.initial_seed() % 2**32
+        np.random.seed(worker_seed)
+        random.seed(worker_seed)
+    worker_init_fn = seed_worker
+
+    dataset = ShapeDataset(args.input)
+    generator = torch.Generator().manual_seed(seed)
+    # train, test = random_split(dataset, [0.8, 0.2], generator=generator)
+    # train = DataLoader(train, batch_size=args.batch_size,
+    #                    shuffle=True, worker_init_fn=worker_init_fn)
+    train = DataLoader(dataset, batch_size=args.batch_size,
+                       shuffle=True, worker_init_fn=worker_init_fn)
+    p = dataset.V[0].shape[0]
 
     encoder = Encoder(p, args.odims, args.ldims,
                       conv_kernel_size=args.encoder_conv_kernel_size, conv_stride_size=args.encoder_conv_stride_size)
     decoder = Decoder(args.idims, args.odims, args.ldims,
                       nlayers=args.glayers, beta=args.beta)
     crom = CROM(encoder, decoder)
-    optimizer = optim.Adam(crom.parameters(), args.learning_rate)
+    optimizer = optim.Adam(
+        [{"params": encoder.parameters(), "lr": args.learning_rate}, {"params": decoder.parameters(), "lr": args.learning_rate}])
 
+    criterion = nn.MSELoss()
     for epoch in range(args.epochs):
-        for b in range(0, ndata - bsize, bsize):
-            Xb = X[:,b:(b+bsize)]
-            L = crom(Xb)
+        for fb, Xb in train:
             optimizer.zero_grad()
+            gb = crom(fb, Xb)
+            fb = fb.swapaxes(1, 2).flatten(0, 1)
+            L = criterion(gb, fb)
             L.backward()
             optimizer.step()
