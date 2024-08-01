@@ -10,14 +10,31 @@ namespace pbat {
 namespace gpu {
 namespace geometry {
 
-Points::Points(Eigen::Ref<MatrixX const> const& V) : x(V.cols()), y(V.cols()), z(V.cols())
+Points::Points(Eigen::Ref<MatrixX const> const& V) : x()
 {
+    for (auto d = 0; d < 3; ++d)
+        x[d].resize(V.cols());
     auto const Vgpu = V.cast<GpuScalar>().eval();
-    std::array<thrust::device_vector<GpuScalar>*, 3> dcoords{&x, &y, &z};
     for (auto d = 0; d < 3; ++d)
     {
-        thrust::copy(Vgpu.row(d).begin(), Vgpu.row(d).end(), dcoords[d]->begin());
+        thrust::copy(Vgpu.row(d).begin(), Vgpu.row(d).end(), x[d].begin());
     }
+}
+
+std::array<GpuScalar const*, 3> Points::Raw() const
+{
+    return {
+        thrust::raw_pointer_cast(x[0].data()),
+        thrust::raw_pointer_cast(x[1].data()),
+        thrust::raw_pointer_cast(x[2].data())};
+}
+
+std::array<GpuScalar*, 3> Points::Raw()
+{
+    return {
+        thrust::raw_pointer_cast(x[0].data()),
+        thrust::raw_pointer_cast(x[1].data()),
+        thrust::raw_pointer_cast(x[2].data())};
 }
 
 Simplices::Simplices(Eigen::Ref<IndexMatrixX const> const& C) : eSimplexType(), inds()
@@ -34,9 +51,41 @@ Simplices::Simplices(Eigen::Ref<IndexMatrixX const> const& C) : eSimplexType(), 
     }
 
     eSimplexType = static_cast<ESimplexType>(C.rows());
-    inds.resize(C.size());
-    auto const Cgpu = C.cast<GpuIndex>().eval();
-    thrust::copy(Cgpu.data(), Cgpu.data() + Cgpu.size(), inds.begin());
+    for (auto m = 0; m < 4; ++m)
+        inds[m].resize(C.cols());
+    auto Cgpu = C.cast<GpuIndex>().eval();
+    for (auto m = 0; m < C.rows(); ++m)
+    {
+        thrust::copy(Cgpu.row(m).begin(), Cgpu.row(m).end(), inds[m].begin());
+    }
+    auto const ninds = (-Cgpu.row(0).array() - 1).eval();
+    for (auto m = C.rows(); m < 4; ++m)
+    {
+        thrust::copy(ninds.data(), ninds.data() + ninds.size(), inds[m].begin());
+    }
+}
+
+GpuIndex Simplices::NumberOfSimplices() const
+{
+    return static_cast<GpuIndex>(inds[0].size());
+}
+
+std::array<GpuIndex const*, 4> Simplices::Raw() const
+{
+    return {
+        thrust::raw_pointer_cast(inds[0].data()),
+        thrust::raw_pointer_cast(inds[1].data()),
+        thrust::raw_pointer_cast(inds[2].data()),
+        thrust::raw_pointer_cast(inds[3].data())};
+}
+
+std::array<GpuIndex*, 4> Simplices::Raw()
+{
+    return {
+        thrust::raw_pointer_cast(inds[0].data()),
+        thrust::raw_pointer_cast(inds[1].data()),
+        thrust::raw_pointer_cast(inds[2].data()),
+        thrust::raw_pointer_cast(inds[3].data())};
 }
 
 } // namespace geometry
@@ -61,20 +110,27 @@ TEST_CASE("[gpu][geometry] Simplices")
          2, 1, 3;
     // clang-format on
     gpu::geometry::Points P(V);
-    std::vector<GpuScalar> const PxGpu{P.x.begin(), P.x.end()};
-    std::vector<GpuScalar> const PyGpu{P.y.begin(), P.y.end()};
-    std::vector<GpuScalar> const PzGpu{P.z.begin(), P.z.end()};
-    std::vector<GpuScalar> const PxEigen{V.row(0).begin(), V.row(0).end()};
-    std::vector<GpuScalar> const PyEigen{V.row(1).begin(), V.row(1).end()};
-    std::vector<GpuScalar> const PzEigen{V.row(2).begin(), V.row(2).end()};
-    CHECK_EQ(PxGpu, PxEigen);
-    CHECK_EQ(PyGpu, PyEigen);
-    CHECK_EQ(PzGpu, PzEigen);
-
+    for (auto d = 0; d < P.x.size(); ++d)
+    {
+        std::vector<GpuScalar> const PxGpu{P.x[d].begin(), P.x[d].end()};
+        std::vector<GpuScalar> const PxEigen{V.row(d).begin(), V.row(d).end()};
+        CHECK_EQ(PxGpu, PxEigen);
+    }
     gpu::geometry::Simplices S(E);
     CHECK_EQ(S.eSimplexType, gpu::geometry::Simplices::ESimplexType::Edge);
-    std::vector<GpuIndex> indsGpu{S.inds.begin(), S.inds.end()};
-    auto const Egpu = E.cast<GpuIndex>().eval();
-    std::vector<GpuIndex> indsEigen{Egpu.data(), Egpu.data() + Egpu.size()};
-    CHECK_EQ(indsGpu, indsEigen);
+    auto const nSimplexVertices = static_cast<int>(S.eSimplexType);
+    auto const Egpu             = E.cast<GpuIndex>().eval();
+    for (auto m = 0; m < nSimplexVertices; ++m)
+    {
+        std::vector<GpuIndex> indsGpu{S.inds[m].begin(), S.inds[m].end()};
+        std::vector<GpuIndex> indsEigen{Egpu.row(m).begin(), Egpu.row(m).end()};
+        CHECK_EQ(indsGpu, indsEigen);
+    }
+    auto const nindsEigen = (-Egpu.row(0).array() - 1).eval();
+    for (auto m = nSimplexVertices; m < S.inds.size(); ++m)
+    {
+        std::vector<GpuIndex> indsGpu{S.inds[m].begin(), S.inds[m].end()};
+        std::vector<GpuIndex> indsEigen{nindsEigen.begin(), nindsEigen.end()};
+        CHECK_EQ(indsGpu, indsEigen);
+    }
 }

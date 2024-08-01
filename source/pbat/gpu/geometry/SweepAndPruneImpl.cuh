@@ -31,21 +31,26 @@ class SweepAndPruneImpl
      * @param S1
      * @param S2
      */
-    void SortAndSweep(Points const& P, Simplices const& S1, Simplices const& S2);
+    void SortAndSweep(
+        Points const& P,
+        Simplices const& S1,
+        Simplices const& S2,
+        GpuScalar expansion = 0.);
 
     /**
      * @brief Obtains the maximum number of simplices that can be tested for overlap.
-     * @return 
-    */
+     * @return
+     */
     std::size_t NumberOfAllocatedBoxes() const;
     /**
      * @brief Obtains the maximum number of overlaps that can be detected.
-     * @return 
-    */
+     * @return
+     */
     std::size_t NumberOfAllocatedOverlaps() const;
 
   private:
     thrust::device_vector<GpuIndex> binds;                ///< Box indices
+    std::array<thrust::device_vector<GpuIndex>, 4> sinds; ///< Simplex vertex indices
     std::array<thrust::device_vector<GpuScalar>, 3> b, e; ///< Box begin/end
     thrust::device_vector<GpuScalar> mu, sigma;           ///< Box center mean and variance
     thrust::device_vector<GpuIndex> no;                   ///< Number of overlaps
