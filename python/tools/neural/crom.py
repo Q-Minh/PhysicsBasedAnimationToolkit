@@ -68,6 +68,8 @@ class Encoder(nn.Module):
         self.linear.append(nn.Linear(L * self.d, 32))
         self.linear.append(nn.ELU())
         self.linear.append(nn.Linear(32, self.r))
+        self.linear = nn.ModuleList(self.linear)
+        self.convolution = nn.ModuleList(self.convolution)
 
     def forward(self, X: torch.Tensor):
         for layer in self.convolution:
@@ -104,6 +106,7 @@ class Decoder(nn.Module):
             self.layers.append(nn.Linear(beta*self.dout, beta*self.dout))
             self.layers.append(nn.ELU())
         self.layers.append(nn.Linear(beta*self.dout, self.dout))
+        self.layers = nn.ModuleList(self.layers)
 
     def forward(self, X: torch.Tensor):
         for layer in self.layers:
