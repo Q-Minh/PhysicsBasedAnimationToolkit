@@ -299,15 +299,25 @@ std::size_t SweepAndPruneImpl::NumberOfAllocatedOverlaps() const
     return o.size();
 }
 
+std::vector<SweepAndPruneImpl::OverlapType> SweepAndPruneImpl::Overlaps() const
+{
+    std::vector<OverlapType> overlaps{o.begin(), o.end()};
+    return overlaps;
+}
+
 } // namespace geometry
 } // namespace gpu
 } // namespace pbat
 
+#include "pbat/common/Hash.h"
+
 #include <doctest/doctest.h>
+#include <unordered_set>
 
 TEST_CASE("[gpu][geometry] Sweep and prune")
 {
     using namespace pbat;
+    // Arrange
     MatrixX V(3, 7);
     IndexMatrixX E1(2, 3);
     IndexMatrixX F2(3, 1);
@@ -321,10 +331,30 @@ TEST_CASE("[gpu][geometry] Sweep and prune")
           5,
           6;
     // clang-format on
+    using OverlapType = gpu::geometry::SweepAndPruneImpl::OverlapType;
+    struct Hash
+    {
+        std::size_t operator()(OverlapType const& overlap) const
+        {
+            return common::HashCombine(overlap.first, overlap.second);
+        }
+    };
+    using OverlapSetType = std::unordered_set<OverlapType, Hash>;
+    OverlapSetType overlapsExpected{{{0, 0}, {1, 0}}};
     gpu::geometry::Points P(V);
     gpu::geometry::Simplices S1(E1);
     gpu::geometry::Simplices S2(F2);
-
-    gpu::geometry::SweepAndPruneImpl stq(4, 2);
-    stq.SortAndSweep(P, S1, S2);
+    // Act
+    gpu::geometry::SweepAndPruneImpl sap(4, 2);
+    sap.SortAndSweep(P, S1, S2);
+    // Assert
+    std::vector<OverlapType> overlaps = sap.Overlaps();
+    for (OverlapType overlap : overlaps)
+    {
+        auto it                             = overlapsExpected.find(overlap);
+        bool const bExpectedOverlapDetected = it != overlapsExpected.end();
+        CHECK(bExpectedOverlapDetected);
+        overlapsExpected.erase(it);
+    }
+    CHECK(overlapsExpected.empty());
 }

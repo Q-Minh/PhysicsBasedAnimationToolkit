@@ -7,6 +7,7 @@
 #include <array>
 #include <cuda/std/utility>
 #include <thrust/device_vector.h>
+#include <vector>
 
 namespace pbat {
 namespace gpu {
@@ -18,7 +19,7 @@ class SweepAndPruneImpl
     using OverlapType = cuda::std::pair<GpuIndex, GpuIndex>;
 
     /**
-     * @brief Construct a new Sweep And Tiniest Queue object
+     * @brief Construct a new Sweep And Prune object
      *
      * @param nPrimitives
      * @param nOverlaps
@@ -47,14 +48,21 @@ class SweepAndPruneImpl
      * @return
      */
     std::size_t NumberOfAllocatedOverlaps() const;
+    /**
+     * @brief Obtains the CPU copy of detected overlaps in the last call to SortAndSweep
+     * @return
+     */
+    std::vector<OverlapType> Overlaps() const;
 
   private:
     thrust::device_vector<GpuIndex> binds;                ///< Box indices
     std::array<thrust::device_vector<GpuIndex>, 4> sinds; ///< Simplex vertex indices
     std::array<thrust::device_vector<GpuScalar>, 3> b, e; ///< Box begin/end
     thrust::device_vector<GpuScalar> mu, sigma;           ///< Box center mean and variance
-    thrust::device_vector<GpuIndex> no;                   ///< Number of overlaps
-    thrust::device_vector<OverlapType> o;                 ///< Overlaps
+
+  public:
+    thrust::device_vector<GpuIndex> no;   ///< Number of overlaps
+    thrust::device_vector<OverlapType> o; ///< Overlaps
 };
 
 } // namespace geometry
