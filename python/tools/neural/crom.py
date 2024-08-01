@@ -122,8 +122,8 @@ class CROM(nn.Module):
         Q = self.encoder(f)
         # Q = |#batch|x|#latent|
         Q = Q[:, :, torch.newaxis].expand(-1, -1, self.encoder.p)
-        Q = torch.swapaxes(Q, 1, 2)
-        X = torch.swapaxes(X, 1, 2)
+        Q = Q.swapaxes(1, 2)
+        X = X.swapaxes(1, 2)
         # Q = |#batch|x|#samples|x|#latent|
         # X = |#batch|x|#samples|x|#din|
         Xhat = torch.cat((X, Q), dim=-1)
@@ -168,7 +168,7 @@ def parse_cli():
 
 if __name__ == "__main__":
     args = parse_cli()
-    
+
     # Setup reproducible training
     seed = 0
     torch.manual_seed(seed)
@@ -176,6 +176,7 @@ if __name__ == "__main__":
     random.seed(seed)
     np.random.seed(seed)
     os.environ["CUBLAS_WORKSPACE_CONFIG"] = ":2048:8"
+
     def seed_worker(worker_id):
         worker_seed = torch.initial_seed() % 2**32
         np.random.seed(worker_seed)
@@ -194,12 +195,14 @@ if __name__ == "__main__":
 
     # Build encoder/decoder joint training network
     encoder = Encoder(p, args.odims, args.ldims,
-                      conv_kernel_size=args.encoder_conv_kernel_size, conv_stride_size=args.encoder_conv_stride_size)
+                      conv_kernel_size=args.encoder_conv_kernel_size,
+                      conv_stride_size=args.encoder_conv_stride_size)
     decoder = Decoder(args.idims, args.odims, args.ldims,
                       nlayers=args.glayers, beta=args.beta)
     crom = CROM(encoder, decoder)
     optimizer = optim.Adam(
-        [{"params": encoder.parameters(), "lr": args.learning_rate}, {"params": decoder.parameters(), "lr": args.learning_rate}])
+        [{"params": encoder.parameters(), "lr": args.learning_rate},
+         {"params": decoder.parameters(), "lr": args.learning_rate}])
     criterion = nn.MSELoss()
 
     # Train encoder/decoder via simple L2 reconstruction error
