@@ -1,5 +1,5 @@
-#ifndef PBAT_GPU_GEOMETRY_PRIMITIVES_CUH
-#define PBAT_GPU_GEOMETRY_PRIMITIVES_CUH
+#ifndef PBAT_GPU_GEOMETRY_PRIMITIVES_IMPL_CUH
+#define PBAT_GPU_GEOMETRY_PRIMITIVES_IMPL_CUH
 
 #define EIGEN_NO_CUDA
 #include "pbat/Aliases.h"
@@ -14,9 +14,18 @@ namespace pbat {
 namespace gpu {
 namespace geometry {
 
-struct Points
+struct PointsImpl
 {
-    Points(Eigen::Ref<MatrixX const> const& V);
+    /**
+     * @brief
+     * @param V |#dims|x|#vertices| array of vertex positions
+     */
+    PointsImpl(Eigen::Ref<GpuMatrixX const> const& V);
+    /**
+     * @brief
+     * @param V |#dims|x|#vertices| array of vertex positions
+     */
+    void Update(Eigen::Ref<GpuMatrixX const> const& V);
     /**
      * @brief Obtains the raw device pointers to the point coordinates
      * @return
@@ -31,7 +40,7 @@ struct Points
     std::array<thrust::device_vector<GpuScalar>, 3> x; ///< Point coordinates
 };
 
-struct Simplices
+struct SimplicesImpl
 {
     /**
      * @brief Type of mesh simplex. The enum's integer value reveals the number of vertices which
@@ -39,7 +48,7 @@ struct Simplices
      */
     enum class ESimplexType : int { Vertex = 1, Edge = 2, Triangle = 3, Tetrahedron = 4 };
 
-    Simplices(Eigen::Ref<IndexMatrixX const> const& C);
+    SimplicesImpl(Eigen::Ref<GpuIndexMatrixX const> const& C);
     /**
      * @brief
      * @return
@@ -69,4 +78,4 @@ struct Simplices
 } // namespace gpu
 } // namespace pbat
 
-#endif // PBAT_GPU_GEOMETRY_PRIMITIVES_CUH
+#endif // PBAT_GPU_GEOMETRY_PRIMITIVES_IMPL_CUH

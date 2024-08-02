@@ -1,7 +1,7 @@
 #ifndef PBAT_GPU_SWEEP_AND_PRUNE_IMPL_CUH
 #define PBAT_GPU_SWEEP_AND_PRUNE_IMPL_CUH
 
-#include "Primitives.cuh"
+#include "PrimitivesImpl.cuh"
 #include "pbat/gpu/Aliases.h"
 
 #include <array>
@@ -33,9 +33,9 @@ class SweepAndPruneImpl
      * @param S2
      */
     void SortAndSweep(
-        Points const& P,
-        Simplices const& S1,
-        Simplices const& S2,
+        PointsImpl const& P,
+        SimplicesImpl const& S1,
+        SimplicesImpl const& S2,
         GpuScalar expansion = 0.);
 
     /**

@@ -13,7 +13,7 @@ namespace py {
 namespace math {
 namespace linalg {
 
-void BindCholmod(pybind11::module& m)
+void BindCholmod([[maybe_unused]] pybind11::module& m)
 {
 #ifdef PBAT_USE_SUITESPARSE
     namespace pyb = pybind11;

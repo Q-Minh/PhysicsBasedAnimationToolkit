@@ -163,9 +163,9 @@ struct FSweep
 };
 
 void SweepAndPruneImpl::SortAndSweep(
-    Points const& P,
-    Simplices const& S1,
-    Simplices const& S2,
+    PointsImpl const& P,
+    SimplicesImpl const& S1,
+    SimplicesImpl const& S2,
     GpuScalar expansion)
 {
     auto const nBoxes = S1.NumberOfSimplices() + S2.NumberOfSimplices();
@@ -318,9 +318,9 @@ TEST_CASE("[gpu][geometry] Sweep and prune")
 {
     using namespace pbat;
     // Arrange
-    MatrixX V(3, 7);
-    IndexMatrixX E1(2, 3);
-    IndexMatrixX F2(3, 1);
+    GpuMatrixX V(3, 7);
+    GpuIndexMatrixX E1(2, 3);
+    GpuIndexMatrixX F2(3, 1);
     // clang-format off
     V << 0.,  1. ,  2. ,  3. , 0.,  2. ,  0.,
          0.,  0.1,  0.2,  0.3, 0.,  0.1,  0.,
@@ -341,9 +341,9 @@ TEST_CASE("[gpu][geometry] Sweep and prune")
     };
     using OverlapSetType = std::unordered_set<OverlapType, Hash>;
     OverlapSetType overlapsExpected{{{0, 0}, {1, 0}}};
-    gpu::geometry::Points P(V);
-    gpu::geometry::Simplices S1(E1);
-    gpu::geometry::Simplices S2(F2);
+    gpu::geometry::PointsImpl P(V);
+    gpu::geometry::SimplicesImpl S1(E1);
+    gpu::geometry::SimplicesImpl S2(F2);
     // Act
     gpu::geometry::SweepAndPruneImpl sap(4, 2);
     sap.SortAndSweep(P, S1, S2);

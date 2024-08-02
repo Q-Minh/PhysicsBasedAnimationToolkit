@@ -5,6 +5,7 @@ target_sources(PhysicsBasedAnimationToolkit_Python
 
 add_subdirectory(fem)
 add_subdirectory(geometry)
+add_subdirectory(gpu)
 add_subdirectory(math)
 add_subdirectory(profiling)
 

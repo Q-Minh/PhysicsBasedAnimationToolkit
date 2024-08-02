@@ -1,5 +1,6 @@
 #include "fem/Fem.h"
 #include "geometry/Geometry.h"
+#include "gpu/Gpu.h"
 #include "math/Math.h"
 #include "profiling/Profiling.h"
 
@@ -15,6 +16,8 @@ PYBIND11_MODULE(_pbat, m)
     pbat::py::fem::Bind(mfem);
     auto mgeometry = m.def_submodule("geometry");
     pbat::py::geometry::Bind(mgeometry);
+    auto mgpu = m.def_submodule("gpu");
+    pbat::py::gpu::Bind(mgpu);
     auto mmath = m.def_submodule("math");
     pbat::py::math::Bind(mmath);
 }

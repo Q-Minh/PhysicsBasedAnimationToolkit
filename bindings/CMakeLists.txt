@@ -57,12 +57,11 @@ set_target_properties(PhysicsBasedAnimationToolkit_Python
 
 # Install rules for scikit-build-core.
 
-# Because our build tree puts all binaries in CMAKE_RUNTIME_OUTPUT_DIRECTORY_<CONFIG>, 
+# Because our build tree puts all binaries in CMAKE_RUNTIME_OUTPUT_DIRECTORY_<CONFIG>,
 # we can install our Python bindings by directly copying the binaries.
 install(
-    DIRECTORY "$<TARGET_FILE_DIR:PhysicsBasedAnimationToolkit_Python>/" 
+    DIRECTORY "$<TARGET_FILE_DIR:PhysicsBasedAnimationToolkit_Python>/"
     DESTINATION "pbatoolkit"
-    # On windows, only .dll is required at runtime, i.e. .lib and .exp files are not needed.
     PATTERN "*.exp" EXCLUDE
     PATTERN "*.lib" EXCLUDE
 )
@@ -70,4 +69,14 @@ install(
 if(PBAT_USE_INTEL_MKL)
     message(VERBOSE "PBAT[python] -- Generating install rule for MKL DLLs ${PBAT_INTERNAL_MKL_DLLS}")
     install(FILES ${PBAT_INTERNAL_MKL_DLLS} DESTINATION "pbatoolkit")
+endif()
+
+if(PBAT_USE_CUDA)
+    message(VERBOSE "PBAT[python] -- Generating install rule for CUDA DLLs located at ${CUDAToolkit_BIN_DIR}")
+    install(
+        DIRECTORY "${CUDAToolkit_BIN_DIR}/"
+        DESTINATION "pbatoolkit"
+        FILES_MATCHING
+        PATTERN "*.dll"
+        PATTERN "*.so")
 endif()

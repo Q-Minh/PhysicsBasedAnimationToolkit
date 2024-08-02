@@ -1,3 +1,6 @@
-from ._pbat import fem as _fem
-
-fem = _fem
+import pbatoolkit.fem
+import pbatoolkit.geometry
+import pbatoolkit.gpu
+import pbatoolkit.profiling
+import pbatoolkit.math
+import pbatoolkit.math.linalg

@@ -5,6 +5,8 @@
 #include "pbat/Aliases.h"
 #undef EIGEN_NO_CUDA
 
+#include "Primitives.h"
+
 #include <cstddef>
 
 namespace pbat {
@@ -24,10 +26,8 @@ class SweepAndPrune
     SweepAndPrune(SweepAndPrune&&) noexcept;
     SweepAndPrune& operator=(SweepAndPrune&&) noexcept;
 
-    IndexMatrixX SortAndSweep(
-        Eigen::Ref<MatrixX const> const& V,
-        Eigen::Ref<IndexMatrixX const> const& C1,
-        Eigen::Ref<IndexMatrixX const> const& C2);
+    IndexMatrixX
+    SortAndSweep(Points const& P, Simplices const& S1, Simplices const& S2, Scalar expansion = 0.);
 
     ~SweepAndPrune();
 
