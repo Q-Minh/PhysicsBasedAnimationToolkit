@@ -125,8 +125,8 @@ struct FSweep
 
     __device__ bool AreSimplexCandidatesOverlapping(GpuIndex si, GpuIndex sj) const
     {
-        return (e[axis[0]][si] >= b[axis[0]][sj] or b[axis[0]][si] <= e[axis[0]][sj]) and
-               (e[axis[1]][si] >= b[axis[1]][sj] or b[axis[1]][si] <= e[axis[1]][sj]);
+        return (e[axis[0]][si] >= b[axis[0]][sj] and b[axis[0]][si] <= e[axis[0]][sj]) and
+               (e[axis[1]][si] >= b[axis[1]][sj] and b[axis[1]][si] <= e[axis[1]][sj]);
     }
 
     __device__ void operator()(GpuIndex si)
@@ -181,7 +181,7 @@ void SweepAndPruneImpl::SortAndSweep(
     mu[0] = mu[1] = mu[2] = 0.f;
     sigma[0] = sigma[1] = sigma[2] = 0.f;
     no[0]                          = 0;
-    thrust::sequence(thrust::device, binds.begin(), binds.end());
+    thrust::sequence(thrust::device, binds.begin(), binds.begin() + nBoxes);
     auto const boxesBegin = thrust::make_counting_iterator(0);
     auto const boxesEnd   = thrust::make_counting_iterator(nBoxes);
 
@@ -202,37 +202,38 @@ void SweepAndPruneImpl::SortAndSweep(
         thrust::raw_pointer_cast(sinds[3].data())};
 
     // 1. Compute bounding boxes of S1 and S2
-    std::array<thrust::device_event, 8> sindsCopyEvents{};
+    thrust::device_event streamEvent{};
     for (auto m = 0; m < 4; ++m)
     {
-        sindsCopyEvents[m * 2ULL] = thrust::async::copy(
-            thrust::device,
-            S1.inds[m].begin(),
-            S1.inds[m].end(),
-            sinds[m].begin());
-        sindsCopyEvents[m * 2ULL + 1ULL] = thrust::async::copy(
-            thrust::device,
+        if (m == 0)
+        {
+            streamEvent = thrust::async::copy(
+                thrust::device,
+                S1.inds[m].begin(),
+                S1.inds[m].end(),
+                sinds[m].begin());
+        }
+        else
+        {
+            streamEvent = thrust::async::copy(
+                thrust::device.after(streamEvent),
+                S1.inds[m].begin(),
+                S1.inds[m].end(),
+                sinds[m].begin());
+        }
+        streamEvent = thrust::async::copy(
+            thrust::device.after(streamEvent),
             S2.inds[m].begin(),
             S2.inds[m].end(),
             sinds[m].begin() + S1.NumberOfSimplices());
     }
-    auto computeAabbExecutionPolicy = thrust::device.after(
-        sindsCopyEvents[0],
-        sindsCopyEvents[1],
-        sindsCopyEvents[2],
-        sindsCopyEvents[3],
-        sindsCopyEvents[4],
-        sindsCopyEvents[5],
-        sindsCopyEvents[6],
-        sindsCopyEvents[7]);
-    thrust::device_event computeAabbEvent;
-    computeAabbEvent = thrust::async::for_each(
-        computeAabbExecutionPolicy,
+    streamEvent = thrust::async::for_each(
+        thrust::device.after(streamEvent),
         boxesBegin,
         thrust::make_counting_iterator(S1.NumberOfSimplices()),
         FComputeAabb{P.Raw(), sindsRaw, static_cast<int>(S1.eSimplexType), bRaw, eRaw, expansion});
-    computeAabbEvent = thrust::async::for_each(
-        thrust::device.after(computeAabbEvent),
+    streamEvent = thrust::async::for_each(
+        thrust::device.after(streamEvent),
         thrust::make_counting_iterator(S1.NumberOfSimplices()),
         boxesEnd,
         FComputeAabb{P.Raw(), sindsRaw, static_cast<int>(S2.eSimplexType), bRaw, eRaw, expansion});
@@ -240,19 +241,19 @@ void SweepAndPruneImpl::SortAndSweep(
     // 2. Compute mean and variance of bounding box centers
     auto muRaw = thrust::raw_pointer_cast(mu.data());
     FComputeMean fComputeMean{bRaw, eRaw, muRaw, nBoxes};
-    thrust::device_event computeMeanEvent = thrust::async::for_each(
-        thrust::device.after(computeAabbEvent),
+    streamEvent = thrust::async::for_each(
+        thrust::device.after(streamEvent),
         boxesBegin,
         boxesEnd,
         fComputeMean);
     auto sigmaRaw = thrust::raw_pointer_cast(sigma.data());
     FComputeVariance fComputeVariance{bRaw, eRaw, muRaw, sigmaRaw, nBoxes};
-    thrust::device_event computeVarianceEvent = thrust::async::for_each(
-        thrust::device.after(computeMeanEvent),
+    streamEvent = thrust::async::for_each(
+        thrust::device.after(streamEvent),
         boxesBegin,
         boxesEnd,
         fComputeVariance);
-    computeVarianceEvent.wait();
+    streamEvent.wait();
 
     // 3. Sort bounding boxes along largest variance axis
     GpuIndex const saxis =
@@ -261,7 +262,7 @@ void SweepAndPruneImpl::SortAndSweep(
     thrust::sort_by_key(
         thrust::device,
         b[saxis].begin(),
-        b[saxis].end(),
+        b[saxis].begin() + nBoxes,
         thrust::make_zip_iterator(
             binds.begin(),
             sinds[0].begin(),

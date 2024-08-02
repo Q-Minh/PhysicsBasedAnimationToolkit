@@ -3,6 +3,8 @@
 #include <cstddef>
 #include <pbat/gpu/geometry/Primitives.h>
 #include <pbat/gpu/geometry/SweepAndPrune.h>
+#include <pbat/profiling/Profiling.h>
+#include <pybind11/eigen.h>
 
 namespace pbat {
 namespace py {
@@ -15,10 +17,29 @@ void BindSweepAndPrune([[maybe_unused]] pybind11::module& m)
     namespace pyb = pybind11;
     using namespace pbat::gpu::geometry;
     pyb::class_<SweepAndPrune>(m, "SweepAndPrune")
-        .def(pyb::init<std::size_t, std::size_t>(), pyb::arg("max_boxes"), pyb::arg("max_overlaps"))
+        .def(
+            pyb::init([](std::size_t maxBoxes, std::size_t maxOverlaps) {
+                return pbat::profiling::Profile("pbat.gpu.geometry.SweepAndPrune.Construct", [=]() {
+                    SweepAndPrune sap(maxBoxes, maxOverlaps);
+                    return sap;
+                });
+            }),
+            pyb::arg("max_boxes"),
+            pyb::arg("max_overlaps"))
         .def(
             "sort_and_sweep",
-            &SweepAndPrune::SortAndSweep,
+            [](SweepAndPrune& sap,
+               Points const& P,
+               Simplices const& S1,
+               Simplices const& S2,
+               Scalar expansion) {
+                return pbat::profiling::Profile(
+                    "pbat.gpu.geometry.SweepAndPrune.SortAndSweep",
+                    [&]() {
+                        IndexMatrixX O = sap.SortAndSweep(P, S1, S2, expansion);
+                        return O;
+                    });
+            },
             pyb::arg("points"),
             pyb::arg("lsimplices"),
             pyb::arg("rsimplices"),

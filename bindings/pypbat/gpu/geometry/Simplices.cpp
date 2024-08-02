@@ -1,6 +1,7 @@
 #include "Simplices.h"
 
 #include <pbat/gpu/geometry/Primitives.h>
+#include <pbat/profiling/Profiling.h>
 #include <pybind11/eigen.h>
 
 namespace pbat {
@@ -24,7 +25,12 @@ void BindSimplices([[maybe_unused]] pybind11::module& m)
 
     pyb::class_<Simplices>(m, "Simplices")
         .def(
-            pyb::init<Eigen::Ref<IndexMatrixX const> const&>(),
+            pyb::init([](Eigen::Ref<IndexMatrixX const> const& C) {
+                return pbat::profiling::Profile("pbat.gpu.geometry.Simplices.Construct", [&]() {
+                    Simplices S(C);
+                    return S;
+                });
+            }),
             pyb::arg("C"),
             "Construct simplices on GPU via |#simplex vertices|x|#simplices| array of simplex "
             "vertex indices")
@@ -32,7 +38,15 @@ void BindSimplices([[maybe_unused]] pybind11::module& m)
             "type",
             &Simplices::Type,
             "Type of simplex stored by this Simplices instance")
-        .def_property_readonly("C", &Simplices::Get, "Load GPU simplices to CPU");
+        .def_property_readonly(
+            "C",
+            [](Simplices const& S) {
+                return pbat::profiling::Profile("pbat.gpu.geometry.Simplices.Get", [&]() {
+                    IndexMatrixX C = S.Get();
+                    return C;
+                });
+            },
+            "Load GPU simplices to CPU");
 #endif // PBAT_USE_CUDA
 }
 
