@@ -1,6 +1,4 @@
 import pbatoolkit as pbat
-import pbatoolkit.math.linalg
-import pbatoolkit.geometry
 import igl
 import meshio
 import polyscope as ps

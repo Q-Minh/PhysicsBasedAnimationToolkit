@@ -1,7 +1,4 @@
 import pbatoolkit as pbat
-import pbatoolkit.geometry
-import pbatoolkit.profiling
-import pbatoolkit.math.linalg
 import igl
 import ipctk
 import meshio

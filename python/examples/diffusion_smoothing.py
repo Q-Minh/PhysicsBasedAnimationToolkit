@@ -1,5 +1,4 @@
 import pbatoolkit as pbat
-import pbatoolkit.math.linalg
 import igl
 import polyscope as ps
 import polyscope.imgui as imgui

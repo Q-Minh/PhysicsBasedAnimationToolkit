@@ -94,8 +94,6 @@ For parallel builds on Unix systems, you can add the `build.tool-args=-j<# threa
 Verify `pbatoolkit`'s contents in Python shell:
 ```python
 import pbatoolkit as pbat
-import pbatoolkit.geometry, pbatoolkit.profiling
-import pbatoolkit.math.linalg
 help(pbat.fem)
 help(pbat.geometry)
 help(pbat.profiling)
