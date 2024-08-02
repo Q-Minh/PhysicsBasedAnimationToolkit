@@ -31,20 +31,24 @@ void BindMesh(pybind11::module& m)
             pyb::arg("C"),
             pyb::arg("element"),
             pyb::arg("order") = 1,
-            pyb::arg("dims")  = 3)
+            pyb::arg("dims")  = 3,
+            "Construct FEM mesh of the given shape function order and dimensions given some input "
+            "geometric mesh V,C.")
         .def("quadrature_points", &Mesh::QuadraturePoints)
         .def("quadrature_weights", &Mesh::QuadratureWeights)
         .def_property(
             "X",
             [](Mesh const& M) { return M.X(); },
-            [](Mesh& M, Eigen::Ref<MatrixX const> const& X) { M.X() = X; })
+            [](Mesh& M, Eigen::Ref<MatrixX const> const& X) { M.X() = X; },
+            "|#dims|x|#nodes| array of nodal positions")
         .def_property(
             "E",
             [](Mesh const& M) { return M.E(); },
-            [](Mesh& M, Eigen::Ref<IndexMatrixX const> const& E) { M.E() = E; })
+            [](Mesh& M, Eigen::Ref<IndexMatrixX const> const& E) { M.E() = E; },
+            "|#element nodes|x|#elements| array of element nodal indices")
         .def_readonly("element", &Mesh::eElement)
-        .def_readonly("order", &Mesh::mOrder)
-        .def_readonly("dims", &Mesh::mDims);
+        .def_readonly("order", &Mesh::mOrder, "Shape function order")
+        .def_readonly("dims", &Mesh::mDims, "Domain dimensions");
 }
 
 Mesh::Mesh(

@@ -211,14 +211,20 @@ void BindHyperElasticPotential(pybind11::module& m)
         .def_readonly("dims", &HyperElasticPotential::mDims)
         //.def_readonly("order", &HyperElasticPotential::mOrder)
         .def_readonly("quadrature_order", &HyperElasticPotential::mQuadratureOrder)
-        .def("precompute_hessian_sparsity", &HyperElasticPotential::PrecomputeHessianSparsity)
+        .def(
+            "precompute_hessian_sparsity",
+            &HyperElasticPotential::PrecomputeHessianSparsity,
+            "Precompute sparsity pattern of the hessian for reusable and efficient hessian "
+            "construction.")
         .def(
             "compute_element_elasticity",
             &HyperElasticPotential::ComputeElementElasticity,
             pyb::arg("x"),
             pyb::arg("grad")    = true,
             pyb::arg("hessian") = true,
-            pyb::arg("spd")     = true)
+            pyb::arg("spd")     = true,
+            "Compute per-element potential energy and its derivatives, projecting the hessian to a "
+            "positive definite state if spd=True.")
         .def("eval", &HyperElasticPotential::Eval)
         .def("gradient", &HyperElasticPotential::ToVector)
         .def("hessian", &HyperElasticPotential::ToMatrix)
