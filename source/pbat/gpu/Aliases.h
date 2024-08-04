@@ -1,6 +1,10 @@
 #ifndef PBAT_GPU_ALIASES_H
 #define PBAT_GPU_ALIASES_H
 
+#define EIGEN_NO_CUDA
+#include <Eigen/Core>
+#undef EIGEN_NO_CUDA
+
 namespace pbat {
 
 using GpuScalar = float;

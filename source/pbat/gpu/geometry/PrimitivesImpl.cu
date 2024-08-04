@@ -64,7 +64,7 @@ SimplicesImpl::SimplicesImpl(Eigen::Ref<GpuIndexMatrixX const> const& C) : eSimp
     auto const ninds = (-C.row(0).array() - 1).eval();
     for (auto m = C.rows(); m < 4; ++m)
     {
-        thrust::copy(ninds.data(), ninds.data() + ninds.size(), inds[m].begin());
+        thrust::copy(ninds.begin(), ninds.end(), inds[m].begin());
     }
 }
 

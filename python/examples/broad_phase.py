@@ -28,11 +28,11 @@ if __name__ == "__main__":
         pbat.gpu.geometry.Simplices(F[0].T),
         pbat.gpu.geometry.Simplices((F[1] + V.shape[0]).T)
     ]
-    sap = pbat.gpu.geometry.SweepAndPrune(2*F[0].shape[0], 4*F[0].shape[0])
+    sap = pbat.gpu.geometry.SweepAndPrune(2*F[0].shape[0], 48*F[0].shape[0])
     profiler = pbat.profiling.Profiler()
 
     # Setup animation
-    height = 4
+    height = 5
     vimin = V[:, -1].argmin()
     vimax = V[:, -1].argmax()
     zmin = V[vimin, -1]
@@ -66,28 +66,29 @@ if __name__ == "__main__":
 
         changed, dhat = imgui.InputFloat(
             "Box expansion", dhat, format="%.4f")
+        changed, speed = imgui.InputFloat(
+            "Speed", speed, format="%.4f")
         changed, animate = imgui.Checkbox("animate", animate)
         step = imgui.Button("step")
-            
+
         if animate or step:
             profiler.begin_frame("Physics")
-            gpu_points.V = np.vstack(V).T
-            O = sap.sort_and_sweep(
-                gpu_points, gpu_triangles[0], gpu_triangles[1], dhat)
             for i in range(len(V)):
-                overlapping[i][O[i, :]] = 1
                 if V[i][vimax, -1] >= zmax:
                     direction[i] = -1
                 if V[i][vimin, -1] <= zmin:
                     direction[i] = 1
                 V[i][:, -1] = V[i][:, -1] + direction[i] * speed
                 sm[i].update_vertex_positions(V[i])
+            gpu_points.V = np.vstack(V).T
+            O = sap.sort_and_sweep(
+                gpu_points, gpu_triangles[0], gpu_triangles[1], dhat)
+            for i in range(len(overlapping)):
+                overlapping[i][:] = 0
+                overlapping[i][O[i, :]] = 1
+                sm[i].add_scalar_quantity(
+                    "Active simplices", overlapping[i], defined_on="faces", enabled=True)
             profiler.end_frame("Physics")
-        
-        for i in range(len(overlapping)):
-            sm[i].add_scalar_quantity(
-                "Active simplices", overlapping[i], defined_on="faces")
-            overlapping[i][:] = 0
 
     ps.set_user_callback(callback)
     ps.show()

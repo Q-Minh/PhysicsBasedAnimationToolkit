@@ -4,12 +4,11 @@
 #include <cuda/std/cmath>
 #include <exception>
 #include <string>
-#include <thrust/async/copy.h>
-#include <thrust/async/for_each.h>
+#include <thrust/copy.h>
 #include <thrust/execution_policy.h>
+#include <thrust/for_each.h>
 #include <thrust/sequence.h>
 #include <thrust/sort.h>
-#include <tuple>
 
 namespace pbat {
 namespace gpu {
@@ -46,7 +45,7 @@ struct FComputeAabb
             for (auto m = 1; m < nSimplexVertices; ++m)
             {
                 b[d][s] = cuda::std::fminf(b[d][s], x[d][inds[m][s]]);
-                e[d][s] = cuda::std::fmaxf(b[d][s], x[d][inds[m][s]]);
+                e[d][s] = cuda::std::fmaxf(e[d][s], x[d][inds[m][s]]);
             }
             b[d][s] -= r;
             e[d][s] += r;
@@ -58,7 +57,7 @@ struct FComputeAabb
     int nSimplexVertices;
     std::array<GpuScalar*, 3> b;
     std::array<GpuScalar*, 3> e;
-    GpuScalar r = 0.;
+    GpuScalar r;
 };
 
 struct FComputeMean
@@ -125,8 +124,8 @@ struct FSweep
 
     __device__ bool AreSimplexCandidatesOverlapping(GpuIndex si, GpuIndex sj) const
     {
-        return (e[axis[0]][si] >= b[axis[0]][sj] and b[axis[0]][si] <= e[axis[0]][sj]) and
-               (e[axis[1]][si] >= b[axis[1]][sj] and b[axis[1]][si] <= e[axis[1]][sj]);
+        return (e[axis[0]][si] >= b[axis[0]][sj]) and (b[axis[0]][si] <= e[axis[0]][sj]) and
+               (e[axis[1]][si] >= b[axis[1]][sj]) and (b[axis[1]][si] <= e[axis[1]][sj]);
     }
 
     __device__ void operator()(GpuIndex si)
@@ -139,14 +138,22 @@ struct FSweep
                 continue;
             if (not AreSimplexCandidatesOverlapping(si, sj))
                 continue;
+
             GpuIndex k = ano++;
             if (k >= nOverlapCapacity)
+            {
+                ano.store(nOverlapCapacity);
                 break;
+            }
 
             if (not bSwap)
+            {
                 o[k] = {binds[si], binds[sj] - nSimplices[0]};
+            }
             else
+            {
                 o[k] = {binds[sj], binds[si] - nSimplices[0]};
+            }
         }
     }
 
@@ -182,8 +189,6 @@ void SweepAndPruneImpl::SortAndSweep(
     sigma[0] = sigma[1] = sigma[2] = 0.f;
     no[0]                          = 0;
     thrust::sequence(thrust::device, binds.begin(), binds.begin() + nBoxes);
-    auto const boxesBegin = thrust::make_counting_iterator(0);
-    auto const boxesEnd   = thrust::make_counting_iterator(nBoxes);
 
     // Convert thrust pointers to raw device pointers, since we need to store them in our functors,
     // and can't store/access host memory there.
@@ -202,77 +207,58 @@ void SweepAndPruneImpl::SortAndSweep(
         thrust::raw_pointer_cast(sinds[3].data())};
 
     // 1. Compute bounding boxes of S1 and S2
-    thrust::device_event streamEvent{};
     for (auto m = 0; m < 4; ++m)
     {
-        if (m == 0)
-        {
-            streamEvent = thrust::async::copy(
-                thrust::device,
-                S1.inds[m].begin(),
-                S1.inds[m].end(),
-                sinds[m].begin());
-        }
-        else
-        {
-            streamEvent = thrust::async::copy(
-                thrust::device.after(streamEvent),
-                S1.inds[m].begin(),
-                S1.inds[m].end(),
-                sinds[m].begin());
-        }
-        streamEvent = thrust::async::copy(
-            thrust::device.after(streamEvent),
+        thrust::copy(thrust::device, S1.inds[m].begin(), S1.inds[m].end(), sinds[m].begin());
+        thrust::copy(
+            thrust::device,
             S2.inds[m].begin(),
             S2.inds[m].end(),
             sinds[m].begin() + S1.NumberOfSimplices());
     }
-    streamEvent = thrust::async::for_each(
-        thrust::device.after(streamEvent),
-        boxesBegin,
+    thrust::for_each(
+        thrust::device,
+        thrust::make_counting_iterator(0),
         thrust::make_counting_iterator(S1.NumberOfSimplices()),
         FComputeAabb{P.Raw(), sindsRaw, static_cast<int>(S1.eSimplexType), bRaw, eRaw, expansion});
-    streamEvent = thrust::async::for_each(
-        thrust::device.after(streamEvent),
+    thrust::for_each(
+        thrust::device,
         thrust::make_counting_iterator(S1.NumberOfSimplices()),
-        boxesEnd,
+        thrust::make_counting_iterator(nBoxes),
         FComputeAabb{P.Raw(), sindsRaw, static_cast<int>(S2.eSimplexType), bRaw, eRaw, expansion});
 
     // 2. Compute mean and variance of bounding box centers
     auto muRaw = thrust::raw_pointer_cast(mu.data());
     FComputeMean fComputeMean{bRaw, eRaw, muRaw, nBoxes};
-    streamEvent = thrust::async::for_each(
-        thrust::device.after(streamEvent),
-        boxesBegin,
-        boxesEnd,
+    thrust::for_each(
+        thrust::device,
+        thrust::make_counting_iterator(0),
+        thrust::make_counting_iterator(nBoxes),
         fComputeMean);
     auto sigmaRaw = thrust::raw_pointer_cast(sigma.data());
     FComputeVariance fComputeVariance{bRaw, eRaw, muRaw, sigmaRaw, nBoxes};
-    streamEvent = thrust::async::for_each(
-        thrust::device.after(streamEvent),
-        boxesBegin,
-        boxesEnd,
+    thrust::for_each(
+        thrust::device,
+        thrust::make_counting_iterator(0),
+        thrust::make_counting_iterator(nBoxes),
         fComputeVariance);
-    streamEvent.wait();
 
     // 3. Sort bounding boxes along largest variance axis
     GpuIndex const saxis =
         (sigma[0] > sigma[1]) ? (sigma[0] > sigma[2] ? 0 : 2) : (sigma[1] > sigma[2] ? 1 : 2);
     std::array<GpuIndex, 2> const axis = {(saxis + 1) % 3, (saxis + 2) % 3};
-    thrust::sort_by_key(
-        thrust::device,
-        b[saxis].begin(),
-        b[saxis].begin() + nBoxes,
-        thrust::make_zip_iterator(
-            binds.begin(),
-            sinds[0].begin(),
-            sinds[1].begin(),
-            sinds[2].begin(),
-            sinds[3].begin(),
-            b[axis[0]].begin(),
-            b[axis[1]].begin(),
-            e[axis[0]].begin(),
-            e[axis[1]].begin()));
+    auto zip                           = thrust::make_zip_iterator(
+        b[axis[0]].begin(),
+        b[axis[1]].begin(),
+        e[saxis].begin(),
+        e[axis[0]].begin(),
+        e[axis[1]].begin(),
+        sinds[0].begin(),
+        sinds[1].begin(),
+        sinds[2].begin(),
+        sinds[3].begin(),
+        binds.begin());
+    thrust::sort_by_key(thrust::device, b[saxis].begin(), b[saxis].begin() + nBoxes, zip);
 
     // 4. Sweep to find overlaps
     FSweep fSweep{
@@ -287,7 +273,11 @@ void SweepAndPruneImpl::SortAndSweep(
         thrust::raw_pointer_cast(o.data()),
         nBoxes,
         static_cast<GpuIndex>(o.size())};
-    thrust::for_each(thrust::device, boxesBegin, boxesEnd, fSweep);
+    thrust::for_each(
+        thrust::device,
+        thrust::make_counting_iterator(0),
+        thrust::make_counting_iterator(nBoxes),
+        fSweep);
 }
 
 std::size_t SweepAndPruneImpl::NumberOfAllocatedBoxes() const
@@ -300,9 +290,10 @@ std::size_t SweepAndPruneImpl::NumberOfAllocatedOverlaps() const
     return o.size();
 }
 
-std::vector<SweepAndPruneImpl::OverlapType> SweepAndPruneImpl::Overlaps() const
+thrust::host_vector<SweepAndPruneImpl::OverlapType> SweepAndPruneImpl::Overlaps() const
 {
-    std::vector<OverlapType> overlaps{o.begin(), o.end()};
+    GpuIndex const nOverlaps = no[0];
+    thrust::host_vector<OverlapType> overlaps{o.begin(), o.begin() + nOverlaps};
     return overlaps;
 }
 
@@ -349,7 +340,7 @@ TEST_CASE("[gpu][geometry] Sweep and prune")
     gpu::geometry::SweepAndPruneImpl sap(4, 2);
     sap.SortAndSweep(P, S1, S2);
     // Assert
-    std::vector<OverlapType> overlaps = sap.Overlaps();
+    thrust::host_vector<OverlapType> overlaps = sap.Overlaps();
     for (OverlapType overlap : overlaps)
     {
         auto it                             = overlapsExpected.find(overlap);

@@ -6,8 +6,9 @@
 
 #include <array>
 #include <cuda/std/utility>
+#include <limits>
 #include <thrust/device_vector.h>
-#include <vector>
+#include <thrust/host_vector.h>
 
 namespace pbat {
 namespace gpu {
@@ -36,7 +37,7 @@ class SweepAndPruneImpl
         PointsImpl const& P,
         SimplicesImpl const& S1,
         SimplicesImpl const& S2,
-        GpuScalar expansion = 0.);
+        GpuScalar expansion = std::numeric_limits<GpuScalar>::epsilon());
 
     /**
      * @brief Obtains the maximum number of simplices that can be tested for overlap.
@@ -52,7 +53,7 @@ class SweepAndPruneImpl
      * @brief Obtains the CPU copy of detected overlaps in the last call to SortAndSweep
      * @return
      */
-    std::vector<OverlapType> Overlaps() const;
+    thrust::host_vector<OverlapType> Overlaps() const;
 
   private:
     thrust::device_vector<GpuIndex> binds;                ///< Box indices

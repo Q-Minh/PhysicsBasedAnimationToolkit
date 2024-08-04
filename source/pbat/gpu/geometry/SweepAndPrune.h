@@ -6,8 +6,10 @@
 #undef EIGEN_NO_CUDA
 
 #include "Primitives.h"
+#include "pbat/gpu/Aliases.h"
 
 #include <cstddef>
+#include <limits>
 
 namespace pbat {
 namespace gpu {
@@ -26,8 +28,11 @@ class SweepAndPrune
     SweepAndPrune(SweepAndPrune&&) noexcept;
     SweepAndPrune& operator=(SweepAndPrune&&) noexcept;
 
-    IndexMatrixX
-    SortAndSweep(Points const& P, Simplices const& S1, Simplices const& S2, Scalar expansion = 0.);
+    IndexMatrixX SortAndSweep(
+        Points const& P,
+        Simplices const& S1,
+        Simplices const& S2,
+        Scalar expansion = static_cast<Scalar>(std::numeric_limits<GpuScalar>::epsilon()));
 
     ~SweepAndPrune();
 
