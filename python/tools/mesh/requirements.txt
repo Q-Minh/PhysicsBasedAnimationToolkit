@@ -7,3 +7,4 @@ polyscope==2.2.1
 gpytoolbox==0.3.1
 pymeshfix==0.17.0
 fast-simplification==0.1.7
+networkx==3.3
