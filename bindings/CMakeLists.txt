@@ -73,7 +73,7 @@ foreach(_pbat_link_library IN ITEMS ${_pbat_link_libraries})
     if(TARGET ${_pbat_link_library})
         get_target_property(_is_imported ${_pbat_link_library} IMPORTED)
         get_target_property(_type ${_pbat_link_library} TYPE)
-        message(VERBOSE "PBAT[python] -- LINK_LIBRARY=${_pbat_link_library} has TYPE=${_type}")
+        message(DEBUG "PBAT[python] -- LINK_LIBRARY=${_pbat_link_library} has TYPE=${_type}")
 
         if(${_is_imported} AND(_type STREQUAL "SHARED_LIBRARY"))
             message(VERBOSE "PBAT[python] -- SHARED_LIBRARY=${_pbat_link_library} is IMPORTED, bundling imported artifacts")
