@@ -87,9 +87,9 @@ if __name__ == "__main__":
                 GCprimal = nx.equitable_color(Gprimal, num_colors=dprimal+1)
                 GCprimal = color_dict_to_array(GCprimal, V.shape[0])
             else:
-                GCdual = nx.greedy_color(Gdual, strategy=strategy)
+                GCdual = nx.greedy_color(Gdual, strategy=strategy, interchange=interchange)
                 GCdual = color_dict_to_array(GCdual, C.shape[0])
-                GCprimal = nx.greedy_color(Gprimal, strategy=strategy)
+                GCprimal = nx.greedy_color(Gprimal, strategy=strategy, interchange=interchange)
                 GCprimal = color_dict_to_array(GCprimal, V.shape[0])
 
             m.add_scalar_quantity(
