@@ -32,7 +32,7 @@ if __name__ == "__main__":
     profiler = pbat.profiling.Profiler()
 
     # Setup animation
-    height = 5
+    height = 4
     vimin = V[:, -1].argmin()
     vimax = V[:, -1].argmax()
     zmin = V[vimin, -1]
@@ -41,7 +41,7 @@ if __name__ == "__main__":
     V = [np.copy(V), np.copy(V)]
     V[-1][:, -1] = V[-1][:, -1] + (height - 2) * zextent
     gpu_points = pbat.gpu.geometry.Points(np.vstack(V).T)
-    direction = [1, 1]
+    direction = [1, -1]
 
     # Setup GUI
     ps.set_verbosity(0)
