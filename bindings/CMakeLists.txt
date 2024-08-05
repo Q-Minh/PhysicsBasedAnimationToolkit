@@ -66,17 +66,38 @@ install(
     PATTERN "*.lib" EXCLUDE
 )
 
-if(PBAT_USE_INTEL_MKL)
-    message(VERBOSE "PBAT[python] -- Generating install rule for MKL DLLs ${PBAT_INTERNAL_MKL_DLLS}")
-    install(FILES ${PBAT_INTERNAL_MKL_DLLS} DESTINATION "pbatoolkit")
-endif()
+# Bundle external (i.e. not built by this project) shared library dependencies.
+get_target_property(_pbat_link_libraries PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit LINK_LIBRARIES)
 
-if(PBAT_USE_CUDA)
-    message(VERBOSE "PBAT[python] -- Generating install rule for CUDA DLLs located at ${CUDAToolkit_BIN_DIR}")
-    install(
-        DIRECTORY "${CUDAToolkit_BIN_DIR}/"
-        DESTINATION "pbatoolkit"
-        FILES_MATCHING
-        PATTERN "*.dll"
-        PATTERN "*.so")
-endif()
+foreach(_pbat_link_library IN ITEMS ${_pbat_link_libraries})
+    if(TARGET ${_pbat_link_library})
+        get_target_property(_is_imported ${_pbat_link_library} IMPORTED)
+        get_target_property(_type ${_pbat_link_library} TYPE)
+        message(VERBOSE "PBAT[python] -- LINK_LIBRARY=${_pbat_link_library} has TYPE=${_type}")
+
+        if(${_is_imported} AND(_type STREQUAL "SHARED_LIBRARY"))
+            message(VERBOSE "PBAT[python] -- SHARED_LIBRARY=${_pbat_link_library} is IMPORTED, bundling imported artifacts")
+            install(IMPORTED_RUNTIME_ARTIFACTS ${_pbat_link_library} RUNTIME DESTINATION "pbatoolkit")
+        endif()
+    endif()
+endforeach()
+
+# Bundling MKL and CUDA dependencies is pretty expensive,
+# so we should expect users to have installed those locally
+# and have the DLLs in system search paths. Normally, the
+# installers for MKL and CUDA should do that automatically.
+
+# if(PBAT_USE_INTEL_MKL)
+# message(VERBOSE "PBAT[python] -- Generating install rule for MKL DLLs ${PBAT_INTERNAL_MKL_DLLS}")
+# install(FILES ${PBAT_INTERNAL_MKL_DLLS} DESTINATION "pbatoolkit")
+# endif()
+
+# if(PBAT_USE_CUDA)
+# message(VERBOSE "PBAT[python] -- Generating install rule for CUDA DLLs located at ${CUDAToolkit_BIN_DIR}")
+# install(
+# DIRECTORY "${CUDAToolkit_BIN_DIR}/"
+# DESTINATION "pbatoolkit"
+# FILES_MATCHING
+# PATTERN "*.dll"
+# PATTERN "*.so")
+# endif()
