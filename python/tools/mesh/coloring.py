@@ -94,7 +94,7 @@ if __name__ == "__main__":
 
             m.add_scalar_quantity(
                 f"Cell colors", GCdual, defined_on=defined_on, cmap="jet", enabled=True)
-            m.add_scalar_quantity(f"Vertex colors", GCprimal,
-                                  cmap="jet", enabled=True)
+            m.add_scalar_quantity(
+                f"Vertex colors", GCprimal, cmap="jet", enabled=False)
     ps.set_user_callback(callback)
     ps.show()
