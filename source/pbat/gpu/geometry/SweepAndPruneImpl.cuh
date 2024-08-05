@@ -3,11 +3,11 @@
 
 #include "PrimitivesImpl.cuh"
 #include "pbat/gpu/Aliases.h"
+#include "pbat/gpu/common/Buffer.cuh"
+#include "pbat/gpu/common/Var.cuh"
 
-#include <array>
 #include <cuda/std/utility>
 #include <limits>
-#include <thrust/device_vector.h>
 #include <thrust/host_vector.h>
 
 namespace pbat {
@@ -56,14 +56,14 @@ class SweepAndPruneImpl
     thrust::host_vector<OverlapType> Overlaps() const;
 
   private:
-    thrust::device_vector<GpuIndex> binds;                ///< Box indices
-    std::array<thrust::device_vector<GpuIndex>, 4> sinds; ///< Simplex vertex indices
-    std::array<thrust::device_vector<GpuScalar>, 3> b, e; ///< Box begin/end
-    thrust::device_vector<GpuScalar> mu, sigma;           ///< Box center mean and variance
+    common::Buffer<GpuIndex> binds;      ///< Box indices
+    common::Buffer<GpuIndex, 4> sinds;   ///< Simplex vertex indices
+    common::Buffer<GpuScalar, 3> b, e;   ///< Box begin/end
+    common::Buffer<GpuScalar> mu, sigma; ///< Box center mean and variance
 
   public:
-    thrust::device_vector<GpuIndex> no;   ///< Number of overlaps
-    thrust::device_vector<OverlapType> o; ///< Overlaps
+    common::Var<GpuIndex> no;      ///< Number of overlaps
+    common::Buffer<OverlapType> o; ///< Overlaps
 };
 
 } // namespace geometry

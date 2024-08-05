@@ -16,20 +16,12 @@ namespace geometry {
 
 SweepAndPruneImpl::SweepAndPruneImpl(std::size_t nPrimitives, std::size_t nOverlaps)
     : binds(nPrimitives),
-      sinds(
-          {thrust::device_vector<GpuIndex>(nPrimitives),
-           thrust::device_vector<GpuIndex>(nPrimitives),
-           thrust::device_vector<GpuIndex>(nPrimitives),
-           thrust::device_vector<GpuIndex>(nPrimitives)}),
-      b({thrust::device_vector<GpuScalar>(nPrimitives),
-         thrust::device_vector<GpuScalar>(nPrimitives),
-         thrust::device_vector<GpuScalar>(nPrimitives)}),
-      e({thrust::device_vector<GpuScalar>(nPrimitives),
-         thrust::device_vector<GpuScalar>(nPrimitives),
-         thrust::device_vector<GpuScalar>(nPrimitives)}),
-      mu(3, 0.f),
-      sigma(3, 0.f),
-      no(1),
+      sinds(nPrimitives),
+      b(nPrimitives),
+      e(nPrimitives),
+      mu(3),
+      sigma(3),
+      no(),
       o(nOverlaps)
 {
 }
@@ -185,26 +177,10 @@ void SweepAndPruneImpl::SortAndSweep(
     }
 
     // 0. Preprocess internal data
-    mu[0] = mu[1] = mu[2] = 0.f;
-    sigma[0] = sigma[1] = sigma[2] = 0.f;
-    no[0]                          = 0;
-    thrust::sequence(thrust::device, binds.begin(), binds.begin() + nBoxes);
-
-    // Convert thrust pointers to raw device pointers, since we need to store them in our functors,
-    // and can't store/access host memory there.
-    std::array<GpuScalar*, 3> bRaw{
-        thrust::raw_pointer_cast(b[0].data()),
-        thrust::raw_pointer_cast(b[1].data()),
-        thrust::raw_pointer_cast(b[2].data())};
-    std::array<GpuScalar*, 3> eRaw{
-        thrust::raw_pointer_cast(e[0].data()),
-        thrust::raw_pointer_cast(e[1].data()),
-        thrust::raw_pointer_cast(e[2].data())};
-    std::array<GpuIndex*, 4> sindsRaw{
-        thrust::raw_pointer_cast(sinds[0].data()),
-        thrust::raw_pointer_cast(sinds[1].data()),
-        thrust::raw_pointer_cast(sinds[2].data()),
-        thrust::raw_pointer_cast(sinds[3].data())};
+    thrust::fill(mu.Data(), mu.Data() + mu.Size(), 0.f);
+    thrust::fill(sigma.Data(), sigma.Data() + sigma.Size(), 0.f);
+    no = 0;
+    thrust::sequence(thrust::device, binds.Data(), binds.Data() + nBoxes);
 
     // 1. Compute bounding boxes of S1 and S2
     for (auto m = 0; m < 4; ++m)
@@ -220,23 +196,33 @@ void SweepAndPruneImpl::SortAndSweep(
         thrust::device,
         thrust::make_counting_iterator(0),
         thrust::make_counting_iterator(S1.NumberOfSimplices()),
-        FComputeAabb{P.Raw(), sindsRaw, static_cast<int>(S1.eSimplexType), bRaw, eRaw, expansion});
+        FComputeAabb{
+            P.x.Raw(),
+            sinds.Raw(),
+            static_cast<int>(S1.eSimplexType),
+            b.Raw(),
+            e.Raw(),
+            expansion});
     thrust::for_each(
         thrust::device,
         thrust::make_counting_iterator(S1.NumberOfSimplices()),
         thrust::make_counting_iterator(nBoxes),
-        FComputeAabb{P.Raw(), sindsRaw, static_cast<int>(S2.eSimplexType), bRaw, eRaw, expansion});
+        FComputeAabb{
+            P.x.Raw(),
+            sinds.Raw(),
+            static_cast<int>(S2.eSimplexType),
+            b.Raw(),
+            e.Raw(),
+            expansion});
 
     // 2. Compute mean and variance of bounding box centers
-    auto muRaw = thrust::raw_pointer_cast(mu.data());
-    FComputeMean fComputeMean{bRaw, eRaw, muRaw, nBoxes};
+    FComputeMean fComputeMean{b.Raw(), e.Raw(), mu.Raw(), nBoxes};
     thrust::for_each(
         thrust::device,
         thrust::make_counting_iterator(0),
         thrust::make_counting_iterator(nBoxes),
         fComputeMean);
-    auto sigmaRaw = thrust::raw_pointer_cast(sigma.data());
-    FComputeVariance fComputeVariance{bRaw, eRaw, muRaw, sigmaRaw, nBoxes};
+    FComputeVariance fComputeVariance{b.Raw(), e.Raw(), mu.Raw(), sigma.Raw(), nBoxes};
     thrust::for_each(
         thrust::device,
         thrust::make_counting_iterator(0),
@@ -244,8 +230,9 @@ void SweepAndPruneImpl::SortAndSweep(
         fComputeVariance);
 
     // 3. Sort bounding boxes along largest variance axis
-    GpuIndex const saxis =
-        (sigma[0] > sigma[1]) ? (sigma[0] > sigma[2] ? 0 : 2) : (sigma[1] > sigma[2] ? 1 : 2);
+    auto sigmaPtr        = sigma.Data();
+    GpuIndex const saxis = (sigmaPtr[0] > sigmaPtr[1]) ? (sigmaPtr[0] > sigmaPtr[2] ? 0 : 2) :
+                                                         (sigmaPtr[1] > sigmaPtr[2] ? 1 : 2);
     std::array<GpuIndex, 2> const axis = {(saxis + 1) % 3, (saxis + 2) % 3};
     auto zip                           = thrust::make_zip_iterator(
         b[axis[0]].begin(),
@@ -257,22 +244,22 @@ void SweepAndPruneImpl::SortAndSweep(
         sinds[1].begin(),
         sinds[2].begin(),
         sinds[3].begin(),
-        binds.begin());
+        binds.Data());
     thrust::sort_by_key(thrust::device, b[saxis].begin(), b[saxis].begin() + nBoxes, zip);
 
     // 4. Sweep to find overlaps
     FSweep fSweep{
-        thrust::raw_pointer_cast(binds.data()),
-        sindsRaw,
+        binds.Raw(),
+        sinds.Raw(),
         {S1.NumberOfSimplices(), S2.NumberOfSimplices()},
-        bRaw,
-        eRaw,
+        b.Raw(),
+        e.Raw(),
         saxis,
         axis,
-        thrust::raw_pointer_cast(no.data()),
-        thrust::raw_pointer_cast(o.data()),
+        no.Raw(),
+        o.Raw(),
         nBoxes,
-        static_cast<GpuIndex>(o.size())};
+        static_cast<GpuIndex>(o.Size())};
     thrust::for_each(
         thrust::device,
         thrust::make_counting_iterator(0),
@@ -282,18 +269,18 @@ void SweepAndPruneImpl::SortAndSweep(
 
 std::size_t SweepAndPruneImpl::NumberOfAllocatedBoxes() const
 {
-    return binds.size();
+    return binds.Size();
 }
 
 std::size_t SweepAndPruneImpl::NumberOfAllocatedOverlaps() const
 {
-    return o.size();
+    return o.Size();
 }
 
 thrust::host_vector<SweepAndPruneImpl::OverlapType> SweepAndPruneImpl::Overlaps() const
 {
-    GpuIndex const nOverlaps = no[0];
-    thrust::host_vector<OverlapType> overlaps{o.begin(), o.begin() + nOverlaps};
+    GpuIndex const nOverlaps = no;
+    thrust::host_vector<OverlapType> overlaps{o.Data(), o.Data() + nOverlaps};
     return overlaps;
 }
 

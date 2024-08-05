@@ -25,22 +25,6 @@ void PointsImpl::Update(Eigen::Ref<GpuMatrixX const> const& V)
     }
 }
 
-std::array<GpuScalar const*, 3> PointsImpl::Raw() const
-{
-    return {
-        thrust::raw_pointer_cast(x[0].data()),
-        thrust::raw_pointer_cast(x[1].data()),
-        thrust::raw_pointer_cast(x[2].data())};
-}
-
-std::array<GpuScalar*, 3> PointsImpl::Raw()
-{
-    return {
-        thrust::raw_pointer_cast(x[0].data()),
-        thrust::raw_pointer_cast(x[1].data()),
-        thrust::raw_pointer_cast(x[2].data())};
-}
-
 SimplicesImpl::SimplicesImpl(Eigen::Ref<GpuIndexMatrixX const> const& C) : eSimplexType(), inds()
 {
     if ((C.rows() < static_cast<int>(ESimplexType::Vertex)) or
@@ -70,25 +54,7 @@ SimplicesImpl::SimplicesImpl(Eigen::Ref<GpuIndexMatrixX const> const& C) : eSimp
 
 GpuIndex SimplicesImpl::NumberOfSimplices() const
 {
-    return static_cast<GpuIndex>(inds[0].size());
-}
-
-std::array<GpuIndex const*, 4> SimplicesImpl::Raw() const
-{
-    return {
-        thrust::raw_pointer_cast(inds[0].data()),
-        thrust::raw_pointer_cast(inds[1].data()),
-        thrust::raw_pointer_cast(inds[2].data()),
-        thrust::raw_pointer_cast(inds[3].data())};
-}
-
-std::array<GpuIndex*, 4> SimplicesImpl::Raw()
-{
-    return {
-        thrust::raw_pointer_cast(inds[0].data()),
-        thrust::raw_pointer_cast(inds[1].data()),
-        thrust::raw_pointer_cast(inds[2].data()),
-        thrust::raw_pointer_cast(inds[3].data())};
+    return static_cast<GpuIndex>(inds.Size());
 }
 
 } // namespace geometry
@@ -113,7 +79,7 @@ TEST_CASE("[gpu][geometry] Simplices")
          2, 1, 3;
     // clang-format on
     gpu::geometry::PointsImpl P(V);
-    for (auto d = 0; d < P.x.size(); ++d)
+    for (auto d = 0; d < P.x.Dimensions(); ++d)
     {
         std::vector<GpuScalar> const PxGpu{P.x[d].begin(), P.x[d].end()};
         std::vector<GpuScalar> const PxEigen{V.row(d).begin(), V.row(d).end()};
@@ -129,7 +95,7 @@ TEST_CASE("[gpu][geometry] Simplices")
         CHECK_EQ(indsGpu, indsEigen);
     }
     auto const nindsEigen = (-E.row(0).array() - 1).eval();
-    for (auto m = nSimplexVertices; m < S.inds.size(); ++m)
+    for (auto m = nSimplexVertices; m < S.inds.Dimensions(); ++m)
     {
         std::vector<GpuIndex> indsGpu{S.inds[m].begin(), S.inds[m].end()};
         std::vector<GpuIndex> indsEigen{nindsEigen.begin(), nindsEigen.end()};

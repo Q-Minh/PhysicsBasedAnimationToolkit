@@ -42,7 +42,7 @@ PointsImpl const* Points::Impl() const
 
 MatrixX Points::Get() const
 {
-    MatrixX V(mImpl->x.size(), mImpl->x[0].size());
+    MatrixX V(mImpl->x.Dimensions(), mImpl->x.Size());
     for (auto d = 0; d < V.rows(); ++d)
     {
         thrust::copy(mImpl->x[d].begin(), mImpl->x[d].end(), V.row(d).begin());

@@ -6,9 +6,9 @@
 #undef EIGEN_NO_CUDA
 
 #include "pbat/gpu/Aliases.h"
+#include "pbat/gpu/common/Buffer.cuh"
 
 #include <array>
-#include <thrust/device_vector.h>
 
 namespace pbat {
 namespace gpu {
@@ -26,18 +26,8 @@ struct PointsImpl
      * @param V |#dims|x|#vertices| array of vertex positions
      */
     void Update(Eigen::Ref<GpuMatrixX const> const& V);
-    /**
-     * @brief Obtains the raw device pointers to the point coordinates
-     * @return
-     */
-    std::array<GpuScalar const*, 3> Raw() const;
-    /**
-     * @brief Obtains the raw device pointers to the point coordinates
-     * @return
-     */
-    std::array<GpuScalar*, 3> Raw();
 
-    std::array<thrust::device_vector<GpuScalar>, 3> x; ///< Point coordinates
+    common::Buffer<GpuScalar, 3> x; ///< Point coordinates
 };
 
 struct SimplicesImpl
@@ -54,19 +44,9 @@ struct SimplicesImpl
      * @return
      */
     GpuIndex NumberOfSimplices() const;
-    /**
-     * @brief Obtains the raw device pointers to the simplex indices
-     * @return
-     */
-    std::array<GpuIndex const*, 4> Raw() const;
-    /**
-     * @brief Obtains the raw device pointers to the simplex indices
-     * @return
-     */
-    std::array<GpuIndex*, 4> Raw();
 
     ESimplexType eSimplexType; ///< Type of simplex stored in inds
-    std::array<thrust::device_vector<GpuIndex>, 4>
+    common::Buffer<GpuIndex, 4>
         inds; ///< Array of simplex vertex indices. inds[m][i] yields the index of the m^{th} vertex
               ///< of the i^{th} simplex. If m is >= than the simplex's dimensionality, i.e. m >=
               ///< eSimplexType, then inds[m][i] = -inds[0][i] - 1. This property ensures that for

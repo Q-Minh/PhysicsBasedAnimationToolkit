@@ -1,190 +1,151 @@
 #ifndef PBAT_GPU_COMMON_BUFFER_CUH
 #define PBAT_GPU_COMMON_BUFFER_CUH
 
-#include <concepts>
 #include <cstddef>
-#include <cuda/api.hpp>
-#include <exception>
-#include <memory>
-#include <span>
-#include <string>
+#include <thrust/copy.h>
+#include <thrust/device_vector.h>
+#include <type_traits>
 #include <vector>
 
 namespace pbat {
 namespace gpu {
 namespace common {
 
-template <class T>
+template <class T, int D = 1>
 class Buffer
 {
   public:
-    static_assert(std::is_trivial_v<T>, "Buffer only supports trivial type template argument");
+    Buffer(std::size_t count = 0ULL);
 
-    Buffer(
-        std::size_t count = 0ULL,
-        std::shared_ptr<cuda::stream_t> stream =
-            std::make_shared<cuda::stream_t>(cuda::device::current::get().default_stream()));
-
-    Buffer(Buffer const&) noexcept            = delete;
-    Buffer& operator=(Buffer const&) noexcept = delete;
-
-    Buffer(Buffer&&) noexcept;
-    Buffer& operator=(Buffer&&) noexcept;
-
-    Buffer& operator=(std::span<T> value);
-    Buffer& operator=(std::span<T const> value);
+    thrust::device_vector<T>& operator[](auto d);
+    thrust::device_vector<T> const& operator[](auto d) const;
 
     std::size_t Size() const;
     bool Empty() const;
     std::vector<T> Get() const;
 
-    Buffer<T> View(std::size_t start = 0ULL);
-    Buffer<T> const View(std::size_t start = 0ULL) const;
+    std::conditional_t<(D > 1), std::array<thrust::device_ptr<T>, D>, thrust::device_ptr<T>> Data();
+    std::conditional_t<
+        (D > 1),
+        std::array<thrust::device_ptr<T const>, D>,
+        thrust::device_ptr<T const>>
+    Data() const;
 
-    Buffer<T> View(std::size_t start, std::size_t end);
-    Buffer<T> const View(std::size_t start, std::size_t end) const;
+    std::conditional_t<(D > 1), std::array<T*, D>, T*> Raw();
+    std::conditional_t<(D > 1), std::array<T const*, D>, T const*> Raw() const;
 
-    T* Raw();
-    T const* Raw() const;
-
-    ~Buffer();
+    constexpr int Dimensions() const { return D; }
 
   private:
-    Buffer(cuda::memory::region_t subregion, std::shared_ptr<cuda::stream_t> stream);
-
-    cuda::memory::region_t mDeviceMemory;
-    std::shared_ptr<cuda::stream_t> mStream;
-    bool mbOwnsMemory;
+    std::array<thrust::device_vector<T>, D> mBuffers;
 };
 
-template <class T>
-Buffer<T>::Buffer(std::size_t count, std::shared_ptr<cuda::stream_t> stream)
-    : mDeviceMemory(), mStream(stream), mbOwnsMemory(true)
+template <class T, int D>
+Buffer<T, D>::Buffer(std::size_t count) : mBuffers()
 {
-    if (count > 0ULL)
-    {
-        mStream->device().make_current();
-        mDeviceMemory = cuda::memory::device::async::allocate(*mStream, count * sizeof(T));
-        cuda::memory::device::async::zero(Raw(), *mStream);
-    }
+    for (auto d = 0; d < D; ++d)
+        mBuffers[d].resize(count);
 }
 
-template <class T>
-Buffer<T>::Buffer(Buffer&& other) noexcept
-    : mDeviceMemory(other.mDeviceMemory), mStream(other.mStream), mbOwnsMemory(other.mbOwnsMemory)
+template <class T, int D>
+thrust::device_vector<T>& Buffer<T, D>::operator[](auto d)
 {
-    other.mbOwnsMemory = false;
+    return mBuffers[d];
 }
 
-template <class T>
-Buffer<T>& Buffer<T>::operator=(Buffer&& other) noexcept
+template <class T, int D>
+thrust::device_vector<T> const& Buffer<T, D>::operator[](auto d) const
 {
-    mDeviceMemory      = other.mDeviceMemory;
-    mStream            = other.mStream;
-    mbOwnsMemory       = other.mbOwnsMemory;
-    other.mbOwnsMemory = false;
-    return *this;
+    return mBuffers[d];
 }
 
-template <class T>
-Buffer<T>& Buffer<T>::operator=(std::span<T> value)
+template <class T, int D>
+std::size_t Buffer<T, D>::Size() const
 {
-    return (*this) = std::span<T const>(value);
+    return mBuffers[0].size();
 }
 
-template <class T>
-Buffer<T>& Buffer<T>::operator=(std::span<T const> value)
-{
-    if (value.size_bytes() > mDeviceMemory.size())
-    {
-        std::string const what = "Expected argument of size " +
-                                 std::to_string(mDeviceMemory.size()) + " bytes, but got " +
-                                 std::to_string(value.size_bytes()) + " instead";
-        throw std::invalid_argument(what);
-    }
-    auto subregion = mDeviceMemory.subregion(0ULL, value.size_bytes());
-    mStream->device().make_current();
-    cuda::memory::async::copy(
-        subregion,
-        reinterpret_cast<void*>(const_cast<T*>(value.data())),
-        *mStream);
-    return *this;
-}
-
-template <class T>
-std::size_t Buffer<T>::Size() const
-{
-    return mDeviceMemory.size() / sizeof(T);
-}
-
-template <class T>
-bool Buffer<T>::Empty() const
+template <class T, int D>
+bool Buffer<T, D>::Empty() const
 {
     return Size() == 0ULL;
 }
 
-template <class T>
-std::vector<T> Buffer<T>::Get() const
+template <class T, int D>
+std::vector<T> Buffer<T, D>::Get() const
 {
-    std::vector<T> memory(Size());
-    mStream->device().make_current();
-    cuda::memory::async::copy(reinterpret_cast<void*>(memory.data()), mDeviceMemory, *mStream);
-    mStream->synchronize();
-    return memory;
-}
-
-template <class T>
-Buffer<T> Buffer<T>::View(std::size_t start)
-{
-    return View(start, Size());
-}
-
-template <class T>
-Buffer<T> const Buffer<T>::View(std::size_t start) const
-{
-    return View(start, Size());
-}
-
-template <class T>
-Buffer<T> Buffer<T>::View(std::size_t start, std::size_t end)
-{
-    auto subregion = mDeviceMemory.subregion(start * sizeof(T), end * sizeof(T));
-    return Buffer<T>(subregion, mStream);
-}
-
-template <class T>
-Buffer<T> const Buffer<T>::View(std::size_t start, std::size_t end) const
-{
-    auto subregion = mDeviceMemory.subregion(start * sizeof(T), end * sizeof(T));
-    return Buffer<T>(subregion, mStream);
-}
-
-template <class T>
-T* Buffer<T>::Raw()
-{
-    return static_cast<T*>(mDeviceMemory.data());
-}
-
-template <class T>
-T const* Buffer<T>::Raw() const
-{
-    return static_cast<T const*>(mDeviceMemory.data());
-}
-
-template <class T>
-Buffer<T>::~Buffer()
-{
-    if (mbOwnsMemory and !Empty())
+    std::vector<T> buffer(Size() * D);
+    for (auto d = 0; d < D; ++d)
     {
-        mStream->device().make_current();
-        cuda::memory::device::free(mDeviceMemory);
+        thrust::copy(mBuffers[d].begin(), mBuffers[d].end(), buffer.begin() + d * Size());
+    }
+    return buffer;
+}
+
+template <class T, int D>
+std::conditional_t<(D > 1), std::array<thrust::device_ptr<T>, D>, thrust::device_ptr<T>>
+Buffer<T, D>::Data()
+{
+    std::array<thrust::device_ptr<T>, D> data{};
+    for (auto d = 0; d < D; ++d)
+        data[d] = mBuffers[d].data();
+    if constexpr (D > 1)
+    {
+        return data;
+    }
+    else
+    {
+        return data[0];
     }
 }
 
-template <class T>
-Buffer<T>::Buffer(cuda::memory::region_t subregion, std::shared_ptr<cuda::stream_t> stream)
-    : mDeviceMemory(subregion), mStream(stream), mbOwnsMemory(false)
+template <class T, int D>
+std::conditional_t<(D > 1), std::array<thrust::device_ptr<T const>, D>, thrust::device_ptr<T const>>
+Buffer<T, D>::Data() const
 {
+    std::array<thrust::device_ptr<T const>, D> data{};
+    for (auto d = 0; d < D; ++d)
+        data[d] = mBuffers[d].data();
+    if constexpr (D > 1)
+    {
+        return data;
+    }
+    else
+    {
+        return data[0];
+    }
+}
+
+template <class T, int D>
+std::conditional_t<(D > 1), std::array<T*, D>, T*> Buffer<T, D>::Raw()
+{
+    std::array<T*, D> raw{};
+    for (auto d = 0; d < D; ++d)
+        raw[d] = thrust::raw_pointer_cast(mBuffers[d].data());
+    if constexpr (D > 1)
+    {
+        return raw;
+    }
+    else
+    {
+        return raw[0];
+    }
+}
+
+template <class T, int D>
+std::conditional_t<(D > 1), std::array<T const*, D>, T const*> Buffer<T, D>::Raw() const
+{
+    std::array<T const*, D> raw{};
+    for (auto d = 0; d < D; ++d)
+        raw[d] = thrust::raw_pointer_cast(mBuffers[d].data());
+    if constexpr (D > 1)
+    {
+        return raw;
+    }
+    else
+    {
+        return raw[0];
+    }
 }
 
 } // namespace common
