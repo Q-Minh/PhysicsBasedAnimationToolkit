@@ -204,6 +204,52 @@ class Product
     RhsNestedType const& B;
 };
 
+template <CMatrix TLhsMatrix, CMatrix TRhsMatrix>
+class CrossProduct
+{
+  public:
+    static_assert(
+        ((TLhsMatrix::kRows == 3 and TLhsMatrix::kCols == 1) or
+         (TLhsMatrix::kRows == 1 and TLhsMatrix::kCols == 3)) and
+            ((TRhsMatrix::kRows == 3 and TRhsMatrix::kCols == 1) or
+             (TRhsMatrix::kRows == 1 and TRhsMatrix::kCols == 3)),
+        "Cross product only valid for 3x1 or 1x3 matrices");
+
+    using LhsNestedType = TLhsMatrix;
+    using RhsNestedType = TRhsMatrix;
+
+    using ScalarType = LhsNestedType::ScalarType;
+    using SelfType   = CrossProduct<LhsNestedType, RhsNestedType>;
+
+    static auto constexpr kRows = 3;
+    static auto constexpr kCols = 1;
+
+    CrossProduct(LhsNestedType const& A, RhsNestedType const& B) : A(A), B(B) {}
+
+    constexpr auto Rows() const { return kRows; }
+    constexpr auto Cols() const { return kCols; }
+
+    auto operator()(auto i, auto j) const
+    {
+        j      = (i + 1) % 3;
+        auto k = (i + 2) % 3;
+        return A(j, 0) * B(k, 0) - A(k, 0) * B(j, 0);
+    }
+
+    template <auto S, auto T>
+    SubMatrix<SelfType, S, T> Slice(auto i, auto j)
+    {
+        return SubMatrix<SelfType, S, T>(*this, i, j);
+    }
+    SubMatrix<SelfType, kRows, 1> Col(auto j) { return Slice<kRows, 1>(0, j); }
+    SubMatrix<SelfType, 1, kCols> Row(auto i) { return Slice<1, kCols>(i, 0); }
+    TransposeView<SelfType> Transpose() const { return TransposeView<SelfType>(*this); }
+
+  private:
+    LhsNestedType const& A;
+    RhsNestedType const& B;
+};
+
 template <class TScalar, int M, int N>
 class Matrix
 {
@@ -283,9 +329,9 @@ auto operator-(TLhsMatrix const& A, TRhsMatrix const& B)
 }
 
 template <CMatrix TLhsMatrix, CMatrix TRhsMatrix>
-auto operator*(TLhsMatrix const& lhs, TRhsMatrix const& rhs)
+auto operator*(TLhsMatrix const& A, TRhsMatrix const& B)
 {
-    return Product<TLhsMatrix, TRhsMatrix>(lhs, rhs);
+    return Product<TLhsMatrix, TRhsMatrix>(A, B);
 }
 
 template <CMatrix TMatrix>
@@ -299,6 +345,63 @@ auto operator/(TMatrix const& A, typename TMatrix::ScalarType k)
 {
     using ScalarType = typename TMatrix::ScalarType;
     return Scale<TMatrix>(ScalarType(1. / k), A);
+}
+
+template <CMatrix TMatrix>
+auto Trace(TMatrix const& A)
+{
+    static_assert(A.Rows() == A.Cols(), "Cannot compute trace of non-square matrix");
+    typename TMatrix::ScalarType tr{0.};
+    for (auto i = 0; i < A.Cols(); ++i)
+        tr += A(i, i);
+    return tr;
+}
+
+template <CMatrix TMatrix>
+auto SquaredNorm(TMatrix const& A)
+{
+    return Trace(A.Transpose() * A());
+}
+
+template <CMatrix TMatrix>
+auto Norm(TMatrix const& A)
+{
+    using ScalarType = typename TMatrix::ScalarType;
+    if constexpr (std::is_same_v<ScalarType, float>)
+    {
+        return sqrtf(Trace(A));
+    }
+    else
+    {
+        return sqrt(Trace(A));
+    }
+}
+
+template <CMatrix TLhsMatrix, CMatrix TRhsMatrix>
+auto Cross(TLhsMatrix const& A, TRhsMatrix const& B)
+{
+    return CrossProduct<TLhsMatrix, TRhsMatrix>(A, B);
+}
+
+template <CMatrix TMatrix>
+auto Determinant(TMatrix const& A)
+{
+    static_assert(A.Rows() == A.Cols(), "Cannot compute determinant of non-square matrix");
+    static_assert(A.Rows() < 4, "Determinant of matrix of dimensions >= 4 too costly");
+    if constexpr (A.Rows() == 1)
+    {
+        return A(0, 0);
+    }
+    if constexpr (A.Rows() == 2)
+    {
+        return A(0, 0) * A(1, 1) - A(0, 1) * A(1, 0);
+    }
+    if constexpr (A.Rows() == 3)
+    {
+        return A(0, 0) * (A(1, 1) * A(2, 2) - A(2, 1) * A(1, 2)) -
+               A(0, 1) * (A(1, 0) * A(2, 2) - A(2, 0) * A(1, 2)) +
+               A(0, 2) * (A(1, 0) * A(2, 1) - A(2, 0) * A(1, 1));
+    }
 }
 
 } // namespace linalg
