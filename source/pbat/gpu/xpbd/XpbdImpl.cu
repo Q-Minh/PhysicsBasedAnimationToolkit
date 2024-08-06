@@ -1,4 +1,5 @@
 #include "XpbdImpl.cuh"
+#include "pbat/gpu/math/linalg/Matrix.cuh"
 
 #include <array>
 #include <thrust/async/for_each.h>
@@ -30,75 +31,68 @@ struct FInitializeSolution
 
 struct FProjectConstraint
 {
-    __device__ void operator()(GpuIndex c)
+    __device__ void ProjectHydrostatic(
+        GpuIndex c,
+        math::linalg::Matrix<GpuScalar, 4, 1>& mc,
+        math::linalg::Matrix<GpuScalar, 3, 4>& xc)
     {
-        GpuIndex const v[4]     = {T[0][c], T[1][c], T[2][c], T[3][c]};
-        GpuScalar const* DmInvC = DmInv + 9 * c;
-        // dC/dx
-        GpuScalar gradC[12] = {0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f};
-        // dPsi/dF (i.e. Piola Kirchhoff stress)
-        GpuScalar P[9] = {0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f};
-        // Deformation gradient F = Ds * DmInv
-        GpuScalar F[9] = {0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f};
-        {
-            // Column-major matrix Ds = [ (x1-x4) (x2-x4) (x3-x4) ]
-            GpuScalar Ds[9];
-            Ds[0] = x[0][v[0]] - x[0][v[3]];
-            Ds[3] = x[0][v[1]] - x[0][v[3]];
-            Ds[6] = x[0][v[2]] - x[0][v[3]];
-            Ds[1] = x[1][v[0]] - x[1][v[3]];
-            Ds[4] = x[1][v[1]] - x[1][v[3]];
-            Ds[7] = x[1][v[2]] - x[1][v[3]];
-            Ds[2] = x[2][v[0]] - x[2][v[3]];
-            Ds[5] = x[2][v[1]] - x[2][v[3]];
-            Ds[8] = x[2][v[2]] - x[2][v[3]];
-            F[0]  = DmInvC[0] * Ds[0] + DmInvC[1] * Ds[3] + DmInvC[2] * Ds[6];
-            F[1]  = DmInvC[0] * Ds[1] + DmInvC[1] * Ds[4] + DmInvC[2] * Ds[7];
-            F[2]  = DmInvC[0] * Ds[2] + DmInvC[1] * Ds[5] + DmInvC[2] * Ds[8];
-            F[3]  = DmInvC[3] * Ds[0] + DmInvC[4] * Ds[3] + DmInvC[5] * Ds[6];
-            F[4]  = DmInvC[3] * Ds[1] + DmInvC[4] * Ds[4] + DmInvC[5] * Ds[7];
-            F[5]  = DmInvC[3] * Ds[2] + DmInvC[4] * Ds[5] + DmInvC[5] * Ds[8];
-            F[6]  = DmInvC[6] * Ds[0] + DmInvC[7] * Ds[3] + DmInvC[8] * Ds[6];
-            F[7]  = DmInvC[6] * Ds[1] + DmInvC[7] * Ds[4] + DmInvC[8] * Ds[7];
-            F[8]  = DmInvC[6] * Ds[2] + DmInvC[7] * Ds[5] + DmInvC[8] * Ds[8];
-        }
-        {
-            // Compute volume conservation constraints, i.e. CH = det(F) - 1,
-            // grad CH = [f2xf3, f3xf1, f1xf2]
-            GpuScalar CH = F[0] * F[4] * F[8] - F[0] * F[5] * F[7] - F[1] * F[3] * F[8] +
-                           F[1] * F[5] * F[6] + F[2] * F[3] * F[7] - F[2] * F[4] * F[6] - 1.f;
-            P[0]      = F[4] * F[8] - F[5] * F[7];
-            P[3]      = -F[3] * F[8] + F[5] * F[6];
-            P[6]      = F[3] * F[7] - F[4] * F[6];
-            P[1]      = -F[1] * F[8] + F[2] * F[7];
-            P[4]      = F[0] * F[8] - F[2] * F[6];
-            P[7]      = -F[0] * F[7] + F[1] * F[6];
-            P[2]      = F[1] * F[5] - F[2] * F[4];
-            P[5]      = -F[0] * F[5] + F[2] * F[3];
-            P[8]      = F[0] * F[4] - F[1] * F[3];
-            gradC[0]  = P[0] * DmInvC[0] + P[3] * DmInvC[3] + P[6] * DmInvC[6];
-            gradC[1]  = P[1] * DmInvC[0] + P[4] * DmInvC[3] + P[7] * DmInvC[6];
-            gradC[2]  = P[2] * DmInvC[0] + P[5] * DmInvC[3] + P[8] * DmInvC[6];
-            gradC[3]  = P[0] * DmInvC[1] + P[3] * DmInvC[4] + P[6] * DmInvC[7];
-            gradC[4]  = P[1] * DmInvC[1] + P[4] * DmInvC[4] + P[7] * DmInvC[7];
-            gradC[5]  = P[2] * DmInvC[1] + P[5] * DmInvC[4] + P[8] * DmInvC[7];
-            gradC[6]  = P[0] * DmInvC[2] + P[3] * DmInvC[5] + P[6] * DmInvC[8];
-            gradC[7]  = P[1] * DmInvC[2] + P[4] * DmInvC[5] + P[7] * DmInvC[8];
-            gradC[8]  = P[2] * DmInvC[2] + P[5] * DmInvC[5] + P[8] * DmInvC[8];
-            gradC[9]  = -gradC[0] - gradC[3] - gradC[6];
-            gradC[10] = -gradC[1] - gradC[4] - gradC[7];
-            gradC[11] = -gradC[2] - gradC[5] - gradC[8];
-        }
+        using namespace pbat::gpu::math::linalg;
+        MatrixView<GpuScalar, 3, 3> DmInvC(DmInv + 9 * c);
+        Matrix<GpuScalar, 3, 3> F = (xc.Slice<3, 3>(0, 0) - Repeat<1, 3>(xc.Col(3))) * DmInvC;
+        GpuScalar CH              = Determinant(F) - GpuScalar(1.);
+        Matrix<GpuScalar, 3, 3> P{};
+        P.Col(0) = Cross(F.Col(1), F.Col(2));
+        P.Col(1) = Cross(F.Col(2), F.Col(0));
+        P.Col(2) = Cross(F.Col(0), F.Col(1));
+        Matrix<GpuScalar, 3, 4> gradC{};
+        gradC.Slice<3, 3>(0, 0) = P * DmInvC.Transpose();
+        gradC.Col(3)            = -(gradC.Col(0) + gradC.Col(1) + gradC.Col(2));
+        // TODO: Update lambda and project xc
     }
 
-    GpuIndex const* partition;
+    __device__ void ProjectDeviatoric(
+        GpuIndex c,
+        math::linalg::Matrix<GpuScalar, 4, 1>& mc,
+        math::linalg::Matrix<GpuScalar, 3, 4>& xc)
+    {
+        using namespace pbat::gpu::math::linalg;
+        MatrixView<GpuScalar, 3, 3> DmInvC(DmInv + 9 * c);
+        Matrix<GpuScalar, 3, 3> F = (xc.Slice<3, 3>(0, 0) - Repeat<1, 3>(xc.Col(3))) * DmInvC;
+        GpuScalar CD              = Norm(F);
+        Matrix<GpuScalar, 3, 4> gradC{};
+        gradC.Slice<3, 3>(0, 0) = (F * DmInvC.Transpose()) /
+                                  (CD + 1e-8 /*prevent numerical zero at fully collapsed state*/);
+        gradC.Col(3) = -(gradC.Col(0) + gradC.Col(1) + gradC.Col(2));
+        // TODO: Update lambda and project xc
+    }
+
+    __device__ void operator()(GpuIndex c)
+    {
+        using namespace pbat::gpu::math::linalg;
+
+        GpuIndex const v[4] = {T[0][c], T[1][c], T[2][c], T[3][c]};
+        Matrix<GpuScalar, 3, 4> xc{};
+        for (auto d = 0; d < 3; ++d)
+            for (auto j = 0; j < 4; ++j)
+                xc(d, j) = x[d][v[j]];
+        Matrix<GpuScalar, 4, 1> mc{};
+        for (auto j = 0; j < 4; ++j)
+            mc(j) = m[v[j]];
+
+        ProjectHydrostatic(c, mc, xc);
+        ProjectDeviatoric(c, mc, xc);
+
+        for (auto d = 0; d < 3; ++d)
+            for (auto j = 0; j < 4; ++j)
+                x[d][v[j]] = xc(d, j);
+    }
 
     std::array<GpuScalar*, 3> x;
     GpuScalar* lambda;
 
     std::array<GpuIndex*, 4> T;
     GpuScalar* m;
-    GpuScalar* alpha;
+    std::array<GpuScalar*, 2> alpha;
     GpuScalar* DmInv;
 };
 
@@ -148,7 +142,6 @@ void XpbdImpl::Step(GpuScalar dt)
                     partition.Data(),
                     partition.Data() + partition.Size(),
                     FProjectConstraint{
-                        partition.Raw(),
                         mV.x.Raw(),
                         lambda.Raw(),
                         mT.inds.Raw(),

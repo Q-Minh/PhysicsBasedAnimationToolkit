@@ -41,14 +41,14 @@ class XpbdImpl
     geometry::PointsImpl mV;                           ///< Vertex/particle positions
     geometry::SimplicesImpl mT;                        ///< Tetrahedral simplices
 
-    common::Buffer<GpuScalar, 3> xt;   ///< Vertex/particle positions at time t
-    common::Buffer<GpuScalar, 3> v;    ///< Vertex/particle velocities
-    common::Buffer<GpuScalar, 3> f;    ///< Vertex/particle external forces
-    common::Buffer<GpuScalar> m;       ///< Vertex/particle masses
-    common::Buffer<GpuScalar, 2> lame; ///< Lame coefficients
-    common::Buffer<GpuScalar> DmInv;   ///< 3x3x|#elements| array of material shape matrix inverses
-    common::Buffer<GpuScalar> lambda;  ///< "Lagrange" multipliers
-    common::Buffer<GpuScalar> alpha;   ///< Compliance
+    common::Buffer<GpuScalar, 3> xt;    ///< Vertex/particle positions at time t
+    common::Buffer<GpuScalar, 3> v;     ///< Vertex/particle velocities
+    common::Buffer<GpuScalar, 3> f;     ///< Vertex/particle external forces
+    common::Buffer<GpuScalar> m;        ///< Vertex/particle masses
+    common::Buffer<GpuScalar, 2> lame;  ///< Lame coefficients
+    common::Buffer<GpuScalar> DmInv;    ///< 3x3x|#elements| array of material shape matrix inverses
+    common::Buffer<GpuScalar> lambda;   ///< "Lagrange" multipliers
+    common::Buffer<GpuScalar, 2> alpha; ///< Compliance
 
     GpuIndex S;    ///< Number of substeps per timestep
     GpuIndex K;    ///< Maximum number of iterations per constraint solve

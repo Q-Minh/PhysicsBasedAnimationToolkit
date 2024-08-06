@@ -9,28 +9,28 @@ namespace gpu {
 namespace math {
 namespace linalg {
 
-template <class TMatrix>
-concept CMatrix = requires(TMatrix M)
-{
-    requires std::is_arithmetic_v<typename TMatrix::ScalarType>;
-    {
-        M.Rows()
-    } -> std::convertible_to<int>;
-    {
-        M.Cols()
-    } -> std::convertible_to<int>;
-    {
-        TMatrix::kRows
-    } -> std::convertible_to<int>;
-    {
-        TMatrix::kCols
-    } -> std::convertible_to<int>;
-    {
-        M(0, 0)
-    } -> std::convertible_to<typename TMatrix::ScalarType>;
-};
+// template <class TMatrix>
+// concept class /*CMatrix*/ = requires(TMatrix M)
+//{
+//     typename TMatrix::ScalarType;
+//     {
+//         M.Rows()
+//     } -> std::convertible_to<int>;
+//     {
+//         M.Cols()
+//     } -> std::convertible_to<int>;
+//     {
+//         TMatrix::kRows
+//     } -> std::convertible_to<int>;
+//     {
+//         TMatrix::kCols
+//     } -> std::convertible_to<int>;
+//{
+//     M(0, 0)
+// } -> std::convertible_to<typename TMatrix::ScalarType>;
+//};
 
-template <CMatrix TMatrix>
+template <class /*CMatrix*/ TMatrix>
 class TransposeView
 {
   public:
@@ -40,21 +40,21 @@ class TransposeView
     static auto constexpr kRows = TMatrix::kCols;
     static auto constexpr kCols = TMatrix::kRows;
 
-    TransposeView(NestedType const& A) : A(A) {}
-    constexpr auto Rows() const { return A.Cols(); }
-    constexpr auto Cols() const { return A.Rows(); }
+    __host__ __device__ TransposeView(NestedType& A) : A(A) {}
+    __host__ __device__ constexpr auto Rows() const { return A.Cols(); }
+    __host__ __device__ constexpr auto Cols() const { return A.Rows(); }
 
-    auto operator()(auto i, auto j) const { return A(j, i); }
-    auto& operator()(auto i, auto j) { return A(j, i); }
+    __host__ __device__ auto operator()(auto i, auto j) const { return A(j, i); }
+    __host__ __device__ auto& operator()(auto i, auto j) { return A(j, i); }
 
-    NestedType const& Transpose() const { return A; }
-    NestedType& Transpose() { return A; }
+    __host__ __device__ NestedType const& Transpose() const { return A; }
+    __host__ __device__ NestedType& Transpose() { return A; }
 
   private:
-    NestedType const& A;
+    NestedType& A;
 };
 
-template <CMatrix TMatrix, int M, int N>
+template <class /*CMatrix*/ TMatrix, int M, int N>
 class SubMatrix
 {
   public:
@@ -65,34 +65,53 @@ class SubMatrix
     static auto constexpr kRows = M;
     static auto constexpr kCols = N;
 
-    SubMatrix(NestedType const& A, auto ib = 0, auto jb = 0) : A(A), ib(ib), jb(jb)
+    __host__ __device__ SubMatrix(NestedType& A, auto ib = 0, auto jb = 0) : A(A), ib(ib), jb(jb)
     {
         static_assert(
-            A.Rows() >= M and A.Cols() >= N and M > 0 and N > 0,
+            NestedType::kRows >= M and NestedType::kCols >= N and M > 0 and N > 0,
             "Invalid submatrix dimensions");
     }
 
-    constexpr auto Rows() const { return kRows; }
-    constexpr auto Cols() const { return kCols; }
+    template <class /*CMatrix*/ TMatrix>
+    __host__ __device__ SelfType& operator=(TMatrix const& B)
+    {
+        static_assert(
+            TMatrix::kRows == kRows and TMatrix::kCols == kCols,
+            "Invalid submatrix dimensions");
+        for (auto j = 0; j < kCols; ++j)
+            for (auto i = 0; i < kRows; ++i)
+                (*this)(i, j) = B(i, j);
+        return *this;
+    }
 
-    auto operator()(auto i, auto j) const { return A(ib + i, jb + j); }
-    auto& operator()(auto i, auto j) { return A(ib + i, jb + j); }
+    __host__ __device__ constexpr auto Rows() const { return kRows; }
+    __host__ __device__ constexpr auto Cols() const { return kCols; }
+
+    __host__ __device__ auto operator()(auto i, auto j) const { return A(ib + i, jb + j); }
+    __host__ __device__ auto& operator()(auto i, auto j) { return A(ib + i, jb + j); }
 
     template <auto S, auto T>
-    SubMatrix<SelfType, S, T> Slice(auto i, auto j)
+    __host__ __device__ SubMatrix<SelfType, S, T> Slice(auto i, auto j)
     {
         return SubMatrix<SelfType, S, T>(*this, i, j);
     }
-    SubMatrix<SelfType, kRows, 1> Col(auto j) { return Slice<kRows, 1>(0, j); }
-    SubMatrix<SelfType, 1, kCols> Row(auto i) { return Slice<1, kCols>(i, 0); }
-    TransposeView<SelfType> Transpose() const { return TransposeView<SelfType>(*this); }
+    __host__ __device__ SubMatrix<SelfType, kRows, 1> Col(auto j) { return Slice<kRows, 1>(0, j); }
+    __host__ __device__ SubMatrix<SelfType, 1, kCols> Row(auto i) { return Slice<1, kCols>(i, 0); }
+    __host__ __device__ TransposeView<SelfType> Transpose()
+    {
+        return TransposeView<SelfType>(*this);
+    }
+    __host__ __device__ TransposeView<SelfType const> Transpose() const
+    {
+        return TransposeView<SelfType const>(*this);
+    }
 
   private:
-    NestedType const& A;
+    NestedType& A;
     int ib, jb;
 };
 
-template <CMatrix TLhsMatrix, CMatrix TRhsMatrix>
+template <class /*CMatrix*/ TLhsMatrix, class /*CMatrix*/ TRhsMatrix>
 class Sum
 {
   public:
@@ -105,7 +124,7 @@ class Sum
     static auto constexpr kRows = LhsNestedType::kRows;
     static auto constexpr kCols = RhsNestedType::kCols;
 
-    Sum(LhsNestedType const& A, RhsNestedType const& B) : A(A), B(B)
+    __host__ __device__ Sum(LhsNestedType const& A, RhsNestedType const& B) : A(A), B(B)
     {
         static_assert(
             LhsNestedType::kRows == RhsNestedType::kRows and
@@ -113,26 +132,29 @@ class Sum
             "Invalid matrix sum dimensions");
     }
 
-    constexpr auto Rows() const { return kRows; }
-    constexpr auto Cols() const { return kCols; }
+    __host__ __device__ constexpr auto Rows() const { return kRows; }
+    __host__ __device__ constexpr auto Cols() const { return kCols; }
 
-    auto operator()(auto i, auto j) const { return A(i, j) + B(i, j); }
+    __host__ __device__ auto operator()(auto i, auto j) const { return A(i, j) + B(i, j); }
 
     template <auto S, auto T>
-    SubMatrix<SelfType, S, T> Slice(auto i, auto j)
+    __host__ __device__ SubMatrix<SelfType, S, T> Slice(auto i, auto j)
     {
         return SubMatrix<SelfType, S, T>(*this, i, j);
     }
-    SubMatrix<SelfType, kRows, 1> Col(auto j) { return Slice<kRows, 1>(0, j); }
-    SubMatrix<SelfType, 1, kCols> Row(auto i) { return Slice<1, kCols>(i, 0); }
-    TransposeView<SelfType> Transpose() const { return TransposeView<SelfType>(*this); }
+    __host__ __device__ SubMatrix<SelfType, kRows, 1> Col(auto j) { return Slice<kRows, 1>(0, j); }
+    __host__ __device__ SubMatrix<SelfType, 1, kCols> Row(auto i) { return Slice<1, kCols>(i, 0); }
+    __host__ __device__ TransposeView<SelfType> Transpose() const
+    {
+        return TransposeView<SelfType>(*this);
+    }
 
   private:
     LhsNestedType const& A;
     RhsNestedType const& B;
 };
 
-template <CMatrix TMatrix>
+template <class /*CMatrix*/ TMatrix>
 class Scale
 {
   public:
@@ -143,28 +165,31 @@ class Scale
     static auto constexpr kRows = NestedType::kRows;
     static auto constexpr kCols = NestedType::kCols;
 
-    Scale(ScalarType k, NestedType const& A) : k(k), A(A) {}
+    __host__ __device__ Scale(ScalarType k, NestedType const& A) : k(k), A(A) {}
 
-    constexpr auto Rows() const { return kRows; }
-    constexpr auto Cols() const { return kCols; }
+    __host__ __device__ constexpr auto Rows() const { return kRows; }
+    __host__ __device__ constexpr auto Cols() const { return kCols; }
 
-    auto operator()(auto i, auto j) const { return k * A(i, j); }
+    __host__ __device__ auto operator()(auto i, auto j) const { return k * A(i, j); }
 
     template <auto S, auto T>
-    SubMatrix<SelfType, S, T> Slice(auto i, auto j)
+    __host__ __device__ SubMatrix<SelfType, S, T> Slice(auto i, auto j)
     {
         return SubMatrix<SelfType, S, T>(*this, i, j);
     }
-    SubMatrix<SelfType, kRows, 1> Col(auto j) { return Slice<kRows, 1>(0, j); }
-    SubMatrix<SelfType, 1, kCols> Row(auto i) { return Slice<1, kCols>(i, 0); }
-    TransposeView<SelfType> Transpose() const { return TransposeView<SelfType>(*this); }
+    __host__ __device__ SubMatrix<SelfType, kRows, 1> Col(auto j) { return Slice<kRows, 1>(0, j); }
+    __host__ __device__ SubMatrix<SelfType, 1, kCols> Row(auto i) { return Slice<1, kCols>(i, 0); }
+    __host__ __device__ TransposeView<SelfType> Transpose() const
+    {
+        return TransposeView<SelfType>(*this);
+    }
 
   private:
     ScalarType k;
     NestedType const& A;
 };
 
-template <CMatrix TLhsMatrix, CMatrix TRhsMatrix>
+template <class /*CMatrix*/ TLhsMatrix, class /*CMatrix*/ TRhsMatrix>
 class Product
 {
   public:
@@ -177,12 +202,12 @@ class Product
     static auto constexpr kRows = LhsNestedType::kRows;
     static auto constexpr kCols = RhsNestedType::kCols;
 
-    Product(LhsNestedType const& A, RhsNestedType const& B) : A(A), B(B) {}
+    __host__ __device__ Product(LhsNestedType const& A, RhsNestedType const& B) : A(A), B(B) {}
 
-    constexpr auto Rows() const { return kRows; }
-    constexpr auto Cols() const { return kCols; }
+    __host__ __device__ constexpr auto Rows() const { return kRows; }
+    __host__ __device__ constexpr auto Cols() const { return kCols; }
 
-    auto operator()(auto i, auto j) const
+    __host__ __device__ auto operator()(auto i, auto j) const
     {
         ScalarType aij{0.};
         for (auto k = 0; k < A.Cols(); ++k)
@@ -191,20 +216,23 @@ class Product
     }
 
     template <auto S, auto T>
-    SubMatrix<SelfType, S, T> Slice(auto i, auto j)
+    __host__ __device__ SubMatrix<SelfType, S, T> Slice(auto i, auto j)
     {
         return SubMatrix<SelfType, S, T>(*this, i, j);
     }
-    SubMatrix<SelfType, kRows, 1> Col(auto j) { return Slice<kRows, 1>(0, j); }
-    SubMatrix<SelfType, 1, kCols> Row(auto i) { return Slice<1, kCols>(i, 0); }
-    TransposeView<SelfType> Transpose() const { return TransposeView<SelfType>(*this); }
+    __host__ __device__ SubMatrix<SelfType, kRows, 1> Col(auto j) { return Slice<kRows, 1>(0, j); }
+    __host__ __device__ SubMatrix<SelfType, 1, kCols> Row(auto i) { return Slice<1, kCols>(i, 0); }
+    __host__ __device__ TransposeView<SelfType> Transpose() const
+    {
+        return TransposeView<SelfType>(*this);
+    }
 
   private:
     LhsNestedType const& A;
     RhsNestedType const& B;
 };
 
-template <CMatrix TLhsMatrix, CMatrix TRhsMatrix>
+template <class /*CMatrix*/ TLhsMatrix, class /*CMatrix*/ TRhsMatrix>
 class CrossProduct
 {
   public:
@@ -224,12 +252,12 @@ class CrossProduct
     static auto constexpr kRows = 3;
     static auto constexpr kCols = 1;
 
-    CrossProduct(LhsNestedType const& A, RhsNestedType const& B) : A(A), B(B) {}
+    __host__ __device__ CrossProduct(LhsNestedType const& A, RhsNestedType const& B) : A(A), B(B) {}
 
-    constexpr auto Rows() const { return kRows; }
-    constexpr auto Cols() const { return kCols; }
+    __host__ __device__ constexpr auto Rows() const { return kRows; }
+    __host__ __device__ constexpr auto Cols() const { return kCols; }
 
-    auto operator()(auto i, auto j) const
+    __host__ __device__ auto operator()(auto i, auto j) const
     {
         j      = (i + 1) % 3;
         auto k = (i + 2) % 3;
@@ -237,13 +265,16 @@ class CrossProduct
     }
 
     template <auto S, auto T>
-    SubMatrix<SelfType, S, T> Slice(auto i, auto j)
+    __host__ __device__ SubMatrix<SelfType, S, T> Slice(auto i, auto j)
     {
         return SubMatrix<SelfType, S, T>(*this, i, j);
     }
-    SubMatrix<SelfType, kRows, 1> Col(auto j) { return Slice<kRows, 1>(0, j); }
-    SubMatrix<SelfType, 1, kCols> Row(auto i) { return Slice<1, kCols>(i, 0); }
-    TransposeView<SelfType> Transpose() const { return TransposeView<SelfType>(*this); }
+    __host__ __device__ SubMatrix<SelfType, kRows, 1> Col(auto j) { return Slice<kRows, 1>(0, j); }
+    __host__ __device__ SubMatrix<SelfType, 1, kCols> Row(auto i) { return Slice<1, kCols>(i, 0); }
+    __host__ __device__ TransposeView<SelfType> Transpose() const
+    {
+        return TransposeView<SelfType>(*this);
+    }
 
   private:
     LhsNestedType const& A;
@@ -257,10 +288,10 @@ class Matrix
     using ScalarType = TScalar;
     using SelfType   = Matrix<ScalarType, M, N>;
 
-    Matrix() : a() {}
+    __host__ __device__ Matrix() : a() {}
 
-    template <CMatrix TMatrix>
-    Matrix(TMatrix const& B) : a()
+    template <class /*CMatrix*/ TMatrix>
+    __host__ __device__ Matrix(TMatrix const& B) : a()
     {
         static_assert(
             TMatrix::kRows == kRows and TMatrix::kCols == kCols,
@@ -270,36 +301,44 @@ class Matrix
                 (*this)(i, j) = B(i, j);
     }
 
-    template <CMatrix TMatrix>
-    SelfType& operator=(TMatrix const& B)
+    template <class /*CMatrix*/ TMatrix>
+    __host__ __device__ SelfType& operator=(TMatrix const& B)
     {
         for (auto j = 0; j < kCols; ++j)
             for (auto i = 0; i < kRows; ++i)
                 (*this)(i, j) = B(i, j);
+        return *this;
     }
 
     static auto constexpr kRows = M;
     static auto constexpr kCols = N;
 
-    constexpr auto Rows() const { return kRows; }
-    constexpr auto Cols() const { return kCols; }
+    __host__ __device__ constexpr auto Rows() const { return kRows; }
+    __host__ __device__ constexpr auto Cols() const { return kCols; }
 
-    auto operator()(auto i, auto j) const { return a[j * M + i]; }
-    auto& operator()(auto i, auto j) { return a[j * M + i]; }
+    __host__ __device__ auto operator()(auto i, auto j) const { return this->a[j * M + i]; }
+    __host__ __device__ auto& operator()(auto i, auto j) { return this->a[j * M + i]; }
 
     // Vector(ized) access
-    auto operator()(auto i) const { return a[i]; }
-    auto& operator()(auto i) { return a[i]; }
+    __host__ __device__ auto operator()(auto i) const { return a[i]; }
+    __host__ __device__ auto& operator()(auto i) { return a[i]; }
 
     // Smart accessors
     template <auto S, auto T>
-    SubMatrix<SelfType, S, T> Slice(auto i, auto j)
+    __host__ __device__ SubMatrix<SelfType, S, T> Slice(auto i, auto j)
     {
         return SubMatrix<SelfType, S, T>(*this, i, j);
     }
-    SubMatrix<SelfType, kRows, 1> Col(auto j) { return Slice<kRows, 1>(0, j); }
-    SubMatrix<SelfType, 1, kCols> Row(auto i) { return Slice<1, kCols>(i, 0); }
-    TransposeView<SelfType> Transpose() const { return TransposeView<SelfType>(*this); }
+    __host__ __device__ SubMatrix<SelfType, kRows, 1> Col(auto j) { return Slice<kRows, 1>(0, j); }
+    __host__ __device__ SubMatrix<SelfType, 1, kCols> Row(auto i) { return Slice<1, kCols>(i, 0); }
+    __host__ __device__ TransposeView<SelfType> Transpose()
+    {
+        return TransposeView<SelfType>(*this);
+    }
+    __host__ __device__ TransposeView<SelfType const> Transpose() const
+    {
+        return TransposeView<SelfType const>(*this);
+    }
 
     void SetZero() { memset(a.data(), 0, kRows * kCols * sizeof(ScalarType)); }
 
@@ -307,64 +346,158 @@ class Matrix
     std::array<ScalarType, M * N> a;
 };
 
-template <CMatrix TLhsMatrix, CMatrix TRhsMatrix>
-auto operator+(TLhsMatrix const& A, TRhsMatrix const& B)
+template <class TScalar, int M, int N>
+class MatrixView
+{
+  public:
+    using ScalarType = TScalar;
+    using SelfType   = MatrixView<ScalarType, M, N>;
+
+    __host__ __device__ MatrixView(ScalarType* a) : a(a) {}
+
+    template <class /*CMatrix*/ TMatrix>
+    __host__ __device__ SelfType& operator=(TMatrix const& B)
+    {
+        for (auto j = 0; j < kCols; ++j)
+            for (auto i = 0; i < kRows; ++i)
+                (*this)(i, j) = B(i, j);
+        return *this;
+    }
+
+    static auto constexpr kRows = M;
+    static auto constexpr kCols = N;
+
+    __host__ __device__ constexpr auto Rows() const { return kRows; }
+    __host__ __device__ constexpr auto Cols() const { return kCols; }
+
+    __host__ __device__ auto operator()(auto i, auto j) const { return a[j * M + i]; }
+    __host__ __device__ auto& operator()(auto i, auto j) { return a[j * M + i]; }
+
+    // Vector(ized) access
+    __host__ __device__ auto operator()(auto i) const { return a[i]; }
+    __host__ __device__ auto& operator()(auto i) { return a[i]; }
+
+    // Smart accessors
+    template <auto S, auto T>
+    __host__ __device__ SubMatrix<SelfType, S, T> Slice(auto i, auto j)
+    {
+        return SubMatrix<SelfType, S, T>(*this, i, j);
+    }
+    __host__ __device__ SubMatrix<SelfType, kRows, 1> Col(auto j) { return Slice<kRows, 1>(0, j); }
+    __host__ __device__ SubMatrix<SelfType, 1, kCols> Row(auto i) { return Slice<1, kCols>(i, 0); }
+    __host__ __device__ TransposeView<SelfType> Transpose()
+    {
+        return TransposeView<SelfType>(*this);
+    }
+    __host__ __device__ TransposeView<SelfType const> Transpose() const
+    {
+        return TransposeView<SelfType const>(*this);
+    }
+
+    void SetZero() { memset(a, 0, kRows * kCols * sizeof(ScalarType)); }
+
+  private:
+    ScalarType* a;
+};
+
+template <class /*CMatrix*/ TMatrix, int RepeatRows, int RepeatCols>
+class TiledView
+{
+  public:
+    using NestedType = TMatrix;
+    using ScalarType = typename NestedType::ScalarType;
+    using SelfType   = TiledView<NestedType, RepeatRows, RepeatCols>;
+
+    static auto constexpr kRows = RepeatRows * NestedType::kRows;
+    static auto constexpr kCols = RepeatCols * NestedType::kCols;
+
+    __host__ __device__ TiledView(NestedType const& A) : A(A) {}
+
+    __host__ __device__ constexpr auto Rows() const { return kRows; }
+    __host__ __device__ constexpr auto Cols() const { return kCols; }
+
+    __host__ __device__ auto operator()(auto i, auto j) const
+    {
+        assert(i >= 0 and i < kRows, "Invalid row accessor");
+        assert(j >= 0 and j < kCols, "Invalid column accessor");
+        return A(i % NestedType::kRows, j % NestedType::kCols);
+    }
+
+    // Smart accessors
+    template <auto S, auto T>
+    __host__ __device__ SubMatrix<SelfType, S, T> Slice(auto i, auto j)
+    {
+        return SubMatrix<SelfType, S, T>(*this, i, j);
+    }
+    __host__ __device__ SubMatrix<SelfType, kRows, 1> Col(auto j) { return Slice<kRows, 1>(0, j); }
+    __host__ __device__ SubMatrix<SelfType, 1, kCols> Row(auto i) { return Slice<1, kCols>(i, 0); }
+    __host__ __device__ TransposeView<SelfType> Transpose() const
+    {
+        return TransposeView<SelfType>(*this);
+    }
+
+  private:
+    NestedType const& A;
+};
+
+template <class /*CMatrix*/ TLhsMatrix, class /*CMatrix*/ TRhsMatrix>
+__host__ __device__ auto operator+(TLhsMatrix const& A, TRhsMatrix const& B)
 {
     return Sum<TLhsMatrix, TRhsMatrix>(A, B);
 }
 
-template <CMatrix TMatrix>
-auto operator-(TMatrix const& A)
+template <class /*CMatrix*/ TMatrix>
+__host__ __device__ auto operator-(TMatrix const& A)
 {
     using ScalarType = typename TMatrix::ScalarType;
     return Scale<TMatrix>(ScalarType(-1.), A);
 }
 
-template <CMatrix TLhsMatrix, CMatrix TRhsMatrix>
-auto operator-(TLhsMatrix const& A, TRhsMatrix const& B)
+template <class /*CMatrix*/ TLhsMatrix, class /*CMatrix*/ TRhsMatrix>
+__host__ __device__ auto operator-(TLhsMatrix const& A, TRhsMatrix const& B)
 {
     using NegatedMatrixType = Scale<TRhsMatrix>;
     NegatedMatrixType negB  = -B;
     return Sum<TLhsMatrix, NegatedMatrixType>(A, negB);
 }
 
-template <CMatrix TLhsMatrix, CMatrix TRhsMatrix>
-auto operator*(TLhsMatrix const& A, TRhsMatrix const& B)
+template <class /*CMatrix*/ TLhsMatrix, class /*CMatrix*/ TRhsMatrix>
+__host__ __device__ auto operator*(TLhsMatrix const& A, TRhsMatrix const& B)
 {
     return Product<TLhsMatrix, TRhsMatrix>(A, B);
 }
 
-template <CMatrix TMatrix>
-auto operator*(typename TMatrix::ScalarType k, TMatrix const& A)
+template <class /*CMatrix*/ TMatrix>
+__host__ __device__ auto operator*(typename TMatrix::ScalarType k, TMatrix const& A)
 {
     return Scale<TMatrix>(k, A);
 }
 
-template <CMatrix TMatrix>
-auto operator/(TMatrix const& A, typename TMatrix::ScalarType k)
+template <class /*CMatrix*/ TMatrix>
+__host__ __device__ auto operator/(TMatrix const& A, typename TMatrix::ScalarType k)
 {
     using ScalarType = typename TMatrix::ScalarType;
     return Scale<TMatrix>(ScalarType(1. / k), A);
 }
 
-template <CMatrix TMatrix>
-auto Trace(TMatrix const& A)
+template <class /*CMatrix*/ TMatrix>
+__host__ __device__ auto Trace(TMatrix const& A)
 {
-    static_assert(A.Rows() == A.Cols(), "Cannot compute trace of non-square matrix");
+    static_assert(TMatrix::kRows == TMatrix::kCols, "Cannot compute trace of non-square matrix");
     typename TMatrix::ScalarType tr{0.};
     for (auto i = 0; i < A.Cols(); ++i)
         tr += A(i, i);
     return tr;
 }
 
-template <CMatrix TMatrix>
-auto SquaredNorm(TMatrix const& A)
+template <class /*CMatrix*/ TMatrix>
+__host__ __device__ auto SquaredNorm(TMatrix const& A)
 {
     return Trace(A.Transpose() * A());
 }
 
-template <CMatrix TMatrix>
-auto Norm(TMatrix const& A)
+template <class /*CMatrix*/ TMatrix>
+__host__ __device__ auto Norm(TMatrix const& A)
 {
     using ScalarType = typename TMatrix::ScalarType;
     if constexpr (std::is_same_v<ScalarType, float>)
@@ -377,31 +510,41 @@ auto Norm(TMatrix const& A)
     }
 }
 
-template <CMatrix TLhsMatrix, CMatrix TRhsMatrix>
-auto Cross(TLhsMatrix const& A, TRhsMatrix const& B)
+template <class /*CMatrix*/ TLhsMatrix, class /*CMatrix*/ TRhsMatrix>
+__host__ __device__ auto Cross(TLhsMatrix&& A, TRhsMatrix&& B)
 {
     return CrossProduct<TLhsMatrix, TRhsMatrix>(A, B);
 }
 
-template <CMatrix TMatrix>
-auto Determinant(TMatrix const& A)
+template <class /*CMatrix*/ TMatrix>
+__host__ __device__ auto Determinant(TMatrix const& A)
 {
-    static_assert(A.Rows() == A.Cols(), "Cannot compute determinant of non-square matrix");
-    static_assert(A.Rows() < 4, "Determinant of matrix of dimensions >= 4 too costly");
-    if constexpr (A.Rows() == 1)
+    static_assert(
+        TMatrix::kRows == TMatrix::kCols,
+        "Cannot compute determinant of non-square matrix");
+    static_assert(TMatrix::kRows < 4, "Determinant of matrix of dimensions >= 4 too costly");
+    if constexpr (TMatrix::kRows == 1)
     {
         return A(0, 0);
     }
-    if constexpr (A.Rows() == 2)
+    if constexpr (TMatrix::kRows == 2)
     {
         return A(0, 0) * A(1, 1) - A(0, 1) * A(1, 0);
     }
-    if constexpr (A.Rows() == 3)
+    if constexpr (TMatrix::kRows == 3)
     {
         return A(0, 0) * (A(1, 1) * A(2, 2) - A(2, 1) * A(1, 2)) -
                A(0, 1) * (A(1, 0) * A(2, 2) - A(2, 0) * A(1, 2)) +
                A(0, 2) * (A(1, 0) * A(2, 1) - A(2, 0) * A(1, 1));
     }
+    using ScalarType = typename TMatrix::ScalarType;
+    return ScalarType{0.};
+}
+
+template <auto RepeatRows, auto RepeatCols, class /*CMatrix*/ TMatrix>
+__host__ __device__ auto Repeat(TMatrix const& A)
+{
+    return TiledView<TMatrix, RepeatRows, RepeatCols>(A);
 }
 
 } // namespace linalg
