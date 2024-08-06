@@ -56,7 +56,10 @@ struct FComputeMean
 {
     __device__ void operator()(int s)
     {
-        cuda::atomic_ref<GpuScalar, cuda::thread_scope_device> amu[3] = {mu[0], mu[1], mu[2]};
+        cuda::atomic_ref<GpuScalar, cuda::thread_scope_device> amu[3] = {
+            cuda::atomic_ref<GpuScalar, cuda::thread_scope_device>(mu[0]),
+            cuda::atomic_ref<GpuScalar, cuda::thread_scope_device>(mu[1]),
+            cuda::atomic_ref<GpuScalar, cuda::thread_scope_device>(mu[2])};
         for (auto d = 0; d < 3; ++d)
         {
             amu[d] += (b[d][s] + e[d][s]) / (2.f * static_cast<GpuScalar>(nBoxes));
@@ -74,9 +77,9 @@ struct FComputeVariance
     __device__ void operator()(int s)
     {
         cuda::atomic_ref<GpuScalar, cuda::thread_scope_device> asigma[3] = {
-            sigma[0],
-            sigma[1],
-            sigma[2]};
+            cuda::atomic_ref<GpuScalar, cuda::thread_scope_device>(sigma[0]),
+            cuda::atomic_ref<GpuScalar, cuda::thread_scope_device>(sigma[1]),
+            cuda::atomic_ref<GpuScalar, cuda::thread_scope_device>(sigma[2])};
         for (auto d = 0; d < 3; ++d)
         {
             GpuScalar const cd = (b[d][s] + e[d][s]) / 2.f;

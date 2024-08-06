@@ -43,6 +43,10 @@ Var<T>::Var(T const& value, std::shared_ptr<cuda::stream_t> stream)
 {
     mStream->device().make_current();
     mDeviceMemory = cuda::memory::device::async::allocate(*mStream, sizeof(T));
+    cuda::memory::async::copy(
+        mDeviceMemory,
+        reinterpret_cast<void*>(const_cast<T*>(&value)),
+        *mStream);
 }
 
 template <class T>

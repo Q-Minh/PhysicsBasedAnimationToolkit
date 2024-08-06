@@ -418,8 +418,8 @@ class TiledView
 
     __host__ __device__ auto operator()(auto i, auto j) const
     {
-        assert(i >= 0 and i < kRows, "Invalid row accessor");
-        assert(j >= 0 and j < kCols, "Invalid column accessor");
+        assert(i >= 0 and i < kRows);
+        assert(j >= 0 and j < kCols);
         return A(i % NestedType::kRows, j % NestedType::kCols);
     }
 
