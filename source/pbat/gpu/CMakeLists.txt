@@ -4,6 +4,7 @@ if(PBAT_USE_CUDA)
         FILE_SET api
         FILES
         "Aliases.h"
+        "DisableWarnings.h"
     )
 
     add_subdirectory(common)

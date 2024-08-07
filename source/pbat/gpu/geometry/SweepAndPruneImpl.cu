@@ -1,3 +1,7 @@
+// clang-format off
+#include "pbat/gpu/DisableWarnings.h"
+// clang-format on
+
 #include "SweepAndPruneImpl.cuh"
 
 #include <cuda/atomic>
@@ -304,9 +308,9 @@ TEST_CASE("[gpu][geometry] Sweep and prune")
     GpuIndexMatrixX E1(2, 3);
     GpuIndexMatrixX F2(3, 1);
     // clang-format off
-    V << 0.,  1. ,  2. ,  3. , 0.,  2. ,  0.,
-         0.,  0.1,  0.2,  0.3, 0.,  0.1,  0.,
-         0., 10. , 20. , 30. , 0., 10. ,  0.;
+    V << 0.f,  1.f ,  2.f ,  3.f , 0.f,  2.f ,  0.f,
+         0.f,  0.1f,  0.2f,  0.3f, 0.f,  0.1f,  0.f,
+         0.f, 10.f , 20.f , 30.f , 0.f, 10.f ,  0.f;
     E1 << 1, 0, 2,
           2, 1, 3;
     F2 << 4,
