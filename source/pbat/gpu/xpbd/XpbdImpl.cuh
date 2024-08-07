@@ -10,6 +10,7 @@
 #include "pbat/gpu/common/Var.cuh"
 #include "pbat/gpu/geometry/PrimitivesImpl.cuh"
 
+#include <array>
 #include <cstddef>
 #include <vector>
 
@@ -20,11 +21,26 @@ namespace xpbd {
 class XpbdImpl
 {
   public:
+    enum EConstraint : int { StableNeoHookean = 0, Collision, NumberOfConstraintTypes };
+    static auto constexpr kConstraintTypes = static_cast<int>(EConstraint::NumberOfConstraintTypes);
+
+    /**
+     * @brief
+     * @param V
+     * @param T
+     */
+    XpbdImpl(Eigen::Ref<GpuMatrixX const> const& V, Eigen::Ref<GpuIndexMatrixX const> const& T);
+    /**
+     * @brief
+     */
+    void PrepareConstraints();
     /**
      * @brief
      * @param dt
+     * @param iterations
+     * @params substeps
      */
-    void Step(GpuScalar dt);
+    void Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps);
     /**
      * @brief
      * @return
@@ -35,25 +51,55 @@ class XpbdImpl
      * @return
      */
     std::size_t NumberOfConstraints() const;
+    /**
+     * @brief
+     * @param v
+     */
+    void SetVelocities(Eigen::Ref<GpuMatrixX const> const& v);
+    /**
+     * @brief
+     * @param f
+     */
+    void SetExternalForces(Eigen::Ref<GpuMatrixX const> const& f);
+    /**
+     * @brief
+     * @param m
+     */
+    void SetMass(Eigen::Ref<GpuMatrixX const> const& m);
+    /**
+     * @brief
+     * @param l
+     */
+    void SetLameCoefficients(Eigen::Ref<GpuMatrixX const> const& l);
+    /**
+     * @brief
+     * @param partitions
+     */
+    void SetConstraintPartitions(std::vector<std::vector<GpuIndex>> const& partitions);
 
+  public:
+    geometry::PointsImpl V;    ///< Vertex/particle positions
+    geometry::SimplicesImpl T; ///< Tetrahedral simplices
   private:
+    common::Buffer<GpuScalar, 3> mPositions;      ///< Vertex/particle positions at time t
+    common::Buffer<GpuScalar, 3> mVelocities;     ///< Vertex/particle velocities
+    common::Buffer<GpuScalar, 3> mExternalForces; ///< Vertex/particle external forces
+    common::Buffer<GpuScalar> mMasses;            ///< Vertex/particle masses
+    common::Buffer<GpuScalar> mLame;              ///< Lame coefficients
+    common::Buffer<GpuScalar>
+        mShapeMatrixInverses; ///< 3x3x|#elements| array of material shape matrix inverses
+    common::Buffer<GpuScalar> mRestStableGamma; ///< 1. + mu/lambda, where mu,lambda are Lame coefficients
+    std::array<common::Buffer<GpuScalar>, kConstraintTypes>
+        mLagrangeMultipliers; ///< "Lagrange" multipliers:
+                              ///< lambda[0] -> Stable Neo-Hookean constraint multipliers
+                              ///< lambda[1] -> Collision penalty constraint multipliers
+    std::array<common::Buffer<GpuScalar>, kConstraintTypes>
+        mCompliance; ///< Compliance
+                     ///< alpha[0] -> Stable Neo-Hookean constraint compliance
+                     ///< alpha[1] -> Collision penalty constraint compliance
+
     std::vector<common::Buffer<GpuIndex>> mPartitions; ///< Constraint partitions
-    geometry::PointsImpl mV;                           ///< Vertex/particle positions
-    geometry::SimplicesImpl mT;                        ///< Tetrahedral simplices
-
-    common::Buffer<GpuScalar, 3> xt;    ///< Vertex/particle positions at time t
-    common::Buffer<GpuScalar, 3> v;     ///< Vertex/particle velocities
-    common::Buffer<GpuScalar, 3> f;     ///< Vertex/particle external forces
-    common::Buffer<GpuScalar> m;        ///< Vertex/particle masses
-    common::Buffer<GpuScalar, 2> lame;  ///< Lame coefficients
-    common::Buffer<GpuScalar> DmInv;    ///< 3x3x|#elements| array of material shape matrix inverses
-    common::Buffer<GpuScalar> lambda;   ///< "Lagrange" multipliers
-    common::Buffer<GpuScalar, 2> alpha; ///< Compliance
-
-    GpuIndex S;    ///< Number of substeps per timestep
-    GpuIndex K;    ///< Maximum number of iterations per constraint solve
-    GpuScalar muf; ///< Coulomb friction coefficient
-    GpuScalar muc; ///< Collision penalty
+    GpuScalar muf;                                     ///< Coulomb friction coefficient
 };
 
 } // namespace xpbd

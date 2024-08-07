@@ -19,6 +19,16 @@ PointsImpl::PointsImpl(Eigen::Ref<GpuMatrixX const> const& V) : x()
     Update(V);
 }
 
+std::size_t PointsImpl::NumberOfPoints() const
+{
+    return x.Size();
+}
+
+std::size_t PointsImpl::Dimensions() const
+{
+    return x.Dimensions();
+}
+
 void PointsImpl::Update(Eigen::Ref<GpuMatrixX const> const& V)
 {
     for (auto d = 0; d < 3; ++d)

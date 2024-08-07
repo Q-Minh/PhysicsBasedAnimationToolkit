@@ -23,6 +23,16 @@ struct PointsImpl
     PointsImpl(Eigen::Ref<GpuMatrixX const> const& V);
     /**
      * @brief
+     * @return
+     */
+    std::size_t NumberOfPoints() const;
+    /**
+     * @brief
+     * @return
+     */
+    std::size_t Dimensions() const;
+    /**
+     * @brief
      * @param V |#dims|x|#vertices| array of vertex positions
      */
     void Update(Eigen::Ref<GpuMatrixX const> const& V);

@@ -6,13 +6,51 @@
 #include "pbat/gpu/math/linalg/Matrix.cuh"
 
 #include <array>
+#include <exception>
+#include <sstream>
+#include <string>
 #include <thrust/async/for_each.h>
+#include <thrust/copy.h>
 #include <thrust/execution_policy.h>
+#include <thrust/fill.h>
 #include <thrust/iterator/counting_iterator.h>
 
 namespace pbat {
 namespace gpu {
 namespace xpbd {
+namespace kernels {
+
+struct FInitializeNeoHookeanConstraint
+{
+    __device__ void operator()(GpuIndex c)
+    {
+        using namespace pbat::gpu::math::linalg;
+        // Load vertex positions of element c
+        GpuIndex const v[4] = {T[0][c], T[1][c], T[2][c], T[3][c]};
+        Matrix<GpuScalar, 3, 4> xc{};
+        for (auto d = 0; d < 3; ++d)
+            for (auto j = 0; j < 4; ++j)
+                xc(d, j) = x[d][v[j]];
+        // Compute shape matrix and its inverse
+        Matrix<GpuScalar, 3, 3> Ds = (xc.Slice<3, 3>(0, 0) - Repeat<1, 3>(xc.Col(3)));
+        MatrixView<GpuScalar, 3, 3> DmInvC(DmInv + 9 * c);
+        DmInvC = Inverse(Ds);
+        // Compute constraint compliance
+        GpuScalar const tetVolume = Determinant(Ds) / GpuScalar{6.};
+        MatrixView<GpuScalar, 2, 1> alphac{alpha + 2 * c};
+        MatrixView<GpuScalar, 2, 1> lamec{lame + 2 * c};
+        alphac(0) = GpuScalar{1.} / (lamec(0) * tetVolume);
+        alphac(1) = GpuScalar{1.} / (lamec(1) * tetVolume);
+        // Compute rest stability
+        gamma[c] = GpuScalar{1.} + lamec(0) / lamec(1);
+    }
+    std::array<GpuScalar*, 3> x;
+    std::array<GpuIndex*, 4> T;
+    GpuScalar* lame;
+    GpuScalar* DmInv;
+    GpuScalar* alpha;
+    GpuScalar* gamma;
+};
 
 struct FInitializeSolution
 {
@@ -58,13 +96,14 @@ struct FProjectConstraint
         GpuIndex c,
         math::linalg::Matrix<GpuScalar, 4, 1> const& mc,
         GpuScalar alphac,
+        GpuScalar gammac,
         GpuScalar& lambdac,
         math::linalg::Matrix<GpuScalar, 3, 4>& xc)
     {
         using namespace pbat::gpu::math::linalg;
         MatrixView<GpuScalar, 3, 3> DmInvC(DmInv + 9 * c);
         Matrix<GpuScalar, 3, 3> F = (xc.Slice<3, 3>(0, 0) - Repeat<1, 3>(xc.Col(3))) * DmInvC;
-        GpuScalar C               = Determinant(F) - GpuScalar(1.);
+        GpuScalar C               = Determinant(F) - gammac;
         Matrix<GpuScalar, 3, 3> P{};
         P.Col(0) = Cross(F.Col(1), F.Col(2));
         P.Col(1) = Cross(F.Col(2), F.Col(0));
@@ -97,7 +136,7 @@ struct FProjectConstraint
     {
         using namespace pbat::gpu::math::linalg;
 
-        // Load constraint data in local memory
+        // 1. Load constraint data in local memory
         GpuIndex const v[4] = {T[0][c], T[1][c], T[2][c], T[3][c]};
         Matrix<GpuScalar, 3, 4> xc{};
         for (auto d = 0; d < 3; ++d)
@@ -110,13 +149,14 @@ struct FProjectConstraint
         lambdac(0) = lambda[2 * c];
         lambdac(1) = lambda[2 * c + 1];
         Matrix<GpuScalar, 2, 1> alphac{};
-        alphac(0) = alpha[0][c];
-        alphac(1) = alpha[1][c];
+        alphac(0) = alpha[2 * c];
+        alphac(1) = alpha[2 * c + 1];
 
-        ProjectHydrostatic(c, mc, alphac(0), lambdac(0), xc);
-        ProjectDeviatoric(c, mc, alphac(1), lambdac(1), xc);
+        // 2. Project elastic constraints
+        ProjectDeviatoric(c, mc, alphac(0), lambdac(0), xc);
+        ProjectHydrostatic(c, mc, alphac(1), gamma[c], lambdac(1), xc);
 
-        // Update global "Lagrange" multipliers and positions
+        // 3. Update global "Lagrange" multipliers and positions
         lambda[2 * c]     = lambdac(0);
         lambda[2 * c + 1] = lambdac(1);
         for (auto d = 0; d < 3; ++d)
@@ -129,11 +169,12 @@ struct FProjectConstraint
 
     std::array<GpuIndex*, 4> T;
     GpuScalar* m;
-    std::array<GpuScalar*, 2> alpha;
+    GpuScalar* alpha;
     GpuScalar* DmInv;
+    GpuScalar* gamma;
 };
 
-struct FFinalizeSolution
+struct FUpdateSolution
 {
     __device__ void operator()(GpuIndex i)
     {
@@ -150,26 +191,93 @@ struct FFinalizeSolution
     GpuScalar dt;
 };
 
-void XpbdImpl::Step(GpuScalar dt)
+} // namespace kernels
+
+XpbdImpl::XpbdImpl(
+    Eigen::Ref<GpuMatrixX const> const& Vin,
+    Eigen::Ref<GpuIndexMatrixX const> const& Tin)
+    : V(Vin),
+      T(Tin),
+      mPositions(Vin.cols()),
+      mVelocities(Vin.cols()),
+      mExternalForces(Vin.cols()),
+      mMasses(Vin.cols()),
+      mLame(2 * Tin.cols()),
+      mShapeMatrixInverses(9 * Tin.cols()),
+      mLagrangeMultipliers(),
+      mCompliance(),
+      mPartitions(),
+      muf{0.5}
 {
-    GpuScalar const sdt       = dt / static_cast<GpuScalar>(S);
+    mLagrangeMultipliers[StableNeoHookean].Resize(T.NumberOfSimplices());
+    mLagrangeMultipliers[Collision].Resize(V.NumberOfPoints());
+    mCompliance[StableNeoHookean].Resize(T.NumberOfSimplices());
+    mCompliance[Collision].Resize(V.NumberOfPoints());
+    // Initialize particle data
+    for (auto d = 0; d < V.Dimensions(); ++d)
+    {
+        thrust::copy(V.x[d].begin(), V.x[d].end(), mPositions[d].begin());
+        thrust::fill(mVelocities[d].begin(), mVelocities[d].end(), GpuScalar{0.});
+        thrust::fill(mExternalForces[d].begin(), mExternalForces[d].end(), GpuScalar{0.});
+        thrust::fill(mMasses.Data(), mMasses.Data() + mMasses.Size(), GpuScalar{1.});
+    }
+}
+
+void XpbdImpl::PrepareConstraints()
+{
+    thrust::fill(
+        thrust::device,
+        mCompliance[Collision].Data(),
+        mCompliance[Collision].Data() + mCompliance[Collision].Size(),
+        GpuScalar{0.});
+    thrust::for_each(
+        thrust::device,
+        thrust::make_counting_iterator<GpuIndex>(0),
+        thrust::make_counting_iterator<GpuIndex>(T.NumberOfSimplices()),
+        kernels::FInitializeNeoHookeanConstraint{
+            V.x.Raw(),
+            T.inds.Raw(),
+            mLame.Raw(),
+            mShapeMatrixInverses.Raw(),
+            mCompliance[StableNeoHookean].Raw(),
+            mRestStableGamma.Raw()});
+}
+
+void XpbdImpl::Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps)
+{
+    GpuScalar const sdt       = dt / static_cast<GpuScalar>(substeps);
     GpuScalar const sdt2      = sdt * sdt;
     GpuIndex const nParticles = static_cast<GpuIndex>(NumberOfParticles());
     // TODO: Detect collision candidates and setup collision constraint solve
     // ...
 
-    for (auto s = 0; s < S; ++s)
+    auto& nextPositions = V.x;
+    for (auto s = 0; s < substeps; ++s)
     {
         // Reset "Lagrange" multipliers
-        thrust::fill(lambda.Data(), lambda.Data() + lambda.Size(), GpuScalar{0.});
+        for (auto d = 0; d < kConstraintTypes; ++d)
+        {
+            thrust::fill(
+                thrust::device,
+                mLagrangeMultipliers[d].Data(),
+                mLagrangeMultipliers[d].Data() + mLagrangeMultipliers[d].Size(),
+                GpuScalar{0.});
+        }
         // Initialize constraint solve
         thrust::device_event e = thrust::async::for_each(
             thrust::device,
             thrust::make_counting_iterator<GpuIndex>(0),
             thrust::make_counting_iterator<GpuIndex>(nParticles),
-            FInitializeSolution{xt.Raw(), mV.x.Raw(), v.Raw(), f.Raw(), m.Raw(), sdt, sdt2});
+            kernels::FInitializeSolution{
+                mPositions.Raw(),
+                nextPositions.Raw(),
+                mVelocities.Raw(),
+                mExternalForces.Raw(),
+                mMasses.Raw(),
+                sdt,
+                sdt2});
         // Solve constraints
-        for (auto k = 0; k < K; ++k)
+        for (auto k = 0; k < iterations; ++k)
         {
             // Elastic constraints
             for (common::Buffer<GpuIndex> const& partition : mPartitions)
@@ -178,13 +286,14 @@ void XpbdImpl::Step(GpuScalar dt)
                     thrust::device.after(e),
                     partition.Data(),
                     partition.Data() + partition.Size(),
-                    FProjectConstraint{
-                        mV.x.Raw(),
-                        lambda.Raw(),
-                        mT.inds.Raw(),
-                        m.Raw(),
-                        alpha.Raw(),
-                        DmInv.Raw()});
+                    kernels::FProjectConstraint{
+                        nextPositions.Raw(),
+                        thrust::raw_pointer_cast(mLagrangeMultipliers[0].Data()),
+                        T.inds.Raw(),
+                        mMasses.Raw(),
+                        thrust::raw_pointer_cast(mCompliance[0].Data()),
+                        mShapeMatrixInverses.Raw(),
+                        mRestStableGamma.Raw()});
             }
             // TODO: Collision constraints
             // ...
@@ -194,19 +303,87 @@ void XpbdImpl::Step(GpuScalar dt)
             thrust::device.after(e),
             thrust::make_counting_iterator<GpuIndex>(0),
             thrust::make_counting_iterator<GpuIndex>(nParticles),
-            FFinalizeSolution{xt.Raw(), mV.x.Raw(), v.Raw(), sdt});
+            kernels::FUpdateSolution{
+                mPositions.Raw(),
+                nextPositions.Raw(),
+                mVelocities.Raw(),
+                sdt});
         e.wait();
     }
 }
 
 std::size_t XpbdImpl::NumberOfParticles() const
 {
-    return mV.x.Size();
+    return V.x.Size();
 }
 
 std::size_t XpbdImpl::NumberOfConstraints() const
 {
-    return mT.inds.Size();
+    return T.inds.Size();
+}
+
+void XpbdImpl::SetVelocities(Eigen::Ref<GpuMatrixX const> const& vIn)
+{
+    auto const nParticles = static_cast<GpuIndex>(mVelocities.Size());
+    if (vIn.rows() != 3 and vIn.cols() != nParticles)
+    {
+        std::ostringstream ss{};
+        ss << "Expected velocities of dimensions " << mVelocities.Dimensions() << "x"
+           << mVelocities.Size() << ", but got " << vIn.rows() << "x" << vIn.cols() << "\n";
+        throw std::invalid_argument(ss.str());
+    }
+    for (auto d = 0; d < mVelocities.Dimensions(); ++d)
+        thrust::copy(vIn.row(d).begin(), vIn.row(d).end(), mVelocities[d].begin());
+}
+
+void XpbdImpl::SetExternalForces(Eigen::Ref<GpuMatrixX const> const& fIn)
+{
+    auto const nParticles = static_cast<GpuIndex>(mExternalForces.Size());
+    if (fIn.rows() != 3 and fIn.cols() != nParticles)
+    {
+        std::ostringstream ss{};
+        ss << "Expected forces of dimensions " << mExternalForces.Dimensions() << "x"
+           << mExternalForces.Size() << ", but got " << fIn.rows() << "x" << fIn.cols() << "\n";
+        throw std::invalid_argument(ss.str());
+    }
+    for (auto d = 0; d < mExternalForces.Dimensions(); ++d)
+        thrust::copy(fIn.row(d).begin(), fIn.row(d).end(), mExternalForces[d].begin());
+}
+
+void XpbdImpl::SetMass(Eigen::Ref<GpuMatrixX const> const& mIn)
+{
+    auto const nParticles = static_cast<GpuIndex>(mMasses.Size());
+    if (mIn.rows() != 1 and mIn.cols() != nParticles)
+    {
+        std::ostringstream ss{};
+        ss << "Expected masses of dimensions " << mMasses.Dimensions() << "x" << mMasses.Size()
+           << ", but got " << mIn.rows() << "x" << mIn.cols() << "\n";
+        throw std::invalid_argument(ss.str());
+    }
+    thrust::copy(mIn.data(), mIn.data() + mIn.size(), mMasses.Data());
+}
+
+void XpbdImpl::SetLameCoefficients(Eigen::Ref<GpuMatrixX const> const& l)
+{
+    auto const nTetrahedra = static_cast<GpuIndex>(T.inds.Size());
+    if (l.rows() != 2 and l.cols() != nTetrahedra)
+    {
+        std::ostringstream ss{};
+        ss << "Expected Lame coefficients of dimensions 2x" << T.inds.Size() << ", but got "
+           << l.rows() << "x" << l.cols() << "\n";
+        throw std::invalid_argument(ss.str());
+    }
+    thrust::copy(l.data(), l.data() + l.size(), mLame.Data());
+}
+
+void XpbdImpl::SetConstraintPartitions(std::vector<std::vector<GpuIndex>> const& partitions)
+{
+    mPartitions.resize(partitions.size());
+    for (auto p = 0; p < partitions.size(); ++p)
+    {
+        mPartitions[p][0].resize(partitions[p].size());
+        thrust::copy(partitions[p].begin(), partitions[p].end(), mPartitions[p].Data());
+    }
 }
 
 } // namespace xpbd

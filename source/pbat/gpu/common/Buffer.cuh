@@ -31,6 +31,8 @@ class Buffer
         thrust::device_ptr<T const>>
     Data() const;
 
+    void Resize(std::size_t count);
+
     std::conditional_t<(D > 1), std::array<T*, D>, T*> Raw();
     std::conditional_t<(D > 1), std::array<T const*, D>, T const*> Raw() const;
 
@@ -113,6 +115,15 @@ Buffer<T, D>::Data() const
     else
     {
         return data[0];
+    }
+}
+
+template <class T, int D>
+void Buffer<T, D>::Resize(std::size_t count)
+{
+    for (auto d = 0; d < D; ++d)
+    {
+        mBuffers[d].resize(count);
     }
 }
 
