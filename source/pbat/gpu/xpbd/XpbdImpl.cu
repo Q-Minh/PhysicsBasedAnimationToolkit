@@ -35,15 +35,36 @@ struct FInitializeSolution
 
 struct FProjectConstraint
 {
+    __device__ void Project(
+        GpuScalar C,
+        math::linalg::Matrix<GpuScalar, 3, 4> const& gradC,
+        math::linalg::Matrix<GpuScalar, 4, 1> const& mc,
+        GpuScalar alphac,
+        GpuScalar& lambdac,
+        math::linalg::Matrix<GpuScalar, 3, 4>& xc)
+    {
+        GpuScalar dlambda =
+            -(C + alphac * lambdac) /
+            (mc(0) * SquaredNorm(gradC.Col(0)) + mc(1) * SquaredNorm(gradC.Col(1)) +
+             mc(2) * SquaredNorm(gradC.Col(2)) + mc(3) * SquaredNorm(gradC.Col(3)) + alphac);
+        lambdac += dlambda;
+        xc.Col(0) += (dlambda / mc(0)) * gradC.Col(0);
+        xc.Col(1) += (dlambda / mc(1)) * gradC.Col(1);
+        xc.Col(2) += (dlambda / mc(2)) * gradC.Col(2);
+        xc.Col(3) += (dlambda / mc(3)) * gradC.Col(3);
+    }
+
     __device__ void ProjectHydrostatic(
         GpuIndex c,
-        math::linalg::Matrix<GpuScalar, 4, 1>& mc,
+        math::linalg::Matrix<GpuScalar, 4, 1> const& mc,
+        GpuScalar alphac,
+        GpuScalar& lambdac,
         math::linalg::Matrix<GpuScalar, 3, 4>& xc)
     {
         using namespace pbat::gpu::math::linalg;
         MatrixView<GpuScalar, 3, 3> DmInvC(DmInv + 9 * c);
         Matrix<GpuScalar, 3, 3> F = (xc.Slice<3, 3>(0, 0) - Repeat<1, 3>(xc.Col(3))) * DmInvC;
-        GpuScalar CH              = Determinant(F) - GpuScalar(1.);
+        GpuScalar C               = Determinant(F) - GpuScalar(1.);
         Matrix<GpuScalar, 3, 3> P{};
         P.Col(0) = Cross(F.Col(1), F.Col(2));
         P.Col(1) = Cross(F.Col(2), F.Col(0));
@@ -51,29 +72,32 @@ struct FProjectConstraint
         Matrix<GpuScalar, 3, 4> gradC{};
         gradC.Slice<3, 3>(0, 0) = P * DmInvC.Transpose();
         gradC.Col(3)            = -(gradC.Col(0) + gradC.Col(1) + gradC.Col(2));
-        // TODO: Update lambda and project xc
+        Project(C, gradC, mc, alphac, lambdac, xc);
     }
 
     __device__ void ProjectDeviatoric(
         GpuIndex c,
-        math::linalg::Matrix<GpuScalar, 4, 1>& mc,
+        math::linalg::Matrix<GpuScalar, 4, 1> const& mc,
+        GpuScalar alphac,
+        GpuScalar& lambdac,
         math::linalg::Matrix<GpuScalar, 3, 4>& xc)
     {
         using namespace pbat::gpu::math::linalg;
         MatrixView<GpuScalar, 3, 3> DmInvC(DmInv + 9 * c);
         Matrix<GpuScalar, 3, 3> F = (xc.Slice<3, 3>(0, 0) - Repeat<1, 3>(xc.Col(3))) * DmInvC;
-        GpuScalar CD              = Norm(F);
+        GpuScalar C               = Norm(F);
         Matrix<GpuScalar, 3, 4> gradC{};
         gradC.Slice<3, 3>(0, 0) = (F * DmInvC.Transpose()) /
-                                  (CD + 1e-8 /*prevent numerical zero at fully collapsed state*/);
+                                  (C + 1e-8 /*prevent numerical zero at fully collapsed state*/);
         gradC.Col(3) = -(gradC.Col(0) + gradC.Col(1) + gradC.Col(2));
-        // TODO: Update lambda and project xc
+        Project(C, gradC, mc, alphac, lambdac, xc);
     }
 
     __device__ void operator()(GpuIndex c)
     {
         using namespace pbat::gpu::math::linalg;
 
+        // Load constraint data in local memory
         GpuIndex const v[4] = {T[0][c], T[1][c], T[2][c], T[3][c]};
         Matrix<GpuScalar, 3, 4> xc{};
         for (auto d = 0; d < 3; ++d)
@@ -82,10 +106,19 @@ struct FProjectConstraint
         Matrix<GpuScalar, 4, 1> mc{};
         for (auto j = 0; j < 4; ++j)
             mc(j) = m[v[j]];
+        Matrix<GpuScalar, 2, 1> lambdac{};
+        lambdac(0) = lambda[2 * c];
+        lambdac(1) = lambda[2 * c + 1];
+        Matrix<GpuScalar, 2, 1> alphac{};
+        alphac(0) = alpha[0][c];
+        alphac(1) = alpha[1][c];
 
-        ProjectHydrostatic(c, mc, xc);
-        ProjectDeviatoric(c, mc, xc);
+        ProjectHydrostatic(c, mc, alphac(0), lambdac(0), xc);
+        ProjectDeviatoric(c, mc, alphac(1), lambdac(1), xc);
 
+        // Update global "Lagrange" multipliers and positions
+        lambda[2 * c]     = lambdac(0);
+        lambda[2 * c + 1] = lambdac(1);
         for (auto d = 0; d < 3; ++d)
             for (auto j = 0; j < 4; ++j)
                 x[d][v[j]] = xc(d, j);

@@ -3,32 +3,33 @@
 
 #include <array>
 #include <concepts>
+#include <utility>
 
 namespace pbat {
 namespace gpu {
 namespace math {
 namespace linalg {
 
-// template <class TMatrix>
-// concept class /*CMatrix*/ = requires(TMatrix M)
-//{
-//     typename TMatrix::ScalarType;
-//     {
-//         M.Rows()
-//     } -> std::convertible_to<int>;
-//     {
-//         M.Cols()
-//     } -> std::convertible_to<int>;
-//     {
-//         TMatrix::kRows
-//     } -> std::convertible_to<int>;
-//     {
-//         TMatrix::kCols
-//     } -> std::convertible_to<int>;
-//{
-//     M(0, 0)
-// } -> std::convertible_to<typename TMatrix::ScalarType>;
-//};
+template <class TMatrix>
+concept CMatrix = requires(TMatrix M)
+{
+    typename TMatrix::ScalarType;
+    {
+        M.Rows()
+    } -> std::convertible_to<int>;
+    {
+        M.Cols()
+    } -> std::convertible_to<int>;
+    {
+        TMatrix::kRows
+    } -> std::convertible_to<int>;
+    {
+        TMatrix::kCols
+    } -> std::convertible_to<int>;
+    {
+        M(0, 0)
+    } -> std::convertible_to<typename TMatrix::ScalarType>;
+};
 
 template <class /*CMatrix*/ TMatrix>
 class TransposeView
@@ -36,11 +37,26 @@ class TransposeView
   public:
     using NestedType = TMatrix;
     using ScalarType = typename NestedType::ScalarType;
+    using SelfType   = TransposeView<NestedType>;
 
-    static auto constexpr kRows = TMatrix::kCols;
-    static auto constexpr kCols = TMatrix::kRows;
+    static auto constexpr kRows = NestedType::kCols;
+    static auto constexpr kCols = NestedType::kRows;
 
     __host__ __device__ TransposeView(NestedType& A) : A(A) {}
+
+    template <class /*CMatrix*/ TMatrix>
+    __host__ __device__ SelfType& operator=(TMatrix&& B)
+    {
+        auto fRows = [&]<auto... I>(auto j, std::index_sequence<I...>) {
+            (((*this)(I, j) = std::forward<TMatrix>(B)(I, j)), ...);
+        };
+        auto fCols = [&]<auto... J>(std::index_sequence<J...>) {
+            (fRows(J, std::make_index_sequence<kRows>()), ...);
+        };
+        fCols(std::make_index_sequence<kCols>());
+        return *this;
+    }
+
     __host__ __device__ constexpr auto Rows() const { return A.Cols(); }
     __host__ __device__ constexpr auto Cols() const { return A.Rows(); }
 
@@ -73,14 +89,18 @@ class SubMatrix
     }
 
     template <class /*CMatrix*/ TMatrix>
-    __host__ __device__ SelfType& operator=(TMatrix const& B)
+    __host__ __device__ SelfType& operator=(TMatrix&& B)
     {
         static_assert(
             TMatrix::kRows == kRows and TMatrix::kCols == kCols,
             "Invalid submatrix dimensions");
-        for (auto j = 0; j < kCols; ++j)
-            for (auto i = 0; i < kRows; ++i)
-                (*this)(i, j) = B(i, j);
+        auto fRows = [&]<auto... I>(auto j, std::index_sequence<I...>) {
+            (((*this)(I, j) = std::forward<TMatrix>(B)(I, j)), ...);
+        };
+        auto fCols = [&]<auto... J>(std::index_sequence<J...>) {
+            (fRows(J, std::make_index_sequence<kRows>()), ...);
+        };
+        fCols(std::make_index_sequence<kCols>());
         return *this;
     }
 
@@ -108,6 +128,57 @@ class SubMatrix
 
   private:
     NestedType& A;
+    int ib, jb;
+};
+
+template <class /*CMatrix*/ TMatrix, int M, int N>
+class ConstSubMatrix
+{
+  public:
+    using NestedType = TMatrix;
+    using ScalarType = typename NestedType::ScalarType;
+    using SelfType   = ConstSubMatrix<NestedType, M, N>;
+
+    static auto constexpr kRows = M;
+    static auto constexpr kCols = N;
+
+    __host__ __device__ ConstSubMatrix(NestedType const& A, auto ib = 0, auto jb = 0)
+        : A(A), ib(ib), jb(jb)
+    {
+        static_assert(
+            NestedType::kRows >= M and NestedType::kCols >= N and M > 0 and N > 0,
+            "Invalid submatrix dimensions");
+    }
+
+    __host__ __device__ constexpr auto Rows() const { return kRows; }
+    __host__ __device__ constexpr auto Cols() const { return kCols; }
+
+    __host__ __device__ auto operator()(auto i, auto j) const { return A(ib + i, jb + j); }
+
+    template <auto S, auto T>
+    __host__ __device__ ConstSubMatrix<SelfType, S, T> Slice(auto i, auto j)
+    {
+        return ConstSubMatrix<SelfType, S, T>(*this, i, j);
+    }
+    __host__ __device__ ConstSubMatrix<SelfType, kRows, 1> Col(auto j)
+    {
+        return Slice<kRows, 1>(0, j);
+    }
+    __host__ __device__ ConstSubMatrix<SelfType, 1, kCols> Row(auto i)
+    {
+        return Slice<1, kCols>(i, 0);
+    }
+    __host__ __device__ TransposeView<SelfType> Transpose()
+    {
+        return TransposeView<SelfType>(*this);
+    }
+    __host__ __device__ TransposeView<SelfType const> Transpose() const
+    {
+        return TransposeView<SelfType const>(*this);
+    }
+
+  private:
+    NestedType const& A;
     int ib, jb;
 };
 
@@ -209,10 +280,10 @@ class Product
 
     __host__ __device__ auto operator()(auto i, auto j) const
     {
-        ScalarType aij{0.};
-        for (auto k = 0; k < A.Cols(); ++k)
-            aij += A(i, k) * B(k, j);
-        return aij;
+        auto contract = [this, i, j]<auto... K>(std::index_sequence<K...>) {
+            return ((A(i, K) * B(K, j)) + ...);
+        };
+        return contract(std::make_index_sequence<LhsNestedType::kCols>());
     }
 
     template <auto S, auto T>
@@ -281,7 +352,7 @@ class CrossProduct
     RhsNestedType const& B;
 };
 
-template <class TScalar, int M, int N>
+template <class TScalar, int M, int N = 1>
 class Matrix
 {
   public:
@@ -291,22 +362,30 @@ class Matrix
     __host__ __device__ Matrix() : a() {}
 
     template <class /*CMatrix*/ TMatrix>
-    __host__ __device__ Matrix(TMatrix const& B) : a()
+    __host__ __device__ Matrix(TMatrix&& B) : a()
     {
         static_assert(
             TMatrix::kRows == kRows and TMatrix::kCols == kCols,
             "Invalid matrix assignment dimensions");
-        for (auto j = 0; j < kCols; ++j)
-            for (auto i = 0; i < kRows; ++i)
-                (*this)(i, j) = B(i, j);
+        auto fRows = [&]<auto... I>(auto j, std::index_sequence<I...>) {
+            (((*this)(I, j) = std::forward<TMatrix>(B)(I, j)), ...);
+        };
+        auto fCols = [&]<auto... J>(std::index_sequence<J...>) {
+            (fRows(J, std::make_index_sequence<kRows>()), ...);
+        };
+        fCols(std::make_index_sequence<kCols>());
     }
 
     template <class /*CMatrix*/ TMatrix>
-    __host__ __device__ SelfType& operator=(TMatrix const& B)
+    __host__ __device__ SelfType& operator=(TMatrix&& B)
     {
-        for (auto j = 0; j < kCols; ++j)
-            for (auto i = 0; i < kRows; ++i)
-                (*this)(i, j) = B(i, j);
+        auto fRows = [&]<auto... I>(auto j, std::index_sequence<I...>) {
+            ((*this)(I, j) = std::forward<TMatrix>(B)(I, j), ...);
+        };
+        auto fCols = [&]<auto... J>(std::index_sequence<J...>) {
+            (fRows(J, std::make_index_sequence<kRows>()), ...);
+        };
+        fCols(std::make_index_sequence<kCols>());
         return *this;
     }
 
@@ -329,8 +408,21 @@ class Matrix
     {
         return SubMatrix<SelfType, S, T>(*this, i, j);
     }
+    template <auto S, auto T>
+    __host__ __device__ ConstSubMatrix<SelfType, S, T> Slice(auto i, auto j) const
+    {
+        return ConstSubMatrix<SelfType, S, T>(*this, i, j);
+    }
     __host__ __device__ SubMatrix<SelfType, kRows, 1> Col(auto j) { return Slice<kRows, 1>(0, j); }
     __host__ __device__ SubMatrix<SelfType, 1, kCols> Row(auto i) { return Slice<1, kCols>(i, 0); }
+    __host__ __device__ ConstSubMatrix<SelfType, kRows, 1> Col(auto j) const
+    {
+        return Slice<kRows, 1>(0, j);
+    }
+    __host__ __device__ ConstSubMatrix<SelfType, 1, kCols> Row(auto i) const
+    {
+        return Slice<1, kCols>(i, 0);
+    }
     __host__ __device__ TransposeView<SelfType> Transpose()
     {
         return TransposeView<SelfType>(*this);
@@ -356,11 +448,15 @@ class MatrixView
     __host__ __device__ MatrixView(ScalarType* a) : a(a) {}
 
     template <class /*CMatrix*/ TMatrix>
-    __host__ __device__ SelfType& operator=(TMatrix const& B)
+    __host__ __device__ SelfType& operator=(TMatrix&& B)
     {
-        for (auto j = 0; j < kCols; ++j)
-            for (auto i = 0; i < kRows; ++i)
-                (*this)(i, j) = B(i, j);
+        auto fRows = [&]<auto... I>(auto j, std::index_sequence<I...>) {
+            (((*this)(I, j) = std::forward<TMatrix>(B)(I, j)), ...);
+        };
+        auto fCols = [&]<auto... J>(std::index_sequence<J...>) {
+            (fRows(J, std::make_index_sequence<kRows>()), ...);
+        };
+        fCols(std::make_index_sequence<kCols>());
         return *this;
     }
 
@@ -385,6 +481,21 @@ class MatrixView
     }
     __host__ __device__ SubMatrix<SelfType, kRows, 1> Col(auto j) { return Slice<kRows, 1>(0, j); }
     __host__ __device__ SubMatrix<SelfType, 1, kCols> Row(auto i) { return Slice<1, kCols>(i, 0); }
+
+    template <auto S, auto T>
+    __host__ __device__ ConstSubMatrix<SelfType, S, T> Slice(auto i, auto j) const
+    {
+        return ConstSubMatrix<SelfType, S, T>(*this, i, j);
+    }
+    __host__ __device__ ConstSubMatrix<SelfType, kRows, 1> Col(auto j) const
+    {
+        return Slice<kRows, 1>(0, j);
+    }
+    __host__ __device__ ConstSubMatrix<SelfType, 1, kCols> Row(auto i) const
+    {
+        return Slice<1, kCols>(i, 0);
+    }
+
     __host__ __device__ TransposeView<SelfType> Transpose()
     {
         return TransposeView<SelfType>(*this);
@@ -418,8 +529,6 @@ class TiledView
 
     __host__ __device__ auto operator()(auto i, auto j) const
     {
-        assert(i >= 0 and i < kRows);
-        assert(j >= 0 and j < kCols);
         return A(i % NestedType::kRows, j % NestedType::kCols);
     }
 
@@ -441,24 +550,72 @@ class TiledView
 };
 
 template <class /*CMatrix*/ TLhsMatrix, class /*CMatrix*/ TRhsMatrix>
-__host__ __device__ auto operator+(TLhsMatrix const& A, TRhsMatrix const& B)
+__host__ __device__ auto operator+(TLhsMatrix&& A, TRhsMatrix&& B)
 {
-    return Sum<TLhsMatrix, TRhsMatrix>(A, B);
-}
-
-template <class /*CMatrix*/ TMatrix>
-__host__ __device__ auto operator-(TMatrix const& A)
-{
-    using ScalarType = typename TMatrix::ScalarType;
-    return Scale<TMatrix>(ScalarType(-1.), A);
+    using LhsMatrixType = std::remove_cvref_t<TLhsMatrix>;
+    static_assert(CMatrix<LhsMatrixType>, "Input must satisfy concept CMatrix");
+    using RhsMatrixType = std::remove_cvref_t<TRhsMatrix>;
+    static_assert(CMatrix<RhsMatrixType>, "Input must satisfy concept CMatrix");
+    return Sum<TLhsMatrix, TRhsMatrix>(std::forward<TLhsMatrix>(A), std::forward<TRhsMatrix>(B));
 }
 
 template <class /*CMatrix*/ TLhsMatrix, class /*CMatrix*/ TRhsMatrix>
-__host__ __device__ auto operator-(TLhsMatrix const& A, TRhsMatrix const& B)
+__host__ __device__ auto operator+=(TLhsMatrix&& A, TRhsMatrix&& B)
 {
+    using LhsMatrixType = std::remove_cvref_t<TLhsMatrix>;
+    static_assert(CMatrix<LhsMatrixType>, "Input must satisfy concept CMatrix");
+    using RhsMatrixType = std::remove_cvref_t<TRhsMatrix>;
+    static_assert(CMatrix<RhsMatrixType>, "Input must satisfy concept CMatrix");
+    auto fRows = [&]<auto... I>(auto j, std::index_sequence<I...>) {
+        ((std::forward<TLhsMatrix>(A)(I, j) += std::forward<TRhsMatrix>(B)(I, j)), ...);
+    };
+    auto fCols = [&]<auto... J>(std::index_sequence<J...>) {
+        (fRows(J, std::make_index_sequence<TLhsMatrix::kRows>()), ...);
+    };
+    fCols(std::make_index_sequence<TLhsMatrix::kCols>());
+    return A;
+}
+
+template <class /*CMatrix*/ TMatrix>
+__host__ __device__ auto operator-(TMatrix&& A)
+{
+    using MatrixType = std::remove_cvref_t<TMatrix>;
+    static_assert(CMatrix<MatrixType>, "Input must satisfy concept CMatrix");
+    using ScalarType = typename TMatrix::ScalarType;
+    return Scale<TMatrix>(ScalarType(-1.), std::forward<TMatrix>(A));
+}
+
+template <class /*CMatrix*/ TLhsMatrix, class /*CMatrix*/ TRhsMatrix>
+__host__ __device__ auto operator-(TLhsMatrix&& A, TRhsMatrix&& B)
+{
+    using LhsMatrixType = std::remove_cvref_t<TLhsMatrix>;
+    static_assert(CMatrix<LhsMatrixType>, "Input must satisfy concept CMatrix");
+    using RhsMatrixType = std::remove_cvref_t<TRhsMatrix>;
+    static_assert(CMatrix<RhsMatrixType>, "Input must satisfy concept CMatrix");
     using NegatedMatrixType = Scale<TRhsMatrix>;
-    NegatedMatrixType negB  = -B;
-    return Sum<TLhsMatrix, NegatedMatrixType>(A, negB);
+    NegatedMatrixType negB  = -std::forward<TRhsMatrix>(B);
+    return Sum<TLhsMatrix, NegatedMatrixType>(std::forward<TLhsMatrix>(A), negB);
+}
+
+template <class /*CMatrix*/ TLhsMatrix, class /*CMatrix*/ TRhsMatrix>
+__host__ __device__ auto operator-=(TLhsMatrix&& A, TRhsMatrix&& B)
+{
+    using LhsMatrixType = std::remove_cvref_t<TLhsMatrix>;
+    static_assert(CMatrix<LhsMatrixType>, "Input must satisfy concept CMatrix");
+    using RhsMatrixType = std::remove_cvref_t<TRhsMatrix>;
+    static_assert(CMatrix<RhsMatrixType>, "Input must satisfy concept CMatrix");
+    static_assert(
+        LhsMatrixType::kRows == RhsMatrixType::kRows and
+            LhsMatrixType::kCols == RhsMatrixType::kCols,
+        "A and B must have same dimensions");
+    auto fRows = [&]<auto... I>(auto j, std::index_sequence<I...>) {
+        (std::forward<TLhsMatrix>(A)(I, j) -= std::forward<TRhsMatrix>(B)(I, j), ...);
+    };
+    auto fCols = [&]<auto... J>(std::index_sequence<J...>) {
+        (fRows(J, std::make_index_sequence<LhsMatrixType::kRows>()), ...);
+    };
+    fCols(std::make_index_sequence<LhsMatrixType::kCols>());
+    return A;
 }
 
 template <class /*CMatrix*/ TLhsMatrix, class /*CMatrix*/ TRhsMatrix>
@@ -468,64 +625,108 @@ __host__ __device__ auto operator*(TLhsMatrix const& A, TRhsMatrix const& B)
 }
 
 template <class /*CMatrix*/ TMatrix>
-__host__ __device__ auto operator*(typename TMatrix::ScalarType k, TMatrix const& A)
+__host__ __device__ auto operator*(typename TMatrix::ScalarType k, TMatrix&& A)
 {
-    return Scale<TMatrix>(k, A);
+    using MatrixType = std::remove_cvref_t<TMatrix>;
+    static_assert(CMatrix<MatrixType>, "Input must satisfy concept CMatrix");
+    return Scale<TMatrix>(k, std::forward<TMatrix>(A));
 }
 
 template <class /*CMatrix*/ TMatrix>
-__host__ __device__ auto operator/(TMatrix const& A, typename TMatrix::ScalarType k)
+__host__ __device__ auto operator*=(TMatrix&& A, typename TMatrix::ScalarType k)
 {
-    using ScalarType = typename TMatrix::ScalarType;
-    return Scale<TMatrix>(ScalarType(1. / k), A);
+    using MatrixType = std::remove_cvref_t<TMatrix>;
+    static_assert(CMatrix<MatrixType>, "Input must satisfy concept CMatrix");
+    auto fRows = [&]<auto... I>(auto j, std::index_sequence<I...>) {
+        (std::forward<TMatrix>(A)(I, j) *= k, ...);
+    };
+    auto fCols = [&]<auto... J>(std::index_sequence<J...>) {
+        (fRows(J, std::make_index_sequence<TMatrix::kRows>()), ...);
+    };
+    fCols(std::make_index_sequence<TMatrix::kCols>());
+    return A;
 }
 
 template <class /*CMatrix*/ TMatrix>
-__host__ __device__ auto Trace(TMatrix const& A)
+__host__ __device__ auto operator/(TMatrix&& A, typename TMatrix::ScalarType k)
 {
+    using MatrixType = std::remove_cvref_t<TMatrix>;
+    static_assert(CMatrix<MatrixType>, "Input must satisfy concept CMatrix");
+    using ScalarType = typename MatrixType::ScalarType;
+    return Scale<TMatrix>(ScalarType(1. / k), std::forward<TMatrix>(A));
+}
+
+template <class /*CMatrix*/ TMatrix>
+__host__ __device__ auto operator/=(TMatrix&& A, typename TMatrix::ScalarType k)
+{
+    using MatrixType = std::remove_cvref_t<TMatrix>;
+    static_assert(CMatrix<MatrixType>, "Input must satisfy concept CMatrix");
+    auto fRows = [&]<auto... I>(auto j, std::index_sequence<I...>) {
+        (std::forward<TMatrix>(A)(I, j) /= k, ...);
+    };
+    auto fCols = [&]<auto... J>(std::index_sequence<J...>) {
+        (fRows(J, std::make_index_sequence<TMatrix::kRows>()), ...);
+    };
+    fCols(std::make_index_sequence<TMatrix::kCols>());
+    return A;
+}
+
+template <class /*CMatrix*/ TMatrix>
+__host__ __device__ auto Trace(TMatrix&& A)
+{
+    using MatrixType = std::remove_cvref_t<TMatrix>;
+    static_assert(CMatrix<MatrixType>, "Input must satisfy concept CMatrix");
     static_assert(TMatrix::kRows == TMatrix::kCols, "Cannot compute trace of non-square matrix");
-    typename TMatrix::ScalarType tr{0.};
-    for (auto i = 0; i < A.Cols(); ++i)
-        tr += A(i, i);
-    return tr;
+    auto sum = [&]<auto... I>(std::index_sequence<I...>) {
+        return (std::forward<TMatrix>(A)(I, I) + ...);
+    };
+    return sum(std::make_index_sequence<TMatrix::kRows>{});
 }
 
 template <class /*CMatrix*/ TMatrix>
-__host__ __device__ auto SquaredNorm(TMatrix const& A)
+__host__ __device__ auto SquaredNorm(TMatrix&& A)
 {
-    return Trace(A.Transpose() * A());
+    using MatrixType = std::remove_cvref_t<TMatrix>;
+    static_assert(CMatrix<MatrixType>, "Input must satisfy concept CMatrix");
+    return Trace(std::forward<TMatrix>(A).Transpose() * std::forward<TMatrix>(A));
 }
 
 template <class /*CMatrix*/ TMatrix>
-__host__ __device__ auto Norm(TMatrix const& A)
+__host__ __device__ auto Norm(TMatrix&& A)
 {
-    using ScalarType = typename TMatrix::ScalarType;
+    using MatrixType = std::remove_cvref_t<TMatrix>;
+    static_assert(CMatrix<MatrixType>, "Input must satisfy concept CMatrix");
+    using ScalarType = typename MatrixType::ScalarType;
     if constexpr (std::is_same_v<ScalarType, float>)
     {
-        return sqrtf(Trace(A));
+        return sqrtf(SquaredNorm(std::forward<TMatrix>(A)));
     }
     else
     {
-        return sqrt(Trace(A));
+        return sqrt(SquaredNorm(std::forward<TMatrix>(A)));
     }
 }
 
 template <class /*CMatrix*/ TLhsMatrix, class /*CMatrix*/ TRhsMatrix>
 __host__ __device__ auto Cross(TLhsMatrix&& A, TRhsMatrix&& B)
 {
-    return CrossProduct<TLhsMatrix, TRhsMatrix>(A, B);
+    return CrossProduct<TLhsMatrix, TRhsMatrix>(
+        std::forward<TLhsMatrix>(A),
+        std::forward<TRhsMatrix>(B));
 }
 
 template <class /*CMatrix*/ TMatrix>
 __host__ __device__ auto Determinant(TMatrix const& A)
 {
+    using MatrixType = std::remove_cvref_t<TMatrix>;
+    static_assert(CMatrix<MatrixType>, "Input must satisfy concept CMatrix");
     static_assert(
         TMatrix::kRows == TMatrix::kCols,
         "Cannot compute determinant of non-square matrix");
     static_assert(TMatrix::kRows < 4, "Determinant of matrix of dimensions >= 4 too costly");
     if constexpr (TMatrix::kRows == 1)
     {
-        return A(0, 0);
+        return std::forward<TMatrix>(A)(0, 0);
     }
     if constexpr (TMatrix::kRows == 2)
     {
@@ -542,9 +743,11 @@ __host__ __device__ auto Determinant(TMatrix const& A)
 }
 
 template <auto RepeatRows, auto RepeatCols, class /*CMatrix*/ TMatrix>
-__host__ __device__ auto Repeat(TMatrix const& A)
+__host__ __device__ auto Repeat(TMatrix&& A)
 {
-    return TiledView<TMatrix, RepeatRows, RepeatCols>(A);
+    using MatrixType = std::remove_cvref_t<TMatrix>;
+    static_assert(CMatrix<MatrixType>, "Input must satisfy concept CMatrix");
+    return TiledView<TMatrix, RepeatRows, RepeatCols>(std::forward<TMatrix>(A));
 }
 
 } // namespace linalg
