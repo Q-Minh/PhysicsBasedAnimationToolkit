@@ -8,6 +8,7 @@
 #include "pbat/gpu/Aliases.h"
 #include "pbat/gpu/common/Buffer.cuh"
 #include "pbat/gpu/geometry/PrimitivesImpl.cuh"
+#include "pbat/gpu/geometry/SweepAndPruneImpl.cuh"
 
 #include <array>
 #include <cstddef>
@@ -31,7 +32,8 @@ class XpbdImpl
     XpbdImpl(
         Eigen::Ref<GpuMatrixX const> const& V,
         Eigen::Ref<GpuIndexMatrixX const> const& F,
-        Eigen::Ref<GpuIndexMatrixX const> const& T);
+        Eigen::Ref<GpuIndexMatrixX const> const& T, 
+        std::size_t nMaxVertexTriangleOverlaps);
     /**
      * @brief
      */
@@ -135,7 +137,10 @@ class XpbdImpl
     geometry::PointsImpl V;    ///< Vertex/particle positions
     geometry::SimplicesImpl F; ///< Triangle simplices
     geometry::SimplicesImpl T; ///< Tetrahedral simplices
+    geometry::SweepAndPruneImpl SAP; ///< Sweep and prune broad phase
   private:
+    geometry::SimplicesImpl VS; ///< Vertex simplices
+
     common::Buffer<GpuScalar, 3> mPositions;      ///< Vertex/particle positions at time t
     common::Buffer<GpuScalar, 3> mVelocities;     ///< Vertex/particle velocities
     common::Buffer<GpuScalar, 3> mExternalForces; ///< Vertex/particle external forces

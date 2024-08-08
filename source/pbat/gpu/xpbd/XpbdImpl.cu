@@ -196,10 +196,13 @@ struct FUpdateSolution
 XpbdImpl::XpbdImpl(
     Eigen::Ref<GpuMatrixX const> const& Vin,
     Eigen::Ref<GpuIndexMatrixX const> const& Fin,
-    Eigen::Ref<GpuIndexMatrixX const> const& Tin)
+    Eigen::Ref<GpuIndexMatrixX const> const& Tin,
+    std::size_t nMaxVertexTriangleOverlaps)
     : V(Vin),
       F(Fin),
       T(Tin),
+      SAP(Vin.cols() + Fin.cols(), nMaxVertexTriangleOverlaps),
+      VS(GpuIndexMatrixX{GpuIndexVectorX::LinSpaced(0, Vin.cols() - 1)}.transpose()),
       mPositions(Vin.cols()),
       mVelocities(Vin.cols()),
       mExternalForces(Vin.cols()),
@@ -254,7 +257,8 @@ void XpbdImpl::Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps)
     GpuScalar const sdt       = dt / static_cast<GpuScalar>(substeps);
     GpuScalar const sdt2      = sdt * sdt;
     GpuIndex const nParticles = static_cast<GpuIndex>(NumberOfParticles());
-    // TODO: Detect collision candidates and setup collision constraint solve
+    // Detect collision candidates and setup collision constraint solve
+    SAP.SortAndSweep(V, VS, F, 1e-3f);
     // ...
 
     auto& nextPositions = V.x;
@@ -498,7 +502,7 @@ TEST_CASE("[gpu][xpbd] Xpbd")
 
     // Act
     using pbat::gpu::xpbd::XpbdImpl;
-    XpbdImpl xpbd{V, F, T};
+    XpbdImpl xpbd{V, F, T, 10 * V.cols()};
     xpbd.SetLameCoefficients(lame);
     xpbd.PrepareConstraints();
     // Assert

@@ -55,8 +55,6 @@ if __name__ == "__main__":
     V, C = imesh.points, imesh.cells_dict["tetra"]
     mesh = pbat.fem.Mesh(
         V.T, C.T, element=pbat.fem.Element.Tetrahedron, order=1)
-    x = mesh.X.reshape(math.prod(mesh.X.shape), order='f')
-    v = np.zeros(x.shape[0])
     detJeM = pbat.fem.jacobian_determinants(mesh, quadrature_order=2)
     rho = args.rho
     M = pbat.fem.MassMatrix(mesh, detJeM, rho=rho,
