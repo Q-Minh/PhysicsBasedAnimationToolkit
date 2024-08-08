@@ -452,3 +452,61 @@ std::vector<common::Buffer<GpuIndex>> const& XpbdImpl::GetPartitions() const
 } // namespace xpbd
 } // namespace gpu
 } // namespace pbat
+
+#include "pbat/common/Eigen.h"
+#include "pbat/physics/HyperElasticity.h"
+
+#include <doctest/doctest.h>
+
+TEST_CASE("[gpu][xpbd] Xpbd")
+{
+    using namespace pbat;
+    // Arrange
+    GpuMatrixX V(3, 4);
+    GpuIndexMatrixX F(3, 4);
+    GpuIndexMatrixX T(4, 1);
+    GpuMatrixX lame(2, 1);
+    auto constexpr Y        = 1e6;
+    auto constexpr nu       = 0.45;
+    auto const [mu, lambda] = physics::LameCoefficients(Y, nu);
+    lame(0, 0)              = static_cast<GpuScalar>(mu);
+    lame(1, 0)              = static_cast<GpuScalar>(lambda);
+    // Unit tetrahedron
+    // clang-format off
+    V << 0.f, 1.f, 0.f, 0.f,
+         0.f, 0.f, 1.f, 0.f,
+         0.f, 0.f, 0.f, 1.f;
+    F << 0, 1, 2, 0,
+         1, 2, 0, 2,
+         3, 3, 3, 1;
+    T << 0, 
+         1, 
+         2, 
+         3;
+    // clang-format on
+    GpuScalar constexpr tetVolumeExpected = GpuScalar{1.} / GpuScalar{6.};
+    GpuMatrixX alphaExpected(2, 1);
+    alphaExpected(0, 0)           = GpuScalar{1.} / (tetVolumeExpected * lame(0, 0));
+    alphaExpected(1, 0)           = GpuScalar{1.} / (tetVolumeExpected * lame(1, 0));
+    GpuScalar const gammaExpected = GpuScalar{1.} + lame(0, 0) / lame(1, 0);
+    GpuScalar constexpr zero      = 1e-10f;
+
+    // Act
+    using pbat::gpu::xpbd::XpbdImpl;
+    XpbdImpl xpbd{V, F, T};
+    xpbd.SetLameCoefficients(lame);
+    xpbd.PrepareConstraints();
+    // Assert
+    auto const& alphaGpu = xpbd.GetCompliance(XpbdImpl::EConstraint::StableNeoHookean);
+    CHECK_EQ(alphaGpu.Size(), 2);
+    GpuMatrixX alpha = common::ToEigen(alphaGpu.Get()).reshaped(2, alphaGpu.Size() / 2);
+    CHECK(alpha.isApprox(alphaExpected, zero));
+    auto const& DmInvGpu = xpbd.GetShapeMatrixInverse();
+    CHECK_EQ(DmInvGpu.Size(), 9);
+    GpuMatrixX DmInv = common::ToEigen(DmInvGpu.Get()).reshaped(3, DmInvGpu.Size() / 3);
+    CHECK(DmInv.isApprox(GpuMatrixX::Identity(3, 3), zero));
+    auto const& gammaGpu = xpbd.GetRestStableGamma();
+    CHECK_EQ(gammaGpu.Size(), 1);
+    GpuVectorX gamma = common::ToEigen(gammaGpu.Get());
+    CHECK_LE(std::abs(gamma(0) - gammaExpected), zero);
+}
