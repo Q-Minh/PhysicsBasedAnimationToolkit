@@ -60,7 +60,7 @@ if __name__ == "__main__":
     rho = args.rho
     M = pbat.fem.MassMatrix(mesh, detJeM, rho=rho,
                             dims=1, quadrature_order=2).to_matrix()
-    m = M.sum(axis=0)
+    m = np.array(M.sum(axis=0)).squeeze()
 
     # Construct load vector from gravity field
     detJeU = pbat.fem.jacobian_determinants(mesh, quadrature_order=1)
@@ -81,12 +81,12 @@ if __name__ == "__main__":
     lambdae = (Y*nu) / ((1+nu)*(1-2*nu))
 
     # Set Dirichlet boundary conditions
-    # Xmin = mesh.X.min(axis=1)
-    # Xmax = mesh.X.max(axis=1)
-    # Xmax[0] = Xmin[0]+1e-4
-    # Xmin[0] = Xmin[0]-1e-4
-    # aabb = pbat.geometry.aabb(np.vstack((Xmin, Xmax)).T)
-    # vdbc = aabb.contained(mesh.X)
+    Xmin = mesh.X.min(axis=1)
+    Xmax = mesh.X.max(axis=1)
+    Xmax[0] = Xmin[0]+1e-4
+    Xmin[0] = Xmin[0]-1e-4
+    aabb = pbat.geometry.aabb(np.vstack((Xmin, Xmax)).T)
+    vdbc = aabb.contained(mesh.X)
     # m[vdbc] = 0.  # XPBD allows fixing particles by zeroing out their mass
 
     # Setup XPBD
@@ -99,16 +99,6 @@ if __name__ == "__main__":
     partitions, GC = partition_constraints(mesh.E.T)
     xpbd.partitions = partitions
     xpbd.prepare()
-    
-    xgpu = xpbd.x
-    vgpu = xpbd.v
-    fgpu = xpbd.f
-    mgpu = xpbd.m
-    lamegpu = xpbd.lame
-    dminvgpu = xpbd.shape_matrix_inverse
-    lambdagpu = xpbd.lagrange(pbat.gpu.xpbd.ConstraintType.StableNeoHookean)
-    alphagpu = xpbd.alpha(pbat.gpu.xpbd.ConstraintType.StableNeoHookean)
-    partitionsgpu = xpbd.partitions
 
     ps.set_verbosity(0)
     ps.set_up_dir("z_up")
@@ -119,10 +109,10 @@ if __name__ == "__main__":
     ps.init()
     vm = ps.register_volume_mesh("world model", xpbd.x.T, mesh.E.T)
     vm.add_scalar_quantity("Coloring", GC, defined_on="cells", cmap="jet")
-    # pc = ps.register_point_cloud("Dirichlet", mesh.X[:, vdbc].T)
+    pc = ps.register_point_cloud("Dirichlet", mesh.X[:, vdbc].T)
     dt = 0.01
-    iterations = 10
-    substeps = 5
+    iterations = 5
+    substeps = 10
     animate = False
 
     profiler = pbat.profiling.Profiler()

@@ -83,8 +83,8 @@ struct FProjectConstraint
     {
         GpuScalar dlambda =
             -(C + atilde * lambdac) /
-            (mc(0) * SquaredNorm(gradC.Col(0)) + mc(1) * SquaredNorm(gradC.Col(1)) +
-             mc(2) * SquaredNorm(gradC.Col(2)) + mc(3) * SquaredNorm(gradC.Col(3)) + atilde);
+            (SquaredNorm(gradC.Col(0)) / mc(0) + SquaredNorm(gradC.Col(1)) / mc(1) +
+             SquaredNorm(gradC.Col(2)) / mc(2) + SquaredNorm(gradC.Col(3)) / mc(3) + atilde);
         lambdac += dlambda;
         xc.Col(0) += (dlambda / mc(0)) * gradC.Col(0);
         xc.Col(1) += (dlambda / mc(1)) * gradC.Col(1);
@@ -371,11 +371,12 @@ void XpbdImpl::SetExternalForces(Eigen::Ref<GpuMatrixX const> const& fIn)
 void XpbdImpl::SetMass(Eigen::Ref<GpuMatrixX const> const& mIn)
 {
     auto const nParticles = static_cast<GpuIndex>(mMasses.Size());
-    if (mIn.rows() != 1 and mIn.cols() != nParticles)
+    if (not(mIn.rows() == 1 and mIn.cols() == nParticles) and
+        not(mIn.rows() == nParticles and mIn.cols() == 1))
     {
         std::ostringstream ss{};
         ss << "Expected masses of dimensions " << mMasses.Dimensions() << "x" << mMasses.Size()
-           << ", but got " << mIn.rows() << "x" << mIn.cols() << "\n";
+           << " or its transpose, but got " << mIn.rows() << "x" << mIn.cols() << "\n";
         throw std::invalid_argument(ss.str());
     }
     thrust::copy(mIn.data(), mIn.data() + mIn.size(), mMasses.Data());
