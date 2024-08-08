@@ -70,9 +70,9 @@ class XpbdImpl
     void SetExternalForces(Eigen::Ref<GpuMatrixX const> const& f);
     /**
      * @brief
-     * @param m
+     * @param minv
      */
-    void SetMass(Eigen::Ref<GpuMatrixX const> const& m);
+    void SetMassInverse(Eigen::Ref<GpuMatrixX const> const& minv);
     /**
      * @brief
      * @param l
@@ -97,7 +97,7 @@ class XpbdImpl
      * @brief
      * @return
      */
-    common::Buffer<GpuScalar> const& GetMass() const;
+    common::Buffer<GpuScalar> const& GetMassInverse() const;
     /**
      * @brief
      * @return
@@ -139,7 +139,7 @@ class XpbdImpl
     common::Buffer<GpuScalar, 3> mPositions;      ///< Vertex/particle positions at time t
     common::Buffer<GpuScalar, 3> mVelocities;     ///< Vertex/particle velocities
     common::Buffer<GpuScalar, 3> mExternalForces; ///< Vertex/particle external forces
-    common::Buffer<GpuScalar> mMasses;            ///< Vertex/particle masses
+    common::Buffer<GpuScalar> mMassInverses;      ///< Vertex/particle mass inverses
     common::Buffer<GpuScalar> mLame;              ///< Lame coefficients
     common::Buffer<GpuScalar>
         mShapeMatrixInverses; ///< 3x3x|#elements| array of material shape matrix inverses

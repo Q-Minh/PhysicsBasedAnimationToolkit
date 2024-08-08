@@ -33,7 +33,7 @@ def partition_constraints(C):
         constraints = np.nonzero(GC == p)[0]
         partitions[p] = constraints.tolist()
     return partitions, GC
-    
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
@@ -50,7 +50,8 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # Construct FEM quantities for simulation
-    imesh = meshio.read(args.inputs[0])  # TODO: Combine all input meshes into 1
+    # TODO: Combine all input meshes into 1
+    imesh = meshio.read(args.inputs[0])
     V, C = imesh.points, imesh.cells_dict["tetra"]
     mesh = pbat.fem.Mesh(
         V.T, C.T, element=pbat.fem.Element.Tetrahedron, order=1)
@@ -87,14 +88,15 @@ if __name__ == "__main__":
     Xmin[0] = Xmin[0]-1e-4
     aabb = pbat.geometry.aabb(np.vstack((Xmin, Xmax)).T)
     vdbc = aabb.contained(mesh.X)
-    # m[vdbc] = 0.  # XPBD allows fixing particles by zeroing out their mass
+    minv = 1 / m
+    minv[vdbc] = 0.  # XPBD allows fixing particles by zeroing out their mass
 
     # Setup XPBD
     F = igl.boundary_facets(mesh.E.T)
     F[:, :2] = np.roll(F[:, :2], shift=1, axis=1)
     xpbd = pbat.gpu.xpbd.Xpbd(mesh.X, F.T, mesh.E)
     xpbd.f = f
-    xpbd.m = m
+    xpbd.minv = minv
     xpbd.lame = np.vstack((mue, lambdae))
     partitions, GC = partition_constraints(mesh.E.T)
     xpbd.partitions = partitions

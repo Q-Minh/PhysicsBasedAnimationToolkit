@@ -58,7 +58,7 @@ struct FInitializeSolution
     {
         for (auto d = 0; d < 3; ++d)
         {
-            x[d][i] = xt[d][i] + dt * v[d][i] + dt2 * f[d][i] / m[i];
+            x[d][i] = xt[d][i] + dt * v[d][i] + dt2 * minv[i] * f[d][i];
         }
     }
 
@@ -66,7 +66,7 @@ struct FInitializeSolution
     std::array<GpuScalar*, 3> x;
     std::array<GpuScalar*, 3> v;
     std::array<GpuScalar*, 3> f;
-    GpuScalar* m;
+    GpuScalar* minv;
     GpuScalar dt;
     GpuScalar dt2;
 };
@@ -76,25 +76,25 @@ struct FProjectConstraint
     __device__ void Project(
         GpuScalar C,
         math::linalg::Matrix<GpuScalar, 3, 4> const& gradC,
-        math::linalg::Matrix<GpuScalar, 4, 1> const& mc,
+        math::linalg::Matrix<GpuScalar, 4, 1> const& minvc,
         GpuScalar atilde,
         GpuScalar& lambdac,
         math::linalg::Matrix<GpuScalar, 3, 4>& xc)
     {
         GpuScalar dlambda =
             -(C + atilde * lambdac) /
-            (SquaredNorm(gradC.Col(0)) / mc(0) + SquaredNorm(gradC.Col(1)) / mc(1) +
-             SquaredNorm(gradC.Col(2)) / mc(2) + SquaredNorm(gradC.Col(3)) / mc(3) + atilde);
+            (minvc(0) * SquaredNorm(gradC.Col(0)) + minvc(1) * SquaredNorm(gradC.Col(1)) +
+             minvc(2) * SquaredNorm(gradC.Col(2)) + minvc(3) * SquaredNorm(gradC.Col(3)) + atilde);
         lambdac += dlambda;
-        xc.Col(0) += (dlambda / mc(0)) * gradC.Col(0);
-        xc.Col(1) += (dlambda / mc(1)) * gradC.Col(1);
-        xc.Col(2) += (dlambda / mc(2)) * gradC.Col(2);
-        xc.Col(3) += (dlambda / mc(3)) * gradC.Col(3);
+        xc.Col(0) += (minvc(0) * dlambda) * gradC.Col(0);
+        xc.Col(1) += (minvc(1) * dlambda) * gradC.Col(1);
+        xc.Col(2) += (minvc(2) * dlambda) * gradC.Col(2);
+        xc.Col(3) += (minvc(3) * dlambda) * gradC.Col(3);
     }
 
     __device__ void ProjectHydrostatic(
         GpuIndex c,
-        math::linalg::Matrix<GpuScalar, 4, 1> const& mc,
+        math::linalg::Matrix<GpuScalar, 4, 1> const& minvc,
         GpuScalar atilde,
         GpuScalar gammac,
         GpuScalar& lambdac,
@@ -111,12 +111,12 @@ struct FProjectConstraint
         Matrix<GpuScalar, 3, 4> gradC{};
         gradC.Slice<3, 3>(0, 1) = P * DmInvC.Transpose();
         gradC.Col(0)            = -(gradC.Col(1) + gradC.Col(2) + gradC.Col(3));
-        Project(C, gradC, mc, atilde, lambdac, xc);
+        Project(C, gradC, minvc, atilde, lambdac, xc);
     }
 
     __device__ void ProjectDeviatoric(
         GpuIndex c,
-        math::linalg::Matrix<GpuScalar, 4, 1> const& mc,
+        math::linalg::Matrix<GpuScalar, 4, 1> const& minvc,
         GpuScalar atilde,
         GpuScalar& lambdac,
         math::linalg::Matrix<GpuScalar, 3, 4>& xc)
@@ -128,7 +128,7 @@ struct FProjectConstraint
         Matrix<GpuScalar, 3, 4> gradC{};
         gradC.Slice<3, 3>(0, 1) = (F * DmInvC.Transpose()) / (C /*+ 1e-8*/);
         gradC.Col(0)            = -(gradC.Col(1) + gradC.Col(2) + gradC.Col(3));
-        Project(C, gradC, mc, atilde, lambdac, xc);
+        Project(C, gradC, minvc, atilde, lambdac, xc);
     }
 
     __device__ void operator()(GpuIndex c)
@@ -141,9 +141,9 @@ struct FProjectConstraint
         for (auto d = 0; d < 3; ++d)
             for (auto j = 0; j < 4; ++j)
                 xc(d, j) = x[d][v[j]];
-        Matrix<GpuScalar, 4, 1> mc{};
+        Matrix<GpuScalar, 4, 1> minvc{};
         for (auto j = 0; j < 4; ++j)
-            mc(j) = m[v[j]];
+            minvc(j) = minv[v[j]];
         Matrix<GpuScalar, 2, 1> lambdac{};
         lambdac(0) = lambda[2 * c];
         lambdac(1) = lambda[2 * c + 1];
@@ -152,8 +152,8 @@ struct FProjectConstraint
         atilde(1) = alpha[2 * c + 1] / dt2;
 
         // 2. Project elastic constraints
-        ProjectDeviatoric(c, mc, atilde(0), lambdac(0), xc);
-        ProjectHydrostatic(c, mc, atilde(1), gamma[c], lambdac(1), xc);
+        ProjectDeviatoric(c, minvc, atilde(0), lambdac(0), xc);
+        ProjectHydrostatic(c, minvc, atilde(1), gamma[c], lambdac(1), xc);
 
         // 3. Update global "Lagrange" multipliers and positions
         lambda[2 * c]     = lambdac(0);
@@ -167,7 +167,7 @@ struct FProjectConstraint
     GpuScalar* lambda;
 
     std::array<GpuIndex*, 4> T;
-    GpuScalar* m;
+    GpuScalar* minv;
     GpuScalar* alpha;
     GpuScalar* DmInv;
     GpuScalar* gamma;
@@ -203,7 +203,7 @@ XpbdImpl::XpbdImpl(
       mPositions(Vin.cols()),
       mVelocities(Vin.cols()),
       mExternalForces(Vin.cols()),
-      mMasses(Vin.cols()),
+      mMassInverses(Vin.cols()),
       mLame(2 * Tin.cols()),
       mShapeMatrixInverses(9 * Tin.cols()),
       mRestStableGamma(Tin.cols()),
@@ -222,7 +222,10 @@ XpbdImpl::XpbdImpl(
         thrust::copy(V.x[d].begin(), V.x[d].end(), mPositions[d].begin());
         thrust::fill(mVelocities[d].begin(), mVelocities[d].end(), GpuScalar{0.});
         thrust::fill(mExternalForces[d].begin(), mExternalForces[d].end(), GpuScalar{0.});
-        thrust::fill(mMasses.Data(), mMasses.Data() + mMasses.Size(), GpuScalar{1.});
+        thrust::fill(
+            mMassInverses.Data(),
+            mMassInverses.Data() + mMassInverses.Size(),
+            GpuScalar{1.});
     }
 }
 
@@ -276,7 +279,7 @@ void XpbdImpl::Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps)
                 nextPositions.Raw(),
                 mVelocities.Raw(),
                 mExternalForces.Raw(),
-                mMasses.Raw(),
+                mMassInverses.Raw(),
                 sdt,
                 sdt2});
         // Solve constraints
@@ -293,7 +296,7 @@ void XpbdImpl::Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps)
                         nextPositions.Raw(),
                         thrust::raw_pointer_cast(mLagrangeMultipliers[StableNeoHookean].Data()),
                         T.inds.Raw(),
-                        mMasses.Raw(),
+                        mMassInverses.Raw(),
                         thrust::raw_pointer_cast(mCompliance[StableNeoHookean].Data()),
                         mShapeMatrixInverses.Raw(),
                         mRestStableGamma.Raw(),
@@ -368,18 +371,19 @@ void XpbdImpl::SetExternalForces(Eigen::Ref<GpuMatrixX const> const& fIn)
         thrust::copy(fIn.row(d).begin(), fIn.row(d).end(), mExternalForces[d].begin());
 }
 
-void XpbdImpl::SetMass(Eigen::Ref<GpuMatrixX const> const& mIn)
+void XpbdImpl::SetMassInverse(Eigen::Ref<GpuMatrixX const> const& minv)
 {
-    auto const nParticles = static_cast<GpuIndex>(mMasses.Size());
-    if (not(mIn.rows() == 1 and mIn.cols() == nParticles) and
-        not(mIn.rows() == nParticles and mIn.cols() == 1))
+    auto const nParticles = static_cast<GpuIndex>(mMassInverses.Size());
+    if (not(minv.rows() == 1 and minv.cols() == nParticles) and
+        not(minv.rows() == nParticles and minv.cols() == 1))
     {
         std::ostringstream ss{};
-        ss << "Expected masses of dimensions " << mMasses.Dimensions() << "x" << mMasses.Size()
-           << " or its transpose, but got " << mIn.rows() << "x" << mIn.cols() << "\n";
+        ss << "Expected mass inverses of dimensions " << mMassInverses.Dimensions() << "x"
+           << mMassInverses.Size() << " or its transpose, but got " << minv.rows() << "x"
+           << minv.cols() << "\n";
         throw std::invalid_argument(ss.str());
     }
-    thrust::copy(mIn.data(), mIn.data() + mIn.size(), mMasses.Data());
+    thrust::copy(minv.data(), minv.data() + minv.size(), mMassInverses.Data());
 }
 
 void XpbdImpl::SetLameCoefficients(Eigen::Ref<GpuMatrixX const> const& l)
@@ -415,9 +419,9 @@ common::Buffer<GpuScalar, 3> const& XpbdImpl::GetExternalForce() const
     return mExternalForces;
 }
 
-common::Buffer<GpuScalar> const& XpbdImpl::GetMass() const
+common::Buffer<GpuScalar> const& XpbdImpl::GetMassInverse() const
 {
-    return mMasses;
+    return mMassInverses;
 }
 
 common::Buffer<GpuScalar> const& XpbdImpl::GetLameCoefficients() const

@@ -79,9 +79,9 @@ void Xpbd::SetExternalForces(Eigen::Ref<GpuMatrixX const> const& f)
     mImpl->SetExternalForces(f);
 }
 
-void Xpbd::SetMass(Eigen::Ref<GpuMatrixX const> const& m)
+void Xpbd::SetMassInverse(Eigen::Ref<GpuMatrixX const> const& minv)
 {
-    mImpl->SetMass(m);
+    mImpl->SetMassInverse(minv);
 }
 
 void Xpbd::SetLameCoefficients(Eigen::Ref<GpuMatrixX const> const& l)
@@ -116,12 +116,12 @@ GpuMatrixX Xpbd::GetExternalForce() const
     return f;
 }
 
-GpuVectorX Xpbd::GetMass() const
+GpuVectorX Xpbd::GetMassInverse() const
 {
-    auto const& mGpu = mImpl->GetMass();
-    GpuVectorX m(mGpu.Size());
-    thrust::copy(mGpu.Data(), mGpu.Data() + mGpu.Size(), m.begin());
-    return m;
+    auto const& minvGpu = mImpl->GetMassInverse();
+    GpuVectorX minv(minvGpu.Size());
+    thrust::copy(minvGpu.Data(), minvGpu.Data() + minvGpu.Size(), minv.begin());
+    return minv;
 }
 
 GpuMatrixX Xpbd::GetLameCoefficients() const

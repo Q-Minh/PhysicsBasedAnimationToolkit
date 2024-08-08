@@ -79,9 +79,9 @@ class Xpbd
     void SetExternalForces(Eigen::Ref<GpuMatrixX const> const& f);
     /**
      * @brief
-     * @param m
+     * @param minv
      */
-    void SetMass(Eigen::Ref<GpuMatrixX const> const& m);
+    void SetMassInverse(Eigen::Ref<GpuMatrixX const> const& minv);
     /**
      * @brief
      * @param l
@@ -106,7 +106,7 @@ class Xpbd
      * @brief
      * @return
      */
-    GpuVectorX GetMass() const;
+    GpuVectorX GetMassInverse() const;
     /**
      * @brief
      * @return

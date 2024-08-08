@@ -103,17 +103,19 @@ void Bind(pybind11::module& m)
             },
             "|#dims|x|#particles| particle external forces")
         .def_property(
-            "m",
+            "minv",
             [](Xpbd const& xpbd) {
-                return pbat::profiling::Profile("pbat.gpu.xpbd.Xpbd.GetMass", [&]() {
-                    GpuVectorX m = xpbd.GetMass();
-                    return m;
+                return pbat::profiling::Profile("pbat.gpu.xpbd.Xpbd.GetMassInverse", [&]() {
+                    GpuVectorX minv = xpbd.GetMassInverse();
+                    return minv;
                 });
             },
-            [](Xpbd& xpbd, Eigen::Ref<GpuMatrixX const> const& m) {
-                pbat::profiling::Profile("pbat.gpu.xpbd.Xpbd.SetMass", [&]() { xpbd.SetMass(m); });
+            [](Xpbd& xpbd, Eigen::Ref<GpuMatrixX const> const& minv) {
+                pbat::profiling::Profile("pbat.gpu.xpbd.Xpbd.SetMassInverse", [&]() {
+                    xpbd.SetMassInverse(minv);
+                });
             },
-            "|#particles| particle masses")
+            "|#particles| particle mass inverses")
         .def_property(
             "lame",
             [](Xpbd const& xpbd) {
