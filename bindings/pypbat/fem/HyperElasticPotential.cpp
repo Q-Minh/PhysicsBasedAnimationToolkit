@@ -235,7 +235,7 @@ void BindHyperElasticPotential(pybind11::module& m)
             "Piecewise constant (per-element) vector of first Lame coefficients")
         .def_property(
             "lambdae",
-            [](HyperElasticPotential const& M) { return M.mue(); },
+            [](HyperElasticPotential const& M) { return M.lambdae(); },
             [](HyperElasticPotential& M, Eigen::Ref<VectorX const> const& lambdae) {
                 M.lambdae() = lambdae;
             },

@@ -7,7 +7,6 @@
 
 #include "pbat/gpu/Aliases.h"
 #include "pbat/gpu/common/Buffer.cuh"
-#include "pbat/gpu/common/Var.cuh"
 #include "pbat/gpu/geometry/PrimitivesImpl.cuh"
 
 #include <array>
@@ -29,7 +28,10 @@ class XpbdImpl
      * @param V
      * @param T
      */
-    XpbdImpl(Eigen::Ref<GpuMatrixX const> const& V, Eigen::Ref<GpuIndexMatrixX const> const& T);
+    XpbdImpl(
+        Eigen::Ref<GpuMatrixX const> const& V,
+        Eigen::Ref<GpuIndexMatrixX const> const& F,
+        Eigen::Ref<GpuIndexMatrixX const> const& T);
     /**
      * @brief
      */
@@ -51,6 +53,11 @@ class XpbdImpl
      * @return
      */
     std::size_t NumberOfConstraints() const;
+    /**
+     * @brief
+     * @param X
+     */
+    void SetPositions(Eigen::Ref<GpuMatrixX const> const& X);
     /**
      * @brief
      * @param v
@@ -76,9 +83,57 @@ class XpbdImpl
      * @param partitions
      */
     void SetConstraintPartitions(std::vector<std::vector<GpuIndex>> const& partitions);
+    /**
+     * @brief
+     * @return
+     */
+    common::Buffer<GpuScalar, 3> const& GetVelocity() const;
+    /**
+     * @brief
+     * @return
+     */
+    common::Buffer<GpuScalar, 3> const& GetExternalForce() const;
+    /**
+     * @brief
+     * @return
+     */
+    common::Buffer<GpuScalar> const& GetMass() const;
+    /**
+     * @brief
+     * @return
+     */
+    common::Buffer<GpuScalar> const& GetLameCoefficients() const;
+    /**
+     * @brief
+     * @return
+     */
+    common::Buffer<GpuScalar> const& GetShapeMatrixInverse() const;
+    /**
+     * @brief
+     * @return
+     */
+    common::Buffer<GpuScalar> const& GetRestStableGamma() const;
+    /**
+     * @brief
+     * @param eConstraint
+     * @return
+     */
+    common::Buffer<GpuScalar> const& GetLagrangeMultiplier(EConstraint eConstraint) const;
+    /**
+     * @brief
+     * @param eConstraint
+     * @return
+     */
+    common::Buffer<GpuScalar> const& GetCompliance(EConstraint eConstraint) const;
+    /**
+     * @brief
+     * @return
+     */
+    std::vector<common::Buffer<GpuIndex>> const& GetPartitions() const;
 
   public:
     geometry::PointsImpl V;    ///< Vertex/particle positions
+    geometry::SimplicesImpl F; ///< Triangle simplices
     geometry::SimplicesImpl T; ///< Tetrahedral simplices
   private:
     common::Buffer<GpuScalar, 3> mPositions;      ///< Vertex/particle positions at time t
@@ -88,7 +143,8 @@ class XpbdImpl
     common::Buffer<GpuScalar> mLame;              ///< Lame coefficients
     common::Buffer<GpuScalar>
         mShapeMatrixInverses; ///< 3x3x|#elements| array of material shape matrix inverses
-    common::Buffer<GpuScalar> mRestStableGamma; ///< 1. + mu/lambda, where mu,lambda are Lame coefficients
+    common::Buffer<GpuScalar>
+        mRestStableGamma; ///< 1. + mu/lambda, where mu,lambda are Lame coefficients
     std::array<common::Buffer<GpuScalar>, kConstraintTypes>
         mLagrangeMultipliers; ///< "Lagrange" multipliers:
                               ///< lambda[0] -> Stable Neo-Hookean constraint multipliers
