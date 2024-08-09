@@ -210,7 +210,9 @@ struct FVertexTriangleCollisionConstraint
     __device__ bool ProjectVertexTriangle(
         GpuIndex c,
         GpuScalar minvv,
+        GpuScalar atildec,
         math::linalg::Matrix<GpuScalar, 3, 3> const& xf,
+        GpuScalar& lambdac,
         math::linalg::Matrix<GpuScalar, 3, 1>& xv)
     {
         using namespace pbat::gpu::math::linalg;
@@ -240,9 +242,9 @@ struct FVertexTriangleCollisionConstraint
         // the vertex.
         if (minvv <= GpuScalar{1e-10})
             return false;
-        // GpuScalar dlambda = -C / minvv;
-        lambda[c] = Norm(C * n);
-        xv.Col(0) -= C * n;
+        GpuScalar dlambda = -(C + atildec * lambdac) / (minvv + atildec);
+        xv.Col(0) += dlambda * minvv * n;
+        lambdac += dlambda;
         return true;
     }
 
@@ -263,24 +265,29 @@ struct FVertexTriangleCollisionConstraint
             for (auto j = 0; j < 3; ++j)
                 xf(d, j) = x[d][vf[j]];
 
-        GpuScalar minvv = minv[vv];
+        GpuScalar minvv   = minv[vv];
+        GpuScalar atildec = alpha[c] / dt2;
+        GpuScalar lambdac = lambda[c];
 
         // 2. Project collision constraint
-        if (not ProjectVertexTriangle(c, minvv, xf, xv))
+        if (not ProjectVertexTriangle(c, minvv, atildec, xf, lambdac, xv))
             return;
 
         // 3. Update global positions
+        lambda[c] = lambdac;
         for (auto d = 0; d < 3; ++d)
             x[d][vv] = xv(d, 0);
     }
 
     std::array<GpuScalar*, 3> x;
+    GpuScalar* lambda;
 
     OverlapType const* overlaps;
     std::array<GpuIndex*, 4> V;
     std::array<GpuIndex*, 4> F;
     GpuScalar* minv;
-    GpuScalar* lambda;
+    GpuScalar* alpha;
+    GpuScalar dt2;
 };
 
 struct FUpdateSolution
@@ -369,7 +376,7 @@ void XpbdImpl::Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps)
     GpuIndex const nParticles = static_cast<GpuIndex>(NumberOfParticles());
     // Detect collision candidates and setup collision constraint solve
     using OverlapType = typename geometry::SweepAndPruneImpl::OverlapType;
-    SAP.SortAndSweep(X, V, F, 1e-3f);
+    SAP.SortAndSweep(X, V, F, GpuScalar{1e-3});
     GpuIndex const nVertexTriangleOverlaps      = SAP.no.Get();
     common::Buffer<OverlapType> const& overlaps = SAP.o;
 
@@ -425,11 +432,13 @@ void XpbdImpl::Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps)
                 thrust::make_counting_iterator<GpuIndex>(nVertexTriangleOverlaps),
                 kernels::FVertexTriangleCollisionConstraint{
                     nextPositions.Raw(),
+                    mLagrangeMultipliers[Collision].Raw(),
                     overlaps.Raw(),
                     V.inds.Raw(),
                     F.inds.Raw(),
                     mMassInverses.Raw(),
-                    mLagrangeMultipliers[Collision].Raw()});
+                    mCompliance[Collision].Raw(),
+                    sdt2});
         }
         // Update simulation state
         e = thrust::async::for_each(
@@ -466,7 +475,10 @@ void XpbdImpl::SetPositions(Eigen::Ref<GpuMatrixX const> const& Xin)
         throw std::invalid_argument(ss.str());
     }
     for (auto d = 0; d < mVelocities.Dimensions(); ++d)
+    {
         thrust::copy(Xin.row(d).begin(), Xin.row(d).end(), X.x[d].begin());
+        thrust::copy(Xin.row(d).begin(), Xin.row(d).end(), mPositions[d].begin());
+    }
 }
 
 void XpbdImpl::SetVelocities(Eigen::Ref<GpuMatrixX const> const& vIn)
@@ -523,6 +535,18 @@ void XpbdImpl::SetLameCoefficients(Eigen::Ref<GpuMatrixX const> const& l)
         throw std::invalid_argument(ss.str());
     }
     thrust::copy(l.data(), l.data() + l.size(), mLame.Data());
+}
+
+void XpbdImpl::SetCompliance(Eigen::Ref<GpuMatrixX const> const& alpha, EConstraint eConstraint)
+{
+    if (alpha.size() != mCompliance[eConstraint].Size())
+    {
+        std::ostringstream ss{};
+        ss << "Expected compliance of dimensions " << mCompliance[eConstraint].Size() << ", but got "
+           << alpha.size() << "\n";
+        throw std::invalid_argument(ss.str());
+    }
+    thrust::copy(alpha.data(), alpha.data() + alpha.size(), mCompliance[eConstraint].Data());
 }
 
 void XpbdImpl::SetConstraintPartitions(std::vector<std::vector<GpuIndex>> const& partitions)

@@ -8,6 +8,16 @@ import polyscope.imgui as imgui
 import math
 import argparse
 import networkx as nx
+import itertools
+
+
+def combine(V: list, C: list):
+    Vsizes = [Vi.shape[0] for Vi in V]
+    offsets = list(itertools.accumulate(Vsizes))
+    C = [C[i] + offsets[i] - Vsizes[i] for i in range(len(C))]
+    C = np.vstack(C)
+    V = np.vstack(V)
+    return V, C
 
 
 def color_dict_to_array(Cdict, n):
@@ -47,12 +57,19 @@ if __name__ == "__main__":
                         dest="Y", default=1e6)
     parser.add_argument("-n", "--poisson-ratio", help="Poisson's ratio", type=float,
                         dest="nu", default=0.45)
+    parser.add_argument("-t", "--translation", help="Distance in z axis between every input mesh as multiplier of input mesh extents", type=float,
+                        dest="translation", default=0.1)
     args = parser.parse_args()
 
     # Construct FEM quantities for simulation
-    # TODO: Combine all input meshes into 1
-    imesh = meshio.read(args.inputs[0])
-    V, C = imesh.points, imesh.cells_dict["tetra"]
+    imeshes = [meshio.read(input) for input in args.inputs]
+    V, C = [imesh.points / (imesh.points.max() - imesh.points.min()) for imesh in imeshes], [
+        imesh.cells_dict["tetra"] for imesh in imeshes]
+    for i in range(len(V) - 1):
+        extent = V[i][:, -1].max() - V[i][:, -1].min()
+        offset = V[i][:, -1].max() - V[i+1][:, -1].min()
+        V[i+1][:, -1] += offset + extent*args.translation
+    V, C = combine(V, C)
     mesh = pbat.fem.Mesh(
         V.T, C.T, element=pbat.fem.Element.Tetrahedron, order=1)
     detJeM = pbat.fem.jacobian_determinants(mesh, quadrature_order=2)
@@ -82,8 +99,8 @@ if __name__ == "__main__":
     # Set Dirichlet boundary conditions
     Xmin = mesh.X.min(axis=1)
     Xmax = mesh.X.max(axis=1)
-    Xmax[0] = Xmin[0]+1e-4
-    Xmin[0] = Xmin[0]-1e-4
+    extent = Xmax - Xmin
+    Xmax[-1] = Xmin[-1] + 0.05*extent[-1]
     aabb = pbat.geometry.aabb(np.vstack((Xmin, Xmax)).T)
     vdbc = aabb.contained(mesh.X)
     minv = 1 / m
@@ -100,6 +117,9 @@ if __name__ == "__main__":
     xpbd.lame = np.vstack((mue, lambdae))
     partitions, GC = partition_constraints(mesh.E.T)
     xpbd.partitions = partitions
+    alphac = 1e-5
+    xpbd.set_compliance(
+        alphac * np.ones(Vcollision.shape[1]), pbat.gpu.xpbd.ConstraintType.Collision)
     xpbd.prepare()
 
     ps.set_verbosity(0)
@@ -117,41 +137,59 @@ if __name__ == "__main__":
                            foverlaps, defined_on="faces")
     pc = ps.register_point_cloud("Dirichlet", mesh.X[:, vdbc].T)
     dt = 0.01
-    iterations = 5
-    substeps = 10
+    iterations = 1
+    substeps = 50
     animate = False
-    selected_overlap = 0
+    t = 0
 
     profiler = pbat.profiling.Profiler()
 
     def callback():
-        global animate, dt, iterations, substeps
+        global dt, iterations, substeps, alphac
+        global animate, t
         global profiler
 
         changed, dt = imgui.InputFloat("dt", dt)
-        changed, iterations = imgui.InputInt("iterations", iterations)
-        changed, substeps = imgui.InputInt("substeps", substeps)
-        changed, animate = imgui.Checkbox("animate", animate)
-        step = imgui.Button("step")
+        changed, iterations = imgui.InputInt("Iterations", iterations)
+        changed, substeps = imgui.InputInt("Substeps", substeps)
+        alphac_changed, alphac = imgui.InputFloat(
+            "Collision compliance", alphac, format="%.8f")
+        changed, animate = imgui.Checkbox("Animate", animate)
+        step = imgui.Button("Step")
+        reset = imgui.Button("Reset")
+        
+        if reset:
+            xpbd.x = mesh.X
+            xpbd.v = np.zeros(mesh.X.shape)
+            vm.update_vertex_positions(mesh.X.T)
+            sm.update_vertex_positions(mesh.X.T)
+            t = 0
 
-        foverlaps[:] = 0
+        if alphac_changed:
+            xpbd.set_compliance(
+                alphac * np.ones(Vcollision.shape[1]), pbat.gpu.xpbd.ConstraintType.Collision)
+
         if animate or step:
             profiler.begin_frame("Physics")
             xpbd.step(dt, iterations, substeps)
-            O = xpbd.vertex_triangle_overlaps
             profiler.end_frame("Physics")
 
             # Update visuals
             V = xpbd.x.T
             vm.update_vertex_positions(V)
             sm.update_vertex_positions(V)
-            noverlaps = O.shape[1]
-            Vcolliding = Vcollision[0, O[0, :]]
-            ps.register_point_cloud("Colliding Vertices", V[Vcolliding, :])
-            foverlaps[O[1, :]] = 1
-            sm.add_scalar_quantity("Overlapping Triangles",
-                                   foverlaps, defined_on="faces")
-            imgui.Text(f"Number of Vertex-Triangle overlaps={noverlaps}")
+            t = t+1
+
+        O = xpbd.vertex_triangle_overlaps
+        foverlaps[:] = 0
+        noverlaps = O.shape[1]
+        # Vcolliding = Vcollision[0, O[0, :]]
+        # ps.register_point_cloud("Colliding Vertices", V[Vcolliding, :])
+        foverlaps[O[1, :]] = 1
+        sm.add_scalar_quantity("Overlapping Triangles",
+                               foverlaps, defined_on="faces")
+        imgui.Text(f"Number of Vertex-Triangle overlaps={noverlaps}")
+        imgui.Text(f"Frame={t}")
 
     ps.set_user_callback(callback)
     ps.show()

@@ -12,8 +12,8 @@
 
 #include <array>
 #include <cstddef>
-#include <vector>
 #include <thrust/host_vector.h>
+#include <vector>
 
 namespace pbat {
 namespace gpu {
@@ -83,6 +83,12 @@ class XpbdImpl
      */
     void SetLameCoefficients(Eigen::Ref<GpuMatrixX const> const& l);
     /**
+     * @brief 
+     * @param alpha 
+     * @param eConstraint 
+     */
+    void SetCompliance(Eigen::Ref<GpuMatrixX const> const& alpha, EConstraint eConstraint);
+    /**
      * @brief
      * @param partitions
      */
@@ -139,15 +145,15 @@ class XpbdImpl
     /**
      * @brief Get the Vertex Triangle Overlap Candidates list
      *
-     * @return thrust::host_vector<OverlapType> 
+     * @return thrust::host_vector<OverlapType>
      */
     thrust::host_vector<OverlapType> GetVertexTriangleOverlapCandidates() const;
 
   public:
-    geometry::PointsImpl X;          ///< Vertex/particle positions
-    geometry::SimplicesImpl V;       ///< Vertex simplices
-    geometry::SimplicesImpl F;       ///< Triangle simplices
-    geometry::SimplicesImpl T;       ///< Tetrahedral simplices
+    geometry::PointsImpl X;    ///< Vertex/particle positions
+    geometry::SimplicesImpl V; ///< Vertex simplices
+    geometry::SimplicesImpl F; ///< Triangle simplices
+    geometry::SimplicesImpl T; ///< Tetrahedral simplices
   private:
     geometry::SweepAndPruneImpl SAP; ///< Sweep and prune broad phase
 

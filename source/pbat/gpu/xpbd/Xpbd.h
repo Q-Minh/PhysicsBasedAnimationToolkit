@@ -91,6 +91,12 @@ class Xpbd
     void SetLameCoefficients(Eigen::Ref<GpuMatrixX const> const& l);
     /**
      * @brief
+     * @param alpha
+     * @param eConstraint
+     */
+    void SetCompliance(Eigen::Ref<GpuMatrixX const> const& alpha, EConstraint eConstraint);
+    /**
+     * @brief
      * @param partitions
      */
     void SetConstraintPartitions(std::vector<std::vector<GpuIndex>> const& partitions);

@@ -92,6 +92,11 @@ void Xpbd::SetLameCoefficients(Eigen::Ref<GpuMatrixX const> const& l)
     mImpl->SetLameCoefficients(l);
 }
 
+void Xpbd::SetCompliance(Eigen::Ref<GpuMatrixX const> const& alpha, EConstraint eConstraint)
+{
+    mImpl->SetCompliance(alpha, static_cast<XpbdImpl::EConstraint>(eConstraint));
+}
+
 void Xpbd::SetConstraintPartitions(std::vector<std::vector<GpuIndex>> const& partitions)
 {
     mImpl->SetConstraintPartitions(partitions);

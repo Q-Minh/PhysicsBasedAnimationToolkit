@@ -164,6 +164,17 @@ void Bind(pybind11::module& m)
             },
             "|#lagrange multiplier per constraint|x|#constraint of type eConstraint| constraint "
             "compliances")
+        .def(
+            "set_compliance",
+            [](Xpbd& xpbd,
+               Eigen::Ref<GpuMatrixX const> const& alpha,
+               EConstraint eConstraint) {
+                return pbat::profiling::Profile("pbat.gpu.xpbd.Xpbd.SetCompliance", [&]() {
+                    xpbd.SetCompliance(alpha, eConstraint);
+                });
+            },
+            "Set the |#lagrange multiplier per constraint|x|#constraint of type eConstraint| "
+            "constraint compliances for the given constraint type")
         .def_property(
             "partitions",
             [](Xpbd const& xpbd) {
