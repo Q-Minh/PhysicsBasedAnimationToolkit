@@ -92,7 +92,9 @@ if __name__ == "__main__":
     # Setup XPBD
     F = igl.boundary_facets(mesh.E.T)
     F[:, :2] = np.roll(F[:, :2], shift=1, axis=1)
-    xpbd = pbat.gpu.xpbd.Xpbd(mesh.X, F.T, mesh.E)
+    Vcollision = np.unique(F)[:, np.newaxis].T
+    xpbd = pbat.gpu.xpbd.Xpbd(mesh.X, Vcollision, F.T,
+                              mesh.E, 20 * mesh.X.shape[1])
     xpbd.f = f
     xpbd.minv = minv
     xpbd.lame = np.vstack((mue, lambdae))
@@ -107,13 +109,18 @@ if __name__ == "__main__":
     ps.set_ground_plane_height_factor(0.5)
     ps.set_program_name("Elasticity")
     ps.init()
-    vm = ps.register_volume_mesh("world model", xpbd.x.T, mesh.E.T)
+    vm = ps.register_volume_mesh("Simulation Model", mesh.X.T, mesh.E.T)
     vm.add_scalar_quantity("Coloring", GC, defined_on="cells", cmap="jet")
+    sm = ps.register_surface_mesh("Collision Model", mesh.X.T, F)
+    foverlaps = np.zeros(F.shape[0])
+    sm.add_scalar_quantity("Overlapping Triangles",
+                           foverlaps, defined_on="faces")
     pc = ps.register_point_cloud("Dirichlet", mesh.X[:, vdbc].T)
     dt = 0.01
     iterations = 5
     substeps = 10
     animate = False
+    selected_overlap = 0
 
     profiler = pbat.profiling.Profiler()
 
@@ -127,13 +134,24 @@ if __name__ == "__main__":
         changed, animate = imgui.Checkbox("animate", animate)
         step = imgui.Button("step")
 
+        foverlaps[:] = 0
         if animate or step:
             profiler.begin_frame("Physics")
             xpbd.step(dt, iterations, substeps)
+            O = xpbd.vertex_triangle_overlaps
             profiler.end_frame("Physics")
 
             # Update visuals
-            vm.update_vertex_positions(xpbd.x.T)
+            V = xpbd.x.T
+            vm.update_vertex_positions(V)
+            sm.update_vertex_positions(V)
+            noverlaps = O.shape[1]
+            Vcolliding = Vcollision[0, O[0, :]]
+            ps.register_point_cloud("Colliding Vertices", V[Vcolliding, :])
+            foverlaps[O[1, :]] = 1
+            sm.add_scalar_quantity("Overlapping Triangles",
+                                   foverlaps, defined_on="faces")
+            imgui.Text(f"Number of Vertex-Triangle overlaps={noverlaps}")
 
     ps.set_user_callback(callback)
     ps.show()

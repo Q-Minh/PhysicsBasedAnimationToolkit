@@ -71,7 +71,7 @@ struct FInitializeSolution
     GpuScalar dt2;
 };
 
-struct FProjectConstraint
+struct FStableNeoHookeanConstraint
 {
     __device__ void Project(
         GpuScalar C,
@@ -174,6 +174,115 @@ struct FProjectConstraint
     GpuScalar dt2;
 };
 
+struct FVertexTriangleCollisionConstraint
+{
+    using OverlapType = typename geometry::SweepAndPruneImpl::OverlapType;
+
+    __device__ math::linalg::Matrix<GpuScalar, 3, 1>
+    PointOnPlane(auto const& X, auto const& P, auto const& n)
+    {
+        using namespace pbat::gpu::math::linalg;
+        GpuScalar const t          = (n.Transpose() * (X - P))(0, 0);
+        Matrix<GpuScalar, 3, 1> Xp = X - t * n;
+        return Xp;
+    }
+
+    __device__ math::linalg::Matrix<GpuScalar, 3, 1>
+    TriangleBarycentricCoordinates(auto const& AP, auto const& AB, auto const& AC) const
+    {
+        using namespace pbat::gpu::math::linalg;
+        GpuScalar const d00   = (AB.Transpose() * AB)(0, 0);
+        GpuScalar const d01   = (AB.Transpose() * AC)(0, 0);
+        GpuScalar const d11   = (AC.Transpose() * AC)(0, 0);
+        GpuScalar const d20   = (AP.Transpose() * AB)(0, 0);
+        GpuScalar const d21   = (AP.Transpose() * AC)(0, 0);
+        GpuScalar const denom = d00 * d11 - d01 * d01;
+        GpuScalar const v     = (d11 * d20 - d01 * d21) / denom;
+        GpuScalar const w     = (d00 * d21 - d01 * d20) / denom;
+        GpuScalar const u     = GpuScalar{1.} - v - w;
+        Matrix<GpuScalar, 3, 1> uvw{};
+        uvw(0, 0) = u;
+        uvw(1, 0) = v;
+        uvw(2, 0) = w;
+        return uvw;
+    };
+
+    __device__ bool ProjectVertexTriangle(
+        GpuIndex c,
+        GpuScalar minvv,
+        math::linalg::Matrix<GpuScalar, 3, 3> const& xf,
+        math::linalg::Matrix<GpuScalar, 3, 1>& xv)
+    {
+        using namespace pbat::gpu::math::linalg;
+        // Compute triangle normal
+        Matrix<GpuScalar, 3, 1> T1 = xf.Col(1) - xf.Col(0);
+        Matrix<GpuScalar, 3, 1> T2 = xf.Col(2) - xf.Col(0);
+        Matrix<GpuScalar, 3, 1> n  = Normalized(Cross(T1, T2));
+        Matrix<GpuScalar, 3, 1> xc = PointOnPlane(xv, xf.Col(0), n);
+        // Check if xv projects to the triangle's interior by checking its barycentric coordinates
+        Matrix<GpuScalar, 3, 1> b = TriangleBarycentricCoordinates(xc - xf.Col(0), T1, T2);
+        // If xv doesn't project inside triangle, then we don't generate a contact response
+        // clang-format off
+        bool const bIsVertexInsideTriangle = 
+            (b(0) >= GpuScalar{0.f}) and (b(0) <= GpuScalar{1.f}) and
+            (b(1) >= GpuScalar{0.f}) and (b(1) <= GpuScalar{1.f}) and
+            (b(2) >= GpuScalar{0.f}) and (b(2) <= GpuScalar{1.f});
+        // clang-format on
+        if (not bIsVertexInsideTriangle)
+            return false;
+        // Project xv onto triangle's plane into xc
+        GpuScalar const C = (n.Transpose() * (xv - xf.Col(0)))(0, 0);
+        // If xv is positively oriented w.r.t. triangles xf, there is no penetration
+        if (C > GpuScalar{0.})
+            return false;
+        // Project constraint:
+        // We assume that the triangle is static (although it is not), so that the gradient is n for
+        // the vertex.
+        if (minvv <= GpuScalar{1e-10})
+            return false;
+        // GpuScalar dlambda = -C / minvv;
+        lambda[c] = Norm(C * n);
+        xv.Col(0) -= C * n;
+        return true;
+    }
+
+    __device__ void operator()(GpuIndex c)
+    {
+        using namespace pbat::gpu::math::linalg;
+        GpuIndex vv    = V[0][overlaps[c].first]; ///< Colliding vertex
+        GpuIndex vf[3] = {
+            F[0][overlaps[c].second],
+            F[1][overlaps[c].second],
+            F[2][overlaps[c].second]}; ///< Colliding triangle
+
+        Matrix<GpuScalar, 3, 1> xv{};
+        for (auto d = 0; d < 3; ++d)
+            xv(d, 0) = x[d][vv];
+        Matrix<GpuScalar, 3, 3> xf{};
+        for (auto d = 0; d < 3; ++d)
+            for (auto j = 0; j < 3; ++j)
+                xf(d, j) = x[d][vf[j]];
+
+        GpuScalar minvv = minv[vv];
+
+        // 2. Project collision constraint
+        if (not ProjectVertexTriangle(c, minvv, xf, xv))
+            return;
+
+        // 3. Update global positions
+        for (auto d = 0; d < 3; ++d)
+            x[d][vv] = xv(d, 0);
+    }
+
+    std::array<GpuScalar*, 3> x;
+
+    OverlapType const* overlaps;
+    std::array<GpuIndex*, 4> V;
+    std::array<GpuIndex*, 4> F;
+    GpuScalar* minv;
+    GpuScalar* lambda;
+};
+
 struct FUpdateSolution
 {
     __device__ void operator()(GpuIndex i)
@@ -194,19 +303,20 @@ struct FUpdateSolution
 } // namespace kernels
 
 XpbdImpl::XpbdImpl(
-    Eigen::Ref<GpuMatrixX const> const& Vin,
+    Eigen::Ref<GpuMatrixX const> const& Xin,
+    Eigen::Ref<GpuIndexMatrixX const> const& Vin,
     Eigen::Ref<GpuIndexMatrixX const> const& Fin,
     Eigen::Ref<GpuIndexMatrixX const> const& Tin,
     std::size_t nMaxVertexTriangleOverlaps)
-    : V(Vin),
+    : X(Xin),
+      V(Vin),
       F(Fin),
       T(Tin),
-      SAP(Vin.cols() + Fin.cols(), nMaxVertexTriangleOverlaps),
-      VS(GpuIndexMatrixX{GpuIndexVectorX::LinSpaced(0, Vin.cols() - 1)}.transpose()),
-      mPositions(Vin.cols()),
-      mVelocities(Vin.cols()),
-      mExternalForces(Vin.cols()),
-      mMassInverses(Vin.cols()),
+      SAP(Xin.cols() + Fin.cols(), nMaxVertexTriangleOverlaps),
+      mPositions(Xin.cols()),
+      mVelocities(Xin.cols()),
+      mExternalForces(Xin.cols()),
+      mMassInverses(Xin.cols()),
       mLame(2 * Tin.cols()),
       mShapeMatrixInverses(9 * Tin.cols()),
       mRestStableGamma(Tin.cols()),
@@ -216,13 +326,13 @@ XpbdImpl::XpbdImpl(
       muf{0.5}
 {
     mLagrangeMultipliers[StableNeoHookean].Resize(2 * T.NumberOfSimplices());
-    mLagrangeMultipliers[Collision].Resize(V.NumberOfPoints());
+    mLagrangeMultipliers[Collision].Resize(X.NumberOfPoints());
     mCompliance[StableNeoHookean].Resize(2 * T.NumberOfSimplices());
-    mCompliance[Collision].Resize(V.NumberOfPoints());
+    mCompliance[Collision].Resize(V.NumberOfSimplices());
     // Initialize particle data
-    for (auto d = 0; d < V.Dimensions(); ++d)
+    for (auto d = 0; d < X.Dimensions(); ++d)
     {
-        thrust::copy(V.x[d].begin(), V.x[d].end(), mPositions[d].begin());
+        thrust::copy(X.x[d].begin(), X.x[d].end(), mPositions[d].begin());
         thrust::fill(mVelocities[d].begin(), mVelocities[d].end(), GpuScalar{0.});
         thrust::fill(mExternalForces[d].begin(), mExternalForces[d].end(), GpuScalar{0.});
         thrust::fill(
@@ -244,7 +354,7 @@ void XpbdImpl::PrepareConstraints()
         thrust::make_counting_iterator<GpuIndex>(0),
         thrust::make_counting_iterator<GpuIndex>(T.NumberOfSimplices()),
         kernels::FInitializeNeoHookeanConstraint{
-            V.x.Raw(),
+            X.x.Raw(),
             T.inds.Raw(),
             mLame.Raw(),
             mShapeMatrixInverses.Raw(),
@@ -258,10 +368,12 @@ void XpbdImpl::Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps)
     GpuScalar const sdt2      = sdt * sdt;
     GpuIndex const nParticles = static_cast<GpuIndex>(NumberOfParticles());
     // Detect collision candidates and setup collision constraint solve
-    SAP.SortAndSweep(V, VS, F, 1e-3f);
-    // ...
+    using OverlapType = typename geometry::SweepAndPruneImpl::OverlapType;
+    SAP.SortAndSweep(X, V, F, 1e-3f);
+    GpuIndex const nVertexTriangleOverlaps      = SAP.no.Get();
+    common::Buffer<OverlapType> const& overlaps = SAP.o;
 
-    auto& nextPositions = V.x;
+    auto& nextPositions = X.x;
     for (auto s = 0; s < substeps; ++s)
     {
         // Reset "Lagrange" multipliers
@@ -296,18 +408,28 @@ void XpbdImpl::Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps)
                     thrust::device.after(e),
                     partition.Data(),
                     partition.Data() + partition.Size(),
-                    kernels::FProjectConstraint{
+                    kernels::FStableNeoHookeanConstraint{
                         nextPositions.Raw(),
-                        thrust::raw_pointer_cast(mLagrangeMultipliers[StableNeoHookean].Data()),
+                        mLagrangeMultipliers[StableNeoHookean].Raw(),
                         T.inds.Raw(),
                         mMassInverses.Raw(),
-                        thrust::raw_pointer_cast(mCompliance[StableNeoHookean].Data()),
+                        mCompliance[StableNeoHookean].Raw(),
                         mShapeMatrixInverses.Raw(),
                         mRestStableGamma.Raw(),
                         sdt2});
             }
-            // TODO: Collision constraints
-            // ...
+            // Collision constraints
+            e = thrust::async::for_each(
+                thrust::device.after(e),
+                thrust::make_counting_iterator<GpuIndex>(0),
+                thrust::make_counting_iterator<GpuIndex>(nVertexTriangleOverlaps),
+                kernels::FVertexTriangleCollisionConstraint{
+                    nextPositions.Raw(),
+                    overlaps.Raw(),
+                    V.inds.Raw(),
+                    F.inds.Raw(),
+                    mMassInverses.Raw(),
+                    mLagrangeMultipliers[Collision].Raw()});
         }
         // Update simulation state
         e = thrust::async::for_each(
@@ -325,7 +447,7 @@ void XpbdImpl::Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps)
 
 std::size_t XpbdImpl::NumberOfParticles() const
 {
-    return V.x.Size();
+    return X.x.Size();
 }
 
 std::size_t XpbdImpl::NumberOfConstraints() const
@@ -333,18 +455,18 @@ std::size_t XpbdImpl::NumberOfConstraints() const
     return T.inds.Size();
 }
 
-void XpbdImpl::SetPositions(Eigen::Ref<GpuMatrixX const> const& X)
+void XpbdImpl::SetPositions(Eigen::Ref<GpuMatrixX const> const& Xin)
 {
-    auto const nParticles = static_cast<GpuIndex>(V.x.Size());
-    if (X.rows() != 3 and X.cols() != nParticles)
+    auto const nParticles = static_cast<GpuIndex>(X.x.Size());
+    if (Xin.rows() != 3 and Xin.cols() != nParticles)
     {
         std::ostringstream ss{};
-        ss << "Expected positions of dimensions " << V.x.Dimensions() << "x" << V.x.Size()
-           << ", but got " << X.rows() << "x" << X.cols() << "\n";
+        ss << "Expected positions of dimensions " << X.x.Dimensions() << "x" << X.x.Size()
+           << ", but got " << Xin.rows() << "x" << Xin.cols() << "\n";
         throw std::invalid_argument(ss.str());
     }
     for (auto d = 0; d < mVelocities.Dimensions(); ++d)
-        thrust::copy(X.row(d).begin(), X.row(d).end(), V.x[d].begin());
+        thrust::copy(Xin.row(d).begin(), Xin.row(d).end(), X.x[d].begin());
 }
 
 void XpbdImpl::SetVelocities(Eigen::Ref<GpuMatrixX const> const& vIn)
@@ -458,6 +580,12 @@ std::vector<common::Buffer<GpuIndex>> const& XpbdImpl::GetPartitions() const
     return mPartitions;
 }
 
+thrust::host_vector<typename XpbdImpl::OverlapType>
+XpbdImpl::GetVertexTriangleOverlapCandidates() const
+{
+    return SAP.Overlaps();
+}
+
 } // namespace xpbd
 } // namespace gpu
 } // namespace pbat
@@ -502,7 +630,13 @@ TEST_CASE("[gpu][xpbd] Xpbd")
 
     // Act
     using pbat::gpu::xpbd::XpbdImpl;
-    XpbdImpl xpbd{V, F, T, 10 * V.cols()};
+    auto const nMaxOverlaps = static_cast<std::size_t>(10 * V.cols());
+    XpbdImpl xpbd{
+        V,
+        GpuIndexMatrixX{GpuIndexVectorX::LinSpaced(V.cols(), 0, V.cols() - 1)}.transpose(),
+        F,
+        T,
+        nMaxOverlaps};
     xpbd.SetLameCoefficients(lame);
     xpbd.PrepareConstraints();
     // Assert

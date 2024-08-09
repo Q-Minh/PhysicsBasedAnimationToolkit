@@ -227,6 +227,74 @@ class SubMatrix
     int ib, jb;
 };
 
+template <class TScalar, int M, int N>
+class Ones
+{
+  public:
+    using ScalarType = TScalar;
+    using SelfType   = Ones<ScalarType, M, N>;
+
+    static auto constexpr kRows = M;
+    static auto constexpr kCols = N;
+
+    __host__ __device__ constexpr auto Rows() const { return kRows; }
+    __host__ __device__ constexpr auto Cols() const { return kCols; }
+
+    __host__ __device__ auto operator()(auto i, auto j) const { return ScalarType{1.}; }
+
+    template <auto S, auto T>
+    __host__ __device__ Ones<ScalarType, S, T> Slice(auto i, auto j) const
+    {
+        return Ones<ScalarType, S, T>();
+    }
+    __host__ __device__ Ones<ScalarType, kRows, 1> Col(auto j) const
+    {
+        return Ones<ScalarType, kRows, 1>();
+    }
+    __host__ __device__ Ones<ScalarType, 1, kCols> Row(auto i) const
+    {
+        return Ones<ScalarType, 1, kCols>();
+    }
+    __host__ __device__ ConstTransposeView<SelfType> Transpose() const
+    {
+        return ConstTransposeView<SelfType>(*this);
+    }
+};
+
+template <class TScalar, int M, int N>
+class Identity
+{
+  public:
+    using ScalarType = TScalar;
+    using SelfType   = Ones<ScalarType, M, N>;
+
+    static auto constexpr kRows = M;
+    static auto constexpr kCols = N;
+
+    __host__ __device__ constexpr auto Rows() const { return kRows; }
+    __host__ __device__ constexpr auto Cols() const { return kCols; }
+
+    __host__ __device__ auto operator()(auto i, auto j) const { return static_cast<ScalarType>(i == j); }
+
+    template <auto S, auto T>
+    __host__ __device__ ConstSubMatrix<SelfType, S, T> Slice(auto i, auto j) const
+    {
+        return ConstSubMatrix<SelfType, S, T>(*this, i, j);
+    }
+    __host__ __device__ ConstSubMatrix<SelfType, kRows, 1> Col(auto j) const
+    {
+        return Slice<kRows, 1>(0, j);
+    }
+    __host__ __device__ ConstSubMatrix<SelfType, 1, kCols> Row(auto i) const
+    {
+        return Slice<1, kCols>(i, 0);
+    }
+    __host__ __device__ ConstTransposeView<SelfType const> Transpose() const
+    {
+        return ConstTransposeView<SelfType const>(*this);
+    }
+};
+
 template <CMatrix TLhsMatrix, CMatrix TRhsMatrix>
 class Sum
 {
@@ -708,7 +776,7 @@ __host__ __device__ auto operator-=(TLhsMatrix&& A, TRhsMatrix&& B)
             LhsMatrixType::kCols == RhsMatrixType::kCols,
         "A and B must have same dimensions");
     auto fRows = [&]<auto... I>(auto j, std::index_sequence<I...>) {
-        (std::forward<TLhsMatrix>(A)(I, j) -= std::forward<TRhsMatrix>(B)(I, j), ...);
+        ((std::forward<TLhsMatrix>(A)(I, j) -= std::forward<TRhsMatrix>(B)(I, j)), ...);
     };
     auto fCols = [&]<auto... J>(std::index_sequence<J...>) {
         (fRows(J, std::make_index_sequence<LhsMatrixType::kRows>()), ...);
@@ -732,13 +800,19 @@ __host__ __device__ auto operator*(typename std::remove_cvref_t<TMatrix>::Scalar
 }
 
 template <class /*CMatrix*/ TMatrix>
+__host__ __device__ auto operator*(TMatrix&& A, typename std::remove_cvref_t<TMatrix>::ScalarType k)
+{
+    return k * std::forward<TMatrix>(A);
+}
+
+template <class /*CMatrix*/ TMatrix>
 __host__ __device__ auto
 operator*=(TMatrix&& A, typename std::remove_cvref_t<TMatrix>::ScalarType k)
 {
     using MatrixType = std::remove_cvref_t<TMatrix>;
     static_assert(CMatrix<MatrixType>, "Input must satisfy concept CMatrix");
     auto fRows = [&]<auto... I>(auto j, std::index_sequence<I...>) {
-        (std::forward<TMatrix>(A)(I, j) *= k, ...);
+        ((std::forward<TMatrix>(A)(I, j) *= k), ...);
     };
     auto fCols = [&]<auto... J>(std::index_sequence<J...>) {
         (fRows(J, std::make_index_sequence<MatrixType::kRows>()), ...);
@@ -748,7 +822,7 @@ operator*=(TMatrix&& A, typename std::remove_cvref_t<TMatrix>::ScalarType k)
 }
 
 template <class /*CMatrix*/ TMatrix>
-__host__ __device__ auto operator/(TMatrix&& A, typename TMatrix::ScalarType k)
+__host__ __device__ auto operator/(TMatrix&& A, typename std::remove_cvref_t<TMatrix>::ScalarType k)
 {
     using MatrixType = std::remove_cvref_t<TMatrix>;
     static_assert(CMatrix<MatrixType>, "Input must satisfy concept CMatrix");
@@ -757,12 +831,13 @@ __host__ __device__ auto operator/(TMatrix&& A, typename TMatrix::ScalarType k)
 }
 
 template <class /*CMatrix*/ TMatrix>
-__host__ __device__ auto operator/=(TMatrix&& A, typename TMatrix::ScalarType k)
+__host__ __device__ auto
+operator/=(TMatrix&& A, typename std::remove_cvref_t<TMatrix>::ScalarType k)
 {
     using MatrixType = std::remove_cvref_t<TMatrix>;
     static_assert(CMatrix<MatrixType>, "Input must satisfy concept CMatrix");
     auto fRows = [&]<auto... I>(auto j, std::index_sequence<I...>) {
-        (std::forward<TMatrix>(A)(I, j) /= k, ...);
+        ((std::forward<TMatrix>(A)(I, j) /= k), ...);
     };
     auto fCols = [&]<auto... J>(std::index_sequence<J...>) {
         (fRows(J, std::make_index_sequence<MatrixType::kRows>()), ...);
@@ -807,6 +882,17 @@ __host__ __device__ auto Norm(TMatrix&& A)
     {
         return sqrt(SquaredNorm(std::forward<TMatrix>(A)));
     }
+}
+
+template <class /*CMatrix*/ TMatrix>
+__host__ __device__ auto Normalized(TMatrix&& A)
+{
+    using MatrixType = std::remove_cvref_t<TMatrix>;
+    static_assert(CMatrix<MatrixType>, "Input must satisfy concept CMatrix");
+    static_assert(
+        (MatrixType::kRows == 1) or (MatrixType::kCols == 1),
+        "Only vectors can be normalized");
+    return std::forward<TMatrix>(A) / Norm(std::forward<TMatrix>(A));
 }
 
 template <class /*CMatrix*/ TLhsMatrix, class /*CMatrix*/ TRhsMatrix>

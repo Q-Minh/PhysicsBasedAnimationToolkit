@@ -27,20 +27,25 @@ void Bind(pybind11::module& m)
 
     pyb::class_<Xpbd>(m, "Xpbd")
         .def(
-            pyb::init([](Eigen::Ref<GpuMatrixX const> const& V,
+            pyb::init([](Eigen::Ref<GpuMatrixX const> const& X,
+                         Eigen::Ref<GpuIndexMatrixX const> const& V,
                          Eigen::Ref<GpuIndexMatrixX const> const& F,
-                         Eigen::Ref<GpuIndexMatrixX const> const& T) {
+                         Eigen::Ref<GpuIndexMatrixX const> const& T,
+                         std::size_t nMaxVertexTriangleOverlaps) {
                 return pbat::profiling::Profile("pbat.gpu.xpbd.Xpbd.Construct", [&]() {
-                    Xpbd xpbd(V, F, T);
+                    Xpbd xpbd(X, V, F, T, nMaxVertexTriangleOverlaps);
                     return xpbd;
                 });
             }),
+            pyb::arg("X"),
             pyb::arg("V"),
             pyb::arg("F"),
             pyb::arg("T"),
-            "Construct an XPBD algorithm to run on the GPU using input particle positions V as an "
-            "array of dimensions 3x|#particles|, triangles F as an array of dimensions "
-            "3x|#triangles| and tetrahedra T as an array of dimensions 4x|#tetrahedra|")
+            pyb::arg("max_vertex_triangle_overlaps"),
+            "Construct an XPBD algorithm to run on the GPU using input particle positions X as an "
+            "array of dimensions 3x|#particles|, vertices V as an array of dimensions "
+            "1x|#collision vertices|, triangles F as an array of dimensions "
+            "3x|#collision triangles| and tetrahedra T as an array of dimensions 4x|#tetrahedra|")
         .def(
             "prepare",
             [](Xpbd& xpbd) {
@@ -175,7 +180,18 @@ void Bind(pybind11::module& m)
                 });
             },
             "Set constraint partitions for the parallel constraint solve as list of lists of "
-            "constraint indices");
+            "constraint indices")
+        .def_property_readonly(
+            "vertex_triangle_overlaps",
+            [](Xpbd const& xpbd) {
+                return pbat::profiling::Profile(
+                    "pbat.gpu.xpbd.Xpbd.GetVertexTriangleOverlaps",
+                    [&]() {
+                        GpuIndexMatrixX O = xpbd.GetVertexTriangleOverlaps();
+                        return O;
+                    });
+            },
+            "2x|#overlap| vertex triangle overlap pairs");
 #endif // PBAT_USE_CUDA
 }
 

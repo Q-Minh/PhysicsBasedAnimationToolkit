@@ -7,16 +7,19 @@
 #include "pbat/gpu/common/Buffer.cuh"
 
 #include <thrust/copy.h>
+#include <thrust/host_vector.h>
 
 namespace pbat {
 namespace gpu {
 namespace xpbd {
 
 Xpbd::Xpbd(
-    Eigen::Ref<GpuMatrixX const> const& V,
+    Eigen::Ref<GpuMatrixX const> const& X,
+    Eigen::Ref<GpuIndexMatrixX const> const& V,
     Eigen::Ref<GpuIndexMatrixX const> const& F,
-    Eigen::Ref<GpuIndexMatrixX const> const& T)
-    : mImpl(new XpbdImpl{V, F, T})
+    Eigen::Ref<GpuIndexMatrixX const> const& T,
+    std::size_t nMaxVertexTriangleOverlaps)
+    : mImpl(new XpbdImpl{X, V, F, T, nMaxVertexTriangleOverlaps})
 {
 }
 
@@ -46,12 +49,12 @@ void Xpbd::Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps)
 
 GpuMatrixX Xpbd::Positions() const
 {
-    GpuMatrixX V(mImpl->V.Dimensions(), mImpl->V.NumberOfPoints());
-    for (auto d = 0; d < V.rows(); ++d)
+    GpuMatrixX X(mImpl->X.Dimensions(), mImpl->X.NumberOfPoints());
+    for (auto d = 0; d < X.rows(); ++d)
     {
-        thrust::copy(mImpl->V.x[d].begin(), mImpl->V.x[d].end(), V.row(d).begin());
+        thrust::copy(mImpl->X.x[d].begin(), mImpl->X.x[d].end(), X.row(d).begin());
     }
-    return V;
+    return X;
 }
 
 std::size_t Xpbd::NumberOfParticles() const
@@ -199,6 +202,19 @@ std::vector<std::vector<GpuIndex>> Xpbd::GetPartitions() const
             partitions[p].begin());
     }
     return partitions;
+}
+
+GpuIndexMatrixX Xpbd::GetVertexTriangleOverlaps() const
+{
+    thrust::host_vector<typename XpbdImpl::OverlapType> const overlaps =
+        mImpl->GetVertexTriangleOverlapCandidates();
+    GpuIndexMatrixX O(2, overlaps.size());
+    for (auto o = 0; o < overlaps.size(); ++o)
+    {
+        O(0, o) = overlaps[o].first;
+        O(1, o) = overlaps[o].second;
+    }
+    return O;
 }
 
 Xpbd::~Xpbd()

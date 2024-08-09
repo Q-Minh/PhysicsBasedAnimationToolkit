@@ -20,7 +20,7 @@ class XpbdImpl;
 class Xpbd
 {
   public:
-    enum EConstraint { StableNeoHookean = 0, Collision };
+    enum class EConstraint : int { StableNeoHookean = 0, Collision };
 
     // Constructors
     /**
@@ -29,9 +29,11 @@ class Xpbd
      * @param T
      */
     Xpbd(
-        Eigen::Ref<GpuMatrixX const> const& V,
+        Eigen::Ref<GpuMatrixX const> const& X,
+        Eigen::Ref<GpuIndexMatrixX const> const& V,
         Eigen::Ref<GpuIndexMatrixX const> const& F,
-        Eigen::Ref<GpuIndexMatrixX const> const& T);
+        Eigen::Ref<GpuIndexMatrixX const> const& T,
+        std::size_t nMaxVertexTriangleOverlaps);
     Xpbd(Xpbd const&)            = delete;
     Xpbd& operator=(Xpbd const&) = delete;
     Xpbd(Xpbd&&) noexcept;
@@ -139,6 +141,12 @@ class Xpbd
      * @return
      */
     std::vector<std::vector<GpuIndex>> GetPartitions() const;
+    /**
+     * @brief Get the Vertex Triangle Overlaps list
+     *
+     * @return GpuIndexMatrixX 2x|#overlap candidates|
+     */
+    GpuIndexMatrixX GetVertexTriangleOverlaps() const;
     /**
      * @brief
      */

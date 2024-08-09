@@ -13,6 +13,7 @@
 #include <array>
 #include <cstddef>
 #include <vector>
+#include <thrust/host_vector.h>
 
 namespace pbat {
 namespace gpu {
@@ -30,9 +31,10 @@ class XpbdImpl
      * @param T
      */
     XpbdImpl(
-        Eigen::Ref<GpuMatrixX const> const& V,
+        Eigen::Ref<GpuMatrixX const> const& X,
+        Eigen::Ref<GpuIndexMatrixX const> const& V,
         Eigen::Ref<GpuIndexMatrixX const> const& F,
-        Eigen::Ref<GpuIndexMatrixX const> const& T, 
+        Eigen::Ref<GpuIndexMatrixX const> const& T,
         std::size_t nMaxVertexTriangleOverlaps);
     /**
      * @brief
@@ -133,13 +135,21 @@ class XpbdImpl
      */
     std::vector<common::Buffer<GpuIndex>> const& GetPartitions() const;
 
+    using OverlapType = typename geometry::SweepAndPruneImpl::OverlapType;
+    /**
+     * @brief Get the Vertex Triangle Overlap Candidates list
+     *
+     * @return thrust::host_vector<OverlapType> 
+     */
+    thrust::host_vector<OverlapType> GetVertexTriangleOverlapCandidates() const;
+
   public:
-    geometry::PointsImpl V;    ///< Vertex/particle positions
-    geometry::SimplicesImpl F; ///< Triangle simplices
-    geometry::SimplicesImpl T; ///< Tetrahedral simplices
-    geometry::SweepAndPruneImpl SAP; ///< Sweep and prune broad phase
+    geometry::PointsImpl X;          ///< Vertex/particle positions
+    geometry::SimplicesImpl V;       ///< Vertex simplices
+    geometry::SimplicesImpl F;       ///< Triangle simplices
+    geometry::SimplicesImpl T;       ///< Tetrahedral simplices
   private:
-    geometry::SimplicesImpl VS; ///< Vertex simplices
+    geometry::SweepAndPruneImpl SAP; ///< Sweep and prune broad phase
 
     common::Buffer<GpuScalar, 3> mPositions;      ///< Vertex/particle positions at time t
     common::Buffer<GpuScalar, 3> mVelocities;     ///< Vertex/particle velocities
