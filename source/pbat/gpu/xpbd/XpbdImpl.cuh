@@ -104,7 +104,7 @@ class XpbdImpl
      * @param muS
      * @param muK
      */
-    void SetCoulombFrictionCoefficients(GpuScalar muS, GpuScalar muK);
+    void SetFrictionCoefficients(GpuScalar muS, GpuScalar muK);
     /**
      * @brief
      * @return

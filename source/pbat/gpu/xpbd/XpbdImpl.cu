@@ -262,19 +262,14 @@ struct FVertexTriangleContactConstraint
 
         // Collision constraint
         GpuScalar dlambda          = -(C + atildec * lambdac) / (minvv + atildec);
-        Matrix<GpuScalar, 3, 1> dx = GpuScalar{0.5} * dlambda * minvv * n;
+        Matrix<GpuScalar, 3, 1> dx = dlambda * minvv * n;
         xv += dx;
-        for (auto j = 0; j < 3; ++j)
-            if (minvf(j, 0) > GpuScalar{1e-10}) // "Infinite" mass particles cannot move
-                xf.Col(j) -= b(j) * dx;
         lambdac += dlambda;
 
         // Friction constraint
         GpuScalar const d = Norm(dx);
         dx                = (xv - xvt) - (xf * b - xft * b);
         dx                = dx - n * n.Transpose() * dx;
-        GpuScalar const SchurInv =
-            GpuScalar{1.} / (minvv + minvf(0, 0) + minvf(1, 0) + minvf(2, 0));
         GpuScalar const dxd = Norm(dx);
         if (dxd > muS * d)
         {
@@ -283,11 +278,7 @@ struct FVertexTriangleContactConstraint
             if constexpr (std::is_same_v<GpuScalar, double>)
                 dx *= cuda::std::fminl(muK * d / dxd, 1.);
         }
-        dx *= SchurInv;
-        xv += minvv * dx;
-        for (auto j = 0; j < 3; ++j)
-            if (minvf(j, 0) > GpuScalar{1e-10}) // "Infinite" mass particles cannot move
-                xf.Col(j) -= b(j) * minvf(j, 0) * dx;
+        xv += dx;
         return true;
     }
 
@@ -343,8 +334,6 @@ struct FVertexTriangleContactConstraint
         // 3. Update global positions
         // lambda[c] = lambdac;
         SetParticlePosition(vv, xv, x);
-        for (auto j = 0; j < 3; ++j)
-            SetParticlePosition(vf[j], xf.Col(j), x);
     }
 
     std::array<GpuScalar*, 3> x;
@@ -649,7 +638,7 @@ void XpbdImpl::SetMaxCollisionPenetration(GpuScalar kMaxCollisionPenetration)
     mMaxCollisionPenetration = kMaxCollisionPenetration;
 }
 
-void XpbdImpl::SetCoulombFrictionCoefficients(GpuScalar muS, GpuScalar muK)
+void XpbdImpl::SetFrictionCoefficients(GpuScalar muS, GpuScalar muK)
 {
     mStaticFrictionCoefficient  = muS;
     mDynamicFrictionCoefficient = muK;

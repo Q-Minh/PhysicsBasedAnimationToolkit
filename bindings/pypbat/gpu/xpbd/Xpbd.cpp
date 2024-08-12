@@ -194,9 +194,9 @@ void Bind(pybind11::module& m)
             "mu",
             nullptr,
             [](Xpbd& xpbd, std::pair<GpuScalar, GpuScalar> mu) {
-                xpbd.SetCoulombFrictionCoefficients(mu.first, mu.second);
+                xpbd.SetFrictionCoefficients(mu.first, mu.second);
             },
-            "Tuple of Coulomb static and dynamic friction coefficients (muS, muK).")
+            "Tuple of static and dynamic friction coefficients (muS, muK).")
         .def_property(
             "partitions",
             [](Xpbd const& xpbd) {
