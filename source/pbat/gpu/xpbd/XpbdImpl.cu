@@ -211,9 +211,9 @@ struct FVertexTriangleCollisionConstraint
     __device__ bool ProjectVertexTriangle(
         GpuScalar minvv,
         GpuScalar atildec,
-        math::linalg::Matrix<GpuScalar, 3, 3> const& xf,
         GpuScalar& lambdac,
-        math::linalg::Matrix<GpuScalar, 3, 1>& xv)
+        math::linalg::Matrix<GpuScalar, 3, 1>& xv,
+        math::linalg::Matrix<GpuScalar, 3, 3>& xf)
     {
         using namespace pbat::gpu::math::linalg;
         // Compute triangle normal
@@ -253,8 +253,12 @@ struct FVertexTriangleCollisionConstraint
         // the vertex.
         if (minvv <= GpuScalar{1e-10})
             return false;
-        GpuScalar dlambda = -(C + atildec * lambdac) / (minvv + atildec);
-        xv += dlambda * minvv * n;
+        GpuScalar dlambda           = -(C + atildec * lambdac) / (minvv + atildec);
+        Matrix<GpuScalar, 3, 1> dxn = GpuScalar{0.5} * dlambda * minvv * n;
+        xv += dxn;
+        xf.Col(0) -= b(0) * dxn;
+        xf.Col(1) -= b(1) * dxn;
+        xf.Col(2) -= b(2) * dxn;
         lambdac += dlambda;
         return true;
     }
@@ -281,13 +285,16 @@ struct FVertexTriangleCollisionConstraint
         GpuScalar lambdac = lambda[c];
 
         // 2. Project collision constraint
-        if (not ProjectVertexTriangle(minvv, atildec, xf, lambdac, xv))
+        if (not ProjectVertexTriangle(minvv, atildec, lambdac, xv, xf))
             return;
 
         // 3. Update global positions
         lambda[c] = lambdac;
         for (auto d = 0; d < 3; ++d)
             x[d][vv] = xv(d, 0);
+        for (auto d = 0; d < 3; ++d)
+            for (auto j = 0; j < 3; ++j)
+                x[d][vf[j]] = xf(d, j);
     }
 
     std::array<GpuScalar*, 3> x;
