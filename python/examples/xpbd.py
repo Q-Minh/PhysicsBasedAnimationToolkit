@@ -110,14 +110,16 @@ if __name__ == "__main__":
     F = igl.boundary_facets(mesh.E.T)
     F[:, :2] = np.roll(F[:, :2], shift=1, axis=1)
     Vcollision = np.unique(F)[:, np.newaxis].T
+    max_collision_penetration = 1.
+    max_overlaps = 20 * mesh.X.shape[1]
     xpbd = pbat.gpu.xpbd.Xpbd(mesh.X, Vcollision, F.T,
-                              mesh.E, 20 * mesh.X.shape[1])
+                              mesh.E, max_overlaps, max_collision_penetration)
     xpbd.f = f
     xpbd.minv = minv
     xpbd.lame = np.vstack((mue, lambdae))
     partitions, GC = partition_constraints(mesh.E.T)
     xpbd.partitions = partitions
-    alphac = 1e-5
+    alphac = 0
     xpbd.set_compliance(
         alphac * np.ones(Vcollision.shape[1]), pbat.gpu.xpbd.ConstraintType.Collision)
     xpbd.prepare()
@@ -131,10 +133,6 @@ if __name__ == "__main__":
     ps.init()
     vm = ps.register_volume_mesh("Simulation Model", mesh.X.T, mesh.E.T)
     vm.add_scalar_quantity("Coloring", GC, defined_on="cells", cmap="jet")
-    sm = ps.register_surface_mesh("Collision Model", mesh.X.T, F)
-    foverlaps = np.zeros(F.shape[0])
-    sm.add_scalar_quantity("Overlapping Triangles",
-                           foverlaps, defined_on="faces")
     pc = ps.register_point_cloud("Dirichlet", mesh.X[:, vdbc].T)
     dt = 0.01
     iterations = 1
@@ -145,7 +143,7 @@ if __name__ == "__main__":
     profiler = pbat.profiling.Profiler()
 
     def callback():
-        global dt, iterations, substeps, alphac
+        global dt, iterations, substeps, alphac, max_collision_penetration
         global animate, t
         global profiler
 
@@ -153,21 +151,25 @@ if __name__ == "__main__":
         changed, iterations = imgui.InputInt("Iterations", iterations)
         changed, substeps = imgui.InputInt("Substeps", substeps)
         alphac_changed, alphac = imgui.InputFloat(
-            "Collision compliance", alphac, format="%.8f")
+            "Collision compliance", alphac, format="%.10f")
+        max_collision_penetration_changed, max_collision_penetration = imgui.InputFloat(
+            "Max collision depth", max_collision_penetration)
         changed, animate = imgui.Checkbox("Animate", animate)
         step = imgui.Button("Step")
         reset = imgui.Button("Reset")
-        
+
         if reset:
             xpbd.x = mesh.X
             xpbd.v = np.zeros(mesh.X.shape)
             vm.update_vertex_positions(mesh.X.T)
-            sm.update_vertex_positions(mesh.X.T)
             t = 0
 
         if alphac_changed:
             xpbd.set_compliance(
                 alphac * np.ones(Vcollision.shape[1]), pbat.gpu.xpbd.ConstraintType.Collision)
+
+        if max_collision_penetration_changed:
+            xpbd.max_collision_penetration = max_collision_penetration
 
         if animate or step:
             profiler.begin_frame("Physics")
@@ -177,18 +179,8 @@ if __name__ == "__main__":
             # Update visuals
             V = xpbd.x.T
             vm.update_vertex_positions(V)
-            sm.update_vertex_positions(V)
             t = t+1
 
-        O = xpbd.vertex_triangle_overlaps
-        foverlaps[:] = 0
-        noverlaps = O.shape[1]
-        # Vcolliding = Vcollision[0, O[0, :]]
-        # ps.register_point_cloud("Colliding Vertices", V[Vcolliding, :])
-        foverlaps[O[1, :]] = 1
-        sm.add_scalar_quantity("Overlapping Triangles",
-                               foverlaps, defined_on="faces")
-        imgui.Text(f"Number of Vertex-Triangle overlaps={noverlaps}")
         imgui.Text(f"Frame={t}")
 
     ps.set_user_callback(callback)

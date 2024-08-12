@@ -33,7 +33,8 @@ class Xpbd
         Eigen::Ref<GpuIndexMatrixX const> const& V,
         Eigen::Ref<GpuIndexMatrixX const> const& F,
         Eigen::Ref<GpuIndexMatrixX const> const& T,
-        std::size_t nMaxVertexTriangleOverlaps);
+        std::size_t nMaxVertexTriangleOverlaps,
+        GpuScalar kMaxCollisionPenetration = GpuScalar{1.});
     Xpbd(Xpbd const&)            = delete;
     Xpbd& operator=(Xpbd const&) = delete;
     Xpbd(Xpbd&&) noexcept;
@@ -100,6 +101,11 @@ class Xpbd
      * @param partitions
      */
     void SetConstraintPartitions(std::vector<std::vector<GpuIndex>> const& partitions);
+    /**
+     * @brief 
+     * @param kMaxCollisionPenetration 
+     */
+    void SetMaxCollisionPenetration(GpuScalar kMaxCollisionPenetration);
     /**
      * @brief
      * @return

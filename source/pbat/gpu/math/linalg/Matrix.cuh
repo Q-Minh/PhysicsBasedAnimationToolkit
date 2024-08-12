@@ -274,7 +274,10 @@ class Identity
     __host__ __device__ constexpr auto Rows() const { return kRows; }
     __host__ __device__ constexpr auto Cols() const { return kCols; }
 
-    __host__ __device__ auto operator()(auto i, auto j) const { return static_cast<ScalarType>(i == j); }
+    __host__ __device__ auto operator()(auto i, auto j) const
+    {
+        return static_cast<ScalarType>(i == j);
+    }
 
     template <auto S, auto T>
     __host__ __device__ ConstSubMatrix<SelfType, S, T> Slice(auto i, auto j) const
@@ -504,8 +507,9 @@ class Matrix
     template <class /*CMatrix*/ TMatrix>
     __host__ __device__ Matrix(TMatrix&& B) : a()
     {
+        using MatrixType = std::remove_cvref_t<TMatrix>;
         static_assert(
-            TMatrix::kRows == kRows and TMatrix::kCols == kCols,
+            MatrixType::kRows == kRows and MatrixType::kCols == kCols,
             "Invalid matrix assignment dimensions");
         auto fRows = [&]<auto... I>(auto j, std::index_sequence<I...>) {
             (((*this)(I, j) = std::forward<TMatrix>(B)(I, j)), ...);
@@ -737,9 +741,9 @@ __host__ __device__ auto operator+=(TLhsMatrix&& A, TRhsMatrix&& B)
         ((std::forward<TLhsMatrix>(A)(I, j) += std::forward<TRhsMatrix>(B)(I, j)), ...);
     };
     auto fCols = [&]<auto... J>(std::index_sequence<J...>) {
-        (fRows(J, std::make_index_sequence<TLhsMatrix::kRows>()), ...);
+        (fRows(J, std::make_index_sequence<LhsMatrixType::kRows>()), ...);
     };
-    fCols(std::make_index_sequence<TLhsMatrix::kCols>());
+    fCols(std::make_index_sequence<LhsMatrixType::kCols>());
     return A;
 }
 

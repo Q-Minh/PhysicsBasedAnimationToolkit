@@ -18,8 +18,9 @@ Xpbd::Xpbd(
     Eigen::Ref<GpuIndexMatrixX const> const& V,
     Eigen::Ref<GpuIndexMatrixX const> const& F,
     Eigen::Ref<GpuIndexMatrixX const> const& T,
-    std::size_t nMaxVertexTriangleOverlaps)
-    : mImpl(new XpbdImpl{X, V, F, T, nMaxVertexTriangleOverlaps})
+    std::size_t nMaxVertexTriangleOverlaps,
+    GpuScalar kMaxCollisionPenetration)
+    : mImpl(new XpbdImpl{X, V, F, T, nMaxVertexTriangleOverlaps, kMaxCollisionPenetration})
 {
 }
 
@@ -100,6 +101,11 @@ void Xpbd::SetCompliance(Eigen::Ref<GpuMatrixX const> const& alpha, EConstraint 
 void Xpbd::SetConstraintPartitions(std::vector<std::vector<GpuIndex>> const& partitions)
 {
     mImpl->SetConstraintPartitions(partitions);
+}
+
+void Xpbd::SetMaxCollisionPenetration(GpuScalar kMaxCollisionPenetration)
+{
+    mImpl->SetMaxCollisionPenetration(kMaxCollisionPenetration);
 }
 
 GpuMatrixX Xpbd::GetVelocity() const

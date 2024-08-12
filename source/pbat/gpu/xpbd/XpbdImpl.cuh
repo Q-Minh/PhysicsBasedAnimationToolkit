@@ -35,7 +35,8 @@ class XpbdImpl
         Eigen::Ref<GpuIndexMatrixX const> const& V,
         Eigen::Ref<GpuIndexMatrixX const> const& F,
         Eigen::Ref<GpuIndexMatrixX const> const& T,
-        std::size_t nMaxVertexTriangleOverlaps);
+        std::size_t nMaxVertexTriangleOverlaps,
+        GpuScalar kMaxCollisionPenetration = GpuScalar{1.});
     /**
      * @brief
      */
@@ -83,9 +84,9 @@ class XpbdImpl
      */
     void SetLameCoefficients(Eigen::Ref<GpuMatrixX const> const& l);
     /**
-     * @brief 
-     * @param alpha 
-     * @param eConstraint 
+     * @brief
+     * @param alpha
+     * @param eConstraint
      */
     void SetCompliance(Eigen::Ref<GpuMatrixX const> const& alpha, EConstraint eConstraint);
     /**
@@ -93,6 +94,11 @@ class XpbdImpl
      * @param partitions
      */
     void SetConstraintPartitions(std::vector<std::vector<GpuIndex>> const& partitions);
+    /**
+     * @brief 
+     * @param kMaxCollisionPenetration 
+     */
+    void SetMaxCollisionPenetration(GpuScalar kMaxCollisionPenetration);
     /**
      * @brief
      * @return
@@ -177,6 +183,12 @@ class XpbdImpl
 
     std::vector<common::Buffer<GpuIndex>> mPartitions; ///< Constraint partitions
     GpuScalar muf;                                     ///< Coulomb friction coefficient
+    GpuScalar mAverageEdgeLength;       ///< Average edge length of collision (triangle) mesh
+    GpuScalar mMaxCollisionPenetration; ///< Coefficient controlling the maximum collision
+                                        ///< constraint violation as max violation =
+                                        ///< mMaxCollisionPenetration*mAverageEdgeLength. To
+                                        ///< maintain stability, past this threshold, a collision
+                                        ///< constraint will not perform any projection.
 };
 
 } // namespace xpbd

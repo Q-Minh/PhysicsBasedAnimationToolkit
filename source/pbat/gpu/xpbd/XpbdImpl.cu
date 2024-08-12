@@ -10,6 +10,7 @@
 #include <sstream>
 #include <string>
 #include <thrust/async/for_each.h>
+#include <thrust/async/sort.h>
 #include <thrust/copy.h>
 #include <thrust/execution_policy.h>
 #include <thrust/fill.h>
@@ -174,41 +175,40 @@ struct FStableNeoHookeanConstraint
     GpuScalar dt2;
 };
 
+__device__ math::linalg::Matrix<GpuScalar, 3, 1>
+PointOnPlane(auto const& X, auto const& P, auto const& n)
+{
+    using namespace pbat::gpu::math::linalg;
+    GpuScalar const t          = (n.Transpose() * (X - P))(0, 0);
+    Matrix<GpuScalar, 3, 1> Xp = X - t * n;
+    return Xp;
+}
+
+__device__ math::linalg::Matrix<GpuScalar, 3, 1>
+TriangleBarycentricCoordinates(auto const& AP, auto const& AB, auto const& AC)
+{
+    using namespace pbat::gpu::math::linalg;
+    GpuScalar const d00   = (AB.Transpose() * AB)(0, 0);
+    GpuScalar const d01   = (AB.Transpose() * AC)(0, 0);
+    GpuScalar const d11   = (AC.Transpose() * AC)(0, 0);
+    GpuScalar const d20   = (AP.Transpose() * AB)(0, 0);
+    GpuScalar const d21   = (AP.Transpose() * AC)(0, 0);
+    GpuScalar const denom = d00 * d11 - d01 * d01;
+    GpuScalar const v     = (d11 * d20 - d01 * d21) / denom;
+    GpuScalar const w     = (d00 * d21 - d01 * d20) / denom;
+    GpuScalar const u     = GpuScalar{1.} - v - w;
+    Matrix<GpuScalar, 3, 1> uvw{};
+    uvw(0, 0) = u;
+    uvw(1, 0) = v;
+    uvw(2, 0) = w;
+    return uvw;
+};
+
 struct FVertexTriangleCollisionConstraint
 {
     using OverlapType = typename geometry::SweepAndPruneImpl::OverlapType;
 
-    __device__ math::linalg::Matrix<GpuScalar, 3, 1>
-    PointOnPlane(auto const& X, auto const& P, auto const& n)
-    {
-        using namespace pbat::gpu::math::linalg;
-        GpuScalar const t          = (n.Transpose() * (X - P))(0, 0);
-        Matrix<GpuScalar, 3, 1> Xp = X - t * n;
-        return Xp;
-    }
-
-    __device__ math::linalg::Matrix<GpuScalar, 3, 1>
-    TriangleBarycentricCoordinates(auto const& AP, auto const& AB, auto const& AC) const
-    {
-        using namespace pbat::gpu::math::linalg;
-        GpuScalar const d00   = (AB.Transpose() * AB)(0, 0);
-        GpuScalar const d01   = (AB.Transpose() * AC)(0, 0);
-        GpuScalar const d11   = (AC.Transpose() * AC)(0, 0);
-        GpuScalar const d20   = (AP.Transpose() * AB)(0, 0);
-        GpuScalar const d21   = (AP.Transpose() * AC)(0, 0);
-        GpuScalar const denom = d00 * d11 - d01 * d01;
-        GpuScalar const v     = (d11 * d20 - d01 * d21) / denom;
-        GpuScalar const w     = (d00 * d21 - d01 * d20) / denom;
-        GpuScalar const u     = GpuScalar{1.} - v - w;
-        Matrix<GpuScalar, 3, 1> uvw{};
-        uvw(0, 0) = u;
-        uvw(1, 0) = v;
-        uvw(2, 0) = w;
-        return uvw;
-    };
-
     __device__ bool ProjectVertexTriangle(
-        GpuIndex c,
         GpuScalar minvv,
         GpuScalar atildec,
         math::linalg::Matrix<GpuScalar, 3, 3> const& xf,
@@ -217,9 +217,15 @@ struct FVertexTriangleCollisionConstraint
     {
         using namespace pbat::gpu::math::linalg;
         // Compute triangle normal
-        Matrix<GpuScalar, 3, 1> T1 = xf.Col(1) - xf.Col(0);
-        Matrix<GpuScalar, 3, 1> T2 = xf.Col(2) - xf.Col(0);
-        Matrix<GpuScalar, 3, 1> n  = Normalized(Cross(T1, T2));
+        Matrix<GpuScalar, 3, 1> T1       = xf.Col(1) - xf.Col(0);
+        Matrix<GpuScalar, 3, 1> T2       = xf.Col(2) - xf.Col(0);
+        Matrix<GpuScalar, 3, 1> n        = Cross(T1, T2);
+        GpuScalar const doublearea       = Norm(n);
+        bool const bIsTriangleDegenerate = doublearea <= GpuScalar{1e-8f};
+        if (bIsTriangleDegenerate)
+            return false;
+
+        n /= doublearea;
         Matrix<GpuScalar, 3, 1> xc = PointOnPlane(xv, xf.Col(0), n);
         // Check if xv projects to the triangle's interior by checking its barycentric coordinates
         Matrix<GpuScalar, 3, 1> b = TriangleBarycentricCoordinates(xc - xf.Col(0), T1, T2);
@@ -232,10 +238,15 @@ struct FVertexTriangleCollisionConstraint
         // clang-format on
         if (not bIsVertexInsideTriangle)
             return false;
+
         // Project xv onto triangle's plane into xc
         GpuScalar const C = (n.Transpose() * (xv - xf.Col(0)))(0, 0);
         // If xv is positively oriented w.r.t. triangles xf, there is no penetration
         if (C > GpuScalar{0.})
+            return false;
+        // Prevent super violent projection for stability, i.e. if the collision constraint
+        // violation is already too large, we give up.
+        if (C < -kMaxPenetration)
             return false;
         // Project constraint:
         // We assume that the triangle is static (although it is not), so that the gradient is n for
@@ -243,7 +254,7 @@ struct FVertexTriangleCollisionConstraint
         if (minvv <= GpuScalar{1e-10})
             return false;
         GpuScalar dlambda = -(C + atildec * lambdac) / (minvv + atildec);
-        xv.Col(0) += dlambda * minvv * n;
+        xv += dlambda * minvv * n;
         lambdac += dlambda;
         return true;
     }
@@ -270,7 +281,7 @@ struct FVertexTriangleCollisionConstraint
         GpuScalar lambdac = lambda[c];
 
         // 2. Project collision constraint
-        if (not ProjectVertexTriangle(c, minvv, atildec, xf, lambdac, xv))
+        if (not ProjectVertexTriangle(minvv, atildec, xf, lambdac, xv))
             return;
 
         // 3. Update global positions
@@ -288,6 +299,7 @@ struct FVertexTriangleCollisionConstraint
     GpuScalar* minv;
     GpuScalar* alpha;
     GpuScalar dt2;
+    GpuScalar const kMaxPenetration;
 };
 
 struct FUpdateSolution
@@ -314,7 +326,8 @@ XpbdImpl::XpbdImpl(
     Eigen::Ref<GpuIndexMatrixX const> const& Vin,
     Eigen::Ref<GpuIndexMatrixX const> const& Fin,
     Eigen::Ref<GpuIndexMatrixX const> const& Tin,
-    std::size_t nMaxVertexTriangleOverlaps)
+    std::size_t nMaxVertexTriangleOverlaps,
+    GpuScalar kMaxCollisionPenetration)
     : X(Xin),
       V(Vin),
       F(Fin),
@@ -330,12 +343,19 @@ XpbdImpl::XpbdImpl(
       mLagrangeMultipliers(),
       mCompliance(),
       mPartitions(),
-      muf{0.5}
+      muf{0.5},
+      mAverageEdgeLength{},
+      mMaxCollisionPenetration{kMaxCollisionPenetration}
 {
     mLagrangeMultipliers[StableNeoHookean].Resize(2 * T.NumberOfSimplices());
     mLagrangeMultipliers[Collision].Resize(X.NumberOfPoints());
     mCompliance[StableNeoHookean].Resize(2 * T.NumberOfSimplices());
     mCompliance[Collision].Resize(V.NumberOfSimplices());
+    mAverageEdgeLength =
+        (GpuScalar{1.} / GpuScalar{3.}) *
+        ((Xin(Eigen::all, Fin.row(0)) - Xin(Eigen::all, Fin.row(1))).colwise().norm().mean() +
+         (Xin(Eigen::all, Fin.row(1)) - Xin(Eigen::all, Fin.row(2))).colwise().norm().mean() +
+         (Xin(Eigen::all, Fin.row(2)) - Xin(Eigen::all, Fin.row(0))).colwise().norm().mean());
     // Initialize particle data
     for (auto d = 0; d < X.Dimensions(); ++d)
     {
@@ -438,7 +458,8 @@ void XpbdImpl::Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps)
                     F.inds.Raw(),
                     mMassInverses.Raw(),
                     mCompliance[Collision].Raw(),
-                    sdt2});
+                    sdt2,
+                    mMaxCollisionPenetration * mAverageEdgeLength});
         }
         // Update simulation state
         e = thrust::async::for_each(
@@ -542,8 +563,8 @@ void XpbdImpl::SetCompliance(Eigen::Ref<GpuMatrixX const> const& alpha, EConstra
     if (alpha.size() != mCompliance[eConstraint].Size())
     {
         std::ostringstream ss{};
-        ss << "Expected compliance of dimensions " << mCompliance[eConstraint].Size() << ", but got "
-           << alpha.size() << "\n";
+        ss << "Expected compliance of dimensions " << mCompliance[eConstraint].Size()
+           << ", but got " << alpha.size() << "\n";
         throw std::invalid_argument(ss.str());
     }
     thrust::copy(alpha.data(), alpha.data() + alpha.size(), mCompliance[eConstraint].Data());
@@ -557,6 +578,11 @@ void XpbdImpl::SetConstraintPartitions(std::vector<std::vector<GpuIndex>> const&
         mPartitions[p][0].resize(partitions[p].size());
         thrust::copy(partitions[p].begin(), partitions[p].end(), mPartitions[p].Data());
     }
+}
+
+void XpbdImpl::SetMaxCollisionPenetration(GpuScalar kMaxCollisionPenetration)
+{
+    mMaxCollisionPenetration = kMaxCollisionPenetration;
 }
 
 common::Buffer<GpuScalar, 3> const& XpbdImpl::GetVelocity() const

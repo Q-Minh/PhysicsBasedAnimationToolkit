@@ -31,9 +31,10 @@ void Bind(pybind11::module& m)
                          Eigen::Ref<GpuIndexMatrixX const> const& V,
                          Eigen::Ref<GpuIndexMatrixX const> const& F,
                          Eigen::Ref<GpuIndexMatrixX const> const& T,
-                         std::size_t nMaxVertexTriangleOverlaps) {
+                         std::size_t nMaxVertexTriangleOverlaps,
+                         GpuScalar kMaxCollisionPenetration) {
                 return pbat::profiling::Profile("pbat.gpu.xpbd.Xpbd.Construct", [&]() {
-                    Xpbd xpbd(X, V, F, T, nMaxVertexTriangleOverlaps);
+                    Xpbd xpbd(X, V, F, T, nMaxVertexTriangleOverlaps, kMaxCollisionPenetration);
                     return xpbd;
                 });
             }),
@@ -42,10 +43,16 @@ void Bind(pybind11::module& m)
             pyb::arg("F"),
             pyb::arg("T"),
             pyb::arg("max_vertex_triangle_overlaps"),
+            pyb::arg("max_collision_penetration") = GpuScalar{1.},
             "Construct an XPBD algorithm to run on the GPU using input particle positions X as an "
             "array of dimensions 3x|#particles|, vertices V as an array of dimensions "
             "1x|#collision vertices|, triangles F as an array of dimensions "
-            "3x|#collision triangles| and tetrahedra T as an array of dimensions 4x|#tetrahedra|")
+            "3x|#collision triangles| and tetrahedra T as an array of dimensions 4x|#tetrahedra|. "
+            "max_vertex_triangle_overlaps specifies the size of memory preallocated for "
+            "vertex-triangle collision constraints. max_collision_penetration is a coefficient "
+            "specifying the maximum collision constraint violation after which collision "
+            "constraints are deactivated for stability, as max_collision_penetration times the "
+            "average edge length of the input collision (triangle) mesh (X,F).")
         .def(
             "prepare",
             [](Xpbd& xpbd) {
@@ -166,15 +173,22 @@ void Bind(pybind11::module& m)
             "compliances")
         .def(
             "set_compliance",
-            [](Xpbd& xpbd,
-               Eigen::Ref<GpuMatrixX const> const& alpha,
-               EConstraint eConstraint) {
+            [](Xpbd& xpbd, Eigen::Ref<GpuMatrixX const> const& alpha, EConstraint eConstraint) {
                 return pbat::profiling::Profile("pbat.gpu.xpbd.Xpbd.SetCompliance", [&]() {
                     xpbd.SetCompliance(alpha, eConstraint);
                 });
             },
             "Set the |#lagrange multiplier per constraint|x|#constraint of type eConstraint| "
             "constraint compliances for the given constraint type")
+        .def_property(
+            "max_collision_penetration",
+            nullptr,
+            [](Xpbd& xpbd, GpuScalar kMaxCollisionPenetration) {
+                xpbd.SetMaxCollisionPenetration(kMaxCollisionPenetration);
+            },
+            "Set the maximum collision penetration as a multiplier of the collision mesh's average "
+            "edge length, after which collision constraint projection is deactivated for "
+            "stability.")
         .def_property(
             "partitions",
             [](Xpbd const& xpbd) {
