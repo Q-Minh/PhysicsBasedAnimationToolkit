@@ -95,10 +95,16 @@ class XpbdImpl
      */
     void SetConstraintPartitions(std::vector<std::vector<GpuIndex>> const& partitions);
     /**
-     * @brief 
-     * @param kMaxCollisionPenetration 
+     * @brief
+     * @param kMaxCollisionPenetration
      */
     void SetMaxCollisionPenetration(GpuScalar kMaxCollisionPenetration);
+    /**
+     * @brief
+     * @param muS
+     * @param muK
+     */
+    void SetCoulombFrictionCoefficients(GpuScalar muS, GpuScalar muK);
     /**
      * @brief
      * @return
@@ -182,7 +188,8 @@ class XpbdImpl
                      ///< alpha[1] -> Collision penalty constraint compliance
 
     std::vector<common::Buffer<GpuIndex>> mPartitions; ///< Constraint partitions
-    GpuScalar muf;                                     ///< Coulomb friction coefficient
+    GpuScalar mStaticFrictionCoefficient;              ///< Coulomb static friction coefficient
+    GpuScalar mDynamicFrictionCoefficient;             ///< Coulomb dynamic friction coefficient
     GpuScalar mAverageEdgeLength;       ///< Average edge length of collision (triangle) mesh
     GpuScalar mMaxCollisionPenetration; ///< Coefficient controlling the maximum collision
                                         ///< constraint violation as max violation =

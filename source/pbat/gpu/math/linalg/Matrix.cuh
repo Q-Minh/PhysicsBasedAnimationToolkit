@@ -526,7 +526,7 @@ class Matrix
         using OtherMatrixType = std::remove_cvref_t<TMatrix>;
         static_assert(CMatrix<OtherMatrixType>, "B must satisfy CMatrix");
         auto fRows = [&]<auto... I>(auto j, std::index_sequence<I...>) {
-            ((*this)(I, j) = std::forward<TMatrix>(B)(I, j), ...);
+            (((*this)(I, j) = std::forward<TMatrix>(B)(I, j)), ...);
         };
         auto fCols = [&]<auto... J>(std::index_sequence<J...>) {
             (fRows(J, std::make_index_sequence<kRows>()), ...);

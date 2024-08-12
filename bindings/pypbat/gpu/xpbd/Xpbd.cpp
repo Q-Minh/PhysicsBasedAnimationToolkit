@@ -5,6 +5,7 @@
 #include <pbat/profiling/Profiling.h>
 #include <pybind11/eigen.h>
 #include <pybind11/stl.h>
+#include <utility>
 
 namespace pbat {
 namespace py {
@@ -189,6 +190,13 @@ void Bind(pybind11::module& m)
             "Set the maximum collision penetration as a multiplier of the collision mesh's average "
             "edge length, after which collision constraint projection is deactivated for "
             "stability.")
+        .def_property(
+            "mu",
+            nullptr,
+            [](Xpbd& xpbd, std::pair<GpuScalar, GpuScalar> mu) {
+                xpbd.SetCoulombFrictionCoefficients(mu.first, mu.second);
+            },
+            "Tuple of Coulomb static and dynamic friction coefficients (muS, muK).")
         .def_property(
             "partitions",
             [](Xpbd const& xpbd) {

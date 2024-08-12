@@ -108,6 +108,11 @@ void Xpbd::SetMaxCollisionPenetration(GpuScalar kMaxCollisionPenetration)
     mImpl->SetMaxCollisionPenetration(kMaxCollisionPenetration);
 }
 
+void Xpbd::SetCoulombFrictionCoefficients(GpuScalar muS, GpuScalar muK)
+{
+    mImpl->SetCoulombFrictionCoefficients(muS, muK);
+}
+
 GpuMatrixX Xpbd::GetVelocity() const
 {
     auto const& vGpu = mImpl->GetVelocity();

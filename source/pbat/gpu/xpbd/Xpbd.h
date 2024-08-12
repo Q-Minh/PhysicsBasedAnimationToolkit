@@ -102,10 +102,16 @@ class Xpbd
      */
     void SetConstraintPartitions(std::vector<std::vector<GpuIndex>> const& partitions);
     /**
-     * @brief 
-     * @param kMaxCollisionPenetration 
+     * @brief
+     * @param kMaxCollisionPenetration
      */
     void SetMaxCollisionPenetration(GpuScalar kMaxCollisionPenetration);
+    /**
+     * @brief
+     * @param muS
+     * @param muK
+     */
+    void SetCoulombFrictionCoefficients(GpuScalar muS, GpuScalar muK);
     /**
      * @brief
      * @return

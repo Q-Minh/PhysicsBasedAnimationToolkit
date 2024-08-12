@@ -6,6 +6,7 @@
 #include "pbat/gpu/math/linalg/Matrix.cuh"
 
 #include <array>
+#include <cuda/std/cmath>
 #include <exception>
 #include <sstream>
 #include <string>
@@ -204,18 +205,24 @@ TriangleBarycentricCoordinates(auto const& AP, auto const& AB, auto const& AC)
     return uvw;
 };
 
-struct FVertexTriangleCollisionConstraint
+struct FVertexTriangleContactConstraint
 {
     using OverlapType = typename geometry::SweepAndPruneImpl::OverlapType;
 
     __device__ bool ProjectVertexTriangle(
         GpuScalar minvv,
+        math::linalg::Matrix<GpuScalar, 3, 1> const& minvf,
+        math::linalg::Matrix<GpuScalar, 3, 1> const& xvt,
+        math::linalg::Matrix<GpuScalar, 3, 3> const& xft,
         GpuScalar atildec,
         GpuScalar& lambdac,
         math::linalg::Matrix<GpuScalar, 3, 1>& xv,
         math::linalg::Matrix<GpuScalar, 3, 3>& xf)
     {
         using namespace pbat::gpu::math::linalg;
+        // Numerically zero inverse mass makes the Schur complement ill-conditioned/singular
+        if (minvv < GpuScalar{1e-10})
+            return false;
         // Compute triangle normal
         Matrix<GpuScalar, 3, 1> T1       = xf.Col(1) - xf.Col(0);
         Matrix<GpuScalar, 3, 1> T2       = xf.Col(2) - xf.Col(0);
@@ -248,19 +255,59 @@ struct FVertexTriangleCollisionConstraint
         // violation is already too large, we give up.
         if (C < -kMaxPenetration)
             return false;
-        // Project constraint:
+
+        // Project constraints:
         // We assume that the triangle is static (although it is not), so that the gradient is n for
         // the vertex.
-        if (minvv <= GpuScalar{1e-10})
-            return false;
-        GpuScalar dlambda           = -(C + atildec * lambdac) / (minvv + atildec);
-        Matrix<GpuScalar, 3, 1> dxn = GpuScalar{0.5} * dlambda * minvv * n;
-        xv += dxn;
-        xf.Col(0) -= b(0) * dxn;
-        xf.Col(1) -= b(1) * dxn;
-        xf.Col(2) -= b(2) * dxn;
+
+        // Collision constraint
+        GpuScalar dlambda          = -(C + atildec * lambdac) / (minvv + atildec);
+        Matrix<GpuScalar, 3, 1> dx = GpuScalar{0.5} * dlambda * minvv * n;
+        xv += dx;
+        for (auto j = 0; j < 3; ++j)
+            if (minvf(j, 0) > GpuScalar{1e-10}) // "Infinite" mass particles cannot move
+                xf.Col(j) -= b(j) * dx;
         lambdac += dlambda;
+
+        // Friction constraint
+        GpuScalar const d = Norm(dx);
+        dx                = (xv - xvt) - (xf * b - xft * b);
+        dx                = dx - n * n.Transpose() * dx;
+        GpuScalar const SchurInv =
+            GpuScalar{1.} / (minvv + minvf(0, 0) + minvf(1, 0) + minvf(2, 0));
+        GpuScalar const dxd = Norm(dx);
+        if (dxd > muS * d)
+        {
+            if constexpr (std::is_same_v<GpuScalar, float>)
+                dx *= cuda::std::fminf(muK * d / dxd, 1.f);
+            if constexpr (std::is_same_v<GpuScalar, double>)
+                dx *= cuda::std::fminl(muK * d / dxd, 1.);
+        }
+        dx *= SchurInv;
+        xv += minvv * dx;
+        for (auto j = 0; j < 3; ++j)
+            if (minvf(j, 0) > GpuScalar{1e-10}) // "Infinite" mass particles cannot move
+                xf.Col(j) -= b(j) * minvf(j, 0) * dx;
         return true;
+    }
+
+    __device__ void SetParticlePosition(
+        GpuIndex v,
+        math::linalg::Matrix<GpuScalar, 3, 1> const& xv,
+        std::array<GpuScalar*, 3> const& xx)
+    {
+        for (auto d = 0; d < 3; ++d)
+            xx[d][v] = xv(d, 0);
+    }
+
+    __device__ math::linalg::Matrix<GpuScalar, 3, 1>
+    GetParticlePosition(GpuIndex v, std::array<GpuScalar*, 3> const& xx)
+    {
+        using namespace pbat::gpu::math::linalg;
+        Matrix<GpuScalar, 3, 1> xv{};
+        for (auto d = 0; d < 3; ++d)
+            xv(d, 0) = xx[d][v];
+        return xv;
     }
 
     __device__ void operator()(GpuIndex c)
@@ -272,29 +319,32 @@ struct FVertexTriangleCollisionConstraint
             F[1][overlaps[c].second],
             F[2][overlaps[c].second]}; ///< Colliding triangle
 
-        Matrix<GpuScalar, 3, 1> xv{};
-        for (auto d = 0; d < 3; ++d)
-            xv(d, 0) = x[d][vv];
+        Matrix<GpuScalar, 3, 1> xv = GetParticlePosition(vv, x);
         Matrix<GpuScalar, 3, 3> xf{};
-        for (auto d = 0; d < 3; ++d)
-            for (auto j = 0; j < 3; ++j)
-                xf(d, j) = x[d][vf[j]];
+        for (auto j = 0; j < 3; ++j)
+            xf.Col(j) = GetParticlePosition(vf[j], x);
 
-        GpuScalar minvv   = minv[vv];
+        Matrix<GpuScalar, 3, 1> xvt = GetParticlePosition(vv, xt);
+        Matrix<GpuScalar, 3, 3> xft{};
+        for (auto j = 0; j < 3; ++j)
+            xft.Col(j) = GetParticlePosition(vf[j], xt);
+
+        GpuScalar const minvv = minv[vv];
+        Matrix<GpuScalar, 3, 1> minvf{};
+        for (auto j = 0; j < 3; ++j)
+            minvf(j, 0) = minv[vf[j]];
         GpuScalar atildec = alpha[c] / dt2;
         GpuScalar lambdac = lambda[c];
 
         // 2. Project collision constraint
-        if (not ProjectVertexTriangle(minvv, atildec, lambdac, xv, xf))
+        if (not ProjectVertexTriangle(minvv, minvf, xvt, xft, atildec, lambdac, xv, xf))
             return;
 
         // 3. Update global positions
-        lambda[c] = lambdac;
-        for (auto d = 0; d < 3; ++d)
-            x[d][vv] = xv(d, 0);
-        for (auto d = 0; d < 3; ++d)
-            for (auto j = 0; j < 3; ++j)
-                x[d][vf[j]] = xf(d, j);
+        // lambda[c] = lambdac;
+        SetParticlePosition(vv, xv, x);
+        for (auto j = 0; j < 3; ++j)
+            SetParticlePosition(vf[j], xf.Col(j), x);
     }
 
     std::array<GpuScalar*, 3> x;
@@ -305,8 +355,11 @@ struct FVertexTriangleCollisionConstraint
     std::array<GpuIndex*, 4> F;
     GpuScalar* minv;
     GpuScalar* alpha;
+    std::array<GpuScalar*, 3> xt;
     GpuScalar dt2;
     GpuScalar const kMaxPenetration;
+    GpuScalar const muS; ///< Static Coulomb friction coefficient
+    GpuScalar const muK; ///< Dynamic Coulomb friction coefficient
 };
 
 struct FUpdateSolution
@@ -350,7 +403,8 @@ XpbdImpl::XpbdImpl(
       mLagrangeMultipliers(),
       mCompliance(),
       mPartitions(),
-      muf{0.5},
+      mStaticFrictionCoefficient{0.5},
+      mDynamicFrictionCoefficient{0.3},
       mAverageEdgeLength{},
       mMaxCollisionPenetration{kMaxCollisionPenetration}
 {
@@ -457,7 +511,7 @@ void XpbdImpl::Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps)
                 thrust::device.after(e),
                 thrust::make_counting_iterator<GpuIndex>(0),
                 thrust::make_counting_iterator<GpuIndex>(nVertexTriangleOverlaps),
-                kernels::FVertexTriangleCollisionConstraint{
+                kernels::FVertexTriangleContactConstraint{
                     nextPositions.Raw(),
                     mLagrangeMultipliers[Collision].Raw(),
                     overlaps.Raw(),
@@ -465,8 +519,11 @@ void XpbdImpl::Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps)
                     F.inds.Raw(),
                     mMassInverses.Raw(),
                     mCompliance[Collision].Raw(),
+                    mPositions.Raw(),
                     sdt2,
-                    mMaxCollisionPenetration * mAverageEdgeLength});
+                    mMaxCollisionPenetration * mAverageEdgeLength,
+                    mStaticFrictionCoefficient,
+                    mDynamicFrictionCoefficient});
         }
         // Update simulation state
         e = thrust::async::for_each(
@@ -590,6 +647,12 @@ void XpbdImpl::SetConstraintPartitions(std::vector<std::vector<GpuIndex>> const&
 void XpbdImpl::SetMaxCollisionPenetration(GpuScalar kMaxCollisionPenetration)
 {
     mMaxCollisionPenetration = kMaxCollisionPenetration;
+}
+
+void XpbdImpl::SetCoulombFrictionCoefficients(GpuScalar muS, GpuScalar muK)
+{
+    mStaticFrictionCoefficient  = muS;
+    mDynamicFrictionCoefficient = muK;
 }
 
 common::Buffer<GpuScalar, 3> const& XpbdImpl::GetVelocity() const
