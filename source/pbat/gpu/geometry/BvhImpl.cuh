@@ -17,7 +17,7 @@ namespace geometry {
 /**
  * @brief Radix-tree linear BVH
  *
- * See https://developer.nvidia.com/blog/thinking-parallel-part-iii-tree-construction-gpu/
+ * See https://research.nvidia.com/sites/default/files/pubs/2012-06_Maximizing-Parallelism-in/karras2012hpg_paper.pdf#page=4.43
  */
 class BvhImpl
 {
@@ -58,10 +58,12 @@ class BvhImpl
     common::Buffer<GpuIndex, 2>
         child; ///< Left and right children. If child[lr][i] > n - 2, then it is
                ///< a leaf node, otherwise an internal node. lr == 0 -> left
-               ///< child buffer, while lr == 1 -> right child buffer.
+               ///< child buffer, while lr == 1 -> right child buffer. i == 0 -> root node.
+    common::Buffer<GpuIndex> parent; ///< parent[i] -> index of parent node of node i
     common::Buffer<GpuScalar, 3> b,
         e; ///< Simplex and internal node bounding boxes. The first n-1 boxes are internal node
-           ///< bounding boxes. The next n boxes are leaf node (i.e. simplex) bounding boxes.
+           ///< bounding boxes. The next n boxes are leaf node (i.e. simplex) bounding boxes. The
+           ///< box 0 is always the root.
 
   public:
     common::Var<GpuIndex> no;      ///< Number of overlaps
