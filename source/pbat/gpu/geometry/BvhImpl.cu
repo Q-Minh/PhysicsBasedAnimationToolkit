@@ -3,6 +3,7 @@
 // clang-format on
 
 #include "BvhImpl.cuh"
+#include "pbat/gpu/common/Stack.cuh"
 
 #include <cuda/atomic>
 #include <exception>
@@ -157,25 +158,31 @@ struct FGenerateHierarchy
         return gamma;
     }
 
-    __device__ void operator()(auto i)
+    __device__ void operator()(auto in)
     {
         // Find out which range of objects the node corresponds to.
-        Range R = DetermineRange(i);
+        Range R = DetermineRange(in);
         // Determine where to split the range.
         GpuIndex gamma = FindSplit(R);
         // Select left+right child
-        GpuIndex lc = (min(R.i, R.j) == gamma) ? leafBegin + gamma : gamma;
-        GpuIndex rc = (max(R.i, R.j) == gamma + 1) ? leafBegin + gamma + 1 : gamma + 1;
+        GpuIndex i  = min(R.i, R.j);
+        GpuIndex j  = max(R.i, R.j);
+        GpuIndex lc = (i == gamma) ? leafBegin + gamma : gamma;
+        GpuIndex rc = (j == gamma + 1) ? leafBegin + gamma + 1 : gamma + 1;
         // Record parent-child relationships
-        child[0][i] = lc;
-        child[1][i] = rc;
-        parent[lc]  = i;
-        parent[rc]  = i;
+        child[0][in] = lc;
+        child[1][in] = rc;
+        parent[lc]   = in;
+        parent[rc]   = in;
+        // Record subtree relationships
+        rightmost[0][in] = gamma;
+        rightmost[1][in] = j;
     }
 
     MortonCodeType const* morton;
     std::array<GpuIndex*, 2> child;
     GpuIndex* parent;
+    std::array<GpuIndex*, 2> rightmost;
     GpuIndex leafBegin;
     GpuIndex n;
 };
@@ -221,6 +228,7 @@ BvhImpl::BvhImpl(std::size_t nPrimitives, std::size_t nOverlaps)
       morton(nPrimitives),
       child(nPrimitives - 1),
       parent(2 * nPrimitives - 1),
+      rightmost(nPrimitives - 1),
       b(2 * nPrimitives - 1),
       e(2 * nPrimitives - 1),
       visits(nPrimitives - 1),
@@ -285,7 +293,7 @@ void BvhImpl::Build(PointsImpl const& P, SimplicesImpl const& S, GpuScalar expan
         thrust::device,
         thrust::make_counting_iterator(0),
         thrust::make_counting_iterator(n - 1),
-        FGenerateHierarchy{morton.Raw(), child.Raw(), parent.Raw(), leafBegin, n});
+        FGenerateHierarchy{morton.Raw(), child.Raw(), parent.Raw(), rightmost.Raw(), leafBegin, n});
 
     // 5. Construct internal node bounding boxes
     thrust::for_each(
@@ -293,6 +301,127 @@ void BvhImpl::Build(PointsImpl const& P, SimplicesImpl const& S, GpuScalar expan
         thrust::make_counting_iterator(n - 1),
         thrust::make_counting_iterator(2 * n - 1),
         FInternalNodeBoundingBoxes{parent.Raw(), child.Raw(), b.Raw(), e.Raw(), visits.Raw()});
+}
+
+struct FDetectSelfOverlaps
+{
+    __device__ bool AreSimplicesTopologicallyAdjacent(GpuIndex si, GpuIndex sj) const
+    {
+        for (auto i = 0; i < inds.size(); ++i)
+            for (auto j = 0; j < inds.size(); ++j)
+                if (inds[i][si] == inds[j][sj])
+                    return true;
+        return false;
+    }
+
+    __device__ bool AreBoxesOverlapping(GpuIndex i, GpuIndex j) const
+    {
+        // clang-format off
+        return (e[0][i] >= b[0][j]) and (b[0][i] <= e[0][j]) and
+               (e[1][i] >= b[1][j]) and (b[1][i] <= e[1][j]) and
+               (e[2][i] >= b[2][j]) and (b[2][i] <= e[2][j]);
+        // clang-format on
+    }
+
+    __device__ void operator()(auto leaf)
+    {
+        // Atomic overlap counter
+        cuda::atomic_ref<GpuIndex, cuda::thread_scope_device> ano{*no};
+        // Append to overlap list synchronously
+        auto const AddOverlap = [&](GpuIndex si, GpuIndex sj) {
+            GpuIndex k = ano++;
+            if (k >= nOverlapCapacity)
+            {
+                ano.store(nOverlapCapacity);
+                return false;
+            }
+            o[k] = {si, sj};
+            return true;
+        };
+        // Traverse nodes depth-first starting from the root.
+        common::Stack<GpuIndex, 64> stack{};
+        stack.Push(0);
+        do
+        {
+            GpuIndex const node = stack.Pop();
+            // Check each child node for overlap.
+            GpuIndex const lc = child[0][node];
+            GpuIndex const rc = child[1][node];
+            bool const bLeftOverlaps =
+                AreBoxesOverlapping(leaf, lc) and (rightmost[0][node] > leaf);
+            bool const bRightOverlaps =
+                AreBoxesOverlapping(leaf, rc) and (rightmost[1][node] > leaf);
+
+            // Leaf overlaps another leaf node => report collision if topologically separate
+            // simplices
+            bool const bIsLeftLeaf = lc >= leafBegin;
+            if (bLeftOverlaps and bIsLeftLeaf)
+            {
+                GpuIndex const si = simplex[leaf - leafBegin];
+                GpuIndex const sj = simplex[lc - leafBegin];
+                if (not AreSimplicesTopologicallyAdjacent(si, sj))
+                    if (not AddOverlap(si, sj))
+                        break;
+            }
+            bool const bIsRightLeaf = rc >= leafBegin;
+            if (bRightOverlaps and bIsRightLeaf)
+            {
+                GpuIndex const si = simplex[leaf - leafBegin];
+                GpuIndex const sj = simplex[rc - leafBegin];
+                if (not AreSimplicesTopologicallyAdjacent(si, sj))
+                    if (not AddOverlap(si, sj))
+                        break;
+            }
+
+            // Leaf overlaps an internal node => traverse.
+            bool const bTraverseLeft  = bLeftOverlaps and not bIsLeftLeaf;
+            bool const bTraverseRight = bRightOverlaps and not bIsRightLeaf;
+            if (bTraverseLeft)
+                stack.Push(lc);
+            if (bTraverseRight)
+                stack.Push(rc);
+        } while (not stack.IsEmpty());
+    }
+
+    GpuIndex* simplex;
+    std::array<GpuIndex const*, 4> inds;
+    std::array<GpuIndex*, 2> child;
+    std::array<GpuIndex*, 2> rightmost;
+    std::array<GpuScalar*, 3> b;
+    std::array<GpuScalar*, 3> e;
+    GpuIndex leafBegin;
+
+    GpuIndex* no;
+    BvhImpl::OverlapType* o;
+    GpuIndex nOverlapCapacity;
+};
+
+void BvhImpl::DetectSelfOverlaps(SimplicesImpl const& S)
+{
+    auto const n = S.NumberOfSimplices();
+    if (NumberOfAllocatedBoxes() < n)
+    {
+        std::string const what = "Allocated memory for " +
+                                 std::to_string(NumberOfAllocatedBoxes()) +
+                                 " boxes, but received " + std::to_string(n) + " simplices.";
+        throw std::invalid_argument(what);
+    }
+    auto const leafBegin = n - 1;
+    thrust::for_each(
+        thrust::device,
+        thrust::make_counting_iterator(n - 1),
+        thrust::make_counting_iterator(2 * n - 1),
+        FDetectSelfOverlaps{
+            simplex.Raw(),
+            S.inds.Raw(),
+            child.Raw(),
+            rightmost.Raw(),
+            b.Raw(),
+            e.Raw(),
+            leafBegin,
+            no.Raw(),
+            o.Raw(),
+            static_cast<GpuIndex>(o.Size())});
 }
 
 std::size_t BvhImpl::NumberOfAllocatedBoxes() const
@@ -303,3 +432,30 @@ std::size_t BvhImpl::NumberOfAllocatedBoxes() const
 } // namespace geometry
 } // namespace gpu
 } // namespace pbat
+
+#include <doctest/doctest.h>
+#include <unordered_set>
+
+TEST_CASE("[gpu][geometry] Sweep and prune")
+{
+    using namespace pbat;
+    // Arrange
+    // Cube mesh
+    GpuMatrixX V(3, 8);
+    GpuIndexMatrixX C(4, 5);
+    // clang-format off
+    V << 0.f, 1.f, 0.f, 1.f, 0.f, 1.f, 0.f, 1.f,
+         0.f, 0.f, 1.f, 1.f, 0.f, 0.f, 1.f, 1.f,
+         0.f, 0.f, 0.f, 0.f, 1.f, 1.f, 1.f, 1.f;
+    C << 0, 3, 5, 6, 0,
+         1, 2, 4, 7, 5,
+         3, 0, 6, 5, 3,
+         5, 6, 0, 3, 6;
+    // clang-format on
+    gpu::geometry::PointsImpl P(V);
+    gpu::geometry::SimplicesImpl S(C);
+    // Act
+    gpu::geometry::BvhImpl bvh(S.NumberOfSimplices(), S.NumberOfSimplices());
+    bvh.Build(P, S);
+    // Assert
+}

@@ -267,9 +267,9 @@ struct FVertexTriangleContactConstraint
         lambdac += dlambda;
 
         // Friction constraint
-        GpuScalar const d = Norm(dx);
-        dx                = (xv - xvt) - (xf * b - xft * b);
-        dx                = dx - n * n.Transpose() * dx;
+        GpuScalar const d   = Norm(dx);
+        dx                  = (xv - xvt) - (xf * b - xft * b);
+        dx                  = dx - n * n.Transpose() * dx;
         GpuScalar const dxd = Norm(dx);
         if (dxd > muS * d)
         {
@@ -392,8 +392,8 @@ XpbdImpl::XpbdImpl(
       mLagrangeMultipliers(),
       mCompliance(),
       mPartitions(),
-      mStaticFrictionCoefficient{0.5},
-      mDynamicFrictionCoefficient{0.3},
+      mStaticFrictionCoefficient{GpuScalar{0.5}},
+      mDynamicFrictionCoefficient{GpuScalar{0.3}},
       mAverageEdgeLength{},
       mMaxCollisionPenetration{kMaxCollisionPenetration}
 {
@@ -613,7 +613,7 @@ void XpbdImpl::SetLameCoefficients(Eigen::Ref<GpuMatrixX const> const& l)
 
 void XpbdImpl::SetCompliance(Eigen::Ref<GpuMatrixX const> const& alpha, EConstraint eConstraint)
 {
-    if (alpha.size() != mCompliance[eConstraint].Size())
+    if (static_cast<std::size_t>(alpha.size()) != mCompliance[eConstraint].Size())
     {
         std::ostringstream ss{};
         ss << "Expected compliance of dimensions " << mCompliance[eConstraint].Size()
@@ -742,7 +742,9 @@ TEST_CASE("[gpu][xpbd] Xpbd")
     auto const nMaxOverlaps = static_cast<std::size_t>(10 * V.cols());
     XpbdImpl xpbd{
         V,
-        GpuIndexMatrixX{GpuIndexVectorX::LinSpaced(V.cols(), 0, V.cols() - 1)}.transpose(),
+        GpuIndexMatrixX{
+            GpuIndexVectorX::LinSpaced(V.cols(), GpuIndex{0}, static_cast<GpuIndex>(V.cols()) - 1)}
+            .transpose(),
         F,
         T,
         nMaxOverlaps};

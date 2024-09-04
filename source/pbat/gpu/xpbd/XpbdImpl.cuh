@@ -36,7 +36,7 @@ class XpbdImpl
         Eigen::Ref<GpuIndexMatrixX const> const& F,
         Eigen::Ref<GpuIndexMatrixX const> const& T,
         std::size_t nMaxVertexTriangleOverlaps,
-        GpuScalar kMaxCollisionPenetration = GpuScalar{1.});
+        GpuScalar kMaxCollisionPenetration = GpuScalar{1});
     /**
      * @brief
      */

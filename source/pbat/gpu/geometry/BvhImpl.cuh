@@ -54,6 +54,12 @@ class BvhImpl
 
     /**
      * @brief
+     * @param S The simplices which were used to build this BVH
+     */
+    void DetectSelfOverlaps(SimplicesImpl const& S);
+
+    /**
+     * @brief
      * @return
      */
     std::size_t NumberOfAllocatedBoxes() const;
@@ -65,8 +71,10 @@ class BvhImpl
         child; ///< Left and right children. If child[lr][i] > n - 2, then it is
                ///< a leaf node, otherwise an internal node. lr == 0 -> left
                ///< child buffer, while lr == 1 -> right child buffer. i == 0 -> root node.
-    common::Buffer<GpuIndex> parent; ///< parent[i] -> index of parent node of node i.
-                                     ///< parent[0] == -1 <=> root node has no parent.
+    common::Buffer<GpuIndex> parent;       ///< parent[i] -> index of parent node of node i.
+                                           ///< parent[0] == -1 <=> root node has no parent.
+    common::Buffer<GpuIndex, 2> rightmost; ///< rightmost[lr][i] -> right most leaf in left (lr ==
+                                           ///< 0) or right (lr == 1) subtree.
     common::Buffer<GpuScalar, 3> b,
         e; ///< Simplex and internal node bounding boxes. The first n-1 boxes are internal node
            ///< bounding boxes. The next n boxes are leaf node (i.e. simplex) bounding boxes. The
