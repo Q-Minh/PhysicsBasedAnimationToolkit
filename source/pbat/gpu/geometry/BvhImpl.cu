@@ -5,7 +5,6 @@
 #include "BvhImpl.cuh"
 
 #include <cuda/atomic>
-#include <cuda/std/cmath>
 #include <exception>
 #include <string>
 #include <thrust/execution_policy.h>
@@ -18,10 +17,11 @@ namespace pbat {
 namespace gpu {
 namespace geometry {
 
-struct FComputeAabb
+struct FLeafBoundingBoxes
 {
     __device__ void operator()(int s)
     {
+        using namespace cuda::std;
         for (auto d = 0; d < 3; ++d)
         {
             auto bs  = leafBegin + s;
@@ -29,8 +29,8 @@ struct FComputeAabb
             e[d][bs] = x[d][inds[0][s]];
             for (auto m = 1; m < nSimplexVertices; ++m)
             {
-                b[d][bs] = cuda::std::fminf(b[d][bs], x[d][inds[m][s]]);
-                e[d][bs] = cuda::std::fmaxf(e[d][bs], x[d][inds[m][s]]);
+                b[d][bs] = fminf(b[d][bs], x[d][inds[m][s]]);
+                e[d][bs] = fmaxf(e[d][bs], x[d][inds[m][s]]);
             }
             b[d][bs] -= r;
             e[d][bs] += r;
@@ -48,7 +48,7 @@ struct FComputeAabb
 
 struct FComputeMortonCode
 {
-    using MortonCodeType = cuda::std::uint32_t;
+    using MortonCodeType = typename BvhImpl::MortonCodeType;
 
     // Expands a 10-bit integer into 30 bits
     // by inserting 2 zeros after each bit.
@@ -66,12 +66,12 @@ struct FComputeMortonCode
     __device__ MortonCodeType Morton3D(std::array<GpuScalar, 3> x)
     {
         using namespace cuda::std;
-        x[0]        = fminf(fmaxf(x[0] * 1024.0f, 0.0f), 1023.0f);
-        x[1]        = fminf(fmaxf(x[1] * 1024.0f, 0.0f), 1023.0f);
-        x[2]        = fminf(fmaxf(x[2] * 1024.0f, 0.0f), 1023.0f);
-        uint32_t xx = ExpandBits(static_cast<uint32_t>(x[0]));
-        uint32_t yy = ExpandBits(static_cast<uint32_t>(x[1]));
-        uint32_t zz = ExpandBits(static_cast<uint32_t>(x[2]));
+        x[0]              = fminf(fmaxf(x[0] * 1024.0f, 0.0f), 1023.0f);
+        x[1]              = fminf(fmaxf(x[1] * 1024.0f, 0.0f), 1023.0f);
+        x[2]              = fminf(fmaxf(x[2] * 1024.0f, 0.0f), 1023.0f);
+        MortonCodeType xx = ExpandBits(static_cast<MortonCodeType>(x[0]));
+        MortonCodeType yy = ExpandBits(static_cast<MortonCodeType>(x[1]));
+        MortonCodeType zz = ExpandBits(static_cast<MortonCodeType>(x[2]));
         return xx * 4 + yy * 2 + zz;
     }
 
@@ -87,12 +87,14 @@ struct FComputeMortonCode
 
     std::array<GpuScalar*, 3> b;
     std::array<GpuScalar*, 3> e;
-    GpuIndex* morton;
+    MortonCodeType* morton;
     GpuIndex leafBegin;
 };
 
 struct FGenerateHierarchy
 {
+    using MortonCodeType = typename BvhImpl::MortonCodeType;
+
     struct Range
     {
         GpuIndex i, j, l;
@@ -104,8 +106,8 @@ struct FGenerateHierarchy
         if (j < 0 or j >= n)
             return -1;
         if (i == j)
-            return __clz(reinterpret_cast<int>(i ^ j));
-        return __clz(reinterpret_cast<int>(morton[i] ^ morton[j]));
+            return __clz(i ^ j);
+        return __clz(morton[i] ^ morton[j]);
     }
 
     __device__ Range DetermineRange(GpuIndex i) const
@@ -171,12 +173,62 @@ struct FGenerateHierarchy
         parent[rc]  = i;
     }
 
-    GpuIndex const* morton;
+    MortonCodeType const* morton;
     std::array<GpuIndex*, 2> child;
     GpuIndex* parent;
     GpuIndex leafBegin;
-    std::size_t n;
+    GpuIndex n;
 };
+
+struct FInternalNodeBoundingBoxes
+{
+    __device__ void operator()(auto leaf)
+    {
+        using namespace cuda::std;
+        auto p = parent[leaf];
+        while (p >= 0)
+        {
+            cuda::atomic_ref<GpuIndex, cuda::thread_scope_device> ap{visits[p]};
+            // The first thread that gets access to the internal node p will terminate,
+            // while the second thread visiting p will be allowed to continue execution.
+            // This ensures that there is no race condition where a thread can access an
+            // internal node too early, i.e. before both children of the internal node
+            // have finished computing their bounding boxes.
+            if (ap++ == 0)
+                break;
+
+            GpuIndex lc = child[0][p];
+            GpuIndex rc = child[1][p];
+            for (auto d = 0; d < 3; ++d)
+            {
+                b[d][p] = fminf(b[d][lc], b[d][rc]);
+                e[d][p] = fmaxf(e[d][lc], e[d][rc]);
+            }
+            // Move up the binary tree
+            p = parent[p];
+        }
+    }
+
+    GpuIndex const* parent;
+    std::array<GpuIndex*, 2> child;
+    std::array<GpuScalar*, 3> b;
+    std::array<GpuScalar*, 3> e;
+    GpuIndex* visits;
+};
+
+BvhImpl::BvhImpl(std::size_t nPrimitives, std::size_t nOverlaps)
+    : simplex(nPrimitives),
+      morton(nPrimitives),
+      child(nPrimitives - 1),
+      parent(2 * nPrimitives - 1),
+      b(2 * nPrimitives - 1),
+      e(2 * nPrimitives - 1),
+      visits(nPrimitives - 1),
+      no(0),
+      o(nOverlaps)
+{
+    thrust::fill(thrust::device, parent.Data(), parent.Data() + parent.Size(), GpuIndex{-1});
+}
 
 void BvhImpl::Build(PointsImpl const& P, SimplicesImpl const& S, GpuScalar expansion)
 {
@@ -189,13 +241,16 @@ void BvhImpl::Build(PointsImpl const& P, SimplicesImpl const& S, GpuScalar expan
         throw std::invalid_argument(what);
     }
 
+    // 0. Reset intermediate data
+    thrust::fill(thrust::device, visits.Raw(), visits.Raw() + visits.Size(), GpuIndex{0});
+
     // 1. Construct leaf node (i.e. simplex) bounding boxes
     auto const leafBegin = n - 1;
     thrust::for_each(
         thrust::device,
         thrust::make_counting_iterator(0),
         thrust::make_counting_iterator(n),
-        FComputeAabb{
+        FLeafBoundingBoxes{
             P.x.Raw(),
             S.inds.Raw(),
             static_cast<int>(S.eSimplexType),
@@ -233,6 +288,11 @@ void BvhImpl::Build(PointsImpl const& P, SimplicesImpl const& S, GpuScalar expan
         FGenerateHierarchy{morton.Raw(), child.Raw(), parent.Raw(), leafBegin, n});
 
     // 5. Construct internal node bounding boxes
+    thrust::for_each(
+        thrust::device,
+        thrust::make_counting_iterator(n - 1),
+        thrust::make_counting_iterator(2 * n - 1),
+        FInternalNodeBoundingBoxes{parent.Raw(), child.Raw(), b.Raw(), e.Raw(), visits.Raw()});
 }
 
 std::size_t BvhImpl::NumberOfAllocatedBoxes() const
