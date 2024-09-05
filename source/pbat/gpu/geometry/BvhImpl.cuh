@@ -4,6 +4,7 @@
 #include "PrimitivesImpl.cuh"
 #include "pbat/gpu/Aliases.h"
 #include "pbat/gpu/common/Buffer.cuh"
+#include "pbat/gpu/common/Morton.cuh"
 #include "pbat/gpu/common/Var.cuh"
 
 #include <cuda/std/cmath>
@@ -25,11 +26,10 @@ class BvhImpl
 {
   public:
     using OverlapType    = cuda::std::pair<GpuIndex, GpuIndex>;
-    using MortonCodeType = cuda::std::uint32_t;
+    using MortonCodeType = pbat::gpu::common::MortonCodeType;
 
-    static_assert(
-        std::is_same_v<GpuScalar, float>,
-        "gpu::BvhImpl only supported for single precision floating point numbers");
+    friend class BvhQueryImpl;
+
     static_assert(
         std::is_same_v<GpuIndex, int>,
         "gpu::BvhImpl only supported for 32-bit signed integer indices");
