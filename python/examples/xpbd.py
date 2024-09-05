@@ -51,6 +51,8 @@ if __name__ == "__main__":
     )
     parser.add_argument("-i", "--input", help="Paths to input mesh", nargs="+",
                         dest="inputs", required=True)
+    parser.add_argument("-o", "--output", help="Path to output meshes", 
+                        dest="output", default=".")
     parser.add_argument("-m", "--mass-density", help="Mass density", type=float,
                         dest="rho", default=1000.)
     parser.add_argument("-Y", "--young-modulus", help="Young's modulus", type=float,
@@ -100,7 +102,7 @@ if __name__ == "__main__":
     Xmin = mesh.X.min(axis=1)
     Xmax = mesh.X.max(axis=1)
     extent = Xmax - Xmin
-    Xmax[-1] = Xmin[-1] + 0.05*extent[-1]
+    Xmax[0] = Xmin[0] + 0.01*extent[0]
     aabb = pbat.geometry.aabb(np.vstack((Xmin, Xmax)).T)
     vdbc = aabb.contained(mesh.X)
     minv = 1 / m
@@ -138,13 +140,14 @@ if __name__ == "__main__":
     iterations = 1
     substeps = 50
     animate = False
+    export = False
     t = 0
 
     profiler = pbat.profiling.Profiler()
 
     def callback():
         global dt, iterations, substeps, alphac, max_collision_penetration
-        global animate, t
+        global animate, export, t
         global profiler
 
         changed, dt = imgui.InputFloat("dt", dt)
@@ -155,6 +158,7 @@ if __name__ == "__main__":
         max_collision_penetration_changed, max_collision_penetration = imgui.InputFloat(
             "Max collision depth", max_collision_penetration)
         changed, animate = imgui.Checkbox("Animate", animate)
+        changed, export = imgui.Checkbox("Export", export)
         step = imgui.Button("Step")
         reset = imgui.Button("Reset")
 
@@ -178,6 +182,10 @@ if __name__ == "__main__":
 
             # Update visuals
             V = xpbd.x.T
+            if export:
+                omesh = meshio.Mesh(V, {"tetra": mesh.E.T})
+                meshio.write(f"{args.output}/{t}.mesh", omesh)
+                
             vm.update_vertex_positions(V)
             t = t+1
 
