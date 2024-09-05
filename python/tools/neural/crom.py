@@ -465,7 +465,7 @@ def parse_cli():
                         dest="learning_rate", default=1e-4)
     parser.add_argument("--batch-size", help="Training batch size", type=int,
                         dest="batch_size", default=32)
-    parser.add_argument("--mode", help="One of train | run", type=str,
+    parser.add_argument("--mode", help="One of train | sample | run", type=str,
                         dest="mode", default="train")
     args = parser.parse_args()
     return args
@@ -475,6 +475,8 @@ if __name__ == "__main__":
     args = parse_cli()
     if args.mode == "train":
         train(args)
+    if args.mode == "sample":
+        sample(args)
     if args.mode == "run":
         run(args)
     
