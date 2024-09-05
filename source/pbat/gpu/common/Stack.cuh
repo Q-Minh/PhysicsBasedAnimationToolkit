@@ -11,10 +11,7 @@ template <class T, auto kCapacity = 64>
 class Stack
 {
   public:
-    __host__ __device__ Stack() : stack{0,}, size{0}
-    {
-    }
-
+    __host__ __device__ Stack() : stack{}, size{0} {}
     __host__ __device__ void Push(T value) { stack[size++] = value; }
     __host__ __device__ T Pop() { return stack[--size]; }
     __host__ __device__ T const& Top() const { return stack[size - 1]; }
