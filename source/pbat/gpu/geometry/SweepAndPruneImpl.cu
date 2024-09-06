@@ -10,6 +10,7 @@
 #include <thrust/copy.h>
 #include <thrust/execution_policy.h>
 #include <thrust/for_each.h>
+#include <thrust/iterator/counting_iterator.h>
 #include <thrust/sequence.h>
 #include <thrust/sort.h>
 
@@ -24,8 +25,7 @@ SweepAndPruneImpl::SweepAndPruneImpl(std::size_t nPrimitives, std::size_t nOverl
       e(nPrimitives),
       mu(3),
       sigma(3),
-      no(),
-      o(nOverlaps)
+      overlaps(nOverlaps)
 {
 }
 
@@ -47,7 +47,7 @@ void SweepAndPruneImpl::SortAndSweep(
     // 0. Preprocess internal data
     thrust::fill(mu.Data(), mu.Data() + mu.Size(), 0.f);
     thrust::fill(sigma.Data(), sigma.Data() + sigma.Size(), 0.f);
-    no = 0;
+    overlaps.Clear();
     thrust::sequence(thrust::device, binds.Data(), binds.Data() + nBoxes);
 
     // 1. Compute bounding boxes of S1 and S2
@@ -125,10 +125,8 @@ void SweepAndPruneImpl::SortAndSweep(
         e.Raw(),
         saxis,
         axis,
-        no.Raw(),
-        o.Raw(),
         nBoxes,
-        static_cast<GpuIndex>(o.Size())};
+        overlaps.Raw()};
     thrust::for_each(
         thrust::device,
         thrust::make_counting_iterator(0),
@@ -143,14 +141,12 @@ std::size_t SweepAndPruneImpl::NumberOfAllocatedBoxes() const
 
 std::size_t SweepAndPruneImpl::NumberOfAllocatedOverlaps() const
 {
-    return o.Size();
+    return overlaps.Capacity();
 }
 
-thrust::host_vector<SweepAndPruneImpl::OverlapType> SweepAndPruneImpl::Overlaps() const
+std::vector<typename SweepAndPruneImpl::OverlapType> SweepAndPruneImpl::Overlaps() const
 {
-    GpuIndex const nOverlaps = no;
-    thrust::host_vector<OverlapType> overlaps{o.Data(), o.Data() + nOverlaps};
-    return overlaps;
+    return overlaps.Get();
 }
 
 } // namespace geometry
@@ -195,8 +191,8 @@ TEST_CASE("[gpu][geometry] Sweep and prune")
     // Act
     gpu::geometry::SweepAndPruneImpl sap(4, 2);
     sap.SortAndSweep(P, S1, S2);
+    std::vector<OverlapType> overlaps = sap.Overlaps();
     // Assert
-    thrust::host_vector<OverlapType> overlaps = sap.Overlaps();
     for (OverlapType overlap : overlaps)
     {
         auto it                             = overlapsExpected.find(overlap);

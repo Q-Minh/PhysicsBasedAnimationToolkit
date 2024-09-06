@@ -3,6 +3,7 @@
 
 #include "SweepAndPruneImpl.cuh"
 #include "pbat/gpu/Aliases.h"
+#include "pbat/gpu/common/SynchronizedList.cuh"
 
 #include <array>
 #include <cuda/atomic>
@@ -84,6 +85,8 @@ struct FComputeVariance
 
 struct FSweep
 {
+    using OverlapType = typename SweepAndPruneImpl::OverlapType;
+
     /**
      * @brief If (si,sj) are from the same simplex set, or if (si,sj) share a common vertex, they
      * should not be considered for overlap testing.
@@ -112,7 +115,6 @@ struct FSweep
 
     __device__ void operator()(GpuIndex si)
     {
-        cuda::atomic_ref<GpuIndex, cuda::thread_scope_device> ano{*no};
         bool const bSwap = binds[si] >= nSimplices[0];
         for (auto sj = si + 1; (sj < nBoxes) and (e[saxis][si] >= b[saxis][sj]); ++sj)
         {
@@ -121,21 +123,10 @@ struct FSweep
             if (not AreSimplexCandidatesOverlapping(si, sj))
                 continue;
 
-            GpuIndex k = ano++;
-            if (k >= nOverlapCapacity)
-            {
-                ano.store(nOverlapCapacity);
+            auto const overlap = bSwap ? OverlapType{binds[sj], binds[si] - nSimplices[0]} :
+                                         OverlapType{binds[si], binds[sj] - nSimplices[0]};
+            if (not overlaps.Append(overlap))
                 break;
-            }
-
-            if (not bSwap)
-            {
-                o[k] = {binds[si], binds[sj] - nSimplices[0]};
-            }
-            else
-            {
-                o[k] = {binds[sj], binds[si] - nSimplices[0]};
-            }
         }
     }
 
@@ -145,10 +136,8 @@ struct FSweep
     std::array<GpuScalar*, 3> b, e;
     GpuIndex saxis;
     std::array<GpuIndex, 2> axis;
-    GpuIndex* no;
-    SweepAndPruneImpl::OverlapType* o;
     GpuIndex nBoxes;
-    GpuIndex nOverlapCapacity;
+    common::DeviceSynchronizedList<OverlapType> overlaps;
 };
 
 } // namespace SweepAndPruneImplKernels

@@ -24,6 +24,8 @@ class XpbdImpl
   public:
     enum EConstraint : int { StableNeoHookean = 0, Collision, NumberOfConstraintTypes };
     static auto constexpr kConstraintTypes = static_cast<int>(EConstraint::NumberOfConstraintTypes);
+    
+    using CollisionPairType                = typename geometry::SweepAndPruneImpl::OverlapType;
 
     /**
      * @brief

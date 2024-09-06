@@ -4,11 +4,12 @@
 #include "PrimitivesImpl.cuh"
 #include "pbat/gpu/Aliases.h"
 #include "pbat/gpu/common/Buffer.cuh"
+#include "pbat/gpu/common/SynchronizedList.cuh"
 #include "pbat/gpu/common/Var.cuh"
 
 #include <cuda/std/utility>
 #include <limits>
-#include <thrust/host_vector.h>
+#include <vector>
 
 namespace pbat {
 namespace gpu {
@@ -53,7 +54,7 @@ class SweepAndPruneImpl
      * @brief Obtains the CPU copy of detected overlaps in the last call to SortAndSweep
      * @return
      */
-    thrust::host_vector<OverlapType> Overlaps() const;
+    std::vector<OverlapType> Overlaps() const;
 
   private:
     common::Buffer<GpuIndex> binds;      ///< Box indices
@@ -62,8 +63,7 @@ class SweepAndPruneImpl
     common::Buffer<GpuScalar> mu, sigma; ///< Box center mean and variance
 
   public:
-    common::Var<GpuIndex> no;      ///< Number of overlaps
-    common::Buffer<OverlapType> o; ///< Overlaps
+    common::SynchronizedList<OverlapType> overlaps; ///< Simplex box overlaps
 };
 
 } // namespace geometry

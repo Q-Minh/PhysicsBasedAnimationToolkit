@@ -9,9 +9,11 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     FILES
     "Xpbd.h"
     "XpbdImpl.cuh"
+    "XpbdImplKernels.cuh"
 )
 target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     PRIVATE
     "Xpbd.cu"
     "XpbdImpl.cu"
+    "XpbdImplKernels.cu"
 )

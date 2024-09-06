@@ -21,7 +21,7 @@ class DeviceSynchronizedList
     {
     }
 
-    __device__ bool Append(T&& value)
+    __device__ bool Append(T const& value)
     {
         cuda::atomic_ref<GpuIndex, cuda::thread_scope_device> aSize{*mSize};
         GpuIndex k = aSize++;
@@ -30,7 +30,7 @@ class DeviceSynchronizedList
             aSize.store(mCapacity);
             return false;
         }
-        mBuffer[k] = std::forward<T>(value);
+        mBuffer[k] = value;
         return true;
     }
 
@@ -47,6 +47,11 @@ class SynchronizedList
     SynchronizedList(std::size_t capacity) : mBuffer(capacity), mSize{0} {}
     DeviceSynchronizedList<T> Raw() { return DeviceSynchronizedList<T>(mBuffer, mSize); }
     std::vector<T> Get() const { return mBuffer.Get(mSize.Get()); }
+    void Clear() { mSize = 0; }
+    std::size_t Capacity() const { return mBuffer.Size(); }
+    Buffer<T>& Memory() { return mBuffer; }
+    Buffer<T> const& Memory() const { return mBuffer; }
+    GpuIndex Size() const { return mSize.Get(); }
 
   private:
     Buffer<T> mBuffer;
