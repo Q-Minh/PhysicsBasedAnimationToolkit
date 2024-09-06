@@ -12,18 +12,24 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     FILE_SET implementation
     FILES
     "BvhImpl.cuh"
+    "BvhImplKernels.cuh"
     "BvhQueryImpl.cuh"
+    "BvhQueryImplKernels.cuh"
     "PrimitivesImpl.cuh"
     "SweepAndPruneImpl.cuh"
+    "SweepAndPruneImplKernels.cuh"
 )
 target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     PRIVATE
     "Bvh.cu"
     "BvhImpl.cu"
+    "BvhImplKernels.cu"
     "BvhQuery.cu"
     "BvhQueryImpl.cu"
+    "BvhQueryImplKernels.cu"
     "Primitives.cu"
     "PrimitivesImpl.cu"
     "SweepAndPrune.cu"
     "SweepAndPruneImpl.cu"
+    "SweepAndPruneImplKernels.cu"
 )

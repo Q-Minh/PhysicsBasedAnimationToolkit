@@ -3,9 +3,8 @@
 // clang-format on
 
 #include "SweepAndPruneImpl.cuh"
+#include "SweepAndPruneImplKernels.cuh"
 
-#include <cuda/atomic>
-#include <cuda/std/cmath>
 #include <exception>
 #include <string>
 #include <thrust/copy.h>
@@ -29,144 +28,6 @@ SweepAndPruneImpl::SweepAndPruneImpl(std::size_t nPrimitives, std::size_t nOverl
       o(nOverlaps)
 {
 }
-
-struct FComputeAabb
-{
-    __device__ void operator()(int s)
-    {
-        for (auto d = 0; d < 3; ++d)
-        {
-            b[d][s] = x[d][inds[0][s]];
-            e[d][s] = x[d][inds[0][s]];
-            for (auto m = 1; m < nSimplexVertices; ++m)
-            {
-                b[d][s] = cuda::std::fminf(b[d][s], x[d][inds[m][s]]);
-                e[d][s] = cuda::std::fmaxf(e[d][s], x[d][inds[m][s]]);
-            }
-            b[d][s] -= r;
-            e[d][s] += r;
-        }
-    }
-
-    std::array<GpuScalar const*, 3> x;
-    std::array<GpuIndex*, 4> inds;
-    int nSimplexVertices;
-    std::array<GpuScalar*, 3> b;
-    std::array<GpuScalar*, 3> e;
-    GpuScalar r;
-};
-
-struct FComputeMean
-{
-    __device__ void operator()(int s)
-    {
-        cuda::atomic_ref<GpuScalar, cuda::thread_scope_device> amu[3] = {
-            cuda::atomic_ref<GpuScalar, cuda::thread_scope_device>(mu[0]),
-            cuda::atomic_ref<GpuScalar, cuda::thread_scope_device>(mu[1]),
-            cuda::atomic_ref<GpuScalar, cuda::thread_scope_device>(mu[2])};
-        for (auto d = 0; d < 3; ++d)
-        {
-            amu[d] += (b[d][s] + e[d][s]) / (2.f * static_cast<GpuScalar>(nBoxes));
-        }
-    }
-
-    std::array<GpuScalar*, 3> b;
-    std::array<GpuScalar*, 3> e;
-    GpuScalar* mu;
-    GpuIndex nBoxes;
-};
-
-struct FComputeVariance
-{
-    __device__ void operator()(int s)
-    {
-        cuda::atomic_ref<GpuScalar, cuda::thread_scope_device> asigma[3] = {
-            cuda::atomic_ref<GpuScalar, cuda::thread_scope_device>(sigma[0]),
-            cuda::atomic_ref<GpuScalar, cuda::thread_scope_device>(sigma[1]),
-            cuda::atomic_ref<GpuScalar, cuda::thread_scope_device>(sigma[2])};
-        for (auto d = 0; d < 3; ++d)
-        {
-            GpuScalar const cd = (b[d][s] + e[d][s]) / 2.f;
-            GpuScalar const dx = cd - mu[d];
-            asigma[d] += dx * dx / static_cast<GpuScalar>(nBoxes);
-        }
-    }
-
-    std::array<GpuScalar*, 3> b;
-    std::array<GpuScalar*, 3> e;
-    GpuScalar* mu;
-    GpuScalar* sigma;
-    GpuIndex nBoxes;
-};
-
-struct FSweep
-{
-    /**
-     * @brief If (si,sj) are from the same simplex set, or if (si,sj) share a common vertex, they
-     * should not be considered for overlap testing.
-     * @param sinds Simplex vertex indices in both sets
-     * @param nSimplices Number of simplices in each simplex set
-     * @param si Index of first simplex in pair to test
-     * @param sj Index of second simplex in pair to test
-     * @return
-     */
-    __device__ bool AreSimplicesOverlapCandidates(GpuIndex si, GpuIndex sj) const
-    {
-        if ((binds[si] < nSimplices[0]) == (binds[sj] < nSimplices[0]))
-            return false;
-        for (auto i = 0; i < sinds.size(); ++i)
-            for (auto j = 0; j < sinds.size(); ++j)
-                if (sinds[i][si] == sinds[j][sj])
-                    return false;
-        return true;
-    }
-
-    __device__ bool AreSimplexCandidatesOverlapping(GpuIndex si, GpuIndex sj) const
-    {
-        return (e[axis[0]][si] >= b[axis[0]][sj]) and (b[axis[0]][si] <= e[axis[0]][sj]) and
-               (e[axis[1]][si] >= b[axis[1]][sj]) and (b[axis[1]][si] <= e[axis[1]][sj]);
-    }
-
-    __device__ void operator()(GpuIndex si)
-    {
-        cuda::atomic_ref<GpuIndex, cuda::thread_scope_device> ano{*no};
-        bool const bSwap = binds[si] >= nSimplices[0];
-        for (auto sj = si + 1; (sj < nBoxes) and (e[saxis][si] >= b[saxis][sj]); ++sj)
-        {
-            if (not AreSimplicesOverlapCandidates(si, sj))
-                continue;
-            if (not AreSimplexCandidatesOverlapping(si, sj))
-                continue;
-
-            GpuIndex k = ano++;
-            if (k >= nOverlapCapacity)
-            {
-                ano.store(nOverlapCapacity);
-                break;
-            }
-
-            if (not bSwap)
-            {
-                o[k] = {binds[si], binds[sj] - nSimplices[0]};
-            }
-            else
-            {
-                o[k] = {binds[sj], binds[si] - nSimplices[0]};
-            }
-        }
-    }
-
-    GpuIndex* binds;
-    std::array<GpuIndex*, 4> sinds;
-    std::array<GpuIndex, 2> nSimplices;
-    std::array<GpuScalar*, 3> b, e;
-    GpuIndex saxis;
-    std::array<GpuIndex, 2> axis;
-    GpuIndex* no;
-    SweepAndPruneImpl::OverlapType* o;
-    GpuIndex nBoxes;
-    GpuIndex nOverlapCapacity;
-};
 
 void SweepAndPruneImpl::SortAndSweep(
     PointsImpl const& P,
@@ -203,7 +64,7 @@ void SweepAndPruneImpl::SortAndSweep(
         thrust::device,
         thrust::make_counting_iterator(0),
         thrust::make_counting_iterator(S1.NumberOfSimplices()),
-        FComputeAabb{
+        SweepAndPruneImplKernels::FComputeAabb{
             P.x.Raw(),
             sinds.Raw(),
             static_cast<int>(S1.eSimplexType),
@@ -214,7 +75,7 @@ void SweepAndPruneImpl::SortAndSweep(
         thrust::device,
         thrust::make_counting_iterator(S1.NumberOfSimplices()),
         thrust::make_counting_iterator(nBoxes),
-        FComputeAabb{
+        SweepAndPruneImplKernels::FComputeAabb{
             P.x.Raw(),
             sinds.Raw(),
             static_cast<int>(S2.eSimplexType),
@@ -223,13 +84,14 @@ void SweepAndPruneImpl::SortAndSweep(
             expansion});
 
     // 2. Compute mean and variance of bounding box centers
-    FComputeMean fComputeMean{b.Raw(), e.Raw(), mu.Raw(), nBoxes};
+    SweepAndPruneImplKernels::FComputeMean fComputeMean{b.Raw(), e.Raw(), mu.Raw(), nBoxes};
     thrust::for_each(
         thrust::device,
         thrust::make_counting_iterator(0),
         thrust::make_counting_iterator(nBoxes),
         fComputeMean);
-    FComputeVariance fComputeVariance{b.Raw(), e.Raw(), mu.Raw(), sigma.Raw(), nBoxes};
+    SweepAndPruneImplKernels::FComputeVariance
+        fComputeVariance{b.Raw(), e.Raw(), mu.Raw(), sigma.Raw(), nBoxes};
     thrust::for_each(
         thrust::device,
         thrust::make_counting_iterator(0),
@@ -255,7 +117,7 @@ void SweepAndPruneImpl::SortAndSweep(
     thrust::sort_by_key(thrust::device, b[saxis].begin(), b[saxis].begin() + nBoxes, zip);
 
     // 4. Sweep to find overlaps
-    FSweep fSweep{
+    SweepAndPruneImplKernels::FSweep fSweep{
         binds.Raw(),
         sinds.Raw(),
         {S1.NumberOfSimplices(), S2.NumberOfSimplices()},

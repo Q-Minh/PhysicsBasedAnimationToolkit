@@ -1,4 +1,10 @@
+// clang-format off
+#include "pbat/gpu/DisableWarnings.h"
+// clang-format on
+
 #include "BvhQueryImpl.cuh"
+#include "BvhQueryImplKernels.cuh"
+#include "pbat/gpu/common/Stack.cuh"
 
 #include <cuda/atomic>
 #include <cuda/std/cmath>
@@ -14,53 +20,9 @@ namespace gpu {
 namespace geometry {
 
 BvhQueryImpl::BvhQueryImpl(std::size_t nPrimitives, std::size_t nOverlaps)
-    : simplex(nPrimitives), morton(nPrimitives), b(nPrimitives), e(nPrimitives), no(0), o(nOverlaps)
+    : simplex(nPrimitives), morton(nPrimitives), b(nPrimitives), e(nPrimitives), overlaps(nOverlaps)
 {
 }
-
-struct FComputeAabb
-{
-    __device__ void operator()(int s)
-    {
-        for (auto d = 0; d < 3; ++d)
-        {
-            b[d][s] = x[d][inds[0][s]];
-            e[d][s] = x[d][inds[0][s]];
-            for (auto m = 1; m < nSimplexVertices; ++m)
-            {
-                b[d][s] = cuda::std::fminf(b[d][s], x[d][inds[m][s]]);
-                e[d][s] = cuda::std::fmaxf(e[d][s], x[d][inds[m][s]]);
-            }
-            b[d][s] -= r;
-            e[d][s] += r;
-        }
-    }
-
-    std::array<GpuScalar const*, 3> x;
-    std::array<GpuIndex const*, 4> inds;
-    int nSimplexVertices;
-    std::array<GpuScalar*, 3> b;
-    std::array<GpuScalar*, 3> e;
-    GpuScalar r;
-};
-
-struct FComputeMortonCode
-{
-    using MortonCodeType = typename BvhImpl::MortonCodeType;
-
-    __device__ void operator()(int s)
-    {
-        // Compute Morton code of the centroid of the bounding box of simplex s
-        std::array<GpuScalar, 3> c{0.f, 0.f, 0.f};
-        for (auto d = 0; d < 3; ++d)
-            c[d] += GpuScalar{0.5} * (b[d][s] + e[d][s]);
-        morton[s] = common::Morton3D(c);
-    }
-
-    std::array<GpuScalar*, 3> b;
-    std::array<GpuScalar*, 3> e;
-    MortonCodeType* morton;
-};
 
 void BvhQueryImpl::Build(PointsImpl const& P, SimplicesImpl const& S, GpuScalar expansion)
 {
@@ -77,7 +39,7 @@ void BvhQueryImpl::Build(PointsImpl const& P, SimplicesImpl const& S, GpuScalar 
         thrust::device,
         thrust::make_counting_iterator(0),
         thrust::make_counting_iterator(n),
-        FComputeAabb{
+        BvhQueryImplKernels::FComputeAabb{
             P.x.Raw(),
             S.inds.Raw(),
             static_cast<int>(S.eSimplexType),
@@ -89,7 +51,7 @@ void BvhQueryImpl::Build(PointsImpl const& P, SimplicesImpl const& S, GpuScalar 
         thrust::device,
         thrust::make_counting_iterator(0),
         thrust::make_counting_iterator(n),
-        FComputeMortonCode{b.Raw(), e.Raw(), morton.Raw()});
+        BvhQueryImplKernels::FComputeMortonCode{b.Raw(), e.Raw(), morton.Raw()});
     // Sort simplices+boxes by morton codes to try and improve data locality in future queries
     thrust::sequence(thrust::device, simplex.Data(), simplex.Data() + simplex.Size());
     auto zip = thrust::make_zip_iterator(
@@ -104,11 +66,37 @@ void BvhQueryImpl::Build(PointsImpl const& P, SimplicesImpl const& S, GpuScalar 
 }
 
 void BvhQueryImpl::DetectOverlaps(
-    PointsImpl const& P1,
+    PointsImpl const& P,
     SimplicesImpl const& S1,
-    PointsImpl const& P2,
-    SimplicesImpl const& S2)
+    SimplicesImpl const& S2,
+    BvhImpl const& bvh)
 {
+    auto const nQueries = S1.NumberOfSimplices();
+    if (NumberOfAllocatedBoxes() < nQueries)
+    {
+        std::string const what =
+            "Allocated memory for " + std::to_string(NumberOfAllocatedBoxes()) +
+            " boxes, but received " + std::to_string(nQueries) + " query simplices.";
+        throw std::invalid_argument(what);
+    }
+    auto const leafBegin = bvh.simplex.Size() - 1;
+    thrust::for_each(
+        thrust::device,
+        thrust::make_counting_iterator(0),
+        thrust::make_counting_iterator(nQueries),
+        BvhQueryImplKernels::FDetectOverlaps{
+            P.x.Raw(),
+            simplex.Raw(),
+            S1.inds.Raw(),
+            b.Raw(),
+            e.Raw(),
+            bvh.simplex.Raw(),
+            S2.inds.Raw(),
+            bvh.b.Raw(),
+            bvh.e.Raw(),
+            bvh.child.Raw(),
+            static_cast<GpuIndex>(leafBegin),
+            overlaps.Raw()});
 }
 
 std::size_t BvhQueryImpl::NumberOfAllocatedBoxes() const

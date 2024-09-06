@@ -6,6 +6,7 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     "Morton.cuh"
     "Queue.cuh"
     "Stack.cuh"
+    "SynchronizedList.cuh"
     "Var.cuh"
 )
 
@@ -15,5 +16,6 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     "Morton.cu"
     "Queue.cu"
     "Stack.cu"
+    "SynchronizedList.cu"
     "Var.cu"
 )

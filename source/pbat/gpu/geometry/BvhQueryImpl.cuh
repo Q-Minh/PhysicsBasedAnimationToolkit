@@ -5,6 +5,7 @@
 #include "PrimitivesImpl.cuh"
 #include "pbat/gpu/Aliases.h"
 #include "pbat/gpu/common/Buffer.cuh"
+#include "pbat/gpu/common/SynchronizedList.cuh"
 #include "pbat/gpu/common/Var.cuh"
 
 #include <cuda/std/cmath>
@@ -42,17 +43,17 @@ class BvhQueryImpl
         GpuScalar expansion = std::numeric_limits<GpuScalar>::min());
 
     /**
-     * @brief 
-     * @param P1 
-     * @param S1 
-     * @param P2 
-     * @param S2 
+     * @brief
+     * @param P
+     * @param S1
+     * @param S2
+     * @param bvh
      */
     void DetectOverlaps(
-        PointsImpl const& P1,
+        PointsImpl const& P,
         SimplicesImpl const& S1,
-        PointsImpl const& P2,
-        SimplicesImpl const& S2);
+        SimplicesImpl const& S2,
+        BvhImpl const& bvh);
 
     /**
      * @brief
@@ -67,8 +68,7 @@ class BvhQueryImpl
         e; ///< Simplex and internal node bounding boxes.
 
   public:
-    common::Var<GpuIndex> no;      ///< Number of overlaps
-    common::Buffer<OverlapType> o; ///< Overlaps
+    common::SynchronizedList<OverlapType> overlaps; ///< Detected overlaps
 };
 
 } // namespace geometry
