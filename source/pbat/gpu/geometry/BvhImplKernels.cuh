@@ -4,6 +4,7 @@
 #include "BvhImpl.cuh"
 #include "pbat/gpu/Aliases.h"
 #include "pbat/gpu/common/Stack.cuh"
+#include "pbat/gpu/common/SynchronizedList.cuh"
 
 #include <array>
 #include <cuda/atomic>
@@ -196,6 +197,8 @@ struct FInternalNodeBoundingBoxes
 
 struct FDetectSelfOverlaps
 {
+    using OverlapType = typename BvhImpl::OverlapType;
+
     __device__ bool AreSimplicesTopologicallyAdjacent(GpuIndex si, GpuIndex sj) const
     {
         for (auto i = 0; i < inds.size(); ++i)
@@ -216,19 +219,6 @@ struct FDetectSelfOverlaps
 
     __device__ void operator()(auto leaf)
     {
-        // Atomic overlap counter
-        cuda::atomic_ref<GpuIndex, cuda::thread_scope_device> ano{*no};
-        // Append to overlap list synchronously
-        auto const AddOverlap = [&](GpuIndex si, GpuIndex sj) {
-            GpuIndex k = ano++;
-            if (k >= nOverlapCapacity)
-            {
-                ano.store(nOverlapCapacity);
-                return false;
-            }
-            o[k] = {si, sj};
-            return true;
-        };
         // Traverse nodes depth-first starting from the root.
         common::Stack<GpuIndex, 64> stack{};
         stack.Push(0);
@@ -250,18 +240,16 @@ struct FDetectSelfOverlaps
             {
                 GpuIndex const si = simplex[leaf - leafBegin];
                 GpuIndex const sj = simplex[lc - leafBegin];
-                if (not AreSimplicesTopologicallyAdjacent(si, sj))
-                    if (not AddOverlap(si, sj))
-                        break;
+                if (not AreSimplicesTopologicallyAdjacent(si, sj) and not overlaps.Append({si, sj}))
+                    break;
             }
             bool const bIsRightLeaf = rc >= leafBegin;
             if (bRightOverlaps and bIsRightLeaf)
             {
                 GpuIndex const si = simplex[leaf - leafBegin];
                 GpuIndex const sj = simplex[rc - leafBegin];
-                if (not AreSimplicesTopologicallyAdjacent(si, sj))
-                    if (not AddOverlap(si, sj))
-                        break;
+                if (not AreSimplicesTopologicallyAdjacent(si, sj) and not overlaps.Append({si, sj}))
+                    break;
             }
 
             // Leaf overlaps an internal node => traverse.
@@ -281,10 +269,7 @@ struct FDetectSelfOverlaps
     std::array<GpuScalar*, 3> b;
     std::array<GpuScalar*, 3> e;
     GpuIndex leafBegin;
-
-    GpuIndex* no;
-    BvhImpl::OverlapType* o;
-    GpuIndex nOverlapCapacity;
+    common::DeviceSynchronizedList<OverlapType> overlaps;
 };
 
 } // namespace BvhImplKernels

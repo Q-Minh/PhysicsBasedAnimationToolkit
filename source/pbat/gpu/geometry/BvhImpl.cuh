@@ -5,6 +5,7 @@
 #include "pbat/gpu/Aliases.h"
 #include "pbat/gpu/common/Buffer.cuh"
 #include "pbat/gpu/common/Morton.cuh"
+#include "pbat/gpu/common/SynchronizedList.cuh"
 #include "pbat/gpu/common/Var.cuh"
 
 #include <cuda/std/cmath>
@@ -83,8 +84,7 @@ class BvhImpl
                                      ///< for bottom-up bounding box computations
 
   public:
-    common::Var<GpuIndex> no;      ///< Number of overlaps
-    common::Buffer<OverlapType> o; ///< Overlaps
+    common::SynchronizedList<OverlapType> overlaps; ///< Detected overlaps
 };
 
 } // namespace geometry

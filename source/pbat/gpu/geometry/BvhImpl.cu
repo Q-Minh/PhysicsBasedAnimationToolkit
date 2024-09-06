@@ -27,8 +27,7 @@ BvhImpl::BvhImpl(std::size_t nPrimitives, std::size_t nOverlaps)
       b(2 * nPrimitives - 1),
       e(2 * nPrimitives - 1),
       visits(nPrimitives - 1),
-      no(0),
-      o(nOverlaps)
+      overlaps(nOverlaps)
 {
     thrust::fill(thrust::device, parent.Data(), parent.Data() + parent.Size(), GpuIndex{-1});
 }
@@ -132,9 +131,7 @@ void BvhImpl::DetectSelfOverlaps(SimplicesImpl const& S)
             b.Raw(),
             e.Raw(),
             leafBegin,
-            no.Raw(),
-            o.Raw(),
-            static_cast<GpuIndex>(o.Size())});
+            overlaps.Raw()});
 }
 
 std::size_t BvhImpl::NumberOfAllocatedBoxes() const
@@ -152,7 +149,6 @@ std::size_t BvhImpl::NumberOfAllocatedBoxes() const
 TEST_CASE("[gpu][geometry] Sweep and prune")
 {
     using namespace pbat;
-    // Arrange
     // Cube mesh
     GpuMatrixX V(3, 8);
     GpuIndexMatrixX C(4, 5);
@@ -165,10 +161,33 @@ TEST_CASE("[gpu][geometry] Sweep and prune")
          3, 0, 6, 5, 3,
          5, 6, 0, 3, 6;
     // clang-format on
-    gpu::geometry::PointsImpl P(V);
-    gpu::geometry::SimplicesImpl S(C);
-    // Act
-    gpu::geometry::BvhImpl bvh(S.NumberOfSimplices(), S.NumberOfSimplices());
-    bvh.Build(P, S);
-    // Assert
+    SUBCASE("Connected non self-overlapping mesh")
+    {
+        // Arrange
+        gpu::geometry::PointsImpl P(V);
+        gpu::geometry::SimplicesImpl S(C);
+        // Act
+        gpu::geometry::BvhImpl bvh(S.NumberOfSimplices(), S.NumberOfSimplices());
+        bvh.Build(P, S);
+        bvh.DetectSelfOverlaps(S);
+        // Assert
+        auto overlaps = bvh.overlaps.Get();
+        CHECK_EQ(overlaps.size(), 0ULL);
+    }
+    SUBCASE("Disconnected mesh")
+    {
+        V = V(Eigen::all, C.reshaped()).eval();
+        C.resize(4, V.cols());
+        C.reshaped().setLinSpaced(0, static_cast<GpuIndex>(C.size() - 1));
+        // Arrange
+        gpu::geometry::PointsImpl P(V);
+        gpu::geometry::SimplicesImpl S(C);
+        // Act
+        gpu::geometry::BvhImpl bvh(S.NumberOfSimplices(), S.NumberOfSimplices());
+        bvh.Build(P, S);
+        bvh.DetectSelfOverlaps(S);
+        // Assert
+        auto overlaps = bvh.overlaps.Get();
+        CHECK_GT(overlaps.size(), 0ULL);
+    }
 }
