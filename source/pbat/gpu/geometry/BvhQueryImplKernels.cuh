@@ -102,9 +102,9 @@ struct FDetectOverlaps
                 GpuIndex const sj = simplex[lc - leafBegin];
                 if (not AreSimplicesTopologicallyAdjacent(
                         si,
-                        sj) /* and AreSimplicesOverlapping(si, sj) */)
-                    if (not overlaps.Append({si, sj}))
-                        break;
+                        sj) /* and AreSimplicesOverlapping(si, sj) */
+                    and not overlaps.Append({si, sj}))
+                    break;
             }
             bool const bIsRightLeaf = rc >= leafBegin;
             if (bRightOverlaps and bIsRightLeaf)
@@ -113,9 +113,9 @@ struct FDetectOverlaps
                 GpuIndex const sj = simplex[rc - leafBegin];
                 if (not AreSimplicesTopologicallyAdjacent(
                         si,
-                        sj) /* and AreSimplicesOverlapping(si, sj) */)
-                    if (not overlaps.Append({si, sj}))
-                        break;
+                        sj) /* and AreSimplicesOverlapping(si, sj) */
+                    and not overlaps.Append({si, sj}))
+                    break;
             }
 
             // Query overlaps an internal node => traverse.
