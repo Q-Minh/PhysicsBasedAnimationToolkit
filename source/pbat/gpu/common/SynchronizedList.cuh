@@ -6,6 +6,7 @@
 #include "pbat/gpu/Aliases.h"
 
 #include <cuda/atomic>
+#include <vector>
 
 namespace pbat {
 namespace gpu {
@@ -43,9 +44,10 @@ template <class T>
 class SynchronizedList
 {
   public:
-    __host__ SynchronizedList(std::size_t capacity) : mBuffer(capacity), mSize{0} {}
-    __host__ DeviceSynchronizedList<T> Raw() { return DeviceSynchronizedList<T>(mBuffer, mSize); }
-    
+    SynchronizedList(std::size_t capacity) : mBuffer(capacity), mSize{0} {}
+    DeviceSynchronizedList<T> Raw() { return DeviceSynchronizedList<T>(mBuffer, mSize); }
+    std::vector<T> Get() const { return mBuffer.Get(mSize.Get()); }
+
   private:
     Buffer<T> mBuffer;
     Var<GpuIndex> mSize;

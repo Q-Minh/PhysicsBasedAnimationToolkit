@@ -2,6 +2,8 @@
 #define PBAT_GPU_COMMON_BUFFER_CUH
 
 #include <cstddef>
+#include <exception>
+#include <string>
 #include <thrust/copy.h>
 #include <thrust/device_vector.h>
 #include <type_traits>
@@ -23,6 +25,7 @@ class Buffer
     std::size_t Size() const;
     bool Empty() const;
     std::vector<T> Get() const;
+    std::vector<T> Get(std::size_t count) const;
 
     std::conditional_t<(D > 1), std::array<thrust::device_ptr<T>, D>, thrust::device_ptr<T>> Data();
     std::conditional_t<
@@ -76,10 +79,22 @@ bool Buffer<T, D>::Empty() const
 template <class T, int D>
 std::vector<T> Buffer<T, D>::Get() const
 {
-    std::vector<T> buffer(Size() * D);
+    return Get(Size());
+}
+
+template <class T, int D>
+inline std::vector<T> Buffer<T, D>::Get(std::size_t count) const
+{
+    if (count > Size())
+    {
+        std::string const what = "Requested " + std::to_string(count) +
+                                 " buffer elements, but buffer has size " + std::to_string(Size());
+        throw std::invalid_argument(what);
+    }
+    std::vector<T> buffer(count * D);
     for (auto d = 0; d < D; ++d)
     {
-        thrust::copy(mBuffers[d].begin(), mBuffers[d].end(), buffer.begin() + d * Size());
+        thrust::copy(mBuffers[d].begin(), mBuffers[d].begin() + count, buffer.begin() + d * count);
     }
     return buffer;
 }
