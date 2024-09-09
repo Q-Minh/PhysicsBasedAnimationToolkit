@@ -4,6 +4,7 @@
 
 #include "BvhImpl.cuh"
 #include "BvhImplKernels.cuh"
+#include "pbat/common/Eigen.h"
 
 #include <exception>
 #include <string>
@@ -32,7 +33,12 @@ BvhImpl::BvhImpl(std::size_t nPrimitives, std::size_t nOverlaps)
     thrust::fill(thrust::device, parent.Data(), parent.Data() + parent.Size(), GpuIndex{-1});
 }
 
-void BvhImpl::Build(PointsImpl const& P, SimplicesImpl const& S, GpuScalar expansion)
+void BvhImpl::Build(
+    PointsImpl const& P,
+    SimplicesImpl const& S,
+    Eigen::Vector<GpuScalar, 3> const& min,
+    Eigen::Vector<GpuScalar, 3> const& max,
+    GpuScalar expansion)
 {
     auto const n = S.NumberOfSimplices();
     if (NumberOfAllocatedBoxes() < n)
@@ -47,7 +53,8 @@ void BvhImpl::Build(PointsImpl const& P, SimplicesImpl const& S, GpuScalar expan
     thrust::fill(thrust::device, visits.Raw(), visits.Raw() + visits.Size(), GpuIndex{0});
 
     // 1. Construct leaf node (i.e. simplex) bounding boxes
-    auto const leafBegin = n - 1;
+    auto const leafBegin        = n - 1;
+    auto const nSimplexVertices = static_cast<int>(S.eSimplexType);
     thrust::for_each(
         thrust::device,
         thrust::make_counting_iterator(0),
@@ -55,7 +62,7 @@ void BvhImpl::Build(PointsImpl const& P, SimplicesImpl const& S, GpuScalar expan
         BvhImplKernels::FLeafBoundingBoxes{
             P.x.Raw(),
             S.inds.Raw(),
-            static_cast<int>(S.eSimplexType),
+            nSimplexVertices,
             b.Raw(),
             e.Raw(),
             leafBegin,
@@ -66,7 +73,13 @@ void BvhImpl::Build(PointsImpl const& P, SimplicesImpl const& S, GpuScalar expan
         thrust::device,
         thrust::make_counting_iterator(0),
         thrust::make_counting_iterator(n),
-        BvhImplKernels::FComputeMortonCode{b.Raw(), e.Raw(), morton.Raw(), leafBegin});
+        BvhImplKernels::FComputeMortonCode{
+            {min(0), min(1), min(2)},
+            {max(0) - min(0), max(1) - min(1), max(2) - min(2)},
+            b.Raw(),
+            e.Raw(),
+            morton.Raw(),
+            leafBegin});
 
     // 3. Sort simplices based on Morton codes
     thrust::sequence(thrust::device, simplex.Data(), simplex.Data() + n);
@@ -139,10 +152,35 @@ std::size_t BvhImpl::NumberOfAllocatedBoxes() const
     return simplex.Size();
 }
 
+Eigen::Matrix<GpuIndex, Eigen::Dynamic, 2> BvhImpl::Child() const
+{
+    using pbat::common::ToEigen;
+    return ToEigen(child.Get()).reshaped(child.Size(), child.Dimensions());
+}
+
+Eigen::Vector<GpuIndex, Eigen::Dynamic> BvhImpl::Parent() const
+{
+    using pbat::common::ToEigen;
+    return ToEigen(parent.Get());
+}
+
+Eigen::Matrix<GpuIndex, Eigen::Dynamic, 2> BvhImpl::Rightmost() const
+{
+    using pbat::common::ToEigen;
+    return ToEigen(rightmost.Get()).reshaped(rightmost.Size(), rightmost.Dimensions());
+}
+
+Eigen::Vector<GpuIndex, Eigen::Dynamic> BvhImpl::Visits() const
+{
+    using pbat::common::ToEigen;
+    return ToEigen(visits.Get());
+}
+
 } // namespace geometry
 } // namespace gpu
 } // namespace pbat
 
+#include <algorithm>
 #include <doctest/doctest.h>
 #include <unordered_set>
 
@@ -161,33 +199,87 @@ TEST_CASE("[gpu][geometry] Sweep and prune")
          3, 0, 6, 5, 3,
          5, 6, 0, 3, 6;
     // clang-format on
+    using gpu::geometry::BvhImpl;
+    using gpu::geometry::PointsImpl;
+    using gpu::geometry::SimplicesImpl;
+    auto const assert_cube = [](BvhImpl const& bvh) {
+        auto child = bvh.Child();
+        CHECK_EQ(child.rows(), 4);
+        CHECK_EQ(child.cols(), 2);
+        CHECK_EQ(child(0, 0), 3);
+        CHECK_EQ(child(0, 1), 8);
+        CHECK_EQ(child(1, 0), 4);
+        CHECK_EQ(child(1, 1), 5);
+        CHECK_EQ(child(2, 0), 6);
+        CHECK_EQ(child(2, 1), 7);
+        CHECK_EQ(child(3, 0), 1);
+        CHECK_EQ(child(3, 1), 2);
+        auto parent = bvh.Parent();
+        CHECK_EQ(parent.rows(), 9);
+        CHECK_EQ(parent.cols(), 1);
+        CHECK_EQ(parent(0), GpuIndex{-1});
+        CHECK_EQ(parent(1), 3);
+        CHECK_EQ(parent(2), 3);
+        CHECK_EQ(parent(3), 0);
+        CHECK_EQ(parent(4), 1);
+        CHECK_EQ(parent(5), 1);
+        CHECK_EQ(parent(6), 2);
+        CHECK_EQ(parent(7), 2);
+        CHECK_EQ(parent(8), 0);
+        auto rightmost       = bvh.Rightmost();
+        auto const leafBegin = 4;
+        CHECK_EQ(rightmost.rows(), 4);
+        CHECK_EQ(rightmost.cols(), 2);
+        CHECK_EQ(rightmost(0, 0), leafBegin + 3);
+        CHECK_EQ(rightmost(0, 1), leafBegin + 4);
+        CHECK_EQ(rightmost(1, 0), leafBegin + 0);
+        CHECK_EQ(rightmost(1, 1), leafBegin + 1);
+        CHECK_EQ(rightmost(2, 0), leafBegin + 2);
+        CHECK_EQ(rightmost(2, 1), leafBegin + 3);
+        CHECK_EQ(rightmost(3, 0), leafBegin + 1);
+        CHECK_EQ(rightmost(3, 1), leafBegin + 3);
+        auto visits = bvh.Visits();
+        CHECK_EQ(visits.rows(), 4);
+        CHECK_EQ(visits.cols(), 1);
+        bool const bTwoVisitsPerInternalNode = (visits.array() == 2).all();
+        CHECK(bTwoVisitsPerInternalNode);
+    };
+    GpuScalar constexpr expansion = std::numeric_limits<GpuScalar>::epsilon();
+    auto const Vmin = (V.topRows<3>().rowwise().minCoeff().array() - expansion).eval();
+    auto const Vmax = (V.topRows<3>().rowwise().maxCoeff().array() + expansion).eval();
     SUBCASE("Connected non self-overlapping mesh")
     {
         // Arrange
-        gpu::geometry::PointsImpl P(V);
-        gpu::geometry::SimplicesImpl S(C);
+        PointsImpl P(V);
+        SimplicesImpl S(C);
         // Act
-        gpu::geometry::BvhImpl bvh(S.NumberOfSimplices(), S.NumberOfSimplices());
-        bvh.Build(P, S);
+        BvhImpl bvh(S.NumberOfSimplices(), S.NumberOfSimplices());
+        bvh.Build(P, S, Vmin, Vmax);
         bvh.DetectSelfOverlaps(S);
         // Assert
+        assert_cube(bvh);
         auto overlaps = bvh.overlaps.Get();
         CHECK_EQ(overlaps.size(), 0ULL);
     }
     SUBCASE("Disconnected mesh")
     {
         V = V(Eigen::all, C.reshaped()).eval();
-        C.resize(4, V.cols());
-        C.reshaped().setLinSpaced(0, static_cast<GpuIndex>(C.size() - 1));
+        C.resize(4, C.cols());
+        C.reshaped().setLinSpaced(0, static_cast<GpuIndex>(V.cols() - 1));
         // Arrange
-        gpu::geometry::PointsImpl P(V);
-        gpu::geometry::SimplicesImpl S(C);
+        PointsImpl P(V);
+        SimplicesImpl S(C);
+        // Because we only support overlaps between i,j s.t. i<j to prevent duplicates, we use the
+        // summation identity \sum_i=1^n i = n*(n+1)/2, and remove the n occurrences where i=j.
+        auto const nExpectedOverlaps =
+            (S.NumberOfSimplices() * (S.NumberOfSimplices() + 1) / 2) - S.NumberOfSimplices();
         // Act
-        gpu::geometry::BvhImpl bvh(S.NumberOfSimplices(), S.NumberOfSimplices());
-        bvh.Build(P, S);
+        BvhImpl bvh(S.NumberOfSimplices(), nExpectedOverlaps);
+        bvh.Build(P, S, Vmin, Vmax);
         bvh.DetectSelfOverlaps(S);
         // Assert
+        assert_cube(bvh);
         auto overlaps = bvh.overlaps.Get();
-        CHECK_GT(overlaps.size(), 0ULL);
+        CHECK_EQ(overlaps.size(), static_cast<std::size_t>(nExpectedOverlaps));
     }
 }

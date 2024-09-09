@@ -4,10 +4,7 @@
 
 #include "BvhQueryImpl.cuh"
 #include "BvhQueryImplKernels.cuh"
-#include "pbat/gpu/common/Stack.cuh"
 
-#include <cuda/atomic>
-#include <cuda/std/cmath>
 #include <exception>
 #include <string>
 #include <thrust/execution_policy.h>

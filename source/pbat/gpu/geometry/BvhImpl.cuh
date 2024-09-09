@@ -51,7 +51,9 @@ class BvhImpl
     void Build(
         PointsImpl const& P,
         SimplicesImpl const& S,
-        GpuScalar expansion = std::numeric_limits<GpuScalar>::min());
+        Eigen::Vector<GpuScalar, 3> const& min,
+        Eigen::Vector<GpuScalar, 3> const& max,
+        GpuScalar expansion = std::numeric_limits<GpuScalar>::epsilon());
 
     /**
      * @brief
@@ -64,6 +66,26 @@ class BvhImpl
      * @return
      */
     std::size_t NumberOfAllocatedBoxes() const;
+    /**
+     * @brief
+     * @return
+     */
+    Eigen::Matrix<GpuIndex, Eigen::Dynamic, 2> Child() const;
+    /**
+     * @brief
+     * @return
+     */
+    Eigen::Vector<GpuIndex, Eigen::Dynamic> Parent() const;
+    /**
+     * @brief
+     * @return
+     */
+    Eigen::Matrix<GpuIndex, Eigen::Dynamic, 2> Rightmost() const;
+    /**
+     * @brief
+     * @return
+     */
+    Eigen::Vector<GpuIndex, Eigen::Dynamic> Visits() const;
 
   private:
     common::Buffer<GpuIndex> simplex;      ///< Box/Simplex indices

@@ -17,7 +17,7 @@ namespace BvhImplKernels {
 
 struct FLeafBoundingBoxes
 {
-    __device__ void operator()(int s)
+    __device__ void operator()(auto s)
     {
         using namespace cuda::std;
         for (auto d = 0; d < 3; ++d)
@@ -48,16 +48,21 @@ struct FComputeMortonCode
 {
     using MortonCodeType = typename BvhImpl::MortonCodeType;
 
-    __device__ void operator()(int s)
+    __device__ void operator()(auto s)
     {
         auto const bs = leafBegin + s;
         // Compute Morton code of the centroid of the bounding box of simplex s
         std::array<GpuScalar, 3> c{0.f, 0.f, 0.f};
         for (auto d = 0; d < 3; ++d)
-            c[d] += GpuScalar{0.5} * (b[d][bs] + e[d][bs]);
+        {
+            auto cd = GpuScalar{0.5} * (b[d][bs] + e[d][bs]);
+            c[d]    = (cd - sb[d]) / (sbe[d]);
+        }
         morton[s] = common::Morton3D(c);
     }
 
+    std::array<GpuScalar, 3> sb;
+    std::array<GpuScalar, 3> sbe;
     std::array<GpuScalar*, 3> b;
     std::array<GpuScalar*, 3> e;
     MortonCodeType* morton;
@@ -78,7 +83,7 @@ struct FGenerateHierarchy
     {
         if (j < 0 or j >= n)
             return -1;
-        if (i == j)
+        if (morton[i] == morton[j])
             return __clz(i ^ j);
         return __clz(morton[i] ^ morton[j]);
     }
@@ -86,7 +91,8 @@ struct FGenerateHierarchy
     __device__ Range DetermineRange(GpuIndex i) const
     {
         // Compute range direction
-        int const d = (Delta(i, i + 1) - Delta(i, i - 1)) >= 0;
+        bool const dsign = (Delta(i, i + 1) - Delta(i, i - 1)) >= 0;
+        int const d      = 2 * dsign - 1;
         // Lower bound on length of internal node i's common prefix
         int const dmin = Delta(i, i - d);
         // Compute conservative upper bound on the range's size
@@ -108,10 +114,6 @@ struct FGenerateHierarchy
 
     __device__ GpuIndex FindSplit(Range R) const
     {
-        // Identical Morton codes => split the range in the middle.
-        if (morton[R.i] == morton[R.j])
-            return (R.i + R.j) >> 1;
-
         // Calculate the number of highest bits that are the same
         // for all objects.
         int const dnode = Delta(R.i, R.j);
@@ -147,8 +149,8 @@ struct FGenerateHierarchy
         parent[lc]   = in;
         parent[rc]   = in;
         // Record subtree relationships
-        rightmost[0][in] = gamma;
-        rightmost[1][in] = j;
+        rightmost[0][in] = leafBegin + gamma;
+        rightmost[1][in] = leafBegin + j;
     }
 
     MortonCodeType const* morton;
@@ -201,11 +203,11 @@ struct FDetectSelfOverlaps
 
     __device__ bool AreSimplicesTopologicallyAdjacent(GpuIndex si, GpuIndex sj) const
     {
+        auto count{0};
         for (auto i = 0; i < inds.size(); ++i)
             for (auto j = 0; j < inds.size(); ++j)
-                if (inds[i][si] == inds[j][sj])
-                    return true;
-        return false;
+                count += (inds[i][si] == inds[j][sj]);
+        return count;
     }
 
     __device__ bool AreBoxesOverlapping(GpuIndex i, GpuIndex j) const
@@ -219,7 +221,7 @@ struct FDetectSelfOverlaps
 
     __device__ void operator()(auto leaf)
     {
-        // Traverse nodes depth-first starting from the root.
+        // Traverse nodes depth-first starting from the root=0 node
         common::Stack<GpuIndex, 64> stack{};
         stack.Push(0);
         do
@@ -228,15 +230,15 @@ struct FDetectSelfOverlaps
             // Check each child node for overlap.
             GpuIndex const lc = child[0][node];
             GpuIndex const rc = child[1][node];
-            bool const bLeftOverlaps =
+            bool const bLeftBoxOverlaps =
                 AreBoxesOverlapping(leaf, lc) and (rightmost[0][node] > leaf);
-            bool const bRightOverlaps =
+            bool const bRightBoxOverlaps =
                 AreBoxesOverlapping(leaf, rc) and (rightmost[1][node] > leaf);
 
-            // Leaf overlaps another leaf node => report collision if topologically separate
+            // Leaf overlaps another leaf node -> report collision if topologically separate
             // simplices
             bool const bIsLeftLeaf = lc >= leafBegin;
-            if (bLeftOverlaps and bIsLeftLeaf)
+            if (bLeftBoxOverlaps and bIsLeftLeaf)
             {
                 GpuIndex const si = simplex[leaf - leafBegin];
                 GpuIndex const sj = simplex[lc - leafBegin];
@@ -244,7 +246,7 @@ struct FDetectSelfOverlaps
                     break;
             }
             bool const bIsRightLeaf = rc >= leafBegin;
-            if (bRightOverlaps and bIsRightLeaf)
+            if (bRightBoxOverlaps and bIsRightLeaf)
             {
                 GpuIndex const si = simplex[leaf - leafBegin];
                 GpuIndex const sj = simplex[rc - leafBegin];
@@ -252,9 +254,9 @@ struct FDetectSelfOverlaps
                     break;
             }
 
-            // Leaf overlaps an internal node => traverse.
-            bool const bTraverseLeft  = bLeftOverlaps and not bIsLeftLeaf;
-            bool const bTraverseRight = bRightOverlaps and not bIsRightLeaf;
+            // Leaf overlaps an internal node -> traverse
+            bool const bTraverseLeft  = bLeftBoxOverlaps and not bIsLeftLeaf;
+            bool const bTraverseRight = bRightBoxOverlaps and not bIsRightLeaf;
             if (bTraverseLeft)
                 stack.Push(lc);
             if (bTraverseRight)
