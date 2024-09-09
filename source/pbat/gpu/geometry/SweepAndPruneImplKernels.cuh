@@ -96,14 +96,16 @@ struct FSweep
      * @param sj Index of second simplex in pair to test
      * @return
      */
-    __device__ bool AreSimplicesOverlapCandidates(GpuIndex si, GpuIndex sj) const
+    __device__ bool
+    AreSimplicesOverlapCandidates(GpuIndex si, GpuIndex sj, bool bIsSiFromSourceSet) const
     {
         auto count{0};
-        count += (binds[si] < nSimplices[0]) == (binds[sj] < nSimplices[0]);
+        bool const bIsSjFromSourceSet = binds[sj] < nSimplices[0];
+        count += (bIsSiFromSourceSet == bIsSjFromSourceSet);
         for (auto i = 0; i < sinds.size(); ++i)
             for (auto j = 0; j < sinds.size(); ++j)
                 count += (sinds[i][si] == sinds[j][sj]);
-        return count;
+        return count == 0;
     }
 
     __device__ bool AreSimplexCandidatesOverlapping(GpuIndex si, GpuIndex sj) const
@@ -114,15 +116,16 @@ struct FSweep
 
     __device__ void operator()(GpuIndex si)
     {
-        bool const bSwap = binds[si] >= nSimplices[0];
+        bool const bIsSiFromSourceSet = binds[si] < nSimplices[0];
         for (auto sj = si + 1; (sj < nBoxes) and (e[saxis][si] >= b[saxis][sj]); ++sj)
         {
-            if (not AreSimplicesOverlapCandidates(si, sj) and
+            if (not AreSimplicesOverlapCandidates(si, sj, bIsSiFromSourceSet) or
                 not AreSimplexCandidatesOverlapping(si, sj))
                 continue;
 
-            auto const overlap = bSwap ? OverlapType{binds[sj], binds[si] - nSimplices[0]} :
-                                         OverlapType{binds[si], binds[sj] - nSimplices[0]};
+            auto const overlap = bIsSiFromSourceSet ?
+                                     OverlapType{binds[si], binds[sj] - nSimplices[0]} :
+                                     OverlapType{binds[sj], binds[si] - nSimplices[0]};
             if (not overlaps.Append(overlap))
                 break;
         }

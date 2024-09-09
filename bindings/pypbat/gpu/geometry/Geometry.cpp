@@ -1,5 +1,6 @@
 #include "Geometry.h"
 
+#include "Bvh.h"
 #include "Points.h"
 #include "Simplices.h"
 #include "SweepAndPrune.h"
@@ -14,6 +15,7 @@ void Bind(pybind11::module& m)
     BindPoints(m);
     BindSimplices(m);
     BindSweepAndPrune(m);
+    BindBvh(m);
 }
 
 } // namespace geometry

@@ -2,6 +2,7 @@ target_sources(PhysicsBasedAnimationToolkit_Python
     PUBLIC
     FILE_SET api
     FILES
+    "Bvh.h"
     "Geometry.h"
     "Points.h"
     "Simplices.h"
@@ -10,6 +11,7 @@ target_sources(PhysicsBasedAnimationToolkit_Python
 
 target_sources(PhysicsBasedAnimationToolkit_Python
     PRIVATE
+    "Bvh.cpp"
     "Geometry.cpp"
     "Points.cpp"
     "Simplices.cpp"

@@ -21,14 +21,20 @@ if __name__ == "__main__":
         np.float64), imesh.cells_dict["tetra"].astype(np.int64)
 
     # Duplicate input mesh into 2 separate meshes
-    F = igl.boundary_facets(C)
-    F[:, :2] = np.roll(F[:, :2], shift=1, axis=1)
-    F = [np.copy(F), np.copy(F)]
-    gpu_triangles = [
-        pbat.gpu.geometry.Simplices(F[0].T),
-        pbat.gpu.geometry.Simplices((F[1] + V.shape[0]).T)
+    # F = igl.boundary_facets(C)
+    # F[:, :2] = np.roll(F[:, :2], shift=1, axis=1)
+    # F = [np.copy(F), np.copy(F)]
+    T = [np.copy(C), np.copy(C)]
+    # gpu_triangles = [
+    #     pbat.gpu.geometry.Simplices(F[0].T),
+    #     pbat.gpu.geometry.Simplices((F[1] + V.shape[0]).T)
+    # ]
+    gpu_tets = [
+        pbat.gpu.geometry.Simplices(T[0].T),
+        pbat.gpu.geometry.Simplices((T[1] + V.shape[0]).T)
     ]
-    sap = pbat.gpu.geometry.SweepAndPrune(2*F[0].shape[0], 48*F[0].shape[0])
+    # sap = pbat.gpu.geometry.SweepAndPrune(2*F[0].shape[0], 48*F[0].shape[0])
+    sap = pbat.gpu.geometry.SweepAndPrune(2*T[0].shape[0], 48*T[0].shape[0])
     profiler = pbat.profiling.Profiler()
 
     # Setup animation
@@ -55,9 +61,12 @@ if __name__ == "__main__":
     speed = 0.01
     animate = False
     dhat = 0.
-    overlapping = [np.zeros(F[0].shape[0]), np.zeros(F[1].shape[0])]
-    sm = [ps.register_surface_mesh(
-        f"Mesh {0}", V[0], F[0]), ps.register_surface_mesh(f"Mesh {1}", V[1], F[1])]
+    # overlapping = [np.zeros(F[0].shape[0]), np.zeros(F[1].shape[0])]
+    overlapping = [np.zeros(T[0].shape[0]), np.zeros(T[1].shape[0])]
+    # sm = [ps.register_surface_mesh(
+    #     f"Mesh {0}", V[0], F[0]), ps.register_surface_mesh(f"Mesh {1}", V[1], F[1])]
+    vm = [ps.register_volume_mesh(
+        f"Mesh 0", V[0], T[0]), ps.register_volume_mesh(f"Mesh 1", V[1], T[1])]
 
     def callback():
         global dhat
@@ -79,15 +88,20 @@ if __name__ == "__main__":
                 if V[i][vimin, -1] <= zmin:
                     direction[i] = 1
                 V[i][:, -1] = V[i][:, -1] + direction[i] * speed
-                sm[i].update_vertex_positions(V[i])
+                # sm[i].update_vertex_positions(V[i])
+                vm[i].update_vertex_positions(V[i])
             gpu_points.V = np.vstack(V).T
+            # O = sap.sort_and_sweep(
+            #     gpu_points, gpu_triangles[0], gpu_triangles[1], dhat)
             O = sap.sort_and_sweep(
-                gpu_points, gpu_triangles[0], gpu_triangles[1], dhat)
+                gpu_points, gpu_tets[0], gpu_tets[1], dhat)
             for i in range(len(overlapping)):
                 overlapping[i][:] = 0
                 overlapping[i][O[i, :]] = 1
-                sm[i].add_scalar_quantity(
-                    "Active simplices", overlapping[i], defined_on="faces", enabled=True)
+                # sm[i].add_scalar_quantity(
+                #     "Active simplices", overlapping[i], defined_on="faces", enabled=True)
+                vm[i].add_scalar_quantity(
+                    "Active simplices", overlapping[i], defined_on="cells", enabled=True)
             profiler.end_frame("Physics")
 
     ps.set_user_callback(callback)
