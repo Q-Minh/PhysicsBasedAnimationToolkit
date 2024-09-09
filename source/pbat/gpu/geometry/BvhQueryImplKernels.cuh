@@ -63,11 +63,11 @@ struct FDetectOverlaps
 {
     __device__ bool AreSimplicesTopologicallyAdjacent(GpuIndex si, GpuIndex sj) const
     {
+        auto count{0};
         for (auto i = 0; i < queryInds.size(); ++i)
             for (auto j = 0; j < inds.size(); ++j)
-                if (queryInds[i][si] == inds[j][sj])
-                    return true;
-        return false;
+                count += (queryInds[i][si] == inds[j][sj]);
+        return count;
     }
 
     __device__ bool AreBoxesOverlapping(GpuIndex i, GpuIndex j) const
@@ -88,15 +88,15 @@ struct FDetectOverlaps
         {
             GpuIndex const node = stack.Pop();
             // Check each child node for overlap.
-            GpuIndex const lc         = child[0][node];
-            GpuIndex const rc         = child[1][node];
-            bool const bLeftOverlaps  = AreBoxesOverlapping(query, lc);
-            bool const bRightOverlaps = AreBoxesOverlapping(query, rc);
+            GpuIndex const lc            = child[0][node];
+            GpuIndex const rc            = child[1][node];
+            bool const bLeftBoxOverlaps  = AreBoxesOverlapping(query, lc);
+            bool const bRightBoxOverlaps = AreBoxesOverlapping(query, rc);
 
-            // Query overlaps another leaf node => report collision if topologically separate
+            // Query overlaps another leaf node -> report collision if topologically separate
             // simplices
             bool const bIsLeftLeaf = lc >= leafBegin;
-            if (bLeftOverlaps and bIsLeftLeaf)
+            if (bLeftBoxOverlaps and bIsLeftLeaf)
             {
                 GpuIndex const si = querySimplex[query];
                 GpuIndex const sj = simplex[lc - leafBegin];
@@ -107,7 +107,7 @@ struct FDetectOverlaps
                     break;
             }
             bool const bIsRightLeaf = rc >= leafBegin;
-            if (bRightOverlaps and bIsRightLeaf)
+            if (bRightBoxOverlaps and bIsRightLeaf)
             {
                 GpuIndex const si = querySimplex[query];
                 GpuIndex const sj = simplex[rc - leafBegin];
@@ -118,9 +118,9 @@ struct FDetectOverlaps
                     break;
             }
 
-            // Query overlaps an internal node => traverse.
-            bool const bTraverseLeft  = bLeftOverlaps and not bIsLeftLeaf;
-            bool const bTraverseRight = bRightOverlaps and not bIsRightLeaf;
+            // Query overlaps an internal node -> traverse.
+            bool const bTraverseLeft  = bLeftBoxOverlaps and not bIsLeftLeaf;
+            bool const bTraverseRight = bRightBoxOverlaps and not bIsRightLeaf;
             if (bTraverseLeft)
                 stack.Push(lc);
             if (bTraverseRight)

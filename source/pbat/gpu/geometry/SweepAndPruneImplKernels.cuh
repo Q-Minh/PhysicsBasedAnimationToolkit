@@ -98,13 +98,12 @@ struct FSweep
      */
     __device__ bool AreSimplicesOverlapCandidates(GpuIndex si, GpuIndex sj) const
     {
-        if ((binds[si] < nSimplices[0]) == (binds[sj] < nSimplices[0]))
-            return false;
+        auto count{0};
+        count += (binds[si] < nSimplices[0]) == (binds[sj] < nSimplices[0]);
         for (auto i = 0; i < sinds.size(); ++i)
             for (auto j = 0; j < sinds.size(); ++j)
-                if (sinds[i][si] == sinds[j][sj])
-                    return false;
-        return true;
+                count += (sinds[i][si] == sinds[j][sj]);
+        return count;
     }
 
     __device__ bool AreSimplexCandidatesOverlapping(GpuIndex si, GpuIndex sj) const
@@ -118,9 +117,8 @@ struct FSweep
         bool const bSwap = binds[si] >= nSimplices[0];
         for (auto sj = si + 1; (sj < nBoxes) and (e[saxis][si] >= b[saxis][sj]); ++sj)
         {
-            if (not AreSimplicesOverlapCandidates(si, sj))
-                continue;
-            if (not AreSimplexCandidatesOverlapping(si, sj))
+            if (not AreSimplicesOverlapCandidates(si, sj) and
+                not AreSimplexCandidatesOverlapping(si, sj))
                 continue;
 
             auto const overlap = bSwap ? OverlapType{binds[sj], binds[si] - nSimplices[0]} :
