@@ -19,9 +19,9 @@ void BeginFrame(std::string_view name)
 {
 #ifdef PBAT_HAS_TRACY_PROFILER
     auto& buf       = detail::buffer();
-    auto const size = std::min(buf.size(), name.size());
+    auto const size = std::min(buf.size() - 1, name.size());
     std::memcpy(buf.data(), name.data(), size);
-    buf[size - 1] = '\0';
+    buf[size] = '\0';
     FrameMarkStart(buf.data());
 #endif // PBAT_HAS_TRACY_PROFILER
 }
@@ -30,9 +30,9 @@ void EndFrame(std::string_view name)
 {
 #ifdef PBAT_HAS_TRACY_PROFILER
     auto& buf       = detail::buffer();
-    auto const size = std::min(buf.size(), name.size());
+    auto const size = std::min(buf.size() - 1, name.size());
     std::memcpy(buf.data(), name.data(), std::min(buf.size(), name.size()));
-    buf[size - 1] = '\0';
+    buf[size] = '\0';
     FrameMarkEnd(buf.data());
 #endif // PBAT_HAS_TRACY_PROFILER
 }
