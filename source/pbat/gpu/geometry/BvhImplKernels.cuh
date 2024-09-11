@@ -7,6 +7,7 @@
 #include "pbat/gpu/common/SynchronizedList.cuh"
 
 #include <array>
+#include <assert.h>
 #include <cuda/atomic>
 #include <cuda/std/cmath>
 
@@ -84,14 +85,14 @@ struct FGenerateHierarchy
         if (j < 0 or j >= n)
             return -1;
         if (morton[i] == morton[j])
-            return __clz(i ^ j);
+            return sizeof(MortonCodeType) + __clz(i ^ j);
         return __clz(morton[i] ^ morton[j]);
     }
 
     __device__ Range DetermineRange(GpuIndex i) const
     {
         // Compute range direction
-        bool const dsign = (Delta(i, i + 1) - Delta(i, i - 1)) >= 0;
+        bool const dsign = (Delta(i, i + 1) - Delta(i, i - 1)) > 0;
         int const d      = 2 * dsign - 1;
         // Lower bound on length of internal node i's common prefix
         int const dmin = Delta(i, i - d);
@@ -128,7 +129,7 @@ struct FGenerateHierarchy
             if (Delta(R.i, R.i + (s + R.l) * R.d) > dnode)
                 s += R.l;
         } while (R.l > 1);
-        GpuIndex const gamma = R.i + s * R.d + min(R.d, 0);
+        GpuIndex gamma = R.i + s * R.d + min(R.d, 0);
         return gamma;
     }
 
@@ -207,7 +208,7 @@ struct FDetectSelfOverlaps
         for (auto i = 0; i < inds.size(); ++i)
             for (auto j = 0; j < inds.size(); ++j)
                 count += (inds[i][si] == inds[j][sj]);
-        return count;
+        return count > 0;
     }
 
     __device__ bool AreBoxesOverlapping(GpuIndex i, GpuIndex j) const
@@ -226,6 +227,7 @@ struct FDetectSelfOverlaps
         stack.Push(0);
         do
         {
+            assert(!stack.IsFull());
             GpuIndex const node = stack.Pop();
             // Check each child node for overlap.
             GpuIndex const lc = child[0][node];

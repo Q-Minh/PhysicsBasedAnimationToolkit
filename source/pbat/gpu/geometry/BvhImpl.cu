@@ -152,6 +152,30 @@ std::size_t BvhImpl::NumberOfAllocatedBoxes() const
     return simplex.Size();
 }
 
+Eigen::Matrix<GpuScalar, Eigen::Dynamic, Eigen::Dynamic> BvhImpl::Min() const
+{
+    using pbat::common::ToEigen;
+    return ToEigen(b.Get()).reshaped(b.Size(), b.Dimensions());
+}
+
+Eigen::Matrix<GpuScalar, Eigen::Dynamic, Eigen::Dynamic> BvhImpl::Max() const
+{
+    using pbat::common::ToEigen;
+    return ToEigen(e.Get()).reshaped(e.Size(), e.Dimensions());
+}
+
+Eigen::Vector<GpuIndex, Eigen::Dynamic> BvhImpl::SimplexOrdering() const
+{
+    using pbat::common::ToEigen;
+    return ToEigen(simplex.Get());
+}
+
+Eigen::Vector<typename BvhImpl::MortonCodeType, Eigen::Dynamic> BvhImpl::MortonCodes() const
+{
+    using pbat::common::ToEigen;
+    return ToEigen(morton.Get());
+}
+
 Eigen::Matrix<GpuIndex, Eigen::Dynamic, 2> BvhImpl::Child() const
 {
     using pbat::common::ToEigen;

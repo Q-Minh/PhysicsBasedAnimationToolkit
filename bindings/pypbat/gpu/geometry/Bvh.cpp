@@ -58,7 +58,32 @@ void BindBvh(pybind11::module& m)
             pyb::arg("S"),
             "Detect self-overlaps (si,sj) between bounding boxes of simplices (si,sj) of S into a "
             "|#overlaps|x2 array, where si < sj. S must index into points P and was used in the "
-            "most recent call to build.");
+            "most recent call to build.")
+        .def_property_readonly("b", &Bvh::Min, "BVH nodes' box minimums")
+        .def_property_readonly("e", &Bvh::Max, "BVH nodes' box maximums")
+        .def_property_readonly(
+            "simplex",
+            &Bvh::SimplexOrdering,
+            "Simplex indices ordered by Morton encoding")
+        .def_property_readonly("morton", &Bvh::MortonCodes, "Sorted morton codes of simplices")
+        .def_property_readonly(
+            "child",
+            &Bvh::Child,
+            "Radix-tree left and right children of each node as a |#simplices - 1|x2 array")
+        .def_property_readonly(
+            "parent",
+            &Bvh::Parent,
+            "Radix-tree parents of each node as a |2*#simplices - 1| array")
+        .def_property_readonly(
+            "rightmost",
+            &Bvh::Rightmost,
+            "Radix-tree left-subtree and right-subtree largest nodal indices as a |#simplices - "
+            "1|x2 array")
+        .def_property_readonly(
+            "visits",
+            &Bvh::Visits,
+            "Number of visits per internal node for bounding box computation as a |#simplices - 1| "
+            "array");
 #endif // PBAT_USE_CUDA
 }
 

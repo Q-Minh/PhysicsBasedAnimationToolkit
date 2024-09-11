@@ -51,6 +51,46 @@ GpuIndexMatrixX Bvh::DetectSelfOverlaps(Simplices const& S)
     return O;
 }
 
+Eigen::Matrix<GpuScalar, Eigen::Dynamic, Eigen::Dynamic> Bvh::Min() const
+{
+    return mImpl->Min();
+}
+
+Eigen::Matrix<GpuScalar, Eigen::Dynamic, Eigen::Dynamic> Bvh::Max() const
+{
+    return mImpl->Max();
+}
+
+Eigen::Vector<GpuIndex, Eigen::Dynamic> Bvh::SimplexOrdering() const
+{
+    return mImpl->SimplexOrdering();
+}
+
+Eigen::Vector<typename Bvh::MortonCodeType, Eigen::Dynamic> Bvh::MortonCodes() const
+{
+    return mImpl->MortonCodes();
+}
+
+Eigen::Matrix<GpuIndex, Eigen::Dynamic, 2> Bvh::Child() const
+{
+    return mImpl->Child();
+}
+
+Eigen::Vector<GpuIndex, Eigen::Dynamic> Bvh::Parent() const
+{
+    return mImpl->Parent();
+}
+
+Eigen::Matrix<GpuIndex, Eigen::Dynamic, 2> Bvh::Rightmost() const
+{
+    return mImpl->Rightmost();
+}
+
+Eigen::Vector<GpuIndex, Eigen::Dynamic> Bvh::Visits() const
+{
+    return mImpl->Visits();
+}
+
 Bvh::~Bvh()
 {
     if (mImpl != nullptr)

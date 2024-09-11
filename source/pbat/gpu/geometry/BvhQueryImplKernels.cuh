@@ -67,7 +67,7 @@ struct FDetectOverlaps
         for (auto i = 0; i < queryInds.size(); ++i)
             for (auto j = 0; j < inds.size(); ++j)
                 count += (queryInds[i][si] == inds[j][sj]);
-        return count;
+        return count > 0;
     }
 
     __device__ bool AreBoxesOverlapping(GpuIndex i, GpuIndex j) const

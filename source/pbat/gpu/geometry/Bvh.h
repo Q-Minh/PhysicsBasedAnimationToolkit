@@ -20,6 +20,8 @@ class BvhImpl;
 class Bvh
 {
   public:
+    using MortonCodeType = std::uint32_t;
+
     /**
      * @brief
      * @param nPrimitives
@@ -51,6 +53,46 @@ class Bvh
      * @param S The simplices which were used to build this BVH
      */
     GpuIndexMatrixX DetectSelfOverlaps(Simplices const& S);
+    /**
+     * @brief BVH nodes' box minimums
+     * @return
+     */
+    Eigen::Matrix<GpuScalar, Eigen::Dynamic, Eigen::Dynamic> Min() const;
+    /**
+     * @brief BVH nodes' box maximums
+     * @return
+     */
+    Eigen::Matrix<GpuScalar, Eigen::Dynamic, Eigen::Dynamic> Max() const;
+    /**
+     * @brief
+     * @return
+     */
+    Eigen::Vector<GpuIndex, Eigen::Dynamic> SimplexOrdering() const;
+    /**
+     * @brief
+     * @return
+     */
+    Eigen::Vector<MortonCodeType, Eigen::Dynamic> MortonCodes() const;
+    /**
+     * @brief
+     * @return
+     */
+    Eigen::Matrix<GpuIndex, Eigen::Dynamic, 2> Child() const;
+    /**
+     * @brief
+     * @return
+     */
+    Eigen::Vector<GpuIndex, Eigen::Dynamic> Parent() const;
+    /**
+     * @brief
+     * @return
+     */
+    Eigen::Matrix<GpuIndex, Eigen::Dynamic, 2> Rightmost() const;
+    /**
+     * @brief
+     * @return
+     */
+    Eigen::Vector<GpuIndex, Eigen::Dynamic> Visits() const;
 
     ~Bvh();
 

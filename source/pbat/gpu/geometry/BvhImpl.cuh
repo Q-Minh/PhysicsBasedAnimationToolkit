@@ -67,6 +67,26 @@ class BvhImpl
      */
     std::size_t NumberOfAllocatedBoxes() const;
     /**
+     * @brief BVH nodes' box minimums
+     * @return
+     */
+    Eigen::Matrix<GpuScalar, Eigen::Dynamic, Eigen::Dynamic> Min() const;
+    /**
+     * @brief BVH nodes' box maximums
+     * @return
+     */
+    Eigen::Matrix<GpuScalar, Eigen::Dynamic, Eigen::Dynamic> Max() const;
+    /**
+     * @brief
+     * @return
+     */
+    Eigen::Vector<GpuIndex, Eigen::Dynamic> SimplexOrdering() const;
+    /**
+     * @brief
+     * @return
+     */
+    Eigen::Vector<MortonCodeType, Eigen::Dynamic> MortonCodes() const;
+    /**
      * @brief
      * @return
      */
