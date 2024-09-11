@@ -57,7 +57,7 @@ struct FComputeMortonCode
         for (auto d = 0; d < 3; ++d)
         {
             auto cd = GpuScalar{0.5} * (b[d][bs] + e[d][bs]);
-            c[d]    = (cd - sb[d]) / (sbe[d]);
+            c[d]    = (cd - sb[d]) / sbe[d];
         }
         morton[s] = common::Morton3D(c);
     }
@@ -227,7 +227,7 @@ struct FDetectSelfOverlaps
         stack.Push(0);
         do
         {
-            assert(!stack.IsFull());
+            assert(not stack.IsFull());
             GpuIndex const node = stack.Pop();
             // Check each child node for overlap.
             GpuIndex const lc = child[0][node];

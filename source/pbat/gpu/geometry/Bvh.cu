@@ -38,6 +38,16 @@ void Bvh::Build(
     mImpl->Build(*P.Impl(), *S.Impl(), min, max, expansion);
 }
 
+BvhImpl* Bvh::Impl()
+{
+    return mImpl;
+}
+
+BvhImpl const* Bvh::Impl() const
+{
+    return mImpl;
+}
+
 GpuIndexMatrixX Bvh::DetectSelfOverlaps(Simplices const& S)
 {
     mImpl->DetectSelfOverlaps(*S.Impl());

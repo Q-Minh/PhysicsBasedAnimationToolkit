@@ -4,7 +4,6 @@ import meshio
 import numpy as np
 import polyscope as ps
 import polyscope.imgui as imgui
-import igl
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
@@ -22,11 +21,13 @@ if __name__ == "__main__":
 
     # Duplicate input mesh into 2 separate meshes
     T = [np.copy(C), np.copy(C)]
-    gpu_tets = [
+    S = [
         pbat.gpu.geometry.Simplices(T[0].T),
         pbat.gpu.geometry.Simplices((T[1] + V.shape[0]).T)
     ]
     sap = pbat.gpu.geometry.SweepAndPrune(2*T[0].shape[0], 48*T[0].shape[0])
+    query = pbat.gpu.geometry.BvhQuery(T[0].shape[0], 48*T[0].shape[0])
+    bvh = pbat.gpu.geometry.Bvh(T[1].shape[0], 0)
     profiler = pbat.profiling.Profiler()
 
     # Setup animation
@@ -38,8 +39,11 @@ if __name__ == "__main__":
     zmax = height * zextent + zmin
     V = [np.copy(V), np.copy(V)]
     V[-1][:, -1] = V[-1][:, -1] + (height - 2) * zextent
-    gpu_points = pbat.gpu.geometry.Points(np.vstack(V).T)
+    P = pbat.gpu.geometry.Points(np.vstack(V).T)
     direction = [1, -1]
+    min, max = np.min(P.V, axis=1), np.max(P.V, axis=1)
+    min[-1] = zmin
+    max[-1] = zmax
 
     # Setup GUI
     ps.set_verbosity(0)
@@ -47,12 +51,17 @@ if __name__ == "__main__":
     ps.set_front_dir("neg_y_front")
     ps.set_ground_plane_mode("shadow_only")
     ps.set_ground_plane_height_factor(0.5)
-    ps.set_program_name("Sweep and Prune Broad Phase")
+    ps.set_program_name("Broad Phase Collision Detection")
     ps.init()
 
     speed = 0.01
     animate = False
     dhat = 0.
+    algorithms = [
+        "Sweep and Prune",
+        "Bounding Volume Hierarchy",
+    ]
+    algorithm = algorithms[0]
     overlapping = [np.zeros(T[0].shape[0]), np.zeros(T[1].shape[0])]
     vm = [ps.register_volume_mesh(
         f"Mesh 0", V[0], T[0]), ps.register_volume_mesh(f"Mesh 1", V[1], T[1])]
@@ -61,7 +70,16 @@ if __name__ == "__main__":
         global dhat
         global speed
         global animate
+        global algorithms, algorithm
 
+        changed = imgui.BeginCombo("Algorithm", algorithm)
+        if changed:
+            for i in range(len(algorithms)):
+                _, selected = imgui.Selectable(
+                    algorithms[i], algorithm == algorithms[i])
+                if selected:
+                    algorithm = algorithms[i]
+            imgui.EndCombo()
         changed, dhat = imgui.InputFloat(
             "Box expansion", dhat, format="%.4f")
         changed, speed = imgui.InputFloat(
@@ -78,9 +96,14 @@ if __name__ == "__main__":
                     direction[i] = 1
                 V[i][:, -1] = V[i][:, -1] + direction[i] * speed
                 vm[i].update_vertex_positions(V[i])
-            gpu_points.V = np.vstack(V).T
-            O = sap.sort_and_sweep(
-                gpu_points, gpu_tets[0], gpu_tets[1], dhat)
+            P.V = np.vstack(V).T
+            if algorithm == algorithms[0]:
+                O = sap.sort_and_sweep(
+                    P, S[0], S[1], dhat)
+            if algorithm == algorithms[1]:
+                query.build(P, S[0], min, max, expansion=dhat)
+                bvh.build(P, S[1], min, max, expansion=dhat)
+                O = query.detect_overlaps(P, S[0], S[1], bvh)
             for i in range(len(overlapping)):
                 overlapping[i][:] = 0
                 overlapping[i][O[i, :]] = 1

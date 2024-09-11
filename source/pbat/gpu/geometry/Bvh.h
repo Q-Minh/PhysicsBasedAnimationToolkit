@@ -48,6 +48,9 @@ class Bvh
         Eigen::Vector<GpuScalar, 3> const& max,
         GpuScalar expansion = std::numeric_limits<GpuScalar>::epsilon());
 
+    BvhImpl* Impl();
+    BvhImpl const* Impl() const;
+
     /**
      * @brief
      * @param S The simplices which were used to build this BVH

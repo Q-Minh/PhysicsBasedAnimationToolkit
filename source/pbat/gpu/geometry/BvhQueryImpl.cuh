@@ -8,6 +8,7 @@
 #include "pbat/gpu/common/SynchronizedList.cuh"
 #include "pbat/gpu/common/Var.cuh"
 
+#include <Eigen/Core>
 #include <cuda/std/cmath>
 #include <limits>
 
@@ -35,12 +36,16 @@ class BvhQueryImpl
      * @brief
      * @param P
      * @param S
+     * @param min
+     * @param max
      * @param expansion
      */
     void Build(
         PointsImpl const& P,
         SimplicesImpl const& S,
-        GpuScalar expansion = std::numeric_limits<GpuScalar>::min());
+        Eigen::Vector<GpuScalar, 3> const& min,
+        Eigen::Vector<GpuScalar, 3> const& max,
+        GpuScalar expansion = std::numeric_limits<GpuScalar>::epsilon());
 
     /**
      * @brief

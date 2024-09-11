@@ -22,7 +22,12 @@ BvhQueryImpl::BvhQueryImpl(std::size_t nPrimitives, std::size_t nOverlaps)
 {
 }
 
-void BvhQueryImpl::Build(PointsImpl const& P, SimplicesImpl const& S, GpuScalar expansion)
+void BvhQueryImpl::Build(
+    PointsImpl const& P,
+    SimplicesImpl const& S,
+    Eigen::Vector<GpuScalar, 3> const& min,
+    Eigen::Vector<GpuScalar, 3> const& max,
+    GpuScalar expansion)
 {
     auto const n = S.NumberOfSimplices();
     if (NumberOfAllocatedBoxes() < n)
@@ -49,7 +54,12 @@ void BvhQueryImpl::Build(PointsImpl const& P, SimplicesImpl const& S, GpuScalar 
         thrust::device,
         thrust::make_counting_iterator(0),
         thrust::make_counting_iterator(n),
-        BvhQueryImplKernels::FComputeMortonCode{b.Raw(), e.Raw(), morton.Raw()});
+        BvhQueryImplKernels::FComputeMortonCode{
+            {min(0), min(1), min(2)},
+            {max(0) - min(0), max(1) - min(1), max(2) - min(2)},
+            b.Raw(),
+            e.Raw(),
+            morton.Raw()});
     // Sort simplices+boxes by morton codes to try and improve data locality in future queries
     thrust::sequence(thrust::device, simplex.Data(), simplex.Data() + simplex.Size());
     auto zip = thrust::make_zip_iterator(
@@ -77,6 +87,7 @@ void BvhQueryImpl::DetectOverlaps(
             " boxes, but received " + std::to_string(nQueries) + " query simplices.";
         throw std::invalid_argument(what);
     }
+    overlaps.Clear();
     auto const leafBegin = bvh.simplex.Size() - 1;
     thrust::for_each(
         thrust::device,

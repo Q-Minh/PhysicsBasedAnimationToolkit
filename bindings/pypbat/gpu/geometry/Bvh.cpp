@@ -15,7 +15,7 @@ void BindBvh(pybind11::module& m)
 #ifdef PBAT_USE_CUDA
     namespace pyb = pybind11;
     using namespace pbat::gpu::geometry;
-    pyb::class_<Bvh>(m, "LinearBvh")
+    pyb::class_<Bvh>(m, "Bvh")
         .def(
             pyb::init([](std::size_t nPrimitives, std::size_t nOverlaps) {
                 return pbat::profiling::Profile("pbat.gpu.geometry.Bvh.Construct", [&]() {
@@ -57,7 +57,7 @@ void BindBvh(pybind11::module& m)
             },
             pyb::arg("S"),
             "Detect self-overlaps (si,sj) between bounding boxes of simplices (si,sj) of S into a "
-            "|#overlaps|x2 array, where si < sj. S must index into points P and was used in the "
+            "2x|#overlaps| array, where si < sj. S must index into points P and was used in the "
             "most recent call to build.")
         .def_property_readonly("b", &Bvh::Min, "BVH nodes' box minimums")
         .def_property_readonly("e", &Bvh::Max, "BVH nodes' box maximums")

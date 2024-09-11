@@ -48,12 +48,17 @@ struct FComputeMortonCode
     __device__ void operator()(int s)
     {
         // Compute Morton code of the centroid of the bounding box of simplex s
-        std::array<GpuScalar, 3> c{0.f, 0.f, 0.f};
+        std::array<GpuScalar, 3> c{};
         for (auto d = 0; d < 3; ++d)
-            c[d] += GpuScalar{0.5} * (b[d][s] + e[d][s]);
+        {
+            auto cd = GpuScalar{0.5} * (b[d][s] + e[d][s]);
+            c[d]    = (cd - sb[d]) / sbe[d];
+        }
         morton[s] = common::Morton3D(c);
     }
 
+    std::array<GpuScalar, 3> sb;
+    std::array<GpuScalar, 3> sbe;
     std::array<GpuScalar*, 3> b;
     std::array<GpuScalar*, 3> e;
     MortonCodeType* morton;
@@ -86,6 +91,7 @@ struct FDetectOverlaps
         stack.Push(0);
         do
         {
+            assert(not stack.IsFull());
             GpuIndex const node = stack.Pop();
             // Check each child node for overlap.
             GpuIndex const lc            = child[0][node];

@@ -8,6 +8,7 @@
 #include "pbat/gpu/common/SynchronizedList.cuh"
 #include "pbat/gpu/common/Var.cuh"
 
+#include <Eigen/Core>
 #include <cuda/std/cmath>
 #include <cuda/std/utility>
 #include <limits>
