@@ -53,7 +53,7 @@ struct FComputeMortonCode
     {
         auto const bs = leafBegin + s;
         // Compute Morton code of the centroid of the bounding box of simplex s
-        std::array<GpuScalar, 3> c{0.f, 0.f, 0.f};
+        std::array<GpuScalar, 3> c{};
         for (auto d = 0; d < 3; ++d)
         {
             auto cd = GpuScalar{0.5} * (b[d][bs] + e[d][bs]);

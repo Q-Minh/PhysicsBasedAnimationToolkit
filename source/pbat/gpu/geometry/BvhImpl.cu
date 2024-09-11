@@ -131,6 +131,7 @@ void BvhImpl::DetectSelfOverlaps(SimplicesImpl const& S)
                                  " boxes, but received " + std::to_string(n) + " simplices.";
         throw std::invalid_argument(what);
     }
+    overlaps.Clear();
     auto const leafBegin = n - 1;
     thrust::for_each(
         thrust::device,
