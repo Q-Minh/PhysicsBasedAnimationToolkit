@@ -85,7 +85,7 @@ struct FGenerateHierarchy
         if (j < 0 or j >= n)
             return -1;
         if (morton[i] == morton[j])
-            return sizeof(MortonCodeType) + __clz(i ^ j);
+            return sizeof(MortonCodeType) * 8 + __clz(i ^ j);
         return __clz(morton[i] ^ morton[j]);
     }
 
@@ -168,7 +168,8 @@ struct FInternalNodeBoundingBoxes
     {
         using namespace cuda::std;
         auto p = parent[leaf];
-        while (p >= 0)
+        auto k = 0;
+        for (; (k < 64) and (p >= 0); ++k)
         {
             cuda::atomic_ref<GpuIndex, cuda::thread_scope_device> ap{visits[p]};
             // The first thread that gets access to the internal node p will terminate,
@@ -189,6 +190,7 @@ struct FInternalNodeBoundingBoxes
             // Move up the binary tree
             p = parent[p];
         }
+        assert(k < 64);
     }
 
     GpuIndex const* parent;
