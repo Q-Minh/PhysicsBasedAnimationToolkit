@@ -11,6 +11,8 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "-i", "--input", help="Path to input mesh", dest="input", required=True)
+    parser.add_argument(
+        "-o", "--output", help="Path to output", dest="output", required=False, default=".")
     parser.add_argument("-t", "--translation", help="Vertical translation", type=float,
                         dest="translation", default=0.1)
     args = parser.parse_args()
@@ -31,12 +33,12 @@ if __name__ == "__main__":
     profiler = pbat.profiling.Profiler()
 
     # Setup animation
-    height = 4
+    height = 3
     vimin = V[:, -1].argmin()
     vimax = V[:, -1].argmax()
     zmin = V[vimin, -1]
     zextent = V[vimax, -1] - zmin
-    zmax = height * zextent + zmin
+    zmax = (height - 1) * zextent + zmin
     V = [np.copy(V), np.copy(V)]
     V[-1][:, -1] = V[-1][:, -1] + (height - 2) * zextent
     P = pbat.gpu.geometry.Points(np.vstack(V).T)
@@ -54,6 +56,7 @@ if __name__ == "__main__":
     ps.set_program_name("Broad Phase Collision Detection")
     ps.init()
 
+    t = 0
     speed = 0.01
     animate = False
     dhat = 0.
@@ -62,15 +65,14 @@ if __name__ == "__main__":
         "Bounding Volume Hierarchy",
     ]
     algorithm = algorithms[0]
+    export = False
     overlapping = [np.zeros(T[0].shape[0]), np.zeros(T[1].shape[0])]
     vm = [ps.register_volume_mesh(
         f"Mesh 0", V[0], T[0]), ps.register_volume_mesh(f"Mesh 1", V[1], T[1])]
 
     def callback():
         global dhat
-        global speed
-        global animate
-        global algorithms, algorithm
+        global t, speed, animate, algorithms, algorithm, export
 
         changed = imgui.BeginCombo("Algorithm", algorithm)
         if changed:
@@ -84,10 +86,14 @@ if __name__ == "__main__":
             "Box expansion", dhat, format="%.4f")
         changed, speed = imgui.InputFloat(
             "Speed", speed, format="%.4f")
+        changed, export = imgui.Checkbox("Export", export)
         changed, animate = imgui.Checkbox("animate", animate)
         step = imgui.Button("step")
 
         if animate or step:
+            if export:
+                ps.screenshot(f"{args.output}/{t}.png")
+
             profiler.begin_frame("Physics")
             for i in range(len(V)):
                 if V[i][vimax, -1] >= zmax:
@@ -110,6 +116,7 @@ if __name__ == "__main__":
                 vm[i].add_scalar_quantity(
                     "Active simplices", overlapping[i], defined_on="cells", vminmax=(0, 1), enabled=True)
             profiler.end_frame("Physics")
+            t = t + 1
 
     ps.set_user_callback(callback)
     ps.show()
