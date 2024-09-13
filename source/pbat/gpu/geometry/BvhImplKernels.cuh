@@ -28,8 +28,8 @@ struct FLeafBoundingBoxes
             e[d][bs] = x[d][inds[0][s]];
             for (auto m = 1; m < nSimplexVertices; ++m)
             {
-                b[d][bs] = fminf(b[d][bs], x[d][inds[m][s]]);
-                e[d][bs] = fmaxf(e[d][bs], x[d][inds[m][s]]);
+                b[d][bs] = min(b[d][bs], x[d][inds[m][s]]);
+                e[d][bs] = max(e[d][bs], x[d][inds[m][s]]);
             }
             b[d][bs] -= r;
             e[d][bs] += r;
@@ -184,8 +184,8 @@ struct FInternalNodeBoundingBoxes
             GpuIndex rc = child[1][p];
             for (auto d = 0; d < 3; ++d)
             {
-                b[d][p] = fminf(b[d][lc], b[d][rc]);
-                e[d][p] = fmaxf(e[d][lc], e[d][rc]);
+                b[d][p] = min(b[d][lc], b[d][rc]);
+                e[d][p] = max(e[d][lc], e[d][rc]);
             }
             // Move up the binary tree
             p = parent[p];

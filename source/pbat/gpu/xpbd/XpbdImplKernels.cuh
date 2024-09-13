@@ -265,7 +265,7 @@ struct FVertexTriangleContactConstraint
         if (dxd > muS * d)
         {
             if constexpr (std::is_same_v<GpuScalar, float>)
-                dx *= cuda::std::fminf(muK * d / dxd, 1.f);
+                dx *= cuda::std::min(muK * d / dxd, 1.f);
             if constexpr (std::is_same_v<GpuScalar, double>)
                 dx *= cuda::std::fminl(muK * d / dxd, 1.);
         }

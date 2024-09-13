@@ -25,8 +25,8 @@ struct FComputeAabb
             e[d][s] = x[d][inds[0][s]];
             for (auto m = 1; m < nSimplexVertices; ++m)
             {
-                b[d][s] = cuda::std::fminf(b[d][s], x[d][inds[m][s]]);
-                e[d][s] = cuda::std::fmaxf(e[d][s], x[d][inds[m][s]]);
+                b[d][s] = cuda::std::min(b[d][s], x[d][inds[m][s]]);
+                e[d][s] = cuda::std::max(e[d][s], x[d][inds[m][s]]);
             }
             b[d][s] -= r;
             e[d][s] += r;

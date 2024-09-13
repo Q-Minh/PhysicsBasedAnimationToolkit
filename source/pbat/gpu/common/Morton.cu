@@ -22,10 +22,9 @@ MortonCodeType Morton3D(std::array<GpuScalar, 3> x)
     static_assert(
         std::is_same_v<GpuScalar, float>,
         "Morton code only supported for single precision floating point numbers");
-    using namespace cuda::std;
-    x[0]              = fminf(fmaxf(x[0] * 1024.0f, 0.0f), 1023.0f);
-    x[1]              = fminf(fmaxf(x[1] * 1024.0f, 0.0f), 1023.0f);
-    x[2]              = fminf(fmaxf(x[2] * 1024.0f, 0.0f), 1023.0f);
+    x[0]              = min(max(x[0] * 1024.0f, 0.0f), 1023.0f);
+    x[1]              = min(max(x[1] * 1024.0f, 0.0f), 1023.0f);
+    x[2]              = min(max(x[2] * 1024.0f, 0.0f), 1023.0f);
     MortonCodeType xx = ExpandBits(static_cast<MortonCodeType>(x[0]));
     MortonCodeType yy = ExpandBits(static_cast<MortonCodeType>(x[1]));
     MortonCodeType zz = ExpandBits(static_cast<MortonCodeType>(x[2]));
