@@ -17,8 +17,16 @@ namespace pbat {
 namespace gpu {
 namespace geometry {
 
-BvhQueryImpl::BvhQueryImpl(std::size_t nPrimitives, std::size_t nOverlaps)
-    : simplex(nPrimitives), morton(nPrimitives), b(nPrimitives), e(nPrimitives), overlaps(nOverlaps)
+BvhQueryImpl::BvhQueryImpl(
+    std::size_t nPrimitives,
+    std::size_t nOverlaps,
+    std::size_t nNearestNeighbours)
+    : simplex(nPrimitives),
+      morton(nPrimitives),
+      b(nPrimitives),
+      e(nPrimitives),
+      overlaps(nOverlaps),
+      neighbours(nNearestNeighbours)
 {
 }
 
@@ -106,6 +114,28 @@ void BvhQueryImpl::DetectOverlaps(
             bvh.child.Raw(),
             static_cast<GpuIndex>(leafBegin),
             overlaps.Raw()});
+}
+
+void BvhQueryImpl::DetectNearestNeighbours(
+    PointsImpl const& P,
+    SimplicesImpl const& S1,
+    SimplicesImpl const& S2,
+    BvhImpl const& bvh,
+    GpuScalar dhat)
+{
+    if (S1.eSimplexType != SimplicesImpl::ESimplexType::Vertex)
+    {
+        std::string const what = "Only vertex simplices are supported as the query simplices";
+        throw std::invalid_argument(what);
+    }
+    auto const nQueries = S1.NumberOfSimplices();
+    if (NumberOfAllocatedBoxes() < nQueries)
+    {
+        std::string const what =
+            "Allocated memory for " + std::to_string(NumberOfAllocatedBoxes()) +
+            " boxes, but received " + std::to_string(nQueries) + " query simplices.";
+        throw std::invalid_argument(what);
+    }
 }
 
 std::size_t BvhQueryImpl::NumberOfAllocatedBoxes() const

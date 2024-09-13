@@ -18,12 +18,13 @@ void BindBvhQuery(pybind11::module& m)
     using namespace pbat::gpu::geometry;
     pyb::class_<BvhQuery>(m, "BvhQuery")
         .def(
-            pyb::init([](std::size_t nPrimitives, std::size_t nOverlaps) {
-                return pbat::profiling::Profile("pbat.gpu.geometry.BvhQuery.Construct", [&]() {
-                    BvhQuery bvhQuery(nPrimitives, nOverlaps);
-                    return bvhQuery;
-                });
-            }),
+            pyb::init(
+                [](std::size_t nPrimitives, std::size_t nOverlaps, std::size_t nNearestNeighbours) {
+                    return pbat::profiling::Profile("pbat.gpu.geometry.BvhQuery.Construct", [&]() {
+                        BvhQuery bvhQuery(nPrimitives, nOverlaps, nNearestNeighbours);
+                        return bvhQuery;
+                    });
+                }),
             pyb::arg("max_boxes"),
             pyb::arg("max_overlaps"),
             "Allocate data on GPU for max_boxes queries, which can detect a maximum of "

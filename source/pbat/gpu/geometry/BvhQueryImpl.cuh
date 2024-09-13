@@ -10,6 +10,7 @@
 
 #include <Eigen/Core>
 #include <cuda/std/cmath>
+#include <cuda/std/utility>
 #include <limits>
 
 namespace pbat {
@@ -22,15 +23,16 @@ namespace geometry {
 class BvhQueryImpl
 {
   public:
-    using OverlapType    = typename BvhImpl::OverlapType;
-    using MortonCodeType = typename BvhImpl::MortonCodeType;
+    using OverlapType              = typename BvhImpl::OverlapType;
+    using NearestNeighbourPairType = cuda::std::pair<GpuIndex, GpuIndex>;
+    using MortonCodeType           = typename BvhImpl::MortonCodeType;
 
     /**
      * @brief
      * @param nPrimitives
      * @param nOverlaps
      */
-    BvhQueryImpl(std::size_t nPrimitives, std::size_t nOverlaps);
+    BvhQueryImpl(std::size_t nPrimitives, std::size_t nOverlaps, std::size_t nNearestNeighbours);
 
     /**
      * @brief
@@ -49,16 +51,31 @@ class BvhQueryImpl
 
     /**
      * @brief
-     * @param P
-     * @param S1
-     * @param S2
-     * @param bvh
+     * @param P Simplex primitive vertex positions
+     * @param S1 Query primitives
+     * @param S2 Target primitives
+     * @param bvh Bounding volume hierarchy over S2
      */
     void DetectOverlaps(
         PointsImpl const& P,
         SimplicesImpl const& S1,
         SimplicesImpl const& S2,
         BvhImpl const& bvh);
+
+    /**
+     * @brief
+     * @param P Simplex primitive vertex positions
+     * @param S1 Query primitives
+     * @param S2 Target primitives
+     * @param bvh Bounding volume hierarchy over S2
+     * @param dhat Radius of nearest neighbour search space for each query primitive in S1
+     */
+    void DetectNearestNeighbours(
+        PointsImpl const& P,
+        SimplicesImpl const& S1,
+        SimplicesImpl const& S2,
+        BvhImpl const& bvh,
+        GpuScalar dhat = std::numeric_limits<GpuScalar>::max());
 
     /**
      * @brief
@@ -73,7 +90,8 @@ class BvhQueryImpl
         e; ///< Simplex and internal node bounding boxes.
 
   public:
-    common::SynchronizedList<OverlapType> overlaps; ///< Detected overlaps
+    common::SynchronizedList<OverlapType> overlaps;                ///< Detected overlaps
+    common::SynchronizedList<NearestNeighbourPairType> neighbours; ///< Detected nearest neighbours
 };
 
 } // namespace geometry

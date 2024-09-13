@@ -437,6 +437,86 @@ class Product
     RhsNestedType const& B;
 };
 
+template <CMatrix TMatrix>
+class Diagonal
+{
+  public:
+    using NestedType = TMatrix;
+    using ScalarType = typename NestedType::ScalarType;
+    using SelfType   = Diagonal<NestedType>;
+
+    static auto constexpr kRows = NestedType::kRows;
+    static auto constexpr kCols = 1;
+
+    __host__ __device__ Diagonal(NestedType const& A) : A(A) {}
+
+    __host__ __device__ constexpr auto Rows() const { return kRows; }
+    __host__ __device__ constexpr auto Cols() const { return kCols; }
+
+    __host__ __device__ auto operator()(auto i, auto j) const { return A(i, i); }
+
+    template <auto S, auto T>
+    __host__ __device__ ConstSubMatrix<SelfType, S, T> Slice(auto i, auto j) const
+    {
+        return ConstSubMatrix<SelfType, S, T>(*this, i, j);
+    }
+    __host__ __device__ ConstSubMatrix<SelfType, kRows, 1> Col(auto j) const
+    {
+        return Slice<kRows, 1>(0, j);
+    }
+    __host__ __device__ ConstSubMatrix<SelfType, 1, kCols> Row(auto i) const
+    {
+        return Slice<1, kCols>(i, 0);
+    }
+    __host__ __device__ ConstTransposeView<SelfType> Transpose() const
+    {
+        return ConstTransposeView<SelfType>(*this);
+    }
+
+  private:
+    NestedType const& A;
+};
+
+template <CMatrix TMatrix>
+class Square
+{
+  public:
+    using NestedType = TMatrix;
+    using ScalarType = typename NestedType::ScalarType;
+    using SelfType   = Square<NestedType>;
+
+    static auto constexpr kRows = NestedType::kRows;
+    static auto constexpr kCols = NestedType::kCols;
+
+    __host__ __device__ Square(NestedType const& A) : A(A) {}
+
+    __host__ __device__ constexpr auto Rows() const { return kRows; }
+    __host__ __device__ constexpr auto Cols() const { return kCols; }
+
+    __host__ __device__ auto operator()(auto i, auto j) const { return A(i, j) * A(i, j); }
+
+    template <auto S, auto T>
+    __host__ __device__ ConstSubMatrix<SelfType, S, T> Slice(auto i, auto j) const
+    {
+        return ConstSubMatrix<SelfType, S, T>(*this, i, j);
+    }
+    __host__ __device__ ConstSubMatrix<SelfType, kRows, 1> Col(auto j) const
+    {
+        return Slice<kRows, 1>(0, j);
+    }
+    __host__ __device__ ConstSubMatrix<SelfType, 1, kCols> Row(auto i) const
+    {
+        return Slice<1, kCols>(i, 0);
+    }
+    __host__ __device__ ConstTransposeView<SelfType> Transpose() const
+    {
+        return ConstTransposeView<SelfType>(*this);
+    }
+
+  private:
+    NestedType const& A;
+};
+
 template <CMatrix TLhsMatrix, CMatrix TRhsMatrix>
 class CrossProduct
 {
@@ -468,6 +548,104 @@ class CrossProduct
         auto k = (i + 2) % 3;
         return A(j, 0) * B(k, 0) - A(k, 0) * B(j, 0);
     }
+
+    template <auto S, auto T>
+    __host__ __device__ ConstSubMatrix<SelfType, S, T> Slice(auto i, auto j) const
+    {
+        return ConstSubMatrix<SelfType, S, T>(*this, i, j);
+    }
+    __host__ __device__ ConstSubMatrix<SelfType, kRows, 1> Col(auto j) const
+    {
+        return Slice<kRows, 1>(0, j);
+    }
+    __host__ __device__ ConstSubMatrix<SelfType, 1, kCols> Row(auto i) const
+    {
+        return Slice<1, kCols>(i, 0);
+    }
+    __host__ __device__ ConstTransposeView<SelfType> Transpose() const
+    {
+        return ConstTransposeView<SelfType>(*this);
+    }
+
+  private:
+    LhsNestedType const& A;
+    RhsNestedType const& B;
+};
+
+template <CMatrix TLhsMatrix, CMatrix TRhsMatrix>
+class Minimum
+{
+  public:
+    using LhsNestedType = TLhsMatrix;
+    using RhsNestedType = TRhsMatrix;
+
+    using ScalarType = typename LhsNestedType::ScalarType;
+    using SelfType   = Minimum<LhsNestedType, RhsNestedType>;
+
+    static auto constexpr kRows = LhsNestedType::kRows;
+    static auto constexpr kCols = RhsNestedType::kCols;
+
+    __host__ __device__ Minimum(LhsNestedType const& A, RhsNestedType const& B) : A(A), B(B)
+    {
+        static_assert(
+            LhsNestedType::kRows == RhsNestedType::kRows and
+                LhsNestedType::kCols == RhsNestedType::kCols,
+            "Invalid matrix minimum dimensions");
+    }
+
+    __host__ __device__ constexpr auto Rows() const { return kRows; }
+    __host__ __device__ constexpr auto Cols() const { return kCols; }
+
+    __host__ __device__ auto operator()(auto i, auto j) const { return min(A(i, j), B(i, j)); }
+
+    template <auto S, auto T>
+    __host__ __device__ ConstSubMatrix<SelfType, S, T> Slice(auto i, auto j) const
+    {
+        return ConstSubMatrix<SelfType, S, T>(*this, i, j);
+    }
+    __host__ __device__ ConstSubMatrix<SelfType, kRows, 1> Col(auto j) const
+    {
+        return Slice<kRows, 1>(0, j);
+    }
+    __host__ __device__ ConstSubMatrix<SelfType, 1, kCols> Row(auto i) const
+    {
+        return Slice<1, kCols>(i, 0);
+    }
+    __host__ __device__ ConstTransposeView<SelfType> Transpose() const
+    {
+        return ConstTransposeView<SelfType>(*this);
+    }
+
+  private:
+    LhsNestedType const& A;
+    RhsNestedType const& B;
+};
+
+template <CMatrix TLhsMatrix, CMatrix TRhsMatrix>
+class Maximum
+{
+  public:
+    using LhsNestedType = TLhsMatrix;
+    using RhsNestedType = TRhsMatrix;
+
+    using ScalarType = typename LhsNestedType::ScalarType;
+    using SelfType   = Maximum<LhsNestedType, RhsNestedType>;
+
+    static auto constexpr kRows = LhsNestedType::kRows;
+    static auto constexpr kCols = RhsNestedType::kCols;
+
+    __host__ __device__ Maximum(LhsNestedType const& A, RhsNestedType const& B) : A(A), B(B)
+    {
+        static_assert(
+            LhsNestedType::kRows == RhsNestedType::kRows and
+                LhsNestedType::kCols == RhsNestedType::kCols,
+            "Invalid matrix maximum dimensions");
+    }
+
+    __host__ __device__ constexpr auto Rows() const { return kRows; }
+    __host__ __device__ constexpr auto Cols() const { return kCols; }
+
+    __host__ __device__ auto operator()(auto i, auto j) const { return max(A(i, j), B(i, j)); }
 
     template <auto S, auto T>
     __host__ __device__ ConstSubMatrix<SelfType, S, T> Slice(auto i, auto j) const
@@ -873,6 +1051,14 @@ __host__ __device__ auto SquaredNorm(TMatrix&& A)
 }
 
 template <class /*CMatrix*/ TMatrix>
+__host__ __device__ auto Squared(TMatrix&& A)
+{
+    using MatrixType = std::remove_cvref_t<TMatrix>;
+    static_assert(CMatrix<MatrixType>, "Input must satisfy concept CMatrix");
+    return Square<MatrixType>(std::forward<TMatrix>(A));
+}
+
+template <class /*CMatrix*/ TMatrix>
 __host__ __device__ auto Norm(TMatrix&& A)
 {
     using MatrixType = std::remove_cvref_t<TMatrix>;
@@ -987,6 +1173,30 @@ __host__ __device__ auto Repeat(TMatrix&& A)
     using MatrixType = std::remove_cvref_t<TMatrix>;
     static_assert(CMatrix<MatrixType>, "Input must satisfy concept CMatrix");
     return TiledView<MatrixType, RepeatRows, RepeatCols>(std::forward<TMatrix>(A));
+}
+
+template <class /*CMatrix*/ TLhsMatrix, class /*CMatrix*/ TRhsMatrix>
+__host__ __device__ auto Min(TLhsMatrix&& A, TRhsMatrix&& B)
+{
+    using LhsMatrixType = std::remove_cvref_t<TLhsMatrix>;
+    static_assert(CMatrix<LhsMatrixType>, "Input must satisfy concept CMatrix");
+    using RhsMatrixType = std::remove_cvref_t<TRhsMatrix>;
+    static_assert(CMatrix<RhsMatrixType>, "Input must satisfy concept CMatrix");
+    return Minimum<LhsMatrixType, RhsMatrixType>(
+        std::forward<TLhsMatrix>(A),
+        std::forward<TRhsMatrix>(B));
+}
+
+template <class /*CMatrix*/ TLhsMatrix, class /*CMatrix*/ TRhsMatrix>
+__host__ __device__ auto Max(TLhsMatrix&& A, TRhsMatrix&& B)
+{
+    using LhsMatrixType = std::remove_cvref_t<TLhsMatrix>;
+    static_assert(CMatrix<LhsMatrixType>, "Input must satisfy concept CMatrix");
+    using RhsMatrixType = std::remove_cvref_t<TRhsMatrix>;
+    static_assert(CMatrix<RhsMatrixType>, "Input must satisfy concept CMatrix");
+    return Maximum<LhsMatrixType, RhsMatrixType>(
+        std::forward<TLhsMatrix>(A),
+        std::forward<TRhsMatrix>(B));
 }
 
 } // namespace linalg

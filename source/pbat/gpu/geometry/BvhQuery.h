@@ -16,7 +16,7 @@ class BvhQueryImpl;
 class BvhQuery
 {
   public:
-    BvhQuery(std::size_t nPrimitives, std::size_t nOverlaps);
+    BvhQuery(std::size_t nPrimitives, std::size_t nOverlaps, std::size_t nNearestNeighbours);
 
     BvhQuery(BvhQuery const&)            = delete;
     BvhQuery& operator=(BvhQuery const&) = delete;

@@ -18,6 +18,7 @@ class Stack
     __host__ __device__ GpuIndex Size() const { return size; }
     __host__ __device__ bool IsEmpty() const { return size == 0; }
     __host__ __device__ bool IsFull() const { return size == kCapacity; }
+    __host__ __device__ void Clear() { size = 0; }
 
   private:
     T stack[kCapacity];
