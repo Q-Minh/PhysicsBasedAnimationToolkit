@@ -7,7 +7,6 @@
 
 #include <array>
 #include <cuda/atomic>
-#include <cuda/std/cmath>
 
 namespace pbat {
 namespace gpu {
@@ -24,8 +23,8 @@ struct FComputeAabb
             e[d][s] = x[d][inds[0][s]];
             for (auto m = 1; m < nSimplexVertices; ++m)
             {
-                b[d][s] = cuda::std::min(b[d][s], x[d][inds[m][s]]);
-                e[d][s] = cuda::std::max(e[d][s], x[d][inds[m][s]]);
+                b[d][s] = min(b[d][s], x[d][inds[m][s]]);
+                e[d][s] = max(e[d][s], x[d][inds[m][s]]);
             }
             b[d][s] -= r;
             e[d][s] += r;

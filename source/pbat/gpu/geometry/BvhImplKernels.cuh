@@ -9,7 +9,6 @@
 #include <array>
 #include <assert.h>
 #include <cuda/atomic>
-#include <cuda/std/cmath>
 
 namespace pbat {
 namespace gpu {
@@ -20,7 +19,6 @@ struct FLeafBoundingBoxes
 {
     __device__ void operator()(auto s)
     {
-        using namespace cuda::std;
         for (auto d = 0; d < 3; ++d)
         {
             auto bs  = leafBegin + s;
@@ -166,7 +164,6 @@ struct FInternalNodeBoundingBoxes
 {
     __device__ void operator()(auto leaf)
     {
-        using namespace cuda::std;
         auto p = parent[leaf];
         auto k = 0;
         for (; (k < 64) and (p >= 0); ++k)
