@@ -1,11 +1,8 @@
 #ifndef PBAT_GPU_SWEEP_AND_PRUNE_H
 #define PBAT_GPU_SWEEP_AND_PRUNE_H
 
-#define EIGEN_NO_CUDA
-#include "pbat/Aliases.h"
-#undef EIGEN_NO_CUDA
-
 #include "Primitives.h"
+#include "pbat/Aliases.h"
 #include "pbat/gpu/Aliases.h"
 
 #include <cstddef>

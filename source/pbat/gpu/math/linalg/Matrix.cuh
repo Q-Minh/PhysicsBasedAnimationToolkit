@@ -766,7 +766,7 @@ class Matrix
         return ConstTransposeView<SelfType const>(*this);
     }
 
-    void SetZero() { memset(a.data(), 0, kRows * kCols * sizeof(ScalarType)); }
+    __host__ __device__ void SetZero() { memset(a.data(), 0, kRows * kCols * sizeof(ScalarType)); }
 
   private:
     std::array<ScalarType, M * N> a;
@@ -852,7 +852,7 @@ class MatrixView
         return ConstTransposeView<SelfType const>(*this);
     }
 
-    void SetZero() { memset(mA, 0, kRows * kCols * sizeof(ScalarType)); }
+    __host__ __device__ void SetZero() { memset(mA, 0, kRows * kCols * sizeof(ScalarType)); }
 
   private:
     ScalarType* mA;
@@ -1042,12 +1042,18 @@ __host__ __device__ auto Trace(TMatrix&& A)
     return sum(std::make_index_sequence<MatrixType::kRows>{});
 }
 
+template <class /*CMatrix*/ TLhsMatrix, class /*CMatrix*/ TRhsMatrix>
+__host__ __device__ auto Dot(TLhsMatrix&& A, TRhsMatrix&& B)
+{
+    using LhsMatrixType = std::remove_cvref_t<TLhsMatrix>;
+    using RhsMatrixType = std::remove_cvref_t<TRhsMatrix>;
+    return Trace(std::forward<TLhsMatrix>(A).Transpose() * std::forward<TRhsMatrix>(B));
+}
+
 template <class /*CMatrix*/ TMatrix>
 __host__ __device__ auto SquaredNorm(TMatrix&& A)
 {
-    using MatrixType = std::remove_cvref_t<TMatrix>;
-    static_assert(CMatrix<MatrixType>, "Input must satisfy concept CMatrix");
-    return Trace(std::forward<TMatrix>(A).Transpose() * std::forward<TMatrix>(A));
+    return Dot(A, A);
 }
 
 template <class /*CMatrix*/ TMatrix>

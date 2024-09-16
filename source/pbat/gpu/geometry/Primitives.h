@@ -1,9 +1,7 @@
 #ifndef PBAT_GPU_GEOMETRY_PRIMITIVES_H
 #define PBAT_GPU_GEOMETRY_PRIMITIVES_H
 
-#define EIGEN_NO_CUDA
-#include "pbat/Aliases.h"
-#undef EIGEN_NO_CUDA
+#include "pbat/gpu/Aliases.h"
 
 namespace pbat {
 namespace gpu {
@@ -11,6 +9,7 @@ namespace geometry {
 
 struct PointsImpl;
 struct SimplicesImpl;
+class BodiesImpl;
 
 class Points
 {
@@ -19,7 +18,7 @@ class Points
      * @brief
      * @param V
      */
-    Points(Eigen::Ref<MatrixX const> const& V);
+    Points(Eigen::Ref<GpuMatrixX const> const& V);
     /**
      * @brief
      * @param
@@ -46,7 +45,7 @@ class Points
      * @brief
      * @param V
      */
-    void Update(Eigen::Ref<MatrixX const> const& V);
+    void Update(Eigen::Ref<GpuMatrixX const> const& V);
     /**
      * @brief
      * @return
@@ -61,7 +60,7 @@ class Points
      * @brief
      * @return
      */
-    MatrixX Get() const;
+    GpuMatrixX Get() const;
     /**
      * @brief
      */
@@ -78,9 +77,9 @@ class Simplices
 
     /**
      * @brief
-     * @param V
+     * @param C
      */
-    Simplices(Eigen::Ref<IndexMatrixX const> const& C);
+    Simplices(Eigen::Ref<GpuIndexMatrixX const> const& C);
     /**
      * @brief
      * @param
@@ -107,7 +106,7 @@ class Simplices
      * @brief
      * @return
      */
-    IndexMatrixX Get() const;
+    GpuIndexMatrixX Get() const;
     /**
      * @brief
      * @return
@@ -130,6 +129,65 @@ class Simplices
 
   private:
     SimplicesImpl* mImpl;
+};
+
+class Bodies
+{
+  public:
+    /**
+     * @brief
+     * @param B
+     */
+    Bodies(Eigen::Ref<GpuIndexVectorX const> const& B);
+    /**
+     * @brief
+     * @param
+     */
+    Bodies(Bodies const&) = delete;
+    /**
+     * @brief
+     * @param
+     * @return
+     */
+    Bodies& operator=(Bodies const&) = delete;
+    /**
+     * @brief
+     * @param
+     */
+    Bodies(Bodies&&) noexcept;
+    /**
+     * @brief
+     * @param
+     * @return
+     */
+    Bodies& operator=(Bodies&&) noexcept;
+    /**
+     * @brief
+     * @return
+     */
+    GpuIndexMatrixX Get() const;
+    /**
+     * @brief
+     * @return
+     */
+    std::size_t NumberOfBodies() const;
+    /**
+     * @brief
+     * @return
+     */
+    BodiesImpl* Impl();
+    /**
+     * @brief
+     * @return
+     */
+    BodiesImpl const* Impl() const;
+    /**
+     * @brief
+     */
+    ~Bodies();
+
+  private:
+    BodiesImpl* mImpl;
 };
 
 } // namespace geometry

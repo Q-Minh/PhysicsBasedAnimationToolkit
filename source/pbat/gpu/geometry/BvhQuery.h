@@ -45,9 +45,36 @@ class BvhQuery
      * @param S1
      * @param S2
      * @param bvh
+     * @returns 2x|#overlaps| matrix O of overlapping simplices, such that (O(0,k), O(1,k)) yields
+     * the k^{th} overlapping pair (si \in S1,sj \in S2).
      */
     GpuIndexMatrixX
     DetectOverlaps(Points const& P, Simplices const& S1, Simplices const& S2, Bvh const& bvh);
+
+    /**
+     * @brief
+     * @param P Simplex primitive vertex positions
+     * @param S1 Query primitives
+     * @param S2 Target primitives
+     * @param B1 Query simplex bodies
+     * @param B2 Target simplex bodies
+     * @param bvh Bounding volume hierarchy over S2
+     * @param dhat Radius of nearest neighbour search space for each query primitive in S1
+     * @param dzero Floating point error considered negligible when comparing "duplicate" nearest
+     * neighbours
+     * @returns 2x|#neighbour pairs| matrix N of nearest neighbour simplices, such that (N(0,k),
+     * N(1,k)) yields the k^{th} nearest neighbour pair (si \in S1, sj \in S2), i.e. the simplices
+     * sj in S2 nearest to si.
+     */
+    GpuIndexMatrixX DetectContactPairsFromOverlaps(
+        Points const& P,
+        Simplices const& S1,
+        Simplices const& S2,
+        Bodies const& B1,
+        Bodies const& B2,
+        Bvh const& bvh,
+        GpuScalar dhat  = std::numeric_limits<GpuScalar>::max(),
+        GpuScalar dzero = std::numeric_limits<GpuScalar>::epsilon());
 
     ~BvhQuery();
 

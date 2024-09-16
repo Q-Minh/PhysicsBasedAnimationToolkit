@@ -154,8 +154,9 @@ struct FDetectOverlaps
     common::DeviceSynchronizedList<OverlapType> overlaps;
 };
 
-struct FNearestNeighbours
+struct FContactPairs
 {
+    using OverlapType              = typename BvhQueryImpl::OverlapType;
     using NearestNeighbourPairType = typename BvhQueryImpl::NearestNeighbourPairType;
     using Vector3                  = pbat::gpu::math::linalg::Matrix<GpuScalar, 3>;
 
@@ -203,19 +204,126 @@ struct FNearestNeighbours
         };
         return min(d[0], min(d[1], d[2]));
     }
-    __device__ GpuScalar Distance(Vector3 const& X, GpuIndex s) const;
+    __device__ GpuScalar Distance(Vector3 const& P, GpuIndex s) const
+    {
+        using namespace pbat::gpu::math::linalg;
+        Matrix<GpuScalar, 3, 3> ABC;
+        auto A = ABC.Col(0);
+        auto B = ABC.Col(1);
+        auto C = ABC.Col(2);
+        A      = Position(targetInds[0][s]);
+        B      = Position(targetInds[1][s]);
+        C      = Position(targetInds[2][s]);
+        Matrix<GpuScalar, 3> uvw;
+        uvw.SetZero();
+
+        /**
+         * Ericson, Christer. Real-time collision detection. Crc Press, 2004. section 5.1.5
+         */
+
+        // Check if P in vertex region outside A
+        Vector3 const AB                     = B - A;
+        Vector3 const AC                     = C - A;
+        Vector3 const AP                     = P - A;
+        GpuScalar const d1                   = Dot(AB, AP);
+        GpuScalar const d2                   = Dot(AC, AP);
+        bool const bIsInVertexRegionOutsideA = d1 <= GpuScalar{0} and d2 <= GpuScalar{0};
+        if (bIsInVertexRegionOutsideA)
+        {
+            uvw(0) = GpuScalar{1}; // barycentric coordinates (1,0,0)
+        }
+
+        // Check if P in vertex region outside B
+        Vector3 const BP                     = P - B;
+        GpuScalar const d3                   = Dot(AB, BP);
+        GpuScalar const d4                   = Dot(AC, BP);
+        bool const bIsInVertexRegionOutsideB = d3 >= GpuScalar{0} and d4 <= d3;
+        if (bIsInVertexRegionOutsideB)
+        {
+            uvw(1) = GpuScalar{1}; // barycentric coordinates (0,1,0)
+        }
+
+        // Check if P in edge region of AB, if so return projection of P onto AB
+        GpuScalar const vc = d1 * d4 - d3 * d2;
+        bool const bIsInEdgeRegionOfAB =
+            vc <= GpuScalar{0} and d1 >= GpuScalar{0} and d3 <= GpuScalar{0};
+        if (bIsInEdgeRegionOfAB)
+        {
+            GpuScalar const v = d1 / (d1 - d3);
+            uvw(0)            = GpuScalar{1} - v;
+            uvw(1)            = v; // barycentric coordinates (1-v,v,0)
+        }
+
+        // Check if P in vertex region outside C
+        Vector3 const CP                     = P - C;
+        GpuScalar const d5                   = Dot(AB, CP);
+        GpuScalar const d6                   = Dot(AC, CP);
+        bool const bIsInVertexRegionOutsideC = d6 >= GpuScalar{0} and d5 <= d6;
+        if (bIsInVertexRegionOutsideC)
+        {
+            uvw(2) = GpuScalar{1}; // barycentric coordinates (0,0,1)
+        }
+
+        // Check if P in edge region of AC, if so return projection of P onto AC
+        GpuScalar const vb = d5 * d2 - d1 * d6;
+        bool const bIsInEdgeRegionOfAC =
+            (vb <= GpuScalar{0} and d2 >= GpuScalar{0} and d6 <= GpuScalar{0});
+        if (bIsInEdgeRegionOfAC)
+        {
+            GpuScalar const w = d2 / (d2 - d6);
+            uvw(0)            = GpuScalar{1} - w; // barycentric coordinates (1-w,0,w)
+            uvw(2)            = w;
+        }
+        // Check if P in edge region of BC, if so return projection of P onto BC
+        GpuScalar const va = d3 * d6 - d5 * d4;
+        bool const bIsInEdgeRegionOfBC =
+            va <= GpuScalar{0} and (d4 - d3) >= GpuScalar{0} and (d5 - d6) >= GpuScalar{0};
+        if (bIsInEdgeRegionOfBC)
+        {
+            GpuScalar const w = (d4 - d3) / ((d4 - d3) + (d5 - d6));
+            // barycentric coordinates (0,1-w,w)
+            uvw(1) = GpuScalar{1} - w;
+            uvw(2) = w;
+        }
+        // P inside face region. Compute Q through its barycentric coordinates (u,v,w)
+        if (not(bIsInVertexRegionOutsideA or bIsInVertexRegionOutsideB or
+                bIsInVertexRegionOutsideC or bIsInEdgeRegionOfAB or bIsInEdgeRegionOfAC or
+                bIsInEdgeRegionOfBC))
+        {
+            GpuScalar const denom = GpuScalar{1} / (va + vb + vc);
+            uvw(1)                = vb * denom;
+            uvw(2)                = vc * denom;
+            uvw(0)                = GpuScalar{1} - uvw(1) - uvw(2);
+        }
+        return SquaredNorm(P - ABC * uvw);
+    }
 
     struct BoxOrSimplex
     {
         GpuIndex node; ///< BVH node index
         GpuScalar d;   ///< Distance between query and node
     };
+
+    template <class FIsLeaf, class FDistance>
     struct BranchAndBound
     {
-        __device__ BranchAndBound(Vector3 X, GpuScalar R) : stack{}, nearest{}, X(X), R(R) {}
+        __device__ BranchAndBound(
+            Vector3 X,
+            GpuScalar R,
+            FIsLeaf fIsLeafIn,
+            FDistance fDistanceIn,
+            GpuScalar dzero)
+            : stack{},
+              nearest{},
+              X(X),
+              R(R),
+              fIsLeaf(std::forward<FIsLeaf>(fIsLeafIn)),
+              fDistance(std::forward<FDistance>(fDistanceIn)),
+              dzero(dzero)
+        {
+        }
 
-        template <class FIsLeaf, class FDistance>
-        __device__ void Push(GpuIndex c, GpuScalar dbox, FIsLeaf&& fIsLeaf, FDistance&& fDistance)
+        __device__ void Push(GpuIndex c, GpuScalar dbox)
         {
             bool const bIsLeaf = fIsLeaf(c);
             if (bIsLeaf)
@@ -238,7 +346,7 @@ struct FNearestNeighbours
             }
         }
 
-        BoxOrSimplex Pop()
+        __device__ BoxOrSimplex Pop()
         {
             BoxOrSimplex bos = stack.Top();
             stack.Pop();
@@ -249,20 +357,32 @@ struct FNearestNeighbours
         common::Queue<GpuIndex, 8> nearest;
         Vector3 X;
         GpuScalar R;
+        FIsLeaf const fIsLeaf;
+        FDistance const fDistance;
+        GpuScalar dzero;
     };
 
-    __device__ void operator()(auto v)
+    __device__ void operator()(OverlapType const& o)
     {
+        // WARNING: Self contacts not supported yet
+        if (queryBodies[o.first] == targetBodies[o.second])
+            return;
+
+        // Branch and bound needs to know which nodes are leaves, and what the cost function to
+        // minimize is.
         auto const fIsLeaf = [this](GpuIndex c) {
             return c >= leafBegin;
         };
         auto const fDistance = [this](Vector3 const& X, GpuIndex c) {
             return Distance(X, simplex[c - leafBegin]);
         };
+        using FIsLeaf   = decltype(fIsLeaf);
+        using FDistance = decltype(fDistance);
 
         // Branch and bound over BVH
-        BranchAndBound traversal{Position(v), R};
-        traversal.stack.Push({0, MinDistance(traversal.X, Lower(0), Upper(0))});
+        GpuIndex const v = queryInds[0][o.first];
+        BranchAndBound<FIsLeaf, FDistance> traversal{Position(v), R, fIsLeaf, fDistance, dzero};
+        traversal.Push(0, MinDistance(traversal.X, Lower(0), Upper(0)));
         do
         {
             assert(not traversal.stack.IsFull());
@@ -284,9 +404,9 @@ struct FNearestNeighbours
             GpuScalar Rdminmax = MinMaxDistance(traversal.X, RL, RU);
 
             if (Ldmin <= Rdminmax)
-                traversal.Push(lc, Ldmin, fIsLeaf, fDistance);
+                traversal.Push(lc, Ldmin);
             if (Rdmin <= Ldminmax)
-                traversal.Push(rc, Rdmin, fIsLeaf, fDistance);
+                traversal.Push(rc, Rdmin);
         } while (not traversal.stack.IsEmpty());
         // Collect results
         while (not traversal.nearest.IsEmpty())
@@ -300,21 +420,23 @@ struct FNearestNeighbours
 
     std::array<GpuScalar const*, 3> x;
 
-    // GpuIndex* querySimplex;
-    // std::array<GpuIndex const*, 4> queryInds;
-    GpuScalar R;     ///< Nearest neighbour query search radius
+    GpuIndex const* queryBodies;              ///< Body indices of query simplices
+    std::array<GpuIndex const*, 4> queryInds; ///< Vertex indices of query simplices
+    GpuScalar R;                              ///< Nearest neighbour query search radius
     GpuScalar dzero; ///< Error tolerance for different distances to be considered the same, i.e. if
                      ///< the distances di,dj to the nearest neighbours i,j are similar, we
                      ///< considered both i and j to be nearest neighbours.
 
-    GpuIndex const* simplex;
-    std::array<GpuIndex const*, 4> inds;
-    std::array<GpuScalar const*, 3> b;
-    std::array<GpuScalar const*, 3> e;
-    std::array<GpuIndex const*, 2> child;
-    GpuIndex leafBegin;
+    GpuIndex const* targetBodies;              ///< Body indices of target simplices
+    std::array<GpuIndex const*, 4> targetInds; ///< Vertex indices of target simplices
+    GpuIndex const* simplex;                   ///< Target simplices
+    std::array<GpuScalar const*, 3> b;         ///< Box beginnings of BVH
+    std::array<GpuScalar const*, 3> e;         ///< Box endings of BVH
+    std::array<GpuIndex const*, 2> child;      ///< BVH children
+    GpuIndex leafBegin;                        ///< Index to beginning of BVH's leaves array
 
-    common::DeviceSynchronizedList<NearestNeighbourPairType> neighbours;
+    common::DeviceSynchronizedList<NearestNeighbourPairType>
+        neighbours; ///< Nearest neighbour pairs found
 };
 
 } // namespace BvhQueryImplKernels

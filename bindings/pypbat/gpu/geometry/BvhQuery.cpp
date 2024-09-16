@@ -68,7 +68,38 @@ void BindBvhQuery(pybind11::module& m)
             pyb::arg("bvh"),
             "Detect self-overlaps (si,sj) between bounding boxes of simplices si in S1, sj in S2 "
             "into a 2x|#overlaps| array. Both S1 and S2 must index into points P and S1 was used "
-            "in the call to build.");
+            "in the call to build.")
+        .def(
+            "detect_contact_pairs",
+            [](BvhQuery& bvhQuery,
+               Points const& P,
+               Simplices const& S1,
+               Simplices const& S2,
+               Bodies const& B1,
+               Bodies const& B2,
+               Bvh const& bvh,
+               GpuScalar dhat,
+               GpuScalar dzero) {
+                return pbat::profiling::Profile(
+                    "pbat.gpu.geometry.BvhQuery.DetectContactPairs",
+                    [&]() {
+                        return bvhQuery
+                            .DetectContactPairsFromOverlaps(P, S1, S2, B1, B2, bvh, dhat, dzero);
+                    });
+            },
+            pyb::arg("P"),
+            pyb::arg("S1"),
+            pyb::arg("S2"),
+            pyb::arg("B1"),
+            pyb::arg("B2"),
+            pyb::arg("bvh"),
+            pyb::arg("dhat")  = std::numeric_limits<GpuScalar>::max(),
+            pyb::arg("dzero") = std::numeric_limits<GpuScalar>::epsilon(),
+            "Detect contact pairs from previously computed overlaps. S1 must have type vertex, and "
+            "S2 must have type triangle. B1 and B2 refer to bodies of simplex sets S1 and S2, "
+            "respectively. bvh is a bounding volume hierarchy built over S2. dhat is the search "
+            "radius around each query simplex in S1. dzero is the numerical error within which 2 "
+            "nearest neighbours pairs are considered to have the same distance.");
 #endif // PBAT_USE_CUDA
 }
 

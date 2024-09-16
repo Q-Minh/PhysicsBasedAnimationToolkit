@@ -18,7 +18,7 @@ class Queue
         queue[end] = std::forward<T>(value);
     }
     __host__ __device__ T const& Top() const { return queue[begin]; }
-    __host__ __device__ void Pop() const { begin = (begin + 1) % kCapacity; }
+    __host__ __device__ void Pop() { begin = (begin + 1) % kCapacity; }
     __host__ __device__ bool IsFull() const { return (end + 1) % kCapacity == begin; }
     __host__ __device__ bool IsEmpty() const { return begin == end; }
     __host__ __device__ void Clear()

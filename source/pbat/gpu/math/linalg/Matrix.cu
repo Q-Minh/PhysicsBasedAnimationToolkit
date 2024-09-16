@@ -2,10 +2,8 @@
 #include "pbat/gpu/DisableWarnings.h"
 // clang-format on
 
-#define EIGEN_NO_CUDA
 #include <Eigen/Core>
 #include <Eigen/Geometry>
-#undef EIGEN_NO_CUDA
 
 #include "Matrix.cuh"
 #include "pbat/gpu/Aliases.h"

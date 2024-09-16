@@ -13,7 +13,7 @@ namespace pbat {
 namespace gpu {
 namespace geometry {
 
-Points::Points(Eigen::Ref<MatrixX const> const& V) : mImpl(new PointsImpl(V.cast<GpuScalar>())) {}
+Points::Points(Eigen::Ref<GpuMatrixX const> const& V) : mImpl(new PointsImpl(V)) {}
 
 Points::Points(Points&& other) noexcept : mImpl(other.mImpl)
 {
@@ -29,9 +29,9 @@ Points& Points::operator=(Points&& other) noexcept
     return *this;
 }
 
-void Points::Update(Eigen::Ref<MatrixX const> const& V)
+void Points::Update(Eigen::Ref<GpuMatrixX const> const& V)
 {
-    mImpl->Update(V.cast<GpuScalar>());
+    mImpl->Update(V);
 }
 
 PointsImpl* Points::Impl()
@@ -44,9 +44,9 @@ PointsImpl const* Points::Impl() const
     return mImpl;
 }
 
-MatrixX Points::Get() const
+GpuMatrixX Points::Get() const
 {
-    MatrixX V(mImpl->x.Dimensions(), mImpl->x.Size());
+    GpuMatrixX V(mImpl->x.Dimensions(), mImpl->x.Size());
     for (auto d = 0; d < V.rows(); ++d)
     {
         thrust::copy(mImpl->x[d].begin(), mImpl->x[d].end(), V.row(d).begin());
@@ -60,10 +60,7 @@ Points::~Points()
         delete mImpl;
 }
 
-Simplices::Simplices(Eigen::Ref<IndexMatrixX const> const& C)
-    : mImpl(new SimplicesImpl(C.cast<GpuIndex>()))
-{
-}
+Simplices::Simplices(Eigen::Ref<GpuIndexMatrixX const> const& C) : mImpl(new SimplicesImpl(C)) {}
 
 Simplices::Simplices(Simplices&& other) noexcept : mImpl(other.mImpl)
 {
@@ -79,10 +76,10 @@ Simplices& Simplices::operator=(Simplices&& other) noexcept
     return *this;
 }
 
-IndexMatrixX Simplices::Get() const
+GpuIndexMatrixX Simplices::Get() const
 {
     auto const m = static_cast<int>(mImpl->eSimplexType);
-    IndexMatrixX C(m, mImpl->NumberOfSimplices());
+    GpuIndexMatrixX C(m, mImpl->NumberOfSimplices());
     for (auto k = 0; k < m; ++k)
     {
         thrust::copy(mImpl->inds[k].begin(), mImpl->inds[k].end(), C.row(k).begin());
@@ -106,6 +103,49 @@ SimplicesImpl const* Simplices::Impl() const
 }
 
 Simplices::~Simplices()
+{
+    if (mImpl != nullptr)
+        delete mImpl;
+}
+
+Bodies::Bodies(Eigen::Ref<GpuIndexVectorX const> const& B) : mImpl(new BodiesImpl(B)) {}
+
+Bodies::Bodies(Bodies&& other) noexcept : mImpl(other.mImpl)
+{
+    other.mImpl = nullptr;
+}
+
+Bodies& geometry::Bodies::operator=(Bodies&& other) noexcept
+{
+    if (mImpl != nullptr)
+        delete mImpl;
+    mImpl       = other.mImpl;
+    other.mImpl = nullptr;
+    return *this;
+}
+
+GpuIndexMatrixX geometry::Bodies::Get() const
+{
+    using pbat::common::ToEigen;
+    return ToEigen(mImpl->body.Get());
+}
+
+std::size_t Bodies::NumberOfBodies() const
+{
+    return mImpl->NumberOfBodies();
+}
+
+BodiesImpl* geometry::Bodies::Impl()
+{
+    return mImpl;
+}
+
+BodiesImpl const* geometry::Bodies::Impl() const
+{
+    return mImpl;
+}
+
+geometry::Bodies::~Bodies()
 {
     if (mImpl != nullptr)
         delete mImpl;

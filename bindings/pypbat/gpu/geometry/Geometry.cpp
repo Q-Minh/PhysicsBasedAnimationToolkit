@@ -1,5 +1,6 @@
 #include "Geometry.h"
 
+#include "Bodies.h"
 #include "Bvh.h"
 #include "BvhQuery.h"
 #include "Points.h"
@@ -15,6 +16,7 @@ void Bind(pybind11::module& m)
 {
     BindPoints(m);
     BindSimplices(m);
+    BindBodies(m);
     BindSweepAndPrune(m);
     BindBvh(m);
     BindBvhQuery(m);

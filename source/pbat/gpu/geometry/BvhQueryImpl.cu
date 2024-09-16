@@ -38,11 +38,10 @@ void BvhQueryImpl::Build(
     GpuScalar expansion)
 {
     auto const n = S.NumberOfSimplices();
-    if (NumberOfAllocatedBoxes() < n)
+    if (NumberOfSimplices() < n)
     {
-        std::string const what = "Allocated memory for " +
-                                 std::to_string(NumberOfAllocatedBoxes()) +
-                                 " boxes, but received " + std::to_string(n) + " simplices.";
+        std::string const what = "Allocated memory for " + std::to_string(NumberOfSimplices()) +
+                                 " simplices, but received " + std::to_string(n) + " simplices.";
         throw std::invalid_argument(what);
     }
     // Compute bounding boxes
@@ -88,11 +87,11 @@ void BvhQueryImpl::DetectOverlaps(
     BvhImpl const& bvh)
 {
     auto const nQueries = S1.NumberOfSimplices();
-    if (NumberOfAllocatedBoxes() < nQueries)
+    if (NumberOfSimplices() < nQueries)
     {
-        std::string const what =
-            "Allocated memory for " + std::to_string(NumberOfAllocatedBoxes()) +
-            " boxes, but received " + std::to_string(nQueries) + " query simplices.";
+        std::string const what = "Allocated memory for " + std::to_string(NumberOfSimplices()) +
+                                 " query simplices, but received " + std::to_string(nQueries) +
+                                 " query simplices.";
         throw std::invalid_argument(what);
     }
     overlaps.Clear();
@@ -116,31 +115,68 @@ void BvhQueryImpl::DetectOverlaps(
             overlaps.Raw()});
 }
 
-void BvhQueryImpl::DetectNearestNeighbours(
+void BvhQueryImpl::DetectContactPairsFromOverlaps(
     PointsImpl const& P,
     SimplicesImpl const& S1,
     SimplicesImpl const& S2,
+    BodiesImpl const& B1,
+    BodiesImpl const& B2,
     BvhImpl const& bvh,
-    GpuScalar dhat)
+    GpuScalar dhat,
+    GpuScalar dzero)
 {
     if (S1.eSimplexType != SimplicesImpl::ESimplexType::Vertex)
     {
         std::string const what = "Only vertex simplices are supported as the query simplices";
         throw std::invalid_argument(what);
     }
-    auto const nQueries = S1.NumberOfSimplices();
-    if (NumberOfAllocatedBoxes() < nQueries)
+    if (S2.eSimplexType != SimplicesImpl::ESimplexType::Triangle)
     {
-        std::string const what =
-            "Allocated memory for " + std::to_string(NumberOfAllocatedBoxes()) +
-            " boxes, but received " + std::to_string(nQueries) + " query simplices.";
+        std::string const what = "Only triangle simplices are supported as the target simplices";
         throw std::invalid_argument(what);
     }
+    auto const nQueries = S1.NumberOfSimplices();
+    if (NumberOfSimplices() < nQueries)
+    {
+        std::string const what = "Allocated memory for " + std::to_string(NumberOfSimplices()) +
+                                 " query simplices, but received " + std::to_string(nQueries) +
+                                 " query simplices.";
+        throw std::invalid_argument(what);
+    }
+    auto const leafBegin = static_cast<GpuIndex>(bvh.simplex.Size() - 1);
+    thrust::for_each(
+        thrust::device,
+        overlaps.Begin(),
+        overlaps.End(),
+        BvhQueryImplKernels::FContactPairs{
+            P.x.Raw(),
+            B1.body.Raw(),
+            S1.inds.Raw(),
+            dhat,
+            dzero,
+            B2.body.Raw(),
+            S2.inds.Raw(),
+            bvh.simplex.Raw(),
+            bvh.b.Raw(),
+            bvh.e.Raw(),
+            bvh.child.Raw(),
+            leafBegin,
+            neighbours.Raw()});
 }
 
-std::size_t BvhQueryImpl::NumberOfAllocatedBoxes() const
+std::size_t BvhQueryImpl::NumberOfSimplices() const
 {
     return simplex.Size();
+}
+
+std::size_t BvhQueryImpl::NumberOfAllocatedOverlaps() const
+{
+    return overlaps.Capacity();
+}
+
+std::size_t BvhQueryImpl::NumberOfAllocatedNeighbours() const
+{
+    return neighbours.Capacity();
 }
 
 } // namespace geometry

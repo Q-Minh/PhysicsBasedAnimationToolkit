@@ -22,6 +22,7 @@ target_compile_definitions(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToo
     $<$<BOOL:${PBAT_USE_INTEL_MKL}>:PBAT_USE_INTEL_MKL>
     $<$<BOOL:${PBAT_USE_SUITESPARSE}>:PBAT_USE_SUITESPARSE>
     $<$<BOOL:${PBAT_USE_CUDA}>:PBAT_USE_CUDA>
+    $<$<BOOL:${PBAT_USE_CUDA}>:EIGEN_NO_CUDA>
     PBAT_ROOT="${PROJECT_SOURCE_DIR}"
 )
 

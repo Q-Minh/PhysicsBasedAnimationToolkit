@@ -1,10 +1,7 @@
 #ifndef PBAT_GPU_GEOMETRY_PRIMITIVES_IMPL_CUH
 #define PBAT_GPU_GEOMETRY_PRIMITIVES_IMPL_CUH
 
-#define EIGEN_NO_CUDA
 #include "pbat/Aliases.h"
-#undef EIGEN_NO_CUDA
-
 #include "pbat/gpu/Aliases.h"
 #include "pbat/gpu/common/Buffer.cuh"
 
@@ -62,6 +59,20 @@ struct SimplicesImpl
               ///< eSimplexType, then inds[m][i] = -inds[0][i] - 1. This property ensures that for
               ///< any 2 simplices i,j of any dimensionality, if i,j are not topologically adjacent,
               ///< then inds[m][i] != inds[m][j] for m=0,1,2,3.
+};
+
+class BodiesImpl
+{
+  public:
+    BodiesImpl(Eigen::Ref<GpuIndexVectorX const> const& B);
+
+    GpuIndex NumberOfBodies() const;
+
+    common::Buffer<GpuIndex>
+        body; ///< |#simplices|x1 array of body indices, such that body[s] -> body of simplex s.
+
+  private:
+    GpuIndex nBodies;
 };
 
 } // namespace geometry

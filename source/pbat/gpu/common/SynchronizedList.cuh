@@ -77,6 +77,8 @@ class SynchronizedList
         }
         mSize = size;
     }
+    auto Begin() { return mBuffer.Data(); }
+    auto End() { return mBuffer.Data() + mSize.Get(); }
 
   private:
     Buffer<T> mBuffer;

@@ -1,10 +1,6 @@
 #ifndef PBAT_GPU_XPBD_XPBD_H
 #define PBAT_GPU_XPBD_XPBD_H
 
-#define EIGEN_NO_CUDA
-#include "pbat/Aliases.h"
-#undef EIGEN_NO_CUDA
-
 #include "pbat/gpu/Aliases.h"
 
 #include <array>

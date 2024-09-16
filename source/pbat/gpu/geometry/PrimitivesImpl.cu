@@ -71,6 +71,17 @@ GpuIndex SimplicesImpl::NumberOfSimplices() const
     return static_cast<GpuIndex>(inds.Size());
 }
 
+BodiesImpl::BodiesImpl(Eigen::Ref<GpuIndexVectorX const> const& B)
+    : body(B.size()), nBodies(static_cast<GpuIndex>(B.maxCoeff() + 1))
+{
+    thrust::copy(B.data(), B.data() + B.size(), body.Data());
+}
+
+GpuIndex BodiesImpl::NumberOfBodies() const
+{
+    return nBodies;
+}
+
 } // namespace geometry
 } // namespace gpu
 } // namespace pbat

@@ -14,6 +14,7 @@ void BindSimplices([[maybe_unused]] pybind11::module& m)
 #ifdef PBAT_USE_CUDA
     namespace pyb = pybind11;
 
+    using namespace pbat::gpu;
     using namespace pbat::gpu::geometry;
     using ESimplexType = Simplices::ESimplexType;
     pyb::enum_<ESimplexType>(m, "SimplexType")
@@ -25,7 +26,7 @@ void BindSimplices([[maybe_unused]] pybind11::module& m)
 
     pyb::class_<Simplices>(m, "Simplices")
         .def(
-            pyb::init([](Eigen::Ref<IndexMatrixX const> const& C) {
+            pyb::init([](Eigen::Ref<GpuIndexMatrixX const> const& C) {
                 return pbat::profiling::Profile("pbat.gpu.geometry.Simplices.Construct", [&]() {
                     Simplices S(C);
                     return S;
@@ -42,7 +43,7 @@ void BindSimplices([[maybe_unused]] pybind11::module& m)
             "C",
             [](Simplices const& S) {
                 return pbat::profiling::Profile("pbat.gpu.geometry.Simplices.Get", [&]() {
-                    IndexMatrixX C = S.Get();
+                    GpuIndexMatrixX C = S.Get();
                     return C;
                 });
             },

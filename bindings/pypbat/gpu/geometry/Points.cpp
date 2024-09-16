@@ -13,10 +13,11 @@ void BindPoints([[maybe_unused]] pybind11::module& m)
 {
 #ifdef PBAT_USE_CUDA
     namespace pyb = pybind11;
+    using namespace pbat::gpu;
     using namespace pbat::gpu::geometry;
     pyb::class_<Points>(m, "Points")
         .def(
-            pyb::init([](Eigen::Ref<MatrixX const> const& V) {
+            pyb::init([](Eigen::Ref<GpuMatrixX const> const& V) {
                 return pbat::profiling::Profile("pbat.gpu.geometry.Points.Construct", [&]() {
                     Points P(V);
                     return P;
@@ -28,11 +29,11 @@ void BindPoints([[maybe_unused]] pybind11::module& m)
             "V",
             [](Points const& P) {
                 return pbat::profiling::Profile("pbat.gpu.geometry.Points.Get", [&]() {
-                    MatrixX V = P.Get();
+                    GpuMatrixX V = P.Get();
                     return V;
                 });
             },
-            [](Points& P, Eigen::Ref<MatrixX const> const& V) {
+            [](Points& P, Eigen::Ref<GpuMatrixX const> const& V) {
                 return pbat::profiling::Profile("pbat.gpu.geometry.Points.Update", [&]() {
                     P.Update(V);
                 });

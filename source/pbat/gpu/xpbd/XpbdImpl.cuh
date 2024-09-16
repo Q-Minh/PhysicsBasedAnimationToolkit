@@ -1,10 +1,7 @@
 #ifndef PBAT_GPU_XPBD_XPBD_IMPL_CUH
 #define PBAT_GPU_XPBD_XPBD_IMPL_CUH
 
-#define EIGEN_NO_CUDA
 #include "pbat/Aliases.h"
-#undef EIGEN_NO_CUDA
-
 #include "pbat/gpu/Aliases.h"
 #include "pbat/gpu/common/Buffer.cuh"
 #include "pbat/gpu/geometry/PrimitivesImpl.cuh"
@@ -24,8 +21,8 @@ class XpbdImpl
   public:
     enum EConstraint : int { StableNeoHookean = 0, Collision, NumberOfConstraintTypes };
     static auto constexpr kConstraintTypes = static_cast<int>(EConstraint::NumberOfConstraintTypes);
-    
-    using CollisionPairType                = typename geometry::SweepAndPruneImpl::OverlapType;
+
+    using CollisionPairType = typename geometry::SweepAndPruneImpl::OverlapType;
 
     /**
      * @brief
