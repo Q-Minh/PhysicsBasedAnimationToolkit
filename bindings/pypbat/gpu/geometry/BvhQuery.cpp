@@ -27,8 +27,10 @@ void BindBvhQuery(pybind11::module& m)
                 }),
             pyb::arg("max_boxes"),
             pyb::arg("max_overlaps"),
+            pyb::arg("max_nearest_neighbours"),
             "Allocate data on GPU for max_boxes queries, which can detect a maximum of "
-            "max_overlaps box overlaps.")
+            "max_overlaps box overlaps, and handle max_nearest_neighbours nearest neighbour "
+            "queries.")
         .def(
             "build",
             [](BvhQuery& bvhQuery,
