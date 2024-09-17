@@ -7,6 +7,7 @@
 #include "pbat/gpu/common/Queue.cuh"
 #include "pbat/gpu/common/Stack.cuh"
 #include "pbat/gpu/common/SynchronizedList.cuh"
+#include "pbat/gpu/geometry/PrimitivesImpl.cuh"
 #include "pbat/gpu/math/linalg/Matrix.cuh"
 
 #include <array>
@@ -68,6 +69,7 @@ struct FComputeMortonCode
 struct FDetectOverlaps
 {
     using OverlapType = typename BvhQueryImpl::OverlapType;
+    using Vector3     = pbat::gpu::math::linalg::Matrix<GpuScalar, 3>;
 
     __device__ bool AreSimplicesTopologicallyAdjacent(GpuIndex si, GpuIndex sj) const
     {
@@ -85,6 +87,44 @@ struct FDetectOverlaps
                (queryE[1][i] >= b[1][j]) and (queryB[1][i] <= e[1][j]) and
                (queryE[2][i] >= b[2][j]) and (queryB[2][i] <= e[2][j]);
         // clang-format on
+    }
+
+    __device__ Vector3 Position(auto v) const
+    {
+        Vector3 P;
+        P(0) = x[0][v];
+        P(1) = x[1][v];
+        P(2) = x[2][v];
+        return P;
+    }
+
+    __device__ bool VertexTetrahedronOverlap(GpuIndex v, GpuIndex t) const
+    {
+        Vector3 P = Position(queryInds[0][v]);
+        Vector3 A = Position(inds[0][t]);
+        Vector3 B = Position(inds[1][t]);
+        Vector3 C = Position(inds[2][t]);
+        Vector3 D = Position(inds[3][t]);
+        auto const PointOutsidePlane =
+            [](auto const& p, auto const& a, auto const& b, auto const& c) {
+                using namespace pbat::gpu::math::linalg;
+                GpuScalar const d = Dot(p - a, Cross(b - a, c - a));
+                return d > GpuScalar{0};
+            };
+        bool const bOverlaps =
+            not(PointOutsidePlane(P, A, B, D) or PointOutsidePlane(P, B, C, D) or
+                PointOutsidePlane(P, C, A, D) or PointOutsidePlane(P, A, C, B));
+        return bOverlaps;
+    }
+
+    __device__ bool AreSimplicesOverlapping(GpuIndex si, GpuIndex sj) const
+    {
+        if (querySimplexType == SimplicesImpl::ESimplexType::Vertex and
+            targetSimplexType == SimplicesImpl::ESimplexType::Tetrahedron)
+        {
+            return VertexTetrahedronOverlap(si, sj);
+        }
+        return true;
     }
 
     __device__ void operator()(auto query)
@@ -109,10 +149,8 @@ struct FDetectOverlaps
             {
                 GpuIndex const si = querySimplex[query];
                 GpuIndex const sj = simplex[lc - leafBegin];
-                if (not AreSimplicesTopologicallyAdjacent(
-                        si,
-                        sj) /* and AreSimplicesOverlapping(si, sj) */
-                    and not overlaps.Append({si, sj}))
+                if (not AreSimplicesTopologicallyAdjacent(si, sj) and
+                    AreSimplicesOverlapping(si, sj) and not overlaps.Append({si, sj}))
                     break;
             }
             bool const bIsRightLeaf = rc >= leafBegin;
@@ -120,10 +158,8 @@ struct FDetectOverlaps
             {
                 GpuIndex const si = querySimplex[query];
                 GpuIndex const sj = simplex[rc - leafBegin];
-                if (not AreSimplicesTopologicallyAdjacent(
-                        si,
-                        sj) /* and AreSimplicesOverlapping(si, sj) */
-                    and not overlaps.Append({si, sj}))
+                if (not AreSimplicesTopologicallyAdjacent(si, sj) and
+                    AreSimplicesOverlapping(si, sj) and not overlaps.Append({si, sj}))
                     break;
             }
 
@@ -139,11 +175,13 @@ struct FDetectOverlaps
 
     std::array<GpuScalar const*, 3> x;
 
+    SimplicesImpl::ESimplexType querySimplexType;
     GpuIndex* querySimplex;
     std::array<GpuIndex const*, 4> queryInds;
     std::array<GpuScalar*, 3> queryB;
     std::array<GpuScalar*, 3> queryE;
 
+    SimplicesImpl::ESimplexType targetSimplexType;
     GpuIndex const* simplex;
     std::array<GpuIndex const*, 4> inds;
     std::array<GpuScalar const*, 3> b;
@@ -214,8 +252,6 @@ struct FContactPairs
         A      = Position(targetInds[0][s]);
         B      = Position(targetInds[1][s]);
         C      = Position(targetInds[2][s]);
-        Matrix<GpuScalar, 3> uvw;
-        uvw.SetZero();
 
         /**
          * Ericson, Christer. Real-time collision detection. Crc Press, 2004. section 5.1.5
@@ -230,7 +266,8 @@ struct FContactPairs
         bool const bIsInVertexRegionOutsideA = d1 <= GpuScalar{0} and d2 <= GpuScalar{0};
         if (bIsInVertexRegionOutsideA)
         {
-            uvw(0) = GpuScalar{1}; // barycentric coordinates (1,0,0)
+            // barycentric coordinates (1,0,0)
+            return SquaredNorm(P - A);
         }
 
         // Check if P in vertex region outside B
@@ -240,7 +277,8 @@ struct FContactPairs
         bool const bIsInVertexRegionOutsideB = d3 >= GpuScalar{0} and d4 <= d3;
         if (bIsInVertexRegionOutsideB)
         {
-            uvw(1) = GpuScalar{1}; // barycentric coordinates (0,1,0)
+            // barycentric coordinates (0,1,0)
+            return SquaredNorm(P - B);
         }
 
         // Check if P in edge region of AB, if so return projection of P onto AB
@@ -250,8 +288,8 @@ struct FContactPairs
         if (bIsInEdgeRegionOfAB)
         {
             GpuScalar const v = d1 / (d1 - d3);
-            uvw(0)            = GpuScalar{1} - v;
-            uvw(1)            = v; // barycentric coordinates (1-v,v,0)
+            // barycentric coordinates (1-v,v,0)
+            return SquaredNorm(P - ((GpuScalar{1} - v) * A + v * B));
         }
 
         // Check if P in vertex region outside C
@@ -261,7 +299,8 @@ struct FContactPairs
         bool const bIsInVertexRegionOutsideC = d6 >= GpuScalar{0} and d5 <= d6;
         if (bIsInVertexRegionOutsideC)
         {
-            uvw(2) = GpuScalar{1}; // barycentric coordinates (0,0,1)
+            // barycentric coordinates (0,0,1)
+            return SquaredNorm(P - C);
         }
 
         // Check if P in edge region of AC, if so return projection of P onto AC
@@ -271,8 +310,8 @@ struct FContactPairs
         if (bIsInEdgeRegionOfAC)
         {
             GpuScalar const w = d2 / (d2 - d6);
-            uvw(0)            = GpuScalar{1} - w; // barycentric coordinates (1-w,0,w)
-            uvw(2)            = w;
+            // barycentric coordinates (1-w,0,w)
+            return SquaredNorm(P - (GpuScalar{1} - w) * A + w * C);
         }
         // Check if P in edge region of BC, if so return projection of P onto BC
         GpuScalar const va = d3 * d6 - d5 * d4;
@@ -282,19 +321,14 @@ struct FContactPairs
         {
             GpuScalar const w = (d4 - d3) / ((d4 - d3) + (d5 - d6));
             // barycentric coordinates (0,1-w,w)
-            uvw(1) = GpuScalar{1} - w;
-            uvw(2) = w;
+            return SquaredNorm(P - ((GpuScalar{1} - w) * B + w * C));
         }
         // P inside face region. Compute Q through its barycentric coordinates (u,v,w)
-        if (not(bIsInVertexRegionOutsideA or bIsInVertexRegionOutsideB or
-                bIsInVertexRegionOutsideC or bIsInEdgeRegionOfAB or bIsInEdgeRegionOfAC or
-                bIsInEdgeRegionOfBC))
-        {
-            GpuScalar const denom = GpuScalar{1} / (va + vb + vc);
-            uvw(1)                = vb * denom;
-            uvw(2)                = vc * denom;
-            uvw(0)                = GpuScalar{1} - uvw(1) - uvw(2);
-        }
+        GpuScalar const denom = GpuScalar{1} / (va + vb + vc);
+        Matrix<GpuScalar, 3> uvw;
+        uvw(1) = vb * denom;
+        uvw(2) = vc * denom;
+        uvw(0) = GpuScalar{1} - uvw(1) - uvw(2);
         return SquaredNorm(P - ABC * uvw);
     }
 
@@ -304,89 +338,71 @@ struct FContactPairs
         GpuScalar d;   ///< Distance between query and node
     };
 
-    template <class FIsLeaf, class FDistance>
     struct BranchAndBound
     {
-        __device__ BranchAndBound(
-            Vector3 X,
-            GpuScalar R,
-            FIsLeaf fIsLeafIn,
-            FDistance fDistanceIn,
-            GpuScalar dzero)
-            : stack{},
-              nearest{},
-              X(X),
-              R(R),
-              fIsLeaf(std::forward<FIsLeaf>(fIsLeafIn)),
-              fDistance(std::forward<FDistance>(fDistanceIn)),
-              dzero(dzero)
+        __device__
+        BranchAndBound(Vector3 const& X, GpuScalar R, GpuScalar dzero, GpuIndex sv, GpuIndex v)
+            : stack{}, nearest{}, X(X), R(R), dzero(dzero), sv(sv), v(v)
         {
-        }
-
-        __device__ void Push(GpuIndex c, GpuScalar dbox)
-        {
-            bool const bIsLeaf = fIsLeaf(c);
-            if (bIsLeaf)
-            {
-                GpuScalar d = fDistance(X, c);
-                if (d < R)
-                {
-                    nearest.Clear();
-                    nearest.Push(c);
-                    R = d;
-                }
-                else if (d - R <= dzero and not nearest.IsFull())
-                {
-                    nearest.Push(c);
-                }
-            }
-            else
-            {
-                stack.Push({c, dbox});
-            }
-        }
-
-        __device__ BoxOrSimplex Pop()
-        {
-            BoxOrSimplex bos = stack.Top();
-            stack.Pop();
-            return bos;
         }
 
         common::Stack<BoxOrSimplex, 64> stack;
         common::Queue<GpuIndex, 8> nearest;
         Vector3 X;
         GpuScalar R;
-        FIsLeaf const fIsLeaf;
-        FDistance const fDistance;
         GpuScalar dzero;
+        GpuIndex sv;
+        GpuIndex v;
     };
+
+    __device__ void Push(BranchAndBound& traversal, GpuIndex node, GpuScalar dbox) const
+    {
+        if (node >= leafBegin)
+        {
+            GpuIndex const s                     = simplex[node - leafBegin];
+            bool const bFromDifferentBodies      = queryBodies[traversal.sv] != targetBodies[s];
+            bool const bAreTopologicallySeparate = (traversal.v != targetInds[0][s]) and
+                                                   (traversal.v != targetInds[1][s]) and
+                                                   (traversal.v != targetInds[2][s]);
+            bool const bIsValidContactPair = bFromDifferentBodies and bAreTopologicallySeparate;
+            if (not bIsValidContactPair)
+                return;
+
+            GpuScalar d = Distance(traversal.X, s);
+            if (d < traversal.R)
+            {
+                traversal.nearest.Clear();
+                traversal.nearest.Push(s);
+                traversal.R = d;
+            }
+            else if (d - traversal.R <= dzero and not traversal.nearest.IsFull())
+            {
+                traversal.nearest.Push(s);
+            }
+        }
+        else
+        {
+            traversal.stack.Push({node, dbox});
+        }
+    }
+
+    __device__ BoxOrSimplex Pop(BranchAndBound& traversal) const
+    {
+        BoxOrSimplex bos = traversal.stack.Top();
+        traversal.stack.Pop();
+        return bos;
+    }
 
     __device__ void operator()(OverlapType const& o)
     {
-        // WARNING: Self contacts not supported yet
-        if (queryBodies[o.first] == targetBodies[o.second])
-            return;
-
-        // Branch and bound needs to know which nodes are leaves, and what the cost function to
-        // minimize is.
-        auto const fIsLeaf = [this](GpuIndex c) {
-            return c >= leafBegin;
-        };
-        auto const fDistance = [this](Vector3 const& X, GpuIndex c) {
-            return Distance(X, simplex[c - leafBegin]);
-        };
-        using FIsLeaf   = decltype(fIsLeaf);
-        using FDistance = decltype(fDistance);
-
         // Branch and bound over BVH
         GpuIndex const v = queryInds[0][o.first];
-        BranchAndBound<FIsLeaf, FDistance> traversal{Position(v), R, fIsLeaf, fDistance, dzero};
-        traversal.Push(0, MinDistance(traversal.X, Lower(0), Upper(0)));
+        BranchAndBound traversal{Position(v), R, dzero, o.first, v};
+        Push(traversal, 0, MinDistance(traversal.X, Lower(0), Upper(0)));
         do
         {
             assert(not traversal.stack.IsFull());
-            BoxOrSimplex const bos = traversal.Pop();
+            BoxOrSimplex const bos = Pop(traversal);
             if (bos.d > traversal.R)
                 continue;
 
@@ -404,17 +420,16 @@ struct FContactPairs
             GpuScalar Rdminmax = MinMaxDistance(traversal.X, RL, RU);
 
             if (Ldmin <= Rdminmax)
-                traversal.Push(lc, Ldmin);
+                Push(traversal, lc, Ldmin);
             if (Rdmin <= Ldminmax)
-                traversal.Push(rc, Rdmin);
+                Push(traversal, rc, Rdmin);
         } while (not traversal.stack.IsEmpty());
         // Collect results
         while (not traversal.nearest.IsEmpty())
         {
-            GpuIndex leaf = traversal.nearest.Top();
-            GpuIndex s    = simplex[leaf - leafBegin];
-            neighbours.Append({v, s});
+            GpuIndex s = traversal.nearest.Top();
             traversal.nearest.Pop();
+            neighbours.Append({traversal.sv, s});
         }
     }
 
@@ -422,10 +437,11 @@ struct FContactPairs
 
     GpuIndex const* queryBodies;              ///< Body indices of query simplices
     std::array<GpuIndex const*, 4> queryInds; ///< Vertex indices of query simplices
-    GpuScalar R;                              ///< Nearest neighbour query search radius
-    GpuScalar dzero; ///< Error tolerance for different distances to be considered the same, i.e. if
-                     ///< the distances di,dj to the nearest neighbours i,j are similar, we
-                     ///< considered both i and j to be nearest neighbours.
+    GpuScalar const R;                        ///< Nearest neighbour query search radius
+    GpuScalar const dzero; ///< Error tolerance for different distances to be considered the same,
+                           ///< i.e. if
+                           ///< the distances di,dj to the nearest neighbours i,j are similar, we
+                           ///< considered both i and j to be nearest neighbours.
 
     GpuIndex const* targetBodies;              ///< Body indices of target simplices
     std::array<GpuIndex const*, 4> targetInds; ///< Vertex indices of target simplices
@@ -433,7 +449,7 @@ struct FContactPairs
     std::array<GpuScalar const*, 3> b;         ///< Box beginnings of BVH
     std::array<GpuScalar const*, 3> e;         ///< Box endings of BVH
     std::array<GpuIndex const*, 2> child;      ///< BVH children
-    GpuIndex leafBegin;                        ///< Index to beginning of BVH's leaves array
+    GpuIndex const leafBegin;                  ///< Index to beginning of BVH's leaves array
 
     common::DeviceSynchronizedList<NearestNeighbourPairType>
         neighbours; ///< Nearest neighbour pairs found

@@ -28,7 +28,7 @@ if __name__ == "__main__":
         pbat.gpu.geometry.Simplices((T[1] + V.shape[0]).T)
     ]
     sap = pbat.gpu.geometry.SweepAndPrune(2*T[0].shape[0], 48*T[0].shape[0])
-    query = pbat.gpu.geometry.BvhQuery(T[0].shape[0], 48*T[0].shape[0])
+    query = pbat.gpu.geometry.BvhQuery(T[0].shape[0], 48*T[0].shape[0], 0)
     bvh = pbat.gpu.geometry.Bvh(T[1].shape[0], 0)
     profiler = pbat.profiling.Profiler()
 

@@ -14,22 +14,24 @@ class Queue
     __host__ __device__ Queue() : queue{}, begin{0}, end{0} {}
     __host__ __device__ void Push(T value)
     {
+        queue[end] = value;
         end        = (end + 1) % kCapacity;
-        queue[end] = std::forward<T>(value);
+        ++n;
     }
     __host__ __device__ T const& Top() const { return queue[begin]; }
-    __host__ __device__ void Pop() { begin = (begin + 1) % kCapacity; }
-    __host__ __device__ bool IsFull() const { return (end + 1) % kCapacity == begin; }
-    __host__ __device__ bool IsEmpty() const { return begin == end; }
-    __host__ __device__ void Clear()
+    __host__ __device__ void Pop()
     {
-        begin = 0;
-        end   = 0;
+        begin = (begin + 1) % kCapacity;
+        --n;
     }
+    __host__ __device__ bool IsFull() const { return n == kCapacity; }
+    __host__ __device__ bool IsEmpty() const { return n == 0; }
+    __host__ __device__ GpuIndex Size() const { return n; }
+    __host__ __device__ void Clear() { begin = end = n = 0; }
 
   private:
     T queue[kCapacity];
-    GpuIndex begin, end;
+    GpuIndex begin, end, n;
 };
 
 } // namespace common

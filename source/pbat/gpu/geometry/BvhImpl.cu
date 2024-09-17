@@ -209,7 +209,7 @@ Eigen::Vector<GpuIndex, Eigen::Dynamic> BvhImpl::Visits() const
 #include <doctest/doctest.h>
 #include <unordered_set>
 
-TEST_CASE("[gpu][geometry] Sweep and prune")
+TEST_CASE("[gpu][geometry] BvhImpl")
 {
     using namespace pbat;
     // Cube mesh
