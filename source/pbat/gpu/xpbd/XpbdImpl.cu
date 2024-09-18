@@ -25,13 +25,19 @@ XpbdImpl::XpbdImpl(
     Eigen::Ref<GpuIndexMatrixX const> const& Vin,
     Eigen::Ref<GpuIndexMatrixX const> const& Fin,
     Eigen::Ref<GpuIndexMatrixX const> const& Tin,
-    std::size_t nMaxVertexTriangleOverlaps,
-    GpuScalar kMaxCollisionPenetration)
+    Eigen::Ref<GpuIndexVectorX const> const& BVin,
+    Eigen::Ref<GpuIndexVectorX const> const& BFin,
+    std::size_t nMaxVertexTetrahedronOverlaps,
+    std::size_t nMaxVertexTriangleContacts)
     : X(Xin),
       V(Vin),
       F(Fin),
       T(Tin),
-      SAP(Xin.cols() + Fin.cols(), nMaxVertexTriangleOverlaps),
+      BV(BVin),
+      BF(BFin),
+      Tbvh(Tin.cols(), 0),
+      Fbvh(Fin.cols(), 0),
+      Vquery(Vin.cols(), nMaxVertexTetrahedronOverlaps, nMaxVertexTriangleContacts),
       mPositions(Xin.cols()),
       mVelocities(Xin.cols()),
       mExternalForces(Xin.cols()),
@@ -43,19 +49,12 @@ XpbdImpl::XpbdImpl(
       mCompliance(),
       mPartitions(),
       mStaticFrictionCoefficient{GpuScalar{0.5}},
-      mDynamicFrictionCoefficient{GpuScalar{0.3}},
-      mAverageEdgeLength{},
-      mMaxCollisionPenetration{kMaxCollisionPenetration}
+      mDynamicFrictionCoefficient{GpuScalar{0.3}}
 {
     mLagrangeMultipliers[StableNeoHookean].Resize(2 * T.NumberOfSimplices());
-    mLagrangeMultipliers[Collision].Resize(X.NumberOfPoints());
     mCompliance[StableNeoHookean].Resize(2 * T.NumberOfSimplices());
+    mLagrangeMultipliers[Collision].Resize(V.NumberOfSimplices());
     mCompliance[Collision].Resize(V.NumberOfSimplices());
-    mAverageEdgeLength =
-        (GpuScalar{1.} / GpuScalar{3.}) *
-        ((Xin(Eigen::all, Fin.row(0)) - Xin(Eigen::all, Fin.row(1))).colwise().norm().mean() +
-         (Xin(Eigen::all, Fin.row(1)) - Xin(Eigen::all, Fin.row(2))).colwise().norm().mean() +
-         (Xin(Eigen::all, Fin.row(2)) - Xin(Eigen::all, Fin.row(0))).colwise().norm().mean());
     // Initialize particle data
     for (auto d = 0; d < X.Dimensions(); ++d)
     {
@@ -95,10 +94,14 @@ void XpbdImpl::Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps)
     GpuScalar const sdt2      = sdt * sdt;
     GpuIndex const nParticles = static_cast<GpuIndex>(NumberOfParticles());
     // Detect collision candidates and setup collision constraint solve
-    using OverlapType = typename geometry::SweepAndPruneImpl::OverlapType;
-    SAP.SortAndSweep(X, V, F, GpuScalar{1e-3});
-    GpuIndex const nVertexTriangleOverlaps      = SAP.overlaps.Size();
-    common::Buffer<OverlapType> const& overlaps = SAP.overlaps.Memory();
+    GpuScalar constexpr expansion{0};
+    Tbvh.Build(X, T, Smin, Smax, expansion);
+    Fbvh.Build(X, F, Smin, Smax, expansion);
+    Vquery.Build(X, V, Smin, Smax, expansion);
+    Vquery.DetectOverlaps(X, V, T, Tbvh);
+    Vquery.DetectContactPairsFromOverlaps(X, V, F, BV, BF, Fbvh);
+    common::SynchronizedList<ContactPairType>& contacts = Vquery.neighbours;
+    GpuIndex const nContacts                            = contacts.Size();
 
     auto& nextPositions = X.x;
     for (auto s = 0; s < substeps; ++s)
@@ -149,18 +152,17 @@ void XpbdImpl::Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps)
             e = thrust::async::for_each(
                 thrust::device.after(e),
                 thrust::make_counting_iterator<GpuIndex>(0),
-                thrust::make_counting_iterator<GpuIndex>(nVertexTriangleOverlaps),
+                thrust::make_counting_iterator<GpuIndex>(nContacts),
                 XpbdImplKernels::FVertexTriangleContactConstraint{
                     nextPositions.Raw(),
                     mLagrangeMultipliers[Collision].Raw(),
-                    overlaps.Raw(),
+                    contacts.Raw(),
                     V.inds.Raw(),
                     F.inds.Raw(),
                     mMassInverses.Raw(),
                     mCompliance[Collision].Raw(),
                     mPositions.Raw(),
                     sdt2,
-                    mMaxCollisionPenetration * mAverageEdgeLength,
                     mStaticFrictionCoefficient,
                     mDynamicFrictionCoefficient});
         }
@@ -283,15 +285,18 @@ void XpbdImpl::SetConstraintPartitions(std::vector<std::vector<GpuIndex>> const&
     }
 }
 
-void XpbdImpl::SetMaxCollisionPenetration(GpuScalar kMaxCollisionPenetration)
-{
-    mMaxCollisionPenetration = kMaxCollisionPenetration;
-}
-
 void XpbdImpl::SetFrictionCoefficients(GpuScalar muS, GpuScalar muK)
 {
     mStaticFrictionCoefficient  = muS;
     mDynamicFrictionCoefficient = muK;
+}
+
+void XpbdImpl::SetSceneBoundingBox(
+    Eigen::Vector<GpuScalar, 3> const& min,
+    Eigen::Vector<GpuScalar, 3> const& max)
+{
+    Smin = min;
+    Smax = max;
 }
 
 common::Buffer<GpuScalar, 3> const& XpbdImpl::GetVelocity() const
@@ -339,10 +344,15 @@ std::vector<common::Buffer<GpuIndex>> const& XpbdImpl::GetPartitions() const
     return mPartitions;
 }
 
-thrust::host_vector<typename XpbdImpl::OverlapType>
-XpbdImpl::GetVertexTriangleOverlapCandidates() const
+std::vector<typename XpbdImpl::CollisionCandidateType>
+XpbdImpl::GetVertexTetrahedronCollisionCandidates() const
 {
-    return SAP.Overlaps();
+    return Vquery.overlaps.Get();
+}
+
+std::vector<typename XpbdImpl::ContactPairType> XpbdImpl::GetVertexTriangleContactPairs() const
+{
+    return Vquery.neighbours.Get();
 }
 
 } // namespace xpbd
@@ -358,7 +368,10 @@ TEST_CASE("[gpu][xpbd] Xpbd")
 {
     using namespace pbat;
     // Arrange
-    GpuMatrixX V(3, 4);
+    GpuMatrixX X(3, 4);
+    GpuIndexMatrixX V{
+        GpuIndexVectorX::LinSpaced(X.cols(), GpuIndex{0}, static_cast<GpuIndex>(X.cols()) - 1)};
+    V.transposeInPlace();
     GpuIndexMatrixX F(3, 4);
     GpuIndexMatrixX T(4, 1);
     GpuMatrixX lame(2, 1);
@@ -369,7 +382,7 @@ TEST_CASE("[gpu][xpbd] Xpbd")
     lame(1, 0)              = static_cast<GpuScalar>(lambda);
     // Unit tetrahedron
     // clang-format off
-    V << 0.f, 1.f, 0.f, 0.f,
+    X << 0.f, 1.f, 0.f, 0.f,
          0.f, 0.f, 1.f, 0.f,
          0.f, 0.f, 0.f, 1.f;
     F << 0, 1, 2, 0,
@@ -380,6 +393,8 @@ TEST_CASE("[gpu][xpbd] Xpbd")
          2, 
          3;
     // clang-format on
+    GpuIndexVectorX BV                    = GpuIndexVectorX::Zero(V.cols());
+    GpuIndexVectorX BF                    = GpuIndexVectorX::Zero(F.cols());
     GpuScalar constexpr tetVolumeExpected = GpuScalar{1.} / GpuScalar{6.};
     GpuMatrixX alphaExpected(2, 1);
     alphaExpected(0, 0)           = GpuScalar{1.} / (tetVolumeExpected * lame(0, 0));
@@ -390,14 +405,8 @@ TEST_CASE("[gpu][xpbd] Xpbd")
     // Act
     using pbat::gpu::xpbd::XpbdImpl;
     auto const nMaxOverlaps = static_cast<std::size_t>(10 * V.cols());
-    XpbdImpl xpbd{
-        V,
-        GpuIndexMatrixX{
-            GpuIndexVectorX::LinSpaced(V.cols(), GpuIndex{0}, static_cast<GpuIndex>(V.cols()) - 1)}
-            .transpose(),
-        F,
-        T,
-        nMaxOverlaps};
+    auto const nMaxContacts = 8 * nMaxOverlaps;
+    XpbdImpl xpbd{X, V, F, T, BV, BF, nMaxOverlaps, nMaxContacts};
     xpbd.SetLameCoefficients(lame);
     xpbd.PrepareConstraints();
     // Assert

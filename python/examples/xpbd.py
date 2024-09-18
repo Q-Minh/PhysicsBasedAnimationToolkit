@@ -13,11 +13,31 @@ import itertools
 
 def combine(V: list, C: list):
     Vsizes = [Vi.shape[0] for Vi in V]
-    offsets = list(itertools.accumulate(Vsizes))
-    C = [C[i] + offsets[i] - Vsizes[i] for i in range(len(C))]
+    Csizes = [Ci.shape[0] for Ci in C]
+    Voffsets = list(itertools.accumulate(Vsizes))
+    Coffsets = list(itertools.accumulate(Csizes))
+    C = [C[i] + Voffsets[i] - Vsizes[i] for i in range(len(C))]
     C = np.vstack(C)
     V = np.vstack(V)
-    return V, C
+    return V, Vsizes, C, Coffsets, Csizes
+
+
+def boundary_triangles(C: np.ndarray, Coffsets: list, Csizes: list):
+    F = [None]*len(Csizes)
+    for i in range(len(F)):
+        begin = Coffsets[i] - Csizes[i]
+        end = begin + Csizes[i]
+        F[i] = igl.boundary_facets(C[begin:end, :])
+        F[i][:, :2] = np.roll(F[i][:, :2], shift=1, axis=1)
+    Fsizes = [Fi.shape[0] for Fi in F]
+    F = np.vstack(F)
+    return F, Fsizes
+
+
+def bodies(Vsizes: list, Fsizes: list):
+    BV = np.hstack([np.full(Vsizes[i], i) for i in range(len(Vsizes))])
+    BF = np.hstack([np.full(Fsizes[i], i) for i in range(len(Fsizes))])
+    return BV, BF
 
 
 def color_dict_to_array(Cdict, n):
@@ -51,7 +71,7 @@ if __name__ == "__main__":
     )
     parser.add_argument("-i", "--input", help="Paths to input mesh", nargs="+",
                         dest="inputs", required=True)
-    parser.add_argument("-o", "--output", help="Path to output meshes", 
+    parser.add_argument("-o", "--output", help="Path to output meshes",
                         dest="output", default=".")
     parser.add_argument("-m", "--mass-density", help="Mass density", type=float,
                         dest="rho", default=1000.)
@@ -61,6 +81,8 @@ if __name__ == "__main__":
                         dest="nu", default=0.45)
     parser.add_argument("-t", "--translation", help="Distance in z axis between every input mesh as multiplier of input mesh extents", type=float,
                         dest="translation", default=0.1)
+    parser.add_argument("--percent-fixed", help="Percentage, in the z-axis, of scene mesh to fix", type=float,
+                        dest="percent_fixed", default=0.01)
     args = parser.parse_args()
 
     # Construct FEM quantities for simulation
@@ -71,9 +93,14 @@ if __name__ == "__main__":
         extent = V[i][:, -1].max() - V[i][:, -1].min()
         offset = V[i][:, -1].max() - V[i+1][:, -1].min()
         V[i+1][:, -1] += offset + extent*args.translation
-    V, C = combine(V, C)
+    V, Vsizes, C, Coffsets, Csizes = combine(V, C)
     mesh = pbat.fem.Mesh(
         V.T, C.T, element=pbat.fem.Element.Tetrahedron, order=1)
+    V = mesh.X.T
+    C = mesh.E.T
+    F, Fsizes = boundary_triangles(C, Coffsets, Csizes)
+    BV, BF = bodies(Vsizes, Fsizes)
+
     detJeM = pbat.fem.jacobian_determinants(mesh, quadrature_order=2)
     rho = args.rho
     M = pbat.fem.MassMatrix(mesh, detJeM, rho=rho,
@@ -102,20 +129,20 @@ if __name__ == "__main__":
     Xmin = mesh.X.min(axis=1)
     Xmax = mesh.X.max(axis=1)
     extent = Xmax - Xmin
-    Xmax[0] = Xmin[0] + 0.01*extent[0]
+    Xmax[-1] = Xmin[-1] + args.percent_fixed*extent[-1]
     aabb = pbat.geometry.aabb(np.vstack((Xmin, Xmax)).T)
     vdbc = aabb.contained(mesh.X)
     minv = 1 / m
     minv[vdbc] = 0.  # XPBD allows fixing particles by zeroing out their mass
 
     # Setup XPBD
-    F = igl.boundary_facets(mesh.E.T)
-    F[:, :2] = np.roll(F[:, :2], shift=1, axis=1)
-    Vcollision = np.unique(F)[:, np.newaxis].T
-    max_collision_penetration = 1.
+    Vcollision = np.unique(F)
+    VC = Vcollision[:, np.newaxis].T
+    BV = BV[Vcollision]
     max_overlaps = 20 * mesh.X.shape[1]
-    xpbd = pbat.gpu.xpbd.Xpbd(mesh.X, Vcollision, F.T,
-                              mesh.E, max_overlaps, max_collision_penetration)
+    max_contacts = 8*max_overlaps
+    xpbd = pbat.gpu.xpbd.Xpbd(mesh.X, VC, F.T, mesh.E,
+                              BV, BF, max_overlaps, max_contacts)
     xpbd.f = f
     xpbd.minv = minv
     xpbd.lame = np.vstack((mue, lambdae))
@@ -123,7 +150,7 @@ if __name__ == "__main__":
     xpbd.partitions = partitions
     alphac = 0
     xpbd.set_compliance(
-        alphac * np.ones(Vcollision.shape[1]), pbat.gpu.xpbd.ConstraintType.Collision)
+        alphac * np.ones(VC.shape[1]), pbat.gpu.xpbd.ConstraintType.Collision)
     xpbd.prepare()
 
     ps.set_verbosity(0)
@@ -133,7 +160,7 @@ if __name__ == "__main__":
     ps.set_ground_plane_height_factor(0.5)
     ps.set_program_name("Elasticity")
     ps.init()
-    vm = ps.register_volume_mesh("Simulation Model", mesh.X.T, mesh.E.T)
+    vm = ps.register_volume_mesh("Simulation mesh", mesh.X.T, mesh.E.T)
     vm.add_scalar_quantity("Coloring", GC, defined_on="cells", cmap="jet")
     pc = ps.register_point_cloud("Dirichlet", mesh.X[:, vdbc].T)
     dt = 0.01
@@ -146,7 +173,7 @@ if __name__ == "__main__":
     profiler = pbat.profiling.Profiler()
 
     def callback():
-        global dt, iterations, substeps, alphac, max_collision_penetration
+        global dt, iterations, substeps, alphac
         global animate, export, t
         global profiler
 
@@ -155,8 +182,6 @@ if __name__ == "__main__":
         changed, substeps = imgui.InputInt("Substeps", substeps)
         alphac_changed, alphac = imgui.InputFloat(
             "Collision compliance", alphac, format="%.10f")
-        max_collision_penetration_changed, max_collision_penetration = imgui.InputFloat(
-            "Max collision depth", max_collision_penetration)
         changed, animate = imgui.Checkbox("Animate", animate)
         changed, export = imgui.Checkbox("Export", export)
         step = imgui.Button("Step")
@@ -170,10 +195,7 @@ if __name__ == "__main__":
 
         if alphac_changed:
             xpbd.set_compliance(
-                alphac * np.ones(Vcollision.shape[1]), pbat.gpu.xpbd.ConstraintType.Collision)
-
-        if max_collision_penetration_changed:
-            xpbd.max_collision_penetration = max_collision_penetration
+                alphac * np.ones(VC.shape[1]), pbat.gpu.xpbd.ConstraintType.Collision)
 
         if animate or step:
             profiler.begin_frame("Physics")
@@ -182,10 +204,13 @@ if __name__ == "__main__":
 
             # Update visuals
             V = xpbd.x.T
+            min, max = np.min(V, axis=0), np.max(V, axis=0)
+            xpbd.scene_bounding_box = min, max
             if export:
-                omesh = meshio.Mesh(V, {"tetra": mesh.E.T})
-                meshio.write(f"{args.output}/{t}.mesh", omesh)
-                
+                ps.screenshot(f"{args.output}/{t}.png")
+                # omesh = meshio.Mesh(V, {"tetra": mesh.E.T})
+                # meshio.write(f"{args.output}/{t}.mesh", omesh)
+
             vm.update_vertex_positions(V)
             t = t+1
 

@@ -3,6 +3,7 @@
 
 #include "XpbdImpl.cuh"
 #include "pbat/gpu/Aliases.h"
+#include "pbat/gpu/common/SynchronizedList.cuh"
 #include "pbat/gpu/math/linalg/Matrix.cuh"
 
 #include <array>
@@ -179,11 +180,11 @@ __device__ math::linalg::Matrix<GpuScalar, 3, 1>
 TriangleBarycentricCoordinates(auto const& AP, auto const& AB, auto const& AC)
 {
     using namespace pbat::gpu::math::linalg;
-    GpuScalar const d00   = (AB.Transpose() * AB)(0, 0);
-    GpuScalar const d01   = (AB.Transpose() * AC)(0, 0);
-    GpuScalar const d11   = (AC.Transpose() * AC)(0, 0);
-    GpuScalar const d20   = (AP.Transpose() * AB)(0, 0);
-    GpuScalar const d21   = (AP.Transpose() * AC)(0, 0);
+    GpuScalar const d00   = Dot(AB, AB);
+    GpuScalar const d01   = Dot(AB, AC);
+    GpuScalar const d11   = Dot(AC, AC);
+    GpuScalar const d20   = Dot(AP, AB);
+    GpuScalar const d21   = Dot(AP, AC);
     GpuScalar const denom = d00 * d11 - d01 * d01;
     GpuScalar const v     = (d11 * d20 - d01 * d21) / denom;
     GpuScalar const w     = (d00 * d21 - d01 * d20) / denom;
@@ -197,17 +198,17 @@ TriangleBarycentricCoordinates(auto const& AP, auto const& AB, auto const& AC)
 
 struct FVertexTriangleContactConstraint
 {
-    using CollisionPairType = typename XpbdImpl::CollisionPairType;
+    using ContactPairType = typename XpbdImpl::ContactPairType;
 
     __device__ bool ProjectVertexTriangle(
         GpuScalar minvv,
         math::linalg::Matrix<GpuScalar, 3, 1> const& minvf,
         math::linalg::Matrix<GpuScalar, 3, 1> const& xvt,
         math::linalg::Matrix<GpuScalar, 3, 3> const& xft,
+        math::linalg::Matrix<GpuScalar, 3, 3> const& xf,
         GpuScalar atildec,
         GpuScalar& lambdac,
-        math::linalg::Matrix<GpuScalar, 3, 1>& xv,
-        math::linalg::Matrix<GpuScalar, 3, 3>& xf)
+        math::linalg::Matrix<GpuScalar, 3, 1>& xv)
     {
         using namespace pbat::gpu::math::linalg;
         // Numerically zero inverse mass makes the Schur complement ill-conditioned/singular
@@ -237,14 +238,14 @@ struct FVertexTriangleContactConstraint
             return false;
 
         // Project xv onto triangle's plane into xc
-        GpuScalar const C = (n.Transpose() * (xv - xf.Col(0)))(0, 0);
+        GpuScalar const C = Dot(n, xv - xf.Col(0));
         // If xv is positively oriented w.r.t. triangles xf, there is no penetration
         if (C > GpuScalar{0.})
             return false;
         // Prevent super violent projection for stability, i.e. if the collision constraint
         // violation is already too large, we give up.
-        if (C < -kMaxPenetration)
-            return false;
+        // if (C < -kMaxPenetration)
+        //     return false;
 
         // Project constraints:
         // We assume that the triangle is static (although it is not), so that the gradient is n for
@@ -263,7 +264,7 @@ struct FVertexTriangleContactConstraint
         GpuScalar const dxd = Norm(dx);
         if (dxd > muS * d)
             dx *= min(muK * d / dxd, 1.);
-            
+
         xv += dx;
         return true;
     }
@@ -314,7 +315,7 @@ struct FVertexTriangleContactConstraint
         GpuScalar lambdac = lambda[c];
 
         // 2. Project collision constraint
-        if (not ProjectVertexTriangle(minvv, minvf, xvt, xft, atildec, lambdac, xv, xf))
+        if (not ProjectVertexTriangle(minvv, minvf, xvt, xft, xf, atildec, lambdac, xv))
             return;
 
         // 3. Update global positions
@@ -322,17 +323,15 @@ struct FVertexTriangleContactConstraint
         SetParticlePosition(vv, xv, x);
     }
 
-    std::array<GpuScalar*, 3> x;
-    GpuScalar* lambda;
-
-    CollisionPairType const* cpairs;
-    std::array<GpuIndex*, 4> V;
-    std::array<GpuIndex*, 4> F;
-    GpuScalar* minv;
-    GpuScalar* alpha;
-    std::array<GpuScalar*, 3> xt;
-    GpuScalar dt2;
-    GpuScalar const kMaxPenetration;
+    std::array<GpuScalar*, 3> x;                                  ///< Current positions
+    GpuScalar* lambda;                                            ///< Lagrange multipliers
+    common::DeviceSynchronizedList<ContactPairType> const cpairs; ///< Vertex-triangle contacts
+    std::array<GpuIndex*, 4> V;                                   ///< Vertex indices
+    std::array<GpuIndex*, 4> F;                                   ///< Triangle indices
+    GpuScalar* minv;                                              ///< Inverse mass
+    GpuScalar* alpha;                                             ///< Compliance
+    std::array<GpuScalar*, 3> xt;                                 ///< Positions at time t
+    GpuScalar dt2;                                                ///< Squared time step
     GpuScalar const muS; ///< Static Coulomb friction coefficient
     GpuScalar const muK; ///< Dynamic Coulomb friction coefficient
 };

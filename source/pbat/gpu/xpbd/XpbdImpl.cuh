@@ -4,12 +4,12 @@
 #include "pbat/Aliases.h"
 #include "pbat/gpu/Aliases.h"
 #include "pbat/gpu/common/Buffer.cuh"
+#include "pbat/gpu/geometry/BvhImpl.cuh"
+#include "pbat/gpu/geometry/BvhQueryImpl.cuh"
 #include "pbat/gpu/geometry/PrimitivesImpl.cuh"
-#include "pbat/gpu/geometry/SweepAndPruneImpl.cuh"
 
 #include <array>
 #include <cstddef>
-#include <thrust/host_vector.h>
 #include <vector>
 
 namespace pbat {
@@ -22,7 +22,8 @@ class XpbdImpl
     enum EConstraint : int { StableNeoHookean = 0, Collision, NumberOfConstraintTypes };
     static auto constexpr kConstraintTypes = static_cast<int>(EConstraint::NumberOfConstraintTypes);
 
-    using CollisionPairType = typename geometry::SweepAndPruneImpl::OverlapType;
+    using CollisionCandidateType = typename geometry::BvhQueryImpl::OverlapType;
+    using ContactPairType        = typename geometry::BvhQueryImpl::NearestNeighbourPairType;
 
     /**
      * @brief
@@ -34,8 +35,10 @@ class XpbdImpl
         Eigen::Ref<GpuIndexMatrixX const> const& V,
         Eigen::Ref<GpuIndexMatrixX const> const& F,
         Eigen::Ref<GpuIndexMatrixX const> const& T,
-        std::size_t nMaxVertexTriangleOverlaps,
-        GpuScalar kMaxCollisionPenetration = GpuScalar{1});
+        Eigen::Ref<GpuIndexVectorX const> const& BV,
+        Eigen::Ref<GpuIndexVectorX const> const& BF,
+        std::size_t nMaxVertexTetrahedronOverlaps,
+        std::size_t nMaxVertexTriangleContacts);
     /**
      * @brief
      */
@@ -95,15 +98,18 @@ class XpbdImpl
     void SetConstraintPartitions(std::vector<std::vector<GpuIndex>> const& partitions);
     /**
      * @brief
-     * @param kMaxCollisionPenetration
-     */
-    void SetMaxCollisionPenetration(GpuScalar kMaxCollisionPenetration);
-    /**
-     * @brief
      * @param muS
      * @param muK
      */
     void SetFrictionCoefficients(GpuScalar muS, GpuScalar muK);
+    /**
+     * @brief
+     * @param min
+     * @param max
+     */
+    void SetSceneBoundingBox(
+        Eigen::Vector<GpuScalar, 3> const& min,
+        Eigen::Vector<GpuScalar, 3> const& max);
     /**
      * @brief
      * @return
@@ -152,21 +158,31 @@ class XpbdImpl
      */
     std::vector<common::Buffer<GpuIndex>> const& GetPartitions() const;
 
-    using OverlapType = typename geometry::SweepAndPruneImpl::OverlapType;
     /**
-     * @brief Get the Vertex Triangle Overlap Candidates list
+     * @brief Get the vertex-tetrahedron overlaps
      *
-     * @return thrust::host_vector<OverlapType>
+     * @return std::vector<CollisionCandidateType>
      */
-    thrust::host_vector<OverlapType> GetVertexTriangleOverlapCandidates() const;
+    std::vector<CollisionCandidateType> GetVertexTetrahedronCollisionCandidates() const;
+
+    /**
+     * @brief
+     * @return
+     */
+    std::vector<ContactPairType> GetVertexTriangleContactPairs() const;
 
   public:
     geometry::PointsImpl X;    ///< Vertex/particle positions
-    geometry::SimplicesImpl V; ///< Vertex simplices
-    geometry::SimplicesImpl F; ///< Triangle simplices
+    geometry::SimplicesImpl V; ///< Boundary vertex simplices
+    geometry::SimplicesImpl F; ///< Boundary triangle simplices
     geometry::SimplicesImpl T; ///< Tetrahedral simplices
+
+    geometry::BodiesImpl BV; ///< Bodies of vertex simplices
+    geometry::BodiesImpl BF; ///< Bodies of triangle simplices
   private:
-    geometry::SweepAndPruneImpl SAP; ///< Sweep and prune broad phase
+    geometry::BvhImpl Tbvh;        ///< Tetrahedron bvh
+    geometry::BvhImpl Fbvh;        ///< Triangle bvh (over boundary mesh)
+    geometry::BvhQueryImpl Vquery; ///< BVH vertex queries
 
     common::Buffer<GpuScalar, 3> mPositions;      ///< Vertex/particle positions at time t
     common::Buffer<GpuScalar, 3> mVelocities;     ///< Vertex/particle velocities
@@ -189,12 +205,7 @@ class XpbdImpl
     std::vector<common::Buffer<GpuIndex>> mPartitions; ///< Constraint partitions
     GpuScalar mStaticFrictionCoefficient;              ///< Coulomb static friction coefficient
     GpuScalar mDynamicFrictionCoefficient;             ///< Coulomb dynamic friction coefficient
-    GpuScalar mAverageEdgeLength;       ///< Average edge length of collision (triangle) mesh
-    GpuScalar mMaxCollisionPenetration; ///< Coefficient controlling the maximum collision
-                                        ///< constraint violation as max violation =
-                                        ///< mMaxCollisionPenetration*mAverageEdgeLength. To
-                                        ///< maintain stability, past this threshold, a collision
-                                        ///< constraint will not perform any projection.
+    Eigen::Vector<GpuScalar, 3> Smin, Smax;            ///< Scene bounding box
 };
 
 } // namespace xpbd

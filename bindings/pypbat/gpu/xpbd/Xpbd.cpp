@@ -32,10 +32,20 @@ void Bind(pybind11::module& m)
                          Eigen::Ref<GpuIndexMatrixX const> const& V,
                          Eigen::Ref<GpuIndexMatrixX const> const& F,
                          Eigen::Ref<GpuIndexMatrixX const> const& T,
-                         std::size_t nMaxVertexTriangleOverlaps,
-                         GpuScalar kMaxCollisionPenetration) {
+                         Eigen::Ref<GpuIndexVectorX const> const& BV,
+                         Eigen::Ref<GpuIndexVectorX const> const& BF,
+                         std::size_t nMaxVertexTetrahedronOverlaps,
+                         std::size_t nMaxVertexTriangleContacts) {
                 return pbat::profiling::Profile("pbat.gpu.xpbd.Xpbd.Construct", [&]() {
-                    Xpbd xpbd(X, V, F, T, nMaxVertexTriangleOverlaps, kMaxCollisionPenetration);
+                    Xpbd xpbd(
+                        X,
+                        V,
+                        F,
+                        T,
+                        BV,
+                        BF,
+                        nMaxVertexTetrahedronOverlaps,
+                        nMaxVertexTriangleContacts);
                     return xpbd;
                 });
             }),
@@ -43,17 +53,17 @@ void Bind(pybind11::module& m)
             pyb::arg("V"),
             pyb::arg("F"),
             pyb::arg("T"),
-            pyb::arg("max_vertex_triangle_overlaps"),
-            pyb::arg("max_collision_penetration") = GpuScalar{1.},
+            pyb::arg("BV"),
+            pyb::arg("BF"),
+            pyb::arg("max_vertex_tetrahedron_overlaps"),
+            pyb::arg("max_vertex_triangle_contacts"),
             "Construct an XPBD algorithm to run on the GPU using input particle positions X as an "
-            "array of dimensions 3x|#particles|, vertices V as an array of dimensions "
-            "1x|#collision vertices|, triangles F as an array of dimensions "
+            "array of dimensions 3x|#particles|, collision vertices V as an array of dimensions "
+            "1x|#collision vertices|, collision triangles F as an array of dimensions "
             "3x|#collision triangles| and tetrahedra T as an array of dimensions 4x|#tetrahedra|. "
-            "max_vertex_triangle_overlaps specifies the size of memory preallocated for "
-            "vertex-triangle collision constraints. max_collision_penetration is a coefficient "
-            "specifying the maximum collision constraint violation after which collision "
-            "constraints are deactivated for stability, as max_collision_penetration times the "
-            "average edge length of the input collision (triangle) mesh (X,F).")
+            "max_vertex_tetrahedron_overlaps specifies the size of memory preallocated for "
+            "vertex-tetrahedron overlaps detected in the broad phase. max_vertex_triangle_contacts "
+            "specifies maximum number of collision constraints that will be supported.")
         .def(
             "prepare",
             [](Xpbd& xpbd) {
@@ -182,21 +192,19 @@ void Bind(pybind11::module& m)
             "Set the |#lagrange multiplier per constraint|x|#constraint of type eConstraint| "
             "constraint compliances for the given constraint type")
         .def_property(
-            "max_collision_penetration",
-            nullptr,
-            [](Xpbd& xpbd, GpuScalar kMaxCollisionPenetration) {
-                xpbd.SetMaxCollisionPenetration(kMaxCollisionPenetration);
-            },
-            "Set the maximum collision penetration as a multiplier of the collision mesh's average "
-            "edge length, after which collision constraint projection is deactivated for "
-            "stability.")
-        .def_property(
             "mu",
             nullptr,
             [](Xpbd& xpbd, std::pair<GpuScalar, GpuScalar> mu) {
                 xpbd.SetFrictionCoefficients(mu.first, mu.second);
             },
             "Tuple of static and dynamic friction coefficients (muS, muK).")
+        .def_property(
+            "scene_bounding_box",
+            nullptr,
+            [](Xpbd& xpbd,
+               std::pair<Eigen::Vector<GpuScalar, 3> const&, Eigen::Vector<GpuScalar, 3> const&>
+                   box) { xpbd.SetSceneBoundingBox(box.first, box.second); },
+            "Tuple of (min,max) scene bounding box extremities.")
         .def_property(
             "partitions",
             [](Xpbd const& xpbd) {
@@ -215,16 +223,29 @@ void Bind(pybind11::module& m)
             "Set constraint partitions for the parallel constraint solve as list of lists of "
             "constraint indices")
         .def_property_readonly(
-            "vertex_triangle_overlaps",
+            "vertex_tetrahedron_overlaps",
             [](Xpbd const& xpbd) {
                 return pbat::profiling::Profile(
-                    "pbat.gpu.xpbd.Xpbd.GetVertexTriangleOverlaps",
+                    "pbat.gpu.xpbd.Xpbd.GetVertexTetrahedronCollisionCandidates",
                     [&]() {
-                        GpuIndexMatrixX O = xpbd.GetVertexTriangleOverlaps();
+                        GpuIndexMatrixX O = xpbd.GetVertexTetrahedronCollisionCandidates();
                         return O;
                     });
             },
-            "2x|#overlap| vertex triangle overlap pairs");
+            "2x|#overlap| vertex tetrahedron overlap pairs O, s.t. O[0,:] and O[1,:] yield "
+            "overlapping vertices and tetrahedra, respectively.")
+        .def_property_readonly(
+            "vertex_triangle_contacts",
+            [](Xpbd const& xpbd) {
+                return pbat::profiling::Profile(
+                    "pbat.gpu.xpbd.Xpbd.GetVertexTriangleContactPairs",
+                    [&]() {
+                        GpuIndexMatrixX C = xpbd.GetVertexTriangleContactPairs();
+                        return C;
+                    });
+            },
+            "2x|#contacts| vertex triangle contacts pairs C, s.t. C[0,:] and C[1,:] yield "
+            "contacting vertices and triangles, respectively.");
 #endif // PBAT_USE_CUDA
 }
 

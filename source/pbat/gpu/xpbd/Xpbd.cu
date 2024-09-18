@@ -7,7 +7,6 @@
 #include "pbat/gpu/common/Buffer.cuh"
 
 #include <thrust/copy.h>
-#include <thrust/host_vector.h>
 
 namespace pbat {
 namespace gpu {
@@ -18,9 +17,19 @@ Xpbd::Xpbd(
     Eigen::Ref<GpuIndexMatrixX const> const& V,
     Eigen::Ref<GpuIndexMatrixX const> const& F,
     Eigen::Ref<GpuIndexMatrixX const> const& T,
-    std::size_t nMaxVertexTriangleOverlaps,
-    GpuScalar kMaxCollisionPenetration)
-    : mImpl(new XpbdImpl{X, V, F, T, nMaxVertexTriangleOverlaps, kMaxCollisionPenetration})
+    Eigen::Ref<GpuIndexVectorX const> const& BV,
+    Eigen::Ref<GpuIndexVectorX const> const& BF,
+    std::size_t nMaxVertexTetrahedronOverlaps,
+    std::size_t nMaxVertexTriangleContacts)
+    : mImpl(new XpbdImpl{
+          X,
+          V,
+          F,
+          T,
+          BV,
+          BF,
+          nMaxVertexTetrahedronOverlaps,
+          nMaxVertexTriangleContacts})
 {
 }
 
@@ -103,14 +112,16 @@ void Xpbd::SetConstraintPartitions(std::vector<std::vector<GpuIndex>> const& par
     mImpl->SetConstraintPartitions(partitions);
 }
 
-void Xpbd::SetMaxCollisionPenetration(GpuScalar kMaxCollisionPenetration)
-{
-    mImpl->SetMaxCollisionPenetration(kMaxCollisionPenetration);
-}
-
 void Xpbd::SetFrictionCoefficients(GpuScalar muS, GpuScalar muK)
 {
     mImpl->SetFrictionCoefficients(muS, muK);
+}
+
+void Xpbd::SetSceneBoundingBox(
+    Eigen::Vector<GpuScalar, 3> const& min,
+    Eigen::Vector<GpuScalar, 3> const& max)
+{
+    mImpl->SetSceneBoundingBox(min, max);
 }
 
 GpuMatrixX Xpbd::GetVelocity() const
@@ -220,10 +231,10 @@ std::vector<std::vector<GpuIndex>> Xpbd::GetPartitions() const
     return partitions;
 }
 
-GpuIndexMatrixX Xpbd::GetVertexTriangleOverlaps() const
+GpuIndexMatrixX Xpbd::GetVertexTetrahedronCollisionCandidates() const
 {
-    thrust::host_vector<typename XpbdImpl::OverlapType> const overlaps =
-        mImpl->GetVertexTriangleOverlapCandidates();
+    std::vector<typename XpbdImpl::CollisionCandidateType> const overlaps =
+        mImpl->GetVertexTetrahedronCollisionCandidates();
     GpuIndexMatrixX O(2, overlaps.size());
     for (auto o = 0; o < overlaps.size(); ++o)
     {
@@ -231,6 +242,19 @@ GpuIndexMatrixX Xpbd::GetVertexTriangleOverlaps() const
         O(1, o) = overlaps[o].second;
     }
     return O;
+}
+
+GpuIndexMatrixX Xpbd::GetVertexTriangleContactPairs() const
+{
+    std::vector<typename XpbdImpl::CollisionCandidateType> const contacts =
+        mImpl->GetVertexTriangleContactPairs();
+    GpuIndexMatrixX C(2, contacts.size());
+    for (auto c = 0; c < contacts.size(); ++c)
+    {
+        C(0, c) = contacts[c].first;
+        C(1, c) = contacts[c].second;
+    }
+    return C;
 }
 
 Xpbd::~Xpbd()

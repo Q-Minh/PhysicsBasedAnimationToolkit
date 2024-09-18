@@ -29,8 +29,10 @@ class Xpbd
         Eigen::Ref<GpuIndexMatrixX const> const& V,
         Eigen::Ref<GpuIndexMatrixX const> const& F,
         Eigen::Ref<GpuIndexMatrixX const> const& T,
-        std::size_t nMaxVertexTriangleOverlaps,
-        GpuScalar kMaxCollisionPenetration = GpuScalar{1.});
+        Eigen::Ref<GpuIndexVectorX const> const& BV,
+        Eigen::Ref<GpuIndexVectorX const> const& BF,
+        std::size_t nMaxVertexTetrahedronOverlaps,
+        std::size_t nMaxVertexTriangleContacts);
     Xpbd(Xpbd const&)            = delete;
     Xpbd& operator=(Xpbd const&) = delete;
     Xpbd(Xpbd&&) noexcept;
@@ -99,15 +101,18 @@ class Xpbd
     void SetConstraintPartitions(std::vector<std::vector<GpuIndex>> const& partitions);
     /**
      * @brief
-     * @param kMaxCollisionPenetration
-     */
-    void SetMaxCollisionPenetration(GpuScalar kMaxCollisionPenetration);
-    /**
-     * @brief
      * @param muS
      * @param muK
      */
     void SetFrictionCoefficients(GpuScalar muS, GpuScalar muK);
+    /**
+     * @brief
+     * @param min
+     * @param max
+     */
+    void SetSceneBoundingBox(
+        Eigen::Vector<GpuScalar, 3> const& min,
+        Eigen::Vector<GpuScalar, 3> const& max);
     /**
      * @brief
      * @return
@@ -156,11 +161,16 @@ class Xpbd
      */
     std::vector<std::vector<GpuIndex>> GetPartitions() const;
     /**
-     * @brief Get the Vertex Triangle Overlaps list
+     * @brief Get the vertex-tetrahedron collision candidates list
      *
-     * @return GpuIndexMatrixX 2x|#overlap candidates|
+     * @return GpuIndexMatrixX 2x|#collision candidates|
      */
-    GpuIndexMatrixX GetVertexTriangleOverlaps() const;
+    GpuIndexMatrixX GetVertexTetrahedronCollisionCandidates() const;
+    /**
+     * @brief 
+     * @return 
+     */
+    GpuIndexMatrixX GetVertexTriangleContactPairs() const;
     /**
      * @brief
      */
