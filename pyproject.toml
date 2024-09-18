@@ -4,7 +4,7 @@ build-backend = "scikit_build_core.build"
 
 [project]
 name = "pbatoolkit"
-version = "0.0.6"
+version = "0.0.7"
 description = "Physics Based Animation Toolkit"
 readme = "README.md"
 authors = [
