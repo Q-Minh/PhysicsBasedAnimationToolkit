@@ -2,18 +2,18 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     PUBLIC
     FILE_SET api
     FILES
-    "Xpbd.h"
+    "Vbd.h"
 )
 target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     PRIVATE
     FILE_SET implementation
     FILES
-    "XpbdImpl.cuh"
-    "XpbdImplKernels.cuh"
+    "VbdImpl.cuh"
+    "VbdImplKernels.cuh"
 )
 target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     PRIVATE
-    "Xpbd.cu"
-    "XpbdImpl.cu"
-    "XpbdImplKernels.cu"
+    "Vbd.cu"
+    "VbdImpl.cu"
+    "VbdImplKernels.cu"
 )
