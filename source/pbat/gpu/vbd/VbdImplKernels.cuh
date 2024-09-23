@@ -408,8 +408,9 @@ __global__ void MinimizeBackwardEuler(BackwardEulerMinimization BDF)
         return;
 
     // 2. Accumulate results into vertex hessian and gradient
-    Matrix<GpuScalar, 3> xi      = BDF.ToLocal(i, BDF.x);
+    Matrix<GpuScalar, 3> xti     = BDF.ToLocal(i, BDF.xt);
     Matrix<GpuScalar, 3> xitilde = BDF.ToLocal(i, BDF.xtilde);
+    Matrix<GpuScalar, 3> xi      = BDF.ToLocal(i, BDF.x);
     Matrix<GpuScalar, 3, 3> Hi;
     Hi.SetZero();
     Matrix<GpuScalar, 3, 1> gi;
@@ -418,8 +419,11 @@ __global__ void MinimizeBackwardEuler(BackwardEulerMinimization BDF)
     {
         GpuScalar* HiShared = Hge + k * 12;
         GpuScalar* giShared = HiShared + 9;
-        Hi += MatrixView<GpuScalar, 3, 3>(HiShared);
-        gi += MatrixView<GpuScalar, 3, 1>(giShared);
+        MatrixView<GpuScalar, 3, 3> Hei(HiShared);
+        MatrixView<GpuScalar, 3, 1> gei(giShared);
+        GpuScalar const D = BDF.kD / BDF.dt; // Rayleigh damping term
+        Hi += (GpuScalar{1} + D) * Hei;
+        gi += gei + Hei * (xi - xti) * D;
     }
     Identity<GpuScalar, 3, 3> I{};
     GpuScalar mi = BDF.m[i];
