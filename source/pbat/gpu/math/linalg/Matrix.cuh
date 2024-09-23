@@ -71,6 +71,10 @@ class TransposeView
     __host__ __device__ auto operator()(auto i, auto j) const { return A(j, i); }
     __host__ __device__ auto& operator()(auto i, auto j) { return A(j, i); }
 
+    // Vector(ized) access
+    __host__ __device__ auto operator()(auto i) const { return (*this)(i % kRows, i / kRows); }
+    __host__ __device__ auto& operator()(auto i) { return (*this)(i % kRows, i / kRows); }
+
     __host__ __device__ NestedType const& Transpose() const { return A; }
     __host__ __device__ NestedType& Transpose() { return A; }
 
@@ -95,6 +99,9 @@ class ConstTransposeView
     __host__ __device__ constexpr auto Cols() const { return A.Rows(); }
 
     __host__ __device__ auto operator()(auto i, auto j) const { return A(j, i); }
+
+    // Vector(ized) access
+    __host__ __device__ auto operator()(auto i) const { return (*this)(i % kRows, i / kRows); }
 
     __host__ __device__ NestedType const& Transpose() const { return A; }
 
@@ -125,6 +132,9 @@ class ConstSubMatrix
     __host__ __device__ constexpr auto Cols() const { return kCols; }
 
     __host__ __device__ auto operator()(auto i, auto j) const { return A(ib + i, jb + j); }
+
+    // Vector(ized) access
+    __host__ __device__ auto operator()(auto i) const { return (*this)(i % kRows, i / kRows); }
 
     template <auto S, auto T>
     __host__ __device__ ConstSubMatrix<SelfType, S, T> Slice(auto i, auto j) const
@@ -191,6 +201,10 @@ class SubMatrix
     __host__ __device__ auto operator()(auto i, auto j) const { return A(ib + i, jb + j); }
     __host__ __device__ auto& operator()(auto i, auto j) { return A(ib + i, jb + j); }
 
+    // Vector(ized) access
+    __host__ __device__ auto operator()(auto i) const { return (*this)(i % kRows, i / kRows); }
+    __host__ __device__ auto& operator()(auto i) { return (*this)(i % kRows, i / kRows); }
+
     template <auto S, auto T>
     __host__ __device__ SubMatrix<SelfType, S, T> Slice(auto i, auto j)
     {
@@ -240,7 +254,10 @@ class Ones
     __host__ __device__ constexpr auto Rows() const { return kRows; }
     __host__ __device__ constexpr auto Cols() const { return kCols; }
 
-    __host__ __device__ auto operator()(auto i, auto j) const { return ScalarType{1.}; }
+    __host__ __device__ auto operator()(auto i, auto j) const { return ScalarType{1}; }
+
+    // Vector(ized) access
+    __host__ __device__ auto operator()(auto i) const { return ScalarType{1}; }
 
     template <auto S, auto T>
     __host__ __device__ Ones<ScalarType, S, T> Slice(auto i, auto j) const
@@ -278,6 +295,9 @@ class Identity
     {
         return static_cast<ScalarType>(i == j);
     }
+
+    // Vector(ized) access
+    __host__ __device__ auto operator()(auto i) const { return (*this)(i % kRows, i / kRows); }
 
     template <auto S, auto T>
     __host__ __device__ ConstSubMatrix<SelfType, S, T> Slice(auto i, auto j) const
@@ -324,6 +344,9 @@ class Sum
 
     __host__ __device__ auto operator()(auto i, auto j) const { return A(i, j) + B(i, j); }
 
+    // Vector(ized) access
+    __host__ __device__ auto operator()(auto i) const { return (*this)(i % kRows, i / kRows); }
+
     template <auto S, auto T>
     __host__ __device__ ConstSubMatrix<SelfType, S, T> Slice(auto i, auto j) const
     {
@@ -364,6 +387,9 @@ class Scale
     __host__ __device__ constexpr auto Cols() const { return kCols; }
 
     __host__ __device__ auto operator()(auto i, auto j) const { return k * A(i, j); }
+
+    // Vector(ized) access
+    __host__ __device__ auto operator()(auto i) const { return (*this)(i % kRows, i / kRows); }
 
     template <auto S, auto T>
     __host__ __device__ ConstSubMatrix<SelfType, S, T> Slice(auto i, auto j) const
@@ -414,6 +440,9 @@ class Product
         return contract(std::make_index_sequence<LhsNestedType::kCols>());
     }
 
+    // Vector(ized) access
+    __host__ __device__ auto operator()(auto i) const { return (*this)(i % kRows, i / kRows); }
+
     template <auto S, auto T>
     __host__ __device__ ConstSubMatrix<SelfType, S, T> Slice(auto i, auto j) const
     {
@@ -455,6 +484,9 @@ class Diagonal
 
     __host__ __device__ auto operator()(auto i, auto j) const { return A(i, i); }
 
+    // Vector(ized) access
+    __host__ __device__ auto operator()(auto i) const { return A(i, i); }
+
     template <auto S, auto T>
     __host__ __device__ ConstSubMatrix<SelfType, S, T> Slice(auto i, auto j) const
     {
@@ -494,6 +526,9 @@ class Square
     __host__ __device__ constexpr auto Cols() const { return kCols; }
 
     __host__ __device__ auto operator()(auto i, auto j) const { return A(i, j) * A(i, j); }
+
+    // Vector(ized) access
+    __host__ __device__ auto operator()(auto i) const { return (*this)(i % kRows, i / kRows); }
 
     template <auto S, auto T>
     __host__ __device__ ConstSubMatrix<SelfType, S, T> Slice(auto i, auto j) const
@@ -549,6 +584,9 @@ class CrossProduct
         return A(j, 0) * B(k, 0) - A(k, 0) * B(j, 0);
     }
 
+    // Vector(ized) access
+    __host__ __device__ auto operator()(auto i) const { return (*this)(i, 0); }
+
     template <auto S, auto T>
     __host__ __device__ ConstSubMatrix<SelfType, S, T> Slice(auto i, auto j) const
     {
@@ -598,6 +636,9 @@ class Minimum
 
     __host__ __device__ auto operator()(auto i, auto j) const { return min(A(i, j), B(i, j)); }
 
+    // Vector(ized) access
+    __host__ __device__ auto operator()(auto i) const { return (*this)(i % kRows, i / kRows); }
+
     template <auto S, auto T>
     __host__ __device__ ConstSubMatrix<SelfType, S, T> Slice(auto i, auto j) const
     {
@@ -646,6 +687,9 @@ class Maximum
     __host__ __device__ constexpr auto Cols() const { return kCols; }
 
     __host__ __device__ auto operator()(auto i, auto j) const { return max(A(i, j), B(i, j)); }
+
+    // Vector(ized) access
+    __host__ __device__ auto operator()(auto i) const { return (*this)(i % kRows, i / kRows); }
 
     template <auto S, auto T>
     __host__ __device__ ConstSubMatrix<SelfType, S, T> Slice(auto i, auto j) const
@@ -878,6 +922,9 @@ class TiledView
     {
         return A(i % NestedType::kRows, j % NestedType::kCols);
     }
+
+    // Vector(ized) access
+    __host__ __device__ auto operator()(auto i) const { return (*this)(i % kRows, i / kRows); }
 
     // Smart accessors
     template <auto S, auto T>
