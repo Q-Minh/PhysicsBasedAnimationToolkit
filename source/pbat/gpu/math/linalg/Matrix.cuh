@@ -279,11 +279,48 @@ class Ones
 };
 
 template <class TScalar, int M, int N>
+class Zeros
+{
+  public:
+    using ScalarType = TScalar;
+    using SelfType   = Zeros<ScalarType, M, N>;
+
+    static auto constexpr kRows = M;
+    static auto constexpr kCols = N;
+
+    __host__ __device__ constexpr auto Rows() const { return kRows; }
+    __host__ __device__ constexpr auto Cols() const { return kCols; }
+
+    __host__ __device__ auto operator()(auto i, auto j) const { return ScalarType{0}; }
+
+    // Vector(ized) access
+    __host__ __device__ auto operator()(auto i) const { return ScalarType{0}; }
+
+    template <auto S, auto T>
+    __host__ __device__ Zeros<ScalarType, S, T> Slice(auto i, auto j) const
+    {
+        return Zeros<ScalarType, S, T>();
+    }
+    __host__ __device__ Zeros<ScalarType, kRows, 1> Col(auto j) const
+    {
+        return Zeros<ScalarType, kRows, 1>();
+    }
+    __host__ __device__ Zeros<ScalarType, 1, kCols> Row(auto i) const
+    {
+        return Zeros<ScalarType, 1, kCols>();
+    }
+    __host__ __device__ ConstTransposeView<SelfType> Transpose() const
+    {
+        return ConstTransposeView<SelfType>(*this);
+    }
+};
+
+template <class TScalar, int M, int N>
 class Identity
 {
   public:
     using ScalarType = TScalar;
-    using SelfType   = Ones<ScalarType, M, N>;
+    using SelfType   = Identity<ScalarType, M, N>;
 
     static auto constexpr kRows = M;
     static auto constexpr kCols = N;
