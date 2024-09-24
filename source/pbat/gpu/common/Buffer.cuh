@@ -17,7 +17,11 @@ template <class T, int D = 1>
 class Buffer
 {
   public:
+    using SelfType = Buffer<T, D>;
+
     Buffer(std::size_t count = 0ULL);
+
+    SelfType& operator=(SelfType const& other);
 
     thrust::device_vector<T>& operator[](auto d);
     thrust::device_vector<T> const& operator[](auto d) const;
@@ -50,6 +54,17 @@ Buffer<T, D>::Buffer(std::size_t count) : mBuffers()
 {
     for (auto d = 0; d < D; ++d)
         mBuffers[d].resize(count);
+}
+
+template <class T, int D>
+inline Buffer<T, D>& Buffer<T, D>::operator=(Buffer<T, D> const& other)
+{
+    for (auto d = 0; d < D; ++d)
+    {
+        if (this->Size() != other.Size())
+            mBuffers[d].resize(other.Size());
+        thrust::copy(other.mBuffers[d].begin(), other.mBuffers[d].end(), mBuffers[d].begin());
+    }
 }
 
 template <class T, int D>
