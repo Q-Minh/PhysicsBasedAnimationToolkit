@@ -109,16 +109,16 @@ struct FFinalizeSolution
     {
         for (auto d = 0; d < 3; ++d)
         {
-            xtm1[d][i] = xt[d][i];
-            vtm1[d][i] = v[d][i];
-            v[d][i]    = (x[d][i] - xt[d][i]) / dt;
-            xt[d][i]   = x[d][i];
+            // xtm1[d][i] = xt[d][i];
+            // vtm1[d][i] = v[d][i];
+            v[d][i] = (x[d][i] - xt[d][i]) / dt;
+            // xt[d][i]   = x[d][i];
         }
     }
 
     GpuScalar dt;
-    std::array<GpuScalar*, 3> xtm1;
-    std::array<GpuScalar*, 3> vtm1;
+    // std::array<GpuScalar*, 3> xtm1;
+    // std::array<GpuScalar*, 3> vtm1;
     std::array<GpuScalar*, 3> xt;
     std::array<GpuScalar*, 3> x;
     std::array<GpuScalar*, 3> v;
@@ -354,7 +354,7 @@ struct BackwardEulerMinimization
         return HGe;
     }
 
-    __device__ void StableNeoHookeanGradAndHessian(auto e, auto ilocal, GpuScalar* Hge) const
+    __device__ void ComputeStableNeoHookeanDerivatives(auto e, auto ilocal, GpuScalar* Hge) const
     {
         // Compute (d^k Psi / dF^k)
         Matrix<GpuScalar, 4, 3> GP   = BDF.BasisFunctionGradients(e);
@@ -373,34 +373,30 @@ struct BackwardEulerMinimization
                 Hi += GP(ilocal, ki) * GP(ilocal, kj) * HF.Slice<3, 3>(ki * 3, kj * 3);
         for (auto k = 0; k < 3; ++k)
             gi += GP(ilocal, k) * gF.Slice<3, 1>(k * 3, 0);
-        return HGei;
     }
 };
 
 __global__ void MinimizeBackwardEuler(BackwardEulerMinimization BDF)
 {
+    // Get thread info
     extern __shared__ GpuScalar shared[];
-    auto tid = threadIdx.x;
-    auto bid = blockIdx.x;
-
+    auto tid              = threadIdx.x;
+    auto bid              = blockIdx.x;
+    auto nThreadsPerBlock = blockDim.x;
     // Vertex index
     GpuIndex i = BDF.partition[bid];
     // Get vertex-tet adjacency information
-    GpuIndex ke                = BDF.GVTp[i];
-    GpuIndex nAdjacentElements = BDF.GVTp[i + 1] - ke;
-    assert(nAdjacentElements <= blockDim.x);
-    if (tid >= nAdjacentElements) // Thread not associated with any adjacent element
-        return;
-    GpuIndex e      = BDF.GVTn[ke + tid];
-    GpuIndex ilocal = BDF.GVTilocal[ke + tid];
-
-    // Each element/thread has a 3x3 hessian + 3x1 gradient = 12 scalars/element
-    GpuScalar* Hge = shared + tid * 12;
-
-    using namespace pbat::gpu::math::linalg;
-
-    // 1. Compute element elastic energy derivatives w.r.t. i
-    Matrix<GpuScalar, 3, 4> HGei = BDF.StableNeoHookeanGradAndHessian(e, ilocal, Hge);
+    GpuIndex GVTbegin          = BDF.GVTp[i];
+    GpuIndex nAdjacentElements = BDF.GVTp[i + 1] - GVTbegin;
+    // 1. Compute element elastic energy derivatives w.r.t. i and store them in shared memory
+    for (auto elocal = tid; elocal < nAdjacentElements; elocal += nThreadsPerBlock)
+    {
+        GpuIndex e      = BDF.GVTn[GVTbegin + elocal];
+        GpuIndex ilocal = BDF.GVTilocal[GVTbegin + elocal];
+        // Each element has a 3x3 hessian + 3x1 gradient = 12 scalars/element in shared memory
+        GpuScalar* Hge = shared + elocal * 12;
+        BDF.ComputeStableNeoHookeanDerivatives(e, ilocal, Hge);
+    }
     __syncthreads();
 
     // Remaining execution is synchronous, i.e. only 1 thread is required
@@ -408,27 +404,32 @@ __global__ void MinimizeBackwardEuler(BackwardEulerMinimization BDF)
         return;
 
     // 2. Accumulate results into vertex hessian and gradient
+    using namespace pbat::gpu::math::linalg;
     Matrix<GpuScalar, 3> xti     = BDF.ToLocal(i, BDF.xt);
     Matrix<GpuScalar, 3> xitilde = BDF.ToLocal(i, BDF.xtilde);
     Matrix<GpuScalar, 3> xi      = BDF.ToLocal(i, BDF.x);
-    Matrix<GpuScalar, 3, 3> Hi;
-    Hi.SetZero();
-    Matrix<GpuScalar, 3, 1> gi;
-    gi.SetZero();
-    for (auto k = 0; k < nAdjacentElements; ++k)
+    Matrix<GpuScalar, 3, 3> Hi   = Zeros<GpuScalar, 3, 3>{};
+    Matrix<GpuScalar, 3, 1> gi   = Zeros<GpuScalar, 3, 1>{};
+    // Add elastic energy derivatives
+    for (auto elocal = 0; elocal < nAdjacentElements; ++elocal)
     {
-        GpuScalar* HiShared = Hge + k * 12;
+        GpuScalar* HiShared = shared + elocal * 12;
         GpuScalar* giShared = HiShared + 9;
         MatrixView<GpuScalar, 3, 3> Hei(HiShared);
         MatrixView<GpuScalar, 3, 1> gei(giShared);
-        GpuScalar const D = BDF.kD / BDF.dt; // Rayleigh damping term
-        Hi += (GpuScalar{1} + D) * Hei;
-        gi += gei + Hei * (xi - xti) * D;
+        Hi += Hei;
+        gi += gei;
     }
-    Identity<GpuScalar, 3, 3> I{};
-    GpuScalar mi = BDF.m[i];
-    Hi += (mi / BDF.dt2) * I;
-    gi += (mi / BDF.dt2) * (xi - xitilde);
+    // Add inertial energy derivatives
+    GpuScalar const K = BDF.m[i] / BDF.dt2;
+    Hi(0, 0) += K;
+    Hi(1, 1) += K;
+    Hi(2, 2) += K;
+    gi += K * (xi - xitilde);
+    // Add Rayleigh damping terms
+    GpuScalar const D = BDF.kD / BDF.dt;
+    gi += D * (Hi * (xi - xti));
+    Hi *= GpuScalar{1} + D;
 
     // 3. Newton step
     if (abs(Determinant(Hi)) <= GpuScalar{1e-6}) // Skip nearly rank-deficient hessian
