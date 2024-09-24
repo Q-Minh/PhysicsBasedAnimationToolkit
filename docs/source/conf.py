@@ -198,7 +198,7 @@ html_theme_options = {
 
 html_title = "Physics Based Animation Toolkit"
 
-html_logo = "_static/hammer-wrench.svg"
+html_logo = "_static/pbat.svg"
 html_favicon = "_static/favicon.ico"
 
 # Add any paths that contain custom static files (such as style sheets) here,
