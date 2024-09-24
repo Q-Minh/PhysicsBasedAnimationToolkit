@@ -55,8 +55,8 @@ jobs:
 
       - name: Build Documentation
         run: |
-          cd docs
           pip install . --config-settings=cmake.args="--preset=pip" --config-settings=build.tool-args="-j4" -v
+          cd docs
           sphinx-build source build/html \
             -D html_theme_options.version_dropdown=true \
             -D html_theme_options.version_json=https://raw.githubusercontent.com/antoinebou12/PhysicsBasedAnimationToolkit/refs/heads/docs/docs/source/_static/versions.json
