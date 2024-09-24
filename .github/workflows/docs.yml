@@ -53,20 +53,19 @@ jobs:
           ccache --max-size=1.0G
           ccache --zero-stats
 
-      - name: Build Documentation
+      - name: Build Python Package
         run: |
           pip install . --config-settings=cmake.args="--preset=pip" --config-settings=build.tool-args="-j4" -v
+          ccache --show-stats
+
+      - name: Build Documentation
+        run: |
           cd docs
           sphinx-build source build/html \
             -D html_theme_options.version_dropdown=true \
             -D html_theme_options.version_json=https://raw.githubusercontent.com/antoinebou12/PhysicsBasedAnimationToolkit/refs/heads/docs/docs/source/_static/versions.json
           cp source/_static/versions.json build/html/
           cd ..
-
-      - name: Build Python Package
-        run: |
-          pip install . --config-settings=cmake.args="--preset=pip" --config-settings=build.tool-args="-j4" -v
-          ccache --show-stats
 
       - name: Build Sphinx Docs
         run: |
