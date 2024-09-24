@@ -1,0 +1,87 @@
+name: Docs
+
+on:
+  push:
+    branches:
+      - main
+      - docs
+
+jobs:
+  Docs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4.0.0
+        with:
+          fetch-depth: 10
+
+      - name: Set up Python
+        uses: actions/setup-python@v5.1.1
+        with:
+          python-version: "3.10"
+
+      - name: Requirements
+        run: |
+          sudo apt-get update
+          sudo apt-get install doxygen python3-sphinx graphviz ccache
+          echo 'CACHE_PATH=~/.cache/ccache' >> "$GITHUB_ENV"
+          python -m pip install --upgrade pip
+          pip install -r docs/requirements.txt
+
+      - name: Cache Build
+        id: cache-build
+        uses: actions/cache@v4.0.2
+        with:
+          path: ${{ env.CACHE_PATH }}
+          key: docs-cache
+          restore-keys: Linux-Python-cache
+
+      - name: Prepare Ccache
+        run: |
+          ccache --max-size=1.0G
+          ccache -V && ccache --show-config
+          ccache --show-stats && ccache --zero-stats
+
+      - name: Build release docs
+        run: |
+          HEAD=$(git rev-parse HEAD)
+          git fetch --all --tags
+          cd docs
+          for version in $(git tag -l); do
+              echo "Processing $version:"
+              git checkout $version
+
+              # Fix links
+              grep -rli 'url = {https://github.com/Q-Minh/PhysicsBasedAnimationToolkit/}' ../* | xargs -i@ sed -i 's/Q-Minh.github.io\/PhysicsBasedAnimationToolkit\//github.com\/Q-Minh\/PhysicsBasedAnimationToolkit/g' @
+              grep -rli 'Q-Minh.github.io/PhysicsBasedAnimationToolkit' ../* | xargs -i@ sed -i 's/Q-Minh.github.io\/PhysicsBasedAnimationToolkit/PhysicsBasedAnimationToolkit.xyz/g' @
+
+              pip install --force-reinstall -v "pbatoolkit==$version"
+              sphinx-build source build/html/$version \
+                -D html_theme_options.version_dropdown=true \
+                -D html_theme_options.version_json=https://PhysicsBasedAnimationToolkit.xyz/versions.json
+
+              # Discard changes
+              git reset --hard
+          done
+          pip uninstall -y pbatoolkit
+          git checkout $HEAD
+          cp source/_static/versions.json build/html/
+          cd ..
+
+      - name: Build pbatoolkit
+        run: |
+          pip install --verbose .
+          ccache --show-stats
+
+      - name: Build docs
+        run: |
+          cd docs
+          make html
+          cd build/html
+          touch .nojekyll
+
+      - name: Deploy
+        uses: JamesIves/github-pages-deploy-action@v4.4.1
+        with:
+          branch: gh-pages # The branch the action should deploy to.
+          folder: docs/build/html # The folder the action should deploy.
