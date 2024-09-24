@@ -48,24 +48,10 @@ jobs:
           HEAD=$(git rev-parse HEAD)
           git fetch --all --tags
           cd docs
-          for version in $(git tag -l); do
-              echo "Processing $version:"
-              git checkout $version
-
-              # Fix links specifically for GitHub Pages
-              grep -rli 'url = {https://Q-Minh.github.io/PhysicsBasedAnimationToolkit/}' ../* | \
-                xargs -i@ sed -i 's/url = {https:\/\/Q-Minh.github.io\/PhysicsBasedAnimationToolkit\/}/url = {https:\/\/github.com\/Q-Minh\/PhysicsBasedAnimationToolkit\/}/g' @
-
-              pip install --force-reinstall -v "pbatoolkit==$version"
-              sphinx-build source build/html/$version \
+          pip install . --config-settings=cmake.args="--preset=pip-local" -v
+          sphinx-build source build/html/$version \
                 -D html_theme_options.version_dropdown=true \
-                -D html_theme_options.version_json=https://Q-Minh.github.io/PhysicsBasedAnimationToolkit/versions.json
-
-              # Discard changes
-              git reset --hard
-          done
-          pip uninstall -y pbatoolkit
-          git checkout $HEAD
+                -D html_theme_options.version_json=https://raw.githubusercontent.com/antoinebou12/PhysicsBasedAnimationToolkit/refs/heads/docs/docs/source/_static/versions.json
           cp source/_static/versions.json build/html/
           cd ..
 
