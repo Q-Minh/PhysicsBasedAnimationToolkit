@@ -55,7 +55,7 @@ jobs:
 
       - name: Build Python Package
         run: |
-          pip install setuptools sphinxcontrib-bibtex
+          pip install setuptools sphinxcontrib-bibtex ipykernel
           pip install . --config-settings=cmake.args="--preset=pip" --config-settings=build.tool-args="-j4" -v
           ccache --show-stats
 
