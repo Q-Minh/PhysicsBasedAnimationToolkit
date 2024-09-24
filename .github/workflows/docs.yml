@@ -7,23 +7,34 @@ on:
       - docs
 
 jobs:
-  Docs:
+  build-docs:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout repository
+      - name: Checkout Repository
         uses: actions/checkout@v4.0.0
         with:
-          fetch-depth: 10
+          fetch-depth: 1
+
+      - uses: lukka/get-cmake@latest
+        with:
+          cmakeVersion: "3.26.0"
+
+      - name: Setup vcpkg
+        uses: lukka/run-vcpkg@v11
+        with:
+          vcpkgDirectory: ${{ github.workspace }}/vcpkg
+          vcpkgGitCommitId: 055721089e8037d4d617250814d11f881e557549
 
       - name: Set up Python
         uses: actions/setup-python@v5.1.1
         with:
           python-version: "3.12"
 
-      - name: Install Requirements
+      - name: Install Dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install doxygen python3-sphinx graphviz ccache
+          sudo apt-get install -y doxygen python3-sphinx graphviz ccache
           echo 'CACHE_PATH=~/.cache/ccache' >> "$GITHUB_ENV"
           python -m pip install --upgrade pip
           pip install -r docs/requirements.txt
@@ -33,34 +44,31 @@ jobs:
         uses: actions/cache@v4.0.2
         with:
           path: ${{ env.CACHE_PATH }}
-          key: docs-cache
+          key: ccache-${{ runner.os }}-${{ hashFiles('**/CMakeLists.txt', 'docs/requirements.txt') }}
           restore-keys: |
-            Linux-Python-cache
+            ccache-${{ runner.os }}-
 
-      - name: Prepare Ccache
+      - name: Configure Ccache
         run: |
           ccache --max-size=1.0G
-          ccache -V && ccache --show-config
-          ccache --show-stats && ccache --zero-stats
+          ccache --zero-stats
 
-      - name: Build Release Docs
+      - name: Build Documentation
         run: |
-          HEAD=$(git rev-parse HEAD)
-          git fetch --all --tags
           cd docs
-          pip install . --config-settings=cmake.args="--preset=pip-local" -v
-          sphinx-build source build/html/$version \
-                -D html_theme_options.version_dropdown=true \
-                -D html_theme_options.version_json=https://raw.githubusercontent.com/antoinebou12/PhysicsBasedAnimationToolkit/refs/heads/docs/docs/source/_static/versions.json
+          pip install . --config-settings=cmake.args="--preset=pip" --config-settings=build.tool-args="-j4" -v
+          sphinx-build source build/html \
+            -D html_theme_options.version_dropdown=true \
+            -D html_theme_options.version_json=https://raw.githubusercontent.com/antoinebou12/PhysicsBasedAnimationToolkit/refs/heads/docs/docs/source/_static/versions.json
           cp source/_static/versions.json build/html/
           cd ..
 
-      - name: Build pbatoolkit
+      - name: Build Python Package
         run: |
-          pip install . --config-settings=cmake.args="--preset=pip-local" -v
+          pip install . --config-settings=cmake.args="--preset=pip" --config-settings=build.tool-args="-j4" -v
           ccache --show-stats
 
-      - name: Build Docs
+      - name: Build Sphinx Docs
         run: |
           cd docs
           make html
@@ -70,7 +78,6 @@ jobs:
       - name: Deploy to GitHub Pages
         uses: JamesIves/github-pages-deploy-action@v4.4.1
         with:
-          branch: gh-pages # The branch the action should deploy to.
-          folder: docs/build/html # The folder to deploy to GitHub Pages.
-          clean: true # Removes existing files from the deployment.
-
+          branch: gh-pages
+          folder: docs/build/html
+          clean: true
