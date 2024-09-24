@@ -71,7 +71,7 @@ jobs:
 
       - name: Build pbatoolkit
         run: |
-          pip install --verbose .
+          pip install . --config-settings=cmake.args="--preset=pip-local" -v
           ccache --show-stats
 
       - name: Build Docs
