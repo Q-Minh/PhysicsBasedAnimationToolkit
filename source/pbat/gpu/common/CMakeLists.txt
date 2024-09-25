@@ -3,6 +3,7 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     FILE_SET implementation
     FILES
     "Buffer.cuh"
+    "Cuda.cuh"
     "Morton.cuh"
     "Queue.cuh"
     "Stack.cuh"
@@ -13,6 +14,7 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
 target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     PRIVATE
     "Buffer.cu"
+    "Cuda.cu"
     "Morton.cu"
     "Queue.cu"
     "Stack.cu"
