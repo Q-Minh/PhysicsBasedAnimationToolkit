@@ -5,6 +5,8 @@
 #include "pbat/gpu/common/Buffer.cuh"
 #include "pbat/gpu/geometry/PrimitivesImpl.cuh"
 
+#include <cuda/api/device.hpp>
+#include <cuda/api/stream.hpp>
 #include <vector>
 
 namespace pbat {
@@ -24,18 +26,22 @@ class VbdImpl
      * @param dt
      * @param iterations
      * @param substeps
+     * @param rho Chebyshev semi-iterative method's estimated spectral radius
      */
-    void Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps);
+    void
+    Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps, GpuScalar rho = GpuScalar{0.95});
     /**
      * @brief
      * @param X
+     * @param bResetHistory Set state history (x(t-1) and x(t-2)) to X as well
      */
-    void SetPositions(Eigen::Ref<GpuMatrixX const> const& X);
+    void SetPositions(Eigen::Ref<GpuMatrixX const> const& X, bool bResetHistory = false);
     /**
      * @brief
      * @param v
+     * @param bResetHistory Set state velocity history (v(t-1)) to v as well
      */
-    void SetVelocities(Eigen::Ref<GpuMatrixX const> const& v);
+    void SetVelocities(Eigen::Ref<GpuMatrixX const> const& v, bool bResetHistory = false);
     /**
      * @brief
      * @param aext

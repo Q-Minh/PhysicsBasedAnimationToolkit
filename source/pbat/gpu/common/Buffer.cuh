@@ -17,7 +17,8 @@ template <class T, int D = 1>
 class Buffer
 {
   public:
-    using SelfType = Buffer<T, D>;
+    using SelfType  = Buffer<T, D>;
+    using ValueType = T;
 
     Buffer(std::size_t count = 0ULL);
 
