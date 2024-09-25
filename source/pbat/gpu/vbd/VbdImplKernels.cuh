@@ -28,7 +28,7 @@ struct FInertialTarget
     std::array<GpuScalar const*, 3> vt;
     std::array<GpuScalar const*, 3> aext;
     std::array<GpuScalar*, 3> xtilde;
-}
+};
 
 struct FAdaptiveInitialization
 {
@@ -56,7 +56,7 @@ struct FAdaptiveInitialization
     {
         using namespace pbat::gpu::math::linalg;
         Vector3 const aexti    = GetExternalAcceleration(i);
-        GpuScalar const atext  = Dot(GetAcceleration(i), aexti) / SquaredNorm(aexti, aexti);
+        GpuScalar const atext  = Dot(GetAcceleration(i), aexti) / SquaredNorm(aexti);
         GpuScalar atilde       = min(max(atext, GpuScalar{0}), GpuScalar{1});
         bool const bWasClamped = (atilde == GpuScalar{0}) or (atilde == GpuScalar{1});
         atilde                 = (not bWasClamped) * atext + bWasClamped * atilde;
@@ -84,7 +84,7 @@ struct FChebyshev
     {
     }
 
-    __host__ Update(auto k)
+    void Update(auto k)
     {
         omega = (k == 1) ? omega = GpuScalar{2} / (GpuScalar{2} - rho2) :
                            GpuScalar{4} / (GpuScalar{4} - rho2 * omega);
@@ -133,15 +133,16 @@ struct BackwardEulerMinimization
     std::array<GpuScalar*, 3> xt;           ///< Previous vertex positions
     std::array<GpuScalar*, 3> x;            ///< Vertex positions
 
-    GpuIndex const* T;                    ///< 4x|#elements| array of tetrahedra
-    GpuScalar const* GP;                  ///< 4x3x|#elements| array of shape function gradients
+    std::array<GpuIndex const*, 4> T;     ///< 4x|#elements| array of tetrahedra
+    GpuScalar* GP;                        ///< 4x3x|#elements| array of shape function gradients
     std::array<GpuScalar const*, 2> lame; ///< 2x|#elements| of 1st and 2nd Lame coefficients
-    GpuScalar const* kD;                  ///< |#elements| array of damping coefficients
+    // GpuScalar const* kD;                  ///< |#elements| array of damping coefficients
 
     GpuIndex const* GVTn;      ///< Vertex-tetrahedron adjacency list's neighbour list
     GpuIndex const* GVTp;      ///< Vertex-tetrahedron adjacency list's prefix sum
     GpuIndex const* GVTilocal; ///< Vertex-tetrahedron adjacency list's ilocal property
 
+    GpuScalar kD;                             ///< Rayleigh damping coefficient
     GpuScalar kC;                             ///< Collision penalty
     GpuIndex nMaxCollidingTrianglesPerVertex; ///< Memory capacity for storing vertex triangle
                                               ///< collision constraints
@@ -158,9 +159,11 @@ struct BackwardEulerMinimization
     using Matrix = pbat::gpu::math::linalg::Matrix<ScalarType, kRows, kCols>;
 
     template <class ScalarType>
-    __device__ Matrix<ScalarType, 3> ToLocal(auto vi, std::array<ScalarType*, 3> vData) const
+    __device__ Matrix<std::remove_const_t<ScalarType>, 3>
+    ToLocal(auto vi, std::array<ScalarType*, 3> vData) const
     {
-        Matrix<ScalarType, 3> vlocal;
+        using UnderlyingScalarType = std::remove_const_t<ScalarType>;
+        Matrix<UnderlyingScalarType, 3> vlocal;
         vlocal(0) = vData[0][vi];
         vlocal(1) = vData[1][vi];
         vlocal(2) = vData[2][vi];
@@ -172,16 +175,16 @@ struct BackwardEulerMinimization
     ToGlobal(auto vi, Matrix<ScalarType, 3> const& vData, std::array<ScalarType*, 3> vGlobalData)
         const
     {
-        vGlobal[0][vi] = vData(0);
-        vGlobal[1][vi] = vData(1);
-        vGlobal[2][vi] = vData(2);
+        vGlobalData[0][vi] = vData(0);
+        vGlobalData[1][vi] = vData(1);
+        vGlobalData[2][vi] = vData(2);
     }
 
     __device__ Matrix<GpuScalar, 4, 3> BasisFunctionGradients(auto e) const
     {
         using namespace pbat::gpu::math::linalg;
-        Matrix<GpuScalar, 4, 3> GP = MatrixView<GpuScalar, 4, 3>(BDF.GP + e * 12);
-        return GP;
+        Matrix<GpuScalar, 4, 3> GPlocal = MatrixView<GpuScalar, 4, 3>(GP + e * 12);
+        return GPlocal;
     }
 
     __device__ Matrix<GpuScalar, 3, 4> ElementVertexPositions(auto e) const
@@ -189,16 +192,16 @@ struct BackwardEulerMinimization
         Matrix<GpuScalar, 3, 4> xe;
         for (auto i = 0; i < 4; ++i)
         {
-            GpuIndex vi = T[e * 4 + i];
+            GpuIndex vi = T[i][e];
             xe.Col(i)   = ToLocal(vi, x);
         }
         return xe;
     }
 
     __device__ Matrix<GpuScalar, 9, 10>
-    StableNeoHookeanDerivativesWrtF(auto e, Matrix<GpuScalar, 4, 3> const& GP) const
+    StableNeoHookeanDerivativesWrtF(auto e, Matrix<GpuScalar, 4, 3> const& GPe) const
     {
-        Matrix<GpuScalar, 3, 3> F = BDF.ElementVertexPositions(e) * GP;
+        Matrix<GpuScalar, 3, 3> F = ElementVertexPositions(e) * GPe;
         GpuScalar mu              = lame[0][e];
         GpuScalar lambda          = lame[1][e];
 
@@ -356,13 +359,13 @@ struct BackwardEulerMinimization
 
     __device__ void ComputeStableNeoHookeanDerivatives(auto e, auto ilocal, GpuScalar* Hge) const
     {
+        using namespace pbat::gpu::math::linalg;
         // Compute (d^k Psi / dF^k)
-        Matrix<GpuScalar, 4, 3> GP   = BDF.BasisFunctionGradients(e);
-        Matrix<GpuScalar, 9, 10> HGF = StableNeoHookeanDerivativesWrtF(e, GP);
+        Matrix<GpuScalar, 4, 3> GPe  = BasisFunctionGradients(e);
+        Matrix<GpuScalar, 9, 10> HGF = StableNeoHookeanDerivativesWrtF(e, GPe);
         auto HF                      = HGF.Slice<9, 9>(0, 0);
         auto gF                      = HGF.Col(9);
         // Write vertex-specific derivatives into output memory HGe
-        using namespace pbat::gpu::math::linalg;
         MatrixView<GpuScalar, 3, 4> HGei(Hge);
         HGei.SetZero();
         auto Hi = HGei.Slice<3, 3>(0, 0);
@@ -370,9 +373,9 @@ struct BackwardEulerMinimization
         // Contract (d^k Psi / dF^k) with (d F / dx)^k. See pbat/fem/DeformationGradient.h.
         for (auto kj = 0; kj < 3; ++kj)
             for (auto ki = 0; ki < 3; ++ki)
-                Hi += GP(ilocal, ki) * GP(ilocal, kj) * HF.Slice<3, 3>(ki * 3, kj * 3);
+                Hi += GPe(ilocal, ki) * GPe(ilocal, kj) * HF.Slice<3, 3>(ki * 3, kj * 3);
         for (auto k = 0; k < 3; ++k)
-            gi += GP(ilocal, k) * gF.Slice<3, 1>(k * 3, 0);
+            gi += GPe(ilocal, k) * gF.Slice<3, 1>(k * 3, 0);
     }
 };
 
@@ -438,7 +441,7 @@ __global__ void MinimizeBackwardEuler(BackwardEulerMinimization BDF)
 
     // 4. Commit vertex descent step
     BDF.ToGlobal(i, xi, BDF.x);
-}
+};
 
 } // namespace kernels
 } // namespace vbd

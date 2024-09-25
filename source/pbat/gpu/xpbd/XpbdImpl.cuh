@@ -47,7 +47,7 @@ class XpbdImpl
      * @brief
      * @param dt
      * @param iterations
-     * @params substeps
+     * @param substeps
      */
     void Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps);
     /**

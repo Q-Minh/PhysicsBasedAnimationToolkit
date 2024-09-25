@@ -61,11 +61,11 @@ XpbdImpl::XpbdImpl(
         thrust::copy(X.x[d].begin(), X.x[d].end(), mPositions[d].begin());
         thrust::fill(mVelocities[d].begin(), mVelocities[d].end(), GpuScalar{0.});
         thrust::fill(mExternalForces[d].begin(), mExternalForces[d].end(), GpuScalar{0.});
-        thrust::fill(
-            mMassInverses.Data(),
-            mMassInverses.Data() + mMassInverses.Size(),
-            GpuScalar{1.});
     }
+    thrust::fill(
+        mMassInverses.Data(),
+        mMassInverses.Data() + mMassInverses.Size(),
+        GpuScalar{1e-3});
 }
 
 void XpbdImpl::PrepareConstraints()
@@ -200,7 +200,7 @@ void XpbdImpl::SetPositions(Eigen::Ref<GpuMatrixX const> const& Xin)
            << ", but got " << Xin.rows() << "x" << Xin.cols() << "\n";
         throw std::invalid_argument(ss.str());
     }
-    for (auto d = 0; d < mVelocities.Dimensions(); ++d)
+    for (auto d = 0; d < mPositions.Dimensions(); ++d)
     {
         thrust::copy(Xin.row(d).begin(), Xin.row(d).end(), X.x[d].begin());
         thrust::copy(Xin.row(d).begin(), Xin.row(d).end(), mPositions[d].begin());

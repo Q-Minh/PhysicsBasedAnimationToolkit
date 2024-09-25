@@ -65,6 +65,7 @@ inline Buffer<T, D>& Buffer<T, D>::operator=(Buffer<T, D> const& other)
             mBuffers[d].resize(other.Size());
         thrust::copy(other.mBuffers[d].begin(), other.mBuffers[d].end(), mBuffers[d].begin());
     }
+    return *this;
 }
 
 template <class T, int D>
