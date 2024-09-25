@@ -183,6 +183,8 @@ struct BackwardEulerMinimization
 
     __device__ void
     ComputeStableNeoHookeanDerivatives(GpuIndex e, GpuIndex ilocal, GpuScalar* Hge) const;
+
+    constexpr auto ExpectedSharedMemoryPerThreadInBytes() const { return 12 * sizeof(GpuScalar); }
 };
 
 __global__ void MinimizeBackwardEuler(BackwardEulerMinimization BDF);

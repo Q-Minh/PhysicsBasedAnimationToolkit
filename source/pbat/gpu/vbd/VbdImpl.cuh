@@ -82,6 +82,11 @@ class VbdImpl
      * @param partitions
      */
     void SetConstraintPartitions(std::vector<std::vector<GpuIndex>> const& partitions);
+    /**
+     * @brief
+     * @param blockSize
+     */
+    void SetBlockSize(GpuIndex blockSize);
 
     /**
      * @brief
@@ -149,6 +154,8 @@ class VbdImpl
                                                       ///< colliding triangles for each vertex.
 
     std::vector<common::Buffer<GpuIndex>> mPartitions; ///< Constraint partitions
+
+    GpuIndex mGpuThreadBlockSize; ///< Number of threads per CUDA thread block
 };
 
 } // namespace vbd

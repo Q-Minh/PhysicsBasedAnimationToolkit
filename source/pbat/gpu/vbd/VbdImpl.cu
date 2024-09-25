@@ -137,11 +137,15 @@ void VbdImpl::Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps, GpuScal
         CUstream_st* thrustNativeStreamHandle = e.stream().get();
         CUstream_st* cawNativeStreamHandle    = stream.handle();
         assert(thrustNativeStreamHandle == cawNativeStreamHandle);
-        auto bcdLaunchConfiguration = cuda::launch_config_builder()
-                                          .grid_size(nVertices)
-                                          .use_maximum_linear_block()
-                                          .dynamic_shared_memory_size(1 << 16 /* 64kB */)
-                                          .build();
+        auto kDynamicSharedMemoryCapacity =
+            mGpuThreadBlockSize * bdf.ExpectedSharedMemoryPerThreadInBytes();
+        auto bcdLaunchConfiguration =
+            cuda::launch_config_builder()
+                .grid_size(nVertices)
+                .block_size(mGpuThreadBlockSize)
+                .dynamic_shared_memory_size(
+                    static_cast<cuda::memory::shared::size_t>(kDynamicSharedMemoryCapacity))
+                .build();
         // Minimize Backward Euler, i.e. BDF1, objective
         for (auto k = 0; k < iterations; ++k)
         {
@@ -300,6 +304,11 @@ void VbdImpl::SetConstraintPartitions(std::vector<std::vector<GpuIndex>> const& 
         mPartitions[p].Resize(partitions[p].size());
         thrust::copy(partitions[p].begin(), partitions[p].end(), mPartitions[p].Data());
     }
+}
+
+void VbdImpl::SetBlockSize(GpuIndex blockSize)
+{
+    mGpuThreadBlockSize = blockSize;
 }
 
 common::Buffer<GpuScalar, 3> const& VbdImpl::GetVelocity() const
