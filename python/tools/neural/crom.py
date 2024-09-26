@@ -17,7 +17,8 @@ class ShapeDataset(Dataset):
     def __init__(self, mesh_path):
         mesh_files = [file for file in os.listdir(mesh_path) if not os.path.isdir(
             file) and (file.endswith(".mesh") or file.endswith(".msh"))]
-        mesh_files = sorted(mesh_files, key=lambda file : int(file.split(".")[0]))
+        mesh_files = sorted(
+            mesh_files, key=lambda file: int(file.split(".")[0]))
         meshes = [meshio.read(os.path.join(mesh_path, file))
                   for file in mesh_files]
         V, C = [mesh.points for mesh in meshes], [
@@ -31,7 +32,7 @@ class ShapeDataset(Dataset):
         return len(self.V)
 
     def __getitem__(self, idx):
-        return self.V[idx].T, self.V[0].T
+        return self.V[idx], self.V[0]  # 2-tuple of |#vertices|x|#dimensions|
 
 
 class Encoder(nn.Module):
@@ -73,7 +74,16 @@ class Encoder(nn.Module):
         self.linear = nn.ModuleList(self.linear)
         self.convolution = nn.ModuleList(self.convolution)
 
-    def forward(self, X: torch.Tensor):
+    def forward(self, f: torch.Tensor):
+        """
+
+        Args:
+            f (torch.Tensor): |#batch|x|#samples|x|#output dims|
+
+        Returns:
+            torch.Tensor: latent code
+        """
+        X = torch.swapaxes(f, 1, 2)
         for layer in self.convolution:
             X = layer(X)
         X = X.flatten(1, 2)
@@ -111,6 +121,14 @@ class Decoder(nn.Module):
         self.layers = nn.ModuleList(self.layers)
 
     def forward(self, X: torch.Tensor):
+        """
+
+        Args:
+            X (torch.Tensor): |#batch|x|#latent + #input dims|
+
+        Returns:
+            torch.Tensor: 
+        """
         for layer in self.layers:
             X = layer(X)
         return X
@@ -124,12 +142,12 @@ class CROM(nn.Module):
         self.decoder = decoder
 
     def forward(self, f: torch.Tensor, X: torch.Tensor):
-        Q = self.encoder(f)
         # Q = |#batch|x|#latent|
-        Q = Q[:, :, torch.newaxis].expand(-1, -1, self.encoder.p)
-        Q = Q.swapaxes(1, 2)
-        X = X.swapaxes(1, 2)
+        Q = self.encoder(f)
+        # Q = |#batch|x|#latent|x|#samples|
+        Q = Q.unsqueeze(dim=2).expand(-1, -1, self.encoder.p)
         # Q = |#batch|x|#samples|x|#latent|
+        Q = Q.swapaxes(1, 2)
         # X = |#batch|x|#samples|x|#din|
         Xhat = torch.cat((X, Q), dim=-1)
         # Xhat = |#batch|x|#samples|x|#din + #latent|
@@ -138,7 +156,7 @@ class CROM(nn.Module):
         g = self.decoder(Xhat)
         return g
 
-    
+
 def line_search(alpha0: float,
                 xk: np.ndarray,
                 dx: np.ndarray,
@@ -157,9 +175,19 @@ def line_search(alpha0: float,
             break
         alphaj = tau*alphaj
     return alphaj
-    
-    
-def concat(q, X):
+
+
+def concat(X, q):
+    """
+
+    Args:
+        q (torch.Tensor): |#latent dims| latent vector
+        X (torch.Tensor): |#points|x|#input dims| sample positions
+
+    Returns:
+        torch.Tensor: Concatenation of q, duplicated #points times, with X
+    """
+    M = X.shape[0]
     # Q = |#latent|
     Q = q.unsqueeze(dim=0).expand(M, -1)
     # Q = |#samples|x|#latent|
@@ -167,46 +195,52 @@ def concat(q, X):
     Xhat = torch.cat((X, Q), dim=-1)
     # Xhat = |#samples|x|#din + #latent|
     return Xhat
-    
-    
+
+
 def gauss_newton(
-    decoder: Decoder, 
-    q0: torch.Tensor, 
-    f: torch.Tensor, 
-    X: torch.Tensor, 
-    maxiters : int=10):
+        decoder: Decoder,
+        q0: torch.Tensor,
+        f: torch.Tensor,
+        X: torch.Tensor,
+        maxiters: int = 10):
     """Solve non-linear least squares problem given an initial 
     iterate q0, sampled function values f taken at sample positions X, 
     and the non-linear function decoder(q).
 
     Args:
         decoder: g(X,q)
-        q0: Initial latent code
-        f: Sampled function values at X
-        X: Sample positions
+        q0: |#latent dims| initial latent code vector
+        f: |#integration samples|x|#output dims| sampled function values at X
+        X: |#integration samples|x|#input dims| sample positions
         maxiters (int, optional): Maximum Gauss-Newton iterations. Defaults to 10.
 
     Returns:
         torch.Tensor: The latent code q corresponding to f
-    """    
+    """
     def L2(q):
-        g = decoder(concat(q, X))
-        return torch.linalg.norm(g - f, ord='fro')
-    
+        g = decoder(concat(X, q))
+        return torch.linalg.norm(g - f)
+
     def residual(Xhat):
-        # Xhat -> |#samples|x|#din + #latent|
+        # Xhat -> |#integration samples|x|#input dims + #latent|
         return torch.linalg.norm(decoder(Xhat) - f, dim=1)
-    
+
     din = X.shape[1]
     dout = decoder.dout
     q = q0
-    J = torch.zeros(q.shape[0], dout)
+    J = torch.zeros(dout, q.shape[0])
     for _ in range(maxiters):
-        Xhat = concat(q, X)
+        # Xhat: |#integration samples|x|#input dims + #latent|
+        Xhat = concat(X, q)
+        # g: |#integration samples|x|#output dims|
         g = decoder(Xhat)
+        # l: |#integration samples|x|#output dims|
         l = g - f
         r = torch.linalg.norm(l)
-        J = (l / r).T @ torch.autograd.functional.jacobian(residual, Xhat)[:,din:]
+        # J: |#output dims|x|#latent|
+        J = (l / r).T @ torch.autograd.functional.jacobian(residual,
+                                                           Xhat)[:, din:]
+        # A: |#latent|x|#latent|
         A = J.T @ J
         b = -J.T @ r
         dq = torch.linalg.solve(A, b)
@@ -220,21 +254,31 @@ def sampling_metric(r: torch.Tensor):
 
 
 def sampling_residual(M: list, dataset: Dataset, encoder: Encoder, decoder: Decoder):
+    # ft: |#training samples|x|#output dims|
+    # XT: |#training samples|x|#input dims|
     fT, XT = dataset[-1]
-    qT = encoder(fT)
-    fMT = fT[M,:]
-    XMT = XT[M,:]
+    fT, XT = torch.from_numpy(fT.T), torch.from_numpy(XT.T)
+    # qT: |#latent dims|
+    qT = encoder(fT.unsqueeze(0))[0, :]
+    # fMT: |#integration samples|x|#output dims|
+    fMT = fT[M, :]
+    # XMT: |#integration samples|x|#input dims|
+    XMT = XT[M, :]
+    # qM: |#latent|
     qM = gauss_newton(decoder, qT, fMT, XMT)
-    r = torch.linalg.norm(decoder(concat(qM, XT)) - fT)
+    # Xhat: |#training samples|x|#input dims + #latent|
+    Xhat = concat(qM, XT)
+    # r: |#training samples|
+    r = torch.linalg.norm(decoder(Xhat) - fT, dim=1)
     return r
 
 
 def robust_sampling(
-    dataset: Dataset, 
-    encoder: Encoder, 
-    decoder: Decoder, 
-    target_accuracy: float = 1e-2, 
-    Q: int = 10):
+        dataset: Dataset,
+        encoder: Encoder,
+        decoder: Decoder,
+        target_accuracy: float = 1e-2,
+        Q: int = 10):
     """Robust sampling to get runtime integration samples from CROM paper
 
     Args:
@@ -253,7 +297,7 @@ def robust_sampling(
     """
     P = encoder.p
     k = random.randint(0, P - 1)
-    M = [] 
+    M = []
     M.append(k)
     r = sampling_residual(M, dataset, encoder, decoder)
     while sampling_metric(r) >= target_accuracy:
@@ -275,21 +319,17 @@ class Dynamics:
         self.v = v
         self.f = f
         self.rho = rho
-        self.mu     = Y / (2. * (1. + nu));
-        self.llambda = (Y * nu) / ((1. + nu) * (1. - 2. * nu));
-        
-        
+        self.mu = Y / (2. * (1. + nu))
+        self.llambda = (Y * nu) / ((1. + nu) * (1. - 2. * nu))
+
     def I1(self, S: torch.Tensor):
         return S.trace()
-
 
     def I2(self, F: torch.Tensor):
         return (F.T @ F).trace()
 
-
     def I3(self, F: torch.Tensor):
         return F.det()
-
 
     def stvk(self, F):
         I = torch.eye(F.shape[0])
@@ -300,12 +340,11 @@ class Dynamics:
         EddotE = EtE.trace()
         return self.mu*EddotE + (self.llambda / 2) * trE**2
 
-
     def neohookean(self, F):
         alpha = 1 + self.mu / self.llambda
         d = F.shape[1]
         return (self.mu / 2) * (self.I2(F) - d) + (self.llambda / 2) * (self.I3(F) - alpha)**2
-        
+
     def __call__(self, xt: torch.Tensor, X: torch.Tensor, dt: float):
         # Default to BDF1 for now, but should support more integration schemes
         vt = self.v
@@ -315,24 +354,32 @@ class Dynamics:
         nsamples = X.shape[0]
         fint = torch.zeros_like(xt)
         for s in range(nsamples):
-            F = torch.zeros((din,din), requires_grad=True)
+            F = torch.zeros((din, din), requires_grad=True)
+            # Compute F = dx/dX
             for d in range(din):
-                F[d,:] = torch.autograd.grad(xt[s,d], X[s,:], create_graph=True)
+                F[d, :] = torch.autograd.grad(
+                    xt[s, d], X[s, :], create_graph=True)
+            # Evaluate elastic potential Psi(F)
             Psi = self.neohookean(F)
-            fint[s,:] = torch.autograd.grad(Psi, xt[s,:])
+            # Compute internal stress as dPsi/dF
+            dPsidF = torch.autograd.grad(
+                Psi, F, create_graph=True, retain_graph=True)
+            # Compute internal forces as div(dPsi/dF)
+            for d in range(din):
+                fint[s, d] = torch.autograd.grad(dPsidF[:, d], X[s, :])
         x = xt + dt*vt + dt**2 * (fint + fext) / rho
         self.v = (x - xt) / dt
         return x
 
 
 def simulate(
-    q0: torch.Tensor, 
-    decoder: Decoder, 
-    X: torch.Tensor, 
-    Xfull: torch.Tensor, 
-    integrate_pde: Callable[[torch.Tensor, float], torch.Tensor], 
-    dt: float = 0.01, 
-    T: int = 500):
+        q0: torch.Tensor,
+        decoder: Decoder,
+        X: torch.Tensor,
+        Xfull: torch.Tensor,
+        integrate_pde: Callable[[torch.Tensor, float], torch.Tensor],
+        dt: float = 0.01,
+        T: int = 500):
     """_summary_
 
     Args:
@@ -347,12 +394,12 @@ def simulate(
     din = X.shape[1]
     q = q0
     for t in range(T):
-        Xhat = concat(q, X)
+        Xhat = concat(X, q)
         f = decoder(Xhat)
-        f = integrate_pde(f, Xhat[:,din:],dt)
+        f = integrate_pde(f, Xhat[:, din:], dt)
         q = gauss_newton(decoder, q, f, X)
         # Obtain full-resolution PDE solution at current time step
-        # ffull = decoder(concat(q, Xfull))
+        # ffull = decoder(concat(Xfull, q))
 
 
 def train(args):
@@ -400,7 +447,7 @@ def train(args):
         for b, (fb, Xb) in enumerate(train):
             optimizer.zero_grad()
             gb = crom(fb, Xb)
-            fb = fb.swapaxes(1, 2).flatten(0, 1)
+            fb = fb.flatten(0, 1)
             L = criterion(gb, fb)
             losses.append(L.item())
             L.backward()
@@ -411,7 +458,7 @@ def train(args):
         torch.save(crom.decoder, f"{args.output}/decoder.pt")
         torch.save(crom.encoder, f"{args.output}/encoder.pt")
     writer.close()
-    q0 = crom.encoder(X0)
+    q0 = crom.encoder(torch.from_numpy(X0).unsqueeze(0))
     torch.save(q0, f"{args.output}/q.pt")
 
 
@@ -421,7 +468,7 @@ def sample(args):
     dataset = ShapeDataset(args.input)
     M = robust_sampling(dataset, encoder, decoder, target_accuracy=0.01, Q=10)
     f0, X0 = dataset[0]
-    XM = X0[M,:]
+    XM = X0[M, :]
     torch.save(XM, f"{args.output}/XM.pt")
 
 
@@ -433,7 +480,7 @@ def run(args):
     rho = torch.ones(XM.shape[0])
     g = -9.81
     f = torch.zeros_like(XM)
-    f[:,-1] = rho*g
+    f[:, -1] = rho*g
     simulate(q0, decoder, XM, None, Dynamics(v, f, rho))
 
 
@@ -479,4 +526,3 @@ if __name__ == "__main__":
         sample(args)
     if args.mode == "run":
         run(args)
-    
