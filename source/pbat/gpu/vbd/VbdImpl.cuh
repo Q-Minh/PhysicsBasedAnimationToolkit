@@ -54,6 +54,11 @@ class VbdImpl
     void SetMass(Eigen::Ref<GpuVectorX const> const& m);
     /**
      * @brief
+     * @param wg
+     */
+    void SetQuadratureWeights(Eigen::Ref<GpuVectorX const> const& wg);
+    /**
+     * @brief
      * @param GP
      */
     void SetShapeFunctionGradients(Eigen::Ref<GpuMatrixX const> const& GP);
@@ -81,7 +86,7 @@ class VbdImpl
      * @brief
      * @param partitions
      */
-    void SetConstraintPartitions(std::vector<std::vector<GpuIndex>> const& partitions);
+    void SetVertexPartitions(std::vector<std::vector<GpuIndex>> const& partitions);
     /**
      * @brief
      * @param blockSize
@@ -133,6 +138,8 @@ class VbdImpl
     common::Buffer<GpuScalar, 3> mExternalAcceleration;    ///< External acceleration
     common::Buffer<GpuScalar> mMass;                       ///< Lumped mass matrix diagonals
 
+    common::Buffer<GpuScalar> mQuadratureWeights; ///< |#elements| array of quadrature weights (i.e.
+                                                  ///< tetrahedron volumes for order 1)
     common::Buffer<GpuScalar> mShapeFunctionGradients; ///< 4x3x|#elements| shape function gradients
     common::Buffer<GpuScalar> mLameCoefficients; ///< 2x|#elements| 1st and 2nd Lame parameters
 

@@ -93,7 +93,8 @@ BackwardEulerMinimization::ElementVertexPositions(GpuIndex e) const
     return xe;
 }
 
-__device__ BackwardEulerMinimization::Matrix<GpuScalar, 9, 10> BackwardEulerMinimization::StableNeoHookeanDerivativesWrtF(
+__device__ BackwardEulerMinimization::Matrix<GpuScalar, 9, 10>
+BackwardEulerMinimization::StableNeoHookeanDerivativesWrtF(
     GpuIndex e,
     Matrix<GpuScalar, 4, 3> const& GPe) const
 {
@@ -264,6 +265,7 @@ __device__ void BackwardEulerMinimization::ComputeStableNeoHookeanDerivatives(
     // Compute (d^k Psi / dF^k)
     Matrix<GpuScalar, 4, 3> GPe  = BasisFunctionGradients(e);
     Matrix<GpuScalar, 9, 10> HGF = StableNeoHookeanDerivativesWrtF(e, GPe);
+    GpuScalar wge                = wg[e];
     auto HF                      = HGF.Slice<9, 9>(0, 0);
     auto gF                      = HGF.Col(9);
     // Write vertex-specific derivatives into output memory HGe
@@ -275,8 +277,10 @@ __device__ void BackwardEulerMinimization::ComputeStableNeoHookeanDerivatives(
     for (auto kj = 0; kj < 3; ++kj)
         for (auto ki = 0; ki < 3; ++ki)
             Hi += GPe(ilocal, ki) * GPe(ilocal, kj) * HF.Slice<3, 3>(ki * 3, kj * 3);
+    Hi *= wge;
     for (auto k = 0; k < 3; ++k)
         gi += GPe(ilocal, k) * gF.Slice<3, 1>(k * 3, 0);
+    gi *= wge;
 }
 
 } // namespace kernels

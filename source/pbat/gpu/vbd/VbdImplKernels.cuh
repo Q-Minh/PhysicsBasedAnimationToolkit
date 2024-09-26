@@ -129,6 +129,7 @@ struct BackwardEulerMinimization
     std::array<GpuScalar*, 3> x;      ///< Vertex positions
 
     std::array<GpuIndex*, 4> T; ///< 4x|#elements| array of tetrahedra
+    GpuScalar* wg;              ///< |#elements| array of quadrature weights
     GpuScalar* GP;              ///< 4x3x|#elements| array of shape function gradients
     GpuScalar* lame;            ///< 2x|#elements| of 1st and 2nd Lame coefficients
     // GpuScalar const* kD;                  ///< |#elements| array of damping coefficients

@@ -30,6 +30,7 @@ VbdImpl::VbdImpl(
       mVelocities(Xin.cols()),
       mExternalAcceleration(Xin.cols()),
       mMass(Xin.cols()),
+      mQuadratureWeights(Tin.cols()),
       mShapeFunctionGradients(Tin.cols() * 4 * 3),
       mLameCoefficients(Tin.cols()),
       mVertexTetrahedronNeighbours(),
@@ -40,7 +41,8 @@ VbdImpl::VbdImpl(
       mMaxCollidingTrianglesPerVertex(8),
       mCollidingTriangles(8 * Xin.cols()),
       mCollidingTriangleCount(Xin.cols()),
-      mPartitions()
+      mPartitions(),
+      mGpuThreadBlockSize(64)
 {
     for (auto d = 0; d < X.Dimensions(); ++d)
     {
@@ -137,15 +139,13 @@ void VbdImpl::Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps, GpuScal
         CUstream_st* thrustNativeStreamHandle = e.stream().get();
         CUstream_st* cawNativeStreamHandle    = stream.handle();
         assert(thrustNativeStreamHandle == cawNativeStreamHandle);
-        auto kDynamicSharedMemoryCapacity =
-            mGpuThreadBlockSize * bdf.ExpectedSharedMemoryPerThreadInBytes();
-        auto bcdLaunchConfiguration =
-            cuda::launch_config_builder()
-                .grid_size(nVertices)
-                .block_size(mGpuThreadBlockSize)
-                .dynamic_shared_memory_size(
-                    static_cast<cuda::memory::shared::size_t>(kDynamicSharedMemoryCapacity))
-                .build();
+        auto kDynamicSharedMemoryCapacity = static_cast<cuda::memory::shared::size_t>(
+            mGpuThreadBlockSize * bdf.ExpectedSharedMemoryPerThreadInBytes());
+        auto bcdLaunchConfiguration = cuda::launch_config_builder()
+                                          .grid_size(nVertices)
+                                          .block_size(mGpuThreadBlockSize)
+                                          .dynamic_shared_memory_size(kDynamicSharedMemoryCapacity)
+                                          .build();
         // Minimize Backward Euler, i.e. BDF1, objective
         for (auto k = 0; k < iterations; ++k)
         {
@@ -252,6 +252,19 @@ void VbdImpl::SetMass(Eigen::Ref<GpuVectorX const> const& m)
     thrust::copy(m.data(), m.data() + m.size(), mMass.Data());
 }
 
+void VbdImpl::SetQuadratureWeights(Eigen::Ref<GpuVectorX const> const& wg)
+{
+    auto const nTetrahedra = static_cast<GpuIndex>(T.inds.Size());
+    if (wg.size() != nTetrahedra)
+    {
+        std::ostringstream ss{};
+        ss << "Expected quadrature weights of dimensions " << nTetrahedra
+           << "x1 or its transpose, but got " << wg.rows() << "x" << wg.cols() << "\n";
+        throw std::invalid_argument(ss.str());
+    }
+    thrust::copy(wg.data(), wg.data() + wg.size(), mQuadratureWeights.Data());
+}
+
 void VbdImpl::SetShapeFunctionGradients(Eigen::Ref<GpuMatrixX const> const& GP)
 {
     auto const nTetrahedra = static_cast<GpuIndex>(T.inds.Size());
@@ -296,7 +309,7 @@ void VbdImpl::SetRayleighDampingCoefficient(GpuScalar kD)
     mRayleighDamping = kD;
 }
 
-void VbdImpl::SetConstraintPartitions(std::vector<std::vector<GpuIndex>> const& partitions)
+void VbdImpl::SetVertexPartitions(std::vector<std::vector<GpuIndex>> const& partitions)
 {
     mPartitions.resize(partitions.size());
     for (auto p = 0; p < partitions.size(); ++p)
@@ -344,3 +357,100 @@ std::vector<common::Buffer<GpuIndex>> const& VbdImpl::GetPartitions() const
 } // namespace vbd
 } // namespace gpu
 } // namespace pbat
+
+#include "pbat/common/Eigen.h"
+#include "pbat/fem/Jacobian.h"
+#include "pbat/fem/Mesh.h"
+#include "pbat/fem/ShapeFunctions.h"
+#include "pbat/fem/Tetrahedron.h"
+#include "pbat/physics/HyperElasticity.h"
+
+#include <Eigen/SparseCore>
+#include <doctest/doctest.h>
+#include <span>
+#include <vector>
+
+TEST_CASE("[gpu][xpbd] Xpbd")
+{
+    using namespace pbat;
+    // Arrange
+    // Cube mesh
+    GpuMatrixX P(3, 8);
+    GpuIndexMatrixX V(1, 8);
+    GpuIndexMatrixX T(4, 5);
+    GpuIndexMatrixX F(3, 12);
+    // clang-format off
+    P << 0.f, 1.f, 0.f, 1.f, 0.f, 1.f, 0.f, 1.f,
+         0.f, 0.f, 1.f, 1.f, 0.f, 0.f, 1.f, 1.f,
+         0.f, 0.f, 0.f, 0.f, 1.f, 1.f, 1.f, 1.f;
+    T << 0, 3, 5, 6, 0,
+         1, 2, 4, 7, 5,
+         3, 0, 6, 5, 3,
+         5, 6, 0, 3, 6;
+    F << 0, 1, 1, 3, 3, 2, 2, 0, 0, 0, 4, 5,
+         1, 5, 3, 7, 2, 6, 0, 4, 3, 2, 5, 7,
+         4, 4, 5, 5, 7, 7, 6, 6, 1, 3, 6, 6;
+    // clang-format on
+    V.reshaped().setLinSpaced(0, static_cast<GpuIndex>(P.cols() - 1));
+    // Parallel graph information
+    using SparseMatrixType = Eigen::SparseMatrix<GpuIndex, Eigen::ColMajor>;
+    using TripletType      = Eigen::Triplet<GpuIndex, typename SparseMatrixType::StorageIndex>;
+    SparseMatrixType G(T.cols(), P.cols());
+    std::vector<TripletType> Gij{};
+    for (auto e = 0; e < T.cols(); ++e)
+    {
+        for (auto ilocal = 0; ilocal < T.rows(); ++ilocal)
+        {
+            auto i = e;
+            auto j = T(ilocal, e);
+            Gij.push_back(TripletType{i, j, ilocal});
+        }
+    }
+    G.setFromTriplets(Gij.begin(), Gij.end());
+    CHECK(G.isCompressed());
+    std::span<GpuIndex> vertexTetrahedronNeighbours{
+        G.innerIndexPtr(),
+        static_cast<std::size_t>(G.nonZeros())};
+    std::span<GpuIndex> vertexTetrahedronPrefix{
+        G.outerIndexPtr(),
+        static_cast<std::size_t>(G.outerSize() + 1)};
+    std::span<GpuIndex> vertexTetrahedronLocalVertexIndices{
+        G.innerNonZeroPtr(),
+        static_cast<std::size_t>(G.nonZeros())};
+    std::vector<std::vector<GpuIndex>> partitions(P.cols());
+    for (auto p = 0; p < partitions.size(); ++p)
+        partitions[p].push_back(p);
+    // Material parameters
+    fem::Mesh<fem::Tetrahedron<1>, 3> mesh{P.cast<Scalar>(), T.cast<Index>()};
+    GpuMatrixX wg           = fem::DeterminantOfJacobian<1>(mesh).cast<GpuScalar>();
+    GpuMatrixX GP           = fem::ShapeFunctionGradients<1>(mesh).cast<GpuScalar>();
+    auto constexpr Y        = 1e6;
+    auto constexpr nu       = 0.45;
+    auto const [mu, lambda] = physics::LameCoefficients(Y, nu);
+    GpuMatrixX lame(2, T.cols());
+    lame.row(0).array() = static_cast<GpuScalar>(mu);
+    lame.row(1).array() = static_cast<GpuScalar>(lambda);
+    // Problem parameters
+    GpuMatrixX aext(3, P.cols());
+    aext.colwise()    = Eigen::Vector<GpuScalar, 3>{GpuScalar{0}, GpuScalar{0}, GpuScalar{-9.81}};
+    auto constexpr dt = GpuScalar{1e-2};
+    auto constexpr substeps   = 1;
+    auto constexpr iterations = 1;
+    auto constexpr rhoC       = GpuScalar{0.95};
+    // Act
+    using pbat::gpu::vbd::VbdImpl;
+    VbdImpl vbd{P, V, F, T};
+    vbd.SetExternalAcceleration(aext);
+    vbd.SetQuadratureWeights(wg);
+    vbd.SetShapeFunctionGradients(GP);
+    vbd.SetLameCoefficients(lame);
+    vbd.SetVertexTetrahedronAdjacencyList(
+        common::ToEigen(vertexTetrahedronNeighbours),
+        common::ToEigen(vertexTetrahedronPrefix),
+        common::ToEigen(vertexTetrahedronLocalVertexIndices));
+    vbd.SetVertexPartitions(partitions);
+
+    vbd.Step(dt, iterations, substeps, rhoC);
+
+    // Assert
+}
