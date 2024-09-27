@@ -17,3 +17,5 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     "VbdImpl.cu"
     "VbdImplKernels.cu"
 )
+
+add_subdirectory(tests)

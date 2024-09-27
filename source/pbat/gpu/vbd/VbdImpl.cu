@@ -359,11 +359,7 @@ std::vector<common::Buffer<GpuIndex>> const& VbdImpl::GetPartitions() const
 } // namespace pbat
 
 #include "pbat/common/Eigen.h"
-#include "pbat/fem/Jacobian.h"
-#include "pbat/fem/Mesh.h"
-#include "pbat/fem/ShapeFunctions.h"
-#include "pbat/fem/Tetrahedron.h"
-#include "pbat/physics/HyperElasticity.h"
+#include "tests/Fem.h"
 
 #include <Eigen/SparseCore>
 #include <doctest/doctest.h>
@@ -372,7 +368,14 @@ std::vector<common::Buffer<GpuIndex>> const& VbdImpl::GetPartitions() const
 
 TEST_CASE("[gpu][xpbd] Xpbd")
 {
-    using namespace pbat;
+    using pbat::GpuIndex;
+    using pbat::GpuIndexMatrixX;
+    using pbat::GpuMatrixX;
+    using pbat::GpuScalar;
+    using pbat::GpuVectorX;
+    using pbat::Index;
+    using pbat::Scalar;
+    using pbat::common::ToEigen;
     // Arrange
     // Cube mesh
     GpuMatrixX P(3, 8);
@@ -421,15 +424,13 @@ TEST_CASE("[gpu][xpbd] Xpbd")
     for (auto p = 0; p < partitions.size(); ++p)
         partitions[p].push_back(p);
     // Material parameters
-    fem::Mesh<fem::Tetrahedron<1>, 3> mesh{P.cast<Scalar>(), T.cast<Index>()};
-    GpuMatrixX wg           = fem::DeterminantOfJacobian<1>(mesh).cast<GpuScalar>();
-    GpuMatrixX GP           = fem::ShapeFunctionGradients<1>(mesh).cast<GpuScalar>();
-    auto constexpr Y        = 1e6;
-    auto constexpr nu       = 0.45;
-    auto const [mu, lambda] = physics::LameCoefficients(Y, nu);
-    GpuMatrixX lame(2, T.cols());
-    lame.row(0).array() = static_cast<GpuScalar>(mu);
-    lame.row(1).array() = static_cast<GpuScalar>(lambda);
+    using pbat::gpu::vbd::tests::LinearFemMesh;
+    LinearFemMesh mesh{P, T};
+    GpuVectorX wg     = mesh.QuadratureWeights();
+    GpuMatrixX GP     = mesh.ShapeFunctionGradients();
+    auto constexpr Y  = GpuScalar{1e6};
+    auto constexpr nu = GpuScalar{0.45};
+    GpuMatrixX lame   = mesh.LameCoefficients(Y, nu);
     // Problem parameters
     GpuMatrixX aext(3, P.cols());
     aext.colwise()    = Eigen::Vector<GpuScalar, 3>{GpuScalar{0}, GpuScalar{0}, GpuScalar{-9.81}};
@@ -445,9 +446,9 @@ TEST_CASE("[gpu][xpbd] Xpbd")
     vbd.SetShapeFunctionGradients(GP);
     vbd.SetLameCoefficients(lame);
     vbd.SetVertexTetrahedronAdjacencyList(
-        common::ToEigen(vertexTetrahedronNeighbours),
-        common::ToEigen(vertexTetrahedronPrefix),
-        common::ToEigen(vertexTetrahedronLocalVertexIndices));
+        ToEigen(vertexTetrahedronNeighbours),
+        ToEigen(vertexTetrahedronPrefix),
+        ToEigen(vertexTetrahedronLocalVertexIndices));
     vbd.SetVertexPartitions(partitions);
 
     vbd.Step(dt, iterations, substeps, rhoC);
