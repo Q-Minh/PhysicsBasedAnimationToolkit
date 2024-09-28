@@ -138,8 +138,8 @@ struct BackwardEulerMinimization
     GpuScalar* lame;            ///< 2x|#elements| of 1st and 2nd Lame coefficients
     // GpuScalar const* kD;                  ///< |#elements| array of damping coefficients
 
-    GpuIndex* GVTn;      ///< Vertex-tetrahedron adjacency list's neighbour list
     GpuIndex* GVTp;      ///< Vertex-tetrahedron adjacency list's prefix sum
+    GpuIndex* GVTn;      ///< Vertex-tetrahedron adjacency list's neighbour list
     GpuIndex* GVTilocal; ///< Vertex-tetrahedron adjacency list's ilocal property
 
     GpuScalar kD;                             ///< Rayleigh damping coefficient
@@ -185,7 +185,7 @@ struct BackwardEulerMinimization
 
     __device__ Matrix<GpuScalar, 9, 10> StableNeoHookeanDerivativesWrtF(
         GpuIndex e,
-        Matrix<GpuScalar, 3, 3> const& F,
+        Matrix<GpuScalar, 3, 3> const& Fe,
         GpuScalar mu,
         GpuScalar lambda) const;
 

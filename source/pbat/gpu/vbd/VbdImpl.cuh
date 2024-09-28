@@ -28,17 +28,21 @@ class VbdImpl
      * @param rho Chebyshev semi-iterative method's estimated spectral radius. If rho >= 1,
      * Chebyshev acceleration is not used.
      */
-    void Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps = GpuIndex{1}, GpuScalar rho = GpuScalar{1});
+    void Step(
+        GpuScalar dt,
+        GpuIndex iterations,
+        GpuIndex substeps = GpuIndex{1},
+        GpuScalar rho     = GpuScalar{1});
     /**
      * @brief
      * @param X
-     * @param bResetHistory Set state history (x(t-1) and x(t-2)) to X as well
+     * @param bResetHistory Set state history x(t-1) to X as well
      */
     void SetPositions(Eigen::Ref<GpuMatrixX const> const& X, bool bResetHistory = false);
     /**
      * @brief
      * @param v
-     * @param bResetHistory Set state velocity history (v(t-1)) to v as well
+     * @param bResetHistory Set state velocity history v(t-1) to v as well
      */
     void SetVelocities(Eigen::Ref<GpuMatrixX const> const& v, bool bResetHistory = false);
     /**
@@ -68,13 +72,13 @@ class VbdImpl
     void SetLameCoefficients(Eigen::Ref<GpuMatrixX const> const& l);
     /**
      * @brief
-     * @param GVTn
      * @param GVTp
+     * @param GVTn
      * @param GVTilocal
      */
     void SetVertexTetrahedronAdjacencyList(
-        Eigen::Ref<GpuIndexVectorX const> const& GVTn,
         Eigen::Ref<GpuIndexVectorX const> const& GVTp,
+        Eigen::Ref<GpuIndexVectorX const> const& GVTn,
         Eigen::Ref<GpuIndexVectorX const> const& GVTilocal);
     /**
      * @brief
@@ -146,9 +150,9 @@ class VbdImpl
     common::Buffer<GpuScalar> mLameCoefficients; ///< 2x|#elements| 1st and 2nd Lame parameters
 
     common::Buffer<GpuIndex>
-        mVertexTetrahedronNeighbours; ///< Vertex-tetrahedron adjacency list's neighbour list
-    common::Buffer<GpuIndex>
         mVertexTetrahedronPrefix; ///< Vertex-tetrahedron adjacency list's prefix sum
+    common::Buffer<GpuIndex>
+        mVertexTetrahedronNeighbours; ///< Vertex-tetrahedron adjacency list's neighbour list
     common::Buffer<GpuIndex> mVertexTetrahedronLocalVertexIndices; ///< Vertex-tetrahedron adjacency
                                                                    ///< list's ilocal property
 

@@ -96,7 +96,7 @@ BackwardEulerMinimization::ElementVertexPositions(GpuIndex e) const
 __device__ BackwardEulerMinimization::Matrix<GpuScalar, 9, 10>
 BackwardEulerMinimization::StableNeoHookeanDerivativesWrtF(
     GpuIndex e,
-    Matrix<GpuScalar, 3, 3> const& F,
+    Matrix<GpuScalar, 3, 3> const& Fe,
     GpuScalar mu,
     GpuScalar lambda) const
 {
@@ -106,69 +106,69 @@ BackwardEulerMinimization::StableNeoHookeanDerivativesWrtF(
     auto ge = HGe.Col(9);
 
     // Auto-generated from pbat/physics/StableNeoHookeanEnergy.h
-    GpuScalar const a0  = F(4) * F(8);
-    GpuScalar const a1  = F(5) * F(7);
+    GpuScalar const a0  = Fe(4) * Fe(8);
+    GpuScalar const a1  = Fe(5) * Fe(7);
     GpuScalar const a2  = 2 * a0 - 2 * a1;
-    GpuScalar const a3  = F(3) * F(8);
-    GpuScalar const a4  = F(4) * F(6);
-    GpuScalar const a5  = lambda * (-a1 * F(0) - a3 * F(1) - a4 * F(2) + F(0) * F(4) * F(8) +
-                                   F(1) * F(5) * F(6) + F(2) * F(3) * F(7) - 1 - mu / lambda);
+    GpuScalar const a3  = Fe(3) * Fe(8);
+    GpuScalar const a4  = Fe(4) * Fe(6);
+    GpuScalar const a5  = lambda * (-a1 * Fe(0) - a3 * Fe(1) - a4 * Fe(2) + Fe(0) * Fe(4) * Fe(8) +
+                                   Fe(1) * Fe(5) * Fe(6) + Fe(2) * Fe(3) * Fe(7) - 1 - mu / lambda);
     GpuScalar const a6  = (1.0 / 2.0) * a5;
-    GpuScalar const a7  = -2 * a3 + 2 * F(5) * F(6);
-    GpuScalar const a8  = F(3) * F(7);
+    GpuScalar const a7  = -2 * a3 + 2 * Fe(5) * Fe(6);
+    GpuScalar const a8  = Fe(3) * Fe(7);
     GpuScalar const a9  = -2 * a4 + 2 * a8;
-    GpuScalar const a10 = F(1) * F(8);
-    GpuScalar const a11 = -2 * a10 + 2 * F(2) * F(7);
-    GpuScalar const a12 = F(0) * F(8);
-    GpuScalar const a13 = F(2) * F(6);
+    GpuScalar const a10 = Fe(1) * Fe(8);
+    GpuScalar const a11 = -2 * a10 + 2 * Fe(2) * Fe(7);
+    GpuScalar const a12 = Fe(0) * Fe(8);
+    GpuScalar const a13 = Fe(2) * Fe(6);
     GpuScalar const a14 = 2 * a12 - 2 * a13;
-    GpuScalar const a15 = F(0) * F(7);
-    GpuScalar const a16 = -2 * a15 + 2 * F(1) * F(6);
-    GpuScalar const a17 = F(1) * F(5);
-    GpuScalar const a18 = F(2) * F(4);
+    GpuScalar const a15 = Fe(0) * Fe(7);
+    GpuScalar const a16 = -2 * a15 + 2 * Fe(1) * Fe(6);
+    GpuScalar const a17 = Fe(1) * Fe(5);
+    GpuScalar const a18 = Fe(2) * Fe(4);
     GpuScalar const a19 = 2 * a17 - 2 * a18;
-    GpuScalar const a20 = F(0) * F(5);
-    GpuScalar const a21 = -2 * a20 + 2 * F(2) * F(3);
-    GpuScalar const a22 = F(0) * F(4);
-    GpuScalar const a23 = F(1) * F(3);
+    GpuScalar const a20 = Fe(0) * Fe(5);
+    GpuScalar const a21 = -2 * a20 + 2 * Fe(2) * Fe(3);
+    GpuScalar const a22 = Fe(0) * Fe(4);
+    GpuScalar const a23 = Fe(1) * Fe(3);
     GpuScalar const a24 = 2 * a22 - 2 * a23;
     GpuScalar const a25 = (1.0 / 2.0) * lambda;
     GpuScalar const a26 = a25 * (a0 - a1);
-    GpuScalar const a27 = a5 * F(8);
-    GpuScalar const a28 = a5 * F(7);
+    GpuScalar const a27 = a5 * Fe(8);
+    GpuScalar const a28 = a5 * Fe(7);
     GpuScalar const a29 = -a28;
-    GpuScalar const a30 = a5 * F(5);
+    GpuScalar const a30 = a5 * Fe(5);
     GpuScalar const a31 = -a30;
-    GpuScalar const a32 = a5 * F(4);
-    GpuScalar const a33 = a25 * (-a3 + F(5) * F(6));
+    GpuScalar const a32 = a5 * Fe(4);
+    GpuScalar const a33 = a25 * (-a3 + Fe(5) * Fe(6));
     GpuScalar const a34 = -a27;
-    GpuScalar const a35 = a5 * F(6);
-    GpuScalar const a36 = a5 * F(3);
+    GpuScalar const a35 = a5 * Fe(6);
+    GpuScalar const a36 = a5 * Fe(3);
     GpuScalar const a37 = -a36;
     GpuScalar const a38 = a25 * (-a4 + a8);
     GpuScalar const a39 = -a35;
     GpuScalar const a40 = -a32;
-    GpuScalar const a41 = a25 * (-a10 + F(2) * F(7));
-    GpuScalar const a42 = a5 * F(2);
-    GpuScalar const a43 = a5 * F(1);
+    GpuScalar const a41 = a25 * (-a10 + Fe(2) * Fe(7));
+    GpuScalar const a42 = a5 * Fe(2);
+    GpuScalar const a43 = a5 * Fe(1);
     GpuScalar const a44 = -a43;
     GpuScalar const a45 = a25 * (a12 - a13);
     GpuScalar const a46 = -a42;
-    GpuScalar const a47 = a5 * F(0);
-    GpuScalar const a48 = a25 * (-a15 + F(1) * F(6));
+    GpuScalar const a47 = a5 * Fe(0);
+    GpuScalar const a48 = a25 * (-a15 + Fe(1) * Fe(6));
     GpuScalar const a49 = -a47;
     GpuScalar const a50 = a25 * (a17 - a18);
-    GpuScalar const a51 = a25 * (-a20 + F(2) * F(3));
+    GpuScalar const a51 = a25 * (-a20 + Fe(2) * Fe(3));
     GpuScalar const a52 = a25 * (a22 - a23);
-    ge(0)               = a2 * a6 + mu * F(0);
-    ge(1)               = a6 * a7 + mu * F(1);
-    ge(2)               = a6 * a9 + mu * F(2);
-    ge(3)               = a11 * a6 + mu * F(3);
-    ge(4)               = a14 * a6 + mu * F(4);
-    ge(5)               = a16 * a6 + mu * F(5);
-    ge(6)               = a19 * a6 + mu * F(6);
-    ge(7)               = a21 * a6 + mu * F(7);
-    ge(8)               = a24 * a6 + mu * F(8);
+    ge(0)               = a2 * a6 + mu * Fe(0);
+    ge(1)               = a6 * a7 + mu * Fe(1);
+    ge(2)               = a6 * a9 + mu * Fe(2);
+    ge(3)               = a11 * a6 + mu * Fe(3);
+    ge(4)               = a14 * a6 + mu * Fe(4);
+    ge(5)               = a16 * a6 + mu * Fe(5);
+    ge(6)               = a19 * a6 + mu * Fe(6);
+    ge(7)               = a21 * a6 + mu * Fe(7);
+    ge(8)               = a24 * a6 + mu * Fe(8);
     He(0)               = a2 * a26 + mu;
     He(1)               = a26 * a7;
     He(2)               = a26 * a9;
@@ -264,8 +264,8 @@ __device__ void BackwardEulerMinimization::ComputeStableNeoHookeanDerivatives(
     // Compute (d^k Psi / dF^k)
     Matrix<GpuScalar, 3, 4> xe   = ElementVertexPositions(e);
     Matrix<GpuScalar, 4, 3> GPe  = BasisFunctionGradients(e);
-    Matrix<GpuScalar, 3, 3> F    = xe * GPe;
-    Matrix<GpuScalar, 9, 10> HGF = StableNeoHookeanDerivativesWrtF(e, F, lamee(0), lamee(1));
+    Matrix<GpuScalar, 3, 3> Fe   = xe * GPe;
+    Matrix<GpuScalar, 9, 10> HGF = StableNeoHookeanDerivativesWrtF(e, Fe, lamee(0), lamee(1));
     auto HF                      = HGF.Slice<9, 9>(0, 0);
     auto gF                      = HGF.Col(9);
     // Write vertex-specific derivatives into output memory HGe

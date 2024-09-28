@@ -35,8 +35,8 @@ VbdImpl::VbdImpl(
       mQuadratureWeights(Tin.cols()),
       mShapeFunctionGradients(Tin.cols() * 4 * 3),
       mLameCoefficients(2 * Tin.cols()),
-      mVertexTetrahedronNeighbours(),
       mVertexTetrahedronPrefix(Xin.cols() + 1),
+      mVertexTetrahedronNeighbours(),
       mVertexTetrahedronLocalVertexIndices(),
       mRayleighDamping(GpuScalar{0}),
       mCollisionPenalty(GpuScalar{1e3}),
@@ -79,8 +79,8 @@ void VbdImpl::Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps, GpuScal
     bdf.wg                              = mQuadratureWeights.Raw();
     bdf.GP                              = mShapeFunctionGradients.Raw();
     bdf.lame                            = mLameCoefficients.Raw();
-    bdf.GVTn                            = mVertexTetrahedronNeighbours.Raw();
     bdf.GVTp                            = mVertexTetrahedronPrefix.Raw();
+    bdf.GVTn                            = mVertexTetrahedronNeighbours.Raw();
     bdf.GVTilocal                       = mVertexTetrahedronLocalVertexIndices.Raw();
     bdf.kD                              = mRayleighDamping;
     bdf.kC                              = mCollisionPenalty;
@@ -157,8 +157,9 @@ void VbdImpl::Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps, GpuScal
         {
             for (auto& partition : mPartitions)
             {
-                bdf.partition                   = partition.Raw();
-                auto const nVerticesInPartition = partition.Size();
+                bdf.partition = partition.Raw();
+                auto const nVerticesInPartition =
+                    static_cast<cuda::grid::dimension_t>(partition.Size());
                 auto bcdLaunchConfiguration =
                     cuda::launch_config_builder()
                         .block_size(mGpuThreadBlockSize)
@@ -306,18 +307,18 @@ void VbdImpl::SetLameCoefficients(Eigen::Ref<GpuMatrixX const> const& l)
 }
 
 void VbdImpl::SetVertexTetrahedronAdjacencyList(
-    Eigen::Ref<GpuIndexVectorX const> const& GVTn,
     Eigen::Ref<GpuIndexVectorX const> const& GVTp,
+    Eigen::Ref<GpuIndexVectorX const> const& GVTn,
     Eigen::Ref<GpuIndexVectorX const> const& GVTilocal)
 {
-    if (GVTp.size() != mVertexTetrahedronPrefix.Size())
+    if (static_cast<std::size_t>(GVTp.size()) != mVertexTetrahedronPrefix.Size())
     {
         std::ostringstream ss{};
         ss << "Expected vertex-tetrahedron adjacency graph's prefix array to have size="
            << mVertexTetrahedronPrefix.Size() << ", but got " << GVTp.size() << "\n";
         throw std::invalid_argument(ss.str());
     }
-    if (GVTn.size() != GVTilocal.size())
+    if (static_cast<std::size_t>(GVTn.size()) != GVTilocal.size())
     {
         std::ostringstream ss{};
         ss << "Expected vertex-tetrahedron adjacency graph's neighbour array and data (ilocal) "
@@ -329,8 +330,8 @@ void VbdImpl::SetVertexTetrahedronAdjacencyList(
     mVertexTetrahedronNeighbours.Resize(GVTn.size());
     mVertexTetrahedronLocalVertexIndices.Resize(GVTilocal.size());
 
-    thrust::copy(GVTn.data(), GVTn.data() + GVTn.size(), mVertexTetrahedronNeighbours.Data());
     thrust::copy(GVTp.data(), GVTp.data() + GVTp.size(), mVertexTetrahedronPrefix.Data());
+    thrust::copy(GVTn.data(), GVTn.data() + GVTn.size(), mVertexTetrahedronNeighbours.Data());
     thrust::copy(
         GVTilocal.data(),
         GVTilocal.data() + GVTilocal.size(),
@@ -443,12 +444,12 @@ TEST_CASE("[gpu][xpbd] Xpbd")
     }
     G.setFromTriplets(Gei.begin(), Gei.end());
     assert(G.isCompressed());
-    std::span<GpuIndex> vertexTetrahedronNeighbours{
-        G.innerIndexPtr(),
-        static_cast<std::size_t>(G.nonZeros())};
     std::span<GpuIndex> vertexTetrahedronPrefix{
         G.outerIndexPtr(),
         static_cast<std::size_t>(G.outerSize() + 1)};
+    std::span<GpuIndex> vertexTetrahedronNeighbours{
+        G.innerIndexPtr(),
+        static_cast<std::size_t>(G.nonZeros())};
     std::span<GpuIndex> vertexTetrahedronLocalVertexIndices{
         G.valuePtr(),
         static_cast<std::size_t>(G.nonZeros())};
@@ -478,8 +479,8 @@ TEST_CASE("[gpu][xpbd] Xpbd")
     vbd.SetShapeFunctionGradients(GP);
     vbd.SetLameCoefficients(lame);
     vbd.SetVertexTetrahedronAdjacencyList(
-        ToEigen(vertexTetrahedronNeighbours),
         ToEigen(vertexTetrahedronPrefix),
+        ToEigen(vertexTetrahedronNeighbours),
         ToEigen(vertexTetrahedronLocalVertexIndices));
     vbd.SetVertexPartitions(partitions);
     vbd.Step(dt, iterations, substeps);
