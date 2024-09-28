@@ -109,7 +109,7 @@ void Bind(pybind11::module& m)
             },
             "|#elements| array of quadrature weights")
         .def_property(
-            "shape_function_gradients",
+            "GNe",
             nullptr,
             [](Vbd& vbd, Eigen::Ref<GpuMatrixX const> const& GP) {
                 pbat::profiling::Profile("pbat.gpu.vbd.Vbd.SetShapeFunctionGradients", [&]() {
@@ -128,7 +128,7 @@ void Bind(pybind11::module& m)
             },
             "2x|#elements| Lame coefficients")
         .def_property(
-            "vertex_tetrahedron_adjacency_graph",
+            "GVT",
             nullptr,
             [](Vbd& vbd,
                std::tuple<
