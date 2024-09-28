@@ -2,6 +2,7 @@
 
 #include "geometry/Geometry.h"
 #include "xpbd/Xpbd.h"
+#include "vbd/Vbd.h"
 
 namespace pbat {
 namespace py {
@@ -14,6 +15,8 @@ void Bind(pybind11::module& m)
     geometry::Bind(mgeometry);
     auto mxpbd = m.def_submodule("xpbd");
     xpbd::Bind(mxpbd);
+    auto mvbd = m.def_submodule("vbd");
+    vbd::Bind(mvbd);
 }
 
 } // namespace gpu

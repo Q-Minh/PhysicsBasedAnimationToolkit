@@ -199,7 +199,7 @@ void VbdImpl::Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps, GpuScal
     mStream.synchronize();
 }
 
-void VbdImpl::SetPositions(Eigen::Ref<GpuMatrixX const> const& Xin, bool bResetHistory)
+void VbdImpl::SetPositions(Eigen::Ref<GpuMatrixX const> const& Xin)
 {
     auto const nVertices = static_cast<GpuIndex>(X.x.Size());
     if (Xin.rows() != 3 and Xin.cols() != nVertices)
@@ -212,14 +212,10 @@ void VbdImpl::SetPositions(Eigen::Ref<GpuMatrixX const> const& Xin, bool bResetH
     for (auto d = 0; d < X.x.Dimensions(); ++d)
     {
         thrust::copy(Xin.row(d).begin(), Xin.row(d).end(), X.x[d].begin());
-        if (bResetHistory)
-        {
-            thrust::copy(Xin.row(d).begin(), Xin.row(d).end(), mPositionsAtT[d].begin());
-        }
     }
 }
 
-void VbdImpl::SetVelocities(Eigen::Ref<GpuMatrixX const> const& v, bool bResetHistory)
+void VbdImpl::SetVelocities(Eigen::Ref<GpuMatrixX const> const& v)
 {
     auto const nVertices = static_cast<GpuIndex>(mVelocities.Size());
     if (v.rows() != 3 and v.cols() != nVertices)
@@ -232,10 +228,6 @@ void VbdImpl::SetVelocities(Eigen::Ref<GpuMatrixX const> const& v, bool bResetHi
     for (auto d = 0; d < mVelocities.Dimensions(); ++d)
     {
         thrust::copy(v.row(d).begin(), v.row(d).end(), mVelocities[d].begin());
-        if (bResetHistory)
-        {
-            thrust::copy(v.row(d).begin(), v.row(d).end(), mVelocitiesAtT[d].begin());
-        }
     }
 }
 

@@ -2,13 +2,10 @@ target_sources(PhysicsBasedAnimationToolkit_Python
     PUBLIC
     FILE_SET api
     FILES
-    "Gpu.h"
+    "Vbd.h"
 )
 
 target_sources(PhysicsBasedAnimationToolkit_Python
     PRIVATE
-    "Gpu.cpp"
+    "Vbd.cpp"
 )
-add_subdirectory(geometry)
-add_subdirectory(xpbd)
-add_subdirectory(vbd)

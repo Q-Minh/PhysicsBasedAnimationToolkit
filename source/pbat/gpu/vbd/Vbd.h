@@ -39,15 +39,13 @@ class Vbd
     /**
      * @brief
      * @param X 3x|#vertices| array of vertex positions
-     * @param bResetHistory Set state history x(t-1) to X as well
      */
-    void SetPositions(Eigen::Ref<GpuMatrixX const> const& X, bool bResetHistory = false);
+    void SetPositions(Eigen::Ref<GpuMatrixX const> const& X);
     /**
      * @brief
      * @param v 3x|#vertices| array of vertex velocities
-     * @param bResetHistory Set state velocity history v(t-1) to v as well
      */
-    void SetVelocities(Eigen::Ref<GpuMatrixX const> const& v, bool bResetHistory = false);
+    void SetVelocities(Eigen::Ref<GpuMatrixX const> const& v);
     /**
      * @brief
      * @param aext 3x|#vertices| array of external accelerations
@@ -102,14 +100,14 @@ class Vbd
     void SetBlockSize(GpuIndex blockSize);
     /**
      * @brief
-     * @return |#vertices|x|#dims| array of vertex positions
+     * @return |#dims|x|#vertices| array of vertex positions
      */
-    GpuMatrixX GetPosition() const;
+    GpuMatrixX GetPositions() const;
     /**
      * @brief
-     * @return |#vertices|x|#dims| array of vertex velocities
+     * @return |#dims|x|#vertices| array of vertex velocities
      */
-    GpuMatrixX GetVelocity() const;
+    GpuMatrixX GetVelocities() const;
 
   private:
     VbdImpl* mImpl;

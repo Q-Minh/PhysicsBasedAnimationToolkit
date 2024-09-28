@@ -44,14 +44,14 @@ void Vbd::Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps, GpuScalar r
     mImpl->Step(dt, iterations, substeps, rho);
 }
 
-void Vbd::SetPositions(Eigen::Ref<GpuMatrixX const> const& X, bool bResetHistory)
+void Vbd::SetPositions(Eigen::Ref<GpuMatrixX const> const& X)
 {
-    mImpl->SetPositions(X, bResetHistory);
+    mImpl->SetPositions(X);
 }
 
-void Vbd::SetVelocities(Eigen::Ref<GpuMatrixX const> const& v, bool bResetHistory)
+void Vbd::SetVelocities(Eigen::Ref<GpuMatrixX const> const& v)
 {
-    mImpl->SetVelocities(v, bResetHistory);
+    mImpl->SetVelocities(v);
 }
 
 void Vbd::SetExternalAcceleration(Eigen::Ref<GpuMatrixX const> const& aext)
@@ -102,17 +102,19 @@ void Vbd::SetBlockSize(GpuIndex blockSize)
     mImpl->SetBlockSize(blockSize);
 }
 
-GpuMatrixX Vbd::GetPosition() const
+GpuMatrixX Vbd::GetPositions() const
 {
     using pbat::common::ToEigen;
-    return ToEigen(mImpl->X.x.Get()).reshaped(mImpl->X.x.Size(), mImpl->X.x.Dimensions());
+    return ToEigen(mImpl->X.x.Get())
+        .reshaped(mImpl->X.x.Size(), mImpl->X.x.Dimensions())
+        .transpose();
 }
 
-GpuMatrixX Vbd::GetVelocity() const
+GpuMatrixX Vbd::GetVelocities() const
 {
     using pbat::common::ToEigen;
     auto const& velocity = mImpl->GetVelocity();
-    return ToEigen(velocity.Get()).reshaped(velocity.Size(), velocity.Dimensions());
+    return ToEigen(velocity.Get()).reshaped(velocity.Size(), velocity.Dimensions()).transpose();
 }
 
 } // namespace vbd

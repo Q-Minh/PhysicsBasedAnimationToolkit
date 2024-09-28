@@ -36,15 +36,13 @@ class VbdImpl
     /**
      * @brief
      * @param X
-     * @param bResetHistory Set state history x(t-1) to X as well
      */
-    void SetPositions(Eigen::Ref<GpuMatrixX const> const& X, bool bResetHistory = false);
+    void SetPositions(Eigen::Ref<GpuMatrixX const> const& X);
     /**
      * @brief
      * @param v
-     * @param bResetHistory Set state velocity history v(t-1) to v as well
      */
-    void SetVelocities(Eigen::Ref<GpuMatrixX const> const& v, bool bResetHistory = false);
+    void SetVelocities(Eigen::Ref<GpuMatrixX const> const& v);
     /**
      * @brief
      * @param aext
