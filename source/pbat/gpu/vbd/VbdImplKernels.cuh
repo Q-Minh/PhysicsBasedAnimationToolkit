@@ -77,10 +77,10 @@ struct FChebyshev
 {
     FChebyshev(
         GpuScalar rho,
-        std::array<GpuScalar*, 3> xtm1,
-        std::array<GpuScalar*, 3> xt,
+        std::array<GpuScalar*, 3> xkm2,
+        std::array<GpuScalar*, 3> xkm1,
         std::array<GpuScalar*, 3> x)
-        : rho2(rho * rho), omega(GpuScalar{1}), xtm1(xtm1), xt(xt), x(x)
+        : rho2(rho * rho), omega(GpuScalar{1}), xkm2(xkm2), xkm1(xkm1), x(x)
     {
     }
 
@@ -93,17 +93,21 @@ struct FChebyshev
     __device__ void operator()(auto i)
     {
         for (auto d = 0; d < 3; ++d)
-            x[d][i] = omega * (x[d][i] - xt[d][i]) + xtm1[d][i];
+        {
+            x[d][i]    = omega * (x[d][i] - xkm2[d][i]) + xkm2[d][i];
+            xkm2[d][i] = xkm1[d][i];
+            xkm1[d][i] = x[d][i];
+        }
     }
 
     GpuScalar rho2;
     GpuScalar omega;
-    std::array<GpuScalar*, 3> xtm1;
-    std::array<GpuScalar*, 3> xt;
+    std::array<GpuScalar*, 3> xkm2;
+    std::array<GpuScalar*, 3> xkm1;
     std::array<GpuScalar*, 3> x;
 };
 
-struct FFinalizeSolution
+struct FUpdateVelocity
 {
     __device__ void operator()(auto i)
     {
@@ -179,8 +183,11 @@ struct BackwardEulerMinimization
 
     __device__ Matrix<GpuScalar, 3, 4> ElementVertexPositions(GpuIndex e) const;
 
-    __device__ Matrix<GpuScalar, 9, 10>
-    StableNeoHookeanDerivativesWrtF(GpuIndex e, Matrix<GpuScalar, 4, 3> const& GPe) const;
+    __device__ Matrix<GpuScalar, 9, 10> StableNeoHookeanDerivativesWrtF(
+        GpuIndex e,
+        Matrix<GpuScalar, 3, 3> const& F,
+        GpuScalar mu,
+        GpuScalar lambda) const;
 
     __device__ void
     ComputeStableNeoHookeanDerivatives(GpuIndex e, GpuIndex ilocal, GpuScalar* Hge) const;

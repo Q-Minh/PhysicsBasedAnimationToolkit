@@ -4,6 +4,7 @@
 
 #include "VbdImpl.cuh"
 #include "VbdImplKernels.cuh"
+#include "pbat/gpu/common/Cuda.cuh"
 
 #include <cuda/api.hpp>
 #include <thrust/async/copy.h>
@@ -23,16 +24,17 @@ VbdImpl::VbdImpl(
       V(Vin),
       F(Fin),
       T(Tin),
-      mPositionsAtTMinus1(Xin.cols()),
       mPositionsAtT(Xin.cols()),
       mInertialTargetPositions(Xin.cols()),
+      mChebyshevPositionsM2(Xin.cols()),
+      mChebyshevPositionsM1(Xin.cols()),
       mVelocitiesAtT(Xin.cols()),
       mVelocities(Xin.cols()),
       mExternalAcceleration(Xin.cols()),
       mMass(Xin.cols()),
       mQuadratureWeights(Tin.cols()),
       mShapeFunctionGradients(Tin.cols() * 4 * 3),
-      mLameCoefficients(Tin.cols()),
+      mLameCoefficients(2 * Tin.cols()),
       mVertexTetrahedronNeighbours(),
       mVertexTetrahedronPrefix(Xin.cols() + 1),
       mVertexTetrahedronLocalVertexIndices(),
@@ -42,11 +44,12 @@ VbdImpl::VbdImpl(
       mCollidingTriangles(8 * Xin.cols()),
       mCollidingTriangleCount(Xin.cols()),
       mPartitions(),
-      mGpuThreadBlockSize(64)
+      mGpuThreadBlockSize(64),
+      mStream(common::Device(common::EDeviceSelectionPreference::HighestComputeCapability)
+                  .create_stream(/*synchronize_with_default_stream=*/false))
 {
     for (auto d = 0; d < X.Dimensions(); ++d)
     {
-        thrust::copy(X.x[d].begin(), X.x[d].end(), mPositionsAtTMinus1[d].begin());
         thrust::copy(X.x[d].begin(), X.x[d].end(), mPositionsAtT[d].begin());
         thrust::fill(mVelocitiesAtT[d].begin(), mVelocitiesAtT[d].end(), GpuScalar{0});
         thrust::fill(mVelocities[d].begin(), mVelocities[d].end(), GpuScalar{0});
@@ -60,9 +63,10 @@ VbdImpl::VbdImpl(
 
 void VbdImpl::Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps, GpuScalar rho)
 {
-    GpuScalar sdt            = dt / static_cast<GpuScalar>(substeps);
-    GpuScalar sdt2           = sdt * sdt;
-    GpuIndex const nVertices = static_cast<GpuIndex>(X.NumberOfPoints());
+    GpuScalar sdt                        = dt / static_cast<GpuScalar>(substeps);
+    GpuScalar sdt2                       = sdt * sdt;
+    GpuIndex const nVertices             = static_cast<GpuIndex>(X.NumberOfPoints());
+    bool const bUseChebyshevAcceleration = rho < GpuScalar{1};
 
     kernels::BackwardEulerMinimization bdf{};
     bdf.dt                              = sdt;
@@ -72,6 +76,7 @@ void VbdImpl::Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps, GpuScal
     bdf.xt                              = mPositionsAtT.Raw();
     bdf.x                               = X.x.Raw();
     bdf.T                               = T.inds.Raw();
+    bdf.wg                              = mQuadratureWeights.Raw();
     bdf.GP                              = mShapeFunctionGradients.Raw();
     bdf.lame                            = mLameCoefficients.Raw();
     bdf.GVTn                            = mVertexTetrahedronNeighbours.Raw();
@@ -86,9 +91,19 @@ void VbdImpl::Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps, GpuScal
 
     for (auto s = 0; s < substeps; ++s)
     {
+        // Store previous positions
+        for (auto d = 0; d < X.x.Dimensions(); ++d)
+        {
+            cuda::memory::async::copy(
+                thrust::raw_pointer_cast(mPositionsAtT[d].data()),
+                thrust::raw_pointer_cast(X.x[d].data()),
+                X.x.Size() * sizeof(GpuScalar),
+                mStream);
+        }
         // Compute inertial target positions
         thrust::device_event e = thrust::async::for_each(
-            thrust::device,
+            // Share thrust's underlying CUDA stream with cuda-api-wrappers
+            thrust::device.on(mStream.handle()),
             thrust::make_counting_iterator<GpuIndex>(0),
             thrust::make_counting_iterator<GpuIndex>(nVertices),
             kernels::FInertialTarget{
@@ -100,7 +115,7 @@ void VbdImpl::Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps, GpuScal
                 mInertialTargetPositions.Raw()});
         // Initialize block coordinate descent's, i.e. BCD's, solution
         e = thrust::async::for_each(
-            thrust::device.after(e),
+            thrust::device.on(mStream.handle()),
             thrust::make_counting_iterator<GpuIndex>(0),
             thrust::make_counting_iterator<GpuIndex>(nVertices),
             kernels::FAdaptiveInitialization{
@@ -111,76 +126,76 @@ void VbdImpl::Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps, GpuScal
                 mVelocities.Raw(),
                 mExternalAcceleration.Raw(),
                 X.x.Raw()});
-        // Prepare state history for Chebyshev acceleration, i.e.
-        // x(t-2) <- x(t-1)
-        // x(t-1) <- x(t)
-        for (auto d = 0; d < X.x.Dimensions(); ++d)
+        if (bUseChebyshevAcceleration)
         {
-            e = thrust::async::copy(
-                thrust::device.after(e),
-                mPositionsAtT[d].begin(),
-                mPositionsAtT[d].end(),
-                mPositionsAtTMinus1[d].begin());
-            e = thrust::async::copy(
-                thrust::device.after(e),
-                X.x[d].begin(),
-                X.x[d].end(),
-                mPositionsAtT[d].begin());
+            // Initialize Chebyshev semi-iterative method
+            // x(k-2) <- x(k-1)
+            // x(k-1) <- x(t)
+            for (auto d = 0; X.x.Dimensions() < 3; ++d)
+            {
+                e = thrust::async::copy(
+                    thrust::device.on(mStream.handle()),
+                    X.x[d].begin(),
+                    X.x[d].end(),
+                    mChebyshevPositionsM2[d].begin());
+                e = thrust::async::copy(
+                    thrust::device.on(mStream.handle()),
+                    X.x[d].begin(),
+                    X.x[d].end(),
+                    mChebyshevPositionsM1[d].begin());
+            }
         }
-        // Initialize Chebyshev semi-iterative method
         kernels::FChebyshev fChebyshev{
             rho,
-            mPositionsAtTMinus1.Raw(),
-            mPositionsAtT.Raw(),
+            mChebyshevPositionsM2.Raw(),
+            mChebyshevPositionsM1.Raw(),
             X.x.Raw()};
-        // Share thrust's underlying CUDA stream with cuda-api-wrappers
-        auto device                           = cuda::device::get(e.where());
-        auto stream                           = device.default_stream();
-        CUstream_st* thrustNativeStreamHandle = e.stream().get();
-        CUstream_st* cawNativeStreamHandle    = stream.handle();
-        assert(thrustNativeStreamHandle == cawNativeStreamHandle);
         auto kDynamicSharedMemoryCapacity = static_cast<cuda::memory::shared::size_t>(
             mGpuThreadBlockSize * bdf.ExpectedSharedMemoryPerThreadInBytes());
-        auto bcdLaunchConfiguration = cuda::launch_config_builder()
-                                          .grid_size(nVertices)
-                                          .block_size(mGpuThreadBlockSize)
-                                          .dynamic_shared_memory_size(kDynamicSharedMemoryCapacity)
-                                          .build();
         // Minimize Backward Euler, i.e. BDF1, objective
         for (auto k = 0; k < iterations; ++k)
         {
             for (auto& partition : mPartitions)
             {
-                bdf.partition = partition.Raw();
-                stream.enqueue.kernel_launch(
+                bdf.partition                   = partition.Raw();
+                auto const nVerticesInPartition = partition.Size();
+                auto bcdLaunchConfiguration =
+                    cuda::launch_config_builder()
+                        .block_size(mGpuThreadBlockSize)
+                        .dynamic_shared_memory_size(kDynamicSharedMemoryCapacity)
+                        .grid_size(nVerticesInPartition)
+                        .build();
+                mStream.enqueue.kernel_launch(
                     kernels::MinimizeBackwardEuler,
                     bcdLaunchConfiguration,
                     bdf);
             }
-            e = thrust::async::for_each(
-                thrust::device.on(stream.handle()),
-                thrust::make_counting_iterator<GpuIndex>(0),
-                thrust::make_counting_iterator<GpuIndex>(nVertices),
-                fChebyshev);
-            fChebyshev.Update(k);
+            if (bUseChebyshevAcceleration)
+            {
+                e = thrust::async::for_each(
+                    thrust::device.on(mStream.handle()),
+                    thrust::make_counting_iterator<GpuIndex>(0),
+                    thrust::make_counting_iterator<GpuIndex>(nVertices),
+                    fChebyshev);
+                fChebyshev.Update(k);
+            }
         }
         // Update velocities
         for (auto d = 0; d < mVelocities.Dimensions(); ++d)
         {
             e = thrust::async::copy(
-                thrust::device.after(e),
+                thrust::device.on(mStream.handle()),
                 mVelocities[d].begin(),
                 mVelocities[d].end(),
                 mVelocitiesAtT[d].begin());
         }
         e = thrust::async::for_each(
-            thrust::device.after(e),
+            thrust::device.on(mStream.handle()),
             thrust::make_counting_iterator<GpuIndex>(0),
             thrust::make_counting_iterator<GpuIndex>(nVertices),
-            kernels::FFinalizeSolution{sdt, mPositionsAtT.Raw(), X.x.Raw(), mVelocities.Raw()});
-
-        e.wait();
+            kernels::FUpdateVelocity{sdt, mPositionsAtT.Raw(), X.x.Raw(), mVelocities.Raw()});
     }
+    mStream.synchronize();
 }
 
 void VbdImpl::SetPositions(Eigen::Ref<GpuMatrixX const> const& Xin, bool bResetHistory)
@@ -198,7 +213,6 @@ void VbdImpl::SetPositions(Eigen::Ref<GpuMatrixX const> const& Xin, bool bResetH
         thrust::copy(Xin.row(d).begin(), Xin.row(d).end(), X.x[d].begin());
         if (bResetHistory)
         {
-            thrust::copy(Xin.row(d).begin(), Xin.row(d).end(), mPositionsAtTMinus1[d].begin());
             thrust::copy(Xin.row(d).begin(), Xin.row(d).end(), mPositionsAtT[d].begin());
         }
     }
@@ -296,6 +310,25 @@ void VbdImpl::SetVertexTetrahedronAdjacencyList(
     Eigen::Ref<GpuIndexVectorX const> const& GVTp,
     Eigen::Ref<GpuIndexVectorX const> const& GVTilocal)
 {
+    if (GVTp.size() != mVertexTetrahedronPrefix.Size())
+    {
+        std::ostringstream ss{};
+        ss << "Expected vertex-tetrahedron adjacency graph's prefix array to have size="
+           << mVertexTetrahedronPrefix.Size() << ", but got " << GVTp.size() << "\n";
+        throw std::invalid_argument(ss.str());
+    }
+    if (GVTn.size() != GVTilocal.size())
+    {
+        std::ostringstream ss{};
+        ss << "Expected vertex-tetrahedron adjacency graph's neighbour array and data (ilocal) "
+              "array to have the same size, but got neighbours="
+           << GVTn.size() << ", ilocal=" << GVTilocal.size() << " \n";
+        throw std::invalid_argument(ss.str());
+    }
+
+    mVertexTetrahedronNeighbours.Resize(GVTn.size());
+    mVertexTetrahedronLocalVertexIndices.Resize(GVTilocal.size());
+
     thrust::copy(GVTn.data(), GVTn.data() + GVTn.size(), mVertexTetrahedronNeighbours.Data());
     thrust::copy(GVTp.data(), GVTp.data() + GVTp.size(), mVertexTetrahedronPrefix.Data());
     thrust::copy(
@@ -399,18 +432,17 @@ TEST_CASE("[gpu][xpbd] Xpbd")
     using SparseMatrixType = Eigen::SparseMatrix<GpuIndex, Eigen::ColMajor>;
     using TripletType      = Eigen::Triplet<GpuIndex, typename SparseMatrixType::StorageIndex>;
     SparseMatrixType G(T.cols(), P.cols());
-    std::vector<TripletType> Gij{};
+    std::vector<TripletType> Gei{};
     for (auto e = 0; e < T.cols(); ++e)
     {
         for (auto ilocal = 0; ilocal < T.rows(); ++ilocal)
         {
-            auto i = e;
-            auto j = T(ilocal, e);
-            Gij.push_back(TripletType{i, j, ilocal});
+            auto i = T(ilocal, e);
+            Gei.push_back(TripletType{e, i, ilocal});
         }
     }
-    G.setFromTriplets(Gij.begin(), Gij.end());
-    CHECK(G.isCompressed());
+    G.setFromTriplets(Gei.begin(), Gei.end());
+    assert(G.isCompressed());
     std::span<GpuIndex> vertexTetrahedronNeighbours{
         G.innerIndexPtr(),
         static_cast<std::size_t>(G.nonZeros())};
@@ -418,7 +450,7 @@ TEST_CASE("[gpu][xpbd] Xpbd")
         G.outerIndexPtr(),
         static_cast<std::size_t>(G.outerSize() + 1)};
     std::span<GpuIndex> vertexTetrahedronLocalVertexIndices{
-        G.innerNonZeroPtr(),
+        G.valuePtr(),
         static_cast<std::size_t>(G.nonZeros())};
     std::vector<std::vector<GpuIndex>> partitions(P.cols());
     for (auto p = 0; p < partitions.size(); ++p)
@@ -436,8 +468,8 @@ TEST_CASE("[gpu][xpbd] Xpbd")
     aext.colwise()    = Eigen::Vector<GpuScalar, 3>{GpuScalar{0}, GpuScalar{0}, GpuScalar{-9.81}};
     auto constexpr dt = GpuScalar{1e-2};
     auto constexpr substeps   = 1;
-    auto constexpr iterations = 1;
-    auto constexpr rhoC       = GpuScalar{0.95};
+    auto constexpr iterations = 10;
+
     // Act
     using pbat::gpu::vbd::VbdImpl;
     VbdImpl vbd{P, V, F, T};
@@ -450,8 +482,13 @@ TEST_CASE("[gpu][xpbd] Xpbd")
         ToEigen(vertexTetrahedronPrefix),
         ToEigen(vertexTetrahedronLocalVertexIndices));
     vbd.SetVertexPartitions(partitions);
-
-    vbd.Step(dt, iterations, substeps, rhoC);
+    vbd.Step(dt, iterations, substeps);
 
     // Assert
+    auto constexpr zero = GpuScalar{1e-4};
+    GpuMatrixX dx       = ToEigen(vbd.X.x.Get()).reshaped(P.cols(), P.rows()).transpose() - P;
+    bool const bVerticesFallUnderGravity = (dx.row(2).array() < GpuScalar{0}).all();
+    CHECK(bVerticesFallUnderGravity);
+    bool const bVerticesOnlyFall = (dx.topRows(2).array().abs() < zero).all();
+    CHECK(bVerticesOnlyFall);
 }

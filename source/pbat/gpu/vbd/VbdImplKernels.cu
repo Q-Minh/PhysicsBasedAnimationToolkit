@@ -96,14 +96,11 @@ BackwardEulerMinimization::ElementVertexPositions(GpuIndex e) const
 __device__ BackwardEulerMinimization::Matrix<GpuScalar, 9, 10>
 BackwardEulerMinimization::StableNeoHookeanDerivativesWrtF(
     GpuIndex e,
-    Matrix<GpuScalar, 4, 3> const& GPe) const
+    Matrix<GpuScalar, 3, 3> const& F,
+    GpuScalar mu,
+    GpuScalar lambda) const
 {
     using namespace pbat::gpu::math::linalg;
-    Matrix<GpuScalar, 3, 3> F = ElementVertexPositions(e) * GPe;
-    MatrixView<GpuScalar, 2, 1> lamee{lame + 2 * e};
-    GpuScalar mu     = lamee(0);
-    GpuScalar lambda = lamee(1);
-
     Matrix<GpuScalar, 9, 10> HGe;
     auto He = HGe.Slice<9, 9>(0, 0);
     auto ge = HGe.Col(9);
@@ -262,10 +259,13 @@ __device__ void BackwardEulerMinimization::ComputeStableNeoHookeanDerivatives(
     GpuScalar* Hge) const
 {
     using namespace pbat::gpu::math::linalg;
+    GpuScalar wge                 = wg[e];
+    Matrix<GpuScalar, 2, 1> lamee = MatrixView<GpuScalar, 2, 1>{lame + 2 * e};
     // Compute (d^k Psi / dF^k)
+    Matrix<GpuScalar, 3, 4> xe   = ElementVertexPositions(e);
     Matrix<GpuScalar, 4, 3> GPe  = BasisFunctionGradients(e);
-    Matrix<GpuScalar, 9, 10> HGF = StableNeoHookeanDerivativesWrtF(e, GPe);
-    GpuScalar wge                = wg[e];
+    Matrix<GpuScalar, 3, 3> F    = xe * GPe;
+    Matrix<GpuScalar, 9, 10> HGF = StableNeoHookeanDerivativesWrtF(e, F, lamee(0), lamee(1));
     auto HF                      = HGF.Slice<9, 9>(0, 0);
     auto gF                      = HGF.Col(9);
     // Write vertex-specific derivatives into output memory HGe

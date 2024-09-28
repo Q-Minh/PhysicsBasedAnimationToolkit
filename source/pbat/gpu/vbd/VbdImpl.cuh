@@ -5,7 +5,6 @@
 #include "pbat/gpu/common/Buffer.cuh"
 #include "pbat/gpu/geometry/PrimitivesImpl.cuh"
 
-#include <cuda/api/device.hpp>
 #include <cuda/api/stream.hpp>
 #include <vector>
 
@@ -26,10 +25,10 @@ class VbdImpl
      * @param dt
      * @param iterations
      * @param substeps
-     * @param rho Chebyshev semi-iterative method's estimated spectral radius
+     * @param rho Chebyshev semi-iterative method's estimated spectral radius. If rho >= 1,
+     * Chebyshev acceleration is not used.
      */
-    void
-    Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps, GpuScalar rho = GpuScalar{0.95});
+    void Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps = GpuIndex{1}, GpuScalar rho = GpuScalar{1});
     /**
      * @brief
      * @param X
@@ -130,13 +129,16 @@ class VbdImpl
     geometry::SimplicesImpl F; ///< Boundary triangle simplices
     geometry::SimplicesImpl T; ///< Tetrahedral mesh elements
   private:
-    common::Buffer<GpuScalar, 3> mPositionsAtTMinus1;      ///< Vertex positions 2 time steps ago
     common::Buffer<GpuScalar, 3> mPositionsAtT;            ///< Previous vertex positions
     common::Buffer<GpuScalar, 3> mInertialTargetPositions; ///< Inertial target for vertex positions
-    common::Buffer<GpuScalar, 3> mVelocitiesAtT;           ///< Previous vertex velocities
-    common::Buffer<GpuScalar, 3> mVelocities;              ///< Current vertex velocities
-    common::Buffer<GpuScalar, 3> mExternalAcceleration;    ///< External acceleration
-    common::Buffer<GpuScalar> mMass;                       ///< Lumped mass matrix diagonals
+    common::Buffer<GpuScalar, 3>
+        mChebyshevPositionsM2; ///< x^{k-2} used in Chebyshev semi-iterative method
+    common::Buffer<GpuScalar, 3>
+        mChebyshevPositionsM1; ///< x^{k-1} used in Chebyshev semi-iterative method
+    common::Buffer<GpuScalar, 3> mVelocitiesAtT;        ///< Previous vertex velocities
+    common::Buffer<GpuScalar, 3> mVelocities;           ///< Current vertex velocities
+    common::Buffer<GpuScalar, 3> mExternalAcceleration; ///< External acceleration
+    common::Buffer<GpuScalar> mMass;                    ///< Lumped mass matrix diagonals
 
     common::Buffer<GpuScalar> mQuadratureWeights; ///< |#elements| array of quadrature weights (i.e.
                                                   ///< tetrahedron volumes for order 1)
@@ -163,6 +165,7 @@ class VbdImpl
     std::vector<common::Buffer<GpuIndex>> mPartitions; ///< Constraint partitions
 
     GpuIndex mGpuThreadBlockSize; ///< Number of threads per CUDA thread block
+    cuda::stream_t mStream;       ///< Cuda stream on which this VBD instance will run
 };
 
 } // namespace vbd
