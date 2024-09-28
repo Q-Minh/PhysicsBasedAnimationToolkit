@@ -55,13 +55,17 @@ struct FAdaptiveInitialization
     __device__ void operator()(auto i)
     {
         using namespace pbat::gpu::math::linalg;
-        Vector3 const aexti    = GetExternalAcceleration(i);
-        GpuScalar const atext  = Dot(GetAcceleration(i), aexti) / SquaredNorm(aexti);
-        GpuScalar atilde       = min(max(atext, GpuScalar{0}), GpuScalar{1});
-        bool const bWasClamped = (atilde == GpuScalar{0}) or (atilde == GpuScalar{1});
-        atilde                 = (not bWasClamped) * atext + bWasClamped * atilde;
+        // Vector3 const aexti                     = GetExternalAcceleration(i);
+        // GpuScalar aexti2                        = SquaredNorm(aexti);
+        // bool const bHasZeroExternalAcceleration = aexti2 == GpuScalar{0};
+        // GpuScalar const atext                   = Dot(GetAcceleration(i), aexti) / aexti2;
+        // GpuScalar atilde                        = min(max(atext, GpuScalar{0}), GpuScalar{1});
+        // bool const bWasClamped = (atilde == GpuScalar{0}) or (atilde == GpuScalar{1});
+        // atilde                 = bHasZeroExternalAcceleration ? GpuScalar{0} :
+        //                                                         (not bWasClamped) * atext +
+        //                                                         bWasClamped * atilde;
         for (auto d = 0; d < 3; ++d)
-            x[d][i] = xt[d][i] + dt * vt[d][i] + dt2 * atilde * aext[d][i];
+            x[d][i] = xt[d][i] + dt * vt[d][i] + dt2 * /*atilde * aexti(d)*/ aext[d][i];
     }
 
     GpuScalar dt;

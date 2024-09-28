@@ -7,7 +7,7 @@
 #include "pbat/gpu/common/Cuda.cuh"
 
 #include <cuda/api.hpp>
-#include <thrust/async/copy.h>
+// #include <thrust/async/copy.h>
 #include <thrust/async/for_each.h>
 #include <thrust/execution_policy.h>
 
@@ -89,6 +89,10 @@ void VbdImpl::Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps, GpuScal
     bdf.nCollidingTriangles             = mCollidingTriangleCount.Raw();
     bdf.F                               = F.inds.Raw();
 
+    // NOTE:
+    // For some reason, thrust::async::copy does not play well with cuda-api-wrapper streams. I am
+    // guessing it has to do with synchronize_with_default_stream=false?
+
     for (auto s = 0; s < substeps; ++s)
     {
         // Store previous positions
@@ -133,16 +137,16 @@ void VbdImpl::Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps, GpuScal
             // x(k-1) <- x(t)
             for (auto d = 0; X.x.Dimensions() < 3; ++d)
             {
-                e = thrust::async::copy(
-                    thrust::device.on(mStream.handle()),
-                    X.x[d].begin(),
-                    X.x[d].end(),
-                    mChebyshevPositionsM2[d].begin());
-                e = thrust::async::copy(
-                    thrust::device.on(mStream.handle()),
-                    X.x[d].begin(),
-                    X.x[d].end(),
-                    mChebyshevPositionsM1[d].begin());
+                cuda::memory::async::copy(
+                    thrust::raw_pointer_cast(mChebyshevPositionsM2[d].data()),
+                    thrust::raw_pointer_cast(X.x[d].data()),
+                    X.x.Size() * sizeof(GpuScalar),
+                    mStream);
+                cuda::memory::async::copy(
+                    thrust::raw_pointer_cast(mChebyshevPositionsM1[d].data()),
+                    thrust::raw_pointer_cast(X.x[d].data()),
+                    X.x.Size() * sizeof(GpuScalar),
+                    mStream);
             }
         }
         kernels::FChebyshev fChebyshev{
@@ -184,11 +188,11 @@ void VbdImpl::Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps, GpuScal
         // Update velocities
         for (auto d = 0; d < mVelocities.Dimensions(); ++d)
         {
-            e = thrust::async::copy(
-                thrust::device.on(mStream.handle()),
-                mVelocities[d].begin(),
-                mVelocities[d].end(),
-                mVelocitiesAtT[d].begin());
+            cuda::memory::async::copy(
+                thrust::raw_pointer_cast(mVelocitiesAtT[d].data()),
+                thrust::raw_pointer_cast(mVelocities[d].data()),
+                mVelocities.Size() * sizeof(GpuScalar),
+                mStream);
         }
         e = thrust::async::for_each(
             thrust::device.on(mStream.handle()),
@@ -310,7 +314,7 @@ void VbdImpl::SetVertexTetrahedronAdjacencyList(
            << mVertexTetrahedronPrefix.Size() << ", but got " << GVTp.size() << "\n";
         throw std::invalid_argument(ss.str());
     }
-    if (static_cast<std::size_t>(GVTn.size()) != GVTilocal.size())
+    if (GVTn.size() != GVTilocal.size())
     {
         std::ostringstream ss{};
         ss << "Expected vertex-tetrahedron adjacency graph's neighbour array and data (ilocal) "
@@ -445,9 +449,12 @@ TEST_CASE("[gpu][xpbd] Xpbd")
     std::span<GpuIndex> vertexTetrahedronLocalVertexIndices{
         G.valuePtr(),
         static_cast<std::size_t>(G.nonZeros())};
-    std::vector<std::vector<GpuIndex>> partitions(P.cols());
-    for (auto p = 0; p < partitions.size(); ++p)
-        partitions[p].push_back(p);
+    std::vector<std::vector<GpuIndex>> partitions{};
+    partitions.push_back({2, 7, 4, 1});
+    partitions.push_back({0});
+    partitions.push_back({5});
+    partitions.push_back({6});
+    partitions.push_back({3});
     // Material parameters
     using pbat::gpu::vbd::tests::LinearFemMesh;
     LinearFemMesh mesh{P, T};

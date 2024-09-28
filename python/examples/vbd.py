@@ -55,17 +55,19 @@ def color_dict_to_array(Cdict, n):
 
 
 def partition_vertices(GVT, dbcs):
-    Gprimal = nx.Graph(GVT.T @ GVT)
+    GVV = GVT.T @ GVT
+    Gprimal = nx.Graph(GVV)
     GC = nx.greedy_color(Gprimal, strategy="random_sequential")
     GC = color_dict_to_array(GC, GVT.shape[1]).astype(np.int32)
     npartitions = GC.max() + 1
-    partitions = [None]*npartitions
+    partitions = []
     for p in range(npartitions):
-        vertices = np.nonzero(GC == p)[0].tolist()
+        vertices = np.nonzero(GC == p)[0]
         # Remove Dirichlet constrained vertices from partitions.
         # In other words, internal forces will not be applied to constrained vertices.
-        vertices = np.setdiff1d(vertices, dbcs)
-        partitions[p] = vertices
+        vertices = np.setdiff1d(vertices, dbcs).tolist()
+        if len(vertices) > 0:
+            partitions.append(vertices)
     return partitions, GC
 
 
@@ -147,7 +149,9 @@ if __name__ == "__main__":
     GVT = vertex_tetrahedron_adjacency_graph(V, C)
     vbd.GVT = GVT.indptr, GVT.indices, GVT.data
     vbd.kD = 0
-    partitions, GC = partition_vertices(GVT, vdbc)
+    GVTtopology = GVT.copy()
+    GVTtopology.data[:] = 1  # Set all edge weights to 1
+    partitions, GC = partition_vertices(GVTtopology, vdbc)
     vbd.partitions = partitions
     thread_block_size = 64
     vbd.set_gpu_block_size(thread_block_size)
@@ -190,9 +194,9 @@ if __name__ == "__main__":
         reset = imgui.Button("Reset")
 
         if reset:
-            vbd.x = V.T
-            vbd.v = np.zeros(V.T.shape)
-            vm.update_vertex_positions(V)
+            vbd.x = mesh.X
+            vbd.v = np.zeros(mesh.X.shape)
+            vm.update_vertex_positions(mesh.X.T)
             t = 0
 
         vbd.set_gpu_block_size(thread_block_size)
