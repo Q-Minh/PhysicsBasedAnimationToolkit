@@ -3,6 +3,8 @@
 
 #include "pbat/gpu/Aliases.h"
 
+#include "pbat/gpu/vbd/InitializationStrategy.h"
+
 namespace pbat {
 namespace gpu {
 namespace vbd {
@@ -93,6 +95,11 @@ class Vbd
      * @param partitions
      */
     void SetVertexPartitions(std::vector<std::vector<GpuIndex>> const& partitions);
+    /**
+     * @brief Sets the initialization strategy to kick-start the time step minimization
+     * @param strategy
+     */
+    void SetInitializationStrategy(EInitializationStrategy strategy);
     /**
      * @brief Sets the GPU thread block size, for the BDF1 minimization
      * @param blockSize #threads per block, should be a multiple of 32

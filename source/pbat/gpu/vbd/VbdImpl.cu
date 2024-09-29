@@ -44,6 +44,7 @@ VbdImpl::VbdImpl(
       mCollidingTriangles(8 * Xin.cols()),
       mCollidingTriangleCount(Xin.cols()),
       mPartitions(),
+      mInitializationStrategy(EInitializationStrategy::InertialTarget),
       mGpuThreadBlockSize(64),
       mStream(common::Device(common::EDeviceSelectionPreference::HighestComputeCapability)
                   .create_stream(/*synchronize_with_default_stream=*/false))
@@ -129,7 +130,8 @@ void VbdImpl::Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps, GpuScal
                 mVelocitiesAtT.Raw(),
                 mVelocities.Raw(),
                 mExternalAcceleration.Raw(),
-                X.x.Raw()});
+                X.x.Raw(),
+                mInitializationStrategy});
         // Initialize Chebyshev semi-iterative method
         kernels::FChebyshev fChebyshev{
             rho,
@@ -332,6 +334,11 @@ void VbdImpl::SetVertexPartitions(std::vector<std::vector<GpuIndex>> const& part
         mPartitions[p].Resize(partitions[p].size());
         thrust::copy(partitions[p].begin(), partitions[p].end(), mPartitions[p].Data());
     }
+}
+
+void VbdImpl::SetInitializationStrategy(EInitializationStrategy strategy)
+{
+    mInitializationStrategy = strategy;
 }
 
 void VbdImpl::SetBlockSize(GpuIndex blockSize)

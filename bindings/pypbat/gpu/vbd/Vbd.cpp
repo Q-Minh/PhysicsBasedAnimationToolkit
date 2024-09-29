@@ -1,6 +1,7 @@
 #include "Vbd.h"
 
 #include <pbat/gpu/Aliases.h>
+#include <pbat/gpu/vbd/InitializationStrategy.h>
 #include <pbat/gpu/vbd/Vbd.h>
 #include <pbat/profiling/Profiling.h>
 #include <pybind11/eigen.h>
@@ -18,7 +19,15 @@ void Bind(pybind11::module& m)
 #ifdef PBAT_USE_CUDA
 
     using namespace pbat;
+    using pbat::gpu::vbd::EInitializationStrategy;
     using pbat::gpu::vbd::Vbd;
+
+    pyb::enum_<EInitializationStrategy>(m, "InitializationStrategy")
+        .value("CurrentPosition", EInitializationStrategy::CurrentPosition)
+        .value("CurrentTrajectory", EInitializationStrategy::CurrentTrajectory)
+        .value("InertialTarget", EInitializationStrategy::InertialTarget)
+        .value("Adaptive", EInitializationStrategy::Adaptive)
+        .export_values();
 
     pyb::class_<Vbd>(m, "Vbd")
         .def(
@@ -160,6 +169,13 @@ void Bind(pybind11::module& m)
             },
             "Set vertex partitions for the parallel time integration minimization solve as list of "
             "lists of vertex indices")
+        .def_property(
+            "initialization_strategy",
+            nullptr,
+            [](Vbd& vbd, EInitializationStrategy strategy) {
+                vbd.SetInitializationStrategy(strategy);
+            },
+            "Set VBD's time step minimization initialization strategy")
         .def(
             "set_gpu_block_size",
             &Vbd::SetBlockSize,

@@ -165,6 +165,14 @@ if __name__ == "__main__":
     vbd.partitions = partitions
     thread_block_size = 64
     vbd.set_gpu_block_size(thread_block_size)
+    initialization_strategies = [
+        pbat.gpu.vbd.InitializationStrategy.CurrentPosition,
+        pbat.gpu.vbd.InitializationStrategy.CurrentTrajectory,
+        pbat.gpu.vbd.InitializationStrategy.InertialTarget,
+        pbat.gpu.vbd.InitializationStrategy.Adaptive
+    ]
+    initialization_strategy = initialization_strategies[2]
+    vbd.initialization_strategy = initialization_strategy
 
     ps.set_verbosity(0)
     ps.set_up_dir("z_up")
@@ -187,7 +195,7 @@ if __name__ == "__main__":
     profiler = pbat.profiling.Profiler()
 
     def callback():
-        global dt, iterations, substeps, rho_chebyshev, thread_block_size
+        global dt, iterations, substeps, rho_chebyshev, thread_block_size, initialization_strategy
         global animate, export, t
         global profiler
 
@@ -198,6 +206,16 @@ if __name__ == "__main__":
             "Chebyshev rho", rho_chebyshev)
         changed, thread_block_size = imgui.InputInt(
             "Thread block size", thread_block_size)
+        changed = imgui.BeginCombo(
+            "Initialization strategy", str(initialization_strategy).split('.')[-1])
+        if changed:
+            for i in range(len(initialization_strategies)):
+                _, selected = imgui.Selectable(
+                    str(initialization_strategies[i]).split('.')[-1], initialization_strategy == initialization_strategies[i])
+                if selected:
+                    initialization_strategy = initialization_strategies[i]
+            imgui.EndCombo()
+        vbd.initialization_strategy = initialization_strategy
         changed, animate = imgui.Checkbox("Animate", animate)
         changed, export = imgui.Checkbox("Export", export)
         step = imgui.Button("Step")

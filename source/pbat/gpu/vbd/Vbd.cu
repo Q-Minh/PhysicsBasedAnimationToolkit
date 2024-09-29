@@ -97,6 +97,11 @@ void Vbd::SetVertexPartitions(std::vector<std::vector<GpuIndex>> const& partitio
     mImpl->SetVertexPartitions(partitions);
 }
 
+void Vbd::SetInitializationStrategy(EInitializationStrategy strategy)
+{
+    mImpl->SetInitializationStrategy(strategy);
+}
+
 void Vbd::SetBlockSize(GpuIndex blockSize)
 {
     mImpl->SetBlockSize(blockSize);

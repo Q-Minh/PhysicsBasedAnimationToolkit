@@ -3,6 +3,7 @@
 
 #include "pbat/gpu/Aliases.h"
 #include "pbat/gpu/math/linalg/Matrix.cuh"
+#include "pbat/gpu/vbd/InitializationStrategy.h"
 
 #include <array>
 #include <cstddef>
@@ -56,13 +57,36 @@ struct FAdaptiveInitialization
     __device__ void operator()(auto i)
     {
         using namespace pbat::gpu::math::linalg;
-        // Vector3 const aexti    = GetExternalAcceleration(i);
-        // Vector3 const ati      = GetAcceleration(i);
-        // GpuScalar const aexti2 = SquaredNorm(aexti) + std::numeric_limits<GpuScalar>::epsilon();
-        // GpuScalar atext        = Dot(ati, aexti) / aexti2;
-        // GpuScalar atilde       = min(max(atext, GpuScalar{0}), GpuScalar{1});
-        for (auto d = 0; d < 3; ++d)
-            x[d][i] = xt[d][i] + dt * vt[d][i] + dt2 * aext[d][i] /*atilde * aexti(d)*/;
+        if (strategy == EInitializationStrategy::CurrentPosition)
+        {
+            for (auto d = 0; d < 3; ++d)
+                x[d][i] = xt[d][i];
+        }
+        else if (strategy == EInitializationStrategy::CurrentTrajectory)
+        {
+            for (auto d = 0; d < 3; ++d)
+                x[d][i] = xt[d][i] + dt * vt[d][i];
+        }
+        else if (strategy == EInitializationStrategy::InertialTarget)
+        {
+            for (auto d = 0; d < 3; ++d)
+                x[d][i] = xt[d][i] + dt * vt[d][i] + dt2 * aext[d][i];
+        }
+        else // (strategy == EInitializationStrategy::Adaptive)
+        {
+            Vector3 const aexti                     = GetExternalAcceleration(i);
+            GpuScalar const aextin2                 = SquaredNorm(aexti);
+            bool const bHasZeroExternalAcceleration = (aextin2 == GpuScalar{0});
+            GpuScalar atilde{0};
+            if (not bHasZeroExternalAcceleration)
+            {
+                Vector3 const ati     = GetAcceleration(i);
+                GpuScalar const atext = Dot(ati, aexti) / aextin2;
+                atilde                = min(max(atext, GpuScalar{0}), GpuScalar{1});
+            }
+            for (auto d = 0; d < 3; ++d)
+                x[d][i] = xt[d][i] + dt * vt[d][i] + dt2 * atilde * aexti(d);
+        }
     }
 
     GpuScalar dt;
@@ -72,6 +96,7 @@ struct FAdaptiveInitialization
     std::array<GpuScalar*, 3> vt;
     std::array<GpuScalar*, 3> aext;
     std::array<GpuScalar*, 3> x;
+    EInitializationStrategy strategy;
 };
 
 struct FChebyshev

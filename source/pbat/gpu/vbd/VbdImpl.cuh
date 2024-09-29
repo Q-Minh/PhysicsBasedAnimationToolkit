@@ -4,6 +4,7 @@
 #include "pbat/gpu/Aliases.h"
 #include "pbat/gpu/common/Buffer.cuh"
 #include "pbat/gpu/geometry/PrimitivesImpl.cuh"
+#include "pbat/gpu/vbd/InitializationStrategy.h"
 
 #include <cuda/api/stream.hpp>
 #include <vector>
@@ -90,6 +91,11 @@ class VbdImpl
     void SetVertexPartitions(std::vector<std::vector<GpuIndex>> const& partitions);
     /**
      * @brief
+     * @param strategy
+     */
+    void SetInitializationStrategy(EInitializationStrategy strategy);
+    /**
+     * @brief
      * @param blockSize
      */
     void SetBlockSize(GpuIndex blockSize);
@@ -166,6 +172,7 @@ class VbdImpl
 
     std::vector<common::Buffer<GpuIndex>> mPartitions; ///< Constraint partitions
 
+    EInitializationStrategy mInitializationStrategy; ///< Strategy to use to determine the initial BCD iterate
     GpuIndex mGpuThreadBlockSize; ///< Number of threads per CUDA thread block
     cuda::stream_t mStream;       ///< Cuda stream on which this VBD instance will run
 };
