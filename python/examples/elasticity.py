@@ -14,6 +14,8 @@ if __name__ == "__main__":
     )
     parser.add_argument("-i", "--input", help="Path to input mesh", type=str,
                         dest="input", required=True)
+    parser.add_argument("-o", "--output", help="Path to output", type=str,
+                        dest="output", default=".")
     parser.add_argument("-m", "--mass-density", help="Mass density", type=float,
                         dest="rho", default=1000.)
     parser.add_argument("-Y", "--young-modulus", help="Young's modulus", type=float,
@@ -97,6 +99,8 @@ if __name__ == "__main__":
     dt = 0.01
     animate = False
     use_direct_solver = False
+    export = False
+    t = 0
     newton_maxiter = 1
     cg_fill_in = 0.01
     cg_drop_tolerance = 1e-4
@@ -109,7 +113,7 @@ if __name__ == "__main__":
     def callback():
         global x, v, dx, hep, dt, M, Minv, f
         global cg_fill_in, cg_drop_tolerance, cg_residual, cg_maxiter
-        global animate, step, use_direct_solver
+        global animate, step, use_direct_solver, export, t
         global newton_maxiter
         global profiler
 
@@ -127,6 +131,7 @@ if __name__ == "__main__":
         changed, animate = imgui.Checkbox("animate", animate)
         changed, use_direct_solver = imgui.Checkbox(
             "Use direct solver", use_direct_solver)
+        changed, export = imgui.Checkbox("Export", export)
         step = imgui.Button("step")
 
         if animate or step:
@@ -175,9 +180,16 @@ if __name__ == "__main__":
             x = xk
             profiler.end_frame("Physics")
 
+            if export:
+                ps.screenshot(f"{args.output}/{t}.png")
+
             # Update visuals
             X = x.reshape(mesh.X.shape[0], mesh.X.shape[1], order='f')
             vm.update_vertex_positions(X.T)
+
+            t = t + 1
+
+        imgui.Text(f"Frame={t}")
 
     ps.set_user_callback(callback)
     ps.show()
