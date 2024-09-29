@@ -6,6 +6,7 @@
 
 #include <array>
 #include <cstddef>
+#include <limits>
 
 namespace pbat {
 namespace gpu {
@@ -55,17 +56,13 @@ struct FAdaptiveInitialization
     __device__ void operator()(auto i)
     {
         using namespace pbat::gpu::math::linalg;
-        // Vector3 const aexti                     = GetExternalAcceleration(i);
-        // GpuScalar aexti2                        = SquaredNorm(aexti);
-        // bool const bHasZeroExternalAcceleration = aexti2 == GpuScalar{0};
-        // GpuScalar const atext                   = Dot(GetAcceleration(i), aexti) / aexti2;
-        // GpuScalar atilde                        = min(max(atext, GpuScalar{0}), GpuScalar{1});
-        // bool const bWasClamped = (atilde == GpuScalar{0}) or (atilde == GpuScalar{1});
-        // atilde                 = bHasZeroExternalAcceleration ? GpuScalar{0} :
-        //                                                         (not bWasClamped) * atext +
-        //                                                         bWasClamped * atilde;
+        // Vector3 const aexti    = GetExternalAcceleration(i);
+        // Vector3 const ati      = GetAcceleration(i);
+        // GpuScalar const aexti2 = SquaredNorm(aexti) + std::numeric_limits<GpuScalar>::epsilon();
+        // GpuScalar atext        = Dot(ati, aexti) / aexti2;
+        // GpuScalar atilde       = min(max(atext, GpuScalar{0}), GpuScalar{1});
         for (auto d = 0; d < 3; ++d)
-            x[d][i] = xt[d][i] + dt * vt[d][i] + dt2 * /*atilde * aexti(d)*/ aext[d][i];
+            x[d][i] = xt[d][i] + dt * vt[d][i] + dt2 * aext[d][i] /*atilde * aexti(d)*/;
     }
 
     GpuScalar dt;
@@ -84,13 +81,15 @@ struct FChebyshev
         std::array<GpuScalar*, 3> xkm2,
         std::array<GpuScalar*, 3> xkm1,
         std::array<GpuScalar*, 3> x)
-        : rho2(rho * rho), omega(GpuScalar{1}), xkm2(xkm2), xkm1(xkm1), x(x)
+        : k(), rho2(rho * rho), omega(), xkm2(xkm2), xkm1(xkm1), x(x)
     {
     }
 
-    void Update(auto k)
+    void SetIteration(auto kIn)
     {
-        omega = (k == 0) ? omega = GpuScalar{2} / (GpuScalar{2} - rho2) :
+        k     = kIn;
+        omega = (k == 0) ? GpuScalar{1} :
+                (k == 1) ? omega = GpuScalar{2} / (GpuScalar{2} - rho2) :
                            GpuScalar{4} / (GpuScalar{4} - rho2 * omega);
     }
 
@@ -98,12 +97,15 @@ struct FChebyshev
     {
         for (auto d = 0; d < 3; ++d)
         {
-            x[d][i]    = omega * (x[d][i] - xkm2[d][i]) + xkm2[d][i];
+            if (k > 1)
+                x[d][i] = omega * (x[d][i] - xkm2[d][i]) + xkm2[d][i];
+
             xkm2[d][i] = xkm1[d][i];
             xkm1[d][i] = x[d][i];
         }
     }
 
+    GpuIndex k;
     GpuScalar rho2;
     GpuScalar omega;
     std::array<GpuScalar*, 3> xkm2;

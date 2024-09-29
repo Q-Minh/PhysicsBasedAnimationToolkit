@@ -130,25 +130,7 @@ void VbdImpl::Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps, GpuScal
                 mVelocities.Raw(),
                 mExternalAcceleration.Raw(),
                 X.x.Raw()});
-        if (bUseChebyshevAcceleration)
-        {
-            // Initialize Chebyshev semi-iterative method
-            // x(k-2) <- x(k-1)
-            // x(k-1) <- x(t)
-            for (auto d = 0; X.x.Dimensions() < 3; ++d)
-            {
-                cuda::memory::async::copy(
-                    thrust::raw_pointer_cast(mChebyshevPositionsM2[d].data()),
-                    thrust::raw_pointer_cast(X.x[d].data()),
-                    X.x.Size() * sizeof(GpuScalar),
-                    mStream);
-                cuda::memory::async::copy(
-                    thrust::raw_pointer_cast(mChebyshevPositionsM1[d].data()),
-                    thrust::raw_pointer_cast(X.x[d].data()),
-                    X.x.Size() * sizeof(GpuScalar),
-                    mStream);
-            }
-        }
+        // Initialize Chebyshev semi-iterative method
         kernels::FChebyshev fChebyshev{
             rho,
             mChebyshevPositionsM2.Raw(),
@@ -159,6 +141,9 @@ void VbdImpl::Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps, GpuScal
         // Minimize Backward Euler, i.e. BDF1, objective
         for (auto k = 0; k < iterations; ++k)
         {
+            if (bUseChebyshevAcceleration)
+                fChebyshev.SetIteration(k);
+
             for (auto& partition : mPartitions)
             {
                 bdf.partition = partition.Raw();
@@ -175,6 +160,7 @@ void VbdImpl::Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps, GpuScal
                     bcdLaunchConfiguration,
                     bdf);
             }
+
             if (bUseChebyshevAcceleration)
             {
                 e = thrust::async::for_each(
@@ -182,7 +168,6 @@ void VbdImpl::Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps, GpuScal
                     thrust::make_counting_iterator<GpuIndex>(0),
                     thrust::make_counting_iterator<GpuIndex>(nVertices),
                     fChebyshev);
-                fChebyshev.Update(k);
             }
         }
         // Update velocities
