@@ -85,8 +85,12 @@ if __name__ == "__main__":
                         dest="Y", default=1e6)
     parser.add_argument("-n", "--poisson-ratio", help="Poisson's ratio", type=float,
                         dest="nu", default=0.45)
-    parser.add_argument("--percent-fixed", help="Percentage, in the z-axis, of top of the scene's mesh to fix", type=float,
+    parser.add_argument("--percent-fixed", help="Percentage, in the fixed axis, of the scene's mesh to fix", type=float,
                         dest="percent_fixed", default=0.01)
+    parser.add_argument("--axis-fixed", help="Axis 0 | 1 | 2 (x=0,y=1,z=2) in which to fix a certain percentage of the scene's mesh", type=int,
+                        dest="fixed_axis", default=2)
+    parser.add_argument("--fixed-end", help="min | max, whether to fix from the min or the max of the scene mesh's bounding box", type=str, default="min",
+                        dest="fixed_end")
     args = parser.parse_args()
 
     # Construct FEM quantities for simulation
@@ -131,8 +135,14 @@ if __name__ == "__main__":
     Xmin = mesh.X.min(axis=1)
     Xmax = mesh.X.max(axis=1)
     extent = Xmax - Xmin
-    # Xmin[-1] = Xmax[-1] - args.percent_fixed*extent[-1]
-    Xmax[0] = Xmin[0] + args.percent_fixed*extent[0]
+    if args.fixed_end == "min":
+        Xmax[args.fixed_axis] = Xmin[args.fixed_axis] + \
+            args.percent_fixed*extent[args.fixed_axis]
+        Xmin[args.fixed_axis] -= args.percent_fixed*extent[args.fixed_axis]
+    elif args.fixed_end == "max":
+        Xmin[args.fixed_axis] = Xmax[args.fixed_axis] - \
+            args.percent_fixed*extent[args.fixed_axis]
+        Xmax[args.fixed_axis] += args.percent_fixed * extent[args.fixed_axis]
     aabb = pbat.geometry.aabb(np.vstack((Xmin, Xmax)).T)
     vdbc = aabb.contained(mesh.X)
     a[:, vdbc] = 0.  # Allow no acceleration, i.e. no external forces in fixed vertices
