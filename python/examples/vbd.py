@@ -87,7 +87,7 @@ if __name__ == "__main__":
                         dest="nu", default=0.45)
     parser.add_argument("--percent-fixed", help="Percentage, in the fixed axis, of the scene's mesh to fix", type=float,
                         dest="percent_fixed", default=0.01)
-    parser.add_argument("--axis-fixed", help="Axis 0 | 1 | 2 (x=0,y=1,z=2) in which to fix a certain percentage of the scene's mesh", type=int,
+    parser.add_argument("--fixed-axis", help="Axis 0 | 1 | 2 (x=0,y=1,z=2) in which to fix a certain percentage of the scene's mesh", type=int,
                         dest="fixed_axis", default=2)
     parser.add_argument("--fixed-end", help="min | max, whether to fix from the min or the max of the scene mesh's bounding box", type=str, default="min",
                         dest="fixed_end")
@@ -153,7 +153,7 @@ if __name__ == "__main__":
     vbd = pbat.gpu.vbd.Vbd(V.T, VC, F.T, C.T)
     vbd.a = a
     vbd.m = m
-    vbd.wg = detJeU
+    vbd.wg = detJeU / 6
     vbd.GNe = GNeU
     vbd.lame = np.vstack((mue, lambdae))
     GVT = vertex_tetrahedron_adjacency_graph(V, C)
@@ -166,10 +166,11 @@ if __name__ == "__main__":
     thread_block_size = 64
     vbd.set_gpu_block_size(thread_block_size)
     initialization_strategies = [
-        pbat.gpu.vbd.InitializationStrategy.CurrentPosition,
-        pbat.gpu.vbd.InitializationStrategy.CurrentTrajectory,
-        pbat.gpu.vbd.InitializationStrategy.InertialTarget,
-        pbat.gpu.vbd.InitializationStrategy.Adaptive
+        pbat.gpu.vbd.InitializationStrategy.Position,
+        pbat.gpu.vbd.InitializationStrategy.Inertia,
+        pbat.gpu.vbd.InitializationStrategy.KineticEnergyMinimum,
+        pbat.gpu.vbd.InitializationStrategy.AdaptiveVbd,
+        pbat.gpu.vbd.InitializationStrategy.AdaptivePbat
     ]
     initialization_strategy = initialization_strategies[2]
     vbd.initialization_strategy = initialization_strategy
@@ -188,6 +189,8 @@ if __name__ == "__main__":
     iterations = 20
     substeps = 1
     rho_chebyshev = 1.
+    RdetH = 1e-10
+    kD = 0.
     animate = False
     export = False
     t = 0
@@ -195,7 +198,7 @@ if __name__ == "__main__":
     profiler = pbat.profiling.Profiler()
 
     def callback():
-        global dt, iterations, substeps, rho_chebyshev, thread_block_size, initialization_strategy
+        global dt, iterations, substeps, rho_chebyshev, thread_block_size, initialization_strategy, RdetH, kD
         global animate, export, t
         global profiler
 
@@ -204,6 +207,10 @@ if __name__ == "__main__":
         changed, substeps = imgui.InputInt("Substeps", substeps)
         changed, rho_chebyshev = imgui.InputFloat(
             "Chebyshev rho", rho_chebyshev)
+        changed, kD = imgui.InputFloat(
+            "Damping", kD, format="%.8f")
+        changed, RdetH = imgui.InputFloat(
+            "Residual det(H)", RdetH, format="%.15f")
         changed, thread_block_size = imgui.InputInt(
             "Thread block size", thread_block_size)
         changed = imgui.BeginCombo(
@@ -216,6 +223,8 @@ if __name__ == "__main__":
                     initialization_strategy = initialization_strategies[i]
             imgui.EndCombo()
         vbd.initialization_strategy = initialization_strategy
+        vbd.kD = kD
+        vbd.RdetH = RdetH
         changed, animate = imgui.Checkbox("Animate", animate)
         changed, export = imgui.Checkbox("Export", export)
         step = imgui.Button("Step")

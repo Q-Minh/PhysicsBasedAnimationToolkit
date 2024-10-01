@@ -29,7 +29,7 @@ GpuVectorX LinearFemMesh::QuadratureWeights() const
 {
     using MeshType = fem::Mesh<fem::Tetrahedron<1>, 3>;
     auto* mesh     = static_cast<MeshType const*>(mImpl);
-    return fem::DeterminantOfJacobian<1>(*mesh).reshaped().cast<GpuScalar>();
+    return (fem::DeterminantOfJacobian<1>(*mesh).reshaped().array() / Scalar{6}).cast<GpuScalar>();
 }
 
 GpuMatrixX LinearFemMesh::ShapeFunctionGradients() const
