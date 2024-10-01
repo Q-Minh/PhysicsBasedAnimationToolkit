@@ -1,6 +1,7 @@
 #ifndef PBAT_GPU_VBD_VBD_H
 #define PBAT_GPU_VBD_VBD_H
 
+#include "PhysicsBasedAnimationToolkitExport.h"
 #include "pbat/gpu/Aliases.h"
 #include "pbat/gpu/vbd/InitializationStrategy.h"
 
@@ -13,16 +14,16 @@ class VbdImpl;
 class Vbd
 {
   public:
-    Vbd(Eigen::Ref<GpuMatrixX const> const& X,
+    PBAT_API Vbd(Eigen::Ref<GpuMatrixX const> const& X,
         Eigen::Ref<GpuIndexMatrixX const> const& V,
         Eigen::Ref<GpuIndexMatrixX const> const& F,
         Eigen::Ref<GpuIndexMatrixX const> const& T);
 
     Vbd(Vbd const&)            = delete;
     Vbd& operator=(Vbd const&) = delete;
-    Vbd(Vbd&& other) noexcept;
-    Vbd& operator=(Vbd&& other);
-    ~Vbd();
+    PBAT_API Vbd(Vbd&& other) noexcept;
+    PBAT_API Vbd& operator=(Vbd&& other) noexcept;
+    PBAT_API ~Vbd();
 
     /**
      * @brief
@@ -32,7 +33,7 @@ class Vbd
      * @param rho Chebyshev semi-iterative method's estimated spectral radius. If rho >= 1,
      * Chebyshev acceleration is not used.
      */
-    void Step(
+    PBAT_API void Step(
         GpuScalar dt,
         GpuIndex iterations,
         GpuIndex substeps = GpuIndex{1},
@@ -41,43 +42,43 @@ class Vbd
      * @brief
      * @param X 3x|#vertices| array of vertex positions
      */
-    void SetPositions(Eigen::Ref<GpuMatrixX const> const& X);
+    PBAT_API void SetPositions(Eigen::Ref<GpuMatrixX const> const& X);
     /**
      * @brief
      * @param v 3x|#vertices| array of vertex velocities
      */
-    void SetVelocities(Eigen::Ref<GpuMatrixX const> const& v);
+    PBAT_API void SetVelocities(Eigen::Ref<GpuMatrixX const> const& v);
     /**
      * @brief
      * @param aext 3x|#vertices| array of external accelerations
      */
-    void SetExternalAcceleration(Eigen::Ref<GpuMatrixX const> const& aext);
+    PBAT_API void SetExternalAcceleration(Eigen::Ref<GpuMatrixX const> const& aext);
     /**
      * @brief
      * @param m |#vertices| array of lumped masses
      */
-    void SetMass(Eigen::Ref<GpuVectorX const> const& m);
+    PBAT_API void SetMass(Eigen::Ref<GpuVectorX const> const& m);
     /**
      * @brief
      * @param wg |#elements| array of quadrature weights
      */
-    void SetQuadratureWeights(Eigen::Ref<GpuVectorX const> const& wg);
+    PBAT_API void SetQuadratureWeights(Eigen::Ref<GpuVectorX const> const& wg);
     /**
      * @brief
      * @param GP |4x3|x|#elements| array of shape function gradients
      */
-    void SetShapeFunctionGradients(Eigen::Ref<GpuMatrixX const> const& GP);
+    PBAT_API void SetShapeFunctionGradients(Eigen::Ref<GpuMatrixX const> const& GP);
     /**
      * @brief
      * @param l 2x|#elements| array of lame coefficients l, where l[0,:] = mu and l[1,:] = lambda
      */
-    void SetLameCoefficients(Eigen::Ref<GpuMatrixX const> const& l);
+    PBAT_API void SetLameCoefficients(Eigen::Ref<GpuMatrixX const> const& l);
     /**
      * @brief
      * @param zero Numerical zero used in Hessian determinant check for approximate singularity
      * detection
      */
-    void SetNumericalZeroForHessianDeterminant(GpuScalar zero);
+    PBAT_API void SetNumericalZeroForHessianDeterminant(GpuScalar zero);
     /**
      * @brief Sets the adjacency graph of vertices to incident tetrahedra in compressed column
      * format
@@ -85,7 +86,7 @@ class Vbd
      * @param GVTn
      * @param GVTilocal
      */
-    void SetVertexTetrahedronAdjacencyList(
+    PBAT_API void SetVertexTetrahedronAdjacencyList(
         Eigen::Ref<GpuIndexVectorX const> const& GVTp,
         Eigen::Ref<GpuIndexVectorX const> const& GVTn,
         Eigen::Ref<GpuIndexVectorX const> const& GVTilocal);
@@ -93,33 +94,33 @@ class Vbd
      * @brief
      * @param kD
      */
-    void SetRayleighDampingCoefficient(GpuScalar kD);
+    PBAT_API void SetRayleighDampingCoefficient(GpuScalar kD);
     /**
      * @brief Sets the groups/partitions of vertices that can be minimized independently, i.e. in
      * parallel.
      * @param partitions
      */
-    void SetVertexPartitions(std::vector<std::vector<GpuIndex>> const& partitions);
+    PBAT_API void SetVertexPartitions(std::vector<std::vector<GpuIndex>> const& partitions);
     /**
      * @brief Sets the initialization strategy to kick-start the time step minimization
      * @param strategy
      */
-    void SetInitializationStrategy(EInitializationStrategy strategy);
+    PBAT_API void SetInitializationStrategy(EInitializationStrategy strategy);
     /**
      * @brief Sets the GPU thread block size, for the BDF1 minimization
      * @param blockSize #threads per block, should be a multiple of 32
      */
-    void SetBlockSize(GpuIndex blockSize);
+    PBAT_API void SetBlockSize(GpuIndex blockSize);
     /**
      * @brief
      * @return |#dims|x|#vertices| array of vertex positions
      */
-    GpuMatrixX GetPositions() const;
+    PBAT_API GpuMatrixX GetPositions() const;
     /**
      * @brief
      * @return |#dims|x|#vertices| array of vertex velocities
      */
-    GpuMatrixX GetVelocities() const;
+    PBAT_API GpuMatrixX GetVelocities() const;
 
   private:
     VbdImpl* mImpl;

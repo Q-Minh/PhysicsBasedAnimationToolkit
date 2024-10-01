@@ -24,7 +24,7 @@ Vbd::Vbd(Vbd&& other) noexcept : mImpl(other.mImpl)
     other.mImpl = nullptr;
 }
 
-Vbd& Vbd::operator=(Vbd&& other)
+Vbd& Vbd::operator=(Vbd&& other) noexcept
 {
     if (mImpl != nullptr)
         delete mImpl;

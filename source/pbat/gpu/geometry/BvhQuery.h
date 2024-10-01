@@ -1,6 +1,7 @@
 #ifndef PBAT_GPU_BVH_QUERY_CUH
 #define PBAT_GPU_BVH_QUERY_CUH
 
+#include "PhysicsBasedAnimationToolkitExport.h"
 #include "pbat/gpu/Aliases.h"
 #include "pbat/gpu/geometry/Bvh.h"
 #include "pbat/gpu/geometry/Primitives.h"
@@ -16,13 +17,14 @@ class BvhQueryImpl;
 class BvhQuery
 {
   public:
+    PBAT_API
     BvhQuery(std::size_t nPrimitives, std::size_t nOverlaps, std::size_t nNearestNeighbours);
 
     BvhQuery(BvhQuery const&)            = delete;
     BvhQuery& operator=(BvhQuery const&) = delete;
 
-    BvhQuery(BvhQuery&& other) noexcept;
-    BvhQuery& operator=(BvhQuery&& other) noexcept;
+    PBAT_API BvhQuery(BvhQuery&& other) noexcept;
+    PBAT_API BvhQuery& operator=(BvhQuery&& other) noexcept;
 
     /**
      * @brief
@@ -32,7 +34,7 @@ class BvhQuery
      * @param max
      * @param expansion
      */
-    void Build(
+    PBAT_API void Build(
         Points const& P,
         Simplices const& S,
         Eigen::Vector<GpuScalar, 3> const& min,
@@ -48,7 +50,7 @@ class BvhQuery
      * @returns 2x|#overlaps| matrix O of overlapping simplices, such that (O(0,k), O(1,k)) yields
      * the k^{th} overlapping pair (si \in S1,sj \in S2).
      */
-    GpuIndexMatrixX
+    PBAT_API GpuIndexMatrixX
     DetectOverlaps(Points const& P, Simplices const& S1, Simplices const& S2, Bvh const& bvh);
 
     /**
@@ -66,7 +68,7 @@ class BvhQuery
      * N(1,k)) yields the k^{th} nearest neighbour pair (si \in S1, sj \in S2), i.e. the simplices
      * sj in S2 nearest to si.
      */
-    GpuIndexMatrixX DetectContactPairsFromOverlaps(
+    PBAT_API GpuIndexMatrixX DetectContactPairsFromOverlaps(
         Points const& P,
         Simplices const& S1,
         Simplices const& S2,
@@ -76,7 +78,7 @@ class BvhQuery
         GpuScalar dhat  = std::numeric_limits<GpuScalar>::max(),
         GpuScalar dzero = std::numeric_limits<GpuScalar>::epsilon());
 
-    ~BvhQuery();
+    PBAT_API ~BvhQuery();
 
   private:
     BvhQueryImpl* mImpl;

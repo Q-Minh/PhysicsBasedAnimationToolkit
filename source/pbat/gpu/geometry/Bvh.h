@@ -3,6 +3,7 @@
 
 #include "Primitives.h"
 #include "pbat/gpu/Aliases.h"
+#include "PhysicsBasedAnimationToolkitExport.h"
 
 #include <Eigen/Core>
 #include <cstddef>
@@ -27,13 +28,13 @@ class Bvh
      * @param nPrimitives
      * @param nOverlaps
      */
-    Bvh(std::size_t nPrimitives, std::size_t nOverlaps);
+    PBAT_API Bvh(std::size_t nPrimitives, std::size_t nOverlaps);
 
     Bvh(Bvh const&)            = delete;
     Bvh& operator=(Bvh const&) = delete;
 
-    Bvh(Bvh&& other) noexcept;
-    Bvh& operator=(Bvh&& other) noexcept;
+    PBAT_API Bvh(Bvh&& other) noexcept;
+    PBAT_API Bvh& operator=(Bvh&& other) noexcept;
 
     /**
      * @brief
@@ -41,63 +42,63 @@ class Bvh
      * @param S
      * @param expansion
      */
-    void Build(
+    PBAT_API void Build(
         Points const& P,
         Simplices const& S,
         Eigen::Vector<GpuScalar, 3> const& min,
         Eigen::Vector<GpuScalar, 3> const& max,
         GpuScalar expansion = std::numeric_limits<GpuScalar>::epsilon());
 
-    BvhImpl* Impl();
-    BvhImpl const* Impl() const;
+    PBAT_API BvhImpl* Impl();
+    PBAT_API BvhImpl const* Impl() const;
 
     /**
      * @brief
      * @param S The simplices which were used to build this BVH
      */
-    GpuIndexMatrixX DetectSelfOverlaps(Simplices const& S);
+    PBAT_API GpuIndexMatrixX DetectSelfOverlaps(Simplices const& S);
     /**
      * @brief BVH nodes' box minimums
      * @return
      */
-    Eigen::Matrix<GpuScalar, Eigen::Dynamic, Eigen::Dynamic> Min() const;
+    PBAT_API Eigen::Matrix<GpuScalar, Eigen::Dynamic, Eigen::Dynamic> Min() const;
     /**
      * @brief BVH nodes' box maximums
      * @return
      */
-    Eigen::Matrix<GpuScalar, Eigen::Dynamic, Eigen::Dynamic> Max() const;
+    PBAT_API Eigen::Matrix<GpuScalar, Eigen::Dynamic, Eigen::Dynamic> Max() const;
     /**
      * @brief
      * @return
      */
-    Eigen::Vector<GpuIndex, Eigen::Dynamic> SimplexOrdering() const;
+    PBAT_API Eigen::Vector<GpuIndex, Eigen::Dynamic> SimplexOrdering() const;
     /**
      * @brief
      * @return
      */
-    Eigen::Vector<MortonCodeType, Eigen::Dynamic> MortonCodes() const;
+    PBAT_API Eigen::Vector<MortonCodeType, Eigen::Dynamic> MortonCodes() const;
     /**
      * @brief
      * @return
      */
-    Eigen::Matrix<GpuIndex, Eigen::Dynamic, 2> Child() const;
+    PBAT_API Eigen::Matrix<GpuIndex, Eigen::Dynamic, 2> Child() const;
     /**
      * @brief
      * @return
      */
-    Eigen::Vector<GpuIndex, Eigen::Dynamic> Parent() const;
+    PBAT_API Eigen::Vector<GpuIndex, Eigen::Dynamic> Parent() const;
     /**
      * @brief
      * @return
      */
-    Eigen::Matrix<GpuIndex, Eigen::Dynamic, 2> Rightmost() const;
+    PBAT_API Eigen::Matrix<GpuIndex, Eigen::Dynamic, 2> Rightmost() const;
     /**
      * @brief
      * @return
      */
-    Eigen::Vector<GpuIndex, Eigen::Dynamic> Visits() const;
+    PBAT_API Eigen::Vector<GpuIndex, Eigen::Dynamic> Visits() const;
 
-    ~Bvh();
+    PBAT_API ~Bvh();
 
   private:
     BvhImpl* mImpl;

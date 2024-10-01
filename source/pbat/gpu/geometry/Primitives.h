@@ -1,6 +1,7 @@
 #ifndef PBAT_GPU_GEOMETRY_PRIMITIVES_H
 #define PBAT_GPU_GEOMETRY_PRIMITIVES_H
 
+#include "PhysicsBasedAnimationToolkitExport.h"
 #include "pbat/gpu/Aliases.h"
 
 namespace pbat {
@@ -18,7 +19,7 @@ class Points
      * @brief
      * @param V
      */
-    Points(Eigen::Ref<GpuMatrixX const> const& V);
+    PBAT_API Points(Eigen::Ref<GpuMatrixX const> const& V);
     /**
      * @brief
      * @param
@@ -34,37 +35,37 @@ class Points
      * @brief
      * @param
      */
-    Points(Points&&) noexcept;
+    PBAT_API Points(Points&&) noexcept;
     /**
      * @brief
      * @param
      * @return
      */
-    Points& operator=(Points&&) noexcept;
+    PBAT_API Points& operator=(Points&&) noexcept;
     /**
      * @brief
      * @param V
      */
-    void Update(Eigen::Ref<GpuMatrixX const> const& V);
+    PBAT_API void Update(Eigen::Ref<GpuMatrixX const> const& V);
     /**
      * @brief
      * @return
      */
-    PointsImpl* Impl();
+    PBAT_API PointsImpl* Impl();
     /**
      * @brief
      * @return
      */
-    PointsImpl const* Impl() const;
+    PBAT_API PointsImpl const* Impl() const;
     /**
      * @brief
      * @return
      */
-    GpuMatrixX Get() const;
+    PBAT_API GpuMatrixX Get() const;
     /**
      * @brief
      */
-    ~Points();
+    PBAT_API ~Points();
 
   private:
     PointsImpl* mImpl;
@@ -79,7 +80,7 @@ class Simplices
      * @brief
      * @param C
      */
-    Simplices(Eigen::Ref<GpuIndexMatrixX const> const& C);
+    PBAT_API Simplices(Eigen::Ref<GpuIndexMatrixX const> const& C);
     /**
      * @brief
      * @param
@@ -95,37 +96,37 @@ class Simplices
      * @brief
      * @param
      */
-    Simplices(Simplices&&) noexcept;
+    PBAT_API Simplices(Simplices&&) noexcept;
     /**
      * @brief
      * @param
      * @return
      */
-    Simplices& operator=(Simplices&&) noexcept;
+    PBAT_API Simplices& operator=(Simplices&&) noexcept;
     /**
      * @brief
      * @return
      */
-    GpuIndexMatrixX Get() const;
+    PBAT_API GpuIndexMatrixX Get() const;
     /**
      * @brief
      * @return
      */
-    ESimplexType Type() const;
+    PBAT_API ESimplexType Type() const;
     /**
      * @brief
      * @return
      */
-    SimplicesImpl* Impl();
+    PBAT_API SimplicesImpl* Impl();
     /**
      * @brief
      * @return
      */
-    SimplicesImpl const* Impl() const;
+    PBAT_API SimplicesImpl const* Impl() const;
     /**
      * @brief
      */
-    ~Simplices();
+    PBAT_API ~Simplices();
 
   private:
     SimplicesImpl* mImpl;
@@ -138,7 +139,7 @@ class Bodies
      * @brief
      * @param B
      */
-    Bodies(Eigen::Ref<GpuIndexVectorX const> const& B);
+    PBAT_API Bodies(Eigen::Ref<GpuIndexVectorX const> const& B);
     /**
      * @brief
      * @param
@@ -154,37 +155,37 @@ class Bodies
      * @brief
      * @param
      */
-    Bodies(Bodies&&) noexcept;
+    PBAT_API Bodies(Bodies&&) noexcept;
     /**
      * @brief
      * @param
      * @return
      */
-    Bodies& operator=(Bodies&&) noexcept;
+    PBAT_API Bodies& operator=(Bodies&&) noexcept;
     /**
      * @brief
      * @return
      */
-    GpuIndexMatrixX Get() const;
+    PBAT_API GpuIndexMatrixX Get() const;
     /**
      * @brief
      * @return
      */
-    std::size_t NumberOfBodies() const;
+    PBAT_API std::size_t NumberOfBodies() const;
     /**
      * @brief
      * @return
      */
-    BodiesImpl* Impl();
+    PBAT_API BodiesImpl* Impl();
     /**
      * @brief
      * @return
      */
-    BodiesImpl const* Impl() const;
+    PBAT_API BodiesImpl const* Impl() const;
     /**
      * @brief
      */
-    ~Bodies();
+    PBAT_API ~Bodies();
 
   private:
     BodiesImpl* mImpl;

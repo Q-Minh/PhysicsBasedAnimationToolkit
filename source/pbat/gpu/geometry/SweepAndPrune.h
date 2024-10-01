@@ -1,6 +1,7 @@
 #ifndef PBAT_GPU_SWEEP_AND_PRUNE_H
 #define PBAT_GPU_SWEEP_AND_PRUNE_H
 
+#include "PhysicsBasedAnimationToolkitExport.h"
 #include "Primitives.h"
 #include "pbat/Aliases.h"
 #include "pbat/gpu/Aliases.h"
@@ -17,21 +18,21 @@ class SweepAndPruneImpl;
 class SweepAndPrune
 {
   public:
-    SweepAndPrune(std::size_t nPrimitives, std::size_t nOverlaps);
+    PBAT_API SweepAndPrune(std::size_t nPrimitives, std::size_t nOverlaps);
 
     SweepAndPrune(SweepAndPrune const&)            = delete;
     SweepAndPrune& operator=(SweepAndPrune const&) = delete;
 
-    SweepAndPrune(SweepAndPrune&&) noexcept;
-    SweepAndPrune& operator=(SweepAndPrune&&) noexcept;
+    PBAT_API SweepAndPrune(SweepAndPrune&&) noexcept;
+    PBAT_API SweepAndPrune& operator=(SweepAndPrune&&) noexcept;
 
-    IndexMatrixX SortAndSweep(
+    PBAT_API IndexMatrixX SortAndSweep(
         Points const& P,
         Simplices const& S1,
         Simplices const& S2,
         Scalar expansion = static_cast<Scalar>(std::numeric_limits<GpuScalar>::epsilon()));
 
-    ~SweepAndPrune();
+    PBAT_API ~SweepAndPrune();
 
   private:
     SweepAndPruneImpl* mImpl;
