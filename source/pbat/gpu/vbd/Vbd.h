@@ -2,7 +2,6 @@
 #define PBAT_GPU_VBD_VBD_H
 
 #include "pbat/gpu/Aliases.h"
-
 #include "pbat/gpu/vbd/InitializationStrategy.h"
 
 namespace pbat {
@@ -73,6 +72,12 @@ class Vbd
      * @param l 2x|#elements| array of lame coefficients l, where l[0,:] = mu and l[1,:] = lambda
      */
     void SetLameCoefficients(Eigen::Ref<GpuMatrixX const> const& l);
+    /**
+     * @brief
+     * @param zero Numerical zero used in Hessian determinant check for approximate singularity
+     * detection
+     */
+    void SetNumericalZeroForHessianDeterminant(GpuScalar zero);
     /**
      * @brief Sets the adjacency graph of vertices to incident tetrahedra in compressed column
      * format

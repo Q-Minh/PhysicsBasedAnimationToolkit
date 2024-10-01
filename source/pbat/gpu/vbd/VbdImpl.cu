@@ -25,7 +25,7 @@ VbdImpl::VbdImpl(
       F(Fin),
       T(Tin),
       mPositionsAtT(Xin.cols()),
-      mInertialTargetPositions(Xin.cols()),
+      mKineticEnergyMinimalPositions(Xin.cols()),
       mChebyshevPositionsM2(Xin.cols()),
       mChebyshevPositionsM1(Xin.cols()),
       mVelocitiesAtT(Xin.cols()),
@@ -35,6 +35,7 @@ VbdImpl::VbdImpl(
       mQuadratureWeights(Tin.cols()),
       mShapeFunctionGradients(Tin.cols() * 4 * 3),
       mLameCoefficients(2 * Tin.cols()),
+      mDetHZero(GpuScalar{1e-10}),
       mVertexTetrahedronPrefix(Xin.cols() + 1),
       mVertexTetrahedronNeighbours(),
       mVertexTetrahedronLocalVertexIndices(),
@@ -44,7 +45,7 @@ VbdImpl::VbdImpl(
       mCollidingTriangles(8 * Xin.cols()),
       mCollidingTriangleCount(Xin.cols()),
       mPartitions(),
-      mInitializationStrategy(EInitializationStrategy::InertialTarget),
+      mInitializationStrategy(EInitializationStrategy::AdaptiveVbd),
       mGpuThreadBlockSize(64),
       mStream(common::Device(common::EDeviceSelectionPreference::HighestComputeCapability)
                   .create_stream(/*synchronize_with_default_stream=*/false))
@@ -67,19 +68,20 @@ void VbdImpl::Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps, GpuScal
     GpuScalar sdt                        = dt / static_cast<GpuScalar>(substeps);
     GpuScalar sdt2                       = sdt * sdt;
     GpuIndex const nVertices             = static_cast<GpuIndex>(X.NumberOfPoints());
-    bool const bUseChebyshevAcceleration = rho < GpuScalar{1};
+    bool const bUseChebyshevAcceleration = rho > GpuScalar{0} and rho < GpuScalar{1};
 
     kernels::BackwardEulerMinimization bdf{};
     bdf.dt                              = sdt;
     bdf.dt2                             = sdt2;
     bdf.m                               = mMass.Raw();
-    bdf.xtilde                          = mInertialTargetPositions.Raw();
+    bdf.xtilde                          = mKineticEnergyMinimalPositions.Raw();
     bdf.xt                              = mPositionsAtT.Raw();
     bdf.x                               = X.x.Raw();
     bdf.T                               = T.inds.Raw();
     bdf.wg                              = mQuadratureWeights.Raw();
     bdf.GP                              = mShapeFunctionGradients.Raw();
     bdf.lame                            = mLameCoefficients.Raw();
+    bdf.detHZero                        = mDetHZero;
     bdf.GVTp                            = mVertexTetrahedronPrefix.Raw();
     bdf.GVTn                            = mVertexTetrahedronNeighbours.Raw();
     bdf.GVTilocal                       = mVertexTetrahedronLocalVertexIndices.Raw();
@@ -93,7 +95,7 @@ void VbdImpl::Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps, GpuScal
     // NOTE:
     // For some reason, thrust::async::copy does not play well with cuda-api-wrapper streams. I am
     // guessing it has to do with synchronize_with_default_stream=false?
-
+    mStream.device().make_current();
     for (auto s = 0; s < substeps; ++s)
     {
         // Store previous positions
@@ -111,13 +113,13 @@ void VbdImpl::Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps, GpuScal
             thrust::device.on(mStream.handle()),
             thrust::make_counting_iterator<GpuIndex>(0),
             thrust::make_counting_iterator<GpuIndex>(nVertices),
-            kernels::FInertialTarget{
+            kernels::FKineticEnergyMinimum{
                 sdt,
                 sdt2,
                 X.x.Raw(),
                 mVelocities.Raw(),
                 mExternalAcceleration.Raw(),
-                mInertialTargetPositions.Raw()});
+                mKineticEnergyMinimalPositions.Raw()});
         // Initialize block coordinate descent's, i.e. BCD's, solution
         e = thrust::async::for_each(
             thrust::device.on(mStream.handle()),
@@ -126,7 +128,7 @@ void VbdImpl::Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps, GpuScal
             kernels::FAdaptiveInitialization{
                 sdt,
                 sdt2,
-                X.x.Raw(),
+                mPositionsAtT.Raw(),
                 mVelocitiesAtT.Raw(),
                 mVelocities.Raw(),
                 mExternalAcceleration.Raw(),
@@ -287,6 +289,11 @@ void VbdImpl::SetLameCoefficients(Eigen::Ref<GpuMatrixX const> const& l)
         throw std::invalid_argument(ss.str());
     }
     thrust::copy(l.data(), l.data() + l.size(), mLameCoefficients.Data());
+}
+
+void VbdImpl::SetNumericalZeroForHessianDeterminant(GpuScalar zero)
+{
+    mDetHZero = zero;
 }
 
 void VbdImpl::SetVertexTetrahedronAdjacencyList(

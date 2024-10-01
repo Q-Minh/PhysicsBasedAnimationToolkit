@@ -71,6 +71,11 @@ class VbdImpl
     void SetLameCoefficients(Eigen::Ref<GpuMatrixX const> const& l);
     /**
      * @brief
+     * @param zero
+     */
+    void SetNumericalZeroForHessianDeterminant(GpuScalar zero);
+    /**
+     * @brief
      * @param GVTp
      * @param GVTn
      * @param GVTilocal
@@ -138,7 +143,7 @@ class VbdImpl
     geometry::SimplicesImpl T; ///< Tetrahedral mesh elements
   private:
     common::Buffer<GpuScalar, 3> mPositionsAtT;            ///< Previous vertex positions
-    common::Buffer<GpuScalar, 3> mInertialTargetPositions; ///< Inertial target for vertex positions
+    common::Buffer<GpuScalar, 3> mKineticEnergyMinimalPositions; ///< Inertial target for vertex positions
     common::Buffer<GpuScalar, 3>
         mChebyshevPositionsM2; ///< x^{k-2} used in Chebyshev semi-iterative method
     common::Buffer<GpuScalar, 3>
@@ -152,6 +157,7 @@ class VbdImpl
                                                   ///< tetrahedron volumes for order 1)
     common::Buffer<GpuScalar> mShapeFunctionGradients; ///< 4x3x|#elements| shape function gradients
     common::Buffer<GpuScalar> mLameCoefficients; ///< 2x|#elements| 1st and 2nd Lame parameters
+    GpuScalar mDetHZero;                         ///< Numerical zero for hessian determinant check
 
     common::Buffer<GpuIndex>
         mVertexTetrahedronPrefix; ///< Vertex-tetrahedron adjacency list's prefix sum
@@ -172,7 +178,8 @@ class VbdImpl
 
     std::vector<common::Buffer<GpuIndex>> mPartitions; ///< Constraint partitions
 
-    EInitializationStrategy mInitializationStrategy; ///< Strategy to use to determine the initial BCD iterate
+    EInitializationStrategy
+        mInitializationStrategy;  ///< Strategy to use to determine the initial BCD iterate
     GpuIndex mGpuThreadBlockSize; ///< Number of threads per CUDA thread block
     cuda::stream_t mStream;       ///< Cuda stream on which this VBD instance will run
 };

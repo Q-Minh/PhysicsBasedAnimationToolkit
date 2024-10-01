@@ -23,10 +23,11 @@ void Bind(pybind11::module& m)
     using pbat::gpu::vbd::Vbd;
 
     pyb::enum_<EInitializationStrategy>(m, "InitializationStrategy")
-        .value("CurrentPosition", EInitializationStrategy::CurrentPosition)
-        .value("CurrentTrajectory", EInitializationStrategy::CurrentTrajectory)
-        .value("InertialTarget", EInitializationStrategy::InertialTarget)
-        .value("Adaptive", EInitializationStrategy::Adaptive)
+        .value("Position", EInitializationStrategy::Position)
+        .value("Inertia", EInitializationStrategy::Inertia)
+        .value("KineticEnergyMinimum", EInitializationStrategy::KineticEnergyMinimum)
+        .value("AdaptiveVbd", EInitializationStrategy::AdaptiveVbd)
+        .value("AdaptivePbat", EInitializationStrategy::AdaptivePbat)
         .export_values();
 
     pyb::class_<Vbd>(m, "Vbd")
@@ -136,6 +137,12 @@ void Bind(pybind11::module& m)
                 });
             },
             "2x|#elements| Lame coefficients")
+        .def_property(
+            "RdetH",
+            nullptr,
+            [](Vbd& vbd, GpuScalar zero) { vbd.SetNumericalZeroForHessianDeterminant(zero); },
+            "Numerical zero used in Hessian determinant check for approximate singularity "
+            "detection")
         .def_property(
             "GVT",
             nullptr,

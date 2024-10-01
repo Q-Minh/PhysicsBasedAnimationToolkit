@@ -79,6 +79,11 @@ void Vbd::SetLameCoefficients(Eigen::Ref<GpuMatrixX const> const& l)
     mImpl->SetLameCoefficients(l);
 }
 
+void Vbd::SetNumericalZeroForHessianDeterminant(GpuScalar zero)
+{
+    mImpl->SetNumericalZeroForHessianDeterminant(zero);
+}
+
 void Vbd::SetVertexTetrahedronAdjacencyList(
     Eigen::Ref<GpuIndexVectorX const> const& GVTp,
     Eigen::Ref<GpuIndexVectorX const> const& GVTn,

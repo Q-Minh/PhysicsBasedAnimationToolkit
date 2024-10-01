@@ -5,7 +5,7 @@ namespace pbat {
 namespace gpu {
 namespace vbd {
 
-enum class EInitializationStrategy { CurrentPosition, CurrentTrajectory, InertialTarget, Adaptive };
+enum class EInitializationStrategy { Position, Inertia, KineticEnergyMinimum, AdaptiveVbd, AdaptivePbat };
 
 } // namespace vbd
 } // namespace gpu
