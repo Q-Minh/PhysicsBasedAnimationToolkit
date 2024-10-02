@@ -85,6 +85,8 @@ if __name__ == "__main__":
                         dest="Y", default=1e6)
     parser.add_argument("-n", "--poisson-ratio", help="Poisson's ratio", type=float,
                         dest="nu", default=0.45)
+    parser.add_argument("-t", "--translation", help="Distance in z axis between every input mesh as multiplier of input mesh extents", type=float,
+                        dest="translation", default=0.1)
     parser.add_argument("--percent-fixed", help="Percentage, in the fixed axis, of the scene's mesh to fix", type=float,
                         dest="percent_fixed", default=0.01)
     parser.add_argument("--fixed-axis", help="Axis 0 | 1 | 2 (x=0,y=1,z=2) in which to fix a certain percentage of the scene's mesh", type=int,
