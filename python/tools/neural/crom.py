@@ -221,25 +221,18 @@ def gauss_newton(
         g = decoder(concat(X, q))
         return torch.linalg.norm(g - f)
 
-    def residual(Xhat):
+    def residual(X, q):
         # Xhat -> |#integration samples|x|#input dims + #latent|
-        return torch.linalg.norm(decoder(Xhat) - f, dim=1)
-
-    din = X.shape[1]
-    dout = decoder.dout
-    q = q0
-    J = torch.zeros(dout, q.shape[0])
-    for _ in range(maxiters):
-        # Xhat: |#integration samples|x|#input dims + #latent|
         Xhat = concat(X, q)
-        # g: |#integration samples|x|#output dims|
-        g = decoder(Xhat)
-        # l: |#integration samples|x|#output dims|
-        l = g - f
-        r = torch.linalg.norm(l)
-        # J: |#output dims|x|#latent|
-        J = (l / r).T @ torch.autograd.functional.jacobian(residual,
-                                                           Xhat)[:, din:]
+        r = torch.linalg.norm(decoder(Xhat) - f, dim=1)
+        return r
+
+    q = q0
+    for _ in range(maxiters):
+        r = residual(X, q)
+        # J: 1x|#latent|
+        drdX, drdq = torch.autograd.functional.jacobian(residual, (X, q))
+        J = drdq
         # A: |#latent|x|#latent|
         A = J.T @ J
         b = -J.T @ r
@@ -253,21 +246,24 @@ def sampling_metric(r: torch.Tensor):
     return torch.mean(r) + torch.max(r)
 
 
-def sampling_residual(M: list, dataset: Dataset, encoder: Encoder, decoder: Decoder):
+def sampling_residual(M: list, dataset: Dataset, encoder: Encoder, decoder: Decoder,
+                      gn_max_iters: int = 100):
     # ft: |#training samples|x|#output dims|
     # XT: |#training samples|x|#input dims|
     fT, XT = dataset[-1]
-    fT, XT = torch.from_numpy(fT.T), torch.from_numpy(XT.T)
-    # qT: |#latent dims|
-    qT = encoder(fT.unsqueeze(0))[0, :]
+    fT, XT = torch.from_numpy(fT), torch.from_numpy(XT)
     # fMT: |#integration samples|x|#output dims|
     fMT = fT[M, :]
     # XMT: |#integration samples|x|#input dims|
     XMT = XT[M, :]
+    # Get latent code from previous frame to initialize network inversion
+    fTm1, XTm1 = dataset[-2]
+    fTm1, XTm1 = torch.from_numpy(fTm1), torch.from_numpy(XTm1)
+    qTm1 = encoder(fTm1.unsqueeze(0))[0, :]
     # qM: |#latent|
-    qM = gauss_newton(decoder, qT, fMT, XMT)
+    qM = gauss_newton(decoder, qTm1, fMT, XMT, maxiters=gn_max_iters)
     # Xhat: |#training samples|x|#input dims + #latent|
-    Xhat = concat(qM, XT)
+    Xhat = concat(XT, qM)
     # r: |#training samples|
     r = torch.linalg.norm(decoder(Xhat) - fT, dim=1)
     return r
@@ -278,7 +274,8 @@ def robust_sampling(
         encoder: Encoder,
         decoder: Decoder,
         target_accuracy: float = 1e-2,
-        Q: int = 10):
+        Q: int = 10,
+        gn_max_iters: int = 100):
     """Robust sampling to get runtime integration samples from CROM paper
 
     Args:
@@ -290,6 +287,7 @@ def robust_sampling(
         Q (int, optional): Number of largest residual 
         training samples to choose from at every sampling iteration. 
         Defaults to 10.
+        gn_max_iters (int, optional): Max Gauss-Newton network inversion iterations
 
     Returns:
         list: Subset (list) of training data sample position indices to 
@@ -299,18 +297,22 @@ def robust_sampling(
     k = random.randint(0, P - 1)
     M = []
     M.append(k)
-    r = sampling_residual(M, dataset, encoder, decoder)
+    S = np.setdiff1d(list(range(P)), [k])
+    r = sampling_residual(M, dataset, encoder, decoder, gn_max_iters)
     while sampling_metric(r) >= target_accuracy:
-        largest = np.argsort(r)[-Q:]
+        print(f"# samples={len(M)}")
+        largest = np.argsort(r[S].detach().numpy())[-Q:]
         mQ = [0]*Q
         for i, m in enumerate(largest):
-            M.append(m)
-            rQ = sampling_residual(M, dataset, encoder, decoder)
+            M.append(S[m])
+            rQ = sampling_residual(M, dataset, encoder, decoder, gn_max_iters)
             mQ[i] = sampling_metric(rQ)
             M.pop()
-        m = largest[np.argmin(rQ)]
+        m = S[largest[np.argmin([mQi.item() for mQi in mQ])]]
         M.append(m)
-        r = sampling_residual(M, dataset, encoder, decoder)
+        S = np.setdiff1d(S, [m])
+        r = sampling_residual(M, dataset, encoder, decoder, gn_max_iters)
+    print(f"Samples:\n{M}")
     return M
 
 
@@ -466,7 +468,10 @@ def sample(args):
     encoder = torch.load(f"{args.input}/encoder.pt")
     decoder = torch.load(f"{args.input}/decoder.pt")
     dataset = ShapeDataset(args.input)
-    M = robust_sampling(dataset, encoder, decoder, target_accuracy=0.01, Q=10)
+    M = robust_sampling(dataset, encoder, decoder,
+                        target_accuracy=args.sampling_target_accuracy,
+                        Q=args.sampling_batch_samples,
+                        gn_max_iters=args.sampling_max_gn_iters)
     f0, X0 = dataset[0]
     XM = X0[M, :]
     torch.save(XM, f"{args.output}/XM.pt")
@@ -512,6 +517,12 @@ def parse_cli():
                         dest="learning_rate", default=1e-4)
     parser.add_argument("--batch-size", help="Training batch size", type=int,
                         dest="batch_size", default=32)
+    parser.add_argument("--sampling-max-gn-iters", help="Number of Gauss-Newton iterations in sampling mode", type=int,
+                        dest="sampling_max_gn_iters", default=100)
+    parser.add_argument("--sampling-target-accuracy", help="Target accuracy in CROM's smart sampling", type=float,
+                        dest="sampling_target_accuracy", default=1e-2)
+    parser.add_argument("--sampling-batch-samples", help="Number of samples with max residual to consider in sampling mode", type=int,
+                        dest="sampling_batch_samples", default=10)
     parser.add_argument("--mode", help="One of train | sample | run", type=str,
                         dest="mode", default="train")
     args = parser.parse_args()
