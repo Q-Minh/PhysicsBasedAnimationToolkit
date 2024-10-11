@@ -17,7 +17,7 @@ The Physics Based Animation Toolkit (PBAT) is a (mostly templated) cross-platfor
   - Dimensions `1,2,3`
   - [Lagrange shape functions](https://doc.comsol.com/5.3/doc/com.comsol.help.comsol/comsol_api_xmesh.40.4.html) of order `1,2,3`
   - Line, triangle, quadrilateral, tetrahedron and hexahedron elements
-- [Hyper elastic](https://en.wikipedia.org/wiki/Hyperelastic_material) material models
+- [Hyperelastic material models](https://en.wikipedia.org/wiki/Hyperelastic_material)
   - Saint-Venant Kirchhoff
   - Stable Neo-Hookean
 - Polynomial [quadrature rules](https://en.wikipedia.org/wiki/Numerical_integration)
