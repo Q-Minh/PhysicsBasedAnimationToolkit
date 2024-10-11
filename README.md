@@ -1,4 +1,5 @@
-# Physics Based Animation Toolkit
+# Physics Based Animation Toolkit 
+# ![](doc/imgs/pbat.png)
 
 [![build](https://github.com/Q-Minh/PhysicsBasedAnimationToolkit/actions/workflows/pyinstall.yml/badge.svg?event=release)](https://github.com/Q-Minh/PhysicsBasedAnimationToolkit/actions/workflows/pyinstall.yml)
 [![wheels](https://github.com/Q-Minh/PhysicsBasedAnimationToolkit/actions/workflows/wheels.yml/badge.svg?event=release)](https://github.com/Q-Minh/PhysicsBasedAnimationToolkit/actions/workflows/wheels.yml)
