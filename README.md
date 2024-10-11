@@ -1,6 +1,9 @@
 # Physics Based Animation Toolkit
 
-[![Wheels](https://github.com/Q-Minh/PhysicsBasedAnimationToolkit/actions/workflows/wheels.yml/badge.svg?event=release)](https://github.com/Q-Minh/PhysicsBasedAnimationToolkit/actions/workflows/wheels.yml)
+[![build](https://github.com/Q-Minh/PhysicsBasedAnimationToolkit/actions/workflows/pyinstall.yml/badge.svg?event=release)](https://github.com/Q-Minh/PhysicsBasedAnimationToolkit/actions/workflows/pyinstall.yml)
+[![wheels](https://github.com/Q-Minh/PhysicsBasedAnimationToolkit/actions/workflows/wheels.yml/badge.svg?event=release)](https://github.com/Q-Minh/PhysicsBasedAnimationToolkit/actions/workflows/wheels.yml)
+![pbatoolkit](https://img.shields.io/pypi/v/pbatoolkit?label=pypi%20package)
+![downloads](https://img.shields.io/pypi/dm/pbatoolkit)
 
 > _We recommend exploring the official [CMake documentation](https://cmake.org/cmake/help/latest/) to beginner CMake users_.
 
@@ -26,6 +29,7 @@ The Physics Based Animation Toolkit (PBAT) is a (mostly templated) cross-platfor
     - Overlapping primitive pairs
     - Point containment
 - GPU algorithms
+  - Vertex Block Descent (VBD)
   - eXtended Position Based Dynamics (XPBD)
   - Broad phase collision detection
     - Sweep and Prune
@@ -102,9 +106,11 @@ To download and install from PyPI, run in command line:
 pip install pbatoolkit
 ```
 
-> _To use [`pbatoolkit`](https://pypi.org/project/pbatoolkit/)'s GPU algorithms, you must build from source, i.e. the prebuilt [`pbatoolkit`](https://pypi.org/project/pbatoolkit/) package hosted from PyPI does not include GPU code._
+> _Currently, the `master` branch may contain breaking changes at any point in time. We recommend users to use specific git tags, i.e. via `git checkout v<major>.<minor>.<patch>`, where the version `<major>.<minor>.<patch>` matches the installed `pbatoolkit`'s version downloaded from PyPI (i.e. from `pip install pbatoolkit`)._
 
 For a local installation, which builds from source, our Python bindings build relies on [Scikit-build-core](https://scikit-build-core.readthedocs.io/en/latest/index.html), which relies on CMake's [`install`](https://cmake.org/cmake/help/latest/command/install.html) mechanism. As such, you can configure the installation as you typically would when using the CMake CLI directly, by now passing the corresponding CMake arguments in `pip`'s `config-settings` parameter (refer to the [Scikit-build-core](https://scikit-build-core.readthedocs.io/en/latest/index.html) documentation for the relevant parameters). See our [pyinstall workflow](.github/workflows/pyinstall.yml) for working examples of building from source on Linux, MacOS and Windows. Then, assuming that external dependencies are found via CMake's [`find_package`](https://cmake.org/cmake/help/latest/command/find_package.html), you can build and install our Python package [`pbatoolkit`](https://pypi.org/project/pbatoolkit/) locally and get the most up to date features. Consider using a [Python virtual environment](https://docs.python.org/3/library/venv.html) for this step.
+
+> _To use [`pbatoolkit`](https://pypi.org/project/pbatoolkit/)'s GPU algorithms, you must build from source, i.e. the prebuilt [`pbatoolkit`](https://pypi.org/project/pbatoolkit/) package hosted from PyPI does not include GPU code._
 
 As an example, assuming use of [`vcpkg`](https://github.com/microsoft/vcpkg) for external dependency management, with `VCPKG_ROOT` set as an environment variable, run
 
@@ -112,7 +118,7 @@ As an example, assuming use of [`vcpkg`](https://github.com/microsoft/vcpkg) for
 pip install . --config-settings=cmake.args="--preset=pip-local" -v
 ```
 
-on the command line to build [`pbatoolkit`](https://pypi.org/project/pbatoolkit/) from source. To build with GPU algorithms included, refer to the Configuration section. Additional CMake variables (i.e. [CMAKE_CUDA_ARCHITECTURES](https://cmake.org/cmake/help/latest/variable/CMAKE_CUDA_ARCHITECTURES.html#variable:CMAKE_CUDA_ARCHITECTURES), [CMAKE_CUDA_COMPILER](https://cmake.org/cmake/help/latest/variable/CMAKE_LANG_COMPILER.html#variable:CMAKE_%3CLANG%3E_COMPILER)) may be required to be set in order for CMake to discover your local CUDA installation.
+on the command line to build [`pbatoolkit`](https://pypi.org/project/pbatoolkit/) from source. To build with GPU algorithms included, refer to the Configuration section. Additional CMake variables (i.e. [`CMAKE_CUDA_ARCHITECTURES`](https://cmake.org/cmake/help/latest/variable/CMAKE_CUDA_ARCHITECTURES.html#variable:CMAKE_CUDA_ARCHITECTURES), [`CMAKE_CUDA_COMPILER`](https://cmake.org/cmake/help/latest/variable/CMAKE_LANG_COMPILER.html#variable:CMAKE_%3CLANG%3E_COMPILER)) may be required to be set in order for CMake to discover your local CUDA installation.
 
 Verify [`pbatoolkit`](https://pypi.org/project/pbatoolkit/)'s contents in Python shell:
 
@@ -121,7 +127,8 @@ import pbatoolkit as pbat
 help(pbat.fem)
 help(pbat.geometry)
 help(pbat.profiling)
-help(pbat.math.linalg)
+help(pbat.math)
+help(pbat.gpu)
 ```
 
 To profile relevant calls to [`pbatoolkit`](https://pypi.org/project/pbatoolkit/) functions/methods, connect to `python.exe` in the `Tracy` profiler server GUI.
@@ -142,6 +149,39 @@ Head over to our hands-on [tutorials section](./doc/tutorial/) to learn more abo
 ## Gallery
 
 Below, we show a few examples of what can be done in just a few lines of code using [`pbatoolkit`](https://pypi.org/project/pbatoolkit/) and Python. Code can be found [here](./python/examples/).
+
+##### Real-time hyper elasticity dynamics
+
+Our GPU implementation of the eXtended Position Based Dynamics (XPBD) algorithm simulates a ~324k element FEM elastic mesh interactively with contact.
+
+<p float="left">
+    <img src="doc/imgs/gpu.xpbd.bvh.gif" width="250" alt="A 162k element armadillo mesh is dropped on top of another duplicate, but fixed, armadillo mesh on the bottom." />
+</p>
+
+##### Inter-penetration free elastodynamic contact
+
+Combining [`pbatoolkit`](https://pypi.org/project/pbatoolkit/)'s FEM+elasticity features and the [`IPC Toolkit`](https://ipctk.xyz/) results in guaranteed inter-penetration free contact dynamics between deformable bodies.
+
+<p float="left">
+    <img src="doc/imgs/ipc.bar.stacks.gif" width="250" alt="A stack of bending beams fall on top of each other, simulated via Incremental Potential Contact (IPC)." />
+</p>
+
+##### Modal analysis
+
+The hyper elastic beam's representative deformation modes, i.e. its low frequency eigen vectors,
+are animated as time continuous signals.
+
+<p float="left">
+    <img src="doc/imgs/beam.modes.gif" width="250" alt="Unconstrained hyper elastic beam's eigen frequencies" />
+</p>
+
+##### GPU broad phase collision detection
+
+Real-time collision detection between 2 large scale meshes (~324k tetrahedra) is accelerated by highly parallel implementations of the [sweep and prune](https://en.wikipedia.org/wiki/Sweep_and_prune) algorithm, or [linear bounding volume hierarchies](https://research.nvidia.com/sites/default/files/pubs/2012-06_Maximizing-Parallelism-in/karras2012hpg_paper.pdf).
+
+<p float="left">
+    <img src="doc/imgs/gpu.broadphase.gif" width="250" alt="Broad phase collision detection on the GPU between 2 moving tetrahedral meshes" />
+</p>
 
 ##### Harmonic interpolation
 
@@ -167,48 +207,6 @@ Fine details of Godzilla's skin are smoothed out by diffusing `x,y,z` coordinate
 
 <p float="left">
     <img src="doc/imgs/godzilla.diffusion.smoothing.gif" width="250" alt="Godzilla model with fine details being smoothed out via diffusion" />
-</p>
-
-##### Hyper elastic simulation
-
-Linear (left) and quadratic (right) shape functions are compared on a hyper elastic simulation of the beam model, whose left side is fixed. Quadratic shape functions result in visually smoother and softer bending.
-
-<p float="left">
-  <img src="doc/imgs/beam.bending.order.1.png" width="250" alt="Bending beam FEM elastic simulation using linear shape functions" />
-  <img src="doc/imgs/beam.bending.order.2.png" width="250" alt="Bending beam FEM elastic simulation using quadratic shape functions" /> 
-</p>
-
-##### Inter-penetration free elastodynamic contact
-
-Combining [`pbatoolkit`](https://pypi.org/project/pbatoolkit/)'s FEM+elasticity features and the [`IPC Toolkit`](https://ipctk.xyz/) results in guaranteed inter-penetration free contact dynamics between deformable bodies.
-
-<p float="left">
-    <img src="doc/imgs/ipc.bar.stacks.gif" width="250" alt="A stack of bending beams fall on top of each other, simulated via Incremental Potential Contact (IPC)." />
-</p>
-
-##### Real-time elastodynamics
-
-Our GPU implementation of the eXtended Position Based Dynamics (XPBD) algorithm simulates a ~324k element FEM elastic mesh interactively with contact.
-
-<p float="left">
-    <img src="doc/imgs/gpu.xpbd.bvh.gif" width="250" alt="A 162k element armadillo mesh is dropped on top of another duplicate, but fixed, armadillo mesh on the bottom." />
-</p>
-
-##### Modal analysis
-
-The hyper elastic beam's representative deformation modes, i.e. its low frequency eigen vectors,
-are animated as time continuous signals.
-
-<p float="left">
-    <img src="doc/imgs/beam.modes.gif" width="250" alt="Unconstrained hyper elastic beam's eigen frequencies" />
-</p>
-
-##### GPU broad phase collision detection
-
-Real-time collision detection between 2 large scale meshes (~324k tetrahedra) is accelerated by highly parallel implementations of the [sweep and prune](https://en.wikipedia.org/wiki/Sweep_and_prune) algorithm, or [linear bounding volume hierarchies](https://research.nvidia.com/sites/default/files/pubs/2012-06_Maximizing-Parallelism-in/karras2012hpg_paper.pdf).
-
-<p float="left">
-    <img src="doc/imgs/gpu.broadphase.gif" width="250" alt="Broad phase collision detection on the GPU between 2 moving tetrahedral meshes" />
 </p>
 
 ##### Profiling statistics
