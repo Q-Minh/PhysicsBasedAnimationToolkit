@@ -21,8 +21,8 @@ The Physics Based Animation Toolkit (PBAT) is a (mostly templated) cross-platfor
   - Saint-Venant Kirchhoff
   - [Stable Neo-Hookean](https://graphics.pixar.com/library/StableElasticity/paper.pdf)
 - Polynomial [quadrature rules](https://en.wikipedia.org/wiki/Numerical_integration)
-  - Simplices in dimensions `1,2,3`
-  - Gauss-Legendre quadrature
+  - [Simplices in dimensions `1,2,3`](https://lsec.cc.ac.cn/~tcui/myinfo/paper/quad.pdf)
+  - [Gauss-Legendre quadrature](https://en.wikipedia.org/wiki/Gauss%E2%80%93Legendre_quadrature)
 - Spatial query acceleration data structures
   - [Bounding volume hierarchy](https://en.wikipedia.org/wiki/Bounding_volume_hierarchy) for triangles (2D+3D) and tetrahedra (3D)
     - Nearest neighbours
