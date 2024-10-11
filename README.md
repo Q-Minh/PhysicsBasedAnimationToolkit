@@ -19,7 +19,7 @@ The Physics Based Animation Toolkit (PBAT) is a (mostly templated) cross-platfor
   - Line, triangle, quadrilateral, tetrahedron and hexahedron elements
 - [Hyperelastic material models](https://en.wikipedia.org/wiki/Hyperelastic_material)
   - Saint-Venant Kirchhoff
-  - Stable Neo-Hookean
+  - [Stable Neo-Hookean](https://graphics.pixar.com/library/StableElasticity/paper.pdf)
 - Polynomial [quadrature rules](https://en.wikipedia.org/wiki/Numerical_integration)
   - Simplices in dimensions `1,2,3`
   - Gauss-Legendre quadrature
