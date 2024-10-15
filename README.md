@@ -8,16 +8,18 @@
 ![downloads](https://img.shields.io/pypi/dm/pbatoolkit)
 [![GitHub Releases](https://img.shields.io/github/release/Q-Minh/PhysicsBasedAnimationToolkit.svg)](https://github.com/Q-Minh/PhysicsBasedAnimationToolkit/releases)
 
+![entei](doc/imgs/entei.harmonic.interpolation.order.2.cropped.png)
+
 - [Overview](#overview)
   - [Features](#features)
-- [Dependencies](#dependencies)
-- [Configuration](#configuration)
-- [Build](#build)
-- [Install](#install)
 - [Quick start](#quick-start)
   - [C++](#c)
   - [Python](#python)
   - [Tutorial](#tutorial)
+- [Dependencies](#dependencies)
+- [Configuration](#configuration)
+- [Build](#build)
+- [Install](#install)
 - [Gallery](#gallery)
 - [Contributing](#contributing)
   - [Coding style](#coding-style)
@@ -51,6 +53,62 @@ The Physics Based Animation Toolkit (PBAT) is a (mostly templated) cross-platfor
     - [Linear Bounding Volume Hierarchy](https://research.nvidia.com/sites/default/files/pubs/2012-06_Maximizing-Parallelism-in/karras2012hpg_paper.pdf)
   - Fixed-size linear algebra library for kernel programming
 - Seamless profiling integration via [Tracy](https://github.com/wolfpld/tracy)
+
+## Quick start
+
+> _We recommend downloading the [Tracy](https://github.com/wolfpld/tracy) profiler server to analyze execution of PBAT algorithms, available as [precompiled executable](https://github.com/wolfpld/tracy/releases). PBAT currently supports [Tracy 0.10](https://github.com/wolfpld/tracy/releases/tag/v0.10)._
+
+### C++
+
+Take a look at the unit tests, found in the library's source (`.cpp` or `.cu`) files.
+
+### Python
+
+To download and install from PyPI, run in command line:
+
+```bash
+pip install pbatoolkit
+```
+
+> _Currently, the `master` branch may contain breaking changes at any point in time. We recommend users to use specific git tags, i.e. via `git checkout v<major>.<minor>.<patch>`, where the version `<major>.<minor>.<patch>` matches the installed `pbatoolkit`'s version downloaded from PyPI (i.e. from `pip install pbatoolkit`)._
+
+For a local installation, which builds from source, our Python bindings build relies on [Scikit-build-core](https://scikit-build-core.readthedocs.io/en/latest/index.html), which relies on CMake's [`install`](https://cmake.org/cmake/help/latest/command/install.html) mechanism. As such, you can configure the installation as you typically would when using the CMake CLI directly, by now passing the corresponding CMake arguments in `pip`'s `config-settings` parameter (refer to the [Scikit-build-core](https://scikit-build-core.readthedocs.io/en/latest/index.html) documentation for the relevant parameters). See our [pyinstall workflow](.github/workflows/pyinstall.yml) for working examples of building from source on Linux, MacOS and Windows. Then, assuming that external dependencies are found via CMake's [`find_package`](https://cmake.org/cmake/help/latest/command/find_package.html), you can build and install our Python package [`pbatoolkit`](https://pypi.org/project/pbatoolkit/) locally and get the most up to date features. Consider using a [Python virtual environment](https://docs.python.org/3/library/venv.html) for this step.
+
+> _To use [`pbatoolkit`](https://pypi.org/project/pbatoolkit/)'s GPU algorithms, you must build from source, i.e. the prebuilt [`pbatoolkit`](https://pypi.org/project/pbatoolkit/) package hosted from PyPI does not include GPU code._
+
+As an example, assuming use of [`vcpkg`](https://github.com/microsoft/vcpkg) for external dependency management, with `VCPKG_ROOT` set as an environment variable, run
+
+```bash
+pip install . --config-settings=cmake.args="--preset=pip-local" -v
+```
+
+on the command line to build [`pbatoolkit`](https://pypi.org/project/pbatoolkit/) from source. To build with GPU algorithms included, refer to the Configuration section. Additional CMake variables (i.e. [`CMAKE_CUDA_ARCHITECTURES`](https://cmake.org/cmake/help/latest/variable/CMAKE_CUDA_ARCHITECTURES.html#variable:CMAKE_CUDA_ARCHITECTURES), [`CMAKE_CUDA_COMPILER`](https://cmake.org/cmake/help/latest/variable/CMAKE_LANG_COMPILER.html#variable:CMAKE_%3CLANG%3E_COMPILER)) may be required to be set in order for CMake to discover your local CUDA installation.
+
+Verify [`pbatoolkit`](https://pypi.org/project/pbatoolkit/)'s contents in Python shell:
+
+```python
+import pbatoolkit as pbat
+help(pbat.fem)
+help(pbat.geometry)
+help(pbat.profiling)
+help(pbat.math)
+help(pbat.gpu)
+```
+
+To profile relevant calls to [`pbatoolkit`](https://pypi.org/project/pbatoolkit/) functions/methods, connect to `python.exe` in the `Tracy` profiler server GUI.
+All calls to pbat will be profiled on a per-frame basis in the Tracy profiler server GUI.
+
+> _Use method `profile` of `pbatoolkit.profiling.Profiler` to profile code external to PBAT, allowing for an integrated profiling experience while using various scientific computing packages_.
+>
+> ```python
+> def expensive_external_computation():
+>     pass
+> profiler.profile("My expensive external computation", expensive_external_computation)
+> ```
+
+### Tutorial
+
+Head over to our hands-on [tutorials section](./doc/tutorial/) to learn more about physics based animation in both theory and practice!
 
 ## Dependencies
 
@@ -109,62 +167,6 @@ cmake --install build --config Release
 ```
 
 Alternatively, if [`vcpkg`](https://github.com/microsoft/vcpkg) is installed and `VCPKG_ROOT=path/to/vcpkg` is set as an environment variable, you can select one of our available presets, for example `cmake --preset=default` and then install.
-
-## Quick start
-
-> _We recommend downloading the [Tracy](https://github.com/wolfpld/tracy) profiler server to analyze execution of PBAT algorithms, available as [precompiled executable](https://github.com/wolfpld/tracy/releases). PBAT currently supports [Tracy 0.10](https://github.com/wolfpld/tracy/releases/tag/v0.10)._
-
-### C++
-
-Take a look at the unit tests, found in the library's source (`.cpp` or `.cu`) files.
-
-### Python
-
-To download and install from PyPI, run in command line:
-
-```bash
-pip install pbatoolkit
-```
-
-> _Currently, the `master` branch may contain breaking changes at any point in time. We recommend users to use specific git tags, i.e. via `git checkout v<major>.<minor>.<patch>`, where the version `<major>.<minor>.<patch>` matches the installed `pbatoolkit`'s version downloaded from PyPI (i.e. from `pip install pbatoolkit`)._
-
-For a local installation, which builds from source, our Python bindings build relies on [Scikit-build-core](https://scikit-build-core.readthedocs.io/en/latest/index.html), which relies on CMake's [`install`](https://cmake.org/cmake/help/latest/command/install.html) mechanism. As such, you can configure the installation as you typically would when using the CMake CLI directly, by now passing the corresponding CMake arguments in `pip`'s `config-settings` parameter (refer to the [Scikit-build-core](https://scikit-build-core.readthedocs.io/en/latest/index.html) documentation for the relevant parameters). See our [pyinstall workflow](.github/workflows/pyinstall.yml) for working examples of building from source on Linux, MacOS and Windows. Then, assuming that external dependencies are found via CMake's [`find_package`](https://cmake.org/cmake/help/latest/command/find_package.html), you can build and install our Python package [`pbatoolkit`](https://pypi.org/project/pbatoolkit/) locally and get the most up to date features. Consider using a [Python virtual environment](https://docs.python.org/3/library/venv.html) for this step.
-
-> _To use [`pbatoolkit`](https://pypi.org/project/pbatoolkit/)'s GPU algorithms, you must build from source, i.e. the prebuilt [`pbatoolkit`](https://pypi.org/project/pbatoolkit/) package hosted from PyPI does not include GPU code._
-
-As an example, assuming use of [`vcpkg`](https://github.com/microsoft/vcpkg) for external dependency management, with `VCPKG_ROOT` set as an environment variable, run
-
-```bash
-pip install . --config-settings=cmake.args="--preset=pip-local" -v
-```
-
-on the command line to build [`pbatoolkit`](https://pypi.org/project/pbatoolkit/) from source. To build with GPU algorithms included, refer to the Configuration section. Additional CMake variables (i.e. [`CMAKE_CUDA_ARCHITECTURES`](https://cmake.org/cmake/help/latest/variable/CMAKE_CUDA_ARCHITECTURES.html#variable:CMAKE_CUDA_ARCHITECTURES), [`CMAKE_CUDA_COMPILER`](https://cmake.org/cmake/help/latest/variable/CMAKE_LANG_COMPILER.html#variable:CMAKE_%3CLANG%3E_COMPILER)) may be required to be set in order for CMake to discover your local CUDA installation.
-
-Verify [`pbatoolkit`](https://pypi.org/project/pbatoolkit/)'s contents in Python shell:
-
-```python
-import pbatoolkit as pbat
-help(pbat.fem)
-help(pbat.geometry)
-help(pbat.profiling)
-help(pbat.math)
-help(pbat.gpu)
-```
-
-To profile relevant calls to [`pbatoolkit`](https://pypi.org/project/pbatoolkit/) functions/methods, connect to `python.exe` in the `Tracy` profiler server GUI.
-All calls to pbat will be profiled on a per-frame basis in the Tracy profiler server GUI.
-
-> _Use method `profile` of `pbatoolkit.profiling.Profiler` to profile code external to PBAT, allowing for an integrated profiling experience while using various scientific computing packages_.
->
-> ```python
-> def expensive_external_computation():
->     pass
-> profiler.profile("My expensive external computation", expensive_external_computation)
-> ```
-
-### Tutorial
-
-Head over to our hands-on [tutorials section](./doc/tutorial/) to learn more about physics based animation in both theory and practice!
 
 ## Gallery
 
