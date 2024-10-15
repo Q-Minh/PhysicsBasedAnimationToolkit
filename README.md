@@ -9,6 +9,21 @@
 
 > _We recommend exploring the official [CMake documentation](https://cmake.org/cmake/help/latest/) to beginner CMake users_.
 
+- [Physics Based Animation Toolkit](#physics-based-animation-toolkit)
+  - [Overview](#overview)
+    - [Features](#features)
+  - [Dependencies](#dependencies)
+  - [Configuration](#configuration)
+  - [Build](#build)
+  - [Install](#install)
+  - [Quick start](#quick-start)
+    - [C++](#c)
+    - [Python](#python)
+    - [Tutorial](#tutorial)
+  - [Gallery](#gallery)
+  - [Contributing](#contributing)
+    - [Coding style](#coding-style)
+
 ## Overview
 
 The Physics Based Animation Toolkit (PBAT) is a (mostly templated) cross-platform C++20 library of algorithms and data structures commonly used in computer graphics research on physically-based simulation in dimensions `1,2,3`. For most use cases, we recommend using our library via its Python interface, enabling seamless integration into Python's ecosystem of powerful scientific computing packages.
@@ -58,8 +73,11 @@ See [`vcpkg.json`](./vcpkg.json) for a versioned list of our dependencies, avail
 Our project provides [configuration presets](./CMakePresets.json) that capture typical use configurations. Refer to the [CMake presets documentation](https://cmake.org/cmake/help/latest/manual/cmake-presets.7.html) for more information.
 
 ```bash
-cmake -S <path/to/PhysicsBasedAnimationToolkit> -B <path/to/build> #-D<option>=<value>
-# or, alternatively
+cmake -S <path/to/PhysicsBasedAnimationToolkit> -B <path/to/build> -D<option 1>=<value 1> ... -D<option N>=<value N>
+```
+or, alternatively
+
+```bash
 cmake --preset=<my-favorite-user-preset>
 ```
 
@@ -86,7 +104,7 @@ From command line:
 
 ```bash
 cd path/to/PhysicsBasedAnimationToolkit
-cmake -S . -B build # -D<option>=<value> ...
+cmake -S . -B build -D<option 1>=<value 1> ... -D<option N>=<value N>
 cmake --install build --config Release
 ```
 
@@ -140,7 +158,7 @@ All calls to pbat will be profiled on a per-frame basis in the Tracy profiler se
 >
 > ```python
 > def expensive_external_computation():
->     # Some expensive computation
+>     pass
 > profiler.profile("My expensive external computation", expensive_external_computation)
 > ```
 
