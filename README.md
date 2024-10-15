@@ -82,7 +82,7 @@ pip install . --config-settings=cmake.args="--preset=pip-local" -v
 
 on the command line to build [`pbatoolkit`](https://pypi.org/project/pbatoolkit/) from source. To build with GPU algorithms included, refer to the Configuration section. Additional CMake variables (i.e. [`CMAKE_CUDA_ARCHITECTURES`](https://cmake.org/cmake/help/latest/variable/CMAKE_CUDA_ARCHITECTURES.html#variable:CMAKE_CUDA_ARCHITECTURES), [`CMAKE_CUDA_COMPILER`](https://cmake.org/cmake/help/latest/variable/CMAKE_LANG_COMPILER.html#variable:CMAKE_%3CLANG%3E_COMPILER)) may be required to be set in order for CMake to discover your local CUDA installation.
 
-Verify [`pbatoolkit`](https://pypi.org/project/pbatoolkit/)'s contents in Python shell:
+Verify [`pbatoolkit`](https://pypi.org/project/pbatoolkit/)'s contents in a Python shell
 
 ```python
 import pbatoolkit as pbat
@@ -93,7 +93,7 @@ help(pbat.math)
 help(pbat.gpu)
 ```
 
-A bunch of Python scripts demonstrating usage of [`pbatoolkit`](https://pypi.org/project/pbatoolkit/) can be found in the [examples folder](python/examples/), along with their associated [`requirements.txt`](python/examples/requirements.txt)  for easily downloading necessary dependencies via `pip install -r python/tools/mesh/requirements.txt`. Their command line interface follows the pattern:
+A bunch of Python scripts demonstrating usage of [`pbatoolkit`](https://pypi.org/project/pbatoolkit/) can be found in the [examples folder](python/examples/), along with their associated [`requirements.txt`](python/examples/requirements.txt)  for easily downloading necessary dependencies via `pip install -r python/tools/mesh/requirements.txt`. Their command line interface follows the pattern
 ```bash
 python[.exe] path/to/examples/[example].py -i path/to/input/mesh
 ```
@@ -150,14 +150,14 @@ Our CMake project exposes the following build targets
 | `PhysicsBasedAnimationToolkit_Tests` | The test executable, using [doctest](https://github.com/doctest/doctest). |
 | `PhysicsBasedAnimationToolkit_Python` | PBAT's Python extension module, using [pybind11](https://github.com/pybind/pybind11). |
 
-For example, to build tests, run:
+For example, to build tests, run
 ```bash
 cmake --build <path/to/build/folder> --target PhysicsBasedAnimationToolkit_Tests --config Release
 ```
 
 ## Install
 
-From command line:
+Install our *PhysicsBasedAnimationToolkit* locally across platforms using the [cmake install CLI](https://cmake.org/cmake/help/latest/guide/tutorial/Installing%20and%20Testing.html).
 
 ```bash
 cd path/to/PhysicsBasedAnimationToolkit
