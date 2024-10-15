@@ -93,7 +93,7 @@ help(pbat.math)
 help(pbat.gpu)
 ```
 
-A bunch of Python scripts demonstrating usage of [`pbatoolkit`](https://pypi.org/project/pbatoolkit/) can be found in the [examples folder](python/examples/), along with their associated [`requirements.txt`](python/examples/requirements.txt)  for easily downloading necessary dependencies via `pip install -r python/tools/mesh/requirements.txt`. Their command line interface follows the pattern
+A bunch of Python scripts demonstrating usage of [`pbatoolkit`](https://pypi.org/project/pbatoolkit/) can be found in the [examples folder](python/examples/), along with their associated [`requirements.txt`](python/examples/requirements.txt)  for easily downloading necessary dependencies via `pip install -r path/to/requirements.txt`. Their command line interface follows the pattern
 ```bash
 python[.exe] path/to/examples/[example].py -i path/to/input/mesh
 ```
