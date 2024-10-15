@@ -62,7 +62,7 @@ Take a look at the unit tests, found in the library's source (`.cpp` or `.cu`) f
 
 ### Python
 
-To download and install from PyPI, run in command line:
+To download and install from PyPI, run in command line
 
 ```bash
 pip install pbatoolkit
