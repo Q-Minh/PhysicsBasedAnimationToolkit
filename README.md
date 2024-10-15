@@ -12,6 +12,8 @@
 
 ## Overview
 
+> _We recommend exploring the official [CMake documentation](https://cmake.org/cmake/help/latest/) to beginner CMake users, if they wish to build this project from source_.
+
 The Physics Based Animation Toolkit (PBAT) is a (mostly templated) cross-platform C++20 library of algorithms and data structures commonly used in computer graphics research on physically-based simulation in dimensions `1,2,3`. For most use cases, we recommend using our library via its Python interface, enabling seamless integration into Python's ecosystem of powerful scientific computing packages.
 
 ### Features
@@ -113,8 +115,6 @@ Head over to our hands-on [tutorials section](./doc/tutorial/) to learn more abo
 ## Dependencies
 
 See [`vcpkg.json`](./vcpkg.json) for a versioned list of our dependencies, available via [vcpkg](https://github.com/microsoft/vcpkg) (use of [vcpkg](https://github.com/microsoft/vcpkg) is not mandatory, as long as dependencies have compatible versions and are discoverable by CMake's [`find_package`](https://cmake.org/cmake/help/latest/command/find_package.html) mechanism).
-
-> _We recommend exploring the official [CMake documentation](https://cmake.org/cmake/help/latest/) to beginner CMake users_.
 
 ## Configuration
 
