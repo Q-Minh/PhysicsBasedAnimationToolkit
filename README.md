@@ -10,20 +10,6 @@
 
 ![entei](doc/imgs/entei.harmonic.interpolation.order.2.cropped.png)
 
-- [Overview](#overview)
-  - [Features](#features)
-- [Quick start](#quick-start)
-  - [C++](#c)
-  - [Python](#python)
-  - [Tutorial](#tutorial)
-- [Dependencies](#dependencies)
-- [Configuration](#configuration)
-- [Build](#build)
-- [Install](#install)
-- [Gallery](#gallery)
-- [Contributing](#contributing)
-  - [Coding style](#coding-style)
-
 ## Overview
 
 The Physics Based Animation Toolkit (PBAT) is a (mostly templated) cross-platform C++20 library of algorithms and data structures commonly used in computer graphics research on physically-based simulation in dimensions `1,2,3`. For most use cases, we recommend using our library via its Python interface, enabling seamless integration into Python's ecosystem of powerful scientific computing packages.
@@ -53,6 +39,18 @@ The Physics Based Animation Toolkit (PBAT) is a (mostly templated) cross-platfor
     - [Linear Bounding Volume Hierarchy](https://research.nvidia.com/sites/default/files/pubs/2012-06_Maximizing-Parallelism-in/karras2012hpg_paper.pdf)
   - Fixed-size linear algebra library for kernel programming
 - Seamless profiling integration via [Tracy](https://github.com/wolfpld/tracy)
+
+## Table of Contents
+
+- [Quick start](#quick-start)
+  - [C++](#c)
+  - [Python](#python)
+  - [Tutorial](#tutorial)
+- [Dependencies](#dependencies)
+- [Configuration](#configuration)
+- [Build](#build)
+- [Install](#install)
+- [Gallery](#gallery)
 
 ## Quick start
 
@@ -95,16 +93,18 @@ help(pbat.math)
 help(pbat.gpu)
 ```
 
-To profile relevant calls to [`pbatoolkit`](https://pypi.org/project/pbatoolkit/) functions/methods, connect to `python.exe` in the `Tracy` profiler server GUI.
-All calls to pbat will be profiled on a per-frame basis in the Tracy profiler server GUI.
+A bunch of Python scripts demonstrating usage of [`pbatoolkit`](https://pypi.org/project/pbatoolkit/) can be found in the [examples folder](python/examples/), along with their associated [`requirements.txt`](python/examples/requirements.txt)  for easily downloading necessary dependencies via `pip install -r python/tools/mesh/requirements.txt`. Their command line interface follows the pattern:
+```bash
+python[.exe] path/to/examples/[example].py -i path/to/input/mesh
+```
+The full interface is always revealed by `-h` or `--help`, i.e. 
+```bash
+python[.exe] path/to/examples/[example].py -h
+```
 
-> _Use method `profile` of `pbatoolkit.profiling.Profiler` to profile code external to PBAT, allowing for an integrated profiling experience while using various scientific computing packages_.
->
-> ```python
-> def expensive_external_computation():
->     pass
-> profiler.profile("My expensive external computation", expensive_external_computation)
-> ```
+> _The examples assume the user provides the meshes to [`pbatoolkit`](https://pypi.org/project/pbatoolkit/). Triangle (surface) meshes can easily be obtained via [Thingi10K](https://ten-thousand-models.appspot.com/), [TurboSquid](https://www.turbosquid.com/Search/3D-Models/free) or authored yourself in [Blender](https://www.blender.org/). Tools like [TetWild](https://github.com/Yixin-Hu/TetWild), [fTetWild](https://github.com/wildmeshing/fTetWild) and [TetGen](https://wias-berlin.de/software/index.jsp?id=TetGen&lang=1) can then convert them into tetrahedral (volume) meshes. We provide [helper scripts](python/tools/mesh/) to facilitate mesh processing and their associated [`requirements.txt`](python/tools/mesh/requirements.txt)._
+
+Example results are showcased in our [Gallery](#gallery).
 
 ### Tutorial
 
@@ -118,32 +118,32 @@ See [`vcpkg.json`](./vcpkg.json) for a versioned list of our dependencies, avail
 
 ## Configuration
 
-| Option                       | Values   | Default | Description                                                                                                                                                                                                             |
-| ---------------------------- | -------- | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `PBAT_BUILD_PYTHON_BINDINGS` | `ON,OFF` | `OFF`   | Enable `PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit` Python bindings. Generates the CMake target `PhysicsBasedAnimationToolkit_Python`, an extension module for Python, built by this project.            |
-| `PBAT_BUILD_TESTS`           | `ON,OFF` | `OFF`   | Enable `PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit` unit tests. Generates the CMake target executable `PhysicsBasedAnimationToolkit_Tests`, built by this project.                                       |
-| `PBAT_ENABLE_PROFILER`       | `ON,OFF` | `OFF`   | Enable [`Tracy`](https://github.com/wolfpld/tracy) instrumentation profiling in built `PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit`.                                                                      |
-| `PBAT_PROFILE_ON_DEMAND`     | `ON,OFF` | `OFF`   | Activate Tracy's on-demand profiling when `PBAT_ENABLE_PROFILER` is `ON`.                                                                                                                                               |
+| Option                       | Values   | Default | Description |
+| ---------------------------- | -------- | ------- | ----------- |
+| `PBAT_BUILD_PYTHON_BINDINGS` | `ON,OFF` | `OFF`   | Enable `PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit` Python bindings. Generates the CMake target `PhysicsBasedAnimationToolkit_Python`, an extension module for Python, built by this project. |
+| `PBAT_BUILD_TESTS`           | `ON,OFF` | `OFF`   | Enable `PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit` unit tests. Generates the CMake target executable `PhysicsBasedAnimationToolkit_Tests`, built by this project. |
+| `PBAT_ENABLE_PROFILER`       | `ON,OFF` | `OFF`   | Enable [`Tracy`](https://github.com/wolfpld/tracy) instrumentation profiling in built `PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit`. |
+| `PBAT_PROFILE_ON_DEMAND`     | `ON,OFF` | `OFF`   | Activate Tracy's on-demand profiling when `PBAT_ENABLE_PROFILER` is `ON`. |
 | `PBAT_USE_INTEL_MKL`         | `ON,OFF` | `OFF`   | Link to user-provided [Intel MKL](https://www.intel.com/content/www/us/en/developer/tools/oneapi/onemkl.html) installation via CMake's [`find_package`](https://cmake.org/cmake/help/latest/command/find_package.html). |
-| `PBAT_USE_SUITESPARSE`       | `ON,OFF` | `OFF`   | Link to user-provided [SuiteSparse](https://github.com/DrTimothyAldenDavis/SuiteSparse) installation via CMake's [`find_package`](https://cmake.org/cmake/help/latest/command/find_package.html).                       |
-| `PBAT_BUILD_SHARED_LIBS`     | `ON,OFF` | `OFF`   | Build project's library targets as shared/dynamic.                                                                                                                                                                      |
+| `PBAT_USE_SUITESPARSE`       | `ON,OFF` | `OFF`   | Link to user-provided [SuiteSparse](https://github.com/DrTimothyAldenDavis/SuiteSparse) installation via CMake's [`find_package`](https://cmake.org/cmake/help/latest/command/find_package.html). |
+| `PBAT_BUILD_SHARED_LIBS`     | `ON,OFF` | `OFF`   | Build project's library targets as shared/dynamic. |
 
-Our project provides [configuration presets](./CMakePresets.json) that capture typical use configurations. Refer to the [CMake presets documentation](https://cmake.org/cmake/help/latest/manual/cmake-presets.7.html) for more information.
-
+Either run CMake's configure step manually
 ```bash
-cmake -S <path/to/PhysicsBasedAnimationToolkit> -B <path/to/build> -D<option 1>=<value 1> ... -D<option N>=<value N>
+cmake -S <path/to/PhysicsBasedAnimationToolkit> -B <path/to/build> -D<option>=<value> ...
 ```
 or, alternatively
-
 ```bash
 cmake --preset=<my-favorite-user-preset>
 ```
+
+Our project provides [configuration presets](./CMakePresets.json) that capture typical use configurations. Refer to the [CMake presets documentation](https://cmake.org/cmake/help/latest/manual/cmake-presets.7.html) for more information.
 
 ## Build
 
 Build transparently across platforms using the [cmake build CLI](https://cmake.org/cmake/help/latest/manual/cmake.1.html#build-a-project).
 
-CMake build targets:
+Our CMake project exposes the following build targets
 | Target | Description |
 |---|---|
 | `PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit` | The PBA Toolkit library. |
@@ -151,7 +151,6 @@ CMake build targets:
 | `PhysicsBasedAnimationToolkit_Python` | PBAT's Python extension module, using [pybind11](https://github.com/pybind/pybind11). |
 
 For example, to build tests, run:
-
 ```bash
 cmake --build <path/to/build/folder> --target PhysicsBasedAnimationToolkit_Tests --config Release
 ```
@@ -162,7 +161,7 @@ From command line:
 
 ```bash
 cd path/to/PhysicsBasedAnimationToolkit
-cmake -S . -B build -D<option 1>=<value 1> ... -D<option N>=<value N>
+cmake -S . -B build -D<option>=<value> ...
 cmake --install build --config Release
 ```
 
