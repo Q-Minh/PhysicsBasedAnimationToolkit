@@ -6,23 +6,21 @@
 [![wheels](https://github.com/Q-Minh/PhysicsBasedAnimationToolkit/actions/workflows/wheels.yml/badge.svg?event=release)](https://github.com/Q-Minh/PhysicsBasedAnimationToolkit/actions/workflows/wheels.yml)
 ![pbatoolkit](https://img.shields.io/pypi/v/pbatoolkit?label=pbatoolkit)
 ![downloads](https://img.shields.io/pypi/dm/pbatoolkit)
+[![GitHub Releases](https://img.shields.io/github/release/Q-Minh/PhysicsBasedAnimationToolkit.svg)](https://github.com/Q-Minh/PhysicsBasedAnimationToolkit/releases)
 
-> _We recommend exploring the official [CMake documentation](https://cmake.org/cmake/help/latest/) to beginner CMake users_.
-
-- [Physics Based Animation Toolkit](#physics-based-animation-toolkit)
-  - [Overview](#overview)
-    - [Features](#features)
-  - [Dependencies](#dependencies)
-  - [Configuration](#configuration)
-  - [Build](#build)
-  - [Install](#install)
-  - [Quick start](#quick-start)
-    - [C++](#c)
-    - [Python](#python)
-    - [Tutorial](#tutorial)
-  - [Gallery](#gallery)
-  - [Contributing](#contributing)
-    - [Coding style](#coding-style)
+- [Overview](#overview)
+  - [Features](#features)
+- [Dependencies](#dependencies)
+- [Configuration](#configuration)
+- [Build](#build)
+- [Install](#install)
+- [Quick start](#quick-start)
+  - [C++](#c)
+  - [Python](#python)
+  - [Tutorial](#tutorial)
+- [Gallery](#gallery)
+- [Contributing](#contributing)
+  - [Coding style](#coding-style)
 
 ## Overview
 
@@ -57,6 +55,8 @@ The Physics Based Animation Toolkit (PBAT) is a (mostly templated) cross-platfor
 ## Dependencies
 
 See [`vcpkg.json`](./vcpkg.json) for a versioned list of our dependencies, available via [vcpkg](https://github.com/microsoft/vcpkg) (use of [vcpkg](https://github.com/microsoft/vcpkg) is not mandatory, as long as dependencies have compatible versions and are discoverable by CMake's [`find_package`](https://cmake.org/cmake/help/latest/command/find_package.html) mechanism).
+
+> _We recommend exploring the official [CMake documentation](https://cmake.org/cmake/help/latest/) to beginner CMake users_.
 
 ## Configuration
 
