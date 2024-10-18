@@ -56,10 +56,6 @@ jobs:
           sub-packages: ${{ matrix.sub_packages }}
           non-cuda-sub-packages: '[]'
 
-      - run: echo "${{ steps.cuda-toolkit.outputs.CUDA_PATH }}"
-        
-      - run: echo "${{ steps.cuda-toolkit.outputs.CUDA_PATH }}/bin"
-
       - name: Setup vcpkg
         uses: lukka/run-vcpkg@v11
         with:
@@ -69,7 +65,7 @@ jobs:
       - uses: pypa/cibuildwheel@v2.19.0
         env:
           MACOSX_DEPLOYMENT_TARGET: ${{ matrix.macosx_deployment_target }}
-          CIBW_ENVIRONMENT_LINUX: VCPKG_ROOT=/host/${{ github.workspace }}/vcpkg CUDA_PATH=/host/${{ steps.cuda-toolkit.outputs.CUDA_PATH }} CMAKE_CUDA_COMPILER=/host/${{ steps.cuda-toolkit.outputs.CUDA_PATH }}/bin/nvcc
+          CIBW_ENVIRONMENT_LINUX: VCPKG_ROOT=/host/${{ github.workspace }}/vcpkg CUDA_PATH=/host/$CUDA_PATH
           CIBW_MANYLINUX_X86_64_IMAGE: ${{ matrix.cibw_image }}
           CIBW_ARCHS: ${{ matrix.cibw_archs }}
           CIBW_BUILD: ${{ matrix.cibw_build }}
