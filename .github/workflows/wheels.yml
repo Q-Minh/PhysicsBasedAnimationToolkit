@@ -56,6 +56,10 @@ jobs:
           sub-packages: ${{ matrix.sub_packages }}
           non-cuda-sub-packages: '[]'
 
+      - run: ls ${{ steps.cuda-toolkit.outputs.CUDA_PATH }}
+        
+      - run: ls ${{ steps.cuda-toolkit.outputs.CUDA_PATH/bin }}
+
       - name: Setup vcpkg
         uses: lukka/run-vcpkg@v11
         with:
