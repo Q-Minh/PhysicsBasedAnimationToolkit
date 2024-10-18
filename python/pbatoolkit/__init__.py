@@ -9,7 +9,18 @@ if platform.system() == "Windows":
 
 import pbatoolkit.fem
 import pbatoolkit.geometry
-import pbatoolkit.gpu
+
+# Some users may not have CUDA Toolkit libraries installed or discoverable.
+# They should still be allowed to use pbatoolkit's CPU APIs.
+try:
+    import pbatoolkit.gpu
+except ImportError:
+    import warnings
+    warnings.warn("Could not load submodule gpu of module pbatoolkit")
+    has_gpu = False
+else:
+    has_gpu = True
+
 import pbatoolkit.profiling
 import pbatoolkit.math
 import pbatoolkit.math.linalg

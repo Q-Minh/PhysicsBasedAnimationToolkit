@@ -187,8 +187,7 @@
                 "PBAT_BUILD_PYTHON_BINDINGS": {
                     "type": "BOOL",
                     "value": "ON"
-                },
-                "CMAKE_CUDA_ARCHITECTURES": "native"
+                }
             }
         },
         {
@@ -197,26 +196,8 @@
                 "pip-cuda"
             ],
             "cacheVariables": {
-                "VCPKG_MANIFEST_FEATURES": "cuda;python",
-                "PBAT_USE_CUDA": {
-                    "type": "BOOL",
-                    "value": "ON"
-                },
-                "PBAT_BUILD_PYTHON_BINDINGS": {
-                    "type": "BOOL",
-                    "value": "ON"
-                },
                 "CMAKE_CUDA_ARCHITECTURES": "80-virtual"
             }
-        },
-        {
-            "name": "ci-wheels",
-            "inherits": [
-                "default",
-                "profile",
-                "python",
-                "pic"
-            ]
         }
     ]
 }

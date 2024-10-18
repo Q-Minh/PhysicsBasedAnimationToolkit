@@ -41,7 +41,6 @@ jobs:
           method: 'network'
           sub-packages: ${{ matrix.sub_packages }}
           non-cuda-sub-packages: '[]'
-          linux-local-args: '["--toolkit"]'
 
       - uses: lukka/get-cmake@latest
         with:
