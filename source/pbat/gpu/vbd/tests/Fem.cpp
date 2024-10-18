@@ -22,7 +22,11 @@ LinearFemMesh::LinearFemMesh(
 LinearFemMesh::~LinearFemMesh()
 {
     if (mImpl)
-        delete mImpl;
+    {
+        using MeshType = fem::Mesh<fem::Tetrahedron<1>, 3>;
+        auto* ptr      = static_cast<MeshType*>(mImpl);
+        delete ptr;
+    }
 }
 
 GpuVectorX LinearFemMesh::QuadratureWeights() const
