@@ -196,7 +196,7 @@
                 "pip-cuda"
             ],
             "cacheVariables": {
-                "CMAKE_CUDA_ARCHITECTURES": "80-virtual"
+                "CMAKE_CUDA_ARCHITECTURES": "80"
             }
         }
     ]
