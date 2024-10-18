@@ -210,6 +210,29 @@
             ]
         },
         {
+            "name": "pip-local-cuda",
+            "inherits": [
+                "default",
+                "profile",
+                "pic"
+            ],
+            "cacheVariables": {
+                "VCPKG_MANIFEST_FEATURES": "cuda;python;suitesparse",
+                "PBAT_USE_CUDA": {
+                    "type": "BOOL",
+                    "value": "ON"
+                },
+                "PBAT_BUILD_PYTHON_BINDINGS": {
+                    "type": "BOOL",
+                    "value": "ON"
+                },
+                "PBAT_USE_SUITESPARSE": {
+                    "type": "BOOL",
+                    "value": "ON"
+                }
+            }
+        },
+        {
             "name": "ci-wheels",
             "inherits": [
                 "default",
