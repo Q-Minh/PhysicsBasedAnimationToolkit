@@ -91,7 +91,6 @@ if(PBAT_USE_CUDA)
     )
     set_target_properties(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
         PROPERTIES
-        CUDA_ARCHITECTURES native
         CUDA_SEPARABLE_COMPILATION ON
         CUDA_RESOLVE_DEVICE_SYMBOLS ON
     )

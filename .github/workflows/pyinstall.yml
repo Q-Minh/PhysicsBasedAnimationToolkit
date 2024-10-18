@@ -45,7 +45,7 @@ jobs:
         with:
           cmakeVersion: "3.26.0"
 
-      - run: echo 'Cuda install location -> $CUDA_PATH'
+      - run: echo '$CUDA_PATH'
 
       - name: Setup vcpkg
         uses: lukka/run-vcpkg@v11
