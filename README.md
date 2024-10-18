@@ -2,7 +2,7 @@
 
 ![logo](doc/imgs/pbat.svg)
 
-[![build](https://github.com/Q-Minh/PhysicsBasedAnimationToolkit/actions/workflows/pyinstall.yml/badge.svg?event=release)](https://github.com/Q-Minh/PhysicsBasedAnimationToolkit/actions/workflows/pyinstall.yml)
+[![build](https://github.com/Q-Minh/PhysicsBasedAnimationToolkit/actions/workflows/pyinstall.yml/badge.svg)](https://github.com/Q-Minh/PhysicsBasedAnimationToolkit/actions/workflows/pyinstall.yml)
 [![wheels](https://github.com/Q-Minh/PhysicsBasedAnimationToolkit/actions/workflows/wheels.yml/badge.svg?event=release)](https://github.com/Q-Minh/PhysicsBasedAnimationToolkit/actions/workflows/wheels.yml)
 ![pbatoolkit](https://img.shields.io/pypi/v/pbatoolkit?label=pbatoolkit)
 ![downloads](https://img.shields.io/pypi/dm/pbatoolkit)
@@ -79,10 +79,10 @@ For a local installation, which builds from source, our Python bindings build re
 As an example, assuming use of [`vcpkg`](https://github.com/microsoft/vcpkg) for external dependency management, with `VCPKG_ROOT` set as an environment variable, run
 
 ```bash
-pip install . --config-settings=cmake.args="--preset=pip" -v
+pip install . --config-settings=cmake.args="--preset=pip-cuda" -v
 ```
 
-on the command line to build [`pbatoolkit`](https://pypi.org/project/pbatoolkit/) from source. To build with GPU algorithms included, refer to the Configuration section. Additional CMake variables (i.e. [`CMAKE_CUDA_ARCHITECTURES`](https://cmake.org/cmake/help/latest/variable/CMAKE_CUDA_ARCHITECTURES.html#variable:CMAKE_CUDA_ARCHITECTURES), [`CMAKE_CUDA_COMPILER`](https://cmake.org/cmake/help/latest/variable/CMAKE_LANG_COMPILER.html#variable:CMAKE_%3CLANG%3E_COMPILER)) may be required to be set in order for CMake to discover your local CUDA installation.
+on the command line to build [`pbatoolkit`](https://pypi.org/project/pbatoolkit/) from source with GPU algorithms included. Additional CMake variables (i.e. [`CMAKE_CUDA_ARCHITECTURES`](https://cmake.org/cmake/help/latest/variable/CMAKE_CUDA_ARCHITECTURES.html#variable:CMAKE_CUDA_ARCHITECTURES), [`CMAKE_CUDA_COMPILER`](https://cmake.org/cmake/help/latest/variable/CMAKE_LANG_COMPILER.html#variable:CMAKE_%3CLANG%3E_COMPILER)) may be required to be set in order for CMake to correctly discover and compile against your local CUDA installation. Refer to [the CMake documentation](https://cmake.org/cmake/help/latest/module/FindCUDAToolkit.html) for more details.
 
 Verify [`pbatoolkit`](https://pypi.org/project/pbatoolkit/)'s contents in a Python shell
 
