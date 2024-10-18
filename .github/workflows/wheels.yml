@@ -66,7 +66,8 @@ jobs:
         env:
           MACOSX_DEPLOYMENT_TARGET: ${{ matrix.macosx_deployment_target }}
           CIBW_ENVIRONMENT_LINUX: VCPKG_ROOT=/host${{ github.workspace }}/vcpkg CUDA_PATH=/host${{ env.CUDA_PATH }}
-          CIBW_BEFORE_ALL_LINUX: export LD_LIBRARY_PATH="$CUDA_PATH/lib64;$LD_LIBRARY_PATH"
+          CIBW_BEFORE_ALL_LINUX: > 
+            export LD_LIBRARY_PATH="$CUDA_PATH/lib64:$LD_LIBRARY_PATH"
           CIBW_MANYLINUX_X86_64_IMAGE: ${{ matrix.cibw_image }}
           CIBW_ARCHS: ${{ matrix.cibw_archs }}
           CIBW_BUILD: ${{ matrix.cibw_build }}
