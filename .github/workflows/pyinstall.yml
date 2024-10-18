@@ -17,15 +17,15 @@ jobs:
         include:
           - os: ubuntu-24.04
             build_tool_args: -j4
-            preset: pip-local-cuda
+            preset: pip-cuda
           - os: windows-2022
             build_tool_args: /p:CL_MPCount=4
-            preset: pip-local-cuda
+            preset: pip-cuda
           - os: macos-13
-            preset: pip-local
+            preset: pip
             build_tool_args: -j4
           - os: macos-14
-            preset: pip-local
+            preset: pip
             build_tool_args: -j4
       max-parallel: 4
 
