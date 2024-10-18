@@ -18,9 +18,11 @@ jobs:
           - os: ubuntu-24.04
             build_tool_args: -j4
             preset: ci-pip-cuda
+            sub_packages: '["nvcc", "cudart"]'
           - os: windows-2022
             build_tool_args: /p:CL_MPCount=4
             preset: ci-pip-cuda
+            sub_packages: '["nvcc", "cudart", "visual_studio_integration"]'
           - os: macos-13
             preset: pip
             build_tool_args: -j4
@@ -37,7 +39,7 @@ jobs:
         with:
           cuda: '12.5.1'
           method: 'network'
-          sub-packages: '["nvcc", "cudart"]'
+          sub-packages: ${{ matrix.sub_packages }}
           non-cuda-sub-packages: '[]'
           linux-local-args: '["--toolkit"]'
 
