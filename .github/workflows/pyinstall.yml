@@ -17,10 +17,10 @@ jobs:
         include:
           - os: ubuntu-24.04
             build_tool_args: -j4
-            preset: pip-cuda
+            preset: ci-pip-cuda
           - os: windows-2022
             build_tool_args: /p:CL_MPCount=4
-            preset: pip-cuda
+            preset: ci-pip-cuda
           - os: macos-13
             preset: pip
             build_tool_args: -j4
