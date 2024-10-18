@@ -132,25 +132,6 @@
             }
         },
         {
-            "name": "vcpkg-all-features",
-            "hidden": true,
-            "cacheVariables": {
-                "VCPKG_MANIFEST_FEATURES": "mkl;suitesparse;python",
-                "PBAT_USE_INTEL_MKL": {
-                    "type": "BOOL",
-                    "value": "ON"
-                },
-                "PBAT_USE_SUITESPARSE": {
-                    "type": "BOOL",
-                    "value": "ON"
-                },
-                "PBAT_BUILD_PYTHON_BINDINGS": {
-                    "type": "BOOL",
-                    "value": "ON"
-                }
-            }
-        },
-        {
             "name": "cuda",
             "hidden": true,
             "cacheVariables": {
@@ -191,33 +172,14 @@
             ]
         },
         {
-            "name": "pip-local",
-            "inherits": [
-                "default",
-                "profile",
-                "vcpkg-all-features",
-                "pic"
-            ]
-        },
-        {
-            "name": "pip-local-shared",
-            "inherits": [
-                "default",
-                "profile",
-                "vcpkg-all-features",
-                "pic",
-                "shared"
-            ]
-        },
-        {
-            "name": "pip-local-cuda",
+            "name": "pip-cuda",
             "inherits": [
                 "default",
                 "profile",
                 "pic"
             ],
             "cacheVariables": {
-                "VCPKG_MANIFEST_FEATURES": "cuda;python;suitesparse",
+                "VCPKG_MANIFEST_FEATURES": "cuda;python",
                 "PBAT_USE_CUDA": {
                     "type": "BOOL",
                     "value": "ON"
@@ -225,11 +187,16 @@
                 "PBAT_BUILD_PYTHON_BINDINGS": {
                     "type": "BOOL",
                     "value": "ON"
-                },
-                "PBAT_USE_SUITESPARSE": {
-                    "type": "BOOL",
-                    "value": "ON"
                 }
+            }
+        },
+        {
+            "name": "ci-pip-cuda",
+            "inherits": [
+                "pip-cuda"
+            ],
+            "cacheVariables": {
+                "CMAKE_CUDA_ARCHITECTURES": "80-virtual"
             }
         },
         {
