@@ -67,7 +67,12 @@ jobs:
           MACOSX_DEPLOYMENT_TARGET: ${{ matrix.macosx_deployment_target }}
           CIBW_ENVIRONMENT_LINUX: VCPKG_ROOT=/host${{ github.workspace }}/vcpkg CUDA_PATH=/host${{ env.CUDA_PATH }}
           CIBW_MANYLINUX_X86_64_IMAGE: ${{ matrix.cibw_image }}
-          CIBW_REPAIR_WHEEL_COMMAND_LINUX: find / -name "libcuda.so*" && auditwheel show {wheel} && auditwheel repair -w {dest_dir} --exclude=libcuda.so.1 --exclude=libcudart.so.12 {wheel}
+          # There should only be 1 CUDA driver API implementation on a given platform. https://forums.developer.nvidia.com/t/multiple-nvidia-drivers/34946
+          # I assume it will be named libcuda.so.1 on linux
+          # The version suffix for the CUDA runtime, i.e. libcudart.so.<version> should match the CUDA Toolkit major version and has ABI compatibility across major versions.
+          # In our case, we compile using CUDA Toolkit version 12.5.1, i.e. major version 12.
+          # We thus require our linux users to have libcuda.so.1 and libcudart.so.12 be dynamically discoverable via search paths described in https://man7.org/linux/man-pages/man8/ld.so.8.html
+          CIBW_REPAIR_WHEEL_COMMAND_LINUX: auditwheel show {wheel} && auditwheel repair -w {dest_dir} --exclude=libcuda.so.1 --exclude=libcudart.so.12 {wheel}
           CIBW_ARCHS: ${{ matrix.cibw_archs }}
           CIBW_BUILD: ${{ matrix.cibw_build }}
           CIBW_BUILD_VERBOSITY: 1
