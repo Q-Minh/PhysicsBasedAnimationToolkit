@@ -114,7 +114,7 @@ On Linux, they are `libcudart.so.12` and `libcuda.so.1`. Ensure that they are di
 
 > MacOS does not support CUDA GPUs.
 
-Our [`pbatoolkit`](https://pypi.org/project/pbatoolkit/) prebuilt binaries include [PTX](https://docs.nvidia.com/cuda/cuda-compiler-driver-nvcc/#virtual-architectures), such that program load times will be delayed by [JIT](https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#just-in-time-compilation) compilation. The generated PTX requires **[compute capability](https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#compute-capabilities) 7.5**, meaning that only [GeForce RTX 2060 and later chips](https://developer.nvidia.com/cuda-gpus) are supported. Runtime GPU performance may be constrained by the targeted compute capability.
+Our [`pbatoolkit`](https://pypi.org/project/pbatoolkit/) prebuilt binaries include [PTX](https://docs.nvidia.com/cuda/cuda-compiler-driver-nvcc/#virtual-architectures), such that program load times will be delayed by [JIT](https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#just-in-time-compilation) compilation. The generated PTX requires **[compute capability](https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#compute-capabilities) 7.0**. [Verify](https://developer.nvidia.com/cuda-gpus) that your NVIDIA GPU supports compute capability at least 7.0. For example, only RTX 2060 up to 4090 chips are supported in the GeForce series. Runtime GPU performance may be constrained by the targeted compute capability.
 
 ### Tutorial
 
