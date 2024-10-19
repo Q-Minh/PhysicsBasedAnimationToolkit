@@ -12,6 +12,16 @@ import pbatoolkit.geometry
 
 # Some users may not have CUDA Toolkit libraries installed or discoverable.
 # They should still be allowed to use pbatoolkit's CPU APIs.
+# NOTE: 
+# Scenarios (best first, worst last):
+# 1. cuda libraries are loaded on first function call to a CUDA API
+# 2. cuda libraries are loaded as soon as the gpu submodule is loaded
+# 3. cuda libraries are loaded as soon as the _pbat.* dynamic library is loaded
+# More details -> https://stackoverflow.com/questions/50786247/when-is-dynamic-linking-between-a-program-and-a-shared-library-performed
+# - Scenario 3. forces pbatoolkit users to have a CUDA GPU and libraries. 
+#   In this case, I will need to either distribute 2 packages, pbatoolkit (CPU only) 
+#   and pbatoolkit-cuda (with GPU), or use dlopen and LoadLibrary calls.
+# - Scenario 2. is handled by the following try/except guard.
 try:
     import pbatoolkit.gpu
 except ImportError:
