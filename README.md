@@ -50,7 +50,9 @@ The Physics Based Animation Toolkit (PBAT) is a (mostly templated) cross-platfor
   - [Tutorial](#tutorial)
 - [Dependencies](#dependencies)
 - [Configuration](#configuration)
-- [Build](#build)
+- [Build & Install](#build--install)
+  - [C++](#c-1)
+  - [Python](#python-1)
 - [Install](#install)
 - [Gallery](#gallery)
 
@@ -71,18 +73,6 @@ pip install pbatoolkit
 ```
 
 > _Currently, the `master` branch may contain breaking changes at any point in time. We recommend users to use specific git tags, i.e. via `git checkout v<major>.<minor>.<patch>`, where the version `<major>.<minor>.<patch>` matches the installed `pbatoolkit`'s version downloaded from PyPI (i.e. from `pip install pbatoolkit`)._
-
-For a local installation, which builds from source, our Python bindings build relies on [Scikit-build-core](https://scikit-build-core.readthedocs.io/en/latest/index.html), which relies on CMake's [`install`](https://cmake.org/cmake/help/latest/command/install.html) mechanism. As such, you can configure the installation as you typically would when using the CMake CLI directly, by now passing the corresponding CMake arguments in `pip`'s `config-settings` parameter (refer to the [Scikit-build-core](https://scikit-build-core.readthedocs.io/en/latest/index.html) documentation for the relevant parameters). See our [pyinstall workflow](.github/workflows/pyinstall.yml) for working examples of building from source on Linux, MacOS and Windows. Then, assuming that external dependencies are found via CMake's [`find_package`](https://cmake.org/cmake/help/latest/command/find_package.html), you can build and install our Python package [`pbatoolkit`](https://pypi.org/project/pbatoolkit/) locally and get the most up to date features. Consider using a [Python virtual environment](https://docs.python.org/3/library/venv.html) for this step.
-
-> _To use [`pbatoolkit`](https://pypi.org/project/pbatoolkit/)'s GPU algorithms, you must build from source, i.e. the prebuilt [`pbatoolkit`](https://pypi.org/project/pbatoolkit/) package hosted from PyPI does not include GPU code._
-
-As an example, assuming use of [`vcpkg`](https://github.com/microsoft/vcpkg) for external dependency management, with `VCPKG_ROOT` set as an environment variable, run
-
-```bash
-pip install . --config-settings=cmake.args="--preset=pip-cuda" -v
-```
-
-on the command line to build [`pbatoolkit`](https://pypi.org/project/pbatoolkit/) from source with GPU algorithms included. Additional CMake variables (i.e. [`CMAKE_CUDA_ARCHITECTURES`](https://cmake.org/cmake/help/latest/variable/CMAKE_CUDA_ARCHITECTURES.html#variable:CMAKE_CUDA_ARCHITECTURES), [`CMAKE_CUDA_COMPILER`](https://cmake.org/cmake/help/latest/variable/CMAKE_LANG_COMPILER.html#variable:CMAKE_%3CLANG%3E_COMPILER)) may be required to be set in order for CMake to correctly discover and compile against your local CUDA installation. Refer to [the CMake documentation](https://cmake.org/cmake/help/latest/module/FindCUDAToolkit.html) for more details.
 
 Verify [`pbatoolkit`](https://pypi.org/project/pbatoolkit/)'s contents in a Python shell
 
@@ -108,13 +98,33 @@ python[.exe] path/to/examples/[example].py -h
 
 Example results are showcased in our [Gallery](#gallery).
 
+#### Note
+
+Consider [locally building and installing](#build--install) `pbatoolkit` for the following reasons.
+- Achieve optimal GPU performance for your platform.
+- Support older/newer GPUs and CUDA Toolkit versions.
+
+When downloaded from PyPI, [`pbatoolkit`](https://pypi.org/project/pbatoolkit/)'s GPU module requires dynamically linking to an instance of the **[CUDA Runtime library](https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#cuda-runtime) with major version `12`**, and your [CUDA Driver](https://docs.nvidia.com/cuda/cuda-c-programming-guide/#driver-api). 
+
+> Recall that the CUDA Runtime is [ABI compatible](https://docs.nvidia.com/cuda/archive/12.5.1/cuda-driver-api/version-mixing-rules.html) up to major version.
+
+On Windows, these are `cudart64_12.dll` and `nvcuda.dll`. Ensure that they are discoverable via Windows' [DLL search order](https://learn.microsoft.com/en-us/windows/win32/dlls/dynamic-link-library-search-order). We recommend adding `<drive>:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.<minor>\bin` (i.e. the binary folder of your CUDA Toolkit installation) to the `PATH` environment variable. The driver should already be on the search path by default after installation.
+
+On Linux, they are `libcudart.so.12` and `libcuda.so.1`. Ensure that they are discoverable via Linux's [dynamic linker/loader](https://man7.org/linux/man-pages/man8/ld.so.8.html). If they are not already in a default search path, we recommend simply updating the library search path, i.e. `export LD_LIBRARY_PATH="path/to/driver/folder;path/to/runtime/folder;$LD_LIBRARY_PATH"`.
+
+> MacOS does not support CUDA GPUs.
+
+Our [`pbatoolkit`](https://pypi.org/project/pbatoolkit/) prebuilt binaries include [PTX](https://docs.nvidia.com/cuda/cuda-compiler-driver-nvcc/#virtual-architectures), such that program load times will be delayed by [JIT](https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#just-in-time-compilation) compilation. The generated PTX require **[compute capability](https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#compute-capabilities) 7.5**, meaning that only [GeForce RTX 2060 and later chips](https://developer.nvidia.com/cuda-gpus) are supported. Runtime GPU performance may be constrained by the targeted compute capability.
+
 ### Tutorial
 
 Head over to our hands-on [tutorials section](./doc/tutorial/) to learn more about physics based animation in both theory and practice!
 
 ## Dependencies
 
-See [`vcpkg.json`](./vcpkg.json) for a versioned list of our dependencies, available via [vcpkg](https://github.com/microsoft/vcpkg) (use of [vcpkg](https://github.com/microsoft/vcpkg) is not mandatory, as long as dependencies have compatible versions and are discoverable by CMake's [`find_package`](https://cmake.org/cmake/help/latest/command/find_package.html) mechanism).
+See [`vcpkg.json`](./vcpkg.json) for a versioned list of our dependencies, available via [vcpkg](https://github.com/microsoft/vcpkg).
+
+> Use of [vcpkg](https://github.com/microsoft/vcpkg) is not mandatory, as long as dependencies have compatible versions and are discoverable by CMake's [`find_package`](https://cmake.org/cmake/help/latest/command/find_package.html) mechanism.
 
 ## Configuration
 
@@ -132,16 +142,18 @@ Either run CMake's configure step manually
 ```bash
 cmake -S <path/to/PhysicsBasedAnimationToolkit> -B <path/to/build> -D<option>=<value> ...
 ```
-or, alternatively
+or, alternatively (and preferably)
 ```bash
 cmake --preset=<my-favorite-user-preset>
 ```
 
-Our project provides [configuration presets](./CMakePresets.json) that capture typical use configurations. Refer to the [CMake presets documentation](https://cmake.org/cmake/help/latest/manual/cmake-presets.7.html) for more information.
+Our project provides [configuration presets](./CMakePresets.json) that capture typical use configurations. For the best experience, install [`vcpkg`](https://github.com/microsoft/vcpkg) and set `VCPKG_ROOT=path/to/vcpkg` as an environment variable. Then, you can select one of our available presets, for example `cmake --preset=default`. Refer to the [CMake presets documentation](https://cmake.org/cmake/help/latest/manual/cmake-presets.7.html) for more information.
 
-## Build
+## Build & Install
 
-Build transparently across platforms using the [cmake build CLI](https://cmake.org/cmake/help/latest/manual/cmake.1.html#build-a-project).
+### C++
+
+Build and install transparently across platforms using the [cmake build CLI](https://cmake.org/cmake/help/latest/manual/cmake.1.html#build-a-project) and [cmake install CLI](https://cmake.org/cmake/help/latest/guide/tutorial/Installing%20and%20Testing.html), respectively.
 
 Our CMake project exposes the following build targets
 | Target | Description |
@@ -155,17 +167,26 @@ For example, to build tests, run
 cmake --build <path/to/build/folder> --target PhysicsBasedAnimationToolkit_Tests --config Release
 ```
 
-## Install
-
-Install our *PhysicsBasedAnimationToolkit* locally across platforms using the [cmake install CLI](https://cmake.org/cmake/help/latest/guide/tutorial/Installing%20and%20Testing.html).
-
+To install *PhysicsBasedAnimationToolkit* locally, run
 ```bash
 cd path/to/PhysicsBasedAnimationToolkit
 cmake -S . -B build -D<option>=<value> ...
 cmake --install build --config Release
 ```
 
-Alternatively, if [`vcpkg`](https://github.com/microsoft/vcpkg) is installed and `VCPKG_ROOT=path/to/vcpkg` is set as an environment variable, you can select one of our available presets, for example `cmake --preset=default` and then install.
+### Python
+
+For a local installation, which builds from source, our Python bindings build relies on [Scikit-build-core](https://scikit-build-core.readthedocs.io/en/latest/index.html), which relies on CMake's [`install`](https://cmake.org/cmake/help/latest/command/install.html) mechanism. As such, you can configure the installation as you typically would when using the CMake CLI directly, by now passing the corresponding CMake arguments in `pip`'s `config-settings` parameter (refer to the [Scikit-build-core](https://scikit-build-core.readthedocs.io/en/latest/index.html) documentation for the relevant parameters). See our [pyinstall workflow](.github/workflows/pyinstall.yml) for working examples of building from source on Linux, MacOS and Windows. Then, assuming that external dependencies are found via CMake's [`find_package`](https://cmake.org/cmake/help/latest/command/find_package.html), you can build and install our Python package [`pbatoolkit`](https://pypi.org/project/pbatoolkit/) locally and get the most up to date features. 
+
+> Consider using a [Python virtual environment](https://docs.python.org/3/library/venv.html) for this step.
+
+As an example, assuming use of [`vcpkg`](https://github.com/microsoft/vcpkg) for external dependency management with `VCPKG_ROOT=path/to/vcpkg` set as an environment variable, run
+
+```bash
+pip install . --config-settings=cmake.args="--preset=pip-cuda" -v
+```
+
+on the command line to build [`pbatoolkit`](https://pypi.org/project/pbatoolkit/) from source with GPU algorithms included. Additional environment variables (i.e. [`CUDA_PATH`](https://cmake.org/cmake/help/latest/module/FindCUDAToolkit.html)) and/or CMake variables (i.e. [`CMAKE_CUDA_COMPILER`](https://cmake.org/cmake/help/latest/variable/CMAKE_LANG_COMPILER.html#variable:CMAKE_%3CLANG%3E_COMPILER)) may be required to be set in order for CMake to correctly discover and compile against your targeted local CUDA installation. Refer to [the CMake documentation](https://cmake.org/cmake/help/latest/module/FindCUDAToolkit.html) for more details.
 
 ## Gallery
 
