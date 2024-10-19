@@ -67,7 +67,7 @@ jobs:
           MACOSX_DEPLOYMENT_TARGET: ${{ matrix.macosx_deployment_target }}
           CIBW_ENVIRONMENT_LINUX: VCPKG_ROOT=/host${{ github.workspace }}/vcpkg CUDA_PATH=/host${{ env.CUDA_PATH }}
           CIBW_MANYLINUX_X86_64_IMAGE: ${{ matrix.cibw_image }}
-          CIBW_REPAIR_WHEEL_COMMAND_LINUX: auditwheel show {wheel} && auditwheel repair -w {dest_dir} --exclude=libcuda.so.1 {wheel}
+          CIBW_REPAIR_WHEEL_COMMAND_LINUX: find / -name "libcuda.so*" && auditwheel show {wheel} && auditwheel repair -w {dest_dir} --exclude=libcuda.so.1 --exclude=libcudart.so.12 {wheel}
           CIBW_ARCHS: ${{ matrix.cibw_archs }}
           CIBW_BUILD: ${{ matrix.cibw_build }}
           CIBW_BUILD_VERBOSITY: 1
