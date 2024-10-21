@@ -364,6 +364,8 @@ std::vector<typename XpbdImpl::ContactPairType> XpbdImpl::GetVertexTriangleConta
 
 #include <doctest/doctest.h>
 
+#pragma nv_diag_suppress 177
+
 TEST_CASE("[gpu][xpbd] Xpbd")
 {
     using namespace pbat;
