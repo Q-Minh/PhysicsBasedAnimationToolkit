@@ -31,9 +31,10 @@ if(PBAT_BUILD_SHARED_LIBS)
     set(BUILD_SHARED_LIBS ON CACHE BOOL "" FORCE)
 endif()
 
-# No matter the platform, we decide the structure of our build tree. This should
-# have no side-effect on library users.
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
+# Unless user specified otherwise, we decide the structure of our build tree.
+if (NOT CMAKE_RUNTIME_OUTPUT_DIRECTORY)
+    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+endif()
 message(VERBOSE "PBAT -- CMAKE_RUNTIME_OUTPUT_DIRECTORY=${CMAKE_RUNTIME_OUTPUT_DIRECTORY}")
 
 # Dependencies
