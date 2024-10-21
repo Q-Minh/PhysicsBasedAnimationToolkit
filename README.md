@@ -79,10 +79,10 @@ pip install pbatoolkit-gpu
 ```
 if your environment is [properly setup to use our GPU algorithms](#cuda).
 
-Verify [`pbatoolkit`](https://pypi.org/project/pbatoolkit/)'s contents in a Python shell
+Verify [`pbatoolkit`](https://pypi.org/project/pbatoolkit/)'s (or [`pbatoolkit-gpu`](https://pypi.org/project/pbatoolkit/)) contents in a Python shell
 
 ```python
-import pbatoolkit as pbat
+import pbatoolkit as pbat # or import pbatoolkit-gpu as pbat
 help(pbat.fem)
 help(pbat.geometry)
 help(pbat.profiling)
