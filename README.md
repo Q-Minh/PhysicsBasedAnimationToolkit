@@ -42,6 +42,8 @@ The Physics Based Animation Toolkit (PBAT) is a (mostly templated) cross-platfor
   - Fixed-size linear algebra library for kernel programming
 - Seamless profiling integration via [Tracy](https://github.com/wolfpld/tracy)
 
+> _Currently, the `master` branch may contain breaking changes at any point in time. We recommend users to use specific git tags, i.e. via `git checkout v<major>.<minor>.<patch>`, where the version `<major>.<minor>.<patch>` matches the installed `pbatoolkit`'s version downloaded from PyPI (i.e. from `pip install pbatoolkit`)._
+
 ## Table of Contents
 
 - [Quick start](#quick-start)
@@ -49,6 +51,7 @@ The Physics Based Animation Toolkit (PBAT) is a (mostly templated) cross-platfor
   - [Python](#python)
   - [Tutorial](#tutorial)
 - [Dependencies](#dependencies)
+  - [CUDA](#cuda)
 - [Configuration](#configuration)
 - [Build & Install](#build--install)
   - [C++](#c-1)
@@ -67,12 +70,14 @@ Take a look at the unit tests, found in the library's source (`.cpp` or `.cu`) f
 ### Python
 
 To download and install from PyPI, run in command line
-
 ```bash
 pip install pbatoolkit
 ```
-
-> _Currently, the `master` branch may contain breaking changes at any point in time. We recommend users to use specific git tags, i.e. via `git checkout v<major>.<minor>.<patch>`, where the version `<major>.<minor>.<patch>` matches the installed `pbatoolkit`'s version downloaded from PyPI (i.e. from `pip install pbatoolkit`)._
+or, alternatively
+```bash
+pip install pbatoolkit-gpu
+```
+if your environment is [properly setup to use our GPU algorithms](#cuda).
 
 Verify [`pbatoolkit`](https://pypi.org/project/pbatoolkit/)'s contents in a Python shell
 
@@ -98,24 +103,6 @@ python[.exe] path/to/examples/[example].py -h
 
 Example results are showcased in our [Gallery](#gallery).
 
-#### Note
-
-Consider [locally building and installing](#build--install) `pbatoolkit` for the following reasons.
-- Achieve optimal GPU performance for your platform.
-- Support older/newer GPUs and CUDA Toolkit versions.
-
-When downloaded from PyPI, [`pbatoolkit`](https://pypi.org/project/pbatoolkit/)'s GPU module requires dynamically linking to an instance of the **[CUDA Runtime library](https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#cuda-runtime) with major version `12`**, and your [CUDA Driver](https://docs.nvidia.com/cuda/cuda-c-programming-guide/#driver-api). 
-
-> Recall that the CUDA Runtime is [ABI compatible](https://docs.nvidia.com/cuda/archive/12.5.1/cuda-driver-api/version-mixing-rules.html) up to major version.
-
-On Windows, these are `cudart64_12.dll` and `nvcuda.dll`. Ensure that they are discoverable via Windows' [DLL search order](https://learn.microsoft.com/en-us/windows/win32/dlls/dynamic-link-library-search-order). We recommend adding `<drive>:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.<minor>\bin` (i.e. the binary folder of your CUDA Toolkit installation) to the `PATH` environment variable. The driver should already be on the search path by default after installation.
-
-On Linux, they are `libcudart.so.12` and `libcuda.so.1`. Ensure that they are discoverable via Linux's [dynamic linker/loader](https://man7.org/linux/man-pages/man8/ld.so.8.html). If they are not already in a default search path, we recommend simply updating the library search path, i.e. `export LD_LIBRARY_PATH="path/to/driver/folder;path/to/runtime/folder;$LD_LIBRARY_PATH"`.
-
-> MacOS does not support CUDA GPUs.
-
-Our [`pbatoolkit`](https://pypi.org/project/pbatoolkit/) prebuilt binaries include [PTX](https://docs.nvidia.com/cuda/cuda-compiler-driver-nvcc/#virtual-architectures), such that program load times will be delayed by [JIT](https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#just-in-time-compilation) compilation. The generated PTX requires **[compute capability](https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#compute-capabilities) 7.0**. [Verify](https://developer.nvidia.com/cuda-gpus) that your NVIDIA GPU supports compute capability at least 7.0. For example, only RTX 2060 up to 4090 chips are supported in the GeForce series. Runtime GPU performance may be constrained by the targeted compute capability.
-
 ### Tutorial
 
 Head over to our hands-on [tutorials section](./doc/tutorial/) to learn more about physics based animation in both theory and practice!
@@ -125,6 +112,30 @@ Head over to our hands-on [tutorials section](./doc/tutorial/) to learn more abo
 See [`vcpkg.json`](./vcpkg.json) for a versioned list of our dependencies, available via [vcpkg](https://github.com/microsoft/vcpkg).
 
 > Use of [vcpkg](https://github.com/microsoft/vcpkg) is not mandatory, as long as dependencies have compatible versions and are discoverable by CMake's [`find_package`](https://cmake.org/cmake/help/latest/command/find_package.html) mechanism.
+
+### CUDA
+
+#### PyPI
+
+[`pbatoolkit-gpu`](https://pypi.org/project/pbatoolkit-gpu/) (downloaded from PyPI) requires dynamically linking to an instance of the
+- [CUDA 12 Runtime library](https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#cuda-runtime), and your
+- [CUDA Driver](https://docs.nvidia.com/cuda/cuda-c-programming-guide/#driver-api). 
+
+> Recall that the CUDA Runtime is [ABI compatible](https://docs.nvidia.com/cuda/archive/12.5.1/cuda-driver-api/version-mixing-rules.html) up to major version.
+
+On 64-bit Windows, these are `cudart64_12.dll` and `nvcuda.dll`. Ensure that they are discoverable via Windows' [DLL search order](https://learn.microsoft.com/en-us/windows/win32/dlls/dynamic-link-library-search-order). We recommend adding `<drive>:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.<minor>\bin` (i.e. the binary folder of your CUDA Toolkit installation) to the `PATH` environment variable. The driver should already be on the search path by default after installation.
+
+On Linux, they are `libcudart.so.12` and `libcuda.so.1`. Ensure that they are discoverable via Linux's [dynamic linker/loader](https://man7.org/linux/man-pages/man8/ld.so.8.html). If they are not already in a default search path, we recommend simply updating the library search path, i.e. `export LD_LIBRARY_PATH="path/to/driver/folder;path/to/runtime/folder;$LD_LIBRARY_PATH"`.
+
+> MacOS does not support CUDA GPUs.
+
+Our [`pbatoolkit-gpu`](https://pypi.org/project/pbatoolkit/) prebuilt binaries include [PTX](https://docs.nvidia.com/cuda/cuda-compiler-driver-nvcc/#virtual-architectures), such that program load times will be delayed by [JIT](https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#just-in-time-compilation) compilation on first use. [Verify](https://developer.nvidia.com/cuda-gpus) that your NVIDIA GPU supports [compute capability](https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#compute-capabilities) at least 7.0. For example, only RTX 2060 up to 4090 chips are supported in the GeForce series. Runtime GPU performance may be constrained by the targeted compute capability.
+
+#### Local
+
+Consider [locally building and installing](#build--install) `pbatoolkit` against your native GPU for the following reasons.
+- Achieve optimal GPU performance for your platform.
+- Support older/newer GPUs and CUDA Toolkit versions.
 
 ## Configuration
 
