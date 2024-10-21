@@ -18,19 +18,12 @@ import pbatoolkit.geometry
 # 2. cuda libraries are loaded as soon as the gpu submodule is loaded
 # 3. cuda libraries are loaded as soon as the _pbat.* dynamic library is loaded
 # More details -> https://stackoverflow.com/questions/50786247/when-is-dynamic-linking-between-a-program-and-a-shared-library-performed
-# - Scenario 3. forces pbatoolkit users to have a CUDA GPU and libraries. 
-#   In this case, I will need to either distribute 2 packages, pbatoolkit (CPU only) 
-#   and pbatoolkit-cuda (with GPU), or use dlopen and LoadLibrary calls.
-# - Scenario 2. is handled by the following try/except guard.
-try:
-    import pbatoolkit.gpu
-except ImportError:
-    import warnings
-    warnings.warn("Could not load submodule gpu of module pbatoolkit")
-    has_gpu = False
-else:
-    has_gpu = True
-
+# - Scenario 1 is the best case, we don't need to do anything special!
+# - Scenario 2 is handled by wrapping the gpu submodule import by a try/except guard.
+# - Scenario 3 forces pbatoolkit users to have a CUDA GPU and libraries. 
+# Because lazy loading of dynamic libraries is hard to achieve on linux, 
+# I distribute 2 packages, pbatoolkit (CPU only) and pbatoolkit-gpu (CPU and GPU).
+import pbatoolkit.gpu
 import pbatoolkit.profiling
 import pbatoolkit.math
 import pbatoolkit.math.linalg
