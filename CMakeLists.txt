@@ -34,6 +34,7 @@ endif()
 # No matter the platform, we decide the structure of our build tree. This should
 # have no side-effect on library users.
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
+message(VERBOSE "PBAT -- CMAKE_RUNTIME_OUTPUT_DIRECTORY=${CMAKE_RUNTIME_OUTPUT_DIRECTORY}")
 
 # Dependencies
 # Note that this call must come after we have set BUILD_SHARED_LIBS
