@@ -1,0 +1,135 @@
+site_name: "Physics Based Animation Toolkit"
+site_url: "https://github.com/Q-Minh/PhysicsBasedAnimationToolkit"
+site_description: "Physics Based Animation Toolkit."
+site_author: "Quoc-Minh Ton-That"
+
+# Repository settings for edit links
+repo_url: "https://github.com/Q-Minh/PhysicsBasedAnimationToolkit"
+repo_name: "Q-Minh/PhysicsBasedAnimationToolkit"
+edit_uri: "blob/main/docs"
+
+# Theme configuration
+theme:
+  name: material
+  language: en
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: deep-purple
+      accent: deep-purple
+      toggle:
+        icon: material/brightness-7
+        name: "Switch to dark mode"
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: deep-purple
+      accent: deep-purple
+      toggle:
+        icon: material/brightness-4
+        name: "Switch to light mode"
+  font:
+    text: Roboto
+    code: Roboto Mono
+  features:
+    - navigation.expand
+    - navigation.tabs
+    - navigation.top
+    - navigation.tracking
+    - search.highlight
+    - search.share
+    - toc.follow
+    - content.tabs.link
+  favicon: "_static/imgs/favicon.ico"
+  logo: "_static/imgs/pbat.svg"
+
+# Navigation structure
+nav:
+  - Home:
+    - PBAT: index.md
+    - Changelog: changelog.md
+    - Contributing: contributing.md
+    - Gallery: gallery.md
+  - C++:
+    - C++: c++/cpp.md
+    - Configuration: c++/configuration.md
+    - CUDA: c++/cuda.md
+  - Python:
+    - Python: python/python.md
+    - API:
+      - FEM: python/FEM.md
+      - Geometry: python/geometry.md
+      - Profiling: python/profiling.md
+      - Math: python/math.md
+      - GPU: python/gpu.md
+  - Examples:
+    - Workshops:
+      - Overview: workshops/index.md
+    - Broad Phase: examples/broad_phase.md
+    - Contact Detection: examples/contact_detection.md
+    - Diffusion Smoothing: examples/diffusion_smoothing.md
+    - Elasticity:
+      - Elasticity: examples/elasticity.md
+      - Higher Order: examples/elasticity_higher_order.md
+    - Heat: examples/heat.md
+    - IPC:
+      - IPC: examples/ipc.md
+      - Multi-Material: examples/ipc-multi.md
+    - Laplace: examples/laplace.md
+    - VBD: examples/vbd.md
+    - XPDB: examples/xpdb.md
+    - Server: examples/server.md
+
+  - FEM:
+      - Introduction: course/fem/index.md
+      - Method: course/fem/method.md
+      - Shape Functions: course/fem/shape_functions.md
+      - Spatial Integration: course/fem/spatial_integration.md
+      - Operators: course/fem/operators.md
+      - Boundary Conditions: course/fem/boundary_conditions.md
+      - Vector-valued Functions: course/fem/vector_valued_functions.md
+      - Limitations: course/fem/limitations.md
+
+# Markdown extensions and plugins
+markdown_extensions:
+  - admonition
+  - codehilite
+  - pymdownx.arithmatex:
+      generic: true
+  - pymdownx.superfences
+  - pymdownx.inlinehilite
+  - mkdocs_graphviz
+  - tables
+  - footnotes
+  - toc:
+      permalink: true
+
+plugins:
+  - search
+  - mkdocstrings
+  - bibtex:
+      bib_file: "docs/refs.bib"
+  - include-markdown
+  - git-revision-date-localized:
+      locale: "en"
+  - mkdocs-jupyter
+
+# Paths to static files (CSS, JS, images)
+extra_css:
+  - "_static/stylesheets/custom.css"
+
+extra_javascript:
+  - "_static/javascripts/config.js"
+  - "_static/javascripts/custom.js"
+  - https://polyfill.io/v3/polyfill.min.js?features=es6
+  - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js
+  - https://cdn.jsdelivr.net/gh/rod2ik/cdn@main/mkdocs/javascripts/mkdocs-graphviz.js
+
+# Static files to include
+extra:
+  css:
+    - "_static/stylesheets/custom.css"
+  js:
+    - "_static/javascripts/custom.js"
+
+use_directory_urls: true
+strict: false
