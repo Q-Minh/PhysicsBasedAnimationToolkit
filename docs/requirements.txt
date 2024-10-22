@@ -1,12 +1,8 @@
-sphinx
-sphinx-sitemap
-sphinx-immaterial==0.11.14
-autoclasstoc
-# sphinx-autodoc-toolbox
-breathe
-nbsphinx
-pandoc
-myst_parser==1.0.0
-sphinxcontrib-bibtex
-sphinxemoji
-sphinx-last-updated-by-git
+mkdocs
+mkdocs-material
+mkdocs-math
+mkdocs-graphviz
+mkdocstrings
+mkdocs-bibtex
+mkdocs-include-markdown-plugin
+mkdocs-git-revision-date-localized-plugin
