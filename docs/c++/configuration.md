@@ -13,4 +13,77 @@
 | `PBAT_BUILD_SHARED_LIBS`     | `ON,OFF` | `OFF`   | Build project's library targets as shared/dynamic. |
 
 
+## vcpkg Configuration
 
+The `vcpkg.json` file defines the dependencies and optional features for the **PBAT Toolkit**:
+
+- **Core Dependencies**:
+  - `range-v3` for range algorithms.
+  - `fmt` for string formatting.
+  - `eigen3` for linear algebra.
+  - `tbb` for parallel programming.
+  - `doctest` for testing.
+
+- **Optional Features**:
+  - **`suitesparse`**: For sparse matrix operations.
+  - **`mkl`**: For Intel MKL optimized math functions.
+  - **`python`**: To enable Python bindings.
+  - **`cuda`**: To enable CUDA support for GPU acceleration.
+
+---
+
+## Installing vcpkg
+
+
+Open a terminal or command prompt and run:
+
+```bash
+git clone https://github.com/microsoft/vcpkg.git
+```
+
+After cloning, navigate into the **vcpkg** directory and run the bootstrap script to build the tool.
+
+#### On Linux and macOS:
+
+```bash
+cd vcpkg
+./bootstrap-vcpkg.sh
+```
+
+#### On Windows:
+
+```bash
+cd vcpkg
+.\bootstrap-vcpkg.bat
+```
+
+## Setting up CMake Presets
+
+CMake presets simplify the configuration and build process. Follow these steps to set them up.
+
+In the root of your project, create a `CMakePresets.json` file:
+
+```json
+{
+    "version": 6,
+    "configurePresets": [
+        {
+            "name": "dev-msvc-cuda",
+            "inherits": ["dev", "x64", "msvc", "pic"],
+            "cacheVariables": {
+                "VCPKG_MANIFEST_FEATURES": "python;cuda",
+                "PBAT_BUILD_PYTHON_BINDINGS": {
+                    "type": "BOOL",
+                    "value": "ON"
+                },
+                "PBAT_USE_CUDA": {
+                    "type": "BOOL",
+                    "value": "ON"
+                }
+            }
+        }
+    ]
+}
+```
+
+You can adjust the settings in `CMakePresets.json` based on your needs, such as enabling or disabling CUDA or Python bindings.
