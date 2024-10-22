@@ -41,41 +41,46 @@ theme:
     - content.tabs.link
   favicon: "assets/imgs/favicon.ico"
   logo: "assets/imgs/pbat.svg"
-  # Remove custom_dir if you don't have a custom theme directory
-  # custom_dir: "theme"
 
 # Navigation structure
 nav:
   - Home: index.md
-  - Overview: overview.md
-  - Quick Start:
-      - Introduction: quick_start/index.md
-      - C++: quick_start/cpp.md
-      - Python: quick_start/python.md
-      - Tutorial: quick_start/tutorial.md
-  - Dependencies:
-      - Overview: dependencies/index.md
-      - CUDA: dependencies/cuda.md
-  - Configuration: configuration.md
-  - Build & Install:
-      - Overview: build_install/index.md
-      - C++: build_install/cpp.md
-      - Python: build_install/python.md
-  - Install: install.md
-  - Gallery: gallery.md
-  - Contributing: contributing.md
-  - The Finite Element Method:
-      - Introduction: fem/index.md
-      - Prerequisites: fem/prerequisites.md
-      - Method: fem/method.md
-      - Shape Functions: fem/shape_functions.md
-      - Spatial Integration: fem/spatial_integration.md
-      - Operators: fem/operators.md
-      - Boundary Conditions: fem/boundary_conditions.md
-      - Vector-valued Functions: fem/vector_valued_functions.md
-      - Limitations: fem/limitations.md
-      - Workshops: fem/workshops.md
+  - C++:
+    - C++: c++/cpp.md
+    - Configuration: c++/configuration.md
+    - CUDA: c++/cuda.md
+  - Python:
+    - Python: python/python.md
+  - Examples:
+    - Broad Phase: examples/broad_phase.md
+    - Contact Detection: examples/contact_detection.md
+    - Diffusion Smoothing: examples/diffusion_smoothing.md
+    - Elasticity:
+      - Elasticity: examples/elasticity.md
+      - Higher Order: examples/elasticity_higher_order.md
+    - Heat: examples/heat.md
+    - IPC:
+      - IPC: examples/ipc.md
+      - Multi-Material: examples/ipc-multi.md
+    - Laplace: examples/laplace.md
+    - VBD: examples/vbd.md
+    - XPDB: examples/xpdb.md
+    - Server: examples/server.md
+
+  - FEM:
+      - Introduction: course/fem/index.md
+      - Method: course/fem/method.md
+      - Shape Functions: course/fem/shape_functions.md
+      - Spatial Integration: course/fem/spatial_integration.md
+      - Operators: course/fem/operators.md
+      - Boundary Conditions: course/fem/boundary_conditions.md
+      - Vector-valued Functions: course/fem/vector_valued_functions.md
+      - Limitations: course/fem/limitations.md
+  - Workshops:
+    - Overview: workshops/index.md
   - Changelog: changelog.md
+  - Contributing: contributing.md
+  - Gallery: gallery.md
 
 # Markdown extensions and plugins
 markdown_extensions:
@@ -120,4 +125,4 @@ extra:
     - "javascripts/custom.js"
 
 use_directory_urls: true
-strict: true
+strict: false

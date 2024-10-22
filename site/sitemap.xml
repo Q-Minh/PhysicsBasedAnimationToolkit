@@ -29,15 +29,15 @@
          <lastmod>2024-10-22</lastmod>
     </url>
     <url>
-         <loc>https://your-documentation-url.com/build_install/</loc>
+         <loc>https://your-documentation-url.com/c%2B%2B/configuration/</loc>
          <lastmod>2024-10-22</lastmod>
     </url>
     <url>
-         <loc>https://your-documentation-url.com/build_install/cpp/</loc>
+         <loc>https://your-documentation-url.com/c%2B%2B/cpp/</loc>
          <lastmod>2024-10-22</lastmod>
     </url>
     <url>
-         <loc>https://your-documentation-url.com/build_install/python/</loc>
+         <loc>https://your-documentation-url.com/c%2B%2B/cuda/</loc>
          <lastmod>2024-10-22</lastmod>
     </url>
     <url>
@@ -81,11 +81,83 @@
          <lastmod>2024-10-22</lastmod>
     </url>
     <url>
-         <loc>https://your-documentation-url.com/quick_start/</loc>
+         <loc>https://your-documentation-url.com/dependencies/</loc>
+         <lastmod>2024-10-22</lastmod>
+    </url>
+    <url>
+         <loc>https://your-documentation-url.com/examples/broad_phase/</loc>
+         <lastmod>2024-10-22</lastmod>
+    </url>
+    <url>
+         <loc>https://your-documentation-url.com/examples/contact_detection/</loc>
+         <lastmod>2024-10-22</lastmod>
+    </url>
+    <url>
+         <loc>https://your-documentation-url.com/examples/diffusion_smoothing/</loc>
+         <lastmod>2024-10-22</lastmod>
+    </url>
+    <url>
+         <loc>https://your-documentation-url.com/examples/elasticity/</loc>
+         <lastmod>2024-10-22</lastmod>
+    </url>
+    <url>
+         <loc>https://your-documentation-url.com/examples/elasticity_higher_order/</loc>
+         <lastmod>2024-10-22</lastmod>
+    </url>
+    <url>
+         <loc>https://your-documentation-url.com/examples/heat/</loc>
+         <lastmod>2024-10-22</lastmod>
+    </url>
+    <url>
+         <loc>https://your-documentation-url.com/examples/ipc-multi/</loc>
+         <lastmod>2024-10-22</lastmod>
+    </url>
+    <url>
+         <loc>https://your-documentation-url.com/examples/ipc/</loc>
+         <lastmod>2024-10-22</lastmod>
+    </url>
+    <url>
+         <loc>https://your-documentation-url.com/examples/laplace/</loc>
+         <lastmod>2024-10-22</lastmod>
+    </url>
+    <url>
+         <loc>https://your-documentation-url.com/examples/server/</loc>
+         <lastmod>2024-10-22</lastmod>
+    </url>
+    <url>
+         <loc>https://your-documentation-url.com/examples/vbd/</loc>
+         <lastmod>2024-10-22</lastmod>
+    </url>
+    <url>
+         <loc>https://your-documentation-url.com/examples/xpdb/</loc>
+         <lastmod>2024-10-22</lastmod>
+    </url>
+    <url>
+         <loc>https://your-documentation-url.com/python/python/</loc>
          <lastmod>2024-10-22</lastmod>
     </url>
     <url>
          <loc>https://your-documentation-url.com/workshop/</loc>
+         <lastmod>2024-10-22</lastmod>
+    </url>
+    <url>
+         <loc>https://your-documentation-url.com/workshop/W1/</loc>
+         <lastmod>2024-10-22</lastmod>
+    </url>
+    <url>
+         <loc>https://your-documentation-url.com/workshop/W2/</loc>
+         <lastmod>2024-10-22</lastmod>
+    </url>
+    <url>
+         <loc>https://your-documentation-url.com/workshop/W3/</loc>
+         <lastmod>2024-10-22</lastmod>
+    </url>
+    <url>
+         <loc>https://your-documentation-url.com/workshop/W4/</loc>
+         <lastmod>2024-10-22</lastmod>
+    </url>
+    <url>
+         <loc>https://your-documentation-url.com/workshop/W5/</loc>
          <lastmod>2024-10-22</lastmod>
     </url>
 </urlset>
