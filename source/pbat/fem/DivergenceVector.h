@@ -74,7 +74,7 @@ inline DivergenceVector<TMesh, Dims, QuadratureOrder>::DivergenceVector(
     if (Fe.rows() != kDims)
     {
         std::string const what = fmt::format(
-            "LoadVector<TMesh,{0}> discretizes a {0}-dimensional load, but received "
+            "DivergenceVector<TMesh,{0}> discretizes a {0}-dimensional load, but received "
             "{1}-dimensional input load",
             kDims,
             Fe.rows());

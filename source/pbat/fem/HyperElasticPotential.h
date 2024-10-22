@@ -123,8 +123,8 @@ struct HyperElasticPotential
     Eigen::Ref<MatrixX const> detJe; ///< |# element quadrature points| x |#elements| matrix of
                                      ///< jacobian determinants at element quadrature points
 
-    VectorX mue;     ///< Element-wise 1st Lame coefficient
-    VectorX lambdae; ///< Element-wise 2nd Lame coefficient
+    MatrixX mue;     ///< |#quad.pts.|x|#elements| 1st Lame coefficient
+    MatrixX lambdae; ///< |#quad.pts.|x|#elements| 2nd Lame coefficient
     MatrixX He;      ///< |(ElementType::kNodes*kDims)| x |#elements *
                      ///< (ElementType::kNodes*kDims)| element hessian matrices
     MatrixX Ge;      ///< |ElementType::kNodes*kDims| x |#elements| element gradient vectors
@@ -143,8 +143,8 @@ inline HyperElasticPotential<TMesh, THyperElasticEnergy, QuadratureOrder>::Hyper
           meshIn,
           detJe,
           GNe,
-          VectorX::Constant(meshIn.E.cols(), Y),
-          VectorX::Constant(meshIn.E.cols(), nu))
+          MatrixX::Constant(QuadratureRuleType::kPoints, meshIn.E.cols(), Y),
+          MatrixX::Constant(QuadratureRuleType::kPoints, meshIn.E.cols(), nu))
 {
 }
 
@@ -158,10 +158,13 @@ inline HyperElasticPotential<TMesh, THyperElasticEnergy, QuadratureOrder>::Hyper
     Eigen::DenseBase<TDerivednu> const& nu)
     : mesh(meshIn), detJe(detJe), GNe(GNe), mue(), lambdae(), He(), Ge(), Ue(), GH()
 {
-    std::tie(mue, lambdae)          = physics::LameCoefficients(Y, nu);
-    auto const numberOfElements     = mesh.E.cols();
-    auto constexpr kNodesPerElement = ElementType::kNodes;
-    auto constexpr kDofsPerElement  = kNodesPerElement * kDims;
+    std::tie(mue, lambdae)            = physics::LameCoefficients(Y.reshaped(), nu.reshaped());
+    auto const numberOfElements       = mesh.E.cols();
+    auto constexpr kNodesPerElement   = ElementType::kNodes;
+    auto constexpr kDofsPerElement    = kNodesPerElement * kDims;
+    auto constexpr kQuadPtsPerElement = QuadratureRuleType::kPoints;
+    mue.resize(kQuadPtsPerElement, numberOfElements);
+    lambdae.resize(kQuadPtsPerElement, numberOfElements);
     Ue.setZero(numberOfElements);
     Ge.setZero(kDofsPerElement, numberOfElements);
     He.setZero(kDofsPerElement, kDofsPerElement * numberOfElements);
@@ -181,8 +184,8 @@ inline HyperElasticPotential<TMesh, THyperElasticEnergy, QuadratureOrder>::Hyper
           detJe,
           GNe,
           x,
-          VectorX::Constant(meshIn.E.cols(), Y),
-          VectorX::Constant(meshIn.E.cols(), nu))
+          MatrixX::Constant(QuadratureRuleType::kPoints, meshIn.E.cols(), Y),
+          MatrixX::Constant(QuadratureRuleType::kPoints, meshIn.E.cols(), nu))
 {
 }
 
@@ -248,7 +251,7 @@ HyperElasticPotential<TMesh, THyperElasticEnergy, QuadratureOrder>::ComputeEleme
                     0,
                     e * kStride + g * MeshType::kDims);
                 auto const F = xe * gradPhi;
-                auto psiF    = Psi.eval(F.reshaped(), mue(e), lambdae(e));
+                auto psiF    = Psi.eval(F.reshaped(), mue(g, e), lambdae(g, e));
                 Ue(e) += (wg(g) * detJe(g, e)) * psiF;
             }
         });
@@ -266,7 +269,7 @@ HyperElasticPotential<TMesh, THyperElasticEnergy, QuadratureOrder>::ComputeEleme
                     0,
                     e * kStride + g * MeshType::kDims);
                 auto const F          = xe * gradPhi;
-                auto [psiF, gradPsiF] = Psi.evalWithGrad(F.reshaped(), mue(e), lambdae(e));
+                auto [psiF, gradPsiF] = Psi.evalWithGrad(F.reshaped(), mue(g, e), lambdae(g, e));
                 Ue(e) += (wg(g) * detJe(g, e)) * psiF;
                 ge +=
                     (wg(g) * detJe(g, e)) * GradientWrtDofs<ElementType, kDims>(gradPsiF, gradPhi);
@@ -286,8 +289,8 @@ HyperElasticPotential<TMesh, THyperElasticEnergy, QuadratureOrder>::ComputeEleme
                     0,
                     e * kStride + g * MeshType::kDims);
                 auto const F  = xe * gradPhi;
-                auto psiF     = Psi.eval(F.reshaped(), mue(e), lambdae(e));
-                auto hessPsiF = Psi.hessian(F.reshaped(), mue(e), lambdae(e));
+                auto psiF     = Psi.eval(F.reshaped(), mue(g, e), lambdae(g, e));
+                auto hessPsiF = Psi.hessian(F.reshaped(), mue(g, e), lambdae(g, e));
                 Ue(e) += (wg(g) * detJe(g, e)) * psiF;
                 he += (wg(g) * detJe(g, e)) * HessianWrtDofs<ElementType, kDims>(hessPsiF, gradPhi);
             }
@@ -308,7 +311,7 @@ HyperElasticPotential<TMesh, THyperElasticEnergy, QuadratureOrder>::ComputeEleme
                     e * kStride + g * MeshType::kDims);
                 auto const F = xe * gradPhi;
                 auto [psiF, gradPsiF, hessPsiF] =
-                    Psi.evalWithGradAndHessian(F.reshaped(), mue(e), lambdae(e));
+                    Psi.evalWithGradAndHessian(F.reshaped(), mue(g, e), lambdae(g, e));
                 Ue(e) += (wg(g) * detJe(g, e)) * psiF;
                 ge +=
                     (wg(g) * detJe(g, e)) * GradientWrtDofs<ElementType, kDims>(gradPsiF, gradPhi);
@@ -532,14 +535,16 @@ HyperElasticPotential<TMesh, THyperElasticEnergy, QuadratureOrder>::CheckValidSt
             GNe.cols());
         throw std::invalid_argument(what);
     }
+    auto constexpr kQuadPtsPerElements = QuadratureRuleType::kPoints;
     bool const bLameCoefficientsHaveCorrectDimensions =
-        (mue.rows() == numberOfElements) and (mue.cols() == 1) and
-        (lambdae.rows() == numberOfElements) and (lambdae.cols() == 1);
+        (mue.rows() == kQuadPtsPerElements) and (mue.cols() == numberOfElements) and
+        (lambdae.rows() == kQuadPtsPerElements) and (lambdae.cols() == numberOfElements);
     if (not bLameCoefficientsHaveCorrectDimensions)
     {
         std::string const what = fmt::format(
-            "Expected piecewise element constant lame coefficients with dimensions {0}x1 and {0}x1 "
-            "for mue and lambdae, but got {1}x{2} and {3}x{4}",
+            "Expected quadrature point lame coefficients with dimensions {0}x{1} and "
+            "{0}x{1} for mue and lambdae, but got {2}x{3} and {4}x{5}",
+            kQuadPtsPerElements,
             numberOfElements,
             mue.rows(),
             mue.cols(),
