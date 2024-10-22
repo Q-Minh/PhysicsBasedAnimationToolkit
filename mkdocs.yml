@@ -1,6 +1,6 @@
 site_name: "Physics Based Animation Toolkit"
-site_url: "https://your-documentation-url.com"  # Replace with your actual documentation URL
-site_description: "Comprehensive documentation for the Physics Based Animation Toolkit."
+site_url: "https://github.com/Q-Minh/PhysicsBasedAnimationToolkit"
+site_description: "Physics Based Animation Toolkit."
 site_author: "Quoc-Minh Ton-That"
 
 # Repository settings for edit links
@@ -39,12 +39,16 @@ theme:
     - search.share
     - toc.follow
     - content.tabs.link
-  favicon: "assets/imgs/favicon.ico"
-  logo: "assets/imgs/pbat.svg"
+  favicon: "_static/imgs/favicon.ico"
+  logo: "_static/imgs/pbat.svg"
 
 # Navigation structure
 nav:
-  - Home: index.md
+  - Home:
+    - PBAT: index.md
+    - Changelog: changelog.md
+    - Contributing: contributing.md
+    - Gallery: gallery.md
   - C++:
     - C++: c++/cpp.md
     - Configuration: c++/configuration.md
@@ -52,6 +56,9 @@ nav:
   - Python:
     - Python: python/python.md
   - Examples:
+    - Workshops:
+      - Overview: workshops/index.md
+      - Overview: workshops/index.md
     - Broad Phase: examples/broad_phase.md
     - Contact Detection: examples/contact_detection.md
     - Diffusion Smoothing: examples/diffusion_smoothing.md
@@ -76,11 +83,6 @@ nav:
       - Boundary Conditions: course/fem/boundary_conditions.md
       - Vector-valued Functions: course/fem/vector_valued_functions.md
       - Limitations: course/fem/limitations.md
-  - Workshops:
-    - Overview: workshops/index.md
-  - Changelog: changelog.md
-  - Contributing: contributing.md
-  - Gallery: gallery.md
 
 # Markdown extensions and plugins
 markdown_extensions:
@@ -108,11 +110,11 @@ plugins:
 
 # Paths to static files (CSS, JS, images)
 extra_css:
-  - "stylesheets/custom.css"
+  - "_static/stylesheets/custom.css"
 
 extra_javascript:
-  - javascripts/config.js
-  - javascripts/custom.js
+  - "_static/javascripts/config.js"
+  - "_static/javascripts/custom.js"
   - https://polyfill.io/v3/polyfill.min.js?features=es6
   - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js
   - https://cdn.jsdelivr.net/gh/rod2ik/cdn@main/mkdocs/javascripts/mkdocs-graphviz.js
@@ -120,9 +122,9 @@ extra_javascript:
 # Static files to include
 extra:
   css:
-    - "stylesheets/custom.css"
+    - "_static/stylesheets/custom.css"
   js:
-    - "javascripts/custom.js"
+    - "_static/javascripts/custom.js"
 
 use_directory_urls: true
 strict: false
