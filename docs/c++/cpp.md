@@ -1,6 +1,3 @@
-Here's a sample content for the `quick_start/cpp.md` file to help users get started with the C++ version of the Physics Based Animation Toolkit:
-
-```markdown
 # Quick Start Guide for C++
 
 This guide will walk you through setting up the **Physics Based Animation Toolkit** for use in C++ projects. By the end of this guide, you'll be able to build and run basic simulations using the toolkit in a C++ environment.
@@ -120,6 +117,3 @@ For more detailed examples and usage, please refer to the **Examples** section i
 ---
 
 Happy coding with the Physics Based Animation Toolkit!
-```
-
-This file provides a basic quick-start guide for using the Physics Based Animation Toolkit with C++, including installation steps, building the project, and running simple simulations. Feel free to customize the content as needed for your specific setup!
