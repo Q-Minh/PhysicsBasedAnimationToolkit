@@ -37,8 +37,8 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y doxygen graphviz ccache
 
-          # Install MkDocs and related dependencies
-          pip install mkdocs mkdocs-material mkdocstrings mkdocs-bibtex
+          # Install MkDocs and related plugins
+          pip install -r docs/requirements.txt
 
           echo 'CACHE_PATH=/home/runner/.cache/ccache' >> "$GITHUB_ENV"
 
