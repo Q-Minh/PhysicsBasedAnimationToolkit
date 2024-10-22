@@ -9,6 +9,20 @@ if platform.system() == "Windows":
 
 import pbatoolkit.fem
 import pbatoolkit.geometry
+
+# Some users may not have CUDA Toolkit libraries installed or discoverable.
+# They should still be allowed to use pbatoolkit's CPU APIs.
+# NOTE: 
+# Scenarios (best first, worst last):
+# 1. cuda libraries are loaded on first function call to a CUDA API
+# 2. cuda libraries are loaded as soon as the gpu submodule is loaded
+# 3. cuda libraries are loaded as soon as the _pbat.* dynamic library is loaded
+# More details -> https://stackoverflow.com/questions/50786247/when-is-dynamic-linking-between-a-program-and-a-shared-library-performed
+# - Scenario 1 is the best case, we don't need to do anything special!
+# - Scenario 2 is handled by wrapping the gpu submodule import by a try/except guard.
+# - Scenario 3 forces pbatoolkit users to have a CUDA GPU and libraries. 
+# Because lazy loading of dynamic libraries is hard to achieve on linux, 
+# I distribute 2 packages, pbatoolkit (CPU only) and pbatoolkit-gpu (CPU and GPU).
 import pbatoolkit.gpu
 import pbatoolkit.profiling
 import pbatoolkit.math

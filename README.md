@@ -1,90 +1,63 @@
-# Physics Based Animation Toolkit
+# Physics Based Animation Toolkit 
 
-[![Wheels](https://github.com/Q-Minh/PhysicsBasedAnimationToolkit/actions/workflows/wheels.yml/badge.svg?event=release)](https://github.com/Q-Minh/PhysicsBasedAnimationToolkit/actions/workflows/wheels.yml)
+![logo](doc/imgs/pbat.svg)
 
-> _We recommend exploring the official [CMake documentation](https://cmake.org/cmake/help/latest/) to beginner CMake users_.
+[![build](https://github.com/Q-Minh/PhysicsBasedAnimationToolkit/actions/workflows/pyinstall.yml/badge.svg)](https://github.com/Q-Minh/PhysicsBasedAnimationToolkit/actions/workflows/pyinstall.yml)
+[![wheels](https://github.com/Q-Minh/PhysicsBasedAnimationToolkit/actions/workflows/wheels.yml/badge.svg?event=release)](https://github.com/Q-Minh/PhysicsBasedAnimationToolkit/actions/workflows/wheels.yml)
+![pbatoolkit](https://img.shields.io/pypi/v/pbatoolkit?label=pbatoolkit)
+![downloads](https://img.shields.io/pypi/dm/pbatoolkit)
+[![GitHub Releases](https://img.shields.io/github/release/Q-Minh/PhysicsBasedAnimationToolkit.svg)](https://github.com/Q-Minh/PhysicsBasedAnimationToolkit/releases)
+
+![entei](doc/imgs/entei.harmonic.interpolation.order.2.cropped.png)
 
 ## Overview
+
+> _We recommend exploring the official [CMake documentation](https://cmake.org/cmake/help/latest/) to beginner CMake users, if they wish to build this project from source_.
 
 The Physics Based Animation Toolkit (PBAT) is a (mostly templated) cross-platform C++20 library of algorithms and data structures commonly used in computer graphics research on physically-based simulation in dimensions `1,2,3`. For most use cases, we recommend using our library via its Python interface, enabling seamless integration into Python's ecosystem of powerful scientific computing packages.
 
 ### Features
 
-- Finite Element Method (FEM) meshes and operators
+- [Finite Element Method](https://hplgit.github.io/fem-book/doc/pub/book/pdf/fem-book-4print-2up.pdf#page=47.07) (FEM) meshes and operators
   - Dimensions `1,2,3`
-  - Lagrange shape functions of order `1,2,3`
+  - [Lagrange shape functions](https://doc.comsol.com/5.3/doc/com.comsol.help.comsol/comsol_api_xmesh.40.4.html) of order `1,2,3`
   - Line, triangle, quadrilateral, tetrahedron and hexahedron elements
-- Hyper elastic material models
+- [Hyperelastic material models](https://en.wikipedia.org/wiki/Hyperelastic_material)
   - Saint-Venant Kirchhoff
-  - Stable Neo-Hookean
-- Polynomial quadrature rules
-  - Simplices in dimensions `1,2,3`
-  - Gauss-Legendre quadrature
+  - [Stable Neo-Hookean](https://graphics.pixar.com/library/StableElasticity/paper.pdf)
+- Polynomial [quadrature rules](https://en.wikipedia.org/wiki/Numerical_integration)
+  - [Simplices in dimensions `1,2,3`](https://lsec.cc.ac.cn/~tcui/myinfo/paper/quad.pdf)
+  - [Gauss-Legendre quadrature](https://en.wikipedia.org/wiki/Gauss%E2%80%93Legendre_quadrature)
 - Spatial query acceleration data structures
-  - Bounding volume hierarchy for triangles (2D+3D) and tetrahedra (3D)
+  - [Bounding volume hierarchy](https://en.wikipedia.org/wiki/Bounding_volume_hierarchy) for triangles (2D+3D) and tetrahedra (3D)
     - Nearest neighbours
     - Overlapping primitive pairs
     - Point containment
 - GPU algorithms
-  - eXtended Position Based Dynamics (XPBD)
+  - [Vertex Block Descent](https://graphics.cs.utah.edu/research/projects/vbd/vbd-siggraph2024.pdf) (VBD)
+  - [eXtended Position Based Dynamics](https://mmacklin.com/xpbd.pdf) (XPBD)
   - Broad phase collision detection
-    - Sweep and Prune
-    - Linear Bounding Volume Hierarchy
-  - Fixed-size matrix operations in kernel code
+    - [Sweep and Prune](https://en.wikipedia.org/wiki/Sweep_and_prune)
+    - [Linear Bounding Volume Hierarchy](https://research.nvidia.com/sites/default/files/pubs/2012-06_Maximizing-Parallelism-in/karras2012hpg_paper.pdf)
+  - Fixed-size linear algebra library for kernel programming
 - Seamless profiling integration via [Tracy](https://github.com/wolfpld/tracy)
 
-## Dependencies
+> _Currently, the `master` branch may contain breaking changes at any point in time. We recommend users to use specific git tags, i.e. via `git checkout v<major>.<minor>.<patch>`, where the version `<major>.<minor>.<patch>` matches the installed `pbatoolkit`'s version downloaded from PyPI (i.e. from `pip install pbatoolkit`)._
 
-See [`vcpkg.json`](./vcpkg.json) for a versioned list of our dependencies, available via [vcpkg](https://github.com/microsoft/vcpkg) (use of [vcpkg](https://github.com/microsoft/vcpkg) is not mandatory, as long as dependencies have compatible versions and are discoverable by CMake's [`find_package`](https://cmake.org/cmake/help/latest/command/find_package.html) mechanism).
+## Table of Contents
 
-## Configuration
-
-| Option                       | Values   | Default | Description                                                                                                                                                                                                             |
-| ---------------------------- | -------- | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `PBAT_BUILD_PYTHON_BINDINGS` | `ON,OFF` | `OFF`   | Enable `PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit` Python bindings. Generates the CMake target `PhysicsBasedAnimationToolkit_Python`, an extension module for Python, built by this project.            |
-| `PBAT_BUILD_TESTS`           | `ON,OFF` | `OFF`   | Enable `PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit` unit tests. Generates the CMake target executable `PhysicsBasedAnimationToolkit_Tests`, built by this project.                                       |
-| `PBAT_ENABLE_PROFILER`       | `ON,OFF` | `OFF`   | Enable [`Tracy`](https://github.com/wolfpld/tracy) instrumentation profiling in built `PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit`.                                                                      |
-| `PBAT_PROFILE_ON_DEMAND`     | `ON,OFF` | `OFF`   | Activate Tracy's on-demand profiling when `PBAT_ENABLE_PROFILER` is `ON`.                                                                                                                                               |
-| `PBAT_USE_INTEL_MKL`         | `ON,OFF` | `OFF`   | Link to user-provided [Intel MKL](https://www.intel.com/content/www/us/en/developer/tools/oneapi/onemkl.html) installation via CMake's [`find_package`](https://cmake.org/cmake/help/latest/command/find_package.html). |
-| `PBAT_USE_SUITESPARSE`       | `ON,OFF` | `OFF`   | Link to user-provided [SuiteSparse](https://github.com/DrTimothyAldenDavis/SuiteSparse) installation via CMake's [`find_package`](https://cmake.org/cmake/help/latest/command/find_package.html).                       |
-| `PBAT_BUILD_SHARED_LIBS`     | `ON,OFF` | `OFF`   | Build project's library targets as shared/dynamic.                                                                                                                                                                      |
-
-Our project provides [configuration presets](./CMakePresets.json) that capture typical use configurations. Refer to the [CMake presets documentation](https://cmake.org/cmake/help/latest/manual/cmake-presets.7.html) for more information.
-
-```bash
-cmake -S <path/to/PhysicsBasedAnimationToolkit> -B <path/to/build> #-D<option>=<value>
-# or, alternatively
-cmake --preset=<my-favorite-user-preset>
-```
-
-## Build
-
-Build transparently across platforms using the [cmake build CLI](https://cmake.org/cmake/help/latest/manual/cmake.1.html#build-a-project).
-
-CMake build targets:
-| Target | Description |
-|---|---|
-| `PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit` | The PBA Toolkit library. |
-| `PhysicsBasedAnimationToolkit_Tests` | The test executable, using [doctest](https://github.com/doctest/doctest). |
-| `PhysicsBasedAnimationToolkit_Python` | PBAT's Python extension module, using [pybind11](https://github.com/pybind/pybind11). |
-
-For example, to build tests, run:
-
-```bash
-cmake --build <path/to/build/folder> --target PhysicsBasedAnimationToolkit_Tests --config Release
-```
-
-## Install
-
-From command line:
-
-```bash
-cd path/to/PhysicsBasedAnimationToolkit
-cmake -S . -B build # -D<option>=<value> ...
-cmake --install build --config Release
-```
-
-Alternatively, if [`vcpkg`](https://github.com/microsoft/vcpkg) is installed and `VCPKG_ROOT=path/to/vcpkg` is set as an environment variable, you can select one of our available presets, for example `cmake --preset=default` and then install.
+- [Quick start](#quick-start)
+  - [C++](#c)
+  - [Python](#python)
+  - [Tutorial](#tutorial)
+- [Dependencies](#dependencies)
+  - [CUDA](#cuda)
+- [Configuration](#configuration)
+- [Build & Install](#build--install)
+  - [C++](#c-1)
+  - [Python](#python-1)
+- [Install](#install)
+- [Gallery](#gallery)
 
 ## Quick start
 
@@ -96,52 +69,172 @@ Take a look at the unit tests, found in the library's source (`.cpp` or `.cu`) f
 
 ### Python
 
-To download and install from PyPI, run in command line:
-
+To download and install from PyPI, run in command line
 ```bash
 pip install pbatoolkit
 ```
-
-> _To use [`pbatoolkit`](https://pypi.org/project/pbatoolkit/)'s GPU algorithms, you must build from source, i.e. the prebuilt [`pbatoolkit`](https://pypi.org/project/pbatoolkit/) package hosted from PyPI does not include GPU code._
-
-For a local installation, which builds from source, our Python bindings build relies on [Scikit-build-core](https://scikit-build-core.readthedocs.io/en/latest/index.html), which relies on CMake's [`install`](https://cmake.org/cmake/help/latest/command/install.html) mechanism. As such, you can configure the installation as you typically would when using the CMake CLI directly, by now passing the corresponding CMake arguments in `pip`'s `config-settings` parameter (refer to the [Scikit-build-core](https://scikit-build-core.readthedocs.io/en/latest/index.html) documentation for the relevant parameters). See our [pyinstall workflow](.github/workflows/pyinstall.yml) for working examples of building from source on Linux, MacOS and Windows. Then, assuming that external dependencies are found via CMake's [`find_package`](https://cmake.org/cmake/help/latest/command/find_package.html), you can build and install our Python package [`pbatoolkit`](https://pypi.org/project/pbatoolkit/) locally and get the most up to date features. Consider using a [Python virtual environment](https://docs.python.org/3/library/venv.html) for this step.
-
-As an example, assuming use of [`vcpkg`](https://github.com/microsoft/vcpkg) for external dependency management, with `VCPKG_ROOT` set as an environment variable, run
-
+or, alternatively
 ```bash
-pip install . --config-settings=cmake.args="--preset=pip-local" -v
+pip install pbatoolkit-gpu
 ```
+if your environment is [properly setup to use our GPU algorithms](#cuda).
 
-on the command line to build [`pbatoolkit`](https://pypi.org/project/pbatoolkit/) from source. To build with GPU algorithms included, refer to the Configuration section. Additional CMake variables (i.e. [CMAKE_CUDA_ARCHITECTURES](https://cmake.org/cmake/help/latest/variable/CMAKE_CUDA_ARCHITECTURES.html#variable:CMAKE_CUDA_ARCHITECTURES), [CMAKE_CUDA_COMPILER](https://cmake.org/cmake/help/latest/variable/CMAKE_LANG_COMPILER.html#variable:CMAKE_%3CLANG%3E_COMPILER)) may be required to be set in order for CMake to discover your local CUDA installation.
-
-Verify [`pbatoolkit`](https://pypi.org/project/pbatoolkit/)'s contents in Python shell:
+Verify [`pbatoolkit`](https://pypi.org/project/pbatoolkit/)'s contents in a Python shell
 
 ```python
 import pbatoolkit as pbat
 help(pbat.fem)
 help(pbat.geometry)
 help(pbat.profiling)
-help(pbat.math.linalg)
+help(pbat.math)
+help(pbat.gpu)
 ```
 
-To profile relevant calls to [`pbatoolkit`](https://pypi.org/project/pbatoolkit/) functions/methods, connect to `python.exe` in the `Tracy` profiler server GUI.
-All calls to pbat will be profiled on a per-frame basis in the Tracy profiler server GUI.
+A bunch of Python scripts demonstrating usage of [`pbatoolkit`](https://pypi.org/project/pbatoolkit/) can be found in the [examples folder](python/examples/), along with their associated [`requirements.txt`](python/examples/requirements.txt)  for easily downloading necessary dependencies via `pip install -r path/to/requirements.txt`. Their command line interface follows the pattern
+```bash
+python[.exe] path/to/examples/[example].py -i path/to/input/mesh
+```
+The full interface is always revealed by `-h` or `--help`, i.e. 
+```bash
+python[.exe] path/to/examples/[example].py -h
+```
 
-> _Use method `profile` of `pbatoolkit.profiling.Profiler` to profile code external to PBAT, allowing for an integrated profiling experience while using various scientific computing packages_.
->
-> ```python
-> def expensive_external_computation():
->     # Some expensive computation
-> profiler.profile("My expensive external computation", expensive_external_computation)
-> ```
+> _The examples assume the user provides the meshes to [`pbatoolkit`](https://pypi.org/project/pbatoolkit/). Triangle (surface) meshes can easily be obtained via [Thingi10K](https://ten-thousand-models.appspot.com/), [TurboSquid](https://www.turbosquid.com/Search/3D-Models/free) or authored yourself in [Blender](https://www.blender.org/). Tools like [TetWild](https://github.com/Yixin-Hu/TetWild), [fTetWild](https://github.com/wildmeshing/fTetWild) and [TetGen](https://wias-berlin.de/software/index.jsp?id=TetGen&lang=1) can then convert them into tetrahedral (volume) meshes. We provide [helper scripts](python/tools/mesh/) to facilitate mesh processing and their associated [`requirements.txt`](python/tools/mesh/requirements.txt)._
+
+Example results are showcased in our [Gallery](#gallery).
 
 ### Tutorial
 
 Head over to our hands-on [tutorials section](./doc/tutorial/) to learn more about physics based animation in both theory and practice!
 
+## Dependencies
+
+See [`vcpkg.json`](./vcpkg.json) for a versioned list of our dependencies, available via [vcpkg](https://github.com/microsoft/vcpkg).
+
+> Use of [vcpkg](https://github.com/microsoft/vcpkg) is not mandatory, as long as dependencies have compatible versions and are discoverable by CMake's [`find_package`](https://cmake.org/cmake/help/latest/command/find_package.html) mechanism.
+
+### CUDA
+
+#### PyPI
+
+[`pbatoolkit-gpu`](https://pypi.org/project/pbatoolkit-gpu/) (downloaded from PyPI) requires dynamically linking to an instance of the
+- [CUDA 12 Runtime library](https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#cuda-runtime), and your
+- [CUDA Driver](https://docs.nvidia.com/cuda/cuda-c-programming-guide/#driver-api). 
+
+> Recall that the CUDA Runtime is [ABI compatible](https://docs.nvidia.com/cuda/archive/12.5.1/cuda-driver-api/version-mixing-rules.html) up to major version.
+
+On 64-bit Windows, these are `cudart64_12.dll` and `nvcuda.dll`. Ensure that they are discoverable via Windows' [DLL search order](https://learn.microsoft.com/en-us/windows/win32/dlls/dynamic-link-library-search-order). We recommend adding `<drive>:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.<minor>\bin` (i.e. the binary folder of your CUDA Toolkit installation) to the `PATH` environment variable. The driver should already be on the search path by default after installation.
+
+On Linux, they are `libcudart.so.12` and `libcuda.so.1`. Ensure that they are discoverable via Linux's [dynamic linker/loader](https://man7.org/linux/man-pages/man8/ld.so.8.html). If they are not already in a default search path, we recommend simply updating the library search path, i.e. `export LD_LIBRARY_PATH="path/to/driver/folder;path/to/runtime/folder;$LD_LIBRARY_PATH"`.
+
+> MacOS does not support CUDA GPUs.
+
+Our [`pbatoolkit-gpu`](https://pypi.org/project/pbatoolkit/) prebuilt binaries include [PTX](https://docs.nvidia.com/cuda/cuda-compiler-driver-nvcc/#virtual-architectures), such that program load times will be delayed by [JIT](https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#just-in-time-compilation) compilation on first use. [Verify](https://developer.nvidia.com/cuda-gpus) that your NVIDIA GPU supports [compute capability](https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#compute-capabilities) at least 7.0. For example, only RTX 2060 up to 4090 chips are supported in the GeForce series. Runtime GPU performance may be constrained by the targeted compute capability.
+
+#### Local
+
+Consider [locally building and installing](#build--install) `pbatoolkit` against your native GPU for the following reasons.
+- Achieve optimal GPU performance for your platform.
+- Support older/newer GPUs and CUDA Toolkit versions.
+
+## Configuration
+
+| Option                       | Values   | Default | Description |
+| ---------------------------- | -------- | ------- | ----------- |
+| `PBAT_BUILD_PYTHON_BINDINGS` | `ON,OFF` | `OFF`   | Enable `PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit` Python bindings. Generates the CMake target `PhysicsBasedAnimationToolkit_Python`, an extension module for Python, built by this project. |
+| `PBAT_BUILD_TESTS`           | `ON,OFF` | `OFF`   | Enable `PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit` unit tests. Generates the CMake target executable `PhysicsBasedAnimationToolkit_Tests`, built by this project. |
+| `PBAT_ENABLE_PROFILER`       | `ON,OFF` | `OFF`   | Enable [`Tracy`](https://github.com/wolfpld/tracy) instrumentation profiling in built `PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit`. |
+| `PBAT_PROFILE_ON_DEMAND`     | `ON,OFF` | `OFF`   | Activate Tracy's on-demand profiling when `PBAT_ENABLE_PROFILER` is `ON`. |
+| `PBAT_USE_INTEL_MKL`         | `ON,OFF` | `OFF`   | Link to user-provided [Intel MKL](https://www.intel.com/content/www/us/en/developer/tools/oneapi/onemkl.html) installation via CMake's [`find_package`](https://cmake.org/cmake/help/latest/command/find_package.html). |
+| `PBAT_USE_SUITESPARSE`       | `ON,OFF` | `OFF`   | Link to user-provided [SuiteSparse](https://github.com/DrTimothyAldenDavis/SuiteSparse) installation via CMake's [`find_package`](https://cmake.org/cmake/help/latest/command/find_package.html). |
+| `PBAT_BUILD_SHARED_LIBS`     | `ON,OFF` | `OFF`   | Build project's library targets as shared/dynamic. |
+
+Either run CMake's configure step manually
+```bash
+cmake -S <path/to/PhysicsBasedAnimationToolkit> -B <path/to/build> -D<option>=<value> ...
+```
+or, alternatively (and preferably)
+```bash
+cmake --preset=<my-favorite-user-preset>
+```
+
+Our project provides [configuration presets](./CMakePresets.json) that capture typical use configurations. For the best experience, install [`vcpkg`](https://github.com/microsoft/vcpkg) and set `VCPKG_ROOT=path/to/vcpkg` as an environment variable. Then, you can select one of our available presets, for example `cmake --preset=default`. Refer to the [CMake presets documentation](https://cmake.org/cmake/help/latest/manual/cmake-presets.7.html) for more information.
+
+## Build & Install
+
+### C++
+
+Build and install transparently across platforms using the [cmake build CLI](https://cmake.org/cmake/help/latest/manual/cmake.1.html#build-a-project) and [cmake install CLI](https://cmake.org/cmake/help/latest/guide/tutorial/Installing%20and%20Testing.html), respectively.
+
+Our CMake project exposes the following build targets
+| Target | Description |
+|---|---|
+| `PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit` | The PBA Toolkit library. |
+| `PhysicsBasedAnimationToolkit_Tests` | The test executable, using [doctest](https://github.com/doctest/doctest). |
+| `PhysicsBasedAnimationToolkit_Python` | PBAT's Python extension module, using [pybind11](https://github.com/pybind/pybind11). |
+
+For example, to build tests, run
+```bash
+cmake --build <path/to/build/folder> --target PhysicsBasedAnimationToolkit_Tests --config Release
+```
+
+To install *PhysicsBasedAnimationToolkit* locally, run
+```bash
+cd path/to/PhysicsBasedAnimationToolkit
+cmake -S . -B build -D<option>=<value> ...
+cmake --install build --config Release
+```
+
+### Python
+
+For a local installation, which builds from source, our Python bindings build relies on [Scikit-build-core](https://scikit-build-core.readthedocs.io/en/latest/index.html), which relies on CMake's [`install`](https://cmake.org/cmake/help/latest/command/install.html) mechanism. As such, you can configure the installation as you typically would when using the CMake CLI directly, by now passing the corresponding CMake arguments in `pip`'s `config-settings` parameter (refer to the [Scikit-build-core](https://scikit-build-core.readthedocs.io/en/latest/index.html) documentation for the relevant parameters). See our [pyinstall workflow](.github/workflows/pyinstall.yml) for working examples of building from source on Linux, MacOS and Windows. Then, assuming that external dependencies are found via CMake's [`find_package`](https://cmake.org/cmake/help/latest/command/find_package.html), you can build and install our Python package [`pbatoolkit`](https://pypi.org/project/pbatoolkit/) locally and get the most up to date features. 
+
+> Consider using a [Python virtual environment](https://docs.python.org/3/library/venv.html) for this step.
+
+As an example, assuming use of [`vcpkg`](https://github.com/microsoft/vcpkg) for external dependency management with `VCPKG_ROOT=path/to/vcpkg` set as an environment variable, run
+
+```bash
+pip install . --config-settings=cmake.args="--preset=pip-cuda" -v
+```
+
+on the command line to build [`pbatoolkit`](https://pypi.org/project/pbatoolkit/) from source with GPU algorithms included. Additional environment variables (i.e. [`CUDA_PATH`](https://cmake.org/cmake/help/latest/module/FindCUDAToolkit.html)) and/or CMake variables (i.e. [`CMAKE_CUDA_COMPILER`](https://cmake.org/cmake/help/latest/variable/CMAKE_LANG_COMPILER.html#variable:CMAKE_%3CLANG%3E_COMPILER)) may be required to be set in order for CMake to correctly discover and compile against your targeted local CUDA installation. Refer to [the CMake documentation](https://cmake.org/cmake/help/latest/module/FindCUDAToolkit.html) for more details.
+
 ## Gallery
 
 Below, we show a few examples of what can be done in just a few lines of code using [`pbatoolkit`](https://pypi.org/project/pbatoolkit/) and Python. Code can be found [here](./python/examples/).
+
+##### Real-time hyper elasticity dynamics
+
+Our GPU implementation of the eXtended Position Based Dynamics (XPBD) algorithm simulates a ~324k element FEM elastic mesh interactively with contact.
+
+<p float="left">
+    <img src="doc/imgs/gpu.xpbd.bvh.gif" width="250" alt="A 162k element armadillo mesh is dropped on top of another duplicate, but fixed, armadillo mesh on the bottom." />
+</p>
+
+##### Inter-penetration free elastodynamic contact
+
+Combining [`pbatoolkit`](https://pypi.org/project/pbatoolkit/)'s FEM+elasticity features and the [`IPC Toolkit`](https://ipctk.xyz/) results in guaranteed inter-penetration free contact dynamics between deformable bodies.
+
+<p float="left">
+    <img src="doc/imgs/ipc.bar.stacks.gif" width="250" alt="A stack of bending beams fall on top of each other, simulated via Incremental Potential Contact (IPC)." />
+</p>
+
+##### Modal analysis
+
+The hyper elastic beam's representative deformation modes, i.e. its low frequency eigen vectors,
+are animated as time continuous signals.
+
+<p float="left">
+    <img src="doc/imgs/beam.modes.gif" width="250" alt="Unconstrained hyper elastic beam's eigen frequencies" />
+</p>
+
+##### GPU broad phase collision detection
+
+Real-time collision detection between 2 large scale meshes (~324k tetrahedra) is accelerated by highly parallel implementations of the [sweep and prune](https://en.wikipedia.org/wiki/Sweep_and_prune) algorithm, or [linear bounding volume hierarchies](https://research.nvidia.com/sites/default/files/pubs/2012-06_Maximizing-Parallelism-in/karras2012hpg_paper.pdf).
+
+<p float="left">
+    <img src="doc/imgs/gpu.broadphase.gif" width="250" alt="Broad phase collision detection on the GPU between 2 moving tetrahedral meshes" />
+</p>
 
 ##### Harmonic interpolation
 
@@ -167,48 +260,6 @@ Fine details of Godzilla's skin are smoothed out by diffusing `x,y,z` coordinate
 
 <p float="left">
     <img src="doc/imgs/godzilla.diffusion.smoothing.gif" width="250" alt="Godzilla model with fine details being smoothed out via diffusion" />
-</p>
-
-##### Hyper elastic simulation
-
-Linear (left) and quadratic (right) shape functions are compared on a hyper elastic simulation of the beam model, whose left side is fixed. Quadratic shape functions result in visually smoother and softer bending.
-
-<p float="left">
-  <img src="doc/imgs/beam.bending.order.1.png" width="250" alt="Bending beam FEM elastic simulation using linear shape functions" />
-  <img src="doc/imgs/beam.bending.order.2.png" width="250" alt="Bending beam FEM elastic simulation using quadratic shape functions" /> 
-</p>
-
-##### Inter-penetration free elastodynamic contact
-
-Combining [`pbatoolkit`](https://pypi.org/project/pbatoolkit/)'s FEM+elasticity features and the [`IPC Toolkit`](https://ipctk.xyz/) results in guaranteed inter-penetration free contact dynamics between deformable bodies.
-
-<p float="left">
-    <img src="doc/imgs/ipc.bar.stacks.gif" width="250" alt="A stack of bending beams fall on top of each other, simulated via Incremental Potential Contact (IPC)." />
-</p>
-
-##### Real-time elastodynamics
-
-Our GPU implementation of the eXtended Position Based Dynamics (XPBD) algorithm simulates a ~324k element FEM elastic mesh interactively with contact.
-
-<p float="left">
-    <img src="doc/imgs/gpu.xpbd.bvh.gif" width="250" alt="A 162k element armadillo mesh is dropped on top of another duplicate, but fixed, armadillo mesh on the bottom." />
-</p>
-
-##### Modal analysis
-
-The hyper elastic beam's representative deformation modes, i.e. its low frequency eigen vectors,
-are animated as time continuous signals.
-
-<p float="left">
-    <img src="doc/imgs/beam.modes.gif" width="250" alt="Unconstrained hyper elastic beam's eigen frequencies" />
-</p>
-
-##### GPU broad phase collision detection
-
-Real-time collision detection between 2 large scale meshes (~324k tetrahedra) is accelerated by highly parallel implementations of the [sweep and prune](https://en.wikipedia.org/wiki/Sweep_and_prune) algorithm, or [linear bounding volume hierarchies](https://research.nvidia.com/sites/default/files/pubs/2012-06_Maximizing-Parallelism-in/karras2012hpg_paper.pdf).
-
-<p float="left">
-    <img src="doc/imgs/gpu.broadphase.gif" width="250" alt="Broad phase collision detection on the GPU between 2 moving tetrahedral meshes" />
 </p>
 
 ##### Profiling statistics

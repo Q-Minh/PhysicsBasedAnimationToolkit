@@ -91,10 +91,10 @@ if(PBAT_USE_CUDA)
     )
     set_target_properties(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
         PROPERTIES
-        CUDA_ARCHITECTURES native
         CUDA_SEPARABLE_COMPILATION ON
         CUDA_RESOLVE_DEVICE_SYMBOLS ON
     )
+
     get_target_property(_pbat_sources PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit SOURCES)
 
     foreach(_source IN ITEMS ${_pbat_sources})

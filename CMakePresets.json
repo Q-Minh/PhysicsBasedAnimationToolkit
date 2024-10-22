@@ -132,25 +132,6 @@
             }
         },
         {
-            "name": "vcpkg-all-features",
-            "hidden": true,
-            "cacheVariables": {
-                "VCPKG_MANIFEST_FEATURES": "mkl;suitesparse;python",
-                "PBAT_USE_INTEL_MKL": {
-                    "type": "BOOL",
-                    "value": "ON"
-                },
-                "PBAT_USE_SUITESPARSE": {
-                    "type": "BOOL",
-                    "value": "ON"
-                },
-                "PBAT_BUILD_PYTHON_BINDINGS": {
-                    "type": "BOOL",
-                    "value": "ON"
-                }
-            }
-        },
-        {
             "name": "cuda",
             "hidden": true,
             "cacheVariables": {
@@ -191,32 +172,41 @@
             ]
         },
         {
-            "name": "pip-local",
+            "name": "pip-cuda",
             "inherits": [
                 "default",
                 "profile",
-                "vcpkg-all-features",
                 "pic"
-            ]
+            ],
+            "cacheVariables": {
+                "VCPKG_MANIFEST_FEATURES": "cuda;python",
+                "PBAT_USE_CUDA": {
+                    "type": "BOOL",
+                    "value": "ON"
+                },
+                "PBAT_BUILD_PYTHON_BINDINGS": {
+                    "type": "BOOL",
+                    "value": "ON"
+                }
+            }
         },
         {
-            "name": "pip-local-shared",
+            "name": "local-pip-cuda",
             "inherits": [
-                "default",
-                "profile",
-                "vcpkg-all-features",
-                "pic",
-                "shared"
-            ]
+                "pip-cuda"
+            ],
+            "cacheVariables": {
+                "CMAKE_CUDA_ARCHITECTURES": "native"
+            }
         },
         {
-            "name": "ci-wheels",
+            "name": "ci-pip-cuda",
             "inherits": [
-                "default",
-                "profile",
-                "python",
-                "pic"
-            ]
+                "pip-cuda"
+            ],
+            "cacheVariables": {
+                "CMAKE_CUDA_ARCHITECTURES": "70-virtual"
+            }
         }
     ]
 }

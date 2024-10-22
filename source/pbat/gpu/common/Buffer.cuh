@@ -17,7 +17,8 @@ template <class T, int D = 1>
 class Buffer
 {
   public:
-    using SelfType = Buffer<T, D>;
+    using SelfType  = Buffer<T, D>;
+    using ValueType = T;
 
     Buffer(std::size_t count = 0ULL);
 
@@ -65,6 +66,7 @@ inline Buffer<T, D>& Buffer<T, D>::operator=(Buffer<T, D> const& other)
             mBuffers[d].resize(other.Size());
         thrust::copy(other.mBuffers[d].begin(), other.mBuffers[d].end(), mBuffers[d].begin());
     }
+    return *this;
 }
 
 template <class T, int D>

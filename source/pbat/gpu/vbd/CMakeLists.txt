@@ -2,6 +2,7 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     PUBLIC
     FILE_SET api
     FILES
+    "InitializationStrategy.h"
     "Vbd.h"
 )
 target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
@@ -17,3 +18,5 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     "VbdImpl.cu"
     "VbdImplKernels.cu"
 )
+
+add_subdirectory(tests)

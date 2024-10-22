@@ -134,67 +134,77 @@ Mesh<TElement, Dims>::Mesh(
 {
     PBAT_PROFILE_NAMED_SCOPE("fem.Mesh.Construct");
 
-    using AffineElementType         = typename ElementType::AffineBaseType;
-    auto constexpr kVerticesPerCell = AffineElementType::kNodes;
-
-    static_assert(
-        kDims >= ElementType::kDims,
-        "Element TElement does not exist in Dims dimensions");
-    assert(C.rows() == kVerticesPerCell);
-    assert(V.rows() == kDims);
-
-    using NodeMap = std::map<NodalKey<ElementType>, Index>;
-
-    auto const numberOfCells    = C.cols();
-    auto const numberOfVertices = V.cols();
-
-    NodeMap nodeMap{};
-    std::vector<Vector<kDims>> nodes{};
-    nodes.reserve(static_cast<std::size_t>(numberOfVertices));
-
-    // Construct mesh topology, i.e. assign mesh nodes to elements,
-    // ensuring that adjacent elements share their common nodes.
-    E.resize(ElementType::kNodes, numberOfCells);
-    for (auto c = 0; c < numberOfCells; ++c)
+    // Smart nodal indexing is only relevant for higher-order meshes
+    if constexpr (kOrder == 1)
     {
-        IndexVector<kVerticesPerCell> const cellVertices = C.col(c);
-        Matrix<kDims, kVerticesPerCell> const Xc         = V(Eigen::all, cellVertices);
-
-        // Sort based on cell vertex index
-        IndexVector<kVerticesPerCell> sortOrder{};
-        std::iota(sortOrder.begin(), sortOrder.end(), 0);
-        std::ranges::sort(sortOrder, [&](Index i, Index j) {
-            return cellVertices[i] < cellVertices[j];
-        });
-        // Loop over nodes of element and create the node on first visit
-        auto const nodalCoordinates = common::ToEigen(ElementType::Coordinates)
-                                          .reshaped(ElementType::kDims, ElementType::kNodes)
-                                          .template cast<math::Rational>() /
-                                      ElementType::kOrder;
-        for (auto i = 0; i < nodalCoordinates.cols(); ++i)
-        {
-            // Use exact rational arithmetic to evaluate affine element shape functions at the node
-            // to get its exact affine coordinates
-            auto const Xi = nodalCoordinates.col(i);
-            auto const N  = AffineElementType::N(Xi);
-            NodalKey<ElementType> const key{cellVertices, sortOrder, N};
-            auto it                        = nodeMap.find(key);
-            bool const bNodeAlreadyCreated = it != nodeMap.end();
-            if (!bNodeAlreadyCreated)
-            {
-                auto const nodeIdx     = static_cast<Index>(nodes.size());
-                Vector<kDims> const xi = Xc * N.template cast<Scalar>();
-                nodes.push_back(xi);
-                bool bInserted{};
-                std::tie(it, bInserted) = nodeMap.insert({key, nodeIdx});
-                assert(bInserted);
-            }
-            Index const node = it->second;
-            E(i, c)          = node;
-        }
+        X = V;
+        E = C;
+        return;
     }
-    // Collect node positions
-    X = common::ToEigen(nodes);
+    else
+    {
+        using AffineElementType         = typename ElementType::AffineBaseType;
+        auto constexpr kVerticesPerCell = AffineElementType::kNodes;
+
+        static_assert(
+            kDims >= ElementType::kDims,
+            "Element TElement does not exist in Dims dimensions");
+        assert(C.rows() == kVerticesPerCell);
+        assert(V.rows() == kDims);
+
+        using NodeMap = std::map<NodalKey<ElementType>, Index>;
+
+        auto const numberOfCells    = C.cols();
+        auto const numberOfVertices = V.cols();
+
+        NodeMap nodeMap{};
+        std::vector<Vector<kDims>> nodes{};
+        nodes.reserve(static_cast<std::size_t>(numberOfVertices));
+
+        // Construct mesh topology, i.e. assign mesh nodes to elements,
+        // ensuring that adjacent elements share their common nodes.
+        E.resize(ElementType::kNodes, numberOfCells);
+        for (auto c = 0; c < numberOfCells; ++c)
+        {
+            IndexVector<kVerticesPerCell> const cellVertices = C.col(c);
+            Matrix<kDims, kVerticesPerCell> const Xc         = V(Eigen::all, cellVertices);
+
+            // Sort based on cell vertex index
+            IndexVector<kVerticesPerCell> sortOrder{};
+            std::iota(sortOrder.begin(), sortOrder.end(), 0);
+            std::ranges::sort(sortOrder, [&](Index i, Index j) {
+                return cellVertices[i] < cellVertices[j];
+            });
+            // Loop over nodes of element and create the node on first visit
+            auto const nodalCoordinates = common::ToEigen(ElementType::Coordinates)
+                                              .reshaped(ElementType::kDims, ElementType::kNodes)
+                                              .template cast<math::Rational>() /
+                                          ElementType::kOrder;
+            for (auto i = 0; i < nodalCoordinates.cols(); ++i)
+            {
+                // Use exact rational arithmetic to evaluate affine element shape functions at the
+                // node to get its exact affine coordinates
+                auto const Xi = nodalCoordinates.col(i);
+                auto const N  = AffineElementType::N(Xi);
+                NodalKey<ElementType> const key{cellVertices, sortOrder, N};
+                auto it                        = nodeMap.find(key);
+                bool const bNodeAlreadyCreated = it != nodeMap.end();
+                if (!bNodeAlreadyCreated)
+                {
+                    auto const nodeIdx     = static_cast<Index>(nodes.size());
+                    Vector<kDims> const xi = Xc * N.template cast<Scalar>();
+                    nodes.push_back(xi);
+                    bool bInserted{};
+                    std::tie(it, bInserted) = nodeMap.insert({key, nodeIdx});
+                    assert(bInserted);
+                }
+                Index const node = it->second;
+                E(i, c)          = node;
+            }
+        }
+        // Collect node positions
+        X = common::ToEigen(nodes);
+    }
 }
 
 template <CElement TElement, int Dims>

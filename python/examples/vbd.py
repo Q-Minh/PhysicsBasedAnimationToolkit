@@ -34,10 +34,16 @@ def boundary_triangles(C: np.ndarray, Coffsets: list, Csizes: list):
     return F, Fsizes
 
 
-def bodies(Vsizes: list, Fsizes: list):
-    BV = np.hstack([np.full(Vsizes[i], i) for i in range(len(Vsizes))])
-    BF = np.hstack([np.full(Fsizes[i], i) for i in range(len(Fsizes))])
-    return BV, BF
+def vertex_tetrahedron_adjacency_graph(V, C):
+    row = np.repeat(range(C.shape[0]), C.shape[1])
+    col = C.flatten()
+    data = np.zeros_like(C)
+    for i in range(C.shape[1]):
+        data[:, i] = i
+    data = data.flatten()
+    GVT = sp.sparse.coo_array((data, (row, col)), shape=(
+        C.shape[0], V.shape[0])).asformat("csc")
+    return GVT
 
 
 def color_dict_to_array(Cdict, n):
@@ -48,30 +54,30 @@ def color_dict_to_array(Cdict, n):
     return C
 
 
-def partition_constraints(C):
-    row = np.repeat(range(C.shape[0]), C.shape[1])
-    col = C.flatten()
-    data = np.ones(math.prod(C.shape))
-    G = sp.sparse.coo_array((data, (row, col)), shape=(
-        C.shape[0], V.shape[0])).asformat("csr")
-    G = nx.Graph(G @ G.T)
-    GC = nx.greedy_color(G, strategy="random_sequential")
-    GC = color_dict_to_array(GC, C.shape[0]).astype(int)
+def partition_vertices(GVT, dbcs):
+    GVV = GVT.T @ GVT
+    Gprimal = nx.Graph(GVV)
+    GC = nx.greedy_color(Gprimal, strategy="random_sequential")
+    GC = color_dict_to_array(GC, GVT.shape[1]).astype(np.int32)
     npartitions = GC.max() + 1
-    partitions = [None]*npartitions
+    partitions = []
     for p in range(npartitions):
-        constraints = np.nonzero(GC == p)[0]
-        partitions[p] = constraints.tolist()
+        vertices = np.nonzero(GC == p)[0]
+        # Remove Dirichlet constrained vertices from partitions.
+        # In other words, internal forces will not be applied to constrained vertices.
+        vertices = np.setdiff1d(vertices, dbcs).tolist()
+        if len(vertices) > 0:
+            partitions.append(vertices)
     return partitions, GC
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        prog="XPBD elastic simulation using linear FEM tetrahedra",
+        prog="VBD elastic simulation using linear FEM tetrahedra",
     )
-    parser.add_argument("-i", "--input", help="Paths to input mesh", nargs="+",
+    parser.add_argument("-i", "--input", help="Path to input mesh", nargs="+",
                         dest="inputs", required=True)
-    parser.add_argument("-o", "--output", help="Path to output meshes",
+    parser.add_argument("-o", "--output", help="Path to output",
                         dest="output", default=".")
     parser.add_argument("-m", "--mass-density", help="Mass density", type=float,
                         dest="rho", default=1000.)
@@ -81,8 +87,12 @@ if __name__ == "__main__":
                         dest="nu", default=0.45)
     parser.add_argument("-t", "--translation", help="Distance in z axis between every input mesh as multiplier of input mesh extents", type=float,
                         dest="translation", default=0.1)
-    parser.add_argument("--percent-fixed", help="Percentage, in the z-axis, of scene mesh to fix", type=float,
+    parser.add_argument("--percent-fixed", help="Percentage, in the fixed axis, of the scene's mesh to fix", type=float,
                         dest="percent_fixed", default=0.01)
+    parser.add_argument("--fixed-axis", help="Axis 0 | 1 | 2 (x=0,y=1,z=2) in which to fix a certain percentage of the scene's mesh", type=int,
+                        dest="fixed_axis", default=2)
+    parser.add_argument("--fixed-end", help="min | max, whether to fix from the min or the max of the scene mesh's bounding box", type=str, default="min",
+                        dest="fixed_end")
     args = parser.parse_args()
 
     # Construct FEM quantities for simulation
@@ -96,10 +106,7 @@ if __name__ == "__main__":
     V, Vsizes, C, Coffsets, Csizes = combine(V, C)
     mesh = pbat.fem.Mesh(
         V.T, C.T, element=pbat.fem.Element.Tetrahedron, order=1)
-    V = mesh.X.T
-    C = mesh.E.T
     F, Fsizes = boundary_triangles(C, Coffsets, Csizes)
-    BV, BF = bodies(Vsizes, Fsizes)
 
     detJeM = pbat.fem.jacobian_determinants(mesh, quadrature_order=2)
     rho = args.rho
@@ -118,6 +125,7 @@ if __name__ == "__main__":
     g[-1] = -9.81
     fe = np.tile(rho*g[:, np.newaxis], mesh.E.shape[1])
     f = fe @ Qf @ Nf
+    a = f / m
 
     # Compute material (Lame) constants
     Y = np.full(mesh.E.shape[1], args.Y)
@@ -129,43 +137,62 @@ if __name__ == "__main__":
     Xmin = mesh.X.min(axis=1)
     Xmax = mesh.X.max(axis=1)
     extent = Xmax - Xmin
-    Xmax[-1] = Xmin[-1] + args.percent_fixed*extent[-1]
+    if args.fixed_end == "min":
+        Xmax[args.fixed_axis] = Xmin[args.fixed_axis] + \
+            args.percent_fixed*extent[args.fixed_axis]
+        Xmin[args.fixed_axis] -= args.percent_fixed*extent[args.fixed_axis]
+    elif args.fixed_end == "max":
+        Xmin[args.fixed_axis] = Xmax[args.fixed_axis] - \
+            args.percent_fixed*extent[args.fixed_axis]
+        Xmax[args.fixed_axis] += args.percent_fixed * extent[args.fixed_axis]
     aabb = pbat.geometry.aabb(np.vstack((Xmin, Xmax)).T)
     vdbc = aabb.contained(mesh.X)
-    minv = 1 / m
-    minv[vdbc] = 0.  # XPBD allows fixing particles by zeroing out their mass
+    a[:, vdbc] = 0.  # Allow no acceleration, i.e. no external forces in fixed vertices
 
-    # Setup XPBD
+    # Setup VBD
     Vcollision = np.unique(F)
     VC = Vcollision[:, np.newaxis].T
-    BV = BV[Vcollision]
-    max_overlaps = 20 * mesh.X.shape[1]
-    max_contacts = 8*max_overlaps
-    xpbd = pbat.gpu.xpbd.Xpbd(mesh.X, VC, F.T, mesh.E,
-                              BV, BF, max_overlaps, max_contacts)
-    xpbd.f = f
-    xpbd.minv = minv
-    xpbd.lame = np.vstack((mue, lambdae))
-    partitions, GC = partition_constraints(mesh.E.T)
-    xpbd.partitions = partitions
-    alphac = 0
-    xpbd.set_compliance(
-        alphac * np.ones(VC.shape[1]), pbat.gpu.xpbd.ConstraintType.Collision)
-    xpbd.prepare()
+    vbd = pbat.gpu.vbd.Vbd(V.T, VC, F.T, C.T)
+    vbd.a = a
+    vbd.m = m
+    vbd.wg = detJeU / 6
+    vbd.GNe = GNeU
+    vbd.lame = np.vstack((mue, lambdae))
+    GVT = vertex_tetrahedron_adjacency_graph(V, C)
+    vbd.GVT = GVT.indptr, GVT.indices, GVT.data
+    vbd.kD = 0
+    GVTtopology = GVT.copy()
+    GVTtopology.data[:] = 1  # Set all edge weights to 1
+    partitions, GC = partition_vertices(GVTtopology, vdbc)
+    vbd.partitions = partitions
+    thread_block_size = 64
+    vbd.set_gpu_block_size(thread_block_size)
+    initialization_strategies = [
+        pbat.gpu.vbd.InitializationStrategy.Position,
+        pbat.gpu.vbd.InitializationStrategy.Inertia,
+        pbat.gpu.vbd.InitializationStrategy.KineticEnergyMinimum,
+        pbat.gpu.vbd.InitializationStrategy.AdaptiveVbd,
+        pbat.gpu.vbd.InitializationStrategy.AdaptivePbat
+    ]
+    initialization_strategy = initialization_strategies[2]
+    vbd.initialization_strategy = initialization_strategy
 
     ps.set_verbosity(0)
     ps.set_up_dir("z_up")
     ps.set_front_dir("neg_y_front")
     ps.set_ground_plane_mode("shadow_only")
     ps.set_ground_plane_height_factor(0.5)
-    ps.set_program_name("eXtended Position Based Dynamics")
+    ps.set_program_name("Vertex Block Descent")
     ps.init()
-    vm = ps.register_volume_mesh("Simulation mesh", mesh.X.T, mesh.E.T)
-    vm.add_scalar_quantity("Coloring", GC, defined_on="cells", cmap="jet")
-    pc = ps.register_point_cloud("Dirichlet", mesh.X[:, vdbc].T)
+    vm = ps.register_volume_mesh("Simulation mesh", V, C)
+    vm.add_scalar_quantity("Coloring", GC, defined_on="vertices", cmap="jet")
+    pc = ps.register_point_cloud("Dirichlet", V[vdbc, :])
     dt = 0.01
-    iterations = 1
-    substeps = 50
+    iterations = 20
+    substeps = 1
+    rho_chebyshev = 1.
+    RdetH = 1e-10
+    kD = 0.
     animate = False
     export = False
     t = 0
@@ -173,39 +200,53 @@ if __name__ == "__main__":
     profiler = pbat.profiling.Profiler()
 
     def callback():
-        global dt, iterations, substeps, alphac
+        global dt, iterations, substeps, rho_chebyshev, thread_block_size, initialization_strategy, RdetH, kD
         global animate, export, t
         global profiler
 
         changed, dt = imgui.InputFloat("dt", dt)
         changed, iterations = imgui.InputInt("Iterations", iterations)
         changed, substeps = imgui.InputInt("Substeps", substeps)
-        alphac_changed, alphac = imgui.InputFloat(
-            "Collision compliance", alphac, format="%.10f")
+        changed, rho_chebyshev = imgui.InputFloat(
+            "Chebyshev rho", rho_chebyshev)
+        changed, kD = imgui.InputFloat(
+            "Damping", kD, format="%.8f")
+        changed, RdetH = imgui.InputFloat(
+            "Residual det(H)", RdetH, format="%.15f")
+        changed, thread_block_size = imgui.InputInt(
+            "Thread block size", thread_block_size)
+        changed = imgui.BeginCombo(
+            "Initialization strategy", str(initialization_strategy).split('.')[-1])
+        if changed:
+            for i in range(len(initialization_strategies)):
+                _, selected = imgui.Selectable(
+                    str(initialization_strategies[i]).split('.')[-1], initialization_strategy == initialization_strategies[i])
+                if selected:
+                    initialization_strategy = initialization_strategies[i]
+            imgui.EndCombo()
+        vbd.initialization_strategy = initialization_strategy
+        vbd.kD = kD
+        vbd.RdetH = RdetH
         changed, animate = imgui.Checkbox("Animate", animate)
         changed, export = imgui.Checkbox("Export", export)
         step = imgui.Button("Step")
         reset = imgui.Button("Reset")
 
         if reset:
-            xpbd.x = mesh.X
-            xpbd.v = np.zeros(mesh.X.shape)
+            vbd.x = mesh.X
+            vbd.v = np.zeros(mesh.X.shape)
             vm.update_vertex_positions(mesh.X.T)
             t = 0
 
-        if alphac_changed:
-            xpbd.set_compliance(
-                alphac * np.ones(VC.shape[1]), pbat.gpu.xpbd.ConstraintType.Collision)
+        vbd.set_gpu_block_size(thread_block_size)
 
         if animate or step:
             profiler.begin_frame("Physics")
-            xpbd.step(dt, iterations, substeps)
+            vbd.step(dt, iterations, substeps, rho_chebyshev)
             profiler.end_frame("Physics")
 
             # Update visuals
-            V = xpbd.x.T
-            min, max = np.min(V, axis=0), np.max(V, axis=0)
-            xpbd.scene_bounding_box = min, max
+            V = vbd.x.T
             if export:
                 ps.screenshot(f"{args.output}/{t}.png")
                 # omesh = meshio.Mesh(V, {"tetra": mesh.E.T})

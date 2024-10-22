@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.26)
-project(PhysicsBasedAnimationToolkit VERSION 0.0.7 LANGUAGES CXX)
+project(PhysicsBasedAnimationToolkit VERSION 0.0.8 LANGUAGES CXX)
 enable_testing()
 
 # Configuration options
@@ -31,9 +31,20 @@ if(PBAT_BUILD_SHARED_LIBS)
     set(BUILD_SHARED_LIBS ON CACHE BOOL "" FORCE)
 endif()
 
-# No matter the platform, we decide the structure of our build tree. This should
-# have no side-effect on library users.
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
+# Unless user specified otherwise, we decide the structure of our build tree.
+include(GNUInstallDirs)
+if (NOT CMAKE_RUNTIME_OUTPUT_DIRECTORY)
+    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_INSTALL_BINDIR})
+    message(VERBOSE "PBAT -- Set CMAKE_RUNTIME_OUTPUT_DIRECTORY=${CMAKE_RUNTIME_OUTPUT_DIRECTORY}")
+endif()
+if (NOT CMAKE_LIBRARY_OUTPUT_DIRECTORY)
+    set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR})
+    message(VERBOSE "PBAT -- Set CMAKE_LIBRARY_OUTPUT_DIRECTORY=${CMAKE_LIBRARY_OUTPUT_DIRECTORY}")
+endif()
+if (NOT CMAKE_ARCHIVE_OUTPUT_DIRECTORY)
+    set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR})
+    message(VERBOSE "PBAT -- Set CMAKE_ARCHIVE_OUTPUT_DIRECTORY=${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}")
+endif()
 
 # Dependencies
 # Note that this call must come after we have set BUILD_SHARED_LIBS

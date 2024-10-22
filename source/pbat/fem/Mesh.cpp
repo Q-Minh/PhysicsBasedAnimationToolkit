@@ -32,7 +32,7 @@ TEST_CASE("[fem] Mesh")
             using Mesh                        = fem::Mesh<Element, kDims>;
             auto const kExpectedNumberOfNodes = 8;
             IndexVectorX nodeOrdering(kExpectedNumberOfNodes);
-            nodeOrdering << 0, 1, 3, 5, 2, 6, 4, 7;
+            nodeOrdering << 0, 1, 2, 3, 4, 5, 6, 7;
 
             Mesh M(V, C);
 

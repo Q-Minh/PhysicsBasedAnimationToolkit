@@ -430,7 +430,7 @@ if __name__ == "__main__":
     ps.set_front_dir("neg_y_front")
     ps.set_ground_plane_mode("shadow_only")
     ps.set_ground_plane_height_factor(0.5)
-    ps.set_program_name("IPC")
+    ps.set_program_name("Incremental Potential Contact")
     ps.init()
     vm = ps.register_surface_mesh(
         "Visual mesh", cmesh.rest_positions, cmesh.faces)

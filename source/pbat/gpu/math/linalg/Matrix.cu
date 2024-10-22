@@ -151,6 +151,8 @@ struct FComposedOperation
 } // namespace test
 } // namespace pbat
 
+#pragma nv_diag_suppress 177
+
 TEST_CASE("[gpu][math][linalg] Matrix operations")
 {
     using namespace pbat;

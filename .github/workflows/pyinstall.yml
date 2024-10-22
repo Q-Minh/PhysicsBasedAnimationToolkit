@@ -1,4 +1,4 @@
-name: Local pip install
+name: build
 
 on:
   workflow_dispatch:
@@ -17,16 +17,30 @@ jobs:
         include:
           - os: ubuntu-24.04
             build_tool_args: -j4
+            preset: ci-pip-cuda
+            sub_packages: '["nvcc", "cudart"]'
           - os: windows-2022
             build_tool_args: /p:CL_MPCount=4
+            preset: ci-pip-cuda
+            sub_packages: '["nvcc", "cudart", "visual_studio_integration"]'
           - os: macos-13
+            preset: pip
             build_tool_args: -j4
           - os: macos-14
+            preset: pip
             build_tool_args: -j4
       max-parallel: 4
 
     steps:
       - uses: actions/checkout@v4
+
+      - uses: Jimver/cuda-toolkit@v0.2.18
+        if: ${{ !startsWith(matrix.os, 'macos') }}
+        with:
+          cuda: '12.5.1'
+          method: 'network'
+          sub-packages: ${{ matrix.sub_packages }}
+          non-cuda-sub-packages: '[]'
 
       - uses: lukka/get-cmake@latest
         with:
@@ -44,4 +58,4 @@ jobs:
 
       - name: Build and install PBAT Python bindings
         run: |
-          pip install . --config-settings=cmake.args="--preset=pip" --config-settings=build.tool-args="${{ matrix.build_tool_args }}" -v
+          pip install . --config-settings=cmake.args="--preset=${{ matrix.preset }}" --config-settings=build.tool-args="${{ matrix.build_tool_args }}" -v
