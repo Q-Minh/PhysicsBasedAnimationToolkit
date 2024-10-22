@@ -55,9 +55,14 @@ nav:
     - CUDA: c++/cuda.md
   - Python:
     - Python: python/python.md
+    - API:
+      - FEM: python/FEM.md
+      - Geometry: python/geometry.md
+      - Profiling: python/profiling.md
+      - Math: python/math.md
+      - GPU: python/gpu.md
   - Examples:
     - Workshops:
-      - Overview: workshops/index.md
       - Overview: workshops/index.md
     - Broad Phase: examples/broad_phase.md
     - Contact Detection: examples/contact_detection.md

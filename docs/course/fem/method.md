@@ -5,13 +5,13 @@ continuous domain $\Omega$, FEM first requires a *geometric mesh* $(V,C) \approx
 
 Nodes $i \in I$ have corresponding positions $X_i \in \Omega$ and associated *basis functions* $\phi_i(X): \Omega \longrightarrow \mathbb{R}$ such that $\phi_i(X_j) = \delta_{ij}$, where $\delta_{ij}$ is the [Kronecker delta](https://en.wikipedia.org/wiki/Kronecker_delta). Such basis functions are defined element-wise by so-called *shape functions* $N_i^e(X)$ for pairs $(i,e)$ of adjacent node and element, and vanish in non-adjacent elements. In other words, the support of $\phi_i(X)$ is the union of its adjacent elements, and evaluating $\phi_i(X)$ amounts to finding the element $e$ containing the evaluation point $X$, and evaluating $N_i^e(X)$ there. It is common to refer to this choice of basis function $\phi_i(X)$ as the "hat" function, because its tip (i.e. its maximal value of $1$) is located on node $i$, "centered" in its support, while it smoothly decreases to 0 at surrounding nodes. It is also common to refer to these elements as "PK Lagrange elements", because their shape functions $N_i^e(X)$ are interpolating polynomials of degree $K$.
 
-| ![Geometric mesh vs FEM mesh](./media/geometric.mesh.vs.fem.mesh.jpg) | 
+| ![Geometric mesh vs FEM mesh](../../../_static/imgs/geometric.mesh.vs.fem.mesh.jpg) | 
 |:--:| 
 | Geometric mesh (left) versus FEM meshes discretized with linear (middle) and quadratic (right) Lagrange elements. |
 
 With $n=|I|$, FEM restricts $u(X)$ to the class of functions $u(X) = \sum_{i=1}^{n} u_i \phi_i(X)$, i.e. linear combinations of coefficients $u_i$ and basis functions $\phi_i$ associated with nodes $i$. More compactly, $u(X) = \Phi^T u$, where $`u = \begin{bmatrix}u_1 & \dots & u_{n} \end{bmatrix}^T \in \mathbb{R}^{n}`$ and $`\Phi = \begin{bmatrix} \phi_1(X) & \dots & \phi_{n}(X) \end{bmatrix}^T \in \mathbb{R}^{n}`$. We say that the basis functions $\phi_i$ span the function space $`\{ \Phi^T u \;\forall\; u \in \mathbb{R}^{n} \}`$, much like basis vectors $v_i$ span vector spaces $V$. Functions in the FEM function space, i.e. the space spanned by $\phi_i$, are uniquely represented by their vector of coefficients $u$, much like vectors $v = v_1 \overrightarrow{i} + v_2\overrightarrow{j} + v_3 \overrightarrow{k}$ in $\mathbb{R}^3$ are uniquely represented by their coefficients $`\begin{bmatrix} v_1 & v_2 & v_3 \end{bmatrix}`$. 
 
-| ![FEM function space 1D](./media/fem1D.gif) | 
+| ![FEM function space 1D](../../../_static/imgs/fem1D.gif) | 
 |:--:| 
 | FEM function space in 1D using linear "hat" basis functions. |
 

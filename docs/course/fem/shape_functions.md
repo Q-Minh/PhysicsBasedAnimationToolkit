@@ -49,7 +49,7 @@ $$
 
 [Chapter 9.3 of Hans Petter Langtangen's FEM book](https://hplgit.github.io/INF5620/doc/pub/main_fem.pdf#page=81.67) (highly recommend that book) provides the following pedagogical visuals, in which dots represent nodes of a quadratic FEM triangular element.
 
-| ![FEM reference to domain linear map](./media/p2.triangle.affine.map.png) | ![FEM reference to domain non-linear map](./media/p2.triangle.isoparametric.map.png) |
+| ![FEM reference to domain linear map](../../../_static/imgs/p2.triangle.affine.map.png) | ![FEM reference to domain non-linear map](../../../_static/imgs/p2.triangle.isoparametric.map.png) |
 |:--:|:--:|
 | Linear map from reference element (local) to domain element (global).  | Non-linear map from reference element (local) to domain element (global). |
 
@@ -60,7 +60,7 @@ and corresponding polynomial basis functions $`P_l \in \left\{ \xi_x^a \xi_y^b \
 
 Taken once again from [chapter 9.3 of Hans Petter Langtangen's FEM book](https://hplgit.github.io/INF5620/doc/pub/main_fem.pdf#page=81.67), here are examples of Lagrange elements and their nodes in dimensions `1,2,3`.
 
-| ![P1 Lagrange simplex elements](./media/p1.lagrange.simplex.elements.png) | ![P2 Lagrange simplex elements](./media/p2.lagrange.simplex.elements.png) |
+| ![P1 Lagrange simplex elements](../../../_static/imgs/p1.lagrange.simplex.elements.png) | ![P2 Lagrange simplex elements](../../../_static/imgs/p2.lagrange.simplex.elements.png) |
 |:--:|:--:|
 | Linear Lagrange simplex elements.  | Quadratic Lagrange simplex elements. |
 
