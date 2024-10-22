@@ -103,8 +103,8 @@ class HyperElasticPotential
         Mesh const& M,
         Eigen::Ref<MatrixX const> const& detJe,
         Eigen::Ref<MatrixX const> const& GNe,
-        Eigen::Ref<VectorX const> const& Y,
-        Eigen::Ref<VectorX const> const& nu,
+        Eigen::Ref<MatrixX const> const& Y,
+        Eigen::Ref<MatrixX const> const& nu,
         EHyperElasticEnergy eHyperElasticEnergy,
         int qOrder);
 
@@ -127,11 +127,11 @@ class HyperElasticPotential
     CSCMatrix ToMatrix() const;
     std::tuple<Index, Index> Shape() const;
 
-    VectorX const& mue() const;
-    VectorX& mue();
+    MatrixX const& mue() const;
+    MatrixX& mue();
 
-    VectorX const& lambdae() const;
-    VectorX& lambdae();
+    MatrixX const& lambdae() const;
+    MatrixX& lambdae();
 
     MatrixX const& ElementHessians() const;
     MatrixX& ElementHessians();
@@ -193,8 +193,8 @@ void BindHyperElasticPotential(pybind11::module& m)
                 Mesh const&,
                 Eigen::Ref<MatrixX const> const&,
                 Eigen::Ref<MatrixX const> const&,
-                Eigen::Ref<VectorX const> const&,
-                Eigen::Ref<VectorX const> const&,
+                Eigen::Ref<MatrixX const> const&,
+                Eigen::Ref<MatrixX const> const&,
                 EHyperElasticEnergy,
                 int>(),
             pyb::arg("mesh"),
@@ -231,15 +231,15 @@ void BindHyperElasticPotential(pybind11::module& m)
         .def_property(
             "mue",
             [](HyperElasticPotential const& M) { return M.mue(); },
-            [](HyperElasticPotential& M, Eigen::Ref<VectorX const> const& mue) { M.mue() = mue; },
-            "Piecewise constant (per-element) vector of first Lame coefficients")
+            [](HyperElasticPotential& M, Eigen::Ref<MatrixX const> const& mue) { M.mue() = mue; },
+            "|#quad.pts.|x|#elements| array of first Lame coefficients")
         .def_property(
             "lambdae",
             [](HyperElasticPotential const& M) { return M.lambdae(); },
-            [](HyperElasticPotential& M, Eigen::Ref<VectorX const> const& lambdae) {
+            [](HyperElasticPotential& M, Eigen::Ref<MatrixX const> const& lambdae) {
                 M.lambdae() = lambdae;
             },
-            "Piecewise constant (per-element) vector of second Lame coefficients")
+            "|#quad.pts.|x|#elements| array of second Lame coefficients")
         .def_property_readonly(
             "UE",
             [](HyperElasticPotential const& M) { return M.ElementPotentials(); },
@@ -298,8 +298,8 @@ HyperElasticPotential::HyperElasticPotential(
     Mesh const& M,
     Eigen::Ref<MatrixX const> const& detJe,
     Eigen::Ref<MatrixX const> const& GNe,
-    Eigen::Ref<VectorX const> const& Y,
-    Eigen::Ref<VectorX const> const& nu,
+    Eigen::Ref<MatrixX const> const& Y,
+    Eigen::Ref<MatrixX const> const& nu,
     EHyperElasticEnergy ePsi,
     int qOrder)
     : eMeshElement(M.eElement),
@@ -388,36 +388,36 @@ std::tuple<Index, Index> HyperElasticPotential::Shape() const
     return std::make_tuple(rows, cols);
 }
 
-VectorX const& HyperElasticPotential::mue() const
+MatrixX const& HyperElasticPotential::mue() const
 {
-    VectorX* muePtr;
+    MatrixX* muePtr;
     Apply([&]<class HyperElasticPotentialType>(HyperElasticPotentialType* hyperElasticPotential) {
         muePtr = std::addressof(hyperElasticPotential->mue);
     });
     return *muePtr;
 }
 
-VectorX& HyperElasticPotential::mue()
+MatrixX& HyperElasticPotential::mue()
 {
-    VectorX* muePtr;
+    MatrixX* muePtr;
     Apply([&]<class HyperElasticPotentialType>(HyperElasticPotentialType* hyperElasticPotential) {
         muePtr = std::addressof(hyperElasticPotential->mue);
     });
     return *muePtr;
 }
 
-VectorX const& HyperElasticPotential::lambdae() const
+MatrixX const& HyperElasticPotential::lambdae() const
 {
-    VectorX* lambdaePtr;
+    MatrixX* lambdaePtr;
     Apply([&]<class HyperElasticPotentialType>(HyperElasticPotentialType* hyperElasticPotential) {
         lambdaePtr = std::addressof(hyperElasticPotential->lambdae);
     });
     return *lambdaePtr;
 }
 
-VectorX& HyperElasticPotential::lambdae()
+MatrixX& HyperElasticPotential::lambdae()
 {
-    VectorX* lambdaePtr;
+    MatrixX* lambdaePtr;
     Apply([&]<class HyperElasticPotentialType>(HyperElasticPotentialType* hyperElasticPotential) {
         lambdaePtr = std::addressof(hyperElasticPotential->lambdae);
     });
