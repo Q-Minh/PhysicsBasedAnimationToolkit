@@ -11,12 +11,8 @@ def harmonic_field(V: np.ndarray, C: np.ndarray, order: int, eps: float = 0.1):
     mesh = pbat.fem.Mesh(
         V.T, C.T, element=pbat.fem.Element.Tetrahedron, order=order)
     quadrature_order = max(int(2*(order-1)), 1)
-    detJeL = pbat.fem.jacobian_determinants(
+    L, detJeL, GNeL = pbat.fem.laplacian(
         mesh, quadrature_order=quadrature_order)
-    GNeL = pbat.fem.shape_function_gradients(
-        mesh, quadrature_order=quadrature_order)
-    L = pbat.fem.Laplacian(
-        mesh, detJeL, GNeL, quadrature_order=quadrature_order).to_matrix()
     # Set Dirichlet boundary conditions at bottom and top of the model
     Xmin = mesh.X.min(axis=1)
     Xmax = mesh.X.max(axis=1)
@@ -68,7 +64,7 @@ if __name__ == "__main__":
     Vrefined, Crefined = rmesh.points.astype(
         np.float64, order='c'), rmesh.cells_dict["tetra"].astype(np.int64, order='c')
     Frefined = igl.boundary_facets(Crefined)
-    Frefined[:,:2] = np.roll(Frefined[:,:2], shift=1, axis=1)
+    Frefined[:, :2] = np.roll(Frefined[:, :2], shift=1, axis=1)
 
     e = bvh.nearest_primitives_to_points(Vrefined.T)
     Xi1 = pbat.fem.reference_positions(mesh1, e, Vrefined.T)
@@ -83,9 +79,11 @@ if __name__ == "__main__":
     ps.set_ground_plane_mode("shadow_only")
     ps.init()
     vm = ps.register_volume_mesh("domain refined", Vrefined, Crefined)
-    vm.add_scalar_quantity("Order 1 harmonic solution", u1ref, enabled=True, cmap="turbo")
+    vm.add_scalar_quantity("Order 1 harmonic solution",
+                           u1ref, enabled=True, cmap="turbo")
     vm.add_scalar_quantity("Order 2 harmonic solution", u2ref, cmap="turbo")
     niso = 15
+
     def isolines(V, F, u, niso):
         # Code for libigl 2.5.1
         diso = (u.max() - u.min()) / (niso+2)

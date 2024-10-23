@@ -110,21 +110,15 @@ if __name__ == "__main__":
 
     detJeM = pbat.fem.jacobian_determinants(mesh, quadrature_order=2)
     rho = args.rho
-    M = pbat.fem.MassMatrix(mesh, detJeM, rho=rho,
-                            dims=1, quadrature_order=2).to_matrix()
-    m = np.array(M.sum(axis=0)).squeeze()
+    M, detJeM = pbat.fem.mass_matrix(mesh, rho=rho, dims=1, lump=True)
+    m = np.array(M.diagonal()).squeeze()
 
     # Construct load vector from gravity field
     detJeU = pbat.fem.jacobian_determinants(mesh, quadrature_order=1)
     GNeU = pbat.fem.shape_function_gradients(mesh, quadrature_order=1)
-    qgf = pbat.fem.inner_product_weights(
-        mesh, quadrature_order=1).flatten(order="F")
-    Qf = sp.sparse.diags_array([qgf], offsets=[0])
-    Nf = pbat.fem.shape_function_matrix(mesh, quadrature_order=1)
     g = np.zeros(mesh.dims)
     g[-1] = -9.81
-    fe = np.tile(rho*g[:, np.newaxis], mesh.E.shape[1])
-    f = fe @ Qf @ Nf
+    f, detJeF = pbat.fem.load_vector(mesh, rho*g, detJ=detJeU, flatten=False)
     a = f / m
 
     # Compute material (Lame) constants

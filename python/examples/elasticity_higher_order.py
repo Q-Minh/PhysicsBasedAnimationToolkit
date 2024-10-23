@@ -38,36 +38,23 @@ if __name__ == "__main__":
         V.T, C.T, element=pbat.fem.Element.Tetrahedron, order=2)
     x = mesh.X.reshape(math.prod(mesh.X.shape), order='f')
     v = np.zeros(x.shape[0])
-    detJeM = pbat.fem.jacobian_determinants(mesh, quadrature_order=4)
     rho = args.rho
-    M = pbat.fem.MassMatrix(mesh, detJeM, rho=rho,
-                             dims=3, quadrature_order=4).to_matrix()
+    
+    # Mass matrix
+    M, detJeM = pbat.fem.mass_matrix(mesh, rho=rho, quadrature_order=4)
     Minv = pbat.math.linalg.ldlt(M)
     Minv.compute(M)
 
     # Construct load vector from gravity field
     g = np.zeros(mesh.dims)
     g[-1] = -9.81
-    detJef = pbat.fem.jacobian_determinants(mesh, quadrature_order=2)
-    nquadpts = mesh.E.shape[1] * mesh.quadrature_weights(2).shape[0]
-    fe = np.tile(rho*g[:, np.newaxis], nquadpts)
-    qgf = pbat.fem.inner_product_weights(
-        mesh, quadrature_order=2).flatten(order="F")
-    Qf = sp.sparse.diags_array([qgf], offsets=[0])
-    Nf = pbat.fem.shape_function_matrix(mesh, quadrature_order=2)
-    f = fe @ Qf @ Nf
-    f = f.reshape(math.prod(f.shape), order="F")
+    f, detJeF = pbat.fem.load_vector(mesh, rho*g, quadrature_order=2)
     a = Minv.solve(f).squeeze()
 
     # Create hyper elastic potential
-    detJeU = pbat.fem.jacobian_determinants(mesh, quadrature_order=4)
-    GNeU = pbat.fem.shape_function_gradients(mesh, quadrature_order=4)
-    Y = np.full(mesh.E.shape[1], args.Y)
-    nu = np.full(mesh.E.shape[1], args.nu)
-    psi = pbat.fem.HyperElasticEnergy.StableNeoHookean
-    hep = pbat.fem.HyperElasticPotential(
-        mesh, detJeU, GNeU, Y, nu, energy=psi, quadrature_order=4)
-    hep.precompute_hessian_sparsity()
+    Y, nu, psi = args.Y, args.nu, pbat.fem.HyperElasticEnergy.StableNeoHookean
+    hep, detJeU, GNeU = pbat.fem.hyper_elastic_potential(
+        mesh, Y=Y, nu=nu, energy=psi, quadrature_order=4)
 
     # Set Dirichlet boundary conditions
     Xmin = mesh.X.min(axis=1)
