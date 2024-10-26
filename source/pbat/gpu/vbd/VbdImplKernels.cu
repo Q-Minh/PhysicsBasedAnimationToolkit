@@ -38,20 +38,20 @@ __global__ void MinimizeBackwardEuler(BackwardEulerMinimization BDF)
         return;
 
     // 2. Accumulate results into vertex hessian and gradient
-    using namespace pbat::gpu::math::linalg;
-    Matrix<GpuScalar, 3> xti     = BDF.ToLocal(i, BDF.xt);
-    Matrix<GpuScalar, 3> xitilde = BDF.ToLocal(i, BDF.xtilde);
-    Matrix<GpuScalar, 3> xi      = BDF.ToLocal(i, BDF.x);
-    Matrix<GpuScalar, 3, 3> Hi   = Zeros<GpuScalar, 3, 3>{};
-    Matrix<GpuScalar, 3, 1> gi   = Zeros<GpuScalar, 3, 1>{};
+    using namespace pbat::math::linalg::mini;
+    SMatrix<GpuScalar, 3> xti     = BDF.ToLocal(i, BDF.xt);
+    SMatrix<GpuScalar, 3> xitilde = BDF.ToLocal(i, BDF.xtilde);
+    SMatrix<GpuScalar, 3> xi      = BDF.ToLocal(i, BDF.x);
+    SMatrix<GpuScalar, 3, 3> Hi   = Zeros<GpuScalar, 3, 3>{};
+    SMatrix<GpuScalar, 3, 1> gi   = Zeros<GpuScalar, 3, 1>{};
     // Add elastic energy derivatives
     auto const nActiveThreads = min(nAdjacentElements, nThreadsPerBlock);
     for (auto j = 0; j < nActiveThreads; ++j)
     {
         GpuScalar* HiShared = shared + j * BDF.ExpectedSharedMemoryPerThreadInScalars();
         GpuScalar* giShared = HiShared + BDF.SharedGradientOffset();
-        MatrixView<GpuScalar, 3, 3> Hei(HiShared);
-        MatrixView<GpuScalar, 3, 1> gei(giShared);
+        SMatrixView<GpuScalar, 3, 3> Hei(HiShared);
+        SMatrixView<GpuScalar, 3, 1> gei(giShared);
         Hi += Hei;
         gi += gei;
     }
@@ -75,18 +75,19 @@ __global__ void MinimizeBackwardEuler(BackwardEulerMinimization BDF)
     BDF.ToGlobal(i, xi, BDF.x);
 };
 
-__device__ BackwardEulerMinimization::Matrix<GpuScalar, 4, 3>
+__device__ pbat::math::linalg::mini::SMatrix<GpuScalar, 4, 3>
 BackwardEulerMinimization::BasisFunctionGradients(GpuIndex e) const
 {
-    using namespace pbat::gpu::math::linalg;
-    Matrix<GpuScalar, 4, 3> GPlocal = MatrixView<GpuScalar, 4, 3>(GP + e * 12);
+    using namespace pbat::math::linalg::mini;
+    SMatrix<GpuScalar, 4, 3> GPlocal = SMatrixView<GpuScalar, 4, 3>(GP + e * 12);
     return GPlocal;
 }
 
-__device__ BackwardEulerMinimization::Matrix<GpuScalar, 3, 4>
+__device__ pbat::math::linalg::mini::SMatrix<GpuScalar, 3, 4>
 BackwardEulerMinimization::ElementVertexPositions(GpuIndex e) const
 {
-    Matrix<GpuScalar, 3, 4> xe;
+    using namespace pbat::math::linalg::mini;
+    SMatrix<GpuScalar, 3, 4> xe;
     for (auto i = 0; i < 4; ++i)
     {
         GpuIndex vi = T[i][e];
@@ -95,15 +96,15 @@ BackwardEulerMinimization::ElementVertexPositions(GpuIndex e) const
     return xe;
 }
 
-__device__ BackwardEulerMinimization::Matrix<GpuScalar, 9, 10>
+__device__ pbat::math::linalg::mini::SMatrix<GpuScalar, 9, 10>
 BackwardEulerMinimization::StableNeoHookeanDerivativesWrtF(
     GpuIndex e,
-    Matrix<GpuScalar, 3, 3> const& Fe,
+    pbat::math::linalg::mini::SMatrix<GpuScalar, 3, 3> const& Fe,
     GpuScalar mu,
     GpuScalar lambda) const
 {
-    using namespace pbat::gpu::math::linalg;
-    Matrix<GpuScalar, 9, 10> HGe;
+    using namespace pbat::math::linalg::mini;
+    SMatrix<GpuScalar, 9, 10> HGe;
     auto He = HGe.Slice<9, 9>(0, 0);
     auto ge = HGe.Col(9);
 
@@ -260,18 +261,18 @@ __device__ void BackwardEulerMinimization::ComputeStableNeoHookeanDerivatives(
     GpuIndex ilocal,
     GpuScalar* Hge) const
 {
-    using namespace pbat::gpu::math::linalg;
-    GpuScalar wge                 = wg[e];
-    Matrix<GpuScalar, 2, 1> lamee = MatrixView<GpuScalar, 2, 1>{lame + 2 * e};
+    using namespace pbat::math::linalg::mini;
+    GpuScalar wge                  = wg[e];
+    SMatrix<GpuScalar, 2, 1> lamee = SMatrixView<GpuScalar, 2, 1>{lame + 2 * e};
     // Compute (d^k Psi / dF^k)
-    Matrix<GpuScalar, 3, 4> xe   = ElementVertexPositions(e);
-    Matrix<GpuScalar, 4, 3> GPe  = BasisFunctionGradients(e);
-    Matrix<GpuScalar, 3, 3> Fe   = xe * GPe;
-    Matrix<GpuScalar, 9, 10> HGF = StableNeoHookeanDerivativesWrtF(e, Fe, lamee(0), lamee(1));
-    auto HF                      = HGF.Slice<9, 9>(0, 0);
-    auto gF                      = HGF.Col(9);
+    SMatrix<GpuScalar, 3, 4> xe   = ElementVertexPositions(e);
+    SMatrix<GpuScalar, 4, 3> GPe  = BasisFunctionGradients(e);
+    SMatrix<GpuScalar, 3, 3> Fe   = xe * GPe;
+    SMatrix<GpuScalar, 9, 10> HGF = StableNeoHookeanDerivativesWrtF(e, Fe, lamee(0), lamee(1));
+    auto HF                       = HGF.Slice<9, 9>(0, 0);
+    auto gF                       = HGF.Col(9);
     // Write vertex-specific derivatives into output memory HGe
-    MatrixView<GpuScalar, 3, 4> HGei(Hge);
+    SMatrixView<GpuScalar, 3, 4> HGei(Hge);
     auto Hi = HGei.Slice<3, 3>(0, 0);
     auto gi = HGei.Col(3);
     // Contract (d^k Psi / dF^k) with (d F / dx)^k. See pbat/fem/DeformationGradient.h.

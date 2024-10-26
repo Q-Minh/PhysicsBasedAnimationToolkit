@@ -2,13 +2,14 @@
 #define PBAT_GPU_GEOMETRY_BVH_QUERY_IMPL_KERNELS_CUH
 
 #include "BvhQueryImpl.cuh"
+#include "pbat/HostDevice.h"
 #include "pbat/gpu/Aliases.h"
 #include "pbat/gpu/common/Morton.cuh"
 #include "pbat/gpu/common/Queue.cuh"
 #include "pbat/gpu/common/Stack.cuh"
 #include "pbat/gpu/common/SynchronizedList.cuh"
 #include "pbat/gpu/geometry/PrimitivesImpl.cuh"
-#include "pbat/gpu/math/linalg/Matrix.cuh"
+#include "pbat/math/linalg/mini/Mini.h"
 
 #include <array>
 
@@ -19,7 +20,7 @@ namespace BvhQueryImplKernels {
 
 struct FComputeAabb
 {
-    __device__ void operator()(int s)
+    PBAT_DEVICE void operator()(int s)
     {
         for (auto d = 0; d < 3; ++d)
         {
@@ -47,7 +48,7 @@ struct FComputeMortonCode
 {
     using MortonCodeType = common::MortonCodeType;
 
-    __device__ void operator()(int s)
+    PBAT_DEVICE void operator()(int s)
     {
         // Compute Morton code of the centroid of the bounding box of simplex s
         std::array<GpuScalar, 3> c{};
@@ -69,9 +70,9 @@ struct FComputeMortonCode
 struct FDetectOverlaps
 {
     using OverlapType = typename BvhQueryImpl::OverlapType;
-    using Vector3     = pbat::gpu::math::linalg::Matrix<GpuScalar, 3>;
+    using Vector3     = pbat::math::linalg::mini::SMatrix<GpuScalar, 3>;
 
-    __device__ bool AreSimplicesTopologicallyAdjacent(GpuIndex si, GpuIndex sj) const
+    PBAT_DEVICE bool AreSimplicesTopologicallyAdjacent(GpuIndex si, GpuIndex sj) const
     {
         auto count{0};
         for (auto i = 0; i < queryInds.size(); ++i)
@@ -80,7 +81,7 @@ struct FDetectOverlaps
         return count > 0;
     }
 
-    __device__ bool AreBoxesOverlapping(GpuIndex i, GpuIndex j) const
+    PBAT_DEVICE bool AreBoxesOverlapping(GpuIndex i, GpuIndex j) const
     {
         // clang-format off
         return (queryE[0][i] >= b[0][j]) and (queryB[0][i] <= e[0][j]) and
@@ -89,7 +90,7 @@ struct FDetectOverlaps
         // clang-format on
     }
 
-    __device__ Vector3 Position(auto v) const
+    PBAT_DEVICE Vector3 Position(auto v) const
     {
         Vector3 P;
         P(0) = x[0][v];
@@ -98,7 +99,7 @@ struct FDetectOverlaps
         return P;
     }
 
-    __device__ bool VertexTetrahedronOverlap(GpuIndex v, GpuIndex t) const
+    PBAT_DEVICE bool VertexTetrahedronOverlap(GpuIndex v, GpuIndex t) const
     {
         Vector3 P = Position(queryInds[0][v]);
         Vector3 A = Position(inds[0][t]);
@@ -107,7 +108,7 @@ struct FDetectOverlaps
         Vector3 D = Position(inds[3][t]);
         auto const PointOutsidePlane =
             [](auto const& p, auto const& a, auto const& b, auto const& c) {
-                using namespace pbat::gpu::math::linalg;
+                using namespace pbat::math::linalg::mini;
                 GpuScalar const d = Dot(p - a, Cross(b - a, c - a));
                 return d > GpuScalar{0};
             };
@@ -117,7 +118,7 @@ struct FDetectOverlaps
         return bOverlaps;
     }
 
-    __device__ bool AreSimplicesOverlapping(GpuIndex si, GpuIndex sj) const
+    PBAT_DEVICE bool AreSimplicesOverlapping(GpuIndex si, GpuIndex sj) const
     {
         if (querySimplexType == SimplicesImpl::ESimplexType::Vertex and
             targetSimplexType == SimplicesImpl::ESimplexType::Tetrahedron)
@@ -127,7 +128,7 @@ struct FDetectOverlaps
         return true;
     }
 
-    __device__ void operator()(auto query)
+    PBAT_DEVICE void operator()(auto query)
     {
         // Traverse nodes depth-first starting from the root.
         common::Stack<GpuIndex, 64> stack{};
@@ -196,9 +197,9 @@ struct FContactPairs
 {
     using OverlapType              = typename BvhQueryImpl::OverlapType;
     using NearestNeighbourPairType = typename BvhQueryImpl::NearestNeighbourPairType;
-    using Vector3                  = pbat::gpu::math::linalg::Matrix<GpuScalar, 3>;
+    using Vector3                  = pbat::math::linalg::mini::SMatrix<GpuScalar, 3>;
 
-    __device__ Vector3 Position(auto v) const
+    PBAT_DEVICE Vector3 Position(auto v) const
     {
         Vector3 P{};
         P(0) = x[0][v];
@@ -206,7 +207,7 @@ struct FContactPairs
         P(2) = x[2][v];
         return P;
     }
-    __device__ Vector3 Lower(auto s) const
+    PBAT_DEVICE Vector3 Lower(auto s) const
     {
         Vector3 P{};
         P(0) = b[0][s];
@@ -214,7 +215,7 @@ struct FContactPairs
         P(2) = b[2][s];
         return P;
     }
-    __device__ Vector3 Upper(auto s) const
+    PBAT_DEVICE Vector3 Upper(auto s) const
     {
         Vector3 P{};
         P(0) = e[0][s];
@@ -222,15 +223,15 @@ struct FContactPairs
         P(2) = e[2][s];
         return P;
     }
-    __device__ GpuScalar MinDistance(Vector3 const& X, Vector3 const& L, Vector3 const& U) const
+    PBAT_DEVICE GpuScalar MinDistance(Vector3 const& X, Vector3 const& L, Vector3 const& U) const
     {
-        using namespace pbat::gpu::math::linalg;
+        using namespace pbat::math::linalg::mini;
         Vector3 const DX = Min(U, Max(L, X)) - X;
         return SquaredNorm(DX);
     }
-    __device__ GpuScalar MinMaxDistance(Vector3 const& X, Vector3 const& L, Vector3 const& U) const
+    PBAT_DEVICE GpuScalar MinMaxDistance(Vector3 const& X, Vector3 const& L, Vector3 const& U) const
     {
-        using namespace pbat::gpu::math::linalg;
+        using namespace pbat::math::linalg::mini;
         Vector3 const DXL = Squared(L - X);
         Vector3 const DXU = Squared(U - X);
         Vector3 const rm  = Min(DXL, DXU);
@@ -242,10 +243,10 @@ struct FContactPairs
         };
         return min(d[0], min(d[1], d[2]));
     }
-    __device__ GpuScalar Distance(Vector3 const& P, GpuIndex s) const
+    PBAT_DEVICE GpuScalar Distance(Vector3 const& P, GpuIndex s) const
     {
-        using namespace pbat::gpu::math::linalg;
-        Matrix<GpuScalar, 3, 3> ABC;
+        using namespace pbat::math::linalg::mini;
+        SMatrix<GpuScalar, 3, 3> ABC;
         auto A = ABC.Col(0);
         auto B = ABC.Col(1);
         auto C = ABC.Col(2);
@@ -325,7 +326,7 @@ struct FContactPairs
         }
         // P inside face region. Compute Q through its barycentric coordinates (u,v,w)
         GpuScalar const denom = GpuScalar{1} / (va + vb + vc);
-        Matrix<GpuScalar, 3> uvw;
+        SMatrix<GpuScalar, 3> uvw;
         uvw(1) = vb * denom;
         uvw(2) = vc * denom;
         uvw(0) = GpuScalar{1} - uvw(1) - uvw(2);
@@ -355,7 +356,7 @@ struct FContactPairs
         GpuIndex v;
     };
 
-    __device__ void Push(BranchAndBound& traversal, GpuIndex node, GpuScalar dbox) const
+    PBAT_DEVICE void Push(BranchAndBound& traversal, GpuIndex node, GpuScalar dbox) const
     {
         if (node >= leafBegin)
         {
@@ -386,14 +387,14 @@ struct FContactPairs
         }
     }
 
-    __device__ BoxOrSimplex Pop(BranchAndBound& traversal) const
+    PBAT_DEVICE BoxOrSimplex Pop(BranchAndBound& traversal) const
     {
         BoxOrSimplex bos = traversal.stack.Top();
         traversal.stack.Pop();
         return bos;
     }
 
-    __device__ void operator()(OverlapType const& o)
+    PBAT_DEVICE void operator()(OverlapType const& o)
     {
         // Branch and bound over BVH
         GpuIndex const v = queryInds[0][o.first];

@@ -1,9 +1,10 @@
 #ifndef PBAT_GPU_VBD_VBD_IMPL_KERNELS_CUH
 #define PBAT_GPU_VBD_VBD_IMPL_KERNELS_CUH
 
+#include "pbat/HostDevice.h"
 #include "pbat/gpu/Aliases.h"
-#include "pbat/gpu/math/linalg/Matrix.cuh"
 #include "pbat/gpu/vbd/InitializationStrategy.h"
+#include "pbat/math/linalg/mini/Mini.h"
 
 #include <array>
 #include <cstddef>
@@ -16,7 +17,7 @@ namespace kernels {
 
 struct FKineticEnergyMinimum
 {
-    __device__ void operator()(auto i)
+    PBAT_DEVICE void operator()(auto i)
     {
         for (auto d = 0; d < 3; ++d)
         {
@@ -34,9 +35,9 @@ struct FKineticEnergyMinimum
 
 struct FAdaptiveInitialization
 {
-    using Vector3 = pbat::gpu::math::linalg::Matrix<GpuScalar, 3>;
+    using Vector3 = pbat::math::linalg::mini::SMatrix<GpuScalar, 3>;
 
-    __device__ Vector3 GetExternalAcceleration(auto i) const
+    PBAT_DEVICE Vector3 GetExternalAcceleration(auto i) const
     {
         Vector3 aexti;
         aexti(0) = aext[0][i];
@@ -45,7 +46,7 @@ struct FAdaptiveInitialization
         return aexti;
     }
 
-    __device__ Vector3 GetAcceleration(auto i) const
+    PBAT_DEVICE Vector3 GetAcceleration(auto i) const
     {
         // In the original VBD paper, they say that they estimate motion by computing the current
         // acceleration, i.e. a(t) = (v(t) - v(t-1)) / dt. However, acceleration is not a measure of
@@ -63,20 +64,20 @@ struct FAdaptiveInitialization
         return at;
     }
 
-    __device__ Vector3 GetLinearizedMotion(auto i) const
+    PBAT_DEVICE Vector3 GetLinearizedMotion(auto i) const
     {
         // We replace acceleration by the velocity's direction to actually estimate motion.
         Vector3 v;
         v(0) = vt[0][i];
         v(1) = vt[1][i];
         v(2) = vt[2][i];
-        using namespace pbat::gpu::math::linalg;
+        using namespace pbat::math::linalg::mini;
         return v / (Norm(v) + std::numeric_limits<GpuScalar>::min());
     }
 
-    __device__ void operator()(auto i)
+    PBAT_DEVICE void operator()(auto i)
     {
-        using namespace pbat::gpu::math::linalg;
+        using namespace pbat::math::linalg::mini;
         if (strategy == EInitializationStrategy::Position)
         {
             for (auto d = 0; d < 3; ++d)
@@ -149,7 +150,7 @@ struct FChebyshev
                            GpuScalar{4} / (GpuScalar{4} - rho2 * omega);
     }
 
-    __device__ void operator()(auto i)
+    PBAT_DEVICE void operator()(auto i)
     {
         for (auto d = 0; d < 3; ++d)
         {
@@ -171,7 +172,7 @@ struct FChebyshev
 
 struct FUpdateVelocity
 {
-    __device__ void operator()(auto i)
+    PBAT_DEVICE void operator()(auto i)
     {
         for (auto d = 0; d < 3; ++d)
         {
@@ -217,15 +218,13 @@ struct BackwardEulerMinimization
     GpuIndex*
         partition; ///< List of vertex indices that can be processed independently, i.e. in parallel
 
-    template <class ScalarType, auto kRows, auto kCols = 1>
-    using Matrix = pbat::gpu::math::linalg::Matrix<ScalarType, kRows, kCols>;
-
     template <class ScalarType>
-    __device__ Matrix<std::remove_const_t<ScalarType>, 3>
+    PBAT_DEVICE pbat::math::linalg::mini::SMatrix<std::remove_const_t<ScalarType>, 3>
     ToLocal(auto vi, std::array<ScalarType*, 3> vData) const
     {
+        using namespace pbat::math::linalg::mini;
         using UnderlyingScalarType = std::remove_const_t<ScalarType>;
-        Matrix<UnderlyingScalarType, 3> vlocal;
+        SMatrix<UnderlyingScalarType, 3> vlocal;
         vlocal(0) = vData[0][vi];
         vlocal(1) = vData[1][vi];
         vlocal(2) = vData[2][vi];
@@ -233,26 +232,29 @@ struct BackwardEulerMinimization
     }
 
     template <class ScalarType>
-    __device__ void
-    ToGlobal(auto vi, Matrix<ScalarType, 3> const& vData, std::array<ScalarType*, 3> vGlobalData)
-        const
+    PBAT_DEVICE void ToGlobal(
+        auto vi,
+        pbat::math::linalg::mini::SMatrix<ScalarType, 3> const& vData,
+        std::array<ScalarType*, 3> vGlobalData) const
     {
         vGlobalData[0][vi] = vData(0);
         vGlobalData[1][vi] = vData(1);
         vGlobalData[2][vi] = vData(2);
     }
 
-    __device__ Matrix<GpuScalar, 4, 3> BasisFunctionGradients(GpuIndex e) const;
+    PBAT_DEVICE pbat::math::linalg::mini::SMatrix<GpuScalar, 4, 3>
+    BasisFunctionGradients(GpuIndex e) const;
 
-    __device__ Matrix<GpuScalar, 3, 4> ElementVertexPositions(GpuIndex e) const;
+    PBAT_DEVICE pbat::math::linalg::mini::SMatrix<GpuScalar, 3, 4>
+    ElementVertexPositions(GpuIndex e) const;
 
-    __device__ Matrix<GpuScalar, 9, 10> StableNeoHookeanDerivativesWrtF(
+    PBAT_DEVICE pbat::math::linalg::mini::SMatrix<GpuScalar, 9, 10> StableNeoHookeanDerivativesWrtF(
         GpuIndex e,
-        Matrix<GpuScalar, 3, 3> const& Fe,
+        pbat::math::linalg::mini::SMatrix<GpuScalar, 3, 3> const& Fe,
         GpuScalar mu,
         GpuScalar lambda) const;
 
-    __device__ void
+    PBAT_DEVICE void
     ComputeStableNeoHookeanDerivatives(GpuIndex e, GpuIndex ilocal, GpuScalar* Hge) const;
 
     constexpr auto ExpectedSharedMemoryPerThreadInScalars() const { return 12; }

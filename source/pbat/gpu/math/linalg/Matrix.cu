@@ -2,13 +2,12 @@
 #include "pbat/gpu/DisableWarnings.h"
 // clang-format on
 
-#include <Eigen/Core>
-#include <Eigen/Geometry>
-
-#include "Matrix.cuh"
 #include "pbat/gpu/Aliases.h"
 #include "pbat/gpu/common/Buffer.cuh"
+#include "pbat/math/linalg/mini/Mini.h"
 
+#include <Eigen/Core>
+#include <Eigen/Geometry>
 #include <doctest/doctest.h>
 #include <thrust/copy.h>
 #include <thrust/execution_policy.h>
@@ -43,10 +42,10 @@ struct FTranspose
 {
     __device__ void operator()(GpuIndex i)
     {
-        using namespace pbat::gpu::math::linalg;
-        MatrixView<GpuScalar, 3, 3> Ad(data + 3 * 3 * i);
-        Matrix<GpuScalar, 3, 3> AdT = Ad.Transpose();
-        Ad                          = AdT;
+        using namespace pbat::math::linalg::mini;
+        SMatrixView<GpuScalar, 3, 3> Ad(data + 3 * 3 * i);
+        SMatrix<GpuScalar, 3, 3> AdT = Ad.Transpose();
+        Ad                           = AdT;
     }
     GpuScalar* data;
 };
@@ -55,10 +54,10 @@ struct FSubMatrix
 {
     __device__ void operator()(GpuIndex i)
     {
-        using namespace pbat::gpu::math::linalg;
-        MatrixView<GpuScalar, 3, 3> Ad(data + 3 * 3 * i);
-        Matrix<GpuScalar, 2, 2> Ads = Ad.Slice<2, 2>(1, 1);
-        Ad.Slice<2, 2>(0, 0)        = Ads;
+        using namespace pbat::math::linalg::mini;
+        SMatrixView<GpuScalar, 3, 3> Ad(data + 3 * 3 * i);
+        SMatrix<GpuScalar, 2, 2> Ads = Ad.Slice<2, 2>(1, 1);
+        Ad.Slice<2, 2>(0, 0)         = Ads;
     }
     GpuScalar* data;
 };
@@ -67,8 +66,8 @@ struct FTiledView
 {
     __device__ void operator()(GpuIndex i)
     {
-        using namespace pbat::gpu::math::linalg;
-        MatrixView<GpuScalar, 3, 3> Ad(data + 3 * 3 * i);
+        using namespace pbat::math::linalg::mini;
+        SMatrixView<GpuScalar, 3, 3> Ad(data + 3 * 3 * i);
         Ad.Slice<3, 2>(0, 1) = Repeat<1, 2>(Ad.Col(0));
     }
     GpuScalar* data;
@@ -78,10 +77,10 @@ struct FScaleAndSumTranspose
 {
     __device__ void operator()(GpuIndex i)
     {
-        using namespace pbat::gpu::math::linalg;
-        MatrixView<GpuScalar, 3, 3> Ad(data + 3 * 3 * i);
-        Matrix<GpuScalar, 3, 3> B = 2.f * Ad + Ad.Transpose();
-        Ad                        = B;
+        using namespace pbat::math::linalg::mini;
+        SMatrixView<GpuScalar, 3, 3> Ad(data + 3 * 3 * i);
+        SMatrix<GpuScalar, 3, 3> B = 2.f * Ad + Ad.Transpose();
+        Ad                         = B;
     }
     GpuScalar* data;
 };
@@ -90,8 +89,8 @@ struct FSquaredNorm
 {
     __device__ void operator()(GpuIndex i)
     {
-        using namespace pbat::gpu::math::linalg;
-        MatrixView<GpuScalar, 6, 3> Ad(data + 6 * 3 * i);
+        using namespace pbat::math::linalg::mini;
+        SMatrixView<GpuScalar, 6, 3> Ad(data + 6 * 3 * i);
         GpuScalar norm2 = SquaredNorm(Ad);
         Ad.SetConstant(norm2);
     }
@@ -102,10 +101,10 @@ struct FCrossProduct
 {
     __device__ void operator()(GpuIndex i)
     {
-        using namespace pbat::gpu::math::linalg;
-        MatrixView<GpuScalar, 3, 2> Ad(data + 3 * 2 * i);
-        Matrix<GpuScalar, 3, 1> cross = Cross(Ad.Col(0), Ad.Col(1));
-        Ad                            = Repeat<1, 2>(cross);
+        using namespace pbat::math::linalg::mini;
+        SMatrixView<GpuScalar, 3, 2> Ad(data + 3 * 2 * i);
+        SMatrix<GpuScalar, 3, 1> cross = Cross(Ad.Col(0), Ad.Col(1));
+        Ad                             = Repeat<1, 2>(cross);
     }
     GpuScalar* data;
 };
@@ -114,8 +113,8 @@ struct FDeterminant
 {
     __device__ void operator()(GpuIndex i)
     {
-        using namespace pbat::gpu::math::linalg;
-        MatrixView<GpuScalar, 3, 3> Ad(data + 3 * 3 * i);
+        using namespace pbat::math::linalg::mini;
+        SMatrixView<GpuScalar, 3, 3> Ad(data + 3 * 3 * i);
         GpuScalar const det = Determinant(Ad);
         Ad.SetConstant(det);
     }
@@ -126,10 +125,10 @@ struct FInverse
 {
     __device__ void operator()(GpuIndex i)
     {
-        using namespace pbat::gpu::math::linalg;
-        MatrixView<GpuScalar, 3, 3> Ad(data + 3 * 3 * i);
-        Matrix<GpuScalar, 3, 3> Ainv = Inverse(Ad);
-        Ad                           = Ainv;
+        using namespace pbat::math::linalg::mini;
+        SMatrixView<GpuScalar, 3, 3> Ad(data + 3 * 3 * i);
+        SMatrix<GpuScalar, 3, 3> Ainv = Inverse(Ad);
+        Ad                            = Ainv;
     }
     GpuScalar* data;
 };
@@ -138,8 +137,8 @@ struct FComposedOperation
 {
     __device__ void operator()(GpuIndex i)
     {
-        using namespace pbat::gpu::math::linalg;
-        MatrixView<GpuScalar, 3, 4> Ad(data + 3 * 4 * i);
+        using namespace pbat::math::linalg::mini;
+        SMatrixView<GpuScalar, 3, 4> Ad(data + 3 * 4 * i);
         auto B              = Ad.Slice<3, 3>(0, 1) - Repeat<1, 3>(Ad.Col(0));
         GpuScalar const tr  = Trace(Inverse(2.f * B));
         GpuScalar const det = Determinant((B * Ad) * (B * Ad).Transpose());
