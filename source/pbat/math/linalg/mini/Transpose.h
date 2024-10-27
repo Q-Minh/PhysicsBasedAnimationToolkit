@@ -57,6 +57,7 @@ class ConstTransposeSubMatrix
     {
         return (*this)(i % RowsAtCompileTime, i / RowsAtCompileTime);
     }
+    PBAT_HOST_DEVICE auto operator[](auto i) const { return (*this)(i); }
 
     template <auto S, auto T>
     PBAT_HOST_DEVICE ConstTransposeSubMatrix<SelfType, S, T> Slice(auto i, auto j) const
@@ -124,6 +125,8 @@ class TransposeSubMatrix
     {
         return (*this)(i % RowsAtCompileTime, i / RowsAtCompileTime);
     }
+    PBAT_HOST_DEVICE auto operator[](auto i) const { return (*this)(i); }
+    PBAT_HOST_DEVICE auto& operator[](auto i) { return (*this)(i); }
 
     template <auto S, auto T>
     PBAT_HOST_DEVICE TransposeSubMatrix<SelfType, S, T> Slice(auto i, auto j)
@@ -211,6 +214,8 @@ class TransposeView
     {
         return (*this)(i % RowsAtCompileTime, i / RowsAtCompileTime);
     }
+    PBAT_HOST_DEVICE auto operator[](auto i) const { return (*this)(i); }
+    PBAT_HOST_DEVICE auto& operator[](auto i) { return (*this)(i); }
 
     template <auto S, auto T>
     PBAT_HOST_DEVICE TransposeSubMatrix<SelfType, S, T> Slice(auto i, auto j)

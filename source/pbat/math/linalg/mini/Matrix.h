@@ -33,6 +33,7 @@ class Ones
 
     // Vector(ized) access
     PBAT_HOST_DEVICE auto operator()(auto i) const { return Scalar{1}; }
+    PBAT_HOST_DEVICE auto operator[](auto i) const { return (*this)(i); }
 
     template <auto S, auto T>
     PBAT_HOST_DEVICE Ones<Scalar, S, T> Slice(auto i, auto j) const
@@ -71,6 +72,7 @@ class Zeros
 
     // Vector(ized) access
     PBAT_HOST_DEVICE auto operator()(auto i) const { return Scalar{0}; }
+    PBAT_HOST_DEVICE auto operator[](auto i) const { return (*this)(i); }
 
     template <auto S, auto T>
     PBAT_HOST_DEVICE Zeros<Scalar, S, T> Slice(auto i, auto j) const
@@ -112,6 +114,7 @@ class Identity
     {
         return (*this)(i % RowsAtCompileTime, i / RowsAtCompileTime);
     }
+    PBAT_HOST_DEVICE auto operator[](auto i) const { return (*this)(i); }
 
     template <auto S, auto T>
     PBAT_HOST_DEVICE ConstSubMatrix<SelfType, S, T> Slice(auto i, auto j) const
@@ -153,6 +156,7 @@ class Diagonal
 
     // Vector(ized) access
     PBAT_HOST_DEVICE auto operator()(auto i) const { return A(i, i); }
+    PBAT_HOST_DEVICE auto operator[](auto i) const { return (*this)(i); }
 
     template <auto S, auto T>
     PBAT_HOST_DEVICE ConstSubMatrix<SelfType, S, T> Slice(auto i, auto j) const
@@ -234,6 +238,8 @@ class SMatrix
     // Vector(ized) access
     PBAT_HOST_DEVICE auto operator()(auto i) const { return a[i]; }
     PBAT_HOST_DEVICE auto& operator()(auto i) { return a[i]; }
+    PBAT_HOST_DEVICE auto operator[](auto i) const { return a[i]; }
+    PBAT_HOST_DEVICE auto& operator[](auto i) { return a[i]; }
 
     // Smart accessors
     template <auto S, auto T>
@@ -319,6 +325,8 @@ class SMatrixView
     // Vector(ized) access
     PBAT_HOST_DEVICE auto operator()(auto i) const { return mA[i]; }
     PBAT_HOST_DEVICE auto& operator()(auto i) { return mA[i]; }
+    PBAT_HOST_DEVICE auto operator[](auto i) const { return mA[i]; }
+    PBAT_HOST_DEVICE auto& operator[](auto i) { return mA[i]; }
 
     // Smart accessors
     template <auto S, auto T>
@@ -391,6 +399,7 @@ class TiledView
     {
         return (*this)(i % RowsAtCompileTime, i / RowsAtCompileTime);
     }
+    PBAT_HOST_DEVICE auto operator[](auto i) const { return (*this)(i); }
 
     // Smart accessors
     template <auto S, auto T>

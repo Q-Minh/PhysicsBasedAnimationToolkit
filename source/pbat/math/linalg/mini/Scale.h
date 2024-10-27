@@ -39,6 +39,7 @@ class Scale
     {
         return (*this)(i % RowsAtCompileTime, i / RowsAtCompileTime);
     }
+    PBAT_HOST_DEVICE auto operator[](auto i) const { return (*this)(i); }
 
     template <auto S, auto T>
     PBAT_HOST_DEVICE ConstSubMatrix<SelfType, S, T> Slice(auto i, auto j) const
