@@ -35,6 +35,7 @@ class ConstTransposeSubMatrix
 
     static auto constexpr RowsAtCompileTime = M;
     static auto constexpr ColsAtCompileTime = N;
+    static bool constexpr IsRowMajor        = NestedType::IsRowMajor;
 
     PBAT_HOST_DEVICE ConstTransposeSubMatrix(NestedType const& A, auto ib = 0, auto jb = 0)
         : A(A), ib(ib), jb(jb)
@@ -89,6 +90,7 @@ class TransposeSubMatrix
 
     static auto constexpr RowsAtCompileTime = M;
     static auto constexpr ColsAtCompileTime = N;
+    static bool constexpr IsRowMajor        = NestedType::IsRowMajor;
 
     PBAT_HOST_DEVICE TransposeSubMatrix(NestedType& A, auto ib = 0, auto jb = 0)
         : A(A), ib(ib), jb(jb)
@@ -183,6 +185,7 @@ class TransposeView
 
     static auto constexpr RowsAtCompileTime = NestedType::ColsAtCompileTime;
     static auto constexpr ColsAtCompileTime = NestedType::RowsAtCompileTime;
+    static bool constexpr IsRowMajor        = not NestedType::IsRowMajor;
 
     PBAT_HOST_DEVICE TransposeView(NestedType& A) : A(A) {}
 
@@ -273,6 +276,7 @@ class ConstTransposeView
 
     static auto constexpr RowsAtCompileTime = NestedType::ColsAtCompileTime;
     static auto constexpr ColsAtCompileTime = NestedType::RowsAtCompileTime;
+    static bool constexpr IsRowMajor        = not NestedType::IsRowMajor;
 
     PBAT_HOST_DEVICE ConstTransposeView(NestedType const& A) : A(A) {}
 

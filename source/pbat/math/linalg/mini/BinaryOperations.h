@@ -27,6 +27,7 @@ class Sum
 
     static auto constexpr RowsAtCompileTime = LhsNestedType::RowsAtCompileTime;
     static auto constexpr ColsAtCompileTime = RhsNestedType::ColsAtCompileTime;
+    static bool constexpr IsRowMajor        = LhsNestedType::IsRowMajor;
 
     PBAT_HOST_DEVICE Sum(LhsNestedType const& A, RhsNestedType const& B) : A(A), B(B)
     {
@@ -82,6 +83,7 @@ class Minimum
 
     static auto constexpr RowsAtCompileTime = LhsNestedType::RowsAtCompileTime;
     static auto constexpr ColsAtCompileTime = RhsNestedType::ColsAtCompileTime;
+    static bool constexpr IsRowMajor        = LhsNestedType::IsRowMajor;
 
     PBAT_HOST_DEVICE Minimum(LhsNestedType const& A, RhsNestedType const& B) : A(A), B(B)
     {
@@ -137,6 +139,7 @@ class Maximum
 
     static auto constexpr RowsAtCompileTime = LhsNestedType::RowsAtCompileTime;
     static auto constexpr ColsAtCompileTime = RhsNestedType::ColsAtCompileTime;
+    static bool constexpr IsRowMajor        = LhsNestedType::IsRowMajor;
 
     PBAT_HOST_DEVICE Maximum(LhsNestedType const& A, RhsNestedType const& B) : A(A), B(B)
     {

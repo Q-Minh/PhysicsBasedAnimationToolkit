@@ -23,6 +23,7 @@ class ConstSubMatrix
 
     static auto constexpr RowsAtCompileTime = M;
     static auto constexpr ColsAtCompileTime = N;
+    static bool constexpr IsRowMajor        = NestedType::IsRowMajor;
 
     PBAT_HOST_DEVICE ConstSubMatrix(NestedType const& A, auto ib = 0, auto jb = 0)
         : A(A), ib(ib), jb(jb)
@@ -77,6 +78,7 @@ class SubMatrix
 
     static auto constexpr RowsAtCompileTime = M;
     static auto constexpr ColsAtCompileTime = N;
+    static bool constexpr IsRowMajor        = NestedType::IsRowMajor;
 
     PBAT_HOST_DEVICE SubMatrix(NestedType& A, auto ib = 0, auto jb = 0) : A(A), ib(ib), jb(jb)
     {

@@ -26,6 +26,7 @@ class Product
 
     static auto constexpr RowsAtCompileTime = LhsNestedType::RowsAtCompileTime;
     static auto constexpr ColsAtCompileTime = RhsNestedType::ColsAtCompileTime;
+    static bool constexpr IsRowMajor        = false;
 
     PBAT_HOST_DEVICE Product(LhsNestedType const& A, RhsNestedType const& B) : A(A), B(B) {}
 

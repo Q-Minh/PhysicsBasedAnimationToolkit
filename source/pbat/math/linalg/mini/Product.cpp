@@ -1,11 +1,10 @@
 #include "Product.h"
 
-namespace pbat {
-namespace math {
-namespace linalg {
-namespace mini {
+#include <doctest/doctest.h>
+#include "pbat/Aliases.h"
 
-} // namespace mini
-} // namespace linalg
-} // namespace math
-} // namespace pbat
+TEST_CASE("[math][linalg][mini] Product")
+{
+    using namespace pbat::math::linalg::mini;
+    
+}

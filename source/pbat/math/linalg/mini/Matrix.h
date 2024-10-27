@@ -23,6 +23,7 @@ class Ones
 
     static auto constexpr RowsAtCompileTime = M;
     static auto constexpr ColsAtCompileTime = N;
+    static bool constexpr IsRowMajor        = false;
 
     PBAT_HOST_DEVICE constexpr auto Rows() const { return RowsAtCompileTime; }
     PBAT_HOST_DEVICE constexpr auto Cols() const { return ColsAtCompileTime; }
@@ -60,6 +61,7 @@ class Zeros
 
     static auto constexpr RowsAtCompileTime = M;
     static auto constexpr ColsAtCompileTime = N;
+    static bool constexpr IsRowMajor        = false;
 
     PBAT_HOST_DEVICE constexpr auto Rows() const { return RowsAtCompileTime; }
     PBAT_HOST_DEVICE constexpr auto Cols() const { return ColsAtCompileTime; }
@@ -97,6 +99,7 @@ class Identity
 
     static auto constexpr RowsAtCompileTime = M;
     static auto constexpr ColsAtCompileTime = N;
+    static bool constexpr IsRowMajor        = false;
 
     PBAT_HOST_DEVICE constexpr auto Rows() const { return RowsAtCompileTime; }
     PBAT_HOST_DEVICE constexpr auto Cols() const { return ColsAtCompileTime; }
@@ -138,6 +141,7 @@ class Diagonal
 
     static auto constexpr RowsAtCompileTime = NestedType::RowsAtCompileTime;
     static auto constexpr ColsAtCompileTime = 1;
+    static bool constexpr IsRowMajor        = false;
 
     PBAT_HOST_DEVICE Diagonal(NestedType const& A) : A(A) {}
 
@@ -182,11 +186,13 @@ class SMatrix
 
     static auto constexpr RowsAtCompileTime = M;
     static auto constexpr ColsAtCompileTime = N;
+    static bool constexpr IsRowMajor        = false;
 
     template <class /*CMatrix*/ TMatrix>
     PBAT_HOST_DEVICE SMatrix(TMatrix&& B) : a()
     {
         using MatrixType = std::remove_cvref_t<TMatrix>;
+        static_assert(CMatrix<MatrixType>, "B must satisfy CMatrix");
         static_assert(
             MatrixType::RowsAtCompileTime == RowsAtCompileTime and
                 MatrixType::ColsAtCompileTime == ColsAtCompileTime,
@@ -289,6 +295,7 @@ class SMatrixView
 
     static auto constexpr RowsAtCompileTime = M;
     static auto constexpr ColsAtCompileTime = N;
+    static bool constexpr IsRowMajor        = false;
 
     PBAT_HOST_DEVICE SMatrixView(Scalar* a) : mA(a) {}
 
@@ -382,6 +389,7 @@ class TiledView
 
     static auto constexpr RowsAtCompileTime = RepeatRows * NestedType::RowsAtCompileTime;
     static auto constexpr ColsAtCompileTime = RepeatCols * NestedType::ColsAtCompileTime;
+    static bool constexpr IsRowMajor        = NestedType::IsRowMajor;
 
     PBAT_HOST_DEVICE TiledView(NestedType const& A) : A(A) {}
 

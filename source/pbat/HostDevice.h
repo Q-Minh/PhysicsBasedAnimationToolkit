@@ -1,7 +1,7 @@
 #ifndef PBAT_HOST_DEVICE_H
 #define PBAT_HOST_DEVICE_H
 
-#ifdef PBAT_GPU_SOURCE
+#if defined(__CUDACC__) 
     #define PBAT_HOST   __host__
     #define PBAT_DEVICE __device__
 #else

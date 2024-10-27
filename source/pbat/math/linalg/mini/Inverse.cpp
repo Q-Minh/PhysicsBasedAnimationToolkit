@@ -1,11 +1,10 @@
 #include "Inverse.h"
 
-namespace pbat {
-namespace math {
-namespace linalg {
-namespace mini {
+#include <doctest/doctest.h>
+#include "pbat/Aliases.h"
 
-} // namespace mini
-} // namespace linalg
-} // namespace math
-} // namespace pbat
+TEST_CASE("[math][linalg][mini] Inverse")
+{
+    using namespace pbat::math::linalg::mini;
+    
+}

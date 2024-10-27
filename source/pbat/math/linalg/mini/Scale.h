@@ -24,6 +24,7 @@ class Scale
 
     static auto constexpr RowsAtCompileTime = NestedType::RowsAtCompileTime;
     static auto constexpr ColsAtCompileTime = NestedType::ColsAtCompileTime;
+    static bool constexpr IsRowMajor        = NestedType::IsRowMajor;
 
     PBAT_HOST_DEVICE Scale(Scalar k, NestedType const& A) : k(k), A(A) {}
 

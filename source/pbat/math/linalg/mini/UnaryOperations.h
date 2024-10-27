@@ -24,6 +24,7 @@ class Square
 
     static auto constexpr RowsAtCompileTime = NestedType::RowsAtCompileTime;
     static auto constexpr ColsAtCompileTime = NestedType::ColsAtCompileTime;
+    static bool constexpr IsRowMajor        = NestedType::IsRowMajor;
 
     PBAT_HOST_DEVICE Square(NestedType const& A) : A(A) {}
 

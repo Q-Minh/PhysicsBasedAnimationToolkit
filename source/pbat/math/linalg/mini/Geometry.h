@@ -33,6 +33,7 @@ class CrossProduct
 
     static auto constexpr RowsAtCompileTime = 3;
     static auto constexpr ColsAtCompileTime = 1;
+    static bool constexpr IsRowMajor        = false;
 
     PBAT_HOST_DEVICE CrossProduct(LhsNestedType const& A, RhsNestedType const& B) : A(A), B(B) {}
 

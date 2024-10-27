@@ -106,7 +106,7 @@ if(PBAT_USE_CUDA)
                 COMPILE_OPTIONS
                 "--expt-relaxed-constexpr;--extended-lambda"
                 COMPILE_DEFINITIONS
-                "_SILENCE_ALL_CXX20_DEPRECATION_WARNINGS;PBAT_GPU_SOURCE"
+                "_SILENCE_ALL_CXX20_DEPRECATION_WARNINGS"
             )
         endif()
     endforeach()

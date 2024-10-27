@@ -20,14 +20,20 @@ concept CMatrix = requires(TMatrix M)
     {
         TMatrix::ColsAtCompileTime
     } -> std::convertible_to<int>;
-    // {
-    //     TMatrix::IsRowMajor
-    // } -> std::convertible_to<bool>;
+    {
+        TMatrix::IsRowMajor
+    } -> std::convertible_to<bool>;
     // WARNING: This constraint causes compile errors with nvcc, I don't know why!
-    // {
-    //     M(std::declval<int>(), std::declval<int>())
-    // } -> std::convertible_to<typename TMatrix::Scalar>;
+#if not defined(__CUDACC__)
+    {
+        M(std::declval<int>(), std::declval<int>())
+    } -> std::convertible_to<typename TMatrix::Scalar>;
+#endif
 };
+
+// WARNING: These constraints don't copmile with nvcc, unfortunately. Only use CMatrix concept is
+// CUDA code.
+#if not defined(__CUDACC__)
 
 template <class TMatrix>
 concept CReadableMatrix = CMatrix<TMatrix> && requires(TMatrix M)
@@ -79,6 +85,8 @@ concept CWriteableVectorizedMatrix = CMatrix<TMatrix> && requires(TMatrix M)
     {M(std::declval<int>()) = std::declval<typename TMatrix::Scalar>()};
     {M[std::declval<int>()] = std::declval<typename TMatrix::Scalar>()};
 };
+
+#endif // not defined(__CUDACC__)
 
 } // namespace mini
 } // namespace linalg
