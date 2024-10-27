@@ -1,6 +1,7 @@
 #ifndef PBAT_MATH_LINALG_MINI_TRANSPOSE_H
 #define PBAT_MATH_LINALG_MINI_TRANSPOSE_H
 
+#include "Assign.h"
 #include "Concepts.h"
 #include "pbat/HostDevice.h"
 
@@ -104,19 +105,7 @@ class TransposeSubMatrix
     template <class /*CMatrix*/ TOtherMatrix>
     PBAT_HOST_DEVICE SelfType& operator=(TOtherMatrix&& B)
     {
-        using OtherMatrixType = std::remove_cvref_t<TOtherMatrix>;
-        static_assert(CMatrix<OtherMatrixType>, "B must satisfy CMatrix");
-        static_assert(
-            OtherMatrixType::RowsAtCompileTime == RowsAtCompileTime and
-                OtherMatrixType::ColsAtCompileTime == ColsAtCompileTime,
-            "Invalid submatrix dimensions");
-        auto fRows = [&]<auto... I>(auto j, std::index_sequence<I...>) {
-            (((*this)(I, j) = std::forward<TOtherMatrix>(B)(I, j)), ...);
-        };
-        auto fCols = [&]<auto... J>(std::index_sequence<J...>) {
-            (fRows(J, std::make_index_sequence<RowsAtCompileTime>()), ...);
-        };
-        fCols(std::make_index_sequence<ColsAtCompileTime>());
+        Assign(*this, std::forward<TOtherMatrix>(B));
         return *this;
     }
 
@@ -192,15 +181,7 @@ class TransposeView
     template <class TOtherMatrix>
     PBAT_HOST_DEVICE SelfType& operator=(TOtherMatrix&& B)
     {
-        using OtherMatrixType = std::remove_cvref_t<TOtherMatrix>;
-        static_assert(CMatrix<OtherMatrixType>, "B must satisfy CMatrix");
-        auto fRows = [&]<auto... I>(auto j, std::index_sequence<I...>) {
-            (((*this)(I, j) = std::forward<TOtherMatrix>(B)(I, j)), ...);
-        };
-        auto fCols = [&]<auto... J>(std::index_sequence<J...>) {
-            (fRows(J, std::make_index_sequence<RowsAtCompileTime>()), ...);
-        };
-        fCols(std::make_index_sequence<ColsAtCompileTime>());
+        Assign(*this, std::forward<TOtherMatrix>(B));
         return *this;
     }
 

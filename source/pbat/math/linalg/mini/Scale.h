@@ -1,6 +1,7 @@
 #ifndef PBAT_MATH_LINALG_MINI_SCALE_H
 #define PBAT_MATH_LINALG_MINI_SCALE_H
 
+#include "Assign.h"
 #include "Concepts.h"
 #include "SubMatrix.h"
 #include "Transpose.h"
@@ -79,15 +80,7 @@ PBAT_HOST_DEVICE auto operator*(TMatrix&& A, typename std::remove_cvref_t<TMatri
 template <class /*CMatrix*/ TMatrix>
 PBAT_HOST_DEVICE auto operator*=(TMatrix&& A, typename std::remove_cvref_t<TMatrix>::Scalar k)
 {
-    using MatrixType = std::remove_cvref_t<TMatrix>;
-    static_assert(CMatrix<MatrixType>, "Input must satisfy concept CMatrix");
-    auto fRows = [&]<auto... I>(auto j, std::index_sequence<I...>) {
-        ((std::forward<TMatrix>(A)(I, j) *= k), ...);
-    };
-    auto fCols = [&]<auto... J>(std::index_sequence<J...>) {
-        (fRows(J, std::make_index_sequence<MatrixType::RowsAtCompileTime>()), ...);
-    };
-    fCols(std::make_index_sequence<MatrixType::ColsAtCompileTime>());
+    MultiplyAssign(std::forward<TMatrix>(A), k);
     return A;
 }
 
@@ -96,22 +89,14 @@ PBAT_HOST_DEVICE auto operator/(TMatrix&& A, typename std::remove_cvref_t<TMatri
 {
     using MatrixType = std::remove_cvref_t<TMatrix>;
     static_assert(CMatrix<MatrixType>, "Input must satisfy concept CMatrix");
-    using Scalar = typename MatrixType::Scalar;
-    return Scale<MatrixType>(Scalar(1. / k), std::forward<TMatrix>(A));
+    using ScalarType = typename MatrixType::Scalar;
+    return Scale<MatrixType>(ScalarType(1. / k), std::forward<TMatrix>(A));
 }
 
 template <class /*CMatrix*/ TMatrix>
 PBAT_HOST_DEVICE auto operator/=(TMatrix&& A, typename std::remove_cvref_t<TMatrix>::Scalar k)
 {
-    using MatrixType = std::remove_cvref_t<TMatrix>;
-    static_assert(CMatrix<MatrixType>, "Input must satisfy concept CMatrix");
-    auto fRows = [&]<auto... I>(auto j, std::index_sequence<I...>) {
-        ((std::forward<TMatrix>(A)(I, j) /= k), ...);
-    };
-    auto fCols = [&]<auto... J>(std::index_sequence<J...>) {
-        (fRows(J, std::make_index_sequence<MatrixType::RowsAtCompileTime>()), ...);
-    };
-    fCols(std::make_index_sequence<MatrixType::ColsAtCompileTime>());
+    DivideAssign(std::forward<TMatrix>(A), k);
     return A;
 }
 

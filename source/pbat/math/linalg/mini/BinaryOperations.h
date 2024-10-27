@@ -1,6 +1,7 @@
 #ifndef PBAT_MATH_LINALG_MINI_BINARY_OPERATIONS_H
 #define PBAT_MATH_LINALG_MINI_BINARY_OPERATIONS_H
 
+#include "Assign.h"
 #include "Concepts.h"
 #include "Scale.h"
 #include "SubMatrix.h"
@@ -198,17 +199,7 @@ PBAT_HOST_DEVICE auto operator+(TLhsMatrix&& A, TRhsMatrix&& B)
 template <class /*CMatrix*/ TLhsMatrix, class /*CMatrix*/ TRhsMatrix>
 PBAT_HOST_DEVICE auto operator+=(TLhsMatrix&& A, TRhsMatrix&& B)
 {
-    using LhsMatrixType = std::remove_cvref_t<TLhsMatrix>;
-    static_assert(CMatrix<LhsMatrixType>, "Input must satisfy concept CMatrix");
-    using RhsMatrixType = std::remove_cvref_t<TRhsMatrix>;
-    static_assert(CMatrix<RhsMatrixType>, "Input must satisfy concept CMatrix");
-    auto fRows = [&]<auto... I>(auto j, std::index_sequence<I...>) {
-        ((std::forward<TLhsMatrix>(A)(I, j) += std::forward<TRhsMatrix>(B)(I, j)), ...);
-    };
-    auto fCols = [&]<auto... J>(std::index_sequence<J...>) {
-        (fRows(J, std::make_index_sequence<LhsMatrixType::RowsAtCompileTime>()), ...);
-    };
-    fCols(std::make_index_sequence<LhsMatrixType::ColsAtCompileTime>());
+    AddAssign(std::forward<TLhsMatrix>(A), std::forward<TRhsMatrix>(B));
     return A;
 }
 
@@ -227,21 +218,7 @@ PBAT_HOST_DEVICE auto operator-(TLhsMatrix&& A, TRhsMatrix&& B)
 template <class /*CMatrix*/ TLhsMatrix, class /*CMatrix*/ TRhsMatrix>
 PBAT_HOST_DEVICE auto operator-=(TLhsMatrix&& A, TRhsMatrix&& B)
 {
-    using LhsMatrixType = std::remove_cvref_t<TLhsMatrix>;
-    static_assert(CMatrix<LhsMatrixType>, "Input must satisfy concept CMatrix");
-    using RhsMatrixType = std::remove_cvref_t<TRhsMatrix>;
-    static_assert(CMatrix<RhsMatrixType>, "Input must satisfy concept CMatrix");
-    static_assert(
-        LhsMatrixType::RowsAtCompileTime == RhsMatrixType::RowsAtCompileTime and
-            LhsMatrixType::ColsAtCompileTime == RhsMatrixType::ColsAtCompileTime,
-        "A and B must have same dimensions");
-    auto fRows = [&]<auto... I>(auto j, std::index_sequence<I...>) {
-        ((std::forward<TLhsMatrix>(A)(I, j) -= std::forward<TRhsMatrix>(B)(I, j)), ...);
-    };
-    auto fCols = [&]<auto... J>(std::index_sequence<J...>) {
-        (fRows(J, std::make_index_sequence<LhsMatrixType::RowsAtCompileTime>()), ...);
-    };
-    fCols(std::make_index_sequence<LhsMatrixType::ColsAtCompileTime>());
+    SubtractAssign(std::forward<TLhsMatrix>(A), std::forward<TRhsMatrix>(B));
     return A;
 }
 

@@ -1,10 +1,10 @@
 #ifndef PBAT_MATH_LINALG_MINI_MINI_H
 #define PBAT_MATH_LINALG_MINI_MINI_H
 
+#include "Assign.h"
 #include "BinaryOperations.h"
 #include "Concepts.h"
 #include "Determinant.h"
-#include "Fold.h"
 #include "Geometry.h"
 #include "Inverse.h"
 #include "Matrix.h"

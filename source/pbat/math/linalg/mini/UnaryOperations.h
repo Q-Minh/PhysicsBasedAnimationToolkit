@@ -66,8 +66,8 @@ PBAT_HOST_DEVICE auto operator-(TMatrix&& A)
 {
     using MatrixType = std::remove_cvref_t<TMatrix>;
     static_assert(CMatrix<MatrixType>, "Input must satisfy concept CMatrix");
-    using Scalar = typename MatrixType::Scalar;
-    return Scale<MatrixType>(Scalar(-1.), std::forward<TMatrix>(A));
+    using ScalarType = typename MatrixType::Scalar;
+    return Scale<MatrixType>(ScalarType(-1.), std::forward<TMatrix>(A));
 }
 
 template <class /*CMatrix*/ TMatrix>

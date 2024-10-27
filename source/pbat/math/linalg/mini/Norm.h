@@ -25,8 +25,8 @@ PBAT_HOST_DEVICE auto Norm(TMatrix&& A)
 {
     using MatrixType = std::remove_cvref_t<TMatrix>;
     static_assert(CMatrix<MatrixType>, "Input must satisfy concept CMatrix");
-    using Scalar = typename MatrixType::Scalar;
-    if constexpr (std::is_same_v<Scalar, float>)
+    using ScalarType = typename MatrixType::Scalar;
+    if constexpr (std::is_same_v<ScalarType, float>)
     {
         return sqrtf(SquaredNorm(std::forward<TMatrix>(A)));
     }

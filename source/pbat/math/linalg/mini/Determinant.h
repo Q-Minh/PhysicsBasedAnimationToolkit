@@ -36,8 +36,8 @@ PBAT_HOST_DEVICE auto Determinant(TMatrix&& A)
                A(0, 1) * (A(1, 0) * A(2, 2) - A(2, 0) * A(1, 2)) +
                A(0, 2) * (A(1, 0) * A(2, 1) - A(2, 0) * A(1, 1));
     }
-    using Scalar = typename MatrixType::Scalar;
-    return Scalar{0.};
+    using ScalarType = typename MatrixType::Scalar;
+    return ScalarType{0.};
 }
 
 } // namespace mini

@@ -1,6 +1,7 @@
 #ifndef PBAT_MATH_LINALG_MINI_MATRIX_CUH
 #define PBAT_MATH_LINALG_MINI_MATRIX_CUH
 
+#include "Assign.h"
 #include "Concepts.h"
 #include "SubMatrix.h"
 #include "Transpose.h"
@@ -209,15 +210,7 @@ class SMatrix
     template <class TMatrix>
     PBAT_HOST_DEVICE SelfType& operator=(TMatrix&& B)
     {
-        using OtherMatrixType = std::remove_cvref_t<TMatrix>;
-        static_assert(CMatrix<OtherMatrixType>, "B must satisfy CMatrix");
-        auto fRows = [&]<auto... I>(auto j, std::index_sequence<I...>) {
-            (((*this)(I, j) = std::forward<TMatrix>(B)(I, j)), ...);
-        };
-        auto fCols = [&]<auto... J>(std::index_sequence<J...>) {
-            (fRows(J, std::make_index_sequence<RowsAtCompileTime>()), ...);
-        };
-        fCols(std::make_index_sequence<ColsAtCompileTime>());
+        Assign(*this, std::forward<TMatrix>(B));
         return *this;
     }
 
@@ -302,15 +295,7 @@ class SMatrixView
     template <class /*CMatrix*/ TMatrix>
     PBAT_HOST_DEVICE SelfType& operator=(TMatrix&& B)
     {
-        using OtherMatrixType = std::remove_cvref_t<TMatrix>;
-        static_assert(CMatrix<OtherMatrixType>, "B must satisfy CMatrix");
-        auto fRows = [&]<auto... I>(auto j, std::index_sequence<I...>) {
-            (((*this)(I, j) = std::forward<TMatrix>(B)(I, j)), ...);
-        };
-        auto fCols = [&]<auto... J>(std::index_sequence<J...>) {
-            (fRows(J, std::make_index_sequence<RowsAtCompileTime>()), ...);
-        };
-        fCols(std::make_index_sequence<ColsAtCompileTime>());
+        Assign(*this, std::forward<TMatrix>(B));
         return *this;
     }
 

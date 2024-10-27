@@ -2,10 +2,10 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     PUBLIC
     FILE_SET api
     FILES
+    "Assign.h"
     "BinaryOperations.h"
     "Concepts.h"
     "Determinant.h"
-    "Fold.h"
     "Geometry.h"
     "Inverse.h"
     "Matrix.h"
@@ -20,9 +20,9 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
 )
 target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     PRIVATE
+    "Assign.cpp"
     "BinaryOperations.cpp"
     "Determinant.cpp"
-    "Fold.cpp"
     "Geometry.cpp"
     "Inverse.cpp"
     "Matrix.cpp"
