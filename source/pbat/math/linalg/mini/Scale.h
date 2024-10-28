@@ -1,10 +1,9 @@
 #ifndef PBAT_MATH_LINALG_MINI_SCALE_H
 #define PBAT_MATH_LINALG_MINI_SCALE_H
 
+#include "Api.h"
 #include "Assign.h"
 #include "Concepts.h"
-#include "SubMatrix.h"
-#include "Transpose.h"
 #include "pbat/HostDevice.h"
 
 #include <type_traits>
@@ -20,85 +19,72 @@ class Scale
 {
   public:
     using NestedType = TMatrix;
-    using Scalar     = typename NestedType::Scalar;
+    using ScalarType = typename NestedType::ScalarType;
     using SelfType   = Scale<NestedType>;
 
-    static auto constexpr RowsAtCompileTime = NestedType::RowsAtCompileTime;
-    static auto constexpr ColsAtCompileTime = NestedType::ColsAtCompileTime;
-    static bool constexpr IsRowMajor        = NestedType::IsRowMajor;
+    static auto constexpr kRows     = NestedType::kRows;
+    static auto constexpr kCols     = NestedType::kCols;
+    static bool constexpr bRowMajor = NestedType::bRowMajor;
 
-    PBAT_HOST_DEVICE Scale(Scalar k, NestedType const& A) : k(k), A(A) {}
+    PBAT_HOST_DEVICE Scale(ScalarType k, NestedType const& A) : k(k), A(A) {}
 
-    PBAT_HOST_DEVICE constexpr auto Rows() const { return RowsAtCompileTime; }
-    PBAT_HOST_DEVICE constexpr auto Cols() const { return ColsAtCompileTime; }
-
-    PBAT_HOST_DEVICE auto operator()(auto i, auto j) const { return k * A(i, j); }
+    PBAT_HOST_DEVICE ScalarType operator()(auto i, auto j) const { return k * A(i, j); }
 
     // Vector(ized) access
-    PBAT_HOST_DEVICE auto operator()(auto i) const
-    {
-        return (*this)(i % RowsAtCompileTime, i / RowsAtCompileTime);
-    }
-    PBAT_HOST_DEVICE auto operator[](auto i) const { return (*this)(i); }
+    PBAT_HOST_DEVICE ScalarType operator()(auto i) const { return (*this)(i % kRows, i / kRows); }
+    PBAT_HOST_DEVICE ScalarType operator[](auto i) const { return (*this)(i); }
 
-    template <auto S, auto T>
-    PBAT_HOST_DEVICE ConstSubMatrix<SelfType, S, T> Slice(auto i, auto j) const
-    {
-        return ConstSubMatrix<SelfType, S, T>(*this, i, j);
-    }
-    PBAT_HOST_DEVICE ConstSubMatrix<SelfType, RowsAtCompileTime, 1> Col(auto j) const
-    {
-        return Slice<RowsAtCompileTime, 1>(0, j);
-    }
-    PBAT_HOST_DEVICE ConstSubMatrix<SelfType, 1, ColsAtCompileTime> Row(auto i) const
-    {
-        return Slice<1, ColsAtCompileTime>(i, 0);
-    }
-    PBAT_HOST_DEVICE ConstTransposeView<SelfType> Transpose() const
-    {
-        return ConstTransposeView<SelfType>(*this);
-    }
+    PBAT_MINI_READ_API(SelfType)
 
   private:
-    Scalar k;
+    ScalarType k;
     NestedType const& A;
 };
 
 template <class /*CMatrix*/ TMatrix>
-PBAT_HOST_DEVICE auto operator*(typename std::remove_cvref_t<TMatrix>::Scalar k, TMatrix&& A)
+PBAT_HOST_DEVICE auto operator*(typename std::remove_cvref_t<TMatrix>::ScalarType k, TMatrix&& A)
 {
     using MatrixType = std::remove_cvref_t<TMatrix>;
-    static_assert(CMatrix<MatrixType>, "Input must satisfy concept CMatrix");
+    PBAT_MINI_CHECK_CMATRIX(MatrixType);
     return Scale<MatrixType>(k, std::forward<TMatrix>(A));
 }
 
 template <class /*CMatrix*/ TMatrix>
-PBAT_HOST_DEVICE auto operator*(TMatrix&& A, typename std::remove_cvref_t<TMatrix>::Scalar k)
+PBAT_HOST_DEVICE auto operator*(TMatrix&& A, typename std::remove_cvref_t<TMatrix>::ScalarType k)
 {
     return k * std::forward<TMatrix>(A);
 }
 
 template <class /*CMatrix*/ TMatrix>
-PBAT_HOST_DEVICE auto operator*=(TMatrix&& A, typename std::remove_cvref_t<TMatrix>::Scalar k)
+PBAT_HOST_DEVICE auto operator*=(TMatrix&& A, typename std::remove_cvref_t<TMatrix>::ScalarType k)
 {
     MultiplyAssign(std::forward<TMatrix>(A), k);
     return A;
 }
 
 template <class /*CMatrix*/ TMatrix>
-PBAT_HOST_DEVICE auto operator/(TMatrix&& A, typename std::remove_cvref_t<TMatrix>::Scalar k)
+PBAT_HOST_DEVICE auto operator/(TMatrix&& A, typename std::remove_cvref_t<TMatrix>::ScalarType k)
 {
     using MatrixType = std::remove_cvref_t<TMatrix>;
-    static_assert(CMatrix<MatrixType>, "Input must satisfy concept CMatrix");
-    using ScalarType = typename MatrixType::Scalar;
+    PBAT_MINI_CHECK_CMATRIX(MatrixType);
+    using ScalarType = typename MatrixType::ScalarType;
     return Scale<MatrixType>(ScalarType(1. / k), std::forward<TMatrix>(A));
 }
 
 template <class /*CMatrix*/ TMatrix>
-PBAT_HOST_DEVICE auto operator/=(TMatrix&& A, typename std::remove_cvref_t<TMatrix>::Scalar k)
+PBAT_HOST_DEVICE auto operator/=(TMatrix&& A, typename std::remove_cvref_t<TMatrix>::ScalarType k)
 {
     DivideAssign(std::forward<TMatrix>(A), k);
     return A;
+}
+
+template <class /*CMatrix*/ TMatrix>
+PBAT_HOST_DEVICE auto operator-(TMatrix&& A)
+{
+    using MatrixType = std::remove_cvref_t<TMatrix>;
+    PBAT_MINI_CHECK_CMATRIX(MatrixType);
+    using ScalarType = typename MatrixType::ScalarType;
+    return Scale<MatrixType>(ScalarType(-1.), std::forward<TMatrix>(A));
 }
 
 } // namespace mini

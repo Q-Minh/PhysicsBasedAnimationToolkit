@@ -14,23 +14,26 @@ namespace linalg {
 namespace mini {
 
 template <class /*CMatrix*/ TMatrix>
-PBAT_HOST_DEVICE
-    SMatrix<typename TMatrix::Scalar, TMatrix::RowsAtCompileTime, TMatrix::ColsAtCompileTime>
-    Inverse(TMatrix const& A)
+PBAT_HOST_DEVICE SMatrix<
+    typename std::remove_cvref_t<TMatrix>::ScalarType,
+    std::remove_cvref_t<TMatrix>::kRows,
+    std::remove_cvref_t<TMatrix>::kCols>
+Inverse(TMatrix&& A)
 {
-    using InputMatrixType = TMatrix;
+    using InputMatrixType = std::remove_cvref_t<TMatrix>;
+    PBAT_MINI_CHECK_CMATRIX(InputMatrixType);
     static_assert(
-        InputMatrixType::RowsAtCompileTime < 4 and InputMatrixType::RowsAtCompileTime > 1,
+        InputMatrixType::kRows < 4 and InputMatrixType::kRows > 1,
         "Cannot compute inverse of large matrix or scalar");
     static_assert(
-        InputMatrixType::RowsAtCompileTime == InputMatrixType::ColsAtCompileTime,
+        InputMatrixType::kRows == InputMatrixType::kCols,
         "Cannot compute inverse of non-square matrix");
     using MatrixType = SMatrix<
-        typename InputMatrixType::Scalar,
-        InputMatrixType::RowsAtCompileTime,
-        InputMatrixType::ColsAtCompileTime>;
+        typename InputMatrixType::ScalarType,
+        InputMatrixType::kRows,
+        InputMatrixType::kCols>;
     MatrixType Ainv{};
-    if constexpr (MatrixType::RowsAtCompileTime == 2)
+    if constexpr (MatrixType::kRows == 2)
     {
         auto const a0 = 1.0 / (A(0, 0) * A(1, 1) - A(1, 0) * A(0, 1));
         Ainv(0, 0)    = a0 * A(1, 1);
@@ -38,7 +41,7 @@ PBAT_HOST_DEVICE
         Ainv(0, 1)    = -a0 * A(0, 1);
         Ainv(1, 1)    = a0 * A(0, 0);
     }
-    if constexpr (MatrixType::RowsAtCompileTime == 3)
+    if constexpr (MatrixType::kRows == 3)
     {
         auto const a0 = A(1, 1) * A(2, 2);
         auto const a1 = A(2, 1) * A(1, 2);

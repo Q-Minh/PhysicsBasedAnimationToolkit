@@ -1,13 +1,12 @@
 #ifndef PBAT_MATH_LINALG_MINI_BINARY_OPERATIONS_H
 #define PBAT_MATH_LINALG_MINI_BINARY_OPERATIONS_H
 
-#include "Assign.h"
+#include "Api.h"
 #include "Concepts.h"
 #include "Scale.h"
-#include "SubMatrix.h"
-#include "Transpose.h"
 #include "pbat/HostDevice.h"
 
+#include <cmath>
 #include <type_traits>
 #include <utility>
 
@@ -23,50 +22,63 @@ class Sum
     using LhsNestedType = TLhsMatrix;
     using RhsNestedType = TRhsMatrix;
 
-    using Scalar   = typename LhsNestedType::Scalar;
-    using SelfType = Sum<LhsNestedType, RhsNestedType>;
+    using ScalarType = typename LhsNestedType::ScalarType;
+    using SelfType   = Sum<LhsNestedType, RhsNestedType>;
 
-    static auto constexpr RowsAtCompileTime = LhsNestedType::RowsAtCompileTime;
-    static auto constexpr ColsAtCompileTime = RhsNestedType::ColsAtCompileTime;
-    static bool constexpr IsRowMajor        = LhsNestedType::IsRowMajor;
+    static auto constexpr kRows     = LhsNestedType::kRows;
+    static auto constexpr kCols     = RhsNestedType::kCols;
+    static bool constexpr bRowMajor = LhsNestedType::bRowMajor;
 
     PBAT_HOST_DEVICE Sum(LhsNestedType const& A, RhsNestedType const& B) : A(A), B(B)
     {
         static_assert(
-            LhsNestedType::RowsAtCompileTime == RhsNestedType::RowsAtCompileTime and
-                LhsNestedType::ColsAtCompileTime == RhsNestedType::ColsAtCompileTime,
+            LhsNestedType::kRows == RhsNestedType::kRows and
+                LhsNestedType::kCols == RhsNestedType::kCols,
             "Invalid matrix sum dimensions");
     }
 
-    PBAT_HOST_DEVICE constexpr auto Rows() const { return RowsAtCompileTime; }
-    PBAT_HOST_DEVICE constexpr auto Cols() const { return ColsAtCompileTime; }
-
-    PBAT_HOST_DEVICE auto operator()(auto i, auto j) const { return A(i, j) + B(i, j); }
+    PBAT_HOST_DEVICE ScalarType operator()(auto i, auto j) const { return A(i, j) + B(i, j); }
 
     // Vector(ized) access
-    PBAT_HOST_DEVICE auto operator()(auto i) const
-    {
-        return (*this)(i % RowsAtCompileTime, i / RowsAtCompileTime);
-    }
-    PBAT_HOST_DEVICE auto operator[](auto i) const { return (*this)(i); }
+    PBAT_HOST_DEVICE ScalarType operator()(auto i) const { return (*this)(i % kRows, i / kRows); }
+    PBAT_HOST_DEVICE ScalarType operator[](auto i) const { return (*this)(i); }
 
-    template <auto S, auto T>
-    PBAT_HOST_DEVICE ConstSubMatrix<SelfType, S, T> Slice(auto i, auto j) const
+    PBAT_MINI_READ_API(SelfType)
+
+  private:
+    LhsNestedType const& A;
+    RhsNestedType const& B;
+};
+
+template <CMatrix TLhsMatrix, CMatrix TRhsMatrix>
+class Subtraction
+{
+  public:
+    using LhsNestedType = TLhsMatrix;
+    using RhsNestedType = TRhsMatrix;
+
+    using ScalarType = typename LhsNestedType::ScalarType;
+    using SelfType   = Subtraction<LhsNestedType, RhsNestedType>;
+
+    static auto constexpr kRows     = LhsNestedType::kRows;
+    static auto constexpr kCols     = RhsNestedType::kCols;
+    static bool constexpr bRowMajor = LhsNestedType::bRowMajor;
+
+    PBAT_HOST_DEVICE Subtraction(LhsNestedType const& A, RhsNestedType const& B) : A(A), B(B)
     {
-        return ConstSubMatrix<SelfType, S, T>(*this, i, j);
+        static_assert(
+            LhsNestedType::kRows == RhsNestedType::kRows and
+                LhsNestedType::kCols == RhsNestedType::kCols,
+            "Invalid matrix sum dimensions");
     }
-    PBAT_HOST_DEVICE ConstSubMatrix<SelfType, RowsAtCompileTime, 1> Col(auto j) const
-    {
-        return Slice<RowsAtCompileTime, 1>(0, j);
-    }
-    PBAT_HOST_DEVICE ConstSubMatrix<SelfType, 1, ColsAtCompileTime> Row(auto i) const
-    {
-        return Slice<1, ColsAtCompileTime>(i, 0);
-    }
-    PBAT_HOST_DEVICE ConstTransposeView<SelfType> Transpose() const
-    {
-        return ConstTransposeView<SelfType>(*this);
-    }
+
+    PBAT_HOST_DEVICE ScalarType operator()(auto i, auto j) const { return A(i, j) - B(i, j); }
+
+    // Vector(ized) access
+    PBAT_HOST_DEVICE ScalarType operator()(auto i) const { return (*this)(i % kRows, i / kRows); }
+    PBAT_HOST_DEVICE ScalarType operator[](auto i) const { return (*this)(i); }
+
+    PBAT_MINI_READ_API(SelfType)
 
   private:
     LhsNestedType const& A;
@@ -80,50 +92,32 @@ class Minimum
     using LhsNestedType = TLhsMatrix;
     using RhsNestedType = TRhsMatrix;
 
-    using Scalar   = typename LhsNestedType::Scalar;
-    using SelfType = Minimum<LhsNestedType, RhsNestedType>;
+    using ScalarType = typename LhsNestedType::ScalarType;
+    using SelfType   = Minimum<LhsNestedType, RhsNestedType>;
 
-    static auto constexpr RowsAtCompileTime = LhsNestedType::RowsAtCompileTime;
-    static auto constexpr ColsAtCompileTime = RhsNestedType::ColsAtCompileTime;
-    static bool constexpr IsRowMajor        = LhsNestedType::IsRowMajor;
+    static auto constexpr kRows     = LhsNestedType::kRows;
+    static auto constexpr kCols     = RhsNestedType::kCols;
+    static bool constexpr bRowMajor = LhsNestedType::bRowMajor;
 
     PBAT_HOST_DEVICE Minimum(LhsNestedType const& A, RhsNestedType const& B) : A(A), B(B)
     {
         static_assert(
-            LhsNestedType::RowsAtCompileTime == RhsNestedType::RowsAtCompileTime and
-                LhsNestedType::ColsAtCompileTime == RhsNestedType::ColsAtCompileTime,
+            LhsNestedType::kRows == RhsNestedType::kRows and
+                LhsNestedType::kCols == RhsNestedType::kCols,
             "Invalid matrix minimum dimensions");
     }
 
-    PBAT_HOST_DEVICE constexpr auto Rows() const { return RowsAtCompileTime; }
-    PBAT_HOST_DEVICE constexpr auto Cols() const { return ColsAtCompileTime; }
-
-    PBAT_HOST_DEVICE auto operator()(auto i, auto j) const { return min(A(i, j), B(i, j)); }
+    PBAT_HOST_DEVICE ScalarType operator()(auto i, auto j) const
+    {
+        using namespace std;
+        return min(A(i, j), B(i, j));
+    }
 
     // Vector(ized) access
-    PBAT_HOST_DEVICE auto operator()(auto i) const
-    {
-        return (*this)(i % RowsAtCompileTime, i / RowsAtCompileTime);
-    }
-    PBAT_HOST_DEVICE auto operator[](auto i) const { return (*this)(i); }
+    PBAT_HOST_DEVICE ScalarType operator()(auto i) const { return (*this)(i % kRows, i / kRows); }
+    PBAT_HOST_DEVICE ScalarType operator[](auto i) const { return (*this)(i); }
 
-    template <auto S, auto T>
-    PBAT_HOST_DEVICE ConstSubMatrix<SelfType, S, T> Slice(auto i, auto j) const
-    {
-        return ConstSubMatrix<SelfType, S, T>(*this, i, j);
-    }
-    PBAT_HOST_DEVICE ConstSubMatrix<SelfType, RowsAtCompileTime, 1> Col(auto j) const
-    {
-        return Slice<RowsAtCompileTime, 1>(0, j);
-    }
-    PBAT_HOST_DEVICE ConstSubMatrix<SelfType, 1, ColsAtCompileTime> Row(auto i) const
-    {
-        return Slice<1, ColsAtCompileTime>(i, 0);
-    }
-    PBAT_HOST_DEVICE ConstTransposeView<SelfType> Transpose() const
-    {
-        return ConstTransposeView<SelfType>(*this);
-    }
+    PBAT_MINI_READ_API(SelfType)
 
   private:
     LhsNestedType const& A;
@@ -137,50 +131,32 @@ class Maximum
     using LhsNestedType = TLhsMatrix;
     using RhsNestedType = TRhsMatrix;
 
-    using Scalar   = typename LhsNestedType::Scalar;
-    using SelfType = Maximum<LhsNestedType, RhsNestedType>;
+    using ScalarType = typename LhsNestedType::ScalarType;
+    using SelfType   = Maximum<LhsNestedType, RhsNestedType>;
 
-    static auto constexpr RowsAtCompileTime = LhsNestedType::RowsAtCompileTime;
-    static auto constexpr ColsAtCompileTime = RhsNestedType::ColsAtCompileTime;
-    static bool constexpr IsRowMajor        = LhsNestedType::IsRowMajor;
+    static auto constexpr kRows     = LhsNestedType::kRows;
+    static auto constexpr kCols     = RhsNestedType::kCols;
+    static bool constexpr bRowMajor = LhsNestedType::bRowMajor;
 
     PBAT_HOST_DEVICE Maximum(LhsNestedType const& A, RhsNestedType const& B) : A(A), B(B)
     {
         static_assert(
-            LhsNestedType::RowsAtCompileTime == RhsNestedType::RowsAtCompileTime and
-                LhsNestedType::ColsAtCompileTime == RhsNestedType::ColsAtCompileTime,
+            LhsNestedType::kRows == RhsNestedType::kRows and
+                LhsNestedType::kCols == RhsNestedType::kCols,
             "Invalid matrix maximum dimensions");
     }
 
-    PBAT_HOST_DEVICE constexpr auto Rows() const { return RowsAtCompileTime; }
-    PBAT_HOST_DEVICE constexpr auto Cols() const { return ColsAtCompileTime; }
-
-    PBAT_HOST_DEVICE auto operator()(auto i, auto j) const { return max(A(i, j), B(i, j)); }
+    PBAT_HOST_DEVICE ScalarType operator()(auto i, auto j) const
+    {
+        using namespace std;
+        return max(A(i, j), B(i, j));
+    }
 
     // Vector(ized) access
-    PBAT_HOST_DEVICE auto operator()(auto i) const
-    {
-        return (*this)(i % RowsAtCompileTime, i / RowsAtCompileTime);
-    }
-    PBAT_HOST_DEVICE auto operator[](auto i) const { return (*this)(i); }
+    PBAT_HOST_DEVICE ScalarType operator()(auto i) const { return (*this)(i % kRows, i / kRows); }
+    PBAT_HOST_DEVICE ScalarType operator[](auto i) const { return (*this)(i); }
 
-    template <auto S, auto T>
-    PBAT_HOST_DEVICE ConstSubMatrix<SelfType, S, T> Slice(auto i, auto j) const
-    {
-        return ConstSubMatrix<SelfType, S, T>(*this, i, j);
-    }
-    PBAT_HOST_DEVICE ConstSubMatrix<SelfType, RowsAtCompileTime, 1> Col(auto j) const
-    {
-        return Slice<RowsAtCompileTime, 1>(0, j);
-    }
-    PBAT_HOST_DEVICE ConstSubMatrix<SelfType, 1, ColsAtCompileTime> Row(auto i) const
-    {
-        return Slice<1, ColsAtCompileTime>(i, 0);
-    }
-    PBAT_HOST_DEVICE ConstTransposeView<SelfType> Transpose() const
-    {
-        return ConstTransposeView<SelfType>(*this);
-    }
+    PBAT_MINI_READ_API(SelfType)
 
   private:
     LhsNestedType const& A;
@@ -191,9 +167,7 @@ template <class /*CMatrix*/ TLhsMatrix, class /*CMatrix*/ TRhsMatrix>
 PBAT_HOST_DEVICE auto operator+(TLhsMatrix&& A, TRhsMatrix&& B)
 {
     using LhsMatrixType = std::remove_cvref_t<TLhsMatrix>;
-    static_assert(CMatrix<LhsMatrixType>, "Input must satisfy concept CMatrix");
     using RhsMatrixType = std::remove_cvref_t<TRhsMatrix>;
-    static_assert(CMatrix<RhsMatrixType>, "Input must satisfy concept CMatrix");
     return Sum<LhsMatrixType, RhsMatrixType>(
         std::forward<TLhsMatrix>(A),
         std::forward<TRhsMatrix>(B));
@@ -210,12 +184,10 @@ template <class /*CMatrix*/ TLhsMatrix, class /*CMatrix*/ TRhsMatrix>
 PBAT_HOST_DEVICE auto operator-(TLhsMatrix&& A, TRhsMatrix&& B)
 {
     using LhsMatrixType = std::remove_cvref_t<TLhsMatrix>;
-    static_assert(CMatrix<LhsMatrixType>, "Input must satisfy concept CMatrix");
     using RhsMatrixType = std::remove_cvref_t<TRhsMatrix>;
-    static_assert(CMatrix<RhsMatrixType>, "Input must satisfy concept CMatrix");
-    using NegatedMatrixType = Scale<RhsMatrixType>;
-    NegatedMatrixType negB  = -std::forward<TRhsMatrix>(B);
-    return Sum<LhsMatrixType, NegatedMatrixType>(std::forward<TLhsMatrix>(A), negB);
+    return Subtraction<LhsMatrixType, RhsMatrixType>(
+        std::forward<TLhsMatrix>(A),
+        std::forward<TRhsMatrix>(B));
 }
 
 template <class /*CMatrix*/ TLhsMatrix, class /*CMatrix*/ TRhsMatrix>
@@ -229,9 +201,7 @@ template <class /*CMatrix*/ TLhsMatrix, class /*CMatrix*/ TRhsMatrix>
 PBAT_HOST_DEVICE auto Min(TLhsMatrix&& A, TRhsMatrix&& B)
 {
     using LhsMatrixType = std::remove_cvref_t<TLhsMatrix>;
-    static_assert(CMatrix<LhsMatrixType>, "Input must satisfy concept CMatrix");
     using RhsMatrixType = std::remove_cvref_t<TRhsMatrix>;
-    static_assert(CMatrix<RhsMatrixType>, "Input must satisfy concept CMatrix");
     return Minimum<LhsMatrixType, RhsMatrixType>(
         std::forward<TLhsMatrix>(A),
         std::forward<TRhsMatrix>(B));
@@ -241,9 +211,7 @@ template <class /*CMatrix*/ TLhsMatrix, class /*CMatrix*/ TRhsMatrix>
 PBAT_HOST_DEVICE auto Max(TLhsMatrix&& A, TRhsMatrix&& B)
 {
     using LhsMatrixType = std::remove_cvref_t<TLhsMatrix>;
-    static_assert(CMatrix<LhsMatrixType>, "Input must satisfy concept CMatrix");
     using RhsMatrixType = std::remove_cvref_t<TRhsMatrix>;
-    static_assert(CMatrix<RhsMatrixType>, "Input must satisfy concept CMatrix");
     return Maximum<LhsMatrixType, RhsMatrixType>(
         std::forward<TLhsMatrix>(A),
         std::forward<TRhsMatrix>(B));

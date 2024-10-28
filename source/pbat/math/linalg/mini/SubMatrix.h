@@ -19,46 +19,42 @@ class ConstSubMatrix
 {
   public:
     using NestedType = TMatrix;
-    using Scalar     = typename NestedType::Scalar;
+    using ScalarType = typename NestedType::ScalarType;
     using SelfType   = ConstSubMatrix<NestedType, M, N>;
 
-    static auto constexpr RowsAtCompileTime = M;
-    static auto constexpr ColsAtCompileTime = N;
-    static bool constexpr IsRowMajor        = NestedType::IsRowMajor;
+    static auto constexpr kRows     = M;
+    static auto constexpr kCols     = N;
+    static bool constexpr bRowMajor = NestedType::bRowMajor;
 
     PBAT_HOST_DEVICE ConstSubMatrix(NestedType const& A, auto ib = 0, auto jb = 0)
         : A(A), ib(ib), jb(jb)
     {
         static_assert(
-            NestedType::RowsAtCompileTime >= M and NestedType::ColsAtCompileTime >= N and M > 0 and
-                N > 0,
+            NestedType::kRows >= M and NestedType::kCols >= N and M > 0 and N > 0,
             "Invalid submatrix dimensions");
     }
 
-    PBAT_HOST_DEVICE constexpr auto Rows() const { return RowsAtCompileTime; }
-    PBAT_HOST_DEVICE constexpr auto Cols() const { return ColsAtCompileTime; }
+    PBAT_HOST_DEVICE constexpr auto Rows() const { return kRows; }
+    PBAT_HOST_DEVICE constexpr auto Cols() const { return kCols; }
 
-    PBAT_HOST_DEVICE auto operator()(auto i, auto j) const { return A(ib + i, jb + j); }
+    PBAT_HOST_DEVICE ScalarType operator()(auto i, auto j) const { return A(ib + i, jb + j); }
 
     // Vector(ized) access
-    PBAT_HOST_DEVICE auto operator()(auto i) const
-    {
-        return (*this)(i % RowsAtCompileTime, i / RowsAtCompileTime);
-    }
-    PBAT_HOST_DEVICE auto operator[](auto i) const { return (*this)(i); }
+    PBAT_HOST_DEVICE ScalarType operator()(auto i) const { return (*this)(i % kRows, i / kRows); }
+    PBAT_HOST_DEVICE ScalarType operator[](auto i) const { return (*this)(i); }
 
     template <auto S, auto T>
     PBAT_HOST_DEVICE ConstSubMatrix<SelfType, S, T> Slice(auto i, auto j) const
     {
         return ConstSubMatrix<SelfType, S, T>(*this, i, j);
     }
-    PBAT_HOST_DEVICE ConstSubMatrix<SelfType, RowsAtCompileTime, 1> Col(auto j) const
+    PBAT_HOST_DEVICE ConstSubMatrix<SelfType, kRows, 1> Col(auto j) const
     {
-        return Slice<RowsAtCompileTime, 1>(0, j);
+        return Slice<kRows, 1>(0, j);
     }
-    PBAT_HOST_DEVICE ConstSubMatrix<SelfType, 1, ColsAtCompileTime> Row(auto i) const
+    PBAT_HOST_DEVICE ConstSubMatrix<SelfType, 1, kCols> Row(auto i) const
     {
-        return Slice<1, ColsAtCompileTime>(i, 0);
+        return Slice<1, kCols>(i, 0);
     }
     PBAT_HOST_DEVICE ConstTransposeView<SelfType const> Transpose() const
     {
@@ -75,18 +71,17 @@ class SubMatrix
 {
   public:
     using NestedType = TMatrix;
-    using Scalar     = typename NestedType::Scalar;
+    using ScalarType = typename NestedType::ScalarType;
     using SelfType   = SubMatrix<NestedType, M, N>;
 
-    static auto constexpr RowsAtCompileTime = M;
-    static auto constexpr ColsAtCompileTime = N;
-    static bool constexpr IsRowMajor        = NestedType::IsRowMajor;
+    static auto constexpr kRows     = M;
+    static auto constexpr kCols     = N;
+    static bool constexpr bRowMajor = NestedType::bRowMajor;
 
     PBAT_HOST_DEVICE SubMatrix(NestedType& A, auto ib = 0, auto jb = 0) : A(A), ib(ib), jb(jb)
     {
         static_assert(
-            NestedType::RowsAtCompileTime >= M and NestedType::ColsAtCompileTime >= N and M > 0 and
-                N > 0,
+            NestedType::kRows >= M and NestedType::kCols >= N and M > 0 and N > 0,
             "Invalid submatrix dimensions");
     }
 
@@ -97,62 +92,73 @@ class SubMatrix
         return *this;
     }
 
-    PBAT_HOST_DEVICE constexpr auto Rows() const { return RowsAtCompileTime; }
-    PBAT_HOST_DEVICE constexpr auto Cols() const { return ColsAtCompileTime; }
+    PBAT_HOST_DEVICE auto Rows() const { return kRows; }
+    PBAT_HOST_DEVICE auto Cols() const { return kCols; }
 
-    PBAT_HOST_DEVICE auto operator()(auto i, auto j) const { return A(ib + i, jb + j); }
-    PBAT_HOST_DEVICE auto& operator()(auto i, auto j) { return A(ib + i, jb + j); }
+    PBAT_HOST_DEVICE ScalarType operator()(auto i, auto j) const { return A(ib + i, jb + j); }
+    PBAT_HOST_DEVICE ScalarType& operator()(auto i, auto j) { return A(ib + i, jb + j); }
 
     // Vector(ized) access
-    PBAT_HOST_DEVICE auto operator()(auto i) const
-    {
-        return (*this)(i % RowsAtCompileTime, i / RowsAtCompileTime);
-    }
-    PBAT_HOST_DEVICE auto& operator()(auto i)
-    {
-        return (*this)(i % RowsAtCompileTime, i / RowsAtCompileTime);
-    }
-    PBAT_HOST_DEVICE auto operator[](auto i) const { return (*this)(i); }
-    PBAT_HOST_DEVICE auto& operator[](auto i) { return (*this)(i); }
+    PBAT_HOST_DEVICE ScalarType operator()(auto i) const { return (*this)(i % kRows, i / kRows); }
+    PBAT_HOST_DEVICE ScalarType& operator()(auto i) { return (*this)(i % kRows, i / kRows); }
+    PBAT_HOST_DEVICE ScalarType operator[](auto i) const { return (*this)(i); }
+    PBAT_HOST_DEVICE ScalarType& operator[](auto i) { return (*this)(i); }
 
     template <auto S, auto T>
-    PBAT_HOST_DEVICE SubMatrix<SelfType, S, T> Slice(auto i, auto j)
+    PBAT_HOST_DEVICE auto Slice(auto i, auto j)
     {
         return SubMatrix<SelfType, S, T>(*this, i, j);
     }
-    PBAT_HOST_DEVICE SubMatrix<SelfType, RowsAtCompileTime, 1> Col(auto j)
-    {
-        return Slice<RowsAtCompileTime, 1>(0, j);
-    }
-    PBAT_HOST_DEVICE SubMatrix<SelfType, 1, ColsAtCompileTime> Row(auto i)
-    {
-        return Slice<1, ColsAtCompileTime>(i, 0);
-    }
+    PBAT_HOST_DEVICE auto Col(auto j) { return Slice<kRows, 1>(0, j); }
+    PBAT_HOST_DEVICE auto Row(auto i) { return Slice<1, kCols>(i, 0); }
 
     template <auto S, auto T>
-    PBAT_HOST_DEVICE ConstSubMatrix<SelfType, S, T> Slice(auto i, auto j) const
+    PBAT_HOST_DEVICE auto Slice(auto i, auto j) const
     {
         return ConstSubMatrix<SelfType, S, T>(*this, i, j);
     }
-    PBAT_HOST_DEVICE ConstSubMatrix<SelfType, RowsAtCompileTime, 1> Col(auto j) const
-    {
-        return Slice<RowsAtCompileTime, 1>(0, j);
-    }
-    PBAT_HOST_DEVICE ConstSubMatrix<SelfType, 1, ColsAtCompileTime> Row(auto i) const
-    {
-        return Slice<1, ColsAtCompileTime>(i, 0);
-    }
+    PBAT_HOST_DEVICE auto Col(auto j) const { return Slice<kRows, 1>(0, j); }
+    PBAT_HOST_DEVICE auto Row(auto i) const { return Slice<1, kCols>(i, 0); }
 
-    PBAT_HOST_DEVICE TransposeView<SelfType> Transpose() { return TransposeView<SelfType>(*this); }
-    PBAT_HOST_DEVICE ConstTransposeView<SelfType const> Transpose() const
-    {
-        return ConstTransposeView<SelfType const>(*this);
-    }
+    PBAT_HOST_DEVICE auto Transpose() { return TransposeView<SelfType>(*this); }
+    PBAT_HOST_DEVICE auto Transpose() const { return ConstTransposeView<SelfType>(*this); }
+
+    void SetConstant(auto k) { AssignScalar(*this, k); }
 
   private:
     NestedType& A;
     int ib, jb;
 };
+
+#define PBAT_MINI_SUBMATRIX_API(SelfType)              \
+    template <auto S, auto T>                          \
+    PBAT_HOST_DEVICE auto Slice(auto i, auto j)        \
+    {                                                  \
+        return SubMatrix<SelfType, S, T>(*this, i, j); \
+    }                                                  \
+    PBAT_HOST_DEVICE auto Col(auto j)                  \
+    {                                                  \
+        return Slice<kRows, 1>(0, j);                  \
+    }                                                  \
+    PBAT_HOST_DEVICE auto Row(auto i)                  \
+    {                                                  \
+        return Slice<1, kCols>(i, 0);                  \
+    }
+
+#define PBAT_MINI_CONST_SUBMATRIX_API(SelfType)             \
+    template <auto S, auto T>                               \
+    PBAT_HOST_DEVICE auto Slice(auto i, auto j) const       \
+    {                                                       \
+        return ConstSubMatrix<SelfType, S, T>(*this, i, j); \
+    }                                                       \
+    PBAT_HOST_DEVICE auto Col(auto j) const                 \
+    {                                                       \
+        return Slice<kRows, 1>(0, j);                       \
+    }                                                       \
+    PBAT_HOST_DEVICE auto Row(auto i) const                 \
+    {                                                       \
+        return Slice<1, kCols>(i, 0);                       \
+    }
 
 } // namespace mini
 } // namespace linalg
