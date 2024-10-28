@@ -341,7 +341,7 @@ struct FContactPairs
 
     struct BranchAndBound
     {
-        __device__
+        PBAT_DEVICE
         BranchAndBound(Vector3 const& X, GpuScalar R, GpuScalar dzero, GpuIndex sv, GpuIndex v)
             : stack{}, nearest{}, X(X), R(R), dzero(dzero), sv(sv), v(v)
         {

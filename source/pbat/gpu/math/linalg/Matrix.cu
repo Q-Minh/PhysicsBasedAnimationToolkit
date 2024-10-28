@@ -2,6 +2,7 @@
 #include "pbat/gpu/DisableWarnings.h"
 // clang-format on
 
+#include "pbat/HostDevice.h"
 #include "pbat/gpu/Aliases.h"
 #include "pbat/gpu/common/Buffer.cuh"
 #include "pbat/math/linalg/mini/Mini.h"
@@ -40,7 +41,7 @@ pbat::GpuMatrixX RunKernel(pbat::GpuMatrixX const& A)
 
 struct FTranspose
 {
-    __device__ void operator()(GpuIndex i)
+    PBAT_DEVICE void operator()(GpuIndex i)
     {
         using namespace pbat::math::linalg::mini;
         SMatrixView<GpuScalar, 3, 3> Ad(data + 3 * 3 * i);
@@ -52,7 +53,7 @@ struct FTranspose
 
 struct FSubMatrix
 {
-    __device__ void operator()(GpuIndex i)
+    PBAT_DEVICE void operator()(GpuIndex i)
     {
         using namespace pbat::math::linalg::mini;
         SMatrixView<GpuScalar, 3, 3> Ad(data + 3 * 3 * i);
@@ -64,7 +65,7 @@ struct FSubMatrix
 
 struct FTiledView
 {
-    __device__ void operator()(GpuIndex i)
+    PBAT_DEVICE void operator()(GpuIndex i)
     {
         using namespace pbat::math::linalg::mini;
         SMatrixView<GpuScalar, 3, 3> Ad(data + 3 * 3 * i);
@@ -75,7 +76,7 @@ struct FTiledView
 
 struct FScaleAndSumTranspose
 {
-    __device__ void operator()(GpuIndex i)
+    PBAT_DEVICE void operator()(GpuIndex i)
     {
         using namespace pbat::math::linalg::mini;
         SMatrixView<GpuScalar, 3, 3> Ad(data + 3 * 3 * i);
@@ -87,7 +88,7 @@ struct FScaleAndSumTranspose
 
 struct FSquaredNorm
 {
-    __device__ void operator()(GpuIndex i)
+    PBAT_DEVICE void operator()(GpuIndex i)
     {
         using namespace pbat::math::linalg::mini;
         SMatrixView<GpuScalar, 6, 3> Ad(data + 6 * 3 * i);
@@ -99,7 +100,7 @@ struct FSquaredNorm
 
 struct FCrossProduct
 {
-    __device__ void operator()(GpuIndex i)
+    PBAT_DEVICE void operator()(GpuIndex i)
     {
         using namespace pbat::math::linalg::mini;
         SMatrixView<GpuScalar, 3, 2> Ad(data + 3 * 2 * i);
@@ -111,7 +112,7 @@ struct FCrossProduct
 
 struct FDeterminant
 {
-    __device__ void operator()(GpuIndex i)
+    PBAT_DEVICE void operator()(GpuIndex i)
     {
         using namespace pbat::math::linalg::mini;
         SMatrixView<GpuScalar, 3, 3> Ad(data + 3 * 3 * i);
@@ -123,7 +124,7 @@ struct FDeterminant
 
 struct FInverse
 {
-    __device__ void operator()(GpuIndex i)
+    PBAT_DEVICE void operator()(GpuIndex i)
     {
         using namespace pbat::math::linalg::mini;
         SMatrixView<GpuScalar, 3, 3> Ad(data + 3 * 3 * i);
@@ -135,7 +136,7 @@ struct FInverse
 
 struct FComposedOperation
 {
-    __device__ void operator()(GpuIndex i)
+    PBAT_DEVICE void operator()(GpuIndex i)
     {
         using namespace pbat::math::linalg::mini;
         SMatrixView<GpuScalar, 3, 4> Ad(data + 3 * 4 * i);

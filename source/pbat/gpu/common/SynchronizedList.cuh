@@ -1,6 +1,7 @@
 #ifndef PBAT_GPU_COMMON_SYNCHRONIZED_LIST_CUH
 #define PBAT_GPU_COMMON_SYNCHRONIZED_LIST_CUH
 
+#include "pbat/HostDevice.h"
 #include "Buffer.cuh"
 #include "Var.cuh"
 #include "pbat/gpu/Aliases.h"
@@ -18,12 +19,12 @@ template <class T>
 class DeviceSynchronizedList
 {
   public:
-    __host__ DeviceSynchronizedList(Buffer<T>& buffer, Var<GpuIndex>& size)
+    PBAT_HOST DeviceSynchronizedList(Buffer<T>& buffer, Var<GpuIndex>& size)
         : mBuffer(buffer.Raw()), mSize(size.Raw()), mCapacity(buffer.Size())
     {
     }
 
-    __device__ bool Append(T const& value)
+    PBAT_DEVICE bool Append(T const& value)
     {
         cuda::atomic_ref<GpuIndex, cuda::thread_scope_device> aSize{*mSize};
         GpuIndex k = aSize++;
@@ -36,14 +37,14 @@ class DeviceSynchronizedList
         return true;
     }
 
-    __device__ T& operator[](auto i)
+    PBAT_DEVICE T& operator[](auto i)
     {
         assert(i >= 0);
         assert(i < (*mSize));
         return mBuffer[i];
     }
 
-    __device__ T const& operator[](auto i) const
+    PBAT_DEVICE T const& operator[](auto i) const
     {
         assert(i >= 0);
         assert(i < (*mSize));

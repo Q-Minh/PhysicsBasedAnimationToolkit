@@ -2,6 +2,7 @@
 #include "pbat/gpu/DisableWarnings.h"
 // clang-format on
 
+#include "pbat/HostDevice.h"
 #include "VbdImplKernels.cuh"
 
 namespace pbat {
@@ -75,7 +76,7 @@ __global__ void MinimizeBackwardEuler(BackwardEulerMinimization BDF)
     BDF.ToGlobal(i, xi, BDF.x);
 };
 
-__device__ pbat::math::linalg::mini::SMatrix<GpuScalar, 4, 3>
+PBAT_DEVICE pbat::math::linalg::mini::SMatrix<GpuScalar, 4, 3>
 BackwardEulerMinimization::BasisFunctionGradients(GpuIndex e) const
 {
     using namespace pbat::math::linalg::mini;
@@ -83,7 +84,7 @@ BackwardEulerMinimization::BasisFunctionGradients(GpuIndex e) const
     return GPlocal;
 }
 
-__device__ pbat::math::linalg::mini::SMatrix<GpuScalar, 3, 4>
+PBAT_DEVICE pbat::math::linalg::mini::SMatrix<GpuScalar, 3, 4>
 BackwardEulerMinimization::ElementVertexPositions(GpuIndex e) const
 {
     using namespace pbat::math::linalg::mini;
@@ -96,7 +97,7 @@ BackwardEulerMinimization::ElementVertexPositions(GpuIndex e) const
     return xe;
 }
 
-__device__ pbat::math::linalg::mini::SMatrix<GpuScalar, 9, 10>
+PBAT_DEVICE pbat::math::linalg::mini::SMatrix<GpuScalar, 9, 10>
 BackwardEulerMinimization::StableNeoHookeanDerivativesWrtF(
     GpuIndex e,
     pbat::math::linalg::mini::SMatrix<GpuScalar, 3, 3> const& Fe,
@@ -256,7 +257,7 @@ BackwardEulerMinimization::StableNeoHookeanDerivativesWrtF(
     return HGe;
 }
 
-__device__ void BackwardEulerMinimization::ComputeStableNeoHookeanDerivatives(
+PBAT_DEVICE void BackwardEulerMinimization::ComputeStableNeoHookeanDerivatives(
     GpuIndex e,
     GpuIndex ilocal,
     GpuScalar* Hge) const
