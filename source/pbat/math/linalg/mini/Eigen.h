@@ -50,7 +50,13 @@ class ConstEigenMatrixWrapper
     static int constexpr kCols      = TDerived::ColsAtCompileTime;
     static bool constexpr bRowMajor = TDerived::IsRowMajor;
 
-    PBAT_HOST_DEVICE ConstEigenMatrixWrapper(TDerived const& A) : mA(A) {}
+    PBAT_HOST_DEVICE ConstEigenMatrixWrapper(TDerived const& A) : mA(A)
+    {
+        static_assert(TDerived::RowsAtCompileTime > 0, "A must have compile-time row dimensions");
+        static_assert(
+            TDerived::ColsAtCompileTime > 0,
+            "A must have compile-time column dimensions");
+    }
 
     PBAT_HOST_DEVICE ScalarType operator()(auto i, auto j) const { return mA(i, j); }
 
@@ -75,7 +81,13 @@ class EigenMatrixWrapper
     static int constexpr kCols      = TDerived::ColsAtCompileTime;
     static bool constexpr bRowMajor = TDerived::IsRowMajor;
 
-    PBAT_HOST_DEVICE EigenMatrixWrapper(TDerived& A) : mA(A) {}
+    PBAT_HOST_DEVICE EigenMatrixWrapper(TDerived& A) : mA(A)
+    {
+        static_assert(TDerived::RowsAtCompileTime > 0, "A must have compile-time row dimensions");
+        static_assert(
+            TDerived::ColsAtCompileTime > 0,
+            "A must have compile-time column dimensions");
+    }
 
     PBAT_HOST_DEVICE void SetConstant(ScalarType k) { Assign(*this, k); }
 
