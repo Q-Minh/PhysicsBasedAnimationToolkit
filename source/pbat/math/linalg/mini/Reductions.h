@@ -97,10 +97,11 @@ PBAT_HOST_DEVICE auto Trace(TMatrix&& A)
     static_assert(
         MatrixType::kRows == MatrixType::kCols,
         "Cannot compute trace of non-square matrix");
-    auto sum = [&]<auto... I>(std::index_sequence<I...>) {
+    using IntegerType = std::remove_const_t<decltype(MatrixType::kRows)>;
+    auto sum          = [&]<IntegerType... I>(std::integer_sequence<IntegerType, I...>) {
         return (std::forward<TMatrix>(A)(I, I) + ...);
     };
-    return sum(std::make_index_sequence<MatrixType::kRows>{});
+    return sum(std::make_integer_sequence<IntegerType, MatrixType::kRows>{});
 }
 
 template <class /*CMatrix*/ TLhsMatrix, class /*CMatrix*/ TRhsMatrix>
@@ -110,6 +111,43 @@ PBAT_HOST_DEVICE auto Dot(TLhsMatrix&& A, TRhsMatrix&& B)
     using RhsMatrixType = std::remove_cvref_t<TRhsMatrix>;
     return Trace(std::forward<TLhsMatrix>(A).Transpose() * std::forward<TRhsMatrix>(B));
 }
+
+// clang-format off
+#define PBAT_MINI_DEFINE_BINARY_PREDICATE_REDUCTION(FunctionName, BinaryOp)                      \
+    template <CMatrix TMatrix>                                                                   \
+    PBAT_HOST_DEVICE auto FunctionName(TMatrix const& A)                                         \
+    {                                                                                            \
+        using MatrixType  = TMatrix;                                                             \
+        using IntegerType = std::remove_const_t<decltype(TMatrix::kRows)>;                       \
+        if constexpr (MatrixType::bRowMajor)                                                     \
+        {                                                                                        \
+            auto fCols =                                                                         \
+                [&]<IntegerType... J>(IntegerType i, std::integer_sequence<IntegerType, J...>) { \
+                    return (static_cast<bool>(A(i, J)) BinaryOp ...);                            \
+                };                                                                               \
+            auto fRows = [&]<IntegerType... I>(std::integer_sequence<IntegerType, I...>) {       \
+                return (fCols(I, std::make_integer_sequence<IntegerType, MatrixType::kCols>())   \
+                            BinaryOp...);                                                        \
+            };                                                                                   \
+            return fRows(std::make_integer_sequence<IntegerType, MatrixType::kRows>());          \
+        }                                                                                        \
+        else                                                                                     \
+        {                                                                                        \
+            auto fRows =                                                                         \
+                [&]<IntegerType... I>(IntegerType j, std::integer_sequence<IntegerType, I...>) { \
+                    return (static_cast<bool>(A(I, j)) BinaryOp ...);                            \
+                };                                                                               \
+            auto fCols = [&]<IntegerType... J>(std::integer_sequence<IntegerType, J...>) {       \
+                return (fRows(J, std::make_integer_sequence<IntegerType, MatrixType::kRows>())   \
+                            BinaryOp...);                                                        \
+            };                                                                                   \
+            return fCols(std::make_integer_sequence<IntegerType, MatrixType::kCols>());          \
+        }                                                                                        \
+    }
+// clang-format on
+
+PBAT_MINI_DEFINE_BINARY_PREDICATE_REDUCTION(All, and)
+PBAT_MINI_DEFINE_BINARY_PREDICATE_REDUCTION(Any, or)
 
 } // namespace mini
 } // namespace linalg

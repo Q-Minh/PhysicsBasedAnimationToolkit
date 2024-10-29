@@ -3,49 +3,48 @@
 
 #include "ClosestPointQueries.h"
 #include "IntersectionQueries.h"
+#include "pbat/common/ConstexprFor.h"
+#include "pbat/math/linalg/mini/Mini.h"
 
-#include <Eigen/Geometry>
 #include <cmath>
-#include <pbat/Aliases.h>
 
 namespace pbat {
 namespace geometry {
 namespace OverlapQueries {
 
+namespace mini = math::linalg::mini;
+
 /**
  * @brief
- * @tparam TDerivedP
- * @tparam TDerivedL
- * @tparam TDerivedU
+ * @tparam TMatrixP
+ * @tparam TMatrixL
+ * @tparam TMatrixU
  * @param P
  * @param L
  * @param U
  * @return
  */
-template <class TDerivedP, class TDerivedL, class TDerivedU>
-bool PointAxisAlignedBoundingBox(
-    Eigen::MatrixBase<TDerivedP> const& P,
-    Eigen::MatrixBase<TDerivedL> const& L,
-    Eigen::MatrixBase<TDerivedU> const& U);
+template <mini::CMatrix TMatrixP, mini::CMatrix TMatrixL, mini::CMatrix TMatrixU>
+bool PointAxisAlignedBoundingBox(TMatrixP const& P, TMatrixL const& L, TMatrixU const& U);
 
 /**
  * @brief
- * @tparam TDerivedP
- * @tparam TDerivedA
- * @tparam TDerivedB
- * @tparam TDerivedC
+ * @tparam TMatrixP
+ * @tparam TMatrixA
+ * @tparam TMatrixB
+ * @tparam TMatrixC
  * @param P
  * @param A
  * @param B
  * @param C
  * @return
  */
-template <class TDerivedP, class TDerivedA, class TDerivedB, class TDerivedC>
-bool PointTriangle(
-    Eigen::MatrixBase<TDerivedP> const& P,
-    Eigen::MatrixBase<TDerivedA> const& A,
-    Eigen::MatrixBase<TDerivedB> const& B,
-    Eigen::MatrixBase<TDerivedC> const& C);
+template <
+    mini::CMatrix TMatrixP,
+    mini::CMatrix TMatrixA,
+    mini::CMatrix TMatrixB,
+    mini::CMatrix TMatrixC>
+bool PointTriangle(TMatrixP const& P, TMatrixA const& A, TMatrixB const& B, TMatrixC const& C);
 
 /**
  * @brief Checks if point P is contained in tetrahedron ABCD, in at least 3D.
@@ -56,13 +55,18 @@ bool PointTriangle(
  * @param D
  * @return
  */
-template <class TDerivedP, class TDerivedA, class TDerivedB, class TDerivedC, class TDerivedD>
+template <
+    mini::CMatrix TMatrixP,
+    mini::CMatrix TMatrixA,
+    mini::CMatrix TMatrixB,
+    mini::CMatrix TMatrixC,
+    mini::CMatrix TMatrixD>
 bool PointTetrahedron3D(
-    Eigen::MatrixBase<TDerivedP> const& P,
-    Eigen::MatrixBase<TDerivedA> const& A,
-    Eigen::MatrixBase<TDerivedB> const& B,
-    Eigen::MatrixBase<TDerivedC> const& C,
-    Eigen::MatrixBase<TDerivedD> const& D);
+    TMatrixP const& P,
+    TMatrixA const& A,
+    TMatrixB const& B,
+    TMatrixC const& C,
+    TMatrixD const& D);
 
 /**
  * @brief Tests for overlap between sphere (C1,R1) and sphere (C2,R2).
@@ -72,12 +76,12 @@ bool PointTetrahedron3D(
  * @param r2
  * @return
  */
-template <class TDerivedC1, class TDerivedC2>
+template <mini::CMatrix TMatrixC1, mini::CMatrix TMatrixC2>
 bool Spheres(
-    Eigen::MatrixBase<TDerivedC1> const& C1,
-    Scalar R1,
-    Eigen::MatrixBase<TDerivedC2> const& C2,
-    Scalar R2);
+    TMatrixC1 const& C1,
+    typename TMatrixC1::ScalarType R1,
+    TMatrixC2 const& C2,
+    typename TMatrixC2::ScalarType R2);
 
 /**
  * @brief Tests for overlap between axis-aligned bounding box (L1,U1) and axis-aligned
@@ -88,12 +92,16 @@ bool Spheres(
  * @param U2
  * @return
  */
-template <class TDerivedL1, class TDerivedU1, class TDerivedL2, class TDerivedU2>
+template <
+    mini::CMatrix TMatrixL1,
+    mini::CMatrix TMatrixU1,
+    mini::CMatrix TMatrixL2,
+    mini::CMatrix TMatrixU2>
 bool AxisAlignedBoundingBoxes(
-    Eigen::MatrixBase<TDerivedL1> const& L1,
-    Eigen::MatrixBase<TDerivedU1> const& U1,
-    Eigen::MatrixBase<TDerivedL2> const& L2,
-    Eigen::MatrixBase<TDerivedU2> const& U2);
+    TMatrixL1 const& L1,
+    TMatrixU1 const& U1,
+    TMatrixL2 const& L2,
+    TMatrixU2 const& U2);
 
 /**
  * @brief Tests for overlap between sphere (c,r) and axis-aligned bounding box (low,up)
@@ -103,12 +111,12 @@ bool AxisAlignedBoundingBoxes(
  * @param U
  * @return
  */
-template <class TDerivedC, class TDerivedL, class TDerivedU>
+template <mini::CMatrix TMatrixC, mini::CMatrix TMatrixL, mini::CMatrix TMatrixU>
 bool SphereAxisAlignedBoundingBox(
-    Eigen::MatrixBase<TDerivedC> const& C,
-    Scalar R,
-    Eigen::MatrixBase<TDerivedL> const& L,
-    Eigen::MatrixBase<TDerivedU> const& U);
+    TMatrixC const& C,
+    typename TMatrixC::ScalarType R,
+    TMatrixL const& L,
+    TMatrixU const& U);
 
 /**
  * @brief
@@ -118,12 +126,12 @@ bool SphereAxisAlignedBoundingBox(
  * @param R
  * @return
  */
-template <class TDerivedP, class TDerivedQ, class TDerivedC>
+template <mini::CMatrix TMatrixP, mini::CMatrix TMatrixQ, mini::CMatrix TMatrixC>
 bool LineSegmentSphere(
-    Eigen::MatrixBase<TDerivedP> const& P,
-    Eigen::MatrixBase<TDerivedQ> const& Q,
-    Eigen::MatrixBase<TDerivedC> const& C,
-    Scalar R);
+    TMatrixP const& P,
+    TMatrixQ const& Q,
+    TMatrixC const& C,
+    typename TMatrixC::ScalarType R);
 
 /**
  * @brief
@@ -133,12 +141,16 @@ bool LineSegmentSphere(
  * @param U
  * @return
  */
-template <class TDerivedP, class TDerivedQ, class TDerivedL, class TDerivedU>
+template <
+    mini::CMatrix TMatrixP,
+    mini::CMatrix TMatrixQ,
+    mini::CMatrix TMatrixL,
+    mini::CMatrix TMatrixU>
 bool LineSegmentAxisAlignedBoundingBox(
-    Eigen::MatrixBase<TDerivedP> const& P,
-    Eigen::MatrixBase<TDerivedQ> const& Q,
-    Eigen::MatrixBase<TDerivedL> const& L,
-    Eigen::MatrixBase<TDerivedU> const& U);
+    TMatrixP const& P,
+    TMatrixQ const& Q,
+    TMatrixL const& L,
+    TMatrixU const& U);
 
 /**
  * @brief Detects if the line segment PQ passes through the triangle ABC, in 3D.
@@ -149,13 +161,18 @@ bool LineSegmentAxisAlignedBoundingBox(
  * @param C
  * @return
  */
-template <class TDerivedP, class TDerivedQ, class TDerivedA, class TDerivedB, class TDerivedC>
+template <
+    mini::CMatrix TMatrixP,
+    mini::CMatrix TMatrixQ,
+    mini::CMatrix TMatrixA,
+    mini::CMatrix TMatrixB,
+    mini::CMatrix TMatrixC>
 bool LineSegmentTriangle3D(
-    Eigen::MatrixBase<TDerivedP> const& P,
-    Eigen::MatrixBase<TDerivedQ> const& Q,
-    Eigen::MatrixBase<TDerivedA> const& A,
-    Eigen::MatrixBase<TDerivedB> const& B,
-    Eigen::MatrixBase<TDerivedC> const& C);
+    TMatrixP const& P,
+    TMatrixQ const& Q,
+    TMatrixA const& A,
+    TMatrixB const& B,
+    TMatrixC const& C);
 
 /**
  * @brief Tests for overlap between plane (P,n) and axis-aligned bounding box (low,up)
@@ -165,12 +182,16 @@ bool LineSegmentTriangle3D(
  * @param U
  * @return
  */
-template <class TDerivedP, class TDerivedn, class TDerivedL, class TDerivedU>
+template <
+    mini::CMatrix TMatrixP,
+    mini::CMatrix TMatrixN,
+    mini::CMatrix TMatrixL,
+    mini::CMatrix TMatrixU>
 bool PlaneAxisAlignedBoundingBox(
-    Eigen::MatrixBase<TDerivedP> const& P,
-    Eigen::MatrixBase<TDerivedn> const& n,
-    Eigen::MatrixBase<TDerivedL> const& L,
-    Eigen::MatrixBase<TDerivedU> const& U);
+    TMatrixP const& P,
+    TMatrixN const& n,
+    TMatrixL const& L,
+    TMatrixU const& U);
 
 /**
  * @brief Tests for overlap between triangle ABC and axis-aligned bounding box (low,up)
@@ -181,13 +202,18 @@ bool PlaneAxisAlignedBoundingBox(
  * @param U
  * @return
  */
-template <class TDerivedA, class TDerivedB, class TDerivedC, class TDerivedL, class TDerivedU>
+template <
+    mini::CMatrix TMatrixA,
+    mini::CMatrix TMatrixB,
+    mini::CMatrix TMatrixC,
+    mini::CMatrix TMatrixL,
+    mini::CMatrix TMatrixU>
 bool TriangleAxisAlignedBoundingBox(
-    Eigen::MatrixBase<TDerivedA> const& A,
-    Eigen::MatrixBase<TDerivedB> const& B,
-    Eigen::MatrixBase<TDerivedC> const& C,
-    Eigen::MatrixBase<TDerivedL> const& L,
-    Eigen::MatrixBase<TDerivedU> const& U);
+    TMatrixA const& A,
+    TMatrixB const& B,
+    TMatrixC const& C,
+    TMatrixL const& L,
+    TMatrixU const& U);
 
 /**
  * @brief Tests for overlap between tetrahedron ABCD and axis-aligned bounding box (L,U), in at
@@ -201,19 +227,19 @@ bool TriangleAxisAlignedBoundingBox(
  * @return
  */
 template <
-    class TDerivedA,
-    class TDerivedB,
-    class TDerivedC,
-    class TDerivedD,
-    class TDerivedL,
-    class TDerivedU>
+    mini::CMatrix TMatrixA,
+    mini::CMatrix TMatrixB,
+    mini::CMatrix TMatrixC,
+    mini::CMatrix TMatrixD,
+    mini::CMatrix TMatrixL,
+    mini::CMatrix TMatrixU>
 bool TetrahedronAxisAlignedBoundingBox(
-    Eigen::MatrixBase<TDerivedA> const& A,
-    Eigen::MatrixBase<TDerivedB> const& B,
-    Eigen::MatrixBase<TDerivedC> const& C,
-    Eigen::MatrixBase<TDerivedD> const& D,
-    Eigen::MatrixBase<TDerivedL> const& L,
-    Eigen::MatrixBase<TDerivedU> const& U);
+    TMatrixA const& A,
+    TMatrixB const& B,
+    TMatrixC const& C,
+    TMatrixD const& D,
+    TMatrixL const& L,
+    TMatrixU const& U);
 
 /**
  * @brief Tests for overlap between triangle A1B1C1 and triangle A2B2C2, in 2D.
@@ -226,19 +252,19 @@ bool TetrahedronAxisAlignedBoundingBox(
  * @return
  */
 template <
-    class TDerivedA1,
-    class TDerivedB1,
-    class TDerivedC1,
-    class TDerivedA2,
-    class TDerivedB2,
-    class TDerivedC2>
+    mini::CMatrix TMatrixA1,
+    mini::CMatrix TMatrixB1,
+    mini::CMatrix TMatrixC1,
+    mini::CMatrix TMatrixA2,
+    mini::CMatrix TMatrixB2,
+    mini::CMatrix TMatrixC2>
 bool Triangles2D(
-    Eigen::MatrixBase<TDerivedA1> const& A1,
-    Eigen::MatrixBase<TDerivedB1> const& B1,
-    Eigen::MatrixBase<TDerivedC1> const& C1,
-    Eigen::MatrixBase<TDerivedA2> const& A2,
-    Eigen::MatrixBase<TDerivedB2> const& B2,
-    Eigen::MatrixBase<TDerivedC2> const& C2);
+    TMatrixA1 const& A1,
+    TMatrixB1 const& B1,
+    TMatrixC1 const& C1,
+    TMatrixA2 const& A2,
+    TMatrixB2 const& B2,
+    TMatrixC2 const& C2);
 
 /**
  * @brief Tests for overlap between triangle A1B1C1 and triangle A2B2C2, in 3D.
@@ -251,19 +277,19 @@ bool Triangles2D(
  * @return
  */
 template <
-    class TDerivedA1,
-    class TDerivedB1,
-    class TDerivedC1,
-    class TDerivedA2,
-    class TDerivedB2,
-    class TDerivedC2>
+    mini::CMatrix TMatrixA1,
+    mini::CMatrix TMatrixB1,
+    mini::CMatrix TMatrixC1,
+    mini::CMatrix TMatrixA2,
+    mini::CMatrix TMatrixB2,
+    mini::CMatrix TMatrixC2>
 bool Triangles3D(
-    Eigen::MatrixBase<TDerivedA1> const& A1,
-    Eigen::MatrixBase<TDerivedB1> const& B1,
-    Eigen::MatrixBase<TDerivedC1> const& C1,
-    Eigen::MatrixBase<TDerivedA2> const& A2,
-    Eigen::MatrixBase<TDerivedB2> const& B2,
-    Eigen::MatrixBase<TDerivedC2> const& C2);
+    TMatrixA1 const& A1,
+    TMatrixB1 const& B1,
+    TMatrixC1 const& C1,
+    TMatrixA2 const& A2,
+    TMatrixB2 const& B2,
+    TMatrixC2 const& C2);
 
 /**
  * @brief Tests for overlap between triangle ABC and tetrahedron IJKL, in at least 3D.
@@ -277,21 +303,21 @@ bool Triangles3D(
  * @return
  */
 template <
-    class TDerivedA,
-    class TDerivedB,
-    class TDerivedC,
-    class TDerivedI,
-    class TDerivedJ,
-    class TDerivedK,
-    class TDerivedL>
+    mini::CMatrix TMatrixA,
+    mini::CMatrix TMatrixB,
+    mini::CMatrix TMatrixC,
+    mini::CMatrix TMatrixI,
+    mini::CMatrix TMatrixJ,
+    mini::CMatrix TMatrixK,
+    mini::CMatrix TMatrixL>
 bool TriangleTetrahedron(
-    Eigen::MatrixBase<TDerivedA> const& A,
-    Eigen::MatrixBase<TDerivedB> const& B,
-    Eigen::MatrixBase<TDerivedC> const& C,
-    Eigen::MatrixBase<TDerivedI> const& I,
-    Eigen::MatrixBase<TDerivedJ> const& J,
-    Eigen::MatrixBase<TDerivedK> const& K,
-    Eigen::MatrixBase<TDerivedL> const& L);
+    TMatrixA const& A,
+    TMatrixB const& B,
+    TMatrixC const& C,
+    TMatrixI const& I,
+    TMatrixJ const& J,
+    TMatrixK const& K,
+    TMatrixL const& L);
 
 /**
  * @brief Tests for overlap between tetrahedron A1B1C1D1 and tetrahedron A2B2C2D2, in at least 3D.
@@ -306,23 +332,23 @@ bool TriangleTetrahedron(
  * @return
  */
 template <
-    class TDerivedA1,
-    class TDerivedB1,
-    class TDerivedC1,
-    class TDerivedD1,
-    class TDerivedA2,
-    class TDerivedB2,
-    class TDerivedC2,
-    class TDerivedD2>
+    mini::CMatrix TMatrixA1,
+    mini::CMatrix TMatrixB1,
+    mini::CMatrix TMatrixC1,
+    mini::CMatrix TMatrixD1,
+    mini::CMatrix TMatrixA2,
+    mini::CMatrix TMatrixB2,
+    mini::CMatrix TMatrixC2,
+    mini::CMatrix TMatrixD2>
 bool Tetrahedra(
-    Eigen::MatrixBase<TDerivedA1> const& A1,
-    Eigen::MatrixBase<TDerivedB1> const& B1,
-    Eigen::MatrixBase<TDerivedC1> const& C1,
-    Eigen::MatrixBase<TDerivedD1> const& D1,
-    Eigen::MatrixBase<TDerivedA2> const& A2,
-    Eigen::MatrixBase<TDerivedB2> const& B2,
-    Eigen::MatrixBase<TDerivedC2> const& C2,
-    Eigen::MatrixBase<TDerivedD2> const& D2);
+    TMatrixA1 const& A1,
+    TMatrixB1 const& B1,
+    TMatrixC1 const& C1,
+    TMatrixD1 const& D1,
+    TMatrixA2 const& A2,
+    TMatrixB2 const& B2,
+    TMatrixC2 const& C2,
+    TMatrixD2 const& D2);
 
 /**
  * @brief Tests for overlap between a triangle ABC and a sphere with center C of radius R
@@ -333,13 +359,17 @@ bool Tetrahedra(
  * @param r
  * @return
  */
-template <class TDerivedA, class TDerivedB, class TDerivedC, class TDerivedSC>
+template <
+    mini::CMatrix TMatrixA,
+    mini::CMatrix TMatrixB,
+    mini::CMatrix TMatrixC,
+    mini::CMatrix TMatrixSC>
 bool TriangleSphere(
-    Eigen::MatrixBase<TDerivedA> const& A,
-    Eigen::MatrixBase<TDerivedB> const& B,
-    Eigen::MatrixBase<TDerivedC> const& C,
-    Eigen::MatrixBase<TDerivedSC> const& SC,
-    Scalar R);
+    TMatrixA const& A,
+    TMatrixB const& B,
+    TMatrixC const& C,
+    TMatrixSC const& SC,
+    typename TMatrixSC::ScalarType R);
 
 /**
  * @brief Tests for overlap between a tetrahedron ABCD and a sphere with center C of radius R
@@ -351,61 +381,73 @@ bool TriangleSphere(
  * @param r
  * @return
  */
-template <class TDerivedA, class TDerivedB, class TDerivedC, class TDerivedD, class TDerivedSC>
+template <
+    mini::CMatrix TMatrixA,
+    mini::CMatrix TMatrixB,
+    mini::CMatrix TMatrixC,
+    mini::CMatrix TMatrixD,
+    mini::CMatrix TMatrixSC>
 bool TetrahedronSphere(
-    Eigen::MatrixBase<TDerivedA> const& A,
-    Eigen::MatrixBase<TDerivedB> const& B,
-    Eigen::MatrixBase<TDerivedC> const& C,
-    Eigen::MatrixBase<TDerivedD> const& D,
-    Eigen::MatrixBase<TDerivedSC> const& SC,
-    Scalar R);
+    TMatrixA const& A,
+    TMatrixB const& B,
+    TMatrixC const& C,
+    TMatrixD const& D,
+    TMatrixSC const& SC,
+    typename TMatrixSC::ScalarType R);
 
-template <class TDerivedP, class TDerivedL, class TDerivedU>
-bool PointAxisAlignedBoundingBox(
-    Eigen::MatrixBase<TDerivedP> const& P,
-    Eigen::MatrixBase<TDerivedL> const& L,
-    Eigen::MatrixBase<TDerivedU> const& U)
+template <mini::CMatrix TMatrixP, mini::CMatrix TMatrixL, mini::CMatrix TMatrixU>
+bool PointAxisAlignedBoundingBox(TMatrixP const& P, TMatrixL const& L, TMatrixU const& U)
 {
-    bool bIsInsideBox{true};
-    auto const dims = L.rows();
-    for (auto dim = 0; dim < dims; ++dim)
-    {
-        if (P(dims) < L(dims) or P(dims) > U(dims))
-        {
-            bIsInsideBox = false;
-            break;
-        }
-    }
-    return bIsInsideBox;
+    // bool bIsInsideBox{true};
+    auto constexpr kDims = L.Rows();
+    bool bIsOutsideBox   = Any((P < L) or (P > U));
+    // common::ForRange<0, kDims>([]<auto d>() {
+    //     if (P(d) < L(d) or P(d) > U(d))
+    //         bIsInsideBox = false;
+    // });
+    // return bIsInsideBox;
+    return not bIsOutsideBox;
 }
 
-template <class TDerivedP, class TDerivedA, class TDerivedB, class TDerivedC>
-bool PointTriangle(
-    Eigen::MatrixBase<TDerivedP> const& P,
-    Eigen::MatrixBase<TDerivedA> const& A,
-    Eigen::MatrixBase<TDerivedB> const& B,
-    Eigen::MatrixBase<TDerivedC> const& C)
+template <
+    mini::CMatrix TMatrixP,
+    mini::CMatrix TMatrixA,
+    mini::CMatrix TMatrixB,
+    mini::CMatrix TMatrixC>
+bool PointTriangle(TMatrixP const& P, TMatrixA const& A, TMatrixB const& B, TMatrixC const& C)
 {
-    Vector<3> const uvw          = IntersectionQueries::TriangleBarycentricCoordinates(P, A, B, C);
-    bool const bIsInsideTriangle = (uvw.array() >= 0.).all() and (uvw.array() <= 1.).all();
+    auto uvw         = IntersectionQueries::TriangleBarycentricCoordinates(P, A, B, C);
+    using ScalarType = typename TMatrixP::ScalarType;
+    // auto constexpr D       = uvw.Rows();
+    //  bool bIsInsideTriangle{true};
+    //  common::ForRange<0, D>([]<auto i>() {
+    //      bIsInsideTriangle &= (uvw(i) >= ScalarType(0) and uvw(i) <= ScalarType(1));
+    //  });
+    bool bIsInsideTriangle = All((uvw >= ScalarType(0)) and (uvw <= ScalarType(1)));
     return bIsInsideTriangle;
 }
 
-template <class TDerivedP, class TDerivedA, class TDerivedB, class TDerivedC, class TDerivedD>
+template <
+    mini::CMatrix TMatrixP,
+    mini::CMatrix TMatrixA,
+    mini::CMatrix TMatrixB,
+    mini::CMatrix TMatrixC,
+    mini::CMatrix TMatrixD>
 bool PointTetrahedron3D(
-    Eigen::MatrixBase<TDerivedP> const& P,
-    Eigen::MatrixBase<TDerivedA> const& A,
-    Eigen::MatrixBase<TDerivedB> const& B,
-    Eigen::MatrixBase<TDerivedC> const& C,
-    Eigen::MatrixBase<TDerivedD> const& D)
+    TMatrixP const& P,
+    TMatrixA const& A,
+    TMatrixB const& B,
+    TMatrixC const& C,
+    TMatrixD const& D)
 {
-    auto constexpr kRows = TDerivedP::RowsAtCompileTime;
+    using ScalarType     = typename TMatrixP::ScalarType;
+    auto constexpr kRows = TMatrixP::kRows;
     auto constexpr kDims = 3;
     static_assert(kRows == kDims, "This overlap test is specialized for 3D");
 
     auto const PointOutsidePlane = [](auto const& p, auto const& a, auto const& b, auto const& c) {
-        Scalar const d = (p - a).dot((b - a).cross(c - a));
-        return d > 0.;
+        ScalarType const d = Dot(p - a, Cross(b - a, c - a));
+        return d > ScalarType(0);
     };
     if (PointOutsidePlane(P, A, B, D))
         return false;
@@ -418,161 +460,194 @@ bool PointTetrahedron3D(
     return true;
 }
 
-template <class TDerivedC1, class TDerivedC2>
+template <mini::CMatrix TMatrixC1, mini::CMatrix TMatrixC2>
 bool Spheres(
-    Eigen::MatrixBase<TDerivedC1> const& C1,
-    Scalar R1,
-    Eigen::MatrixBase<TDerivedC2> const& C2,
-    Scalar R2)
+    TMatrixC1 const& C1,
+    typename TMatrixC1::ScalarType R1,
+    TMatrixC2 const& C2,
+    typename TMatrixC2::ScalarType R2)
 {
-    Scalar const upper  = R1 + R2;
-    Scalar const upper2 = upper * upper;
-    Scalar const d2     = (C1 - C2).squaredNorm();
+    using ScalarType        = typename TMatrixC1::ScalarType;
+    ScalarType const upper  = R1 + R2;
+    ScalarType const upper2 = upper * upper;
+    ScalarType const d2     = SquaredNorm(C1 - C2);
     return d2 <= upper2;
 }
 
-template <class TDerivedL1, class TDerivedU1, class TDerivedL2, class TDerivedU2>
+template <
+    mini::CMatrix TMatrixL1,
+    mini::CMatrix TMatrixU1,
+    mini::CMatrix TMatrixL2,
+    mini::CMatrix TMatrixU2>
 bool AxisAlignedBoundingBoxes(
-    Eigen::MatrixBase<TDerivedL1> const& L1,
-    Eigen::MatrixBase<TDerivedU1> const& U1,
-    Eigen::MatrixBase<TDerivedL2> const& L2,
-    Eigen::MatrixBase<TDerivedU2> const& U2)
+    TMatrixL1 const& L1,
+    TMatrixU1 const& U1,
+    TMatrixL2 const& L2,
+    TMatrixU2 const& U2)
 {
-    return (L1.array() <= U2.array()).all() and (L2.array() <= U1.array()).all();
+    // static auto constexpr kDims = L1.Rows();
+    // bool bOverlap{true};
+    // common::ForRange<0, kDims>([]<auto d>() { bOverlap &= (L1(d) <= U2(d)) and (L2(d) <= U1(d));
+    // });
+    bool bOverlap = All((L1 <= U2) and (L2 <= U1));
+    return bOverlap;
 }
 
-template <class TDerivedC, class TDerivedL, class TDerivedU>
+template <mini::CMatrix TMatrixC, mini::CMatrix TMatrixL, mini::CMatrix TMatrixU>
 bool SphereAxisAlignedBoundingBox(
-    Eigen::MatrixBase<TDerivedC> const& C,
-    Scalar R,
-    Eigen::MatrixBase<TDerivedL> const& L,
-    Eigen::MatrixBase<TDerivedU> const& U)
+    TMatrixC const& C,
+    typename TMatrixC::ScalarType R,
+    TMatrixL const& L,
+    TMatrixU const& U)
 {
     auto const Xaabb = ClosestPointQueries::PointOnAxisAlignedBoundingBox(C, L, U);
-    auto const d2    = (C - Xaabb).squaredNorm();
+    auto const d2    = SquaredNorm(C - Xaabb);
     auto const r2    = R * R;
     return d2 < r2;
 }
 
-template <class TDerivedP, class TDerivedQ, class TDerivedC>
+template <mini::CMatrix TMatrixP, mini::CMatrix TMatrixQ, mini::CMatrix TMatrixC>
 bool LineSegmentSphere(
-    Eigen::MatrixBase<TDerivedP> const& P,
-    Eigen::MatrixBase<TDerivedQ> const& Q,
-    Eigen::MatrixBase<TDerivedC> const& C,
-    Scalar R)
+    TMatrixP const& P,
+    TMatrixQ const& Q,
+    TMatrixC const& C,
+    typename TMatrixC::ScalarType R)
 {
-    auto constexpr kRows  = TDerivedP::RowsAtCompileTime;
-    Vector<kRows> const d = Q - P;
-    Vector<kRows> const m = P - C;
-    Scalar const b        = m.dot(d);
-    Scalar const c        = m.dot(m) - R * R;
+    using ScalarType                         = typename TMatrixC::ScalarType;
+    auto constexpr kRows                     = TMatrixP::kRows;
+    mini::SVector<ScalarType, kRows> const d = Q - P;
+    mini::SVector<ScalarType, kRows> const m = P - C;
+    ScalarType const b                       = Dot(m, d);
+    ScalarType const c                       = Dot(m, m) - R * R;
     // Exit if r's origin outside s (c > 0) and r pointing away from s (b > 0)
-    if (c > 0. and b > 0.)
+    if (c > ScalarType(0) and b > ScalarType(0))
         return false;
-    Scalar const discr = b * b - c;
+    ScalarType const discr = b * b - c;
     // A negative discriminant corresponds to ray missing sphere
-    if (discr < 0.)
+    if (discr < ScalarType(0))
         return false;
     // Ray now found to intersect sphere, compute smallest t value of intersection
-    Scalar t = -b - std::sqrt(discr);
-    if (t > 1.)
+    using namespace std;
+    ScalarType t = -b - sqrt(discr);
+    if (t > ScalarType(1))
         return false;
     return true;
 }
 
-template <class TDerivedP, class TDerivedQ, class TDerivedL, class TDerivedU>
+template <
+    mini::CMatrix TMatrixP,
+    mini::CMatrix TMatrixQ,
+    mini::CMatrix TMatrixL,
+    mini::CMatrix TMatrixU>
 bool LineSegmentAxisAlignedBoundingBox(
-    Eigen::MatrixBase<TDerivedP> const& P,
-    Eigen::MatrixBase<TDerivedQ> const& Q,
-    Eigen::MatrixBase<TDerivedL> const& L,
-    Eigen::MatrixBase<TDerivedU> const& U)
+    TMatrixP const& P,
+    TMatrixQ const& Q,
+    TMatrixL const& L,
+    TMatrixU const& U)
 {
-    auto constexpr kRows  = TDerivedP::RowsAtCompileTime;
-    Vector<kRows> const c = 0.5 * (L + U);
-    Vector<kRows> const e = U - L;
-    Vector<kRows> const d = Q - P;
-    Vector<kRows> m       = P + Q - L - U;
-    m                     = m - c; // Translate box and segment to origin
+    using ScalarType     = typename TMatrixP::ScalarType;
+    auto constexpr kRows = TMatrixP::kRows;
+
+    mini::SVector<ScalarType, kRows> const c = ScalarType(0.5) * (L + U);
+    mini::SVector<ScalarType, kRows> const e = U - L;
+    mini::SVector<ScalarType, kRows> const d = Q - P;
+    mini::SVector<ScalarType, kRows> m       = P + Q - L - U;
+    m                                        = m - c; // Translate box and segment to origin
 
     // Try world coordinate axes as separating axes
-    auto const dims = c.rows();
-    Vector<kRows> ad{};
-    // Should not happen, hopefully...
-    if constexpr (kRows == Eigen::Dynamic)
-        ad.resize(dims);
-
-    for (auto dim = 0; dim < dims; ++dim)
-    {
-        ad(dim) = std::abs(d(dim));
-        if (std::abs(m(dim)) > e(dim) + ad(dim))
-            return false;
-    }
+    using namespace std;
+    auto constexpr kDims = c.Rows();
+    // mini::SVector<ScalarType, kRows> ad{};
+    // for (auto dim = 0; dim < kDims; ++dim)
+    // {
+    //     ad(dim) = abs(d(dim));
+    //     if (abs(m(dim)) > e(dim) + ad(dim))
+    //         return false;
+    // }
+    bool bAxesSeparating = Any(Abs(m) > (e + Abs(d)));
+    if (bAxesSeparating)
+        return false;
     // Add in an epsilon term to counteract arithmetic errors when segment is
     // (near) parallel to a coordinate axis (see text for detail)
-    Scalar constexpr eps = 1e-15;
-    for (auto dim = 0; dim < dims; ++dim)
-    {
+    common::ForRange<0, kDims>([]<auto dim>() {
+        ScalarType constexpr eps = 1e-15;
         ad(dim) += eps;
-        auto i = (dim + 1) % dims;
-        auto j = (dim + 2) % dims;
+        auto i = (dim + 1) % kDims;
+        auto j = (dim + 2) % kDims;
         // Try cross products of segment direction vector with coordinate axes
-        if (std::abs(m(i) * d(i) - m(i) * d(i)) > e(i) * ad(j) + e(j) * ad(i))
-            return false;
-    }
+        bAxesSeparating &= abs(m(i) * d(i) - m(i) * d(i)) > e(i) * ad(j) + e(j) * ad(i);
+    });
     // No separating axis found; segment must be overlapping AABB
-    return true;
+    return not bAxesSeparating;
 }
 
-template <class TDerivedP, class TDerivedQ, class TDerivedA, class TDerivedB, class TDerivedC>
+template <
+    mini::CMatrix TMatrixP,
+    mini::CMatrix TMatrixQ,
+    mini::CMatrix TMatrixA,
+    mini::CMatrix TMatrixB,
+    mini::CMatrix TMatrixC>
 bool LineSegmentTriangle3D(
-    Eigen::MatrixBase<TDerivedP> const& P,
-    Eigen::MatrixBase<TDerivedQ> const& Q,
-    Eigen::MatrixBase<TDerivedA> const& A,
-    Eigen::MatrixBase<TDerivedB> const& B,
-    Eigen::MatrixBase<TDerivedC> const& C)
+    TMatrixP const& P,
+    TMatrixQ const& Q,
+    TMatrixA const& A,
+    TMatrixB const& B,
+    TMatrixC const& C)
 {
     return IntersectionQueries::UvwLineSegmentTriangle3D(P, Q, A, B, C).has_value();
 }
 
-template <class TDerivedP, class TDerivedn, class TDerivedL, class TDerivedU>
+template <
+    mini::CMatrix TMatrixP,
+    mini::CMatrix TMatrixN,
+    mini::CMatrix TMatrixL,
+    mini::CMatrix TMatrixU>
 bool PlaneAxisAlignedBoundingBox(
-    Eigen::MatrixBase<TDerivedP> const& P,
-    Eigen::MatrixBase<TDerivedn> const& n,
-    Eigen::MatrixBase<TDerivedL> const& L,
-    Eigen::MatrixBase<TDerivedU> const& U)
+    TMatrixP const& P,
+    TMatrixN const& n,
+    TMatrixL const& L,
+    TMatrixU const& U)
 {
-    auto constexpr kRows  = TDerivedP::RowsAtCompileTime;
-    Vector<kRows> const C = 0.5 * (L + U); // Compute AABB center
-    Vector<kRows> const e = U - C;         // Compute positive extents
+    using ScalarType                         = typename TMatrixP::ScalarType;
+    auto constexpr kRows                     = TMatrixP::kRows;
+    mini::SVector<ScalarType, kRows> const C = ScalarType(0.5) * (L + U); // Compute AABB center
+    mini::SVector<ScalarType, kRows> const e = U - C; // Compute positive extents
     // Compute the projection interval radius of b onto L(t) = C + t * n
-    Scalar const r = (e.array() * n.array().abs()).sum();
+    ScalarType const r = Dot(e, Abs(n));
     // Compute distance of box center from plane
-    Scalar const s = n.dot(C - P);
+    ScalarType const s = Dot(n, C - P);
     // Intersection occurs when distance s falls within [-r,+r] interval
-    return std::abs(s) <= r;
+    using namespace std;
+    return abs(s) <= r;
 }
 
-template <class TDerivedA, class TDerivedB, class TDerivedC, class TDerivedL, class TDerivedU>
+template <
+    mini::CMatrix TMatrixA,
+    mini::CMatrix TMatrixB,
+    mini::CMatrix TMatrixC,
+    mini::CMatrix TMatrixL,
+    mini::CMatrix TMatrixU>
 bool TriangleAxisAlignedBoundingBox(
-    Eigen::MatrixBase<TDerivedA> const& A,
-    Eigen::MatrixBase<TDerivedB> const& B,
-    Eigen::MatrixBase<TDerivedC> const& C,
-    Eigen::MatrixBase<TDerivedL> const& L,
-    Eigen::MatrixBase<TDerivedU> const& U)
+    TMatrixA const& A,
+    TMatrixB const& B,
+    TMatrixC const& C,
+    TMatrixL const& L,
+    TMatrixU const& U)
 {
     /**
      * Ericson, Christer. Real-time collision detection. Crc Press, 2004. section 5.2.9
      */
 
-    auto constexpr kRows = TDerivedL::RowsAtCompileTime;
+    using ScalarType     = typename TMatrixA::ScalarType;
+    auto constexpr kRows = TMatrixL::kRows;
     auto constexpr kDims = 3;
     static_assert(kRows == kDims, "This overlap test is specialized for 3D");
     // Transform triangle into reference space of AABB
-    Vector<kDims> const O  = 0.5 * (L + U);
-    Vector<kDims> const e  = U - O;
-    Vector<kDims> const AO = A - O;
-    Vector<kDims> const BO = B - O;
-    Vector<kDims> const CO = C - O;
+    mini::SVector<ScalarType, kDims> const O  = ScalarType(0.5) * (L + U);
+    mini::SVector<ScalarType, kDims> const e  = U - O;
+    mini::SVector<ScalarType, kDims> const AO = A - O;
+    mini::SVector<ScalarType, kDims> const BO = B - O;
+    mini::SVector<ScalarType, kDims> const CO = C - O;
 
     /*
      * Separating axis' to test are:
@@ -581,40 +656,43 @@ bool TriangleAxisAlignedBoundingBox(
      * - Face normal of triangle
      */
 
-    auto const ProjectTriangle = [&](auto const& a) -> std::pair<Scalar, Scalar> {
-        Vector<3> const p{AO.dot(a), BO.dot(a), CO.dot(a)};
-        return std::make_pair(std::min({p(0), p(1), p(2)}), std::max({p(0), p(1), p(2)}));
+    using namespace std;
+    auto const ProjectTriangle = [&](auto const& a) -> std::pair<ScalarType, ScalarType> {
+        mini::SVector<ScalarType, 3> const p{Dot(AO, a), Dot(BO, a), Dot(CO, a)};
+        return make_pair(Min(p), Max(p));
     };
-    auto const ProjectAabb = [&](auto const& a) -> Scalar {
-        return (e.array() * a.array().abs()).sum();
+    auto const ProjectAabb = [&](auto const& a) -> ScalarType {
+        return Dot(e, Abs(a));
     };
-    auto const AreDisjoint = [](Scalar ABCprojlow, Scalar ABCprojup, Scalar AABBproj) {
+    auto const AreDisjoint = [](ScalarType ABCprojlow, ScalarType ABCprojup, ScalarType AABBproj) {
         return (AABBproj < ABCprojlow) or (ABCprojup < -AABBproj);
     };
     auto const TestAxis = [&ProjectTriangle, &ProjectAabb, &AreDisjoint](auto const& axis) {
         auto const [ABCmin, ABCmax] = ProjectTriangle(axis);
-        Scalar const r              = ProjectAabb(axis);
+        ScalarType const r          = ProjectAabb(axis);
         return AreDisjoint(ABCmin, ABCmax, r);
     };
 
-    // 1. Test edge pairs
+    // ScalarType(1) Test edge pairs
     auto const IsEdgePairIntersecting = [&TestAxis](auto const& a, auto const& b, auto dim) {
-        auto constexpr eps = 1e-15;
-        auto const ab      = b - a;
+        ScalarType constexpr eps = 1e-15;
+        auto const ab            = b - a;
         // Construct natural unit vector in axis dim
-        auto const u = Vector<kDims>::Unit(dim);
-        auto axis    = ab.cross(u /* - zero*/).normalized();
-        if (!axis.isZero(eps))
+        auto const u                          = mini::Unit<ScalarType, kDims>(dim);
+        mini::SVector<ScalarType, kDims> axis = Normalized(Cross(ab, u /* - zero*/));
+        bool bAxisIsZero                      = All(Abs(axis) <= eps);
+        if (not bAxisIsZero)
         {
             return TestAxis(axis);
         }
         else
         {
             // Edges ab and cd are numerically parallel
-            auto const n = ab.cross(/*zero */ -a);
+            auto const n = Cross(ab, /*zero */ -a);
             // Try a separating axis perpendicular to ab lying in the plane containing ab and cd
-            axis = ab.cross(n).normalized();
-            if (!axis.isZero(eps))
+            axis        = Normalized(Cross(ab, n));
+            bAxisIsZero = All(Abs(axis) <= eps);
+            if (not bAxisIsZero)
                 return TestAxis(axis);
             // ab and ac parallel too, so edges ab and cd are colinear and will not be a
             // separating axis
@@ -640,43 +718,44 @@ bool TriangleAxisAlignedBoundingBox(
     // 2. Test AABB face normals
     for (auto dim = 0; dim < kDims; ++dim)
     {
-        Scalar const max = std::max({AO(dim), BO(dim), CO(dim)});
-        Scalar const min = std::min({AO(dim), BO(dim), CO(dim)});
-        if (max < -e(dim) or min > e(dim))
+        ScalarType const ma = max({AO(dim), BO(dim), CO(dim)});
+        ScalarType const mi = min({AO(dim), BO(dim), CO(dim)});
+        if (ma < -e(dim) or mi > e(dim))
             return false;
     }
 
     // 3. Test triangle face normal
-    Vector<kDims> const n = (B - A).cross(C - A).normalized();
+    mini::SVector<ScalarType, kDims> const n = Normalized(Cross(B - A, C - A));
     return PlaneAxisAlignedBoundingBox(A, n, L, U);
 }
 
 template <
-    class TDerivedA,
-    class TDerivedB,
-    class TDerivedC,
-    class TDerivedD,
-    class TDerivedL,
-    class TDerivedU>
+    mini::CMatrix TMatrixA,
+    mini::CMatrix TMatrixB,
+    mini::CMatrix TMatrixC,
+    mini::CMatrix TMatrixD,
+    mini::CMatrix TMatrixL,
+    mini::CMatrix TMatrixU>
 bool TetrahedronAxisAlignedBoundingBox(
-    Eigen::MatrixBase<TDerivedA> const& A,
-    Eigen::MatrixBase<TDerivedB> const& B,
-    Eigen::MatrixBase<TDerivedC> const& C,
-    Eigen::MatrixBase<TDerivedD> const& D,
-    Eigen::MatrixBase<TDerivedL> const& L,
-    Eigen::MatrixBase<TDerivedU> const& U)
+    TMatrixA const& A,
+    TMatrixB const& B,
+    TMatrixC const& C,
+    TMatrixD const& D,
+    TMatrixL const& L,
+    TMatrixU const& U)
 {
-    auto constexpr kRows = TDerivedL::RowsAtCompileTime;
+    using ScalarType     = typename TMatrixA::ScalarType;
+    auto constexpr kRows = TMatrixL::kRows;
     auto constexpr kDims = 3;
     static_assert(kRows == kDims, "This overlap test is specialized for 3D");
 
     // Transform tetrahedron into reference space of AABB
-    Vector<kDims> const O  = 0.5 * (L + U);
-    Vector<kDims> const e  = U - O;
-    Vector<kDims> const AO = A - O;
-    Vector<kDims> const BO = B - O;
-    Vector<kDims> const CO = C - O;
-    Vector<kDims> const DO = D - O;
+    mini::SVector<ScalarType, kDims> const O  = ScalarType(0.5) * (L + U);
+    mini::SVector<ScalarType, kDims> const e  = U - O;
+    mini::SVector<ScalarType, kDims> const AO = A - O;
+    mini::SVector<ScalarType, kDims> const BO = B - O;
+    mini::SVector<ScalarType, kDims> const CO = C - O;
+    mini::SVector<ScalarType, kDims> const DO = D - O;
 
     /*
      * Separating axis' to test are:
@@ -685,43 +764,43 @@ bool TetrahedronAxisAlignedBoundingBox(
      * - Face normals of AABB (3 tests)
      * - Face normals of tetrahedron (4 tests)
      */
-
-    auto const ProjectTetrahedron = [&](auto const& a) -> std::pair<Scalar, Scalar> {
-        Vector<4> const p{AO.dot(a), BO.dot(a), CO.dot(a), DO.dot(a)};
-        return std::make_pair(
-            std::min({p(0), p(1), p(2), p(3)}),
-            std::max({p(0), p(1), p(2), p(3)}));
+    using namespace std;
+    auto const ProjectTetrahedron = [&](auto const& a) -> std::pair<ScalarType, ScalarType> {
+        mini::SVector<ScalarType, 4> const p{Dot(AO, a), Dot(BO, a), Dot(CO, a), Dot(DO, a)};
+        return make_pair(Min(p), Max(p));
     };
-    auto const ProjectAabb = [&](auto const& a) -> Scalar {
-        return (e.array() * a.array().abs()).sum();
+    auto const ProjectAabb = [&](auto const& a) -> ScalarType {
+        return Dot(e, Abs(a));
     };
-    auto const AreDisjoint = [](Scalar low, Scalar up, Scalar r) {
+    auto const AreDisjoint = [](ScalarType low, ScalarType up, ScalarType r) {
         return (up < -r) or (r < low);
     };
     auto const TestAxis = [&ProjectTetrahedron, &ProjectAabb, &AreDisjoint](auto const& axis) {
         auto const [low, up] = ProjectTetrahedron(axis);
-        Scalar const r       = ProjectAabb(axis);
+        ScalarType const r   = ProjectAabb(axis);
         return AreDisjoint(low, up, r);
     };
 
-    // 1. Test edge pairs
+    // ScalarType(1) Test edge pairs
     auto const IsEdgePairIntersecting = [&TestAxis](auto const& a, auto const& b, auto dim) {
-        auto constexpr eps = 1e-15;
-        auto const ab      = b - a;
+        ScalarType constexpr eps = 1e-15;
+        auto const ab            = b - a;
         // Construct natural unit vector in axis dim
-        auto const u = Vector<kDims>::Unit(dim);
-        auto axis    = ab.cross(u /* - zero*/).normalized();
-        if (!axis.isZero(eps))
+        auto const u                          = mini::Unit<ScalarType, kDims>(dim);
+        mini::SVector<ScalarType, kDims> axis = Normalized(Cross(ab, u /* - zero*/));
+        bool bAxisIsZero                      = All(Abs(axis) <= eps);
+        if (not bAxisIsZero)
         {
             return TestAxis(axis);
         }
         else
         {
             // Edges ab and cd are numerically parallel
-            auto const n = ab.cross(/*zero */ -a);
+            auto const n = Cross(ab, /*zero */ -a);
             // Try a separating axis perpendicular to ab lying in the plane containing ab and cd
-            axis = ab.cross(n).normalized();
-            if (!axis.isZero(eps))
+            axis        = Normalized(Cross(ab, n));
+            bAxisIsZero = All(Abs(axis) <= eps);
+            if (not bAxisIsZero)
                 return TestAxis(axis);
             // ab and ac parallel too, so edges ab and cd are colinear and will not be a
             // separating axis
@@ -759,55 +838,57 @@ bool TetrahedronAxisAlignedBoundingBox(
     // 2. Test AABB face normals
     for (auto dim = 0; dim < kDims; ++dim)
     {
-        Scalar const max = std::max({AO(dim), BO(dim), CO(dim), DO(dim)});
-        Scalar const min = std::min({AO(dim), BO(dim), CO(dim), DO(dim)});
-        if (max < -e(dim) or min > e(dim))
+        ScalarType const ma = max({AO(dim), BO(dim), CO(dim), DO(dim)});
+        ScalarType const mi = min({AO(dim), BO(dim), CO(dim), DO(dim)});
+        if (ma < -e(dim) or mi > e(dim))
             return false;
     }
 
     // 3. Test tetrahedron face normals
     // Tetrahedron faces are: ABD, BCD, CAD, ACB
-    Vector<kDims> n = (B - A).cross(D - A).normalized();
-    if (!PlaneAxisAlignedBoundingBox(A, n, L, U))
+    mini::SVector<ScalarType, kDims> n = Normalized(Cross(B - A, D - A));
+    if (not PlaneAxisAlignedBoundingBox(A, n, L, U))
         return false;
-    n = (C - B).cross(D - B).normalized();
-    if (!PlaneAxisAlignedBoundingBox(B, n, L, U))
+    n = Normalized(Cross(C - B, D - B));
+    if (not PlaneAxisAlignedBoundingBox(B, n, L, U))
         return false;
-    n = (A - C).cross(D - C).normalized();
-    if (!PlaneAxisAlignedBoundingBox(C, n, L, U))
+    n = Normalized(Cross(A - C, D - C));
+    if (not PlaneAxisAlignedBoundingBox(C, n, L, U))
         return false;
-    n = (C - A).cross(B - A).normalized();
+    n = Normalized(Cross(C - A, B - A));
     return PlaneAxisAlignedBoundingBox(A, n, L, U);
 }
 
 template <
-    class TDerivedA1,
-    class TDerivedB1,
-    class TDerivedC1,
-    class TDerivedA2,
-    class TDerivedB2,
-    class TDerivedC2>
+    mini::CMatrix TMatrixA1,
+    mini::CMatrix TMatrixB1,
+    mini::CMatrix TMatrixC1,
+    mini::CMatrix TMatrixA2,
+    mini::CMatrix TMatrixB2,
+    mini::CMatrix TMatrixC2>
 bool Triangles2D(
-    Eigen::MatrixBase<TDerivedA1> const& A1,
-    Eigen::MatrixBase<TDerivedB1> const& B1,
-    Eigen::MatrixBase<TDerivedC1> const& C1,
-    Eigen::MatrixBase<TDerivedA2> const& A2,
-    Eigen::MatrixBase<TDerivedB2> const& B2,
-    Eigen::MatrixBase<TDerivedC2> const& C2)
+    TMatrixA1 const& A1,
+    TMatrixB1 const& B1,
+    TMatrixC1 const& C1,
+    TMatrixA2 const& A2,
+    TMatrixB2 const& B2,
+    TMatrixC2 const& C2)
 {
-    auto constexpr kRows = TDerivedA1::RowsAtCompileTime;
+    using ScalarType     = typename TMatrixA1::ScalarType;
+    auto constexpr kRows = TMatrixA1::kRows;
     auto constexpr kDims = 2;
     static_assert(kRows == kDims, "This overlap test is specialized for 2D");
 
+    using namespace std;
     // Separating axis' to test are all 6 triangle edges
     auto const ProjectTriangle = [&](auto const& a,
                                      auto const& b,
                                      auto const& c,
-                                     auto const& axis) -> std::pair<Scalar, Scalar> {
-        Vector<3> const p{a.dot(axis), b.dot(axis), c.dot(axis)};
-        return std::make_pair(std::min({p(0), p(1), p(2)}), std::max({p(0), p(1), p(2)}));
+                                     auto const& axis) -> std::pair<ScalarType, ScalarType> {
+        mini::SVector<ScalarType, 3> const p{Dot(a, axis), Dot(b, axis), Dot(c, axis)};
+        return make_pair(Min(p), Max(p));
     };
-    auto const AreDisjoint = [](Scalar low1, Scalar up1, Scalar low2, Scalar up2) {
+    auto const AreDisjoint = [](ScalarType low1, ScalarType up1, ScalarType low2, ScalarType up2) {
         return (up1 < low2) or (up2 < low1);
     };
     auto const TestAxis = [&](auto const& axis) {
@@ -816,7 +897,7 @@ bool Triangles2D(
         return AreDisjoint(low1, up1, low2, up2);
     };
     auto const EdgeNormal = [](auto e) {
-        return Vector<kDims>{-e(1), e(0)}.normalized();
+        return Normalized(mini::SVector<ScalarType, kDims>{-e(1), e(0)});
     };
     if (TestAxis(EdgeNormal(B1 - A1)))
         return false;
@@ -834,19 +915,19 @@ bool Triangles2D(
 }
 
 template <
-    class TDerivedA1,
-    class TDerivedB1,
-    class TDerivedC1,
-    class TDerivedA2,
-    class TDerivedB2,
-    class TDerivedC2>
+    mini::CMatrix TMatrixA1,
+    mini::CMatrix TMatrixB1,
+    mini::CMatrix TMatrixC1,
+    mini::CMatrix TMatrixA2,
+    mini::CMatrix TMatrixB2,
+    mini::CMatrix TMatrixC2>
 bool Triangles3D(
-    Eigen::MatrixBase<TDerivedA1> const& A1,
-    Eigen::MatrixBase<TDerivedB1> const& B1,
-    Eigen::MatrixBase<TDerivedC1> const& C1,
-    Eigen::MatrixBase<TDerivedA2> const& A2,
-    Eigen::MatrixBase<TDerivedB2> const& B2,
-    Eigen::MatrixBase<TDerivedC2> const& C2)
+    TMatrixA1 const& A1,
+    TMatrixB1 const& B1,
+    TMatrixC1 const& C1,
+    TMatrixA2 const& A2,
+    TMatrixB2 const& B2,
+    TMatrixC2 const& C2)
 {
     auto const intersections = IntersectionQueries::UvwTriangles3D(A1, B1, C1, A2, B2, C2);
     for (auto const& intersection : intersections)
@@ -856,22 +937,23 @@ bool Triangles3D(
 }
 
 template <
-    class TDerivedA,
-    class TDerivedB,
-    class TDerivedC,
-    class TDerivedI,
-    class TDerivedJ,
-    class TDerivedK,
-    class TDerivedL>
+    mini::CMatrix TMatrixA,
+    mini::CMatrix TMatrixB,
+    mini::CMatrix TMatrixC,
+    mini::CMatrix TMatrixI,
+    mini::CMatrix TMatrixJ,
+    mini::CMatrix TMatrixK,
+    mini::CMatrix TMatrixL>
 bool TriangleTetrahedron(
-    Eigen::MatrixBase<TDerivedA> const& A,
-    Eigen::MatrixBase<TDerivedB> const& B,
-    Eigen::MatrixBase<TDerivedC> const& C,
-    Eigen::MatrixBase<TDerivedI> const& I,
-    Eigen::MatrixBase<TDerivedJ> const& J,
-    Eigen::MatrixBase<TDerivedK> const& K,
-    Eigen::MatrixBase<TDerivedL> const& L)
+    TMatrixA const& A,
+    TMatrixB const& B,
+    TMatrixC const& C,
+    TMatrixI const& I,
+    TMatrixJ const& J,
+    TMatrixK const& K,
+    TMatrixL const& L)
 {
+    using ScalarType = typename TMatrixA::ScalarType;
     /*
      * Separating axis' to test are:
      * - Perpendicular axis' of pairs of 3 triangle edges and 6 tetrahedron edges (18
@@ -879,22 +961,21 @@ bool TriangleTetrahedron(
      * - Face normals of tetrahedron (4 tests)
      * - Face normal of triangle (1 test)
      */
-    auto constexpr kRows = TDerivedA::RowsAtCompileTime;
+    auto constexpr kRows = TMatrixA::kRows;
     auto constexpr kDims = 3;
     static_assert(kRows == kDims, "This overlap test is specialized for 3D");
 
-    // 1. Test edge pairs
-    auto const ProjectTriangle = [&](auto const& a) -> std::pair<Scalar, Scalar> {
-        Vector<3> const p{A.dot(a), B.dot(a), C.dot(a)};
-        return std::make_pair(std::min({p(0), p(1), p(2)}), std::max({p(0), p(1), p(2)}));
+    using namespace std;
+    // ScalarType(1) Test edge pairs
+    auto const ProjectTriangle = [&](auto const& a) -> pair<ScalarType, ScalarType> {
+        mini::SVector<ScalarType, 3> const p{Dot(A, a), Dot(B, a), Dot(C, a)};
+        return make_pair(Min(p), Max(p));
     };
-    auto const ProjectTetrahedron = [&](auto const& a) -> std::pair<Scalar, Scalar> {
-        Vector<4> const p{I.dot(a), J.dot(a), K.dot(a), L.dot(a)};
-        return std::make_pair(
-            std::min({p(0), p(1), p(2), p(3)}),
-            std::max({p(0), p(1), p(2), p(3)}));
+    auto const ProjectTetrahedron = [&](auto const& a) -> pair<ScalarType, ScalarType> {
+        mini::SVector<ScalarType, 4> const p{Dot(I, a), Dot(J, a), Dot(K, a), Dot(L, a)};
+        return make_pair(min({p(0), p(1), p(2), p(3)}), max({p(0), p(1), p(2), p(3)}));
     };
-    auto const AreDisjoint = [](Scalar low1, Scalar up1, Scalar low2, Scalar up2) {
+    auto const AreDisjoint = [](ScalarType low1, ScalarType up1, ScalarType low2, ScalarType up2) {
         return (up1 < low2) or (up2 < low1);
     };
     auto const TestAxis = [&ProjectTriangle, &ProjectTetrahedron, &AreDisjoint](auto const& a) {
@@ -904,20 +985,22 @@ bool TriangleTetrahedron(
     };
     auto const IsEdgePairSeparating =
         [&TestAxis](auto const& a, auto const& b, auto const& c, auto const& d) {
-            auto constexpr eps = 1e-15;
-            auto const ab      = b - a;
-            Vector<kDims> axis = ab.cross(d - c).normalized();
-            if (!axis.isZero(eps))
+            ScalarType constexpr eps              = 1e-15;
+            auto const ab                         = b - a;
+            mini::SVector<ScalarType, kDims> axis = Normalized(Cross(ab, d - c));
+            bool bAxisIsZero                      = All(Abs(axis) <= eps);
+            if (not bAxisIsZero)
             {
                 return TestAxis(axis);
             }
             else
             {
                 // Edges ab and cd are numerically parallel
-                auto const n = ab.cross(c - a);
+                auto const n = Cross(ab, c - a);
                 // Try a separating axis perpendicular to ab lying in the plane containing ab and cd
-                axis = ab.cross(n).normalized();
-                if (!axis.isZero(eps))
+                axis        = Normalized(Cross(ab, n));
+                bAxisIsZero = All(Abs(axis) <= eps);
+                if (not bAxisIsZero)
                     return TestAxis(axis);
                 // ab and ac parallel too, so edges ab and cd are colinear and will not be a
                 // separating axis
@@ -970,73 +1053,71 @@ bool TriangleTetrahedron(
         return false;
 
     // 2. Test tetrahedron face normals
-    Vector<kDims> const IJ = J - I;
-    Vector<kDims> const JK = K - J;
-    Vector<kDims> const KI = I - K;
-    Vector<kDims> const IL = L - I;
-    Vector<kDims> const JL = L - J;
-    Vector<kDims> const KL = L - K;
-    Vector<kDims> n        = IJ.cross(IL).normalized();
+    mini::SVector<ScalarType, kDims> const IJ = J - I;
+    mini::SVector<ScalarType, kDims> const JK = K - J;
+    mini::SVector<ScalarType, kDims> const KI = I - K;
+    mini::SVector<ScalarType, kDims> const IL = L - I;
+    mini::SVector<ScalarType, kDims> const JL = L - J;
+    mini::SVector<ScalarType, kDims> const KL = L - K;
+    mini::SVector<ScalarType, kDims> n        = Normalized(Cross(IJ, IL));
     if (TestAxis(n))
         return false;
-    n = JK.cross(JL).normalized();
+    n = Normalized(Cross(JK, JL));
     if (TestAxis(n))
         return false;
-    n = KI.cross(KL).normalized();
+    n = Normalized(Cross(KI, KL));
     if (TestAxis(n))
         return false;
-    Vector<kDims> const IK = K - I;
-    n                      = IK.cross(IJ).normalized();
+    mini::SVector<ScalarType, kDims> const IK = K - I;
+    n                                         = Normalized(Cross(IK, IJ));
     if (TestAxis(n))
         return false;
 
     // 3. Test triangle face normal
-    n = (B - A).cross(C - A).normalized();
-    return !TestAxis(n);
+    n = Normalized(Cross(B - A, C - A));
+    return not TestAxis(n);
 }
 
 template <
-    class TDerivedA1,
-    class TDerivedB1,
-    class TDerivedC1,
-    class TDerivedD1,
-    class TDerivedA2,
-    class TDerivedB2,
-    class TDerivedC2,
-    class TDerivedD2>
+    mini::CMatrix TMatrixA1,
+    mini::CMatrix TMatrixB1,
+    mini::CMatrix TMatrixC1,
+    mini::CMatrix TMatrixD1,
+    mini::CMatrix TMatrixA2,
+    mini::CMatrix TMatrixB2,
+    mini::CMatrix TMatrixC2,
+    mini::CMatrix TMatrixD2>
 bool Tetrahedra(
-    Eigen::MatrixBase<TDerivedA1> const& A1,
-    Eigen::MatrixBase<TDerivedB1> const& B1,
-    Eigen::MatrixBase<TDerivedC1> const& C1,
-    Eigen::MatrixBase<TDerivedD1> const& D1,
-    Eigen::MatrixBase<TDerivedA2> const& A2,
-    Eigen::MatrixBase<TDerivedB2> const& B2,
-    Eigen::MatrixBase<TDerivedC2> const& C2,
-    Eigen::MatrixBase<TDerivedD2> const& D2)
+    TMatrixA1 const& A1,
+    TMatrixB1 const& B1,
+    TMatrixC1 const& C1,
+    TMatrixD1 const& D1,
+    TMatrixA2 const& A2,
+    TMatrixB2 const& B2,
+    TMatrixC2 const& C2,
+    TMatrixD2 const& D2)
 {
+    using ScalarType = typename TMatrixA1::ScalarType;
     /*
      * Separating axis' to test are:
      * - Perpendicular axis' of pairs of 6 tetrahedron A1B1C1D1 edges and 6 tetrahedron A2B2C2D2
      * edges (36 tests)
      * - Face normals of tetrahedron (4+4=8 tests)
      */
-    auto constexpr kRows = TDerivedA1::RowsAtCompileTime;
+    auto constexpr kRows = TMatrixA1::kRows;
     auto constexpr kDims = 3;
     static_assert(kRows == kDims, "This overlap test is specialized for 3D");
 
-    auto const ProjectTetrahedron1 = [&](auto const& a) -> std::pair<Scalar, Scalar> {
-        Vector<4> const p{A1.dot(a), B1.dot(a), C1.dot(a), D1.dot(a)};
-        return std::make_pair(
-            std::min({p(0), p(1), p(2), p(3)}),
-            std::max({p(0), p(1), p(2), p(3)}));
+    using namespace std;
+    auto const ProjectTetrahedron1 = [&](auto const& a) -> pair<ScalarType, ScalarType> {
+        mini::SVector<ScalarType, 4> const p{Dot(A1, a), Dot(B1, a), Dot(C1, a), Dot(D1, a)};
+        return make_pair(Min(p), Max(p));
     };
-    auto const ProjectTetrahedron2 = [&](auto const& a) -> std::pair<Scalar, Scalar> {
-        Vector<4> const p{A2.dot(a), B2.dot(a), C2.dot(a), D2.dot(a)};
-        return std::make_pair(
-            std::min({p(0), p(1), p(2), p(3)}),
-            std::max({p(0), p(1), p(2), p(3)}));
+    auto const ProjectTetrahedron2 = [&](auto const& a) -> pair<ScalarType, ScalarType> {
+        mini::SVector<ScalarType, 4> const p{Dot(A2, a), Dot(B2, a), Dot(C2, a), Dot(D2, a)};
+        return make_pair(Min(p), Max(p));
     };
-    auto const AreDisjoint = [](Scalar low1, Scalar up1, Scalar low2, Scalar up2) {
+    auto const AreDisjoint = [](ScalarType low1, ScalarType up1, ScalarType low2, ScalarType up2) {
         return (up1 < low2) or (up2 < low1);
     };
     auto const TestAxis =
@@ -1046,23 +1127,25 @@ bool Tetrahedra(
             return AreDisjoint(low1, up1, low2, up2);
         };
 
-    // 1. Test edge pairs
+    // ScalarType(1) Test edge pairs
     auto const IsEdgePairSeparating =
         [&TestAxis](auto const& a, auto const& b, auto const& c, auto const& d) {
-            auto constexpr eps = 1e-15;
-            auto const ab      = b - a;
-            Vector<kDims> axis = ab.cross(d - c).normalized();
-            if (!axis.isZero(eps))
+            ScalarType constexpr eps              = 1e-15;
+            auto const ab                         = b - a;
+            mini::SVector<ScalarType, kDims> axis = Normalized(Cross(ab, d - c));
+            bool bAxisIsZero                      = All(Abs(axis) <= eps);
+            if (not bAxisIsZero)
             {
                 return TestAxis(axis);
             }
             else
             {
                 // Edges ab and cd are numerically parallel
-                auto const n = ab.cross(c - a);
+                auto const n = Cross(ab, c - a);
                 // Try a separating axis perpendicular to ab lying in the plane containing ab and cd
-                axis = ab.cross(n).normalized();
-                if (!axis.isZero(eps))
+                axis        = Normalized(Cross(ab, n));
+                bAxisIsZero = All(Abs(axis) <= eps);
+                if (not bAxisIsZero)
                 {
                     return TestAxis(axis);
                 }
@@ -1155,58 +1238,69 @@ bool Tetrahedra(
     // 2. Test face normals:
     // Tetrahedron 1 faces are: A1B1D1, B1C1D1, C1A1D1, A1C1B1
     // Tetrahedron 2 faces are: A2B2D2, B2C2D2, C2A2D2, A2C2B2
-    Vector<kDims> n = (B1 - A1).cross(D1 - A1).normalized();
+    mini::SVector<ScalarType, kDims> n = Normalized(Cross(B1 - A1, D1 - A1));
     if (TestAxis(n))
         return false;
-    n = (C1 - B1).cross(D1 - B1).normalized();
+    n = Normalized(Cross(C1 - B1, D1 - B1));
     if (TestAxis(n))
         return false;
-    n = (A1 - C1).cross(D1 - C1).normalized();
+    n = Normalized(Cross(A1 - C1, D1 - C1));
     if (TestAxis(n))
         return false;
-    n = (C1 - A1).cross(B1 - A1).normalized();
+    n = Normalized(Cross(C1 - A1, B1 - A1));
     if (TestAxis(n))
         return false;
 
-    n = (B2 - A2).cross(D2 - A2).normalized();
+    n = Normalized(Cross(B2 - A2, D2 - A2));
     if (TestAxis(n))
         return false;
-    n = (C2 - B2).cross(D2 - B2).normalized();
+    n = Normalized(Cross(C2 - B2, D2 - B2));
     if (TestAxis(n))
         return false;
-    n = (A2 - C2).cross(D2 - C2).normalized();
+    n = Normalized(Cross(A2 - C2, D2 - C2));
     if (TestAxis(n))
         return false;
-    n = (C2 - A2).cross(B2 - A2).normalized();
-    return !TestAxis(n);
+    n = Normalized(Cross(C2 - A2, B2 - A2));
+    return not TestAxis(n);
 }
 
-template <class TDerivedA, class TDerivedB, class TDerivedC, class TDerivedSC>
+template <
+    mini::CMatrix TMatrixA,
+    mini::CMatrix TMatrixB,
+    mini::CMatrix TMatrixC,
+    mini::CMatrix TMatrixSC>
 bool TriangleSphere(
-    Eigen::MatrixBase<TDerivedA> const& A,
-    Eigen::MatrixBase<TDerivedB> const& B,
-    Eigen::MatrixBase<TDerivedC> const& C,
-    Eigen::MatrixBase<TDerivedSC> const& SC,
-    Scalar R)
+    TMatrixA const& A,
+    TMatrixB const& B,
+    TMatrixC const& C,
+    TMatrixSC const& SC,
+    typename TMatrixSC::ScalarType R)
 {
-    auto const X    = ClosestPointQueries::PointInTriangle(SC, A, B, C);
-    Scalar const d2 = (X - SC).squaredNorm();
-    Scalar const r2 = R * R;
+    using ScalarType    = typename TMatrixSC::ScalarType;
+    auto const X        = ClosestPointQueries::PointInTriangle(SC, A, B, C);
+    ScalarType const d2 = SquaredNorm(X - SC);
+    ScalarType const r2 = R * R;
     return d2 < r2;
 }
 
-template <class TDerivedA, class TDerivedB, class TDerivedC, class TDerivedD, class TDerivedSC>
+template <
+    mini::CMatrix TMatrixA,
+    mini::CMatrix TMatrixB,
+    mini::CMatrix TMatrixC,
+    mini::CMatrix TMatrixD,
+    mini::CMatrix TMatrixSC>
 bool TetrahedronSphere(
-    Eigen::MatrixBase<TDerivedA> const& A,
-    Eigen::MatrixBase<TDerivedB> const& B,
-    Eigen::MatrixBase<TDerivedC> const& C,
-    Eigen::MatrixBase<TDerivedD> const& D,
-    Eigen::MatrixBase<TDerivedSC> const& SC,
-    Scalar R)
+    TMatrixA const& A,
+    TMatrixB const& B,
+    TMatrixC const& C,
+    TMatrixD const& D,
+    TMatrixSC const& SC,
+    typename TMatrixSC::ScalarType R)
 {
-    auto const X    = ClosestPointQueries::PointInTetrahedron(SC, A, B, C, D);
-    Scalar const d2 = (X - SC).squaredNorm();
-    Scalar const r2 = R * R;
+    using ScalarType    = typename TMatrixSC::ScalarType;
+    auto const X        = ClosestPointQueries::PointInTetrahedron(SC, A, B, C, D);
+    ScalarType const d2 = SquaredNorm(X - SC);
+    ScalarType const r2 = R * R;
     return d2 < r2;
 }
 

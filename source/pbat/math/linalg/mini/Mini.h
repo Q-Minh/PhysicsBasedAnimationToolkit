@@ -5,6 +5,7 @@
 #include "BinaryOperations.h"
 #include "Concepts.h"
 #include "Determinant.h"
+#include "Eigen.h"
 #include "Geometry.h"
 #include "Inverse.h"
 #include "Matrix.h"

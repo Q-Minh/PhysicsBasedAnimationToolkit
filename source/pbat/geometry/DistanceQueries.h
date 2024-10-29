@@ -3,12 +3,15 @@
 
 #include "ClosestPointQueries.h"
 #include "OverlapQueries.h"
+#include "pbat/math/linalg/mini/Mini.h"
 
-#include <pbat/Aliases.h>
+#include <algorithm>
 
 namespace pbat {
 namespace geometry {
 namespace DistanceQueries {
+
+namespace mini = math::linalg::mini;
 
 /**
  * @brief Obtain squared distance between 2 axis-aligned bounding boxes
@@ -18,28 +21,30 @@ namespace DistanceQueries {
  * @param U2 2nd AABB's upper corner
  * @return
  */
-template <class TDerivedL1, class TDerivedU1, class TDerivedL2, class TDerivedU2>
-Scalar AxisAlignedBoundingBoxes(
-    Eigen::MatrixBase<TDerivedL1> const& L1,
-    Eigen::MatrixBase<TDerivedU1> const& U1,
-    Eigen::MatrixBase<TDerivedL2> const& L2,
-    Eigen::MatrixBase<TDerivedU2> const& U2);
+template <
+    mini::CMatrix TMatrixL1,
+    mini::CMatrix TMatrixU1,
+    mini::CMatrix TMatrixL2,
+    mini::CMatrix TMatrixU2>
+typename TMatrixL1::ScalarType AxisAlignedBoundingBoxes(
+    TMatrixL1 const& L1,
+    TMatrixU1 const& U1,
+    TMatrixL2 const& L2,
+    TMatrixU2 const& U2);
 
 /**
  * @brief
- * @tparam TDerivedP
- * @tparam TDerivedL
- * @tparam TDerivedU
+ * @tparam TMatrixP
+ * @tparam TMatrixL
+ * @tparam TMatrixU
  * @param P
  * @param L
  * @param U
  * @return
  */
-template <class TDerivedP, class TDerivedL, class TDerivedU>
-Scalar PointAxisAlignedBoundingBox(
-    Eigen::MatrixBase<TDerivedP> const& P,
-    Eigen::MatrixBase<TDerivedL> const& L,
-    Eigen::MatrixBase<TDerivedU> const& U);
+template <mini::CMatrix TMatrixP, mini::CMatrix TMatrixL, mini::CMatrix TMatrixU>
+typename TMatrixP::ScalarType
+PointAxisAlignedBoundingBox(TMatrixP const& P, TMatrixL const& L, TMatrixU const& U);
 
 /**
  * @brief Obtain squared distance between point P and triangle ABC
@@ -49,20 +54,21 @@ Scalar PointAxisAlignedBoundingBox(
  * @param C
  * @return
  */
-template <class TDerivedP, class TDerivedA, class TDerivedB, class TDerivedC>
-Scalar PointTriangle(
-    Eigen::MatrixBase<TDerivedP> const& P,
-    Eigen::MatrixBase<TDerivedA> const& A,
-    Eigen::MatrixBase<TDerivedB> const& B,
-    Eigen::MatrixBase<TDerivedC> const& C);
+template <
+    mini::CMatrix TMatrixP,
+    mini::CMatrix TMatrixA,
+    mini::CMatrix TMatrixB,
+    mini::CMatrix TMatrixC>
+typename TMatrixP::ScalarType
+PointTriangle(TMatrixP const& P, TMatrixA const& A, TMatrixB const& B, TMatrixC const& C);
 
 /**
  * @brief
- * @tparam TDerivedP
- * @tparam TDerivedA
- * @tparam TDerivedB
- * @tparam TDerivedC
- * @tparam TDerivedD
+ * @tparam TMatrixP
+ * @tparam TMatrixA
+ * @tparam TMatrixB
+ * @tparam TMatrixC
+ * @tparam TMatrixD
  * @param P
  * @param A
  * @param B
@@ -70,13 +76,18 @@ Scalar PointTriangle(
  * @param D
  * @return
  */
-template <class TDerivedP, class TDerivedA, class TDerivedB, class TDerivedC, class TDerivedD>
-Scalar PointTetrahedron(
-    Eigen::MatrixBase<TDerivedP> const& P,
-    Eigen::MatrixBase<TDerivedA> const& A,
-    Eigen::MatrixBase<TDerivedB> const& B,
-    Eigen::MatrixBase<TDerivedC> const& C,
-    Eigen::MatrixBase<TDerivedD> const& D);
+template <
+    mini::CMatrix TMatrixP,
+    mini::CMatrix TMatrixA,
+    mini::CMatrix TMatrixB,
+    mini::CMatrix TMatrixC,
+    mini::CMatrix TMatrixD>
+typename TMatrixP::ScalarType PointTetrahedron(
+    TMatrixP const& P,
+    TMatrixA const& A,
+    TMatrixB const& B,
+    TMatrixC const& C,
+    TMatrixD const& D);
 
 /**
  * @brief Obtains the signed distance of X w.r.t. plane (P,n)
@@ -85,11 +96,8 @@ Scalar PointTetrahedron(
  * @param n
  * @return
  */
-template <class TDerivedX, class TDerivedP, class TDerivedN>
-Scalar PointPlane(
-    Eigen::MatrixBase<TDerivedX> const& X,
-    Eigen::MatrixBase<TDerivedP> const& P,
-    Eigen::MatrixBase<TDerivedN> const& n);
+template <mini::CMatrix TMatrixX, mini::CMatrix TMatrixP, mini::CMatrix TMatrixN>
+typename TMatrixX::ScalarType PointPlane(TMatrixX const& X, TMatrixP const& P, TMatrixN const& n);
 
 /**
  * @brief Obtains the distance between sphere (X,R) and triangle ABC.
@@ -100,41 +108,42 @@ Scalar PointPlane(
  * @param C
  * @return
  */
-template <class TDerivedX, class TDerivedA, class TDerivedB, class TDerivedC>
-Scalar SphereTriangle(
-    Eigen::MatrixBase<TDerivedX> const& X,
-    Scalar R,
-    Eigen::MatrixBase<TDerivedA> const& A,
-    Eigen::MatrixBase<TDerivedB> const& B,
-    Eigen::MatrixBase<TDerivedC> const& C);
+template <
+    mini::CMatrix TMatrixX,
+    mini::CMatrix TMatrixA,
+    mini::CMatrix TMatrixB,
+    mini::CMatrix TMatrixC>
+typename TMatrixX::ScalarType SphereTriangle(
+    TMatrixX const& X,
+    typename TMatrixX::ScalarType R,
+    TMatrixA const& A,
+    TMatrixB const& B,
+    TMatrixC const& C);
 
-template <class TDerivedL1, class TDerivedU1, class TDerivedL2, class TDerivedU2>
-Scalar AxisAlignedBoundingBoxes(
-    Eigen::MatrixBase<TDerivedL1> const& L1,
-    Eigen::MatrixBase<TDerivedU1> const& U1,
-    Eigen::MatrixBase<TDerivedL2> const& L2,
-    Eigen::MatrixBase<TDerivedU2> const& U2)
+template <
+    mini::CMatrix TMatrixL1,
+    mini::CMatrix TMatrixU1,
+    mini::CMatrix TMatrixL2,
+    mini::CMatrix TMatrixU2>
+typename TMatrixL1::ScalarType AxisAlignedBoundingBoxes(
+    TMatrixL1 const& L1,
+    TMatrixU1 const& U1,
+    TMatrixL2 const& L2,
+    TMatrixU2 const& U2)
 {
-    auto const dims                                           = L1.rows();
-    Vector<TDerivedL1::RowsAtCompileTime> const Lintersection = L1.array().max(L2.array());
-    Vector<TDerivedL1::RowsAtCompileTime> const Uintersection = U1.array().min(U2.array());
-    Scalar d2{0.};
-    for (auto i = 0; i < dims; ++i)
-    {
-        if (Lintersection(i) > Uintersection(i))
-        {
-            Scalar const di = Lintersection(i) - Uintersection(i);
-            d2 += di * di;
-        }
-    }
+    using ScalarType                    = typename TMatrixL1::ScalarType;
+    auto constexpr kDims                = TMatrixL1::kRows;
+    mini::SVector<ScalarType, kDims> LI = Max(L1, L2);
+    mini::SVector<ScalarType, kDims> UI = Min(U1, U2);
+    auto LGU                            = LI > UI;
+    mini::SVector<ScalarType, kDims> DI = LI - UI;
+    ScalarType d2                       = Dot(LGU, Squared(DI));
     return d2;
 }
 
-template <class TDerivedP, class TDerivedL, class TDerivedU>
-Scalar PointAxisAlignedBoundingBox(
-    Eigen::MatrixBase<TDerivedP> const& P,
-    Eigen::MatrixBase<TDerivedL> const& L,
-    Eigen::MatrixBase<TDerivedU> const& U)
+template <mini::CMatrix TMatrixP, mini::CMatrix TMatrixL, mini::CMatrix TMatrixU>
+typename TMatrixP::ScalarType
+PointAxisAlignedBoundingBox(TMatrixP const& P, TMatrixL const& L, TMatrixU const& U)
 {
     // If point is inside AABB, then distance is 0.
     bool const bIsInsideBox = OverlapQueries::PointAxisAlignedBoundingBox(P, L, U);
@@ -142,60 +151,67 @@ Scalar PointAxisAlignedBoundingBox(
         return 0.;
     // Otherwise compute distance to boundary
     auto const CP = ClosestPointQueries::PointOnAxisAlignedBoundingBox(P, L, U);
-    return (P - CP).norm();
+    return Norm(P - CP);
 }
 
-template <class TDerivedP, class TDerivedA, class TDerivedB, class TDerivedC>
-Scalar PointTriangle(
-    Eigen::MatrixBase<TDerivedP> const& P,
-    Eigen::MatrixBase<TDerivedA> const& A,
-    Eigen::MatrixBase<TDerivedB> const& B,
-    Eigen::MatrixBase<TDerivedC> const& C)
+template <
+    mini::CMatrix TMatrixP,
+    mini::CMatrix TMatrixA,
+    mini::CMatrix TMatrixB,
+    mini::CMatrix TMatrixC>
+typename TMatrixP::ScalarType
+PointTriangle(TMatrixP const& P, TMatrixA const& A, TMatrixB const& B, TMatrixC const& C)
 {
-    Vector<TDerivedP::RowsAtCompileTime> const PP =
-        ClosestPointQueries::PointInTriangle(P, A, B, C);
-    return (P - PP).norm();
+    auto const PP = ClosestPointQueries::PointInTriangle(P, A, B, C);
+    return Norm(P - PP);
 }
 
-template <class TDerivedP, class TDerivedA, class TDerivedB, class TDerivedC, class TDerivedD>
-Scalar PointTetrahedron(
-    Eigen::MatrixBase<TDerivedP> const& P,
-    Eigen::MatrixBase<TDerivedA> const& A,
-    Eigen::MatrixBase<TDerivedB> const& B,
-    Eigen::MatrixBase<TDerivedC> const& C,
-    Eigen::MatrixBase<TDerivedD> const& D)
+template <
+    mini::CMatrix TMatrixP,
+    mini::CMatrix TMatrixA,
+    mini::CMatrix TMatrixB,
+    mini::CMatrix TMatrixC,
+    mini::CMatrix TMatrixD>
+typename TMatrixP::ScalarType PointTetrahedron(
+    TMatrixP const& P,
+    TMatrixA const& A,
+    TMatrixB const& B,
+    TMatrixC const& C,
+    TMatrixD const& D)
 {
     bool const bPointInTetrahedron = OverlapQueries::PointTetrahedron3D(P, A, B, C, D);
     if (bPointInTetrahedron)
         return 0.;
 
-    Vector<4> sd{
+    using ScalarType = typename TMatrixP::ScalarType;
+    mini::SVector<ScalarType, 4> sd{
         PointTriangle(P, A, B, D),
         PointTriangle(P, B, C, D),
         PointTriangle(P, C, A, D),
         PointTriangle(P, A, C, B)};
-    Scalar const min = sd.minCoeff();
+    ScalarType const min = Min(sd);
     return min;
 }
 
-template <class TDerivedX, class TDerivedP, class TDerivedN>
-Scalar PointPlane(
-    Eigen::MatrixBase<TDerivedX> const& X,
-    Eigen::MatrixBase<TDerivedP> const& P,
-    Eigen::MatrixBase<TDerivedN> const& n)
+template <mini::CMatrix TMatrixX, mini::CMatrix TMatrixP, mini::CMatrix TMatrixN>
+typename TMatrixX::ScalarType PointPlane(TMatrixX const& X, TMatrixP const& P, TMatrixN const& n)
 {
-    return (X - P).dot(n);
+    return Dot(X - P, n);
 }
 
-template <class TDerivedX, class TDerivedA, class TDerivedB, class TDerivedC>
-Scalar SphereTriangle(
-    Eigen::MatrixBase<TDerivedX> const& X,
-    Scalar R,
-    Eigen::MatrixBase<TDerivedA> const& A,
-    Eigen::MatrixBase<TDerivedB> const& B,
-    Eigen::MatrixBase<TDerivedC> const& C)
+template <
+    mini::CMatrix TMatrixX,
+    mini::CMatrix TMatrixA,
+    mini::CMatrix TMatrixB,
+    mini::CMatrix TMatrixC>
+typename TMatrixX::ScalarType SphereTriangle(
+    TMatrixX const& X,
+    typename TMatrixX::ScalarType R,
+    TMatrixA const& A,
+    TMatrixB const& B,
+    TMatrixC const& C)
 {
-    Scalar const d2c = PointTriangle(X, A, B, C);
+    auto const d2c = PointTriangle(X, A, B, C);
     return d2c - R;
 }
 

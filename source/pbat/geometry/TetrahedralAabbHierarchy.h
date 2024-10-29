@@ -82,6 +82,7 @@ inline std::vector<Index> TetrahedralAabbHierarchy::PrimitivesContainingPoints(
     bool bParallelize) const
 {
     PBAT_PROFILE_NAMED_SCOPE("geometry.TetrahedralAabbHierarchy.PrimitivesContainingPoints");
+    using math::linalg::mini::FromEigen;
     std::vector<Index> p(static_cast<std::size_t>(P.cols()), -1);
     auto const FindContainingPrimitive = [&](Index i) {
         std::vector<Index> const intersectingPrimitives = this->PrimitivesIntersecting(
@@ -89,11 +90,11 @@ inline std::vector<Index> TetrahedralAabbHierarchy::PrimitivesContainingPoints(
             [&](PrimitiveType const& T) -> bool {
                 auto const VT = V(Eigen::all, T);
                 return OverlapQueries::PointTetrahedron3D(
-                    P.col(i).template head<kDims>(),
-                    VT.col(0).head<kDims>(),
-                    VT.col(1).head<kDims>(),
-                    VT.col(2).head<kDims>(),
-                    VT.col(3).head<kDims>());
+                    FromEigen(P.col(i).template head<kDims>()),
+                    FromEigen(VT.col(0).head<kDims>()),
+                    FromEigen(VT.col(1).head<kDims>()),
+                    FromEigen(VT.col(2).head<kDims>()),
+                    FromEigen(VT.col(3).head<kDims>()));
             });
         if (not intersectingPrimitives.empty())
         {
@@ -119,6 +120,7 @@ inline std::vector<Index> TetrahedralAabbHierarchy::NearestPrimitivesToPoints(
     bool bParallelize) const
 {
     PBAT_PROFILE_NAMED_SCOPE("geometry.TetrahedralAabbHierarchy.NearestPrimitivesToPoints");
+    using math::linalg::mini::FromEigen;
     std::vector<Index> p(static_cast<std::size_t>(P.cols()), -1);
     auto const FindNearestPrimitive = [&](Index i) {
         std::size_t constexpr K{1};
@@ -129,11 +131,11 @@ inline std::vector<Index> TetrahedralAabbHierarchy::NearestPrimitivesToPoints(
             [&](PrimitiveType const& T) -> Scalar {
                 auto const VT = V(Eigen::all, T);
                 return DistanceQueries::PointTetrahedron(
-                    P.col(i).template head<kDims>(),
-                    VT.col(0).head<kDims>(),
-                    VT.col(1).head<kDims>(),
-                    VT.col(2).head<kDims>(),
-                    VT.col(3).head<kDims>());
+                    FromEigen(P.col(i).template head<kDims>()),
+                    FromEigen(VT.col(0).head<kDims>()),
+                    FromEigen(VT.col(1).head<kDims>()),
+                    FromEigen(VT.col(2).head<kDims>()),
+                    FromEigen(VT.col(3).head<kDims>()));
             },
             K);
         auto const iStl = static_cast<std::size_t>(i);

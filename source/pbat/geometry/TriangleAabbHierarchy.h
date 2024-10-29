@@ -6,6 +6,7 @@
 #include "DistanceQueries.h"
 #include "OverlapQueries.h"
 #include "PhysicsBasedAnimationToolkitExport.h"
+#include "pbat/math/linalg/mini/Eigen.h"
 
 #include <pbat/Aliases.h>
 #include <pbat/common/Eigen.h>
@@ -123,25 +124,26 @@ inline IndexMatrixX
 TriangleAabbHierarchy<3>::OverlappingPrimitives(SelfType const& bvh, std::size_t reserve) const
 {
     PBAT_PROFILE_NAMED_SCOPE("geometry.TriangleAabbHierarchy3D.OverlappingPrimitives");
+    using math::linalg::mini::FromEigen;
     return this->OverlappingPrimitivesImpl<SelfType, BoundingVolumeType, PrimitiveType, kDims>(
         bvh,
         [](BoundingVolumeType const& bv1, BoundingVolumeType const& bv2) -> bool {
             return OverlapQueries::AxisAlignedBoundingBoxes(
-                bv1.min(),
-                bv1.max(),
-                bv2.min(),
-                bv2.max());
+                FromEigen(bv1.min()),
+                FromEigen(bv1.max()),
+                FromEigen(bv2.min()),
+                FromEigen(bv2.max()));
         },
         [&](PrimitiveType const& p1, PrimitiveType const& p2) -> bool {
             auto const V1 = V(Eigen::all, p1);
             auto const V2 = bvh.V(Eigen::all, p2);
             return OverlapQueries::Triangles3D(
-                V1.col(0).head<kDims>(),
-                V1.col(1).head<kDims>(),
-                V1.col(2).head<kDims>(),
-                V2.col(0).head<kDims>(),
-                V2.col(1).head<kDims>(),
-                V2.col(2).head<kDims>());
+                FromEigen(V1.col(0).head<kDims>()),
+                FromEigen(V1.col(1).head<kDims>()),
+                FromEigen(V1.col(2).head<kDims>()),
+                FromEigen(V2.col(0).head<kDims>()),
+                FromEigen(V2.col(1).head<kDims>()),
+                FromEigen(V2.col(2).head<kDims>()));
         },
         [&](PrimitiveType const& p1, PrimitiveType const& p2) -> bool {
             if (this == &bvh)
@@ -170,6 +172,7 @@ inline std::vector<Index> TriangleAabbHierarchy<3>::PrimitivesContainingPoints(
     bool bParallelize) const
 {
     PBAT_PROFILE_NAMED_SCOPE("geometry.TriangleAabbHierarchy3D.PrimitivesContainingPoints");
+    using math::linalg::mini::FromEigen;
     std::vector<Index> p(static_cast<std::size_t>(P.cols()), -1);
     auto const FindContainingPrimitive = [&](Index i) {
         std::vector<Index> const intersectingPrimitives = this->PrimitivesIntersecting(
@@ -177,10 +180,10 @@ inline std::vector<Index> TriangleAabbHierarchy<3>::PrimitivesContainingPoints(
             [&](PrimitiveType const& T) -> bool {
                 auto const VT  = V(Eigen::all, T);
                 Scalar const d = DistanceQueries::PointTriangle(
-                    P.col(i).template head<kDims>(),
-                    VT.col(0).head<kDims>(),
-                    VT.col(1).head<kDims>(),
-                    VT.col(2).head<kDims>());
+                    FromEigen(P.col(i).template head<kDims>()),
+                    FromEigen(VT.col(0).head<kDims>()),
+                    FromEigen(VT.col(1).head<kDims>()),
+                    FromEigen(VT.col(2).head<kDims>()));
                 auto constexpr eps = 1e-15;
                 return d < eps;
             });
@@ -208,6 +211,7 @@ inline std::vector<Index> TriangleAabbHierarchy<3>::NearestPrimitivesToPoints(
     bool bParallelize) const
 {
     PBAT_PROFILE_NAMED_SCOPE("geometry.TriangleAabbHierarchy3D.NearestPrimitivesToPoints");
+    using math::linalg::mini::FromEigen;
     std::vector<Index> p(static_cast<std::size_t>(P.cols()), -1);
     auto const FindNearestPrimitive = [&](Index i) {
         std::size_t constexpr K{1};
@@ -218,10 +222,10 @@ inline std::vector<Index> TriangleAabbHierarchy<3>::NearestPrimitivesToPoints(
             [&](PrimitiveType const& T) -> Scalar {
                 auto const VT = V(Eigen::all, T);
                 return DistanceQueries::PointTriangle(
-                    P.col(i).template head<kDims>(),
-                    VT.col(0).head<kDims>(),
-                    VT.col(1).head<kDims>(),
-                    VT.col(2).head<kDims>());
+                    FromEigen(P.col(i).template head<kDims>()),
+                    FromEigen(VT.col(0).head<kDims>()),
+                    FromEigen(VT.col(1).head<kDims>()),
+                    FromEigen(VT.col(2).head<kDims>()));
             },
             K);
         auto const iStl = static_cast<std::size_t>(i);
@@ -344,25 +348,26 @@ inline IndexMatrixX
 TriangleAabbHierarchy<2>::OverlappingPrimitives(SelfType const& bvh, std::size_t reserve) const
 {
     PBAT_PROFILE_NAMED_SCOPE("geometry.TriangleAabbHierarchy2D.OverlappingPrimitives");
+    using math::linalg::mini::FromEigen;
     return this->OverlappingPrimitivesImpl<SelfType, BoundingVolumeType, PrimitiveType, kDims>(
         bvh,
         [](BoundingVolumeType const& bv1, BoundingVolumeType const& bv2) -> bool {
             return OverlapQueries::AxisAlignedBoundingBoxes(
-                bv1.min(),
-                bv1.max(),
-                bv2.min(),
-                bv2.max());
+                FromEigen(bv1.min()),
+                FromEigen(bv1.max()),
+                FromEigen(bv2.min()),
+                FromEigen(bv2.max()));
         },
         [&](PrimitiveType const& p1, PrimitiveType const& p2) -> bool {
             auto const V1 = V(Eigen::all, p1);
             auto const V2 = bvh.V(Eigen::all, p2);
             return OverlapQueries::Triangles2D(
-                V1.col(0).head<kDims>(),
-                V1.col(1).head<kDims>(),
-                V1.col(2).head<kDims>(),
-                V2.col(0).head<kDims>(),
-                V2.col(1).head<kDims>(),
-                V2.col(2).head<kDims>());
+                FromEigen(V1.col(0).head<kDims>()),
+                FromEigen(V1.col(1).head<kDims>()),
+                FromEigen(V1.col(2).head<kDims>()),
+                FromEigen(V2.col(0).head<kDims>()),
+                FromEigen(V2.col(1).head<kDims>()),
+                FromEigen(V2.col(2).head<kDims>()));
         },
         [&](PrimitiveType const& p1, PrimitiveType const& p2) -> bool {
             if (this == &bvh)
@@ -391,6 +396,7 @@ inline std::vector<Index> TriangleAabbHierarchy<2>::PrimitivesContainingPoints(
     bool bParallelize) const
 {
     PBAT_PROFILE_NAMED_SCOPE("geometry.TriangleAabbHierarchy2D.PrimitivesContainingPoints");
+    using math::linalg::mini::FromEigen;
     std::vector<Index> p(static_cast<std::size_t>(P.cols()), -1);
     auto const FindContainingPrimitive = [&](Index i) {
         std::vector<Index> const intersectingPrimitives = this->PrimitivesIntersecting(
@@ -398,10 +404,10 @@ inline std::vector<Index> TriangleAabbHierarchy<2>::PrimitivesContainingPoints(
             [&](PrimitiveType const& T) -> bool {
                 auto const VT = V(Eigen::all, T);
                 return OverlapQueries::PointTriangle(
-                    P.col(i).template head<kDims>(),
-                    VT.col(0).head<kDims>(),
-                    VT.col(1).head<kDims>(),
-                    VT.col(2).head<kDims>());
+                    FromEigen(P.col(i).template head<kDims>()),
+                    FromEigen(VT.col(0).head<kDims>()),
+                    FromEigen(VT.col(1).head<kDims>()),
+                    FromEigen(VT.col(2).head<kDims>()));
             });
         if (not intersectingPrimitives.empty())
         {
@@ -427,6 +433,7 @@ inline std::vector<Index> TriangleAabbHierarchy<2>::NearestPrimitivesToPoints(
     bool bParallelize) const
 {
     PBAT_PROFILE_NAMED_SCOPE("geometry.TriangleAabbHierarchy2D.NearestPrimitivesToPoints");
+    using math::linalg::mini::FromEigen;
     std::vector<Index> p(static_cast<std::size_t>(P.cols()), -1);
     auto const FindNearestPrimitive = [&](Index i) {
         std::size_t constexpr K{1};
@@ -437,10 +444,10 @@ inline std::vector<Index> TriangleAabbHierarchy<2>::NearestPrimitivesToPoints(
             [&](PrimitiveType const& T) -> Scalar {
                 auto const VT = V(Eigen::all, T);
                 return DistanceQueries::PointTriangle(
-                    P.col(i).template head<kDims>(),
-                    VT.col(0).head<kDims>(),
-                    VT.col(1).head<kDims>(),
-                    VT.col(2).head<kDims>());
+                    FromEigen(P.col(i).template head<kDims>()),
+                    FromEigen(VT.col(0).head<kDims>()),
+                    FromEigen(VT.col(1).head<kDims>()),
+                    FromEigen(VT.col(2).head<kDims>()));
             },
             K);
         auto const iStl = static_cast<std::size_t>(i);

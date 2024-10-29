@@ -1,22 +1,25 @@
 ﻿#ifndef PBAT_GEOMETRY_INTERSECTION_QUERIES_H
 #define PBAT_GEOMETRY_INTERSECTION_QUERIES_H
 
-#include <Eigen/Geometry>
+#include "pbat/Aliases.h"
+#include "pbat/math/linalg/mini/Mini.h"
+
 #include <array>
 #include <cmath>
 #include <optional>
-#include <pbat/Aliases.h>
 
 namespace pbat {
 namespace geometry {
 namespace IntersectionQueries {
 
+namespace mini = math::linalg::mini;
+
 /**
  * @brief
- * @tparam TDerivedP
- * @tparam TDerivedA
- * @tparam TDerivedB
- * @tparam TDerivedC
+ * @tparam TMatrixP
+ * @tparam TMatrixA
+ * @tparam TMatrixB
+ * @tparam TMatrixC
  * @param P Point from which to compute barycentric coordinates. Must be in the plane spanned by
  * triangle ABC.
  * @param A
@@ -24,27 +27,32 @@ namespace IntersectionQueries {
  * @param C
  * @return
  */
-template <class TDerivedP, class TDerivedA, class TDerivedB, class TDerivedC>
-Vector<3> TriangleBarycentricCoordinates(
-    Eigen::MatrixBase<TDerivedP> const& P,
-    Eigen::MatrixBase<TDerivedA> const& A,
-    Eigen::MatrixBase<TDerivedB> const& B,
-    Eigen::MatrixBase<TDerivedC> const& C)
+template <
+    mini::CMatrix TMatrixP,
+    mini::CMatrix TMatrixA,
+    mini::CMatrix TMatrixB,
+    mini::CMatrix TMatrixC>
+mini::SVector<typename TMatrixP::ScalarType, 3> TriangleBarycentricCoordinates(
+    TMatrixP const& P,
+    TMatrixA const& A,
+    TMatrixB const& B,
+    TMatrixC const& C)
 {
-    auto constexpr kRows   = TDerivedP::RowsAtCompileTime;
-    Vector<kRows> const v0 = B - A;
-    Vector<kRows> const v1 = C - A;
-    Vector<kRows> const v2 = P - A;
-    Scalar const d00       = v0.dot(v0);
-    Scalar const d01       = v0.dot(v1);
-    Scalar const d11       = v1.dot(v1);
-    Scalar const d20       = v2.dot(v0);
-    Scalar const d21       = v2.dot(v1);
-    Scalar const denom     = d00 * d11 - d01 * d01;
-    Scalar const v         = (d11 * d20 - d01 * d21) / denom;
-    Scalar const w         = (d00 * d21 - d01 * d20) / denom;
-    Scalar const u         = 1. - v - w;
-    return Vector<3>{u, v, w};
+    using ScalarType                          = typename TMatrixP::ScalarType;
+    auto constexpr kRows                      = TMatrixP::kRows;
+    mini::SVector<ScalarType, kRows> const v0 = B - A;
+    mini::SVector<ScalarType, kRows> const v1 = C - A;
+    mini::SVector<ScalarType, kRows> const v2 = P - A;
+    ScalarType const d00                      = Dot(v0, v0);
+    ScalarType const d01                      = Dot(v0, v1);
+    ScalarType const d11                      = Dot(v1, v1);
+    ScalarType const d20                      = Dot(v2, v0);
+    ScalarType const d21                      = Dot(v2, v1);
+    ScalarType const denom                    = d00 * d11 - d01 * d01;
+    ScalarType const v                        = (d11 * d20 - d01 * d21) / denom;
+    ScalarType const w                        = (d00 * d21 - d01 * d20) / denom;
+    ScalarType const u                        = ScalarType(1) - v - w;
+    return mini::SVector<ScalarType, 3>{u, v, w};
 };
 
 /**
@@ -53,31 +61,36 @@ Vector<3> TriangleBarycentricCoordinates(
  * @param aabb2
  * @return
  */
-template <class TDerivedL1, class TDerivedU1, class TDerivedL2, class TDerivedU2>
-Matrix<TDerivedL1::Rows, 2> AxisAlignedBoundingBoxes(
-    Eigen::MatrixBase<TDerivedL1> const& L1,
-    Eigen::MatrixBase<TDerivedU1> const& U1,
-    Eigen::MatrixBase<TDerivedL2> const& L2,
-    Eigen::MatrixBase<TDerivedU2> const& U2);
+template <
+    mini::CMatrix TMatrixL1,
+    mini::CMatrix TMatrixU1,
+    mini::CMatrix TMatrixL2,
+    mini::CMatrix TMatrixU2>
+mini::SMatrix<typename TMatrixL1::ScalarType, TMatrixL1::Rows, 2> AxisAlignedBoundingBoxes(
+    TMatrixL1 const& L1,
+    TMatrixU1 const& U1,
+    TMatrixL2 const& L2,
+    TMatrixU2 const& U2);
 
 /**
  * @brief
- * @tparam TDerivedP
- * @tparam TDerivedA
- * @tparam TDerivedB
- * @tparam TDerivedC
+ * @tparam TMatrixP
+ * @tparam TMatrixA
+ * @tparam TMatrixB
+ * @tparam TMatrixC
  * @param P
  * @param A
  * @param B
  * @param C
  * @return
  */
-template <class TDerivedP, class TDerivedA, class TDerivedB, class TDerivedC>
-Vector<3> UvwPointTriangle(
-    Eigen::MatrixBase<TDerivedP> const& P,
-    Eigen::MatrixBase<TDerivedA> const& A,
-    Eigen::MatrixBase<TDerivedB> const& B,
-    Eigen::MatrixBase<TDerivedC> const& C);
+template <
+    mini::CMatrix TMatrixP,
+    mini::CMatrix TMatrixA,
+    mini::CMatrix TMatrixB,
+    mini::CMatrix TMatrixC>
+mini::SVector<typename TMatrixP::ScalarType, 3>
+UvwPointTriangle(TMatrixP const& P, TMatrixA const& A, TMatrixB const& B, TMatrixC const& C);
 
 /**
  * @brief Computes the intersection point, if any, between a line segment PQ and a sphere (C,r).
@@ -88,21 +101,21 @@ Vector<3> UvwPointTriangle(
  * @param R
  * @return
  */
-template <class TDerivedP, class TDerivedQ, class TDerivedC>
-std::optional<Vector<TDerivedP::RowsAtCompileTime>> LineSegmentSphere(
-    Eigen::MatrixBase<TDerivedP> const& P,
-    Eigen::MatrixBase<TDerivedQ> const& Q,
-    Eigen::MatrixBase<TDerivedC> const& C,
-    Scalar R);
+template <mini::CMatrix TMatrixP, mini::CMatrix TMatrixQ, mini::CMatrix TMatrixC>
+std::optional<mini::SVector<typename TMatrixP::ScalarType, TMatrixP::kRows>> LineSegmentSphere(
+    TMatrixP const& P,
+    TMatrixQ const& Q,
+    TMatrixC const& C,
+    typename TMatrixC::ScalarType R);
 
 /**
  * @brief Computes the intersection point, if any, between a line including points P,Q and the
  * plane spanned by triangle ABC, in 3D.
- * @tparam TDerivedQ
- * @tparam TDerivedA
- * @tparam TDerivedB
- * @tparam TDerivedC
- * @tparam TDerivedP
+ * @tparam TMatrixQ
+ * @tparam TMatrixA
+ * @tparam TMatrixB
+ * @tparam TMatrixC
+ * @tparam TMatrixP
  * @param P
  * @param Q
  * @param A
@@ -110,32 +123,37 @@ std::optional<Vector<TDerivedP::RowsAtCompileTime>> LineSegmentSphere(
  * @param C
  * @return
  */
-template <class TDerivedP, class TDerivedQ, class TDerivedA, class TDerivedB, class TDerivedC>
-std::optional<Vector<TDerivedP::RowsAtCompileTime>> LineSegmentPlane3D(
-    Eigen::MatrixBase<TDerivedP> const& P,
-    Eigen::MatrixBase<TDerivedQ> const& Q,
-    Eigen::MatrixBase<TDerivedA> const& A,
-    Eigen::MatrixBase<TDerivedB> const& B,
-    Eigen::MatrixBase<TDerivedC> const& C);
+template <
+    mini::CMatrix TMatrixP,
+    mini::CMatrix TMatrixQ,
+    mini::CMatrix TMatrixA,
+    mini::CMatrix TMatrixB,
+    mini::CMatrix TMatrixC>
+std::optional<mini::SVector<typename TMatrixP::ScalarType, TMatrixP::kRows>> LineSegmentPlane3D(
+    TMatrixP const& P,
+    TMatrixQ const& Q,
+    TMatrixA const& A,
+    TMatrixB const& B,
+    TMatrixC const& C);
 
 /**
  * @brief Computes the intersection point, if any, between a line including points P,Q and the
  * plane (n,d), in 3D.
- * @tparam TDerivedP
- * @tparam TDerivedQ
- * @tparam TDerivedn
+ * @tparam TMatrixP
+ * @tparam TMatrixQ
+ * @tparam TMatrixN
  * @param P
  * @param Q
  * @param n
  * @param d
  * @return
  */
-template <class TDerivedP, class TDerivedQ, class TDerivedn>
-std::optional<Vector<TDerivedP::RowsAtCompileTime>> LineSegmentPlane3D(
-    Eigen::MatrixBase<TDerivedP> const& P,
-    Eigen::MatrixBase<TDerivedQ> const& Q,
-    Eigen::MatrixBase<TDerivedn> const& n,
-    Scalar d);
+template <mini::CMatrix TMatrixP, mini::CMatrix TMatrixQ, mini::CMatrix TMatrixN>
+std::optional<mini::SVector<typename TMatrixP::ScalarType, TMatrixP::kRows>> LineSegmentPlane3D(
+    TMatrixP const& P,
+    TMatrixQ const& Q,
+    TMatrixN const& n,
+    typename TMatrixN::ScalarType d);
 
 /**
  * @brief Computes the intersection point, if any, between a line including points P,Q and a
@@ -147,13 +165,18 @@ std::optional<Vector<TDerivedP::RowsAtCompileTime>> LineSegmentPlane3D(
  * @param C
  * @return
  */
-template <class TDerivedP, class TDerivedQ, class TDerivedA, class TDerivedB, class TDerivedC>
-std::optional<Vector<3>> UvwLineTriangle3D(
-    Eigen::MatrixBase<TDerivedP> const& P,
-    Eigen::MatrixBase<TDerivedQ> const& Q,
-    Eigen::MatrixBase<TDerivedA> const& A,
-    Eigen::MatrixBase<TDerivedB> const& B,
-    Eigen::MatrixBase<TDerivedC> const& C);
+template <
+    mini::CMatrix TMatrixP,
+    mini::CMatrix TMatrixQ,
+    mini::CMatrix TMatrixA,
+    mini::CMatrix TMatrixB,
+    mini::CMatrix TMatrixC>
+std::optional<mini::SVector<typename TMatrixP::ScalarType, 3>> UvwLineTriangle3D(
+    TMatrixP const& P,
+    TMatrixQ const& Q,
+    TMatrixA const& A,
+    TMatrixB const& B,
+    TMatrixC const& C);
 
 /**
  * @brief Computes the intersection point, if any, between a line segment delimited by points
@@ -165,13 +188,18 @@ std::optional<Vector<3>> UvwLineTriangle3D(
  * @param C
  * @return
  */
-template <class TDerivedP, class TDerivedQ, class TDerivedA, class TDerivedB, class TDerivedC>
-std::optional<Vector<3>> UvwLineSegmentTriangle3D(
-    Eigen::MatrixBase<TDerivedP> const& P,
-    Eigen::MatrixBase<TDerivedQ> const& Q,
-    Eigen::MatrixBase<TDerivedA> const& A,
-    Eigen::MatrixBase<TDerivedB> const& B,
-    Eigen::MatrixBase<TDerivedC> const& C);
+template <
+    mini::CMatrix TMatrixP,
+    mini::CMatrix TMatrixQ,
+    mini::CMatrix TMatrixA,
+    mini::CMatrix TMatrixB,
+    mini::CMatrix TMatrixC>
+std::optional<mini::SVector<typename TMatrixP::ScalarType, 3>> UvwLineSegmentTriangle3D(
+    TMatrixP const& P,
+    TMatrixQ const& Q,
+    TMatrixA const& A,
+    TMatrixB const& B,
+    TMatrixC const& C);
 
 /**
  * @brief Computes intersection points between 3 edges (as line segments) of triangle A1B1C1 and
@@ -186,147 +214,168 @@ std::optional<Vector<3>> UvwLineSegmentTriangle3D(
  * @return
  */
 template <
-    class TDerivedA1,
-    class TDerivedB1,
-    class TDerivedC1,
-    class TDerivedA2,
-    class TDerivedB2,
-    class TDerivedC2>
-std::array<std::optional<Vector<3>>, 6u> UvwTriangles3D(
-    Eigen::MatrixBase<TDerivedA1> const& A1,
-    Eigen::MatrixBase<TDerivedB1> const& B1,
-    Eigen::MatrixBase<TDerivedC1> const& C1,
-    Eigen::MatrixBase<TDerivedA2> const& A2,
-    Eigen::MatrixBase<TDerivedB2> const& B2,
-    Eigen::MatrixBase<TDerivedC2> const& C2);
+    mini::CMatrix TMatrixA1,
+    mini::CMatrix TMatrixB1,
+    mini::CMatrix TMatrixC1,
+    mini::CMatrix TMatrixA2,
+    mini::CMatrix TMatrixB2,
+    mini::CMatrix TMatrixC2>
+std::array<std::optional<mini::SVector<typename TMatrixA1::ScalarType, 3>>, 6u> UvwTriangles3D(
+    TMatrixA1 const& A1,
+    TMatrixB1 const& B1,
+    TMatrixC1 const& C1,
+    TMatrixA2 const& A2,
+    TMatrixB2 const& B2,
+    TMatrixC2 const& C2);
 
-template <class TDerivedL1, class TDerivedU1, class TDerivedL2, class TDerivedU2>
-Matrix<TDerivedL1::Rows, 2> AxisAlignedBoundingBoxes(
-    Eigen::MatrixBase<TDerivedL1> const& L1,
-    Eigen::MatrixBase<TDerivedU1> const& U1,
-    Eigen::MatrixBase<TDerivedL2> const& L2,
-    Eigen::MatrixBase<TDerivedU2> const& U2)
+template <
+    mini::CMatrix TMatrixL1,
+    mini::CMatrix TMatrixU1,
+    mini::CMatrix TMatrixL2,
+    mini::CMatrix TMatrixU2>
+mini::SMatrix<typename TMatrixL1::ScalarType, TMatrixL1::Rows, 2> AxisAlignedBoundingBoxes(
+    TMatrixL1 const& L1,
+    TMatrixU1 const& U1,
+    TMatrixL2 const& L2,
+    TMatrixU2 const& U2)
 {
-    Matrix<TDerivedL1::Rows, 2> LU;
-    LU.col(0) = L1.cwiseMax(L2);
-    LU.col(1) = U1.cwiseMin(U2);
+    using ScalarType = typename TMatrixL1::ScalarType;
+    mini::SMatrix<ScalarType, TMatrixL1::Rows, 2> LU;
+    LU.Col(0) = Max(L1, L2);
+    LU.Col(1) = Min(U1, U2);
     return LU;
 }
 
-template <class TDerivedP, class TDerivedQ, class TDerivedC>
-std::optional<Vector<TDerivedP::RowsAtCompileTime>> LineSegmentSphere(
-    Eigen::MatrixBase<TDerivedP> const& P,
-    Eigen::MatrixBase<TDerivedQ> const& Q,
-    Eigen::MatrixBase<TDerivedC> const& C,
-    Scalar R)
+template <mini::CMatrix TMatrixP, mini::CMatrix TMatrixQ, mini::CMatrix TMatrixC>
+std::optional<mini::SVector<typename TMatrixP::ScalarType, TMatrixP::kRows>> LineSegmentSphere(
+    TMatrixP const& P,
+    TMatrixQ const& Q,
+    TMatrixC const& C,
+    typename TMatrixC::ScalarType R)
 {
-    auto constexpr kRows   = TDerivedP::RowsAtCompileTime;
-    Vector<kRows> const PQ = (Q - P);
-    Scalar const len       = PQ.norm();
-    Vector<kRows> const d  = PQ / len;
-    Vector<kRows> const m  = P - C;
-    Scalar const b         = m.dot(d);
-    Scalar const c         = m.dot(m) - (R * R);
+    using ScalarType                          = typename TMatrixP::ScalarType;
+    auto constexpr kRows                      = TMatrixP::kRows;
+    mini::SVector<ScalarType, kRows> const PQ = (Q - P);
+    ScalarType const len                      = Norm(PQ);
+    mini::SVector<ScalarType, kRows> const d  = PQ / len;
+    mini::SVector<ScalarType, kRows> const m  = P - C;
+    ScalarType const b                        = Dot(m, d);
+    ScalarType const c                        = Dot(m, m) - (R * R);
     // Exit if r's origin outside s (c > 0) and r pointing away from s (b > 0)
-    if (c > 0. and b > 0.)
+    if (c > ScalarType(0) and b > ScalarType(0))
         return {};
-    Scalar const discr = b * b - c;
+    ScalarType const discr = b * b - c;
     // A negative discriminant corresponds to ray missing sphere
-    if (discr < 0.)
+    if (discr < ScalarType(0))
         return {};
     // Ray now found to intersect sphere, compute smallest t value of intersection
-    Scalar t = -b - std::sqrt(discr);
+    using namespace std;
+    ScalarType t = -b - sqrt(discr);
     // If t is negative, ray started inside sphere so clamp t to zero
-    if (t < 0.)
-        t = 0.;
+    if (t < ScalarType(0))
+        t = ScalarType(0);
     // If the intersection point lies beyond the segment PQ, then return nullopt
     if (t > len)
         return {};
 
-    Vector<kRows> const I = P + t * d;
+    mini::SVector<ScalarType, kRows> I = P + t * d;
     return I;
 }
 
-template <class TDerivedP, class TDerivedQ, class TDerivedA, class TDerivedB, class TDerivedC>
-std::optional<Vector<TDerivedP::RowsAtCompileTime>> LineSegmentPlane3D(
-    Eigen::MatrixBase<TDerivedP> const& P,
-    Eigen::MatrixBase<TDerivedQ> const& Q,
-    Eigen::MatrixBase<TDerivedA> const& A,
-    Eigen::MatrixBase<TDerivedB> const& B,
-    Eigen::MatrixBase<TDerivedC> const& C)
+template <
+    mini::CMatrix TMatrixP,
+    mini::CMatrix TMatrixQ,
+    mini::CMatrix TMatrixA,
+    mini::CMatrix TMatrixB,
+    mini::CMatrix TMatrixC>
+std::optional<mini::SVector<typename TMatrixP::ScalarType, TMatrixP::kRows>> LineSegmentPlane3D(
+    TMatrixP const& P,
+    TMatrixQ const& Q,
+    TMatrixA const& A,
+    TMatrixB const& B,
+    TMatrixC const& C)
 {
-    auto constexpr kRows = TDerivedP::RowsAtCompileTime;
+    using ScalarType     = typename TMatrixP::ScalarType;
+    auto constexpr kRows = TMatrixP::kRows;
     auto constexpr kDims = 3;
     static_assert(kRows == kDims, "This overlap test is specialized for 3D");
     // Intersect segment ab against plane of triangle def. If intersecting,
     // return t value and position q of intersection
-    Vector<kRows> const n = (B - A).cross(C - A);
-    Scalar const d        = n.dot(A);
+    mini::SVector<kRows> const n = Cross(B - A, C - A);
+    ScalarType const d           = Dot(n, A);
     return LineSegmentPlane3D(P, Q, n, d);
 }
 
-template <class TDerivedP, class TDerivedQ, class TDerivedn>
-std::optional<Vector<TDerivedP::RowsAtCompileTime>> LineSegmentPlane3D(
-    Eigen::MatrixBase<TDerivedP> const& P,
-    Eigen::MatrixBase<TDerivedQ> const& Q,
-    Eigen::MatrixBase<TDerivedn> const& n,
-    Scalar d)
+template <mini::CMatrix TMatrixP, mini::CMatrix TMatrixQ, mini::CMatrix TMatrixN>
+std::optional<mini::SVector<typename TMatrixP::ScalarType, TMatrixP::kRows>> LineSegmentPlane3D(
+    TMatrixP const& P,
+    TMatrixQ const& Q,
+    TMatrixN const& n,
+    typename TMatrixN::ScalarType d)
 {
-    auto constexpr kRows = TDerivedP::RowsAtCompileTime;
+    using ScalarType     = typename TMatrixP::ScalarType;
+    auto constexpr kRows = TMatrixP::kRows;
     // Compute the t value for the directed line ab intersecting the plane
-    Vector<kRows> const PQ = Q - P;
-    Scalar const t         = (d - n.dot(P)) / n.dot(PQ);
+    mini::SVector<ScalarType, kRows> const PQ = Q - P;
+    ScalarType const t                        = (d - Dot(n, P)) / Dot(n, PQ);
     // If t in [0..1] compute and return intersection point
-    if (t >= 0. and t <= 1.)
+    if (t >= ScalarType(0) and t <= ScalarType(1))
     {
-        auto const I = P + t * PQ;
+        auto I = P + t * PQ;
         return I;
     }
     // Else no intersection
     return {};
 }
 
-template <class TDerivedP, class TDerivedQ, class TDerivedA, class TDerivedB, class TDerivedC>
-std::optional<Vector<3>> UvwLineTriangle3D(
-    Eigen::MatrixBase<TDerivedP> const& P,
-    Eigen::MatrixBase<TDerivedQ> const& Q,
-    Eigen::MatrixBase<TDerivedA> const& A,
-    Eigen::MatrixBase<TDerivedB> const& B,
-    Eigen::MatrixBase<TDerivedC> const& C)
+template <
+    mini::CMatrix TMatrixP,
+    mini::CMatrix TMatrixQ,
+    mini::CMatrix TMatrixA,
+    mini::CMatrix TMatrixB,
+    mini::CMatrix TMatrixC>
+std::optional<mini::SVector<typename TMatrixP::ScalarType, 3>> UvwLineTriangle3D(
+    TMatrixP const& P,
+    TMatrixQ const& Q,
+    TMatrixA const& A,
+    TMatrixB const& B,
+    TMatrixC const& C)
 {
-    auto constexpr kRows = TDerivedP::RowsAtCompileTime;
+    using ScalarType     = typename TMatrixP::ScalarType;
+    auto constexpr kRows = TMatrixP::kRows;
     auto constexpr kDims = 3;
     static_assert(kRows == kDims, "This overlap test is specialized for 3D");
     /**
      * Ericson, Christer. Real-time collision detection. Crc Press, 2004. section 5.3.4
      */
-    Vector<kDims> const PQ = Q - P;
-    Vector<kDims> const PA = A - P;
-    Vector<kDims> const PB = B - P;
-    Vector<kDims> const PC = C - P;
+    mini::SVector<ScalarType, kDims> const PQ = Q - P;
+    mini::SVector<ScalarType, kDims> const PA = A - P;
+    mini::SVector<ScalarType, kDims> const PB = B - P;
+    mini::SVector<ScalarType, kDims> const PC = C - P;
     // Test if pq is inside the edges bc, ca and ab. Done by testing
-    // that the signed tetrahedral volumes, computed using scalar triple
+    // that the signed tetrahedral volumes, computed using ScalarType triple
     // products, are all non-zero
-    Vector<kDims> const m = PQ.cross(PC);
-    Vector<kDims> uvw     = Vector<kDims>::Zero();
+    mini::SVector<ScalarType, kDims> const m = Cross(PQ, PC);
+    mini::SVector<ScalarType, kDims> uvw     = mini::Zeros<ScalarType, kDims, 1>();
 
-    Scalar& u           = uvw(0);
-    Scalar& v           = uvw(1);
-    Scalar& w           = uvw(2);
-    u                   = PB.dot(m);
-    v                   = -PA.dot(m);
-    auto const SameSign = [](Scalar a, Scalar b) -> bool {
-        return std::signbit(a) == std::signbit(b);
+    ScalarType& u = uvw(0);
+    ScalarType& v = uvw(1);
+    ScalarType& w = uvw(2);
+    u             = Dot(PB, m);
+    v             = -Dot(PA, m);
+    using namespace std;
+    auto const SameSign = [](ScalarType a, ScalarType b) -> bool {
+        return signbit(a) == signbit(b);
     };
     if (not SameSign(u, v))
         return {};
-    w = PQ.dot(PB.cross(PA));
+    w = Dot(PQ, Cross(PB, PA));
     if (not SameSign(u, w))
         return {};
 
-    auto constexpr eps                  = 1e-15;
-    Scalar const uvwSum                 = u + v + w;
-    bool const bIsLineInPlaneOfTriangle = std::abs(uvwSum) < eps;
+    ScalarType constexpr eps            = 1e-15;
+    ScalarType const uvwSum             = u + v + w;
+    bool const bIsLineInPlaneOfTriangle = abs(uvwSum) < eps;
     if (bIsLineInPlaneOfTriangle)
     {
         // WARNING:
@@ -340,72 +389,81 @@ std::optional<Vector<3>> UvwLineTriangle3D(
 
     // Compute the barycentric coordinates (u, v, w) determining the
     // intersection point r, r = u*a + v*b + w*c
-    Scalar const denom = 1. / (uvwSum);
+    ScalarType const denom = ScalarType(1) / (uvwSum);
     u *= denom;
     v *= denom;
-    w *= denom; // w = 1. - u - v;
+    w *= denom; // w = ScalarType(1) - u - v;
     return uvw;
 }
 
-template <class TDerivedP, class TDerivedQ, class TDerivedA, class TDerivedB, class TDerivedC>
-std::optional<Vector<3>> UvwLineSegmentTriangle3D(
-    Eigen::MatrixBase<TDerivedP> const& P,
-    Eigen::MatrixBase<TDerivedQ> const& Q,
-    Eigen::MatrixBase<TDerivedA> const& A,
-    Eigen::MatrixBase<TDerivedB> const& B,
-    Eigen::MatrixBase<TDerivedC> const& C)
+template <
+    mini::CMatrix TMatrixP,
+    mini::CMatrix TMatrixQ,
+    mini::CMatrix TMatrixA,
+    mini::CMatrix TMatrixB,
+    mini::CMatrix TMatrixC>
+std::optional<mini::SVector<typename TMatrixP::ScalarType, 3>> UvwLineSegmentTriangle3D(
+    TMatrixP const& P,
+    TMatrixQ const& Q,
+    TMatrixA const& A,
+    TMatrixB const& B,
+    TMatrixC const& C)
 {
-    auto constexpr kRows = TDerivedP::RowsAtCompileTime;
+    using ScalarType     = typename TMatrixP::ScalarType;
+    auto constexpr kRows = TMatrixP::kRows;
     auto constexpr kDims = 3;
     static_assert(kRows == kDims, "This overlap test is specialized for 3D");
-    Vector<kDims> const AB = B - A;
-    Vector<kDims> const AC = C - A;
-    Vector<kDims> const PQ = Q - P;
-    Vector<kDims> const n  = AB.cross(AC);
+    mini::SVector<ScalarType, kDims> const AB = B - A;
+    mini::SVector<ScalarType, kDims> const AC = C - A;
+    mini::SVector<ScalarType, kDims> const PQ = Q - P;
+    mini::SVector<ScalarType, kDims> const n  = Cross(AB, AC);
     // Compute denominator d. If d == 0, segment is parallel to triangle, so exit early
-    auto constexpr eps                      = 1e-15;
-    Scalar const d                          = PQ.dot(n);
-    bool const bIsSegmentParallelToTriangle = std::abs(d) < eps;
+    ScalarType constexpr eps = 1e-15;
+    ScalarType const d       = Dot(PQ, n);
+    using namespace std;
+    bool const bIsSegmentParallelToTriangle = abs(d) < eps;
     if (bIsSegmentParallelToTriangle)
         return {};
     // Compute intersection t value of pq with plane of triangle. A ray
-    // intersects iff 0 <= t. Segment intersects iff 0 <= t <= 1. Delay
+    // intersects iff 0 <= t. Segment intersects iff 0 <= t <= ScalarType(1) Delay
     // dividing by d until intersection has been found to pierce triangle
-    Scalar const t = n.dot(A - P) / d;
-    if (t < 0. or t > 1.)
+    ScalarType const t = Dot(n, A - P) / d;
+    if (t < ScalarType(0) or t > ScalarType(1))
         return {};
     // Compute barycentric coordinate components and test if within bounds
-    Vector<kDims> const I        = P + t * PQ;
-    Vector<3> const uvw          = TriangleBarycentricCoordinates(I, A, B, C);
-    bool const bIsInsideTriangle = (uvw.array() >= 0.).all() and (uvw.array() <= 1.).all();
-    if (!bIsInsideTriangle)
+    mini::SVector<ScalarType, kDims> const I = P + t * PQ;
+    mini::SVector<ScalarType, 3> const uvw   = TriangleBarycentricCoordinates(I, A, B, C);
+    bool const bIsInsideTriangle = All((uvw >= ScalarType(0)) and (uvw <= ScalarType(1)));
+    if (not bIsInsideTriangle)
         return {};
     return uvw;
 }
 
 template <
-    class TDerivedA1,
-    class TDerivedB1,
-    class TDerivedC1,
-    class TDerivedA2,
-    class TDerivedB2,
-    class TDerivedC2>
-std::array<std::optional<Vector<3>>, 6u> UvwTriangles3D(
-    Eigen::MatrixBase<TDerivedA1> const& A1,
-    Eigen::MatrixBase<TDerivedB1> const& B1,
-    Eigen::MatrixBase<TDerivedC1> const& C1,
-    Eigen::MatrixBase<TDerivedA2> const& A2,
-    Eigen::MatrixBase<TDerivedB2> const& B2,
-    Eigen::MatrixBase<TDerivedC2> const& C2)
+    mini::CMatrix TMatrixA1,
+    mini::CMatrix TMatrixB1,
+    mini::CMatrix TMatrixC1,
+    mini::CMatrix TMatrixA2,
+    mini::CMatrix TMatrixB2,
+    mini::CMatrix TMatrixC2>
+std::array<std::optional<mini::SVector<typename TMatrixA1::ScalarType, 3>>, 6u> UvwTriangles3D(
+    TMatrixA1 const& A1,
+    TMatrixB1 const& B1,
+    TMatrixC1 const& C1,
+    TMatrixA2 const& A2,
+    TMatrixB2 const& B2,
+    TMatrixC2 const& C2)
 {
-    auto constexpr kRows = TDerivedA1::RowsAtCompileTime;
+    using ScalarType     = typename TMatrixA1::ScalarType;
+    auto constexpr kRows = TMatrixA1::kRows;
     auto constexpr kDims = 3;
     static_assert(kRows == kDims, "This overlap test is specialized for 3D");
 
-    Vector<kDims> const n1           = (B1 - A1).cross(C1 - A1).normalized();
-    Vector<kDims> const n2           = (B2 - A2).cross(C2 - A2).normalized();
-    auto constexpr eps               = 1e-15;
-    bool const bAreTrianglesCoplanar = (1. - std::abs(n1.dot(n2))) < eps;
+    using namespace std;
+    mini::SVector<ScalarType, kDims> const n1 = Normalized(Cross(B1 - A1, C1 - A1));
+    mini::SVector<ScalarType, kDims> const n2 = Normalized(Cross(B2 - A2, C2 - A2));
+    ScalarType constexpr eps                  = 1e-15;
+    bool const bAreTrianglesCoplanar          = (ScalarType(1) - abs(Dot(n1, n2))) < eps;
     if (bAreTrianglesCoplanar)
     {
         // NOTE: If triangles are coplanar and vertex of one triangle is in the plane of the other
@@ -420,7 +478,7 @@ std::array<std::optional<Vector<3>>, 6u> UvwTriangles3D(
     // - FOr 2 triangles collapsed to a point, we check if both points are numerically the same.
 
     // Test 3 edges of each triangle against the other triangle
-    std::array<std::optional<Vector<3>>, 6u> intersections{
+    std::array<std::optional<mini::SVector<ScalarType, 3>>, 6u> intersections{
         UvwLineSegmentTriangle3D(A1, B1, A2, B2, C2),
         UvwLineSegmentTriangle3D(B1, C1, A2, B2, C2),
         UvwLineSegmentTriangle3D(C1, A1, A2, B2, C2),

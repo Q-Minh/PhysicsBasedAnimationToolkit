@@ -1,6 +1,7 @@
 #include "TetrahedralAabbHierarchy.h"
 
 #include "OverlapQueries.h"
+#include "pbat/math/linalg/mini/Eigen.h"
 
 #include <exception>
 #include <fmt/format.h>
@@ -56,6 +57,7 @@ IndexMatrixX TetrahedralAabbHierarchy::OverlappingPrimitives(
     std::size_t reserve) const
 {
     PBAT_PROFILE_NAMED_SCOPE("geometry.TetrahedralAabbHierarchy.OverlappingPrimitives");
+    using math::linalg::mini::FromEigen;
     return this->OverlappingPrimitivesImpl<
         TetrahedralAabbHierarchy,
         BoundingVolumeType,
@@ -64,23 +66,23 @@ IndexMatrixX TetrahedralAabbHierarchy::OverlappingPrimitives(
         bvh,
         [](BoundingVolumeType const& bv1, BoundingVolumeType const& bv2) -> bool {
             return OverlapQueries::AxisAlignedBoundingBoxes(
-                bv1.min(),
-                bv1.max(),
-                bv2.min(),
-                bv2.max());
+                FromEigen(bv1.min()),
+                FromEigen(bv1.max()),
+                FromEigen(bv2.min()),
+                FromEigen(bv2.max()));
         },
         [&](PrimitiveType const& p1, PrimitiveType const& p2) -> bool {
             auto const V1 = V(Eigen::all, p1);
             auto const V2 = bvh.V(Eigen::all, p2);
             return OverlapQueries::Tetrahedra(
-                V1.col(0).head<kDims>(),
-                V1.col(1).head<kDims>(),
-                V1.col(2).head<kDims>(),
-                V1.col(3).head<kDims>(),
-                V2.col(0).head<kDims>(),
-                V2.col(1).head<kDims>(),
-                V2.col(2).head<kDims>(),
-                V2.col(3).head<kDims>());
+                FromEigen(V1.col(0).head<kDims>()),
+                FromEigen(V1.col(1).head<kDims>()),
+                FromEigen(V1.col(2).head<kDims>()),
+                FromEigen(V1.col(3).head<kDims>()),
+                FromEigen(V2.col(0).head<kDims>()),
+                FromEigen(V2.col(1).head<kDims>()),
+                FromEigen(V2.col(2).head<kDims>()),
+                FromEigen(V2.col(3).head<kDims>()));
         },
         [&](PrimitiveType const& p1, PrimitiveType const& p2) -> bool {
             if (this == &bvh)

@@ -1,11 +1,14 @@
 #include "TriangleAabbHierarchy.h"
 
+#include "pbat/Aliases.h"
+#include "pbat/math/linalg/mini/Eigen.h"
+
 #include <doctest/doctest.h>
-#include <pbat/Aliases.h>
 
 TEST_CASE("[geometry] TriangleAabbHierarchy")
 {
     using namespace pbat;
+    using pbat::math::linalg::mini::FromEigen;
     SUBCASE("2D")
     {
         // Beam mesh
@@ -124,10 +127,10 @@ TEST_CASE("[geometry] TriangleAabbHierarchy")
             {
                 IndexVector<3> const triangle = bvh.Primitive(primitiveIdx);
                 Scalar const sd               = geometry::DistanceQueries::PointTriangle(
-                    P.col(i).head<kDims>(),
-                    V.col(triangle(0)).head<kDims>(),
-                    V.col(triangle(1)).head<kDims>(),
-                    V.col(triangle(2)).head<kDims>());
+                    FromEigen(P.col(i).head<kDims>()),
+                    FromEigen(V.col(triangle(0)).head<kDims>()),
+                    FromEigen(V.col(triangle(1)).head<kDims>()),
+                    FromEigen(V.col(triangle(2)).head<kDims>()));
                 auto constexpr eps = 1e-14;
                 CHECK_LE(sd, eps);
             }

@@ -27,7 +27,7 @@ Eigen::Map<Eigen::Matrix<
     std::remove_cvref_t<TMatrix>::kRows,
     std::remove_cvref_t<TMatrix>::kCols,
     (std::remove_cvref_t<TMatrix>::bRowMajor) ? Eigen::RowMajor : Eigen::ColMajor>>
-ToEigen(TMatrix&& A)
+ToEigen(TMatrix& A)
 {
     using MatrixType = std::remove_cvref_t<TMatrix>;
     static_assert(CEigenConvertible<MatrixType>, "A must satisfy CEigenConvertible");
@@ -37,6 +37,24 @@ ToEigen(TMatrix&& A)
         MatrixType::kCols,
         (MatrixType::bRowMajor) ? Eigen::RowMajor : Eigen::ColMajor>;
     return Eigen::Map<EigenMatrixType>(A.Data());
+}
+
+template <class TMatrix>
+Eigen::Map<Eigen::Matrix<
+    typename std::remove_cvref_t<TMatrix>::ScalarType,
+    std::remove_cvref_t<TMatrix>::kRows,
+    std::remove_cvref_t<TMatrix>::kCols,
+    (std::remove_cvref_t<TMatrix>::bRowMajor) ? Eigen::RowMajor : Eigen::ColMajor> const>
+ToEigen(TMatrix const& A)
+{
+    using MatrixType = std::remove_cvref_t<TMatrix>;
+    static_assert(CEigenConvertible<MatrixType>, "A must satisfy CEigenConvertible");
+    using EigenMatrixType = Eigen::Matrix<
+        typename MatrixType::ScalarType,
+        MatrixType::kRows,
+        MatrixType::kCols,
+        (MatrixType::bRowMajor) ? Eigen::RowMajor : Eigen::ColMajor>;
+    return Eigen::Map<EigenMatrixType const>(A.Data());
 }
 
 template <class TDerived>

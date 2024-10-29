@@ -157,13 +157,15 @@ class TransposeView
 
     PBAT_HOST_DEVICE void SetConstant(ScalarType k)
     {
-        auto fRows = [&]<auto... I>(auto j, std::index_sequence<I...>) {
-            (((*this)(I, j) = k), ...);
+        using IntegerType = std::remove_const_t<decltype(kCols)>;
+        auto fRows =
+            [&]<IntegerType... I>(IntegerType j, std::integer_sequence<IntegerType, I...>) {
+                (((*this)(I, j) = k), ...);
+            };
+        auto fCols = [&]<IntegerType... J>(std::integer_sequence<IntegerType, J...>) {
+            (fRows(J, std::make_integer_sequence<IntegerType, kRows>()), ...);
         };
-        auto fCols = [&]<auto... J>(std::index_sequence<J...>) {
-            (fRows(J, std::make_index_sequence<kRows>()), ...);
-        };
-        fCols(std::make_index_sequence<kCols>());
+        fCols(std::make_integer_sequence<IntegerType, kCols>());
     }
 
     PBAT_HOST_DEVICE constexpr auto Rows() const { return A.Cols(); }

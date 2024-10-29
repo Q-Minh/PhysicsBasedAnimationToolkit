@@ -6,6 +6,7 @@
 #include "pbat/HostDevice.h"
 
 #include <array>
+#include <initializer_list>
 #include <string.h>
 #include <utility>
 
@@ -123,6 +124,11 @@ class SMatrix
     using IndexType   = typename StorageType::size_type;
 
     PBAT_HOST_DEVICE SMatrix() : a() {}
+
+    template <class... T>
+    PBAT_HOST_DEVICE SMatrix(T... values) : a{values...}
+    {
+    }
 
     static int constexpr kRows      = M;
     static int constexpr kCols      = N;
@@ -255,6 +261,12 @@ PBAT_HOST_DEVICE auto Repeat(TMatrix&& A)
 {
     using MatrixType = std::remove_cvref_t<TMatrix>;
     return TiledView<MatrixType, RepeatRows, RepeatCols>(std::forward<TMatrix>(A));
+}
+
+template <class TScalar, int M>
+PBAT_HOST_DEVICE auto Unit(auto i)
+{
+    return Identity<TScalar, M, M>().Col(i);
 }
 
 } // namespace mini

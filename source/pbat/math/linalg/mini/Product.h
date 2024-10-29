@@ -31,10 +31,11 @@ class Product
 
     PBAT_HOST_DEVICE ScalarType operator()(auto i, auto j) const
     {
-        auto contract = [this, i, j]<auto... K>(std::index_sequence<K...>) {
+        using IntegerType = std::remove_const_t<decltype(LhsNestedType::kRows)>;
+        auto contract = [this, i, j]<IntegerType... K>(std::integer_sequence<IntegerType, K...>) {
             return ((A(i, K) * B(K, j)) + ...);
         };
-        return contract(std::make_index_sequence<LhsNestedType::kCols>());
+        return contract(std::make_integer_sequence<IntegerType, LhsNestedType::kCols>());
     }
 
     // Vector(ized) access
