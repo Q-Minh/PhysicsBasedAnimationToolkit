@@ -8,10 +8,12 @@
 #include "PhysicsBasedAnimationToolkitExport.h"
 #include "pbat/math/linalg/mini/Eigen.h"
 
+#include <limits>
 #include <pbat/Aliases.h>
 #include <pbat/common/Eigen.h>
 #include <pbat/profiling/Profiling.h>
 #include <tbb/parallel_for.h>
+#include <utility>
 
 namespace pbat {
 namespace geometry {
@@ -60,7 +62,7 @@ class TriangleAabbHierarchy<3> : public BoundingVolumeHierarchy<
         bool bParallelize = false) const;
 
     template <class TDerivedP>
-    std::vector<Index> NearestPrimitivesToPoints(
+    std::pair<std::vector<Index>, std::vector<Scalar>> NearestPrimitivesToPoints(
         Eigen::MatrixBase<TDerivedP> const& P,
         bool bParallelize = false) const;
 
@@ -195,27 +197,29 @@ inline std::vector<Index> TriangleAabbHierarchy<3>::PrimitivesContainingPoints(
     };
     if (bParallelize)
     {
-        for (auto i = 0; i < P.cols(); ++i)
-            FindContainingPrimitive(i);
+        tbb::parallel_for(Index{0}, Index{P.cols()}, FindContainingPrimitive);
     }
     else
     {
-        tbb::parallel_for(Index{0}, Index{P.cols()}, FindContainingPrimitive);
+        for (auto i = 0; i < P.cols(); ++i)
+            FindContainingPrimitive(i);
     }
     return p;
 }
 
 template <class TDerivedP>
-inline std::vector<Index> TriangleAabbHierarchy<3>::NearestPrimitivesToPoints(
+inline std::pair<std::vector<Index>, std::vector<Scalar>>
+TriangleAabbHierarchy<3>::NearestPrimitivesToPoints(
     Eigen::MatrixBase<TDerivedP> const& P,
     bool bParallelize) const
 {
     PBAT_PROFILE_NAMED_SCOPE("geometry.TriangleAabbHierarchy3D.NearestPrimitivesToPoints");
     using math::linalg::mini::FromEigen;
     std::vector<Index> p(static_cast<std::size_t>(P.cols()), -1);
+    std::vector<Scalar> d(static_cast<std::size_t>(P.cols()), std::numeric_limits<Scalar>::max());
     auto const FindNearestPrimitive = [&](Index i) {
         std::size_t constexpr K{1};
-        std::vector<Index> const nearestPrimitives = this->NearestPrimitivesTo(
+        auto const [nearestPrimitives, distances] = this->NearestPrimitivesTo(
             [&](BoundingVolumeType const& bv) -> Scalar {
                 return bv.squaredExteriorDistance(P.col(i));
             },
@@ -230,17 +234,18 @@ inline std::vector<Index> TriangleAabbHierarchy<3>::NearestPrimitivesToPoints(
             K);
         auto const iStl = static_cast<std::size_t>(i);
         p[iStl]         = nearestPrimitives.front();
+        d[iStl]         = distances.front();
     };
     if (bParallelize)
+    {
+        tbb::parallel_for(Index{0}, Index{P.cols()}, FindNearestPrimitive);
+    }
+    else
     {
         for (auto i = 0; i < P.cols(); ++i)
             FindNearestPrimitive(i);
     }
-    else
-    {
-        tbb::parallel_for(Index{0}, Index{P.cols()}, FindNearestPrimitive);
-    }
-    return p;
+    return {p, d};
 }
 
 } // namespace geometry
@@ -284,7 +289,7 @@ class TriangleAabbHierarchy<2> : public BoundingVolumeHierarchy<
         bool bParallelize = false) const;
 
     template <class TDerivedP>
-    std::vector<Index> NearestPrimitivesToPoints(
+    std::pair<std::vector<Index>, std::vector<Scalar>> NearestPrimitivesToPoints(
         Eigen::MatrixBase<TDerivedP> const& P,
         bool bParallelize = false) const;
 
@@ -417,27 +422,29 @@ inline std::vector<Index> TriangleAabbHierarchy<2>::PrimitivesContainingPoints(
     };
     if (bParallelize)
     {
-        for (auto i = 0; i < P.cols(); ++i)
-            FindContainingPrimitive(i);
+        tbb::parallel_for(Index{0}, Index{P.cols()}, FindContainingPrimitive);
     }
     else
     {
-        tbb::parallel_for(Index{0}, Index{P.cols()}, FindContainingPrimitive);
+        for (auto i = 0; i < P.cols(); ++i)
+            FindContainingPrimitive(i);
     }
     return p;
 }
 
 template <class TDerivedP>
-inline std::vector<Index> TriangleAabbHierarchy<2>::NearestPrimitivesToPoints(
+inline std::pair<std::vector<Index>, std::vector<Scalar>>
+TriangleAabbHierarchy<2>::NearestPrimitivesToPoints(
     Eigen::MatrixBase<TDerivedP> const& P,
     bool bParallelize) const
 {
     PBAT_PROFILE_NAMED_SCOPE("geometry.TriangleAabbHierarchy2D.NearestPrimitivesToPoints");
     using math::linalg::mini::FromEigen;
     std::vector<Index> p(static_cast<std::size_t>(P.cols()), -1);
+    std::vector<Scalar> d(static_cast<std::size_t>(P.cols()), std::numeric_limits<Scalar>::max());
     auto const FindNearestPrimitive = [&](Index i) {
         std::size_t constexpr K{1};
-        std::vector<Index> const nearestPrimitives = this->NearestPrimitivesTo(
+        auto const [nearestPrimitives, distances] = this->NearestPrimitivesTo(
             [&](BoundingVolumeType const& bv) -> Scalar {
                 return bv.squaredExteriorDistance(P.col(i));
             },
@@ -452,17 +459,18 @@ inline std::vector<Index> TriangleAabbHierarchy<2>::NearestPrimitivesToPoints(
             K);
         auto const iStl = static_cast<std::size_t>(i);
         p[iStl]         = nearestPrimitives.front();
+        d[iStl]         = distances.front();
     };
     if (bParallelize)
+    {
+        tbb::parallel_for(Index{0}, Index{P.cols()}, FindNearestPrimitive);
+    }
+    else
     {
         for (auto i = 0; i < P.cols(); ++i)
             FindNearestPrimitive(i);
     }
-    else
-    {
-        tbb::parallel_for(Index{0}, Index{P.cols()}, FindNearestPrimitive);
-    }
-    return p;
+    return {p, d};
 }
 
 } // namespace geometry

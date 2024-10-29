@@ -144,7 +144,7 @@ TEST_CASE("[geometry] TetrahedralAabbHierarchy")
             CHECK_GT(primitiveIdx, Index{-1});
         }
     }
-    std::vector<Index> const nearestPrimitivesToP = bvh.NearestPrimitivesToPoints(P);
+    auto const [nearestPrimitivesToP, distancesToP] = bvh.NearestPrimitivesToPoints(P);
     CHECK_EQ(nearestPrimitivesToP.size(), P.cols());
     for (auto i = 0; i < P.cols(); ++i)
     {

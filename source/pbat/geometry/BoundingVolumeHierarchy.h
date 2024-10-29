@@ -8,6 +8,7 @@
 #include <queue>
 #include <stack>
 #include <tbb/parallel_for.h>
+#include <utility>
 #include <vector>
 
 namespace pbat {
@@ -71,7 +72,7 @@ class BoundingVolumeHierarchy
      * @return
      */
     template <class FDistanceToBoundingVolume, class FDistanceToPrimitive>
-    std::vector<Index>
+    std::pair<std::vector<Index>, std::vector<Scalar>>
     NearestPrimitivesTo(FDistanceToBoundingVolume&& db, FDistanceToPrimitive&& dp, std::size_t K)
         const;
 
@@ -191,14 +192,16 @@ BoundingVolumeHierarchy<TDerived, TBoundingVolume, TPrimitive, Dims>::Primitives
 
 template <class TDerived, class TBoundingVolume, class TPrimitive, int Dims>
 template <class FDistanceToBoundingVolume, class FDistanceToPrimitive>
-inline std::vector<Index>
+inline std::pair<std::vector<Index>, std::vector<Scalar>>
 BoundingVolumeHierarchy<TDerived, TBoundingVolume, TPrimitive, Dims>::NearestPrimitivesTo(
     FDistanceToBoundingVolume&& db,
     FDistanceToPrimitive&& dp,
     std::size_t K) const
 {
     std::vector<Index> neighbours{};
+    std::vector<Scalar> distances{};
     neighbours.reserve(K);
+    distances.reserve(K);
 
     enum class EQueueItem { Volume, Primitive };
     struct QueueItem
@@ -207,24 +210,24 @@ BoundingVolumeHierarchy<TDerived, TBoundingVolume, TPrimitive, Dims>::NearestPri
         Index idx;       ///< Index of the primitive, if this QueueItem holds a primitive, or index
                          ///< of the node, if this QueueItem holds a volume (recall that node_idx =
                          ///< bv_idx + 1)
-        Scalar sd;       ///< Squared distance from this QueueItem to p
+        Scalar d;        ///< Distance from this QueueItem to p
     };
     auto const MakeVolumeQueueItem = [&](Index bvIdx) {
         auto const bvIdxStl          = static_cast<std::size_t>(bvIdx);
         BoundingVolumeType const& bv = mBoundingVolumes[bvIdxStl];
-        Scalar const sd              = db(bv);
-        QueueItem const q{EQueueItem::Volume, bvIdx, sd};
+        Scalar const d               = db(bv);
+        QueueItem const q{EQueueItem::Volume, bvIdx, d};
         return q;
     };
     auto const MakePrimitiveQueueItem = [&](Index pIdx) {
         PrimitiveType const& p = Primitive(pIdx);
-        Scalar const sd        = dp(p);
-        QueueItem const q{EQueueItem::Primitive, pIdx, sd};
+        Scalar const d         = dp(p);
+        QueueItem const q{EQueueItem::Primitive, pIdx, d};
         return q;
     };
 
     auto const Greater = [](QueueItem const& q1, QueueItem const& q2) {
-        return q1.sd > q2.sd;
+        return q1.d > q2.d;
     };
     using PriorityQueue = std::priority_queue<QueueItem, std::vector<QueueItem>, decltype(Greater)>;
     PriorityQueue queue{Greater};
@@ -259,12 +262,13 @@ BoundingVolumeHierarchy<TDerived, TBoundingVolume, TPrimitive, Dims>::NearestPri
             // it means that primitive is closer to the point p than any other primitive or
             // bounding volume in the queue, thus it is the current closest primitive to p.
             neighbours.push_back(q.idx);
+            distances.push_back(q.d);
         }
 
         if (neighbours.size() == K)
             break;
     }
-    return neighbours;
+    return {neighbours, distances};
 }
 
 template <class TDerived, class TBoundingVolume, class TPrimitive, int Dims>
