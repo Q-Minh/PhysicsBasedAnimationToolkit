@@ -60,7 +60,7 @@ def hyper_elastic_potential(
         energy=_fem.HyperElasticEnergy.StableNeoHookean,
         precompute_sparsity: bool = True,
         quadrature_order: int = 1,
-        detJ: np.ndarray = None,
+        detJe: np.ndarray = None,
         GNe: np.ndarray = None):
     """Construct an FEM hyper elastic potential
 
@@ -71,23 +71,23 @@ def hyper_elastic_potential(
         energy (pbat.fem.HyperElasticEnergy, optional): Constitutive model. Defaults to pbat.fem.HyperElasticEnergy.StableNeoHookean.
         precompute_sparsity (bool, optional): Precompute an acceleration data structure for fast hessian construction. Defaults to True.
         quadrature_order (int, optional): Polynomial order to use for potential (and its derivatives) evaluation. Defaults to 1.
-        detJ (np.ndarray, optional): Jacobian determinants at quadrature points. Defaults to None.
+        detJe (np.ndarray, optional): Jacobian determinants at quadrature points. Defaults to None.
         GNe (np.ndarray, optional): Shape function gradients at quadrature points. Defaults to None.
 
     Returns:
         (pbat.fem.HyperElasticPotential, np.ndarray, np.ndarray): 
     """
-    if detJ is None:
-        detJ = _fem.jacobian_determinants(
+    if detJe is None:
+        detJe = _fem.jacobian_determinants(
             mesh, quadrature_order=quadrature_order)
     if GNe is None:
         GNe = _fem.shape_function_gradients(
             mesh, quadrature_order=quadrature_order)
     hep = _fem.HyperElasticPotential(
-        mesh, detJ, GNe, Y, nu, energy=energy, quadrature_order=quadrature_order)
+        mesh, detJe, GNe, Y, nu, energy=energy, quadrature_order=quadrature_order)
     if precompute_sparsity:
         hep.precompute_hessian_sparsity()
-    return hep, detJ, GNe
+    return hep, detJe, GNe
 
 
 def laplacian(
@@ -162,7 +162,7 @@ def load_vector(
         mesh,
         fe: np.ndarray,
         quadrature_order: int = 1,
-        detJ: np.ndarray = None, 
+        detJ: np.ndarray = None,
         flatten: bool = True):
     """Construct an FEM load vector
 

@@ -108,6 +108,9 @@ class HyperElasticPotential
         EHyperElasticEnergy eHyperElasticEnergy,
         int qOrder);
 
+    HyperElasticPotential(HyperElasticPotential&& other);
+    HyperElasticPotential& operator=(HyperElasticPotential&& other);
+
     HyperElasticPotential(HyperElasticPotential const&)            = delete;
     HyperElasticPotential& operator=(HyperElasticPotential const&) = delete;
 
@@ -329,6 +332,19 @@ HyperElasticPotential::HyperElasticPotential(
         qOrder);
 }
 
+HyperElasticPotential::HyperElasticPotential(HyperElasticPotential&& other)
+    : mHyperElasticPotential(other.mHyperElasticPotential)
+{
+    other.mHyperElasticPotential = nullptr;
+}
+
+HyperElasticPotential& HyperElasticPotential::operator=(HyperElasticPotential&& other)
+{
+    mHyperElasticPotential       = other.mHyperElasticPotential;
+    other.mHyperElasticPotential = nullptr;
+    return *this;
+}
+
 void HyperElasticPotential::PrecomputeHessianSparsity()
 {
     Apply([]<class HyperElasticPotentialType>(HyperElasticPotentialType* hyperElasticPotential) {
@@ -481,10 +497,12 @@ VectorX& HyperElasticPotential::ElementPotentials()
 HyperElasticPotential::~HyperElasticPotential()
 {
     if (mHyperElasticPotential != nullptr)
+    {
         Apply(
             [&]<class HyperElasticPotentialType>(HyperElasticPotentialType* hyperElasticPotential) {
                 delete hyperElasticPotential;
             });
+    }
 }
 
 template <class Func>

@@ -66,6 +66,8 @@ class TetrahedralAabbHierarchy : public BoundingVolumeHierarchy<
 
     [[maybe_unused]] auto GetV() const { return V; }
 
+    [[maybe_unused]] auto GetC() const { return C; }
+
     Eigen::Ref<MatrixX const> V;
     Eigen::Ref<IndexMatrixX const> C;
 };

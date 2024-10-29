@@ -22,7 +22,7 @@ if __name__ == "__main__":
     parser.add_argument("-n", "--poisson-ratio", help="Poisson's ratio", type=float,
                         dest="nu", default=0.45)
     args = parser.parse_args()
-    
+
     # Load domain and visual meshes
     imesh = meshio.read(args.input)
     V, C = imesh.points, imesh.cells_dict["tetra"]
@@ -32,14 +32,14 @@ if __name__ == "__main__":
     VR, FR = rimesh.points, rimesh.cells_dict["triangle"]
     VR = VR.astype(np.float64, order='c')
     FR = FR.astype(np.int64, order='c')
-    
+
     # Construct FEM quantities for simulation
     mesh = pbat.fem.Mesh(
         V.T, C.T, element=pbat.fem.Element.Tetrahedron, order=2)
     x = mesh.X.reshape(math.prod(mesh.X.shape), order='f')
     v = np.zeros(x.shape[0])
     rho = args.rho
-    
+
     # Mass matrix
     M, detJeM = pbat.fem.mass_matrix(mesh, rho=rho, quadrature_order=4)
     Minv = pbat.math.linalg.ldlt(M)
@@ -75,10 +75,10 @@ if __name__ == "__main__":
     Hdd = hep.to_matrix()[:, dofs].tocsr()[dofs, :]
     Hddinv = pbat.math.linalg.ldlt(Hdd)
     Hddinv.analyze(Hdd)
-    
+
     # Setup visual mesh
     bvh = pbat.geometry.bvh(V.T, C.T, cell=pbat.geometry.Cell.Tetrahedron)
-    e = bvh.nearest_primitives_to_points(VR.T)
+    e, d = bvh.nearest_primitives_to_points(VR.T)
     Xi = pbat.fem.reference_positions(mesh, e, VR.T)
     phi = pbat.fem.shape_functions_at(mesh, Xi)
 
@@ -123,7 +123,7 @@ if __name__ == "__main__":
 
             # Update visuals
             X = x.reshape(mesh.X.shape[0], mesh.X.shape[1], order='f')
-            xv = (X[:,mesh.E[:,e]] * phi).sum(axis=1)
+            xv = (X[:, mesh.E[:, e]] * phi).sum(axis=1)
             sm.update_vertex_positions(xv.T)
 
     ps.set_user_callback(callback)

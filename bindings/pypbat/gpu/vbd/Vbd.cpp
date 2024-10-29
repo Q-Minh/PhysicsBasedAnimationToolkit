@@ -13,7 +13,7 @@ namespace py {
 namespace gpu {
 namespace vbd {
 
-void Bind(pybind11::module& m)
+void Bind([[maybe_unused]] pybind11::module& m)
 {
     namespace pyb = pybind11;
 #ifdef PBAT_USE_CUDA

@@ -255,7 +255,7 @@ HyperElasticPotential<TMesh, THyperElasticEnergy, QuadratureOrder>::ComputeEleme
                     0,
                     e * kStride + g * MeshType::kDims);
                 Matrix<kDims, kDims> const F = xe * gradPhi;
-                auto vecF                    = FromEigen(F.reshaped());
+                auto vecF                    = FromEigen(F);
                 auto psiF                    = Psi.eval(vecF, mue(g, e), lambdae(g, e));
                 Ue(e) += (wg(g) * detJe(g, e)) * psiF;
             }
@@ -274,7 +274,7 @@ HyperElasticPotential<TMesh, THyperElasticEnergy, QuadratureOrder>::ComputeEleme
                     0,
                     e * kStride + g * MeshType::kDims);
                 Matrix<kDims, kDims> const F = xe * gradPhi;
-                auto vecF                    = FromEigen(F.reshaped());
+                auto vecF                    = FromEigen(F);
                 auto [psiF, gradPsiF]        = Psi.evalWithGrad(vecF, mue(g, e), lambdae(g, e));
                 Ue(e) += (wg(g) * detJe(g, e)) * psiF;
                 auto const GP = FromEigen(gradPhi);
@@ -296,7 +296,7 @@ HyperElasticPotential<TMesh, THyperElasticEnergy, QuadratureOrder>::ComputeEleme
                     0,
                     e * kStride + g * MeshType::kDims);
                 Matrix<kDims, kDims> const F = xe * gradPhi;
-                auto vecF                    = FromEigen(F.reshaped());
+                auto vecF                    = FromEigen(F);
                 auto psiF                    = Psi.eval(vecF, mue(g, e), lambdae(g, e));
                 auto hessPsiF                = Psi.hessian(vecF, mue(g, e), lambdae(g, e));
                 Ue(e) += (wg(g) * detJe(g, e)) * psiF;
@@ -320,7 +320,7 @@ HyperElasticPotential<TMesh, THyperElasticEnergy, QuadratureOrder>::ComputeEleme
                     0,
                     e * kStride + g * MeshType::kDims);
                 Matrix<kDims, kDims> const F = xe * gradPhi;
-                auto vecF                    = FromEigen(F.reshaped());
+                auto vecF                    = FromEigen(F);
                 auto [psiF, gradPsiF, hessPsiF] =
                     Psi.evalWithGradAndHessian(vecF, mue(g, e), lambdae(g, e));
                 Ue(e) += (wg(g) * detJe(g, e)) * psiF;

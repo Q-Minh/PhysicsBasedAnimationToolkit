@@ -66,7 +66,7 @@ if __name__ == "__main__":
     Frefined = igl.boundary_facets(Crefined)
     Frefined[:, :2] = np.roll(Frefined[:, :2], shift=1, axis=1)
 
-    e = bvh.nearest_primitives_to_points(Vrefined.T)
+    e, d = bvh.nearest_primitives_to_points(Vrefined.T)
     Xi1 = pbat.fem.reference_positions(mesh1, e, Vrefined.T)
     Xi2 = pbat.fem.reference_positions(mesh2, e, Vrefined.T)
     phi1 = pbat.fem.shape_functions_at(mesh1, Xi1)
