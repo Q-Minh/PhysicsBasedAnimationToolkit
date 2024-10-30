@@ -91,8 +91,13 @@ class CholFemFunctionTransferOperator(BaseFemFunctionTransferOperator):
 class RankKApproximateFemFunctionTransferOperator(BaseFemFunctionTransferOperator):
     def __init__(self, MD: pbat.fem.Mesh, MS: pbat.fem.Mesh, MT: pbat.fem.Mesh, modes=30):
         super().__init__(MD, MS, MT)
-        self.U, self.sigma, self.VT = sp.sparse.linalg.svds(
+        modes = modes / 2
+        Ulo, sigmalo, VTlo = sp.sparse.linalg.svds(
             self.Ig @ self.NT, k=modes, which='SM')
+        Uhi, sigmahi, VThi = sp.sparse.linalg.svds(
+            self.Ig @ self.NT, k=modes, which='LM')
+        self.U, self.sigma, self.VT = np.hstack((Ulo, Uhi)), np.hstack(
+            (sigmalo, sigmahi)), np.vstack((VTlo, VThi))
         keep = np.nonzero(self.sigma > 1e-5)[0]
         self.U = self.U[:, keep]
         self.sigma = self.sigma[keep]
