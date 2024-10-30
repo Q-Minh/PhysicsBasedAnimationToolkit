@@ -48,10 +48,10 @@ class BaseFemFunctionTransferOperator():
             MS (pbat.fem.Mesh): Source mesh
             MT (pbat.fem.Mesh): Target mesh
         """
-        nelems = MS.E.shape[1]
+        nelems = MD.E.shape[1]
         quadrature_order = 2*max(MS.order, MT.order)
-        Xg = MS.quadrature_points(quadrature_order)
-        wg = np.tile(MS.quadrature_weights(quadrature_order), nelems)
+        Xg = MD.quadrature_points(quadrature_order)
+        wg = np.tile(MD.quadrature_weights(quadrature_order), nelems)
         Ig = sp.sparse.diags(wg)
         NS = shape_function_matrix(MS, Xg)
         NT = shape_function_matrix(MT, Xg)
@@ -82,27 +82,33 @@ class CholFemFunctionTransferOperator(BaseFemFunctionTransferOperator):
     def __matmul__(self, B):
         B = self.P @ B
         X = self.Ainv.solve(B)
-        # X = sp.linalg.cho_solve((self.C, self.L), B)
         return X
 
 
 class RankKApproximateFemFunctionTransferOperator(BaseFemFunctionTransferOperator):
     def __init__(self, MD: pbat.fem.Mesh, MS: pbat.fem.Mesh, MT: pbat.fem.Mesh, modes=30):
         super().__init__(MD, MS, MT)
-        self.l, self.V = sp.sparse.linalg.eigsh(self.A, k=modes, which='SM')
+        self.U, self.sigma, self.VT = sp.sparse.linalg.svds(
+            self.Ig @ self.NT, k=modes, which='SM')
+        keep = np.nonzero(self.sigma > 1e-5)[0]
+        self.U = self.U[:, keep]
+        self.sigma = self.sigma[keep]
+        self.VT = self.VT[keep, :]
 
-    def __matmul__(self, X):
-        B = self.P @ X
-        B = self.V.T @ B
-        B = B / self.l[:, np.newaxis]
-        return self.V @ B
+    def __matmul__(self, B):
+        B = self.Ig @ self.NS @ B
+        B = self.U.T @ B
+        B = B / self.sigma[:, np.newaxis]
+        X = self.VT.T @ B
+        return X
 
 
 def linear_elastic_deformation_modes(mesh, rho, Y, nu, modes=30, sigma=-1e-5):
     x = mesh.X.reshape(math.prod(mesh.X.shape), order='f')
     M, detJeM = pbat.fem.mass_matrix(mesh, rho=rho)
     energy = pbat.fem.HyperElasticEnergy.StableNeoHookean
-    hep, detJeU, GNeU = pbat.fem.hyper_elastic_potential(mesh, Y, nu, energy=energy)
+    hep, detJeU, GNeU = pbat.fem.hyper_elastic_potential(
+        mesh, Y, nu, energy=energy)
     hep.compute_element_elasticity(x)
     HU = hep.hessian()
     leigs, Veigs = sp.sparse.linalg.eigsh(
@@ -110,7 +116,7 @@ def linear_elastic_deformation_modes(mesh, rho, Y, nu, modes=30, sigma=-1e-5):
     Veigs = Veigs / sp.linalg.norm(Veigs, axis=0, keepdims=True)
     leigs[leigs <= 0] = 0
     w = np.sqrt(leigs)
-    return w, Veigs, hep
+    return w, Veigs
 
 
 def signal(w: float, v: np.ndarray, t: float, c: float, k: float):
@@ -152,7 +158,7 @@ if __name__ == "__main__":
         CV.T, CC.T, element=pbat.fem.Element.Tetrahedron)
 
     # Precompute quantities
-    w, L, hep = linear_elastic_deformation_modes(
+    w, L = linear_elastic_deformation_modes(
         mesh, args.rho, args.Y, args.nu, args.modes)
     Fldl = CholFemFunctionTransferOperator(mesh, mesh, cmesh)
     Krestrict = 30
@@ -181,8 +187,8 @@ if __name__ == "__main__":
         t = time.time() - t0
         X = V + signal(w[mode], L[:, mode],
                        t, c, k).reshape(V.shape[0], 3)
-        XCldl = Fldl @ X
-        XCeig = Feig @ X
+        XCldl = CV + Fldl @ (X - V)
+        XCeig = CV + Feig @ (X - V)
         vm.update_vertex_positions(X)
         ldlvm.update_vertex_positions(XCldl)
         eigvm.update_vertex_positions(XCeig)
