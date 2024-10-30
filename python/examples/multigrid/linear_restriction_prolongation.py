@@ -29,7 +29,7 @@ def shape_function_matrix(mesh, Xg):
     Xi = pbat.fem.reference_positions(mesh, e, Xg)
     phi = pbat.fem.shape_functions_at(mesh, Xi)
     # quad. pts. Xg that are outside the mesh should have N(Xg)=0
-    phi[:, np.array(d) > 0] = 0
+    # phi[:, np.array(d) > 0] = 0
     data = phi.flatten(order='F')
     rows = np.repeat(list(range(nevalpts)), mesh.E.shape[0])
     cols = mesh.E[:, e].flatten(order='F')
@@ -48,10 +48,10 @@ class BaseFemFunctionTransferOperator():
             MS (pbat.fem.Mesh): Source mesh
             MT (pbat.fem.Mesh): Target mesh
         """
-        nelems = MD.E.shape[1]
+        nelems = MT.E.shape[1]
         quadrature_order = 2*max(MS.order, MT.order)
-        Xg = MD.quadrature_points(quadrature_order)
-        wg = np.tile(MD.quadrature_weights(quadrature_order), nelems)
+        Xg = MT.quadrature_points(quadrature_order)
+        wg = np.tile(MT.quadrature_weights(quadrature_order), nelems)
         Ig = sp.sparse.diags(wg)
         NS = shape_function_matrix(MS, Xg)
         NT = shape_function_matrix(MT, Xg)
@@ -72,8 +72,11 @@ class CholFemFunctionTransferOperator(BaseFemFunctionTransferOperator):
         super().__init__(MD, MS, MT)
         n = self.A.shape[0]
         lmin, lmax = min_max_eigs(self.A, n=1)
-        tau = sp.sparse.diags(np.full(n, abs(lmin[0]) + 1e-10))
-        # Regularize A (due to positive semi-definiteness)
+        tau = 0.
+        if lmin[0] <= 0:
+            # Regularize A (due to positive semi-definiteness)
+            tau = abs(lmin[0]) + 1e-10
+        tau = sp.sparse.diags(np.full(n, tau))
         AR = self.A + tau
         solver = pbat.math.linalg.SolverBackend.Eigen
         self.Ainv = pbat.math.linalg.chol(AR, solver=solver)
@@ -148,6 +151,9 @@ if __name__ == "__main__":
         np.float64, order='c'), imesh.cells_dict["tetra"].astype(np.int64, order='c')
     CV, CC = icmesh.points.astype(
         np.float64, order='c'), icmesh.cells_dict["tetra"].astype(np.int64, order='c')
+    maxcoord = V.max()
+    V = V / maxcoord
+    CV = CV / maxcoord
     F = igl.boundary_facets(C)
     F[:, :2] = np.roll(F[:, :2], shift=1, axis=1)
     CF = igl.boundary_facets(CC)
