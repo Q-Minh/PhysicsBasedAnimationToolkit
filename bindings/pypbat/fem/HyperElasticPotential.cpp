@@ -287,8 +287,22 @@ HyperElasticPotential::HyperElasticPotential(
                 [&]<class HyperElasticEnergyType>() {
                     using HyperElasticPotentialType = pbat::fem::
                         HyperElasticPotential<MeshType, HyperElasticEnergyType, QuadratureOrder>;
-                    mHyperElasticPotential =
-                        new HyperElasticPotentialType(*mesh, detJe, GNe, Y, nu);
+                    if (ePsi == EHyperElasticEnergy::SaintVenantKirchhoff and
+                        std::is_same_v<
+                            HyperElasticEnergyType,
+                            pbat::physics::SaintVenantKirchhoffEnergy<MeshType::kDims>>)
+                    {
+                        mHyperElasticPotential =
+                            new HyperElasticPotentialType(*mesh, detJe, GNe, Y, nu);
+                    }
+                    if (ePsi == EHyperElasticEnergy::StableNeoHookean and
+                        std::is_same_v<
+                            HyperElasticEnergyType,
+                            pbat::physics::StableNeoHookeanEnergy<MeshType::kDims>>)
+                    {
+                        mHyperElasticPotential =
+                            new HyperElasticPotentialType(*mesh, detJe, GNe, Y, nu);
+                    }
                     mDims            = HyperElasticPotentialType::kDims;
                     mOrder           = HyperElasticPotentialType::kOrder;
                     mQuadratureOrder = HyperElasticPotentialType::kQuadratureOrder;
@@ -322,8 +336,22 @@ HyperElasticPotential::HyperElasticPotential(
                 [&]<class HyperElasticEnergyType>() {
                     using HyperElasticPotentialType = pbat::fem::
                         HyperElasticPotential<MeshType, HyperElasticEnergyType, QuadratureOrder>;
-                    mHyperElasticPotential =
-                        new HyperElasticPotentialType(*mesh, detJe, GNe, Y, nu);
+                    if (ePsi == EHyperElasticEnergy::SaintVenantKirchhoff and
+                        std::is_same_v<
+                            HyperElasticEnergyType,
+                            pbat::physics::SaintVenantKirchhoffEnergy<MeshType::kDims>>)
+                    {
+                        mHyperElasticPotential =
+                            new HyperElasticPotentialType(*mesh, detJe, GNe, Y, nu);
+                    }
+                    if (ePsi == EHyperElasticEnergy::StableNeoHookean and
+                        std::is_same_v<
+                            HyperElasticEnergyType,
+                            pbat::physics::StableNeoHookeanEnergy<MeshType::kDims>>)
+                    {
+                        mHyperElasticPotential =
+                            new HyperElasticPotentialType(*mesh, detJe, GNe, Y, nu);
+                    }
                     mDims            = HyperElasticPotentialType::kDims;
                     mOrder           = HyperElasticPotentialType::kOrder;
                     mQuadratureOrder = HyperElasticPotentialType::kQuadratureOrder;
@@ -520,9 +548,24 @@ void HyperElasticPotential::Apply(Func&& f) const
                 [&]<class HyperElasticEnergyType>() {
                     using HyperElasticPotentialType = pbat::fem::
                         HyperElasticPotential<MeshType, HyperElasticEnergyType, QuadratureOrder>;
-                    HyperElasticPotentialType* hyperElasticPotential =
-                        reinterpret_cast<HyperElasticPotentialType*>(mHyperElasticPotential);
-                    f.template operator()<HyperElasticPotentialType>(hyperElasticPotential);
+                    if (eHyperElasticEnergy == EHyperElasticEnergy::SaintVenantKirchhoff and
+                        std::is_same_v<
+                            HyperElasticEnergyType,
+                            pbat::physics::SaintVenantKirchhoffEnergy<MeshType::kDims>>)
+                    {
+                        HyperElasticPotentialType* hyperElasticPotential =
+                            reinterpret_cast<HyperElasticPotentialType*>(mHyperElasticPotential);
+                        f.template operator()<HyperElasticPotentialType>(hyperElasticPotential);
+                    }
+                    if (eHyperElasticEnergy == EHyperElasticEnergy::StableNeoHookean and
+                        std::is_same_v<
+                            HyperElasticEnergyType,
+                            pbat::physics::StableNeoHookeanEnergy<MeshType::kDims>>)
+                    {
+                        HyperElasticPotentialType* hyperElasticPotential =
+                            reinterpret_cast<HyperElasticPotentialType*>(mHyperElasticPotential);
+                        f.template operator()<HyperElasticPotentialType>(hyperElasticPotential);
+                    }
                 });
         });
 }
