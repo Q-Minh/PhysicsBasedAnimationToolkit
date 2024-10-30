@@ -162,7 +162,7 @@ if __name__ == "__main__":
         mesh, args.rho, args.Y, args.nu, args.modes)
     Fldl = CholFemFunctionTransferOperator(mesh, mesh, cmesh)
     Krestrict = 30
-    Feig = RankKApproximateFemFunctionTransferOperator(
+    Frank = RankKApproximateFemFunctionTransferOperator(
         mesh, mesh, cmesh, modes=Krestrict)
 
     ps.set_up_dir("z_up")
@@ -171,7 +171,7 @@ if __name__ == "__main__":
     ps.init()
     vm = ps.register_surface_mesh("model", V, F)
     ldlvm = ps.register_surface_mesh("LDL cage", CV, CF)
-    eigvm = ps.register_surface_mesh("Eig cage", CV, CF)
+    rankvm = ps.register_surface_mesh("Rank K cage", CV, CF)
     mode = 6
     t0 = time.time()
     t = 0
@@ -188,10 +188,10 @@ if __name__ == "__main__":
         X = V + signal(w[mode], L[:, mode],
                        t, c, k).reshape(V.shape[0], 3)
         XCldl = CV + Fldl @ (X - V)
-        XCeig = CV + Feig @ (X - V)
+        XCrank = CV + Frank @ (X - V)
         vm.update_vertex_positions(X)
         ldlvm.update_vertex_positions(XCldl)
-        eigvm.update_vertex_positions(XCeig)
+        rankvm.update_vertex_positions(XCrank)
 
     ps.set_user_callback(callback)
     ps.show()
