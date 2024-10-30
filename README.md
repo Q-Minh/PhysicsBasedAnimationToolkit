@@ -18,6 +18,8 @@ The Physics Based Animation Toolkit (PBAT) is a (mostly templated) cross-platfor
 
 ### Features
 
+> _Online documentation coming soon._
+
 - [Finite Element Method](https://hplgit.github.io/fem-book/doc/pub/book/pdf/fem-book-4print-2up.pdf#page=47.07) (FEM) meshes and operators
   - Dimensions `1,2,3`
   - [Lagrange shape functions](https://doc.comsol.com/5.3/doc/com.comsol.help.comsol/comsol_api_xmesh.40.4.html) of order `1,2,3`
