@@ -94,7 +94,7 @@ def laplacian(
         mesh,
         dims: int = 1,
         quadrature_order: int = 1,
-        detJ: np.ndarray = None,
+        detJe: np.ndarray = None,
         GNe: np.ndarray = None,
         as_matrix: bool = True):
     """Construct an FEM Laplacian operator
@@ -103,23 +103,23 @@ def laplacian(
         mesh (pbat.fem.Mesh): 
         dims (int, optional): Solution space dimensions. Defaults to 1.
         quadrature_order (int, optional): Polynomial order to use for operator construction. Defaults to 1.
-        detJ (np.ndarray, optional): Jacobian determinants at quadrature points. Defaults to None.
+        detJe (np.ndarray, optional): Jacobian determinants at quadrature points. Defaults to None.
         GNe (np.ndarray, optional): Shape function gradients at quadrature points. Defaults to None.
         as_matrix (bool, optional): Return the operator as a sparse matrix. Defaults to True.
 
     Returns:
         (pbat.fem.Laplacian | scipy.sparse.csc_matrix, np.ndarray, np.ndarray): 
     """
-    if detJ is None:
-        detJ = _fem.jacobian_determinants(
+    if detJe is None:
+        detJe = _fem.jacobian_determinants(
             mesh, quadrature_order=quadrature_order)
     if GNe is None:
         GNe = _fem.shape_function_gradients(
             mesh, quadrature_order=quadrature_order)
-    L = _fem.Laplacian(mesh, detJ, GNe, dims=dims,
+    L = _fem.Laplacian(mesh, detJe, GNe, dims=dims,
                        quadrature_order=quadrature_order)
     L = L.to_matrix() if as_matrix else L
-    return L, detJ, GNe
+    return L, detJe, GNe
 
 
 def mass_matrix(
@@ -162,7 +162,7 @@ def load_vector(
         mesh,
         fe: np.ndarray,
         quadrature_order: int = 1,
-        detJ: np.ndarray = None,
+        detJe: np.ndarray = None,
         flatten: bool = True):
     """Construct an FEM load vector
 
@@ -170,16 +170,17 @@ def load_vector(
         mesh (pbat.fem.Mesh): 
         fe (np.ndarray): Uniform (|#dims| or |#dims|x1) or heterogeneous (|#dims|x|#mesh quadrature points|) load.
         quadrature_order (int, optional): Polynomial order to use for load vector construction. Defaults to 1.
-        detJ (np.ndarray, optional): Jacobian determinants at quadrature points. Defaults to None.
+        detJe (np.ndarray, optional): Jacobian determinants at quadrature points. Defaults to None.
 
     Returns:
         (np.ndarray, np.ndarray): 
     """
-    if detJ is None:
-        detJ = _fem.jacobian_determinants(
+    if detJe is None:
+        detJe = _fem.jacobian_determinants(
             mesh, quadrature_order=quadrature_order)
-    qgf = _fem.inner_product_weights(
-        mesh, quadrature_order=quadrature_order).flatten(order="F")
+    nelems = mesh.E.shape[1]
+    wg = np.tile(mesh.quadrature_weights(quadrature_order), nelems)
+    qgf = detJe.flatten(order="F") * wg
     Qf = sp.sparse.diags_array([qgf], offsets=[0])
     Nf = _fem.shape_function_matrix(mesh, quadrature_order=quadrature_order)
     if len(fe.shape) == 1:
@@ -189,4 +190,4 @@ def load_vector(
     f = fe @ Qf @ Nf
     if flatten:
         f = f.reshape(math.prod(f.shape), order="F")
-    return f, detJ
+    return f, detJe

@@ -16,7 +16,16 @@ def min_max_eigs(A, n=10):
     return lmin, lmax
 
 
-def shape_function_matrix(mesh, Xg):
+def laplacian_energy(mesh, k=1, dims=1):
+    L = -pbat.fem.laplacian(mesh, dims=dims)[0]
+    M = None if k == 1 else pbat.fem.mass_matrix(mesh, dims=1, lump=True)
+    U = L
+    for i in range(k-1):
+        U = U @ M @ L
+    return U
+
+
+def shape_function_matrix(mesh, Xg, dims=1):
     nevalpts = Xg.shape[1]
     # Unfortunately, we have to perform the copy here...
     # mesh.X and mesh.E are defined via def_property in pybind11, and
@@ -35,11 +44,13 @@ def shape_function_matrix(mesh, Xg):
     cols = mesh.E[:, e].flatten(order='F')
     nnodes = mesh.X.shape[1]
     N = sp.sparse.coo_matrix((data, (rows, cols)), shape=(nevalpts, nnodes))
+    if dims > 1:
+        N = sp.sparse.kron(N, sp.sparse.eye(dims))
     return N.asformat('csc')
 
 
 class BaseFemFunctionTransferOperator():
-    def __init__(self, MD: pbat.fem.Mesh, MS: pbat.fem.Mesh, MT: pbat.fem.Mesh):
+    def __init__(self, MD: pbat.fem.Mesh, MS: pbat.fem.Mesh, MT: pbat.fem.Mesh, H):
         """Operator for transferring FEM discretized functions from a source 
         mesh MS to a target mesh MT, given the domain MD.
 
@@ -48,13 +59,14 @@ class BaseFemFunctionTransferOperator():
             MS (pbat.fem.Mesh): Source mesh
             MT (pbat.fem.Mesh): Target mesh
         """
-        nelems = MT.E.shape[1]
+        nelems = MD.E.shape[1]
         quadrature_order = 2*max(MS.order, MT.order)
-        Xg = MT.quadrature_points(quadrature_order)
-        wg = np.tile(MT.quadrature_weights(quadrature_order), nelems)
+        Xg = MD.quadrature_points(quadrature_order)
+        wg = np.tile(MD.quadrature_weights(quadrature_order), nelems)
         Ig = sp.sparse.diags(wg)
-        NS = shape_function_matrix(MS, Xg)
-        NT = shape_function_matrix(MT, Xg)
+        Ig = sp.sparse.kron(Ig, sp.sparse.eye(MT.dims))
+        NS = shape_function_matrix(MS, Xg, dims=MT.dims)
+        NT = shape_function_matrix(MT, Xg, dims=MT.dims)
         A = (NT.T @ Ig @ NT).asformat('csc')
         P = NT.T @ Ig @ NS
         self.Ig = Ig
@@ -62,22 +74,25 @@ class BaseFemFunctionTransferOperator():
         self.NT = NT
         self.A = A
         self.P = P
+        self.U = laplacian_energy(MT, dims=MT.dims)
+        self.H = H
 
     def __matmul__(self, X):
         pass
 
 
 class CholFemFunctionTransferOperator(BaseFemFunctionTransferOperator):
-    def __init__(self, MD: pbat.fem.Mesh, MS: pbat.fem.Mesh, MT: pbat.fem.Mesh):
-        super().__init__(MD, MS, MT)
+    def __init__(self, MD: pbat.fem.Mesh, MS: pbat.fem.Mesh, MT: pbat.fem.Mesh, H, lreg=5, hreg=1):
+        super().__init__(MD, MS, MT, H)
         n = self.A.shape[0]
-        lmin, lmax = min_max_eigs(self.A, n=1)
+        A = self.A + lreg*self.U + hreg*self.H
+        lmin, lmax = min_max_eigs(A, n=1)
         tau = 0.
         if lmin[0] <= 0:
             # Regularize A (due to positive semi-definiteness)
             tau = abs(lmin[0]) + 1e-10
         tau = sp.sparse.diags(np.full(n, tau))
-        AR = self.A + tau
+        AR = A + tau
         solver = pbat.math.linalg.SolverBackend.Eigen
         self.Ainv = pbat.math.linalg.chol(AR, solver=solver)
         self.Ainv.compute(AR)
@@ -89,36 +104,34 @@ class CholFemFunctionTransferOperator(BaseFemFunctionTransferOperator):
 
 
 class RankKApproximateFemFunctionTransferOperator(BaseFemFunctionTransferOperator):
-    def __init__(self, MD: pbat.fem.Mesh, MS: pbat.fem.Mesh, MT: pbat.fem.Mesh, modes=30):
-        super().__init__(MD, MS, MT)
-        modes = modes / 2
-        Ulo, sigmalo, VTlo = sp.sparse.linalg.svds(
-            self.Ig @ self.NT, k=modes, which='SM')
-        Uhi, sigmahi, VThi = sp.sparse.linalg.svds(
-            self.Ig @ self.NT, k=modes, which='LM')
-        self.U, self.sigma, self.VT = np.hstack((Ulo, Uhi)), np.hstack(
-            (sigmalo, sigmahi)), np.vstack((VTlo, VThi))
-        keep = np.nonzero(self.sigma > 1e-5)[0]
-        self.U = self.U[:, keep]
-        self.sigma = self.sigma[keep]
-        self.VT = self.VT[keep, :]
+    def __init__(self, MD: pbat.fem.Mesh, MS: pbat.fem.Mesh, MT: pbat.fem.Mesh, H, lreg=5, hreg=1, modes=30):
+        super().__init__(MD, MS, MT, H)
+        A = self.A + lreg*self.U + hreg*self.H
+        l, V = sp.sparse.linalg.eigsh(A, k=modes, sigma=1e-5, which='LM')
+        keep = np.nonzero(l > 1e-5)[0]
+        self.l, self.V = l[keep], V[:, keep]
 
     def __matmul__(self, B):
-        B = self.Ig @ self.NS @ B
-        B = self.U.T @ B
-        B = B / self.sigma[:, np.newaxis]
-        X = self.VT.T @ B
+        B = self.P @ B
+        B = self.V.T @ B
+        B = B @ sp.sparse.diags(1 / self.l)
+        X = self.V @ B
         return X
 
 
-def linear_elastic_deformation_modes(mesh, rho, Y, nu, modes=30, sigma=-1e-5):
+def rest_pose_hessian(mesh, Y, nu):
     x = mesh.X.reshape(math.prod(mesh.X.shape), order='f')
-    M, detJeM = pbat.fem.mass_matrix(mesh, rho=rho)
     energy = pbat.fem.HyperElasticEnergy.StableNeoHookean
     hep, detJeU, GNeU = pbat.fem.hyper_elastic_potential(
         mesh, Y, nu, energy=energy)
     hep.compute_element_elasticity(x)
     HU = hep.hessian()
+    return HU
+
+
+def linear_elastic_deformation_modes(mesh, rho, Y, nu, modes=30, sigma=-1e-5):
+    M, detJeM = pbat.fem.mass_matrix(mesh, rho=rho)
+    HU = rest_pose_hessian(mesh, Y, nu)
     leigs, Veigs = sp.sparse.linalg.eigsh(
         HU, k=modes, M=M, sigma=sigma, which='LM')
     Veigs = Veigs / sp.linalg.norm(Veigs, axis=0, keepdims=True)
@@ -171,10 +184,13 @@ if __name__ == "__main__":
     # Precompute quantities
     w, L = linear_elastic_deformation_modes(
         mesh, args.rho, args.Y, args.nu, args.modes)
-    Fldl = CholFemFunctionTransferOperator(mesh, mesh, cmesh)
+    HC = rest_pose_hessian(cmesh, args.Y, args.nu)
+    lreg, hreg = 0, 1e-2
+    Fldl = CholFemFunctionTransferOperator(
+        mesh, mesh, cmesh, HC, lreg=lreg, hreg=hreg)
     Krestrict = 30
     Frank = RankKApproximateFemFunctionTransferOperator(
-        mesh, mesh, cmesh, modes=Krestrict)
+        mesh, mesh, cmesh, HC, lreg=lreg, hreg=hreg, modes=Krestrict)
 
     ps.set_up_dir("z_up")
     ps.set_front_dir("neg_y_front")
@@ -188,21 +204,33 @@ if __name__ == "__main__":
     t = 0
     c = 0.15
     k = 0.05
+    theta = 0
+    dtheta = np.pi/120
 
     def callback():
-        global mode, c, k
+        global mode, c, k, theta, dtheta
         changed, mode = imgui.InputInt("Mode", mode)
         changed, c = imgui.InputFloat("Wave amplitude", c)
         changed, k = imgui.InputFloat("Wave frequency", k)
 
         t = time.time() - t0
-        X = V + signal(w[mode], L[:, mode],
-                       t, c, k).reshape(V.shape[0], 3)
-        XCldl = CV + Fldl @ (X - V)
-        XCrank = CV + Frank @ (X - V)
-        vm.update_vertex_positions(X)
+
+        R = sp.spatial.transform.Rotation.from_quat(
+            [0, np.sin(theta/2), 0, np.cos(theta/4)]).as_matrix()
+        X = (V - V.mean(axis=0)) @ R.T + V.mean(axis=0)
+        uf = signal(w[mode], L[:, mode], t, c, k)
+        ur = (X - V).flatten(order="C")
+        ut = 1
+        u = uf + ur + ut
+        XCldl = CV + (Fldl @ u).reshape(CV.shape)
+        XCrank = CV + (Frank @ u).reshape(CV.shape)
+        vm.update_vertex_positions(V + (uf + ur).reshape(V.shape))
         ldlvm.update_vertex_positions(XCldl)
         rankvm.update_vertex_positions(XCrank)
+
+        theta += dtheta
+        if theta > 2*np.pi:
+            theta = 0
 
     ps.set_user_callback(callback)
     ps.show()
