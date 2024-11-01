@@ -21,13 +21,12 @@ namespace test {
 template <class Func>
 pbat::GpuMatrixX RunKernel(pbat::GpuMatrixX const& A)
 {
-    using namespace pbat::gpu;
     auto const toGpu = [](GpuMatrixX const& A) {
-        common::Buffer<GpuScalar> buf(A.size());
+        gpu::common::Buffer<GpuScalar> buf(A.size());
         thrust::copy(A.data(), A.data() + A.size(), buf.Data());
         return buf;
     };
-    auto const fromGpu = [](common::Buffer<GpuScalar> const& buf, auto rows, auto cols) {
+    auto const fromGpu = [](gpu::common::Buffer<GpuScalar> const& buf, auto rows, auto cols) {
         GpuMatrixX A(rows, cols);
         thrust::copy(buf.Data(), buf.Data() + buf.Size(), A.data());
         return A;

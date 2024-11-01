@@ -51,6 +51,34 @@ class Sum
     RhsNestedType const& B;
 };
 
+template <CMatrix TLhsMatrix>
+class SumScalar
+{
+  public:
+    using LhsNestedType = TLhsMatrix;
+
+    using ScalarType = typename LhsNestedType::ScalarType;
+    using SelfType   = SumScalar<LhsNestedType>;
+
+    static auto constexpr kRows     = LhsNestedType::kRows;
+    static auto constexpr kCols     = LhsNestedType::kCols;
+    static bool constexpr bRowMajor = LhsNestedType::bRowMajor;
+
+    PBAT_HOST_DEVICE SumScalar(LhsNestedType const& A, ScalarType k) : mA(A), mK(k) {}
+
+    PBAT_HOST_DEVICE ScalarType operator()(auto i, auto j) const { return mA(i, j) + mK; }
+
+    // Vector(ized) access
+    PBAT_HOST_DEVICE ScalarType operator()(auto i) const { return (*this)(i % kRows, i / kRows); }
+    PBAT_HOST_DEVICE ScalarType operator[](auto i) const { return (*this)(i); }
+
+    PBAT_MINI_READ_API(SelfType)
+
+  private:
+    LhsNestedType const& mA;
+    ScalarType mK;
+};
+
 template <CMatrix TLhsMatrix, CMatrix TRhsMatrix>
 class Subtraction
 {
@@ -84,6 +112,33 @@ class Subtraction
   private:
     LhsNestedType const& A;
     RhsNestedType const& B;
+};
+
+template <CMatrix TLhsMatrix>
+class SubtractionScalar
+{
+  public:
+    using LhsNestedType = TLhsMatrix;
+    using ScalarType    = typename LhsNestedType::ScalarType;
+    using SelfType      = SubtractionScalar<LhsNestedType>;
+
+    static auto constexpr kRows     = LhsNestedType::kRows;
+    static auto constexpr kCols     = LhsNestedType::kCols;
+    static bool constexpr bRowMajor = LhsNestedType::bRowMajor;
+
+    PBAT_HOST_DEVICE SubtractionScalar(LhsNestedType const& A, ScalarType k) : mA(A), mK(k) {}
+
+    PBAT_HOST_DEVICE ScalarType operator()(auto i, auto j) const { return mA(i, j) - mK; }
+
+    // Vector(ized) access
+    PBAT_HOST_DEVICE ScalarType operator()(auto i) const { return (*this)(i % kRows, i / kRows); }
+    PBAT_HOST_DEVICE ScalarType operator[](auto i) const { return (*this)(i); }
+
+    PBAT_MINI_READ_API(SelfType)
+
+  private:
+    LhsNestedType const& mA;
+    ScalarType mK;
 };
 
 template <CMatrix TLhsMatrix, CMatrix TRhsMatrix>
@@ -245,9 +300,16 @@ PBAT_HOST_DEVICE auto operator+(TLhsMatrix&& A, TRhsMatrix&& B)
 {
     using LhsMatrixType = std::remove_cvref_t<TLhsMatrix>;
     using RhsMatrixType = std::remove_cvref_t<TRhsMatrix>;
-    return Sum<LhsMatrixType, RhsMatrixType>(
-        std::forward<TLhsMatrix>(A),
-        std::forward<TRhsMatrix>(B));
+    if constexpr (std::is_arithmetic_v<RhsMatrixType>)
+    {
+        return SumScalar<LhsMatrixType>(std::forward<TLhsMatrix>(A), std::forward<TRhsMatrix>(B));
+    }
+    else
+    {
+        return Sum<LhsMatrixType, RhsMatrixType>(
+            std::forward<TLhsMatrix>(A),
+            std::forward<TRhsMatrix>(B));
+    }
 }
 
 template <class /*CMatrix*/ TLhsMatrix, class /*CMatrix*/ TRhsMatrix>
@@ -262,9 +324,18 @@ PBAT_HOST_DEVICE auto operator-(TLhsMatrix&& A, TRhsMatrix&& B)
 {
     using LhsMatrixType = std::remove_cvref_t<TLhsMatrix>;
     using RhsMatrixType = std::remove_cvref_t<TRhsMatrix>;
-    return Subtraction<LhsMatrixType, RhsMatrixType>(
-        std::forward<TLhsMatrix>(A),
-        std::forward<TRhsMatrix>(B));
+    if constexpr (std::is_arithmetic_v<RhsMatrixType>)
+    {
+        return SubtractionScalar<LhsMatrixType>(
+            std::forward<TLhsMatrix>(A),
+            std::forward<TRhsMatrix>(B));
+    }
+    else
+    {
+        return Subtraction<LhsMatrixType, RhsMatrixType>(
+            std::forward<TLhsMatrix>(A),
+            std::forward<TRhsMatrix>(B));
+    }
 }
 
 template <class /*CMatrix*/ TLhsMatrix, class /*CMatrix*/ TRhsMatrix>

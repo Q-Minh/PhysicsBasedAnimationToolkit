@@ -13,6 +13,8 @@
 #include "Product.h"
 #include "Reductions.h"
 #include "Repeat.h"
+#include "Scale.h"
+#include "Stack.h"
 #include "SubMatrix.h"
 #include "Transpose.h"
 #include "UnaryOperations.h"
