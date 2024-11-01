@@ -1,8 +1,8 @@
 #include "Inverse.h"
 
+#include "Matrix.h"
+#include "Scale.h"
 #include "pbat/Aliases.h"
-#include "pbat/math/linalg/mini/Matrix.h"
-#include "pbat/math/linalg/mini/Scale.h"
 
 #include <Eigen/LU>
 #include <cmath>

@@ -227,42 +227,6 @@ class SMatrixView
 template <class TScalar, int M>
 using SVectorView = SMatrixView<TScalar, M, 1>;
 
-template <CMatrix TMatrix, int RepeatRows, int RepeatCols>
-class TiledView
-{
-  public:
-    using NestedType = TMatrix;
-    using ScalarType = typename NestedType::ScalarType;
-    using SelfType   = TiledView<NestedType, RepeatRows, RepeatCols>;
-
-    static auto constexpr kRows     = RepeatRows * NestedType::kRows;
-    static auto constexpr kCols     = RepeatCols * NestedType::kCols;
-    static bool constexpr bRowMajor = NestedType::bRowMajor;
-
-    PBAT_HOST_DEVICE TiledView(NestedType const& A) : A(A) {}
-
-    PBAT_HOST_DEVICE ScalarType operator()(auto i, auto j) const
-    {
-        return A(i % NestedType::kRows, j % NestedType::kCols);
-    }
-
-    // Vector(ized) access
-    PBAT_HOST_DEVICE ScalarType operator()(auto i) const { return (*this)(i % kRows, i / kRows); }
-    PBAT_HOST_DEVICE ScalarType operator[](auto i) const { return (*this)(i); }
-
-    PBAT_MINI_READ_API(SelfType)
-
-  private:
-    NestedType const& A;
-};
-
-template <auto RepeatRows, auto RepeatCols, class /*CMatrix*/ TMatrix>
-PBAT_HOST_DEVICE auto Repeat(TMatrix&& A)
-{
-    using MatrixType = std::remove_cvref_t<TMatrix>;
-    return TiledView<MatrixType, RepeatRows, RepeatCols>(std::forward<TMatrix>(A));
-}
-
 template <class TScalar, int M>
 PBAT_HOST_DEVICE auto Unit(auto i)
 {

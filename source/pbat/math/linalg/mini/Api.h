@@ -6,7 +6,7 @@
 #include "SubMatrix.h"
 #include "Transpose.h"
 
-#define PBAT_MINI_READ_API(SelfType)             \
+#define PBAT_MINI_READ_API(SelfType)        \
     PBAT_MINI_DIMENSIONS_API                \
     PBAT_MINI_CONST_SUBMATRIX_API(SelfType) \
     PBAT_MINI_CONST_TRANSPOSE_API(SelfType)

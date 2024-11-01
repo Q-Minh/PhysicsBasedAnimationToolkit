@@ -1,7 +1,7 @@
 #include "Geometry.h"
 
+#include "Matrix.h"
 #include "pbat/Aliases.h"
-#include "pbat/math/linalg/mini/Matrix.h"
 
 #include <doctest/doctest.h>
 

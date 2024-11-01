@@ -12,6 +12,7 @@
 #include "Norm.h"
 #include "Product.h"
 #include "Reductions.h"
+#include "Repeat.h"
 #include "SubMatrix.h"
 #include "Transpose.h"
 #include "UnaryOperations.h"
