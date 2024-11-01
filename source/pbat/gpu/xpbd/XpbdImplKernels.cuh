@@ -14,27 +14,25 @@ namespace gpu {
 namespace xpbd {
 namespace XpbdImplKernels {
 
+namespace mini = pbat::math::linalg::mini;
+
 struct FInitializeNeoHookeanConstraint
 {
     PBAT_DEVICE void operator()(GpuIndex c)
     {
-        using namespace pbat::math::linalg::mini;
+        using namespace mini;
         // Load vertex positions of element c
-        GpuIndex const v[4] = {T[0][c], T[1][c], T[2][c], T[3][c]};
-        SMatrix<GpuScalar, 3, 4> xc{};
-        for (auto d = 0; d < 3; ++d)
-            for (auto j = 0; j < 4; ++j)
-                xc(d, j) = x[d][v[j]];
+        SMatrix<GpuIndex, 4, 1> v   = FromBuffers<4, 1>(T, c);
+        SMatrix<GpuScalar, 3, 4> xc = FromBuffers(x, v.Transpose());
         // Compute shape matrix and its inverse
-        SMatrix<GpuScalar, 3, 3> Ds = (xc.Slice<3, 3>(0, 1) - Repeat<1, 3>(xc.Col(0)));
-        SMatrixView<GpuScalar, 3, 3> DmInvC(DmInv + 9 * c);
-        DmInvC = Inverse(Ds);
+        SMatrix<GpuScalar, 3, 3> Ds         = (xc.Slice<3, 3>(0, 1) - Repeat<1, 3>(xc.Col(0)));
+        SMatrixView<GpuScalar, 3, 3> DmInvC = FromFlatBuffer<3, 3>(DmInv, c);
+        DmInvC                              = Inverse(Ds);
         // Compute constraint compliance
-        GpuScalar const tetVolume = Determinant(Ds) / GpuScalar{6.};
-        SMatrixView<GpuScalar, 2, 1> alphac{alpha + 2 * c};
-        SMatrixView<GpuScalar, 2, 1> lamec{lame + 2 * c};
-        alphac(0) = GpuScalar{1.} / (lamec(0) * tetVolume);
-        alphac(1) = GpuScalar{1.} / (lamec(1) * tetVolume);
+        GpuScalar const tetVolume           = Determinant(Ds) / GpuScalar{6};
+        SMatrixView<GpuScalar, 2, 1> alphac = FromFlatBuffer<2, 1>(alpha, c);
+        SMatrixView<GpuScalar, 2, 1> lamec  = FromFlatBuffer<2, 1>(lame, c);
+        alphac                              = GpuScalar{1} / (lamec * tetVolume);
         // Compute rest stability
         gamma[c] = GpuScalar{1.} + lamec(0) / lamec(1);
     }
@@ -69,13 +67,13 @@ struct FStableNeoHookeanConstraint
 {
     PBAT_DEVICE void Project(
         GpuScalar C,
-        pbat::math::linalg::mini::SMatrix<GpuScalar, 3, 4> const& gradC,
-        pbat::math::linalg::mini::SMatrix<GpuScalar, 4, 1> const& minvc,
+        mini::SMatrix<GpuScalar, 3, 4> const& gradC,
+        mini::SMatrix<GpuScalar, 4, 1> const& minvc,
         GpuScalar atilde,
         GpuScalar& lambdac,
-        pbat::math::linalg::mini::SMatrix<GpuScalar, 3, 4>& xc)
+        mini::SMatrix<GpuScalar, 3, 4>& xc)
     {
-        using namespace pbat::math::linalg::mini;
+        using namespace mini;
         GpuScalar dlambda =
             -(C + atilde * lambdac) /
             (minvc(0) * SquaredNorm(gradC.Col(0)) + minvc(1) * SquaredNorm(gradC.Col(1)) +
@@ -89,13 +87,13 @@ struct FStableNeoHookeanConstraint
 
     PBAT_DEVICE void ProjectHydrostatic(
         GpuIndex c,
-        pbat::math::linalg::mini::SMatrix<GpuScalar, 4, 1> const& minvc,
+        mini::SMatrix<GpuScalar, 4, 1> const& minvc,
         GpuScalar atilde,
         GpuScalar gammac,
         GpuScalar& lambdac,
-        pbat::math::linalg::mini::SMatrix<GpuScalar, 3, 4>& xc)
+        mini::SMatrix<GpuScalar, 3, 4>& xc)
     {
-        using namespace pbat::math::linalg::mini;
+        using namespace mini;
         SMatrixView<GpuScalar, 3, 3> DmInvC(DmInv + 9 * c);
         SMatrix<GpuScalar, 3, 3> F = (xc.Slice<3, 3>(0, 1) - Repeat<1, 3>(xc.Col(0))) * DmInvC;
         GpuScalar C                = Determinant(F) - gammac;
@@ -111,12 +109,12 @@ struct FStableNeoHookeanConstraint
 
     PBAT_DEVICE void ProjectDeviatoric(
         GpuIndex c,
-        pbat::math::linalg::mini::SMatrix<GpuScalar, 4, 1> const& minvc,
+        mini::SMatrix<GpuScalar, 4, 1> const& minvc,
         GpuScalar atilde,
         GpuScalar& lambdac,
-        pbat::math::linalg::mini::SMatrix<GpuScalar, 3, 4>& xc)
+        mini::SMatrix<GpuScalar, 3, 4>& xc)
     {
-        using namespace pbat::math::linalg::mini;
+        using namespace mini;
         SMatrixView<GpuScalar, 3, 3> DmInvC(DmInv + 9 * c);
         SMatrix<GpuScalar, 3, 3> F = (xc.Slice<3, 3>(0, 1) - Repeat<1, 3>(xc.Col(0))) * DmInvC;
         GpuScalar C                = Norm(F);
@@ -128,34 +126,23 @@ struct FStableNeoHookeanConstraint
 
     PBAT_DEVICE void operator()(GpuIndex c)
     {
-        using namespace pbat::math::linalg::mini;
+        using namespace mini;
 
         // 1. Load constraint data in local memory
-        GpuIndex const v[4] = {T[0][c], T[1][c], T[2][c], T[3][c]};
-        SMatrix<GpuScalar, 3, 4> xc{};
-        for (auto d = 0; d < 3; ++d)
-            for (auto j = 0; j < 4; ++j)
-                xc(d, j) = x[d][v[j]];
-        SMatrix<GpuScalar, 4, 1> minvc{};
-        for (auto j = 0; j < 4; ++j)
-            minvc(j) = minv[v[j]];
-        SMatrix<GpuScalar, 2, 1> lambdac{};
-        lambdac(0) = lambda[2 * c];
-        lambdac(1) = lambda[2 * c + 1];
-        SMatrix<GpuScalar, 2, 1> atilde{};
-        atilde(0) = alpha[2 * c] / dt2;
-        atilde(1) = alpha[2 * c + 1] / dt2;
+        SMatrix<GpuIndex, 4, 1> v        = FromBuffers<4, 1>(T, c);
+        SMatrix<GpuScalar, 3, 4> xc      = FromBuffers(x, v.Transpose());
+        SMatrix<GpuScalar, 4, 1> minvc   = FromFlatBuffer(minv, v);
+        SMatrix<GpuScalar, 2, 1> lambdac = FromFlatBuffer<2, 1>(lambda, c);
+        SMatrix<GpuScalar, 2, 1> atilde  = FromFlatBuffer<2, 1>(alpha, c);
+        atilde /= dt2;
 
         // 2. Project elastic constraints
         ProjectDeviatoric(c, minvc, atilde(0), lambdac(0), xc);
         ProjectHydrostatic(c, minvc, atilde(1), gamma[c], lambdac(1), xc);
 
         // 3. Update global "Lagrange" multipliers and positions
-        lambda[2 * c]     = lambdac(0);
-        lambda[2 * c + 1] = lambdac(1);
-        for (auto d = 0; d < 3; ++d)
-            for (auto j = 0; j < 4; ++j)
-                x[d][v[j]] = xc(d, j);
+        ToFlatBuffer(lambdac, lambda, c);
+        ToBuffers(xc, v.Transpose(), x);
     }
 
     std::array<GpuScalar*, 3> x;
@@ -169,19 +156,18 @@ struct FStableNeoHookeanConstraint
     GpuScalar dt2;
 };
 
-PBAT_DEVICE pbat::math::linalg::mini::SMatrix<GpuScalar, 3, 1>
-PointOnPlane(auto const& X, auto const& P, auto const& n)
+PBAT_DEVICE mini::SMatrix<GpuScalar, 3, 1> PointOnPlane(auto const& X, auto const& P, auto const& n)
 {
-    using namespace pbat::math::linalg::mini;
+    using namespace mini;
     GpuScalar const t           = (n.Transpose() * (X - P))(0, 0);
     SMatrix<GpuScalar, 3, 1> Xp = X - t * n;
     return Xp;
 }
 
-PBAT_DEVICE pbat::math::linalg::mini::SMatrix<GpuScalar, 3, 1>
+PBAT_DEVICE mini::SMatrix<GpuScalar, 3, 1>
 TriangleBarycentricCoordinates(auto const& AP, auto const& AB, auto const& AC)
 {
-    using namespace pbat::math::linalg::mini;
+    using namespace mini;
     GpuScalar const d00   = Dot(AB, AB);
     GpuScalar const d01   = Dot(AB, AC);
     GpuScalar const d11   = Dot(AC, AC);
@@ -204,15 +190,15 @@ struct FVertexTriangleContactConstraint
 
     PBAT_DEVICE bool ProjectVertexTriangle(
         GpuScalar minvv,
-        pbat::math::linalg::mini::SMatrix<GpuScalar, 3, 1> const& minvf,
-        pbat::math::linalg::mini::SMatrix<GpuScalar, 3, 1> const& xvt,
-        pbat::math::linalg::mini::SMatrix<GpuScalar, 3, 3> const& xft,
-        pbat::math::linalg::mini::SMatrix<GpuScalar, 3, 3> const& xf,
+        mini::SMatrix<GpuScalar, 3, 1> const& minvf,
+        mini::SMatrix<GpuScalar, 3, 1> const& xvt,
+        mini::SMatrix<GpuScalar, 3, 3> const& xft,
+        mini::SMatrix<GpuScalar, 3, 3> const& xf,
         GpuScalar atildec,
         GpuScalar& lambdac,
-        pbat::math::linalg::mini::SMatrix<GpuScalar, 3, 1>& xv)
+        mini::SMatrix<GpuScalar, 3, 1>& xv)
     {
-        using namespace pbat::math::linalg::mini;
+        using namespace mini;
         // Numerically zero inverse mass makes the Schur complement ill-conditioned/singular
         if (minvv < GpuScalar{1e-10})
             return false;
@@ -232,9 +218,9 @@ struct FVertexTriangleContactConstraint
         // If xv doesn't project inside triangle, then we don't generate a contact response
         // clang-format off
         bool const bIsVertexInsideTriangle = 
-            (b(0) >= GpuScalar{0.f}) and (b(0) <= GpuScalar{1.f}) and
-            (b(1) >= GpuScalar{0.f}) and (b(1) <= GpuScalar{1.f}) and
-            (b(2) >= GpuScalar{0.f}) and (b(2) <= GpuScalar{1.f});
+            (b(0) >= GpuScalar{0}) and (b(0) <= GpuScalar{1}) and
+            (b(1) >= GpuScalar{0}) and (b(1) <= GpuScalar{1}) and
+            (b(2) >= GpuScalar{0}) and (b(2) <= GpuScalar{1});
         // clang-format on
         if (not bIsVertexInsideTriangle)
             return false;
@@ -242,7 +228,7 @@ struct FVertexTriangleContactConstraint
         // Project xv onto triangle's plane into xc
         GpuScalar const C = Dot(n, xv - xf.Col(0));
         // If xv is positively oriented w.r.t. triangles xf, there is no penetration
-        if (C > GpuScalar{0.})
+        if (C > GpuScalar{0})
             return false;
         // Prevent super violent projection for stability, i.e. if the collision constraint
         // violation is already too large, we give up.
@@ -271,50 +257,24 @@ struct FVertexTriangleContactConstraint
         return true;
     }
 
-    PBAT_DEVICE void SetParticlePosition(
-        GpuIndex v,
-        pbat::math::linalg::mini::SMatrix<GpuScalar, 3, 1> const& xv,
-        std::array<GpuScalar*, 3> const& xx)
-    {
-        for (auto d = 0; d < 3; ++d)
-            xx[d][v] = xv(d, 0);
-    }
-
-    PBAT_DEVICE pbat::math::linalg::mini::SMatrix<GpuScalar, 3, 1>
-    GetParticlePosition(GpuIndex v, std::array<GpuScalar*, 3> const& xx)
-    {
-        using namespace pbat::math::linalg::mini;
-        SMatrix<GpuScalar, 3, 1> xv{};
-        for (auto d = 0; d < 3; ++d)
-            xv(d, 0) = xx[d][v];
-        return xv;
-    }
-
     PBAT_DEVICE void operator()(GpuIndex c)
     {
-        using namespace pbat::math::linalg::mini;
-        GpuIndex vv    = V[0][cpairs[c].first]; ///< Colliding vertex
-        GpuIndex vf[3] = {
+        using namespace mini;
+        GpuIndex vv = V[0][cpairs[c].first]; ///< Colliding vertex
+        SMatrix<GpuIndex, 3, 1> vf{
             F[0][cpairs[c].second],
             F[1][cpairs[c].second],
             F[2][cpairs[c].second]}; ///< Colliding triangle
 
-        SMatrix<GpuScalar, 3, 1> xv = GetParticlePosition(vv, x);
-        SMatrix<GpuScalar, 3, 3> xf{};
-        for (auto j = 0; j < 3; ++j)
-            xf.Col(j) = GetParticlePosition(vf[j], x);
+        SMatrix<GpuScalar, 3, 1> xvt = FromBuffers<3, 1>(xt, vv);
+        SMatrix<GpuScalar, 3, 1> xv  = FromBuffers<3, 1>(x, vv);
+        SMatrix<GpuScalar, 3, 3> xft = FromBuffers(xt, vf.Transpose());
+        SMatrix<GpuScalar, 3, 3> xf  = FromBuffers(x, vf.Transpose());
 
-        SMatrix<GpuScalar, 3, 1> xvt = GetParticlePosition(vv, xt);
-        SMatrix<GpuScalar, 3, 3> xft{};
-        for (auto j = 0; j < 3; ++j)
-            xft.Col(j) = GetParticlePosition(vf[j], xt);
-
-        GpuScalar const minvv = minv[vv];
-        SMatrix<GpuScalar, 3, 1> minvf{};
-        for (auto j = 0; j < 3; ++j)
-            minvf(j, 0) = minv[vf[j]];
-        GpuScalar atildec = alpha[c] / dt2;
-        GpuScalar lambdac = lambda[c];
+        GpuScalar const minvv          = minv[vv];
+        SMatrix<GpuScalar, 3, 1> minvf = FromFlatBuffer(minv, vf);
+        GpuScalar atildec              = alpha[c] / dt2;
+        GpuScalar lambdac              = lambda[c];
 
         // 2. Project collision constraint
         if (not ProjectVertexTriangle(minvv, minvf, xvt, xft, xf, atildec, lambdac, xv))
@@ -322,7 +282,7 @@ struct FVertexTriangleContactConstraint
 
         // 3. Update global positions
         // lambda[c] = lambdac;
-        SetParticlePosition(vv, xv, x);
+        ToBuffers(xv, x, vv);
     }
 
     std::array<GpuScalar*, 3> x;                                  ///< Current positions

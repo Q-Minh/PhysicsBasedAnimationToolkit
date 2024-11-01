@@ -247,7 +247,8 @@ PBAT_HOST_DEVICE auto FromFlatBuffer(TScalar* buf, TIndexMatrix const& inds)
     static_assert(std::is_integral_v<IntegerType>, "inds must be matrix of indices");
     auto constexpr M = TIndexMatrix::kRows;
     auto constexpr N = TIndexMatrix::kCols;
-    SMatrix<std::remove_const_t<TScalar>, M, N> A{};
+    using ScalarType = std::remove_cvref_t<TScalar>;
+    SMatrix<ScalarType, M, N> A{};
     using pbat::common::ForRange;
     ForRange<0, N>([&]<auto j>() { ForRange<0, M>([&]<auto i>() { A(i, j) = buf[inds(i, j)]; }); });
     return A;
@@ -257,9 +258,10 @@ template <CMatrix TMatrix, class IndexType>
 PBAT_HOST_DEVICE void
 ToFlatBuffer(TMatrix const& A, typename TMatrix::ScalarType* buf, IndexType bi)
 {
-    auto constexpr M              = TMatrix::kRows;
-    auto constexpr N              = TMatrix::kCols;
-    FromFlatBuffer<M, N>(buf, bi) = A;
+    using ScalarType                          = typename TMatrix::ScalarType;
+    auto constexpr M                          = TMatrix::kRows;
+    auto constexpr N                          = TMatrix::kCols;
+    FromFlatBuffer<M, N, ScalarType>(buf, bi) = A;
 }
 
 template <CMatrix TMatrix, CMatrix TIndexMatrix>
@@ -289,13 +291,12 @@ ToFlatBuffer(TMatrix const& A, TIndexMatrix const& inds, typename TMatrix::Scala
 }
 
 template <int M, int N, class TScalar, class IndexType>
-PBAT_HOST_DEVICE auto
-FromBuffers([[maybe_unused]] std::array<TScalar*, M> buf, [[maybe_unused]] IndexType bi)
+PBAT_HOST_DEVICE auto FromBuffers(std::array<TScalar*, M> buf, IndexType bi)
 {
     using ScalarType = std::remove_const_t<TScalar>;
     SMatrix<ScalarType, M, N> A{};
     using pbat::common::ForRange;
-    ForRange<0, M>([&]<auto i>() { A.Row(i) = FromFlatBuffer<1, N>(buf[i], bi); });
+    ForRange<0, M>([&]<auto i>() { A.Row(i) = FromFlatBuffer<1, N, ScalarType>(buf[i], bi); });
     return A;
 }
 
@@ -306,9 +307,11 @@ PBAT_HOST_DEVICE auto FromBuffers(std::array<TScalar*, K> buf, TIndexMatrix cons
     static_assert(std::is_integral_v<IntegerType>, "inds must be matrix of indices");
     auto constexpr M = TIndexMatrix::kRows;
     auto constexpr N = TIndexMatrix::kCols;
-    SMatrix<std::remove_const_t<TScalar>, K * M, N> A{};
+    using ScalarType = std::remove_cvref_t<TScalar>;
+    SMatrix<ScalarType, K * M, N> A{};
     using pbat::common::ForRange;
-    ForRange<0, K>([&]<auto k>() { A.Slice<M, N>(k * M, 0) = FromFlatBuffer(buf[k], inds); });
+    ForRange<0, K>(
+        [&]<auto k>() { A.Slice<M, N>(k * M, 0) = FromFlatBuffer<ScalarType>(buf[k], inds); });
     return A;
 }
 
@@ -318,8 +321,9 @@ ToBuffers(TMatrix const& A, std::array<typename TMatrix::ScalarType*, M> buf, In
 {
     static_assert(M == TMatrix::kRows, "A must have same rows as number of buffers");
     auto constexpr N = TMatrix::kCols;
+    using ScalarType = typename TMatrix::ScalarType;
     using pbat::common::ForRange;
-    ForRange<0, M>([&]<auto i>() { FromFlatBuffer<1, N>(buf[i], bi) = A.Row(i); });
+    ForRange<0, M>([&]<auto i>() { FromFlatBuffer<1, N, ScalarType>(buf[i], bi) = A.Row(i); });
 }
 
 template <CMatrix TMatrix, CMatrix TIndexMatrix, int K>
@@ -335,6 +339,7 @@ PBAT_HOST_DEVICE void ToBuffers(
     static_assert(MA % MI == 0, "Rows of A must be multiple of rows of inds");
     static_assert(NA == NI, "A and inds must have same number of columns");
     static_assert(MA / MI == K, "A must have number of rows == #buffers*#rows of inds");
+    using ScalarType = typename TMatrix::ScalarType;
     using pbat::common::ForRange;
     ForRange<0, K>([&]<auto k>() { ToFlatBuffer(A.Slice<MI, NI>(k * MI, 0), inds, buf[k]); });
 }

@@ -43,6 +43,32 @@ class Square
     NestedType const& A;
 };
 
+template <CMatrix TLhsMatrix>
+class Reciprocal
+{
+  public:
+    using LhsNestedType = TLhsMatrix;
+    using ScalarType    = typename LhsNestedType::ScalarType;
+    using SelfType      = Reciprocal<LhsNestedType>;
+
+    static auto constexpr kRows     = LhsNestedType::kRows;
+    static auto constexpr kCols     = LhsNestedType::kCols;
+    static bool constexpr bRowMajor = LhsNestedType::bRowMajor;
+
+    PBAT_HOST_DEVICE Reciprocal(LhsNestedType const& A) : mA(A) {}
+
+    PBAT_HOST_DEVICE ScalarType operator()(auto i, auto j) const { return ScalarType(1) / mA(i, j); }
+
+    // Vector(ized) access
+    PBAT_HOST_DEVICE ScalarType operator()(auto i) const { return (*this)(i % kRows, i / kRows); }
+    PBAT_HOST_DEVICE ScalarType operator[](auto i) const { return (*this)(i); }
+
+    PBAT_MINI_READ_API(SelfType)
+
+  private:
+    LhsNestedType const& mA;
+};
+
 template <CMatrix TMatrix>
 class Absolute
 {
@@ -115,6 +141,14 @@ PBAT_HOST_DEVICE auto Max(TMatrix const& A)
         return std::max({A(K)...});
     };
     return maximum(std::make_integer_sequence<IntegerType, TMatrix::kRows * TMatrix::kCols>());
+}
+
+template <class /*CMatrix*/ TMatrix>
+PBAT_HOST_DEVICE auto operator/(typename std::remove_cvref_t<TMatrix>::ScalarType k, TMatrix&& A)
+{
+    using MatrixType = std::remove_cvref_t<TMatrix>;
+    PBAT_MINI_CHECK_CMATRIX(MatrixType);
+    return k * Reciprocal<MatrixType>(std::forward<TMatrix>(A));
 }
 
 } // namespace mini
