@@ -15,6 +15,8 @@ namespace gpu {
 namespace vbd {
 namespace kernels {
 
+namespace mini = pbat::math::linalg::mini;
+
 struct FKineticEnergyMinimum
 {
     PBAT_DEVICE void operator()(auto i)
@@ -35,18 +37,7 @@ struct FKineticEnergyMinimum
 
 struct FAdaptiveInitialization
 {
-    using Vector3 = pbat::math::linalg::mini::SMatrix<GpuScalar, 3>;
-
-    PBAT_DEVICE Vector3 GetExternalAcceleration(auto i) const
-    {
-        Vector3 aexti;
-        aexti(0) = aext[0][i];
-        aexti(1) = aext[1][i];
-        aexti(2) = aext[2][i];
-        return aexti;
-    }
-
-    PBAT_DEVICE Vector3 GetAcceleration(auto i) const
+    PBAT_DEVICE mini::SVector<GpuScalar, 3> GetAcceleration(auto i) const
     {
         // In the original VBD paper, they say that they estimate motion by computing the current
         // acceleration, i.e. a(t) = (v(t) - v(t-1)) / dt. However, acceleration is not a measure of
@@ -57,27 +48,19 @@ struct FAdaptiveInitialization
         // decreases, acceleration suddenly becomes aligned with external acceleration (i.e.
         // gravity), and the adaptive scheme becomes biased towards it, helping to "push" motion in
         // that direction.
-        Vector3 at;
-        at(0) = (vt[0][i] - vtm1[0][i]) / dt;
-        at(1) = (vt[1][i] - vtm1[1][i]) / dt;
-        at(2) = (vt[2][i] - vtm1[2][i]) / dt;
-        return at;
+        return (mini::FromBuffers<3, 1>(vt, i) - mini::FromBuffers<3, 1>(vtm1, i)) / dt;
     }
 
-    PBAT_DEVICE Vector3 GetLinearizedMotion(auto i) const
+    PBAT_DEVICE mini::SVector<GpuScalar, 3> GetLinearizedMotion(auto i) const
     {
         // We replace acceleration by the velocity's direction to actually estimate motion.
-        Vector3 v;
-        v(0) = vt[0][i];
-        v(1) = vt[1][i];
-        v(2) = vt[2][i];
-        using namespace pbat::math::linalg::mini;
+        auto v = mini::FromBuffers<3, 1>(vt, i);
         return v / (Norm(v) + std::numeric_limits<GpuScalar>::min());
     }
 
     PBAT_DEVICE void operator()(auto i)
     {
-        using namespace pbat::math::linalg::mini;
+        using namespace mini;
         if (strategy == EInitializationStrategy::Position)
         {
             for (auto d = 0; d < 3; ++d)
@@ -95,7 +78,7 @@ struct FAdaptiveInitialization
         }
         else // (strategy == EInitializationStrategy::AdaptiveVbd)
         {
-            Vector3 aexti                           = GetExternalAcceleration(i);
+            auto aexti                              = FromBuffers<3, 1>(aext, i);
             GpuScalar const aextin2                 = SquaredNorm(aexti);
             bool const bHasZeroExternalAcceleration = (aextin2 == GpuScalar{0});
             GpuScalar atilde{0};
@@ -103,14 +86,14 @@ struct FAdaptiveInitialization
             {
                 if (strategy == EInitializationStrategy::AdaptiveVbd)
                 {
-                    Vector3 const ati = GetAcceleration(i);
-                    atilde            = Dot(ati, aexti) / aextin2;
-                    atilde            = min(max(atilde, GpuScalar{0}), GpuScalar{1});
+                    auto const ati = GetAcceleration(i);
+                    atilde         = Dot(ati, aexti) / aextin2;
+                    atilde         = min(max(atilde, GpuScalar{0}), GpuScalar{1});
                 }
                 if (strategy == EInitializationStrategy::AdaptivePbat)
                 {
-                    Vector3 const dti = GetLinearizedMotion(i);
-                    atilde            = Dot(dti, aexti) / aextin2;
+                    auto const dti = GetLinearizedMotion(i);
+                    atilde         = Dot(dti, aexti) / aextin2;
                     // Discard the sign of atilde, because motion that goes against
                     // gravity should "feel" gravity, rather than ignore it (i.e. clamping).
                     atilde = min(abs(atilde), GpuScalar{1});
@@ -217,42 +200,6 @@ struct BackwardEulerMinimization
 
     GpuIndex*
         partition; ///< List of vertex indices that can be processed independently, i.e. in parallel
-
-    template <class ScalarType>
-    PBAT_DEVICE pbat::math::linalg::mini::SMatrix<std::remove_const_t<ScalarType>, 3>
-    ToLocal(auto vi, std::array<ScalarType*, 3> vData) const
-    {
-        using namespace pbat::math::linalg::mini;
-        using UnderlyingScalarType = std::remove_const_t<ScalarType>;
-        SMatrix<UnderlyingScalarType, 3> vlocal;
-        vlocal(0) = vData[0][vi];
-        vlocal(1) = vData[1][vi];
-        vlocal(2) = vData[2][vi];
-        return vlocal;
-    }
-
-    template <class ScalarType>
-    PBAT_DEVICE void ToGlobal(
-        auto vi,
-        pbat::math::linalg::mini::SMatrix<ScalarType, 3> const& vData,
-        std::array<ScalarType*, 3> vGlobalData) const
-    {
-        vGlobalData[0][vi] = vData(0);
-        vGlobalData[1][vi] = vData(1);
-        vGlobalData[2][vi] = vData(2);
-    }
-
-    PBAT_DEVICE pbat::math::linalg::mini::SMatrix<GpuScalar, 4, 3>
-    BasisFunctionGradients(GpuIndex e) const;
-
-    PBAT_DEVICE pbat::math::linalg::mini::SMatrix<GpuScalar, 3, 4>
-    ElementVertexPositions(GpuIndex e) const;
-
-    PBAT_DEVICE pbat::math::linalg::mini::SMatrix<GpuScalar, 9, 10> StableNeoHookeanDerivativesWrtF(
-        GpuIndex e,
-        pbat::math::linalg::mini::SMatrix<GpuScalar, 3, 3> const& Fe,
-        GpuScalar mu,
-        GpuScalar lambda) const;
 
     PBAT_DEVICE void
     ComputeStableNeoHookeanDerivatives(GpuIndex e, GpuIndex ilocal, GpuScalar* Hge) const;

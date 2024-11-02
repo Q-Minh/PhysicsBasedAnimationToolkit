@@ -89,6 +89,8 @@ DefineMatrixMatrixAssign(Assign, =);
 DefineMatrixMatrixAssign(AddAssign, +=);
 DefineMatrixMatrixAssign(SubtractAssign, -=);
 DefineMatrixScalarAssign(AssignScalar, =);
+DefineMatrixScalarAssign(AddAssignScalar, +=);
+DefineMatrixScalarAssign(SubtractAssignScalar, -=);
 DefineMatrixScalarAssign(MultiplyAssign, *=);
 DefineMatrixScalarAssign(DivideAssign, /=);
 

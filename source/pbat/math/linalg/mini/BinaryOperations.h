@@ -315,7 +315,15 @@ PBAT_HOST_DEVICE auto operator+(TLhsMatrix&& A, TRhsMatrix&& B)
 template <class /*CMatrix*/ TLhsMatrix, class /*CMatrix*/ TRhsMatrix>
 PBAT_HOST_DEVICE auto operator+=(TLhsMatrix&& A, TRhsMatrix&& B)
 {
-    AddAssign(std::forward<TLhsMatrix>(A), std::forward<TRhsMatrix>(B));
+    using RhsMatrixType = std::remove_cvref_t<TRhsMatrix>;
+    if constexpr (std::is_arithmetic_v<RhsMatrixType>)
+    {
+        AddAssignScalar(std::forward<TLhsMatrix>(A), std::forward<TRhsMatrix>(B));
+    }
+    else
+    {
+        AddAssign(std::forward<TLhsMatrix>(A), std::forward<TRhsMatrix>(B));
+    }
     return A;
 }
 
@@ -341,7 +349,15 @@ PBAT_HOST_DEVICE auto operator-(TLhsMatrix&& A, TRhsMatrix&& B)
 template <class /*CMatrix*/ TLhsMatrix, class /*CMatrix*/ TRhsMatrix>
 PBAT_HOST_DEVICE auto operator-=(TLhsMatrix&& A, TRhsMatrix&& B)
 {
-    SubtractAssign(std::forward<TLhsMatrix>(A), std::forward<TRhsMatrix>(B));
+    using RhsMatrixType = std::remove_cvref_t<TRhsMatrix>;
+    if constexpr (std::is_arithmetic_v<RhsMatrixType>)
+    {
+        SubtractAssignScalar(std::forward<TLhsMatrix>(A), std::forward<TRhsMatrix>(B));
+    }
+    else
+    {
+        SubtractAssign(std::forward<TLhsMatrix>(A), std::forward<TRhsMatrix>(B));
+    }
     return A;
 }
 
