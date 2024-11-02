@@ -3,6 +3,8 @@
 
 #include "XpbdImpl.cuh"
 #include "pbat/HostDevice.h"
+#include "pbat/geometry/ClosestPointQueries.h"
+#include "pbat/geometry/IntersectionQueries.h"
 #include "pbat/gpu/Aliases.h"
 #include "pbat/gpu/common/SynchronizedList.cuh"
 #include "pbat/math/linalg/mini/Mini.h"
@@ -156,34 +158,6 @@ struct FStableNeoHookeanConstraint
     GpuScalar dt2;
 };
 
-PBAT_DEVICE mini::SMatrix<GpuScalar, 3, 1> PointOnPlane(auto const& X, auto const& P, auto const& n)
-{
-    using namespace mini;
-    GpuScalar const t           = (n.Transpose() * (X - P))(0, 0);
-    SMatrix<GpuScalar, 3, 1> Xp = X - t * n;
-    return Xp;
-}
-
-PBAT_DEVICE mini::SMatrix<GpuScalar, 3, 1>
-TriangleBarycentricCoordinates(auto const& AP, auto const& AB, auto const& AC)
-{
-    using namespace mini;
-    GpuScalar const d00   = Dot(AB, AB);
-    GpuScalar const d01   = Dot(AB, AC);
-    GpuScalar const d11   = Dot(AC, AC);
-    GpuScalar const d20   = Dot(AP, AB);
-    GpuScalar const d21   = Dot(AP, AC);
-    GpuScalar const denom = d00 * d11 - d01 * d01;
-    GpuScalar const v     = (d11 * d20 - d01 * d21) / denom;
-    GpuScalar const w     = (d00 * d21 - d01 * d20) / denom;
-    GpuScalar const u     = GpuScalar{1.} - v - w;
-    SMatrix<GpuScalar, 3, 1> uvw{};
-    uvw(0, 0) = u;
-    uvw(1, 0) = v;
-    uvw(2, 0) = w;
-    return uvw;
-};
-
 struct FVertexTriangleContactConstraint
 {
     using ContactPairType = typename XpbdImpl::ContactPairType;
@@ -212,9 +186,11 @@ struct FVertexTriangleContactConstraint
             return false;
 
         n /= doublearea;
-        SMatrix<GpuScalar, 3, 1> xc = PointOnPlane(xv, xf.Col(0), n);
+        using namespace pbat::geometry;
+        SMatrix<GpuScalar, 3, 1> xc = ClosestPointQueries::PointOnPlane(xv, xf.Col(0), n);
         // Check if xv projects to the triangle's interior by checking its barycentric coordinates
-        SMatrix<GpuScalar, 3, 1> b = TriangleBarycentricCoordinates(xc - xf.Col(0), T1, T2);
+        SMatrix<GpuScalar, 3, 1> b =
+            IntersectionQueries::TriangleBarycentricCoordinates(xc - xf.Col(0), T1, T2);
         // If xv doesn't project inside triangle, then we don't generate a contact response
         // clang-format off
         bool const bIsVertexInsideTriangle = 
@@ -245,7 +221,7 @@ struct FVertexTriangleContactConstraint
         xv += dx;
         lambdac += dlambda;
 
-        // Friction constraint
+        // Friction constraint (see https://dl.acm.org/doi/10.1145/2601097.2601152)
         GpuScalar const d   = Norm(dx);
         dx                  = (xv - xvt) - (xf * b - xft * b);
         dx                  = dx - n * n.Transpose() * dx;

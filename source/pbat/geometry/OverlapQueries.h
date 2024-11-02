@@ -3,6 +3,7 @@
 
 #include "ClosestPointQueries.h"
 #include "IntersectionQueries.h"
+#include "pbat/HostDevice.h"
 #include "pbat/common/ConstexprFor.h"
 #include "pbat/math/linalg/mini/Mini.h"
 
@@ -25,7 +26,8 @@ namespace mini = math::linalg::mini;
  * @return
  */
 template <mini::CMatrix TMatrixP, mini::CMatrix TMatrixL, mini::CMatrix TMatrixU>
-bool PointAxisAlignedBoundingBox(TMatrixP const& P, TMatrixL const& L, TMatrixU const& U);
+PBAT_HOST_DEVICE bool
+PointAxisAlignedBoundingBox(TMatrixP const& P, TMatrixL const& L, TMatrixU const& U);
 
 /**
  * @brief
@@ -44,7 +46,8 @@ template <
     mini::CMatrix TMatrixA,
     mini::CMatrix TMatrixB,
     mini::CMatrix TMatrixC>
-bool PointTriangle(TMatrixP const& P, TMatrixA const& A, TMatrixB const& B, TMatrixC const& C);
+PBAT_HOST_DEVICE bool
+PointTriangle(TMatrixP const& P, TMatrixA const& A, TMatrixB const& B, TMatrixC const& C);
 
 /**
  * @brief Checks if point P is contained in tetrahedron ABCD, in at least 3D.
@@ -61,7 +64,7 @@ template <
     mini::CMatrix TMatrixB,
     mini::CMatrix TMatrixC,
     mini::CMatrix TMatrixD>
-bool PointTetrahedron3D(
+PBAT_HOST_DEVICE bool PointTetrahedron3D(
     TMatrixP const& P,
     TMatrixA const& A,
     TMatrixB const& B,
@@ -77,7 +80,7 @@ bool PointTetrahedron3D(
  * @return
  */
 template <mini::CMatrix TMatrixC1, mini::CMatrix TMatrixC2>
-bool Spheres(
+PBAT_HOST_DEVICE bool Spheres(
     TMatrixC1 const& C1,
     typename TMatrixC1::ScalarType R1,
     TMatrixC2 const& C2,
@@ -97,7 +100,7 @@ template <
     mini::CMatrix TMatrixU1,
     mini::CMatrix TMatrixL2,
     mini::CMatrix TMatrixU2>
-bool AxisAlignedBoundingBoxes(
+PBAT_HOST_DEVICE bool AxisAlignedBoundingBoxes(
     TMatrixL1 const& L1,
     TMatrixU1 const& U1,
     TMatrixL2 const& L2,
@@ -112,7 +115,7 @@ bool AxisAlignedBoundingBoxes(
  * @return
  */
 template <mini::CMatrix TMatrixC, mini::CMatrix TMatrixL, mini::CMatrix TMatrixU>
-bool SphereAxisAlignedBoundingBox(
+PBAT_HOST_DEVICE bool SphereAxisAlignedBoundingBox(
     TMatrixC const& C,
     typename TMatrixC::ScalarType R,
     TMatrixL const& L,
@@ -127,7 +130,7 @@ bool SphereAxisAlignedBoundingBox(
  * @return
  */
 template <mini::CMatrix TMatrixP, mini::CMatrix TMatrixQ, mini::CMatrix TMatrixC>
-bool LineSegmentSphere(
+PBAT_HOST_DEVICE bool LineSegmentSphere(
     TMatrixP const& P,
     TMatrixQ const& Q,
     TMatrixC const& C,
@@ -146,7 +149,7 @@ template <
     mini::CMatrix TMatrixQ,
     mini::CMatrix TMatrixL,
     mini::CMatrix TMatrixU>
-bool LineSegmentAxisAlignedBoundingBox(
+PBAT_HOST_DEVICE bool LineSegmentAxisAlignedBoundingBox(
     TMatrixP const& P,
     TMatrixQ const& Q,
     TMatrixL const& L,
@@ -167,7 +170,7 @@ template <
     mini::CMatrix TMatrixA,
     mini::CMatrix TMatrixB,
     mini::CMatrix TMatrixC>
-bool LineSegmentTriangle3D(
+PBAT_HOST_DEVICE bool LineSegmentTriangle3D(
     TMatrixP const& P,
     TMatrixQ const& Q,
     TMatrixA const& A,
@@ -187,7 +190,7 @@ template <
     mini::CMatrix TMatrixN,
     mini::CMatrix TMatrixL,
     mini::CMatrix TMatrixU>
-bool PlaneAxisAlignedBoundingBox(
+PBAT_HOST_DEVICE bool PlaneAxisAlignedBoundingBox(
     TMatrixP const& P,
     TMatrixN const& n,
     TMatrixL const& L,
@@ -208,7 +211,7 @@ template <
     mini::CMatrix TMatrixC,
     mini::CMatrix TMatrixL,
     mini::CMatrix TMatrixU>
-bool TriangleAxisAlignedBoundingBox(
+PBAT_HOST_DEVICE bool TriangleAxisAlignedBoundingBox(
     TMatrixA const& A,
     TMatrixB const& B,
     TMatrixC const& C,
@@ -233,7 +236,7 @@ template <
     mini::CMatrix TMatrixD,
     mini::CMatrix TMatrixL,
     mini::CMatrix TMatrixU>
-bool TetrahedronAxisAlignedBoundingBox(
+PBAT_HOST_DEVICE bool TetrahedronAxisAlignedBoundingBox(
     TMatrixA const& A,
     TMatrixB const& B,
     TMatrixC const& C,
@@ -258,7 +261,7 @@ template <
     mini::CMatrix TMatrixA2,
     mini::CMatrix TMatrixB2,
     mini::CMatrix TMatrixC2>
-bool Triangles2D(
+PBAT_HOST_DEVICE bool Triangles2D(
     TMatrixA1 const& A1,
     TMatrixB1 const& B1,
     TMatrixC1 const& C1,
@@ -283,7 +286,7 @@ template <
     mini::CMatrix TMatrixA2,
     mini::CMatrix TMatrixB2,
     mini::CMatrix TMatrixC2>
-bool Triangles3D(
+PBAT_HOST_DEVICE bool Triangles3D(
     TMatrixA1 const& A1,
     TMatrixB1 const& B1,
     TMatrixC1 const& C1,
@@ -310,7 +313,7 @@ template <
     mini::CMatrix TMatrixJ,
     mini::CMatrix TMatrixK,
     mini::CMatrix TMatrixL>
-bool TriangleTetrahedron(
+PBAT_HOST_DEVICE bool TriangleTetrahedron(
     TMatrixA const& A,
     TMatrixB const& B,
     TMatrixC const& C,
@@ -340,7 +343,7 @@ template <
     mini::CMatrix TMatrixB2,
     mini::CMatrix TMatrixC2,
     mini::CMatrix TMatrixD2>
-bool Tetrahedra(
+PBAT_HOST_DEVICE bool Tetrahedra(
     TMatrixA1 const& A1,
     TMatrixB1 const& B1,
     TMatrixC1 const& C1,
@@ -364,7 +367,7 @@ template <
     mini::CMatrix TMatrixB,
     mini::CMatrix TMatrixC,
     mini::CMatrix TMatrixSC>
-bool TriangleSphere(
+PBAT_HOST_DEVICE bool TriangleSphere(
     TMatrixA const& A,
     TMatrixB const& B,
     TMatrixC const& C,
@@ -387,7 +390,7 @@ template <
     mini::CMatrix TMatrixC,
     mini::CMatrix TMatrixD,
     mini::CMatrix TMatrixSC>
-bool TetrahedronSphere(
+PBAT_HOST_DEVICE bool TetrahedronSphere(
     TMatrixA const& A,
     TMatrixB const& B,
     TMatrixC const& C,
@@ -396,16 +399,12 @@ bool TetrahedronSphere(
     typename TMatrixSC::ScalarType R);
 
 template <mini::CMatrix TMatrixP, mini::CMatrix TMatrixL, mini::CMatrix TMatrixU>
-bool PointAxisAlignedBoundingBox(TMatrixP const& P, TMatrixL const& L, TMatrixU const& U)
+PBAT_HOST_DEVICE bool
+PointAxisAlignedBoundingBox(TMatrixP const& P, TMatrixL const& L, TMatrixU const& U)
 {
     // bool bIsInsideBox{true};
     auto constexpr kDims = L.Rows();
     bool bIsOutsideBox   = Any((P < L) or (P > U));
-    // common::ForRange<0, kDims>([]<auto d>() {
-    //     if (P(d) < L(d) or P(d) > U(d))
-    //         bIsInsideBox = false;
-    // });
-    // return bIsInsideBox;
     return not bIsOutsideBox;
 }
 
@@ -414,15 +413,11 @@ template <
     mini::CMatrix TMatrixA,
     mini::CMatrix TMatrixB,
     mini::CMatrix TMatrixC>
-bool PointTriangle(TMatrixP const& P, TMatrixA const& A, TMatrixB const& B, TMatrixC const& C)
+PBAT_HOST_DEVICE bool
+PointTriangle(TMatrixP const& P, TMatrixA const& A, TMatrixB const& B, TMatrixC const& C)
 {
-    auto uvw         = IntersectionQueries::TriangleBarycentricCoordinates(P, A, B, C);
-    using ScalarType = typename TMatrixP::ScalarType;
-    // auto constexpr D       = uvw.Rows();
-    //  bool bIsInsideTriangle{true};
-    //  common::ForRange<0, D>([]<auto i>() {
-    //      bIsInsideTriangle &= (uvw(i) >= ScalarType(0) and uvw(i) <= ScalarType(1));
-    //  });
+    auto uvw               = IntersectionQueries::TriangleBarycentricCoordinates(P, A, B, C);
+    using ScalarType       = typename TMatrixP::ScalarType;
     bool bIsInsideTriangle = All((uvw >= ScalarType(0)) and (uvw <= ScalarType(1)));
     return bIsInsideTriangle;
 }
@@ -433,7 +428,7 @@ template <
     mini::CMatrix TMatrixB,
     mini::CMatrix TMatrixC,
     mini::CMatrix TMatrixD>
-bool PointTetrahedron3D(
+PBAT_HOST_DEVICE bool PointTetrahedron3D(
     TMatrixP const& P,
     TMatrixA const& A,
     TMatrixB const& B,
@@ -461,7 +456,7 @@ bool PointTetrahedron3D(
 }
 
 template <mini::CMatrix TMatrixC1, mini::CMatrix TMatrixC2>
-bool Spheres(
+PBAT_HOST_DEVICE bool Spheres(
     TMatrixC1 const& C1,
     typename TMatrixC1::ScalarType R1,
     TMatrixC2 const& C2,
@@ -479,22 +474,18 @@ template <
     mini::CMatrix TMatrixU1,
     mini::CMatrix TMatrixL2,
     mini::CMatrix TMatrixU2>
-bool AxisAlignedBoundingBoxes(
+PBAT_HOST_DEVICE bool AxisAlignedBoundingBoxes(
     TMatrixL1 const& L1,
     TMatrixU1 const& U1,
     TMatrixL2 const& L2,
     TMatrixU2 const& U2)
 {
-    // static auto constexpr kDims = L1.Rows();
-    // bool bOverlap{true};
-    // common::ForRange<0, kDims>([]<auto d>() { bOverlap &= (L1(d) <= U2(d)) and (L2(d) <= U1(d));
-    // });
     bool bOverlap = All((L1 <= U2) and (L2 <= U1));
     return bOverlap;
 }
 
 template <mini::CMatrix TMatrixC, mini::CMatrix TMatrixL, mini::CMatrix TMatrixU>
-bool SphereAxisAlignedBoundingBox(
+PBAT_HOST_DEVICE bool SphereAxisAlignedBoundingBox(
     TMatrixC const& C,
     typename TMatrixC::ScalarType R,
     TMatrixL const& L,
@@ -507,7 +498,7 @@ bool SphereAxisAlignedBoundingBox(
 }
 
 template <mini::CMatrix TMatrixP, mini::CMatrix TMatrixQ, mini::CMatrix TMatrixC>
-bool LineSegmentSphere(
+PBAT_HOST_DEVICE bool LineSegmentSphere(
     TMatrixP const& P,
     TMatrixQ const& Q,
     TMatrixC const& C,
@@ -539,7 +530,7 @@ template <
     mini::CMatrix TMatrixQ,
     mini::CMatrix TMatrixL,
     mini::CMatrix TMatrixU>
-bool LineSegmentAxisAlignedBoundingBox(
+PBAT_HOST_DEVICE bool LineSegmentAxisAlignedBoundingBox(
     TMatrixP const& P,
     TMatrixQ const& Q,
     TMatrixL const& L,
@@ -557,13 +548,6 @@ bool LineSegmentAxisAlignedBoundingBox(
     // Try world coordinate axes as separating axes
     using namespace std;
     auto constexpr kDims = c.Rows();
-    // mini::SVector<ScalarType, kRows> ad{};
-    // for (auto dim = 0; dim < kDims; ++dim)
-    // {
-    //     ad(dim) = abs(d(dim));
-    //     if (abs(m(dim)) > e(dim) + ad(dim))
-    //         return false;
-    // }
     bool bAxesSeparating = Any(Abs(m) > (e + Abs(d)));
     if (bAxesSeparating)
         return false;
@@ -587,7 +571,7 @@ template <
     mini::CMatrix TMatrixA,
     mini::CMatrix TMatrixB,
     mini::CMatrix TMatrixC>
-bool LineSegmentTriangle3D(
+PBAT_HOST_DEVICE bool LineSegmentTriangle3D(
     TMatrixP const& P,
     TMatrixQ const& Q,
     TMatrixA const& A,
@@ -602,7 +586,7 @@ template <
     mini::CMatrix TMatrixN,
     mini::CMatrix TMatrixL,
     mini::CMatrix TMatrixU>
-bool PlaneAxisAlignedBoundingBox(
+PBAT_HOST_DEVICE bool PlaneAxisAlignedBoundingBox(
     TMatrixP const& P,
     TMatrixN const& n,
     TMatrixL const& L,
@@ -627,7 +611,7 @@ template <
     mini::CMatrix TMatrixC,
     mini::CMatrix TMatrixL,
     mini::CMatrix TMatrixU>
-bool TriangleAxisAlignedBoundingBox(
+PBAT_HOST_DEVICE bool TriangleAxisAlignedBoundingBox(
     TMatrixA const& A,
     TMatrixB const& B,
     TMatrixC const& C,
@@ -736,7 +720,7 @@ template <
     mini::CMatrix TMatrixD,
     mini::CMatrix TMatrixL,
     mini::CMatrix TMatrixU>
-bool TetrahedronAxisAlignedBoundingBox(
+PBAT_HOST_DEVICE bool TetrahedronAxisAlignedBoundingBox(
     TMatrixA const& A,
     TMatrixB const& B,
     TMatrixC const& C,
@@ -866,7 +850,7 @@ template <
     mini::CMatrix TMatrixA2,
     mini::CMatrix TMatrixB2,
     mini::CMatrix TMatrixC2>
-bool Triangles2D(
+PBAT_HOST_DEVICE bool Triangles2D(
     TMatrixA1 const& A1,
     TMatrixB1 const& B1,
     TMatrixC1 const& C1,
@@ -921,7 +905,7 @@ template <
     mini::CMatrix TMatrixA2,
     mini::CMatrix TMatrixB2,
     mini::CMatrix TMatrixC2>
-bool Triangles3D(
+PBAT_HOST_DEVICE bool Triangles3D(
     TMatrixA1 const& A1,
     TMatrixB1 const& B1,
     TMatrixC1 const& C1,
@@ -944,7 +928,7 @@ template <
     mini::CMatrix TMatrixJ,
     mini::CMatrix TMatrixK,
     mini::CMatrix TMatrixL>
-bool TriangleTetrahedron(
+PBAT_HOST_DEVICE bool TriangleTetrahedron(
     TMatrixA const& A,
     TMatrixB const& B,
     TMatrixC const& C,
@@ -1087,7 +1071,7 @@ template <
     mini::CMatrix TMatrixB2,
     mini::CMatrix TMatrixC2,
     mini::CMatrix TMatrixD2>
-bool Tetrahedra(
+PBAT_HOST_DEVICE bool Tetrahedra(
     TMatrixA1 const& A1,
     TMatrixB1 const& B1,
     TMatrixC1 const& C1,
@@ -1269,7 +1253,7 @@ template <
     mini::CMatrix TMatrixB,
     mini::CMatrix TMatrixC,
     mini::CMatrix TMatrixSC>
-bool TriangleSphere(
+PBAT_HOST_DEVICE bool TriangleSphere(
     TMatrixA const& A,
     TMatrixB const& B,
     TMatrixC const& C,
@@ -1289,7 +1273,7 @@ template <
     mini::CMatrix TMatrixC,
     mini::CMatrix TMatrixD,
     mini::CMatrix TMatrixSC>
-bool TetrahedronSphere(
+PBAT_HOST_DEVICE bool TetrahedronSphere(
     TMatrixA const& A,
     TMatrixB const& B,
     TMatrixC const& C,

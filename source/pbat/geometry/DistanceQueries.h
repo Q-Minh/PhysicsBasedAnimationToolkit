@@ -3,6 +3,7 @@
 
 #include "ClosestPointQueries.h"
 #include "OverlapQueries.h"
+#include "pbat/HostDevice.h"
 #include "pbat/math/linalg/mini/Mini.h"
 
 #include <algorithm>
@@ -26,7 +27,7 @@ template <
     mini::CMatrix TMatrixU1,
     mini::CMatrix TMatrixL2,
     mini::CMatrix TMatrixU2>
-typename TMatrixL1::ScalarType AxisAlignedBoundingBoxes(
+PBAT_HOST_DEVICE typename TMatrixL1::ScalarType AxisAlignedBoundingBoxes(
     TMatrixL1 const& L1,
     TMatrixU1 const& U1,
     TMatrixL2 const& L2,
@@ -43,7 +44,7 @@ typename TMatrixL1::ScalarType AxisAlignedBoundingBoxes(
  * @return
  */
 template <mini::CMatrix TMatrixP, mini::CMatrix TMatrixL, mini::CMatrix TMatrixU>
-typename TMatrixP::ScalarType
+PBAT_HOST_DEVICE typename TMatrixP::ScalarType
 PointAxisAlignedBoundingBox(TMatrixP const& P, TMatrixL const& L, TMatrixU const& U);
 
 /**
@@ -59,7 +60,7 @@ template <
     mini::CMatrix TMatrixA,
     mini::CMatrix TMatrixB,
     mini::CMatrix TMatrixC>
-typename TMatrixP::ScalarType
+PBAT_HOST_DEVICE typename TMatrixP::ScalarType
 PointTriangle(TMatrixP const& P, TMatrixA const& A, TMatrixB const& B, TMatrixC const& C);
 
 /**
@@ -82,7 +83,7 @@ template <
     mini::CMatrix TMatrixB,
     mini::CMatrix TMatrixC,
     mini::CMatrix TMatrixD>
-typename TMatrixP::ScalarType PointTetrahedron(
+PBAT_HOST_DEVICE typename TMatrixP::ScalarType PointTetrahedron(
     TMatrixP const& P,
     TMatrixA const& A,
     TMatrixB const& B,
@@ -97,7 +98,8 @@ typename TMatrixP::ScalarType PointTetrahedron(
  * @return
  */
 template <mini::CMatrix TMatrixX, mini::CMatrix TMatrixP, mini::CMatrix TMatrixN>
-typename TMatrixX::ScalarType PointPlane(TMatrixX const& X, TMatrixP const& P, TMatrixN const& n);
+PBAT_HOST_DEVICE typename TMatrixX::ScalarType
+PointPlane(TMatrixX const& X, TMatrixP const& P, TMatrixN const& n);
 
 /**
  * @brief Obtains the distance between sphere (X,R) and triangle ABC.
@@ -113,7 +115,7 @@ template <
     mini::CMatrix TMatrixA,
     mini::CMatrix TMatrixB,
     mini::CMatrix TMatrixC>
-typename TMatrixX::ScalarType SphereTriangle(
+PBAT_HOST_DEVICE typename TMatrixX::ScalarType SphereTriangle(
     TMatrixX const& X,
     typename TMatrixX::ScalarType R,
     TMatrixA const& A,
@@ -125,7 +127,7 @@ template <
     mini::CMatrix TMatrixU1,
     mini::CMatrix TMatrixL2,
     mini::CMatrix TMatrixU2>
-typename TMatrixL1::ScalarType AxisAlignedBoundingBoxes(
+PBAT_HOST_DEVICE typename TMatrixL1::ScalarType AxisAlignedBoundingBoxes(
     TMatrixL1 const& L1,
     TMatrixU1 const& U1,
     TMatrixL2 const& L2,
@@ -142,7 +144,7 @@ typename TMatrixL1::ScalarType AxisAlignedBoundingBoxes(
 }
 
 template <mini::CMatrix TMatrixP, mini::CMatrix TMatrixL, mini::CMatrix TMatrixU>
-typename TMatrixP::ScalarType
+PBAT_HOST_DEVICE typename TMatrixP::ScalarType
 PointAxisAlignedBoundingBox(TMatrixP const& P, TMatrixL const& L, TMatrixU const& U)
 {
     // If point is inside AABB, then distance is 0.
@@ -159,7 +161,7 @@ template <
     mini::CMatrix TMatrixA,
     mini::CMatrix TMatrixB,
     mini::CMatrix TMatrixC>
-typename TMatrixP::ScalarType
+PBAT_HOST_DEVICE typename TMatrixP::ScalarType
 PointTriangle(TMatrixP const& P, TMatrixA const& A, TMatrixB const& B, TMatrixC const& C)
 {
     auto const PP = ClosestPointQueries::PointInTriangle(P, A, B, C);
@@ -172,7 +174,7 @@ template <
     mini::CMatrix TMatrixB,
     mini::CMatrix TMatrixC,
     mini::CMatrix TMatrixD>
-typename TMatrixP::ScalarType PointTetrahedron(
+PBAT_HOST_DEVICE typename TMatrixP::ScalarType PointTetrahedron(
     TMatrixP const& P,
     TMatrixA const& A,
     TMatrixB const& B,
@@ -194,7 +196,8 @@ typename TMatrixP::ScalarType PointTetrahedron(
 }
 
 template <mini::CMatrix TMatrixX, mini::CMatrix TMatrixP, mini::CMatrix TMatrixN>
-typename TMatrixX::ScalarType PointPlane(TMatrixX const& X, TMatrixP const& P, TMatrixN const& n)
+PBAT_HOST_DEVICE typename TMatrixX::ScalarType
+PointPlane(TMatrixX const& X, TMatrixP const& P, TMatrixN const& n)
 {
     return Dot(X - P, n);
 }
@@ -204,7 +207,7 @@ template <
     mini::CMatrix TMatrixA,
     mini::CMatrix TMatrixB,
     mini::CMatrix TMatrixC>
-typename TMatrixX::ScalarType SphereTriangle(
+PBAT_HOST_DEVICE typename TMatrixX::ScalarType SphereTriangle(
     TMatrixX const& X,
     typename TMatrixX::ScalarType R,
     TMatrixA const& A,
