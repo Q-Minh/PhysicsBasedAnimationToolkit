@@ -553,8 +553,8 @@ PBAT_HOST_DEVICE bool LineSegmentAxisAlignedBoundingBox(
         return false;
     // Add in an epsilon term to counteract arithmetic errors when segment is
     // (near) parallel to a coordinate axis (see text for detail)
-    common::ForRange<0, kDims>([]<auto dim>() {
-        ScalarType constexpr eps = 1e-15;
+    common::ForRange<0, kDims>([&]<auto dim>() {
+        ScalarType constexpr eps{1e-15};
         ad(dim) += eps;
         auto i = (dim + 1) % kDims;
         auto j = (dim + 2) % kDims;

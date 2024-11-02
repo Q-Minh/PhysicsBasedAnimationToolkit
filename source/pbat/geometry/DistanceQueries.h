@@ -34,7 +34,7 @@ PBAT_HOST_DEVICE typename TMatrixL1::ScalarType AxisAlignedBoundingBoxes(
     TMatrixU2 const& U2);
 
 /**
- * @brief
+ * @brief Obtain squared distance between point P and axis-aligned box (L,U)
  * @tparam TMatrixP
  * @tparam TMatrixL
  * @tparam TMatrixU
@@ -64,7 +64,7 @@ PBAT_HOST_DEVICE typename TMatrixP::ScalarType
 PointTriangle(TMatrixP const& P, TMatrixA const& A, TMatrixB const& B, TMatrixC const& C);
 
 /**
- * @brief
+ * @brief Obtain squared distance between point P and tetrahedron ABCD
  * @tparam TMatrixP
  * @tparam TMatrixA
  * @tparam TMatrixB
@@ -102,7 +102,7 @@ PBAT_HOST_DEVICE typename TMatrixX::ScalarType
 PointPlane(TMatrixX const& X, TMatrixP const& P, TMatrixN const& n);
 
 /**
- * @brief Obtains the distance between sphere (X,R) and triangle ABC.
+ * @brief Obtains the squared distance between sphere (X,R) and triangle ABC.
  * @param X
  * @param R
  * @param A
@@ -153,7 +153,7 @@ PointAxisAlignedBoundingBox(TMatrixP const& P, TMatrixL const& L, TMatrixU const
         return 0.;
     // Otherwise compute distance to boundary
     auto const CP = ClosestPointQueries::PointOnAxisAlignedBoundingBox(P, L, U);
-    return Norm(P - CP);
+    return SquaredNorm(P - CP);
 }
 
 template <
@@ -165,7 +165,7 @@ PBAT_HOST_DEVICE typename TMatrixP::ScalarType
 PointTriangle(TMatrixP const& P, TMatrixA const& A, TMatrixB const& B, TMatrixC const& C)
 {
     auto const PP = ClosestPointQueries::PointInTriangle(P, A, B, C);
-    return Norm(P - PP);
+    return SquaredNorm(P - PP);
 }
 
 template <
@@ -214,8 +214,8 @@ PBAT_HOST_DEVICE typename TMatrixX::ScalarType SphereTriangle(
     TMatrixB const& B,
     TMatrixC const& C)
 {
-    auto const d2c = PointTriangle(X, A, B, C);
-    return d2c - R;
+    auto const sd2c = PointTriangle(X, A, B, C);
+    return sd2c - R * R;
 }
 
 } // namespace DistanceQueries

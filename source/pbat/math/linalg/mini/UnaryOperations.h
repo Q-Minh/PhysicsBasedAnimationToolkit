@@ -9,6 +9,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <limits>
 #include <type_traits>
 #include <utility>
 
@@ -57,7 +58,10 @@ class Reciprocal
 
     PBAT_HOST_DEVICE Reciprocal(LhsNestedType const& A) : mA(A) {}
 
-    PBAT_HOST_DEVICE ScalarType operator()(auto i, auto j) const { return ScalarType(1) / mA(i, j); }
+    PBAT_HOST_DEVICE ScalarType operator()(auto i, auto j) const
+    {
+        return ScalarType(1) / mA(i, j);
+    }
 
     // Vector(ized) access
     PBAT_HOST_DEVICE ScalarType operator()(auto i) const { return (*this)(i % kRows, i / kRows); }
@@ -127,9 +131,18 @@ template <CReadableVectorizedMatrix TMatrix>
 PBAT_HOST_DEVICE auto Min(TMatrix const& A)
 {
     using IntegerType = std::remove_const_t<decltype(TMatrix::kRows)>;
-    auto minimum      = [&]<IntegerType... K>(std::integer_sequence<IntegerType, K...>) {
+#ifdef __CUDACC__
+    using ScalarType = typename TMatrix::ScalarType;
+    auto minimum     = [&]<IntegerType... K>(std::integer_sequence<IntegerType, K...>) {
+        auto m = std::numeric_limits<ScalarType>::max();
+        ((m = min(m, A(K))), ...);
+        return m;
+    };
+#else
+    auto minimum = [&]<IntegerType... K>(std::integer_sequence<IntegerType, K...>) {
         return std::min({A(K)...});
     };
+#endif
     return minimum(std::make_integer_sequence<IntegerType, TMatrix::kRows * TMatrix::kCols>());
 }
 
@@ -137,9 +150,18 @@ template <CReadableVectorizedMatrix TMatrix>
 PBAT_HOST_DEVICE auto Max(TMatrix const& A)
 {
     using IntegerType = std::remove_const_t<decltype(TMatrix::kRows)>;
-    auto maximum      = [&]<IntegerType... K>(std::integer_sequence<IntegerType, K...>) {
+    using ScalarType  = typename TMatrix::ScalarType;
+#ifdef __CUDACC__
+    auto maximum = [&]<IntegerType... K>(std::integer_sequence<IntegerType, K...>) {
+        auto m = std::numeric_limits<ScalarType>::lowest();
+        ((m = max(m, A(K))), ...);
+        return m;
+    };
+#else
+    auto maximum = [&]<IntegerType... K>(std::integer_sequence<IntegerType, K...>) {
         return std::max({A(K)...});
     };
+#endif
     return maximum(std::make_integer_sequence<IntegerType, TMatrix::kRows * TMatrix::kCols>());
 }
 

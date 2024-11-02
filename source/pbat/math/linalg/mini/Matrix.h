@@ -258,10 +258,9 @@ template <CMatrix TMatrix, class IndexType>
 PBAT_HOST_DEVICE void
 ToFlatBuffer(TMatrix const& A, typename TMatrix::ScalarType* buf, IndexType bi)
 {
-    using ScalarType                          = typename TMatrix::ScalarType;
-    auto constexpr M                          = TMatrix::kRows;
-    auto constexpr N                          = TMatrix::kCols;
-    FromFlatBuffer<M, N, ScalarType>(buf, bi) = A;
+    auto constexpr M              = TMatrix::kRows;
+    auto constexpr N              = TMatrix::kCols;
+    FromFlatBuffer<M, N>(buf, bi) = A;
 }
 
 template <CMatrix TMatrix, CMatrix TIndexMatrix>
@@ -296,7 +295,7 @@ PBAT_HOST_DEVICE auto FromBuffers(std::array<TScalar*, M> buf, IndexType bi)
     using ScalarType = std::remove_const_t<TScalar>;
     SMatrix<ScalarType, M, N> A{};
     using pbat::common::ForRange;
-    ForRange<0, M>([&]<auto i>() { A.Row(i) = FromFlatBuffer<1, N, ScalarType>(buf[i], bi); });
+    ForRange<0, M>([&]<auto i>() { A.Row(i) = FromFlatBuffer<1, N>(buf[i], bi); });
     return A;
 }
 
@@ -310,8 +309,7 @@ PBAT_HOST_DEVICE auto FromBuffers(std::array<TScalar*, K> buf, TIndexMatrix cons
     using ScalarType = std::remove_cvref_t<TScalar>;
     SMatrix<ScalarType, K * M, N> A{};
     using pbat::common::ForRange;
-    ForRange<0, K>(
-        [&]<auto k>() { A.Slice<M, N>(k * M, 0) = FromFlatBuffer<ScalarType>(buf[k], inds); });
+    ForRange<0, K>([&]<auto k>() { A.Slice<M, N>(k * M, 0) = FromFlatBuffer(buf[k], inds); });
     return A;
 }
 
@@ -321,9 +319,8 @@ ToBuffers(TMatrix const& A, std::array<typename TMatrix::ScalarType*, M> buf, In
 {
     static_assert(M == TMatrix::kRows, "A must have same rows as number of buffers");
     auto constexpr N = TMatrix::kCols;
-    using ScalarType = typename TMatrix::ScalarType;
     using pbat::common::ForRange;
-    ForRange<0, M>([&]<auto i>() { FromFlatBuffer<1, N, ScalarType>(buf[i], bi) = A.Row(i); });
+    ForRange<0, M>([&]<auto i>() { FromFlatBuffer<1, N>(buf[i], bi) = A.Row(i); });
 }
 
 template <CMatrix TMatrix, CMatrix TIndexMatrix, int K>
