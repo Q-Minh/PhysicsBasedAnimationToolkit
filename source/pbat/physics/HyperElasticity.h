@@ -9,7 +9,6 @@
 #include <fmt/core.h>
 #include <pbat/Aliases.h>
 #include <string>
-#include <tuple>
 
 namespace pbat {
 namespace physics {
@@ -40,26 +39,25 @@ concept CHyperElasticEnergy = requires(T t)
         t.evalWithGrad(
             math::linalg::mini::SMatrix<Scalar, T::kDims * T::kDims>{},
             Scalar{},
-            Scalar{})
-    } -> std::convertible_to<
-        std::tuple<Scalar, math::linalg::mini::SVector<Scalar, T::kDims * T::kDims>>>;
+            Scalar{},
+            std::declval<math::linalg::mini::SVector<Scalar, T::kDims * T::kDims>&>())
+    } -> std::convertible_to<Scalar>;
     {
         t.evalWithGradAndHessian(
             math::linalg::mini::SMatrix<Scalar, T::kDims * T::kDims>{},
             Scalar{},
-            Scalar{})
-    } -> std::convertible_to<std::tuple<
-        Scalar,
-        math::linalg::mini::SVector<Scalar, T::kDims * T::kDims>,
-        math::linalg::mini::SMatrix<Scalar, T::kDims * T::kDims, T::kDims * T::kDims>>>;
-    {
-        t.gradAndHessian(
-            math::linalg::mini::SMatrix<Scalar, T::kDims * T::kDims>{},
             Scalar{},
-            Scalar{})
-    } -> std::convertible_to<std::tuple<
-        math::linalg::mini::SVector<Scalar, T::kDims * T::kDims>,
-        math::linalg::mini::SMatrix<Scalar, T::kDims * T::kDims, T::kDims * T::kDims>>>;
+            std::declval<math::linalg::mini::SVector<Scalar, T::kDims * T::kDims>&>(),
+            std::declval<
+                math::linalg::mini::SMatrix<Scalar, T::kDims * T::kDims, T::kDims * T::kDims>&>())
+    } -> std::convertible_to<Scalar>;
+    {t.gradAndHessian(
+        math::linalg::mini::SMatrix<Scalar, T::kDims * T::kDims>{},
+        Scalar{},
+        Scalar{},
+        std::declval<math::linalg::mini::SVector<Scalar, T::kDims * T::kDims>&>(),
+        std::declval<
+            math::linalg::mini::SMatrix<Scalar, T::kDims * T::kDims, T::kDims * T::kDims>&>())};
 };
 
 template <class TDerivedY, class TDerivednu>

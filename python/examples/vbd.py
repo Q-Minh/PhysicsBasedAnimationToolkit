@@ -118,7 +118,7 @@ if __name__ == "__main__":
     GNeU = pbat.fem.shape_function_gradients(mesh, quadrature_order=1)
     g = np.zeros(mesh.dims)
     g[-1] = -9.81
-    f, detJeF = pbat.fem.load_vector(mesh, rho*g, detJ=detJeU, flatten=False)
+    f, detJeF = pbat.fem.load_vector(mesh, rho*g, detJe=detJeU, flatten=False)
     a = f / m
 
     # Compute material (Lame) constants

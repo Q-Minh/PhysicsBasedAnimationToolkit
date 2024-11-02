@@ -7,7 +7,6 @@
 #include "pbat/math/linalg/mini/Matrix.h"
 
 #include <cmath>
-#include <tuple>
 
 namespace pbat {
 namespace physics {
@@ -42,31 +41,36 @@ struct SaintVenantKirchhoffEnergy<1>
     hessian(TMatrix const& F, typename TMatrix::ScalarType mu, typename TMatrix::ScalarType lambda)
         const;
 
-    template <math::linalg::mini::CReadableVectorizedMatrix TMatrix>
-    PBAT_HOST_DEVICE
-        std::tuple<typename TMatrix::ScalarType, SVector<typename TMatrix::ScalarType, 1>>
-        evalWithGrad(
-            TMatrix const& F,
-            typename TMatrix::ScalarType mu,
-            typename TMatrix::ScalarType lambda) const;
-
-    template <math::linalg::mini::CReadableVectorizedMatrix TMatrix>
-    PBAT_HOST_DEVICE std::tuple<
-        typename TMatrix::ScalarType,
-        SVector<typename TMatrix::ScalarType, 1>,
-        SMatrix<typename TMatrix::ScalarType, 1, 1>>
-    evalWithGradAndHessian(
+    template <
+        math::linalg::mini::CReadableVectorizedMatrix TMatrix,
+        math::linalg::mini::CWriteableVectorizedMatrix TMatrixGF>
+    PBAT_HOST_DEVICE typename TMatrix::ScalarType evalWithGrad(
         TMatrix const& F,
         typename TMatrix::ScalarType mu,
-        typename TMatrix::ScalarType lambda) const;
+        typename TMatrix::ScalarType lambda,
+        TMatrixGF& gF) const;
 
-    template <math::linalg::mini::CReadableVectorizedMatrix TMatrix>
-    PBAT_HOST_DEVICE std::
-        tuple<SVector<typename TMatrix::ScalarType, 1>, SMatrix<typename TMatrix::ScalarType, 1, 1>>
-        gradAndHessian(
-            TMatrix const& F,
-            typename TMatrix::ScalarType mu,
-            typename TMatrix::ScalarType lambda) const;
+    template <
+        math::linalg::mini::CReadableVectorizedMatrix TMatrix,
+        math::linalg::mini::CWriteableVectorizedMatrix TMatrixGF,
+        math::linalg::mini::CWriteableVectorizedMatrix TMatrixHF>
+    PBAT_HOST_DEVICE typename TMatrix::ScalarType evalWithGradAndHessian(
+        TMatrix const& F,
+        typename TMatrix::ScalarType mu,
+        typename TMatrix::ScalarType lambda,
+        TMatrixGF& gF,
+        TMatrixHF& HF) const;
+
+    template <
+        math::linalg::mini::CReadableVectorizedMatrix TMatrix,
+        math::linalg::mini::CWriteableVectorizedMatrix TMatrixGF,
+        math::linalg::mini::CWriteableVectorizedMatrix TMatrixHF>
+    PBAT_HOST_DEVICE void gradAndHessian(
+        TMatrix const& F,
+        typename TMatrix::ScalarType mu,
+        typename TMatrix::ScalarType lambda,
+        TMatrixGF& gF,
+        TMatrixHF& HF) const;
 };
 
 template <math::linalg::mini::CReadableVectorizedMatrix TMatrix>
@@ -114,40 +118,47 @@ SaintVenantKirchhoffEnergy<1>::hessian(
     return H;
 }
 
-template <math::linalg::mini::CReadableVectorizedMatrix TMatrix>
-PBAT_HOST_DEVICE std::tuple<
-    typename TMatrix::ScalarType,
-    SaintVenantKirchhoffEnergy<1>::SVector<typename TMatrix::ScalarType, 1>>
-SaintVenantKirchhoffEnergy<1>::evalWithGrad(
+template <
+    math::linalg::mini::CReadableVectorizedMatrix TMatrix,
+    math::linalg::mini::CWriteableVectorizedMatrix TMatrixGF>
+PBAT_HOST_DEVICE typename TMatrix::ScalarType SaintVenantKirchhoffEnergy<1>::evalWithGrad(
     [[maybe_unused]] TMatrix const& F,
     [[maybe_unused]] typename TMatrix::ScalarType mu,
-    [[maybe_unused]] typename TMatrix::ScalarType lambda) const
+    [[maybe_unused]] typename TMatrix::ScalarType lambda,
+    TMatrixGF& gF) const
 {
+    static_assert(
+        TMatrixGF::kRows == 1 and TMatrixGF::kCols == 1,
+        "Grad w.r.t. F must have dimensions 1x1");
     using ScalarType = typename TMatrix::ScalarType;
     ScalarType psi;
-    SVector<ScalarType, 1> G;
     ScalarType const a0 = (1.0 / 2.0) * ((F[0]) * (F[0])) - 1.0 / 2.0;
     ScalarType const a1 = ((a0) * (a0));
     ScalarType const a2 = a0 * F[0];
     psi                 = (1.0 / 2.0) * a1 * lambda + a1 * mu;
-    G[0]                = a2 * lambda + 2 * a2 * mu;
-    return {psi, G};
+    gF[0]               = a2 * lambda + 2 * a2 * mu;
+    return psi;
 }
 
-template <math::linalg::mini::CReadableVectorizedMatrix TMatrix>
-PBAT_HOST_DEVICE std::tuple<
-    typename TMatrix::ScalarType,
-    SaintVenantKirchhoffEnergy<1>::SVector<typename TMatrix::ScalarType, 1>,
-    SaintVenantKirchhoffEnergy<1>::SMatrix<typename TMatrix::ScalarType, 1, 1>>
-SaintVenantKirchhoffEnergy<1>::evalWithGradAndHessian(
+template <
+    math::linalg::mini::CReadableVectorizedMatrix TMatrix,
+    math::linalg::mini::CWriteableVectorizedMatrix TMatrixGF,
+    math::linalg::mini::CWriteableVectorizedMatrix TMatrixHF>
+PBAT_HOST_DEVICE typename TMatrix::ScalarType SaintVenantKirchhoffEnergy<1>::evalWithGradAndHessian(
     [[maybe_unused]] TMatrix const& F,
     [[maybe_unused]] typename TMatrix::ScalarType mu,
-    [[maybe_unused]] typename TMatrix::ScalarType lambda) const
+    [[maybe_unused]] typename TMatrix::ScalarType lambda,
+    TMatrixGF& gF,
+    TMatrixHF& HF) const
 {
+    static_assert(
+        TMatrixGF::kRows == 1 and TMatrixGF::kCols == 1,
+        "Grad w.r.t. F must have dimensions 1x1");
+    static_assert(
+        TMatrixHF::kRows == 1 and TMatrixHF::kCols == 1,
+        "Hessian w.r.t. F must have dimensions 1x1");
     using ScalarType = typename TMatrix::ScalarType;
     ScalarType psi;
-    SVector<ScalarType, 1> G;
-    SMatrix<ScalarType, 1, 1> H;
     ScalarType const a0 = ((F[0]) * (F[0]));
     ScalarType const a1 = (1.0 / 2.0) * a0 - 1.0 / 2.0;
     ScalarType const a2 = ((a1) * (a1));
@@ -155,31 +166,36 @@ SaintVenantKirchhoffEnergy<1>::evalWithGradAndHessian(
     ScalarType const a4 = 2 * mu;
     ScalarType const a5 = a1 * a4;
     psi                 = (1.0 / 2.0) * a2 * lambda + a2 * mu;
-    G[0]                = a3 * F[0] + a5 * F[0];
-    H[0]                = a0 * a4 + a0 * lambda + a3 + a5;
-    return {psi, G, H};
+    gF[0]               = a3 * F[0] + a5 * F[0];
+    HF[0]               = a0 * a4 + a0 * lambda + a3 + a5;
+    return psi;
 }
 
-template <math::linalg::mini::CReadableVectorizedMatrix TMatrix>
-PBAT_HOST_DEVICE std::tuple<
-    SaintVenantKirchhoffEnergy<1>::SVector<typename TMatrix::ScalarType, 1>,
-    SaintVenantKirchhoffEnergy<1>::SMatrix<typename TMatrix::ScalarType, 1, 1>>
-SaintVenantKirchhoffEnergy<1>::gradAndHessian(
+template <
+    math::linalg::mini::CReadableVectorizedMatrix TMatrix,
+    math::linalg::mini::CWriteableVectorizedMatrix TMatrixGF,
+    math::linalg::mini::CWriteableVectorizedMatrix TMatrixHF>
+PBAT_HOST_DEVICE void SaintVenantKirchhoffEnergy<1>::gradAndHessian(
     [[maybe_unused]] TMatrix const& F,
     [[maybe_unused]] typename TMatrix::ScalarType mu,
-    [[maybe_unused]] typename TMatrix::ScalarType lambda) const
+    [[maybe_unused]] typename TMatrix::ScalarType lambda,
+    TMatrixGF& gF,
+    TMatrixHF& HF) const
 {
-    using ScalarType = typename TMatrix::ScalarType;
-    SVector<ScalarType, 1> G;
-    SMatrix<ScalarType, 1, 1> H;
+    static_assert(
+        TMatrixGF::kRows == 1 and TMatrixGF::kCols == 1,
+        "Grad w.r.t. F must have dimensions 1x1");
+    static_assert(
+        TMatrixHF::kRows == 1 and TMatrixHF::kCols == 1,
+        "Hessian w.r.t. F must have dimensions 1x1");
+    using ScalarType    = typename TMatrix::ScalarType;
     ScalarType const a0 = ((F[0]) * (F[0]));
     ScalarType const a1 = (1.0 / 2.0) * a0 - 1.0 / 2.0;
     ScalarType const a2 = a1 * lambda;
     ScalarType const a3 = 2 * mu;
     ScalarType const a4 = a1 * a3;
-    G[0]                = a2 * F[0] + a4 * F[0];
-    H[0]                = a0 * a3 + a0 * lambda + a2 + a4;
-    return {G, H};
+    gF[0]               = a2 * F[0] + a4 * F[0];
+    HF[0]               = a0 * a3 + a0 * lambda + a2 + a4;
 }
 
 template <>
@@ -209,31 +225,36 @@ struct SaintVenantKirchhoffEnergy<2>
     hessian(TMatrix const& F, typename TMatrix::ScalarType mu, typename TMatrix::ScalarType lambda)
         const;
 
-    template <math::linalg::mini::CReadableVectorizedMatrix TMatrix>
-    PBAT_HOST_DEVICE
-        std::tuple<typename TMatrix::ScalarType, SVector<typename TMatrix::ScalarType, 4>>
-        evalWithGrad(
-            TMatrix const& F,
-            typename TMatrix::ScalarType mu,
-            typename TMatrix::ScalarType lambda) const;
-
-    template <math::linalg::mini::CReadableVectorizedMatrix TMatrix>
-    PBAT_HOST_DEVICE std::tuple<
-        typename TMatrix::ScalarType,
-        SVector<typename TMatrix::ScalarType, 4>,
-        SMatrix<typename TMatrix::ScalarType, 4, 4>>
-    evalWithGradAndHessian(
+    template <
+        math::linalg::mini::CReadableVectorizedMatrix TMatrix,
+        math::linalg::mini::CWriteableVectorizedMatrix TMatrixGF>
+    PBAT_HOST_DEVICE typename TMatrix::ScalarType evalWithGrad(
         TMatrix const& F,
         typename TMatrix::ScalarType mu,
-        typename TMatrix::ScalarType lambda) const;
+        typename TMatrix::ScalarType lambda,
+        TMatrixGF& gF) const;
 
-    template <math::linalg::mini::CReadableVectorizedMatrix TMatrix>
-    PBAT_HOST_DEVICE std::
-        tuple<SVector<typename TMatrix::ScalarType, 4>, SMatrix<typename TMatrix::ScalarType, 4, 4>>
-        gradAndHessian(
-            TMatrix const& F,
-            typename TMatrix::ScalarType mu,
-            typename TMatrix::ScalarType lambda) const;
+    template <
+        math::linalg::mini::CReadableVectorizedMatrix TMatrix,
+        math::linalg::mini::CWriteableVectorizedMatrix TMatrixGF,
+        math::linalg::mini::CWriteableVectorizedMatrix TMatrixHF>
+    PBAT_HOST_DEVICE typename TMatrix::ScalarType evalWithGradAndHessian(
+        TMatrix const& F,
+        typename TMatrix::ScalarType mu,
+        typename TMatrix::ScalarType lambda,
+        TMatrixGF& gF,
+        TMatrixHF& HF) const;
+
+    template <
+        math::linalg::mini::CReadableVectorizedMatrix TMatrix,
+        math::linalg::mini::CWriteableVectorizedMatrix TMatrixGF,
+        math::linalg::mini::CWriteableVectorizedMatrix TMatrixHF>
+    PBAT_HOST_DEVICE void gradAndHessian(
+        TMatrix const& F,
+        typename TMatrix::ScalarType mu,
+        typename TMatrix::ScalarType lambda,
+        TMatrixGF& gF,
+        TMatrixHF& HF) const;
 };
 
 template <math::linalg::mini::CReadableVectorizedMatrix TMatrix>
@@ -323,18 +344,20 @@ SaintVenantKirchhoffEnergy<2>::hessian(
     return H;
 }
 
-template <math::linalg::mini::CReadableVectorizedMatrix TMatrix>
-PBAT_HOST_DEVICE std::tuple<
-    typename TMatrix::ScalarType,
-    SaintVenantKirchhoffEnergy<2>::SVector<typename TMatrix::ScalarType, 4>>
-SaintVenantKirchhoffEnergy<2>::evalWithGrad(
+template <
+    math::linalg::mini::CReadableVectorizedMatrix TMatrix,
+    math::linalg::mini::CWriteableVectorizedMatrix TMatrixGF>
+PBAT_HOST_DEVICE typename TMatrix::ScalarType SaintVenantKirchhoffEnergy<2>::evalWithGrad(
     [[maybe_unused]] TMatrix const& F,
     [[maybe_unused]] typename TMatrix::ScalarType mu,
-    [[maybe_unused]] typename TMatrix::ScalarType lambda) const
+    [[maybe_unused]] typename TMatrix::ScalarType lambda,
+    TMatrixGF& gF) const
 {
+    static_assert(
+        TMatrixGF::kRows == 4 and TMatrixGF::kCols == 1,
+        "Grad w.r.t. F must have dimensions 4x1");
     using ScalarType = typename TMatrix::ScalarType;
     ScalarType psi;
-    SVector<ScalarType, 4> G;
     ScalarType const a0 = (1.0 / 2.0) * ((F[0]) * (F[0])) + (1.0 / 2.0) * ((F[1]) * (F[1]));
     ScalarType const a1 = (1.0 / 2.0) * ((F[2]) * (F[2])) + (1.0 / 2.0) * ((F[3]) * (F[3]));
     ScalarType const a2 = a0 + a1 - 1;
@@ -347,27 +370,32 @@ SaintVenantKirchhoffEnergy<2>::evalWithGrad(
     ScalarType const a9 = 2 * a4;
     psi                 = (1.0 / 2.0) * ((a2) * (a2)) * lambda +
           mu * (((a3) * (a3)) + ((a4) * (a4)) + 2 * ((a5) * (a5)));
-    G[0] = a6 * F[0] + mu * (a7 * F[0] + a8 * F[2]);
-    G[1] = a6 * F[1] + mu * (a7 * F[1] + a8 * F[3]);
-    G[2] = a6 * F[2] + mu * (a8 * F[0] + a9 * F[2]);
-    G[3] = a6 * F[3] + mu * (a8 * F[1] + a9 * F[3]);
-    return {psi, G};
+    gF[0] = a6 * F[0] + mu * (a7 * F[0] + a8 * F[2]);
+    gF[1] = a6 * F[1] + mu * (a7 * F[1] + a8 * F[3]);
+    gF[2] = a6 * F[2] + mu * (a8 * F[0] + a9 * F[2]);
+    gF[3] = a6 * F[3] + mu * (a8 * F[1] + a9 * F[3]);
+    return psi;
 }
 
-template <math::linalg::mini::CReadableVectorizedMatrix TMatrix>
-PBAT_HOST_DEVICE std::tuple<
-    typename TMatrix::ScalarType,
-    SaintVenantKirchhoffEnergy<2>::SVector<typename TMatrix::ScalarType, 4>,
-    SaintVenantKirchhoffEnergy<2>::SMatrix<typename TMatrix::ScalarType, 4, 4>>
-SaintVenantKirchhoffEnergy<2>::evalWithGradAndHessian(
+template <
+    math::linalg::mini::CReadableVectorizedMatrix TMatrix,
+    math::linalg::mini::CWriteableVectorizedMatrix TMatrixGF,
+    math::linalg::mini::CWriteableVectorizedMatrix TMatrixHF>
+PBAT_HOST_DEVICE typename TMatrix::ScalarType SaintVenantKirchhoffEnergy<2>::evalWithGradAndHessian(
     [[maybe_unused]] TMatrix const& F,
     [[maybe_unused]] typename TMatrix::ScalarType mu,
-    [[maybe_unused]] typename TMatrix::ScalarType lambda) const
+    [[maybe_unused]] typename TMatrix::ScalarType lambda,
+    TMatrixGF& gF,
+    TMatrixHF& HF) const
 {
+    static_assert(
+        TMatrixGF::kRows == 4 and TMatrixGF::kCols == 1,
+        "Grad w.r.t. F must have dimensions 4x1");
+    static_assert(
+        TMatrixHF::kRows == 4 and TMatrixHF::kCols == 4,
+        "Hessian w.r.t. F must have dimensions 4x4");
     using ScalarType = typename TMatrix::ScalarType;
     ScalarType psi;
-    SVector<ScalarType, 4> G;
-    SMatrix<ScalarType, 4, 4> H;
     ScalarType const a0  = ((F[0]) * (F[0]));
     ScalarType const a1  = ((F[1]) * (F[1]));
     ScalarType const a2  = (1.0 / 2.0) * a0 + (1.0 / 2.0) * a1;
@@ -398,41 +426,47 @@ SaintVenantKirchhoffEnergy<2>::evalWithGradAndHessian(
     ScalarType const a27 = a18 * lambda + mu * (a17 + 2 * a18);
     psi                  = (1.0 / 2.0) * ((a6) * (a6)) * lambda +
           mu * (2 * ((a11) * (a11)) + ((a7) * (a7)) + ((a8) * (a8)));
-    G[0]  = a12 * F[0] + mu * (a13 * F[0] + a14 * F[2]);
-    G[1]  = a12 * F[1] + mu * (a13 * F[1] + a14 * F[3]);
-    G[2]  = a12 * F[2] + mu * (a14 * F[0] + a15 * F[2]);
-    G[3]  = a12 * F[3] + mu * (a14 * F[1] + a15 * F[3]);
-    H[0]  = a0 * lambda + a12 + mu * (3 * a0 + a16);
-    H[1]  = a19;
-    H[2]  = a20;
-    H[3]  = a23;
-    H[4]  = a19;
-    H[5]  = a1 * lambda + a12 + mu * (3 * a1 + a24);
-    H[6]  = a25;
-    H[7]  = a26;
-    H[8]  = a20;
-    H[9]  = a25;
-    H[10] = a12 + a3 * lambda + mu * (a24 + 3 * a3);
-    H[11] = a27;
-    H[12] = a23;
-    H[13] = a26;
-    H[14] = a27;
-    H[15] = a12 + a4 * lambda + mu * (a16 + 3 * a4);
-    return {psi, G, H};
+    gF[0]  = a12 * F[0] + mu * (a13 * F[0] + a14 * F[2]);
+    gF[1]  = a12 * F[1] + mu * (a13 * F[1] + a14 * F[3]);
+    gF[2]  = a12 * F[2] + mu * (a14 * F[0] + a15 * F[2]);
+    gF[3]  = a12 * F[3] + mu * (a14 * F[1] + a15 * F[3]);
+    HF[0]  = a0 * lambda + a12 + mu * (3 * a0 + a16);
+    HF[1]  = a19;
+    HF[2]  = a20;
+    HF[3]  = a23;
+    HF[4]  = a19;
+    HF[5]  = a1 * lambda + a12 + mu * (3 * a1 + a24);
+    HF[6]  = a25;
+    HF[7]  = a26;
+    HF[8]  = a20;
+    HF[9]  = a25;
+    HF[10] = a12 + a3 * lambda + mu * (a24 + 3 * a3);
+    HF[11] = a27;
+    HF[12] = a23;
+    HF[13] = a26;
+    HF[14] = a27;
+    HF[15] = a12 + a4 * lambda + mu * (a16 + 3 * a4);
+    return psi;
 }
 
-template <math::linalg::mini::CReadableVectorizedMatrix TMatrix>
-PBAT_HOST_DEVICE std::tuple<
-    SaintVenantKirchhoffEnergy<2>::SVector<typename TMatrix::ScalarType, 4>,
-    SaintVenantKirchhoffEnergy<2>::SMatrix<typename TMatrix::ScalarType, 4, 4>>
-SaintVenantKirchhoffEnergy<2>::gradAndHessian(
+template <
+    math::linalg::mini::CReadableVectorizedMatrix TMatrix,
+    math::linalg::mini::CWriteableVectorizedMatrix TMatrixGF,
+    math::linalg::mini::CWriteableVectorizedMatrix TMatrixHF>
+PBAT_HOST_DEVICE void SaintVenantKirchhoffEnergy<2>::gradAndHessian(
     [[maybe_unused]] TMatrix const& F,
     [[maybe_unused]] typename TMatrix::ScalarType mu,
-    [[maybe_unused]] typename TMatrix::ScalarType lambda) const
+    [[maybe_unused]] typename TMatrix::ScalarType lambda,
+    TMatrixGF& gF,
+    TMatrixHF& HF) const
 {
-    using ScalarType = typename TMatrix::ScalarType;
-    SVector<ScalarType, 4> G;
-    SMatrix<ScalarType, 4, 4> H;
+    static_assert(
+        TMatrixGF::kRows == 4 and TMatrixGF::kCols == 1,
+        "Grad w.r.t. F must have dimensions 4x1");
+    static_assert(
+        TMatrixHF::kRows == 4 and TMatrixHF::kCols == 4,
+        "Hessian w.r.t. F must have dimensions 4x4");
+    using ScalarType     = typename TMatrix::ScalarType;
     ScalarType const a0  = ((F[0]) * (F[0]));
     ScalarType const a1  = ((F[1]) * (F[1]));
     ScalarType const a2  = (1.0 / 2.0) * a0 + (1.0 / 2.0) * a1;
@@ -457,27 +491,26 @@ SaintVenantKirchhoffEnergy<2>::gradAndHessian(
     ScalarType const a21 = a17 * mu + a18 * lambda;
     ScalarType const a22 = a9 * lambda + mu * (a8 + 2 * a9);
     ScalarType const a23 = a14 * lambda + mu * (a13 + 2 * a14);
-    G[0]                 = a6 * F[0] + mu * (a10 * F[2] + a7 * F[0]);
-    G[1]                 = a6 * F[1] + mu * (a10 * F[3] + a7 * F[1]);
-    G[2]                 = a6 * F[2] + mu * (a10 * F[0] + a11 * F[2]);
-    G[3]                 = a6 * F[3] + mu * (a10 * F[1] + a11 * F[3]);
-    H[0]                 = a0 * lambda + a6 + mu * (3 * a0 + a12);
-    H[1]                 = a15;
-    H[2]                 = a16;
-    H[3]                 = a19;
-    H[4]                 = a15;
-    H[5]                 = a1 * lambda + a6 + mu * (3 * a1 + a20);
-    H[6]                 = a21;
-    H[7]                 = a22;
-    H[8]                 = a16;
-    H[9]                 = a21;
-    H[10]                = a3 * lambda + a6 + mu * (a20 + 3 * a3);
-    H[11]                = a23;
-    H[12]                = a19;
-    H[13]                = a22;
-    H[14]                = a23;
-    H[15]                = a4 * lambda + a6 + mu * (a12 + 3 * a4);
-    return {G, H};
+    gF[0]                = a6 * F[0] + mu * (a10 * F[2] + a7 * F[0]);
+    gF[1]                = a6 * F[1] + mu * (a10 * F[3] + a7 * F[1]);
+    gF[2]                = a6 * F[2] + mu * (a10 * F[0] + a11 * F[2]);
+    gF[3]                = a6 * F[3] + mu * (a10 * F[1] + a11 * F[3]);
+    HF[0]                = a0 * lambda + a6 + mu * (3 * a0 + a12);
+    HF[1]                = a15;
+    HF[2]                = a16;
+    HF[3]                = a19;
+    HF[4]                = a15;
+    HF[5]                = a1 * lambda + a6 + mu * (3 * a1 + a20);
+    HF[6]                = a21;
+    HF[7]                = a22;
+    HF[8]                = a16;
+    HF[9]                = a21;
+    HF[10]               = a3 * lambda + a6 + mu * (a20 + 3 * a3);
+    HF[11]               = a23;
+    HF[12]               = a19;
+    HF[13]               = a22;
+    HF[14]               = a23;
+    HF[15]               = a4 * lambda + a6 + mu * (a12 + 3 * a4);
 }
 
 template <>
@@ -507,31 +540,36 @@ struct SaintVenantKirchhoffEnergy<3>
     hessian(TMatrix const& F, typename TMatrix::ScalarType mu, typename TMatrix::ScalarType lambda)
         const;
 
-    template <math::linalg::mini::CReadableVectorizedMatrix TMatrix>
-    PBAT_HOST_DEVICE
-        std::tuple<typename TMatrix::ScalarType, SVector<typename TMatrix::ScalarType, 9>>
-        evalWithGrad(
-            TMatrix const& F,
-            typename TMatrix::ScalarType mu,
-            typename TMatrix::ScalarType lambda) const;
-
-    template <math::linalg::mini::CReadableVectorizedMatrix TMatrix>
-    PBAT_HOST_DEVICE std::tuple<
-        typename TMatrix::ScalarType,
-        SVector<typename TMatrix::ScalarType, 9>,
-        SMatrix<typename TMatrix::ScalarType, 9, 9>>
-    evalWithGradAndHessian(
+    template <
+        math::linalg::mini::CReadableVectorizedMatrix TMatrix,
+        math::linalg::mini::CWriteableVectorizedMatrix TMatrixGF>
+    PBAT_HOST_DEVICE typename TMatrix::ScalarType evalWithGrad(
         TMatrix const& F,
         typename TMatrix::ScalarType mu,
-        typename TMatrix::ScalarType lambda) const;
+        typename TMatrix::ScalarType lambda,
+        TMatrixGF& gF) const;
 
-    template <math::linalg::mini::CReadableVectorizedMatrix TMatrix>
-    PBAT_HOST_DEVICE std::
-        tuple<SVector<typename TMatrix::ScalarType, 9>, SMatrix<typename TMatrix::ScalarType, 9, 9>>
-        gradAndHessian(
-            TMatrix const& F,
-            typename TMatrix::ScalarType mu,
-            typename TMatrix::ScalarType lambda) const;
+    template <
+        math::linalg::mini::CReadableVectorizedMatrix TMatrix,
+        math::linalg::mini::CWriteableVectorizedMatrix TMatrixGF,
+        math::linalg::mini::CWriteableVectorizedMatrix TMatrixHF>
+    PBAT_HOST_DEVICE typename TMatrix::ScalarType evalWithGradAndHessian(
+        TMatrix const& F,
+        typename TMatrix::ScalarType mu,
+        typename TMatrix::ScalarType lambda,
+        TMatrixGF& gF,
+        TMatrixHF& HF) const;
+
+    template <
+        math::linalg::mini::CReadableVectorizedMatrix TMatrix,
+        math::linalg::mini::CWriteableVectorizedMatrix TMatrixGF,
+        math::linalg::mini::CWriteableVectorizedMatrix TMatrixHF>
+    PBAT_HOST_DEVICE void gradAndHessian(
+        TMatrix const& F,
+        typename TMatrix::ScalarType mu,
+        typename TMatrix::ScalarType lambda,
+        TMatrixGF& gF,
+        TMatrixHF& HF) const;
 };
 
 template <math::linalg::mini::CReadableVectorizedMatrix TMatrix>
@@ -779,18 +817,20 @@ SaintVenantKirchhoffEnergy<3>::hessian(
     return H;
 }
 
-template <math::linalg::mini::CReadableVectorizedMatrix TMatrix>
-PBAT_HOST_DEVICE std::tuple<
-    typename TMatrix::ScalarType,
-    SaintVenantKirchhoffEnergy<3>::SVector<typename TMatrix::ScalarType, 9>>
-SaintVenantKirchhoffEnergy<3>::evalWithGrad(
+template <
+    math::linalg::mini::CReadableVectorizedMatrix TMatrix,
+    math::linalg::mini::CWriteableVectorizedMatrix TMatrixGF>
+PBAT_HOST_DEVICE typename TMatrix::ScalarType SaintVenantKirchhoffEnergy<3>::evalWithGrad(
     [[maybe_unused]] TMatrix const& F,
     [[maybe_unused]] typename TMatrix::ScalarType mu,
-    [[maybe_unused]] typename TMatrix::ScalarType lambda) const
+    [[maybe_unused]] typename TMatrix::ScalarType lambda,
+    TMatrixGF& gF) const
 {
+    static_assert(
+        TMatrixGF::kRows == 9 and TMatrixGF::kCols == 1,
+        "Grad w.r.t. F must have dimensions 9x1");
     using ScalarType = typename TMatrix::ScalarType;
     ScalarType psi;
-    SVector<ScalarType, 9> G;
     ScalarType const a0 = (1.0 / 2.0) * ((F[0]) * (F[0])) + (1.0 / 2.0) * ((F[1]) * (F[1])) +
                           (1.0 / 2.0) * ((F[2]) * (F[2]));
     ScalarType const a1 = (1.0 / 2.0) * ((F[3]) * (F[3])) + (1.0 / 2.0) * ((F[4]) * (F[4])) +
@@ -818,32 +858,37 @@ SaintVenantKirchhoffEnergy<3>::evalWithGrad(
     psi                  = (1.0 / 2.0) * ((a3) * (a3)) * lambda +
           mu * (2 * ((a10) * (a10)) + 2 * ((a11) * (a11)) + 2 * ((a12) * (a12)) + ((a4) * (a4)) +
                 ((a5) * (a5)) + ((a6) * (a6)));
-    G[0] = a13 * F[0] + mu * (a14 * F[0] + a15 * F[3] + a16 * F[6]);
-    G[1] = a13 * F[1] + mu * (a14 * F[1] + a15 * F[4] + a16 * F[7]);
-    G[2] = a13 * F[2] + mu * (a14 * F[2] + a15 * F[5] + a16 * F[8]);
-    G[3] = a13 * F[3] + mu * (a15 * F[0] + a17 * F[3] + a18 * F[6]);
-    G[4] = a13 * F[4] + mu * (a15 * F[1] + a17 * F[4] + a18 * F[7]);
-    G[5] = a13 * F[5] + mu * (a15 * F[2] + a17 * F[5] + a18 * F[8]);
-    G[6] = a13 * F[6] + mu * (a16 * F[0] + a18 * F[3] + a19 * F[6]);
-    G[7] = a13 * F[7] + mu * (a16 * F[1] + a18 * F[4] + a19 * F[7]);
-    G[8] = a13 * F[8] + mu * (a16 * F[2] + a18 * F[5] + a19 * F[8]);
-    return {psi, G};
+    gF[0] = a13 * F[0] + mu * (a14 * F[0] + a15 * F[3] + a16 * F[6]);
+    gF[1] = a13 * F[1] + mu * (a14 * F[1] + a15 * F[4] + a16 * F[7]);
+    gF[2] = a13 * F[2] + mu * (a14 * F[2] + a15 * F[5] + a16 * F[8]);
+    gF[3] = a13 * F[3] + mu * (a15 * F[0] + a17 * F[3] + a18 * F[6]);
+    gF[4] = a13 * F[4] + mu * (a15 * F[1] + a17 * F[4] + a18 * F[7]);
+    gF[5] = a13 * F[5] + mu * (a15 * F[2] + a17 * F[5] + a18 * F[8]);
+    gF[6] = a13 * F[6] + mu * (a16 * F[0] + a18 * F[3] + a19 * F[6]);
+    gF[7] = a13 * F[7] + mu * (a16 * F[1] + a18 * F[4] + a19 * F[7]);
+    gF[8] = a13 * F[8] + mu * (a16 * F[2] + a18 * F[5] + a19 * F[8]);
+    return psi;
 }
 
-template <math::linalg::mini::CReadableVectorizedMatrix TMatrix>
-PBAT_HOST_DEVICE std::tuple<
-    typename TMatrix::ScalarType,
-    SaintVenantKirchhoffEnergy<3>::SVector<typename TMatrix::ScalarType, 9>,
-    SaintVenantKirchhoffEnergy<3>::SMatrix<typename TMatrix::ScalarType, 9, 9>>
-SaintVenantKirchhoffEnergy<3>::evalWithGradAndHessian(
+template <
+    math::linalg::mini::CReadableVectorizedMatrix TMatrix,
+    math::linalg::mini::CWriteableVectorizedMatrix TMatrixGF,
+    math::linalg::mini::CWriteableVectorizedMatrix TMatrixHF>
+PBAT_HOST_DEVICE typename TMatrix::ScalarType SaintVenantKirchhoffEnergy<3>::evalWithGradAndHessian(
     [[maybe_unused]] TMatrix const& F,
     [[maybe_unused]] typename TMatrix::ScalarType mu,
-    [[maybe_unused]] typename TMatrix::ScalarType lambda) const
+    [[maybe_unused]] typename TMatrix::ScalarType lambda,
+    TMatrixGF& gF,
+    TMatrixHF& HF) const
 {
+    static_assert(
+        TMatrixGF::kRows == 9 and TMatrixGF::kCols == 1,
+        "Grad w.r.t. F must have dimensions 9x1");
+    static_assert(
+        TMatrixHF::kRows == 9 and TMatrixHF::kCols == 9,
+        "Hessian w.r.t. F must have dimensions 9x9");
     using ScalarType = typename TMatrix::ScalarType;
     ScalarType psi;
-    SVector<ScalarType, 9> G;
-    SMatrix<ScalarType, 9, 9> H;
     ScalarType const a0  = ((F[0]) * (F[0]));
     ScalarType const a1  = ((F[1]) * (F[1]));
     ScalarType const a2  = ((F[2]) * (F[2]));
@@ -946,111 +991,117 @@ SaintVenantKirchhoffEnergy<3>::evalWithGradAndHessian(
     psi                  = (1.0 / 2.0) * ((a12) * (a12)) * lambda +
           mu * (((a13) * (a13)) + ((a14) * (a14)) + ((a15) * (a15)) + 2 * ((a19) * (a19)) +
                 2 * ((a23) * (a23)) + 2 * ((a27) * (a27)));
-    G[0]  = a28 * F[0] + mu * (a29 * F[0] + a30 * F[3] + a31 * F[6]);
-    G[1]  = a28 * F[1] + mu * (a29 * F[1] + a30 * F[4] + a31 * F[7]);
-    G[2]  = a28 * F[2] + mu * (a29 * F[2] + a30 * F[5] + a31 * F[8]);
-    G[3]  = a28 * F[3] + mu * (a30 * F[0] + a32 * F[3] + a33 * F[6]);
-    G[4]  = a28 * F[4] + mu * (a30 * F[1] + a32 * F[4] + a33 * F[7]);
-    G[5]  = a28 * F[5] + mu * (a30 * F[2] + a32 * F[5] + a33 * F[8]);
-    G[6]  = a28 * F[6] + mu * (a31 * F[0] + a33 * F[3] + a34 * F[6]);
-    G[7]  = a28 * F[7] + mu * (a31 * F[1] + a33 * F[4] + a34 * F[7]);
-    G[8]  = a28 * F[8] + mu * (a31 * F[2] + a33 * F[5] + a34 * F[8]);
-    H[0]  = a0 * lambda + a28 + mu * (3 * a0 + a35 + a37);
-    H[1]  = a41;
-    H[2]  = a45;
-    H[3]  = a46;
-    H[4]  = a49;
-    H[5]  = a50;
-    H[6]  = a51;
-    H[7]  = a53;
-    H[8]  = a54;
-    H[9]  = a41;
-    H[10] = a1 * lambda + a28 + mu * (3 * a1 + a36 + a55 + a9);
-    H[11] = a59;
-    H[12] = a62;
-    H[13] = a63;
-    H[14] = a64;
-    H[15] = a66;
-    H[16] = a67;
-    H[17] = a68;
-    H[18] = a45;
-    H[19] = a59;
-    H[20] = a2 * lambda + a28 + mu * (a1 + 3 * a2 + a69 + a70);
-    H[21] = a73;
-    H[22] = a74;
-    H[23] = a75;
-    H[24] = a77;
-    H[25] = a78;
-    H[26] = a79;
-    H[27] = a46;
-    H[28] = a62;
-    H[29] = a73;
-    H[30] = a28 + a4 * lambda + mu * (3 * a4 + a55 + a69 + a8);
-    H[31] = a80;
-    H[32] = a81;
-    H[33] = a82;
-    H[34] = a84;
-    H[35] = a85;
-    H[36] = a49;
-    H[37] = a63;
-    H[38] = a74;
-    H[39] = a80;
-    H[40] = a28 + a5 * lambda + mu * (a35 + 3 * a5 + a69 + a9);
-    H[41] = a86;
-    H[42] = a88;
-    H[43] = a89;
-    H[44] = a90;
-    H[45] = a50;
-    H[46] = a64;
-    H[47] = a75;
-    H[48] = a81;
-    H[49] = a86;
-    H[50] = a28 + a6 * lambda + mu * (a36 + a4 + 3 * a6 + a91);
-    H[51] = a93;
-    H[52] = a94;
-    H[53] = a95;
-    H[54] = a51;
-    H[55] = a66;
-    H[56] = a77;
-    H[57] = a82;
-    H[58] = a88;
-    H[59] = a93;
-    H[60] = a28 + a8 * lambda + mu * (a4 + a70 + 3 * a8 + a9 - 1);
-    H[61] = a96;
-    H[62] = a97;
-    H[63] = a53;
-    H[64] = a67;
-    H[65] = a78;
-    H[66] = a84;
-    H[67] = a89;
-    H[68] = a94;
-    H[69] = a96;
-    H[70] = a28 + a9 * lambda + mu * (a1 + a8 + 3 * a9 + a91 - 1);
-    H[71] = a98;
-    H[72] = a54;
-    H[73] = a68;
-    H[74] = a79;
-    H[75] = a85;
-    H[76] = a90;
-    H[77] = a95;
-    H[78] = a97;
-    H[79] = a98;
-    H[80] = a10 * lambda + a28 + mu * (3 * a10 + a37 + a6 + a9);
-    return {psi, G, H};
+    gF[0]  = a28 * F[0] + mu * (a29 * F[0] + a30 * F[3] + a31 * F[6]);
+    gF[1]  = a28 * F[1] + mu * (a29 * F[1] + a30 * F[4] + a31 * F[7]);
+    gF[2]  = a28 * F[2] + mu * (a29 * F[2] + a30 * F[5] + a31 * F[8]);
+    gF[3]  = a28 * F[3] + mu * (a30 * F[0] + a32 * F[3] + a33 * F[6]);
+    gF[4]  = a28 * F[4] + mu * (a30 * F[1] + a32 * F[4] + a33 * F[7]);
+    gF[5]  = a28 * F[5] + mu * (a30 * F[2] + a32 * F[5] + a33 * F[8]);
+    gF[6]  = a28 * F[6] + mu * (a31 * F[0] + a33 * F[3] + a34 * F[6]);
+    gF[7]  = a28 * F[7] + mu * (a31 * F[1] + a33 * F[4] + a34 * F[7]);
+    gF[8]  = a28 * F[8] + mu * (a31 * F[2] + a33 * F[5] + a34 * F[8]);
+    HF[0]  = a0 * lambda + a28 + mu * (3 * a0 + a35 + a37);
+    HF[1]  = a41;
+    HF[2]  = a45;
+    HF[3]  = a46;
+    HF[4]  = a49;
+    HF[5]  = a50;
+    HF[6]  = a51;
+    HF[7]  = a53;
+    HF[8]  = a54;
+    HF[9]  = a41;
+    HF[10] = a1 * lambda + a28 + mu * (3 * a1 + a36 + a55 + a9);
+    HF[11] = a59;
+    HF[12] = a62;
+    HF[13] = a63;
+    HF[14] = a64;
+    HF[15] = a66;
+    HF[16] = a67;
+    HF[17] = a68;
+    HF[18] = a45;
+    HF[19] = a59;
+    HF[20] = a2 * lambda + a28 + mu * (a1 + 3 * a2 + a69 + a70);
+    HF[21] = a73;
+    HF[22] = a74;
+    HF[23] = a75;
+    HF[24] = a77;
+    HF[25] = a78;
+    HF[26] = a79;
+    HF[27] = a46;
+    HF[28] = a62;
+    HF[29] = a73;
+    HF[30] = a28 + a4 * lambda + mu * (3 * a4 + a55 + a69 + a8);
+    HF[31] = a80;
+    HF[32] = a81;
+    HF[33] = a82;
+    HF[34] = a84;
+    HF[35] = a85;
+    HF[36] = a49;
+    HF[37] = a63;
+    HF[38] = a74;
+    HF[39] = a80;
+    HF[40] = a28 + a5 * lambda + mu * (a35 + 3 * a5 + a69 + a9);
+    HF[41] = a86;
+    HF[42] = a88;
+    HF[43] = a89;
+    HF[44] = a90;
+    HF[45] = a50;
+    HF[46] = a64;
+    HF[47] = a75;
+    HF[48] = a81;
+    HF[49] = a86;
+    HF[50] = a28 + a6 * lambda + mu * (a36 + a4 + 3 * a6 + a91);
+    HF[51] = a93;
+    HF[52] = a94;
+    HF[53] = a95;
+    HF[54] = a51;
+    HF[55] = a66;
+    HF[56] = a77;
+    HF[57] = a82;
+    HF[58] = a88;
+    HF[59] = a93;
+    HF[60] = a28 + a8 * lambda + mu * (a4 + a70 + 3 * a8 + a9 - 1);
+    HF[61] = a96;
+    HF[62] = a97;
+    HF[63] = a53;
+    HF[64] = a67;
+    HF[65] = a78;
+    HF[66] = a84;
+    HF[67] = a89;
+    HF[68] = a94;
+    HF[69] = a96;
+    HF[70] = a28 + a9 * lambda + mu * (a1 + a8 + 3 * a9 + a91 - 1);
+    HF[71] = a98;
+    HF[72] = a54;
+    HF[73] = a68;
+    HF[74] = a79;
+    HF[75] = a85;
+    HF[76] = a90;
+    HF[77] = a95;
+    HF[78] = a97;
+    HF[79] = a98;
+    HF[80] = a10 * lambda + a28 + mu * (3 * a10 + a37 + a6 + a9);
+    return psi;
 }
 
-template <math::linalg::mini::CReadableVectorizedMatrix TMatrix>
-PBAT_HOST_DEVICE std::tuple<
-    SaintVenantKirchhoffEnergy<3>::SVector<typename TMatrix::ScalarType, 9>,
-    SaintVenantKirchhoffEnergy<3>::SMatrix<typename TMatrix::ScalarType, 9, 9>>
-SaintVenantKirchhoffEnergy<3>::gradAndHessian(
+template <
+    math::linalg::mini::CReadableVectorizedMatrix TMatrix,
+    math::linalg::mini::CWriteableVectorizedMatrix TMatrixGF,
+    math::linalg::mini::CWriteableVectorizedMatrix TMatrixHF>
+PBAT_HOST_DEVICE void SaintVenantKirchhoffEnergy<3>::gradAndHessian(
     [[maybe_unused]] TMatrix const& F,
     [[maybe_unused]] typename TMatrix::ScalarType mu,
-    [[maybe_unused]] typename TMatrix::ScalarType lambda) const
+    [[maybe_unused]] typename TMatrix::ScalarType lambda,
+    TMatrixGF& gF,
+    TMatrixHF& HF) const
 {
-    using ScalarType = typename TMatrix::ScalarType;
-    SVector<ScalarType, 9> G;
-    SMatrix<ScalarType, 9, 9> H;
+    static_assert(
+        TMatrixGF::kRows == 9 and TMatrixGF::kCols == 1,
+        "Grad w.r.t. F must have dimensions 9x1");
+    static_assert(
+        TMatrixHF::kRows == 9 and TMatrixHF::kCols == 9,
+        "Hessian w.r.t. F must have dimensions 9x9");
+    using ScalarType     = typename TMatrix::ScalarType;
     ScalarType const a0  = ((F[0]) * (F[0]));
     ScalarType const a1  = ((F[1]) * (F[1]));
     ScalarType const a2  = ((F[2]) * (F[2]));
@@ -1143,97 +1194,96 @@ SaintVenantKirchhoffEnergy<3>::gradAndHessian(
     ScalarType const a89 = a33 * lambda + mu * (a31 + a32 + 2 * a33);
     ScalarType const a90 = a37 * lambda + mu * (a35 + a36 + 2 * a37);
     ScalarType const a91 = a51 * lambda + mu * (a49 + a50 + 2 * a51);
-    G[0]                 = a12 * F[0] + mu * (a13 * F[0] + a17 * F[3] + a21 * F[6]);
-    G[1]                 = a12 * F[1] + mu * (a13 * F[1] + a17 * F[4] + a21 * F[7]);
-    G[2]                 = a12 * F[2] + mu * (a13 * F[2] + a17 * F[5] + a21 * F[8]);
-    G[3]                 = a12 * F[3] + mu * (a17 * F[0] + a22 * F[3] + a26 * F[6]);
-    G[4]                 = a12 * F[4] + mu * (a17 * F[1] + a22 * F[4] + a26 * F[7]);
-    G[5]                 = a12 * F[5] + mu * (a17 * F[2] + a22 * F[5] + a26 * F[8]);
-    G[6]                 = a12 * F[6] + mu * (a21 * F[0] + a26 * F[3] + a27 * F[6]);
-    G[7]                 = a12 * F[7] + mu * (a21 * F[1] + a26 * F[4] + a27 * F[7]);
-    G[8]                 = a12 * F[8] + mu * (a21 * F[2] + a26 * F[5] + a27 * F[8]);
-    H[0]                 = a0 * lambda + a12 + mu * (3 * a0 + a28 + a30);
-    H[1]                 = a34;
-    H[2]                 = a38;
-    H[3]                 = a39;
-    H[4]                 = a42;
-    H[5]                 = a43;
-    H[6]                 = a44;
-    H[7]                 = a46;
-    H[8]                 = a47;
-    H[9]                 = a34;
-    H[10]                = a1 * lambda + a12 + mu * (3 * a1 + a29 + a48 + a9);
-    H[11]                = a52;
-    H[12]                = a55;
-    H[13]                = a56;
-    H[14]                = a57;
-    H[15]                = a59;
-    H[16]                = a60;
-    H[17]                = a61;
-    H[18]                = a38;
-    H[19]                = a52;
-    H[20]                = a12 + a2 * lambda + mu * (a1 + 3 * a2 + a62 + a63);
-    H[21]                = a66;
-    H[22]                = a67;
-    H[23]                = a68;
-    H[24]                = a70;
-    H[25]                = a71;
-    H[26]                = a72;
-    H[27]                = a39;
-    H[28]                = a55;
-    H[29]                = a66;
-    H[30]                = a12 + a4 * lambda + mu * (3 * a4 + a48 + a62 + a8);
-    H[31]                = a73;
-    H[32]                = a74;
-    H[33]                = a75;
-    H[34]                = a77;
-    H[35]                = a78;
-    H[36]                = a42;
-    H[37]                = a56;
-    H[38]                = a67;
-    H[39]                = a73;
-    H[40]                = a12 + a5 * lambda + mu * (a28 + 3 * a5 + a62 + a9);
-    H[41]                = a79;
-    H[42]                = a81;
-    H[43]                = a82;
-    H[44]                = a83;
-    H[45]                = a43;
-    H[46]                = a57;
-    H[47]                = a68;
-    H[48]                = a74;
-    H[49]                = a79;
-    H[50]                = a12 + a6 * lambda + mu * (a29 + a4 + 3 * a6 + a84);
-    H[51]                = a86;
-    H[52]                = a87;
-    H[53]                = a88;
-    H[54]                = a44;
-    H[55]                = a59;
-    H[56]                = a70;
-    H[57]                = a75;
-    H[58]                = a81;
-    H[59]                = a86;
-    H[60]                = a12 + a8 * lambda + mu * (a4 + a63 + 3 * a8 + a9 - 1);
-    H[61]                = a89;
-    H[62]                = a90;
-    H[63]                = a46;
-    H[64]                = a60;
-    H[65]                = a71;
-    H[66]                = a77;
-    H[67]                = a82;
-    H[68]                = a87;
-    H[69]                = a89;
-    H[70]                = a12 + a9 * lambda + mu * (a1 + a8 + a84 + 3 * a9 - 1);
-    H[71]                = a91;
-    H[72]                = a47;
-    H[73]                = a61;
-    H[74]                = a72;
-    H[75]                = a78;
-    H[76]                = a83;
-    H[77]                = a88;
-    H[78]                = a90;
-    H[79]                = a91;
-    H[80]                = a10 * lambda + a12 + mu * (3 * a10 + a30 + a6 + a9);
-    return {G, H};
+    gF[0]                = a12 * F[0] + mu * (a13 * F[0] + a17 * F[3] + a21 * F[6]);
+    gF[1]                = a12 * F[1] + mu * (a13 * F[1] + a17 * F[4] + a21 * F[7]);
+    gF[2]                = a12 * F[2] + mu * (a13 * F[2] + a17 * F[5] + a21 * F[8]);
+    gF[3]                = a12 * F[3] + mu * (a17 * F[0] + a22 * F[3] + a26 * F[6]);
+    gF[4]                = a12 * F[4] + mu * (a17 * F[1] + a22 * F[4] + a26 * F[7]);
+    gF[5]                = a12 * F[5] + mu * (a17 * F[2] + a22 * F[5] + a26 * F[8]);
+    gF[6]                = a12 * F[6] + mu * (a21 * F[0] + a26 * F[3] + a27 * F[6]);
+    gF[7]                = a12 * F[7] + mu * (a21 * F[1] + a26 * F[4] + a27 * F[7]);
+    gF[8]                = a12 * F[8] + mu * (a21 * F[2] + a26 * F[5] + a27 * F[8]);
+    HF[0]                = a0 * lambda + a12 + mu * (3 * a0 + a28 + a30);
+    HF[1]                = a34;
+    HF[2]                = a38;
+    HF[3]                = a39;
+    HF[4]                = a42;
+    HF[5]                = a43;
+    HF[6]                = a44;
+    HF[7]                = a46;
+    HF[8]                = a47;
+    HF[9]                = a34;
+    HF[10]               = a1 * lambda + a12 + mu * (3 * a1 + a29 + a48 + a9);
+    HF[11]               = a52;
+    HF[12]               = a55;
+    HF[13]               = a56;
+    HF[14]               = a57;
+    HF[15]               = a59;
+    HF[16]               = a60;
+    HF[17]               = a61;
+    HF[18]               = a38;
+    HF[19]               = a52;
+    HF[20]               = a12 + a2 * lambda + mu * (a1 + 3 * a2 + a62 + a63);
+    HF[21]               = a66;
+    HF[22]               = a67;
+    HF[23]               = a68;
+    HF[24]               = a70;
+    HF[25]               = a71;
+    HF[26]               = a72;
+    HF[27]               = a39;
+    HF[28]               = a55;
+    HF[29]               = a66;
+    HF[30]               = a12 + a4 * lambda + mu * (3 * a4 + a48 + a62 + a8);
+    HF[31]               = a73;
+    HF[32]               = a74;
+    HF[33]               = a75;
+    HF[34]               = a77;
+    HF[35]               = a78;
+    HF[36]               = a42;
+    HF[37]               = a56;
+    HF[38]               = a67;
+    HF[39]               = a73;
+    HF[40]               = a12 + a5 * lambda + mu * (a28 + 3 * a5 + a62 + a9);
+    HF[41]               = a79;
+    HF[42]               = a81;
+    HF[43]               = a82;
+    HF[44]               = a83;
+    HF[45]               = a43;
+    HF[46]               = a57;
+    HF[47]               = a68;
+    HF[48]               = a74;
+    HF[49]               = a79;
+    HF[50]               = a12 + a6 * lambda + mu * (a29 + a4 + 3 * a6 + a84);
+    HF[51]               = a86;
+    HF[52]               = a87;
+    HF[53]               = a88;
+    HF[54]               = a44;
+    HF[55]               = a59;
+    HF[56]               = a70;
+    HF[57]               = a75;
+    HF[58]               = a81;
+    HF[59]               = a86;
+    HF[60]               = a12 + a8 * lambda + mu * (a4 + a63 + 3 * a8 + a9 - 1);
+    HF[61]               = a89;
+    HF[62]               = a90;
+    HF[63]               = a46;
+    HF[64]               = a60;
+    HF[65]               = a71;
+    HF[66]               = a77;
+    HF[67]               = a82;
+    HF[68]               = a87;
+    HF[69]               = a89;
+    HF[70]               = a12 + a9 * lambda + mu * (a1 + a8 + a84 + 3 * a9 - 1);
+    HF[71]               = a91;
+    HF[72]               = a47;
+    HF[73]               = a61;
+    HF[74]               = a72;
+    HF[75]               = a78;
+    HF[76]               = a83;
+    HF[77]               = a88;
+    HF[78]               = a90;
+    HF[79]               = a91;
+    HF[80]               = a10 * lambda + a12 + mu * (3 * a10 + a30 + a6 + a9);
 }
 
 } // namespace physics

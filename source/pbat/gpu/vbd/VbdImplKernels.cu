@@ -44,12 +44,9 @@ __global__ void MinimizeBackwardEuler(BackwardEulerMinimization BDF)
     // 2. Accumulate results into vertex hessian and gradient
     SVector<GpuScalar, 3> xti     = FromBuffers<3, 1>(BDF.xt, i);
     SVector<GpuScalar, 3> xitilde = FromBuffers<3, 1>(BDF.xtilde, i);
-    SVector<GpuScalar, 3> xi{
-        BDF.x[0][i],
-        BDF.x[1][i],
-        BDF.x[2][i]} /*= FromBuffers<3, 1>(BDF.x, i)*/;
-    SMatrix<GpuScalar, 3, 3> Hi = Zeros<GpuScalar, 3, 3>{};
-    SVector<GpuScalar, 3> gi    = Zeros<GpuScalar, 3, 1>{};
+    SVector<GpuScalar, 3> xi      = FromBuffers<3, 1>(BDF.x, i);
+    SMatrix<GpuScalar, 3, 3> Hi   = Zeros<GpuScalar, 3, 3>{};
+    SVector<GpuScalar, 3> gi      = Zeros<GpuScalar, 3, 1>{};
     // Add elastic energy derivatives
     auto const nActiveThreads = min(nAdjacentElements, nThreadsPerBlock);
     for (auto j = 0; j < nActiveThreads; ++j)
@@ -93,14 +90,10 @@ PBAT_DEVICE void BackwardEulerMinimization::ComputeStableNeoHookeanDerivatives(
     SMatrix<GpuScalar, 3, 4> xe  = FromBuffers(x, v.Transpose());
     SMatrix<GpuScalar, 4, 3> GPe = FromFlatBuffer<4, 3>(GP, e);
     SMatrix<GpuScalar, 3, 3> Fe  = xe * GPe;
+    physics::StableNeoHookeanEnergy<3> Psi{};
     SVector<GpuScalar, 9> gF;
     SMatrix<GpuScalar, 9, 9> HF;
-    physics::StableNeoHookeanEnergy<3> Psi{};
-    // NOTE:
-    // For some reason, nvcc doesn't like structured bindings, so I can't write
-    // auto [gF, HF] = Psi.gradAndHessian(Fe, lamee(0), lamee(1));
-    // or else I get nan values?? Weird.
-    std::tie(gF, HF) = Psi.gradAndHessian(Fe, lamee(0), lamee(1));
+    Psi.gradAndHessian(Fe, lamee(0), lamee(1), gF, HF);
     // Write vertex-specific derivatives into output memory HGe
     SMatrixView<GpuScalar, 3, 4> HGei(Hge);
     auto Hi = HGei.Slice<3, 3>(0, 0);

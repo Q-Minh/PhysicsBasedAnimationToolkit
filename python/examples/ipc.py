@@ -379,7 +379,7 @@ if __name__ == "__main__":
     # Create hyper elastic potential
     Y, nu, psi = args.Y, args.nu, pbat.fem.HyperElasticEnergy.StableNeoHookean
     hep, detJeU, GNeU = pbat.fem.hyper_elastic_potential(
-        mesh, Y=Y, nu=nu, energy=psi, detJ=detJeF)
+        mesh, Y=Y, nu=nu, energy=psi, detJe=detJeF)
 
     # Setup IPC contact handling
     F = igl.boundary_facets(C)

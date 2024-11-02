@@ -241,8 +241,9 @@ HyperElasticPotential<TMesh, THyperElasticEnergy, QuadratureOrder>::ComputeEleme
     auto constexpr kNodesPerElement = ElementType::kNodes;
     auto constexpr kDofsPerElement  = kNodesPerElement * kDims;
     auto const wg                   = common::ToEigen(QuadratureRuleType::weights);
-    using math::linalg::mini::FromEigen;
-    using math::linalg::mini::ToEigen;
+    namespace mini                  = math::linalg::mini;
+    using mini::FromEigen;
+    using mini::ToEigen;
     if (not bWithGradient and not bWithHessian)
     {
         tbb::parallel_for(Index{0}, Index{numberOfElements}, [&](Index e) {
@@ -275,7 +276,8 @@ HyperElasticPotential<TMesh, THyperElasticEnergy, QuadratureOrder>::ComputeEleme
                     e * kStride + g * MeshType::kDims);
                 Matrix<kDims, kDims> const F = xe * gradPhi;
                 auto vecF                    = FromEigen(F);
-                auto [psiF, gradPsiF]        = Psi.evalWithGrad(vecF, mue(g, e), lambdae(g, e));
+                mini::SVector<Scalar, kDims * kDims> gradPsiF;
+                auto psiF = Psi.evalWithGrad(vecF, mue(g, e), lambdae(g, e), gradPsiF);
                 Ue(e) += (wg(g) * detJe(g, e)) * psiF;
                 auto const GP = FromEigen(gradPhi);
                 auto GPsix    = GradientWrtDofs<ElementType, kDims>(gradPsiF, GP);
@@ -321,8 +323,10 @@ HyperElasticPotential<TMesh, THyperElasticEnergy, QuadratureOrder>::ComputeEleme
                     e * kStride + g * MeshType::kDims);
                 Matrix<kDims, kDims> const F = xe * gradPhi;
                 auto vecF                    = FromEigen(F);
-                auto [psiF, gradPsiF, hessPsiF] =
-                    Psi.evalWithGradAndHessian(vecF, mue(g, e), lambdae(g, e));
+                mini::SVector<Scalar, kDims * kDims> gradPsiF;
+                mini::SMatrix<Scalar, kDims * kDims, kDims * kDims> hessPsiF;
+                auto psiF =
+                    Psi.evalWithGradAndHessian(vecF, mue(g, e), lambdae(g, e), gradPsiF, hessPsiF);
                 Ue(e) += (wg(g) * detJe(g, e)) * psiF;
                 auto const GP = FromEigen(gradPhi);
                 auto GPsix    = GradientWrtDofs<ElementType, kDims>(gradPsiF, GP);
