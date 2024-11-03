@@ -3,12 +3,12 @@
 
 #include "BvhQueryImpl.cuh"
 #include "pbat/HostDevice.h"
+#include "pbat/common/Queue.h"
+#include "pbat/common/Stack.h"
 #include "pbat/geometry/DistanceQueries.h"
+#include "pbat/geometry/Morton.h"
 #include "pbat/geometry/OverlapQueries.h"
 #include "pbat/gpu/Aliases.h"
-#include "pbat/gpu/common/Morton.cuh"
-#include "pbat/gpu/common/Queue.cuh"
-#include "pbat/gpu/common/Stack.cuh"
 #include "pbat/gpu/common/SynchronizedList.cuh"
 #include "pbat/gpu/geometry/PrimitivesImpl.cuh"
 #include "pbat/math/linalg/mini/Mini.h"
@@ -50,7 +50,7 @@ struct FComputeAabb
 
 struct FComputeMortonCode
 {
-    using MortonCodeType = common::MortonCodeType;
+    using MortonCodeType = pbat::geometry::MortonCodeType;
 
     PBAT_DEVICE void operator()(int s)
     {
@@ -61,7 +61,8 @@ struct FComputeMortonCode
             auto cd = GpuScalar{0.5} * (b[d][s] + e[d][s]);
             c[d]    = (cd - sb[d]) / sbe[d];
         }
-        morton[s] = common::Morton3D(c);
+        using pbat::geometry::Morton3D;
+        morton[s] = Morton3D(c);
     }
 
     std::array<GpuScalar, 3> sb;
@@ -118,7 +119,8 @@ struct FDetectOverlaps
     PBAT_DEVICE void operator()(auto query)
     {
         // Traverse nodes depth-first starting from the root.
-        common::Stack<GpuIndex, 64> stack{};
+        using pbat::common::Stack;
+        Stack<GpuIndex, 64> stack{};
         stack.Push(0);
         do
         {
@@ -229,6 +231,9 @@ struct FContactPairs
 
     struct BranchAndBound
     {
+        using StackType = pbat::common::Stack<BoxOrSimplex, 64>;
+        using QueueType = pbat::common::Queue<GpuIndex, 8>;
+
         PBAT_DEVICE
         BranchAndBound(
             mini::SVector<GpuScalar, 3> const& X,
@@ -240,8 +245,8 @@ struct FContactPairs
         {
         }
 
-        common::Stack<BoxOrSimplex, 64> stack;
-        common::Queue<GpuIndex, 8> nearest;
+        StackType stack;
+        QueueType nearest;
         mini::SVector<GpuScalar, 3> X;
         GpuScalar R;
         GpuScalar dzero;

@@ -1,11 +1,9 @@
-#ifndef PBAT_GPU_COMMON_QUEUE_CUH
-#define PBAT_GPU_COMMON_QUEUE_CUH
+#ifndef PBAT_COMMON_QUEUE_H
+#define PBAT_COMMON_QUEUE_H
 
 #include "pbat/HostDevice.h"
-#include "pbat/gpu/Aliases.h"
 
 namespace pbat {
-namespace gpu {
 namespace common {
 
 template <class T, auto kCapacity = 64>
@@ -27,16 +25,15 @@ class Queue
     }
     PBAT_HOST_DEVICE bool IsFull() const { return n == kCapacity; }
     PBAT_HOST_DEVICE bool IsEmpty() const { return n == 0; }
-    PBAT_HOST_DEVICE GpuIndex Size() const { return n; }
+    PBAT_HOST_DEVICE auto Size() const { return n; }
     PBAT_HOST_DEVICE void Clear() { begin = end = n = 0; }
 
   private:
     T queue[kCapacity];
-    GpuIndex begin, end, n;
+    int begin, end, n;
 };
 
 } // namespace common
-} // namespace gpu
 } // namespace pbat
 
-#endif // PBAT_GPU_COMMON_QUEUE_CUH
+#endif // PBAT_COMMON_QUEUE_H

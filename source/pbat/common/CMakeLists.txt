@@ -8,9 +8,13 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
         "Eigen.h"
         "Hash.h"
         "Indexing.h"
+        "Queue.h"
+        "Stack.h"
 )
 target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
 PRIVATE
     "Eigen.cpp"
     "Indexing.cpp"
+    "Queue.cpp"
+    "Stack.cpp"
 )

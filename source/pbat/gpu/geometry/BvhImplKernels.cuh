@@ -3,8 +3,8 @@
 
 #include "BvhImpl.cuh"
 #include "pbat/HostDevice.h"
+#include "pbat/common/Stack.h"
 #include "pbat/gpu/Aliases.h"
-#include "pbat/gpu/common/Stack.cuh"
 #include "pbat/gpu/common/SynchronizedList.cuh"
 
 #include <array>
@@ -58,7 +58,8 @@ struct FComputeMortonCode
             auto cd = GpuScalar{0.5} * (b[d][bs] + e[d][bs]);
             c[d]    = (cd - sb[d]) / sbe[d];
         }
-        morton[s] = common::Morton3D(c);
+        using pbat::geometry::Morton3D;
+        morton[s] = Morton3D(c);
     }
 
     std::array<GpuScalar, 3> sb;
@@ -223,7 +224,8 @@ struct FDetectSelfOverlaps
     PBAT_DEVICE void operator()(auto leaf)
     {
         // Traverse nodes depth-first starting from the root=0 node
-        common::Stack<GpuIndex, 64> stack{};
+        using pbat::common::Stack;
+        Stack<GpuIndex, 64> stack{};
         stack.Push(0);
         do
         {
