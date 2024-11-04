@@ -309,7 +309,8 @@ PBAT_HOST_DEVICE auto FromBuffers(std::array<TScalar*, K> buf, TIndexMatrix cons
     using ScalarType = std::remove_cvref_t<TScalar>;
     SMatrix<ScalarType, K * M, N> A{};
     using pbat::common::ForRange;
-    ForRange<0, K>([&]<auto k>() { A.Slice<M, N>(k * M, 0) = FromFlatBuffer(buf[k], inds); });
+    ForRange<0, K>(
+        [&]<auto k>() { A.template Slice<M, N>(k * M, 0) = FromFlatBuffer(buf[k], inds); });
     return A;
 }
 
@@ -338,7 +339,8 @@ PBAT_HOST_DEVICE void ToBuffers(
     static_assert(MA / MI == K, "A must have number of rows == #buffers*#rows of inds");
     using ScalarType = typename TMatrix::ScalarType;
     using pbat::common::ForRange;
-    ForRange<0, K>([&]<auto k>() { ToFlatBuffer(A.Slice<MI, NI>(k * MI, 0), inds, buf[k]); });
+    ForRange<0, K>(
+        [&]<auto k>() { ToFlatBuffer(A.template Slice<MI, NI>(k * MI, 0), inds, buf[k]); });
 }
 
 } // namespace mini
