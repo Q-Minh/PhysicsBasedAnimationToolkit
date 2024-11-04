@@ -4,11 +4,19 @@ import inspect
 import numpy as np
 import scipy as sp
 import math
+import contextlib
+import io
 
 __module = sys.modules[__name__]
-for name, attr in inspect.getmembers(_fem):
-    setattr(__module, name, attr)
+for _name, _attr in inspect.getmembers(_fem):
+    if not _name.startswith("__"):
+        setattr(__module, _name, _attr)
 
+_strio = io.StringIO()
+with contextlib.redirect_stdout(_strio):
+    help(_fem)
+_strio.seek(0)
+setattr(__module, "__doc__", f"{getattr(__module, "__doc__")}\n\n{_strio.read()}")
 
 def divergence(mesh, quadrature_order: int = 1, GNe: np.ndarray = None):
     """Construct an FEM divergence operator such that composing div(grad(u)) 

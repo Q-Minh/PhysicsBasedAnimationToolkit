@@ -22,14 +22,6 @@ void Bind([[maybe_unused]] pybind11::module& m)
     using pbat::sim::vbd::EInitializationStrategy;
     using pbat::gpu::vbd::Vbd;
 
-    pyb::enum_<EInitializationStrategy>(m, "InitializationStrategy")
-        .value("Position", EInitializationStrategy::Position)
-        .value("Inertia", EInitializationStrategy::Inertia)
-        .value("KineticEnergyMinimum", EInitializationStrategy::KineticEnergyMinimum)
-        .value("AdaptiveVbd", EInitializationStrategy::AdaptiveVbd)
-        .value("AdaptivePbat", EInitializationStrategy::AdaptivePbat)
-        .export_values();
-
     pyb::class_<Vbd>(m, "Vbd")
         .def(
             pyb::init([](Eigen::Ref<GpuMatrixX const> const& X,

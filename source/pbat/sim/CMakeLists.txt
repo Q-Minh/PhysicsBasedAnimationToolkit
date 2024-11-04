@@ -4,6 +4,5 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     FILES
     "Sim.h"
 )
-
 add_subdirectory(vbd)
 add_subdirectory(xpbd)

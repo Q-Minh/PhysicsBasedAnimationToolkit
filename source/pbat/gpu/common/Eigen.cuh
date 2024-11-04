@@ -20,9 +20,11 @@ void ToBuffer(
     Eigen::Ref<Eigen::Matrix<ScalarType, EigenRows, EigenCols, StorageOrder> const> const& A,
     Buffer<ScalarType, D>& buf)
 {
+    using SizeType = decltype(buf.Size());
     if constexpr (D > 1)
     {
-        if (A.rows() != buf.Dimensions() and A.cols() != buf.Size())
+        if (static_cast<SizeType>(A.rows()) != buf.Dimensions() and
+            static_cast<SizeType>(A.cols()) != buf.Size())
         {
             std::ostringstream ss{};
             ss << "Expected input dimensions " << buf.Dimensions() << "x" << buf.Size()
@@ -36,7 +38,7 @@ void ToBuffer(
     }
     else
     {
-        if (A.size() != buf.Size())
+        if (static_cast<SizeType>(A.size()) != buf.Size())
         {
             std::ostringstream ss{};
             ss << "Expected input dimensions " << buf.Dimensions() << "x" << buf.Size()
@@ -47,11 +49,18 @@ void ToBuffer(
     }
 }
 
-template <class ScalarType, auto D, auto StorageOrder = Eigen::RowMajor>
+template <class ScalarType, auto D, auto StorageOrder = (D > 1) ? Eigen::RowMajor : Eigen::ColMajor>
 Eigen::Matrix<ScalarType, Eigen::Dynamic, Eigen::Dynamic, StorageOrder>
 ToEigen(Buffer<ScalarType, D> const& buf)
 {
-    return pbat::common::ToEigen(buf.Get()).reshaped(buf.Size(), buf.Dimensions()).transpose();
+    if constexpr (D > 1)
+    {
+        return pbat::common::ToEigen(buf.Get()).reshaped(buf.Size(), buf.Dimensions()).transpose();
+    }
+    else
+    {
+        return pbat::common::ToEigen(buf.Get());
+    }
 }
 
 } // namespace common

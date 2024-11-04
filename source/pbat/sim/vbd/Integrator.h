@@ -12,7 +12,7 @@ namespace vbd {
 class Integrator
 {
   public:
-    PBAT_API Integrator(Data&& data);
+    PBAT_API Integrator(Data data);
 
     PBAT_API void
     Step(Scalar dt, Index iterations, Index substeps = Index{1}, Scalar rho = Scalar{1});

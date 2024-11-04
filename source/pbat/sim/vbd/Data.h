@@ -12,27 +12,33 @@ namespace vbd {
 PBAT_API struct Data
 {
   public:
-    Data& VolumeMesh(Eigen::Ref<MatrixX const> const& V, Eigen::Ref<IndexMatrixX const> const& E);
     Data&
-    SurfaceMesh(Eigen::Ref<IndexVectorX const> const& V, Eigen::Ref<IndexMatrixX const> const& F);
-    Data& Velocity(Eigen::Ref<MatrixX const> const& v);
-    Data& Acceleration(Eigen::Ref<MatrixX const> const& aext);
-    Data& Mass(Eigen::Ref<VectorX const> const& m);
-    Data& Quadrature(
+    WithVolumeMesh(Eigen::Ref<MatrixX const> const& V, Eigen::Ref<IndexMatrixX const> const& E);
+    Data& WithSurfaceMesh(
+        Eigen::Ref<IndexVectorX const> const& V,
+        Eigen::Ref<IndexMatrixX const> const& F);
+    Data& WithVelocity(Eigen::Ref<MatrixX const> const& v);
+    Data& WithAcceleration(Eigen::Ref<MatrixX const> const& aext);
+    Data& WithMass(Eigen::Ref<VectorX const> const& m);
+    Data& WithQuadrature(
         Eigen::Ref<VectorX const> const& wg,
         Eigen::Ref<MatrixX const> const& GP,
         Eigen::Ref<MatrixX const> const& lame);
-    Data& VertexAdjacency(
+    Data& WithVertexAdjacency(
         Eigen::Ref<IndexVectorX const> const& GVGp,
-        Eigen::Ref<IndexVectorX const> const& GVGn,
+        Eigen::Ref<IndexVectorX const> const& GVGg,
         Eigen::Ref<IndexVectorX const> const& GVGe,
         Eigen::Ref<IndexVectorX const> const& GVGilocal);
-    Data& Partitions(std::vector<std::vector<Index>> const& partitions);
-    Data& DirichletConstrainedVertices(IndexVectorX const& dbc);
-    Data& InitializationStrategy(EInitializationStrategy strategy);
-    Data& RayleighDamping(Scalar kD);
-    Data& CollisionPenalty(Scalar kC);
-    Data& NumericalZero(Scalar zero);
+    Data& WithPartitions(std::vector<std::vector<Index>> const& partitions);
+    Data& WithDirichletConstrainedVertices(
+        IndexVectorX const& dbc,
+        bool bDbcSorted        = true,
+        bool bPartitionsSorted = false);
+    Data& WithInitializationStrategy(EInitializationStrategy strategy);
+    Data& WithRayleighDamping(Scalar kD);
+    Data& WithCollisionPenalty(Scalar kC);
+    Data& WithHessianDeterminantZeroUnder(Scalar zero);
+    Data& Construct(bool bValidate = true);
 
   public:
     IndexVectorX V; ///< Collision vertices
@@ -54,10 +60,10 @@ PBAT_API struct Data
     MatrixX GP;   ///< |#elem.nodes|x|#dims*#quad.pts.| shape function gradients at quad. pts.
     MatrixX lame; ///< 2x|#quad.pts.| Lame coefficients
 
-    IndexVectorX GVGp; ///< |#verts+1| prefixes into GVGn
+    IndexVectorX GVGp; ///< |#verts+1| prefixes into GVGg
     IndexVectorX
-        GVGn; ///< |# of vertex-quad.pt. edges| neighbours s.t.
-              ///< GVGn[k] for GVGp[i] <= k < GVGp[i+1] gives the quad.pts. involving vertex i
+        GVGg; ///< |# of vertex-quad.pt. edges| neighbours s.t.
+              ///< GVGg[k] for GVGp[i] <= k < GVGp[i+1] gives the quad.pts. involving vertex i
     IndexVectorX GVGe;      ///< |# of vertex-quad.pt. edges| element indices s.t.
                             ///< GVGe[k] for GVGp[i] <= k < GVGp[i+1] gives the element index of
                             ///< adjacent to vertex i for the neighbouring quad.pt.
@@ -65,16 +71,17 @@ PBAT_API struct Data
                             ///< GVGilocal[k] for GVGp[i] <= k < GVGp[i+1] gives the local index of
                             ///< vertex i for the neighbouring quad.pts.
 
-    IndexVectorX dbc; ///< Dirichlet constrained vertices
+    IndexVectorX dbc; ///< Dirichlet constrained vertices (sorted)
 
     std::vector<std::vector<Index>>
         partitions; ///< partitions[c] gives the c^{th} group of vertices which can all be
                     ///< integrated independently in parallel
 
-    EInitializationStrategy initializationStrategy; ///< BCD optimization initialization strategy
-    Scalar kD;                                      ///< Uniform damping coefficient
-    Scalar kC;                                      ///< Uniform collision penalty
-    Scalar detHZero; ///< Numerical zero for hessian pseudo-singularity check
+    EInitializationStrategy strategy{
+        EInitializationStrategy::AdaptivePbat}; ///< BCD optimization initialization strategy
+    Scalar kD{0};                               ///< Uniform damping coefficient
+    Scalar kC{1};                               ///< Uniform collision penalty
+    Scalar detHZero{1e-7}; ///< Numerical zero for hessian pseudo-singularity check
 };
 
 } // namespace vbd

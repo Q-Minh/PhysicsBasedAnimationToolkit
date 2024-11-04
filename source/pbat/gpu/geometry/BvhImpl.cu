@@ -175,7 +175,7 @@ Eigen::Vector<typename BvhImpl::MortonCodeType, Eigen::Dynamic> BvhImpl::MortonC
 
 Eigen::Matrix<GpuIndex, Eigen::Dynamic, 2> BvhImpl::Child() const
 {
-    return common::ToEigen(child);
+    return common::ToEigen(child).transpose();
 }
 
 Eigen::Vector<GpuIndex, Eigen::Dynamic> BvhImpl::Parent() const
@@ -185,7 +185,7 @@ Eigen::Vector<GpuIndex, Eigen::Dynamic> BvhImpl::Parent() const
 
 Eigen::Matrix<GpuIndex, Eigen::Dynamic, 2> BvhImpl::Rightmost() const
 {
-    return common::ToEigen(rightmost);
+    return common::ToEigen(rightmost).transpose();
 }
 
 Eigen::Vector<GpuIndex, Eigen::Dynamic> BvhImpl::Visits() const

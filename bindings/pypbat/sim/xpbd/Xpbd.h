@@ -1,18 +1,18 @@
-#ifndef PYPBAT_GPU_XPBD_XPBD_H
-#define PYPBAT_GPU_XPBD_XPBD_H
+#ifndef PYPBAT_SIM_XPBD_XPBD_H
+#define PYPBAT_SIM_XPBD_XPBD_H
 
 #include <pybind11/pybind11.h>
 
 namespace pbat {
 namespace py {
-namespace gpu {
+namespace sim {
 namespace xpbd {
 
 void Bind(pybind11::module& m);
 
 } // namespace xpbd
-} // namespace gpu
+} // namespace sim
 } // namespace py
 } // namespace pbat
 
-#endif // PYPBAT_GPU_XPBD_XPBD_H
+#endif // PYPBAT_SIM_XPBD_XPBD_H
