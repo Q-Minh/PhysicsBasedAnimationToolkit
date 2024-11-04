@@ -95,7 +95,7 @@ template <class TDerivedF>
 inline void DivergenceVector<TMesh, Dims, QuadratureOrder>::ComputeElementDivergence(
     Eigen::DenseBase<TDerivedF> const& Fe)
 {
-    PBAT_PROFILE_NAMED_SCOPE("fem.DivergenceVector.ComputeElementDivergence");
+    PBAT_PROFILE_NAMED_SCOPE("pbat.fem.DivergenceVector.ComputeElementDivergence");
     CheckValidState();
     auto const numberOfElements = mesh.E.cols();
     divE.setZero(ElementType::kNodes, numberOfElements);
@@ -119,7 +119,7 @@ inline void DivergenceVector<TMesh, Dims, QuadratureOrder>::ComputeElementDiverg
 template <CMesh TMesh, int Dims, int QuadratureOrder>
 inline VectorX DivergenceVector<TMesh, Dims, QuadratureOrder>::ToVector() const
 {
-    PBAT_PROFILE_NAMED_SCOPE("fem.DivergenceVector.ToVector");
+    PBAT_PROFILE_NAMED_SCOPE("pbat.fem.DivergenceVector.ToVector");
     auto const numberOfNodes    = mesh.X.cols();
     auto const numberOfElements = mesh.E.cols();
     VectorX div                 = VectorX::Zero(numberOfNodes);

@@ -1,9 +1,10 @@
-#ifndef PBAT_GPU_VBD_VBD_IMPL_CUH
-#define PBAT_GPU_VBD_VBD_IMPL_CUH
+#ifndef PBAT_GPU_VBD_INTEGRATOR_IMPL_CUH
+#define PBAT_GPU_VBD_INTEGRATOR_IMPL_CUH
 
 #include "pbat/gpu/Aliases.h"
 #include "pbat/gpu/common/Buffer.cuh"
 #include "pbat/gpu/geometry/PrimitivesImpl.cuh"
+#include "pbat/sim/vbd/Data.h"
 #include "pbat/sim/vbd/Enums.h"
 
 #include <cuda/api/stream.hpp>
@@ -13,16 +14,13 @@ namespace pbat {
 namespace gpu {
 namespace vbd {
 
-class VbdImpl
+class IntegratorImpl
 {
   public:
     using EInitializationStrategy = pbat::sim::vbd::EInitializationStrategy;
+    using Data                    = pbat::sim::vbd::Data;
 
-    VbdImpl(
-        Eigen::Ref<GpuMatrixX const> const& X,
-        Eigen::Ref<GpuIndexMatrixX const> const& V,
-        Eigen::Ref<GpuIndexMatrixX const> const& F,
-        Eigen::Ref<GpuIndexMatrixX const> const& T);
+    IntegratorImpl(Data const& data);
     /**
      * @brief
      * @param dt
@@ -190,4 +188,4 @@ class VbdImpl
 } // namespace gpu
 } // namespace pbat
 
-#endif // PBAT_GPU_VBD_VBD_IMPL_CUH
+#endif // PBAT_GPU_VBD_INTEGRATOR_IMPL_CUH

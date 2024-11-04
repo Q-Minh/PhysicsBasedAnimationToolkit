@@ -2,8 +2,8 @@
 #include "pbat/gpu/DisableWarnings.h"
 // clang-format on
 
+#include "IntegratorImpl.cuh"
 #include "Kernels.cuh"
-#include "VbdImpl.cuh"
 #include "pbat/gpu/common/Cuda.cuh"
 #include "pbat/gpu/common/Eigen.cuh"
 #include "pbat/math/linalg/mini/Mini.h"
@@ -18,49 +18,60 @@ namespace pbat {
 namespace gpu {
 namespace vbd {
 
-VbdImpl::VbdImpl(
-    Eigen::Ref<GpuMatrixX const> const& Xin,
-    Eigen::Ref<GpuIndexMatrixX const> const& Vin,
-    Eigen::Ref<GpuIndexMatrixX const> const& Fin,
-    Eigen::Ref<GpuIndexMatrixX const> const& Tin)
-    : X(Xin),
-      V(Vin),
-      F(Fin),
-      T(Tin),
-      mPositionsAtT(Xin.cols()),
-      mInertialTargetPositions(Xin.cols()),
-      mChebyshevPositionsM2(Xin.cols()),
-      mChebyshevPositionsM1(Xin.cols()),
-      mVelocitiesAtT(Xin.cols()),
-      mVelocities(Xin.cols()),
-      mExternalAcceleration(Xin.cols()),
-      mMass(Xin.cols()),
-      mQuadratureWeights(Tin.cols()),
-      mShapeFunctionGradients(Tin.cols() * 4 * 3),
-      mLameCoefficients(2 * Tin.cols()),
-      mDetHZero(GpuScalar{1e-10}),
-      mVertexTetrahedronPrefix(Xin.cols() + 1),
-      mVertexTetrahedronNeighbours(),
-      mVertexTetrahedronLocalVertexIndices(),
-      mRayleighDamping(GpuScalar{0}),
-      mCollisionPenalty(GpuScalar{1e3}),
+IntegratorImpl::IntegratorImpl(Data const& data)
+    : X(data.x.cast<GpuScalar>()),
+      V(data.V.cast<GpuIndex>().transpose()),
+      F(data.F.cast<GpuIndex>()),
+      T(data.T.cast<GpuIndex>()),
+      mPositionsAtT(data.xt.cols()),
+      mInertialTargetPositions(data.xtilde.cols()),
+      mChebyshevPositionsM2(data.xchebm2.cols()),
+      mChebyshevPositionsM1(data.xchebm1.cols()),
+      mVelocitiesAtT(data.vt.cols()),
+      mVelocities(data.v.cols()),
+      mExternalAcceleration(data.aext.cols()),
+      mMass(data.x.cols()),
+      mQuadratureWeights(data.wg.size()),
+      mShapeFunctionGradients(data.GP.size()),
+      mLameCoefficients(data.lame.size()),
+      mDetHZero(static_cast<GpuScalar>(data.detHZero)),
+      mVertexTetrahedronPrefix(data.GVGp.size()),
+      mVertexTetrahedronNeighbours(data.GVGe.size()),
+      mVertexTetrahedronLocalVertexIndices(data.GVGilocal.size()),
+      mRayleighDamping(static_cast<GpuScalar>(data.kD)),
+      mCollisionPenalty(static_cast<GpuScalar>(data.kC)),
       mMaxCollidingTrianglesPerVertex(8),
-      mCollidingTriangles(8 * Xin.cols()),
-      mCollidingTriangleCount(Xin.cols()),
+      mCollidingTriangles(8 * data.x.cols()),
+      mCollidingTriangleCount(data.x.cols()),
       mPartitions(),
-      mInitializationStrategy(EInitializationStrategy::AdaptiveVbd),
+      mInitializationStrategy(data.strategy),
       mGpuThreadBlockSize(64),
       mStream(common::Device(common::EDeviceSelectionPreference::HighestComputeCapability)
                   .create_stream(/*synchronize_with_default_stream=*/false))
 {
-    mPositionsAtT = X.x;
-    mVelocitiesAtT.SetConstant(GpuScalar(0));
-    mVelocities.SetConstant(GpuScalar(0));
-    mExternalAcceleration.SetConstant(GpuScalar(0));
-    mMass.SetConstant(GpuScalar(1e3));
+    common::ToBuffer(data.v, mVelocities);
+    common::ToBuffer(data.aext, mExternalAcceleration);
+    common::ToBuffer(data.m, mMass);
+
+    common::ToBuffer(data.wg, mQuadratureWeights);
+    common::ToBuffer(data.GP, mShapeFunctionGradients);
+    common::ToBuffer(data.lame, mLameCoefficients);
+
+    common::ToBuffer(data.GVGp, mVertexTetrahedronPrefix);
+    mVertexTetrahedronNeighbours.Resize(data.GVGe.size());
+    mVertexTetrahedronLocalVertexIndices.Resize(data.GVGilocal.size());
+    common::ToBuffer(data.GVGe, mVertexTetrahedronNeighbours);
+    common::ToBuffer(data.GVGilocal, mVertexTetrahedronLocalVertexIndices);
+
+    mPartitions.resize(data.partitions.size());
+    for (auto p = 0; p < data.partitions.size(); ++p)
+    {
+        mPartitions[p].Resize(data.partitions[p].size());
+        thrust::copy(data.partitions[p].begin(), data.partitions[p].end(), mPartitions[p].Data());
+    }
 }
 
-void VbdImpl::Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps, GpuScalar rho)
+void IntegratorImpl::Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps, GpuScalar rho)
 {
     GpuScalar sdt                        = dt / static_cast<GpuScalar>(substeps);
     GpuScalar sdt2                       = sdt * sdt;
@@ -222,47 +233,47 @@ void VbdImpl::Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps, GpuScal
     mStream.synchronize();
 }
 
-void VbdImpl::SetPositions(Eigen::Ref<GpuMatrixX const> const& Xin)
+void IntegratorImpl::SetPositions(Eigen::Ref<GpuMatrixX const> const& Xin)
 {
     common::ToBuffer(Xin, X.x);
 }
 
-void VbdImpl::SetVelocities(Eigen::Ref<GpuMatrixX const> const& v)
+void IntegratorImpl::SetVelocities(Eigen::Ref<GpuMatrixX const> const& v)
 {
     common::ToBuffer(v, mVelocities);
 }
 
-void VbdImpl::SetExternalAcceleration(Eigen::Ref<GpuMatrixX const> const& aext)
+void IntegratorImpl::SetExternalAcceleration(Eigen::Ref<GpuMatrixX const> const& aext)
 {
     common::ToBuffer(aext, mExternalAcceleration);
 }
 
-void VbdImpl::SetMass(Eigen::Ref<GpuVectorX const> const& m)
+void IntegratorImpl::SetMass(Eigen::Ref<GpuVectorX const> const& m)
 {
     common::ToBuffer(m, mMass);
 }
 
-void VbdImpl::SetQuadratureWeights(Eigen::Ref<GpuVectorX const> const& wg)
+void IntegratorImpl::SetQuadratureWeights(Eigen::Ref<GpuVectorX const> const& wg)
 {
     common::ToBuffer(wg, mQuadratureWeights);
 }
 
-void VbdImpl::SetShapeFunctionGradients(Eigen::Ref<GpuMatrixX const> const& GP)
+void IntegratorImpl::SetShapeFunctionGradients(Eigen::Ref<GpuMatrixX const> const& GP)
 {
     common::ToBuffer(GP, mShapeFunctionGradients);
 }
 
-void VbdImpl::SetLameCoefficients(Eigen::Ref<GpuMatrixX const> const& l)
+void IntegratorImpl::SetLameCoefficients(Eigen::Ref<GpuMatrixX const> const& l)
 {
     common::ToBuffer(l, mLameCoefficients);
 }
 
-void VbdImpl::SetNumericalZeroForHessianDeterminant(GpuScalar zero)
+void IntegratorImpl::SetNumericalZeroForHessianDeterminant(GpuScalar zero)
 {
     mDetHZero = zero;
 }
 
-void VbdImpl::SetVertexTetrahedronAdjacencyList(
+void IntegratorImpl::SetVertexTetrahedronAdjacencyList(
     Eigen::Ref<GpuIndexVectorX const> const& GVTp,
     Eigen::Ref<GpuIndexVectorX const> const& GVTn,
     Eigen::Ref<GpuIndexVectorX const> const& GVTilocal)
@@ -283,12 +294,12 @@ void VbdImpl::SetVertexTetrahedronAdjacencyList(
     common::ToBuffer(GVTilocal, mVertexTetrahedronLocalVertexIndices);
 }
 
-void VbdImpl::SetRayleighDampingCoefficient(GpuScalar kD)
+void IntegratorImpl::SetRayleighDampingCoefficient(GpuScalar kD)
 {
     mRayleighDamping = kD;
 }
 
-void VbdImpl::SetVertexPartitions(std::vector<std::vector<GpuIndex>> const& partitions)
+void IntegratorImpl::SetVertexPartitions(std::vector<std::vector<GpuIndex>> const& partitions)
 {
     mPartitions.resize(partitions.size());
     for (auto p = 0; p < partitions.size(); ++p)
@@ -298,42 +309,42 @@ void VbdImpl::SetVertexPartitions(std::vector<std::vector<GpuIndex>> const& part
     }
 }
 
-void VbdImpl::SetInitializationStrategy(EInitializationStrategy strategy)
+void IntegratorImpl::SetInitializationStrategy(EInitializationStrategy strategy)
 {
     mInitializationStrategy = strategy;
 }
 
-void VbdImpl::SetBlockSize(GpuIndex blockSize)
+void IntegratorImpl::SetBlockSize(GpuIndex blockSize)
 {
     mGpuThreadBlockSize = blockSize;
 }
 
-common::Buffer<GpuScalar, 3> const& VbdImpl::GetVelocity() const
+common::Buffer<GpuScalar, 3> const& IntegratorImpl::GetVelocity() const
 {
     return mVelocities;
 }
 
-common::Buffer<GpuScalar, 3> const& VbdImpl::GetExternalAcceleration() const
+common::Buffer<GpuScalar, 3> const& IntegratorImpl::GetExternalAcceleration() const
 {
     return mExternalAcceleration;
 }
 
-common::Buffer<GpuScalar> const& VbdImpl::GetMass() const
+common::Buffer<GpuScalar> const& IntegratorImpl::GetMass() const
 {
     return mMass;
 }
 
-common::Buffer<GpuScalar> const& VbdImpl::GetShapeFunctionGradients() const
+common::Buffer<GpuScalar> const& IntegratorImpl::GetShapeFunctionGradients() const
 {
     return mShapeFunctionGradients;
 }
 
-common::Buffer<GpuScalar> const& VbdImpl::GetLameCoefficients() const
+common::Buffer<GpuScalar> const& IntegratorImpl::GetLameCoefficients() const
 {
     return mLameCoefficients;
 }
 
-std::vector<common::Buffer<GpuIndex>> const& VbdImpl::GetPartitions() const
+std::vector<common::Buffer<GpuIndex>> const& IntegratorImpl::GetPartitions() const
 {
     return mPartitions;
 }
@@ -350,22 +361,16 @@ std::vector<common::Buffer<GpuIndex>> const& VbdImpl::GetPartitions() const
 #include <span>
 #include <vector>
 
-TEST_CASE("[gpu][vbd] Vbd")
+TEST_CASE("[gpu][vbd] IntegratorImpl")
 {
-    using pbat::GpuIndex;
-    using pbat::GpuIndexMatrixX;
-    using pbat::GpuMatrixX;
-    using pbat::GpuScalar;
-    using pbat::GpuVectorX;
-    using pbat::Index;
-    using pbat::Scalar;
+    using namespace pbat;
     using pbat::common::ToEigen;
     // Arrange
     // Cube mesh
-    GpuMatrixX P(3, 8);
-    GpuIndexMatrixX V(1, 8);
-    GpuIndexMatrixX T(4, 5);
-    GpuIndexMatrixX F(3, 12);
+    MatrixX P(3, 8);
+    IndexMatrixX V(1, 8);
+    IndexMatrixX T(4, 5);
+    IndexMatrixX F(3, 12);
     // clang-format off
     P << 0.f, 1.f, 0.f, 1.f, 0.f, 1.f, 0.f, 1.f,
          0.f, 0.f, 1.f, 1.f, 0.f, 0.f, 1.f, 1.f,
@@ -378,10 +383,10 @@ TEST_CASE("[gpu][vbd] Vbd")
          1, 5, 3, 7, 2, 6, 0, 4, 3, 2, 5, 7,
          4, 4, 5, 5, 7, 7, 6, 6, 1, 3, 6, 6;
     // clang-format on
-    V.reshaped().setLinSpaced(0, static_cast<GpuIndex>(P.cols() - 1));
+    V.reshaped().setLinSpaced(0, static_cast<Index>(P.cols() - 1));
     // Parallel graph information
-    using SparseMatrixType = Eigen::SparseMatrix<GpuIndex, Eigen::ColMajor>;
-    using TripletType      = Eigen::Triplet<GpuIndex, typename SparseMatrixType::StorageIndex>;
+    using SparseMatrixType = Eigen::SparseMatrix<Index, Eigen::ColMajor, Index>;
+    using TripletType      = Eigen::Triplet<Index, Index>;
     SparseMatrixType G(T.cols(), P.cols());
     std::vector<TripletType> Gei{};
     for (auto e = 0; e < T.cols(); ++e)
@@ -394,16 +399,16 @@ TEST_CASE("[gpu][vbd] Vbd")
     }
     G.setFromTriplets(Gei.begin(), Gei.end());
     assert(G.isCompressed());
-    std::span<GpuIndex> vertexTetrahedronPrefix{
+    std::span<Index> vertexTetrahedronPrefix{
         G.outerIndexPtr(),
         static_cast<std::size_t>(G.outerSize() + 1)};
-    std::span<GpuIndex> vertexTetrahedronNeighbours{
+    std::span<Index> vertexTetrahedronNeighbours{
         G.innerIndexPtr(),
         static_cast<std::size_t>(G.nonZeros())};
-    std::span<GpuIndex> vertexTetrahedronLocalVertexIndices{
+    std::span<Index> vertexTetrahedronLocalVertexIndices{
         G.valuePtr(),
         static_cast<std::size_t>(G.nonZeros())};
-    std::vector<std::vector<GpuIndex>> partitions{};
+    std::vector<std::vector<Index>> partitions{};
     partitions.push_back({2, 7, 4, 1});
     partitions.push_back({0});
     partitions.push_back({5});
@@ -411,36 +416,39 @@ TEST_CASE("[gpu][vbd] Vbd")
     partitions.push_back({3});
     // Material parameters
     using pbat::gpu::vbd::tests::LinearFemMesh;
-    LinearFemMesh mesh{P, T};
-    GpuVectorX wg     = mesh.QuadratureWeights();
-    GpuMatrixX GP     = mesh.ShapeFunctionGradients();
-    auto constexpr Y  = GpuScalar{1e6};
-    auto constexpr nu = GpuScalar{0.45};
-    GpuMatrixX lame   = mesh.LameCoefficients(Y, nu);
+    LinearFemMesh mesh(P.cast<Scalar>(), T.cast<Index>());
+    VectorX wg        = mesh.QuadratureWeights();
+    MatrixX GP        = mesh.ShapeFunctionGradients();
+    auto constexpr Y  = Scalar{1e6};
+    auto constexpr nu = Scalar{0.45};
+    MatrixX lame      = mesh.LameCoefficients(Y, nu);
     // Problem parameters
-    GpuMatrixX aext(3, P.cols());
-    aext.colwise()    = Eigen::Vector<GpuScalar, 3>{GpuScalar{0}, GpuScalar{0}, GpuScalar{-9.81}};
-    auto constexpr dt = GpuScalar{1e-2};
+    MatrixX aext(3, P.cols());
+    aext.colwise()            = Vector<3>{Scalar{0}, Scalar{0}, Scalar{-9.81}};
+    auto constexpr dt         = GpuScalar{1e-2};
     auto constexpr substeps   = 1;
     auto constexpr iterations = 10;
 
     // Act
-    using pbat::gpu::vbd::VbdImpl;
-    VbdImpl vbd{P, V, F, T};
-    vbd.SetExternalAcceleration(aext);
-    vbd.SetQuadratureWeights(wg);
-    vbd.SetShapeFunctionGradients(GP);
-    vbd.SetLameCoefficients(lame);
-    vbd.SetVertexTetrahedronAdjacencyList(
-        ToEigen(vertexTetrahedronPrefix),
-        ToEigen(vertexTetrahedronNeighbours),
-        ToEigen(vertexTetrahedronLocalVertexIndices));
-    vbd.SetVertexPartitions(partitions);
+    using pbat::gpu::vbd::IntegratorImpl;
+    IntegratorImpl vbd{sim::vbd::Data()
+                           .WithVolumeMesh(P, T)
+                           .WithAcceleration(aext)
+                           .WithPartitions(partitions)
+                           .WithQuadrature(wg, GP, lame)
+                           .WithVertexAdjacency(
+                               ToEigen(vertexTetrahedronPrefix),
+                               ToEigen(vertexTetrahedronNeighbours),
+                               ToEigen(vertexTetrahedronNeighbours),
+                               ToEigen(vertexTetrahedronLocalVertexIndices))
+                           .Construct()};
+
     vbd.Step(dt, iterations, substeps);
 
     // Assert
     auto constexpr zero = GpuScalar{1e-4};
-    GpuMatrixX dx       = ToEigen(vbd.X.x.Get()).reshaped(P.cols(), P.rows()).transpose() - P;
+    GpuMatrixX dx =
+        ToEigen(vbd.X.x.Get()).reshaped(P.cols(), P.rows()).transpose() - P.cast<GpuScalar>();
     bool const bVerticesFallUnderGravity = (dx.row(2).array() < GpuScalar{0}).all();
     CHECK(bVerticesFallUnderGravity);
     bool const bVerticesOnlyFall = (dx.topRows(2).array().abs() < zero).all();

@@ -85,7 +85,7 @@ inline Gradient<TMesh, QuadratureOrder>::Gradient(
 template <CMesh TMesh, int QuadratureOrder>
 inline CSCMatrix Gradient<TMesh, QuadratureOrder>::ToMatrix() const
 {
-    PBAT_PROFILE_NAMED_SCOPE("fem.Gradient.ToMatrix");
+    PBAT_PROFILE_NAMED_SCOPE("pbat.fem.Gradient.ToMatrix");
     using SparseIndex = typename CSCMatrix::StorageIndex;
     using Triplet     = Eigen::Triplet<Scalar, SparseIndex>;
 
@@ -148,7 +148,7 @@ inline void Gradient<TMesh, QuadratureOrder>::Apply(
     Eigen::MatrixBase<TDerivedIn> const& x,
     Eigen::DenseBase<TDerivedOut>& y) const
 {
-    PBAT_PROFILE_NAMED_SCOPE("fem.Gradient.Apply");
+    PBAT_PROFILE_NAMED_SCOPE("pbat.fem.Gradient.Apply");
     // Check inputs
     bool const bDimensionsMatch = (x.cols() == y.cols()) and (x.rows() == InputDimensions()) and
                                   (y.rows() == OutputDimensions());

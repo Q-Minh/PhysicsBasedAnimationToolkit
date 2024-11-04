@@ -10,6 +10,44 @@ namespace pbat {
 namespace gpu {
 namespace common {
 
+template <class ScalarType, auto D, class TDerived>
+void ToBuffer(Eigen::PlainObjectBase<TDerived> const& A, Buffer<ScalarType, D>& buf)
+{
+    if constexpr (not std::is_same_v<typename TDerived::Scalar, ScalarType>)
+    {
+        auto A2 = A.template cast<ScalarType>().eval();
+        ToBuffer(A2, buf);
+    }
+
+    using SizeType = decltype(buf.Size());
+    if constexpr (D > 1)
+    {
+        if (static_cast<SizeType>(A.rows()) != buf.Dimensions() and
+            static_cast<SizeType>(A.cols()) != buf.Size())
+        {
+            std::ostringstream ss{};
+            ss << "Expected input dimensions " << buf.Dimensions() << "x" << buf.Size()
+               << ", but got " << A.rows() << "x" << A.cols() << "\n";
+            throw std::invalid_argument(ss.str());
+        }
+        for (auto d = 0; d < buf.Dimensions(); ++d)
+        {
+            thrust::copy(A.row(d).begin(), A.row(d).end(), buf[d].begin());
+        }
+    }
+    else
+    {
+        if (static_cast<SizeType>(A.size()) != buf.Size())
+        {
+            std::ostringstream ss{};
+            ss << "Expected input dimensions " << buf.Dimensions() << "x" << buf.Size()
+               << " or its transpose, but got " << A.rows() << "x" << A.cols() << "\n";
+            throw std::invalid_argument(ss.str());
+        }
+        thrust::copy(A.data(), A.data() + A.size(), buf.Data());
+    }
+}
+
 template <
     class ScalarType,
     auto D,

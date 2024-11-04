@@ -3,6 +3,7 @@
 #include "Kernels.h"
 #include "pbat/math/linalg/mini/Mini.h"
 #include "pbat/physics/StableNeoHookeanEnergy.h"
+#include "pbat/profiling/Profiling.h"
 
 #include <tbb/parallel_for.h>
 #include <type_traits>
@@ -15,6 +16,8 @@ Integrator::Integrator(Data dataIn) : data(std::move(dataIn)) {}
 
 void Integrator::Step(Scalar dt, Index iterations, Index substeps, Scalar rho)
 {
+    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.vbd.Integrator.Step");
+
     Scalar sdt                           = dt / (static_cast<Scalar>(substeps));
     Scalar sdt2                          = sdt * sdt;
     auto const nVertices                 = data.x.cols();
@@ -197,7 +200,6 @@ TEST_CASE("[sim][vbd] Integrator")
     Mesh mesh{P, T};
     MatrixX const GP        = fem::ShapeFunctionGradients<1>(mesh);
     VectorX wg              = fem::InnerProductWeights<1>(mesh).reshaped();
-    VectorX m               = VectorX::Ones(P.cols());
     auto constexpr Y        = Scalar{1e6};
     auto constexpr nu       = Scalar{0.45};
     auto const [mu, lambda] = physics::LameCoefficients(Y, nu);
@@ -217,7 +219,6 @@ TEST_CASE("[sim][vbd] Integrator")
     Integrator vbd{sim::vbd::Data()
                        .WithVolumeMesh(P, T)
                        .WithAcceleration(aext)
-                       .WithMass(m)
                        .WithPartitions(partitions)
                        .WithQuadrature(wg, GP, lame)
                        .WithVertexAdjacency(

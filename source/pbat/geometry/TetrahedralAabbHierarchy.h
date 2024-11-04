@@ -85,7 +85,7 @@ inline std::vector<Index> TetrahedralAabbHierarchy::PrimitivesContainingPoints(
     Eigen::MatrixBase<TDerivedP> const& P,
     bool bParallelize) const
 {
-    PBAT_PROFILE_NAMED_SCOPE("geometry.TetrahedralAabbHierarchy.PrimitivesContainingPoints");
+    PBAT_PROFILE_NAMED_SCOPE("pbat.geometry.TetrahedralAabbHierarchy.PrimitivesContainingPoints");
     using math::linalg::mini::FromEigen;
     std::vector<Index> p(static_cast<std::size_t>(P.cols()), -1);
     auto const FindContainingPrimitive = [&](Index i) {
@@ -124,7 +124,7 @@ TetrahedralAabbHierarchy::NearestPrimitivesToPoints(
     Eigen::MatrixBase<TDerivedP> const& P,
     bool bParallelize) const
 {
-    PBAT_PROFILE_NAMED_SCOPE("geometry.TetrahedralAabbHierarchy.NearestPrimitivesToPoints");
+    PBAT_PROFILE_NAMED_SCOPE("pbat.geometry.TetrahedralAabbHierarchy.NearestPrimitivesToPoints");
     using math::linalg::mini::FromEigen;
     std::vector<Index> p(static_cast<std::size_t>(P.cols()), -1);
     std::vector<Scalar> d(static_cast<std::size_t>(P.cols()), std::numeric_limits<Scalar>::max());

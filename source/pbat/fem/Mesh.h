@@ -132,7 +132,7 @@ Mesh<TElement, Dims>::Mesh(
     Eigen::Ref<MatrixX const> const& V,
     Eigen::Ref<IndexMatrixX const> const& C)
 {
-    PBAT_PROFILE_NAMED_SCOPE("fem.Mesh.Construct");
+    PBAT_PROFILE_NAMED_SCOPE("pbat.fem.Mesh.Construct");
 
     // Smart nodal indexing is only relevant for higher-order meshes
     if constexpr (kOrder == 1)

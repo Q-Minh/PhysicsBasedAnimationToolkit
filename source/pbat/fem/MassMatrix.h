@@ -128,7 +128,7 @@ inline void MassMatrix<TMesh, QuadratureOrder>::Apply(
     Eigen::MatrixBase<TDerivedIn> const& x,
     Eigen::DenseBase<TDerivedOut>& y) const
 {
-    PBAT_PROFILE_NAMED_SCOPE("fem.MassMatrix.Apply");
+    PBAT_PROFILE_NAMED_SCOPE("pbat.fem.MassMatrix.Apply");
     CheckValidState();
     auto const numberOfDofs = InputDimensions();
     if (x.rows() != numberOfDofs or y.rows() != numberOfDofs or x.cols() != y.cols())
@@ -164,7 +164,7 @@ inline void MassMatrix<TMesh, QuadratureOrder>::Apply(
 template <CMesh TMesh, int QuadratureOrder>
 inline CSCMatrix MassMatrix<TMesh, QuadratureOrder>::ToMatrix() const
 {
-    PBAT_PROFILE_NAMED_SCOPE("fem.MassMatrix.ToMatrix");
+    PBAT_PROFILE_NAMED_SCOPE("pbat.fem.MassMatrix.ToMatrix");
     CheckValidState();
     using SparseIndex = typename CSCMatrix::StorageIndex;
     using Triplet     = Eigen::Triplet<Scalar, SparseIndex>;
@@ -230,7 +230,7 @@ template <class TDerived>
 inline void MassMatrix<TMesh, QuadratureOrder>::ComputeElementMassMatrices(
     Eigen::DenseBase<TDerived> const& rho)
 {
-    PBAT_PROFILE_NAMED_SCOPE("fem.MassMatrix.ComputeElementMassMatrices");
+    PBAT_PROFILE_NAMED_SCOPE("pbat.fem.MassMatrix.ComputeElementMassMatrices");
     CheckValidState();
     auto const numberOfElements       = mesh.E.cols();
     auto constexpr kNodesPerElement   = ElementType::kNodes;

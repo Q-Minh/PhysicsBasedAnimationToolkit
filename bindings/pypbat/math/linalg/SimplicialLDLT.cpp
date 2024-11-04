@@ -67,7 +67,7 @@ void BindSimplicialLDLT(pybind11::module& m)
                 .def(
                     "analyze",
                     [=](SimplicialLdltType& ldlt, SparseMatrixType const& A) {
-                        pbat::profiling::Profile("math.linalg." + className + ".analyze", [&]() {
+                        pbat::profiling::Profile("pbat.math.linalg." + className + ".analyze", [&]() {
                             ldlt.analyzePattern(A);
                         });
                     },
@@ -76,7 +76,7 @@ void BindSimplicialLDLT(pybind11::module& m)
                     "compute",
                     [=](SimplicialLdltType& ldlt,
                         SparseMatrixType const& A) -> SimplicialLdltType& {
-                        pbat::profiling::Profile("math.linalg." + className + ".compute", [&]() {
+                        pbat::profiling::Profile("pbat.math.linalg." + className + ".compute", [&]() {
                             ldlt.compute(A);
                         });
                         return ldlt;
@@ -87,7 +87,7 @@ void BindSimplicialLDLT(pybind11::module& m)
                 .def(
                     "factorize",
                     [=](SimplicialLdltType& ldlt, SparseMatrixType const& A) {
-                        pbat::profiling::Profile("math.linalg." + className + ".factorize", [&]() {
+                        pbat::profiling::Profile("pbat.math.linalg." + className + ".factorize", [&]() {
                             ldlt.factorize(A);
                         });
                     },
@@ -121,7 +121,7 @@ void BindSimplicialLDLT(pybind11::module& m)
                     [=](SimplicialLdltType const& ldlt,
                         Eigen::Ref<MatrixX const> const& B) -> MatrixX {
                         return pbat::profiling::Profile(
-                            "math.linalg." + className + ".solve",
+                            "pbat.math.linalg." + className + ".solve",
                             [&]() {
                                 MatrixX X = ldlt.solve(B);
                                 return X;

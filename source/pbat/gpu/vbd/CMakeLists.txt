@@ -2,19 +2,20 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     PUBLIC
     FILE_SET api
     FILES
+    "Integrator.h"
     "Vbd.h"
 )
 target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     PRIVATE
     FILE_SET implementation
     FILES
-    "VbdImpl.cuh"
+    "IntegratorImpl.cuh"
     "Kernels.cuh"
 )
 target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     PRIVATE
-    "Vbd.cu"
-    "VbdImpl.cu"
+    "Integrator.cu"
+    "IntegratorImpl.cu"
     "Kernels.cu"
 )
 
