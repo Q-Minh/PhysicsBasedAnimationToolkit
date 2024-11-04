@@ -3,6 +3,7 @@
 // clang-format on
 
 #include "PrimitivesImpl.cuh"
+#include "pbat/gpu/common/Eigen.cuh"
 
 #include <array>
 #include <exception>
@@ -31,12 +32,8 @@ std::size_t PointsImpl::Dimensions() const
 
 void PointsImpl::Update(Eigen::Ref<GpuMatrixX const> const& V)
 {
-    for (auto d = 0; d < 3; ++d)
-        x[d].resize(V.cols());
-    for (auto d = 0; d < 3; ++d)
-    {
-        thrust::copy(V.row(d).begin(), V.row(d).end(), x[d].begin());
-    }
+    x.Resize(V.cols());
+    common::ToBuffer(V, x);
 }
 
 SimplicesImpl::SimplicesImpl(Eigen::Ref<GpuIndexMatrixX const> const& C) : eSimplexType(), inds()
@@ -74,7 +71,7 @@ GpuIndex SimplicesImpl::NumberOfSimplices() const
 BodiesImpl::BodiesImpl(Eigen::Ref<GpuIndexVectorX const> const& B)
     : body(B.size()), nBodies(static_cast<GpuIndex>(B.maxCoeff() + 1))
 {
-    thrust::copy(B.data(), B.data() + B.size(), body.Data());
+    common::ToBuffer(B, body);
 }
 
 GpuIndex BodiesImpl::NumberOfBodies() const

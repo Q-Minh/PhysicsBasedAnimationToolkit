@@ -5,6 +5,7 @@
 #include "Kernels.cuh"
 #include "VbdImpl.cuh"
 #include "pbat/gpu/common/Cuda.cuh"
+#include "pbat/gpu/common/Eigen.cuh"
 #include "pbat/math/linalg/mini/Mini.h"
 #include "pbat/sim/vbd/Kernels.h"
 
@@ -52,17 +53,11 @@ VbdImpl::VbdImpl(
       mStream(common::Device(common::EDeviceSelectionPreference::HighestComputeCapability)
                   .create_stream(/*synchronize_with_default_stream=*/false))
 {
-    for (auto d = 0; d < X.Dimensions(); ++d)
-    {
-        thrust::copy(X.x[d].begin(), X.x[d].end(), mPositionsAtT[d].begin());
-        thrust::fill(mVelocitiesAtT[d].begin(), mVelocitiesAtT[d].end(), GpuScalar{0});
-        thrust::fill(mVelocities[d].begin(), mVelocities[d].end(), GpuScalar{0});
-        thrust::fill(
-            mExternalAcceleration[d].begin(),
-            mExternalAcceleration[d].end(),
-            GpuScalar{0});
-    }
-    thrust::fill(mMass.Data(), mMass.Data() + mMass.Size(), GpuScalar{1e3});
+    mPositionsAtT = X.x;
+    mVelocitiesAtT.SetConstant(GpuScalar(0));
+    mVelocities.SetConstant(GpuScalar(0));
+    mExternalAcceleration.SetConstant(GpuScalar(0));
+    mMass.SetConstant(GpuScalar(1e3));
 }
 
 void VbdImpl::Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps, GpuScalar rho)
@@ -229,101 +224,37 @@ void VbdImpl::Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps, GpuScal
 
 void VbdImpl::SetPositions(Eigen::Ref<GpuMatrixX const> const& Xin)
 {
-    auto const nVertices = static_cast<GpuIndex>(X.x.Size());
-    if (Xin.rows() != 3 and Xin.cols() != nVertices)
-    {
-        std::ostringstream ss{};
-        ss << "Expected positions of dimensions " << X.x.Dimensions() << "x" << X.x.Size()
-           << ", but got " << Xin.rows() << "x" << Xin.cols() << "\n";
-        throw std::invalid_argument(ss.str());
-    }
-    for (auto d = 0; d < X.x.Dimensions(); ++d)
-    {
-        thrust::copy(Xin.row(d).begin(), Xin.row(d).end(), X.x[d].begin());
-    }
+    common::ToBuffer(Xin, X.x);
 }
 
 void VbdImpl::SetVelocities(Eigen::Ref<GpuMatrixX const> const& v)
 {
-    auto const nVertices = static_cast<GpuIndex>(mVelocities.Size());
-    if (v.rows() != 3 and v.cols() != nVertices)
-    {
-        std::ostringstream ss{};
-        ss << "Expected velocities of dimensions " << mVelocities.Dimensions() << "x"
-           << mVelocities.Size() << ", but got " << v.rows() << "x" << v.cols() << "\n";
-        throw std::invalid_argument(ss.str());
-    }
-    for (auto d = 0; d < mVelocities.Dimensions(); ++d)
-    {
-        thrust::copy(v.row(d).begin(), v.row(d).end(), mVelocities[d].begin());
-    }
+    common::ToBuffer(v, mVelocities);
 }
 
 void VbdImpl::SetExternalAcceleration(Eigen::Ref<GpuMatrixX const> const& aext)
 {
-    auto const nVertices = static_cast<GpuIndex>(mExternalAcceleration.Size());
-    if (aext.rows() != 3 and aext.cols() != nVertices)
-    {
-        std::ostringstream ss{};
-        ss << "Expected accelerations of dimensions " << mExternalAcceleration.Dimensions() << "x"
-           << mExternalAcceleration.Size() << ", but got " << aext.rows() << "x" << aext.cols()
-           << "\n";
-        throw std::invalid_argument(ss.str());
-    }
-    for (auto d = 0; d < mExternalAcceleration.Dimensions(); ++d)
-        thrust::copy(aext.row(d).begin(), aext.row(d).end(), mExternalAcceleration[d].begin());
+    common::ToBuffer(aext, mExternalAcceleration);
 }
 
 void VbdImpl::SetMass(Eigen::Ref<GpuVectorX const> const& m)
 {
-    auto const nVertices = static_cast<GpuIndex>(mMass.Size());
-    if (m.size() != nVertices)
-    {
-        std::ostringstream ss{};
-        ss << "Expected masses of dimensions " << nVertices << "x1 or its transpose, but got "
-           << m.size() << "\n";
-        throw std::invalid_argument(ss.str());
-    }
-    thrust::copy(m.data(), m.data() + m.size(), mMass.Data());
+    common::ToBuffer(m, mMass);
 }
 
 void VbdImpl::SetQuadratureWeights(Eigen::Ref<GpuVectorX const> const& wg)
 {
-    auto const nTetrahedra = static_cast<GpuIndex>(T.inds.Size());
-    if (wg.size() != nTetrahedra)
-    {
-        std::ostringstream ss{};
-        ss << "Expected quadrature weights of dimensions " << nTetrahedra
-           << "x1 or its transpose, but got " << wg.rows() << "x" << wg.cols() << "\n";
-        throw std::invalid_argument(ss.str());
-    }
-    thrust::copy(wg.data(), wg.data() + wg.size(), mQuadratureWeights.Data());
+    common::ToBuffer(wg, mQuadratureWeights);
 }
 
 void VbdImpl::SetShapeFunctionGradients(Eigen::Ref<GpuMatrixX const> const& GP)
 {
-    auto const nTetrahedra = static_cast<GpuIndex>(T.inds.Size());
-    if (GP.rows() != 4 and GP.cols() != nTetrahedra * 3)
-    {
-        std::ostringstream ss{};
-        ss << "Expected shape function gradients of dimensions 4x" << nTetrahedra * 3
-           << ", but got " << GP.rows() << "x" << GP.cols() << "\n";
-        throw std::invalid_argument(ss.str());
-    }
-    thrust::copy(GP.data(), GP.data() + GP.size(), mShapeFunctionGradients.Data());
+    common::ToBuffer(GP, mShapeFunctionGradients);
 }
 
 void VbdImpl::SetLameCoefficients(Eigen::Ref<GpuMatrixX const> const& l)
 {
-    auto const nTetrahedra = static_cast<GpuIndex>(T.inds.Size());
-    if (l.rows() != 2 and l.cols() != nTetrahedra)
-    {
-        std::ostringstream ss{};
-        ss << "Expected Lame coefficients of dimensions 2x" << nTetrahedra << ", but got "
-           << l.rows() << "x" << l.cols() << "\n";
-        throw std::invalid_argument(ss.str());
-    }
-    thrust::copy(l.data(), l.data() + l.size(), mLameCoefficients.Data());
+    common::ToBuffer(l, mLameCoefficients);
 }
 
 void VbdImpl::SetNumericalZeroForHessianDeterminant(GpuScalar zero)
@@ -336,13 +267,6 @@ void VbdImpl::SetVertexTetrahedronAdjacencyList(
     Eigen::Ref<GpuIndexVectorX const> const& GVTn,
     Eigen::Ref<GpuIndexVectorX const> const& GVTilocal)
 {
-    if (static_cast<std::size_t>(GVTp.size()) != mVertexTetrahedronPrefix.Size())
-    {
-        std::ostringstream ss{};
-        ss << "Expected vertex-tetrahedron adjacency graph's prefix array to have size="
-           << mVertexTetrahedronPrefix.Size() << ", but got " << GVTp.size() << "\n";
-        throw std::invalid_argument(ss.str());
-    }
     if (GVTn.size() != GVTilocal.size())
     {
         std::ostringstream ss{};
@@ -352,15 +276,11 @@ void VbdImpl::SetVertexTetrahedronAdjacencyList(
         throw std::invalid_argument(ss.str());
     }
 
+    common::ToBuffer(GVTp, mVertexTetrahedronPrefix);
     mVertexTetrahedronNeighbours.Resize(GVTn.size());
     mVertexTetrahedronLocalVertexIndices.Resize(GVTilocal.size());
-
-    thrust::copy(GVTp.data(), GVTp.data() + GVTp.size(), mVertexTetrahedronPrefix.Data());
-    thrust::copy(GVTn.data(), GVTn.data() + GVTn.size(), mVertexTetrahedronNeighbours.Data());
-    thrust::copy(
-        GVTilocal.data(),
-        GVTilocal.data() + GVTilocal.size(),
-        mVertexTetrahedronLocalVertexIndices.Data());
+    common::ToBuffer(GVTn, mVertexTetrahedronNeighbours);
+    common::ToBuffer(GVTilocal, mVertexTetrahedronLocalVertexIndices);
 }
 
 void VbdImpl::SetRayleighDampingCoefficient(GpuScalar kD)

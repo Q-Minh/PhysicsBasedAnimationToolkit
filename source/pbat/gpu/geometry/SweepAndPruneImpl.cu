@@ -45,8 +45,8 @@ void SweepAndPruneImpl::SortAndSweep(
     }
 
     // 0. Preprocess internal data
-    thrust::fill(mu.Data(), mu.Data() + mu.Size(), 0.f);
-    thrust::fill(sigma.Data(), sigma.Data() + sigma.Size(), 0.f);
+    mu.SetConstant(GpuScalar(0));
+    sigma.SetConstant(GpuScalar(0));
     overlaps.Clear();
     thrust::sequence(thrust::device, binds.Data(), binds.Data() + nBoxes);
 

@@ -4,7 +4,7 @@
 
 #include "BvhImpl.cuh"
 #include "BvhImplKernels.cuh"
-#include "pbat/common/Eigen.h"
+#include "pbat/gpu/common/Eigen.cuh"
 
 #include <exception>
 #include <string>
@@ -30,7 +30,7 @@ BvhImpl::BvhImpl(std::size_t nPrimitives, std::size_t nOverlaps)
       visits(nPrimitives - 1),
       overlaps(nOverlaps)
 {
-    thrust::fill(thrust::device, parent.Data(), parent.Data() + parent.Size(), GpuIndex{-1});
+    parent.SetConstant(GpuIndex(-1));
 }
 
 void BvhImpl::Build(
@@ -50,7 +50,7 @@ void BvhImpl::Build(
     }
 
     // 0. Reset intermediate data
-    thrust::fill(thrust::device, visits.Raw(), visits.Raw() + visits.Size(), GpuIndex{0});
+    visits.SetConstant(GpuIndex(0));
 
     // 1. Construct leaf node (i.e. simplex) bounding boxes
     auto const leafBegin        = n - 1;
@@ -155,50 +155,42 @@ std::size_t BvhImpl::NumberOfAllocatedBoxes() const
 
 Eigen::Matrix<GpuScalar, Eigen::Dynamic, Eigen::Dynamic> BvhImpl::Min() const
 {
-    using pbat::common::ToEigen;
-    return ToEigen(b.Get()).reshaped(b.Size(), b.Dimensions());
+    return common::ToEigen(b);
 }
 
 Eigen::Matrix<GpuScalar, Eigen::Dynamic, Eigen::Dynamic> BvhImpl::Max() const
 {
-    using pbat::common::ToEigen;
-    return ToEigen(e.Get()).reshaped(e.Size(), e.Dimensions());
+    return common::ToEigen(e);
 }
 
 Eigen::Vector<GpuIndex, Eigen::Dynamic> BvhImpl::SimplexOrdering() const
 {
-    using pbat::common::ToEigen;
-    return ToEigen(simplex.Get());
+    return common::ToEigen(simplex);
 }
 
 Eigen::Vector<typename BvhImpl::MortonCodeType, Eigen::Dynamic> BvhImpl::MortonCodes() const
 {
-    using pbat::common::ToEigen;
-    return ToEigen(morton.Get());
+    return common::ToEigen(morton);
 }
 
 Eigen::Matrix<GpuIndex, Eigen::Dynamic, 2> BvhImpl::Child() const
 {
-    using pbat::common::ToEigen;
-    return ToEigen(child.Get()).reshaped(child.Size(), child.Dimensions());
+    return common::ToEigen(child);
 }
 
 Eigen::Vector<GpuIndex, Eigen::Dynamic> BvhImpl::Parent() const
 {
-    using pbat::common::ToEigen;
-    return ToEigen(parent.Get());
+    return common::ToEigen(parent);
 }
 
 Eigen::Matrix<GpuIndex, Eigen::Dynamic, 2> BvhImpl::Rightmost() const
 {
-    using pbat::common::ToEigen;
-    return ToEigen(rightmost.Get()).reshaped(rightmost.Size(), rightmost.Dimensions());
+    return common::ToEigen(rightmost);
 }
 
 Eigen::Vector<GpuIndex, Eigen::Dynamic> BvhImpl::Visits() const
 {
-    using pbat::common::ToEigen;
-    return ToEigen(visits.Get());
+    return common::ToEigen(visits);
 }
 
 } // namespace geometry

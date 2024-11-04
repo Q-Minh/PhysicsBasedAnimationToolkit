@@ -4,7 +4,7 @@
 
 #include "Vbd.h"
 #include "VbdImpl.cuh"
-#include "pbat/common/Eigen.h"
+#include "pbat/gpu/common/Eigen.cuh"
 
 namespace pbat {
 namespace gpu {
@@ -114,17 +114,12 @@ void Vbd::SetBlockSize(GpuIndex blockSize)
 
 GpuMatrixX Vbd::GetPositions() const
 {
-    using pbat::common::ToEigen;
-    return ToEigen(mImpl->X.x.Get())
-        .reshaped(mImpl->X.x.Size(), mImpl->X.x.Dimensions())
-        .transpose();
+    return common::ToEigen(mImpl->X.x);
 }
 
 GpuMatrixX Vbd::GetVelocities() const
 {
-    using pbat::common::ToEigen;
-    auto const& velocity = mImpl->GetVelocity();
-    return ToEigen(velocity.Get()).reshaped(velocity.Size(), velocity.Dimensions()).transpose();
+    return common::ToEigen(mImpl->GetVelocity());
 }
 
 } // namespace vbd

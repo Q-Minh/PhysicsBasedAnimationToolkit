@@ -5,6 +5,7 @@
 #include "Xpbd.h"
 #include "XpbdImpl.cuh"
 #include "pbat/gpu/common/Buffer.cuh"
+#include "pbat/gpu/common/Eigen.cuh"
 
 #include <thrust/copy.h>
 
@@ -59,12 +60,7 @@ void Xpbd::Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps)
 
 GpuMatrixX Xpbd::Positions() const
 {
-    GpuMatrixX X(mImpl->X.Dimensions(), mImpl->X.NumberOfPoints());
-    for (auto d = 0; d < X.rows(); ++d)
-    {
-        thrust::copy(mImpl->X.x[d].begin(), mImpl->X.x[d].end(), X.row(d).begin());
-    }
-    return X;
+    return common::ToEigen(mImpl->X.x);
 }
 
 std::size_t Xpbd::NumberOfParticles() const
@@ -126,92 +122,56 @@ void Xpbd::SetSceneBoundingBox(
 
 GpuMatrixX Xpbd::GetVelocity() const
 {
-    auto const& vGpu = mImpl->GetVelocity();
-    GpuMatrixX v(vGpu.Dimensions(), vGpu.Size());
-    for (auto d = 0; d < vGpu.Dimensions(); ++d)
-    {
-        thrust::copy(vGpu[d].begin(), vGpu[d].end(), v.row(d).begin());
-    }
-    return v;
+    return common::ToEigen(mImpl->GetVelocity());
 }
 
 GpuMatrixX Xpbd::GetExternalForce() const
 {
-    auto const& fGpu = mImpl->GetExternalForce();
-    GpuMatrixX f(fGpu.Dimensions(), fGpu.Size());
-    for (auto d = 0; d < fGpu.Dimensions(); ++d)
-    {
-        thrust::copy(fGpu[d].begin(), fGpu[d].end(), f.row(d).begin());
-    }
-    return f;
+    return common::ToEigen(mImpl->GetExternalForce());
 }
 
 GpuVectorX Xpbd::GetMassInverse() const
 {
-    auto const& minvGpu = mImpl->GetMassInverse();
-    GpuVectorX minv(minvGpu.Size());
-    thrust::copy(minvGpu.Data(), minvGpu.Data() + minvGpu.Size(), minv.begin());
-    return minv;
+    return common::ToEigen(mImpl->GetMassInverse());
 }
 
 GpuMatrixX Xpbd::GetLameCoefficients() const
 {
-    auto const& lameGpu = mImpl->GetLameCoefficients();
-    GpuMatrixX lame(2, lameGpu.Size() / 2);
-    thrust::copy(lameGpu.Data(), lameGpu.Data() + lameGpu.Size(), lame.data());
-    return lame;
+    auto lame = common::ToEigen(mImpl->GetLameCoefficients());
+    return lame.reshaped(2, lame.size() / 2);
 }
 
 GpuMatrixX Xpbd::GetShapeMatrixInverse() const
 {
-    auto const& DmInvGpu = mImpl->GetShapeMatrixInverse();
-    GpuMatrixX DmInv(3, DmInvGpu.Size() / 3);
-    thrust::copy(DmInvGpu.Data(), DmInvGpu.Data() + DmInvGpu.Size(), DmInv.data());
-    return DmInv;
+    auto DmInv = common::ToEigen(mImpl->GetShapeMatrixInverse());
+    return DmInv.reshaped(3, DmInv.size() / 3);
 }
 
 GpuMatrixX Xpbd::GetRestStableGamma() const
 {
-    auto const& gammaGpu = mImpl->GetRestStableGamma();
-    GpuMatrixX gamma(2, gammaGpu.Size() / 2);
-    thrust::copy(gammaGpu.Data(), gammaGpu.Data() + gammaGpu.Size(), gamma.data());
-    return gamma;
+    auto gamma = common::ToEigen(mImpl->GetRestStableGamma());
+    return gamma.reshaped(2, gamma.size() / 2);
 }
 
 GpuMatrixX Xpbd::GetLagrangeMultiplier(EConstraint eConstraint) const
 {
-    auto const& lambdaGpu =
-        mImpl->GetLagrangeMultiplier(static_cast<XpbdImpl::EConstraint>(eConstraint));
-    GpuMatrixX lambda{};
+    auto lambda = common::ToEigen(
+        mImpl->GetLagrangeMultiplier(static_cast<XpbdImpl::EConstraint>(eConstraint)));
     if (eConstraint == EConstraint::StableNeoHookean)
     {
-        lambda.resize(2, lambdaGpu.Size() / 2);
+        lambda.resize(2, lambda.size() / 2);
     }
-    if (eConstraint == EConstraint::Collision)
-    {
-        lambda.resize(1, lambdaGpu.Size());
-    }
-    thrust::copy(lambdaGpu.Data(), lambdaGpu.Data() + lambdaGpu.Size(), lambda.data());
     return lambda;
 }
 
 GpuMatrixX Xpbd::GetCompliance(EConstraint eConstraint) const
 {
-    auto const& complianceGpu =
-        mImpl->GetCompliance(static_cast<XpbdImpl::EConstraint>(eConstraint));
-    GpuMatrixX compliance{};
+    auto compliance =
+        common::ToEigen(mImpl->GetCompliance(static_cast<XpbdImpl::EConstraint>(eConstraint)));
     if (eConstraint == EConstraint::StableNeoHookean)
     {
-        compliance.resize(2, complianceGpu.Size() / 2);
+        compliance.resize(2, compliance.size() / 2);
     }
-    if (eConstraint == EConstraint::Collision)
-    {
-        compliance.resize(1, complianceGpu.Size());
-    }
-    thrust::copy(
-        complianceGpu.Data(),
-        complianceGpu.Data() + complianceGpu.Size(),
-        compliance.data());
     return compliance;
 }
 
