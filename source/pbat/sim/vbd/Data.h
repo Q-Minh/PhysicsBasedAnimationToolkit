@@ -30,10 +30,7 @@ PBAT_API struct Data
         Eigen::Ref<IndexVectorX const> const& GVGe,
         Eigen::Ref<IndexVectorX const> const& GVGilocal);
     Data& WithPartitions(std::vector<std::vector<Index>> const& partitions);
-    Data& WithDirichletConstrainedVertices(
-        IndexVectorX const& dbc,
-        bool bDbcSorted        = true,
-        bool bPartitionsSorted = false);
+    Data& WithDirichletConstrainedVertices(IndexVectorX const& dbc, bool bDbcSorted = true);
     Data& WithInitializationStrategy(EInitializationStrategy strategy);
     Data& WithRayleighDamping(Scalar kD);
     Data& WithCollisionPenalty(Scalar kC);

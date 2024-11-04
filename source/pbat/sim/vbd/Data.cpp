@@ -77,30 +77,12 @@ Data& Data::WithPartitions(std::vector<std::vector<Index>> const& partitionsIn)
     return *this;
 }
 
-Data& Data::WithDirichletConstrainedVertices(
-    IndexVectorX const& dbcIn,
-    bool bDbcSorted,
-    bool bPartitionsSorted)
+Data& Data::WithDirichletConstrainedVertices(IndexVectorX const& dbcIn, bool bDbcSorted)
 {
     this->dbc = dbcIn;
     if (not bDbcSorted)
     {
         std::sort(this->dbc.begin(), this->dbc.end());
-    }
-    for (auto& partition : partitions)
-    {
-        std::vector<Index> freePartition = partition;
-        if (not bPartitionsSorted)
-        {
-            std::sort(partition.begin(), partition.end());
-        }
-        std::set_difference(
-            partition.begin(),
-            partition.end(),
-            this->dbc.begin(),
-            this->dbc.end(),
-            freePartition.begin());
-        std::swap(partition, freePartition);
     }
     return *this;
 }
@@ -131,7 +113,6 @@ Data& Data::WithHessianDeterminantZeroUnder(Scalar zero)
 
 Data& Data::Construct(bool bValidate)
 {
-    // clang-format off
     if (xt.size() == 0)
     {
         xt = x;
@@ -160,8 +141,25 @@ Data& Data::Construct(bool bValidate)
         lame.row(0).setConstant(mu);
         lame.row(1).setConstant(lambda);
     }
+    // Constrained vertices must not move
+    v(Eigen::all, dbc).setZero();
+    aext(Eigen::all, dbc).setZero();
+    for (auto& partition : partitions)
+    {
+        std::vector<Index> freePartition = partition;
+        std::sort(partition.begin(), partition.end());
+        std::set_difference(
+            partition.begin(),
+            partition.end(),
+            this->dbc.begin(),
+            this->dbc.end(),
+            freePartition.begin());
+        std::swap(partition, freePartition);
+    }
+    
     if (bValidate)
     {
+        // clang-format off
         bool const bPerVertexQuantityDimensionsValid = 
             x.cols() == xt.cols() and
             x.cols() == v.cols() and
