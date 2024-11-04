@@ -1,5 +1,7 @@
 #include "Data.h"
 
+#include "pbat/physics/HyperElasticity.h"
+
 #include <algorithm>
 #include <exception>
 #include <fmt/format.h>
@@ -131,13 +133,33 @@ Data& Data::Construct(bool bValidate)
 {
     // clang-format off
     if (xt.size() == 0)
+    {
         xt = x;
+    }
     if (v.size() == 0)
+    {
         v.setZero(x.rows(), x.cols());
+    }
+    if (m.size() == 0)
+    {
+        m.setConstant(x.cols(), Scalar(1e3));
+    }
+    if (aext.size() == 0)
+    {
+        aext.resizeLike(x);
+        aext.colwise() = Vector<3>{Scalar(0), Scalar(0), Scalar(-9.81)};
+    }
     xtilde.resizeLike(x);
     xchebm2.resizeLike(x);
     xchebm1.resizeLike(x);
     vt.resizeLike(x);
+    if (lame.size() == 0)
+    {
+        auto const [mu, lambda] = physics::LameCoefficients(Scalar(1e6), Scalar(0.45));
+        lame.resize(2, T.cols());
+        lame.row(0).setConstant(mu);
+        lame.row(1).setConstant(lambda);
+    }
     if (bValidate)
     {
         bool const bPerVertexQuantityDimensionsValid = 
