@@ -2,8 +2,8 @@
 #include "pbat/gpu/DisableWarnings.h"
 // clang-format on
 
-#include "VbdImpl.cuh"
 #include "Kernels.cuh"
+#include "VbdImpl.cuh"
 #include "pbat/gpu/common/Cuda.cuh"
 #include "pbat/math/linalg/mini/Mini.h"
 #include "pbat/sim/vbd/Kernels.h"
@@ -216,7 +216,7 @@ void VbdImpl::Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps, GpuScal
             thrust::device.on(mStream.handle()),
             thrust::make_counting_iterator<GpuIndex>(0),
             thrust::make_counting_iterator<GpuIndex>(nVertices),
-            [xt = mPositionsAtT.Raw(), x = X.x.Raw(), v = mVelocities.Raw(), dt = dt] PBAT_DEVICE(
+            [xt = mPositionsAtT.Raw(), x = X.x.Raw(), v = mVelocities.Raw(), dt = sdt] PBAT_DEVICE(
                 auto i) {
                 using pbat::sim::vbd::kernels::IntegrateVelocity;
                 auto vtp1 =
