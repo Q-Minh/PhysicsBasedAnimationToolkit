@@ -1,7 +1,7 @@
 #include "Vbd.h"
 
 #include <pbat/gpu/Aliases.h>
-#include <pbat/gpu/vbd/InitializationStrategy.h>
+#include <pbat/sim/vbd/Enums.h>
 #include <pbat/gpu/vbd/Vbd.h>
 #include <pbat/profiling/Profiling.h>
 #include <pybind11/eigen.h>
@@ -19,7 +19,7 @@ void Bind([[maybe_unused]] pybind11::module& m)
 #ifdef PBAT_USE_CUDA
 
     using namespace pbat;
-    using pbat::gpu::vbd::EInitializationStrategy;
+    using pbat::sim::vbd::EInitializationStrategy;
     using pbat::gpu::vbd::Vbd;
 
     pyb::enum_<EInitializationStrategy>(m, "InitializationStrategy")

@@ -113,6 +113,7 @@ void Integrator::Step(Scalar dt, Index iterations, Index substeps, Scalar rho)
             }
         }
         // Update velocity
+        data.vt = data.v;
         tbb::parallel_for(IndexType(0), nVertices, [&](auto i) {
             kernels::IntegrateVelocity(
                 FromEigen(data.xt.col(i).head<3>()),

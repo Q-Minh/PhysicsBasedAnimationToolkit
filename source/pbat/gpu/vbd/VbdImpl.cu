@@ -3,8 +3,10 @@
 // clang-format on
 
 #include "VbdImpl.cuh"
-#include "VbdImplKernels.cuh"
+#include "Kernels.cuh"
 #include "pbat/gpu/common/Cuda.cuh"
+#include "pbat/math/linalg/mini/Mini.h"
+#include "pbat/sim/vbd/Kernels.h"
 
 #include <cuda/api.hpp>
 // #include <thrust/async/copy.h>
@@ -25,7 +27,7 @@ VbdImpl::VbdImpl(
       F(Fin),
       T(Tin),
       mPositionsAtT(Xin.cols()),
-      mKineticEnergyMinimalPositions(Xin.cols()),
+      mInertialTargetPositions(Xin.cols()),
       mChebyshevPositionsM2(Xin.cols()),
       mChebyshevPositionsM1(Xin.cols()),
       mVelocitiesAtT(Xin.cols()),
@@ -74,7 +76,7 @@ void VbdImpl::Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps, GpuScal
     bdf.dt                              = sdt;
     bdf.dt2                             = sdt2;
     bdf.m                               = mMass.Raw();
-    bdf.xtilde                          = mKineticEnergyMinimalPositions.Raw();
+    bdf.xtilde                          = mInertialTargetPositions.Raw();
     bdf.xt                              = mPositionsAtT.Raw();
     bdf.x                               = X.x.Raw();
     bdf.T                               = T.inds.Raw();
@@ -98,6 +100,7 @@ void VbdImpl::Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps, GpuScal
     mStream.device().make_current();
     for (auto s = 0; s < substeps; ++s)
     {
+        using namespace pbat::math::linalg::mini;
         // Store previous positions
         for (auto d = 0; d < X.x.Dimensions(); ++d)
         {
@@ -113,40 +116,56 @@ void VbdImpl::Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps, GpuScal
             thrust::device.on(mStream.handle()),
             thrust::make_counting_iterator<GpuIndex>(0),
             thrust::make_counting_iterator<GpuIndex>(nVertices),
-            kernels::FKineticEnergyMinimum{
-                sdt,
-                sdt2,
-                X.x.Raw(),
-                mVelocities.Raw(),
-                mExternalAcceleration.Raw(),
-                mKineticEnergyMinimalPositions.Raw()});
+            [xt     = mPositionsAtT.Raw(),
+             vt     = mVelocities.Raw(),
+             aext   = mExternalAcceleration.Raw(),
+             xtilde = mInertialTargetPositions.Raw(),
+             dt     = sdt,
+             dt2    = sdt2] PBAT_DEVICE(auto i) {
+                using pbat::sim::vbd::kernels::InertialTarget;
+                auto y = InertialTarget(
+                    FromBuffers<3, 1>(xt, i),
+                    FromBuffers<3, 1>(vt, i),
+                    FromBuffers<3, 1>(aext, i),
+                    dt,
+                    dt2);
+                ToBuffers(y, xtilde, i);
+            });
         // Initialize block coordinate descent's, i.e. BCD's, solution
         e = thrust::async::for_each(
             thrust::device.on(mStream.handle()),
             thrust::make_counting_iterator<GpuIndex>(0),
             thrust::make_counting_iterator<GpuIndex>(nVertices),
-            kernels::FAdaptiveInitialization{
-                sdt,
-                sdt2,
-                mPositionsAtT.Raw(),
-                mVelocitiesAtT.Raw(),
-                mVelocities.Raw(),
-                mExternalAcceleration.Raw(),
-                X.x.Raw(),
-                mInitializationStrategy});
+            [xt       = mPositionsAtT.Raw(),
+             vtm1     = mVelocitiesAtT.Raw(),
+             vt       = mVelocities.Raw(),
+             aext     = mExternalAcceleration.Raw(),
+             x        = X.x.Raw(),
+             dt       = sdt,
+             dt2      = sdt2,
+             strategy = mInitializationStrategy] PBAT_DEVICE(auto i) {
+                using pbat::sim::vbd::kernels::InitialPositionsForSolve;
+                auto x0 = InitialPositionsForSolve(
+                    FromBuffers<3, 1>(xt, i),
+                    FromBuffers<3, 1>(vtm1, i),
+                    FromBuffers<3, 1>(vt, i),
+                    FromBuffers<3, 1>(aext, i),
+                    dt,
+                    dt2,
+                    strategy);
+                ToBuffers(x0, x, i);
+            });
         // Initialize Chebyshev semi-iterative method
-        kernels::FChebyshev fChebyshev{
-            rho,
-            mChebyshevPositionsM2.Raw(),
-            mChebyshevPositionsM1.Raw(),
-            X.x.Raw()};
+        GpuScalar rho2 = rho * rho;
+        GpuScalar omega{};
         auto kDynamicSharedMemoryCapacity = static_cast<cuda::memory::shared::size_t>(
             mGpuThreadBlockSize * bdf.ExpectedSharedMemoryPerThreadInBytes());
         // Minimize Backward Euler, i.e. BDF1, objective
         for (auto k = 0; k < iterations; ++k)
         {
+            using pbat::sim::vbd::kernels::ChebyshevOmega;
             if (bUseChebyshevAcceleration)
-                fChebyshev.SetIteration(k);
+                omega = ChebyshevOmega(k, rho2, omega);
 
             for (auto& partition : mPartitions)
             {
@@ -171,7 +190,17 @@ void VbdImpl::Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps, GpuScal
                     thrust::device.on(mStream.handle()),
                     thrust::make_counting_iterator<GpuIndex>(0),
                     thrust::make_counting_iterator<GpuIndex>(nVertices),
-                    fChebyshev);
+                    [k     = k,
+                     omega = omega,
+                     xkm2  = mChebyshevPositionsM2.Raw(),
+                     xkm1  = mChebyshevPositionsM1.Raw(),
+                     xk    = X.x.Raw()] PBAT_DEVICE(auto i) {
+                        using pbat::sim::vbd::kernels::ChebyshevUpdate;
+                        auto xkm2i = FromBuffers<3, 1>(xkm2, i);
+                        auto xkm1i = FromBuffers<3, 1>(xkm1, i);
+                        auto xki   = FromBuffers<3, 1>(xk, i);
+                        ChebyshevUpdate(k, omega, xkm2i, xkm1i, xki);
+                    });
             }
         }
         // Update velocities
@@ -187,7 +216,13 @@ void VbdImpl::Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps, GpuScal
             thrust::device.on(mStream.handle()),
             thrust::make_counting_iterator<GpuIndex>(0),
             thrust::make_counting_iterator<GpuIndex>(nVertices),
-            kernels::FUpdateVelocity{sdt, mPositionsAtT.Raw(), X.x.Raw(), mVelocities.Raw()});
+            [xt = mPositionsAtT.Raw(), x = X.x.Raw(), v = mVelocities.Raw(), dt = dt] PBAT_DEVICE(
+                auto i) {
+                using pbat::sim::vbd::kernels::IntegrateVelocity;
+                auto vtp1 =
+                    IntegrateVelocity(FromBuffers<3, 1>(xt, i), FromBuffers<3, 1>(x, i), dt);
+                ToBuffers(vtp1, v, i);
+            });
     }
     mStream.synchronize();
 }
@@ -395,7 +430,7 @@ std::vector<common::Buffer<GpuIndex>> const& VbdImpl::GetPartitions() const
 #include <span>
 #include <vector>
 
-TEST_CASE("[gpu][xpbd] Xpbd")
+TEST_CASE("[gpu][vbd] Vbd")
 {
     using pbat::GpuIndex;
     using pbat::GpuIndexMatrixX;

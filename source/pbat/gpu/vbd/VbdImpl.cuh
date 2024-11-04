@@ -4,7 +4,7 @@
 #include "pbat/gpu/Aliases.h"
 #include "pbat/gpu/common/Buffer.cuh"
 #include "pbat/gpu/geometry/PrimitivesImpl.cuh"
-#include "pbat/gpu/vbd/InitializationStrategy.h"
+#include "pbat/sim/vbd/Enums.h"
 
 #include <cuda/api/stream.hpp>
 #include <vector>
@@ -16,6 +16,8 @@ namespace vbd {
 class VbdImpl
 {
   public:
+    using EInitializationStrategy = pbat::sim::vbd::EInitializationStrategy;
+
     VbdImpl(
         Eigen::Ref<GpuMatrixX const> const& X,
         Eigen::Ref<GpuIndexMatrixX const> const& V,
@@ -143,7 +145,7 @@ class VbdImpl
     geometry::SimplicesImpl T; ///< Tetrahedral mesh elements
   private:
     common::Buffer<GpuScalar, 3> mPositionsAtT;            ///< Previous vertex positions
-    common::Buffer<GpuScalar, 3> mKineticEnergyMinimalPositions; ///< Inertial target for vertex positions
+    common::Buffer<GpuScalar, 3> mInertialTargetPositions; ///< Inertial target for vertex positions
     common::Buffer<GpuScalar, 3>
         mChebyshevPositionsM2; ///< x^{k-2} used in Chebyshev semi-iterative method
     common::Buffer<GpuScalar, 3>

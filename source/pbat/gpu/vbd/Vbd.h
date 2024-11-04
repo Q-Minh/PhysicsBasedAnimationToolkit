@@ -3,7 +3,7 @@
 
 #include "PhysicsBasedAnimationToolkitExport.h"
 #include "pbat/gpu/Aliases.h"
-#include "pbat/gpu/vbd/InitializationStrategy.h"
+#include "pbat/sim/vbd/Enums.h"
 
 namespace pbat {
 namespace gpu {
@@ -14,7 +14,10 @@ class VbdImpl;
 class Vbd
 {
   public:
-    PBAT_API Vbd(Eigen::Ref<GpuMatrixX const> const& X,
+    using EInitializationStrategy = pbat::sim::vbd::EInitializationStrategy;
+
+    PBAT_API
+    Vbd(Eigen::Ref<GpuMatrixX const> const& X,
         Eigen::Ref<GpuIndexMatrixX const> const& V,
         Eigen::Ref<GpuIndexMatrixX const> const& F,
         Eigen::Ref<GpuIndexMatrixX const> const& T);
