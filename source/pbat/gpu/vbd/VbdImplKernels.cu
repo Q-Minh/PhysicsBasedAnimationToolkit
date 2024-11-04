@@ -71,7 +71,7 @@ __global__ void MinimizeBackwardEuler(BackwardEulerMinimization BDF)
     if (abs(Determinant(Hi)) <= BDF.detHZero) // Skip nearly rank-deficient hessian
         return;
 
-    xi = xi - (Inverse(Hi) * gi);
+    xi -= (Inverse(Hi) * gi);
 
     // 4. Commit vertex descent step
     ToBuffers(xi, BDF.x, i);
