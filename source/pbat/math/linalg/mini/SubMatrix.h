@@ -26,8 +26,7 @@ class ConstSubMatrix
     static auto constexpr kCols     = N;
     static bool constexpr bRowMajor = NestedType::bRowMajor;
 
-    PBAT_HOST_DEVICE ConstSubMatrix(NestedType const& A, auto ib = 0, auto jb = 0)
-        : A(A), ib(ib), jb(jb)
+    PBAT_HOST_DEVICE ConstSubMatrix(NestedType const& A, int ib, int jb) : A(A), ib(ib), jb(jb)
     {
         static_assert(
             NestedType::kRows >= M and NestedType::kCols >= N and M > 0 and N > 0,
@@ -78,7 +77,7 @@ class SubMatrix
     static auto constexpr kCols     = N;
     static bool constexpr bRowMajor = NestedType::bRowMajor;
 
-    PBAT_HOST_DEVICE SubMatrix(NestedType& A, auto ib = 0, auto jb = 0) : A(A), ib(ib), jb(jb)
+    PBAT_HOST_DEVICE SubMatrix(NestedType& A, int ib, int jb) : A(A), ib(ib), jb(jb)
     {
         static_assert(
             NestedType::kRows >= M and NestedType::kCols >= N and M > 0 and N > 0,
@@ -132,30 +131,30 @@ class SubMatrix
 
 #define PBAT_MINI_SUBMATRIX_API(SelfType)              \
     template <auto S, auto T>                          \
-    PBAT_HOST_DEVICE auto Slice(auto i, auto j)        \
+    PBAT_HOST_DEVICE auto Slice(int i, int j)          \
     {                                                  \
         return SubMatrix<SelfType, S, T>(*this, i, j); \
     }                                                  \
-    PBAT_HOST_DEVICE auto Col(auto j)                  \
+    PBAT_HOST_DEVICE auto Col(int j)                   \
     {                                                  \
         return Slice<kRows, 1>(0, j);                  \
     }                                                  \
-    PBAT_HOST_DEVICE auto Row(auto i)                  \
+    PBAT_HOST_DEVICE auto Row(int i)                   \
     {                                                  \
         return Slice<1, kCols>(i, 0);                  \
     }
 
 #define PBAT_MINI_CONST_SUBMATRIX_API(SelfType)             \
     template <auto S, auto T>                               \
-    PBAT_HOST_DEVICE auto Slice(auto i, auto j) const       \
+    PBAT_HOST_DEVICE auto Slice(int i, int j) const         \
     {                                                       \
         return ConstSubMatrix<SelfType, S, T>(*this, i, j); \
     }                                                       \
-    PBAT_HOST_DEVICE auto Col(auto j) const                 \
+    PBAT_HOST_DEVICE auto Col(int j) const                  \
     {                                                       \
         return Slice<kRows, 1>(0, j);                       \
     }                                                       \
-    PBAT_HOST_DEVICE auto Row(auto i) const                 \
+    PBAT_HOST_DEVICE auto Row(int i) const                  \
     {                                                       \
         return Slice<1, kCols>(i, 0);                       \
     }

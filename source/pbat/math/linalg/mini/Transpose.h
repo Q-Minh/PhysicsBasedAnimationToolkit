@@ -38,7 +38,7 @@ class ConstTransposeSubMatrix
     static auto constexpr kCols     = N;
     static bool constexpr bRowMajor = NestedType::bRowMajor;
 
-    PBAT_HOST_DEVICE ConstTransposeSubMatrix(NestedType const& A, auto ib = 0, auto jb = 0)
+    PBAT_HOST_DEVICE ConstTransposeSubMatrix(NestedType const& A, int ib = 0, int jb = 0)
         : A(A), ib(ib), jb(jb)
     {
         static_assert(
@@ -56,12 +56,12 @@ class ConstTransposeSubMatrix
     PBAT_HOST_DEVICE ScalarType operator[](auto i) const { return (*this)(i); }
 
     template <auto S, auto T>
-    PBAT_HOST_DEVICE auto Slice(auto i, auto j) const
+    PBAT_HOST_DEVICE auto Slice(int i, int j) const
     {
         return ConstTransposeSubMatrix<SelfType, S, T>(*this, i, j);
     }
-    PBAT_HOST_DEVICE auto Col(auto j) const { return Slice<kRows, 1>(0, j); }
-    PBAT_HOST_DEVICE auto Row(auto i) const { return Slice<1, kCols>(i, 0); }
+    PBAT_HOST_DEVICE auto Col(int j) const { return Slice<kRows, 1>(0, j); }
+    PBAT_HOST_DEVICE auto Row(int i) const { return Slice<1, kCols>(i, 0); }
     PBAT_HOST_DEVICE auto Transpose() const { return ConstTransposeView<SelfType>(*this); }
 
   private:
@@ -81,7 +81,7 @@ class TransposeSubMatrix
     static auto constexpr kCols     = N;
     static bool constexpr bRowMajor = NestedType::bRowMajor;
 
-    PBAT_HOST_DEVICE TransposeSubMatrix(NestedType& A, auto ib = 0, auto jb = 0)
+    PBAT_HOST_DEVICE TransposeSubMatrix(NestedType& A, int ib = 0, int jb = 0)
         : A(A), ib(ib), jb(jb)
     {
         static_assert(
@@ -109,20 +109,20 @@ class TransposeSubMatrix
     PBAT_HOST_DEVICE ScalarType& operator[](auto i) { return (*this)(i); }
 
     template <auto S, auto T>
-    PBAT_HOST_DEVICE auto Slice(auto i, auto j)
+    PBAT_HOST_DEVICE auto Slice(int i, int j)
     {
         return TransposeSubMatrix<SelfType, S, T>(*this, i, j);
     }
-    PBAT_HOST_DEVICE auto Col(auto j) { return Slice<kRows, 1>(0, j); }
-    PBAT_HOST_DEVICE auto Row(auto i) { return Slice<1, kCols>(i, 0); }
+    PBAT_HOST_DEVICE auto Col(int j) { return Slice<kRows, 1>(0, j); }
+    PBAT_HOST_DEVICE auto Row(int i) { return Slice<1, kCols>(i, 0); }
 
     template <auto S, auto T>
-    PBAT_HOST_DEVICE auto Slice(auto i, auto j) const
+    PBAT_HOST_DEVICE auto Slice(int i, int j) const
     {
         return ConstTransposeSubMatrix<SelfType, S, T>(*this, i, j);
     }
-    PBAT_HOST_DEVICE auto Col(auto j) const { return Slice<kRows, 1>(0, j); }
-    PBAT_HOST_DEVICE auto Row(auto i) const { return Slice<1, kCols>(i, 0); }
+    PBAT_HOST_DEVICE auto Col(int j) const { return Slice<kRows, 1>(0, j); }
+    PBAT_HOST_DEVICE auto Row(int i) const { return Slice<1, kCols>(i, 0); }
 
     PBAT_HOST_DEVICE auto Transpose() { return TransposeView<SelfType>(*this); }
     PBAT_HOST_DEVICE auto Transpose() const { return ConstTransposeView<SelfType>(*this); }
