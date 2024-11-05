@@ -31,7 +31,7 @@ void Integrator::Step(Scalar dt, Index iterations, Index substeps, Scalar rho)
         // Store previous positions
         data.xt = data.x;
         // Compute inertial target positions
-        tbb::parallel_for(IndexType(0), nVertices, [&](auto i) {
+        tbb::parallel_for(IndexType(0), nVertices, [&](IndexType i) {
             auto xtilde = kernels::InertialTarget(
                 FromEigen(data.xt.col(i).head<3>()),
                 FromEigen(data.v.col(i).head<3>()),
@@ -41,7 +41,7 @@ void Integrator::Step(Scalar dt, Index iterations, Index substeps, Scalar rho)
             data.xtilde.col(i) = ToEigen(xtilde);
         });
         // Initialize block coordinate descent's, i.e. BCD's, solution
-        tbb::parallel_for(IndexType(0), nVertices, [&](auto i) {
+        tbb::parallel_for(IndexType(0), nVertices, [&](IndexType i) {
             auto x = kernels::InitialPositionsForSolve(
                 FromEigen(data.xt.col(i).head<3>()),
                 FromEigen(data.vt.col(i).head<3>()),
@@ -64,7 +64,7 @@ void Integrator::Step(Scalar dt, Index iterations, Index substeps, Scalar rho)
             for (auto const& partition : data.partitions)
             {
                 auto const nVerticesInPartition = static_cast<std::size_t>(partition.size());
-                tbb::parallel_for(std::size_t(0), nVerticesInPartition, [&](auto v) {
+                tbb::parallel_for(std::size_t(0), nVerticesInPartition, [&](IndexType v) {
                     auto i     = partition[v];
                     auto begin = data.GVGp[i];
                     auto end   = data.GVGp[i + 1];
@@ -104,7 +104,7 @@ void Integrator::Step(Scalar dt, Index iterations, Index substeps, Scalar rho)
 
             if (bUseChebyshevAcceleration)
             {
-                tbb::parallel_for(IndexType(0), nVertices, [&](auto i) {
+                tbb::parallel_for(IndexType(0), nVertices, [&](IndexType i) {
                     auto xkm2eig = data.xchebm2.col(i).head<3>();
                     auto xkm1eig = data.xchebm1.col(i).head<3>();
                     auto xkeig   = data.x.col(i).head<3>();
@@ -117,7 +117,7 @@ void Integrator::Step(Scalar dt, Index iterations, Index substeps, Scalar rho)
         }
         // Update velocity
         data.vt = data.v;
-        tbb::parallel_for(IndexType(0), nVertices, [&](auto i) {
+        tbb::parallel_for(IndexType(0), nVertices, [&](IndexType i) {
             auto v = kernels::IntegrateVelocity(
                 FromEigen(data.xt.col(i).head<3>()),
                 FromEigen(data.x.col(i).head<3>()),
