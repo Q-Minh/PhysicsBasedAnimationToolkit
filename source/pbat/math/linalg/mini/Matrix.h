@@ -235,8 +235,8 @@ PBAT_HOST_DEVICE auto Unit(auto i)
     return Identity<TScalar, M, M>().Col(i);
 }
 
-template <int M, int N, class TScalar, class IndexType = std::int64_t>
-PBAT_HOST_DEVICE auto FromFlatBuffer(TScalar* buf, IndexType bi)
+template <int M, int N, class TScalar>
+PBAT_HOST_DEVICE auto FromFlatBuffer(TScalar* buf, std::int64_t bi)
 {
     return SMatrixView<TScalar, M, N>(buf + M * N * bi);
 }
@@ -255,9 +255,9 @@ PBAT_HOST_DEVICE auto FromFlatBuffer(TScalar* buf, TIndexMatrix const& inds)
     return A;
 }
 
-template <CMatrix TMatrix, class IndexType = std::int64_t>
+template <CMatrix TMatrix>
 PBAT_HOST_DEVICE void
-ToFlatBuffer(TMatrix const& A, typename TMatrix::ScalarType* buf, IndexType bi)
+ToFlatBuffer(TMatrix const& A, typename TMatrix::ScalarType* buf, std::int64_t bi)
 {
     auto constexpr M              = TMatrix::kRows;
     auto constexpr N              = TMatrix::kCols;
@@ -290,8 +290,8 @@ ToFlatBuffer(TMatrix const& A, TIndexMatrix const& inds, typename TMatrix::Scala
     }
 }
 
-template <int M, int N, class TScalar, class IndexType = std::int64_t>
-PBAT_HOST_DEVICE auto FromBuffers(std::array<TScalar*, M> buf, IndexType bi)
+template <int M, int N, class TScalar>
+PBAT_HOST_DEVICE auto FromBuffers(std::array<TScalar*, M> buf, std::int64_t bi)
 {
     using ScalarType = std::remove_const_t<TScalar>;
     SMatrix<ScalarType, M, N> A{};
@@ -315,9 +315,9 @@ PBAT_HOST_DEVICE auto FromBuffers(std::array<TScalar*, K> buf, TIndexMatrix cons
     return A;
 }
 
-template <CMatrix TMatrix, int M, class IndexType = std::int64_t>
+template <CMatrix TMatrix, int M>
 PBAT_HOST_DEVICE void
-ToBuffers(TMatrix const& A, std::array<typename TMatrix::ScalarType*, M> buf, IndexType bi)
+ToBuffers(TMatrix const& A, std::array<typename TMatrix::ScalarType*, M> buf, std::int64_t bi)
 {
     static_assert(M == TMatrix::kRows, "A must have same rows as number of buffers");
     auto constexpr N = TMatrix::kCols;
