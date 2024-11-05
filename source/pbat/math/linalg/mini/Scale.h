@@ -14,7 +14,7 @@ namespace math {
 namespace linalg {
 namespace mini {
 
-template <CMatrix TMatrix>
+template <class /*CMatrix*/ TMatrix>
 class Scale
 {
   public:

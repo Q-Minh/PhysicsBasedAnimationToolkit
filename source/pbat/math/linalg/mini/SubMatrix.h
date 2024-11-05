@@ -14,7 +14,7 @@ namespace math {
 namespace linalg {
 namespace mini {
 
-template <CMatrix TMatrix, int M, int N>
+template <class /*CMatrix*/ TMatrix, int M, int N>
 class ConstSubMatrix
 {
   public:
@@ -66,7 +66,7 @@ class ConstSubMatrix
     int ib, jb;
 };
 
-template <CMatrix TMatrix, int M, int N>
+template <class /*CMatrix*/ TMatrix, int M, int N>
 class SubMatrix
 {
   public:

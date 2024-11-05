@@ -18,7 +18,7 @@ namespace math {
 namespace linalg {
 namespace mini {
 
-template <CMatrix TMatrix>
+template <class /*CMatrix*/ TMatrix>
 class Square
 {
   public:
@@ -44,7 +44,7 @@ class Square
     NestedType const& A;
 };
 
-template <CMatrix TLhsMatrix>
+template <class /*CMatrix*/ TLhsMatrix>
 class Reciprocal
 {
   public:
@@ -73,7 +73,7 @@ class Reciprocal
     LhsNestedType const& mA;
 };
 
-template <CMatrix TMatrix>
+template <class /*CMatrix*/ TMatrix>
 class Absolute
 {
   public:

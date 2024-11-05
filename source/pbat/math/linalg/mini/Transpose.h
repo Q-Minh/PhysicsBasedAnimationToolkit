@@ -13,10 +13,10 @@ namespace math {
 namespace linalg {
 namespace mini {
 
-template <CMatrix TMatrix>
+template <class /*CMatrix*/ TMatrix>
 class ConstTransposeView;
 
-template <CMatrix TMatrix>
+template <class /*CMatrix*/ TMatrix>
 class TransposeView;
 
 // NOTE:
@@ -26,7 +26,7 @@ class TransposeView;
 // the exact same implementation as SubMatrix (and its const version), specifically for
 // (Const)TransposeView.
 
-template <CMatrix TMatrix, int M, int N>
+template <class /*CMatrix*/ TMatrix, int M, int N>
 class ConstTransposeSubMatrix
 {
   public:
@@ -69,7 +69,7 @@ class ConstTransposeSubMatrix
     int ib, jb;
 };
 
-template <CMatrix TMatrix, int M, int N>
+template <class /*CMatrix*/ TMatrix, int M, int N>
 class TransposeSubMatrix
 {
   public:
@@ -134,7 +134,7 @@ class TransposeSubMatrix
     int ib, jb;
 };
 
-template <CMatrix TMatrix>
+template <class /*CMatrix*/ TMatrix>
 class TransposeView
 {
   public:
@@ -205,7 +205,7 @@ class TransposeView
     NestedType& A;
 };
 
-template <CMatrix TMatrix>
+template <class /*CMatrix*/ TMatrix>
 class ConstTransposeView
 {
   public:

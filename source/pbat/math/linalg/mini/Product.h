@@ -13,7 +13,7 @@ namespace math {
 namespace linalg {
 namespace mini {
 
-template <CMatrix TLhsMatrix, CMatrix TRhsMatrix>
+template <class /*CMatrix*/ TLhsMatrix, class /*CMatrix*/ TRhsMatrix>
 class Product
 {
   public:

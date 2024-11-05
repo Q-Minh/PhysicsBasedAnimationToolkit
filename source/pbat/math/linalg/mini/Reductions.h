@@ -14,7 +14,7 @@ namespace math {
 namespace linalg {
 namespace mini {
 
-template <CMatrix TMatrix>
+template <class /*CMatrix*/ TMatrix>
 class ConstDiagonal
 {
   public:
@@ -43,7 +43,7 @@ class ConstDiagonal
     NestedType const& mA;
 };
 
-template <CMatrix TMatrix>
+template <class /*CMatrix*/ TMatrix>
 class Diagonal
 {
   public:

@@ -12,8 +12,7 @@ namespace math {
 namespace linalg {
 namespace mini {
 
-
-template <CMatrix TMatrix, int RepeatRows, int RepeatCols>
+template <class /*CMatrix*/ TMatrix, int RepeatRows, int RepeatCols>
 class TiledView
 {
   public:

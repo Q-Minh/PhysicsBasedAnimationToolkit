@@ -13,7 +13,7 @@ namespace math {
 namespace linalg {
 namespace mini {
 
-template <CMatrix TLhsMatrix, CMatrix TRhsMatrix>
+template <class /*CMatrix*/ TLhsMatrix, class /*CMatrix*/ TRhsMatrix>
 class HorizontalStack
 {
   public:
@@ -50,7 +50,7 @@ class HorizontalStack
     RhsNestedType const& mRhs;
 };
 
-template <CMatrix TLhsMatrix, CMatrix TRhsMatrix>
+template <class /*CMatrix*/ TLhsMatrix, class /*CMatrix*/ TRhsMatrix>
 class VerticalStack
 {
   public:

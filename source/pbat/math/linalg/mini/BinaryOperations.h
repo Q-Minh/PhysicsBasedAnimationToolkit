@@ -16,7 +16,7 @@ namespace math {
 namespace linalg {
 namespace mini {
 
-template <CMatrix TLhsMatrix, CMatrix TRhsMatrix>
+template <class /*CMatrix*/ TLhsMatrix, class /*CMatrix*/ TRhsMatrix>
 class Sum
 {
   public:
@@ -51,7 +51,7 @@ class Sum
     RhsNestedType const& B;
 };
 
-template <CMatrix TLhsMatrix>
+template <class /*CMatrix*/ TLhsMatrix>
 class SumScalar
 {
   public:
@@ -79,7 +79,7 @@ class SumScalar
     ScalarType mK;
 };
 
-template <CMatrix TLhsMatrix, CMatrix TRhsMatrix>
+template <class /*CMatrix*/ TLhsMatrix, class /*CMatrix*/ TRhsMatrix>
 class Subtraction
 {
   public:
@@ -114,7 +114,7 @@ class Subtraction
     RhsNestedType const& B;
 };
 
-template <CMatrix TLhsMatrix>
+template <class /*CMatrix*/ TLhsMatrix>
 class SubtractionScalar
 {
   public:
@@ -141,7 +141,7 @@ class SubtractionScalar
     ScalarType mK;
 };
 
-template <CMatrix TLhsMatrix, CMatrix TRhsMatrix>
+template <class /*CMatrix*/ TLhsMatrix, class /*CMatrix*/ TRhsMatrix>
 class Minimum
 {
   public:
@@ -180,7 +180,7 @@ class Minimum
     RhsNestedType const& B;
 };
 
-template <CMatrix TLhsMatrix, CMatrix TRhsMatrix>
+template <class /*CMatrix*/ TLhsMatrix, class /*CMatrix*/ TRhsMatrix>
 class Maximum
 {
   public:
@@ -219,7 +219,7 @@ class Maximum
     RhsNestedType const& B;
 };
 
-template <CMatrix TMatrix, class Compare>
+template <class /*CMatrix*/ TMatrix, class Compare>
 class MatrixScalarPredicate
 {
   public:
@@ -254,7 +254,7 @@ class MatrixScalarPredicate
     CompareType mComparator;
 };
 
-template <CMatrix TLhsMatrix, CMatrix TRhsMatrix, class Compare>
+template <class /*CMatrix*/ TLhsMatrix, class /*CMatrix*/ TRhsMatrix, class Compare>
 class MatrixMatrixPredicate
 {
   public:
