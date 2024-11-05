@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.26)
-project(PhysicsBasedAnimationToolkit VERSION 0.0.8 LANGUAGES CXX)
+project(PhysicsBasedAnimationToolkit VERSION 0.0.9 LANGUAGES CXX)
 enable_testing()
 
 # Configuration options
