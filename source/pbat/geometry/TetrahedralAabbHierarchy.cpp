@@ -43,7 +43,7 @@ TetrahedralAabbHierarchy::PrimitiveType TetrahedralAabbHierarchy::Primitive(Inde
 Vector<TetrahedralAabbHierarchy::kDims>
 TetrahedralAabbHierarchy::PrimitiveLocation(PrimitiveType const& primitive) const
 {
-    return V(Eigen::all, primitive).rowwise().mean();
+    return V(Eigen::placeholders::all, primitive).rowwise().mean();
 }
 
 void TetrahedralAabbHierarchy::Update()
@@ -72,8 +72,8 @@ IndexMatrixX TetrahedralAabbHierarchy::OverlappingPrimitives(
                 FromEigen(bv2.max()));
         },
         [&](PrimitiveType const& p1, PrimitiveType const& p2) -> bool {
-            auto const V1 = V(Eigen::all, p1);
-            auto const V2 = bvh.V(Eigen::all, p2);
+            auto const V1 = V(Eigen::placeholders::all, p1);
+            auto const V2 = bvh.V(Eigen::placeholders::all, p2);
             return OverlapQueries::Tetrahedra(
                 FromEigen(V1.col(0).head<kDims>()),
                 FromEigen(V1.col(1).head<kDims>()),

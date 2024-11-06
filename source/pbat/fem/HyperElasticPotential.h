@@ -248,7 +248,7 @@ HyperElasticPotential<TMesh, THyperElasticEnergy, QuadratureOrder>::ComputeEleme
     {
         tbb::parallel_for(Index{0}, Index{numberOfElements}, [&](Index e) {
             auto const nodes = mesh.E.col(e);
-            auto const xe    = x.reshaped(kDims, numberOfNodes)(Eigen::all, nodes);
+            auto const xe    = x.reshaped(kDims, numberOfNodes)(Eigen::placeholders::all, nodes);
             for (auto g = 0; g < QuadratureRuleType::kPoints; ++g)
             {
                 auto constexpr kStride = MeshType::kDims * QuadratureRuleType::kPoints;
@@ -266,7 +266,7 @@ HyperElasticPotential<TMesh, THyperElasticEnergy, QuadratureOrder>::ComputeEleme
     {
         tbb::parallel_for(Index{0}, Index{numberOfElements}, [&](Index e) {
             auto const nodes = mesh.E.col(e);
-            auto const xe    = x.reshaped(kDims, numberOfNodes)(Eigen::all, nodes);
+            auto const xe    = x.reshaped(kDims, numberOfNodes)(Eigen::placeholders::all, nodes);
             auto ge          = Ge.col(e);
             for (auto g = 0; g < QuadratureRuleType::kPoints; ++g)
             {
@@ -289,7 +289,7 @@ HyperElasticPotential<TMesh, THyperElasticEnergy, QuadratureOrder>::ComputeEleme
     {
         tbb::parallel_for(Index{0}, Index{numberOfElements}, [&](Index e) {
             auto const nodes = mesh.E.col(e);
-            auto const xe    = x.reshaped(kDims, numberOfNodes)(Eigen::all, nodes);
+            auto const xe    = x.reshaped(kDims, numberOfNodes)(Eigen::placeholders::all, nodes);
             auto he          = He.block<kDofsPerElement, kDofsPerElement>(0, e * kDofsPerElement);
             for (auto g = 0; g < QuadratureRuleType::kPoints; ++g)
             {
@@ -312,7 +312,7 @@ HyperElasticPotential<TMesh, THyperElasticEnergy, QuadratureOrder>::ComputeEleme
     {
         tbb::parallel_for(Index{0}, Index{numberOfElements}, [&](Index e) {
             auto const nodes = mesh.E.col(e);
-            auto const xe    = x.reshaped(kDims, numberOfNodes)(Eigen::all, nodes);
+            auto const xe    = x.reshaped(kDims, numberOfNodes)(Eigen::placeholders::all, nodes);
             auto ge          = Ge.col(e);
             auto he          = He.block<kDofsPerElement, kDofsPerElement>(0, e * kDofsPerElement);
             for (auto g = 0; g < QuadratureRuleType::kPoints; ++g)
@@ -386,8 +386,9 @@ inline void HyperElasticPotential<TMesh, THyperElasticEnergy, QuadratureOrder>::
         {
             auto const nodes = mesh.E.col(e);
             auto const he    = He.block<kDofsPerElement, kDofsPerElement>(0, e * kDofsPerElement);
-            auto const xe    = x.col(c).reshaped(kDims, x.size() / kDims)(Eigen::all, nodes);
-            auto ye          = y.col(c).reshaped(kDims, y.size() / kDims)(Eigen::all, nodes);
+            auto const xe =
+                x.col(c).reshaped(kDims, x.size() / kDims)(Eigen::placeholders::all, nodes);
+            auto ye = y.col(c).reshaped(kDims, y.size() / kDims)(Eigen::placeholders::all, nodes);
             ye.reshaped() += he * xe.reshaped();
         }
     }
@@ -484,7 +485,7 @@ inline VectorX HyperElasticPotential<TMesh, THyperElasticEnergy, QuadratureOrder
     {
         auto const nodes = mesh.E.col(e);
         auto const ge    = Ge.col(e).reshaped(kDims, kNodesPerElement);
-        auto gi          = g.reshaped(kDims, numberOfNodes)(Eigen::all, nodes);
+        auto gi          = g.reshaped(kDims, numberOfNodes)(Eigen::placeholders::all, nodes);
         gi += ge;
     }
     return g;

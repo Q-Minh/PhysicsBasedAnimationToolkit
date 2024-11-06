@@ -282,7 +282,7 @@ TEST_CASE("[gpu][geometry] BvhImpl")
     }
     SUBCASE("Disconnected mesh")
     {
-        V = V(Eigen::all, C.reshaped()).eval();
+        V = V(Eigen::placeholders::all, C.reshaped()).eval();
         C.resize(4, C.cols());
         C.reshaped().setLinSpaced(0, static_cast<GpuIndex>(V.cols() - 1));
         // Arrange

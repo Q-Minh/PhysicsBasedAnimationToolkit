@@ -113,7 +113,7 @@ inline TriangleAabbHierarchy<3>::PrimitiveType TriangleAabbHierarchy<3>::Primiti
 inline Vector<TriangleAabbHierarchy<3>::kDims>
 TriangleAabbHierarchy<3>::PrimitiveLocation(PrimitiveType const& primitive) const
 {
-    return V(Eigen::all, primitive).rowwise().mean();
+    return V(Eigen::placeholders::all, primitive).rowwise().mean();
 }
 
 inline void TriangleAabbHierarchy<3>::Update()
@@ -137,8 +137,8 @@ TriangleAabbHierarchy<3>::OverlappingPrimitives(SelfType const& bvh, std::size_t
                 FromEigen(bv2.max()));
         },
         [&](PrimitiveType const& p1, PrimitiveType const& p2) -> bool {
-            auto const V1 = V(Eigen::all, p1);
-            auto const V2 = bvh.V(Eigen::all, p2);
+            auto const V1 = V(Eigen::placeholders::all, p1);
+            auto const V2 = bvh.V(Eigen::placeholders::all, p2);
             return OverlapQueries::Triangles3D(
                 FromEigen(V1.col(0).head<kDims>()),
                 FromEigen(V1.col(1).head<kDims>()),
@@ -164,8 +164,8 @@ template <class RPrimitiveIndices>
 inline TriangleAabbHierarchy<3>::BoundingVolumeType
 TriangleAabbHierarchy<3>::BoundingVolumeOf(RPrimitiveIndices&& pinds) const
 {
-    auto vertices = C(Eigen::all, common::Slice(pinds)).reshaped();
-    return BoundingVolumeType(V(Eigen::all, vertices));
+    auto vertices = C(Eigen::placeholders::all, common::Slice(pinds)).reshaped();
+    return BoundingVolumeType(V(Eigen::placeholders::all, vertices));
 }
 
 template <class TDerivedP>
@@ -180,7 +180,7 @@ inline std::vector<Index> TriangleAabbHierarchy<3>::PrimitivesContainingPoints(
         std::vector<Index> const intersectingPrimitives = this->PrimitivesIntersecting(
             [&](BoundingVolumeType const& bv) -> bool { return bv.contains(P.col(i)); },
             [&](PrimitiveType const& T) -> bool {
-                auto const VT  = V(Eigen::all, T);
+                auto const VT  = V(Eigen::placeholders::all, T);
                 Scalar const d = DistanceQueries::PointTriangle(
                     FromEigen(P.col(i).template head<kDims>()),
                     FromEigen(VT.col(0).head<kDims>()),
@@ -224,7 +224,7 @@ TriangleAabbHierarchy<3>::NearestPrimitivesToPoints(
                 return bv.squaredExteriorDistance(P.col(i));
             },
             [&](PrimitiveType const& T) -> Scalar {
-                auto const VT = V(Eigen::all, T);
+                auto const VT = V(Eigen::placeholders::all, T);
                 return DistanceQueries::PointTriangle(
                     FromEigen(P.col(i).template head<kDims>()),
                     FromEigen(VT.col(0).head<kDims>()),
@@ -340,7 +340,7 @@ inline TriangleAabbHierarchy<2>::PrimitiveType TriangleAabbHierarchy<2>::Primiti
 inline Vector<TriangleAabbHierarchy<2>::kDims>
 TriangleAabbHierarchy<2>::PrimitiveLocation(PrimitiveType const& primitive) const
 {
-    return V(Eigen::all, primitive).rowwise().mean();
+    return V(Eigen::placeholders::all, primitive).rowwise().mean();
 }
 
 inline void TriangleAabbHierarchy<2>::Update()
@@ -364,8 +364,8 @@ TriangleAabbHierarchy<2>::OverlappingPrimitives(SelfType const& bvh, std::size_t
                 FromEigen(bv2.max()));
         },
         [&](PrimitiveType const& p1, PrimitiveType const& p2) -> bool {
-            auto const V1 = V(Eigen::all, p1);
-            auto const V2 = bvh.V(Eigen::all, p2);
+            auto const V1 = V(Eigen::placeholders::all, p1);
+            auto const V2 = bvh.V(Eigen::placeholders::all, p2);
             return OverlapQueries::Triangles2D(
                 FromEigen(V1.col(0).head<kDims>()),
                 FromEigen(V1.col(1).head<kDims>()),
@@ -391,8 +391,8 @@ template <class RPrimitiveIndices>
 inline TriangleAabbHierarchy<2>::BoundingVolumeType
 TriangleAabbHierarchy<2>::BoundingVolumeOf(RPrimitiveIndices&& pinds) const
 {
-    auto vertices = C(Eigen::all, common::Slice(pinds)).reshaped();
-    return BoundingVolumeType(V(Eigen::all, vertices));
+    auto vertices = C(Eigen::placeholders::all, common::Slice(pinds)).reshaped();
+    return BoundingVolumeType(V(Eigen::placeholders::all, vertices));
 }
 
 template <class TDerivedP>
@@ -407,7 +407,7 @@ inline std::vector<Index> TriangleAabbHierarchy<2>::PrimitivesContainingPoints(
         std::vector<Index> const intersectingPrimitives = this->PrimitivesIntersecting(
             [&](BoundingVolumeType const& bv) -> bool { return bv.contains(P.col(i)); },
             [&](PrimitiveType const& T) -> bool {
-                auto const VT = V(Eigen::all, T);
+                auto const VT = V(Eigen::placeholders::all, T);
                 return OverlapQueries::PointTriangle(
                     FromEigen(P.col(i).template head<kDims>()),
                     FromEigen(VT.col(0).head<kDims>()),
@@ -449,7 +449,7 @@ TriangleAabbHierarchy<2>::NearestPrimitivesToPoints(
                 return bv.squaredExteriorDistance(P.col(i));
             },
             [&](PrimitiveType const& T) -> Scalar {
-                auto const VT = V(Eigen::all, T);
+                auto const VT = V(Eigen::placeholders::all, T);
                 return DistanceQueries::PointTriangle(
                     FromEigen(P.col(i).template head<kDims>()),
                     FromEigen(VT.col(0).head<kDims>()),

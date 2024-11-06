@@ -154,8 +154,9 @@ inline void MassMatrix<TMesh, QuadratureOrder>::Apply(
             auto const nodes = mesh.E.col(e).array();
             auto const me =
                 Me.block<ElementType::kNodes, ElementType::kNodes>(0, e * ElementType::kNodes);
-            auto ye       = y.col(c).reshaped(dims, y.size() / dims)(Eigen::all, nodes);
-            auto const xe = x.col(c).reshaped(dims, x.size() / dims)(Eigen::all, nodes);
+            auto ye = y.col(c).reshaped(dims, y.size() / dims)(Eigen::placeholders::all, nodes);
+            auto const xe =
+                x.col(c).reshaped(dims, x.size() / dims)(Eigen::placeholders::all, nodes);
             ye += xe * me /*.transpose() technically, but mass matrix is symmetric*/;
         }
     }

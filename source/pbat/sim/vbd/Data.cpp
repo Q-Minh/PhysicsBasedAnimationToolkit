@@ -142,8 +142,8 @@ Data& Data::Construct(bool bValidate)
         lame.row(1).setConstant(lambda);
     }
     // Constrained vertices must not move
-    v(Eigen::all, dbc).setZero();
-    aext(Eigen::all, dbc).setZero();
+    v(Eigen::placeholders::all, dbc).setZero();
+    aext(Eigen::placeholders::all, dbc).setZero();
     for (auto& partition : partitions)
     {
         std::vector<Index> freePartition = partition;
@@ -156,7 +156,7 @@ Data& Data::Construct(bool bValidate)
             freePartition.begin());
         std::swap(partition, freePartition);
     }
-    
+
     if (bValidate)
     {
         // clang-format off
@@ -198,9 +198,10 @@ Data& Data::Construct(bool bValidate)
         // clang-format off
         bool const bAdjacencyStructuresValid = 
             GVGp.size() == (x.cols() + 1) and 
-            GVGg.size() == GVGp(Eigen::last) and 
+            GVGg.size() == GVGp(Eigen::placeholders::last) and 
             GVGg.size() == GVGe.size() and 
             GVGg.size() == GVGilocal.size();
+        // clang-format on
         if (not bAdjacencyStructuresValid)
         {
             std::string const what = fmt::format(

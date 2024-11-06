@@ -81,7 +81,7 @@ void Integrator::Step(Scalar dt, Index iterations, Index substeps, Scalar rho)
                         auto Te                         = data.T.col(e);
                         mini::SMatrix<Scalar, 4, 3> GPe = FromEigen(data.GP.block<4, 3>(0, e * 3));
                         mini::SMatrix<Scalar, 3, 4> xe =
-                            FromEigen(data.x(Eigen::all, Te).block<3, 4>(0, 0));
+                            FromEigen(data.x(Eigen::placeholders::all, Te).block<3, 4>(0, 0));
                         mini::SMatrix<Scalar, 3, 3> Fe = xe * GPe;
                         physics::StableNeoHookeanEnergy<3> Psi{};
                         mini::SVector<Scalar, 9> gF;

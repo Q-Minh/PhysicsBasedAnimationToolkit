@@ -260,7 +260,7 @@ MatrixX ShapeFunctionGradients(TMesh const& mesh)
         auto const vertices             = nodes(ElementType::Vertices);
         auto constexpr kRowsJ           = MeshType::kDims;
         auto constexpr kColsJ           = AffineElementType::kNodes;
-        Matrix<kRowsJ, kColsJ> const Ve = mesh.X(Eigen::all, vertices);
+        Matrix<kRowsJ, kColsJ> const Ve = mesh.X(Eigen::placeholders::all, vertices);
         for (auto g = 0; g < QuadratureRuleType::kPoints; ++g)
         {
             auto const GP          = ShapeFunctionGradients<ElementType>(Xg.col(g), Ve);
@@ -301,7 +301,7 @@ MatrixX ShapeFunctionGradientsAt(
         auto const vertices             = nodes(ElementType::Vertices);
         auto constexpr kRowsJ           = MeshType::kDims;
         auto constexpr kColsJ           = AffineElementType::kNodes;
-        Matrix<kRowsJ, kColsJ> const Ve = mesh.X(Eigen::all, vertices);
+        Matrix<kRowsJ, kColsJ> const Ve = mesh.X(Eigen::placeholders::all, vertices);
         auto const GP                   = ShapeFunctionGradients<ElementType>(Xi.col(g), Ve);
         GNe.block<kNodesPerElement, MeshType::kDims>(0, g * MeshType::kDims) = GP;
     });

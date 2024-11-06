@@ -108,7 +108,7 @@ inline void DivergenceVector<TMesh, Dims, QuadratureOrder>::ComputeElementDiverg
             auto constexpr kNodesPerElement = ElementType::kNodes;
             auto const gradPhi =
                 GNe.block<kNodesPerElement, MeshType::kDims>(0, e * kStride + g * MeshType::kDims);
-            auto const F = Fe(Eigen::all, nodes);
+            auto const F = Fe(Eigen::placeholders::all, nodes);
             // div(F) = \sum_i \sum_d F_id d(\phi_i) / d(X_d)
             divE.col(e) =
                 (wg(g) * detJe(g, e)) * (F.array().transpose() * gradPhi.array()).rowwise().sum();

@@ -76,8 +76,8 @@ template <class RPrimitiveIndices>
 inline TetrahedralAabbHierarchy::BoundingVolumeType
 TetrahedralAabbHierarchy::BoundingVolumeOf(RPrimitiveIndices&& pinds) const
 {
-    auto vertices = C(Eigen::all, common::Slice(pinds)).reshaped();
-    return BoundingVolumeType(V(Eigen::all, vertices));
+    auto vertices = C(Eigen::placeholders::all, common::Slice(pinds)).reshaped();
+    return BoundingVolumeType(V(Eigen::placeholders::all, vertices));
 }
 
 template <class TDerivedP>
@@ -92,7 +92,7 @@ inline std::vector<Index> TetrahedralAabbHierarchy::PrimitivesContainingPoints(
         std::vector<Index> const intersectingPrimitives = this->PrimitivesIntersecting(
             [&](BoundingVolumeType const& bv) -> bool { return bv.contains(P.col(i)); },
             [&](PrimitiveType const& T) -> bool {
-                auto const VT = V(Eigen::all, T);
+                auto const VT = V(Eigen::placeholders::all, T);
                 return OverlapQueries::PointTetrahedron3D(
                     FromEigen(P.col(i).template head<kDims>()),
                     FromEigen(VT.col(0).head<kDims>()),
@@ -135,7 +135,7 @@ TetrahedralAabbHierarchy::NearestPrimitivesToPoints(
                 return bv.squaredExteriorDistance(P.col(i));
             },
             [&](PrimitiveType const& T) -> Scalar {
-                auto const VT = V(Eigen::all, T);
+                auto const VT = V(Eigen::placeholders::all, T);
                 return DistanceQueries::PointTetrahedron(
                     FromEigen(P.col(i).template head<kDims>()),
                     FromEigen(VT.col(0).head<kDims>()),

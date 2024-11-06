@@ -219,8 +219,9 @@ inline void SymmetricLaplacianMatrix<TMesh, QuadratureOrder>::Apply(
             auto constexpr kNodesPerElement = ElementType::kNodes;
             auto const Le =
                 deltaE.block(0, e * kNodesPerElement, kNodesPerElement, kNodesPerElement);
-            auto ye       = y.col(c).reshaped(dims, y.size() / dims)(Eigen::all, nodes);
-            auto const xe = x.col(c).reshaped(dims, x.size() / dims)(Eigen::all, nodes);
+            auto ye = y.col(c).reshaped(dims, y.size() / dims)(Eigen::placeholders::all, nodes);
+            auto const xe =
+                x.col(c).reshaped(dims, x.size() / dims)(Eigen::placeholders::all, nodes);
             ye += xe * Le /*.transpose() technically, but Laplacian matrix is symmetric*/;
         }
     }

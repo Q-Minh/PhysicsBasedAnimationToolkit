@@ -111,9 +111,9 @@ Head over to our hands-on [tutorials section](./doc/tutorial/) to learn more abo
 
 ## Dependencies
 
-See [`vcpkg.json`](./vcpkg.json) for a versioned list of our dependencies, available via [vcpkg](https://github.com/microsoft/vcpkg).
+See [`vcpkg.json`](./vcpkg.json) for a versioned list of our external dependencies, available via [vcpkg](https://github.com/microsoft/vcpkg).
 
-> Use of [vcpkg](https://github.com/microsoft/vcpkg) is not mandatory, as long as dependencies have compatible versions and are discoverable by CMake's [`find_package`](https://cmake.org/cmake/help/latest/command/find_package.html) mechanism.
+> Use of [vcpkg](https://github.com/microsoft/vcpkg) is not mandatory, as long as external dependencies have compatible versions and are discoverable by CMake's [`find_package`](https://cmake.org/cmake/help/latest/command/find_package.html) mechanism.
 
 ### CUDA
 
