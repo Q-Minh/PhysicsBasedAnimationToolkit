@@ -47,4 +47,39 @@ TEST_CASE("[math] MomentFitting")
         math::test::TestFixedQuadrature<3, 3>(precision);
         math::test::TestFixedQuadrature<3, 4>(precision);
     }
+    SUBCASE("Moment fitting on mesh reproduces existing quadrature rule")
+    {
+        // Arrange
+        auto constexpr kOrder         = 2;
+        auto constexpr kDims          = 3;
+        auto constexpr kMaxIterations = 20;
+        math::SymmetricSimplexPolynomialQuadratureRule<kDims, kOrder> Q2{};
+        auto X2Q = common::ToEigen(Q2.points).reshaped(kDims + 1, Q2.kPoints);
+        auto w2Q = common::ToEigen(Q2.weights);
+
+        IndexVectorX S1(8), S2(8);
+        S2 << 0, 0, 0, 1, 1, 1, 1, 0;
+        S1 = S2;
+        MatrixX X1(kDims + 1, 8), X2(kDims + 1, 8);
+        VectorX w2(8);
+        X2 << X2Q.col(0), X2Q.col(1), X2Q.col(2), X2Q.col(0), X2Q.col(1), X2Q.col(2), X2Q.col(3),
+            X2Q.col(3);
+        w2 << w2Q(0), w2Q(1), w2Q(2), w2Q(0), w2Q(1), w2Q(2), w2Q(3), w2Q(3);
+        X1 = X2;
+
+        // Act
+        bool constexpr bEvaluateError{true};
+        auto [w1, error] = math::TransferQuadrature<kOrder>(
+            S1,
+            X1.bottomRows(kDims),
+            S2,
+            X2.bottomRows(kDims),
+            w2,
+            bEvaluateError,
+            kMaxIterations);
+
+        // Assert
+        CHECK((w1.array() >= Scalar(0)).all());
+        CHECK_LT(error.maxCoeff(), 1e-10);
+    }
 }

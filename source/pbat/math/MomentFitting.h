@@ -13,6 +13,7 @@
 #include <limits>
 #include <tbb/parallel_for.h>
 #include <unsupported/Eigen/NNLS>
+#include <utility>
 
 namespace pbat {
 namespace math {
@@ -169,9 +170,11 @@ Vector<TDerivedXg1::ColsAtCompileTime> TransferQuadrature(
  * @param Xi2 |#dims|x|#old quad.pts.| array of quadrature point positions defined in reference
  * simplex space
  * @param wi2 |#old quad.pts.|x1 array of quadrature weights
+ * @param bEvaluateError Whether to compute the integration error on the new quadrature rule
  * @param maxIterations Maximum number of non-negative least-squares active set solver
  * @param precision Convergence threshold
- * @return
+ * @return (w, e) where w are the quadrature weights associated with points Xi1, and e is the
+ * integration error in each simplex (zeros if not bEvaluateError).
  */
 template <
     auto Order,
@@ -180,82 +183,99 @@ template <
     class TDerivedS2,
     class TDerivedXi2,
     class TDerivedWg2>
-VectorX TransferQuadrature(
+std::pair<VectorX, VectorX> TransferQuadrature(
     Eigen::DenseBase<TDerivedS1> const& S1,
     Eigen::MatrixBase<TDerivedXi1> const& Xi1,
     Eigen::DenseBase<TDerivedS2> const& S2,
     Eigen::MatrixBase<TDerivedXi2> const& Xi2,
     Eigen::MatrixBase<TDerivedWg2> const& wi2,
+    bool bEvaluateError = false,
     Index maxIterations = 10,
     Scalar precision    = std::numeric_limits<Scalar>::epsilon())
 {
     // Compute adjacency graph from simplices s to their quadrature points Xi
+    using common::ArgSort;
+    using common::Counts;
+    using common::CumSum;
+    using common::ToEigen;
     auto nsimplices =
         std::max(*std::max_element(S1.begin(), S1.end()), *std::max_element(S2.begin(), S2.end())) +
         1;
-    std::vector<Index> S1P =
-        common::CumSum(common::Counts<Index>(S1.begin(), S1.end(), nsimplices));
-    std::vector<Index> S2P =
-        common::CumSum(common::Counts<Index>(S2.begin(), S2.end(), nsimplices));
-    std::vector<Index> S1N =
-        common::ArgSort<Index>(S1.size(), [](auto si, auto sj) { return S1(si) < S1(sj); });
-    std::vector<Index> S2N =
-        common::ArgSort<Index>(S2.size(), [](auto si, auto sj) { return S2(si) < S2(sj); });
+    std::vector<Index> S1P = CumSum(Counts<Index>(S1.begin(), S1.end(), nsimplices));
+    std::vector<Index> S2P = CumSum(Counts<Index>(S2.begin(), S2.end(), nsimplices));
+    IndexVectorX S1N =
+        ToEigen(ArgSort<Index>(S1.size(), [&](auto si, auto sj) { return S1(si) < S1(sj); }));
+    IndexVectorX S2N =
+        ToEigen(ArgSort<Index>(S2.size(), [&](auto si, auto sj) { return S2(si) < S2(sj); }));
     // Find weights wg1 that fit the given quadrature rule Xi2, wi2 on simplices S2
-    auto fSolveWeights = [maxIterations,
-                          precision](MatrixX const& Xg1, MatrixX const& Xg2, VectorX const& wg2) {
+    auto fSolveWeights = [maxIterations, precision, bEvaluateError](
+                             MatrixX const& Xg1,
+                             MatrixX const& Xg2,
+                             VectorX const& wg2) {
         if (Xg1.rows() == 1)
         {
-            return TransferQuadrature(
-                OrthonormalPolynomialBasis<1, Order>{},
-                Xg1,
-                Xg2,
-                wg2,
-                maxIterations,
-                precision);
+            OrthonormalPolynomialBasis<1, Order> P{};
+            auto w = TransferQuadrature(P, Xg1, Xg2, wg2, maxIterations, precision);
+            Scalar error(0);
+            if (bEvaluateError)
+            {
+                auto b1 = math::Integrate(P, Xg1, w);
+                auto b2 = math::Integrate(P, Xg2, wg2);
+                error   = (b1 - b2).squaredNorm();
+            }
+            return std::make_pair(w, error);
         }
         if (Xg1.rows() == 2)
         {
-            return TransferQuadrature(
-                OrthonormalPolynomialBasis<2, Order>{},
-                Xg1,
-                Xg2,
-                wg2,
-                maxIterations,
-                precision);
+            OrthonormalPolynomialBasis<2, Order> P{};
+            auto w = TransferQuadrature(P, Xg1, Xg2, wg2, maxIterations, precision);
+            Scalar error(0);
+            if (bEvaluateError)
+            {
+                auto b1 = math::Integrate(P, Xg1, w);
+                auto b2 = math::Integrate(P, Xg2, wg2);
+                error   = (b1 - b2).squaredNorm();
+            }
+            return std::make_pair(w, error);
         }
         if (Xg1.rows() == 3)
         {
-            return TransferQuadrature(
-                OrthonormalPolynomialBasis<3, Order>{},
-                Xg1,
-                Xg2,
-                wg2,
-                maxIterations,
-                precision);
+            OrthonormalPolynomialBasis<3, Order> P{};
+            auto w = TransferQuadrature(P, Xg1, Xg2, wg2, maxIterations, precision);
+            Scalar error(0);
+            if (bEvaluateError)
+            {
+                auto b1 = math::Integrate(P, Xg1, w);
+                auto b2 = math::Integrate(P, Xg2, wg2);
+                error   = (b1 - b2).squaredNorm();
+            }
+            return std::make_pair(w, error);
         }
         throw std::invalid_argument(
             "Expected quadrature points in reference simplex space of dimensions (i.e. rows) 1,2 "
             "or 3.");
     };
 
-    VectorX wg1 = VectorX::Zero(Xi1.cols());
+    VectorX error = VectorX::Zero(nsimplices);
+    VectorX wi1   = VectorX::Zero(Xi1.cols());
     tbb::parallel_for(Index(0), nsimplices, [&](Index s) {
         auto S1begin = S1P[s];
         auto S1end   = S1P[s + 1];
         if (S1end > S1begin)
         {
-            auto s1inds  = S1N(Eigen::seq(S1begin, S1end - 1));
-            MatrixX Xg1  = Xi1(Eigen::placeholders::all, s1inds);
-            auto S2begin = S2P[s];
-            auto S2end   = S2P[s + 1];
-            auto s2inds  = S2N(Eigen::seq(S2begin, S2end - 1));
-            MatrixX Xg2  = Xi2(Eigen::placeholders::all, s2inds);
-            VectorX wg2  = wi2(s2inds);
-            wg1(s1inds)  = fSolveWeights(Xg1, Xg2, wg2);
+            auto s1inds     = S1N(Eigen::seq(S1begin, S1end - 1));
+            MatrixX Xg1     = Xi1(Eigen::placeholders::all, s1inds);
+            auto S2begin    = S2P[s];
+            auto S2end      = S2P[s + 1];
+            auto s2inds     = S2N(Eigen::seq(S2begin, S2end - 1));
+            MatrixX Xg2     = Xi2(Eigen::placeholders::all, s2inds);
+            VectorX wg2     = wi2(s2inds);
+            auto [wg1, err] = fSolveWeights(Xg1, Xg2, wg2);
+            wi1(s1inds)     = wg1;
+            error(s)        = err;
         }
     });
-    return wg1;
+    return {wi1, error};
 }
 
 } // namespace math
