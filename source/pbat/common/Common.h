@@ -1,6 +1,7 @@
 #ifndef PBAT_COMMON_COMMON_H
 #define PBAT_COMMON_COMMON_H
 
+#include "ArgSort.h"
 #include "Concepts.h"
 #include "ConstexprFor.h"
 #include "Eigen.h"

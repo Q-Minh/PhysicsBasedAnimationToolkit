@@ -2,6 +2,7 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     PUBLIC
     FILE_SET api
     FILES 
+        "ArgSort.h"
         "Common.h"
         "Concepts.h"
         "ConstexprFor.h"
@@ -13,6 +14,7 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
 )
 target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
 PRIVATE
+    "ArgSort.cpp"
     "Eigen.cpp"
     "Indexing.cpp"
     "Queue.cpp"
