@@ -16,16 +16,6 @@ def min_max_eigs(A, n=10):
     return lmin, lmax
 
 
-def rest_pose_hessian(mesh, Y, nu):
-    x = mesh.X.reshape(math.prod(mesh.X.shape), order='f')
-    energy = pbat.fem.HyperElasticEnergy.StableNeoHookean
-    hep, detJeU, GNeU = pbat.fem.hyper_elastic_potential(
-        mesh, Y, nu, energy=energy)
-    hep.compute_element_elasticity(x)
-    HU = hep.hessian()
-    return HU
-
-
 def laplacian_energy(mesh, k=1, dims=1):
     L = -pbat.fem.laplacian(mesh, dims=dims)[0]
     M = None if k == 1 else pbat.fem.mass_matrix(mesh, dims=1, lump=True)
@@ -43,8 +33,9 @@ def display_quadrature(mesh, Xg):
     nelems = mesh.E.shape[1]
     efree = np.setdiff1d(list(range(nelems)), np.unique(e))
     if len(efree) > 0:
-        ps.register_volume_mesh(f"Invalid mesh nelems={
-                                nelems}", V.T, C[:, efree].T)
+        ps.register_volume_mesh(
+            f"Invalid mesh nelems={nelems}", V.T, C[:, efree].T
+        )
 
 
 def gradient_operator(mesh, Xg, dims=1):
@@ -103,9 +94,10 @@ class BaseFemFunctionTransferOperator():
             MS (pbat.fem.Mesh): Source mesh
             MT (pbat.fem.Mesh): Target mesh
         """
+        nelems = MD.E.shape[1]
         quadrature_order = 2*max(MS.order, MT.order)
         Xg = MD.quadrature_points(quadrature_order)
-        wg = np.tile(MD.quadrature_weights(quadrature_order), MD.E.shape[1])
+        wg = np.tile(MD.quadrature_weights(quadrature_order), nelems)
         from scipy.sparse import kron, eye, diags
         Ig = diags(wg)
         Ig = kron(Ig, eye(MT.dims))
@@ -128,68 +120,109 @@ class BaseFemFunctionTransferOperator():
         pass
 
 
+class NonLinearElasticRestrictionEnergy:
+    def __init__(self, hep, rho, Ig, NT, y, xr, hxreg):
+        self.hep = hep
+        self.rho = rho
+        self.Ig = Ig
+        self.NT = NT
+        self.y = y
+        self.xr = xr
+        self.hxreg = hxreg
+
+    def __call__(self, u):
+        x = self.xr + u
+        self.hep.compute_element_elasticity(x, grad=False, hessian=False)
+        duku = self.NT @ u - self.y
+        E = 0.5 * duku.T @ (self.rho * self.Ig) @ duku + \
+            self.hxreg * self.hep.eval()
+        return E
+
+
 class CholFemFunctionTransferOperator(BaseFemFunctionTransferOperator):
-    def __init__(self, MD: pbat.fem.Mesh, MS: pbat.fem.Mesh, MT: pbat.fem.Mesh, H, lreg=5, hreg=1, greg=1, Y=1e6, nu=0.45, hxreg=1e-4, rho=1e3):
+    def __init__(self, MD: pbat.fem.Mesh, MS: pbat.fem.Mesh, MT: pbat.fem.Mesh, H, lreg=5, hreg=1, greg=1, hxreg=1e-4, Y=1e6, nu=0.45, rho=1e3):
         super().__init__(MD, MS, MT, H)
-        n = self.A.shape[0]
+        self.greg = greg
+        self.M = (self.NT.T @ (rho * self.Ig) @ self.NT).asformat('csc')
+        self.P = (self.NT.T @ (rho * self.Ig) @ self.NS).asformat('csc')
+        self.rho = rho
         energy = pbat.fem.HyperElasticEnergy.StableNeoHookean
         self.hep, self.detJeU, self.GNeU = pbat.fem.hyper_elastic_potential(
             MT, Y, nu, energy=energy)
-        self.MT = MT
-        self.rho = rho
-        self.M = self.NT.T @ (rho * self.Ig) @ self.NT  # + lreg*self.U + hreg*self.H + greg * self.GT.T @ self.IG @ self.GT
-        self.P = self.NT.T @ (rho * self.Ig) @ self.NS
         self.hxreg = hxreg
+        self.X = MT.X
+        self.u = np.zeros(math.prod(self.X.shape), order="f")
+        # n = self.A.shape[0]
+        # A = self.M + lreg*self.U + hreg*self.H
         # lmin, lmax = min_max_eigs(A, n=1)
         # tau = 0.
         # if lmin[0] <= 0:
         #     # Regularize A (due to positive semi-definiteness)
-        #     print("WARNING: A is semi-definite")
         #     tau = abs(lmin[0]) + 1e-10
         # tau = sp.sparse.diags(np.full(n, tau))
         # AR = A + tau
         # solver = pbat.math.linalg.SolverBackend.Eigen
         # self.Ainv = pbat.math.linalg.chol(AR, solver=solver)
         # self.Ainv.compute(AR)
-        self.uk = np.zeros(math.prod(self.MT.X.shape))
 
     def __matmul__(self, u):
-        self.uk = np.zeros(math.prod(self.MT.X.shape))
-        xr = self.MT.X.reshape(math.prod(self.MT.X.shape), order='f')
-        for k in range(1):
-            x = xr + self.uk
+        xr = self.X.reshape(math.prod(self.X.shape), order='f')
+        uk = self.u  # np.zeros_like(xr)
+        y = self.P @ u
+        f = NonLinearElasticRestrictionEnergy(
+            self.hep, self.rho, self.Ig, self.NT, self.NS @ u, xr, self.hxreg)
+        for k in range(5):
+            x = xr + uk
             self.hep.compute_element_elasticity(x)
-            duku = self.NT @ self.uk - self.NS @ u
-            E = 0.5 * duku.T @ (self.rho * self.Ig) @ duku + self.hxreg * self.hep.eval()
-            H = self.M + self.hxreg * self.hep.hessian()
+            K = self.hep.hessian()
+            H = self.M + self.hxreg * K
             solver = pbat.math.linalg.SolverBackend.Eigen
             Hinv = pbat.math.linalg.ldlt(H, solver=solver)
             Hinv.compute(H)
-            # B = self.P @ u + self.GT.T @ self.IG @ self.GS @ u
-            ng = self.P @ u - self.hxreg * self.hep.gradient()
-            r = ng.T @ ng
-            if r < 1e-3:
-                break
-            # X = self.Ainv.solve(B)
-            du = Hinv.solve(ng).squeeze()
-            self.uk += du
-        return self.uk
+            gk = (self.M @ uk - y) + self.hxreg * self.hep.gradient()
+            du = Hinv.solve(-gk).squeeze()
+            # Line search
+            alpha = 1.
+            Dfk = gk.dot(du)
+            fk = f(uk)
+            maxiters = 20
+            tau = 0.5
+            for j in range(maxiters):
+                fx = f(uk + alpha*du)
+                flinear = fk + alpha * c * Dfk
+                if fx <= flinear:
+                    break
+                alpha = tau*alpha
+            uk += alpha*du
+        self.u = uk
+        return uk
 
 
 class RankKApproximateFemFunctionTransferOperator(BaseFemFunctionTransferOperator):
     def __init__(self, MD: pbat.fem.Mesh, MS: pbat.fem.Mesh, MT: pbat.fem.Mesh, H, lreg=5, hreg=1, greg=1, modes=30):
         super().__init__(MD, MS, MT, H)
+        self.greg = greg
         A = self.A + lreg*self.U + hreg*self.H + greg * self.GT.T @ self.IG @ self.GT
         l, V = sp.sparse.linalg.eigsh(A, k=modes, sigma=1e-5, which='LM')
         keep = np.nonzero(l > 1e-5)[0]
         self.l, self.V = l[keep], V[:, keep]
 
     def __matmul__(self, B):
-        B = self.P @ B + self.GT.T @ self.IG @ self.GS @ B
+        B = self.P @ B + self.greg * self.GT.T @ self.IG @ self.GS @ B
         B = self.V.T @ B
         B = B @ sp.sparse.diags(1 / self.l)
         X = self.V @ B
         return X
+
+
+def rest_pose_hessian(mesh, Y, nu):
+    x = mesh.X.reshape(math.prod(mesh.X.shape), order='f')
+    energy = pbat.fem.HyperElasticEnergy.StableNeoHookean
+    hep, detJeU, GNeU = pbat.fem.hyper_elastic_potential(
+        mesh, Y, nu, energy=energy)
+    hep.compute_element_elasticity(x)
+    HU = hep.hessian()
+    return HU
 
 
 def linear_elastic_deformation_modes(mesh, rho, Y, nu, modes=30, sigma=-1e-5):
@@ -248,12 +281,12 @@ if __name__ == "__main__":
     w, L = linear_elastic_deformation_modes(
         mesh, args.rho, args.Y, args.nu, args.modes)
     HC = rest_pose_hessian(cmesh, args.Y, args.nu)
-    lreg, hreg, greg, hxreg = 0, 0, 0, 1e-4
+    lreg, hreg, greg, hxreg = 0, 1e-2, 0, 1e-4
     Fldl = CholFemFunctionTransferOperator(
-        mesh, mesh, cmesh, HC, lreg=lreg, hreg=hreg, greg=greg, hxreg=hxreg, rho=args.rho)
-    # Krestrict = 30
-    # Frank = RankKApproximateFemFunctionTransferOperator(
-    #     mesh, mesh, cmesh, HC, lreg=lreg, hreg=hreg, greg=greg, modes=Krestrict)
+        mesh, mesh, cmesh, HC, lreg=lreg, hreg=hreg, greg=greg, hxreg=hxreg)
+    Krestrict = 30
+    Frank = RankKApproximateFemFunctionTransferOperator(
+        mesh, mesh, cmesh, HC, lreg=lreg, hreg=hreg, greg=greg, modes=Krestrict)
 
     ps.set_up_dir("z_up")
     ps.set_front_dir("neg_y_front")
@@ -261,7 +294,11 @@ if __name__ == "__main__":
     ps.init()
     vm = ps.register_surface_mesh("model", V, F)
     ldlvm = ps.register_surface_mesh("LDL cage", CV, CF)
-    # rankvm = ps.register_surface_mesh("Rank K cage", CV, CF)
+    ldlvm.set_transparency(0.5)
+    ldlvm.set_edge_width(1)
+    rankvm = ps.register_surface_mesh("Rank K cage", CV, CF)
+    rankvm.set_transparency(0.5)
+    rankvm.set_edge_width(1)
     mode = 6
     t0 = time.time()
     t = 0
@@ -275,7 +312,6 @@ if __name__ == "__main__":
     def callback():
         global mode, c, k, theta, dtheta
         global animate, step
-        
         changed, mode = imgui.InputInt("Mode", mode)
         changed, c = imgui.InputFloat("Wave amplitude", c)
         changed, k = imgui.InputFloat("Wave frequency", k)
@@ -293,10 +329,10 @@ if __name__ == "__main__":
             ut = 1
             u = uf + ur + ut
             XCldl = CV + (Fldl @ u).reshape(CV.shape)
-            # XCrank = CV + (Frank @ u).reshape(CV.shape)
+            XCrank = CV + (Frank @ u).reshape(CV.shape)
             vm.update_vertex_positions(V + (uf + ur).reshape(V.shape))
             ldlvm.update_vertex_positions(XCldl)
-            # rankvm.update_vertex_positions(XCrank)
+            rankvm.update_vertex_positions(XCrank)
 
             theta += dtheta
             if theta > 2*np.pi:
