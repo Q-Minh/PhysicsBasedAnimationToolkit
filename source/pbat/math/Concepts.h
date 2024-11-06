@@ -66,6 +66,10 @@ concept CPolynomialQuadratureRule = requires(Q q)
     requires std::is_integral_v<decltype(Q::kOrder)>;
 };
 
+template <class Q>
+concept CFixedPointPolynomialQuadratureRule =
+    CFixedPointQuadratureRule<Q> and CPolynomialQuadratureRule<Q>;
+
 } // namespace math
 } // namespace pbat
 

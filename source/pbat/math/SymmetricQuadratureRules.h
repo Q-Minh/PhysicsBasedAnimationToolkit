@@ -8,32 +8,18 @@
 namespace pbat {
 namespace math {
 
-template <class TBasis, class Quad>
-Matrix<TBasis::kSize, Quad::kPoints> ReferenceMomentFittingMatrix(TBasis const& Pb, Quad const& Q)
-{
-    static_assert(
-        TBasis::kDims == Quad::kDims,
-        "Dimensions of the quadrature rule and the polynomial basis must match, i.e. a 2D "
-        "polynomial must be fit in a 2D integration domain");
-    Matrix<TBasis::kSize, Quad::kPoints> P{};
-    Eigen::Map<Matrix<Quad::kDims + 1, Quad::kPoints> const> Xg(Q.points.data());
-    for (auto g = 0u; g < Quad::kPoints; ++g)
-        P.col(g) = Pb.eval(Xg.col(g).template segment<Quad::kDims>(1));
-    return P;
-}
-
 /**
  * @brief Represents a quadrature scheme that can be constructed via existing quadrature schemes.
  * However, this generic quadrature scheme can be modified, i.e. its points and weights are instance
  * member variables.
  */
 template <class Quad>
-struct ModifiableQuadratureScheme
+struct FixedSizeVariableQuadrature
 {
     inline static std::uint8_t constexpr kDims    = Quad::kDims;
     inline static std::uint16_t constexpr kPoints = Quad::kPoints;
     inline static std::uint8_t constexpr kOrder   = Quad::kOrder;
-    ModifiableQuadratureScheme() : points(Quad::points), weights(Quad::weights) {}
+    FixedSizeVariableQuadrature() : points(Quad::points), weights(Quad::weights) {}
 
     decltype(Quad::points) points;
     decltype(Quad::weights) weights;

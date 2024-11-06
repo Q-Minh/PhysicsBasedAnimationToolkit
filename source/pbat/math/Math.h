@@ -5,6 +5,7 @@
 #include "GaussQuadrature.h"
 #include "IntegerArithmeticChecks.h"
 #include "LinearOperator.h"
+#include "MomentFitting.h"
 #include "PolynomialBasis.h"
 #include "Rational.h"
 #include "SymmetricQuadratureRules.h"
