@@ -18,13 +18,8 @@ void TestFixedQuadrature(Scalar precision)
     pbat::math::SymmetricSimplexPolynomialQuadratureRule<Dims, Order> Q{};
     auto Xg = pbat::common::ToEigen(Q.points).reshaped(Q.kDims + 1, Q.kPoints);
     auto wg = pbat::common::ToEigen(Q.weights);
-    auto M  = pbat::math::ReferenceMomentFittingMatrix(P, Q);
-    auto b  = pbat::Vector<decltype(P)::kSize>::Zero().eval();
-    for (auto g = 0; g < Q.kPoints; ++g)
-    {
-        b += wg(g) * P.eval(Xg.col(g).segment<Dims>(1));
-    }
-    auto w = pbat::math::MomentFittedWeights(M, b, 20);
+    auto w =
+        pbat::math::TransferQuadrature(P, Xg.bottomRows(Q.kDims), Xg.bottomRows(Q.kDims), wg, 20);
     CHECK_LT((w - wg).squaredNorm(), precision);
     CHECK((w.array() >= Scalar(0)).all());
 };
