@@ -1,5 +1,6 @@
 #include "Math.h"
 
+#include "MomentFitting.h"
 #include "linalg/LinAlg.h"
 
 #include <string>
@@ -10,7 +11,7 @@ namespace math {
 
 void Bind(pybind11::module& m)
 {
-    namespace pyb = pybind11;
+    BindMomentFitting(m);
     auto mlinalg = m.def_submodule("linalg");
     linalg::Bind(mlinalg);
 }
