@@ -4,6 +4,7 @@
 
 #include "XpbdImpl.cuh"
 #include "XpbdImplKernels.cuh"
+#include "pbat/gpu/common/Eigen.cuh"
 
 #include <array>
 #include <exception>
@@ -56,25 +57,15 @@ XpbdImpl::XpbdImpl(
     mLagrangeMultipliers[Collision].Resize(V.NumberOfSimplices());
     mCompliance[Collision].Resize(V.NumberOfSimplices());
     // Initialize particle data
-    for (auto d = 0; d < X.Dimensions(); ++d)
-    {
-        thrust::copy(X.x[d].begin(), X.x[d].end(), mPositions[d].begin());
-        thrust::fill(mVelocities[d].begin(), mVelocities[d].end(), GpuScalar{0.});
-        thrust::fill(mExternalForces[d].begin(), mExternalForces[d].end(), GpuScalar{0.});
-    }
-    thrust::fill(
-        mMassInverses.Data(),
-        mMassInverses.Data() + mMassInverses.Size(),
-        GpuScalar{1e-3});
+    mPositions = X.x;
+    mVelocities.SetConstant(GpuScalar(0));
+    mExternalForces.SetConstant(GpuScalar(0));
+    mMassInverses.SetConstant(GpuScalar(1e-3));
 }
 
 void XpbdImpl::PrepareConstraints()
 {
-    thrust::fill(
-        thrust::device,
-        mCompliance[Collision].Data(),
-        mCompliance[Collision].Data() + mCompliance[Collision].Size(),
-        GpuScalar{0.});
+    mCompliance[Collision].SetConstant(GpuScalar(0));
     thrust::for_each(
         thrust::device,
         thrust::make_counting_iterator<GpuIndex>(0),
@@ -192,87 +183,33 @@ std::size_t XpbdImpl::NumberOfConstraints() const
 
 void XpbdImpl::SetPositions(Eigen::Ref<GpuMatrixX const> const& Xin)
 {
-    auto const nParticles = static_cast<GpuIndex>(X.x.Size());
-    if (Xin.rows() != 3 and Xin.cols() != nParticles)
-    {
-        std::ostringstream ss{};
-        ss << "Expected positions of dimensions " << X.x.Dimensions() << "x" << X.x.Size()
-           << ", but got " << Xin.rows() << "x" << Xin.cols() << "\n";
-        throw std::invalid_argument(ss.str());
-    }
-    for (auto d = 0; d < mPositions.Dimensions(); ++d)
-    {
-        thrust::copy(Xin.row(d).begin(), Xin.row(d).end(), X.x[d].begin());
-        thrust::copy(Xin.row(d).begin(), Xin.row(d).end(), mPositions[d].begin());
-    }
+    common::ToBuffer(Xin, X.x);
+    mPositions = X.x;
 }
 
 void XpbdImpl::SetVelocities(Eigen::Ref<GpuMatrixX const> const& vIn)
 {
-    auto const nParticles = static_cast<GpuIndex>(mVelocities.Size());
-    if (vIn.rows() != 3 and vIn.cols() != nParticles)
-    {
-        std::ostringstream ss{};
-        ss << "Expected velocities of dimensions " << mVelocities.Dimensions() << "x"
-           << mVelocities.Size() << ", but got " << vIn.rows() << "x" << vIn.cols() << "\n";
-        throw std::invalid_argument(ss.str());
-    }
-    for (auto d = 0; d < mVelocities.Dimensions(); ++d)
-        thrust::copy(vIn.row(d).begin(), vIn.row(d).end(), mVelocities[d].begin());
+    common::ToBuffer(vIn, mVelocities);
 }
 
 void XpbdImpl::SetExternalForces(Eigen::Ref<GpuMatrixX const> const& fIn)
 {
-    auto const nParticles = static_cast<GpuIndex>(mExternalForces.Size());
-    if (fIn.rows() != 3 and fIn.cols() != nParticles)
-    {
-        std::ostringstream ss{};
-        ss << "Expected forces of dimensions " << mExternalForces.Dimensions() << "x"
-           << mExternalForces.Size() << ", but got " << fIn.rows() << "x" << fIn.cols() << "\n";
-        throw std::invalid_argument(ss.str());
-    }
-    for (auto d = 0; d < mExternalForces.Dimensions(); ++d)
-        thrust::copy(fIn.row(d).begin(), fIn.row(d).end(), mExternalForces[d].begin());
+    common::ToBuffer(fIn, mExternalForces);
 }
 
 void XpbdImpl::SetMassInverse(Eigen::Ref<GpuMatrixX const> const& minv)
 {
-    auto const nParticles = static_cast<GpuIndex>(mMassInverses.Size());
-    if (not(minv.rows() == 1 and minv.cols() == nParticles) and
-        not(minv.rows() == nParticles and minv.cols() == 1))
-    {
-        std::ostringstream ss{};
-        ss << "Expected mass inverses of dimensions " << mMassInverses.Dimensions() << "x"
-           << mMassInverses.Size() << " or its transpose, but got " << minv.rows() << "x"
-           << minv.cols() << "\n";
-        throw std::invalid_argument(ss.str());
-    }
-    thrust::copy(minv.data(), minv.data() + minv.size(), mMassInverses.Data());
+    common::ToBuffer(minv, mMassInverses);
 }
 
 void XpbdImpl::SetLameCoefficients(Eigen::Ref<GpuMatrixX const> const& l)
 {
-    auto const nTetrahedra = static_cast<GpuIndex>(T.inds.Size());
-    if (l.rows() != 2 and l.cols() != nTetrahedra)
-    {
-        std::ostringstream ss{};
-        ss << "Expected Lame coefficients of dimensions 2x" << T.inds.Size() << ", but got "
-           << l.rows() << "x" << l.cols() << "\n";
-        throw std::invalid_argument(ss.str());
-    }
-    thrust::copy(l.data(), l.data() + l.size(), mLame.Data());
+    common::ToBuffer(l, mLame);
 }
 
 void XpbdImpl::SetCompliance(Eigen::Ref<GpuMatrixX const> const& alpha, EConstraint eConstraint)
 {
-    if (static_cast<std::size_t>(alpha.size()) != mCompliance[eConstraint].Size())
-    {
-        std::ostringstream ss{};
-        ss << "Expected compliance of dimensions " << mCompliance[eConstraint].Size()
-           << ", but got " << alpha.size() << "\n";
-        throw std::invalid_argument(ss.str());
-    }
-    thrust::copy(alpha.data(), alpha.data() + alpha.size(), mCompliance[eConstraint].Data());
+    common::ToBuffer(alpha, mCompliance[eConstraint]);
 }
 
 void XpbdImpl::SetConstraintPartitions(std::vector<std::vector<GpuIndex>> const& partitions)

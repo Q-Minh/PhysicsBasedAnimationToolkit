@@ -11,7 +11,7 @@ namespace py {
 namespace gpu {
 namespace geometry {
 
-void BindBvhQuery(pybind11::module& m)
+void BindBvhQuery([[maybe_unused]] pybind11::module& m)
 {
 #ifdef PBAT_USE_CUDA
     namespace pyb = pybind11;

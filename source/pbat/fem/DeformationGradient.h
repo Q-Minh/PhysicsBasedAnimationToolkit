@@ -3,9 +3,10 @@
 
 #include "Concepts.h"
 #include "Jacobian.h"
-
-#include <Eigen/SVD>
-#include <pbat/Aliases.h>
+#include "pbat/Aliases.h"
+#include "pbat/math/linalg/mini/BinaryOperations.h"
+#include "pbat/math/linalg/mini/Concepts.h"
+#include "pbat/math/linalg/mini/Matrix.h"
 
 namespace pbat {
 namespace fem {
@@ -44,24 +45,35 @@ DeformationGradient(Eigen::MatrixBase<TDerivedx> const& x, Eigen::MatrixBase<TDe
  *                                             gid I_{d x d} ]
  *        = \sum_{k=1}^{d} dpk_{d x 1} * gik
  *
- * @tparam TDerivedF
- * @tparam TDerivedGP
  * @tparam TElement
  * @tparam Dims Problem dimensionality
+ * @tparam TMatrixGF
+ * @tparam TMatrixGP
+ * @tparam Scalar
  * @param GF Gradient w.r.t. vectorized deformation gradient vec(F)
  * @param GP Basis function gradients
  * @return
  */
-template <CElement TElement, int Dims, class TDerivedF, class TDerivedGP>
-Vector<TElement::kNodes * Dims>
-GradientWrtDofs(Eigen::DenseBase<TDerivedF> const& GF, Eigen::DenseBase<TDerivedGP> const& GP)
+template <
+    CElement TElement,
+    int Dims,
+    math::linalg::mini::CMatrix TMatrixGF,
+    math::linalg::mini::CMatrix TMatrixGP,
+    class ScalarType = typename TMatrixGF::ScalarType>
+math::linalg::mini::SVector<ScalarType, TElement::kNodes * Dims>
+GradientWrtDofs(TMatrixGF const& GF, TMatrixGP const& GP)
 {
     auto constexpr kRows = TElement::kNodes * Dims;
-    Vector<kRows> dPsidx = Vector<kRows>::Zero();
+    using namespace math::linalg::mini;
+    SVector<ScalarType, kRows> dPsidx = Zeros<ScalarType, kRows, 1>{};
     for (auto k = 0; k < Dims; ++k)
+    {
         for (auto i = 0; i < TElement::kNodes; ++i)
-            dPsidx.template segment<Dims>(i * Dims) +=
-                GP(i, k) * GF.template segment<Dims>(k * Dims);
+        {
+            dPsidx.template Slice<Dims, 1>(i * Dims, 0) +=
+                GP(i, k) * GF.template Slice<Dims, 1>(k * Dims, 0);
+        }
+    }
     return dPsidx;
 }
 
@@ -72,27 +84,42 @@ GradientWrtDofs(Eigen::DenseBase<TDerivedF> const& GF, Eigen::DenseBase<TDerived
  * dPsi/dxi = \sum_{k=1}^{d} dpk_{d x 1} * gik (see GradientWrtDofs)
  * d^2 Psi / dxi dxj = \sum_{ki=1}^{d} \sum_{kj=1}^{d} d^2 gi_{ki} p_{ki,kj}  gj_{kj}
  *
- * @tparam TDerivedF
- * @tparam TDerivedGP
  * @tparam TElement
  * @tparam Dims Problem dimensionality
+ * @tparam TMatrixHF
+ * @tparam TMatrixGP
+ * @tparam Scalar
  * @param HF Hessian of energy w.r.t. vectorized deformation gradient vec(F)
  * @param GP Basis function gradients
  * @return
  */
-template <CElement TElement, int Dims, class TDerivedF, class TDerivedGP>
-Matrix<TElement::kNodes * Dims, TElement::kNodes * Dims>
-HessianWrtDofs(Eigen::DenseBase<TDerivedF> const& HF, Eigen::DenseBase<TDerivedGP> const& GP)
+template <
+    CElement TElement,
+    int Dims,
+    math::linalg::mini::CMatrix TMatrixHF,
+    math::linalg::mini::CMatrix TMatrixGP,
+    class ScalarType = typename TMatrixHF::ScalarType>
+math::linalg::mini::SMatrix<ScalarType, TElement::kNodes * Dims, TElement::kNodes * Dims>
+HessianWrtDofs(TMatrixHF const& HF, TMatrixGP const& GP)
 {
-    auto constexpr kRows          = TElement::kNodes * Dims;
-    auto constexpr kCols          = TElement::kNodes * Dims;
-    Matrix<kRows, kCols> d2Psidx2 = Matrix<kRows, kCols>::Zero();
+    auto constexpr kRows = TElement::kNodes * Dims;
+    auto constexpr kCols = TElement::kNodes * Dims;
+    using namespace math::linalg::mini;
+    SMatrix<ScalarType, kRows, kCols> d2Psidx2 = Zeros<ScalarType, kRows, kCols>{};
     for (auto kj = 0; kj < Dims; ++kj)
+    {
         for (auto ki = 0; ki < Dims; ++ki)
+        {
             for (auto j = 0; j < TElement::kNodes; ++j)
+            {
                 for (auto i = 0; i < TElement::kNodes; ++i)
-                    d2Psidx2.template block<Dims, Dims>(i * Dims, j * Dims) +=
-                        GP(i, ki) * GP(j, kj) * HF.template block<Dims, Dims>(ki * Dims, kj * Dims);
+                {
+                    d2Psidx2.template Slice<Dims, Dims>(i * Dims, j * Dims) +=
+                        GP(i, ki) * GP(j, kj) * HF.template Slice<Dims, Dims>(ki * Dims, kj * Dims);
+                }
+            }
+        }
+    }
     return d2Psidx2;
 }
 

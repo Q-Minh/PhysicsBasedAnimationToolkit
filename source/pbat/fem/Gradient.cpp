@@ -7,9 +7,9 @@
 #include "Tetrahedron.h"
 
 #include <doctest/doctest.h>
-#include <eigen3/unsupported/Eigen/KroneckerProduct>
 #include <pbat/common/ConstexprFor.h>
 #include <pbat/math/LinearOperator.h>
+#include <unsupported/Eigen/KroneckerProduct>
 
 TEST_CASE("[fem] Gradient")
 {
@@ -67,8 +67,9 @@ TEST_CASE("[fem] Gradient")
         CSCMatrix Ik(kDims, kDims);
         Ik.setIdentity();
         CSCMatrix const NThat = Eigen::kroneckerProduct(NT, Ik);
-        VectorX const Ihat =
-            fem::InnerProductWeights<kQuadratureOrder>(mesh).reshaped().template replicate<kDims, 1>();
+        VectorX const Ihat    = fem::InnerProductWeights<kQuadratureOrder>(mesh)
+                                 .reshaped()
+                                 .template replicate<kDims, 1>();
         CSCMatrix const GG = NThat * Ihat.asDiagonal() * GM;
         CHECK_EQ(GG.rows(), kDims * n);
         CHECK_EQ(GG.cols(), n);

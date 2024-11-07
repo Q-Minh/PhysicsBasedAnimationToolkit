@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.26)
-project(PhysicsBasedAnimationToolkit VERSION 0.0.8 LANGUAGES CXX)
+project(PhysicsBasedAnimationToolkit VERSION 0.0.9 LANGUAGES CXX)
 enable_testing()
 
 # Configuration options
@@ -33,15 +33,18 @@ endif()
 
 # Unless user specified otherwise, we decide the structure of our build tree.
 include(GNUInstallDirs)
-if (NOT CMAKE_RUNTIME_OUTPUT_DIRECTORY)
+
+if(NOT CMAKE_RUNTIME_OUTPUT_DIRECTORY)
     set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_INSTALL_BINDIR})
     message(VERBOSE "PBAT -- Set CMAKE_RUNTIME_OUTPUT_DIRECTORY=${CMAKE_RUNTIME_OUTPUT_DIRECTORY}")
 endif()
-if (NOT CMAKE_LIBRARY_OUTPUT_DIRECTORY)
+
+if(NOT CMAKE_LIBRARY_OUTPUT_DIRECTORY)
     set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR})
     message(VERBOSE "PBAT -- Set CMAKE_LIBRARY_OUTPUT_DIRECTORY=${CMAKE_LIBRARY_OUTPUT_DIRECTORY}")
 endif()
-if (NOT CMAKE_ARCHIVE_OUTPUT_DIRECTORY)
+
+if(NOT CMAKE_ARCHIVE_OUTPUT_DIRECTORY)
     set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR})
     message(VERBOSE "PBAT -- Set CMAKE_ARCHIVE_OUTPUT_DIRECTORY=${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}")
 endif()
@@ -70,6 +73,7 @@ set_target_properties(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
 )
 install(
     TARGETS
+    eigen 
     PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     EXPORT PhysicsBasedAnimationToolkit_Targets
     FILE_SET api

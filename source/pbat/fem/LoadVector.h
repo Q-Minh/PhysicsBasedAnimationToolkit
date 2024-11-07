@@ -64,7 +64,7 @@ struct LoadVector
                ///< obtain the element force vectors, compute Neint \kron I_{dims} * f
     Eigen::Ref<MatrixX const> detJe; ///< |# element quadrature points|x|#elements| matrix of
                                      ///< jacobian determinants at element quadrature points
-    int dims; ///< ///< Dimensionality of image of FEM function space, i.e. this load vector is
+    int dims; ///< Dimensionality of image of FEM function space, i.e. this load vector is
               ///< actually f \kronecker 1_{dims \times dims}. Should be >= 1.
 };
 
@@ -84,7 +84,7 @@ inline LoadVector<TMesh, QuadratureOrder>::LoadVector(
 template <CMesh TMesh, int QuadratureOrder>
 inline VectorX LoadVector<TMesh, QuadratureOrder>::ToVector() const
 {
-    PBAT_PROFILE_NAMED_SCOPE("fem.LoadVector.ToVector");
+    PBAT_PROFILE_NAMED_SCOPE("pbat.fem.LoadVector.ToVector");
     CheckValidState();
     auto const n                = mesh.X.cols() * dims;
     auto const numberOfElements = mesh.E.cols();

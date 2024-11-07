@@ -2,13 +2,13 @@
 #define PBAT_PHYSICS_HYPER_ELASTICITY_H
 
 #include "PhysicsBasedAnimationToolkitExport.h"
+#include "pbat/math/linalg/mini/Matrix.h"
 
 #include <concepts>
 #include <exception>
 #include <fmt/core.h>
 #include <pbat/Aliases.h>
 #include <string>
-#include <tuple>
 
 namespace pbat {
 namespace physics {
@@ -26,27 +26,38 @@ concept CHyperElasticEnergy = requires(T t)
         T::kDims
     } -> std::convertible_to<int>;
     {
-        t.eval(Matrix<T::kDims, T::kDims>{}.reshaped(), Scalar{}, Scalar{})
+        t.eval(math::linalg::mini::SMatrix<Scalar, T::kDims * T::kDims>{}, Scalar{}, Scalar{})
     } -> std::convertible_to<Scalar>;
     {
-        t.grad(Matrix<T::kDims, T::kDims>{}.reshaped(), Scalar{}, Scalar{})
-    } -> std::convertible_to<Vector<T::kDims * T::kDims>>;
+        t.grad(math::linalg::mini::SMatrix<Scalar, T::kDims * T::kDims>{}, Scalar{}, Scalar{})
+    } -> std::convertible_to<math::linalg::mini::SVector<Scalar, T::kDims * T::kDims>>;
     {
-        t.hessian(Matrix<T::kDims, T::kDims>{}.reshaped(), Scalar{}, Scalar{})
-    } -> std::convertible_to<Matrix<T::kDims * T::kDims, T::kDims * T::kDims>>;
-    {
-        t.evalWithGrad(Matrix<T::kDims, T::kDims>{}.reshaped(), Scalar{}, Scalar{})
-    } -> std::convertible_to<std::tuple<Scalar, Vector<T::kDims * T::kDims>>>;
-    {
-        t.evalWithGradAndHessian(Matrix<T::kDims, T::kDims>{}.reshaped(), Scalar{}, Scalar{})
-    } -> std::convertible_to<std::tuple<
-        Scalar,
-        Vector<T::kDims * T::kDims>,
-        Matrix<T::kDims * T::kDims, T::kDims * T::kDims>>>;
-    {
-        t.gradAndHessian(Matrix<T::kDims, T::kDims>{}.reshaped(), Scalar{}, Scalar{})
+        t.hessian(math::linalg::mini::SMatrix<Scalar, T::kDims * T::kDims>{}, Scalar{}, Scalar{})
     } -> std::convertible_to<
-        std::tuple<Vector<T::kDims * T::kDims>, Matrix<T::kDims * T::kDims, T::kDims * T::kDims>>>;
+        math::linalg::mini::SMatrix<Scalar, T::kDims * T::kDims, T::kDims * T::kDims>>;
+    {
+        t.evalWithGrad(
+            math::linalg::mini::SMatrix<Scalar, T::kDims * T::kDims>{},
+            Scalar{},
+            Scalar{},
+            std::declval<math::linalg::mini::SVector<Scalar, T::kDims * T::kDims>&>())
+    } -> std::convertible_to<Scalar>;
+    {
+        t.evalWithGradAndHessian(
+            math::linalg::mini::SMatrix<Scalar, T::kDims * T::kDims>{},
+            Scalar{},
+            Scalar{},
+            std::declval<math::linalg::mini::SVector<Scalar, T::kDims * T::kDims>&>(),
+            std::declval<
+                math::linalg::mini::SMatrix<Scalar, T::kDims * T::kDims, T::kDims * T::kDims>&>())
+    } -> std::convertible_to<Scalar>;
+    {t.gradAndHessian(
+        math::linalg::mini::SMatrix<Scalar, T::kDims * T::kDims>{},
+        Scalar{},
+        Scalar{},
+        std::declval<math::linalg::mini::SVector<Scalar, T::kDims * T::kDims>&>(),
+        std::declval<
+            math::linalg::mini::SMatrix<Scalar, T::kDims * T::kDims, T::kDims * T::kDims>&>())};
 };
 
 template <class TDerivedY, class TDerivednu>

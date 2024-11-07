@@ -46,8 +46,14 @@ void BindTetrahedralAabbHierarchy(pybind11::module& m)
             pyb::arg("P"),
             pyb::arg("parallelize") = false)
         .def("update", &TetrahedralAabbHierarchy::Update)
-        .def_property_readonly("bounding_volumes", [](TetrahedralAabbHierarchy const& self) {
-            return self.GetBoundingVolumes();
+        .def_property_readonly(
+            "bounding_volumes",
+            [](TetrahedralAabbHierarchy const& self) { return self.GetBoundingVolumes(); })
+        .def_property_readonly(
+            "points",
+            [](TetrahedralAabbHierarchy const& self) { return self.GetV(); })
+        .def_property_readonly("primitives", [](TetrahedralAabbHierarchy const& self) {
+            return self.GetC();
         });
 }
 

@@ -358,44 +358,28 @@ if __name__ == "__main__":
     V, C = combine(V, C)
     mesh = pbat.fem.Mesh(
         V.T, C.T, element=pbat.fem.Element.Tetrahedron, order=1)
-    V, C = mesh.X.T, mesh.E.T
 
     # Construct FEM quantities for simulation
     x = mesh.X.reshape(math.prod(mesh.X.shape), order='F')
     n = x.shape[0]
     v = np.zeros(n)
 
-    detJeM = pbat.fem.jacobian_determinants(mesh, quadrature_order=2)
+    # Lumped mass matrix
     rho = args.rho
-    M = pbat.fem.MassMatrix(mesh, detJeM, rho=rho,
-                            dims=3, quadrature_order=2).to_matrix()
-    # Lump mass matrix
-    lumpedm = M.sum(axis=0)
-    M = sp.sparse.spdiags(lumpedm, np.array([0]), m=M.shape[0], n=M.shape[0])
+    M, detJeM = pbat.fem.mass_matrix(mesh, rho=rho, lump=True)
     Minv = sp.sparse.spdiags(
-        1./lumpedm, np.array([0]), m=M.shape[0], n=M.shape[0])
+        1./M.diagonal(), np.array([0]), m=M.shape[0], n=M.shape[0])
 
     # Construct load vector from gravity field
-    qgf = pbat.fem.inner_product_weights(
-        mesh, quadrature_order=1).flatten(order="F")
-    Qf = sp.sparse.diags_array([qgf], offsets=[0])
-    Nf = pbat.fem.shape_function_matrix(mesh, quadrature_order=1)
     g = np.zeros(mesh.dims)
     g[-1] = -9.81
-    fe = np.tile(rho*g[:, np.newaxis], mesh.E.shape[1])
-    f = fe @ Qf @ Nf
-    f = f.reshape(math.prod(f.shape), order="F")
+    f, detJeF = pbat.fem.load_vector(mesh, rho*g)
     a = Minv @ f
 
     # Create hyper elastic potential
-    detJeU = pbat.fem.jacobian_determinants(mesh, quadrature_order=1)
-    GNeU = pbat.fem.shape_function_gradients(mesh, quadrature_order=1)
-    Y = np.full(mesh.E.shape[1], args.Y)
-    nu = np.full(mesh.E.shape[1], args.nu)
-    psi = pbat.fem.HyperElasticEnergy.StableNeoHookean
-    hep = pbat.fem.HyperElasticPotential(
-        mesh, detJeU, GNeU, Y, nu, energy=psi, quadrature_order=1)
-    hep.precompute_hessian_sparsity()
+    Y, nu, psi = args.Y, args.nu, pbat.fem.HyperElasticEnergy.StableNeoHookean
+    hep, egU, wgU, GNeU = pbat.fem.hyper_elastic_potential(
+        mesh, Y=Y, nu=nu, energy=psi)
 
     # Setup IPC contact handling
     F = igl.boundary_facets(C)

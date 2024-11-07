@@ -6,7 +6,7 @@
         "tonthat.quocminh@gmail.com"
     ],
     "name": "pbatoolkit",
-    "version": "0.0.8",
+    "version": "0.0.9",
     "dependencies": [
         {
             "name": "range-v3",
@@ -15,10 +15,6 @@
         {
             "name": "fmt",
             "version>=": "10.2.1"
-        },
-        {
-            "name": "eigen3",
-            "version>=": "3.4.0"
         },
         {
             "name": "tbb",

@@ -3,6 +3,7 @@
 #include "gpu/Gpu.h"
 #include "math/Math.h"
 #include "profiling/Profiling.h"
+#include "sim/Sim.h"
 
 #include <pybind11/pybind11.h>
 
@@ -16,8 +17,11 @@ PYBIND11_MODULE(_pbat, m)
     pbat::py::fem::Bind(mfem);
     auto mgeometry = m.def_submodule("geometry");
     pbat::py::geometry::Bind(mgeometry);
-    auto mgpu = m.def_submodule("gpu");
-    pbat::py::gpu::Bind(mgpu);
     auto mmath = m.def_submodule("math");
     pbat::py::math::Bind(mmath);
+    auto msim = m.def_submodule("sim");
+    pbat::py::sim::Bind(msim);
+    // Bind GPU module at the end, since it is layered on top of non-GPU modules
+    auto mgpu = m.def_submodule("gpu");
+    pbat::py::gpu::Bind(mgpu);
 }

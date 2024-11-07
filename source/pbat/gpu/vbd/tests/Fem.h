@@ -1,7 +1,7 @@
 #ifndef PBAT_GPU_VBD_TESTS_FEM_H
 #define PBAT_GPU_VBD_TESTS_FEM_H
 
-#include "pbat/gpu/Aliases.h"
+#include "pbat/Aliases.h"
 
 namespace pbat {
 namespace gpu {
@@ -11,16 +11,14 @@ namespace tests {
 class LinearFemMesh
 {
   public:
-    LinearFemMesh(
-        Eigen::Ref<GpuMatrixX const> const& V,
-        Eigen::Ref<GpuIndexMatrixX const> const& T);
+    LinearFemMesh(Eigen::Ref<MatrixX const> const& V, Eigen::Ref<IndexMatrixX const> const& T);
     LinearFemMesh(LinearFemMesh const&)            = delete;
     LinearFemMesh& operator=(LinearFemMesh const&) = delete;
     ~LinearFemMesh();
 
-    GpuVectorX QuadratureWeights() const;
-    GpuMatrixX ShapeFunctionGradients() const;
-    GpuMatrixX LameCoefficients(GpuScalar Y, GpuScalar nu) const;
+    VectorX QuadratureWeights() const;
+    MatrixX ShapeFunctionGradients() const;
+    MatrixX LameCoefficients(Scalar Y, Scalar nu) const;
 
   private:
     void* mImpl;

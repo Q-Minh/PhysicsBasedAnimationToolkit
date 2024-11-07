@@ -132,7 +132,7 @@ Mesh<TElement, Dims>::Mesh(
     Eigen::Ref<MatrixX const> const& V,
     Eigen::Ref<IndexMatrixX const> const& C)
 {
-    PBAT_PROFILE_NAMED_SCOPE("fem.Mesh.Construct");
+    PBAT_PROFILE_NAMED_SCOPE("pbat.fem.Mesh.Construct");
 
     // Smart nodal indexing is only relevant for higher-order meshes
     if constexpr (kOrder == 1)
@@ -167,7 +167,7 @@ Mesh<TElement, Dims>::Mesh(
         for (auto c = 0; c < numberOfCells; ++c)
         {
             IndexVector<kVerticesPerCell> const cellVertices = C.col(c);
-            Matrix<kDims, kVerticesPerCell> const Xc         = V(Eigen::all, cellVertices);
+            Matrix<kDims, kVerticesPerCell> const Xc = V(Eigen::placeholders::all, cellVertices);
 
             // Sort based on cell vertex index
             IndexVector<kVerticesPerCell> sortOrder{};
@@ -224,7 +224,7 @@ inline MatrixX Mesh<TElement, Dims>::QuadraturePoints() const
         auto const vertices             = nodes(ElementType::Vertices);
         auto constexpr kRowsJ           = kDims;
         auto constexpr kColsJ           = AffineElementType::kNodes;
-        Matrix<kRowsJ, kColsJ> const Ve = X(Eigen::all, vertices);
+        Matrix<kRowsJ, kColsJ> const Ve = X(Eigen::placeholders::all, vertices);
         for (auto g = 0; g < kQuadPts; ++g)
         {
             Xg.col(e * kQuadPts + g) = Ve * XgRef.col(g);
