@@ -52,8 +52,8 @@ if __name__ == "__main__":
 
     # Create hyper elastic potential
     Y, nu, energy = args.Y, args.nu, pbat.fem.HyperElasticEnergy.StableNeoHookean
-    hep, detJeU, GNeU = pbat.fem.hyper_elastic_potential(
-        mesh, Y=Y, nu=nu, energy=energy, detJe=detJeF)
+    hep, egU, wgU, GNeU = pbat.fem.hyper_elastic_potential(
+        mesh, Y=Y, nu=nu, energy=energy)
 
     # Set Dirichlet boundary conditions
     Xmin = mesh.X.min(axis=1)

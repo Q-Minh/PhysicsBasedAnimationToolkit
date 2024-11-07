@@ -148,7 +148,7 @@ class CholFemFunctionTransferOperator(BaseFemFunctionTransferOperator):
         self.P = (self.NT.T @ (rho * self.Ig) @ self.NS).asformat('csc')
         self.rho = rho
         energy = pbat.fem.HyperElasticEnergy.StableNeoHookean
-        self.hep, self.detJeU, self.GNeU = pbat.fem.hyper_elastic_potential(
+        self.hep, self.egU, self.wgU, self.GNeU = pbat.fem.hyper_elastic_potential(
             MT, Y, nu, energy=energy)
         self.hxreg = hxreg
         self.X = MT.X
@@ -219,7 +219,7 @@ class RankKApproximateFemFunctionTransferOperator(BaseFemFunctionTransferOperato
 def rest_pose_hessian(mesh, Y, nu):
     x = mesh.X.reshape(math.prod(mesh.X.shape), order='f')
     energy = pbat.fem.HyperElasticEnergy.StableNeoHookean
-    hep, detJeU, GNeU = pbat.fem.hyper_elastic_potential(
+    hep, egU, wgU, GNeU = pbat.fem.hyper_elastic_potential(
         mesh, Y, nu, energy=energy)
     hep.compute_element_elasticity(x)
     HU = hep.hessian()

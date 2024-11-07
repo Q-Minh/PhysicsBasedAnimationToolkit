@@ -38,20 +38,23 @@ TEST_CASE("[fem] HyperElasticPotential")
             else
                 return kOrder - 1;
         }();
-        using ElasticEnergyType = physics::StableNeoHookeanEnergy<3>;
-        using ElementType       = fem::Tetrahedron<kOrder>;
-        using MeshType          = fem::Mesh<ElementType, kDims>;
-        using ElasticPotentialType =
-            fem::HyperElasticPotential<MeshType, ElasticEnergyType, kQuadratureOrder>;
-        using QuadratureType = ElasticPotentialType::QuadratureRuleType;
+        using ElasticEnergyType    = physics::StableNeoHookeanEnergy<3>;
+        using ElementType          = fem::Tetrahedron<kOrder>;
+        using MeshType             = fem::Mesh<ElementType, kDims>;
+        using ElasticPotentialType = fem::HyperElasticPotential<MeshType, ElasticEnergyType>;
 
         CHECK(math::CLinearOperator<ElasticPotentialType>);
 
         MeshType const M(V, C);
-        VectorX const x     = M.X.reshaped();
-        MatrixX const detJe = fem::DeterminantOfJacobian<kQuadratureOrder>(M);
-        MatrixX const GNe   = fem::ShapeFunctionGradients<kQuadratureOrder>(M);
-        ElasticPotentialType U(M, detJe, GNe, x, Y, nu);
+        VectorX const x       = M.X.reshaped();
+        MatrixX const WG      = fem::InnerProductWeights<kQuadratureOrder>(M);
+        VectorX const wg      = WG.reshaped();
+        MatrixX const GNeg    = fem::ShapeFunctionGradients<kQuadratureOrder>(M);
+        IndexVectorX const eg = IndexVectorX::LinSpaced(M.E.cols(), Index(0), M.E.cols() - 1)
+                                    .replicate(1, WG.rows())
+                                    .transpose()
+                                    .reshaped();
+        ElasticPotentialType U(M, eg, wg, GNeg, x, Y, nu);
         Scalar const UMaterial      = U.Eval();
         VectorX const gradUMaterial = U.ToVector();
         CSCMatrix const HMaterial   = U.ToMatrix();

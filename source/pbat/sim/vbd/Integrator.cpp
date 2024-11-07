@@ -132,7 +132,6 @@ void Integrator::Step(Scalar dt, Index iterations, Index substeps, Scalar rho)
 } // namespace pbat
 
 #include "pbat/common/Eigen.h"
-#include "pbat/fem/HyperElasticPotential.h"
 #include "pbat/fem/Jacobian.h"
 #include "pbat/fem/Mesh.h"
 #include "pbat/fem/ShapeFunctions.h"

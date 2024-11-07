@@ -16,7 +16,9 @@ _strio = io.StringIO()
 with contextlib.redirect_stdout(_strio):
     help(_fem)
 _strio.seek(0)
-setattr(__module, "__doc__", f"{getattr(__module, "__doc__")}\n\n{_strio.read()}")
+setattr(__module, "__doc__", f"{
+        getattr(__module, "__doc__")}\n\n{_strio.read()}")
+
 
 def divergence(mesh, quadrature_order: int = 1, GNe: np.ndarray = None):
     """Construct an FEM divergence operator such that composing div(grad(u)) 
@@ -68,8 +70,9 @@ def hyper_elastic_potential(
         energy=_fem.HyperElasticEnergy.StableNeoHookean,
         precompute_sparsity: bool = True,
         quadrature_order: int = 1,
-        detJe: np.ndarray = None,
-        GNe: np.ndarray = None):
+        eg: np.ndarray = None,
+        wg: np.ndarray = None,
+        GNeg: np.ndarray = None):
     """Construct an FEM hyper elastic potential
 
     Args:
@@ -79,23 +82,27 @@ def hyper_elastic_potential(
         energy (pbat.fem.HyperElasticEnergy, optional): Constitutive model. Defaults to pbat.fem.HyperElasticEnergy.StableNeoHookean.
         precompute_sparsity (bool, optional): Precompute an acceleration data structure for fast hessian construction. Defaults to True.
         quadrature_order (int, optional): Polynomial order to use for potential (and its derivatives) evaluation. Defaults to 1.
-        detJe (np.ndarray, optional): Jacobian determinants at quadrature points. Defaults to None.
-        GNe (np.ndarray, optional): Shape function gradients at quadrature points. Defaults to None.
+        eg (np.ndarray, optional): Elements corresponding to each quadrature weight in wg.
+        wg (np.ndarray, optional): Quadrature weights at quadrature points. Defaults to None.
+        GNeg (np.ndarray, optional): Shape function gradients at quadrature points. Defaults to None.
 
     Returns:
         (pbat.fem.HyperElasticPotential, np.ndarray, np.ndarray): 
     """
-    if detJe is None:
-        detJe = _fem.jacobian_determinants(
+    if eg is None or wg is None or GNeg is None:
+        wg = _fem.inner_product_weights(
             mesh, quadrature_order=quadrature_order)
-    if GNe is None:
-        GNe = _fem.shape_function_gradients(
+        eg = np.linspace(0, mesh.E.shape[1]-1,
+                         num=mesh.E.shape[1], dtype=np.int64)
+        eg = np.repeat(eg, wg.shape[0])
+        wg = wg.flatten(order="F")
+        GNeg = _fem.shape_function_gradients(
             mesh, quadrature_order=quadrature_order)
     hep = _fem.HyperElasticPotential(
-        mesh, detJe, GNe, Y, nu, energy=energy, quadrature_order=quadrature_order)
+        mesh, eg, wg, GNeg, Y, nu, energy=energy)
     if precompute_sparsity:
         hep.precompute_hessian_sparsity()
-    return hep, detJe, GNe
+    return hep, eg, wg, GNeg
 
 
 def laplacian(
