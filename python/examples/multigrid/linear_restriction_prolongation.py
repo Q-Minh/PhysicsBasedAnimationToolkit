@@ -94,10 +94,11 @@ class BaseFemFunctionTransferOperator():
             MS (pbat.fem.Mesh): Source mesh
             MT (pbat.fem.Mesh): Target mesh
         """
-        nelems = MD.E.shape[1]
         quadrature_order = 2*max(MS.order, MT.order)
         Xg = MD.quadrature_points(quadrature_order)
-        wg = np.tile(MD.quadrature_weights(quadrature_order), nelems)
+        wg = pbat.fem.inner_product_weights(
+            MD, quadrature_order=quadrature_order
+        ).flatten(order="F")
         from scipy.sparse import kron, eye, diags
         Ig = diags(wg)
         Ig = kron(Ig, eye(MT.dims))
@@ -281,7 +282,7 @@ if __name__ == "__main__":
     w, L = linear_elastic_deformation_modes(
         mesh, args.rho, args.Y, args.nu, args.modes)
     HC = rest_pose_hessian(cmesh, args.Y, args.nu)
-    lreg, hreg, greg, hxreg = 0, 1e-2, 0, 1e-4
+    lreg, hreg, greg, hxreg = 0, 1e-2, 1e-2, 1e-4
     Fldl = CholFemFunctionTransferOperator(
         mesh, mesh, cmesh, HC, lreg=lreg, hreg=hreg, greg=greg, hxreg=hxreg)
     Krestrict = 30
