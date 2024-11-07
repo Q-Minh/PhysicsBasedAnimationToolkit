@@ -81,5 +81,19 @@ TEST_CASE("[math] MomentFitting")
         // Assert
         CHECK((w1.array() >= Scalar(0)).all());
         CHECK_LT(error.maxCoeff(), 1e-10);
+
+        SUBCASE("Can also solve global sparse linear system for quadrature weights")
+        {
+            auto [M, B, P] = math::ReferenceMomentFittingSystems<kOrder>(
+                S1,
+                X1.bottomRows(kDims),
+                S2,
+                X2.bottomRows(kDims),
+                w2);
+            CSRMatrix GM = math::BlockDiagonalReferenceMomentFittingSystem(M, B, P);
+            CHECK_EQ(GM.rows(), 2*math::OrthonormalPolynomialBasis<kDims, kOrder>::kSize);
+            CHECK_EQ(GM.cols(), 8);
+            CHECK_EQ(GM.nonZeros(), 2 * math::OrthonormalPolynomialBasis<kDims, kOrder>::kSize * 4);
+        }
     }
 }

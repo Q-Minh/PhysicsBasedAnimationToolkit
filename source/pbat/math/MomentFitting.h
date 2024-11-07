@@ -12,6 +12,7 @@
 #include <exception>
 #include <limits>
 #include <tbb/parallel_for.h>
+#include <tuple>
 #include <unsupported/Eigen/NNLS>
 #include <utility>
 
@@ -188,7 +189,7 @@ std::pair<VectorX, VectorX> TransferQuadrature(
     Eigen::MatrixBase<TDerivedXi1> const& Xi1,
     Eigen::DenseBase<TDerivedS2> const& S2,
     Eigen::MatrixBase<TDerivedXi2> const& Xi2,
-    Eigen::MatrixBase<TDerivedWg2> const& wi2,
+    Eigen::DenseBase<TDerivedWg2> const& wi2,
     bool bEvaluateError = false,
     Index maxIterations = 10,
     Scalar precision    = std::numeric_limits<Scalar>::epsilon())
@@ -276,6 +277,169 @@ std::pair<VectorX, VectorX> TransferQuadrature(
         }
     });
     return {wi1, error};
+}
+
+/**
+ * @brief
+ *
+ * @tparam Order
+ * @tparam TDerivedS1
+ * @tparam TDerivedX1
+ * @tparam TDerivedS2
+ * @tparam TDerivedX2
+ * @tparam TDerivedW2
+ * @param S1
+ * @param X1
+ * @param S2
+ * @param X2
+ * @param w2
+ * @return std::tuple<MatrixX, MatrixX, IndexVectorX>
+ */
+template <
+    int Order,
+    class TDerivedS1,
+    class TDerivedX1,
+    class TDerivedS2,
+    class TDerivedX2,
+    class TDerivedW2>
+std::tuple<MatrixX /*P*/, MatrixX /*B*/, IndexVectorX /*prefix into columns of P*/>
+ReferenceMomentFittingSystems(
+    Eigen::DenseBase<TDerivedS1> const& S1,
+    Eigen::MatrixBase<TDerivedX1> const& X1,
+    Eigen::DenseBase<TDerivedS2> const& S2,
+    Eigen::MatrixBase<TDerivedX2> const& X2,
+    Eigen::DenseBase<TDerivedW2> const& w2)
+{
+    // Compute adjacency graph from simplices s to their quadrature points Xi
+    using common::ArgSort;
+    using common::Counts;
+    using common::CumSum;
+    using common::ToEigen;
+    auto nsimplices =
+        std::max(*std::max_element(S1.begin(), S1.end()), *std::max_element(S2.begin(), S2.end())) +
+        1;
+    IndexVectorX S1P = ToEigen(CumSum(Counts<Index>(S1.begin(), S1.end(), nsimplices)));
+    IndexVectorX S2P = ToEigen(CumSum(Counts<Index>(S2.begin(), S2.end(), nsimplices)));
+    IndexVectorX S1N =
+        ToEigen(ArgSort<Index>(S1.size(), [&](auto si, auto sj) { return S1(si) < S1(sj); }));
+    IndexVectorX S2N =
+        ToEigen(ArgSort<Index>(S2.size(), [&](auto si, auto sj) { return S2(si) < S2(sj); }));
+    // Assemble moment fitting matrices and their rhs
+    auto fPolyRows = [](MatrixX const& Xg) {
+        if (Xg.rows() == 1)
+            return OrthonormalPolynomialBasis<1, Order>::kSize;
+        if (Xg.rows() == 2)
+            return OrthonormalPolynomialBasis<2, Order>::kSize;
+        if (Xg.rows() == 3)
+            return OrthonormalPolynomialBasis<3, Order>::kSize;
+        throw std::invalid_argument(
+            "Expected quadrature points in reference simplex space of dimensions (i.e. rows) 1,2 "
+            "or 3.");
+    };
+    auto fAssembleSystem = [](MatrixX const& Xg1,
+                              MatrixX const& Xg2,
+                              VectorX const& wg2) -> std::pair<MatrixX, VectorX> {
+        if (Xg1.rows() == 1)
+        {
+            OrthonormalPolynomialBasis<1, Order> P{};
+            auto M = ReferenceMomentFittingMatrix(P, Xg1);
+            auto b = Integrate(P, Xg2, wg2);
+            return {M, b};
+        }
+        if (Xg1.rows() == 2)
+        {
+            OrthonormalPolynomialBasis<2, Order> P{};
+            auto M = ReferenceMomentFittingMatrix(P, Xg1);
+            auto b = Integrate(P, Xg2, wg2);
+            return {M, b};
+        }
+        if (Xg1.rows() == 3)
+        {
+            OrthonormalPolynomialBasis<3, Order> P{};
+            auto M = ReferenceMomentFittingMatrix(P, Xg1);
+            auto b = Integrate(P, Xg2, wg2);
+            return {M, b};
+        }
+        throw std::invalid_argument(
+            "Expected quadrature points in reference simplex space of dimensions (i.e. rows) 1,2 "
+            "or 3.");
+    };
+    auto nrows = fPolyRows(X1);
+    MatrixX P(nrows, S1N.size());
+    MatrixX B(nrows, nsimplices);
+    B.setZero();
+    tbb::parallel_for(Index(0), nsimplices, [&](Index s) {
+        auto S1begin = S1P(s);
+        auto S1end   = S1P(s + 1);
+        if (S1end > S1begin)
+        {
+            auto s1inds                                 = S1N(Eigen::seq(S1begin, S1end - 1));
+            MatrixX Xg1                                 = X1(Eigen::placeholders::all, s1inds);
+            auto S2begin                                = S2P(s);
+            auto S2end                                  = S2P(s + 1);
+            auto s2inds                                 = S2N(Eigen::seq(S2begin, S2end - 1));
+            MatrixX Xg2                                 = X2(Eigen::placeholders::all, s2inds);
+            VectorX wg2                                 = w2(s2inds);
+            auto [Ps, bs]                               = fAssembleSystem(Xg1, Xg2, wg2);
+            P.block(0, S1begin, nrows, S1end - S1begin) = Ps;
+            B.col(s)                                    = bs;
+        }
+    });
+    return std::make_tuple(P, B, S1P);
+}
+
+/**
+ * @brief
+ *
+ * @tparam TDerivedM
+ * @tparam TDerivedB
+ * @tparam TDerivedP
+ * @param M
+ * @param B
+ * @param P
+ * @return CSRMatrix The block diagonal row sparse matrix GM, whose diagonal blocks are the
+ * individual reference moment fitting matrices in M, such that GM @ w = B.reshaped() is the global
+ * sparse linear system to solve for quadrature weights w.
+ */
+template <class TDerivedM, class TDerivedB, class TDerivedP>
+CSRMatrix BlockDiagonalReferenceMomentFittingSystem(
+    Eigen::MatrixBase<TDerivedM> const& M,
+    Eigen::MatrixBase<TDerivedB> const& B,
+    Eigen::DenseBase<TDerivedP> const& P)
+{
+    auto const nblocks    = P.size() - 1;
+    auto const nblockrows = M.rows();
+    auto const nrows      = nblockrows * nblocks;
+    auto const ncols      = P(Eigen::placeholders::last);
+    CSRMatrix GM(nrows, ncols);
+    std::vector<Index> reserves(nrows);
+    for (auto b = 0; b < nblocks; ++b)
+    {
+        auto begin            = P(b);
+        auto end              = P(b + 1);
+        auto const nblockcols = end - begin;
+        auto const offset     = b * nblockrows;
+        for (auto i = 0; i < nblockrows; ++i)
+            reserves[offset + i] = nblockcols;
+    }
+    GM.reserve(reserves);
+    for (auto b = 0; b < nblocks; ++b)
+    {
+        auto begin            = P(b);
+        auto end              = P(b + 1);
+        auto const nblockcols = end - begin;
+        auto Mb               = M.block(0, begin, nblockrows, nblockcols);
+        auto const roffset    = b * nblockrows;
+        auto const coffset    = begin;
+        for (auto i = 0; i < nblockrows; ++i)
+        {
+            for (auto j = 0; j < nblockcols; ++j)
+            {
+                GM.insert(roffset + i, coffset + j) = Mb(i, j);
+            }
+        }
+    }
+    return GM;
 }
 
 } // namespace math
