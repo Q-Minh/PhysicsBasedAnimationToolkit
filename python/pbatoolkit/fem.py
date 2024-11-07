@@ -16,8 +16,11 @@ _strio = io.StringIO()
 with contextlib.redirect_stdout(_strio):
     help(_fem)
 _strio.seek(0)
-setattr(__module, "__doc__", f"{
-        getattr(__module, "__doc__")}\n\n{_strio.read()}")
+setattr(
+    __module,
+    "__doc__",
+    f"{getattr(__module, "__doc__")}\n\n{_strio.read()}"
+)
 
 
 def divergence(mesh, quadrature_order: int = 1, GNe: np.ndarray = None):
