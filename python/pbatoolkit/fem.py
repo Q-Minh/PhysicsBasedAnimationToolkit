@@ -23,7 +23,7 @@ setattr(
 )
 
 
-def divergence(mesh, quadrature_order: int = 1, GNe: np.ndarray = None):
+def divergence(mesh, quadrature_order: int = 1, eg: np.ndarray = None, wg: np.ndarray = None, GNeg: np.ndarray = None):
     """Construct an FEM divergence operator such that composing div(grad(u)) 
     computes the Laplacian of u, i.e. D @ G = L, where L is the FEM Laplacian 
     operator.
@@ -31,39 +31,49 @@ def divergence(mesh, quadrature_order: int = 1, GNe: np.ndarray = None):
     Args:
         mesh (pbat.fem.Mesh): 
         quadrature_order (int, optional): Polynomial order to use for operator construction. Defaults to 1.
-        GNe (np.ndarray, optional): Shape function gradients at quadrature points. Defaults to None.
+        eg (np.ndarray, optional): |#quad.pts.|x1 array of elements corresponding to quadrature points. Defaults to None.
+        wg (np.ndarray, optional): |#quad.pts.|x1 array of quadrature weights. Defaults to None.
+        GNeg (np.ndarray, optional): |#elem. nodes|x|#dims * #quad.pts.| array of shape function gradients at quadrature points. Defaults to None.
 
     Returns:
         (scipy.sparse.csc_matrix, np.ndarray): 
     """
-    G, GNe = gradient(mesh, quadrature_order=quadrature_order,
-                      GNe=GNe, as_matrix=True)
-    qgL = _fem.inner_product_weights(
-        mesh, quadrature_order=quadrature_order).flatten(order="F")
-    QL = sp.sparse.diags_array([qgL], offsets=[0])
+    should_compute_quadrature = eg is None or wg is None or GNeg is None
+    G, eg, GNeg = gradient(mesh, quadrature_order=quadrature_order, as_matrix=True) if should_compute_quadrature else gradient(
+        mesh, eg=eg, GNeg=GNeg, as_matrix=True)
+    wg = _fem.inner_product_weights(
+        mesh, quadrature_order=quadrature_order).flatten(order="F") if should_compute_quadrature else wg
+    QL = sp.sparse.diags_array(np.asarray(wg).squeeze())
     QL = sp.sparse.kron(sp.sparse.eye_array(mesh.dims), QL)
     D = -G.T @ QL
-    return D, GNe
+    return D, eg, wg, GNeg
 
 
-def gradient(mesh, quadrature_order: int = 1, GNe: np.ndarray = None, as_matrix: bool = True):
+def gradient(mesh, quadrature_order: int = 1, eg: np.ndarray = None, GNeg: np.ndarray = None, as_matrix: bool = True):
     """Construct an FEM gradient operator
 
     Args:
         mesh (pbat.fem.Mesh): 
         quadrature_order (int, optional): Polynomial order to use for operator construction. Defaults to 1.
-        GNe (np.ndarray, optional): Shape function gradients at quadrature points. Defaults to None.
+        eg (np.ndarray, optional): Elements corresponding to quadrature points. Defaults to None.
+        GNeg (np.ndarray, optional): Shape function gradients at quadrature points. Defaults to None.
         as_matrix (bool, optional): Return the operator as a sparse matrix. Defaults to True.
 
     Returns:
         (scipy.sparse.csc_matrix | pbat.fem.Gradient, np.ndarray): 
     """
-    if GNe is None:
-        GNe = _fem.shape_function_gradients(
+
+    if GNeg is None:
+        GNeg = _fem.shape_function_gradients(
             mesh, quadrature_order=quadrature_order)
-    G = _fem.Gradient(mesh, GNe, quadrature_order=quadrature_order)
+        n_quadpts_per_element = GNeg.shape[1] / (mesh.dims * mesh.E.shape[1])
+        eg = np.linspace(0, mesh.E.shape[1]-1,
+                         num=mesh.E.shape[1], dtype=np.int64)
+        eg = np.repeat(eg, n_quadpts_per_element)
+
+    G = _fem.Gradient(mesh, eg, GNeg)
     G = G.to_matrix() if as_matrix else G
-    return G, GNe
+    return G, eg, GNeg
 
 
 def hyper_elastic_potential(
@@ -170,9 +180,8 @@ def mass_matrix(
     if as_matrix:
         M = M.to_matrix()
         if lump:
-            lumpedm = M.sum(axis=0)
-            M = sp.sparse.spdiags(lumpedm, np.array(
-                [0]), m=M.shape[0], n=M.shape[0])
+            lumpedm = np.asarray(M.sum(axis=0)).squeeze()
+            M = sp.sparse.diags_array(lumpedm)
     return M, detJe
 
 
@@ -199,7 +208,7 @@ def load_vector(
     nelems = mesh.E.shape[1]
     wg = np.tile(mesh.quadrature_weights(quadrature_order), nelems)
     qgf = detJe.flatten(order="F") * wg
-    Qf = sp.sparse.diags_array([qgf], offsets=[0])
+    Qf = sp.sparse.diags_array(qgf)
     Nf = _fem.shape_function_matrix(mesh, quadrature_order=quadrature_order)
     if len(fe.shape) == 1:
         fe = np.tile(fe[:, np.newaxis], Qf.shape[0])

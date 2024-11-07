@@ -36,16 +36,20 @@ TEST_CASE("[fem] Gradient")
         using Mesh                      = fem::Mesh<Element, kDims>;
         Mesh mesh(V, C);
 
-        MatrixX const GNe  = fem::ShapeFunctionGradients<kQuadratureOrder>(mesh);
-        using GradientType = fem::Gradient<Mesh, kQuadratureOrder>;
+        MatrixX const GNe                = fem::ShapeFunctionGradients<kQuadratureOrder>(mesh);
+        auto const nQuadPointsPerElement = GNe.cols() / (kDims * mesh.E.cols());
+        IndexVectorX const eg = IndexVectorX::LinSpaced(mesh.E.cols(), Index(0), mesh.E.cols() - 1)
+                                    .replicate(1, nQuadPointsPerElement)
+                                    .transpose()
+                                    .reshaped();
+        using GradientType = fem::Gradient<Mesh>;
         CHECK(math::CLinearOperator<GradientType>);
-        GradientType G{mesh, GNe};
+        GradientType G{mesh, eg, GNe};
 
         auto const n                = G.InputDimensions();
         auto const m                = G.OutputDimensions();
         auto const numberOfElements = mesh.E.cols();
-        auto constexpr kQuadPts     = GradientType::QuadratureRuleType::kPoints;
-        CHECK_EQ(m, kDims * kQuadPts * numberOfElements);
+        CHECK_EQ(m, kDims * nQuadPointsPerElement * numberOfElements);
 
         VectorX const ones = VectorX::Ones(n);
         VectorX gradOnes   = VectorX::Zero(m);

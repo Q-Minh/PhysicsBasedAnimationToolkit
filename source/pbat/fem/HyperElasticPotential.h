@@ -21,6 +21,11 @@
 namespace pbat {
 namespace fem {
 
+/**
+ * @brief
+ * @tparam TMesh
+ * @tparam THyperElasticEnergy
+ */
 template <CMesh TMesh, physics::CHyperElasticEnergy THyperElasticEnergy>
 struct HyperElasticPotential
 {
