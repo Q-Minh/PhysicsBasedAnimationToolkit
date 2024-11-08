@@ -35,8 +35,9 @@ if __name__ == "__main__":
     # Construct Galerkin laplacian, mass and gradient operators
     n = V.shape[0]
     M, detJeM = pbat.fem.mass_matrix(mesh, dims=1)
-    G, GNeG = pbat.fem.gradient(mesh)
-    D, GNeD = pbat.fem.divergence(mesh, GNe=GNeG)
+    G, egG, GNegG = pbat.fem.gradient(mesh)
+    wgD = pbat.fem.inner_product_weights(mesh)
+    D, wgD, egD, GNegD = pbat.fem.divergence(mesh, eg=egG, wg=wgD, GNeg=GNegG)
     L = D @ G
     # Setup 1-step heat diffusion
     h = igl.avg_edge_length(V, C)

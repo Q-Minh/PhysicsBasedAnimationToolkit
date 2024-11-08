@@ -37,11 +37,6 @@ if __name__ == "__main__":
     M, detJeM = pbat.fem.mass_matrix(mesh, rho=rho)
     Minv = pbat.math.linalg.ldlt(M)
     Minv.compute(M)
-    # Could also lump the mass matrix like this
-    # lumpedm = M.sum(axis=0)
-    # M = sp.sparse.spdiags(lumpedm, np.array([0]), m=M.shape[0], n=M.shape[0])
-    # Minv = sp.sparse.spdiags(
-    #     1./lumpedm, np.array([0]), m=M.shape[0], n=M.shape[0])
 
     # Construct load vector from gravity field
     g = np.zeros(mesh.dims)

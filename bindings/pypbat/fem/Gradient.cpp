@@ -13,7 +13,10 @@ namespace fem {
 class Gradient
 {
   public:
-    Gradient(Mesh const& M, Eigen::Ref<MatrixX const> const& GNe, int qOrder);
+    Gradient(
+        Mesh const& M,
+        Eigen::Ref<IndexVectorX const> const& eg,
+        Eigen::Ref<MatrixX const> const& GNeg);
 
     Gradient(Gradient const&)            = delete;
     Gradient& operator=(Gradient const&) = delete;
@@ -30,9 +33,6 @@ class Gradient
     int mMeshOrder;
     int mDims;
     int mOrder;
-    int mQuadratureOrder;
-
-    static auto constexpr kMaxQuadratureOrder = 2;
 
   private:
     void* mGradient;
@@ -44,37 +44,38 @@ void BindGradient(pybind11::module& m)
 
     pyb::class_<Gradient>(m, "Gradient")
         .def(
-            pyb::init<Mesh const&, Eigen::Ref<MatrixX const> const&, int>(),
+            pyb::init<
+                Mesh const&,
+                Eigen::Ref<IndexVectorX const> const&,
+                Eigen::Ref<MatrixX const> const&>(),
             pyb::arg("mesh"),
-            pyb::arg("GNe"),
-            pyb::arg("quadrature_order") = 1,
+            pyb::arg("eg"),
+            pyb::arg("GNeg"),
             "Construct Gradient operator from mesh mesh, using precomputed shape function "
-            "gradients GNe at quadrature points given by quadrature rule of order quadrature_order")
+            "gradients GNeg at quadrature points at elements eg.")
         .def_readonly("dims", &Gradient::mDims)
         .def_readonly("order", &Gradient::mOrder, "Polynomial order of the gradient")
-        .def_readonly("quadrature_order", &Gradient::mQuadratureOrder)
         .def_property_readonly("shape", &Gradient::Shape)
         .def("to_matrix", &Gradient::ToMatrix);
 }
 
-Gradient::Gradient(Mesh const& M, Eigen::Ref<MatrixX const> const& GNe, int qOrder)
+Gradient::Gradient(
+    Mesh const& M,
+    Eigen::Ref<IndexVectorX const> const& eg,
+    Eigen::Ref<MatrixX const> const& GNeg)
     : eMeshElement(M.eElement),
       mMeshDims(M.mDims),
       mMeshOrder(M.mOrder),
       mDims(),
       mOrder(),
-      mQuadratureOrder(),
       mGradient(nullptr)
 {
-    M.ApplyWithQuadrature<kMaxQuadratureOrder>(
-        [&]<pbat::fem::CMesh MeshType, auto QuadratureOrder>(MeshType* mesh) {
-            using GradientType = pbat::fem::Gradient<MeshType, QuadratureOrder>;
-            mGradient          = new GradientType(*mesh, GNe);
-            mDims              = GradientType::kDims;
-            mOrder             = GradientType::kOrder;
-            mQuadratureOrder   = GradientType::kQuadratureOrder;
-        },
-        qOrder);
+    M.Apply([&]<pbat::fem::CMesh MeshType>(MeshType* mesh) {
+        using GradientType = pbat::fem::Gradient<MeshType>;
+        mGradient          = new GradientType(*mesh, eg, GNeg);
+        mDims              = GradientType::kDims;
+        mOrder             = GradientType::kOrder;
+    });
 }
 
 CSCMatrix Gradient::ToMatrix() const
@@ -103,16 +104,11 @@ Gradient::~Gradient()
 template <class Func>
 void Gradient::Apply(Func&& f) const
 {
-    ApplyToMeshWithQuadrature<kMaxQuadratureOrder>(
-        mMeshDims,
-        mMeshOrder,
-        eMeshElement,
-        mQuadratureOrder,
-        [&]<pbat::fem::CMesh MeshType, auto QuadratureOrder>() {
-            using GradientType     = pbat::fem::Gradient<MeshType, QuadratureOrder>;
-            GradientType* gradient = reinterpret_cast<GradientType*>(mGradient);
-            f.template operator()<GradientType>(gradient);
-        });
+    ApplyToMesh(mMeshDims, mMeshOrder, eMeshElement, [&]<pbat::fem::CMesh MeshType>() {
+        using GradientType     = pbat::fem::Gradient<MeshType>;
+        GradientType* gradient = reinterpret_cast<GradientType*>(mGradient);
+        f.template operator()<GradientType>(gradient);
+    });
 }
 
 } // namespace fem
