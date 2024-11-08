@@ -149,8 +149,7 @@ def laplacian(
         wg = wg.flatten(order="F")
         GNeg = _fem.shape_function_gradients(
             mesh, quadrature_order=quadrature_order)
-    L = _fem.Laplacian(mesh, eg, wg, GNeg, dims=dims,
-                       quadrature_order=quadrature_order)
+    L = _fem.Laplacian(mesh, eg, wg, GNeg, dims=dims)
     L = L.to_matrix() if as_matrix else L
     return L, eg, wg, GNeg
 
