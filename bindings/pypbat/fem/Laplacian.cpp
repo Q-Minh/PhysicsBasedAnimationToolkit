@@ -15,10 +15,10 @@ class Laplacian
   public:
     Laplacian(
         Mesh const& M,
-        Eigen::Ref<MatrixX const> const& detJe,
-        Eigen::Ref<MatrixX const> const& GNe,
-        int dims,
-        int qOrder);
+        Eigen::Ref<IndexVectorX const> const& eg,
+        Eigen::Ref<MatrixX const> const& wg,
+        Eigen::Ref<MatrixX const> const& GNeg,
+        int dims);
 
     Laplacian(Laplacian const&)            = delete;
     Laplacian& operator=(Laplacian const&) = delete;
@@ -40,9 +40,6 @@ class Laplacian
     int mMeshDims;
     int mMeshOrder;
     int mOrder;
-    int mQuadratureOrder;
-
-    static auto constexpr kMaxQuadratureOrder = 4;
 
   private:
     void* mLaplacian;
@@ -56,58 +53,52 @@ void BindLaplacian(pybind11::module& m)
         .def(
             pyb::init<
                 Mesh const&,
+                Eigen::Ref<IndexVectorX const> const&,
                 Eigen::Ref<MatrixX const> const&,
                 Eigen::Ref<MatrixX const> const&,
-                int,
                 int>(),
             pyb::arg("mesh"),
-            pyb::arg("detJe"),
+            pyb::arg("eg"),
+            pyb::arg("wg"),
             pyb::arg("GNe"),
-            pyb::arg("dims")             = 1,
-            pyb::arg("quadrature_order") = 1,
+            pyb::arg("dims") = 1,
             "Construct the symmetric part of the Laplacian operator on mesh mesh, using "
-            "precomputed jacobian determinants detJe and shape function gradients GNe evaluated at "
-            "quadrature points given by the quadrature rule of order quadrature_order. The "
-            "discretization is based on Galerkin projection. The dimensions dims can be set to "
-            "accommodate vector-valued functions.")
+            "precomputed shape function gradients GNeg evaluated at quadrature points g at "
+            "elements eg with weights wg. The discretization is based on Galerkin projection. The "
+            "dimensions dims can be set to accommodate vector-valued functions.")
         .def_property(
             "dims",
             [](Laplacian const& L) { return L.dims(); },
             [](Laplacian& L, int dims) { L.dims() = dims; })
         .def_readonly("order", &Laplacian::mOrder)
-        .def_readonly("quadrature_order", &Laplacian::mQuadratureOrder)
         .def_property(
-            "deltaE",
+            "deltag",
             [](Laplacian const& L) { return L.ElementLaplacians(); },
-            [](Laplacian& L, Eigen::Ref<MatrixX const> const& deltaE) {
-                L.ElementLaplacians() = deltaE;
+            [](Laplacian& L, Eigen::Ref<MatrixX const> const& deltag) {
+                L.ElementLaplacians() = deltag;
             },
-            "|#element nodes|x|#element nodes * #elements| matrix of element Laplacians")
+            "|#element nodes|x|#element nodes * #quad.pts.| matrix of element Laplacians")
         .def_property_readonly("shape", &Laplacian::Shape)
         .def("to_matrix", &Laplacian::ToMatrix);
 }
 
 Laplacian::Laplacian(
     Mesh const& M,
-    Eigen::Ref<MatrixX const> const& detJe,
+    Eigen::Ref<IndexVectorX const> const& eg,
+    Eigen::Ref<MatrixX const> const& wg,
     Eigen::Ref<MatrixX const> const& GNe,
-    int dims,
-    int qOrder)
+    int dims)
     : eMeshElement(M.eElement),
       mMeshDims(M.mDims),
       mMeshOrder(M.mOrder),
       mOrder(),
-      mQuadratureOrder(),
       mLaplacian(nullptr)
 {
-    M.ApplyWithQuadrature<kMaxQuadratureOrder>(
-        [&]<pbat::fem::CMesh MeshType, auto QuadratureOrder>(MeshType* mesh) {
-            using LaplacianType = pbat::fem::SymmetricLaplacianMatrix<MeshType, QuadratureOrder>;
-            mLaplacian          = new LaplacianType(*mesh, detJe, GNe, dims);
-            mOrder              = LaplacianType::kOrder;
-            mQuadratureOrder    = LaplacianType::kQuadratureOrder;
-        },
-        qOrder);
+    M.Apply([&]<pbat::fem::CMesh MeshType>(MeshType* mesh) {
+        using LaplacianType = pbat::fem::SymmetricLaplacianMatrix<MeshType>;
+        mLaplacian          = new LaplacianType(*mesh, eg, wg, GNe, dims);
+        mOrder              = LaplacianType::kOrder;
+    });
 }
 
 CSCMatrix Laplacian::ToMatrix() const
@@ -129,20 +120,20 @@ std::tuple<Index, Index> Laplacian::Shape() const
 
 MatrixX const& Laplacian::ElementLaplacians() const
 {
-    MatrixX* deltaEPtr;
+    MatrixX* deltagPtr;
     Apply([&]<class LaplacianType>(LaplacianType* laplacian) {
-        deltaEPtr = std::addressof(laplacian->deltaE);
+        deltagPtr = std::addressof(laplacian->deltag);
     });
-    return *deltaEPtr;
+    return *deltagPtr;
 }
 
 MatrixX& Laplacian::ElementLaplacians()
 {
-    MatrixX* deltaEPtr;
+    MatrixX* deltagPtr;
     Apply([&]<class LaplacianType>(LaplacianType* laplacian) {
-        deltaEPtr = std::addressof(laplacian->deltaE);
+        deltagPtr = std::addressof(laplacian->deltag);
     });
-    return *deltaEPtr;
+    return *deltagPtr;
 }
 
 int const& Laplacian::dims() const
@@ -172,16 +163,11 @@ Laplacian::~Laplacian()
 template <class Func>
 void Laplacian::Apply(Func&& f) const
 {
-    ApplyToMeshWithQuadrature<kMaxQuadratureOrder>(
-        mMeshDims,
-        mMeshOrder,
-        eMeshElement,
-        mQuadratureOrder,
-        [&]<pbat::fem::CMesh MeshType, auto QuadratureOrder>() {
-            using LaplacianType = pbat::fem::SymmetricLaplacianMatrix<MeshType, QuadratureOrder>;
-            LaplacianType* laplacian = reinterpret_cast<LaplacianType*>(mLaplacian);
-            f.template operator()<LaplacianType>(laplacian);
-        });
+    ApplyToMesh(mMeshDims, mMeshOrder, eMeshElement, [&]<pbat::fem::CMesh MeshType>() {
+        using LaplacianType      = pbat::fem::SymmetricLaplacianMatrix<MeshType>;
+        LaplacianType* laplacian = reinterpret_cast<LaplacianType*>(mLaplacian);
+        f.template operator()<LaplacianType>(laplacian);
+    });
 }
 
 } // namespace fem

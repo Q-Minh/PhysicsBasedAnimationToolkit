@@ -86,9 +86,9 @@ TEST_CASE("[fem] Gradient")
         CSCMatrix Lhat           = -GMT * Ihat.asDiagonal() * GM;
         VectorX const LhatValues = Lhat.coeffs();
         Lhat.coeffs().setOnes();
-        using LaplacianType   = fem::SymmetricLaplacianMatrix<Mesh, kQuadratureOrder>;
-        MatrixX const detJe   = fem::DeterminantOfJacobian<kQuadratureOrder>(mesh);
-        CSCMatrix L           = LaplacianType(mesh, detJe, GNe).ToMatrix();
+        using LaplacianType   = fem::SymmetricLaplacianMatrix<Mesh>;
+        VectorX const wg      = fem::InnerProductWeights<kQuadratureOrder>(mesh).reshaped();
+        CSCMatrix L           = LaplacianType(mesh, eg, wg, GNe).ToMatrix();
         VectorX const Lvalues = L.coeffs();
         L.coeffs().setOnes();
         Scalar const LsparsityError = (L - Lhat).squaredNorm();

@@ -44,11 +44,16 @@ TEST_CASE("[fem] LaplacianMatrix")
                     return (kOrder - 1) + (kOrder - 1);
             }();
 
-            using LaplacianMatrix = fem::SymmetricLaplacianMatrix<Mesh, kQuadratureOrder>;
-            MatrixX const detJe   = fem::DeterminantOfJacobian<kQuadratureOrder>(mesh);
-            MatrixX const GNe     = fem::ShapeFunctionGradients<kQuadratureOrder>(mesh);
+            using LaplacianMatrix = fem::SymmetricLaplacianMatrix<Mesh>;
+            VectorX const wg      = fem::InnerProductWeights<kQuadratureOrder>(mesh).reshaped();
+            IndexVectorX const eg =
+                IndexVectorX::LinSpaced(mesh.E.cols(), Index(0), mesh.E.cols() - 1)
+                    .replicate(1, wg.size() / mesh.E.cols())
+                    .transpose()
+                    .reshaped();
+            MatrixX const GNeg = fem::ShapeFunctionGradients<kQuadratureOrder>(mesh);
             CHECK(math::CLinearOperator<LaplacianMatrix>);
-            LaplacianMatrix matrixFreeLaplacian(mesh, detJe, GNe, outDims);
+            LaplacianMatrix matrixFreeLaplacian(mesh, eg, wg, GNeg, outDims);
 
             CSCMatrix const L = matrixFreeLaplacian.ToMatrix();
             CHECK_EQ(L.rows(), n);

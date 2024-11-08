@@ -13,22 +13,21 @@
 namespace pbat {
 namespace fem {
 
-template <CMesh TMesh, int QuadratureOrder>
+template <CMesh TMesh>
 struct SymmetricLaplacianMatrix
 {
   public:
-    using SelfType           = SymmetricLaplacianMatrix<TMesh, QuadratureOrder>;
-    using MeshType           = TMesh;
-    using ElementType        = typename TMesh::ElementType;
-    using QuadratureRuleType = typename ElementType::template QuadratureType<QuadratureOrder>;
+    using SelfType    = SymmetricLaplacianMatrix<TMesh>;
+    using MeshType    = TMesh;
+    using ElementType = typename TMesh::ElementType;
 
-    static int constexpr kOrder           = 2 * (ElementType::kOrder - 1);
-    static int constexpr kQuadratureOrder = QuadratureOrder;
+    static int constexpr kOrder = 2 * (ElementType::kOrder - 1);
 
     SymmetricLaplacianMatrix(
         MeshType const& mesh,
-        Eigen::Ref<MatrixX const> const& detJe,
-        Eigen::Ref<MatrixX const> const& GNe,
+        Eigen::Ref<IndexVectorX const> const& eg,
+        Eigen::Ref<VectorX const> const& wg,
+        Eigen::Ref<MatrixX const> const& GNegg,
         int dims = 1);
 
     SelfType& operator=(SelfType const&) = delete;
@@ -57,31 +56,33 @@ struct SymmetricLaplacianMatrix
 
     void CheckValidState() const;
 
-    MeshType const& mesh;            ///< The finite element mesh
-    Eigen::Ref<MatrixX const> detJe; ///< |#quad.pts.|x|#elements| affine element jacobian
-                                     ///< determinants at quadrature points
+    MeshType const& mesh; ///< The finite element mesh
+    Eigen::Ref<IndexVectorX const>
+        eg; ///< |#quad.pts.|x1 array of elements associated with quadrature points
+    Eigen::Ref<VectorX const> wg; ///< |#quad.pts.|x1 array of quadrature weights
     Eigen::Ref<MatrixX const>
-        GNe;        ///< |#element nodes|x|#dims * #quad.pts. * #elements|
+        GNeg;       ///< |#element nodes|x|#dims * #quad.pts. * #elements|
                     ///< matrix of element shape function gradients at quadrature points
-    MatrixX deltaE; ///< |#element nodes| x |#element nodes * #elements| matrix element
-                    ///< laplacians
+    MatrixX deltag; ///< |#element nodes| x |#element nodes * #quad.pts.| matrix of element
+                    ///< laplacians at quadrature points
     int dims; ///< Dimensionality of image of FEM function space, i.e. this Laplacian matrix is
               ///< actually L \kronecker I_{dims \times dims}. Should be >= 1.
 };
 
-template <CMesh TMesh, int QuadratureOrder>
-inline SymmetricLaplacianMatrix<TMesh, QuadratureOrder>::SymmetricLaplacianMatrix(
+template <CMesh TMesh>
+inline SymmetricLaplacianMatrix<TMesh>::SymmetricLaplacianMatrix(
     MeshType const& mesh,
-    Eigen::Ref<MatrixX const> const& detJe,
-    Eigen::Ref<MatrixX const> const& GNe,
+    Eigen::Ref<IndexVectorX const> const& eg,
+    Eigen::Ref<VectorX const> const& wg,
+    Eigen::Ref<MatrixX const> const& GNeg,
     int dims)
-    : mesh(mesh), detJe(detJe), GNe(GNe), deltaE(), dims(dims)
+    : mesh(mesh), eg(eg), wg(wg), GNeg(GNeg), deltag(), dims(dims)
 {
     ComputeElementLaplacians();
 }
 
-template <CMesh TMesh, int QuadratureOrder>
-inline CSCMatrix SymmetricLaplacianMatrix<TMesh, QuadratureOrder>::ToMatrix() const
+template <CMesh TMesh>
+inline CSCMatrix SymmetricLaplacianMatrix<TMesh>::ToMatrix() const
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.fem.SymmetricLaplacianMatrix.ToMatrix");
     CheckValidState();
@@ -90,22 +91,23 @@ inline CSCMatrix SymmetricLaplacianMatrix<TMesh, QuadratureOrder>::ToMatrix() co
     using Triplet     = Eigen::Triplet<Scalar, SparseIndex>;
 
     std::vector<Triplet> triplets{};
-    triplets.reserve(static_cast<std::size_t>(deltaE.size() * dims));
-    auto const numberOfElements = mesh.E.cols();
-    for (auto e = 0; e < numberOfElements; ++e)
+    triplets.reserve(static_cast<std::size_t>(deltag.size() * dims));
+    auto const numberOfQuadraturePoints = wg.size();
+    for (auto g = 0; g < numberOfQuadraturePoints; ++g)
     {
+        auto const e                    = eg(g);
         auto const nodes                = mesh.E.col(e);
         auto constexpr kNodesPerElement = ElementType::kNodes;
-        auto const Le = deltaE.block(0, e * kNodesPerElement, kNodesPerElement, kNodesPerElement);
-        for (auto j = 0; j < Le.cols(); ++j)
+        auto const Leg = deltag.block(0, g * kNodesPerElement, kNodesPerElement, kNodesPerElement);
+        for (auto j = 0; j < Leg.cols(); ++j)
         {
-            for (auto i = 0; i < Le.rows(); ++i)
+            for (auto i = 0; i < Leg.rows(); ++i)
             {
                 for (auto d = 0; d < dims; ++d)
                 {
                     auto const ni = static_cast<SparseIndex>(dims * nodes(i) + d);
                     auto const nj = static_cast<SparseIndex>(dims * nodes(j) + d);
-                    triplets.push_back(Triplet(ni, nj, Le(i, j)));
+                    triplets.push_back(Triplet(ni, nj, Leg(i, j)));
                 }
             }
         }
@@ -114,68 +116,45 @@ inline CSCMatrix SymmetricLaplacianMatrix<TMesh, QuadratureOrder>::ToMatrix() co
     return L;
 }
 
-template <CMesh TMesh, int QuadratureOrder>
-inline void SymmetricLaplacianMatrix<TMesh, QuadratureOrder>::ComputeElementLaplacians()
+template <CMesh TMesh>
+inline void SymmetricLaplacianMatrix<TMesh>::ComputeElementLaplacians()
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.fem.SymmetricLaplacianMatrix.ComputeElementLaplacians");
     CheckValidState();
     // Compute element laplacians
-    auto const wg                   = common::ToEigen(QuadratureRuleType::weights);
-    auto constexpr kNodesPerElement = ElementType::kNodes;
-    auto constexpr kQuadPts         = QuadratureRuleType::kPoints;
-    auto constexpr kDims            = MeshType::kDims;
-    auto constexpr kStride          = kDims * kQuadPts;
-    auto const numberOfElements     = mesh.E.cols();
-    deltaE.setZero(kNodesPerElement, kNodesPerElement * numberOfElements);
-    tbb::parallel_for(Index{0}, Index{numberOfElements}, [&](Index e) {
-        auto Le = deltaE.block<kNodesPerElement, kNodesPerElement>(0, e * kNodesPerElement);
-        for (auto g = 0; g < kQuadPts; ++g)
-        {
-            // Use multivariable integration by parts (i.e. Green's identity), and retain only the
-            // symmetric part, i.e.
-            // Lij = -\int_{\Omega} \nabla \phi_i(X) \cdot \nabla \phi_j(X) \partial \Omega.
-            auto const GP = GNe.block<kNodesPerElement, kDims>(0, e * kStride + g * kDims);
-            Le -= (wg(g) * detJe(g, e)) * (GP * GP.transpose());
-        }
+    auto constexpr kNodesPerElement     = ElementType::kNodes;
+    auto constexpr kDims                = MeshType::kDims;
+    auto const numberOfQuadraturePoints = wg.size();
+    deltag.setZero(kNodesPerElement, kNodesPerElement * numberOfQuadraturePoints);
+    tbb::parallel_for(Index{0}, Index{numberOfQuadraturePoints}, [&](Index g) {
+        auto const e = eg(g);
+        auto Leg     = deltag.block<kNodesPerElement, kNodesPerElement>(0, g * kNodesPerElement);
+        // Use multivariable integration by parts (i.e. Green's identity), and retain only the
+        // symmetric part, i.e.
+        // Lij = -\int_{\Omega} \nabla \phi_i(X) \cdot \nabla \phi_j(X) \partial \Omega.
+        auto const GP = GNeg.block<kNodesPerElement, kDims>(0, g * kDims);
+        Leg -= wg(g) * GP * GP.transpose();
     });
 }
 
-template <CMesh TMesh, int QuadratureOrder>
-inline void SymmetricLaplacianMatrix<TMesh, QuadratureOrder>::CheckValidState() const
+template <CMesh TMesh>
+inline void SymmetricLaplacianMatrix<TMesh>::CheckValidState() const
 {
-    auto const numberOfElements       = mesh.E.cols();
-    auto constexpr kExpectedDetJeRows = QuadratureRuleType::kPoints;
-    auto const expectedDetJeCols      = numberOfElements;
-    bool const bDeterminantsHaveCorrectDimensions =
-        (detJe.rows() == kExpectedDetJeRows) and (detJe.cols() == expectedDetJeCols);
-    if (not bDeterminantsHaveCorrectDimensions)
-    {
-        std::string const what = fmt::format(
-            "Expected determinants at element quadrature points of dimensions #quad.pts.={} x "
-            "#elements={} for polynomial "
-            "quadrature order={}, but got {}x{} instead.",
-            kExpectedDetJeRows,
-            expectedDetJeCols,
-            QuadratureOrder,
-            detJe.rows(),
-            detJe.cols());
-        throw std::invalid_argument(what);
-    }
-    auto constexpr kExpectedGNeRows = ElementType::kNodes;
-    auto const expectedGNeCols = MeshType::kDims * QuadratureRuleType::kPoints * numberOfElements;
+    auto const numberOfQuadraturePoints = wg.size();
+    auto constexpr kExpectedGNegRows    = ElementType::kNodes;
+    auto const expectedGNegCols         = MeshType::kDims * numberOfQuadraturePoints;
     bool const bShapeFunctionGradientsHaveCorrectDimensions =
-        (GNe.rows() == kExpectedGNeRows) and (GNe.cols() == expectedGNeCols);
+        (GNeg.rows() == kExpectedGNegRows) and (GNeg.cols() == expectedGNegCols);
     if (not bShapeFunctionGradientsHaveCorrectDimensions)
     {
         std::string const what = fmt::format(
             "Expected shape function gradients at element quadrature points of dimensions "
-            "|#nodes-per-element|={} x |#mesh-dims * #quad.pts. * #elemens|={} for polynomiail "
-            "quadrature order={}, but got {}x{} instead",
-            kExpectedGNeRows,
-            expectedGNeCols,
-            QuadratureOrder,
-            GNe.rows(),
-            GNe.cols());
+            "|#nodes-per-element|={} x |#mesh-dims * #quad.pts.|={} for polynomial but got {}x{} "
+            "instead",
+            kExpectedGNegRows,
+            expectedGNegCols,
+            GNeg.rows(),
+            GNeg.cols());
         throw std::invalid_argument(what);
     }
     if (dims < 1)
@@ -186,9 +165,9 @@ inline void SymmetricLaplacianMatrix<TMesh, QuadratureOrder>::CheckValidState() 
     }
 }
 
-template <CMesh TMesh, int QuadratureOrder>
+template <CMesh TMesh>
 template <class TDerivedIn, class TDerivedOut>
-inline void SymmetricLaplacianMatrix<TMesh, QuadratureOrder>::Apply(
+inline void SymmetricLaplacianMatrix<TMesh>::Apply(
     Eigen::MatrixBase<TDerivedIn> const& x,
     Eigen::DenseBase<TDerivedOut>& y) const
 {
@@ -210,19 +189,20 @@ inline void SymmetricLaplacianMatrix<TMesh, QuadratureOrder>::Apply(
         throw std::invalid_argument(what);
     }
 
-    auto const numberOfElements = mesh.E.cols();
+    auto const numberOfQuadraturePoints = wg.size();
     for (auto c = 0; c < x.cols(); ++c)
     {
-        for (auto e = 0; e < numberOfElements; ++e)
+        for (auto g = 0; g < numberOfQuadraturePoints; ++g)
         {
+            auto const e                    = eg(g);
             auto const nodes                = mesh.E.col(e);
             auto constexpr kNodesPerElement = ElementType::kNodes;
-            auto const Le =
-                deltaE.block(0, e * kNodesPerElement, kNodesPerElement, kNodesPerElement);
+            auto const Leg =
+                deltag.block(0, g * kNodesPerElement, kNodesPerElement, kNodesPerElement);
             auto ye = y.col(c).reshaped(dims, y.size() / dims)(Eigen::placeholders::all, nodes);
             auto const xe =
                 x.col(c).reshaped(dims, x.size() / dims)(Eigen::placeholders::all, nodes);
-            ye += xe * Le /*.transpose() technically, but Laplacian matrix is symmetric*/;
+            ye += xe * Leg /*.transpose() technically, but Laplacian matrix is symmetric*/;
         }
     }
 }

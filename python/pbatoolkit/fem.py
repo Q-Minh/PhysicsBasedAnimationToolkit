@@ -31,12 +31,12 @@ def divergence(mesh, quadrature_order: int = 1, eg: np.ndarray = None, wg: np.nd
     Args:
         mesh (pbat.fem.Mesh): 
         quadrature_order (int, optional): Polynomial order to use for operator construction. Defaults to 1.
-        eg (np.ndarray, optional): |#quad.pts.|x1 array of elements corresponding to quadrature points. Defaults to None.
-        wg (np.ndarray, optional): |#quad.pts.|x1 array of quadrature weights. Defaults to None.
+        eg (np.ndarray, optional): |#quad.pts.| array of elements corresponding to quadrature points. Defaults to None.
+        wg (np.ndarray, optional): |#quad.pts.| array of quadrature weights. Defaults to None.
         GNeg (np.ndarray, optional): |#elem. nodes|x|#dims * #quad.pts.| array of shape function gradients at quadrature points. Defaults to None.
 
     Returns:
-        (scipy.sparse.csc_matrix, np.ndarray): 
+        (scipy.sparse.csc_matrix, np.ndarray, np.ndarray): 
     """
     should_compute_quadrature = eg is None or wg is None or GNeg is None
     G, eg, GNeg = gradient(mesh, quadrature_order=quadrature_order, as_matrix=True) if should_compute_quadrature else gradient(
@@ -60,7 +60,7 @@ def gradient(mesh, quadrature_order: int = 1, eg: np.ndarray = None, GNeg: np.nd
         as_matrix (bool, optional): Return the operator as a sparse matrix. Defaults to True.
 
     Returns:
-        (scipy.sparse.csc_matrix | pbat.fem.Gradient, np.ndarray): 
+        (scipy.sparse.csc_matrix | pbat.fem.Gradient, np.ndarray, np.ndarray): 
     """
 
     if GNeg is None:
@@ -100,7 +100,7 @@ def hyper_elastic_potential(
         GNeg (np.ndarray, optional): Shape function gradients at quadrature points. Defaults to None.
 
     Returns:
-        (pbat.fem.HyperElasticPotential, np.ndarray, np.ndarray): 
+        (pbat.fem.HyperElasticPotential, np.ndarray, np.ndarray, np.ndarray): 
     """
     if eg is None or wg is None or GNeg is None:
         wg = _fem.inner_product_weights(
@@ -122,8 +122,9 @@ def laplacian(
         mesh,
         dims: int = 1,
         quadrature_order: int = 1,
-        detJe: np.ndarray = None,
-        GNe: np.ndarray = None,
+        eg: np.ndarray = None,
+        wg: np.ndarray = None,
+        GNeg: np.ndarray = None,
         as_matrix: bool = True):
     """Construct an FEM Laplacian operator
 
@@ -131,23 +132,27 @@ def laplacian(
         mesh (pbat.fem.Mesh): 
         dims (int, optional): Solution space dimensions. Defaults to 1.
         quadrature_order (int, optional): Polynomial order to use for operator construction. Defaults to 1.
-        detJe (np.ndarray, optional): Jacobian determinants at quadrature points. Defaults to None.
-        GNe (np.ndarray, optional): Shape function gradients at quadrature points. Defaults to None.
+        eg (np.ndarray, optional): |#quad.pts.| array of elements associated with quadrature points. Defaults to None.
+        wg (np.ndarray, optional): |#quad.pts.| array of quadrature weights. Defaults to None.
+        GNeg (np.ndarray, optional): Shape function gradients at quadrature points. Defaults to None.
         as_matrix (bool, optional): Return the operator as a sparse matrix. Defaults to True.
 
     Returns:
-        (pbat.fem.Laplacian | scipy.sparse.csc_matrix, np.ndarray, np.ndarray): 
+        (pbat.fem.Laplacian | scipy.sparse.csc_matrix, np.ndarray, np.ndarray, np.ndarray): 
     """
-    if detJe is None:
-        detJe = _fem.jacobian_determinants(
+    if eg is None or wg is None or GNeg is None:
+        wg = _fem.inner_product_weights(
             mesh, quadrature_order=quadrature_order)
-    if GNe is None:
-        GNe = _fem.shape_function_gradients(
+        eg = np.linspace(0, mesh.E.shape[1]-1,
+                         num=mesh.E.shape[1], dtype=np.int64)
+        eg = np.repeat(eg, wg.shape[0])
+        wg = wg.flatten(order="F")
+        GNeg = _fem.shape_function_gradients(
             mesh, quadrature_order=quadrature_order)
-    L = _fem.Laplacian(mesh, detJe, GNe, dims=dims,
+    L = _fem.Laplacian(mesh, eg, wg, GNeg, dims=dims,
                        quadrature_order=quadrature_order)
     L = L.to_matrix() if as_matrix else L
-    return L, detJe, GNe
+    return L, eg, wg, GNeg
 
 
 def mass_matrix(
