@@ -22,7 +22,7 @@ if __name__ == "__main__":
     # Construct Galerkin laplacian, mass and gradient operators
     mesh = pbat.fem.Mesh(
         V.T, F.T, element=pbat.fem.Element.Triangle, order=1)
-    L, egL, wgL, GNegL = pbat.fem.laplacian(mesh)
+    L, detJeL, GNeL = pbat.fem.laplacian(mesh)
     M, detJeM = pbat.fem.mass_matrix(mesh, dims=1)
     # Setup heat diffusion
     dt = 0.016
