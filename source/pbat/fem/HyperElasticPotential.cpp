@@ -47,11 +47,10 @@ TEST_CASE("[fem] HyperElasticPotential")
 
         MeshType const M(V, C);
         VectorX const x       = M.X.reshaped();
-        MatrixX const WG      = fem::InnerProductWeights<kQuadratureOrder>(M);
-        VectorX const wg      = WG.reshaped();
+        MatrixX const wg      = fem::InnerProductWeights<kQuadratureOrder>(M).reshaped();
         MatrixX const GNeg    = fem::ShapeFunctionGradients<kQuadratureOrder>(M);
         IndexVectorX const eg = IndexVectorX::LinSpaced(M.E.cols(), Index(0), M.E.cols() - 1)
-                                    .replicate(1, WG.rows())
+                                    .replicate(1, wg.size() / M.E.cols())
                                     .transpose()
                                     .reshaped();
         ElasticPotentialType U(M, eg, wg, GNeg, x, Y, nu);

@@ -11,7 +11,7 @@ def harmonic_field(V: np.ndarray, C: np.ndarray, order: int, eps: float = 0.1):
     mesh = pbat.fem.Mesh(
         V.T, C.T, element=pbat.fem.Element.Tetrahedron, order=order)
     quadrature_order = max(int(2*(order-1)), 1)
-    L, detJeL, GNeL = pbat.fem.laplacian(
+    L, egL, wgL, GNegL = pbat.fem.laplacian(
         mesh, quadrature_order=quadrature_order)
     # Set Dirichlet boundary conditions at bottom and top of the model
     Xmin = mesh.X.min(axis=1)
