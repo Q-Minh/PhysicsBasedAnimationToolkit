@@ -8,6 +8,7 @@ import time
 import meshio
 import argparse
 import math
+import qpsolvers
 
 
 def min_max_eigs(A, n=10):
@@ -25,17 +26,43 @@ def laplacian_energy(mesh, k=1, dims=1):
     return U
 
 
-def display_quadrature(mesh, Xg):
-    V = mesh.X
-    C = mesh.E
-    bvh = pbat.geometry.bvh(V, C, cell=pbat.geometry.Cell.Tetrahedron)
-    e, d = bvh.nearest_primitives_to_points(Xg, parallelize=True)
-    nelems = mesh.E.shape[1]
-    efree = np.setdiff1d(list(range(nelems)), np.unique(e))
-    if len(efree) > 0:
-        ps.register_volume_mesh(
-            f"Invalid mesh nelems={nelems}", V.T, C[:, efree].T
-        )
+def transfer_quadrature(cmesh, wg2, Xg2, order=1):
+    CV, CC = cmesh.X, cmesh.E
+    Xg1 = cmesh.quadrature_points(order)
+    e1 = np.linspace(0, cmesh.E.shape[1]-1,
+                     num=cmesh.E.shape[1], dtype=np.int64)
+    e1 = np.repeat(e1, int(Xg1.shape[1] / cmesh.E.shape[1]))
+    Xi1 = pbat.fem.reference_positions(cmesh, e1, Xg1)
+    bvh1 = pbat.geometry.bvh(CV, CC, cell=pbat.geometry.Cell.Tetrahedron)
+    e2 = np.array(bvh1.nearest_primitives_to_points(
+        Xg2, parallelize=True)[0])
+    Xi2 = pbat.fem.reference_positions(cmesh, e2, Xg2)
+    wg1, err = pbat.math.transfer_quadrature(
+        e1, Xi1, e2, Xi2, wg2, order=order, with_error=True, max_iters=50, precision=1e-10)
+    return wg1, Xg1, e1, err
+
+
+def patch_quadrature(cmesh, wg1, Xg1, e1, err=1e-4, numerical_zero=1e-10):
+    wtotal = np.zeros(cmesh.E.shape[1])
+    np.add.at(wtotal, e1, wg1)
+    ezero = np.argwhere(wtotal < numerical_zero).squeeze()
+    ezeroinds = np.in1d(e1, ezero)
+    e1zero = np.copy(e1[ezeroinds])
+    Xg1zero = np.copy(Xg1[:, ezeroinds])
+    MM, BM, PM = pbat.math.reference_moment_fitting_systems(
+        e1zero, Xg1zero, e1zero, Xg1zero, np.zeros(Xg1zero.shape[1]))
+    MM = pbat.math.block_diagonalize_moment_fitting(MM, PM)
+    n = np.count_nonzero(ezeroinds)
+    P = -sp.sparse.eye(n).asformat('csc')
+    G = MM.asformat('csc')
+    h = np.full(G.shape[0], err)
+    lb = np.full(n, 0.)
+    q = np.full(n, 0.)
+    wzero = qpsolvers.solve_qp(P, q, G=G, h=h, lb=lb, initvals=np.zeros(
+        n), solver="cvxopt")
+    wg1p = np.copy(wg1)
+    wg1p[ezeroinds] = wzero
+    return wg1p, ezeroinds
 
 
 def gradient_operator(mesh, Xg, dims=1):
@@ -85,7 +112,7 @@ def shape_function_matrix(mesh, Xg, dims=1):
 
 
 class BaseFemFunctionTransferOperator():
-    def __init__(self, MD: pbat.fem.Mesh, MS: pbat.fem.Mesh, MT: pbat.fem.Mesh, H):
+    def __init__(self, MD: pbat.fem.Mesh, MS: pbat.fem.Mesh, MT: pbat.fem.Mesh, H=None):
         """Operator for transferring FEM discretized functions from a source 
         mesh MS to a target mesh MT, given the domain MD.
 
@@ -141,9 +168,48 @@ class NonLinearElasticRestrictionEnergy:
 
 
 class CholFemFunctionTransferOperator(BaseFemFunctionTransferOperator):
-    def __init__(self, MD: pbat.fem.Mesh, MS: pbat.fem.Mesh, MT: pbat.fem.Mesh, H, lreg=5, hreg=1, greg=1, hxreg=1e-4, Y=1e6, nu=0.45, rho=1e3):
+    def __init__(self, MD: pbat.fem.Mesh, MS: pbat.fem.Mesh, MT: pbat.fem.Mesh, H, lreg=5, hreg=1, greg=1):
+        super().__init__(MD, MS, MT, H)
+        n = self.A.shape[0]
+        self.greg = greg
+        A = self.A + lreg*self.U + hreg*self.H + greg * self.GT.T @ self.IG @ self.GT
+        lmin, lmax = min_max_eigs(A, n=1)
+        tau = 0.
+        if lmin[0] <= 0:
+            # Regularize A (due to positive semi-definiteness)
+            tau = abs(lmin[0]) + 1e-10
+        tau = sp.sparse.diags(np.full(n, tau))
+        AR = A + tau
+        solver = pbat.math.linalg.SolverBackend.Eigen
+        self.Ainv = pbat.math.linalg.chol(AR, solver=solver)
+        self.Ainv.compute(AR)
+
+    def __matmul__(self, u):
+        b = self.P @ u + self.greg * self.GT.T @ self.IG @ self.GS @ u
+        du = self.Ainv.solve(b).squeeze()
+        return du
+
+
+class RankKApproximateFemFunctionTransferOperator(BaseFemFunctionTransferOperator):
+    def __init__(self, MD: pbat.fem.Mesh, MS: pbat.fem.Mesh, MT: pbat.fem.Mesh, H, lreg=5, hreg=1, greg=1, modes=30):
         super().__init__(MD, MS, MT, H)
         self.greg = greg
+        A = self.A + lreg*self.U + hreg*self.H + greg * self.GT.T @ self.IG @ self.GT
+        l, V = sp.sparse.linalg.eigsh(A, k=modes, sigma=1e-5, which='LM')
+        keep = np.nonzero(l > 1e-5)[0]
+        self.l, self.V = l[keep], V[:, keep]
+
+    def __matmul__(self, B):
+        B = self.P @ B + self.greg * self.GT.T @ self.IG @ self.GS @ B
+        B = self.V.T @ B
+        B = B @ sp.sparse.diags(1 / self.l)
+        X = self.V @ B
+        return X
+
+
+class NewtonFunctionTransferOperator(BaseFemFunctionTransferOperator):
+    def __init__(self, MD: pbat.fem.Mesh, MS: pbat.fem.Mesh, MT: pbat.fem.Mesh, hxreg=1e-4, Y=1e6, nu=0.45, rho=1e3):
+        super().__init__(MD, MS, MT)
         self.M = (self.NT.T @ (rho * self.Ig) @ self.NT).asformat('csc')
         self.P = (self.NT.T @ (rho * self.Ig) @ self.NS).asformat('csc')
         self.rho = rho
@@ -153,18 +219,6 @@ class CholFemFunctionTransferOperator(BaseFemFunctionTransferOperator):
         self.hxreg = hxreg
         self.X = MT.X
         self.u = np.zeros(math.prod(self.X.shape), order="f")
-        # n = self.A.shape[0]
-        # A = self.M + lreg*self.U + hreg*self.H
-        # lmin, lmax = min_max_eigs(A, n=1)
-        # tau = 0.
-        # if lmin[0] <= 0:
-        #     # Regularize A (due to positive semi-definiteness)
-        #     tau = abs(lmin[0]) + 1e-10
-        # tau = sp.sparse.diags(np.full(n, tau))
-        # AR = A + tau
-        # solver = pbat.math.linalg.SolverBackend.Eigen
-        # self.Ainv = pbat.math.linalg.chol(AR, solver=solver)
-        # self.Ainv.compute(AR)
 
     def __matmul__(self, u):
         xr = self.X.reshape(math.prod(self.X.shape), order='f')
@@ -197,23 +251,6 @@ class CholFemFunctionTransferOperator(BaseFemFunctionTransferOperator):
             uk += alpha*du
         self.u = uk
         return uk
-
-
-class RankKApproximateFemFunctionTransferOperator(BaseFemFunctionTransferOperator):
-    def __init__(self, MD: pbat.fem.Mesh, MS: pbat.fem.Mesh, MT: pbat.fem.Mesh, H, lreg=5, hreg=1, greg=1, modes=30):
-        super().__init__(MD, MS, MT, H)
-        self.greg = greg
-        A = self.A + lreg*self.U + hreg*self.H + greg * self.GT.T @ self.IG @ self.GT
-        l, V = sp.sparse.linalg.eigsh(A, k=modes, sigma=1e-5, which='LM')
-        keep = np.nonzero(l > 1e-5)[0]
-        self.l, self.V = l[keep], V[:, keep]
-
-    def __matmul__(self, B):
-        B = self.P @ B + self.greg * self.GT.T @ self.IG @ self.GS @ B
-        B = self.V.T @ B
-        B = B @ sp.sparse.diags(1 / self.l)
-        X = self.V @ B
-        return X
 
 
 def rest_pose_hessian(mesh, Y, nu):
@@ -282,9 +319,11 @@ if __name__ == "__main__":
     w, L = linear_elastic_deformation_modes(
         mesh, args.rho, args.Y, args.nu, args.modes)
     HC = rest_pose_hessian(cmesh, args.Y, args.nu)
-    lreg, hreg, greg, hxreg = 0, 1e-2, 1e-2, 1e-4
-    Fldl = CholFemFunctionTransferOperator(
-        mesh, mesh, cmesh, HC, lreg=lreg, hreg=hreg, greg=greg, hxreg=hxreg)
+    lreg, hreg, greg, hxreg = 1e-2, 0, 1, 1e-4
+    # Fldl = CholFemFunctionTransferOperator(
+    #     mesh, mesh, cmesh, HC, lreg=lreg, hreg=hreg, greg=greg)
+    Fldl = NewtonFunctionTransferOperator(
+        mesh, mesh, cmesh, hxreg=hxreg)
     Krestrict = 30
     Frank = RankKApproximateFemFunctionTransferOperator(
         mesh, mesh, cmesh, HC, lreg=lreg, hreg=hreg, greg=greg, modes=Krestrict)
@@ -309,14 +348,40 @@ if __name__ == "__main__":
     dtheta = np.pi/120
     animate = False
     step = False
+    screenshot = False
+
+    wg2 = pbat.fem.inner_product_weights(mesh, 1).flatten(order="F")
+    Xg2 = mesh.quadrature_points(1)
+
+    pg2 = ps.register_point_cloud("Fine quad", Xg2.T)
+    pg2.add_scalar_quantity("weights", wg2, enabled=True)
+    pg2.set_point_radius_quantity("weights")
+
+    wg1, Xg1, e1, err = transfer_quadrature(cmesh, wg2, Xg2, order=1)
+    pg1 = ps.register_point_cloud("Cage quad", Xg1.T)
+    pg1.add_scalar_quantity("weights", wg1, enabled=True)
+    pg1.set_point_radius_quantity("weights")
+
+    wg1p, ezeroinds = patch_quadrature(cmesh, wg1, Xg1, e1, err=1e-4)
+    ezero = np.unique(e1[ezeroinds])
+    wgpatched = wg1p[ezeroinds]
+    Xgpatched = Xg1[:, ezeroinds]
+    pp = ps.register_point_cloud("Patched", Xgpatched.T)
+    pp.add_scalar_quantity("weights", wgpatched, enabled=True)
+    pp.set_point_radius_quantity("weights")
+    ps.register_volume_mesh("Bad coarse", CV, CC[ezero, :])
+    pg1p = ps.register_point_cloud("Cage quad patched", Xg1.T)
+    pg1p.add_scalar_quantity("weights", wg1p, enabled=True)
+    pg1p.set_point_radius_quantity("weights")
 
     def callback():
         global mode, c, k, theta, dtheta
-        global animate, step
+        global animate, step, screenshot
         changed, mode = imgui.InputInt("Mode", mode)
         changed, c = imgui.InputFloat("Wave amplitude", c)
         changed, k = imgui.InputFloat("Wave frequency", k)
         changed, animate = imgui.Checkbox("animate", animate)
+        changed, screenshot = imgui.Checkbox("screenshot", screenshot)
         step = imgui.Button("step")
 
         if animate or step:
@@ -338,6 +403,9 @@ if __name__ == "__main__":
             theta += dtheta
             if theta > 2*np.pi:
                 theta = 0
+
+        if screenshot:
+            ps.screenshot()
 
     ps.set_user_callback(callback)
     ps.show()

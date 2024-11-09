@@ -19,7 +19,7 @@ _strio.seek(0)
 setattr(
     __module,
     "__doc__",
-    f"{getattr(__module, "__doc__")}\n\n{_strio.read()}"
+    f"{getattr(__module, '__doc__')}\n\n{_strio.read()}"
 )
 
 
