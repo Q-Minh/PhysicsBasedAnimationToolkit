@@ -199,11 +199,11 @@ std::pair<VectorX, VectorX> TransferQuadrature(
     using common::Counts;
     using common::CumSum;
     using common::ToEigen;
-    auto nsimplices =
+    auto nSimplices =
         std::max(*std::max_element(S1.begin(), S1.end()), *std::max_element(S2.begin(), S2.end())) +
         1;
-    std::vector<Index> S1P = CumSum(Counts<Index>(S1.begin(), S1.end(), nsimplices));
-    std::vector<Index> S2P = CumSum(Counts<Index>(S2.begin(), S2.end(), nsimplices));
+    std::vector<Index> S1P = CumSum(Counts<Index>(S1.begin(), S1.end(), nSimplices));
+    std::vector<Index> S2P = CumSum(Counts<Index>(S2.begin(), S2.end(), nSimplices));
     IndexVectorX S1N =
         ToEigen(ArgSort<Index>(S1.size(), [&](auto si, auto sj) { return S1(si) < S1(sj); }));
     IndexVectorX S2N =
@@ -257,9 +257,9 @@ std::pair<VectorX, VectorX> TransferQuadrature(
             "or 3.");
     };
 
-    VectorX error = VectorX::Zero(nsimplices);
+    VectorX error = VectorX::Zero(nSimplices);
     VectorX wi1   = VectorX::Zero(Xi1.cols());
-    tbb::parallel_for(Index(0), nsimplices, [&](Index s) {
+    tbb::parallel_for(Index(0), nSimplices, [&](Index s) {
         auto S1begin = S1P[s];
         auto S1end   = S1P[s + 1];
         if (S1end > S1begin)
@@ -315,11 +315,11 @@ ReferenceMomentFittingSystems(
     using common::Counts;
     using common::CumSum;
     using common::ToEigen;
-    auto nsimplices =
+    auto nSimplices =
         std::max(*std::max_element(S1.begin(), S1.end()), *std::max_element(S2.begin(), S2.end())) +
         1;
-    IndexVectorX S1P = ToEigen(CumSum(Counts<Index>(S1.begin(), S1.end(), nsimplices)));
-    IndexVectorX S2P = ToEigen(CumSum(Counts<Index>(S2.begin(), S2.end(), nsimplices)));
+    IndexVectorX S1P = ToEigen(CumSum(Counts<Index>(S1.begin(), S1.end(), nSimplices)));
+    IndexVectorX S2P = ToEigen(CumSum(Counts<Index>(S2.begin(), S2.end(), nSimplices)));
     IndexVectorX S1N =
         ToEigen(ArgSort<Index>(S1.size(), [&](auto si, auto sj) { return S1(si) < S1(sj); }));
     IndexVectorX S2N =
@@ -365,46 +365,64 @@ ReferenceMomentFittingSystems(
             "or 3.");
     };
     auto nrows = fPolyRows(X1);
-    MatrixX P(nrows, S1N.size());
-    MatrixX B(nrows, nsimplices);
+
+    // Count actual number of systems and their dimensions
+    Index nSystems{0};
+    for (auto s = 0; s < nSimplices; ++s)
+        if (S1P(s + 1) > S1P(s))
+            ++nSystems;
+    std::vector<Index> nQuads(nSystems, Index(0));
+    for (auto s = 0, sy = 0; s < nSimplices; ++s)
+    {
+        if (S1P(s + 1) > S1P(s))
+        {
+            auto syStl    = static_cast<std::size_t>(sy);
+            nQuads[syStl] = S1P(s + 1) - S1P(s);
+            ++sy;
+        }
+    }
+    IndexVectorX const prefix = ToEigen(CumSum(nQuads));
+
+    MatrixX P(nrows, prefix(Eigen::placeholders::last));
+    MatrixX B(nrows, nSystems);
     B.setZero();
-    tbb::parallel_for(Index(0), nsimplices, [&](Index s) {
+    for (auto s = 0, sy = 0; s < nSimplices; ++s)
+    {
+        auto syStl   = static_cast<std::size_t>(sy);
         auto S1begin = S1P(s);
         auto S1end   = S1P(s + 1);
         if (S1end > S1begin)
         {
-            auto s1inds                                 = S1N(Eigen::seq(S1begin, S1end - 1));
-            MatrixX Xg1                                 = X1(Eigen::placeholders::all, s1inds);
-            auto S2begin                                = S2P(s);
-            auto S2end                                  = S2P(s + 1);
-            auto s2inds                                 = S2N(Eigen::seq(S2begin, S2end - 1));
-            MatrixX Xg2                                 = X2(Eigen::placeholders::all, s2inds);
-            VectorX wg2                                 = w2(s2inds);
-            auto [Ps, bs]                               = fAssembleSystem(Xg1, Xg2, wg2);
-            P.block(0, S1begin, nrows, S1end - S1begin) = Ps;
-            B.col(s)                                    = bs;
+            auto s1inds                                  = S1N(Eigen::seq(S1begin, S1end - 1));
+            MatrixX Xg1                                  = X1(Eigen::placeholders::all, s1inds);
+            auto S2begin                                 = S2P(s);
+            auto S2end                                   = S2P(s + 1);
+            auto s2inds                                  = S2N(Eigen::seq(S2begin, S2end - 1));
+            MatrixX Xg2                                  = X2(Eigen::placeholders::all, s2inds);
+            VectorX wg2                                  = w2(s2inds);
+            auto [Ps, bs]                                = fAssembleSystem(Xg1, Xg2, wg2);
+            P.block(0, prefix(sy), nrows, nQuads[syStl]) = Ps;
+            B.col(sy)                                    = bs;
+            ++sy;
         }
-    });
-    return std::make_tuple(P, B, S1P);
+    }
+    return std::make_tuple(P, B, prefix);
 }
 
 /**
  * @brief
  *
  * @tparam TDerivedM
- * @tparam TDerivedB
  * @tparam TDerivedP
  * @param M
- * @param B
  * @param P
  * @return CSRMatrix The block diagonal row sparse matrix GM, whose diagonal blocks are the
  * individual reference moment fitting matrices in M, such that GM @ w = B.reshaped() is the global
  * sparse linear system to solve for quadrature weights w.
  */
-template <class TDerivedM, class TDerivedB, class TDerivedP>
+template <class TDerivedM, class TDerivedP>
 CSRMatrix BlockDiagonalReferenceMomentFittingSystem(
     Eigen::MatrixBase<TDerivedM> const& M,
-    Eigen::MatrixBase<TDerivedB> const& B,
     Eigen::DenseBase<TDerivedP> const& P)
 {
     auto const nblocks    = P.size() - 1;

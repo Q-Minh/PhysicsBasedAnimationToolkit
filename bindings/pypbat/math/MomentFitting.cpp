@@ -89,13 +89,10 @@ void BindMomentFitting(pybind11::module& m)
 
     m.def(
         "block_diagonalize_moment_fitting",
-        [](Eigen::Ref<MatrixX const> const& M,
-           Eigen::Ref<MatrixX const> const& B,
-           Eigen::Ref<IndexVectorX const> const& P) {
-            return pbat::math::BlockDiagonalReferenceMomentFittingSystem(M, B, P);
+        [](Eigen::Ref<MatrixX const> const& M, Eigen::Ref<IndexVectorX const> const& P) {
+            return pbat::math::BlockDiagonalReferenceMomentFittingSystem(M, P);
         },
         pyb::arg("M"),
-        pyb::arg("B"),
         pyb::arg("P"),
         "Assemble the block diagonal row sparse matrix GM, such that GM @ w = B.flatten(order='F') "
         "contains all the reference moment fitting systems in (M,B,P).");
