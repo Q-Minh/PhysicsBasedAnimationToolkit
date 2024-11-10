@@ -40,6 +40,16 @@ template <int Dims, int Order>
 struct SymmetricSimplexPolynomialQuadratureRule;
 
 template <>
+struct SymmetricSimplexPolynomialQuadratureRule<1, 0>
+{
+    inline static std::uint8_t constexpr kDims            = 1;
+    inline static std::uint16_t constexpr kPoints         = 1;
+    inline static std::uint8_t constexpr kOrder           = 0;
+    inline static std::array<Scalar, 2> constexpr points  = {0.5, 0.5};
+    inline static std::array<Scalar, 1> constexpr weights = {1};
+};
+
+template <>
 struct SymmetricSimplexPolynomialQuadratureRule<1, 1>
 {
     inline static std::uint8_t constexpr kDims            = 1;
@@ -251,6 +261,16 @@ struct SymmetricSimplexPolynomialQuadratureRule<1, 21>
         0.131402,
         0.131402,
         0.136463};
+};
+
+template <>
+struct SymmetricSimplexPolynomialQuadratureRule<2, 0>
+{
+    inline static std::uint8_t constexpr kDims            = 2;
+    inline static std::uint16_t constexpr kPoints         = 1;
+    inline static std::uint8_t constexpr kOrder           = 0;
+    inline static std::array<Scalar, 3> constexpr points  = {0.333333, 0.333333, 0.333333};
+    inline static std::array<Scalar, 1> constexpr weights = {0.5};
 };
 
 template <>
@@ -1619,6 +1639,16 @@ struct SymmetricSimplexPolynomialQuadratureRule<2, 29>
         0.00338648,  0.00416178,  0.00416178,  0.00416178,  0.00416178,  0.00416178,  0.00416178,
         0.00587913,  0.00587913,  0.00587913,  0.00587913,  0.00587913,  0.00587913,  0.00634059,
         0.00634059,  0.00634059,  0.00634059,  0.00634059,  0.00634059};
+};
+
+template <>
+struct SymmetricSimplexPolynomialQuadratureRule<3, 0>
+{
+    inline static std::uint8_t constexpr kDims            = 3;
+    inline static std::uint16_t constexpr kPoints         = 1;
+    inline static std::uint8_t constexpr kOrder           = 0;
+    inline static std::array<Scalar, 4> constexpr points  = {0.25, 0.25, 0.25, 0.25};
+    inline static std::array<Scalar, 1> constexpr weights = {0.166667};
 };
 
 template <>

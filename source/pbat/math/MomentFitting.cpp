@@ -90,8 +90,8 @@ TEST_CASE("[math] MomentFitting")
                 S2,
                 X2.bottomRows(kDims),
                 w2);
-            CSRMatrix GM = math::BlockDiagonalReferenceMomentFittingSystem(M, B, P);
-            CHECK_EQ(GM.rows(), 2*math::OrthonormalPolynomialBasis<kDims, kOrder>::kSize);
+            CSRMatrix GM = math::BlockDiagonalReferenceMomentFittingSystem(M, P);
+            CHECK_EQ(GM.rows(), 2 * math::OrthonormalPolynomialBasis<kDims, kOrder>::kSize);
             CHECK_EQ(GM.cols(), 8);
             CHECK_EQ(GM.nonZeros(), 2 * math::OrthonormalPolynomialBasis<kDims, kOrder>::kSize * 4);
         }
