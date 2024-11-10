@@ -77,7 +77,7 @@ inline void SparsityPattern::Compute(
     TRowIndexRange&& rowIndices,
     TColIndexRange&& colIndices)
 {
-    PBAT_PROFILE_NAMED_SCOPE("math.linalg.SparsityPattern.Compute");
+    PBAT_PROFILE_NAMED_SCOPE("pbat.math.linalg.SparsityPattern.Compute");
     namespace srng   = std::ranges;
     namespace sviews = std::views;
     namespace rng    = ranges;
@@ -156,7 +156,7 @@ inline void SparsityPattern::Compute(
 template <common::CArithmeticRange TNonZeroRange>
 CSCMatrix SparsityPattern::ToMatrix(TNonZeroRange&& nonZeros) const
 {
-    PBAT_PROFILE_NAMED_SCOPE("math.linalg.SparsityPattern.ToMatrix");
+    PBAT_PROFILE_NAMED_SCOPE("pbat.math.linalg.SparsityPattern.ToMatrix");
     static_assert(
         std::is_same_v<Scalar, std::ranges::range_value_t<TNonZeroRange>>,
         "Only Scalar non-zero values are accepted");

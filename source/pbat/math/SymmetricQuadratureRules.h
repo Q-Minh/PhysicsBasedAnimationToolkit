@@ -8,32 +8,18 @@
 namespace pbat {
 namespace math {
 
-template <class TBasis, class Quad>
-Matrix<TBasis::kSize, Quad::kPoints> ReferenceMomentFittingMatrix(TBasis const& Pb, Quad const& Q)
-{
-    static_assert(
-        TBasis::kDims == Quad::kDims,
-        "Dimensions of the quadrature rule and the polynomial basis must match, i.e. a 2D "
-        "polynomial must be fit in a 2D integration domain");
-    Matrix<TBasis::kSize, Quad::kPoints> P{};
-    Eigen::Map<Matrix<Quad::kDims + 1, Quad::kPoints> const> Xg(Q.points.data());
-    for (auto g = 0u; g < Quad::kPoints; ++g)
-        P.col(g) = Pb.eval(Xg.col(g).template segment<Quad::kDims>(1));
-    return P;
-}
-
 /**
  * @brief Represents a quadrature scheme that can be constructed via existing quadrature schemes.
  * However, this generic quadrature scheme can be modified, i.e. its points and weights are instance
  * member variables.
  */
 template <class Quad>
-struct ModifiableQuadratureScheme
+struct FixedSizeVariableQuadrature
 {
     inline static std::uint8_t constexpr kDims    = Quad::kDims;
     inline static std::uint16_t constexpr kPoints = Quad::kPoints;
     inline static std::uint8_t constexpr kOrder   = Quad::kOrder;
-    ModifiableQuadratureScheme() : points(Quad::points), weights(Quad::weights) {}
+    FixedSizeVariableQuadrature() : points(Quad::points), weights(Quad::weights) {}
 
     decltype(Quad::points) points;
     decltype(Quad::weights) weights;
@@ -52,6 +38,16 @@ struct ModifiableQuadratureScheme
  */
 template <int Dims, int Order>
 struct SymmetricSimplexPolynomialQuadratureRule;
+
+template <>
+struct SymmetricSimplexPolynomialQuadratureRule<1, 0>
+{
+    inline static std::uint8_t constexpr kDims            = 1;
+    inline static std::uint16_t constexpr kPoints         = 1;
+    inline static std::uint8_t constexpr kOrder           = 0;
+    inline static std::array<Scalar, 2> constexpr points  = {0.5, 0.5};
+    inline static std::array<Scalar, 1> constexpr weights = {1};
+};
 
 template <>
 struct SymmetricSimplexPolynomialQuadratureRule<1, 1>
@@ -265,6 +261,16 @@ struct SymmetricSimplexPolynomialQuadratureRule<1, 21>
         0.131402,
         0.131402,
         0.136463};
+};
+
+template <>
+struct SymmetricSimplexPolynomialQuadratureRule<2, 0>
+{
+    inline static std::uint8_t constexpr kDims            = 2;
+    inline static std::uint16_t constexpr kPoints         = 1;
+    inline static std::uint8_t constexpr kOrder           = 0;
+    inline static std::array<Scalar, 3> constexpr points  = {0.333333, 0.333333, 0.333333};
+    inline static std::array<Scalar, 1> constexpr weights = {0.5};
 };
 
 template <>
@@ -1633,6 +1639,16 @@ struct SymmetricSimplexPolynomialQuadratureRule<2, 29>
         0.00338648,  0.00416178,  0.00416178,  0.00416178,  0.00416178,  0.00416178,  0.00416178,
         0.00587913,  0.00587913,  0.00587913,  0.00587913,  0.00587913,  0.00587913,  0.00634059,
         0.00634059,  0.00634059,  0.00634059,  0.00634059,  0.00634059};
+};
+
+template <>
+struct SymmetricSimplexPolynomialQuadratureRule<3, 0>
+{
+    inline static std::uint8_t constexpr kDims            = 3;
+    inline static std::uint16_t constexpr kPoints         = 1;
+    inline static std::uint8_t constexpr kOrder           = 0;
+    inline static std::array<Scalar, 4> constexpr points  = {0.25, 0.25, 0.25, 0.25};
+    inline static std::array<Scalar, 1> constexpr weights = {0.166667};
 };
 
 template <>

@@ -37,7 +37,7 @@ if __name__ == "__main__":
     x = mesh.X.reshape(math.prod(mesh.X.shape), order='f')
     M, detJeM = pbat.fem.mass_matrix(mesh, rho=args.rho)
     Y, nu, energy = args.Y, args.nu, pbat.fem.HyperElasticEnergy.StableNeoHookean
-    hep, detJeU, GNeU = pbat.fem.hyper_elastic_potential(
+    hep, egU, wgU, GNeU = pbat.fem.hyper_elastic_potential(
         mesh, Y, nu, energy=energy)
     hep.compute_element_elasticity(x)
     U, gradU, HU = hep.eval(), hep.gradient(), hep.hessian()

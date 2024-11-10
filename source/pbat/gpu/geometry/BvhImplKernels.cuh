@@ -2,8 +2,9 @@
 #define PBAT_GPU_GEOMETRY_BVH_QUERY_IMPL_KERNELS_CUH
 
 #include "BvhImpl.cuh"
+#include "pbat/HostDevice.h"
+#include "pbat/common/Stack.h"
 #include "pbat/gpu/Aliases.h"
-#include "pbat/gpu/common/Stack.cuh"
 #include "pbat/gpu/common/SynchronizedList.cuh"
 
 #include <array>
@@ -17,7 +18,7 @@ namespace BvhImplKernels {
 
 struct FLeafBoundingBoxes
 {
-    __device__ void operator()(auto s)
+    PBAT_DEVICE void operator()(auto s)
     {
         for (auto d = 0; d < 3; ++d)
         {
@@ -47,7 +48,7 @@ struct FComputeMortonCode
 {
     using MortonCodeType = typename BvhImpl::MortonCodeType;
 
-    __device__ void operator()(auto s)
+    PBAT_DEVICE void operator()(auto s)
     {
         auto const bs = leafBegin + s;
         // Compute Morton code of the centroid of the bounding box of simplex s
@@ -57,7 +58,8 @@ struct FComputeMortonCode
             auto cd = GpuScalar{0.5} * (b[d][bs] + e[d][bs]);
             c[d]    = (cd - sb[d]) / sbe[d];
         }
-        morton[s] = common::Morton3D(c);
+        using pbat::geometry::Morton3D;
+        morton[s] = Morton3D(c);
     }
 
     std::array<GpuScalar, 3> sb;
@@ -78,7 +80,7 @@ struct FGenerateHierarchy
         int d;
     };
 
-    __device__ int Delta(GpuIndex i, GpuIndex j) const
+    PBAT_DEVICE int Delta(GpuIndex i, GpuIndex j) const
     {
         if (j < 0 or j >= n)
             return -1;
@@ -87,7 +89,7 @@ struct FGenerateHierarchy
         return __clz(morton[i] ^ morton[j]);
     }
 
-    __device__ Range DetermineRange(GpuIndex i) const
+    PBAT_DEVICE Range DetermineRange(GpuIndex i) const
     {
         // Compute range direction
         bool const dsign = (Delta(i, i + 1) - Delta(i, i - 1)) > 0;
@@ -111,7 +113,7 @@ struct FGenerateHierarchy
         return Range{i, j, l, d};
     }
 
-    __device__ GpuIndex FindSplit(Range R) const
+    PBAT_DEVICE GpuIndex FindSplit(Range R) const
     {
         // Calculate the number of highest bits that are the same
         // for all objects.
@@ -131,7 +133,7 @@ struct FGenerateHierarchy
         return gamma;
     }
 
-    __device__ void operator()(auto in)
+    PBAT_DEVICE void operator()(auto in)
     {
         // Find out which range of objects the node corresponds to.
         Range R = DetermineRange(in);
@@ -162,7 +164,7 @@ struct FGenerateHierarchy
 
 struct FInternalNodeBoundingBoxes
 {
-    __device__ void operator()(auto leaf)
+    PBAT_DEVICE void operator()(auto leaf)
     {
         auto p = parent[leaf];
         auto k = 0;
@@ -201,7 +203,7 @@ struct FDetectSelfOverlaps
 {
     using OverlapType = typename BvhImpl::OverlapType;
 
-    __device__ bool AreSimplicesTopologicallyAdjacent(GpuIndex si, GpuIndex sj) const
+    PBAT_DEVICE bool AreSimplicesTopologicallyAdjacent(GpuIndex si, GpuIndex sj) const
     {
         auto count{0};
         for (auto i = 0; i < inds.size(); ++i)
@@ -210,7 +212,7 @@ struct FDetectSelfOverlaps
         return count > 0;
     }
 
-    __device__ bool AreBoxesOverlapping(GpuIndex i, GpuIndex j) const
+    PBAT_DEVICE bool AreBoxesOverlapping(GpuIndex i, GpuIndex j) const
     {
         // clang-format off
         return (e[0][i] >= b[0][j]) and (b[0][i] <= e[0][j]) and
@@ -219,10 +221,11 @@ struct FDetectSelfOverlaps
         // clang-format on
     }
 
-    __device__ void operator()(auto leaf)
+    PBAT_DEVICE void operator()(auto leaf)
     {
         // Traverse nodes depth-first starting from the root=0 node
-        common::Stack<GpuIndex, 64> stack{};
+        using pbat::common::Stack;
+        Stack<GpuIndex, 64> stack{};
         stack.Push(0);
         do
         {

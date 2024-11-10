@@ -50,10 +50,11 @@ def codegen(fpsi, energy_name: str):
 #ifndef PBAT_PHYSICS_{energy_name.upper()}_H
 #define PBAT_PHYSICS_{energy_name.upper()}_H
 
-#include <pbat/Aliases.h>
+#include "pbat/Aliases.h"
+#include "pbat/HostDevice.h"
+#include "pbat/math/linalg/mini/Matrix.h"
 
 #include <cmath>
-#include <tuple>
 
 namespace pbat {{
 namespace physics {{
@@ -73,137 +74,214 @@ struct {energy_name};
         gradpsi = sp.derive_by_array(psi, vecF)
         hesspsi = sp.derive_by_array(
             gradpsi, vecF)[:, 0, :, 0]
-        psicode = cg.codegen(psi, lhs=sp.Symbol("psi"))
+        psicode = cg.codegen(psi, lhs=sp.Symbol("psi"),
+                             scalar_type="ScalarType")
         gradpsicode = cg.codegen(
-            gradpsi, lhs=sp.MatrixSymbol("vecG", *gradpsi.shape))
+            gradpsi, lhs=sp.MatrixSymbol("G", *gradpsi.shape), scalar_type="ScalarType")
         hesspsicode = cg.codegen(hesspsi.transpose(
-        ), lhs=sp.MatrixSymbol("vecH", vecF.shape[0], vecF.shape[0]))
+        ), lhs=sp.MatrixSymbol("H", vecF.shape[0], vecF.shape[0]), scalar_type="ScalarType")
         evalgradpsi = cg.codegen([psi, gradpsi], lhs=[sp.Symbol(
-            "psi"), sp.MatrixSymbol("vecG", *gradpsi.shape)])
+            "psi"), sp.MatrixSymbol("gF", *gradpsi.shape)], scalar_type="ScalarType")
         evalgradhesspsi = cg.codegen([psi, gradpsi, hesspsi], lhs=[
             sp.Symbol("psi"),
-            sp.MatrixSymbol("vecG", *gradpsi.shape),
+            sp.MatrixSymbol("gF", *gradpsi.shape),
             sp.MatrixSymbol(
-                "vecH", vecF.shape[0], vecF.shape[0])
-        ])
+                "HF", vecF.shape[0], vecF.shape[0])
+        ], scalar_type="ScalarType")
         gradhesspsi = cg.codegen([gradpsi, hesspsi], lhs=[
-            sp.MatrixSymbol("vecG", *gradpsi.shape),
+            sp.MatrixSymbol("gF", *gradpsi.shape),
             sp.MatrixSymbol(
-                "vecH", vecF.shape[0], vecF.shape[0])
-        ])
+                "HF", vecF.shape[0], vecF.shape[0])
+        ], scalar_type="ScalarType")
         impl = f"""
 template <>
 struct {energy_name}<{d}>
 {{
     public:
+        template <class TScalar, int M, int N>
+        using SMatrix = pbat::math::linalg::mini::SMatrix<TScalar, M, N>;
+
+        template <class TScalar, int M>
+        using SVector = pbat::math::linalg::mini::SVector<TScalar, M>;
+
         static auto constexpr kDims = {d};
-    
-        template <class TDerived>
-        Scalar
-        eval(Eigen::DenseBase<TDerived> const& F, Scalar mu, Scalar lambda) const;
 
-        template <class TDerived>
-        Vector<{vecF.shape[0]}>
-        grad(Eigen::DenseBase<TDerived> const& F, Scalar mu, Scalar lambda) const;
+        template <math::linalg::mini::CReadableVectorizedMatrix TMatrix>
+        PBAT_HOST_DEVICE
+        typename TMatrix::ScalarType
+        eval(
+            TMatrix const& F,
+            typename TMatrix::ScalarType mu,
+            typename TMatrix::ScalarType lambda) const;
 
-        template <class TDerived>
-        Matrix<{vecF.shape[0]},{vecF.shape[0]}>
-        hessian(Eigen::DenseBase<TDerived> const& F, Scalar mu, Scalar lambda) const;
+        template <math::linalg::mini::CReadableVectorizedMatrix TMatrix>
+        PBAT_HOST_DEVICE
+        SVector<typename TMatrix::ScalarType, {vecF.shape[0]}>
+        grad(
+            TMatrix const& F,
+            typename TMatrix::ScalarType mu,
+            typename TMatrix::ScalarType lambda) const;
 
-        template <class TDerived>
-        std::tuple<Scalar, Vector<{vecF.shape[0]}>>
-        evalWithGrad(Eigen::DenseBase<TDerived> const& F, Scalar mu, Scalar lambda) const;
+        template <math::linalg::mini::CReadableVectorizedMatrix TMatrix>
+        PBAT_HOST_DEVICE
+        SMatrix<typename TMatrix::ScalarType, {vecF.shape[0]},{vecF.shape[0]}>
+        hessian(
+            TMatrix const& F,
+            typename TMatrix::ScalarType mu,
+            typename TMatrix::ScalarType lambda) const;
 
-        template <class TDerived>
-        std::tuple<Scalar, Vector<{vecF.shape[0]}>, Matrix<{vecF.shape[0]},{vecF.shape[0]}>>
-        evalWithGradAndHessian(Eigen::DenseBase<TDerived> const& F, Scalar mu, Scalar lambda) const;
+        template <
+            math::linalg::mini::CReadableVectorizedMatrix TMatrix, 
+            math::linalg::mini::CWriteableVectorizedMatrix TMatrixGF
+            >
+        PBAT_HOST_DEVICE
+        typename TMatrix::ScalarType
+        evalWithGrad(
+            TMatrix const& F,
+            typename TMatrix::ScalarType mu,
+            typename TMatrix::ScalarType lambda,
+            TMatrixGF& gF) const;
 
-        template <class TDerived>
-        std::tuple<Vector<{vecF.shape[0]}>, Matrix<{vecF.shape[0]},{vecF.shape[0]}>>
-        gradAndHessian(Eigen::DenseBase<TDerived> const& F, Scalar mu, Scalar lambda) const;
+        template <
+            math::linalg::mini::CReadableVectorizedMatrix TMatrix,
+            math::linalg::mini::CWriteableVectorizedMatrix TMatrixGF, 
+            math::linalg::mini::CWriteableVectorizedMatrix TMatrixHF
+            >
+        PBAT_HOST_DEVICE
+        typename TMatrix::ScalarType
+        evalWithGradAndHessian(
+            TMatrix const& F,
+            typename TMatrix::ScalarType mu,
+            typename TMatrix::ScalarType lambda,
+            TMatrixGF& gF,
+            TMatrixHF& HF) const;
+
+        template <
+            math::linalg::mini::CReadableVectorizedMatrix TMatrix,
+            math::linalg::mini::CWriteableVectorizedMatrix TMatrixGF, 
+            math::linalg::mini::CWriteableVectorizedMatrix TMatrixHF
+            >
+        PBAT_HOST_DEVICE
+        void
+        gradAndHessian(
+            TMatrix const& F,
+            typename TMatrix::ScalarType mu,
+            typename TMatrix::ScalarType lambda,
+            TMatrixGF& gF,
+            TMatrixHF& HF) const;
 }};
 
-template <class TDerived>
-Scalar
+template <math::linalg::mini::CReadableVectorizedMatrix TMatrix>
+PBAT_HOST_DEVICE
+typename TMatrix::ScalarType
 {energy_name}<{d}>::eval(
-    [[maybe_unused]] Eigen::DenseBase<TDerived> const& F,
-    [[maybe_unused]] Scalar mu,
-    [[maybe_unused]] Scalar lambda) const
+    [[maybe_unused]] TMatrix const& F,
+    [[maybe_unused]] typename TMatrix::ScalarType mu,
+    [[maybe_unused]] typename TMatrix::ScalarType lambda) const
 {{
-    Scalar psi;
+    using ScalarType = typename TMatrix::ScalarType;
+    ScalarType psi;
 {cg.tabulate(psicode, spaces=4)}
     return psi;
 }}
 
-template <class TDerived>
-Vector<{vecF.shape[0]}>
+template <math::linalg::mini::CReadableVectorizedMatrix TMatrix>
+PBAT_HOST_DEVICE
+{energy_name}<{d}>::SVector<typename TMatrix::ScalarType, {vecF.shape[0]}>
 {energy_name}<{d}>::grad(
-    [[maybe_unused]] Eigen::DenseBase<TDerived> const& F,
-    [[maybe_unused]] Scalar mu,
-    [[maybe_unused]] Scalar lambda) const
+    [[maybe_unused]] TMatrix const& F,
+    [[maybe_unused]] typename TMatrix::ScalarType mu,
+    [[maybe_unused]] typename TMatrix::ScalarType lambda) const
 {{
-    Vector<{vecF.shape[0]}> G;
-    auto vecG = G.reshaped();
+    using ScalarType = typename TMatrix::ScalarType;
+    SVector<ScalarType, {vecF.shape[0]}> G;
 {cg.tabulate(gradpsicode, spaces=4)}
     return G;
 }}
 
-template <class TDerived>
-Matrix<{vecF.shape[0]},{vecF.shape[0]}>
+template <math::linalg::mini::CReadableVectorizedMatrix TMatrix>
+PBAT_HOST_DEVICE
+{energy_name}<{d}>::SMatrix<typename TMatrix::ScalarType, {vecF.shape[0]},{vecF.shape[0]}>
 {energy_name}<{d}>::hessian(
-    [[maybe_unused]] Eigen::DenseBase<TDerived> const& F,
-    [[maybe_unused]] Scalar mu,
-    [[maybe_unused]] Scalar lambda) const
+    [[maybe_unused]] TMatrix const& F,
+    [[maybe_unused]] typename TMatrix::ScalarType mu,
+    [[maybe_unused]] typename TMatrix::ScalarType lambda) const
 {{
-    Matrix<{vecF.shape[0]},{vecF.shape[0]}> H;
-    auto vecH = H.reshaped();
+    using ScalarType = typename TMatrix::ScalarType;
+    SMatrix<ScalarType, {vecF.shape[0]},{vecF.shape[0]}> H;
 {cg.tabulate(hesspsicode, spaces=4)}
     return H;
 }}
 
-template <class TDerived>
-std::tuple<Scalar, Vector<{vecF.shape[0]}>>
+template <
+    math::linalg::mini::CReadableVectorizedMatrix TMatrix,
+    math::linalg::mini::CWriteableVectorizedMatrix TMatrixGF
+    >
+PBAT_HOST_DEVICE
+typename TMatrix::ScalarType
 {energy_name}<{d}>::evalWithGrad(
-    [[maybe_unused]] Eigen::DenseBase<TDerived> const& F,
-    [[maybe_unused]] Scalar mu,
-    [[maybe_unused]] Scalar lambda) const
+    [[maybe_unused]] TMatrix const& F,
+    [[maybe_unused]] typename TMatrix::ScalarType mu,
+    [[maybe_unused]] typename TMatrix::ScalarType lambda,
+    TMatrixGF& gF) const
 {{
-    Scalar psi;
-    Vector<{vecF.shape[0]}> G;
-    auto vecG = G.reshaped();
+    static_assert(
+        TMatrixGF::kRows == {vecF.shape[0]} and TMatrixGF::kCols == 1, 
+        "Grad w.r.t. F must have dimensions {vecF.shape[0]}x1");
+    using ScalarType = typename TMatrix::ScalarType;
+    ScalarType psi;
 {cg.tabulate(evalgradpsi, spaces=4)}
-    return {{psi, G}};
+    return psi;
 }}
 
-template <class TDerived>
-std::tuple<Scalar, Vector<{vecF.shape[0]}>, Matrix<{vecF.shape[0]},{vecF.shape[0]}>>
+template <
+    math::linalg::mini::CReadableVectorizedMatrix TMatrix,
+    math::linalg::mini::CWriteableVectorizedMatrix TMatrixGF,
+    math::linalg::mini::CWriteableVectorizedMatrix TMatrixHF
+    >
+PBAT_HOST_DEVICE
+typename TMatrix::ScalarType
 {energy_name}<{d}>::evalWithGradAndHessian(
-    [[maybe_unused]] Eigen::DenseBase<TDerived> const& F,
-    [[maybe_unused]] Scalar mu,
-    [[maybe_unused]] Scalar lambda) const
+    [[maybe_unused]] TMatrix const& F,
+    [[maybe_unused]] typename TMatrix::ScalarType mu,
+    [[maybe_unused]] typename TMatrix::ScalarType lambda,
+    TMatrixGF& gF,
+    TMatrixHF& HF) const
 {{
-    Scalar psi;
-    Vector<{vecF.shape[0]}> G;
-    Matrix<{vecF.shape[0]},{vecF.shape[0]}> H;
-    auto vecG = G.reshaped();
-    auto vecH = H.reshaped();
+    static_assert(
+        TMatrixGF::kRows == {vecF.shape[0]} and TMatrixGF::kCols == 1, 
+        "Grad w.r.t. F must have dimensions {vecF.shape[0]}x1");
+    static_assert(
+        TMatrixHF::kRows == {vecF.shape[0]} and TMatrixHF::kCols == {vecF.shape[0]}, 
+        "Hessian w.r.t. F must have dimensions {vecF.shape[0]}x{vecF.shape[0]}");
+    using ScalarType = typename TMatrix::ScalarType;
+    ScalarType psi;
 {cg.tabulate(evalgradhesspsi, spaces=4)}
-    return {{psi, G, H}};
+    return psi;
 }}
 
-template <class TDerived>
-std::tuple<Vector<{vecF.shape[0]}>, Matrix<{vecF.shape[0]},{vecF.shape[0]}>>
+template <
+    math::linalg::mini::CReadableVectorizedMatrix TMatrix,
+    math::linalg::mini::CWriteableVectorizedMatrix TMatrixGF,
+    math::linalg::mini::CWriteableVectorizedMatrix TMatrixHF
+    >
+PBAT_HOST_DEVICE
+void
 {energy_name}<{d}>::gradAndHessian(
-    [[maybe_unused]] Eigen::DenseBase<TDerived> const& F, 
-    [[maybe_unused]] Scalar mu, 
-    [[maybe_unused]] Scalar lambda) const
+    [[maybe_unused]] TMatrix const& F,
+    [[maybe_unused]] typename TMatrix::ScalarType mu,
+    [[maybe_unused]] typename TMatrix::ScalarType lambda,
+    TMatrixGF& gF,
+    TMatrixHF& HF) const
 {{
-    Vector<{vecF.shape[0]}> G;
-    Matrix<{vecF.shape[0]},{vecF.shape[0]}> H;
-    auto vecG = G.reshaped();
-    auto vecH = H.reshaped();
+    static_assert(
+        TMatrixGF::kRows == {vecF.shape[0]} and TMatrixGF::kCols == 1, 
+        "Grad w.r.t. F must have dimensions {vecF.shape[0]}x1");
+    static_assert(
+        TMatrixHF::kRows == {vecF.shape[0]} and TMatrixHF::kCols == {vecF.shape[0]}, 
+        "Hessian w.r.t. F must have dimensions {vecF.shape[0]}x{vecF.shape[0]}");
+    using ScalarType = typename TMatrix::ScalarType;
 {cg.tabulate(gradhesspsi, spaces=4)}
-    return {{G, H}};
 }}
 """
         source.append(impl)

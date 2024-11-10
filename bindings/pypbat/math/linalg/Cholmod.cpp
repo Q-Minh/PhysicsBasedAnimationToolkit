@@ -32,7 +32,7 @@ void BindCholmod([[maybe_unused]] pybind11::module& m)
     chol.def(
         "solve",
         [](CholmodType& llt, Eigen::Ref<MatrixX const> const& B) {
-            return pbat::profiling::Profile("math.linalg.Cholmod.Solve", [&]() {
+            return pbat::profiling::Profile("pbat.math.linalg.Cholmod.Solve", [&]() {
                 MatrixX X = llt.Solve(B);
                 return X;
             });
@@ -51,7 +51,7 @@ void BindCholmod([[maybe_unused]] pybind11::module& m)
                 [](CholmodType& llt,
                    SparseMatrixType const& A,
                    CholmodType::ESparseStorage storage) {
-                    pbat::profiling::Profile("math.linalg.Cholmod.Analyze", [&]() {
+                    pbat::profiling::Profile("pbat.math.linalg.Cholmod.Analyze", [&]() {
                         llt.Analyze(A, storage);
                     });
                 },
@@ -63,7 +63,7 @@ void BindCholmod([[maybe_unused]] pybind11::module& m)
                    SparseMatrixType const& A,
                    CholmodType::ESparseStorage storage) {
                     bool const bFactorized =
-                        pbat::profiling::Profile("math.linalg.Cholmod.Factorize", [&]() {
+                        pbat::profiling::Profile("pbat.math.linalg.Cholmod.Factorize", [&]() {
                             return llt.Factorize(A, storage);
                         });
                     return bFactorized;
@@ -76,7 +76,7 @@ void BindCholmod([[maybe_unused]] pybind11::module& m)
                    SparseMatrixType const& A,
                    CholmodType::ESparseStorage storage) {
                     bool const bFactorized =
-                        pbat::profiling::Profile("math.linalg.Cholmod.Compute", [&]() {
+                        pbat::profiling::Profile("pbat.math.linalg.Cholmod.Compute", [&]() {
                             return llt.Compute(A, storage);
                         });
                     return bFactorized;
@@ -87,7 +87,7 @@ void BindCholmod([[maybe_unused]] pybind11::module& m)
                 "update",
                 [](CholmodType& llt, SparseMatrixType const& U) {
                     bool const bUpdated =
-                        pbat::profiling::Profile("math.linalg.Cholmod.Update", [&]() {
+                        pbat::profiling::Profile("pbat.math.linalg.Cholmod.Update", [&]() {
                             return llt.Update(U);
                         });
                     return bUpdated;
@@ -97,7 +97,7 @@ void BindCholmod([[maybe_unused]] pybind11::module& m)
                 "downdate",
                 [](CholmodType& llt, SparseMatrixType const& U) {
                     bool const bDowndated =
-                        pbat::profiling::Profile("math.linalg.Cholmod.Downdate", [&]() {
+                        pbat::profiling::Profile("pbat.math.linalg.Cholmod.Downdate", [&]() {
                             return llt.Downdate(U);
                         });
                     return bDowndated;

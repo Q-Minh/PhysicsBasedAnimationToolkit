@@ -11,7 +11,7 @@ def harmonic_field(V: np.ndarray, C: np.ndarray, order: int, eps: float = 0.1):
     mesh = pbat.fem.Mesh(
         V.T, C.T, element=pbat.fem.Element.Tetrahedron, order=order)
     quadrature_order = max(int(2*(order-1)), 1)
-    L, detJeL, GNeL = pbat.fem.laplacian(
+    L, egL, wgL, GNegL = pbat.fem.laplacian(
         mesh, quadrature_order=quadrature_order)
     # Set Dirichlet boundary conditions at bottom and top of the model
     Xmin = mesh.X.min(axis=1)
@@ -66,7 +66,7 @@ if __name__ == "__main__":
     Frefined = igl.boundary_facets(Crefined)
     Frefined[:, :2] = np.roll(Frefined[:, :2], shift=1, axis=1)
 
-    e = bvh.nearest_primitives_to_points(Vrefined.T)
+    e, d = bvh.nearest_primitives_to_points(Vrefined.T)
     Xi1 = pbat.fem.reference_positions(mesh1, e, Vrefined.T)
     Xi2 = pbat.fem.reference_positions(mesh2, e, Vrefined.T)
     phi1 = pbat.fem.shape_functions_at(mesh1, Xi1)

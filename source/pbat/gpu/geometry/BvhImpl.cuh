@@ -2,9 +2,9 @@
 #define PBAT_GPU_BVH_IMPL_CUH
 
 #include "PrimitivesImpl.cuh"
+#include "pbat/geometry/Morton.h"
 #include "pbat/gpu/Aliases.h"
 #include "pbat/gpu/common/Buffer.cuh"
-#include "pbat/gpu/common/Morton.cuh"
 #include "pbat/gpu/common/SynchronizedList.cuh"
 #include "pbat/gpu/common/Var.cuh"
 
@@ -28,7 +28,7 @@ class BvhImpl
 {
   public:
     using OverlapType    = cuda::std::pair<GpuIndex, GpuIndex>;
-    using MortonCodeType = pbat::gpu::common::MortonCodeType;
+    using MortonCodeType = pbat::geometry::MortonCodeType;
 
     friend class BvhQueryImpl;
 

@@ -61,7 +61,7 @@ void BindPardiso([[maybe_unused]] pybind11::module& m)
             .def(
                 "analyze",
                 [=](SolverType& solver, SparseMatrixType const& A) {
-                    pbat::profiling::Profile("math.linalg." + className + ".analyze", [&]() {
+                    pbat::profiling::Profile("pbat.math.linalg." + className + ".analyze", [&]() {
                         solver.analyzePattern(A);
                     });
                 },
@@ -69,7 +69,7 @@ void BindPardiso([[maybe_unused]] pybind11::module& m)
             .def(
                 "compute",
                 [=](SolverType& solver, SparseMatrixType const& A) -> SolverType& {
-                    pbat::profiling::Profile("math.linalg." + className + ".compute", [&]() {
+                    pbat::profiling::Profile("pbat.math.linalg." + className + ".compute", [&]() {
                         solver.compute(A);
                     });
                     return solver;
@@ -78,7 +78,7 @@ void BindPardiso([[maybe_unused]] pybind11::module& m)
             .def(
                 "factorize",
                 [=](SolverType& solver, SparseMatrixType const& A) {
-                    pbat::profiling::Profile("math.linalg." + className + ".factorize", [&]() {
+                    pbat::profiling::Profile("pbat.math.linalg." + className + ".factorize", [&]() {
                         solver.factorize(A);
                     });
                 },
@@ -91,7 +91,7 @@ void BindPardiso([[maybe_unused]] pybind11::module& m)
             .def(
                 "solve",
                 [=](SolverType const& solver, Eigen::Ref<MatrixX const> const& B) -> MatrixX {
-                    return pbat::profiling::Profile("math.linalg." + className + ".solve", [&]() {
+                    return pbat::profiling::Profile("pbat.math.linalg." + className + ".solve", [&]() {
                         MatrixX X = solver.solve(B);
                         return X;
                     });

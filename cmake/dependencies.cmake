@@ -1,15 +1,24 @@
+include(FetchContent)
+
 find_package(doctest CONFIG REQUIRED)
-find_package(Eigen3 CONFIG REQUIRED)
 find_package(fmt CONFIG REQUIRED)
 find_package(range-v3 CONFIG REQUIRED)
 find_package(TBB CONFIG REQUIRED)
+
+if(NOT TARGET Eigen3::Eigen)
+    FetchContent_Declare(
+        eigen
+        GIT_REPOSITORY https://gitlab.com/libeigen/eigen
+        GIT_TAG 7fd305ecae2410714cde018cb6851f49138568c8
+        GIT_PROGRESS TRUE
+    )
+    FetchContent_MakeAvailable(eigen)
+endif()
 
 if(PBAT_BUILD_PYTHON_BINDINGS)
     find_package(Python COMPONENTS Interpreter Development.Module REQUIRED)
     find_package(pybind11 CONFIG REQUIRED)
 endif()
-
-include(FetchContent)
 
 if(PBAT_ENABLE_PROFILER)
     set(TRACY_ON_DEMAND ${PBAT_PROFILE_ON_DEMAND} CACHE BOOL "" FORCE)

@@ -40,7 +40,7 @@ TEST_CASE("[fem] Mesh")
             CHECK(fem::CMesh<Mesh>);
             CHECK_EQ(M.E.cols(), C.cols());
             CHECK_EQ(M.X.cols(), kExpectedNumberOfNodes);
-            CHECK(V(Eigen::all, nodeOrdering) == M.X);
+            CHECK(V(Eigen::placeholders::all, nodeOrdering) == M.X);
         }
         SUBCASE("Quadratic")
         {
@@ -102,7 +102,7 @@ TEST_CASE("[fem] Mesh")
             CHECK(fem::CMesh<Mesh>);
             CHECK_EQ(M.E.cols(), C.cols());
             CHECK_EQ(M.X.cols(), kExpectedNumberOfNodes);
-            CHECK(V(Eigen::all, nodeOrdering) == M.X);
+            CHECK(V(Eigen::placeholders::all, nodeOrdering) == M.X);
         }
         SUBCASE("Quadratic")
         {

@@ -7,7 +7,7 @@ import argparse
 
 
 def dot(u, v, x: list, a: list, b: list):
-    assert(len(a) == len(b) == len(x))
+    assert (len(a) == len(b) == len(x))
     I = u*v
     for i in reversed(range(len(a))):
         I = sp.integrate(I, (x[i], a[i], b[i])).expand()
@@ -44,19 +44,22 @@ def orthonormalized_basis(dims, order, x, a, b):
     V = []
     if dims == 1:
         # Generate the monomial basis
-        Vl = sorted(itermonomials(x, order), key=monomial_key('grlex', list(reversed(x))))
+        Vl = sorted(itermonomials(x, order),
+                    key=monomial_key('grlex', list(reversed(x))))
         # Orthonormalize the line's polynomial basis
         Vlo = gram_schmidt(Vl, x, a, b)
         V = normalize(Vlo, x, a, b)
     if dims == 2:
         # Generate the monomial basis
-        Vf = sorted(itermonomials(x, order), key=monomial_key('grlex', list(reversed(x))))
+        Vf = sorted(itermonomials(x, order),
+                    key=monomial_key('grlex', list(reversed(x))))
         # Orthonormalize the triangle's polynomial basis'
         Vfo = gram_schmidt(Vf, x, a, b)
         V = normalize(Vfo, x, a, b)
     if dims == 3:
         # Generate the monomial basis
-        Vt = sorted(itermonomials(x, order), key=monomial_key('grlex', list(reversed(x))))
+        Vt = sorted(itermonomials(x, order),
+                    key=monomial_key('grlex', list(reversed(x))))
         # Orthonormalize the tetrahedron's polynomial basis'
         Vto = gram_schmidt(Vt, x, a, b)
         V = normalize(Vto, x, a, b)
@@ -88,11 +91,11 @@ def divergence_free_basis(V: list, dims: int, x: list, a: list, b: list):
     H = sp.Matrix.zeros(len(V), dims*len(V))
     for n in range(len(G)):
         gn = G[n]
-        assert(len(gn) == len(x))
+        assert (len(gn) == len(x))
         div = divergence(gn, x)
         # Compute the coefficients of div(gn) w.r.t. orthonormal basis V
         for i in range(len(V)):
-            H[i,n] = dot(div, V[i], x, a, b)
+            H[i, n] = dot(div, V[i], x, a, b)
 
     HN = H.nullspace()
     GG = sp.Matrix(G).transpose()
@@ -102,12 +105,13 @@ def divergence_free_basis(V: list, dims: int, x: list, a: list, b: list):
         F.append(sp.simplify(fi))
     for fi in F:
         div = sp.simplify(divergence(fi, x))
-        assert(div == 0)
+        assert (div == 0)
     return F
+
 
 def header(file):
     file.write(
-"""#ifndef PBAT_MATH_POLYNOMIAL_BASIS_H
+        """#ifndef PBAT_MATH_POLYNOMIAL_BASIS_H
 #define PBAT_MATH_POLYNOMIAL_BASIS_H
 
 /**
@@ -137,16 +141,17 @@ class DivergenceFreePolynomialBasis;
 """
     )
 
+
 def footer(file):
     file.write(
-"""
+        """
 } // namespace math
 } // namespace pbat
 
 #endif // PBAT_MATH_POLYNOMIAL_BASIS_H
 """
     )
-    
+
 
 def codegen(file, V: list, X: list, order: int, orthonormal=False):
     dimV = len(V)
@@ -157,10 +162,11 @@ def codegen(file, V: list, X: list, order: int, orthonormal=False):
     code = cg.codegen(V, lhs=sp.MatrixSymbol("P", len(V), 1))
     GV = V.jacobian(X)
     jaccode = cg.codegen(GV, lhs=sp.MatrixSymbol("G", *GV.shape))
-    AV = sp.Matrix([[sp.integrate(V[i], X[d]) for i in range(len(V))] for d in range(len(X))])
+    AV = sp.Matrix([[sp.integrate(V[i], X[d])
+                   for i in range(len(V))] for d in range(len(X))])
     antiderivscode = cg.codegen(AV, lhs=sp.MatrixSymbol("P", *AV.shape))
     file.write(
-f"""
+        f"""
 template <>
 class {classname}<{nvariables}, {order}>
 {{
@@ -169,13 +175,13 @@ class {classname}<{nvariables}, {order}>
     inline static constexpr std::size_t kOrder = {order};
     inline static constexpr std::size_t kSize = {dimV};
 
-    [[maybe_unused]] Vector<kSize> eval([[maybe_unused]] Vector<kDims> const& X) const 
+    [[maybe_unused]] Vector<kSize> eval([[maybe_unused]] Vector<kDims> const& X) const
     {{
         Vector<kSize> P;
 {cg.tabulate(code, spaces=8)}
         return P;
-    }}         
-    
+    }}
+
     [[maybe_unused]] Matrix<kDims, kSize> derivatives([[maybe_unused]] Vector<kDims> const& X) const
     {{
         Matrix<kDims, kSize> Gm;
@@ -183,7 +189,7 @@ class {classname}<{nvariables}, {order}>
 {cg.tabulate(jaccode, spaces=8)}
         return Gm;
     }}
-    
+
     [[maybe_unused]] Matrix<kSize, kDims> antiderivatives([[maybe_unused]] Vector<kDims> const& X) const
     {{
         Matrix<kSize, kDims> Pm;
@@ -202,7 +208,7 @@ def div_free_codegen(file, F: list, X: list, order: int):
     F = sp.Matrix(F).transpose()
     code = cg.codegen(F, lhs=sp.MatrixSymbol("P", *F.shape))
     file.write(
-f"""
+        f"""
 template <>
 class {classname}<{nvariables}, {order}>
 {{
@@ -211,7 +217,7 @@ class {classname}<{nvariables}, {order}>
     inline static constexpr std::size_t kOrder = {order};
     inline static constexpr std::size_t kSize = {dimF};
 
-    [[maybe_unused]] Matrix<kSize, kDims> eval([[maybe_unused]] Vector<kDims> const& X) const 
+    [[maybe_unused]] Matrix<kSize, kDims> eval([[maybe_unused]] Vector<kDims> const& X) const
     {{
         Matrix<kSize, kDims> Pm;
         Scalar* P = Pm.data();
@@ -220,6 +226,7 @@ class {classname}<{nvariables}, {order}>
     }}
 }};
 """)
+
 
 if __name__ == "__main__":
     X = sp.Matrix(sp.MatrixSymbol("X", 3, 1))
@@ -230,7 +237,8 @@ if __name__ == "__main__":
     )
     parser.add_argument("-o", "--order", help="Maximum degree of the polynomial basis functions", type=int,
                         dest="order", default=1)
-    parser.add_argument("-d", "--dry-run", help="Prints computed polynomial basis' to stdout", type=bool, dest="dry_run")
+    parser.add_argument("-d", "--dry-run", help="Prints computed polynomial basis' to stdout",
+                        action="store_true", dest="dry_run")
     args = parser.parse_args()
 
     # polynomial order
@@ -261,7 +269,7 @@ if __name__ == "__main__":
         for v in Vfo:
             print(v)
 
-        Vto = orthonormalized_basis(2, order, xt, ta, tb)
+        Vto = orthonormalized_basis(3, order, xt, ta, tb)
         print("Orthonormal Polynomial Basis of order={} on the reference tetrahedron".format(order))
         for v in Vto:
             print(v)
@@ -270,61 +278,70 @@ if __name__ == "__main__":
             header(file)
 
             file.write("\n/**\n * Monomial basis in 1D\n */\n")
-            for o in range(order):
-                V = sorted(itermonomials(xl, o+1), key=monomial_key('lex', list(reversed(xl))))
-                codegen(file, V, xl, o+1)
+            for o in range(order+2):
+                V = sorted(itermonomials(xl, o),
+                           key=monomial_key('lex', list(reversed(xl))))
+                codegen(file, V, xl, o)
             file.write("\n/**\n * Monomial basis in 2D\n */\n")
-            for o in range(order):
-                V = sorted(itermonomials(xf, o+1), key=monomial_key('lex', list(reversed(xf))))
-                codegen(file, V, xf, o+1)
+            for o in range(order+2):
+                V = sorted(itermonomials(xf, o),
+                           key=monomial_key('lex', list(reversed(xf))))
+                codegen(file, V, xf, o)
             file.write("\n/**\n * Monomial basis in 3D\n */\n")
-            for o in range(order):
-                V = sorted(itermonomials(xt, o+1), key=monomial_key('lex', list(reversed(xt))))
-                codegen(file, V, xt, o+1)
+            for o in range(order+1):
+                V = sorted(itermonomials(xt, o),
+                           key=monomial_key('lex', list(reversed(xt))))
+                codegen(file, V, xt, o)
 
             Vl = []
             dVl = []
-            for o in range(order):
-                V = orthonormalized_basis(1,o+1, xl, la, lb)
+            for o in range(order+1):
+                V = orthonormalized_basis(1, o, xl, la, lb)
                 Vl.append(V)
                 dVl.append(divergence_free_basis(V, 1, xl, la, lb))
 
             Vf = []
             dVf = []
-            for o in range(order):
-                V = orthonormalized_basis(2,o+1, xf, fa, fb)
+            for o in range(order+1):
+                V = orthonormalized_basis(2, o, xf, fa, fb)
                 Vf.append(V)
                 dVf.append(divergence_free_basis(V, 2, xf, fa, fb))
 
             Vt = []
             dVt = []
-            for o in range(order):
-                V = orthonormalized_basis(3,o+1, xt, ta, tb)
+            for o in range(order+1):
+                V = orthonormalized_basis(3, o, xt, ta, tb)
                 Vt.append(V)
                 dVt.append(divergence_free_basis(V, 3, xt, ta, tb))
 
-            file.write("\n/**\n * Orthonormalized polynomial basis on reference line\n */\n")
-            for o in range(order):
-                codegen(file, Vl[o], xl, o+1, orthonormal=True)
-            
-            file.write("\n/**\n * Orthonormalized polynomial basis on reference triangle\n */\n")
-            for o in range(order):
-                codegen(file, Vf[o], xf, o+1, orthonormal=True)
+            file.write(
+                "\n/**\n * Orthonormalized polynomial basis on reference line\n */\n")
+            for o in range(order+1):
+                codegen(file, Vl[o], xl, o, orthonormal=True)
 
-            file.write("\n/**\n * Orthonormalized polynomial basis on reference tetrahedron\n */\n")
-            for o in range(order):
-                codegen(file, Vt[o], xt, o+1, orthonormal=True)
+            file.write(
+                "\n/**\n * Orthonormalized polynomial basis on reference triangle\n */\n")
+            for o in range(order+1):
+                codegen(file, Vf[o], xf, o, orthonormal=True)
 
-            file.write("\n/**\n * Divergence free polynomial basis on reference line\n */\n")
-            for o in range(order):
-                div_free_codegen(file, dVl[o], xl, o+1)
+            file.write(
+                "\n/**\n * Orthonormalized polynomial basis on reference tetrahedron\n */\n")
+            for o in range(order+1):
+                codegen(file, Vt[o], xt, o, orthonormal=True)
 
-            file.write("\n/**\n * Divergence free polynomial basis on reference triangle\n */\n")
-            for o in range(order):
-                div_free_codegen(file, dVf[o], xf, o+1)
+            file.write(
+                "\n/**\n * Divergence free polynomial basis on reference line\n */\n")
+            for o in range(order+1):
+                div_free_codegen(file, dVl[o], xl, o)
 
-            file.write("\n/**\n * Divergence free polynomial basis on reference tetrahedron\n */\n")
-            for o in range(order):
-                div_free_codegen(file, dVt[o], xt, o+1)
+            file.write(
+                "\n/**\n * Divergence free polynomial basis on reference triangle\n */\n")
+            for o in range(order+1):
+                div_free_codegen(file, dVf[o], xf, o)
+
+            file.write(
+                "\n/**\n * Divergence free polynomial basis on reference tetrahedron\n */\n")
+            for o in range(order+1):
+                div_free_codegen(file, dVt[o], xt, o)
 
             footer(file)

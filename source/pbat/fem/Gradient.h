@@ -21,28 +21,28 @@ namespace fem {
  * \sum_j u_j \nabla \phi_j(X_g) ] \forall e \in E
  *
  * @tparam TMesh
- * @tparam QuadratureOrder
  */
-template <CMesh TMesh, int QuadratureOrder>
+template <CMesh TMesh>
 struct Gradient
 {
   public:
-    using SelfType              = Gradient<TMesh, QuadratureOrder>;
+    using SelfType              = Gradient<TMesh>;
     using MeshType              = TMesh;
     using ElementType           = typename TMesh::ElementType;
-    using QuadratureRuleType    = typename ElementType::template QuadratureType<QuadratureOrder>;
     static int constexpr kDims  = MeshType::kDims;
     static int constexpr kOrder = (ElementType::kOrder > 1) ? (ElementType::kOrder - 1) : 1;
-    static int constexpr kQuadratureOrder = QuadratureOrder;
 
     /**
      * @brief
      * @param mesh
-     * @param GNe |#element nodes|x|#dims * #quad.pts. * #elements|
-                    ///< matrix of element shape function gradients at quadrature points
-     * points
+     * @param eg |#quad.pts.|x1 array of element indices associated with quadrature points
+     * @param GNeg |#element nodes|x|#dims * #quad.pts.| matrix of element shape function gradients
+     * at quadrature points points
      */
-    Gradient(MeshType const& mesh, Eigen::Ref<MatrixX const> const& GNe);
+    Gradient(
+        MeshType const& mesh,
+        Eigen::Ref<IndexVectorX const> eg,
+        Eigen::Ref<MatrixX const> const& GNeg);
 
     SelfType& operator=(SelfType const&) = delete;
 
@@ -64,52 +64,51 @@ struct Gradient
     CSCMatrix ToMatrix() const;
 
     Index InputDimensions() const { return mesh.X.cols(); }
-    Index OutputDimensions() const { return kDims * mesh.E.cols() * QuadratureRuleType::kPoints; }
+    Index OutputDimensions() const { return kDims * eg.size(); }
 
     void CheckValidState() const;
 
     MeshType const& mesh; ///< The finite element mesh
+
+    Eigen::Ref<IndexVectorX const>
+        eg; ///< |#quad.pts.|x1 array of element indices corresponding to quadrature points
     Eigen::Ref<MatrixX const>
-        GNe; ///< |#element nodes|x|#dims * #quad.pts. * #elements|
-             ///< matrix of element shape function gradients at quadrature points
+        GNeg; ///< |#element nodes|x|#dims * #quad.pts. * #elements|
+              ///< matrix of element shape function gradients at quadrature points
 };
 
-template <CMesh TMesh, int QuadratureOrder>
-inline Gradient<TMesh, QuadratureOrder>::Gradient(
+template <CMesh TMesh>
+inline Gradient<TMesh>::Gradient(
     MeshType const& mesh,
-    Eigen::Ref<MatrixX const> const& GNe)
-    : mesh(mesh), GNe(GNe)
+    Eigen::Ref<IndexVectorX const> eg,
+    Eigen::Ref<MatrixX const> const& GNeg)
+    : mesh(mesh), eg(eg), GNeg(GNeg)
 {
 }
 
-template <CMesh TMesh, int QuadratureOrder>
-inline CSCMatrix Gradient<TMesh, QuadratureOrder>::ToMatrix() const
+template <CMesh TMesh>
+inline CSCMatrix Gradient<TMesh>::ToMatrix() const
 {
-    PBAT_PROFILE_NAMED_SCOPE("fem.Gradient.ToMatrix");
+    PBAT_PROFILE_NAMED_SCOPE("pbat.fem.Gradient.ToMatrix");
     using SparseIndex = typename CSCMatrix::StorageIndex;
     using Triplet     = Eigen::Triplet<Scalar, SparseIndex>;
 
     std::vector<Triplet> triplets{};
-    triplets.reserve(static_cast<std::size_t>(GNe.size()));
-    auto const numberOfElements                = mesh.E.cols();
-    auto constexpr kNodesPerElement            = ElementType::kNodes;
-    auto constexpr kQuadPts                    = QuadratureRuleType::kPoints;
-    auto const numberOfElementQuadraturePoints = numberOfElements * kQuadPts;
-    for (auto e = 0; e < numberOfElements; ++e)
+    triplets.reserve(static_cast<std::size_t>(GNeg.size()));
+    auto const numberOfQuadraturePoints = eg.size();
+    auto constexpr kNodesPerElement     = ElementType::kNodes;
+    for (auto g = 0; g < numberOfQuadraturePoints; ++g)
     {
+        auto const e     = eg(g);
         auto const nodes = mesh.E.col(e);
-        auto const Ge    = GNe.block<kNodesPerElement, kQuadPts * kDims>(0, e * kQuadPts * kDims);
+        auto const Geg   = GNeg.block<kNodesPerElement, kDims>(0, g * kDims);
         for (auto d = 0; d < kDims; ++d)
         {
-            for (auto g = 0; g < kQuadPts; ++g)
+            for (auto j = 0; j < kNodesPerElement; ++j)
             {
-                for (auto j = 0; j < kNodesPerElement; ++j)
-                {
-                    auto const ni = static_cast<SparseIndex>(
-                        d * numberOfElementQuadraturePoints + e * kQuadPts + g);
-                    auto const nj = static_cast<SparseIndex>(nodes(j));
-                    triplets.push_back(Triplet(ni, nj, Ge(j, g * kDims + d)));
-                }
+                auto const ni = static_cast<SparseIndex>(d * numberOfQuadraturePoints + g);
+                auto const nj = static_cast<SparseIndex>(nodes(j));
+                triplets.push_back(Triplet(ni, nj, Geg(j, d)));
             }
         }
     }
@@ -118,37 +117,35 @@ inline CSCMatrix Gradient<TMesh, QuadratureOrder>::ToMatrix() const
     return G;
 }
 
-template <CMesh TMesh, int QuadratureOrder>
-inline void Gradient<TMesh, QuadratureOrder>::CheckValidState() const
+template <CMesh TMesh>
+inline void Gradient<TMesh>::CheckValidState() const
 {
-    auto constexpr kQuadPts         = QuadratureRuleType::kPoints;
-    auto const numberOfElements     = mesh.E.cols();
-    auto constexpr kExpectedGNeRows = ElementType::kNodes;
-    auto const expectedGNeCols      = kDims * kQuadPts * numberOfElements;
+    auto const numberOfQuadraturePoints = eg.size();
+    auto constexpr kExpectedGNegRows    = ElementType::kNodes;
+    auto const expectedGNegCols         = kDims * numberOfQuadraturePoints;
     bool const bShapeFunctionGradientsHaveCorrectDimensions =
-        (GNe.rows() == kExpectedGNeRows) and (GNe.cols() == expectedGNeCols);
+        (GNeg.rows() == kExpectedGNegRows) and (GNeg.cols() == expectedGNegCols);
     if (not bShapeFunctionGradientsHaveCorrectDimensions)
     {
         std::string const what = fmt::format(
             "Expected shape function gradients at element quadrature points of dimensions "
-            "|#nodes-per-element|={} x |#mesh-dims * #quad.pts. * #elemens|={} for polynomiail "
-            "quadrature order={}, but got {}x{} instead",
-            kExpectedGNeRows,
-            expectedGNeCols,
-            QuadratureOrder,
-            GNe.rows(),
-            GNe.cols());
+            "|#nodes-per-element|={} x |#mesh-dims * #quad.pts.|={} for polynomial but got {}x{} "
+            "instead",
+            kExpectedGNegRows,
+            expectedGNegCols,
+            GNeg.rows(),
+            GNeg.cols());
         throw std::invalid_argument(what);
     }
 }
 
-template <CMesh TMesh, int QuadratureOrder>
+template <CMesh TMesh>
 template <class TDerivedIn, class TDerivedOut>
-inline void Gradient<TMesh, QuadratureOrder>::Apply(
+inline void Gradient<TMesh>::Apply(
     Eigen::MatrixBase<TDerivedIn> const& x,
     Eigen::DenseBase<TDerivedOut>& y) const
 {
-    PBAT_PROFILE_NAMED_SCOPE("fem.Gradient.Apply");
+    PBAT_PROFILE_NAMED_SCOPE("pbat.fem.Gradient.Apply");
     // Check inputs
     bool const bDimensionsMatch = (x.cols() == y.cols()) and (x.rows() == InputDimensions()) and
                                   (y.rows() == OutputDimensions());
@@ -167,27 +164,20 @@ inline void Gradient<TMesh, QuadratureOrder>::Apply(
         throw std::invalid_argument(what);
     }
     // Compute gradient
-    auto constexpr kNodesPerElement = ElementType::kNodes;
-    auto constexpr kQuadPts         = QuadratureRuleType::kPoints;
-    auto const numberOfElements     = mesh.E.cols();
+    auto constexpr kNodesPerElement     = ElementType::kNodes;
+    auto const numberOfQuadraturePoints = eg.size();
     for (auto c = 0; c < x.cols(); ++c)
     {
-        for (auto e = 0; e < numberOfElements; ++e)
+        for (auto g = 0; g < numberOfQuadraturePoints; ++g)
         {
+            auto const e     = eg(g);
             auto const nodes = mesh.E.col(e);
             auto const xe    = x.col(c)(nodes);
-            auto const Ge = GNe.block<kNodesPerElement, kDims * kQuadPts>(0, e * kQuadPts * kDims);
+            auto const Geg   = GNeg.block<kNodesPerElement, kDims>(0, g * kDims);
             for (auto d = 0; d < kDims; ++d)
             {
-                auto ye =
-                    y.col(c).segment(d * numberOfElements * kQuadPts + e * kQuadPts, kQuadPts);
-                for (auto g = 0; g < kQuadPts; ++g)
-                {
-                    for (auto i = 0; i < nodes.size(); ++i)
-                    {
-                        ye(g) += Ge(i, d + g * kDims) * xe(i);
-                    }
-                }
+                y(d * numberOfQuadraturePoints + g) +=
+                    Geg(Eigen::placeholders::all, d).transpose() * xe;
             }
         }
     }

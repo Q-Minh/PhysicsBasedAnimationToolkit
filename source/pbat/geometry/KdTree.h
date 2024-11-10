@@ -109,7 +109,7 @@ template <int Dims>
 template <class FVisit, class FStop>
 inline void KdTree<Dims>::BreadthFirstSearch(FVisit visit, FStop stop, Index root) const
 {
-    PBAT_PROFILE_NAMED_SCOPE("geometry.KdTree.BreadthFirstSearch");
+    PBAT_PROFILE_NAMED_SCOPE("pbat.geometry.KdTree.BreadthFirstSearch");
     std::queue<Index> bfs{};
     bfs.push(root);
     while (!bfs.empty())
@@ -136,7 +136,7 @@ template <int Dims>
 template <class FVisit, class FStop>
 inline void KdTree<Dims>::DepthFirstSearch(FVisit visit, FStop stop, Index root) const
 {
-    PBAT_PROFILE_NAMED_SCOPE("geometry.KdTree.DepthFirstSearch");
+    PBAT_PROFILE_NAMED_SCOPE("pbat.geometry.KdTree.DepthFirstSearch");
     std::stack<Index> dfs{};
     dfs.push(root);
     while (!dfs.empty())
@@ -165,7 +165,7 @@ template <class TDerivedP>
 inline void
 KdTree<Dims>::Construct(Eigen::DenseBase<TDerivedP> const& P, std::size_t maxPointsInLeaf)
 {
-    PBAT_PROFILE_NAMED_SCOPE("geometry.KdTree.Construct");
+    PBAT_PROFILE_NAMED_SCOPE("pbat.geometry.KdTree.Construct");
     std::size_t const n = static_cast<std::size_t>(P.cols());
     mNodes.clear();
     mNodes.reserve(n);
