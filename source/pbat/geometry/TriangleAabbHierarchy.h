@@ -61,6 +61,12 @@ class TriangleAabbHierarchy<3> : public BoundingVolumeHierarchy<
         Eigen::MatrixBase<TDerivedP> const& P,
         bool bParallelize = false) const;
 
+    template <class TDerivedP, class FCull>
+    std::pair<std::vector<Index>, std::vector<Scalar>> NearestPrimitivesToPoints(
+        Eigen::MatrixBase<TDerivedP> const& P,
+        FCull fCull,
+        bool bParallelize = false) const;
+
     template <class TDerivedP>
     std::pair<std::vector<Index>, std::vector<Scalar>> NearestPrimitivesToPoints(
         Eigen::MatrixBase<TDerivedP> const& P,
@@ -207,10 +213,11 @@ inline std::vector<Index> TriangleAabbHierarchy<3>::PrimitivesContainingPoints(
     return p;
 }
 
-template <class TDerivedP>
+template <class TDerivedP, class FCull>
 inline std::pair<std::vector<Index>, std::vector<Scalar>>
 TriangleAabbHierarchy<3>::NearestPrimitivesToPoints(
     Eigen::MatrixBase<TDerivedP> const& P,
+    FCull fCull,
     bool bParallelize) const
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.geometry.TriangleAabbHierarchy3D.NearestPrimitivesToPoints");
@@ -224,6 +231,10 @@ TriangleAabbHierarchy<3>::NearestPrimitivesToPoints(
                 return bv.squaredExteriorDistance(P.col(i));
             },
             [&](PrimitiveType const& T) -> Scalar {
+                if (fCull(i, T))
+                {
+                    return std::numeric_limits<Scalar>::max();
+                }
                 auto const VT = V(Eigen::placeholders::all, T);
                 return DistanceQueries::PointTriangle(
                     FromEigen(P.col(i).template head<kDims>()),
@@ -246,6 +257,18 @@ TriangleAabbHierarchy<3>::NearestPrimitivesToPoints(
             FindNearestPrimitive(i);
     }
     return {p, d};
+}
+
+template <class TDerivedP>
+inline std::pair<std::vector<Index>, std::vector<Scalar>>
+TriangleAabbHierarchy<3>::NearestPrimitivesToPoints(
+    Eigen::MatrixBase<TDerivedP> const& P,
+    bool bParallelize) const
+{
+    return NearestPrimitivesToPoints(
+        P,
+        [](auto i, auto F) { return false; },
+        bParallelize);
 }
 
 } // namespace geometry
