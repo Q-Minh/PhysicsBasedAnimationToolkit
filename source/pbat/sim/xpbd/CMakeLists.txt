@@ -2,14 +2,15 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     PUBLIC
     FILE_SET api
     FILES
-    "Xpbd.h"
     "Data.h"
-    "Kernels.h"
+    "Enums.h"
     "Integrator.h"
+    "Kernels.h"
+    "Xpbd.h"
 )
 target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     PRIVATE
     "Data.cpp"
-    "Kernels.cpp"
     "Integrator.cpp"
+    "Kernels.cpp"
 )

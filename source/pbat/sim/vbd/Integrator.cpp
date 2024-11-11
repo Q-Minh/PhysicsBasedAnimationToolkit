@@ -63,8 +63,8 @@ void Integrator::Step(Scalar dt, Index iterations, Index substeps, Scalar rho)
 
             for (auto const& partition : data.partitions)
             {
-                auto const nVerticesInPartition = static_cast<std::size_t>(partition.size());
-                tbb::parallel_for(std::size_t(0), nVerticesInPartition, [&](IndexType v) {
+                auto const nVerticesInPartition = static_cast<IndexType>(partition.size());
+                tbb::parallel_for(IndexType(0), nVerticesInPartition, [&](IndexType v) {
                     auto i     = partition[v];
                     auto begin = data.GVGp[i];
                     auto end   = data.GVGp[i + 1];

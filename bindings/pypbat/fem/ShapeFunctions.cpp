@@ -64,6 +64,24 @@ void BindShapeFunctions(pybind11::module& m)
         "|#elements * #quad.pts.| x |#nodes| shape function matrix");
 
     m.def(
+        "shape_function_matrix",
+        [](Mesh const& M,
+           Eigen::Ref<IndexVectorX const> const& eg,
+           Eigen::Ref<VectorX const> const& wg,
+           Eigen::Ref<MatrixX const> const& Xg) {
+            CSRMatrix N;
+            M.Apply([&]<class MeshType>(MeshType* mesh) {
+                N = pbat::fem::ShapeFunctionMatrix(*mesh, eg, wg, Xg);
+            });
+            return N;
+        },
+        pyb::arg("mesh"),
+        pyb::arg("eg"),
+        pyb::arg("wg"),
+        pyb::arg("Xg"),
+        "|#quad.pts.| x |#nodes| shape function matrix");
+
+    m.def(
         "shape_functions_at",
         [](Mesh const& M, Eigen::Ref<MatrixX const> const& Xi) {
             MatrixX N;

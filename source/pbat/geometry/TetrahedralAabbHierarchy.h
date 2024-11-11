@@ -46,6 +46,12 @@ class TetrahedralAabbHierarchy : public BoundingVolumeHierarchy<
     PBAT_API IndexMatrixX
     OverlappingPrimitives(TetrahedralAabbHierarchy const& bvh, std::size_t reserve = 1000ULL) const;
 
+    template <class TDerivedP, class FCull>
+    std::vector<Index> PrimitivesContainingPoints(
+        Eigen::MatrixBase<TDerivedP> const& P,
+        FCull fCull,
+        bool bParallelize = false) const;
+
     template <class TDerivedP>
     std::vector<Index> PrimitivesContainingPoints(
         Eigen::MatrixBase<TDerivedP> const& P,
@@ -80,9 +86,10 @@ TetrahedralAabbHierarchy::BoundingVolumeOf(RPrimitiveIndices&& pinds) const
     return BoundingVolumeType(V(Eigen::placeholders::all, vertices));
 }
 
-template <class TDerivedP>
+template <class TDerivedP, class FCull>
 inline std::vector<Index> TetrahedralAabbHierarchy::PrimitivesContainingPoints(
     Eigen::MatrixBase<TDerivedP> const& P,
+    FCull fCull,
     bool bParallelize) const
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.geometry.TetrahedralAabbHierarchy.PrimitivesContainingPoints");
@@ -92,6 +99,8 @@ inline std::vector<Index> TetrahedralAabbHierarchy::PrimitivesContainingPoints(
         std::vector<Index> const intersectingPrimitives = this->PrimitivesIntersecting(
             [&](BoundingVolumeType const& bv) -> bool { return bv.contains(P.col(i)); },
             [&](PrimitiveType const& T) -> bool {
+                if (fCull(i, T))
+                    return false;
                 auto const VT = V(Eigen::placeholders::all, T);
                 return OverlapQueries::PointTetrahedron3D(
                     FromEigen(P.col(i).template head<kDims>()),
@@ -116,6 +125,17 @@ inline std::vector<Index> TetrahedralAabbHierarchy::PrimitivesContainingPoints(
             FindContainingPrimitive(i);
     }
     return p;
+}
+
+template <class TDerivedP>
+inline std::vector<Index> TetrahedralAabbHierarchy::PrimitivesContainingPoints(
+    Eigen::MatrixBase<TDerivedP> const& P,
+    bool bParallelize) const
+{
+    return PrimitivesContainingPoints(
+        P,
+        [](auto i, auto primitive) { return false; },
+        bParallelize);
 }
 
 template <class TDerivedP>

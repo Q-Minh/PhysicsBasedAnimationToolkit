@@ -79,6 +79,47 @@ CSRMatrix ShapeFunctionMatrix(TMesh const& mesh)
 }
 
 /**
+ * @brief
+ * @tparam TMesh
+ * @tparam TDerivedW
+ * @tparam TDerivedX
+ * @param mesh
+ * @param eg |#quad.pts.| array of elements associated with quadrature points
+ * @param wg |#quad.pts.| array of quadrature weights
+ * @param Xg |#dims|x|#quad.pts.| array of quadrature points in reference space
+ * @return |#quad.pts.| x |#nodes| shape function matrix
+ */
+template <CMesh TMesh, class TDerivedE, class TDerivedW, class TDerivedX>
+CSRMatrix ShapeFunctionMatrix(
+    TMesh const& mesh,
+    Eigen::DenseBase<TDerivedE> const& eg,
+    Eigen::DenseBase<TDerivedW> const& wg,
+    Eigen::MatrixBase<TDerivedX> const& Xg)
+{
+    PBAT_PROFILE_NAMED_SCOPE("pbat.fem.ShapeFunctionMatrix");
+    using ElementType               = typename TMesh::ElementType;
+    auto const numberOfNodes        = mesh.X.cols();
+    auto const numberOfElements     = mesh.E.cols();
+    auto const numberOfQuadPoints   = wg.size();
+    auto const m                    = numberOfQuadPoints;
+    auto const n                    = numberOfNodes;
+    auto constexpr kNodesPerElement = ElementType::kNodes;
+    CSRMatrix N(m, n);
+    N.reserve(IndexVectorX::Constant(m, kNodesPerElement));
+    for (auto g = 0; g < numberOfQuadPoints; ++g)
+    {
+        auto const e     = eg(g);
+        auto const nodes = mesh.E.col(e);
+        auto Ng          = ElementType::N(Xg.col(g));
+        for (auto i = 0; i < kNodesPerElement; ++i)
+        {
+            N.insert(g, nodes(i)) = Ng(i);
+        }
+    }
+    return N;
+}
+
+/**
  * @brief Compute shape functions at the given reference space positions
  * @tparam TDerivedXi
  * @tparam TElement
