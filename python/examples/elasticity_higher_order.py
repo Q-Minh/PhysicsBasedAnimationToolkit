@@ -22,7 +22,7 @@ if __name__ == "__main__":
     parser.add_argument("-n", "--poisson-ratio", help="Poisson's ratio", type=float,
                         dest="nu", default=0.45)
     args = parser.parse_args()
-    
+
     # Load domain and visual meshes
     imesh = meshio.read(args.input)
     V, C = imesh.points, imesh.cells_dict["tetra"]
@@ -32,42 +32,29 @@ if __name__ == "__main__":
     VR, FR = rimesh.points, rimesh.cells_dict["triangle"]
     VR = VR.astype(np.float64, order='c')
     FR = FR.astype(np.int64, order='c')
-    
+
     # Construct FEM quantities for simulation
     mesh = pbat.fem.Mesh(
         V.T, C.T, element=pbat.fem.Element.Tetrahedron, order=2)
     x = mesh.X.reshape(math.prod(mesh.X.shape), order='f')
     v = np.zeros(x.shape[0])
-    detJeM = pbat.fem.jacobian_determinants(mesh, quadrature_order=4)
     rho = args.rho
-    M = pbat.fem.MassMatrix(mesh, detJeM, rho=rho,
-                             dims=3, quadrature_order=4).to_matrix()
+
+    # Mass matrix
+    M, detJeM = pbat.fem.mass_matrix(mesh, rho=rho, quadrature_order=4)
     Minv = pbat.math.linalg.ldlt(M)
     Minv.compute(M)
 
     # Construct load vector from gravity field
     g = np.zeros(mesh.dims)
     g[-1] = -9.81
-    detJef = pbat.fem.jacobian_determinants(mesh, quadrature_order=2)
-    nquadpts = mesh.E.shape[1] * mesh.quadrature_weights(2).shape[0]
-    fe = np.tile(rho*g[:, np.newaxis], nquadpts)
-    qgf = pbat.fem.inner_product_weights(
-        mesh, quadrature_order=2).flatten(order="F")
-    Qf = sp.sparse.diags_array([qgf], offsets=[0])
-    Nf = pbat.fem.shape_function_matrix(mesh, quadrature_order=2)
-    f = fe @ Qf @ Nf
-    f = f.reshape(math.prod(f.shape), order="F")
+    f, detJeF = pbat.fem.load_vector(mesh, rho*g, quadrature_order=2)
     a = Minv.solve(f).squeeze()
 
     # Create hyper elastic potential
-    detJeU = pbat.fem.jacobian_determinants(mesh, quadrature_order=4)
-    GNeU = pbat.fem.shape_function_gradients(mesh, quadrature_order=4)
-    Y = np.full(mesh.E.shape[1], args.Y)
-    nu = np.full(mesh.E.shape[1], args.nu)
-    psi = pbat.fem.HyperElasticEnergy.StableNeoHookean
-    hep = pbat.fem.HyperElasticPotential(
-        mesh, detJeU, GNeU, Y, nu, energy=psi, quadrature_order=4)
-    hep.precompute_hessian_sparsity()
+    Y, nu, psi = args.Y, args.nu, pbat.fem.HyperElasticEnergy.StableNeoHookean
+    hep, egU, wgU, GNeU = pbat.fem.hyper_elastic_potential(
+        mesh, Y=Y, nu=nu, energy=psi, quadrature_order=4)
 
     # Set Dirichlet boundary conditions
     Xmin = mesh.X.min(axis=1)
@@ -88,10 +75,10 @@ if __name__ == "__main__":
     Hdd = hep.to_matrix()[:, dofs].tocsr()[dofs, :]
     Hddinv = pbat.math.linalg.ldlt(Hdd)
     Hddinv.analyze(Hdd)
-    
+
     # Setup visual mesh
     bvh = pbat.geometry.bvh(V.T, C.T, cell=pbat.geometry.Cell.Tetrahedron)
-    e = bvh.nearest_primitives_to_points(VR.T)
+    e, d = bvh.nearest_primitives_to_points(VR.T)
     Xi = pbat.fem.reference_positions(mesh, e, VR.T)
     phi = pbat.fem.shape_functions_at(mesh, Xi)
 
@@ -136,7 +123,7 @@ if __name__ == "__main__":
 
             # Update visuals
             X = x.reshape(mesh.X.shape[0], mesh.X.shape[1], order='f')
-            xv = (X[:,mesh.E[:,e]] * phi).sum(axis=1)
+            xv = (X[:, mesh.E[:, e]] * phi).sum(axis=1)
             sm.update_vertex_positions(xv.T)
 
     ps.set_user_callback(callback)

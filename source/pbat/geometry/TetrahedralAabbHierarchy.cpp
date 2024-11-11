@@ -1,6 +1,7 @@
 #include "TetrahedralAabbHierarchy.h"
 
 #include "OverlapQueries.h"
+#include "pbat/math/linalg/mini/Eigen.h"
 
 #include <exception>
 #include <fmt/format.h>
@@ -15,7 +16,7 @@ TetrahedralAabbHierarchy::TetrahedralAabbHierarchy(
     std::size_t maxPointsInLeaf)
     : V(V), C(C)
 {
-    PBAT_PROFILE_NAMED_SCOPE("geometry.TetrahedralAabbHierarchy.Construct");
+    PBAT_PROFILE_NAMED_SCOPE("pbat.geometry.TetrahedralAabbHierarchy.Construct");
     auto constexpr kRowsC = static_cast<int>(PrimitiveType::RowsAtCompileTime);
     if (V.rows() != kDims and C.rows() != kRowsC)
     {
@@ -42,12 +43,12 @@ TetrahedralAabbHierarchy::PrimitiveType TetrahedralAabbHierarchy::Primitive(Inde
 Vector<TetrahedralAabbHierarchy::kDims>
 TetrahedralAabbHierarchy::PrimitiveLocation(PrimitiveType const& primitive) const
 {
-    return V(Eigen::all, primitive).rowwise().mean();
+    return V(Eigen::placeholders::all, primitive).rowwise().mean();
 }
 
 void TetrahedralAabbHierarchy::Update()
 {
-    PBAT_PROFILE_NAMED_SCOPE("geometry.TetrahedralAabbHierarchy.Update");
+    PBAT_PROFILE_NAMED_SCOPE("pbat.geometry.TetrahedralAabbHierarchy.Update");
     BaseType::Update();
 }
 
@@ -55,7 +56,8 @@ IndexMatrixX TetrahedralAabbHierarchy::OverlappingPrimitives(
     TetrahedralAabbHierarchy const& bvh,
     std::size_t reserve) const
 {
-    PBAT_PROFILE_NAMED_SCOPE("geometry.TetrahedralAabbHierarchy.OverlappingPrimitives");
+    PBAT_PROFILE_NAMED_SCOPE("pbat.geometry.TetrahedralAabbHierarchy.OverlappingPrimitives");
+    using math::linalg::mini::FromEigen;
     return this->OverlappingPrimitivesImpl<
         TetrahedralAabbHierarchy,
         BoundingVolumeType,
@@ -64,23 +66,23 @@ IndexMatrixX TetrahedralAabbHierarchy::OverlappingPrimitives(
         bvh,
         [](BoundingVolumeType const& bv1, BoundingVolumeType const& bv2) -> bool {
             return OverlapQueries::AxisAlignedBoundingBoxes(
-                bv1.min(),
-                bv1.max(),
-                bv2.min(),
-                bv2.max());
+                FromEigen(bv1.min()),
+                FromEigen(bv1.max()),
+                FromEigen(bv2.min()),
+                FromEigen(bv2.max()));
         },
         [&](PrimitiveType const& p1, PrimitiveType const& p2) -> bool {
-            auto const V1 = V(Eigen::all, p1);
-            auto const V2 = bvh.V(Eigen::all, p2);
+            auto const V1 = V(Eigen::placeholders::all, p1);
+            auto const V2 = bvh.V(Eigen::placeholders::all, p2);
             return OverlapQueries::Tetrahedra(
-                V1.col(0).head<kDims>(),
-                V1.col(1).head<kDims>(),
-                V1.col(2).head<kDims>(),
-                V1.col(3).head<kDims>(),
-                V2.col(0).head<kDims>(),
-                V2.col(1).head<kDims>(),
-                V2.col(2).head<kDims>(),
-                V2.col(3).head<kDims>());
+                FromEigen(V1.col(0).head<kDims>()),
+                FromEigen(V1.col(1).head<kDims>()),
+                FromEigen(V1.col(2).head<kDims>()),
+                FromEigen(V1.col(3).head<kDims>()),
+                FromEigen(V2.col(0).head<kDims>()),
+                FromEigen(V2.col(1).head<kDims>()),
+                FromEigen(V2.col(2).head<kDims>()),
+                FromEigen(V2.col(3).head<kDims>()));
         },
         [&](PrimitiveType const& p1, PrimitiveType const& p2) -> bool {
             if (this == &bvh)
@@ -142,7 +144,7 @@ TEST_CASE("[geometry] TetrahedralAabbHierarchy")
             CHECK_GT(primitiveIdx, Index{-1});
         }
     }
-    std::vector<Index> const nearestPrimitivesToP = bvh.NearestPrimitivesToPoints(P);
+    auto const [nearestPrimitivesToP, distancesToP] = bvh.NearestPrimitivesToPoints(P);
     CHECK_EQ(nearestPrimitivesToP.size(), P.cols());
     for (auto i = 0; i < P.cols(); ++i)
     {

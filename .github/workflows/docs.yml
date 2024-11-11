@@ -16,17 +16,6 @@ jobs:
         with:
           fetch-depth: 1
 
-      - name: Setup CMake
-        uses: lukka/get-cmake@v12
-        with:
-          cmakeVersion: "3.26.0"
-
-      - name: Setup vcpkg
-        uses: lukka/run-vcpkg@v11
-        with:
-          vcpkgDirectory: ${{ github.workspace }}/vcpkg
-          vcpkgGitCommitId: 055721089e8037d4d617250814d11f881e557549
-
       - name: Set up Python
         uses: actions/setup-python@v5.1.1
         with:
@@ -37,35 +26,10 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y doxygen graphviz ccache
 
-          # Install MkDocs and related plugins
-          pip install -r docs/requirements.txt
-
-          echo 'CACHE_PATH=/home/runner/.cache/ccache' >> "$GITHUB_ENV"
-
       - name: Upgrade pip and Install Python Dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r docs/requirements.txt
-
-      - name: Cache Ccache
-        id: cache-build
-        uses: actions/cache@v4.0.2
-        with:
-          path: /home/runner/.cache/ccache
-          key: ccache-${{ runner.os }}-${{ hashFiles('**/CMakeLists.txt', 'docs/requirements.txt') }}
-          restore-keys: |
-            ccache-${{ runner.os }}-
-
-      - name: Configure Ccache
-        run: |
-          ccache --max-size=1.0G
-          ccache --zero-stats
-
-      - name: Build Python Package
-        run: |
-          pip install setuptools mkdocstrings
-          pip install . --config-settings=cmake.args="--preset=pip" --config-settings=build.tool-args="-j4" -v
-          ccache --show-stats
 
       - name: Build Documentation with MkDocs
         run: |

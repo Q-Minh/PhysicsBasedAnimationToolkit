@@ -6,11 +6,13 @@
 #include "DistanceQueries.h"
 #include "OverlapQueries.h"
 #include "PhysicsBasedAnimationToolkitExport.h"
+#include "pbat/Aliases.h"
+#include "pbat/common/Eigen.h"
+#include "pbat/profiling/Profiling.h"
 
-#include <pbat/Aliases.h>
-#include <pbat/common/Eigen.h>
-#include <pbat/profiling/Profiling.h>
+#include <limits>
 #include <tbb/parallel_for.h>
+#include <utility>
 
 namespace pbat {
 namespace geometry {
@@ -44,13 +46,19 @@ class TetrahedralAabbHierarchy : public BoundingVolumeHierarchy<
     PBAT_API IndexMatrixX
     OverlappingPrimitives(TetrahedralAabbHierarchy const& bvh, std::size_t reserve = 1000ULL) const;
 
+    template <class TDerivedP, class FCull>
+    std::vector<Index> PrimitivesContainingPoints(
+        Eigen::MatrixBase<TDerivedP> const& P,
+        FCull fCull,
+        bool bParallelize = false) const;
+
     template <class TDerivedP>
     std::vector<Index> PrimitivesContainingPoints(
         Eigen::MatrixBase<TDerivedP> const& P,
         bool bParallelize = false) const;
 
     template <class TDerivedP>
-    std::vector<Index> NearestPrimitivesToPoints(
+    std::pair<std::vector<Index>, std::vector<Scalar>> NearestPrimitivesToPoints(
         Eigen::MatrixBase<TDerivedP> const& P,
         bool bParallelize = false) const;
 
@@ -64,6 +72,8 @@ class TetrahedralAabbHierarchy : public BoundingVolumeHierarchy<
 
     [[maybe_unused]] auto GetV() const { return V; }
 
+    [[maybe_unused]] auto GetC() const { return C; }
+
     Eigen::Ref<MatrixX const> V;
     Eigen::Ref<IndexMatrixX const> C;
 };
@@ -72,28 +82,32 @@ template <class RPrimitiveIndices>
 inline TetrahedralAabbHierarchy::BoundingVolumeType
 TetrahedralAabbHierarchy::BoundingVolumeOf(RPrimitiveIndices&& pinds) const
 {
-    auto vertices = C(Eigen::all, common::Slice(pinds)).reshaped();
-    return BoundingVolumeType(V(Eigen::all, vertices));
+    auto vertices = C(Eigen::placeholders::all, common::Slice(pinds)).reshaped();
+    return BoundingVolumeType(V(Eigen::placeholders::all, vertices));
 }
 
-template <class TDerivedP>
+template <class TDerivedP, class FCull>
 inline std::vector<Index> TetrahedralAabbHierarchy::PrimitivesContainingPoints(
     Eigen::MatrixBase<TDerivedP> const& P,
+    FCull fCull,
     bool bParallelize) const
 {
-    PBAT_PROFILE_NAMED_SCOPE("geometry.TetrahedralAabbHierarchy.PrimitivesContainingPoints");
+    PBAT_PROFILE_NAMED_SCOPE("pbat.geometry.TetrahedralAabbHierarchy.PrimitivesContainingPoints");
+    using math::linalg::mini::FromEigen;
     std::vector<Index> p(static_cast<std::size_t>(P.cols()), -1);
     auto const FindContainingPrimitive = [&](Index i) {
         std::vector<Index> const intersectingPrimitives = this->PrimitivesIntersecting(
             [&](BoundingVolumeType const& bv) -> bool { return bv.contains(P.col(i)); },
             [&](PrimitiveType const& T) -> bool {
-                auto const VT = V(Eigen::all, T);
+                if (fCull(i, T))
+                    return false;
+                auto const VT = V(Eigen::placeholders::all, T);
                 return OverlapQueries::PointTetrahedron3D(
-                    P.col(i).template head<kDims>(),
-                    VT.col(0).head<kDims>(),
-                    VT.col(1).head<kDims>(),
-                    VT.col(2).head<kDims>(),
-                    VT.col(3).head<kDims>());
+                    FromEigen(P.col(i).template head<kDims>()),
+                    FromEigen(VT.col(0).head<kDims>()),
+                    FromEigen(VT.col(1).head<kDims>()),
+                    FromEigen(VT.col(2).head<kDims>()),
+                    FromEigen(VT.col(3).head<kDims>()));
             });
         if (not intersectingPrimitives.empty())
         {
@@ -103,52 +117,67 @@ inline std::vector<Index> TetrahedralAabbHierarchy::PrimitivesContainingPoints(
     };
     if (bParallelize)
     {
-        for (auto i = 0; i < P.cols(); ++i)
-            FindContainingPrimitive(i);
+        tbb::parallel_for(Index{0}, Index{P.cols()}, FindContainingPrimitive);
     }
     else
     {
-        tbb::parallel_for(Index{0}, Index{P.cols()}, FindContainingPrimitive);
+        for (auto i = 0; i < P.cols(); ++i)
+            FindContainingPrimitive(i);
     }
     return p;
 }
 
 template <class TDerivedP>
-inline std::vector<Index> TetrahedralAabbHierarchy::NearestPrimitivesToPoints(
+inline std::vector<Index> TetrahedralAabbHierarchy::PrimitivesContainingPoints(
     Eigen::MatrixBase<TDerivedP> const& P,
     bool bParallelize) const
 {
-    PBAT_PROFILE_NAMED_SCOPE("geometry.TetrahedralAabbHierarchy.NearestPrimitivesToPoints");
+    return PrimitivesContainingPoints(
+        P,
+        [](auto i, auto primitive) { return false; },
+        bParallelize);
+}
+
+template <class TDerivedP>
+inline std::pair<std::vector<Index>, std::vector<Scalar>>
+TetrahedralAabbHierarchy::NearestPrimitivesToPoints(
+    Eigen::MatrixBase<TDerivedP> const& P,
+    bool bParallelize) const
+{
+    PBAT_PROFILE_NAMED_SCOPE("pbat.geometry.TetrahedralAabbHierarchy.NearestPrimitivesToPoints");
+    using math::linalg::mini::FromEigen;
     std::vector<Index> p(static_cast<std::size_t>(P.cols()), -1);
+    std::vector<Scalar> d(static_cast<std::size_t>(P.cols()), std::numeric_limits<Scalar>::max());
     auto const FindNearestPrimitive = [&](Index i) {
         std::size_t constexpr K{1};
-        std::vector<Index> const nearestPrimitives = this->NearestPrimitivesTo(
+        auto const [nearestPrimitives, distances] = this->NearestPrimitivesTo(
             [&](BoundingVolumeType const& bv) -> Scalar {
                 return bv.squaredExteriorDistance(P.col(i));
             },
             [&](PrimitiveType const& T) -> Scalar {
-                auto const VT = V(Eigen::all, T);
+                auto const VT = V(Eigen::placeholders::all, T);
                 return DistanceQueries::PointTetrahedron(
-                    P.col(i).template head<kDims>(),
-                    VT.col(0).head<kDims>(),
-                    VT.col(1).head<kDims>(),
-                    VT.col(2).head<kDims>(),
-                    VT.col(3).head<kDims>());
+                    FromEigen(P.col(i).template head<kDims>()),
+                    FromEigen(VT.col(0).head<kDims>()),
+                    FromEigen(VT.col(1).head<kDims>()),
+                    FromEigen(VT.col(2).head<kDims>()),
+                    FromEigen(VT.col(3).head<kDims>()));
             },
             K);
         auto const iStl = static_cast<std::size_t>(i);
         p[iStl]         = nearestPrimitives.front();
+        d[iStl]         = distances.front();
     };
     if (bParallelize)
+    {
+        tbb::parallel_for(Index{0}, Index{P.cols()}, FindNearestPrimitive);
+    }
+    else
     {
         for (auto i = 0; i < P.cols(); ++i)
             FindNearestPrimitive(i);
     }
-    else
-    {
-        tbb::parallel_for(Index{0}, Index{P.cols()}, FindNearestPrimitive);
-    }
-    return p;
+    return {p, d};
 }
 
 } // namespace geometry

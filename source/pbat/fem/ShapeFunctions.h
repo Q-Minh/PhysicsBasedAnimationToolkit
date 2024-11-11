@@ -51,7 +51,7 @@ ShapeFunctions()
 template <int QuadratureOrder, CMesh TMesh>
 CSRMatrix ShapeFunctionMatrix(TMesh const& mesh)
 {
-    PBAT_PROFILE_NAMED_SCOPE("fem.ShapeFunctionMatrix");
+    PBAT_PROFILE_NAMED_SCOPE("pbat.fem.ShapeFunctionMatrix");
     using ElementType               = typename TMesh::ElementType;
     auto const Ng                   = ShapeFunctions<ElementType, QuadratureOrder>();
     auto const numberOfNodes        = mesh.X.cols();
@@ -79,6 +79,47 @@ CSRMatrix ShapeFunctionMatrix(TMesh const& mesh)
 }
 
 /**
+ * @brief
+ * @tparam TMesh
+ * @tparam TDerivedW
+ * @tparam TDerivedX
+ * @param mesh
+ * @param eg |#quad.pts.| array of elements associated with quadrature points
+ * @param wg |#quad.pts.| array of quadrature weights
+ * @param Xg |#dims|x|#quad.pts.| array of quadrature points in reference space
+ * @return |#quad.pts.| x |#nodes| shape function matrix
+ */
+template <CMesh TMesh, class TDerivedE, class TDerivedW, class TDerivedX>
+CSRMatrix ShapeFunctionMatrix(
+    TMesh const& mesh,
+    Eigen::DenseBase<TDerivedE> const& eg,
+    Eigen::DenseBase<TDerivedW> const& wg,
+    Eigen::MatrixBase<TDerivedX> const& Xg)
+{
+    PBAT_PROFILE_NAMED_SCOPE("pbat.fem.ShapeFunctionMatrix");
+    using ElementType               = typename TMesh::ElementType;
+    auto const numberOfNodes        = mesh.X.cols();
+    auto const numberOfElements     = mesh.E.cols();
+    auto const numberOfQuadPoints   = wg.size();
+    auto const m                    = numberOfQuadPoints;
+    auto const n                    = numberOfNodes;
+    auto constexpr kNodesPerElement = ElementType::kNodes;
+    CSRMatrix N(m, n);
+    N.reserve(IndexVectorX::Constant(m, kNodesPerElement));
+    for (auto g = 0; g < numberOfQuadPoints; ++g)
+    {
+        auto const e     = eg(g);
+        auto const nodes = mesh.E.col(e);
+        auto Ng          = ElementType::N(Xg.col(g));
+        for (auto i = 0; i < kNodesPerElement; ++i)
+        {
+            N.insert(g, nodes(i)) = Ng(i);
+        }
+    }
+    return N;
+}
+
+/**
  * @brief Compute shape functions at the given reference space positions
  * @tparam TDerivedXi
  * @tparam TElement
@@ -88,7 +129,7 @@ CSRMatrix ShapeFunctionMatrix(TMesh const& mesh)
 template <CElement TElement, class TDerivedXi>
 MatrixX ShapeFunctionsAt(Eigen::DenseBase<TDerivedXi> const& Xi)
 {
-    PBAT_PROFILE_NAMED_SCOPE("fem.ShapeFunctionsAt");
+    PBAT_PROFILE_NAMED_SCOPE("pbat.fem.ShapeFunctionsAt");
     using ElementType = TElement;
     if (Xi.rows() != ElementType::kDims)
     {
@@ -117,7 +158,7 @@ MatrixX ShapeFunctionsAt(Eigen::DenseBase<TDerivedXi> const& Xi)
 template <int QuadratureOrder, CMesh TMesh, class TDerived>
 MatrixX IntegratedShapeFunctions(TMesh const& mesh, Eigen::DenseBase<TDerived> const& detJe)
 {
-    PBAT_PROFILE_NAMED_SCOPE("fem.IntegratedShapeFunctions");
+    PBAT_PROFILE_NAMED_SCOPE("pbat.fem.IntegratedShapeFunctions");
     using MeshType           = TMesh;
     using ElementType        = typename MeshType::ElementType;
     using QuadratureRuleType = typename ElementType::template QuadratureType<QuadratureOrder>;
@@ -244,7 +285,7 @@ Matrix<TElement::kNodes, TDerivedX::RowsAtCompileTime> ShapeFunctionGradients(
 template <int QuadratureOrder, CMesh TMesh>
 MatrixX ShapeFunctionGradients(TMesh const& mesh)
 {
-    PBAT_PROFILE_NAMED_SCOPE("fem.ShapeFunctionGradients");
+    PBAT_PROFILE_NAMED_SCOPE("pbat.fem.ShapeFunctionGradients");
     using MeshType              = TMesh;
     using ElementType           = typename MeshType::ElementType;
     using QuadratureRuleType    = typename ElementType::template QuadratureType<QuadratureOrder>;
@@ -260,7 +301,7 @@ MatrixX ShapeFunctionGradients(TMesh const& mesh)
         auto const vertices             = nodes(ElementType::Vertices);
         auto constexpr kRowsJ           = MeshType::kDims;
         auto constexpr kColsJ           = AffineElementType::kNodes;
-        Matrix<kRowsJ, kColsJ> const Ve = mesh.X(Eigen::all, vertices);
+        Matrix<kRowsJ, kColsJ> const Ve = mesh.X(Eigen::placeholders::all, vertices);
         for (auto g = 0; g < QuadratureRuleType::kPoints; ++g)
         {
             auto const GP          = ShapeFunctionGradients<ElementType>(Xg.col(g), Ve);
@@ -288,7 +329,7 @@ MatrixX ShapeFunctionGradientsAt(
     Eigen::DenseBase<TDerivedE> const& E,
     Eigen::DenseBase<TDerivedXi> const& Xi)
 {
-    PBAT_PROFILE_NAMED_SCOPE("fem.ShapeFunctionGradientsAt");
+    PBAT_PROFILE_NAMED_SCOPE("pbat.fem.ShapeFunctionGradientsAt");
     using MeshType                      = TMesh;
     using ElementType                   = typename MeshType::ElementType;
     using AffineElementType             = typename ElementType::AffineBaseType;
@@ -301,7 +342,7 @@ MatrixX ShapeFunctionGradientsAt(
         auto const vertices             = nodes(ElementType::Vertices);
         auto constexpr kRowsJ           = MeshType::kDims;
         auto constexpr kColsJ           = AffineElementType::kNodes;
-        Matrix<kRowsJ, kColsJ> const Ve = mesh.X(Eigen::all, vertices);
+        Matrix<kRowsJ, kColsJ> const Ve = mesh.X(Eigen::placeholders::all, vertices);
         auto const GP                   = ShapeFunctionGradients<ElementType>(Xi.col(g), Ve);
         GNe.block<kNodesPerElement, MeshType::kDims>(0, g * MeshType::kDims) = GP;
     });

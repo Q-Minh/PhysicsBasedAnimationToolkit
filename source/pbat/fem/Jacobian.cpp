@@ -62,7 +62,7 @@ TEST_CASE("[fem] Jacobian")
                 E(Eigen::seqN(e * Element::kNodes, Element::kNodes)).array() = e;
                 auto const nodes                                             = mesh.E.col(e);
                 X.block<Mesh::kDims, Element::kNodes>(0, e * Element::kNodes) =
-                    mesh.X(Eigen::all, nodes);
+                    mesh.X(Eigen::placeholders::all, nodes);
             }
 
             auto constexpr maxIterations = 2;

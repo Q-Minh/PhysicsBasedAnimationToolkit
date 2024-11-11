@@ -40,6 +40,7 @@ class Buffer
     Data() const;
 
     void Resize(std::size_t count);
+    void SetConstant(T value);
 
     std::conditional_t<(D > 1), std::array<T*, D>, T*> Raw();
     std::conditional_t<(D > 1), std::array<T const*, D>, T const*> Raw() const;
@@ -156,6 +157,15 @@ void Buffer<T, D>::Resize(std::size_t count)
     for (auto d = 0; d < D; ++d)
     {
         mBuffers[d].resize(count);
+    }
+}
+
+template <class T, int D>
+void Buffer<T, D>::SetConstant(T value)
+{
+    for (auto d = 0; d < Dimensions(); ++d)
+    {
+        thrust::fill(mBuffers[d].begin(), mBuffers[d].end(), value);
     }
 }
 

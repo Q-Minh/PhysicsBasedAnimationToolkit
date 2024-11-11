@@ -11,7 +11,7 @@ namespace common {
 TEST_CASE("[common] Cumulative sums are computable from any integral range type")
 {
     std::array<Index, 3> v{5, 10, 15};
-    auto const cs = cumsum(v);
+    auto const cs = CumSum(v);
     CHECK_EQ(cs, std::vector<Index>{0, 5, 15, 30});
 }
 

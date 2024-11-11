@@ -74,7 +74,7 @@ inline DivergenceVector<TMesh, Dims, QuadratureOrder>::DivergenceVector(
     if (Fe.rows() != kDims)
     {
         std::string const what = fmt::format(
-            "LoadVector<TMesh,{0}> discretizes a {0}-dimensional load, but received "
+            "DivergenceVector<TMesh,{0}> discretizes a {0}-dimensional load, but received "
             "{1}-dimensional input load",
             kDims,
             Fe.rows());
@@ -95,7 +95,7 @@ template <class TDerivedF>
 inline void DivergenceVector<TMesh, Dims, QuadratureOrder>::ComputeElementDivergence(
     Eigen::DenseBase<TDerivedF> const& Fe)
 {
-    PBAT_PROFILE_NAMED_SCOPE("fem.DivergenceVector.ComputeElementDivergence");
+    PBAT_PROFILE_NAMED_SCOPE("pbat.fem.DivergenceVector.ComputeElementDivergence");
     CheckValidState();
     auto const numberOfElements = mesh.E.cols();
     divE.setZero(ElementType::kNodes, numberOfElements);
@@ -108,7 +108,7 @@ inline void DivergenceVector<TMesh, Dims, QuadratureOrder>::ComputeElementDiverg
             auto constexpr kNodesPerElement = ElementType::kNodes;
             auto const gradPhi =
                 GNe.block<kNodesPerElement, MeshType::kDims>(0, e * kStride + g * MeshType::kDims);
-            auto const F = Fe(Eigen::all, nodes);
+            auto const F = Fe(Eigen::placeholders::all, nodes);
             // div(F) = \sum_i \sum_d F_id d(\phi_i) / d(X_d)
             divE.col(e) =
                 (wg(g) * detJe(g, e)) * (F.array().transpose() * gradPhi.array()).rowwise().sum();
@@ -119,7 +119,7 @@ inline void DivergenceVector<TMesh, Dims, QuadratureOrder>::ComputeElementDiverg
 template <CMesh TMesh, int Dims, int QuadratureOrder>
 inline VectorX DivergenceVector<TMesh, Dims, QuadratureOrder>::ToVector() const
 {
-    PBAT_PROFILE_NAMED_SCOPE("fem.DivergenceVector.ToVector");
+    PBAT_PROFILE_NAMED_SCOPE("pbat.fem.DivergenceVector.ToVector");
     auto const numberOfNodes    = mesh.X.cols();
     auto const numberOfElements = mesh.E.cols();
     VectorX div                 = VectorX::Zero(numberOfNodes);

@@ -1,6 +1,7 @@
 #ifndef PBAT_GPU_GEOMETRY_BVH_QUERY_IMPL_KERNELS_CUH
 #define PBAT_GPU_GEOMETRY_BVH_QUERY_IMPL_KERNELS_CUH
 
+#include "pbat/HostDevice.h"
 #include "SweepAndPruneImpl.cuh"
 #include "pbat/gpu/Aliases.h"
 #include "pbat/gpu/common/SynchronizedList.cuh"
@@ -15,7 +16,7 @@ namespace SweepAndPruneImplKernels {
 
 struct FComputeAabb
 {
-    __device__ void operator()(int s)
+    PBAT_DEVICE void operator()(int s)
     {
         for (auto d = 0; d < 3; ++d)
         {
@@ -41,7 +42,7 @@ struct FComputeAabb
 
 struct FComputeMean
 {
-    __device__ void operator()(int s)
+    PBAT_DEVICE void operator()(int s)
     {
         cuda::atomic_ref<GpuScalar, cuda::thread_scope_device> amu[3] = {
             cuda::atomic_ref<GpuScalar, cuda::thread_scope_device>(mu[0]),
@@ -61,7 +62,7 @@ struct FComputeMean
 
 struct FComputeVariance
 {
-    __device__ void operator()(int s)
+    PBAT_DEVICE void operator()(int s)
     {
         cuda::atomic_ref<GpuScalar, cuda::thread_scope_device> asigma[3] = {
             cuda::atomic_ref<GpuScalar, cuda::thread_scope_device>(sigma[0]),
@@ -95,7 +96,7 @@ struct FSweep
      * @param sj Index of second simplex in pair to test
      * @return
      */
-    __device__ bool
+    PBAT_DEVICE bool
     AreSimplicesOverlapCandidates(GpuIndex si, GpuIndex sj, bool bIsSiFromSourceSet) const
     {
         auto count{0};
@@ -107,13 +108,13 @@ struct FSweep
         return count == 0;
     }
 
-    __device__ bool AreSimplexCandidatesOverlapping(GpuIndex si, GpuIndex sj) const
+    PBAT_DEVICE bool AreSimplexCandidatesOverlapping(GpuIndex si, GpuIndex sj) const
     {
         return (e[axis[0]][si] >= b[axis[0]][sj]) and (b[axis[0]][si] <= e[axis[0]][sj]) and
                (e[axis[1]][si] >= b[axis[1]][sj]) and (b[axis[1]][si] <= e[axis[1]][sj]);
     }
 
-    __device__ void operator()(GpuIndex si)
+    PBAT_DEVICE void operator()(GpuIndex si)
     {
         bool const bIsSiFromSourceSet = binds[si] < nSimplices[0];
         for (auto sj = si + 1; (sj < nBoxes) and (e[saxis][si] >= b[saxis][sj]); ++sj)

@@ -2,15 +2,21 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     PUBLIC
     FILE_SET api
     FILES 
+        "ArgSort.h"
         "Common.h"
         "Concepts.h"
         "ConstexprFor.h"
         "Eigen.h"
         "Hash.h"
         "Indexing.h"
+        "Queue.h"
+        "Stack.h"
 )
 target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
 PRIVATE
+    "ArgSort.cpp"
     "Eigen.cpp"
     "Indexing.cpp"
+    "Queue.cpp"
+    "Stack.cpp"
 )

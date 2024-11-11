@@ -3,6 +3,7 @@
 // clang-format on
 
 #include "PrimitivesImpl.cuh"
+#include "pbat/gpu/common/Eigen.cuh"
 
 #include <array>
 #include <exception>
@@ -31,38 +32,37 @@ std::size_t PointsImpl::Dimensions() const
 
 void PointsImpl::Update(Eigen::Ref<GpuMatrixX const> const& V)
 {
-    for (auto d = 0; d < 3; ++d)
-        x[d].resize(V.cols());
-    for (auto d = 0; d < 3; ++d)
-    {
-        thrust::copy(V.row(d).begin(), V.row(d).end(), x[d].begin());
-    }
+    x.Resize(V.cols());
+    common::ToBuffer(V, x);
 }
 
 SimplicesImpl::SimplicesImpl(Eigen::Ref<GpuIndexMatrixX const> const& C) : eSimplexType(), inds()
 {
-    if ((C.rows() < static_cast<int>(ESimplexType::Vertex)) or
-        (C.rows() > static_cast<int>(ESimplexType::Tetrahedron)))
+    if (C.size() > 0)
     {
-        std::string const what =
-            "Expected cell index array with either 1,2,3 or 4 rows, corresponding to "
-            "vertex,edge,triangle "
-            "or tetrahedron simplices, but got " +
-            std::to_string(C.rows()) + " rows instead ";
-        throw std::invalid_argument(what);
-    }
+        if ((C.rows() < static_cast<int>(ESimplexType::Vertex)) or
+            (C.rows() > static_cast<int>(ESimplexType::Tetrahedron)))
+        {
+            std::string const what =
+                "Expected cell index array with either 1,2,3 or 4 rows, corresponding to "
+                "vertex,edge,triangle "
+                "or tetrahedron simplices, but got " +
+                std::to_string(C.rows()) + " rows instead ";
+            throw std::invalid_argument(what);
+        }
 
-    eSimplexType = static_cast<ESimplexType>(C.rows());
-    for (auto m = 0; m < 4; ++m)
-        inds[m].resize(C.cols());
-    for (auto m = 0; m < C.rows(); ++m)
-    {
-        thrust::copy(C.row(m).begin(), C.row(m).end(), inds[m].begin());
-    }
-    auto const ninds = (-C.row(0).array() - 1).eval();
-    for (auto m = C.rows(); m < 4; ++m)
-    {
-        thrust::copy(ninds.begin(), ninds.end(), inds[m].begin());
+        eSimplexType = static_cast<ESimplexType>(C.rows());
+        for (auto m = 0; m < 4; ++m)
+            inds[m].resize(C.cols());
+        for (auto m = 0; m < C.rows(); ++m)
+        {
+            thrust::copy(C.row(m).begin(), C.row(m).end(), inds[m].begin());
+        }
+        auto const ninds = (-C.row(0).array() - 1).eval();
+        for (auto m = C.rows(); m < 4; ++m)
+        {
+            thrust::copy(ninds.begin(), ninds.end(), inds[m].begin());
+        }
     }
 }
 
@@ -74,7 +74,7 @@ GpuIndex SimplicesImpl::NumberOfSimplices() const
 BodiesImpl::BodiesImpl(Eigen::Ref<GpuIndexVectorX const> const& B)
     : body(B.size()), nBodies(static_cast<GpuIndex>(B.maxCoeff() + 1))
 {
-    thrust::copy(B.data(), B.data() + B.size(), body.Data());
+    common::ToBuffer(B, body);
 }
 
 GpuIndex BodiesImpl::NumberOfBodies() const

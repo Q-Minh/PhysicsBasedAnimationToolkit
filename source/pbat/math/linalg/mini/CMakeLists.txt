@@ -1,0 +1,43 @@
+target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
+    PUBLIC
+    FILE_SET api
+    FILES
+    "Api.h"
+    "Assign.h"
+    "BinaryOperations.h"
+    "Concepts.h"
+    "Determinant.h"
+    "Eigen.h"
+    "Geometry.h"
+    "Inverse.h"
+    "Matrix.h"
+    "Mini.h"
+    "Norm.h"
+    "Product.h"
+    "Reductions.h"
+    "Repeat.h"
+    "Scale.h"
+    "Stack.h"
+    "SubMatrix.h"
+    "Transpose.h"
+    "UnaryOperations.h"
+)
+target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
+    PRIVATE
+    "Assign.cpp"
+    "BinaryOperations.cpp"
+    "Determinant.cpp"
+    "Eigen.cpp"
+    "Geometry.cpp"
+    "Inverse.cpp"
+    "Matrix.cpp"
+    "Norm.cpp"
+    "Product.cpp"
+    "Reductions.cpp"
+    "Repeat.cpp"
+    "Scale.cpp"
+    "Stack.cpp"
+    "SubMatrix.cpp"
+    "Transpose.cpp"
+    "UnaryOperations.cpp"
+)

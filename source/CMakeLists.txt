@@ -103,8 +103,11 @@ if(PBAT_USE_CUDA)
         if(_extension STREQUAL ".cu")
             set_source_files_properties(${_source}
                 PROPERTIES
-                COMPILE_OPTIONS "--expt-relaxed-constexpr;--extended-lambda"
-                COMPILE_DEFINITIONS "_SILENCE_ALL_CXX20_DEPRECATION_WARNINGS")
+                COMPILE_OPTIONS
+                "--expt-relaxed-constexpr;--extended-lambda"
+                COMPILE_DEFINITIONS
+                "_SILENCE_ALL_CXX20_DEPRECATION_WARNINGS"
+            )
         endif()
     endforeach()
 endif()

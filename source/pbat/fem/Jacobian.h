@@ -50,7 +50,7 @@ template <class TDerived>
 template <int QuadratureOrder, CMesh TMesh>
 MatrixX DeterminantOfJacobian(TMesh const& mesh)
 {
-    PBAT_PROFILE_NAMED_SCOPE("fem.DeterminantOfJacobian");
+    PBAT_PROFILE_NAMED_SCOPE("pbat.fem.DeterminantOfJacobian");
 
     using ElementType        = typename TMesh::ElementType;
     using AffineElementType  = typename ElementType::AffineBaseType;
@@ -67,7 +67,7 @@ MatrixX DeterminantOfJacobian(TMesh const& mesh)
         auto const vertices             = nodes(ElementType::Vertices);
         auto constexpr kRowsJ           = TMesh::kDims;
         auto constexpr kColsJ           = AffineElementType::kNodes;
-        Matrix<kRowsJ, kColsJ> const Ve = mesh.X(Eigen::all, vertices);
+        Matrix<kRowsJ, kColsJ> const Ve = mesh.X(Eigen::placeholders::all, vertices);
         if constexpr (AffineElementType::bHasConstantJacobian)
         {
             Scalar const detJ = DeterminantOfJacobian(Jacobian<AffineElementType>({}, Ve));
@@ -160,7 +160,7 @@ Vector<TElement::kDims> ReferencePosition(
     // Initial guess is element's barycenter.
     auto const coords = common::ToEigen(ElementType::Coordinates).reshaped(kDims, kNodes);
     auto const vertexLagrangePositions =
-        (coords(Eigen::all, ElementType::Vertices).template cast<Scalar>() /
+        (coords(Eigen::placeholders::all, ElementType::Vertices).template cast<Scalar>() /
          static_cast<Scalar>(ElementType::kOrder));
     Vector<kDims> Xik =
         vertexLagrangePositions.rowwise().sum() / static_cast<Scalar>(ElementType::Vertices.size());
@@ -215,7 +215,7 @@ MatrixX ReferencePositions(
     int maxIterations = 5,
     Scalar eps        = 1e-10)
 {
-    PBAT_PROFILE_NAMED_SCOPE("fem.ReferencePositions");
+    PBAT_PROFILE_NAMED_SCOPE("pbat.fem.ReferencePositions");
     using MeshType    = TMesh;
     using ElementType = typename MeshType::ElementType;
     MatrixX Xi(ElementType::kDims, E.size());
@@ -224,7 +224,7 @@ MatrixX ReferencePositions(
         auto const nodes                  = mesh.E.col(e);
         auto constexpr kOutDims           = MeshType::kDims;
         auto constexpr kNodes             = ElementType::kNodes;
-        Matrix<kOutDims, kNodes> const Xe = mesh.X(Eigen::all, nodes);
+        Matrix<kOutDims, kNodes> const Xe = mesh.X(Eigen::placeholders::all, nodes);
         Vector<kOutDims> const Xk         = X.col(k);
         Xi.col(k) = ReferencePosition<ElementType>(Xk, Xe, maxIterations, eps);
     });

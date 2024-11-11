@@ -45,7 +45,7 @@ struct MassMatrix
      * @param mesh
      * @param detJe |#quad.pts.|x|#elements| affine element jacobian determinants at quadrature
      * points
-     * @param rho |#elements| x 1 piecewise constant mass density
+     * @param rho |#quad.pts.|x|#elements| mass density per quadrature point
      */
     template <class TDerived>
     MassMatrix(
@@ -79,7 +79,7 @@ struct MassMatrix
     /**
      * @brief
      * @tparam TDerived
-     * @param rho |#elements| x 1 piecewise constant mass density
+     * @param rho |#quad.pts.|x|#elements| piecewise constant mass density
      */
     template <class TDerived>
     void ComputeElementMassMatrices(Eigen::DenseBase<TDerived> const& rho);
@@ -102,7 +102,11 @@ inline MassMatrix<TMesh, QuadratureOrder>::MassMatrix(
     Eigen::Ref<MatrixX const> const& detJe,
     Scalar rho,
     int dims)
-    : MassMatrix<TMesh, QuadratureOrder>(mesh, detJe, VectorX::Constant(mesh.E.cols(), rho), dims)
+    : MassMatrix<TMesh, QuadratureOrder>(
+          mesh,
+          detJe,
+          MatrixX::Constant(QuadratureRuleType::kPoints, mesh.E.cols(), rho),
+          dims)
 {
 }
 
@@ -124,7 +128,7 @@ inline void MassMatrix<TMesh, QuadratureOrder>::Apply(
     Eigen::MatrixBase<TDerivedIn> const& x,
     Eigen::DenseBase<TDerivedOut>& y) const
 {
-    PBAT_PROFILE_NAMED_SCOPE("fem.MassMatrix.Apply");
+    PBAT_PROFILE_NAMED_SCOPE("pbat.fem.MassMatrix.Apply");
     CheckValidState();
     auto const numberOfDofs = InputDimensions();
     if (x.rows() != numberOfDofs or y.rows() != numberOfDofs or x.cols() != y.cols())
@@ -150,8 +154,9 @@ inline void MassMatrix<TMesh, QuadratureOrder>::Apply(
             auto const nodes = mesh.E.col(e).array();
             auto const me =
                 Me.block<ElementType::kNodes, ElementType::kNodes>(0, e * ElementType::kNodes);
-            auto ye       = y.col(c).reshaped(dims, y.size() / dims)(Eigen::all, nodes);
-            auto const xe = x.col(c).reshaped(dims, x.size() / dims)(Eigen::all, nodes);
+            auto ye = y.col(c).reshaped(dims, y.size() / dims)(Eigen::placeholders::all, nodes);
+            auto const xe =
+                x.col(c).reshaped(dims, x.size() / dims)(Eigen::placeholders::all, nodes);
             ye += xe * me /*.transpose() technically, but mass matrix is symmetric*/;
         }
     }
@@ -160,7 +165,7 @@ inline void MassMatrix<TMesh, QuadratureOrder>::Apply(
 template <CMesh TMesh, int QuadratureOrder>
 inline CSCMatrix MassMatrix<TMesh, QuadratureOrder>::ToMatrix() const
 {
-    PBAT_PROFILE_NAMED_SCOPE("fem.MassMatrix.ToMatrix");
+    PBAT_PROFILE_NAMED_SCOPE("pbat.fem.MassMatrix.ToMatrix");
     CheckValidState();
     using SparseIndex = typename CSCMatrix::StorageIndex;
     using Triplet     = Eigen::Triplet<Scalar, SparseIndex>;
@@ -226,18 +231,19 @@ template <class TDerived>
 inline void MassMatrix<TMesh, QuadratureOrder>::ComputeElementMassMatrices(
     Eigen::DenseBase<TDerived> const& rho)
 {
-    PBAT_PROFILE_NAMED_SCOPE("fem.MassMatrix.ComputeElementMassMatrices");
+    PBAT_PROFILE_NAMED_SCOPE("pbat.fem.MassMatrix.ComputeElementMassMatrices");
     CheckValidState();
     auto const numberOfElements       = mesh.E.cols();
     auto constexpr kNodesPerElement   = ElementType::kNodes;
     auto constexpr kQuadPtsPerElement = QuadratureRuleType::kPoints;
     bool const bRhoDimensionsAreCorrect =
-        (rho.size() == numberOfElements) and ((rho.rows() == 1) or (rho.cols() == 1));
+        (rho.cols() == numberOfElements) and (rho.rows() == kQuadPtsPerElement);
     if (not bRhoDimensionsAreCorrect)
     {
         std::string const what = fmt::format(
-            "Expected element-piecewise mass density rho of dimensions {}x1, but dimensions were "
+            "Expected mass density rho of dimensions {}x{}, but dimensions were "
             "{}x{}",
+            kQuadPtsPerElement,
             numberOfElements,
             rho.rows(),
             rho.cols());
@@ -257,7 +263,7 @@ inline void MassMatrix<TMesh, QuadratureOrder>::ComputeElementMassMatrices(
         auto me = Me.block<kNodesPerElement, kNodesPerElement>(0, e * kNodesPerElement);
         for (auto g = 0; g < kQuadPtsPerElement; ++g)
         {
-            me += (rho(e) * detJe(g, e)) * NgOuterNg[static_cast<std::size_t>(g)];
+            me += (rho(g, e) * detJe(g, e)) * NgOuterNg[static_cast<std::size_t>(g)];
         }
     });
 }

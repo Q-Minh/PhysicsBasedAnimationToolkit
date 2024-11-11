@@ -26,7 +26,6 @@ if __name__ == "__main__":
         mesh = pbat.fem.Mesh(
             V.T, C.T, element=pbat.fem.Element.Triangle, order=1)
 
-    V, C = mesh.X.T, mesh.E.T
     F = C
     if mesh.element == pbat.fem.Element.Tetrahedron:
         F = igl.boundary_facets(C)
@@ -35,19 +34,10 @@ if __name__ == "__main__":
     gamma = [0]
     # Construct Galerkin laplacian, mass and gradient operators
     n = V.shape[0]
-    qgM = pbat.fem.inner_product_weights(
-        mesh, quadrature_order=2).flatten(order="F")
-    QM = sp.sparse.diags_array([qgM], offsets=[0])
-    NM = pbat.fem.shape_function_matrix(mesh, quadrature_order=2)
-    M = NM.T @ QM @ NM
-    GNeL = pbat.fem.shape_function_gradients(mesh, quadrature_order=1)
-    G = pbat.fem.Gradient(
-        mesh, GNeL, quadrature_order=1).to_matrix()
-    qgL = pbat.fem.inner_product_weights(
-        mesh, quadrature_order=1).flatten(order="F")
-    QL = sp.sparse.diags_array([qgL], offsets=[0])
-    QL = sp.sparse.kron(sp.sparse.eye_array(3), QL)
-    D = -G.T @ QL
+    M, detJeM = pbat.fem.mass_matrix(mesh, dims=1)
+    G, egG, GNegG = pbat.fem.gradient(mesh)
+    wgD = pbat.fem.inner_product_weights(mesh)
+    D, wgD, egD, GNegD = pbat.fem.divergence(mesh, eg=egG, wg=wgD, GNeg=GNegG)
     L = D @ G
     # Setup 1-step heat diffusion
     h = igl.avg_edge_length(V, C)

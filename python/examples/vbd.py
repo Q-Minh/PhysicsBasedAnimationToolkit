@@ -93,6 +93,8 @@ if __name__ == "__main__":
                         dest="fixed_axis", default=2)
     parser.add_argument("--fixed-end", help="min | max, whether to fix from the min or the max of the scene mesh's bounding box", type=str, default="min",
                         dest="fixed_end")
+    parser.add_argument("--use-gpu", help="Run GPU implementation of VBD", action="store_true",
+                        dest="gpu", default=False)
     args = parser.parse_args()
 
     # Construct FEM quantities for simulation
@@ -110,21 +112,15 @@ if __name__ == "__main__":
 
     detJeM = pbat.fem.jacobian_determinants(mesh, quadrature_order=2)
     rho = args.rho
-    M = pbat.fem.MassMatrix(mesh, detJeM, rho=rho,
-                            dims=1, quadrature_order=2).to_matrix()
-    m = np.array(M.sum(axis=0)).squeeze()
+    M, detJeM = pbat.fem.mass_matrix(mesh, rho=rho, dims=1, lump=True)
+    m = np.array(M.diagonal()).squeeze()
 
     # Construct load vector from gravity field
     detJeU = pbat.fem.jacobian_determinants(mesh, quadrature_order=1)
     GNeU = pbat.fem.shape_function_gradients(mesh, quadrature_order=1)
-    qgf = pbat.fem.inner_product_weights(
-        mesh, quadrature_order=1).flatten(order="F")
-    Qf = sp.sparse.diags_array([qgf], offsets=[0])
-    Nf = pbat.fem.shape_function_matrix(mesh, quadrature_order=1)
     g = np.zeros(mesh.dims)
     g[-1] = -9.81
-    fe = np.tile(rho*g[:, np.newaxis], mesh.E.shape[1])
-    f = fe @ Qf @ Nf
+    f, detJeF = pbat.fem.load_vector(mesh, rho*g, detJe=detJeU, flatten=False)
     a = f / m
 
     # Compute material (Lame) constants
@@ -147,35 +143,52 @@ if __name__ == "__main__":
         Xmax[args.fixed_axis] += args.percent_fixed * extent[args.fixed_axis]
     aabb = pbat.geometry.aabb(np.vstack((Xmin, Xmax)).T)
     vdbc = aabb.contained(mesh.X)
-    a[:, vdbc] = 0.  # Allow no acceleration, i.e. no external forces in fixed vertices
 
     # Setup VBD
     Vcollision = np.unique(F)
-    VC = Vcollision[:, np.newaxis].T
-    vbd = pbat.gpu.vbd.Vbd(V.T, VC, F.T, C.T)
-    vbd.a = a
-    vbd.m = m
-    vbd.wg = detJeU / 6
-    vbd.GNe = GNeU
-    vbd.lame = np.vstack((mue, lambdae))
+    VC = Vcollision
     GVT = vertex_tetrahedron_adjacency_graph(V, C)
-    vbd.GVT = GVT.indptr, GVT.indices, GVT.data
-    vbd.kD = 0
     GVTtopology = GVT.copy()
     GVTtopology.data[:] = 1  # Set all edge weights to 1
     partitions, GC = partition_vertices(GVTtopology, vdbc)
-    vbd.partitions = partitions
+    data = pbat.sim.vbd.Data().with_volume_mesh(
+        V.T, C.T
+    ).with_surface_mesh(
+        VC, F.T
+    ).with_acceleration(
+        a
+    ).with_mass(
+        m
+    ).with_quadrature(
+        detJeU[0, :] / 6, GNeU, np.vstack((mue, lambdae))
+    ).with_vertex_adjacency(
+        GVT.indptr, GVT.indices, GVT.indices, GVT.data
+    ).with_partitions(
+        partitions
+    ).with_dirichlet_vertices(
+        vdbc
+    ).with_initialization_strategy(
+        pbat.sim.vbd.InitializationStrategy.KineticEnergyMinimum
+    ).construct(validate=False)
     thread_block_size = 64
-    vbd.set_gpu_block_size(thread_block_size)
+
+    vbd = None
+    if args.gpu:
+        vbd = pbat.gpu.vbd.Integrator(data)
+        vbd.set_gpu_block_size(thread_block_size)
+    else:
+        vbd = pbat.sim.vbd.Integrator(data)
+
+    # Setup visuals
     initialization_strategies = [
-        pbat.gpu.vbd.InitializationStrategy.Position,
-        pbat.gpu.vbd.InitializationStrategy.Inertia,
-        pbat.gpu.vbd.InitializationStrategy.KineticEnergyMinimum,
-        pbat.gpu.vbd.InitializationStrategy.AdaptiveVbd,
-        pbat.gpu.vbd.InitializationStrategy.AdaptivePbat
+        pbat.sim.vbd.InitializationStrategy.Position,
+        pbat.sim.vbd.InitializationStrategy.Inertia,
+        pbat.sim.vbd.InitializationStrategy.KineticEnergyMinimum,
+        pbat.sim.vbd.InitializationStrategy.AdaptiveVbd,
+        pbat.sim.vbd.InitializationStrategy.AdaptivePbat
     ]
     initialization_strategy = initialization_strategies[2]
-    vbd.initialization_strategy = initialization_strategy
+    vbd.strategy = initialization_strategy
 
     ps.set_verbosity(0)
     ps.set_up_dir("z_up")
@@ -224,9 +237,9 @@ if __name__ == "__main__":
                 if selected:
                     initialization_strategy = initialization_strategies[i]
             imgui.EndCombo()
-        vbd.initialization_strategy = initialization_strategy
+        vbd.strategy = initialization_strategy
         vbd.kD = kD
-        vbd.RdetH = RdetH
+        vbd.detH_residual = RdetH
         changed, animate = imgui.Checkbox("Animate", animate)
         changed, export = imgui.Checkbox("Export", export)
         step = imgui.Button("Step")
@@ -238,7 +251,8 @@ if __name__ == "__main__":
             vm.update_vertex_positions(mesh.X.T)
             t = 0
 
-        vbd.set_gpu_block_size(thread_block_size)
+        if args.gpu:
+            vbd.set_gpu_block_size(thread_block_size)
 
         if animate or step:
             profiler.begin_frame("Physics")
@@ -256,6 +270,10 @@ if __name__ == "__main__":
             t = t+1
 
         imgui.Text(f"Frame={t}")
+        if args.gpu:
+            imgui.Text("Using GPU VBD integrator")
+        else:
+            imgui.Text("Using CPU VBD integrator")
 
     ps.set_user_callback(callback)
     ps.show()

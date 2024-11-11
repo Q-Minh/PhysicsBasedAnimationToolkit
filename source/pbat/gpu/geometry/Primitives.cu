@@ -4,7 +4,7 @@
 
 #include "Primitives.h"
 #include "PrimitivesImpl.cuh"
-#include "pbat/common/Eigen.h"
+#include "pbat/gpu/common/Eigen.cuh"
 
 #include <array>
 #include <thrust/copy.h>
@@ -46,12 +46,7 @@ PointsImpl const* Points::Impl() const
 
 GpuMatrixX Points::Get() const
 {
-    GpuMatrixX V(mImpl->x.Dimensions(), mImpl->x.Size());
-    for (auto d = 0; d < V.rows(); ++d)
-    {
-        thrust::copy(mImpl->x[d].begin(), mImpl->x[d].end(), V.row(d).begin());
-    }
-    return V;
+    return common::ToEigen(mImpl->x);
 }
 
 Points::~Points()
@@ -126,8 +121,7 @@ Bodies& geometry::Bodies::operator=(Bodies&& other) noexcept
 
 GpuIndexMatrixX geometry::Bodies::Get() const
 {
-    using pbat::common::ToEigen;
-    return ToEigen(mImpl->body.Get());
+    return common::ToEigen(mImpl->body);
 }
 
 std::size_t Bodies::NumberOfBodies() const
