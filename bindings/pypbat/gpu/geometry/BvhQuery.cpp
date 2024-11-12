@@ -83,7 +83,7 @@ void BindBvhQuery([[maybe_unused]] pybind11::module& m)
                     "pbat.gpu.geometry.BvhQuery.DetectContactPairs",
                     [&]() {
                         return bvhQuery
-                            .DetectContactPairsFromOverlaps(P, S1, S2, B1, B2, bvh, dhat, dzero);
+                            .DetectContactPairsFromOverlaps(P, S1, S2, BV, bvh, dhat, dzero);
                     });
             },
             pyb::arg("P"),

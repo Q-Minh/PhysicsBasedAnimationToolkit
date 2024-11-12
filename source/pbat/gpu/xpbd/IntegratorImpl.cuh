@@ -114,7 +114,7 @@ class IntegratorImpl
      * @brief
      * @return
      */
-    common::Buffer<GpuScalar, 3> const& GetExternalForce() const;
+    common::Buffer<GpuScalar, 3> const& GetExternalAcceleration() const;
     /**
      * @brief
      * @return
@@ -179,6 +179,7 @@ class IntegratorImpl
     geometry::BvhQueryImpl Vquery; ///< BVH vertex queries
 
     common::Buffer<GpuScalar, 3> mPositions;            ///< Vertex/particle positions at time t
+    common::Buffer<GpuScalar, 3> mPositionBuffer;       ///< Vertex/particle positions buffer
     common::Buffer<GpuScalar, 3> mVelocities;           ///< Vertex/particle velocities
     common::Buffer<GpuScalar, 3> mExternalAcceleration; ///< Vertex/particle external forces
     common::Buffer<GpuScalar> mMassInverses;            ///< Vertex/particle mass inverses
@@ -197,6 +198,7 @@ class IntegratorImpl
                      ///< alpha[1] -> Collision penalty constraint compliance
 
     std::vector<common::Buffer<GpuIndex>> mPartitions; ///< Constraint partitions
+    common::Buffer<GpuScalar> mPenalty;            ///< Collision vertex penalties
     GpuScalar mStaticFrictionCoefficient;              ///< Coulomb static friction coefficient
     GpuScalar mDynamicFrictionCoefficient;             ///< Coulomb dynamic friction coefficient
     Eigen::Vector<GpuScalar, 3> Smin, Smax;            ///< Scene bounding box

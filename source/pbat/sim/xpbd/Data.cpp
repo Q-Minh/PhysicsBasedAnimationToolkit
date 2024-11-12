@@ -61,6 +61,12 @@ Data& Data::WithElasticMaterial(Eigen::Ref<MatrixX const> const& lame)
     return *this;
 }
 
+Data& Data::WithCollisionPenalties(Eigen::Ref<VectorX const> const& muV)
+{
+    this->muV = muV;
+    return *this;
+}
+
 Data& Data::WithFrictionCoefficients(Scalar muS, Scalar muD)
 {
     this->muS = muS;
@@ -96,12 +102,17 @@ Data& Data::Construct(bool bValidate)
     if (aext.size() == 0)
     {
         aext.setZero(x.rows(), x.cols());
-        aext.row(aext.rows() - 1).setConstant(Scalar(-9.81));
+        aext.bottomRows(1).setConstant(Scalar(-9.81));
     }
     if (minv.size() == 0)
     {
-        minv.setConstant(Scalar(1));
+        minv.setConstant(x.cols(), Scalar(1e-3));
     }
+    if (BV.size() == 0)
+    {
+        BV.setZero(x.cols());
+    }
+    xb = x;
     // Enforce Dirichlet boundary conditions
     minv(dbc).setZero();
     v(Eigen::placeholders::all, dbc).setZero();
@@ -135,8 +146,12 @@ Data& Data::Construct(bool bValidate)
     });
     lambda[static_cast<int>(EConstraint::StableNeoHookean)].setZero(2 * T.cols());
     // Set contact data
-    alpha[static_cast<int>(EConstraint::Collision)].setConstant(V.cols(), alphaC);
-    lambda[static_cast<int>(EConstraint::Collision)].setZero(V.cols());
+    alpha[static_cast<int>(EConstraint::Collision)].setConstant(V.size(), alphaC);
+    lambda[static_cast<int>(EConstraint::Collision)].setZero(V.size());
+    if (muV.size() == 0)
+    {
+        muV.setOnes(V.size());
+    }
 
     // Throw error if ill-formed Data
     if (bValidate)
@@ -174,13 +189,11 @@ Data& Data::Construct(bool bValidate)
                 T.cols() * 3);
             throw std::invalid_argument(what);
         }
-        bool const bMultibodyContactSystemValid = BV.size() == V.size();
+        bool const bMultibodyContactSystemValid = BV.size() == x.cols() and muV.size() == V.size();
         if (not bMultibodyContactSystemValid)
         {
-            std::string const what = fmt::format(
-                "With #collision vertices={0}, #collision faces={1} expected BV.size()={0}",
-                V.size(),
-                F.cols());
+            std::string const what =
+                fmt::format("Expected BV.size()={0}, muV.size()={1}", x.cols(), V.size());
             throw std::invalid_argument(what);
         }
     }

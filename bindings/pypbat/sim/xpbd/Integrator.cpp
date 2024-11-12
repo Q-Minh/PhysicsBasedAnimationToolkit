@@ -19,9 +19,15 @@ void BindIntegrator(pybind11::module& m)
     using pbat::sim::xpbd::Integrator;
     pyb::class_<Integrator>(m, "Integrator")
         .def(
-            pyb::init([](Data& data) { return Integrator(std::move(data)); }),
-            "Construct an XPBD integrator initialized with data. The passed in data is 'moved' in "
-            "the C++ sense, i.e. the C++ side will take ownership of the data. To access the data "
+            pyb::init([](Data const& data,
+                         [[maybe_unused]] std::size_t nMaxVertexTetrahedronOverlaps,
+                         [[maybe_unused]] std::size_t nMaxVertexTriangleContacts) {
+                return Integrator(data);
+            }),
+            pyb::arg("data"),
+            pyb::arg("max_vertex_tetrahedron_overlaps") = 0,
+            pyb::arg("max_vertex_triangle_contacts")    = 0,
+            "Construct an XPBD integrator initialized with data. To access the data "
             "during simulation, go through the pbat.sim.xpbd.Integrator.data member.")
         .def(
             "step",

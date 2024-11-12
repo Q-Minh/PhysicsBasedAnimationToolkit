@@ -105,9 +105,9 @@ GpuMatrixX Integrator::GetVelocity() const
     return common::ToEigen(mImpl->GetVelocity());
 }
 
-GpuMatrixX Integrator::GetExternalForce() const
+GpuMatrixX Integrator::GetExternalAcceleration() const
 {
-    return common::ToEigen(mImpl->GetExternalForce());
+    return common::ToEigen(mImpl->GetExternalAcceleration());
 }
 
 GpuVectorX Integrator::GetMassInverse() const

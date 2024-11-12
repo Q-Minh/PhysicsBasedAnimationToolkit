@@ -130,6 +130,7 @@ PBAT_DEVICE bool ProjectVertexTriangle(
     TMatrixXVT const& xvt,
     TMatrixXFT const& xft,
     TMatrixXF const& xf,
+    ScalarType muC,
     ScalarType muS,
     ScalarType muD,
     ScalarType atildec,
@@ -146,7 +147,7 @@ PBAT_DEVICE bool ProjectVertexTriangle(
     SMatrix<ScalarType, 3, 1> T2     = xf.Col(2) - xf.Col(0);
     SMatrix<ScalarType, 3, 1> n      = Cross(T1, T2);
     ScalarType const doublearea      = Norm(n);
-    bool const bIsTriangleDegenerate = doublearea <= ScalarType(1e-8f);
+    bool const bIsTriangleDegenerate = doublearea <= ScalarType(1e-8);
     if (bIsTriangleDegenerate)
         return false;
 
@@ -158,22 +159,22 @@ PBAT_DEVICE bool ProjectVertexTriangle(
         IntersectionQueries::TriangleBarycentricCoordinates(xc - xf.Col(0), T1, T2);
     // If xv doesn't project inside triangle, then we don't generate a contact response
     // clang-format off
-        bool const bIsVertexInsideTriangle = 
-            (b(0) >= ScalarType(0)) and (b(0) <= ScalarType(1)) and
-            (b(1) >= ScalarType(0)) and (b(1) <= ScalarType(1)) and
-            (b(2) >= ScalarType(0)) and (b(2) <= ScalarType(1));
+    bool const bIsVertexInsideTriangle = 
+        (b(0) >= ScalarType(0)) and (b(0) <= ScalarType(1)) and
+        (b(1) >= ScalarType(0)) and (b(1) <= ScalarType(1)) and
+        (b(2) >= ScalarType(0)) and (b(2) <= ScalarType(1));
     // clang-format on
     if (not bIsVertexInsideTriangle)
         return false;
 
     // Project xv onto triangle's plane into xc
-    ScalarType const C = Dot(n, xv - xf.Col(0));
+    ScalarType const C = muC * Dot(n, xv - xf.Col(0));
     // If xv is positively oriented w.r.t. triangles xf, there is no penetration
-    if (C > ScalarType{0})
+    if (C > ScalarType(0))
         return false;
     // Prevent super violent projection for stability, i.e. if the collision constraint
     // violation is already too large, we give up.
-    // if (C < -kMaxPenetration)
+    // if (C < -1e-2)
     //     return false;
 
     // Project constraints:
@@ -182,7 +183,7 @@ PBAT_DEVICE bool ProjectVertexTriangle(
 
     // Collision constraint
     ScalarType dlambda           = -(C + atildec * lambdac) / (minvv + atildec);
-    SMatrix<ScalarType, 3, 1> dx = dlambda * minvv * n;
+    SMatrix<ScalarType, 3, 1> dx = dlambda * minvv * muC * n;
     xv += dx;
     lambdac += dlambda;
 

@@ -116,7 +116,7 @@ class Integrator
      * @brief
      * @return
      */
-    PBAT_API GpuMatrixX GetExternalForce() const;
+    PBAT_API GpuMatrixX GetExternalAcceleration() const;
     /**
      * @brief
      * @return

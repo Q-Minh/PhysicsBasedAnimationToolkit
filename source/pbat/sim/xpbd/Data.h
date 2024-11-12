@@ -24,6 +24,7 @@ PBAT_API struct Data
     Data& WithAcceleration(Eigen::Ref<MatrixX const> const& aext);
     Data& WithMassInverse(Eigen::Ref<VectorX const> const& minv);
     Data& WithElasticMaterial(Eigen::Ref<MatrixX const> const& lame);
+    Data& WithCollisionPenalties(Eigen::Ref<VectorX const> const& muV);
     Data& WithFrictionCoefficients(Scalar muS, Scalar muD);
     Data& WithCompliance(Eigen::Ref<VectorX> const& alpha, EConstraint constraint);
     Data& WithPartitions(std::vector<std::vector<Index>> const& partitions);
@@ -44,11 +45,13 @@ PBAT_API struct Data
     VectorX minv; ///< Vertex mass inverses
 
     MatrixX xt; ///< Vertex positions at time t
+    MatrixX xb; ///< Vertex positions buffer for contact
 
     MatrixX lame;     ///< 2x|#quad.pts.| Lame coefficients
     MatrixX DmInv;    ///< 3x3x|#elements| array of material shape matrix inverses
     VectorX gammaSNH; ///< 1. + mu/lambda, where mu,lambda are Lame coefficients
 
+    VectorX muV;       ///< |#collision vertices| array of collision penalties
     Scalar alphaC{0.}; ///< Collision compliance
     Scalar muS{0.3};   ///< Static friction coefficient
     Scalar muD{0.2};   ///< Dynamic friction coefficient

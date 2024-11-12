@@ -69,6 +69,11 @@ void BindData(pybind11::module& m)
             pyb::arg("muD"),
             "Sets the static and dynamic friction coefficients.")
         .def(
+            "with_collision_penalties",
+            &Data::WithCollisionPenalties,
+            pyb::arg("muV"),
+            "Sets the |#collision vertices| array of collision penalty coefficients.")
+        .def(
             "with_compliance",
             &Data::WithCompliance,
             pyb::arg("alpha"),
