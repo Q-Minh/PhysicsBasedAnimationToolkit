@@ -70,6 +70,9 @@ PBAT_DEVICE void ProjectHydrostatic(
     TMatrixXC& xc)
 {
     using namespace mini;
+#if defined(CUDART_VERSION)
+    #pragma nv_diag_suppress 174
+#endif
     SMatrix<ScalarType, 3, 3> F = (xc.Slice<3, 3>(0, 1) - Repeat<1, 3>(xc.Col(0))) * DmInv;
     ScalarType C                = Determinant(F) - gammac;
     SMatrix<ScalarType, 3, 3> P{};
@@ -80,6 +83,9 @@ PBAT_DEVICE void ProjectHydrostatic(
     gradC.Slice<3, 3>(0, 1) = P * DmInv.Transpose();
     gradC.Col(0)            = -(gradC.Col(1) + gradC.Col(2) + gradC.Col(3));
     ProjectTetrahedron(C, gradC, minvc, atilde, lambdac, xc);
+#if defined(CUDART_VERSION)
+    #pragma nv_diag_default 174
+#endif
 }
 
 template <
@@ -97,12 +103,18 @@ PBAT_DEVICE void ProjectDeviatoric(
     TMatrixXC& xc)
 {
     using namespace mini;
+#if defined(CUDART_VERSION)
+    #pragma nv_diag_suppress 174
+#endif
     SMatrix<ScalarType, 3, 3> F = (xc.Slice<3, 3>(0, 1) - Repeat<1, 3>(xc.Col(0))) * DmInv;
     ScalarType C                = Norm(F);
     SMatrix<ScalarType, 3, 4> gradC{};
     gradC.Slice<3, 3>(0, 1) = (F * DmInv.Transpose()) / (C /*+ 1e-8*/);
     gradC.Col(0)            = -(gradC.Col(1) + gradC.Col(2) + gradC.Col(3));
     ProjectTetrahedron(C, gradC, minvc, atilde, lambdac, xc);
+#if defined(CUDART_VERSION)
+    #pragma nv_diag_default 174
+#endif
 }
 
 template <
