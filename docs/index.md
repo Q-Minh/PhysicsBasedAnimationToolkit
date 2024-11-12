@@ -94,7 +94,7 @@ A bunch of Python scripts demonstrating usage of [`pbatoolkit`](https://pypi.org
 ```bash
 python[.exe] path/to/examples/[example].py -i path/to/input/mesh
 ```
-The full interface is always revealed by `-h` or `--help`, i.e. 
+The full interface is always revealed by `-h` or `--help`, i.e.
 ```bash
 python[.exe] path/to/examples/[example].py -h
 ```

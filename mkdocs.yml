@@ -88,6 +88,10 @@ nav:
       - Boundary Conditions: course/fem/boundary_conditions.md
       - Vector-valued Functions: course/fem/vector_valued_functions.md
       - Limitations: course/fem/limitations.md
+  - Math:
+    - Introduction: course/math/index.md
+    - Linear Algebra: course/math/linear_algebra.md
+    - Optimization: course/math/optimization.md
 
 # Markdown extensions and plugins
 markdown_extensions:

@@ -88,46 +88,6 @@ O = Vquery.detect_overlaps(P, SV, ST, Tbvh)
 N = Vquery.detect_contact_pairs(P, SV, SF, BV, BF, Fbvh, dhat)
 ```
 
-## Code Sample
-
-```python
-import pbatoolkit as pbat
-import argparse
-import meshio
-import numpy as np
-import polyscope as ps
-import igl
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(prog="3D vertex-triangle contact detection")
-    parser.add_argument("-i", "--input", help="Path to input mesh", required=True)
-    args = parser.parse_args()
-
-    imesh = meshio.read(args.input)
-    V, T = imesh.points.astype(np.float32), imesh.cells_dict["tetra"].astype(np.int32)
-    F = igl.boundary_facets(T)
-
-    # Duplicate mesh, BVH setup
-    V = np.vstack((V.copy(), V.copy()))
-    T = np.vstack((T.copy(), T + V.shape[0] // 2))
-    F = np.vstack((F.copy(), F + V.shape[0] // 2))
-
-    profiler = pbat.profiling.Profiler()
-    ps.init()
-
-    # Initialize visualization
-    sm = ps.register_surface_mesh("Boundary Mesh", V, F)
-    vm = ps.register_volume_mesh("Mesh", V, T)
-
-    def callback():
-        # Update positions and visualization
-        sm.update_vertex_positions(V)
-        vm.update_vertex_positions(V)
-        
-    ps.set_user_callback(callback)
-    ps.show()
-```
-
 ### Running the Script
 
 Once the script is ready, you can run it by passing the path to the mesh file as an argument:

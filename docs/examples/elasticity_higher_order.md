@@ -105,67 +105,6 @@ def callback():
     step = imgui.Button("step")
 ```
 
-## Code Sample
-
-```python
-import pbatoolkit as pbat
-import meshio
-import numpy as np
-import polyscope as ps
-import polyscope.imgui as imgui
-import math
-import argparse
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(prog="Simple 3D elastic simulation using quadratic FEM tetrahedra")
-    parser.add_argument("-i", "--input", help="Path to input mesh", type=str, required=True)
-    parser.add_argument("-r", "--refined-input", help="Path to refined input mesh", type=str, required=True)
-    parser.add_argument("-m", "--mass-density", help="Mass density", type=float, default=1000.)
-    parser.add_argument("-Y", "--young-modulus", help="Young's modulus", type=float, default=1e6)
-    parser.add_argument("-n", "--poisson-ratio", help="Poisson's ratio", type=float, default=0.45)
-    args = parser.parse_args()
-
-    # Load meshes
-    imesh = meshio.read(args.input)
-    V, C = imesh.points, imesh.cells_dict["tetra"]
-    V, C = V.astype(np.float64, order='c'), C.astype(np.int64, order='c')
-    rimesh = meshio.read(args.rinput)
-    VR, FR = rimesh.points, rimesh.cells_dict["triangle"]
-    VR, FR = VR.astype(np.float64, order='c'), FR.astype(np.int64, order='c')
-
-    # FEM setup
-    mesh = pbat.fem.Mesh(V.T, C.T, element=pbat.fem.Element.Tetrahedron, order=2)
-    detJeM = pbat.fem.jacobian_determinants(mesh, quadrature_order=4)
-    rho = args.rho
-    M = pbat.fem.MassMatrix(mesh, detJeM, rho=rho, dims=3, quadrature_order=4).to_matrix()
-    Minv = pbat.math.linalg.ldlt(M)
-    Minv.compute(M)
-
-    # Gravity load vector
-    g = np.zeros(mesh.dims)
-    g[-1] = -9.81
-    detJef = pbat.fem.jacobian_determinants(mesh, quadrature_order=2)
-    fe = np.tile(rho * g[:, np.newaxis], mesh.quadrature_weights(2).shape[0] * mesh.E.shape[1])
-    qgf = pbat.fem.inner_product_weights(mesh, quadrature_order=2).flatten(order="F")
-    Qf = sp.sparse.diags_array([qgf], offsets=[0])
-    Nf = pbat.fem.shape_function_matrix(mesh, quadrature_order=2)
-    f = fe @ Qf @ Nf
-    f = f.reshape(math.prod(f.shape), order="F")
-
-    # Hyperelastic potential
-    Y = np.full(mesh.E.shape[1], args.Y)
-    nu = np.full(mesh.E.shape[1], args.nu)
-    psi = pbat.fem.HyperElasticEnergy.StableNeoHookean
-    hep = pbat.fem.HyperElasticPotential(mesh, detJeU, GNeU, Y, nu, energy=psi, quadrature_order=4)
-    hep.precompute_hessian_sparsity()
-
-    # Visualization setup
-    ps.init()
-    vm = ps.register_volume_mesh("Domain", V, C)
-    sm = ps.register_surface_mesh("Visual", VR, FR)
-    ps.show()
-```
-
 ### Running the Script
 
 ```bash
