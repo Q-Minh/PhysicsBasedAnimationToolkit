@@ -239,9 +239,8 @@ struct FContactPairs
             mini::SVector<GpuScalar, 3> const& X,
             GpuScalar R,
             GpuScalar dzero,
-            GpuIndex sv,
             GpuIndex v)
-            : stack{}, nearest{}, X(X), R(R), dzero(dzero), sv(sv), v(v)
+            : stack{}, nearest{}, X(X), R(R), dzero(dzero), v(v)
         {
         }
 
@@ -250,7 +249,6 @@ struct FContactPairs
         mini::SVector<GpuScalar, 3> X;
         GpuScalar R;
         GpuScalar dzero;
-        GpuIndex sv;
         GpuIndex v;
     };
 
@@ -259,7 +257,7 @@ struct FContactPairs
         if (node >= leafBegin)
         {
             GpuIndex const s                     = simplex[node - leafBegin];
-            bool const bFromDifferentBodies      = queryBodies[traversal.sv] != targetBodies[s];
+            bool const bFromDifferentBodies      = body[traversal.v] != body[targetInds[0][s]];
             bool const bAreTopologicallySeparate = (traversal.v != targetInds[0][s]) and
                                                    (traversal.v != targetInds[1][s]) and
                                                    (traversal.v != targetInds[2][s]);
@@ -296,8 +294,9 @@ struct FContactPairs
     {
         using namespace mini;
         // Branch and bound over BVH
-        GpuIndex const v = queryInds[0][o.first];
-        BranchAndBound traversal{FromBuffers<3, 1>(x, v), R, dzero, o.first, v};
+        GpuIndex const sv = o.first;
+        GpuIndex const v  = queryInds[0][sv];
+        BranchAndBound traversal{FromBuffers<3, 1>(x, v), R, dzero, v};
         Push(
             traversal,
             0,
@@ -332,13 +331,13 @@ struct FContactPairs
         {
             GpuIndex s = traversal.nearest.Top();
             traversal.nearest.Pop();
-            neighbours.Append({traversal.sv, s});
+            neighbours.Append({sv, s});
         }
     }
 
     std::array<GpuScalar const*, 3> x;
 
-    GpuIndex const* queryBodies;              ///< Body indices of query simplices
+    GpuIndex const* body;                     ///< Body indices of points
     std::array<GpuIndex const*, 4> queryInds; ///< Vertex indices of query simplices
     GpuScalar const R;                        ///< Nearest neighbour query search radius
     GpuScalar const dzero; ///< Error tolerance for different distances to be considered the same,
@@ -346,7 +345,6 @@ struct FContactPairs
                            ///< the distances di,dj to the nearest neighbours i,j are similar, we
                            ///< considered both i and j to be nearest neighbours.
 
-    GpuIndex const* targetBodies;              ///< Body indices of target simplices
     std::array<GpuIndex const*, 4> targetInds; ///< Vertex indices of target simplices
     GpuIndex const* simplex;                   ///< Target simplices
     std::array<GpuScalar const*, 3> b;         ///< Box beginnings of BVH

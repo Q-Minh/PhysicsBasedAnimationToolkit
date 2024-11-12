@@ -1,5 +1,5 @@
-#ifndef PBAT_GPU_XPBD_XPBD_IMPL_CUH
-#define PBAT_GPU_XPBD_XPBD_IMPL_CUH
+#ifndef PBAT_GPU_XPBD_INTEGRATOR_IMPL_CUH
+#define PBAT_GPU_XPBD_INTEGRATOR_IMPL_CUH
 
 #include "pbat/Aliases.h"
 #include "pbat/gpu/Aliases.h"
@@ -7,42 +7,37 @@
 #include "pbat/gpu/geometry/BvhImpl.cuh"
 #include "pbat/gpu/geometry/BvhQueryImpl.cuh"
 #include "pbat/gpu/geometry/PrimitivesImpl.cuh"
+#include "pbat/sim/xpbd/Data.h"
+#include "pbat/sim/xpbd/Enums.h"
 
 #include <array>
-#include <cstddef>
 #include <vector>
 
 namespace pbat {
 namespace gpu {
 namespace xpbd {
 
-class XpbdImpl
+class IntegratorImpl
 {
   public:
-    enum EConstraint : int { StableNeoHookean = 0, Collision, NumberOfConstraintTypes };
+    using EConstraint                      = pbat::sim::xpbd::EConstraint;
     static auto constexpr kConstraintTypes = static_cast<int>(EConstraint::NumberOfConstraintTypes);
 
+    using Data                   = pbat::sim::xpbd::Data;
     using CollisionCandidateType = typename geometry::BvhQueryImpl::OverlapType;
     using ContactPairType        = typename geometry::BvhQueryImpl::NearestNeighbourPairType;
 
     /**
-     * @brief
-     * @param V
-     * @param T
+     * @brief Construct a new Integrator Impl object
+     *
+     * @param data
+     * @param nMaxVertexTetrahedronOverlaps
+     * @param nMaxVertexTriangleContacts
      */
-    XpbdImpl(
-        Eigen::Ref<GpuMatrixX const> const& X,
-        Eigen::Ref<GpuIndexMatrixX const> const& V,
-        Eigen::Ref<GpuIndexMatrixX const> const& F,
-        Eigen::Ref<GpuIndexMatrixX const> const& T,
-        Eigen::Ref<GpuIndexVectorX const> const& BV,
-        Eigen::Ref<GpuIndexVectorX const> const& BF,
+    IntegratorImpl(
+        Data const& data,
         std::size_t nMaxVertexTetrahedronOverlaps,
         std::size_t nMaxVertexTriangleContacts);
-    /**
-     * @brief
-     */
-    void PrepareConstraints();
     /**
      * @brief
      * @param dt
@@ -72,9 +67,9 @@ class XpbdImpl
     void SetVelocities(Eigen::Ref<GpuMatrixX const> const& v);
     /**
      * @brief
-     * @param f
+     * @param aext
      */
-    void SetExternalForces(Eigen::Ref<GpuMatrixX const> const& f);
+    void SetExternalAcceleration(Eigen::Ref<GpuMatrixX const> const& aext);
     /**
      * @brief
      * @param minv
@@ -177,18 +172,17 @@ class XpbdImpl
     geometry::SimplicesImpl F; ///< Boundary triangle simplices
     geometry::SimplicesImpl T; ///< Tetrahedral simplices
 
-    geometry::BodiesImpl BV; ///< Bodies of vertex simplices
-    geometry::BodiesImpl BF; ///< Bodies of triangle simplices
+    geometry::BodiesImpl BV; ///< Bodies of particles
   private:
     geometry::BvhImpl Tbvh;        ///< Tetrahedron bvh
     geometry::BvhImpl Fbvh;        ///< Triangle bvh (over boundary mesh)
     geometry::BvhQueryImpl Vquery; ///< BVH vertex queries
 
-    common::Buffer<GpuScalar, 3> mPositions;      ///< Vertex/particle positions at time t
-    common::Buffer<GpuScalar, 3> mVelocities;     ///< Vertex/particle velocities
-    common::Buffer<GpuScalar, 3> mExternalForces; ///< Vertex/particle external forces
-    common::Buffer<GpuScalar> mMassInverses;      ///< Vertex/particle mass inverses
-    common::Buffer<GpuScalar> mLame;              ///< Lame coefficients
+    common::Buffer<GpuScalar, 3> mPositions;            ///< Vertex/particle positions at time t
+    common::Buffer<GpuScalar, 3> mVelocities;           ///< Vertex/particle velocities
+    common::Buffer<GpuScalar, 3> mExternalAcceleration; ///< Vertex/particle external forces
+    common::Buffer<GpuScalar> mMassInverses;            ///< Vertex/particle mass inverses
+    common::Buffer<GpuScalar> mLame;                    ///< Lame coefficients
     common::Buffer<GpuScalar>
         mShapeMatrixInverses; ///< 3x3x|#elements| array of material shape matrix inverses
     common::Buffer<GpuScalar>
@@ -212,4 +206,4 @@ class XpbdImpl
 } // namespace gpu
 } // namespace pbat
 
-#endif // PBAT_GPU_XPBD_XPBD_IMPL_CUH
+#endif // PBAT_GPU_XPBD_INTEGRATOR_IMPL_CUH

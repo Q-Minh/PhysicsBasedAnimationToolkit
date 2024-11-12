@@ -67,8 +67,7 @@ class BvhQueryImpl
      * @param P Simplex primitive vertex positions
      * @param S1 Query primitives
      * @param S2 Target primitives
-     * @param B1 Bodies of query primitives
-     * @param B2 Bodies of target primitives
+     * @param BV Bodies of vertex positions
      * @param bvh Bounding volume hierarchy over S2
      * @param dhat Radius of nearest neighbour search space for each query primitive in S1
      * @param dzero Floating point error considered negligible when comparing "duplicate" nearest
@@ -78,8 +77,7 @@ class BvhQueryImpl
         PointsImpl const& P,
         SimplicesImpl const& S1,
         SimplicesImpl const& S2,
-        BodiesImpl const& B1,
-        BodiesImpl const& B2,
+        BodiesImpl const& BV,
         BvhImpl const& bvh,
         GpuScalar dhat  = std::numeric_limits<GpuScalar>::max(),
         GpuScalar dzero = std::numeric_limits<GpuScalar>::epsilon());

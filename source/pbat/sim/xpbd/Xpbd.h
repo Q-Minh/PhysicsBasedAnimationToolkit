@@ -1,16 +1,9 @@
-#ifndef PBAT_SIM_XPBD_H
-#define PBAT_SIM_XPBD_H
+#ifndef PBAT_SIM_XPBD_XPBD_H
+#define PBAT_SIM_XPBD_XPBD_H
 
-namespace pbat {
-namespace sim {
+#include "Data.h"
+#include "Enums.h"
+#include "Integrator.h"
+#include "Kernels.h"
 
-class Xpbd
-{
-  public:
-  private:
-};
-
-} // namespace sim
-} // namespace pbat
-
-#endif // PBAT_SIM_XPBD_H
+#endif // PBAT_SIM_XPBD_XPBD_H
