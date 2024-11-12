@@ -57,8 +57,7 @@ GpuIndexMatrixX BvhQuery::DetectContactPairsFromOverlaps(
     Points const& P,
     Simplices const& S1,
     Simplices const& S2,
-    Bodies const& B1,
-    Bodies const& B2,
+    Bodies const& BV,
     Bvh const& bvh,
     GpuScalar dhat,
     GpuScalar dzero)
@@ -67,8 +66,7 @@ GpuIndexMatrixX BvhQuery::DetectContactPairsFromOverlaps(
         *P.Impl(),
         *S1.Impl(),
         *S2.Impl(),
-        *B1.Impl(),
-        *B2.Impl(),
+        *BV.Impl(),
         *bvh.Impl(),
         dhat,
         dzero);

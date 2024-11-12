@@ -2,44 +2,29 @@
 #include "pbat/gpu/DisableWarnings.h"
 // clang-format on
 
-#include "Xpbd.h"
-#include "XpbdImpl.cuh"
+#include "Integrator.h"
+#include "IntegratorImpl.cuh"
 #include "pbat/gpu/common/Buffer.cuh"
 #include "pbat/gpu/common/Eigen.cuh"
-
-#include <thrust/copy.h>
 
 namespace pbat {
 namespace gpu {
 namespace xpbd {
 
-Xpbd::Xpbd(
-    Eigen::Ref<GpuMatrixX const> const& X,
-    Eigen::Ref<GpuIndexMatrixX const> const& V,
-    Eigen::Ref<GpuIndexMatrixX const> const& F,
-    Eigen::Ref<GpuIndexMatrixX const> const& T,
-    Eigen::Ref<GpuIndexVectorX const> const& BV,
-    Eigen::Ref<GpuIndexVectorX const> const& BF,
+Integrator::Integrator(
+    Data const& data,
     std::size_t nMaxVertexTetrahedronOverlaps,
     std::size_t nMaxVertexTriangleContacts)
-    : mImpl(new XpbdImpl{
-          X,
-          V,
-          F,
-          T,
-          BV,
-          BF,
-          nMaxVertexTetrahedronOverlaps,
-          nMaxVertexTriangleContacts})
+    : mImpl(new IntegratorImpl{data, nMaxVertexTetrahedronOverlaps, nMaxVertexTriangleContacts})
 {
 }
 
-Xpbd::Xpbd(Xpbd&& other) noexcept : mImpl(other.mImpl)
+Integrator::Integrator(Integrator&& other) noexcept : mImpl(other.mImpl)
 {
     other.mImpl = nullptr;
 }
 
-Xpbd& Xpbd::operator=(Xpbd&& other) noexcept
+Integrator& Integrator::operator=(Integrator&& other) noexcept
 {
     if (mImpl != nullptr)
         delete mImpl;
@@ -48,115 +33,110 @@ Xpbd& Xpbd::operator=(Xpbd&& other) noexcept
     return *this;
 }
 
-void Xpbd::PrepareConstraints()
-{
-    mImpl->PrepareConstraints();
-}
-
-void Xpbd::Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps)
+void Integrator::Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps)
 {
     mImpl->Step(dt, iterations, substeps);
 }
 
-GpuMatrixX Xpbd::Positions() const
+GpuMatrixX Integrator::Positions() const
 {
     return common::ToEigen(mImpl->X.x);
 }
 
-std::size_t Xpbd::NumberOfParticles() const
+std::size_t Integrator::NumberOfParticles() const
 {
     return mImpl->NumberOfParticles();
 }
 
-std::size_t Xpbd::NumberOfConstraints() const
+std::size_t Integrator::NumberOfConstraints() const
 {
     return mImpl->NumberOfConstraints();
 }
 
-void Xpbd::SetPositions(Eigen::Ref<GpuMatrixX const> const& X)
+void Integrator::SetPositions(Eigen::Ref<GpuMatrixX const> const& X)
 {
     mImpl->SetPositions(X);
 }
 
-void Xpbd::SetVelocities(Eigen::Ref<GpuMatrixX const> const& v)
+void Integrator::SetVelocities(Eigen::Ref<GpuMatrixX const> const& v)
 {
     mImpl->SetVelocities(v);
 }
 
-void Xpbd::SetExternalForces(Eigen::Ref<GpuMatrixX const> const& f)
+void Integrator::SetExternalAcceleration(Eigen::Ref<GpuMatrixX const> const& aext)
 {
-    mImpl->SetExternalForces(f);
+    mImpl->SetExternalAcceleration(aext);
 }
 
-void Xpbd::SetMassInverse(Eigen::Ref<GpuMatrixX const> const& minv)
+void Integrator::SetMassInverse(Eigen::Ref<GpuMatrixX const> const& minv)
 {
     mImpl->SetMassInverse(minv);
 }
 
-void Xpbd::SetLameCoefficients(Eigen::Ref<GpuMatrixX const> const& l)
+void Integrator::SetLameCoefficients(Eigen::Ref<GpuMatrixX const> const& l)
 {
     mImpl->SetLameCoefficients(l);
 }
 
-void Xpbd::SetCompliance(Eigen::Ref<GpuMatrixX const> const& alpha, EConstraint eConstraint)
+void Integrator::SetCompliance(Eigen::Ref<GpuMatrixX const> const& alpha, EConstraint eConstraint)
 {
-    mImpl->SetCompliance(alpha, static_cast<XpbdImpl::EConstraint>(eConstraint));
+    mImpl->SetCompliance(alpha, static_cast<IntegratorImpl::EConstraint>(eConstraint));
 }
 
-void Xpbd::SetConstraintPartitions(std::vector<std::vector<GpuIndex>> const& partitions)
+void Integrator::SetConstraintPartitions(std::vector<std::vector<GpuIndex>> const& partitions)
 {
     mImpl->SetConstraintPartitions(partitions);
 }
 
-void Xpbd::SetFrictionCoefficients(GpuScalar muS, GpuScalar muK)
+void Integrator::SetFrictionCoefficients(GpuScalar muS, GpuScalar muK)
 {
     mImpl->SetFrictionCoefficients(muS, muK);
 }
 
-void Xpbd::SetSceneBoundingBox(
+void Integrator::SetSceneBoundingBox(
     Eigen::Vector<GpuScalar, 3> const& min,
     Eigen::Vector<GpuScalar, 3> const& max)
 {
     mImpl->SetSceneBoundingBox(min, max);
 }
 
-GpuMatrixX Xpbd::GetVelocity() const
+GpuMatrixX Integrator::GetVelocity() const
 {
     return common::ToEigen(mImpl->GetVelocity());
 }
 
-GpuMatrixX Xpbd::GetExternalForce() const
+GpuMatrixX Integrator::GetExternalForce() const
 {
     return common::ToEigen(mImpl->GetExternalForce());
 }
 
-GpuVectorX Xpbd::GetMassInverse() const
+GpuVectorX Integrator::GetMassInverse() const
 {
     return common::ToEigen(mImpl->GetMassInverse());
 }
 
-GpuMatrixX Xpbd::GetLameCoefficients() const
+GpuMatrixX Integrator::GetLameCoefficients() const
 {
     auto lame = common::ToEigen(mImpl->GetLameCoefficients());
     return lame.reshaped(2, lame.size() / 2);
 }
 
-GpuMatrixX Xpbd::GetShapeMatrixInverse() const
+GpuMatrixX Integrator::GetShapeMatrixInverse() const
 {
     auto DmInv = common::ToEigen(mImpl->GetShapeMatrixInverse());
     return DmInv.reshaped(3, DmInv.size() / 3);
 }
 
-GpuMatrixX Xpbd::GetRestStableGamma() const
+GpuMatrixX Integrator::GetRestStableGamma() const
 {
     auto gamma = common::ToEigen(mImpl->GetRestStableGamma());
     return gamma.reshaped(2, gamma.size() / 2);
 }
 
-GpuMatrixX Xpbd::GetLagrangeMultiplier(EConstraint eConstraint) const
+GpuMatrixX Integrator::GetLagrangeMultiplier(EConstraint eConstraint) const
 {
     auto lambda = common::ToEigen(
-        mImpl->GetLagrangeMultiplier(static_cast<XpbdImpl::EConstraint>(eConstraint)));
+        mImpl->GetLagrangeMultiplier(static_cast<IntegratorImpl::EConstraint>(eConstraint)));
     if (eConstraint == EConstraint::StableNeoHookean)
     {
         lambda.resize(2, lambda.size() / 2);
@@ -164,10 +144,10 @@ GpuMatrixX Xpbd::GetLagrangeMultiplier(EConstraint eConstraint) const
     return lambda;
 }
 
-GpuMatrixX Xpbd::GetCompliance(EConstraint eConstraint) const
+GpuMatrixX Integrator::GetCompliance(EConstraint eConstraint) const
 {
-    auto compliance =
-        common::ToEigen(mImpl->GetCompliance(static_cast<XpbdImpl::EConstraint>(eConstraint)));
+    auto compliance = common::ToEigen(
+        mImpl->GetCompliance(static_cast<IntegratorImpl::EConstraint>(eConstraint)));
     if (eConstraint == EConstraint::StableNeoHookean)
     {
         compliance.resize(2, compliance.size() / 2);
@@ -175,7 +155,7 @@ GpuMatrixX Xpbd::GetCompliance(EConstraint eConstraint) const
     return compliance;
 }
 
-std::vector<std::vector<GpuIndex>> Xpbd::GetPartitions() const
+std::vector<std::vector<GpuIndex>> Integrator::GetPartitions() const
 {
     auto const& partitionsGpu = mImpl->GetPartitions();
     std::vector<std::vector<GpuIndex>> partitions{};
@@ -191,9 +171,9 @@ std::vector<std::vector<GpuIndex>> Xpbd::GetPartitions() const
     return partitions;
 }
 
-GpuIndexMatrixX Xpbd::GetVertexTetrahedronCollisionCandidates() const
+GpuIndexMatrixX Integrator::GetVertexTetrahedronCollisionCandidates() const
 {
-    std::vector<typename XpbdImpl::CollisionCandidateType> const overlaps =
+    std::vector<typename IntegratorImpl::CollisionCandidateType> const overlaps =
         mImpl->GetVertexTetrahedronCollisionCandidates();
     GpuIndexMatrixX O(2, overlaps.size());
     for (auto o = 0; o < overlaps.size(); ++o)
@@ -204,9 +184,9 @@ GpuIndexMatrixX Xpbd::GetVertexTetrahedronCollisionCandidates() const
     return O;
 }
 
-GpuIndexMatrixX Xpbd::GetVertexTriangleContactPairs() const
+GpuIndexMatrixX Integrator::GetVertexTriangleContactPairs() const
 {
-    std::vector<typename XpbdImpl::CollisionCandidateType> const contacts =
+    std::vector<typename IntegratorImpl::CollisionCandidateType> const contacts =
         mImpl->GetVertexTriangleContactPairs();
     GpuIndexMatrixX C(2, contacts.size());
     for (auto c = 0; c < contacts.size(); ++c)
@@ -217,7 +197,7 @@ GpuIndexMatrixX Xpbd::GetVertexTriangleContactPairs() const
     return C;
 }
 
-Xpbd::~Xpbd()
+Integrator::~Integrator()
 {
     if (mImpl != nullptr)
         delete mImpl;

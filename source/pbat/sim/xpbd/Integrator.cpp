@@ -146,7 +146,7 @@ void Integrator::Step(Scalar dt, Index iterations, Index substeps)
                 Scalar atildec              = alphaContact(vc) / dt2;
                 Scalar lambdac              = lambdaContact(vc);
 
-                bool bApplyProjection = kernels::ProjectVertexTriangle(
+                bool bProject = kernels::ProjectVertexTriangle(
                     minvv,
                     FromEigen(minvf),
                     FromEigen(xvt),
@@ -157,7 +157,7 @@ void Integrator::Step(Scalar dt, Index iterations, Index substeps)
                     atildec,
                     lambdac,
                     xv);
-                if (bApplyProjection)
+                if (bProject)
                 {
                     lambdaContact(vc) = lambdac;
                     data.x.col(v)     = ToEigen(xv);

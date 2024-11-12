@@ -121,8 +121,7 @@ void BvhQueryImpl::DetectContactPairsFromOverlaps(
     PointsImpl const& P,
     SimplicesImpl const& S1,
     SimplicesImpl const& S2,
-    BodiesImpl const& B1,
-    BodiesImpl const& B2,
+    BodiesImpl const& BV,
     BvhImpl const& bvh,
     GpuScalar dhat,
     GpuScalar dzero)
@@ -153,11 +152,10 @@ void BvhQueryImpl::DetectContactPairsFromOverlaps(
         overlaps.End(),
         BvhQueryImplKernels::FContactPairs{
             P.x.Raw(),
-            B1.body.Raw(),
+            BV.body.Raw(),
             S1.inds.Raw(),
             dhat,
             dzero,
-            B2.body.Raw(),
             S2.inds.Raw(),
             bvh.simplex.Raw(),
             bvh.b.Raw(),
@@ -244,9 +242,6 @@ TEST_CASE("[gpu][geometry] BvhQueryImpl")
     GpuIndexMatrixX BV = hstack<GpuIndexMatrixX>(
         GpuIndexVectorX::Zero(V.cols() / 2).reshaped(1, V.cols() / 2),
         GpuIndexVectorX::Ones(V.cols() / 2).reshaped(1, V.cols() / 2));
-    GpuIndexMatrixX BF = hstack<GpuIndexMatrixX>(
-        GpuIndexVectorX::Zero(F.cols() / 2).reshaped(1, F.cols() / 2),
-        GpuIndexVectorX::Ones(F.cols() / 2).reshaped(1, F.cols() / 2));
     using gpu::geometry::BodiesImpl;
     using gpu::geometry::BvhImpl;
     using gpu::geometry::BvhQueryImpl;
@@ -272,7 +267,6 @@ TEST_CASE("[gpu][geometry] BvhQueryImpl")
     SimplicesImpl FG(F);
     SimplicesImpl TG(T);
     BodiesImpl BVG(BV.reshaped());
-    BodiesImpl BFG(BF.reshaped());
 
     BvhImpl Tbvh(T.cols(), nExpectedOverlaps + nFalseOverlaps);
     BvhImpl Fbvh(F.cols(), 0);
@@ -287,7 +281,7 @@ TEST_CASE("[gpu][geometry] BvhQueryImpl")
 
     // Act
     Vquery.DetectOverlaps(PG, VG, TG, Tbvh);
-    Vquery.DetectContactPairsFromOverlaps(PG, VG, FG, BVG, BFG, Fbvh, dhat, dzero);
+    Vquery.DetectContactPairsFromOverlaps(PG, VG, FG, BVG, Fbvh, dhat, dzero);
 
     // Assert
     auto const overlaps = Vquery.overlaps.Get();
@@ -314,7 +308,7 @@ TEST_CASE("[gpu][geometry] BvhQueryImpl")
     {
         // Nearest neighbour contact pairs should not come from the same body, i.e. self-contact is
         // not supported as of now.
-        CHECK_NE(BV(0, v), BF(0, f));
+        CHECK_NE(BV(0, V(v)), BV(0, F(0, f)));
     }
     bool const bNearestTrianglesFound =
         (nearestNeighbours[0].second == expectedNearestTriangle[0] and
