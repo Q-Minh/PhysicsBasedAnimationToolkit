@@ -60,6 +60,8 @@ if __name__ == "__main__":
                         dest="Y", default=1e6)
     parser.add_argument("-n", "--poisson-ratio", help="Poisson's ratio", type=float,
                         dest="nu", default=0.45)
+    parser.add_argument("--muC", help="Vertex collision penalty", type=float,
+                        dest="muC", default=1e1)
     parser.add_argument("-t", "--translation", help="Distance in z axis between every input mesh as multiplier of input mesh extents", type=float,
                         dest="translation", default=0.1)
     parser.add_argument("--percent-fixed", help="Percentage, in the z-axis, of scene mesh to fix", type=float,
@@ -106,8 +108,8 @@ if __name__ == "__main__":
     dblA = igl.doublearea(V, F)
     muC = np.zeros(V.shape[0])
     for d in range(3):
-        muC[F[:,d]] += (1/6)*dblA
-    muC = muC[VC]
+        muC[F[:, d]] += (1/6)*dblA
+    muC = args.muC*muC[VC]
     max_overlaps = 20 * mesh.X.shape[1]
     max_contacts = 8*max_overlaps
     partitions, GC = partition_constraints(mesh.E.T)
@@ -125,9 +127,9 @@ if __name__ == "__main__":
         ).with_elastic_material(
             np.vstack((mue, lambdae))
         ).with_collision_penalties(
-            80*muC
+            muC
         ).with_friction_coefficients(
-            0.6, 0.4  
+            0.6, 0.4
         ).with_dirichlet_vertices(
             vdbc
         ).with_partitions(
