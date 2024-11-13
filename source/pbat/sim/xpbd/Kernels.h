@@ -183,7 +183,7 @@ PBAT_DEVICE bool ProjectVertexTriangle(
 
     // Collision constraint
     ScalarType dlambda           = -(C + atildec * lambdac) / (minvv + atildec);
-    SMatrix<ScalarType, 3, 1> dx = dlambda * minvv * muC * n;
+    SMatrix<ScalarType, 3, 1> dx = dlambda * minvv * n;
     xv += dx;
     lambdac += dlambda;
 
