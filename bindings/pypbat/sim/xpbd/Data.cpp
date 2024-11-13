@@ -80,6 +80,12 @@ void BindData(pybind11::module& m)
             pyb::arg("constraint"),
             "Sets the constraint compliance for the given constraint type.")
         .def(
+            "with_damping",
+            &Data::WithDamping,
+            pyb::arg("beta"),
+            pyb::arg("constraint"),
+            "Sets the constraint damping for the given constraint type.")
+        .def(
             "with_partitions",
             &Data::WithPartitions,
             pyb::arg("partitions"),
@@ -104,6 +110,7 @@ void BindData(pybind11::module& m)
         .def_readwrite("muS", &Data::muS)
         .def_readwrite("muD", &Data::muD)
         .def_readwrite("alpha", &Data::alpha)
+        .def_readwrite("beta", &Data::beta)
         .def_readwrite("lambda", &Data::lambda)
         .def_readwrite("dbc", &Data::dbc)
         .def_readwrite("partitions", &Data::partitions);

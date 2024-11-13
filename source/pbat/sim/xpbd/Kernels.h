@@ -33,20 +33,25 @@ template <
     mini::CMatrix TMatrixGC,
     mini::CMatrix TMatrixMinvC,
     mini::CMatrix TMatrixXC,
+    mini::CMatrix TMatrixXTC,
     class ScalarType = typename TMatrixGC::ScalarType>
 PBAT_DEVICE void ProjectTetrahedron(
     ScalarType C,
     TMatrixGC const& gradC,
     TMatrixMinvC const& minvc,
     ScalarType atilde,
+    ScalarType gammac,
+    TMatrixXTC const& xtc,
     ScalarType& lambdac,
     TMatrixXC& xc)
 {
     using namespace mini;
+    ScalarType const D = ScalarType(1) + gammac;
     ScalarType dlambda =
-        -(C + atilde * lambdac) /
-        (minvc(0) * SquaredNorm(gradC.Col(0)) + minvc(1) * SquaredNorm(gradC.Col(1)) +
-         minvc(2) * SquaredNorm(gradC.Col(2)) + minvc(3) * SquaredNorm(gradC.Col(3)) + atilde);
+        -(C + atilde * lambdac + gammac * Dot(gradC, xc - xtc)) /
+        (D * minvc(0) * SquaredNorm(gradC.Col(0)) + D * minvc(1) * SquaredNorm(gradC.Col(1)) +
+         D * minvc(2) * SquaredNorm(gradC.Col(2)) + D * minvc(3) * SquaredNorm(gradC.Col(3)) +
+         atilde);
     lambdac += dlambda;
     xc.Col(0) += (minvc(0) * dlambda) * gradC.Col(0);
     xc.Col(1) += (minvc(1) * dlambda) * gradC.Col(1);
@@ -58,14 +63,17 @@ template <
     class IndexType,
     mini::CMatrix TMatrixMinv,
     mini::CMatrix TMatrixDmInv,
+    mini::CMatrix TMatrixXTC,
     mini::CMatrix TMatrixXC,
     class ScalarType = typename TMatrixMinv::ScalarType>
 PBAT_DEVICE void ProjectHydrostatic(
     IndexType c,
     TMatrixMinv const& minvc,
-    ScalarType atilde,
-    ScalarType gammac,
     TMatrixDmInv const& DmInv,
+    ScalarType atilde,
+    ScalarType gammaSNHc,
+    ScalarType gammac,
+    TMatrixXTC const& xtc,
     ScalarType& lambdac,
     TMatrixXC& xc)
 {
@@ -74,7 +82,7 @@ PBAT_DEVICE void ProjectHydrostatic(
     #pragma nv_diag_suppress 174
 #endif
     SMatrix<ScalarType, 3, 3> F = (xc.Slice<3, 3>(0, 1) - Repeat<1, 3>(xc.Col(0))) * DmInv;
-    ScalarType C                = Determinant(F) - gammac;
+    ScalarType C                = Determinant(F) - gammaSNHc;
     SMatrix<ScalarType, 3, 3> P{};
     P.Col(0) = Cross(F.Col(1), F.Col(2));
     P.Col(1) = Cross(F.Col(2), F.Col(0));
@@ -82,7 +90,7 @@ PBAT_DEVICE void ProjectHydrostatic(
     SMatrix<ScalarType, 3, 4> gradC{};
     gradC.Slice<3, 3>(0, 1) = P * DmInv.Transpose();
     gradC.Col(0)            = -(gradC.Col(1) + gradC.Col(2) + gradC.Col(3));
-    ProjectTetrahedron(C, gradC, minvc, atilde, lambdac, xc);
+    ProjectTetrahedron(C, gradC, minvc, atilde, gammac, xtc, lambdac, xc);
 #if defined(CUDART_VERSION)
     #pragma nv_diag_default 174
 #endif
@@ -92,13 +100,16 @@ template <
     class IndexType,
     mini::CMatrix TMatrixMinv,
     mini::CMatrix TMatrixDmInv,
+    mini::CMatrix TMatrixXTC,
     mini::CMatrix TMatrixXC,
     class ScalarType = typename TMatrixMinv::ScalarType>
 PBAT_DEVICE void ProjectDeviatoric(
     IndexType c,
     TMatrixMinv const& minvc,
-    ScalarType atilde,
     TMatrixDmInv const& DmInv,
+    ScalarType atilde,
+    ScalarType gammac,
+    TMatrixXTC const& xtc,
     ScalarType& lambdac,
     TMatrixXC& xc)
 {
@@ -111,7 +122,7 @@ PBAT_DEVICE void ProjectDeviatoric(
     SMatrix<ScalarType, 3, 4> gradC{};
     gradC.Slice<3, 3>(0, 1) = (F * DmInv.Transpose()) / (C /*+ 1e-8*/);
     gradC.Col(0)            = -(gradC.Col(1) + gradC.Col(2) + gradC.Col(3));
-    ProjectTetrahedron(C, gradC, minvc, atilde, lambdac, xc);
+    ProjectTetrahedron(C, gradC, minvc, atilde, gammac, xtc, lambdac, xc);
 #if defined(CUDART_VERSION)
     #pragma nv_diag_default 174
 #endif
@@ -134,6 +145,7 @@ PBAT_DEVICE bool ProjectVertexTriangle(
     ScalarType muS,
     ScalarType muD,
     ScalarType atildec,
+    ScalarType gammac,
     ScalarType& lambdac,
     TMatrixXV& xv)
 {
@@ -182,7 +194,9 @@ PBAT_DEVICE bool ProjectVertexTriangle(
     // the vertex.
 
     // Collision constraint
-    ScalarType dlambda           = -(C + atildec * lambdac) / (minvv + atildec);
+    ScalarType const D = ScalarType(1) + gammac;
+    ScalarType dlambda =
+        -(C + atildec * lambdac + gammac * Dot(n, xv - xvt)) / (D * minvv + atildec);
     SMatrix<ScalarType, 3, 1> dx = dlambda * minvv * n;
     xv += dx;
     lambdac += dlambda;

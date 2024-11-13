@@ -98,6 +98,7 @@ void Integrator::Step(Scalar dt, Index iterations, Index substeps)
         {
             // Solve tetrahedral (elasticity) constraints
             auto& alphaSNH  = data.alpha[static_cast<int>(EConstraint::StableNeoHookean)];
+            auto& betaSNH   = data.beta[static_cast<int>(EConstraint::StableNeoHookean)];
             auto& lambdaSNH = data.lambda[static_cast<int>(EConstraint::StableNeoHookean)];
             for (auto const& partition : data.partitions)
             {
@@ -105,27 +106,41 @@ void Integrator::Step(Scalar dt, Index iterations, Index substeps)
                 tbb::parallel_for(
                     IndexType(0),
                     nPartitionConstraints,
-                    [&, dt2 = sdt2](IndexType pc) {
+                    [&, dt = sdt, dt2 = sdt2](IndexType pc) {
                         // Gather constraint data
                         auto c                         = partition[pc];
                         auto vinds                     = data.T.col(c);
                         mini::SVector<Scalar, 4> minvc = FromEigen(data.minv(vinds).head<4>());
                         mini::SVector<Scalar, 2> atildec =
                             FromEigen(alphaSNH.segment<2>(2 * c)) / dt2;
-                        Scalar gammac = data.gammaSNH(c);
+                        mini::SVector<Scalar, 2> betac  = FromEigen(betaSNH.segment<2>(2 * c));
+                        mini::SVector<Scalar, 2> gammac = atildec * betac * dt;
+                        Scalar gammaSNHc                = data.gammaSNH(c);
                         mini::SMatrix<Scalar, 3, 3> DmInv =
                             FromEigen(data.DmInv.block<3, 3>(0, 3 * c));
+                        mini::SMatrix<Scalar, 3, 4> xtc =
+                            FromEigen(data.xt(Eigen::placeholders::all, vinds).block<3, 4>(0, 0));
                         mini::SMatrix<Scalar, 3, 4> xc =
                             FromEigen(data.x(Eigen::placeholders::all, vinds).block<3, 4>(0, 0));
                         Vector<2> lambdac = lambdaSNH.segment<2>(2 * c);
                         // Project constraints
-                        kernels::ProjectDeviatoric(c, minvc, atildec(0), DmInv, lambdac(0), xc);
+                        kernels::ProjectDeviatoric(
+                            c,
+                            minvc,
+                            DmInv,
+                            atildec(0),
+                            gammac(0),
+                            xtc,
+                            lambdac(0),
+                            xc);
                         kernels::ProjectHydrostatic(
                             c,
                             minvc,
-                            atildec(1),
-                            gammac,
                             DmInv,
+                            atildec(1),
+                            gammaSNHc,
+                            gammac(1),
+                            xtc,
                             lambdac(1),
                             xc);
                         // Update solution
@@ -136,8 +151,9 @@ void Integrator::Step(Scalar dt, Index iterations, Index substeps)
 
             // Solve contact constraints
             auto& alphaContact  = data.alpha[static_cast<int>(EConstraint::Collision)];
+            auto& betaContact   = data.beta[static_cast<int>(EConstraint::Collision)];
             auto& lambdaContact = data.lambda[static_cast<int>(EConstraint::Collision)];
-            tbb::parallel_for(Index(0), nParticlesInContact, [&](Index c) {
+            tbb::parallel_for(Index(0), nParticlesInContact, [&, dt = sdt, dt2 = sdt2](Index c) {
                 auto sv                        = mParticlesInContact[c];
                 auto v                         = data.V(mParticlesInContact[c]);
                 auto f                         = mTrianglesInContact[c];
@@ -150,7 +166,8 @@ void Integrator::Step(Scalar dt, Index iterations, Index substeps)
                 mini::SMatrix<Scalar, 3, 3> xf =
                     FromEigen(data.x(Eigen::placeholders::all, fv).block<3, 3>(0, 0));
                 mini::SVector<Scalar, 3> xv = FromEigen(data.x.col(v).head<3>());
-                Scalar atildec              = alphaContact(c) / sdt2;
+                Scalar atildec              = alphaContact(c) / dt2;
+                Scalar gammac               = atildec * betaContact(c) * dt;
                 Scalar lambdac              = lambdaContact(c);
                 Scalar muc                  = data.muV(sv);
 
@@ -164,6 +181,7 @@ void Integrator::Step(Scalar dt, Index iterations, Index substeps)
                     data.muS,
                     data.muD,
                     atildec,
+                    gammac,
                     lambdac,
                     xv);
                 if (bProject)

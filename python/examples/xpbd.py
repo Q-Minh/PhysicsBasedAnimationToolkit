@@ -60,6 +60,12 @@ if __name__ == "__main__":
                         dest="Y", default=1e6)
     parser.add_argument("-n", "--poisson-ratio", help="Poisson's ratio", type=float,
                         dest="nu", default=0.45)
+    parser.add_argument("--betaSNH", help="Stable Neo-Hookean constraint damping", type=float,
+                        dest="betaSNH", default=0.)
+    parser.add_argument("--alphaC", help="Vertex collision constraint compliance", type=float,
+                        dest="alphaC", default=0.)
+    parser.add_argument("--betaC", help="Vertex collision constraint damping", type=float,
+                        dest="betaC", default=0.)
     parser.add_argument("--muC", help="Vertex collision penalty", type=float,
                         dest="muC", default=1e1)
     parser.add_argument("-t", "--translation", help="Distance in z axis between every input mesh as multiplier of input mesh extents", type=float,
@@ -126,6 +132,12 @@ if __name__ == "__main__":
             minv
         ).with_elastic_material(
             np.vstack((mue, lambdae))
+        ).with_damping(
+            np.full(mesh.E.shape[1]*2, args.betaSNH), pbat.sim.xpbd.Constraint.StableNeoHookean
+        ).with_compliance(
+            np.full(VC.shape[0], args.alphaC), pbat.sim.xpbd.Constraint.Collision
+        ).with_damping(
+            np.full(VC.shape[0], args.betaC), pbat.sim.xpbd.Constraint.Collision
         ).with_collision_penalties(
             muC
         ).with_friction_coefficients(

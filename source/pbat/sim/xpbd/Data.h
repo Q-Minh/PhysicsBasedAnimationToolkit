@@ -26,6 +26,7 @@ PBAT_API struct Data
     Data& WithElasticMaterial(Eigen::Ref<MatrixX const> const& lame);
     Data& WithCollisionPenalties(Eigen::Ref<VectorX const> const& muV);
     Data& WithFrictionCoefficients(Scalar muS, Scalar muD);
+    Data& WithDamping(Eigen::Ref<VectorX> const& beta, EConstraint constraint);
     Data& WithCompliance(Eigen::Ref<VectorX> const& alpha, EConstraint constraint);
     Data& WithPartitions(std::vector<std::vector<Index>> const& partitions);
     Data& WithDirichletConstrainedVertices(IndexVectorX const& dbc);
@@ -52,7 +53,6 @@ PBAT_API struct Data
     VectorX gammaSNH; ///< 1. + mu/lambda, where mu,lambda are Lame coefficients
 
     VectorX muV;       ///< |#collision vertices| array of collision penalties
-    Scalar alphaC{0.}; ///< Collision compliance
     Scalar muS{0.3};   ///< Static friction coefficient
     Scalar muD{0.2};   ///< Dynamic friction coefficient
 
@@ -60,6 +60,10 @@ PBAT_API struct Data
         alpha; ///< Compliance
                ///< alpha[0] -> Stable Neo-Hookean constraint compliance
                ///< alpha[1] -> Collision penalty constraint compliance
+    std::array<VectorX, static_cast<int>(EConstraint::NumberOfConstraintTypes)>
+        beta; ///< Damping
+              ///< beta[0] -> Stable Neo-Hookean constraint damping
+              ///< beta[1] -> Collision penalty constraint damping
     std::array<VectorX, static_cast<int>(EConstraint::NumberOfConstraintTypes)>
         lambda; ///< "Lagrange" multipliers:
                 ///< lambda[0] -> Stable Neo-Hookean constraint multipliers

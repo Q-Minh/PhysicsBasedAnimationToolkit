@@ -196,9 +196,13 @@ class IntegratorImpl
         mCompliance; ///< Compliance
                      ///< alpha[0] -> Stable Neo-Hookean constraint compliance
                      ///< alpha[1] -> Collision penalty constraint compliance
+    std::array<common::Buffer<GpuScalar>, kConstraintTypes>
+        mDamping; ///< Damping
+                  ///< beta[0] -> Stable Neo-Hookean constraint damping
+                  ///< beta[1] -> Collision penalty constraint damping
 
     std::vector<common::Buffer<GpuIndex>> mPartitions; ///< Constraint partitions
-    common::Buffer<GpuScalar> mPenalty;            ///< Collision vertex penalties
+    common::Buffer<GpuScalar> mPenalty;                ///< Collision vertex penalties
     GpuScalar mStaticFrictionCoefficient;              ///< Coulomb static friction coefficient
     GpuScalar mDynamicFrictionCoefficient;             ///< Coulomb dynamic friction coefficient
     Eigen::Vector<GpuScalar, 3> Smin, Smax;            ///< Scene bounding box

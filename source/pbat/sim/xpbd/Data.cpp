@@ -74,6 +74,12 @@ Data& Data::WithFrictionCoefficients(Scalar muS, Scalar muD)
     return *this;
 }
 
+Data& Data::WithDamping(Eigen::Ref<VectorX> const& beta, EConstraint constraint)
+{
+    this->beta[static_cast<int>(constraint)] = beta;
+    return *this;
+}
+
 Data& Data::WithCompliance(Eigen::Ref<VectorX> const& alpha, EConstraint constraint)
 {
     this->alpha[static_cast<int>(constraint)] = alpha;
@@ -126,7 +132,8 @@ Data& Data::Construct(bool bValidate)
         lame.row(1).setConstant(llambda);
     }
     DmInv.resize(3, 3 * T.cols());
-    alpha[static_cast<int>(EConstraint::StableNeoHookean)].resize(2 * T.cols());
+    auto snhConstraintId = static_cast<int>(EConstraint::StableNeoHookean);
+    alpha[snhConstraintId].resize(2 * T.cols());
     gammaSNH.resize(T.cols());
     tbb::parallel_for(Index(0), T.cols(), [&](Index t) {
         // Load vertex positions of element c
@@ -138,16 +145,28 @@ Data& Data::Construct(bool bValidate)
         DmInvC          = Ds.inverse();
         // Compute constraint compliance
         Scalar const tetVolume = Ds.determinant() / Scalar(6);
-        auto alphat = alpha[static_cast<int>(EConstraint::StableNeoHookean)].segment<2>(2 * t);
-        auto lamet  = lame.col(t).segment<2>(0);
-        alphat      = Scalar(1) / (lamet * tetVolume).array();
+        auto alphat            = alpha[snhConstraintId].segment<2>(2 * t);
+        auto lamet             = lame.col(t).segment<2>(0);
+        alphat                 = Scalar(1) / (lamet * tetVolume).array();
         // Compute rest stability
         gammaSNH(t) = Scalar(1) + lamet(0) / lamet(1);
     });
-    lambda[static_cast<int>(EConstraint::StableNeoHookean)].setZero(2 * T.cols());
+    if (beta[snhConstraintId].size() == 0)
+    {
+        beta[snhConstraintId].setZero(2 * T.cols());
+    }
+    lambda[snhConstraintId].setZero(2 * T.cols());
     // Set contact data
-    alpha[static_cast<int>(EConstraint::Collision)].setConstant(V.size(), alphaC);
-    lambda[static_cast<int>(EConstraint::Collision)].setZero(V.size());
+    auto collisionConstraintId = static_cast<int>(EConstraint::Collision);
+    if (alpha[collisionConstraintId].size() == 0)
+    {
+        alpha[collisionConstraintId].setConstant(V.size(), Scalar(0));
+    }
+    if (beta[collisionConstraintId].size() == 0)
+    {
+        beta[collisionConstraintId].setConstant(V.size(), Scalar(0));
+    }
+    lambda[collisionConstraintId].setZero(V.size());
     if (muV.size() == 0)
     {
         muV.setOnes(V.size());

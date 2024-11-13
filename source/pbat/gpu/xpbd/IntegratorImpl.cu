@@ -38,6 +38,7 @@ IntegratorImpl::IntegratorImpl(
       mRestStableGamma(data.gammaSNH.size()),
       mLagrangeMultipliers(),
       mCompliance(),
+      mDamping(),
       mPartitions(),
       mPenalty(data.muV.size()),
       mStaticFrictionCoefficient{static_cast<GpuScalar>(data.muS)},
@@ -55,16 +56,20 @@ IntegratorImpl::IntegratorImpl(
     int const snhConstraintId = static_cast<int>(EConstraint::StableNeoHookean);
     mLagrangeMultipliers[snhConstraintId].Resize(data.lambda[snhConstraintId].size());
     mCompliance[snhConstraintId].Resize(data.alpha[snhConstraintId].size());
+    mDamping[snhConstraintId].Resize(data.beta[snhConstraintId].size());
     common::ToBuffer(data.lambda[snhConstraintId], mLagrangeMultipliers[snhConstraintId]);
     common::ToBuffer(data.alpha[snhConstraintId], mCompliance[snhConstraintId]);
+    common::ToBuffer(data.beta[snhConstraintId], mDamping[snhConstraintId]);
 
     int const collisionConstraintId = static_cast<int>(EConstraint::Collision);
     mLagrangeMultipliers[collisionConstraintId].Resize(data.lambda[collisionConstraintId].size());
     mCompliance[collisionConstraintId].Resize(data.alpha[collisionConstraintId].size());
+    mDamping[collisionConstraintId].Resize(data.beta[collisionConstraintId].size());
     common::ToBuffer(
         data.lambda[collisionConstraintId],
         mLagrangeMultipliers[collisionConstraintId]);
     common::ToBuffer(data.alpha[collisionConstraintId], mCompliance[collisionConstraintId]);
+    common::ToBuffer(data.beta[collisionConstraintId], mDamping[collisionConstraintId]);
     // Setup partitions
     mPartitions.resize(data.partitions.size());
     for (auto p = 0; p < data.partitions.size(); ++p)
@@ -133,25 +138,48 @@ void IntegratorImpl::Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps)
                     thrust::device.after(e),
                     partition.Data(),
                     partition.Data() + partition.Size(),
-                    [x      = nextPositions.Raw(),
-                     lambda = mLagrangeMultipliers[snhConstraintId].Raw(),
-                     T      = T.inds.Raw(),
-                     minv   = mMassInverses.Raw(),
-                     alpha  = mCompliance[snhConstraintId].Raw(),
-                     DmInv  = mShapeMatrixInverses.Raw(),
-                     gamma  = mRestStableGamma.Raw(),
-                     dt2    = sdt2] PBAT_DEVICE(GpuIndex c) {
+                    [x        = nextPositions.Raw(),
+                     xt       = mPositions.Raw(),
+                     lambda   = mLagrangeMultipliers[snhConstraintId].Raw(),
+                     T        = T.inds.Raw(),
+                     minv     = mMassInverses.Raw(),
+                     alpha    = mCompliance[snhConstraintId].Raw(),
+                     beta     = mDamping[snhConstraintId].Raw(),
+                     DmInv    = mShapeMatrixInverses.Raw(),
+                     gammaSNH = mRestStableGamma.Raw(),
+                     dt       = sdt,
+                     dt2      = sdt2] PBAT_DEVICE(GpuIndex c) {
                         using pbat::sim::xpbd::kernels::ProjectDeviatoric;
                         using pbat::sim::xpbd::kernels::ProjectHydrostatic;
                         using namespace pbat::math::linalg::mini;
                         SVector<GpuIndex, 4> Tc         = FromBuffers<4, 1>(T, c);
                         SVector<GpuScalar, 4> minvc     = FromFlatBuffer(minv, Tc);
                         SVector<GpuScalar, 2> atildec   = FromFlatBuffer<2, 1>(alpha, c) / dt2;
+                        SVector<GpuScalar, 2> betac     = FromFlatBuffer<2, 1>(beta, c);
+                        SVector<GpuScalar, 2> gammac    = atildec * betac * dt;
                         SMatrix<GpuScalar, 3, 3> DmInvc = FromFlatBuffer<3, 3>(DmInv, c);
                         SVector<GpuScalar, 2> lambdac   = FromFlatBuffer<2, 1>(lambda, c);
+                        SMatrix<GpuScalar, 3, 4> xtc    = FromBuffers(xt, Tc.Transpose());
                         SMatrix<GpuScalar, 3, 4> xc     = FromBuffers(x, Tc.Transpose());
-                        ProjectDeviatoric(c, minvc, atildec(0), DmInvc, lambdac(0), xc);
-                        ProjectHydrostatic(c, minvc, atildec(1), gamma[c], DmInvc, lambdac(1), xc);
+                        ProjectDeviatoric(
+                            c,
+                            minvc,
+                            DmInvc,
+                            atildec(0),
+                            gammac(0),
+                            xtc,
+                            lambdac(0),
+                            xc);
+                        ProjectHydrostatic(
+                            c,
+                            minvc,
+                            DmInvc,
+                            atildec(1),
+                            gammaSNH[c],
+                            gammac(1),
+                            xtc,
+                            lambdac(1),
+                            xc);
                         ToFlatBuffer(lambdac, lambda, c);
                         ToBuffers(xc, Tc.Transpose(), x);
                     });
@@ -167,10 +195,12 @@ void IntegratorImpl::Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps)
                  xt     = mPositions.Raw(),
                  lambda = mLagrangeMultipliers[collisionConstraintId].Raw(),
                  alpha  = mCompliance[collisionConstraintId].Raw(),
+                 beta   = mDamping[collisionConstraintId].Raw(),
                  pairs  = contacts.Raw(),
                  CV     = V.inds.Raw(),
                  CF     = F.inds.Raw(),
                  minv   = mMassInverses.Raw(),
+                 dt     = sdt,
                  dt2    = sdt2,
                  muC    = mPenalty.Raw(),
                  muS    = mStaticFrictionCoefficient,
@@ -190,6 +220,7 @@ void IntegratorImpl::Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps)
                     SMatrix<GpuScalar, 3, 3> xft = FromBuffers(xt, f.Transpose());
                     SMatrix<GpuScalar, 3, 3> xf  = FromBuffers(x, f.Transpose());
                     GpuScalar atildec            = alpha[c] / dt2;
+                    GpuScalar gammac             = atildec * beta[c] * dt;
                     GpuScalar lambdac            = lambda[c];
                     GpuScalar muc                = muC[sv];
                     bool const bProject          = ProjectVertexTriangle(
@@ -202,6 +233,7 @@ void IntegratorImpl::Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps)
                         muS,
                         muD,
                         atildec,
+                        gammac,
                         lambdac,
                         xv);
                     if (bProject)
