@@ -149,36 +149,27 @@ void IntegratorImpl::Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps)
                      gammaSNH = mRestStableGamma.Raw(),
                      dt       = sdt,
                      dt2      = sdt2] PBAT_DEVICE(GpuIndex c) {
-                        using pbat::sim::xpbd::kernels::ProjectDeviatoric;
-                        using pbat::sim::xpbd::kernels::ProjectHydrostatic;
+                        using pbat::sim::xpbd::kernels::ProjectBlockNeoHookean;
                         using namespace pbat::math::linalg::mini;
-                        SVector<GpuIndex, 4> Tc         = FromBuffers<4, 1>(T, c);
-                        SVector<GpuScalar, 4> minvc     = FromFlatBuffer(minv, Tc);
-                        SVector<GpuScalar, 2> atildec   = FromFlatBuffer<2, 1>(alpha, c) / dt2;
-                        SVector<GpuScalar, 2> betac     = FromFlatBuffer<2, 1>(beta, c);
-                        SVector<GpuScalar, 2> gammac    = atildec * betac * dt;
+                        SVector<GpuIndex, 4> Tc       = FromBuffers<4, 1>(T, c);
+                        SVector<GpuScalar, 4> minvc   = FromFlatBuffer(minv, Tc);
+                        SVector<GpuScalar, 2> atildec = FromFlatBuffer<2, 1>(alpha, c) / dt2;
+                        SVector<GpuScalar, 2> betac   = FromFlatBuffer<2, 1>(beta, c);
+                        SVector<GpuScalar, 2> gammac{
+                            atildec(0) * betac(0) * dt,
+                            atildec(1) * betac(1) * dt};
                         SMatrix<GpuScalar, 3, 3> DmInvc = FromFlatBuffer<3, 3>(DmInv, c);
                         SVector<GpuScalar, 2> lambdac   = FromFlatBuffer<2, 1>(lambda, c);
                         SMatrix<GpuScalar, 3, 4> xtc    = FromBuffers(xt, Tc.Transpose());
                         SMatrix<GpuScalar, 3, 4> xc     = FromBuffers(x, Tc.Transpose());
-                        ProjectDeviatoric(
-                            c,
+                        ProjectBlockNeoHookean(
                             minvc,
                             DmInvc,
-                            atildec(0),
-                            gammac(0),
-                            xtc,
-                            lambdac(0),
-                            xc);
-                        ProjectHydrostatic(
-                            c,
-                            minvc,
-                            DmInvc,
-                            atildec(1),
                             gammaSNH[c],
-                            gammac(1),
+                            atildec,
+                            gammac,
                             xtc,
-                            lambdac(1),
+                            lambdac,
                             xc);
                         ToFlatBuffer(lambdac, lambda, c);
                         ToBuffers(xc, Tc.Transpose(), x);

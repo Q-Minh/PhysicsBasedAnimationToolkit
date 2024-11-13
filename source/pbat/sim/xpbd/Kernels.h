@@ -1,6 +1,7 @@
 #ifndef PBAT_SIM_XPBD_KERNELS_H
 #define PBAT_SIM_XPBD_KERNELS_H
 
+#include "pbat/common/ConstexprFor.h"
 #include "pbat/geometry/ClosestPointQueries.h"
 #include "pbat/geometry/IntersectionQueries.h"
 #include "pbat/math/linalg/mini/Mini.h"
@@ -30,102 +31,88 @@ PBAT_HOST_DEVICE mini::SVector<ScalarType, TMatrixXT::kRows> InitialPosition(
 }
 
 template <
-    mini::CMatrix TMatrixGC,
-    mini::CMatrix TMatrixMinvC,
-    mini::CMatrix TMatrixXC,
-    mini::CMatrix TMatrixXTC,
-    class ScalarType = typename TMatrixGC::ScalarType>
-PBAT_DEVICE void ProjectTetrahedron(
-    ScalarType C,
-    TMatrixGC const& gradC,
-    TMatrixMinvC const& minvc,
-    ScalarType atilde,
-    ScalarType gammac,
-    TMatrixXTC const& xtc,
-    ScalarType& lambdac,
-    TMatrixXC& xc)
+    mini::CMatrix TMatrixA,
+    mini::CMatrix TMatrixB,
+    class ScalarType = typename TMatrixA::ScalarType>
+PBAT_HOST_DEVICE mini::SVector<ScalarType, 2> Solve2x2(TMatrixA const& A, TMatrixB const& b)
 {
-    using namespace mini;
-    ScalarType const D = ScalarType(1) + gammac;
-    ScalarType dlambda =
-        -(C + atilde * lambdac + gammac * Dot(gradC, xc - xtc)) /
-        (D * minvc(0) * SquaredNorm(gradC.Col(0)) + D * minvc(1) * SquaredNorm(gradC.Col(1)) +
-         D * minvc(2) * SquaredNorm(gradC.Col(2)) + D * minvc(3) * SquaredNorm(gradC.Col(3)) +
-         atilde);
-    lambdac += dlambda;
-    xc.Col(0) += (minvc(0) * dlambda) * gradC.Col(0);
-    xc.Col(1) += (minvc(1) * dlambda) * gradC.Col(1);
-    xc.Col(2) += (minvc(2) * dlambda) * gradC.Col(2);
-    xc.Col(3) += (minvc(3) * dlambda) * gradC.Col(3);
+    mini::SVector<ScalarType, 2> x;
+    // NOTE: Add partial pivoting if conditioning problems
+    ScalarType const A2 = (A(1, 1) - (A(1, 0) * A(0, 1) / A(0, 0)));
+    ScalarType const b2 = b(1) - (A(1, 0) * b(0) / A(0, 0));
+    x(1)                = b2 / A2;
+    x(0)                = (b(0) - A(0, 1) * x(1)) / A(0, 0);
+    return x;
 }
 
 template <
-    class IndexType,
     mini::CMatrix TMatrixMinv,
     mini::CMatrix TMatrixDmInv,
+    mini::CMatrix TMatrixAlphaT,
+    mini::CMatrix TMatrixGamma,
     mini::CMatrix TMatrixXTC,
+    mini::CMatrix TMatrixL,
     mini::CMatrix TMatrixXC,
     class ScalarType = typename TMatrixMinv::ScalarType>
-PBAT_DEVICE void ProjectHydrostatic(
-    IndexType c,
+PBAT_HOST_DEVICE void ProjectBlockNeoHookean(
     TMatrixMinv const& minvc,
     TMatrixDmInv const& DmInv,
-    ScalarType atilde,
     ScalarType gammaSNHc,
-    ScalarType gammac,
+    TMatrixAlphaT atildec,
+    TMatrixGamma gammac,
     TMatrixXTC const& xtc,
-    ScalarType& lambdac,
+    TMatrixL& lambdac,
     TMatrixXC& xc)
 {
     using namespace mini;
+    // Compute deviatoric+hydrostatic elasticity
 #if defined(CUDART_VERSION)
     #pragma nv_diag_suppress 174
 #endif
     SMatrix<ScalarType, 3, 3> F = (xc.Slice<3, 3>(0, 1) - Repeat<1, 3>(xc.Col(0))) * DmInv;
-    ScalarType C                = Determinant(F) - gammaSNHc;
-    SMatrix<ScalarType, 3, 3> P{};
-    P.Col(0) = Cross(F.Col(1), F.Col(2));
-    P.Col(1) = Cross(F.Col(2), F.Col(0));
-    P.Col(2) = Cross(F.Col(0), F.Col(1));
-    SMatrix<ScalarType, 3, 4> gradC{};
-    gradC.Slice<3, 3>(0, 1) = P * DmInv.Transpose();
-    gradC.Col(0)            = -(gradC.Col(1) + gradC.Col(2) + gradC.Col(3));
-    ProjectTetrahedron(C, gradC, minvc, atilde, gammac, xtc, lambdac, xc);
+    ScalarType CD               = Norm(F);
+    SMatrix<ScalarType, 3, 4> gradCD{};
+    gradCD.Slice<3, 3>(0, 1) = (F * DmInv.Transpose()) / (CD /*+ 1e-8*/);
+    gradCD.Col(0)            = -(gradCD.Col(1) + gradCD.Col(2) + gradCD.Col(3));
+    ScalarType CH            = Determinant(F) - gammaSNHc;
+    SMatrix<ScalarType, 3, 3> PH{};
+    PH.Col(0) = Cross(F.Col(1), F.Col(2));
+    PH.Col(1) = Cross(F.Col(2), F.Col(0));
+    PH.Col(2) = Cross(F.Col(0), F.Col(1));
+    SMatrix<ScalarType, 3, 4> gradCH{};
+    gradCH.Slice<3, 3>(0, 1) = PH * DmInv.Transpose();
+    gradCH.Col(0)            = -(gradCH.Col(1) + gradCH.Col(2) + gradCH.Col(3));
 #if defined(CUDART_VERSION)
     #pragma nv_diag_default 174
 #endif
-}
-
-template <
-    class IndexType,
-    mini::CMatrix TMatrixMinv,
-    mini::CMatrix TMatrixDmInv,
-    mini::CMatrix TMatrixXTC,
-    mini::CMatrix TMatrixXC,
-    class ScalarType = typename TMatrixMinv::ScalarType>
-PBAT_DEVICE void ProjectDeviatoric(
-    IndexType c,
-    TMatrixMinv const& minvc,
-    TMatrixDmInv const& DmInv,
-    ScalarType atilde,
-    ScalarType gammac,
-    TMatrixXTC const& xtc,
-    ScalarType& lambdac,
-    TMatrixXC& xc)
-{
-    using namespace mini;
-#if defined(CUDART_VERSION)
-    #pragma nv_diag_suppress 174
-#endif
-    SMatrix<ScalarType, 3, 3> F = (xc.Slice<3, 3>(0, 1) - Repeat<1, 3>(xc.Col(0))) * DmInv;
-    ScalarType C                = Norm(F);
-    SMatrix<ScalarType, 3, 4> gradC{};
-    gradC.Slice<3, 3>(0, 1) = (F * DmInv.Transpose()) / (C /*+ 1e-8*/);
-    gradC.Col(0)            = -(gradC.Col(1) + gradC.Col(2) + gradC.Col(3));
-    ProjectTetrahedron(C, gradC, minvc, atilde, gammac, xtc, lambdac, xc);
-#if defined(CUDART_VERSION)
-    #pragma nv_diag_default 174
-#endif
+    // Construct 2x2 constraint block system
+    SVector<ScalarType, 2> b{
+        -(CD + atildec(0) * lambdac(0) + gammac(0) * Dot(gradCD, xc - xtc)),
+        -(CH + atildec(1) * lambdac(1) + gammac(1) * Dot(gradCH, xc - xtc))};
+    SVector<ScalarType, 2> D = Ones<ScalarType, 2, 1>() + gammac;
+    SMatrix<ScalarType, 2, 2> A{};
+    A(0, 0) =
+        D(0) * (minvc(0) * SquaredNorm(gradCD.Col(0)) + minvc(1) * SquaredNorm(gradCD.Col(1)) +
+                minvc(2) * SquaredNorm(gradCD.Col(2)) + minvc(3) * SquaredNorm(gradCD.Col(3))) +
+        atildec(0);
+    A(1, 1) =
+        D(1) * (minvc(0) * SquaredNorm(gradCH.Col(0)) + minvc(1) * SquaredNorm(gradCH.Col(1)) +
+                minvc(2) * SquaredNorm(gradCH.Col(2)) + minvc(3) * SquaredNorm(gradCH.Col(3))) +
+        atildec(1);
+    A(0, 1) =
+        (minvc(0) * Dot(gradCD.Col(0), gradCH.Col(0)) +
+         minvc(1) * Dot(gradCD.Col(1), gradCH.Col(1)) +
+         minvc(2) * Dot(gradCD.Col(2), gradCH.Col(2)) +
+         minvc(3) * Dot(gradCD.Col(3), gradCH.Col(3)));
+    A(1, 0) = A(0, 1);
+    A(0, 1) *= D(0);
+    A(1, 0) *= D(1);
+    // Project block constraint
+    SVector<ScalarType, 2> dlambda = Solve2x2(A, b);
+    lambdac += dlambda;
+    pbat::common::ForRange<0, 4>([&]<auto i>() {
+        xc.Col(i) += minvc(i) * (dlambda(0) * gradCD.Col(i) + dlambda(1) * gradCH.Col(i));
+    });
 }
 
 template <
@@ -135,7 +122,7 @@ template <
     mini::CMatrix TMatrixXF,
     mini::CMatrix TMatrixXV,
     class ScalarType = typename TMatrixXV::ScalarType>
-PBAT_DEVICE bool ProjectVertexTriangle(
+PBAT_HOST_DEVICE bool ProjectVertexTriangle(
     ScalarType minvv,
     TMatrixMinvF const& minvf,
     TMatrixXVT const& xvt,

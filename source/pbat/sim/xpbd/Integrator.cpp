@@ -113,38 +113,30 @@ void Integrator::Step(Scalar dt, Index iterations, Index substeps)
                         mini::SVector<Scalar, 4> minvc = FromEigen(data.minv(vinds).head<4>());
                         mini::SVector<Scalar, 2> atildec =
                             FromEigen(alphaSNH.segment<2>(2 * c)) / dt2;
-                        mini::SVector<Scalar, 2> betac  = FromEigen(betaSNH.segment<2>(2 * c));
-                        mini::SVector<Scalar, 2> gammac = atildec * betac * dt;
-                        Scalar gammaSNHc                = data.gammaSNH(c);
-                        mini::SMatrix<Scalar, 3, 3> DmInv =
+                        mini::SVector<Scalar, 2> betac = FromEigen(betaSNH.segment<2>(2 * c));
+                        mini::SVector<Scalar, 2> gammac{
+                            atildec(0) * betac(0) * dt,
+                            atildec(1) * betac(1) * dt};
+                        Scalar gammaSNHc = data.gammaSNH(c);
+                        mini::SMatrix<Scalar, 3, 3> DmInvc =
                             FromEigen(data.DmInv.block<3, 3>(0, 3 * c));
                         mini::SMatrix<Scalar, 3, 4> xtc =
                             FromEigen(data.xt(Eigen::placeholders::all, vinds).block<3, 4>(0, 0));
                         mini::SMatrix<Scalar, 3, 4> xc =
                             FromEigen(data.x(Eigen::placeholders::all, vinds).block<3, 4>(0, 0));
-                        Vector<2> lambdac = lambdaSNH.segment<2>(2 * c);
+                        mini::SVector<Scalar, 2> lambdac = FromEigen(lambdaSNH.segment<2>(2 * c));
                         // Project constraints
-                        kernels::ProjectDeviatoric(
-                            c,
+                        kernels::ProjectBlockNeoHookean(
                             minvc,
-                            DmInv,
-                            atildec(0),
-                            gammac(0),
-                            xtc,
-                            lambdac(0),
-                            xc);
-                        kernels::ProjectHydrostatic(
-                            c,
-                            minvc,
-                            DmInv,
-                            atildec(1),
+                            DmInvc,
                             gammaSNHc,
-                            gammac(1),
+                            atildec,
+                            gammac,
                             xtc,
-                            lambdac(1),
+                            lambdac,
                             xc);
                         // Update solution
-                        lambdaSNH.segment<2>(2 * c)             = lambdac;
+                        lambdaSNH.segment<2>(2 * c)             = ToEigen(lambdac);
                         data.x(Eigen::placeholders::all, vinds) = ToEigen(xc);
                     });
             }

@@ -70,6 +70,8 @@ if __name__ == "__main__":
                         dest="muC", default=1e1)
     parser.add_argument("-t", "--translation", help="Distance in z axis between every input mesh as multiplier of input mesh extents", type=float,
                         dest="translation", default=0.1)
+    parser.add_argument("--fixed-axis", help="Axis of scene to fix", type=int,
+                        dest="fixed_axis", default=2)
     parser.add_argument("--percent-fixed", help="Percentage, in the z-axis, of scene mesh to fix", type=float,
                         dest="percent_fixed", default=0.01)
     parser.add_argument("--use-gpu", help="Use GPU implementation", action="store_true",
@@ -104,7 +106,8 @@ if __name__ == "__main__":
     Xmin = mesh.X.min(axis=1)
     Xmax = mesh.X.max(axis=1)
     extent = Xmax - Xmin
-    Xmax[-1] = Xmin[-1] + args.percent_fixed*extent[-1]
+    Xmax[args.fixed_axis] = Xmin[args.fixed_axis] + \
+        args.percent_fixed*extent[args.fixed_axis]
     aabb = pbat.geometry.aabb(np.vstack((Xmin, Xmax)).T)
     vdbc = aabb.contained(mesh.X)
     minv = 1 / m
@@ -133,11 +136,14 @@ if __name__ == "__main__":
         ).with_elastic_material(
             np.vstack((mue, lambdae))
         ).with_damping(
-            np.full(mesh.E.shape[1]*2, args.betaSNH), pbat.sim.xpbd.Constraint.StableNeoHookean
+            np.full(
+                mesh.E.shape[1]*2, args.betaSNH), pbat.sim.xpbd.Constraint.StableNeoHookean
         ).with_compliance(
-            np.full(VC.shape[0], args.alphaC), pbat.sim.xpbd.Constraint.Collision
+            np.full(VC.shape[0],
+                    args.alphaC), pbat.sim.xpbd.Constraint.Collision
         ).with_damping(
-            np.full(VC.shape[0], args.betaC), pbat.sim.xpbd.Constraint.Collision
+            np.full(VC.shape[0],
+                    args.betaC), pbat.sim.xpbd.Constraint.Collision
         ).with_collision_penalties(
             muC
         ).with_friction_coefficients(
