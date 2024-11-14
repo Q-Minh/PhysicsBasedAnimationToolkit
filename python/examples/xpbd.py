@@ -64,7 +64,7 @@ def partition_clustered_constraint_graph(C):
     # We will try to partition this weighted dual graph such that the edge cut
     # is minimized, i.e. "highly connected" elements (ei,ej) with large w(ei,ej)
     # will be in the same partition (as much as possible).
-    weights = 10**np.array(GGT.data, dtype=np.int64)
+    weights = 10**np.array(2*(GGT.data - 1), dtype=np.int64)
     # For tetrahedral elements, 5-element partitions is a good choice
     cluster_size = 5
     # Cluster our constraint graph via (edge-)cut-minimizing graph partitioning into
