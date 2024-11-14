@@ -116,7 +116,6 @@ PBAT_HOST_DEVICE void ProjectBlockNeoHookean(
 }
 
 template <
-    mini::CMatrix TMatrixMinvF,
     mini::CMatrix TMatrixXVT,
     mini::CMatrix TMatrixXFT,
     mini::CMatrix TMatrixXF,
@@ -124,7 +123,6 @@ template <
     class ScalarType = typename TMatrixXV::ScalarType>
 PBAT_HOST_DEVICE bool ProjectVertexTriangle(
     ScalarType minvv,
-    TMatrixMinvF const& minvf,
     TMatrixXVT const& xvt,
     TMatrixXFT const& xft,
     TMatrixXF const& xf,

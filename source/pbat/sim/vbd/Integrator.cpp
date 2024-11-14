@@ -65,7 +65,7 @@ void Integrator::Step(Scalar dt, Index iterations, Index substeps, Scalar rho)
             {
                 auto const nVerticesInPartition = static_cast<IndexType>(partition.size());
                 tbb::parallel_for(IndexType(0), nVerticesInPartition, [&](IndexType v) {
-                    auto i     = partition[v];
+                    auto i     = partition[static_cast<std::size_t>(v)];
                     auto begin = data.GVGp[i];
                     auto end   = data.GVGp[i + 1];
                     // Compute vertex elastic hessian

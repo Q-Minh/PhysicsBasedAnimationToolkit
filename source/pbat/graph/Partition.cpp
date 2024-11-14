@@ -31,7 +31,7 @@ std::vector<Index> Partition(
     options[METIS_OPTION_PTYPE]     = METIS_PTYPE_KWAY;
     options[METIS_OPTION_NUMBERING] = 0;
     idx_t objval(-1);
-    std::vector<idx_t> part(nVertices, idx_t(-1));
+    std::vector<idx_t> part(static_cast<std::size_t>(nVertices), idx_t(-1));
     int const ec = METIS_PartGraphKway(
         &nVertices,
         &nBalancingConstraints,
@@ -54,7 +54,7 @@ std::vector<Index> Partition(
                                          "Unknown error from METIS";
         throw std::invalid_argument(what);
     }
-    auto pbatPart = common::ToEigen(part).cast<Index>().eval();
+    auto pbatPart = common::ToEigen(part).cast<Index>();
     return std::vector<Index>{pbatPart.begin(), pbatPart.end()};
 }
 #endif // PBAT_USE_METIS

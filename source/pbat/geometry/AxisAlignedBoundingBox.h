@@ -22,11 +22,7 @@ class AxisAlignedBoundingBox : public Eigen::AlignedBox<Scalar, Dims>
 
     static auto constexpr kDims = Dims;
 
-    AxisAlignedBoundingBox()                = default;
-    AxisAlignedBoundingBox(SelfType const&) = default;
-    AxisAlignedBoundingBox(SelfType&&)      = default;
-    SelfType& operator=(SelfType const&)    = default;
-    SelfType& operator=(SelfType&&)         = default;
+    AxisAlignedBoundingBox() = default;
 
     AxisAlignedBoundingBox(BaseType const& box);
     AxisAlignedBoundingBox(BaseType&& box);

@@ -206,7 +206,6 @@ void IntegratorImpl::Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps)
                         CF[1][pairs[c].second],
                         CF[2][pairs[c].second]};
                     GpuScalar minvv              = minv[v];
-                    SVector<GpuScalar, 3> minvf  = FromFlatBuffer(minv, f);
                     SVector<GpuScalar, 3> xvt    = FromBuffers<3, 1>(xt, v);
                     SVector<GpuScalar, 3> xv     = FromBuffers<3, 1>(x, v);
                     SMatrix<GpuScalar, 3, 3> xft = FromBuffers(xt, f.Transpose());
@@ -217,7 +216,6 @@ void IntegratorImpl::Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps)
                     GpuScalar muc                = muC[sv];
                     bool const bProject          = ProjectVertexTriangle(
                         minvv,
-                        minvf,
                         xvt,
                         xft,
                         xf,

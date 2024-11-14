@@ -260,14 +260,15 @@ std::pair<VectorX, VectorX> TransferQuadrature(
     VectorX error = VectorX::Zero(nSimplices);
     VectorX wi1   = VectorX::Zero(Xi1.cols());
     tbb::parallel_for(Index(0), nSimplices, [&](Index s) {
-        auto S1begin = S1P[s];
-        auto S1end   = S1P[s + 1];
+        auto sStl    = static_cast<std::size_t>(s);
+        auto S1begin = S1P[sStl];
+        auto S1end   = S1P[sStl + 1];
         if (S1end > S1begin)
         {
             auto s1inds     = S1N(Eigen::seq(S1begin, S1end - 1));
             MatrixX Xg1     = Xi1(Eigen::placeholders::all, s1inds);
-            auto S2begin    = S2P[s];
-            auto S2end      = S2P[s + 1];
+            auto S2begin    = S2P[sStl];
+            auto S2end      = S2P[sStl + 1];
             auto s2inds     = S2N(Eigen::seq(S2begin, S2end - 1));
             MatrixX Xg2     = Xi2(Eigen::placeholders::all, s2inds);
             VectorX wg2     = wi2(s2inds);
@@ -371,7 +372,7 @@ ReferenceMomentFittingSystems(
     for (auto s = 0; s < nSimplices; ++s)
         if (S1P(s + 1) > S1P(s))
             ++nSystems;
-    std::vector<Index> nQuads(nSystems, Index(0));
+    std::vector<Index> nQuads(static_cast<std::size_t>(nSystems), Index(0));
     for (auto s = 0, sy = 0; s < nSimplices; ++s)
     {
         if (S1P(s + 1) > S1P(s))
@@ -430,13 +431,13 @@ CSRMatrix BlockDiagonalReferenceMomentFittingSystem(
     auto const nrows      = nblockrows * nblocks;
     auto const ncols      = P(Eigen::placeholders::last);
     CSRMatrix GM(nrows, ncols);
-    std::vector<Index> reserves(nrows);
+    std::vector<Index> reserves(static_cast<std::size_t>(nrows));
     for (auto b = 0; b < nblocks; ++b)
     {
         auto begin            = P(b);
         auto end              = P(b + 1);
         auto const nblockcols = end - begin;
-        auto const offset     = b * nblockrows;
+        auto const offset     = static_cast<std::size_t>(b * nblockrows);
         for (auto i = 0; i < nblockrows; ++i)
             reserves[offset + i] = nblockcols;
     }

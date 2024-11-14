@@ -21,10 +21,11 @@ Integrator::Integrator(Data dataIn)
       mTetsInContact(),
       mSquaredDistancesToTriangles()
 {
-    mParticlesInContact.reserve(data.V.size());
-    mTrianglesInContact.reserve(data.V.size());
-    mSquaredDistancesToTriangles.reserve(data.V.size());
-    mTetsInContact.reserve(data.V.size());
+    auto const nCollisionVertices = static_cast<std::size_t>(data.V.size());
+    mParticlesInContact.reserve(nCollisionVertices);
+    mTrianglesInContact.reserve(nCollisionVertices);
+    mSquaredDistancesToTriangles.reserve(nCollisionVertices);
+    mTetsInContact.reserve(nCollisionVertices);
 }
 
 void Integrator::Step(Scalar dt, Index iterations, Index substeps)
@@ -34,7 +35,6 @@ void Integrator::Step(Scalar dt, Index iterations, Index substeps)
     Scalar sdt            = dt / (static_cast<Scalar>(substeps));
     Scalar sdt2           = sdt * sdt;
     auto const nParticles = data.x.cols();
-    auto const nTets      = data.T.cols();
     using IndexType       = std::remove_const_t<decltype(nParticles)>;
     using namespace math::linalg;
     using mini::FromEigen;
@@ -58,17 +58,18 @@ void Integrator::Step(Scalar dt, Index iterations, Index substeps)
         fCullPointTet,
         bParallelize);
     mParticlesInContact.clear();
-    for (auto i = 0; i < mTetsInContact.size(); ++i)
+    for (auto i = 0ULL; i < mTetsInContact.size(); ++i)
     {
         if (mTetsInContact[i] >= Index(0))
         {
-            mParticlesInContact.push_back(i);
+            mParticlesInContact.push_back(static_cast<Index>(i));
         }
     }
     Index const nParticlesInContact = static_cast<Index>(mParticlesInContact.size());
     // Find nearest boundary face
     auto const fCullPointTriangle = [&](Index i, IndexVector<3> const& tri) {
-        return data.BV(data.V(mParticlesInContact[i])) == data.BV(tri(0));
+        auto iStl = static_cast<std::size_t>(i);
+        return data.BV(data.V(mParticlesInContact[iStl])) == data.BV(tri(0));
     };
     std::tie(mTrianglesInContact, mSquaredDistancesToTriangles) =
         mTriangleBvh.NearestPrimitivesToPoints(
@@ -103,16 +104,17 @@ void Integrator::Step(Scalar dt, Index iterations, Index substeps)
             auto const nPartitions = static_cast<Index>(data.Pptr.size()) - 1;
             for (auto p = 0; p < nPartitions; ++p)
             {
-                auto const pbegin                = data.Pptr[p];
-                auto const pend                  = data.Pptr[p + 1];
+                auto const pStl                  = static_cast<std::size_t>(p);
+                auto const pbegin                = data.Pptr[pStl];
+                auto const pend                  = data.Pptr[pStl + 1];
                 auto const nPartitionConstraints = static_cast<IndexType>(pend - pbegin);
                 tbb::parallel_for(
                     IndexType(0),
                     nPartitionConstraints,
                     [&, dt = sdt, dt2 = sdt2](IndexType k) {
                         // Gather constraint data
-                        auto c                         = data.Padj[pbegin + k];
-                        auto vinds                     = data.T.col(c);
+                        auto c     = data.Padj[static_cast<std::size_t>(pbegin) + k];
+                        auto vinds = data.T.col(c);
                         mini::SVector<Scalar, 4> minvc = FromEigen(data.minv(vinds).head<4>());
                         mini::SVector<Scalar, 2> atildec =
                             FromEigen(alphaSNH.segment<2>(2 * c)) / dt2;
@@ -149,13 +151,13 @@ void Integrator::Step(Scalar dt, Index iterations, Index substeps)
             auto& betaContact   = data.beta[static_cast<int>(EConstraint::Collision)];
             auto& lambdaContact = data.lambda[static_cast<int>(EConstraint::Collision)];
             tbb::parallel_for(Index(0), nParticlesInContact, [&, dt = sdt, dt2 = sdt2](Index c) {
-                auto sv                        = mParticlesInContact[c];
-                auto v                         = data.V(mParticlesInContact[c]);
-                auto f                         = mTrianglesInContact[c];
-                IndexVector<3> fv              = data.F.col(f);
-                Scalar minvv                   = data.minv(v);
-                mini::SVector<Scalar, 3> minvf = FromEigen(data.minv(fv).head<3>());
-                mini::SVector<Scalar, 3> xvt   = FromEigen(data.xt.col(v).head<3>());
+                auto cStl                    = static_cast<std::size_t>(c);
+                auto sv                      = mParticlesInContact[cStl];
+                auto v                       = data.V(mParticlesInContact[cStl]);
+                auto f                       = mTrianglesInContact[cStl];
+                IndexVector<3> fv            = data.F.col(f);
+                Scalar minvv                 = data.minv(v);
+                mini::SVector<Scalar, 3> xvt = FromEigen(data.xt.col(v).head<3>());
                 mini::SMatrix<Scalar, 3, 3> xft =
                     FromEigen(data.xt(Eigen::placeholders::all, fv).block<3, 3>(0, 0));
                 mini::SMatrix<Scalar, 3, 3> xf =
@@ -168,7 +170,6 @@ void Integrator::Step(Scalar dt, Index iterations, Index substeps)
 
                 bool const bProject = kernels::ProjectVertexTriangle(
                     minvv,
-                    minvf,
                     xvt,
                     xft,
                     xf,

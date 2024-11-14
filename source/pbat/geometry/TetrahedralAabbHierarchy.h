@@ -62,7 +62,7 @@ class TetrahedralAabbHierarchy : public BoundingVolumeHierarchy<
         Eigen::MatrixBase<TDerivedP> const& P,
         bool bParallelize = false) const;
 
-    auto const& GetBoundingVolumes() const { return mBoundingVolumes; }
+    [[maybe_unused]] auto const& GetBoundingVolumes() const { return mBoundingVolumes; }
 
     template <class TDerivedP>
     void SetV(Eigen::MatrixBase<TDerivedP> const& P)
@@ -134,7 +134,7 @@ inline std::vector<Index> TetrahedralAabbHierarchy::PrimitivesContainingPoints(
 {
     return PrimitivesContainingPoints(
         P,
-        [](auto i, auto primitive) { return false; },
+        [](auto, auto) { return false; },
         bParallelize);
 }
 

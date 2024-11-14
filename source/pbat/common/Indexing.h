@@ -29,9 +29,9 @@ std::vector<Index> CumSum(R&& sizes)
 template <std::integral TIndex>
 std::vector<TIndex> Counts(auto begin, auto end, auto ncounts)
 {
-    std::vector<TIndex> counts(ncounts, TIndex(0));
+    std::vector<TIndex> counts(static_cast<std::size_t>(ncounts), TIndex(0));
     for (auto it = begin; it != end; ++it)
-        ++counts[*it];
+        ++counts[static_cast<std::size_t>(*it)];
     return counts;
 }
 

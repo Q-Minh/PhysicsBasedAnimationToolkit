@@ -13,102 +13,102 @@ namespace sim {
 namespace xpbd {
 
 Data& Data::WithVolumeMesh(
-    Eigen::Ref<MatrixX const> const& V,
-    Eigen::Ref<IndexMatrixX const> const& E)
+    Eigen::Ref<MatrixX const> const& Vin,
+    Eigen::Ref<IndexMatrixX const> const& Ein)
 {
-    this->x  = V;
-    this->xt = V;
-    this->T  = E;
+    this->x  = Vin;
+    this->xt = Vin;
+    this->T  = Ein;
     return *this;
 }
 
 Data& Data::WithSurfaceMesh(
-    Eigen::Ref<IndexVectorX const> const& V,
-    Eigen::Ref<IndexMatrixX const> const& F)
+    Eigen::Ref<IndexVectorX const> const& Vin,
+    Eigen::Ref<IndexMatrixX const> const& Fin)
 {
-    this->V = V;
-    this->F = F;
+    this->V = Vin;
+    this->F = Fin;
     return *this;
 }
 
-Data& Data::WithBodies(Eigen::Ref<IndexVectorX const> const& BV)
+Data& Data::WithBodies(Eigen::Ref<IndexVectorX const> const& BVin)
 {
-    this->BV = BV;
+    this->BV = BVin;
     return *this;
 }
 
-Data& Data::WithVelocity(Eigen::Ref<MatrixX const> const& v)
+Data& Data::WithVelocity(Eigen::Ref<MatrixX const> const& vIn)
 {
-    this->v = v;
+    this->v = vIn;
     return *this;
 }
 
-Data& Data::WithAcceleration(Eigen::Ref<MatrixX const> const& aext)
+Data& Data::WithAcceleration(Eigen::Ref<MatrixX const> const& aextIn)
 {
-    this->aext = aext;
+    this->aext = aextIn;
     return *this;
 }
 
-Data& Data::WithMassInverse(Eigen::Ref<VectorX const> const& minv)
+Data& Data::WithMassInverse(Eigen::Ref<VectorX const> const& minvIn)
 {
-    this->minv = minv;
+    this->minv = minvIn;
     return *this;
 }
 
-Data& Data::WithElasticMaterial(Eigen::Ref<MatrixX const> const& lame)
+Data& Data::WithElasticMaterial(Eigen::Ref<MatrixX const> const& lameIn)
 {
-    this->lame = lame;
+    this->lame = lameIn;
     return *this;
 }
 
-Data& Data::WithCollisionPenalties(Eigen::Ref<VectorX const> const& muV)
+Data& Data::WithCollisionPenalties(Eigen::Ref<VectorX const> const& muVin)
 {
-    this->muV = muV;
+    this->muV = muVin;
     return *this;
 }
 
-Data& Data::WithFrictionCoefficients(Scalar muS, Scalar muD)
+Data& Data::WithFrictionCoefficients(Scalar muSin, Scalar muDin)
 {
-    this->muS = muS;
-    this->muD = muD;
+    this->muS = muSin;
+    this->muD = muDin;
     return *this;
 }
 
-Data& Data::WithDamping(Eigen::Ref<VectorX> const& beta, EConstraint constraint)
+Data& Data::WithDamping(Eigen::Ref<VectorX> const& betaIn, EConstraint constraint)
 {
-    this->beta[static_cast<int>(constraint)] = beta;
+    this->beta[static_cast<std::size_t>(constraint)] = betaIn;
     return *this;
 }
 
-Data& Data::WithCompliance(Eigen::Ref<VectorX> const& alpha, EConstraint constraint)
+Data& Data::WithCompliance(Eigen::Ref<VectorX> const& alphaIn, EConstraint constraint)
 {
-    this->alpha[static_cast<int>(constraint)] = alpha;
+    this->alpha[static_cast<std::size_t>(constraint)] = alphaIn;
     return *this;
 }
 
-Data& Data::WithPartitions(std::vector<Index> const& Pptr, std::vector<Index> const& Padj)
+Data& Data::WithPartitions(std::vector<Index> const& PptrIn, std::vector<Index> const& PadjIn)
 {
-    this->Pptr = Pptr;
-    this->Padj = Padj;
+    this->Pptr = PptrIn;
+    this->Padj = PadjIn;
     return *this;
 }
 
 Data& Data::WithClusterPartitions(
-    std::vector<Index> const& SGptr,
-    std::vector<Index> const& SGadj,
-    std::vector<Index> const& Cptr,
-    std::vector<Index> const& Cadj)
+    std::vector<Index> const& SGptrIn,
+    std::vector<Index> const& SGadjIn,
+    std::vector<Index> const& CptrIn,
+    std::vector<Index> const& CadjIn)
 {
-    this->SGptr = SGptr;
-    this->SGadj = SGadj;
-    this->Cptr  = Cptr;
-    this->Cadj  = Cadj;
+    this->SGptr = SGptrIn;
+    this->SGadj = SGadjIn;
+    this->Cptr  = CptrIn;
+    this->Cadj  = CadjIn;
     return *this;
 }
 
-Data& Data::WithDirichletConstrainedVertices(IndexVectorX const& dbc)
+Data& Data::WithDirichletConstrainedVertices(IndexVectorX const& dbcIn)
 {
-    this->dbc = dbc;
+    this->dbc = dbcIn;
     return *this;
 }
 
@@ -146,7 +146,7 @@ Data& Data::Construct(bool bValidate)
         lame.row(1).setConstant(llambda);
     }
     DmInv.resize(3, 3 * T.cols());
-    auto snhConstraintId = static_cast<int>(EConstraint::StableNeoHookean);
+    auto snhConstraintId = static_cast<std::size_t>(EConstraint::StableNeoHookean);
     alpha[snhConstraintId].resize(2 * T.cols());
     gammaSNH.resize(T.cols());
     tbb::parallel_for(Index(0), T.cols(), [&](Index t) {
@@ -171,7 +171,7 @@ Data& Data::Construct(bool bValidate)
     }
     lambda[snhConstraintId].setZero(2 * T.cols());
     // Set contact data
-    auto collisionConstraintId = static_cast<int>(EConstraint::Collision);
+    auto collisionConstraintId = static_cast<std::size_t>(EConstraint::Collision);
     if (alpha[collisionConstraintId].size() == 0)
     {
         alpha[collisionConstraintId].setConstant(V.size(), Scalar(0));

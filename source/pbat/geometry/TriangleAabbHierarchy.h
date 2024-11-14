@@ -54,7 +54,8 @@ class TriangleAabbHierarchy<3> : public BoundingVolumeHierarchy<
 
     void Update();
 
-    IndexMatrixX OverlappingPrimitives(SelfType const& bvh, std::size_t reserve = 1000ULL) const;
+    [[maybe_unused]] IndexMatrixX
+    OverlappingPrimitives(SelfType const& bvh, std::size_t reserve = 1000ULL) const;
 
     template <class TDerivedP>
     std::vector<Index> PrimitivesContainingPoints(
@@ -72,7 +73,7 @@ class TriangleAabbHierarchy<3> : public BoundingVolumeHierarchy<
         Eigen::MatrixBase<TDerivedP> const& P,
         bool bParallelize = false) const;
 
-    auto const& GetBoundingVolumes() const { return mBoundingVolumes; }
+    [[maybe_unused]] auto const& GetBoundingVolumes() const { return mBoundingVolumes; }
 
     template <class TDerivedP>
     void SetV(Eigen::MatrixBase<TDerivedP> const& P)
@@ -267,7 +268,7 @@ TriangleAabbHierarchy<3>::NearestPrimitivesToPoints(
 {
     return NearestPrimitivesToPoints(
         P,
-        [](auto i, auto F) { return false; },
+        [](auto, auto) { return false; },
         bParallelize);
 }
 
@@ -302,9 +303,10 @@ class TriangleAabbHierarchy<2> : public BoundingVolumeHierarchy<
     template <class RPrimitiveIndices>
     BoundingVolumeType BoundingVolumeOf(RPrimitiveIndices&& pinds) const;
 
-    void Update();
+    [[maybe_unused]] void Update();
 
-    IndexMatrixX OverlappingPrimitives(SelfType const& bvh, std::size_t reserve = 1000ULL) const;
+    [[maybe_unused]] IndexMatrixX
+    OverlappingPrimitives(SelfType const& bvh, std::size_t reserve = 1000ULL) const;
 
     template <class TDerivedP>
     std::vector<Index> PrimitivesContainingPoints(
@@ -316,7 +318,7 @@ class TriangleAabbHierarchy<2> : public BoundingVolumeHierarchy<
         Eigen::MatrixBase<TDerivedP> const& P,
         bool bParallelize = false) const;
 
-    auto const& GetBoundingVolumes() const { return mBoundingVolumes; }
+    [[maybe_unused]] auto const& GetBoundingVolumes() const { return mBoundingVolumes; }
 
     template <class TDerivedP>
     void SetV(Eigen::MatrixBase<TDerivedP> const& P)
@@ -330,7 +332,7 @@ class TriangleAabbHierarchy<2> : public BoundingVolumeHierarchy<
     Eigen::Ref<IndexMatrixX const> C;
 };
 
-inline TriangleAabbHierarchy<2>::TriangleAabbHierarchy(
+[[maybe_unused]] inline TriangleAabbHierarchy<2>::TriangleAabbHierarchy(
     Eigen::Ref<MatrixX const> const& V,
     Eigen::Ref<IndexMatrixX const> const& C,
     std::size_t maxPointsInLeaf)

@@ -13,6 +13,7 @@ if(NOT TARGET Eigen3::Eigen)
         GIT_PROGRESS TRUE
     )
     FetchContent_MakeAvailable(eigen)
+    set_target_properties(eigen PROPERTIES SYSTEM ON)
 endif()
 
 if(PBAT_BUILD_PYTHON_BINDINGS)
@@ -30,6 +31,7 @@ if(PBAT_ENABLE_PROFILER)
         GIT_PROGRESS TRUE
     )
     FetchContent_MakeAvailable(tracy)
+    set_target_properties(TracyClient PROPERTIES SYSTEM ON)
 endif()
 
 if(PBAT_USE_INTEL_MKL)
