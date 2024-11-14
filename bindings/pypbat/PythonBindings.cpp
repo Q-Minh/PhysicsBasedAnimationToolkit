@@ -1,6 +1,7 @@
 #include "fem/Fem.h"
 #include "geometry/Geometry.h"
 #include "gpu/Gpu.h"
+#include "graph/Graph.h"
 #include "math/Math.h"
 #include "profiling/Profiling.h"
 #include "sim/Sim.h"
@@ -17,6 +18,8 @@ PYBIND11_MODULE(_pbat, m)
     pbat::py::fem::Bind(mfem);
     auto mgeometry = m.def_submodule("geometry");
     pbat::py::geometry::Bind(mgeometry);
+    auto mgraph = m.def_submodule("graph");
+    pbat::py::graph::Bind(mgraph);
     auto mmath = m.def_submodule("math");
     pbat::py::math::Bind(mmath);
     auto msim = m.def_submodule("sim");

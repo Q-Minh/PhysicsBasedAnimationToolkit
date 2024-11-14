@@ -9,6 +9,7 @@ if platform.system() == "Windows":
 
 import pbatoolkit.fem
 import pbatoolkit.geometry
+import pbatoolkit.graph
 import pbatoolkit.sim
 import pbatoolkit.profiling
 import pbatoolkit.math

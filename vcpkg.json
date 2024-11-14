@@ -44,6 +44,15 @@
                 }
             ]
         },
+        "metis": {
+            "description": "Use Metis for graph partitioning",
+            "dependencies": [
+                {
+                    "name": "metis",
+                    "version>=": "2022-07-27#0"
+                }
+            ]
+        },
         "python": {
             "description": "Enable building Python bindings",
             "dependencies": [

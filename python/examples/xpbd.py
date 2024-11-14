@@ -35,7 +35,10 @@ def partition_constraints(C):
     data = np.ones(math.prod(C.shape))
     G = sp.sparse.coo_array((data, (row, col)), shape=(
         C.shape[0], V.shape[0])).asformat("csr")
-    G = nx.Graph(G @ G.T)
+    GGT = G @ G.T
+    # weights = 10**np.array(GGT.data, dtype=np.int64)
+    # partitioning = np.array(pbat.graph.partition(GGT.indptr, GGT.indices, weights, int(C.shape[0] / 5)))
+    G = nx.Graph(GGT)
     GC = nx.greedy_color(G, strategy="random_sequential")
     GC = color_dict_to_array(GC, C.shape[0]).astype(int)
     npartitions = GC.max() + 1
@@ -43,7 +46,7 @@ def partition_constraints(C):
     np.add.at(psizes[1:], GC, 1)
     Pptr = list(itertools.accumulate(psizes))
     Padj = np.argsort(GC)
-    return Pptr, Padj, GC
+    return Pptr, Padj, GC, partitioning
 
 
 if __name__ == "__main__":
@@ -121,7 +124,7 @@ if __name__ == "__main__":
     muC = args.muC*muC[VC]
     max_overlaps = 20 * mesh.X.shape[1]
     max_contacts = 8*max_overlaps
-    Pptr, Padj, GC = partition_constraints(mesh.E.T)
+    Pptr, Padj, GC, partitioning = partition_constraints(mesh.E.T)
 
     integrator_type = pbat.gpu.xpbd.Integrator if args.gpu else pbat.sim.xpbd.Integrator
     xpbd = integrator_type(
@@ -166,6 +169,7 @@ if __name__ == "__main__":
     ps.init()
     vm = ps.register_volume_mesh("Simulation mesh", mesh.X.T, mesh.E.T)
     vm.add_scalar_quantity("Coloring", GC, defined_on="cells", cmap="jet")
+    vm.add_scalar_quantity("Partitioning", partitioning, defined_on="cells", cmap="jet")
     pc = ps.register_point_cloud("Dirichlet", mesh.X[:, vdbc].T)
     dt = 0.01
     iterations = 1

@@ -21,6 +21,7 @@ target_compile_definitions(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToo
     $<$<BOOL:${PBAT_USE_INTEL_MKL}>:EIGEN_USE_MKL_ALL>
     $<$<BOOL:${PBAT_USE_INTEL_MKL}>:PBAT_USE_INTEL_MKL>
     $<$<BOOL:${PBAT_USE_SUITESPARSE}>:PBAT_USE_SUITESPARSE>
+    $<$<BOOL:${PBAT_USE_METIS}>:PBAT_USE_METIS>
     $<$<BOOL:${PBAT_USE_CUDA}>:PBAT_USE_CUDA>
     $<$<BOOL:${PBAT_USE_CUDA}>:EIGEN_NO_CUDA>
     PBAT_ROOT="${PROJECT_SOURCE_DIR}"
@@ -79,6 +80,13 @@ if(PBAT_USE_SUITESPARSE)
         SuiteSparse::ldl
         SuiteSparse::umfpack
         SuiteSparse::spqr
+    )
+endif()
+
+if(PBAT_USE_METIS)
+    target_link_libraries(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
+        PRIVATE
+        metis
     )
 endif()
 

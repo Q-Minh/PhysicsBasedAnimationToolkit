@@ -63,6 +63,10 @@ if(PBAT_USE_SUITESPARSE)
     find_package(suitesparse CONFIG REQUIRED)
 endif()
 
+if(PBAT_USE_METIS)
+    find_package(metis CONFIG REQUIRED)
+endif()
+
 if(PBAT_USE_CUDA)
     include(CheckLanguage)
     check_language(CUDA)
