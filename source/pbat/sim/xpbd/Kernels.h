@@ -15,6 +15,19 @@ namespace kernels {
 
 namespace mini = pbat::math::linalg::mini;
 
+/**
+ * @brief
+ * @tparam ScalarType
+ * @tparam TMatrixXT
+ * @tparam TMatrixVT
+ * @tparam TMatrixA
+ * @param xt
+ * @param vt
+ * @param aext
+ * @param dt
+ * @param dt2
+ * @return
+ */
 template <
     mini::CMatrix TMatrixXT,
     mini::CMatrix TMatrixVT,
@@ -30,21 +43,32 @@ PBAT_HOST_DEVICE mini::SVector<ScalarType, TMatrixXT::kRows> InitialPosition(
     return xt + dt * vt + dt2 * aext;
 }
 
-template <
-    mini::CMatrix TMatrixA,
-    mini::CMatrix TMatrixB,
-    class ScalarType = typename TMatrixA::ScalarType>
-PBAT_HOST_DEVICE mini::SVector<ScalarType, 2> Solve2x2(TMatrixA const& A, TMatrixB const& b)
-{
-    mini::SVector<ScalarType, 2> x;
-    // NOTE: Add partial pivoting if conditioning problems
-    ScalarType const A2 = (A(1, 1) - (A(1, 0) * A(0, 1) / A(0, 0)));
-    ScalarType const b2 = b(1) - (A(1, 0) * b(0) / A(0, 0));
-    x(1)                = b2 / A2;
-    x(0)                = (b(0) - A(0, 1) * x(1)) / A(0, 0);
-    return x;
-}
-
+/**
+ * @brief Project coupled Stable Neo-Hookean constraints
+ *
+ * Implements the constraint coupling technique from
+ * Ton-That, Quoc-Minh, Paul G. Kry, and Sheldon Andrews.
+ * "Parallel block Neo-Hookean XPBD using graph clustering."
+ * Computers & Graphics 110 (2023): 1-10.
+ *
+ * @tparam TMatrixMinv
+ * @tparam TMatrixDmInv
+ * @tparam TMatrixAlphA
+ * @tparam TMatrixGamma
+ * @tparam TMatrixXTC
+ * @tparam TMatrixL
+ * @tparam TMatrixXC
+ * @tparam ScalarType
+ *
+ * @param minvc 4x1 vector of tetrahedron particle inverse masses
+ * @param DmInv 3x3 matrix of tetrahedron shape matrix inverse
+ * @param gammaSNHc Rest stable coefficient for Stable Neo-Hookean material
+ * @param atildec 2x1 Deviatoric and hydrostatic compliances
+ * @param gammac 2x1 XPBD damping terms
+ * @param xtc 3x4 tetrahedron particle positions at time t
+ * @param lambda 2x1 vector of XPBD Lagrange multipliers
+ * @param xc 3x4 current tetrahedron particle positions
+ */
 template <
     mini::CMatrix TMatrixMinv,
     mini::CMatrix TMatrixDmInv,
@@ -65,10 +89,10 @@ PBAT_HOST_DEVICE void ProjectBlockNeoHookean(
     TMatrixXC& xc)
 {
     using namespace mini;
-    // Compute deviatoric+hydrostatic elasticity
 #if defined(CUDART_VERSION)
     #pragma nv_diag_suppress 174
 #endif
+    // Compute deviatoric+hydrostatic elasticity
     SMatrix<ScalarType, 3, 3> F = (xc.Slice<3, 3>(0, 1) - Repeat<1, 3>(xc.Col(0))) * DmInv;
     ScalarType CD               = Norm(F);
     SMatrix<ScalarType, 3, 4> gradCD{};
@@ -108,13 +132,33 @@ PBAT_HOST_DEVICE void ProjectBlockNeoHookean(
     A(0, 1) *= D(0);
     A(1, 0) *= D(1);
     // Project block constraint
-    SVector<ScalarType, 2> dlambda = Solve2x2(A, b);
+    SVector<ScalarType, 2> dlambda = Inverse(A) * b;
     lambdac += dlambda;
     pbat::common::ForRange<0, 4>([&]<auto i>() {
         xc.Col(i) += minvc(i) * (dlambda(0) * gradCD.Col(i) + dlambda(1) * gradCH.Col(i));
     });
 }
 
+/**
+ * @brief
+ *
+ * @tparam TMatrixXVT
+ * @tparam TMatrixXFT
+ * @tparam TMatrixXF
+ * @tparam TMatrixXV
+ * @tparam ScalarType
+ * @param minvv
+ * @param xvt
+ * @param xft
+ * @param xf
+ * @param muC
+ * @param muS
+ * @param muD
+ * @param atildec
+ * @param gammac
+ * @param lambdac
+ * @param xv
+ */
 template <
     mini::CMatrix TMatrixXVT,
     mini::CMatrix TMatrixXFT,
@@ -201,6 +245,16 @@ PBAT_HOST_DEVICE bool ProjectVertexTriangle(
     return true;
 }
 
+/**
+ * @brief
+ * @tparam ScalarType
+ * @tparam TMatrixXT
+ * @tparam TMatrixX
+ * @param xt
+ * @param x
+ * @param dt
+ * @return
+ */
 template <
     mini::CMatrix TMatrixXT,
     mini::CMatrix TMatrixX,

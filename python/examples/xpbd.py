@@ -40,7 +40,7 @@ def mesh_dual_graph(C):
 
 
 def partition_clustered_constraint_graph(C):
-    """Implement the graph clustering technique from 
+    """Computes the clustered constraint graph's partitioning from 
     Ton-That, Quoc-Minh, Paul G. Kry, and Sheldon Andrews. 
     "Parallel block Neo-Hookean XPBD using graph clustering." 
     Computers & Graphics 110 (2023): 1-10.
@@ -49,11 +49,11 @@ def partition_clustered_constraint_graph(C):
         C (np.ndarray): Tetrahedral mesh elements
 
     Returns:
-        (np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray): 
-        The tuple (SGptr, SGadj, Cptr, Cadj, SGC) where (SGptr, SGadj) 
-        yields the clustered graph partitions, (Cptr, Cadj) yields the 
-        map from clusters to constraints, and SGC is the coloring on the
-        clustered graph.
+        (np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray): 
+        The tuple (SGptr, SGadj, Cptr, Cadj, clustering, SGC) where (SGptr, SGadj) 
+        yields the clustered graph partitions, (Cptr, Cadj) yields the map from 
+        clusters to constraints, clustering[c] yields the cluster which constraint c 
+        belongs to, and SGC is the coloring of the clusters.
     """
     GGT = mesh_dual_graph(C)
     # NOTE:
@@ -97,7 +97,7 @@ def partition_clustered_constraint_graph(C):
     np.add.at(psizes[1:], SGC, 1)
     SGptr = list(itertools.accumulate(psizes))
     SGadj = np.argsort(SGC)
-    return SGptr, SGadj, Cptr, Cadj, SGC
+    return SGptr, SGadj, Cptr, Cadj, clustering, SGC
 
 
 def partition_constraints(C):
@@ -110,7 +110,7 @@ def partition_constraints(C):
     np.add.at(psizes[1:], GC, 1)
     Pptr = list(itertools.accumulate(psizes))
     Padj = np.argsort(GC)
-    return Pptr, Padj, GC, partitioning
+    return Pptr, Padj, GC
 
 
 if __name__ == "__main__":
@@ -143,6 +143,8 @@ if __name__ == "__main__":
                         dest="percent_fixed", default=0.01)
     parser.add_argument("--use-gpu", help="Use GPU implementation", action="store_true",
                         dest="gpu", default=False)
+    parser.add_argument("--use-clustering", help="Use Ton-That et al. 2023's clustered constraint graph parallelization strategy", action="store_true",
+                        dest="cluster", default=False)
     args = parser.parse_args()
 
     # Construct FEM quantities for simulation
@@ -186,8 +188,7 @@ if __name__ == "__main__":
     for d in range(3):
         muC[F[:, d]] += (1/6)*dblA
     muC = args.muC*muC[VC]
-    max_overlaps = 20 * mesh.X.shape[1]
-    max_contacts = 8*max_overlaps
+    Pptr, Padj, GC = partition_constraints(mesh.E.T)
     data = pbat.sim.xpbd.Data(
     ).with_volume_mesh(
         mesh.X, mesh.E
@@ -214,22 +215,8 @@ if __name__ == "__main__":
         0.6, 0.4
     ).with_dirichlet_vertices(
         vdbc
-    )
-    has_partitioning = getattr(pbat.graph, "partition")
-    if has_partitioning:
-        SGptr, SGadj, Cptr, Cadj, SGC = partition_clustered_constraint_graph(
-            mesh.E.T)
-        data.with_cluster_partitions(SGptr, SGadj, Cptr, Cadj)
-    else:
-        Pptr, Padj, GC, partitioning = partition_constraints(mesh.E.T)
-        data.with_partitions(Pptr, Padj)
-    data.construct()
-
-    integrator_type = pbat.gpu.xpbd.Integrator if args.gpu else pbat.sim.xpbd.Integrator
-    xpbd = integrator_type(
-        data,
-        max_vertex_tetrahedron_overlaps=max_overlaps,
-        max_vertex_triangle_contacts=max_contacts
+    ).with_partitions(
+        Pptr, Padj
     )
 
     ps.set_verbosity(0)
@@ -240,9 +227,7 @@ if __name__ == "__main__":
     ps.set_program_name("eXtended Position Based Dynamics")
     ps.init()
     vm = ps.register_volume_mesh("Simulation mesh", mesh.X.T, mesh.E.T)
-    # vm.add_scalar_quantity("Coloring", GC, defined_on="cells", cmap="jet")
-    # vm.add_scalar_quantity("Partitioning", partitioning,
-    #                        defined_on="cells", cmap="jet")
+    vm.add_scalar_quantity("Coloring", GC, defined_on="cells", cmap="jet")
     pc = ps.register_point_cloud("Dirichlet", mesh.X[:, vdbc].T)
     dt = 0.01
     iterations = 1
@@ -250,6 +235,25 @@ if __name__ == "__main__":
     animate = False
     export = False
     t = 0
+
+    has_partitioning = getattr(pbat.graph, "partition") is not None
+    if has_partitioning and args.cluster:
+        SGptr, SGadj, Cptr, Cadj, clustering, SGC = partition_clustered_constraint_graph(
+            mesh.E.T)
+        data.with_cluster_partitions(SGptr, SGadj, Cptr, Cadj)
+        ecolors = SGC[clustering]
+        vm.add_scalar_quantity("Clustered Coloring",
+                               ecolors, defined_on="cells", cmap="jet")
+    data.construct()
+
+    integrator_type = pbat.gpu.xpbd.Integrator if args.gpu else pbat.sim.xpbd.Integrator
+    max_overlaps = 20 * mesh.X.shape[1]
+    max_contacts = 8 * max_overlaps
+    xpbd = integrator_type(
+        data,
+        max_vertex_tetrahedron_overlaps=max_overlaps,
+        max_vertex_triangle_contacts=max_contacts
+    )
 
     profiler = pbat.profiling.Profiler()
 

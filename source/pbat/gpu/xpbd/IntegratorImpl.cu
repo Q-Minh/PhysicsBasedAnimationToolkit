@@ -9,6 +9,7 @@
 
 #include <thrust/async/for_each.h>
 #include <thrust/copy.h>
+#include <thrust/execution_policy.h>
 #include <thrust/iterator/counting_iterator.h>
 
 namespace pbat {
@@ -137,6 +138,15 @@ void IntegratorImpl::Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps)
         for (auto k = 0; k < iterations; ++k)
         {
             // Elastic constraints
+            bool const bHasClusterPartitions = not mSGptr.empty();
+            if (bHasClusterPartitions)
+            {
+                ProjectClusteredBlockNeoHookeanConstraints(e, sdt, sdt2);
+            }
+            else
+            {
+                ProjectBlockNeoHookeanConstraints(e, sdt, sdt2);
+            }
             // Collision constraints
             auto const collisionConstraintId = static_cast<int>(EConstraint::Collision);
             e                                = thrust::async::for_each(
@@ -335,6 +345,36 @@ IntegratorImpl::GetVertexTriangleContactPairs() const
     return Vquery.neighbours.Get();
 }
 
+PBAT_DEVICE static void ProjectBlockNeoHookeanConstraint(
+    std::array<GpuScalar*, 3> x,
+    std::array<GpuScalar*, 3> xt,
+    GpuScalar* lambda,
+    std::array<GpuIndex*, 4> T,
+    GpuScalar* minv,
+    GpuScalar* alpha,
+    GpuScalar* beta,
+    GpuScalar* DmInv,
+    GpuScalar* gammaSNH,
+    GpuScalar dt,
+    GpuScalar dt2,
+    GpuIndex c)
+{
+    using pbat::sim::xpbd::kernels::ProjectBlockNeoHookean;
+    using namespace pbat::math::linalg::mini;
+    SVector<GpuIndex, 4> Tc       = FromBuffers<4, 1>(T, c);
+    SVector<GpuScalar, 4> minvc   = FromFlatBuffer(minv, Tc);
+    SVector<GpuScalar, 2> atildec = FromFlatBuffer<2, 1>(alpha, c) / dt2;
+    SVector<GpuScalar, 2> betac   = FromFlatBuffer<2, 1>(beta, c);
+    SVector<GpuScalar, 2> gammac{atildec(0) * betac(0) * dt, atildec(1) * betac(1) * dt};
+    SMatrix<GpuScalar, 3, 3> DmInvc = FromFlatBuffer<3, 3>(DmInv, c);
+    SVector<GpuScalar, 2> lambdac   = FromFlatBuffer<2, 1>(lambda, c);
+    SMatrix<GpuScalar, 3, 4> xtc    = FromBuffers(xt, Tc.Transpose());
+    SMatrix<GpuScalar, 3, 4> xc     = FromBuffers(x, Tc.Transpose());
+    ProjectBlockNeoHookean(minvc, DmInvc, gammaSNH[c], atildec, gammac, xtc, lambdac, xc);
+    ToFlatBuffer(lambdac, lambda, c);
+    ToBuffers(xc, Tc.Transpose(), x);
+}
+
 void IntegratorImpl::ProjectBlockNeoHookeanConstraints(
     thrust::device_event& e,
     Scalar dt,
@@ -362,36 +402,76 @@ void IntegratorImpl::ProjectBlockNeoHookeanConstraints(
              gammaSNH  = mRestStableGamma.Raw(),
              dt,
              dt2] PBAT_DEVICE(Index k) {
-                using pbat::sim::xpbd::kernels::ProjectBlockNeoHookean;
-                using namespace pbat::math::linalg::mini;
-                GpuIndex c                    = partition[k];
-                SVector<GpuIndex, 4> Tc       = FromBuffers<4, 1>(T, c);
-                SVector<GpuScalar, 4> minvc   = FromFlatBuffer(minv, Tc);
-                SVector<GpuScalar, 2> atildec = FromFlatBuffer<2, 1>(alpha, c) / dt2;
-                SVector<GpuScalar, 2> betac   = FromFlatBuffer<2, 1>(beta, c);
-                SVector<GpuScalar, 2> gammac{
-                    atildec(0) * betac(0) * dt,
-                    atildec(1) * betac(1) * dt};
-                SMatrix<GpuScalar, 3, 3> DmInvc = FromFlatBuffer<3, 3>(DmInv, c);
-                SVector<GpuScalar, 2> lambdac   = FromFlatBuffer<2, 1>(lambda, c);
-                SMatrix<GpuScalar, 3, 4> xtc    = FromBuffers(xt, Tc.Transpose());
-                SMatrix<GpuScalar, 3, 4> xc     = FromBuffers(x, Tc.Transpose());
-                ProjectBlockNeoHookean(
-                    minvc,
-                    DmInvc,
-                    gammaSNH[c],
-                    atildec,
-                    gammac,
-                    xtc,
-                    lambdac,
-                    xc);
-                ToFlatBuffer(lambdac, lambda, c);
-                ToBuffers(xc, Tc.Transpose(), x);
+                GpuIndex c = partition[k];
+                ProjectBlockNeoHookeanConstraint(
+                    x,
+                    xt,
+                    lambda,
+                    T,
+                    minv,
+                    alpha,
+                    beta,
+                    DmInv,
+                    gammaSNH,
+                    dt,
+                    dt2,
+                    c);
             });
     }
 }
 
-void IntegratorImpl::ProjectClusteredBlockNeoHookeanConstraints(Scalar dt, Scalar dt2) {}
+void IntegratorImpl::ProjectClusteredBlockNeoHookeanConstraints(
+    thrust::device_event& e,
+    Scalar dt,
+    Scalar dt2)
+{
+    auto const snhConstraintId    = static_cast<int>(EConstraint::StableNeoHookean);
+    auto const nClusterPartitions = static_cast<Index>(mSGptr.size()) - 1;
+    for (auto cp = 0ULL; cp < nClusterPartitions; ++cp)
+    {
+        auto cpbegin = mSGptr[cp];
+        auto cpend   = mSGptr[cp + 1];
+        e            = thrust::async::for_each(
+            thrust::device.after(e),
+            thrust::make_counting_iterator(cpbegin),
+            thrust::make_counting_iterator(cpend),
+            [SGadj    = mSGadj.Raw(),
+             Cptr     = mCptr.Raw(),
+             Cadj     = mCadj.Raw(),
+             x        = X.x.Raw(),
+             xt       = mPositions.Raw(),
+             lambda   = mLagrangeMultipliers[snhConstraintId].Raw(),
+             T        = T.inds.Raw(),
+             minv     = mMassInverses.Raw(),
+             alpha    = mCompliance[snhConstraintId].Raw(),
+             beta     = mDamping[snhConstraintId].Raw(),
+             DmInv    = mShapeMatrixInverses.Raw(),
+             gammaSNH = mRestStableGamma.Raw(),
+             dt,
+             dt2] PBAT_DEVICE(Index ks) {
+                auto kc     = SGadj[ks];
+                auto cbegin = Cptr[kc];
+                auto cend   = Cptr[kc + 1];
+                for (auto k = cbegin; k < cend; ++k)
+                {
+                    GpuIndex c = Cadj[k];
+                    ProjectBlockNeoHookeanConstraint(
+                        x,
+                        xt,
+                        lambda,
+                        T,
+                        minv,
+                        alpha,
+                        beta,
+                        DmInv,
+                        gammaSNH,
+                        dt,
+                        dt2,
+                        c);
+                }
+            });
+    }
+}
 
 } // namespace xpbd
 } // namespace gpu
