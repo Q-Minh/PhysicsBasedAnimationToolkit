@@ -11,8 +11,8 @@
 #include "pbat/sim/xpbd/Enums.h"
 
 #include <array>
+#include <thrust/execution_policy.h>
 #include <vector>
-
 namespace pbat {
 namespace gpu {
 namespace xpbd {
@@ -166,6 +166,10 @@ class IntegratorImpl
      */
     std::vector<ContactPairType> GetVertexTriangleContactPairs() const;
 
+  protected:
+    void ProjectBlockNeoHookeanConstraints(thrust::device_event& e, Scalar dt, Scalar dt2);
+    void ProjectClusteredBlockNeoHookeanConstraints(Scalar dt, Scalar dt2);
+
   public:
     geometry::PointsImpl X;    ///< Vertex/particle positions
     geometry::SimplicesImpl V; ///< Boundary vertex simplices
@@ -201,8 +205,14 @@ class IntegratorImpl
                   ///< beta[0] -> Stable Neo-Hookean constraint damping
                   ///< beta[1] -> Collision penalty constraint damping
 
-    std::vector<Index> mPptr;               ///< Constraint partitions' pointers
-    common::Buffer<GpuIndex> mPadj;            ///< Constraint partitions' constraints
+    std::vector<Index> mPptr;       ///< Constraint partitions' pointers
+    common::Buffer<GpuIndex> mPadj; ///< Constraint partitions' constraints
+
+    std::vector<Index> mSGptr;       ///< Clustered constraint partitions' pointers
+    common::Buffer<GpuIndex> mSGadj; ///< Clustered constraint partitions' constraints
+    common::Buffer<Index> mCptr;     ///< Cluster -> constraint map pointers
+    common::Buffer<GpuIndex> mCadj;  ///< Cluster -> constraint map constraints
+
     common::Buffer<GpuScalar> mPenalty;     ///< Collision vertex penalties
     GpuScalar mStaticFrictionCoefficient;   ///< Coulomb static friction coefficient
     GpuScalar mDynamicFrictionCoefficient;  ///< Coulomb dynamic friction coefficient

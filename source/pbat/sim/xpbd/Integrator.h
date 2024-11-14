@@ -20,6 +20,11 @@ class Integrator
 
     PBAT_API Data data;
 
+  protected:
+    void ProjectBlockNeoHookeanConstraints(Scalar dt, Scalar dt2);
+    void ProjectClusteredBlockNeoHookeanConstraints(Scalar dt, Scalar dt2);
+    void ProjectBlockNeoHookeanConstraint(Index c, Scalar dt, Scalar dt2);
+
   private:
     geometry::TetrahedralAabbHierarchy mTetrahedralBvh;
     geometry::TriangleAabbHierarchy<3> mTriangleBvh;

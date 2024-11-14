@@ -92,6 +92,15 @@ void BindData(pybind11::module& m)
             pyb::arg("Padj"),
             "Sets the independent constraint partitions for solver parallelization.")
         .def(
+            "with_cluster_partitions",
+            &Data::WithClusterPartitions,
+            pyb::arg("SGptr"),
+            pyb::arg("SGadj"),
+            pyb::arg("Cptr"),
+            pyb::arg("Cadj"),
+            "Sets the independent constraint cluster partitions for clustered solver "
+            "parallelization.")
+        .def(
             "with_dirichlet_vertices",
             &Data::WithDirichletConstrainedVertices,
             pyb::arg("dbc"),

@@ -98,52 +98,14 @@ void Integrator::Step(Scalar dt, Index iterations, Index substeps)
         for (auto k = 0; k < iterations; ++k)
         {
             // Solve tetrahedral (elasticity) constraints
-            auto& alphaSNH         = data.alpha[static_cast<int>(EConstraint::StableNeoHookean)];
-            auto& betaSNH          = data.beta[static_cast<int>(EConstraint::StableNeoHookean)];
-            auto& lambdaSNH        = data.lambda[static_cast<int>(EConstraint::StableNeoHookean)];
-            auto const nPartitions = static_cast<Index>(data.Pptr.size()) - 1;
-            for (auto p = 0; p < nPartitions; ++p)
+            bool const bHasClusteredConstraintPartitions = not data.SGptr.empty();
+            if (bHasClusteredConstraintPartitions)
             {
-                auto const pStl                  = static_cast<std::size_t>(p);
-                auto const pbegin                = data.Pptr[pStl];
-                auto const pend                  = data.Pptr[pStl + 1];
-                auto const nPartitionConstraints = static_cast<IndexType>(pend - pbegin);
-                tbb::parallel_for(
-                    IndexType(0),
-                    nPartitionConstraints,
-                    [&, dt = sdt, dt2 = sdt2](IndexType k) {
-                        // Gather constraint data
-                        auto c     = data.Padj[static_cast<std::size_t>(pbegin) + k];
-                        auto vinds = data.T.col(c);
-                        mini::SVector<Scalar, 4> minvc = FromEigen(data.minv(vinds).head<4>());
-                        mini::SVector<Scalar, 2> atildec =
-                            FromEigen(alphaSNH.segment<2>(2 * c)) / dt2;
-                        mini::SVector<Scalar, 2> betac = FromEigen(betaSNH.segment<2>(2 * c));
-                        mini::SVector<Scalar, 2> gammac{
-                            atildec(0) * betac(0) * dt,
-                            atildec(1) * betac(1) * dt};
-                        Scalar gammaSNHc = data.gammaSNH(c);
-                        mini::SMatrix<Scalar, 3, 3> DmInvc =
-                            FromEigen(data.DmInv.block<3, 3>(0, 3 * c));
-                        mini::SMatrix<Scalar, 3, 4> xtc =
-                            FromEigen(data.xt(Eigen::placeholders::all, vinds).block<3, 4>(0, 0));
-                        mini::SMatrix<Scalar, 3, 4> xc =
-                            FromEigen(data.x(Eigen::placeholders::all, vinds).block<3, 4>(0, 0));
-                        mini::SVector<Scalar, 2> lambdac = FromEigen(lambdaSNH.segment<2>(2 * c));
-                        // Project constraints
-                        kernels::ProjectBlockNeoHookean(
-                            minvc,
-                            DmInvc,
-                            gammaSNHc,
-                            atildec,
-                            gammac,
-                            xtc,
-                            lambdac,
-                            xc);
-                        // Update solution
-                        lambdaSNH.segment<2>(2 * c)             = ToEigen(lambdac);
-                        data.x(Eigen::placeholders::all, vinds) = ToEigen(xc);
-                    });
+                ProjectClusteredBlockNeoHookeanConstraints(sdt, sdt2);
+            }
+            else
+            {
+                ProjectBlockNeoHookeanConstraints(sdt, sdt2);
             }
 
             // Solve contact constraints
@@ -198,6 +160,74 @@ void Integrator::Step(Scalar dt, Index iterations, Index substeps)
             data.v.col(i) = ToEigen(v);
         });
     }
+}
+
+void Integrator::ProjectBlockNeoHookeanConstraints(Scalar dt, Scalar dt2)
+{
+    auto const nPartitions = static_cast<Index>(data.Pptr.size()) - 1;
+    for (auto p = 0; p < nPartitions; ++p)
+    {
+        auto const pStl                  = static_cast<std::size_t>(p);
+        auto const pbegin                = data.Pptr[pStl];
+        auto const pend                  = data.Pptr[pStl + 1];
+        auto const nPartitionConstraints = static_cast<Index>(pend - pbegin);
+        tbb::parallel_for(Index(0), nPartitionConstraints, [&](Index k) {
+            auto c = data.Padj[static_cast<std::size_t>(pbegin) + k];
+            ProjectBlockNeoHookeanConstraint(c, dt, dt2);
+        });
+    }
+}
+
+void Integrator::ProjectClusteredBlockNeoHookeanConstraints(Scalar dt, Scalar dt2)
+{
+    auto const nClusterPartitions = static_cast<Index>(data.SGptr.size()) - 1;
+    for (auto cp = 0; cp < nClusterPartitions; ++cp)
+    {
+        auto const cpStl                = static_cast<std::size_t>(cp);
+        auto const cpbegin              = data.SGptr[cpStl];
+        auto const cpend                = data.SGptr[cpStl + 1];
+        auto const nClustersInPartition = static_cast<Index>(cpend - cpbegin);
+        tbb::parallel_for(Index(0), nClustersInPartition, [&](Index k) {
+            auto cc           = data.SGadj[static_cast<std::size_t>(cpbegin) + k];
+            auto const ccStl  = static_cast<std::size_t>(cc);
+            auto const cbegin = data.Cptr[ccStl];
+            auto const cend   = data.Cptr[ccStl + 1];
+            for (auto j = cbegin; j < cend; ++j)
+            {
+                auto jStl = static_cast<std::size_t>(j);
+                auto c    = data.Cadj[jStl];
+                ProjectBlockNeoHookeanConstraint(c, dt, dt2);
+            }
+        });
+    }
+}
+
+void Integrator::ProjectBlockNeoHookeanConstraint(Index c, Scalar dt, Scalar dt2)
+{
+    using namespace math::linalg;
+    using mini::FromEigen;
+    using mini::ToEigen;
+    auto const& alphaSNH = data.alpha[static_cast<int>(EConstraint::StableNeoHookean)];
+    auto const& betaSNH  = data.beta[static_cast<int>(EConstraint::StableNeoHookean)];
+    auto& lambdaSNH      = data.lambda[static_cast<int>(EConstraint::StableNeoHookean)];
+    // Gather constraint data
+    auto vinds                       = data.T.col(c);
+    mini::SVector<Scalar, 4> minvc   = FromEigen(data.minv(vinds).head<4>());
+    mini::SVector<Scalar, 2> atildec = FromEigen(alphaSNH.segment<2>(2 * c)) / dt2;
+    mini::SVector<Scalar, 2> betac   = FromEigen(betaSNH.segment<2>(2 * c));
+    mini::SVector<Scalar, 2> gammac{atildec(0) * betac(0) * dt, atildec(1) * betac(1) * dt};
+    Scalar gammaSNHc                   = data.gammaSNH(c);
+    mini::SMatrix<Scalar, 3, 3> DmInvc = FromEigen(data.DmInv.block<3, 3>(0, 3 * c));
+    mini::SMatrix<Scalar, 3, 4> xtc =
+        FromEigen(data.xt(Eigen::placeholders::all, vinds).block<3, 4>(0, 0));
+    mini::SMatrix<Scalar, 3, 4> xc =
+        FromEigen(data.x(Eigen::placeholders::all, vinds).block<3, 4>(0, 0));
+    mini::SVector<Scalar, 2> lambdac = FromEigen(lambdaSNH.segment<2>(2 * c));
+    // Project constraints
+    kernels::ProjectBlockNeoHookean(minvc, DmInvc, gammaSNHc, atildec, gammac, xtc, lambdac, xc);
+    // Update solution
+    lambdaSNH.segment<2>(2 * c)             = ToEigen(lambdac);
+    data.x(Eigen::placeholders::all, vinds) = ToEigen(xc);
 }
 
 } // namespace xpbd

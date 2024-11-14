@@ -79,8 +79,8 @@ PBAT_API struct Data
     std::vector<Index> Pptr; ///< Compressed sparse storage's pointers for constraint partitions
     std::vector<Index> Padj; ///< Compressed sparse storage's edges for constraint indices
 
-    std::vector<Index> SGptr; ///< Supernodal constraint graph's compressed sparse storage pointers
-    std::vector<Index> SGadj; ///< Supernodal constraint graph's compressed sparse storage adjacency
+    std::vector<Index> SGptr; ///< Supernodal constraint graph's partition pointers
+    std::vector<Index> SGadj; ///< Supernodal constraint graph's partition adjacency
     std::vector<Index> Cptr;  ///< Flattened cluster pointers, where [Cptr[c], Cptr[c+1]) gives
                               ///< indices into C to obtain cluster c's constraints
     std::vector<Index> Cadj;     ///< Constraint indices in each cluster

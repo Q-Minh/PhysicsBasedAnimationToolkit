@@ -22,25 +22,89 @@ def combine(V: list, C: list):
 
 
 def color_dict_to_array(Cdict, n):
-    C = np.zeros(n)
-    keys = [key for key in Cdict.keys()]
-    values = [value for value in Cdict.values()]
+    C = np.zeros(n, dtype=np.int64)
+    keys = np.array(list(Cdict.keys()), dtype=np.int64)
+    values = np.array(list(Cdict.values()), dtype=np.int64)
     C[keys] = values
     return C
 
 
-def partition_constraints(C):
+def mesh_dual_graph(C):
     row = np.repeat(range(C.shape[0]), C.shape[1])
     col = C.flatten()
     data = np.ones(math.prod(C.shape))
     G = sp.sparse.coo_array((data, (row, col)), shape=(
         C.shape[0], V.shape[0])).asformat("csr")
     GGT = G @ G.T
-    # weights = 10**np.array(GGT.data, dtype=np.int64)
-    # partitioning = np.array(pbat.graph.partition(GGT.indptr, GGT.indices, weights, int(C.shape[0] / 5)))
+    return GGT
+
+
+def partition_clustered_constraint_graph(C):
+    """Implement the graph clustering technique from 
+    Ton-That, Quoc-Minh, Paul G. Kry, and Sheldon Andrews. 
+    "Parallel block Neo-Hookean XPBD using graph clustering." 
+    Computers & Graphics 110 (2023): 1-10.
+
+    Args:
+        C (np.ndarray): Tetrahedral mesh elements
+
+    Returns:
+        (np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray): 
+        The tuple (SGptr, SGadj, Cptr, Cadj, SGC) where (SGptr, SGadj) 
+        yields the clustered graph partitions, (Cptr, Cadj) yields the 
+        map from clusters to constraints, and SGC is the coloring on the
+        clustered graph.
+    """
+    GGT = mesh_dual_graph(C)
+    # NOTE:
+    # The sparse matrix representation of GGT counts the number of shared vertices
+    # n(ei,ej) for each adjacent element pair (ei, ej). We define a weight function
+    # w(ei,ej) = 10^{n(ei,ej)},
+    # such that adjacent elements with many shared vertices have large weight.
+    # We will try to partition this weighted dual graph such that the edge cut
+    # is minimized, i.e. "highly connected" elements (ei,ej) with large w(ei,ej)
+    # will be in the same partition (as much as possible).
+    weights = 10**np.array(GGT.data, dtype=np.int64)
+    # For tetrahedral elements, 5-element partitions is a good choice
+    cluster_size = 5
+    # Cluster our constraint graph via (edge-)cut-minimizing graph partitioning into
+    # a supernodal graph
+    clustering = np.array(pbat.graph.partition(
+        GGT.indptr, GGT.indices, weights, int(C.shape[0] / cluster_size)))
+    # Construct adjacency graph of the map clusters -> constraints
+    nclusters = clustering.max() + 1
+    Csizes = np.zeros(nclusters + 1, dtype=np.int64)
+    np.add.at(Csizes[1:], clustering, 1)
+    Cptr = np.array(list(itertools.accumulate(Csizes)))
+    Cadj = np.argsort(clustering)
+    # Compute edges between the clusters, i.e. the supernodal graph's edges
+    GGTsizes = GGT.indptr[1:] - GGT.indptr[:-1]
+    SGu = clustering[np.repeat(np.linspace(
+        0, clustering.shape[0]-1, clustering.shape[0], dtype=np.int64), GGTsizes)]
+    SGv = clustering[GGT.indices]
+    inds = np.unique(SGu + clustering.shape[0]*SGv, return_index=True)[1]
+    SGu, SGv = SGu[inds], SGv[inds]
+    # Construct the supernodal graph
+    SGM = sp.sparse.coo_array(
+        (np.ones(SGu.shape[0]), (SGu, SGv))).asformat('csr')
+    SG = nx.Graph(SGM)
+    # Color the supernodal graph
+    SGC = nx.greedy_color(SG, strategy="random_sequential")
+    SGC = color_dict_to_array(SGC, nclusters)
+    # Construct supernode partitions
+    npartitions = SGC.max() + 1
+    psizes = np.zeros(npartitions+1, dtype=np.int64)
+    np.add.at(psizes[1:], SGC, 1)
+    SGptr = list(itertools.accumulate(psizes))
+    SGadj = np.argsort(SGC)
+    return SGptr, SGadj, Cptr, Cadj, SGC
+
+
+def partition_constraints(C):
+    GGT = mesh_dual_graph(C)
     G = nx.Graph(GGT)
     GC = nx.greedy_color(G, strategy="random_sequential")
-    GC = color_dict_to_array(GC, C.shape[0]).astype(int)
+    GC = color_dict_to_array(GC, C.shape[0])
     npartitions = GC.max() + 1
     psizes = np.zeros(npartitions+1, dtype=np.int64)
     np.add.at(psizes[1:], GC, 1)
@@ -124,38 +188,46 @@ if __name__ == "__main__":
     muC = args.muC*muC[VC]
     max_overlaps = 20 * mesh.X.shape[1]
     max_contacts = 8*max_overlaps
-    Pptr, Padj, GC, partitioning = partition_constraints(mesh.E.T)
+    data = pbat.sim.xpbd.Data(
+    ).with_volume_mesh(
+        mesh.X, mesh.E
+    ).with_surface_mesh(
+        VC, F.T
+    ).with_bodies(
+        BV
+    ).with_mass_inverse(
+        minv
+    ).with_elastic_material(
+        np.vstack((mue, lambdae))
+    ).with_damping(
+        np.full(
+            mesh.E.shape[1]*2, args.betaSNH), pbat.sim.xpbd.Constraint.StableNeoHookean
+    ).with_compliance(
+        np.full(VC.shape[0],
+                args.alphaC), pbat.sim.xpbd.Constraint.Collision
+    ).with_damping(
+        np.full(VC.shape[0],
+                args.betaC), pbat.sim.xpbd.Constraint.Collision
+    ).with_collision_penalties(
+        muC
+    ).with_friction_coefficients(
+        0.6, 0.4
+    ).with_dirichlet_vertices(
+        vdbc
+    )
+    has_partitioning = getattr(pbat.graph, "partition")
+    if has_partitioning:
+        SGptr, SGadj, Cptr, Cadj, SGC = partition_clustered_constraint_graph(
+            mesh.E.T)
+        data.with_cluster_partitions(SGptr, SGadj, Cptr, Cadj)
+    else:
+        Pptr, Padj, GC, partitioning = partition_constraints(mesh.E.T)
+        data.with_partitions(Pptr, Padj)
+    data.construct()
 
     integrator_type = pbat.gpu.xpbd.Integrator if args.gpu else pbat.sim.xpbd.Integrator
     xpbd = integrator_type(
-        pbat.sim.xpbd.Data().with_volume_mesh(
-            mesh.X, mesh.E
-        ).with_surface_mesh(
-            VC, F.T
-        ).with_bodies(
-            BV
-        ).with_mass_inverse(
-            minv
-        ).with_elastic_material(
-            np.vstack((mue, lambdae))
-        ).with_damping(
-            np.full(
-                mesh.E.shape[1]*2, args.betaSNH), pbat.sim.xpbd.Constraint.StableNeoHookean
-        ).with_compliance(
-            np.full(VC.shape[0],
-                    args.alphaC), pbat.sim.xpbd.Constraint.Collision
-        ).with_damping(
-            np.full(VC.shape[0],
-                    args.betaC), pbat.sim.xpbd.Constraint.Collision
-        ).with_collision_penalties(
-            muC
-        ).with_friction_coefficients(
-            0.6, 0.4
-        ).with_dirichlet_vertices(
-            vdbc
-        ).with_partitions(
-            Pptr, Padj
-        ).construct(),
+        data,
         max_vertex_tetrahedron_overlaps=max_overlaps,
         max_vertex_triangle_contacts=max_contacts
     )
@@ -168,8 +240,9 @@ if __name__ == "__main__":
     ps.set_program_name("eXtended Position Based Dynamics")
     ps.init()
     vm = ps.register_volume_mesh("Simulation mesh", mesh.X.T, mesh.E.T)
-    vm.add_scalar_quantity("Coloring", GC, defined_on="cells", cmap="jet")
-    vm.add_scalar_quantity("Partitioning", partitioning, defined_on="cells", cmap="jet")
+    # vm.add_scalar_quantity("Coloring", GC, defined_on="cells", cmap="jet")
+    # vm.add_scalar_quantity("Partitioning", partitioning,
+    #                        defined_on="cells", cmap="jet")
     pc = ps.register_point_cloud("Dirichlet", mesh.X[:, vdbc].T)
     dt = 0.01
     iterations = 1
