@@ -187,23 +187,6 @@ void BindIntegrator([[maybe_unused]] pybind11::module& m)
                std::pair<Eigen::Vector<GpuScalar, 3> const&, Eigen::Vector<GpuScalar, 3> const&>
                    box) { xpbd.SetSceneBoundingBox(box.first, box.second); },
             "Tuple of (min,max) scene bounding box extremities.")
-        .def_property(
-            "partitions",
-            [](Integrator const& xpbd) {
-                return pbat::profiling::Profile(
-                    "pbat.gpu.xpbd.Integrator.GetConstraintPartitions",
-                    [&]() {
-                        std::vector<std::vector<GpuIndex>> partitions = xpbd.GetPartitions();
-                        return partitions;
-                    });
-            },
-            [](Integrator& xpbd, std::vector<std::vector<GpuIndex>> const& partitions) {
-                pbat::profiling::Profile("pbat.gpu.xpbd.Integrator.SetConstraintPartitions", [&]() {
-                    xpbd.SetConstraintPartitions(partitions);
-                });
-            },
-            "Set constraint partitions for the parallel constraint solve as list of lists of "
-            "constraint indices")
         .def_property_readonly(
             "vertex_tetrahedron_overlaps",
             [](Integrator const& xpbd) {

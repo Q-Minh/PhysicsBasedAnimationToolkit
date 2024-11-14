@@ -88,7 +88,8 @@ void BindData(pybind11::module& m)
         .def(
             "with_partitions",
             &Data::WithPartitions,
-            pyb::arg("partitions"),
+            pyb::arg("Pptr"),
+            pyb::arg("Padj"),
             "Sets the independent constraint partitions for solver parallelization.")
         .def(
             "with_dirichlet_vertices",
@@ -113,7 +114,8 @@ void BindData(pybind11::module& m)
         .def_readwrite("beta", &Data::beta)
         .def_readwrite("lambda", &Data::lambda)
         .def_readwrite("dbc", &Data::dbc)
-        .def_readwrite("partitions", &Data::partitions);
+        .def_readwrite("partitions_ptr", &Data::Pptr)
+        .def_readwrite("partitions_adj", &Data::Padj);
 }
 
 } // namespace xpbd

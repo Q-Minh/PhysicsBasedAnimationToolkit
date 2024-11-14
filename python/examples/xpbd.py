@@ -39,11 +39,11 @@ def partition_constraints(C):
     GC = nx.greedy_color(G, strategy="random_sequential")
     GC = color_dict_to_array(GC, C.shape[0]).astype(int)
     npartitions = GC.max() + 1
-    partitions = [None]*npartitions
-    for p in range(npartitions):
-        constraints = np.nonzero(GC == p)[0]
-        partitions[p] = constraints.tolist()
-    return partitions, GC
+    psizes = np.zeros(npartitions+1, dtype=np.int64)
+    np.add.at(psizes[1:], GC, 1)
+    Pptr = list(itertools.accumulate(psizes))
+    Padj = np.argsort(GC)
+    return Pptr, Padj, GC
 
 
 if __name__ == "__main__":
@@ -121,7 +121,7 @@ if __name__ == "__main__":
     muC = args.muC*muC[VC]
     max_overlaps = 20 * mesh.X.shape[1]
     max_contacts = 8*max_overlaps
-    partitions, GC = partition_constraints(mesh.E.T)
+    Pptr, Padj, GC = partition_constraints(mesh.E.T)
 
     integrator_type = pbat.gpu.xpbd.Integrator if args.gpu else pbat.sim.xpbd.Integrator
     xpbd = integrator_type(
@@ -151,7 +151,7 @@ if __name__ == "__main__":
         ).with_dirichlet_vertices(
             vdbc
         ).with_partitions(
-            partitions
+            Pptr, Padj
         ).construct(),
         max_vertex_tetrahedron_overlaps=max_overlaps,
         max_vertex_triangle_contacts=max_contacts

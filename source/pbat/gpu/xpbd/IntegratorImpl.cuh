@@ -201,11 +201,12 @@ class IntegratorImpl
                   ///< beta[0] -> Stable Neo-Hookean constraint damping
                   ///< beta[1] -> Collision penalty constraint damping
 
-    std::vector<common::Buffer<GpuIndex>> mPartitions; ///< Constraint partitions
-    common::Buffer<GpuScalar> mPenalty;                ///< Collision vertex penalties
-    GpuScalar mStaticFrictionCoefficient;              ///< Coulomb static friction coefficient
-    GpuScalar mDynamicFrictionCoefficient;             ///< Coulomb dynamic friction coefficient
-    Eigen::Vector<GpuScalar, 3> Smin, Smax;            ///< Scene bounding box
+    std::vector<Index> mPptr;               ///< Constraint partitions' pointers
+    common::Buffer<GpuIndex> mPadj;            ///< Constraint partitions' constraints
+    common::Buffer<GpuScalar> mPenalty;     ///< Collision vertex penalties
+    GpuScalar mStaticFrictionCoefficient;   ///< Coulomb static friction coefficient
+    GpuScalar mDynamicFrictionCoefficient;  ///< Coulomb dynamic friction coefficient
+    Eigen::Vector<GpuScalar, 3> Smin, Smax; ///< Scene bounding box
 };
 
 } // namespace xpbd

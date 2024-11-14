@@ -86,9 +86,23 @@ Data& Data::WithCompliance(Eigen::Ref<VectorX> const& alpha, EConstraint constra
     return *this;
 }
 
-Data& Data::WithPartitions(std::vector<std::vector<Index>> const& partitions)
+Data& Data::WithPartitions(std::vector<Index> const& Pptr, std::vector<Index> const& Padj)
 {
-    this->partitions = partitions;
+    this->Pptr = Pptr;
+    this->Padj = Padj;
+    return *this;
+}
+
+Data& Data::WithClusterPartitions(
+    std::vector<Index> const& SGptr,
+    std::vector<Index> const& SGadj,
+    std::vector<Index> const& Cptr,
+    std::vector<Index> const& Cadj)
+{
+    this->SGptr = SGptr;
+    this->SGadj = SGadj;
+    this->Cptr  = Cptr;
+    this->Cadj  = Cadj;
     return *this;
 }
 

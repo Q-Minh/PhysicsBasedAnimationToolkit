@@ -83,11 +83,6 @@ void Integrator::SetCompliance(Eigen::Ref<GpuMatrixX const> const& alpha, EConst
     mImpl->SetCompliance(alpha, static_cast<IntegratorImpl::EConstraint>(eConstraint));
 }
 
-void Integrator::SetConstraintPartitions(std::vector<std::vector<GpuIndex>> const& partitions)
-{
-    mImpl->SetConstraintPartitions(partitions);
-}
-
 void Integrator::SetFrictionCoefficients(GpuScalar muS, GpuScalar muK)
 {
     mImpl->SetFrictionCoefficients(muS, muK);
@@ -153,22 +148,6 @@ GpuMatrixX Integrator::GetCompliance(EConstraint eConstraint) const
         compliance.resize(2, compliance.size() / 2);
     }
     return compliance;
-}
-
-std::vector<std::vector<GpuIndex>> Integrator::GetPartitions() const
-{
-    auto const& partitionsGpu = mImpl->GetPartitions();
-    std::vector<std::vector<GpuIndex>> partitions{};
-    partitions.resize(partitionsGpu.size());
-    for (auto p = 0; p < partitionsGpu.size(); ++p)
-    {
-        partitions[p].resize(partitionsGpu[p].Size());
-        thrust::copy(
-            partitionsGpu[p].Data(),
-            partitionsGpu[p].Data() + partitionsGpu[p].Size(),
-            partitions[p].begin());
-    }
-    return partitions;
 }
 
 GpuIndexMatrixX Integrator::GetVertexTetrahedronCollisionCandidates() const

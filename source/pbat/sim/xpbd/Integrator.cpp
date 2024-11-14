@@ -97,18 +97,21 @@ void Integrator::Step(Scalar dt, Index iterations, Index substeps)
         for (auto k = 0; k < iterations; ++k)
         {
             // Solve tetrahedral (elasticity) constraints
-            auto& alphaSNH  = data.alpha[static_cast<int>(EConstraint::StableNeoHookean)];
-            auto& betaSNH   = data.beta[static_cast<int>(EConstraint::StableNeoHookean)];
-            auto& lambdaSNH = data.lambda[static_cast<int>(EConstraint::StableNeoHookean)];
-            for (auto const& partition : data.partitions)
+            auto& alphaSNH         = data.alpha[static_cast<int>(EConstraint::StableNeoHookean)];
+            auto& betaSNH          = data.beta[static_cast<int>(EConstraint::StableNeoHookean)];
+            auto& lambdaSNH        = data.lambda[static_cast<int>(EConstraint::StableNeoHookean)];
+            auto const nPartitions = static_cast<Index>(data.Pptr.size()) - 1;
+            for (auto p = 0; p < nPartitions; ++p)
             {
-                auto const nPartitionConstraints = static_cast<IndexType>(partition.size());
+                auto const pbegin                = data.Pptr[p];
+                auto const pend                  = data.Pptr[p + 1];
+                auto const nPartitionConstraints = static_cast<IndexType>(pend - pbegin);
                 tbb::parallel_for(
                     IndexType(0),
                     nPartitionConstraints,
-                    [&, dt = sdt, dt2 = sdt2](IndexType pc) {
+                    [&, dt = sdt, dt2 = sdt2](IndexType k) {
                         // Gather constraint data
-                        auto c                         = partition[pc];
+                        auto c                         = data.Padj[pbegin + k];
                         auto vinds                     = data.T.col(c);
                         mini::SVector<Scalar, 4> minvc = FromEigen(data.minv(vinds).head<4>());
                         mini::SVector<Scalar, 2> atildec =
@@ -225,12 +228,8 @@ TEST_CASE("[sim][xpbd] Integrator")
          4, 4, 5, 5, 7, 7, 6, 6, 1, 3, 6, 6;
     // clang-format on
     V.setLinSpaced(0, static_cast<IndexType>(P.cols() - 1));
-    std::vector<std::vector<IndexType>> partitions{};
-    partitions.push_back({0});
-    partitions.push_back({1});
-    partitions.push_back({2});
-    partitions.push_back({3});
-    partitions.push_back({4});
+    std::vector<IndexType> Pptr({0, 1, 2, 3, 4, 5});
+    std::vector<IndexType> Padj({0, 1, 2, 3, 4});
     // Problem parameters
     auto constexpr dt         = ScalarType{1e-2};
     auto constexpr substeps   = 20;
@@ -242,7 +241,7 @@ TEST_CASE("[sim][xpbd] Integrator")
     Integrator xpbd{pbat::sim::xpbd::Data()
                         .WithVolumeMesh(P, T)
                         .WithSurfaceMesh(V, F)
-                        .WithPartitions(partitions)
+                        .WithPartitions(Pptr, Padj)
                         .Construct()};
     xpbd.Step(dt, iterations, substeps);
 

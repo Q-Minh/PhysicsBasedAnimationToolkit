@@ -39,7 +39,8 @@ IntegratorImpl::IntegratorImpl(
       mLagrangeMultipliers(),
       mCompliance(),
       mDamping(),
-      mPartitions(),
+      mPptr(data.Pptr),
+      mPadj(data.Padj.size()),
       mPenalty(data.muV.size()),
       mStaticFrictionCoefficient{static_cast<GpuScalar>(data.muS)},
       mDynamicFrictionCoefficient{static_cast<GpuScalar>(data.muD)}
@@ -71,12 +72,7 @@ IntegratorImpl::IntegratorImpl(
     common::ToBuffer(data.alpha[collisionConstraintId], mCompliance[collisionConstraintId]);
     common::ToBuffer(data.beta[collisionConstraintId], mDamping[collisionConstraintId]);
     // Setup partitions
-    mPartitions.resize(data.partitions.size());
-    for (auto p = 0; p < data.partitions.size(); ++p)
-    {
-        mPartitions[p].Resize(data.partitions[p].size());
-        thrust::copy(data.partitions[p].begin(), data.partitions[p].end(), mPartitions[p].Data());
-    }
+    common::ToBuffer(pbat::common::ToEigen(data.Padj).cast<GpuIndex>().eval(), mPadj);
     // Copy collision data
     common::ToBuffer(data.muV, mPenalty);
 }
@@ -132,25 +128,30 @@ void IntegratorImpl::Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps)
         {
             // Elastic constraints
             auto const snhConstraintId = static_cast<int>(EConstraint::StableNeoHookean);
-            for (common::Buffer<GpuIndex> const& partition : mPartitions)
+            auto const nPartitions     = static_cast<Index>(mPptr.size()) - 1;
+            for (auto p = 0; p < nPartitions; ++p)
             {
-                e = thrust::async::for_each(
+                auto pbegin = mPptr[p];
+                auto pend   = mPptr[p + 1];
+                e           = thrust::async::for_each(
                     thrust::device.after(e),
-                    partition.Data(),
-                    partition.Data() + partition.Size(),
-                    [x        = nextPositions.Raw(),
-                     xt       = mPositions.Raw(),
-                     lambda   = mLagrangeMultipliers[snhConstraintId].Raw(),
-                     T        = T.inds.Raw(),
-                     minv     = mMassInverses.Raw(),
-                     alpha    = mCompliance[snhConstraintId].Raw(),
-                     beta     = mDamping[snhConstraintId].Raw(),
-                     DmInv    = mShapeMatrixInverses.Raw(),
-                     gammaSNH = mRestStableGamma.Raw(),
-                     dt       = sdt,
-                     dt2      = sdt2] PBAT_DEVICE(GpuIndex c) {
+                    thrust::make_counting_iterator(pbegin),
+                    thrust::make_counting_iterator(pend),
+                    [partition = mPadj.Raw(),
+                     x         = nextPositions.Raw(),
+                     xt        = mPositions.Raw(),
+                     lambda    = mLagrangeMultipliers[snhConstraintId].Raw(),
+                     T         = T.inds.Raw(),
+                     minv      = mMassInverses.Raw(),
+                     alpha     = mCompliance[snhConstraintId].Raw(),
+                     beta      = mDamping[snhConstraintId].Raw(),
+                     DmInv     = mShapeMatrixInverses.Raw(),
+                     gammaSNH  = mRestStableGamma.Raw(),
+                     dt        = sdt,
+                     dt2       = sdt2] PBAT_DEVICE(Index k) {
                         using pbat::sim::xpbd::kernels::ProjectBlockNeoHookean;
                         using namespace pbat::math::linalg::mini;
+                        GpuIndex c                    = partition[k];
                         SVector<GpuIndex, 4> Tc       = FromBuffers<4, 1>(T, c);
                         SVector<GpuScalar, 4> minvc   = FromFlatBuffer(minv, Tc);
                         SVector<GpuScalar, 2> atildec = FromFlatBuffer<2, 1>(alpha, c) / dt2;
@@ -308,16 +309,6 @@ void IntegratorImpl::SetCompliance(
     common::ToBuffer(alpha, mCompliance[static_cast<int>(eConstraint)]);
 }
 
-void IntegratorImpl::SetConstraintPartitions(std::vector<std::vector<GpuIndex>> const& partitions)
-{
-    mPartitions.resize(partitions.size());
-    for (auto p = 0; p < partitions.size(); ++p)
-    {
-        mPartitions[p][0].resize(partitions[p].size());
-        thrust::copy(partitions[p].begin(), partitions[p].end(), mPartitions[p].Data());
-    }
-}
-
 void IntegratorImpl::SetFrictionCoefficients(GpuScalar muS, GpuScalar muK)
 {
     mStaticFrictionCoefficient  = muS;
@@ -371,11 +362,6 @@ IntegratorImpl::GetLagrangeMultiplier(EConstraint eConstraint) const
 common::Buffer<GpuScalar> const& IntegratorImpl::GetCompliance(EConstraint eConstraint) const
 {
     return mCompliance[static_cast<int>(eConstraint)];
-}
-
-std::vector<common::Buffer<GpuIndex>> const& IntegratorImpl::GetPartitions() const
-{
-    return mPartitions;
 }
 
 std::vector<typename IntegratorImpl::CollisionCandidateType>
