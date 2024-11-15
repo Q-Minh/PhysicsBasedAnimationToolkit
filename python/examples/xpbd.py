@@ -242,8 +242,9 @@ if __name__ == "__main__":
             mesh.E.T)
         data.with_cluster_partitions(SGptr, SGadj, Cptr, Cadj)
         ecolors = SGC[clustering]
+        max_color = GC.max()
         vm.add_scalar_quantity("Clustered Coloring",
-                               ecolors, defined_on="cells", cmap="jet")
+                               ecolors, defined_on="cells", cmap="jet", vminmax=(0, max_color))
     data.construct()
 
     integrator_type = pbat.gpu.xpbd.Integrator if args.gpu else pbat.sim.xpbd.Integrator
