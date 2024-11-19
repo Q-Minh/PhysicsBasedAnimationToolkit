@@ -31,6 +31,7 @@ endif()
 
 add_subdirectory(common)
 add_subdirectory(fem)
+add_subdirectory(graph)
 add_subdirectory(geometry)
 add_subdirectory(gpu)
 add_subdirectory(math)

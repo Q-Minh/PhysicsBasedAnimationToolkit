@@ -99,7 +99,6 @@ CSRMatrix ShapeFunctionMatrix(
     PBAT_PROFILE_NAMED_SCOPE("pbat.fem.ShapeFunctionMatrix");
     using ElementType               = typename TMesh::ElementType;
     auto const numberOfNodes        = mesh.X.cols();
-    auto const numberOfElements     = mesh.E.cols();
     auto const numberOfQuadPoints   = wg.size();
     auto const m                    = numberOfQuadPoints;
     auto const n                    = numberOfNodes;

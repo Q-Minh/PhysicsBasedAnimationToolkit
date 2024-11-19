@@ -127,8 +127,7 @@ inline void SymmetricLaplacianMatrix<TMesh>::ComputeElementLaplacians()
     auto const numberOfQuadraturePoints = wg.size();
     deltag.setZero(kNodesPerElement, kNodesPerElement * numberOfQuadraturePoints);
     tbb::parallel_for(Index{0}, Index{numberOfQuadraturePoints}, [&](Index g) {
-        auto const e = eg(g);
-        auto Leg     = deltag.block<kNodesPerElement, kNodesPerElement>(0, g * kNodesPerElement);
+        auto Leg = deltag.block<kNodesPerElement, kNodesPerElement>(0, g * kNodesPerElement);
         // Use multivariable integration by parts (i.e. Green's identity), and retain only the
         // symmetric part, i.e.
         // Lij = -\int_{\Omega} \nabla \phi_i(X) \cdot \nabla \phi_j(X) \partial \Omega.

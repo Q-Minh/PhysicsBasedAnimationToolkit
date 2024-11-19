@@ -116,8 +116,8 @@ PointOnPlane(TMatrixX const& X, TMatrixP const& P, TMatrixN const& n)
     /**
      * Ericson, Christer. Real-time collision detection. Crc Press, 2004. section 5.ScalarType(1)1
      */
-    ScalarType const t = Dot(n, X - P);
-    auto const Xplane  = X - t * n;
+    ScalarType const t                                = Dot(n, X - P);
+    mini::SVector<ScalarType, TMatrixX::kRows> Xplane = X - t * n;
     return Xplane;
 }
 

@@ -20,9 +20,8 @@ void BindIntegrator(pybind11::module& m)
     using pbat::sim::vbd::Integrator;
     pyb::class_<Integrator>(m, "Integrator")
         .def(
-            pyb::init([](Data& data) { return Integrator(std::move(data)); }),
-            "Construct a VBD integrator initialized with data. The passed in data is 'moved' in "
-            "the C++ sense, i.e. the C++ side will take ownership of the data. To access the data "
+            pyb::init([](Data const& data) { return Integrator(data); }),
+            "Construct a VBD integrator initialized with data. To access the data "
             "during simulation, go through the pbat.sim.vbd.Integrator.data member.")
         .def(
             "step",

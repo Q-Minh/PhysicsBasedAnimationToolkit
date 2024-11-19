@@ -13,76 +13,102 @@ namespace sim {
 namespace xpbd {
 
 Data& Data::WithVolumeMesh(
-    Eigen::Ref<MatrixX const> const& V,
-    Eigen::Ref<IndexMatrixX const> const& E)
+    Eigen::Ref<MatrixX const> const& Vin,
+    Eigen::Ref<IndexMatrixX const> const& Ein)
 {
-    this->x  = V;
-    this->xt = V;
-    this->T  = E;
+    this->x  = Vin;
+    this->xt = Vin;
+    this->T  = Ein;
     return *this;
 }
 
 Data& Data::WithSurfaceMesh(
-    Eigen::Ref<IndexVectorX const> const& V,
-    Eigen::Ref<IndexMatrixX const> const& F)
+    Eigen::Ref<IndexVectorX const> const& Vin,
+    Eigen::Ref<IndexMatrixX const> const& Fin)
 {
-    this->V = V;
-    this->F = F;
+    this->V = Vin;
+    this->F = Fin;
     return *this;
 }
 
-Data& Data::WithBodies(Eigen::Ref<IndexVectorX const> const& BV)
+Data& Data::WithBodies(Eigen::Ref<IndexVectorX const> const& BVin)
 {
-    this->BV = BV;
+    this->BV = BVin;
     return *this;
 }
 
-Data& Data::WithVelocity(Eigen::Ref<MatrixX const> const& v)
+Data& Data::WithVelocity(Eigen::Ref<MatrixX const> const& vIn)
 {
-    this->v = v;
+    this->v = vIn;
     return *this;
 }
 
-Data& Data::WithAcceleration(Eigen::Ref<MatrixX const> const& aext)
+Data& Data::WithAcceleration(Eigen::Ref<MatrixX const> const& aextIn)
 {
-    this->aext = aext;
+    this->aext = aextIn;
     return *this;
 }
 
-Data& Data::WithMassInverse(Eigen::Ref<VectorX const> const& minv)
+Data& Data::WithMassInverse(Eigen::Ref<VectorX const> const& minvIn)
 {
-    this->minv = minv;
+    this->minv = minvIn;
     return *this;
 }
 
-Data& Data::WithElasticMaterial(Eigen::Ref<MatrixX const> const& lame)
+Data& Data::WithElasticMaterial(Eigen::Ref<MatrixX const> const& lameIn)
 {
-    this->lame = lame;
+    this->lame = lameIn;
     return *this;
 }
 
-Data& Data::WithFrictionCoefficients(Scalar muS, Scalar muD)
+Data& Data::WithCollisionPenalties(Eigen::Ref<VectorX const> const& muVin)
 {
-    this->muS = muS;
-    this->muD = muD;
+    this->muV = muVin;
     return *this;
 }
 
-Data& Data::WithCompliance(Eigen::Ref<VectorX> const& alpha, EConstraint constraint)
+Data& Data::WithFrictionCoefficients(Scalar muSin, Scalar muDin)
 {
-    this->alpha[static_cast<int>(constraint)] = alpha;
+    this->muS = muSin;
+    this->muD = muDin;
     return *this;
 }
 
-Data& Data::WithPartitions(std::vector<std::vector<Index>> const& partitions)
+Data& Data::WithDamping(Eigen::Ref<VectorX> const& betaIn, EConstraint constraint)
 {
-    this->partitions = partitions;
+    this->beta[static_cast<std::size_t>(constraint)] = betaIn;
     return *this;
 }
 
-Data& Data::WithDirichletConstrainedVertices(IndexVectorX const& dbc)
+Data& Data::WithCompliance(Eigen::Ref<VectorX> const& alphaIn, EConstraint constraint)
 {
-    this->dbc = dbc;
+    this->alpha[static_cast<std::size_t>(constraint)] = alphaIn;
+    return *this;
+}
+
+Data& Data::WithPartitions(std::vector<Index> const& PptrIn, std::vector<Index> const& PadjIn)
+{
+    this->Pptr = PptrIn;
+    this->Padj = PadjIn;
+    return *this;
+}
+
+Data& Data::WithClusterPartitions(
+    std::vector<Index> const& SGptrIn,
+    std::vector<Index> const& SGadjIn,
+    std::vector<Index> const& CptrIn,
+    std::vector<Index> const& CadjIn)
+{
+    this->SGptr = SGptrIn;
+    this->SGadj = SGadjIn;
+    this->Cptr  = CptrIn;
+    this->Cadj  = CadjIn;
+    return *this;
+}
+
+Data& Data::WithDirichletConstrainedVertices(IndexVectorX const& dbcIn)
+{
+    this->dbc = dbcIn;
     return *this;
 }
 
@@ -96,12 +122,17 @@ Data& Data::Construct(bool bValidate)
     if (aext.size() == 0)
     {
         aext.setZero(x.rows(), x.cols());
-        aext.row(aext.rows() - 1).setConstant(Scalar(-9.81));
+        aext.bottomRows(1).setConstant(Scalar(-9.81));
     }
     if (minv.size() == 0)
     {
-        minv.setConstant(Scalar(1));
+        minv.setConstant(x.cols(), Scalar(1e-3));
     }
+    if (BV.size() == 0)
+    {
+        BV.setZero(x.cols());
+    }
+    xb = x;
     // Enforce Dirichlet boundary conditions
     minv(dbc).setZero();
     v(Eigen::placeholders::all, dbc).setZero();
@@ -115,7 +146,8 @@ Data& Data::Construct(bool bValidate)
         lame.row(1).setConstant(llambda);
     }
     DmInv.resize(3, 3 * T.cols());
-    alpha[static_cast<int>(EConstraint::StableNeoHookean)].resize(2 * T.cols());
+    auto snhConstraintId = static_cast<std::size_t>(EConstraint::StableNeoHookean);
+    alpha[snhConstraintId].resize(2 * T.cols());
     gammaSNH.resize(T.cols());
     tbb::parallel_for(Index(0), T.cols(), [&](Index t) {
         // Load vertex positions of element c
@@ -127,16 +159,32 @@ Data& Data::Construct(bool bValidate)
         DmInvC          = Ds.inverse();
         // Compute constraint compliance
         Scalar const tetVolume = Ds.determinant() / Scalar(6);
-        auto alphat = alpha[static_cast<int>(EConstraint::StableNeoHookean)].segment<2>(2 * t);
-        auto lamet  = lame.col(t).segment<2>(0);
-        alphat      = Scalar(1) / (lamet * tetVolume).array();
+        auto alphat            = alpha[snhConstraintId].segment<2>(2 * t);
+        auto lamet             = lame.col(t).segment<2>(0);
+        alphat                 = Scalar(1) / (lamet * tetVolume).array();
         // Compute rest stability
         gammaSNH(t) = Scalar(1) + lamet(0) / lamet(1);
     });
-    lambda[static_cast<int>(EConstraint::StableNeoHookean)].setZero(2 * T.cols());
+    if (beta[snhConstraintId].size() == 0)
+    {
+        beta[snhConstraintId].setZero(2 * T.cols());
+    }
+    lambda[snhConstraintId].setZero(2 * T.cols());
     // Set contact data
-    alpha[static_cast<int>(EConstraint::Collision)].setConstant(V.cols(), alphaC);
-    lambda[static_cast<int>(EConstraint::Collision)].setZero(V.cols());
+    auto collisionConstraintId = static_cast<std::size_t>(EConstraint::Collision);
+    if (alpha[collisionConstraintId].size() == 0)
+    {
+        alpha[collisionConstraintId].setConstant(V.size(), Scalar(0));
+    }
+    if (beta[collisionConstraintId].size() == 0)
+    {
+        beta[collisionConstraintId].setConstant(V.size(), Scalar(0));
+    }
+    lambda[collisionConstraintId].setZero(V.size());
+    if (muV.size() == 0)
+    {
+        muV.setOnes(V.size());
+    }
 
     // Throw error if ill-formed Data
     if (bValidate)
@@ -174,13 +222,11 @@ Data& Data::Construct(bool bValidate)
                 T.cols() * 3);
             throw std::invalid_argument(what);
         }
-        bool const bMultibodyContactSystemValid = BV.size() == V.size();
+        bool const bMultibodyContactSystemValid = BV.size() == x.cols() and muV.size() == V.size();
         if (not bMultibodyContactSystemValid)
         {
-            std::string const what = fmt::format(
-                "With #collision vertices={0}, #collision faces={1} expected BV.size()={0}",
-                V.size(),
-                F.cols());
+            std::string const what =
+                fmt::format("Expected BV.size()={0}, muV.size()={1}", x.cols(), V.size());
             throw std::invalid_argument(what);
         }
     }

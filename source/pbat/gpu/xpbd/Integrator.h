@@ -90,11 +90,6 @@ class Integrator
     PBAT_API void SetCompliance(Eigen::Ref<GpuMatrixX const> const& alpha, EConstraint eConstraint);
     /**
      * @brief
-     * @param partitions
-     */
-    PBAT_API void SetConstraintPartitions(std::vector<std::vector<GpuIndex>> const& partitions);
-    /**
-     * @brief
      * @param muS
      * @param muK
      */
@@ -116,7 +111,7 @@ class Integrator
      * @brief
      * @return
      */
-    PBAT_API GpuMatrixX GetExternalForce() const;
+    PBAT_API GpuMatrixX GetExternalAcceleration() const;
     /**
      * @brief
      * @return
@@ -149,11 +144,6 @@ class Integrator
      * @return
      */
     PBAT_API GpuMatrixX GetCompliance(EConstraint eConstraint) const;
-    /**
-     * @brief
-     * @return
-     */
-    PBAT_API std::vector<std::vector<GpuIndex>> GetPartitions() const;
     /**
      * @brief Get the vertex-tetrahedron collision candidates list
      *

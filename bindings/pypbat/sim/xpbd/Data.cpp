@@ -69,16 +69,37 @@ void BindData(pybind11::module& m)
             pyb::arg("muD"),
             "Sets the static and dynamic friction coefficients.")
         .def(
+            "with_collision_penalties",
+            &Data::WithCollisionPenalties,
+            pyb::arg("muV"),
+            "Sets the |#collision vertices| array of collision penalty coefficients.")
+        .def(
             "with_compliance",
             &Data::WithCompliance,
             pyb::arg("alpha"),
             pyb::arg("constraint"),
             "Sets the constraint compliance for the given constraint type.")
         .def(
+            "with_damping",
+            &Data::WithDamping,
+            pyb::arg("beta"),
+            pyb::arg("constraint"),
+            "Sets the constraint damping for the given constraint type.")
+        .def(
             "with_partitions",
             &Data::WithPartitions,
-            pyb::arg("partitions"),
+            pyb::arg("Pptr"),
+            pyb::arg("Padj"),
             "Sets the independent constraint partitions for solver parallelization.")
+        .def(
+            "with_cluster_partitions",
+            &Data::WithClusterPartitions,
+            pyb::arg("SGptr"),
+            pyb::arg("SGadj"),
+            pyb::arg("Cptr"),
+            pyb::arg("Cadj"),
+            "Sets the independent constraint cluster partitions for clustered solver "
+            "parallelization.")
         .def(
             "with_dirichlet_vertices",
             &Data::WithDirichletConstrainedVertices,
@@ -99,9 +120,11 @@ void BindData(pybind11::module& m)
         .def_readwrite("muS", &Data::muS)
         .def_readwrite("muD", &Data::muD)
         .def_readwrite("alpha", &Data::alpha)
+        .def_readwrite("beta", &Data::beta)
         .def_readwrite("lambda", &Data::lambda)
         .def_readwrite("dbc", &Data::dbc)
-        .def_readwrite("partitions", &Data::partitions);
+        .def_readwrite("partitions_ptr", &Data::Pptr)
+        .def_readwrite("partitions_adj", &Data::Padj);
 }
 
 } // namespace xpbd

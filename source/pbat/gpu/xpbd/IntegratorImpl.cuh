@@ -11,6 +11,7 @@
 #include "pbat/sim/xpbd/Enums.h"
 
 #include <array>
+#include <thrust/future.h>
 #include <vector>
 
 namespace pbat {
@@ -114,7 +115,7 @@ class IntegratorImpl
      * @brief
      * @return
      */
-    common::Buffer<GpuScalar, 3> const& GetExternalForce() const;
+    common::Buffer<GpuScalar, 3> const& GetExternalAcceleration() const;
     /**
      * @brief
      * @return
@@ -166,6 +167,12 @@ class IntegratorImpl
      */
     std::vector<ContactPairType> GetVertexTriangleContactPairs() const;
 
+    // Ideally, these would not be public, but nvcc will otherwise report that
+    // "The enclosing parent function ("[...]") for an extended __device__ lambda
+    // cannot have private or protected access within its class"
+    void ProjectBlockNeoHookeanConstraints(thrust::device_event& e, Scalar dt, Scalar dt2);
+    void ProjectClusteredBlockNeoHookeanConstraints(thrust::device_event& e, Scalar dt, Scalar dt2);
+
   public:
     geometry::PointsImpl X;    ///< Vertex/particle positions
     geometry::SimplicesImpl V; ///< Boundary vertex simplices
@@ -179,6 +186,7 @@ class IntegratorImpl
     geometry::BvhQueryImpl Vquery; ///< BVH vertex queries
 
     common::Buffer<GpuScalar, 3> mPositions;            ///< Vertex/particle positions at time t
+    common::Buffer<GpuScalar, 3> mPositionBuffer;       ///< Vertex/particle positions buffer
     common::Buffer<GpuScalar, 3> mVelocities;           ///< Vertex/particle velocities
     common::Buffer<GpuScalar, 3> mExternalAcceleration; ///< Vertex/particle external forces
     common::Buffer<GpuScalar> mMassInverses;            ///< Vertex/particle mass inverses
@@ -195,11 +203,23 @@ class IntegratorImpl
         mCompliance; ///< Compliance
                      ///< alpha[0] -> Stable Neo-Hookean constraint compliance
                      ///< alpha[1] -> Collision penalty constraint compliance
+    std::array<common::Buffer<GpuScalar>, kConstraintTypes>
+        mDamping; ///< Damping
+                  ///< beta[0] -> Stable Neo-Hookean constraint damping
+                  ///< beta[1] -> Collision penalty constraint damping
 
-    std::vector<common::Buffer<GpuIndex>> mPartitions; ///< Constraint partitions
-    GpuScalar mStaticFrictionCoefficient;              ///< Coulomb static friction coefficient
-    GpuScalar mDynamicFrictionCoefficient;             ///< Coulomb dynamic friction coefficient
-    Eigen::Vector<GpuScalar, 3> Smin, Smax;            ///< Scene bounding box
+    std::vector<Index> mPptr;       ///< Constraint partitions' pointers
+    common::Buffer<GpuIndex> mPadj; ///< Constraint partitions' constraints
+
+    std::vector<Index> mSGptr;       ///< Clustered constraint partitions' pointers
+    common::Buffer<GpuIndex> mSGadj; ///< Clustered constraint partitions' constraints
+    common::Buffer<Index> mCptr;     ///< Cluster -> constraint map pointers
+    common::Buffer<GpuIndex> mCadj;  ///< Cluster -> constraint map constraints
+
+    common::Buffer<GpuScalar> mPenalty;     ///< Collision vertex penalties
+    GpuScalar mStaticFrictionCoefficient;   ///< Coulomb static friction coefficient
+    GpuScalar mDynamicFrictionCoefficient;  ///< Coulomb dynamic friction coefficient
+    Eigen::Vector<GpuScalar, 3> Smin, Smax; ///< Scene bounding box
 };
 
 } // namespace xpbd
