@@ -7,10 +7,16 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     "Enums.h"
     "Kernels.h"
     "Integrator.h"
+    "MultiScaleIntegrator.h"
+    "Prolongation.h"
+    "Restriction.h"
 )
 target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     PRIVATE
     "Data.cpp"
     "Kernels.cpp"
     "Integrator.cpp"
+    "MultiScaleIntegrator.cpp"
+    "Prolongation.cpp"
+    "Restriction.cpp"
 )
