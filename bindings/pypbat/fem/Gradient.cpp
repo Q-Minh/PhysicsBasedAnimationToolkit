@@ -49,8 +49,8 @@ void BindGradient(pybind11::module& m)
                 Eigen::Ref<IndexVectorX const> const&,
                 Eigen::Ref<MatrixX const> const&>(),
             pyb::arg("mesh"),
-            pyb::arg("eg"),
-            pyb::arg("GNeg"),
+            pyb::arg("eg").noconvert(),
+            pyb::arg("GNeg").noconvert(),
             "Construct Gradient operator from mesh mesh, using precomputed shape function "
             "gradients GNeg at quadrature points at elements eg.")
         .def_readonly("dims", &Gradient::mDims)

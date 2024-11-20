@@ -63,7 +63,7 @@ void BindMassMatrix(pybind11::module& m)
         .def(
             pyb::init<Mesh const&, Eigen::Ref<MatrixX const> const&, Scalar, int, int>(),
             pyb::arg("mesh"),
-            pyb::arg("detJe"),
+            pyb::arg("detJe").noconvert(),
             pyb::arg("rho") = 1.,
             pyb::arg("dims") = 1,
             pyb::arg("quadrature_order") = 1,
@@ -80,7 +80,7 @@ void BindMassMatrix(pybind11::module& m)
                 int,
                 int>(),
             pyb::arg("mesh"),
-            pyb::arg("detJe"),
+            pyb::arg("detJe").noconvert(),
             pyb::arg("rho") = 1.,
             pyb::arg("dims") = 1,
             pyb::arg("quadrature_order") = 1,
