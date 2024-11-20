@@ -11,6 +11,7 @@ import pbatoolkit.fem
 import pbatoolkit.geometry
 import pbatoolkit.graph
 import pbatoolkit.sim
+import pbatoolkit.sim.vbd
 import pbatoolkit.profiling
 import pbatoolkit.math
 import pbatoolkit.math.linalg

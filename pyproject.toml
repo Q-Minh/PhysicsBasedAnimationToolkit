@@ -24,6 +24,11 @@ dependencies = [
     "scipy >= 1"
 ]
 
+[project.optional-dependencies]
+all = [
+    "networkx >= 3.3"
+]
+
 [tool.scikit-build]
 minimum-version = "0.9"
 wheel.packages = ["python/pbatoolkit"]

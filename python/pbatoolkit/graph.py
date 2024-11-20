@@ -19,31 +19,32 @@ for _name, _attr in inspect.getmembers(_graph):
         setattr(__module, _name, _attr)
 
 
-def mesh_adjacency_graph(V: np.ndarray, C: np.ndarray, data: np.ndarray | list = None):
-    """Computes the adjacency list (c,v), where c in C and v in V. Vertices v in V can 
+def mesh_adjacency_graph(V: np.ndarray, C: np.ndarray, data: np.ndarray = None):
+    """Computes the adjacency list (c,v), where c in C and v in V. Edges (c,v) can 
     have associated property values in data.
 
     Args:
         V (np.ndarray): |#verts|x|#dims| array of vertices
         C (np.ndarray): |#elements|x|#verts per element| array of elements
-        data (np.ndarray | list, optional): |#vertices| property values. Defaults to None.
+        data (np.ndarray, optional): |#elements|x|#verts per element| or 
+        |#elements * #verts per element| property values. Defaults to None.
 
     Raises:
-        ValueError: Given data must be associated to vertices.
+        ValueError: Given data must be associated to edges (c,v).
 
     Returns:
         G: Graph (c,v) in compressed sparse row format
     """
     row = np.repeat(range(C.shape[0]), C.shape[1])
-    col = C.flatten()
-    nnz = math.prod(C.shape)
+    col = C.flatten(order="C")
     if data is None:
-        data = np.ones(nnz)
+        data = np.ones_like(C)
     else:
-        length = len(data)
+        length = math.prod(data.shape)
+        nnz = math.prod(C.shape)
         if length != nnz:
             raise ValueError(f"Expected len(data)={nnz}")
-    G = sp.sparse.csr_array((data, (row, col)), shape=(
+    G = sp.sparse.csr_array((data.flatten(order="C"), (row, col)), shape=(
         C.shape[0], V.shape[0]))
     return G
 
