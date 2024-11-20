@@ -57,7 +57,7 @@ class Restriction
 template <class TDerivedXTI>
 inline void Restriction::SetTargetShape(Eigen::MatrixBase<TDerivedXTI> const& xtildeg)
 {
-    gtilde.setZero();
+    gtilde.setZero(3, m.size());
     for (auto g = 0; g < xtildeg.cols(); ++g)
     {
         auto e     = eg(g);
