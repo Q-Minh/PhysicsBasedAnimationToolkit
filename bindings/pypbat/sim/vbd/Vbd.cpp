@@ -2,6 +2,7 @@
 
 #include "Data.h"
 #include "Integrator.h"
+#include "Restriction.h"
 
 namespace pbat {
 namespace py {
@@ -12,6 +13,7 @@ void Bind(pybind11::module& m)
 {
     BindData(m);
     BindIntegrator(m);
+    BindRestriction(m);
 }
 
 } // namespace vbd

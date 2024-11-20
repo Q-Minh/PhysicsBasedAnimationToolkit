@@ -129,34 +129,34 @@ class SubMatrix
     int ib, jb;
 };
 
-#define PBAT_MINI_SUBMATRIX_API(SelfType)              \
-    template <auto S, auto T>                          \
-    PBAT_HOST_DEVICE auto Slice(int i, int j)          \
-    {                                                  \
-        return SubMatrix<SelfType, S, T>(*this, i, j); \
-    }                                                  \
-    PBAT_HOST_DEVICE auto Col(int j)                   \
-    {                                                  \
-        return Slice<kRows, 1>(0, j);                  \
-    }                                                  \
-    PBAT_HOST_DEVICE auto Row(int i)                   \
-    {                                                  \
-        return Slice<1, kCols>(i, 0);                  \
+#define PBAT_MINI_SUBMATRIX_API(SelfType)                      \
+    template <auto S, auto T>                                  \
+    PBAT_HOST_DEVICE [[maybe_unused]] auto Slice(int i, int j) \
+    {                                                          \
+        return SubMatrix<SelfType, S, T>(*this, i, j);         \
+    }                                                          \
+    PBAT_HOST_DEVICE [[maybe_unused]] auto Col(int j)          \
+    {                                                          \
+        return Slice<kRows, 1>(0, j);                          \
+    }                                                          \
+    PBAT_HOST_DEVICE [[maybe_unused]] auto Row(int i)          \
+    {                                                          \
+        return Slice<1, kCols>(i, 0);                          \
     }
 
-#define PBAT_MINI_CONST_SUBMATRIX_API(SelfType)             \
-    template <auto S, auto T>                               \
-    PBAT_HOST_DEVICE auto Slice(int i, int j) const         \
-    {                                                       \
-        return ConstSubMatrix<SelfType, S, T>(*this, i, j); \
-    }                                                       \
-    PBAT_HOST_DEVICE auto Col(int j) const                  \
-    {                                                       \
-        return Slice<kRows, 1>(0, j);                       \
-    }                                                       \
-    PBAT_HOST_DEVICE auto Row(int i) const                  \
-    {                                                       \
-        return Slice<1, kCols>(i, 0);                       \
+#define PBAT_MINI_CONST_SUBMATRIX_API(SelfType)                      \
+    template <auto S, auto T>                                        \
+    PBAT_HOST_DEVICE [[maybe_unused]] auto Slice(int i, int j) const \
+    {                                                                \
+        return ConstSubMatrix<SelfType, S, T>(*this, i, j);          \
+    }                                                                \
+    PBAT_HOST_DEVICE [[maybe_unused]] auto Col(int j) const          \
+    {                                                                \
+        return Slice<kRows, 1>(0, j);                                \
+    }                                                                \
+    PBAT_HOST_DEVICE [[maybe_unused]] auto Row(int i) const          \
+    {                                                                \
+        return Slice<1, kCols>(i, 0);                                \
     }
 
 } // namespace mini
