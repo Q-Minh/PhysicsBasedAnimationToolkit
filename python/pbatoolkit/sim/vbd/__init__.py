@@ -31,10 +31,9 @@ def vertex_element_adjacency(V: np.ndarray, C: np.ndarray, data: np.ndarray = No
         |#elements * #verts per element| property values. Defaults to None.
 
     Returns:
-        GVT: Adjacency graph GVT of edges (v,c) in compressed sparse matrix format.
+        GVT: Adjacency graph GVT of edges (v,c) in compressed sparse column matrix format.
     """
-    GTV = mesh_adjacency_graph(V, C, data)
-    GVT = GTV.T
+    GVT = mesh_adjacency_graph(V, C, data).asformat("csc")
     return GVT
 
 
