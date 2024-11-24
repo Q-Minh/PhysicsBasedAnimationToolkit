@@ -13,14 +13,16 @@ struct Energy
     MatrixX xtildeg; ///< 3x|#quad.pts.| array of inertial target positions at quadrature points
     VectorX rhog;    ///< |#quad.pts.| array of mass densities at quadrature points
     MatrixX
-        Ng; ///< 4x|#quad.pts.| array of coarse cage element shape functions at quadrature points
-    MatrixX GNeg;  ///< 4x|3*#quad.pts.| array of coarse cage element shape function gradients at
-                   ///< quadrature points
-    MatrixX Neg;   ///< 4x|4*#quad.pts.| array of coarse cage element shape functions at root level
-                   ///< elements' 4 vertices associated with quadrature points
-    MatrixX GNfeg; ///< 4x|3*#quad.pts.| array of root level element shape function gradients at
-                   ///< quadrature points
-    VectorX mug;   ///< |#quad.pts.| array of first Lame coefficients at quadrature points
+        Ncg; ///< 4x|#quad.pts.| array of coarse cage element shape functions at quadrature points
+    MatrixX GNcg;     ///< 4x|3*#quad.pts.| array of coarse cage element shape function gradients at
+                      ///< quadrature points
+    IndexMatrixX erg; ///< 4x|#quad.pts.| array of coarse element indices containing vertices of
+                      ///< root level element embedding quadrature point g
+    MatrixX Nrg;  ///< 4x|4*#quad.pts.| array of coarse cage element shape functions at root level
+                  ///< elements' 4 vertices associated with quadrature points
+    MatrixX GNfg; ///< 4x|3*#quad.pts.| array of root level element shape function gradients at
+                  ///< quadrature points
+    VectorX mug;  ///< |#quad.pts.| array of first Lame coefficients at quadrature points
     VectorX lambdag; ///< |#quad.pts.| array of second Lame coefficients at quadrature points
     IndexVectorX eg; ///< |#quad.pts.| array of elements associated with quadrature points
     Eigen::Vector<bool, Eigen::Dynamic>

@@ -68,7 +68,7 @@ void Restriction::Apply(Hierarchy& H)
                     // the elastic energy does not overpower the shape matching energy.
                     if (bSingular)
                     {
-                        SMatrix<Scalar, 4, 3> GNeg = FromEigen(Lc.E.GNeg.block<4, 3>(0, g * 3));
+                        SMatrix<Scalar, 4, 3> GNeg = FromEigen(Lc.E.GNcg.block<4, 3>(0, g * 3));
                         SMatrix<Scalar, 3, 3> Feg  = xeg * GNeg;
                         physics::StableNeoHookeanEnergy<3> Psi{};
                         SVector<Scalar, 9> gF;
@@ -80,7 +80,7 @@ void Restriction::Apply(Hierarchy& H)
                     else
                     {
                         Scalar rhog           = Lc.E.rhog(g);
-                        SVector<Scalar, 4> Nc = FromEigen(Lc.E.Ng.col(g).head<4>());
+                        SVector<Scalar, 4> Nc = FromEigen(Lc.E.Ncg.col(g).head<4>());
                         SVector<Scalar, 3> xf = FromEigen(xfg.col(g).head<3>());
                         auto xc               = xeg * Nc;
                         // Energy is 1/2 w_g rho_g || xc - xf ||_2^2

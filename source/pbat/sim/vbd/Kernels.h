@@ -4,7 +4,10 @@
 #include "Enums.h"
 #include "pbat/HostDevice.h"
 #include "pbat/common/ConstexprFor.h"
+#include "pbat/fem/DeformationGradient.h"
+#include "pbat/fem/Tetrahedron.h"
 #include "pbat/math/linalg/mini/Mini.h"
+#include "pbat/physics/HyperElasticity.h"
 
 #include <cmath>
 
@@ -221,6 +224,178 @@ PBAT_HOST_DEVICE void IntegratePositions(
     x -= (Inverse(H) * g);
 }
 
+namespace smoothing {
+
+template <
+    class IndexType,
+    mini::CMatrix TMatrixXCG,
+    mini::CMatrix TMatrixNC,
+    mini::CMatrix TMatrixXTL,
+    mini::CMatrix TMatrixGI,
+    mini::CMatrix TMatrixHI,
+    class ScalarType = typename TMatrixXCG::ScalarType>
+void AccumulateKineticEnergy(
+    IndexType ilocal,
+    ScalarType wg,
+    ScalarType rhog,
+    TMatrixXCG const& xcg,
+    TMatrixNC const& Nc,
+    TMatrixXTL const& xtildeg,
+    TMatrixGI& gi,
+    TMatrixHI& Hi)
+{
+    using namespace mini;
+    auto x = xcg * Nc;
+    gi += wg * rhog * (x - xtildeg) * Nc(ilocal);
+    Diag(Hi) += wg * rhog * Nc(ilocal) * Nc(ilocal);
+}
+
+template <
+    class IndexType,
+    physics::CHyperElasticEnergy TPsi,
+    mini::CMatrix TMatrixXCG,
+    mini::CMatrix TMatrixGNCG,
+    mini::CMatrix TMatrixGI,
+    mini::CMatrix TMatrixHI,
+    class ScalarType = typename TMatrixXCG::ScalarType>
+void AccumulateSingularEnergy(
+    ScalarType dt2,
+    IndexType ilocal,
+    ScalarType wg,
+    TPsi const& Psi,
+    ScalarType mug,
+    ScalarType lambdag,
+    TMatrixXCG const& xcg,
+    TMatrixGNCG const& GNcg,
+    TMatrixGI& gi,
+    TMatrixHI& Hi)
+{
+    using namespace mini;
+    SMatrix<Scalar, 3, 3> F = xcg * GNcg;
+    SVector<Scalar, 9> gF;
+    SMatrix<Scalar, 9, 9> HF;
+    Psi.gradAndHessian(F, mug, lambdag, gF, HF);
+    kernels::AccumulateElasticGradient(ilocal, dt2 * wg, GNcg, gF, gi);
+    kernels::AccumulateElasticHessian(ilocal, dt2 * wg, GNcg, HF, Hi);
+}
+
+template <
+    class IndexType,
+    mini::CMatrix TMatrixI,
+    mini::CMatrix TMatrixNCE,
+    mini::CMatrix TMatrixGE,
+    mini::CMatrix TMatrixGI,
+    class ScalarType = typename TMatrixNCE::ScalarType>
+void AccumulateElasticGradient(
+    IndexType ilocal,
+    ScalarType wg,
+    TMatrixI const& indicator,
+    TMatrixNCE const& Nce,
+    TMatrixGE const& ge,
+    TMatrixGI& gi)
+{
+    common::ForRange<0, 4>(
+        [&]<auto k>() { gi += indicator(k) * wg * Nce(ilocal, k) * ge.Slice<3, 1>(k * 3, 0); });
+}
+
+template <
+    class IndexType,
+    mini::CMatrix TMatrixI,
+    mini::CMatrix TMatrixNCE,
+    mini::CMatrix TMatrixHE,
+    mini::CMatrix TMatrixHI,
+    class ScalarType = typename TMatrixNCE::ScalarType>
+void AccumulateElasticHessian(
+    IndexType ilocal,
+    ScalarType wg,
+    TMatrixI const& indicator,
+    TMatrixNCE const& Nce,
+    TMatrixHE const& He,
+    TMatrixHI& Hi)
+{
+    common::ForRange<0, 4>([&]<auto kj>() {
+        common::ForRange<0, 4>([&]<auto ki>() {
+            Hi += indicator(ki) * indicator(kj) * wg * Nce(ilocal, ki) * Nce(ilocal, kj) *
+                  He.Slice<3, 3>(ki * 3, kj * 3);
+        });
+    });
+}
+
+template <
+    mini::CMatrix TMatrixXCR,
+    mini::CMatrix TMatrixNCE,
+    mini::CMatrix TMatrixGN,
+    class ScalarType = typename TMatrixXCR::ScalarType>
+mini::SMatrix<ScalarType, 3, 3>
+ComputeDeformationGradient(TMatrixXCR const& xcr, TMatrixNCE const& Nce, TMatrixGN const& GN)
+{
+    using namespace mini;
+    SMatrix<Scalar, 3, 4> x{};
+    common::ForRange<0, 4>(
+        [&]<auto k>() { x.Col(k) = xcr.template Slice<3, 4>(0, k * 4) * Nce.Col(k); });
+    auto F = x * GN;
+    return F;
+}
+
+template <
+    physics::CHyperElasticEnergy TPsi,
+    mini::CMatrix TMatrixXCR,
+    mini::CMatrix TMatrixNCE,
+    mini::CMatrix TMatrixGN,
+    mini::CMatrix TMatrixGF,
+    mini::CMatrix TMatrixHF,
+    class ScalarType = typename TMatrixXCR::ScalarType>
+void ComputeElasticDerivativesWrtF(
+    TPsi const& Psi,
+    ScalarType mug,
+    ScalarType lambdag,
+    TMatrixXCR const& xcr,
+    TMatrixNCE const& Nce,
+    TMatrixGN const& GN,
+    TMatrixGF& gF,
+    TMatrixHF& HF)
+{
+    using namespace mini;
+    SMatrix<Scalar, 3, 3> F = ComputeDeformationGradient(xcr, Nce, GN);
+    Psi.gradAndHessian(F, mug, lambdag, gF, HF);
+}
+
+template <
+    class IndexType,
+    physics::CHyperElasticEnergy TPsi,
+    mini::CMatrix TMatrixXCR,
+    mini::CMatrix TMatrixNCE,
+    mini::CMatrix TMatrixGN,
+    mini::CMatrix TMatrixI,
+    mini::CMatrix TMatrixGI,
+    mini::CMatrix TMatrixHI,
+    class ScalarType = typename TMatrixXCR::ScalarType>
+void AccumulatePotentialEnergy(
+    ScalarType dt2,
+    IndexType ilocal,
+    ScalarType wg,
+    TPsi const& Psi,
+    ScalarType mug,
+    ScalarType lambdag,
+    TMatrixXCR const& xcr,
+    TMatrixNCE const& Nce,
+    TMatrixGN const& GN,
+    TMatrixI const& indicator,
+    TMatrixGI& gi,
+    TMatrixHI& Hi)
+{
+    using namespace mini;
+    SVector<Scalar, 9> gF;
+    SMatrix<Scalar, 9, 9> HF;
+    ComputeElasticDerivativesWrtF(Psi, mug, lambdag, xcr, Nce, GN, gF, HF);
+    using ElementType          = fem::Tetrahedron<1>;
+    SVector<Scalar, 12> ge     = fem::GradientWrtDofs<ElementType, 3>(gF, GN);
+    SMatrix<Scalar, 12, 12> He = fem::HessianWrtDofs<ElementType, 3>(HF, GN);
+    AccumulateElasticGradient(ilocal, dt2 * wg, indicator, Nce, ge, gi);
+    AccumulateElasticHessian(ilocal, dt2 * wg, indicator, Nce, He, Hi);
+}
+
+} // namespace smoothing
 } // namespace kernels
 } // namespace vbd
 } // namespace sim
