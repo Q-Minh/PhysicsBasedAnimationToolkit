@@ -11,27 +11,16 @@ namespace vbd {
 
 void Prolongation::Apply(Hierarchy& H)
 {
-    auto lcStl      = static_cast<std::size_t>(lc);
-    Level const& Lc = H.levels[lcStl];
-    if (lf > -1)
-    {
-        auto lfStl = static_cast<std::size_t>(lf);
-        Level& Lf  = H.levels[lfStl];
-        assert(Lf.C.x.cols() == Nf.cols() and Lf.C.x.rows() == Lc.C.x.rows());
-        tbb::parallel_for(Index(0), Nf.cols(), [&](Index i) {
-            auto e        = ef(i);
-            Lf.C.x.col(i) = Lc.C.x(Eigen::placeholders::all, Lc.C.E.col(e)) * Nf.col(i);
-        });
-    }
-    else
-    {
-        Data& Lf = H.root;
-        assert(Lf.x.cols() == Nf.cols() and Lf.x.rows() == Lc.C.x.rows());
-        tbb::parallel_for(Index(0), Nf.cols(), [&](Index i) {
-            auto e      = ef(i);
-            Lf.x.col(i) = Lc.C.x(Eigen::placeholders::all, Lc.C.E.col(e)) * Nf.col(i);
-        });
-    }
+    auto lcStl                  = static_cast<std::size_t>(lc);
+    auto lfStl                  = static_cast<std::size_t>(lf);
+    Level const& Lc             = H.levels[lcStl];
+    bool const bIsFineLevelRoot = lf < 0;
+    MatrixX& xf                 = bIsFineLevelRoot ? H.root.x : H.levels[lfStl].C.x;
+    assert(xf.cols() == Nf.cols() and xf.rows() == Lc.C.x.rows());
+    tbb::parallel_for(Index(0), Nf.cols(), [&](Index i) {
+        auto e    = ef(i);
+        xf.col(i) = Lc.C.x(Eigen::placeholders::all, Lc.C.E.col(e)) * Nf.col(i);
+    });
 }
 
 } // namespace vbd
