@@ -3,15 +3,23 @@ target_sources(PhysicsBasedAnimationToolkit_Python
     FILE_SET api
     FILES
     "Data.h"
+    "Hierarchy.h"
     "Integrator.h"
+    "Level.h"
+    "Prolongation.h"
     "Restriction.h"
+    "Smoother.h"
     "Vbd.h"
 )
 
 target_sources(PhysicsBasedAnimationToolkit_Python
     PRIVATE
     "Data.cpp"
+    "Hierarchy.cpp"
     "Integrator.cpp"
+    "Level.cpp"
+    "Prolongation.cpp"
     "Restriction.cpp"
+    "Smoother.cpp"
     "Vbd.cpp"
 )
