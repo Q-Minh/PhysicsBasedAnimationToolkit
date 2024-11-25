@@ -1,6 +1,10 @@
 #ifndef PBAT_PROFILING_PROFILING_H
 #define PBAT_PROFILING_PROFILING_H
 
+#if defined(__CUDACC__)
+static_assert(false, "Cannot #include tracy headers in CUDA code.");
+#endif // __CUDACC__
+
 #include "PhysicsBasedAnimationToolkitExport.h"
 
 #ifdef PBAT_HAS_TRACY_PROFILER

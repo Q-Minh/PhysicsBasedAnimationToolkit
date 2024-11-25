@@ -241,16 +241,16 @@ class ConstTransposeView
     NestedType const& A;
 };
 
-#define PBAT_MINI_TRANSPOSE_API(SelfType)      \
-    PBAT_HOST_DEVICE auto Transpose()          \
-    {                                          \
-        return TransposeView<SelfType>(*this); \
+#define PBAT_MINI_TRANSPOSE_API(SelfType)              \
+    PBAT_HOST_DEVICE [[maybe_unused]] auto Transpose() \
+    {                                                  \
+        return TransposeView<SelfType>(*this);         \
     }
 
-#define PBAT_MINI_CONST_TRANSPOSE_API(SelfType)     \
-    PBAT_HOST_DEVICE auto Transpose() const         \
-    {                                               \
-        return ConstTransposeView<SelfType>(*this); \
+#define PBAT_MINI_CONST_TRANSPOSE_API(SelfType)              \
+    PBAT_HOST_DEVICE [[maybe_unused]] auto Transpose() const \
+    {                                                        \
+        return ConstTransposeView<SelfType>(*this);          \
     }
 
 } // namespace mini

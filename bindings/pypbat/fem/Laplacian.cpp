@@ -58,9 +58,9 @@ void BindLaplacian(pybind11::module& m)
                 Eigen::Ref<MatrixX const> const&,
                 int>(),
             pyb::arg("mesh"),
-            pyb::arg("eg"),
-            pyb::arg("wg"),
-            pyb::arg("GNe"),
+            pyb::arg("eg").noconvert(),
+            pyb::arg("wg").noconvert(),
+            pyb::arg("GNe").noconvert(),
             pyb::arg("dims") = 1,
             "Construct the symmetric part of the Laplacian operator on mesh mesh, using "
             "precomputed shape function gradients GNeg evaluated at quadrature points g at "

@@ -90,9 +90,11 @@ void Integrator::SetRayleighDampingCoefficient(GpuScalar kD)
     mImpl->SetRayleighDampingCoefficient(kD);
 }
 
-void Integrator::SetVertexPartitions(std::vector<std::vector<GpuIndex>> const& partitions)
+void Integrator::SetVertexPartitions(
+    Eigen::Ref<GpuIndexVectorX const> const& Pptr,
+    Eigen::Ref<GpuIndexVectorX const> const& Padj)
 {
-    mImpl->SetVertexPartitions(partitions);
+    mImpl->SetVertexPartitions(Pptr, Padj);
 }
 
 void Integrator::SetInitializationStrategy(EInitializationStrategy strategy)

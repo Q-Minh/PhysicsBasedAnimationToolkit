@@ -6,17 +6,23 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     "Data.h"
     "Enums.h"
     "Kernels.h"
+    "Hierarchy.h"
     "Integrator.h"
+    "Level.h"
     "MultiScaleIntegrator.h"
     "Prolongation.h"
     "Restriction.h"
+    "Smoother.h"
 )
 target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     PRIVATE
     "Data.cpp"
     "Kernels.cpp"
+    "Hierarchy.cpp"
     "Integrator.cpp"
+    "Level.cpp"
     "MultiScaleIntegrator.cpp"
     "Prolongation.cpp"
     "Restriction.cpp"
+    "Smoother.cpp"
 )

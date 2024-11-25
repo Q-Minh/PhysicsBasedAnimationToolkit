@@ -10,62 +10,56 @@ namespace pbat {
 namespace sim {
 namespace vbd {
 
-class Prolongation
-{
-  public:
-    /**
-     * @brief Construct a new Prolongation object
-     *
-     * @tparam TDerivedTC
-     * @tparam TDerivedEC
-     * @tparam TDerivedN
-     * @param TC
-     * @param EC
-     * @param N
-     */
-    template <class TDerivedTC, class TDerivedEC, class TDerivedN>
-    Prolongation(
-        Eigen::MatrixBase<TDerivedTC> const& TC,
-        Eigen::MatrixBase<TDerivedEC> const& EC,
-        Eigen::MatrixBase<TDerivedN> const& N);
+struct Hierarchy;
 
+struct Prolongation
+{
     /**
      * @brief
      *
-     * @tparam TDerivedXL
-     * @tparam TDerivedXLM1
-     * @param xl
-     * @param xlm1
+     * @param lc Coarse level
+     * @return Prolongation&
      */
-    template <class TDerivedXL, class TDerivedXLM1>
-    void Apply(Eigen::MatrixBase<TDerivedXL> const& xl, Eigen::MatrixBase<TDerivedXLM1>& xlm1);
+    Prolongation& From(Index lc);
+    /**
+     * @brief
+     *
+     * @param lf Fine level
+     * @return Prolongation&
+     */
+    Prolongation& To(Index lf);
+    /**
+     * @brief
+     *
+     * @param ec |#verts at fine level| array of coarse cage elements containing fine level vertices
+     * @param Nc 4x|#verts at fine level| array of coarse cage shape functions at fine level
+     * vertices
+     * @return Prolongation&
+     */
+    Prolongation& WithCoarseShapeFunctions(
+        Eigen::Ref<IndexVectorX const> const& ec,
+        Eigen::Ref<MatrixX const> const& Nc);
+    /**
+     * @brief
+     *
+     * @param bValidate Throw on ill-formed input
+     * @return Prolongation&
+     */
+    Prolongation& Construct(bool bValidate = true);
 
-  private:
-    Eigen::Ref<IndexMatrixX const> TC; ///< Coarse (i.e. level l) tetrahedral mesh elements
-    IndexVectorX EC; ///< Coarse (i.e. level l) elements associated with each fine level vertex
-    MatrixX
-        N; ///< 4x|V^{l-1}| linear tetrahedral shape functions at V^{l-1} (i.e. fine level vertices)
+    IndexVectorX
+        ec; ///< |#verts at fine level| array of coarse cage elements containing fine level vertices
+    MatrixX Nc;   ///< 4x|#verts at fine level| array of coarse cage shape functions at fine level
+                  ///< vertices
+    Index lc, lf; ///< Coarse (lc) and fine (lf) indices to levels in the hierarchy (lc > lf)
+
+    /**
+     * @brief Prolong level lc to level lf
+     *
+     * @param H
+     */
+    void Apply(Hierarchy& H);
 };
-
-template <class TDerivedTC, class TDerivedEC, class TDerivedN>
-inline Prolongation::Prolongation(
-    Eigen::MatrixBase<TDerivedTC> const& TCin,
-    Eigen::MatrixBase<TDerivedEC> const& ECin,
-    Eigen::MatrixBase<TDerivedN> const& Nin)
-    : TC(TCin), EC(ECin), N(Nin)
-{
-}
-
-template <class TDerivedXL, class TDerivedXLM1>
-inline void
-Prolongation::Apply(Eigen::MatrixBase<TDerivedXL> const& xl, Eigen::MatrixBase<TDerivedXLM1>& xlm1)
-{
-    assert(xlm1.cols() == N.cols() and xlm1.rows() == xl.rows());
-    tbb::parallel_for(Index(0), N.cols(), [&](Index i) {
-        auto e      = EC(i);
-        xlm1.col(i) = xl(Eigen::placeholders::all, TC.col(e)) * N.col(i);
-    });
-}
 
 } // namespace vbd
 } // namespace sim

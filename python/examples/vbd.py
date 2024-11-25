@@ -1,13 +1,10 @@
 import pbatoolkit as pbat
 import meshio
 import numpy as np
-import scipy as sp
 import igl
 import polyscope as ps
 import polyscope.imgui as imgui
-import math
 import argparse
-import networkx as nx
 import itertools
 
 
@@ -15,60 +12,10 @@ def combine(V: list, C: list):
     Vsizes = [Vi.shape[0] for Vi in V]
     Csizes = [Ci.shape[0] for Ci in C]
     Voffsets = list(itertools.accumulate(Vsizes))
-    Coffsets = list(itertools.accumulate(Csizes))
     C = [C[i] + Voffsets[i] - Vsizes[i] for i in range(len(C))]
     C = np.vstack(C)
     V = np.vstack(V)
-    return V, Vsizes, C, Coffsets, Csizes
-
-
-def boundary_triangles(C: np.ndarray, Coffsets: list, Csizes: list):
-    F = [None]*len(Csizes)
-    for i in range(len(F)):
-        begin = Coffsets[i] - Csizes[i]
-        end = begin + Csizes[i]
-        F[i] = igl.boundary_facets(C[begin:end, :])
-        F[i][:, :2] = np.roll(F[i][:, :2], shift=1, axis=1)
-    Fsizes = [Fi.shape[0] for Fi in F]
-    F = np.vstack(F)
-    return F, Fsizes
-
-
-def vertex_tetrahedron_adjacency_graph(V, C):
-    row = np.repeat(range(C.shape[0]), C.shape[1])
-    col = C.flatten()
-    data = np.zeros_like(C)
-    for i in range(C.shape[1]):
-        data[:, i] = i
-    data = data.flatten()
-    GVT = sp.sparse.coo_array((data, (row, col)), shape=(
-        C.shape[0], V.shape[0])).asformat("csc")
-    return GVT
-
-
-def color_dict_to_array(Cdict, n):
-    C = np.zeros(n)
-    keys = [key for key in Cdict.keys()]
-    values = [value for value in Cdict.values()]
-    C[keys] = values
-    return C
-
-
-def partition_vertices(GVT, dbcs):
-    GVV = GVT.T @ GVT
-    Gprimal = nx.Graph(GVV)
-    GC = nx.greedy_color(Gprimal, strategy="random_sequential")
-    GC = color_dict_to_array(GC, GVT.shape[1]).astype(np.int32)
-    npartitions = GC.max() + 1
-    partitions = []
-    for p in range(npartitions):
-        vertices = np.nonzero(GC == p)[0]
-        # Remove Dirichlet constrained vertices from partitions.
-        # In other words, internal forces will not be applied to constrained vertices.
-        vertices = np.setdiff1d(vertices, dbcs).tolist()
-        if len(vertices) > 0:
-            partitions.append(vertices)
-    return partitions, GC
+    return V, C
 
 
 if __name__ == "__main__":
@@ -105,10 +52,11 @@ if __name__ == "__main__":
         extent = V[i][:, -1].max() - V[i][:, -1].min()
         offset = V[i][:, -1].max() - V[i+1][:, -1].min()
         V[i+1][:, -1] += offset + extent*args.translation
-    V, Vsizes, C, Coffsets, Csizes = combine(V, C)
+    V, C = combine(V, C)
     mesh = pbat.fem.Mesh(
         V.T, C.T, element=pbat.fem.Element.Tetrahedron, order=1)
-    F, Fsizes = boundary_triangles(C, Coffsets, Csizes)
+    F = igl.boundary_facets(C)
+    F[:, :2] = np.roll(F[:, :2], shift=1, axis=1)
 
     detJeM = pbat.fem.jacobian_determinants(mesh, quadrature_order=2)
     rho = args.rho
@@ -147,10 +95,9 @@ if __name__ == "__main__":
     # Setup VBD
     Vcollision = np.unique(F)
     VC = Vcollision
-    GVT = vertex_tetrahedron_adjacency_graph(V, C)
-    GVTtopology = GVT.copy()
-    GVTtopology.data[:] = 1  # Set all edge weights to 1
-    partitions, GC = partition_vertices(GVTtopology, vdbc)
+    ilocal = np.repeat(np.arange(4)[np.newaxis, :], C.shape[0], axis=0)
+    GVT = pbat.sim.vbd.vertex_element_adjacency(V, C, data=ilocal)
+    Pptr, Padj, GC = pbat.sim.vbd.partitions(V, C, vdbc)
     data = pbat.sim.vbd.Data().with_volume_mesh(
         V.T, C.T
     ).with_surface_mesh(
@@ -164,7 +111,7 @@ if __name__ == "__main__":
     ).with_vertex_adjacency(
         GVT.indptr, GVT.indices, GVT.indices, GVT.data
     ).with_partitions(
-        partitions
+        Pptr, Padj
     ).with_dirichlet_vertices(
         vdbc
     ).with_initialization_strategy(

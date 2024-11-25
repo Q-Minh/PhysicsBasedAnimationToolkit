@@ -71,9 +71,12 @@ Data& Data::WithVertexAdjacency(
     return *this;
 }
 
-Data& Data::WithPartitions(std::vector<std::vector<Index>> const& partitionsIn)
+Data& Data::WithPartitions(
+    Eigen::Ref<IndexVectorX const> const& PptrIn,
+    Eigen::Ref<IndexVectorX const> const& PadjIn)
 {
-    this->partitions = partitionsIn;
+    this->Pptr = PptrIn;
+    this->Padj = PadjIn;
     return *this;
 }
 
@@ -144,18 +147,6 @@ Data& Data::Construct(bool bValidate)
     // Constrained vertices must not move
     v(Eigen::placeholders::all, dbc).setZero();
     aext(Eigen::placeholders::all, dbc).setZero();
-    for (auto& partition : partitions)
-    {
-        std::vector<Index> freePartition = partition;
-        std::sort(partition.begin(), partition.end());
-        std::set_difference(
-            partition.begin(),
-            partition.end(),
-            this->dbc.begin(),
-            this->dbc.end(),
-            freePartition.begin());
-        std::swap(partition, freePartition);
-    }
 
     if (bValidate)
     {

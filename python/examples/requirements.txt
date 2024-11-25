@@ -5,5 +5,4 @@ libigl==v2.5.1
 polyscope==2.2.1
 ilupp==1.0.2
 ipctk==1.2.0
-networkx==3.3
 qpsolvers[open_source_solvers]==4.4.0

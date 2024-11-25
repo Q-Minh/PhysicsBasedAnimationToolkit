@@ -19,10 +19,10 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
 ]
-dependencies = [
-    "numpy >= 1, < 2",
-    "scipy >= 1"
-]
+dependencies = ["numpy >= 1, < 2", "scipy >= 1", "networkx >= 3.3"]
+
+[project.optional-dependencies]
+all = []
 
 [tool.scikit-build]
 minimum-version = "0.9"

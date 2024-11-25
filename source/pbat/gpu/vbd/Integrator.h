@@ -100,9 +100,10 @@ class Integrator
     /**
      * @brief Sets the groups/partitions of vertices that can be minimized independently, i.e. in
      * parallel.
-     * @param partitions
+     * @param Pptr
+     * @param Padj
      */
-    PBAT_API void SetVertexPartitions(std::vector<std::vector<GpuIndex>> const& partitions);
+    PBAT_API void SetVertexPartitions(Eigen::Ref<GpuIndexVectorX const> const& Pptr, Eigen::Ref<GpuIndexVectorX const> const& Padj);
     /**
      * @brief Sets the initialization strategy to kick-start the time step minimization
      * @param strategy

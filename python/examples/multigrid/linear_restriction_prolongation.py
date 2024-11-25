@@ -87,8 +87,7 @@ def gradient_operator(mesh, Xg, dims=1):
     return G.asformat('csc')
 
 
-def shape_function_matrix(mesh, Xg, dims=1):
-    nevalpts = Xg.shape[1]
+def shape_functions(mesh, Xg, dims=1):
     # Unfortunately, we have to perform the copy here...
     # mesh.X and mesh.E are defined via def_property in pybind11, and
     # the underlying function returns a const reference. pbat.geometry.bvh
@@ -100,7 +99,13 @@ def shape_function_matrix(mesh, Xg, dims=1):
     Xi = pbat.fem.reference_positions(mesh, e, Xg)
     phi = pbat.fem.shape_functions_at(mesh, Xi)
     # quad. pts. Xg that are outside the mesh should have N(Xg)=0
-    # phi[:, np.array(d) > 0] = 0
+    phi[:, np.array(d) > 0] = 0
+    return phi, np.array(e, dtype=np.int64)
+
+
+def shape_function_matrix(mesh, Xg, dims=1):
+    nevalpts = Xg.shape[1]
+    phi, e = shape_functions(mesh, Xg, dims=dims)
     data = phi.flatten(order='F')
     rows = np.repeat(list(range(nevalpts)), mesh.E.shape[0])
     cols = mesh.E[:, e].flatten(order='F')
@@ -109,6 +114,16 @@ def shape_function_matrix(mesh, Xg, dims=1):
     if dims > 1:
         N = sp.sparse.kron(N, sp.sparse.eye(dims))
     return N.asformat('csc')
+
+
+def shape_function_gradients(mesh, Xg):
+    V = mesh.X
+    C = mesh.E
+    bvh = pbat.geometry.bvh(V, C, cell=pbat.geometry.Cell.Tetrahedron)
+    e, d = bvh.nearest_primitives_to_points(Xg, parallelize=True)
+    Xi = pbat.fem.reference_positions(mesh, e, Xg)
+    gradphi = pbat.fem.shape_function_gradients_at(mesh, e, Xi)
+    return gradphi, np.array(e, dtype=np.int64)
 
 
 class BaseFemFunctionTransferOperator():
@@ -253,6 +268,76 @@ class NewtonFunctionTransferOperator(BaseFemFunctionTransferOperator):
         return uk
 
 
+class VbdFunctionTransferOperator:
+    def __init__(self, MD: pbat.fem.Mesh, MS: pbat.fem.Mesh, MT: pbat.fem.Mesh, hxreg=1e-4, Y=1e6, nu=0.45, rho=1e3):
+        quadrature_order = 1
+        wgD = pbat.fem.inner_product_weights(
+            MD, quadrature_order).flatten(order="F")
+        XgD = MD.quadrature_points(quadrature_order)
+        wgT, self.Xg, self.eg, errT = transfer_quadrature(
+            MT, wgD, XgD, order=quadrature_order)
+        self.wg, ezeroinds = patch_quadrature(
+            MT, wgT, self.Xg, self.eg, err=1e-4)
+        self.Ng, eNg = shape_functions(MT, self.Xg)
+        self.GNeg, eGNeg = shape_function_gradients(MT, self.Xg)
+        Y = np.full(self.wg.shape[0], Y)
+        nu = np.full(self.wg.shape[0], nu)
+        self.mug = Y / (2*(1+nu))
+        self.lambdag = (Y*nu) / ((1+nu)*(1-2*nu))
+        self.NT = shape_function_matrix(MT, self.Xg)
+        self.NS = shape_function_matrix(MS, self.Xg)
+        Ig = sp.sparse.diags_array(rho * self.wg)
+        M = (self.NT.T @ Ig @ self.NT).asformat('csc')
+        self.m = np.array(M.sum(axis=0)).squeeze()
+        self.P = (self.NT.T @ Ig @ self.NS).asformat('csc')
+        self.rho = rho
+        energy = pbat.fem.HyperElasticEnergy.StableNeoHookean
+        self.hep, self.egU, self.wgU, self.GNeU = pbat.fem.hyper_elastic_potential(
+            MT, Y, nu, energy=energy, eg=self.eg, wg=self.wg, GNeg=self.GNeg)
+        GNegS, egS = shape_function_gradients(MS, self.Xg)
+        self.hepS, self.egUS, self.wgUS, self.GNeUS = pbat.fem.hyper_elastic_potential(
+            MS, Y, nu, energy=energy, eg=egS, wg=self.wg, GNeg=GNegS)
+        self.Kpsi = hxreg
+        self.R = pbat.sim.vbd.Restriction()
+        self.R.E = MT.E
+        self.R.eg = self.eg
+        self.R.Ng = self.Ng
+        self.R.GNeg = self.GNeg
+        self.R.wg = self.wg
+        self.R.rhog = np.full(self.wg.shape[0], rho)
+        self.R.mug = self.mug
+        self.R.lambdag = self.lambdag
+        self.R.m = self.m
+        self.R.Kpsi = self.Kpsi
+        V, C = MT.X.T, MT.E[:, self.eg].T
+        eg = np.repeat(self.eg, C.shape[1])
+        ilocal = np.tile(np.arange(C.shape[1]), self.eg.shape[0])
+        GVTe = pbat.sim.vbd.vertex_element_adjacency(V, C, data=eg)
+        GVTi = pbat.sim.vbd.vertex_element_adjacency(V, C, data=ilocal)
+        self.R.GVGp = GVTi.indptr
+        self.R.GVGg = GVTi.indices
+        self.R.GVGe = GVTe.data
+        self.R.GVGilocal = GVTi.data
+        self.R.partitions = pbat.sim.vbd.partitions(V, C)[0]
+        self.X = MT.X
+        self.XS = MS.X
+        self.u = np.zeros(math.prod(self.X.shape), order="f")
+
+    def __matmul__(self, u):
+        xrs = self.XS.reshape(math.prod(self.XS.shape), order='f')
+        uk = self.u
+        U = u.reshape((3, int(u.shape[0] / 3)), order="F")
+        Uk = uk.reshape(self.X.shape, order="F")
+        xtildeg = U @ self.NS.T
+        self.R.set_target_shape(xtildeg)
+        xs = xrs + u
+        self.hepS.compute_element_elasticity(xs, grad=False, hessian=False)
+        self.R.Psitildeg = self.hepS.Ug
+        Ukp1 = self.R.apply(Uk, iters=20)
+        self.uk = Ukp1.flatten(order="F")
+        return self.uk
+
+
 def rest_pose_hessian(mesh, Y, nu):
     x = mesh.X.reshape(math.prod(mesh.X.shape), order='f')
     energy = pbat.fem.HyperElasticEnergy.StableNeoHookean
@@ -320,25 +405,29 @@ if __name__ == "__main__":
         mesh, args.rho, args.Y, args.nu, args.modes)
     HC = rest_pose_hessian(cmesh, args.Y, args.nu)
     lreg, hreg, greg, hxreg = 1e-2, 0, 1, 1e-4
-    # Fldl = CholFemFunctionTransferOperator(
+    # Fnewton = CholFemFunctionTransferOperator(
     #     mesh, mesh, cmesh, HC, lreg=lreg, hreg=hreg, greg=greg)
-    Fldl = NewtonFunctionTransferOperator(
-        mesh, mesh, cmesh, hxreg=hxreg)
-    Krestrict = 30
-    Frank = RankKApproximateFemFunctionTransferOperator(
-        mesh, mesh, cmesh, HC, lreg=lreg, hreg=hreg, greg=greg, modes=Krestrict)
+    # Fnewton = NewtonFunctionTransferOperator(
+    #     mesh, mesh, cmesh, hxreg=hxreg)
+    # Krestrict = 30
+    # Frank = RankKApproximateFemFunctionTransferOperator(
+    #     mesh, mesh, cmesh, HC, lreg=lreg, hreg=hreg, greg=greg, modes=Krestrict)
+    Fvbd = VbdFunctionTransferOperator(mesh, mesh, cmesh, hxreg=1e-8)
 
     ps.set_up_dir("z_up")
     ps.set_front_dir("neg_y_front")
     ps.set_ground_plane_mode("shadow_only")
     ps.init()
     vm = ps.register_surface_mesh("model", V, F)
-    ldlvm = ps.register_surface_mesh("LDL cage", CV, CF)
-    ldlvm.set_transparency(0.5)
-    ldlvm.set_edge_width(1)
-    rankvm = ps.register_surface_mesh("Rank K cage", CV, CF)
-    rankvm.set_transparency(0.5)
-    rankvm.set_edge_width(1)
+    # newtonvm = ps.register_surface_mesh("Newton cage", CV, CF)
+    # newtonvm.set_transparency(0.5)
+    # newtonvm.set_edge_width(1)
+    # rankvm = ps.register_surface_mesh("Rank K cage", CV, CF)
+    # rankvm.set_transparency(0.5)
+    # rankvm.set_edge_width(1)
+    vbdvm = ps.register_surface_mesh("VBD cage", CV, CF)
+    vbdvm.set_transparency(0.5)
+    vbdvm.set_edge_width(1)
     mode = 6
     t0 = time.time()
     t = 0
@@ -350,29 +439,29 @@ if __name__ == "__main__":
     step = False
     screenshot = False
 
-    wg2 = pbat.fem.inner_product_weights(mesh, 1).flatten(order="F")
-    Xg2 = mesh.quadrature_points(1)
+    # wg2 = pbat.fem.inner_product_weights(mesh, 1).flatten(order="F")
+    # Xg2 = mesh.quadrature_points(1)
 
-    pg2 = ps.register_point_cloud("Fine quad", Xg2.T)
-    pg2.add_scalar_quantity("weights", wg2, enabled=True)
-    pg2.set_point_radius_quantity("weights")
+    # pg2 = ps.register_point_cloud("Fine quad", Xg2.T)
+    # pg2.add_scalar_quantity("weights", wg2, enabled=True)
+    # pg2.set_point_radius_quantity("weights")
 
-    wg1, Xg1, e1, err = transfer_quadrature(cmesh, wg2, Xg2, order=1)
-    pg1 = ps.register_point_cloud("Cage quad", Xg1.T)
-    pg1.add_scalar_quantity("weights", wg1, enabled=True)
-    pg1.set_point_radius_quantity("weights")
+    # wg1, Xg1, e1, err = transfer_quadrature(cmesh, wg2, Xg2, order=1)
+    # pg1 = ps.register_point_cloud("Cage quad", Xg1.T)
+    # pg1.add_scalar_quantity("weights", wg1, enabled=True)
+    # pg1.set_point_radius_quantity("weights")
 
-    wg1p, ezeroinds = patch_quadrature(cmesh, wg1, Xg1, e1, err=1e-4)
-    ezero = np.unique(e1[ezeroinds])
-    wgpatched = wg1p[ezeroinds]
-    Xgpatched = Xg1[:, ezeroinds]
-    pp = ps.register_point_cloud("Patched", Xgpatched.T)
-    pp.add_scalar_quantity("weights", wgpatched, enabled=True)
-    pp.set_point_radius_quantity("weights")
-    ps.register_volume_mesh("Bad coarse", CV, CC[ezero, :])
-    pg1p = ps.register_point_cloud("Cage quad patched", Xg1.T)
-    pg1p.add_scalar_quantity("weights", wg1p, enabled=True)
-    pg1p.set_point_radius_quantity("weights")
+    # wg1p, ezeroinds = patch_quadrature(cmesh, wg1, Xg1, e1, err=1e-4)
+    # ezero = np.unique(e1[ezeroinds])
+    # wgpatched = wg1p[ezeroinds]
+    # Xgpatched = Xg1[:, ezeroinds]
+    # pp = ps.register_point_cloud("Patched", Xgpatched.T)
+    # pp.add_scalar_quantity("weights", wgpatched, enabled=True)
+    # pp.set_point_radius_quantity("weights")
+    # ps.register_volume_mesh("Bad coarse", CV, CC[ezero, :])
+    # pg1p = ps.register_point_cloud("Cage quad patched", Xg1.T)
+    # pg1p.add_scalar_quantity("weights", wg1p, enabled=True)
+    # pg1p.set_point_radius_quantity("weights")
 
     def callback():
         global mode, c, k, theta, dtheta
@@ -394,11 +483,13 @@ if __name__ == "__main__":
             ur = (X - V).flatten(order="C")
             ut = 1
             u = uf + ur + ut
-            XCldl = CV + (Fldl @ u).reshape(CV.shape)
-            XCrank = CV + (Frank @ u).reshape(CV.shape)
+            # XCnewton = CV + (Fnewton @ u).reshape(CV.shape)
+            XCvbd = CV + (Fvbd @ u).reshape(CV.shape)
+            # XCrank = CV + (Frank @ u).reshape(CV.shape)
             vm.update_vertex_positions(V + (uf + ur).reshape(V.shape))
-            ldlvm.update_vertex_positions(XCldl)
-            rankvm.update_vertex_positions(XCrank)
+            # newtonvm.update_vertex_positions(XCnewton)
+            vbdvm.update_vertex_positions(XCvbd)
+            # rankvm.update_vertex_positions(XCrank)
 
             theta += dtheta
             if theta > 2*np.pi:

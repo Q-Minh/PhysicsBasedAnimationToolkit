@@ -2,7 +2,6 @@
 #define PBAT_FEM_DEFORMATION_GRADIENT_H
 
 #include "Concepts.h"
-#include "Jacobian.h"
 #include "pbat/Aliases.h"
 #include "pbat/math/linalg/mini/BinaryOperations.h"
 #include "pbat/math/linalg/mini/Concepts.h"
