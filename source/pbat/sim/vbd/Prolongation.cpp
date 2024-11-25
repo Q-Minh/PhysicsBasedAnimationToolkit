@@ -3,11 +3,59 @@
 #include "Hierarchy.h"
 
 #include <cassert>
+#include <exception>
+#include <fmt/format.h>
+#include <string>
 #include <tbb/parallel_for.h>
 
 namespace pbat {
 namespace sim {
 namespace vbd {
+
+Prolongation& Prolongation::From(Index lcIn)
+{
+    lc = lcIn;
+    return *this;
+}
+
+Prolongation& Prolongation::To(Index lfIn)
+{
+    lf = lfIn;
+    return *this;
+}
+
+Prolongation& Prolongation::WithCoarseShapeFunctions(
+    Eigen::Ref<IndexVectorX const> const& efIn,
+    Eigen::Ref<MatrixX const> const& NfIn)
+{
+    ef = efIn;
+    Nf = NfIn;
+    return *this;
+}
+
+Prolongation& Prolongation::Construct(bool bValidate)
+{
+    if (not bValidate)
+        return *this;
+
+    bool const bTransitionValid = (lc > lf);
+    if (not bTransitionValid)
+    {
+        std::string const what = fmt::format("Expected lc > lf, but got lc={}, lf={}", lc, lf);
+        throw std::invalid_argument(what);
+    }
+    bool const bShapeFunctionsAndElementsMatch = ef.size() == Nf.cols();
+    if (not bShapeFunctionsAndElementsMatch)
+    {
+        std::string const what = fmt::format(
+            "Expected ef.size() == Nf.cols(), but got dimensions ef={}, Nf={}x{}",
+            ef.size(),
+            Nf.rows(),
+            Nf.cols());
+        throw std::invalid_argument(what);
+    }
+    return *this;
+}
 
 void Prolongation::Apply(Hierarchy& H)
 {

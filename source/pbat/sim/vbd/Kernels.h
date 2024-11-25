@@ -224,6 +224,63 @@ PBAT_HOST_DEVICE void IntegratePositions(
     x -= (Inverse(H) * g);
 }
 
+namespace restriction {
+
+template <
+    class IndexType,
+    physics::CHyperElasticEnergy TPsi,
+    mini::CMatrix TMatrixXCG,
+    mini::CMatrix TMatrixGNCG,
+    mini::CMatrix TMatrixGI,
+    mini::CMatrix TMatrixHI,
+    class ScalarType = typename TMatrixXCG::ScalarType>
+void AccumulateSingularEnergy(
+    IndexType ilocal,
+    ScalarType wg,
+    TPsi const& Psi,
+    ScalarType mug,
+    ScalarType lambdag,
+    TMatrixXCG const& xcg,
+    TMatrixGNCG const& GNcg,
+    TMatrixGI& gi,
+    TMatrixHI& Hi)
+{
+    using namespace mini;
+    SMatrix<Scalar, 3, 3> F = xcg * GNcg;
+    SVector<Scalar, 9> gF;
+    SMatrix<Scalar, 9, 9> HF;
+    Psi.gradAndHessian(F, mug, lambdag, gF, HF);
+    kernels::AccumulateElasticGradient(ilocal, wg, GNcg, gF, gi);
+    kernels::AccumulateElasticHessian(ilocal, wg, GNcg, HF, Hi);
+}
+
+template <
+    class IndexType,
+    mini::CMatrix TMatrixXCG,
+    mini::CMatrix TMatrixNCG,
+    mini::CMatrix TMatrixXTL,
+    mini::CMatrix TMatrixGI,
+    mini::CMatrix TMatrixHI,
+    class ScalarType = typename TMatrixXCG::ScalarType>
+void AccumulateShapeMatchingEnergy(
+    IndexType ilocal,
+    ScalarType wg,
+    ScalarType rhog,
+    TMatrixXCG const& xcg,
+    TMatrixNCG const& Ncg,
+    TMatrixXTL const& xf,
+    TMatrixGI& gi,
+    TMatrixHI& Hi)
+{
+    using namespace mini;
+    auto xc = xcg * Ncg;
+    // Energy is 1/2 w_g rho_g || xc - xf ||_2^2
+    gi += (wg * rhog * Ncg(ilocal)) * (xc - xf);
+    Diag(Hi) += wg * rhog * Ncg(ilocal) * Ncg(ilocal);
+}
+
+} // namespace restriction
+
 namespace smoothing {
 
 template <
@@ -245,6 +302,7 @@ void AccumulateKineticEnergy(
     TMatrixHI& Hi)
 {
     using namespace mini;
+    // Kinetic energy is 1/2 w_g rho_g || Nc*xc - xtildeg ||_2^2
     auto x = xcg * Nc;
     gi += wg * rhog * (x - xtildeg) * Nc(ilocal);
     Diag(Hi) += wg * rhog * Nc(ilocal) * Nc(ilocal);
@@ -385,6 +443,7 @@ void AccumulatePotentialEnergy(
     TMatrixHI& Hi)
 {
     using namespace mini;
+    // Potential energy is w_g \Psi(Nce * xcr)
     SVector<Scalar, 9> gF;
     SMatrix<Scalar, 9, 9> HF;
     ComputeElasticDerivativesWrtF(Psi, mug, lambdag, xcr, Nce, GN, gF, HF);
@@ -396,6 +455,7 @@ void AccumulatePotentialEnergy(
 }
 
 } // namespace smoothing
+
 } // namespace kernels
 } // namespace vbd
 } // namespace sim
