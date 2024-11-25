@@ -28,7 +28,7 @@ struct Hierarchy
      * @param levels Ordered coarsened levels, such that li > lj => li is coarser than lj for levels
      * li, lj
      * @param smoothers Smoothers associated with each level
-     * @param Nl Root level shape functions evaluated at quadrature poitns of each coarse level
+     * @param Ng Root level shape functions evaluated at quadrature poitns of each coarse level
      * @param transitions The multilevel solver cycle scheme as an ordered list of transitions
      * (either restrictions or prolongations)
      */
@@ -36,7 +36,7 @@ struct Hierarchy
         Data root,
         std::vector<Level> levels,
         std::vector<Smoother> smoothers,
-        std::vector<MatrixX> Nl,
+        std::vector<MatrixX> Ng,
         std::vector<Transition> transitions);
 
     Data root;                 ///< Root level, i.e. the finest resolution
@@ -44,7 +44,7 @@ struct Hierarchy
                                ///< than levels[l+k], k > 0.
     std::vector<Smoother> smoothers; ///< |#levels| list of smoothers associated with each level.
     std::vector<MatrixX>
-        Nl; ///< List of 4x|#quad.pts at level l| arrays of root level shape functions evaluated at
+        Ng; ///< List of 4x|#quad.pts at level l| arrays of root level shape functions evaluated at
             ///< quadrature points of the corresponding level. This allows transferring problem
             ///< parameters from the root directly to a given coarser level, for example inertial
             ///< targets xtildeg.

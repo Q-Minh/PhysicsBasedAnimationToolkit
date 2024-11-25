@@ -11,7 +11,7 @@ struct Level;
 
 struct Smoother
 {
-    Index iterations; ///< Number of smoothing iterations
+    Index iterations{10}; ///< Number of smoothing iterations
 
     /**
      * @brief Smooth level L

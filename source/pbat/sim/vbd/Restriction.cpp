@@ -41,6 +41,9 @@ Restriction& Restriction::Iterate(Index iterationsIn)
 
 Restriction& Restriction::Construct(bool bValidate)
 {
+    if (iterations < 1)
+        iterations = 10;
+        
     if (not bValidate)
         return *this;
 

@@ -31,14 +31,14 @@ struct Prolongation
     /**
      * @brief
      *
-     * @param ef |#verts at fine level| array of coarse cage elements containing fine level vertices
-     * @param Nf 4x|#verts at fine level| array of coarse cage shape functions at fine level
+     * @param ec |#verts at fine level| array of coarse cage elements containing fine level vertices
+     * @param Nc 4x|#verts at fine level| array of coarse cage shape functions at fine level
      * vertices
      * @return Prolongation&
      */
     Prolongation& WithCoarseShapeFunctions(
-        Eigen::Ref<IndexVectorX const> const& ef,
-        Eigen::Ref<MatrixX const> const& Nf);
+        Eigen::Ref<IndexVectorX const> const& ec,
+        Eigen::Ref<MatrixX const> const& Nc);
     /**
      * @brief
      *
@@ -48,8 +48,8 @@ struct Prolongation
     Prolongation& Construct(bool bValidate = true);
 
     IndexVectorX
-        ef; ///< |#verts at fine level| array of coarse cage elements containing fine level vertices
-    MatrixX Nf;   ///< 4x|#verts at fine level| array of coarse cage shape functions at fine level
+        ec; ///< |#verts at fine level| array of coarse cage elements containing fine level vertices
+    MatrixX Nc;   ///< 4x|#verts at fine level| array of coarse cage shape functions at fine level
                   ///< vertices
     Index lc, lf; ///< Coarse (lc) and fine (lf) indices to levels in the hierarchy (lc > lf)
 

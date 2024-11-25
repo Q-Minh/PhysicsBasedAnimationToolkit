@@ -40,7 +40,7 @@ struct Level
         /**
          * @brief
          *
-         * @param dt
+         * @param dt Time step
          * @param xtildeg 3x|#quad.pts.| array of inertial target positions at quadrature points
          * @param rhog |#quad.pts.| array of mass densities at quadrature points
          * @param Ncg 4x|#quad.pts.| array of coarse cage element shape functions at quadrature

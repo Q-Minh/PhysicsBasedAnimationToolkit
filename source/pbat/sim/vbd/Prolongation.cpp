@@ -28,8 +28,8 @@ Prolongation& Prolongation::WithCoarseShapeFunctions(
     Eigen::Ref<IndexVectorX const> const& efIn,
     Eigen::Ref<MatrixX const> const& NfIn)
 {
-    ef = efIn;
-    Nf = NfIn;
+    ec = efIn;
+    Nc = NfIn;
     return *this;
 }
 
@@ -44,14 +44,14 @@ Prolongation& Prolongation::Construct(bool bValidate)
         std::string const what = fmt::format("Expected lc > lf, but got lc={}, lf={}", lc, lf);
         throw std::invalid_argument(what);
     }
-    bool const bShapeFunctionsAndElementsMatch = ef.size() == Nf.cols();
+    bool const bShapeFunctionsAndElementsMatch = ec.size() == Nc.cols();
     if (not bShapeFunctionsAndElementsMatch)
     {
         std::string const what = fmt::format(
-            "Expected ef.size() == Nf.cols(), but got dimensions ef={}, Nf={}x{}",
-            ef.size(),
-            Nf.rows(),
-            Nf.cols());
+            "Expected ef.size() == Nc.cols(), but got dimensions ef={}, Nc={}x{}",
+            ec.size(),
+            Nc.rows(),
+            Nc.cols());
         throw std::invalid_argument(what);
     }
     return *this;
@@ -64,10 +64,10 @@ void Prolongation::Apply(Hierarchy& H)
     Level const& Lc             = H.levels[lcStl];
     bool const bIsFineLevelRoot = lf < 0;
     MatrixX& xf                 = bIsFineLevelRoot ? H.root.x : H.levels[lfStl].C.x;
-    assert(xf.cols() == Nf.cols() and xf.rows() == Lc.C.x.rows());
-    tbb::parallel_for(Index(0), Nf.cols(), [&](Index i) {
-        auto e    = ef(i);
-        xf.col(i) = Lc.C.x(Eigen::placeholders::all, Lc.C.E.col(e)) * Nf.col(i);
+    assert(xf.cols() == Nc.cols() and xf.rows() == Lc.C.x.rows());
+    tbb::parallel_for(Index(0), Nc.cols(), [&](Index i) {
+        auto e    = ec(i);
+        xf.col(i) = Lc.C.x(Eigen::placeholders::all, Lc.C.E.col(e)) * Nc.col(i);
     });
 }
 
