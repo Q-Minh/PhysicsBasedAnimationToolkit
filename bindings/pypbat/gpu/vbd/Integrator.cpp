@@ -164,9 +164,9 @@ void BindIntegrator(pybind11::module& m)
         .def_property(
             "partitions",
             nullptr,
-            [](Integrator& vbd, std::vector<std::vector<GpuIndex>> const& partitions) {
-                vbd.SetVertexPartitions(partitions);
-            },
+            [](Integrator& vbd,
+               std::pair<Eigen::Ref<GpuIndexVectorX const>, Eigen::Ref<GpuIndexVectorX const>>
+                   partitions) { vbd.SetVertexPartitions(partitions.first, partitions.second); },
             "Set vertex partitions for the parallel time integration minimization solve as list of "
             "lists of vertex indices")
         .def_property(

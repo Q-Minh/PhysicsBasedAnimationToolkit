@@ -97,7 +97,7 @@ if __name__ == "__main__":
     VC = Vcollision
     ilocal = np.repeat(np.arange(4)[np.newaxis, :], C.shape[0], axis=0)
     GVT = pbat.sim.vbd.vertex_element_adjacency(V, C, data=ilocal)
-    partitions, GC = pbat.sim.vbd.partitions(V, C, vdbc)
+    Pptr, Padj, GC = pbat.sim.vbd.partitions(V, C, vdbc)
     data = pbat.sim.vbd.Data().with_volume_mesh(
         V.T, C.T
     ).with_surface_mesh(
@@ -111,7 +111,7 @@ if __name__ == "__main__":
     ).with_vertex_adjacency(
         GVT.indptr, GVT.indices, GVT.indices, GVT.data
     ).with_partitions(
-        partitions
+        Pptr, Padj
     ).with_dirichlet_vertices(
         vdbc
     ).with_initialization_strategy(

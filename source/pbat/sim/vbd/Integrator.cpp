@@ -61,13 +61,16 @@ void Integrator::Step(Scalar dt, Index iterations, Index substeps, Scalar rho)
             if (bUseChebyshevAcceleration)
                 omega = kernels::ChebyshevOmega(k, rho2, omega);
 
-            for (auto const& partition : data.partitions)
+            auto const nPartitions = data.Pptr.size() - 1;
+            for (auto p = 0; p < nPartitions; ++p)
             {
-                auto const nVerticesInPartition = static_cast<IndexType>(partition.size());
-                tbb::parallel_for(IndexType(0), nVerticesInPartition, [&](IndexType v) {
-                    auto i     = partition[static_cast<std::size_t>(v)];
-                    auto begin = data.GVGp[i];
-                    auto end   = data.GVGp[i + 1];
+                auto const pBegin               = data.Pptr(p);
+                auto const pEnd                 = data.Pptr(p + 1);
+                auto const nVerticesInPartition = pEnd - pBegin;
+                tbb::parallel_for(pBegin, pEnd, [&](Index k) {
+                    auto i     = data.Padj[k];
+                    auto begin = data.GVGp(i);
+                    auto end   = data.GVGp(i + 1);
                     // Compute vertex elastic hessian
                     mini::SMatrix<Scalar, 3, 3> Hi = mini::Zeros<Scalar, 3, 3>();
                     mini::SVector<Scalar, 3> gi    = mini::Zeros<Scalar, 3, 1>();
@@ -187,12 +190,10 @@ TEST_CASE("[sim][vbd] Integrator")
     std::span<Index> vertexTetrahedronLocalVertexIndices{
         G.valuePtr(),
         static_cast<std::size_t>(G.nonZeros())};
-    std::vector<std::vector<Index>> partitions{};
-    partitions.push_back({2, 7, 4, 1});
-    partitions.push_back({0});
-    partitions.push_back({5});
-    partitions.push_back({6});
-    partitions.push_back({3});
+    IndexVectorX Pptr(6);
+    Pptr << 0, 4, 5, 6, 7, 8;
+    IndexVectorX Padj(8);
+    Padj << 2, 7, 4, 1, 0, 5, 6, 3;
     // Material parameters
     using Element = fem::Tetrahedron<1>;
     using Mesh    = fem::Mesh<Element, 3>;
@@ -218,7 +219,7 @@ TEST_CASE("[sim][vbd] Integrator")
     Integrator vbd{sim::vbd::Data()
                        .WithVolumeMesh(P, T)
                        .WithAcceleration(aext)
-                       .WithPartitions(partitions)
+                       .WithPartitions(Pptr, Padj)
                        .WithQuadrature(wg, GP, lame)
                        .WithVertexAdjacency(
                            ToEigen(vertexTetrahedronPrefix),

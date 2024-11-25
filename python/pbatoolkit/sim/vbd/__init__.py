@@ -5,7 +5,7 @@ import contextlib
 import io
 import numpy as np
 
-from ...graph import mesh_adjacency_graph, mesh_primal_graph, colors
+from ...graph import mesh_adjacency_graph, mesh_primal_graph, colors, lil_to_adjacency
 
 __module = sys.modules[__name__]
 _strio = io.StringIO()
@@ -65,4 +65,5 @@ def partitions(V: np.ndarray, C: np.ndarray, dbcs: np.ndarray | list = None):
             vertices = np.setdiff1d(vertices, dbcs).tolist()
         if len(vertices) > 0:
             partitions.append(vertices)
-    return partitions, GC
+    Pptr, Padj = lil_to_adjacency(partitions)
+    return Pptr, Padj, GC

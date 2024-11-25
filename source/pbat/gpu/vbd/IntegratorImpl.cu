@@ -43,7 +43,8 @@ IntegratorImpl::IntegratorImpl(Data const& data)
       mMaxCollidingTrianglesPerVertex(8),
       mCollidingTriangles(8 * data.x.cols()),
       mCollidingTriangleCount(data.x.cols()),
-      mPartitions(),
+      mPptr(data.Pptr.cast<GpuIndex>()),
+      mPadj(data.Padj.size()),
       mInitializationStrategy(data.strategy),
       mGpuThreadBlockSize(64),
       mStream(common::Device(common::EDeviceSelectionPreference::HighestComputeCapability)
@@ -63,12 +64,7 @@ IntegratorImpl::IntegratorImpl(Data const& data)
     common::ToBuffer(data.GVGe, mVertexTetrahedronNeighbours);
     common::ToBuffer(data.GVGilocal, mVertexTetrahedronLocalVertexIndices);
 
-    mPartitions.resize(data.partitions.size());
-    for (auto p = 0; p < data.partitions.size(); ++p)
-    {
-        mPartitions[p].Resize(data.partitions[p].size());
-        thrust::copy(data.partitions[p].begin(), data.partitions[p].end(), mPartitions[p].Data());
-    }
+    common::ToBuffer(data.Padj.cast<GpuIndex>().eval(), mPadj);
 }
 
 void IntegratorImpl::Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps, GpuScalar rho)
@@ -173,11 +169,14 @@ void IntegratorImpl::Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps, 
             if (bUseChebyshevAcceleration)
                 omega = ChebyshevOmega(k, rho2, omega);
 
-            for (auto& partition : mPartitions)
+            auto const nPartitions = mPptr.size() - 1;
+            for (auto p = 0; p < nPartitions; ++p)
             {
-                bdf.partition = partition.Raw();
+                auto pBegin   = mPptr[p];
+                auto pEnd     = mPptr[p + 1];
+                bdf.partition = mPadj.Raw() + pBegin;
                 auto const nVerticesInPartition =
-                    static_cast<cuda::grid::dimension_t>(partition.Size());
+                    static_cast<cuda::grid::dimension_t>(pEnd - pBegin);
                 auto bcdLaunchConfiguration =
                     cuda::launch_config_builder()
                         .block_size(mGpuThreadBlockSize)
@@ -299,14 +298,12 @@ void IntegratorImpl::SetRayleighDampingCoefficient(GpuScalar kD)
     mRayleighDamping = kD;
 }
 
-void IntegratorImpl::SetVertexPartitions(std::vector<std::vector<GpuIndex>> const& partitions)
+void IntegratorImpl::SetVertexPartitions(
+    Eigen::Ref<GpuIndexVectorX const> const& Pptr,
+    Eigen::Ref<GpuIndexVectorX const> const& Padj)
 {
-    mPartitions.resize(partitions.size());
-    for (auto p = 0; p < partitions.size(); ++p)
-    {
-        mPartitions[p].Resize(partitions[p].size());
-        thrust::copy(partitions[p].begin(), partitions[p].end(), mPartitions[p].Data());
-    }
+    mPptr = Pptr;
+    common::ToBuffer(Padj, mPadj);
 }
 
 void IntegratorImpl::SetInitializationStrategy(EInitializationStrategy strategy)
@@ -342,11 +339,6 @@ common::Buffer<GpuScalar> const& IntegratorImpl::GetShapeFunctionGradients() con
 common::Buffer<GpuScalar> const& IntegratorImpl::GetLameCoefficients() const
 {
     return mLameCoefficients;
-}
-
-std::vector<common::Buffer<GpuIndex>> const& IntegratorImpl::GetPartitions() const
-{
-    return mPartitions;
 }
 
 } // namespace vbd
@@ -408,12 +400,10 @@ TEST_CASE("[gpu][vbd] IntegratorImpl")
     std::span<Index> vertexTetrahedronLocalVertexIndices{
         G.valuePtr(),
         static_cast<std::size_t>(G.nonZeros())};
-    std::vector<std::vector<Index>> partitions{};
-    partitions.push_back({2, 7, 4, 1});
-    partitions.push_back({0});
-    partitions.push_back({5});
-    partitions.push_back({6});
-    partitions.push_back({3});
+    IndexVectorX Pptr(6);
+    Pptr << 0, 4, 5, 6, 7, 8;
+    IndexVectorX Padj(8);
+    Padj << 2, 7, 4, 1, 0, 5, 6, 3;
     // Material parameters
     using pbat::gpu::vbd::tests::LinearFemMesh;
     LinearFemMesh mesh(P.cast<Scalar>(), T.cast<Index>());
@@ -434,7 +424,7 @@ TEST_CASE("[gpu][vbd] IntegratorImpl")
     IntegratorImpl vbd{sim::vbd::Data()
                            .WithVolumeMesh(P, T)
                            .WithAcceleration(aext)
-                           .WithPartitions(partitions)
+                           .WithPartitions(Pptr, Padj)
                            .WithQuadrature(wg, GP, lame)
                            .WithVertexAdjacency(
                                ToEigen(vertexTetrahedronPrefix),

@@ -91,9 +91,10 @@ class IntegratorImpl
     void SetRayleighDampingCoefficient(GpuScalar kD);
     /**
      * @brief
-     * @param partitions
+     * @param Pptr
+     * @param Padj
      */
-    void SetVertexPartitions(std::vector<std::vector<GpuIndex>> const& partitions);
+    void SetVertexPartitions(Eigen::Ref<GpuIndexVectorX const> const& Pptr, Eigen::Ref<GpuIndexVectorX const> const& Padj);
     /**
      * @brief
      * @param strategy
@@ -130,11 +131,6 @@ class IntegratorImpl
      * @return
      */
     common::Buffer<GpuScalar> const& GetLameCoefficients() const;
-    /**
-     * @brief
-     * @return
-     */
-    std::vector<common::Buffer<GpuIndex>> const& GetPartitions() const;
 
   public:
     geometry::PointsImpl X;    ///< Current vertex positions
@@ -176,7 +172,10 @@ class IntegratorImpl
     common::Buffer<GpuIndex> mCollidingTriangleCount; ///< |#vertices| array of the number of
                                                       ///< colliding triangles for each vertex.
 
-    std::vector<common::Buffer<GpuIndex>> mPartitions; ///< Constraint partitions
+    GpuIndexVectorX
+        mPptr; ///< |#partitions+1| partition pointers, s.t. the range [Pptr[p], Pptr[p+1])
+               ///< indexes into Padj vertices from partition p
+    common::Buffer<GpuIndex> mPadj; ///< Partition vertices
 
     EInitializationStrategy
         mInitializationStrategy;  ///< Strategy to use to determine the initial BCD iterate

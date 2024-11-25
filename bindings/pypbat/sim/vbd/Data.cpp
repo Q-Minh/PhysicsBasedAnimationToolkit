@@ -79,7 +79,8 @@ void BindData(pybind11::module& m)
         .def(
             "with_partitions",
             &Data::WithPartitions,
-            pyb::arg("partitions"),
+            pyb::arg("ptr"),
+            pyb::arg("adj"),
             "Sets the independent vertex partitions for solver parallelization.")
         .def(
             "with_dirichlet_vertices",
@@ -114,7 +115,8 @@ void BindData(pybind11::module& m)
         .def_readwrite("GVGe", &Data::GVGe)
         .def_readwrite("GVGilocal", &Data::GVGilocal)
         .def_readwrite("dbc", &Data::dbc)
-        .def_readwrite("partitions", &Data::partitions)
+        .def_readwrite("Pptr", &Data::Pptr)
+        .def_readwrite("Padj", &Data::Padj)
         .def_readwrite("strategy", &Data::strategy)
         .def_readwrite("kD", &Data::kD)
         .def_readwrite("kC", &Data::kC)
