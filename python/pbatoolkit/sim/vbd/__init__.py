@@ -5,7 +5,7 @@ import contextlib
 import io
 import numpy as np
 
-from ...graph import mesh_adjacency_graph, mesh_primal_graph
+from ...graph import mesh_adjacency_graph, mesh_primal_graph, colors
 
 __module = sys.modules[__name__]
 _strio = io.StringIO()
@@ -37,18 +37,10 @@ def vertex_element_adjacency(V: np.ndarray, C: np.ndarray, data: np.ndarray = No
     return GVT
 
 
-def _color_dict_to_array(Cdict, n):
-    C = np.zeros(n, dtype=np.int64)
-    keys = np.array(list(Cdict.keys()), dtype=np.int64)
-    values = np.array(list(Cdict.values()), dtype=np.int64)
-    C[keys] = values
-    return C
-
-
 def partitions(V: np.ndarray, C: np.ndarray, dbcs: np.ndarray | list = None):
     """Computes VBD parallel vertex partitions, accounting for 
     Dirichlet boundary conditions dbcs.
-    
+
     NOTE: Requires networkx to be available!
 
     Args:
@@ -61,11 +53,8 @@ def partitions(V: np.ndarray, C: np.ndarray, dbcs: np.ndarray | list = None):
         list: List of lists of independent vertices, disregarding any Dirichlet 
         constrained vertex.
     """
-    import networkx as nx
     GVV = mesh_primal_graph(V, C)
-    Gprimal = nx.Graph(GVV)
-    GC = nx.greedy_color(Gprimal, strategy="random_sequential")
-    GC = _color_dict_to_array(GC, V.shape[0])
+    GC = colors(GVV, strategy="random_sequential")
     npartitions = GC.max() + 1
     partitions = []
     for p in range(npartitions):

@@ -5,7 +5,6 @@ import scipy as sp
 import igl
 import polyscope as ps
 import polyscope.imgui as imgui
-import math
 import argparse
 import networkx as nx
 import itertools
@@ -19,98 +18,6 @@ def combine(V: list, C: list):
     V = np.vstack(V)
     BV = np.hstack([np.full(NV[i], i) for i in range(len(NV))])
     return V, C, BV
-
-
-def color_dict_to_array(Cdict, n):
-    C = np.zeros(n, dtype=np.int64)
-    keys = np.array(list(Cdict.keys()), dtype=np.int64)
-    values = np.array(list(Cdict.values()), dtype=np.int64)
-    C[keys] = values
-    return C
-
-
-def mesh_dual_graph(C):
-    row = np.repeat(range(C.shape[0]), C.shape[1])
-    col = C.flatten()
-    data = np.ones(math.prod(C.shape))
-    G = sp.sparse.coo_array((data, (row, col)), shape=(
-        C.shape[0], V.shape[0])).asformat("csr")
-    GGT = G @ G.T
-    return GGT
-
-
-def partition_clustered_constraint_graph(C):
-    """Computes the clustered constraint graph's partitioning from 
-    Ton-That, Quoc-Minh, Paul G. Kry, and Sheldon Andrews. 
-    "Parallel block Neo-Hookean XPBD using graph clustering." 
-    Computers & Graphics 110 (2023): 1-10.
-
-    Args:
-        C (np.ndarray): Tetrahedral mesh elements
-
-    Returns:
-        (np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray): 
-        The tuple (SGptr, SGadj, Cptr, Cadj, clustering, SGC) where (SGptr, SGadj) 
-        yields the clustered graph partitions, (Cptr, Cadj) yields the map from 
-        clusters to constraints, clustering[c] yields the cluster which constraint c 
-        belongs to, and SGC is the coloring of the clusters.
-    """
-    GGT = mesh_dual_graph(C)
-    # NOTE:
-    # The sparse matrix representation of GGT counts the number of shared vertices
-    # n(ei,ej) for each adjacent element pair (ei, ej). We define a weight function
-    # w(ei,ej) = 10^{n(ei,ej)},
-    # such that adjacent elements with many shared vertices have large weight.
-    # We will try to partition this weighted dual graph such that the edge cut
-    # is minimized, i.e. "highly connected" elements (ei,ej) with large w(ei,ej)
-    # will be in the same partition (as much as possible).
-    weights = 10**np.array(2*(GGT.data - 1), dtype=np.int64)
-    # For tetrahedral elements, 5-element partitions is a good choice
-    cluster_size = 5
-    # Cluster our constraint graph via (edge-)cut-minimizing graph partitioning into
-    # a supernodal graph
-    clustering = np.array(pbat.graph.partition(
-        GGT.indptr, GGT.indices, weights, int(C.shape[0] / cluster_size)))
-    # Construct adjacency graph of the map clusters -> constraints
-    nclusters = clustering.max() + 1
-    Csizes = np.zeros(nclusters + 1, dtype=np.int64)
-    np.add.at(Csizes[1:], clustering, 1)
-    Cptr = np.array(list(itertools.accumulate(Csizes)))
-    Cadj = np.argsort(clustering)
-    # Compute edges between the clusters, i.e. the supernodal graph's edges
-    GGTsizes = GGT.indptr[1:] - GGT.indptr[:-1]
-    SGu = clustering[np.repeat(np.linspace(
-        0, clustering.shape[0]-1, clustering.shape[0], dtype=np.int64), GGTsizes)]
-    SGv = clustering[GGT.indices]
-    inds = np.unique(SGu + clustering.shape[0]*SGv, return_index=True)[1]
-    SGu, SGv = SGu[inds], SGv[inds]
-    # Construct the supernodal graph
-    SGM = sp.sparse.coo_array(
-        (np.ones(SGu.shape[0]), (SGu, SGv))).asformat('csr')
-    SG = nx.Graph(SGM)
-    # Color the supernodal graph
-    SGC = nx.greedy_color(SG, strategy="random_sequential")
-    SGC = color_dict_to_array(SGC, nclusters)
-    # Construct supernode partitions
-    npartitions = SGC.max() + 1
-    psizes = np.zeros(npartitions+1, dtype=np.int64)
-    np.add.at(psizes[1:], SGC, 1)
-    SGptr = list(itertools.accumulate(psizes))
-    SGadj = np.argsort(SGC)
-    return SGptr, SGadj, Cptr, Cadj, clustering, SGC
-
-
-def partition_constraints(C):
-    GGT = mesh_dual_graph(C)
-    G = nx.Graph(GGT)
-    GC = nx.greedy_color(G, strategy="random_sequential")
-    GC = color_dict_to_array(GC, C.shape[0])
-    npartitions = GC.max() + 1
-    psizes = np.zeros(npartitions+1, dtype=np.int64)
-    np.add.at(psizes[1:], GC, 1)
-    Pptr = list(itertools.accumulate(psizes))
-    Padj = np.argsort(GC)
-    return Pptr, Padj, GC
 
 
 if __name__ == "__main__":
@@ -188,7 +95,8 @@ if __name__ == "__main__":
     for d in range(3):
         muC[F[:, d]] += (1/6)*dblA
     muC = args.muC*muC[VC]
-    Pptr, Padj, GC = partition_constraints(mesh.E.T)
+    Pptr, Padj, GC = pbat.sim.xpbd.partition_mesh_constraints(
+        mesh.X.T, mesh.E.T)
     data = pbat.sim.xpbd.Data(
     ).with_volume_mesh(
         mesh.X, mesh.E
@@ -238,8 +146,8 @@ if __name__ == "__main__":
 
     has_partitioning = getattr(pbat.graph, "partition") is not None
     if has_partitioning and args.cluster:
-        SGptr, SGadj, Cptr, Cadj, clustering, SGC = partition_clustered_constraint_graph(
-            mesh.E.T)
+        SGptr, SGadj, Cptr, Cadj, clustering, SGC = pbat.sim.xpbd.partition_clustered_mesh_constraint_graph(
+            mesh.X.T, mesh.E.T)
         data.with_cluster_partitions(SGptr, SGadj, Cptr, Cadj)
         ecolors = SGC[clustering]
         max_color = GC.max()
@@ -290,7 +198,7 @@ if __name__ == "__main__":
 
             # Update visuals
             V = xpbd.x.T
-            if isinstance(xpbd, pbat.gpu.xpbd.Integrator):
+            if hasattr(pbat.gpu.xpbd, "Integrator") and isinstance(xpbd, pbat.gpu.xpbd.Integrator):
                 min, max = np.min(V, axis=0), np.max(V, axis=0)
                 xpbd.scene_bounding_box = min, max
             if export:

@@ -6,6 +6,8 @@ import io
 import numpy as np
 import math
 import scipy as sp
+import itertools
+import networkx as nx
 
 __module = sys.modules[__name__]
 _strio = io.StringIO()
@@ -79,3 +81,66 @@ def mesh_primal_graph(V: np.ndarray, C: np.ndarray):
     G = mesh_adjacency_graph(V, C)
     GTG = G.T @ G
     return GTG
+
+
+def _color_dict_to_array(Cdict):
+    keys = np.array(list(Cdict.keys()), dtype=np.int64)
+    values = np.array(list(Cdict.values()), dtype=np.int64)
+    n = keys.max() + 1
+    C = np.zeros(n, dtype=np.int64)
+    C[keys] = values
+    return C
+
+
+def colors(G: sp.sparse.csc_array | sp.sparse.csr_array | sp.sparse.csc_matrix | sp.sparse.csr_matrix, strategy: str = "random_sequential"):
+    """Computes a greedy coloring on graph G.
+
+    Args:
+        G (sp.sparse.csc_array | sp.sparse.csr_array | sp.sparse.csc_matrix | sp.sparse.csr_matrix): Input graph in sparse matrix format.
+        strategy (str, optional): One of 'largest_first' | 'random_sequential' | 'smallest_last' | 'independent_set' | 
+        'connected_sequential_bfs' | 'connected_sequential_dfs' | 'saturation_largest_first'. 
+        Defaults to "random_sequential".
+
+    Returns:
+        np.ndarray: Returns the color map C s.t. C[i] yields the color of node i in G.
+    """
+    G = nx.Graph(G)
+    C = nx.greedy_color(G, strategy=strategy)
+    C = _color_dict_to_array(C)
+    return C
+
+
+def lil_to_adjacency(partitions: list[list[int]], dtype=np.int64):
+    """Converts list of lists (i.e. partitions, clusters, elements, etc.) to an adjacency graph.
+
+    Args:
+        partitions (list[list[int]]): Groups of objects.
+        dtype: Object type. Defaults to np.int64.
+
+    Returns:
+        (np.ndarray, np.ndarray): Adjacency graph (ptr, adj) in compressed sparse storage format
+    """
+    psizes = np.zeros(len(partitions) + 1, dtype=dtype)
+    psizes[1:] = [len(partition) for partition in partitions]
+    ptr = np.array(list(itertools.accumulate(psizes)))
+    adj = np.array(list(itertools.chain.from_iterable(partitions)))
+    return ptr, adj
+
+
+def map_to_adjacency(map: np.ndarray | list[int], dtype=np.int64):
+    """Converts flat array (i.e. some partition map) to an adjacency graph.
+
+    Args:
+        map (np.ndarray | list[int]): Flat array mapping objects to partitions/clusters/groups/elements, 
+        i.e. p = map[i] for object i and partition p, if the edge (p,i) exists in the graph.
+        dtype: Object type. Defaults to np.int64.
+
+    Returns:
+        (np.ndarray, np.ndarray): Adjacency graph (ptr, adj) in compressed sparse storage format
+    """
+    npartitions = map.max() + 1
+    psizes = np.zeros(npartitions+1, dtype=dtype)
+    np.add.at(psizes[1:], map, 1)
+    ptr = np.array(list(itertools.accumulate(psizes)))
+    adj = np.argsort(map)
+    return ptr, adj
