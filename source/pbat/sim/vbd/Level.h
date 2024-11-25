@@ -116,20 +116,20 @@ struct Level
         /**
          * @brief Construct a new Cage object
          *
-         * @param E 4x|#elements| array of mesh elements
          * @param x 3x|#verts| array of mesh vertex positions
+         * @param E 4x|#elements| array of mesh elements
          * @param ptr |#partitions + 1| prefix array of partition-vertex adjacency graph, i.e.
          * Padj[Pptr[i]:Pptr[i+1]] yield vertex indices of the i^{th} partition
          * @param adj |#free verts| array of partition-vertex adjacency graph edges
          */
         Cage(
-            Eigen::Ref<IndexMatrixX const> const& E,
             Eigen::Ref<MatrixX const> const& x,
+            Eigen::Ref<IndexMatrixX const> const& E,
             Eigen::Ref<IndexVectorX const> const& ptr,
             Eigen::Ref<IndexVectorX const> const& adj);
 
-        IndexMatrixX E; ///< 4x|#elements| array of mesh elements
         MatrixX x;      ///< 3x|#verts| array of mesh vertex positions
+        IndexMatrixX E; ///< 4x|#elements| array of mesh elements
 
         IndexVectorX
             ptr; ///< |#partitions + 1| prefix array of partition-vertex adjacency graph, i.e.

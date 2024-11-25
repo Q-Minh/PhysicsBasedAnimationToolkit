@@ -101,11 +101,11 @@ Level::Energy& Level::Energy::Construct(bool bValidate)
 }
 
 Level::Cage::Cage(
-    Eigen::Ref<IndexMatrixX const> const& Ein,
     Eigen::Ref<MatrixX const> const& xIn,
+    Eigen::Ref<IndexMatrixX const> const& Ein,
     Eigen::Ref<IndexVectorX const> const& ptrIn,
     Eigen::Ref<IndexVectorX const> const& adjIn)
-    : E(Ein), x(xIn), ptr(ptrIn), adj(adjIn)
+    : x(xIn), E(Ein), ptr(ptrIn), adj(adjIn)
 {
 }
 

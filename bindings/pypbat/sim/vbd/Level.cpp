@@ -103,18 +103,18 @@ void BindLevel(pybind11::module& m)
     pyb::class_<Cage>(mlevel, "Cage")
         .def(
             pyb::init<
-                Eigen::Ref<IndexMatrixX const> const&,
                 Eigen::Ref<MatrixX const> const&,
+                Eigen::Ref<IndexMatrixX const> const&,
                 Eigen::Ref<IndexVectorX const> const&,
                 Eigen::Ref<IndexVectorX const> const&>(),
-            pyb::arg("E"),
             pyb::arg("x"),
+            pyb::arg("E"),
             pyb::arg("ptr"),
             pyb::arg("adj"),
             "Construct a multiscale VBD coarse cage.\n"
             "Args:\n"
-            "E (np.ndarray): 4x|#elements| array of coarse cage tetrahedra\n"
             "x (np.ndarray): 3x|#verts| array of coarse cage vertex positions\n"
+            "E (np.ndarray): 4x|#elements| array of coarse cage tetrahedra\n"
             "ptr (np.ndarray): |#partitions+1| array of vertex partition pointers\n"
             "adj (np.ndarray): |#free verts| array of partition vertices")
         .def_readwrite("E", &Cage::E)

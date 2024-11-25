@@ -45,14 +45,14 @@ def transfer_quadrature(cmesh, wg2, Xg2, order=1):
 def patch_quadrature(cmesh, wg1, Xg1, e1, err=1e-4, numerical_zero=1e-10):
     wtotal = np.zeros(cmesh.E.shape[1])
     np.add.at(wtotal, e1, wg1)
-    ezero = np.argwhere(wtotal < numerical_zero).squeeze()
-    ezeroinds = np.in1d(e1, ezero)
-    e1zero = np.copy(e1[ezeroinds])
-    Xg1zero = np.copy(Xg1[:, ezeroinds])
+    ezero = np.nonzero(wtotal < numerical_zero)
+    ezeromask = np.in1d(e1, ezero)
+    e1zero = np.copy(e1[ezeromask])
+    Xg1zero = np.copy(Xg1[:, ezeromask])
     MM, BM, PM = pbat.math.reference_moment_fitting_systems(
         e1zero, Xg1zero, e1zero, Xg1zero, np.zeros(Xg1zero.shape[1]))
     MM = pbat.math.block_diagonalize_moment_fitting(MM, PM)
-    n = np.count_nonzero(ezeroinds)
+    n = np.count_nonzero(ezeromask)
     P = -sp.sparse.eye(n).asformat('csc')
     G = MM.asformat('csc')
     h = np.full(G.shape[0], err)
@@ -61,8 +61,8 @@ def patch_quadrature(cmesh, wg1, Xg1, e1, err=1e-4, numerical_zero=1e-10):
     wzero = qpsolvers.solve_qp(P, q, G=G, h=h, lb=lb, initvals=np.zeros(
         n), solver="cvxopt")
     wg1p = np.copy(wg1)
-    wg1p[ezeroinds] = wzero
-    return wg1p, ezeroinds
+    wg1p[ezeromask] = wzero
+    return wg1p, ezeromask
 
 
 def gradient_operator(mesh, Xg, dims=1):
