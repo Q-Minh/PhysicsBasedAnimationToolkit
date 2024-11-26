@@ -29,9 +29,6 @@ class Integrator
     geometry::TetrahedralAabbHierarchy mTetrahedralBvh;
     geometry::TriangleAabbHierarchy<3> mTriangleBvh;
     std::vector<Index> mParticlesInContact;
-    std::vector<Index> mTrianglesInContact;
-    std::vector<Index> mTetsInContact;
-    std::vector<Scalar> mSquaredDistancesToTriangles;
 };
 
 } // namespace xpbd

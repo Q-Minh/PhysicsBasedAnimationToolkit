@@ -30,13 +30,13 @@ TEST_CASE("[geometry] TriangleAabbHierarchy")
         CHECK_EQ(bvh.C.cols(), C.cols());
         auto constexpr kPoints          = 20;
         Matrix<kDims, Eigen::Dynamic> P = Matrix<kDims, Eigen::Dynamic>::Random(kDims, kPoints);
-        std::vector<Index> const primitivesContainingP = bvh.PrimitivesContainingPoints(P);
+        IndexVectorX const primitivesContainingP = bvh.PrimitivesContainingPoints(P);
         geometry::AxisAlignedBoundingBox<kDims> const domain(
             V.rowwise().minCoeff(),
             V.rowwise().maxCoeff());
         for (auto i = 0; i < P.cols(); ++i)
         {
-            auto const primitiveIdx = primitivesContainingP[static_cast<std::size_t>(i)];
+            auto const primitiveIdx = primitivesContainingP(i);
             if (not domain.contains(P.col(i)))
             {
                 CHECK_EQ(primitiveIdx, Index{-1});
@@ -50,7 +50,7 @@ TEST_CASE("[geometry] TriangleAabbHierarchy")
         CHECK_EQ(nearestPrimitivesToP.size(), P.cols());
         for (auto i = 0; i < P.cols(); ++i)
         {
-            auto const primitiveIdx = nearestPrimitivesToP[static_cast<std::size_t>(i)];
+            auto const primitiveIdx = nearestPrimitivesToP(i);
             CHECK_GT(primitiveIdx, Index{-1});
         }
 
@@ -116,13 +116,13 @@ TEST_CASE("[geometry] TriangleAabbHierarchy")
         CHECK_EQ(bvh.C.cols(), C.cols());
         auto constexpr kPoints          = 20;
         Matrix<kDims, Eigen::Dynamic> P = Matrix<kDims, Eigen::Dynamic>::Random(kDims, kPoints);
-        std::vector<Index> const primitivesContainingP = bvh.PrimitivesContainingPoints(P);
+        IndexVectorX const primitivesContainingP = bvh.PrimitivesContainingPoints(P);
         geometry::AxisAlignedBoundingBox<kDims> const domain(
             V.rowwise().minCoeff(),
             V.rowwise().maxCoeff());
         for (auto i = 0; i < P.cols(); ++i)
         {
-            auto const primitiveIdx = primitivesContainingP[static_cast<std::size_t>(i)];
+            auto const primitiveIdx = primitivesContainingP(i);
             if (primitiveIdx > -1)
             {
                 IndexVector<3> const triangle = bvh.Primitive(primitiveIdx);
@@ -139,7 +139,7 @@ TEST_CASE("[geometry] TriangleAabbHierarchy")
         CHECK_EQ(nearestPrimitivesToP.size(), P.cols());
         for (auto i = 0; i < P.cols(); ++i)
         {
-            auto const primitiveIdx = nearestPrimitivesToP[static_cast<std::size_t>(i)];
+            auto const primitiveIdx = nearestPrimitivesToP(i);
             CHECK_GT(primitiveIdx, Index{-1});
         }
 
