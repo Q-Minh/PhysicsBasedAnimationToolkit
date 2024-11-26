@@ -50,17 +50,17 @@ class TetrahedralAabbHierarchy : public BoundingVolumeHierarchy<
     std::vector<Index> PrimitivesContainingPoints(
         Eigen::MatrixBase<TDerivedP> const& P,
         FCull fCull,
-        bool bParallelize = false) const;
+        bool bParallelize = true) const;
 
     template <class TDerivedP>
     std::vector<Index> PrimitivesContainingPoints(
         Eigen::MatrixBase<TDerivedP> const& P,
-        bool bParallelize = false) const;
+        bool bParallelize = true) const;
 
     template <class TDerivedP>
     std::pair<std::vector<Index>, std::vector<Scalar>> NearestPrimitivesToPoints(
         Eigen::MatrixBase<TDerivedP> const& P,
-        bool bParallelize = false) const;
+        bool bParallelize = true) const;
 
     [[maybe_unused]] auto const& GetBoundingVolumes() const { return mBoundingVolumes; }
 
@@ -132,10 +132,7 @@ inline std::vector<Index> TetrahedralAabbHierarchy::PrimitivesContainingPoints(
     Eigen::MatrixBase<TDerivedP> const& P,
     bool bParallelize) const
 {
-    return PrimitivesContainingPoints(
-        P,
-        [](auto, auto) { return false; },
-        bParallelize);
+    return PrimitivesContainingPoints(P, [](auto, auto) { return false; }, bParallelize);
 }
 
 template <class TDerivedP>

@@ -60,18 +60,18 @@ class TriangleAabbHierarchy<3> : public BoundingVolumeHierarchy<
     template <class TDerivedP>
     std::vector<Index> PrimitivesContainingPoints(
         Eigen::MatrixBase<TDerivedP> const& P,
-        bool bParallelize = false) const;
+        bool bParallelize = true) const;
 
     template <class TDerivedP, class FCull>
     std::pair<std::vector<Index>, std::vector<Scalar>> NearestPrimitivesToPoints(
         Eigen::MatrixBase<TDerivedP> const& P,
         FCull fCull,
-        bool bParallelize = false) const;
+        bool bParallelize = true) const;
 
     template <class TDerivedP>
     std::pair<std::vector<Index>, std::vector<Scalar>> NearestPrimitivesToPoints(
         Eigen::MatrixBase<TDerivedP> const& P,
-        bool bParallelize = false) const;
+        bool bParallelize = true) const;
 
     [[maybe_unused]] auto const& GetBoundingVolumes() const { return mBoundingVolumes; }
 
@@ -266,10 +266,7 @@ TriangleAabbHierarchy<3>::NearestPrimitivesToPoints(
     Eigen::MatrixBase<TDerivedP> const& P,
     bool bParallelize) const
 {
-    return NearestPrimitivesToPoints(
-        P,
-        [](auto, auto) { return false; },
-        bParallelize);
+    return NearestPrimitivesToPoints(P, [](auto, auto) { return false; }, bParallelize);
 }
 
 } // namespace geometry
@@ -311,12 +308,12 @@ class TriangleAabbHierarchy<2> : public BoundingVolumeHierarchy<
     template <class TDerivedP>
     std::vector<Index> PrimitivesContainingPoints(
         Eigen::MatrixBase<TDerivedP> const& P,
-        bool bParallelize = false) const;
+        bool bParallelize = true) const;
 
     template <class TDerivedP>
     std::pair<std::vector<Index>, std::vector<Scalar>> NearestPrimitivesToPoints(
         Eigen::MatrixBase<TDerivedP> const& P,
-        bool bParallelize = false) const;
+        bool bParallelize = true) const;
 
     [[maybe_unused]] auto const& GetBoundingVolumes() const { return mBoundingVolumes; }
 

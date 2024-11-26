@@ -37,14 +37,14 @@ void BindTetrahedralAabbHierarchy(pybind11::module& m)
                Eigen::Ref<MatrixX const> const& P,
                bool bParallelize) { return self.PrimitivesContainingPoints(P, bParallelize); },
             pyb::arg("P"),
-            pyb::arg("parallelize") = false)
+            pyb::arg("parallelize") = true)
         .def(
             "nearest_primitives_to_points",
             [](TetrahedralAabbHierarchy const& self,
                Eigen::Ref<MatrixX const> const& P,
                bool bParallelize) { return self.NearestPrimitivesToPoints(P, bParallelize); },
             pyb::arg("P"),
-            pyb::arg("parallelize") = false)
+            pyb::arg("parallelize") = true)
         .def("update", &TetrahedralAabbHierarchy::Update)
         .def_property_readonly(
             "bounding_volumes",
