@@ -34,8 +34,7 @@ def transfer_quadrature(cmesh, wg2, Xg2, order=1):
     e1 = np.repeat(e1, int(Xg1.shape[1] / cmesh.E.shape[1]))
     Xi1 = pbat.fem.reference_positions(cmesh, e1, Xg1)
     bvh1 = pbat.geometry.bvh(CV, CC, cell=pbat.geometry.Cell.Tetrahedron)
-    e2 = np.array(bvh1.nearest_primitives_to_points(
-        Xg2, parallelize=True)[0])
+    e2 = bvh1.nearest_primitives_to_points(Xg2, parallelize=True)[0]
     Xi2 = pbat.fem.reference_positions(cmesh, e2, Xg2)
     wg1, err = pbat.math.transfer_quadrature(
         e1, Xi1, e2, Xi2, wg2, order=order, with_error=True, max_iters=50, precision=1e-10)
@@ -99,8 +98,8 @@ def shape_functions(mesh, Xg, dims=1):
     Xi = pbat.fem.reference_positions(mesh, e, Xg)
     phi = pbat.fem.shape_functions_at(mesh, Xi)
     # quad. pts. Xg that are outside the mesh should have N(Xg)=0
-    phi[:, np.array(d) > 0] = 0
-    return phi, np.array(e, dtype=np.int64)
+    phi[:, d > 0] = 0
+    return phi, e
 
 
 def shape_function_matrix(mesh, Xg, dims=1):
@@ -123,7 +122,7 @@ def shape_function_gradients(mesh, Xg):
     e, d = bvh.nearest_primitives_to_points(Xg, parallelize=True)
     Xi = pbat.fem.reference_positions(mesh, e, Xg)
     gradphi = pbat.fem.shape_function_gradients_at(mesh, e, Xi)
-    return gradphi, np.array(e, dtype=np.int64)
+    return gradphi, e
 
 
 class BaseFemFunctionTransferOperator():

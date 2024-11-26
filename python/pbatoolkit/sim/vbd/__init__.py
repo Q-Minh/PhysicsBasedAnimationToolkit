@@ -78,8 +78,7 @@ def _transfer_quadrature(cmesh, cbvh, wgf, Xgf, order=1):
     n_quad_pts_per_elem = int(n_quad_pts / n_elems)
     egc = np.repeat(egc, n_quad_pts_per_elem)
     Xic = fem.reference_positions(cmesh, egc, Xgc)
-    ecf = np.array(cbvh.nearest_primitives_to_points(
-        Xgf, parallelize=True)[0])
+    ecf = cbvh.nearest_primitives_to_points(Xgf, parallelize=True)[0]
     Xif = fem.reference_positions(cmesh, ecf, Xgf)
     wgc, err = math.transfer_quadrature(
         egc, Xic, ecf, Xif, wgf, order=order, with_error=True, max_iters=50, precision=1e-10)
