@@ -48,15 +48,10 @@ void BindLevel(pybind11::module& m)
         .def(
             "with_kinetic_energy",
             &Energy::WithKineticEnergy,
-            pyb::arg("dt"),
-            pyb::arg("xtildeg"),
             pyb::arg("rhog"),
             pyb::arg("Ncg"),
             "Defines the kinetic term of this energy.\n"
             "Args:\n"
-            "dt (float): Time step\n"
-            "xtildeg (np.ndarray): 3x|#quad.pts.| array of inertial target positions at quadrature "
-            "points\n"
             "rhog (np.ndarray): |#quad.pts.| array of mass densities at quadrature points\n"
             "Ncg (np.ndarray): 4x|#quad.pts.| array of coarse cage element shape functions at "
             "quadrature points")

@@ -288,10 +288,10 @@ def fit_output_quad_to_input_quad(
     obvh,
     iorder=1,
     oorder=1,
-    selection=QuadraturePointSelection.FromOutputQuadrature,
-    fitting_strategy=QuadratureFittingStrategy.FitOutputQuadrature,
+    selection=QuadraturePointSelection.FromInputRandomSampling,
+    fitting_strategy=QuadratureFittingStrategy.FitInputQuadrature,
     singular_strategy=QuadratureSingularityStrategy.Ignore,
-    wsg=1e-8,
+    volerr=1e-3,
     numerical_zero=1e-12
 ):
     # Compute fine quadrature, which acts as the ground truth integral
@@ -350,7 +350,8 @@ def fit_output_quad_to_input_quad(
         oeg = np.hstack((oeg, ss))
         # Patch singular quadrature points
         if singular_strategy == QuadratureSingularityStrategy.Constant:
-            owg[n_non_singular:] = wsg
+            volume = iwg.sum()
+            owg[n_non_singular:] = volerr*volume / n_singular
 
         ordering = np.argsort(oeg)
         oXg = oXg[:, ordering]

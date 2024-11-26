@@ -36,15 +36,12 @@ Level::Energy& Level::Energy::WithAdjacency(
 }
 
 Level::Energy& Level::Energy::WithKineticEnergy(
-    Scalar dtIn,
-    Eigen::Ref<MatrixX const> const& xtildegIn,
     Eigen::Ref<VectorX const> const& rhogIn,
     Eigen::Ref<MatrixX const> const& NcgIn)
 {
-    dt      = dtIn;
-    xtildeg = xtildegIn;
-    rhog    = rhogIn;
-    Ncg     = NcgIn;
+    rhog = rhogIn;
+    Ncg  = NcgIn;
+    xtildeg.resize(3, rhog.size());
     return *this;
 }
 

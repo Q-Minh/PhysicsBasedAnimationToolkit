@@ -69,79 +69,86 @@ def partitions(V: np.ndarray, C: np.ndarray, dbcs: np.ndarray | list = None):
     return Pptr, Padj, GC
 
 
-def _transfer_quadrature(cmesh, cbvh, wgf, Xgf, order=1):
-    from ... import fem, math
-    Xgc = cmesh.quadrature_points(order)
-    n_elems = cmesh.E.shape[1]
-    egc = np.arange(n_elems, dtype=np.int64)
-    n_quad_pts = Xgc.shape[1]
-    n_quad_pts_per_elem = int(n_quad_pts / n_elems)
-    egc = np.repeat(egc, n_quad_pts_per_elem)
-    Xic = fem.reference_positions(cmesh, egc, Xgc)
-    ecf = cbvh.nearest_primitives_to_points(Xgf, parallelize=True)[0]
-    Xif = fem.reference_positions(cmesh, ecf, Xgf)
-    wgc, err = math.transfer_quadrature(
-        egc, Xic, ecf, Xif, wgf, order=order, with_error=True, max_iters=50, precision=1e-10)
-    return wgc, Xgc, egc, err
+class Quadrature:
+    def __init__(self, wg, Xg, eg, sg):
+        self.wg = wg
+        self.Xg = Xg
+        self.eg = eg
+        self.sg = sg
 
 
-def _patch_quadrature(cmesh, wgc, Xgc, egc, err=1e-4, numerical_zero=1e-10):
-    from ... import fem, math
-    import scipy as sp
-    import qpsolvers
-
-    wtotal = np.zeros(cmesh.E.shape[1])
-    np.add.at(wtotal, egc, wgc)
-    ezero = np.argwhere(wtotal < numerical_zero).squeeze()
-    ezeroinds = np.isin(egc, ezero)
-    egczero = np.copy(egc[ezeroinds])
-    Xg1zero = np.copy(Xgc[:, ezeroinds])
-    MM, BM, PM = math.reference_moment_fitting_systems(
-        egczero, Xg1zero, egczero, Xg1zero, np.zeros(Xg1zero.shape[1]))
-    MM = math.block_diagonalize_moment_fitting(MM, PM)
-    n = np.count_nonzero(ezeroinds)
-    P = -sp.sparse.eye(n).asformat('csc')
-    G = MM.asformat('csc')
-    h = np.full(G.shape[0], err)
-    lb = np.full(n, 0.)
-    q = np.full(n, 0.)
-    wzero = qpsolvers.solve_qp(P, q, G=G, h=h, lb=lb, initvals=np.zeros(
-        n), solver="cvxopt")
-    wgcp = np.copy(wgc)
-    wgcp[ezeroinds] = wzero
-    return wgcp, ezeroinds
-
-
-def hierarchy(data: _vbd.Data, V: list[np.ndarray], C: list[np.ndarray]):
+def hierarchy(
+        data: _vbd.Data,
+        V: list[np.ndarray],
+        C: list[np.ndarray],
+        QL: list[Quadrature],
+        rrhog: np.ndarray | float = 1e3):
     from ... import fem, geometry
+    rmesh = fem.Mesh(data.x, data.T, element=fem.Element.Tetrahedron)
     rbvh = geometry.bvh(data.x, data.T, cell=geometry.Cell.Tetrahedron)
     bvhs = [geometry.bvh(VC, CC, cell=geometry.Cell.Tetrahedron)
             for VC, CC in zip(V, C)]
+    if isinstance(rrhog, float):
+        rrhog = np.full(data.T.shape[1], rrhog)
     cages = [None]*len(V)
     for c in range(len(V)):
         X, E = V[c].T, C[c].T
         ptr, adj = partitions(V[c], C[c])
         cages[c] = _vbd.level.Cage(X, E, ptr, adj)
     energies = [None]*len(V)
-    from ...fem import inner_product_weights
 
-    reference_quadrature_order = 1
-    rmesh = fem.Mesh(data.x, data.T, element=fem.Element.Tetrahedron, order=1)
-    Xgr = rmesh.quadrature_points(reference_quadrature_order)
-    wgr = fem.inner_product_weights(
-        rmesh, quadrature_order=reference_quadrature_order
-    ).flatten(order="F")
-    coarse_quadrature_order = 1
     for c in range(len(V)):
         # Quadrature
-        cmesh = fem.Mesh(
-            V[c].T, C[c].T, element=fem.Element.Tetrahedron, order=1)
-        cbvh = bvhs[c]
-        wgc, Xgc, egc, err = _transfer_quadrature(cmesh, cbvh, wgr, Xgr,
-                                                  order=coarse_quadrature_order)
-
+        wg, Xg, eg, sg = QL[c].wg, QL[c].Xg, QL[c].eg, QL[c].sg
+        reg = rbvh.nearest_primitives_to(Xg)
         # Adjacency
-
+        VC, CC = V[c], C[c]
+        CG = CC[eg, :]
+        ilocal = np.repeat(np.arange(CG.shape[1])[
+                           np.newaxis, :], CG.shape[0], axis=0)
+        GVG = mesh_adjacency_graph(VC, CG, ilocal)
+        e = np.repeat(eg[:, np.newaxis], CG.shape[1])
+        GVGp = GVG.indptr
+        GVGg = GVG.indices
+        GVGilocal = GVG.data
+        GVGe = mesh_adjacency_graph(VC, CG, e).data
         # Kinetic energy
-
+        cmesh = fem.Mesh(VC.T, CC.T, element=fem.Element.Tetrahedron)
+        Xig = fem.reference_positions(cmesh, eg, Xg)
+        Ncg = fem.shape_functions_at(cmesh, Xig)
+        rhog = rrhog[reg]
         # Potential energy
+        nquadpts = Xg.shape[1]
+        rmug = data.lame[0, :]
+        rlambdag = data.lame[1, :]
+        mug = rmug[reg]
+        lambdag = rlambdag[reg]
+        nshapef = CC.shape[1]
+        Nrg = np.zeros(nshapef, nshapef*nquadpts)
+        erg = np.zeros((nshapef, nquadpts), dtype=np.int64)
+        cbvh = bvhs[c]
+        for v in range(nshapef):
+            rXv = data.x[:, data.T[v, reg]]
+            erg[v, :] = cbvh.primitives_containing_points(rXv)
+            cXi = fem.reference_positions(cmesh, erg[v, :], rXv)
+            Nrg[:, v::nshapef] = fem.shape_functions_at(cmesh, erg[v, :], cXi)
+        # Gradients of linear shape functions on root mesh are constant,
+        # so the specific reference points Xi are unimportant
+        rXi = np.zeros((rmesh.dims, nquadpts))
+        GNfg = fem.shape_function_gradients_at(
+            rmesh, reg, rXi)
+        GNcg = fem.shape_function_gradients_at(cmesh, eg, Xig)
+        # Store energy
+        energies[c] = _vbd.level.Energy(
+        ).with_quadrature(
+            wg, sg
+        ).with_adjacency(
+            GVGp, GVGg, GVGe, GVGilocal
+        ).with_kinetic_energy(
+            rhog, Ncg
+        ).with_potential_energy(
+            mug, lambdag, erg, Nrg, GNfg, GNcg
+        ).construct()
+
+    levels = [_vbd.Level(cage, energy)
+              for cage, energy in zip(cages, energies)]

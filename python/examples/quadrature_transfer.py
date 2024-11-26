@@ -72,9 +72,10 @@ if __name__ == "__main__":
         pbat.fem.QuadratureSingularityStrategy.Constant
     ]
     singular_strategy = singular_strategies[0]
+    volerr = 1e-3
 
     def callback():
-        global cwg, iwg, radius, iorder, corder, err
+        global cwg, iwg, radius, iorder, corder, err, volerr
         global selection_strategy, fitting_strategy, singular_strategy
 
         changed, iorder = imgui.InputInt("Input quad. order", iorder)
@@ -112,6 +113,7 @@ if __name__ == "__main__":
 
         changed, radius = imgui.SliderFloat(
             "Point radius", radius, v_min=1, v_max=1e3)
+        changed, volerr = imgui.InputFloat("Singular error", volerr)
 
         if imgui.Button("Compute coarse quadrature"):
             cXg, cwg, ceg, csg, iXg, iwg, err = pbat.fem.fit_output_quad_to_input_quad(
@@ -123,7 +125,8 @@ if __name__ == "__main__":
                 corder,
                 selection=selection_strategy,
                 fitting_strategy=fitting_strategy,
-                singular_strategy=singular_strategy
+                singular_strategy=singular_strategy,
+                volerr=volerr
             )
             ipc = ps.register_point_cloud("Input quadrature", iXg.T)
             ipc.add_scalar_quantity("weights", radius*iwg,
