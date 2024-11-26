@@ -87,7 +87,7 @@ def fit_cage_quad_to_fine_quad(imesh, cmesh, ibvh, cbvh, iorder=1, corder=1, sel
         cXi = pbat.fem.reference_positions(cmesh, ceg, cXg)
         cwg, err = pbat.math.transfer_quadrature(
             ceg, cXi, ieg, iXi, iwg, order=corder, with_error=True, max_iters=50, precision=1e-10)
-    return cXg, cwg, iXg, iwg
+    return cXg, cwg, iXg, iwg, err
 
 
 if __name__ == "__main__":
@@ -124,6 +124,7 @@ if __name__ == "__main__":
     corder = 1
     cwg = pbat.fem.inner_product_weights(cmesh, corder).flatten("F")
     iwg = pbat.fem.inner_product_weights(mesh, iorder).flatten("F")
+    err = np.array([(iwg.sum() - cwg.sum())**2])
 
     # Visualize
     ps.set_up_dir("z_up")
@@ -149,7 +150,8 @@ if __name__ == "__main__":
     fitting_strategy = fitting_strategies[0]
 
     def callback():
-        global cwg, iwg, radius, selection_strategy, fitting_strategy, iorder, corder
+        global cwg, iwg, radius
+        global selection_strategy, fitting_strategy, iorder, corder, err
 
         changed, iorder = imgui.InputInt("Input quad. order", iorder)
         changed, corder = imgui.InputInt("Coarse quad. order", corder)
@@ -178,7 +180,7 @@ if __name__ == "__main__":
             "Point radius", radius, v_min=1, v_max=1e3)
 
         if imgui.Button("Compute coarse quadrature"):
-            cXg, cwg, iXg, iwg = fit_cage_quad_to_fine_quad(
+            cXg, cwg, iXg, iwg, err = fit_cage_quad_to_fine_quad(
                 mesh,
                 cmesh,
                 ibvh,
@@ -199,6 +201,7 @@ if __name__ == "__main__":
 
         imgui.Text(f"Fine quad volume={iwg.sum()}")
         imgui.Text(f"Coarse quad volume={cwg.sum()}")
+        imgui.Text(f"Integration error={err.sum()}")
 
     ps.set_user_callback(callback)
     ps.show()

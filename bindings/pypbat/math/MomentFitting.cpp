@@ -24,7 +24,7 @@ void BindMomentFitting(pybind11::module& m)
            Index maxIterations,
            Scalar precision) {
             VectorX w1, err;
-            common::ForRange<1, 4>([&]<auto Order>() {
+            common::ForRange<1, 5>([&]<auto Order>() {
                 if (order == Order)
                 {
                     std::tie(w1, err) = pbat::math::TransferQuadrature<
@@ -63,7 +63,7 @@ void BindMomentFitting(pybind11::module& m)
            Index order) {
             MatrixX M, B;
             IndexVectorX P;
-            common::ForRange<1, 4>([&]<auto Order>() {
+            common::ForRange<1, 5>([&]<auto Order>() {
                 if (order == Order)
                 {
                     std::tie(M, B, P) =
