@@ -7,87 +7,6 @@ import igl
 import meshio
 import argparse
 import qpsolvers
-from enum import Enum
-
-
-class QuadraturePointSelection(Enum):
-    FromCageQuadrature = 0
-    FromInputRandomSampling = 1
-    FromInputSmartSampling = 2
-
-
-class QuadratureFittingStrategy(Enum):
-    FitCageQuadrature = 0
-    FitInputQuadrature = 1
-
-
-def cage_quadrature_points(cmesh, cbvh, iXg, selection=QuadraturePointSelection.FromCageQuadrature, corder=1):
-    """Selects quadrature points on coarse cage cmesh, given input mesh quadrature points iXg.
-
-    Args:
-        cmesh: Coarse cage mesh
-        cbvh: BVH over coarse cage mesh
-        iXg (np.ndarray): 3x|#input quad.pts.| array of input mesh quadrature points
-        selection (QuadraturePointSelection, optional): Coarse quadrature point selection scheme. 
-        Defaults to QuadraturePointSelection.FromCageQuadrature.
-        corder (int, optional): Quadrature order on coarse cage. Defaults to 1.
-
-    Raises:
-        ValueError: The selection scheme QuadraturePointSelection.FromInputSmartSampling is not yet supported
-
-    Returns:
-        (np.ndarray, np.ndarray): (cXg, ceg) where cXg is a 3x|#coarse quad.pts.| array of coarse quadrature points, 
-        and ceg is the |#coarse quad.pts.| array of corresponding coarse elements
-    """
-    cXg = cmesh.quadrature_points(corder)
-    n_coarse_elements = cmesh.E.shape[1]
-    if selection == QuadraturePointSelection.FromCageQuadrature:
-        return cXg
-    if selection == QuadraturePointSelection.FromInputRandomSampling:
-        inds = np.arange(iXg.shape[1])
-        np.random.shuffle(inds)
-        n_random_samples = cXg.shape[1]
-        inds = inds[:n_random_samples]
-        cXg = iXg[:, inds]
-        cen = cbvh.primitives_containing_points(cXg)
-        ces = np.setdiff1d(list(range(n_coarse_elements)), cen)
-        cXg = np.hstack((cXg, cmesh.quadrature_points(1)[:, ces]))
-        ceg = np.hstack((cen, ces))
-        eorder = np.argsort(ceg)
-        cXg = cXg[:, eorder]
-        return cXg
-    if selection == QuadraturePointSelection.FromInputSmartSampling:
-        raise ValueError(
-            f"selection={QuadraturePointSelection.FromInputSmartSampling} not yet supported")
-
-
-def fit_cage_quad_to_fine_quad(imesh, cmesh, ibvh, cbvh, iorder=1, corder=1, selection=QuadraturePointSelection.FromCageQuadrature, fitting_strategy=QuadratureFittingStrategy.FitCageQuadrature):
-    iwg = pbat.fem.inner_product_weights(imesh, iorder).flatten(order="F")
-    iXg = imesh.quadrature_points(iorder)
-    cXg = cage_quadrature_points(
-        cmesh, cbvh, iXg, selection=selection, corder=corder)
-    if fitting_strategy == QuadratureFittingStrategy.FitInputQuadrature:
-        ieg = np.array(ibvh.primitives_containing_points(iXg))
-        ceg = np.array(ibvh.primitives_containing_points(cXg))
-        singular = np.nonzero(ceg < 0)[0].astype(np.int64)
-        valid = np.nonzero(ceg >= 0)[0].astype(np.int64)
-        iXi = pbat.fem.reference_positions(imesh, ieg, iXg)
-        cXi = pbat.fem.reference_positions(
-            imesh, ceg[valid], cXg[:, valid])
-        ieg = np.array(cbvh.primitives_containing_points(iXg))
-        ceg = np.array(cbvh.primitives_containing_points(
-            cXg))
-        cwg = np.zeros(cXg.shape[1])
-        cwg[valid], err = pbat.math.transfer_quadrature(
-            ceg[valid], cXi, ieg, iXi, iwg, order=corder, with_error=True, max_iters=50, precision=1e-10)
-    elif fitting_strategy == QuadratureFittingStrategy.FitCageQuadrature:
-        ieg = np.array(cbvh.primitives_containing_points(iXg))
-        ceg = np.array(cbvh.primitives_containing_points(cXg))
-        iXi = pbat.fem.reference_positions(cmesh, ieg, iXg)
-        cXi = pbat.fem.reference_positions(cmesh, ceg, cXg)
-        cwg, err = pbat.math.transfer_quadrature(
-            ceg, cXi, ieg, iXi, iwg, order=corder, with_error=True, max_iters=50, precision=1e-10)
-    return cXg, cwg, iXg, iwg, err
 
 
 if __name__ == "__main__":
@@ -139,19 +58,24 @@ if __name__ == "__main__":
 
     radius = 1e2
     selection_strategies = [
-        QuadraturePointSelection.FromCageQuadrature,
-        QuadraturePointSelection.FromInputRandomSampling
+        pbat.fem.QuadraturePointSelection.FromOutputQuadrature,
+        pbat.fem.QuadraturePointSelection.FromInputRandomSampling
     ]
     selection_strategy = selection_strategies[0]
     fitting_strategies = [
-        QuadratureFittingStrategy.FitCageQuadrature,
-        QuadratureFittingStrategy.FitInputQuadrature
+        pbat.fem.QuadratureFittingStrategy.FitOutputQuadrature,
+        pbat.fem.QuadratureFittingStrategy.FitInputQuadrature
     ]
     fitting_strategy = fitting_strategies[0]
+    singular_strategies = [
+        pbat.fem.QuadratureSingularityStrategy.Ignore,
+        pbat.fem.QuadratureSingularityStrategy.Constant
+    ]
+    singular_strategy = singular_strategies[0]
 
     def callback():
-        global cwg, iwg, radius
-        global selection_strategy, fitting_strategy, iorder, corder, err
+        global cwg, iwg, radius, iorder, corder, err
+        global selection_strategy, fitting_strategy, singular_strategy
 
         changed, iorder = imgui.InputInt("Input quad. order", iorder)
         changed, corder = imgui.InputInt("Coarse quad. order", corder)
@@ -176,11 +100,21 @@ if __name__ == "__main__":
                     fitting_strategy = fitting_strategies[i]
             imgui.EndCombo()
 
+        changed = imgui.BeginCombo(
+            "Singular strategy", str(singular_strategy).split(".")[-1])
+        if changed:
+            for i in range(len(singular_strategies)):
+                _, selected = imgui.Selectable(
+                    str(singular_strategies[i]).split(".")[-1], singular_strategy == singular_strategies[i])
+                if selected:
+                    singular_strategy = singular_strategies[i]
+            imgui.EndCombo()
+
         changed, radius = imgui.SliderFloat(
             "Point radius", radius, v_min=1, v_max=1e3)
 
         if imgui.Button("Compute coarse quadrature"):
-            cXg, cwg, iXg, iwg, err = fit_cage_quad_to_fine_quad(
+            cXg, cwg, ceg, csg, iXg, iwg, err = pbat.fem.fit_output_quad_to_input_quad(
                 mesh,
                 cmesh,
                 ibvh,
@@ -188,7 +122,8 @@ if __name__ == "__main__":
                 iorder,
                 corder,
                 selection=selection_strategy,
-                fitting_strategy=fitting_strategy
+                fitting_strategy=fitting_strategy,
+                singular_strategy=singular_strategy
             )
             ipc = ps.register_point_cloud("Input quadrature", iXg.T)
             ipc.add_scalar_quantity("weights", radius*iwg,

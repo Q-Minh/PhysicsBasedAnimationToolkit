@@ -6,6 +6,7 @@ import scipy as sp
 import math
 import contextlib
 import io
+from enum import Enum
 
 __module = sys.modules[__name__]
 for _name, _attr in inspect.getmembers(_fem):
@@ -222,3 +223,139 @@ def load_vector(
     if flatten:
         f = f.reshape(math.prod(f.shape), order="F")
     return f, detJe
+
+
+class QuadraturePointSelection(Enum):
+    FromOutputQuadrature = 0
+    FromInputRandomSampling = 1
+    FromInputSmartSampling = 2
+
+
+class QuadratureFittingStrategy(Enum):
+    FitOutputQuadrature = 0
+    FitInputQuadrature = 1
+
+
+class QuadratureSingularityStrategy(Enum):
+    Ignore = 0
+    Constant = 1
+
+
+def output_quadrature_points(omesh, obvh, iXg, selection=QuadraturePointSelection.FromOutputQuadrature, oorder=1):
+    """Selects quadrature points on output mesh, given input mesh quadrature points iXg.
+
+    Args:
+        omesh: Output mesh
+        obvh: BVH over output mesh
+        iXg (np.ndarray): 3x|#input quad.pts.| array of input mesh quadrature points
+        selection (QuadraturePointSelection, optional): Output quadrature point selection scheme. 
+        Defaults to QuadraturePointSelection.FromOutputQuadrature.
+        oorder (int, optional): Quadrature order on output mesh. Defaults to 1.
+
+    Raises:
+        ValueError: The selection scheme QuadraturePointSelection.FromInputSmartSampling is not yet supported
+
+    Returns:
+        (np.ndarray, np.ndarray): (oXg, oeg) where oXg is a 3x|#output quad.pts.| array of output quadrature points, 
+        and oeg is the |#output quad.pts.| array of corresponding output elements
+    """
+    oXg = omesh.quadrature_points(oorder)
+    n_output_elements = omesh.E.shape[1]
+    if selection == QuadraturePointSelection.FromOutputQuadrature:
+        return oXg
+    if selection == QuadraturePointSelection.FromInputRandomSampling:
+        inds = np.arange(iXg.shape[1])
+        np.random.shuffle(inds)
+        n_random_samples = oXg.shape[1]
+        inds = inds[:n_random_samples]
+        oXg = iXg[:, inds]
+        oen = obvh.primitives_containing_points(oXg)
+        oes = np.setdiff1d(list(range(n_output_elements)), oen)
+        oXg = np.hstack((oXg, omesh.quadrature_points(1)[:, oes]))
+        oeg = np.hstack((oen, oes))
+        eorder = np.argsort(oeg)
+        oXg = oXg[:, eorder]
+        return oXg
+    if selection == QuadraturePointSelection.FromInputSmartSampling:
+        raise ValueError(
+            f"selection={QuadraturePointSelection.FromInputSmartSampling} not yet supported")
+
+
+def fit_output_quad_to_input_quad(
+    imesh,
+    omesh,
+    ibvh,
+    obvh,
+    iorder=1,
+    oorder=1,
+    selection=QuadraturePointSelection.FromOutputQuadrature,
+    fitting_strategy=QuadratureFittingStrategy.FitOutputQuadrature,
+    singular_strategy=QuadratureSingularityStrategy.Ignore,
+    wsg=1e-8,
+    numerical_zero=1e-12
+):
+    # Compute fine quadrature, which acts as the ground truth integral
+    iwg = _fem.inner_product_weights(imesh, iorder).flatten(order="F")
+    iXg = imesh.quadrature_points(iorder)
+    # Select quadrature points
+    oXg = output_quadrature_points(
+        omesh, obvh, iXg, selection=selection, oorder=oorder)
+    # Delete quadrature points that are outside the input mesh
+    outside = ibvh.primitives_containing_points(oXg) < 0
+    inside = ~outside
+    oXg = oXg[:, inside]
+    oeg = obvh.primitives_containing_points(oXg)
+
+    # Find quadrature weights for the output quadrature points
+    from .math import transfer_quadrature
+    if fitting_strategy == QuadratureFittingStrategy.FitInputQuadrature:
+        n_fine_elements = imesh.E.shape[1]
+        n_fine_quad_pts = iXg.shape[1]
+        ieg = np.repeat(np.arange(n_fine_elements, dtype=np.int64),
+                        int(n_fine_quad_pts / n_fine_elements))
+        ieg = ibvh.primitives_containing_points(iXg)
+        iXi = _fem.reference_positions(imesh, ieg, iXg)
+        oXi = _fem.reference_positions(
+            imesh, ibvh.primitives_containing_points(oXg), oXg)
+        ieg = obvh.primitives_containing_points(iXg)
+        owg = np.zeros(oXg.shape[1])
+        owg, err = transfer_quadrature(
+            oeg, oXi, ieg, iXi, iwg, order=oorder, with_error=True, max_iters=100, precision=1e-12)
+    elif fitting_strategy == QuadratureFittingStrategy.FitOutputQuadrature:
+        ieg = obvh.primitives_containing_points(iXg)
+        iXi = _fem.reference_positions(omesh, ieg, iXg)
+        oXi = _fem.reference_positions(omesh, oeg, oXg)
+        owg, err = transfer_quadrature(
+            oeg, oXi, ieg, iXi, iwg, order=oorder, with_error=True, max_iters=100, precision=1e-12)
+
+    # Delete insignificant quadrature points, i.e. those with vanishing weights
+    nontrivial = owg > numerical_zero
+    oXg = oXg[:, nontrivial]
+    oeg = oeg[nontrivial]
+    owg = owg[nontrivial]
+    osg = np.full(owg.shape[0], False)
+
+    if singular_strategy != QuadratureSingularityStrategy.Ignore:
+        # Find singular elements
+        n_output_elements = omesh.E.shape[1]
+        ss = np.setdiff1d(list(range(n_output_elements)), oeg)
+        # Inject a single quadrature point in each singular element
+        soXg = omesh.quadrature_points(1)[:, ss]
+        n_non_singular = oXg.shape[1]
+        n_singular = soXg.shape[1]
+        osg = np.hstack((np.full(n_non_singular, False),
+                         np.full(n_singular, True)))
+        oXg = np.hstack((oXg, soXg))
+        owg = np.hstack((owg, np.zeros(n_singular, dtype=owg.dtype)))
+        oeg = np.hstack((oeg, ss))
+        # Patch singular quadrature points
+        if singular_strategy == QuadratureSingularityStrategy.Constant:
+            owg[n_non_singular:] = wsg
+
+        ordering = np.argsort(oeg)
+        oXg = oXg[:, ordering]
+        owg = owg[ordering]
+        oeg = oeg[ordering]
+        osg = osg[ordering]
+
+    return oXg, owg, oeg, osg, iXg, iwg, err
