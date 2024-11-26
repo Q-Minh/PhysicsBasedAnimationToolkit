@@ -56,11 +56,11 @@ def cage_quadrature_points(cmesh, cbvh, iXg, selection=QuadraturePointSelection.
             f"selection={QuadraturePointSelection.FromInputSmartSampling} not yet supported")
 
 
-def fit_cage_quad_to_fine_quad(imesh, cmesh, cbvh, iorder=1, corder=1, on_fine_elements=False):
+def fit_cage_quad_to_fine_quad(imesh, cmesh, cbvh, iorder=1, corder=1, selection=QuadraturePointSelection.FromCageQuadrature, on_fine_elements=False):
     iwg = pbat.fem.inner_product_weights(imesh, iorder).flatten(order="F")
     iXg = imesh.quadrature_points(iorder)
     cXg = cage_quadrature_points(
-        cmesh, cbvh, iXg, selection=QuadraturePointSelection.FromInputRandomSampling, corder=corder)
+        cmesh, cbvh, iXg, selection=selection, corder=corder)
     if on_fine_elements:
         ieg = np.array(ibvh.primitives_containing_points(iXg, parallelize=True))
         ceg = np.array(ibvh.primitives_containing_points(cXg, parallelize=True))
@@ -121,7 +121,14 @@ if __name__ == "__main__":
     ibvh = pbat.geometry.bvh(V.T, C.T, cell=pbat.geometry.Cell.Tetrahedron)
     cbvh = pbat.geometry.bvh(CV.T, CC.T, cell=pbat.geometry.Cell.Tetrahedron)
     cXg, cwg, iXg, iwg = fit_cage_quad_to_fine_quad(
-        mesh, cmesh, cbvh, args.iorder, args.corder, on_fine_elements=True)
+        mesh,
+        cmesh,
+        cbvh,
+        args.iorder,
+        args.corder,
+        selection=QuadraturePointSelection.FromCageQuadrature,
+        on_fine_elements=False
+    )
 
     # Visualize
     ps.set_up_dir("z_up")
