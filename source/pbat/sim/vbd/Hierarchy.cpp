@@ -7,14 +7,14 @@ namespace vbd {
 Hierarchy::Hierarchy(
     Data rootIn,
     std::vector<Level> levelsIn,
-    std::vector<Smoother> smoothersIn,
     std::vector<MatrixX> NgIn,
-    std::vector<Transition> transitionsIn)
+    std::vector<Transition> transitionsIn,
+    std::vector<Smoother> smoothersIn)
     : root(std::move(rootIn)),
       levels(std::move(levelsIn)),
-      smoothers(std::move(smoothersIn)),
       Ng(std::move(NgIn)),
-      transitions(std::move(transitionsIn))
+      transitions(std::move(transitionsIn)),
+      smoothers(std::move(smoothersIn))
 {
 }
 

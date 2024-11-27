@@ -77,17 +77,28 @@ class Quadrature:
         self.sg = sg
 
 
+class Transition:
+    def __init__(self, li, lj, riters=10, siters=10):
+        self.li = li
+        self.lj = lj
+        self.riters = riters
+        self.siters = siters
+
+
 def hierarchy(
         data: _vbd.Data,
         V: list[np.ndarray],
         C: list[np.ndarray],
         QL: list[Quadrature],
+        cycle: list[Transition],
         rrhog: np.ndarray | float = 1e3):
     from ... import fem, geometry
     rmesh = fem.Mesh(data.x, data.T, element=fem.Element.Tetrahedron)
+    cmeshes = [fem.Mesh(VC.T, CC.T, element=fem.Element.Tetrahedron)
+               for VC, CC in zip(V, C)]
     rbvh = geometry.bvh(data.x, data.T, cell=geometry.Cell.Tetrahedron)
-    bvhs = [geometry.bvh(VC, CC, cell=geometry.Cell.Tetrahedron)
-            for VC, CC in zip(V, C)]
+    cbvhs = [geometry.bvh(VC, CC, cell=geometry.Cell.Tetrahedron)
+             for VC, CC in zip(V, C)]
     if isinstance(rrhog, float):
         rrhog = np.full(data.T.shape[1], rrhog)
     cages = [None]*len(V)
@@ -113,7 +124,7 @@ def hierarchy(
         GVGilocal = GVG.data
         GVGe = mesh_adjacency_graph(VC, CG, e).data
         # Kinetic energy
-        cmesh = fem.Mesh(VC.T, CC.T, element=fem.Element.Tetrahedron)
+        cmesh = cmeshes[c]
         Xig = fem.reference_positions(cmesh, eg, Xg)
         Ncg = fem.shape_functions_at(cmesh, Xig)
         rhog = rrhog[reg]
@@ -126,7 +137,7 @@ def hierarchy(
         nshapef = CC.shape[1]
         Nrg = np.zeros(nshapef, nshapef*nquadpts)
         erg = np.zeros((nshapef, nquadpts), dtype=np.int64)
-        cbvh = bvhs[c]
+        cbvh = cbvhs[c]
         for v in range(nshapef):
             rXv = data.x[:, data.T[v, reg]]
             erg[v, :] = cbvh.primitives_containing_points(rXv)
@@ -152,3 +163,60 @@ def hierarchy(
 
     levels = [_vbd.Level(cage, energy)
               for cage, energy in zip(cages, energies)]
+
+    transitions = [None]*len(cycle)
+    smoothers = [None]*len(cycle)
+    for t, step in enumerate(cycle):
+        li, lj = step.li, step.lj
+        riters, siters = step.riters, step.siters
+        if li == lj:
+            raise ValueError(
+                f"Invalid transition from level={li} to level={lj}"
+            )
+        is_prolongation = li > lj
+        if is_prolongation:
+            lc, lf = li, lj
+            is_lf_root = lf == -1
+            Xf = data.x if is_lf_root else V[lc].T
+            ecf = cbvhs[lc].primitives_containing_points(Xf)
+            Xif = fem.reference_positions(cmeshes[lc], ecf, Xf)
+            Ncf = fem.shape_functions_at(cmeshes[lc], Xif)
+            transitions[t] = _vbd.Prolongation(
+            ).from_level(
+                lc
+            ).to_level(
+                lf
+            ).with_coarse_shape_functions(
+                ecf, Ncf
+            ).construct()
+        else:
+            lf, lc = li, lj
+            is_lf_root = lf == -1
+            Xcg = QL[lc].Xg
+            fbvh = rbvh if is_lf_root else cbvhs[lf]
+            fmesh = rmesh if is_lf_root else cmeshes[lf]
+            efg = fbvh.nearest_primitives_to(Xcg)
+            Xif = fem.reference_positions(fmesh, efg, Xcg)
+            Nfg = fem.shape_functions_at(fmesh, Xif)
+            transitions[t] = _vbd.Restriction(
+            ).from_level(
+                lf
+            ).to_level(
+                lc
+            ).with_fine_shape_functions(
+                efg, Nfg
+            ).iterate(
+                riters
+            ).construct()
+
+        smoothers[t] = _vbd.Smoother(siters)
+
+    Ng = [None]*len(levels)
+    for l in range(len(levels)):
+        Xgl = QL[l].Xg
+        reg = rbvh.nearest_primitives_to_points(Xgl)
+        Xigl = fem.reference_positions(rmesh, reg, Xgl)
+        Ng[l] = fem.shape_functions_at(rmesh, Xigl)
+
+    hierarchy = _vbd.Hierarchy(data, levels, Ng, transitions, smoothers)
+    return hierarchy
