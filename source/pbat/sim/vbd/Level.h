@@ -78,7 +78,6 @@ struct Level
          */
         Energy& Construct(bool bValidate = true);
 
-        Scalar dt;       ///< Time step
         MatrixX xtildeg; ///< 3x|#quad.pts.| array of inertial target positions at quadrature points
         VectorX rhog;    ///< |#quad.pts.| array of mass densities at quadrature points
         MatrixX Ncg; ///< 4x|#quad.pts.| array of coarse cage element shape functions at quadrature
@@ -134,15 +133,41 @@ struct Level
     };
 
     /**
-     * @brief Construct a new Level object
-     * 
-     * @param C 
-     * @param E 
+     * @brief
+     *
+     * This allows transferring problem parameters from the root directly to a given coarser level,
+     * for example inertial targets xtildeg.
+     *
      */
-    Level(Cage C, Energy E);
+    struct RootParameterBus
+    {
+        /**
+         * @brief Construct a new Root Parameter Bus object
+         *
+         * @param ergIn
+         * @param NrgIn
+         */
+        RootParameterBus(
+            Eigen::Ref<IndexVectorX const> const& ergIn,
+            Eigen::Ref<MatrixX const> const& NrgIn);
+
+        IndexVectorX erg; ///< |#quad.pts.| array of root element associated with quadrature points
+        MatrixX Nrg; ///< 4x|#quad.pts at level l| arrays of root level shape functions evaluated at
+                     ///< quadrature points
+    };
+
+    /**
+     * @brief Construct a new Level object
+     *
+     * @param C
+     * @param E
+     * @param RPB
+     */
+    Level(Cage C, Energy E, RootParameterBus RPB);
 
     Cage C;
     Energy E;
+    RootParameterBus RPB;
 };
 
 } // namespace vbd

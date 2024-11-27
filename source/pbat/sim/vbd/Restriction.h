@@ -49,6 +49,18 @@ struct Restriction
      * @return Restriction&
      */
     Restriction& Construct(bool bValidate = true);
+    /**
+     * @brief
+     *
+     * @return Index
+     */
+    Index StartLevel() const { return lf; }
+    /**
+     * @brief
+     *
+     * @return Index
+     */
+    Index EndLevel() const { return lc; }
 
     IndexVectorX
         efg;     ///< |#quad.pts.| array of fine cage elements associated with quadrature points

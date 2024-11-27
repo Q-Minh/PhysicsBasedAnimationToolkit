@@ -61,21 +61,18 @@ void BindData(pybind11::module& m)
             pyb::arg("wg"),
             pyb::arg("GP"),
             pyb::arg("lame"),
-            "Sets the |#quad.pts.| array of quadrature points for the total elastic potential, "
+            "Sets the |#elems| array of quadrature weights for the total elastic potential, "
             "including the 3x|4*#elements| array of element shape function gradients GP, and "
             "2x|#elements| array of Lame coefficients.")
         .def(
             "with_vertex_adjacency",
             &Data::WithVertexAdjacency,
             pyb::arg("GVGp"),
-            pyb::arg("GVGg"),
             pyb::arg("GVGe"),
             pyb::arg("GVGilocal"),
-            "Sets the graph of (vertex, quadrature point) edges in the compressed sparse format, "
-            "where GVGp is the |#nodes+1| prefix array, GVGg yields the adjacent quadrature "
-            "points, GVGe yields the adjacent elements containing the corresponding quadrature "
-            "points and GVGilocal yields the local vertex index in the corresponding adjacent "
-            "element.")
+            "Sets the graph of (vertex, element) edges in the compressed sparse format, "
+            "where GVGp is the |#nodes+1| prefix array, GVGe yields the adjacent elements and "
+            "GVGilocal yields the local vertex index in the corresponding adjacent element.")
         .def(
             "with_partitions",
             &Data::WithPartitions,
@@ -111,7 +108,6 @@ void BindData(pybind11::module& m)
         .def_readwrite("wg", &Data::wg)
         .def_readwrite("lame", &Data::lame)
         .def_readwrite("GVGp", &Data::GVGp)
-        .def_readwrite("GVGg", &Data::GVGg)
         .def_readwrite("GVGe", &Data::GVGe)
         .def_readwrite("GVGilocal", &Data::GVGilocal)
         .def_readwrite("dbc", &Data::dbc)

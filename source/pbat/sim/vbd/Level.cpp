@@ -106,7 +106,17 @@ Level::Cage::Cage(
 {
 }
 
-Level::Level(Cage Cin, Energy Ein) : C(std::move(Cin)), E(std::move(Ein)) {}
+Level::RootParameterBus::RootParameterBus(
+    Eigen::Ref<IndexVectorX const> const& ergIn,
+    Eigen::Ref<MatrixX const> const& NrgIn)
+    : erg(ergIn), Nrg(NrgIn)
+{
+}
+
+Level::Level(Cage Cin, Energy Ein, RootParameterBus RPBin)
+    : C(std::move(Cin)), E(std::move(Ein)), RPB(std::move(RPBin))
+{
+}
 
 } // namespace vbd
 } // namespace sim

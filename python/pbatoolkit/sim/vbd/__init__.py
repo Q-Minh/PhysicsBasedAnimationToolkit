@@ -101,19 +101,20 @@ def hierarchy(
              for VC, CC in zip(V, C)]
     if isinstance(rrhog, float):
         rrhog = np.full(data.T.shape[1], rrhog)
-    cages = [None]*len(V)
-    for c in range(len(V)):
-        X, E = V[c].T, C[c].T
-        ptr, adj = partitions(V[c], C[c])
-        cages[c] = _vbd.level.Cage(X, E, ptr, adj)
-    energies = [None]*len(V)
 
-    for c in range(len(V)):
+    cages = [None]*len(V)
+    for l in range(len(V)):
+        X, E = V[l].T, C[l].T
+        ptr, adj = partitions(V[l], C[l])
+        cages[l] = _vbd.level.Cage(X, E, ptr, adj)
+
+    energies = [None]*len(V)
+    for l in range(len(V)):
         # Quadrature
-        wg, Xg, eg, sg = QL[c].wg, QL[c].Xg, QL[c].eg, QL[c].sg
+        wg, Xg, eg, sg = QL[l].wg, QL[l].Xg, QL[l].eg, QL[l].sg
         reg = rbvh.nearest_primitives_to(Xg)
         # Adjacency
-        VC, CC = V[c], C[c]
+        VC, CC = V[l], C[l]
         CG = CC[eg, :]
         ilocal = np.repeat(np.arange(CG.shape[1])[
                            np.newaxis, :], CG.shape[0], axis=0)
@@ -124,7 +125,7 @@ def hierarchy(
         GVGilocal = GVG.data
         GVGe = mesh_adjacency_graph(VC, CG, e).data
         # Kinetic energy
-        cmesh = cmeshes[c]
+        cmesh = cmeshes[l]
         Xig = fem.reference_positions(cmesh, eg, Xg)
         Ncg = fem.shape_functions_at(cmesh, Xig)
         rhog = rrhog[reg]
@@ -137,7 +138,7 @@ def hierarchy(
         nshapef = CC.shape[1]
         Nrg = np.zeros(nshapef, nshapef*nquadpts)
         erg = np.zeros((nshapef, nquadpts), dtype=np.int64)
-        cbvh = cbvhs[c]
+        cbvh = cbvhs[l]
         for v in range(nshapef):
             rXv = data.x[:, data.T[v, reg]]
             erg[v, :] = cbvh.primitives_containing_points(rXv)
@@ -150,7 +151,7 @@ def hierarchy(
             rmesh, reg, rXi)
         GNcg = fem.shape_function_gradients_at(cmesh, eg, Xig)
         # Store energy
-        energies[c] = _vbd.level.Energy(
+        energies[l] = _vbd.level.Energy(
         ).with_quadrature(
             wg, sg
         ).with_adjacency(
@@ -161,8 +162,16 @@ def hierarchy(
             mug, lambdag, erg, Nrg, GNfg, GNcg
         ).construct()
 
-    levels = [_vbd.Level(cage, energy)
-              for cage, energy in zip(cages, energies)]
+    buses = [None]*len(V)
+    for l in range(len(V)):
+        Xgl = QL[l].Xg
+        erg = rbvh.nearest_primitives_to_points(Xgl)
+        Xigl = fem.reference_positions(rmesh, erg, Xgl)
+        Nrg = fem.shape_functions_at(rmesh, Xigl)
+        buses[l] = _vbd.level.RootParameterBus(erg, Nrg)
+
+    levels = [_vbd.Level(cage, energy, bus)
+              for cage, energy, bus in zip(cages, energies, buses)]
 
     transitions = [None]*len(cycle)
     smoothers = [None]*len(cycle)
@@ -211,12 +220,5 @@ def hierarchy(
 
         smoothers[t] = _vbd.Smoother(siters)
 
-    Ng = [None]*len(levels)
-    for l in range(len(levels)):
-        Xgl = QL[l].Xg
-        reg = rbvh.nearest_primitives_to_points(Xgl)
-        Xigl = fem.reference_positions(rmesh, reg, Xgl)
-        Ng[l] = fem.shape_functions_at(rmesh, Xigl)
-
-    hierarchy = _vbd.Hierarchy(data, levels, Ng, transitions, smoothers)
+    hierarchy = _vbd.Hierarchy(data, levels, transitions, smoothers)
     return hierarchy

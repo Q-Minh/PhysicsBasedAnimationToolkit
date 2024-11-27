@@ -7,17 +7,15 @@ namespace pbat {
 namespace sim {
 namespace vbd {
 
-class Restriction
-{
-  public:
-  private:
-};
+class Hierarchy;
 
-class Prolongation
+class MultiScaleIntegrator
 {
   public:
+    void Step(Scalar dt, Index substeps, Hierarchy& H);
+
   private:
-    
+
 };
 
 } // namespace vbd

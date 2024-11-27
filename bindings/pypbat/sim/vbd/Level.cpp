@@ -13,8 +13,9 @@ void BindLevel(pybind11::module& m)
     namespace pyb = pybind11;
 
     using pbat::sim::vbd::Level;
-    using Cage   = pbat::sim::vbd::Level::Cage;
-    using Energy = pbat::sim::vbd::Level::Energy;
+    using Cage             = pbat::sim::vbd::Level::Cage;
+    using Energy           = pbat::sim::vbd::Level::Energy;
+    using RootParameterBus = pbat::sim::vbd::Level::RootParameterBus;
 
     auto mlevel = m.def_submodule("level");
 
@@ -78,7 +79,6 @@ void BindLevel(pybind11::module& m)
             "GNcg (np.ndarray): 4x|3*#quad.pts.| array of coarse cage element shape function "
             "gradients at quadrature points")
         .def("construct", &Energy::Construct, pyb::arg("validate") = true)
-        .def_readwrite("dt", &Energy::dt)
         .def_readwrite("xtildeg", &Energy::xtildeg)
         .def_readwrite("rhog", &Energy::rhog)
         .def_readwrite("Ncg", &Energy::Ncg)
@@ -117,13 +117,31 @@ void BindLevel(pybind11::module& m)
         .def_readwrite("ptr", &Cage::ptr)
         .def_readwrite("adj", &Cage::adj);
 
+    pyb::class_<RootParameterBus>(mlevel, "RootParameterBus")
+        .def(
+            pyb::init<Eigen::Ref<IndexVectorX const> const&, Eigen::Ref<MatrixX const> const&>(),
+            pyb::arg("erg"),
+            pyb::arg("Nrg"),
+            "Construct a multiscale VBD coarse cage.\n"
+            "Args:\n"
+            "erg (np.ndarray): |#quad.pts.| array of root element associated with quadrature "
+            "points\n"
+            "Nrg (np.ndarray): 4x|#quad.pts at level l| arrays of root level shape functions "
+            "evaluated at quadrature points")
+        .def_readwrite("erg", &RootParameterBus::erg)
+        .def_readwrite("Nrg", &RootParameterBus::Nrg);
+
     pyb::class_<Level>(m, "Level")
         .def(
-            pyb::init([](Cage& C, Energy& E) { return Level(std::move(C), std::move(E)); }),
+            pyb::init([](Cage& C, Energy& E, RootParameterBus& RPB) {
+                return Level(std::move(C), std::move(E), std::move(RPB));
+            }),
             pyb::arg("cage"),
-            pyb::arg("energy"))
+            pyb::arg("energy"),
+            pyb::arg("bus"))
         .def_readwrite("cage", &Level::C)
-        .def_readwrite("energy", &Level::E);
+        .def_readwrite("energy", &Level::E)
+        .def_readwrite("bus", &Level::RPB);
 }
 
 } // namespace vbd

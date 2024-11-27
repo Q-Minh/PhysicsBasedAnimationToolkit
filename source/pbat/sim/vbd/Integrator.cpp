@@ -78,9 +78,8 @@ void Integrator::Step(Scalar dt, Index iterations, Index substeps, Scalar rho)
                     {
                         auto ilocal                     = data.GVGilocal[n];
                         auto e                          = data.GVGe[n];
-                        auto g                          = data.GVGg[n];
                         auto lamee                      = data.lame.col(e);
-                        auto wg                         = data.wg[g];
+                        auto wg                         = data.wg[e];
                         auto Te                         = data.T.col(e);
                         mini::SMatrix<Scalar, 4, 3> GPe = FromEigen(data.GP.block<4, 3>(0, e * 3));
                         mini::SMatrix<Scalar, 3, 4> xe =
@@ -223,7 +222,6 @@ TEST_CASE("[sim][vbd] Integrator")
                        .WithQuadrature(wg, GP, lame)
                        .WithVertexAdjacency(
                            ToEigen(vertexTetrahedronPrefix),
-                           ToEigen(vertexTetrahedronNeighbours),
                            ToEigen(vertexTetrahedronNeighbours),
                            ToEigen(vertexTetrahedronLocalVertexIndices))
                        .Construct()};

@@ -7,6 +7,7 @@ namespace pbat {
 namespace sim {
 namespace vbd {
 
+struct Data;
 struct Level;
 
 struct Smoother
@@ -16,9 +17,17 @@ struct Smoother
     /**
      * @brief Smooth level L
      *
+     * @param dt
      * @param L
      */
-    void Apply(Level& L);
+    void Apply(Scalar dt, Level& L);
+    /**
+     * @brief Smooth root level
+     *
+     * @param dt
+     * @param data
+     */
+    void Apply(Scalar dt, Data& data);
 };
 
 } // namespace vbd

@@ -49,9 +49,9 @@ PBAT_API struct Data
     Data& WithMass(Eigen::Ref<VectorX const> const& m);
     /**
      * @brief
-     * @param wg |#quad.pts.| quadrature weights
-     * @param GP |#elem.nodes|x|#dims*#quad.pts.| shape function gradients at quad. pts.
-     * @param lame 2x|#quad.pts.| Lame coefficients
+     * @param wg |#elems| quadrature weights
+     * @param GP |#elem.nodes|x|#dims*#elems| shape function gradients at elems
+     * @param lame 2x|#elems| Lame coefficients
      * @return
      */
     Data& WithQuadrature(
@@ -61,17 +61,14 @@ PBAT_API struct Data
     /**
      * @brief
      * @param GVGp |#verts+1| prefixes into GVGg
-     * @param GVGg |# of vertex-quad.pt. edges| neighbours s.t. GVGg[k] for GVGp[i] <= k < GVGp[i+1]
-     * gives the quad.pts. involving vertex i
-     * @param GVGe |# of vertex-quad.pt. edges| element indices s.t. GVGe[k] for GVGp[i] <= k <
-     * GVGp[i+1] gives the element index of adjacent to vertex i for the neighbouring quad.pt.
-     * @param GVGilocal |# of vertex-quad.pt. edges| local vertex indices s.t. GVGilocal[k] for
-     * GVGp[i] <= k < GVGp[i+1] gives the local index of vertex i for the neighbouring quad.pts.
+     * @param GVGe |# of vertex-elems edges| element indices s.t. GVGe[k] for GVGp[i] <= k <
+     * GVGp[i+1] gives the element index of adjacent to vertex i for the neighbouring elems
+     * @param GVGilocal |# of vertex-elems edges| local vertex indices s.t. GVGilocal[k] for
+     * GVGp[i] <= k < GVGp[i+1] gives the local index of vertex i for the neighbouring elems
      * @return
      */
     Data& WithVertexAdjacency(
         Eigen::Ref<IndexVectorX const> const& GVGp,
-        Eigen::Ref<IndexVectorX const> const& GVGg,
         Eigen::Ref<IndexVectorX const> const& GVGe,
         Eigen::Ref<IndexVectorX const> const& GVGilocal);
     /**
@@ -138,20 +135,17 @@ PBAT_API struct Data
     MatrixX xchebm1; ///< 3x|#verts| x^{k-1} used in Chebyshev semi-iterative method
     MatrixX vt;      ///< 3x|#verts| previous vertex velocities
 
-    VectorX wg;   ///< |#quad.pts.| quadrature weights
-    MatrixX GP;   ///< |#elem.nodes|x|#dims*#quad.pts.| shape function gradients at quad. pts.
-    MatrixX lame; ///< 2x|#quad.pts.| Lame coefficients
+    VectorX wg;   ///< |#elems| quadrature weights
+    MatrixX GP;   ///< |#elem.nodes|x|#dims*#elems| shape function gradients at elems
+    MatrixX lame; ///< 2x|#elems| Lame coefficients
 
-    IndexVectorX GVGp; ///< |#verts+1| prefixes into GVGg
-    IndexVectorX
-        GVGg; ///< |# of vertex-quad.pt. edges| neighbours s.t.
-              ///< GVGg[k] for GVGp[i] <= k < GVGp[i+1] gives the quad.pts. involving vertex i
-    IndexVectorX GVGe;      ///< |# of vertex-quad.pt. edges| element indices s.t.
+    IndexVectorX GVGp;      ///< |#verts+1| prefixes into GVGg
+    IndexVectorX GVGe;      ///< |# of vertex-elems edges| element indices s.t.
                             ///< GVGe[k] for GVGp[i] <= k < GVGp[i+1] gives the element index of
-                            ///< adjacent to vertex i for the neighbouring quad.pt.
-    IndexVectorX GVGilocal; ///< |# of vertex-quad.pt. edges| local vertex indices s.t.
+                            ///< adjacent to vertex i for the neighbouring elems
+    IndexVectorX GVGilocal; ///< |# of vertex-elems edges| local vertex indices s.t.
                             ///< GVGilocal[k] for GVGp[i] <= k < GVGp[i+1] gives the local index of
-                            ///< vertex i for the neighbouring quad.pts.
+                            ///< vertex i for the neighbouring elems
 
     IndexVectorX dbc; ///< Dirichlet constrained vertices (sorted)
 
