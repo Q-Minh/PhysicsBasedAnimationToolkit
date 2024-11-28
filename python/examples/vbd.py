@@ -109,7 +109,7 @@ if __name__ == "__main__":
     ).with_quadrature(
         detJeU[0, :] / 6, GNeU, np.vstack((mue, lambdae))
     ).with_vertex_adjacency(
-        GVT.indptr, GVT.indices, GVT.indices, GVT.data
+        GVT.indptr, GVT.indices, GVT.data
     ).with_partitions(
         Pptr, Padj
     ).with_dirichlet_vertices(

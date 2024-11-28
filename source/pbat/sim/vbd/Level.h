@@ -66,7 +66,7 @@ struct Level
         Energy& WithPotentialEnergy(
             Eigen::Ref<VectorX const> const& mug,
             Eigen::Ref<VectorX const> const& lambdag,
-            Eigen::Ref<IndexVectorX const> const& erg,
+            Eigen::Ref<IndexMatrixX const> const& erg,
             Eigen::Ref<MatrixX const> const& Nrg,
             Eigen::Ref<MatrixX const> const& GNfg,
             Eigen::Ref<MatrixX const> const& GNcg);

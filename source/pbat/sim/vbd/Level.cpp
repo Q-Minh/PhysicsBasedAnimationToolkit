@@ -48,7 +48,7 @@ Level::Energy& Level::Energy::WithKineticEnergy(
 Level::Energy& Level::Energy::WithPotentialEnergy(
     Eigen::Ref<VectorX const> const& mugIn,
     Eigen::Ref<VectorX const> const& lambdagIn,
-    Eigen::Ref<IndexVectorX const> const& ergIn,
+    Eigen::Ref<IndexMatrixX const> const& ergIn,
     Eigen::Ref<MatrixX const> const& NrgIn,
     Eigen::Ref<MatrixX const> const& GNfgIn,
     Eigen::Ref<MatrixX const> const& GNcgIn)

@@ -78,11 +78,10 @@ class Quadrature:
 
 
 class Transition:
-    def __init__(self, li, lj, riters=10, siters=10):
+    def __init__(self, li, lj, riters=10):
         self.li = li
         self.lj = lj
         self.riters = riters
-        self.siters = siters
 
 
 def hierarchy(
@@ -91,13 +90,34 @@ def hierarchy(
         C: list[np.ndarray],
         QL: list[Quadrature],
         cycle: list[Transition],
+        schedule: list[int],
         rrhog: np.ndarray | float = 1e3):
+    """Constructs a multiscale hierarchy for VBD integration
+
+    Args:
+        data (_vbd.Data): The problem description
+        V (list[np.ndarray]): List of cage mesh vertices
+        C (list[np.ndarray]): List of cage mesh elements
+        QL (list[Quadrature]): Quadrature schemes for each cage
+        cycle (list[Transition]): The multigrid cycle as a list of transitions between levels 
+        (l = -1 is the root level, l >= 0 are the coarser levels in order of increasing coarsening).
+        schedule (list[int]): Size len(cycle)+1 list of smoothing iterations at each level in the cycle.
+        rrhog (np.ndarray | float, optional): |#elems| mass densities at root level. Defaults to 1e3.
+
+    Raises:
+        ValueError: 
+
+    Returns:
+        (_pbat.sim.vbd.Hierarchy): The multiscale VBD hierarchy
+    """
+
     from ... import fem, geometry
     rmesh = fem.Mesh(data.x, data.T, element=fem.Element.Tetrahedron)
     cmeshes = [fem.Mesh(VC.T, CC.T, element=fem.Element.Tetrahedron)
                for VC, CC in zip(V, C)]
-    rbvh = geometry.bvh(data.x, data.T, cell=geometry.Cell.Tetrahedron)
-    cbvhs = [geometry.bvh(VC, CC, cell=geometry.Cell.Tetrahedron)
+    VR, CR = data.x.T, data.T.T
+    rbvh = geometry.bvh(VR.T, CR.T, cell=geometry.Cell.Tetrahedron)
+    cbvhs = [geometry.bvh(VC.T, CC.T, cell=geometry.Cell.Tetrahedron)
              for VC, CC in zip(V, C)]
     if isinstance(rrhog, float):
         rrhog = np.full(data.T.shape[1], rrhog)
@@ -105,14 +125,14 @@ def hierarchy(
     cages = [None]*len(V)
     for l in range(len(V)):
         X, E = V[l].T, C[l].T
-        ptr, adj = partitions(V[l], C[l])
+        ptr, adj, colors = partitions(V[l], C[l])
         cages[l] = _vbd.level.Cage(X, E, ptr, adj)
 
     energies = [None]*len(V)
     for l in range(len(V)):
         # Quadrature
         wg, Xg, eg, sg = QL[l].wg, QL[l].Xg, QL[l].eg, QL[l].sg
-        reg = rbvh.nearest_primitives_to(Xg)
+        reg = rbvh.nearest_primitives_to_points(Xg)[0]
         # Adjacency
         VC, CC = V[l], C[l]
         CG = CC[eg, :]
@@ -136,14 +156,14 @@ def hierarchy(
         mug = rmug[reg]
         lambdag = rlambdag[reg]
         nshapef = CC.shape[1]
-        Nrg = np.zeros(nshapef, nshapef*nquadpts)
+        Nrg = np.zeros((nshapef, nshapef*nquadpts))
         erg = np.zeros((nshapef, nquadpts), dtype=np.int64)
         cbvh = cbvhs[l]
         for v in range(nshapef):
             rXv = data.x[:, data.T[v, reg]]
             erg[v, :] = cbvh.primitives_containing_points(rXv)
             cXi = fem.reference_positions(cmesh, erg[v, :], rXv)
-            Nrg[:, v::nshapef] = fem.shape_functions_at(cmesh, erg[v, :], cXi)
+            Nrg[:, v::nshapef] = fem.shape_functions_at(cmesh, cXi)
         # Gradients of linear shape functions on root mesh are constant,
         # so the specific reference points Xi are unimportant
         rXi = np.zeros((rmesh.dims, nquadpts))
@@ -165,7 +185,7 @@ def hierarchy(
     buses = [None]*len(V)
     for l in range(len(V)):
         Xgl = QL[l].Xg
-        erg = rbvh.nearest_primitives_to_points(Xgl)
+        erg = rbvh.nearest_primitives_to_points(Xgl)[0]
         Xigl = fem.reference_positions(rmesh, erg, Xgl)
         Nrg = fem.shape_functions_at(rmesh, Xigl)
         buses[l] = _vbd.level.RootParameterBus(erg, Nrg)
@@ -176,8 +196,7 @@ def hierarchy(
     transitions = [None]*len(cycle)
     smoothers = [None]*len(cycle)
     for t, step in enumerate(cycle):
-        li, lj = step.li, step.lj
-        riters, siters = step.riters, step.siters
+        li, lj, riters = step.li, step.lj, step.riters
         if li == lj:
             raise ValueError(
                 f"Invalid transition from level={li} to level={lj}"
@@ -204,7 +223,7 @@ def hierarchy(
             Xcg = QL[lc].Xg
             fbvh = rbvh if is_lf_root else cbvhs[lf]
             fmesh = rmesh if is_lf_root else cmeshes[lf]
-            efg = fbvh.nearest_primitives_to(Xcg)
+            efg = fbvh.nearest_primitives_to_points(Xcg)[0]
             Xif = fem.reference_positions(fmesh, efg, Xcg)
             Nfg = fem.shape_functions_at(fmesh, Xif)
             transitions[t] = _vbd.Restriction(
@@ -218,7 +237,7 @@ def hierarchy(
                 riters
             ).construct()
 
-        smoothers[t] = _vbd.Smoother(siters)
+    smoothers = [_vbd.Smoother(siters) for siters in schedule]
 
     hierarchy = _vbd.Hierarchy(data, levels, transitions, smoothers)
     return hierarchy
