@@ -26,44 +26,6 @@ def laplacian_energy(mesh, k=1, dims=1):
     return U
 
 
-def transfer_quadrature(cmesh, wg2, Xg2, order=1):
-    CV, CC = cmesh.X, cmesh.E
-    Xg1 = cmesh.quadrature_points(order)
-    e1 = np.linspace(0, cmesh.E.shape[1]-1,
-                     num=cmesh.E.shape[1], dtype=np.int64)
-    e1 = np.repeat(e1, int(Xg1.shape[1] / cmesh.E.shape[1]))
-    Xi1 = pbat.fem.reference_positions(cmesh, e1, Xg1)
-    bvh1 = pbat.geometry.bvh(CV, CC, cell=pbat.geometry.Cell.Tetrahedron)
-    e2 = bvh1.nearest_primitives_to_points(Xg2, parallelize=True)[0]
-    Xi2 = pbat.fem.reference_positions(cmesh, e2, Xg2)
-    wg1, err = pbat.math.transfer_quadrature(
-        e1, Xi1, e2, Xi2, wg2, order=order, with_error=True, max_iters=50, precision=1e-10)
-    return wg1, Xg1, e1, err
-
-
-def patch_quadrature(cmesh, wg1, Xg1, e1, err=1e-4, numerical_zero=1e-10):
-    wtotal = np.zeros(cmesh.E.shape[1])
-    np.add.at(wtotal, e1, wg1)
-    ezero = np.nonzero(wtotal < numerical_zero)
-    ezeromask = np.in1d(e1, ezero)
-    e1zero = np.copy(e1[ezeromask])
-    Xg1zero = np.copy(Xg1[:, ezeromask])
-    MM, BM, PM = pbat.math.reference_moment_fitting_systems(
-        e1zero, Xg1zero, e1zero, Xg1zero, np.zeros(Xg1zero.shape[1]))
-    MM = pbat.math.block_diagonalize_moment_fitting(MM, PM)
-    n = np.count_nonzero(ezeromask)
-    P = -sp.sparse.eye(n).asformat('csc')
-    G = MM.asformat('csc')
-    h = np.full(G.shape[0], err)
-    lb = np.full(n, 0.)
-    q = np.full(n, 0.)
-    wzero = qpsolvers.solve_qp(P, q, G=G, h=h, lb=lb, initvals=np.zeros(
-        n), solver="cvxopt")
-    wg1p = np.copy(wg1)
-    wg1p[ezeromask] = wzero
-    return wg1p, ezeromask
-
-
 def gradient_operator(mesh, Xg, dims=1):
     nevalpts = Xg.shape[1]
     nnodes = mesh.X.shape[1]
@@ -269,72 +231,73 @@ class NewtonFunctionTransferOperator(BaseFemFunctionTransferOperator):
 
 class VbdFunctionTransferOperator:
     def __init__(self, MD: pbat.fem.Mesh, MS: pbat.fem.Mesh, MT: pbat.fem.Mesh, hxreg=1e-4, Y=1e6, nu=0.45, rho=1e3):
-        quadrature_order = 1
-        wgD = pbat.fem.inner_product_weights(
-            MD, quadrature_order).flatten(order="F")
-        XgD = MD.quadrature_points(quadrature_order)
-        wgT, self.Xg, self.eg, errT = transfer_quadrature(
-            MT, wgD, XgD, order=quadrature_order)
-        self.wg, ezeroinds = patch_quadrature(
-            MT, wgT, self.Xg, self.eg, err=1e-4)
-        self.Ng, eNg = shape_functions(MT, self.Xg)
-        self.GNeg, eGNeg = shape_function_gradients(MT, self.Xg)
-        Y = np.full(self.wg.shape[0], Y)
-        nu = np.full(self.wg.shape[0], nu)
-        self.mug = Y / (2*(1+nu))
-        self.lambdag = (Y*nu) / ((1+nu)*(1-2*nu))
-        self.NT = shape_function_matrix(MT, self.Xg)
-        self.NS = shape_function_matrix(MS, self.Xg)
-        Ig = sp.sparse.diags_array(rho * self.wg)
-        M = (self.NT.T @ Ig @ self.NT).asformat('csc')
-        self.m = np.array(M.sum(axis=0)).squeeze()
-        self.P = (self.NT.T @ Ig @ self.NS).asformat('csc')
-        self.rho = rho
-        energy = pbat.fem.HyperElasticEnergy.StableNeoHookean
-        self.hep, self.egU, self.wgU, self.GNeU = pbat.fem.hyper_elastic_potential(
-            MT, Y, nu, energy=energy, eg=self.eg, wg=self.wg, GNeg=self.GNeg)
-        GNegS, egS = shape_function_gradients(MS, self.Xg)
-        self.hepS, self.egUS, self.wgUS, self.GNeUS = pbat.fem.hyper_elastic_potential(
-            MS, Y, nu, energy=energy, eg=egS, wg=self.wg, GNeg=GNegS)
-        self.Kpsi = hxreg
-        self.R = pbat.sim.vbd.Restriction()
-        self.R.E = MT.E
-        self.R.eg = self.eg
-        self.R.Ng = self.Ng
-        self.R.GNeg = self.GNeg
-        self.R.wg = self.wg
-        self.R.rhog = np.full(self.wg.shape[0], rho)
-        self.R.mug = self.mug
-        self.R.lambdag = self.lambdag
-        self.R.m = self.m
-        self.R.Kpsi = self.Kpsi
-        V, C = MT.X.T, MT.E[:, self.eg].T
-        eg = np.repeat(self.eg, C.shape[1])
-        ilocal = np.tile(np.arange(C.shape[1]), self.eg.shape[0])
-        GVTe = pbat.sim.vbd.vertex_element_adjacency(V, C, data=eg)
-        GVTi = pbat.sim.vbd.vertex_element_adjacency(V, C, data=ilocal)
-        self.R.GVGp = GVTi.indptr
-        self.R.GVGg = GVTi.indices
-        self.R.GVGe = GVTe.data
-        self.R.GVGilocal = GVTi.data
-        self.R.partitions = pbat.sim.vbd.partitions(V, C)[0]
-        self.X = MT.X
-        self.XS = MS.X
-        self.u = np.zeros(math.prod(self.X.shape), order="f")
+        # Construct VBD problem
+        V, C = MD.X.T, MD.E.T
+        F = igl.boundary_facets(C)
+        F[:, :2] = np.roll(F[:, :2], shift=1, axis=1)
+        VC = np.unique(F)
+        ilocal = np.repeat(np.arange(4)[np.newaxis, :], C.shape[0], axis=0)
+        GVT = pbat.sim.vbd.vertex_element_adjacency(V, C, data=ilocal)
+        Pptr, Padj, GC = pbat.sim.vbd.partitions(V, C)
+        wg = pbat.fem.inner_product_weights(MD).flatten(order="F")
+        GNeg = pbat.fem.shape_function_gradients(MD)
+        Y = np.full(wg.shape[0], 1e6)
+        nu = np.full(wg.shape[0], 0.45)
+        mue = Y / (2*(1+nu))
+        lambdae = (Y*nu) / ((1+nu)*(1-2*nu))
+        data = pbat.sim.vbd.Data().with_volume_mesh(
+            V.T, C.T
+        ).with_surface_mesh(
+            VC, F.T
+        ).with_quadrature(
+            wg, GNeg, np.vstack((mue, lambdae))
+        ).with_vertex_adjacency(
+            GVT.indptr, GVT.indices, GVT.data
+        ).with_partitions(
+            Pptr, Padj
+        ).with_initialization_strategy(
+            pbat.sim.vbd.InitializationStrategy.KineticEnergyMinimum
+        ).construct()
+        # Construct quadrature rule on coarse mesh
+        VC, CC = MT.X.T, MT.E.T
+        ibvh = pbat.geometry.bvh(
+            V.T, C.T, cell=pbat.geometry.Cell.Tetrahedron)
+        cbvh = pbat.geometry.bvh(
+            VC.T, CC.T, cell=pbat.geometry.Cell.Tetrahedron)
+        cXg, cwg, ceg, csg, iXg, iwg, err = pbat.fem.fit_output_quad_to_input_quad(
+            MD,
+            MT,
+            ibvh,
+            cbvh,
+            iorder=1,
+            oorder=2,
+            selection=pbat.fem.QuadraturePointSelection.FromInputRandomSampling,
+            fitting_strategy=pbat.fem.QuadratureFittingStrategy.FitInputQuadrature,
+            singular_strategy=pbat.fem.QuadratureSingularityStrategy.Constant,
+            volerr=1e-4
+        )
+        Q = [pbat.sim.vbd.Quadrature(cwg, cXg, ceg, csg)]
+        # Define multigrid cycle to include a single Restriction operation
+        cycle = [pbat.sim.vbd.Transition(-1, 0, riters=10)]
+        schedule = [0, 0]
+        # Get hierarchy
+        self.hierarchy = pbat.sim.vbd.hierarchy(
+            data, [VC], [CC], Q, cycle, schedule)
 
     def __matmul__(self, u):
-        xrs = self.XS.reshape(math.prod(self.XS.shape), order='f')
-        uk = self.u
-        U = u.reshape((3, int(u.shape[0] / 3)), order="F")
-        Uk = uk.reshape(self.X.shape, order="F")
-        xtildeg = U @ self.NS.T
-        self.R.set_target_shape(xtildeg)
-        xs = xrs + u
-        self.hepS.compute_element_elasticity(xs, grad=False, hessian=False)
-        self.R.Psitildeg = self.hepS.Ug
-        Ukp1 = self.R.apply(Uk, iters=20)
-        self.uk = Ukp1.flatten(order="F")
-        return self.uk
+        # xrs = self.XS.reshape(math.prod(self.XS.shape), order='f')
+        # uk = self.u
+        # U = u.reshape((3, int(u.shape[0] / 3)), order="F")
+        # Uk = uk.reshape(self.X.shape, order="F")
+        # xtildeg = U @ self.NS.T
+        # self.R.set_target_shape(xtildeg)
+        # xs = xrs + u
+        # self.hepS.compute_element_elasticity(xs, grad=False, hessian=False)
+        # self.R.Psitildeg = self.hepS.Ug
+        # Ukp1 = self.R.apply(Uk, iters=20)
+        # self.uk = Ukp1.flatten(order="F")
+        # return self.uk
+        pass
 
 
 def rest_pose_hessian(mesh, Y, nu):
