@@ -283,21 +283,21 @@ class VbdFunctionTransferOperator:
         # Get hierarchy
         self.hierarchy = pbat.sim.vbd.hierarchy(
             data, [VC], [CC], Q, cycle, schedule)
+        # Store rest shape
+        self.XD = MD.X
+        self.XT = MT.X
 
     def __matmul__(self, u):
-        # xrs = self.XS.reshape(math.prod(self.XS.shape), order='f')
-        # uk = self.u
-        # U = u.reshape((3, int(u.shape[0] / 3)), order="F")
-        # Uk = uk.reshape(self.X.shape, order="F")
-        # xtildeg = U @ self.NS.T
-        # self.R.set_target_shape(xtildeg)
-        # xs = xrs + u
-        # self.hepS.compute_element_elasticity(xs, grad=False, hessian=False)
-        # self.R.Psitildeg = self.hepS.Ug
-        # Ukp1 = self.R.apply(Uk, iters=20)
-        # self.uk = Ukp1.flatten(order="F")
-        # return self.uk
-        pass
+        UD = u.reshape(self.XD.shape, order='F')
+        x = self.XD + UD
+        self.hierarchy.root.x = x
+        R = self.hierarchy.transitions[0]
+        R.apply(self.hierarchy)
+        LC = self.hierarchy.levels[R.lc]
+        xc = LC.cage.x
+        UT = xc - self.XT
+        uc = UT.reshape(math.prod(UT.shape), order="F")
+        return uc
 
 
 def rest_pose_hessian(mesh, Y, nu):
@@ -346,13 +346,19 @@ if __name__ == "__main__":
 
     # Load input meshes
     imesh, icmesh = meshio.read(args.input), meshio.read(args.cage)
-    V, C = imesh.points.astype(
-        np.float64, order='c'), imesh.cells_dict["tetra"].astype(np.int64, order='c')
-    CV, CC = icmesh.points.astype(
-        np.float64, order='c'), icmesh.cells_dict["tetra"].astype(np.int64, order='c')
-    maxcoord = V.max()
-    V = V / maxcoord
-    CV = CV / maxcoord
+    # V, C = imesh.points.astype(
+    #     np.float64, order='c'), imesh.cells_dict["tetra"].astype(np.int64, order='c')
+    # CV, CC = icmesh.points.astype(
+    #     np.float64, order='c'), icmesh.cells_dict["tetra"].astype(np.int64, order='c')
+    # maxcoord = V.max()
+    # V = V / maxcoord
+    # CV = CV / maxcoord
+    V = np.array([[0, 0, 0], [1, 0, 0], [0, 1, 0], [1, 1, 0], [0, 0, 1], [
+                 1, 0, 1], [0, 1, 1], [1, 1, 1]], dtype=np.float64)
+    V = V - V.mean(axis=0)
+    C = np.array([[0, 1, 3, 5], [3, 2, 0, 6], [5, 4, 6, 0], [6, 7, 5, 3], [0, 5, 3, 6]], dtype=np.int64)
+    CV = 2*V
+    CC = C
     F = igl.boundary_facets(C)
     F[:, :2] = np.roll(F[:, :2], shift=1, axis=1)
     CF = igl.boundary_facets(CC)
@@ -363,10 +369,10 @@ if __name__ == "__main__":
         CV.T, CC.T, element=pbat.fem.Element.Tetrahedron)
 
     # Precompute quantities
-    w, L = linear_elastic_deformation_modes(
-        mesh, args.rho, args.Y, args.nu, args.modes)
-    HC = rest_pose_hessian(cmesh, args.Y, args.nu)
-    lreg, hreg, greg, hxreg = 1e-2, 0, 1, 1e-4
+    # w, L = linear_elastic_deformation_modes(
+    #     mesh, args.rho, args.Y, args.nu, args.modes)
+    # HC = rest_pose_hessian(cmesh, args.Y, args.nu)
+    # lreg, hreg, greg, hxreg = 1e-2, 0, 1, 1e-4
     # Fnewton = CholFemFunctionTransferOperator(
     #     mesh, mesh, cmesh, HC, lreg=lreg, hreg=hreg, greg=greg)
     # Fnewton = NewtonFunctionTransferOperator(
@@ -441,14 +447,16 @@ if __name__ == "__main__":
             R = sp.spatial.transform.Rotation.from_quat(
                 [0, np.sin(theta/2), 0, np.cos(theta/4)]).as_matrix()
             X = (V - V.mean(axis=0)) @ R.T + V.mean(axis=0)
-            uf = signal(w[mode], L[:, mode], t, c, k)
-            ur = (X - V).flatten(order="C")
+            # uf = signal(w[mode], L[:, mode], t, c, k)
+            uf = 0
+            # ur = (X - V).flatten(order="C")
+            ur = 0
             ut = 1
             u = uf + ur + ut
             # XCnewton = CV + (Fnewton @ u).reshape(CV.shape)
             XCvbd = CV + (Fvbd @ u).reshape(CV.shape)
             # XCrank = CV + (Frank @ u).reshape(CV.shape)
-            vm.update_vertex_positions(V + (uf + ur).reshape(V.shape))
+            vm.update_vertex_positions(V + u.reshape(V.shape))
             # newtonvm.update_vertex_positions(XCnewton)
             vbdvm.update_vertex_positions(XCvbd)
             # rankvm.update_vertex_positions(XCrank)

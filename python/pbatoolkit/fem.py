@@ -341,6 +341,7 @@ def fit_output_quad_to_input_quad(
         ss = np.setdiff1d(list(range(n_output_elements)), oeg)
         # Inject a single quadrature point in each singular element
         soXg = omesh.quadrature_points(1)[:, ss]
+        sowg = _fem.inner_product_weights(omesh, 1)[:, ss].flatten(order="F")
         n_non_singular = oXg.shape[1]
         n_singular = soXg.shape[1]
         osg = np.hstack((np.full(n_non_singular, False),
@@ -351,7 +352,9 @@ def fit_output_quad_to_input_quad(
         # Patch singular quadrature points
         if singular_strategy == QuadratureSingularityStrategy.Constant:
             volume = iwg.sum()
-            owg[n_non_singular:] = volerr*volume / n_singular
+            # alpha * sowg.sum() = volerr*volume
+            alpha = volerr*volume / sowg.sum()
+            owg[n_non_singular:] = alpha*sowg
 
         ordering = np.argsort(oeg)
         oXg = oXg[:, ordering]
