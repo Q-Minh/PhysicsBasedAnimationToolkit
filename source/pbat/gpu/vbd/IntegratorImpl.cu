@@ -429,7 +429,6 @@ TEST_CASE("[gpu][vbd] IntegratorImpl")
                            .WithVertexAdjacency(
                                ToEigen(vertexTetrahedronPrefix),
                                ToEigen(vertexTetrahedronNeighbours),
-                               ToEigen(vertexTetrahedronNeighbours),
                                ToEigen(vertexTetrahedronLocalVertexIndices))
                            .Construct()};
 
