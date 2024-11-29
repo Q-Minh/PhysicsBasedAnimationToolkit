@@ -7,7 +7,7 @@ namespace pbat {
 namespace sim {
 namespace vbd {
 
-class Hierarchy;
+struct Hierarchy;
 
 class MultiScaleIntegrator
 {
@@ -15,7 +15,6 @@ class MultiScaleIntegrator
     void Step(Scalar dt, Index substeps, Hierarchy& H);
 
   private:
-
 };
 
 } // namespace vbd

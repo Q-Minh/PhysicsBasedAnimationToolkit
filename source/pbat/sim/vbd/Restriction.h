@@ -55,13 +55,13 @@ struct Restriction
      *
      * @return Index
      */
-    Index StartLevel() const { return lf; }
+    Index StartLevel() const;
     /**
      * @brief
      *
      * @return Index
      */
-    Index EndLevel() const { return lc; }
+    Index EndLevel() const;
 
     IndexVectorX
         efg;     ///< |#quad.pts.| array of fine cage elements associated with quadrature points

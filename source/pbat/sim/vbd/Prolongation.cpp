@@ -57,6 +57,16 @@ Prolongation& Prolongation::Construct(bool bValidate)
     return *this;
 }
 
+Index Prolongation::StartLevel() const
+{
+    return lc;
+}
+
+Index Prolongation::EndLevel() const
+{
+    return lf;
+}
+
 void Prolongation::Apply(Hierarchy& H)
 {
     auto lcStl                  = static_cast<std::size_t>(lc);

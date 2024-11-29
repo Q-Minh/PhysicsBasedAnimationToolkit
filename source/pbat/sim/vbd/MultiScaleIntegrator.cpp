@@ -64,7 +64,8 @@ void MultiScaleIntegrator::Step(Scalar dt, Index substeps, Hierarchy& H)
             }
             else
             {
-                H.smoothers[t + 1].Apply(sdt, H.levels[l]);
+                auto lStl = static_cast<std::size_t>(l);
+                H.smoothers[t + 1].Apply(sdt, H.levels[lStl]);
             }
         }
         // Update velocity

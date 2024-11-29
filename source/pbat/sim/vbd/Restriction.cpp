@@ -68,6 +68,16 @@ Restriction& Restriction::Construct(bool bValidate)
     return *this;
 }
 
+Index Restriction::StartLevel() const
+{
+    return lf;
+}
+
+Index Restriction::EndLevel() const
+{
+    return lc;
+}
+
 void Restriction::Apply(Hierarchy& H)
 {
     bool const bIsFineLevelRoot = lf < 0;

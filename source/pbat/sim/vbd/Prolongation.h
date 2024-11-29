@@ -51,13 +51,13 @@ struct Prolongation
      *
      * @return Index
      */
-    Index StartLevel() const { return lc; }
+    Index StartLevel() const;
     /**
      * @brief
      *
      * @return Index
      */
-    Index EndLevel() const { return lf; }
+    Index EndLevel() const;
 
     IndexVectorX
         ec; ///< |#verts at fine level| array of coarse cage elements containing fine level vertices

@@ -121,9 +121,8 @@ void Smoother::Apply(Scalar dt, Data& data)
         auto const nPartitions = data.Pptr.size() - 1;
         for (auto p = 0; p < nPartitions; ++p)
         {
-            auto const pBegin               = data.Pptr(p);
-            auto const pEnd                 = data.Pptr(p + 1);
-            auto const nVerticesInPartition = pEnd - pBegin;
+            auto const pBegin = data.Pptr(p);
+            auto const pEnd   = data.Pptr(p + 1);
             tbb::parallel_for(pBegin, pEnd, [&](Index k) {
                 using namespace math::linalg;
                 using mini::FromEigen;
