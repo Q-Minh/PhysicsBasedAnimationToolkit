@@ -132,44 +132,44 @@ def hierarchy(
     for l in range(len(V)):
         # Quadrature
         wg, Xg, eg, sg = QL[l].wg, QL[l].Xg, QL[l].eg, QL[l].sg
-        reg = rbvh.nearest_primitives_to_points(Xg)[0]
-        # Adjacency
+        erg = rbvh.nearest_primitives_to_points(Xg)[0]
         VC, CC = V[l], C[l]
         CG = CC[eg, :]
-        ilocal = np.repeat(np.arange(CG.shape[1])[
-                           np.newaxis, :], CG.shape[0], axis=0)
-        GVG = mesh_adjacency_graph(VC, CG, ilocal)
-        e = np.repeat(eg[:, np.newaxis], CG.shape[1])
-        GVGp = GVG.indptr
-        GVGg = GVG.indices
-        GVGilocal = GVG.data
-        GVGe = mesh_adjacency_graph(VC, CG, e).data
-        # Kinetic energy
         cmesh = cmeshes[l]
+        # Kinetic energy
         Xig = fem.reference_positions(cmesh, eg, Xg)
         Ncg = fem.shape_functions_at(cmesh, Xig)
-        rhog = rrhog[reg]
+        rhog = rrhog[erg]
         # Potential energy
         nquadpts = Xg.shape[1]
         rmug = data.lame[0, :]
         rlambdag = data.lame[1, :]
-        mug = rmug[reg]
-        lambdag = rlambdag[reg]
+        mug = rmug[erg]
+        lambdag = rlambdag[erg]
         nshapef = CC.shape[1]
         Nrg = np.zeros((nshapef, nshapef*nquadpts))
-        erg = np.zeros((nshapef, nquadpts), dtype=np.int64)
+        ervg = np.zeros((nshapef, nquadpts), dtype=np.int64)
         cbvh = cbvhs[l]
         for v in range(nshapef):
-            rXv = data.x[:, data.T[v, reg]]
-            erg[v, :] = cbvh.primitives_containing_points(rXv)
-            cXi = fem.reference_positions(cmesh, erg[v, :], rXv)
+            rXv = data.x[:, data.T[v, erg]]
+            ervg[v, :] = cbvh.nearest_primitives_to_points(rXv)[0]
+            cXi = fem.reference_positions(cmesh, ervg[v, :], rXv)
             Nrg[:, v::nshapef] = fem.shape_functions_at(cmesh, cXi)
-        # Gradients of linear shape functions on root mesh are constant,
-        # so the specific reference points Xi are unimportant
-        rXi = np.zeros((rmesh.dims, nquadpts))
+        # Shape function gradients on root mesh at quad.pts.
+        rXi = fem.reference_positions(rmesh, erg, Xg)
         GNfg = fem.shape_function_gradients_at(
-            rmesh, reg, rXi)
+            rmesh, erg, rXi)
+        # Shape function gradients on coarse mesh at quad.pts.
         GNcg = fem.shape_function_gradients_at(cmesh, eg, Xig)
+        # Adjacency
+        ilocal = np.repeat(np.arange(CG.shape[1])[
+                           np.newaxis, :], CG.shape[0], axis=0)
+        GVG = vertex_element_adjacency(VC, CG, data=ilocal)
+        e = np.repeat(eg[:, np.newaxis], CG.shape[1])
+        GVGp = GVG.indptr
+        GVGg = GVG.indices
+        GVGilocal = GVG.data
+        GVGe = vertex_element_adjacency(VC, CG, data=e).data
         # Store energy
         energies[l] = _vbd.level.Energy(
         ).with_quadrature(
@@ -179,16 +179,16 @@ def hierarchy(
         ).with_kinetic_energy(
             rhog, Ncg
         ).with_potential_energy(
-            mug, lambdag, erg, Nrg, GNfg, GNcg
+            mug, lambdag, ervg, Nrg, GNfg, GNcg
         ).construct()
 
     buses = [None]*len(V)
     for l in range(len(V)):
         Xgl = QL[l].Xg
-        erg = rbvh.nearest_primitives_to_points(Xgl)[0]
-        Xigl = fem.reference_positions(rmesh, erg, Xgl)
+        ervg = rbvh.nearest_primitives_to_points(Xgl)[0]
+        Xigl = fem.reference_positions(rmesh, ervg, Xgl)
         Nrg = fem.shape_functions_at(rmesh, Xigl)
-        buses[l] = _vbd.level.RootParameterBus(erg, Nrg)
+        buses[l] = _vbd.level.RootParameterBus(ervg, Nrg)
 
     levels = [_vbd.Level(cage, energy, bus)
               for cage, energy, bus in zip(cages, energies, buses)]

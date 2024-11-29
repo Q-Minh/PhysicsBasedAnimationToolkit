@@ -86,13 +86,7 @@ void Restriction::Apply(Hierarchy& H)
     IndexMatrixX const& Ef      = bIsFineLevelRoot ? H.root.T : H.levels[lfStl].C.E;
     MatrixX const& xf           = bIsFineLevelRoot ? H.root.x : H.levels[lfStl].C.x;
     // Precompute target (i.e. fine level) shapes
-    tbb::parallel_for(Index(0), xfg.cols(), [&](Index g) {
-        Index ef   = efg(g);
-        auto indsf = Ef.col(ef);
-        auto xefg  = xf(Eigen::placeholders::all, indsf).block<3, 4>(0, 0);
-        auto Nf    = Nfg.col(g).head<4>();
-        xfg.col(g) = xefg * Nf;
-    });
+    SetTargetShape(Ef, xf);
     // Fit coarse level to fine level, i.e. minimize shape matching energy
     Level& Lc = H.levels[lcStl];
     DoApply(Lc, H.root.detHZero);
@@ -269,7 +263,7 @@ TEST_CASE("[sim][vbd] Restriction")
     {
         auto const [erg, sd] = rbvh.NearestPrimitivesToPoints(XgC);
         BoolVector sgC       = (sd.array() > Scalar(0)).eval();
-        wgC                  = (sd.array() > Scalar(0)).select(Scalar(1e-14), wgC);
+        wgC                  = (sd.array() > Scalar(0)).select(Scalar(1e-10) * wgC, wgC);
         energy.WithQuadrature(wgC, sgC);
         IndexVectorX ecg = cbvh.PrimitivesContainingPoints(XgC);
         MatrixX XigC     = fem::ReferencePositions(MC, ecg, XgC);
@@ -305,11 +299,11 @@ TEST_CASE("[sim][vbd] Restriction")
             common::ToEigen(GVGe),
             common::ToEigen(GVGilocal));
     }
-    Cage cage(
-        VC,
-        CC,
-        IndexVectorX::LinSpaced(VC.cols() + 1, Index(0), VC.cols()),
-        IndexVectorX::LinSpaced(VC.cols(), Index(0), VC.cols() - 1));
+    IndexVectorX Pptr(5);
+    Pptr << 0, 2, 4, 6, 8;
+    IndexVectorX Padj(8);
+    Padj << 2, 5, 0, 7, 3, 4, 1, 6;
+    Cage cage(VC, CC, Pptr, Padj);
     auto const [erg, sd] = rbvh.NearestPrimitivesToPoints(XgC);
     MatrixX Xirg         = fem::ReferencePositions(MR, erg, XgC);
     Bus bus(erg, fem::ShapeFunctionsAt<Element>(Xirg));
@@ -322,7 +316,7 @@ TEST_CASE("[sim][vbd] Restriction")
                         .Iterate(50)
                         .Construct();
     // Act
-    MatrixX x = MR.X.colwise() + Vector<3>::Constant(Scalar(20.));
+    MatrixX x = MR.X.colwise() + Vector<3>::Constant(Scalar(1.));
     R.SetTargetShape(MR.E, x);
     Scalar Eshape = R.DoApply(L, Scalar(1e-12));
     // Assert

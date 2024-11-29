@@ -264,21 +264,27 @@ class VbdFunctionTransferOperator:
             V.T, C.T, cell=pbat.geometry.Cell.Tetrahedron)
         cbvh = pbat.geometry.bvh(
             VC.T, CC.T, cell=pbat.geometry.Cell.Tetrahedron)
-        cXg, cwg, ceg, csg, iXg, iwg, err = pbat.fem.fit_output_quad_to_input_quad(
-            MD,
-            MT,
-            ibvh,
-            cbvh,
-            iorder=1,
-            oorder=2,
-            selection=pbat.fem.QuadraturePointSelection.FromInputRandomSampling,
-            fitting_strategy=pbat.fem.QuadratureFittingStrategy.FitInputQuadrature,
-            singular_strategy=pbat.fem.QuadratureSingularityStrategy.Constant,
-            volerr=1e-4
-        )
+        # cXg, cwg, ceg, csg, iXg, iwg, err = pbat.fem.fit_output_quad_to_input_quad(
+        #     MD,
+        #     MT,
+        #     ibvh,
+        #     cbvh,
+        #     iorder=1,
+        #     oorder=3,
+        #     selection=pbat.fem.QuadraturePointSelection.FromOutputQuadrature,
+        #     fitting_strategy=pbat.fem.QuadratureFittingStrategy.FitOutputQuadrature,
+        #     singular_strategy=pbat.fem.QuadratureSingularityStrategy.Constant,
+        #     volerr=1e-10
+        # )
+        cwg = pbat.fem.inner_product_weights(MT, 3).flatten(order="F")
+        cXg = MT.quadrature_points(3)
+        ceg = cbvh.primitives_containing_points(cXg)
+        cerg = ibvh.primitives_containing_points(cXg)
+        csg = cerg == -1
+        cwg[csg] *= 1e-6
         Q = [pbat.sim.vbd.Quadrature(cwg, cXg, ceg, csg)]
         # Define multigrid cycle to include a single Restriction operation
-        cycle = [pbat.sim.vbd.Transition(-1, 0, riters=10)]
+        cycle = [pbat.sim.vbd.Transition(-1, 0, riters=20)]
         schedule = [0, 0]
         # Get hierarchy
         self.hierarchy = pbat.sim.vbd.hierarchy(
@@ -346,19 +352,21 @@ if __name__ == "__main__":
 
     # Load input meshes
     imesh, icmesh = meshio.read(args.input), meshio.read(args.cage)
-    # V, C = imesh.points.astype(
-    #     np.float64, order='c'), imesh.cells_dict["tetra"].astype(np.int64, order='c')
-    # CV, CC = icmesh.points.astype(
-    #     np.float64, order='c'), icmesh.cells_dict["tetra"].astype(np.int64, order='c')
-    # maxcoord = V.max()
-    # V = V / maxcoord
-    # CV = CV / maxcoord
-    V = np.array([[0, 0, 0], [1, 0, 0], [0, 1, 0], [1, 1, 0], [0, 0, 1], [
-                 1, 0, 1], [0, 1, 1], [1, 1, 1]], dtype=np.float64)
-    V = V - V.mean(axis=0)
-    C = np.array([[0, 1, 3, 5], [3, 2, 0, 6], [5, 4, 6, 0], [6, 7, 5, 3], [0, 5, 3, 6]], dtype=np.int64)
-    CV = 2*V
-    CC = C
+    V, C = imesh.points.astype(
+        np.float64, order='c'), imesh.cells_dict["tetra"].astype(np.int64, order='c')
+    CV, CC = icmesh.points.astype(
+        np.float64, order='c'), icmesh.cells_dict["tetra"].astype(np.int64, order='c')
+    maxcoord = V.max()
+    V = V / maxcoord
+    CV = CV / maxcoord
+    # Cube test
+    # V = np.array([[0, 0, 0], [1, 0, 0], [0, 1, 0], [1, 1, 0], [0, 0, 1], [
+    #              1, 0, 1], [0, 1, 1], [1, 1, 1]], dtype=np.float64)
+    # V = V - V.mean(axis=0)
+    # C = np.array([[0, 1, 3, 5], [3, 2, 0, 6], [5, 4, 6, 0], [
+    #              6, 7, 5, 3], [0, 5, 3, 6]], dtype=np.int64)
+    # CV = 2*V
+    # CC = C
     F = igl.boundary_facets(C)
     F[:, :2] = np.roll(F[:, :2], shift=1, axis=1)
     CF = igl.boundary_facets(CC)
@@ -369,8 +377,8 @@ if __name__ == "__main__":
         CV.T, CC.T, element=pbat.fem.Element.Tetrahedron)
 
     # Precompute quantities
-    # w, L = linear_elastic_deformation_modes(
-    #     mesh, args.rho, args.Y, args.nu, args.modes)
+    w, L = linear_elastic_deformation_modes(
+        mesh, args.rho, args.Y, args.nu, args.modes)
     # HC = rest_pose_hessian(cmesh, args.Y, args.nu)
     # lreg, hreg, greg, hxreg = 1e-2, 0, 1, 1e-4
     # Fnewton = CholFemFunctionTransferOperator(
@@ -447,16 +455,14 @@ if __name__ == "__main__":
             R = sp.spatial.transform.Rotation.from_quat(
                 [0, np.sin(theta/2), 0, np.cos(theta/4)]).as_matrix()
             X = (V - V.mean(axis=0)) @ R.T + V.mean(axis=0)
-            # uf = signal(w[mode], L[:, mode], t, c, k)
-            uf = 0
-            # ur = (X - V).flatten(order="C")
-            ur = 0
-            ut = 1
+            uf = signal(w[mode], L[:, mode], t, c, k)
+            ur = (X - V).flatten(order="C")
+            ut = np.ones(math.prod(X.shape))
             u = uf + ur + ut
             # XCnewton = CV + (Fnewton @ u).reshape(CV.shape)
             XCvbd = CV + (Fvbd @ u).reshape(CV.shape)
             # XCrank = CV + (Frank @ u).reshape(CV.shape)
-            vm.update_vertex_positions(V + u.reshape(V.shape))
+            vm.update_vertex_positions(V + (uf + ur).reshape(V.shape))
             # newtonvm.update_vertex_positions(XCnewton)
             vbdvm.update_vertex_positions(XCvbd)
             # rankvm.update_vertex_positions(XCrank)
