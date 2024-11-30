@@ -34,8 +34,9 @@ void Smoother::Apply(Scalar dt, Level& L)
                 Index i                  = L.C.adj[kp];
                 SVector<Scalar, 3> gi    = mini::Zeros<Scalar, 3, 1>();
                 SMatrix<Scalar, 3, 3> Hi = mini::Zeros<Scalar, 3, 3>();
-                auto gBegin              = L.E.GVGp[i];
-                auto gEnd                = L.E.GVGp[i + 1];
+                // Kinetic + Potential energy
+                auto gBegin = L.E.GVGp[i];
+                auto gEnd   = L.E.GVGp[i + 1];
                 for (auto kg = gBegin; kg < gEnd; ++kg)
                 {
                     Index g        = L.E.GVGg(kg);
@@ -106,6 +107,26 @@ void Smoother::Apply(Scalar dt, Level& L)
                             Hi);
                     }
                 }
+                // Dirichlet energy
+                gBegin = L.E.GVDGp[i];
+                gEnd   = L.E.GVDGp[i + 1];
+                for (auto kg = gBegin; kg < gEnd; ++kg)
+                {
+                    Index g      = L.E.GVDGg(kg);
+                    Index e      = L.E.GVDGe(kg);
+                    Index ilocal = L.E.GVDGilocal(kg);
+                    Scalar wg    = L.E.dwg(g);
+                    auto inds    = L.C.E.col(e);
+                    SMatrix<Scalar, 3, 4> xcg =
+                        FromEigen(L.C.x(Eigen::placeholders::all, inds).block<3, 4>(0, 0));
+                    SVector<Scalar, 4> Ncg = FromEigen(L.E.dNcg.col(g).head<4>());
+                    SVector<Scalar, 3> dxg = FromEigen(L.E.dxg.col(g).head<3>());
+                    // Dirichlet energy is 1/2 w_g || N*x - dx ||_2^2
+                    auto xg = xcg * Ncg;
+                    gi += wg * Ncg(ilocal) * (xg - dxg);
+                    mini::Diag(Hi) += wg * Ncg(ilocal) * Ncg(ilocal);
+                }
+                // Commit descent
                 SVector<Scalar, 3> dx = mini::Inverse(Hi) * gi;
                 L.C.x.col(i) -= ToEigen(dx);
             });
@@ -131,7 +152,7 @@ void Smoother::Apply(Scalar dt, Data& data)
                 auto i     = data.Padj[k];
                 auto begin = data.GVGp(i);
                 auto end   = data.GVGp(i + 1);
-                // Compute vertex elastic hessian
+                // Elastic energy
                 mini::SMatrix<Scalar, 3, 3> Hi = mini::Zeros<Scalar, 3, 3>();
                 mini::SVector<Scalar, 3> gi    = mini::Zeros<Scalar, 3, 1>();
                 for (auto n = begin; n < end; ++n)

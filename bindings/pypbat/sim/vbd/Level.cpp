@@ -47,6 +47,22 @@ void BindLevel(pybind11::module& m)
             "GVGilocal (np.ndarray): |#vertex-quad.pt. adjacencies| array of local vertex indices "
             "associated with adjacency graph edges")
         .def(
+            "with_dirichlet_adjacency",
+            &Energy::WithDirichletAdjacency,
+            pyb::arg("GVDGp"),
+            pyb::arg("GVDGg"),
+            pyb::arg("GVDGe"),
+            pyb::arg("GVDGilocal"),
+            "Defines the vertex-Dirichlet quad.pt. adjacency structure of this energy.\n"
+            "Args:\n"
+            "GVDGp (np.ndarray): |#verts + 1| prefix array of vertex-quad.pt. adjacency graph\n"
+            "GVDGg (np.ndarray): |#vertex-Dirichlet quad.pt. adjacencies| array of Dirichlet "
+            "adjacency graph edges\n"
+            "GVDGe (np.ndarray): |#vertex-Dirichlet quad.pt. adjacencies| array of element indices "
+            "associated with Dirichlet adjacency graph edges\n"
+            "GVGilocal (np.ndarray): |#vertex-Dirichlet quad.pt. adjacencies| array of local "
+            "vertex indices associated with Dirichlet adjacency graph edges")
+        .def(
             "with_kinetic_energy",
             &Energy::WithKineticEnergy,
             pyb::arg("rhog"),
@@ -78,6 +94,19 @@ void BindLevel(pybind11::module& m)
             "gradients at quadrature points\n"
             "GNcg (np.ndarray): 4x|3*#quad.pts.| array of coarse cage element shape function "
             "gradients at quadrature points")
+        .def(
+            "with_dirichlet_energy",
+            &Energy::WithDirichletEnergy,
+            pyb::arg("dwg"),
+            pyb::arg("dNcg"),
+            pyb::arg("dxg"),
+            "Defines the Dirichlet term of this energy\n"
+            "Args:\n"
+            "dwg (np.ndarray): |#Dirichlet quad.pts.| array of Dirichlet quadrature weights\n"
+            "dNcg (np.ndarray): 4x|#Dirichlet quad.pts.| array of coarse cage element shape "
+            "functions at Dirichlet quadrature points\n"
+            "dxg (np.ndarray): 3x|#Dirichlet quad.pts.| array of Dirichlet conditions at Dirichlet "
+            "quadrature points")
         .def("construct", &Energy::Construct, pyb::arg("validate") = true)
         .def_readwrite("xtildeg", &Energy::xtildeg)
         .def_readwrite("rhog", &Energy::rhog)

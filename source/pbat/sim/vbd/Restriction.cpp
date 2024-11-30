@@ -128,6 +128,7 @@ Scalar Restriction::DoApply(Level& Lc, Scalar detHZero) const
                 SMatrix<Scalar, 3, 3> Hi = mini::Zeros<Scalar, 3, 3>();
                 auto gBegin              = Lc.E.GVGp[i];
                 auto gEnd                = Lc.E.GVGp[i + 1];
+                // Accumulate restriction energy
                 for (auto kg = gBegin; kg < gEnd; ++kg)
                 {
                     Index g        = Lc.E.GVGg(kg);
@@ -178,6 +179,26 @@ Scalar Restriction::DoApply(Level& Lc, Scalar detHZero) const
                         energy(kg) = Scalar(0.5) * wg * rhog * SquaredNorm(xcg * Ncg - xf);
                     }
                 }
+                // Accumulate Dirichlet energy
+                gBegin = Lc.E.GVDGp[i];
+                gEnd   = Lc.E.GVDGp[i + 1];
+                for (auto kg = gBegin; kg < gEnd; ++kg)
+                {
+                    Index g      = Lc.E.GVDGg(kg);
+                    Index e      = Lc.E.GVDGe(kg);
+                    Index ilocal = Lc.E.GVDGilocal(kg);
+                    Scalar wg    = Lc.E.dwg(g);
+                    auto inds    = Lc.C.E.col(e);
+                    SMatrix<Scalar, 3, 4> xcg =
+                        FromEigen(Lc.C.x(Eigen::placeholders::all, inds).block<3, 4>(0, 0));
+                    SVector<Scalar, 4> Ncg = FromEigen(Lc.E.dNcg.col(g).head<4>());
+                    SVector<Scalar, 3> dxg = FromEigen(Lc.E.dxg.col(g).head<3>());
+                    // Dirichlet energy is 1/2 w_g || N*x - dx ||_2^2
+                    auto xg = xcg * Ncg;
+                    gi += wg * Ncg(ilocal) * (xg - dxg);
+                    mini::Diag(Hi) += wg * Ncg(ilocal) * Ncg(ilocal);
+                }
+                // Commit descent
                 if (std::abs(mini::Determinant(Hi)) < detHZero)
                     return;
                 SVector<Scalar, 3> dx = -(mini::Inverse(Hi) * gi);

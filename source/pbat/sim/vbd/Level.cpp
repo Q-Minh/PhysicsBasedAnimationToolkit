@@ -35,6 +35,30 @@ Level::Energy& Level::Energy::WithAdjacency(
     return *this;
 }
 
+Level::Energy& Level::Energy::WithDirichletEnergy(
+    Eigen::Ref<VectorX const> const& dwgIn,
+    Eigen::Ref<MatrixX const> const& dNcgIn,
+    Eigen::Ref<MatrixX const> const& dxgIn)
+{
+    dwg  = dwgIn;
+    dNcg = dNcgIn;
+    dxg  = dxgIn;
+    return *this;
+}
+
+Level::Energy& Level::Energy::WithDirichletAdjacency(
+    Eigen::Ref<IndexVectorX const> const& GVDGpIn,
+    Eigen::Ref<IndexVectorX const> const& GVDGgIn,
+    Eigen::Ref<IndexVectorX const> const& GVDGeIn,
+    Eigen::Ref<IndexVectorX const> const& GVDGilocalIn)
+{
+    GVDGp      = GVDGpIn;
+    GVDGg      = GVDGgIn;
+    GVDGe      = GVDGeIn;
+    GVDGilocal = GVDGilocalIn;
+    return *this;
+}
+
 Level::Energy& Level::Energy::WithKineticEnergy(
     Eigen::Ref<VectorX const> const& rhogIn,
     Eigen::Ref<MatrixX const> const& NcgIn)
@@ -64,6 +88,11 @@ Level::Energy& Level::Energy::WithPotentialEnergy(
 
 Level::Energy& Level::Energy::Construct(bool bValidate)
 {
+    if (GVDGp.size() == 0)
+    {
+        GVDGp.setZero(GVGp.size());
+    }
+
     if (not bValidate)
         return *this;
 
@@ -85,14 +114,50 @@ Level::Energy& Level::Energy::Construct(bool bValidate)
             3 * nQuadPts);
         throw std::invalid_argument(what);
     }
+    bool const bHasAdjacency = GVGp.size() > 0;
+    if (not bHasAdjacency)
+    {
+        throw std::invalid_argument("GVGp must have size #verts+1, but got size(GVGp)=0");
+    }
     bool const bAdjacencyValid = (GVGg.size() == GVGe.size()) and (GVGg.size() == GVGilocal.size());
     if (not bAdjacencyValid)
     {
         std::string const what = fmt::format(
             "With the vertex-quad.pt. adjacency graph having #edges={0}, expected dimensions "
             "GVGe={0}, GVGilocal={0}",
-            GVGg.size());
+            GVGp(Eigen::placeholders::last));
         throw std::invalid_argument(what);
+    }
+    auto const nDirichletConditions = GVDGp(Eigen::placeholders::last);
+    if (nDirichletConditions > 0)
+    {
+        bool const bDirichletEnergyValid = (dwg.size() == dNcg.cols()) and (dNcg.rows() == 4) and
+                                           (dwg.size() == dxg.cols()) and (dxg.rows() == 3);
+        if (not bDirichletEnergyValid)
+        {
+            std::string const what = fmt::format(
+                "With dwg of size {0}, expected dimensions dNcg=4x{0}, dxg=3x{0}",
+                dwg.size());
+            throw std::invalid_argument(what);
+        }
+        bool const bHasDirichletAdjacency = GVDGp.size() == GVGp.size();
+        if (not bHasDirichletAdjacency)
+        {
+            std::string const what =
+                fmt::format("GVDGp must have size #verts+1, but got size(GVDGp)={}", GVDGp.size());
+            throw std::invalid_argument(what);
+        }
+        bool const bDirichletAdjacencyValid = (GVDGp(Eigen::placeholders::last) == GVDGg.size()) and
+                                              (GVDGg.size() == GVDGe.size()) and
+                                              (GVDGg.size() == GVDGilocal.size());
+        if (not bDirichletAdjacencyValid)
+        {
+            std::string const what = fmt::format(
+                "With the vertex-Dirichlet quad.pt. adjacency graph having #edges={0}, expected "
+                "dimensions GVDGg={0}, GVDGe={0}, GVDGilocal={0}",
+                GVDGp(Eigen::placeholders::last));
+            throw std::invalid_argument(what);
+        }
     }
     return *this;
 }
