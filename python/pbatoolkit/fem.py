@@ -232,8 +232,9 @@ class QuadraturePointSelection(Enum):
 
 
 class QuadratureFittingStrategy(Enum):
-    FitOutputQuadrature = 0
-    FitInputQuadrature = 1
+    Ignore = 0
+    FitOutputQuadrature = 1
+    FitInputQuadrature = 2
 
 
 class QuadratureSingularityStrategy(Enum):
@@ -300,6 +301,19 @@ def fit_output_quad_to_input_quad(
     # Select quadrature points
     oXg = output_quadrature_points(
         omesh, obvh, iXg, selection=selection, oorder=oorder)
+    if fitting_strategy == QuadratureFittingStrategy.Ignore:
+        owg = _fem.inner_product_weights(omesh, oorder).flatten(order="F")
+        oeg = obvh.primitives_containing_points(oXg)
+        osg = ibvh.primitives_containing_points(oXg) == -1
+        if singular_strategy == QuadratureSingularityStrategy.Ignore:
+            owg[osg] = 0
+        if singular_strategy == QuadratureSingularityStrategy.Constant:
+            volume = iwg.sum()
+            # alpha * sowg.sum() = volerr*volume
+            alpha = volerr*volume / owg[osg].sum()
+            owg[osg] *= alpha
+        return oXg, owg, oeg, osg, iXg, iwg, None
+    
     # Delete quadrature points that are outside the input mesh
     outside = ibvh.primitives_containing_points(oXg) < 0
     inside = ~outside

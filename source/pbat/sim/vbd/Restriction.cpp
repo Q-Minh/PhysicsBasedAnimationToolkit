@@ -116,9 +116,7 @@ Scalar Restriction::DoApply(Level& Lc, Scalar detHZero) const
         {
             auto pBegin = Lc.C.ptr[p];
             auto pEnd   = Lc.C.ptr[p + 1];
-            for (auto kp = pBegin; kp < pEnd; ++kp)
-            {
-                // tbb::parallel_for(pBegin, pEnd, [&](Index kp) {
+            tbb::parallel_for(pBegin, pEnd, [&](Index kp) {
                 using namespace math::linalg;
                 using mini::FromEigen;
                 using mini::SMatrix;
@@ -181,13 +179,10 @@ Scalar Restriction::DoApply(Level& Lc, Scalar detHZero) const
                     }
                 }
                 if (std::abs(mini::Determinant(Hi)) < detHZero)
-                {
-                    continue;
-                }
+                    return;
                 SVector<Scalar, 3> dx = -(mini::Inverse(Hi) * gi);
                 Lc.C.x.col(i) += ToEigen(dx);
-                //});
-            }
+            });
         }
     }
     return energy.sum();

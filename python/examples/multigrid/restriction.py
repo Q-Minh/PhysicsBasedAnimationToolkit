@@ -264,27 +264,21 @@ class VbdFunctionTransferOperator:
             V.T, C.T, cell=pbat.geometry.Cell.Tetrahedron)
         cbvh = pbat.geometry.bvh(
             VC.T, CC.T, cell=pbat.geometry.Cell.Tetrahedron)
-        # cXg, cwg, ceg, csg, iXg, iwg, err = pbat.fem.fit_output_quad_to_input_quad(
-        #     MD,
-        #     MT,
-        #     ibvh,
-        #     cbvh,
-        #     iorder=1,
-        #     oorder=3,
-        #     selection=pbat.fem.QuadraturePointSelection.FromOutputQuadrature,
-        #     fitting_strategy=pbat.fem.QuadratureFittingStrategy.FitOutputQuadrature,
-        #     singular_strategy=pbat.fem.QuadratureSingularityStrategy.Constant,
-        #     volerr=1e-10
-        # )
-        cwg = pbat.fem.inner_product_weights(MT, 3).flatten(order="F")
-        cXg = MT.quadrature_points(3)
-        ceg = cbvh.primitives_containing_points(cXg)
-        cerg = ibvh.primitives_containing_points(cXg)
-        csg = cerg == -1
-        cwg[csg] *= 1e-6
+        cXg, cwg, ceg, csg, iXg, iwg, err = pbat.fem.fit_output_quad_to_input_quad(
+            MD,
+            MT,
+            ibvh,
+            cbvh,
+            iorder=1,
+            oorder=2,
+            selection=pbat.fem.QuadraturePointSelection.FromOutputQuadrature,
+            fitting_strategy=pbat.fem.QuadratureFittingStrategy.Ignore,
+            singular_strategy=pbat.fem.QuadratureSingularityStrategy.Constant,
+            volerr=1e-5
+        )
         Q = [pbat.sim.vbd.Quadrature(cwg, cXg, ceg, csg)]
         # Define multigrid cycle to include a single Restriction operation
-        cycle = [pbat.sim.vbd.Transition(-1, 0, riters=20)]
+        cycle = [pbat.sim.vbd.Transition(-1, 0, riters=10)]
         schedule = [0, 0]
         # Get hierarchy
         self.hierarchy = pbat.sim.vbd.hierarchy(
