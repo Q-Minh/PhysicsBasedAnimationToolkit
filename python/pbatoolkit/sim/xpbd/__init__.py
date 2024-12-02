@@ -53,8 +53,8 @@ def partition_clustered_mesh_constraint_graph(V, C):
     # Cluster our constraint graph via (edge-)cut-minimizing graph partitioning into
     # a supernodal graph
     from ...graph import partition
-    clustering = np.array(partition(
-        GGT.indptr, GGT.indices, weights, int(C.shape[0] / cluster_size)))
+    clustering = partition(
+        GGT.indptr, GGT.indices, weights, int(C.shape[0] / cluster_size))
     # Construct adjacency graph of the map clusters -> constraints
     Cptr, Cadj = map_to_adjacency(clustering)
     # Compute edges between the clusters, i.e. the supernodal graph's edges

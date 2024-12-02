@@ -1,6 +1,6 @@
 #include "Graph.h"
 
-#include "Partitioning.h"
+#include "Partition.h"
 
 namespace pbat {
 namespace py {
@@ -8,7 +8,7 @@ namespace graph {
 
 void Bind(pybind11::module& m)
 {
-    BindPartitioning(m);
+    BindPartition(m);
 }
 
 } // namespace graph
