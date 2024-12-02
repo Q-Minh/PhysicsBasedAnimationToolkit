@@ -52,9 +52,16 @@ def partition_clustered_mesh_constraint_graph(V, C):
     cluster_size = 5
     # Cluster our constraint graph via (edge-)cut-minimizing graph partitioning into
     # a supernodal graph
-    from ...graph import partition
+    from ...graph import partition, PartitioningCoarseningStrategy, InitialPartitioningStrategy, PartitioningRefinementStrategy
+    n_clusters = int(C.shape[0] / cluster_size)
     clustering = partition(
-        GGT.indptr, GGT.indices, weights, int(C.shape[0] / cluster_size))
+        GGT.indptr, GGT.indices, weights, n_clusters,
+        # Default | RandomMatching | SortedHeavyEdgeMatching
+        coarsening=PartitioningCoarseningStrategy.SortedHeavyEdgeMatching,
+        seed=0,
+        minimize_degree=True,
+        contiguous_parts=True,
+        identify_conn_comp=True)
     # Construct adjacency graph of the map clusters -> constraints
     Cptr, Cadj = map_to_adjacency(clustering)
     # Compute edges between the clusters, i.e. the supernodal graph's edges
