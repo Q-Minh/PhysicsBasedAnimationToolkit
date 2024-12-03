@@ -61,8 +61,7 @@ __global__ void MinimizeBackwardEuler(BackwardEulerMinimization BDF)
         {
             // If the workload is odd, the last active thread should ignore its right-hand side.
             // If the workload is even, every thread participates in summing.
-            auto bShouldAccumulate =
-                static_cast<GpuScalar>((nActiveThreads % 2) == 0 or tid < (nActiveThreads - 1));
+            bool bShouldAccumulate = (nActiveThreads & 0b1) == 0 or tid < (nActiveThreads - 1);
             ++nActiveThreads >>= 1;
             // When nActiveThreads hits 1, every other thread will have exited
             if (tid >= nActiveThreads)
