@@ -82,7 +82,9 @@ if __name__ == "__main__":
     # Setup VBD
     ilocal = np.repeat(np.arange(4)[np.newaxis, :], C.shape[0], axis=0)
     GVT = pbat.sim.vbd.vertex_element_adjacency(V, C, data=ilocal)
-    Pptr, Padj, GC = pbat.sim.vbd.partitions(V, C, vdbc)
+    Pptr, Padj, GC = pbat.sim.vbd.partitions(
+        V, C  # , vdbc
+    )
     data = pbat.sim.vbd.Data().with_volume_mesh(
         V.T, C.T
     ).with_surface_mesh(
@@ -97,8 +99,8 @@ if __name__ == "__main__":
         GVT.indptr, GVT.indices, GVT.data
     ).with_partitions(
         Pptr, Padj
-    ).with_dirichlet_vertices(
-        vdbc
+        # ).with_dirichlet_vertices(
+        #    vdbc
     ).with_initialization_strategy(
         pbat.sim.vbd.InitializationStrategy.KineticEnergyMinimum
     ).construct(validate=False)
