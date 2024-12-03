@@ -46,6 +46,8 @@ struct BackwardEulerMinimization
     GpuIndex*
         partition; ///< List of vertex indices that can be processed independently, i.e. in parallel
 
+    bool bUseParallelReduction{false}; ///< Use parallel reduction to accumulate vertex derivatives
+
     auto constexpr ExpectedSharedMemoryPerThreadInBytes() const { return 12 * sizeof(GpuScalar); }
 };
 

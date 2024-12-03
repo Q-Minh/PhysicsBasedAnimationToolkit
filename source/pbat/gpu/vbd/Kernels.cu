@@ -51,20 +51,42 @@ __global__ void MinimizeBackwardEuler(BackwardEulerMinimization BDF)
     }
     __syncthreads();
 
-    // Remaining execution is synchronous, i.e. only 1 thread is required
-    if (tid > 0)
-        return;
-
-    // 2. Compute total vertex hessian and gradient
-    SMatrix<GpuScalar, 3, 3> Hi = Zeros<GpuScalar, 3, 3>{};
-    SVector<GpuScalar, 3> gi    = Zeros<GpuScalar, 3, 1>{};
-    auto const nActiveThreads   = min(nAdjacentElements, nThreadsPerBlock);
-    for (auto j = 0; j < nActiveThreads; ++j)
+    // 2. Compute total vertex hessian and gradient via parallel reduction
+    SMatrix<GpuScalar, 3, 3> Hi = Zeros<GpuScalar, 3, 3>();
+    SVector<GpuScalar, 3> gi    = Zeros<GpuScalar, 3, 1>();
+    auto nActiveThreads         = min(nAdjacentElements, nThreadsPerBlock);
+    if (BDF.bUseParallelReduction)
     {
-        auto Hgei = FromFlatBuffer<3, 4>(shared, j);
-        Hi += Hgei.Slice<3, 3>(0, 0);
-        gi += Hgei.Col(3);
+        do
+        {
+            ++nActiveThreads >>= 1;
+            // When nActiveThreads hits 1, every other thread will have exited
+            if (tid >= nActiveThreads)
+                return;
+            auto rHgt = FromFlatBuffer<3, 4>(shared, tid + nActiveThreads);
+            Hgt += rHgt;
+            rHgt.SetZero();
+            // __syncthreads();
+            // If nActiveThreads is not 1, i.e. it is > 1, then we preserve its value,
+            // otherwise, nActiveThreads becomes 0 so that we can exit the loop.
+            nActiveThreads *= (nActiveThreads > 1);
+        } while (nActiveThreads > 0);
+        Hi = Ht;
+        gi = gt;
     }
+    else
+    {
+        if (tid > 0)
+            return;
+        for (auto j = 0; j < nActiveThreads; ++j)
+        {
+            auto Hgj = FromFlatBuffer<3, 4>(shared, j);
+            Hi += Hgj.Slice<3, 3>(0, 0);
+            gi += Hgj.Col(3);
+        }
+    }
+
+    // 3. Time integrate vertex position
     GpuScalar mi                  = BDF.m[i];
     SVector<GpuScalar, 3> xti     = FromBuffers<3, 1>(BDF.xt, i);
     SVector<GpuScalar, 3> xitilde = FromBuffers<3, 1>(BDF.xtilde, i);

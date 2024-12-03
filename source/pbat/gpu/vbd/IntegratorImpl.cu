@@ -48,7 +48,8 @@ IntegratorImpl::IntegratorImpl(Data const& data)
       mInitializationStrategy(data.strategy),
       mGpuThreadBlockSize(64),
       mStream(common::Device(common::EDeviceSelectionPreference::HighestComputeCapability)
-                  .create_stream(/*synchronize_with_default_stream=*/false))
+                  .create_stream(/*synchronize_with_default_stream=*/false)),
+      mbUseParallelReduction(false)
 {
     common::ToBuffer(data.v, mVelocities);
     common::ToBuffer(data.aext, mExternalAcceleration);
@@ -95,6 +96,7 @@ void IntegratorImpl::Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps, 
     bdf.FC                              = mCollidingTriangles.Raw();
     bdf.nCollidingTriangles             = mCollidingTriangleCount.Raw();
     bdf.F                               = F.inds.Raw();
+    bdf.bUseParallelReduction           = mbUseParallelReduction;
 
     // NOTE:
     // For some reason, thrust::async::copy does not play well with cuda-api-wrapper streams. I am
@@ -314,6 +316,11 @@ void IntegratorImpl::SetInitializationStrategy(EInitializationStrategy strategy)
 void IntegratorImpl::SetBlockSize(GpuIndex blockSize)
 {
     mGpuThreadBlockSize = blockSize;
+}
+
+void IntegratorImpl::UseParallelReduction(bool bUseParallelReduction)
+{
+    mbUseParallelReduction = bUseParallelReduction;
 }
 
 common::Buffer<GpuScalar, 3> const& IntegratorImpl::GetVelocity() const

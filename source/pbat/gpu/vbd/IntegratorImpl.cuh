@@ -94,7 +94,9 @@ class IntegratorImpl
      * @param Pptr
      * @param Padj
      */
-    void SetVertexPartitions(Eigen::Ref<GpuIndexVectorX const> const& Pptr, Eigen::Ref<GpuIndexVectorX const> const& Padj);
+    void SetVertexPartitions(
+        Eigen::Ref<GpuIndexVectorX const> const& Pptr,
+        Eigen::Ref<GpuIndexVectorX const> const& Padj);
     /**
      * @brief
      * @param strategy
@@ -105,6 +107,11 @@ class IntegratorImpl
      * @param blockSize
      */
     void SetBlockSize(GpuIndex blockSize);
+    /**
+     * @brief
+     * @param bUseParallelReduction Use parallel reduction to accumulate vertex derivatives
+     */
+    void UseParallelReduction(bool bUseParallelReduction = true);
 
     /**
      * @brief
@@ -172,15 +179,16 @@ class IntegratorImpl
     common::Buffer<GpuIndex> mCollidingTriangleCount; ///< |#vertices| array of the number of
                                                       ///< colliding triangles for each vertex.
 
-    GpuIndexVectorX
-        mPptr; ///< |#partitions+1| partition pointers, s.t. the range [Pptr[p], Pptr[p+1])
-               ///< indexes into Padj vertices from partition p
+    GpuIndexVectorX mPptr; ///< |#partitions+1| partition pointers, s.t. the range [Pptr[p],
+                           ///< Pptr[p+1]) indexes into Padj vertices from partition p
     common::Buffer<GpuIndex> mPadj; ///< Partition vertices
 
     EInitializationStrategy
         mInitializationStrategy;  ///< Strategy to use to determine the initial BCD iterate
     GpuIndex mGpuThreadBlockSize; ///< Number of threads per CUDA thread block
     cuda::stream_t mStream;       ///< Cuda stream on which this VBD instance will run
+
+    bool mbUseParallelReduction; ///< Use parallel reduction to accumulate vertex derivatives
 };
 
 } // namespace vbd
