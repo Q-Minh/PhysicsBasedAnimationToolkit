@@ -4,6 +4,7 @@
 #include "Hierarchy.h"
 #include "Integrator.h"
 #include "Level.h"
+#include "MultiScaleIntegrator.h"
 #include "Prolongation.h"
 #include "Restriction.h"
 #include "Smoother.h"
@@ -22,6 +23,7 @@ void Bind(pybind11::module& m)
     BindRestriction(m);
     BindSmoother(m);
     BindHierarchy(m);
+    BindMultiScaleIntegrator(m);
 }
 
 } // namespace vbd

@@ -28,8 +28,9 @@ void BindSmoother(pybind11::module& m)
             "Smooth level's solution.")
         .def(
             "apply",
-            [](Smoother& S, Scalar dt, Data& data) { S.Apply(dt, data); },
+            [](Smoother& S, Scalar dt, Scalar rho, Data& data) { S.Apply(dt, rho, data); },
             pyb::arg("dt"),
+            pyb::arg("rho"),
             pyb::arg("data"),
             "Smooth root's solution.")
         .def_readwrite("iters", &Smoother::iterations);

@@ -27,7 +27,7 @@ struct Smoother
      * @param dt
      * @param data
      */
-    void Apply(Scalar dt, Data& data);
+    void Apply(Scalar dt, Scalar rho, Data& data);
 };
 
 } // namespace vbd

@@ -50,7 +50,7 @@ void MultiScaleIntegrator::Step(Scalar dt, Index substeps, Hierarchy& H)
             H.root.x.col(i) = ToEigen(x);
         });
         // Minimize time integration energy using multiscale approach
-        H.smoothers.front().Apply(sdt, H.root);
+        H.smoothers.front().Apply(sdt, Scalar(1), H.root);
         for (auto t = 0ULL; t < H.transitions.size(); ++t)
         {
             std::visit([&](auto&& transition) { transition.Apply(H); }, H.transitions[t]);
@@ -60,7 +60,7 @@ void MultiScaleIntegrator::Step(Scalar dt, Index substeps, Hierarchy& H)
             bool const bNextLevelIsRoot = l < 0;
             if (bNextLevelIsRoot)
             {
-                H.smoothers[t + 1].Apply(sdt, H.root);
+                H.smoothers[t + 1].Apply(sdt, Scalar(1), H.root);
             }
             else
             {

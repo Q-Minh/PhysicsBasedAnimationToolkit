@@ -84,6 +84,19 @@ class Transition:
         self.riters = riters
 
 
+def vertex_quad_adjacency(V, C, eg):
+    CG = C[eg, :]
+    ilocal = np.repeat(np.arange(CG.shape[1])[
+        np.newaxis, :], CG.shape[0], axis=0)
+    GVG = vertex_element_adjacency(V, CG, data=ilocal)
+    e = np.repeat(eg[:, np.newaxis], CG.shape[1])
+    GVGp = GVG.indptr
+    GVGg = GVG.indices
+    GVGilocal = GVG.data
+    GVGe = vertex_element_adjacency(V, CG, data=e).data
+    return GVGp, GVGg, GVGe, GVGilocal
+
+
 def hierarchy(
         data: _vbd.Data,
         V: list[np.ndarray],
@@ -134,7 +147,6 @@ def hierarchy(
         wg, Xg, eg, sg = QL[l].wg, QL[l].Xg, QL[l].eg, QL[l].sg
         erg = rbvh.nearest_primitives_to_points(Xg)[0]
         VC, CC = V[l], C[l]
-        CG = CC[eg, :]
         cmesh = cmeshes[l]
         # Kinetic energy
         Xig = fem.reference_positions(cmesh, eg, Xg)
@@ -162,16 +174,9 @@ def hierarchy(
         # Shape function gradients on coarse mesh at quad.pts.
         GNcg = fem.shape_function_gradients_at(cmesh, eg, Xig)
         # Adjacency
-        ilocal = np.repeat(np.arange(CG.shape[1])[
-                           np.newaxis, :], CG.shape[0], axis=0)
-        GVG = vertex_element_adjacency(VC, CG, data=ilocal)
-        e = np.repeat(eg[:, np.newaxis], CG.shape[1])
-        GVGp = GVG.indptr
-        GVGg = GVG.indices
-        GVGilocal = GVG.data
-        GVGe = vertex_element_adjacency(VC, CG, data=e).data
+        GVGp, GVGg, GVGe, GVGilocal = vertex_quad_adjacency(VC, CC, eg)
         # Store energy
-        energies[l] = _vbd.level.Energy(
+        energy = _vbd.level.Energy(
         ).with_quadrature(
             wg, sg
         ).with_adjacency(
@@ -180,7 +185,22 @@ def hierarchy(
             rhog, Ncg
         ).with_potential_energy(
             mug, lambdag, ervg, Nrg, GNfg, GNcg
-        ).construct()
+        )
+        if len(data.dbc) > 0:
+            # Dirichlet energy
+            dxg = data.x[:, data.dbc]
+            edg = cbvh.primitives_containing_points(dxg)
+            GVDGp, GVDGg, GVDGe, GVDGilocal = vertex_quad_adjacency(
+                VC, CC, edg)
+            dwg = np.full(len(data.dbc), 1e8)
+            dNcg = fem.shape_functions_at(
+                cmesh, fem.reference_positions(cmesh, edg, dxg))
+            energy.with_dirichlet_adjacency(
+                GVDGp, GVDGg, GVDGe, GVDGilocal
+            ).with_dirichlet_energy(
+                dwg, dNcg, dxg
+            )
+        energies[l] = energy.construct()
 
     buses = [None]*len(V)
     for l in range(len(V)):

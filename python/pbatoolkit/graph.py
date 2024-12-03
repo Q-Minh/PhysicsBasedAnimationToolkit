@@ -127,7 +127,7 @@ def lil_to_adjacency(partitions: list[list[int]], dtype=np.int64):
     return ptr, adj
 
 
-def map_to_adjacency(map: np.ndarray | list[int], dtype=np.int64):
+def map_to_adjacency(map: np.ndarray | list[int], dtype=np.int64, n=None):
     """Converts flat array (i.e. some partition map) to an adjacency graph.
 
     Args:
@@ -138,8 +138,9 @@ def map_to_adjacency(map: np.ndarray | list[int], dtype=np.int64):
     Returns:
         (np.ndarray, np.ndarray): Adjacency graph (ptr, adj) in compressed sparse storage format
     """
-    npartitions = map.max() + 1
-    psizes = np.zeros(npartitions+1, dtype=dtype)
+    if n is None:
+        n = map.max() + 1
+    psizes = np.zeros(n + 1, dtype=dtype)
     np.add.at(psizes[1:], map, 1)
     ptr = np.array(list(itertools.accumulate(psizes)))
     adj = np.argsort(map)

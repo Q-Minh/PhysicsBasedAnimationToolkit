@@ -134,11 +134,19 @@ void Smoother::Apply(Scalar dt, Level& L)
     }
 }
 
-void Smoother::Apply(Scalar dt, Data& data)
+void Smoother::Apply(Scalar dt, Scalar rho, Data& data)
 {
-    Scalar const dt2 = dt * dt;
+    auto const nVertices                 = data.x.cols();
+    Scalar const dt2                     = dt * dt;
+    bool const bUseChebyshevAcceleration = rho > Scalar(0) and rho < Scalar(1);
+    Scalar omega{};
+    Scalar rho2 = rho * rho;
+    // Minimize Backward Euler, i.e. BDF1, objective
     for (auto k = 0; k < iterations; ++k)
     {
+        if (bUseChebyshevAcceleration)
+            omega = kernels::ChebyshevOmega(k, rho2, omega);
+
         auto const nPartitions = data.Pptr.size() - 1;
         for (auto p = 0; p < nPartitions; ++p)
         {
@@ -182,6 +190,21 @@ void Smoother::Apply(Scalar dt, Data& data)
                 kernels::AddInertiaDerivatives(dt2, m, xtildei, xi, gi, Hi);
                 kernels::IntegratePositions(gi, Hi, xi, data.detHZero);
                 data.x.col(i) = ToEigen(xi);
+            });
+        }
+
+        if (bUseChebyshevAcceleration)
+        {
+            tbb::parallel_for(Index(0), nVertices, [&](Index i) {
+                using namespace math::linalg;
+                using mini::FromEigen;
+                auto xkm2eig = data.xchebm2.col(i).head<3>();
+                auto xkm1eig = data.xchebm1.col(i).head<3>();
+                auto xkeig   = data.x.col(i).head<3>();
+                auto xkm2    = FromEigen(xkm2eig);
+                auto xkm1    = FromEigen(xkm1eig);
+                auto xk      = FromEigen(xkeig);
+                kernels::ChebyshevUpdate(k, omega, xkm2, xkm1, xk);
             });
         }
     }
