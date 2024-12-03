@@ -59,23 +59,24 @@ __global__ void MinimizeBackwardEuler(BackwardEulerMinimization BDF)
     {
         do
         {
+            // If the workload is odd, the last active thread should ignore its right-hand side.
+            // If the workload is even, every thread participates in summing.
+            auto bShouldAccumulate =
+                static_cast<GpuScalar>((nActiveThreads % 2) == 0 or tid < (nActiveThreads - 1));
             ++nActiveThreads >>= 1;
             // When nActiveThreads hits 1, every other thread will have exited
             if (tid >= nActiveThreads)
                 return;
             auto rHgt = FromFlatBuffer<3, 4>(shared, tid + nActiveThreads);
-            Hgt += rHgt;
-            rHgt.SetZero();
-            // __syncthreads();
-            // If nActiveThreads is not 1, i.e. it is > 1, then we preserve its value,
-            // otherwise, nActiveThreads becomes 0 so that we can exit the loop.
-            nActiveThreads *= (nActiveThreads > 1);
-        } while (nActiveThreads > 0);
+            Hgt += bShouldAccumulate * rHgt;
+            __syncthreads();
+        } while (nActiveThreads > 1);
         Hi = Ht;
         gi = gt;
     }
     else
     {
+        // Let every thread exit except the first
         if (tid > 0)
             return;
         for (auto j = 0; j < nActiveThreads; ++j)
