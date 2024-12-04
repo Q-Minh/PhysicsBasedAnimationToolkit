@@ -13,6 +13,7 @@ option(PBAT_PROFILE_ON_DEMAND
     "Build Tracy with TRACY_ON_DEMAND option"
     OFF)
 option(PBAT_USE_INTEL_MKL "Link to Intel MKL for dense and sparse linear algebra." OFF)
+option(PBAT_USE_METIS "Link to METIS for graph partitioning." OFF)
 option(PBAT_USE_SUITESPARSE
     "Link to SuiteSparse for sparse matrix decompositions. Overrides Intel MKL."
     OFF)
