@@ -19,14 +19,14 @@ void BindProlongation(pybind11::module& m)
     pyb::class_<Prolongation>(m, "Prolongation")
         .def(pyb::init<>())
         .def(
-            "from",
+            "from_level",
             &Prolongation::From,
             pyb::arg("lc"),
             "Associates this Prolongation operator with coarse level lc.\n"
             "Args:\n"
             "lc (int): Coarse level index (-1 is root, i.e. finest)")
         .def(
-            "to",
+            "to_level",
             &Prolongation::To,
             pyb::arg("lf"),
             "Associates this Prolongation operator with fine level lf.\n"

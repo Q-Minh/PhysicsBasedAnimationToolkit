@@ -8,6 +8,7 @@ namespace sim {
 namespace vbd {
 
 struct Hierarchy;
+struct Level;
 
 struct Restriction
 {
@@ -49,6 +50,18 @@ struct Restriction
      * @return Restriction&
      */
     Restriction& Construct(bool bValidate = true);
+    /**
+     * @brief
+     *
+     * @return Index
+     */
+    Index StartLevel() const;
+    /**
+     * @brief
+     *
+     * @return Index
+     */
+    Index EndLevel() const;
 
     IndexVectorX
         efg;     ///< |#quad.pts.| array of fine cage elements associated with quadrature points
@@ -63,6 +76,20 @@ struct Restriction
      * @param H
      */
     void Apply(Hierarchy& H);
+    /**
+     * @brief
+     * @param Ef
+     * @param xf
+     */
+    void
+    SetTargetShape(Eigen::Ref<IndexMatrixX const> const& Ef, Eigen::Ref<MatrixX const> const& xf);
+    /**
+     * @brief Restrict
+     *
+     * @param Lc
+     * @param detHZero
+     */
+    Scalar DoApply(Level& Lc, Scalar detHZero) const;
 };
 
 } // namespace vbd

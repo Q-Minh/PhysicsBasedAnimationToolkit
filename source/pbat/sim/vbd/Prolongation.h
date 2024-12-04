@@ -46,6 +46,18 @@ struct Prolongation
      * @return Prolongation&
      */
     Prolongation& Construct(bool bValidate = true);
+    /**
+     * @brief
+     *
+     * @return Index
+     */
+    Index StartLevel() const;
+    /**
+     * @brief
+     *
+     * @return Index
+     */
+    Index EndLevel() const;
 
     IndexVectorX
         ec; ///< |#verts at fine level| array of coarse cage elements containing fine level vertices

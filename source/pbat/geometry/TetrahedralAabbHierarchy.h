@@ -47,20 +47,20 @@ class TetrahedralAabbHierarchy : public BoundingVolumeHierarchy<
     OverlappingPrimitives(TetrahedralAabbHierarchy const& bvh, std::size_t reserve = 1000ULL) const;
 
     template <class TDerivedP, class FCull>
-    std::vector<Index> PrimitivesContainingPoints(
+    IndexVectorX PrimitivesContainingPoints(
         Eigen::MatrixBase<TDerivedP> const& P,
         FCull fCull,
-        bool bParallelize = false) const;
+        bool bParallelize = true) const;
 
     template <class TDerivedP>
-    std::vector<Index> PrimitivesContainingPoints(
+    IndexVectorX PrimitivesContainingPoints(
         Eigen::MatrixBase<TDerivedP> const& P,
-        bool bParallelize = false) const;
+        bool bParallelize = true) const;
 
     template <class TDerivedP>
-    std::pair<std::vector<Index>, std::vector<Scalar>> NearestPrimitivesToPoints(
+    std::pair<IndexVectorX, VectorX> NearestPrimitivesToPoints(
         Eigen::MatrixBase<TDerivedP> const& P,
-        bool bParallelize = false) const;
+        bool bParallelize = true) const;
 
     [[maybe_unused]] auto const& GetBoundingVolumes() const { return mBoundingVolumes; }
 
@@ -87,14 +87,15 @@ TetrahedralAabbHierarchy::BoundingVolumeOf(RPrimitiveIndices&& pinds) const
 }
 
 template <class TDerivedP, class FCull>
-inline std::vector<Index> TetrahedralAabbHierarchy::PrimitivesContainingPoints(
+inline IndexVectorX TetrahedralAabbHierarchy::PrimitivesContainingPoints(
     Eigen::MatrixBase<TDerivedP> const& P,
     FCull fCull,
     bool bParallelize) const
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.geometry.TetrahedralAabbHierarchy.PrimitivesContainingPoints");
     using math::linalg::mini::FromEigen;
-    std::vector<Index> p(static_cast<std::size_t>(P.cols()), -1);
+    IndexVectorX p(P.cols());
+    p.setConstant(-1);
     auto const FindContainingPrimitive = [&](Index i) {
         std::vector<Index> const intersectingPrimitives = this->PrimitivesIntersecting(
             [&](BoundingVolumeType const& bv) -> bool { return bv.contains(P.col(i)); },
@@ -111,8 +112,7 @@ inline std::vector<Index> TetrahedralAabbHierarchy::PrimitivesContainingPoints(
             });
         if (not intersectingPrimitives.empty())
         {
-            auto const iStl = static_cast<std::size_t>(i);
-            p[iStl]         = intersectingPrimitives.front();
+            p(i) = intersectingPrimitives.front();
         }
     };
     if (bParallelize)
@@ -128,26 +128,24 @@ inline std::vector<Index> TetrahedralAabbHierarchy::PrimitivesContainingPoints(
 }
 
 template <class TDerivedP>
-inline std::vector<Index> TetrahedralAabbHierarchy::PrimitivesContainingPoints(
+inline IndexVectorX TetrahedralAabbHierarchy::PrimitivesContainingPoints(
     Eigen::MatrixBase<TDerivedP> const& P,
     bool bParallelize) const
 {
-    return PrimitivesContainingPoints(
-        P,
-        [](auto, auto) { return false; },
-        bParallelize);
+    return PrimitivesContainingPoints(P, [](auto, auto) { return false; }, bParallelize);
 }
 
 template <class TDerivedP>
-inline std::pair<std::vector<Index>, std::vector<Scalar>>
-TetrahedralAabbHierarchy::NearestPrimitivesToPoints(
+inline std::pair<IndexVectorX, VectorX> TetrahedralAabbHierarchy::NearestPrimitivesToPoints(
     Eigen::MatrixBase<TDerivedP> const& P,
     bool bParallelize) const
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.geometry.TetrahedralAabbHierarchy.NearestPrimitivesToPoints");
     using math::linalg::mini::FromEigen;
-    std::vector<Index> p(static_cast<std::size_t>(P.cols()), -1);
-    std::vector<Scalar> d(static_cast<std::size_t>(P.cols()), std::numeric_limits<Scalar>::max());
+    IndexVectorX p(P.cols());
+    p.setConstant(-1);
+    VectorX d(P.cols());
+    d.setConstant(std::numeric_limits<Scalar>::max());
     auto const FindNearestPrimitive = [&](Index i) {
         std::size_t constexpr K{1};
         auto const [nearestPrimitives, distances] = this->NearestPrimitivesTo(
@@ -164,9 +162,8 @@ TetrahedralAabbHierarchy::NearestPrimitivesToPoints(
                     FromEigen(VT.col(3).head<kDims>()));
             },
             K);
-        auto const iStl = static_cast<std::size_t>(i);
-        p[iStl]         = nearestPrimitives.front();
-        d[iStl]         = distances.front();
+        p(i) = nearestPrimitives.front();
+        d(i) = distances.front();
     };
     if (bParallelize)
     {

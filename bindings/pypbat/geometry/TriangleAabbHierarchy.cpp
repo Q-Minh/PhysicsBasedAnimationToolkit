@@ -41,14 +41,14 @@ void BindTriangleAabbHierarchy(pybind11::module& m)
                     return self.PrimitivesContainingPoints(P, bParallelize);
                 },
                 pyb::arg("P"),
-                pyb::arg("parallelize") = false)
+                pyb::arg("parallelize") = true)
             .def(
                 "nearest_primitives_to_points",
                 [](BvhType const& self, Eigen::Ref<MatrixX const> const& P, bool bParallelize) {
                     return self.NearestPrimitivesToPoints(P, bParallelize);
                 },
                 pyb::arg("P"),
-                pyb::arg("parallelize") = false)
+                pyb::arg("parallelize") = true)
             .def("update", &BvhType::Update)
             .def_property_readonly("bounding_volumes", [](BvhType const& self) {
                 return self.GetBoundingVolumes();

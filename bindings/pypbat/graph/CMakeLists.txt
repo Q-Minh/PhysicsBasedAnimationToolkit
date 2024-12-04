@@ -3,11 +3,11 @@ target_sources(PhysicsBasedAnimationToolkit_Python
     FILE_SET api
     FILES
     "Graph.h"
-    "Partitioning.h"
+    "Partition.h"
 )
 
 target_sources(PhysicsBasedAnimationToolkit_Python
     PRIVATE
     "Graph.cpp"
-    "Partitioning.cpp"
+    "Partition.cpp"
 )

@@ -15,7 +15,7 @@ std::vector<TIndex> ArgSort(auto n, FLess less)
 {
     std::vector<TIndex> inds(static_cast<std::size_t>(n));
     std::iota(inds.begin(), inds.end(), TIndex(0));
-    std::sort(inds.begin(), inds.end(), less);
+    std::stable_sort(inds.begin(), inds.end(), less);
     return inds;
 }
 

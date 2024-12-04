@@ -16,16 +16,10 @@ Integrator::Integrator(Data dataIn)
     : data(std::move(dataIn)),
       mTetrahedralBvh(data.x, data.T),
       mTriangleBvh(data.x, data.F),
-      mParticlesInContact(),
-      mTrianglesInContact(),
-      mTetsInContact(),
-      mSquaredDistancesToTriangles()
+      mParticlesInContact()
 {
     auto const nCollisionVertices = static_cast<std::size_t>(data.V.size());
     mParticlesInContact.reserve(nCollisionVertices);
-    mTrianglesInContact.reserve(nCollisionVertices);
-    mSquaredDistancesToTriangles.reserve(nCollisionVertices);
-    mTetsInContact.reserve(nCollisionVertices);
 }
 
 void Integrator::Step(Scalar dt, Index iterations, Index substeps)
@@ -53,14 +47,14 @@ void Integrator::Step(Scalar dt, Index iterations, Index substeps)
                data.V(i) == tet(3);
         // clang-format on
     };
-    mTetsInContact = mTetrahedralBvh.PrimitivesContainingPoints(
+    IndexVectorX tetsInContact = mTetrahedralBvh.PrimitivesContainingPoints(
         data.x(Eigen::placeholders::all, data.V),
         fCullPointTet,
         bParallelize);
     mParticlesInContact.clear();
-    for (auto i = 0ULL; i < mTetsInContact.size(); ++i)
+    for (auto i = 0; i < tetsInContact.size(); ++i)
     {
-        if (mTetsInContact[i] >= Index(0))
+        if (tetsInContact(i) >= Index(0))
         {
             mParticlesInContact.push_back(static_cast<Index>(i));
         }
@@ -71,7 +65,7 @@ void Integrator::Step(Scalar dt, Index iterations, Index substeps)
         auto iStl = static_cast<std::size_t>(i);
         return data.BV(data.V(mParticlesInContact[iStl])) == data.BV(tri(0));
     };
-    std::tie(mTrianglesInContact, mSquaredDistancesToTriangles) =
+    auto const [mTrianglesInContact, mSquaredDistancesToTriangles] =
         mTriangleBvh.NearestPrimitivesToPoints(
             data.x(Eigen::placeholders::all, data.V(mParticlesInContact)),
             fCullPointTriangle,
@@ -116,7 +110,7 @@ void Integrator::Step(Scalar dt, Index iterations, Index substeps)
                 auto cStl                    = static_cast<std::size_t>(c);
                 auto sv                      = mParticlesInContact[cStl];
                 auto v                       = data.V(mParticlesInContact[cStl]);
-                auto f                       = mTrianglesInContact[cStl];
+                auto f                       = mTrianglesInContact(c);
                 IndexVector<3> fv            = data.F.col(f);
                 Scalar minvv                 = data.minv(v);
                 mini::SVector<Scalar, 3> xvt = FromEigen(data.xt.col(v).head<3>());

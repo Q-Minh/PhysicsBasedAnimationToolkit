@@ -18,14 +18,14 @@ void BindRestriction(pybind11::module& m)
     pyb::class_<Restriction>(m, "Restriction")
         .def(pyb::init<>())
         .def(
-            "from",
+            "from_level",
             &Restriction::From,
             pyb::arg("lf"),
             "Associates this Restriction operator with fine level lf.\n"
             "Args:\n"
             "lf (int): Fine level index (-1 is root, i.e. finest)")
         .def(
-            "to",
+            "to_level",
             &Restriction::To,
             pyb::arg("lc"),
             "Associates this Restriction operator with coarse level lc.\n"

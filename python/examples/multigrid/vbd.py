@@ -5,25 +5,16 @@ import igl
 import polyscope as ps
 import polyscope.imgui as imgui
 import argparse
-import itertools
-
-
-def combine(V: list, C: list):
-    Vsizes = [Vi.shape[0] for Vi in V]
-    Csizes = [Ci.shape[0] for Ci in C]
-    Voffsets = list(itertools.accumulate(Vsizes))
-    C = [C[i] + Voffsets[i] - Vsizes[i] for i in range(len(C))]
-    C = np.vstack(C)
-    V = np.vstack(V)
-    return V, C
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         prog="VBD elastic simulation using linear FEM tetrahedra",
     )
-    parser.add_argument("-i", "--input", help="Path to input mesh", nargs="+",
-                        dest="inputs", required=True)
+    parser.add_argument("-i", "--input", help="Path to input mesh",
+                        dest="input", required=True)
+    parser.add_argument("-c", "--cage", help="Path to cage tetrahedral mesh", type=str,
+                        dest="cage", required=True)
     parser.add_argument("-o", "--output", help="Path to output",
                         dest="output", default=".")
     parser.add_argument("-m", "--mass-density", help="Mass density", type=float,
@@ -32,31 +23,27 @@ if __name__ == "__main__":
                         dest="Y", default=1e6)
     parser.add_argument("-n", "--poisson-ratio", help="Poisson's ratio", type=float,
                         dest="nu", default=0.45)
-    parser.add_argument("-t", "--translation", help="Distance in z axis between every input mesh as multiplier of input mesh extents", type=float,
-                        dest="translation", default=0.1)
     parser.add_argument("--percent-fixed", help="Percentage, in the fixed axis, of the scene's mesh to fix", type=float,
                         dest="percent_fixed", default=0.01)
     parser.add_argument("--fixed-axis", help="Axis 0 | 1 | 2 (x=0,y=1,z=2) in which to fix a certain percentage of the scene's mesh", type=int,
                         dest="fixed_axis", default=2)
     parser.add_argument("--fixed-end", help="min | max, whether to fix from the min or the max of the scene mesh's bounding box", type=str, default="min",
                         dest="fixed_end")
-    parser.add_argument("--use-gpu", help="Run GPU implementation of VBD", action="store_true",
-                        dest="gpu", default=False)
     args = parser.parse_args()
 
     # Construct FEM quantities for simulation
-    imeshes = [meshio.read(input) for input in args.inputs]
-    V, C = [imesh.points / (imesh.points.max() - imesh.points.min()) for imesh in imeshes], [
-        imesh.cells_dict["tetra"] for imesh in imeshes]
-    for i in range(len(V) - 1):
-        extent = V[i][:, -1].max() - V[i][:, -1].min()
-        offset = V[i][:, -1].max() - V[i+1][:, -1].min()
-        V[i+1][:, -1] += offset + extent*args.translation
-    V, C = combine(V, C)
+    imesh = meshio.read(args.input)
+    V, C = imesh.points.astype(
+        np.float64), imesh.cells_dict["tetra"].astype(np.int64)
+    cmesh = meshio.read(args.cage)
+    VC, CC = cmesh.points.astype(
+        np.float64), cmesh.cells_dict["tetra"].astype(np.int64)
+
     mesh = pbat.fem.Mesh(
-        V.T, C.T, element=pbat.fem.Element.Tetrahedron, order=1)
+        V.T, C.T, element=pbat.fem.Element.Tetrahedron)
     F = igl.boundary_facets(C)
     F[:, :2] = np.roll(F[:, :2], shift=1, axis=1)
+    cmesh = pbat.fem.Mesh(VC.T, CC.T, element=pbat.fem.Element.Tetrahedron)
 
     detJeM = pbat.fem.jacobian_determinants(mesh, quadrature_order=2)
     rho = args.rho
@@ -93,15 +80,15 @@ if __name__ == "__main__":
     vdbc = aabb.contained(mesh.X)
 
     # Setup VBD
-    Vcollision = np.unique(F)
-    VC = Vcollision
     ilocal = np.repeat(np.arange(4)[np.newaxis, :], C.shape[0], axis=0)
     GVT = pbat.sim.vbd.vertex_element_adjacency(V, C, data=ilocal)
-    Pptr, Padj, GC = pbat.sim.vbd.partitions(V, C, vdbc)
+    Pptr, Padj, GC = pbat.sim.vbd.partitions(
+        V, C  # , vdbc
+    )
     data = pbat.sim.vbd.Data().with_volume_mesh(
         V.T, C.T
     ).with_surface_mesh(
-        VC, F.T
+        np.unique(F), F.T
     ).with_acceleration(
         a
     ).with_mass(
@@ -112,30 +99,47 @@ if __name__ == "__main__":
         GVT.indptr, GVT.indices, GVT.data
     ).with_partitions(
         Pptr, Padj
-    ).with_dirichlet_vertices(
-        vdbc
+        # ).with_dirichlet_vertices(
+        #    vdbc
     ).with_initialization_strategy(
         pbat.sim.vbd.InitializationStrategy.KineticEnergyMinimum
     ).construct(validate=False)
     thread_block_size = 64
 
-    vbd = None
-    if args.gpu:
-        vbd = pbat.gpu.vbd.Integrator(data)
-        vbd.set_gpu_block_size(thread_block_size)
-    else:
-        vbd = pbat.sim.vbd.Integrator(data)
+    # Setup multiscale VBD
+    Transition = pbat.sim.vbd.Transition
+    Quadrature = pbat.sim.vbd.Quadrature
+    ibvh = pbat.geometry.bvh(V.T, C.T, cell=pbat.geometry.Cell.Tetrahedron)
+    cbvh = pbat.geometry.bvh(
+        VC.T, CC.T, cell=pbat.geometry.Cell.Tetrahedron)
+    cXg, cwg, ceg, csg, iXg, iwg, err = pbat.fem.fit_output_quad_to_input_quad(
+        mesh,
+        cmesh,
+        ibvh,
+        cbvh,
+        iorder=1,
+        oorder=2,
+        selection=pbat.fem.QuadraturePointSelection.FromOutputQuadrature,
+        fitting_strategy=pbat.fem.QuadratureFittingStrategy.Ignore,
+        singular_strategy=pbat.fem.QuadratureSingularityStrategy.Constant,
+        volerr=1e-3
+    )
+    hierarchy = pbat.sim.vbd.hierarchy(
+        data,
+        V=[VC], C=[CC],
+        QL=[Quadrature(cwg, cXg, ceg, csg)],
+        cycle=[Transition(-1, 0, riters=20), Transition(0, -1)],
+        schedule=[10, 10, 10],
+        rrhog=rho
+    )
 
-    # Setup visuals
-    initialization_strategies = [
-        pbat.sim.vbd.InitializationStrategy.Position,
-        pbat.sim.vbd.InitializationStrategy.Inertia,
-        pbat.sim.vbd.InitializationStrategy.KineticEnergyMinimum,
-        pbat.sim.vbd.InitializationStrategy.AdaptiveVbd,
-        pbat.sim.vbd.InitializationStrategy.AdaptivePbat
-    ]
-    initialization_strategy = initialization_strategies[2]
-    vbd.strategy = initialization_strategy
+    # vbd = None
+    # if args.gpu:
+    #     vbd = pbat.gpu.vbd.Integrator(data)
+    #     vbd.set_gpu_block_size(thread_block_size)
+    # else:
+    #     vbd = pbat.sim.vbd.Integrator(data)
+    vbd = pbat.sim.vbd.MultiScaleIntegrator()
 
     ps.set_verbosity(0)
     ps.set_up_dir("z_up")
@@ -148,12 +152,8 @@ if __name__ == "__main__":
     vm.add_scalar_quantity("Coloring", GC, defined_on="vertices", cmap="jet")
     pc = ps.register_point_cloud("Dirichlet", V[vdbc, :])
     dt = 0.01
-    iterations = 20
     substeps = 1
-    rho_chebyshev = 1.
     RdetH = 1e-10
-    kD = 0.
-    use_parallel_reduction = False
     animate = False
     export = False
     t = 0
@@ -161,59 +161,26 @@ if __name__ == "__main__":
     profiler = pbat.profiling.Profiler()
 
     def callback():
-        global dt, iterations, substeps
-        global rho_chebyshev, initialization_strategy, RdetH, kD
-        global use_parallel_reduction, thread_block_size
+        global dt, substeps
+        global RdetH
+        global thread_block_size
         global animate, export, t
         global profiler
 
         changed, dt = imgui.InputFloat("dt", dt)
-        changed, iterations = imgui.InputInt("Iterations", iterations)
         changed, substeps = imgui.InputInt("Substeps", substeps)
-        changed, rho_chebyshev = imgui.InputFloat(
-            "Chebyshev rho", rho_chebyshev)
-        changed, kD = imgui.InputFloat(
-            "Damping", kD, format="%.8f")
-        changed, RdetH = imgui.InputFloat(
-            "Residual det(H)", RdetH, format="%.15f")
-        changed, thread_block_size = imgui.InputInt(
-            "Thread block size", thread_block_size)
-        changed, use_parallel_reduction = imgui.Checkbox(
-            "2-level parallelism", use_parallel_reduction)
-        changed = imgui.BeginCombo(
-            "Initialization strategy", str(initialization_strategy).split('.')[-1])
-        if changed:
-            for i in range(len(initialization_strategies)):
-                _, selected = imgui.Selectable(
-                    str(initialization_strategies[i]).split('.')[-1], initialization_strategy == initialization_strategies[i])
-                if selected:
-                    initialization_strategy = initialization_strategies[i]
-            imgui.EndCombo()
-        vbd.strategy = initialization_strategy
-        vbd.kD = kD
-        vbd.detH_residual = RdetH
         changed, animate = imgui.Checkbox("Animate", animate)
         changed, export = imgui.Checkbox("Export", export)
         step = imgui.Button("Step")
         reset = imgui.Button("Reset")
 
-        if reset:
-            vbd.x = mesh.X
-            vbd.v = np.zeros(mesh.X.shape)
-            vm.update_vertex_positions(mesh.X.T)
-            t = 0
-
-        if args.gpu:
-            vbd.set_gpu_block_size(thread_block_size)
-            vbd.use_parallel_reduction(use_parallel_reduction)
-
         if animate or step:
             profiler.begin_frame("Physics")
-            vbd.step(dt, iterations, substeps, rho_chebyshev)
+            vbd.step(dt, substeps, hierarchy)
             profiler.end_frame("Physics")
 
             # Update visuals
-            V = vbd.x.T
+            V = hierarchy.root.x.T
             if export:
                 ps.screenshot(f"{args.output}/{t}.png")
                 # omesh = meshio.Mesh(V, {"tetra": mesh.E.T})
@@ -223,10 +190,7 @@ if __name__ == "__main__":
             t = t+1
 
         imgui.Text(f"Frame={t}")
-        if args.gpu:
-            imgui.Text("Using GPU VBD integrator")
-        else:
-            imgui.Text("Using CPU VBD integrator")
+        imgui.Text("Using CPU Multi-Scale VBD integrator")
 
     ps.set_user_callback(callback)
     ps.show()

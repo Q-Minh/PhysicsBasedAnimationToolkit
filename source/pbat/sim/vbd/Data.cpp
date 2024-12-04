@@ -60,12 +60,10 @@ Data& Data::WithQuadrature(
 
 Data& Data::WithVertexAdjacency(
     Eigen::Ref<IndexVectorX const> const& GVGpIn,
-    Eigen::Ref<IndexVectorX const> const& GVGgIn,
     Eigen::Ref<IndexVectorX const> const& GVGeIn,
     Eigen::Ref<IndexVectorX const> const& GVGilocalIn)
 {
     this->GVGp      = GVGpIn;
-    this->GVGg      = GVGgIn;
     this->GVGe      = GVGeIn;
     this->GVGilocal = GVGilocalIn;
     return *this;
@@ -189,15 +187,14 @@ Data& Data::Construct(bool bValidate)
         // clang-format off
         bool const bAdjacencyStructuresValid = 
             GVGp.size() == (x.cols() + 1) and 
-            GVGg.size() == GVGp(Eigen::placeholders::last) and 
-            GVGg.size() == GVGe.size() and 
-            GVGg.size() == GVGilocal.size();
+            GVGe.size() == GVGp(Eigen::placeholders::last) and 
+            GVGe.size() == GVGilocal.size();
         // clang-format on
         if (not bAdjacencyStructuresValid)
         {
             std::string const what = fmt::format(
                 "Expected vertex-element adjacency with prefix GVGp of size={}, "
-                "and same sizes for GVGg, GVGe and GVGilocal",
+                "and same sizes for GVGe and GVGilocal",
                 x.cols() + 1);
             throw std::invalid_argument(what);
         }

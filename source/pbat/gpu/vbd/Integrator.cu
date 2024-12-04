@@ -107,6 +107,11 @@ void Integrator::SetBlockSize(GpuIndex blockSize)
     mImpl->SetBlockSize(blockSize);
 }
 
+PBAT_API void Integrator::UseParallelReduction(bool bUseParallelReduction)
+{
+    mImpl->UseParallelReduction(bUseParallelReduction);
+}
+
 GpuMatrixX Integrator::GetPositions() const
 {
     return common::ToEigen(mImpl->X.x);

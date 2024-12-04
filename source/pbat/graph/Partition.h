@@ -3,18 +3,53 @@
 
 #include "pbat/Aliases.h"
 
-#include <utility>
-#include <vector>
-
 namespace pbat {
 namespace graph {
 
 #ifdef PBAT_USE_METIS
-std::vector<Index> Partition(
-    std::vector<Index> const& ptr,
-    std::vector<Index> const& adj,
-    std::vector<Index> const& wadj,
-    std::size_t nPartitions);
+
+struct PartitioningOptions
+{
+    enum class EObjective {
+        Default,
+        MinEdgeCut,
+        MinCommunicationVolume,
+    } eObjective{EObjective::Default};
+    enum class ECoarseningStrategy {
+        Default,
+        RandomMatching,
+        SortedHeavyEdgeMatching
+    } eCoarseningStrategy{ECoarseningStrategy::Default};
+    enum class EInitialPartitioningStrategy {
+        Default,
+        GreedyBisectionGrowing,
+        RandomBisectionAndRefinement,
+        EdgeCutSeparator,
+        GreedyNodeBisectionGrowing
+    } eInitialPartitioningStrategy{EInitialPartitioningStrategy::Default};
+    enum class ERefinementStrategy {
+        Default,
+        FiducciaMattheyses,
+        GreedyCutAndVolumeRefinement,
+        TwoSidedNodeFiducciaMattheyses,
+        OneSidedNodeFiducciaMattheyses
+    } eRefinementStrategy{ERefinementStrategy::Default};
+    int nPartitioningTrials{1};
+    int nSeparators{1};
+    int nRefinementIters{10};
+    int rngSeed{0};
+    bool bMinimizeSupernodalGraphDegree{false};
+    bool bPerform2HopMatching{true};
+    bool bEnforceContiguousPartitions{false};
+    bool bIdentifyConnectedComponents{false};
+};
+
+IndexVectorX Partition(
+    IndexVectorX const& ptr,
+    IndexVectorX const& adj,
+    IndexVectorX const& wadj,
+    std::size_t nPartitions,
+    PartitioningOptions opts = PartitioningOptions{});
 #endif PBAT_USE_METIS
 
 } // namespace graph

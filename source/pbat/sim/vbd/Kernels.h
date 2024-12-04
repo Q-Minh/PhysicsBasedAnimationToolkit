@@ -234,7 +234,7 @@ template <
     mini::CMatrix TMatrixGI,
     mini::CMatrix TMatrixHI,
     class ScalarType = typename TMatrixXCG::ScalarType>
-void AccumulateSingularEnergy(
+Scalar AccumulateSingularEnergy(
     IndexType ilocal,
     ScalarType wg,
     TPsi const& Psi,
@@ -249,9 +249,10 @@ void AccumulateSingularEnergy(
     SMatrix<Scalar, 3, 3> F = xcg * GNcg;
     SVector<Scalar, 9> gF;
     SMatrix<Scalar, 9, 9> HF;
-    Psi.gradAndHessian(F, mug, lambdag, gF, HF);
+    Scalar E = Psi.evalWithGradAndHessian(F, mug, lambdag, gF, HF);
     kernels::AccumulateElasticGradient(ilocal, wg, GNcg, gF, gi);
     kernels::AccumulateElasticHessian(ilocal, wg, GNcg, HF, Hi);
+    return E;
 }
 
 template <
