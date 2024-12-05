@@ -18,6 +18,11 @@ class Stack
     PBAT_HOST_DEVICE bool IsEmpty() const { return size == 0; }
     PBAT_HOST_DEVICE bool IsFull() const { return size == kCapacity; }
     PBAT_HOST_DEVICE void Clear() { size = 0; }
+    PBAT_HOST_DEVICE T& operator[](auto i) { return stack[i]; }
+    PBAT_HOST_DEVICE T const& operator[](auto i) const { return stack[i]; }
+
+    PBAT_HOST_DEVICE T* begin() { return stack; }
+    PBAT_HOST_DEVICE T* end() { return stack + size; }
 
   private:
     T stack[kCapacity];
