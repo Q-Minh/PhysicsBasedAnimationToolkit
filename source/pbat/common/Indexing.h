@@ -2,23 +2,22 @@
 #define PBAT_COMMON_INDEXING_H
 
 #include "Concepts.h"
+#include "pbat/Aliases.h"
 
 #include <concepts>
 #include <numeric>
-#include <pbat/Aliases.h>
 #include <ranges>
-#include <vector>
 
 namespace pbat {
 namespace common {
 
-template <CContiguousIndexRange R>
-std::vector<Index> CumSum(R&& sizes)
+template <CIndexRange R, std::integral TIndex = std::ranges::range_value_t<R>>
+Eigen::Vector<TIndex, Eigen::Dynamic> CumSum(R&& sizes)
 {
-    namespace rng = std::ranges;
-    std::vector<Index> cs{};
-    cs.reserve(rng::size(sizes) + 1);
-    auto bi    = std::back_inserter(cs);
+    namespace rng         = std::ranges;
+    using IndexVectorType = Eigen::Vector<TIndex, Eigen::Dynamic>;
+    IndexVectorType cs(rng::size(sizes) + 1);
+    auto bi    = cs.data();
     *bi++      = Index{0};
     auto begin = rng::begin(sizes);
     auto end   = rng::end(sizes);
@@ -27,11 +26,13 @@ std::vector<Index> CumSum(R&& sizes)
 }
 
 template <std::integral TIndex>
-std::vector<TIndex> Counts(auto begin, auto end, auto ncounts)
+Eigen::Vector<TIndex, Eigen::Dynamic> Counts(auto begin, auto end, TIndex ncounts)
 {
-    std::vector<TIndex> counts(static_cast<std::size_t>(ncounts), TIndex(0));
+    using IndexVectorType = Eigen::Vector<TIndex, Eigen::Dynamic>;
+    IndexVectorType counts(ncounts);
+    counts.setZero();
     for (auto it = begin; it != end; ++it)
-        ++counts[static_cast<std::size_t>(*it)];
+        ++counts(*it);
     return counts;
 }
 

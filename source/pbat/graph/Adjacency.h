@@ -20,10 +20,10 @@ MapToAdjacency(Eigen::DenseBase<TDerivedP> const& p, TIndex n = TIndex(-1))
     using IndexVectorType = Eigen::Vector<TIndex, Eigen::Dynamic>;
     if (n < 0)
         n = p.maxCoeff() + TIndex(1);
-    auto s   = common::Counts<TIndex>(p.begin(), p.end(), n);
+    auto s   = common::Counts(p.begin(), p.end(), n);
     auto ptr = common::CumSum(s);
-    auto adj = common::ArgSort<TIndex>(p.size(), [&](auto i, auto j) { return p(i) < p(j); });
-    return std::make_tuple(common::ToEigen(ptr), common::ToEigen(adj));
+    auto adj = common::ArgSort(p.size(), [&](auto i, auto j) { return p(i) < p(j); });
+    return std::make_tuple(ptr, adj);
 }
 
 template <

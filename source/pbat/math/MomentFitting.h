@@ -199,15 +199,13 @@ std::pair<VectorX, VectorX> TransferQuadrature(
     using common::Counts;
     using common::CumSum;
     using common::ToEigen;
-    auto nSimplices =
+    Index nSimplices =
         std::max(*std::max_element(S1.begin(), S1.end()), *std::max_element(S2.begin(), S2.end())) +
         1;
-    std::vector<Index> S1P = CumSum(Counts<Index>(S1.begin(), S1.end(), nSimplices));
-    std::vector<Index> S2P = CumSum(Counts<Index>(S2.begin(), S2.end(), nSimplices));
-    IndexVectorX S1N =
-        ToEigen(ArgSort<Index>(S1.size(), [&](auto si, auto sj) { return S1(si) < S1(sj); }));
-    IndexVectorX S2N =
-        ToEigen(ArgSort<Index>(S2.size(), [&](auto si, auto sj) { return S2(si) < S2(sj); }));
+    IndexVectorX S1P = CumSum(Counts(S1.begin(), S1.end(), nSimplices));
+    IndexVectorX S2P = CumSum(Counts(S2.begin(), S2.end(), nSimplices));
+    IndexVectorX S1N = ArgSort<Index>(S1.size(), [&](auto si, auto sj) { return S1(si) < S1(sj); });
+    IndexVectorX S2N = ArgSort<Index>(S2.size(), [&](auto si, auto sj) { return S2(si) < S2(sj); });
     // Find weights wg1 that fit the given quadrature rule Xi2, wi2 on simplices S2
     auto fSolveWeights = [maxIterations, precision, bEvaluateError](
                              MatrixX const& Xg1,
@@ -260,15 +258,14 @@ std::pair<VectorX, VectorX> TransferQuadrature(
     VectorX error = VectorX::Zero(nSimplices);
     VectorX wi1   = VectorX::Zero(Xi1.cols());
     tbb::parallel_for(Index(0), nSimplices, [&](Index s) {
-        auto sStl    = static_cast<std::size_t>(s);
-        auto S1begin = S1P[sStl];
-        auto S1end   = S1P[sStl + 1];
+        auto S1begin = S1P(s);
+        auto S1end   = S1P(s + 1);
         if (S1end > S1begin)
         {
             auto s1inds     = S1N(Eigen::seq(S1begin, S1end - 1));
             MatrixX Xg1     = Xi1(Eigen::placeholders::all, s1inds);
-            auto S2begin    = S2P[sStl];
-            auto S2end      = S2P[sStl + 1];
+            auto S2begin    = S2P(s);
+            auto S2end      = S2P(s + 1);
             auto s2inds     = S2N(Eigen::seq(S2begin, S2end - 1));
             MatrixX Xg2     = Xi2(Eigen::placeholders::all, s2inds);
             VectorX wg2     = wi2(s2inds);
@@ -316,15 +313,13 @@ ReferenceMomentFittingSystems(
     using common::Counts;
     using common::CumSum;
     using common::ToEigen;
-    auto nSimplices =
+    Index nSimplices =
         std::max(*std::max_element(S1.begin(), S1.end()), *std::max_element(S2.begin(), S2.end())) +
         1;
-    IndexVectorX S1P = ToEigen(CumSum(Counts<Index>(S1.begin(), S1.end(), nSimplices)));
-    IndexVectorX S2P = ToEigen(CumSum(Counts<Index>(S2.begin(), S2.end(), nSimplices)));
-    IndexVectorX S1N =
-        ToEigen(ArgSort<Index>(S1.size(), [&](auto si, auto sj) { return S1(si) < S1(sj); }));
-    IndexVectorX S2N =
-        ToEigen(ArgSort<Index>(S2.size(), [&](auto si, auto sj) { return S2(si) < S2(sj); }));
+    IndexVectorX S1P = CumSum(Counts<Index>(S1.begin(), S1.end(), nSimplices));
+    IndexVectorX S2P = CumSum(Counts<Index>(S2.begin(), S2.end(), nSimplices));
+    IndexVectorX S1N = ArgSort<Index>(S1.size(), [&](auto si, auto sj) { return S1(si) < S1(sj); });
+    IndexVectorX S2N = ArgSort<Index>(S2.size(), [&](auto si, auto sj) { return S2(si) < S2(sj); });
     // Assemble moment fitting matrices and their rhs
     auto fPolyRows = [](MatrixX const& Xg) {
         if (Xg.rows() == 1)
@@ -369,41 +364,39 @@ ReferenceMomentFittingSystems(
 
     // Count actual number of systems and their dimensions
     Index nSystems{0};
-    for (auto s = 0; s < nSimplices; ++s)
+    for (Index s = 0; s < nSimplices; ++s)
         if (S1P(s + 1) > S1P(s))
             ++nSystems;
-    std::vector<Index> nQuads(static_cast<std::size_t>(nSystems), Index(0));
-    for (auto s = 0, sy = 0; s < nSimplices; ++s)
+    IndexVectorX nQuads(nSystems);
+    nQuads.setZero();
+    for (Index s = 0, sy = 0; s < nSimplices; ++s)
     {
         if (S1P(s + 1) > S1P(s))
         {
-            auto syStl    = static_cast<std::size_t>(sy);
-            nQuads[syStl] = S1P(s + 1) - S1P(s);
-            ++sy;
+            nQuads(sy++) = S1P(s + 1) - S1P(s);
         }
     }
-    IndexVectorX const prefix = ToEigen(CumSum(nQuads));
+    IndexVectorX const prefix = CumSum(nQuads);
 
     MatrixX P(nrows, prefix(Eigen::placeholders::last));
     MatrixX B(nrows, nSystems);
     B.setZero();
-    for (auto s = 0, sy = 0; s < nSimplices; ++s)
+    for (Index s = 0, sy = 0; s < nSimplices; ++s)
     {
-        auto syStl   = static_cast<std::size_t>(sy);
         auto S1begin = S1P(s);
         auto S1end   = S1P(s + 1);
         if (S1end > S1begin)
         {
-            auto s1inds                                  = S1N(Eigen::seq(S1begin, S1end - 1));
-            MatrixX Xg1                                  = X1(Eigen::placeholders::all, s1inds);
-            auto S2begin                                 = S2P(s);
-            auto S2end                                   = S2P(s + 1);
-            auto s2inds                                  = S2N(Eigen::seq(S2begin, S2end - 1));
-            MatrixX Xg2                                  = X2(Eigen::placeholders::all, s2inds);
-            VectorX wg2                                  = w2(s2inds);
-            auto [Ps, bs]                                = fAssembleSystem(Xg1, Xg2, wg2);
-            P.block(0, prefix(sy), nrows, nQuads[syStl]) = Ps;
-            B.col(sy)                                    = bs;
+            auto s1inds                               = S1N(Eigen::seq(S1begin, S1end - 1));
+            MatrixX Xg1                               = X1(Eigen::placeholders::all, s1inds);
+            auto S2begin                              = S2P(s);
+            auto S2end                                = S2P(s + 1);
+            auto s2inds                               = S2N(Eigen::seq(S2begin, S2end - 1));
+            MatrixX Xg2                               = X2(Eigen::placeholders::all, s2inds);
+            VectorX wg2                               = w2(s2inds);
+            auto [Ps, bs]                             = fAssembleSystem(Xg1, Xg2, wg2);
+            P.block(0, prefix(sy), nrows, nQuads(sy)) = Ps;
+            B.col(sy)                                 = bs;
             ++sy;
         }
     }
@@ -431,15 +424,15 @@ CSRMatrix BlockDiagonalReferenceMomentFittingSystem(
     auto const nrows      = nblockrows * nblocks;
     auto const ncols      = P(Eigen::placeholders::last);
     CSRMatrix GM(nrows, ncols);
-    std::vector<Index> reserves(static_cast<std::size_t>(nrows));
+    IndexVectorX reserves(nrows);
     for (auto b = 0; b < nblocks; ++b)
     {
         auto begin            = P(b);
         auto end              = P(b + 1);
         auto const nblockcols = end - begin;
-        auto const offset     = static_cast<std::size_t>(b * nblockrows);
+        auto const offset     = b * nblockrows;
         for (auto i = 0; i < nblockrows; ++i)
-            reserves[offset + i] = nblockcols;
+            reserves(offset + i) = nblockcols;
     }
     GM.reserve(reserves);
     for (auto b = 0; b < nblocks; ++b)

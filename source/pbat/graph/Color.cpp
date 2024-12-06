@@ -3,8 +3,8 @@
 #include "Mesh.h"
 #include "pbat/common/Eigen.h"
 
+#include <array>
 #include <doctest/doctest.h>
-#include <span>
 
 TEST_CASE("[graph] Color")
 {
@@ -22,15 +22,29 @@ TEST_CASE("[graph] Color")
             3, 0, 6, 5, 3,
             5, 6, 0, 3, 6;
     // clang-format on
-    auto G = graph::MeshPrimalGraph(E, V.cols());
+    auto G   = graph::MeshPrimalGraph(E, V.cols());
+    auto ptr = Eigen::Map<IndexVectorX>(G.outerIndexPtr(), G.outerSize() + 1);
+    auto adj = Eigen::Map<IndexVectorX>(G.innerIndexPtr(), G.nonZeros());
+    std::array<graph::EGreedyColorOrderingStrategy, 3> eOrderingStrategies{
+        graph::EGreedyColorOrderingStrategy::Natural,
+        graph::EGreedyColorOrderingStrategy::SmallestDegree,
+        graph::EGreedyColorOrderingStrategy::LargestDegree};
+
+    std::array<graph::EGreedyColorSelectionStrategy, 2> eSelectionStrategies{
+        graph::EGreedyColorSelectionStrategy::LeastUsed,
+        graph::EGreedyColorSelectionStrategy::FirstAvailable};
     // Act
-    auto ptr       = Eigen::Map<IndexVectorX>(G.outerIndexPtr(), G.outerSize() + 1);
-    auto adj       = Eigen::Map<IndexVectorX>(G.innerIndexPtr(), G.nonZeros());
-    IndexVectorX C = graph::GreedyColor(ptr, adj);
-    // Assert
-    CHECK_EQ(C.size(), V.cols());
-    for (auto v = 0; v < V.cols(); ++v)
-        for (auto k = ptr(v); k < ptr(v + Index(1)); ++k)
-            if (v != adj(k))
-                CHECK_NE(C(v), C(adj(k)));
+    for (auto eOrdering : eOrderingStrategies)
+    {
+        for (auto eSelection : eSelectionStrategies)
+        {
+            IndexVectorX C = graph::GreedyColor(ptr, adj, eOrdering, eSelection);
+            // Assert
+            CHECK_EQ(C.size(), V.cols());
+            for (auto v = 0; v < V.cols(); ++v)
+                for (auto k = ptr(v); k < ptr(v + Index(1)); ++k)
+                    if (v != adj(k))
+                        CHECK_NE(C(v), C(adj(k)));
+        }
+    }
 }

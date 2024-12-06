@@ -65,6 +65,12 @@ void BindData(pybind11::module& m)
             pyb::arg("input_sorted") = true,
             "Sets Dirichlet constrained vertices.")
         .def(
+            "with_vertex_coloring_strategy",
+            &Data::WithVertexColoringStrategy,
+            pyb::arg("ordering"),
+            pyb::arg("selection"),
+            "Sets the vertex coloring strategy to use.")
+        .def(
             "with_initialization_strategy",
             &Data::WithInitializationStrategy,
             pyb::arg("strategy"))
@@ -98,6 +104,8 @@ void BindData(pybind11::module& m)
         .def_readwrite("GVGe", &Data::GVGe)
         .def_readwrite("GVGilocal", &Data::GVGilocal)
         .def_readwrite("dbc", &Data::dbc)
+        .def_readwrite("vertex_coloring_ordering", &Data::eOrdering)
+        .def_readwrite("vertex_coloring_selection", &Data::eSelection)
         .def_readwrite("colors", &Data::colors)
         .def_readwrite("Pptr", &Data::Pptr)
         .def_readwrite("Padj", &Data::Padj)

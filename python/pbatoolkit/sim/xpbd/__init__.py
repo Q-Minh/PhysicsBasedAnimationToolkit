@@ -6,7 +6,12 @@ import io
 import numpy as np
 import scipy as sp
 
-from ...graph import mesh_dual_graph, map_to_adjacency, greedy_color
+from ...graph import mesh_dual_graph
+from ...graph import map_to_adjacency
+from ...graph import greedy_color
+from ...graph import GreedyColorOrderingStrategy
+from ...graph import GreedyColorSelectionStrategy
+
 
 __module = sys.modules[__name__]
 _strio = io.StringIO()
@@ -21,7 +26,11 @@ for _name, _attr in inspect.getmembers(_xpbd):
         setattr(__module, _name, _attr)
 
 
-def partition_clustered_mesh_constraint_graph(X, E):
+def partition_clustered_mesh_constraint_graph(
+        X: np.ndarray,
+        E: np.ndarray,
+        ordering: GreedyColorOrderingStrategy = GreedyColorOrderingStrategy.LargestDegree,
+        selection: GreedyColorSelectionStrategy = GreedyColorSelectionStrategy.LeastUsed):
     """Computes the clustered constraint graph's partitioning from 
     Ton-That, Quoc-Minh, Paul G. Kry, and Sheldon Andrews. 
     "Parallel block Neo-Hookean XPBD using graph clustering." 
@@ -30,6 +39,10 @@ def partition_clustered_mesh_constraint_graph(X, E):
     Args:
         X (np.ndarray): |#dims|x|#verts| array of mesh vertex positions
         E (np.ndarray): |#verts-per-element|x|#elements| array of mesh elements
+        ordering (_pbat.graph.GreedyColorOrderingStrategy): Vertex coloring ordering strategy. 
+        Defaults to GreedyColorOrderingStrategy.LargestDegree.
+        selection (_pbat.graph.GreedyColorSelectionStrategy): Vertex coloring selection strategy. 
+        Defaults to GreedyColorSelectionStrategy.LeastUsed.
 
     Returns:
         (np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray): 
@@ -75,13 +88,18 @@ def partition_clustered_mesh_constraint_graph(X, E):
     SGM = sp.sparse.coo_array(
         (np.ones(SGu.shape[0]), (SGu, SGv))).asformat('csr')
     # Color the supernodal graph
-    SGC = greedy_color(SGM.indptr, SGM.indices)
+    SGC = greedy_color(SGM.indptr, SGM.indices,
+                       ordering=ordering, selection=selection)
     # Construct supernode partitions
     SGptr, SGadj = map_to_adjacency(SGC)
     return SGptr, SGadj, Cptr, Cadj, clustering, SGC
 
 
-def partition_mesh_constraints(X, E):
+def partition_mesh_constraints(
+        X: np.ndarray,
+        E: np.ndarray,
+        ordering: GreedyColorOrderingStrategy = GreedyColorOrderingStrategy.LargestDegree,
+        selection: GreedyColorSelectionStrategy = GreedyColorSelectionStrategy.LeastUsed):
     """Computes partition of mesh (X,E)'s constraint graph, 
     assuming constraints are associated with mesh elements, 
     and degrees of freedom are attached to mesh vertices.
@@ -97,6 +115,7 @@ def partition_mesh_constraints(X, E):
             and GC is the color map on mesh elements.
     """
     GGT = mesh_dual_graph(E, X.shape[1])
-    GC = greedy_color(GGT.indptr, GGT.indices)
+    GC = greedy_color(GGT.indptr, GGT.indices,
+                      ordering=ordering, selection=selection)
     ptr, adj = map_to_adjacency(GC)
     return ptr, adj, GC

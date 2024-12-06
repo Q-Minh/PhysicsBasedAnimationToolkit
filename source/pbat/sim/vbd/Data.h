@@ -6,6 +6,7 @@
 #include "pbat/Aliases.h"
 #include "pbat/fem/Mesh.h"
 #include "pbat/fem/Tetrahedron.h"
+#include "pbat/graph/Color.h"
 
 namespace pbat {
 namespace sim {
@@ -64,6 +65,15 @@ PBAT_API struct Data
      * @return
      */
     Data& WithDirichletConstrainedVertices(IndexVectorX const& dbc, bool bDbcSorted = true);
+    /**
+     * @brief
+     * @param eOrdering
+     * @param eSelection
+     * @return
+     */
+    Data& WithVertexColoringStrategy(
+        graph::EGreedyColorOrderingStrategy eOrdering,
+        graph::EGreedyColorSelectionStrategy eSelection);
     /**
      * @brief
      * @param strategy
@@ -126,7 +136,13 @@ PBAT_API struct Data
 
     IndexVectorX dbc; ///< Dirichlet constrained vertices (sorted)
 
-    IndexVectorX colors; ///< |#vertices| map of vertex colors
+    graph::EGreedyColorOrderingStrategy eOrdering{
+        graph::EGreedyColorOrderingStrategy::LargestDegree}; ///< Vertex graph coloring ordering
+                                                             ///< strategy
+    graph::EGreedyColorSelectionStrategy eSelection{
+        graph::EGreedyColorSelectionStrategy::LeastUsed}; ///< Vertex graph coloring selection
+                                                          ///< strategy
+    IndexVectorX colors;                                  ///< |#vertices| map of vertex colors
     IndexVectorX Pptr; ///< |#partitions+1| partition pointers, s.t. the range [Pptr[p], Pptr[p+1])
                        ///< indexes into Padj vertices from partition p
     IndexVectorX Padj; ///< Partition vertices

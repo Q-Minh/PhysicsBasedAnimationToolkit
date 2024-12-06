@@ -95,8 +95,10 @@ if __name__ == "__main__":
     for d in range(3):
         muC[F[:, d]] += (1/6)*dblA
     muC = args.muC*muC[VC]
+    vc_ordering = pbat.graph.GreedyColorOrderingStrategy.LargestDegree
+    vc_selection = pbat.graph.GreedyColorSelectionStrategy.LeastUsed
     Pptr, Padj, GC = pbat.sim.xpbd.partition_mesh_constraints(
-        mesh.X, mesh.E)
+        mesh.X, mesh.E, ordering=vc_ordering, selection=vc_selection)
     data = pbat.sim.xpbd.Data(
     ).with_volume_mesh(
         mesh.X, mesh.E
@@ -147,7 +149,7 @@ if __name__ == "__main__":
     has_partitioning = getattr(pbat.graph, "partition") is not None
     if has_partitioning and args.cluster:
         SGptr, SGadj, Cptr, Cadj, clustering, SGC = pbat.sim.xpbd.partition_clustered_mesh_constraint_graph(
-            mesh.X, mesh.E)
+            mesh.X, mesh.E, ordering=vc_ordering, selection=vc_selection)
         data.with_cluster_partitions(SGptr, SGadj, Cptr, Cadj)
         ecolors = SGC[clustering]
         max_color = GC.max()

@@ -2,6 +2,7 @@
 #define PBAT_GRAPH_COLOR_H
 
 #include "pbat/Aliases.h"
+#include "pbat/common/ArgSort.h"
 #include "pbat/common/Stack.h"
 
 #include <algorithm>
@@ -11,21 +12,49 @@
 namespace pbat {
 namespace graph {
 
+enum class EGreedyColorSelectionStrategy { LeastUsed, FirstAvailable };
+enum class EGreedyColorOrderingStrategy { Natural, SmallestDegree, LargestDegree };
+
 template <
     class TDerivedPtr,
     class TDerivedAdj,
     int NC               = 128,
     std::integral TIndex = typename TDerivedPtr::Scalar>
-Eigen::Vector<TIndex, Eigen::Dynamic>
-GreedyColor(Eigen::DenseBase<TDerivedPtr> const& ptr, Eigen::DenseBase<TDerivedAdj> const& adj)
+Eigen::Vector<TIndex, Eigen::Dynamic> GreedyColor(
+    Eigen::DenseBase<TDerivedPtr> const& ptr,
+    Eigen::DenseBase<TDerivedAdj> const& adj,
+    EGreedyColorOrderingStrategy eOrderingStrategy   = EGreedyColorOrderingStrategy::Natural,
+    EGreedyColorSelectionStrategy eSelectionStrategy = EGreedyColorSelectionStrategy::LeastUsed)
 {
     common::Stack<TIndex, NC> palette{};
     common::Stack<bool, NC> usable{};
-    auto const n = ptr.size() - 1;
-    using Colors = Eigen::Vector<TIndex, Eigen::Dynamic>;
+    TIndex const n        = ptr.size() - 1;
+    using IndexVectorType = Eigen::Vector<TIndex, Eigen::Dynamic>;
+    using Colors          = IndexVectorType;
     Colors C(n);
     C.setConstant(TIndex(-1));
-    for (auto u = 0; u < n; ++u)
+    // Compute vertex visiting order
+    IndexVectorType ordering(n);
+    std::ranges::copy(std::views::iota(TIndex(0), n), ordering.data());
+    switch (eOrderingStrategy)
+    {
+        case EGreedyColorOrderingStrategy::Natural: break;
+        case EGreedyColorOrderingStrategy::SmallestDegree:
+            ordering = common::ArgSort(n, [&](auto i, auto j) {
+                auto di = ptr(i + 1) - ptr(i);
+                auto dj = ptr(j + 1) - ptr(j);
+                return di < dj;
+            });
+        case EGreedyColorOrderingStrategy::LargestDegree:
+            ordering = common::ArgSort(n, [&](auto i, auto j) {
+                auto di = ptr(i + 1) - ptr(i);
+                auto dj = ptr(j + 1) - ptr(j);
+                return di > dj;
+            });
+        default: break;
+    }
+    // Color vertices in user-defined order
+    for (TIndex u : ordering)
     {
         // Reset usable color flags
         std::fill(usable.begin(), usable.end(), true);
@@ -57,7 +86,19 @@ GreedyColor(Eigen::DenseBase<TDerivedPtr> const& ptr, Eigen::DenseBase<TDerivedA
             // Find, in palette, the usable color with the smallest size, ignoring unusable colors.
             auto colors = std::views::iota(0, palette.Size());
             auto c      = *std::ranges::min_element(colors, [&](auto ci, auto cj) {
-                return (usable[ci] and usable[cj]) ? palette[ci] < palette[cj] : usable[ci];
+                bool bLess{true};
+                switch (eSelectionStrategy)
+                {
+                    case EGreedyColorSelectionStrategy::LeastUsed:
+                        bLess =
+                            (usable[ci] and usable[cj]) ? palette[ci] < palette[cj] : usable[ci];
+                        break;
+                    case EGreedyColorSelectionStrategy::FirstAvailable:
+                        bLess = (usable[ci] and usable[cj]) ? ci < cj : usable[ci];
+                        break;
+                    default: break;
+                }
+                return bLess;
             });
             C(u)        = c;
             ++palette[c];

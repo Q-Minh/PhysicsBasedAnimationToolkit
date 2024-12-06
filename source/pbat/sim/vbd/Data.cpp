@@ -4,7 +4,6 @@
 #include "pbat/fem/MassMatrix.h"
 #include "pbat/fem/ShapeFunctions.h"
 #include "pbat/graph/Adjacency.h"
-#include "pbat/graph/Color.h"
 #include "pbat/graph/Mesh.h"
 #include "pbat/physics/HyperElasticity.h"
 
@@ -66,6 +65,15 @@ Data& Data::WithDirichletConstrainedVertices(IndexVectorX const& dbcIn, bool bDb
     {
         std::sort(this->dbc.begin(), this->dbc.end());
     }
+    return *this;
+}
+
+Data& Data::WithVertexColoringStrategy(
+    graph::EGreedyColorOrderingStrategy eOrderingIn,
+    graph::EGreedyColorSelectionStrategy eSelectionIn)
+{
+    eOrdering  = eOrderingIn;
+    eSelection = eSelectionIn;
     return *this;
 }
 
@@ -140,7 +148,7 @@ Data& Data::Construct(bool bValidate)
     // Parallel partitions
     auto GVV                = graph::MeshPrimalGraph(mesh.E, mesh.X.cols());
     auto [GVVp, GVVv, GVVw] = graph::MatrixToAdjacency(GVV);
-    colors                  = graph::GreedyColor(GVVp, GVVv);
+    colors                  = graph::GreedyColor(GVVp, GVVv, eOrdering, eSelection);
     std::tie(Pptr, Padj)    = graph::MapToAdjacency(colors);
     // Apply Dirichlet boundary conditions.
     // This is done by removing any velocity and external accelerations (i.e. external forces) on
