@@ -32,7 +32,7 @@ namespace std {
 template <>
 struct hash<pair<pbat::Index, pbat::Index>>
 {
-    std::size_t operator()(pair<pbat::Index, pbat::Index> const& inds) const
+    [[maybe_unused]] std::size_t operator()(pair<pbat::Index, pbat::Index> const& inds) const
     {
         return pbat::common::HashCombine(inds.first, inds.second);
     }
@@ -41,7 +41,7 @@ struct hash<pair<pbat::Index, pbat::Index>>
 template <>
 struct hash<tuple<pbat::Index, pbat::Index>>
 {
-    std::size_t operator()(tuple<pbat::Index, pbat::Index> const& inds) const
+    [[maybe_unused]] std::size_t operator()(tuple<pbat::Index, pbat::Index> const& inds) const
     {
         return pbat::common::HashCombine(get<0>(inds), get<1>(inds));
     }
@@ -50,7 +50,8 @@ struct hash<tuple<pbat::Index, pbat::Index>>
 template <>
 struct hash<tuple<pbat::Index, pbat::Index, pbat::Index>>
 {
-    std::size_t operator()(tuple<pbat::Index, pbat::Index, pbat::Index> const& inds) const
+    [[maybe_unused]] std::size_t
+    operator()(tuple<pbat::Index, pbat::Index, pbat::Index> const& inds) const
     {
         return pbat::common::HashCombine(get<0>(inds), get<1>(inds), get<2>(inds));
     }
@@ -59,7 +60,7 @@ struct hash<tuple<pbat::Index, pbat::Index, pbat::Index>>
 template <>
 struct hash<pbat::IndexVector<2>>
 {
-    std::size_t operator()(pbat::IndexVector<2> const& inds) const
+    [[maybe_unused]] std::size_t operator()(pbat::IndexVector<2> const& inds) const
     {
         return pbat::common::HashCombine(inds(0), inds(1));
     }
@@ -68,7 +69,7 @@ struct hash<pbat::IndexVector<2>>
 template <>
 struct hash<pbat::IndexVector<3>>
 {
-    std::size_t operator()(pbat::IndexVector<3> const& inds) const
+    [[maybe_unused]] std::size_t operator()(pbat::IndexVector<3> const& inds) const
     {
         return pbat::common::HashCombine(inds(0), inds(1), inds(2));
     }
