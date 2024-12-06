@@ -22,7 +22,7 @@ IntegratorImpl::IntegratorImpl(Data const& data)
     : X(data.x.cast<GpuScalar>()),
       V(data.V.cast<GpuIndex>().transpose()),
       F(data.F.cast<GpuIndex>()),
-      T(data.T.cast<GpuIndex>()),
+      T(data.mesh.E.cast<GpuIndex>()),
       mPositionsAtT(data.xt.cols()),
       mInertialTargetPositions(data.xtilde.cols()),
       mChebyshevPositionsM2(data.xchebm2.cols()),
@@ -383,62 +383,14 @@ TEST_CASE("[gpu][vbd] IntegratorImpl")
          4, 4, 5, 5, 7, 7, 6, 6, 1, 3, 6, 6;
     // clang-format on
     V.reshaped().setLinSpaced(0, static_cast<Index>(P.cols() - 1));
-    // Parallel graph information
-    using SparseMatrixType = Eigen::SparseMatrix<Index, Eigen::ColMajor, Index>;
-    using TripletType      = Eigen::Triplet<Index, Index>;
-    SparseMatrixType G(T.cols(), P.cols());
-    std::vector<TripletType> Gei{};
-    for (auto e = 0; e < T.cols(); ++e)
-    {
-        for (auto ilocal = 0; ilocal < T.rows(); ++ilocal)
-        {
-            auto i = T(ilocal, e);
-            Gei.push_back(TripletType{e, i, ilocal});
-        }
-    }
-    G.setFromTriplets(Gei.begin(), Gei.end());
-    assert(G.isCompressed());
-    std::span<Index> vertexTetrahedronPrefix{
-        G.outerIndexPtr(),
-        static_cast<std::size_t>(G.outerSize() + 1)};
-    std::span<Index> vertexTetrahedronNeighbours{
-        G.innerIndexPtr(),
-        static_cast<std::size_t>(G.nonZeros())};
-    std::span<Index> vertexTetrahedronLocalVertexIndices{
-        G.valuePtr(),
-        static_cast<std::size_t>(G.nonZeros())};
-    IndexVectorX Pptr(6);
-    Pptr << 0, 4, 5, 6, 7, 8;
-    IndexVectorX Padj(8);
-    Padj << 2, 7, 4, 1, 0, 5, 6, 3;
-    // Material parameters
-    using pbat::gpu::vbd::tests::LinearFemMesh;
-    LinearFemMesh mesh(P.cast<Scalar>(), T.cast<Index>());
-    VectorX wg        = mesh.QuadratureWeights();
-    MatrixX GP        = mesh.ShapeFunctionGradients();
-    auto constexpr Y  = Scalar{1e6};
-    auto constexpr nu = Scalar{0.45};
-    MatrixX lame      = mesh.LameCoefficients(Y, nu);
     // Problem parameters
-    MatrixX aext(3, P.cols());
-    aext.colwise()            = Vector<3>{Scalar{0}, Scalar{0}, Scalar{-9.81}};
     auto constexpr dt         = GpuScalar{1e-2};
     auto constexpr substeps   = 1;
     auto constexpr iterations = 10;
 
     // Act
     using pbat::gpu::vbd::IntegratorImpl;
-    IntegratorImpl vbd{sim::vbd::Data()
-                           .WithVolumeMesh(P, T)
-                           .WithAcceleration(aext)
-                           .WithPartitions(Pptr, Padj)
-                           .WithQuadrature(wg, GP, lame)
-                           .WithVertexAdjacency(
-                               ToEigen(vertexTetrahedronPrefix),
-                               ToEigen(vertexTetrahedronNeighbours),
-                               ToEigen(vertexTetrahedronLocalVertexIndices))
-                           .Construct()};
-
+    IntegratorImpl vbd{sim::vbd::Data().WithVolumeMesh(P, T).WithSurfaceMesh(V, F).Construct()};
     vbd.Step(dt, iterations, substeps);
 
     // Assert

@@ -73,6 +73,12 @@ struct MassMatrix
      */
     CSCMatrix ToMatrix() const;
 
+    /**
+     * @brief
+     * @return
+     */
+    VectorX ToLumpedMasses() const;
+
     Index InputDimensions() const { return dims * mesh.X.cols(); }
     Index OutputDimensions() const { return InputDimensions(); }
 
@@ -195,6 +201,32 @@ inline CSCMatrix MassMatrix<TMesh, QuadratureOrder>::ToMatrix() const
     CSCMatrix Mmat(OutputDimensions(), InputDimensions());
     Mmat.setFromTriplets(triplets.begin(), triplets.end());
     return Mmat;
+}
+
+template <CMesh TMesh, int QuadratureOrder>
+inline VectorX MassMatrix<TMesh, QuadratureOrder>::ToLumpedMasses() const
+{
+    VectorX m(InputDimensions());
+    m.setZero();
+    auto const numberOfElements = mesh.E.cols();
+    for (auto e = 0; e < numberOfElements; ++e)
+    {
+        auto const nodes = mesh.E.col(e);
+        auto const me =
+            Me.block<ElementType::kNodes, ElementType::kNodes>(0, e * ElementType::kNodes);
+        for (auto j = 0; j < me.cols(); ++j)
+        {
+            for (auto i = 0; i < me.rows(); ++i)
+            {
+                for (auto d = 0; d < dims; ++d)
+                {
+                    auto const ni = dims * nodes(i) + d;
+                    m(ni) += me(i, j);
+                }
+            }
+        }
+    }
+    return m;
 }
 
 template <CMesh TMesh, int QuadratureOrder>

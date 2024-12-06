@@ -83,7 +83,7 @@ void Restriction::Apply(Hierarchy& H)
     bool const bIsFineLevelRoot = lf < 0;
     auto lfStl                  = static_cast<std::size_t>(lf);
     auto lcStl                  = static_cast<std::size_t>(lc);
-    IndexMatrixX const& Ef      = bIsFineLevelRoot ? H.root.T : H.levels[lfStl].C.E;
+    IndexMatrixX const& Ef      = bIsFineLevelRoot ? H.root.mesh.E : H.levels[lfStl].C.E;
     MatrixX const& xf           = bIsFineLevelRoot ? H.root.x : H.levels[lfStl].C.x;
     // Precompute target (i.e. fine level) shapes
     SetTargetShape(Ef, xf);

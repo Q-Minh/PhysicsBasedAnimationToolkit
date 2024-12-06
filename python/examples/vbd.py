@@ -58,20 +58,8 @@ if __name__ == "__main__":
     F = igl.boundary_facets(C)
     F[:, :2] = np.roll(F[:, :2], shift=1, axis=1)
 
-    detJeM = pbat.fem.jacobian_determinants(mesh, quadrature_order=2)
-    rho = args.rho
-    M, detJeM = pbat.fem.mass_matrix(mesh, rho=rho, dims=1, lump=True)
-    m = np.array(M.diagonal()).squeeze()
-
-    # Construct load vector from gravity field
-    detJeU = pbat.fem.jacobian_determinants(mesh, quadrature_order=1)
-    GNeU = pbat.fem.shape_function_gradients(mesh, quadrature_order=1)
-    g = np.zeros(mesh.dims)
-    g[-1] = -9.81
-    f, detJeF = pbat.fem.load_vector(mesh, rho*g, detJe=detJeU, flatten=False)
-    a = f / m
-
     # Compute material (Lame) constants
+    rhoe = np.full(mesh.E.shape[1], args.rho)
     Y = np.full(mesh.E.shape[1], args.Y)
     nu = np.full(mesh.E.shape[1], args.nu)
     mue = Y / (2*(1+nu))
@@ -93,25 +81,12 @@ if __name__ == "__main__":
     vdbc = aabb.contained(mesh.X)
 
     # Setup VBD
-    Vcollision = np.unique(F)
-    VC = Vcollision
-    ilocal = np.repeat(np.arange(4)[np.newaxis, :], C.shape[0], axis=0)
-    GVT = pbat.sim.vbd.vertex_element_adjacency(V, C, data=ilocal)
-    Pptr, Padj, GC = pbat.sim.vbd.partitions(V, C, vdbc)
     data = pbat.sim.vbd.Data().with_volume_mesh(
         V.T, C.T
     ).with_surface_mesh(
-        VC, F.T
-    ).with_acceleration(
-        a
-    ).with_mass(
-        m
-    ).with_quadrature(
-        detJeU[0, :] / 6, GNeU, np.vstack((mue, lambdae))
-    ).with_vertex_adjacency(
-        GVT.indptr, GVT.indices, GVT.data
-    ).with_partitions(
-        Pptr, Padj
+        np.unique(F), F.T
+    ).with_material(
+        rhoe, mue, lambdae
     ).with_dirichlet_vertices(
         vdbc
     ).with_initialization_strategy(
@@ -145,7 +120,7 @@ if __name__ == "__main__":
     ps.set_program_name("Vertex Block Descent")
     ps.init()
     vm = ps.register_volume_mesh("Simulation mesh", V, C)
-    vm.add_scalar_quantity("Coloring", GC, defined_on="vertices", cmap="jet")
+    vm.add_scalar_quantity("Coloring", data.colors, defined_on="vertices", cmap="jet")
     pc = ps.register_point_cloud("Dirichlet", V[vdbc, :])
     dt = 0.01
     iterations = 20

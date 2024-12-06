@@ -102,49 +102,7 @@ TEST_CASE("[sim][vbd] Integrator")
          4, 4, 5, 5, 7, 7, 6, 6, 1, 3, 6, 6;
     // clang-format on
     V.reshaped().setLinSpaced(0, static_cast<Index>(P.cols() - 1));
-    // Parallel graph information
-    using SparseMatrixType = Eigen::SparseMatrix<Index, Eigen::ColMajor, Index>;
-    using TripletType      = Eigen::Triplet<Index, Index>;
-    SparseMatrixType G(T.cols(), P.cols());
-    std::vector<TripletType> Gei{};
-    for (auto e = 0; e < T.cols(); ++e)
-    {
-        for (auto ilocal = 0; ilocal < T.rows(); ++ilocal)
-        {
-            auto i = T(ilocal, e);
-            Gei.push_back(TripletType{e, i, ilocal});
-        }
-    }
-    G.setFromTriplets(Gei.begin(), Gei.end());
-    assert(G.isCompressed());
-    std::span<Index> vertexTetrahedronPrefix{
-        G.outerIndexPtr(),
-        static_cast<std::size_t>(G.outerSize() + 1)};
-    std::span<Index> vertexTetrahedronNeighbours{
-        G.innerIndexPtr(),
-        static_cast<std::size_t>(G.nonZeros())};
-    std::span<Index> vertexTetrahedronLocalVertexIndices{
-        G.valuePtr(),
-        static_cast<std::size_t>(G.nonZeros())};
-    IndexVectorX Pptr(6);
-    Pptr << 0, 4, 5, 6, 7, 8;
-    IndexVectorX Padj(8);
-    Padj << 2, 7, 4, 1, 0, 5, 6, 3;
-    // Material parameters
-    using Element = fem::Tetrahedron<1>;
-    using Mesh    = fem::Mesh<Element, 3>;
-    Mesh mesh{P, T};
-    MatrixX const GP        = fem::ShapeFunctionGradients<1>(mesh);
-    VectorX wg              = fem::InnerProductWeights<1>(mesh).reshaped();
-    auto constexpr Y        = Scalar{1e6};
-    auto constexpr nu       = Scalar{0.45};
-    auto const [mu, lambda] = physics::LameCoefficients(Y, nu);
-    MatrixX lame(2, T.cols());
-    lame.row(0).setConstant(mu);
-    lame.row(1).setConstant(lambda);
     // Problem parameters
-    MatrixX aext(3, P.cols());
-    aext.colwise()            = Vector<3>{Scalar{0}, Scalar{0}, Scalar{-9.81}};
     auto constexpr dt         = Scalar{1e-2};
     auto constexpr substeps   = 1;
     auto constexpr iterations = 10;
@@ -152,16 +110,7 @@ TEST_CASE("[sim][vbd] Integrator")
     // Act
     using pbat::common::ToEigen;
     using pbat::sim::vbd::Integrator;
-    Integrator vbd{sim::vbd::Data()
-                       .WithVolumeMesh(P, T)
-                       .WithAcceleration(aext)
-                       .WithPartitions(Pptr, Padj)
-                       .WithQuadrature(wg, GP, lame)
-                       .WithVertexAdjacency(
-                           ToEigen(vertexTetrahedronPrefix),
-                           ToEigen(vertexTetrahedronNeighbours),
-                           ToEigen(vertexTetrahedronLocalVertexIndices))
-                       .Construct()};
+    Integrator vbd{sim::vbd::Data().WithVolumeMesh(P, T).WithSurfaceMesh(V, T).Construct()};
     vbd.Step(dt, iterations, substeps);
 
     // Assert

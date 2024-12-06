@@ -18,7 +18,7 @@ void MultiScaleIntegrator::Step(Scalar dt, Index substeps, Hierarchy& H)
         // Store previous positions
         H.root.xt = H.root.x;
         // Compute inertial target positions
-        H.root.xtilde = H.root.xt + sdt * H.root.vt + sdt2 * H.root.aext;
+        H.root.xtilde = H.root.xt + sdt * H.root.v + sdt2 * H.root.aext;
         // Propagate inertial target positions to all levels
         for (auto l = 0ULL; l < H.levels.size(); ++l)
         {
@@ -28,7 +28,7 @@ void MultiScaleIntegrator::Step(Scalar dt, Index substeps, Hierarchy& H)
             auto nQuadPts           = L.E.wg.size();
             tbb::parallel_for(Index(0), nQuadPts, [&](Index g) {
                 auto e       = erg(g);
-                auto inds    = H.root.T.col(e).head<4>();
+                auto inds    = H.root.mesh.E.col(e).head<4>();
                 auto N       = Nrg.col(g).head<4>();
                 auto xtildee = H.root.xtilde(Eigen::placeholders::all, inds).block<3, 4>(0, 0);
                 L.E.xtildeg.col(g) = xtildee * N;

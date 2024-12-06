@@ -169,7 +169,7 @@ void Smoother::Apply(Scalar dt, Scalar rho, Data& data)
                     auto e                          = data.GVGe[n];
                     auto lamee                      = data.lame.col(e);
                     auto wg                         = data.wg[e];
-                    auto Te                         = data.T.col(e);
+                    auto Te                         = data.mesh.E.col(e);
                     mini::SMatrix<Scalar, 4, 3> GPe = FromEigen(data.GP.block<4, 3>(0, e * 3));
                     mini::SMatrix<Scalar, 3, 4> xe =
                         FromEigen(data.x(Eigen::placeholders::all, Te).block<3, 4>(0, 0));

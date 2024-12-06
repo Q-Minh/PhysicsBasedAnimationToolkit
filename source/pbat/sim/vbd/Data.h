@@ -4,6 +4,8 @@
 #include "Enums.h"
 #include "PhysicsBasedAnimationToolkitExport.h"
 #include "pbat/Aliases.h"
+#include "pbat/fem/Mesh.h"
+#include "pbat/fem/Tetrahedron.h"
 
 namespace pbat {
 namespace sim {
@@ -12,6 +14,9 @@ namespace vbd {
 PBAT_API struct Data
 {
   public:
+    using Element = pbat::fem::Tetrahedron<1>;
+    using Mesh    = pbat::fem::Mesh<Element, 3>;
+
     /**
      * @brief
      * @param X 3x|#vertices| vertex positions
@@ -43,44 +48,15 @@ PBAT_API struct Data
     Data& WithAcceleration(Eigen::Ref<MatrixX const> const& aext);
     /**
      * @brief
-     * @param m 3x|#verts| vertex masses
+     * @param rhoe |#elems| mass densities
+     * @param mue |#elems| 1st Lame coefficients
+     * @param lambdae |#elems| 2nd Lame coefficients
      * @return
      */
-    Data& WithMass(Eigen::Ref<VectorX const> const& m);
-    /**
-     * @brief
-     * @param wg |#elems| quadrature weights
-     * @param GP |#elem.nodes|x|#dims*#elems| shape function gradients at elems
-     * @param lame 2x|#elems| Lame coefficients
-     * @return
-     */
-    Data& WithQuadrature(
-        Eigen::Ref<VectorX const> const& wg,
-        Eigen::Ref<MatrixX const> const& GP,
-        Eigen::Ref<MatrixX const> const& lame);
-    /**
-     * @brief
-     * @param GVGp |#verts+1| prefixes into GVGg
-     * @param GVGe |# of vertex-elems edges| element indices s.t. GVGe[k] for GVGp[i] <= k <
-     * GVGp[i+1] gives the element index of adjacent to vertex i for the neighbouring elems
-     * @param GVGilocal |# of vertex-elems edges| local vertex indices s.t. GVGilocal[k] for
-     * GVGp[i] <= k < GVGp[i+1] gives the local index of vertex i for the neighbouring elems
-     * @return
-     */
-    Data& WithVertexAdjacency(
-        Eigen::Ref<IndexVectorX const> const& GVGp,
-        Eigen::Ref<IndexVectorX const> const& GVGe,
-        Eigen::Ref<IndexVectorX const> const& GVGilocal);
-    /**
-     * @brief
-     * @param Pptr |#partitions+1| partition pointers, s.t. the range [Pptr[p], Pptr[p+1]) indexes
-     * into Padj vertices from partition p
-     * @param Padj Partition vertices
-     * @return
-     */
-    Data& WithPartitions(
-        Eigen::Ref<IndexVectorX const> const& Pptr,
-        Eigen::Ref<IndexVectorX const> const& Padj);
+    Data& WithMaterial(
+        Eigen::Ref<VectorX const> const& rhoe,
+        Eigen::Ref<VectorX const> const& mue,
+        Eigen::Ref<VectorX const> const& lambdae);
     /**
      * @brief
      * @param dbc Dirichlet constrained vertices
@@ -120,9 +96,9 @@ PBAT_API struct Data
     Data& Construct(bool bValidate = true);
 
   public:
+    Mesh mesh;      ///< Linear tetrahedral FEM mesh
     IndexVectorX V; ///< Collision vertices
     IndexMatrixX F; ///< 3x|#collision triangles| collision triangles (on the boundary of T)
-    IndexMatrixX T; ///< 4x|#elements| tetrahedra
 
     MatrixX x;    ///< 3x|#verts| vertex positions
     MatrixX v;    ///< 3x|#verts| vertex velocities
@@ -137,6 +113,7 @@ PBAT_API struct Data
 
     VectorX wg;   ///< |#elems| quadrature weights
     MatrixX GP;   ///< |#elem.nodes|x|#dims*#elems| shape function gradients at elems
+    VectorX rhoe; ///< |#elems| mass densities
     MatrixX lame; ///< 2x|#elems| Lame coefficients
 
     IndexVectorX GVGp;      ///< |#verts+1| prefixes into GVGg
@@ -149,6 +126,7 @@ PBAT_API struct Data
 
     IndexVectorX dbc; ///< Dirichlet constrained vertices (sorted)
 
+    IndexVectorX colors; ///< |#vertices| map of vertex colors
     IndexVectorX Pptr; ///< |#partitions+1| partition pointers, s.t. the range [Pptr[p], Pptr[p+1])
                        ///< indexes into Padj vertices from partition p
     IndexVectorX Padj; ///< Partition vertices

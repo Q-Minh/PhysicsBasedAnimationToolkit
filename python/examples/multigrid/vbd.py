@@ -35,9 +35,13 @@ if __name__ == "__main__":
     imesh = meshio.read(args.input)
     V, C = imesh.points.astype(
         np.float64), imesh.cells_dict["tetra"].astype(np.int64)
+    center = V.mean(axis=0)
+    scale = V.max() - V.min()
+    V = (V - center) / scale
     cmesh = meshio.read(args.cage)
     VC, CC = cmesh.points.astype(
         np.float64), cmesh.cells_dict["tetra"].astype(np.int64)
+    VC = (VC - center) / scale
 
     mesh = pbat.fem.Mesh(
         V.T, C.T, element=pbat.fem.Element.Tetrahedron)
@@ -83,7 +87,7 @@ if __name__ == "__main__":
     ilocal = np.repeat(np.arange(4)[np.newaxis, :], C.shape[0], axis=0)
     GVT = pbat.sim.vbd.vertex_element_adjacency(V, C, data=ilocal)
     Pptr, Padj, GC = pbat.sim.vbd.partitions(
-        V, C  # , vdbc
+        V, C, vdbc
     )
     data = pbat.sim.vbd.Data().with_volume_mesh(
         V.T, C.T
@@ -99,11 +103,11 @@ if __name__ == "__main__":
         GVT.indptr, GVT.indices, GVT.data
     ).with_partitions(
         Pptr, Padj
-        # ).with_dirichlet_vertices(
-        #    vdbc
+    ).with_dirichlet_vertices(
+        vdbc
     ).with_initialization_strategy(
         pbat.sim.vbd.InitializationStrategy.KineticEnergyMinimum
-    ).construct(validate=False)
+    ).construct()
     thread_block_size = 64
 
     # Setup multiscale VBD
@@ -128,10 +132,19 @@ if __name__ == "__main__":
         data,
         V=[VC], C=[CC],
         QL=[Quadrature(cwg, cXg, ceg, csg)],
-        cycle=[Transition(-1, 0, riters=20), Transition(0, -1)],
-        schedule=[10, 10, 10],
+        cycle=[Transition(-1, 0, riters=50), Transition(0, -1)],
+        schedule=[20, 10, 20],
         rrhog=rho
     )
+    
+    # hierarchy = pbat.sim.vbd.hierarchy(
+    #     data,
+    #     V=[], C=[],
+    #     QL=[],
+    #     cycle=[],
+    #     schedule=[20],
+    #     rrhog=rho
+    # )
 
     # vbd = None
     # if args.gpu:

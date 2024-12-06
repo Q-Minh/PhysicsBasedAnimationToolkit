@@ -96,7 +96,7 @@ if __name__ == "__main__":
         muC[F[:, d]] += (1/6)*dblA
     muC = args.muC*muC[VC]
     Pptr, Padj, GC = pbat.sim.xpbd.partition_mesh_constraints(
-        mesh.X.T, mesh.E.T)
+        mesh.X, mesh.E)
     data = pbat.sim.xpbd.Data(
     ).with_volume_mesh(
         mesh.X, mesh.E
@@ -147,7 +147,7 @@ if __name__ == "__main__":
     has_partitioning = getattr(pbat.graph, "partition") is not None
     if has_partitioning and args.cluster:
         SGptr, SGadj, Cptr, Cadj, clustering, SGC = pbat.sim.xpbd.partition_clustered_mesh_constraint_graph(
-            mesh.X.T, mesh.E.T)
+            mesh.X, mesh.E)
         data.with_cluster_partitions(SGptr, SGadj, Cptr, Cadj)
         ecolors = SGC[clustering]
         max_color = GC.max()

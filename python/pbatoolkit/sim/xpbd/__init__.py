@@ -4,10 +4,9 @@ import inspect
 import contextlib
 import io
 import numpy as np
-import itertools
 import scipy as sp
 
-from ...graph import mesh_dual_graph, map_to_adjacency, colors
+from ...graph import mesh_dual_graph, map_to_adjacency, greedy_color
 
 __module = sys.modules[__name__]
 _strio = io.StringIO()
@@ -22,14 +21,15 @@ for _name, _attr in inspect.getmembers(_xpbd):
         setattr(__module, _name, _attr)
 
 
-def partition_clustered_mesh_constraint_graph(V, C):
+def partition_clustered_mesh_constraint_graph(X, E):
     """Computes the clustered constraint graph's partitioning from 
     Ton-That, Quoc-Minh, Paul G. Kry, and Sheldon Andrews. 
     "Parallel block Neo-Hookean XPBD using graph clustering." 
     Computers & Graphics 110 (2023): 1-10.
 
     Args:
-        C (np.ndarray): Tetrahedral mesh elements
+        X (np.ndarray): |#dims|x|#verts| array of mesh vertex positions
+        E (np.ndarray): |#verts-per-element|x|#elements| array of mesh elements
 
     Returns:
         (np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray): 
@@ -38,7 +38,7 @@ def partition_clustered_mesh_constraint_graph(V, C):
         clusters to constraints, clustering[c] yields the cluster which constraint c 
         belongs to, and SGC is the coloring of the clusters.
     """
-    GGT = mesh_dual_graph(V, C)
+    GGT = mesh_dual_graph(E, X.shape[1])
     # NOTE:
     # The sparse matrix representation of GGT counts the number of shared vertices
     # n(ei,ej) for each adjacent element pair (ei, ej). We define a weight function
@@ -52,8 +52,8 @@ def partition_clustered_mesh_constraint_graph(V, C):
     cluster_size = 5
     # Cluster our constraint graph via (edge-)cut-minimizing graph partitioning into
     # a supernodal graph
-    from ...graph import partition, PartitioningCoarseningStrategy, InitialPartitioningStrategy, PartitioningRefinementStrategy
-    n_clusters = int(C.shape[0] / cluster_size)
+    from ...graph import partition, PartitioningCoarseningStrategy
+    n_clusters = int(E.shape[1] / cluster_size)
     clustering = partition(
         GGT.indptr, GGT.indices, weights, n_clusters,
         # Default | RandomMatching | SortedHeavyEdgeMatching
@@ -74,22 +74,21 @@ def partition_clustered_mesh_constraint_graph(V, C):
     # Construct the supernodal graph
     SGM = sp.sparse.coo_array(
         (np.ones(SGu.shape[0]), (SGu, SGv))).asformat('csr')
-    import networkx as nx
     # Color the supernodal graph
-    SGC = colors(SGM, strategy="random_sequential")
+    SGC = greedy_color(SGM.indptr, SGM.indices)
     # Construct supernode partitions
     SGptr, SGadj = map_to_adjacency(SGC)
     return SGptr, SGadj, Cptr, Cadj, clustering, SGC
 
 
-def partition_mesh_constraints(V, C):
-    """Computes partition of mesh (V,C)'s constraint graph, 
+def partition_mesh_constraints(X, E):
+    """Computes partition of mesh (X,E)'s constraint graph, 
     assuming constraints are associated with mesh elements, 
     and degrees of freedom are attached to mesh vertices.
 
     Args:
-        V (np.ndarray): |#verts|x|#dims| array of mesh vertex positions
-        C (np.ndarray): |#elements|x|#verts-per-element| array of mesh elements
+        X (np.ndarray): |#dims|x|#verts| array of mesh vertex positions
+        E (np.ndarray): |#verts-per-element|x|#elements| array of mesh elements
 
     Returns:
         (np.ndarray, np.ndarray, np.ndarray): 
@@ -97,7 +96,7 @@ def partition_mesh_constraints(V, C):
             mapping partitions to constraints in compressed sparse format, 
             and GC is the color map on mesh elements.
     """
-    GGT = mesh_dual_graph(V, C)
-    GC = colors(GGT, strategy="random_sequential")
+    GGT = mesh_dual_graph(E, X.shape[1])
+    GC = greedy_color(GGT.indptr, GGT.indices)
     ptr, adj = map_to_adjacency(GC)
     return ptr, adj, GC
