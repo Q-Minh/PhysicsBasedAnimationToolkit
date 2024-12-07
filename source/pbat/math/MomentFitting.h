@@ -171,6 +171,7 @@ Vector<TDerivedXg1::ColsAtCompileTime> TransferQuadrature(
  * @param Xi2 |#dims|x|#old quad.pts.| array of quadrature point positions defined in reference
  * simplex space
  * @param wi2 |#old quad.pts.|x1 array of quadrature weights
+ * @param nSimplices
  * @param bEvaluateError Whether to compute the integration error on the new quadrature rule
  * @param maxIterations Maximum number of non-negative least-squares active set solver
  * @param precision Convergence threshold
@@ -190,6 +191,7 @@ std::pair<VectorX, VectorX> TransferQuadrature(
     Eigen::DenseBase<TDerivedS2> const& S2,
     Eigen::MatrixBase<TDerivedXi2> const& Xi2,
     Eigen::DenseBase<TDerivedWg2> const& wi2,
+    Index nSimplices    = -1,
     bool bEvaluateError = false,
     Index maxIterations = 10,
     Scalar precision    = std::numeric_limits<Scalar>::epsilon())
@@ -199,18 +201,19 @@ std::pair<VectorX, VectorX> TransferQuadrature(
     using common::Counts;
     using common::CumSum;
     using common::ToEigen;
-    Index nSimplices =
-        std::max(*std::max_element(S1.begin(), S1.end()), *std::max_element(S2.begin(), S2.end())) +
-        1;
+    if (nSimplices < 0)
+        nSimplices = std::max(
+                         *std::max_element(S1.begin(), S1.end()),
+                         *std::max_element(S2.begin(), S2.end())) +
+                     1;
     IndexVectorX S1P = CumSum(Counts(S1.begin(), S1.end(), nSimplices));
     IndexVectorX S2P = CumSum(Counts(S2.begin(), S2.end(), nSimplices));
     IndexVectorX S1N = ArgSort<Index>(S1.size(), [&](auto si, auto sj) { return S1(si) < S1(sj); });
     IndexVectorX S2N = ArgSort<Index>(S2.size(), [&](auto si, auto sj) { return S2(si) < S2(sj); });
     // Find weights wg1 that fit the given quadrature rule Xi2, wi2 on simplices S2
-    auto fSolveWeights = [maxIterations, precision, bEvaluateError](
-                             MatrixX const& Xg1,
-                             MatrixX const& Xg2,
-                             VectorX const& wg2) {
+    auto fSolveWeights = [maxIterations,
+                          precision,
+                          bEvaluateError](auto const& Xg1, auto const& Xg2, auto const& wg2) {
         if (Xg1.rows() == 1)
         {
             OrthonormalPolynomialBasis<1, Order> P{};
@@ -254,7 +257,7 @@ std::pair<VectorX, VectorX> TransferQuadrature(
             "Expected quadrature points in reference simplex space of dimensions (i.e. rows) 1,2 "
             "or 3.");
     };
-
+    // Solve moment fitting on each simplex
     VectorX error = VectorX::Zero(nSimplices);
     VectorX wi1   = VectorX::Zero(Xi1.cols());
     tbb::parallel_for(Index(0), nSimplices, [&](Index s) {
@@ -306,16 +309,19 @@ ReferenceMomentFittingSystems(
     Eigen::MatrixBase<TDerivedX1> const& X1,
     Eigen::DenseBase<TDerivedS2> const& S2,
     Eigen::MatrixBase<TDerivedX2> const& X2,
-    Eigen::DenseBase<TDerivedW2> const& w2)
+    Eigen::DenseBase<TDerivedW2> const& w2,
+    Index nSimplices = Index(-1))
 {
     // Compute adjacency graph from simplices s to their quadrature points Xi
     using common::ArgSort;
     using common::Counts;
     using common::CumSum;
     using common::ToEigen;
-    Index nSimplices =
-        std::max(*std::max_element(S1.begin(), S1.end()), *std::max_element(S2.begin(), S2.end())) +
-        1;
+    if (nSimplices < 0)
+        nSimplices = std::max(
+                         *std::max_element(S1.begin(), S1.end()),
+                         *std::max_element(S2.begin(), S2.end())) +
+                     1;
     IndexVectorX S1P = CumSum(Counts<Index>(S1.begin(), S1.end(), nSimplices));
     IndexVectorX S2P = CumSum(Counts<Index>(S2.begin(), S2.end(), nSimplices));
     IndexVectorX S1N = ArgSort<Index>(S1.size(), [&](auto si, auto sj) { return S1(si) < S1(sj); });
@@ -332,9 +338,8 @@ ReferenceMomentFittingSystems(
             "Expected quadrature points in reference simplex space of dimensions (i.e. rows) 1,2 "
             "or 3.");
     };
-    auto fAssembleSystem = [](MatrixX const& Xg1,
-                              MatrixX const& Xg2,
-                              VectorX const& wg2) -> std::pair<MatrixX, VectorX> {
+    auto fAssembleSystem =
+        [](auto const& Xg1, auto const& Xg2, auto const& wg2) -> std::pair<MatrixX, VectorX> {
         if (Xg1.rows() == 1)
         {
             OrthonormalPolynomialBasis<1, Order> P{};

@@ -2,6 +2,7 @@
 
 #include <pbat/geometry/MeshBoundary.h>
 #include <pybind11/eigen.h>
+#include <pybind11/stl.h>
 
 namespace pbat {
 namespace py {
@@ -21,7 +22,10 @@ void BindMeshBoundary(pybind11::module& m)
         "Args:\n"
         "C (np.ndarray): |#simplex vertices|x|#simplices| array of simplices. Only triangles "
         "(#simplex vertices=3) and tetrahedra (#simplex vertices=4) are supported.\n"
-        "n (int): Number of vertices");
+        "n (int): Number of vertices\n"
+        "Returns:\n"
+        "(np.ndarray, np.ndarray): (V,F) where V is a |#boundary vertices| array of vertex indices "
+        "and F is a |#dims|x|#boundary facets| array of boundary facets");
 }
 
 } // namespace geometry

@@ -26,3 +26,5 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     "Restriction.cpp"
     "Smoother.cpp"
 )
+
+add_subdirectory(multigrid)

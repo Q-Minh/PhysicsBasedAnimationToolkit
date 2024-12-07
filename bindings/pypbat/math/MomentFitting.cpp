@@ -19,6 +19,7 @@ void BindMomentFitting(pybind11::module& m)
            Eigen::Ref<IndexVectorX const> const& S2,
            Eigen::Ref<MatrixX const> const& X2,
            Eigen::Ref<VectorX const> const& w2,
+           Index nSimplices,
            Index order,
            bool bEvaluateError,
            Index maxIterations,
@@ -27,8 +28,16 @@ void BindMomentFitting(pybind11::module& m)
             common::ForRange<1, 5>([&]<auto Order>() {
                 if (order == Order)
                 {
-                    std::tie(w1, err) = pbat::math::TransferQuadrature<
-                        Order>(S1, X1, S2, X2, w2, bEvaluateError, maxIterations, precision);
+                    std::tie(w1, err) = pbat::math::TransferQuadrature<Order>(
+                        S1,
+                        X1,
+                        S2,
+                        X2,
+                        w2,
+                        nSimplices,
+                        bEvaluateError,
+                        maxIterations,
+                        precision);
                 }
             });
             if (w1.size() == 0)
@@ -40,6 +49,7 @@ void BindMomentFitting(pybind11::module& m)
         pyb::arg("S2"),
         pyb::arg("X2"),
         pyb::arg("w2"),
+        pyb::arg("nSimplices") = -1,
         pyb::arg("order")      = 1,
         pyb::arg("with_error") = false,
         pyb::arg("max_iters")  = 20,
@@ -60,14 +70,20 @@ void BindMomentFitting(pybind11::module& m)
            Eigen::Ref<IndexVectorX const> const& S2,
            Eigen::Ref<MatrixX const> const& X2,
            Eigen::Ref<VectorX const> const& w2,
+           Index nSimplices,
            Index order) {
             MatrixX M, B;
             IndexVectorX P;
             common::ForRange<1, 5>([&]<auto Order>() {
                 if (order == Order)
                 {
-                    std::tie(M, B, P) =
-                        pbat::math::ReferenceMomentFittingSystems<Order>(S1, X1, S2, X2, w2);
+                    std::tie(M, B, P) = pbat::math::ReferenceMomentFittingSystems<Order>(
+                        S1,
+                        X1,
+                        S2,
+                        X2,
+                        w2,
+                        nSimplices);
                 }
             });
             if (M.size() == 0)
@@ -79,7 +95,8 @@ void BindMomentFitting(pybind11::module& m)
         pyb::arg("S2"),
         pyb::arg("X2"),
         pyb::arg("w2"),
-        pyb::arg("order") = 1,
+        pyb::arg("nSimplices") = -1,
+        pyb::arg("order")      = 1,
         "Obtain a collection of reference moment fitting systems (M, B, P), where M[:, "
         "P[s]:P[s+1]] is the reference moment fitting matrix for simplex s, and b[:,s] is its "
         "corresponding right-hand side. X1, S1 are the |#dims|x|#quad.pts.| array of quadrature "

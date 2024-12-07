@@ -11,7 +11,7 @@
 namespace pbat {
 namespace geometry {
 
-IndexMatrixX SimplexMeshBoundary(IndexMatrixX const& C, Index n)
+std::tuple<IndexVectorX, IndexMatrixX> SimplexMeshBoundary(IndexMatrixX const& C, Index n)
 {
     if (n < 0)
         n = C.maxCoeff() + 1;
@@ -67,6 +67,16 @@ IndexMatrixX SimplexMeshBoundary(IndexMatrixX const& C, Index n)
                 B.col(b++) = F.col(f);
         return B;
     };
+    auto fExtractVertices = [&](IndexMatrixX B) {
+        auto begin = B.data();
+        auto end   = B.data() + B.size();
+        std::sort(begin, end);
+        auto it                = std::unique(begin, end);
+        auto nBoundaryVertices = std::distance(begin, it);
+        IndexVectorX V(nBoundaryVertices);
+        std::copy(begin, it, V.data());
+        return V;
+    };
     IndexMatrixX B{};
     if (nSimplexFacets == 4)
     {
@@ -84,7 +94,8 @@ IndexMatrixX SimplexMeshBoundary(IndexMatrixX const& C, Index n)
             ++FU[FS.col(f)];
         B = fExtractBoundary(FU);
     }
-    return B;
+    IndexVectorX V = fExtractVertices(B);
+    return {V, B};
 }
 
 } // namespace geometry
@@ -117,9 +128,11 @@ TEST_CASE("[geometry] MeshBoundary")
     // clang-format on
 
     // Act
-    IndexMatrixX BC = geometry::SimplexMeshBoundary(C, 8);
-    IndexMatrixX BF = geometry::SimplexMeshBoundary(F, 4);
+    auto [VC, BC] = geometry::SimplexMeshBoundary(C, 8);
+    auto [VF, BF] = geometry::SimplexMeshBoundary(F, 4);
     // Assert
+    CHECK_EQ(VC.size(), 8);
+    CHECK_EQ(VF.size(), 4);
     CHECK_EQ(BC.rows(), 3);
     CHECK_EQ(BC.cols(), 12);
     CHECK_EQ(BF.rows(), 2);
