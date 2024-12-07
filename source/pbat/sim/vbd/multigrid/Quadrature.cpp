@@ -1,8 +1,6 @@
 #include "Quadrature.h"
 
 #include "pbat/fem/Jacobian.h"
-#include "pbat/fem/Mesh.h"
-#include "pbat/fem/Tetrahedron.h"
 #include "pbat/fem/Triangle.h"
 #include "pbat/geometry/MeshBoundary.h"
 #include "pbat/geometry/TetrahedralAabbHierarchy.h"
@@ -18,42 +16,35 @@ namespace vbd {
 namespace multigrid {
 
 CageQuadrature::CageQuadrature(
-    Eigen::Ref<MatrixX const> const& X,
-    Eigen::Ref<IndexMatrixX const> const& E,
-    Eigen::Ref<MatrixX const> const& XC,
-    Eigen::Ref<IndexMatrixX const> const& EC,
+    fem::Mesh<fem::Tetrahedron<1>, 3> const& FM,
+    fem::Mesh<fem::Tetrahedron<1>, 3> const& CM,
     ECageQuadratureStrategy eStrategy)
     : Xg(), wg(), sg(), eg(), GVGp(), GVGg(), GVGilocal()
 {
     // Accelerate spatial queries
-    geometry::TetrahedralAabbHierarchy cbvh(XC, EC);
-    geometry::TetrahedralAabbHierarchy fbvh(X, E);
+    geometry::TetrahedralAabbHierarchy cbvh(CM.X, CM.E);
+    geometry::TetrahedralAabbHierarchy fbvh(FM.X, FM.E);
 
-    using LinearTetrahedron = fem::Tetrahedron<1>;
-    using VolumeMesh        = fem::Mesh<LinearTetrahedron, 3>;
     switch (eStrategy)
     {
         case ECageQuadratureStrategy::EmbeddedMesh: {
-            VolumeMesh FM(X, E);
             Xg = FM.QuadraturePoints<1>();
             eg = cbvh.PrimitivesContainingPoints(Xg);
             wg = fem::InnerProductWeights<1>(FM).reshaped();
             break;
         }
         case ECageQuadratureStrategy::PolynomialSubCellIntegration: {
-            VolumeMesh CM(XC, EC);
             // Make sure to have over-determined moment fitting systems, i.e. aim for
             // #quad.pts. >= 2|p|, where |p| is the size of the polynomial basis of order p.
             auto constexpr kPolynomialOrder                    = 1;
             auto constexpr kPolynomialOrderForSufficientPoints = 3;
             // Compute quadrature points via symmetric simplex quadrature rule on coarse mesh
             Xg = CM.QuadraturePoints<kPolynomialOrderForSufficientPoints>();
-            eg = IndexVectorX::LinSpaced(EC.cols(), Index(0), EC.cols() - 1)
+            eg = IndexVectorX::LinSpaced(CM.E.cols(), Index(0), CM.E.cols() - 1)
                      .transpose()
-                     .replicate(Xg.cols() / EC.cols(), 1)
+                     .replicate(Xg.cols() / CM.E.cols(), 1)
                      .reshaped();
             // Compute quadrature weights via moment fitting
-            VolumeMesh FM(X, E);
             VectorX fwg               = fem::InnerProductWeights<1>(FM).reshaped();
             MatrixX fXg               = FM.QuadraturePoints<1>();
             IndexVectorX Sf           = cbvh.PrimitivesContainingPoints(fXg);
@@ -62,7 +53,7 @@ CageQuadrature::CageQuadrature(
             bool const bEvaluateError = true;
             auto const bMaxIterations = 10;
             VectorX error;
-            auto const nSimplices = EC.cols();
+            auto const nSimplices = CM.E.cols();
             std::tie(wg, error)   = math::TransferQuadrature<kPolynomialOrder>(
                 eg,
                 cXi,
@@ -78,38 +69,36 @@ CageQuadrature::CageQuadrature(
     // Find singular quadrature points
     sg = (fbvh.PrimitivesContainingPoints(Xg).array() < 0);
     // Compute vertex-quad.pt. adjacency
-    auto G = graph::MeshAdjacencyMatrix(EC(Eigen::placeholders::all, eg), XC.cols());
+    auto G = graph::MeshAdjacencyMatrix(CM.E(Eigen::placeholders::all, eg), CM.X.cols());
     G      = G.transpose();
     std::tie(GVGp, GVGg, GVGilocal) = graph::MatrixToAdjacency(G);
 }
 
 SurfaceQuadrature::SurfaceQuadrature(
-    Eigen::Ref<MatrixX const> const& X,
-    Eigen::Ref<IndexMatrixX const> const& E,
-    Eigen::Ref<MatrixX const> const& XC,
-    Eigen::Ref<IndexMatrixX const> const& EC,
+    fem::Mesh<fem::Tetrahedron<1>, 3> const& FM,
+    fem::Mesh<fem::Tetrahedron<1>, 3> const& CM,
     ESurfaceQuadratureStrategy eStrategy)
     : Xg(), wg(), eg(), GVGp(), GVGg(), GVGilocal()
 {
     // Accelerate spatial queries
-    geometry::TetrahedralAabbHierarchy cbvh(XC, EC);
+    geometry::TetrahedralAabbHierarchy cbvh(CM.X, CM.E);
     // Extract domain boundary
     using LinearTriangle = fem::Triangle<1>;
     using SurfaceMesh    = fem::Mesh<LinearTriangle, 3>;
-    auto [V, F]          = geometry::SimplexMeshBoundary(E, X.cols());
-    SurfaceMesh S(X, F);
+    auto [V, F]          = geometry::SimplexMeshBoundary(FM.E, FM.X.cols());
+    SurfaceMesh S(FM.X, F);
     // Distribute 1-pt boundary triangle quadratures onto boundary vertices
     if (eStrategy == ESurfaceQuadratureStrategy::EmbeddedVertexSinglePointQuadrature)
     {
         VectorX FA = fem::InnerProductWeights<1>(S).reshaped();
-        Xg         = X(Eigen::placeholders::all, V);
+        Xg         = FM.X(Eigen::placeholders::all, V);
         wg.setZero(Xg.cols());
         for (auto d = 0; d < 3; ++d)
             wg(F.row(d)) += FA / Scalar(3);
         eg = cbvh.PrimitivesContainingPoints(Xg);
     }
     // Compute vertex-quad.pt. adjacency
-    auto G = graph::MeshAdjacencyMatrix(EC(Eigen::placeholders::all, eg), XC.cols());
+    auto G = graph::MeshAdjacencyMatrix(CM.E(Eigen::placeholders::all, eg), CM.X.cols());
     G      = G.transpose();
     std::tie(GVGp, GVGg, GVGilocal) = graph::MatrixToAdjacency(G);
 }
@@ -146,9 +135,14 @@ TEST_CASE("[sim][vbd][multigrid] Quadrature")
     using sim::vbd::multigrid::ECageQuadratureStrategy;
     using sim::vbd::multigrid::ESurfaceQuadratureStrategy;
     using sim::vbd::multigrid::SurfaceQuadrature;
-    CageQuadrature Qcage(VR, CR, VC, CC, ECageQuadratureStrategy::PolynomialSubCellIntegration);
-    SurfaceQuadrature
-        Qsurf(VR, CR, VC, CC, ESurfaceQuadratureStrategy::EmbeddedVertexSinglePointQuadrature);
+    using VolumeMesh = fem::Mesh<fem::Tetrahedron<1>, 3>;
+    VolumeMesh FM(VR, CR);
+    VolumeMesh CM(VC, CC);
+    CageQuadrature Qcage(FM, CM, ECageQuadratureStrategy::PolynomialSubCellIntegration);
+    SurfaceQuadrature Qsurf(
+        FM,
+        CM,
+        ESurfaceQuadratureStrategy::EmbeddedVertexSinglePointQuadrature);
 
     // Assert
     bool const bCageWeightsNonNegative = (Qcage.wg.array() >= Scalar(0)).all();

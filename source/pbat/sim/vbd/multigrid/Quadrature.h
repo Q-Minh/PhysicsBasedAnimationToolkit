@@ -2,6 +2,8 @@
 #define PBAT_SIM_VBD_MULTIGRID_QUADRATURE_H
 
 #include "pbat/Aliases.h"
+#include "pbat/fem/Mesh.h"
+#include "pbat/fem/Tetrahedron.h"
 
 namespace pbat {
 namespace sim {
@@ -13,18 +15,13 @@ enum class ECageQuadratureStrategy { EmbeddedMesh, PolynomialSubCellIntegration 
 struct CageQuadrature
 {
     /**
-     * @brief Computes a cage quadrature given the domain (X,E) and embedding cage (XC,EC) as
-     * meshes.
-     * @param X
-     * @param E
-     * @param XC
-     * @param EC
+     * @brief Computes a cage quadrature given a fine mesh FM and its embedding cage mesh CM.
+     * @param FM Fine mesh
+     * @param CM Coarse mesh
      */
     CageQuadrature(
-        Eigen::Ref<MatrixX const> const& X,
-        Eigen::Ref<IndexMatrixX const> const& E,
-        Eigen::Ref<MatrixX const> const& XC,
-        Eigen::Ref<IndexMatrixX const> const& EC,
+        fem::Mesh<fem::Tetrahedron<1>, 3> const& FM,
+        fem::Mesh<fem::Tetrahedron<1>, 3> const& CM,
         ECageQuadratureStrategy eStrategy = ECageQuadratureStrategy::PolynomialSubCellIntegration);
 
     using BoolVectorType = Eigen::Vector<bool, Eigen::Dynamic>;
@@ -44,11 +41,15 @@ enum class ESurfaceQuadratureStrategy { EmbeddedVertexSinglePointQuadrature };
 
 struct SurfaceQuadrature
 {
+    /**
+     * @brief Computes a surface quadrature on the boundary of a mesh FM embedded in mesh CM.
+     * @param FM 
+     * @param CM 
+     * @param eStrategy 
+     */
     SurfaceQuadrature(
-        Eigen::Ref<MatrixX const> const& X,
-        Eigen::Ref<IndexMatrixX const> const& E,
-        Eigen::Ref<MatrixX const> const& XC,
-        Eigen::Ref<IndexMatrixX const> const& EC,
+        fem::Mesh<fem::Tetrahedron<1>, 3> const& FM,
+        fem::Mesh<fem::Tetrahedron<1>, 3> const& CM,
         ESurfaceQuadratureStrategy eStrategy =
             ESurfaceQuadratureStrategy::EmbeddedVertexSinglePointQuadrature);
 
