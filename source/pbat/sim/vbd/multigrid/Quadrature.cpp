@@ -28,37 +28,55 @@ CageQuadrature::CageQuadrature(
     // Accelerate spatial queries
     geometry::TetrahedralAabbHierarchy cbvh(XC, EC);
     geometry::TetrahedralAabbHierarchy fbvh(X, E);
-    // Compute linear FEM coarse mesh
+
     using LinearTetrahedron = fem::Tetrahedron<1>;
     using VolumeMesh        = fem::Mesh<LinearTetrahedron, 3>;
-    VolumeMesh CM(XC, EC);
-    if (eStrategy == ECageQuadratureStrategy::PolynomialSubCellIntegration)
+    switch (eStrategy)
     {
-        // Make sure to have over-determined moment fitting systems, i.e. aim for
-        // #quad.pts. >= 2p, where p is polynomial order.
-        auto constexpr kPolynomialOrder                    = 1;
-        auto constexpr kPolynomialOrderForSufficientPoints = 3;
-        // Compute quadrature points via symmetric simplex quadrature rule on coarse mesh
-        Xg = CM.QuadraturePoints<kPolynomialOrderForSufficientPoints>();
-        sg = (fbvh.PrimitivesContainingPoints(Xg).array() < 0);
-        eg = IndexVectorX::LinSpaced(EC.cols(), Index(0), EC.cols() - 1)
-                 .transpose()
-                 .replicate(Xg.cols() / EC.cols(), 1)
-                 .reshaped();
-        // Compute quadrature weights via moment fitting
-        VolumeMesh FM(X, E);
-        VectorX fwg               = fem::InnerProductWeights<1>(FM).reshaped();
-        MatrixX fXg               = FM.QuadraturePoints<1>();
-        IndexVectorX Sf           = cbvh.PrimitivesContainingPoints(fXg);
-        MatrixX fXi               = fem::ReferencePositions(CM, Sf, fXg);
-        MatrixX cXi               = fem::ReferencePositions(CM, eg, Xg);
-        bool const bEvaluateError = true;
-        auto const bMaxIterations = 10;
-        VectorX error;
-        auto const nSimplices = EC.cols();
-        std::tie(wg, error)   = math::TransferQuadrature<
-            kPolynomialOrder>(eg, cXi, Sf, fXi, fwg, nSimplices, bEvaluateError, bMaxIterations);
+        case ECageQuadratureStrategy::EmbeddedMesh: {
+            VolumeMesh FM(X, E);
+            Xg = FM.QuadraturePoints<1>();
+            eg = cbvh.PrimitivesContainingPoints(Xg);
+            wg = fem::InnerProductWeights<1>(FM).reshaped();
+            break;
+        }
+        case ECageQuadratureStrategy::PolynomialSubCellIntegration: {
+            VolumeMesh CM(XC, EC);
+            // Make sure to have over-determined moment fitting systems, i.e. aim for
+            // #quad.pts. >= 2|p|, where |p| is the size of the polynomial basis of order p.
+            auto constexpr kPolynomialOrder                    = 1;
+            auto constexpr kPolynomialOrderForSufficientPoints = 3;
+            // Compute quadrature points via symmetric simplex quadrature rule on coarse mesh
+            Xg = CM.QuadraturePoints<kPolynomialOrderForSufficientPoints>();
+            eg = IndexVectorX::LinSpaced(EC.cols(), Index(0), EC.cols() - 1)
+                     .transpose()
+                     .replicate(Xg.cols() / EC.cols(), 1)
+                     .reshaped();
+            // Compute quadrature weights via moment fitting
+            VolumeMesh FM(X, E);
+            VectorX fwg               = fem::InnerProductWeights<1>(FM).reshaped();
+            MatrixX fXg               = FM.QuadraturePoints<1>();
+            IndexVectorX Sf           = cbvh.PrimitivesContainingPoints(fXg);
+            MatrixX fXi               = fem::ReferencePositions(CM, Sf, fXg);
+            MatrixX cXi               = fem::ReferencePositions(CM, eg, Xg);
+            bool const bEvaluateError = true;
+            auto const bMaxIterations = 10;
+            VectorX error;
+            auto const nSimplices = EC.cols();
+            std::tie(wg, error)   = math::TransferQuadrature<kPolynomialOrder>(
+                eg,
+                cXi,
+                Sf,
+                fXi,
+                fwg,
+                nSimplices,
+                bEvaluateError,
+                bMaxIterations);
+            break;
+        }
     }
+    // Find singular quadrature points
+    sg = (fbvh.PrimitivesContainingPoints(Xg).array() < 0);
     // Compute vertex-quad.pt. adjacency
     auto G = graph::MeshAdjacencyMatrix(EC(Eigen::placeholders::all, eg), XC.cols());
     G      = G.transpose();

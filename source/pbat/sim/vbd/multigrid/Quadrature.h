@@ -8,7 +8,7 @@ namespace sim {
 namespace vbd {
 namespace multigrid {
 
-enum class ECageQuadratureStrategy { PolynomialSubCellIntegration };
+enum class ECageQuadratureStrategy { EmbeddedMesh, PolynomialSubCellIntegration };
 
 struct CageQuadrature
 {
