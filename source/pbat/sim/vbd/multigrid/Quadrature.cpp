@@ -1,6 +1,7 @@
 #include "Quadrature.h"
 
 #include "pbat/fem/Jacobian.h"
+#include "pbat/fem/MassMatrix.h"
 #include "pbat/fem/Triangle.h"
 #include "pbat/geometry/MeshBoundary.h"
 #include "pbat/geometry/TetrahedralAabbHierarchy.h"
@@ -16,17 +17,26 @@ namespace vbd {
 namespace multigrid {
 
 CageQuadrature::CageQuadrature(
-    fem::Mesh<fem::Tetrahedron<1>, 3> const& FM,
-    fem::Mesh<fem::Tetrahedron<1>, 3> const& CM,
+    VolumeMesh const& FM,
+    VolumeMesh const& CM,
     ECageQuadratureStrategy eStrategy)
     : Xg(), wg(), sg(), eg(), GVGp(), GVGg(), GVGilocal()
 {
-    // Accelerate spatial queries
-    geometry::TetrahedralAabbHierarchy cbvh(CM.X, CM.E);
     geometry::TetrahedralAabbHierarchy fbvh(FM.X, FM.E);
-
+    geometry::TetrahedralAabbHierarchy cbvh(CM.X, CM.E);
     switch (eStrategy)
     {
+        case ECageQuadratureStrategy::CageMesh: {
+            auto constexpr kCoarsePolynomialOrder = 3;
+            // Simply use the symmetric simplex polynomial quadrature rule of the coarse mesh
+            Xg = CM.QuadraturePoints<kCoarsePolynomialOrder>();
+            eg = IndexVectorX::LinSpaced(CM.E.cols(), Index(0), CM.E.cols() - 1)
+                     .transpose()
+                     .replicate(Xg.cols() / CM.E.cols(), 1)
+                     .reshaped();
+            wg = fem::InnerProductWeights<kCoarsePolynomialOrder>(CM).reshaped();
+            break;
+        }
         case ECageQuadratureStrategy::EmbeddedMesh: {
             Xg = FM.QuadraturePoints<1>();
             eg = cbvh.PrimitivesContainingPoints(Xg);
@@ -75,12 +85,11 @@ CageQuadrature::CageQuadrature(
 }
 
 SurfaceQuadrature::SurfaceQuadrature(
-    fem::Mesh<fem::Tetrahedron<1>, 3> const& FM,
-    fem::Mesh<fem::Tetrahedron<1>, 3> const& CM,
+    VolumeMesh const& FM,
+    VolumeMesh const& CM,
     ESurfaceQuadratureStrategy eStrategy)
     : Xg(), wg(), eg(), GVGp(), GVGg(), GVGilocal()
 {
-    // Accelerate spatial queries
     geometry::TetrahedralAabbHierarchy cbvh(CM.X, CM.E);
     // Extract domain boundary
     using LinearTriangle = fem::Triangle<1>;
@@ -97,6 +106,23 @@ SurfaceQuadrature::SurfaceQuadrature(
             wg(F.row(d)) += FA / Scalar(3);
         eg = cbvh.PrimitivesContainingPoints(Xg);
     }
+    // Compute vertex-quad.pt. adjacency
+    auto G = graph::MeshAdjacencyMatrix(CM.E(Eigen::placeholders::all, eg), CM.X.cols());
+    G      = G.transpose();
+    std::tie(GVGp, GVGg, GVGilocal) = graph::MatrixToAdjacency(G);
+}
+
+DirichletQuadrature::DirichletQuadrature(
+    VolumeMesh const& FM,
+    VolumeMesh const& CM,
+    Eigen::Ref<VectorX const> const& m,
+    Eigen::Ref<IndexVectorX const> const& dbcs)
+    : Xg(), wg(), eg(), GVGp(), GVGg(), GVGilocal()
+{
+    geometry::TetrahedralAabbHierarchy cbvh(CM.X, CM.E);
+    Xg = FM.X(Eigen::placeholders::all, dbcs);
+    wg = m(dbcs);
+    eg = cbvh.PrimitivesContainingPoints(Xg);
     // Compute vertex-quad.pt. adjacency
     auto G = graph::MeshAdjacencyMatrix(CM.E(Eigen::placeholders::all, eg), CM.X.cols());
     G      = G.transpose();
@@ -135,7 +161,7 @@ TEST_CASE("[sim][vbd][multigrid] Quadrature")
     using sim::vbd::multigrid::ECageQuadratureStrategy;
     using sim::vbd::multigrid::ESurfaceQuadratureStrategy;
     using sim::vbd::multigrid::SurfaceQuadrature;
-    using VolumeMesh = fem::Mesh<fem::Tetrahedron<1>, 3>;
+    using VolumeMesh = sim::vbd::multigrid::VolumeMesh;
     VolumeMesh FM(VR, CR);
     VolumeMesh CM(VC, CC);
     CageQuadrature Qcage(FM, CM, ECageQuadratureStrategy::PolynomialSubCellIntegration);

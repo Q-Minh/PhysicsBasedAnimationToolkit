@@ -58,9 +58,13 @@ Data& Data::WithMaterial(
     return *this;
 }
 
-Data& Data::WithDirichletConstrainedVertices(IndexVectorX const& dbcIn, bool bDbcSorted)
+Data& Data::WithDirichletConstrainedVertices(
+    IndexVectorX const& dbcIn,
+    Scalar muDin,
+    bool bDbcSorted)
 {
     this->dbc = dbcIn;
+    this->muD = muDin;
     if (not bDbcSorted)
     {
         std::sort(this->dbc.begin(), this->dbc.end());

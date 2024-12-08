@@ -61,10 +61,14 @@ PBAT_API struct Data
     /**
      * @brief
      * @param dbc Dirichlet constrained vertices
+     * @param muD Dirichlet penalty coefficient
      * @param bDbcSorted If false, dbc will be sorted
      * @return
      */
-    Data& WithDirichletConstrainedVertices(IndexVectorX const& dbc, bool bDbcSorted = true);
+    Data& WithDirichletConstrainedVertices(
+        IndexVectorX const& dbc,
+        Scalar muD      = Scalar(1),
+        bool bDbcSorted = false);
     /**
      * @brief
      * @param eOrdering
@@ -113,7 +117,7 @@ PBAT_API struct Data
     MatrixX x;    ///< 3x|#verts| vertex positions
     MatrixX v;    ///< 3x|#verts| vertex velocities
     MatrixX aext; ///< 3x|#verts| vertex external accelerations
-    VectorX m;    ///< 3x|#verts| vertex masses
+    VectorX m;    ///< |#verts| vertex masses
 
     MatrixX xt;      ///< 3x|#verts| previous vertex positions
     MatrixX xtilde;  ///< 3x|#verts| inertial target positions
@@ -134,6 +138,7 @@ PBAT_API struct Data
                             ///< GVGilocal[k] for GVGp[i] <= k < GVGp[i+1] gives the local index of
                             ///< vertex i for the neighbouring elems
 
+    Scalar muD{1};    ///< Dirichlet penalty coefficient
     IndexVectorX dbc; ///< Dirichlet constrained vertices (sorted)
 
     graph::EGreedyColorOrderingStrategy eOrdering{

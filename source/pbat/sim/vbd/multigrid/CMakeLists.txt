@@ -2,12 +2,24 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     PUBLIC
     FILE_SET api
     FILES
+    "DirichletEnergy.h"
+    "ElasticEnergy.h"
+    "Hierarchy.h"
+    "Level.h"
+    "MomentumEnergy.h"
+    "Mesh.h"
     "Multigrid.h"
     "Quadrature.h"
     "Restriction.h"
 )
 target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     PRIVATE
+    "DirichletEnergy.cpp"
+    "ElasticEnergy.cpp"
+    "Hierarchy.cpp"
+    "Level.cpp"
+    "Mesh.cpp"
+    "MomentumEnergy.cpp"
     "Quadrature.cpp"
     "Restriction.cpp"
 )

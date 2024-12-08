@@ -62,6 +62,7 @@ void BindData(pybind11::module& m)
             "with_dirichlet_vertices",
             &Data::WithDirichletConstrainedVertices,
             pyb::arg("dbc"),
+            pyb::arg("muD")          = Scalar(1),
             pyb::arg("input_sorted") = true,
             "Sets Dirichlet constrained vertices.")
         .def(
