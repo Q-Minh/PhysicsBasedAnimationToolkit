@@ -1,5 +1,6 @@
 #include "Quadrature.h"
 
+#include "pbat/common/ArgSort.h"
 #include "pbat/fem/Jacobian.h"
 #include "pbat/fem/MassMatrix.h"
 #include "pbat/fem/Triangle.h"
@@ -10,11 +11,51 @@
 #include "pbat/math/MomentFitting.h"
 
 #include <algorithm>
+#include <numeric>
+#include <tuple>
 
 namespace pbat {
 namespace sim {
 namespace vbd {
 namespace multigrid {
+
+template <class TDerivedEG, class TDerivedWG, class TDerivedXG>
+std::tuple<IndexVectorX, VectorX, MatrixX> PatchQuadrature(
+    VolumeMesh const& CM,
+    Eigen::MatrixBase<TDerivedEG> const& eg1,
+    Eigen::MatrixBase<TDerivedWG> const& wg1,
+    Eigen::MatrixBase<TDerivedXG> const& Xg1,
+    Scalar zeroTetVolume = Scalar(1e-6))
+{
+    // Find empty coarse elements
+    IndexVectorX egcpy = eg1;
+    {
+        std::sort(egcpy.begin(), egcpy.end());
+        auto it = std::unique(egcpy.begin(), egcpy.end());
+        egcpy.conservativeResize(std::distance(egcpy.begin(), it));
+    }
+    IndexVectorX eg2{};
+    {
+        IndexVectorX eall(CM.E.cols());
+        std::iota(eall.begin(), eall.end(), Index(0));
+        eg2.resizeLike(eall);
+        auto it =
+            std::set_difference(eall.begin(), eall.end(), egcpy.begin(), egcpy.end(), eg2.begin());
+        eg2.conservativeResize(std::distance(eg2.begin(), it));
+    }
+    // Compute "negligible" 1-pt quadrature on coarse empty elements
+    VectorX wg2 = fem::InnerProductWeights<1>(CM).reshaped()(eg2);
+    wg2 *= zeroTetVolume;
+    MatrixX Xg2 = CM.QuadraturePoints<1>()(Eigen::placeholders::all, eg2);
+    // Combine embedded mesh's quadrature + the negligible quadrature
+    MatrixX Xg(3, Xg1.cols() + Xg2.cols());
+    VectorX wg(wg1.size() + wg2.size());
+    IndexVectorX eg(eg1.size() + eg2.size());
+    Xg << Xg1, Xg2;
+    wg << wg1, wg2;
+    eg << eg1, eg2;
+    return std::make_tuple(eg, wg, Xg);
+}
 
 CageQuadrature::CageQuadrature(
     VolumeMesh const& FM,
@@ -24,6 +65,7 @@ CageQuadrature::CageQuadrature(
 {
     geometry::TetrahedralAabbHierarchy fbvh(FM.X, FM.E);
     geometry::TetrahedralAabbHierarchy cbvh(CM.X, CM.E);
+
     switch (eStrategy)
     {
         case ECageQuadratureStrategy::CageMesh: {
@@ -38,9 +80,18 @@ CageQuadrature::CageQuadrature(
             break;
         }
         case ECageQuadratureStrategy::EmbeddedMesh: {
-            Xg = FM.QuadraturePoints<1>();
-            eg = cbvh.PrimitivesContainingPoints(Xg);
-            wg = fem::InnerProductWeights<1>(FM).reshaped();
+            MatrixX Xg1      = FM.QuadraturePoints<1>();
+            IndexVectorX eg1 = cbvh.PrimitivesContainingPoints(Xg1);
+            VectorX wg1      = fem::InnerProductWeights<1>(FM).reshaped();
+            // Group quadrature points of same elements together to improve cache locality.
+            IndexVectorX eorder =
+                common::ArgSort(eg1.size(), [&](auto i, auto j) { return eg1(i) < eg1(j); });
+            // Patch coarse elements that don't have any embedded quadrature point
+            std::tie(eg, wg, Xg) = PatchQuadrature(
+                CM,
+                eg1(eorder),
+                wg1(eorder),
+                Xg1(Eigen::placeholders::all, eorder));
             break;
         }
         case ECageQuadratureStrategy::PolynomialSubCellIntegration: {
@@ -73,6 +124,19 @@ CageQuadrature::CageQuadrature(
                 nSimplices,
                 bEvaluateError,
                 bMaxIterations);
+            // Find all non-negligible quadrature points (i.e. quadrature weight > 0)
+            Index const nQuadPts = wg.size();
+            std::vector<Index> validQuadPts{};
+            validQuadPts.reserve(static_cast<std::size_t>(nQuadPts));
+            for (Index g = 0; g < nQuadPts; ++g)
+                if (wg(g) > Scalar(0))
+                    validQuadPts.push_back(g);
+            // Remove negligible quadrature points and patch the quadrature
+            std::tie(eg, wg, Xg) = PatchQuadrature(
+                CM,
+                eg(validQuadPts),
+                wg(validQuadPts),
+                Xg(Eigen::placeholders::all, validQuadPts));
             break;
         }
     }
