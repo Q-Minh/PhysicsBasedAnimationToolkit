@@ -1,7 +1,6 @@
 import pbatoolkit as pbat
 import polyscope as ps
 import polyscope.imgui as imgui
-import igl
 import meshio
 import argparse
 

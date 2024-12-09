@@ -34,19 +34,8 @@ if __name__ == "__main__":
     V, C = imesh.points, imesh.cells_dict["tetra"]
     mesh = pbat.fem.Mesh(
         V.T, C.T, element=pbat.fem.Element.Tetrahedron)
-    x = mesh.X.reshape(math.prod(mesh.X.shape), order='f')
-    M, detJeM = pbat.fem.mass_matrix(mesh, rho=args.rho)
-    Y, nu, energy = args.Y, args.nu, pbat.fem.HyperElasticEnergy.StableNeoHookean
-    hep, egU, wgU, GNeU = pbat.fem.hyper_elastic_potential(
-        mesh, Y, nu, energy=energy)
-    hep.compute_element_elasticity(x)
-    U, gradU, HU = hep.eval(), hep.gradient(), hep.hessian()
-    sigma = -1e-5
-    leigs, Veigs = sp.sparse.linalg.eigsh(
-        HU, k=args.modes, M=M, sigma=-1e-5, which='LM')
-    Veigs = Veigs / sp.linalg.norm(Veigs, axis=0, keepdims=True)
-    leigs[leigs <= 0] = 0
-    w = np.sqrt(leigs)
+    w, Veigs = pbat.fem.rest_pose_hyper_elastic_modes(
+        mesh, Y=args.Y, nu=args.nu, rho=args.rho, modes=args.modes)
 
     ps.set_up_dir("z_up")
     ps.set_front_dir("neg_y_front")

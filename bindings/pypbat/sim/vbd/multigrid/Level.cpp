@@ -27,7 +27,7 @@ void BindLevel(pybind11::module& m)
                 if (CMraw == nullptr)
                     throw std::invalid_argument(
                         "Requested underlying MeshType that this Mesh does not hold.");
-                return Level(std::move(*CMraw));
+                return Level(*CMraw);
             }),
             pyb::arg("cage_mesh"))
         .def(
