@@ -92,10 +92,21 @@ VectorX MomentFittedWeights(
 {
     using MatrixType = TDerivedP;
     Eigen::NNLS<MatrixType> nnls{};
-    nnls.compute(P.derived());
     nnls.setMaxIterations(maxIterations);
     nnls.setTolerance(precision);
+    nnls.compute(P.derived());
     auto w = nnls.solve(b);
+    if (nnls.info() != Eigen::ComputationInfo::Success)
+    {
+        std::string what = "Moment fitting's non-negative least-squares failed with error: ";
+        if (nnls.info() == Eigen::ComputationInfo::InvalidInput)
+            what += "InvalidInput";
+        if (nnls.info() == Eigen::ComputationInfo::NoConvergence)
+            what += "NoConvergence";
+        if (nnls.info() == Eigen::ComputationInfo::NumericalIssue)
+            what += "NumericalIssue";
+        throw std::invalid_argument(what);
+    }
     return w;
 }
 

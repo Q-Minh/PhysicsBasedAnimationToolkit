@@ -20,9 +20,15 @@ void BindDirichletEnergy(pybind11::module& m)
     using pbat::sim::vbd::multigrid::DirichletQuadrature;
     using pbat::sim::vbd::multigrid::VolumeMesh;
     pyb::class_<DirichletEnergy>(m, "DirichletEnergy")
-        .def(pyb::init(
-            [](Data const& problem, pbat::py::fem::Mesh const& CM, DirichletQuadrature const& DQ) {
-                return DirichletEnergy(problem, *CM.Raw<VolumeMesh>(), DQ);
+        .def(
+            pyb::init([](Data const& problem,
+                         pbat::py::fem::Mesh const& CM,
+                         DirichletQuadrature const& DQ) {
+                VolumeMesh const* CMraw = CM.Raw<VolumeMesh>();
+                if (CMraw == nullptr)
+                    throw std::invalid_argument(
+                        "Requested underlying MeshType that this Mesh does not hold.");
+                return DirichletEnergy(problem, *CMraw, DQ);
             }),
             pyb::arg("problem"),
             pyb::arg("cage_mesh"),

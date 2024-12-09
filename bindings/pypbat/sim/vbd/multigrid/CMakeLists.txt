@@ -12,6 +12,7 @@ target_sources(PhysicsBasedAnimationToolkit_Python
     "Prolongation.h"
     "Quadrature.h"
     "Restriction.h"
+    "Smoother.h"
 )
 
 target_sources(PhysicsBasedAnimationToolkit_Python
@@ -26,4 +27,5 @@ target_sources(PhysicsBasedAnimationToolkit_Python
     "Prolongation.cpp"
     "Quadrature.cpp"
     "Restriction.cpp"
+    "Smoother.cpp"
 )

@@ -58,14 +58,14 @@ PBAT_HOST_DEVICE void AccumulateShapeMatchingEnergy(
     ScalarType rhog,
     TMatrixXCG const& xcg,
     TMatrixNCG const& Ncg,
-    TMatrixXTL const& xf,
+    TMatrixXTL const& xtarget,
     TMatrixGI& gi,
     TMatrixHI& Hi)
 {
     using namespace mini;
     auto xc = xcg * Ncg;
     // Energy is 1/2 w_g rho_g || xc - xf ||_2^2
-    gi += (wg * rhog * Ncg(ilocal)) * (xc - xf);
+    gi += (wg * rhog * Ncg(ilocal)) * (xc - xtarget);
     Diag(Hi) += wg * rhog * Ncg(ilocal) * Ncg(ilocal);
 }
 

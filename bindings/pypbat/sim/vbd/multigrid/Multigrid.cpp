@@ -9,6 +9,7 @@
 #include "Prolongation.h"
 #include "Quadrature.h"
 #include "Restriction.h"
+#include "Smoother.h"
 
 namespace pbat {
 namespace py {
@@ -25,6 +26,7 @@ void Bind(pybind11::module& m)
     BindLevel(m);
     BindRestriction(m);
     BindProlongation(m);
+    BindSmoother(m);
     BindHierarchy(m);
     BindIntegrator(m);
 }

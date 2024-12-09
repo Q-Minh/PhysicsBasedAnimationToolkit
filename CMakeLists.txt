@@ -19,6 +19,7 @@ option(PBAT_USE_SUITESPARSE
     OFF)
 option(PBAT_BUILD_SHARED_LIBS "Build as shared library" OFF)
 option(PBAT_USE_CUDA "Link to CUDA Toolkit for GPU API" OFF)
+option(PBAT_PRECOMPILE_LARGE_MODELS "Precompile large 3d models in geometry/model" OFF)
 
 # Global settings
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
@@ -74,7 +75,7 @@ set_target_properties(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
 )
 install(
     TARGETS
-    eigen 
+    eigen
     PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     EXPORT PhysicsBasedAnimationToolkit_Targets
     FILE_SET api

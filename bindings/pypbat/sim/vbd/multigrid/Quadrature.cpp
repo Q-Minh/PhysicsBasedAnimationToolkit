@@ -38,7 +38,12 @@ void BindQuadrature(pybind11::module& m)
             pyb::init([](pbat::py::fem::Mesh const& FM,
                          pbat::py::fem::Mesh const& CM,
                          ECageQuadratureStrategy eStrategy) {
-                return CageQuadrature(*FM.Raw<VolumeMesh>(), *CM.Raw<VolumeMesh>(), eStrategy);
+                VolumeMesh const* FMraw = FM.Raw<VolumeMesh>();
+                VolumeMesh const* CMraw = CM.Raw<VolumeMesh>();
+                if (FMraw == nullptr or CMraw == nullptr)
+                    throw std::invalid_argument(
+                        "Requested underlying MeshType that this Mesh does not hold.");
+                return CageQuadrature(*FMraw, *CMraw, eStrategy);
             }),
             pyb::arg("fine_mesh"),
             pyb::arg("cage_mesh"),
@@ -78,7 +83,12 @@ void BindQuadrature(pybind11::module& m)
             pyb::init([](pbat::py::fem::Mesh const& FM,
                          pbat::py::fem::Mesh const& CM,
                          ESurfaceQuadratureStrategy eStrategy) {
-                return SurfaceQuadrature(*FM.Raw<VolumeMesh>(), *CM.Raw<VolumeMesh>(), eStrategy);
+                VolumeMesh const* FMraw = FM.Raw<VolumeMesh>();
+                VolumeMesh const* CMraw = CM.Raw<VolumeMesh>();
+                if (FMraw == nullptr or CMraw == nullptr)
+                    throw std::invalid_argument(
+                        "Requested underlying MeshType that this Mesh does not hold.");
+                return SurfaceQuadrature(*FMraw, *CMraw, eStrategy);
             }),
             pyb::arg("fine_mesh"),
             pyb::arg("cage_mesh"),
@@ -99,7 +109,12 @@ void BindQuadrature(pybind11::module& m)
                          pbat::py::fem::Mesh const& CM,
                          Eigen::Ref<VectorX const> const& m,
                          Eigen::Ref<IndexVectorX const> const& dbcs) {
-                return DirichletQuadrature(*FM.Raw<VolumeMesh>(), *CM.Raw<VolumeMesh>(), m, dbcs);
+                VolumeMesh const* FMraw = FM.Raw<VolumeMesh>();
+                VolumeMesh const* CMraw = CM.Raw<VolumeMesh>();
+                if (FMraw == nullptr or CMraw == nullptr)
+                    throw std::invalid_argument(
+                        "Requested underlying MeshType that this Mesh does not hold.");
+                return DirichletQuadrature(*FMraw, *CMraw, m, dbcs);
             }),
             pyb::arg("fine_mesh"),
             pyb::arg("cage_mesh"),

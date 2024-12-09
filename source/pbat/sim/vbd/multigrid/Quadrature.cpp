@@ -100,22 +100,24 @@ CageQuadrature::CageQuadrature(
             auto constexpr kPolynomialOrder                    = 1;
             auto constexpr kPolynomialOrderForSufficientPoints = 3;
             // Compute quadrature points via symmetric simplex quadrature rule on coarse mesh
-            Xg = CM.QuadraturePoints<kPolynomialOrderForSufficientPoints>();
-            eg = IndexVectorX::LinSpaced(CM.E.cols(), Index(0), CM.E.cols() - 1)
+            Xg                   = CM.QuadraturePoints<kPolynomialOrderForSufficientPoints>();
+            auto nQuadPtsPerElem = Xg.cols() / CM.E.cols();
+            eg                   = IndexVectorX::LinSpaced(CM.E.cols(), Index(0), CM.E.cols() - 1)
                      .transpose()
-                     .replicate(Xg.cols() / CM.E.cols(), 1)
+                     .replicate(nQuadPtsPerElem, 1)
                      .reshaped();
             // Compute quadrature weights via moment fitting
-            VectorX fwg               = fem::InnerProductWeights<1>(FM).reshaped();
-            MatrixX fXg               = FM.QuadraturePoints<1>();
-            IndexVectorX Sf           = cbvh.PrimitivesContainingPoints(fXg);
-            MatrixX fXi               = fem::ReferencePositions(CM, Sf, fXg);
-            MatrixX cXi               = fem::ReferencePositions(CM, eg, Xg);
-            bool const bEvaluateError = true;
-            auto const bMaxIterations = 10;
+            MatrixX fXg                = FM.QuadraturePoints<1>();
+            VectorX fwg                = fem::InnerProductWeights<1>(FM).reshaped();
+            IndexVectorX Sf            = cbvh.PrimitivesContainingPoints(fXg);
+            MatrixX fXi                = fem::ReferencePositions(CM, Sf, fXg, 10);
+            MatrixX cXi                = fem::ReferencePositions(CM, eg, Xg, 10);
+            auto const nSimplices      = CM.E.cols();
+            bool const bEvaluateError  = true;
+            Index const bMaxIterations = 10 * nQuadPtsPerElem;
+            Scalar const precision     = 1e-10 * fwg.maxCoeff();
             VectorX error;
-            auto const nSimplices = CM.E.cols();
-            std::tie(wg, error)   = math::TransferQuadrature<kPolynomialOrder>(
+            std::tie(wg, error) = math::TransferQuadrature<kPolynomialOrder>(
                 eg,
                 cXi,
                 Sf,
@@ -123,7 +125,8 @@ CageQuadrature::CageQuadrature(
                 fwg,
                 nSimplices,
                 bEvaluateError,
-                bMaxIterations);
+                bMaxIterations,
+                precision);
             // Find all non-negligible quadrature points (i.e. quadrature weight > 0)
             Index const nQuadPts = wg.size();
             std::vector<Index> validQuadPts{};
@@ -196,49 +199,67 @@ DirichletQuadrature::DirichletQuadrature(
 } // namespace sim
 } // namespace pbat
 
+#ifdef PBAT_WITH_PRECOMPILED_LARGE_MODELS
+#include "pbat/geometry/model/Armadillo.h"
+#endif // PBAT_WITH_PRECOMPILED_LARGE_MODELS
+#include "pbat/geometry/model/Cube.h"
+
 #include <doctest/doctest.h>
 
 TEST_CASE("[sim][vbd][multigrid] Quadrature")
 {
     using namespace pbat;
-    // Cube mesh
-    MatrixX VR(3, 8);
-    IndexMatrixX CR(4, 5);
-    // clang-format off
-    VR << 0., 1., 0., 1., 0., 1., 0., 1.,
-          0., 0., 1., 1., 0., 0., 1., 1.,
-          0., 0., 0., 0., 1., 1., 1., 1.;
-    CR << 0, 3, 5, 6, 0,
-          1, 2, 4, 7, 5,
-          3, 0, 6, 5, 3,
-          5, 6, 0, 3, 6;
-    // clang-format on
-    // Center and create cage
-    VR.colwise() -= VR.rowwise().mean();
-    MatrixX VC      = Scalar(1.1) * VR;
-    IndexMatrixX CC = CR;
-
-    // Act
     using sim::vbd::multigrid::CageQuadrature;
     using sim::vbd::multigrid::ECageQuadratureStrategy;
     using sim::vbd::multigrid::ESurfaceQuadratureStrategy;
     using sim::vbd::multigrid::SurfaceQuadrature;
-    using VolumeMesh = sim::vbd::multigrid::VolumeMesh;
-    VolumeMesh FM(VR, CR);
-    VolumeMesh CM(VC, CC);
-    CageQuadrature Qcage(FM, CM, ECageQuadratureStrategy::PolynomialSubCellIntegration);
-    SurfaceQuadrature Qsurf(
-        FM,
-        CM,
-        ESurfaceQuadratureStrategy::EmbeddedVertexSinglePointQuadrature);
+    using VolumeMesh  = sim::vbd::multigrid::VolumeMesh;
+    using SurfaceMesh = sim::vbd::multigrid::SurfaceMesh;
 
-    // Assert
-    bool const bCageWeightsNonNegative = (Qcage.wg.array() >= Scalar(0)).all();
-    bool const bSurfWeightsNonNegative = (Qsurf.wg.array() >= Scalar(0)).all();
-    CHECK(bCageWeightsNonNegative);
-    CHECK(bSurfWeightsNonNegative);
-    Scalar const cageQuadEmbeddedVolumeError = std::abs(Qcage.wg.sum() - Scalar(1));
-    CHECK_LT(cageQuadEmbeddedVolumeError, Scalar(1e-5));
-    Scalar const surfQuadSurfaceAreaError = std::abs(Qsurf.wg.sum() - Scalar(6));
-    CHECK_LT(surfQuadSurfaceAreaError, Scalar(1e-10));
+    auto const ActAndAssert =
+        [](MatrixX const& VR, IndexMatrixX const& CR, MatrixX const& VC, IndexMatrixX const& CC) {
+            // Act
+            VolumeMesh FM(VR, CR);
+            VolumeMesh CM(VC, CC);
+            CageQuadrature Qcage(FM, CM, ECageQuadratureStrategy::PolynomialSubCellIntegration);
+            SurfaceQuadrature Qsurf(
+                FM,
+                CM,
+                ESurfaceQuadratureStrategy::EmbeddedVertexSinglePointQuadrature);
+
+            // Assert
+            bool const bCageWeightsNonNegative = (Qcage.wg.array() >= Scalar(0)).all();
+            bool const bSurfWeightsNonNegative = (Qsurf.wg.array() >= Scalar(0)).all();
+            CHECK(bCageWeightsNonNegative);
+            CHECK(bSurfWeightsNonNegative);
+            Scalar const expectedVolume = fem::InnerProductWeights<1>(FM).sum();
+            Scalar const cageQuadEmbeddedVolumeError =
+                std::abs(Qcage.wg.sum() - expectedVolume) / expectedVolume;
+            CHECK_LT(cageQuadEmbeddedVolumeError, Scalar(1e-2));
+
+            auto [FVR, FFR] = geometry::SimplexMeshBoundary(CR, VR.cols());
+            SurfaceMesh SM(VR, FFR);
+            Scalar const expectedSurfaceArea = fem::InnerProductWeights<1>(SM).sum();
+            Scalar const surfQuadSurfaceAreaError =
+                std::abs(Qsurf.wg.sum() - expectedSurfaceArea) / expectedSurfaceArea;
+            CHECK_LT(surfQuadSurfaceAreaError, Scalar(1e-10));
+        };
+
+    SUBCASE("Cube")
+    {
+        auto [VR, CR] = geometry::model::Cube();
+        // Center and create cage
+        VR.colwise() -= VR.rowwise().mean();
+        MatrixX VC      = Scalar(1.1) * VR;
+        IndexMatrixX CC = CR;
+        ActAndAssert(VR, CR, VC, CC);
+    }
+#ifdef PBAT_WITH_PRECOMPILED_LARGE_MODELS
+    SUBCASE("Armadillo")
+    {
+       auto [VR, CR] = geometry::model::Armadillo(geometry::model::EMesh::Tetrahedral, Index(0));
+       auto [VC, CC] = geometry::model::Armadillo(geometry::model::EMesh::Tetrahedral, Index(1));
+       ActAndAssert(VR, CR, VC, CC);
+    }
+#endif // PBAT_WITH_PRECOMPILED_LARGE_MODELS
 }

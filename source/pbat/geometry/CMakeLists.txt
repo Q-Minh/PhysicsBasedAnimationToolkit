@@ -29,3 +29,5 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     "TetrahedralAabbHierarchy.cpp"
     "TriangleAabbHierarchy.cpp"
 )
+
+add_subdirectory(model)

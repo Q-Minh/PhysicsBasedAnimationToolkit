@@ -23,7 +23,11 @@ void BindLevel(pybind11::module& m)
     pyb::class_<Level>(m, "Level")
         .def(
             pyb::init([](pbat::py::fem::Mesh const& CM) {
-                return Level(std::move(*CM.Raw<VolumeMesh>()));
+                VolumeMesh const* CMraw = CM.Raw<VolumeMesh>();
+                if (CMraw == nullptr)
+                    throw std::invalid_argument(
+                        "Requested underlying MeshType that this Mesh does not hold.");
+                return Level(std::move(*CMraw));
             }),
             pyb::arg("cage_mesh"))
         .def(

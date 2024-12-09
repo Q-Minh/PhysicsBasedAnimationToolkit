@@ -14,6 +14,7 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     "Prolongation.h"
     "Quadrature.h"
     "Restriction.h"
+    "Smoother.h"
 )
 target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     PRIVATE
@@ -28,4 +29,5 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     "Prolongation.cpp"
     "Quadrature.cpp"
     "Restriction.cpp"
+    "Smoother.cpp"
 )

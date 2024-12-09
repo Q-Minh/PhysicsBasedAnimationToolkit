@@ -20,9 +20,14 @@ void BindElasticEnergy(pybind11::module& m)
     using pbat::sim::vbd::multigrid::ElasticEnergy;
     using pbat::sim::vbd::multigrid::VolumeMesh;
     pyb::class_<ElasticEnergy>(m, "ElasticEnergy")
-        .def(pyb::init(
-            [](Data const& problem, pbat::py::fem::Mesh const& CM, CageQuadrature const& CQ) {
-                return ElasticEnergy(problem, *CM.Raw<VolumeMesh>(), CQ);
+        .def(
+            pyb::init(
+                [](Data const& problem, pbat::py::fem::Mesh const& CM, CageQuadrature const& CQ) {
+                    VolumeMesh const* CMraw = CM.Raw<VolumeMesh>();
+                    if (CMraw == nullptr)
+                        throw std::invalid_argument(
+                            "Requested underlying MeshType that this Mesh does not hold.");
+                    return ElasticEnergy(problem, *CMraw, CQ);
                 }),
             pyb::arg("problem"),
             pyb::arg("cage_mesh"),

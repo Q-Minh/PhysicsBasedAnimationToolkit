@@ -153,9 +153,6 @@ inline MeshType* Mesh::Raw()
     this->Apply([&]<class OtherMeshType>(OtherMeshType* mesh) {
         if constexpr (std::is_same_v<MeshType, OtherMeshType>)
             raw = mesh;
-        else
-            throw std::invalid_argument(
-                "Requested underlying MeshType that this Mesh does not hold.");
     });
     return raw;
 }
@@ -167,9 +164,6 @@ inline MeshType const* Mesh::Raw() const
     this->Apply([&]<class OtherMeshType>(OtherMeshType* mesh) {
         if constexpr (std::is_same_v<MeshType, OtherMeshType>)
             raw = mesh;
-        else
-            throw std::invalid_argument(
-                "Requested underlying MeshType that this Mesh does not hold.");
     });
     return raw;
 }

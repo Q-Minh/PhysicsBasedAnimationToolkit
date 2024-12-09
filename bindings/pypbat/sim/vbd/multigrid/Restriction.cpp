@@ -27,7 +27,12 @@ void BindRestriction(pybind11::module& m)
         .def(
             pyb::init(
                 [](Data const& problem, Mesh const& FM, Mesh const& CM, CageQuadrature const& CQ) {
-                    return Restriction(problem, *FM.Raw<VolumeMesh>(), *CM.Raw<VolumeMesh>(), CQ);
+                    VolumeMesh const* FMraw = FM.Raw<VolumeMesh>();
+                    VolumeMesh const* CMraw = CM.Raw<VolumeMesh>();
+                    if (FMraw == nullptr or CMraw == nullptr)
+                        throw std::invalid_argument(
+                            "Requested underlying MeshType that this Mesh does not hold.");
+                    return Restriction(problem, *FMraw, *CMraw, CQ);
                 }),
             pyb::arg("problem"),
             pyb::arg("fine_mesh"),

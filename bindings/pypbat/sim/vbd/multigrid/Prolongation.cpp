@@ -23,7 +23,12 @@ void BindProlongation(pybind11::module& m)
     pyb::class_<Prolongation>(m, "Prolongation")
         .def(
             pyb::init([](Mesh const& FM, Mesh const& CM) {
-                return Prolongation(*FM.Raw<VolumeMesh>(), *CM.Raw<VolumeMesh>());
+                VolumeMesh const* FMraw = FM.Raw<VolumeMesh>();
+                VolumeMesh const* CMraw = CM.Raw<VolumeMesh>();
+                if (FMraw == nullptr or CMraw == nullptr)
+                    throw std::invalid_argument(
+                        "Requested underlying MeshType that this Mesh does not hold.");
+                return Prolongation(*FMraw, *CMraw);
             }),
             pyb::arg("fine_mesh"),
             pyb::arg("cage_mesh"))
