@@ -4,7 +4,6 @@
 #include "Mesh.h"
 #include "Quadrature.h"
 #include "pbat/Aliases.h"
-#include "pbat/geometry/TetrahedralAabbHierarchy.h"
 #include "pbat/sim/vbd/Data.h"
 
 namespace pbat {

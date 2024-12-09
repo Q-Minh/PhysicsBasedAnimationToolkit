@@ -23,7 +23,7 @@ template <
 Eigen::Vector<TIndex, Eigen::Dynamic> GreedyColor(
     Eigen::DenseBase<TDerivedPtr> const& ptr,
     Eigen::DenseBase<TDerivedAdj> const& adj,
-    EGreedyColorOrderingStrategy eOrderingStrategy   = EGreedyColorOrderingStrategy::Natural,
+    EGreedyColorOrderingStrategy eOrderingStrategy   = EGreedyColorOrderingStrategy::LargestDegree,
     EGreedyColorSelectionStrategy eSelectionStrategy = EGreedyColorSelectionStrategy::LeastUsed)
 {
     common::Stack<TIndex, NC> palette{};

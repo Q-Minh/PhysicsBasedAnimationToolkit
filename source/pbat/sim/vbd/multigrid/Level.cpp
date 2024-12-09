@@ -1,13 +1,37 @@
 #include "Level.h"
 
+#include "pbat/graph/Adjacency.h"
+#include "pbat/graph/Color.h"
+#include "pbat/graph/Mesh.h"
+
 namespace pbat {
 namespace sim {
 namespace vbd {
 namespace multigrid {
 
 Level::Level(VolumeMesh CM)
-    : mesh(std::move(CM)), Qcage(), Qdirichlet(), Ekinetic(), Epotential(), Edirichlet()
+    : x(),
+      colors(),
+      ptr(),
+      adj(),
+      mesh(std::move(CM)),
+      Qcage(),
+      Qdirichlet(),
+      Ekinetic(),
+      Epotential(),
+      Edirichlet()
 {
+    // Initialize coarse vertex positions from rest pose
+    x                       = mesh.X;
+    // Compute vertex parallelization scheme
+    auto GVV                = graph::MeshPrimalGraph(mesh.E, mesh.X.cols());
+    auto [GVVp, GVVv, GVVw] = graph::MatrixToAdjacency(GVV);
+    colors                  = graph::GreedyColor(
+        GVVp,
+        GVVv,
+        graph::EGreedyColorOrderingStrategy::LargestDegree,
+        graph::EGreedyColorSelectionStrategy::LeastUsed);
+    std::tie(ptr, adj) = graph::MapToAdjacency(colors);
 }
 
 Level& Level::WithCageQuadrature(Data const& problem, ECageQuadratureStrategy eStrategy)

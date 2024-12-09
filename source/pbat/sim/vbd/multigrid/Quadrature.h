@@ -3,7 +3,6 @@
 
 #include "Mesh.h"
 #include "pbat/Aliases.h"
-#include "pbat/geometry/TetrahedralAabbHierarchy.h"
 
 namespace pbat {
 namespace sim {

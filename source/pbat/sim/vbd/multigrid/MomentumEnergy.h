@@ -1,6 +1,7 @@
 #ifndef PBAT_SIM_VBD_MULTIGRID_MOMENTUM_ENERGY_H
 #define PBAT_SIM_VBD_MULTIGRID_MOMENTUM_ENERGY_H
 
+#include "Mesh.h"
 #include "Quadrature.h"
 #include "pbat/Aliases.h"
 #include "pbat/sim/vbd/Data.h"

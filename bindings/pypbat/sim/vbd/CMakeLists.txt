@@ -25,3 +25,5 @@ target_sources(PhysicsBasedAnimationToolkit_Python
     "Smoother.cpp"
     "Vbd.cpp"
 )
+
+add_subdirectory(multigrid)

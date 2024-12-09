@@ -13,51 +13,72 @@ namespace vbd {
 namespace multigrid {
 
 Hierarchy::Hierarchy(
-    Data rootIn,
+    Data root,
     std::vector<Eigen::Ref<MatrixX const>> const& X,
     std::vector<Eigen::Ref<IndexMatrixX const>> const& E,
-    std::optional<std::vector<std::pair<Index, Index>>> cycleIn,
-    std::optional<std::vector<Index>> transitionScheduleIn,
-    std::optional<std::vector<Index>> smoothingScheduleIn)
-    : root(std::move(rootIn)), levels(), cycle(), smoothingSchedule(), transitionSchedule()
+    Eigen::Ref<IndexMatrixX const> const& cycle,
+    Eigen::Ref<IndexVectorX const> const& transitionSchedule,
+    Eigen::Ref<IndexVectorX const> const& smoothingSchedule)
+    : mRoot(std::move(root)),
+      mLevels(),
+      mCycle(cycle),
+      mTransitionSchedule(transitionSchedule),
+      mSmoothingSchedule(smoothingSchedule),
+      mTransitions()
 {
-    levels.reserve(X.size());
+    mLevels.reserve(X.size());
     for (auto l = 0ULL; l < X.size(); ++l)
     {
-        levels.push_back(
+        mLevels.push_back(
             Level(VolumeMesh(X[l], E[l]))
-                .WithCageQuadrature(root, ECageQuadratureStrategy::PolynomialSubCellIntegration)
-                .WithDirichletQuadrature(root)
-                .WithMomentumEnergy(root)
-                .WithElasticEnergy(root));
+                .WithCageQuadrature(mRoot, ECageQuadratureStrategy::PolynomialSubCellIntegration)
+                .WithDirichletQuadrature(mRoot)
+                .WithMomentumEnergy(mRoot)
+                .WithElasticEnergy(mRoot));
     }
-    if (cycleIn)
+    if (mCycle.size() == 0)
     {
-        cycle = std::move(*cycleIn);
+        Index const nLevels = static_cast<Index>(mLevels.size());
+        mCycle.resize(2, nLevels + 1);
+        mCycle.col(0) = IndexVector<2>{Index(-1), nLevels - 1};
+        for (Index l = nLevels - 1, k = 1; l >= 0; --l, ++k)
+            mCycle.col(k) << l, l - 1;
     }
-    else
+    if (mTransitionSchedule.size() == 0)
     {
-        cycle.reserve(levels.size() + 1);
-        Index const nLevels = static_cast<Index>(levels.size());
-        cycle.push_back({Index(-1), nLevels - 1});
-        for (Index l = nLevels - 1; l >= 0; --l)
-            cycle.push_back({l, l - 1});
+        mTransitionSchedule.setConstant(mCycle.size(), Index(10));
     }
-    if (smoothingScheduleIn)
+    if (mSmoothingSchedule.size() == 0)
     {
-        smoothingSchedule = std::move(*smoothingScheduleIn);
+        mSmoothingSchedule.setConstant(mCycle.size() + 1, Index(10));
     }
-    else
+
+    mTransitions.reserve(mTransitionSchedule.size() * 3ULL);
+    for (Index t = 0; t < mTransitionSchedule.cols(); ++t)
     {
-        smoothingSchedule.resize(cycle.size() + 1, Index(10));
-    }
-    if (transitionScheduleIn)
-    {
-        transitionSchedule = std::move(*transitionScheduleIn);
-    }
-    else
-    {
-        transitionSchedule.resize(cycle.size(), Index(10));
+        IndexVector<2> const transition = mTransitionSchedule.col(t);
+        bool const bIsNewTransition     = mTransitions.find(transition) == mTransitions.end();
+        if (bIsNewTransition)
+        {
+            bool const bIsProlongation = transition(0) > transition(1);
+            if (bIsProlongation)
+            {
+                Level const& lc      = mLevels[static_cast<std::size_t>(transition(0))];
+                Level const& lf      = mLevels[static_cast<std::size_t>(transition(1))];
+                VolumeMesh const& CM = lc.mesh;
+                VolumeMesh const& FM = transition(1) > -1 ? lf.mesh : mRoot.mesh;
+                mTransitions.insert({transition, Prolongation(FM, CM)});
+            }
+            else
+            {
+                Level const& lf          = mLevels[static_cast<std::size_t>(transition(0))];
+                Level const& lc          = mLevels[static_cast<std::size_t>(transition(1))];
+                VolumeMesh const& FM     = transition(0) > -1 ? lf.mesh : mRoot.mesh;
+                VolumeMesh const& CM     = lc.mesh;
+                CageQuadrature const& CQ = lc.Qcage;
+                mTransitions.insert({transition, Restriction(mRoot, FM, CM, CQ)});
+            }
+        }
     }
 }
 

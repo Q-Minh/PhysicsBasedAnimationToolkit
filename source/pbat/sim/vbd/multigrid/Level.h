@@ -55,12 +55,16 @@ struct Level
      */
     Level& WithDirichletEnergy(Data const& problem);
 
-    VolumeMesh mesh;
-    CageQuadrature Qcage;
-    DirichletQuadrature Qdirichlet;
-    MomentumEnergy Ekinetic;
-    ElasticEnergy Epotential;
-    DirichletEnergy Edirichlet;
+    MatrixX x;             ///< 3x|#cage verts| deformed positions
+    IndexVectorX colors;   ///< Coarse vertex graph coloring
+    IndexVectorX ptr, adj; ///< Parallel vertex partitions
+
+    VolumeMesh mesh;                ///< Cage linear tetrahedral FEM mesh
+    CageQuadrature Qcage;           ///< Cage volumetric quadrature
+    DirichletQuadrature Qdirichlet; ///< Cage Dirichlet quadrature
+    MomentumEnergy Ekinetic;        ///< \frac{1}{2} \rho || x^c - \Tilde{x} ||_2^2
+    ElasticEnergy Epotential;       ///< \Psi(x^c)
+    DirichletEnergy Edirichlet;     ///< \frac{1}{2} \mu_D || x^c - x_D ||_2^2
 };
 
 } // namespace multigrid

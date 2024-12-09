@@ -1,4 +1,4 @@
-target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
+target_sources(PhysicsBasedAnimationToolkit_Python
     PUBLIC
     FILE_SET api
     FILES
@@ -6,25 +6,23 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     "ElasticEnergy.h"
     "Hierarchy.h"
     "Integrator.h"
-    "Kernels.h"
     "Level.h"
-    "Mesh.h"
     "MomentumEnergy.h"
     "Multigrid.h"
     "Prolongation.h"
     "Quadrature.h"
     "Restriction.h"
 )
-target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
+
+target_sources(PhysicsBasedAnimationToolkit_Python
     PRIVATE
     "DirichletEnergy.cpp"
     "ElasticEnergy.cpp"
     "Hierarchy.cpp"
     "Integrator.cpp"
-    "Kernels.cpp"
     "Level.cpp"
-    "Mesh.cpp"
     "MomentumEnergy.cpp"
+    "Multigrid.cpp"
     "Prolongation.cpp"
     "Quadrature.cpp"
     "Restriction.cpp"

@@ -156,9 +156,7 @@ SurfaceQuadrature::SurfaceQuadrature(
 {
     geometry::TetrahedralAabbHierarchy cbvh(CM.X, CM.E);
     // Extract domain boundary
-    using LinearTriangle = fem::Triangle<1>;
-    using SurfaceMesh    = fem::Mesh<LinearTriangle, 3>;
-    auto [V, F]          = geometry::SimplexMeshBoundary(FM.E, FM.X.cols());
+    auto [V, F] = geometry::SimplexMeshBoundary(FM.E, FM.X.cols());
     SurfaceMesh S(FM.X, F);
     // Distribute 1-pt boundary triangle quadratures onto boundary vertices
     if (eStrategy == ESurfaceQuadratureStrategy::EmbeddedVertexSinglePointQuadrature)

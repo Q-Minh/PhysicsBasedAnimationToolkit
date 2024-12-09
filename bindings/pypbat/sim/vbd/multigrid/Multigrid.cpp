@@ -1,34 +1,35 @@
-#include "Vbd.h"
+#include "Multigrid.h"
 
-#include "Data.h"
+#include "DirichletEnergy.h"
+#include "ElasticEnergy.h"
 #include "Hierarchy.h"
 #include "Integrator.h"
 #include "Level.h"
-#include "MultiScaleIntegrator.h"
+#include "MomentumEnergy.h"
 #include "Prolongation.h"
+#include "Quadrature.h"
 #include "Restriction.h"
-#include "Smoother.h"
-#include "multigrid/Multigrid.h"
 
 namespace pbat {
 namespace py {
 namespace sim {
 namespace vbd {
+namespace multigrid {
 
 void Bind(pybind11::module& m)
 {
-    BindData(m);
-    BindIntegrator(m);
+    BindQuadrature(m);
+    BindDirichletEnergy(m);
+    BindElasticEnergy(m);
+    BindMomentumEnergy(m);
     BindLevel(m);
-    BindProlongation(m);
     BindRestriction(m);
-    BindSmoother(m);
+    BindProlongation(m);
     BindHierarchy(m);
-    BindMultiScaleIntegrator(m);
-    auto mmultigrid = m.def_submodule("multigrid");
-    multigrid::Bind(mmultigrid);
+    BindIntegrator(m);
 }
 
+} // namespace multigrid
 } // namespace vbd
 } // namespace sim
 } // namespace py
