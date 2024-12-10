@@ -8,7 +8,6 @@ import time
 import meshio
 import argparse
 import math
-import qpsolvers
 
 
 def min_max_eigs(A, n=10):
@@ -19,7 +18,7 @@ def min_max_eigs(A, n=10):
 
 def laplacian_energy(mesh, k=1, dims=1):
     L = -pbat.fem.laplacian(mesh, dims=dims)[0]
-    M = None if k == 1 else pbat.fem.mass_matrix(mesh, dims=1, lump=True)
+    M = None if k == 1 else pbat.fem.mass_matrix(mesh, dims=dims, lump=True)
     U = L
     for i in range(k-1):
         U = U @ M @ L
@@ -237,7 +236,7 @@ class VbdRestrictionOperator:
         MT: pbat.fem.Mesh,
         Y=1e6, nu=0.45, rho=1e3,
         cage_quadrature_strategy=pbat.sim.vbd.multigrid.ECageQuadratureStrategy.EmbeddedMesh,
-        iters: int = 20
+        iters: int = 10
     ):
         # Construct VBD problem
         VR, FR = pbat.geometry.simplex_mesh_boundary(MD.E, n=MD.X.shape[1])
@@ -261,6 +260,10 @@ class VbdRestrictionOperator:
             strategy=cage_quadrature_strategy
         )
         # Construct Restriction operator
+        wg = np.copy(self.coarse_level.Qcage.wg)
+        sg = self.coarse_level.Qcage.sg
+        wg[sg] *= 1e-3
+        self.coarse_level.Qcage.wg = wg
         self.restriction = pbat.sim.vbd.multigrid.Restriction(
             data, MD, MT, self.coarse_level.Qcage)
         self.iters = iters
@@ -328,9 +331,10 @@ if __name__ == "__main__":
         np.float64, order='c'), imesh.cells_dict["tetra"].astype(np.int64, order='c')
     CV, CC = icmesh.points.astype(
         np.float64, order='c'), icmesh.cells_dict["tetra"].astype(np.int64, order='c')
-    maxcoord = V.max()
-    V = V / maxcoord
-    CV = CV / maxcoord
+    center = V.mean(axis=0).reshape(1, 3)
+    scale = V.max() - V.min()
+    V = (V - center) / scale
+    CV = (CV - center) / scale
     # Cube test
     # V = np.array([[0, 0, 0], [1, 0, 0], [0, 1, 0], [1, 1, 0], [0, 0, 1], [
     #              1, 0, 1], [0, 1, 1], [1, 1, 1]], dtype=np.float64)
@@ -360,7 +364,7 @@ if __name__ == "__main__":
     # Krestrict = 30
     # Frank = RankKApproximateFemFunctionTransferOperator(
     #     mesh, mesh, cmesh, HC, lreg=lreg, hreg=hreg, greg=greg, modes=Krestrict)
-    Fvbd = VbdRestrictionOperator(mesh, mesh, cmesh)
+    Fvbd = VbdRestrictionOperator(mesh, mesh, cmesh, iters=1)
 
     ps.set_up_dir("z_up")
     ps.set_front_dir("neg_y_front")
@@ -404,16 +408,13 @@ if __name__ == "__main__":
                 [0, np.sin(theta/2), 0, np.cos(theta/4)]).as_matrix()
             X = (V - V.mean(axis=0)) @ R.T + V.mean(axis=0)
             uf = signal(w[mode], L[:, mode], t, c, k)
-            ur = (X - V).flatten(order="C")
-            # ut = np.ones(math.prod(X.shape))
-            u = uf  # + ur + ut
+            # ur = (X - V).flatten(order="C")
+            ut = 1e-1*np.ones(math.prod(X.shape))
+            u = ut# + ur + uf
             # XCnewton = CV + (Fnewton @ u).reshape(CV.shape)
             XCvbd = CV + (Fvbd @ u).reshape(CV.shape)
             # XCrank = CV + (Frank @ u).reshape(CV.shape)
-            vm.update_vertex_positions(V + (
-                uf #+ ur
-            ).reshape(V.shape)
-            )
+            vm.update_vertex_positions(V + u.reshape(V.shape))
             # newtonvm.update_vertex_positions(XCnewton)
             vbdvm.update_vertex_positions(XCvbd)
             # rankvm.update_vertex_positions(XCrank)

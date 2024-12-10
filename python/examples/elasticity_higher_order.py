@@ -79,8 +79,7 @@ if __name__ == "__main__":
     # Setup visual mesh
     bvh = pbat.geometry.bvh(V.T, C.T, cell=pbat.geometry.Cell.Tetrahedron)
     e, d = bvh.nearest_primitives_to_points(VR.T)
-    Xi = pbat.fem.reference_positions(mesh, e, VR.T)
-    phi = pbat.fem.shape_functions_at(mesh, Xi)
+    phi = pbat.fem.shape_functions_at(mesh, e, VR.T)
 
     ps.set_verbosity(0)
     ps.set_up_dir("z_up")

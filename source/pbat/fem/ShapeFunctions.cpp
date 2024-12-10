@@ -171,7 +171,7 @@ TEST_CASE("[fem] ShapeFunctionGradientsAt")
                 Xi.col(e * kQuadPts + g) = Xg.col(g);
             }
         }
-        MatrixX const GNe         = fem::ShapeFunctionGradientsAt(mesh, Ei, Xi);
+        MatrixX const GNe         = fem::ShapeFunctionGradientsAt(mesh, Ei, Xi, true);
         MatrixX const GNeExpected = fem::ShapeFunctionGradients<kQuadratureOrder>(mesh);
         Scalar const GNeError     = (GNe - GNeExpected).squaredNorm();
         Scalar constexpr zero     = 1e-15;

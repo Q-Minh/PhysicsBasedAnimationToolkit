@@ -14,9 +14,8 @@ DirichletEnergy::DirichletEnergy(
     DirichletQuadrature const& DQ)
     : muD(problem.muD), Ncg(), dg()
 {
-    dg        = DQ.Xg;
-    auto cXig = fem::ReferencePositions(CM, DQ.eg, DQ.Xg);
-    Ncg       = fem::ShapeFunctionsAt<VolumeMesh::ElementType>(cXig);
+    dg  = DQ.Xg;
+    Ncg = fem::ShapeFunctionsAt(CM, DQ.eg, DQ.Xg);
 }
 
 } // namespace multigrid

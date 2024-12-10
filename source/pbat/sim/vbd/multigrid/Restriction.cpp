@@ -26,8 +26,7 @@ Restriction::Restriction(
 {
     geometry::TetrahedralAabbHierarchy fbvh(FM.X, FM.E);
     efg              = fbvh.NearestPrimitivesToPoints(CQ.Xg).first;
-    auto fXig        = fem::ReferencePositions(FM, efg, CQ.Xg);
-    Nfg              = fem::ShapeFunctionsAt<VolumeMesh::ElementType>(fXig);
+    Nfg              = fem::ShapeFunctionsAt(FM, efg, CQ.Xg);
     IndexVectorX erg = geometry::TetrahedralAabbHierarchy(problem.mesh.X, problem.mesh.E)
                            .NearestPrimitivesToPoints(CQ.Xg)
                            .first;
@@ -35,8 +34,8 @@ Restriction::Restriction(
     mug       = problem.lame.row(0)(erg);
     lambdag   = problem.lame.row(1)(erg);
     auto cXig = fem::ReferencePositions(CM, CQ.eg, CQ.Xg);
-    Ncg       = fem::ShapeFunctionsAt<VolumeMesh::ElementType>(cXig);
-    GNcg      = fem::ShapeFunctionGradientsAt(CM, CQ.eg, cXig);
+    Ncg       = fem::ShapeFunctionsAt(CM, CQ.eg, cXig, true);
+    GNcg      = fem::ShapeFunctionGradientsAt(CM, CQ.eg, cXig, true);
     xfg.resize(3, rhog.size());
 }
 

@@ -27,8 +27,7 @@ Prolongation::Prolongation(VolumeMesh const& FM, VolumeMesh const& CM) : ec(), N
             nOutOfBounds);
         throw std::invalid_argument(what);
     }
-    auto Xig = fem::ReferencePositions(CM, ec, FM.X);
-    Nc       = fem::ShapeFunctionsAt<VolumeMesh::ElementType>(Xig);
+    Nc = fem::ShapeFunctionsAt(CM, ec, FM.X);
 }
 
 void Prolongation::Apply(Level const& lc, Level& lf)

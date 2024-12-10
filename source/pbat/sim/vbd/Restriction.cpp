@@ -296,8 +296,8 @@ TEST_CASE("[sim][vbd] Restriction")
             Nrg(Eigen::placeholders::all, Eigen::seqN(v, wgC.size(), 4)) = Nivg;
         }
         MatrixX XigR = fem::ReferencePositions(MR, erg, XgC);
-        MatrixX GNfg = fem::ShapeFunctionGradientsAt(MR, erg, XigR);
-        MatrixX GNcg = fem::ShapeFunctionGradientsAt(MC, ecg, XigC);
+        MatrixX GNfg = fem::ShapeFunctionGradientsAt(MR, erg, XigR, true);
+        MatrixX GNcg = fem::ShapeFunctionGradientsAt(MC, ecg, XigC, true);
         energy.WithPotentialEnergy(mug, lambdag, ervg, Nrg, GNfg, GNcg);
         IndexMatrixX CG = CC(Eigen::placeholders::all, ecg);
         IndexMatrixX ilocal =

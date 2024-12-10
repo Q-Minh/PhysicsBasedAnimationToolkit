@@ -15,12 +15,10 @@ MomentumEnergy::MomentumEnergy(Data const& problem, VolumeMesh const& CM, CageQu
     : xtildeg(), erg(), Nrg(), Ncg(), rhog()
 {
     geometry::TetrahedralAabbHierarchy rbvh(problem.mesh.X, problem.mesh.E);
-    erg       = rbvh.NearestPrimitivesToPoints(CQ.Xg).first;
-    auto rXig = fem::ReferencePositions(problem.mesh, erg, CQ.Xg);
-    Nrg       = fem::ShapeFunctionsAt<VolumeMesh::ElementType>(rXig);
-    auto cXig = fem::ReferencePositions(CM, CQ.eg, CQ.Xg);
-    Ncg       = fem::ShapeFunctionsAt<VolumeMesh::ElementType>(cXig);
-    rhog      = problem.rhoe(erg);
+    erg  = rbvh.NearestPrimitivesToPoints(CQ.Xg).first;
+    Nrg  = fem::ShapeFunctionsAt(problem.mesh, erg, CQ.Xg);
+    Ncg  = fem::ShapeFunctionsAt(CM, CQ.eg, CQ.Xg);
+    rhog = problem.rhoe(erg);
     xtildeg.resize(3, rhog.size());
 }
 
