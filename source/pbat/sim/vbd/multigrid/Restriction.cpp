@@ -42,12 +42,19 @@ Restriction::Restriction(
 
 void Restriction::Apply(Index iters, Level const& lf, Level& lc)
 {
+    DoApply(iters, lf.x, lf.mesh.E, lc);
+}
+
+Scalar Restriction::DoApply(
+    Index iters,
+    Eigen::Ref<MatrixX const> const& xf,
+    Eigen::Ref<IndexMatrixX const> const& Ef,
+    Level& lc)
+{
     // Compute target positions at quad.pts.
-    VolumeMesh const& FM = lf.mesh;
-    MatrixX const& xf    = lf.x;
     tbb::parallel_for(Index(0), efg.size(), [&](Index g) {
         auto e     = efg(g);
-        auto inds  = FM.E(Eigen::placeholders::all, e);
+        auto inds  = Ef(Eigen::placeholders::all, e);
         auto Nf    = Nfg.col(g);
         xfg.col(g) = xf(Eigen::placeholders::all, inds) * Nf;
     });
@@ -56,8 +63,10 @@ void Restriction::Apply(Index iters, Level const& lf, Level& lc)
     CageQuadrature const& Q = lc.Qcage;
     auto const [ptr, adj]   = std::tie(lc.ptr, lc.adj);
     MatrixX& xc             = lc.x;
+    VectorX energy(lc.Qcage.GVGg.size());
     for (auto k = 0; k < iters; ++k)
     {
+        energy.setZero();
         auto nPartitions = ptr.size() - 1;
         for (Index p = 0; p < nPartitions; ++p)
         {
@@ -67,11 +76,11 @@ void Restriction::Apply(Index iters, Level const& lf, Level& lc)
                 Index i     = adj(kp);
                 auto gBegin = Q.GVGp(i);
                 auto gEnd   = Q.GVGp(i + 1);
+                using math::linalg::mini::FromEigen;
                 using math::linalg::mini::SMatrix;
                 using math::linalg::mini::SVector;
-                using math::linalg::mini::Zeros;
-                using math::linalg::mini::FromEigen;
                 using math::linalg::mini::ToEigen;
+                using math::linalg::mini::Zeros;
                 SMatrix<Scalar, 3, 3> Hi = Zeros<Scalar, 3, 3>();
                 SVector<Scalar, 3> gi    = Zeros<Scalar, 3, 1>();
                 for (auto kg = gBegin; kg < gEnd; ++kg)
@@ -89,7 +98,15 @@ void Restriction::Apply(Index iters, Level const& lf, Level& lc)
                         Scalar rho            = rhog(g);
                         SVector<Scalar, 4> Nc = FromEigen(Ncg.col(g).head<4>());
                         SVector<Scalar, 3> x  = FromEigen(xfg.col(g).head<3>());
-                        kernels::AccumulateShapeMatchingEnergy(ilocal, wg, rho, xce, Nc, x, gi, Hi);
+                        energy(kg)            = kernels::AccumulateShapeMatchingEnergy(
+                            ilocal,
+                            wg,
+                            rho,
+                            xce,
+                            Nc,
+                            x,
+                            gi,
+                            Hi);
                     }
                     else
                     {
@@ -117,9 +134,77 @@ void Restriction::Apply(Index iters, Level const& lf, Level& lc)
             });
         }
     }
+    return energy.maxCoeff();
 }
 
 } // namespace multigrid
 } // namespace vbd
 } // namespace sim
 } // namespace pbat
+
+#include "pbat/geometry/model/Cube.h"
+#ifdef PBAT_WITH_PRECOMPILED_LARGE_MODELS
+    #include "pbat/geometry/model/Armadillo.h"
+#endif // PBAT_WITH_PRECOMPILED_LARGE_MODELS
+
+#include <doctest/doctest.h>
+
+TEST_CASE("[sim][vbd][multigrid] Restriction")
+{
+    using namespace pbat;
+    using sim::vbd::Data;
+    using sim::vbd::multigrid::CageQuadrature;
+    using sim::vbd::multigrid::ECageQuadratureStrategy;
+    using sim::vbd::multigrid::Level;
+    using sim::vbd::multigrid::Restriction;
+    using sim::vbd::multigrid::VolumeMesh;
+
+    auto const fActAndAssert = [](Index iters,
+                                  VolumeMesh const& FM,
+                                  VolumeMesh const& CM,
+                                  Scalar translate,
+                                  Scalar scale) {
+        Data data = Data().WithVolumeMesh(FM.X, FM.E).Construct();
+        Level lf{FM};
+        Level lc = Level{CM}.WithCageQuadrature(data, ECageQuadratureStrategy::EmbeddedMesh);
+        Restriction R(data, FM, lc.mesh, lc.Qcage);
+        // Translate and scale fine mesh
+        lf.x.colwise() -= translate * Vector<3>::Ones();
+        lf.x.array() *= scale;
+        // Restrict coarse mesh to fine mesh
+        Scalar energy    = R.DoApply(iters, lf.x, lf.mesh.E, lc);
+        Scalar bboxDiag2 = (lf.x.rowwise().maxCoeff() - lf.x.rowwise().minCoeff()).squaredNorm();
+        Scalar wgMax     = lc.Qcage.wg.maxCoeff();
+        // Energy is max_g (1/2 w_g rho_g || xc - xf ||_2^2)
+        Scalar const kLargestExpectedError = Scalar(1e-6) * bboxDiag2 * wgMax * data.rhoe.mean();
+        CHECK_LT(energy, kLargestExpectedError);
+    };
+
+    SUBCASE("Cube")
+    {
+        auto [VR, CR] = geometry::model::Cube();
+        // Center and create cage
+        VR.colwise() -= VR.rowwise().mean();
+        MatrixX VC      = Scalar(1.1) * VR;
+        IndexMatrixX CC = CR;
+        VolumeMesh FM(VR, CR);
+        VolumeMesh CM(VC, CC);
+        Index constexpr iters = 10;
+        Scalar constexpr scale{5};
+        Scalar constexpr translate{5};
+        fActAndAssert(iters, FM, CM, translate, scale);
+    }
+#ifdef PBAT_WITH_PRECOMPILED_LARGE_MODELS
+    SUBCASE("Armadillo")
+    {
+        auto [VR, CR] = geometry::model::Armadillo(geometry::model::EMesh::Tetrahedral, Index(0));
+        auto [VC, CC] = geometry::model::Armadillo(geometry::model::EMesh::Tetrahedral, Index(1));
+        VolumeMesh FM(VR, CR);
+        VolumeMesh CM(VC, CC);
+        Index constexpr iters = 150;
+        Scalar constexpr scale{2.};
+        Scalar constexpr translate{2.};
+        fActAndAssert(iters, FM, CM, translate, scale);
+    }
+#endif // PBAT_WITH_PRECOMPILED_LARGE_MODELS
+}

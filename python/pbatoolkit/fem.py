@@ -77,6 +77,12 @@ def gradient(mesh, quadrature_order: int = 1, eg: np.ndarray = None, GNeg: np.nd
     return G, eg, GNeg
 
 
+def lame_coefficients(Y: float | np.ndarray, nu: float | np.ndarray):
+    mue = Y / (2*(1+nu))
+    lambdae = (Y*nu) / ((1+nu)*(1-2*nu))
+    return mue, lambdae
+
+
 def hyper_elastic_potential(
         mesh,
         Y: float | np.ndarray = 1e6,

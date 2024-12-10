@@ -52,7 +52,7 @@ template <
     mini::CMatrix TMatrixGI,
     mini::CMatrix TMatrixHI,
     class ScalarType = typename TMatrixXCG::ScalarType>
-PBAT_HOST_DEVICE void AccumulateShapeMatchingEnergy(
+PBAT_HOST_DEVICE Scalar AccumulateShapeMatchingEnergy(
     IndexType ilocal,
     ScalarType wg,
     ScalarType rhog,
@@ -65,8 +65,11 @@ PBAT_HOST_DEVICE void AccumulateShapeMatchingEnergy(
     using namespace mini;
     auto xc = xcg * Ncg;
     // Energy is 1/2 w_g rho_g || xc - xf ||_2^2
-    gi += (wg * rhog * Ncg(ilocal)) * (xc - xtarget);
+    SVector<ScalarType, 3> dx = xc - xtarget;
+    Scalar E                  = Scalar(0.5) * wg * rhog * SquaredNorm(dx);
+    gi += (wg * rhog * Ncg(ilocal)) * dx;
     Diag(Hi) += wg * rhog * Ncg(ilocal) * Ncg(ilocal);
+    return E;
 }
 
 } // namespace kernels

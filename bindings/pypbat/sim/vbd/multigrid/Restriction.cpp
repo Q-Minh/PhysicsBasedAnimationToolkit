@@ -39,6 +39,13 @@ void BindRestriction(pybind11::module& m)
             pyb::arg("cage_mesh"),
             pyb::arg("cage_quadrature"))
         .def("apply", &Restriction::Apply, pyb::arg("iters"), pyb::arg("lf"), pyb::arg("lc"))
+        .def(
+            "do_apply",
+            &Restriction::DoApply,
+            pyb::arg("iters"),
+            pyb::arg("xf"),
+            pyb::arg("Ef"),
+            pyb::arg("lc"))
         .def_readwrite("efg", &Restriction::efg)
         .def_readwrite("Nfg", &Restriction::Nfg)
         .def_readwrite("xfg", &Restriction::xfg)

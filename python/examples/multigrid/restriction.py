@@ -229,74 +229,52 @@ class NewtonFunctionTransferOperator(BaseFemFunctionTransferOperator):
         return uk
 
 
-class VbdFunctionTransferOperator:
-    def __init__(self, MD: pbat.fem.Mesh, MS: pbat.fem.Mesh, MT: pbat.fem.Mesh, hxreg=1e-4, Y=1e6, nu=0.45, rho=1e3):
+class VbdRestrictionOperator:
+    def __init__(
+        self,
+        MD: pbat.fem.Mesh,
+        MS: pbat.fem.Mesh,
+        MT: pbat.fem.Mesh,
+        Y=1e6, nu=0.45, rho=1e3,
+        cage_quadrature_strategy=pbat.sim.vbd.multigrid.ECageQuadratureStrategy.EmbeddedMesh,
+        iters: int = 20
+    ):
         # Construct VBD problem
-        V, C = MD.X.T, MD.E.T
-        F = igl.boundary_facets(C)
-        F[:, :2] = np.roll(F[:, :2], shift=1, axis=1)
-        VC = np.unique(F)
-        ilocal = np.repeat(np.arange(4)[np.newaxis, :], C.shape[0], axis=0)
-        GVT = pbat.sim.vbd.vertex_element_adjacency(V, C, data=ilocal)
-        Pptr, Padj, GC = pbat.sim.vbd.partitions(V, C)
-        wg = pbat.fem.inner_product_weights(MD).flatten(order="F")
-        GNeg = pbat.fem.shape_function_gradients(MD)
-        Y = np.full(wg.shape[0], 1e6)
-        nu = np.full(wg.shape[0], 0.45)
-        mue = Y / (2*(1+nu))
-        lambdae = (Y*nu) / ((1+nu)*(1-2*nu))
-        data = pbat.sim.vbd.Data().with_volume_mesh(
-            V.T, C.T
-        ).with_surface_mesh(
-            VC, F.T
-        ).with_quadrature(
-            wg, GNeg, np.vstack((mue, lambdae))
-        ).with_vertex_adjacency(
-            GVT.indptr, GVT.indices, GVT.data
-        ).with_partitions(
-            Pptr, Padj
-        ).with_initialization_strategy(
-            pbat.sim.vbd.InitializationStrategy.KineticEnergyMinimum
-        ).construct()
-        # Construct quadrature rule on coarse mesh
-        VC, CC = MT.X.T, MT.E.T
-        ibvh = pbat.geometry.bvh(
-            V.T, C.T, cell=pbat.geometry.Cell.Tetrahedron)
-        cbvh = pbat.geometry.bvh(
-            VC.T, CC.T, cell=pbat.geometry.Cell.Tetrahedron)
-        cXg, cwg, ceg, csg, iXg, iwg, err = pbat.fem.fit_output_quad_to_input_quad(
-            MD,
-            MT,
-            ibvh,
-            cbvh,
-            iorder=1,
-            oorder=2,
-            selection=pbat.fem.QuadraturePointSelection.FromOutputQuadrature,
-            fitting_strategy=pbat.fem.QuadratureFittingStrategy.Ignore,
-            singular_strategy=pbat.fem.QuadratureSingularityStrategy.Constant,
-            volerr=1e-5
+        VR, FR = pbat.geometry.simplex_mesh_boundary(MD.E, n=MD.X.shape[1])
+        rhoe = np.full(mesh.E.shape[1], rho)
+        mue, lambdae = pbat.fem.lame_coefficients(
+            np.full(mesh.E.shape[1], Y),
+            np.full(mesh.E.shape[1], nu)
         )
-        Q = [pbat.sim.vbd.Quadrature(cwg, cXg, ceg, csg)]
-        # Define multigrid cycle to include a single Restriction operation
-        cycle = [pbat.sim.vbd.Transition(-1, 0, riters=10)]
-        schedule = [0, 0]
-        # Get hierarchy
-        self.hierarchy = pbat.sim.vbd.hierarchy(
-            data, [VC], [CC], Q, cycle, schedule)
-        # Store rest shape
-        self.XD = MD.X
-        self.XT = MT.X
+        data = pbat.sim.vbd.Data().with_volume_mesh(
+            MD.X, MD.E
+        ).with_surface_mesh(
+            VR, FR
+        ).with_material(
+            rhoe, mue, lambdae
+        ).construct()
+        # Construct quadrature on coarse mesh
+        self.coarse_level = pbat.sim.vbd.multigrid.Level(
+            MT
+        ).with_cage_quadrature(
+            data,
+            strategy=cage_quadrature_strategy
+        )
+        # Construct Restriction operator
+        self.restriction = pbat.sim.vbd.multigrid.Restriction(
+            data, MD, MT, self.coarse_level.Qcage)
+        self.iters = iters
+        self.fine_level = pbat.sim.vbd.multigrid.Level(MD)
 
     def __matmul__(self, u):
-        UD = u.reshape(self.XD.shape, order='F')
-        x = self.XD + UD
-        self.hierarchy.root.x = x
-        R = self.hierarchy.transitions[0]
-        R.apply(self.hierarchy)
-        LC = self.hierarchy.levels[R.lc]
-        xc = LC.cage.x
-        UT = xc - self.XT
-        uc = UT.reshape(math.prod(UT.shape), order="F")
+        UD = u.reshape(self.fine_level.X.shape, order='F')
+        xf = self.fine_level.X + UD
+        self.fine_level.x = xf
+        energy = self.restriction.do_apply(
+            self.iters, self.fine_level.x, self.fine_level.E, self.coarse_level)
+        xc = self.coarse_level.x
+        UC = xc - self.coarse_level.X
+        uc = UC.flatten(order="F")
         return uc
 
 
@@ -371,8 +349,8 @@ if __name__ == "__main__":
         CV.T, CC.T, element=pbat.fem.Element.Tetrahedron)
 
     # Precompute quantities
-    w, L = linear_elastic_deformation_modes(
-        mesh, args.rho, args.Y, args.nu, args.modes)
+    w, L = pbat.fem.rest_pose_hyper_elastic_modes(
+        mesh, rho=args.rho, Y=args.Y, nu=args.nu, modes=args.modes)
     # HC = rest_pose_hessian(cmesh, args.Y, args.nu)
     # lreg, hreg, greg, hxreg = 1e-2, 0, 1, 1e-4
     # Fnewton = CholFemFunctionTransferOperator(
@@ -382,7 +360,7 @@ if __name__ == "__main__":
     # Krestrict = 30
     # Frank = RankKApproximateFemFunctionTransferOperator(
     #     mesh, mesh, cmesh, HC, lreg=lreg, hreg=hreg, greg=greg, modes=Krestrict)
-    Fvbd = VbdFunctionTransferOperator(mesh, mesh, cmesh, hxreg=1e-8)
+    Fvbd = VbdRestrictionOperator(mesh, mesh, cmesh)
 
     ps.set_up_dir("z_up")
     ps.set_front_dir("neg_y_front")
@@ -409,30 +387,6 @@ if __name__ == "__main__":
     step = False
     screenshot = False
 
-    # wg2 = pbat.fem.inner_product_weights(mesh, 1).flatten(order="F")
-    # Xg2 = mesh.quadrature_points(1)
-
-    # pg2 = ps.register_point_cloud("Fine quad", Xg2.T)
-    # pg2.add_scalar_quantity("weights", wg2, enabled=True)
-    # pg2.set_point_radius_quantity("weights")
-
-    # wg1, Xg1, e1, err = transfer_quadrature(cmesh, wg2, Xg2, order=1)
-    # pg1 = ps.register_point_cloud("Cage quad", Xg1.T)
-    # pg1.add_scalar_quantity("weights", wg1, enabled=True)
-    # pg1.set_point_radius_quantity("weights")
-
-    # wg1p, ezeroinds = patch_quadrature(cmesh, wg1, Xg1, e1, err=1e-4)
-    # ezero = np.unique(e1[ezeroinds])
-    # wgpatched = wg1p[ezeroinds]
-    # Xgpatched = Xg1[:, ezeroinds]
-    # pp = ps.register_point_cloud("Patched", Xgpatched.T)
-    # pp.add_scalar_quantity("weights", wgpatched, enabled=True)
-    # pp.set_point_radius_quantity("weights")
-    # ps.register_volume_mesh("Bad coarse", CV, CC[ezero, :])
-    # pg1p = ps.register_point_cloud("Cage quad patched", Xg1.T)
-    # pg1p.add_scalar_quantity("weights", wg1p, enabled=True)
-    # pg1p.set_point_radius_quantity("weights")
-
     def callback():
         global mode, c, k, theta, dtheta
         global animate, step, screenshot
@@ -451,12 +405,15 @@ if __name__ == "__main__":
             X = (V - V.mean(axis=0)) @ R.T + V.mean(axis=0)
             uf = signal(w[mode], L[:, mode], t, c, k)
             ur = (X - V).flatten(order="C")
-            ut = np.ones(math.prod(X.shape))
-            u = uf + ur + ut
+            # ut = np.ones(math.prod(X.shape))
+            u = uf  # + ur + ut
             # XCnewton = CV + (Fnewton @ u).reshape(CV.shape)
             XCvbd = CV + (Fvbd @ u).reshape(CV.shape)
             # XCrank = CV + (Frank @ u).reshape(CV.shape)
-            vm.update_vertex_positions(V + (uf + ur).reshape(V.shape))
+            vm.update_vertex_positions(V + (
+                uf #+ ur
+            ).reshape(V.shape)
+            )
             # newtonvm.update_vertex_positions(XCnewton)
             vbdvm.update_vertex_positions(XCvbd)
             # rankvm.update_vertex_positions(XCrank)

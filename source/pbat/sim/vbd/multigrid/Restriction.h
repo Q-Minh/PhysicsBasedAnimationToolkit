@@ -35,6 +35,18 @@ struct Restriction
      * @param lc
      */
     void Apply(Index iters, Level const& lf, Level& lc);
+    /**
+     * @brief
+     * @param iters
+     * @param xf
+     * @param lc
+     * @return 
+     */
+    Scalar DoApply(
+        Index iters,
+        Eigen::Ref<MatrixX const> const& xf,
+        Eigen::Ref<IndexMatrixX const> const& Ef,
+        Level& lc);
 
     IndexVectorX efg; ///< |#quad.pts.| array of fine cage elements associated with quad.pts.
     MatrixX Nfg;      ///< 4x|#quad.pts.| array of fine cage shape functions at quad.pts.

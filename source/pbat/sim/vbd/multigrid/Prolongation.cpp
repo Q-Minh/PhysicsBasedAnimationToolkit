@@ -50,11 +50,11 @@ void Prolongation::Apply(Level const& lc, Level& lf)
 } // namespace pbat
 
 #include "pbat/geometry/model/Cube.h"
-
-#include <doctest/doctest.h>
 #ifdef PBAT_WITH_PRECOMPILED_LARGE_MODELS
     #include "pbat/geometry/model/Armadillo.h"
 #endif // PBAT_WITH_PRECOMPILED_LARGE_MODELS
+
+#include <doctest/doctest.h>
 
 TEST_CASE("[sim][vbd][multigrid] Prolongation")
 {
