@@ -41,6 +41,7 @@ IndexVectorX Partition(
         case PartitioningOptions::EObjective::MinCommunicationVolume:
             options[METIS_OPTION_OBJTYPE] = METIS_OBJTYPE_VOL;
             break;
+        case PartitioningOptions::EObjective::Default: [[fallthrough]];
         default: break;
     }
     switch (opts.eCoarseningStrategy)
@@ -51,6 +52,7 @@ IndexVectorX Partition(
         case PartitioningOptions::ECoarseningStrategy::SortedHeavyEdgeMatching:
             options[METIS_OPTION_CTYPE] = METIS_CTYPE_SHEM;
             break;
+        case PartitioningOptions::ECoarseningStrategy::Default: [[fallthrough]];
         default: break;
     }
     switch (opts.eInitialPartitioningStrategy)
@@ -67,6 +69,7 @@ IndexVectorX Partition(
         case PartitioningOptions::EInitialPartitioningStrategy::GreedyNodeBisectionGrowing:
             options[METIS_OPTION_IPTYPE] = METIS_IPTYPE_NODE;
             break;
+        case PartitioningOptions::EInitialPartitioningStrategy::Default: [[fallthrough]];
         default: break;
     }
     switch (opts.eRefinementStrategy)
@@ -83,6 +86,7 @@ IndexVectorX Partition(
         case PartitioningOptions::ERefinementStrategy::OneSidedNodeFiducciaMattheyses:
             options[METIS_OPTION_RTYPE] = METIS_RTYPE_SEP1SIDED;
             break;
+        case PartitioningOptions::ERefinementStrategy::Default: [[fallthrough]];
         default: break;
     }
     options[METIS_OPTION_NCUTS]   = static_cast<idx_t>(opts.nPartitioningTrials);

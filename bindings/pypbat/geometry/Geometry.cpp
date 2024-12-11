@@ -1,6 +1,7 @@
 #include "Geometry.h"
 
 #include "AxisAlignedBoundingBox.h"
+#include "MeshBoundary.h"
 #include "TetrahedralAabbHierarchy.h"
 #include "TriangleAabbHierarchy.h"
 
@@ -13,6 +14,7 @@ void Bind(pybind11::module& m)
     BindAxisAlignedBoundingBox(m);
     BindTetrahedralAabbHierarchy(m);
     BindTriangleAabbHierarchy(m);
+    BindMeshBoundary(m);
 }
 
 } // namespace geometry

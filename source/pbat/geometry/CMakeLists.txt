@@ -9,6 +9,7 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     "Geometry.h"
     "IntersectionQueries.h"
     "KdTree.h"
+    "MeshBoundary.h"
     "Morton.h"
     "OverlapQueries.h"
     "TetrahedralAabbHierarchy.h"
@@ -22,8 +23,11 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     "DistanceQueries.cpp"
     "IntersectionQueries.cpp"
     "KdTree.cpp"
+    "MeshBoundary.cpp"
     "Morton.cpp"
     "OverlapQueries.cpp"
     "TetrahedralAabbHierarchy.cpp"
     "TriangleAabbHierarchy.cpp"
 )
+
+add_subdirectory(model)

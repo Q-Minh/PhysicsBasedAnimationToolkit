@@ -76,6 +76,15 @@ TEST_CASE("[fem] MassMatrix")
                 (yInputScaled - yOutputScaled).norm() / yOutputScaled.norm();
             CHECK_LE(yLinearityError, zero);
 
+            // Check lumped mass
+            VectorX lumpedMass = matrixFreeMass.ToLumpedMasses();
+            CHECK_EQ(lumpedMass.size(), M.cols());
+            for (auto i = 0; i < M.cols(); ++i)
+            {
+                Scalar const err = std::abs(lumpedMass(i) - M.col(i).sum());
+                CHECK_LT(err, Scalar(1e-10));
+            }
+
             // TODO: We should probably check that the mass matrices actually have the
             // right values... But this is probably best done in a separate test.
         }

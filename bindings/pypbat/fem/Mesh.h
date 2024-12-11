@@ -96,6 +96,12 @@ class Mesh
     template <auto MaxQuadratureOrder, class Func>
     void ApplyWithQuadrature(Func&& f, int qOrder) const;
 
+    template <class MeshType>
+    MeshType* Raw();
+
+    template <class MeshType>
+    MeshType const* Raw() const;
+
     MatrixX QuadraturePoints(int qOrder) const;
     VectorX QuadratureWeights(int qOrder) const;
 
@@ -138,6 +144,28 @@ inline void Mesh::ApplyWithQuadrature(Func&& f, int qOrder) const
             MeshType* mesh = reinterpret_cast<MeshType*>(mMesh);
             f.template operator()<MeshType, QuadratureOrder>(mesh);
         });
+}
+
+template <class MeshType>
+inline MeshType* Mesh::Raw()
+{
+    MeshType* raw{nullptr};
+    this->Apply([&]<class OtherMeshType>(OtherMeshType* mesh) {
+        if constexpr (std::is_same_v<MeshType, OtherMeshType>)
+            raw = mesh;
+    });
+    return raw;
+}
+
+template <class MeshType>
+inline MeshType const* Mesh::Raw() const
+{
+    MeshType const* raw{nullptr};
+    this->Apply([&]<class OtherMeshType>(OtherMeshType* mesh) {
+        if constexpr (std::is_same_v<MeshType, OtherMeshType>)
+            raw = mesh;
+    });
+    return raw;
 }
 
 } // namespace fem

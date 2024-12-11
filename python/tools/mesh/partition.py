@@ -17,7 +17,7 @@ if __name__ == "__main__":
 
     imesh = meshio.read(args.input)
     V, C = imesh.points, imesh.cells_dict["tetra"]
-    GGT = pbat.graph.mesh_dual_graph(V, C)
+    GGT = pbat.graph.mesh_dual_graph(C, V.shape[0])
     GGT.data[GGT.data < 3] = 0
     GGT.eliminate_zeros()
     weights = np.ones_like(GGT.data)

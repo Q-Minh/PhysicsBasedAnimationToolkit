@@ -51,40 +51,26 @@ void BindData(pybind11::module& m)
             pyb::arg("a"),
             "Sets the 3x|#nodes| external acceleration field at FEM nodes.")
         .def(
-            "with_mass",
-            &Data::WithMass,
-            pyb::arg("m"),
-            "Sets the |#nodes| array of lumped nodal masses.")
-        .def(
-            "with_quadrature",
-            &Data::WithQuadrature,
-            pyb::arg("wg"),
-            pyb::arg("GP"),
-            pyb::arg("lame"),
-            "Sets the |#elems| array of quadrature weights for the total elastic potential, "
-            "including the 3x|4*#elements| array of element shape function gradients GP, and "
-            "2x|#elements| array of Lame coefficients.")
-        .def(
-            "with_vertex_adjacency",
-            &Data::WithVertexAdjacency,
-            pyb::arg("GVGp"),
-            pyb::arg("GVGe"),
-            pyb::arg("GVGilocal"),
-            "Sets the graph of (vertex, element) edges in the compressed sparse format, "
-            "where GVGp is the |#nodes+1| prefix array, GVGe yields the adjacent elements and "
-            "GVGilocal yields the local vertex index in the corresponding adjacent element.")
-        .def(
-            "with_partitions",
-            &Data::WithPartitions,
-            pyb::arg("ptr"),
-            pyb::arg("adj"),
-            "Sets the independent vertex partitions for solver parallelization.")
+            "with_material",
+            &Data::WithMaterial,
+            pyb::arg("rhoe"),
+            pyb::arg("mue"),
+            pyb::arg("lambdae"),
+            "Sets the |#elements| array of mass densities, |#elements| array of 1st Lame "
+            "coefficients and |#elements| array of 2nd Lame coefficients.")
         .def(
             "with_dirichlet_vertices",
             &Data::WithDirichletConstrainedVertices,
             pyb::arg("dbc"),
+            pyb::arg("muD")          = Scalar(1),
             pyb::arg("input_sorted") = true,
             "Sets Dirichlet constrained vertices.")
+        .def(
+            "with_vertex_coloring_strategy",
+            &Data::WithVertexColoringStrategy,
+            pyb::arg("ordering"),
+            pyb::arg("selection"),
+            "Sets the vertex coloring strategy to use.")
         .def(
             "with_initialization_strategy",
             &Data::WithInitializationStrategy,
@@ -96,9 +82,16 @@ void BindData(pybind11::module& m)
             &Data::WithHessianDeterminantZeroUnder,
             pyb::arg("zero"))
         .def("construct", &Data::Construct, pyb::arg("validate") = true)
+        .def_property(
+            "X",
+            [](Data const& data) { return data.mesh.X; },
+            [](Data& data, Eigen::Ref<MatrixX const> const& X) { data.mesh.X = X; })
+        .def_property(
+            "E",
+            [](Data const& data) { return data.mesh.E; },
+            [](Data& data, Eigen::Ref<IndexMatrixX const> const& E) { data.mesh.E = E; })
         .def_readwrite("V", &Data::V)
         .def_readwrite("F", &Data::F)
-        .def_readwrite("T", &Data::T)
         .def_readwrite("x", &Data::x)
         .def_readwrite("v", &Data::v)
         .def_readwrite("aext", &Data::aext)
@@ -106,11 +99,15 @@ void BindData(pybind11::module& m)
         .def_readwrite("xt", &Data::xt)
         .def_readwrite("vt", &Data::vt)
         .def_readwrite("wg", &Data::wg)
+        .def_readwrite("rhoe", &Data::rhoe)
         .def_readwrite("lame", &Data::lame)
         .def_readwrite("GVGp", &Data::GVGp)
         .def_readwrite("GVGe", &Data::GVGe)
         .def_readwrite("GVGilocal", &Data::GVGilocal)
         .def_readwrite("dbc", &Data::dbc)
+        .def_readwrite("vertex_coloring_ordering", &Data::eOrdering)
+        .def_readwrite("vertex_coloring_selection", &Data::eSelection)
+        .def_readwrite("colors", &Data::colors)
         .def_readwrite("Pptr", &Data::Pptr)
         .def_readwrite("Padj", &Data::Padj)
         .def_readwrite("strategy", &Data::strategy)

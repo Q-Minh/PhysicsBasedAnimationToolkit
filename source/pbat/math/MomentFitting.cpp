@@ -69,12 +69,14 @@ TEST_CASE("[math] MomentFitting")
 
         // Act
         bool constexpr bEvaluateError{true};
-        auto [w1, error] = math::TransferQuadrature<kOrder>(
+        auto const nSimplices = 2;
+        auto [w1, error]      = math::TransferQuadrature<kOrder>(
             S1,
             X1.bottomRows(kDims),
             S2,
             X2.bottomRows(kDims),
             w2,
+            nSimplices,
             bEvaluateError,
             kMaxIterations);
 

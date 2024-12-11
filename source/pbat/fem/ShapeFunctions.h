@@ -8,6 +8,7 @@
 #include <Eigen/LU>
 #include <exception>
 #include <fmt/core.h>
+#include <optional>
 #include <pbat/Aliases.h>
 #include <pbat/profiling/Profiling.h>
 #include <string>
@@ -81,25 +82,32 @@ CSRMatrix ShapeFunctionMatrix(TMesh const& mesh)
 /**
  * @brief
  * @tparam TMesh
- * @tparam TDerivedW
+ * @tparam TDerivedE
  * @tparam TDerivedX
  * @param mesh
  * @param eg |#quad.pts.| array of elements associated with quadrature points
- * @param wg |#quad.pts.| array of quadrature weights
  * @param Xg |#dims|x|#quad.pts.| array of quadrature points in reference space
+ * @param bXgInReferenceSpace Consider evaluation points Xg have coordinates in reference space
  * @return |#quad.pts.| x |#nodes| shape function matrix
  */
-template <CMesh TMesh, class TDerivedE, class TDerivedW, class TDerivedX>
+template <CMesh TMesh, class TDerivedE, class TDerivedX>
 CSRMatrix ShapeFunctionMatrix(
     TMesh const& mesh,
     Eigen::DenseBase<TDerivedE> const& eg,
-    Eigen::DenseBase<TDerivedW> const& wg,
-    Eigen::MatrixBase<TDerivedX> const& Xg)
+    Eigen::MatrixBase<TDerivedX> const& Xg,
+    bool bXgInReferenceSpace = false)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.fem.ShapeFunctionMatrix");
-    using ElementType               = typename TMesh::ElementType;
+    using ElementType = typename TMesh::ElementType;
+
+    MatrixX Xi{};
+    if (not bXgInReferenceSpace)
+    {
+        // NOTE: Should expose the "iterations" parameter to parent function
+        Xi = ReferencePositions(mesh, eg, Xg);
+    }
     auto const numberOfNodes        = mesh.X.cols();
-    auto const numberOfQuadPoints   = wg.size();
+    auto const numberOfQuadPoints   = Xg.cols();
     auto const m                    = numberOfQuadPoints;
     auto const n                    = numberOfNodes;
     auto constexpr kNodesPerElement = ElementType::kNodes;
@@ -109,7 +117,7 @@ CSRMatrix ShapeFunctionMatrix(
     {
         auto const e     = eg(g);
         auto const nodes = mesh.E.col(e);
-        auto Ng          = ElementType::N(Xg.col(g));
+        auto Ng = bXgInReferenceSpace ? ElementType::N(Xg.col(g)) : ElementType::N(Xi.col(g));
         for (auto i = 0; i < kNodesPerElement; ++i)
         {
             N.insert(g, nodes(i)) = Ng(i);
@@ -119,10 +127,10 @@ CSRMatrix ShapeFunctionMatrix(
 }
 
 /**
- * @brief Compute shape functions at the given reference space positions
- * @tparam TDerivedXi
+ * @brief Compute shape functions at the given reference positions
  * @tparam TElement
- * @param Xi
+ * @tparam TDerivedXi
+ * @param Xi |#dims|x|#quad.pts.| Evaluation points
  * @return |#element nodes| x |Xi.cols()| matrix of nodal shape functions at reference points Xi
  */
 template <CElement TElement, class TDerivedXi>
@@ -143,6 +151,32 @@ MatrixX ShapeFunctionsAt(Eigen::DenseBase<TDerivedXi> const& Xi)
         N.col(i) = ElementType::N(Xi.col(i));
     });
     return N;
+}
+
+/**
+ * @brief Compute shape functions at the given reference or domain space positions
+ * @tparam TMesh
+ * @tparam TDerivedE
+ * @tparam TDerivedXg
+ * @param mesh
+ * @param eg |#quad.pts.| array of elements associated with quadrature points
+ * @param Xg |#dims|x|#quad.pts.| Evaluation points
+ * @param bXgInReferenceSpace Consider evaluation points Xg have coordinates in reference space
+ * @return |#element nodes| x |Xg.cols()| matrix of nodal shape functions at reference points Xg
+ */
+template <CMesh TMesh, class TDerivedE, class TDerivedXg>
+MatrixX ShapeFunctionsAt(
+    TMesh const& mesh,
+    Eigen::DenseBase<TDerivedE> const& eg,
+    Eigen::MatrixBase<TDerivedXg> const& Xg,
+    bool bXgInReferenceSpace = false)
+{
+    PBAT_PROFILE_NAMED_SCOPE("pbat.fem.ShapeFunctionsAt");
+    using ElementType = typename TMesh::ElementType;
+    if (bXgInReferenceSpace)
+        return ShapeFunctionsAt<ElementType>(Xg);
+    // NOTE: Should expose the "iterations" parameter to parent function
+    return ShapeFunctionsAt<ElementType>(ReferencePositions(mesh, eg, Xg));
 }
 
 /**
@@ -312,27 +346,36 @@ MatrixX ShapeFunctionGradients(TMesh const& mesh)
 }
 
 /**
- * @brief Computes nodal shape function gradients at reference points Xi.
+ * @brief Computes nodal shape function gradients at evaluation points Xg.
  * @tparam TDerivedE
- * @tparam TDerivedXi
+ * @tparam TDerivedXg
  * @tparam TMesh
  * @param mesh
  * @param E
- * @param Xi
- * @return |#element nodes| x |E.size() * mesh.dims| nodal shape function gradients at reference
- * points Xi
+ * @param Xg
+ * @param bXgInReferenceSpace
+ * @return |#element nodes| x |E.size() * mesh.dims| nodal shape function gradients at evaluation
+ * points Xg
  */
-template <CMesh TMesh, class TDerivedE, class TDerivedXi>
+template <CMesh TMesh, class TDerivedE, class TDerivedXg>
 MatrixX ShapeFunctionGradientsAt(
     TMesh const& mesh,
     Eigen::DenseBase<TDerivedE> const& E,
-    Eigen::DenseBase<TDerivedXi> const& Xi)
+    Eigen::MatrixBase<TDerivedXg> const& Xg,
+    bool bXgInReferenceSpace = false)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.fem.ShapeFunctionGradientsAt");
-    using MeshType                      = TMesh;
-    using ElementType                   = typename MeshType::ElementType;
-    using AffineElementType             = typename ElementType::AffineBaseType;
-    auto const numberOfEvaluationPoints = Xi.cols();
+    using MeshType          = TMesh;
+    using ElementType       = typename MeshType::ElementType;
+    using AffineElementType = typename ElementType::AffineBaseType;
+
+    MatrixX Xi{};
+    if (not bXgInReferenceSpace)
+    {
+        // NOTE: Should expose the "iterations" parameter to parent function
+        Xi = ReferencePositions(mesh, E, Xg);
+    }
+    auto const numberOfEvaluationPoints = Xg.cols();
     auto constexpr kNodesPerElement     = ElementType::kNodes;
     MatrixX GNe(kNodesPerElement, numberOfEvaluationPoints * MeshType::kDims);
     tbb::parallel_for(Index{0}, Index{numberOfEvaluationPoints}, [&](Index g) {
@@ -342,7 +385,8 @@ MatrixX ShapeFunctionGradientsAt(
         auto constexpr kRowsJ           = MeshType::kDims;
         auto constexpr kColsJ           = AffineElementType::kNodes;
         Matrix<kRowsJ, kColsJ> const Ve = mesh.X(Eigen::placeholders::all, vertices);
-        auto const GP                   = ShapeFunctionGradients<ElementType>(Xi.col(g), Ve);
+        auto const GP = bXgInReferenceSpace ? ShapeFunctionGradients<ElementType>(Xg.col(g), Ve) :
+                                              ShapeFunctionGradients<ElementType>(Xi.col(g), Ve);
         GNe.block<kNodesPerElement, MeshType::kDims>(0, g * MeshType::kDims) = GP;
     });
     return GNe;

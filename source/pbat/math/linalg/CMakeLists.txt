@@ -6,10 +6,12 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     FILES
     "Cholmod.h"
     "LinAlg.h"
+    "SelectionMatrix.h"
     "SparsityPattern.h"
 )
 target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     PRIVATE
     "Cholmod.cpp"
+    "SelectionMatrix.cpp"
     "SparsityPattern.cpp"
 )

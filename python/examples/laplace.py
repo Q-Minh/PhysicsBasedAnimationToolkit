@@ -67,10 +67,8 @@ if __name__ == "__main__":
     Frefined[:, :2] = np.roll(Frefined[:, :2], shift=1, axis=1)
 
     e, d = bvh.nearest_primitives_to_points(Vrefined.T)
-    Xi1 = pbat.fem.reference_positions(mesh1, e, Vrefined.T)
-    Xi2 = pbat.fem.reference_positions(mesh2, e, Vrefined.T)
-    phi1 = pbat.fem.shape_functions_at(mesh1, Xi1)
-    phi2 = pbat.fem.shape_functions_at(mesh2, Xi2)
+    phi1 = pbat.fem.shape_functions_at(mesh1, e, Vrefined.T)
+    phi2 = pbat.fem.shape_functions_at(mesh2, e, Vrefined.T)
     u1ref = (u1[mesh1.E[:, e]] * phi1).sum(axis=0)
     u2ref = (u2[mesh2.E[:, e]] * phi2).sum(axis=0)
 

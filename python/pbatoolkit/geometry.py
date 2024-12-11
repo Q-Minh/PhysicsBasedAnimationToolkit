@@ -1,6 +1,23 @@
-from ._pbat import geometry as _geometry
-import numpy as np
 from enum import Enum
+import numpy as np
+from ._pbat import geometry as _geometry
+
+import sys
+import inspect
+import contextlib
+import io
+
+__module = sys.modules[__name__]
+_strio = io.StringIO()
+with contextlib.redirect_stdout(_strio):
+    help(_geometry)
+_strio.seek(0)
+setattr(__module, "__doc__", _strio.read())
+
+for _name, _attr in inspect.getmembers(_geometry):
+    if not _name.startswith("__"):
+        setattr(__module, _name, _attr)
+
 
 def aabb(P: np.ndarray):
     """Computes the axis aligned boundary box of the input points
@@ -16,9 +33,11 @@ def aabb(P: np.ndarray):
     """
     dims = P.shape[0]
     if dims != 2 and dims != 3:
-        raise ValueError(f"Expected points P with dimensions (i.e. rows) 2 or 3, but got {dims}")
+        raise ValueError(
+            f"Expected points P with dimensions (i.e. rows) 2 or 3, but got {dims}")
     class_ = getattr(_geometry, f"AxisAlignedBoundingBox{dims}")
     return class_(P)
+
 
 class Cell(Enum):
     Triangle = 0
