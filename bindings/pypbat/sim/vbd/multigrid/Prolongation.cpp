@@ -20,6 +20,7 @@ void BindProlongation(pybind11::module& m)
     using pbat::sim::vbd::Data;
     using pbat::sim::vbd::multigrid::Prolongation;
     using pbat::sim::vbd::multigrid::VolumeMesh;
+    using pbat::sim::vbd::multigrid::Level;
     pyb::class_<Prolongation>(m, "Prolongation")
         .def(
             pyb::init([](Mesh const& FM, Mesh const& CM) {
@@ -32,7 +33,16 @@ void BindProlongation(pybind11::module& m)
             }),
             pyb::arg("fine_mesh"),
             pyb::arg("cage_mesh"))
-        .def("apply", &Prolongation::Apply, pyb::arg("lc"), pyb::arg("lf"))
+        .def(
+            "apply",
+            [](Prolongation& P, Level const& lc, Level& lf) { P.Apply(lc, lf); },
+            pyb::arg("lc"),
+            pyb::arg("lf"))
+        .def(
+            "apply",
+            [](Prolongation& P, Level const& lc, Data& lf) { P.Apply(lc, lf); },
+            pyb::arg("lc"),
+            pyb::arg("lf"))
         .def_readwrite("ec", &Prolongation::ec)
         .def_readwrite("Nc", &Prolongation::Nc);
 }

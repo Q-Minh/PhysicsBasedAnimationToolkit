@@ -1,5 +1,7 @@
 #include "Hierarchy.h"
 
+#include "pypbat/fem/Mesh.h"
+
 #include <pbat/sim/vbd/Data.h>
 #include <pbat/sim/vbd/multigrid/Hierarchy.h>
 #include <pybind11/eigen.h>
@@ -15,6 +17,7 @@ namespace multigrid {
 void BindHierarchy(pybind11::module& m)
 {
     namespace pyb = pybind11;
+    using pbat::py::fem::Mesh;
     using pbat::sim::vbd::Data;
     using pbat::sim::vbd::multigrid::CageQuadratureParameters;
     using pbat::sim::vbd::multigrid::Hierarchy;
@@ -22,11 +25,21 @@ void BindHierarchy(pybind11::module& m)
     pyb::class_<Hierarchy>(m, "Hierarchy")
         .def(
             pyb::init([](Data& root,
-                         std::vector<VolumeMesh> const& cages,
+                         std::vector<Mesh> const& cagesIn,
                          Eigen::Ref<IndexVectorX const> const& cycle,
                          Eigen::Ref<IndexVectorX const> const& smoothingSchedule,
                          Eigen::Ref<IndexVectorX const> const& transitionSchedule,
                          std::vector<CageQuadratureParameters> const& cageQuadParams) {
+                std::vector<VolumeMesh> cages{};
+                cages.reserve(cagesIn.size());
+                for (auto const& cageIn : cagesIn)
+                {
+                    VolumeMesh const* cageRaw = cageIn.Raw<VolumeMesh>();
+                    if (cageRaw == nullptr)
+                        throw std::invalid_argument(
+                            "Requested underlying MeshType that this Mesh does not hold.");
+                    cages.push_back(*cageRaw);
+                }
                 return Hierarchy(
                     std::move(root),
                     cages,

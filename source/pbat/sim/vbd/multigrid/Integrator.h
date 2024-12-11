@@ -13,7 +13,7 @@ struct Hierarchy;
 class Integrator
 {
   public:
-    void Step(Scalar dt, Index substeps, Hierarchy& hierarchy);
+    void Step(Scalar dt, Index substeps, Hierarchy& hierarchy) const;
 
   private:
 };

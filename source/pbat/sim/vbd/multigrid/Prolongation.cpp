@@ -4,6 +4,7 @@
 #include "pbat/fem/ShapeFunctions.h"
 #include "pbat/geometry/TetrahedralAabbHierarchy.h"
 #include "pbat/sim/vbd/Data.h"
+#include "pbat/profiling/Profiling.h"
 
 #include <exception>
 #include <fmt/format.h>
@@ -30,17 +31,19 @@ Prolongation::Prolongation(VolumeMesh const& FM, VolumeMesh const& CM) : ec(), N
     Nc = fem::ShapeFunctionsAt(CM, ec, FM.X);
 }
 
-void Prolongation::Apply(Level const& lc, Level& lf)
+void Prolongation::Apply(Level const& lc, Level& lf) const
 {
+    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.vbd.multigrid.Prolongation.Apply");
     DoApply(lc, lf.x);
 }
 
-void Prolongation::Apply(Level const& lc, Data& lf)
+void Prolongation::Apply(Level const& lc, Data& lf) const
 {
+    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.vbd.multigrid.Prolongation.Apply");
     DoApply(lc, lf.x);
 }
 
-void Prolongation::DoApply(Level const& lc, Eigen::Ref<MatrixX> xf)
+void Prolongation::DoApply(Level const& lc, Eigen::Ref<MatrixX> xf) const
 {
     VolumeMesh const& CM = lc.mesh;
     MatrixX const& xc    = lc.x;

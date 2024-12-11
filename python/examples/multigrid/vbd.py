@@ -13,8 +13,8 @@ if __name__ == "__main__":
     )
     parser.add_argument("-i", "--input", help="Path to input mesh",
                         dest="input", required=True)
-    parser.add_argument("-c", "--cage", help="Path to cage tetrahedral mesh", type=str,
-                        dest="cage", required=True)
+    parser.add_argument("-c", "--cages", help="Path to cage tetrahedral meshes", nargs="+",
+                        dest="cages", required=True)
     parser.add_argument("-o", "--output", help="Path to output",
                         dest="output", default=".")
     parser.add_argument("-m", "--mass-density", help="Mass density", type=float,
@@ -38,35 +38,22 @@ if __name__ == "__main__":
     center = V.mean(axis=0)
     scale = V.max() - V.min()
     V = (V - center) / scale
-    cmesh = meshio.read(args.cage)
-    VC, CC = cmesh.points.astype(
-        np.float64), cmesh.cells_dict["tetra"].astype(np.int64)
+    icmeshes = [meshio.read(cage) for cage in args.cages]
+    VC, CC = [icmesh.points.astype(np.float64) for icmesh in icmeshes], [
+        icmesh.cells_dict["tetra"].astype(np.int64) for icmesh in icmeshes]
     VC = (VC - center) / scale
 
     mesh = pbat.fem.Mesh(
         V.T, C.T, element=pbat.fem.Element.Tetrahedron)
-    F = igl.boundary_facets(C)
-    F[:, :2] = np.roll(F[:, :2], shift=1, axis=1)
-    cmesh = pbat.fem.Mesh(VC.T, CC.T, element=pbat.fem.Element.Tetrahedron)
-
-    detJeM = pbat.fem.jacobian_determinants(mesh, quadrature_order=2)
-    rho = args.rho
-    M, detJeM = pbat.fem.mass_matrix(mesh, rho=rho, dims=1, lump=True)
-    m = np.array(M.diagonal()).squeeze()
-
-    # Construct load vector from gravity field
-    detJeU = pbat.fem.jacobian_determinants(mesh, quadrature_order=1)
-    GNeU = pbat.fem.shape_function_gradients(mesh, quadrature_order=1)
-    g = np.zeros(mesh.dims)
-    g[-1] = -9.81
-    f, detJeF = pbat.fem.load_vector(mesh, rho*g, detJe=detJeU, flatten=False)
-    a = f / m
+    cmeshes = [pbat.fem.Mesh(VCc.T, CCc.T, element=pbat.fem.Element.Tetrahedron) for (
+        VCc, CCc) in zip(VC, CC)]
 
     # Compute material (Lame) constants
     Y = np.full(mesh.E.shape[1], args.Y)
     nu = np.full(mesh.E.shape[1], args.nu)
     mue = Y / (2*(1+nu))
     lambdae = (Y*nu) / ((1+nu)*(1-2*nu))
+    rhoe = np.full(mesh.E.shape[1], args.rho)
 
     # Set Dirichlet boundary conditions
     Xmin = mesh.X.min(axis=1)
@@ -84,75 +71,22 @@ if __name__ == "__main__":
     vdbc = aabb.contained(mesh.X)
 
     # Setup VBD
-    ilocal = np.repeat(np.arange(4)[np.newaxis, :], C.shape[0], axis=0)
-    GVT = pbat.sim.vbd.vertex_element_adjacency(V, C, data=ilocal)
-    Pptr, Padj, GC = pbat.sim.vbd.partitions(
-        V, C, vdbc
-    )
+    VF, FF = pbat.geometry.simplex_mesh_boundary(C.T, V.shape[0])
     data = pbat.sim.vbd.Data().with_volume_mesh(
         V.T, C.T
     ).with_surface_mesh(
-        np.unique(F), F.T
-    ).with_acceleration(
-        a
-    ).with_mass(
-        m
-    ).with_quadrature(
-        detJeU[0, :] / 6, GNeU, np.vstack((mue, lambdae))
-    ).with_vertex_adjacency(
-        GVT.indptr, GVT.indices, GVT.data
-    ).with_partitions(
-        Pptr, Padj
+        VF, FF
+    ).with_material(
+        rhoe, mue, lambdae
     ).with_dirichlet_vertices(
-        vdbc
+        vdbc, muD=1e3
     ).with_initialization_strategy(
         pbat.sim.vbd.InitializationStrategy.KineticEnergyMinimum
-    ).construct()
-    thread_block_size = 64
+    ).construct(validate=False)
 
     # Setup multiscale VBD
-    Transition = pbat.sim.vbd.Transition
-    Quadrature = pbat.sim.vbd.Quadrature
-    ibvh = pbat.geometry.bvh(V.T, C.T, cell=pbat.geometry.Cell.Tetrahedron)
-    cbvh = pbat.geometry.bvh(
-        VC.T, CC.T, cell=pbat.geometry.Cell.Tetrahedron)
-    cXg, cwg, ceg, csg, iXg, iwg, err = pbat.fem.fit_output_quad_to_input_quad(
-        mesh,
-        cmesh,
-        ibvh,
-        cbvh,
-        iorder=1,
-        oorder=2,
-        selection=pbat.fem.QuadraturePointSelection.FromOutputQuadrature,
-        fitting_strategy=pbat.fem.QuadratureFittingStrategy.Ignore,
-        singular_strategy=pbat.fem.QuadratureSingularityStrategy.Constant,
-        volerr=1e-3
-    )
-    hierarchy = pbat.sim.vbd.hierarchy(
-        data,
-        V=[VC], C=[CC],
-        QL=[Quadrature(cwg, cXg, ceg, csg)],
-        cycle=[Transition(-1, 0, riters=50), Transition(0, -1)],
-        schedule=[20, 10, 20],
-        rrhog=rho
-    )
-    
-    # hierarchy = pbat.sim.vbd.hierarchy(
-    #     data,
-    #     V=[], C=[],
-    #     QL=[],
-    #     cycle=[],
-    #     schedule=[20],
-    #     rrhog=rho
-    # )
-
-    # vbd = None
-    # if args.gpu:
-    #     vbd = pbat.gpu.vbd.Integrator(data)
-    #     vbd.set_gpu_block_size(thread_block_size)
-    # else:
-    #     vbd = pbat.sim.vbd.Integrator(data)
-    vbd = pbat.sim.vbd.MultiScaleIntegrator()
+    hierarchy = pbat.sim.vbd.multigrid.Hierarchy(data, cmeshes)
+    vbd = pbat.sim.vbd.multigrid.Integrator()
 
     ps.set_verbosity(0)
     ps.set_up_dir("z_up")
@@ -162,7 +96,8 @@ if __name__ == "__main__":
     ps.set_program_name("Vertex Block Descent")
     ps.init()
     vm = ps.register_volume_mesh("Simulation mesh", V, C)
-    vm.add_scalar_quantity("Coloring", GC, defined_on="vertices", cmap="jet")
+    vm.add_scalar_quantity("Coloring", hierarchy.root.colors,
+                           defined_on="vertices", cmap="jet")
     pc = ps.register_point_cloud("Dirichlet", V[vdbc, :])
     dt = 0.01
     substeps = 1
@@ -176,7 +111,6 @@ if __name__ == "__main__":
     def callback():
         global dt, substeps
         global RdetH
-        global thread_block_size
         global animate, export, t
         global profiler
 

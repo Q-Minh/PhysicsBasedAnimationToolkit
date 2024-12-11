@@ -5,6 +5,7 @@
 #include "pbat/physics/StableNeoHookeanEnergy.h"
 #include "pbat/sim/vbd/Data.h"
 #include "pbat/sim/vbd/Kernels.h"
+#include "pbat/profiling/Profiling.h"
 
 #include <tbb/parallel_for.h>
 
@@ -13,8 +14,9 @@ namespace sim {
 namespace vbd {
 namespace multigrid {
 
-void Smoother::Apply(Index iters, Scalar dt, Level& l)
+void Smoother::Apply(Index iters, Scalar dt, Level& l) const
 {
+    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.vbd.multigrid.Smoother.Apply");
     Scalar const dt2              = dt * dt;
     auto const [ptr, adj]         = std::tie(l.ptr, l.adj);
     CageQuadrature const& CQ      = l.Qcage;
@@ -97,8 +99,9 @@ void Smoother::Apply(Index iters, Scalar dt, Level& l)
     }
 }
 
-void Smoother::Apply(Index iters, Scalar dt, Data& data)
+void Smoother::Apply(Index iters, Scalar dt, Data& data) const
 {
+    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.vbd.multigrid.Smoother.Apply");
     Scalar const dt2 = dt * dt;
     // Minimize Backward Euler, i.e. BDF1, objective
     for (auto k = 0; k < iters; ++k)

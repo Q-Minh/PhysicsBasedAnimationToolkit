@@ -1,7 +1,6 @@
 #include "Integrator.h"
 
 #include "Kernels.h"
-#include "Smoother.h"
 #include "pbat/math/linalg/mini/Mini.h"
 #include "pbat/physics/StableNeoHookeanEnergy.h"
 #include "pbat/profiling/Profiling.h"
@@ -52,8 +51,76 @@ void Integrator::Step(Scalar dt, Index iterations, Index substeps, Scalar rho)
             data.x.col(i) = ToEigen(x);
         });
         // Minimize Backward Euler, i.e. BDF1, objective
-        Smoother S{iterations};
-        S.Apply(sdt, rho, data);
+        bool const bUseChebyshevAcceleration = rho > Scalar(0) and rho < Scalar(1);
+        Scalar omega{};
+        Scalar rho2 = rho * rho;
+        // Minimize Backward Euler, i.e. BDF1, objective
+        for (auto k = 0; k < iterations; ++k)
+        {
+            if (bUseChebyshevAcceleration)
+                omega = kernels::ChebyshevOmega(k, rho2, omega);
+
+            auto const nPartitions = data.Pptr.size() - 1;
+            for (auto p = 0; p < nPartitions; ++p)
+            {
+                auto const pBegin = data.Pptr(p);
+                auto const pEnd   = data.Pptr(p + 1);
+                tbb::parallel_for(pBegin, pEnd, [&](Index k) {
+                    using namespace math::linalg;
+                    using mini::FromEigen;
+                    using mini::ToEigen;
+
+                    auto i     = data.Padj[k];
+                    auto begin = data.GVGp(i);
+                    auto end   = data.GVGp(i + 1);
+                    // Elastic energy
+                    mini::SMatrix<Scalar, 3, 3> Hi = mini::Zeros<Scalar, 3, 3>();
+                    mini::SVector<Scalar, 3> gi    = mini::Zeros<Scalar, 3, 1>();
+                    for (auto n = begin; n < end; ++n)
+                    {
+                        auto ilocal                     = data.GVGilocal[n];
+                        auto e                          = data.GVGe[n];
+                        auto lamee                      = data.lame.col(e);
+                        auto wg                         = data.wg[e];
+                        auto Te                         = data.mesh.E.col(e);
+                        mini::SMatrix<Scalar, 4, 3> GPe = FromEigen(data.GP.block<4, 3>(0, e * 3));
+                        mini::SMatrix<Scalar, 3, 4> xe =
+                            FromEigen(data.x(Eigen::placeholders::all, Te).block<3, 4>(0, 0));
+                        mini::SMatrix<Scalar, 3, 3> Fe = xe * GPe;
+                        physics::StableNeoHookeanEnergy<3> Psi{};
+                        mini::SVector<Scalar, 9> gF;
+                        mini::SMatrix<Scalar, 9, 9> HF;
+                        Psi.gradAndHessian(Fe, lamee(0), lamee(1), gF, HF);
+                        kernels::AccumulateElasticHessian(ilocal, wg, GPe, HF, Hi);
+                        kernels::AccumulateElasticGradient(ilocal, wg, GPe, gF, gi);
+                    }
+                    // Update vertex position
+                    Scalar m                         = data.m[i];
+                    mini::SVector<Scalar, 3> xti     = FromEigen(data.xt.col(i).head<3>());
+                    mini::SVector<Scalar, 3> xtildei = FromEigen(data.xtilde.col(i).head<3>());
+                    mini::SVector<Scalar, 3> xi      = FromEigen(data.x.col(i).head<3>());
+                    kernels::AddDamping(sdt, xti, xi, data.kD, gi, Hi);
+                    kernels::AddInertiaDerivatives(sdt2, m, xtildei, xi, gi, Hi);
+                    kernels::IntegratePositions(gi, Hi, xi, data.detHZero);
+                    data.x.col(i) = ToEigen(xi);
+                });
+            }
+
+            if (bUseChebyshevAcceleration)
+            {
+                tbb::parallel_for(Index(0), nVertices, [&](Index i) {
+                    using namespace math::linalg;
+                    using mini::FromEigen;
+                    auto xkm2eig = data.xchebm2.col(i).head<3>();
+                    auto xkm1eig = data.xchebm1.col(i).head<3>();
+                    auto xkeig   = data.x.col(i).head<3>();
+                    auto xkm2    = FromEigen(xkm2eig);
+                    auto xkm1    = FromEigen(xkm1eig);
+                    auto xk      = FromEigen(xkeig);
+                    kernels::ChebyshevUpdate(k, omega, xkm2, xkm1, xk);
+                });
+            }
+        }
         // Update velocity
         data.vt = data.v;
         tbb::parallel_for(Index(0), nVertices, [&](Index i) {

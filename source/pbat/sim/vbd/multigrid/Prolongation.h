@@ -31,19 +31,19 @@ struct Prolongation
      * @param lc
      * @param lf
      */
-    void Apply(Level const& lc, Level& lf);
+    void Apply(Level const& lc, Level& lf) const;
     /**
      * @brief
      * @param lc
      * @param lf
      */
-    void Apply(Level const& lc, Data& lf);
+    void Apply(Level const& lc, Data& lf) const;
     /**
      * @brief
      * @param lc
      * @param xf
      */
-    void DoApply(Level const& lc, Eigen::Ref<MatrixX> xf);
+    void DoApply(Level const& lc, Eigen::Ref<MatrixX> xf) const;
 
     IndexVectorX ec; ///< |#fine verts| array of coarse cage elements containing fine mesh vertices
     MatrixX Nc;      ///< 4x|#fine verts| array of coarse cage shape functions at fine mesh vertices

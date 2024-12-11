@@ -5,6 +5,7 @@
 #include "Quadrature.h"
 #include "pbat/math/linalg/mini/Mini.h"
 #include "pbat/physics/StableNeoHookeanEnergy.h"
+#include "pbat/profiling/Profiling.h"
 #include "pbat/sim/vbd/Data.h"
 
 #include <cmath>
@@ -22,11 +23,13 @@ Restriction::Restriction(CageQuadrature const& CQ) : xfg()
 
 void Restriction::Apply(Index iters, Level const& lf, Level& lc)
 {
+    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.vbd.multigrid.Restriction.Apply");
     DoApply(iters, lf.x, lf.mesh.E, lc);
 }
 
 void Restriction::Apply(Index iters, Data const& lf, Level& lc)
 {
+    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.vbd.multigrid.Restriction.Apply");
     DoApply(iters, lf.x, lf.mesh.E, lc);
 }
 

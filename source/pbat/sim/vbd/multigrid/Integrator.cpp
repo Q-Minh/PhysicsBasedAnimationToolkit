@@ -13,7 +13,7 @@ namespace sim {
 namespace vbd {
 namespace multigrid {
 
-void Integrator::Step(Scalar dt, Index substeps, Hierarchy& H)
+void Integrator::Step(Scalar dt, Index substeps, Hierarchy& H) const
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.vbd.multigrid.Integrator.Step");
     Scalar sdt           = dt / static_cast<Scalar>(substeps);

@@ -15,8 +15,8 @@ struct Level;
 
 struct Smoother
 {
-    void Apply(Index iters, Scalar dt, Level& l);
-    void Apply(Index iters, Scalar dt, Data& root);
+    void Apply(Index iters, Scalar dt, Level& l) const;
+    void Apply(Index iters, Scalar dt, Data& root) const;
 };
 
 } // namespace multigrid
