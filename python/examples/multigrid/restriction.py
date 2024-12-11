@@ -112,10 +112,10 @@ if __name__ == "__main__":
         np.float64, order='c'), icmesh.cells_dict["tetra"].astype(np.int64, order='c')
 
     # Rescale problem
-    center = V.mean(axis=0).reshape(1, 3)
-    scale = V.max() - V.min()
-    V = (V - center) / scale
-    CV = (CV - center) / scale
+    # center = V.mean(axis=0).reshape(1, 3)
+    # scale = V.max() - V.min()
+    # V = (V - center) / scale
+    # CV = (CV - center) / scale
 
     # Construct FEM meshes
     mesh = pbat.fem.Mesh(
@@ -132,19 +132,19 @@ if __name__ == "__main__":
     # Construct restriction operator
     cage_quad_params = pbat.sim.vbd.multigrid.CageQuadratureParameters(
     ).with_strategy(
-        pbat.sim.vbd.multigrid.CageQuadratureStrategy.PolynomialSubCellIntegration
+        pbat.sim.vbd.multigrid.CageQuadratureStrategy.EmbeddedMesh
     ).with_cage_mesh_pts(
         4
     ).with_patch_cell_pts(
         2
     ).with_patch_error(
-        1e-5
+        1e-4
     )
     Fvbd = VbdRestrictionOperator(
         mesh,
         cmesh,
         cage_quad_params=cage_quad_params,
-        iters=20
+        iters=10
     )
 
     ps.set_up_dir("z_up")

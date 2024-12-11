@@ -3,7 +3,7 @@
 #include "pbat/common/ArgSort.h"
 #include "pbat/common/ConstexprFor.h"
 #include "pbat/fem/Jacobian.h"
-#include "pbat/fem/MassMatrix.h"
+#include "pbat/fem/ShapeFunctions.h"
 #include "pbat/fem/Triangle.h"
 #include "pbat/geometry/MeshBoundary.h"
 #include "pbat/geometry/TetrahedralAabbHierarchy.h"

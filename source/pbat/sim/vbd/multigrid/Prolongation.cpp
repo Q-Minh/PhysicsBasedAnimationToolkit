@@ -1,7 +1,6 @@
 #include "Prolongation.h"
 
 #include "Level.h"
-#include "pbat/fem/Jacobian.h"
 #include "pbat/fem/ShapeFunctions.h"
 #include "pbat/geometry/TetrahedralAabbHierarchy.h"
 

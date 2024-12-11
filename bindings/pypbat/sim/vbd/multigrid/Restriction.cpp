@@ -1,5 +1,6 @@
 #include "Restriction.h"
 
+#include <pbat/sim/vbd/Data.h>
 #include <pbat/sim/vbd/multigrid/Level.h>
 #include <pbat/sim/vbd/multigrid/Quadrature.h>
 #include <pbat/sim/vbd/multigrid/Restriction.h>
@@ -14,13 +15,26 @@ namespace multigrid {
 void BindRestriction(pybind11::module& m)
 {
     namespace pyb = pybind11;
+    using pbat::sim::vbd::Data;
     using pbat::sim::vbd::multigrid::CageQuadrature;
+    using pbat::sim::vbd::multigrid::Level;
     using pbat::sim::vbd::multigrid::Restriction;
     pyb::class_<Restriction>(m, "Restriction")
         .def(
             pyb::init([](CageQuadrature const& CQ) { return Restriction(CQ); }),
             pyb::arg("cage_quadrature"))
-        .def("apply", &Restriction::Apply, pyb::arg("iters"), pyb::arg("lf"), pyb::arg("lc"))
+        .def(
+            "apply",
+            [](Restriction& R, Index iters, Data const& lf, Level& lc) { R.Apply(iters, lf, lc); },
+            pyb::arg("iters"),
+            pyb::arg("lf"),
+            pyb::arg("lc"))
+        .def(
+            "apply",
+            [](Restriction& R, Index iters, Level const& lf, Level& lc) { R.Apply(iters, lf, lc); },
+            pyb::arg("iters"),
+            pyb::arg("lf"),
+            pyb::arg("lc"))
         .def(
             "do_apply",
             &Restriction::DoApply,

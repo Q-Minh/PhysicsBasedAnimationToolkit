@@ -1,7 +1,6 @@
 #include "Hierarchy.h"
 
 #include "Mesh.h"
-#include "pbat/geometry/TetrahedralAabbHierarchy.h"
 
 #include <exception>
 #include <fmt/format.h>
@@ -18,7 +17,8 @@ Hierarchy::Hierarchy(
     std::vector<Eigen::Ref<IndexMatrixX const>> const& E,
     Eigen::Ref<IndexMatrixX const> const& cycle,
     Eigen::Ref<IndexVectorX const> const& transitionSchedule,
-    Eigen::Ref<IndexVectorX const> const& smoothingSchedule)
+    Eigen::Ref<IndexVectorX const> const& smoothingSchedule,
+    std::vector<CageQuadratureParameters> const& cageQuadParams)
     : mRoot(std::move(root)),
       mLevels(),
       mCycle(cycle),
@@ -26,16 +26,25 @@ Hierarchy::Hierarchy(
       mSmoothingSchedule(smoothingSchedule),
       mTransitions()
 {
-    mLevels.reserve(X.size());
+    if (X.size() != E.size())
+    {
+        throw std::invalid_argument(fmt::format(
+            "Expected X and E to have same length, but got len(X)={} and len(E)={}",
+            X.size(),
+            E.size()));
+    }
+    auto const nCoarseLevels = X.size();
+    mLevels.reserve(nCoarseLevels);
     for (auto l = 0ULL; l < X.size(); ++l)
     {
-        mLevels.push_back(Level(VolumeMesh(X[l], E[l]))
-                              // NOTE:
-                              // Expose CageQuadratureParameters to the user!
-                              .WithCageQuadrature(mRoot, CageQuadratureParameters{})
-                              .WithDirichletQuadrature(mRoot)
-                              .WithMomentumEnergy(mRoot)
-                              .WithElasticEnergy(mRoot));
+        mLevels.push_back(
+            Level(VolumeMesh(X[l], E[l]))
+                .WithCageQuadrature(
+                    mRoot,
+                    cageQuadParams.empty() ? CageQuadratureParameters{} : cageQuadParams[l])
+                .WithDirichletQuadrature(mRoot)
+                .WithMomentumEnergy(mRoot)
+                .WithElasticEnergy(mRoot));
     }
     if (mCycle.size() == 0)
     {

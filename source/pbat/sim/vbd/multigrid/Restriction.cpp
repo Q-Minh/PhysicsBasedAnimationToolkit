@@ -3,11 +3,9 @@
 #include "Kernels.h"
 #include "Level.h"
 #include "Quadrature.h"
-#include "pbat/fem/Jacobian.h"
-#include "pbat/fem/ShapeFunctions.h"
-#include "pbat/geometry/TetrahedralAabbHierarchy.h"
 #include "pbat/math/linalg/mini/Mini.h"
 #include "pbat/physics/StableNeoHookeanEnergy.h"
+#include "pbat/sim/vbd/Data.h"
 
 #include <cmath>
 #include <tbb/parallel_for.h>
@@ -23,6 +21,11 @@ Restriction::Restriction(CageQuadrature const& CQ) : xfg()
 }
 
 void Restriction::Apply(Index iters, Level const& lf, Level& lc)
+{
+    DoApply(iters, lf.x, lf.mesh.E, lc);
+}
+
+void Restriction::Apply(Index iters, Data const& lf, Level& lc)
 {
     DoApply(iters, lf.x, lf.mesh.E, lc);
 }
@@ -109,7 +112,7 @@ Scalar Restriction::DoApply(
                     }
                 }
                 // Commit descent step
-                //if (std::abs(Determinant(Hi)) < Scalar(1e-8))
+                // if (std::abs(Determinant(Hi)) < Scalar(1e-8))
                 //    return;
                 SVector<Scalar, 3> dx = -(Inverse(Hi) * gi);
                 xc.col(i) += ToEigen(dx);

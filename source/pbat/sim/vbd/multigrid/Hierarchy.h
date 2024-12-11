@@ -2,7 +2,6 @@
 #define PBAT_SIM_VBD_MULTIGRID_HIERARCHY_H
 
 #include "Level.h"
-#include "Mesh.h"
 #include "Prolongation.h"
 #include "Quadrature.h"
 #include "Restriction.h"
@@ -36,9 +35,10 @@ struct Hierarchy
         Data root,
         std::vector<Eigen::Ref<MatrixX const>> const& X,
         std::vector<Eigen::Ref<IndexMatrixX const>> const& E,
-        Eigen::Ref<IndexMatrixX const> const& cycle              = IndexMatrixX{},
-        Eigen::Ref<IndexVectorX const> const& transitionSchedule = IndexVectorX{},
-        Eigen::Ref<IndexVectorX const> const& smoothingSchedule  = IndexVectorX{});
+        Eigen::Ref<IndexMatrixX const> const& cycle                 = IndexMatrixX{},
+        Eigen::Ref<IndexVectorX const> const& transitionSchedule    = IndexVectorX{},
+        Eigen::Ref<IndexVectorX const> const& smoothingSchedule     = IndexVectorX{},
+        std::vector<CageQuadratureParameters> const& cageQuadParams = {});
 
     Data mRoot;                 ///< Finest mesh
     std::vector<Level> mLevels; ///< Ordered list of coarse embedding/cage meshes

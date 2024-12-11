@@ -13,10 +13,10 @@ enum class ECageQuadratureStrategy { CageMesh, EmbeddedMesh, PolynomialSubCellIn
 
 struct CageQuadratureParameters
 {
-    ECageQuadratureStrategy eStrategy = ECageQuadratureStrategy::EmbeddedMesh;
-    int mCageMeshPointsOfOrder        = 3;
-    int mPatchCellPointsOfOrder       = 2;
-    Scalar mPatchTetVolumeError{1e-6};
+    ECageQuadratureStrategy eStrategy{ECageQuadratureStrategy::EmbeddedMesh};
+    int mCageMeshPointsOfOrder{4};
+    int mPatchCellPointsOfOrder{2};
+    Scalar mPatchTetVolumeError{1e-4};
 
     CageQuadratureParameters& WithStrategy(ECageQuadratureStrategy eStrategyIn);
     CageQuadratureParameters& WithCageMeshPointsOfOrder(int order);

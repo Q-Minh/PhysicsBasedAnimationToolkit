@@ -16,6 +16,7 @@ void BindHierarchy(pybind11::module& m)
 {
     namespace pyb = pybind11;
     using pbat::sim::vbd::Data;
+    using pbat::sim::vbd::multigrid::CageQuadratureParameters;
     using pbat::sim::vbd::multigrid::Hierarchy;
     pyb::class_<Hierarchy>(m, "Hierarchy")
         .def(
@@ -24,14 +25,16 @@ void BindHierarchy(pybind11::module& m)
                          std::vector<Eigen::Ref<IndexMatrixX const>> const& E,
                          Eigen::Ref<IndexMatrixX const> const& cycle,
                          Eigen::Ref<IndexVectorX const> const& transitionSchedule,
-                         Eigen::Ref<IndexVectorX const> const& smoothingSchedule) {
+                         Eigen::Ref<IndexVectorX const> const& smoothingSchedule,
+                         std::vector<CageQuadratureParameters> const& cageQuadParams) {
                 return Hierarchy(
                     std::move(root),
                     X,
                     E,
                     cycle,
                     transitionSchedule,
-                    smoothingSchedule);
+                    smoothingSchedule,
+                    cageQuadParams);
             }),
             pyb::arg("root"),
             pyb::arg("X"),
@@ -39,6 +42,7 @@ void BindHierarchy(pybind11::module& m)
             pyb::arg("cycle")               = IndexMatrixX{},
             pyb::arg("transition_schedule") = IndexVectorX{},
             pyb::arg("smoothing_schedule")  = IndexVectorX{},
+            pyb::arg("cage_quad_params")    = std::vector<CageQuadratureParameters>{},
             "Computes a geometric multigrid hierarchy from the full space root problem, given an "
             "ordered list of coarse embedding/cage meshes (X,E).\n"
             "Args:\n"
@@ -51,7 +55,10 @@ void BindHierarchy(pybind11::module& m)
             "transition_schedule (list[int] | None): |len(cycle)| list of iterations to spend on "
             "each transition. Defaults to None.\n"
             "smoothing_schedule (list[int] | None): |len(cycle)+1| list of iterations to spend on "
-            "each visited level in the cycle. Defaults to None.")
+            "each visited level in the cycle. Defaults to None.\n"
+            "cage_quad_params (list[_pbat.sim.vbd.multigrid.CageQuadratureParameters] | None): "
+            "|len(X)| list of parameters to create cage quadratures at each level. Defaults to "
+            "None.")
         .def_readwrite("root", &Hierarchy::mRoot)
         .def_readwrite("levels", &Hierarchy::mLevels)
         .def_readwrite("cycle", &Hierarchy::mCycle)

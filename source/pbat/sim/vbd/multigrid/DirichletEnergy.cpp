@@ -1,8 +1,5 @@
 #include "DirichletEnergy.h"
 
-#include "pbat/fem/Jacobian.h"
-#include "pbat/fem/ShapeFunctions.h"
-
 namespace pbat {
 namespace sim {
 namespace vbd {

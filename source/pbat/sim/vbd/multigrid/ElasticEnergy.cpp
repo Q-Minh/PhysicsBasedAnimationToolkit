@@ -1,7 +1,5 @@
 #include "ElasticEnergy.h"
 
-#include "pbat/fem/Jacobian.h"
-#include "pbat/fem/ShapeFunctions.h"
 #include "pbat/geometry/TetrahedralAabbHierarchy.h"
 
 namespace pbat {

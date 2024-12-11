@@ -7,6 +7,9 @@
 namespace pbat {
 namespace sim {
 namespace vbd {
+
+struct Data;
+
 namespace multigrid {
 
 struct Level;
@@ -26,6 +29,13 @@ struct Restriction
      * @param lc
      */
     void Apply(Index iters, Level const& lf, Level& lc);
+    /**
+     * @brief 
+     * @param iters 
+     * @param lf 
+     * @param lc 
+     */
+    void Apply(Index iters, Data const& lf, Level& lc);
     /**
      * @brief
      * @param iters
