@@ -238,7 +238,8 @@ def rest_pose_hyper_elastic_modes(
         rho: float | np.ndarray = 1e-3,
         energy=_fem.HyperElasticEnergy.StableNeoHookean,
         modes: int = 30,
-        sigma: float = -1e-5):
+        sigma: float = -1e-5, 
+        zero: float = 0.):
     x = mesh.X.reshape(math.prod(mesh.X.shape), order='f')
     M, detJeM = mass_matrix(mesh, rho=rho)
     energy = _fem.HyperElasticEnergy.StableNeoHookean
@@ -250,6 +251,6 @@ def rest_pose_hyper_elastic_modes(
     l, V = sp.sparse.linalg.eigsh(
         HU, k=modes, M=M, sigma=sigma, which='LM')
     V = V / sp.linalg.norm(V, axis=0, keepdims=True)
-    l[l <= 0] = 0
+    l[l <= zero] = 0
     w = np.sqrt(l)
     return w, V

@@ -17,26 +17,9 @@ namespace sim {
 namespace vbd {
 namespace multigrid {
 
-Restriction::Restriction(
-    Data const& problem,
-    VolumeMesh const& FM,
-    VolumeMesh const& CM,
-    CageQuadrature const& CQ)
-    : efg(), Nfg(), xfg(), rhog(), mug(), lambdag(), Ncg(), GNcg()
+Restriction::Restriction(CageQuadrature const& CQ) : xfg()
 {
-    geometry::TetrahedralAabbHierarchy fbvh(FM.X, FM.E);
-    efg              = fbvh.NearestPrimitivesToPoints(CQ.Xg).first;
-    Nfg              = fem::ShapeFunctionsAt(FM, efg, CQ.Xg);
-    IndexVectorX erg = geometry::TetrahedralAabbHierarchy(problem.mesh.X, problem.mesh.E)
-                           .NearestPrimitivesToPoints(CQ.Xg)
-                           .first;
-    rhog      = problem.rhoe(erg);
-    mug       = problem.lame.row(0)(erg);
-    lambdag   = problem.lame.row(1)(erg);
-    auto cXig = fem::ReferencePositions(CM, CQ.eg, CQ.Xg);
-    Ncg       = fem::ShapeFunctionsAt(CM, CQ.eg, cXig, true);
-    GNcg      = fem::ShapeFunctionGradientsAt(CM, CQ.eg, cXig, true);
-    xfg.resize(3, rhog.size());
+    xfg.resize(3, CQ.Xg.cols());
 }
 
 void Restriction::Apply(Index iters, Level const& lf, Level& lc)
@@ -50,18 +33,18 @@ Scalar Restriction::DoApply(
     Eigen::Ref<IndexMatrixX const> const& Ef,
     Level& lc)
 {
+    CageQuadrature const& Q = lc.Qcage;
     // Compute target positions at quad.pts.
-    tbb::parallel_for(Index(0), efg.size(), [&](Index g) {
-        auto e     = efg(g);
+    tbb::parallel_for(Index(0), Q.efg.size(), [&](Index g) {
+        auto e     = Q.efg(g);
         auto inds  = Ef(Eigen::placeholders::all, e);
-        auto Nf    = Nfg.col(g);
+        auto Nf    = Q.Nfg.col(g);
         xfg.col(g) = xf(Eigen::placeholders::all, inds) * Nf;
     });
     // Minimize mass-weighted shape matching energy
-    VolumeMesh const& CM    = lc.mesh;
-    CageQuadrature const& Q = lc.Qcage;
-    auto const [ptr, adj]   = std::tie(lc.ptr, lc.adj);
-    MatrixX& xc             = lc.x;
+    VolumeMesh const& CM  = lc.mesh;
+    auto const [ptr, adj] = std::tie(lc.ptr, lc.adj);
+    MatrixX& xc           = lc.x;
     VectorX energy(lc.Qcage.GVGg.size());
     for (auto k = 0; k < iters; ++k)
     {
@@ -94,8 +77,8 @@ Scalar Restriction::DoApply(
                     bool bSingular = Q.sg(g);
                     if (not bSingular)
                     {
-                        Scalar rho            = rhog(g);
-                        SVector<Scalar, 4> Nc = FromEigen(Ncg.col(g).head<4>());
+                        Scalar rho            = lc.Ekinetic.rhog(g);
+                        SVector<Scalar, 4> Nc = FromEigen(Q.Ncg.col(g).head<4>());
                         SVector<Scalar, 3> x  = FromEigen(xfg.col(g).head<3>());
                         energy(kg)            = kernels::AccumulateShapeMatchingEnergy(
                             ilocal,
@@ -109,10 +92,10 @@ Scalar Restriction::DoApply(
                     }
                     else
                     {
-                        SMatrix<Scalar, 4, 3> GNce = FromEigen(GNcg.block<4, 3>(0, 3 * g));
+                        SMatrix<Scalar, 4, 3> GNce = FromEigen(Q.GNcg.block<4, 3>(0, 3 * g));
                         physics::StableNeoHookeanEnergy<3> Psi{};
-                        Scalar mu     = mug(g);
-                        Scalar lambda = lambdag(g);
+                        Scalar mu     = lc.Epotential.mug(g);
+                        Scalar lambda = lc.Epotential.lambdag(g);
                         kernels::AccumulateElasticEnergy(
                             ilocal,
                             wg,
@@ -126,8 +109,8 @@ Scalar Restriction::DoApply(
                     }
                 }
                 // Commit descent step
-                if (std::abs(Determinant(Hi)) < Scalar(1e-8))
-                    return;
+                //if (std::abs(Determinant(Hi)) < Scalar(1e-8))
+                //    return;
                 SVector<Scalar, 3> dx = -(Inverse(Hi) * gi);
                 xc.col(i) += ToEigen(dx);
             });
@@ -153,7 +136,7 @@ TEST_CASE("[sim][vbd][multigrid] Restriction")
     using namespace pbat;
     using sim::vbd::Data;
     using sim::vbd::multigrid::CageQuadrature;
-    using sim::vbd::multigrid::ECageQuadratureStrategy;
+    using sim::vbd::multigrid::CageQuadratureParameters;
     using sim::vbd::multigrid::Level;
     using sim::vbd::multigrid::Restriction;
     using sim::vbd::multigrid::VolumeMesh;
@@ -165,8 +148,11 @@ TEST_CASE("[sim][vbd][multigrid] Restriction")
                                   Scalar scale) {
         Data data = Data().WithVolumeMesh(FM.X, FM.E).Construct();
         Level lf{FM};
-        Level lc = Level{CM}.WithCageQuadrature(data, ECageQuadratureStrategy::EmbeddedMesh);
-        Restriction R(data, FM, lc.mesh, lc.Qcage);
+        Level lc = Level{CM}
+                       .WithCageQuadrature(data, CageQuadratureParameters{})
+                       .WithElasticEnergy(data)
+                       .WithMomentumEnergy(data);
+        Restriction R(lc.Qcage);
         // Translate and scale fine mesh
         lf.x.colwise() -= translate * Vector<3>::Ones();
         lf.x.array() *= scale;

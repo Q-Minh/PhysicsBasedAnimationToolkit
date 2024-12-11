@@ -51,7 +51,7 @@ void Smoother::Apply(Index iters, Scalar dt, Level& l)
                     auto inds    = l.mesh.E.col(e);
                     SMatrix<Scalar, 3, 4> xcg =
                         FromEigen(x(Eigen::placeholders::all, inds).block<3, 4>(0, 0));
-                    SVector<Scalar, 4> Ncg = FromEigen(Ekin.Ncg.col(g).head<4>());
+                    SVector<Scalar, 4> Ncg = FromEigen(CQ.Ncg.col(g).head<4>());
                     bool const bSingular   = CQ.sg(g);
                     if (not bSingular)
                     {
@@ -64,7 +64,7 @@ void Smoother::Apply(Index iters, Scalar dt, Level& l)
                     Scalar mug     = Epot.mug(g);
                     Scalar lambdag = Epot.lambdag(g);
                     physics::StableNeoHookeanEnergy<3> Psi{};
-                    SMatrix<Scalar, 4, 3> GNcg = FromEigen(Epot.GNg.block<4, 3>(0, 3 * g));
+                    SMatrix<Scalar, 4, 3> GNcg = FromEigen(CQ.GNcg.block<4, 3>(0, 3 * g));
                     AccumulateElasticEnergy(ilocal, dt2 * wg, Psi, mug, lambdag, xcg, GNcg, gi, Hi);
                 }
                 // Dirichlet energy
@@ -81,7 +81,7 @@ void Smoother::Apply(Index iters, Scalar dt, Level& l)
                     SMatrix<Scalar, 3, 4> xcg =
                         FromEigen(x(Eigen::placeholders::all, inds).block<3, 4>(0, 0));
                     Scalar muD             = Edir.muD;
-                    SVector<Scalar, 4> Ncg = FromEigen(Edir.Ncg.col(g).head<4>());
+                    SVector<Scalar, 4> Ncg = FromEigen(DQ.Ncg.col(g).head<4>());
                     SVector<Scalar, 3> dxg = FromEigen(Edir.dg.col(g).head<3>());
                     // Dirichlet energy is 1/2 w_g mu_D || N*x - dx ||_2^2
                     using kernels::AccumulateShapeMatchingEnergy;

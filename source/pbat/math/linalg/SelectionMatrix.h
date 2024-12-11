@@ -19,7 +19,7 @@ template <class TDerivedC>
 CSCMatrix SelectionMatrix(Eigen::DenseBase<TDerivedC> const& C, Index n = Index(-1))
 {
     if (n < 0)
-        n = E.maxCoeff() + 1;
+        n = C.maxCoeff() + 1;
     CSCMatrix S(n, C.size());
     S.reserve(IndexVectorX::Ones(C.size()));
     for (auto c = 0; c < C.size(); ++c)

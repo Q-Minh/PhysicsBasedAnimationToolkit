@@ -29,12 +29,13 @@ Hierarchy::Hierarchy(
     mLevels.reserve(X.size());
     for (auto l = 0ULL; l < X.size(); ++l)
     {
-        mLevels.push_back(
-            Level(VolumeMesh(X[l], E[l]))
-                .WithCageQuadrature(mRoot, ECageQuadratureStrategy::PolynomialSubCellIntegration)
-                .WithDirichletQuadrature(mRoot)
-                .WithMomentumEnergy(mRoot)
-                .WithElasticEnergy(mRoot));
+        mLevels.push_back(Level(VolumeMesh(X[l], E[l]))
+                              // NOTE:
+                              // Expose CageQuadratureParameters to the user!
+                              .WithCageQuadrature(mRoot, CageQuadratureParameters{})
+                              .WithDirichletQuadrature(mRoot)
+                              .WithMomentumEnergy(mRoot)
+                              .WithElasticEnergy(mRoot));
     }
     if (mCycle.size() == 0)
     {
@@ -71,12 +72,9 @@ Hierarchy::Hierarchy(
             }
             else
             {
-                Level const& lf          = mLevels[static_cast<std::size_t>(transition(0))];
                 Level const& lc          = mLevels[static_cast<std::size_t>(transition(1))];
-                VolumeMesh const& FM     = transition(0) > -1 ? lf.mesh : mRoot.mesh;
-                VolumeMesh const& CM     = lc.mesh;
                 CageQuadrature const& CQ = lc.Qcage;
-                mTransitions.insert({transition, Restriction(mRoot, FM, CM, CQ)});
+                mTransitions.insert({transition, Restriction(CQ)});
             }
         }
     }

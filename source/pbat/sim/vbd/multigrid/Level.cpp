@@ -22,7 +22,7 @@ Level::Level(VolumeMesh CM)
       Edirichlet()
 {
     // Initialize coarse vertex positions from rest pose
-    x                       = mesh.X;
+    x = mesh.X;
     // Compute vertex parallelization scheme
     auto GVV                = graph::MeshPrimalGraph(mesh.E, mesh.X.cols());
     auto [GVVp, GVVv, GVVw] = graph::MatrixToAdjacency(GVV);
@@ -34,9 +34,9 @@ Level::Level(VolumeMesh CM)
     std::tie(ptr, adj) = graph::MapToAdjacency(colors);
 }
 
-Level& Level::WithCageQuadrature(Data const& problem, ECageQuadratureStrategy eStrategy)
+Level& Level::WithCageQuadrature(Data const& problem, CageQuadratureParameters const& params)
 {
-    Qcage = CageQuadrature(problem.mesh, mesh, eStrategy);
+    Qcage = CageQuadrature(problem.mesh, mesh, params);
     return *this;
 }
 
@@ -48,19 +48,19 @@ Level& Level::WithDirichletQuadrature(Data const& problem)
 
 Level& Level::WithMomentumEnergy(Data const& problem)
 {
-    Ekinetic = MomentumEnergy(problem, mesh, Qcage);
+    Ekinetic = MomentumEnergy(problem, Qcage);
     return *this;
 }
 
 Level& Level::WithElasticEnergy(Data const& problem)
 {
-    Epotential = ElasticEnergy(problem, mesh, Qcage);
+    Epotential = ElasticEnergy(problem, Qcage);
     return *this;
 }
 
 Level& Level::WithDirichletEnergy(Data const& problem)
 {
-    Edirichlet = DirichletEnergy(problem, mesh, Qdirichlet);
+    Edirichlet = DirichletEnergy(problem, Qdirichlet);
     return *this;
 }
 

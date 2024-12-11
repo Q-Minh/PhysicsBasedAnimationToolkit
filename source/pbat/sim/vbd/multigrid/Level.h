@@ -24,12 +24,10 @@ struct Level
     /**
      * @brief Constructs this level's cage quadrature
      * @param problem
-     * @param eStrategy
+     * @param params
      * @return
      */
-    Level& WithCageQuadrature(
-        Data const& problem,
-        ECageQuadratureStrategy eStrategy = ECageQuadratureStrategy::PolynomialSubCellIntegration);
+    Level& WithCageQuadrature(Data const& problem, CageQuadratureParameters const& params);
     /**
      * @brief Constructs this level's Dirichlet quadrature
      * @param problem

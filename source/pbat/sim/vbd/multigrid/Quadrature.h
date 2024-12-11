@@ -11,6 +11,19 @@ namespace multigrid {
 
 enum class ECageQuadratureStrategy { CageMesh, EmbeddedMesh, PolynomialSubCellIntegration };
 
+struct CageQuadratureParameters
+{
+    ECageQuadratureStrategy eStrategy = ECageQuadratureStrategy::EmbeddedMesh;
+    int mCageMeshPointsOfOrder        = 3;
+    int mPatchCellPointsOfOrder       = 2;
+    Scalar mPatchTetVolumeError{1e-6};
+
+    CageQuadratureParameters& WithStrategy(ECageQuadratureStrategy eStrategyIn);
+    CageQuadratureParameters& WithCageMeshPointsOfOrder(int order);
+    CageQuadratureParameters& WithPatchCellPointsOfOrder(int order);
+    CageQuadratureParameters& WithPatchError(Scalar err);
+};
+
 struct CageQuadrature
 {
     CageQuadrature() = default;
@@ -19,11 +32,12 @@ struct CageQuadrature
      * @brief Computes a cage quadrature given a fine mesh FM and its embedding cage mesh CM.
      * @param FM Fine mesh
      * @param CM Coarse mesh
+     * @param params
      */
     CageQuadrature(
         VolumeMesh const& FM,
         VolumeMesh const& CM,
-        ECageQuadratureStrategy eStrategy = ECageQuadratureStrategy::PolynomialSubCellIntegration);
+        CageQuadratureParameters const& params = CageQuadratureParameters{});
 
     using BoolVectorType = Eigen::Vector<bool, Eigen::Dynamic>;
 
@@ -32,6 +46,12 @@ struct CageQuadrature
     BoolVectorType
         sg;          ///< |#quad.pts.| boolean mask indicating quad.pts. outside the embedded domain
     IndexVectorX eg; ///< |#quad.pts.| array of cage elements containing corresponding quad.pts.
+
+    MatrixX Ncg;      ///< 4x|#quad.pts.| coarse mesh shape functions at quad.pts.
+    MatrixX GNcg;     ///< 4x|3*#quad.pts.| coarse mesh shape function gradients at quad.pts.
+    IndexVectorX efg; ///< |#quad.pts.| fine mesh elements associated with quad.pts.
+    MatrixX Nfg;      ///< 4x|#quad.pts.| fine mesh shape functions at quad.pts.
+    MatrixX GNfg;     ///< 4x|3*#quad.pts.| fine mesh shape function gradients at quad.pts.
 
     IndexVectorX GVGp;      ///< |#cage verts + 1| prefix
     IndexVectorX GVGg;      ///< |#quad.pts.| cage vertex-quad.pt. adjacencies
@@ -84,6 +104,8 @@ struct DirichletQuadrature
     MatrixX Xg;      ///< 3x|#quad.pts.| array of quadrature points
     VectorX wg;      ///< |#quad.pts.| array of quadrature weights
     IndexVectorX eg; ///< |#quad.pts.| array of cage elements containing corresponding quad.pts.
+
+    MatrixX Ncg; ///< 4x|#quad.pts.| coarse mesh shape functions at quad.pts.
 
     IndexVectorX GVGp;      ///< |#cage verts + 1| prefix
     IndexVectorX GVGg;      ///< |#quad.pts.| cage vertex-quad.pt. adjacencies

@@ -10,12 +10,9 @@ namespace multigrid {
 
 DirichletEnergy::DirichletEnergy(
     Data const& problem,
-    VolumeMesh const& CM,
     DirichletQuadrature const& DQ)
-    : muD(problem.muD), Ncg(), dg()
+    : muD(problem.muD), dg(DQ.Xg)
 {
-    dg  = DQ.Xg;
-    Ncg = fem::ShapeFunctionsAt(CM, DQ.eg, DQ.Xg);
 }
 
 } // namespace multigrid

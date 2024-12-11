@@ -39,13 +39,6 @@ if __name__ == "__main__":
     ps.set_ground_plane_mode("shadow_only")
     ps.init()
 
-    cage_quadrature_strategies = [
-        pbat.sim.vbd.multigrid.ECageQuadratureStrategy.CageMesh,
-        pbat.sim.vbd.multigrid.ECageQuadratureStrategy.EmbeddedMesh,
-        pbat.sim.vbd.multigrid.ECageQuadratureStrategy.PolynomialSubCellIntegration
-    ]
-    cage_quadrature_strategy = cage_quadrature_strategies[0]
-
     rsm = ps.register_surface_mesh("Domain", root_mesh.X.T, FR.T)
     min_transparency, max_transparency = 0.25, 0.75
     scene_size = cage_meshes[-1].X.max() - cage_meshes[-1].X.min()
@@ -57,22 +50,51 @@ if __name__ == "__main__":
             (max_transparency - min_transparency) / n_cages
         csm.set_transparency(transparency)
 
+    cage_quadrature_strategies = [
+        pbat.sim.vbd.multigrid.CageQuadratureStrategy.CageMesh,
+        pbat.sim.vbd.multigrid.CageQuadratureStrategy.EmbeddedMesh,
+        pbat.sim.vbd.multigrid.CageQuadratureStrategy.PolynomialSubCellIntegration
+    ]
+    cage_quadrature_strategy = cage_quadrature_strategies[0]
+    cage_mesh_pts = 3
+    patch_cell_pts = 2
+    patch_error = 1e-4
+
     def callback():
-        global cage_quadrature_strategy
+        global cage_quadrature_strategy, cage_mesh_pts, patch_cell_pts, patch_error
         changed = imgui.BeginCombo(
             "Quadrature Strategy", str(cage_quadrature_strategy).split(".")[-1])
         if changed:
             for i in range(len(cage_quadrature_strategies)):
                 _, selected = imgui.Selectable(
-                    str(cage_quadrature_strategies[i]).split(".")[-1], cage_quadrature_strategy == cage_quadrature_strategies[i])
+                    str(cage_quadrature_strategies[i]).split(".")[-1],
+                    cage_quadrature_strategy == cage_quadrature_strategies[i]
+                )
                 if selected:
                     cage_quadrature_strategy = cage_quadrature_strategies[i]
             imgui.EndCombo()
+        changed, cage_mesh_pts = imgui.InputInt(
+            "Cage mesh order", cage_mesh_pts)
+        changed, patch_cell_pts = imgui.InputInt(
+            "Patch cell order", patch_cell_pts)
+        changed, patch_error = imgui.InputFloat("Patch error", patch_error, format="%.6f")
 
         if imgui.Button("Compute"):
+            cage_quad_params = pbat.sim.vbd.multigrid.CageQuadratureParameters(
+            ).with_strategy(
+                cage_quadrature_strategy
+            ).with_cage_mesh_pts(
+                cage_mesh_pts
+            ).with_patch_cell_pts(
+                patch_cell_pts
+            ).with_patch_error(
+                patch_error
+            )
             cage_quadratures = [
                 pbat.sim.vbd.multigrid.CageQuadrature(
-                    root_mesh, cage_mesh, strategy=cage_quadrature_strategy)
+                    root_mesh,
+                    cage_mesh,
+                    params=pbat.sim.vbd.multigrid.CageQuadratureParameters().with_strategy(cage_quadrature_strategy))
                 for cage_mesh in cage_meshes
             ]
             for c, cage_quadrature in enumerate(cage_quadratures):

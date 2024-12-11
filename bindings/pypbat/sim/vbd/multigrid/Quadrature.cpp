@@ -17,7 +17,7 @@ void BindQuadrature(pybind11::module& m)
     namespace pyb = pybind11;
     using namespace pbat::sim::vbd::multigrid;
 
-    pyb::enum_<ECageQuadratureStrategy>(m, "ECageQuadratureStrategy")
+    pyb::enum_<ECageQuadratureStrategy>(m, "CageQuadratureStrategy")
         .value("CageMesh", ECageQuadratureStrategy::CageMesh, "Use the cage mesh's quadrature rule")
         .value(
             "EmbeddedMesh",
@@ -30,6 +30,23 @@ void BindQuadrature(pybind11::module& m)
             "quadrature rule as right-hand side.")
         .export_values();
 
+    pyb::class_<CageQuadratureParameters>(m, "CageQuadratureParameters")
+        .def(pyb::init<>())
+        .def("with_strategy", &CageQuadratureParameters::WithStrategy, pyb::arg("strategy"))
+        .def(
+            "with_cage_mesh_pts",
+            &CageQuadratureParameters::WithCageMeshPointsOfOrder,
+            pyb::arg("order"))
+        .def(
+            "with_patch_cell_pts",
+            &CageQuadratureParameters::WithPatchCellPointsOfOrder,
+            pyb::arg("order"))
+        .def("with_patch_error", &CageQuadratureParameters::WithPatchError, pyb::arg("err"))
+        .def_readwrite("strategy", &CageQuadratureParameters::eStrategy)
+        .def_readwrite("cage_order", &CageQuadratureParameters::mCageMeshPointsOfOrder)
+        .def_readwrite("patch_order", &CageQuadratureParameters::mPatchCellPointsOfOrder)
+        .def_readwrite("patch_error", &CageQuadratureParameters::mPatchTetVolumeError);
+
     pyb::class_<CageQuadrature>(
         m,
         "CageQuadrature",
@@ -37,17 +54,17 @@ void BindQuadrature(pybind11::module& m)
         .def(
             pyb::init([](pbat::py::fem::Mesh const& FM,
                          pbat::py::fem::Mesh const& CM,
-                         ECageQuadratureStrategy eStrategy) {
+                         CageQuadratureParameters const& params) {
                 VolumeMesh const* FMraw = FM.Raw<VolumeMesh>();
                 VolumeMesh const* CMraw = CM.Raw<VolumeMesh>();
                 if (FMraw == nullptr or CMraw == nullptr)
                     throw std::invalid_argument(
                         "Requested underlying MeshType that this Mesh does not hold.");
-                return CageQuadrature(*FMraw, *CMraw, eStrategy);
+                return CageQuadrature(*FMraw, *CMraw, params);
             }),
             pyb::arg("fine_mesh"),
             pyb::arg("cage_mesh"),
-            pyb::arg("strategy") = ECageQuadratureStrategy::PolynomialSubCellIntegration)
+            pyb::arg("params") = CageQuadratureParameters{})
         .def_readwrite("Xg", &CageQuadrature::Xg, "3x|#quad.pts.| array of quadrature points")
         .def_readwrite("wg", &CageQuadrature::wg, "|#quad.pts.| array of quadrature weights")
         .def_readwrite(
@@ -57,7 +74,27 @@ void BindQuadrature(pybind11::module& m)
         .def_readwrite(
             "eg",
             &CageQuadrature::eg,
-            "|#quad.pts.| array of cage elements containing corresponding quad.pts.")
+            "|#quad.pts.| array of cage elements containing corresponding to quad.pts.")
+        .def_readwrite(
+            "Ncg",
+            &CageQuadrature::Ncg,
+            "4x|#quad.pts.| array of cage element shape functions at quad.pts.")
+        .def_readwrite(
+            "GNcg",
+            &CageQuadrature::GNcg,
+            "4x|3*#quad.pts.| array of cage element shape function gradients at quad.pts.")
+        .def_readwrite(
+            "efg",
+            &CageQuadrature::efg,
+            "|#quad.pts.| array of fine mesh elements containing corresponding to quad.pts.")
+        .def_readwrite(
+            "Nfg",
+            &CageQuadrature::Nfg,
+            "4x|#quad.pts.| array of fine mesh element shape functions at quad.pts.")
+        .def_readwrite(
+            "GNfg",
+            &CageQuadrature::GNfg,
+            "4x|3*#quad.pts.| array of fine mesh element shape function gradients at quad.pts.")
         .def_readwrite("GVGp", &CageQuadrature::GVGp, "|#cage verts + 1| prefix")
         .def_readwrite(
             "GVGg",
@@ -123,6 +160,7 @@ void BindQuadrature(pybind11::module& m)
         .def_readwrite("Xg", &DirichletQuadrature::Xg)
         .def_readwrite("wg", &DirichletQuadrature::wg)
         .def_readwrite("eg", &DirichletQuadrature::eg)
+        .def_readwrite("Ncg", &DirichletQuadrature::Ncg)
         .def_readwrite("GVGp", &DirichletQuadrature::GVGp)
         .def_readwrite("GVGg", &DirichletQuadrature::GVGg)
         .def_readwrite("GVGilocal", &DirichletQuadrature::GVGilocal);

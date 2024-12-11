@@ -34,7 +34,7 @@ void BindLevel(pybind11::module& m)
             "with_cage_quadrature",
             &Level::WithCageQuadrature,
             pyb::arg("problem"),
-            pyb::arg("strategy"))
+            pyb::arg("params"))
         .def("with_dirichlet_quadrature", &Level::WithDirichletQuadrature, pyb::arg("problem"))
         .def("with_momentum_energy", &Level::WithMomentumEnergy, pyb::arg("problem"))
         .def("with_elastic_energy", &Level::WithElasticEnergy, pyb::arg("problem"))

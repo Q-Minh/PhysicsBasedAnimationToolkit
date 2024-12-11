@@ -11,13 +11,12 @@ namespace sim {
 namespace vbd {
 namespace multigrid {
 
-MomentumEnergy::MomentumEnergy(Data const& problem, VolumeMesh const& CM, CageQuadrature const& CQ)
-    : xtildeg(), erg(), Nrg(), Ncg(), rhog()
+MomentumEnergy::MomentumEnergy(Data const& problem, CageQuadrature const& CQ)
+    : xtildeg(), erg(), Nrg(), rhog()
 {
     geometry::TetrahedralAabbHierarchy rbvh(problem.mesh.X, problem.mesh.E);
     erg  = rbvh.NearestPrimitivesToPoints(CQ.Xg).first;
     Nrg  = fem::ShapeFunctionsAt(problem.mesh, erg, CQ.Xg);
-    Ncg  = fem::ShapeFunctionsAt(CM, CQ.eg, CQ.Xg);
     rhog = problem.rhoe(erg);
     xtildeg.resize(3, rhog.size());
 }
