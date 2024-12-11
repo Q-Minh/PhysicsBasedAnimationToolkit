@@ -248,7 +248,8 @@ SurfaceQuadrature::SurfaceQuadrature(
         eg = cbvh.PrimitivesContainingPoints(Xg);
     }
     // Compute vertex-quad.pt. adjacency
-    auto G = graph::MeshAdjacencyMatrix(CM.E(Eigen::placeholders::all, eg), CM.X.cols());
+    IndexMatrixX ilocal = IndexVector<4>{0, 1, 2, 3}.replicate(1, eg.size());
+    auto G = graph::MeshAdjacencyMatrix(CM.E(Eigen::placeholders::all, eg), ilocal, CM.X.cols());
     G      = G.transpose();
     std::tie(GVGp, GVGg, GVGilocal) = graph::MatrixToAdjacency(G);
 }
@@ -266,7 +267,8 @@ DirichletQuadrature::DirichletQuadrature(
     eg  = cbvh.PrimitivesContainingPoints(Xg);
     Ncg = fem::ShapeFunctionsAt(CM, eg, Xg);
     // Compute vertex-quad.pt. adjacency
-    auto G = graph::MeshAdjacencyMatrix(CM.E(Eigen::placeholders::all, eg), CM.X.cols());
+    IndexMatrixX ilocal = IndexVector<4>{0, 1, 2, 3}.replicate(1, eg.size());
+    auto G = graph::MeshAdjacencyMatrix(CM.E(Eigen::placeholders::all, eg), ilocal, CM.X.cols());
     G      = G.transpose();
     std::tie(GVGp, GVGg, GVGilocal) = graph::MatrixToAdjacency(G);
 }
