@@ -1,7 +1,5 @@
 #include "Hierarchy.h"
 
-#include "Mesh.h"
-
 #include <exception>
 #include <fmt/format.h>
 #include <string>
@@ -13,79 +11,75 @@ namespace multigrid {
 
 Hierarchy::Hierarchy(
     Data root,
-    std::vector<Eigen::Ref<MatrixX const>> const& X,
-    std::vector<Eigen::Ref<IndexMatrixX const>> const& E,
-    Eigen::Ref<IndexMatrixX const> const& cycle,
-    Eigen::Ref<IndexVectorX const> const& transitionSchedule,
+    std::vector<VolumeMesh> const& cages,
+    Eigen::Ref<IndexVectorX const> const& cycle,
     Eigen::Ref<IndexVectorX const> const& smoothingSchedule,
+    Eigen::Ref<IndexVectorX const> const& transitionSchedule,
     std::vector<CageQuadratureParameters> const& cageQuadParams)
     : mRoot(std::move(root)),
       mLevels(),
       mCycle(cycle),
-      mTransitionSchedule(transitionSchedule),
       mSmoothingSchedule(smoothingSchedule),
+      mTransitionSchedule(transitionSchedule),
       mTransitions()
 {
-    if (X.size() != E.size())
-    {
-        throw std::invalid_argument(fmt::format(
-            "Expected X and E to have same length, but got len(X)={} and len(E)={}",
-            X.size(),
-            E.size()));
-    }
-    auto const nCoarseLevels = X.size();
+    auto const nCoarseLevels = cages.size();
     mLevels.reserve(nCoarseLevels);
-    for (auto l = 0ULL; l < X.size(); ++l)
+    for (auto l = 0ULL; l < cages.size(); ++l)
     {
         mLevels.push_back(
-            Level(VolumeMesh(X[l], E[l]))
+            Level(cages[l])
                 .WithCageQuadrature(
                     mRoot,
                     cageQuadParams.empty() ? CageQuadratureParameters{} : cageQuadParams[l])
                 .WithDirichletQuadrature(mRoot)
                 .WithMomentumEnergy(mRoot)
-                .WithElasticEnergy(mRoot));
+                .WithElasticEnergy(mRoot)
+                .WithDirichletEnergy(mRoot));
     }
     if (mCycle.size() == 0)
     {
         Index const nLevels = static_cast<Index>(mLevels.size());
-        mCycle.resize(2, nLevels + 1);
-        mCycle.col(0) = IndexVector<2>{Index(-1), nLevels - 1};
+        mCycle.resize(nLevels + 2);
+        mCycle(0) = Index(-1);
         for (Index l = nLevels - 1, k = 1; l >= 0; --l, ++k)
-            mCycle.col(k) << l, l - 1;
-    }
-    if (mTransitionSchedule.size() == 0)
-    {
-        mTransitionSchedule.setConstant(mCycle.size(), Index(10));
+            mCycle(k) = l;
+        mCycle(nLevels + 1) = Index(-1);
     }
     if (mSmoothingSchedule.size() == 0)
     {
-        mSmoothingSchedule.setConstant(mCycle.size() + 1, Index(10));
+        mSmoothingSchedule.setConstant(mCycle.size(), Index(10));
+    }
+    if (mTransitionSchedule.size() == 0)
+    {
+        mTransitionSchedule.setConstant(mCycle.size() - 1, Index(10));
     }
 
     mTransitions.reserve(mTransitionSchedule.size() * 3ULL);
-    for (Index t = 0; t < mTransitionSchedule.cols(); ++t)
+    Index lCurrent = mCycle(0);
+    for (Index lNext : mCycle.tail(mCycle.size() - 1))
     {
-        IndexVector<2> const transition = mTransitionSchedule.col(t);
+        IndexVector<2> const transition = {lCurrent, lNext};
         bool const bIsNewTransition     = mTransitions.find(transition) == mTransitions.end();
         if (bIsNewTransition)
         {
             bool const bIsProlongation = transition(0) > transition(1);
+            auto li                    = static_cast<std::size_t>(transition(0));
+            auto lj                    = static_cast<std::size_t>(transition(1));
             if (bIsProlongation)
             {
-                Level const& lc      = mLevels[static_cast<std::size_t>(transition(0))];
-                Level const& lf      = mLevels[static_cast<std::size_t>(transition(1))];
-                VolumeMesh const& CM = lc.mesh;
-                VolumeMesh const& FM = transition(1) > -1 ? lf.mesh : mRoot.mesh;
+                VolumeMesh const& CM = mLevels[li].mesh;
+                VolumeMesh const& FM = transition(1) > -1 ? mLevels[lj].mesh : mRoot.mesh;
                 mTransitions.insert({transition, Prolongation(FM, CM)});
             }
             else
             {
-                Level const& lc          = mLevels[static_cast<std::size_t>(transition(1))];
+                Level const& lc          = mLevels[lj];
                 CageQuadrature const& CQ = lc.Qcage;
                 mTransitions.insert({transition, Restriction(CQ)});
             }
         }
+        lCurrent = lNext;
     }
 }
 
@@ -93,3 +87,48 @@ Hierarchy::Hierarchy(
 } // namespace vbd
 } // namespace sim
 } // namespace pbat
+
+#include "pbat/geometry/model/Cube.h"
+
+#include <doctest/doctest.h>
+
+TEST_CASE("[sim][vbd][multigrid] Hierarchy")
+{
+    using namespace pbat;
+    using sim::vbd::Data;
+    using sim::vbd::multigrid::Hierarchy;
+    using sim::vbd::multigrid::VolumeMesh;
+
+    auto [XR, ER] = geometry::model::Cube();
+    XR.colwise() -= XR.rowwise().mean();
+    std::vector<VolumeMesh> cages{
+        {VolumeMesh(Scalar(1.1) * XR, ER), VolumeMesh(Scalar(1.2) * XR, ER)}};
+    Data root = Data().WithVolumeMesh(XR, ER).Construct();
+
+    SUBCASE("Default constructor parameters")
+    {
+        Hierarchy H(root, cages);
+        CHECK_GT(H.mCycle.size(), 0ULL);
+        CHECK_EQ(H.mCycle.size(), H.mSmoothingSchedule.size());
+        CHECK_EQ(H.mCycle.size(), H.mTransitionSchedule.size() + 1ULL);
+        CHECK_EQ(H.mLevels.size(), cages.size());
+        CHECK_GT(H.mTransitions.size(), 0ULL);
+        CHECK_EQ(H.mCycle(0), Index(-1));
+        CHECK_EQ(H.mCycle(H.mCycle.size() - 1), Index(-1));
+    }
+    SUBCASE("User-specified constructor parameters")
+    {
+        IndexVectorX cycle(7);
+        cycle << -1, 0, 1, 0, 1, 0, -1;
+        IndexVectorX riters(6);
+        riters << 10, 10, 10, 10, 10, 10;
+        IndexVectorX siters(7);
+        siters << 10, 10, 10, 10, 10, 10, 10;
+        Hierarchy H(root, cages, cycle, siters, riters);
+        CHECK_EQ(H.mCycle.size(), cycle.size());
+        CHECK_EQ(H.mSmoothingSchedule.size(), siters.size());
+        CHECK_EQ(H.mTransitionSchedule.size(), riters.size());
+        CHECK_EQ(H.mLevels.size(), cages.size());
+        CHECK_EQ(H.mTransitions.size(), 4ULL);
+    }
+}

@@ -9,6 +9,9 @@
 namespace pbat {
 namespace sim {
 namespace vbd {
+
+struct Data;
+
 namespace multigrid {
 
 struct Level;
@@ -29,6 +32,18 @@ struct Prolongation
      * @param lf
      */
     void Apply(Level const& lc, Level& lf);
+    /**
+     * @brief
+     * @param lc
+     * @param lf
+     */
+    void Apply(Level const& lc, Data& lf);
+    /**
+     * @brief
+     * @param lc
+     * @param xf
+     */
+    void DoApply(Level const& lc, Eigen::Ref<MatrixX> xf);
 
     IndexVectorX ec; ///< |#fine verts| array of coarse cage elements containing fine mesh vertices
     MatrixX Nc;      ///< 4x|#fine verts| array of coarse cage shape functions at fine mesh vertices

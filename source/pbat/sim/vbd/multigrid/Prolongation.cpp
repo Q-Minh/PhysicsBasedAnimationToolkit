@@ -3,6 +3,7 @@
 #include "Level.h"
 #include "pbat/fem/ShapeFunctions.h"
 #include "pbat/geometry/TetrahedralAabbHierarchy.h"
+#include "pbat/sim/vbd/Data.h"
 
 #include <exception>
 #include <fmt/format.h>
@@ -31,9 +32,18 @@ Prolongation::Prolongation(VolumeMesh const& FM, VolumeMesh const& CM) : ec(), N
 
 void Prolongation::Apply(Level const& lc, Level& lf)
 {
+    DoApply(lc, lf.x);
+}
+
+void Prolongation::Apply(Level const& lc, Data& lf)
+{
+    DoApply(lc, lf.x);
+}
+
+void Prolongation::DoApply(Level const& lc, Eigen::Ref<MatrixX> xf)
+{
     VolumeMesh const& CM = lc.mesh;
     MatrixX const& xc    = lc.x;
-    MatrixX& xf          = lf.x;
     tbb::parallel_for(Index(0), ec.size(), [&](Index i) {
         auto e    = ec(i);
         auto inds = CM.E(Eigen::placeholders::all, e);
