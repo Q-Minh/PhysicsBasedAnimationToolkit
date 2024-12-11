@@ -85,7 +85,16 @@ if __name__ == "__main__":
     ).construct(validate=False)
 
     # Setup multiscale VBD
-    hierarchy = pbat.sim.vbd.multigrid.Hierarchy(data, cmeshes)
+    cycle = [-1, 0, -1]
+    siters = [0, 5, 5]
+    riters = [5, 0]
+    hierarchy = pbat.sim.vbd.multigrid.Hierarchy(
+        data,
+        cmeshes,
+        cycle,
+        siters,
+        riters
+    )
     vbd = pbat.sim.vbd.multigrid.Integrator()
 
     ps.set_verbosity(0)
