@@ -238,8 +238,24 @@ def rest_pose_hyper_elastic_modes(
         rho: float | np.ndarray = 1e-3,
         energy=_fem.HyperElasticEnergy.StableNeoHookean,
         modes: int = 30,
-        sigma: float = -1e-5, 
+        sigma: float = -1e-5,
         zero: float = 0.):
+    """Computes natural (linear) displacement modes of mesh.
+
+    Args:
+        mesh (_pbat.fem.Mesh): FEM mesh.
+        Y (float | np.ndarray, optional): Young's modulus. Defaults to 1e6.
+        nu (float | np.ndarray, optional): Poisson's ratio. Defaults to 0.45.
+        rho (float | np.ndarray, optional): Mass density. Defaults to 1e-3.
+        energy (_pbat.fem.HyperElasticEnergy, optional): Constitutive model. Defaults to _fem.HyperElasticEnergy.StableNeoHookean.
+        modes (int, optional): Maximum number of modes to compute. Defaults to 30.
+        sigma (float, optional): Shift (see scipy.sparse.eigsh). Defaults to -1e-5.
+        zero (float, optional): Numerical zero used to cull modes. Defaults to 0.
+
+    Returns:
+        (np.ndarray, np.ndarray): (w,U) s.t. w is a |#modes| vector of amplitudes and 
+        U is a nx|#modes| array of displacement modes in columns.
+    """
     x = mesh.X.reshape(math.prod(mesh.X.shape), order='f')
     M, detJeM = mass_matrix(mesh, rho=rho)
     energy = _fem.HyperElasticEnergy.StableNeoHookean
@@ -254,3 +270,4 @@ def rest_pose_hyper_elastic_modes(
     l[l <= zero] = 0
     w = np.sqrt(l)
     return w, V
+

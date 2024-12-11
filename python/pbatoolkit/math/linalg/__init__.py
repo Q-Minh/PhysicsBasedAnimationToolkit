@@ -140,3 +140,22 @@ def ldlt(A, ordering: Ordering = Ordering.AMD, solver: SolverBackend = SolverBac
         if class_ is None:
             raise ValueError("pbatoolkit was not built with MKL support")
         return class_()
+
+
+def selection_matrix(C: np.ndarray[np.int64 | np.int32], n: int = -1, dtype=np.float64):
+    """Computes a selection matrix S s.t. X @ S selects columns in X given by vec(C)
+
+    Args:
+        C (np.ndarray[np.int64 | np.int32]): Array of indices in [0,n)
+        n (int, optional): Number of columns in X. Defaults to -1.
+        dtype (type): Storage type of S's coefficients
+
+    Returns:
+        scipy.sparse.csc_array: The n x |len(C)| selection matrix S
+    """
+    if n < 0:
+        n = C.max() + 1
+    indices = C.flatten(order="F")
+    indptr = np.arange(n+1)
+    data = np.ones_like(C, dtype=dtype)
+    return sp.sparse.csc_array(data, indices, indptr, shape=(n, len(indices)))
