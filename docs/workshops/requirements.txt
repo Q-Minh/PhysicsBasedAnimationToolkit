@@ -1,0 +1,7 @@
+numpy==1.26.0
+scipy==1.14.0
+sympy==1.12
+meshio==5.3.5
+libigl==v2.5.1
+polyscope==2.2.1
+pbatoolkit>=0.0.4
