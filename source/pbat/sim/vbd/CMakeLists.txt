@@ -15,4 +15,4 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     "Integrator.cpp"
 )
 
-add_subdirectory(multigrid)
+add_subdirectory(lod)

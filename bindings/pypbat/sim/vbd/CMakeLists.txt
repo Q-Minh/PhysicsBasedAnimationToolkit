@@ -14,4 +14,4 @@ target_sources(PhysicsBasedAnimationToolkit_Python
     "Vbd.cpp"
 )
 
-add_subdirectory(multigrid)
+add_subdirectory(lod)
