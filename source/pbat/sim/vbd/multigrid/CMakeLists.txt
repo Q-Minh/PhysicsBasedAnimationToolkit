@@ -2,30 +2,22 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     PUBLIC
     FILE_SET api
     FILES
-    "DirichletEnergy.h"
-    "ElasticEnergy.h"
     "Hierarchy.h"
     "Integrator.h"
     "Kernels.h"
     "Level.h"
-    "MomentumEnergy.h"
-    "Lod.h"
+    "Multigrid.h"
     "Prolongation.h"
     "Quadrature.h"
-    "Restriction.h"
     "Smoother.h"
 )
 target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     PRIVATE
-    "DirichletEnergy.cpp"
-    "ElasticEnergy.cpp"
     "Hierarchy.cpp"
     "Integrator.cpp"
     "Kernels.cpp"
     "Level.cpp"
-    "MomentumEnergy.cpp"
     "Prolongation.cpp"
     "Quadrature.cpp"
-    "Restriction.cpp"
     "Smoother.cpp"
 )

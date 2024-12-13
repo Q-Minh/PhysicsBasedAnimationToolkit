@@ -2,12 +2,12 @@
 #define PBAT_SIM_VBD_LOD_HIERARCHY_H
 
 #include "Level.h"
-#include "Mesh.h"
 #include "Prolongation.h"
 #include "Quadrature.h"
 #include "Restriction.h"
 #include "pbat/common/Hash.h"
 #include "pbat/sim/vbd/Data.h"
+#include "pbat/sim/vbd/Mesh.h"
 
 #include <unordered_map>
 #include <variant>

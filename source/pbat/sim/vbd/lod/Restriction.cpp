@@ -141,11 +141,11 @@ TEST_CASE("[sim][vbd][lod] Restriction")
 {
     using namespace pbat;
     using sim::vbd::Data;
+    using sim::vbd::VolumeMesh;
     using sim::vbd::lod::CageQuadrature;
     using sim::vbd::lod::CageQuadratureParameters;
     using sim::vbd::lod::Level;
     using sim::vbd::lod::Restriction;
-    using sim::vbd::lod::VolumeMesh;
 
     auto const fActAndAssert = [](Index iters,
                                   VolumeMesh const& FM,

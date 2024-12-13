@@ -1,8 +1,8 @@
 #ifndef PBAT_SIM_VBD_LOD_QUADRATURE_H
 #define PBAT_SIM_VBD_LOD_QUADRATURE_H
 
-#include "Mesh.h"
 #include "pbat/Aliases.h"
+#include "pbat/sim/vbd/Mesh.h"
 
 namespace pbat {
 namespace sim {

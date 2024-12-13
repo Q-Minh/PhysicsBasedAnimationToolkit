@@ -21,7 +21,7 @@ Data& Data::WithVolumeMesh(
     Eigen::Ref<MatrixX const> const& Vin,
     Eigen::Ref<IndexMatrixX const> const& Ein)
 {
-    this->mesh = Mesh(Vin, Ein);
+    this->mesh = VolumeMesh(Vin, Ein);
     return *this;
 }
 
@@ -140,7 +140,7 @@ Data& Data::Construct(bool bValidate)
     }
     MatrixX detJe = fem::DeterminantOfJacobian<2>(mesh);
     MatrixX rhog  = rhoe.transpose().replicate(detJe.rows(), 1);
-    fem::MassMatrix<Mesh, 2> M(mesh, detJe, rhog, 1);
+    fem::MassMatrix<VolumeMesh, 2> M(mesh, detJe, rhog, 1);
     m  = M.ToLumpedMasses();
     GP = fem::ShapeFunctionGradients<1>(mesh);
     wg = fem::InnerProductWeights<1>(mesh).reshaped();

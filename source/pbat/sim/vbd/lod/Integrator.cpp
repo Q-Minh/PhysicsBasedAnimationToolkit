@@ -99,9 +99,9 @@ TEST_CASE("[sim][vbd][lod] Integrator")
 {
     using namespace pbat;
     using sim::vbd::Data;
+    using sim::vbd::VolumeMesh;
     using sim::vbd::lod::Hierarchy;
     using sim::vbd::lod::Integrator;
-    using sim::vbd::lod::VolumeMesh;
 
     // Arrange
     auto [XR, ER] = geometry::model::Cube();

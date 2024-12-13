@@ -3,11 +3,11 @@
 
 #include "DirichletEnergy.h"
 #include "ElasticEnergy.h"
-#include "Mesh.h"
 #include "MomentumEnergy.h"
 #include "Quadrature.h"
 #include "pbat/Aliases.h"
 #include "pbat/sim/vbd/Data.h"
+#include "pbat/sim/vbd/Mesh.h"
 
 namespace pbat {
 namespace sim {

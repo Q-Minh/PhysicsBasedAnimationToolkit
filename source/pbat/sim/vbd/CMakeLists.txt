@@ -7,12 +7,15 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     "Enums.h"
     "Kernels.h"
     "Integrator.h"
+    "Mesh.h"
 )
 target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     PRIVATE
     "Data.cpp"
     "Kernels.cpp"
     "Integrator.cpp"
+    "Mesh.cpp"
 )
 
 add_subdirectory(lod)
+add_subdirectory(multigrid)

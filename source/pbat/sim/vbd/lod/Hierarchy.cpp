@@ -96,8 +96,8 @@ TEST_CASE("[sim][vbd][lod] Hierarchy")
 {
     using namespace pbat;
     using sim::vbd::Data;
+    using sim::vbd::VolumeMesh;
     using sim::vbd::lod::Hierarchy;
-    using sim::vbd::lod::VolumeMesh;
 
     auto [XR, ER] = geometry::model::Cube();
     XR.colwise() -= XR.rowwise().mean();

@@ -7,7 +7,6 @@
 #include "Integrator.h"
 #include "Kernels.h"
 #include "Level.h"
-#include "Mesh.h"
 #include "MomentumEnergy.h"
 #include "Prolongation.h"
 #include "Quadrature.h"

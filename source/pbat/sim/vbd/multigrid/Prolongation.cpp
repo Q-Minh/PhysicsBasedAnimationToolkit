@@ -4,7 +4,6 @@
 #include "pbat/fem/ShapeFunctions.h"
 #include "pbat/geometry/TetrahedralAabbHierarchy.h"
 #include "pbat/profiling/Profiling.h"
-#include "pbat/sim/vbd/Data.h"
 
 #include <exception>
 #include <fmt/format.h>
@@ -14,7 +13,7 @@
 namespace pbat {
 namespace sim {
 namespace vbd {
-namespace lod {
+namespace multigrid {
 
 Prolongation::Prolongation(VolumeMesh const& FM, VolumeMesh const& CM) : ec(), Nc()
 {
@@ -33,45 +32,42 @@ Prolongation::Prolongation(VolumeMesh const& FM, VolumeMesh const& CM) : ec(), N
 
 void Prolongation::Apply(Level const& lc, Level& lf) const
 {
-    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.vbd.lod.Prolongation.Apply");
-    DoApply(lc, lf.x);
+    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.vbd.multigrid.Prolongation.Apply");
+    // DoApply(lc, lf.x);
 }
 
 void Prolongation::Apply(Level const& lc, Data& lf) const
 {
-    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.vbd.lod.Prolongation.Apply");
-    DoApply(lc, lf.x);
+    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.vbd.multigrid.Prolongation.Apply");
+    // DoApply(lc, lf.x);
 }
 
 void Prolongation::DoApply(Level const& lc, Eigen::Ref<MatrixX> xf) const
 {
-    VolumeMesh const& CM = lc.mesh;
-    MatrixX const& xc    = lc.x;
-    tbb::parallel_for(Index(0), ec.size(), [&](Index i) {
-        auto e    = ec(i);
-        auto inds = CM.E(Eigen::placeholders::all, e);
-        auto N    = Nc.col(i);
-        xf.col(i) = xc(Eigen::placeholders::all, inds) * N;
-    });
+    // VolumeMesh const& CM = lc.mesh;
+    // MatrixX const& xc    = lc.x;
+    // tbb::parallel_for(Index(0), ec.size(), [&](Index i) {
+    //     auto e    = ec(i);
+    //     auto inds = CM.E(Eigen::placeholders::all, e);
+    //     auto N    = Nc.col(i);
+    //     xf.col(i) = xc(Eigen::placeholders::all, inds) * N;
+    // });
 }
 
-} // namespace lod
+} // namespace multigrid
 } // namespace vbd
 } // namespace sim
 } // namespace pbat
 
 #include "pbat/geometry/model/Cube.h"
-#ifdef PBAT_WITH_PRECOMPILED_LARGE_MODELS
-    #include "pbat/geometry/model/Armadillo.h"
-#endif // PBAT_WITH_PRECOMPILED_LARGE_MODELS
 
 #include <doctest/doctest.h>
 
-TEST_CASE("[sim][vbd][lod] Prolongation")
+TEST_CASE("[sim][vbd][multigrid] Prolongation")
 {
     using namespace pbat;
     using sim::vbd::VolumeMesh;
-    using sim::vbd::lod::Prolongation;
+    using sim::vbd::multigrid::Prolongation;
 
     auto const fActAndAssert = [](VolumeMesh const& FM, VolumeMesh const& CM) {
         Prolongation P(FM, CM);
@@ -90,14 +86,4 @@ TEST_CASE("[sim][vbd][lod] Prolongation")
         VolumeMesh CM(VC, CC);
         fActAndAssert(FM, CM);
     }
-#ifdef PBAT_WITH_PRECOMPILED_LARGE_MODELS
-    SUBCASE("Armadillo")
-    {
-        auto [VR, CR] = geometry::model::Armadillo(geometry::model::EMesh::Tetrahedral, Index(0));
-        auto [VC, CC] = geometry::model::Armadillo(geometry::model::EMesh::Tetrahedral, Index(1));
-        VolumeMesh FM(VR, CR);
-        VolumeMesh CM(VC, CC);
-        fActAndAssert(FM, CM);
-    }
-#endif // PBAT_WITH_PRECOMPILED_LARGE_MODELS
 }

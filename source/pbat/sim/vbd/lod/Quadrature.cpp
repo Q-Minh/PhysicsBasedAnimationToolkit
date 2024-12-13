@@ -293,8 +293,8 @@ TEST_CASE("[sim][vbd][lod] Quadrature")
     using sim::vbd::lod::ECageQuadratureStrategy;
     using sim::vbd::lod::ESurfaceQuadratureStrategy;
     using sim::vbd::lod::SurfaceQuadrature;
-    using VolumeMesh  = sim::vbd::lod::VolumeMesh;
-    using SurfaceMesh = sim::vbd::lod::SurfaceMesh;
+    using VolumeMesh  = sim::vbd::VolumeMesh;
+    using SurfaceMesh = sim::vbd::SurfaceMesh;
 
     auto const ActAndAssert =
         [](MatrixX const& VR, IndexMatrixX const& CR, MatrixX const& VC, IndexMatrixX const& CC) {
