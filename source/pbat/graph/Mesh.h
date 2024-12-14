@@ -12,7 +12,8 @@ template <class TDerivedE, class TDerivedW, std::integral TIndex = typename TDer
 Eigen::SparseMatrix<TIndex, Eigen::ColMajor, TIndex> MeshAdjacencyMatrix(
     Eigen::DenseBase<TDerivedE> const& E,
     Eigen::DenseBase<TDerivedW> const& w,
-    TIndex nNodes = TIndex(-1))
+    TIndex nNodes         = TIndex(-1),
+    bool bVertexToElement = false)
 {
     if (nNodes < 0)
         nNodes = E.maxCoeff() + TIndex(1);
@@ -24,15 +25,23 @@ Eigen::SparseMatrix<TIndex, Eigen::ColMajor, TIndex> MeshAdjacencyMatrix(
     for (auto e = 0; e < E.cols(); ++e)
         for (auto i = 0; i < E.rows(); ++i)
             G.insert(E(i, e), e) = w(i, e);
+    if (bVertexToElement)
+        G = G.transpose();
     return G;
 }
 
 template <class TDerivedE, std::integral TIndex = typename TDerivedE::Scalar>
-Eigen::SparseMatrix<TIndex, Eigen::ColMajor, TIndex>
-MeshAdjacencyMatrix(Eigen::DenseBase<TDerivedE> const& E, TIndex nNodes = TIndex(-1))
+Eigen::SparseMatrix<TIndex, Eigen::ColMajor, TIndex> MeshAdjacencyMatrix(
+    Eigen::DenseBase<TDerivedE> const& E,
+    TIndex nNodes         = TIndex(-1),
+    bool bVertexToElement = false)
 {
     using WeightMatrixType = Eigen::Matrix<TIndex, Eigen::Dynamic, Eigen::Dynamic>;
-    return MeshAdjacencyMatrix(E, WeightMatrixType::Ones(E.rows(), E.cols()), nNodes);
+    return MeshAdjacencyMatrix(
+        E,
+        WeightMatrixType::Ones(E.rows(), E.cols()),
+        nNodes,
+        bVertexToElement);
 }
 
 template <class TDerivedE, std::integral TIndex = typename TDerivedE::Scalar>

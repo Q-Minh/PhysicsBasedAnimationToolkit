@@ -31,6 +31,36 @@ DeformationGradient(Eigen::MatrixBase<TDerivedx> const& x, Eigen::MatrixBase<TDe
 }
 
 /**
+ * @brief Extracts the i^{th} segment of GradientWrtDofs()
+ * @tparam TElement
+ * @tparam Dims Problem dimensionality
+ * @tparam TMatrixGF
+ * @tparam TMatrixGP
+ * @tparam Scalar
+ * @param GF Gradient w.r.t. vectorized deformation gradient vec(F)
+ * @param GP Basis function gradients
+ * @param i The segment to extract
+ * @return
+ */
+template <
+    CElement TElement,
+    int Dims,
+    math::linalg::mini::CMatrix TMatrixGF,
+    math::linalg::mini::CMatrix TMatrixGP,
+    class ScalarType = typename TMatrixGF::ScalarType>
+math::linalg::mini::SVector<ScalarType, Dims>
+GradientSegmentWrtDofs(TMatrixGF const& GF, TMatrixGP const& GP, auto i)
+{
+    using namespace math::linalg::mini;
+    SVector<ScalarType, Dims> dPsidx = Zeros<ScalarType, Dims, 1>{};
+    for (auto k = 0; k < Dims; ++k)
+    {
+        dPsidx += GP(i, k) * GF.template Slice<Dims, 1>(k * Dims, 0);
+    }
+    return dPsidx;
+}
+
+/**
  * @brief Computes gradient w.r.t. FEM degrees of freedom x of some function of deformation gradient
  * F, U(F(x)) via chain rule. This is effectively a rank-3 to rank-1 tensor contraction.
  *
@@ -74,6 +104,40 @@ GradientWrtDofs(TMatrixGF const& GF, TMatrixGP const& GP)
         }
     }
     return dPsidx;
+}
+
+/**
+ * @brief Extracts the ij^{th} block of HessianWrtDofs
+ * @tparam TElement
+ * @tparam Dims Problem dimensionality
+ * @tparam TMatrixHF
+ * @tparam TMatrixGP
+ * @tparam Scalar
+ * @param HF Hessian of energy w.r.t. vectorized deformation gradient vec(F)
+ * @param GP Basis function gradients
+ * @param i
+ * @param j
+ * @return
+ */
+template <
+    CElement TElement,
+    int Dims,
+    math::linalg::mini::CMatrix TMatrixHF,
+    math::linalg::mini::CMatrix TMatrixGP,
+    class ScalarType = typename TMatrixHF::ScalarType>
+math::linalg::mini::SMatrix<ScalarType, Dims, Dims>
+HessianBlockWrtDofs(TMatrixHF const& HF, TMatrixGP const& GP, auto i, auto j)
+{
+    using namespace math::linalg::mini;
+    SMatrix<ScalarType, Dims, Dims> d2Psidx2 = Zeros<ScalarType, Dims, Dims>{};
+    for (auto kj = 0; kj < Dims; ++kj)
+    {
+        for (auto ki = 0; ki < Dims; ++ki)
+        {
+            d2Psidx2 += GP(i, ki) * GP(j, kj) * HF.template Slice<Dims, Dims>(ki * Dims, kj * Dims);
+        }
+    }
+    return d2Psidx2;
 }
 
 /**

@@ -148,10 +148,10 @@ Data& Data::Construct(bool bValidate)
     IndexMatrixX ilocal             = IndexVector<4>{0, 1, 2, 3}.replicate(1, mesh.E.cols());
     auto GVT                        = graph::MeshAdjacencyMatrix(mesh.E, ilocal, mesh.X.cols());
     GVT                             = GVT.transpose();
-    std::tie(GVGp, GVGe, GVGilocal) = graph::MatrixToAdjacency(GVT);
+    std::tie(GVGp, GVGe, GVGilocal) = graph::MatrixToWeightedAdjacency(GVT);
     // Parallel partitions
     auto GVV                = graph::MeshPrimalGraph(mesh.E, mesh.X.cols());
-    auto [GVVp, GVVv, GVVw] = graph::MatrixToAdjacency(GVV);
+    auto [GVVp, GVVv, GVVw] = graph::MatrixToWeightedAdjacency(GVV);
     colors                  = graph::GreedyColor(GVVp, GVVv, eOrdering, eSelection);
     std::tie(Pptr, Padj)    = graph::MapToAdjacency(colors);
     // Apply Dirichlet boundary conditions.

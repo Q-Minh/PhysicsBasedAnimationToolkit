@@ -224,7 +224,7 @@ CageQuadrature::CageQuadrature(
     IndexMatrixX ilocal = IndexVector<4>{0, 1, 2, 3}.replicate(1, eg.size());
     auto G = graph::MeshAdjacencyMatrix(CM.E(Eigen::placeholders::all, eg), ilocal, CM.X.cols());
     G      = G.transpose();
-    std::tie(GVGp, GVGg, GVGilocal) = graph::MatrixToAdjacency(G);
+    std::tie(GVGp, GVGg, GVGilocal) = graph::MatrixToWeightedAdjacency(G);
 }
 
 SurfaceQuadrature::SurfaceQuadrature(
@@ -251,7 +251,7 @@ SurfaceQuadrature::SurfaceQuadrature(
     IndexMatrixX ilocal = IndexVector<4>{0, 1, 2, 3}.replicate(1, eg.size());
     auto G = graph::MeshAdjacencyMatrix(CM.E(Eigen::placeholders::all, eg), ilocal, CM.X.cols());
     G      = G.transpose();
-    std::tie(GVGp, GVGg, GVGilocal) = graph::MatrixToAdjacency(G);
+    std::tie(GVGp, GVGg, GVGilocal) = graph::MatrixToWeightedAdjacency(G);
 }
 
 DirichletQuadrature::DirichletQuadrature(
@@ -270,7 +270,7 @@ DirichletQuadrature::DirichletQuadrature(
     IndexMatrixX ilocal = IndexVector<4>{0, 1, 2, 3}.replicate(1, eg.size());
     auto G = graph::MeshAdjacencyMatrix(CM.E(Eigen::placeholders::all, eg), ilocal, CM.X.cols());
     G      = G.transpose();
-    std::tie(GVGp, GVGg, GVGilocal) = graph::MatrixToAdjacency(G);
+    std::tie(GVGp, GVGg, GVGilocal) = graph::MatrixToWeightedAdjacency(G);
 }
 
 } // namespace lod

@@ -3,6 +3,7 @@
 #include "pbat/graph/Adjacency.h"
 #include "pbat/graph/Color.h"
 #include "pbat/graph/Mesh.h"
+#include "Level.h"
 
 namespace pbat {
 namespace sim {
@@ -25,7 +26,7 @@ Level::Level(VolumeMesh CM)
     x = mesh.X;
     // Compute vertex parallelization scheme
     auto GVV                = graph::MeshPrimalGraph(mesh.E, mesh.X.cols());
-    auto [GVVp, GVVv, GVVw] = graph::MatrixToAdjacency(GVV);
+    auto [GVVp, GVVv, GVVw] = graph::MatrixToWeightedAdjacency(GVV);
     colors                  = graph::GreedyColor(
         GVVp,
         GVVv,

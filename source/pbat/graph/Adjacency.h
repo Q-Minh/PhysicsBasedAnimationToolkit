@@ -7,11 +7,58 @@
 #include "pbat/common/Indexing.h"
 
 #include <concepts>
+#include <iterator>
 #include <tuple>
 #include <vector>
 
 namespace pbat {
 namespace graph {
+
+template <class TWeight = Scalar, class TIndex = Index>
+using WeightedEdge = Eigen::Triplet<TWeight, TIndex>;
+
+template <
+    class TWeightedEdgeIterator,
+    class TWeightedEdge = typename std::iterator_traits<TWeightedEdgeIterator>::value_type,
+    class TScalar       = std::remove_cvref_t<decltype(std::declval<TWeightedEdge>().value())>,
+    class TIndex        = std::remove_cvref_t<decltype(std::declval<TWeightedEdge>().row())>>
+Eigen::SparseMatrix<TScalar, Eigen::RowMajor, TIndex>
+AdjacencyMatrixFromEdges(TWeightedEdgeIterator begin, TWeightedEdgeIterator end)
+{
+    Eigen::SparseMatrix<TScalar, Eigen::RowMajor, TIndex> G{};
+    G.setFromTriplets(begin, end);
+    return G;
+}
+
+template <
+    class TDerivedA,
+    class TScalar        = typename TDerivedA::Scalar,
+    std::integral TIndex = typename TDerivedA::StorageIndex>
+auto AdjacencyMatrixPrefix(Eigen::SparseCompressedBase<TDerivedA> const& A)
+{
+    using IndexVectorType = Eigen::Map<Eigen::Vector<TIndex, Eigen::Dynamic>>;
+    return Eigen::Map<IndexVectorType const>(A.outerIndexPtr(), A.outerSize() + 1);
+}
+
+template <
+    class TDerivedA,
+    class TScalar        = typename TDerivedA::Scalar,
+    std::integral TIndex = typename TDerivedA::StorageIndex>
+auto AdjacencyMatrixIndices(Eigen::SparseCompressedBase<TDerivedA> const& A)
+{
+    using IndexVectorType = Eigen::Map<Eigen::Vector<TIndex, Eigen::Dynamic>>;
+    return Eigen::Map<IndexVectorType const>(A.innerIndexPtr(), A.nonZeros());
+}
+
+template <
+    class TDerivedA,
+    class TScalar        = typename TDerivedA::Scalar,
+    std::integral TIndex = typename TDerivedA::StorageIndex>
+auto AdjacencyMatrixWeights(Eigen::SparseCompressedBase<TDerivedA> const& A)
+{
+    using WeightVectorType = Eigen::Map<Eigen::Vector<TScalar, Eigen::Dynamic>>;
+    return Eigen::Map<WeightVectorType const>(A.valuePtr(), A.nonZeros());
+}
 
 template <class TDerivedP, std::integral TIndex = typename TDerivedP::Scalar>
 std::tuple<Eigen::Vector<TIndex, Eigen::Dynamic>, Eigen::Vector<TIndex, Eigen::Dynamic>>
@@ -32,12 +79,21 @@ template <
     std::integral TIndex = typename TDerivedA::StorageIndex>
 auto MatrixToAdjacency(Eigen::SparseCompressedBase<TDerivedA> const& A)
 {
-    using IndexVectorType  = Eigen::Map<Eigen::Vector<TIndex, Eigen::Dynamic>>;
-    using WeightVectorType = Eigen::Map<Eigen::Vector<TScalar, Eigen::Dynamic>>;
     return std::make_tuple(
-        Eigen::Map<IndexVectorType const>(A.outerIndexPtr(), A.outerSize() + 1),
-        Eigen::Map<IndexVectorType const>(A.innerIndexPtr(), A.nonZeros()),
-        Eigen::Map<WeightVectorType const>(A.valuePtr(), A.nonZeros()));
+        AdjacencyMatrixPrefix<TDerivedA, TScalar, TIndex>(A.derived()),
+        AdjacencyMatrixIndices<TDerivedA, TScalar, TIndex>(A.derived()));
+}
+
+template <
+    class TDerivedA,
+    class TScalar        = typename TDerivedA::Scalar,
+    std::integral TIndex = typename TDerivedA::StorageIndex>
+auto MatrixToWeightedAdjacency(Eigen::SparseCompressedBase<TDerivedA> const& A)
+{
+    return std::make_tuple(
+        AdjacencyMatrixPrefix<TDerivedA, TScalar, TIndex>(A.derived()),
+        AdjacencyMatrixIndices<TDerivedA, TScalar, TIndex>(A.derived()),
+        AdjacencyMatrixWeights<TDerivedA, TScalar, TIndex>(A.derived()));
 }
 
 template <class TIndex = Index>
@@ -62,6 +118,26 @@ auto ListOfListsToAdjacency(std::vector<std::vector<TIndex>> const& lil)
         adj(Eigen::seqN(start, end - start)) = common::ToEigen(lil[l]);
     }
     return std::make_tuple(ptr, adj);
+}
+
+template <
+    class TDerivedPtr,
+    class TDerivedAdj,
+    class TIndex = typename TDerivedPtr::Scalar,
+    class Func>
+void ForEachEdge(Eigen::DenseBase<TDerivedPtr>& ptr, Eigen::DenseBase<TDerivedAdj>& adj, Func&& f)
+{
+    auto nVertices = ptr.size() - 1;
+    for (TIndex u = 0; u < nVertices; ++u)
+    {
+        auto uBegin = ptr(u);
+        auto uEnd   = ptr(u + 1);
+        for (auto k = uBegin; k < uEnd; ++k)
+        {
+            auto v = adj(k);
+            f(u, v, k);
+        }
+    }
 }
 
 template <
