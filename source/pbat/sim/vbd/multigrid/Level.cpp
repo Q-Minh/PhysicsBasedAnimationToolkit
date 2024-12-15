@@ -1,8 +1,6 @@
 #include "Level.h"
 
 #include "Kernels.h"
-#include "pbat/fem/DeformationGradient.h"
-#include "pbat/fem/Jacobian.h"
 #include "pbat/fem/ShapeFunctions.h"
 #include "pbat/geometry/TetrahedralAabbHierarchy.h"
 #include "pbat/graph/Adjacency.h"
@@ -10,8 +8,8 @@
 #include "pbat/graph/Mesh.h"
 #include "pbat/math/linalg/mini/Mini.h"
 #include "pbat/physics/StableNeoHookeanEnergy.h"
+#include "pbat/profiling/Profiling.h"
 
-#include <ranges>
 #include <tbb/parallel_for.h>
 #include <utility>
 #include <vector>
@@ -39,6 +37,8 @@ Level::Level(Data const& data, VolumeMesh meshIn)
       GKilocal(),
       bIsDirichletVertex()
 {
+    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.vbd.multigrid.Level.Construct");
+
     // Coarse mesh
     u.resize(mesh.X.rows(), mesh.X.cols());
     auto G                  = graph::MeshPrimalGraph(mesh.E, mesh.X.cols());
@@ -116,6 +116,7 @@ Level::Level(Data const& data, VolumeMesh meshIn)
 
 void Level::Prolong(Data& data) const
 {
+    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.vbd.multigrid.Level.Prolong");
     tbb::parallel_for(Index(0), data.x.cols(), [&](Index i) {
         Index ec = ecK(i);
         auto uec = u(Eigen::placeholders::all, mesh.E.col(ec));
@@ -126,6 +127,7 @@ void Level::Prolong(Data& data) const
 
 void Level::Smooth(Scalar dt, Index iters, Data& data)
 {
+    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.vbd.multigrid.Level.Smooth");
     u.setZero();
     Index const nPartitions = Pptr.size() - 1;
     Scalar dt2              = dt * dt;

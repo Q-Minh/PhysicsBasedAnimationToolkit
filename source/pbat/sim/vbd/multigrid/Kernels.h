@@ -3,9 +3,9 @@
 
 #include "pbat/Aliases.h"
 #include "pbat/HostDevice.h"
+#include "pbat/fem/DeformationGradient.h"
 #include "pbat/math/linalg/mini/Mini.h"
 #include "pbat/physics/HyperElasticity.h"
-#include "pbat/sim/vbd/Kernels.h"
 #include "pbat/sim/vbd/Mesh.h"
 
 namespace pbat {

@@ -61,7 +61,7 @@ void Integrator::Step(Scalar dt, Index iterations, Index substeps, Scalar rho)
                 omega = kernels::ChebyshevOmega(k, rho2, omega);
 
             auto const nPartitions = data.Pptr.size() - 1;
-            for (auto p = 0; p < nPartitions; ++p)
+            for (Index p = 0; p < nPartitions; ++p)
             {
                 auto const pBegin = data.Pptr(p);
                 auto const pEnd   = data.Pptr(p + 1);
@@ -70,7 +70,7 @@ void Integrator::Step(Scalar dt, Index iterations, Index substeps, Scalar rho)
                     using mini::FromEigen;
                     using mini::ToEigen;
 
-                    auto i     = data.Padj[k];
+                    auto i     = data.Padj(k);
                     auto begin = data.GVGp(i);
                     auto end   = data.GVGp(i + 1);
                     // Elastic energy
@@ -78,10 +78,10 @@ void Integrator::Step(Scalar dt, Index iterations, Index substeps, Scalar rho)
                     mini::SVector<Scalar, 3> gi    = mini::Zeros<Scalar, 3, 1>();
                     for (auto n = begin; n < end; ++n)
                     {
-                        auto ilocal                     = data.GVGilocal[n];
-                        auto e                          = data.GVGe[n];
+                        auto ilocal                     = data.GVGilocal(n);
+                        auto e                          = data.GVGe(n);
                         auto lamee                      = data.lame.col(e);
-                        auto wg                         = data.wg[e];
+                        auto wg                         = data.wg(e);
                         auto Te                         = data.mesh.E.col(e);
                         mini::SMatrix<Scalar, 4, 3> GPe = FromEigen(data.GP.block<4, 3>(0, e * 3));
                         mini::SMatrix<Scalar, 3, 4> xe =
@@ -95,7 +95,7 @@ void Integrator::Step(Scalar dt, Index iterations, Index substeps, Scalar rho)
                         kernels::AccumulateElasticGradient(ilocal, wg, GPe, gF, gi);
                     }
                     // Update vertex position
-                    Scalar m                         = data.m[i];
+                    Scalar m                         = data.m(i);
                     mini::SVector<Scalar, 3> xti     = FromEigen(data.xt.col(i).head<3>());
                     mini::SVector<Scalar, 3> xtildei = FromEigen(data.xtilde.col(i).head<3>());
                     mini::SVector<Scalar, 3> xi      = FromEigen(data.x.col(i).head<3>());
@@ -118,6 +118,9 @@ void Integrator::Step(Scalar dt, Index iterations, Index substeps, Scalar rho)
                     auto xkm1    = FromEigen(xkm1eig);
                     auto xk      = FromEigen(xkeig);
                     kernels::ChebyshevUpdate(k, omega, xkm2, xkm1, xk);
+                    data.xchebm2.col(i) = xkm2eig;
+                    data.xchebm1.col(i) = xkm1eig;
+                    data.x.col(i)       = xkeig;
                 });
             }
         }
@@ -157,9 +160,9 @@ TEST_CASE("[sim][vbd] Integrator")
     IndexMatrixX T(4, 5);
     IndexMatrixX F(3, 12);
     // clang-format off
-    P << 0.f, 1.f, 0.f, 1.f, 0.f, 1.f, 0.f, 1.f,
-         0.f, 0.f, 1.f, 1.f, 0.f, 0.f, 1.f, 1.f,
-         0.f, 0.f, 0.f, 0.f, 1.f, 1.f, 1.f, 1.f;
+    P << 0., 1., 0., 1., 0., 1., 0., 1.,
+         0., 0., 1., 1., 0., 0., 1., 1.,
+         0., 0., 0., 0., 1., 1., 1., 1.;
     T << 0, 3, 5, 6, 0,
          1, 2, 4, 7, 5,
          3, 0, 6, 5, 3,

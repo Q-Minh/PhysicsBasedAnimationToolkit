@@ -3,9 +3,9 @@
 #include "Kernels.h"
 #include "Level.h"
 #include "pbat/physics/StableNeoHookeanEnergy.h"
+#include "pbat/profiling/Profiling.h"
 #include "pbat/sim/vbd/Data.h"
 #include "pbat/sim/vbd/Kernels.h"
-#include "pbat/profiling/Profiling.h"
 
 #include <tbb/parallel_for.h>
 
@@ -103,22 +103,26 @@ void Smoother::Apply(Index iters, Scalar dt, Data& data) const
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.vbd.lod.Smoother.Apply");
     Scalar const dt2 = dt * dt;
+    using namespace math::linalg;
+    using mini::FromEigen;
+    using mini::ToEigen;
     // Minimize Backward Euler, i.e. BDF1, objective
     for (auto k = 0; k < iters; ++k)
     {
         auto const nPartitions = data.Pptr.size() - 1;
         for (Index p = 0; p < nPartitions; ++p)
         {
-            auto const pBegin = data.Pptr(p);
-            auto const pEnd   = data.Pptr(p + 1);
+            Index const pBegin = data.Pptr(p);
+            Index const pEnd   = data.Pptr(p + 1);
             tbb::parallel_for(pBegin, pEnd, [&](Index k) {
                 using namespace math::linalg;
                 using mini::FromEigen;
                 using mini::ToEigen;
+                using namespace pbat::sim::vbd::kernels;
 
-                auto i     = data.Padj(k);
-                auto begin = data.GVGp(i);
-                auto end   = data.GVGp(i + 1);
+                Index i     = data.Padj(k);
+                Index begin = data.GVGp(i);
+                Index end   = data.GVGp(i + 1);
                 // Elastic energy
                 mini::SMatrix<Scalar, 3, 3> Hi = mini::Zeros<Scalar, 3, 3>();
                 mini::SVector<Scalar, 3> gi    = mini::Zeros<Scalar, 3, 1>();
@@ -137,7 +141,6 @@ void Smoother::Apply(Index iters, Scalar dt, Data& data) const
                     mini::SVector<Scalar, 9> gF;
                     mini::SMatrix<Scalar, 9, 9> HF;
                     Psi.gradAndHessian(Fe, lamee(0), lamee(1), gF, HF);
-                    using namespace pbat::sim::vbd::kernels;
                     AccumulateElasticHessian(ilocal, wg, GPe, HF, Hi);
                     AccumulateElasticGradient(ilocal, wg, GPe, gF, gi);
                 }
@@ -146,7 +149,6 @@ void Smoother::Apply(Index iters, Scalar dt, Data& data) const
                 mini::SVector<Scalar, 3> xti     = FromEigen(data.xt.col(i).head<3>());
                 mini::SVector<Scalar, 3> xtildei = FromEigen(data.xtilde.col(i).head<3>());
                 mini::SVector<Scalar, 3> xi      = FromEigen(data.x.col(i).head<3>());
-                using namespace pbat::sim::vbd::kernels;
                 AddDamping(dt, xti, xi, data.kD, gi, Hi);
                 AddInertiaDerivatives(dt2, m, xtildei, xi, gi, Hi);
                 IntegratePositions(gi, Hi, xi, data.detHZero);
