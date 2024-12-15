@@ -2,8 +2,8 @@
 
 #include "pypbat/fem/Mesh.h"
 
+#include <pbat/sim/vbd/Mesh.h>
 #include <pbat/sim/vbd/lod/Level.h>
-#include <pbat/sim/vbd/lod/Mesh.h>
 #include <pybind11/eigen.h>
 
 namespace pbat {
@@ -16,9 +16,9 @@ void BindLevel(pybind11::module& m)
 {
     namespace pyb = pybind11;
     using pbat::sim::vbd::Data;
+    using pbat::sim::vbd::VolumeMesh;
     using pbat::sim::vbd::lod::ECageQuadratureStrategy;
     using pbat::sim::vbd::lod::Level;
-    using pbat::sim::vbd::lod::VolumeMesh;
 
     pyb::class_<Level>(m, "Level")
         .def(

@@ -3,6 +3,7 @@
 #include "pypbat/fem/Mesh.h"
 
 #include <pbat/sim/vbd/Data.h>
+#include <pbat/sim/vbd/Mesh.h>
 #include <pbat/sim/vbd/lod/Hierarchy.h>
 #include <pybind11/eigen.h>
 #include <pybind11/stl.h>
@@ -19,9 +20,9 @@ void BindHierarchy(pybind11::module& m)
     namespace pyb = pybind11;
     using pbat::py::fem::Mesh;
     using pbat::sim::vbd::Data;
+    using pbat::sim::vbd::VolumeMesh;
     using pbat::sim::vbd::lod::CageQuadratureParameters;
     using pbat::sim::vbd::lod::Hierarchy;
-    using pbat::sim::vbd::lod::VolumeMesh;
     pyb::class_<Hierarchy>(m, "Hierarchy")
         .def(
             pyb::init([](Data& root,

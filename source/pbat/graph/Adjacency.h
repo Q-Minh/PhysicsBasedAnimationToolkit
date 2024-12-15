@@ -131,7 +131,8 @@ auto ListOfListsToAdjacency(std::vector<std::vector<TIndex>> const& lil)
     ptr(0) = TIndex(0);
     for (auto l = 0; l < n; ++l)
     {
-        auto nVerticesInPartition = static_cast<TIndex>(lil[l].size());
+        auto lStl                 = static_cast<std::size_t>(l);
+        auto nVerticesInPartition = static_cast<TIndex>(lil[lStl].size());
         ptr(l + 1)                = ptr(l) + nVerticesInPartition;
         nEdges += nVerticesInPartition;
     }
@@ -140,7 +141,8 @@ auto ListOfListsToAdjacency(std::vector<std::vector<TIndex>> const& lil)
     {
         auto start                           = ptr(l);
         auto end                             = ptr(l + 1);
-        adj(Eigen::seqN(start, end - start)) = common::ToEigen(lil[l]);
+        auto lStl                            = static_cast<std::size_t>(l);
+        adj(Eigen::seqN(start, end - start)) = common::ToEigen(lil[lStl]);
     }
     return std::make_tuple(ptr, adj);
 }

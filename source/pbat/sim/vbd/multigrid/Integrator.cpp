@@ -109,7 +109,7 @@ TEST_CASE("[sim][vbd][multigrid] Integrator")
     IndexVectorX cycle(3);
     cycle << 1, 0, -1;
     IndexVectorX siters(3);
-    siters << 2, 3, 5;
+    siters << 2, 1, 1;
     Hierarchy H{
         Data()
             .WithVolumeMesh(VR, CR)

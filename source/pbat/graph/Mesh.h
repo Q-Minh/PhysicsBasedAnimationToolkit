@@ -8,8 +8,12 @@
 namespace pbat {
 namespace graph {
 
-template <class TDerivedE, class TDerivedW, std::integral TIndex = typename TDerivedE::Scalar>
-Eigen::SparseMatrix<TIndex, Eigen::ColMajor, TIndex> MeshAdjacencyMatrix(
+template <
+    class TDerivedE,
+    class TDerivedW,
+    std::integral TIndex = typename TDerivedE::Scalar,
+    class TScalar        = typename TDerivedW::Scalar>
+Eigen::SparseMatrix<TScalar, Eigen::ColMajor, TIndex> MeshAdjacencyMatrix(
     Eigen::DenseBase<TDerivedE> const& E,
     Eigen::DenseBase<TDerivedW> const& w,
     TIndex nNodes         = TIndex(-1),
@@ -18,7 +22,7 @@ Eigen::SparseMatrix<TIndex, Eigen::ColMajor, TIndex> MeshAdjacencyMatrix(
     if (nNodes < 0)
         nNodes = E.maxCoeff() + TIndex(1);
 
-    using AdjacencyMatrix = Eigen::SparseMatrix<TIndex, Eigen::ColMajor, TIndex>;
+    using AdjacencyMatrix = Eigen::SparseMatrix<TScalar, Eigen::ColMajor, TIndex>;
     AdjacencyMatrix G(nNodes, E.cols());
     using IndexVectorType = Eigen::Vector<TIndex, Eigen::Dynamic>;
     G.reserve(IndexVectorType::Constant(E.cols(), static_cast<TIndex>(E.rows())));

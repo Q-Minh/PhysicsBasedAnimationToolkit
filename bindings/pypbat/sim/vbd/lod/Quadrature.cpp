@@ -2,7 +2,7 @@
 
 #include "pypbat/fem/Mesh.h"
 
-#include <pbat/sim/vbd/lod/Mesh.h>
+#include <pbat/sim/vbd/Mesh.h>
 #include <pbat/sim/vbd/lod/Quadrature.h>
 #include <pybind11/eigen.h>
 
@@ -16,6 +16,7 @@ void BindQuadrature(pybind11::module& m)
 {
     namespace pyb = pybind11;
     using namespace pbat::sim::vbd::lod;
+    using pbat::sim::vbd::VolumeMesh;
 
     pyb::enum_<ECageQuadratureStrategy>(m, "CageQuadratureStrategy")
         .value("CageMesh", ECageQuadratureStrategy::CageMesh, "Use the cage mesh's quadrature rule")

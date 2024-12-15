@@ -2,17 +2,16 @@ target_sources(PhysicsBasedAnimationToolkit_Python
     PUBLIC
     FILE_SET api
     FILES
-    "Data.h"
+    "Hierarchy.h"
     "Integrator.h"
-    "Vbd.h"
+    "Level.h"
+    "Multigrid.h"
 )
 
 target_sources(PhysicsBasedAnimationToolkit_Python
     PRIVATE
-    "Data.cpp"
+    "Hierarchy.cpp"
     "Integrator.cpp"
-    "Vbd.cpp"
+    "Level.cpp"
+    "Multigrid.cpp"
 )
-
-add_subdirectory(lod)
-add_subdirectory(multigrid)

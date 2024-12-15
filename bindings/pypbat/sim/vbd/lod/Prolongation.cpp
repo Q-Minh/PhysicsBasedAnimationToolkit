@@ -2,8 +2,8 @@
 
 #include "pypbat/fem/Mesh.h"
 
+#include <pbat/sim/vbd/Mesh.h>
 #include <pbat/sim/vbd/lod/Level.h>
-#include <pbat/sim/vbd/lod/Mesh.h>
 #include <pbat/sim/vbd/lod/Prolongation.h>
 #include <pybind11/eigen.h>
 
@@ -18,9 +18,9 @@ void BindProlongation(pybind11::module& m)
     namespace pyb = pybind11;
     using pbat::py::fem::Mesh;
     using pbat::sim::vbd::Data;
-    using pbat::sim::vbd::lod::Prolongation;
-    using pbat::sim::vbd::lod::VolumeMesh;
+    using pbat::sim::vbd::VolumeMesh;
     using pbat::sim::vbd::lod::Level;
+    using pbat::sim::vbd::lod::Prolongation;
     pyb::class_<Prolongation>(m, "Prolongation")
         .def(
             pyb::init([](Mesh const& FM, Mesh const& CM) {
