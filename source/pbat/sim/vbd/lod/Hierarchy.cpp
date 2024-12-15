@@ -91,6 +91,7 @@ Hierarchy::Hierarchy(
 #include "pbat/geometry/model/Cube.h"
 
 #include <doctest/doctest.h>
+#include "Hierarchy.h"
 
 TEST_CASE("[sim][vbd][lod] Hierarchy")
 {

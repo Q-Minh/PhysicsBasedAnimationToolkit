@@ -1,8 +1,8 @@
 #ifndef PBAT_GEOMETRY_MODEL_CUBE_H
 #define PBAT_GEOMETRY_MODEL_CUBE_H
 
-#include "pbat/Aliases.h"
 #include "Enums.h"
+#include "pbat/Aliases.h"
 
 #include <utility>
 
@@ -10,7 +10,7 @@ namespace pbat {
 namespace geometry {
 namespace model {
 
-std::pair<MatrixX, IndexMatrixX> Cube(EMesh mesh = EMesh::Tetrahedral);
+std::pair<MatrixX, IndexMatrixX> Cube(EMesh mesh = EMesh::Tetrahedral, int layer = 0);
 
 } // namespace model
 } // namespace geometry

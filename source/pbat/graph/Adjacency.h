@@ -22,10 +22,35 @@ template <
     class TWeightedEdge = typename std::iterator_traits<TWeightedEdgeIterator>::value_type,
     class TScalar       = std::remove_cvref_t<decltype(std::declval<TWeightedEdge>().value())>,
     class TIndex        = std::remove_cvref_t<decltype(std::declval<TWeightedEdge>().row())>>
-Eigen::SparseMatrix<TScalar, Eigen::RowMajor, TIndex>
-AdjacencyMatrixFromEdges(TWeightedEdgeIterator begin, TWeightedEdgeIterator end)
+Eigen::SparseMatrix<TScalar, Eigen::RowMajor, TIndex> AdjacencyMatrixFromEdges(
+    TWeightedEdgeIterator begin,
+    TWeightedEdgeIterator end,
+    TIndex m = TIndex(-1),
+    TIndex n = TIndex(-1))
 {
-    Eigen::SparseMatrix<TScalar, Eigen::RowMajor, TIndex> G{};
+    if (m < 0)
+    {
+        m = std::max_element(
+                begin,
+                end,
+                [](TWeightedEdge const& lhs, TWeightedEdge const& rhs) {
+                    return lhs.row() < rhs.row();
+                })
+                ->row() +
+            TIndex(1);
+    }
+    if (n < 0)
+    {
+        n = std::max_element(
+                begin,
+                end,
+                [](TWeightedEdge const& lhs, TWeightedEdge const& rhs) {
+                    return lhs.col() < rhs.col();
+                })
+                ->col() +
+            TIndex(1);
+    }
+    Eigen::SparseMatrix<TScalar, Eigen::RowMajor, TIndex> G(m, n);
     G.setFromTriplets(begin, end);
     return G;
 }

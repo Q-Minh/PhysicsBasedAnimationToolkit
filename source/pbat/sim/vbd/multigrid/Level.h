@@ -26,9 +26,11 @@ struct Level
     void Prolong(Data& data) const;
     /**
      * @brief
+     * @param dt
+     * @param iters
      * @param data
      */
-    void Smooth(Data const& data);
+    void Smooth(Scalar dt, Index iters, Data& data);
 
     /**
      * Coarse mesh discretization
@@ -44,8 +46,8 @@ struct Level
     IndexMatrixX ecVE; ///< 4x|#fine elems| coarse elements containing 4 vertices of fine elements
     MatrixX
         NecVE; ///< 4x|4*#fine elems| coarse element shape functions at 4 vertices of fine elements
-    IndexMatrixX ilocalE; ///< 4x|#fine elems| coarse vertex local index w.r.t. coarse elements
-                          ///< containing 4 vertices of fine elements
+    IndexMatrixX ilocalE;      ///< 4x|#fine elems| coarse vertex local index w.r.t. coarse elements
+                               ///< containing 4 vertices of fine elements
     IndexVectorX GEptr, GEadj; ///< Coarse vertex -> fine element adjacency graph
 
     /**
