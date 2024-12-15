@@ -83,7 +83,7 @@ if __name__ == "__main__":
         vdbc, muD=args.Y
     ).with_initialization_strategy(
         pbat.sim.vbd.InitializationStrategy.AdaptivePbat
-    ).construct(validate=False)
+    ).construct(validate=True)
 
     # Setup multiscale VBD
     cycle = [-1, 0, -1]
