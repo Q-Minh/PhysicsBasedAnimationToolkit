@@ -1,0 +1,21 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="dir_5d9ff19dddd9059279e2890cc4401539" kind="dir">
+    <compoundname>/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/graph</compoundname>
+    <innerfile refid="bindings_2pypbat_2graph_2Adjacency_8cpp">Adjacency.cpp</innerfile>
+    <innerfile refid="bindings_2pypbat_2graph_2Adjacency_8h">Adjacency.h</innerfile>
+    <innerfile refid="bindings_2pypbat_2graph_2Color_8cpp">Color.cpp</innerfile>
+    <innerfile refid="bindings_2pypbat_2graph_2Color_8h">Color.h</innerfile>
+    <innerfile refid="Graph_8cpp">Graph.cpp</innerfile>
+    <innerfile refid="bindings_2pypbat_2graph_2Graph_8h">Graph.h</innerfile>
+    <innerfile refid="bindings_2pypbat_2graph_2Mesh_8cpp">Mesh.cpp</innerfile>
+    <innerfile refid="bindings_2pypbat_2graph_2Mesh_8h">Mesh.h</innerfile>
+    <innerfile refid="bindings_2pypbat_2graph_2Partition_8cpp">Partition.cpp</innerfile>
+    <innerfile refid="bindings_2pypbat_2graph_2Partition_8h">Partition.h</innerfile>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/graph/"/>
+  </compounddef>
+</doxygen>

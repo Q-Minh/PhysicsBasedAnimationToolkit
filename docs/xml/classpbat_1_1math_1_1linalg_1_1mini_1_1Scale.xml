@@ -1,0 +1,221 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="classpbat_1_1math_1_1linalg_1_1mini_1_1Scale" kind="class" language="C++" prot="public">
+    <compoundname>pbat::math::linalg::mini::Scale</compoundname>
+    <templateparamlist>
+      <param>
+        <type>class TMatrix</type>
+      </param>
+    </templateparamlist>
+      <sectiondef kind="public-type">
+      <memberdef kind="typedef" id="classpbat_1_1math_1_1linalg_1_1mini_1_1Scale_1a85c2f8d1e8bf0c506455562d0bb4f3cd" prot="public" static="no">
+        <type>TMatrix</type>
+        <definition>using pbat::math::linalg::mini::Scale&lt; TMatrix &gt;::NestedType =  TMatrix</definition>
+        <argsstring></argsstring>
+        <name>NestedType</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Scale.h" line="21" column="5" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Scale.h" bodystart="21" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="classpbat_1_1math_1_1linalg_1_1mini_1_1Scale_1a8c5f2650577829240eed9dd2c74ca0e4" prot="public" static="no">
+        <type>typename NestedType::ScalarType</type>
+        <definition>using pbat::math::linalg::mini::Scale&lt; TMatrix &gt;::ScalarType =  typename NestedType::ScalarType</definition>
+        <argsstring></argsstring>
+        <name>ScalarType</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Scale.h" line="22" column="5" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Scale.h" bodystart="22" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="classpbat_1_1math_1_1linalg_1_1mini_1_1Scale_1a439db0092b43c12b8602be2ed47c48a3" prot="public" static="no">
+        <type><ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1Scale" kindref="compound">Scale</ref>&lt; NestedType &gt;</type>
+        <definition>using pbat::math::linalg::mini::Scale&lt; TMatrix &gt;::SelfType =  Scale&lt;NestedType&gt;</definition>
+        <argsstring></argsstring>
+        <name>SelfType</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Scale.h" line="23" column="5" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Scale.h" bodystart="23" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="public-static-attrib">
+      <memberdef kind="variable" id="classpbat_1_1math_1_1linalg_1_1mini_1_1Scale_1afde3d4d6bd5c230924e6a6d5fa37f3d3" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>constexpr auto</type>
+        <definition>constexpr auto pbat::math::linalg::mini::Scale&lt; TMatrix &gt;::kRows</definition>
+        <argsstring></argsstring>
+        <name>kRows</name>
+        <initializer>= NestedType::kRows</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Scale.h" line="25" column="27" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Scale.h" bodystart="25" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpbat_1_1math_1_1linalg_1_1mini_1_1Scale_1a3130bde4094b31a115bb34dbcc9f71ce" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>constexpr auto</type>
+        <definition>constexpr auto pbat::math::linalg::mini::Scale&lt; TMatrix &gt;::kCols</definition>
+        <argsstring></argsstring>
+        <name>kCols</name>
+        <initializer>= NestedType::kCols</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Scale.h" line="26" column="27" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Scale.h" bodystart="26" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpbat_1_1math_1_1linalg_1_1mini_1_1Scale_1af3f64a192c35ba044c987820f07b9b99" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>constexpr bool</type>
+        <definition>constexpr bool pbat::math::linalg::mini::Scale&lt; TMatrix &gt;::bRowMajor</definition>
+        <argsstring></argsstring>
+        <name>bRowMajor</name>
+        <initializer>= NestedType::bRowMajor</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Scale.h" line="27" column="27" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Scale.h" bodystart="27" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="classpbat_1_1math_1_1linalg_1_1mini_1_1Scale_1a971b176cbda8891943acc499694e1693" prot="private" static="no" mutable="no">
+        <type>ScalarType</type>
+        <definition>ScalarType pbat::math::linalg::mini::Scale&lt; TMatrix &gt;::k</definition>
+        <argsstring></argsstring>
+        <name>k</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Scale.h" line="40" column="16" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Scale.h" bodystart="40" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpbat_1_1math_1_1linalg_1_1mini_1_1Scale_1a11e29dfab58a451969125a3b723d90cc" prot="private" static="no" mutable="no">
+        <type>NestedType const  &amp;</type>
+        <definition>NestedType const&amp; pbat::math::linalg::mini::Scale&lt; TMatrix &gt;::A</definition>
+        <argsstring></argsstring>
+        <name>A</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Scale.h" line="41" column="22" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Scale.h" bodystart="41" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpbat_1_1math_1_1linalg_1_1mini_1_1Scale_1ae9ed499be3f97053b37b060362e3f2c6" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>PBAT_HOST_DEVICE</type>
+        <definition>PBAT_HOST_DEVICE pbat::math::linalg::mini::Scale&lt; TMatrix &gt;::Scale</definition>
+        <argsstring>(ScalarType k, NestedType const &amp;A)</argsstring>
+        <name>Scale</name>
+        <param>
+          <type>ScalarType</type>
+          <declname>k</declname>
+        </param>
+        <param>
+          <type>NestedType const &amp;</type>
+          <declname>A</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Scale.h" line="29" column="22" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Scale.h" bodystart="29" bodyend="29"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1math_1_1linalg_1_1mini_1_1Scale_1ac4530502f6f41044964a35a4fca1a344" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>PBAT_HOST_DEVICE ScalarType</type>
+        <definition>PBAT_HOST_DEVICE ScalarType pbat::math::linalg::mini::Scale&lt; TMatrix &gt;::operator()</definition>
+        <argsstring>(auto i, auto j) const</argsstring>
+        <name>operator()</name>
+        <param>
+          <type>auto</type>
+          <declname>i</declname>
+        </param>
+        <param>
+          <type>auto</type>
+          <declname>j</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Scale.h" line="31" column="33" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Scale.h" bodystart="31" bodyend="31"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1math_1_1linalg_1_1mini_1_1Scale_1ac8a44e608f5a49ed0f38a213bcb32dbe" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>PBAT_HOST_DEVICE ScalarType</type>
+        <definition>PBAT_HOST_DEVICE ScalarType pbat::math::linalg::mini::Scale&lt; TMatrix &gt;::operator()</definition>
+        <argsstring>(auto i) const</argsstring>
+        <name>operator()</name>
+        <param>
+          <type>auto</type>
+          <declname>i</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Scale.h" line="34" column="33" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Scale.h" bodystart="34" bodyend="34"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1math_1_1linalg_1_1mini_1_1Scale_1a376de8ffd20035383d7e2ec0f2792ceb" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>PBAT_HOST_DEVICE ScalarType</type>
+        <definition>PBAT_HOST_DEVICE ScalarType pbat::math::linalg::mini::Scale&lt; TMatrix &gt;::operator[]</definition>
+        <argsstring>(auto i) const</argsstring>
+        <name>operator[]</name>
+        <param>
+          <type>auto</type>
+          <declname>i</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Scale.h" line="35" column="33" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Scale.h" bodystart="35" bodyend="35"/>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Scale.h" line="19" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Scale.h" bodystart="18" bodyend="42"/>
+    <listofallmembers>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1Scale_1a11e29dfab58a451969125a3b723d90cc" prot="private" virt="non-virtual"><scope>pbat::math::linalg::mini::Scale</scope><name>A</name></member>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1Scale_1af3f64a192c35ba044c987820f07b9b99" prot="public" virt="non-virtual"><scope>pbat::math::linalg::mini::Scale</scope><name>bRowMajor</name></member>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1Scale_1a971b176cbda8891943acc499694e1693" prot="private" virt="non-virtual"><scope>pbat::math::linalg::mini::Scale</scope><name>k</name></member>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1Scale_1a3130bde4094b31a115bb34dbcc9f71ce" prot="public" virt="non-virtual"><scope>pbat::math::linalg::mini::Scale</scope><name>kCols</name></member>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1Scale_1afde3d4d6bd5c230924e6a6d5fa37f3d3" prot="public" virt="non-virtual"><scope>pbat::math::linalg::mini::Scale</scope><name>kRows</name></member>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1Scale_1a85c2f8d1e8bf0c506455562d0bb4f3cd" prot="public" virt="non-virtual"><scope>pbat::math::linalg::mini::Scale</scope><name>NestedType</name></member>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1Scale_1ac4530502f6f41044964a35a4fca1a344" prot="public" virt="non-virtual"><scope>pbat::math::linalg::mini::Scale</scope><name>operator()</name></member>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1Scale_1ac8a44e608f5a49ed0f38a213bcb32dbe" prot="public" virt="non-virtual"><scope>pbat::math::linalg::mini::Scale</scope><name>operator()</name></member>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1Scale_1a376de8ffd20035383d7e2ec0f2792ceb" prot="public" virt="non-virtual"><scope>pbat::math::linalg::mini::Scale</scope><name>operator[]</name></member>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1Scale_1a8c5f2650577829240eed9dd2c74ca0e4" prot="public" virt="non-virtual"><scope>pbat::math::linalg::mini::Scale</scope><name>ScalarType</name></member>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1Scale_1ae9ed499be3f97053b37b060362e3f2c6" prot="public" virt="non-virtual"><scope>pbat::math::linalg::mini::Scale</scope><name>Scale</name></member>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1Scale_1a439db0092b43c12b8602be2ed47c48a3" prot="public" virt="non-virtual"><scope>pbat::math::linalg::mini::Scale</scope><name>SelfType</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

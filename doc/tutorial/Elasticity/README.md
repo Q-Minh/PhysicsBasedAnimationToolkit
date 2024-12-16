@@ -1,1 +1,0 @@
-# Simulation of continuum elastic materials

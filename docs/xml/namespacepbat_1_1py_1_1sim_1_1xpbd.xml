@@ -1,0 +1,64 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="namespacepbat_1_1py_1_1sim_1_1xpbd" kind="namespace" language="C++">
+    <compoundname>pbat::py::sim::xpbd</compoundname>
+      <sectiondef kind="func">
+      <memberdef kind="function" id="bindings_2pypbat_2sim_2xpbd_2Data_8cpp_1a48b97c4faf49e208c0d33a135b1ee9c7" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void pbat::py::sim::xpbd::BindData</definition>
+        <argsstring>(pybind11::module &amp;m)</argsstring>
+        <name>BindData</name>
+        <param>
+          <type>pybind11::module &amp;</type>
+          <declname>m</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/sim/xpbd/Data.cpp" line="13" column="6" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/sim/xpbd/Data.cpp" bodystart="13" bodyend="128" declfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/sim/xpbd/Data.h" declline="11" declcolumn="6"/>
+      </memberdef>
+      <memberdef kind="function" id="bindings_2pypbat_2sim_2xpbd_2Integrator_8cpp_1ac55fe7dd1240bc5eeb96e80d288af447" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void pbat::py::sim::xpbd::BindIntegrator</definition>
+        <argsstring>(pybind11::module &amp;m)</argsstring>
+        <name>BindIntegrator</name>
+        <param>
+          <type>pybind11::module &amp;</type>
+          <declname>m</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/sim/xpbd/Integrator.cpp" line="14" column="6" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/sim/xpbd/Integrator.cpp" bodystart="14" bodyend="50" declfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/sim/xpbd/Integrator.h" declline="11" declcolumn="6"/>
+      </memberdef>
+      <memberdef kind="function" id="sim_2xpbd_2Xpbd_8cpp_1a34f67bd0912f20415c38697d0eb39c65" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void pbat::py::sim::xpbd::Bind</definition>
+        <argsstring>(pybind11::module &amp;m)</argsstring>
+        <name>Bind</name>
+        <param>
+          <type>pybind11::module &amp;</type>
+          <declname>m</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/sim/xpbd/Xpbd.cpp" line="11" column="6" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/sim/xpbd/Xpbd.cpp" bodystart="11" bodyend="16" declfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/sim/xpbd/Xpbd.h" declline="11" declcolumn="6"/>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/sim/xpbd/Data.cpp" line="11" column="14"/>
+  </compounddef>
+</doxygen>

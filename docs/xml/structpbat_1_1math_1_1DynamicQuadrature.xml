@@ -1,0 +1,89 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="structpbat_1_1math_1_1DynamicQuadrature" kind="struct" language="C++" prot="public">
+    <compoundname>pbat::math::DynamicQuadrature</compoundname>
+    <templateparamlist>
+      <param>
+        <type>int</type>
+        <declname>Dims</declname>
+        <defname>Dims</defname>
+      </param>
+      <param>
+        <type>int</type>
+        <declname>Order</declname>
+        <defname>Order</defname>
+      </param>
+    </templateparamlist>
+      <sectiondef kind="public-static-attrib">
+      <memberdef kind="variable" id="structpbat_1_1math_1_1DynamicQuadrature_1a7a6aa97404166ee6896920df9de4e1bc" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>constexpr auto</type>
+        <definition>constexpr auto pbat::math::DynamicQuadrature&lt; Dims, Order &gt;::kOrder</definition>
+        <argsstring></argsstring>
+        <name>kOrder</name>
+        <initializer>= Order</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/MomentFitting.h" line="25" column="27" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/MomentFitting.h" bodystart="25" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpbat_1_1math_1_1DynamicQuadrature_1a50f0ba74fd351b147410f9a9f48e267c" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>constexpr auto</type>
+        <definition>constexpr auto pbat::math::DynamicQuadrature&lt; Dims, Order &gt;::kDims</definition>
+        <argsstring></argsstring>
+        <name>kDims</name>
+        <initializer>= Dims</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/MomentFitting.h" line="26" column="27" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/MomentFitting.h" bodystart="26" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="structpbat_1_1math_1_1DynamicQuadrature_1a51e562eca461e7d8290660e05d28a007" prot="public" static="no" mutable="no">
+        <type>MatrixX</type>
+        <definition>MatrixX pbat::math::DynamicQuadrature&lt; Dims, Order &gt;::points</definition>
+        <argsstring></argsstring>
+        <name>points</name>
+        <briefdescription>
+<para>|kDims| x |<ref refid="structpbat_1_1math_1_1DynamicQuadrature_1ae8bc305177acb8a543b6b1cb071bc08d" kindref="member">weights</ref>| array of quadrature points Xg </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/MomentFitting.h" line="28" column="13" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/MomentFitting.h" bodystart="28" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpbat_1_1math_1_1DynamicQuadrature_1ae8bc305177acb8a543b6b1cb071bc08d" prot="public" static="no" mutable="no">
+        <type>VectorX</type>
+        <definition>VectorX pbat::math::DynamicQuadrature&lt; Dims, Order &gt;::weights</definition>
+        <argsstring></argsstring>
+        <name>weights</name>
+        <briefdescription>
+<para>Array of quadrature weights wg associated with Xg. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/MomentFitting.h" line="29" column="13" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/MomentFitting.h" bodystart="29" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/MomentFitting.h" line="24" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/MomentFitting.h" bodystart="23" bodyend="30"/>
+    <listofallmembers>
+      <member refid="structpbat_1_1math_1_1DynamicQuadrature_1a50f0ba74fd351b147410f9a9f48e267c" prot="public" virt="non-virtual"><scope>pbat::math::DynamicQuadrature</scope><name>kDims</name></member>
+      <member refid="structpbat_1_1math_1_1DynamicQuadrature_1a7a6aa97404166ee6896920df9de4e1bc" prot="public" virt="non-virtual"><scope>pbat::math::DynamicQuadrature</scope><name>kOrder</name></member>
+      <member refid="structpbat_1_1math_1_1DynamicQuadrature_1a51e562eca461e7d8290660e05d28a007" prot="public" virt="non-virtual"><scope>pbat::math::DynamicQuadrature</scope><name>points</name></member>
+      <member refid="structpbat_1_1math_1_1DynamicQuadrature_1ae8bc305177acb8a543b6b1cb071bc08d" prot="public" virt="non-virtual"><scope>pbat::math::DynamicQuadrature</scope><name>weights</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

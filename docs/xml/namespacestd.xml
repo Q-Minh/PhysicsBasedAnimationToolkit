@@ -1,0 +1,16 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="namespacestd" kind="namespace" language="C++">
+    <compoundname>std</compoundname>
+    <innerclass refid="structstd_1_1hash_3_01pair_3_01pbat_1_1Index_00_01pbat_1_1Index_01_4_01_4" prot="public">std::hash&lt; pair&lt; pbat::Index, pbat::Index &gt; &gt;</innerclass>
+    <innerclass refid="structstd_1_1hash_3_01pbat_1_1IndexVector_3_012_01_4_01_4" prot="public">std::hash&lt; pbat::IndexVector&lt; 2 &gt; &gt;</innerclass>
+    <innerclass refid="structstd_1_1hash_3_01pbat_1_1IndexVector_3_013_01_4_01_4" prot="public">std::hash&lt; pbat::IndexVector&lt; 3 &gt; &gt;</innerclass>
+    <innerclass refid="structstd_1_1hash_3_01tuple_3_01pbat_1_1Index_00_01pbat_1_1Index_01_4_01_4" prot="public">std::hash&lt; tuple&lt; pbat::Index, pbat::Index &gt; &gt;</innerclass>
+    <innerclass refid="structstd_1_1hash_3_01tuple_3_01pbat_1_1Index_00_01pbat_1_1Index_00_01pbat_1_1Index_01_4_01_4" prot="public">std::hash&lt; tuple&lt; pbat::Index, pbat::Index, pbat::Index &gt; &gt;</innerclass>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/common/Hash.h" line="30" column="13"/>
+  </compounddef>
+</doxygen>

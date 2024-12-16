@@ -1,0 +1,517 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="namespacepbat_1_1geometry_1_1ClosestPointQueries" kind="namespace" language="C++">
+    <compoundname>pbat::geometry::ClosestPointQueries</compoundname>
+      <sectiondef kind="func">
+      <memberdef kind="function" id="ClosestPointQueries_8h_1a7d0be2bc9f16e6d5b8daf622dfbdb2ba" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixX</declname>
+            <defname>TMatrixX</defname>
+          </param>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixP</declname>
+            <defname>TMatrixP</defname>
+          </param>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixN</declname>
+            <defname>TMatrixN</defname>
+          </param>
+        </templateparamlist>
+        <type>PBAT_HOST_DEVICE <ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1SMatrix" kindref="compound">mini::SVector</ref>&lt; typename TMatrixX::ScalarType, TMatrixX::kRows &gt;</type>
+        <definition>PBAT_HOST_DEVICE mini::SVector&lt; typename TMatrixX::ScalarType, TMatrixX::kRows &gt; pbat::geometry::ClosestPointQueries::PointOnPlane</definition>
+        <argsstring>(TMatrixX const &amp;X, TMatrixP const &amp;P, TMatrixN const &amp;n)</argsstring>
+        <name>PointOnPlane</name>
+        <param>
+          <type>TMatrixX const &amp;</type>
+          <declname>X</declname>
+        </param>
+        <param>
+          <type>TMatrixP const &amp;</type>
+          <declname>P</declname>
+        </param>
+        <param>
+          <type>TMatrixN const &amp;</type>
+          <declname>n</declname>
+        </param>
+        <briefdescription>
+<para>Obtain the point on the plane (P,n) closest to the point X. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>X</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>P</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>n</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para></para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+<para>Ericson, Christer. Real-time collision detection. Crc Press, 2004. section 5.ScalarType(1)1</para>
+<para>Ericson, Christer. Real-time collision detection. Crc Press, 2004. section 5.ScalarType(1)1</para>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/ClosestPointQueries.h" line="108" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/ClosestPointQueries.h" bodystart="108" bodyend="122" declfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/ClosestPointQueries.h" declline="25" declcolumn="1"/>
+      </memberdef>
+      <memberdef kind="function" id="ClosestPointQueries_8h_1aa7f6a9ff64feadbab364fa7c87a3325b" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixX</declname>
+            <defname>TMatrixX</defname>
+          </param>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixP</declname>
+            <defname>TMatrixP</defname>
+          </param>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixQ</declname>
+            <defname>TMatrixQ</defname>
+          </param>
+        </templateparamlist>
+        <type>PBAT_HOST_DEVICE <ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1SMatrix" kindref="compound">mini::SVector</ref>&lt; typename TMatrixX::ScalarType, TMatrixX::kRows &gt;</type>
+        <definition>PBAT_HOST_DEVICE mini::SVector&lt; typename TMatrixX::ScalarType, TMatrixX::kRows &gt; pbat::geometry::ClosestPointQueries::PointOnLineSegment</definition>
+        <argsstring>(TMatrixX const &amp;X, TMatrixP const &amp;P, TMatrixQ const &amp;Q)</argsstring>
+        <name>PointOnLineSegment</name>
+        <param>
+          <type>TMatrixX const &amp;</type>
+          <declname>X</declname>
+        </param>
+        <param>
+          <type>TMatrixP const &amp;</type>
+          <declname>P</declname>
+        </param>
+        <param>
+          <type>TMatrixQ const &amp;</type>
+          <declname>Q</declname>
+        </param>
+        <briefdescription>
+<para>Obtain the point on the line segment PQ closest to the point X. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>X</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>P</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>Q</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para></para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+<para>Ericson, Christer. Real-time collision detection. Crc Press, 2004. section 5.ScalarType(1)2</para>
+<para>Ericson, Christer. Real-time collision detection. Crc Press, 2004. section 5.ScalarType(1)2</para>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/ClosestPointQueries.h" line="126" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/ClosestPointQueries.h" bodystart="126" bodyend="141" declfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/ClosestPointQueries.h" declline="36" declcolumn="1"/>
+      </memberdef>
+      <memberdef kind="function" id="ClosestPointQueries_8h_1a3d2ee9d958e88ed1ea8b2eae1fbd5285" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixX</declname>
+            <defname>TMatrixX</defname>
+          </param>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixL</declname>
+            <defname>TMatrixL</defname>
+          </param>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixU</declname>
+            <defname>TMatrixU</defname>
+          </param>
+        </templateparamlist>
+        <type>PBAT_HOST_DEVICE <ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1SMatrix" kindref="compound">mini::SVector</ref>&lt; typename TMatrixX::ScalarType, TMatrixX::kRows &gt;</type>
+        <definition>PBAT_HOST_DEVICE mini::SVector&lt; typename TMatrixX::ScalarType, TMatrixX::kRows &gt; pbat::geometry::ClosestPointQueries::PointOnAxisAlignedBoundingBox</definition>
+        <argsstring>(TMatrixX const &amp;X, TMatrixL const &amp;L, TMatrixU const &amp;U)</argsstring>
+        <name>PointOnAxisAlignedBoundingBox</name>
+        <param>
+          <type>TMatrixX const &amp;</type>
+          <declname>X</declname>
+        </param>
+        <param>
+          <type>TMatrixL const &amp;</type>
+          <declname>L</declname>
+        </param>
+        <param>
+          <type>TMatrixU const &amp;</type>
+          <declname>U</declname>
+        </param>
+        <briefdescription>
+<para>Obtain the point on the axis-aligned bounding box (AABB) defined by the lower and upper corners closest to the point P. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>P</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>L</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>U</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para></para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+<para>Ericson, Christer. Real-time collision detection. Crc Press, 2004. section 5.ScalarType(1)3</para>
+<para>Ericson, Christer. Real-time collision detection. Crc Press, 2004. section 5.ScalarType(1)3</para>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/ClosestPointQueries.h" line="145" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/ClosestPointQueries.h" bodystart="145" bodyend="155" declfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/ClosestPointQueries.h" declline="48" declcolumn="1"/>
+      </memberdef>
+      <memberdef kind="function" id="ClosestPointQueries_8h_1ab47c18452f6e41f55f94f6b78eb947ac" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixP</declname>
+            <defname>TMatrixP</defname>
+          </param>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixA</declname>
+            <defname>TMatrixA</defname>
+          </param>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixB</declname>
+            <defname>TMatrixB</defname>
+          </param>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixC</declname>
+            <defname>TMatrixC</defname>
+          </param>
+        </templateparamlist>
+        <type>PBAT_HOST_DEVICE <ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1SMatrix" kindref="compound">mini::SVector</ref>&lt; typename TMatrixP::ScalarType, 3 &gt;</type>
+        <definition>PBAT_HOST_DEVICE mini::SVector&lt; typename TMatrixP::ScalarType, 3 &gt; pbat::geometry::ClosestPointQueries::UvwPointInTriangle</definition>
+        <argsstring>(TMatrixP const &amp;P, TMatrixA const &amp;A, TMatrixB const &amp;B, TMatrixC const &amp;C)</argsstring>
+        <name>UvwPointInTriangle</name>
+        <param>
+          <type>TMatrixP const &amp;</type>
+          <declname>P</declname>
+        </param>
+        <param>
+          <type>TMatrixA const &amp;</type>
+          <declname>A</declname>
+        </param>
+        <param>
+          <type>TMatrixB const &amp;</type>
+          <declname>B</declname>
+        </param>
+        <param>
+          <type>TMatrixC const &amp;</type>
+          <declname>C</declname>
+        </param>
+        <briefdescription>
+<para>Obtain the point on the triangle ABC closest to the point P in barycentric coordinates. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>P</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>A</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>B</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>C</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para></para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+<para>Ericson, Christer. Real-time collision detection. Crc Press, 2004. section 5.ScalarType(1)5</para>
+<para>Ericson, Christer. Real-time collision detection. Crc Press, 2004. section 5.ScalarType(1)5</para>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/ClosestPointQueries.h" line="163" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/ClosestPointQueries.h" bodystart="163" bodyend="239" declfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/ClosestPointQueries.h" declline="64" declcolumn="1"/>
+      </memberdef>
+      <memberdef kind="function" id="ClosestPointQueries_8h_1ac93271c0255fcebbd15accef8315cb58" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixP</declname>
+            <defname>TMatrixP</defname>
+          </param>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixA</declname>
+            <defname>TMatrixA</defname>
+          </param>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixB</declname>
+            <defname>TMatrixB</defname>
+          </param>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixC</declname>
+            <defname>TMatrixC</defname>
+          </param>
+        </templateparamlist>
+        <type>PBAT_HOST_DEVICE <ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1SMatrix" kindref="compound">mini::SVector</ref>&lt; typename TMatrixP::ScalarType, TMatrixP::kRows &gt;</type>
+        <definition>PBAT_HOST_DEVICE mini::SVector&lt; typename TMatrixP::ScalarType, TMatrixP::kRows &gt; pbat::geometry::ClosestPointQueries::PointInTriangle</definition>
+        <argsstring>(TMatrixP const &amp;P, TMatrixA const &amp;A, TMatrixB const &amp;B, TMatrixC const &amp;C)</argsstring>
+        <name>PointInTriangle</name>
+        <param>
+          <type>TMatrixP const &amp;</type>
+          <declname>P</declname>
+        </param>
+        <param>
+          <type>TMatrixA const &amp;</type>
+          <declname>A</declname>
+        </param>
+        <param>
+          <type>TMatrixB const &amp;</type>
+          <declname>B</declname>
+        </param>
+        <param>
+          <type>TMatrixC const &amp;</type>
+          <declname>C</declname>
+        </param>
+        <briefdescription>
+<para>Obtain the point on the triangle ABC closest to the point P. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>P</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>A</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>B</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>C</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para></para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/ClosestPointQueries.h" line="247" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/ClosestPointQueries.h" bodystart="247" bodyend="251" declfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/ClosestPointQueries.h" declline="80" declcolumn="1"/>
+      </memberdef>
+      <memberdef kind="function" id="ClosestPointQueries_8h_1a134dd00445a15a27e2038de979af18ea" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixP</declname>
+            <defname>TMatrixP</defname>
+          </param>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixA</declname>
+            <defname>TMatrixA</defname>
+          </param>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixB</declname>
+            <defname>TMatrixB</defname>
+          </param>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixC</declname>
+            <defname>TMatrixC</defname>
+          </param>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixD</declname>
+            <defname>TMatrixD</defname>
+          </param>
+        </templateparamlist>
+        <type>PBAT_HOST_DEVICE <ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1SMatrix" kindref="compound">mini::SVector</ref>&lt; typename TMatrixP::ScalarType, TMatrixP::kRows &gt;</type>
+        <definition>PBAT_HOST_DEVICE mini::SVector&lt; typename TMatrixP::ScalarType, TMatrixP::kRows &gt; pbat::geometry::ClosestPointQueries::PointInTetrahedron</definition>
+        <argsstring>(TMatrixP const &amp;P, TMatrixA const &amp;A, TMatrixB const &amp;B, TMatrixC const &amp;C, TMatrixD const &amp;D)</argsstring>
+        <name>PointInTetrahedron</name>
+        <param>
+          <type>TMatrixP const &amp;</type>
+          <declname>P</declname>
+        </param>
+        <param>
+          <type>TMatrixA const &amp;</type>
+          <declname>A</declname>
+        </param>
+        <param>
+          <type>TMatrixB const &amp;</type>
+          <declname>B</declname>
+        </param>
+        <param>
+          <type>TMatrixC const &amp;</type>
+          <declname>C</declname>
+        </param>
+        <param>
+          <type>TMatrixD const &amp;</type>
+          <declname>D</declname>
+        </param>
+        <briefdescription>
+<para>Obtain the point in the tetrahedron ABCD closest to the point P. The order of ABCD must be such that all faces ABC, ACD, ADB and BDC are oriented with outwards pointing normals when viewed from outside the tetrahedron. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>P</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>A</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>B</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>C</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>D</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para></para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+<para>Ericson, Christer. Real-time collision detection. Crc Press, 2004. section 5.ScalarType(1)6</para>
+<para>Ericson, Christer. Real-time collision detection. Crc Press, 2004. section 5.ScalarType(1)6</para>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/ClosestPointQueries.h" line="259" column="32" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/ClosestPointQueries.h" bodystart="259" bodyend="302" declfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/ClosestPointQueries.h" declline="99" declcolumn="32"/>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/ClosestPointQueries.h" line="12" column="29"/>
+  </compounddef>
+</doxygen>

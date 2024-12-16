@@ -1,0 +1,216 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="structpbat_1_1sim_1_1vbd_1_1lod_1_1DirichletQuadrature" kind="struct" language="C++" prot="public">
+    <compoundname>pbat::sim::vbd::lod::DirichletQuadrature</compoundname>
+      <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="structpbat_1_1sim_1_1vbd_1_1lod_1_1DirichletQuadrature_1a71c66874a9e87695d61942d8e768136f" prot="public" static="no" mutable="no">
+        <type>MatrixX</type>
+        <definition>MatrixX pbat::sim::vbd::lod::DirichletQuadrature::Xg</definition>
+        <argsstring></argsstring>
+        <name>Xg</name>
+        <briefdescription>
+<para>3x|#quad.pts.| array of quadrature points </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Quadrature.h" line="104" column="13" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Quadrature.h" bodystart="104" bodyend="-1"/>
+        <referencedby refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1DirichletQuadrature_1a12d4a95a8177b8a26535bc92cb756af5" compoundref="source_2pbat_2sim_2vbd_2lod_2Quadrature_8cpp" startline="257" endline="274">DirichletQuadrature</referencedby>
+      </memberdef>
+      <memberdef kind="variable" id="structpbat_1_1sim_1_1vbd_1_1lod_1_1DirichletQuadrature_1a4f6767149235474a21cbe98bca1c51d4" prot="public" static="no" mutable="no">
+        <type>VectorX</type>
+        <definition>VectorX pbat::sim::vbd::lod::DirichletQuadrature::wg</definition>
+        <argsstring></argsstring>
+        <name>wg</name>
+        <briefdescription>
+<para>|#quad.pts.| array of quadrature weights </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Quadrature.h" line="105" column="13" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Quadrature.h" bodystart="105" bodyend="-1"/>
+        <referencedby refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1DirichletQuadrature_1a12d4a95a8177b8a26535bc92cb756af5" compoundref="source_2pbat_2sim_2vbd_2lod_2Quadrature_8cpp" startline="257" endline="274">DirichletQuadrature</referencedby>
+      </memberdef>
+      <memberdef kind="variable" id="structpbat_1_1sim_1_1vbd_1_1lod_1_1DirichletQuadrature_1a5f75d1fd5efb09912c0a198c602676d6" prot="public" static="no" mutable="no">
+        <type>IndexVectorX</type>
+        <definition>IndexVectorX pbat::sim::vbd::lod::DirichletQuadrature::eg</definition>
+        <argsstring></argsstring>
+        <name>eg</name>
+        <briefdescription>
+<para>|#quad.pts.| array of cage elements containing corresponding quad.pts. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Quadrature.h" line="106" column="18" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Quadrature.h" bodystart="106" bodyend="-1"/>
+        <referencedby refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1DirichletQuadrature_1a12d4a95a8177b8a26535bc92cb756af5" compoundref="source_2pbat_2sim_2vbd_2lod_2Quadrature_8cpp" startline="257" endline="274">DirichletQuadrature</referencedby>
+      </memberdef>
+      <memberdef kind="variable" id="structpbat_1_1sim_1_1vbd_1_1lod_1_1DirichletQuadrature_1a76b9c249cf81cf6939ae90478c44f15c" prot="public" static="no" mutable="no">
+        <type>MatrixX</type>
+        <definition>MatrixX pbat::sim::vbd::lod::DirichletQuadrature::Ncg</definition>
+        <argsstring></argsstring>
+        <name>Ncg</name>
+        <briefdescription>
+<para>4x|#quad.pts.| coarse mesh shape functions at quad.pts. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Quadrature.h" line="108" column="13" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Quadrature.h" bodystart="108" bodyend="-1"/>
+        <referencedby refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1DirichletQuadrature_1a12d4a95a8177b8a26535bc92cb756af5" compoundref="source_2pbat_2sim_2vbd_2lod_2Quadrature_8cpp" startline="257" endline="274">DirichletQuadrature</referencedby>
+      </memberdef>
+      <memberdef kind="variable" id="structpbat_1_1sim_1_1vbd_1_1lod_1_1DirichletQuadrature_1a5b9fe3fc140cdb4bbeb2e7bb7a0777b9" prot="public" static="no" mutable="no">
+        <type>IndexVectorX</type>
+        <definition>IndexVectorX pbat::sim::vbd::lod::DirichletQuadrature::GVGp</definition>
+        <argsstring></argsstring>
+        <name>GVGp</name>
+        <briefdescription>
+<para>|#cage verts + 1| prefix </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Quadrature.h" line="110" column="18" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Quadrature.h" bodystart="110" bodyend="-1"/>
+        <referencedby refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1DirichletQuadrature_1a12d4a95a8177b8a26535bc92cb756af5" compoundref="source_2pbat_2sim_2vbd_2lod_2Quadrature_8cpp" startline="257" endline="274">DirichletQuadrature</referencedby>
+      </memberdef>
+      <memberdef kind="variable" id="structpbat_1_1sim_1_1vbd_1_1lod_1_1DirichletQuadrature_1ac274439ff094ac8c8ce4f609dd2dde7d" prot="public" static="no" mutable="no">
+        <type>IndexVectorX</type>
+        <definition>IndexVectorX pbat::sim::vbd::lod::DirichletQuadrature::GVGg</definition>
+        <argsstring></argsstring>
+        <name>GVGg</name>
+        <briefdescription>
+<para>|#quad.pts.| cage vertex-quad.pt. adjacencies </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Quadrature.h" line="111" column="18" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Quadrature.h" bodystart="111" bodyend="-1"/>
+        <referencedby refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1DirichletQuadrature_1a12d4a95a8177b8a26535bc92cb756af5" compoundref="source_2pbat_2sim_2vbd_2lod_2Quadrature_8cpp" startline="257" endline="274">DirichletQuadrature</referencedby>
+      </memberdef>
+      <memberdef kind="variable" id="structpbat_1_1sim_1_1vbd_1_1lod_1_1DirichletQuadrature_1af42ffe26159daa9c6a1ee410ccdcacf3" prot="public" static="no" mutable="no">
+        <type>IndexVectorX</type>
+        <definition>IndexVectorX pbat::sim::vbd::lod::DirichletQuadrature::GVGilocal</definition>
+        <argsstring></argsstring>
+        <name>GVGilocal</name>
+        <briefdescription>
+<para>|#quad.pts.| cage vertex local element index </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Quadrature.h" line="112" column="18" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Quadrature.h" bodystart="112" bodyend="-1"/>
+        <referencedby refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1DirichletQuadrature_1a12d4a95a8177b8a26535bc92cb756af5" compoundref="source_2pbat_2sim_2vbd_2lod_2Quadrature_8cpp" startline="257" endline="274">DirichletQuadrature</referencedby>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="public-func">
+      <memberdef kind="function" id="structpbat_1_1sim_1_1vbd_1_1lod_1_1DirichletQuadrature_1a66a8e773ce7b2d00fdd44f540598bd34" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>pbat::sim::vbd::lod::DirichletQuadrature::DirichletQuadrature</definition>
+        <argsstring>()=default</argsstring>
+        <name>DirichletQuadrature</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Quadrature.h" line="89" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="structpbat_1_1sim_1_1vbd_1_1lod_1_1DirichletQuadrature_1a12d4a95a8177b8a26535bc92cb756af5" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>pbat::sim::vbd::lod::DirichletQuadrature::DirichletQuadrature</definition>
+        <argsstring>(VolumeMesh const &amp;FM, VolumeMesh const &amp;CM, Eigen::Ref&lt; VectorX const &gt; const &amp;m, Eigen::Ref&lt; IndexVectorX const &gt; const &amp;dbcs)</argsstring>
+        <name>DirichletQuadrature</name>
+        <param>
+          <type><ref refid="structpbat_1_1fem_1_1Mesh" kindref="compound">VolumeMesh</ref> const &amp;</type>
+          <declname>FM</declname>
+        </param>
+        <param>
+          <type><ref refid="structpbat_1_1fem_1_1Mesh" kindref="compound">VolumeMesh</ref> const &amp;</type>
+          <declname>CM</declname>
+        </param>
+        <param>
+          <type>Eigen::Ref&lt; VectorX const &gt; const &amp;</type>
+          <declname>m</declname>
+        </param>
+        <param>
+          <type>Eigen::Ref&lt; IndexVectorX const &gt; const &amp;</type>
+          <declname>dbcs</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>FM</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Fine mesh </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>CM</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Coarse mesh </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>m</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Lumped mass coefficients of FM </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>dbcs</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Dirichlet constrained vertices in FM </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Quadrature.h" line="98" column="5" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Quadrature.cpp" bodystart="257" bodyend="274"/>
+        <references refid="structpbat_1_1fem_1_1Mesh_1a384afdf16df5efa27e09f17520402b5b" compoundref="source_2pbat_2fem_2Mesh_8h" startline="52">pbat::fem::Mesh&lt; TElement, Dims &gt;::E</references>
+        <references refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1DirichletQuadrature_1a5f75d1fd5efb09912c0a198c602676d6" compoundref="source_2pbat_2sim_2vbd_2lod_2Quadrature_8h" startline="106">eg</references>
+        <references refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1DirichletQuadrature_1ac274439ff094ac8c8ce4f609dd2dde7d" compoundref="source_2pbat_2sim_2vbd_2lod_2Quadrature_8h" startline="111">GVGg</references>
+        <references refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1DirichletQuadrature_1af42ffe26159daa9c6a1ee410ccdcacf3" compoundref="source_2pbat_2sim_2vbd_2lod_2Quadrature_8h" startline="112">GVGilocal</references>
+        <references refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1DirichletQuadrature_1a5b9fe3fc140cdb4bbeb2e7bb7a0777b9" compoundref="source_2pbat_2sim_2vbd_2lod_2Quadrature_8h" startline="110">GVGp</references>
+        <references refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1DirichletQuadrature_1a76b9c249cf81cf6939ae90478c44f15c" compoundref="source_2pbat_2sim_2vbd_2lod_2Quadrature_8h" startline="108">Ncg</references>
+        <references refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1DirichletQuadrature_1a4f6767149235474a21cbe98bca1c51d4" compoundref="source_2pbat_2sim_2vbd_2lod_2Quadrature_8h" startline="105">wg</references>
+        <references refid="structpbat_1_1fem_1_1Mesh_1abc65a193ee960705ddf64227afb18809" compoundref="source_2pbat_2fem_2Mesh_8h" startline="51">pbat::fem::Mesh&lt; TElement, Dims &gt;::X</references>
+        <references refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1DirichletQuadrature_1a71c66874a9e87695d61942d8e768136f" compoundref="source_2pbat_2sim_2vbd_2lod_2Quadrature_8h" startline="104">Xg</references>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Quadrature.h" line="88" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Quadrature.h" bodystart="87" bodyend="113"/>
+    <listofallmembers>
+      <member refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1DirichletQuadrature_1a66a8e773ce7b2d00fdd44f540598bd34" prot="public" virt="non-virtual"><scope>pbat::sim::vbd::lod::DirichletQuadrature</scope><name>DirichletQuadrature</name></member>
+      <member refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1DirichletQuadrature_1a12d4a95a8177b8a26535bc92cb756af5" prot="public" virt="non-virtual"><scope>pbat::sim::vbd::lod::DirichletQuadrature</scope><name>DirichletQuadrature</name></member>
+      <member refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1DirichletQuadrature_1a5f75d1fd5efb09912c0a198c602676d6" prot="public" virt="non-virtual"><scope>pbat::sim::vbd::lod::DirichletQuadrature</scope><name>eg</name></member>
+      <member refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1DirichletQuadrature_1ac274439ff094ac8c8ce4f609dd2dde7d" prot="public" virt="non-virtual"><scope>pbat::sim::vbd::lod::DirichletQuadrature</scope><name>GVGg</name></member>
+      <member refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1DirichletQuadrature_1af42ffe26159daa9c6a1ee410ccdcacf3" prot="public" virt="non-virtual"><scope>pbat::sim::vbd::lod::DirichletQuadrature</scope><name>GVGilocal</name></member>
+      <member refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1DirichletQuadrature_1a5b9fe3fc140cdb4bbeb2e7bb7a0777b9" prot="public" virt="non-virtual"><scope>pbat::sim::vbd::lod::DirichletQuadrature</scope><name>GVGp</name></member>
+      <member refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1DirichletQuadrature_1a76b9c249cf81cf6939ae90478c44f15c" prot="public" virt="non-virtual"><scope>pbat::sim::vbd::lod::DirichletQuadrature</scope><name>Ncg</name></member>
+      <member refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1DirichletQuadrature_1a4f6767149235474a21cbe98bca1c51d4" prot="public" virt="non-virtual"><scope>pbat::sim::vbd::lod::DirichletQuadrature</scope><name>wg</name></member>
+      <member refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1DirichletQuadrature_1a71c66874a9e87695d61942d8e768136f" prot="public" virt="non-virtual"><scope>pbat::sim::vbd::lod::DirichletQuadrature</scope><name>Xg</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

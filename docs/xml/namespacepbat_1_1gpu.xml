@@ -1,0 +1,14 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="namespacepbat_1_1gpu" kind="namespace" language="C++">
+    <compoundname>pbat::gpu</compoundname>
+    <innernamespace refid="namespacepbat_1_1gpu_1_1geometry">pbat::gpu::geometry</innernamespace>
+    <innernamespace refid="namespacepbat_1_1gpu_1_1vbd">pbat::gpu::vbd</innernamespace>
+    <innernamespace refid="namespacepbat_1_1gpu_1_1xpbd">pbat::gpu::xpbd</innernamespace>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/geometry/Bvh.h" line="13" column="13"/>
+  </compounddef>
+</doxygen>

@@ -1,0 +1,1617 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="namespacepbat_1_1math_1_1linalg_1_1mini" kind="namespace" language="C++">
+    <compoundname>pbat::math::linalg::mini</compoundname>
+    <innerclass refid="classpbat_1_1math_1_1linalg_1_1mini_1_1Absolute" prot="public">pbat::math::linalg::mini::Absolute</innerclass>
+    <innerclass refid="classpbat_1_1math_1_1linalg_1_1mini_1_1ConstDiagonal" prot="public">pbat::math::linalg::mini::ConstDiagonal</innerclass>
+    <innerclass refid="classpbat_1_1math_1_1linalg_1_1mini_1_1ConstEigenMatrixWrapper" prot="public">pbat::math::linalg::mini::ConstEigenMatrixWrapper</innerclass>
+    <innerclass refid="classpbat_1_1math_1_1linalg_1_1mini_1_1ConstSubMatrix" prot="public">pbat::math::linalg::mini::ConstSubMatrix</innerclass>
+    <innerclass refid="classpbat_1_1math_1_1linalg_1_1mini_1_1ConstTransposeSubMatrix" prot="public">pbat::math::linalg::mini::ConstTransposeSubMatrix</innerclass>
+    <innerclass refid="classpbat_1_1math_1_1linalg_1_1mini_1_1ConstTransposeView" prot="public">pbat::math::linalg::mini::ConstTransposeView</innerclass>
+    <innerclass refid="classpbat_1_1math_1_1linalg_1_1mini_1_1CrossProduct" prot="public">pbat::math::linalg::mini::CrossProduct</innerclass>
+    <innerclass refid="classpbat_1_1math_1_1linalg_1_1mini_1_1Diagonal" prot="public">pbat::math::linalg::mini::Diagonal</innerclass>
+    <innerclass refid="classpbat_1_1math_1_1linalg_1_1mini_1_1EigenMatrixWrapper" prot="public">pbat::math::linalg::mini::EigenMatrixWrapper</innerclass>
+    <innerclass refid="classpbat_1_1math_1_1linalg_1_1mini_1_1FlatView" prot="public">pbat::math::linalg::mini::FlatView</innerclass>
+    <innerclass refid="classpbat_1_1math_1_1linalg_1_1mini_1_1HorizontalStack" prot="public">pbat::math::linalg::mini::HorizontalStack</innerclass>
+    <innerclass refid="classpbat_1_1math_1_1linalg_1_1mini_1_1Identity" prot="public">pbat::math::linalg::mini::Identity</innerclass>
+    <innerclass refid="classpbat_1_1math_1_1linalg_1_1mini_1_1MatrixMatrixPredicate" prot="public">pbat::math::linalg::mini::MatrixMatrixPredicate</innerclass>
+    <innerclass refid="classpbat_1_1math_1_1linalg_1_1mini_1_1MatrixScalarPredicate" prot="public">pbat::math::linalg::mini::MatrixScalarPredicate</innerclass>
+    <innerclass refid="classpbat_1_1math_1_1linalg_1_1mini_1_1Maximum" prot="public">pbat::math::linalg::mini::Maximum</innerclass>
+    <innerclass refid="classpbat_1_1math_1_1linalg_1_1mini_1_1Minimum" prot="public">pbat::math::linalg::mini::Minimum</innerclass>
+    <innerclass refid="classpbat_1_1math_1_1linalg_1_1mini_1_1Ones" prot="public">pbat::math::linalg::mini::Ones</innerclass>
+    <innerclass refid="classpbat_1_1math_1_1linalg_1_1mini_1_1Product" prot="public">pbat::math::linalg::mini::Product</innerclass>
+    <innerclass refid="classpbat_1_1math_1_1linalg_1_1mini_1_1Reciprocal" prot="public">pbat::math::linalg::mini::Reciprocal</innerclass>
+    <innerclass refid="classpbat_1_1math_1_1linalg_1_1mini_1_1Scale" prot="public">pbat::math::linalg::mini::Scale</innerclass>
+    <innerclass refid="classpbat_1_1math_1_1linalg_1_1mini_1_1SMatrix" prot="public">pbat::math::linalg::mini::SMatrix</innerclass>
+    <innerclass refid="classpbat_1_1math_1_1linalg_1_1mini_1_1SMatrixView" prot="public">pbat::math::linalg::mini::SMatrixView</innerclass>
+    <innerclass refid="classpbat_1_1math_1_1linalg_1_1mini_1_1Square" prot="public">pbat::math::linalg::mini::Square</innerclass>
+    <innerclass refid="classpbat_1_1math_1_1linalg_1_1mini_1_1SubMatrix" prot="public">pbat::math::linalg::mini::SubMatrix</innerclass>
+    <innerclass refid="classpbat_1_1math_1_1linalg_1_1mini_1_1Subtraction" prot="public">pbat::math::linalg::mini::Subtraction</innerclass>
+    <innerclass refid="classpbat_1_1math_1_1linalg_1_1mini_1_1SubtractionScalar" prot="public">pbat::math::linalg::mini::SubtractionScalar</innerclass>
+    <innerclass refid="classpbat_1_1math_1_1linalg_1_1mini_1_1Sum" prot="public">pbat::math::linalg::mini::Sum</innerclass>
+    <innerclass refid="classpbat_1_1math_1_1linalg_1_1mini_1_1SumScalar" prot="public">pbat::math::linalg::mini::SumScalar</innerclass>
+    <innerclass refid="classpbat_1_1math_1_1linalg_1_1mini_1_1TiledView" prot="public">pbat::math::linalg::mini::TiledView</innerclass>
+    <innerclass refid="classpbat_1_1math_1_1linalg_1_1mini_1_1TransposeSubMatrix" prot="public">pbat::math::linalg::mini::TransposeSubMatrix</innerclass>
+    <innerclass refid="classpbat_1_1math_1_1linalg_1_1mini_1_1TransposeView" prot="public">pbat::math::linalg::mini::TransposeView</innerclass>
+    <innerclass refid="classpbat_1_1math_1_1linalg_1_1mini_1_1VerticalStack" prot="public">pbat::math::linalg::mini::VerticalStack</innerclass>
+    <innerclass refid="classpbat_1_1math_1_1linalg_1_1mini_1_1Zeros" prot="public">pbat::math::linalg::mini::Zeros</innerclass>
+      <sectiondef kind="typedef">
+      <memberdef kind="typedef" id="Matrix_8h_1a949a21084f0136be479581fdcca496cb" prot="public" static="no">
+        <templateparamlist>
+          <param>
+            <type>class TScalar</type>
+          </param>
+          <param>
+            <type>int</type>
+            <declname>M</declname>
+            <defname>M</defname>
+          </param>
+        </templateparamlist>
+        <type><ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1SMatrix" kindref="compound">SMatrix</ref>&lt; TScalar, M, 1 &gt;</type>
+        <definition>using pbat::math::linalg::mini::SVector = typedef SMatrix&lt;TScalar, M, 1&gt;</definition>
+        <argsstring></argsstring>
+        <name>SVector</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Matrix.h" line="192" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Matrix.h" bodystart="192" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="Matrix_8h_1a9157f40db70a128f4389a14844eeff07" prot="public" static="no">
+        <templateparamlist>
+          <param>
+            <type>class TScalar</type>
+          </param>
+          <param>
+            <type>int</type>
+            <declname>M</declname>
+            <defname>M</defname>
+          </param>
+        </templateparamlist>
+        <type><ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1SMatrixView" kindref="compound">SMatrixView</ref>&lt; TScalar, M, 1 &gt;</type>
+        <definition>using pbat::math::linalg::mini::SVectorView = typedef SMatrixView&lt;TScalar, M, 1&gt;</definition>
+        <argsstring></argsstring>
+        <name>SVectorView</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Matrix.h" line="230" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Matrix.h" bodystart="230" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="var">
+      <memberdef kind="variable" id="math_2linalg_2mini_2Concepts_8h_1a3a28be8c8c3041b6ee179a2ea32e9c60" prot="public" static="no" mutable="no">
+        <templateparamlist>
+          <param>
+            <type>class TMatrix</type>
+          </param>
+        </templateparamlist>
+        <type>concept</type>
+        <definition>concept pbat::math::linalg::mini::CMatrix</definition>
+        <argsstring></argsstring>
+        <name>CMatrix</name>
+        <initializer>= requires(TMatrix M)
+{
+    typename TMatrix::ScalarType;
+    {
+        TMatrix::kRows
+    } -&gt; std::convertible_to&lt;int&gt;;
+    {
+        TMatrix::kCols
+    } -&gt; std::convertible_to&lt;int&gt;;
+    {
+        TMatrix::bRowMajor
+    } -&gt; std::convertible_to&lt;bool&gt;;
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+
+
+
+
+
+}</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Concepts.h" line="14" column="9" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Concepts.h" bodystart="14" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="math_2linalg_2mini_2Concepts_8h_1a4546f296135c3bef1997fed06869be93" prot="public" static="no" mutable="no">
+        <templateparamlist>
+          <param>
+            <type>class TMatrix</type>
+          </param>
+        </templateparamlist>
+        <type>concept</type>
+        <definition>concept pbat::math::linalg::mini::CReadableMatrix</definition>
+        <argsstring></argsstring>
+        <name>CReadableMatrix</name>
+        <initializer>= CMatrix&lt;TMatrix&gt;</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Concepts.h" line="88" column="9" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Concepts.h" bodystart="88" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="math_2linalg_2mini_2Concepts_8h_1a6e49574fadc448420ada3be0d9b6c874" prot="public" static="no" mutable="no">
+        <templateparamlist>
+          <param>
+            <type>class TMatrix</type>
+          </param>
+        </templateparamlist>
+        <type>concept</type>
+        <definition>concept pbat::math::linalg::mini::CWriteableMatrix</definition>
+        <argsstring></argsstring>
+        <name>CWriteableMatrix</name>
+        <initializer>= CMatrix&lt;TMatrix&gt;</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Concepts.h" line="91" column="9" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Concepts.h" bodystart="91" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="math_2linalg_2mini_2Concepts_8h_1a430d66b5158e325de582ebc36a50826b" prot="public" static="no" mutable="no">
+        <templateparamlist>
+          <param>
+            <type>class TMatrix</type>
+          </param>
+        </templateparamlist>
+        <type>concept</type>
+        <definition>concept pbat::math::linalg::mini::CReadableVectorizedMatrix</definition>
+        <argsstring></argsstring>
+        <name>CReadableVectorizedMatrix</name>
+        <initializer>= CMatrix&lt;TMatrix&gt;</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Concepts.h" line="94" column="9" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Concepts.h" bodystart="94" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="math_2linalg_2mini_2Concepts_8h_1a93b3c488db5f52ee608e5c8a39f1a4f2" prot="public" static="no" mutable="no">
+        <templateparamlist>
+          <param>
+            <type>class TMatrix</type>
+          </param>
+        </templateparamlist>
+        <type>concept</type>
+        <definition>concept pbat::math::linalg::mini::CWriteableVectorizedMatrix</definition>
+        <argsstring></argsstring>
+        <name>CWriteableVectorizedMatrix</name>
+        <initializer>= CMatrix&lt;TMatrix&gt;</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Concepts.h" line="97" column="9" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Concepts.h" bodystart="97" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="math_2linalg_2mini_2Eigen_8h_1a19aaa201fbffb78534f66e3556a5bf5a" prot="public" static="no" mutable="no">
+        <templateparamlist>
+          <param>
+            <type>class TMatrix</type>
+          </param>
+        </templateparamlist>
+        <type>concept</type>
+        <definition>concept pbat::math::linalg::mini::CEigenConvertible</definition>
+        <argsstring></argsstring>
+        <name>CEigenConvertible</name>
+        <initializer>= CMatrix&lt;TMatrix&gt; &amp;&amp; requires(TMatrix M)
+{
+    {
+        M.Data()
+    } -&gt; std::convertible_to&lt;typename TMatrix::ScalarType*&gt;;
+}</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Eigen.h" line="17" column="9" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Eigen.h" bodystart="17" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="func">
+      <memberdef kind="function" id="Assign_8h_1ab3b96f39d54c4cdce717bacf1ea5ed3d" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>pbat::math::linalg::mini::DefineMatrixMatrixAssign</definition>
+        <argsstring>(Assign,=)</argsstring>
+        <name>DefineMatrixMatrixAssign</name>
+        <param>
+          <type>Assign</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Assign.h" line="88" column="1" declfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Assign.h" declline="88" declcolumn="1"/>
+      </memberdef>
+      <memberdef kind="function" id="Assign_8h_1adcba7765f5f3365f919a87fcafbb9d59" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>pbat::math::linalg::mini::DefineMatrixMatrixAssign</definition>
+        <argsstring>(AddAssign,+=)</argsstring>
+        <name>DefineMatrixMatrixAssign</name>
+        <param>
+          <type>AddAssign</type>
+        </param>
+        <param>
+          <type>+</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Assign.h" line="89" column="1" declfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Assign.h" declline="89" declcolumn="1"/>
+      </memberdef>
+      <memberdef kind="function" id="Assign_8h_1a9bef0d853b87c9134be434d4415bc33d" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>pbat::math::linalg::mini::DefineMatrixMatrixAssign</definition>
+        <argsstring>(SubtractAssign, -=)</argsstring>
+        <name>DefineMatrixMatrixAssign</name>
+        <param>
+          <type>SubtractAssign</type>
+        </param>
+        <param>
+          <type>-</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Assign.h" line="90" column="1" declfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Assign.h" declline="90" declcolumn="1"/>
+      </memberdef>
+      <memberdef kind="function" id="Assign_8h_1ac86c92c342b5b6fca24d5572319eda23" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>pbat::math::linalg::mini::DefineMatrixScalarAssign</definition>
+        <argsstring>(AssignScalar,=)</argsstring>
+        <name>DefineMatrixScalarAssign</name>
+        <param>
+          <type>AssignScalar</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Assign.h" line="91" column="1" declfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Assign.h" declline="91" declcolumn="1"/>
+      </memberdef>
+      <memberdef kind="function" id="Assign_8h_1a0fa81f769ee6ec0209201207bd42d3ac" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>pbat::math::linalg::mini::DefineMatrixScalarAssign</definition>
+        <argsstring>(AddAssignScalar,+=)</argsstring>
+        <name>DefineMatrixScalarAssign</name>
+        <param>
+          <type>AddAssignScalar</type>
+        </param>
+        <param>
+          <type>+</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Assign.h" line="92" column="1" declfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Assign.h" declline="92" declcolumn="1"/>
+      </memberdef>
+      <memberdef kind="function" id="Assign_8h_1a64304859c698d58141430689559a2418" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>pbat::math::linalg::mini::DefineMatrixScalarAssign</definition>
+        <argsstring>(SubtractAssignScalar, -=)</argsstring>
+        <name>DefineMatrixScalarAssign</name>
+        <param>
+          <type>SubtractAssignScalar</type>
+        </param>
+        <param>
+          <type>-</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Assign.h" line="93" column="1" declfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Assign.h" declline="93" declcolumn="1"/>
+      </memberdef>
+      <memberdef kind="function" id="Assign_8h_1ad5276fab693ae5a1a3eea4be88a61b30" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>pbat::math::linalg::mini::DefineMatrixScalarAssign</definition>
+        <argsstring>(MultiplyAssign, *=)</argsstring>
+        <name>DefineMatrixScalarAssign</name>
+        <param>
+          <type>MultiplyAssign</type>
+        </param>
+        <param>
+          <type>*</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Assign.h" line="94" column="1" declfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Assign.h" declline="94" declcolumn="1"/>
+      </memberdef>
+      <memberdef kind="function" id="Assign_8h_1aff65ff3b175de0dc0fed163cc733dee3" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>pbat::math::linalg::mini::DefineMatrixScalarAssign</definition>
+        <argsstring>(DivideAssign,/=)</argsstring>
+        <name>DefineMatrixScalarAssign</name>
+        <param>
+          <type>DivideAssign</type>
+        </param>
+        <param>
+          <type>/</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Assign.h" line="95" column="1" declfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Assign.h" declline="95" declcolumn="1"/>
+      </memberdef>
+      <memberdef kind="function" id="BinaryOperations_8h_1ab1b8aeb9b7e706338b11260f678c549c" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class TLhsMatrix</type>
+          </param>
+          <param>
+            <type>class TRhsMatrix</type>
+          </param>
+        </templateparamlist>
+        <type>PBAT_HOST_DEVICE auto</type>
+        <definition>PBAT_HOST_DEVICE auto pbat::math::linalg::mini::operator+</definition>
+        <argsstring>(TLhsMatrix &amp;&amp;A, TRhsMatrix &amp;&amp;B)</argsstring>
+        <name>operator+</name>
+        <param>
+          <type>TLhsMatrix &amp;&amp;</type>
+          <declname>A</declname>
+        </param>
+        <param>
+          <type>TRhsMatrix &amp;&amp;</type>
+          <declname>B</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/BinaryOperations.h" line="299" column="23" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/BinaryOperations.h" bodystart="299" bodyend="313"/>
+      </memberdef>
+      <memberdef kind="function" id="BinaryOperations_8h_1a04c8643acf41fa8e40150d3fa4196048" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class TLhsMatrix</type>
+          </param>
+          <param>
+            <type>class TRhsMatrix</type>
+          </param>
+        </templateparamlist>
+        <type>PBAT_HOST_DEVICE auto</type>
+        <definition>PBAT_HOST_DEVICE auto pbat::math::linalg::mini::operator+=</definition>
+        <argsstring>(TLhsMatrix &amp;&amp;A, TRhsMatrix &amp;&amp;B)</argsstring>
+        <name>operator+=</name>
+        <param>
+          <type>TLhsMatrix &amp;&amp;</type>
+          <declname>A</declname>
+        </param>
+        <param>
+          <type>TRhsMatrix &amp;&amp;</type>
+          <declname>B</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/BinaryOperations.h" line="316" column="23" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/BinaryOperations.h" bodystart="316" bodyend="328"/>
+      </memberdef>
+      <memberdef kind="function" id="BinaryOperations_8h_1aa76853b87e4e30f63fb1c8a157935967" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class TLhsMatrix</type>
+          </param>
+          <param>
+            <type>class TRhsMatrix</type>
+          </param>
+        </templateparamlist>
+        <type>PBAT_HOST_DEVICE auto</type>
+        <definition>PBAT_HOST_DEVICE auto pbat::math::linalg::mini::operator-</definition>
+        <argsstring>(TLhsMatrix &amp;&amp;A, TRhsMatrix &amp;&amp;B)</argsstring>
+        <name>operator-</name>
+        <param>
+          <type>TLhsMatrix &amp;&amp;</type>
+          <declname>A</declname>
+        </param>
+        <param>
+          <type>TRhsMatrix &amp;&amp;</type>
+          <declname>B</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/BinaryOperations.h" line="331" column="23" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/BinaryOperations.h" bodystart="331" bodyend="347"/>
+      </memberdef>
+      <memberdef kind="function" id="BinaryOperations_8h_1a13dacffcdd4c657a8f01c48886b5f3c7" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class TLhsMatrix</type>
+          </param>
+          <param>
+            <type>class TRhsMatrix</type>
+          </param>
+        </templateparamlist>
+        <type>PBAT_HOST_DEVICE auto</type>
+        <definition>PBAT_HOST_DEVICE auto pbat::math::linalg::mini::operator-=</definition>
+        <argsstring>(TLhsMatrix &amp;&amp;A, TRhsMatrix &amp;&amp;B)</argsstring>
+        <name>operator-=</name>
+        <param>
+          <type>TLhsMatrix &amp;&amp;</type>
+          <declname>A</declname>
+        </param>
+        <param>
+          <type>TRhsMatrix &amp;&amp;</type>
+          <declname>B</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/BinaryOperations.h" line="350" column="23" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/BinaryOperations.h" bodystart="350" bodyend="362"/>
+      </memberdef>
+      <memberdef kind="function" id="BinaryOperations_8h_1a08bd12fec7ce4db8b7d6b5f192aa139e" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class TLhsMatrix</type>
+          </param>
+          <param>
+            <type>class TRhsMatrix</type>
+          </param>
+        </templateparamlist>
+        <type>PBAT_HOST_DEVICE auto</type>
+        <definition>PBAT_HOST_DEVICE auto pbat::math::linalg::mini::Min</definition>
+        <argsstring>(TLhsMatrix &amp;&amp;A, TRhsMatrix &amp;&amp;B)</argsstring>
+        <name>Min</name>
+        <param>
+          <type>TLhsMatrix &amp;&amp;</type>
+          <declname>A</declname>
+        </param>
+        <param>
+          <type>TRhsMatrix &amp;&amp;</type>
+          <declname>B</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/BinaryOperations.h" line="365" column="23" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/BinaryOperations.h" bodystart="365" bodyend="372"/>
+      </memberdef>
+      <memberdef kind="function" id="BinaryOperations_8h_1a15979fa2b441f3ca948ddbcdd6f3480c" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class TLhsMatrix</type>
+          </param>
+          <param>
+            <type>class TRhsMatrix</type>
+          </param>
+        </templateparamlist>
+        <type>PBAT_HOST_DEVICE auto</type>
+        <definition>PBAT_HOST_DEVICE auto pbat::math::linalg::mini::Max</definition>
+        <argsstring>(TLhsMatrix &amp;&amp;A, TRhsMatrix &amp;&amp;B)</argsstring>
+        <name>Max</name>
+        <param>
+          <type>TLhsMatrix &amp;&amp;</type>
+          <declname>A</declname>
+        </param>
+        <param>
+          <type>TRhsMatrix &amp;&amp;</type>
+          <declname>B</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/BinaryOperations.h" line="375" column="23" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/BinaryOperations.h" bodystart="375" bodyend="382"/>
+      </memberdef>
+      <memberdef kind="function" id="Determinant_8h_1a91ba19396022fe170b1f659cd586531a" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class TMatrix</type>
+          </param>
+        </templateparamlist>
+        <type>PBAT_HOST_DEVICE auto</type>
+        <definition>PBAT_HOST_DEVICE auto pbat::math::linalg::mini::Determinant</definition>
+        <argsstring>(TMatrix &amp;&amp;A)</argsstring>
+        <name>Determinant</name>
+        <param>
+          <type>TMatrix &amp;&amp;</type>
+          <declname>A</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Determinant.h" line="15" column="23" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Determinant.h" bodystart="15" bodyend="42"/>
+      </memberdef>
+      <memberdef kind="function" id="math_2linalg_2mini_2Eigen_8h_1aeba7753e58e370a18161a440bdf0b626" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class TMatrix</type>
+          </param>
+        </templateparamlist>
+        <type>Eigen::Map&lt; Eigen::Matrix&lt; typename std::remove_cvref_t&lt; TMatrix &gt;::ScalarType, std::remove_cvref_t&lt; TMatrix &gt;::kRows, std::remove_cvref_t&lt; TMatrix &gt;::kCols,(std::remove_cvref_t&lt; TMatrix &gt;::bRowMajor) ? Eigen::RowMajor :Eigen::ColMajor &gt; &gt;</type>
+        <definition>Eigen::Map&lt;Eigen::Matrix&lt; typename std::remove_cvref_t&lt;TMatrix&gt;::ScalarType, std::remove_cvref_t&lt;TMatrix&gt;::kRows, std::remove_cvref_t&lt;TMatrix&gt;::kCols, (std::remove_cvref_t&lt;TMatrix&gt;::bRowMajor) ? Eigen::RowMajor : Eigen::ColMajor&gt; &gt; pbat::math::linalg::mini::ToEigen</definition>
+        <argsstring>(TMatrix &amp;A)</argsstring>
+        <name>ToEigen</name>
+        <param>
+          <type>TMatrix &amp;</type>
+          <declname>A</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Eigen.h" line="30" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Eigen.h" bodystart="30" bodyend="40"/>
+      </memberdef>
+      <memberdef kind="function" id="math_2linalg_2mini_2Eigen_8h_1a04b14612a619e0e5e8674e92ac726464" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class TMatrix</type>
+          </param>
+        </templateparamlist>
+        <type>Eigen::Map&lt; Eigen::Matrix&lt; typename std::remove_cvref_t&lt; TMatrix &gt;::ScalarType, std::remove_cvref_t&lt; TMatrix &gt;::kRows, std::remove_cvref_t&lt; TMatrix &gt;::kCols,(std::remove_cvref_t&lt; TMatrix &gt;::bRowMajor) ? Eigen::RowMajor :Eigen::ColMajor &gt; const  &gt;</type>
+        <definition>Eigen::Map&lt;Eigen::Matrix&lt; typename std::remove_cvref_t&lt;TMatrix&gt;::ScalarType, std::remove_cvref_t&lt;TMatrix&gt;::kRows, std::remove_cvref_t&lt;TMatrix&gt;::kCols, (std::remove_cvref_t&lt;TMatrix&gt;::bRowMajor) ? Eigen::RowMajor : Eigen::ColMajor&gt; const&gt; pbat::math::linalg::mini::ToEigen</definition>
+        <argsstring>(TMatrix const &amp;A)</argsstring>
+        <name>ToEigen</name>
+        <param>
+          <type>TMatrix const &amp;</type>
+          <declname>A</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Eigen.h" line="48" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Eigen.h" bodystart="48" bodyend="58"/>
+      </memberdef>
+      <memberdef kind="function" id="math_2linalg_2mini_2Eigen_8h_1a42020bfbec31b60860629c617f0e688a" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class TDerived</type>
+          </param>
+        </templateparamlist>
+        <type>auto</type>
+        <definition>auto pbat::math::linalg::mini::FromEigen</definition>
+        <argsstring>(TDerived &amp;A)</argsstring>
+        <name>FromEigen</name>
+        <param>
+          <type>TDerived &amp;</type>
+          <declname>A</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Eigen.h" line="128" column="6" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Eigen.h" bodystart="128" bodyend="131"/>
+      </memberdef>
+      <memberdef kind="function" id="math_2linalg_2mini_2Eigen_8h_1ab549a9dc3eb44aeac447de582617c247" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class TDerived</type>
+          </param>
+        </templateparamlist>
+        <type>auto</type>
+        <definition>auto pbat::math::linalg::mini::FromEigen</definition>
+        <argsstring>(TDerived const &amp;A)</argsstring>
+        <name>FromEigen</name>
+        <param>
+          <type>TDerived const &amp;</type>
+          <declname>A</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Eigen.h" line="134" column="6" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Eigen.h" bodystart="134" bodyend="137"/>
+      </memberdef>
+      <memberdef kind="function" id="Flatten_8h_1a1f19131a9ff3fc5c58c4af47d57fe14a" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class TMatrix</type>
+          </param>
+        </templateparamlist>
+        <type>PBAT_HOST_DEVICE auto</type>
+        <definition>PBAT_HOST_DEVICE auto pbat::math::linalg::mini::Flatten</definition>
+        <argsstring>(TMatrix &amp;&amp;A)</argsstring>
+        <name>Flatten</name>
+        <param>
+          <type>TMatrix &amp;&amp;</type>
+          <declname>A</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Flatten.h" line="42" column="23" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Flatten.h" bodystart="42" bodyend="46"/>
+      </memberdef>
+      <memberdef kind="function" id="source_2pbat_2math_2linalg_2mini_2Geometry_8h_1ad7f365cf6acd1e6b656e1269355b9c1e" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class TLhsMatrix</type>
+          </param>
+          <param>
+            <type>class TRhsMatrix</type>
+          </param>
+        </templateparamlist>
+        <type>PBAT_HOST_DEVICE auto</type>
+        <definition>PBAT_HOST_DEVICE auto pbat::math::linalg::mini::Cross</definition>
+        <argsstring>(TLhsMatrix &amp;&amp;A, TRhsMatrix &amp;&amp;B)</argsstring>
+        <name>Cross</name>
+        <param>
+          <type>TLhsMatrix &amp;&amp;</type>
+          <declname>A</declname>
+        </param>
+        <param>
+          <type>TRhsMatrix &amp;&amp;</type>
+          <declname>B</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Geometry.h" line="58" column="23" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Geometry.h" bodystart="58" bodyend="65"/>
+      </memberdef>
+      <memberdef kind="function" id="Inverse_8h_1a8c519695f7852a2ce8220f553cdc6efe" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class TMatrix</type>
+          </param>
+        </templateparamlist>
+        <type>PBAT_HOST_DEVICE <ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1SMatrix" kindref="compound">SMatrix</ref>&lt; typename std::remove_cvref_t&lt; TMatrix &gt;::ScalarType, std::remove_cvref_t&lt; TMatrix &gt;::kRows, std::remove_cvref_t&lt; TMatrix &gt;::kCols &gt;</type>
+        <definition>PBAT_HOST_DEVICE SMatrix&lt; typename std::remove_cvref_t&lt;TMatrix&gt;::ScalarType, std::remove_cvref_t&lt;TMatrix&gt;::kRows, std::remove_cvref_t&lt;TMatrix&gt;::kCols&gt; pbat::math::linalg::mini::Inverse</definition>
+        <argsstring>(TMatrix &amp;&amp;A)</argsstring>
+        <name>Inverse</name>
+        <param>
+          <type>TMatrix &amp;&amp;</type>
+          <declname>A</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Inverse.h" line="21" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Inverse.h" bodystart="21" bodyend="64"/>
+      </memberdef>
+      <memberdef kind="function" id="Matrix_8h_1a37585fc340f3aa1c60f992f6a0f18651" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class TScalar</type>
+          </param>
+          <param>
+            <type>int</type>
+            <declname>M</declname>
+            <defname>M</defname>
+          </param>
+        </templateparamlist>
+        <type>PBAT_HOST_DEVICE auto</type>
+        <definition>PBAT_HOST_DEVICE auto pbat::math::linalg::mini::Unit</definition>
+        <argsstring>(auto i)</argsstring>
+        <name>Unit</name>
+        <param>
+          <type>auto</type>
+          <declname>i</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Matrix.h" line="233" column="23" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Matrix.h" bodystart="233" bodyend="236"/>
+      </memberdef>
+      <memberdef kind="function" id="Matrix_8h_1ab9828302a1aa8d7403a6c1b423dc164a" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>auto</type>
+            <declname>M</declname>
+            <defname>M</defname>
+          </param>
+          <param>
+            <type>auto</type>
+            <declname>N</declname>
+            <defname>N</defname>
+          </param>
+          <param>
+            <type>class TScalar</type>
+          </param>
+        </templateparamlist>
+        <type>PBAT_HOST_DEVICE auto</type>
+        <definition>PBAT_HOST_DEVICE auto pbat::math::linalg::mini::FromFlatBuffer</definition>
+        <argsstring>(TScalar *buf, std::int64_t bi)</argsstring>
+        <name>FromFlatBuffer</name>
+        <param>
+          <type>TScalar *</type>
+          <declname>buf</declname>
+        </param>
+        <param>
+          <type>std::int64_t</type>
+          <declname>bi</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Matrix.h" line="239" column="23" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Matrix.h" bodystart="239" bodyend="242"/>
+      </memberdef>
+      <memberdef kind="function" id="Matrix_8h_1a7a23d079505cebae6524429d35e2fec1" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class TScalar</type>
+          </param>
+          <param>
+            <type>CMatrix</type>
+            <declname>TIndexMatrix</declname>
+            <defname>TIndexMatrix</defname>
+          </param>
+        </templateparamlist>
+        <type>PBAT_HOST_DEVICE auto</type>
+        <definition>PBAT_HOST_DEVICE auto pbat::math::linalg::mini::FromFlatBuffer</definition>
+        <argsstring>(TScalar *buf, TIndexMatrix const &amp;inds)</argsstring>
+        <name>FromFlatBuffer</name>
+        <param>
+          <type>TScalar *</type>
+          <declname>buf</declname>
+        </param>
+        <param>
+          <type>TIndexMatrix const &amp;</type>
+          <declname>inds</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Matrix.h" line="245" column="23" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Matrix.h" bodystart="245" bodyend="256"/>
+      </memberdef>
+      <memberdef kind="function" id="Matrix_8h_1a7f21b40b7807b9fe03c09014ba0e4637" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>CMatrix</type>
+            <declname>TMatrix</declname>
+            <defname>TMatrix</defname>
+          </param>
+        </templateparamlist>
+        <type>PBAT_HOST_DEVICE void</type>
+        <definition>PBAT_HOST_DEVICE void pbat::math::linalg::mini::ToFlatBuffer</definition>
+        <argsstring>(TMatrix const &amp;A, typename TMatrix::ScalarType *buf, std::int64_t bi)</argsstring>
+        <name>ToFlatBuffer</name>
+        <param>
+          <type>TMatrix const &amp;</type>
+          <declname>A</declname>
+        </param>
+        <param>
+          <type>typename TMatrix::ScalarType *</type>
+          <declname>buf</declname>
+        </param>
+        <param>
+          <type>std::int64_t</type>
+          <declname>bi</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Matrix.h" line="260" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Matrix.h" bodystart="260" bodyend="265"/>
+      </memberdef>
+      <memberdef kind="function" id="Matrix_8h_1ad4655046b71a874ea3586057680ef319" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>CMatrix</type>
+            <declname>TMatrix</declname>
+            <defname>TMatrix</defname>
+          </param>
+          <param>
+            <type>CMatrix</type>
+            <declname>TIndexMatrix</declname>
+            <defname>TIndexMatrix</defname>
+          </param>
+        </templateparamlist>
+        <type>PBAT_HOST_DEVICE void</type>
+        <definition>PBAT_HOST_DEVICE void pbat::math::linalg::mini::ToFlatBuffer</definition>
+        <argsstring>(TMatrix const &amp;A, TIndexMatrix const &amp;inds, typename TMatrix::ScalarType *buf)</argsstring>
+        <name>ToFlatBuffer</name>
+        <param>
+          <type>TMatrix const &amp;</type>
+          <declname>A</declname>
+        </param>
+        <param>
+          <type>TIndexMatrix const &amp;</type>
+          <declname>inds</declname>
+        </param>
+        <param>
+          <type>typename TMatrix::ScalarType *</type>
+          <declname>buf</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Matrix.h" line="269" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Matrix.h" bodystart="269" bodyend="291"/>
+      </memberdef>
+      <memberdef kind="function" id="Matrix_8h_1aa0744c834832a5bc49baa1e52f956b32" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>auto</type>
+            <declname>M</declname>
+            <defname>M</defname>
+          </param>
+          <param>
+            <type>auto</type>
+            <declname>N</declname>
+            <defname>N</defname>
+          </param>
+          <param>
+            <type>class TScalar</type>
+          </param>
+        </templateparamlist>
+        <type>PBAT_HOST_DEVICE auto</type>
+        <definition>PBAT_HOST_DEVICE auto pbat::math::linalg::mini::FromBuffers</definition>
+        <argsstring>(std::array&lt; TScalar *, M &gt; buf, std::int64_t bi)</argsstring>
+        <name>FromBuffers</name>
+        <param>
+          <type>std::array&lt; TScalar *, M &gt;</type>
+          <declname>buf</declname>
+        </param>
+        <param>
+          <type>std::int64_t</type>
+          <declname>bi</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Matrix.h" line="294" column="23" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Matrix.h" bodystart="294" bodyend="301"/>
+      </memberdef>
+      <memberdef kind="function" id="Matrix_8h_1a4253945a1f348a761ab2d4cf64ff7c86" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>auto</type>
+            <declname>K</declname>
+            <defname>K</defname>
+          </param>
+          <param>
+            <type>class TScalar</type>
+          </param>
+          <param>
+            <type>CMatrix</type>
+            <declname>TIndexMatrix</declname>
+            <defname>TIndexMatrix</defname>
+          </param>
+        </templateparamlist>
+        <type>PBAT_HOST_DEVICE auto</type>
+        <definition>PBAT_HOST_DEVICE auto pbat::math::linalg::mini::FromBuffers</definition>
+        <argsstring>(std::array&lt; TScalar *, K &gt; buf, TIndexMatrix const &amp;inds)</argsstring>
+        <name>FromBuffers</name>
+        <param>
+          <type>std::array&lt; TScalar *, K &gt;</type>
+          <declname>buf</declname>
+        </param>
+        <param>
+          <type>TIndexMatrix const &amp;</type>
+          <declname>inds</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Matrix.h" line="304" column="23" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Matrix.h" bodystart="304" bodyend="316"/>
+      </memberdef>
+      <memberdef kind="function" id="Matrix_8h_1a8831dff955eee7a0b354a4d147c15d4c" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>CMatrix</type>
+            <declname>TMatrix</declname>
+            <defname>TMatrix</defname>
+          </param>
+          <param>
+            <type>auto</type>
+            <declname>M</declname>
+            <defname>M</defname>
+          </param>
+        </templateparamlist>
+        <type>PBAT_HOST_DEVICE void</type>
+        <definition>PBAT_HOST_DEVICE void pbat::math::linalg::mini::ToBuffers</definition>
+        <argsstring>(TMatrix const &amp;A, std::array&lt; typename TMatrix::ScalarType *, M &gt; buf, std::int64_t bi)</argsstring>
+        <name>ToBuffers</name>
+        <param>
+          <type>TMatrix const &amp;</type>
+          <declname>A</declname>
+        </param>
+        <param>
+          <type>std::array&lt; typename TMatrix::ScalarType *, M &gt;</type>
+          <declname>buf</declname>
+        </param>
+        <param>
+          <type>std::int64_t</type>
+          <declname>bi</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Matrix.h" line="320" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Matrix.h" bodystart="320" bodyend="326"/>
+      </memberdef>
+      <memberdef kind="function" id="Matrix_8h_1a3c7d594b67119ef9a6e5f35f8b6b4d4e" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>CMatrix</type>
+            <declname>TMatrix</declname>
+            <defname>TMatrix</defname>
+          </param>
+          <param>
+            <type>CMatrix</type>
+            <declname>TIndexMatrix</declname>
+            <defname>TIndexMatrix</defname>
+          </param>
+          <param>
+            <type>auto</type>
+            <declname>K</declname>
+            <defname>K</defname>
+          </param>
+        </templateparamlist>
+        <type>PBAT_HOST_DEVICE void</type>
+        <definition>PBAT_HOST_DEVICE void pbat::math::linalg::mini::ToBuffers</definition>
+        <argsstring>(TMatrix const &amp;A, TIndexMatrix const &amp;inds, std::array&lt; typename TMatrix::ScalarType *, K &gt; buf)</argsstring>
+        <name>ToBuffers</name>
+        <param>
+          <type>TMatrix const &amp;</type>
+          <declname>A</declname>
+        </param>
+        <param>
+          <type>TIndexMatrix const &amp;</type>
+          <declname>inds</declname>
+        </param>
+        <param>
+          <type>std::array&lt; typename TMatrix::ScalarType *, K &gt;</type>
+          <declname>buf</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Matrix.h" line="329" column="23" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Matrix.h" bodystart="329" bodyend="345"/>
+      </memberdef>
+      <memberdef kind="function" id="Norm_8h_1a91a83943ccb4a94a7b4a700b937252ab" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class TMatrix</type>
+          </param>
+        </templateparamlist>
+        <type>PBAT_HOST_DEVICE auto</type>
+        <definition>PBAT_HOST_DEVICE auto pbat::math::linalg::mini::SquaredNorm</definition>
+        <argsstring>(TMatrix &amp;&amp;A)</argsstring>
+        <name>SquaredNorm</name>
+        <param>
+          <type>TMatrix &amp;&amp;</type>
+          <declname>A</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Norm.h" line="18" column="23" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Norm.h" bodystart="18" bodyend="21"/>
+      </memberdef>
+      <memberdef kind="function" id="Norm_8h_1ae93004018a9843d5739c78f015a49bf3" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class TMatrix</type>
+          </param>
+        </templateparamlist>
+        <type>PBAT_HOST_DEVICE auto</type>
+        <definition>PBAT_HOST_DEVICE auto pbat::math::linalg::mini::Norm</definition>
+        <argsstring>(TMatrix &amp;&amp;A)</argsstring>
+        <name>Norm</name>
+        <param>
+          <type>TMatrix &amp;&amp;</type>
+          <declname>A</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Norm.h" line="24" column="23" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Norm.h" bodystart="24" bodyend="37"/>
+      </memberdef>
+      <memberdef kind="function" id="Product_8h_1a58bff752a423927508445cd7bc5cbb71" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>CMatrix</type>
+            <declname>TLhsMatrix</declname>
+            <defname>TLhsMatrix</defname>
+          </param>
+          <param>
+            <type>CMatrix</type>
+            <declname>TRhsMatrix</declname>
+            <defname>TRhsMatrix</defname>
+          </param>
+        </templateparamlist>
+        <type>PBAT_HOST_DEVICE auto</type>
+        <definition>PBAT_HOST_DEVICE auto pbat::math::linalg::mini::operator*</definition>
+        <argsstring>(TLhsMatrix const &amp;A, TRhsMatrix const &amp;B)</argsstring>
+        <name>operator*</name>
+        <param>
+          <type>TLhsMatrix const &amp;</type>
+          <declname>A</declname>
+        </param>
+        <param>
+          <type>TRhsMatrix const &amp;</type>
+          <declname>B</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Product.h" line="53" column="23" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Product.h" bodystart="53" bodyend="56"/>
+      </memberdef>
+      <memberdef kind="function" id="Reductions_8h_1a1edf7205eabfe480c99404619fd268d3" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>CMatrix</type>
+            <declname>TMatrix</declname>
+            <defname>TMatrix</defname>
+          </param>
+        </templateparamlist>
+        <type>PBAT_HOST_DEVICE auto</type>
+        <definition>PBAT_HOST_DEVICE auto pbat::math::linalg::mini::Diag</definition>
+        <argsstring>(TMatrix const &amp;A)</argsstring>
+        <name>Diag</name>
+        <param>
+          <type>TMatrix const &amp;</type>
+          <declname>A</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Reductions.h" line="81" column="23" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Reductions.h" bodystart="81" bodyend="84"/>
+      </memberdef>
+      <memberdef kind="function" id="Reductions_8h_1a6604da2f34938cd120ba896dfd5ba4cf" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>CMatrix</type>
+            <declname>TMatrix</declname>
+            <defname>TMatrix</defname>
+          </param>
+        </templateparamlist>
+        <type>PBAT_HOST_DEVICE auto</type>
+        <definition>PBAT_HOST_DEVICE auto pbat::math::linalg::mini::Diag</definition>
+        <argsstring>(TMatrix &amp;A)</argsstring>
+        <name>Diag</name>
+        <param>
+          <type>TMatrix &amp;</type>
+          <declname>A</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Reductions.h" line="87" column="23" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Reductions.h" bodystart="87" bodyend="90"/>
+      </memberdef>
+      <memberdef kind="function" id="Reductions_8h_1a0a7875a2855b3dbcb96398c57996e049" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class TMatrix</type>
+          </param>
+        </templateparamlist>
+        <type>PBAT_HOST_DEVICE auto</type>
+        <definition>PBAT_HOST_DEVICE auto pbat::math::linalg::mini::Trace</definition>
+        <argsstring>(TMatrix &amp;&amp;A)</argsstring>
+        <name>Trace</name>
+        <param>
+          <type>TMatrix &amp;&amp;</type>
+          <declname>A</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Reductions.h" line="93" column="23" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Reductions.h" bodystart="93" bodyend="105"/>
+      </memberdef>
+      <memberdef kind="function" id="Reductions_8h_1a488dc48a71fdfc0b599fe3478685f335" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class TLhsMatrix</type>
+          </param>
+          <param>
+            <type>class TRhsMatrix</type>
+          </param>
+        </templateparamlist>
+        <type>PBAT_HOST_DEVICE auto</type>
+        <definition>PBAT_HOST_DEVICE auto pbat::math::linalg::mini::Dot</definition>
+        <argsstring>(TLhsMatrix &amp;&amp;A, TRhsMatrix &amp;&amp;B)</argsstring>
+        <name>Dot</name>
+        <param>
+          <type>TLhsMatrix &amp;&amp;</type>
+          <declname>A</declname>
+        </param>
+        <param>
+          <type>TRhsMatrix &amp;&amp;</type>
+          <declname>B</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Reductions.h" line="108" column="23" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Reductions.h" bodystart="108" bodyend="113"/>
+      </memberdef>
+      <memberdef kind="function" id="Repeat_8h_1aa7b5f43d5d0a486bbb6313e4311c5dd8" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>auto</type>
+            <declname>RepeatRows</declname>
+            <defname>RepeatRows</defname>
+          </param>
+          <param>
+            <type>auto</type>
+            <declname>RepeatCols</declname>
+            <defname>RepeatCols</defname>
+          </param>
+          <param>
+            <type>class TMatrix</type>
+          </param>
+        </templateparamlist>
+        <type>PBAT_HOST_DEVICE auto</type>
+        <definition>PBAT_HOST_DEVICE auto pbat::math::linalg::mini::Repeat</definition>
+        <argsstring>(TMatrix &amp;&amp;A)</argsstring>
+        <name>Repeat</name>
+        <param>
+          <type>TMatrix &amp;&amp;</type>
+          <declname>A</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Repeat.h" line="45" column="23" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Repeat.h" bodystart="45" bodyend="49"/>
+      </memberdef>
+      <memberdef kind="function" id="Scale_8h_1ae9374ecd747d7892d79b92c925a82e96" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class TMatrix</type>
+          </param>
+        </templateparamlist>
+        <type>PBAT_HOST_DEVICE auto</type>
+        <definition>PBAT_HOST_DEVICE auto pbat::math::linalg::mini::operator*</definition>
+        <argsstring>(typename std::remove_cvref_t&lt; TMatrix &gt;::ScalarType k, TMatrix &amp;&amp;A)</argsstring>
+        <name>operator*</name>
+        <param>
+          <type>typename std::remove_cvref_t&lt; TMatrix &gt;::ScalarType</type>
+          <declname>k</declname>
+        </param>
+        <param>
+          <type>TMatrix &amp;&amp;</type>
+          <declname>A</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Scale.h" line="45" column="23" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Scale.h" bodystart="45" bodyend="50"/>
+      </memberdef>
+      <memberdef kind="function" id="Scale_8h_1a1025e18aa3f89bedc469449034732c16" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class TMatrix</type>
+          </param>
+        </templateparamlist>
+        <type>PBAT_HOST_DEVICE auto</type>
+        <definition>PBAT_HOST_DEVICE auto pbat::math::linalg::mini::operator*</definition>
+        <argsstring>(TMatrix &amp;&amp;A, typename std::remove_cvref_t&lt; TMatrix &gt;::ScalarType k)</argsstring>
+        <name>operator*</name>
+        <param>
+          <type>TMatrix &amp;&amp;</type>
+          <declname>A</declname>
+        </param>
+        <param>
+          <type>typename std::remove_cvref_t&lt; TMatrix &gt;::ScalarType</type>
+          <declname>k</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Scale.h" line="53" column="23" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Scale.h" bodystart="53" bodyend="56"/>
+      </memberdef>
+      <memberdef kind="function" id="Scale_8h_1a3a541daecf97ad6c5cd0348a61f53f96" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class TMatrix</type>
+          </param>
+        </templateparamlist>
+        <type>PBAT_HOST_DEVICE auto</type>
+        <definition>PBAT_HOST_DEVICE auto pbat::math::linalg::mini::operator*=</definition>
+        <argsstring>(TMatrix &amp;&amp;A, typename std::remove_cvref_t&lt; TMatrix &gt;::ScalarType k)</argsstring>
+        <name>operator*=</name>
+        <param>
+          <type>TMatrix &amp;&amp;</type>
+          <declname>A</declname>
+        </param>
+        <param>
+          <type>typename std::remove_cvref_t&lt; TMatrix &gt;::ScalarType</type>
+          <declname>k</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Scale.h" line="59" column="23" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Scale.h" bodystart="59" bodyend="63"/>
+      </memberdef>
+      <memberdef kind="function" id="Scale_8h_1ac79573abc2fa93e5b4f2381e6e4b1e75" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class TMatrix</type>
+          </param>
+        </templateparamlist>
+        <type>PBAT_HOST_DEVICE auto</type>
+        <definition>PBAT_HOST_DEVICE auto pbat::math::linalg::mini::operator/</definition>
+        <argsstring>(TMatrix &amp;&amp;A, typename std::remove_cvref_t&lt; TMatrix &gt;::ScalarType k)</argsstring>
+        <name>operator/</name>
+        <param>
+          <type>TMatrix &amp;&amp;</type>
+          <declname>A</declname>
+        </param>
+        <param>
+          <type>typename std::remove_cvref_t&lt; TMatrix &gt;::ScalarType</type>
+          <declname>k</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Scale.h" line="66" column="23" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Scale.h" bodystart="66" bodyend="72"/>
+      </memberdef>
+      <memberdef kind="function" id="Scale_8h_1aa004047ed2e3bd98ea09e372c3ce853b" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class TMatrix</type>
+          </param>
+        </templateparamlist>
+        <type>PBAT_HOST_DEVICE auto</type>
+        <definition>PBAT_HOST_DEVICE auto pbat::math::linalg::mini::operator/=</definition>
+        <argsstring>(TMatrix &amp;&amp;A, typename std::remove_cvref_t&lt; TMatrix &gt;::ScalarType k)</argsstring>
+        <name>operator/=</name>
+        <param>
+          <type>TMatrix &amp;&amp;</type>
+          <declname>A</declname>
+        </param>
+        <param>
+          <type>typename std::remove_cvref_t&lt; TMatrix &gt;::ScalarType</type>
+          <declname>k</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Scale.h" line="75" column="23" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Scale.h" bodystart="75" bodyend="79"/>
+      </memberdef>
+      <memberdef kind="function" id="Scale_8h_1a797e6e6f6dc6be8da8a89fd0b40e34c7" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class TMatrix</type>
+          </param>
+        </templateparamlist>
+        <type>PBAT_HOST_DEVICE auto</type>
+        <definition>PBAT_HOST_DEVICE auto pbat::math::linalg::mini::operator-</definition>
+        <argsstring>(TMatrix &amp;&amp;A)</argsstring>
+        <name>operator-</name>
+        <param>
+          <type>TMatrix &amp;&amp;</type>
+          <declname>A</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Scale.h" line="82" column="23" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Scale.h" bodystart="82" bodyend="88"/>
+      </memberdef>
+      <memberdef kind="function" id="math_2linalg_2mini_2Stack_8h_1a64f1955f9a84002d08758ea9cb1f9d55" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class TLhsMatrix</type>
+          </param>
+          <param>
+            <type>class TRhsMatrix</type>
+          </param>
+        </templateparamlist>
+        <type>PBAT_HOST_DEVICE auto</type>
+        <definition>PBAT_HOST_DEVICE auto pbat::math::linalg::mini::HStack</definition>
+        <argsstring>(TLhsMatrix &amp;&amp;A, TRhsMatrix &amp;&amp;B)</argsstring>
+        <name>HStack</name>
+        <param>
+          <type>TLhsMatrix &amp;&amp;</type>
+          <declname>A</declname>
+        </param>
+        <param>
+          <type>TRhsMatrix &amp;&amp;</type>
+          <declname>B</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Stack.h" line="91" column="23" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Stack.h" bodystart="91" bodyend="100"/>
+      </memberdef>
+      <memberdef kind="function" id="math_2linalg_2mini_2Stack_8h_1a97cd979511089e1235284999d263b854" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class TLhsMatrix</type>
+          </param>
+          <param>
+            <type>class TRhsMatrix</type>
+          </param>
+        </templateparamlist>
+        <type>PBAT_HOST_DEVICE auto</type>
+        <definition>PBAT_HOST_DEVICE auto pbat::math::linalg::mini::VStack</definition>
+        <argsstring>(TLhsMatrix &amp;&amp;A, TRhsMatrix &amp;&amp;B)</argsstring>
+        <name>VStack</name>
+        <param>
+          <type>TLhsMatrix &amp;&amp;</type>
+          <declname>A</declname>
+        </param>
+        <param>
+          <type>TRhsMatrix &amp;&amp;</type>
+          <declname>B</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Stack.h" line="103" column="23" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Stack.h" bodystart="103" bodyend="112"/>
+      </memberdef>
+      <memberdef kind="function" id="UnaryOperations_8h_1ad9765e706c2ac2cc45c8b62981a8f2ca" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class TMatrix</type>
+          </param>
+        </templateparamlist>
+        <type>PBAT_HOST_DEVICE auto</type>
+        <definition>PBAT_HOST_DEVICE auto pbat::math::linalg::mini::Squared</definition>
+        <argsstring>(TMatrix &amp;&amp;A)</argsstring>
+        <name>Squared</name>
+        <param>
+          <type>TMatrix &amp;&amp;</type>
+          <declname>A</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/UnaryOperations.h" line="107" column="23" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/UnaryOperations.h" bodystart="107" bodyend="112"/>
+      </memberdef>
+      <memberdef kind="function" id="UnaryOperations_8h_1a7fdca431cadd580df1d07c6f69bf9a62" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class TMatrix</type>
+          </param>
+        </templateparamlist>
+        <type>PBAT_HOST_DEVICE auto</type>
+        <definition>PBAT_HOST_DEVICE auto pbat::math::linalg::mini::Abs</definition>
+        <argsstring>(TMatrix &amp;&amp;A)</argsstring>
+        <name>Abs</name>
+        <param>
+          <type>TMatrix &amp;&amp;</type>
+          <declname>A</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/UnaryOperations.h" line="115" column="23" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/UnaryOperations.h" bodystart="115" bodyend="120"/>
+      </memberdef>
+      <memberdef kind="function" id="UnaryOperations_8h_1a9f2339247ca0410df11954bf03fb1e9f" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class TMatrix</type>
+          </param>
+        </templateparamlist>
+        <type>PBAT_HOST_DEVICE auto</type>
+        <definition>PBAT_HOST_DEVICE auto pbat::math::linalg::mini::Normalized</definition>
+        <argsstring>(TMatrix &amp;&amp;A)</argsstring>
+        <name>Normalized</name>
+        <param>
+          <type>TMatrix &amp;&amp;</type>
+          <declname>A</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/UnaryOperations.h" line="123" column="23" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/UnaryOperations.h" bodystart="123" bodyend="128"/>
+      </memberdef>
+      <memberdef kind="function" id="UnaryOperations_8h_1a212b5c428130d52200d1bf2ef6bd11ac" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>CReadableVectorizedMatrix</type>
+            <declname>TMatrix</declname>
+            <defname>TMatrix</defname>
+          </param>
+        </templateparamlist>
+        <type>PBAT_HOST_DEVICE auto</type>
+        <definition>PBAT_HOST_DEVICE auto pbat::math::linalg::mini::Min</definition>
+        <argsstring>(TMatrix const &amp;A)</argsstring>
+        <name>Min</name>
+        <param>
+          <type>TMatrix const &amp;</type>
+          <declname>A</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/UnaryOperations.h" line="131" column="23" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/UnaryOperations.h" bodystart="131" bodyend="147"/>
+      </memberdef>
+      <memberdef kind="function" id="UnaryOperations_8h_1a6c8f30d4c6fe3229b5ec6f7384ba2bae" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>CReadableVectorizedMatrix</type>
+            <declname>TMatrix</declname>
+            <defname>TMatrix</defname>
+          </param>
+        </templateparamlist>
+        <type>PBAT_HOST_DEVICE auto</type>
+        <definition>PBAT_HOST_DEVICE auto pbat::math::linalg::mini::Max</definition>
+        <argsstring>(TMatrix const &amp;A)</argsstring>
+        <name>Max</name>
+        <param>
+          <type>TMatrix const &amp;</type>
+          <declname>A</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/UnaryOperations.h" line="150" column="23" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/UnaryOperations.h" bodystart="150" bodyend="166"/>
+      </memberdef>
+      <memberdef kind="function" id="UnaryOperations_8h_1a7adbdb18fe2010cdc83ce817c73555a2" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class TMatrix</type>
+          </param>
+        </templateparamlist>
+        <type>PBAT_HOST_DEVICE auto</type>
+        <definition>PBAT_HOST_DEVICE auto pbat::math::linalg::mini::operator/</definition>
+        <argsstring>(typename std::remove_cvref_t&lt; TMatrix &gt;::ScalarType k, TMatrix &amp;&amp;A)</argsstring>
+        <name>operator/</name>
+        <param>
+          <type>typename std::remove_cvref_t&lt; TMatrix &gt;::ScalarType</type>
+          <declname>k</declname>
+        </param>
+        <param>
+          <type>TMatrix &amp;&amp;</type>
+          <declname>A</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/UnaryOperations.h" line="169" column="23" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/UnaryOperations.h" bodystart="169" bodyend="174"/>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Assign.h" line="12" column="14"/>
+  </compounddef>
+</doxygen>

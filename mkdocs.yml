@@ -56,7 +56,7 @@ nav:
   - Python:
     - Python: python/python.md
     - API:
-      - FEM: python/FEM.md
+      - FEM: python/fem.md
       - Geometry: python/geometry.md
       - Profiling: python/profiling.md
       - Math: python/math.md
@@ -109,7 +109,14 @@ markdown_extensions:
 
 plugins:
   - search
-  - mkdocstrings
+  - mkdocstrings:
+      handlers:
+        python:
+          options:
+            docstring_style: google
+        cpp:
+          options:
+            parser: doxygen
   - bibtex:
       bib_file: "docs/refs.bib"
   - include-markdown

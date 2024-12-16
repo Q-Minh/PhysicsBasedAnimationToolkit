@@ -1,0 +1,167 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="bindings_2CMakeLists_8txt" kind="file" language="C++">
+    <compoundname>CMakeLists.txt</compoundname>
+      <sectiondef kind="func">
+      <memberdef kind="function" id="bindings_2CMakeLists_8txt_1a4df81d14248f5d69fdae645bfbe9e6ad" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>Python_add_library</definition>
+        <argsstring>(PhysicsBasedAnimationToolkit_Python MODULE WITH_SOABI) set_target_properties(PhysicsBasedAnimationToolkit_Python PROPERTIES OUTPUT_NAME &quot;_pbat&quot; EXPORT_NAME &quot;Python&quot; FOLDER &quot;PhysicsBasedAnimationToolkit/bindings&quot;) target_sources(PhysicsBasedAnimationToolkit_Python PUBLIC FILE_SET api TYPE HEADERS BASE_DIRS $</argsstring>
+        <name>Python_add_library</name>
+        <param>
+          <type>PhysicsBasedAnimationToolkit_Python MODULE</type>
+          <declname>WITH_SOABI</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/CMakeLists.txt" line="1" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/CMakeLists.txt" bodystart="1" bodyend="14"/>
+      </memberdef>
+      <memberdef kind="function" id="bindings_2CMakeLists_8txt_1a0cda567c9fb939f2aff24474ade93389" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>target_link_libraries</definition>
+        <argsstring>(PhysicsBasedAnimationToolkit_Python PRIVATE PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit pybind11::headers) if(NOT MSVC AND NOT $</argsstring>
+        <name>target_link_libraries</name>
+        <param>
+          <type>PhysicsBasedAnimationToolkit_Python PRIVATE PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit pybind11::headers</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/CMakeLists.txt" line="17" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/CMakeLists.txt" bodystart="17" bodyend="23"/>
+      </memberdef>
+      <memberdef kind="function" id="bindings_2CMakeLists_8txt_1ab03b986433a5cd0056708e70b8b111b2" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>MATCHES Debug RelWithDebInfo</type>
+        <definition>MATCHES Debug RelWithDebInfo pybind11_strip</definition>
+        <argsstring>(PhysicsBasedAnimationToolkit_Python) endif() add_subdirectory(pypbat) get_target_property(_pbat_python_sources PhysicsBasedAnimationToolkit_Python SOURCES) get_target_property(_pbat_python_headers PhysicsBasedAnimationToolkit_Python HEADER_SET_api) source_group(TREE $</argsstring>
+        <name>pybind11_strip</name>
+        <param>
+          <type>PhysicsBasedAnimationToolkit_Python</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/CMakeLists.txt" line="25" column="5" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/CMakeLists.txt" bodystart="25" bodyend="34"/>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="normal">Python_add_library(PhysicsBasedAnimationToolkit_Python<sp/>MODULE<sp/>WITH_SOABI)</highlight></codeline>
+<codeline lineno="2"><highlight class="normal"></highlight></codeline>
+<codeline lineno="3"><highlight class="normal">set_target_properties(PhysicsBasedAnimationToolkit_Python</highlight></codeline>
+<codeline lineno="4"><highlight class="normal"><sp/><sp/><sp/><sp/>PROPERTIES</highlight></codeline>
+<codeline lineno="5"><highlight class="normal"><sp/><sp/><sp/><sp/>OUTPUT_NAME<sp/></highlight><highlight class="stringliteral">&quot;_pbat&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="6"><highlight class="normal"><sp/><sp/><sp/><sp/>EXPORT_NAME<sp/></highlight><highlight class="stringliteral">&quot;Python&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="7"><highlight class="normal"><sp/><sp/><sp/><sp/>FOLDER<sp/></highlight><highlight class="stringliteral">&quot;PhysicsBasedAnimationToolkit/bindings&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="8"><highlight class="normal">)</highlight></codeline>
+<codeline lineno="9"><highlight class="normal"></highlight></codeline>
+<codeline lineno="10"><highlight class="normal">target_sources(PhysicsBasedAnimationToolkit_Python</highlight></codeline>
+<codeline lineno="11"><highlight class="normal"><sp/><sp/><sp/><sp/>PUBLIC</highlight></codeline>
+<codeline lineno="12"><highlight class="normal"><sp/><sp/><sp/><sp/>FILE_SET<sp/>api</highlight></codeline>
+<codeline lineno="13"><highlight class="normal"><sp/><sp/><sp/><sp/>TYPE<sp/>HEADERS</highlight></codeline>
+<codeline lineno="14"><highlight class="normal"><sp/><sp/><sp/><sp/>BASE_DIRS<sp/>${CMAKE_CURRENT_LIST_DIR}</highlight></codeline>
+<codeline lineno="15"><highlight class="normal">)</highlight></codeline>
+<codeline lineno="16"><highlight class="normal"></highlight></codeline>
+<codeline lineno="17"><highlight class="normal">target_link_libraries(PhysicsBasedAnimationToolkit_Python</highlight></codeline>
+<codeline lineno="18"><highlight class="normal"><sp/><sp/><sp/><sp/>PRIVATE</highlight></codeline>
+<codeline lineno="19"><highlight class="normal"><sp/><sp/><sp/><sp/>PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit</highlight></codeline>
+<codeline lineno="20"><highlight class="normal"><sp/><sp/><sp/><sp/>pybind11::headers</highlight></codeline>
+<codeline lineno="21"><highlight class="normal">)</highlight></codeline>
+<codeline lineno="22"><highlight class="normal"></highlight></codeline>
+<codeline lineno="23"><highlight class="normal"></highlight><highlight class="keywordflow">if</highlight><highlight class="normal">(NOT<sp/>MSVC<sp/>AND<sp/>NOT<sp/>${CMAKE_BUILD_TYPE}<sp/>MATCHES<sp/>Debug|RelWithDebInfo)</highlight></codeline>
+<codeline lineno="24"><highlight class="normal"><sp/><sp/><sp/><sp/>#<sp/>Strip<sp/>unnecessary<sp/>sections<sp/>of<sp/>the<sp/>binary<sp/>on<sp/>Linux/macOS</highlight></codeline>
+<codeline lineno="25"><highlight class="normal"><sp/><sp/><sp/><sp/>pybind11_strip(PhysicsBasedAnimationToolkit_Python)</highlight></codeline>
+<codeline lineno="26"><highlight class="normal">endif()</highlight></codeline>
+<codeline lineno="27"><highlight class="normal"></highlight></codeline>
+<codeline lineno="28"><highlight class="normal">add_subdirectory(pypbat)</highlight></codeline>
+<codeline lineno="29"><highlight class="normal"></highlight></codeline>
+<codeline lineno="30"><highlight class="normal"></highlight><highlight class="preprocessor">#<sp/>Make<sp/>source<sp/>tree<sp/>appear<sp/>as<sp/>on<sp/>file<sp/>system<sp/>in<sp/>IDEs</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="31"><highlight class="normal">get_target_property(_pbat_python_sources<sp/>PhysicsBasedAnimationToolkit_Python<sp/>SOURCES)</highlight></codeline>
+<codeline lineno="32"><highlight class="normal">get_target_property(_pbat_python_headers<sp/>PhysicsBasedAnimationToolkit_Python<sp/>HEADER_SET_api)</highlight></codeline>
+<codeline lineno="33"><highlight class="normal">source_group(</highlight></codeline>
+<codeline lineno="34"><highlight class="normal"><sp/><sp/><sp/><sp/>TREE<sp/>${CMAKE_CURRENT_SOURCE_DIR}</highlight></codeline>
+<codeline lineno="35"><highlight class="normal"><sp/><sp/><sp/><sp/>PREFIX<sp/></highlight><highlight class="stringliteral">&quot;source&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="36"><highlight class="normal"><sp/><sp/><sp/><sp/>FILES<sp/>${_pbat_python_sources}</highlight></codeline>
+<codeline lineno="37"><highlight class="normal">)</highlight></codeline>
+<codeline lineno="38"><highlight class="normal">source_group(</highlight></codeline>
+<codeline lineno="39"><highlight class="normal"><sp/><sp/><sp/><sp/>TREE<sp/>${CMAKE_CURRENT_SOURCE_DIR}</highlight></codeline>
+<codeline lineno="40"><highlight class="normal"><sp/><sp/><sp/><sp/>PREFIX<sp/></highlight><highlight class="stringliteral">&quot;headers&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="41"><highlight class="normal"><sp/><sp/><sp/><sp/>FILES<sp/>${_pbat_python_headers}</highlight></codeline>
+<codeline lineno="42"><highlight class="normal">)</highlight></codeline>
+<codeline lineno="43"><highlight class="normal"></highlight></codeline>
+<codeline lineno="44"><highlight class="normal">#<sp/>Make<sp/>sure<sp/>Python<sp/>module<sp/>can<sp/>find<sp/>shared<sp/>library<sp/>dependencies</highlight></codeline>
+<codeline lineno="45"><highlight class="normal">#<sp/>in<sp/>install<sp/>tree<sp/>on<sp/>non-Windows<sp/>platforms.<sp/>For<sp/>simplicity,<sp/>we</highlight></codeline>
+<codeline lineno="46"><highlight class="normal">#<sp/>install<sp/>shared<sp/>dependencies<sp/>in<sp/>the<sp/>same<sp/>path<sp/>as<sp/>our<sp/>Python</highlight></codeline>
+<codeline lineno="47"><highlight class="normal">#<sp/>bindings<sp/>module,<sp/>although<sp/>we<sp/>could<sp/>install<sp/>them<sp/>to<sp/></highlight><highlight class="stringliteral">&quot;bin&quot;</highlight><highlight class="normal">.</highlight></codeline>
+<codeline lineno="48"><highlight class="normal">#<sp/>Some<sp/>paths<sp/>are<sp/>explicitly<sp/>ignored<sp/>(see<sp/>pyproject.toml).</highlight></codeline>
+<codeline lineno="49"><highlight class="normal">#<sp/>include(GNUInstallDirs)</highlight></codeline>
+<codeline lineno="50"><highlight class="normal">list(APPEND<sp/>_pbat_python_rpaths</highlight></codeline>
+<codeline lineno="51"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="stringliteral">&quot;$ORIGIN&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="52"><highlight class="normal">)</highlight></codeline>
+<codeline lineno="53"><highlight class="normal">set_target_properties(PhysicsBasedAnimationToolkit_Python</highlight></codeline>
+<codeline lineno="54"><highlight class="normal"><sp/><sp/><sp/><sp/>PROPERTIES</highlight></codeline>
+<codeline lineno="55"><highlight class="normal"><sp/><sp/><sp/><sp/>INSTALL_RPATH<sp/>${_pbat_python_rpaths}</highlight></codeline>
+<codeline lineno="56"><highlight class="normal">)</highlight></codeline>
+<codeline lineno="57"><highlight class="normal"></highlight></codeline>
+<codeline lineno="58"><highlight class="normal">#<sp/>Install<sp/>rules<sp/></highlight><highlight class="keywordflow">for</highlight><highlight class="normal"><sp/>scikit-build-core.</highlight></codeline>
+<codeline lineno="59"><highlight class="normal"></highlight></codeline>
+<codeline lineno="60"><highlight class="normal">#<sp/>Because<sp/>our<sp/>build<sp/>tree<sp/>puts<sp/>all<sp/>binaries<sp/>in<sp/>CMAKE_RUNTIME_OUTPUT_DIRECTORY_&lt;CONFIG&gt;,</highlight></codeline>
+<codeline lineno="61"><highlight class="normal">#<sp/>we<sp/>can<sp/>install<sp/>our<sp/>Python<sp/>bindings<sp/>by<sp/>directly<sp/>copying<sp/>the<sp/>binaries.</highlight></codeline>
+<codeline lineno="62"><highlight class="normal">install(</highlight></codeline>
+<codeline lineno="63"><highlight class="normal"><sp/><sp/><sp/><sp/>DIRECTORY<sp/></highlight><highlight class="stringliteral">&quot;$&lt;TARGET_FILE_DIR:PhysicsBasedAnimationToolkit_Python&gt;/&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="64"><highlight class="normal"><sp/><sp/><sp/><sp/>DESTINATION<sp/></highlight><highlight class="stringliteral">&quot;pbatoolkit&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="65"><highlight class="normal"><sp/><sp/><sp/><sp/>PATTERN<sp/></highlight><highlight class="stringliteral">&quot;*.exp&quot;</highlight><highlight class="normal"><sp/>EXCLUDE</highlight></codeline>
+<codeline lineno="66"><highlight class="normal"><sp/><sp/><sp/><sp/>PATTERN<sp/></highlight><highlight class="stringliteral">&quot;*.lib&quot;</highlight><highlight class="normal"><sp/>EXCLUDE</highlight></codeline>
+<codeline lineno="67"><highlight class="normal">)</highlight></codeline>
+<codeline lineno="68"><highlight class="normal"></highlight></codeline>
+<codeline lineno="69"><highlight class="normal"></highlight><highlight class="preprocessor">#<sp/>Bundle<sp/>external<sp/>(i.e.<sp/>not<sp/>built<sp/>by<sp/>this<sp/>project)<sp/>shared<sp/>library<sp/>dependencies.</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="70"><highlight class="normal">get_target_property(_pbat_link_libraries<sp/>PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit<sp/>LINK_LIBRARIES)</highlight></codeline>
+<codeline lineno="71"><highlight class="normal"></highlight></codeline>
+<codeline lineno="72"><highlight class="normal"></highlight><highlight class="keywordflow">foreach</highlight><highlight class="normal">(_pbat_link_library<sp/>IN<sp/>ITEMS<sp/>${_pbat_link_libraries})</highlight></codeline>
+<codeline lineno="73"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal">(TARGET<sp/>${_pbat_link_library})</highlight></codeline>
+<codeline lineno="74"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>get_target_property(_is_imported<sp/>${_pbat_link_library}<sp/>IMPORTED)</highlight></codeline>
+<codeline lineno="75"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>get_target_property(_type<sp/>${_pbat_link_library}<sp/>TYPE)</highlight></codeline>
+<codeline lineno="76"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>message(DEBUG<sp/></highlight><highlight class="stringliteral">&quot;PBAT[python]<sp/>--<sp/>LINK_LIBRARY=${_pbat_link_library}<sp/>has<sp/>TYPE=${_type}&quot;</highlight><highlight class="normal">)</highlight></codeline>
+<codeline lineno="77"><highlight class="normal"></highlight></codeline>
+<codeline lineno="78"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal">(${_is_imported}<sp/>AND(_type<sp/>STREQUAL<sp/></highlight><highlight class="stringliteral">&quot;SHARED_LIBRARY&quot;</highlight><highlight class="normal">))</highlight></codeline>
+<codeline lineno="79"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>message(VERBOSE<sp/></highlight><highlight class="stringliteral">&quot;PBAT[python]<sp/>--<sp/>SHARED_LIBRARY=${_pbat_link_library}<sp/>is<sp/>IMPORTED,<sp/>bundling<sp/>imported<sp/>artifacts&quot;</highlight><highlight class="normal">)</highlight></codeline>
+<codeline lineno="80"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>install(IMPORTED_RUNTIME_ARTIFACTS<sp/>${_pbat_link_library}<sp/>RUNTIME<sp/>DESTINATION<sp/></highlight><highlight class="stringliteral">&quot;pbatoolkit&quot;</highlight><highlight class="normal">)</highlight></codeline>
+<codeline lineno="81"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>endif()</highlight></codeline>
+<codeline lineno="82"><highlight class="normal"><sp/><sp/><sp/><sp/>endif()</highlight></codeline>
+<codeline lineno="83"><highlight class="normal">endforeach()</highlight></codeline>
+<codeline lineno="84"><highlight class="normal"></highlight></codeline>
+<codeline lineno="85"><highlight class="normal"></highlight><highlight class="preprocessor">#<sp/>Bundling<sp/>MKL<sp/>and<sp/>CUDA<sp/>dependencies<sp/>is<sp/>pretty<sp/>expensive,</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="86"><highlight class="normal"></highlight><highlight class="preprocessor">#<sp/>so<sp/>we<sp/>should<sp/>expect<sp/>users<sp/>to<sp/>have<sp/>installed<sp/>those<sp/>locally</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="87"><highlight class="normal"></highlight><highlight class="preprocessor">#<sp/>and<sp/>have<sp/>the<sp/>DLLs<sp/>in<sp/>system<sp/>search<sp/>paths.<sp/>Normally,<sp/>the</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="88"><highlight class="normal"></highlight><highlight class="preprocessor">#<sp/>installers<sp/>for<sp/>MKL<sp/>and<sp/>CUDA<sp/>should<sp/>do<sp/>that<sp/>automatically.</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="89"><highlight class="normal"></highlight></codeline>
+<codeline lineno="90"><highlight class="normal"></highlight><highlight class="preprocessor">#<sp/>if(PBAT_USE_INTEL_MKL)</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="91"><highlight class="normal"></highlight><highlight class="preprocessor">#<sp/>message(VERBOSE<sp/>&quot;PBAT[python]<sp/>--<sp/>Generating<sp/>install<sp/>rule<sp/>for<sp/>MKL<sp/>DLLs<sp/>${PBAT_INTERNAL_MKL_DLLS}&quot;)</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="92"><highlight class="normal"></highlight><highlight class="preprocessor">#<sp/>install(FILES<sp/>${PBAT_INTERNAL_MKL_DLLS}<sp/>DESTINATION<sp/>&quot;pbatoolkit&quot;)</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="93"><highlight class="normal"></highlight><highlight class="preprocessor">#<sp/>endif()</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="94"><highlight class="normal"></highlight></codeline>
+<codeline lineno="95"><highlight class="normal"></highlight><highlight class="preprocessor">#<sp/>if(PBAT_USE_CUDA)</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="96"><highlight class="normal"></highlight><highlight class="preprocessor">#<sp/>message(VERBOSE<sp/>&quot;PBAT[python]<sp/>--<sp/>Generating<sp/>install<sp/>rule<sp/>for<sp/>CUDA<sp/>DLLs<sp/>located<sp/>at<sp/>${CUDAToolkit_BIN_DIR}&quot;)</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="97"><highlight class="normal"></highlight><highlight class="preprocessor">#<sp/>install(</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="98"><highlight class="normal"></highlight><highlight class="preprocessor">#<sp/>DIRECTORY<sp/>&quot;${CUDAToolkit_BIN_DIR}/&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="99"><highlight class="normal"></highlight><highlight class="preprocessor">#<sp/>DESTINATION<sp/>&quot;pbatoolkit&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="100"><highlight class="normal"></highlight><highlight class="preprocessor">#<sp/>FILES_MATCHING</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="101"><highlight class="normal"></highlight><highlight class="preprocessor">#<sp/>PATTERN<sp/>&quot;*.dll&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="102"><highlight class="normal"></highlight><highlight class="preprocessor">#<sp/>PATTERN<sp/>&quot;*.so&quot;)</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="103"><highlight class="normal"></highlight><highlight class="preprocessor">#<sp/>endif()</highlight></codeline>
+    </programlisting>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/CMakeLists.txt"/>
+  </compounddef>
+</doxygen>

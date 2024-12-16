@@ -1,0 +1,19 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="dir_9f39819a78573ba6abcd88f117b2b69f" kind="dir">
+    <compoundname>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd</compoundname>
+    <innerfile refid="source_2pbat_2sim_2xpbd_2Data_8cpp">Data.cpp</innerfile>
+    <innerfile refid="source_2pbat_2sim_2xpbd_2Data_8h">Data.h</innerfile>
+    <innerfile refid="sim_2xpbd_2Enums_8h">Enums.h</innerfile>
+    <innerfile refid="source_2pbat_2sim_2xpbd_2Integrator_8cpp">Integrator.cpp</innerfile>
+    <innerfile refid="source_2pbat_2sim_2xpbd_2Integrator_8h">Integrator.h</innerfile>
+    <innerfile refid="xpbd_2Kernels_8cpp">Kernels.cpp</innerfile>
+    <innerfile refid="xpbd_2Kernels_8h">Kernels.h</innerfile>
+    <innerfile refid="source_2pbat_2sim_2xpbd_2Xpbd_8h">Xpbd.h</innerfile>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/"/>
+  </compounddef>
+</doxygen>

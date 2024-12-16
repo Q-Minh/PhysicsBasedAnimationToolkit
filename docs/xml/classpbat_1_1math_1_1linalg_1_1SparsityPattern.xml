@@ -1,0 +1,184 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="classpbat_1_1math_1_1linalg_1_1SparsityPattern" kind="class" language="C++" prot="public">
+    <compoundname>pbat::math::linalg::SparsityPattern</compoundname>
+      <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="classpbat_1_1math_1_1linalg_1_1SparsityPattern_1ad0194f4c8be0c63416dd0f79666a77ed" prot="private" static="no" mutable="no">
+        <type>std::vector&lt; Index &gt;</type>
+        <definition>std::vector&lt;Index&gt; pbat::math::linalg::SparsityPattern::ij</definition>
+        <argsstring></argsstring>
+        <name>ij</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Maps (triplet/duplicate) non-zero index k to its corresponding index into the unique non-zero list </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/SparsityPattern.h" line="50" column="17" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/SparsityPattern.h" bodystart="50" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpbat_1_1math_1_1linalg_1_1SparsityPattern_1ad50d1c7055b3cd83da237bfefc02c401" prot="private" static="no" mutable="no">
+        <type>CSCMatrix</type>
+        <definition>CSCMatrix pbat::math::linalg::SparsityPattern::A</definition>
+        <argsstring></argsstring>
+        <name>A</name>
+        <briefdescription>
+<para>Sparsity pattern + unique non-zeros. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/SparsityPattern.h" line="52" column="15" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/SparsityPattern.h" bodystart="52" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpbat_1_1math_1_1linalg_1_1SparsityPattern_1ac2c2c266bf392174314986b7d1cf1abc" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>PBAT_API</type>
+        <definition>PBAT_API pbat::math::linalg::SparsityPattern::SparsityPattern</definition>
+        <argsstring>()=default</argsstring>
+        <name>SparsityPattern</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/SparsityPattern.h" line="27" column="14"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1math_1_1linalg_1_1SparsityPattern_1a2715d3c62f45b8ad4cb25c78b5f7b784" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>common::CContiguousIndexRange</type>
+            <declname>TRowIndexRange</declname>
+            <defname>TRowIndexRange</defname>
+          </param>
+          <param>
+            <type>common::CContiguousIndexRange</type>
+            <declname>TColIndexRange</declname>
+            <defname>TColIndexRange</defname>
+          </param>
+        </templateparamlist>
+        <type></type>
+        <definition>pbat::math::linalg::SparsityPattern::SparsityPattern</definition>
+        <argsstring>(Index nRows, Index nCols, TRowIndexRange &amp;&amp;rowIndices, TColIndexRange &amp;&amp;colIndices)</argsstring>
+        <name>SparsityPattern</name>
+        <param>
+          <type>Index</type>
+          <declname>nRows</declname>
+        </param>
+        <param>
+          <type>Index</type>
+          <declname>nCols</declname>
+        </param>
+        <param>
+          <type>TRowIndexRange &amp;&amp;</type>
+          <declname>rowIndices</declname>
+        </param>
+        <param>
+          <type>TColIndexRange &amp;&amp;</type>
+          <declname>colIndices</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/SparsityPattern.h" line="32" column="5" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/SparsityPattern.h" bodystart="58" bodyend="69"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1math_1_1linalg_1_1SparsityPattern_1af95f0502076bab89cc477587d9e095f2" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>common::CContiguousIndexRange</type>
+            <declname>TRowIndexRange</declname>
+            <defname>TRowIndexRange</defname>
+          </param>
+          <param>
+            <type>common::CContiguousIndexRange</type>
+            <declname>TColIndexRange</declname>
+            <defname>TColIndexRange</defname>
+          </param>
+        </templateparamlist>
+        <type>void</type>
+        <definition>void pbat::math::linalg::SparsityPattern::Compute</definition>
+        <argsstring>(Index nRows, Index nCols, TRowIndexRange &amp;&amp;rowIndices, TColIndexRange &amp;&amp;colIndices)</argsstring>
+        <name>Compute</name>
+        <param>
+          <type>Index</type>
+          <declname>nRows</declname>
+        </param>
+        <param>
+          <type>Index</type>
+          <declname>nCols</declname>
+        </param>
+        <param>
+          <type>TRowIndexRange &amp;&amp;</type>
+          <declname>rowIndices</declname>
+        </param>
+        <param>
+          <type>TColIndexRange &amp;&amp;</type>
+          <declname>colIndices</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/SparsityPattern.h" line="42" column="5" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/SparsityPattern.h" bodystart="74" bodyend="154"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1math_1_1linalg_1_1SparsityPattern_1ad3bcc8d86973f10012af61aeb9693cb8" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>common::CArithmeticRange</type>
+            <declname>TNonZeroRange</declname>
+            <defname>TNonZeroRange</defname>
+          </param>
+        </templateparamlist>
+        <type>CSCMatrix</type>
+        <definition>CSCMatrix pbat::math::linalg::SparsityPattern::ToMatrix</definition>
+        <argsstring>(TNonZeroRange &amp;&amp;nonZeros) const</argsstring>
+        <name>ToMatrix</name>
+        <param>
+          <type>TNonZeroRange &amp;&amp;</type>
+          <declname>nonZeros</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/SparsityPattern.h" line="45" column="15" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/SparsityPattern.h" bodystart="157" bodyend="177"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1math_1_1linalg_1_1SparsityPattern_1a2e4eb918e1a01f80dccf6938821b43a5" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>PBAT_API bool</type>
+        <definition>bool pbat::math::linalg::SparsityPattern::IsEmpty</definition>
+        <argsstring>() const</argsstring>
+        <name>IsEmpty</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/SparsityPattern.h" line="47" column="19" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/SparsityPattern.cpp" bodystart="7" bodyend="10"/>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/SparsityPattern.h" line="25" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/SparsityPattern.h" bodystart="24" bodyend="53"/>
+    <listofallmembers>
+      <member refid="classpbat_1_1math_1_1linalg_1_1SparsityPattern_1ad50d1c7055b3cd83da237bfefc02c401" prot="private" virt="non-virtual"><scope>pbat::math::linalg::SparsityPattern</scope><name>A</name></member>
+      <member refid="classpbat_1_1math_1_1linalg_1_1SparsityPattern_1af95f0502076bab89cc477587d9e095f2" prot="public" virt="non-virtual"><scope>pbat::math::linalg::SparsityPattern</scope><name>Compute</name></member>
+      <member refid="classpbat_1_1math_1_1linalg_1_1SparsityPattern_1ad0194f4c8be0c63416dd0f79666a77ed" prot="private" virt="non-virtual"><scope>pbat::math::linalg::SparsityPattern</scope><name>ij</name></member>
+      <member refid="classpbat_1_1math_1_1linalg_1_1SparsityPattern_1a2e4eb918e1a01f80dccf6938821b43a5" prot="public" virt="non-virtual"><scope>pbat::math::linalg::SparsityPattern</scope><name>IsEmpty</name></member>
+      <member refid="classpbat_1_1math_1_1linalg_1_1SparsityPattern_1ac2c2c266bf392174314986b7d1cf1abc" prot="public" virt="non-virtual"><scope>pbat::math::linalg::SparsityPattern</scope><name>SparsityPattern</name></member>
+      <member refid="classpbat_1_1math_1_1linalg_1_1SparsityPattern_1a2715d3c62f45b8ad4cb25c78b5f7b784" prot="public" virt="non-virtual"><scope>pbat::math::linalg::SparsityPattern</scope><name>SparsityPattern</name></member>
+      <member refid="classpbat_1_1math_1_1linalg_1_1SparsityPattern_1ad3bcc8d86973f10012af61aeb9693cb8" prot="public" virt="non-virtual"><scope>pbat::math::linalg::SparsityPattern</scope><name>ToMatrix</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

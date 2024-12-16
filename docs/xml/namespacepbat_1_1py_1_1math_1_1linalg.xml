@@ -1,0 +1,117 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="namespacepbat_1_1py_1_1math_1_1linalg" kind="namespace" language="C++">
+    <compoundname>pbat::py::math::linalg</compoundname>
+      <sectiondef kind="func">
+      <memberdef kind="function" id="bindings_2pypbat_2math_2linalg_2Cholmod_8cpp_1a9ac6b6fe23ab274fc0d1ae534d8cebb8" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void pbat::py::math::linalg::BindCholmod</definition>
+        <argsstring>([[maybe_unused]] pybind11::module &amp;m)</argsstring>
+        <name>BindCholmod</name>
+        <param>
+          <attributes>[[maybe_unused]</attributes>
+          <type>] pybind11::module &amp;</type>
+          <declname>m</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/math/linalg/Cholmod.cpp" line="16" column="6" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/math/linalg/Cholmod.cpp" bodystart="16" bodyend="108"/>
+      </memberdef>
+      <memberdef kind="function" id="bindings_2pypbat_2math_2linalg_2Cholmod_8h_1a8c72caace6a7498537f4085eda0e1c66" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void pbat::py::math::linalg::BindCholmod</definition>
+        <argsstring>(pybind11::module &amp;m)</argsstring>
+        <name>BindCholmod</name>
+        <param>
+          <type>pybind11::module &amp;</type>
+          <declname>m</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/math/linalg/Cholmod.h" line="11" column="6" declfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/math/linalg/Cholmod.h" declline="11" declcolumn="6"/>
+      </memberdef>
+      <memberdef kind="function" id="LinAlg_8cpp_1ac0f2a257b43a422d1c7884bc53bee43b" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void pbat::py::math::linalg::Bind</definition>
+        <argsstring>(pybind11::module &amp;m)</argsstring>
+        <name>Bind</name>
+        <param>
+          <type>pybind11::module &amp;</type>
+          <declname>m</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/math/linalg/LinAlg.cpp" line="14" column="6" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/math/linalg/LinAlg.cpp" bodystart="14" bodyend="20" declfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/math/linalg/LinAlg.h" declline="11" declcolumn="6"/>
+      </memberdef>
+      <memberdef kind="function" id="Pardiso_8cpp_1ae03c90353686dc755350462374b5f11d" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void pbat::py::math::linalg::BindPardiso</definition>
+        <argsstring>([[maybe_unused]] pybind11::module &amp;m)</argsstring>
+        <name>BindPardiso</name>
+        <param>
+          <attributes>[[maybe_unused]</attributes>
+          <type>] pybind11::module &amp;</type>
+          <declname>m</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/math/linalg/Pardiso.cpp" line="23" column="6" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/math/linalg/Pardiso.cpp" bodystart="23" bodyend="123"/>
+      </memberdef>
+      <memberdef kind="function" id="Pardiso_8h_1a3b6c51e86080585703e0e6a90cc50382" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void pbat::py::math::linalg::BindPardiso</definition>
+        <argsstring>(pybind11::module &amp;m)</argsstring>
+        <name>BindPardiso</name>
+        <param>
+          <type>pybind11::module &amp;</type>
+          <declname>m</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/math/linalg/Pardiso.h" line="11" column="6" declfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/math/linalg/Pardiso.h" declline="11" declcolumn="6"/>
+      </memberdef>
+      <memberdef kind="function" id="SimplicialLDLT_8cpp_1aaf9226e0df8354894577e9085b1333b0" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void pbat::py::math::linalg::BindSimplicialLDLT</definition>
+        <argsstring>(pybind11::module &amp;m)</argsstring>
+        <name>BindSimplicialLDLT</name>
+        <param>
+          <type>pybind11::module &amp;</type>
+          <declname>m</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/math/linalg/SimplicialLDLT.cpp" line="17" column="6" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/math/linalg/SimplicialLDLT.cpp" bodystart="17" bodyend="143" declfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/math/linalg/SimplicialLDLT.h" declline="11" declcolumn="6"/>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/math/linalg/Cholmod.cpp" line="14" column="16"/>
+  </compounddef>
+</doxygen>

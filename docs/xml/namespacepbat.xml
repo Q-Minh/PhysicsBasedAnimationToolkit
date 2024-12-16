@@ -1,0 +1,311 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="namespacepbat" kind="namespace" language="C++">
+    <compoundname>pbat</compoundname>
+    <innernamespace refid="namespacepbat_1_1common">pbat::common</innernamespace>
+    <innernamespace refid="namespacepbat_1_1fem">pbat::fem</innernamespace>
+    <innernamespace refid="namespacepbat_1_1geometry">pbat::geometry</innernamespace>
+    <innernamespace refid="namespacepbat_1_1gpu">pbat::gpu</innernamespace>
+    <innernamespace refid="namespacepbat_1_1graph">pbat::graph</innernamespace>
+    <innernamespace refid="namespacepbat_1_1math">pbat::math</innernamespace>
+    <innernamespace refid="namespacepbat_1_1physics">pbat::physics</innernamespace>
+    <innernamespace refid="namespacepbat_1_1profiling">pbat::profiling</innernamespace>
+    <innernamespace refid="namespacepbat_1_1py">pbat::py</innernamespace>
+    <innernamespace refid="namespacepbat_1_1sim">pbat::sim</innernamespace>
+    <innernamespace refid="namespacepbat_1_1test">pbat::test</innernamespace>
+      <sectiondef kind="typedef">
+      <memberdef kind="typedef" id="Aliases_8h_1a8418ba1f561bffadff59aa8fdb9365be" prot="public" static="no">
+        <type>std::ptrdiff_t</type>
+        <definition>using pbat::Index = typedef std::ptrdiff_t</definition>
+        <argsstring></argsstring>
+        <name>Index</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/Aliases.h" line="10" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/Aliases.h" bodystart="10" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="Aliases_8h_1a36034e6ab008797c994e4d489df05c3c" prot="public" static="no">
+        <type>double</type>
+        <definition>using pbat::Scalar = typedef double</definition>
+        <argsstring></argsstring>
+        <name>Scalar</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/Aliases.h" line="11" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/Aliases.h" bodystart="11" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="Aliases_8h_1adcb4103bb0e36111d14162f3fdbb88a9" prot="public" static="no">
+        <templateparamlist>
+          <param>
+            <type>Index</type>
+            <declname>N</declname>
+            <defname>N</defname>
+          </param>
+        </templateparamlist>
+        <type>Eigen::Vector&lt; Scalar, N &gt;</type>
+        <definition>using pbat::Vector = typedef Eigen::Vector&lt;Scalar, N&gt;</definition>
+        <argsstring></argsstring>
+        <name>Vector</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/Aliases.h" line="14" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/Aliases.h" bodystart="14" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="Aliases_8h_1a71649f81f5c18af68a4277f55e5003ef" prot="public" static="no">
+        <templateparamlist>
+          <param>
+            <type>Index</type>
+            <declname>Rows</declname>
+            <defname>Rows</defname>
+          </param>
+          <param>
+            <type>Index</type>
+            <declname>Cols</declname>
+            <defname>Cols</defname>
+          </param>
+        </templateparamlist>
+        <type>Eigen::Matrix&lt; Scalar, Rows, Cols &gt;</type>
+        <definition>using pbat::Matrix = typedef Eigen::Matrix&lt;Scalar, Rows, Cols&gt;</definition>
+        <argsstring></argsstring>
+        <name>Matrix</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/Aliases.h" line="16" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/Aliases.h" bodystart="16" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="Aliases_8h_1a6edd7416b857e2c2175e2bdb6064bad4" prot="public" static="no">
+        <type>Eigen::Vector&lt; Scalar, Eigen::Dynamic &gt;</type>
+        <definition>using pbat::VectorX = typedef Eigen::Vector&lt;Scalar, Eigen::Dynamic&gt;</definition>
+        <argsstring></argsstring>
+        <name>VectorX</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/Aliases.h" line="18" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/Aliases.h" bodystart="18" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="Aliases_8h_1a966d951f069529ffeab5f25f40f25a89" prot="public" static="no">
+        <type>Eigen::Matrix&lt; Scalar, Eigen::Dynamic, Eigen::Dynamic &gt;</type>
+        <definition>using pbat::MatrixX = typedef Eigen::Matrix&lt;Scalar, Eigen::Dynamic, Eigen::Dynamic&gt;</definition>
+        <argsstring></argsstring>
+        <name>MatrixX</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/Aliases.h" line="19" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/Aliases.h" bodystart="19" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="Aliases_8h_1ad27528bf745012fefbeffe4f73b1808c" prot="public" static="no">
+        <templateparamlist>
+          <param>
+            <type>Index</type>
+            <declname>N</declname>
+            <defname>N</defname>
+          </param>
+        </templateparamlist>
+        <type>Eigen::Vector&lt; Index, N &gt;</type>
+        <definition>using pbat::IndexVector = typedef Eigen::Vector&lt;Index, N&gt;</definition>
+        <argsstring></argsstring>
+        <name>IndexVector</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/Aliases.h" line="22" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/Aliases.h" bodystart="22" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="Aliases_8h_1a57070f326082a0405c91421e1dcde052" prot="public" static="no">
+        <templateparamlist>
+          <param>
+            <type>Index</type>
+            <declname>Rows</declname>
+            <defname>Rows</defname>
+          </param>
+          <param>
+            <type>Index</type>
+            <declname>Cols</declname>
+            <defname>Cols</defname>
+          </param>
+        </templateparamlist>
+        <type>Eigen::Matrix&lt; Index, Rows, Cols &gt;</type>
+        <definition>using pbat::IndexMatrix = typedef Eigen::Matrix&lt;Index, Rows, Cols&gt;</definition>
+        <argsstring></argsstring>
+        <name>IndexMatrix</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/Aliases.h" line="25" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/Aliases.h" bodystart="25" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="Aliases_8h_1a70f7ac526562dfbf001bc9188092c3eb" prot="public" static="no">
+        <type>Eigen::Vector&lt; Index, Eigen::Dynamic &gt;</type>
+        <definition>using pbat::IndexVectorX = typedef Eigen::Vector&lt;Index, Eigen::Dynamic&gt;</definition>
+        <argsstring></argsstring>
+        <name>IndexVectorX</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/Aliases.h" line="27" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/Aliases.h" bodystart="27" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="Aliases_8h_1ab368ad5291143cf542a00bf41e85c8bf" prot="public" static="no">
+        <type>Eigen::Matrix&lt; Index, Eigen::Dynamic, Eigen::Dynamic &gt;</type>
+        <definition>using pbat::IndexMatrixX = typedef Eigen::Matrix&lt;Index, Eigen::Dynamic, Eigen::Dynamic&gt;</definition>
+        <argsstring></argsstring>
+        <name>IndexMatrixX</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/Aliases.h" line="28" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/Aliases.h" bodystart="28" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="Aliases_8h_1a33ee7cecb2963719152d183dd8dd7993" prot="public" static="no">
+        <type>Eigen::SparseMatrix&lt; Scalar, Eigen::ColMajor &gt;</type>
+        <definition>using pbat::CSCMatrix = typedef Eigen::SparseMatrix&lt;Scalar, Eigen::ColMajor&gt;</definition>
+        <argsstring></argsstring>
+        <name>CSCMatrix</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/Aliases.h" line="30" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/Aliases.h" bodystart="30" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="Aliases_8h_1a40c5eb78fb3a520512ee4de823a0b4a6" prot="public" static="no">
+        <type>Eigen::SparseMatrix&lt; Scalar, Eigen::RowMajor &gt;</type>
+        <definition>using pbat::CSRMatrix = typedef Eigen::SparseMatrix&lt;Scalar, Eigen::RowMajor&gt;</definition>
+        <argsstring></argsstring>
+        <name>CSRMatrix</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/Aliases.h" line="31" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/Aliases.h" bodystart="31" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="gpu_2Aliases_8h_1a44b32acfe69c4e25256433da571ba747" prot="public" static="no">
+        <type>float</type>
+        <definition>using pbat::GpuScalar = typedef float</definition>
+        <argsstring></argsstring>
+        <name>GpuScalar</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/Aliases.h" line="8" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/Aliases.h" bodystart="8" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="gpu_2Aliases_8h_1ab0149f4226fca82a2ae1b2d107e0fa15" prot="public" static="no">
+        <type>int</type>
+        <definition>using pbat::GpuIndex = typedef int</definition>
+        <argsstring></argsstring>
+        <name>GpuIndex</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/Aliases.h" line="9" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/Aliases.h" bodystart="9" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="gpu_2Aliases_8h_1a04d3d2b6123bcdab22eb3fe2e45b23f5" prot="public" static="no">
+        <type>Eigen::Matrix&lt; GpuScalar, Eigen::Dynamic, Eigen::Dynamic &gt;</type>
+        <definition>using pbat::GpuMatrixX = typedef Eigen::Matrix&lt;GpuScalar, Eigen::Dynamic, Eigen::Dynamic&gt;</definition>
+        <argsstring></argsstring>
+        <name>GpuMatrixX</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/Aliases.h" line="11" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/Aliases.h" bodystart="11" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="gpu_2Aliases_8h_1a4b54c580467133410857b598e0c13f7b" prot="public" static="no">
+        <type>Eigen::Matrix&lt; GpuIndex, Eigen::Dynamic, Eigen::Dynamic &gt;</type>
+        <definition>using pbat::GpuIndexMatrixX = typedef Eigen::Matrix&lt;GpuIndex, Eigen::Dynamic, Eigen::Dynamic&gt;</definition>
+        <argsstring></argsstring>
+        <name>GpuIndexMatrixX</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/Aliases.h" line="12" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/Aliases.h" bodystart="12" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="gpu_2Aliases_8h_1a809b53046635483fc714712327d243f0" prot="public" static="no">
+        <type>Eigen::Vector&lt; GpuScalar, Eigen::Dynamic &gt;</type>
+        <definition>using pbat::GpuVectorX = typedef Eigen::Vector&lt;GpuScalar, Eigen::Dynamic&gt;</definition>
+        <argsstring></argsstring>
+        <name>GpuVectorX</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/Aliases.h" line="14" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/Aliases.h" bodystart="14" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="gpu_2Aliases_8h_1a2b43b777b2e9556af60d7cf113a29ed2" prot="public" static="no">
+        <type>Eigen::Vector&lt; GpuIndex, Eigen::Dynamic &gt;</type>
+        <definition>using pbat::GpuIndexVectorX = typedef Eigen::Vector&lt;GpuIndex, Eigen::Dynamic&gt;</definition>
+        <argsstring></argsstring>
+        <name>GpuIndexVectorX</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/Aliases.h" line="15" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/Aliases.h" bodystart="15" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="func">
+      <memberdef kind="function" id="DoctestLoadDLL_8cpp_1acf21d6a477ea6252a257d6d7a9216baa" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>PBAT_API void pbat::ForceLoadDLL</definition>
+        <argsstring>()</argsstring>
+        <name>ForceLoadDLL</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/DoctestLoadDLL.cpp" line="7" column="6" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/DoctestLoadDLL.cpp" bodystart="7" bodyend="10" declfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/DoctestLoadDLL.h" declline="8" declcolumn="15"/>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/Aliases.h" line="8" column="14"/>
+  </compounddef>
+</doxygen>

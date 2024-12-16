@@ -1,0 +1,281 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="classpbat_1_1math_1_1linalg_1_1mini_1_1Diagonal" kind="class" language="C++" prot="public">
+    <compoundname>pbat::math::linalg::mini::Diagonal</compoundname>
+    <templateparamlist>
+      <param>
+        <type>class TMatrix</type>
+      </param>
+    </templateparamlist>
+      <sectiondef kind="public-type">
+      <memberdef kind="typedef" id="classpbat_1_1math_1_1linalg_1_1mini_1_1Diagonal_1a43b479040b99dbeac8d4b593ce2fd719" prot="public" static="no">
+        <type>TMatrix</type>
+        <definition>using pbat::math::linalg::mini::Diagonal&lt; TMatrix &gt;::NestedType =  TMatrix</definition>
+        <argsstring></argsstring>
+        <name>NestedType</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Reductions.h" line="50" column="5" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Reductions.h" bodystart="50" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="classpbat_1_1math_1_1linalg_1_1mini_1_1Diagonal_1a764f68c58a5ecdc46e4bf86ae732b690" prot="public" static="no">
+        <type>typename NestedType::ScalarType</type>
+        <definition>using pbat::math::linalg::mini::Diagonal&lt; TMatrix &gt;::ScalarType =  typename NestedType::ScalarType</definition>
+        <argsstring></argsstring>
+        <name>ScalarType</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Reductions.h" line="51" column="5" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Reductions.h" bodystart="51" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="classpbat_1_1math_1_1linalg_1_1mini_1_1Diagonal_1a47450810700926b1469a9ba1f6d15b69" prot="public" static="no">
+        <type><ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1Diagonal" kindref="compound">Diagonal</ref>&lt; NestedType &gt;</type>
+        <definition>using pbat::math::linalg::mini::Diagonal&lt; TMatrix &gt;::SelfType =  Diagonal&lt;NestedType&gt;</definition>
+        <argsstring></argsstring>
+        <name>SelfType</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Reductions.h" line="52" column="5" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Reductions.h" bodystart="52" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="public-static-attrib">
+      <memberdef kind="variable" id="classpbat_1_1math_1_1linalg_1_1mini_1_1Diagonal_1a538be7490648e31b39b91453a5b313ef" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>constexpr auto</type>
+        <definition>constexpr auto pbat::math::linalg::mini::Diagonal&lt; TMatrix &gt;::kRows</definition>
+        <argsstring></argsstring>
+        <name>kRows</name>
+        <initializer>= NestedType::kRows</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Reductions.h" line="54" column="27" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Reductions.h" bodystart="54" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpbat_1_1math_1_1linalg_1_1mini_1_1Diagonal_1a076adcfeecd4265d3ed543fd69d4ee24" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>constexpr auto</type>
+        <definition>constexpr auto pbat::math::linalg::mini::Diagonal&lt; TMatrix &gt;::kCols</definition>
+        <argsstring></argsstring>
+        <name>kCols</name>
+        <initializer>= 1</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Reductions.h" line="55" column="27" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Reductions.h" bodystart="55" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpbat_1_1math_1_1linalg_1_1mini_1_1Diagonal_1a23cc2123b3df078c30ea535ea403c831" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>constexpr bool</type>
+        <definition>constexpr bool pbat::math::linalg::mini::Diagonal&lt; TMatrix &gt;::bRowMajor</definition>
+        <argsstring></argsstring>
+        <name>bRowMajor</name>
+        <initializer>= false</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Reductions.h" line="56" column="27" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Reductions.h" bodystart="56" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="classpbat_1_1math_1_1linalg_1_1mini_1_1Diagonal_1a208f8a0970696c9285f591641b8469de" prot="private" static="no" mutable="no">
+        <type>NestedType &amp;</type>
+        <definition>NestedType&amp; pbat::math::linalg::mini::Diagonal&lt; TMatrix &gt;::mA</definition>
+        <argsstring></argsstring>
+        <name>mA</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Reductions.h" line="77" column="16" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Reductions.h" bodystart="77" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpbat_1_1math_1_1linalg_1_1mini_1_1Diagonal_1aab276713aa1f3dcb088c8b6744a4d933" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>PBAT_HOST_DEVICE</type>
+        <definition>PBAT_HOST_DEVICE pbat::math::linalg::mini::Diagonal&lt; TMatrix &gt;::Diagonal</definition>
+        <argsstring>(NestedType &amp;A)</argsstring>
+        <name>Diagonal</name>
+        <param>
+          <type>NestedType &amp;</type>
+          <declname>A</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Reductions.h" line="58" column="22" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Reductions.h" bodystart="58" bodyend="58"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1math_1_1linalg_1_1mini_1_1Diagonal_1a39bf2c2dc6da3553dad8cd6d3bbef057" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>PBAT_HOST_DEVICE ScalarType</type>
+        <definition>PBAT_HOST_DEVICE ScalarType pbat::math::linalg::mini::Diagonal&lt; TMatrix &gt;::operator()</definition>
+        <argsstring>(auto i, [[maybe_unused]] auto j) const</argsstring>
+        <name>operator()</name>
+        <param>
+          <type>auto</type>
+          <declname>i</declname>
+        </param>
+        <param>
+          <attributes>[[maybe_unused]</attributes>
+          <type>] auto</type>
+          <declname>j</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Reductions.h" line="60" column="33" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Reductions.h" bodystart="60" bodyend="63"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1math_1_1linalg_1_1mini_1_1Diagonal_1adb9e2223ecef0cb4ca8baec82d2cd6fa" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>PBAT_HOST_DEVICE ScalarType &amp;</type>
+        <definition>PBAT_HOST_DEVICE ScalarType&amp; pbat::math::linalg::mini::Diagonal&lt; TMatrix &gt;::operator()</definition>
+        <argsstring>(auto i, [[maybe_unused]] auto j)</argsstring>
+        <name>operator()</name>
+        <param>
+          <type>auto</type>
+          <declname>i</declname>
+        </param>
+        <param>
+          <attributes>[[maybe_unused]</attributes>
+          <type>] auto</type>
+          <declname>j</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Reductions.h" line="64" column="33" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Reductions.h" bodystart="64" bodyend="64"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1math_1_1linalg_1_1mini_1_1Diagonal_1aa63bce9387627da211fe962d3f2ee8e1" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>PBAT_HOST_DEVICE ScalarType</type>
+        <definition>PBAT_HOST_DEVICE ScalarType pbat::math::linalg::mini::Diagonal&lt; TMatrix &gt;::operator()</definition>
+        <argsstring>(auto i) const</argsstring>
+        <name>operator()</name>
+        <param>
+          <type>auto</type>
+          <declname>i</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Reductions.h" line="67" column="33" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Reductions.h" bodystart="67" bodyend="67"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1math_1_1linalg_1_1mini_1_1Diagonal_1a3b66054135706c88bb76c1f98c04494a" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>PBAT_HOST_DEVICE ScalarType</type>
+        <definition>PBAT_HOST_DEVICE ScalarType pbat::math::linalg::mini::Diagonal&lt; TMatrix &gt;::operator[]</definition>
+        <argsstring>(auto i) const</argsstring>
+        <name>operator[]</name>
+        <param>
+          <type>auto</type>
+          <declname>i</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Reductions.h" line="68" column="33" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Reductions.h" bodystart="68" bodyend="68"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1math_1_1linalg_1_1mini_1_1Diagonal_1a6c0f9aca0976dcea93e193b93e3be160" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>PBAT_HOST_DEVICE ScalarType &amp;</type>
+        <definition>PBAT_HOST_DEVICE ScalarType&amp; pbat::math::linalg::mini::Diagonal&lt; TMatrix &gt;::operator()</definition>
+        <argsstring>(auto i)</argsstring>
+        <name>operator()</name>
+        <param>
+          <type>auto</type>
+          <declname>i</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Reductions.h" line="69" column="33" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Reductions.h" bodystart="69" bodyend="69"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1math_1_1linalg_1_1mini_1_1Diagonal_1aa34fb9b2f8a7ad439679b3bc10ceea28" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>PBAT_HOST_DEVICE ScalarType &amp;</type>
+        <definition>PBAT_HOST_DEVICE ScalarType&amp; pbat::math::linalg::mini::Diagonal&lt; TMatrix &gt;::operator[]</definition>
+        <argsstring>(auto i)</argsstring>
+        <name>operator[]</name>
+        <param>
+          <type>auto</type>
+          <declname>i</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Reductions.h" line="70" column="33" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Reductions.h" bodystart="70" bodyend="70"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1math_1_1linalg_1_1mini_1_1Diagonal_1ac6c7c3f10fce1b7a6d9e0b6e1581c7e5" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>PBAT_HOST_DEVICE void</type>
+        <definition>PBAT_HOST_DEVICE void pbat::math::linalg::mini::Diagonal&lt; TMatrix &gt;::SetConstant</definition>
+        <argsstring>(auto k)</argsstring>
+        <name>SetConstant</name>
+        <param>
+          <type>auto</type>
+          <declname>k</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Reductions.h" line="72" column="27" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Reductions.h" bodystart="72" bodyend="72"/>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Reductions.h" line="48" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Reductions.h" bodystart="47" bodyend="78"/>
+    <listofallmembers>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1Diagonal_1a23cc2123b3df078c30ea535ea403c831" prot="public" virt="non-virtual"><scope>pbat::math::linalg::mini::Diagonal</scope><name>bRowMajor</name></member>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1Diagonal_1aab276713aa1f3dcb088c8b6744a4d933" prot="public" virt="non-virtual"><scope>pbat::math::linalg::mini::Diagonal</scope><name>Diagonal</name></member>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1Diagonal_1a076adcfeecd4265d3ed543fd69d4ee24" prot="public" virt="non-virtual"><scope>pbat::math::linalg::mini::Diagonal</scope><name>kCols</name></member>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1Diagonal_1a538be7490648e31b39b91453a5b313ef" prot="public" virt="non-virtual"><scope>pbat::math::linalg::mini::Diagonal</scope><name>kRows</name></member>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1Diagonal_1a208f8a0970696c9285f591641b8469de" prot="private" virt="non-virtual"><scope>pbat::math::linalg::mini::Diagonal</scope><name>mA</name></member>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1Diagonal_1a43b479040b99dbeac8d4b593ce2fd719" prot="public" virt="non-virtual"><scope>pbat::math::linalg::mini::Diagonal</scope><name>NestedType</name></member>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1Diagonal_1a39bf2c2dc6da3553dad8cd6d3bbef057" prot="public" virt="non-virtual"><scope>pbat::math::linalg::mini::Diagonal</scope><name>operator()</name></member>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1Diagonal_1adb9e2223ecef0cb4ca8baec82d2cd6fa" prot="public" virt="non-virtual"><scope>pbat::math::linalg::mini::Diagonal</scope><name>operator()</name></member>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1Diagonal_1aa63bce9387627da211fe962d3f2ee8e1" prot="public" virt="non-virtual"><scope>pbat::math::linalg::mini::Diagonal</scope><name>operator()</name></member>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1Diagonal_1a6c0f9aca0976dcea93e193b93e3be160" prot="public" virt="non-virtual"><scope>pbat::math::linalg::mini::Diagonal</scope><name>operator()</name></member>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1Diagonal_1a3b66054135706c88bb76c1f98c04494a" prot="public" virt="non-virtual"><scope>pbat::math::linalg::mini::Diagonal</scope><name>operator[]</name></member>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1Diagonal_1aa34fb9b2f8a7ad439679b3bc10ceea28" prot="public" virt="non-virtual"><scope>pbat::math::linalg::mini::Diagonal</scope><name>operator[]</name></member>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1Diagonal_1a764f68c58a5ecdc46e4bf86ae732b690" prot="public" virt="non-virtual"><scope>pbat::math::linalg::mini::Diagonal</scope><name>ScalarType</name></member>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1Diagonal_1a47450810700926b1469a9ba1f6d15b69" prot="public" virt="non-virtual"><scope>pbat::math::linalg::mini::Diagonal</scope><name>SelfType</name></member>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1Diagonal_1ac6c7c3f10fce1b7a6d9e0b6e1581c7e5" prot="public" virt="non-virtual"><scope>pbat::math::linalg::mini::Diagonal</scope><name>SetConstant</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

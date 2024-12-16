@@ -1,0 +1,13 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="namespaceEigen_1_1internal" kind="namespace" language="C++">
+    <compoundname>Eigen::internal</compoundname>
+    <innerclass refid="structEigen_1_1internal_1_1generic__product__impl_3_01Lhs_00_01Rhs_00_01SparseShape_00_01DenseShape_00_01ProductType_01_4" prot="public">Eigen::internal::generic_product_impl&lt; Lhs, Rhs, SparseShape, DenseShape, ProductType &gt;</innerclass>
+    <innerclass refid="structEigen_1_1internal_1_1traits_3_01pbat_1_1math_1_1LinearOperator_3_01TLinearOperators_8_8_8_01_4_01_4" prot="public">Eigen::internal::traits&lt; pbat::math::LinearOperator&lt; TLinearOperators... &gt; &gt;</innerclass>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/LinearOperator.h" line="46" column="18"/>
+  </compounddef>
+</doxygen>

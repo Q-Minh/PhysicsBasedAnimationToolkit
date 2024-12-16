@@ -1,0 +1,1785 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="namespacepbat_1_1fem" kind="namespace" language="C++">
+    <compoundname>pbat::fem</compoundname>
+    <innerclass refid="structpbat_1_1fem_1_1DivergenceVector" prot="public">pbat::fem::DivergenceVector</innerclass>
+    <innerclass refid="structpbat_1_1fem_1_1Gradient" prot="public">pbat::fem::Gradient</innerclass>
+    <innerclass refid="structpbat_1_1fem_1_1Hexahedron" prot="public">pbat::fem::Hexahedron</innerclass>
+    <innerclass refid="structpbat_1_1fem_1_1Hexahedron_3_011_01_4" prot="public">pbat::fem::Hexahedron&lt; 1 &gt;</innerclass>
+    <innerclass refid="structpbat_1_1fem_1_1Hexahedron_3_012_01_4" prot="public">pbat::fem::Hexahedron&lt; 2 &gt;</innerclass>
+    <innerclass refid="structpbat_1_1fem_1_1Hexahedron_3_013_01_4" prot="public">pbat::fem::Hexahedron&lt; 3 &gt;</innerclass>
+    <innerclass refid="structpbat_1_1fem_1_1HyperElasticPotential" prot="public">pbat::fem::HyperElasticPotential</innerclass>
+    <innerclass refid="structpbat_1_1fem_1_1Line" prot="public">pbat::fem::Line</innerclass>
+    <innerclass refid="structpbat_1_1fem_1_1Line_3_011_01_4" prot="public">pbat::fem::Line&lt; 1 &gt;</innerclass>
+    <innerclass refid="structpbat_1_1fem_1_1Line_3_012_01_4" prot="public">pbat::fem::Line&lt; 2 &gt;</innerclass>
+    <innerclass refid="structpbat_1_1fem_1_1Line_3_013_01_4" prot="public">pbat::fem::Line&lt; 3 &gt;</innerclass>
+    <innerclass refid="structpbat_1_1fem_1_1LoadVector" prot="public">pbat::fem::LoadVector</innerclass>
+    <innerclass refid="structpbat_1_1fem_1_1MassMatrix" prot="public">pbat::fem::MassMatrix</innerclass>
+    <innerclass refid="structpbat_1_1fem_1_1Mesh" prot="public">pbat::fem::Mesh</innerclass>
+    <innerclass refid="classpbat_1_1fem_1_1NodalKey" prot="public">pbat::fem::NodalKey</innerclass>
+    <innerclass refid="structpbat_1_1fem_1_1Quadrilateral" prot="public">pbat::fem::Quadrilateral</innerclass>
+    <innerclass refid="structpbat_1_1fem_1_1Quadrilateral_3_011_01_4" prot="public">pbat::fem::Quadrilateral&lt; 1 &gt;</innerclass>
+    <innerclass refid="structpbat_1_1fem_1_1Quadrilateral_3_012_01_4" prot="public">pbat::fem::Quadrilateral&lt; 2 &gt;</innerclass>
+    <innerclass refid="structpbat_1_1fem_1_1Quadrilateral_3_013_01_4" prot="public">pbat::fem::Quadrilateral&lt; 3 &gt;</innerclass>
+    <innerclass refid="structpbat_1_1fem_1_1SymmetricLaplacianMatrix" prot="public">pbat::fem::SymmetricLaplacianMatrix</innerclass>
+    <innerclass refid="structpbat_1_1fem_1_1Tetrahedron" prot="public">pbat::fem::Tetrahedron</innerclass>
+    <innerclass refid="structpbat_1_1fem_1_1Tetrahedron_3_011_01_4" prot="public">pbat::fem::Tetrahedron&lt; 1 &gt;</innerclass>
+    <innerclass refid="structpbat_1_1fem_1_1Tetrahedron_3_012_01_4" prot="public">pbat::fem::Tetrahedron&lt; 2 &gt;</innerclass>
+    <innerclass refid="structpbat_1_1fem_1_1Tetrahedron_3_013_01_4" prot="public">pbat::fem::Tetrahedron&lt; 3 &gt;</innerclass>
+    <innerclass refid="structpbat_1_1fem_1_1Triangle" prot="public">pbat::fem::Triangle</innerclass>
+    <innerclass refid="structpbat_1_1fem_1_1Triangle_3_011_01_4" prot="public">pbat::fem::Triangle&lt; 1 &gt;</innerclass>
+    <innerclass refid="structpbat_1_1fem_1_1Triangle_3_012_01_4" prot="public">pbat::fem::Triangle&lt; 2 &gt;</innerclass>
+    <innerclass refid="structpbat_1_1fem_1_1Triangle_3_013_01_4" prot="public">pbat::fem::Triangle&lt; 3 &gt;</innerclass>
+      <sectiondef kind="var">
+      <memberdef kind="variable" id="fem_2Concepts_8h_1ad64796a28fc71fbf5925074a327da81e" prot="public" static="no" mutable="no">
+        <templateparamlist>
+          <param>
+            <type>class T</type>
+          </param>
+        </templateparamlist>
+        <type>concept</type>
+        <definition>concept pbat::fem::CElement</definition>
+        <argsstring></argsstring>
+        <name>CElement</name>
+        <initializer>= requires(T t)
+{
+    typename T::AffineBaseType;
+    {
+        T::bHasConstantJacobian
+    } -&gt; std::convertible_to&lt;bool&gt;;
+    
+    typename T::template QuadratureType&lt;1&gt;;
+    {
+        T::kOrder
+    } -&gt; std::convertible_to&lt;int&gt;;
+    {
+        T::kDims
+    } -&gt; std::convertible_to&lt;int&gt;;
+    {
+        T::kNodes
+    } -&gt; std::convertible_to&lt;int&gt;;
+    requires common::CContiguousIndexRange&lt;decltype(T::Coordinates)&gt;;
+    requires common::CContiguousIndexRange&lt;decltype(T::Vertices)&gt;;
+    {
+        t.N(Vector&lt;T::kDims&gt;{})
+    } -&gt; std::convertible_to&lt;Vector&lt;T::kNodes&gt;&gt;;
+    {
+        t.GradN(Vector&lt;T::kDims&gt;{})
+    } -&gt; std::convertible_to&lt;Matrix&lt;T::kNodes, T::kDims&gt;&gt;;
+}</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Concepts.h" line="12" column="9" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Concepts.h" bodystart="12" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="fem_2Concepts_8h_1aa3d37f44e17ad2c8c6093e0d15ac0476" prot="public" static="no" mutable="no">
+        <templateparamlist>
+          <param>
+            <type>class M</type>
+          </param>
+        </templateparamlist>
+        <type>concept</type>
+        <definition>concept pbat::fem::CMesh</definition>
+        <argsstring></argsstring>
+        <name>CMesh</name>
+        <initializer>= requires(M m)
+{
+    requires CElement&lt;typename M::ElementType&gt;;
+    {
+        M::kDims
+    } -&gt; std::convertible_to&lt;int&gt;;
+    {
+        M::kOrder
+    } -&gt; std::convertible_to&lt;int&gt;;
+    {
+        m.X
+    } -&gt; std::convertible_to&lt;MatrixX&gt;;
+    {
+        m.E
+    } -&gt; std::convertible_to&lt;IndexMatrixX&gt;;
+}</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Concepts.h" line="40" column="9" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Concepts.h" bodystart="40" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="func">
+      <memberdef kind="function" id="DeformationGradient_8h_1a261285554e301b86e2bb4dee02aad592" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>CElement</type>
+            <declname>TElement</declname>
+            <defname>TElement</defname>
+          </param>
+          <param>
+            <type>class TDerivedx</type>
+          </param>
+          <param>
+            <type>class TDerivedX</type>
+          </param>
+        </templateparamlist>
+        <type>Matrix&lt; TDerivedx::RowsAtCompileTime, TElement::kDims &gt;</type>
+        <definition>Matrix&lt;TDerivedx::RowsAtCompileTime, TElement::kDims&gt; pbat::fem::DeformationGradient</definition>
+        <argsstring>(Eigen::MatrixBase&lt; TDerivedx &gt; const &amp;x, Eigen::MatrixBase&lt; TDerivedX &gt; const &amp;GP)</argsstring>
+        <name>DeformationGradient</name>
+        <param>
+          <type>Eigen::MatrixBase&lt; TDerivedx &gt; const &amp;</type>
+          <declname>x</declname>
+        </param>
+        <param>
+          <type>Eigen::MatrixBase&lt; TDerivedX &gt; const &amp;</type>
+          <declname>GP</declname>
+        </param>
+        <briefdescription>
+<para>Computes the deformation gradient dx(X)/dX of the deformation map x(X). </para>
+        </briefdescription>
+        <detaileddescription>
+<para>If the problem is discretized with displacement coefficients u = x(X) - X, then simply feed this function with argument x = X + u.</para>
+<para><parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>TDerivedU</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>TDerivedX</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>TElement</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>x</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Matrix of column-wise position nodal coefficients </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>GP</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Basis function gradients </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para></para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/DeformationGradient.h" line="28" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/DeformationGradient.h" bodystart="28" bodyend="31"/>
+      </memberdef>
+      <memberdef kind="function" id="DeformationGradient_8h_1a566f2408a26366d48549ba33e6355a00" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>CElement</type>
+            <declname>TElement</declname>
+            <defname>TElement</defname>
+          </param>
+          <param>
+            <type>int</type>
+            <declname>Dims</declname>
+            <defname>Dims</defname>
+          </param>
+          <param>
+            <type>math::linalg::mini::CMatrix</type>
+            <declname>TMatrixGF</declname>
+            <defname>TMatrixGF</defname>
+          </param>
+          <param>
+            <type>math::linalg::mini::CMatrix</type>
+            <declname>TMatrixGP</declname>
+            <defname>TMatrixGP</defname>
+          </param>
+          <param>
+            <type>class ScalarType</type>
+            <defval>typename TMatrixGF::ScalarType</defval>
+          </param>
+        </templateparamlist>
+        <type><ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1SMatrix" kindref="compound">math::linalg::mini::SVector</ref>&lt; ScalarType, Dims &gt;</type>
+        <definition>math::linalg::mini::SVector&lt;ScalarType, Dims&gt; pbat::fem::GradientSegmentWrtDofs</definition>
+        <argsstring>(TMatrixGF const &amp;GF, TMatrixGP const &amp;GP, auto i)</argsstring>
+        <name>GradientSegmentWrtDofs</name>
+        <param>
+          <type>TMatrixGF const &amp;</type>
+          <declname>GF</declname>
+        </param>
+        <param>
+          <type>TMatrixGP const &amp;</type>
+          <declname>GP</declname>
+        </param>
+        <param>
+          <type>auto</type>
+          <declname>i</declname>
+        </param>
+        <briefdescription>
+<para>Extracts the i^{th} segment of GradientWrtDofs() </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>TElement</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>Dims</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Problem dimensionality </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>TMatrixGF</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>TMatrixGP</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>Scalar</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>GF</parametername>
+</parameternamelist>
+<parameterdescription>
+<para><ref refid="structpbat_1_1fem_1_1Gradient" kindref="compound">Gradient</ref> w.r.t. vectorized deformation gradient vec(F) </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>GP</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Basis function gradients </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>i</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The segment to extract </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para></para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/DeformationGradient.h" line="52" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/DeformationGradient.h" bodystart="52" bodyend="61"/>
+      </memberdef>
+      <memberdef kind="function" id="DeformationGradient_8h_1a47b8fc575aab5bc00c20b956fc84cc43" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>CElement</type>
+            <declname>TElement</declname>
+            <defname>TElement</defname>
+          </param>
+          <param>
+            <type>int</type>
+            <declname>Dims</declname>
+            <defname>Dims</defname>
+          </param>
+          <param>
+            <type>math::linalg::mini::CMatrix</type>
+            <declname>TMatrixGF</declname>
+            <defname>TMatrixGF</defname>
+          </param>
+          <param>
+            <type>math::linalg::mini::CMatrix</type>
+            <declname>TMatrixGP</declname>
+            <defname>TMatrixGP</defname>
+          </param>
+          <param>
+            <type>class ScalarType</type>
+            <defval>typename TMatrixGF::ScalarType</defval>
+          </param>
+        </templateparamlist>
+        <type><ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1SMatrix" kindref="compound">math::linalg::mini::SVector</ref>&lt; ScalarType, TElement::kNodes *Dims &gt;</type>
+        <definition>math::linalg::mini::SVector&lt;ScalarType, TElement::kNodes * Dims&gt; pbat::fem::GradientWrtDofs</definition>
+        <argsstring>(TMatrixGF const &amp;GF, TMatrixGP const &amp;GP)</argsstring>
+        <name>GradientWrtDofs</name>
+        <param>
+          <type>TMatrixGF const &amp;</type>
+          <declname>GF</declname>
+        </param>
+        <param>
+          <type>TMatrixGP const &amp;</type>
+          <declname>GP</declname>
+        </param>
+        <briefdescription>
+<para>Computes gradient w.r.t. FEM degrees of freedom x of some function of deformation gradient F, U(F(x)) via chain rule. This is effectively a rank-3 to rank-1 tensor contraction. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>dF/dxi = d/dxi xi gi^T, xi \in R^d, gi \in R^d</para>
+<para>dvec(F)/dxi = gi \kronecker I_{d x d} \in R^{d^2 x d}</para>
+<para>dPsi/dxi = dPsi/dvec(F) * dvec(F)/dxi = [ dp1_{d x 1} <mdash/> dpd_{d x 1} ] [ gi1 I_{d x d} | gid I_{d x d} ] = \sum_{k=1}^{d} dpk_{d x 1} * gik</para>
+<para><parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>TElement</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>Dims</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Problem dimensionality </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>TMatrixGF</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>TMatrixGP</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>Scalar</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>GF</parametername>
+</parameternamelist>
+<parameterdescription>
+<para><ref refid="structpbat_1_1fem_1_1Gradient" kindref="compound">Gradient</ref> w.r.t. vectorized deformation gradient vec(F) </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>GP</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Basis function gradients </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para></para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/DeformationGradient.h" line="93" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/DeformationGradient.h" bodystart="93" bodyend="107"/>
+      </memberdef>
+      <memberdef kind="function" id="DeformationGradient_8h_1ad46ae3bf821d1b1c57ca460a14a20e02" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>CElement</type>
+            <declname>TElement</declname>
+            <defname>TElement</defname>
+          </param>
+          <param>
+            <type>int</type>
+            <declname>Dims</declname>
+            <defname>Dims</defname>
+          </param>
+          <param>
+            <type>math::linalg::mini::CMatrix</type>
+            <declname>TMatrixHF</declname>
+            <defname>TMatrixHF</defname>
+          </param>
+          <param>
+            <type>math::linalg::mini::CMatrix</type>
+            <declname>TMatrixGP</declname>
+            <defname>TMatrixGP</defname>
+          </param>
+          <param>
+            <type>class ScalarType</type>
+            <defval>typename TMatrixHF::ScalarType</defval>
+          </param>
+        </templateparamlist>
+        <type><ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1SMatrix" kindref="compound">math::linalg::mini::SMatrix</ref>&lt; ScalarType, Dims, Dims &gt;</type>
+        <definition>math::linalg::mini::SMatrix&lt;ScalarType, Dims, Dims&gt; pbat::fem::HessianBlockWrtDofs</definition>
+        <argsstring>(TMatrixHF const &amp;HF, TMatrixGP const &amp;GP, auto i, auto j)</argsstring>
+        <name>HessianBlockWrtDofs</name>
+        <param>
+          <type>TMatrixHF const &amp;</type>
+          <declname>HF</declname>
+        </param>
+        <param>
+          <type>TMatrixGP const &amp;</type>
+          <declname>GP</declname>
+        </param>
+        <param>
+          <type>auto</type>
+          <declname>i</declname>
+        </param>
+        <param>
+          <type>auto</type>
+          <declname>j</declname>
+        </param>
+        <briefdescription>
+<para>Extracts the ij^{th} block of HessianWrtDofs. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>TElement</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>Dims</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Problem dimensionality </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>TMatrixHF</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>TMatrixGP</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>Scalar</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>HF</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Hessian of energy w.r.t. vectorized deformation gradient vec(F) </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>GP</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Basis function gradients </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>i</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>j</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para></para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/DeformationGradient.h" line="129" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/DeformationGradient.h" bodystart="129" bodyend="141"/>
+      </memberdef>
+      <memberdef kind="function" id="DeformationGradient_8h_1a0d7c2e28ac889507f71a1b6adf21adbb" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>CElement</type>
+            <declname>TElement</declname>
+            <defname>TElement</defname>
+          </param>
+          <param>
+            <type>int</type>
+            <declname>Dims</declname>
+            <defname>Dims</defname>
+          </param>
+          <param>
+            <type>math::linalg::mini::CMatrix</type>
+            <declname>TMatrixHF</declname>
+            <defname>TMatrixHF</defname>
+          </param>
+          <param>
+            <type>math::linalg::mini::CMatrix</type>
+            <declname>TMatrixGP</declname>
+            <defname>TMatrixGP</defname>
+          </param>
+          <param>
+            <type>class ScalarType</type>
+            <defval>typename TMatrixHF::ScalarType</defval>
+          </param>
+        </templateparamlist>
+        <type><ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1SMatrix" kindref="compound">math::linalg::mini::SMatrix</ref>&lt; ScalarType, TElement::kNodes *Dims, TElement::kNodes *Dims &gt;</type>
+        <definition>math::linalg::mini::SMatrix&lt;ScalarType, TElement::kNodes * Dims, TElement::kNodes * Dims&gt; pbat::fem::HessianWrtDofs</definition>
+        <argsstring>(TMatrixHF const &amp;HF, TMatrixGP const &amp;GP)</argsstring>
+        <name>HessianWrtDofs</name>
+        <param>
+          <type>TMatrixHF const &amp;</type>
+          <declname>HF</declname>
+        </param>
+        <param>
+          <type>TMatrixGP const &amp;</type>
+          <declname>GP</declname>
+        </param>
+        <briefdescription>
+<para>Computes hessian w.r.t. FEM degrees of freedom x of some function of deformation gradient F, U(F(x)) via chain rule. This is effectively a rank-4 to rank-2 tensor contraction. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>dPsi/dxi = \sum_{k=1}^{d} dpk_{d x 1} * gik (see GradientWrtDofs) d^2 Psi / dxi dxj = \sum_{ki=1}^{d} \sum_{kj=1}^{d} d^2 gi_{ki} p_{ki,kj} gj_{kj}</para>
+<para><parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>TElement</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>Dims</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Problem dimensionality </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>TMatrixHF</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>TMatrixGP</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>Scalar</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>HF</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Hessian of energy w.r.t. vectorized deformation gradient vec(F) </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>GP</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Basis function gradients </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para></para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/DeformationGradient.h" line="166" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/DeformationGradient.h" bodystart="166" bodyend="187"/>
+      </memberdef>
+      <memberdef kind="function" id="source_2pbat_2fem_2Jacobian_8h_1a37c4fbd3108b3de71c530db7e95babec" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>CElement</type>
+            <declname>TElement</declname>
+            <defname>TElement</defname>
+          </param>
+          <param>
+            <type>class TDerived</type>
+          </param>
+        </templateparamlist>
+        <type>Matrix&lt; TDerived::RowsAtCompileTime, TElement::kDims &gt;</type>
+        <definition>Matrix&lt;TDerived::RowsAtCompileTime, TElement::kDims&gt; pbat::fem::Jacobian</definition>
+        <argsstring>(Vector&lt; TElement::kDims &gt; const &amp;X, Eigen::MatrixBase&lt; TDerived &gt; const &amp;x)</argsstring>
+        <name>Jacobian</name>
+        <param>
+          <type>Vector&lt; TElement::kDims &gt; const &amp;</type>
+          <declname>X</declname>
+        </param>
+        <param>
+          <type>Eigen::MatrixBase&lt; TDerived &gt; const &amp;</type>
+          <declname>x</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Jacobian.h" line="21" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Jacobian.h" bodystart="21" bodyend="27"/>
+      </memberdef>
+      <memberdef kind="function" id="source_2pbat_2fem_2Jacobian_8h_1ac7b221e3bdbe9955c2130008d1f1c063" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class TDerived</type>
+          </param>
+        </templateparamlist>
+        <type>Scalar</type>
+        <definition>Scalar pbat::fem::DeterminantOfJacobian</definition>
+        <argsstring>(Eigen::MatrixBase&lt; TDerived &gt; const &amp;J)</argsstring>
+        <name>DeterminantOfJacobian</name>
+        <param>
+          <type>Eigen::MatrixBase&lt; TDerived &gt; const &amp;</type>
+          <declname>J</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Jacobian.h" line="30" column="9" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Jacobian.h" bodystart="30" bodyend="40"/>
+      </memberdef>
+      <memberdef kind="function" id="source_2pbat_2fem_2Jacobian_8h_1a561dff9d8b152f9ca7cd256b59c282b3" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>int</type>
+            <declname>QuadratureOrder</declname>
+            <defname>QuadratureOrder</defname>
+          </param>
+          <param>
+            <type>CMesh</type>
+            <declname>TMesh</declname>
+            <defname>TMesh</defname>
+          </param>
+        </templateparamlist>
+        <type>MatrixX</type>
+        <definition>MatrixX pbat::fem::DeterminantOfJacobian</definition>
+        <argsstring>(TMesh const &amp;mesh)</argsstring>
+        <name>DeterminantOfJacobian</name>
+        <param>
+          <type>TMesh const &amp;</type>
+          <declname>mesh</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>QuadratureOrder</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>TMesh</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>mesh</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>|#quad.pts.|x|#elements| matrix of element jacobian determinants at element quadrature points </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Jacobian.h" line="51" column="9" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Jacobian.h" bodystart="51" bodyend="87"/>
+      </memberdef>
+      <memberdef kind="function" id="source_2pbat_2fem_2Jacobian_8h_1a6da92505b9101789305c1c712d7bc0ea" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>int</type>
+            <declname>QuadratureOrder</declname>
+            <defname>QuadratureOrder</defname>
+          </param>
+          <param>
+            <type>CMesh</type>
+            <declname>TMesh</declname>
+            <defname>TMesh</defname>
+          </param>
+        </templateparamlist>
+        <type>MatrixX</type>
+        <definition>MatrixX pbat::fem::InnerProductWeights</definition>
+        <argsstring>(TMesh const &amp;mesh)</argsstring>
+        <name>InnerProductWeights</name>
+        <param>
+          <type>TMesh const &amp;</type>
+          <declname>mesh</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>QuadratureOrder</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>TMesh</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>mesh</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>MatrixX </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Jacobian.h" line="98" column="9" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Jacobian.h" bodystart="98" bodyend="106"/>
+      </memberdef>
+      <memberdef kind="function" id="source_2pbat_2fem_2Jacobian_8h_1aca05952d5f7c5031468fc2ebc0604f84" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>int</type>
+            <declname>QuadratureOrder</declname>
+            <defname>QuadratureOrder</defname>
+          </param>
+          <param>
+            <type>CMesh</type>
+            <declname>TMesh</declname>
+            <defname>TMesh</defname>
+          </param>
+          <param>
+            <type>class TDerivedDetJe</type>
+          </param>
+        </templateparamlist>
+        <type>MatrixX</type>
+        <definition>MatrixX pbat::fem::InnerProductWeights</definition>
+        <argsstring>(TMesh const &amp;mesh, Eigen::MatrixBase&lt; TDerivedDetJe &gt; const &amp;detJe)</argsstring>
+        <name>InnerProductWeights</name>
+        <param>
+          <type>TMesh const &amp;</type>
+          <declname>mesh</declname>
+        </param>
+        <param>
+          <type>Eigen::MatrixBase&lt; TDerivedDetJe &gt; const &amp;</type>
+          <declname>detJe</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>QuadratureOrder</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>TMesh</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>TDerivedDetJe</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>mesh</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>detJe</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>|#quad.pts.|x|#elements| matrix of quadrature weights multiplied by jacobian determinants at element quadrature points </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Jacobian.h" line="120" column="9" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Jacobian.h" bodystart="120" bodyend="138"/>
+      </memberdef>
+      <memberdef kind="function" id="source_2pbat_2fem_2Jacobian_8h_1a38995f445061549d6a10cf36648c703d" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>CElement</type>
+            <declname>TElement</declname>
+            <defname>TElement</defname>
+          </param>
+          <param>
+            <type>class TDerivedX</type>
+          </param>
+          <param>
+            <type>class TDerivedx</type>
+          </param>
+        </templateparamlist>
+        <type>Vector&lt; TElement::kDims &gt;</type>
+        <definition>Vector&lt;TElement::kDims&gt; pbat::fem::ReferencePosition</definition>
+        <argsstring>(Eigen::MatrixBase&lt; TDerivedX &gt; const &amp;X, Eigen::MatrixBase&lt; TDerivedx &gt; const &amp;x, int const maxIterations=5, Scalar const eps=1e-10)</argsstring>
+        <name>ReferencePosition</name>
+        <param>
+          <type>Eigen::MatrixBase&lt; TDerivedX &gt; const &amp;</type>
+          <declname>X</declname>
+        </param>
+        <param>
+          <type>Eigen::MatrixBase&lt; TDerivedx &gt; const &amp;</type>
+          <declname>x</declname>
+        </param>
+        <param>
+          <type>int const</type>
+          <declname>maxIterations</declname>
+          <defval>5</defval>
+        </param>
+        <param>
+          <type>Scalar const</type>
+          <declname>eps</declname>
+          <defval>1e-10</defval>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Jacobian.h" line="141" column="8" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Jacobian.h" bodystart="141" bodyend="195"/>
+      </memberdef>
+      <memberdef kind="function" id="source_2pbat_2fem_2Jacobian_8h_1a218ccdf8adf7265415dded0d274db48b" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>CMesh</type>
+            <declname>TMesh</declname>
+            <defname>TMesh</defname>
+          </param>
+          <param>
+            <type>class TDerivedE</type>
+          </param>
+          <param>
+            <type>class TDerivedX</type>
+          </param>
+        </templateparamlist>
+        <type>MatrixX</type>
+        <definition>MatrixX pbat::fem::ReferencePositions</definition>
+        <argsstring>(TMesh const &amp;mesh, Eigen::DenseBase&lt; TDerivedE &gt; const &amp;E, Eigen::MatrixBase&lt; TDerivedX &gt; const &amp;X, int maxIterations=5, Scalar eps=1e-10)</argsstring>
+        <name>ReferencePositions</name>
+        <param>
+          <type>TMesh const &amp;</type>
+          <declname>mesh</declname>
+        </param>
+        <param>
+          <type>Eigen::DenseBase&lt; TDerivedE &gt; const &amp;</type>
+          <declname>E</declname>
+        </param>
+        <param>
+          <type>Eigen::MatrixBase&lt; TDerivedX &gt; const &amp;</type>
+          <declname>X</declname>
+        </param>
+        <param>
+          <type>int</type>
+          <declname>maxIterations</declname>
+          <defval>5</defval>
+        </param>
+        <param>
+          <type>Scalar</type>
+          <declname>eps</declname>
+          <defval>1e-10</defval>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>TDerivedE</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>TDerivedX</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>TMesh</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>mesh</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>E</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>X</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>maxIterations</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>eps</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>|#element dims| x |X.cols()| matrix of reference positions associated with domain points X in corresponding elements E </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Jacobian.h" line="211" column="9" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Jacobian.h" bodystart="211" bodyend="232"/>
+      </memberdef>
+      <memberdef kind="function" id="source_2pbat_2fem_2ShapeFunctions_8h_1a842f81c207c40afb8ca9febde2182239" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>CElement</type>
+            <declname>TElement</declname>
+            <defname>TElement</defname>
+          </param>
+          <param>
+            <type>int</type>
+            <declname>QuadratureOrder</declname>
+            <defname>QuadratureOrder</defname>
+          </param>
+        </templateparamlist>
+        <type>Matrix&lt; TElement::kNodes, TElement::template QuadratureType&lt; QuadratureOrder &gt;::kPoints &gt;</type>
+        <definition>Matrix&lt;TElement::kNodes, TElement::template QuadratureType&lt;QuadratureOrder&gt;::kPoints&gt; pbat::fem::ShapeFunctions</definition>
+        <argsstring>()</argsstring>
+        <name>ShapeFunctions</name>
+        <briefdescription>
+<para>Computes shape functions at element quadrature points for a polynomial quadrature rule of order QuadratureOrder. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>TElement</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>QuadratureOrder</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>The shape function values of each node at quadrature points, stored in a matrix of dimensions |#element nodes| x |#quad.pts.| </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/ShapeFunctions.h" line="30" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/ShapeFunctions.h" bodystart="30" bodyend="43"/>
+      </memberdef>
+      <memberdef kind="function" id="source_2pbat_2fem_2ShapeFunctions_8h_1acfbe621945187df932bef371bffee327" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>int</type>
+            <declname>QuadratureOrder</declname>
+            <defname>QuadratureOrder</defname>
+          </param>
+          <param>
+            <type>CMesh</type>
+            <declname>TMesh</declname>
+            <defname>TMesh</defname>
+          </param>
+        </templateparamlist>
+        <type>CSRMatrix</type>
+        <definition>CSRMatrix pbat::fem::ShapeFunctionMatrix</definition>
+        <argsstring>(TMesh const &amp;mesh)</argsstring>
+        <name>ShapeFunctionMatrix</name>
+        <param>
+          <type>TMesh const &amp;</type>
+          <declname>mesh</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>QuadratureOrder</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>TMesh</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>mesh</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>|#elements * #quad.pts.| x |#nodes| shape function matrix </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/ShapeFunctions.h" line="53" column="11" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/ShapeFunctions.h" bodystart="53" bodyend="80"/>
+      </memberdef>
+      <memberdef kind="function" id="source_2pbat_2fem_2ShapeFunctions_8h_1a1855e76ae1a905fe4c9f697c8863fbfa" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>CMesh</type>
+            <declname>TMesh</declname>
+            <defname>TMesh</defname>
+          </param>
+          <param>
+            <type>class TDerivedE</type>
+          </param>
+          <param>
+            <type>class TDerivedX</type>
+          </param>
+        </templateparamlist>
+        <type>CSRMatrix</type>
+        <definition>CSRMatrix pbat::fem::ShapeFunctionMatrix</definition>
+        <argsstring>(TMesh const &amp;mesh, Eigen::DenseBase&lt; TDerivedE &gt; const &amp;eg, Eigen::MatrixBase&lt; TDerivedX &gt; const &amp;Xg, bool bXgInReferenceSpace=false)</argsstring>
+        <name>ShapeFunctionMatrix</name>
+        <param>
+          <type>TMesh const &amp;</type>
+          <declname>mesh</declname>
+        </param>
+        <param>
+          <type>Eigen::DenseBase&lt; TDerivedE &gt; const &amp;</type>
+          <declname>eg</declname>
+        </param>
+        <param>
+          <type>Eigen::MatrixBase&lt; TDerivedX &gt; const &amp;</type>
+          <declname>Xg</declname>
+        </param>
+        <param>
+          <type>bool</type>
+          <declname>bXgInReferenceSpace</declname>
+          <defval>false</defval>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>TMesh</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>TDerivedE</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>TDerivedX</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>mesh</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>eg</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>|#quad.pts.| array of elements associated with quadrature points </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>Xg</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>|#dims|x|#quad.pts.| array of quadrature points in reference space </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>bXgInReferenceSpace</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Consider evaluation points Xg have coordinates in reference space </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>|#quad.pts.| x |#nodes| shape function matrix </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/ShapeFunctions.h" line="94" column="11" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/ShapeFunctions.h" bodystart="94" bodyend="127"/>
+      </memberdef>
+      <memberdef kind="function" id="source_2pbat_2fem_2ShapeFunctions_8h_1af577de15afe9127546f1b2afc4fb389a" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>CElement</type>
+            <declname>TElement</declname>
+            <defname>TElement</defname>
+          </param>
+          <param>
+            <type>class TDerivedXi</type>
+          </param>
+        </templateparamlist>
+        <type>MatrixX</type>
+        <definition>MatrixX pbat::fem::ShapeFunctionsAt</definition>
+        <argsstring>(Eigen::DenseBase&lt; TDerivedXi &gt; const &amp;Xi)</argsstring>
+        <name>ShapeFunctionsAt</name>
+        <param>
+          <type>Eigen::DenseBase&lt; TDerivedXi &gt; const &amp;</type>
+          <declname>Xi</declname>
+        </param>
+        <briefdescription>
+<para>Compute shape functions at the given reference positions. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>TElement</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>TDerivedXi</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>Xi</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>|#dims|x|#quad.pts.| Evaluation points </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>|#element nodes| x |Xi.cols()| matrix of nodal shape functions at reference points Xi </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/ShapeFunctions.h" line="137" column="9" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/ShapeFunctions.h" bodystart="137" bodyend="154"/>
+      </memberdef>
+      <memberdef kind="function" id="source_2pbat_2fem_2ShapeFunctions_8h_1a5b70c237bbeb1cad1cb608aa130617b4" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>CMesh</type>
+            <declname>TMesh</declname>
+            <defname>TMesh</defname>
+          </param>
+          <param>
+            <type>class TDerivedE</type>
+          </param>
+          <param>
+            <type>class TDerivedXg</type>
+          </param>
+        </templateparamlist>
+        <type>MatrixX</type>
+        <definition>MatrixX pbat::fem::ShapeFunctionsAt</definition>
+        <argsstring>(TMesh const &amp;mesh, Eigen::DenseBase&lt; TDerivedE &gt; const &amp;eg, Eigen::MatrixBase&lt; TDerivedXg &gt; const &amp;Xg, bool bXgInReferenceSpace=false)</argsstring>
+        <name>ShapeFunctionsAt</name>
+        <param>
+          <type>TMesh const &amp;</type>
+          <declname>mesh</declname>
+        </param>
+        <param>
+          <type>Eigen::DenseBase&lt; TDerivedE &gt; const &amp;</type>
+          <declname>eg</declname>
+        </param>
+        <param>
+          <type>Eigen::MatrixBase&lt; TDerivedXg &gt; const &amp;</type>
+          <declname>Xg</declname>
+        </param>
+        <param>
+          <type>bool</type>
+          <declname>bXgInReferenceSpace</declname>
+          <defval>false</defval>
+        </param>
+        <briefdescription>
+<para>Compute shape functions at the given reference or domain space positions. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>TMesh</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>TDerivedE</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>TDerivedXg</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>mesh</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>eg</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>|#quad.pts.| array of elements associated with quadrature points </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>Xg</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>|#dims|x|#quad.pts.| Evaluation points </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>bXgInReferenceSpace</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Consider evaluation points Xg have coordinates in reference space </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>|#element nodes| x |Xg.cols()| matrix of nodal shape functions at reference points Xg </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/ShapeFunctions.h" line="168" column="9" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/ShapeFunctions.h" bodystart="168" bodyend="180"/>
+      </memberdef>
+      <memberdef kind="function" id="source_2pbat_2fem_2ShapeFunctions_8h_1a73870d2e01a52677deb15a8d495dbb8a" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>int</type>
+            <declname>QuadratureOrder</declname>
+            <defname>QuadratureOrder</defname>
+          </param>
+          <param>
+            <type>CMesh</type>
+            <declname>TMesh</declname>
+            <defname>TMesh</defname>
+          </param>
+          <param>
+            <type>class TDerived</type>
+          </param>
+        </templateparamlist>
+        <type>MatrixX</type>
+        <definition>MatrixX pbat::fem::IntegratedShapeFunctions</definition>
+        <argsstring>(TMesh const &amp;mesh, Eigen::DenseBase&lt; TDerived &gt; const &amp;detJe)</argsstring>
+        <name>IntegratedShapeFunctions</name>
+        <param>
+          <type>TMesh const &amp;</type>
+          <declname>mesh</declname>
+        </param>
+        <param>
+          <type>Eigen::DenseBase&lt; TDerived &gt; const &amp;</type>
+          <declname>detJe</declname>
+        </param>
+        <briefdescription>
+<para>Integrate shape functions on each element. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>TDerived</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>TMesh</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>QuadratureOrder</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>mesh</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>detJe</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>|#element nodes|x|#elements| </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/ShapeFunctions.h" line="192" column="9" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/ShapeFunctions.h" bodystart="192" bodyend="227"/>
+      </memberdef>
+      <memberdef kind="function" id="source_2pbat_2fem_2ShapeFunctions_8h_1a7fbc9e3313ba5d01a35229e42877d754" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>CElement</type>
+            <declname>TElement</declname>
+            <defname>TElement</defname>
+          </param>
+          <param>
+            <type>class TDerivedXi</type>
+          </param>
+          <param>
+            <type>class TDerivedX</type>
+          </param>
+        </templateparamlist>
+        <type>Matrix&lt; TElement::kNodes, TDerivedX::RowsAtCompileTime &gt;</type>
+        <definition>Matrix&lt;TElement::kNodes, TDerivedX::RowsAtCompileTime&gt; pbat::fem::ShapeFunctionGradients</definition>
+        <argsstring>(Eigen::MatrixBase&lt; TDerivedXi &gt; const &amp;Xi, Eigen::MatrixBase&lt; TDerivedX &gt; const &amp;X)</argsstring>
+        <name>ShapeFunctionGradients</name>
+        <param>
+          <type>Eigen::MatrixBase&lt; TDerivedXi &gt; const &amp;</type>
+          <declname>Xi</declname>
+        </param>
+        <param>
+          <type>Eigen::MatrixBase&lt; TDerivedX &gt; const &amp;</type>
+          <declname>X</declname>
+        </param>
+        <briefdescription>
+<para>Computes gradients of FEM basis functions in reference element. Only works for linear maps, but we do not emit an error when TElement::bHasConstantJacobian is false, since the element&apos;s function space might be non-linear, while its current configuration induces a linear map. I.e., a kth order element that is purely a rigid transformation on the reference element still induces a linear map, even if the element&apos;s function space is kth order. It is up to the user to give the right inputs, and we cannot/won&apos;t check those. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>TDerivedXi</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>TDerivedX</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>TElement</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>Xi</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Point in reference element at which to evaluate the gradients </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>X</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Element vertices, i.e. nodes of affine element </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>|#nodes|x|Dims| matrix of basis function gradients in rows </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/ShapeFunctions.h" line="245" column="8" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/ShapeFunctions.h" bodystart="245" bodyend="309"/>
+      </memberdef>
+      <memberdef kind="function" id="source_2pbat_2fem_2ShapeFunctions_8h_1a9053a94bb02cf2a974f4297f7d454dff" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>int</type>
+            <declname>QuadratureOrder</declname>
+            <defname>QuadratureOrder</defname>
+          </param>
+          <param>
+            <type>CMesh</type>
+            <declname>TMesh</declname>
+            <defname>TMesh</defname>
+          </param>
+        </templateparamlist>
+        <type>MatrixX</type>
+        <definition>MatrixX pbat::fem::ShapeFunctionGradients</definition>
+        <argsstring>(TMesh const &amp;mesh)</argsstring>
+        <name>ShapeFunctionGradients</name>
+        <param>
+          <type>TMesh const &amp;</type>
+          <declname>mesh</declname>
+        </param>
+        <briefdescription>
+<para>Computes nodal shape function gradients at each element quadrature point. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>Order</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>TMesh</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>mesh</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>|#element nodes| x |#dims * #quad.pts. * #elements| matrix of shape functions </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/ShapeFunctions.h" line="319" column="9" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/ShapeFunctions.h" bodystart="319" bodyend="346"/>
+      </memberdef>
+      <memberdef kind="function" id="source_2pbat_2fem_2ShapeFunctions_8h_1a54def3a4563d5668cf85f9f1cfca7ffe" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>CMesh</type>
+            <declname>TMesh</declname>
+            <defname>TMesh</defname>
+          </param>
+          <param>
+            <type>class TDerivedE</type>
+          </param>
+          <param>
+            <type>class TDerivedXg</type>
+          </param>
+        </templateparamlist>
+        <type>MatrixX</type>
+        <definition>MatrixX pbat::fem::ShapeFunctionGradientsAt</definition>
+        <argsstring>(TMesh const &amp;mesh, Eigen::DenseBase&lt; TDerivedE &gt; const &amp;E, Eigen::MatrixBase&lt; TDerivedXg &gt; const &amp;Xg, bool bXgInReferenceSpace=false)</argsstring>
+        <name>ShapeFunctionGradientsAt</name>
+        <param>
+          <type>TMesh const &amp;</type>
+          <declname>mesh</declname>
+        </param>
+        <param>
+          <type>Eigen::DenseBase&lt; TDerivedE &gt; const &amp;</type>
+          <declname>E</declname>
+        </param>
+        <param>
+          <type>Eigen::MatrixBase&lt; TDerivedXg &gt; const &amp;</type>
+          <declname>Xg</declname>
+        </param>
+        <param>
+          <type>bool</type>
+          <declname>bXgInReferenceSpace</declname>
+          <defval>false</defval>
+        </param>
+        <briefdescription>
+<para>Computes nodal shape function gradients at evaluation points Xg. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>TDerivedE</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>TDerivedXg</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>TMesh</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>mesh</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>E</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>Xg</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>bXgInReferenceSpace</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>|#element nodes| x |E.size() * mesh.dims| nodal shape function gradients at evaluation points Xg </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/ShapeFunctions.h" line="361" column="9" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/ShapeFunctions.h" bodystart="361" bodyend="393"/>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Concepts.h" line="9" column="13"/>
+  </compounddef>
+</doxygen>

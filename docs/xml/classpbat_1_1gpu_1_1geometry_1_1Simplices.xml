@@ -1,0 +1,287 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="classpbat_1_1gpu_1_1geometry_1_1Simplices" kind="class" language="C++" prot="public">
+    <compoundname>pbat::gpu::geometry::Simplices</compoundname>
+      <sectiondef kind="public-type">
+      <memberdef kind="enum" id="classpbat_1_1gpu_1_1geometry_1_1Simplices_1a052b5c3c494ace5cc112eb25ed6cd936" prot="public" static="no" strong="yes">
+        <type>int</type>
+        <name>ESimplexType</name>
+        <enumvalue id="classpbat_1_1gpu_1_1geometry_1_1Simplices_1a052b5c3c494ace5cc112eb25ed6cd936ab22b929ba52471a02d18bb3a4e4472e6" prot="public">
+          <name>Vertex</name>
+          <initializer>= 1</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="classpbat_1_1gpu_1_1geometry_1_1Simplices_1a052b5c3c494ace5cc112eb25ed6cd936ae4a297a0f76119a442c2595ac040673e" prot="public">
+          <name>Edge</name>
+          <initializer>= 2</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="classpbat_1_1gpu_1_1geometry_1_1Simplices_1a052b5c3c494ace5cc112eb25ed6cd936a5e5500cb2b82eb72d550de644bd1b64b" prot="public">
+          <name>Triangle</name>
+          <initializer>= 3</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="classpbat_1_1gpu_1_1geometry_1_1Simplices_1a052b5c3c494ace5cc112eb25ed6cd936ae029cf63d8d01a489974f9289b50dc80" prot="public">
+          <name>Tetrahedron</name>
+          <initializer>= 4</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/geometry/Primitives.h" line="77" column="28" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/geometry/Primitives.h" bodystart="77" bodyend="77"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="classpbat_1_1gpu_1_1geometry_1_1Simplices_1a68ed77047e080456377af1d12cc4bd41" prot="private" static="no" mutable="no">
+        <type>SimplicesImpl *</type>
+        <definition>SimplicesImpl* pbat::gpu::geometry::Simplices::mImpl</definition>
+        <argsstring></argsstring>
+        <name>mImpl</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/geometry/Primitives.h" line="132" column="19" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/geometry/Primitives.h" bodystart="132" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpbat_1_1gpu_1_1geometry_1_1Simplices_1ac0d1dca0e59fd7ff0953caa9ddffcf8f" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>PBAT_API</type>
+        <definition>PBAT_API pbat::gpu::geometry::Simplices::Simplices</definition>
+        <argsstring>(Eigen::Ref&lt; GpuIndexMatrixX const &gt; const &amp;C)</argsstring>
+        <name>Simplices</name>
+        <param>
+          <type>Eigen::Ref&lt; GpuIndexMatrixX const &gt; const &amp;</type>
+          <declname>C</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>C</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/geometry/Primitives.h" line="83" column="14"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1gpu_1_1geometry_1_1Simplices_1ad1978f4cee10ea0391430ccfe9cb6413" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>pbat::gpu::geometry::Simplices::Simplices</definition>
+        <argsstring>(Simplices const &amp;)=delete</argsstring>
+        <name>Simplices</name>
+        <param>
+          <type><ref refid="classpbat_1_1gpu_1_1geometry_1_1Simplices" kindref="compound">Simplices</ref> const &amp;</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+</parameternamelist>
+<parameterdescription>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/geometry/Primitives.h" line="88" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1gpu_1_1geometry_1_1Simplices_1a2cdc4316c5406973cd56236246bf0701" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpbat_1_1gpu_1_1geometry_1_1Simplices" kindref="compound">Simplices</ref> &amp;</type>
+        <definition>Simplices&amp; pbat::gpu::geometry::Simplices::operator=</definition>
+        <argsstring>(Simplices const &amp;)=delete</argsstring>
+        <name>operator=</name>
+        <param>
+          <type><ref refid="classpbat_1_1gpu_1_1geometry_1_1Simplices" kindref="compound">Simplices</ref> const &amp;</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+</parameternamelist>
+<parameterdescription>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/geometry/Primitives.h" line="94" column="15"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1gpu_1_1geometry_1_1Simplices_1a367dd2b5e6045cafc52dae9eee4f745f" prot="public" static="no" const="no" explicit="no" inline="no" noexcept="yes" virt="non-virtual">
+        <type>PBAT_API</type>
+        <definition>PBAT_API pbat::gpu::geometry::Simplices::Simplices</definition>
+        <argsstring>(Simplices &amp;&amp;) noexcept</argsstring>
+        <name>Simplices</name>
+        <param>
+          <type><ref refid="classpbat_1_1gpu_1_1geometry_1_1Simplices" kindref="compound">Simplices</ref> &amp;&amp;</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+</parameternamelist>
+<parameterdescription>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/geometry/Primitives.h" line="99" column="14"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1gpu_1_1geometry_1_1Simplices_1af4670557c091c99a1131459b3b6666d7" prot="public" static="no" const="no" explicit="no" inline="no" noexcept="yes" virt="non-virtual">
+        <type>PBAT_API <ref refid="classpbat_1_1gpu_1_1geometry_1_1Simplices" kindref="compound">Simplices</ref> &amp;</type>
+        <definition>PBAT_API Simplices&amp; pbat::gpu::geometry::Simplices::operator=</definition>
+        <argsstring>(Simplices &amp;&amp;) noexcept</argsstring>
+        <name>operator=</name>
+        <param>
+          <type><ref refid="classpbat_1_1gpu_1_1geometry_1_1Simplices" kindref="compound">Simplices</ref> &amp;&amp;</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+</parameternamelist>
+<parameterdescription>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/geometry/Primitives.h" line="105" column="24"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1gpu_1_1geometry_1_1Simplices_1ae0b17517e839bb8f0410656c0bd78808" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>PBAT_API GpuIndexMatrixX</type>
+        <definition>PBAT_API GpuIndexMatrixX pbat::gpu::geometry::Simplices::Get</definition>
+        <argsstring>() const</argsstring>
+        <name>Get</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para></para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/geometry/Primitives.h" line="110" column="30"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1gpu_1_1geometry_1_1Simplices_1a749967454cca3b0434c747f3840d5452" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>PBAT_API ESimplexType</type>
+        <definition>PBAT_API ESimplexType pbat::gpu::geometry::Simplices::Type</definition>
+        <argsstring>() const</argsstring>
+        <name>Type</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para></para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/geometry/Primitives.h" line="115" column="27"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1gpu_1_1geometry_1_1Simplices_1a8c3e07904023d58793d55ea88b2acf9d" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>PBAT_API SimplicesImpl *</type>
+        <definition>PBAT_API SimplicesImpl* pbat::gpu::geometry::Simplices::Impl</definition>
+        <argsstring>()</argsstring>
+        <name>Impl</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para></para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/geometry/Primitives.h" line="120" column="28"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1gpu_1_1geometry_1_1Simplices_1a3b5c3250859ab7880e12f50eb10de063" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>PBAT_API SimplicesImpl const  *</type>
+        <definition>PBAT_API SimplicesImpl const* pbat::gpu::geometry::Simplices::Impl</definition>
+        <argsstring>() const</argsstring>
+        <name>Impl</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para></para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/geometry/Primitives.h" line="125" column="34"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1gpu_1_1geometry_1_1Simplices_1aa60deae11adc642092801b55a1d7572f" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>PBAT_API</type>
+        <definition>PBAT_API pbat::gpu::geometry::Simplices::~Simplices</definition>
+        <argsstring>()</argsstring>
+        <name>~Simplices</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/geometry/Primitives.h" line="129" column="14"/>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/geometry/Primitives.h" line="75" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/geometry/Primitives.h" bodystart="74" bodyend="133"/>
+    <listofallmembers>
+      <member refid="classpbat_1_1gpu_1_1geometry_1_1Simplices_1a052b5c3c494ace5cc112eb25ed6cd936" prot="public" virt="non-virtual"><scope>pbat::gpu::geometry::Simplices</scope><name>ESimplexType</name></member>
+      <member refid="classpbat_1_1gpu_1_1geometry_1_1Simplices_1ae0b17517e839bb8f0410656c0bd78808" prot="public" virt="non-virtual"><scope>pbat::gpu::geometry::Simplices</scope><name>Get</name></member>
+      <member refid="classpbat_1_1gpu_1_1geometry_1_1Simplices_1a8c3e07904023d58793d55ea88b2acf9d" prot="public" virt="non-virtual"><scope>pbat::gpu::geometry::Simplices</scope><name>Impl</name></member>
+      <member refid="classpbat_1_1gpu_1_1geometry_1_1Simplices_1a3b5c3250859ab7880e12f50eb10de063" prot="public" virt="non-virtual"><scope>pbat::gpu::geometry::Simplices</scope><name>Impl</name></member>
+      <member refid="classpbat_1_1gpu_1_1geometry_1_1Simplices_1a68ed77047e080456377af1d12cc4bd41" prot="private" virt="non-virtual"><scope>pbat::gpu::geometry::Simplices</scope><name>mImpl</name></member>
+      <member refid="classpbat_1_1gpu_1_1geometry_1_1Simplices_1a2cdc4316c5406973cd56236246bf0701" prot="public" virt="non-virtual"><scope>pbat::gpu::geometry::Simplices</scope><name>operator=</name></member>
+      <member refid="classpbat_1_1gpu_1_1geometry_1_1Simplices_1af4670557c091c99a1131459b3b6666d7" prot="public" virt="non-virtual"><scope>pbat::gpu::geometry::Simplices</scope><name>operator=</name></member>
+      <member refid="classpbat_1_1gpu_1_1geometry_1_1Simplices_1ac0d1dca0e59fd7ff0953caa9ddffcf8f" prot="public" virt="non-virtual"><scope>pbat::gpu::geometry::Simplices</scope><name>Simplices</name></member>
+      <member refid="classpbat_1_1gpu_1_1geometry_1_1Simplices_1ad1978f4cee10ea0391430ccfe9cb6413" prot="public" virt="non-virtual"><scope>pbat::gpu::geometry::Simplices</scope><name>Simplices</name></member>
+      <member refid="classpbat_1_1gpu_1_1geometry_1_1Simplices_1a367dd2b5e6045cafc52dae9eee4f745f" prot="public" virt="non-virtual"><scope>pbat::gpu::geometry::Simplices</scope><name>Simplices</name></member>
+      <member refid="classpbat_1_1gpu_1_1geometry_1_1Simplices_1a749967454cca3b0434c747f3840d5452" prot="public" virt="non-virtual"><scope>pbat::gpu::geometry::Simplices</scope><name>Type</name></member>
+      <member refid="classpbat_1_1gpu_1_1geometry_1_1Simplices_1aa60deae11adc642092801b55a1d7572f" prot="public" virt="non-virtual"><scope>pbat::gpu::geometry::Simplices</scope><name>~Simplices</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

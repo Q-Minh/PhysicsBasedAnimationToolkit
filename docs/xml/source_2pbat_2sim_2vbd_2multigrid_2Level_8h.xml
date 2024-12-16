@@ -1,0 +1,194 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="source_2pbat_2sim_2vbd_2multigrid_2Level_8h" kind="file" language="C++">
+    <compoundname>Level.h</compoundname>
+    <includes refid="Aliases_8h" local="yes">pbat/Aliases.h</includes>
+    <includes local="yes">pbat/sim/vbd/Data.h</includes>
+    <includes refid="source_2pbat_2sim_2vbd_2Mesh_8h" local="yes">pbat/sim/vbd/Mesh.h</includes>
+    <includedby refid="source_2pbat_2sim_2vbd_2multigrid_2Hierarchy_8h" local="yes">/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/multigrid/Hierarchy.h</includedby>
+    <includedby refid="source_2pbat_2sim_2vbd_2multigrid_2Level_8cpp" local="yes">/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/multigrid/Level.cpp</includedby>
+    <includedby refid="source_2pbat_2sim_2vbd_2multigrid_2Multigrid_8h" local="yes">/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/multigrid/Multigrid.h</includedby>
+    <incdepgraph>
+      <node id="11">
+        <label>pbat/math/GaussQuadrature.h</label>
+        <link refid="GaussQuadrature_8h_source"/>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="13" relation="include">
+        </childnode>
+        <childnode refid="2" relation="include">
+        </childnode>
+      </node>
+      <node id="13">
+        <label>cstdint</label>
+      </node>
+      <node id="2">
+        <label>pbat/Aliases.h</label>
+        <link refid="Aliases_8h_source"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>Eigen/Core</label>
+      </node>
+      <node id="7">
+        <label>pbat/sim/vbd/Mesh.h</label>
+        <link refid="source_2pbat_2sim_2vbd_2Mesh_8h_source"/>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="15" relation="include">
+        </childnode>
+      </node>
+      <node id="15">
+        <label>pbat/fem/Triangle.h</label>
+        <link refid="Triangle_8h_source"/>
+        <childnode refid="10" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="2" relation="include">
+        </childnode>
+      </node>
+      <node id="10">
+        <label>QuadratureRules.h</label>
+        <link refid="QuadratureRules_8h_source"/>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="14" relation="include">
+        </childnode>
+      </node>
+      <node id="14">
+        <label>pbat/math/SymmetricQuadratureRules.h</label>
+        <link refid="SymmetricQuadratureRules_8h_source"/>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="13" relation="include">
+        </childnode>
+        <childnode refid="2" relation="include">
+        </childnode>
+      </node>
+      <node id="4">
+        <label>Eigen/Sparse</label>
+      </node>
+      <node id="9">
+        <label>pbat/fem/Tetrahedron.h</label>
+        <link refid="Tetrahedron_8h_source"/>
+        <childnode refid="10" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="2" relation="include">
+        </childnode>
+      </node>
+      <node id="8">
+        <label>pbat/fem/Mesh.h</label>
+      </node>
+      <node id="12">
+        <label>array</label>
+      </node>
+      <node id="6">
+        <label>pbat/sim/vbd/Data.h</label>
+      </node>
+      <node id="1">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/multigrid/Level.h</label>
+        <link refid="source_2pbat_2sim_2vbd_2multigrid_2Level_8h"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+      </node>
+      <node id="5">
+        <label>cstddef</label>
+      </node>
+    </incdepgraph>
+    <invincdepgraph>
+      <node id="1">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/multigrid/Level.h</label>
+        <link refid="source_2pbat_2sim_2vbd_2multigrid_2Level_8h"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/multigrid/Multigrid.h</label>
+        <link refid="source_2pbat_2sim_2vbd_2multigrid_2Multigrid_8h_source"/>
+      </node>
+      <node id="2">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/multigrid/Hierarchy.h</label>
+        <link refid="source_2pbat_2sim_2vbd_2multigrid_2Hierarchy_8h_source"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+      </node>
+    </invincdepgraph>
+    <innerclass refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level" prot="public">pbat::sim::vbd::multigrid::Level</innerclass>
+    <innernamespace refid="namespacepbat">pbat</innernamespace>
+    <innernamespace refid="namespacepbat_1_1sim">pbat::sim</innernamespace>
+    <innernamespace refid="namespacepbat_1_1sim_1_1vbd">pbat::sim::vbd</innernamespace>
+    <innernamespace refid="namespacepbat_1_1sim_1_1vbd_1_1multigrid">pbat::sim::vbd::multigrid</innernamespace>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="preprocessor">#ifndef<sp/>PBAT_SIM_VBD_MULTIGRID_LEVEL_H</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="2"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>PBAT_SIM_VBD_MULTIGRID_LEVEL_H</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="3"><highlight class="normal"></highlight></codeline>
+<codeline lineno="4"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;pbat/Aliases.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="5"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;pbat/sim/vbd/Data.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="6"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;pbat/sim/vbd/Mesh.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="7"><highlight class="normal"></highlight></codeline>
+<codeline lineno="8"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal">pbat<sp/>{</highlight></codeline>
+<codeline lineno="9"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal">sim<sp/>{</highlight></codeline>
+<codeline lineno="10"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal">vbd<sp/>{</highlight></codeline>
+<codeline lineno="11"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal">multigrid<sp/>{</highlight></codeline>
+<codeline lineno="12"><highlight class="normal"></highlight></codeline>
+<codeline lineno="13" refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level" refkind="compound"><highlight class="normal"></highlight><highlight class="keyword">struct<sp/></highlight><highlight class="normal"><ref refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level" kindref="compound">Level</ref></highlight></codeline>
+<codeline lineno="14"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="20"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a36c5ca3486f6772b43d4490c095cc3be" kindref="member">Level</ref>(<ref refid="structpbat_1_1sim_1_1vbd_1_1Data" kindref="compound">Data</ref><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>data,<sp/><ref refid="structpbat_1_1fem_1_1Mesh" kindref="compound">VolumeMesh</ref><sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1ab8a508431690592254dd834a827a1f74" kindref="member">mesh</ref>);</highlight></codeline>
+<codeline lineno="25"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1abc6b7179bef6b4eacaca30beb6420328" kindref="member">HyperReduce</ref>(<ref refid="structpbat_1_1sim_1_1vbd_1_1Data" kindref="compound">Data</ref><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>data);</highlight></codeline>
+<codeline lineno="30"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a9a1a48eb8d79156416b7ce3187082718" kindref="member">Prolong</ref>(<ref refid="structpbat_1_1sim_1_1vbd_1_1Data" kindref="compound">Data</ref>&amp;<sp/>data)<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="37"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a8400962314cd373e84191514273cdda4" kindref="member">Smooth</ref>(Scalar<sp/>dt,<sp/>Index<sp/>iters,<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1Data" kindref="compound">Data</ref>&amp;<sp/>data);</highlight></codeline>
+<codeline lineno="38"><highlight class="normal"></highlight></codeline>
+<codeline lineno="42" refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1ab8a508431690592254dd834a827a1f74" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1fem_1_1Mesh" kindref="compound">VolumeMesh</ref><sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1ab8a508431690592254dd834a827a1f74" kindref="member">mesh</ref>;<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight></codeline>
+<codeline lineno="43" refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a9cb9f579145195025d2e5e751e6b16dc" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>MatrixX<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a9cb9f579145195025d2e5e751e6b16dc" kindref="member">u</ref>;<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight></codeline>
+<codeline lineno="44" refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1af9c1dddf690c4fa1d924d574276a7de8" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>IndexVectorX<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1af9c1dddf690c4fa1d924d574276a7de8" kindref="member">colors</ref>;<sp/><sp/><sp/><sp/><sp/></highlight></codeline>
+<codeline lineno="45" refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a9b30ad5129f3ad7795fde1bf4c61cd67" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>IndexVectorX<sp/>Pptr,<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a9b30ad5129f3ad7795fde1bf4c61cd67" kindref="member">Padj</ref>;<sp/></highlight></codeline>
+<codeline lineno="46"><highlight class="normal"></highlight></codeline>
+<codeline lineno="47"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using</highlight><highlight class="normal"><sp/>BoolVector<sp/>=<sp/>Eigen::Vector&lt;bool,<sp/>Eigen::Dynamic&gt;;</highlight></codeline>
+<codeline lineno="48"><highlight class="normal"></highlight></codeline>
+<codeline lineno="52" refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1af2b4a49b4bcaea445229f49b7afd5c68" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>IndexMatrixX<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1af2b4a49b4bcaea445229f49b7afd5c68" kindref="member">ecVE</ref>;<sp/></highlight></codeline>
+<codeline lineno="53"><highlight class="normal"><sp/><sp/><sp/><sp/>MatrixX</highlight></codeline>
+<codeline lineno="54" refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a15ada99e6a2788cd0875074ec11241cd" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a15ada99e6a2788cd0875074ec11241cd" kindref="member">NecVE</ref>;<sp/></highlight></codeline>
+<codeline lineno="55" refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a76b7c7412be98e35731817eb90d35abf" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>IndexMatrixX<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a76b7c7412be98e35731817eb90d35abf" kindref="member">ilocalE</ref>;<sp/><sp/><sp/><sp/><sp/><sp/></highlight></codeline>
+<codeline lineno="56"><highlight class="normal"><sp/><sp/><sp/><sp/>IndexVectorX<sp/>GEptr,<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a47d8c865309e3e4b11dd7e2c87836392" kindref="member">GEadj</ref>;<sp/></highlight></codeline>
+<codeline lineno="58" refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a23f1f16b587f670ba5d906194a70c38d" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>BoolVector<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a23f1f16b587f670ba5d906194a70c38d" kindref="member">bActiveE</ref>;<sp/></highlight></codeline>
+<codeline lineno="59" refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1ad618e3eed689aefa9303c3160e685286" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>VectorX<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1ad618e3eed689aefa9303c3160e685286" kindref="member">wgE</ref>;<sp/></highlight></codeline>
+<codeline lineno="60"><highlight class="normal"></highlight></codeline>
+<codeline lineno="64" refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1af5c6f09ec649781789a621d72720a007" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>IndexVectorX<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1af5c6f09ec649781789a621d72720a007" kindref="member">ecK</ref>;<sp/></highlight></codeline>
+<codeline lineno="65" refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1aa1cf1126c61010f6cc1b3ed2be9a469f" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>MatrixX<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1aa1cf1126c61010f6cc1b3ed2be9a469f" kindref="member">NecK</ref>;<sp/><sp/><sp/><sp/><sp/></highlight></codeline>
+<codeline lineno="66" refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a75949b0ce4f4dc4a37d5fe0947413026" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>IndexVectorX<sp/>GKptr,<sp/>GKadj,<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a75949b0ce4f4dc4a37d5fe0947413026" kindref="member">GKilocal</ref>;<sp/></highlight></codeline>
+<codeline lineno="67" refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1ae5ea2cc51674c045f3c2e85bd82cbf99" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>BoolVector<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1ae5ea2cc51674c045f3c2e85bd82cbf99" kindref="member">bActiveK</ref>;<sp/></highlight></codeline>
+<codeline lineno="68" refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1aed31fc53836d0a471329bf6f76e6ed41" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>VectorX<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1aed31fc53836d0a471329bf6f76e6ed41" kindref="member">mK</ref>;<sp/></highlight></codeline>
+<codeline lineno="69"><highlight class="normal"></highlight></codeline>
+<codeline lineno="73" refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1afdebab3dd80f85c6e94375ec4100334e" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>BoolVector<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1afdebab3dd80f85c6e94375ec4100334e" kindref="member">bIsDirichletVertex</ref>;</highlight></codeline>
+<codeline lineno="74"><highlight class="normal">};</highlight></codeline>
+<codeline lineno="75"><highlight class="normal"></highlight></codeline>
+<codeline lineno="76"><highlight class="normal">}<sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>multigrid</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="77"><highlight class="normal">}<sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>vbd</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="78"><highlight class="normal">}<sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>sim</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="79"><highlight class="normal">}<sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>pbat</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="80"><highlight class="normal"></highlight></codeline>
+<codeline lineno="81"><highlight class="normal"></highlight><highlight class="preprocessor">#endif<sp/>//<sp/>PBAT_SIM_VBD_MULTIGRID_LEVEL_H</highlight></codeline>
+    </programlisting>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/multigrid/Level.h"/>
+  </compounddef>
+</doxygen>

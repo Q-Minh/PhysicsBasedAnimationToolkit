@@ -1,0 +1,338 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="namespacepbat_1_1py_1_1fem" kind="namespace" language="C++">
+    <compoundname>pbat::py::fem</compoundname>
+    <innerclass refid="classpbat_1_1py_1_1fem_1_1Gradient" prot="public">pbat::py::fem::Gradient</innerclass>
+    <innerclass refid="classpbat_1_1py_1_1fem_1_1HyperElasticPotential" prot="public">pbat::py::fem::HyperElasticPotential</innerclass>
+    <innerclass refid="classpbat_1_1py_1_1fem_1_1Laplacian" prot="public">pbat::py::fem::Laplacian</innerclass>
+    <innerclass refid="classpbat_1_1py_1_1fem_1_1MassMatrix" prot="public">pbat::py::fem::MassMatrix</innerclass>
+    <innerclass refid="classpbat_1_1py_1_1fem_1_1Mesh" prot="public">pbat::py::fem::Mesh</innerclass>
+      <sectiondef kind="enum">
+      <memberdef kind="enum" id="bindings_2pypbat_2fem_2HyperElasticPotential_8cpp_1ab80b9c29b7d4396e0d55c21d641f2036" prot="public" static="no" strong="yes">
+        <type></type>
+        <name>EHyperElasticEnergy</name>
+        <enumvalue id="bindings_2pypbat_2fem_2HyperElasticPotential_8cpp_1ab80b9c29b7d4396e0d55c21d641f2036a1641ef8fbff81acb0b281ce9d71fcde7" prot="public">
+          <name>SaintVenantKirchhoff</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="bindings_2pypbat_2fem_2HyperElasticPotential_8cpp_1ab80b9c29b7d4396e0d55c21d641f2036a5293ce2e7bfdcdc074590919af132e39" prot="public">
+          <name>StableNeoHookean</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/HyperElasticPotential.cpp" line="62" column="31" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/HyperElasticPotential.cpp" bodystart="62" bodyend="62"/>
+      </memberdef>
+      <memberdef kind="enum" id="bindings_2pypbat_2fem_2Mesh_8h_1a473956f53f1976aebaf11304e1232646" prot="public" static="no" strong="yes">
+        <type></type>
+        <name>EElement</name>
+        <enumvalue id="bindings_2pypbat_2fem_2Mesh_8h_1a473956f53f1976aebaf11304e1232646a4803e6b9e63dabf04de980788d6a13c4" prot="public">
+          <name>Line</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="bindings_2pypbat_2fem_2Mesh_8h_1a473956f53f1976aebaf11304e1232646a5e5500cb2b82eb72d550de644bd1b64b" prot="public">
+          <name>Triangle</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="bindings_2pypbat_2fem_2Mesh_8h_1a473956f53f1976aebaf11304e1232646ab1aa854f21a681be6412a6df6340ab00" prot="public">
+          <name>Quadrilateral</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="bindings_2pypbat_2fem_2Mesh_8h_1a473956f53f1976aebaf11304e1232646ae029cf63d8d01a489974f9289b50dc80" prot="public">
+          <name>Tetrahedron</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="bindings_2pypbat_2fem_2Mesh_8h_1a473956f53f1976aebaf11304e1232646a9f9ee7eff41b83c79fb8cce4168c5af6" prot="public">
+          <name>Hexahedron</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/Mesh.h" line="21" column="20" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/Mesh.h" bodystart="21" bodyend="21"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="func">
+      <memberdef kind="function" id="bindings_2pypbat_2fem_2Fem_8cpp_1a7fcb22ab92b09031aa57d23b2a28fe12" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void pbat::py::fem::Bind</definition>
+        <argsstring>(pybind11::module &amp;m)</argsstring>
+        <name>Bind</name>
+        <param>
+          <type>pybind11::module &amp;</type>
+          <declname>m</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/Fem.cpp" line="15" column="6" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/Fem.cpp" bodystart="15" bodyend="26" declfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/Fem.h" declline="10" declcolumn="6"/>
+      </memberdef>
+      <memberdef kind="function" id="bindings_2pypbat_2fem_2Gradient_8cpp_1a2bd3665973af2c48ff99df2f12bf3797" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void pbat::py::fem::BindGradient</definition>
+        <argsstring>(pybind11::module &amp;m)</argsstring>
+        <name>BindGradient</name>
+        <param>
+          <type>pybind11::module &amp;</type>
+          <declname>m</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/Gradient.cpp" line="41" column="6" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/Gradient.cpp" bodystart="41" bodyend="60" declfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/Gradient.h" declline="10" declcolumn="6"/>
+      </memberdef>
+      <memberdef kind="function" id="bindings_2pypbat_2fem_2HyperElasticPotential_8cpp_1a4ea94750caeadb3607115bab878a2a31" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class Func</type>
+          </param>
+        </templateparamlist>
+        <type>void</type>
+        <definition>void pbat::py::fem::HepApplyToMesh</definition>
+        <argsstring>(int meshDims, int meshOrder, EElement meshElement, Func &amp;&amp;f)</argsstring>
+        <name>HepApplyToMesh</name>
+        <param>
+          <type>int</type>
+          <declname>meshDims</declname>
+        </param>
+        <param>
+          <type>int</type>
+          <declname>meshOrder</declname>
+        </param>
+        <param>
+          <type>EElement</type>
+          <declname>meshElement</declname>
+        </param>
+        <param>
+          <type>Func &amp;&amp;</type>
+          <declname>f</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/HyperElasticPotential.cpp" line="17" column="13" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/HyperElasticPotential.cpp" bodystart="17" bodyend="60"/>
+      </memberdef>
+      <memberdef kind="function" id="bindings_2pypbat_2fem_2HyperElasticPotential_8cpp_1af55bc2fea8a7e0898020ca5b4fe931fd" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void pbat::py::fem::BindHyperElasticPotential</definition>
+        <argsstring>(pybind11::module &amp;m)</argsstring>
+        <name>BindHyperElasticPotential</name>
+        <param>
+          <type>pybind11::module &amp;</type>
+          <declname>m</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/HyperElasticPotential.cpp" line="134" column="6" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/HyperElasticPotential.cpp" bodystart="134" bodyend="230" declfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/HyperElasticPotential.h" declline="10" declcolumn="6"/>
+      </memberdef>
+      <memberdef kind="function" id="bindings_2pypbat_2fem_2Jacobian_8cpp_1aa368c3072c592a009f23e58081213dd1" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void pbat::py::fem::BindJacobian</definition>
+        <argsstring>(pybind11::module &amp;m)</argsstring>
+        <name>BindJacobian</name>
+        <param>
+          <type>pybind11::module &amp;</type>
+          <declname>m</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/Jacobian.cpp" line="13" column="6" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/Jacobian.cpp" bodystart="13" bodyend="88" declfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/Jacobian.h" declline="10" declcolumn="6"/>
+      </memberdef>
+      <memberdef kind="function" id="Laplacian_8cpp_1a690f1016dee5f23743520d33e329dfdb" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void pbat::py::fem::BindLaplacian</definition>
+        <argsstring>(pybind11::module &amp;m)</argsstring>
+        <name>BindLaplacian</name>
+        <param>
+          <type>pybind11::module &amp;</type>
+          <declname>m</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/Laplacian.cpp" line="48" column="6" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/Laplacian.cpp" bodystart="48" bodyend="83" declfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/Laplacian.h" declline="10" declcolumn="6"/>
+      </memberdef>
+      <memberdef kind="function" id="bindings_2pypbat_2fem_2MassMatrix_8cpp_1a544c605a0befca5f7292da6e2e96f371" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void pbat::py::fem::BindMassMatrix</definition>
+        <argsstring>(pybind11::module &amp;m)</argsstring>
+        <name>BindMassMatrix</name>
+        <param>
+          <type>pybind11::module &amp;</type>
+          <declname>m</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/MassMatrix.cpp" line="58" column="6" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/MassMatrix.cpp" bodystart="58" bodyend="107" declfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/MassMatrix.h" declline="10" declcolumn="6"/>
+      </memberdef>
+      <memberdef kind="function" id="bindings_2pypbat_2fem_2Mesh_8cpp_1aa9f5617846dcfb6a837f72b46f05cf1e" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void pbat::py::fem::BindMesh</definition>
+        <argsstring>(pybind11::module &amp;m)</argsstring>
+        <name>BindMesh</name>
+        <param>
+          <type>pybind11::module &amp;</type>
+          <declname>m</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/Mesh.cpp" line="10" column="6" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/Mesh.cpp" bodystart="10" bodyend="52" declfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/Mesh.h" declline="124" declcolumn="6"/>
+      </memberdef>
+      <memberdef kind="function" id="bindings_2pypbat_2fem_2Mesh_8h_1a392b1b9e92c28de7411b7c064ad488ce" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class Func</type>
+          </param>
+        </templateparamlist>
+        <type>void</type>
+        <definition>void pbat::py::fem::ApplyToMesh</definition>
+        <argsstring>(int meshDims, int meshOrder, EElement meshElement, Func &amp;&amp;f)</argsstring>
+        <name>ApplyToMesh</name>
+        <param>
+          <type>int</type>
+          <declname>meshDims</declname>
+        </param>
+        <param>
+          <type>int</type>
+          <declname>meshOrder</declname>
+        </param>
+        <param>
+          <type>EElement</type>
+          <declname>meshElement</declname>
+        </param>
+        <param>
+          <type>Func &amp;&amp;</type>
+          <declname>f</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/Mesh.h" line="24" column="13" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/Mesh.h" bodystart="24" bodyend="59"/>
+      </memberdef>
+      <memberdef kind="function" id="bindings_2pypbat_2fem_2Mesh_8h_1a4b2b7aa53d4084564cbf73a2694f5890" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>auto</type>
+            <declname>MaxQuadratureOrder</declname>
+            <defname>MaxQuadratureOrder</defname>
+          </param>
+          <param>
+            <type>class Func</type>
+          </param>
+        </templateparamlist>
+        <type>void</type>
+        <definition>void pbat::py::fem::ApplyToMeshWithQuadrature</definition>
+        <argsstring>(int meshDims, int meshOrder, EElement meshElement, int qOrder, Func &amp;&amp;f)</argsstring>
+        <name>ApplyToMeshWithQuadrature</name>
+        <param>
+          <type>int</type>
+          <declname>meshDims</declname>
+        </param>
+        <param>
+          <type>int</type>
+          <declname>meshOrder</declname>
+        </param>
+        <param>
+          <type>EElement</type>
+          <declname>meshElement</declname>
+        </param>
+        <param>
+          <type>int</type>
+          <declname>qOrder</declname>
+        </param>
+        <param>
+          <type>Func &amp;&amp;</type>
+          <declname>f</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/Mesh.h" line="63" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/Mesh.h" bodystart="63" bodyend="81"/>
+      </memberdef>
+      <memberdef kind="function" id="bindings_2pypbat_2fem_2ShapeFunctions_8cpp_1a10b307a837e9e3efff2c8bbb624e43bd" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void pbat::py::fem::BindShapeFunctions</definition>
+        <argsstring>(pybind11::module &amp;m)</argsstring>
+        <name>BindShapeFunctions</name>
+        <param>
+          <type>pybind11::module &amp;</type>
+          <declname>m</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/ShapeFunctions.cpp" line="13" column="6" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/ShapeFunctions.cpp" bodystart="13" bodyend="104" declfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/ShapeFunctions.h" declline="10" declcolumn="6"/>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/Fem.cpp" line="13" column="13"/>
+  </compounddef>
+</doxygen>

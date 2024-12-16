@@ -1,0 +1,13 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="namespacepbat_1_1gpu_1_1vbd" kind="namespace" language="C++">
+    <compoundname>pbat::gpu::vbd</compoundname>
+    <innerclass refid="classpbat_1_1gpu_1_1vbd_1_1Integrator" prot="public">pbat::gpu::vbd::Integrator</innerclass>
+    <innernamespace refid="namespacepbat_1_1gpu_1_1vbd_1_1tests">pbat::gpu::vbd::tests</innernamespace>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/vbd/Integrator.h" line="11" column="13"/>
+  </compounddef>
+</doxygen>

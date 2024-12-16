@@ -1,0 +1,98 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="namespacepbat_1_1py_1_1geometry" kind="namespace" language="C++">
+    <compoundname>pbat::py::geometry</compoundname>
+      <sectiondef kind="func">
+      <memberdef kind="function" id="bindings_2pypbat_2geometry_2AxisAlignedBoundingBox_8cpp_1a586ce1a860235e2a1f050c03d29955e3" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void pbat::py::geometry::BindAxisAlignedBoundingBox</definition>
+        <argsstring>(pybind11::module &amp;m)</argsstring>
+        <name>BindAxisAlignedBoundingBox</name>
+        <param>
+          <type>pybind11::module &amp;</type>
+          <declname>m</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/geometry/AxisAlignedBoundingBox.cpp" line="13" column="6" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/geometry/AxisAlignedBoundingBox.cpp" bodystart="13" bodyend="90" declfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/geometry/AxisAlignedBoundingBox.h" declline="10" declcolumn="6"/>
+      </memberdef>
+      <memberdef kind="function" id="bindings_2pypbat_2geometry_2Geometry_8cpp_1a88d889980bf7254f56c7aaec692c870f" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void pbat::py::geometry::Bind</definition>
+        <argsstring>(pybind11::module &amp;m)</argsstring>
+        <name>Bind</name>
+        <param>
+          <type>pybind11::module &amp;</type>
+          <declname>m</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/geometry/Geometry.cpp" line="12" column="6" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/geometry/Geometry.cpp" bodystart="12" bodyend="18" declfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/geometry/Geometry.h" declline="10" declcolumn="6"/>
+      </memberdef>
+      <memberdef kind="function" id="bindings_2pypbat_2geometry_2MeshBoundary_8cpp_1a231fccbfbf26a1710534a13f55f85bc3" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void pbat::py::geometry::BindMeshBoundary</definition>
+        <argsstring>(pybind11::module &amp;m)</argsstring>
+        <name>BindMeshBoundary</name>
+        <param>
+          <type>pybind11::module &amp;</type>
+          <declname>m</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/geometry/MeshBoundary.cpp" line="11" column="6" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/geometry/MeshBoundary.cpp" bodystart="11" bodyend="29" declfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/geometry/MeshBoundary.h" declline="10" declcolumn="6"/>
+      </memberdef>
+      <memberdef kind="function" id="bindings_2pypbat_2geometry_2TetrahedralAabbHierarchy_8cpp_1acd93884df4f8d2d13de5e3095fcbdb18" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void pbat::py::geometry::BindTetrahedralAabbHierarchy</definition>
+        <argsstring>(pybind11::module &amp;m)</argsstring>
+        <name>BindTetrahedralAabbHierarchy</name>
+        <param>
+          <type>pybind11::module &amp;</type>
+          <declname>m</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/geometry/TetrahedralAabbHierarchy.cpp" line="11" column="6" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/geometry/TetrahedralAabbHierarchy.cpp" bodystart="11" bodyend="58" declfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/geometry/TetrahedralAabbHierarchy.h" declline="10" declcolumn="6"/>
+      </memberdef>
+      <memberdef kind="function" id="bindings_2pypbat_2geometry_2TriangleAabbHierarchy_8cpp_1a37df8f2613707db68f0bc0cceae271e7" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void pbat::py::geometry::BindTriangleAabbHierarchy</definition>
+        <argsstring>(pybind11::module &amp;m)</argsstring>
+        <name>BindTriangleAabbHierarchy</name>
+        <param>
+          <type>pybind11::module &amp;</type>
+          <declname>m</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/geometry/TriangleAabbHierarchy.cpp" line="14" column="6" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/geometry/TriangleAabbHierarchy.cpp" bodystart="14" bodyend="57" declfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/geometry/TriangleAabbHierarchy.h" declline="10" declcolumn="6"/>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/geometry/AxisAlignedBoundingBox.cpp" line="11" column="18"/>
+  </compounddef>
+</doxygen>

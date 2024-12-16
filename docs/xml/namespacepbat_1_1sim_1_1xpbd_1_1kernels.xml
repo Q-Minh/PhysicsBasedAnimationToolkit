@@ -1,0 +1,671 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="namespacepbat_1_1sim_1_1xpbd_1_1kernels" kind="namespace" language="C++">
+    <compoundname>pbat::sim::xpbd::kernels</compoundname>
+      <sectiondef kind="func">
+      <memberdef kind="function" id="xpbd_2Kernels_8h_1aa476a9bedb24496304639ba05a05a678" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixXT</declname>
+            <defname>TMatrixXT</defname>
+          </param>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixVT</declname>
+            <defname>TMatrixVT</defname>
+          </param>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixA</declname>
+            <defname>TMatrixA</defname>
+          </param>
+          <param>
+            <type>class ScalarType</type>
+            <defval>typename TMatrixXT::ScalarType</defval>
+          </param>
+        </templateparamlist>
+        <type>PBAT_HOST_DEVICE <ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1SMatrix" kindref="compound">mini::SVector</ref>&lt; ScalarType, TMatrixXT::kRows &gt;</type>
+        <definition>PBAT_HOST_DEVICE mini::SVector&lt;ScalarType, TMatrixXT::kRows&gt; pbat::sim::xpbd::kernels::InitialPosition</definition>
+        <argsstring>(TMatrixXT const &amp;xt, TMatrixVT const &amp;vt, TMatrixA const &amp;aext, ScalarType dt, ScalarType dt2)</argsstring>
+        <name>InitialPosition</name>
+        <param>
+          <type>TMatrixXT const &amp;</type>
+          <declname>xt</declname>
+        </param>
+        <param>
+          <type>TMatrixVT const &amp;</type>
+          <declname>vt</declname>
+        </param>
+        <param>
+          <type>TMatrixA const &amp;</type>
+          <declname>aext</declname>
+        </param>
+        <param>
+          <type>ScalarType</type>
+          <declname>dt</declname>
+        </param>
+        <param>
+          <type>ScalarType</type>
+          <declname>dt2</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>ScalarType</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>TMatrixXT</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>TMatrixVT</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>TMatrixA</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>xt</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>vt</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>aext</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>dt</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>dt2</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para></para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Kernels.h" line="36" column="32" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Kernels.h" bodystart="36" bodyend="44"/>
+      </memberdef>
+      <memberdef kind="function" id="xpbd_2Kernels_8h_1a6ed4d2a70363859337fb5fbb31cd33ad" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixMinv</declname>
+            <defname>TMatrixMinv</defname>
+          </param>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixDmInv</declname>
+            <defname>TMatrixDmInv</defname>
+          </param>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixAlphaT</declname>
+            <defname>TMatrixAlphaT</defname>
+          </param>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixGamma</declname>
+            <defname>TMatrixGamma</defname>
+          </param>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixXTC</declname>
+            <defname>TMatrixXTC</defname>
+          </param>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixL</declname>
+            <defname>TMatrixL</defname>
+          </param>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixXC</declname>
+            <defname>TMatrixXC</defname>
+          </param>
+          <param>
+            <type>class ScalarType</type>
+            <defval>typename TMatrixMinv::ScalarType</defval>
+          </param>
+        </templateparamlist>
+        <type>PBAT_HOST_DEVICE void</type>
+        <definition>PBAT_HOST_DEVICE void pbat::sim::xpbd::kernels::ProjectBlockNeoHookean</definition>
+        <argsstring>(TMatrixMinv const &amp;minvc, TMatrixDmInv const &amp;DmInv, ScalarType gammaSNHc, TMatrixAlphaT atildec, TMatrixGamma gammac, TMatrixXTC const &amp;xtc, TMatrixL &amp;lambdac, TMatrixXC &amp;xc)</argsstring>
+        <name>ProjectBlockNeoHookean</name>
+        <param>
+          <type>TMatrixMinv const &amp;</type>
+          <declname>minvc</declname>
+        </param>
+        <param>
+          <type>TMatrixDmInv const &amp;</type>
+          <declname>DmInv</declname>
+        </param>
+        <param>
+          <type>ScalarType</type>
+          <declname>gammaSNHc</declname>
+        </param>
+        <param>
+          <type>TMatrixAlphaT</type>
+          <declname>atildec</declname>
+        </param>
+        <param>
+          <type>TMatrixGamma</type>
+          <declname>gammac</declname>
+        </param>
+        <param>
+          <type>TMatrixXTC const &amp;</type>
+          <declname>xtc</declname>
+        </param>
+        <param>
+          <type>TMatrixL &amp;</type>
+          <declname>lambdac</declname>
+        </param>
+        <param>
+          <type>TMatrixXC &amp;</type>
+          <declname>xc</declname>
+        </param>
+        <briefdescription>
+<para>Project coupled Stable Neo-Hookean constraints. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>Implements the constraint coupling technique from Ton-That, Quoc-Minh, Paul G. Kry, and Sheldon Andrews. &quot;Parallel block Neo-Hookean XPBD using graph clustering.&quot; Computers &amp; Graphics 110 (2023): 1-10.</para>
+<para><parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>TMatrixMinv</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>TMatrixDmInv</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>TMatrixAlphA</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>TMatrixGamma</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>TMatrixXTC</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>TMatrixL</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>TMatrixXC</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>ScalarType</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>minvc</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>4x1 vector of tetrahedron particle inverse masses </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>DmInv</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>3x3 matrix of tetrahedron shape matrix inverse </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>gammaSNHc</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Rest stable coefficient for Stable Neo-Hookean material </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>atildec</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>2x1 Deviatoric and hydrostatic compliances </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>gammac</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>2x1 XPBD damping terms </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>xtc</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>3x4 tetrahedron particle positions at time t </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>lambda</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>2x1 vector of XPBD Lagrange multipliers </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>xc</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>3x4 current tetrahedron particle positions </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Kernels.h" line="81" column="23" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Kernels.h" bodystart="81" bodyend="140"/>
+      </memberdef>
+      <memberdef kind="function" id="xpbd_2Kernels_8h_1af4222e1f78fa129abb46f15c1454c1eb" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixXVT</declname>
+            <defname>TMatrixXVT</defname>
+          </param>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixXFT</declname>
+            <defname>TMatrixXFT</defname>
+          </param>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixXF</declname>
+            <defname>TMatrixXF</defname>
+          </param>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixXV</declname>
+            <defname>TMatrixXV</defname>
+          </param>
+          <param>
+            <type>class ScalarType</type>
+            <defval>typename TMatrixXV::ScalarType</defval>
+          </param>
+        </templateparamlist>
+        <type>PBAT_HOST_DEVICE bool</type>
+        <definition>PBAT_HOST_DEVICE bool pbat::sim::xpbd::kernels::ProjectVertexTriangle</definition>
+        <argsstring>(ScalarType minvv, TMatrixXVT const &amp;xvt, TMatrixXFT const &amp;xft, TMatrixXF const &amp;xf, ScalarType muC, ScalarType muS, ScalarType muD, ScalarType atildec, ScalarType gammac, ScalarType &amp;lambdac, TMatrixXV &amp;xv)</argsstring>
+        <name>ProjectVertexTriangle</name>
+        <param>
+          <type>ScalarType</type>
+          <declname>minvv</declname>
+        </param>
+        <param>
+          <type>TMatrixXVT const &amp;</type>
+          <declname>xvt</declname>
+        </param>
+        <param>
+          <type>TMatrixXFT const &amp;</type>
+          <declname>xft</declname>
+        </param>
+        <param>
+          <type>TMatrixXF const &amp;</type>
+          <declname>xf</declname>
+        </param>
+        <param>
+          <type>ScalarType</type>
+          <declname>muC</declname>
+        </param>
+        <param>
+          <type>ScalarType</type>
+          <declname>muS</declname>
+        </param>
+        <param>
+          <type>ScalarType</type>
+          <declname>muD</declname>
+        </param>
+        <param>
+          <type>ScalarType</type>
+          <declname>atildec</declname>
+        </param>
+        <param>
+          <type>ScalarType</type>
+          <declname>gammac</declname>
+        </param>
+        <param>
+          <type>ScalarType &amp;</type>
+          <declname>lambdac</declname>
+        </param>
+        <param>
+          <type>TMatrixXV &amp;</type>
+          <declname>xv</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>TMatrixXVT</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>TMatrixXFT</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>TMatrixXF</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>TMatrixXV</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>ScalarType</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>minvv</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>xvt</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>xft</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>xf</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>muC</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>muS</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>muD</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>atildec</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>gammac</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>lambdac</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>xv</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Kernels.h" line="168" column="23" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Kernels.h" bodystart="168" bodyend="246"/>
+      </memberdef>
+      <memberdef kind="function" id="xpbd_2Kernels_8h_1ad841a2c7b41d4eb90dec7d479aa1627a" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixXT</declname>
+            <defname>TMatrixXT</defname>
+          </param>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixX</declname>
+            <defname>TMatrixX</defname>
+          </param>
+          <param>
+            <type>class ScalarType</type>
+            <defval>typename TMatrixXT::ScalarType</defval>
+          </param>
+        </templateparamlist>
+        <type>PBAT_HOST_DEVICE <ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1SMatrix" kindref="compound">mini::SVector</ref>&lt; ScalarType, TMatrixXT::kRows &gt;</type>
+        <definition>PBAT_HOST_DEVICE mini::SVector&lt;ScalarType, TMatrixXT::kRows&gt; pbat::sim::xpbd::kernels::IntegrateVelocity</definition>
+        <argsstring>(TMatrixXT const &amp;xt, TMatrixX const &amp;x, ScalarType dt)</argsstring>
+        <name>IntegrateVelocity</name>
+        <param>
+          <type>TMatrixXT const &amp;</type>
+          <declname>xt</declname>
+        </param>
+        <param>
+          <type>TMatrixX const &amp;</type>
+          <declname>x</declname>
+        </param>
+        <param>
+          <type>ScalarType</type>
+          <declname>dt</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>ScalarType</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>TMatrixXT</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>TMatrixX</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>xt</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>x</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>dt</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para></para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Kernels.h" line="263" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Kernels.h" bodystart="263" bodyend="266"/>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Kernels.h" line="14" column="17"/>
+  </compounddef>
+</doxygen>

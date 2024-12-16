@@ -1,0 +1,41 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="classpbat_1_1sim_1_1vbd_1_1multigrid_1_1Integrator" kind="class" language="C++" prot="public">
+    <compoundname>pbat::sim::vbd::multigrid::Integrator</compoundname>
+      <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpbat_1_1sim_1_1vbd_1_1multigrid_1_1Integrator_1acb5af04b145126371e360a4f66bad4af" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void pbat::sim::vbd::multigrid::Integrator::Step</definition>
+        <argsstring>(Scalar dt, Index substeps, Hierarchy &amp;hierarchy) const</argsstring>
+        <name>Step</name>
+        <param>
+          <type>Scalar</type>
+          <declname>dt</declname>
+        </param>
+        <param>
+          <type>Index</type>
+          <declname>substeps</declname>
+        </param>
+        <param>
+          <type><ref refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Hierarchy" kindref="compound">Hierarchy</ref> &amp;</type>
+          <declname>hierarchy</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/multigrid/Integrator.h" line="16" column="10" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/multigrid/Integrator.cpp" bodystart="15" bodyend="84"/>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/multigrid/Integrator.h" line="14" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/multigrid/Integrator.h" bodystart="13" bodyend="19"/>
+    <listofallmembers>
+      <member refid="classpbat_1_1sim_1_1vbd_1_1multigrid_1_1Integrator_1acb5af04b145126371e360a4f66bad4af" prot="public" virt="non-virtual"><scope>pbat::sim::vbd::multigrid::Integrator</scope><name>Step</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

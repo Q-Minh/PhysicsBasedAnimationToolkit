@@ -1,0 +1,415 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="classpbat_1_1geometry_1_1TetrahedralAabbHierarchy" kind="class" language="C++" prot="public">
+    <compoundname>pbat::geometry::TetrahedralAabbHierarchy</compoundname>
+    <basecompoundref refid="classpbat_1_1geometry_1_1BoundingVolumeHierarchy" prot="public" virt="non-virtual">pbat::geometry::BoundingVolumeHierarchy&lt; TetrahedralAabbHierarchy, AxisAlignedBoundingBox&lt; 3 &gt;, IndexVector&lt; 4 &gt;, 3 &gt;</basecompoundref>
+      <sectiondef kind="public-type">
+      <memberdef kind="typedef" id="classpbat_1_1geometry_1_1TetrahedralAabbHierarchy_1a397a3d1a50d8a6bf49b5b578b3612179" prot="public" static="no">
+        <type><ref refid="classpbat_1_1geometry_1_1TetrahedralAabbHierarchy" kindref="compound">TetrahedralAabbHierarchy</ref></type>
+        <definition>using pbat::geometry::TetrahedralAabbHierarchy::SelfType =  TetrahedralAabbHierarchy</definition>
+        <argsstring></argsstring>
+        <name>SelfType</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/TetrahedralAabbHierarchy.h" line="28" column="5" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/TetrahedralAabbHierarchy.h" bodystart="28" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="classpbat_1_1geometry_1_1TetrahedralAabbHierarchy_1a4e5ff90f0371ffecae90c386a0ee024a" prot="public" static="no">
+        <type><ref refid="classpbat_1_1geometry_1_1BoundingVolumeHierarchy" kindref="compound">BoundingVolumeHierarchy</ref>&lt; <ref refid="classpbat_1_1geometry_1_1TetrahedralAabbHierarchy" kindref="compound">SelfType</ref>, <ref refid="classpbat_1_1geometry_1_1AxisAlignedBoundingBox" kindref="compound">AxisAlignedBoundingBox</ref>&lt; kDims &gt;, IndexVector&lt; 4 &gt;, kDims &gt;</type>
+        <definition>using pbat::geometry::TetrahedralAabbHierarchy::BaseType =  BoundingVolumeHierarchy&lt;SelfType, AxisAlignedBoundingBox&lt;kDims&gt;, IndexVector&lt;4&gt;, kDims&gt;</definition>
+        <argsstring></argsstring>
+        <name>BaseType</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/TetrahedralAabbHierarchy.h" line="29" column="5" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/TetrahedralAabbHierarchy.h" bodystart="30" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="public-static-attrib">
+      <memberdef kind="variable" id="classpbat_1_1geometry_1_1TetrahedralAabbHierarchy_1a72bfabfbf9769838758763a9d6391071" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>constexpr auto</type>
+        <definition>constexpr auto pbat::geometry::TetrahedralAabbHierarchy::kDims</definition>
+        <argsstring></argsstring>
+        <name>kDims</name>
+        <initializer>= 3</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/TetrahedralAabbHierarchy.h" line="27" column="27" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/TetrahedralAabbHierarchy.h" bodystart="27" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="classpbat_1_1geometry_1_1TetrahedralAabbHierarchy_1ab2e8575ffbc1636f1e90eb8220aad844" prot="public" static="no" mutable="no">
+        <type>Eigen::Ref&lt; MatrixX const  &gt;</type>
+        <definition>Eigen::Ref&lt;MatrixX const&gt; pbat::geometry::TetrahedralAabbHierarchy::V</definition>
+        <argsstring></argsstring>
+        <name>V</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/TetrahedralAabbHierarchy.h" line="77" column="16" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/TetrahedralAabbHierarchy.h" bodystart="77" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpbat_1_1geometry_1_1TetrahedralAabbHierarchy_1ad8dc3d5c2d5800a768987630712ff5be" prot="public" static="no" mutable="no">
+        <type>Eigen::Ref&lt; IndexMatrixX const  &gt;</type>
+        <definition>Eigen::Ref&lt;IndexMatrixX const&gt; pbat::geometry::TetrahedralAabbHierarchy::C</definition>
+        <argsstring></argsstring>
+        <name>C</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/TetrahedralAabbHierarchy.h" line="78" column="16" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/TetrahedralAabbHierarchy.h" bodystart="78" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpbat_1_1geometry_1_1TetrahedralAabbHierarchy_1a23f6061ccdd92aca09aead5f14b1646d" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>PBAT_API</type>
+        <definition>pbat::geometry::TetrahedralAabbHierarchy::TetrahedralAabbHierarchy</definition>
+        <argsstring>(Eigen::Ref&lt; MatrixX const &gt; const &amp;V, Eigen::Ref&lt; IndexMatrixX const &gt; const &amp;C, std::size_t maxPointsInLeaf=10ULL)</argsstring>
+        <name>TetrahedralAabbHierarchy</name>
+        <param>
+          <type>Eigen::Ref&lt; MatrixX const &gt; const &amp;</type>
+          <declname>V</declname>
+        </param>
+        <param>
+          <type>Eigen::Ref&lt; IndexMatrixX const &gt; const &amp;</type>
+          <declname>C</declname>
+        </param>
+        <param>
+          <type>std::size_t</type>
+          <declname>maxPointsInLeaf</declname>
+          <defval>10ULL</defval>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/TetrahedralAabbHierarchy.h" line="32" column="14" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/TetrahedralAabbHierarchy.cpp" bodystart="13" bodyend="35"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1geometry_1_1TetrahedralAabbHierarchy_1a265d03853e1c3f5da33aa58a5ae69a94" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>PBAT_API PrimitiveType</type>
+        <definition>TetrahedralAabbHierarchy::PrimitiveType pbat::geometry::TetrahedralAabbHierarchy::Primitive</definition>
+        <argsstring>(Index p) const</argsstring>
+        <name>Primitive</name>
+        <param>
+          <type>Index</type>
+          <declname>p</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/TetrahedralAabbHierarchy.h" line="37" column="28" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/TetrahedralAabbHierarchy.cpp" bodystart="37" bodyend="41"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1geometry_1_1TetrahedralAabbHierarchy_1a00ebda926b7c453aff3fb000d4e48eff" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>PBAT_API Vector&lt; kDims &gt;</type>
+        <definition>Vector&lt; TetrahedralAabbHierarchy::kDims &gt; pbat::geometry::TetrahedralAabbHierarchy::PrimitiveLocation</definition>
+        <argsstring>(PrimitiveType const &amp;primitive) const</argsstring>
+        <name>PrimitiveLocation</name>
+        <param>
+          <type>PrimitiveType const &amp;</type>
+          <declname>primitive</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/TetrahedralAabbHierarchy.h" line="39" column="21" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/TetrahedralAabbHierarchy.cpp" bodystart="44" bodyend="47"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1geometry_1_1TetrahedralAabbHierarchy_1adfec13d5982daf03818993e8f7a7395e" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class RPrimitiveIndices</type>
+          </param>
+        </templateparamlist>
+        <type><ref refid="classpbat_1_1geometry_1_1AxisAlignedBoundingBox" kindref="compound">BoundingVolumeType</ref></type>
+        <definition>TetrahedralAabbHierarchy::BoundingVolumeType pbat::geometry::TetrahedralAabbHierarchy::BoundingVolumeOf</definition>
+        <argsstring>(RPrimitiveIndices &amp;&amp;pinds) const</argsstring>
+        <name>BoundingVolumeOf</name>
+        <param>
+          <type>RPrimitiveIndices &amp;&amp;</type>
+          <declname>pinds</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/TetrahedralAabbHierarchy.h" line="42" column="24" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/TetrahedralAabbHierarchy.h" bodystart="83" bodyend="87"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1geometry_1_1TetrahedralAabbHierarchy_1a96129c23a239d74319222c44b5a9e48e" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>PBAT_API void</type>
+        <definition>void pbat::geometry::TetrahedralAabbHierarchy::Update</definition>
+        <argsstring>()</argsstring>
+        <name>Update</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/TetrahedralAabbHierarchy.h" line="44" column="19" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/TetrahedralAabbHierarchy.cpp" bodystart="49" bodyend="53"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1geometry_1_1TetrahedralAabbHierarchy_1a51f7cdf0bc6daae099c632a839b6026c" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>PBAT_API IndexMatrixX</type>
+        <definition>IndexMatrixX pbat::geometry::TetrahedralAabbHierarchy::OverlappingPrimitives</definition>
+        <argsstring>(TetrahedralAabbHierarchy const &amp;bvh, std::size_t reserve=1000ULL) const</argsstring>
+        <name>OverlappingPrimitives</name>
+        <param>
+          <type><ref refid="classpbat_1_1geometry_1_1TetrahedralAabbHierarchy" kindref="compound">TetrahedralAabbHierarchy</ref> const &amp;</type>
+          <declname>bvh</declname>
+        </param>
+        <param>
+          <type>std::size_t</type>
+          <declname>reserve</declname>
+          <defval>1000ULL</defval>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/TetrahedralAabbHierarchy.h" line="47" column="5" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/TetrahedralAabbHierarchy.cpp" bodystart="55" bodyend="98"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1geometry_1_1TetrahedralAabbHierarchy_1a258997e1565ea9d48154e0c5cdacdb8e" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class TDerivedP</type>
+          </param>
+          <param>
+            <type>class FCull</type>
+          </param>
+        </templateparamlist>
+        <type>IndexVectorX</type>
+        <definition>IndexVectorX pbat::geometry::TetrahedralAabbHierarchy::PrimitivesContainingPoints</definition>
+        <argsstring>(Eigen::MatrixBase&lt; TDerivedP &gt; const &amp;P, FCull fCull, bool bParallelize=true) const</argsstring>
+        <name>PrimitivesContainingPoints</name>
+        <param>
+          <type>Eigen::MatrixBase&lt; TDerivedP &gt; const &amp;</type>
+          <declname>P</declname>
+        </param>
+        <param>
+          <type>FCull</type>
+          <declname>fCull</declname>
+        </param>
+        <param>
+          <type>bool</type>
+          <declname>bParallelize</declname>
+          <defval>true</defval>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/TetrahedralAabbHierarchy.h" line="50" column="18" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/TetrahedralAabbHierarchy.h" bodystart="90" bodyend="128"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1geometry_1_1TetrahedralAabbHierarchy_1ac6b540ae246f66b86f72826b019f4a02" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class TDerivedP</type>
+          </param>
+        </templateparamlist>
+        <type>IndexVectorX</type>
+        <definition>IndexVectorX pbat::geometry::TetrahedralAabbHierarchy::PrimitivesContainingPoints</definition>
+        <argsstring>(Eigen::MatrixBase&lt; TDerivedP &gt; const &amp;P, bool bParallelize=true) const</argsstring>
+        <name>PrimitivesContainingPoints</name>
+        <param>
+          <type>Eigen::MatrixBase&lt; TDerivedP &gt; const &amp;</type>
+          <declname>P</declname>
+        </param>
+        <param>
+          <type>bool</type>
+          <declname>bParallelize</declname>
+          <defval>true</defval>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/TetrahedralAabbHierarchy.h" line="56" column="18" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/TetrahedralAabbHierarchy.h" bodystart="131" bodyend="136"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1geometry_1_1TetrahedralAabbHierarchy_1affe441dfe4ac7a4ff688dcfd4924f3d9" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class TDerivedP</type>
+          </param>
+        </templateparamlist>
+        <type>std::pair&lt; IndexVectorX, VectorX &gt;</type>
+        <definition>std::pair&lt; IndexVectorX, VectorX &gt; pbat::geometry::TetrahedralAabbHierarchy::NearestPrimitivesToPoints</definition>
+        <argsstring>(Eigen::MatrixBase&lt; TDerivedP &gt; const &amp;P, bool bParallelize=true) const</argsstring>
+        <name>NearestPrimitivesToPoints</name>
+        <param>
+          <type>Eigen::MatrixBase&lt; TDerivedP &gt; const &amp;</type>
+          <declname>P</declname>
+        </param>
+        <param>
+          <type>bool</type>
+          <declname>bParallelize</declname>
+          <defval>true</defval>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/TetrahedralAabbHierarchy.h" line="61" column="15" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/TetrahedralAabbHierarchy.h" bodystart="139" bodyend="178"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1geometry_1_1TetrahedralAabbHierarchy_1ae8fa34fadba78a422d90df66d3b43124" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>auto const  &amp;</type>
+        <definition>auto const&amp; pbat::geometry::TetrahedralAabbHierarchy::GetBoundingVolumes</definition>
+        <argsstring>() const</argsstring>
+        <name>GetBoundingVolumes</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/TetrahedralAabbHierarchy.h" line="65" column="17" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/TetrahedralAabbHierarchy.h" bodystart="65" bodyend="65"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1geometry_1_1TetrahedralAabbHierarchy_1ae731eebd33a9f7c799b3337d5bfe4426" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class TDerivedP</type>
+          </param>
+        </templateparamlist>
+        <type>void</type>
+        <definition>void pbat::geometry::TetrahedralAabbHierarchy::SetV</definition>
+        <argsstring>(Eigen::MatrixBase&lt; TDerivedP &gt; const &amp;P)</argsstring>
+        <name>SetV</name>
+        <param>
+          <type>Eigen::MatrixBase&lt; TDerivedP &gt; const &amp;</type>
+          <declname>P</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/TetrahedralAabbHierarchy.h" line="68" column="10" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/TetrahedralAabbHierarchy.h" bodystart="68" bodyend="71"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1geometry_1_1TetrahedralAabbHierarchy_1a0dfda400734d783be1b8e85b3cc238a5" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>auto</type>
+        <definition>auto pbat::geometry::TetrahedralAabbHierarchy::GetV</definition>
+        <argsstring>() const</argsstring>
+        <name>GetV</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/TetrahedralAabbHierarchy.h" line="73" column="11" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/TetrahedralAabbHierarchy.h" bodystart="73" bodyend="73"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1geometry_1_1TetrahedralAabbHierarchy_1a0f4ab2577ea1a860b5bf6fb52a51fd49" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>auto</type>
+        <definition>auto pbat::geometry::TetrahedralAabbHierarchy::GetC</definition>
+        <argsstring>() const</argsstring>
+        <name>GetC</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/TetrahedralAabbHierarchy.h" line="75" column="11" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/TetrahedralAabbHierarchy.h" bodystart="75" bodyend="75"/>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="2">
+        <label>pbat::geometry::BoundingVolumeHierarchy&lt; TetrahedralAabbHierarchy, AxisAlignedBoundingBox&lt; 3 &gt;, IndexVector&lt; 4 &gt;, 3 &gt;</label>
+        <link refid="classpbat_1_1geometry_1_1BoundingVolumeHierarchy"/>
+      </node>
+      <node id="1">
+        <label>pbat::geometry::TetrahedralAabbHierarchy</label>
+        <link refid="classpbat_1_1geometry_1_1TetrahedralAabbHierarchy"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="2">
+        <label>pbat::geometry::BoundingVolumeHierarchy&lt; TetrahedralAabbHierarchy, AxisAlignedBoundingBox&lt; 3 &gt;, IndexVector&lt; 4 &gt;, 3 &gt;</label>
+        <link refid="classpbat_1_1geometry_1_1BoundingVolumeHierarchy"/>
+        <childnode refid="3" relation="usage">
+          <edgelabel>mKdTree</edgelabel>
+        </childnode>
+      </node>
+      <node id="3">
+        <label>pbat::geometry::KdTree&lt; kDims &gt;</label>
+        <link refid="classpbat_1_1geometry_1_1KdTree"/>
+      </node>
+      <node id="1">
+        <label>pbat::geometry::TetrahedralAabbHierarchy</label>
+        <link refid="classpbat_1_1geometry_1_1TetrahedralAabbHierarchy"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/TetrahedralAabbHierarchy.h" line="25" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/TetrahedralAabbHierarchy.h" bodystart="20" bodyend="79"/>
+    <listofallmembers>
+      <member refid="classpbat_1_1geometry_1_1TetrahedralAabbHierarchy_1a4e5ff90f0371ffecae90c386a0ee024a" prot="public" virt="non-virtual"><scope>pbat::geometry::TetrahedralAabbHierarchy</scope><name>BaseType</name></member>
+      <member refid="classpbat_1_1geometry_1_1BoundingVolumeHierarchy_1a9af7b63212fba69911db7d48dbe4c3a1" prot="public" virt="non-virtual"><scope>pbat::geometry::TetrahedralAabbHierarchy</scope><name>BoundingVolumeHierarchy</name></member>
+      <member refid="classpbat_1_1geometry_1_1TetrahedralAabbHierarchy_1adfec13d5982daf03818993e8f7a7395e" prot="public" virt="non-virtual"><scope>pbat::geometry::TetrahedralAabbHierarchy</scope><name>BoundingVolumeOf</name></member>
+      <member refid="classpbat_1_1geometry_1_1BoundingVolumeHierarchy_1adb858e89cc8f852571838e8edd7eb776" prot="public" virt="non-virtual"><scope>pbat::geometry::TetrahedralAabbHierarchy</scope><name>BoundingVolumes</name></member>
+      <member refid="classpbat_1_1geometry_1_1BoundingVolumeHierarchy_1a323a572a1983a6cc0b2303e68279d183" prot="public" virt="non-virtual"><scope>pbat::geometry::TetrahedralAabbHierarchy</scope><name>BoundingVolumeType</name></member>
+      <member refid="classpbat_1_1geometry_1_1TetrahedralAabbHierarchy_1ad8dc3d5c2d5800a768987630712ff5be" prot="public" virt="non-virtual"><scope>pbat::geometry::TetrahedralAabbHierarchy</scope><name>C</name></member>
+      <member refid="classpbat_1_1geometry_1_1BoundingVolumeHierarchy_1aa33e2a85b380bebb16dace6fe17ab5ac" prot="public" virt="non-virtual"><scope>pbat::geometry::TetrahedralAabbHierarchy</scope><name>Construct</name></member>
+      <member refid="classpbat_1_1geometry_1_1BoundingVolumeHierarchy_1ae3ac974f1eaf1dc33d3a4fb6e89e817d" prot="public" virt="non-virtual"><scope>pbat::geometry::TetrahedralAabbHierarchy</scope><name>DerivedType</name></member>
+      <member refid="classpbat_1_1geometry_1_1TetrahedralAabbHierarchy_1ae8fa34fadba78a422d90df66d3b43124" prot="public" virt="non-virtual"><scope>pbat::geometry::TetrahedralAabbHierarchy</scope><name>GetBoundingVolumes</name></member>
+      <member refid="classpbat_1_1geometry_1_1TetrahedralAabbHierarchy_1a0f4ab2577ea1a860b5bf6fb52a51fd49" prot="public" virt="non-virtual"><scope>pbat::geometry::TetrahedralAabbHierarchy</scope><name>GetC</name></member>
+      <member refid="classpbat_1_1geometry_1_1TetrahedralAabbHierarchy_1a0dfda400734d783be1b8e85b3cc238a5" prot="public" virt="non-virtual"><scope>pbat::geometry::TetrahedralAabbHierarchy</scope><name>GetV</name></member>
+      <member refid="classpbat_1_1geometry_1_1TetrahedralAabbHierarchy_1a72bfabfbf9769838758763a9d6391071" prot="public" virt="non-virtual"><scope>pbat::geometry::TetrahedralAabbHierarchy</scope><name>kDims</name></member>
+      <member refid="classpbat_1_1geometry_1_1BoundingVolumeHierarchy_1ad828620c07e5bdfc1cc507eeb068a12c" prot="protected" virt="non-virtual"><scope>pbat::geometry::TetrahedralAabbHierarchy</scope><name>mBoundingVolumes</name></member>
+      <member refid="classpbat_1_1geometry_1_1BoundingVolumeHierarchy_1a1316732dbb7ecebba9da79ce208304c5" prot="protected" virt="non-virtual"><scope>pbat::geometry::TetrahedralAabbHierarchy</scope><name>mKdTree</name></member>
+      <member refid="classpbat_1_1geometry_1_1BoundingVolumeHierarchy_1af51532663eabc5e0a3fce30542317b3d" prot="public" virt="non-virtual"><scope>pbat::geometry::TetrahedralAabbHierarchy</scope><name>NearestPrimitivesTo</name></member>
+      <member refid="classpbat_1_1geometry_1_1TetrahedralAabbHierarchy_1affe441dfe4ac7a4ff688dcfd4924f3d9" prot="public" virt="non-virtual"><scope>pbat::geometry::TetrahedralAabbHierarchy</scope><name>NearestPrimitivesToPoints</name></member>
+      <member refid="classpbat_1_1geometry_1_1TetrahedralAabbHierarchy_1a51f7cdf0bc6daae099c632a839b6026c" prot="public" virt="non-virtual"><scope>pbat::geometry::TetrahedralAabbHierarchy</scope><name>OverlappingPrimitives</name></member>
+      <member refid="classpbat_1_1geometry_1_1BoundingVolumeHierarchy_1aabf91e306d8b51aa514eb82348cbf624" prot="protected" virt="non-virtual"><scope>pbat::geometry::TetrahedralAabbHierarchy</scope><name>OverlappingPrimitivesImpl</name></member>
+      <member refid="classpbat_1_1geometry_1_1TetrahedralAabbHierarchy_1a265d03853e1c3f5da33aa58a5ae69a94" prot="public" virt="non-virtual"><scope>pbat::geometry::TetrahedralAabbHierarchy</scope><name>Primitive</name></member>
+      <member refid="classpbat_1_1geometry_1_1TetrahedralAabbHierarchy_1a00ebda926b7c453aff3fb000d4e48eff" prot="public" virt="non-virtual"><scope>pbat::geometry::TetrahedralAabbHierarchy</scope><name>PrimitiveLocation</name></member>
+      <member refid="classpbat_1_1geometry_1_1TetrahedralAabbHierarchy_1a258997e1565ea9d48154e0c5cdacdb8e" prot="public" virt="non-virtual"><scope>pbat::geometry::TetrahedralAabbHierarchy</scope><name>PrimitivesContainingPoints</name></member>
+      <member refid="classpbat_1_1geometry_1_1TetrahedralAabbHierarchy_1ac6b540ae246f66b86f72826b019f4a02" prot="public" virt="non-virtual"><scope>pbat::geometry::TetrahedralAabbHierarchy</scope><name>PrimitivesContainingPoints</name></member>
+      <member refid="classpbat_1_1geometry_1_1BoundingVolumeHierarchy_1a227f32152c55e54718dea43feec0d8b4" prot="public" virt="non-virtual"><scope>pbat::geometry::TetrahedralAabbHierarchy</scope><name>PrimitivesInBoundingVolume</name></member>
+      <member refid="classpbat_1_1geometry_1_1BoundingVolumeHierarchy_1a2a29d4e81744fc0c120e3ec9beb0329c" prot="public" virt="non-virtual"><scope>pbat::geometry::TetrahedralAabbHierarchy</scope><name>PrimitivesIntersecting</name></member>
+      <member refid="classpbat_1_1geometry_1_1BoundingVolumeHierarchy_1a1cc2d500243dbb646ea19f05b4fcae3e" prot="public" virt="non-virtual"><scope>pbat::geometry::TetrahedralAabbHierarchy</scope><name>PrimitiveType</name></member>
+      <member refid="classpbat_1_1geometry_1_1TetrahedralAabbHierarchy_1a397a3d1a50d8a6bf49b5b578b3612179" prot="public" virt="non-virtual"><scope>pbat::geometry::TetrahedralAabbHierarchy</scope><name>SelfType</name></member>
+      <member refid="classpbat_1_1geometry_1_1TetrahedralAabbHierarchy_1ae731eebd33a9f7c799b3337d5bfe4426" prot="public" virt="non-virtual"><scope>pbat::geometry::TetrahedralAabbHierarchy</scope><name>SetV</name></member>
+      <member refid="classpbat_1_1geometry_1_1TetrahedralAabbHierarchy_1a23f6061ccdd92aca09aead5f14b1646d" prot="public" virt="non-virtual"><scope>pbat::geometry::TetrahedralAabbHierarchy</scope><name>TetrahedralAabbHierarchy</name></member>
+      <member refid="classpbat_1_1geometry_1_1TetrahedralAabbHierarchy_1a96129c23a239d74319222c44b5a9e48e" prot="public" virt="non-virtual"><scope>pbat::geometry::TetrahedralAabbHierarchy</scope><name>Update</name></member>
+      <member refid="classpbat_1_1geometry_1_1TetrahedralAabbHierarchy_1ab2e8575ffbc1636f1e90eb8220aad844" prot="public" virt="non-virtual"><scope>pbat::geometry::TetrahedralAabbHierarchy</scope><name>V</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

@@ -1,0 +1,16 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="dir_57d3ede956bee6d1c8a5ae7cafe669e2" kind="dir">
+    <compoundname>/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/gpu</compoundname>
+    <innerdir refid="dir_af909ee029cca5c433818e7f0902d52a">/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/gpu/geometry</innerdir>
+    <innerdir refid="dir_e8b3e572a2ab811a4e0694e5171a2c0b">/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/gpu/vbd</innerdir>
+    <innerdir refid="dir_70dc9803981379ead8f518ef826ffdeb">/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/gpu/xpbd</innerdir>
+    <innerfile refid="Gpu_8cpp">Gpu.cpp</innerfile>
+    <innerfile refid="Gpu_8h">Gpu.h</innerfile>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/gpu/"/>
+  </compounddef>
+</doxygen>

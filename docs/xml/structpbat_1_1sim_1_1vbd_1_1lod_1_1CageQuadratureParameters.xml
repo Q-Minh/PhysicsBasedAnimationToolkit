@@ -1,0 +1,149 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="structpbat_1_1sim_1_1vbd_1_1lod_1_1CageQuadratureParameters" kind="struct" language="C++" prot="public">
+    <compoundname>pbat::sim::vbd::lod::CageQuadratureParameters</compoundname>
+      <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="structpbat_1_1sim_1_1vbd_1_1lod_1_1CageQuadratureParameters_1a60114d1dd893a57ea40e90f9c091f109" prot="public" static="no" mutable="no">
+        <type>ECageQuadratureStrategy</type>
+        <definition>ECageQuadratureStrategy pbat::sim::vbd::lod::CageQuadratureParameters::eStrategy</definition>
+        <argsstring></argsstring>
+        <name>eStrategy</name>
+        <initializer>{ECageQuadratureStrategy::EmbeddedMesh}</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Quadrature.h" line="16" column="29" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Quadrature.h" bodystart="16" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpbat_1_1sim_1_1vbd_1_1lod_1_1CageQuadratureParameters_1a8d7607fc5fa4ad9007d6b76834f52b04" prot="public" static="no" mutable="no">
+        <type>int</type>
+        <definition>int pbat::sim::vbd::lod::CageQuadratureParameters::mCageMeshPointsOfOrder</definition>
+        <argsstring></argsstring>
+        <name>mCageMeshPointsOfOrder</name>
+        <initializer>{4}</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Quadrature.h" line="17" column="9" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Quadrature.h" bodystart="17" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpbat_1_1sim_1_1vbd_1_1lod_1_1CageQuadratureParameters_1a2f25b3cb849246dce0b17032951db1a0" prot="public" static="no" mutable="no">
+        <type>int</type>
+        <definition>int pbat::sim::vbd::lod::CageQuadratureParameters::mPatchCellPointsOfOrder</definition>
+        <argsstring></argsstring>
+        <name>mPatchCellPointsOfOrder</name>
+        <initializer>{2}</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Quadrature.h" line="18" column="9" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Quadrature.h" bodystart="18" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpbat_1_1sim_1_1vbd_1_1lod_1_1CageQuadratureParameters_1a01020f8b829d399dfc28d444ee582c4d" prot="public" static="no" mutable="no">
+        <type>Scalar</type>
+        <definition>Scalar pbat::sim::vbd::lod::CageQuadratureParameters::mPatchTetVolumeError</definition>
+        <argsstring></argsstring>
+        <name>mPatchTetVolumeError</name>
+        <initializer>{1e-4}</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Quadrature.h" line="19" column="12" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Quadrature.h" bodystart="19" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="public-func">
+      <memberdef kind="function" id="structpbat_1_1sim_1_1vbd_1_1lod_1_1CageQuadratureParameters_1a6d180abe73de9cfc28ec62243a68f547" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1CageQuadratureParameters" kindref="compound">CageQuadratureParameters</ref> &amp;</type>
+        <definition>CageQuadratureParameters &amp; pbat::sim::vbd::lod::CageQuadratureParameters::WithStrategy</definition>
+        <argsstring>(ECageQuadratureStrategy eStrategyIn)</argsstring>
+        <name>WithStrategy</name>
+        <param>
+          <type>ECageQuadratureStrategy</type>
+          <declname>eStrategyIn</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Quadrature.h" line="21" column="30" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Quadrature.cpp" bodystart="80" bodyend="84"/>
+      </memberdef>
+      <memberdef kind="function" id="structpbat_1_1sim_1_1vbd_1_1lod_1_1CageQuadratureParameters_1a90e6a7ec45eb221af548cb81de62e6e9" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1CageQuadratureParameters" kindref="compound">CageQuadratureParameters</ref> &amp;</type>
+        <definition>CageQuadratureParameters &amp; pbat::sim::vbd::lod::CageQuadratureParameters::WithCageMeshPointsOfOrder</definition>
+        <argsstring>(int order)</argsstring>
+        <name>WithCageMeshPointsOfOrder</name>
+        <param>
+          <type>int</type>
+          <declname>order</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Quadrature.h" line="22" column="30" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Quadrature.cpp" bodystart="86" bodyend="95"/>
+      </memberdef>
+      <memberdef kind="function" id="structpbat_1_1sim_1_1vbd_1_1lod_1_1CageQuadratureParameters_1a63fad9e05ae751397c212ce4cb5568d2" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1CageQuadratureParameters" kindref="compound">CageQuadratureParameters</ref> &amp;</type>
+        <definition>CageQuadratureParameters &amp; pbat::sim::vbd::lod::CageQuadratureParameters::WithPatchCellPointsOfOrder</definition>
+        <argsstring>(int order)</argsstring>
+        <name>WithPatchCellPointsOfOrder</name>
+        <param>
+          <type>int</type>
+          <declname>order</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Quadrature.h" line="23" column="30" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Quadrature.cpp" bodystart="97" bodyend="106"/>
+      </memberdef>
+      <memberdef kind="function" id="structpbat_1_1sim_1_1vbd_1_1lod_1_1CageQuadratureParameters_1a34524fbd4a279631a926a4ba67a670b1" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1CageQuadratureParameters" kindref="compound">CageQuadratureParameters</ref> &amp;</type>
+        <definition>CageQuadratureParameters &amp; pbat::sim::vbd::lod::CageQuadratureParameters::WithPatchError</definition>
+        <argsstring>(Scalar err)</argsstring>
+        <name>WithPatchError</name>
+        <param>
+          <type>Scalar</type>
+          <declname>err</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Quadrature.h" line="24" column="30" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Quadrature.cpp" bodystart="108" bodyend="112"/>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Quadrature.h" line="15" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Quadrature.h" bodystart="14" bodyend="25"/>
+    <listofallmembers>
+      <member refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1CageQuadratureParameters_1a60114d1dd893a57ea40e90f9c091f109" prot="public" virt="non-virtual"><scope>pbat::sim::vbd::lod::CageQuadratureParameters</scope><name>eStrategy</name></member>
+      <member refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1CageQuadratureParameters_1a8d7607fc5fa4ad9007d6b76834f52b04" prot="public" virt="non-virtual"><scope>pbat::sim::vbd::lod::CageQuadratureParameters</scope><name>mCageMeshPointsOfOrder</name></member>
+      <member refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1CageQuadratureParameters_1a2f25b3cb849246dce0b17032951db1a0" prot="public" virt="non-virtual"><scope>pbat::sim::vbd::lod::CageQuadratureParameters</scope><name>mPatchCellPointsOfOrder</name></member>
+      <member refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1CageQuadratureParameters_1a01020f8b829d399dfc28d444ee582c4d" prot="public" virt="non-virtual"><scope>pbat::sim::vbd::lod::CageQuadratureParameters</scope><name>mPatchTetVolumeError</name></member>
+      <member refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1CageQuadratureParameters_1a90e6a7ec45eb221af548cb81de62e6e9" prot="public" virt="non-virtual"><scope>pbat::sim::vbd::lod::CageQuadratureParameters</scope><name>WithCageMeshPointsOfOrder</name></member>
+      <member refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1CageQuadratureParameters_1a63fad9e05ae751397c212ce4cb5568d2" prot="public" virt="non-virtual"><scope>pbat::sim::vbd::lod::CageQuadratureParameters</scope><name>WithPatchCellPointsOfOrder</name></member>
+      <member refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1CageQuadratureParameters_1a34524fbd4a279631a926a4ba67a670b1" prot="public" virt="non-virtual"><scope>pbat::sim::vbd::lod::CageQuadratureParameters</scope><name>WithPatchError</name></member>
+      <member refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1CageQuadratureParameters_1a6d180abe73de9cfc28ec62243a68f547" prot="public" virt="non-virtual"><scope>pbat::sim::vbd::lod::CageQuadratureParameters</scope><name>WithStrategy</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

@@ -1,0 +1,16 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="dir_c285818ee2054263477e33dea25aeb72" kind="dir">
+    <compoundname>/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/math</compoundname>
+    <innerdir refid="dir_46d4b706a8b34a9bc0bd182eac82e74a">/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/math/linalg</innerdir>
+    <innerfile refid="Math_8cpp">Math.cpp</innerfile>
+    <innerfile refid="bindings_2pypbat_2math_2Math_8h">Math.h</innerfile>
+    <innerfile refid="bindings_2pypbat_2math_2MomentFitting_8cpp">MomentFitting.cpp</innerfile>
+    <innerfile refid="bindings_2pypbat_2math_2MomentFitting_8h">MomentFitting.h</innerfile>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/math/"/>
+  </compounddef>
+</doxygen>

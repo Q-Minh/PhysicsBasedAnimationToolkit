@@ -1,0 +1,67 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="structpbat_1_1sim_1_1vbd_1_1lod_1_1Smoother" kind="struct" language="C++" prot="public">
+    <compoundname>pbat::sim::vbd::lod::Smoother</compoundname>
+      <sectiondef kind="public-func">
+      <memberdef kind="function" id="structpbat_1_1sim_1_1vbd_1_1lod_1_1Smoother_1aa23aec90288e0db93aef6c85882ca5bc" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void pbat::sim::vbd::lod::Smoother::Apply</definition>
+        <argsstring>(Index iters, Scalar dt, Level &amp;l) const</argsstring>
+        <name>Apply</name>
+        <param>
+          <type>Index</type>
+          <declname>iters</declname>
+        </param>
+        <param>
+          <type>Scalar</type>
+          <declname>dt</declname>
+        </param>
+        <param>
+          <type><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Level" kindref="compound">Level</ref> &amp;</type>
+          <declname>l</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Smoother.h" line="18" column="10" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Smoother.cpp" bodystart="17" bodyend="100"/>
+      </memberdef>
+      <memberdef kind="function" id="structpbat_1_1sim_1_1vbd_1_1lod_1_1Smoother_1a70b5cd0c4746d41e0a6209120d29016c" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void pbat::sim::vbd::lod::Smoother::Apply</definition>
+        <argsstring>(Index iters, Scalar dt, Data &amp;root) const</argsstring>
+        <name>Apply</name>
+        <param>
+          <type>Index</type>
+          <declname>iters</declname>
+        </param>
+        <param>
+          <type>Scalar</type>
+          <declname>dt</declname>
+        </param>
+        <param>
+          <type><ref refid="structpbat_1_1sim_1_1vbd_1_1Data" kindref="compound">Data</ref> &amp;</type>
+          <declname>root</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Smoother.h" line="19" column="10" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Smoother.cpp" bodystart="102" bodyend="159"/>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Smoother.h" line="17" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Smoother.h" bodystart="16" bodyend="20"/>
+    <listofallmembers>
+      <member refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Smoother_1aa23aec90288e0db93aef6c85882ca5bc" prot="public" virt="non-virtual"><scope>pbat::sim::vbd::lod::Smoother</scope><name>Apply</name></member>
+      <member refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Smoother_1a70b5cd0c4746d41e0a6209120d29016c" prot="public" virt="non-virtual"><scope>pbat::sim::vbd::lod::Smoother</scope><name>Apply</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

@@ -1,0 +1,534 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="classpbat_1_1py_1_1fem_1_1HyperElasticPotential" kind="class" language="C++" prot="public">
+    <compoundname>pbat::py::fem::HyperElasticPotential</compoundname>
+      <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="classpbat_1_1py_1_1fem_1_1HyperElasticPotential_1ad7edcf2c8db572d11ef750fb17b17793" prot="public" static="no" mutable="no">
+        <type>EElement</type>
+        <definition>EElement pbat::py::fem::HyperElasticPotential::eMeshElement</definition>
+        <argsstring></argsstring>
+        <name>eMeshElement</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/HyperElasticPotential.cpp" line="124" column="14" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/HyperElasticPotential.cpp" bodystart="124" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpbat_1_1py_1_1fem_1_1HyperElasticPotential_1ab27da18a60c0995a46b67b339bf4d0cd" prot="public" static="no" mutable="no">
+        <type>int</type>
+        <definition>int pbat::py::fem::HyperElasticPotential::mMeshDims</definition>
+        <argsstring></argsstring>
+        <name>mMeshDims</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/HyperElasticPotential.cpp" line="125" column="9" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/HyperElasticPotential.cpp" bodystart="125" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpbat_1_1py_1_1fem_1_1HyperElasticPotential_1a014fb4c73483e3abad25a9490e0cc478" prot="public" static="no" mutable="no">
+        <type>int</type>
+        <definition>int pbat::py::fem::HyperElasticPotential::mMeshOrder</definition>
+        <argsstring></argsstring>
+        <name>mMeshOrder</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/HyperElasticPotential.cpp" line="126" column="9" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/HyperElasticPotential.cpp" bodystart="126" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpbat_1_1py_1_1fem_1_1HyperElasticPotential_1adbde5d16b528494e2e41d01c7bd671b2" prot="public" static="no" mutable="no">
+        <type>EHyperElasticEnergy</type>
+        <definition>EHyperElasticEnergy pbat::py::fem::HyperElasticPotential::eHyperElasticEnergy</definition>
+        <argsstring></argsstring>
+        <name>eHyperElasticEnergy</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/HyperElasticPotential.cpp" line="127" column="25" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/HyperElasticPotential.cpp" bodystart="127" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpbat_1_1py_1_1fem_1_1HyperElasticPotential_1a7de9cebe5b0558e1ffecdfae6584471e" prot="public" static="no" mutable="no">
+        <type>int</type>
+        <definition>int pbat::py::fem::HyperElasticPotential::mDims</definition>
+        <argsstring></argsstring>
+        <name>mDims</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/HyperElasticPotential.cpp" line="128" column="9" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/HyperElasticPotential.cpp" bodystart="128" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="classpbat_1_1py_1_1fem_1_1HyperElasticPotential_1a93f0a9b436e1c96a3df7808bbe3824e0" prot="private" static="no" mutable="no">
+        <type>void *</type>
+        <definition>void* pbat::py::fem::HyperElasticPotential::mHyperElasticPotential</definition>
+        <argsstring></argsstring>
+        <name>mHyperElasticPotential</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/HyperElasticPotential.cpp" line="131" column="10" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/HyperElasticPotential.cpp" bodystart="131" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpbat_1_1py_1_1fem_1_1HyperElasticPotential_1a1e8935942b5a292d1289755858b77251" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>pbat::py::fem::HyperElasticPotential::HyperElasticPotential</definition>
+        <argsstring>(Mesh const &amp;M, Eigen::Ref&lt; IndexVectorX const &gt; const &amp;eg, Eigen::Ref&lt; VectorX const &gt; const &amp;wg, Eigen::Ref&lt; MatrixX const &gt; const &amp;GNeg, Scalar Y, Scalar nu, EHyperElasticEnergy eHyperElasticEnergy)</argsstring>
+        <name>HyperElasticPotential</name>
+        <param>
+          <type><ref refid="classpbat_1_1py_1_1fem_1_1Mesh" kindref="compound">Mesh</ref> const &amp;</type>
+          <declname>M</declname>
+        </param>
+        <param>
+          <type>Eigen::Ref&lt; IndexVectorX const &gt; const &amp;</type>
+          <declname>eg</declname>
+        </param>
+        <param>
+          <type>Eigen::Ref&lt; VectorX const &gt; const &amp;</type>
+          <declname>wg</declname>
+        </param>
+        <param>
+          <type>Eigen::Ref&lt; MatrixX const &gt; const &amp;</type>
+          <declname>GNeg</declname>
+        </param>
+        <param>
+          <type>Scalar</type>
+          <declname>Y</declname>
+        </param>
+        <param>
+          <type>Scalar</type>
+          <declname>nu</declname>
+        </param>
+        <param>
+          <type>EHyperElasticEnergy</type>
+          <declname>eHyperElasticEnergy</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/HyperElasticPotential.cpp" line="67" column="5" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/HyperElasticPotential.cpp" bodystart="232" bodyend="274"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1py_1_1fem_1_1HyperElasticPotential_1a97d868a0f640fb4211b6c62fe9e1a41f" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>pbat::py::fem::HyperElasticPotential::HyperElasticPotential</definition>
+        <argsstring>(Mesh const &amp;M, Eigen::Ref&lt; IndexVectorX const &gt; const &amp;eg, Eigen::Ref&lt; VectorX const &gt; const &amp;wg, Eigen::Ref&lt; MatrixX const &gt; const &amp;GNeg, Eigen::Ref&lt; MatrixX const &gt; const &amp;Y, Eigen::Ref&lt; MatrixX const &gt; const &amp;nu, EHyperElasticEnergy eHyperElasticEnergy)</argsstring>
+        <name>HyperElasticPotential</name>
+        <param>
+          <type><ref refid="classpbat_1_1py_1_1fem_1_1Mesh" kindref="compound">Mesh</ref> const &amp;</type>
+          <declname>M</declname>
+        </param>
+        <param>
+          <type>Eigen::Ref&lt; IndexVectorX const &gt; const &amp;</type>
+          <declname>eg</declname>
+        </param>
+        <param>
+          <type>Eigen::Ref&lt; VectorX const &gt; const &amp;</type>
+          <declname>wg</declname>
+        </param>
+        <param>
+          <type>Eigen::Ref&lt; MatrixX const &gt; const &amp;</type>
+          <declname>GNeg</declname>
+        </param>
+        <param>
+          <type>Eigen::Ref&lt; MatrixX const &gt; const &amp;</type>
+          <declname>Y</declname>
+        </param>
+        <param>
+          <type>Eigen::Ref&lt; MatrixX const &gt; const &amp;</type>
+          <declname>nu</declname>
+        </param>
+        <param>
+          <type>EHyperElasticEnergy</type>
+          <declname>eHyperElasticEnergy</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/HyperElasticPotential.cpp" line="76" column="5" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/HyperElasticPotential.cpp" bodystart="276" bodyend="318"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1py_1_1fem_1_1HyperElasticPotential_1ab009eacc641345d6493a8dde052b3472" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>pbat::py::fem::HyperElasticPotential::HyperElasticPotential</definition>
+        <argsstring>(HyperElasticPotential &amp;&amp;other)</argsstring>
+        <name>HyperElasticPotential</name>
+        <param>
+          <type><ref refid="classpbat_1_1py_1_1fem_1_1HyperElasticPotential" kindref="compound">HyperElasticPotential</ref> &amp;&amp;</type>
+          <declname>other</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/HyperElasticPotential.cpp" line="85" column="5" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/HyperElasticPotential.cpp" bodystart="320" bodyend="324"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1py_1_1fem_1_1HyperElasticPotential_1a296770ba3584c37f7efcdc55548d383f" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpbat_1_1py_1_1fem_1_1HyperElasticPotential" kindref="compound">HyperElasticPotential</ref> &amp;</type>
+        <definition>HyperElasticPotential &amp; pbat::py::fem::HyperElasticPotential::operator=</definition>
+        <argsstring>(HyperElasticPotential &amp;&amp;other)</argsstring>
+        <name>operator=</name>
+        <param>
+          <type><ref refid="classpbat_1_1py_1_1fem_1_1HyperElasticPotential" kindref="compound">HyperElasticPotential</ref> &amp;&amp;</type>
+          <declname>other</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/HyperElasticPotential.cpp" line="86" column="27" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/HyperElasticPotential.cpp" bodystart="326" bodyend="331"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1py_1_1fem_1_1HyperElasticPotential_1a8daa4612c7a15b04136b8c54a3b7098b" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>pbat::py::fem::HyperElasticPotential::HyperElasticPotential</definition>
+        <argsstring>(HyperElasticPotential const &amp;)=delete</argsstring>
+        <name>HyperElasticPotential</name>
+        <param>
+          <type><ref refid="classpbat_1_1py_1_1fem_1_1HyperElasticPotential" kindref="compound">HyperElasticPotential</ref> const &amp;</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/HyperElasticPotential.cpp" line="88" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1py_1_1fem_1_1HyperElasticPotential_1ad09d96aa0006d032804c17d844c392de" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpbat_1_1py_1_1fem_1_1HyperElasticPotential" kindref="compound">HyperElasticPotential</ref> &amp;</type>
+        <definition>HyperElasticPotential&amp; pbat::py::fem::HyperElasticPotential::operator=</definition>
+        <argsstring>(HyperElasticPotential const &amp;)=delete</argsstring>
+        <name>operator=</name>
+        <param>
+          <type><ref refid="classpbat_1_1py_1_1fem_1_1HyperElasticPotential" kindref="compound">HyperElasticPotential</ref> const &amp;</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/HyperElasticPotential.cpp" line="89" column="27"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1py_1_1fem_1_1HyperElasticPotential_1a10cc4f8cdb6b1051bc75f1fa53b853c9" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class Func</type>
+          </param>
+        </templateparamlist>
+        <type>void</type>
+        <definition>void pbat::py::fem::HyperElasticPotential::Apply</definition>
+        <argsstring>(Func &amp;&amp;f) const</argsstring>
+        <name>Apply</name>
+        <param>
+          <type>Func &amp;&amp;</type>
+          <declname>f</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/HyperElasticPotential.cpp" line="92" column="10" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/HyperElasticPotential.cpp" bodystart="494" bodyend="523"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1py_1_1fem_1_1HyperElasticPotential_1a79ddc03e9df4386024df09c4a0b1705f" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void pbat::py::fem::HyperElasticPotential::PrecomputeHessianSparsity</definition>
+        <argsstring>()</argsstring>
+        <name>PrecomputeHessianSparsity</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/HyperElasticPotential.cpp" line="94" column="10" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/HyperElasticPotential.cpp" bodystart="333" bodyend="338"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1py_1_1fem_1_1HyperElasticPotential_1a346e0ea4b3b20e14ee16471b55c414ec" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void pbat::py::fem::HyperElasticPotential::ComputeElementElasticity</definition>
+        <argsstring>(Eigen::Ref&lt; VectorX const &gt; const &amp;x, bool bWithGradient, bool bWithHessian, bool bWithSpdProjection)</argsstring>
+        <name>ComputeElementElasticity</name>
+        <param>
+          <type>Eigen::Ref&lt; VectorX const &gt; const &amp;</type>
+          <declname>x</declname>
+        </param>
+        <param>
+          <type>bool</type>
+          <declname>bWithGradient</declname>
+        </param>
+        <param>
+          <type>bool</type>
+          <declname>bWithHessian</declname>
+        </param>
+        <param>
+          <type>bool</type>
+          <declname>bWithSpdProjection</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/HyperElasticPotential.cpp" line="96" column="10" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/HyperElasticPotential.cpp" bodystart="340" bodyend="353"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1py_1_1fem_1_1HyperElasticPotential_1a37aeb44eb3498e311fcde3c8fb87a469" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>Scalar</type>
+        <definition>Scalar pbat::py::fem::HyperElasticPotential::Eval</definition>
+        <argsstring>() const</argsstring>
+        <name>Eval</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/HyperElasticPotential.cpp" line="102" column="12" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/HyperElasticPotential.cpp" bodystart="355" bodyend="362"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1py_1_1fem_1_1HyperElasticPotential_1a2c16a80a9c1d2f1175a30619e7dafd5b" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>VectorX</type>
+        <definition>VectorX pbat::py::fem::HyperElasticPotential::ToVector</definition>
+        <argsstring>() const</argsstring>
+        <name>ToVector</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/HyperElasticPotential.cpp" line="103" column="13" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/HyperElasticPotential.cpp" bodystart="364" bodyend="371"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1py_1_1fem_1_1HyperElasticPotential_1a34b2f68237cca3883814df92f5e7435f" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>CSCMatrix</type>
+        <definition>CSCMatrix pbat::py::fem::HyperElasticPotential::ToMatrix</definition>
+        <argsstring>() const</argsstring>
+        <name>ToMatrix</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/HyperElasticPotential.cpp" line="104" column="15" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/HyperElasticPotential.cpp" bodystart="373" bodyend="380"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1py_1_1fem_1_1HyperElasticPotential_1ac3926f5bfe600fca79a59ac910094481" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>std::tuple&lt; Index, Index &gt;</type>
+        <definition>std::tuple&lt; Index, Index &gt; pbat::py::fem::HyperElasticPotential::Shape</definition>
+        <argsstring>() const</argsstring>
+        <name>Shape</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/HyperElasticPotential.cpp" line="105" column="16" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/HyperElasticPotential.cpp" bodystart="382" bodyend="390"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1py_1_1fem_1_1HyperElasticPotential_1aeb33b4fd5f5b0fd806d68c630081d261" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>VectorX const  &amp;</type>
+        <definition>VectorX &amp; pbat::py::fem::HyperElasticPotential::mug</definition>
+        <argsstring>() const</argsstring>
+        <name>mug</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/HyperElasticPotential.cpp" line="107" column="19" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/HyperElasticPotential.cpp" bodystart="392" bodyend="399"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1py_1_1fem_1_1HyperElasticPotential_1a2cdfb3ed202fe339ad9a43b589f11145" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>VectorX &amp;</type>
+        <definition>VectorX&amp; pbat::py::fem::HyperElasticPotential::mug</definition>
+        <argsstring>()</argsstring>
+        <name>mug</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/HyperElasticPotential.cpp" line="108" column="13"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1py_1_1fem_1_1HyperElasticPotential_1a1cf4471adc61bd7d9064c92781674a1f" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>VectorX const  &amp;</type>
+        <definition>VectorX &amp; pbat::py::fem::HyperElasticPotential::lambdag</definition>
+        <argsstring>() const</argsstring>
+        <name>lambdag</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/HyperElasticPotential.cpp" line="110" column="19" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/HyperElasticPotential.cpp" bodystart="410" bodyend="417"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1py_1_1fem_1_1HyperElasticPotential_1a4ed9020e3b7d4310e35e24f71995848c" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>VectorX &amp;</type>
+        <definition>VectorX&amp; pbat::py::fem::HyperElasticPotential::lambdag</definition>
+        <argsstring>()</argsstring>
+        <name>lambdag</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/HyperElasticPotential.cpp" line="111" column="13"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1py_1_1fem_1_1HyperElasticPotential_1aff6094e5258ba9229ef2e7138372c729" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>MatrixX const  &amp;</type>
+        <definition>MatrixX &amp; pbat::py::fem::HyperElasticPotential::Hessians</definition>
+        <argsstring>() const</argsstring>
+        <name>Hessians</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/HyperElasticPotential.cpp" line="113" column="19" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/HyperElasticPotential.cpp" bodystart="428" bodyend="435"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1py_1_1fem_1_1HyperElasticPotential_1a979cb63ab9ed8de3efd835206f38f6ac" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>MatrixX &amp;</type>
+        <definition>MatrixX&amp; pbat::py::fem::HyperElasticPotential::Hessians</definition>
+        <argsstring>()</argsstring>
+        <name>Hessians</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/HyperElasticPotential.cpp" line="114" column="13"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1py_1_1fem_1_1HyperElasticPotential_1a531d71a82cf8635450fe8b9d2f759c67" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>MatrixX const  &amp;</type>
+        <definition>MatrixX &amp; pbat::py::fem::HyperElasticPotential::Gradients</definition>
+        <argsstring>() const</argsstring>
+        <name>Gradients</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/HyperElasticPotential.cpp" line="116" column="19" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/HyperElasticPotential.cpp" bodystart="446" bodyend="453"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1py_1_1fem_1_1HyperElasticPotential_1a520c5b550bc6091ca3f68adf3bbefdc6" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>MatrixX &amp;</type>
+        <definition>MatrixX&amp; pbat::py::fem::HyperElasticPotential::Gradients</definition>
+        <argsstring>()</argsstring>
+        <name>Gradients</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/HyperElasticPotential.cpp" line="117" column="13"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1py_1_1fem_1_1HyperElasticPotential_1a00e1a6df1f0af447e3c18ff8d5de0484" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>VectorX const  &amp;</type>
+        <definition>VectorX &amp; pbat::py::fem::HyperElasticPotential::Potentials</definition>
+        <argsstring>() const</argsstring>
+        <name>Potentials</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/HyperElasticPotential.cpp" line="119" column="19" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/HyperElasticPotential.cpp" bodystart="464" bodyend="471"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1py_1_1fem_1_1HyperElasticPotential_1a0ac8717c116ba15fe6c8cfe9625c36c7" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>VectorX &amp;</type>
+        <definition>VectorX&amp; pbat::py::fem::HyperElasticPotential::Potentials</definition>
+        <argsstring>()</argsstring>
+        <name>Potentials</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/HyperElasticPotential.cpp" line="120" column="13"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1py_1_1fem_1_1HyperElasticPotential_1a30d83ab8407454595f7ebeee31c87c32" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>pbat::py::fem::HyperElasticPotential::~HyperElasticPotential</definition>
+        <argsstring>()</argsstring>
+        <name>~HyperElasticPotential</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/HyperElasticPotential.cpp" line="122" column="5" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/HyperElasticPotential.cpp" bodystart="482" bodyend="491"/>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/HyperElasticPotential.cpp" line="65" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/HyperElasticPotential.cpp" bodystart="64" bodyend="132"/>
+    <listofallmembers>
+      <member refid="classpbat_1_1py_1_1fem_1_1HyperElasticPotential_1a10cc4f8cdb6b1051bc75f1fa53b853c9" prot="public" virt="non-virtual"><scope>pbat::py::fem::HyperElasticPotential</scope><name>Apply</name></member>
+      <member refid="classpbat_1_1py_1_1fem_1_1HyperElasticPotential_1a346e0ea4b3b20e14ee16471b55c414ec" prot="public" virt="non-virtual"><scope>pbat::py::fem::HyperElasticPotential</scope><name>ComputeElementElasticity</name></member>
+      <member refid="classpbat_1_1py_1_1fem_1_1HyperElasticPotential_1adbde5d16b528494e2e41d01c7bd671b2" prot="public" virt="non-virtual"><scope>pbat::py::fem::HyperElasticPotential</scope><name>eHyperElasticEnergy</name></member>
+      <member refid="classpbat_1_1py_1_1fem_1_1HyperElasticPotential_1ad7edcf2c8db572d11ef750fb17b17793" prot="public" virt="non-virtual"><scope>pbat::py::fem::HyperElasticPotential</scope><name>eMeshElement</name></member>
+      <member refid="classpbat_1_1py_1_1fem_1_1HyperElasticPotential_1a37aeb44eb3498e311fcde3c8fb87a469" prot="public" virt="non-virtual"><scope>pbat::py::fem::HyperElasticPotential</scope><name>Eval</name></member>
+      <member refid="classpbat_1_1py_1_1fem_1_1HyperElasticPotential_1a531d71a82cf8635450fe8b9d2f759c67" prot="public" virt="non-virtual"><scope>pbat::py::fem::HyperElasticPotential</scope><name>Gradients</name></member>
+      <member refid="classpbat_1_1py_1_1fem_1_1HyperElasticPotential_1a520c5b550bc6091ca3f68adf3bbefdc6" prot="public" virt="non-virtual"><scope>pbat::py::fem::HyperElasticPotential</scope><name>Gradients</name></member>
+      <member refid="classpbat_1_1py_1_1fem_1_1HyperElasticPotential_1aff6094e5258ba9229ef2e7138372c729" prot="public" virt="non-virtual"><scope>pbat::py::fem::HyperElasticPotential</scope><name>Hessians</name></member>
+      <member refid="classpbat_1_1py_1_1fem_1_1HyperElasticPotential_1a979cb63ab9ed8de3efd835206f38f6ac" prot="public" virt="non-virtual"><scope>pbat::py::fem::HyperElasticPotential</scope><name>Hessians</name></member>
+      <member refid="classpbat_1_1py_1_1fem_1_1HyperElasticPotential_1a1e8935942b5a292d1289755858b77251" prot="public" virt="non-virtual"><scope>pbat::py::fem::HyperElasticPotential</scope><name>HyperElasticPotential</name></member>
+      <member refid="classpbat_1_1py_1_1fem_1_1HyperElasticPotential_1a97d868a0f640fb4211b6c62fe9e1a41f" prot="public" virt="non-virtual"><scope>pbat::py::fem::HyperElasticPotential</scope><name>HyperElasticPotential</name></member>
+      <member refid="classpbat_1_1py_1_1fem_1_1HyperElasticPotential_1ab009eacc641345d6493a8dde052b3472" prot="public" virt="non-virtual"><scope>pbat::py::fem::HyperElasticPotential</scope><name>HyperElasticPotential</name></member>
+      <member refid="classpbat_1_1py_1_1fem_1_1HyperElasticPotential_1a8daa4612c7a15b04136b8c54a3b7098b" prot="public" virt="non-virtual"><scope>pbat::py::fem::HyperElasticPotential</scope><name>HyperElasticPotential</name></member>
+      <member refid="classpbat_1_1py_1_1fem_1_1HyperElasticPotential_1a1cf4471adc61bd7d9064c92781674a1f" prot="public" virt="non-virtual"><scope>pbat::py::fem::HyperElasticPotential</scope><name>lambdag</name></member>
+      <member refid="classpbat_1_1py_1_1fem_1_1HyperElasticPotential_1a4ed9020e3b7d4310e35e24f71995848c" prot="public" virt="non-virtual"><scope>pbat::py::fem::HyperElasticPotential</scope><name>lambdag</name></member>
+      <member refid="classpbat_1_1py_1_1fem_1_1HyperElasticPotential_1a7de9cebe5b0558e1ffecdfae6584471e" prot="public" virt="non-virtual"><scope>pbat::py::fem::HyperElasticPotential</scope><name>mDims</name></member>
+      <member refid="classpbat_1_1py_1_1fem_1_1HyperElasticPotential_1a93f0a9b436e1c96a3df7808bbe3824e0" prot="private" virt="non-virtual"><scope>pbat::py::fem::HyperElasticPotential</scope><name>mHyperElasticPotential</name></member>
+      <member refid="classpbat_1_1py_1_1fem_1_1HyperElasticPotential_1ab27da18a60c0995a46b67b339bf4d0cd" prot="public" virt="non-virtual"><scope>pbat::py::fem::HyperElasticPotential</scope><name>mMeshDims</name></member>
+      <member refid="classpbat_1_1py_1_1fem_1_1HyperElasticPotential_1a014fb4c73483e3abad25a9490e0cc478" prot="public" virt="non-virtual"><scope>pbat::py::fem::HyperElasticPotential</scope><name>mMeshOrder</name></member>
+      <member refid="classpbat_1_1py_1_1fem_1_1HyperElasticPotential_1aeb33b4fd5f5b0fd806d68c630081d261" prot="public" virt="non-virtual"><scope>pbat::py::fem::HyperElasticPotential</scope><name>mug</name></member>
+      <member refid="classpbat_1_1py_1_1fem_1_1HyperElasticPotential_1a2cdfb3ed202fe339ad9a43b589f11145" prot="public" virt="non-virtual"><scope>pbat::py::fem::HyperElasticPotential</scope><name>mug</name></member>
+      <member refid="classpbat_1_1py_1_1fem_1_1HyperElasticPotential_1a296770ba3584c37f7efcdc55548d383f" prot="public" virt="non-virtual"><scope>pbat::py::fem::HyperElasticPotential</scope><name>operator=</name></member>
+      <member refid="classpbat_1_1py_1_1fem_1_1HyperElasticPotential_1ad09d96aa0006d032804c17d844c392de" prot="public" virt="non-virtual"><scope>pbat::py::fem::HyperElasticPotential</scope><name>operator=</name></member>
+      <member refid="classpbat_1_1py_1_1fem_1_1HyperElasticPotential_1a00e1a6df1f0af447e3c18ff8d5de0484" prot="public" virt="non-virtual"><scope>pbat::py::fem::HyperElasticPotential</scope><name>Potentials</name></member>
+      <member refid="classpbat_1_1py_1_1fem_1_1HyperElasticPotential_1a0ac8717c116ba15fe6c8cfe9625c36c7" prot="public" virt="non-virtual"><scope>pbat::py::fem::HyperElasticPotential</scope><name>Potentials</name></member>
+      <member refid="classpbat_1_1py_1_1fem_1_1HyperElasticPotential_1a79ddc03e9df4386024df09c4a0b1705f" prot="public" virt="non-virtual"><scope>pbat::py::fem::HyperElasticPotential</scope><name>PrecomputeHessianSparsity</name></member>
+      <member refid="classpbat_1_1py_1_1fem_1_1HyperElasticPotential_1ac3926f5bfe600fca79a59ac910094481" prot="public" virt="non-virtual"><scope>pbat::py::fem::HyperElasticPotential</scope><name>Shape</name></member>
+      <member refid="classpbat_1_1py_1_1fem_1_1HyperElasticPotential_1a34b2f68237cca3883814df92f5e7435f" prot="public" virt="non-virtual"><scope>pbat::py::fem::HyperElasticPotential</scope><name>ToMatrix</name></member>
+      <member refid="classpbat_1_1py_1_1fem_1_1HyperElasticPotential_1a2c16a80a9c1d2f1175a30619e7dafd5b" prot="public" virt="non-virtual"><scope>pbat::py::fem::HyperElasticPotential</scope><name>ToVector</name></member>
+      <member refid="classpbat_1_1py_1_1fem_1_1HyperElasticPotential_1a30d83ab8407454595f7ebeee31c87c32" prot="public" virt="non-virtual"><scope>pbat::py::fem::HyperElasticPotential</scope><name>~HyperElasticPotential</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

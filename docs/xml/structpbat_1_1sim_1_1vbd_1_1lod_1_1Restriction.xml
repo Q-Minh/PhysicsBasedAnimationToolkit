@@ -1,0 +1,270 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="structpbat_1_1sim_1_1vbd_1_1lod_1_1Restriction" kind="struct" language="C++" prot="public">
+    <compoundname>pbat::sim::vbd::lod::Restriction</compoundname>
+      <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="structpbat_1_1sim_1_1vbd_1_1lod_1_1Restriction_1a4acb976ae35b830b93ba2df7748bcd0a" prot="public" static="no" mutable="no">
+        <type>MatrixX</type>
+        <definition>MatrixX pbat::sim::vbd::lod::Restriction::xfg</definition>
+        <argsstring></argsstring>
+        <name>xfg</name>
+        <briefdescription>
+<para>3x|#quad.pts.| array of fine cage shape target positions at quad.pts. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Restriction.h" line="52" column="13" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Restriction.h" bodystart="52" bodyend="-1"/>
+        <referencedby refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Restriction_1afe54d5182ab4a3074b1de65b28cc80a4" compoundref="source_2pbat_2sim_2vbd_2lod_2Restriction_8cpp" startline="19" endline="22">Restriction</referencedby>
+        <referencedby refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Restriction_1af7b613a2fd3f543232339fc7a94f6f00" compoundref="source_2pbat_2sim_2vbd_2lod_2Restriction_8cpp" startline="36" endline="126">DoApply</referencedby>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="public-func">
+      <memberdef kind="function" id="structpbat_1_1sim_1_1vbd_1_1lod_1_1Restriction_1af78925e68a74ef08d5615f1a9bdb23cd" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>pbat::sim::vbd::lod::Restriction::Restriction</definition>
+        <argsstring>()=default</argsstring>
+        <name>Restriction</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Restriction.h" line="19" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="structpbat_1_1sim_1_1vbd_1_1lod_1_1Restriction_1afe54d5182ab4a3074b1de65b28cc80a4" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>pbat::sim::vbd::lod::Restriction::Restriction</definition>
+        <argsstring>(CageQuadrature const &amp;CQ)</argsstring>
+        <name>Restriction</name>
+        <param>
+          <type><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1CageQuadrature" kindref="compound">CageQuadrature</ref> const &amp;</type>
+          <declname>CQ</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>CQ</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Restriction.h" line="24" column="5" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Restriction.cpp" bodystart="19" bodyend="22"/>
+        <references refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Restriction_1a4acb976ae35b830b93ba2df7748bcd0a" compoundref="source_2pbat_2sim_2vbd_2lod_2Restriction_8h" startline="52">xfg</references>
+        <references refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1CageQuadrature_1a1b3cbb03c6c2987415438a9e6c85940e" compoundref="source_2pbat_2sim_2vbd_2lod_2Quadrature_8h" startline="44">pbat::sim::vbd::lod::CageQuadrature::Xg</references>
+      </memberdef>
+      <memberdef kind="function" id="structpbat_1_1sim_1_1vbd_1_1lod_1_1Restriction_1a96ba34ece998c608ffb03f67b3c8e496" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void pbat::sim::vbd::lod::Restriction::Apply</definition>
+        <argsstring>(Index iters, Level const &amp;lf, Level &amp;lc)</argsstring>
+        <name>Apply</name>
+        <param>
+          <type>Index</type>
+          <declname>iters</declname>
+        </param>
+        <param>
+          <type><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Level" kindref="compound">Level</ref> const &amp;</type>
+          <declname>lf</declname>
+        </param>
+        <param>
+          <type><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Level" kindref="compound">Level</ref> &amp;</type>
+          <declname>lc</declname>
+        </param>
+        <briefdescription>
+<para>Restrict fine level lf to coarse level lc. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>iters</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>lf</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>lc</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Restriction.h" line="31" column="10" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Restriction.cpp" bodystart="24" bodyend="28"/>
+        <references refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Restriction_1af7b613a2fd3f543232339fc7a94f6f00" compoundref="source_2pbat_2sim_2vbd_2lod_2Restriction_8cpp" startline="36" endline="126">DoApply</references>
+        <references refid="structpbat_1_1fem_1_1Mesh_1a384afdf16df5efa27e09f17520402b5b" compoundref="source_2pbat_2fem_2Mesh_8h" startline="52">pbat::fem::Mesh&lt; TElement, Dims &gt;::E</references>
+        <references refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Level_1a0aef12e785b24c517539b81842e4f834" compoundref="source_2pbat_2sim_2vbd_2lod_2Level_8h" startline="60">pbat::sim::vbd::lod::Level::mesh</references>
+        <references refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Level_1ab331b103c090e822c37f0b0192ef6b7b" compoundref="source_2pbat_2sim_2vbd_2lod_2Level_8h" startline="56">pbat::sim::vbd::lod::Level::x</references>
+      </memberdef>
+      <memberdef kind="function" id="structpbat_1_1sim_1_1vbd_1_1lod_1_1Restriction_1a579db38ba036ce4f3cd800fec9d7470e" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void pbat::sim::vbd::lod::Restriction::Apply</definition>
+        <argsstring>(Index iters, Data const &amp;lf, Level &amp;lc)</argsstring>
+        <name>Apply</name>
+        <param>
+          <type>Index</type>
+          <declname>iters</declname>
+        </param>
+        <param>
+          <type><ref refid="structpbat_1_1sim_1_1vbd_1_1Data" kindref="compound">Data</ref> const &amp;</type>
+          <declname>lf</declname>
+        </param>
+        <param>
+          <type><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Level" kindref="compound">Level</ref> &amp;</type>
+          <declname>lc</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>iters</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>lf</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>lc</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Restriction.h" line="38" column="10" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Restriction.cpp" bodystart="30" bodyend="34"/>
+        <references refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Restriction_1af7b613a2fd3f543232339fc7a94f6f00" compoundref="source_2pbat_2sim_2vbd_2lod_2Restriction_8cpp" startline="36" endline="126">DoApply</references>
+        <references refid="structpbat_1_1fem_1_1Mesh_1a384afdf16df5efa27e09f17520402b5b" compoundref="source_2pbat_2fem_2Mesh_8h" startline="52">pbat::fem::Mesh&lt; TElement, Dims &gt;::E</references>
+        <references refid="structpbat_1_1sim_1_1vbd_1_1Data_1a0814000764d127a91a05454ee341504d" compoundref="source_2pbat_2sim_2vbd_2Data_8h" startline="111">pbat::sim::vbd::Data::mesh</references>
+        <references refid="structpbat_1_1sim_1_1vbd_1_1Data_1a2a0bd0abb260a15041042f27078ab0d9" compoundref="source_2pbat_2sim_2vbd_2Data_8h" startline="115">pbat::sim::vbd::Data::x</references>
+      </memberdef>
+      <memberdef kind="function" id="structpbat_1_1sim_1_1vbd_1_1lod_1_1Restriction_1af7b613a2fd3f543232339fc7a94f6f00" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>Scalar</type>
+        <definition>Scalar pbat::sim::vbd::lod::Restriction::DoApply</definition>
+        <argsstring>(Index iters, Eigen::Ref&lt; MatrixX const &gt; const &amp;xf, Eigen::Ref&lt; IndexMatrixX const &gt; const &amp;Ef, Level &amp;lc)</argsstring>
+        <name>DoApply</name>
+        <param>
+          <type>Index</type>
+          <declname>iters</declname>
+        </param>
+        <param>
+          <type>Eigen::Ref&lt; MatrixX const &gt; const &amp;</type>
+          <declname>xf</declname>
+        </param>
+        <param>
+          <type>Eigen::Ref&lt; IndexMatrixX const &gt; const &amp;</type>
+          <declname>Ef</declname>
+        </param>
+        <param>
+          <type><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Level" kindref="compound">Level</ref> &amp;</type>
+          <declname>lc</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>iters</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>xf</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>lc</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para></para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Restriction.h" line="46" column="12" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Restriction.cpp" bodystart="36" bodyend="126"/>
+        <references refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Level_1a5265a00ded12fad8a1da8271fe867e95" compoundref="source_2pbat_2sim_2vbd_2lod_2Level_8h" startline="58">pbat::sim::vbd::lod::Level::adj</references>
+        <references refid="structpbat_1_1fem_1_1Mesh_1a384afdf16df5efa27e09f17520402b5b" compoundref="source_2pbat_2fem_2Mesh_8h" startline="52">pbat::fem::Mesh&lt; TElement, Dims &gt;::E</references>
+        <references refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1CageQuadrature_1a9108dadd72bfcc581bb252fd9154e3e5" compoundref="source_2pbat_2sim_2vbd_2lod_2Quadrature_8h" startline="52">pbat::sim::vbd::lod::CageQuadrature::efg</references>
+        <references refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1CageQuadrature_1a9ee6edaf65d908bcc3ae7c26c8127866" compoundref="source_2pbat_2sim_2vbd_2lod_2Quadrature_8h" startline="48">pbat::sim::vbd::lod::CageQuadrature::eg</references>
+        <references refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Level_1a75c846fb62f227b05c05cc2a9cc20934" compoundref="source_2pbat_2sim_2vbd_2lod_2Level_8h" startline="63">pbat::sim::vbd::lod::Level::Ekinetic</references>
+        <references refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Level_1a3ad38a1f394b7f894075f8d98587d50c" compoundref="source_2pbat_2sim_2vbd_2lod_2Level_8h" startline="64">pbat::sim::vbd::lod::Level::Epotential</references>
+        <references refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1CageQuadrature_1a1fe1c6fcf6c1f6117c9add54a27872b3" compoundref="source_2pbat_2sim_2vbd_2lod_2Quadrature_8h" startline="51">pbat::sim::vbd::lod::CageQuadrature::GNcg</references>
+        <references refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1CageQuadrature_1aba379b1c54f77bfcb86554c0ee4d585e" compoundref="source_2pbat_2sim_2vbd_2lod_2Quadrature_8h" startline="57">pbat::sim::vbd::lod::CageQuadrature::GVGg</references>
+        <references refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1CageQuadrature_1abd5e63afc087a2de4a7ea6c707d8543d" compoundref="source_2pbat_2sim_2vbd_2lod_2Quadrature_8h" startline="58">pbat::sim::vbd::lod::CageQuadrature::GVGilocal</references>
+        <references refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1CageQuadrature_1a2feff7f52953b97caf1255bc6c5aa982" compoundref="source_2pbat_2sim_2vbd_2lod_2Quadrature_8h" startline="56">pbat::sim::vbd::lod::CageQuadrature::GVGp</references>
+        <references refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1ElasticEnergy_1a661332c03e37a3cc8d283654059dc01c" compoundref="source_2pbat_2sim_2vbd_2lod_2ElasticEnergy_8h" startline="24">pbat::sim::vbd::lod::ElasticEnergy::lambdag</references>
+        <references refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Level_1a0aef12e785b24c517539b81842e4f834" compoundref="source_2pbat_2sim_2vbd_2lod_2Level_8h" startline="60">pbat::sim::vbd::lod::Level::mesh</references>
+        <references refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1ElasticEnergy_1ae3fb8a3a6c9e40035a0f5013f0a292bc" compoundref="source_2pbat_2sim_2vbd_2lod_2ElasticEnergy_8h" startline="23">pbat::sim::vbd::lod::ElasticEnergy::mug</references>
+        <references refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1CageQuadrature_1a8617360bb8a7adc9c378b5c5c8ab1831" compoundref="source_2pbat_2sim_2vbd_2lod_2Quadrature_8h" startline="50">pbat::sim::vbd::lod::CageQuadrature::Ncg</references>
+        <references refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Level_1a7f387e1420dc1149ce49455172466d3e" compoundref="source_2pbat_2sim_2vbd_2lod_2Level_8h" startline="61">pbat::sim::vbd::lod::Level::Qcage</references>
+        <references refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1MomentumEnergy_1a5e0876a94f7e84f8578d25497b949440" compoundref="source_2pbat_2sim_2vbd_2lod_2MomentumEnergy_8h" startline="31">pbat::sim::vbd::lod::MomentumEnergy::rhog</references>
+        <references refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1CageQuadrature_1a9d99da11102409ae4c3af40a229611ae" compoundref="source_2pbat_2sim_2vbd_2lod_2Quadrature_8h" startline="47">pbat::sim::vbd::lod::CageQuadrature::sg</references>
+        <references refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1CageQuadrature_1a5f5e79e5d5779140bea1eac8d97da4f0" compoundref="source_2pbat_2sim_2vbd_2lod_2Quadrature_8h" startline="45">pbat::sim::vbd::lod::CageQuadrature::wg</references>
+        <references refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Level_1ab331b103c090e822c37f0b0192ef6b7b" compoundref="source_2pbat_2sim_2vbd_2lod_2Level_8h" startline="56">pbat::sim::vbd::lod::Level::x</references>
+        <references refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Restriction_1a4acb976ae35b830b93ba2df7748bcd0a" compoundref="source_2pbat_2sim_2vbd_2lod_2Restriction_8h" startline="52">xfg</references>
+        <referencedby refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Restriction_1a96ba34ece998c608ffb03f67b3c8e496" compoundref="source_2pbat_2sim_2vbd_2lod_2Restriction_8cpp" startline="24" endline="28">Apply</referencedby>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Restriction.h" line="18" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Restriction.h" bodystart="17" bodyend="53"/>
+    <listofallmembers>
+      <member refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Restriction_1a96ba34ece998c608ffb03f67b3c8e496" prot="public" virt="non-virtual"><scope>pbat::sim::vbd::lod::Restriction</scope><name>Apply</name></member>
+      <member refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Restriction_1a579db38ba036ce4f3cd800fec9d7470e" prot="public" virt="non-virtual"><scope>pbat::sim::vbd::lod::Restriction</scope><name>Apply</name></member>
+      <member refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Restriction_1af7b613a2fd3f543232339fc7a94f6f00" prot="public" virt="non-virtual"><scope>pbat::sim::vbd::lod::Restriction</scope><name>DoApply</name></member>
+      <member refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Restriction_1af78925e68a74ef08d5615f1a9bdb23cd" prot="public" virt="non-virtual"><scope>pbat::sim::vbd::lod::Restriction</scope><name>Restriction</name></member>
+      <member refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Restriction_1afe54d5182ab4a3074b1de65b28cc80a4" prot="public" virt="non-virtual"><scope>pbat::sim::vbd::lod::Restriction</scope><name>Restriction</name></member>
+      <member refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Restriction_1a4acb976ae35b830b93ba2df7748bcd0a" prot="public" virt="non-virtual"><scope>pbat::sim::vbd::lod::Restriction</scope><name>xfg</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

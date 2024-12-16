@@ -1,0 +1,307 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="structpbat_1_1fem_1_1DivergenceVector" kind="struct" language="C++" prot="public">
+    <compoundname>pbat::fem::DivergenceVector</compoundname>
+    <templateparamlist>
+      <param>
+        <type>CMesh</type>
+        <declname>TMesh</declname>
+        <defname>TMesh</defname>
+      </param>
+      <param>
+        <type>int</type>
+        <declname>Dims</declname>
+        <defname>Dims</defname>
+      </param>
+      <param>
+        <type>int</type>
+        <declname>QuadratureOrder</declname>
+        <defname>QuadratureOrder</defname>
+      </param>
+    </templateparamlist>
+      <sectiondef kind="public-type">
+      <memberdef kind="typedef" id="structpbat_1_1fem_1_1DivergenceVector_1ad69ac3f248e93afb537098cf6c384e1d" prot="public" static="no">
+        <type><ref refid="structpbat_1_1fem_1_1DivergenceVector" kindref="compound">DivergenceVector</ref>&lt; TMesh, Dims, QuadratureOrder &gt;</type>
+        <definition>using pbat::fem::DivergenceVector&lt; TMesh, Dims, QuadratureOrder &gt;::SelfType =  DivergenceVector&lt;TMesh, Dims, QuadratureOrder&gt;</definition>
+        <argsstring></argsstring>
+        <name>SelfType</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/DivergenceVector.h" line="20" column="5" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/DivergenceVector.h" bodystart="20" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="structpbat_1_1fem_1_1DivergenceVector_1a994d5ef2dd28cbd1567473f7a2d53e7c" prot="public" static="no">
+        <type>TMesh</type>
+        <definition>using pbat::fem::DivergenceVector&lt; TMesh, Dims, QuadratureOrder &gt;::MeshType =  TMesh</definition>
+        <argsstring></argsstring>
+        <name>MeshType</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/DivergenceVector.h" line="21" column="5" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/DivergenceVector.h" bodystart="21" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="structpbat_1_1fem_1_1DivergenceVector_1a67919ebae78dc5da5000a230fac88051" prot="public" static="no">
+        <type>typename TMesh::ElementType</type>
+        <definition>using pbat::fem::DivergenceVector&lt; TMesh, Dims, QuadratureOrder &gt;::ElementType =  typename TMesh::ElementType</definition>
+        <argsstring></argsstring>
+        <name>ElementType</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/DivergenceVector.h" line="22" column="5" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/DivergenceVector.h" bodystart="22" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="structpbat_1_1fem_1_1DivergenceVector_1a73faa9b2bb2a62dde307130e827a482d" prot="public" static="no">
+        <type>typename ElementType::template QuadratureType&lt; QuadratureOrder &gt;</type>
+        <definition>using pbat::fem::DivergenceVector&lt; TMesh, Dims, QuadratureOrder &gt;::QuadratureRuleType =  typename ElementType::template QuadratureType&lt;QuadratureOrder&gt;</definition>
+        <argsstring></argsstring>
+        <name>QuadratureRuleType</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/DivergenceVector.h" line="27" column="5" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/DivergenceVector.h" bodystart="27" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="public-static-attrib">
+      <memberdef kind="variable" id="structpbat_1_1fem_1_1DivergenceVector_1a85e0760f1f849d0df6bc29612bd5719d" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>constexpr int</type>
+        <definition>constexpr int pbat::fem::DivergenceVector&lt; TMesh, Dims, QuadratureOrder &gt;::kDims</definition>
+        <argsstring></argsstring>
+        <name>kDims</name>
+        <initializer>= Dims</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/DivergenceVector.h" line="23" column="26" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/DivergenceVector.h" bodystart="23" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpbat_1_1fem_1_1DivergenceVector_1aa653442abc9c86a39c84bc6ee63c8005" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>constexpr int</type>
+        <definition>constexpr int pbat::fem::DivergenceVector&lt; TMesh, Dims, QuadratureOrder &gt;::kOrder</definition>
+        <argsstring></argsstring>
+        <name>kOrder</name>
+        <initializer>= ElementType::kOrder - 1</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/DivergenceVector.h" line="24" column="26" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/DivergenceVector.h" bodystart="24" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpbat_1_1fem_1_1DivergenceVector_1a3177809fb45a61a969b6877a08395416" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>constexpr int</type>
+        <definition>constexpr int pbat::fem::DivergenceVector&lt; TMesh, Dims, QuadratureOrder &gt;::kQuadratureOrder</definition>
+        <argsstring></argsstring>
+        <name>kQuadratureOrder</name>
+        <initializer>= QuadratureOrder</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/DivergenceVector.h" line="25" column="26" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/DivergenceVector.h" bodystart="25" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="structpbat_1_1fem_1_1DivergenceVector_1a142c347faced1f8018c5c65fb7485171" prot="public" static="no" mutable="no">
+        <type>MeshType const  &amp;</type>
+        <definition>MeshType const&amp; pbat::fem::DivergenceVector&lt; TMesh, Dims, QuadratureOrder &gt;::mesh</definition>
+        <argsstring></argsstring>
+        <name>mesh</name>
+        <briefdescription>
+<para>The finite element mesh. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/DivergenceVector.h" line="52" column="20" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/DivergenceVector.h" bodystart="52" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpbat_1_1fem_1_1DivergenceVector_1a62251fa3c5a30520696c75e23995247b" prot="public" static="no" mutable="no">
+        <type>Eigen::Ref&lt; MatrixX const  &gt;</type>
+        <definition>Eigen::Ref&lt;MatrixX const&gt; pbat::fem::DivergenceVector&lt; TMesh, Dims, QuadratureOrder &gt;::detJe</definition>
+        <argsstring></argsstring>
+        <name>detJe</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>|# element quadrature points|x|#elements| matrix of jacobian determinants at element quadrature points </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/DivergenceVector.h" line="53" column="16" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/DivergenceVector.h" bodystart="53" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpbat_1_1fem_1_1DivergenceVector_1ad238fc1943a4e61564b2e9aa61465a8f" prot="public" static="no" mutable="no">
+        <type>Eigen::Ref&lt; MatrixX const  &gt;</type>
+        <definition>Eigen::Ref&lt;MatrixX const&gt; pbat::fem::DivergenceVector&lt; TMesh, Dims, QuadratureOrder &gt;::GNe</definition>
+        <argsstring></argsstring>
+        <name>GNe</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>|ElementType::kNodes|x|kDims * QuadratureRuleType::kPoints * #elements| matrix of element shape function gradients at quadrature points </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/DivergenceVector.h" line="56" column="9" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/DivergenceVector.h" bodystart="56" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpbat_1_1fem_1_1DivergenceVector_1ad2643f7fe3d5a8b822dacdefcd631e72" prot="public" static="no" mutable="no">
+        <type>MatrixX</type>
+        <definition>MatrixX pbat::fem::DivergenceVector&lt; TMesh, Dims, QuadratureOrder &gt;::divE</definition>
+        <argsstring></argsstring>
+        <name>divE</name>
+        <briefdescription>
+<para>|ElementType::kNodes|x|#elements| matrix of element divergences at nodes </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/DivergenceVector.h" line="61" column="13" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/DivergenceVector.h" bodystart="61" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="public-func">
+      <memberdef kind="function" id="structpbat_1_1fem_1_1DivergenceVector_1a4c63376d932316d8fb4e7c6178467e1a" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class TDerived</type>
+          </param>
+        </templateparamlist>
+        <type></type>
+        <definition>pbat::fem::DivergenceVector&lt; TMesh, Dims, QuadratureOrder &gt;::DivergenceVector</definition>
+        <argsstring>(MeshType const &amp;mesh, Eigen::Ref&lt; MatrixX const &gt; const &amp;detJe, Eigen::Ref&lt; MatrixX const &gt; const &amp;GNe, Eigen::DenseBase&lt; TDerived &gt; const &amp;Fe)</argsstring>
+        <name>DivergenceVector</name>
+        <param>
+          <type>MeshType const &amp;</type>
+          <declname>mesh</declname>
+        </param>
+        <param>
+          <type>Eigen::Ref&lt; MatrixX const &gt; const &amp;</type>
+          <declname>detJe</declname>
+        </param>
+        <param>
+          <type>Eigen::Ref&lt; MatrixX const &gt; const &amp;</type>
+          <declname>GNe</declname>
+        </param>
+        <param>
+          <type>Eigen::DenseBase&lt; TDerived &gt; const &amp;</type>
+          <declname>Fe</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/DivergenceVector.h" line="30" column="5" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/DivergenceVector.h" bodystart="66" bodyend="91"/>
+      </memberdef>
+      <memberdef kind="function" id="structpbat_1_1fem_1_1DivergenceVector_1a96d2e39e20385d64bb95b970c57b7036" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="structpbat_1_1fem_1_1DivergenceVector" kindref="compound">SelfType</ref> &amp;</type>
+        <definition>SelfType&amp; pbat::fem::DivergenceVector&lt; TMesh, Dims, QuadratureOrder &gt;::operator=</definition>
+        <argsstring>(SelfType const &amp;)=delete</argsstring>
+        <name>operator=</name>
+        <param>
+          <type><ref refid="structpbat_1_1fem_1_1DivergenceVector" kindref="compound">SelfType</ref> const &amp;</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/DivergenceVector.h" line="36" column="14"/>
+      </memberdef>
+      <memberdef kind="function" id="structpbat_1_1fem_1_1DivergenceVector_1aa843a25d33876e0dfc8879e9a4c19576" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>VectorX</type>
+        <definition>VectorX pbat::fem::DivergenceVector&lt; TMesh, Dims, QuadratureOrder &gt;::ToVector</definition>
+        <argsstring>() const</argsstring>
+        <name>ToVector</name>
+        <briefdescription>
+<para>Transforms this matrix-free mass matrix representation into sparse compressed format. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para></para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/DivergenceVector.h" line="42" column="13" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/DivergenceVector.h" bodystart="120" bodyend="132"/>
+      </memberdef>
+      <memberdef kind="function" id="structpbat_1_1fem_1_1DivergenceVector_1a495e47b1f31ccb857ed5dc492c72f3f9" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class TDerivedF</type>
+          </param>
+        </templateparamlist>
+        <type>void</type>
+        <definition>void pbat::fem::DivergenceVector&lt; TMesh, Dims, QuadratureOrder &gt;::ComputeElementDivergence</definition>
+        <argsstring>(Eigen::DenseBase&lt; TDerivedF &gt; const &amp;Fe)</argsstring>
+        <name>ComputeElementDivergence</name>
+        <param>
+          <type>Eigen::DenseBase&lt; TDerivedF &gt; const &amp;</type>
+          <declname>Fe</declname>
+        </param>
+        <briefdescription>
+<para>Computes the piecewise divergence operator representations. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/DivergenceVector.h" line="48" column="10" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/DivergenceVector.h" bodystart="95" bodyend="117"/>
+      </memberdef>
+      <memberdef kind="function" id="structpbat_1_1fem_1_1DivergenceVector_1aa5cba20c07bdaff47263a384f74132b4" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>void</type>
+        <definition>void pbat::fem::DivergenceVector&lt; TMesh, Dims, QuadratureOrder &gt;::CheckValidState</definition>
+        <argsstring>() const</argsstring>
+        <name>CheckValidState</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/DivergenceVector.h" line="50" column="10" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/DivergenceVector.h" bodystart="135" bodyend="172"/>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/DivergenceVector.h" line="18" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/DivergenceVector.h" bodystart="17" bodyend="62"/>
+    <listofallmembers>
+      <member refid="structpbat_1_1fem_1_1DivergenceVector_1aa5cba20c07bdaff47263a384f74132b4" prot="public" virt="non-virtual"><scope>pbat::fem::DivergenceVector</scope><name>CheckValidState</name></member>
+      <member refid="structpbat_1_1fem_1_1DivergenceVector_1a495e47b1f31ccb857ed5dc492c72f3f9" prot="public" virt="non-virtual"><scope>pbat::fem::DivergenceVector</scope><name>ComputeElementDivergence</name></member>
+      <member refid="structpbat_1_1fem_1_1DivergenceVector_1a62251fa3c5a30520696c75e23995247b" prot="public" virt="non-virtual"><scope>pbat::fem::DivergenceVector</scope><name>detJe</name></member>
+      <member refid="structpbat_1_1fem_1_1DivergenceVector_1ad2643f7fe3d5a8b822dacdefcd631e72" prot="public" virt="non-virtual"><scope>pbat::fem::DivergenceVector</scope><name>divE</name></member>
+      <member refid="structpbat_1_1fem_1_1DivergenceVector_1a4c63376d932316d8fb4e7c6178467e1a" prot="public" virt="non-virtual"><scope>pbat::fem::DivergenceVector</scope><name>DivergenceVector</name></member>
+      <member refid="structpbat_1_1fem_1_1DivergenceVector_1a67919ebae78dc5da5000a230fac88051" prot="public" virt="non-virtual"><scope>pbat::fem::DivergenceVector</scope><name>ElementType</name></member>
+      <member refid="structpbat_1_1fem_1_1DivergenceVector_1ad238fc1943a4e61564b2e9aa61465a8f" prot="public" virt="non-virtual"><scope>pbat::fem::DivergenceVector</scope><name>GNe</name></member>
+      <member refid="structpbat_1_1fem_1_1DivergenceVector_1a85e0760f1f849d0df6bc29612bd5719d" prot="public" virt="non-virtual"><scope>pbat::fem::DivergenceVector</scope><name>kDims</name></member>
+      <member refid="structpbat_1_1fem_1_1DivergenceVector_1aa653442abc9c86a39c84bc6ee63c8005" prot="public" virt="non-virtual"><scope>pbat::fem::DivergenceVector</scope><name>kOrder</name></member>
+      <member refid="structpbat_1_1fem_1_1DivergenceVector_1a3177809fb45a61a969b6877a08395416" prot="public" virt="non-virtual"><scope>pbat::fem::DivergenceVector</scope><name>kQuadratureOrder</name></member>
+      <member refid="structpbat_1_1fem_1_1DivergenceVector_1a142c347faced1f8018c5c65fb7485171" prot="public" virt="non-virtual"><scope>pbat::fem::DivergenceVector</scope><name>mesh</name></member>
+      <member refid="structpbat_1_1fem_1_1DivergenceVector_1a994d5ef2dd28cbd1567473f7a2d53e7c" prot="public" virt="non-virtual"><scope>pbat::fem::DivergenceVector</scope><name>MeshType</name></member>
+      <member refid="structpbat_1_1fem_1_1DivergenceVector_1a96d2e39e20385d64bb95b970c57b7036" prot="public" virt="non-virtual"><scope>pbat::fem::DivergenceVector</scope><name>operator=</name></member>
+      <member refid="structpbat_1_1fem_1_1DivergenceVector_1a73faa9b2bb2a62dde307130e827a482d" prot="public" virt="non-virtual"><scope>pbat::fem::DivergenceVector</scope><name>QuadratureRuleType</name></member>
+      <member refid="structpbat_1_1fem_1_1DivergenceVector_1ad69ac3f248e93afb537098cf6c384e1d" prot="public" virt="non-virtual"><scope>pbat::fem::DivergenceVector</scope><name>SelfType</name></member>
+      <member refid="structpbat_1_1fem_1_1DivergenceVector_1aa843a25d33876e0dfc8879e9a4c19576" prot="public" virt="non-virtual"><scope>pbat::fem::DivergenceVector</scope><name>ToVector</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

@@ -1,0 +1,18 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="namespacepbat_1_1py" kind="namespace" language="C++">
+    <compoundname>pbat::py</compoundname>
+    <innernamespace refid="namespacepbat_1_1py_1_1fem">pbat::py::fem</innernamespace>
+    <innernamespace refid="namespacepbat_1_1py_1_1geometry">pbat::py::geometry</innernamespace>
+    <innernamespace refid="namespacepbat_1_1py_1_1gpu">pbat::py::gpu</innernamespace>
+    <innernamespace refid="namespacepbat_1_1py_1_1graph">pbat::py::graph</innernamespace>
+    <innernamespace refid="namespacepbat_1_1py_1_1math">pbat::py::math</innernamespace>
+    <innernamespace refid="namespacepbat_1_1py_1_1profiling">pbat::py::profiling</innernamespace>
+    <innernamespace refid="namespacepbat_1_1py_1_1sim">pbat::py::sim</innernamespace>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/Fem.cpp" line="12" column="12"/>
+  </compounddef>
+</doxygen>

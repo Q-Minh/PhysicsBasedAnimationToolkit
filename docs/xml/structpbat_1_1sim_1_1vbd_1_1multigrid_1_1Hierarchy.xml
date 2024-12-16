@@ -1,0 +1,129 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Hierarchy" kind="struct" language="C++" prot="public">
+    <compoundname>pbat::sim::vbd::multigrid::Hierarchy</compoundname>
+      <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Hierarchy_1a4ad7adda2b79f9c5bbaf2bf8e7716f09" prot="public" static="no" mutable="no">
+        <type><ref refid="structpbat_1_1sim_1_1vbd_1_1Data" kindref="compound">Data</ref></type>
+        <definition>Data pbat::sim::vbd::multigrid::Hierarchy::data</definition>
+        <argsstring></argsstring>
+        <name>data</name>
+        <briefdescription>
+<para>Root level. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/multigrid/Hierarchy.h" line="23" column="10" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/multigrid/Hierarchy.h" bodystart="23" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Hierarchy_1a105a3fc478246252ef21a69c59bdaf0f" prot="public" static="no" mutable="no">
+        <type>std::vector&lt; <ref refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level" kindref="compound">Level</ref> &gt;</type>
+        <definition>std::vector&lt;Level&gt; pbat::sim::vbd::multigrid::Hierarchy::levels</definition>
+        <argsstring></argsstring>
+        <name>levels</name>
+        <briefdescription>
+<para>Coarse levels. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/multigrid/Hierarchy.h" line="24" column="17" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/multigrid/Hierarchy.h" bodystart="24" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Hierarchy_1ab854e1959a2763566c9a30c02d83027f" prot="public" static="no" mutable="no">
+        <type>IndexVectorX</type>
+        <definition>IndexVectorX pbat::sim::vbd::multigrid::Hierarchy::cycle</definition>
+        <argsstring></argsstring>
+        <name>cycle</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>|#level visits| ordered array of levels to visit during the solve. <ref refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level" kindref="compound">Level</ref> -1 is the root, 0 the first coarse level, etc. </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/multigrid/Hierarchy.h" line="25" column="18" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/multigrid/Hierarchy.h" bodystart="25" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Hierarchy_1a56815dec11835b335a04d294d00fd903" prot="public" static="no" mutable="no">
+        <type>IndexVectorX</type>
+        <definition>IndexVectorX pbat::sim::vbd::multigrid::Hierarchy::siters</definition>
+        <argsstring></argsstring>
+        <name>siters</name>
+        <briefdescription>
+<para>|#cages+1| max smoother iterations at each level, starting from the root </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/multigrid/Hierarchy.h" line="28" column="9" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/multigrid/Hierarchy.h" bodystart="28" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="public-func">
+      <memberdef kind="function" id="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Hierarchy_1a4a78d50abe1b848cb8de2a35ce830444" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>pbat::sim::vbd::multigrid::Hierarchy::Hierarchy</definition>
+        <argsstring>(Data data, std::vector&lt; VolumeMesh &gt; cages, IndexVectorX const &amp;cycle={}, IndexVectorX const &amp;siters={})</argsstring>
+        <name>Hierarchy</name>
+        <param>
+          <type><ref refid="structpbat_1_1sim_1_1vbd_1_1Data" kindref="compound">Data</ref></type>
+          <declname>data</declname>
+        </param>
+        <param>
+          <type>std::vector&lt; <ref refid="structpbat_1_1fem_1_1Mesh" kindref="compound">VolumeMesh</ref> &gt;</type>
+          <declname>cages</declname>
+        </param>
+        <param>
+          <type>IndexVectorX const &amp;</type>
+          <declname>cycle</declname>
+          <defval>{}</defval>
+        </param>
+        <param>
+          <type>IndexVectorX const &amp;</type>
+          <declname>siters</declname>
+          <defval>{}</defval>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/multigrid/Hierarchy.h" line="17" column="5" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/multigrid/Hierarchy.cpp" bodystart="8" bodyend="36"/>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <collaborationgraph>
+      <node id="1">
+        <label>pbat::sim::vbd::multigrid::Hierarchy</label>
+        <link refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Hierarchy"/>
+        <childnode refid="2" relation="usage">
+          <edgelabel>data</edgelabel>
+        </childnode>
+      </node>
+      <node id="2">
+        <label>pbat::sim::vbd::Data</label>
+        <link refid="structpbat_1_1sim_1_1vbd_1_1Data"/>
+        <childnode refid="3" relation="usage">
+          <edgelabel>mesh</edgelabel>
+        </childnode>
+      </node>
+      <node id="3">
+        <label>pbat::fem::Mesh&lt; fem::Tetrahedron&lt; 1 &gt;, 3 &gt;</label>
+        <link refid="structpbat_1_1fem_1_1Mesh"/>
+      </node>
+    </collaborationgraph>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/multigrid/Hierarchy.h" line="16" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/multigrid/Hierarchy.h" bodystart="15" bodyend="29"/>
+    <listofallmembers>
+      <member refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Hierarchy_1ab854e1959a2763566c9a30c02d83027f" prot="public" virt="non-virtual"><scope>pbat::sim::vbd::multigrid::Hierarchy</scope><name>cycle</name></member>
+      <member refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Hierarchy_1a4ad7adda2b79f9c5bbaf2bf8e7716f09" prot="public" virt="non-virtual"><scope>pbat::sim::vbd::multigrid::Hierarchy</scope><name>data</name></member>
+      <member refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Hierarchy_1a4a78d50abe1b848cb8de2a35ce830444" prot="public" virt="non-virtual"><scope>pbat::sim::vbd::multigrid::Hierarchy</scope><name>Hierarchy</name></member>
+      <member refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Hierarchy_1a105a3fc478246252ef21a69c59bdaf0f" prot="public" virt="non-virtual"><scope>pbat::sim::vbd::multigrid::Hierarchy</scope><name>levels</name></member>
+      <member refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Hierarchy_1a56815dec11835b335a04d294d00fd903" prot="public" virt="non-virtual"><scope>pbat::sim::vbd::multigrid::Hierarchy</scope><name>siters</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

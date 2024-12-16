@@ -1,0 +1,15 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="dir_b8703e20c11b677bfb7d81d9b9ff98ce" kind="dir">
+    <compoundname>/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/sim</compoundname>
+    <innerdir refid="dir_50dc2c85f15cbbeaa5ffb33584deef5f">/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/sim/vbd</innerdir>
+    <innerdir refid="dir_6912ac55476a434e3c22f6bf0d326401">/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/sim/xpbd</innerdir>
+    <innerfile refid="Sim_8cpp">Sim.cpp</innerfile>
+    <innerfile refid="bindings_2pypbat_2sim_2Sim_8h">Sim.h</innerfile>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/sim/"/>
+  </compounddef>
+</doxygen>

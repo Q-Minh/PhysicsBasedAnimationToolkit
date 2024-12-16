@@ -1,0 +1,75 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="namespacepbat_1_1geometry_1_1model" kind="namespace" language="C++">
+    <compoundname>pbat::geometry::model</compoundname>
+      <sectiondef kind="enum">
+      <memberdef kind="enum" id="geometry_2model_2Enums_8h_1afa30b3430836153636e43b1b7492d96e" prot="public" static="no" strong="yes">
+        <type></type>
+        <name>EMesh</name>
+        <enumvalue id="geometry_2model_2Enums_8h_1afa30b3430836153636e43b1b7492d96eac0664347d8897385f1aefec815415a0e" prot="public">
+          <name>Tetrahedral</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/model/Enums.h" line="8" column="17" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/model/Enums.h" bodystart="8" bodyend="8"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="func">
+      <memberdef kind="function" id="Armadillo_8cpp_1a0ca865462ba1b7801cd96486f20418c4" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>std::pair&lt; MatrixX, IndexMatrixX &gt;</type>
+        <definition>std::pair&lt; MatrixX, IndexMatrixX &gt; pbat::geometry::model::Armadillo</definition>
+        <argsstring>(EMesh mesh, Index layer)</argsstring>
+        <name>Armadillo</name>
+        <param>
+          <type>EMesh</type>
+          <declname>mesh</declname>
+        </param>
+        <param>
+          <type>Index</type>
+          <declname>layer</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/model/Armadillo.cpp" line="7" column="11" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/model/Armadillo.cpp" bodystart="7" bodyend="28466" declfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/model/Armadillo.h" declline="13" declcolumn="11"/>
+      </memberdef>
+      <memberdef kind="function" id="Cube_8cpp_1a97828c943388ac4c306f2881540dc16e" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>std::pair&lt; MatrixX, IndexMatrixX &gt;</type>
+        <definition>std::pair&lt; MatrixX, IndexMatrixX &gt; pbat::geometry::model::Cube</definition>
+        <argsstring>(EMesh mesh, int layer)</argsstring>
+        <name>Cube</name>
+        <param>
+          <type>EMesh</type>
+          <declname>mesh</declname>
+        </param>
+        <param>
+          <type>int</type>
+          <declname>layer</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/model/Cube.cpp" line="7" column="11" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/model/Cube.cpp" bodystart="7" bodyend="1635" declfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/model/Cube.h" declline="13" declcolumn="11"/>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/model/Armadillo.cpp" line="5" column="15"/>
+  </compounddef>
+</doxygen>

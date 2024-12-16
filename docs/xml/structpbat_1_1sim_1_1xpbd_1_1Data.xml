@@ -1,0 +1,719 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="structpbat_1_1sim_1_1xpbd_1_1Data" kind="struct" language="C++" prot="public">
+    <compoundname>pbat::sim::xpbd::Data</compoundname>
+      <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="structpbat_1_1sim_1_1xpbd_1_1Data_1a5aa416eee37bbe52d6b315f743c527e8" prot="public" static="no" mutable="no">
+        <type>IndexVectorX</type>
+        <definition>IndexVectorX pbat::sim::xpbd::Data::V</definition>
+        <argsstring></argsstring>
+        <name>V</name>
+        <briefdescription>
+<para>|#collision vertices| array of indices into columns of x </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Data.h" line="41" column="18" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Data.h" bodystart="41" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpbat_1_1sim_1_1xpbd_1_1Data_1a3bb30340e3f83142274d67e5a38d270d" prot="public" static="no" mutable="no">
+        <type>IndexMatrixX</type>
+        <definition>IndexMatrixX pbat::sim::xpbd::Data::F</definition>
+        <argsstring></argsstring>
+        <name>F</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>3x|#triangles| array of collision triangles (on the boundary of T), indexing into columns of x </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Data.h" line="42" column="18" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Data.h" bodystart="42" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpbat_1_1sim_1_1xpbd_1_1Data_1a2491dcc22c501bd670e70dfabe2fd18c" prot="public" static="no" mutable="no">
+        <type>IndexMatrixX</type>
+        <definition>IndexMatrixX pbat::sim::xpbd::Data::T</definition>
+        <argsstring></argsstring>
+        <name>T</name>
+        <briefdescription>
+<para>Tetrahedra. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Data.h" line="44" column="18" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Data.h" bodystart="44" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpbat_1_1sim_1_1xpbd_1_1Data_1a95aa2ea06f54bc2e9ab4c81b959926bc" prot="public" static="no" mutable="no">
+        <type>IndexVectorX</type>
+        <definition>IndexVectorX pbat::sim::xpbd::Data::BV</definition>
+        <argsstring></argsstring>
+        <name>BV</name>
+        <briefdescription>
+<para>|#particles| array of body indices </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Data.h" line="46" column="18" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Data.h" bodystart="46" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpbat_1_1sim_1_1xpbd_1_1Data_1a902c4a34b00ced9a46301747997cb9a8" prot="public" static="no" mutable="no">
+        <type>MatrixX</type>
+        <definition>MatrixX pbat::sim::xpbd::Data::x</definition>
+        <argsstring></argsstring>
+        <name>x</name>
+        <briefdescription>
+<para>Vertex positions. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Data.h" line="48" column="13" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Data.h" bodystart="48" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpbat_1_1sim_1_1xpbd_1_1Data_1a7ac0f27e88e9752be2325f8b228c2246" prot="public" static="no" mutable="no">
+        <type>MatrixX</type>
+        <definition>MatrixX pbat::sim::xpbd::Data::v</definition>
+        <argsstring></argsstring>
+        <name>v</name>
+        <briefdescription>
+<para>Vertex velocities. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Data.h" line="49" column="13" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Data.h" bodystart="49" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpbat_1_1sim_1_1xpbd_1_1Data_1aafbeba1abbc778e0f599f3360446dc16" prot="public" static="no" mutable="no">
+        <type>MatrixX</type>
+        <definition>MatrixX pbat::sim::xpbd::Data::aext</definition>
+        <argsstring></argsstring>
+        <name>aext</name>
+        <briefdescription>
+<para>Vertex external accelerations. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Data.h" line="50" column="13" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Data.h" bodystart="50" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpbat_1_1sim_1_1xpbd_1_1Data_1a1ee71d9fb8ea2c65eafd285cf97cd526" prot="public" static="no" mutable="no">
+        <type>VectorX</type>
+        <definition>VectorX pbat::sim::xpbd::Data::minv</definition>
+        <argsstring></argsstring>
+        <name>minv</name>
+        <briefdescription>
+<para>Vertex mass inverses. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Data.h" line="51" column="13" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Data.h" bodystart="51" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpbat_1_1sim_1_1xpbd_1_1Data_1ac5f54713dd9c158e94ac4ba2d09cdc06" prot="public" static="no" mutable="no">
+        <type>MatrixX</type>
+        <definition>MatrixX pbat::sim::xpbd::Data::xt</definition>
+        <argsstring></argsstring>
+        <name>xt</name>
+        <briefdescription>
+<para>Vertex positions at time t. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Data.h" line="53" column="13" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Data.h" bodystart="53" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpbat_1_1sim_1_1xpbd_1_1Data_1a2cd9e1c29eb0c96792f980b21cef4e30" prot="public" static="no" mutable="no">
+        <type>MatrixX</type>
+        <definition>MatrixX pbat::sim::xpbd::Data::xb</definition>
+        <argsstring></argsstring>
+        <name>xb</name>
+        <briefdescription>
+<para>Vertex positions buffer for contact. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Data.h" line="54" column="13" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Data.h" bodystart="54" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpbat_1_1sim_1_1xpbd_1_1Data_1a3d80b245c3702bb79791f99792f97dbb" prot="public" static="no" mutable="no">
+        <type>MatrixX</type>
+        <definition>MatrixX pbat::sim::xpbd::Data::lame</definition>
+        <argsstring></argsstring>
+        <name>lame</name>
+        <briefdescription>
+<para>2x|#quad.pts.| Lame coefficients </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Data.h" line="56" column="13" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Data.h" bodystart="56" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpbat_1_1sim_1_1xpbd_1_1Data_1ae8a0cbe70c0f47658d0d9d7eac2bd17e" prot="public" static="no" mutable="no">
+        <type>MatrixX</type>
+        <definition>MatrixX pbat::sim::xpbd::Data::DmInv</definition>
+        <argsstring></argsstring>
+        <name>DmInv</name>
+        <briefdescription>
+<para>3x3x|#elements| array of material shape matrix inverses </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Data.h" line="57" column="13" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Data.h" bodystart="57" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpbat_1_1sim_1_1xpbd_1_1Data_1a335f7a2d79745c02010b4914d573bc85" prot="public" static="no" mutable="no">
+        <type>VectorX</type>
+        <definition>VectorX pbat::sim::xpbd::Data::gammaSNH</definition>
+        <argsstring></argsstring>
+        <name>gammaSNH</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><orderedlist>
+<listitem><para>+ mu/lambda, where mu,lambda are Lame coefficients </para>
+</listitem></orderedlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Data.h" line="58" column="13" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Data.h" bodystart="58" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpbat_1_1sim_1_1xpbd_1_1Data_1a569dc1cfbb1ab7752bb78b2021e55e65" prot="public" static="no" mutable="no">
+        <type>VectorX</type>
+        <definition>VectorX pbat::sim::xpbd::Data::muV</definition>
+        <argsstring></argsstring>
+        <name>muV</name>
+        <briefdescription>
+<para>|#collision vertices| array of collision penalties </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Data.h" line="60" column="13" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Data.h" bodystart="60" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpbat_1_1sim_1_1xpbd_1_1Data_1a8cee0775fbac819e171ceefe47cd9875" prot="public" static="no" mutable="no">
+        <type>Scalar</type>
+        <definition>Scalar pbat::sim::xpbd::Data::muS</definition>
+        <argsstring></argsstring>
+        <name>muS</name>
+        <initializer>{0.3}</initializer>
+        <briefdescription>
+<para>Static friction coefficient. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Data.h" line="61" column="12" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Data.h" bodystart="61" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpbat_1_1sim_1_1xpbd_1_1Data_1af3af44f9a6b77dfb3dc56f641b84bad3" prot="public" static="no" mutable="no">
+        <type>Scalar</type>
+        <definition>Scalar pbat::sim::xpbd::Data::muD</definition>
+        <argsstring></argsstring>
+        <name>muD</name>
+        <initializer>{0.2}</initializer>
+        <briefdescription>
+<para>Dynamic friction coefficient. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Data.h" line="62" column="12" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Data.h" bodystart="62" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpbat_1_1sim_1_1xpbd_1_1Data_1ac712fd69fb23ee3b551ec6d189f7fa52" prot="public" static="no" mutable="no">
+        <type>std::array&lt; VectorX, static_cast&lt; int &gt;EConstraint::NumberOfConstraintTypes)&gt;</type>
+        <definition>std::array&lt;VectorX, static_cast&lt;int&gt;EConstraint::NumberOfConstraintTypes)&gt; pbat::sim::xpbd::Data::alpha</definition>
+        <argsstring></argsstring>
+        <name>alpha</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Compliance alpha[0] -&gt; Stable Neo-Hookean constraint compliance alpha[1] -&gt; Collision penalty constraint compliance </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Data.h" line="65" column="9" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Data.h" bodystart="65" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpbat_1_1sim_1_1xpbd_1_1Data_1a4dba08a8776f7357f9fb126ef2977ca9" prot="public" static="no" mutable="no">
+        <type>std::array&lt; VectorX, static_cast&lt; int &gt;EConstraint::NumberOfConstraintTypes)&gt;</type>
+        <definition>std::array&lt;VectorX, static_cast&lt;int&gt;EConstraint::NumberOfConstraintTypes)&gt; pbat::sim::xpbd::Data::beta</definition>
+        <argsstring></argsstring>
+        <name>beta</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Damping beta[0] -&gt; Stable Neo-Hookean constraint damping beta[1] -&gt; Collision penalty constraint damping </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Data.h" line="69" column="9" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Data.h" bodystart="69" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpbat_1_1sim_1_1xpbd_1_1Data_1a4b51063769fd9d1fa93ec66bca426a12" prot="public" static="no" mutable="no">
+        <type>std::array&lt; VectorX, static_cast&lt; int &gt;EConstraint::NumberOfConstraintTypes)&gt;</type>
+        <definition>std::array&lt;VectorX, static_cast&lt;int&gt;EConstraint::NumberOfConstraintTypes)&gt; pbat::sim::xpbd::Data::lambda</definition>
+        <argsstring></argsstring>
+        <name>lambda</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>&quot;Lagrange&quot; multipliers: lambda[0] -&gt; Stable Neo-Hookean constraint multipliers lambda[1] -&gt; Collision penalty constraint multipliers </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Data.h" line="73" column="9" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Data.h" bodystart="73" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpbat_1_1sim_1_1xpbd_1_1Data_1ac84ad222c87b687feda8c85b3ee8bf83" prot="public" static="no" mutable="no">
+        <type>IndexVectorX</type>
+        <definition>IndexVectorX pbat::sim::xpbd::Data::dbc</definition>
+        <argsstring></argsstring>
+        <name>dbc</name>
+        <briefdescription>
+<para>Dirichlet constrained vertices. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Data.h" line="77" column="18" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Data.h" bodystart="77" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpbat_1_1sim_1_1xpbd_1_1Data_1a5f7f375dda4fd8a74fc10efe60c92db3" prot="public" static="no" mutable="no">
+        <type>std::vector&lt; Index &gt;</type>
+        <definition>std::vector&lt;Index&gt; pbat::sim::xpbd::Data::Pptr</definition>
+        <argsstring></argsstring>
+        <name>Pptr</name>
+        <briefdescription>
+<para>Compressed sparse storage&apos;s pointers for constraint partitions. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Data.h" line="79" column="17" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Data.h" bodystart="79" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpbat_1_1sim_1_1xpbd_1_1Data_1a4bc4b56355a90c7b578562a3637e153b" prot="public" static="no" mutable="no">
+        <type>std::vector&lt; Index &gt;</type>
+        <definition>std::vector&lt;Index&gt; pbat::sim::xpbd::Data::Padj</definition>
+        <argsstring></argsstring>
+        <name>Padj</name>
+        <briefdescription>
+<para>Compressed sparse storage&apos;s edges for constraint indices. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Data.h" line="80" column="17" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Data.h" bodystart="80" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpbat_1_1sim_1_1xpbd_1_1Data_1aaad7636c574132f2861bba6af6fce8ef" prot="public" static="no" mutable="no">
+        <type>std::vector&lt; Index &gt;</type>
+        <definition>std::vector&lt;Index&gt; pbat::sim::xpbd::Data::SGptr</definition>
+        <argsstring></argsstring>
+        <name>SGptr</name>
+        <briefdescription>
+<para>Supernodal constraint graph&apos;s partition pointers. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Data.h" line="82" column="17" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Data.h" bodystart="82" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpbat_1_1sim_1_1xpbd_1_1Data_1a0d0af6eefad7d7d46eb343432b6ed615" prot="public" static="no" mutable="no">
+        <type>std::vector&lt; Index &gt;</type>
+        <definition>std::vector&lt;Index&gt; pbat::sim::xpbd::Data::SGadj</definition>
+        <argsstring></argsstring>
+        <name>SGadj</name>
+        <briefdescription>
+<para>Supernodal constraint graph&apos;s partition adjacency. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Data.h" line="83" column="17" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Data.h" bodystart="83" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpbat_1_1sim_1_1xpbd_1_1Data_1a22462dd2f00c418abd54e2ff6956841a" prot="public" static="no" mutable="no">
+        <type>std::vector&lt; Index &gt;</type>
+        <definition>std::vector&lt;Index&gt; pbat::sim::xpbd::Data::Cptr</definition>
+        <argsstring></argsstring>
+        <name>Cptr</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Flattened cluster pointers, where [Cptr[c], Cptr[c+1]) gives indices into C to obtain cluster c&apos;s constraints </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Data.h" line="84" column="17" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Data.h" bodystart="84" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpbat_1_1sim_1_1xpbd_1_1Data_1affd5f09868f8390697cb1d2374419fb4" prot="public" static="no" mutable="no">
+        <type>std::vector&lt; Index &gt;</type>
+        <definition>std::vector&lt;Index&gt; pbat::sim::xpbd::Data::Cadj</definition>
+        <argsstring></argsstring>
+        <name>Cadj</name>
+        <briefdescription>
+<para>Constraint indices in each cluster. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Data.h" line="86" column="17" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Data.h" bodystart="86" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="public-func">
+      <memberdef kind="function" id="structpbat_1_1sim_1_1xpbd_1_1Data_1acd2af66657983d14db15398634848f06" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="structpbat_1_1sim_1_1xpbd_1_1Data" kindref="compound">Data</ref> &amp;</type>
+        <definition>Data &amp; pbat::sim::xpbd::Data::WithVolumeMesh</definition>
+        <argsstring>(Eigen::Ref&lt; MatrixX const &gt; const &amp;V, Eigen::Ref&lt; IndexMatrixX const &gt; const &amp;E)</argsstring>
+        <name>WithVolumeMesh</name>
+        <param>
+          <type>Eigen::Ref&lt; MatrixX const &gt; const &amp;</type>
+          <declname>V</declname>
+        </param>
+        <param>
+          <type>Eigen::Ref&lt; IndexMatrixX const &gt; const &amp;</type>
+          <declname>E</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Data.h" line="18" column="5" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Data.cpp" bodystart="15" bodyend="23"/>
+      </memberdef>
+      <memberdef kind="function" id="structpbat_1_1sim_1_1xpbd_1_1Data_1a8b472e8de82e868af96bf4d999d14eeb" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="structpbat_1_1sim_1_1xpbd_1_1Data" kindref="compound">Data</ref> &amp;</type>
+        <definition>Data &amp; pbat::sim::xpbd::Data::WithSurfaceMesh</definition>
+        <argsstring>(Eigen::Ref&lt; IndexVectorX const &gt; const &amp;V, Eigen::Ref&lt; IndexMatrixX const &gt; const &amp;F)</argsstring>
+        <name>WithSurfaceMesh</name>
+        <param>
+          <type>Eigen::Ref&lt; IndexVectorX const &gt; const &amp;</type>
+          <declname>V</declname>
+        </param>
+        <param>
+          <type>Eigen::Ref&lt; IndexMatrixX const &gt; const &amp;</type>
+          <declname>F</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Data.h" line="19" column="10" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Data.cpp" bodystart="25" bodyend="32"/>
+      </memberdef>
+      <memberdef kind="function" id="structpbat_1_1sim_1_1xpbd_1_1Data_1a403111695305938536d41fded129c3e6" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="structpbat_1_1sim_1_1xpbd_1_1Data" kindref="compound">Data</ref> &amp;</type>
+        <definition>Data &amp; pbat::sim::xpbd::Data::WithBodies</definition>
+        <argsstring>(Eigen::Ref&lt; IndexVectorX const &gt; const &amp;BV)</argsstring>
+        <name>WithBodies</name>
+        <param>
+          <type>Eigen::Ref&lt; IndexVectorX const &gt; const &amp;</type>
+          <declname>BV</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Data.h" line="22" column="10" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Data.cpp" bodystart="34" bodyend="38"/>
+      </memberdef>
+      <memberdef kind="function" id="structpbat_1_1sim_1_1xpbd_1_1Data_1a7fbde3e21469b9f1f037ed47a8bbabb4" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="structpbat_1_1sim_1_1xpbd_1_1Data" kindref="compound">Data</ref> &amp;</type>
+        <definition>Data &amp; pbat::sim::xpbd::Data::WithVelocity</definition>
+        <argsstring>(Eigen::Ref&lt; MatrixX const &gt; const &amp;v)</argsstring>
+        <name>WithVelocity</name>
+        <param>
+          <type>Eigen::Ref&lt; MatrixX const &gt; const &amp;</type>
+          <declname>v</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Data.h" line="23" column="10" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Data.cpp" bodystart="40" bodyend="44"/>
+      </memberdef>
+      <memberdef kind="function" id="structpbat_1_1sim_1_1xpbd_1_1Data_1afb3d12053cf738ca7ec5562899dcdc65" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="structpbat_1_1sim_1_1xpbd_1_1Data" kindref="compound">Data</ref> &amp;</type>
+        <definition>Data &amp; pbat::sim::xpbd::Data::WithAcceleration</definition>
+        <argsstring>(Eigen::Ref&lt; MatrixX const &gt; const &amp;aext)</argsstring>
+        <name>WithAcceleration</name>
+        <param>
+          <type>Eigen::Ref&lt; MatrixX const &gt; const &amp;</type>
+          <declname>aext</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Data.h" line="24" column="10" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Data.cpp" bodystart="46" bodyend="50"/>
+      </memberdef>
+      <memberdef kind="function" id="structpbat_1_1sim_1_1xpbd_1_1Data_1a92daa00a0d6793361780165336b8c360" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="structpbat_1_1sim_1_1xpbd_1_1Data" kindref="compound">Data</ref> &amp;</type>
+        <definition>Data &amp; pbat::sim::xpbd::Data::WithMassInverse</definition>
+        <argsstring>(Eigen::Ref&lt; VectorX const &gt; const &amp;minv)</argsstring>
+        <name>WithMassInverse</name>
+        <param>
+          <type>Eigen::Ref&lt; VectorX const &gt; const &amp;</type>
+          <declname>minv</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Data.h" line="25" column="10" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Data.cpp" bodystart="52" bodyend="56"/>
+      </memberdef>
+      <memberdef kind="function" id="structpbat_1_1sim_1_1xpbd_1_1Data_1a6b814d18bc904705a4cd3a8d5ec7e8cb" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="structpbat_1_1sim_1_1xpbd_1_1Data" kindref="compound">Data</ref> &amp;</type>
+        <definition>Data &amp; pbat::sim::xpbd::Data::WithElasticMaterial</definition>
+        <argsstring>(Eigen::Ref&lt; MatrixX const &gt; const &amp;lame)</argsstring>
+        <name>WithElasticMaterial</name>
+        <param>
+          <type>Eigen::Ref&lt; MatrixX const &gt; const &amp;</type>
+          <declname>lame</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Data.h" line="26" column="10" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Data.cpp" bodystart="58" bodyend="62"/>
+      </memberdef>
+      <memberdef kind="function" id="structpbat_1_1sim_1_1xpbd_1_1Data_1add7d79fc9db2d3876e1f0957ebeb5b5a" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="structpbat_1_1sim_1_1xpbd_1_1Data" kindref="compound">Data</ref> &amp;</type>
+        <definition>Data &amp; pbat::sim::xpbd::Data::WithCollisionPenalties</definition>
+        <argsstring>(Eigen::Ref&lt; VectorX const &gt; const &amp;muV)</argsstring>
+        <name>WithCollisionPenalties</name>
+        <param>
+          <type>Eigen::Ref&lt; VectorX const &gt; const &amp;</type>
+          <declname>muV</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Data.h" line="27" column="10" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Data.cpp" bodystart="64" bodyend="68"/>
+      </memberdef>
+      <memberdef kind="function" id="structpbat_1_1sim_1_1xpbd_1_1Data_1a8b9481a4a2e7fc1d2a746402aac70aa3" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="structpbat_1_1sim_1_1xpbd_1_1Data" kindref="compound">Data</ref> &amp;</type>
+        <definition>Data &amp; pbat::sim::xpbd::Data::WithFrictionCoefficients</definition>
+        <argsstring>(Scalar muS, Scalar muD)</argsstring>
+        <name>WithFrictionCoefficients</name>
+        <param>
+          <type>Scalar</type>
+          <declname>muS</declname>
+        </param>
+        <param>
+          <type>Scalar</type>
+          <declname>muD</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Data.h" line="28" column="10" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Data.cpp" bodystart="70" bodyend="75"/>
+      </memberdef>
+      <memberdef kind="function" id="structpbat_1_1sim_1_1xpbd_1_1Data_1ada946398a59a1ff1335dfcafbae44c03" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="structpbat_1_1sim_1_1xpbd_1_1Data" kindref="compound">Data</ref> &amp;</type>
+        <definition>Data &amp; pbat::sim::xpbd::Data::WithDamping</definition>
+        <argsstring>(Eigen::Ref&lt; VectorX &gt; const &amp;beta, EConstraint constraint)</argsstring>
+        <name>WithDamping</name>
+        <param>
+          <type>Eigen::Ref&lt; VectorX &gt; const &amp;</type>
+          <declname>beta</declname>
+        </param>
+        <param>
+          <type>EConstraint</type>
+          <declname>constraint</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Data.h" line="29" column="10" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Data.cpp" bodystart="77" bodyend="81"/>
+      </memberdef>
+      <memberdef kind="function" id="structpbat_1_1sim_1_1xpbd_1_1Data_1a451b36942f8c1d8ce37311b31e6f5b67" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="structpbat_1_1sim_1_1xpbd_1_1Data" kindref="compound">Data</ref> &amp;</type>
+        <definition>Data &amp; pbat::sim::xpbd::Data::WithCompliance</definition>
+        <argsstring>(Eigen::Ref&lt; VectorX &gt; const &amp;alpha, EConstraint constraint)</argsstring>
+        <name>WithCompliance</name>
+        <param>
+          <type>Eigen::Ref&lt; VectorX &gt; const &amp;</type>
+          <declname>alpha</declname>
+        </param>
+        <param>
+          <type>EConstraint</type>
+          <declname>constraint</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Data.h" line="30" column="10" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Data.cpp" bodystart="83" bodyend="87"/>
+      </memberdef>
+      <memberdef kind="function" id="structpbat_1_1sim_1_1xpbd_1_1Data_1a897ecaa42a992172f65a85514a1f45f5" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="structpbat_1_1sim_1_1xpbd_1_1Data" kindref="compound">Data</ref> &amp;</type>
+        <definition>Data &amp; pbat::sim::xpbd::Data::WithPartitions</definition>
+        <argsstring>(std::vector&lt; Index &gt; const &amp;Pptr, std::vector&lt; Index &gt; const &amp;Padj)</argsstring>
+        <name>WithPartitions</name>
+        <param>
+          <type>std::vector&lt; Index &gt; const &amp;</type>
+          <declname>Pptr</declname>
+        </param>
+        <param>
+          <type>std::vector&lt; Index &gt; const &amp;</type>
+          <declname>Padj</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Data.h" line="31" column="10" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Data.cpp" bodystart="89" bodyend="94"/>
+      </memberdef>
+      <memberdef kind="function" id="structpbat_1_1sim_1_1xpbd_1_1Data_1acd9689a70240d992ac78becf541b25b0" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="structpbat_1_1sim_1_1xpbd_1_1Data" kindref="compound">Data</ref> &amp;</type>
+        <definition>Data &amp; pbat::sim::xpbd::Data::WithClusterPartitions</definition>
+        <argsstring>(std::vector&lt; Index &gt; const &amp;SGptr, std::vector&lt; Index &gt; const &amp;SGadj, std::vector&lt; Index &gt; const &amp;Cptr, std::vector&lt; Index &gt; const &amp;Cadj)</argsstring>
+        <name>WithClusterPartitions</name>
+        <param>
+          <type>std::vector&lt; Index &gt; const &amp;</type>
+          <declname>SGptr</declname>
+        </param>
+        <param>
+          <type>std::vector&lt; Index &gt; const &amp;</type>
+          <declname>SGadj</declname>
+        </param>
+        <param>
+          <type>std::vector&lt; Index &gt; const &amp;</type>
+          <declname>Cptr</declname>
+        </param>
+        <param>
+          <type>std::vector&lt; Index &gt; const &amp;</type>
+          <declname>Cadj</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Data.h" line="32" column="10" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Data.cpp" bodystart="96" bodyend="107"/>
+      </memberdef>
+      <memberdef kind="function" id="structpbat_1_1sim_1_1xpbd_1_1Data_1a97bbfce259852ec4b694e070db2383aa" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="structpbat_1_1sim_1_1xpbd_1_1Data" kindref="compound">Data</ref> &amp;</type>
+        <definition>Data &amp; pbat::sim::xpbd::Data::WithDirichletConstrainedVertices</definition>
+        <argsstring>(IndexVectorX const &amp;dbc)</argsstring>
+        <name>WithDirichletConstrainedVertices</name>
+        <param>
+          <type>IndexVectorX const &amp;</type>
+          <declname>dbc</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Data.h" line="37" column="10" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Data.cpp" bodystart="109" bodyend="113"/>
+      </memberdef>
+      <memberdef kind="function" id="structpbat_1_1sim_1_1xpbd_1_1Data_1a61a990e0bafeaab1ecb0627de22cdf30" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="structpbat_1_1sim_1_1xpbd_1_1Data" kindref="compound">Data</ref> &amp;</type>
+        <definition>Data &amp; pbat::sim::xpbd::Data::Construct</definition>
+        <argsstring>(bool bValidate=true)</argsstring>
+        <name>Construct</name>
+        <param>
+          <type>bool</type>
+          <declname>bValidate</declname>
+          <defval>true</defval>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Data.h" line="38" column="10" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Data.cpp" bodystart="115" bodyend="234"/>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Data.h" line="15" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Data.h" bodystart="14" bodyend="87"/>
+    <listofallmembers>
+      <member refid="structpbat_1_1sim_1_1xpbd_1_1Data_1aafbeba1abbc778e0f599f3360446dc16" prot="public" virt="non-virtual"><scope>pbat::sim::xpbd::Data</scope><name>aext</name></member>
+      <member refid="structpbat_1_1sim_1_1xpbd_1_1Data_1ac712fd69fb23ee3b551ec6d189f7fa52" prot="public" virt="non-virtual"><scope>pbat::sim::xpbd::Data</scope><name>alpha</name></member>
+      <member refid="structpbat_1_1sim_1_1xpbd_1_1Data_1a4dba08a8776f7357f9fb126ef2977ca9" prot="public" virt="non-virtual"><scope>pbat::sim::xpbd::Data</scope><name>beta</name></member>
+      <member refid="structpbat_1_1sim_1_1xpbd_1_1Data_1a95aa2ea06f54bc2e9ab4c81b959926bc" prot="public" virt="non-virtual"><scope>pbat::sim::xpbd::Data</scope><name>BV</name></member>
+      <member refid="structpbat_1_1sim_1_1xpbd_1_1Data_1affd5f09868f8390697cb1d2374419fb4" prot="public" virt="non-virtual"><scope>pbat::sim::xpbd::Data</scope><name>Cadj</name></member>
+      <member refid="structpbat_1_1sim_1_1xpbd_1_1Data_1a61a990e0bafeaab1ecb0627de22cdf30" prot="public" virt="non-virtual"><scope>pbat::sim::xpbd::Data</scope><name>Construct</name></member>
+      <member refid="structpbat_1_1sim_1_1xpbd_1_1Data_1a22462dd2f00c418abd54e2ff6956841a" prot="public" virt="non-virtual"><scope>pbat::sim::xpbd::Data</scope><name>Cptr</name></member>
+      <member refid="structpbat_1_1sim_1_1xpbd_1_1Data_1ac84ad222c87b687feda8c85b3ee8bf83" prot="public" virt="non-virtual"><scope>pbat::sim::xpbd::Data</scope><name>dbc</name></member>
+      <member refid="structpbat_1_1sim_1_1xpbd_1_1Data_1ae8a0cbe70c0f47658d0d9d7eac2bd17e" prot="public" virt="non-virtual"><scope>pbat::sim::xpbd::Data</scope><name>DmInv</name></member>
+      <member refid="structpbat_1_1sim_1_1xpbd_1_1Data_1a3bb30340e3f83142274d67e5a38d270d" prot="public" virt="non-virtual"><scope>pbat::sim::xpbd::Data</scope><name>F</name></member>
+      <member refid="structpbat_1_1sim_1_1xpbd_1_1Data_1a335f7a2d79745c02010b4914d573bc85" prot="public" virt="non-virtual"><scope>pbat::sim::xpbd::Data</scope><name>gammaSNH</name></member>
+      <member refid="structpbat_1_1sim_1_1xpbd_1_1Data_1a4b51063769fd9d1fa93ec66bca426a12" prot="public" virt="non-virtual"><scope>pbat::sim::xpbd::Data</scope><name>lambda</name></member>
+      <member refid="structpbat_1_1sim_1_1xpbd_1_1Data_1a3d80b245c3702bb79791f99792f97dbb" prot="public" virt="non-virtual"><scope>pbat::sim::xpbd::Data</scope><name>lame</name></member>
+      <member refid="structpbat_1_1sim_1_1xpbd_1_1Data_1a1ee71d9fb8ea2c65eafd285cf97cd526" prot="public" virt="non-virtual"><scope>pbat::sim::xpbd::Data</scope><name>minv</name></member>
+      <member refid="structpbat_1_1sim_1_1xpbd_1_1Data_1af3af44f9a6b77dfb3dc56f641b84bad3" prot="public" virt="non-virtual"><scope>pbat::sim::xpbd::Data</scope><name>muD</name></member>
+      <member refid="structpbat_1_1sim_1_1xpbd_1_1Data_1a8cee0775fbac819e171ceefe47cd9875" prot="public" virt="non-virtual"><scope>pbat::sim::xpbd::Data</scope><name>muS</name></member>
+      <member refid="structpbat_1_1sim_1_1xpbd_1_1Data_1a569dc1cfbb1ab7752bb78b2021e55e65" prot="public" virt="non-virtual"><scope>pbat::sim::xpbd::Data</scope><name>muV</name></member>
+      <member refid="structpbat_1_1sim_1_1xpbd_1_1Data_1a4bc4b56355a90c7b578562a3637e153b" prot="public" virt="non-virtual"><scope>pbat::sim::xpbd::Data</scope><name>Padj</name></member>
+      <member refid="structpbat_1_1sim_1_1xpbd_1_1Data_1a5f7f375dda4fd8a74fc10efe60c92db3" prot="public" virt="non-virtual"><scope>pbat::sim::xpbd::Data</scope><name>Pptr</name></member>
+      <member refid="structpbat_1_1sim_1_1xpbd_1_1Data_1a0d0af6eefad7d7d46eb343432b6ed615" prot="public" virt="non-virtual"><scope>pbat::sim::xpbd::Data</scope><name>SGadj</name></member>
+      <member refid="structpbat_1_1sim_1_1xpbd_1_1Data_1aaad7636c574132f2861bba6af6fce8ef" prot="public" virt="non-virtual"><scope>pbat::sim::xpbd::Data</scope><name>SGptr</name></member>
+      <member refid="structpbat_1_1sim_1_1xpbd_1_1Data_1a2491dcc22c501bd670e70dfabe2fd18c" prot="public" virt="non-virtual"><scope>pbat::sim::xpbd::Data</scope><name>T</name></member>
+      <member refid="structpbat_1_1sim_1_1xpbd_1_1Data_1a5aa416eee37bbe52d6b315f743c527e8" prot="public" virt="non-virtual"><scope>pbat::sim::xpbd::Data</scope><name>V</name></member>
+      <member refid="structpbat_1_1sim_1_1xpbd_1_1Data_1a7ac0f27e88e9752be2325f8b228c2246" prot="public" virt="non-virtual"><scope>pbat::sim::xpbd::Data</scope><name>v</name></member>
+      <member refid="structpbat_1_1sim_1_1xpbd_1_1Data_1afb3d12053cf738ca7ec5562899dcdc65" prot="public" virt="non-virtual"><scope>pbat::sim::xpbd::Data</scope><name>WithAcceleration</name></member>
+      <member refid="structpbat_1_1sim_1_1xpbd_1_1Data_1a403111695305938536d41fded129c3e6" prot="public" virt="non-virtual"><scope>pbat::sim::xpbd::Data</scope><name>WithBodies</name></member>
+      <member refid="structpbat_1_1sim_1_1xpbd_1_1Data_1acd9689a70240d992ac78becf541b25b0" prot="public" virt="non-virtual"><scope>pbat::sim::xpbd::Data</scope><name>WithClusterPartitions</name></member>
+      <member refid="structpbat_1_1sim_1_1xpbd_1_1Data_1add7d79fc9db2d3876e1f0957ebeb5b5a" prot="public" virt="non-virtual"><scope>pbat::sim::xpbd::Data</scope><name>WithCollisionPenalties</name></member>
+      <member refid="structpbat_1_1sim_1_1xpbd_1_1Data_1a451b36942f8c1d8ce37311b31e6f5b67" prot="public" virt="non-virtual"><scope>pbat::sim::xpbd::Data</scope><name>WithCompliance</name></member>
+      <member refid="structpbat_1_1sim_1_1xpbd_1_1Data_1ada946398a59a1ff1335dfcafbae44c03" prot="public" virt="non-virtual"><scope>pbat::sim::xpbd::Data</scope><name>WithDamping</name></member>
+      <member refid="structpbat_1_1sim_1_1xpbd_1_1Data_1a97bbfce259852ec4b694e070db2383aa" prot="public" virt="non-virtual"><scope>pbat::sim::xpbd::Data</scope><name>WithDirichletConstrainedVertices</name></member>
+      <member refid="structpbat_1_1sim_1_1xpbd_1_1Data_1a6b814d18bc904705a4cd3a8d5ec7e8cb" prot="public" virt="non-virtual"><scope>pbat::sim::xpbd::Data</scope><name>WithElasticMaterial</name></member>
+      <member refid="structpbat_1_1sim_1_1xpbd_1_1Data_1a8b9481a4a2e7fc1d2a746402aac70aa3" prot="public" virt="non-virtual"><scope>pbat::sim::xpbd::Data</scope><name>WithFrictionCoefficients</name></member>
+      <member refid="structpbat_1_1sim_1_1xpbd_1_1Data_1a92daa00a0d6793361780165336b8c360" prot="public" virt="non-virtual"><scope>pbat::sim::xpbd::Data</scope><name>WithMassInverse</name></member>
+      <member refid="structpbat_1_1sim_1_1xpbd_1_1Data_1a897ecaa42a992172f65a85514a1f45f5" prot="public" virt="non-virtual"><scope>pbat::sim::xpbd::Data</scope><name>WithPartitions</name></member>
+      <member refid="structpbat_1_1sim_1_1xpbd_1_1Data_1a8b472e8de82e868af96bf4d999d14eeb" prot="public" virt="non-virtual"><scope>pbat::sim::xpbd::Data</scope><name>WithSurfaceMesh</name></member>
+      <member refid="structpbat_1_1sim_1_1xpbd_1_1Data_1a7fbde3e21469b9f1f037ed47a8bbabb4" prot="public" virt="non-virtual"><scope>pbat::sim::xpbd::Data</scope><name>WithVelocity</name></member>
+      <member refid="structpbat_1_1sim_1_1xpbd_1_1Data_1acd2af66657983d14db15398634848f06" prot="public" virt="non-virtual"><scope>pbat::sim::xpbd::Data</scope><name>WithVolumeMesh</name></member>
+      <member refid="structpbat_1_1sim_1_1xpbd_1_1Data_1a902c4a34b00ced9a46301747997cb9a8" prot="public" virt="non-virtual"><scope>pbat::sim::xpbd::Data</scope><name>x</name></member>
+      <member refid="structpbat_1_1sim_1_1xpbd_1_1Data_1a2cd9e1c29eb0c96792f980b21cef4e30" prot="public" virt="non-virtual"><scope>pbat::sim::xpbd::Data</scope><name>xb</name></member>
+      <member refid="structpbat_1_1sim_1_1xpbd_1_1Data_1ac5f54713dd9c158e94ac4ba2d09cdc06" prot="public" virt="non-virtual"><scope>pbat::sim::xpbd::Data</scope><name>xt</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

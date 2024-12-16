@@ -1,0 +1,353 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="structpbat_1_1graph_1_1PartitioningOptions" kind="struct" language="C++" prot="public">
+    <compoundname>pbat::graph::PartitioningOptions</compoundname>
+      <sectiondef kind="public-type">
+      <memberdef kind="enum" id="structpbat_1_1graph_1_1PartitioningOptions_1a15c4bdced8f850ca59bbf86103d3a914" prot="public" static="no" strong="yes">
+        <type></type>
+        <name>EObjective</name>
+        <enumvalue id="structpbat_1_1graph_1_1PartitioningOptions_1a15c4bdced8f850ca59bbf86103d3a914a7a1920d61156abc05a60135aefe8bc67" prot="public">
+          <name>Default</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="structpbat_1_1graph_1_1PartitioningOptions_1a15c4bdced8f850ca59bbf86103d3a914a2e52b8739a34f57429fa1f35f958f983" prot="public">
+          <name>MinEdgeCut</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="structpbat_1_1graph_1_1PartitioningOptions_1a15c4bdced8f850ca59bbf86103d3a914ab7905b6a321e84d006787829710a5ba4" prot="public">
+          <name>MinCommunicationVolume</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/graph/Partition.h" line="11" column="26" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/graph/Partition.h" bodystart="11" bodyend="15"/>
+      </memberdef>
+      <memberdef kind="enum" id="structpbat_1_1graph_1_1PartitioningOptions_1ae8baa26ec99ba27ebe889eb01bf13867" prot="public" static="no" strong="yes">
+        <type></type>
+        <name>ECoarseningStrategy</name>
+        <enumvalue id="structpbat_1_1graph_1_1PartitioningOptions_1ae8baa26ec99ba27ebe889eb01bf13867a7a1920d61156abc05a60135aefe8bc67" prot="public">
+          <name>Default</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="structpbat_1_1graph_1_1PartitioningOptions_1ae8baa26ec99ba27ebe889eb01bf13867a43f0360f3d6dd072a905e7bf6343b565" prot="public">
+          <name>RandomMatching</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="structpbat_1_1graph_1_1PartitioningOptions_1ae8baa26ec99ba27ebe889eb01bf13867abe88c36f0ece5837cefe7f461787a44b" prot="public">
+          <name>SortedHeavyEdgeMatching</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/graph/Partition.h" line="16" column="35" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/graph/Partition.h" bodystart="16" bodyend="20"/>
+      </memberdef>
+      <memberdef kind="enum" id="structpbat_1_1graph_1_1PartitioningOptions_1a5b7a7d18643d7c678468daf889e3bca5" prot="public" static="no" strong="yes">
+        <type></type>
+        <name>EInitialPartitioningStrategy</name>
+        <enumvalue id="structpbat_1_1graph_1_1PartitioningOptions_1a5b7a7d18643d7c678468daf889e3bca5a7a1920d61156abc05a60135aefe8bc67" prot="public">
+          <name>Default</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="structpbat_1_1graph_1_1PartitioningOptions_1a5b7a7d18643d7c678468daf889e3bca5a517536b290814bee60bfd4de6d7d8228" prot="public">
+          <name>GreedyBisectionGrowing</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="structpbat_1_1graph_1_1PartitioningOptions_1a5b7a7d18643d7c678468daf889e3bca5ad00a549b0e092f8035fc67eed9689b62" prot="public">
+          <name>RandomBisectionAndRefinement</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="structpbat_1_1graph_1_1PartitioningOptions_1a5b7a7d18643d7c678468daf889e3bca5a2cea58dc36d015c61f97fd97a8da31d5" prot="public">
+          <name>EdgeCutSeparator</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="structpbat_1_1graph_1_1PartitioningOptions_1a5b7a7d18643d7c678468daf889e3bca5aaef6ea096c9f787672e88f9577b2f4e5" prot="public">
+          <name>GreedyNodeBisectionGrowing</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/graph/Partition.h" line="21" column="44" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/graph/Partition.h" bodystart="21" bodyend="27"/>
+      </memberdef>
+      <memberdef kind="enum" id="structpbat_1_1graph_1_1PartitioningOptions_1ae5d2102ab11ff750e2d49da219e1129b" prot="public" static="no" strong="yes">
+        <type></type>
+        <name>ERefinementStrategy</name>
+        <enumvalue id="structpbat_1_1graph_1_1PartitioningOptions_1ae5d2102ab11ff750e2d49da219e1129ba7a1920d61156abc05a60135aefe8bc67" prot="public">
+          <name>Default</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="structpbat_1_1graph_1_1PartitioningOptions_1ae5d2102ab11ff750e2d49da219e1129ba60a62f763dcf37c3064c4728e89542f5" prot="public">
+          <name>FiducciaMattheyses</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="structpbat_1_1graph_1_1PartitioningOptions_1ae5d2102ab11ff750e2d49da219e1129bad7b716a66fb9c38561c539739a42c354" prot="public">
+          <name>GreedyCutAndVolumeRefinement</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="structpbat_1_1graph_1_1PartitioningOptions_1ae5d2102ab11ff750e2d49da219e1129ba10bb7e5f07c6e3552ea1cb3feee9e4f8" prot="public">
+          <name>TwoSidedNodeFiducciaMattheyses</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="structpbat_1_1graph_1_1PartitioningOptions_1ae5d2102ab11ff750e2d49da219e1129ba446099279b4a7de232e0dde34554ad4a" prot="public">
+          <name>OneSidedNodeFiducciaMattheyses</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/graph/Partition.h" line="28" column="35" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/graph/Partition.h" bodystart="28" bodyend="34"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="structpbat_1_1graph_1_1PartitioningOptions_1a28da48d46e8ae78ecf33d1573881d0a0" prot="public" static="no" mutable="no">
+        <type>enum pbat::graph::PartitioningOptions::EObjective</type>
+        <definition>enum pbat::graph::PartitioningOptions::EObjective pbat::graph::PartitioningOptions::Default</definition>
+        <argsstring></argsstring>
+        <name>Default</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/graph/Partition.h" line="15" column="33"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpbat_1_1graph_1_1PartitioningOptions_1af8300fde30f56935d133f8146a2b34b7" prot="public" static="no" mutable="no">
+        <type>enum pbat::graph::PartitioningOptions::ECoarseningStrategy</type>
+        <definition>enum pbat::graph::PartitioningOptions::ECoarseningStrategy pbat::graph::PartitioningOptions::Default</definition>
+        <argsstring></argsstring>
+        <name>Default</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/graph/Partition.h" line="20" column="51"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpbat_1_1graph_1_1PartitioningOptions_1a6ce424ab2b5f5426c286b82ca54a3c2c" prot="public" static="no" mutable="no">
+        <type>enum pbat::graph::PartitioningOptions::EInitialPartitioningStrategy</type>
+        <definition>enum pbat::graph::PartitioningOptions::EInitialPartitioningStrategy pbat::graph::PartitioningOptions::Default</definition>
+        <argsstring></argsstring>
+        <name>Default</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/graph/Partition.h" line="27" column="69"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpbat_1_1graph_1_1PartitioningOptions_1ac5eae46822ca50211cedf8d0b7fcc3f3" prot="public" static="no" mutable="no">
+        <type>enum pbat::graph::PartitioningOptions::ERefinementStrategy</type>
+        <definition>enum pbat::graph::PartitioningOptions::ERefinementStrategy pbat::graph::PartitioningOptions::Default</definition>
+        <argsstring></argsstring>
+        <name>Default</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/graph/Partition.h" line="34" column="51"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpbat_1_1graph_1_1PartitioningOptions_1a7eafc433d5349b361e9273e887a40c80" prot="public" static="no" mutable="no">
+        <type>int</type>
+        <definition>int pbat::graph::PartitioningOptions::nPartitioningTrials</definition>
+        <argsstring></argsstring>
+        <name>nPartitioningTrials</name>
+        <initializer>{1}</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/graph/Partition.h" line="35" column="9" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/graph/Partition.h" bodystart="35" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpbat_1_1graph_1_1PartitioningOptions_1a41936e048d29ecc80062aa3fc246684f" prot="public" static="no" mutable="no">
+        <type>int</type>
+        <definition>int pbat::graph::PartitioningOptions::nSeparators</definition>
+        <argsstring></argsstring>
+        <name>nSeparators</name>
+        <initializer>{1}</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/graph/Partition.h" line="36" column="9" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/graph/Partition.h" bodystart="36" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpbat_1_1graph_1_1PartitioningOptions_1a95b84c223ffe842ced017d166a538136" prot="public" static="no" mutable="no">
+        <type>int</type>
+        <definition>int pbat::graph::PartitioningOptions::nRefinementIters</definition>
+        <argsstring></argsstring>
+        <name>nRefinementIters</name>
+        <initializer>{10}</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/graph/Partition.h" line="37" column="9" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/graph/Partition.h" bodystart="37" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpbat_1_1graph_1_1PartitioningOptions_1afbe07db32dc69f8e66c34605c0ff660c" prot="public" static="no" mutable="no">
+        <type>int</type>
+        <definition>int pbat::graph::PartitioningOptions::rngSeed</definition>
+        <argsstring></argsstring>
+        <name>rngSeed</name>
+        <initializer>{0}</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/graph/Partition.h" line="38" column="9" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/graph/Partition.h" bodystart="38" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpbat_1_1graph_1_1PartitioningOptions_1a49ad4da128d67dc165ef9807c8a64caf" prot="public" static="no" mutable="no">
+        <type>bool</type>
+        <definition>bool pbat::graph::PartitioningOptions::bMinimizeSupernodalGraphDegree</definition>
+        <argsstring></argsstring>
+        <name>bMinimizeSupernodalGraphDegree</name>
+        <initializer>{false}</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/graph/Partition.h" line="39" column="10" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/graph/Partition.h" bodystart="39" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpbat_1_1graph_1_1PartitioningOptions_1a5cd6f62f49ed185a7a4e1b4dba46445a" prot="public" static="no" mutable="no">
+        <type>bool</type>
+        <definition>bool pbat::graph::PartitioningOptions::bPerform2HopMatching</definition>
+        <argsstring></argsstring>
+        <name>bPerform2HopMatching</name>
+        <initializer>{true}</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/graph/Partition.h" line="40" column="10" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/graph/Partition.h" bodystart="40" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpbat_1_1graph_1_1PartitioningOptions_1aeeaec5536078876040ec04d6344b42a5" prot="public" static="no" mutable="no">
+        <type>bool</type>
+        <definition>bool pbat::graph::PartitioningOptions::bEnforceContiguousPartitions</definition>
+        <argsstring></argsstring>
+        <name>bEnforceContiguousPartitions</name>
+        <initializer>{false}</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/graph/Partition.h" line="41" column="10" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/graph/Partition.h" bodystart="41" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpbat_1_1graph_1_1PartitioningOptions_1abfa5ffadd5b1957ea165875b33f81971" prot="public" static="no" mutable="no">
+        <type>bool</type>
+        <definition>bool pbat::graph::PartitioningOptions::bIdentifyConnectedComponents</definition>
+        <argsstring></argsstring>
+        <name>bIdentifyConnectedComponents</name>
+        <initializer>{false}</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/graph/Partition.h" line="42" column="10" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/graph/Partition.h" bodystart="42" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/graph/Partition.h" line="10" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/graph/Partition.h" bodystart="9" bodyend="43"/>
+    <listofallmembers>
+      <member refid="structpbat_1_1graph_1_1PartitioningOptions_1aeeaec5536078876040ec04d6344b42a5" prot="public" virt="non-virtual"><scope>pbat::graph::PartitioningOptions</scope><name>bEnforceContiguousPartitions</name></member>
+      <member refid="structpbat_1_1graph_1_1PartitioningOptions_1abfa5ffadd5b1957ea165875b33f81971" prot="public" virt="non-virtual"><scope>pbat::graph::PartitioningOptions</scope><name>bIdentifyConnectedComponents</name></member>
+      <member refid="structpbat_1_1graph_1_1PartitioningOptions_1a49ad4da128d67dc165ef9807c8a64caf" prot="public" virt="non-virtual"><scope>pbat::graph::PartitioningOptions</scope><name>bMinimizeSupernodalGraphDegree</name></member>
+      <member refid="structpbat_1_1graph_1_1PartitioningOptions_1a5cd6f62f49ed185a7a4e1b4dba46445a" prot="public" virt="non-virtual"><scope>pbat::graph::PartitioningOptions</scope><name>bPerform2HopMatching</name></member>
+      <member refid="structpbat_1_1graph_1_1PartitioningOptions_1a28da48d46e8ae78ecf33d1573881d0a0" prot="public" virt="non-virtual"><scope>pbat::graph::PartitioningOptions</scope><name>Default</name></member>
+      <member refid="structpbat_1_1graph_1_1PartitioningOptions_1af8300fde30f56935d133f8146a2b34b7" prot="public" virt="non-virtual"><scope>pbat::graph::PartitioningOptions</scope><name>Default</name></member>
+      <member refid="structpbat_1_1graph_1_1PartitioningOptions_1a6ce424ab2b5f5426c286b82ca54a3c2c" prot="public" virt="non-virtual"><scope>pbat::graph::PartitioningOptions</scope><name>Default</name></member>
+      <member refid="structpbat_1_1graph_1_1PartitioningOptions_1ac5eae46822ca50211cedf8d0b7fcc3f3" prot="public" virt="non-virtual"><scope>pbat::graph::PartitioningOptions</scope><name>Default</name></member>
+      <member refid="structpbat_1_1graph_1_1PartitioningOptions_1ae8baa26ec99ba27ebe889eb01bf13867" prot="public" virt="non-virtual"><scope>pbat::graph::PartitioningOptions</scope><name>ECoarseningStrategy</name></member>
+      <member refid="structpbat_1_1graph_1_1PartitioningOptions_1a5b7a7d18643d7c678468daf889e3bca5" prot="public" virt="non-virtual"><scope>pbat::graph::PartitioningOptions</scope><name>EInitialPartitioningStrategy</name></member>
+      <member refid="structpbat_1_1graph_1_1PartitioningOptions_1a15c4bdced8f850ca59bbf86103d3a914" prot="public" virt="non-virtual"><scope>pbat::graph::PartitioningOptions</scope><name>EObjective</name></member>
+      <member refid="structpbat_1_1graph_1_1PartitioningOptions_1ae5d2102ab11ff750e2d49da219e1129b" prot="public" virt="non-virtual"><scope>pbat::graph::PartitioningOptions</scope><name>ERefinementStrategy</name></member>
+      <member refid="structpbat_1_1graph_1_1PartitioningOptions_1a7eafc433d5349b361e9273e887a40c80" prot="public" virt="non-virtual"><scope>pbat::graph::PartitioningOptions</scope><name>nPartitioningTrials</name></member>
+      <member refid="structpbat_1_1graph_1_1PartitioningOptions_1a95b84c223ffe842ced017d166a538136" prot="public" virt="non-virtual"><scope>pbat::graph::PartitioningOptions</scope><name>nRefinementIters</name></member>
+      <member refid="structpbat_1_1graph_1_1PartitioningOptions_1a41936e048d29ecc80062aa3fc246684f" prot="public" virt="non-virtual"><scope>pbat::graph::PartitioningOptions</scope><name>nSeparators</name></member>
+      <member refid="structpbat_1_1graph_1_1PartitioningOptions_1afbe07db32dc69f8e66c34605c0ff660c" prot="public" virt="non-virtual"><scope>pbat::graph::PartitioningOptions</scope><name>rngSeed</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

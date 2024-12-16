@@ -1,0 +1,15 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="namespacepbat_1_1sim_1_1vbd_1_1multigrid" kind="namespace" language="C++">
+    <compoundname>pbat::sim::vbd::multigrid</compoundname>
+    <innerclass refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Hierarchy" prot="public">pbat::sim::vbd::multigrid::Hierarchy</innerclass>
+    <innerclass refid="classpbat_1_1sim_1_1vbd_1_1multigrid_1_1Integrator" prot="public">pbat::sim::vbd::multigrid::Integrator</innerclass>
+    <innerclass refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level" prot="public">pbat::sim::vbd::multigrid::Level</innerclass>
+    <innernamespace refid="namespacepbat_1_1sim_1_1vbd_1_1multigrid_1_1kernels">pbat::sim::vbd::multigrid::kernels</innernamespace>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/multigrid/Hierarchy.cpp" line="6" column="19"/>
+  </compounddef>
+</doxygen>

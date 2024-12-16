@@ -1,0 +1,200 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="classpbat_1_1common_1_1Queue" kind="class" language="C++" prot="public">
+    <compoundname>pbat::common::Queue</compoundname>
+    <templateparamlist>
+      <param>
+        <type>class T</type>
+      </param>
+      <param>
+        <type>auto</type>
+        <declname>kCapacity</declname>
+        <defname>kCapacity</defname>
+        <defval>64</defval>
+      </param>
+    </templateparamlist>
+      <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="classpbat_1_1common_1_1Queue_1a0dabe5cfcdf45cdcfba2fed16a6234e0" prot="private" static="no" mutable="no">
+        <type>T</type>
+        <definition>T pbat::common::Queue&lt; T, kCapacity &gt;::queue[kCapacity]</definition>
+        <argsstring>[kCapacity]</argsstring>
+        <name>queue</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/common/Queue.h" line="32" column="7" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/common/Queue.h" bodystart="32" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpbat_1_1common_1_1Queue_1a8da657c4b95e2d4ddd322d28b578866e" prot="private" static="no" mutable="no">
+        <type>int</type>
+        <definition>int pbat::common::Queue&lt; T, kCapacity &gt;::begin</definition>
+        <argsstring></argsstring>
+        <name>begin</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/common/Queue.h" line="33" column="9" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/common/Queue.h" bodystart="33" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpbat_1_1common_1_1Queue_1adb0197ebf08c0a887d0e3360e6faa3c0" prot="private" static="no" mutable="no">
+        <type>int</type>
+        <definition>int pbat::common::Queue&lt; T, kCapacity &gt;::end</definition>
+        <argsstring></argsstring>
+        <name>end</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/common/Queue.h" line="33" column="15" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/common/Queue.h" bodystart="33" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpbat_1_1common_1_1Queue_1a9018e39eee0cb3ce2ba744cb337675cc" prot="private" static="no" mutable="no">
+        <type>int</type>
+        <definition>int pbat::common::Queue&lt; T, kCapacity &gt;::n</definition>
+        <argsstring></argsstring>
+        <name>n</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/common/Queue.h" line="33" column="19" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/common/Queue.h" bodystart="33" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpbat_1_1common_1_1Queue_1a8b3cdfb009ec825cdf6168eab2363a3e" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>PBAT_HOST_DEVICE</type>
+        <definition>PBAT_HOST_DEVICE pbat::common::Queue&lt; T, kCapacity &gt;::Queue</definition>
+        <argsstring>()</argsstring>
+        <name>Queue</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/common/Queue.h" line="13" column="22" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/common/Queue.h" bodystart="13" bodyend="13"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1common_1_1Queue_1ae77a531cebf601bf7e0c3600f3150087" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>PBAT_HOST_DEVICE void</type>
+        <definition>PBAT_HOST_DEVICE void pbat::common::Queue&lt; T, kCapacity &gt;::Push</definition>
+        <argsstring>(T value)</argsstring>
+        <name>Push</name>
+        <param>
+          <type>T</type>
+          <declname>value</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/common/Queue.h" line="14" column="27" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/common/Queue.h" bodystart="14" bodyend="19"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1common_1_1Queue_1a71e0b93b953131b32877ed08ef132dda" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>PBAT_HOST_DEVICE T const  &amp;</type>
+        <definition>PBAT_HOST_DEVICE T const&amp; pbat::common::Queue&lt; T, kCapacity &gt;::Top</definition>
+        <argsstring>() const</argsstring>
+        <name>Top</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/common/Queue.h" line="20" column="30" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/common/Queue.h" bodystart="20" bodyend="20"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1common_1_1Queue_1a6129a7e59fcade822e0163fcf255989f" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>PBAT_HOST_DEVICE void</type>
+        <definition>PBAT_HOST_DEVICE void pbat::common::Queue&lt; T, kCapacity &gt;::Pop</definition>
+        <argsstring>()</argsstring>
+        <name>Pop</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/common/Queue.h" line="21" column="27" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/common/Queue.h" bodystart="21" bodyend="25"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1common_1_1Queue_1aac14ace9871c3f745fb73cc4436b2a08" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>PBAT_HOST_DEVICE bool</type>
+        <definition>PBAT_HOST_DEVICE bool pbat::common::Queue&lt; T, kCapacity &gt;::IsFull</definition>
+        <argsstring>() const</argsstring>
+        <name>IsFull</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/common/Queue.h" line="26" column="27" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/common/Queue.h" bodystart="26" bodyend="26"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1common_1_1Queue_1ad3e27a17d769c3f2756bbafe8b9be017" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>PBAT_HOST_DEVICE bool</type>
+        <definition>PBAT_HOST_DEVICE bool pbat::common::Queue&lt; T, kCapacity &gt;::IsEmpty</definition>
+        <argsstring>() const</argsstring>
+        <name>IsEmpty</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/common/Queue.h" line="27" column="27" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/common/Queue.h" bodystart="27" bodyend="27"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1common_1_1Queue_1ad64eb5210926129ba74e302bb7f0dd54" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>PBAT_HOST_DEVICE auto</type>
+        <definition>PBAT_HOST_DEVICE auto pbat::common::Queue&lt; T, kCapacity &gt;::Size</definition>
+        <argsstring>() const</argsstring>
+        <name>Size</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/common/Queue.h" line="28" column="27" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/common/Queue.h" bodystart="28" bodyend="28"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1common_1_1Queue_1a557e1eec34f61cca26ac70878433f467" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>PBAT_HOST_DEVICE void</type>
+        <definition>PBAT_HOST_DEVICE void pbat::common::Queue&lt; T, kCapacity &gt;::Clear</definition>
+        <argsstring>()</argsstring>
+        <name>Clear</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/common/Queue.h" line="29" column="27" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/common/Queue.h" bodystart="29" bodyend="29"/>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/common/Queue.h" line="11" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/common/Queue.h" bodystart="10" bodyend="34"/>
+    <listofallmembers>
+      <member refid="classpbat_1_1common_1_1Queue_1a8da657c4b95e2d4ddd322d28b578866e" prot="private" virt="non-virtual"><scope>pbat::common::Queue</scope><name>begin</name></member>
+      <member refid="classpbat_1_1common_1_1Queue_1a557e1eec34f61cca26ac70878433f467" prot="public" virt="non-virtual"><scope>pbat::common::Queue</scope><name>Clear</name></member>
+      <member refid="classpbat_1_1common_1_1Queue_1adb0197ebf08c0a887d0e3360e6faa3c0" prot="private" virt="non-virtual"><scope>pbat::common::Queue</scope><name>end</name></member>
+      <member refid="classpbat_1_1common_1_1Queue_1ad3e27a17d769c3f2756bbafe8b9be017" prot="public" virt="non-virtual"><scope>pbat::common::Queue</scope><name>IsEmpty</name></member>
+      <member refid="classpbat_1_1common_1_1Queue_1aac14ace9871c3f745fb73cc4436b2a08" prot="public" virt="non-virtual"><scope>pbat::common::Queue</scope><name>IsFull</name></member>
+      <member refid="classpbat_1_1common_1_1Queue_1a9018e39eee0cb3ce2ba744cb337675cc" prot="private" virt="non-virtual"><scope>pbat::common::Queue</scope><name>n</name></member>
+      <member refid="classpbat_1_1common_1_1Queue_1a6129a7e59fcade822e0163fcf255989f" prot="public" virt="non-virtual"><scope>pbat::common::Queue</scope><name>Pop</name></member>
+      <member refid="classpbat_1_1common_1_1Queue_1ae77a531cebf601bf7e0c3600f3150087" prot="public" virt="non-virtual"><scope>pbat::common::Queue</scope><name>Push</name></member>
+      <member refid="classpbat_1_1common_1_1Queue_1a8b3cdfb009ec825cdf6168eab2363a3e" prot="public" virt="non-virtual"><scope>pbat::common::Queue</scope><name>Queue</name></member>
+      <member refid="classpbat_1_1common_1_1Queue_1a0dabe5cfcdf45cdcfba2fed16a6234e0" prot="private" virt="non-virtual"><scope>pbat::common::Queue</scope><name>queue</name></member>
+      <member refid="classpbat_1_1common_1_1Queue_1ad64eb5210926129ba74e302bb7f0dd54" prot="public" virt="non-virtual"><scope>pbat::common::Queue</scope><name>Size</name></member>
+      <member refid="classpbat_1_1common_1_1Queue_1a71e0b93b953131b32877ed08ef132dda" prot="public" virt="non-virtual"><scope>pbat::common::Queue</scope><name>Top</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

@@ -1,0 +1,224 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="Rational_8cpp" kind="file" language="C++">
+    <compoundname>Rational.cpp</compoundname>
+    <includes refid="Rational_8h" local="yes">Rational.h</includes>
+    <includes refid="IntegerArithmeticChecks_8h" local="yes">IntegerArithmeticChecks.h</includes>
+    <includes local="no">numeric</includes>
+    <includes local="no">type_traits</includes>
+    <incdepgraph>
+      <node id="12">
+        <label>limits</label>
+      </node>
+      <node id="4">
+        <label>cstdint</label>
+      </node>
+      <node id="2">
+        <label>Rational.h</label>
+        <link refid="Rational_8h_source"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+      </node>
+      <node id="5">
+        <label>pbat/Aliases.h</label>
+        <link refid="Aliases_8h_source"/>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+      </node>
+      <node id="13">
+        <label>stdexcept</label>
+      </node>
+      <node id="14">
+        <label>numeric</label>
+      </node>
+      <node id="6">
+        <label>Eigen/Core</label>
+      </node>
+      <node id="3">
+        <label>PhysicsBasedAnimationToolkitExport.h</label>
+      </node>
+      <node id="7">
+        <label>Eigen/Sparse</label>
+      </node>
+      <node id="1">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/Rational.cpp</label>
+        <link refid="Rational_8cpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+        <childnode refid="14" relation="include">
+        </childnode>
+        <childnode refid="15" relation="include">
+        </childnode>
+      </node>
+      <node id="9">
+        <label>tuple</label>
+      </node>
+      <node id="8">
+        <label>cstddef</label>
+      </node>
+      <node id="10">
+        <label>IntegerArithmeticChecks.h</label>
+        <link refid="IntegerArithmeticChecks_8h_source"/>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="13" relation="include">
+        </childnode>
+      </node>
+      <node id="11">
+        <label>concepts</label>
+      </node>
+      <node id="15">
+        <label>type_traits</label>
+      </node>
+    </incdepgraph>
+    <innernamespace refid="namespacepbat">pbat</innernamespace>
+    <innernamespace refid="namespacepbat_1_1math">pbat::math</innernamespace>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="preprocessor">#include<sp/>&quot;Rational.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="2"><highlight class="normal"></highlight></codeline>
+<codeline lineno="3"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;IntegerArithmeticChecks.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="4"><highlight class="normal"></highlight></codeline>
+<codeline lineno="5"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;numeric&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="6"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;type_traits&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="7"><highlight class="normal"></highlight></codeline>
+<codeline lineno="8"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal">pbat<sp/>{</highlight></codeline>
+<codeline lineno="9"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal">math<sp/>{</highlight></codeline>
+<codeline lineno="10"><highlight class="normal"></highlight></codeline>
+<codeline lineno="11" refid="structpbat_1_1math_1_1Rational_1a84dd5e0f1496a8b8cf940dc54b52d7f7" refkind="member"><highlight class="normal"><ref refid="structpbat_1_1math_1_1Rational_1a84dd5e0f1496a8b8cf940dc54b52d7f7" kindref="member">Rational::Rational</ref>()<sp/>:<sp/>a(0),<sp/>b(1)<sp/>{}</highlight></codeline>
+<codeline lineno="12"><highlight class="normal"></highlight></codeline>
+<codeline lineno="13" refid="structpbat_1_1math_1_1Rational_1a9811e71ff29869a7e5d202a9c43ee1bc" refkind="member"><highlight class="normal"><ref refid="structpbat_1_1math_1_1Rational" kindref="compound">Rational</ref><sp/><ref refid="structpbat_1_1math_1_1Rational_1a9811e71ff29869a7e5d202a9c43ee1bc" kindref="member">Rational::operator+</ref>(<ref refid="structpbat_1_1math_1_1Rational" kindref="compound">Rational</ref><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>rhs)</highlight><highlight class="keyword"><sp/>const</highlight></codeline>
+<codeline lineno="14"><highlight class="keyword"></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="15"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>oc<sp/>=<sp/>[](</highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>value)<sp/>{</highlight></codeline>
+<codeline lineno="16"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using</highlight><highlight class="normal"><sp/>IntegerType<sp/>=<sp/>std::remove_cvref_t&lt;decltype(value)&gt;;</highlight></codeline>
+<codeline lineno="17"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/><ref refid="structpbat_1_1math_1_1OverflowChecked" kindref="compound">OverflowChecked&lt;IntegerType&gt;</ref>{value};</highlight></codeline>
+<codeline lineno="18"><highlight class="normal"><sp/><sp/><sp/><sp/>};</highlight></codeline>
+<codeline lineno="19"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>a1/b1<sp/>+<sp/>a2/b2<sp/>=<sp/>a1*b2/b1*b2<sp/>+<sp/>a2*b1/b1*b2</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="20"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>gcd<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/>std::gcd(<ref refid="structpbat_1_1math_1_1Rational_1ad62bfedd63a20044c6758b8de391122e" kindref="member">b</ref>,<sp/>rhs.<ref refid="structpbat_1_1math_1_1Rational_1ad62bfedd63a20044c6758b8de391122e" kindref="member">b</ref>);</highlight></codeline>
+<codeline lineno="21"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>b1<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/><ref refid="structpbat_1_1math_1_1Rational_1ad62bfedd63a20044c6758b8de391122e" kindref="member">b</ref><sp/>/<sp/>gcd;</highlight></codeline>
+<codeline lineno="22"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>b2<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/>rhs.<ref refid="structpbat_1_1math_1_1Rational_1ad62bfedd63a20044c6758b8de391122e" kindref="member">b</ref><sp/>/<sp/>gcd;</highlight></codeline>
+<codeline lineno="23"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>denominator<sp/>=<sp/>oc(b1)<sp/>*<sp/>oc(b2<sp/>*<sp/>gcd);</highlight></codeline>
+<codeline lineno="24"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>numerator<sp/><sp/><sp/>=<sp/>oc(<ref refid="structpbat_1_1math_1_1Rational_1a889dd85f3c91c7e249b5aec037c33716" kindref="member">a</ref>)<sp/>*<sp/>oc(b2)<sp/>+<sp/>oc(rhs.<ref refid="structpbat_1_1math_1_1Rational_1a889dd85f3c91c7e249b5aec037c33716" kindref="member">a</ref>)<sp/>*<sp/>oc(b1);</highlight></codeline>
+<codeline lineno="25"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/><ref refid="structpbat_1_1math_1_1Rational_1a84dd5e0f1496a8b8cf940dc54b52d7f7" kindref="member">Rational</ref>(*numerator,<sp/>*denominator);</highlight></codeline>
+<codeline lineno="26"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="27"><highlight class="normal"></highlight></codeline>
+<codeline lineno="28" refid="structpbat_1_1math_1_1Rational_1aaf3532df7a5c6962aabc74f0134dc24e" refkind="member"><highlight class="normal"><ref refid="structpbat_1_1math_1_1Rational" kindref="compound">Rational</ref><sp/><ref refid="structpbat_1_1math_1_1Rational_1af41cb101e490fe12faf62340e2fd6741" kindref="member">Rational::operator-</ref>(<ref refid="structpbat_1_1math_1_1Rational" kindref="compound">Rational</ref><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>rhs)</highlight><highlight class="keyword"><sp/>const</highlight></codeline>
+<codeline lineno="29"><highlight class="keyword"></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="30"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>(*</highlight><highlight class="keyword">this</highlight><highlight class="normal">)<sp/>+<sp/>(-rhs);</highlight></codeline>
+<codeline lineno="31"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="32"><highlight class="normal"></highlight></codeline>
+<codeline lineno="33" refid="structpbat_1_1math_1_1Rational_1af41cb101e490fe12faf62340e2fd6741" refkind="member"><highlight class="normal"><ref refid="structpbat_1_1math_1_1Rational" kindref="compound">Rational</ref><sp/><ref refid="structpbat_1_1math_1_1Rational_1af41cb101e490fe12faf62340e2fd6741" kindref="member">Rational::operator-</ref>()</highlight><highlight class="keyword"><sp/>const</highlight></codeline>
+<codeline lineno="34"><highlight class="keyword"></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="35"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using</highlight><highlight class="normal"><sp/>IntegerType<sp/>=<sp/>std::remove_cvref_t&lt;decltype(<ref refid="structpbat_1_1math_1_1Rational_1a889dd85f3c91c7e249b5aec037c33716" kindref="member">a</ref>)&gt;;</highlight></codeline>
+<codeline lineno="36"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>na<sp/>=<sp/>-<ref refid="structpbat_1_1math_1_1OverflowChecked" kindref="compound">OverflowChecked&lt;IntegerType&gt;</ref>{<ref refid="structpbat_1_1math_1_1Rational_1a889dd85f3c91c7e249b5aec037c33716" kindref="member">a</ref>};</highlight></codeline>
+<codeline lineno="37"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/><ref refid="structpbat_1_1math_1_1Rational_1a84dd5e0f1496a8b8cf940dc54b52d7f7" kindref="member">Rational</ref>(*na,<sp/><ref refid="structpbat_1_1math_1_1Rational_1ad62bfedd63a20044c6758b8de391122e" kindref="member">b</ref>);</highlight></codeline>
+<codeline lineno="38"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="39"><highlight class="normal"></highlight></codeline>
+<codeline lineno="40" refid="structpbat_1_1math_1_1Rational_1af44e204809284427c64e82cef3b5044b" refkind="member"><highlight class="normal"><ref refid="structpbat_1_1math_1_1Rational" kindref="compound">Rational</ref><sp/><ref refid="structpbat_1_1math_1_1Rational_1af44e204809284427c64e82cef3b5044b" kindref="member">Rational::operator*</ref>(<ref refid="structpbat_1_1math_1_1Rational" kindref="compound">Rational</ref><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>rhs)</highlight><highlight class="keyword"><sp/>const</highlight></codeline>
+<codeline lineno="41"><highlight class="keyword"></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="42"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>oc<sp/>=<sp/>[](</highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>value)<sp/>{</highlight></codeline>
+<codeline lineno="43"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using</highlight><highlight class="normal"><sp/>IntegerType<sp/>=<sp/>std::remove_cvref_t&lt;decltype(value)&gt;;</highlight></codeline>
+<codeline lineno="44"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/><ref refid="structpbat_1_1math_1_1OverflowChecked" kindref="compound">OverflowChecked&lt;IntegerType&gt;</ref>{value};</highlight></codeline>
+<codeline lineno="45"><highlight class="normal"><sp/><sp/><sp/><sp/>};</highlight></codeline>
+<codeline lineno="46"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>a1/b1<sp/>*<sp/>a2/b2<sp/>=<sp/>a1*a2<sp/>/<sp/>b1*b2</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="47"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>num<sp/>=<sp/>oc(<ref refid="structpbat_1_1math_1_1Rational_1a889dd85f3c91c7e249b5aec037c33716" kindref="member">a</ref>)<sp/>*<sp/>oc(rhs.<ref refid="structpbat_1_1math_1_1Rational_1a889dd85f3c91c7e249b5aec037c33716" kindref="member">a</ref>);</highlight></codeline>
+<codeline lineno="48"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>den<sp/>=<sp/>oc(<ref refid="structpbat_1_1math_1_1Rational_1ad62bfedd63a20044c6758b8de391122e" kindref="member">b</ref>)<sp/>*<sp/>oc(rhs.<ref refid="structpbat_1_1math_1_1Rational_1ad62bfedd63a20044c6758b8de391122e" kindref="member">b</ref>);</highlight></codeline>
+<codeline lineno="49"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/><ref refid="structpbat_1_1math_1_1Rational_1a84dd5e0f1496a8b8cf940dc54b52d7f7" kindref="member">Rational</ref>(*num,<sp/>*den);</highlight></codeline>
+<codeline lineno="50"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="51"><highlight class="normal"></highlight></codeline>
+<codeline lineno="52" refid="structpbat_1_1math_1_1Rational_1a62c51fed7962e2f912d78656cf782e53" refkind="member"><highlight class="normal"><ref refid="structpbat_1_1math_1_1Rational" kindref="compound">Rational</ref><sp/><ref refid="structpbat_1_1math_1_1Rational_1a62c51fed7962e2f912d78656cf782e53" kindref="member">Rational::operator/</ref>(<ref refid="structpbat_1_1math_1_1Rational" kindref="compound">Rational</ref><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>rhs)</highlight><highlight class="keyword"><sp/>const</highlight></codeline>
+<codeline lineno="53"><highlight class="keyword"></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="54"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>oc<sp/>=<sp/>[](</highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>value)<sp/>{</highlight></codeline>
+<codeline lineno="55"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using</highlight><highlight class="normal"><sp/>IntegerType<sp/>=<sp/>std::remove_cvref_t&lt;decltype(value)&gt;;</highlight></codeline>
+<codeline lineno="56"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/><ref refid="structpbat_1_1math_1_1OverflowChecked" kindref="compound">OverflowChecked&lt;IntegerType&gt;</ref>{value};</highlight></codeline>
+<codeline lineno="57"><highlight class="normal"><sp/><sp/><sp/><sp/>};</highlight></codeline>
+<codeline lineno="58"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>(a1/b1)<sp/>/<sp/>(a2/b2)<sp/>=<sp/>a1*b2<sp/>/<sp/>b1*a2</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="59"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>num<sp/>=<sp/>oc(<ref refid="structpbat_1_1math_1_1Rational_1a889dd85f3c91c7e249b5aec037c33716" kindref="member">a</ref>)<sp/>*<sp/>oc(rhs.<ref refid="structpbat_1_1math_1_1Rational_1ad62bfedd63a20044c6758b8de391122e" kindref="member">b</ref>);</highlight></codeline>
+<codeline lineno="60"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>den<sp/>=<sp/>oc(<ref refid="structpbat_1_1math_1_1Rational_1ad62bfedd63a20044c6758b8de391122e" kindref="member">b</ref>)<sp/>*<sp/>oc(rhs.<ref refid="structpbat_1_1math_1_1Rational_1a889dd85f3c91c7e249b5aec037c33716" kindref="member">a</ref>);</highlight></codeline>
+<codeline lineno="61"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/><ref refid="structpbat_1_1math_1_1Rational_1a84dd5e0f1496a8b8cf940dc54b52d7f7" kindref="member">Rational</ref>(*num,<sp/>*den);</highlight></codeline>
+<codeline lineno="62"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="63"><highlight class="normal"></highlight></codeline>
+<codeline lineno="64" refid="structpbat_1_1math_1_1Rational_1ae77ae4e62392d8c9d41f4e8bee4deb8d" refkind="member"><highlight class="normal"></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/><ref refid="structpbat_1_1math_1_1Rational_1ae77ae4e62392d8c9d41f4e8bee4deb8d" kindref="member">Rational::operator==</ref>(<ref refid="structpbat_1_1math_1_1Rational" kindref="compound">Rational</ref><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>rhs)</highlight><highlight class="keyword"><sp/>const</highlight></codeline>
+<codeline lineno="65"><highlight class="keyword"></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="66"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>oc<sp/>=<sp/>[](</highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>value)<sp/>{</highlight></codeline>
+<codeline lineno="67"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using</highlight><highlight class="normal"><sp/>IntegerType<sp/>=<sp/>std::remove_cvref_t&lt;decltype(value)&gt;;</highlight></codeline>
+<codeline lineno="68"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/><ref refid="structpbat_1_1math_1_1OverflowChecked" kindref="compound">OverflowChecked&lt;IntegerType&gt;</ref>{value};</highlight></codeline>
+<codeline lineno="69"><highlight class="normal"><sp/><sp/><sp/><sp/>};</highlight></codeline>
+<codeline lineno="70"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>gcd<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/>std::gcd(<ref refid="structpbat_1_1math_1_1Rational_1ad62bfedd63a20044c6758b8de391122e" kindref="member">b</ref>,<sp/>rhs.<ref refid="structpbat_1_1math_1_1Rational_1ad62bfedd63a20044c6758b8de391122e" kindref="member">b</ref>);</highlight></codeline>
+<codeline lineno="71"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>b1<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/>oc(<ref refid="structpbat_1_1math_1_1Rational_1ad62bfedd63a20044c6758b8de391122e" kindref="member">b</ref>)<sp/>/<sp/>gcd;</highlight></codeline>
+<codeline lineno="72"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>b2<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/>oc(rhs.<ref refid="structpbat_1_1math_1_1Rational_1ad62bfedd63a20044c6758b8de391122e" kindref="member">b</ref>)<sp/>/<sp/>gcd;</highlight></codeline>
+<codeline lineno="73"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>numerator1<sp/>=<sp/>oc(<ref refid="structpbat_1_1math_1_1Rational_1a889dd85f3c91c7e249b5aec037c33716" kindref="member">a</ref>)<sp/>*<sp/>b2;</highlight></codeline>
+<codeline lineno="74"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>numerator2<sp/>=<sp/>oc(rhs.<ref refid="structpbat_1_1math_1_1Rational_1a889dd85f3c91c7e249b5aec037c33716" kindref="member">a</ref>)<sp/>*<sp/>b1;</highlight></codeline>
+<codeline lineno="75"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>numerator1<sp/>==<sp/>numerator2;</highlight></codeline>
+<codeline lineno="76"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="77"><highlight class="normal"></highlight></codeline>
+<codeline lineno="78" refid="structpbat_1_1math_1_1Rational_1a3b53005a81448d4dc5bde97764f2d407" refkind="member"><highlight class="normal"></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/><ref refid="structpbat_1_1math_1_1Rational_1a3b53005a81448d4dc5bde97764f2d407" kindref="member">Rational::operator&lt;</ref>(<ref refid="structpbat_1_1math_1_1Rational" kindref="compound">Rational</ref><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>rhs)</highlight><highlight class="keyword"><sp/>const</highlight></codeline>
+<codeline lineno="79"><highlight class="keyword"></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="80"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>oc<sp/>=<sp/>[](</highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>value)<sp/>{</highlight></codeline>
+<codeline lineno="81"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using</highlight><highlight class="normal"><sp/>IntegerType<sp/>=<sp/>std::remove_cvref_t&lt;decltype(value)&gt;;</highlight></codeline>
+<codeline lineno="82"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/><ref refid="structpbat_1_1math_1_1OverflowChecked" kindref="compound">OverflowChecked&lt;IntegerType&gt;</ref>{value};</highlight></codeline>
+<codeline lineno="83"><highlight class="normal"><sp/><sp/><sp/><sp/>};</highlight></codeline>
+<codeline lineno="84"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>gcd<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/>std::gcd(<ref refid="structpbat_1_1math_1_1Rational_1ad62bfedd63a20044c6758b8de391122e" kindref="member">b</ref>,<sp/>rhs.<ref refid="structpbat_1_1math_1_1Rational_1ad62bfedd63a20044c6758b8de391122e" kindref="member">b</ref>);</highlight></codeline>
+<codeline lineno="85"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>b1<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/>oc(<ref refid="structpbat_1_1math_1_1Rational_1ad62bfedd63a20044c6758b8de391122e" kindref="member">b</ref>)<sp/>/<sp/>gcd;</highlight></codeline>
+<codeline lineno="86"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>b2<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/>oc(rhs.<ref refid="structpbat_1_1math_1_1Rational_1ad62bfedd63a20044c6758b8de391122e" kindref="member">b</ref>)<sp/>/<sp/>gcd;</highlight></codeline>
+<codeline lineno="87"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>numerator1<sp/>=<sp/>oc(<ref refid="structpbat_1_1math_1_1Rational_1a889dd85f3c91c7e249b5aec037c33716" kindref="member">a</ref>)<sp/>*<sp/>b2;</highlight></codeline>
+<codeline lineno="88"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>numerator2<sp/>=<sp/>oc(rhs.<ref refid="structpbat_1_1math_1_1Rational_1a889dd85f3c91c7e249b5aec037c33716" kindref="member">a</ref>)<sp/>*<sp/>b1;</highlight></codeline>
+<codeline lineno="89"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>numerator1<sp/>&lt;<sp/>numerator2;</highlight></codeline>
+<codeline lineno="90"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="91"><highlight class="normal"></highlight></codeline>
+<codeline lineno="92" refid="structpbat_1_1math_1_1Rational_1ab17136d3826200a2fecd92a7b643a7b1" refkind="member"><highlight class="normal"></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/><ref refid="structpbat_1_1math_1_1Rational_1ab17136d3826200a2fecd92a7b643a7b1" kindref="member">Rational::Rebase</ref>(std::int64_t<sp/>denominator)</highlight></codeline>
+<codeline lineno="93"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="94"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>oc<sp/>=<sp/>[](</highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>value)<sp/>{</highlight></codeline>
+<codeline lineno="95"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using</highlight><highlight class="normal"><sp/>IntegerType<sp/>=<sp/>std::remove_cvref_t&lt;decltype(value)&gt;;</highlight></codeline>
+<codeline lineno="96"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/><ref refid="structpbat_1_1math_1_1OverflowChecked" kindref="compound">OverflowChecked&lt;IntegerType&gt;</ref>{value};</highlight></codeline>
+<codeline lineno="97"><highlight class="normal"><sp/><sp/><sp/><sp/>};</highlight></codeline>
+<codeline lineno="98"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>prod<sp/><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/>oc(<ref refid="structpbat_1_1math_1_1Rational_1a889dd85f3c91c7e249b5aec037c33716" kindref="member">a</ref>)<sp/>*<sp/>oc(denominator);</highlight></codeline>
+<codeline lineno="99"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>can_divide<sp/>=<sp/>(prod<sp/>%<sp/><ref refid="structpbat_1_1math_1_1Rational_1ad62bfedd63a20044c6758b8de391122e" kindref="member">b</ref>)<sp/>==<sp/>0;</highlight></codeline>
+<codeline lineno="100"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(!can_divide)</highlight></codeline>
+<codeline lineno="101"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">false</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="102"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1math_1_1Rational_1a889dd85f3c91c7e249b5aec037c33716" kindref="member">a</ref><sp/>=<sp/>prod<sp/>/<sp/><ref refid="structpbat_1_1math_1_1Rational_1ad62bfedd63a20044c6758b8de391122e" kindref="member">b</ref>;</highlight></codeline>
+<codeline lineno="103"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1math_1_1Rational_1ad62bfedd63a20044c6758b8de391122e" kindref="member">b</ref><sp/>=<sp/>denominator;</highlight></codeline>
+<codeline lineno="104"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">true</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="105"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="106"><highlight class="normal"></highlight></codeline>
+<codeline lineno="107" refid="structpbat_1_1math_1_1Rational_1ab660128b6243094cbf7124d16a66ce05" refkind="member"><highlight class="normal">Rational::operator<sp/>Scalar()</highlight><highlight class="keyword"><sp/>const</highlight></codeline>
+<codeline lineno="108"><highlight class="keyword"></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="109"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">static_cast&lt;</highlight><highlight class="normal">Scalar</highlight><highlight class="keyword">&gt;</highlight><highlight class="normal">(a)<sp/>/<sp/></highlight><highlight class="keyword">static_cast&lt;</highlight><highlight class="normal">Scalar</highlight><highlight class="keyword">&gt;</highlight><highlight class="normal">(b);</highlight></codeline>
+<codeline lineno="110"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="111"><highlight class="normal"></highlight></codeline>
+<codeline lineno="112" refid="structpbat_1_1math_1_1Rational_1abb46013280fbc3188a6e559368d4b6b1" refkind="member"><highlight class="normal"></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="structpbat_1_1math_1_1Rational_1abb46013280fbc3188a6e559368d4b6b1" kindref="member">Rational::simplify</ref>()</highlight></codeline>
+<codeline lineno="113"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="114"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(<ref refid="structpbat_1_1math_1_1Rational_1a889dd85f3c91c7e249b5aec037c33716" kindref="member">a</ref><sp/>&gt;=<sp/>0<sp/>&amp;&amp;<sp/><ref refid="structpbat_1_1math_1_1Rational_1ad62bfedd63a20044c6758b8de391122e" kindref="member">b</ref><sp/>&lt;<sp/>0)</highlight></codeline>
+<codeline lineno="115"><highlight class="normal"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="116"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using</highlight><highlight class="normal"><sp/>IntegerType<sp/>=<sp/>std::remove_cvref_t&lt;decltype(<ref refid="structpbat_1_1math_1_1Rational_1a889dd85f3c91c7e249b5aec037c33716" kindref="member">a</ref>)&gt;;</highlight></codeline>
+<codeline lineno="117"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1math_1_1Rational_1a889dd85f3c91c7e249b5aec037c33716" kindref="member">a</ref><sp/>=<sp/>-<ref refid="structpbat_1_1math_1_1OverflowChecked" kindref="compound">OverflowChecked&lt;IntegerType&gt;</ref>{<ref refid="structpbat_1_1math_1_1Rational_1a889dd85f3c91c7e249b5aec037c33716" kindref="member">a</ref>};</highlight></codeline>
+<codeline lineno="118"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1math_1_1Rational_1ad62bfedd63a20044c6758b8de391122e" kindref="member">b</ref><sp/>=<sp/>-<ref refid="structpbat_1_1math_1_1OverflowChecked" kindref="compound">OverflowChecked&lt;IntegerType&gt;</ref>{<ref refid="structpbat_1_1math_1_1Rational_1ad62bfedd63a20044c6758b8de391122e" kindref="member">b</ref>};</highlight></codeline>
+<codeline lineno="119"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="120"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>gcd<sp/>=<sp/>std::gcd(<ref refid="structpbat_1_1math_1_1Rational_1a889dd85f3c91c7e249b5aec037c33716" kindref="member">a</ref>,<sp/><ref refid="structpbat_1_1math_1_1Rational_1ad62bfedd63a20044c6758b8de391122e" kindref="member">b</ref>);</highlight></codeline>
+<codeline lineno="121"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1math_1_1Rational_1a889dd85f3c91c7e249b5aec037c33716" kindref="member">a</ref><sp/>/=<sp/>gcd;</highlight></codeline>
+<codeline lineno="122"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1math_1_1Rational_1ad62bfedd63a20044c6758b8de391122e" kindref="member">b</ref><sp/>/=<sp/>gcd;</highlight></codeline>
+<codeline lineno="123"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="124"><highlight class="normal"></highlight></codeline>
+<codeline lineno="125"><highlight class="normal">}<sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>math</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="126"><highlight class="normal">}<sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>pbat</highlight></codeline>
+    </programlisting>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/Rational.cpp"/>
+  </compounddef>
+</doxygen>

@@ -1,0 +1,1087 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="source_2pbat_2sim_2vbd_2multigrid_2Level_8cpp" kind="file" language="C++">
+    <compoundname>Level.cpp</compoundname>
+    <includes refid="source_2pbat_2sim_2vbd_2multigrid_2Level_8h" local="yes">Level.h</includes>
+    <includes refid="vbd_2multigrid_2Kernels_8h" local="yes">Kernels.h</includes>
+    <includes local="yes">pbat/fem/ShapeFunctions.h</includes>
+    <includes local="yes">pbat/geometry/TetrahedralAabbHierarchy.h</includes>
+    <includes local="yes">pbat/graph/Adjacency.h</includes>
+    <includes local="yes">pbat/graph/Color.h</includes>
+    <includes local="yes">pbat/graph/Mesh.h</includes>
+    <includes local="yes">pbat/graph/Partition.h</includes>
+    <includes refid="Mini_8h" local="yes">pbat/math/linalg/mini/Mini.h</includes>
+    <includes refid="StableNeoHookeanEnergy_8h" local="yes">pbat/physics/StableNeoHookeanEnergy.h</includes>
+    <includes local="yes">pbat/profiling/Profiling.h</includes>
+    <includes local="no">tbb/parallel_for.h</includes>
+    <includes local="no">utility</includes>
+    <includes local="no">vector</includes>
+    <includes refid="Cube_8h" local="yes">pbat/geometry/model/Cube.h</includes>
+    <includes local="no">doctest/doctest.h</includes>
+    <incdepgraph>
+      <node id="71">
+        <label>Enums.h</label>
+        <link refid="geometry_2model_2Enums_8h_source"/>
+      </node>
+      <node id="1">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/multigrid/Level.cpp</label>
+        <link refid="source_2pbat_2sim_2vbd_2multigrid_2Level_8cpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="17" relation="include">
+        </childnode>
+        <childnode refid="60" relation="include">
+        </childnode>
+        <childnode refid="61" relation="include">
+        </childnode>
+        <childnode refid="62" relation="include">
+        </childnode>
+        <childnode refid="63" relation="include">
+        </childnode>
+        <childnode refid="64" relation="include">
+        </childnode>
+        <childnode refid="65" relation="include">
+        </childnode>
+        <childnode refid="40" relation="include">
+        </childnode>
+        <childnode refid="66" relation="include">
+        </childnode>
+        <childnode refid="67" relation="include">
+        </childnode>
+        <childnode refid="68" relation="include">
+        </childnode>
+        <childnode refid="30" relation="include">
+        </childnode>
+        <childnode refid="69" relation="include">
+        </childnode>
+        <childnode refid="70" relation="include">
+        </childnode>
+        <childnode refid="72" relation="include">
+        </childnode>
+      </node>
+      <node id="35">
+        <label>functional</label>
+      </node>
+      <node id="54">
+        <label>limits</label>
+      </node>
+      <node id="26">
+        <label>pbat/math/linalg/mini/BinaryOperations.h</label>
+        <link refid="BinaryOperations_8h_source"/>
+        <childnode refid="27" relation="include">
+        </childnode>
+        <childnode refid="29" relation="include">
+        </childnode>
+        <childnode refid="33" relation="include">
+        </childnode>
+        <childnode refid="18" relation="include">
+        </childnode>
+        <childnode refid="34" relation="include">
+        </childnode>
+        <childnode refid="35" relation="include">
+        </childnode>
+        <childnode refid="25" relation="include">
+        </childnode>
+        <childnode refid="30" relation="include">
+        </childnode>
+      </node>
+      <node id="64">
+        <label>pbat/graph/Mesh.h</label>
+      </node>
+      <node id="28">
+        <label>Assign.h</label>
+        <link refid="Assign_8h_source"/>
+        <childnode refid="29" relation="include">
+        </childnode>
+        <childnode refid="18" relation="include">
+        </childnode>
+        <childnode refid="30" relation="include">
+        </childnode>
+      </node>
+      <node id="23">
+        <label>iterator</label>
+      </node>
+      <node id="24">
+        <label>ranges</label>
+      </node>
+      <node id="12">
+        <label>pbat/math/GaussQuadrature.h</label>
+        <link refid="GaussQuadrature_8h_source"/>
+        <childnode refid="13" relation="include">
+        </childnode>
+        <childnode refid="14" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+      </node>
+      <node id="14">
+        <label>cstdint</label>
+      </node>
+      <node id="44">
+        <label>Geometry.h</label>
+        <link refid="source_2pbat_2math_2linalg_2mini_2Geometry_8h_source"/>
+        <childnode refid="27" relation="include">
+        </childnode>
+        <childnode refid="29" relation="include">
+        </childnode>
+        <childnode refid="18" relation="include">
+        </childnode>
+        <childnode refid="25" relation="include">
+        </childnode>
+        <childnode refid="30" relation="include">
+        </childnode>
+      </node>
+      <node id="32">
+        <label>Transpose.h</label>
+        <link refid="Transpose_8h_source"/>
+        <childnode refid="28" relation="include">
+        </childnode>
+        <childnode refid="29" relation="include">
+        </childnode>
+        <childnode refid="18" relation="include">
+        </childnode>
+        <childnode refid="25" relation="include">
+        </childnode>
+        <childnode refid="30" relation="include">
+        </childnode>
+      </node>
+      <node id="65">
+        <label>pbat/graph/Partition.h</label>
+      </node>
+      <node id="3">
+        <label>pbat/Aliases.h</label>
+        <link refid="Aliases_8h_source"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+      </node>
+      <node id="52">
+        <label>UnaryOperations.h</label>
+        <link refid="UnaryOperations_8h_source"/>
+        <childnode refid="27" relation="include">
+        </childnode>
+        <childnode refid="29" relation="include">
+        </childnode>
+        <childnode refid="46" relation="include">
+        </childnode>
+        <childnode refid="33" relation="include">
+        </childnode>
+        <childnode refid="18" relation="include">
+        </childnode>
+        <childnode refid="53" relation="include">
+        </childnode>
+        <childnode refid="34" relation="include">
+        </childnode>
+        <childnode refid="54" relation="include">
+        </childnode>
+        <childnode refid="25" relation="include">
+        </childnode>
+        <childnode refid="30" relation="include">
+        </childnode>
+      </node>
+      <node id="45">
+        <label>Inverse.h</label>
+        <link refid="Inverse_8h_source"/>
+        <childnode refid="29" relation="include">
+        </childnode>
+        <childnode refid="36" relation="include">
+        </childnode>
+        <childnode refid="18" relation="include">
+        </childnode>
+        <childnode refid="25" relation="include">
+        </childnode>
+        <childnode refid="30" relation="include">
+        </childnode>
+      </node>
+      <node id="70">
+        <label>pbat/geometry/model/Cube.h</label>
+        <link refid="Cube_8h_source"/>
+        <childnode refid="71" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="30" relation="include">
+        </childnode>
+      </node>
+      <node id="34">
+        <label>cmath</label>
+      </node>
+      <node id="4">
+        <label>Eigen/Core</label>
+      </node>
+      <node id="50">
+        <label>Repeat.h</label>
+        <link refid="Repeat_8h_source"/>
+        <childnode refid="27" relation="include">
+        </childnode>
+        <childnode refid="29" relation="include">
+        </childnode>
+        <childnode refid="18" relation="include">
+        </childnode>
+        <childnode refid="25" relation="include">
+        </childnode>
+      </node>
+      <node id="59">
+        <label>string</label>
+      </node>
+      <node id="36">
+        <label>pbat/math/linalg/mini/Matrix.h</label>
+        <link refid="Matrix_8h_source"/>
+        <childnode refid="27" relation="include">
+        </childnode>
+        <childnode refid="29" relation="include">
+        </childnode>
+        <childnode refid="18" relation="include">
+        </childnode>
+        <childnode refid="37" relation="include">
+        </childnode>
+        <childnode refid="13" relation="include">
+        </childnode>
+        <childnode refid="14" relation="include">
+        </childnode>
+        <childnode refid="38" relation="include">
+        </childnode>
+        <childnode refid="39" relation="include">
+        </childnode>
+        <childnode refid="30" relation="include">
+        </childnode>
+      </node>
+      <node id="18">
+        <label>pbat/HostDevice.h</label>
+        <link refid="HostDevice_8h_source"/>
+      </node>
+      <node id="8">
+        <label>pbat/sim/vbd/Mesh.h</label>
+        <link refid="source_2pbat_2sim_2vbd_2Mesh_8h_source"/>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+        <childnode refid="16" relation="include">
+        </childnode>
+      </node>
+      <node id="16">
+        <label>pbat/fem/Triangle.h</label>
+        <link refid="Triangle_8h_source"/>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="13" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+      </node>
+      <node id="11">
+        <label>QuadratureRules.h</label>
+        <link refid="QuadratureRules_8h_source"/>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="15" relation="include">
+        </childnode>
+      </node>
+      <node id="61">
+        <label>pbat/geometry/TetrahedralAabbHierarchy.h</label>
+      </node>
+      <node id="57">
+        <label>exception</label>
+      </node>
+      <node id="15">
+        <label>pbat/math/SymmetricQuadratureRules.h</label>
+        <link refid="SymmetricQuadratureRules_8h_source"/>
+        <childnode refid="13" relation="include">
+        </childnode>
+        <childnode refid="14" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+      </node>
+      <node id="29">
+        <label>Concepts.h</label>
+        <link refid="math_2linalg_2mini_2Concepts_8h_source"/>
+        <childnode refid="21" relation="include">
+        </childnode>
+        <childnode refid="25" relation="include">
+        </childnode>
+        <childnode refid="30" relation="include">
+        </childnode>
+      </node>
+      <node id="63">
+        <label>pbat/graph/Color.h</label>
+      </node>
+      <node id="33">
+        <label>Scale.h</label>
+        <link refid="Scale_8h_source"/>
+        <childnode refid="27" relation="include">
+        </childnode>
+        <childnode refid="28" relation="include">
+        </childnode>
+        <childnode refid="29" relation="include">
+        </childnode>
+        <childnode refid="18" relation="include">
+        </childnode>
+        <childnode refid="25" relation="include">
+        </childnode>
+        <childnode refid="30" relation="include">
+        </childnode>
+      </node>
+      <node id="58">
+        <label>fmt/core.h</label>
+      </node>
+      <node id="72">
+        <label>doctest/doctest.h</label>
+      </node>
+      <node id="56">
+        <label>PhysicsBasedAnimationToolkitExport.h</label>
+      </node>
+      <node id="68">
+        <label>tbb/parallel_for.h</label>
+      </node>
+      <node id="40">
+        <label>pbat/math/linalg/mini/Mini.h</label>
+        <link refid="Mini_8h_source"/>
+        <childnode refid="28" relation="include">
+        </childnode>
+        <childnode refid="26" relation="include">
+        </childnode>
+        <childnode refid="29" relation="include">
+        </childnode>
+        <childnode refid="41" relation="include">
+        </childnode>
+        <childnode refid="42" relation="include">
+        </childnode>
+        <childnode refid="43" relation="include">
+        </childnode>
+        <childnode refid="44" relation="include">
+        </childnode>
+        <childnode refid="45" relation="include">
+        </childnode>
+        <childnode refid="36" relation="include">
+        </childnode>
+        <childnode refid="46" relation="include">
+        </childnode>
+        <childnode refid="48" relation="include">
+        </childnode>
+        <childnode refid="47" relation="include">
+        </childnode>
+        <childnode refid="50" relation="include">
+        </childnode>
+        <childnode refid="33" relation="include">
+        </childnode>
+        <childnode refid="51" relation="include">
+        </childnode>
+        <childnode refid="31" relation="include">
+        </childnode>
+        <childnode refid="32" relation="include">
+        </childnode>
+        <childnode refid="52" relation="include">
+        </childnode>
+      </node>
+      <node id="5">
+        <label>Eigen/Sparse</label>
+      </node>
+      <node id="55">
+        <label>pbat/physics/HyperElasticity.h</label>
+        <link refid="HyperElasticity_8h_source"/>
+        <childnode refid="56" relation="include">
+        </childnode>
+        <childnode refid="36" relation="include">
+        </childnode>
+        <childnode refid="21" relation="include">
+        </childnode>
+        <childnode refid="57" relation="include">
+        </childnode>
+        <childnode refid="58" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="59" relation="include">
+        </childnode>
+      </node>
+      <node id="39">
+        <label>string.h</label>
+      </node>
+      <node id="67">
+        <label>pbat/profiling/Profiling.h</label>
+      </node>
+      <node id="22">
+        <label>pbat/common/Concepts.h</label>
+        <link refid="common_2Concepts_8h_source"/>
+        <childnode refid="21" relation="include">
+        </childnode>
+        <childnode refid="23" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="24" relation="include">
+        </childnode>
+        <childnode refid="25" relation="include">
+        </childnode>
+      </node>
+      <node id="42">
+        <label>Eigen.h</label>
+        <link refid="math_2linalg_2mini_2Eigen_8h_source"/>
+        <childnode refid="27" relation="include">
+        </childnode>
+        <childnode refid="29" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="25" relation="include">
+        </childnode>
+        <childnode refid="30" relation="include">
+        </childnode>
+      </node>
+      <node id="41">
+        <label>Determinant.h</label>
+        <link refid="Determinant_8h_source"/>
+        <childnode refid="29" relation="include">
+        </childnode>
+        <childnode refid="18" relation="include">
+        </childnode>
+        <childnode refid="25" relation="include">
+        </childnode>
+      </node>
+      <node id="69">
+        <label>vector</label>
+      </node>
+      <node id="10">
+        <label>pbat/fem/Tetrahedron.h</label>
+        <link refid="Tetrahedron_8h_source"/>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="13" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+      </node>
+      <node id="9">
+        <label>pbat/fem/Mesh.h</label>
+      </node>
+      <node id="30">
+        <label>utility</label>
+      </node>
+      <node id="13">
+        <label>array</label>
+      </node>
+      <node id="7">
+        <label>pbat/sim/vbd/Data.h</label>
+      </node>
+      <node id="2">
+        <label>Level.h</label>
+        <link refid="source_2pbat_2sim_2vbd_2multigrid_2Level_8h_source"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+      </node>
+      <node id="49">
+        <label>math.h</label>
+      </node>
+      <node id="17">
+        <label>Kernels.h</label>
+        <link refid="vbd_2multigrid_2Kernels_8h_source"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="18" relation="include">
+        </childnode>
+        <childnode refid="19" relation="include">
+        </childnode>
+        <childnode refid="40" relation="include">
+        </childnode>
+        <childnode refid="55" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+      </node>
+      <node id="47">
+        <label>Reductions.h</label>
+        <link refid="Reductions_8h_source"/>
+        <childnode refid="27" relation="include">
+        </childnode>
+        <childnode refid="29" relation="include">
+        </childnode>
+        <childnode refid="48" relation="include">
+        </childnode>
+        <childnode refid="18" relation="include">
+        </childnode>
+        <childnode refid="25" relation="include">
+        </childnode>
+        <childnode refid="30" relation="include">
+        </childnode>
+      </node>
+      <node id="43">
+        <label>Flatten.h</label>
+        <link refid="Flatten_8h_source"/>
+        <childnode refid="27" relation="include">
+        </childnode>
+        <childnode refid="29" relation="include">
+        </childnode>
+        <childnode refid="18" relation="include">
+        </childnode>
+        <childnode refid="25" relation="include">
+        </childnode>
+      </node>
+      <node id="62">
+        <label>pbat/graph/Adjacency.h</label>
+      </node>
+      <node id="48">
+        <label>Product.h</label>
+        <link refid="Product_8h_source"/>
+        <childnode refid="27" relation="include">
+        </childnode>
+        <childnode refid="29" relation="include">
+        </childnode>
+        <childnode refid="18" relation="include">
+        </childnode>
+        <childnode refid="25" relation="include">
+        </childnode>
+        <childnode refid="30" relation="include">
+        </childnode>
+      </node>
+      <node id="6">
+        <label>cstddef</label>
+      </node>
+      <node id="27">
+        <label>Api.h</label>
+        <link refid="Api_8h_source"/>
+        <childnode refid="28" relation="include">
+        </childnode>
+        <childnode refid="29" relation="include">
+        </childnode>
+        <childnode refid="31" relation="include">
+        </childnode>
+        <childnode refid="32" relation="include">
+        </childnode>
+      </node>
+      <node id="31">
+        <label>SubMatrix.h</label>
+        <link refid="SubMatrix_8h_source"/>
+        <childnode refid="28" relation="include">
+        </childnode>
+        <childnode refid="29" relation="include">
+        </childnode>
+        <childnode refid="32" relation="include">
+        </childnode>
+        <childnode refid="18" relation="include">
+        </childnode>
+        <childnode refid="25" relation="include">
+        </childnode>
+        <childnode refid="30" relation="include">
+        </childnode>
+      </node>
+      <node id="66">
+        <label>pbat/physics/StableNeoHookeanEnergy.h</label>
+        <link refid="StableNeoHookeanEnergy_8h_source"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="18" relation="include">
+        </childnode>
+        <childnode refid="36" relation="include">
+        </childnode>
+        <childnode refid="34" relation="include">
+        </childnode>
+      </node>
+      <node id="37">
+        <label>pbat/common/ConstexprFor.h</label>
+        <link refid="ConstexprFor_8h_source"/>
+        <childnode refid="25" relation="include">
+        </childnode>
+        <childnode refid="30" relation="include">
+        </childnode>
+      </node>
+      <node id="21">
+        <label>concepts</label>
+      </node>
+      <node id="60">
+        <label>pbat/fem/ShapeFunctions.h</label>
+      </node>
+      <node id="20">
+        <label>Concepts.h</label>
+        <link refid="fem_2Concepts_8h_source"/>
+        <childnode refid="21" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="22" relation="include">
+        </childnode>
+      </node>
+      <node id="19">
+        <label>pbat/fem/DeformationGradient.h</label>
+        <link refid="DeformationGradient_8h_source"/>
+        <childnode refid="20" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="26" relation="include">
+        </childnode>
+        <childnode refid="29" relation="include">
+        </childnode>
+        <childnode refid="36" relation="include">
+        </childnode>
+      </node>
+      <node id="25">
+        <label>type_traits</label>
+      </node>
+      <node id="53">
+        <label>algorithm</label>
+      </node>
+      <node id="38">
+        <label>initializer_list</label>
+      </node>
+      <node id="51">
+        <label>Stack.h</label>
+        <link refid="math_2linalg_2mini_2Stack_8h_source"/>
+        <childnode refid="27" relation="include">
+        </childnode>
+        <childnode refid="29" relation="include">
+        </childnode>
+        <childnode refid="18" relation="include">
+        </childnode>
+        <childnode refid="25" relation="include">
+        </childnode>
+        <childnode refid="30" relation="include">
+        </childnode>
+      </node>
+      <node id="46">
+        <label>Norm.h</label>
+        <link refid="Norm_8h_source"/>
+        <childnode refid="29" relation="include">
+        </childnode>
+        <childnode refid="47" relation="include">
+        </childnode>
+        <childnode refid="18" relation="include">
+        </childnode>
+        <childnode refid="49" relation="include">
+        </childnode>
+        <childnode refid="25" relation="include">
+        </childnode>
+        <childnode refid="30" relation="include">
+        </childnode>
+      </node>
+    </incdepgraph>
+    <innernamespace refid="namespacepbat">pbat</innernamespace>
+    <innernamespace refid="namespacepbat_1_1sim">pbat::sim</innernamespace>
+    <innernamespace refid="namespacepbat_1_1sim_1_1vbd">pbat::sim::vbd</innernamespace>
+    <innernamespace refid="namespacepbat_1_1sim_1_1vbd_1_1multigrid">pbat::sim::vbd::multigrid</innernamespace>
+      <sectiondef kind="func">
+      <memberdef kind="function" id="source_2pbat_2sim_2vbd_2multigrid_2Level_8cpp_1a023a22f926a97b17501bce19503a917b" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>TEST_CASE</definition>
+        <argsstring>(&quot;[sim][vbd][multigrid] Level&quot;)</argsstring>
+        <name>TEST_CASE</name>
+        <param>
+          <type>&quot; Level&quot;</type>
+          <array>[sim][vbd][multigrid]</array>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/multigrid/Level.cpp" line="364" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/multigrid/Level.cpp" bodystart="364" bodyend="390"/>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="preprocessor">#include<sp/>&quot;Level.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="2"><highlight class="normal"></highlight></codeline>
+<codeline lineno="3"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;Kernels.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="4"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;pbat/fem/ShapeFunctions.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="5"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;pbat/geometry/TetrahedralAabbHierarchy.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="6"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;pbat/graph/Adjacency.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="7"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;pbat/graph/Color.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="8"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;pbat/graph/Mesh.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="9"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;pbat/graph/Partition.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="10"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;pbat/math/linalg/mini/Mini.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="11"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;pbat/physics/StableNeoHookeanEnergy.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="12"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;pbat/profiling/Profiling.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="13"><highlight class="normal"></highlight></codeline>
+<codeline lineno="14"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;tbb/parallel_for.h&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="15"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;utility&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="16"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;vector&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="17"><highlight class="normal"></highlight></codeline>
+<codeline lineno="18"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal">pbat<sp/>{</highlight></codeline>
+<codeline lineno="19"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal">sim<sp/>{</highlight></codeline>
+<codeline lineno="20"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal">vbd<sp/>{</highlight></codeline>
+<codeline lineno="21"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal">multigrid<sp/>{</highlight></codeline>
+<codeline lineno="22"><highlight class="normal"></highlight></codeline>
+<codeline lineno="23" refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a36c5ca3486f6772b43d4490c095cc3be" refkind="member"><highlight class="normal"><ref refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a36c5ca3486f6772b43d4490c095cc3be" kindref="member">Level::Level</ref>(<ref refid="structpbat_1_1sim_1_1vbd_1_1Data" kindref="compound">Data</ref><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>data,<sp/><ref refid="structpbat_1_1fem_1_1Mesh" kindref="compound">VolumeMesh</ref><sp/>meshIn)</highlight></codeline>
+<codeline lineno="24"><highlight class="normal"><sp/><sp/><sp/><sp/>:<sp/>mesh(std::move(meshIn)),</highlight></codeline>
+<codeline lineno="25"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>u(),</highlight></codeline>
+<codeline lineno="26"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>colors(),</highlight></codeline>
+<codeline lineno="27"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>Pptr(),</highlight></codeline>
+<codeline lineno="28"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>Padj(),</highlight></codeline>
+<codeline lineno="29"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>ecVE(),</highlight></codeline>
+<codeline lineno="30"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>NecVE(),</highlight></codeline>
+<codeline lineno="31"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>ilocalE(),</highlight></codeline>
+<codeline lineno="32"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>GEptr(),</highlight></codeline>
+<codeline lineno="33"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>GEadj(),</highlight></codeline>
+<codeline lineno="34"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>bActiveE(),</highlight></codeline>
+<codeline lineno="35"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>wgE(),</highlight></codeline>
+<codeline lineno="36"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>ecK(),</highlight></codeline>
+<codeline lineno="37"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>NecK(),</highlight></codeline>
+<codeline lineno="38"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>GKptr(),</highlight></codeline>
+<codeline lineno="39"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>GKadj(),</highlight></codeline>
+<codeline lineno="40"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>GKilocal(),</highlight></codeline>
+<codeline lineno="41"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>bActiveK(),</highlight></codeline>
+<codeline lineno="42"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>mK(),</highlight></codeline>
+<codeline lineno="43"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>bIsDirichletVertex()</highlight></codeline>
+<codeline lineno="44"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="45"><highlight class="normal"><sp/><sp/><sp/><sp/>PBAT_PROFILE_NAMED_SCOPE(</highlight><highlight class="stringliteral">&quot;pbat.sim.vbd.multigrid.Level.Construct&quot;</highlight><highlight class="normal">);</highlight></codeline>
+<codeline lineno="46"><highlight class="normal"></highlight></codeline>
+<codeline lineno="47"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Coarse<sp/>mesh</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="48"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a9cb9f579145195025d2e5e751e6b16dc" kindref="member">u</ref>.resize(<ref refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1ab8a508431690592254dd834a827a1f74" kindref="member">mesh</ref>.<ref refid="structpbat_1_1fem_1_1Mesh_1abc65a193ee960705ddf64227afb18809" kindref="member">X</ref>.rows(),<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1ab8a508431690592254dd834a827a1f74" kindref="member">mesh</ref>.<ref refid="structpbat_1_1fem_1_1Mesh_1abc65a193ee960705ddf64227afb18809" kindref="member">X</ref>.cols());</highlight></codeline>
+<codeline lineno="49"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>G<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/>graph::MeshPrimalGraph(<ref refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1ab8a508431690592254dd834a827a1f74" kindref="member">mesh</ref>.<ref refid="structpbat_1_1fem_1_1Mesh_1a384afdf16df5efa27e09f17520402b5b" kindref="member">E</ref>,<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1ab8a508431690592254dd834a827a1f74" kindref="member">mesh</ref>.<ref refid="structpbat_1_1fem_1_1Mesh_1abc65a193ee960705ddf64227afb18809" kindref="member">X</ref>.cols());</highlight></codeline>
+<codeline lineno="50"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>[Gptr,<sp/>Gadj,<sp/>Gwts]<sp/>=<sp/>graph::MatrixToWeightedAdjacency(G);</highlight></codeline>
+<codeline lineno="51"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1af9c1dddf690c4fa1d924d574276a7de8" kindref="member">colors</ref><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/>graph::GreedyColor(Gptr,<sp/>Gadj,<sp/>data.<ref refid="structpbat_1_1sim_1_1vbd_1_1Data_1a65e365755f7b8b39de4fc1f46dbd883e" kindref="member">eOrdering</ref>,<sp/>data.<ref refid="structpbat_1_1sim_1_1vbd_1_1Data_1a5f6eed3ae91f2ba44f10ebf7ffd8ebb7" kindref="member">eSelection</ref>);</highlight></codeline>
+<codeline lineno="52"><highlight class="normal"><sp/><sp/><sp/><sp/>std::tie(Pptr,<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a9b30ad5129f3ad7795fde1bf4c61cd67" kindref="member">Padj</ref>)<sp/><sp/><sp/><sp/>=<sp/>graph::MapToAdjacency(<ref refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1af9c1dddf690c4fa1d924d574276a7de8" kindref="member">colors</ref>);</highlight></codeline>
+<codeline lineno="53"><highlight class="normal"></highlight></codeline>
+<codeline lineno="54"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="classpbat_1_1geometry_1_1TetrahedralAabbHierarchy" kindref="compound">geometry::TetrahedralAabbHierarchy</ref><sp/>cbvh(<ref refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1ab8a508431690592254dd834a827a1f74" kindref="member">mesh</ref>.<ref refid="structpbat_1_1fem_1_1Mesh_1abc65a193ee960705ddf64227afb18809" kindref="member">X</ref>,<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1ab8a508431690592254dd834a827a1f74" kindref="member">mesh</ref>.<ref refid="structpbat_1_1fem_1_1Mesh_1a384afdf16df5efa27e09f17520402b5b" kindref="member">E</ref>);</highlight></codeline>
+<codeline lineno="55"><highlight class="normal"></highlight></codeline>
+<codeline lineno="56"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Elastic<sp/>energy</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="57"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="58"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Objective:</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="59"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Need<sp/>to<sp/>construct<sp/>list<sp/>of<sp/>edges<sp/>(vc,<sp/>ef),<sp/>where<sp/>vc<sp/>is<sp/>coarse<sp/>vertex<sp/>and<sp/>ef<sp/>is<sp/>fine<sp/>element.</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="60"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>In<sp/>addition,<sp/>for<sp/>each<sp/>such<sp/>edge,<sp/>for<sp/>each<sp/>fine<sp/>vertex<sp/>vf<sp/>of<sp/>element<sp/>ef,<sp/>we<sp/>want<sp/>to<sp/>know:</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="61"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>-<sp/>(ec,<sp/>Nec,<sp/>ilocal)<sp/>where<sp/>Nec<sp/>are<sp/>ec&apos;s<sp/>shape<sp/>functions<sp/>at<sp/>vf<sp/>and<sp/>ilocal<sp/>is<sp/>vc&apos;s<sp/>local<sp/>vertex</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="62"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/><sp/><sp/>index<sp/>in<sp/>ec</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="63"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="64"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>1.<sp/>We<sp/>first<sp/>construct<sp/>4x|#fine<sp/>elements|<sp/>indices<sp/>ecVE<sp/>which<sp/>contain,<sp/>in<sp/>each<sp/>column,</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="65"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/><sp/><sp/><sp/>the<sp/>4<sp/>coarse<sp/>elements<sp/>ec<sp/>containing<sp/>the<sp/>4<sp/>vertices<sp/>of<sp/>element<sp/>ef.</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="66"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>2.<sp/>We<sp/>then<sp/>construct<sp/>4x|4*#fine<sp/>elements|<sp/>coarse<sp/>element<sp/>shape<sp/>functions<sp/>at<sp/>those<sp/>vertices.</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="67"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>3.<sp/>Then,<sp/>we<sp/>construct<sp/>the<sp/>graph<sp/>(vc,<sp/>ef)<sp/>by<sp/>traversing<sp/>the<sp/>graph<sp/>with<sp/>edge<sp/>(ec,<sp/>ef)<sp/>if<sp/>ec</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="68"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/><sp/><sp/><sp/>contains<sp/>at<sp/>least<sp/>one<sp/>fine<sp/>vertex<sp/>of<sp/>ef.</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="69"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>4.<sp/>For<sp/>each<sp/>(vc,ef),<sp/>we<sp/>look<sp/>at<sp/>all<sp/>4<sp/>ec<sp/>in<sp/>the<sp/>column<sp/>ef<sp/>of<sp/>ecVE,<sp/>and<sp/>determine<sp/>which<sp/>local</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="70"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/><sp/><sp/><sp/>vertex<sp/>index<sp/>vc<sp/>corresponds<sp/>to,<sp/>or<sp/>set<sp/>it<sp/>to<sp/>-1<sp/>if<sp/>it<sp/>doesn&apos;t<sp/>apply.</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="71"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>nFineElements<sp/>=<sp/>data.<ref refid="structpbat_1_1sim_1_1vbd_1_1Data_1a0814000764d127a91a05454ee341504d" kindref="member">mesh</ref>.<ref refid="structpbat_1_1fem_1_1Mesh_1a384afdf16df5efa27e09f17520402b5b" kindref="member">E</ref>.cols();</highlight></codeline>
+<codeline lineno="72"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1af2b4a49b4bcaea445229f49b7afd5c68" kindref="member">ecVE</ref>.resize(4,<sp/>nFineElements);</highlight></codeline>
+<codeline lineno="73"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a15ada99e6a2788cd0875074ec11241cd" kindref="member">NecVE</ref>.resize(4,<sp/>4<sp/>*<sp/>nFineElements);</highlight></codeline>
+<codeline lineno="74"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">for</highlight><highlight class="normal"><sp/>(</highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>i<sp/>=<sp/>0;<sp/>i<sp/>&lt;<sp/>4;<sp/>++i)</highlight></codeline>
+<codeline lineno="75"><highlight class="normal"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="76"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>ithVertexPositions<sp/>=<sp/>data.<ref refid="structpbat_1_1sim_1_1vbd_1_1Data_1a0814000764d127a91a05454ee341504d" kindref="member">mesh</ref>.<ref refid="structpbat_1_1fem_1_1Mesh_1abc65a193ee960705ddf64227afb18809" kindref="member">X</ref>(Eigen::placeholders::all,<sp/>data.<ref refid="structpbat_1_1sim_1_1vbd_1_1Data_1a0814000764d127a91a05454ee341504d" kindref="member">mesh</ref>.<ref refid="structpbat_1_1fem_1_1Mesh_1a384afdf16df5efa27e09f17520402b5b" kindref="member">E</ref>.row(i));</highlight></codeline>
+<codeline lineno="77"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1af2b4a49b4bcaea445229f49b7afd5c68" kindref="member">ecVE</ref>.row(i)<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/>cbvh.PrimitivesContainingPoints(ithVertexPositions);</highlight></codeline>
+<codeline lineno="78"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a15ada99e6a2788cd0875074ec11241cd" kindref="member">NecVE</ref>(Eigen::placeholders::all,<sp/>Eigen::seqN(i,<sp/>nFineElements,<sp/>4))<sp/>=</highlight></codeline>
+<codeline lineno="79"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>fem::ShapeFunctionsAt(<ref refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1ab8a508431690592254dd834a827a1f74" kindref="member">mesh</ref>,<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1af2b4a49b4bcaea445229f49b7afd5c68" kindref="member">ecVE</ref>.row(i),<sp/>ithVertexPositions);</highlight></codeline>
+<codeline lineno="80"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="81"><highlight class="normal"><sp/><sp/><sp/><sp/>Index<sp/>constexpr<sp/>nVertexPerElement<sp/>=<sp/>4;</highlight></codeline>
+<codeline lineno="82"><highlight class="normal"><sp/><sp/><sp/><sp/>std::vector&lt;graph::WeightedEdge&lt;Scalar,<sp/>Index&gt;&gt;<sp/>vc2ef{};</highlight></codeline>
+<codeline lineno="83"><highlight class="normal"><sp/><sp/><sp/><sp/>vc2ef.reserve(</highlight><highlight class="keyword">static_cast&lt;</highlight><highlight class="normal">std::size_t</highlight><highlight class="keyword">&gt;</highlight><highlight class="normal">(nFineElements<sp/>*<sp/>nVertexPerElement<sp/>*<sp/>nVertexPerElement));</highlight></codeline>
+<codeline lineno="84"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">for</highlight><highlight class="normal"><sp/>(</highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>ef<sp/>=<sp/>0;<sp/>ef<sp/>&lt;<sp/>nFineElements;<sp/>++ef)</highlight></codeline>
+<codeline lineno="85"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">for</highlight><highlight class="normal"><sp/>(</highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>ec<sp/>:<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1af2b4a49b4bcaea445229f49b7afd5c68" kindref="member">ecVE</ref>.col(ef))</highlight></codeline>
+<codeline lineno="86"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">for</highlight><highlight class="normal"><sp/>(</highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>vc<sp/>:<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1ab8a508431690592254dd834a827a1f74" kindref="member">mesh</ref>.<ref refid="structpbat_1_1fem_1_1Mesh_1a384afdf16df5efa27e09f17520402b5b" kindref="member">E</ref>.col(ec))</highlight></codeline>
+<codeline lineno="87"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>vc2ef.push_back({vc,<sp/>ef});</highlight></codeline>
+<codeline lineno="88"><highlight class="normal"><sp/><sp/><sp/><sp/>Index<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>nCoarseVertices<sp/>=<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1ab8a508431690592254dd834a827a1f74" kindref="member">mesh</ref>.<ref refid="structpbat_1_1fem_1_1Mesh_1abc65a193ee960705ddf64227afb18809" kindref="member">X</ref>.cols();</highlight></codeline>
+<codeline lineno="89"><highlight class="normal"><sp/><sp/><sp/><sp/>std::tie(GEptr,<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a47d8c865309e3e4b11dd7e2c87836392" kindref="member">GEadj</ref>)<sp/><sp/><sp/><sp/><sp/><sp/>=<sp/>graph::MatrixToAdjacency(graph::AdjacencyMatrixFromEdges(</highlight></codeline>
+<codeline lineno="90"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>vc2ef.begin(),</highlight></codeline>
+<codeline lineno="91"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>vc2ef.end(),</highlight></codeline>
+<codeline lineno="92"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>nCoarseVertices,</highlight></codeline>
+<codeline lineno="93"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>nFineElements));</highlight></codeline>
+<codeline lineno="94"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a76b7c7412be98e35731817eb90d35abf" kindref="member">ilocalE</ref>.setConstant(4,<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a47d8c865309e3e4b11dd7e2c87836392" kindref="member">GEadj</ref>.size(),<sp/>Index(-1));</highlight></codeline>
+<codeline lineno="95"><highlight class="normal"><sp/><sp/><sp/><sp/>graph::ForEachEdge(GEptr,<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a47d8c865309e3e4b11dd7e2c87836392" kindref="member">GEadj</ref>,<sp/>[&amp;](Index<sp/>vc,<sp/>Index<sp/>ef,<sp/>Index<sp/>eid)<sp/>{</highlight></codeline>
+<codeline lineno="96"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">for</highlight><highlight class="normal"><sp/>(Index<sp/>vf<sp/>=<sp/>0;<sp/>vf<sp/>&lt;<sp/>4;<sp/>++vf)</highlight></codeline>
+<codeline lineno="97"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="98"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>Index<sp/>ec<sp/>=<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1af2b4a49b4bcaea445229f49b7afd5c68" kindref="member">ecVE</ref>(vf,<sp/>ef);</highlight></codeline>
+<codeline lineno="99"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">for</highlight><highlight class="normal"><sp/>(Index<sp/>iclocal<sp/>=<sp/>0;<sp/>iclocal<sp/>&lt;<sp/>4;<sp/>++iclocal)</highlight></codeline>
+<codeline lineno="100"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(vc<sp/>==<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1ab8a508431690592254dd834a827a1f74" kindref="member">mesh</ref>.<ref refid="structpbat_1_1fem_1_1Mesh_1a384afdf16df5efa27e09f17520402b5b" kindref="member">E</ref>(iclocal,<sp/>ec))</highlight></codeline>
+<codeline lineno="101"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a76b7c7412be98e35731817eb90d35abf" kindref="member">ilocalE</ref>(vf,<sp/>eid)<sp/>=<sp/>iclocal;</highlight></codeline>
+<codeline lineno="102"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="103"><highlight class="normal"><sp/><sp/><sp/><sp/>});</highlight></codeline>
+<codeline lineno="104"><highlight class="normal"></highlight></codeline>
+<codeline lineno="105"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Kinetic<sp/>energy</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="106"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1af5c6f09ec649781789a621d72720a007" kindref="member">ecK</ref><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/>cbvh.PrimitivesContainingPoints(data.<ref refid="structpbat_1_1sim_1_1vbd_1_1Data_1a0814000764d127a91a05454ee341504d" kindref="member">mesh</ref>.<ref refid="structpbat_1_1fem_1_1Mesh_1abc65a193ee960705ddf64227afb18809" kindref="member">X</ref>);</highlight></codeline>
+<codeline lineno="107"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1aa1cf1126c61010f6cc1b3ed2be9a469f" kindref="member">NecK</ref><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/>fem::ShapeFunctionsAt(<ref refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1ab8a508431690592254dd834a827a1f74" kindref="member">mesh</ref>,<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1af5c6f09ec649781789a621d72720a007" kindref="member">ecK</ref>,<sp/>data.<ref refid="structpbat_1_1sim_1_1vbd_1_1Data_1a0814000764d127a91a05454ee341504d" kindref="member">mesh</ref>.<ref refid="structpbat_1_1fem_1_1Mesh_1abc65a193ee960705ddf64227afb18809" kindref="member">X</ref>);</highlight></codeline>
+<codeline lineno="108"><highlight class="normal"><sp/><sp/><sp/><sp/>IndexMatrixX<sp/>ilocal<sp/>=<sp/>IndexVector&lt;4&gt;{0,<sp/>1,<sp/>2,<sp/>3}.replicate(1,<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1af5c6f09ec649781789a621d72720a007" kindref="member">ecK</ref>.size());</highlight></codeline>
+<codeline lineno="109"><highlight class="normal"><sp/><sp/><sp/><sp/>G<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/>graph::MeshAdjacencyMatrix(</highlight></codeline>
+<codeline lineno="110"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1ab8a508431690592254dd834a827a1f74" kindref="member">mesh</ref>.<ref refid="structpbat_1_1fem_1_1Mesh_1a384afdf16df5efa27e09f17520402b5b" kindref="member">E</ref>(Eigen::placeholders::all,<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1af5c6f09ec649781789a621d72720a007" kindref="member">ecK</ref>),</highlight></codeline>
+<codeline lineno="111"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>ilocal,</highlight></codeline>
+<codeline lineno="112"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1ab8a508431690592254dd834a827a1f74" kindref="member">mesh</ref>.<ref refid="structpbat_1_1fem_1_1Mesh_1abc65a193ee960705ddf64227afb18809" kindref="member">X</ref>.cols(),</highlight></codeline>
+<codeline lineno="113"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">true</highlight><highlight class="normal">);</highlight></codeline>
+<codeline lineno="114"><highlight class="normal"><sp/><sp/><sp/><sp/>std::tie(GKptr,<sp/>GKadj,<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a75949b0ce4f4dc4a37d5fe0947413026" kindref="member">GKilocal</ref>)<sp/>=<sp/>graph::MatrixToWeightedAdjacency(G);</highlight></codeline>
+<codeline lineno="115"><highlight class="normal"></highlight></codeline>
+<codeline lineno="116"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Dirichlet<sp/>energy</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="117"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>nFineVertices<sp/>=<sp/>data.<ref refid="structpbat_1_1sim_1_1vbd_1_1Data_1a0814000764d127a91a05454ee341504d" kindref="member">mesh</ref>.<ref refid="structpbat_1_1fem_1_1Mesh_1abc65a193ee960705ddf64227afb18809" kindref="member">X</ref>.cols();</highlight></codeline>
+<codeline lineno="118"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1afdebab3dd80f85c6e94375ec4100334e" kindref="member">bIsDirichletVertex</ref>.setConstant(nFineVertices,<sp/></highlight><highlight class="keyword">false</highlight><highlight class="normal">);</highlight></codeline>
+<codeline lineno="119"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1afdebab3dd80f85c6e94375ec4100334e" kindref="member">bIsDirichletVertex</ref>(data.<ref refid="structpbat_1_1sim_1_1vbd_1_1Data_1a0af80e757ad6d712fd8cb988c2723abe" kindref="member">dbc</ref>).setConstant(</highlight><highlight class="keyword">true</highlight><highlight class="normal">);</highlight></codeline>
+<codeline lineno="120"><highlight class="normal"></highlight></codeline>
+<codeline lineno="121"><highlight class="normal"></highlight><highlight class="preprocessor">#ifdef<sp/>PBAT_USE_METIS</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="122"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1abc6b7179bef6b4eacaca30beb6420328" kindref="member">HyperReduce</ref>(data);</highlight></codeline>
+<codeline lineno="123"><highlight class="normal"></highlight><highlight class="preprocessor">#else</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="124"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1ad618e3eed689aefa9303c3160e685286" kindref="member">wgE</ref><sp/>=<sp/>data.<ref refid="structpbat_1_1sim_1_1vbd_1_1Data_1af7202dd6a57b205d8b245e0fc007b160" kindref="member">wg</ref>;</highlight></codeline>
+<codeline lineno="125"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1aed31fc53836d0a471329bf6f76e6ed41" kindref="member">mK</ref><sp/><sp/>=<sp/>data.<ref refid="structpbat_1_1sim_1_1vbd_1_1Data_1a2254c059ec6624402fb8ffab3b825771" kindref="member">m</ref>;</highlight></codeline>
+<codeline lineno="126"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a23f1f16b587f670ba5d906194a70c38d" kindref="member">bActiveE</ref>.setConstant(nFineElements,<sp/></highlight><highlight class="keyword">true</highlight><highlight class="normal">);</highlight></codeline>
+<codeline lineno="127"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1ae5ea2cc51674c045f3c2e85bd82cbf99" kindref="member">bActiveK</ref>.setConstant(nFineVertices,<sp/></highlight><highlight class="keyword">true</highlight><highlight class="normal">);</highlight></codeline>
+<codeline lineno="128"><highlight class="normal"></highlight><highlight class="preprocessor">#endif</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="129"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="130"><highlight class="normal"></highlight></codeline>
+<codeline lineno="131" refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1abc6b7179bef6b4eacaca30beb6420328" refkind="member"><highlight class="normal"></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1abc6b7179bef6b4eacaca30beb6420328" kindref="member">Level::HyperReduce</ref>(<ref refid="structpbat_1_1sim_1_1vbd_1_1Data" kindref="compound">Data</ref><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>data)</highlight></codeline>
+<codeline lineno="132"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="133"><highlight class="normal"><sp/><sp/><sp/><sp/>PBAT_PROFILE_NAMED_SCOPE(</highlight><highlight class="stringliteral">&quot;pbat.sim.vbd.multigrid.Level.HyperReduce&quot;</highlight><highlight class="normal">);</highlight></codeline>
+<codeline lineno="134"><highlight class="normal"></highlight></codeline>
+<codeline lineno="135"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Hyper-reduction</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="136"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>1.<sp/>Partition<sp/>root<sp/>mesh<sp/>elements<sp/>into<sp/>a<sp/>set<sp/>of<sp/>clusters.</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="137"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>2.<sp/>In<sp/>each<sp/>cluster,<sp/>pick<sp/>a<sp/>single<sp/>element<sp/>(i.e.<sp/>the<sp/>one<sp/>closest<sp/>to<sp/>the<sp/>cluster&apos;s<sp/>geometric</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="138"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>center).</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="139"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>3.<sp/>Mark<sp/>that<sp/>element<sp/>as<sp/>active.</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="140"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>4.<sp/>Its<sp/>quadrature<sp/>weight<sp/>should<sp/>be<sp/>the<sp/>sum<sp/>of<sp/>its<sp/>cluster&apos;s<sp/>elements&apos;<sp/>quadrature<sp/>weights.</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="141"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>5.<sp/>Mark<sp/>each<sp/>active<sp/>elements&apos;<sp/>vertices<sp/>as<sp/>active.</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="142"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>6.<sp/>Scale<sp/>each<sp/>active<sp/>vertex&apos;s<sp/>mass<sp/>such<sp/>that<sp/>the<sp/>sum<sp/>of<sp/>active<sp/>vertex<sp/>masses<sp/>=<sp/>sum<sp/>of<sp/>vertex</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="143"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>masses.</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="144"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>nFineElements<sp/>=<sp/>data.<ref refid="structpbat_1_1sim_1_1vbd_1_1Data_1a0814000764d127a91a05454ee341504d" kindref="member">mesh</ref>.<ref refid="structpbat_1_1fem_1_1Mesh_1a384afdf16df5efa27e09f17520402b5b" kindref="member">E</ref>.cols();</highlight></codeline>
+<codeline lineno="145"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>nFineVertices<sp/>=<sp/>data.<ref refid="structpbat_1_1sim_1_1vbd_1_1Data_1a0814000764d127a91a05454ee341504d" kindref="member">mesh</ref>.<ref refid="structpbat_1_1fem_1_1Mesh_1abc65a193ee960705ddf64227afb18809" kindref="member">X</ref>.cols();</highlight></codeline>
+<codeline lineno="146"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a23f1f16b587f670ba5d906194a70c38d" kindref="member">bActiveE</ref>.setConstant(nFineElements,<sp/></highlight><highlight class="keyword">false</highlight><highlight class="normal">);</highlight></codeline>
+<codeline lineno="147"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1ae5ea2cc51674c045f3c2e85bd82cbf99" kindref="member">bActiveK</ref>.setConstant(nFineVertices,<sp/></highlight><highlight class="keyword">false</highlight><highlight class="normal">);</highlight></codeline>
+<codeline lineno="148"><highlight class="normal"></highlight></codeline>
+<codeline lineno="149"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Choose<sp/>coarse<sp/>level<sp/>compute<sp/>budget<sp/>as<sp/>3x<sp/>its<sp/>elements,<sp/>but<sp/>not<sp/>surpassing<sp/>the<sp/>number<sp/>of<sp/>fine</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="150"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>elements.</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="151"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>TODO:<sp/>Implement<sp/>smart<sp/>way<sp/>to<sp/>choose<sp/>computational<sp/>budget<sp/>at<sp/>each<sp/>coarse<sp/>level.</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="152"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>nCoarseElements<sp/>=<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1ab8a508431690592254dd834a827a1f74" kindref="member">mesh</ref>.<ref refid="structpbat_1_1fem_1_1Mesh_1a384afdf16df5efa27e09f17520402b5b" kindref="member">E</ref>.cols();</highlight></codeline>
+<codeline lineno="153"><highlight class="normal"><sp/><sp/><sp/><sp/>Index<sp/>nSubsetElements<sp/><sp/><sp/><sp/><sp/><sp/>=<sp/>std::min(3<sp/>*<sp/>nCoarseElements,<sp/>nFineElements);</highlight></codeline>
+<codeline lineno="154"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Compute<sp/>the<sp/>graph<sp/>of<sp/>face-adjacent<sp/>tetrahedra<sp/>on<sp/>the<sp/>fine<sp/>mesh</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="155"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>Gdual<sp/>=<sp/>graph::MeshDualGraph(data.<ref refid="structpbat_1_1sim_1_1vbd_1_1Data_1a0814000764d127a91a05454ee341504d" kindref="member">mesh</ref>.<ref refid="structpbat_1_1fem_1_1Mesh_1a384afdf16df5efa27e09f17520402b5b" kindref="member">E</ref>,<sp/>nFineVertices);</highlight></codeline>
+<codeline lineno="156"><highlight class="normal"><sp/><sp/><sp/><sp/>Gdual.prune([]([[maybe_unused]]<sp/>Index<sp/>row,<sp/>[[maybe_unused]]<sp/>Index<sp/>col,<sp/>Index<sp/>value)<sp/>{</highlight></codeline>
+<codeline lineno="157"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>bIsFaceAdjacency<sp/>=<sp/>value<sp/>==<sp/>3;</highlight></codeline>
+<codeline lineno="158"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>bIsFaceAdjacency;</highlight></codeline>
+<codeline lineno="159"><highlight class="normal"><sp/><sp/><sp/><sp/>});</highlight></codeline>
+<codeline lineno="160"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>Gdualptr<sp/>=<sp/>graph::AdjacencyMatrixPrefix(Gdual);</highlight></codeline>
+<codeline lineno="161"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>Gdualadj<sp/>=<sp/>graph::AdjacencyMatrixIndices(Gdual);</highlight></codeline>
+<codeline lineno="162"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Partition<sp/>the<sp/>fine<sp/>mesh<sp/>using<sp/>scale-invariant<sp/>geometric<sp/>distance<sp/>between<sp/>element<sp/>barycenters</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="163"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>as<sp/>the<sp/>weight<sp/>function.</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="164"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>TODO:<sp/>Use<sp/>smarter<sp/>weight<sp/>function<sp/>that<sp/>exhibits<sp/>shape<sp/>and<sp/>material<sp/>awareness.</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="165"><highlight class="normal"><sp/><sp/><sp/><sp/>MatrixX<sp/>XEbary<sp/>=<sp/>data.<ref refid="structpbat_1_1sim_1_1vbd_1_1Data_1a0814000764d127a91a05454ee341504d" kindref="member">mesh</ref>.<ref refid="structpbat_1_1fem_1_1Mesh_1a810ae14a3d6596c587f83793132e643e" kindref="member">QuadraturePoints</ref>&lt;1&gt;();</highlight></codeline>
+<codeline lineno="166"><highlight class="normal"><sp/><sp/><sp/><sp/>Scalar<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>scale<sp/>=</highlight></codeline>
+<codeline lineno="167"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>(data.<ref refid="structpbat_1_1sim_1_1vbd_1_1Data_1a0814000764d127a91a05454ee341504d" kindref="member">mesh</ref>.<ref refid="structpbat_1_1fem_1_1Mesh_1abc65a193ee960705ddf64227afb18809" kindref="member">X</ref>.rowwise().maxCoeff()<sp/>-<sp/>data.<ref refid="structpbat_1_1sim_1_1vbd_1_1Data_1a0814000764d127a91a05454ee341504d" kindref="member">mesh</ref>.<ref refid="structpbat_1_1fem_1_1Mesh_1abc65a193ee960705ddf64227afb18809" kindref="member">X</ref>.rowwise().minCoeff()).norm();</highlight></codeline>
+<codeline lineno="168"><highlight class="normal"><sp/><sp/><sp/><sp/>Scalar<sp/>decimalPrecision<sp/>=<sp/>1e4;</highlight></codeline>
+<codeline lineno="169"><highlight class="normal"><sp/><sp/><sp/><sp/>IndexVectorX<sp/>Wdual(Gdual.nonZeros());</highlight></codeline>
+<codeline lineno="170"><highlight class="normal"><sp/><sp/><sp/><sp/>graph::ForEachEdge(Gdualptr,<sp/>Gdualadj,<sp/>[&amp;](Index<sp/>ei,<sp/>Index<sp/>ej,<sp/>Index<sp/>k)<sp/>{</highlight></codeline>
+<codeline lineno="171"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>Scalar<sp/>dij<sp/>=<sp/>(XEbary.col(ei)<sp/>-<sp/>XEbary.col(ej)).norm()<sp/>/<sp/>scale;</highlight></codeline>
+<codeline lineno="172"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>Wdual(k)<sp/><sp/><sp/>=<sp/></highlight><highlight class="keyword">static_cast&lt;</highlight><highlight class="normal">Index</highlight><highlight class="keyword">&gt;</highlight><highlight class="normal">(dij<sp/>*<sp/>decimalPrecision);</highlight></codeline>
+<codeline lineno="173"><highlight class="normal"><sp/><sp/><sp/><sp/>});</highlight></codeline>
+<codeline lineno="174"><highlight class="normal"><sp/><sp/><sp/><sp/>IndexVectorX<sp/>clusters<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/>graph::Partition(Gdualptr,<sp/>Gdualadj,<sp/>Wdual,<sp/>nSubsetElements);</highlight></codeline>
+<codeline lineno="175"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>[clusterPtr,<sp/>clusterAdj]<sp/>=<sp/>graph::MapToAdjacency(clusters);</highlight></codeline>
+<codeline lineno="176"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Compute<sp/>the<sp/>coarse<sp/>level<sp/>quadrature<sp/>weights<sp/>of<sp/>active<sp/>fine<sp/>elements<sp/>as<sp/>the<sp/>sum<sp/>of<sp/>cluster</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="177"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>element<sp/>weights.</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="178"><highlight class="normal"><sp/><sp/><sp/><sp/>VectorX<sp/>clusterQuadWeights<sp/>=<sp/>VectorX::Zero(nSubsetElements);</highlight></codeline>
+<codeline lineno="179"><highlight class="normal"><sp/><sp/><sp/><sp/>graph::ForEachEdge(clusterPtr,<sp/>clusterAdj,<sp/>[&amp;](Index<sp/>c,<sp/>Index<sp/>e,<sp/>[[maybe_unused]]<sp/>Index<sp/>k)<sp/>{</highlight></codeline>
+<codeline lineno="180"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>clusterQuadWeights(c)<sp/>+=<sp/>data.<ref refid="structpbat_1_1sim_1_1vbd_1_1Data_1af7202dd6a57b205d8b245e0fc007b160" kindref="member">wg</ref>(e);</highlight></codeline>
+<codeline lineno="181"><highlight class="normal"><sp/><sp/><sp/><sp/>});</highlight></codeline>
+<codeline lineno="182"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>We<sp/>use<sp/>the<sp/>previously<sp/>computed<sp/>weighting<sp/>scheme<sp/>to<sp/>compute<sp/>&quot;shape-aware&quot;<sp/>cluster<sp/>geometric</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="183"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>centers</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="184"><highlight class="normal"><sp/><sp/><sp/><sp/>MatrixX<sp/>clusterCenters<sp/>=<sp/>MatrixX::Zero(3,<sp/>nSubsetElements);</highlight></codeline>
+<codeline lineno="185"><highlight class="normal"><sp/><sp/><sp/><sp/>graph::ForEachEdge(clusterPtr,<sp/>clusterAdj,<sp/>[&amp;](Index<sp/>c,<sp/>Index<sp/>e,<sp/>[[maybe_unused]]<sp/>Index<sp/>k)<sp/>{</highlight></codeline>
+<codeline lineno="186"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>clusterCenters.col(c)<sp/>+=<sp/>data.<ref refid="structpbat_1_1sim_1_1vbd_1_1Data_1af7202dd6a57b205d8b245e0fc007b160" kindref="member">wg</ref>(e)<sp/>*<sp/>XEbary.col(e)<sp/>/<sp/>clusterQuadWeights(c);</highlight></codeline>
+<codeline lineno="187"><highlight class="normal"><sp/><sp/><sp/><sp/>});</highlight></codeline>
+<codeline lineno="188"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Find<sp/>active<sp/>elements<sp/>as<sp/>those<sp/>closest<sp/>to<sp/>cluster<sp/>centers.</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="189"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>TODO:</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="190"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>We<sp/>might<sp/>want<sp/>to<sp/>make<sp/>this<sp/>adaptive<sp/>per<sp/>timestep.<sp/>This<sp/>could<sp/>be</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="191"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>in<sp/>the<sp/>form<sp/>of<sp/>keeping<sp/>the<sp/>clusters<sp/>pre-computed,<sp/>but<sp/>changing<sp/>the</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="192"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>active<sp/>element<sp/>in<sp/>each<sp/>cluster<sp/>at<sp/>the<sp/>beginning<sp/>of<sp/>each<sp/>time<sp/>step</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="193"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>based<sp/>on<sp/>strain<sp/>rate.</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="194"><highlight class="normal"><sp/><sp/><sp/><sp/>VectorX<sp/>clusterMinDistToCenter<sp/>=</highlight></codeline>
+<codeline lineno="195"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>VectorX::Constant(nSubsetElements,<sp/>std::numeric_limits&lt;Scalar&gt;::max());</highlight></codeline>
+<codeline lineno="196"><highlight class="normal"><sp/><sp/><sp/><sp/>IndexVectorX<sp/>activeElements(nSubsetElements);</highlight></codeline>
+<codeline lineno="197"><highlight class="normal"><sp/><sp/><sp/><sp/>graph::ForEachEdge(clusterPtr,<sp/>clusterAdj,<sp/>[&amp;](Index<sp/>c,<sp/>Index<sp/>e,<sp/>[[maybe_unused]]<sp/>Index<sp/>k)<sp/>{</highlight></codeline>
+<codeline lineno="198"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>Scalar<sp/>d<sp/>=<sp/>(XEbary.col(e)<sp/>-<sp/>clusterCenters.col(c)).squaredNorm();</highlight></codeline>
+<codeline lineno="199"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(d<sp/>&gt;=<sp/>clusterMinDistToCenter(c))</highlight></codeline>
+<codeline lineno="200"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="201"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>activeElements(c)<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/>e;</highlight></codeline>
+<codeline lineno="202"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>clusterMinDistToCenter(c)<sp/>=<sp/>d;</highlight></codeline>
+<codeline lineno="203"><highlight class="normal"><sp/><sp/><sp/><sp/>});</highlight></codeline>
+<codeline lineno="204"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Make<sp/>element<sp/>vertices<sp/>active</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="205"><highlight class="normal"><sp/><sp/><sp/><sp/>IndexVectorX<sp/>activeVertices<sp/>=<sp/>data.<ref refid="structpbat_1_1sim_1_1vbd_1_1Data_1a0814000764d127a91a05454ee341504d" kindref="member">mesh</ref>.<ref refid="structpbat_1_1fem_1_1Mesh_1a384afdf16df5efa27e09f17520402b5b" kindref="member">E</ref>(Eigen::placeholders::all,<sp/>activeElements).reshaped();</highlight></codeline>
+<codeline lineno="206"><highlight class="normal"><sp/><sp/><sp/><sp/>std::sort(activeVertices.begin(),<sp/>activeVertices.end());</highlight></codeline>
+<codeline lineno="207"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>nActiveVertices<sp/>=<sp/>std::distance(</highlight></codeline>
+<codeline lineno="208"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>activeVertices.begin(),</highlight></codeline>
+<codeline lineno="209"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::unique(activeVertices.begin(),<sp/>activeVertices.end()));</highlight></codeline>
+<codeline lineno="210"><highlight class="normal"><sp/><sp/><sp/><sp/>activeVertices.conservativeResize(nActiveVertices);</highlight></codeline>
+<codeline lineno="211"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a23f1f16b587f670ba5d906194a70c38d" kindref="member">bActiveE</ref>(activeElements).setConstant(</highlight><highlight class="keyword">true</highlight><highlight class="normal">);</highlight></codeline>
+<codeline lineno="212"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1ae5ea2cc51674c045f3c2e85bd82cbf99" kindref="member">bActiveK</ref>(activeVertices).setConstant(</highlight><highlight class="keyword">true</highlight><highlight class="normal">);</highlight></codeline>
+<codeline lineno="213"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Compute<sp/>coarse<sp/>level<sp/>quadrature<sp/>weights</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="214"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>TODO:</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="215"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Find<sp/>smarter<sp/>way<sp/>to<sp/>compute<sp/>coarse<sp/>quadrature<sp/>weights.</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="216"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>This<sp/>could<sp/>potentially<sp/>be<sp/>an<sp/>adaptive,<sp/>per-timestep<sp/>method</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="217"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>that<sp/>computes<sp/>a<sp/>quadrature<sp/>weight<sp/>which,<sp/>when<sp/>multiplying</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="218"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>its<sp/>corresponding<sp/>active<sp/>element&apos;s<sp/>elasticity,<sp/>would<sp/>yield</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="219"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>the<sp/>sum<sp/>of<sp/>its<sp/>cluster&apos;s<sp/>elements&apos;<sp/>elastic<sp/>energies.</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="220"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1ad618e3eed689aefa9303c3160e685286" kindref="member">wgE</ref>.setZero(nFineElements);</highlight></codeline>
+<codeline lineno="221"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1ad618e3eed689aefa9303c3160e685286" kindref="member">wgE</ref>(activeElements)<sp/>=<sp/>clusterQuadWeights;</highlight></codeline>
+<codeline lineno="222"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Compute<sp/>coarse<sp/>level<sp/>lumped<sp/>masses<sp/>by<sp/>scaling<sp/>s.t.<sp/>total<sp/>mass<sp/>is<sp/>matched,</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="223"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>i.e.<sp/>\alpha<sp/>*<sp/>\sum<sp/>Mcoarse(i)<sp/>=<sp/>Mtotal<sp/>-&gt;<sp/>\alpha<sp/>=<sp/>Mtotal<sp/>/<sp/>\sum<sp/>Mcoarse(i)</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="224"><highlight class="normal"><sp/><sp/><sp/><sp/>Scalar<sp/>alpha<sp/>=<sp/>data.<ref refid="structpbat_1_1sim_1_1vbd_1_1Data_1a2254c059ec6624402fb8ffab3b825771" kindref="member">m</ref>.sum()<sp/>/<sp/>data.<ref refid="structpbat_1_1sim_1_1vbd_1_1Data_1a2254c059ec6624402fb8ffab3b825771" kindref="member">m</ref>(activeVertices).sum();</highlight></codeline>
+<codeline lineno="225"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1aed31fc53836d0a471329bf6f76e6ed41" kindref="member">mK</ref>.setZero(nFineVertices);</highlight></codeline>
+<codeline lineno="226"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1aed31fc53836d0a471329bf6f76e6ed41" kindref="member">mK</ref>(activeVertices)<sp/>=<sp/>alpha<sp/>*<sp/>data.<ref refid="structpbat_1_1sim_1_1vbd_1_1Data_1a2254c059ec6624402fb8ffab3b825771" kindref="member">m</ref>(activeVertices);</highlight></codeline>
+<codeline lineno="227"><highlight class="normal"></highlight></codeline>
+<codeline lineno="228"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>TODO:</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="229"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Find<sp/>smart<sp/>way<sp/>to<sp/>reduce<sp/>quadrature<sp/>for<sp/>Dirichlet<sp/>boundary<sp/>conditions<sp/>and</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="230"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>contact<sp/>constraints.<sp/>This<sp/>could<sp/>be<sp/>in<sp/>the<sp/>form<sp/>of<sp/>selecting<sp/>only<sp/>a<sp/>fixed-size</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="231"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>subset<sp/>of<sp/>contacts<sp/>with<sp/>the<sp/>deepest<sp/>penetrations,<sp/>while<sp/>the<sp/>Dirichlet<sp/>reduction</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="232"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>should<sp/>be<sp/>based<sp/>on<sp/>shape<sp/>preservation<sp/>and<sp/>can<sp/>be<sp/>precomputed.</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="233"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="234"><highlight class="normal"></highlight></codeline>
+<codeline lineno="235" refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a9a1a48eb8d79156416b7ce3187082718" refkind="member"><highlight class="normal"></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a9a1a48eb8d79156416b7ce3187082718" kindref="member">Level::Prolong</ref>(<ref refid="structpbat_1_1sim_1_1vbd_1_1Data" kindref="compound">Data</ref>&amp;<sp/>data)</highlight><highlight class="keyword"><sp/>const</highlight></codeline>
+<codeline lineno="236"><highlight class="keyword"></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="237"><highlight class="normal"><sp/><sp/><sp/><sp/>PBAT_PROFILE_NAMED_SCOPE(</highlight><highlight class="stringliteral">&quot;pbat.sim.vbd.multigrid.Level.Prolong&quot;</highlight><highlight class="normal">);</highlight></codeline>
+<codeline lineno="238"><highlight class="normal"><sp/><sp/><sp/><sp/>tbb::parallel_for(Index(0),<sp/>data.<ref refid="structpbat_1_1sim_1_1vbd_1_1Data_1a2a0bd0abb260a15041042f27078ab0d9" kindref="member">x</ref>.cols(),<sp/>[&amp;](Index<sp/>i)<sp/>{</highlight></codeline>
+<codeline lineno="239"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>Index<sp/>ec<sp/>=<sp/>ecK(i);</highlight></codeline>
+<codeline lineno="240"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>auto<sp/>uec<sp/>=<sp/>u(Eigen::placeholders::all,<sp/>mesh.E.col(ec));</highlight></codeline>
+<codeline lineno="241"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>auto<sp/>Nec<sp/>=<sp/>NecK.col(i);</highlight></codeline>
+<codeline lineno="242"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>data.x.col(i)<sp/>+=<sp/>uec<sp/>*<sp/>Nec;</highlight></codeline>
+<codeline lineno="243"><highlight class="normal"><sp/><sp/><sp/><sp/>});</highlight></codeline>
+<codeline lineno="244"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="245"><highlight class="normal"></highlight></codeline>
+<codeline lineno="246" refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a8400962314cd373e84191514273cdda4" refkind="member"><highlight class="normal"></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a8400962314cd373e84191514273cdda4" kindref="member">Level::Smooth</ref>(Scalar<sp/>dt,<sp/>Index<sp/>iters,<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1Data" kindref="compound">Data</ref>&amp;<sp/>data)</highlight></codeline>
+<codeline lineno="247"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="248"><highlight class="normal"><sp/><sp/><sp/><sp/>PBAT_PROFILE_NAMED_SCOPE(</highlight><highlight class="stringliteral">&quot;pbat.sim.vbd.multigrid.Level.Smooth&quot;</highlight><highlight class="normal">);</highlight></codeline>
+<codeline lineno="249"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a9cb9f579145195025d2e5e751e6b16dc" kindref="member">u</ref>.setZero();</highlight></codeline>
+<codeline lineno="250"><highlight class="normal"><sp/><sp/><sp/><sp/>Index<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>nPartitions<sp/>=<sp/>Pptr.size()<sp/>-<sp/>1;</highlight></codeline>
+<codeline lineno="251"><highlight class="normal"><sp/><sp/><sp/><sp/>Scalar<sp/>dt2<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/>dt<sp/>*<sp/>dt;</highlight></codeline>
+<codeline lineno="252"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">for</highlight><highlight class="normal"><sp/>(</highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>iter<sp/>=<sp/>0;<sp/>iter<sp/>&lt;<sp/>iters;<sp/>++iter)</highlight></codeline>
+<codeline lineno="253"><highlight class="normal"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="254"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">for</highlight><highlight class="normal"><sp/>(Index<sp/>p<sp/>=<sp/>0;<sp/>p<sp/>&lt;<sp/>nPartitions;<sp/>++p)</highlight></codeline>
+<codeline lineno="255"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="256"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>pBegin<sp/>=<sp/>Pptr(p);</highlight></codeline>
+<codeline lineno="257"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>pEnd<sp/><sp/><sp/>=<sp/>Pptr(p<sp/>+<sp/>1);</highlight></codeline>
+<codeline lineno="258"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>tbb::parallel_for(pBegin,<sp/>pEnd,<sp/>[&amp;](Index<sp/>kp)<sp/>{</highlight></codeline>
+<codeline lineno="259"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>Index<sp/>i<sp/><sp/><sp/><sp/><sp/>=<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a9b30ad5129f3ad7795fde1bf4c61cd67" kindref="member">Padj</ref>(kp);</highlight></codeline>
+<codeline lineno="260"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>gBegin<sp/>=<sp/>GEptr(i);</highlight></codeline>
+<codeline lineno="261"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>gEnd<sp/><sp/><sp/>=<sp/>GEptr(i<sp/>+<sp/>1);</highlight></codeline>
+<codeline lineno="262"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Use<sp/>mini<sp/>API</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="263"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using</highlight><highlight class="normal"><sp/>pbat::math::linalg::mini::ToEigen;</highlight></codeline>
+<codeline lineno="264"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using</highlight><highlight class="normal"><sp/>pbat::math::linalg::mini::FromEigen;</highlight></codeline>
+<codeline lineno="265"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using</highlight><highlight class="normal"><sp/><ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1SMatrix" kindref="compound">pbat::math::linalg::mini::SMatrix</ref>;</highlight></codeline>
+<codeline lineno="266"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using</highlight><highlight class="normal"><sp/><ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1SMatrix" kindref="compound">pbat::math::linalg::mini::SVector</ref>;</highlight></codeline>
+<codeline lineno="267"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using</highlight><highlight class="normal"><sp/><ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1Zeros" kindref="compound">pbat::math::linalg::mini::Zeros</ref>;</highlight></codeline>
+<codeline lineno="268"><highlight class="normal"></highlight></codeline>
+<codeline lineno="269"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Compute<sp/>energy<sp/>derivatives</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="270"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>SMatrix&lt;Scalar,<sp/>3,<sp/>3&gt;<sp/>Hu<sp/>=<sp/>Zeros&lt;Scalar,<sp/>3,<sp/>3&gt;();</highlight></codeline>
+<codeline lineno="271"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>SVector&lt;Scalar,<sp/>3&gt;<sp/>gu<sp/><sp/><sp/><sp/>=<sp/>Zeros&lt;Scalar,<sp/>3&gt;();</highlight></codeline>
+<codeline lineno="272"><highlight class="normal"></highlight></codeline>
+<codeline lineno="273"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Elastic<sp/>energy</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="274"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">for</highlight><highlight class="normal"><sp/>(</highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>kg<sp/>=<sp/>gBegin;<sp/>kg<sp/>&lt;<sp/>gEnd;<sp/>++kg)</highlight></codeline>
+<codeline lineno="275"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="276"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>Index<sp/>ef<sp/>=<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a47d8c865309e3e4b11dd7e2c87836392" kindref="member">GEadj</ref>(kg);</highlight></codeline>
+<codeline lineno="277"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(not<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a23f1f16b587f670ba5d906194a70c38d" kindref="member">bActiveE</ref>(ef))</highlight></codeline>
+<codeline lineno="278"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">continue</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="279"><highlight class="normal"></highlight></codeline>
+<codeline lineno="280"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>IndexVector&lt;4&gt;<sp/>ilocal<sp/>=<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a76b7c7412be98e35731817eb90d35abf" kindref="member">ilocalE</ref>.col(kg);</highlight></codeline>
+<codeline lineno="281"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>Scalar<sp/>wg<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1ad618e3eed689aefa9303c3160e685286" kindref="member">wgE</ref>(ef);</highlight></codeline>
+<codeline lineno="282"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>Scalar<sp/>mug<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/>data.<ref refid="structpbat_1_1sim_1_1vbd_1_1Data_1af5043269e65921692dd1938cd75e9eb4" kindref="member">lame</ref>(0,<sp/>ef);</highlight></codeline>
+<codeline lineno="283"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>Scalar<sp/>lambdag<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/>data.<ref refid="structpbat_1_1sim_1_1vbd_1_1Data_1af5043269e65921692dd1938cd75e9eb4" kindref="member">lame</ref>(1,<sp/>ef);</highlight></codeline>
+<codeline lineno="284"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>Matrix&lt;4,<sp/>3&gt;<sp/>GNef<sp/><sp/><sp/><sp/><sp/>=<sp/>data.<ref refid="structpbat_1_1sim_1_1vbd_1_1Data_1acb06d13aaccc6827135488ff05b9baac" kindref="member">GP</ref>.block&lt;4,<sp/>3&gt;(0,<sp/>3<sp/>*<sp/>ef);</highlight></codeline>
+<codeline lineno="285"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>Matrix&lt;4,<sp/>4&gt;<sp/>N<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a15ada99e6a2788cd0875074ec11241cd" kindref="member">NecVE</ref>.block&lt;4,<sp/>4&gt;(0,<sp/>4<sp/>*<sp/>ef);</highlight></codeline>
+<codeline lineno="286"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>Matrix&lt;3,<sp/>4&gt;<sp/>xe<sp/><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/>data.<ref refid="structpbat_1_1sim_1_1vbd_1_1Data_1a2a0bd0abb260a15041042f27078ab0d9" kindref="member">x</ref>(Eigen::placeholders::all,<sp/>data.<ref refid="structpbat_1_1sim_1_1vbd_1_1Data_1a0814000764d127a91a05454ee341504d" kindref="member">mesh</ref>.<ref refid="structpbat_1_1fem_1_1Mesh_1a384afdf16df5efa27e09f17520402b5b" kindref="member">E</ref>.col(ef));</highlight></codeline>
+<codeline lineno="287"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>IndexMatrix&lt;4,<sp/>4&gt;<sp/>ec<sp/><sp/>=<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1ab8a508431690592254dd834a827a1f74" kindref="member">mesh</ref>.<ref refid="structpbat_1_1fem_1_1Mesh_1a384afdf16df5efa27e09f17520402b5b" kindref="member">E</ref>(Eigen::placeholders::all,<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1af2b4a49b4bcaea445229f49b7afd5c68" kindref="member">ecVE</ref>.col(ef));</highlight></codeline>
+<codeline lineno="288"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">for</highlight><highlight class="normal"><sp/>(</highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>iflocal<sp/>=<sp/>0;<sp/>iflocal<sp/>&lt;<sp/>4;<sp/>++iflocal)</highlight></codeline>
+<codeline lineno="289"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="290"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>xe.col(iflocal)<sp/>+=</highlight></codeline>
+<codeline lineno="291"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a9cb9f579145195025d2e5e751e6b16dc" kindref="member">u</ref>(Eigen::placeholders::all,<sp/>ec.col(iflocal))<sp/>*<sp/>N.col(iflocal);</highlight></codeline>
+<codeline lineno="292"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="293"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using</highlight><highlight class="normal"><sp/>kernels::AccumulateElasticEnergy;</highlight></codeline>
+<codeline lineno="294"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>AccumulateElasticEnergy(</highlight></codeline>
+<codeline lineno="295"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1physics_1_1StableNeoHookeanEnergy_3_013_01_4" kindref="compound">physics::StableNeoHookeanEnergy&lt;3&gt;</ref>{},</highlight></codeline>
+<codeline lineno="296"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>FromEigen(ilocal),</highlight></codeline>
+<codeline lineno="297"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>dt2<sp/>*<sp/>wg,</highlight></codeline>
+<codeline lineno="298"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>mug,</highlight></codeline>
+<codeline lineno="299"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>lambdag,</highlight></codeline>
+<codeline lineno="300"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>FromEigen(xe),</highlight></codeline>
+<codeline lineno="301"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>FromEigen(GNef),</highlight></codeline>
+<codeline lineno="302"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>FromEigen(N),</highlight></codeline>
+<codeline lineno="303"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>gu,</highlight></codeline>
+<codeline lineno="304"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>Hu);</highlight></codeline>
+<codeline lineno="305"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="306"><highlight class="normal"></highlight></codeline>
+<codeline lineno="307"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Kinetic<sp/>+<sp/>Dirichlet<sp/>energy</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="308"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>gBegin<sp/>=<sp/>GKptr(i);</highlight></codeline>
+<codeline lineno="309"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>gEnd<sp/><sp/><sp/>=<sp/>GKptr(i<sp/>+<sp/>1);</highlight></codeline>
+<codeline lineno="310"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">for</highlight><highlight class="normal"><sp/>(</highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>kg<sp/>=<sp/>gBegin;<sp/>kg<sp/>&lt;<sp/>gEnd;<sp/>++kg)</highlight></codeline>
+<codeline lineno="311"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="312"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Kinetic<sp/>energy<sp/>is<sp/>1/2<sp/>*<sp/>mi<sp/>*<sp/>||<sp/>(x^k<sp/>+<sp/>u*N)<sp/>-<sp/>xtilde<sp/>||_2^2</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="313"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>Index<sp/>vf<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/>GKadj(kg);</highlight></codeline>
+<codeline lineno="314"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>bIsActive<sp/><sp/><sp/><sp/>=<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1ae5ea2cc51674c045f3c2e85bd82cbf99" kindref="member">bActiveK</ref>(vf);</highlight></codeline>
+<codeline lineno="315"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>bIsDirichlet<sp/>=<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1afdebab3dd80f85c6e94375ec4100334e" kindref="member">bIsDirichletVertex</ref>(vf);</highlight></codeline>
+<codeline lineno="316"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(not<sp/>bIsActive<sp/>and<sp/>not<sp/>bIsDirichlet)</highlight></codeline>
+<codeline lineno="317"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">continue</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="318"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>Index<sp/>ilocal<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a75949b0ce4f4dc4a37d5fe0947413026" kindref="member">GKilocal</ref>(kg);</highlight></codeline>
+<codeline lineno="319"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>Index<sp/>ec<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1af5c6f09ec649781789a621d72720a007" kindref="member">ecK</ref>(vf);</highlight></codeline>
+<codeline lineno="320"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>SVector&lt;Scalar,<sp/>4&gt;<sp/>Ne<sp/>=<sp/>FromEigen(<ref refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1aa1cf1126c61010f6cc1b3ed2be9a469f" kindref="member">NecK</ref>.col(vf).head&lt;4&gt;());</highlight></codeline>
+<codeline lineno="321"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>SVector&lt;Scalar,<sp/>3&gt;<sp/>xk<sp/>=<sp/>FromEigen(data.<ref refid="structpbat_1_1sim_1_1vbd_1_1Data_1a2a0bd0abb260a15041042f27078ab0d9" kindref="member">x</ref>.col(vf).head&lt;3&gt;());</highlight></codeline>
+<codeline lineno="322"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>SMatrix&lt;Scalar,<sp/>3,<sp/>4&gt;<sp/>ue<sp/>=</highlight></codeline>
+<codeline lineno="323"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>FromEigen(<ref refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a9cb9f579145195025d2e5e751e6b16dc" kindref="member">u</ref>(Eigen::placeholders::all,<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1ab8a508431690592254dd834a827a1f74" kindref="member">mesh</ref>.<ref refid="structpbat_1_1fem_1_1Mesh_1a384afdf16df5efa27e09f17520402b5b" kindref="member">E</ref>.col(ec)).block&lt;3,<sp/>4&gt;(0,<sp/>0));</highlight></codeline>
+<codeline lineno="324"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>SVector&lt;Scalar,<sp/>3&gt;<sp/>x<sp/>=<sp/>xk<sp/>+<sp/>ue<sp/>*<sp/>Ne;</highlight></codeline>
+<codeline lineno="325"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(bIsActive)</highlight></codeline>
+<codeline lineno="326"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="327"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>Scalar<sp/>mvf<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1aed31fc53836d0a471329bf6f76e6ed41" kindref="member">mK</ref>(vf);</highlight></codeline>
+<codeline lineno="328"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>SVector&lt;Scalar,<sp/>3&gt;<sp/>xtilde<sp/>=<sp/>FromEigen(data.<ref refid="structpbat_1_1sim_1_1vbd_1_1Data_1a4fec3531f1dee1ae4ef57c4faf34aeb7" kindref="member">xtilde</ref>.col(vf).head&lt;3&gt;());</highlight></codeline>
+<codeline lineno="329"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>gu<sp/>+=<sp/>Ne(ilocal)<sp/>*<sp/>mvf<sp/>*<sp/>(x<sp/>-<sp/>xtilde);</highlight></codeline>
+<codeline lineno="330"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>Diag(Hu)<sp/>+=<sp/>Ne(ilocal)<sp/>*<sp/>Ne(ilocal)<sp/>*<sp/>mvf;</highlight></codeline>
+<codeline lineno="331"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="332"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Dirichlet<sp/>energy</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="333"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(bIsDirichlet)</highlight></codeline>
+<codeline lineno="334"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="335"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>NOTE:<sp/>We<sp/>should<sp/>have<sp/>an<sp/>explicit<sp/>matrix<sp/>of<sp/>Dirichlet<sp/>boundary<sp/>conditions</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="336"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>so<sp/>that<sp/>we<sp/>can<sp/>control<sp/>them,<sp/>rather<sp/>than<sp/>always<sp/>having<sp/>them<sp/>as<sp/>rest</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="337"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>positions.</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="338"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>SVector&lt;Scalar,<sp/>3&gt;<sp/>xD<sp/>=<sp/>FromEigen(data.<ref refid="structpbat_1_1sim_1_1vbd_1_1Data_1a0814000764d127a91a05454ee341504d" kindref="member">mesh</ref>.<ref refid="structpbat_1_1fem_1_1Mesh_1abc65a193ee960705ddf64227afb18809" kindref="member">X</ref>.col(vf).head&lt;3&gt;());</highlight></codeline>
+<codeline lineno="339"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Dirichlet<sp/>energy<sp/>is<sp/>1/2<sp/>muD<sp/>*<sp/>||<sp/>(x^k<sp/>+<sp/>u*N)<sp/>-<sp/>d(x)<sp/>||_2^2</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="340"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>gu<sp/>+=<sp/>Ne(ilocal)<sp/>*<sp/>data.<ref refid="structpbat_1_1sim_1_1vbd_1_1Data_1a1a29fe9009b7f1592fea20cf22c8edff" kindref="member">muD</ref><sp/>*<sp/>(x<sp/>-<sp/>xD);</highlight></codeline>
+<codeline lineno="341"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>Diag(Hu)<sp/>+=<sp/>Ne(ilocal)<sp/>*<sp/>Ne(ilocal)<sp/>*<sp/>data.<ref refid="structpbat_1_1sim_1_1vbd_1_1Data_1a1a29fe9009b7f1592fea20cf22c8edff" kindref="member">muD</ref>;</highlight></codeline>
+<codeline lineno="342"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="343"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="344"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Integrate</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="345"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(std::abs(Determinant(Hu))<sp/>&lt;<sp/>data.<ref refid="structpbat_1_1sim_1_1vbd_1_1Data_1a3f5c9dc1a0032e5497ba4cf856fe261e" kindref="member">detHZero</ref>)</highlight></codeline>
+<codeline lineno="346"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="347"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>SVector&lt;Scalar,<sp/>3&gt;<sp/>du<sp/>=<sp/>-(Inverse(Hu)<sp/>*<sp/>gu);</highlight></codeline>
+<codeline lineno="348"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a9cb9f579145195025d2e5e751e6b16dc" kindref="member">u</ref>.col(i)<sp/>+=<sp/>ToEigen(du);</highlight></codeline>
+<codeline lineno="349"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>});</highlight></codeline>
+<codeline lineno="350"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="351"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="352"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a9a1a48eb8d79156416b7ce3187082718" kindref="member">Prolong</ref>(data);</highlight></codeline>
+<codeline lineno="353"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="354"><highlight class="normal"></highlight></codeline>
+<codeline lineno="355"><highlight class="normal">}<sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>multigrid</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="356"><highlight class="normal">}<sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>vbd</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="357"><highlight class="normal">}<sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>sim</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="358"><highlight class="normal">}<sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>pbat</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="359"><highlight class="normal"></highlight></codeline>
+<codeline lineno="360"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;pbat/geometry/model/Cube.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="361"><highlight class="normal"></highlight></codeline>
+<codeline lineno="362"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;doctest/doctest.h&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="363"><highlight class="normal"></highlight></codeline>
+<codeline lineno="364"><highlight class="normal">TEST_CASE(</highlight><highlight class="stringliteral">&quot;[sim][vbd][multigrid]<sp/>Level&quot;</highlight><highlight class="normal">)</highlight></codeline>
+<codeline lineno="365"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="366"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/>namespace<sp/></highlight><highlight class="normal">pbat;</highlight></codeline>
+<codeline lineno="367"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using</highlight><highlight class="normal"><sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1Data" kindref="compound">sim::vbd::Data</ref>;</highlight></codeline>
+<codeline lineno="368"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using</highlight><highlight class="normal"><sp/><ref refid="structpbat_1_1fem_1_1Mesh" kindref="compound">sim::vbd::VolumeMesh</ref>;</highlight></codeline>
+<codeline lineno="369"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using</highlight><highlight class="normal"><sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level" kindref="compound">sim::vbd::multigrid::Level</ref>;</highlight></codeline>
+<codeline lineno="370"><highlight class="normal"></highlight></codeline>
+<codeline lineno="371"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Arrange</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="372"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>[VR,<sp/>CR]<sp/>=<sp/>geometry::model::Cube(geometry::model::EMesh::Tetrahedral,<sp/>2);</highlight></codeline>
+<codeline lineno="373"><highlight class="normal"><sp/><sp/><sp/><sp/>Data<sp/>data<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/>Data().WithVolumeMesh(VR,<sp/>CR).Construct();</highlight></codeline>
+<codeline lineno="374"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>[VL,<sp/>CL]<sp/>=<sp/>geometry::model::Cube(geometry::model::EMesh::Tetrahedral,<sp/>0);</highlight></codeline>
+<codeline lineno="375"><highlight class="normal"></highlight></codeline>
+<codeline lineno="376"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Act</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="377"><highlight class="normal"><sp/><sp/><sp/><sp/>Level<sp/>level(data,<sp/>VolumeMesh(VL,<sp/>CL));</highlight></codeline>
+<codeline lineno="378"><highlight class="normal"><sp/><sp/><sp/><sp/>CHECK_EQ(level.mesh.X.cols(),<sp/>VL.cols());</highlight></codeline>
+<codeline lineno="379"><highlight class="normal"><sp/><sp/><sp/><sp/>CHECK_EQ(level.mesh.E.cols(),<sp/>CL.cols());</highlight></codeline>
+<codeline lineno="380"><highlight class="normal"><sp/><sp/><sp/><sp/>CHECK_EQ(level.u.rows(),<sp/>Index(3));</highlight></codeline>
+<codeline lineno="381"><highlight class="normal"><sp/><sp/><sp/><sp/>CHECK_EQ(level.u.cols(),<sp/>VL.cols());</highlight></codeline>
+<codeline lineno="382"><highlight class="normal"><sp/><sp/><sp/><sp/>CHECK_EQ(level.ecVE.rows(),<sp/>4);</highlight></codeline>
+<codeline lineno="383"><highlight class="normal"><sp/><sp/><sp/><sp/>CHECK_EQ(level.ecVE.cols(),<sp/>CR.cols());</highlight></codeline>
+<codeline lineno="384"><highlight class="normal"><sp/><sp/><sp/><sp/>CHECK_EQ(level.NecVE.cols(),<sp/>4<sp/>*<sp/>CR.cols());</highlight></codeline>
+<codeline lineno="385"><highlight class="normal"><sp/><sp/><sp/><sp/>CHECK_EQ(level.NecVE.rows(),<sp/>4);</highlight></codeline>
+<codeline lineno="386"><highlight class="normal"><sp/><sp/><sp/><sp/>CHECK_EQ(level.ilocalE.rows(),<sp/>4);</highlight></codeline>
+<codeline lineno="387"><highlight class="normal"><sp/><sp/><sp/><sp/>CHECK_EQ(level.ilocalE.cols(),<sp/>level.GEadj.size());</highlight></codeline>
+<codeline lineno="388"><highlight class="normal"><sp/><sp/><sp/><sp/>CHECK_EQ(level.bIsDirichletVertex.size(),<sp/>VR.cols());</highlight></codeline>
+<codeline lineno="389"><highlight class="normal"><sp/><sp/><sp/><sp/>CHECK_FALSE((level.ecVE.array()<sp/>&lt;<sp/>0).any());</highlight></codeline>
+<codeline lineno="390"><highlight class="normal">}</highlight></codeline>
+    </programlisting>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/multigrid/Level.cpp"/>
+  </compounddef>
+</doxygen>

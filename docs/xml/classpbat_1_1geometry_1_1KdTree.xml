@@ -1,0 +1,403 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="classpbat_1_1geometry_1_1KdTree" kind="class" language="C++" prot="public">
+    <compoundname>pbat::geometry::KdTree</compoundname>
+    <templateparamlist>
+      <param>
+        <type>int</type>
+        <declname>Dims</declname>
+        <defname>Dims</defname>
+      </param>
+    </templateparamlist>
+      <sectiondef kind="private-static-attrib">
+      <memberdef kind="variable" id="classpbat_1_1geometry_1_1KdTree_1af82046768cf8a4799fc9bafd3b05320a" prot="private" static="yes" mutable="no">
+        <type>const auto</type>
+        <definition>const auto pbat::geometry::KdTree&lt; Dims &gt;::fStopDefault</definition>
+        <argsstring></argsstring>
+        <name>fStopDefault</name>
+        <initializer>= [](auto, auto) {
+        return false;
+    }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/KdTree.h" line="48" column="30" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/KdTree.h" bodystart="48" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="classpbat_1_1geometry_1_1KdTree_1a472056b972c4aa689f0ee03e1b53ed4a" prot="private" static="no" mutable="no">
+        <type>std::vector&lt; Index &gt;</type>
+        <definition>std::vector&lt;Index&gt; pbat::geometry::KdTree&lt; Dims &gt;::mPermutation</definition>
+        <argsstring></argsstring>
+        <name>mPermutation</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>permutation_[i] gives the index of point i in the original points list given to construct(std::vector&lt;Vector3&gt; const&amp; points). </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/KdTree.h" line="95" column="17" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/KdTree.h" bodystart="95" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpbat_1_1geometry_1_1KdTree_1ae1297ba992f01608bae8021ee567ed9a" prot="private" static="no" mutable="no">
+        <type>std::vector&lt; <ref refid="structpbat_1_1geometry_1_1KdTreeNode" kindref="compound">KdTreeNode</ref> &gt;</type>
+        <definition>std::vector&lt;KdTreeNode&gt; pbat::geometry::KdTree&lt; Dims &gt;::mNodes</definition>
+        <argsstring></argsstring>
+        <name>mNodes</name>
+        <briefdescription>
+<para>KDTree nodes. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/KdTree.h" line="98" column="17" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/KdTree.h" bodystart="98" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpbat_1_1geometry_1_1KdTree_1a14275f768bdccaea5eb3e6862f5c9149" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>pbat::geometry::KdTree&lt; Dims &gt;::KdTree</definition>
+        <argsstring>()=default</argsstring>
+        <name>KdTree</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/KdTree.h" line="42" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1geometry_1_1KdTree_1a902b117076a8ace364ad46dc5079f38c" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class TDerivedP</type>
+          </param>
+        </templateparamlist>
+        <type></type>
+        <definition>pbat::geometry::KdTree&lt; Dims &gt;::KdTree</definition>
+        <argsstring>(Eigen::DenseBase&lt; TDerivedP &gt; const &amp;P, std::size_t maxPointsInLeaf=10)</argsstring>
+        <name>KdTree</name>
+        <param>
+          <type>Eigen::DenseBase&lt; TDerivedP &gt; const &amp;</type>
+          <declname>P</declname>
+        </param>
+        <param>
+          <type>std::size_t</type>
+          <declname>maxPointsInLeaf</declname>
+          <defval>10</defval>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/KdTree.h" line="45" column="5" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/KdTree.h" bodystart="103" bodyend="106"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1geometry_1_1KdTree_1a8c9ffac50181d0bd12ae924320f66913" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class FVisit</type>
+          </param>
+          <param>
+            <type>class FStop</type>
+            <defval>decltype(fStopDefault)</defval>
+          </param>
+        </templateparamlist>
+        <type>void</type>
+        <definition>void pbat::geometry::KdTree&lt; Dims &gt;::BreadthFirstSearch</definition>
+        <argsstring>(FVisit visit, FStop stop=fStopDefault, Index root=0) const</argsstring>
+        <name>BreadthFirstSearch</name>
+        <param>
+          <type>FVisit</type>
+          <declname>visit</declname>
+        </param>
+        <param>
+          <type>FStop</type>
+          <declname>stop</declname>
+          <defval>fStopDefault</defval>
+        </param>
+        <param>
+          <type>Index</type>
+          <declname>root</declname>
+          <defval>0</defval>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>visit</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Returns true if the node&apos;s children should be visited, false otherwise </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>stop</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Returns true if the search should stop </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>root</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/KdTree.h" line="60" column="10" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/KdTree.h" bodystart="110" bodyend="133"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1geometry_1_1KdTree_1ace9c3069d77ea93618ede0b0b7faf2dd" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class FVisit</type>
+          </param>
+          <param>
+            <type>class FStop</type>
+            <defval>decltype(fStopDefault)</defval>
+          </param>
+        </templateparamlist>
+        <type>void</type>
+        <definition>void pbat::geometry::KdTree&lt; Dims &gt;::DepthFirstSearch</definition>
+        <argsstring>(FVisit visit, FStop stop=fStopDefault, Index root=0) const</argsstring>
+        <name>DepthFirstSearch</name>
+        <param>
+          <type>FVisit</type>
+          <declname>visit</declname>
+        </param>
+        <param>
+          <type>FStop</type>
+          <declname>stop</declname>
+          <defval>fStopDefault</defval>
+        </param>
+        <param>
+          <type>Index</type>
+          <declname>root</declname>
+          <defval>0</defval>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>visit</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Returns true if the node&apos;s children should be visited, false otherwise </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>stop</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Returns true if the search should stop </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>root</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/KdTree.h" line="69" column="10" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/KdTree.h" bodystart="137" bodyend="161"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1geometry_1_1KdTree_1aa730e5bdeca6a00a9892568beb11cadb" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class TDerivedP</type>
+          </param>
+        </templateparamlist>
+        <type>void</type>
+        <definition>void pbat::geometry::KdTree&lt; Dims &gt;::Construct</definition>
+        <argsstring>(Eigen::DenseBase&lt; TDerivedP &gt; const &amp;P, std::size_t maxPointsInLeaf)</argsstring>
+        <name>Construct</name>
+        <param>
+          <type>Eigen::DenseBase&lt; TDerivedP &gt; const &amp;</type>
+          <declname>P</declname>
+        </param>
+        <param>
+          <type>std::size_t</type>
+          <declname>maxPointsInLeaf</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/KdTree.h" line="72" column="10" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/KdTree.h" bodystart="166" bodyend="180"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1geometry_1_1KdTree_1a5088da8afc4ff19ba1784bad28f4084a" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>std::vector&lt; <ref refid="structpbat_1_1geometry_1_1KdTreeNode" kindref="compound">KdTreeNode</ref> &gt; const  &amp;</type>
+        <definition>std::vector&lt;KdTreeNode&gt; const&amp; pbat::geometry::KdTree&lt; Dims &gt;::Nodes</definition>
+        <argsstring>() const</argsstring>
+        <name>Nodes</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/KdTree.h" line="74" column="23" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/KdTree.h" bodystart="74" bodyend="74"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1geometry_1_1KdTree_1a159540be44d704a8670c47db3272474d" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>std::vector&lt; Index &gt; const  &amp;</type>
+        <definition>std::vector&lt;Index&gt; const&amp; pbat::geometry::KdTree&lt; Dims &gt;::Permutation</definition>
+        <argsstring>() const</argsstring>
+        <name>Permutation</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/KdTree.h" line="76" column="23" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/KdTree.h" bodystart="76" bodyend="76"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1geometry_1_1KdTree_1a19287131e3bd5d8f9b6d64977d9f363d" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>auto</type>
+        <definition>auto pbat::geometry::KdTree&lt; Dims &gt;::PointsInNode</definition>
+        <argsstring>(Index const nodeIdx) const</argsstring>
+        <name>PointsInNode</name>
+        <param>
+          <type>Index const</type>
+          <declname>nodeIdx</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/KdTree.h" line="78" column="10" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/KdTree.h" bodystart="225" bodyend="229"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1geometry_1_1KdTree_1a0ec7959d6d57c3c5cd3176bec71dacd4" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>auto</type>
+        <definition>auto pbat::geometry::KdTree&lt; Dims &gt;::PointsInNode</definition>
+        <argsstring>(KdTreeNode const &amp;node) const</argsstring>
+        <name>PointsInNode</name>
+        <param>
+          <type><ref refid="structpbat_1_1geometry_1_1KdTreeNode" kindref="compound">KdTreeNode</ref> const &amp;</type>
+          <declname>node</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/KdTree.h" line="80" column="10" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/KdTree.h" bodystart="232" bodyend="237"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="protected-func">
+      <memberdef kind="function" id="classpbat_1_1geometry_1_1KdTree_1a0e0237ab432230109f85db88bcfacc93" prot="protected" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class TDerivedP</type>
+          </param>
+        </templateparamlist>
+        <type>void</type>
+        <definition>void pbat::geometry::KdTree&lt; Dims &gt;::DoConstruct</definition>
+        <argsstring>(Index const nodeIdx, Eigen::DenseBase&lt; TDerivedP &gt; const &amp;P, AxisAlignedBoundingBox&lt; Dims &gt; const &amp;aabb, Index const begin, std::size_t const n, std::size_t maxPointsInLeaf)</argsstring>
+        <name>DoConstruct</name>
+        <param>
+          <type>Index const</type>
+          <declname>nodeIdx</declname>
+        </param>
+        <param>
+          <type>Eigen::DenseBase&lt; TDerivedP &gt; const &amp;</type>
+          <declname>P</declname>
+        </param>
+        <param>
+          <type><ref refid="classpbat_1_1geometry_1_1AxisAlignedBoundingBox" kindref="compound">AxisAlignedBoundingBox</ref>&lt; Dims &gt; const &amp;</type>
+          <declname>aabb</declname>
+        </param>
+        <param>
+          <type>Index const</type>
+          <declname>begin</declname>
+        </param>
+        <param>
+          <type>std::size_t const</type>
+          <declname>n</declname>
+        </param>
+        <param>
+          <type>std::size_t</type>
+          <declname>maxPointsInLeaf</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/KdTree.h" line="84" column="10" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/KdTree.h" bodystart="184" bodyend="222"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1geometry_1_1KdTree_1a9afbb1955aef32445dfe0d3930685890" prot="protected" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>Index</type>
+        <definition>Index pbat::geometry::KdTree&lt; Dims &gt;::AddNode</definition>
+        <argsstring>(Index begin, std::size_t n, Index depth)</argsstring>
+        <name>AddNode</name>
+        <param>
+          <type>Index</type>
+          <declname>begin</declname>
+        </param>
+        <param>
+          <type>std::size_t</type>
+          <declname>n</declname>
+        </param>
+        <param>
+          <type>Index</type>
+          <declname>depth</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/KdTree.h" line="92" column="11" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/KdTree.h" bodystart="240" bodyend="249"/>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/KdTree.h" line="40" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/KdTree.h" bodystart="39" bodyend="99"/>
+    <listofallmembers>
+      <member refid="classpbat_1_1geometry_1_1KdTree_1a9afbb1955aef32445dfe0d3930685890" prot="protected" virt="non-virtual"><scope>pbat::geometry::KdTree</scope><name>AddNode</name></member>
+      <member refid="classpbat_1_1geometry_1_1KdTree_1a8c9ffac50181d0bd12ae924320f66913" prot="public" virt="non-virtual"><scope>pbat::geometry::KdTree</scope><name>BreadthFirstSearch</name></member>
+      <member refid="classpbat_1_1geometry_1_1KdTree_1aa730e5bdeca6a00a9892568beb11cadb" prot="public" virt="non-virtual"><scope>pbat::geometry::KdTree</scope><name>Construct</name></member>
+      <member refid="classpbat_1_1geometry_1_1KdTree_1ace9c3069d77ea93618ede0b0b7faf2dd" prot="public" virt="non-virtual"><scope>pbat::geometry::KdTree</scope><name>DepthFirstSearch</name></member>
+      <member refid="classpbat_1_1geometry_1_1KdTree_1a0e0237ab432230109f85db88bcfacc93" prot="protected" virt="non-virtual"><scope>pbat::geometry::KdTree</scope><name>DoConstruct</name></member>
+      <member refid="classpbat_1_1geometry_1_1KdTree_1af82046768cf8a4799fc9bafd3b05320a" prot="private" virt="non-virtual"><scope>pbat::geometry::KdTree</scope><name>fStopDefault</name></member>
+      <member refid="classpbat_1_1geometry_1_1KdTree_1a14275f768bdccaea5eb3e6862f5c9149" prot="public" virt="non-virtual"><scope>pbat::geometry::KdTree</scope><name>KdTree</name></member>
+      <member refid="classpbat_1_1geometry_1_1KdTree_1a902b117076a8ace364ad46dc5079f38c" prot="public" virt="non-virtual"><scope>pbat::geometry::KdTree</scope><name>KdTree</name></member>
+      <member refid="classpbat_1_1geometry_1_1KdTree_1ae1297ba992f01608bae8021ee567ed9a" prot="private" virt="non-virtual"><scope>pbat::geometry::KdTree</scope><name>mNodes</name></member>
+      <member refid="classpbat_1_1geometry_1_1KdTree_1a472056b972c4aa689f0ee03e1b53ed4a" prot="private" virt="non-virtual"><scope>pbat::geometry::KdTree</scope><name>mPermutation</name></member>
+      <member refid="classpbat_1_1geometry_1_1KdTree_1a5088da8afc4ff19ba1784bad28f4084a" prot="public" virt="non-virtual"><scope>pbat::geometry::KdTree</scope><name>Nodes</name></member>
+      <member refid="classpbat_1_1geometry_1_1KdTree_1a159540be44d704a8670c47db3272474d" prot="public" virt="non-virtual"><scope>pbat::geometry::KdTree</scope><name>Permutation</name></member>
+      <member refid="classpbat_1_1geometry_1_1KdTree_1a19287131e3bd5d8f9b6d64977d9f363d" prot="public" virt="non-virtual"><scope>pbat::geometry::KdTree</scope><name>PointsInNode</name></member>
+      <member refid="classpbat_1_1geometry_1_1KdTree_1a0ec7959d6d57c3c5cd3176bec71dacd4" prot="public" virt="non-virtual"><scope>pbat::geometry::KdTree</scope><name>PointsInNode</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

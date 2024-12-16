@@ -1,0 +1,34 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="dir_8d1befc4dcb8b2b882b2b5b4675702ae" kind="dir">
+    <compoundname>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod</compoundname>
+    <innerfile refid="source_2pbat_2sim_2vbd_2lod_2DirichletEnergy_8cpp">DirichletEnergy.cpp</innerfile>
+    <innerfile refid="source_2pbat_2sim_2vbd_2lod_2DirichletEnergy_8h">DirichletEnergy.h</innerfile>
+    <innerfile refid="source_2pbat_2sim_2vbd_2lod_2ElasticEnergy_8cpp">ElasticEnergy.cpp</innerfile>
+    <innerfile refid="source_2pbat_2sim_2vbd_2lod_2ElasticEnergy_8h">ElasticEnergy.h</innerfile>
+    <innerfile refid="source_2pbat_2sim_2vbd_2lod_2Hierarchy_8cpp">Hierarchy.cpp</innerfile>
+    <innerfile refid="source_2pbat_2sim_2vbd_2lod_2Hierarchy_8h">Hierarchy.h</innerfile>
+    <innerfile refid="source_2pbat_2sim_2vbd_2lod_2Integrator_8cpp">Integrator.cpp</innerfile>
+    <innerfile refid="source_2pbat_2sim_2vbd_2lod_2Integrator_8h">Integrator.h</innerfile>
+    <innerfile refid="vbd_2lod_2Kernels_8cpp">Kernels.cpp</innerfile>
+    <innerfile refid="vbd_2lod_2Kernels_8h">Kernels.h</innerfile>
+    <innerfile refid="source_2pbat_2sim_2vbd_2lod_2Level_8cpp">Level.cpp</innerfile>
+    <innerfile refid="source_2pbat_2sim_2vbd_2lod_2Level_8h">Level.h</innerfile>
+    <innerfile refid="source_2pbat_2sim_2vbd_2lod_2Lod_8h">Lod.h</innerfile>
+    <innerfile refid="source_2pbat_2sim_2vbd_2lod_2MomentumEnergy_8cpp">MomentumEnergy.cpp</innerfile>
+    <innerfile refid="source_2pbat_2sim_2vbd_2lod_2MomentumEnergy_8h">MomentumEnergy.h</innerfile>
+    <innerfile refid="source_2pbat_2sim_2vbd_2lod_2Prolongation_8cpp">Prolongation.cpp</innerfile>
+    <innerfile refid="source_2pbat_2sim_2vbd_2lod_2Prolongation_8h">Prolongation.h</innerfile>
+    <innerfile refid="source_2pbat_2sim_2vbd_2lod_2Quadrature_8cpp">Quadrature.cpp</innerfile>
+    <innerfile refid="source_2pbat_2sim_2vbd_2lod_2Quadrature_8h">Quadrature.h</innerfile>
+    <innerfile refid="source_2pbat_2sim_2vbd_2lod_2Restriction_8cpp">Restriction.cpp</innerfile>
+    <innerfile refid="source_2pbat_2sim_2vbd_2lod_2Restriction_8h">Restriction.h</innerfile>
+    <innerfile refid="source_2pbat_2sim_2vbd_2lod_2Smoother_8cpp">Smoother.cpp</innerfile>
+    <innerfile refid="source_2pbat_2sim_2vbd_2lod_2Smoother_8h">Smoother.h</innerfile>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/"/>
+  </compounddef>
+</doxygen>

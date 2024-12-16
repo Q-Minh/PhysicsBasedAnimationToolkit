@@ -1,0 +1,724 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="ClosestPointQueries_8h" kind="file" language="C++">
+    <compoundname>ClosestPointQueries.h</compoundname>
+    <includes refid="HostDevice_8h" local="yes">pbat/HostDevice.h</includes>
+    <includes refid="Mini_8h" local="yes">pbat/math/linalg/mini/Mini.h</includes>
+    <includes local="no">algorithm</includes>
+    <includes local="no">cassert</includes>
+    <includedby refid="ClosestPointQueries_8cpp" local="yes">/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/ClosestPointQueries.cpp</includedby>
+    <includedby refid="DistanceQueries_8h" local="yes">/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/DistanceQueries.h</includedby>
+    <includedby refid="OverlapQueries_8h" local="yes">/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/OverlapQueries.h</includedby>
+    <includedby refid="source_2pbat_2geometry_2Geometry_8h" local="yes">/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/Geometry.h</includedby>
+    <includedby refid="xpbd_2Kernels_8h" local="yes">/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Kernels.h</includedby>
+    <incdepgraph>
+      <node id="15">
+        <label>functional</label>
+      </node>
+      <node id="36">
+        <label>limits</label>
+      </node>
+      <node id="9">
+        <label>BinaryOperations.h</label>
+        <link refid="BinaryOperations_8h_source"/>
+        <childnode refid="10" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="13" relation="include">
+        </childnode>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="14" relation="include">
+        </childnode>
+        <childnode refid="15" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+      </node>
+      <node id="4">
+        <label>Assign.h</label>
+        <link refid="Assign_8h_source"/>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+      </node>
+      <node id="25">
+        <label>cstdint</label>
+      </node>
+      <node id="20">
+        <label>Geometry.h</label>
+        <link refid="source_2pbat_2math_2linalg_2mini_2Geometry_8h_source"/>
+        <childnode refid="10" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+      </node>
+      <node id="12">
+        <label>Transpose.h</label>
+        <link refid="Transpose_8h_source"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+      </node>
+      <node id="34">
+        <label>UnaryOperations.h</label>
+        <link refid="UnaryOperations_8h_source"/>
+        <childnode refid="10" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="28" relation="include">
+        </childnode>
+        <childnode refid="13" relation="include">
+        </childnode>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="35" relation="include">
+        </childnode>
+        <childnode refid="14" relation="include">
+        </childnode>
+        <childnode refid="36" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+      </node>
+      <node id="21">
+        <label>Inverse.h</label>
+        <link refid="Inverse_8h_source"/>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="22" relation="include">
+        </childnode>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+      </node>
+      <node id="14">
+        <label>cmath</label>
+      </node>
+      <node id="37">
+        <label>cassert</label>
+      </node>
+      <node id="18">
+        <label>Eigen/Core</label>
+      </node>
+      <node id="32">
+        <label>Repeat.h</label>
+        <link refid="Repeat_8h_source"/>
+        <childnode refid="10" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+      </node>
+      <node id="22">
+        <label>Matrix.h</label>
+        <link refid="Matrix_8h_source"/>
+        <childnode refid="10" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="23" relation="include">
+        </childnode>
+        <childnode refid="24" relation="include">
+        </childnode>
+        <childnode refid="25" relation="include">
+        </childnode>
+        <childnode refid="26" relation="include">
+        </childnode>
+        <childnode refid="27" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>pbat/HostDevice.h</label>
+        <link refid="HostDevice_8h_source"/>
+      </node>
+      <node id="5">
+        <label>Concepts.h</label>
+        <link refid="math_2linalg_2mini_2Concepts_8h_source"/>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+      </node>
+      <node id="13">
+        <label>Scale.h</label>
+        <link refid="Scale_8h_source"/>
+        <childnode refid="10" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>pbat/math/linalg/mini/Mini.h</label>
+        <link refid="Mini_8h_source"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="16" relation="include">
+        </childnode>
+        <childnode refid="17" relation="include">
+        </childnode>
+        <childnode refid="19" relation="include">
+        </childnode>
+        <childnode refid="20" relation="include">
+        </childnode>
+        <childnode refid="21" relation="include">
+        </childnode>
+        <childnode refid="22" relation="include">
+        </childnode>
+        <childnode refid="28" relation="include">
+        </childnode>
+        <childnode refid="30" relation="include">
+        </childnode>
+        <childnode refid="29" relation="include">
+        </childnode>
+        <childnode refid="32" relation="include">
+        </childnode>
+        <childnode refid="13" relation="include">
+        </childnode>
+        <childnode refid="33" relation="include">
+        </childnode>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="34" relation="include">
+        </childnode>
+      </node>
+      <node id="27">
+        <label>string.h</label>
+      </node>
+      <node id="17">
+        <label>Eigen.h</label>
+        <link refid="math_2linalg_2mini_2Eigen_8h_source"/>
+        <childnode refid="10" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="18" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+      </node>
+      <node id="16">
+        <label>Determinant.h</label>
+        <link refid="Determinant_8h_source"/>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+      </node>
+      <node id="8">
+        <label>utility</label>
+      </node>
+      <node id="24">
+        <label>array</label>
+      </node>
+      <node id="31">
+        <label>math.h</label>
+      </node>
+      <node id="29">
+        <label>Reductions.h</label>
+        <link refid="Reductions_8h_source"/>
+        <childnode refid="10" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="30" relation="include">
+        </childnode>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+      </node>
+      <node id="19">
+        <label>Flatten.h</label>
+        <link refid="Flatten_8h_source"/>
+        <childnode refid="10" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+      </node>
+      <node id="30">
+        <label>Product.h</label>
+        <link refid="Product_8h_source"/>
+        <childnode refid="10" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+      </node>
+      <node id="10">
+        <label>Api.h</label>
+        <link refid="Api_8h_source"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+      </node>
+      <node id="11">
+        <label>SubMatrix.h</label>
+        <link refid="SubMatrix_8h_source"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/ClosestPointQueries.h</label>
+        <link refid="ClosestPointQueries_8h"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="35" relation="include">
+        </childnode>
+        <childnode refid="37" relation="include">
+        </childnode>
+      </node>
+      <node id="23">
+        <label>pbat/common/ConstexprFor.h</label>
+        <link refid="ConstexprFor_8h_source"/>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+      </node>
+      <node id="6">
+        <label>concepts</label>
+      </node>
+      <node id="7">
+        <label>type_traits</label>
+      </node>
+      <node id="35">
+        <label>algorithm</label>
+      </node>
+      <node id="26">
+        <label>initializer_list</label>
+      </node>
+      <node id="33">
+        <label>Stack.h</label>
+        <link refid="math_2linalg_2mini_2Stack_8h_source"/>
+        <childnode refid="10" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+      </node>
+      <node id="28">
+        <label>Norm.h</label>
+        <link refid="Norm_8h_source"/>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="29" relation="include">
+        </childnode>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="31" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+      </node>
+    </incdepgraph>
+    <invincdepgraph>
+      <node id="2">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/DistanceQueries.h</label>
+        <link refid="DistanceQueries_8h_source"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+      </node>
+      <node id="7">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/OverlapQueries.h</label>
+        <link refid="OverlapQueries_8h_source"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+      </node>
+      <node id="4">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/Pbat.h</label>
+        <link refid="Pbat_8h_source"/>
+      </node>
+      <node id="8">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Kernels.h</label>
+        <link refid="xpbd_2Kernels_8h_source"/>
+        <childnode refid="9" relation="include">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/Geometry.h</label>
+        <link refid="source_2pbat_2geometry_2Geometry_8h_source"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+      </node>
+      <node id="9">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Xpbd.h</label>
+        <link refid="source_2pbat_2sim_2xpbd_2Xpbd_8h_source"/>
+      </node>
+      <node id="5">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/TetrahedralAabbHierarchy.h</label>
+        <link refid="source_2pbat_2geometry_2TetrahedralAabbHierarchy_8h_source"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/ClosestPointQueries.h</label>
+        <link refid="ClosestPointQueries_8h"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+      </node>
+      <node id="6">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/TriangleAabbHierarchy.h</label>
+        <link refid="source_2pbat_2geometry_2TriangleAabbHierarchy_8h_source"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+      </node>
+    </invincdepgraph>
+    <innernamespace refid="namespacepbat">pbat</innernamespace>
+    <innernamespace refid="namespacepbat_1_1geometry">pbat::geometry</innernamespace>
+    <innernamespace refid="namespacepbat_1_1geometry_1_1ClosestPointQueries">pbat::geometry::ClosestPointQueries</innernamespace>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="preprocessor">#ifndef<sp/>PBAT_GEOMETRY_CLOSEST_POINT_QUERIES_H</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="2"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>PBAT_GEOMETRY_CLOSEST_POINT_QUERIES_H</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="3"><highlight class="normal"></highlight></codeline>
+<codeline lineno="4"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;pbat/HostDevice.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="5"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;pbat/math/linalg/mini/Mini.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="6"><highlight class="normal"></highlight></codeline>
+<codeline lineno="7"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;algorithm&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="8"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;cassert&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="9"><highlight class="normal"></highlight></codeline>
+<codeline lineno="10"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal">pbat<sp/>{</highlight></codeline>
+<codeline lineno="11"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal">geometry<sp/>{</highlight></codeline>
+<codeline lineno="12"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal">ClosestPointQueries<sp/>{</highlight></codeline>
+<codeline lineno="13"><highlight class="normal"></highlight></codeline>
+<codeline lineno="14"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal">mini<sp/>=<sp/>math::linalg::mini;</highlight></codeline>
+<codeline lineno="15"><highlight class="normal"></highlight></codeline>
+<codeline lineno="23"><highlight class="keyword">template</highlight><highlight class="normal"><sp/>&lt;mini::CMatrix<sp/>TMatrixX,<sp/>mini::CMatrix<sp/>TMatrixP,<sp/>mini::CMatrix<sp/>TMatrixN&gt;</highlight></codeline>
+<codeline lineno="24"><highlight class="normal">PBAT_HOST_DEVICE<sp/><ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1SMatrix" kindref="compound">mini::SVector&lt;typename TMatrixX::ScalarType, TMatrixX::kRows&gt;</ref></highlight></codeline>
+<codeline lineno="25"><highlight class="normal">PointOnPlane(TMatrixX<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>X,<sp/>TMatrixP<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>P,<sp/>TMatrixN<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>n);</highlight></codeline>
+<codeline lineno="26"><highlight class="normal"></highlight></codeline>
+<codeline lineno="34"><highlight class="keyword">template</highlight><highlight class="normal"><sp/>&lt;mini::CMatrix<sp/>TMatrixX,<sp/>mini::CMatrix<sp/>TMatrixP,<sp/>mini::CMatrix<sp/>TMatrixQ&gt;</highlight></codeline>
+<codeline lineno="35"><highlight class="normal">PBAT_HOST_DEVICE<sp/><ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1SMatrix" kindref="compound">mini::SVector&lt;typename TMatrixX::ScalarType, TMatrixX::kRows&gt;</ref></highlight></codeline>
+<codeline lineno="36"><highlight class="normal">PointOnLineSegment(TMatrixX<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>X,<sp/>TMatrixP<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>P,<sp/>TMatrixQ<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>Q);</highlight></codeline>
+<codeline lineno="37"><highlight class="normal"></highlight></codeline>
+<codeline lineno="46"><highlight class="keyword">template</highlight><highlight class="normal"><sp/>&lt;mini::CMatrix<sp/>TMatrixX,<sp/>mini::CMatrix<sp/>TMatrixL,<sp/>mini::CMatrix<sp/>TMatrixU&gt;</highlight></codeline>
+<codeline lineno="47"><highlight class="normal">PBAT_HOST_DEVICE<sp/><ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1SMatrix" kindref="compound">mini::SVector&lt;typename TMatrixX::ScalarType, TMatrixX::kRows&gt;</ref></highlight></codeline>
+<codeline lineno="48"><highlight class="normal">PointOnAxisAlignedBoundingBox(TMatrixX<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>X,<sp/>TMatrixL<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>L,<sp/>TMatrixU<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>U);</highlight></codeline>
+<codeline lineno="49"><highlight class="normal"></highlight></codeline>
+<codeline lineno="58"><highlight class="keyword">template</highlight><highlight class="normal"><sp/>&lt;</highlight></codeline>
+<codeline lineno="59"><highlight class="normal"><sp/><sp/><sp/><sp/>mini::CMatrix<sp/>TMatrixP,</highlight></codeline>
+<codeline lineno="60"><highlight class="normal"><sp/><sp/><sp/><sp/>mini::CMatrix<sp/>TMatrixA,</highlight></codeline>
+<codeline lineno="61"><highlight class="normal"><sp/><sp/><sp/><sp/>mini::CMatrix<sp/>TMatrixB,</highlight></codeline>
+<codeline lineno="62"><highlight class="normal"><sp/><sp/><sp/><sp/>mini::CMatrix<sp/>TMatrixC&gt;</highlight></codeline>
+<codeline lineno="63"><highlight class="normal">PBAT_HOST_DEVICE<sp/><ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1SMatrix" kindref="compound">mini::SVector&lt;typename TMatrixP::ScalarType, 3&gt;</ref></highlight></codeline>
+<codeline lineno="64"><highlight class="normal">UvwPointInTriangle(TMatrixP<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>P,<sp/>TMatrixA<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>A,<sp/>TMatrixB<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>B,<sp/>TMatrixC<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>C);</highlight></codeline>
+<codeline lineno="65"><highlight class="normal"></highlight></codeline>
+<codeline lineno="74"><highlight class="keyword">template</highlight><highlight class="normal"><sp/>&lt;</highlight></codeline>
+<codeline lineno="75"><highlight class="normal"><sp/><sp/><sp/><sp/>mini::CMatrix<sp/>TMatrixP,</highlight></codeline>
+<codeline lineno="76"><highlight class="normal"><sp/><sp/><sp/><sp/>mini::CMatrix<sp/>TMatrixA,</highlight></codeline>
+<codeline lineno="77"><highlight class="normal"><sp/><sp/><sp/><sp/>mini::CMatrix<sp/>TMatrixB,</highlight></codeline>
+<codeline lineno="78"><highlight class="normal"><sp/><sp/><sp/><sp/>mini::CMatrix<sp/>TMatrixC&gt;</highlight></codeline>
+<codeline lineno="79"><highlight class="normal">PBAT_HOST_DEVICE<sp/><ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1SMatrix" kindref="compound">mini::SVector&lt;typename TMatrixP::ScalarType, TMatrixP::kRows&gt;</ref></highlight></codeline>
+<codeline lineno="80"><highlight class="normal">PointInTriangle(TMatrixP<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>P,<sp/>TMatrixA<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>A,<sp/>TMatrixB<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>B,<sp/>TMatrixC<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>C);</highlight></codeline>
+<codeline lineno="81"><highlight class="normal"></highlight></codeline>
+<codeline lineno="93"><highlight class="keyword">template</highlight><highlight class="normal"><sp/>&lt;</highlight></codeline>
+<codeline lineno="94"><highlight class="normal"><sp/><sp/><sp/><sp/>mini::CMatrix<sp/>TMatrixP,</highlight></codeline>
+<codeline lineno="95"><highlight class="normal"><sp/><sp/><sp/><sp/>mini::CMatrix<sp/>TMatrixA,</highlight></codeline>
+<codeline lineno="96"><highlight class="normal"><sp/><sp/><sp/><sp/>mini::CMatrix<sp/>TMatrixB,</highlight></codeline>
+<codeline lineno="97"><highlight class="normal"><sp/><sp/><sp/><sp/>mini::CMatrix<sp/>TMatrixC,</highlight></codeline>
+<codeline lineno="98"><highlight class="normal"><sp/><sp/><sp/><sp/>mini::CMatrix<sp/>TMatrixD&gt;</highlight></codeline>
+<codeline lineno="99"><highlight class="normal">PBAT_HOST_DEVICE<sp/><ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1SMatrix" kindref="compound">mini::SVector&lt;typename TMatrixP::ScalarType, TMatrixP::kRows&gt;</ref><sp/>PointInTetrahedron(</highlight></codeline>
+<codeline lineno="100"><highlight class="normal"><sp/><sp/><sp/><sp/>TMatrixP<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>P,</highlight></codeline>
+<codeline lineno="101"><highlight class="normal"><sp/><sp/><sp/><sp/>TMatrixA<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>A,</highlight></codeline>
+<codeline lineno="102"><highlight class="normal"><sp/><sp/><sp/><sp/>TMatrixB<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>B,</highlight></codeline>
+<codeline lineno="103"><highlight class="normal"><sp/><sp/><sp/><sp/>TMatrixC<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>C,</highlight></codeline>
+<codeline lineno="104"><highlight class="normal"><sp/><sp/><sp/><sp/>TMatrixD<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>D);</highlight></codeline>
+<codeline lineno="105"><highlight class="normal"></highlight></codeline>
+<codeline lineno="106"><highlight class="normal"></highlight><highlight class="keyword">template</highlight><highlight class="normal"><sp/>&lt;mini::CMatrix<sp/>TMatrixX,<sp/>mini::CMatrix<sp/>TMatrixP,<sp/>mini::CMatrix<sp/>TMatrixN&gt;</highlight></codeline>
+<codeline lineno="107"><highlight class="normal">PBAT_HOST_DEVICE<sp/><ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1SMatrix" kindref="compound">mini::SVector&lt;typename TMatrixX::ScalarType, TMatrixX::kRows&gt;</ref></highlight></codeline>
+<codeline lineno="108"><highlight class="normal">PointOnPlane(TMatrixX<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>X,<sp/>TMatrixP<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>P,<sp/>TMatrixN<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>n)</highlight></codeline>
+<codeline lineno="109"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="110"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/>namespace<sp/></highlight><highlight class="normal">std;</highlight></codeline>
+<codeline lineno="111"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using</highlight><highlight class="normal"><sp/>ScalarType<sp/>=<sp/></highlight><highlight class="keyword">typename</highlight><highlight class="normal"><sp/>TMatrixX::ScalarType;</highlight></codeline>
+<codeline lineno="112"><highlight class="normal"></highlight><highlight class="preprocessor">#ifndef<sp/>NDEBUG</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="113"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>bIsNormalUnit<sp/>=<sp/>abs(SquaredNorm(n)<sp/>-<sp/>ScalarType(1))<sp/>&lt;=<sp/>ScalarType(1e-15);</highlight></codeline>
+<codeline lineno="114"><highlight class="normal"><sp/><sp/><sp/><sp/>assert(bIsNormalUnit);</highlight></codeline>
+<codeline lineno="115"><highlight class="normal"></highlight><highlight class="preprocessor">#endif</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="116"><highlight class="normal"></highlight></codeline>
+<codeline lineno="119"><highlight class="normal"><sp/><sp/><sp/><sp/>ScalarType<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>t<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/>Dot(n,<sp/>X<sp/>-<sp/>P);</highlight></codeline>
+<codeline lineno="120"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1SMatrix" kindref="compound">mini::SVector&lt;ScalarType, TMatrixX::kRows&gt;</ref><sp/>Xplane<sp/>=<sp/>X<sp/>-<sp/>t<sp/>*<sp/>n;</highlight></codeline>
+<codeline lineno="121"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>Xplane;</highlight></codeline>
+<codeline lineno="122"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="123"><highlight class="normal"></highlight></codeline>
+<codeline lineno="124"><highlight class="normal"></highlight><highlight class="keyword">template</highlight><highlight class="normal"><sp/>&lt;mini::CMatrix<sp/>TMatrixX,<sp/>mini::CMatrix<sp/>TMatrixP,<sp/>mini::CMatrix<sp/>TMatrixQ&gt;</highlight></codeline>
+<codeline lineno="125"><highlight class="normal">PBAT_HOST_DEVICE<sp/><ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1SMatrix" kindref="compound">mini::SVector&lt;typename TMatrixX::ScalarType, TMatrixX::kRows&gt;</ref></highlight></codeline>
+<codeline lineno="126"><highlight class="normal">PointOnLineSegment(TMatrixX<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>X,<sp/>TMatrixP<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>P,<sp/>TMatrixQ<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>Q)</highlight></codeline>
+<codeline lineno="127"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="128"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using</highlight><highlight class="normal"><sp/>ScalarType<sp/>=<sp/></highlight><highlight class="keyword">typename</highlight><highlight class="normal"><sp/>TMatrixX::ScalarType;</highlight></codeline>
+<codeline lineno="129"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/>namespace<sp/></highlight><highlight class="normal">std;</highlight></codeline>
+<codeline lineno="133"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1SMatrix" kindref="compound">mini::SVector&lt;ScalarType, TMatrixX::kRows&gt;</ref><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>PQ<sp/>=<sp/>Q<sp/>-<sp/>P;</highlight></codeline>
+<codeline lineno="134"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Project<sp/>X<sp/>onto<sp/>PQ,<sp/>computing<sp/>parameterized<sp/>position<sp/>R(t)<sp/>=<sp/>P<sp/>+<sp/>t*(Q<sp/>�<sp/>P)</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="135"><highlight class="normal"><sp/><sp/><sp/><sp/>ScalarType<sp/>t<sp/>=<sp/>Dot(X<sp/>-<sp/>P,<sp/>PQ)<sp/>/<sp/>SquaredNorm(PQ);</highlight></codeline>
+<codeline lineno="136"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>If<sp/>outside<sp/>segment,<sp/>clamp<sp/>t<sp/>(and<sp/>therefore<sp/>d)<sp/>to<sp/>the<sp/>closest<sp/>endpoint</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="137"><highlight class="normal"><sp/><sp/><sp/><sp/>t<sp/>=<sp/>min(max(t,<sp/>ScalarType(0)),<sp/>ScalarType(1));</highlight></codeline>
+<codeline lineno="138"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Compute<sp/>projected<sp/>position<sp/>from<sp/>the<sp/>clamped<sp/>t</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="139"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>Xpq<sp/>=<sp/>P<sp/>+<sp/>t<sp/>*<sp/>PQ;</highlight></codeline>
+<codeline lineno="140"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>Xpq;</highlight></codeline>
+<codeline lineno="141"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="142"><highlight class="normal"></highlight></codeline>
+<codeline lineno="143"><highlight class="normal"></highlight><highlight class="keyword">template</highlight><highlight class="normal"><sp/>&lt;mini::CMatrix<sp/>TMatrixX,<sp/>mini::CMatrix<sp/>TMatrixL,<sp/>mini::CMatrix<sp/>TMatrixU&gt;</highlight></codeline>
+<codeline lineno="144"><highlight class="normal">PBAT_HOST_DEVICE<sp/><ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1SMatrix" kindref="compound">mini::SVector&lt;typename TMatrixX::ScalarType, TMatrixX::kRows&gt;</ref></highlight></codeline>
+<codeline lineno="145"><highlight class="normal">PointOnAxisAlignedBoundingBox(TMatrixX<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>P,<sp/>TMatrixL<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>L,<sp/>TMatrixU<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>U)</highlight></codeline>
+<codeline lineno="146"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="147"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/>namespace<sp/></highlight><highlight class="normal">std;</highlight></codeline>
+<codeline lineno="151"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1SMatrix" kindref="compound">mini::SVector&lt;typename TMatrixX::ScalarType, TMatrixX::kRows&gt;</ref><sp/>X<sp/>=<sp/>P;</highlight></codeline>
+<codeline lineno="152"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">for</highlight><highlight class="normal"><sp/>(</highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>i<sp/>=<sp/>0;<sp/>i<sp/>&lt;<sp/>P.Rows();<sp/>++i)</highlight></codeline>
+<codeline lineno="153"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>X(i)<sp/>=<sp/>min(max(X(i),<sp/>L(i)),<sp/>U(i));</highlight></codeline>
+<codeline lineno="154"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>X;</highlight></codeline>
+<codeline lineno="155"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="156"><highlight class="normal"></highlight></codeline>
+<codeline lineno="157"><highlight class="normal"></highlight><highlight class="keyword">template</highlight><highlight class="normal"><sp/>&lt;</highlight></codeline>
+<codeline lineno="158"><highlight class="normal"><sp/><sp/><sp/><sp/>mini::CMatrix<sp/>TMatrixP,</highlight></codeline>
+<codeline lineno="159"><highlight class="normal"><sp/><sp/><sp/><sp/>mini::CMatrix<sp/>TMatrixA,</highlight></codeline>
+<codeline lineno="160"><highlight class="normal"><sp/><sp/><sp/><sp/>mini::CMatrix<sp/>TMatrixB,</highlight></codeline>
+<codeline lineno="161"><highlight class="normal"><sp/><sp/><sp/><sp/>mini::CMatrix<sp/>TMatrixC&gt;</highlight></codeline>
+<codeline lineno="162"><highlight class="normal">PBAT_HOST_DEVICE<sp/><ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1SMatrix" kindref="compound">mini::SVector&lt;typename TMatrixP::ScalarType, 3&gt;</ref></highlight></codeline>
+<codeline lineno="163"><highlight class="normal">UvwPointInTriangle(TMatrixP<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>P,<sp/>TMatrixA<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>A,<sp/>TMatrixB<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>B,<sp/>TMatrixC<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>C)</highlight></codeline>
+<codeline lineno="164"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="165"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using</highlight><highlight class="normal"><sp/>ScalarType<sp/>=<sp/></highlight><highlight class="keyword">typename</highlight><highlight class="normal"><sp/>TMatrixP::ScalarType;</highlight></codeline>
+<codeline lineno="170"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Check<sp/>if<sp/>P<sp/>in<sp/>vertex<sp/>region<sp/>outside<sp/>A</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="171"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>constexpr<sp/>kRows<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/>TMatrixP::kRows;</highlight></codeline>
+<codeline lineno="172"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1SMatrix" kindref="compound">mini::SVector&lt;ScalarType, kRows&gt;</ref><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>AB<sp/>=<sp/>B<sp/>-<sp/>A;</highlight></codeline>
+<codeline lineno="173"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1SMatrix" kindref="compound">mini::SVector&lt;ScalarType, kRows&gt;</ref><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>AC<sp/>=<sp/>C<sp/>-<sp/>A;</highlight></codeline>
+<codeline lineno="174"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1SMatrix" kindref="compound">mini::SVector&lt;ScalarType, kRows&gt;</ref><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>AP<sp/>=<sp/>P<sp/>-<sp/>A;</highlight></codeline>
+<codeline lineno="175"><highlight class="normal"><sp/><sp/><sp/><sp/>ScalarType<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>d1<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/>Dot(AB,<sp/>AP);</highlight></codeline>
+<codeline lineno="176"><highlight class="normal"><sp/><sp/><sp/><sp/>ScalarType<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>d2<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/>Dot(AC,<sp/>AP);</highlight></codeline>
+<codeline lineno="177"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(d1<sp/>&lt;=<sp/>ScalarType(0)<sp/>and<sp/>d2<sp/>&lt;=<sp/>ScalarType(0))</highlight></codeline>
+<codeline lineno="178"><highlight class="normal"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="179"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>mini::Unit&lt;ScalarType,<sp/>3&gt;(0);<sp/></highlight><highlight class="comment">//<sp/>barycentric<sp/>coordinates<sp/>(1,0,0)</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="180"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="181"><highlight class="normal"></highlight></codeline>
+<codeline lineno="182"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Check<sp/>if<sp/>P<sp/>in<sp/>vertex<sp/>region<sp/>outside<sp/>B</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="183"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1SMatrix" kindref="compound">mini::SVector&lt;ScalarType, kRows&gt;</ref><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>BP<sp/>=<sp/>P<sp/>-<sp/>B;</highlight></codeline>
+<codeline lineno="184"><highlight class="normal"><sp/><sp/><sp/><sp/>ScalarType<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>d3<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/>Dot(AB,<sp/>BP);</highlight></codeline>
+<codeline lineno="185"><highlight class="normal"><sp/><sp/><sp/><sp/>ScalarType<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>d4<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/>Dot(AC,<sp/>BP);</highlight></codeline>
+<codeline lineno="186"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(d3<sp/>&gt;=<sp/>ScalarType(0)<sp/>and<sp/>d4<sp/>&lt;=<sp/>d3)</highlight></codeline>
+<codeline lineno="187"><highlight class="normal"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="188"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>mini::Unit&lt;ScalarType,<sp/>3&gt;(1);<sp/></highlight><highlight class="comment">//<sp/>barycentric<sp/>coordinates<sp/>(0,1,0)</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="189"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="190"><highlight class="normal"></highlight></codeline>
+<codeline lineno="191"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Check<sp/>if<sp/>P<sp/>in<sp/>edge<sp/>region<sp/>of<sp/>AB,<sp/>if<sp/>so<sp/>return<sp/>projection<sp/>of<sp/>P<sp/>onto<sp/>AB</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="192"><highlight class="normal"><sp/><sp/><sp/><sp/>ScalarType<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>vc<sp/>=<sp/>d1<sp/>*<sp/>d4<sp/>-<sp/>d3<sp/>*<sp/>d2;</highlight></codeline>
+<codeline lineno="193"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(vc<sp/>&lt;=<sp/>ScalarType(0)<sp/>and<sp/>d1<sp/>&gt;=<sp/>ScalarType(0)<sp/>and<sp/>d3<sp/>&lt;=<sp/>ScalarType(0))</highlight></codeline>
+<codeline lineno="194"><highlight class="normal"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="195"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>ScalarType<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>v<sp/>=<sp/>d1<sp/>/<sp/>(d1<sp/>-<sp/>d3);</highlight></codeline>
+<codeline lineno="196"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/><ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1SMatrix" kindref="compound">mini::SVector&lt;ScalarType, 3&gt;</ref>{</highlight></codeline>
+<codeline lineno="197"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>ScalarType(1)<sp/>-<sp/>v,</highlight></codeline>
+<codeline lineno="198"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>v,</highlight></codeline>
+<codeline lineno="199"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>ScalarType(0)};<sp/></highlight><highlight class="comment">//<sp/>barycentric<sp/>coordinates<sp/>(1-v,v,0)</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="200"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="201"><highlight class="normal"></highlight></codeline>
+<codeline lineno="202"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Check<sp/>if<sp/>P<sp/>in<sp/>vertex<sp/>region<sp/>outside<sp/>C</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="203"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1SMatrix" kindref="compound">mini::SVector&lt;ScalarType, kRows&gt;</ref><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>CP<sp/>=<sp/>P<sp/>-<sp/>C;</highlight></codeline>
+<codeline lineno="204"><highlight class="normal"><sp/><sp/><sp/><sp/>ScalarType<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>d5<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/>Dot(AB,<sp/>CP);</highlight></codeline>
+<codeline lineno="205"><highlight class="normal"><sp/><sp/><sp/><sp/>ScalarType<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>d6<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/>Dot(AC,<sp/>CP);</highlight></codeline>
+<codeline lineno="206"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(d6<sp/>&gt;=<sp/>ScalarType(0)<sp/>and<sp/>d5<sp/>&lt;=<sp/>d6)</highlight></codeline>
+<codeline lineno="207"><highlight class="normal"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="208"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>mini::Unit&lt;ScalarType,<sp/>3&gt;(2);<sp/></highlight><highlight class="comment">//<sp/>barycentric<sp/>coordinates<sp/>(0,0,1)</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="209"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="210"><highlight class="normal"></highlight></codeline>
+<codeline lineno="211"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Check<sp/>if<sp/>P<sp/>in<sp/>edge<sp/>region<sp/>of<sp/>AC,<sp/>if<sp/>so<sp/>return<sp/>projection<sp/>of<sp/>P<sp/>onto<sp/>AC</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="212"><highlight class="normal"><sp/><sp/><sp/><sp/>ScalarType<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>vb<sp/>=<sp/>d5<sp/>*<sp/>d2<sp/>-<sp/>d1<sp/>*<sp/>d6;</highlight></codeline>
+<codeline lineno="213"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(vb<sp/>&lt;=<sp/>ScalarType(0)<sp/>and<sp/>d2<sp/>&gt;=<sp/>ScalarType(0)<sp/>and<sp/>d6<sp/>&lt;=<sp/>ScalarType(0))</highlight></codeline>
+<codeline lineno="214"><highlight class="normal"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="215"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>ScalarType<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>w<sp/>=<sp/>d2<sp/>/<sp/>(d2<sp/>-<sp/>d6);</highlight></codeline>
+<codeline lineno="216"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/><ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1SMatrix" kindref="compound">mini::SVector&lt;ScalarType, 3&gt;</ref>{</highlight></codeline>
+<codeline lineno="217"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>ScalarType(1)<sp/>-<sp/>w,</highlight></codeline>
+<codeline lineno="218"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>ScalarType(0),</highlight></codeline>
+<codeline lineno="219"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>w};<sp/></highlight><highlight class="comment">//<sp/>barycentric<sp/>coordinates<sp/>(1-w,0,w)</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="220"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="221"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Check<sp/>if<sp/>P<sp/>in<sp/>edge<sp/>region<sp/>of<sp/>BC,<sp/>if<sp/>so<sp/>return<sp/>projection<sp/>of<sp/>P<sp/>onto<sp/>BC</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="222"><highlight class="normal"><sp/><sp/><sp/><sp/>ScalarType<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>va<sp/>=<sp/>d3<sp/>*<sp/>d6<sp/>-<sp/>d5<sp/>*<sp/>d4;</highlight></codeline>
+<codeline lineno="223"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(va<sp/>&lt;=<sp/>ScalarType(0)<sp/>and<sp/>(d4<sp/>-<sp/>d3)<sp/>&gt;=<sp/>ScalarType(0)<sp/>and<sp/>(d5<sp/>-<sp/>d6)<sp/>&gt;=<sp/>ScalarType(0))</highlight></codeline>
+<codeline lineno="224"><highlight class="normal"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="225"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>ScalarType<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>w<sp/>=<sp/>(d4<sp/>-<sp/>d3)<sp/>/<sp/>((d4<sp/>-<sp/>d3)<sp/>+<sp/>(d5<sp/>-<sp/>d6));</highlight></codeline>
+<codeline lineno="226"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/><ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1SMatrix" kindref="compound">mini::SVector&lt;ScalarType, 3&gt;</ref>{</highlight></codeline>
+<codeline lineno="227"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>ScalarType(0),</highlight></codeline>
+<codeline lineno="228"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>ScalarType(1)<sp/>-<sp/>w,</highlight></codeline>
+<codeline lineno="229"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>w};<sp/></highlight><highlight class="comment">//<sp/>barycentric<sp/>coordinates<sp/>(0,1-w,w)</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="230"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="231"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>P<sp/>inside<sp/>face<sp/>region.<sp/>Compute<sp/>Q<sp/>through<sp/>its<sp/>barycentric<sp/>coordinates<sp/>(u,v,w)</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="232"><highlight class="normal"><sp/><sp/><sp/><sp/>ScalarType<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>denom<sp/>=<sp/>ScalarType(1)<sp/>/<sp/>(va<sp/>+<sp/>vb<sp/>+<sp/>vc);</highlight></codeline>
+<codeline lineno="233"><highlight class="normal"><sp/><sp/><sp/><sp/>ScalarType<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>v<sp/><sp/><sp/><sp/><sp/>=<sp/>vb<sp/>*<sp/>denom;</highlight></codeline>
+<codeline lineno="234"><highlight class="normal"><sp/><sp/><sp/><sp/>ScalarType<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>w<sp/><sp/><sp/><sp/><sp/>=<sp/>vc<sp/>*<sp/>denom;</highlight></codeline>
+<codeline lineno="235"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/><ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1SMatrix" kindref="compound">mini::SVector&lt;ScalarType, 3&gt;</ref>{</highlight></codeline>
+<codeline lineno="236"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>ScalarType(1)<sp/>-<sp/>v<sp/>-<sp/>w,</highlight></codeline>
+<codeline lineno="237"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>v,</highlight></codeline>
+<codeline lineno="238"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>w};<sp/></highlight><highlight class="comment">//<sp/>=<sp/>u*a<sp/>+<sp/>v*b<sp/>+<sp/>w*c,<sp/>u<sp/>=<sp/>va<sp/>*<sp/>denom<sp/>=<sp/>ScalarType(1)0f-v-w</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="239"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="240"><highlight class="normal"></highlight></codeline>
+<codeline lineno="241"><highlight class="normal"></highlight><highlight class="keyword">template</highlight><highlight class="normal"><sp/>&lt;</highlight></codeline>
+<codeline lineno="242"><highlight class="normal"><sp/><sp/><sp/><sp/>mini::CMatrix<sp/>TMatrixP,</highlight></codeline>
+<codeline lineno="243"><highlight class="normal"><sp/><sp/><sp/><sp/>mini::CMatrix<sp/>TMatrixA,</highlight></codeline>
+<codeline lineno="244"><highlight class="normal"><sp/><sp/><sp/><sp/>mini::CMatrix<sp/>TMatrixB,</highlight></codeline>
+<codeline lineno="245"><highlight class="normal"><sp/><sp/><sp/><sp/>mini::CMatrix<sp/>TMatrixC&gt;</highlight></codeline>
+<codeline lineno="246"><highlight class="normal">PBAT_HOST_DEVICE<sp/><ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1SMatrix" kindref="compound">mini::SVector&lt;typename TMatrixP::ScalarType, TMatrixP::kRows&gt;</ref></highlight></codeline>
+<codeline lineno="247"><highlight class="normal">PointInTriangle(TMatrixP<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>P,<sp/>TMatrixA<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>A,<sp/>TMatrixB<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>B,<sp/>TMatrixC<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>C)</highlight></codeline>
+<codeline lineno="248"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="249"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>uvw<sp/>=<sp/>UvwPointInTriangle(P,<sp/>A,<sp/>B,<sp/>C);</highlight></codeline>
+<codeline lineno="250"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>A<sp/>*<sp/>uvw(0)<sp/>+<sp/>B<sp/>*<sp/>uvw(1)<sp/>+<sp/>C<sp/>*<sp/>uvw(2);</highlight></codeline>
+<codeline lineno="251"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="252"><highlight class="normal"></highlight></codeline>
+<codeline lineno="253"><highlight class="normal"></highlight><highlight class="keyword">template</highlight><highlight class="normal"><sp/>&lt;</highlight></codeline>
+<codeline lineno="254"><highlight class="normal"><sp/><sp/><sp/><sp/>mini::CMatrix<sp/>TMatrixP,</highlight></codeline>
+<codeline lineno="255"><highlight class="normal"><sp/><sp/><sp/><sp/>mini::CMatrix<sp/>TMatrixA,</highlight></codeline>
+<codeline lineno="256"><highlight class="normal"><sp/><sp/><sp/><sp/>mini::CMatrix<sp/>TMatrixB,</highlight></codeline>
+<codeline lineno="257"><highlight class="normal"><sp/><sp/><sp/><sp/>mini::CMatrix<sp/>TMatrixC,</highlight></codeline>
+<codeline lineno="258"><highlight class="normal"><sp/><sp/><sp/><sp/>mini::CMatrix<sp/>TMatrixD&gt;</highlight></codeline>
+<codeline lineno="259"><highlight class="normal">PBAT_HOST_DEVICE<sp/><ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1SMatrix" kindref="compound">mini::SVector&lt;typename TMatrixP::ScalarType, TMatrixP::kRows&gt;</ref><sp/>PointInTetrahedron(</highlight></codeline>
+<codeline lineno="260"><highlight class="normal"><sp/><sp/><sp/><sp/>TMatrixP<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>P,</highlight></codeline>
+<codeline lineno="261"><highlight class="normal"><sp/><sp/><sp/><sp/>TMatrixA<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>A,</highlight></codeline>
+<codeline lineno="262"><highlight class="normal"><sp/><sp/><sp/><sp/>TMatrixB<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>B,</highlight></codeline>
+<codeline lineno="263"><highlight class="normal"><sp/><sp/><sp/><sp/>TMatrixC<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>C,</highlight></codeline>
+<codeline lineno="264"><highlight class="normal"><sp/><sp/><sp/><sp/>TMatrixD<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>D)</highlight></codeline>
+<codeline lineno="265"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="266"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using</highlight><highlight class="normal"><sp/>ScalarType<sp/><sp/><sp/><sp/><sp/>=<sp/></highlight><highlight class="keyword">typename</highlight><highlight class="normal"><sp/>TMatrixP::ScalarType;</highlight></codeline>
+<codeline lineno="267"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>constexpr<sp/>kRows<sp/>=<sp/>TMatrixP::kRows;</highlight></codeline>
+<codeline lineno="268"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>constexpr<sp/>kDims<sp/>=<sp/>3;</highlight></codeline>
+<codeline lineno="269"><highlight class="normal"><sp/><sp/><sp/><sp/>static_assert(kRows<sp/>==<sp/>kDims,<sp/></highlight><highlight class="stringliteral">&quot;This<sp/>overlap<sp/>test<sp/>is<sp/>specialized<sp/>for<sp/>3D&quot;</highlight><highlight class="normal">);</highlight></codeline>
+<codeline lineno="270"><highlight class="normal"></highlight></codeline>
+<codeline lineno="275"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Start<sp/>out<sp/>assuming<sp/>point<sp/>inside<sp/>all<sp/>halfspaces,<sp/>so<sp/>closest<sp/>to<sp/>itself</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="276"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1SMatrix" kindref="compound">mini::SVector&lt;ScalarType, kDims&gt;</ref><sp/>X<sp/>=<sp/>P;</highlight></codeline>
+<codeline lineno="277"><highlight class="normal"><sp/><sp/><sp/><sp/>ScalarType<sp/>d2min<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/>std::numeric_limits&lt;ScalarType&gt;::max();</highlight></codeline>
+<codeline lineno="278"><highlight class="normal"></highlight></codeline>
+<codeline lineno="279"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>PointOutsidePlane<sp/>=<sp/>[](</highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>p,<sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>a,<sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>b,<sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>c)<sp/>{</highlight></codeline>
+<codeline lineno="280"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>ScalarType<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>d<sp/>=<sp/>Dot(p<sp/>-<sp/>a,<sp/>Cross(b<sp/>-<sp/>a,<sp/>c<sp/>-<sp/>a));</highlight></codeline>
+<codeline lineno="281"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>d<sp/>&gt;<sp/>ScalarType(0);</highlight></codeline>
+<codeline lineno="282"><highlight class="normal"><sp/><sp/><sp/><sp/>};</highlight></codeline>
+<codeline lineno="283"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>TestFace<sp/>=<sp/>[&amp;](</highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>a,<sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>b,<sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>c)<sp/>{</highlight></codeline>
+<codeline lineno="284"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>If<sp/>point<sp/>outside<sp/>face<sp/>abc<sp/>then<sp/>compute<sp/>closest<sp/>point<sp/>on<sp/>abc</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="285"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(PointOutsidePlane(P,<sp/>a,<sp/>b,<sp/>c))</highlight></codeline>
+<codeline lineno="286"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="287"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>Q<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/>PointInTriangle(P,<sp/>a,<sp/>b,<sp/>c);</highlight></codeline>
+<codeline lineno="288"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>ScalarType<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>d2<sp/>=<sp/>SquaredNorm(Q<sp/>-<sp/>P);</highlight></codeline>
+<codeline lineno="289"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Update<sp/>best<sp/>closest<sp/>point<sp/>if<sp/>(squared)<sp/>distance<sp/>is<sp/>less<sp/>than<sp/>current<sp/>best</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="290"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(d2<sp/>&lt;<sp/>d2min)</highlight></codeline>
+<codeline lineno="291"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="292"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>d2min<sp/>=<sp/>d2;</highlight></codeline>
+<codeline lineno="293"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>X<sp/><sp/><sp/><sp/><sp/>=<sp/>Q;</highlight></codeline>
+<codeline lineno="294"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="295"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="296"><highlight class="normal"><sp/><sp/><sp/><sp/>};</highlight></codeline>
+<codeline lineno="297"><highlight class="normal"><sp/><sp/><sp/><sp/>TestFace(A,<sp/>B,<sp/>D);</highlight></codeline>
+<codeline lineno="298"><highlight class="normal"><sp/><sp/><sp/><sp/>TestFace(B,<sp/>C,<sp/>D);</highlight></codeline>
+<codeline lineno="299"><highlight class="normal"><sp/><sp/><sp/><sp/>TestFace(C,<sp/>A,<sp/>D);</highlight></codeline>
+<codeline lineno="300"><highlight class="normal"><sp/><sp/><sp/><sp/>TestFace(A,<sp/>C,<sp/>B);</highlight></codeline>
+<codeline lineno="301"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>X;</highlight></codeline>
+<codeline lineno="302"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="303"><highlight class="normal"></highlight></codeline>
+<codeline lineno="304"><highlight class="normal">}<sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>ClosestPointQueries</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="305"><highlight class="normal">}<sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>geometry</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="306"><highlight class="normal">}<sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>pbat</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="307"><highlight class="normal"></highlight></codeline>
+<codeline lineno="308"><highlight class="normal"></highlight><highlight class="preprocessor">#endif<sp/>//<sp/>PBAT_GEOMETRY_CLOSEST_POINT_QUERIES_H</highlight></codeline>
+    </programlisting>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/ClosestPointQueries.h"/>
+  </compounddef>
+</doxygen>

@@ -1,0 +1,199 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="structpbat_1_1fem_1_1Triangle_3_012_01_4" kind="struct" language="C++" prot="public">
+    <compoundname>pbat::fem::Triangle&lt; 2 &gt;</compoundname>
+    <templateparamlist>
+    </templateparamlist>
+      <sectiondef kind="public-type">
+      <memberdef kind="typedef" id="structpbat_1_1fem_1_1Triangle_3_012_01_4_1a9427dda83bcdf6d9403d5929e7b7adbe" prot="public" static="no">
+        <type><ref refid="structpbat_1_1fem_1_1Triangle" kindref="compound">Triangle</ref>&lt; 1 &gt;</type>
+        <definition>using pbat::fem::Triangle&lt; 2 &gt;::AffineBaseType =  Triangle&lt;1&gt;</definition>
+        <argsstring></argsstring>
+        <name>AffineBaseType</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Triangle.h" line="69" column="5" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Triangle.h" bodystart="69" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="structpbat_1_1fem_1_1Triangle_3_012_01_4_1a9e551a11fe376a5f2d38892272dac6f6" prot="public" static="no">
+        <templateparamlist>
+          <param>
+            <type>int</type>
+            <declname>PolynomialOrder</declname>
+            <defname>PolynomialOrder</defname>
+          </param>
+        </templateparamlist>
+        <type><ref refid="structpbat_1_1math_1_1SymmetricSimplexPolynomialQuadratureRule" kindref="compound">math::SymmetricSimplexPolynomialQuadratureRule</ref>&lt; kDims, PolynomialOrder &gt;</type>
+        <definition>using pbat::fem::Triangle&lt; 2 &gt;::QuadratureType =  math::SymmetricSimplexPolynomialQuadratureRule&lt;kDims, PolynomialOrder&gt;</definition>
+        <argsstring></argsstring>
+        <name>QuadratureType</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Triangle.h" line="84" column="5" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Triangle.h" bodystart="84" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="public-static-attrib">
+      <memberdef kind="variable" id="structpbat_1_1fem_1_1Triangle_3_012_01_4_1a84da5ca33ab0f4af0a583533d0b1a9f9" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>constexpr int</type>
+        <definition>constexpr int pbat::fem::Triangle&lt; 2 &gt;::kOrder</definition>
+        <argsstring></argsstring>
+        <name>kOrder</name>
+        <initializer>= 2</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Triangle.h" line="71" column="26" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Triangle.h" bodystart="71" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpbat_1_1fem_1_1Triangle_3_012_01_4_1a6f51c3146e602c527bf3d57d6db533cc" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>constexpr int</type>
+        <definition>constexpr int pbat::fem::Triangle&lt; 2 &gt;::kDims</definition>
+        <argsstring></argsstring>
+        <name>kDims</name>
+        <initializer>= 2</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Triangle.h" line="72" column="26" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Triangle.h" bodystart="72" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpbat_1_1fem_1_1Triangle_3_012_01_4_1adda8039b9cc0e2b37945e13c254cae39" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>constexpr int</type>
+        <definition>constexpr int pbat::fem::Triangle&lt; 2 &gt;::kNodes</definition>
+        <argsstring></argsstring>
+        <name>kNodes</name>
+        <initializer>= 6</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Triangle.h" line="73" column="26" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Triangle.h" bodystart="73" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpbat_1_1fem_1_1Triangle_3_012_01_4_1a6e76770fe6f930cdfa4712dc85652d8e" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>constexpr std::array&lt; int, kNodes *kDims &gt;</type>
+        <definition>constexpr std::array&lt;int, kNodes * kDims&gt; pbat::fem::Triangle&lt; 2 &gt;::Coordinates</definition>
+        <argsstring></argsstring>
+        <name>Coordinates</name>
+        <initializer>=
+        {0, 0, 1, 0, 2, 0, 0, 1, 1, 1, 0, 2}</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Divide coordinates by kOrder to obtain actual coordinates in the reference element </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Triangle.h" line="74" column="33" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Triangle.h" bodystart="74" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpbat_1_1fem_1_1Triangle_3_012_01_4_1a5bf2f4078a0f0dcde4e290558163de0a" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>constexpr std::array&lt; int, AffineBaseType::kNodes &gt;</type>
+        <definition>constexpr std::array&lt;int, AffineBaseType::kNodes&gt; pbat::fem::Triangle&lt; 2 &gt;::Vertices</definition>
+        <argsstring></argsstring>
+        <name>Vertices</name>
+        <initializer>= {
+        0,
+        2,
+        5}</initializer>
+        <briefdescription>
+<para>Indices into nodes [0,kNodes-1] revealing vertices of the element. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Triangle.h" line="77" column="33" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Triangle.h" bodystart="77" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpbat_1_1fem_1_1Triangle_3_012_01_4_1a94260fd6c5573935213e89bd6e8d2ac3" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>constexpr bool</type>
+        <definition>constexpr bool pbat::fem::Triangle&lt; 2 &gt;::bHasConstantJacobian</definition>
+        <argsstring></argsstring>
+        <name>bHasConstantJacobian</name>
+        <initializer>= false</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Triangle.h" line="81" column="27" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Triangle.h" bodystart="81" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="public-static-func">
+      <memberdef kind="function" id="structpbat_1_1fem_1_1Triangle_3_012_01_4_1a38aa58869100b4187d612acf3372f630" prot="public" static="yes" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class TDerived</type>
+          </param>
+          <param>
+            <type>class TScalar</type>
+            <defval>typename TDerived::Scalar</defval>
+          </param>
+        </templateparamlist>
+        <type>Eigen::Vector&lt; TScalar, kNodes &gt;</type>
+        <definition>static Eigen::Vector&lt;TScalar, kNodes&gt; pbat::fem::Triangle&lt; 2 &gt;::N</definition>
+        <argsstring>([[maybe_unused]] Eigen::DenseBase&lt; TDerived &gt; const &amp;X)</argsstring>
+        <name>N</name>
+        <param>
+          <attributes>[[maybe_unused]</attributes>
+          <type>] Eigen::DenseBase&lt; TDerived &gt; const &amp;</type>
+          <declname>X</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Triangle.h" line="88" column="5" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Triangle.h" bodystart="88" bodyend="103"/>
+      </memberdef>
+      <memberdef kind="function" id="structpbat_1_1fem_1_1Triangle_3_012_01_4_1ad6a125f5e785958d2ba561becbb60b5d" prot="public" static="yes" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>Matrix&lt; kNodes, kDims &gt;</type>
+        <definition>static Matrix&lt;kNodes, kDims&gt; pbat::fem::Triangle&lt; 2 &gt;::GradN</definition>
+        <argsstring>([[maybe_unused]] Vector&lt; kDims &gt; const &amp;X)</argsstring>
+        <name>GradN</name>
+        <param>
+          <attributes>[[maybe_unused]</attributes>
+          <type>] Vector&lt; kDims &gt; const &amp;</type>
+          <declname>X</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Triangle.h" line="105" column="20" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Triangle.h" bodystart="105" bodyend="125"/>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Triangle.h" line="68" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Triangle.h" bodystart="67" bodyend="126"/>
+    <listofallmembers>
+      <member refid="structpbat_1_1fem_1_1Triangle_3_012_01_4_1a9427dda83bcdf6d9403d5929e7b7adbe" prot="public" virt="non-virtual"><scope>pbat::fem::Triangle&lt; 2 &gt;</scope><name>AffineBaseType</name></member>
+      <member refid="structpbat_1_1fem_1_1Triangle_3_012_01_4_1a94260fd6c5573935213e89bd6e8d2ac3" prot="public" virt="non-virtual"><scope>pbat::fem::Triangle&lt; 2 &gt;</scope><name>bHasConstantJacobian</name></member>
+      <member refid="structpbat_1_1fem_1_1Triangle_3_012_01_4_1a6e76770fe6f930cdfa4712dc85652d8e" prot="public" virt="non-virtual"><scope>pbat::fem::Triangle&lt; 2 &gt;</scope><name>Coordinates</name></member>
+      <member refid="structpbat_1_1fem_1_1Triangle_3_012_01_4_1ad6a125f5e785958d2ba561becbb60b5d" prot="public" virt="non-virtual"><scope>pbat::fem::Triangle&lt; 2 &gt;</scope><name>GradN</name></member>
+      <member refid="structpbat_1_1fem_1_1Triangle_3_012_01_4_1a6f51c3146e602c527bf3d57d6db533cc" prot="public" virt="non-virtual"><scope>pbat::fem::Triangle&lt; 2 &gt;</scope><name>kDims</name></member>
+      <member refid="structpbat_1_1fem_1_1Triangle_3_012_01_4_1adda8039b9cc0e2b37945e13c254cae39" prot="public" virt="non-virtual"><scope>pbat::fem::Triangle&lt; 2 &gt;</scope><name>kNodes</name></member>
+      <member refid="structpbat_1_1fem_1_1Triangle_3_012_01_4_1a84da5ca33ab0f4af0a583533d0b1a9f9" prot="public" virt="non-virtual"><scope>pbat::fem::Triangle&lt; 2 &gt;</scope><name>kOrder</name></member>
+      <member refid="structpbat_1_1fem_1_1Triangle_3_012_01_4_1a38aa58869100b4187d612acf3372f630" prot="public" virt="non-virtual"><scope>pbat::fem::Triangle&lt; 2 &gt;</scope><name>N</name></member>
+      <member refid="structpbat_1_1fem_1_1Triangle_3_012_01_4_1a9e551a11fe376a5f2d38892272dac6f6" prot="public" virt="non-virtual"><scope>pbat::fem::Triangle&lt; 2 &gt;</scope><name>QuadratureType</name></member>
+      <member refid="structpbat_1_1fem_1_1Triangle_3_012_01_4_1a5bf2f4078a0f0dcde4e290558163de0a" prot="public" virt="non-virtual"><scope>pbat::fem::Triangle&lt; 2 &gt;</scope><name>Vertices</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

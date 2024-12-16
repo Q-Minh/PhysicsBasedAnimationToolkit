@@ -1,0 +1,17 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="dir_a78b89e200aa19186099d6be194acbad" kind="dir">
+    <compoundname>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu</compoundname>
+    <innerdir refid="dir_6c6984b87a79c4a19310ccd6815e6129">/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/common</innerdir>
+    <innerdir refid="dir_6b1a58c88251787e4c28b35a91d245f3">/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/geometry</innerdir>
+    <innerdir refid="dir_5f77d02e7a978b5506b1800c90b241d4">/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/vbd</innerdir>
+    <innerdir refid="dir_8f6ae8078d5cfba003eb78717f220026">/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/xpbd</innerdir>
+    <innerfile refid="gpu_2Aliases_8h">Aliases.h</innerfile>
+    <innerfile refid="DisableWarnings_8h">DisableWarnings.h</innerfile>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/"/>
+  </compounddef>
+</doxygen>

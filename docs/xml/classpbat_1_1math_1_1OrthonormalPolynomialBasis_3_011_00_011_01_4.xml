@@ -1,0 +1,123 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="classpbat_1_1math_1_1OrthonormalPolynomialBasis_3_011_00_011_01_4" kind="class" language="C++" prot="public">
+    <compoundname>pbat::math::OrthonormalPolynomialBasis&lt; 1, 1 &gt;</compoundname>
+    <includes refid="PolynomialBasis_8h" local="no">PolynomialBasis.h</includes>
+    <templateparamlist>
+    </templateparamlist>
+      <sectiondef kind="public-static-attrib">
+      <memberdef kind="variable" id="classpbat_1_1math_1_1OrthonormalPolynomialBasis_3_011_00_011_01_4_1a1148e6fcfe6ece28ae82a032ff49d8cf" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>constexpr std::size_t</type>
+        <definition>constexpr std::size_t pbat::math::OrthonormalPolynomialBasis&lt; 1, 1 &gt;::kDims</definition>
+        <argsstring></argsstring>
+        <name>kDims</name>
+        <initializer>= 1</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/PolynomialBasis.h" line="1283" column="41" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/PolynomialBasis.h" bodystart="1283" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpbat_1_1math_1_1OrthonormalPolynomialBasis_3_011_00_011_01_4_1a2723323e959201db4608fe1161c05c3d" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>constexpr std::size_t</type>
+        <definition>constexpr std::size_t pbat::math::OrthonormalPolynomialBasis&lt; 1, 1 &gt;::kOrder</definition>
+        <argsstring></argsstring>
+        <name>kOrder</name>
+        <initializer>= 1</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/PolynomialBasis.h" line="1284" column="41" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/PolynomialBasis.h" bodystart="1284" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpbat_1_1math_1_1OrthonormalPolynomialBasis_3_011_00_011_01_4_1a2898946741b770d8da0de965fc8dd191" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>constexpr std::size_t</type>
+        <definition>constexpr std::size_t pbat::math::OrthonormalPolynomialBasis&lt; 1, 1 &gt;::kSize</definition>
+        <argsstring></argsstring>
+        <name>kSize</name>
+        <initializer>= 2</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/PolynomialBasis.h" line="1285" column="41" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/PolynomialBasis.h" bodystart="1285" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpbat_1_1math_1_1OrthonormalPolynomialBasis_3_011_00_011_01_4_1a2e093d2e3da4d029628845395901350f" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>Vector&lt; kSize &gt;</type>
+        <definition>Vector&lt;kSize&gt; pbat::math::OrthonormalPolynomialBasis&lt; 1, 1 &gt;::eval</definition>
+        <argsstring>([[maybe_unused]] Vector&lt; kDims &gt; const &amp;X) const</argsstring>
+        <name>eval</name>
+        <param>
+          <attributes>[[maybe_unused]</attributes>
+          <type>] Vector&lt; kDims &gt; const &amp;</type>
+          <declname>X</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/PolynomialBasis.h" line="1287" column="13" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/PolynomialBasis.h" bodystart="1287" bodyend="1293"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1math_1_1OrthonormalPolynomialBasis_3_011_00_011_01_4_1a2ea63b99f62a9a29844696df38051b58" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>Matrix&lt; kDims, kSize &gt;</type>
+        <definition>Matrix&lt;kDims, kSize&gt; pbat::math::OrthonormalPolynomialBasis&lt; 1, 1 &gt;::derivatives</definition>
+        <argsstring>([[maybe_unused]] Vector&lt; kDims &gt; const &amp;X) const</argsstring>
+        <name>derivatives</name>
+        <param>
+          <attributes>[[maybe_unused]</attributes>
+          <type>] Vector&lt; kDims &gt; const &amp;</type>
+          <declname>X</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/PolynomialBasis.h" line="1295" column="13" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/PolynomialBasis.h" bodystart="1295" bodyend="1302"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1math_1_1OrthonormalPolynomialBasis_3_011_00_011_01_4_1a869858a9ff7767c15b4ddde5f4f79ef3" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>Matrix&lt; kSize, kDims &gt;</type>
+        <definition>Matrix&lt;kSize, kDims&gt; pbat::math::OrthonormalPolynomialBasis&lt; 1, 1 &gt;::antiderivatives</definition>
+        <argsstring>([[maybe_unused]] Vector&lt; kDims &gt; const &amp;X) const</argsstring>
+        <name>antiderivatives</name>
+        <param>
+          <attributes>[[maybe_unused]</attributes>
+          <type>] Vector&lt; kDims &gt; const &amp;</type>
+          <declname>X</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/PolynomialBasis.h" line="1305" column="5" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/PolynomialBasis.h" bodystart="1305" bodyend="1313"/>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+<para>Orthonormalized polynomial basis on reference line </para>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/PolynomialBasis.h" line="1281" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/PolynomialBasis.h" bodystart="1280" bodyend="1314"/>
+    <listofallmembers>
+      <member refid="classpbat_1_1math_1_1OrthonormalPolynomialBasis_3_011_00_011_01_4_1a869858a9ff7767c15b4ddde5f4f79ef3" prot="public" virt="non-virtual"><scope>pbat::math::OrthonormalPolynomialBasis&lt; 1, 1 &gt;</scope><name>antiderivatives</name></member>
+      <member refid="classpbat_1_1math_1_1OrthonormalPolynomialBasis_3_011_00_011_01_4_1a2ea63b99f62a9a29844696df38051b58" prot="public" virt="non-virtual"><scope>pbat::math::OrthonormalPolynomialBasis&lt; 1, 1 &gt;</scope><name>derivatives</name></member>
+      <member refid="classpbat_1_1math_1_1OrthonormalPolynomialBasis_3_011_00_011_01_4_1a2e093d2e3da4d029628845395901350f" prot="public" virt="non-virtual"><scope>pbat::math::OrthonormalPolynomialBasis&lt; 1, 1 &gt;</scope><name>eval</name></member>
+      <member refid="classpbat_1_1math_1_1OrthonormalPolynomialBasis_3_011_00_011_01_4_1a1148e6fcfe6ece28ae82a032ff49d8cf" prot="public" virt="non-virtual"><scope>pbat::math::OrthonormalPolynomialBasis&lt; 1, 1 &gt;</scope><name>kDims</name></member>
+      <member refid="classpbat_1_1math_1_1OrthonormalPolynomialBasis_3_011_00_011_01_4_1a2723323e959201db4608fe1161c05c3d" prot="public" virt="non-virtual"><scope>pbat::math::OrthonormalPolynomialBasis&lt; 1, 1 &gt;</scope><name>kOrder</name></member>
+      <member refid="classpbat_1_1math_1_1OrthonormalPolynomialBasis_3_011_00_011_01_4_1a2898946741b770d8da0de965fc8dd191" prot="public" virt="non-virtual"><scope>pbat::math::OrthonormalPolynomialBasis&lt; 1, 1 &gt;</scope><name>kSize</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

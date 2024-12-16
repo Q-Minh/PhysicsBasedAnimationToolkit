@@ -1,0 +1,177 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="structpbat_1_1sim_1_1vbd_1_1lod_1_1SurfaceQuadrature" kind="struct" language="C++" prot="public">
+    <compoundname>pbat::sim::vbd::lod::SurfaceQuadrature</compoundname>
+      <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="structpbat_1_1sim_1_1vbd_1_1lod_1_1SurfaceQuadrature_1aa9941dce3ad71012db3fd0ab09d6a49c" prot="public" static="no" mutable="no">
+        <type>MatrixX</type>
+        <definition>MatrixX pbat::sim::vbd::lod::SurfaceQuadrature::Xg</definition>
+        <argsstring></argsstring>
+        <name>Xg</name>
+        <briefdescription>
+<para>3x|#quad.pts.| array of quadrature points </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Quadrature.h" line="78" column="13" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Quadrature.h" bodystart="78" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpbat_1_1sim_1_1vbd_1_1lod_1_1SurfaceQuadrature_1a659336bf536b6f83eecd23eb953ca711" prot="public" static="no" mutable="no">
+        <type>VectorX</type>
+        <definition>VectorX pbat::sim::vbd::lod::SurfaceQuadrature::wg</definition>
+        <argsstring></argsstring>
+        <name>wg</name>
+        <briefdescription>
+<para>|#quad.pts.| array of quadrature weights </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Quadrature.h" line="79" column="13" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Quadrature.h" bodystart="79" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpbat_1_1sim_1_1vbd_1_1lod_1_1SurfaceQuadrature_1ac2ba9cead6650ae655b85ae3064103f6" prot="public" static="no" mutable="no">
+        <type>IndexVectorX</type>
+        <definition>IndexVectorX pbat::sim::vbd::lod::SurfaceQuadrature::eg</definition>
+        <argsstring></argsstring>
+        <name>eg</name>
+        <briefdescription>
+<para>|#quad.pts.| array of cage elements containing corresponding quad.pts. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Quadrature.h" line="80" column="18" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Quadrature.h" bodystart="80" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpbat_1_1sim_1_1vbd_1_1lod_1_1SurfaceQuadrature_1a256d29ce8eff150c4f12d9c2e1e5d6fc" prot="public" static="no" mutable="no">
+        <type>IndexVectorX</type>
+        <definition>IndexVectorX pbat::sim::vbd::lod::SurfaceQuadrature::GVGp</definition>
+        <argsstring></argsstring>
+        <name>GVGp</name>
+        <briefdescription>
+<para>|#cage verts + 1| prefix </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Quadrature.h" line="82" column="18" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Quadrature.h" bodystart="82" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpbat_1_1sim_1_1vbd_1_1lod_1_1SurfaceQuadrature_1a7a9a5dbfaff661b9b0100f7f5a5bd6b8" prot="public" static="no" mutable="no">
+        <type>IndexVectorX</type>
+        <definition>IndexVectorX pbat::sim::vbd::lod::SurfaceQuadrature::GVGg</definition>
+        <argsstring></argsstring>
+        <name>GVGg</name>
+        <briefdescription>
+<para>|#quad.pts.| cage vertex-quad.pt. adjacencies </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Quadrature.h" line="83" column="18" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Quadrature.h" bodystart="83" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpbat_1_1sim_1_1vbd_1_1lod_1_1SurfaceQuadrature_1a84f3c06d00efa05998f8736c0c34f58d" prot="public" static="no" mutable="no">
+        <type>IndexVectorX</type>
+        <definition>IndexVectorX pbat::sim::vbd::lod::SurfaceQuadrature::GVGilocal</definition>
+        <argsstring></argsstring>
+        <name>GVGilocal</name>
+        <briefdescription>
+<para>|#quad.pts.| cage vertex local element index </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Quadrature.h" line="84" column="18" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Quadrature.h" bodystart="84" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="public-func">
+      <memberdef kind="function" id="structpbat_1_1sim_1_1vbd_1_1lod_1_1SurfaceQuadrature_1a384162c7a48d8c8a0a76372440ba0554" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>pbat::sim::vbd::lod::SurfaceQuadrature::SurfaceQuadrature</definition>
+        <argsstring>()=default</argsstring>
+        <name>SurfaceQuadrature</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Quadrature.h" line="65" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="structpbat_1_1sim_1_1vbd_1_1lod_1_1SurfaceQuadrature_1a1afd0898f60f8f0e71b1f693a5c298e5" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>pbat::sim::vbd::lod::SurfaceQuadrature::SurfaceQuadrature</definition>
+        <argsstring>(VolumeMesh const &amp;FM, VolumeMesh const &amp;CM, ESurfaceQuadratureStrategy eStrategy=ESurfaceQuadratureStrategy::EmbeddedVertexSinglePointQuadrature)</argsstring>
+        <name>SurfaceQuadrature</name>
+        <param>
+          <type><ref refid="structpbat_1_1fem_1_1Mesh" kindref="compound">VolumeMesh</ref> const &amp;</type>
+          <declname>FM</declname>
+        </param>
+        <param>
+          <type><ref refid="structpbat_1_1fem_1_1Mesh" kindref="compound">VolumeMesh</ref> const &amp;</type>
+          <declname>CM</declname>
+        </param>
+        <param>
+          <type>ESurfaceQuadratureStrategy</type>
+          <declname>eStrategy</declname>
+          <defval>ESurfaceQuadratureStrategy::EmbeddedVertexSinglePointQuadrature</defval>
+        </param>
+        <briefdescription>
+<para>Computes a surface quadrature on the boundary of a mesh FM embedded in mesh CM. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>FM</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>CM</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>eStrategy</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Quadrature.h" line="72" column="5" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Quadrature.cpp" bodystart="230" bodyend="255"/>
+        <references refid="structpbat_1_1fem_1_1Mesh_1a384afdf16df5efa27e09f17520402b5b" compoundref="source_2pbat_2fem_2Mesh_8h" startline="52">pbat::fem::Mesh&lt; TElement, Dims &gt;::E</references>
+        <references refid="structpbat_1_1fem_1_1Mesh_1abc65a193ee960705ddf64227afb18809" compoundref="source_2pbat_2fem_2Mesh_8h" startline="51">pbat::fem::Mesh&lt; TElement, Dims &gt;::X</references>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Quadrature.h" line="64" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Quadrature.h" bodystart="63" bodyend="85"/>
+    <listofallmembers>
+      <member refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1SurfaceQuadrature_1ac2ba9cead6650ae655b85ae3064103f6" prot="public" virt="non-virtual"><scope>pbat::sim::vbd::lod::SurfaceQuadrature</scope><name>eg</name></member>
+      <member refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1SurfaceQuadrature_1a7a9a5dbfaff661b9b0100f7f5a5bd6b8" prot="public" virt="non-virtual"><scope>pbat::sim::vbd::lod::SurfaceQuadrature</scope><name>GVGg</name></member>
+      <member refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1SurfaceQuadrature_1a84f3c06d00efa05998f8736c0c34f58d" prot="public" virt="non-virtual"><scope>pbat::sim::vbd::lod::SurfaceQuadrature</scope><name>GVGilocal</name></member>
+      <member refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1SurfaceQuadrature_1a256d29ce8eff150c4f12d9c2e1e5d6fc" prot="public" virt="non-virtual"><scope>pbat::sim::vbd::lod::SurfaceQuadrature</scope><name>GVGp</name></member>
+      <member refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1SurfaceQuadrature_1a384162c7a48d8c8a0a76372440ba0554" prot="public" virt="non-virtual"><scope>pbat::sim::vbd::lod::SurfaceQuadrature</scope><name>SurfaceQuadrature</name></member>
+      <member refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1SurfaceQuadrature_1a1afd0898f60f8f0e71b1f693a5c298e5" prot="public" virt="non-virtual"><scope>pbat::sim::vbd::lod::SurfaceQuadrature</scope><name>SurfaceQuadrature</name></member>
+      <member refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1SurfaceQuadrature_1a659336bf536b6f83eecd23eb953ca711" prot="public" virt="non-virtual"><scope>pbat::sim::vbd::lod::SurfaceQuadrature</scope><name>wg</name></member>
+      <member refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1SurfaceQuadrature_1aa9941dce3ad71012db3fd0ab09d6a49c" prot="public" virt="non-virtual"><scope>pbat::sim::vbd::lod::SurfaceQuadrature</scope><name>Xg</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

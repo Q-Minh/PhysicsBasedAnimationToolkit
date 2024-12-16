@@ -1,0 +1,48 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="namespacepbat_1_1py_1_1math" kind="namespace" language="C++">
+    <compoundname>pbat::py::math</compoundname>
+    <innernamespace refid="namespacepbat_1_1py_1_1math_1_1linalg">pbat::py::math::linalg</innernamespace>
+      <sectiondef kind="func">
+      <memberdef kind="function" id="Math_8cpp_1a82f5e1aa347ea63c4f8ad36f4d1e9663" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void pbat::py::math::Bind</definition>
+        <argsstring>(pybind11::module &amp;m)</argsstring>
+        <name>Bind</name>
+        <param>
+          <type>pybind11::module &amp;</type>
+          <declname>m</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/math/Math.cpp" line="12" column="6" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/math/Math.cpp" bodystart="12" bodyend="17" declfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/math/Math.h" declline="10" declcolumn="6"/>
+      </memberdef>
+      <memberdef kind="function" id="bindings_2pypbat_2math_2MomentFitting_8cpp_1ac55d158d7db87342dd8b8f7c3f2f45c9" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void pbat::py::math::BindMomentFitting</definition>
+        <argsstring>(pybind11::module &amp;m)</argsstring>
+        <name>BindMomentFitting</name>
+        <param>
+          <type>pybind11::module &amp;</type>
+          <declname>m</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/math/MomentFitting.cpp" line="12" column="6" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/math/MomentFitting.cpp" bodystart="12" bodyend="116" declfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/math/MomentFitting.h" declline="10" declcolumn="6"/>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/math/linalg/Cholmod.cpp" line="13" column="14"/>
+  </compounddef>
+</doxygen>

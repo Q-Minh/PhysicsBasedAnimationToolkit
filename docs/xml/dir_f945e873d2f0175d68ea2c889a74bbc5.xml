@@ -1,0 +1,27 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="dir_f945e873d2f0175d68ea2c889a74bbc5" kind="dir">
+    <compoundname>/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem</compoundname>
+    <innerfile refid="bindings_2pypbat_2fem_2Fem_8cpp">Fem.cpp</innerfile>
+    <innerfile refid="bindings_2pypbat_2fem_2Fem_8h">Fem.h</innerfile>
+    <innerfile refid="bindings_2pypbat_2fem_2Gradient_8cpp">Gradient.cpp</innerfile>
+    <innerfile refid="bindings_2pypbat_2fem_2Gradient_8h">Gradient.h</innerfile>
+    <innerfile refid="bindings_2pypbat_2fem_2HyperElasticPotential_8cpp">HyperElasticPotential.cpp</innerfile>
+    <innerfile refid="bindings_2pypbat_2fem_2HyperElasticPotential_8h">HyperElasticPotential.h</innerfile>
+    <innerfile refid="bindings_2pypbat_2fem_2Jacobian_8cpp">Jacobian.cpp</innerfile>
+    <innerfile refid="bindings_2pypbat_2fem_2Jacobian_8h">Jacobian.h</innerfile>
+    <innerfile refid="Laplacian_8cpp">Laplacian.cpp</innerfile>
+    <innerfile refid="Laplacian_8h">Laplacian.h</innerfile>
+    <innerfile refid="bindings_2pypbat_2fem_2MassMatrix_8cpp">MassMatrix.cpp</innerfile>
+    <innerfile refid="bindings_2pypbat_2fem_2MassMatrix_8h">MassMatrix.h</innerfile>
+    <innerfile refid="bindings_2pypbat_2fem_2Mesh_8cpp">Mesh.cpp</innerfile>
+    <innerfile refid="bindings_2pypbat_2fem_2Mesh_8h">Mesh.h</innerfile>
+    <innerfile refid="bindings_2pypbat_2fem_2ShapeFunctions_8cpp">ShapeFunctions.cpp</innerfile>
+    <innerfile refid="bindings_2pypbat_2fem_2ShapeFunctions_8h">ShapeFunctions.h</innerfile>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/"/>
+  </compounddef>
+</doxygen>

@@ -1,0 +1,310 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="source_2pbat_2sim_2vbd_2lod_2Quadrature_8h" kind="file" language="C++">
+    <compoundname>Quadrature.h</compoundname>
+    <includes refid="Aliases_8h" local="yes">pbat/Aliases.h</includes>
+    <includes refid="source_2pbat_2sim_2vbd_2Mesh_8h" local="yes">pbat/sim/vbd/Mesh.h</includes>
+    <includedby refid="source_2pbat_2sim_2vbd_2lod_2DirichletEnergy_8h" local="yes">/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/DirichletEnergy.h</includedby>
+    <includedby refid="source_2pbat_2sim_2vbd_2lod_2ElasticEnergy_8h" local="yes">/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/ElasticEnergy.h</includedby>
+    <includedby refid="source_2pbat_2sim_2vbd_2lod_2MomentumEnergy_8h" local="yes">/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/MomentumEnergy.h</includedby>
+    <includedby refid="source_2pbat_2sim_2vbd_2lod_2Level_8h" local="yes">/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Level.h</includedby>
+    <includedby refid="source_2pbat_2sim_2vbd_2lod_2Prolongation_8h" local="yes">/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Prolongation.h</includedby>
+    <includedby refid="source_2pbat_2sim_2vbd_2lod_2Hierarchy_8h" local="yes">/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Hierarchy.h</includedby>
+    <includedby refid="source_2pbat_2sim_2vbd_2lod_2Restriction_8h" local="yes">/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Restriction.h</includedby>
+    <includedby refid="source_2pbat_2sim_2vbd_2lod_2Lod_8h" local="yes">/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Lod.h</includedby>
+    <includedby refid="source_2pbat_2sim_2vbd_2lod_2Quadrature_8cpp" local="yes">/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Quadrature.cpp</includedby>
+    <includedby refid="source_2pbat_2sim_2vbd_2lod_2Restriction_8cpp" local="yes">/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Restriction.cpp</includedby>
+    <incdepgraph>
+      <node id="10">
+        <label>pbat/math/GaussQuadrature.h</label>
+        <link refid="GaussQuadrature_8h_source"/>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="2" relation="include">
+        </childnode>
+      </node>
+      <node id="12">
+        <label>cstdint</label>
+      </node>
+      <node id="2">
+        <label>pbat/Aliases.h</label>
+        <link refid="Aliases_8h_source"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>Eigen/Core</label>
+      </node>
+      <node id="6">
+        <label>pbat/sim/vbd/Mesh.h</label>
+        <link refid="source_2pbat_2sim_2vbd_2Mesh_8h_source"/>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="14" relation="include">
+        </childnode>
+      </node>
+      <node id="14">
+        <label>pbat/fem/Triangle.h</label>
+        <link refid="Triangle_8h_source"/>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="2" relation="include">
+        </childnode>
+      </node>
+      <node id="9">
+        <label>QuadratureRules.h</label>
+        <link refid="QuadratureRules_8h_source"/>
+        <childnode refid="10" relation="include">
+        </childnode>
+        <childnode refid="13" relation="include">
+        </childnode>
+      </node>
+      <node id="13">
+        <label>pbat/math/SymmetricQuadratureRules.h</label>
+        <link refid="SymmetricQuadratureRules_8h_source"/>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="2" relation="include">
+        </childnode>
+      </node>
+      <node id="4">
+        <label>Eigen/Sparse</label>
+      </node>
+      <node id="8">
+        <label>pbat/fem/Tetrahedron.h</label>
+        <link refid="Tetrahedron_8h_source"/>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="2" relation="include">
+        </childnode>
+      </node>
+      <node id="7">
+        <label>pbat/fem/Mesh.h</label>
+      </node>
+      <node id="11">
+        <label>array</label>
+      </node>
+      <node id="5">
+        <label>cstddef</label>
+      </node>
+      <node id="1">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Quadrature.h</label>
+        <link refid="source_2pbat_2sim_2vbd_2lod_2Quadrature_8h"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+      </node>
+    </incdepgraph>
+    <invincdepgraph>
+      <node id="8">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Prolongation.h</label>
+        <link refid="source_2pbat_2sim_2vbd_2lod_2Prolongation_8h_source"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/DirichletEnergy.h</label>
+        <link refid="source_2pbat_2sim_2vbd_2lod_2DirichletEnergy_8h_source"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+      </node>
+      <node id="4">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Hierarchy.h</label>
+        <link refid="source_2pbat_2sim_2vbd_2lod_2Hierarchy_8h_source"/>
+        <childnode refid="5" relation="include">
+        </childnode>
+      </node>
+      <node id="6">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/ElasticEnergy.h</label>
+        <link refid="source_2pbat_2sim_2vbd_2lod_2ElasticEnergy_8h_source"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+      </node>
+      <node id="5">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Lod.h</label>
+        <link refid="source_2pbat_2sim_2vbd_2lod_2Lod_8h_source"/>
+      </node>
+      <node id="3">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Level.h</label>
+        <link refid="source_2pbat_2sim_2vbd_2lod_2Level_8h_source"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+      </node>
+      <node id="9">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Restriction.h</label>
+        <link refid="source_2pbat_2sim_2vbd_2lod_2Restriction_8h_source"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Quadrature.h</label>
+        <link refid="source_2pbat_2sim_2vbd_2lod_2Quadrature_8h"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+      </node>
+      <node id="7">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/MomentumEnergy.h</label>
+        <link refid="source_2pbat_2sim_2vbd_2lod_2MomentumEnergy_8h_source"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+      </node>
+    </invincdepgraph>
+    <innerclass refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1CageQuadratureParameters" prot="public">pbat::sim::vbd::lod::CageQuadratureParameters</innerclass>
+    <innerclass refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1CageQuadrature" prot="public">pbat::sim::vbd::lod::CageQuadrature</innerclass>
+    <innerclass refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1SurfaceQuadrature" prot="public">pbat::sim::vbd::lod::SurfaceQuadrature</innerclass>
+    <innerclass refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1DirichletQuadrature" prot="public">pbat::sim::vbd::lod::DirichletQuadrature</innerclass>
+    <innernamespace refid="namespacepbat">pbat</innernamespace>
+    <innernamespace refid="namespacepbat_1_1sim">pbat::sim</innernamespace>
+    <innernamespace refid="namespacepbat_1_1sim_1_1vbd">pbat::sim::vbd</innernamespace>
+    <innernamespace refid="namespacepbat_1_1sim_1_1vbd_1_1lod">pbat::sim::vbd::lod</innernamespace>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="preprocessor">#ifndef<sp/>PBAT_SIM_VBD_LOD_QUADRATURE_H</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="2"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>PBAT_SIM_VBD_LOD_QUADRATURE_H</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="3"><highlight class="normal"></highlight></codeline>
+<codeline lineno="4"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;pbat/Aliases.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="5"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;pbat/sim/vbd/Mesh.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="6"><highlight class="normal"></highlight></codeline>
+<codeline lineno="7"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal">pbat<sp/>{</highlight></codeline>
+<codeline lineno="8"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal">sim<sp/>{</highlight></codeline>
+<codeline lineno="9"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal">vbd<sp/>{</highlight></codeline>
+<codeline lineno="10"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal">lod<sp/>{</highlight></codeline>
+<codeline lineno="11"><highlight class="normal"></highlight></codeline>
+<codeline lineno="12"><highlight class="normal"></highlight><highlight class="keyword">enum<sp/>class</highlight><highlight class="normal"><sp/>ECageQuadratureStrategy<sp/>{<sp/>CageMesh,<sp/>EmbeddedMesh,<sp/>PolynomialSubCellIntegration<sp/>};</highlight></codeline>
+<codeline lineno="13"><highlight class="normal"></highlight></codeline>
+<codeline lineno="14" refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1CageQuadratureParameters" refkind="compound"><highlight class="normal"></highlight><highlight class="keyword">struct<sp/></highlight><highlight class="normal"><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1CageQuadratureParameters" kindref="compound">CageQuadratureParameters</ref></highlight></codeline>
+<codeline lineno="15"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="16"><highlight class="normal"><sp/><sp/><sp/><sp/>ECageQuadratureStrategy<sp/>eStrategy{ECageQuadratureStrategy::EmbeddedMesh};</highlight></codeline>
+<codeline lineno="17"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">int</highlight><highlight class="normal"><sp/>mCageMeshPointsOfOrder{4};</highlight></codeline>
+<codeline lineno="18"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">int</highlight><highlight class="normal"><sp/>mPatchCellPointsOfOrder{2};</highlight></codeline>
+<codeline lineno="19"><highlight class="normal"><sp/><sp/><sp/><sp/>Scalar<sp/>mPatchTetVolumeError{1e-4};</highlight></codeline>
+<codeline lineno="20"><highlight class="normal"></highlight></codeline>
+<codeline lineno="21"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1CageQuadratureParameters" kindref="compound">CageQuadratureParameters</ref>&amp;<sp/>WithStrategy(ECageQuadratureStrategy<sp/>eStrategyIn);</highlight></codeline>
+<codeline lineno="22"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1CageQuadratureParameters" kindref="compound">CageQuadratureParameters</ref>&amp;<sp/>WithCageMeshPointsOfOrder(</highlight><highlight class="keywordtype">int</highlight><highlight class="normal"><sp/>order);</highlight></codeline>
+<codeline lineno="23"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1CageQuadratureParameters" kindref="compound">CageQuadratureParameters</ref>&amp;<sp/>WithPatchCellPointsOfOrder(</highlight><highlight class="keywordtype">int</highlight><highlight class="normal"><sp/>order);</highlight></codeline>
+<codeline lineno="24"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1CageQuadratureParameters" kindref="compound">CageQuadratureParameters</ref>&amp;<sp/>WithPatchError(Scalar<sp/>err);</highlight></codeline>
+<codeline lineno="25"><highlight class="normal">};</highlight></codeline>
+<codeline lineno="26"><highlight class="normal"></highlight></codeline>
+<codeline lineno="27" refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1CageQuadrature" refkind="compound"><highlight class="normal"></highlight><highlight class="keyword">struct<sp/></highlight><highlight class="normal"><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1CageQuadrature" kindref="compound">CageQuadrature</ref></highlight></codeline>
+<codeline lineno="28"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="29"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1CageQuadrature" kindref="compound">CageQuadrature</ref>()<sp/>=<sp/></highlight><highlight class="keywordflow">default</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="30"><highlight class="normal"></highlight></codeline>
+<codeline lineno="37"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1CageQuadrature" kindref="compound">CageQuadrature</ref>(</highlight></codeline>
+<codeline lineno="38"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1fem_1_1Mesh" kindref="compound">VolumeMesh</ref><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>FM,</highlight></codeline>
+<codeline lineno="39"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1fem_1_1Mesh" kindref="compound">VolumeMesh</ref><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>CM,</highlight></codeline>
+<codeline lineno="40"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1CageQuadratureParameters" kindref="compound">CageQuadratureParameters</ref><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>params<sp/>=<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1CageQuadratureParameters" kindref="compound">CageQuadratureParameters</ref>{});</highlight></codeline>
+<codeline lineno="41"><highlight class="normal"></highlight></codeline>
+<codeline lineno="42"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using</highlight><highlight class="normal"><sp/>BoolVectorType<sp/>=<sp/>Eigen::Vector&lt;bool,<sp/>Eigen::Dynamic&gt;;</highlight></codeline>
+<codeline lineno="43"><highlight class="normal"></highlight></codeline>
+<codeline lineno="44" refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1CageQuadrature_1a1b3cbb03c6c2987415438a9e6c85940e" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>MatrixX<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1CageQuadrature_1a1b3cbb03c6c2987415438a9e6c85940e" kindref="member">Xg</ref>;<sp/></highlight></codeline>
+<codeline lineno="45" refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1CageQuadrature_1a5f5e79e5d5779140bea1eac8d97da4f0" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>VectorX<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1CageQuadrature_1a5f5e79e5d5779140bea1eac8d97da4f0" kindref="member">wg</ref>;<sp/></highlight></codeline>
+<codeline lineno="46"><highlight class="normal"><sp/><sp/><sp/><sp/>BoolVectorType</highlight></codeline>
+<codeline lineno="47" refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1CageQuadrature_1a9d99da11102409ae4c3af40a229611ae" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1CageQuadrature_1a9d99da11102409ae4c3af40a229611ae" kindref="member">sg</ref>;<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight></codeline>
+<codeline lineno="48" refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1CageQuadrature_1a9ee6edaf65d908bcc3ae7c26c8127866" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>IndexVectorX<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1CageQuadrature_1a9ee6edaf65d908bcc3ae7c26c8127866" kindref="member">eg</ref>;<sp/></highlight></codeline>
+<codeline lineno="49"><highlight class="normal"></highlight></codeline>
+<codeline lineno="50" refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1CageQuadrature_1a8617360bb8a7adc9c378b5c5c8ab1831" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>MatrixX<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1CageQuadrature_1a8617360bb8a7adc9c378b5c5c8ab1831" kindref="member">Ncg</ref>;<sp/><sp/><sp/><sp/><sp/><sp/></highlight></codeline>
+<codeline lineno="51" refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1CageQuadrature_1a1fe1c6fcf6c1f6117c9add54a27872b3" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>MatrixX<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1CageQuadrature_1a1fe1c6fcf6c1f6117c9add54a27872b3" kindref="member">GNcg</ref>;<sp/><sp/><sp/><sp/><sp/></highlight></codeline>
+<codeline lineno="52" refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1CageQuadrature_1a9108dadd72bfcc581bb252fd9154e3e5" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>IndexVectorX<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1CageQuadrature_1a9108dadd72bfcc581bb252fd9154e3e5" kindref="member">efg</ref>;<sp/></highlight></codeline>
+<codeline lineno="53" refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1CageQuadrature_1a8a971b6ed1d2a0e535886c38ff2069b5" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>MatrixX<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1CageQuadrature_1a8a971b6ed1d2a0e535886c38ff2069b5" kindref="member">Nfg</ref>;<sp/><sp/><sp/><sp/><sp/><sp/></highlight></codeline>
+<codeline lineno="54" refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1CageQuadrature_1ad7e7da57a859ef32ce20754c574af2bb" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>MatrixX<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1CageQuadrature_1ad7e7da57a859ef32ce20754c574af2bb" kindref="member">GNfg</ref>;<sp/><sp/><sp/><sp/><sp/></highlight></codeline>
+<codeline lineno="55"><highlight class="normal"></highlight></codeline>
+<codeline lineno="56" refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1CageQuadrature_1a2feff7f52953b97caf1255bc6c5aa982" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>IndexVectorX<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1CageQuadrature_1a2feff7f52953b97caf1255bc6c5aa982" kindref="member">GVGp</ref>;<sp/><sp/><sp/><sp/><sp/><sp/></highlight></codeline>
+<codeline lineno="57" refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1CageQuadrature_1aba379b1c54f77bfcb86554c0ee4d585e" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>IndexVectorX<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1CageQuadrature_1aba379b1c54f77bfcb86554c0ee4d585e" kindref="member">GVGg</ref>;<sp/><sp/><sp/><sp/><sp/><sp/></highlight></codeline>
+<codeline lineno="58" refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1CageQuadrature_1abd5e63afc087a2de4a7ea6c707d8543d" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>IndexVectorX<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1CageQuadrature_1abd5e63afc087a2de4a7ea6c707d8543d" kindref="member">GVGilocal</ref>;<sp/></highlight></codeline>
+<codeline lineno="59"><highlight class="normal">};</highlight></codeline>
+<codeline lineno="60"><highlight class="normal"></highlight></codeline>
+<codeline lineno="61"><highlight class="normal"></highlight><highlight class="keyword">enum<sp/>class</highlight><highlight class="normal"><sp/>ESurfaceQuadratureStrategy<sp/>{<sp/>EmbeddedVertexSinglePointQuadrature<sp/>};</highlight></codeline>
+<codeline lineno="62"><highlight class="normal"></highlight></codeline>
+<codeline lineno="63" refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1SurfaceQuadrature" refkind="compound"><highlight class="normal"></highlight><highlight class="keyword">struct<sp/></highlight><highlight class="normal"><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1SurfaceQuadrature" kindref="compound">SurfaceQuadrature</ref></highlight></codeline>
+<codeline lineno="64"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="65"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1SurfaceQuadrature" kindref="compound">SurfaceQuadrature</ref>()<sp/>=<sp/></highlight><highlight class="keywordflow">default</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="72"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1SurfaceQuadrature" kindref="compound">SurfaceQuadrature</ref>(</highlight></codeline>
+<codeline lineno="73"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1fem_1_1Mesh" kindref="compound">VolumeMesh</ref><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>FM,</highlight></codeline>
+<codeline lineno="74"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1fem_1_1Mesh" kindref="compound">VolumeMesh</ref><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>CM,</highlight></codeline>
+<codeline lineno="75"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>ESurfaceQuadratureStrategy<sp/>eStrategy<sp/>=</highlight></codeline>
+<codeline lineno="76"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>ESurfaceQuadratureStrategy::EmbeddedVertexSinglePointQuadrature);</highlight></codeline>
+<codeline lineno="77"><highlight class="normal"></highlight></codeline>
+<codeline lineno="78" refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1SurfaceQuadrature_1aa9941dce3ad71012db3fd0ab09d6a49c" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>MatrixX<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1SurfaceQuadrature_1aa9941dce3ad71012db3fd0ab09d6a49c" kindref="member">Xg</ref>;<sp/><sp/><sp/><sp/><sp/><sp/></highlight></codeline>
+<codeline lineno="79" refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1SurfaceQuadrature_1a659336bf536b6f83eecd23eb953ca711" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>VectorX<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1SurfaceQuadrature_1a659336bf536b6f83eecd23eb953ca711" kindref="member">wg</ref>;<sp/><sp/><sp/><sp/><sp/><sp/></highlight></codeline>
+<codeline lineno="80" refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1SurfaceQuadrature_1ac2ba9cead6650ae655b85ae3064103f6" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>IndexVectorX<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1SurfaceQuadrature_1ac2ba9cead6650ae655b85ae3064103f6" kindref="member">eg</ref>;<sp/></highlight></codeline>
+<codeline lineno="81"><highlight class="normal"></highlight></codeline>
+<codeline lineno="82" refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1SurfaceQuadrature_1a256d29ce8eff150c4f12d9c2e1e5d6fc" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>IndexVectorX<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1SurfaceQuadrature_1a256d29ce8eff150c4f12d9c2e1e5d6fc" kindref="member">GVGp</ref>;<sp/><sp/><sp/><sp/><sp/><sp/></highlight></codeline>
+<codeline lineno="83" refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1SurfaceQuadrature_1a7a9a5dbfaff661b9b0100f7f5a5bd6b8" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>IndexVectorX<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1SurfaceQuadrature_1a7a9a5dbfaff661b9b0100f7f5a5bd6b8" kindref="member">GVGg</ref>;<sp/><sp/><sp/><sp/><sp/><sp/></highlight></codeline>
+<codeline lineno="84" refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1SurfaceQuadrature_1a84f3c06d00efa05998f8736c0c34f58d" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>IndexVectorX<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1SurfaceQuadrature_1a84f3c06d00efa05998f8736c0c34f58d" kindref="member">GVGilocal</ref>;<sp/></highlight></codeline>
+<codeline lineno="85"><highlight class="normal">};</highlight></codeline>
+<codeline lineno="86"><highlight class="normal"></highlight></codeline>
+<codeline lineno="87" refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1DirichletQuadrature" refkind="compound"><highlight class="normal"></highlight><highlight class="keyword">struct<sp/></highlight><highlight class="normal"><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1DirichletQuadrature" kindref="compound">DirichletQuadrature</ref></highlight></codeline>
+<codeline lineno="88"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="89"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1DirichletQuadrature" kindref="compound">DirichletQuadrature</ref>()<sp/>=<sp/></highlight><highlight class="keywordflow">default</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="90"><highlight class="normal"></highlight></codeline>
+<codeline lineno="98"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1DirichletQuadrature" kindref="compound">DirichletQuadrature</ref>(</highlight></codeline>
+<codeline lineno="99"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1fem_1_1Mesh" kindref="compound">VolumeMesh</ref><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>FM,</highlight></codeline>
+<codeline lineno="100"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1fem_1_1Mesh" kindref="compound">VolumeMesh</ref><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>CM,</highlight></codeline>
+<codeline lineno="101"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>Eigen::Ref&lt;VectorX<sp/>const&gt;<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>m,</highlight></codeline>
+<codeline lineno="102"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>Eigen::Ref&lt;IndexVectorX<sp/>const&gt;<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>dbcs);</highlight></codeline>
+<codeline lineno="103"><highlight class="normal"></highlight></codeline>
+<codeline lineno="104" refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1DirichletQuadrature_1a71c66874a9e87695d61942d8e768136f" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>MatrixX<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1DirichletQuadrature_1a71c66874a9e87695d61942d8e768136f" kindref="member">Xg</ref>;<sp/><sp/><sp/><sp/><sp/><sp/></highlight></codeline>
+<codeline lineno="105" refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1DirichletQuadrature_1a4f6767149235474a21cbe98bca1c51d4" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>VectorX<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1DirichletQuadrature_1a4f6767149235474a21cbe98bca1c51d4" kindref="member">wg</ref>;<sp/><sp/><sp/><sp/><sp/><sp/></highlight></codeline>
+<codeline lineno="106" refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1DirichletQuadrature_1a5f75d1fd5efb09912c0a198c602676d6" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>IndexVectorX<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1DirichletQuadrature_1a5f75d1fd5efb09912c0a198c602676d6" kindref="member">eg</ref>;<sp/></highlight></codeline>
+<codeline lineno="107"><highlight class="normal"></highlight></codeline>
+<codeline lineno="108" refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1DirichletQuadrature_1a76b9c249cf81cf6939ae90478c44f15c" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>MatrixX<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1DirichletQuadrature_1a76b9c249cf81cf6939ae90478c44f15c" kindref="member">Ncg</ref>;<sp/></highlight></codeline>
+<codeline lineno="109"><highlight class="normal"></highlight></codeline>
+<codeline lineno="110" refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1DirichletQuadrature_1a5b9fe3fc140cdb4bbeb2e7bb7a0777b9" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>IndexVectorX<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1DirichletQuadrature_1a5b9fe3fc140cdb4bbeb2e7bb7a0777b9" kindref="member">GVGp</ref>;<sp/><sp/><sp/><sp/><sp/><sp/></highlight></codeline>
+<codeline lineno="111" refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1DirichletQuadrature_1ac274439ff094ac8c8ce4f609dd2dde7d" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>IndexVectorX<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1DirichletQuadrature_1ac274439ff094ac8c8ce4f609dd2dde7d" kindref="member">GVGg</ref>;<sp/><sp/><sp/><sp/><sp/><sp/></highlight></codeline>
+<codeline lineno="112" refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1DirichletQuadrature_1af42ffe26159daa9c6a1ee410ccdcacf3" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>IndexVectorX<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1DirichletQuadrature_1af42ffe26159daa9c6a1ee410ccdcacf3" kindref="member">GVGilocal</ref>;<sp/></highlight></codeline>
+<codeline lineno="113"><highlight class="normal">};</highlight></codeline>
+<codeline lineno="114"><highlight class="normal"></highlight></codeline>
+<codeline lineno="115"><highlight class="normal">}<sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>lod</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="116"><highlight class="normal">}<sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>vbd</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="117"><highlight class="normal">}<sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>sim</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="118"><highlight class="normal">}<sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>pbat</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="119"><highlight class="normal"></highlight></codeline>
+<codeline lineno="120"><highlight class="normal"></highlight><highlight class="preprocessor">#endif<sp/>//<sp/>PBAT_SIM_VBD_LOD_QUADRATURE_H</highlight></codeline>
+    </programlisting>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Quadrature.h"/>
+  </compounddef>
+</doxygen>

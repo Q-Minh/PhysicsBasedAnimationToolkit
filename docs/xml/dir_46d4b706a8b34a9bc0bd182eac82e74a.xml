@@ -1,0 +1,19 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="dir_46d4b706a8b34a9bc0bd182eac82e74a" kind="dir">
+    <compoundname>/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/math/linalg</compoundname>
+    <innerfile refid="bindings_2pypbat_2math_2linalg_2Cholmod_8cpp">Cholmod.cpp</innerfile>
+    <innerfile refid="bindings_2pypbat_2math_2linalg_2Cholmod_8h">Cholmod.h</innerfile>
+    <innerfile refid="LinAlg_8cpp">LinAlg.cpp</innerfile>
+    <innerfile refid="bindings_2pypbat_2math_2linalg_2LinAlg_8h">LinAlg.h</innerfile>
+    <innerfile refid="Pardiso_8cpp">Pardiso.cpp</innerfile>
+    <innerfile refid="Pardiso_8h">Pardiso.h</innerfile>
+    <innerfile refid="SimplicialLDLT_8cpp">SimplicialLDLT.cpp</innerfile>
+    <innerfile refid="SimplicialLDLT_8h">SimplicialLDLT.h</innerfile>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/math/linalg/"/>
+  </compounddef>
+</doxygen>

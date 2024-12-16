@@ -1,0 +1,168 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="source_2CMakeLists_8txt" kind="file" language="C++">
+    <compoundname>CMakeLists.txt</compoundname>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="normal">add_library(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit)</highlight></codeline>
+<codeline lineno="2"><highlight class="normal">add_library(PhysicsBasedAnimationToolkit::PhysicsBasedAnimationToolkit<sp/>ALIAS<sp/>PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit)</highlight></codeline>
+<codeline lineno="3"><highlight class="normal">set_target_properties(</highlight></codeline>
+<codeline lineno="4"><highlight class="normal"><sp/><sp/><sp/><sp/>PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit</highlight></codeline>
+<codeline lineno="5"><highlight class="normal"><sp/><sp/><sp/><sp/>PROPERTIES</highlight></codeline>
+<codeline lineno="6"><highlight class="normal"><sp/><sp/><sp/><sp/>OUTPUT_NAME<sp/></highlight><highlight class="stringliteral">&quot;PhysicsBasedAnimationToolkit&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="7"><highlight class="normal"><sp/><sp/><sp/><sp/>EXPORT_NAME<sp/></highlight><highlight class="stringliteral">&quot;PhysicsBasedAnimationToolkit&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="8"><highlight class="normal"><sp/><sp/><sp/><sp/>FOLDER<sp/></highlight><highlight class="stringliteral">&quot;PhysicsBasedAnimationToolkit&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="9"><highlight class="normal"><sp/><sp/><sp/><sp/>DEBUG_POSTFIX<sp/></highlight><highlight class="stringliteral">&quot;_d&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="10"><highlight class="normal"><sp/><sp/><sp/><sp/>CXX_VISIBILITY_PRESET<sp/></highlight><highlight class="stringliteral">&quot;hidden&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="11"><highlight class="normal"><sp/><sp/><sp/><sp/>VISIBILITY_INLINES_HIDDEN<sp/>ON</highlight></codeline>
+<codeline lineno="12"><highlight class="normal">)</highlight></codeline>
+<codeline lineno="13"><highlight class="normal"></highlight></codeline>
+<codeline lineno="14"><highlight class="normal"></highlight><highlight class="preprocessor">#<sp/>Most<sp/>of<sp/>our<sp/>implementation<sp/>code<sp/>is<sp/>templated,<sp/>so<sp/>we<sp/>expose<sp/>transitive<sp/>dependencies<sp/>(i.e.<sp/>PUBLIC)</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="15"><highlight class="normal">target_compile_features(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit<sp/>PUBLIC<sp/>cxx_std_20)</highlight></codeline>
+<codeline lineno="16"><highlight class="normal">target_compile_definitions(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit</highlight></codeline>
+<codeline lineno="17"><highlight class="normal"><sp/><sp/><sp/><sp/>PUBLIC</highlight></codeline>
+<codeline lineno="18"><highlight class="normal"><sp/><sp/><sp/><sp/>$&lt;$&lt;BOOL:${PBAT_BUILD_TESTS}&gt;:PBAT_HAS_DOCTEST&gt;</highlight></codeline>
+<codeline lineno="19"><highlight class="normal"><sp/><sp/><sp/><sp/>$&lt;$&lt;NOT:$&lt;BOOL:${PBAT_BUILD_TESTS}&gt;&gt;:DOCTEST_CONFIG_DISABLE&gt;</highlight></codeline>
+<codeline lineno="20"><highlight class="normal"><sp/><sp/><sp/><sp/>$&lt;$&lt;BOOL:${PBAT_ENABLE_PROFILER}&gt;:PBAT_HAS_TRACY_PROFILER&gt;</highlight></codeline>
+<codeline lineno="21"><highlight class="normal"><sp/><sp/><sp/><sp/>$&lt;$&lt;BOOL:${PBAT_USE_INTEL_MKL}&gt;:EIGEN_USE_MKL_ALL&gt;</highlight></codeline>
+<codeline lineno="22"><highlight class="normal"><sp/><sp/><sp/><sp/>$&lt;$&lt;BOOL:${PBAT_USE_INTEL_MKL}&gt;:PBAT_USE_INTEL_MKL&gt;</highlight></codeline>
+<codeline lineno="23"><highlight class="normal"><sp/><sp/><sp/><sp/>$&lt;$&lt;BOOL:${PBAT_USE_SUITESPARSE}&gt;:PBAT_USE_SUITESPARSE&gt;</highlight></codeline>
+<codeline lineno="24"><highlight class="normal"><sp/><sp/><sp/><sp/>$&lt;$&lt;BOOL:${PBAT_USE_METIS}&gt;:PBAT_USE_METIS&gt;</highlight></codeline>
+<codeline lineno="25"><highlight class="normal"><sp/><sp/><sp/><sp/>$&lt;$&lt;BOOL:${PBAT_USE_CUDA}&gt;:PBAT_USE_CUDA&gt;</highlight></codeline>
+<codeline lineno="26"><highlight class="normal"><sp/><sp/><sp/><sp/>$&lt;$&lt;BOOL:${PBAT_USE_CUDA}&gt;:EIGEN_NO_CUDA&gt;</highlight></codeline>
+<codeline lineno="27"><highlight class="normal"><sp/><sp/><sp/><sp/>PBAT_ROOT=</highlight><highlight class="stringliteral">&quot;${PROJECT_SOURCE_DIR}&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="28"><highlight class="normal">)</highlight></codeline>
+<codeline lineno="29"><highlight class="normal"></highlight></codeline>
+<codeline lineno="30"><highlight class="normal">#<sp/>Define<sp/>header<sp/>file<sp/>sets</highlight></codeline>
+<codeline lineno="31"><highlight class="normal">target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit</highlight></codeline>
+<codeline lineno="32"><highlight class="normal"><sp/><sp/><sp/><sp/>PUBLIC</highlight></codeline>
+<codeline lineno="33"><highlight class="normal"><sp/><sp/><sp/><sp/>FILE_SET<sp/>api</highlight></codeline>
+<codeline lineno="34"><highlight class="normal"><sp/><sp/><sp/><sp/>TYPE<sp/>HEADERS</highlight></codeline>
+<codeline lineno="35"><highlight class="normal"><sp/><sp/><sp/><sp/>BASE_DIRS<sp/>${CMAKE_CURRENT_LIST_DIR}<sp/>${CMAKE_CURRENT_BINARY_DIR}</highlight></codeline>
+<codeline lineno="36"><highlight class="normal">)</highlight></codeline>
+<codeline lineno="37"><highlight class="normal">target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit</highlight></codeline>
+<codeline lineno="38"><highlight class="normal"><sp/><sp/><sp/><sp/>PRIVATE</highlight></codeline>
+<codeline lineno="39"><highlight class="normal"><sp/><sp/><sp/><sp/>FILE_SET<sp/>implementation</highlight></codeline>
+<codeline lineno="40"><highlight class="normal"><sp/><sp/><sp/><sp/>TYPE<sp/>HEADERS</highlight></codeline>
+<codeline lineno="41"><highlight class="normal"><sp/><sp/><sp/><sp/>BASE_DIRS<sp/>${CMAKE_CURRENT_LIST_DIR}</highlight></codeline>
+<codeline lineno="42"><highlight class="normal">)</highlight></codeline>
+<codeline lineno="43"><highlight class="normal"></highlight></codeline>
+<codeline lineno="44"><highlight class="normal">#<sp/>Define<sp/>sources+targets<sp/></highlight><highlight class="keywordflow">for</highlight><highlight class="normal"><sp/>our<sp/>library<sp/>and<sp/>link<sp/>to<sp/>every<sp/>dependency</highlight></codeline>
+<codeline lineno="45"><highlight class="normal">add_subdirectory(pbat)</highlight></codeline>
+<codeline lineno="46"><highlight class="normal">target_link_libraries(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit</highlight></codeline>
+<codeline lineno="47"><highlight class="normal"><sp/><sp/><sp/><sp/>PUBLIC</highlight></codeline>
+<codeline lineno="48"><highlight class="normal"><sp/><sp/><sp/><sp/>doctest::doctest</highlight></codeline>
+<codeline lineno="49"><highlight class="normal"><sp/><sp/><sp/><sp/>Eigen3::Eigen</highlight></codeline>
+<codeline lineno="50"><highlight class="normal"><sp/><sp/><sp/><sp/>fmt::fmt</highlight></codeline>
+<codeline lineno="51"><highlight class="normal"><sp/><sp/><sp/><sp/>range-v3::concepts</highlight></codeline>
+<codeline lineno="52"><highlight class="normal"><sp/><sp/><sp/><sp/>range-v3::meta</highlight></codeline>
+<codeline lineno="53"><highlight class="normal"><sp/><sp/><sp/><sp/>range-v3::range-v3</highlight></codeline>
+<codeline lineno="54"><highlight class="normal"><sp/><sp/><sp/><sp/>TBB::tbb</highlight></codeline>
+<codeline lineno="55"><highlight class="normal">)</highlight></codeline>
+<codeline lineno="56"><highlight class="normal"></highlight></codeline>
+<codeline lineno="57"><highlight class="normal"></highlight><highlight class="keywordflow">if</highlight><highlight class="normal">(PBAT_ENABLE_PROFILER)</highlight></codeline>
+<codeline lineno="58"><highlight class="normal"><sp/><sp/><sp/><sp/>target_link_libraries(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit</highlight></codeline>
+<codeline lineno="59"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>PUBLIC</highlight></codeline>
+<codeline lineno="60"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>Tracy::TracyClient</highlight></codeline>
+<codeline lineno="61"><highlight class="normal"><sp/><sp/><sp/><sp/>)</highlight></codeline>
+<codeline lineno="62"><highlight class="normal">endif()</highlight></codeline>
+<codeline lineno="63"><highlight class="normal"></highlight></codeline>
+<codeline lineno="64"><highlight class="normal">if(PBAT_USE_INTEL_MKL)</highlight></codeline>
+<codeline lineno="65"><highlight class="normal"><sp/><sp/><sp/><sp/>target_link_libraries(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit</highlight></codeline>
+<codeline lineno="66"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>PUBLIC</highlight></codeline>
+<codeline lineno="67"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>MKL::MKL</highlight></codeline>
+<codeline lineno="68"><highlight class="normal"><sp/><sp/><sp/><sp/>)</highlight></codeline>
+<codeline lineno="69"><highlight class="normal">endif()</highlight></codeline>
+<codeline lineno="70"><highlight class="normal"></highlight></codeline>
+<codeline lineno="71"><highlight class="normal">if(PBAT_USE_SUITESPARSE)</highlight></codeline>
+<codeline lineno="72"><highlight class="normal"><sp/><sp/><sp/><sp/>target_link_libraries(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit</highlight></codeline>
+<codeline lineno="73"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>PUBLIC</highlight></codeline>
+<codeline lineno="74"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>SuiteSparse::suitesparseconfig</highlight></codeline>
+<codeline lineno="75"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>SuiteSparse::amd</highlight></codeline>
+<codeline lineno="76"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>SuiteSparse::cholmod</highlight></codeline>
+<codeline lineno="77"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>SuiteSparse::colamd</highlight></codeline>
+<codeline lineno="78"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>SuiteSparse::ccolamd</highlight></codeline>
+<codeline lineno="79"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>SuiteSparse::camd</highlight></codeline>
+<codeline lineno="80"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>SuiteSparse::ldl</highlight></codeline>
+<codeline lineno="81"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>SuiteSparse::umfpack</highlight></codeline>
+<codeline lineno="82"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>SuiteSparse::spqr</highlight></codeline>
+<codeline lineno="83"><highlight class="normal"><sp/><sp/><sp/><sp/>)</highlight></codeline>
+<codeline lineno="84"><highlight class="normal">endif()</highlight></codeline>
+<codeline lineno="85"><highlight class="normal"></highlight></codeline>
+<codeline lineno="86"><highlight class="normal">if(PBAT_USE_METIS)</highlight></codeline>
+<codeline lineno="87"><highlight class="normal"><sp/><sp/><sp/><sp/>target_link_libraries(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit</highlight></codeline>
+<codeline lineno="88"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>PRIVATE</highlight></codeline>
+<codeline lineno="89"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>metis</highlight></codeline>
+<codeline lineno="90"><highlight class="normal"><sp/><sp/><sp/><sp/>)</highlight></codeline>
+<codeline lineno="91"><highlight class="normal">endif()</highlight></codeline>
+<codeline lineno="92"><highlight class="normal"></highlight></codeline>
+<codeline lineno="93"><highlight class="normal">if(PBAT_USE_CUDA)</highlight></codeline>
+<codeline lineno="94"><highlight class="normal"><sp/><sp/><sp/><sp/>target_link_libraries(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit</highlight></codeline>
+<codeline lineno="95"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>PRIVATE</highlight></codeline>
+<codeline lineno="96"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>CUDA::toolkit</highlight></codeline>
+<codeline lineno="97"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>CUDA::cudart</highlight></codeline>
+<codeline lineno="98"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>cuda-api-wrappers::runtime-and-driver</highlight></codeline>
+<codeline lineno="99"><highlight class="normal"><sp/><sp/><sp/><sp/>)</highlight></codeline>
+<codeline lineno="100"><highlight class="normal"><sp/><sp/><sp/><sp/>set_target_properties(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit</highlight></codeline>
+<codeline lineno="101"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>PROPERTIES</highlight></codeline>
+<codeline lineno="102"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>CUDA_SEPARABLE_COMPILATION<sp/>ON</highlight></codeline>
+<codeline lineno="103"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>CUDA_RESOLVE_DEVICE_SYMBOLS<sp/>ON</highlight></codeline>
+<codeline lineno="104"><highlight class="normal"><sp/><sp/><sp/><sp/>)</highlight></codeline>
+<codeline lineno="105"><highlight class="normal"></highlight></codeline>
+<codeline lineno="106"><highlight class="normal"><sp/><sp/><sp/><sp/>get_target_property(_pbat_sources<sp/>PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit<sp/>SOURCES)</highlight></codeline>
+<codeline lineno="107"><highlight class="normal"></highlight></codeline>
+<codeline lineno="108"><highlight class="normal"><sp/><sp/><sp/><sp/>foreach(_source<sp/>IN<sp/>ITEMS<sp/>${_pbat_sources})</highlight></codeline>
+<codeline lineno="109"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>get_filename_component(_extension<sp/>${_source}<sp/>LAST_EXT)</highlight></codeline>
+<codeline lineno="110"><highlight class="normal"></highlight></codeline>
+<codeline lineno="111"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal">(_extension<sp/>STREQUAL<sp/></highlight><highlight class="stringliteral">&quot;.cu&quot;</highlight><highlight class="normal">)</highlight></codeline>
+<codeline lineno="112"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>set_source_files_properties(${_source}</highlight></codeline>
+<codeline lineno="113"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>PROPERTIES</highlight></codeline>
+<codeline lineno="114"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>COMPILE_OPTIONS</highlight></codeline>
+<codeline lineno="115"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="stringliteral">&quot;--expt-relaxed-constexpr;--extended-lambda&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="116"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>COMPILE_DEFINITIONS</highlight></codeline>
+<codeline lineno="117"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="stringliteral">&quot;_SILENCE_ALL_CXX20_DEPRECATION_WARNINGS&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="118"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>)</highlight></codeline>
+<codeline lineno="119"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>endif()</highlight></codeline>
+<codeline lineno="120"><highlight class="normal"><sp/><sp/><sp/><sp/>endforeach()</highlight></codeline>
+<codeline lineno="121"><highlight class="normal">endif()</highlight></codeline>
+<codeline lineno="122"><highlight class="normal"></highlight></codeline>
+<codeline lineno="123"><highlight class="normal"></highlight><highlight class="preprocessor">#<sp/>Make<sp/>source<sp/>tree<sp/>appear<sp/>as<sp/>on<sp/>file<sp/>system<sp/>in<sp/>IDEs</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="124"><highlight class="normal">get_target_property(_pbat_sources<sp/>PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit<sp/>SOURCES)</highlight></codeline>
+<codeline lineno="125"><highlight class="normal">get_target_property(_pbat_headers<sp/>PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit<sp/>HEADER_SET_api)</highlight></codeline>
+<codeline lineno="126"><highlight class="normal">get_target_property(_pbat_private_headers<sp/>PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit<sp/>HEADER_SET_implementation)</highlight></codeline>
+<codeline lineno="127"><highlight class="normal">list(APPEND<sp/>_pbat_headers<sp/>${_pbat_private_headers})</highlight></codeline>
+<codeline lineno="128"><highlight class="normal">source_group(</highlight></codeline>
+<codeline lineno="129"><highlight class="normal"><sp/><sp/><sp/><sp/>TREE<sp/>${CMAKE_CURRENT_SOURCE_DIR}</highlight></codeline>
+<codeline lineno="130"><highlight class="normal"><sp/><sp/><sp/><sp/>PREFIX<sp/></highlight><highlight class="stringliteral">&quot;source&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="131"><highlight class="normal"><sp/><sp/><sp/><sp/>FILES<sp/>${_pbat_sources}</highlight></codeline>
+<codeline lineno="132"><highlight class="normal">)</highlight></codeline>
+<codeline lineno="133"><highlight class="normal">source_group(</highlight></codeline>
+<codeline lineno="134"><highlight class="normal"><sp/><sp/><sp/><sp/>TREE<sp/>${CMAKE_CURRENT_SOURCE_DIR}</highlight></codeline>
+<codeline lineno="135"><highlight class="normal"><sp/><sp/><sp/><sp/>PREFIX<sp/></highlight><highlight class="stringliteral">&quot;headers&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="136"><highlight class="normal"><sp/><sp/><sp/><sp/>FILES<sp/>${_pbat_headers}</highlight></codeline>
+<codeline lineno="137"><highlight class="normal">)</highlight></codeline>
+<codeline lineno="138"><highlight class="normal"></highlight></codeline>
+<codeline lineno="139"><highlight class="normal">#<sp/>Generate<sp/>shared<sp/>library<sp/>export<sp/>macros</highlight></codeline>
+<codeline lineno="140"><highlight class="normal">#<sp/>Note<sp/>that<sp/>the<sp/>following<sp/>code<sp/>must<sp/>come<sp/>after<sp/>the<sp/>previous<sp/>call<sp/>to<sp/>source_group,</highlight></codeline>
+<codeline lineno="141"><highlight class="normal">#<sp/>otherwise<sp/>the<sp/>export<sp/>file<sp/>will<sp/>not<sp/>play<sp/>well<sp/>with<sp/>source_group,<sp/>since<sp/>it<sp/>resides</highlight></codeline>
+<codeline lineno="142"><highlight class="normal">#<sp/>in<sp/>the<sp/>${CMAKE_CURRENT_BINARY_DIR}<sp/>folder,<sp/>not<sp/>in<sp/>the<sp/>current<sp/>source<sp/>tree.</highlight></codeline>
+<codeline lineno="143"><highlight class="normal">include(GenerateExportHeader)</highlight></codeline>
+<codeline lineno="144"><highlight class="normal">generate_export_header(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit</highlight></codeline>
+<codeline lineno="145"><highlight class="normal"><sp/><sp/><sp/><sp/>EXPORT_MACRO_NAME<sp/></highlight><highlight class="stringliteral">&quot;PBAT_API&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="146"><highlight class="normal"><sp/><sp/><sp/><sp/>EXPORT_FILE_NAME<sp/></highlight><highlight class="stringliteral">&quot;PhysicsBasedAnimationToolkitExport.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="147"><highlight class="normal"><sp/><sp/><sp/><sp/>DEPRECATED_MACRO_NAME<sp/></highlight><highlight class="stringliteral">&quot;PBAT_DEPRECATED&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="148"><highlight class="normal"><sp/><sp/><sp/><sp/>STATIC_DEFINE<sp/></highlight><highlight class="stringliteral">&quot;PBAT_STATIC_DEFINE&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="149"><highlight class="normal">)</highlight></codeline>
+<codeline lineno="150"><highlight class="normal">target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit</highlight></codeline>
+<codeline lineno="151"><highlight class="normal"><sp/><sp/><sp/><sp/>PUBLIC</highlight></codeline>
+<codeline lineno="152"><highlight class="normal"><sp/><sp/><sp/><sp/>FILE_SET<sp/>api</highlight></codeline>
+<codeline lineno="153"><highlight class="normal"><sp/><sp/><sp/><sp/>TYPE<sp/>HEADERS</highlight></codeline>
+<codeline lineno="154"><highlight class="normal"><sp/><sp/><sp/><sp/>FILES<sp/></highlight><highlight class="stringliteral">&quot;${CMAKE_CURRENT_BINARY_DIR}/PhysicsBasedAnimationToolkitExport.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="155"><highlight class="normal">)</highlight></codeline>
+    </programlisting>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/CMakeLists.txt"/>
+  </compounddef>
+</doxygen>

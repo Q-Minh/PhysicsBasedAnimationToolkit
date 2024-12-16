@@ -1,0 +1,739 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="classpbat_1_1gpu_1_1xpbd_1_1Integrator" kind="class" language="C++" prot="public">
+    <compoundname>pbat::gpu::xpbd::Integrator</compoundname>
+      <sectiondef kind="public-type">
+      <memberdef kind="typedef" id="classpbat_1_1gpu_1_1xpbd_1_1Integrator_1ac989aca6ba25634ef07dc4072afd7ff9" prot="public" static="no">
+        <type><ref refid="structpbat_1_1sim_1_1xpbd_1_1Data" kindref="compound">pbat::sim::xpbd::Data</ref></type>
+        <definition>using pbat::gpu::xpbd::Integrator::Data =  pbat::sim::xpbd::Data</definition>
+        <argsstring></argsstring>
+        <name>Data</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/xpbd/Integrator.h" line="21" column="5" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/xpbd/Integrator.h" bodystart="21" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="classpbat_1_1gpu_1_1xpbd_1_1Integrator_1aaa13fe7c555e8fee121bc7371c5b3822" prot="public" static="no">
+        <type>pbat::sim::xpbd::EConstraint</type>
+        <definition>using pbat::gpu::xpbd::Integrator::EConstraint =  pbat::sim::xpbd::EConstraint</definition>
+        <argsstring></argsstring>
+        <name>EConstraint</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/xpbd/Integrator.h" line="22" column="5" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/xpbd/Integrator.h" bodystart="22" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="classpbat_1_1gpu_1_1xpbd_1_1Integrator_1a917b5778145981184f2c42fd84c37ed4" prot="private" static="no" mutable="no">
+        <type>IntegratorImpl *</type>
+        <definition>IntegratorImpl* pbat::gpu::xpbd::Integrator::mImpl</definition>
+        <argsstring></argsstring>
+        <name>mImpl</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/xpbd/Integrator.h" line="164" column="20" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/xpbd/Integrator.h" bodystart="164" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpbat_1_1gpu_1_1xpbd_1_1Integrator_1a7c5e8d5d96918f470c48f698580b06b5" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>PBAT_API</type>
+        <definition>PBAT_API pbat::gpu::xpbd::Integrator::Integrator</definition>
+        <argsstring>(Data const &amp;data, std::size_t nMaxVertexTetrahedronOverlaps, std::size_t nMaxVertexTriangleContacts)</argsstring>
+        <name>Integrator</name>
+        <param>
+          <type><ref refid="structpbat_1_1sim_1_1xpbd_1_1Data" kindref="compound">Data</ref> const &amp;</type>
+          <declname>data</declname>
+        </param>
+        <param>
+          <type>std::size_t</type>
+          <declname>nMaxVertexTetrahedronOverlaps</declname>
+        </param>
+        <param>
+          <type>std::size_t</type>
+          <declname>nMaxVertexTriangleContacts</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>V</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>T</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/xpbd/Integrator.h" line="30" column="14"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1gpu_1_1xpbd_1_1Integrator_1a434d1af71e6ae6059f758b6d723e047e" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>pbat::gpu::xpbd::Integrator::Integrator</definition>
+        <argsstring>(Integrator const &amp;)=delete</argsstring>
+        <name>Integrator</name>
+        <param>
+          <type><ref refid="classpbat_1_1gpu_1_1xpbd_1_1Integrator" kindref="compound">Integrator</ref> const &amp;</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/xpbd/Integrator.h" line="34" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1gpu_1_1xpbd_1_1Integrator_1a6b94d9254398f7c94b788298e3304e2a" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpbat_1_1gpu_1_1xpbd_1_1Integrator" kindref="compound">Integrator</ref> &amp;</type>
+        <definition>Integrator&amp; pbat::gpu::xpbd::Integrator::operator=</definition>
+        <argsstring>(Integrator const &amp;)=delete</argsstring>
+        <name>operator=</name>
+        <param>
+          <type><ref refid="classpbat_1_1gpu_1_1xpbd_1_1Integrator" kindref="compound">Integrator</ref> const &amp;</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/xpbd/Integrator.h" line="35" column="16"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1gpu_1_1xpbd_1_1Integrator_1a0704c26b7f456067c97263d4dba3369b" prot="public" static="no" const="no" explicit="no" inline="no" noexcept="yes" virt="non-virtual">
+        <type>PBAT_API</type>
+        <definition>PBAT_API pbat::gpu::xpbd::Integrator::Integrator</definition>
+        <argsstring>(Integrator &amp;&amp;) noexcept</argsstring>
+        <name>Integrator</name>
+        <param>
+          <type><ref refid="classpbat_1_1gpu_1_1xpbd_1_1Integrator" kindref="compound">Integrator</ref> &amp;&amp;</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/xpbd/Integrator.h" line="36" column="14"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1gpu_1_1xpbd_1_1Integrator_1a7ef051d5315a71fec0c11418a4c1e461" prot="public" static="no" const="no" explicit="no" inline="no" noexcept="yes" virt="non-virtual">
+        <type>PBAT_API <ref refid="classpbat_1_1gpu_1_1xpbd_1_1Integrator" kindref="compound">Integrator</ref> &amp;</type>
+        <definition>PBAT_API Integrator&amp; pbat::gpu::xpbd::Integrator::operator=</definition>
+        <argsstring>(Integrator &amp;&amp;) noexcept</argsstring>
+        <name>operator=</name>
+        <param>
+          <type><ref refid="classpbat_1_1gpu_1_1xpbd_1_1Integrator" kindref="compound">Integrator</ref> &amp;&amp;</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/xpbd/Integrator.h" line="37" column="25"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1gpu_1_1xpbd_1_1Integrator_1af797d48badc1884cc50b5acd0f6dfa5c" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>PBAT_API void</type>
+        <definition>PBAT_API void pbat::gpu::xpbd::Integrator::Step</definition>
+        <argsstring>(GpuScalar dt, GpuIndex iterations, GpuIndex substeps)</argsstring>
+        <name>Step</name>
+        <param>
+          <type>GpuScalar</type>
+          <declname>dt</declname>
+        </param>
+        <param>
+          <type>GpuIndex</type>
+          <declname>iterations</declname>
+        </param>
+        <param>
+          <type>GpuIndex</type>
+          <declname>substeps</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>dt</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>iterations</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>@params substeps </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/xpbd/Integrator.h" line="44" column="19"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1gpu_1_1xpbd_1_1Integrator_1aa6e6f692fd22a40e1b6077e0174042ea" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>PBAT_API GpuMatrixX</type>
+        <definition>PBAT_API GpuMatrixX pbat::gpu::xpbd::Integrator::Positions</definition>
+        <argsstring>() const</argsstring>
+        <name>Positions</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para></para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/xpbd/Integrator.h" line="49" column="25"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1gpu_1_1xpbd_1_1Integrator_1a09f1e7bb7242eb7d32a5465a2e1b6b0c" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>PBAT_API std::size_t</type>
+        <definition>PBAT_API std::size_t pbat::gpu::xpbd::Integrator::NumberOfParticles</definition>
+        <argsstring>() const</argsstring>
+        <name>NumberOfParticles</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para></para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/xpbd/Integrator.h" line="54" column="26"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1gpu_1_1xpbd_1_1Integrator_1ad352613391cf0838ca484b8860b2a35f" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>PBAT_API std::size_t</type>
+        <definition>PBAT_API std::size_t pbat::gpu::xpbd::Integrator::NumberOfConstraints</definition>
+        <argsstring>() const</argsstring>
+        <name>NumberOfConstraints</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para></para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/xpbd/Integrator.h" line="59" column="26"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1gpu_1_1xpbd_1_1Integrator_1ad2fd2874c230073f66dd852448007bcf" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>PBAT_API void</type>
+        <definition>PBAT_API void pbat::gpu::xpbd::Integrator::SetPositions</definition>
+        <argsstring>(Eigen::Ref&lt; GpuMatrixX const &gt; const &amp;X)</argsstring>
+        <name>SetPositions</name>
+        <param>
+          <type>Eigen::Ref&lt; GpuMatrixX const &gt; const &amp;</type>
+          <declname>X</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>X</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/xpbd/Integrator.h" line="64" column="19"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1gpu_1_1xpbd_1_1Integrator_1abd3b3e2f5281c68de6778cf3e8958baa" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>PBAT_API void</type>
+        <definition>PBAT_API void pbat::gpu::xpbd::Integrator::SetVelocities</definition>
+        <argsstring>(Eigen::Ref&lt; GpuMatrixX const &gt; const &amp;v)</argsstring>
+        <name>SetVelocities</name>
+        <param>
+          <type>Eigen::Ref&lt; GpuMatrixX const &gt; const &amp;</type>
+          <declname>v</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>v</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/xpbd/Integrator.h" line="69" column="19"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1gpu_1_1xpbd_1_1Integrator_1adec0875558f1e836e4bb024313406190" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>PBAT_API void</type>
+        <definition>PBAT_API void pbat::gpu::xpbd::Integrator::SetExternalAcceleration</definition>
+        <argsstring>(Eigen::Ref&lt; GpuMatrixX const &gt; const &amp;aext)</argsstring>
+        <name>SetExternalAcceleration</name>
+        <param>
+          <type>Eigen::Ref&lt; GpuMatrixX const &gt; const &amp;</type>
+          <declname>aext</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>aext</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/xpbd/Integrator.h" line="74" column="19"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1gpu_1_1xpbd_1_1Integrator_1aebf3c01b199e4a06bbf1d5f40df4d448" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>PBAT_API void</type>
+        <definition>PBAT_API void pbat::gpu::xpbd::Integrator::SetMassInverse</definition>
+        <argsstring>(Eigen::Ref&lt; GpuMatrixX const &gt; const &amp;minv)</argsstring>
+        <name>SetMassInverse</name>
+        <param>
+          <type>Eigen::Ref&lt; GpuMatrixX const &gt; const &amp;</type>
+          <declname>minv</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>minv</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/xpbd/Integrator.h" line="79" column="19"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1gpu_1_1xpbd_1_1Integrator_1a7013f2e6eb52feb81458c8f4e0fe0f9a" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>PBAT_API void</type>
+        <definition>PBAT_API void pbat::gpu::xpbd::Integrator::SetLameCoefficients</definition>
+        <argsstring>(Eigen::Ref&lt; GpuMatrixX const &gt; const &amp;l)</argsstring>
+        <name>SetLameCoefficients</name>
+        <param>
+          <type>Eigen::Ref&lt; GpuMatrixX const &gt; const &amp;</type>
+          <declname>l</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>l</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/xpbd/Integrator.h" line="84" column="19"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1gpu_1_1xpbd_1_1Integrator_1a5eddb176363f7820a6e31603f7c31115" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>PBAT_API void</type>
+        <definition>PBAT_API void pbat::gpu::xpbd::Integrator::SetCompliance</definition>
+        <argsstring>(Eigen::Ref&lt; GpuMatrixX const &gt; const &amp;alpha, EConstraint eConstraint)</argsstring>
+        <name>SetCompliance</name>
+        <param>
+          <type>Eigen::Ref&lt; GpuMatrixX const &gt; const &amp;</type>
+          <declname>alpha</declname>
+        </param>
+        <param>
+          <type>EConstraint</type>
+          <declname>eConstraint</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>alpha</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>eConstraint</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/xpbd/Integrator.h" line="90" column="19"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1gpu_1_1xpbd_1_1Integrator_1a96a5b817c4e3315d30a864075e1c6fb1" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>PBAT_API void</type>
+        <definition>PBAT_API void pbat::gpu::xpbd::Integrator::SetFrictionCoefficients</definition>
+        <argsstring>(GpuScalar muS, GpuScalar muK)</argsstring>
+        <name>SetFrictionCoefficients</name>
+        <param>
+          <type>GpuScalar</type>
+          <declname>muS</declname>
+        </param>
+        <param>
+          <type>GpuScalar</type>
+          <declname>muK</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>muS</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>muK</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/xpbd/Integrator.h" line="96" column="19"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1gpu_1_1xpbd_1_1Integrator_1afd895f7f904bd27f1c9d46c720a54d86" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>PBAT_API void</type>
+        <definition>PBAT_API void pbat::gpu::xpbd::Integrator::SetSceneBoundingBox</definition>
+        <argsstring>(Eigen::Vector&lt; GpuScalar, 3 &gt; const &amp;min, Eigen::Vector&lt; GpuScalar, 3 &gt; const &amp;max)</argsstring>
+        <name>SetSceneBoundingBox</name>
+        <param>
+          <type>Eigen::Vector&lt; GpuScalar, 3 &gt; const &amp;</type>
+          <declname>min</declname>
+        </param>
+        <param>
+          <type>Eigen::Vector&lt; GpuScalar, 3 &gt; const &amp;</type>
+          <declname>max</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>min</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>max</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/xpbd/Integrator.h" line="102" column="19"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1gpu_1_1xpbd_1_1Integrator_1a4269fd57bf864b33ecbd12724f17f889" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>PBAT_API GpuMatrixX</type>
+        <definition>PBAT_API GpuMatrixX pbat::gpu::xpbd::Integrator::GetVelocity</definition>
+        <argsstring>() const</argsstring>
+        <name>GetVelocity</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para></para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/xpbd/Integrator.h" line="109" column="25"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1gpu_1_1xpbd_1_1Integrator_1a297596e388d7141ed3a52aaaf7e81250" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>PBAT_API GpuMatrixX</type>
+        <definition>PBAT_API GpuMatrixX pbat::gpu::xpbd::Integrator::GetExternalAcceleration</definition>
+        <argsstring>() const</argsstring>
+        <name>GetExternalAcceleration</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para></para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/xpbd/Integrator.h" line="114" column="25"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1gpu_1_1xpbd_1_1Integrator_1a7b1cdd7952a3a3f04f5f025cbd862f2f" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>PBAT_API GpuVectorX</type>
+        <definition>PBAT_API GpuVectorX pbat::gpu::xpbd::Integrator::GetMassInverse</definition>
+        <argsstring>() const</argsstring>
+        <name>GetMassInverse</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para></para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/xpbd/Integrator.h" line="119" column="25"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1gpu_1_1xpbd_1_1Integrator_1a7eb30366009f512a7561c5db987c1793" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>PBAT_API GpuMatrixX</type>
+        <definition>PBAT_API GpuMatrixX pbat::gpu::xpbd::Integrator::GetLameCoefficients</definition>
+        <argsstring>() const</argsstring>
+        <name>GetLameCoefficients</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para></para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/xpbd/Integrator.h" line="124" column="25"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1gpu_1_1xpbd_1_1Integrator_1ae4d228bbfb1b5d2dbf29ef9bbce362be" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>PBAT_API GpuMatrixX</type>
+        <definition>PBAT_API GpuMatrixX pbat::gpu::xpbd::Integrator::GetShapeMatrixInverse</definition>
+        <argsstring>() const</argsstring>
+        <name>GetShapeMatrixInverse</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para></para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/xpbd/Integrator.h" line="129" column="25"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1gpu_1_1xpbd_1_1Integrator_1afe19caf55a30f95b9e310db18cbb3d1b" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>PBAT_API GpuMatrixX</type>
+        <definition>PBAT_API GpuMatrixX pbat::gpu::xpbd::Integrator::GetRestStableGamma</definition>
+        <argsstring>() const</argsstring>
+        <name>GetRestStableGamma</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para></para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/xpbd/Integrator.h" line="134" column="25"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1gpu_1_1xpbd_1_1Integrator_1a62521ffc65d930a7e92dddac236616d5" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>PBAT_API GpuMatrixX</type>
+        <definition>PBAT_API GpuMatrixX pbat::gpu::xpbd::Integrator::GetLagrangeMultiplier</definition>
+        <argsstring>(EConstraint eConstraint) const</argsstring>
+        <name>GetLagrangeMultiplier</name>
+        <param>
+          <type>EConstraint</type>
+          <declname>eConstraint</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>eConstraint</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para></para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/xpbd/Integrator.h" line="140" column="25"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1gpu_1_1xpbd_1_1Integrator_1adc46611308b04f2983fe79dbd8ef7aca" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>PBAT_API GpuMatrixX</type>
+        <definition>PBAT_API GpuMatrixX pbat::gpu::xpbd::Integrator::GetCompliance</definition>
+        <argsstring>(EConstraint eConstraint) const</argsstring>
+        <name>GetCompliance</name>
+        <param>
+          <type>EConstraint</type>
+          <declname>eConstraint</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>eConstraint</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para></para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/xpbd/Integrator.h" line="146" column="25"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1gpu_1_1xpbd_1_1Integrator_1afdf658e420da9ab0867653ec4eb89cf5" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>PBAT_API GpuIndexMatrixX</type>
+        <definition>PBAT_API GpuIndexMatrixX pbat::gpu::xpbd::Integrator::GetVertexTetrahedronCollisionCandidates</definition>
+        <argsstring>() const</argsstring>
+        <name>GetVertexTetrahedronCollisionCandidates</name>
+        <briefdescription>
+<para>Get the vertex-tetrahedron collision candidates list. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>GpuIndexMatrixX 2x|#collision candidates| </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/xpbd/Integrator.h" line="152" column="30"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1gpu_1_1xpbd_1_1Integrator_1aa74733cae74b4c4c00d96d5a3d9390f2" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>PBAT_API GpuIndexMatrixX</type>
+        <definition>PBAT_API GpuIndexMatrixX pbat::gpu::xpbd::Integrator::GetVertexTriangleContactPairs</definition>
+        <argsstring>() const</argsstring>
+        <name>GetVertexTriangleContactPairs</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para></para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/xpbd/Integrator.h" line="157" column="30"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1gpu_1_1xpbd_1_1Integrator_1a8bc5a33d04d2ed5612e928b89692ea4f" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>PBAT_API</type>
+        <definition>PBAT_API pbat::gpu::xpbd::Integrator::~Integrator</definition>
+        <argsstring>()</argsstring>
+        <name>~Integrator</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/xpbd/Integrator.h" line="161" column="14"/>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/xpbd/Integrator.h" line="19" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/xpbd/Integrator.h" bodystart="18" bodyend="165"/>
+    <listofallmembers>
+      <member refid="classpbat_1_1gpu_1_1xpbd_1_1Integrator_1ac989aca6ba25634ef07dc4072afd7ff9" prot="public" virt="non-virtual"><scope>pbat::gpu::xpbd::Integrator</scope><name>Data</name></member>
+      <member refid="classpbat_1_1gpu_1_1xpbd_1_1Integrator_1aaa13fe7c555e8fee121bc7371c5b3822" prot="public" virt="non-virtual"><scope>pbat::gpu::xpbd::Integrator</scope><name>EConstraint</name></member>
+      <member refid="classpbat_1_1gpu_1_1xpbd_1_1Integrator_1adc46611308b04f2983fe79dbd8ef7aca" prot="public" virt="non-virtual"><scope>pbat::gpu::xpbd::Integrator</scope><name>GetCompliance</name></member>
+      <member refid="classpbat_1_1gpu_1_1xpbd_1_1Integrator_1a297596e388d7141ed3a52aaaf7e81250" prot="public" virt="non-virtual"><scope>pbat::gpu::xpbd::Integrator</scope><name>GetExternalAcceleration</name></member>
+      <member refid="classpbat_1_1gpu_1_1xpbd_1_1Integrator_1a62521ffc65d930a7e92dddac236616d5" prot="public" virt="non-virtual"><scope>pbat::gpu::xpbd::Integrator</scope><name>GetLagrangeMultiplier</name></member>
+      <member refid="classpbat_1_1gpu_1_1xpbd_1_1Integrator_1a7eb30366009f512a7561c5db987c1793" prot="public" virt="non-virtual"><scope>pbat::gpu::xpbd::Integrator</scope><name>GetLameCoefficients</name></member>
+      <member refid="classpbat_1_1gpu_1_1xpbd_1_1Integrator_1a7b1cdd7952a3a3f04f5f025cbd862f2f" prot="public" virt="non-virtual"><scope>pbat::gpu::xpbd::Integrator</scope><name>GetMassInverse</name></member>
+      <member refid="classpbat_1_1gpu_1_1xpbd_1_1Integrator_1afe19caf55a30f95b9e310db18cbb3d1b" prot="public" virt="non-virtual"><scope>pbat::gpu::xpbd::Integrator</scope><name>GetRestStableGamma</name></member>
+      <member refid="classpbat_1_1gpu_1_1xpbd_1_1Integrator_1ae4d228bbfb1b5d2dbf29ef9bbce362be" prot="public" virt="non-virtual"><scope>pbat::gpu::xpbd::Integrator</scope><name>GetShapeMatrixInverse</name></member>
+      <member refid="classpbat_1_1gpu_1_1xpbd_1_1Integrator_1a4269fd57bf864b33ecbd12724f17f889" prot="public" virt="non-virtual"><scope>pbat::gpu::xpbd::Integrator</scope><name>GetVelocity</name></member>
+      <member refid="classpbat_1_1gpu_1_1xpbd_1_1Integrator_1afdf658e420da9ab0867653ec4eb89cf5" prot="public" virt="non-virtual"><scope>pbat::gpu::xpbd::Integrator</scope><name>GetVertexTetrahedronCollisionCandidates</name></member>
+      <member refid="classpbat_1_1gpu_1_1xpbd_1_1Integrator_1aa74733cae74b4c4c00d96d5a3d9390f2" prot="public" virt="non-virtual"><scope>pbat::gpu::xpbd::Integrator</scope><name>GetVertexTriangleContactPairs</name></member>
+      <member refid="classpbat_1_1gpu_1_1xpbd_1_1Integrator_1a7c5e8d5d96918f470c48f698580b06b5" prot="public" virt="non-virtual"><scope>pbat::gpu::xpbd::Integrator</scope><name>Integrator</name></member>
+      <member refid="classpbat_1_1gpu_1_1xpbd_1_1Integrator_1a434d1af71e6ae6059f758b6d723e047e" prot="public" virt="non-virtual"><scope>pbat::gpu::xpbd::Integrator</scope><name>Integrator</name></member>
+      <member refid="classpbat_1_1gpu_1_1xpbd_1_1Integrator_1a0704c26b7f456067c97263d4dba3369b" prot="public" virt="non-virtual"><scope>pbat::gpu::xpbd::Integrator</scope><name>Integrator</name></member>
+      <member refid="classpbat_1_1gpu_1_1xpbd_1_1Integrator_1a917b5778145981184f2c42fd84c37ed4" prot="private" virt="non-virtual"><scope>pbat::gpu::xpbd::Integrator</scope><name>mImpl</name></member>
+      <member refid="classpbat_1_1gpu_1_1xpbd_1_1Integrator_1ad352613391cf0838ca484b8860b2a35f" prot="public" virt="non-virtual"><scope>pbat::gpu::xpbd::Integrator</scope><name>NumberOfConstraints</name></member>
+      <member refid="classpbat_1_1gpu_1_1xpbd_1_1Integrator_1a09f1e7bb7242eb7d32a5465a2e1b6b0c" prot="public" virt="non-virtual"><scope>pbat::gpu::xpbd::Integrator</scope><name>NumberOfParticles</name></member>
+      <member refid="classpbat_1_1gpu_1_1xpbd_1_1Integrator_1a6b94d9254398f7c94b788298e3304e2a" prot="public" virt="non-virtual"><scope>pbat::gpu::xpbd::Integrator</scope><name>operator=</name></member>
+      <member refid="classpbat_1_1gpu_1_1xpbd_1_1Integrator_1a7ef051d5315a71fec0c11418a4c1e461" prot="public" virt="non-virtual"><scope>pbat::gpu::xpbd::Integrator</scope><name>operator=</name></member>
+      <member refid="classpbat_1_1gpu_1_1xpbd_1_1Integrator_1aa6e6f692fd22a40e1b6077e0174042ea" prot="public" virt="non-virtual"><scope>pbat::gpu::xpbd::Integrator</scope><name>Positions</name></member>
+      <member refid="classpbat_1_1gpu_1_1xpbd_1_1Integrator_1a5eddb176363f7820a6e31603f7c31115" prot="public" virt="non-virtual"><scope>pbat::gpu::xpbd::Integrator</scope><name>SetCompliance</name></member>
+      <member refid="classpbat_1_1gpu_1_1xpbd_1_1Integrator_1adec0875558f1e836e4bb024313406190" prot="public" virt="non-virtual"><scope>pbat::gpu::xpbd::Integrator</scope><name>SetExternalAcceleration</name></member>
+      <member refid="classpbat_1_1gpu_1_1xpbd_1_1Integrator_1a96a5b817c4e3315d30a864075e1c6fb1" prot="public" virt="non-virtual"><scope>pbat::gpu::xpbd::Integrator</scope><name>SetFrictionCoefficients</name></member>
+      <member refid="classpbat_1_1gpu_1_1xpbd_1_1Integrator_1a7013f2e6eb52feb81458c8f4e0fe0f9a" prot="public" virt="non-virtual"><scope>pbat::gpu::xpbd::Integrator</scope><name>SetLameCoefficients</name></member>
+      <member refid="classpbat_1_1gpu_1_1xpbd_1_1Integrator_1aebf3c01b199e4a06bbf1d5f40df4d448" prot="public" virt="non-virtual"><scope>pbat::gpu::xpbd::Integrator</scope><name>SetMassInverse</name></member>
+      <member refid="classpbat_1_1gpu_1_1xpbd_1_1Integrator_1ad2fd2874c230073f66dd852448007bcf" prot="public" virt="non-virtual"><scope>pbat::gpu::xpbd::Integrator</scope><name>SetPositions</name></member>
+      <member refid="classpbat_1_1gpu_1_1xpbd_1_1Integrator_1afd895f7f904bd27f1c9d46c720a54d86" prot="public" virt="non-virtual"><scope>pbat::gpu::xpbd::Integrator</scope><name>SetSceneBoundingBox</name></member>
+      <member refid="classpbat_1_1gpu_1_1xpbd_1_1Integrator_1abd3b3e2f5281c68de6778cf3e8958baa" prot="public" virt="non-virtual"><scope>pbat::gpu::xpbd::Integrator</scope><name>SetVelocities</name></member>
+      <member refid="classpbat_1_1gpu_1_1xpbd_1_1Integrator_1af797d48badc1884cc50b5acd0f6dfa5c" prot="public" virt="non-virtual"><scope>pbat::gpu::xpbd::Integrator</scope><name>Step</name></member>
+      <member refid="classpbat_1_1gpu_1_1xpbd_1_1Integrator_1a8bc5a33d04d2ed5612e928b89692ea4f" prot="public" virt="non-virtual"><scope>pbat::gpu::xpbd::Integrator</scope><name>~Integrator</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

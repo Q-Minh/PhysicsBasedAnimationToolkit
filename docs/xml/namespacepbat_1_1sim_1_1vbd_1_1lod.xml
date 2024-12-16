@@ -1,0 +1,129 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="namespacepbat_1_1sim_1_1vbd_1_1lod" kind="namespace" language="C++">
+    <compoundname>pbat::sim::vbd::lod</compoundname>
+    <innerclass refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1CageQuadrature" prot="public">pbat::sim::vbd::lod::CageQuadrature</innerclass>
+    <innerclass refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1CageQuadratureParameters" prot="public">pbat::sim::vbd::lod::CageQuadratureParameters</innerclass>
+    <innerclass refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1DirichletEnergy" prot="public">pbat::sim::vbd::lod::DirichletEnergy</innerclass>
+    <innerclass refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1DirichletQuadrature" prot="public">pbat::sim::vbd::lod::DirichletQuadrature</innerclass>
+    <innerclass refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1ElasticEnergy" prot="public">pbat::sim::vbd::lod::ElasticEnergy</innerclass>
+    <innerclass refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Hierarchy" prot="public">pbat::sim::vbd::lod::Hierarchy</innerclass>
+    <innerclass refid="classpbat_1_1sim_1_1vbd_1_1lod_1_1Integrator" prot="public">pbat::sim::vbd::lod::Integrator</innerclass>
+    <innerclass refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Level" prot="public">pbat::sim::vbd::lod::Level</innerclass>
+    <innerclass refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1MomentumEnergy" prot="public">pbat::sim::vbd::lod::MomentumEnergy</innerclass>
+    <innerclass refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Prolongation" prot="public">pbat::sim::vbd::lod::Prolongation</innerclass>
+    <innerclass refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Restriction" prot="public">pbat::sim::vbd::lod::Restriction</innerclass>
+    <innerclass refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Smoother" prot="public">pbat::sim::vbd::lod::Smoother</innerclass>
+    <innerclass refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1SurfaceQuadrature" prot="public">pbat::sim::vbd::lod::SurfaceQuadrature</innerclass>
+    <innernamespace refid="namespacepbat_1_1sim_1_1vbd_1_1lod_1_1kernels">pbat::sim::vbd::lod::kernels</innernamespace>
+      <sectiondef kind="enum">
+      <memberdef kind="enum" id="source_2pbat_2sim_2vbd_2lod_2Quadrature_8h_1af0f8b247a072dd138792cd55d11c5c1c" prot="public" static="no" strong="yes">
+        <type></type>
+        <name>ECageQuadratureStrategy</name>
+        <enumvalue id="source_2pbat_2sim_2vbd_2lod_2Quadrature_8h_1af0f8b247a072dd138792cd55d11c5c1ca4ce815089d89836b7dc35a29d1c1b77a" prot="public">
+          <name>CageMesh</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="source_2pbat_2sim_2vbd_2lod_2Quadrature_8h_1af0f8b247a072dd138792cd55d11c5c1cae340935d0769af0e6fc15d70deefee0e" prot="public">
+          <name>EmbeddedMesh</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="source_2pbat_2sim_2vbd_2lod_2Quadrature_8h_1af0f8b247a072dd138792cd55d11c5c1ca95ccaf33d3eddcb3ef6f0358eda688fa" prot="public">
+          <name>PolynomialSubCellIntegration</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Quadrature.h" line="12" column="35" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Quadrature.h" bodystart="12" bodyend="12"/>
+      </memberdef>
+      <memberdef kind="enum" id="source_2pbat_2sim_2vbd_2lod_2Quadrature_8h_1abe2982aeed98bda36cf9f960aa7ad9a1" prot="public" static="no" strong="yes">
+        <type></type>
+        <name>ESurfaceQuadratureStrategy</name>
+        <enumvalue id="source_2pbat_2sim_2vbd_2lod_2Quadrature_8h_1abe2982aeed98bda36cf9f960aa7ad9a1a8fc19e34a52563e489e1759622272a1a" prot="public">
+          <name>EmbeddedVertexSinglePointQuadrature</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Quadrature.h" line="61" column="38" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Quadrature.h" bodystart="61" bodyend="61"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="func">
+      <memberdef kind="function" id="source_2pbat_2sim_2vbd_2lod_2Quadrature_8cpp_1a3961ea05e6978c68136cde1be455fc0c" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class TDerivedEG</type>
+          </param>
+          <param>
+            <type>class TDerivedWG</type>
+          </param>
+          <param>
+            <type>class TDerivedXG</type>
+          </param>
+        </templateparamlist>
+        <type>std::tuple&lt; IndexVectorX, VectorX, MatrixX &gt;</type>
+        <definition>std::tuple&lt;IndexVectorX, VectorX, MatrixX&gt; pbat::sim::vbd::lod::PatchQuadrature</definition>
+        <argsstring>(VolumeMesh const &amp;CM, Eigen::MatrixBase&lt; TDerivedEG &gt; const &amp;eg1, Eigen::MatrixBase&lt; TDerivedWG &gt; const &amp;wg1, Eigen::MatrixBase&lt; TDerivedXG &gt; const &amp;Xg1, int patchOrder=2, Scalar zeroTetVolume=Scalar(1e-6))</argsstring>
+        <name>PatchQuadrature</name>
+        <param>
+          <type><ref refid="structpbat_1_1fem_1_1Mesh" kindref="compound">VolumeMesh</ref> const &amp;</type>
+          <declname>CM</declname>
+        </param>
+        <param>
+          <type>Eigen::MatrixBase&lt; TDerivedEG &gt; const &amp;</type>
+          <declname>eg1</declname>
+        </param>
+        <param>
+          <type>Eigen::MatrixBase&lt; TDerivedWG &gt; const &amp;</type>
+          <declname>wg1</declname>
+        </param>
+        <param>
+          <type>Eigen::MatrixBase&lt; TDerivedXG &gt; const &amp;</type>
+          <declname>Xg1</declname>
+        </param>
+        <param>
+          <type>int</type>
+          <declname>patchOrder</declname>
+          <defval>2</defval>
+        </param>
+        <param>
+          <type>Scalar</type>
+          <declname>zeroTetVolume</declname>
+          <defval>Scalar(1e-6)</defval>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Quadrature.cpp" line="26" column="12" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Quadrature.cpp" bodystart="26" bodyend="77"/>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/DirichletEnergy.cpp" line="6" column="13"/>
+  </compounddef>
+</doxygen>

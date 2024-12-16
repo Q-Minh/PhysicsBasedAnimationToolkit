@@ -1,0 +1,250 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="source_2pbat_2sim_2vbd_2Data_8h" kind="file" language="C++">
+    <compoundname>Data.h</compoundname>
+    <includes refid="sim_2vbd_2Enums_8h" local="yes">Enums.h</includes>
+    <includes refid="source_2pbat_2sim_2vbd_2Mesh_8h" local="yes">Mesh.h</includes>
+    <includes local="yes">PhysicsBasedAnimationToolkitExport.h</includes>
+    <includes refid="Aliases_8h" local="yes">pbat/Aliases.h</includes>
+    <includes local="yes">pbat/fem/Mesh.h</includes>
+    <includes refid="Tetrahedron_8h" local="yes">pbat/fem/Tetrahedron.h</includes>
+    <includes local="yes">pbat/graph/Color.h</includes>
+    <includedby refid="source_2pbat_2sim_2vbd_2Data_8cpp" local="yes">/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/Data.cpp</includedby>
+    <includedby refid="source_2pbat_2sim_2vbd_2Integrator_8h" local="yes">/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/Integrator.h</includedby>
+    <incdepgraph>
+      <node id="7">
+        <label>pbat/math/GaussQuadrature.h</label>
+        <link refid="GaussQuadrature_8h_source"/>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+      </node>
+      <node id="9">
+        <label>cstdint</label>
+      </node>
+      <node id="10">
+        <label>pbat/Aliases.h</label>
+        <link refid="Aliases_8h_source"/>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="13" relation="include">
+        </childnode>
+      </node>
+      <node id="11">
+        <label>Eigen/Core</label>
+      </node>
+      <node id="3">
+        <label>Mesh.h</label>
+        <link refid="source_2pbat_2sim_2vbd_2Mesh_8h_source"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="15" relation="include">
+        </childnode>
+      </node>
+      <node id="15">
+        <label>pbat/fem/Triangle.h</label>
+        <link refid="Triangle_8h_source"/>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+      </node>
+      <node id="6">
+        <label>QuadratureRules.h</label>
+        <link refid="QuadratureRules_8h_source"/>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="14" relation="include">
+        </childnode>
+      </node>
+      <node id="14">
+        <label>pbat/math/SymmetricQuadratureRules.h</label>
+        <link refid="SymmetricQuadratureRules_8h_source"/>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+      </node>
+      <node id="17">
+        <label>pbat/graph/Color.h</label>
+      </node>
+      <node id="16">
+        <label>PhysicsBasedAnimationToolkitExport.h</label>
+      </node>
+      <node id="12">
+        <label>Eigen/Sparse</label>
+      </node>
+      <node id="2">
+        <label>Enums.h</label>
+        <link refid="sim_2vbd_2Enums_8h_source"/>
+      </node>
+      <node id="5">
+        <label>pbat/fem/Tetrahedron.h</label>
+        <link refid="Tetrahedron_8h_source"/>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+      </node>
+      <node id="4">
+        <label>pbat/fem/Mesh.h</label>
+      </node>
+      <node id="8">
+        <label>array</label>
+      </node>
+      <node id="13">
+        <label>cstddef</label>
+      </node>
+      <node id="1">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/Data.h</label>
+        <link refid="source_2pbat_2sim_2vbd_2Data_8h"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="16" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="17" relation="include">
+        </childnode>
+      </node>
+    </incdepgraph>
+    <invincdepgraph>
+      <node id="1">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/Data.h</label>
+        <link refid="source_2pbat_2sim_2vbd_2Data_8h"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/Integrator.h</label>
+        <link refid="source_2pbat_2sim_2vbd_2Integrator_8h_source"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/Vbd.h</label>
+        <link refid="source_2pbat_2sim_2vbd_2Vbd_8h_source"/>
+      </node>
+    </invincdepgraph>
+    <innerclass refid="structpbat_1_1sim_1_1vbd_1_1Data" prot="public">pbat::sim::vbd::Data</innerclass>
+    <innernamespace refid="namespacepbat">pbat</innernamespace>
+    <innernamespace refid="namespacepbat_1_1sim">pbat::sim</innernamespace>
+    <innernamespace refid="namespacepbat_1_1sim_1_1vbd">pbat::sim::vbd</innernamespace>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="preprocessor">#ifndef<sp/>PBAT_SIM_VBD_DATA_H</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="2"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>PBAT_SIM_VBD_DATA_H</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="3"><highlight class="normal"></highlight></codeline>
+<codeline lineno="4"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;Enums.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="5"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;Mesh.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="6"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;PhysicsBasedAnimationToolkitExport.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="7"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;pbat/Aliases.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="8"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;pbat/fem/Mesh.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="9"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;pbat/fem/Tetrahedron.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="10"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;pbat/graph/Color.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="11"><highlight class="normal"></highlight></codeline>
+<codeline lineno="12"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal">pbat<sp/>{</highlight></codeline>
+<codeline lineno="13"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal">sim<sp/>{</highlight></codeline>
+<codeline lineno="14"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal">vbd<sp/>{</highlight></codeline>
+<codeline lineno="15"><highlight class="normal"></highlight></codeline>
+<codeline lineno="16" refid="structpbat_1_1sim_1_1vbd_1_1Data" refkind="compound"><highlight class="normal">PBAT_API<sp/></highlight><highlight class="keyword">struct<sp/></highlight><highlight class="normal"><ref refid="structpbat_1_1sim_1_1vbd_1_1Data" kindref="compound">Data</ref></highlight></codeline>
+<codeline lineno="17"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="18"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="25"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1Data" kindref="compound">Data</ref>&amp;</highlight></codeline>
+<codeline lineno="26"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1Data_1a3ca7b6b60d5c7b54665c65d5bdaf830d" kindref="member">WithVolumeMesh</ref>(Eigen::Ref&lt;MatrixX<sp/>const&gt;<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>X,<sp/>Eigen::Ref&lt;IndexMatrixX<sp/>const&gt;<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>E);</highlight></codeline>
+<codeline lineno="33"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1Data" kindref="compound">Data</ref>&amp;<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1Data_1a36e1167c73664866c343e7fbcf59bbe0" kindref="member">WithSurfaceMesh</ref>(</highlight></codeline>
+<codeline lineno="34"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>Eigen::Ref&lt;IndexVectorX<sp/>const&gt;<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1Data_1a4d65d8d1cbf5cd5c2984b8cbeb88ebdb" kindref="member">V</ref>,</highlight></codeline>
+<codeline lineno="35"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>Eigen::Ref&lt;IndexMatrixX<sp/>const&gt;<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1Data_1a9558fcc083d96888e3641b892d6cab7a" kindref="member">F</ref>);</highlight></codeline>
+<codeline lineno="41"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1Data" kindref="compound">Data</ref>&amp;<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1Data_1aa686cb073d01d25c0548e3c6a7337fb7" kindref="member">WithVelocity</ref>(Eigen::Ref&lt;MatrixX<sp/>const&gt;<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1Data_1a2bdfa702437868783adac5a10213d65a" kindref="member">v</ref>);</highlight></codeline>
+<codeline lineno="47"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1Data" kindref="compound">Data</ref>&amp;<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1Data_1a0a09281c4136604b8f7c115468cb8cd3" kindref="member">WithAcceleration</ref>(Eigen::Ref&lt;MatrixX<sp/>const&gt;<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1Data_1a9301b2727c19917c2e0289d01cb66fde" kindref="member">aext</ref>);</highlight></codeline>
+<codeline lineno="55"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1Data" kindref="compound">Data</ref>&amp;<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1Data_1ace4cdebedb3ff5e41d8b464b7bf9c96f" kindref="member">WithMaterial</ref>(</highlight></codeline>
+<codeline lineno="56"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>Eigen::Ref&lt;VectorX<sp/>const&gt;<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1Data_1a84f3bffdd7d8084167d80de3eb4c18eb" kindref="member">rhoe</ref>,</highlight></codeline>
+<codeline lineno="57"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>Eigen::Ref&lt;VectorX<sp/>const&gt;<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>mue,</highlight></codeline>
+<codeline lineno="58"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>Eigen::Ref&lt;VectorX<sp/>const&gt;<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>lambdae);</highlight></codeline>
+<codeline lineno="66"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1Data" kindref="compound">Data</ref>&amp;<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1Data_1ac1c78ed56845db9aba754a13c415b282" kindref="member">WithDirichletConstrainedVertices</ref>(</highlight></codeline>
+<codeline lineno="67"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>IndexVectorX<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1Data_1a0af80e757ad6d712fd8cb988c2723abe" kindref="member">dbc</ref>,</highlight></codeline>
+<codeline lineno="68"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>Scalar<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1Data_1a1a29fe9009b7f1592fea20cf22c8edff" kindref="member">muD</ref><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/>Scalar(1),</highlight></codeline>
+<codeline lineno="69"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/>bDbcSorted<sp/>=<sp/></highlight><highlight class="keyword">false</highlight><highlight class="normal">);</highlight></codeline>
+<codeline lineno="76"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1Data" kindref="compound">Data</ref>&amp;<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1Data_1a6270314a24ddb420152329c255967da7" kindref="member">WithVertexColoringStrategy</ref>(</highlight></codeline>
+<codeline lineno="77"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>graph::EGreedyColorOrderingStrategy<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1Data_1a65e365755f7b8b39de4fc1f46dbd883e" kindref="member">eOrdering</ref>,</highlight></codeline>
+<codeline lineno="78"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>graph::EGreedyColorSelectionStrategy<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1Data_1a5f6eed3ae91f2ba44f10ebf7ffd8ebb7" kindref="member">eSelection</ref>);</highlight></codeline>
+<codeline lineno="84"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1Data" kindref="compound">Data</ref>&amp;<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1Data_1aaa23905100edff4312401f985e8db982" kindref="member">WithInitializationStrategy</ref>(EInitializationStrategy<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1Data_1a8bdc4ce20cf8d3033ef5aaa481e244e9" kindref="member">strategy</ref>);</highlight></codeline>
+<codeline lineno="90"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1Data" kindref="compound">Data</ref>&amp;<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1Data_1a5f3e6c10d92c609d723afaace155d96e" kindref="member">WithRayleighDamping</ref>(Scalar<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1Data_1ad38fcef7fd10830f10e4eaf1f45b6afa" kindref="member">kD</ref>);</highlight></codeline>
+<codeline lineno="96"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1Data" kindref="compound">Data</ref>&amp;<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1Data_1a8a5e0361677cb903a24abde05afecacf" kindref="member">WithCollisionPenalty</ref>(Scalar<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1Data_1a11a08fafec36cb87ca5833dabad091c5" kindref="member">kC</ref>);</highlight></codeline>
+<codeline lineno="102"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1Data" kindref="compound">Data</ref>&amp;<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1Data_1aff718e71aa48623533cbd65be1cd81a2" kindref="member">WithHessianDeterminantZeroUnder</ref>(Scalar<sp/>zero);</highlight></codeline>
+<codeline lineno="108"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1Data" kindref="compound">Data</ref>&amp;<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1Data_1a7466f7eec8f704576cdc03430314d7e0" kindref="member">Construct</ref>(</highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/>bValidate<sp/>=<sp/></highlight><highlight class="keyword">true</highlight><highlight class="normal">);</highlight></codeline>
+<codeline lineno="109"><highlight class="normal"></highlight></codeline>
+<codeline lineno="110"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="111" refid="structpbat_1_1sim_1_1vbd_1_1Data_1a0814000764d127a91a05454ee341504d" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1fem_1_1Mesh" kindref="compound">VolumeMesh</ref><sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1Data_1a0814000764d127a91a05454ee341504d" kindref="member">mesh</ref>;<sp/></highlight></codeline>
+<codeline lineno="112" refid="structpbat_1_1sim_1_1vbd_1_1Data_1a4d65d8d1cbf5cd5c2984b8cbeb88ebdb" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>IndexVectorX<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1Data_1a4d65d8d1cbf5cd5c2984b8cbeb88ebdb" kindref="member">V</ref>;<sp/><sp/></highlight></codeline>
+<codeline lineno="113" refid="structpbat_1_1sim_1_1vbd_1_1Data_1a9558fcc083d96888e3641b892d6cab7a" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>IndexMatrixX<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1Data_1a9558fcc083d96888e3641b892d6cab7a" kindref="member">F</ref>;<sp/><sp/></highlight></codeline>
+<codeline lineno="114"><highlight class="normal"></highlight></codeline>
+<codeline lineno="115" refid="structpbat_1_1sim_1_1vbd_1_1Data_1a2a0bd0abb260a15041042f27078ab0d9" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>MatrixX<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1Data_1a2a0bd0abb260a15041042f27078ab0d9" kindref="member">x</ref>;<sp/><sp/><sp/><sp/></highlight></codeline>
+<codeline lineno="116" refid="structpbat_1_1sim_1_1vbd_1_1Data_1a2bdfa702437868783adac5a10213d65a" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>MatrixX<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1Data_1a2bdfa702437868783adac5a10213d65a" kindref="member">v</ref>;<sp/><sp/><sp/><sp/></highlight></codeline>
+<codeline lineno="117" refid="structpbat_1_1sim_1_1vbd_1_1Data_1a9301b2727c19917c2e0289d01cb66fde" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>MatrixX<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1Data_1a9301b2727c19917c2e0289d01cb66fde" kindref="member">aext</ref>;<sp/></highlight></codeline>
+<codeline lineno="118" refid="structpbat_1_1sim_1_1vbd_1_1Data_1a2254c059ec6624402fb8ffab3b825771" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>VectorX<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1Data_1a2254c059ec6624402fb8ffab3b825771" kindref="member">m</ref>;<sp/><sp/><sp/><sp/></highlight></codeline>
+<codeline lineno="119"><highlight class="normal"></highlight></codeline>
+<codeline lineno="120" refid="structpbat_1_1sim_1_1vbd_1_1Data_1aabba5dceecdcdf185a2f0a2f5ea45a32" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>MatrixX<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1Data_1aabba5dceecdcdf185a2f0a2f5ea45a32" kindref="member">xt</ref>;<sp/><sp/><sp/><sp/><sp/><sp/></highlight></codeline>
+<codeline lineno="121" refid="structpbat_1_1sim_1_1vbd_1_1Data_1a4fec3531f1dee1ae4ef57c4faf34aeb7" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>MatrixX<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1Data_1a4fec3531f1dee1ae4ef57c4faf34aeb7" kindref="member">xtilde</ref>;<sp/><sp/></highlight></codeline>
+<codeline lineno="122" refid="structpbat_1_1sim_1_1vbd_1_1Data_1a28575e41edf73b289223333032fcb2f1" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>MatrixX<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1Data_1a28575e41edf73b289223333032fcb2f1" kindref="member">xchebm2</ref>;<sp/></highlight></codeline>
+<codeline lineno="123" refid="structpbat_1_1sim_1_1vbd_1_1Data_1ac6310357896469a40c518173d896110f" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>MatrixX<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1Data_1ac6310357896469a40c518173d896110f" kindref="member">xchebm1</ref>;<sp/></highlight></codeline>
+<codeline lineno="124" refid="structpbat_1_1sim_1_1vbd_1_1Data_1a8b1add2e7da96f7fb534cec017867f96" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>MatrixX<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1Data_1a8b1add2e7da96f7fb534cec017867f96" kindref="member">vt</ref>;<sp/><sp/><sp/><sp/><sp/><sp/></highlight></codeline>
+<codeline lineno="125"><highlight class="normal"></highlight></codeline>
+<codeline lineno="126" refid="structpbat_1_1sim_1_1vbd_1_1Data_1af7202dd6a57b205d8b245e0fc007b160" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>VectorX<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1Data_1af7202dd6a57b205d8b245e0fc007b160" kindref="member">wg</ref>;<sp/><sp/><sp/></highlight></codeline>
+<codeline lineno="127" refid="structpbat_1_1sim_1_1vbd_1_1Data_1acb06d13aaccc6827135488ff05b9baac" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>MatrixX<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1Data_1acb06d13aaccc6827135488ff05b9baac" kindref="member">GP</ref>;<sp/><sp/><sp/></highlight></codeline>
+<codeline lineno="128" refid="structpbat_1_1sim_1_1vbd_1_1Data_1a84f3bffdd7d8084167d80de3eb4c18eb" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>VectorX<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1Data_1a84f3bffdd7d8084167d80de3eb4c18eb" kindref="member">rhoe</ref>;<sp/></highlight></codeline>
+<codeline lineno="129" refid="structpbat_1_1sim_1_1vbd_1_1Data_1af5043269e65921692dd1938cd75e9eb4" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>MatrixX<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1Data_1af5043269e65921692dd1938cd75e9eb4" kindref="member">lame</ref>;<sp/></highlight></codeline>
+<codeline lineno="130"><highlight class="normal"></highlight></codeline>
+<codeline lineno="131" refid="structpbat_1_1sim_1_1vbd_1_1Data_1a269db69ae0a80dfe03648191226b4f4d" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>IndexVectorX<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1Data_1a269db69ae0a80dfe03648191226b4f4d" kindref="member">GVGp</ref>;<sp/><sp/><sp/><sp/><sp/><sp/></highlight></codeline>
+<codeline lineno="132" refid="structpbat_1_1sim_1_1vbd_1_1Data_1a7c8ce3d92eebe0896641aafc9c5d69b4" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>IndexVectorX<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1Data_1a7c8ce3d92eebe0896641aafc9c5d69b4" kindref="member">GVGe</ref>;<sp/><sp/><sp/><sp/><sp/><sp/></highlight></codeline>
+<codeline lineno="133"><highlight class="normal"><sp/><sp/><sp/><sp/>IndexVectorX<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1Data_1ad8afc8833069cdff86a74639d14386f2" kindref="member">GVGilocal</ref>;<sp/></highlight></codeline>
+<codeline lineno="136"><highlight class="normal"></highlight></codeline>
+<codeline lineno="139" refid="structpbat_1_1sim_1_1vbd_1_1Data_1a1a29fe9009b7f1592fea20cf22c8edff" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>Scalar<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1Data_1a1a29fe9009b7f1592fea20cf22c8edff" kindref="member">muD</ref>{1};<sp/><sp/><sp/><sp/></highlight></codeline>
+<codeline lineno="140" refid="structpbat_1_1sim_1_1vbd_1_1Data_1a0af80e757ad6d712fd8cb988c2723abe" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>IndexVectorX<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1Data_1a0af80e757ad6d712fd8cb988c2723abe" kindref="member">dbc</ref>;<sp/></highlight></codeline>
+<codeline lineno="141"><highlight class="normal"></highlight></codeline>
+<codeline lineno="142" refid="structpbat_1_1sim_1_1vbd_1_1Data_1a65e365755f7b8b39de4fc1f46dbd883e" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>graph::EGreedyColorOrderingStrategy<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1Data_1a65e365755f7b8b39de4fc1f46dbd883e" kindref="member">eOrdering</ref>{</highlight></codeline>
+<codeline lineno="143"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>graph::EGreedyColorOrderingStrategy::LargestDegree};<sp/></highlight></codeline>
+<codeline lineno="144"><highlight class="normal"><sp/><sp/><sp/><sp/>graph::EGreedyColorSelectionStrategy<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1Data_1a5f6eed3ae91f2ba44f10ebf7ffd8ebb7" kindref="member">eSelection</ref>{</highlight></codeline>
+<codeline lineno="146"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>graph::EGreedyColorSelectionStrategy::LeastUsed};<sp/></highlight></codeline>
+<codeline lineno="147"><highlight class="normal"><sp/><sp/><sp/><sp/>IndexVectorX<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1Data_1acdf66d1fc5a735c14e11c503e52a150b" kindref="member">colors</ref>;<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight></codeline>
+<codeline lineno="149" refid="structpbat_1_1sim_1_1vbd_1_1Data_1a5a9bfee4a172530493ec1c3204da5c78" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>IndexVectorX<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1Data_1a5a9bfee4a172530493ec1c3204da5c78" kindref="member">Pptr</ref>;<sp/></highlight></codeline>
+<codeline lineno="150"><highlight class="normal"><sp/><sp/><sp/><sp/>IndexVectorX<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1Data_1a359efe0808cd94c7b7f5244ac6471f1a" kindref="member">Padj</ref>;<sp/></highlight></codeline>
+<codeline lineno="152"><highlight class="normal"></highlight></codeline>
+<codeline lineno="153" refid="structpbat_1_1sim_1_1vbd_1_1Data_1a8bdc4ce20cf8d3033ef5aaa481e244e9" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>EInitializationStrategy<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1Data_1a8bdc4ce20cf8d3033ef5aaa481e244e9" kindref="member">strategy</ref>{</highlight></codeline>
+<codeline lineno="154"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>EInitializationStrategy::AdaptivePbat};<sp/></highlight></codeline>
+<codeline lineno="155" refid="structpbat_1_1sim_1_1vbd_1_1Data_1ad38fcef7fd10830f10e4eaf1f45b6afa" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>Scalar<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1Data_1ad38fcef7fd10830f10e4eaf1f45b6afa" kindref="member">kD</ref>{0};<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight></codeline>
+<codeline lineno="156" refid="structpbat_1_1sim_1_1vbd_1_1Data_1a11a08fafec36cb87ca5833dabad091c5" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>Scalar<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1Data_1a11a08fafec36cb87ca5833dabad091c5" kindref="member">kC</ref>{1};<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight></codeline>
+<codeline lineno="157" refid="structpbat_1_1sim_1_1vbd_1_1Data_1a3f5c9dc1a0032e5497ba4cf856fe261e" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>Scalar<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1Data_1a3f5c9dc1a0032e5497ba4cf856fe261e" kindref="member">detHZero</ref>{1e-7};<sp/></highlight></codeline>
+<codeline lineno="158"><highlight class="normal">};</highlight></codeline>
+<codeline lineno="159"><highlight class="normal"></highlight></codeline>
+<codeline lineno="160"><highlight class="normal">}<sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>vbd</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="161"><highlight class="normal">}<sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>sim</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="162"><highlight class="normal">}<sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>pbat</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="163"><highlight class="normal"></highlight></codeline>
+<codeline lineno="164"><highlight class="normal"></highlight><highlight class="preprocessor">#endif<sp/>//<sp/>PBAT_SIM_XPBD_DATA_H</highlight></codeline>
+    </programlisting>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/Data.h"/>
+  </compounddef>
+</doxygen>

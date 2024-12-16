@@ -1,0 +1,679 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="namespacepbat_1_1graph" kind="namespace" language="C++">
+    <compoundname>pbat::graph</compoundname>
+    <innerclass refid="structpbat_1_1graph_1_1PartitioningOptions" prot="public">pbat::graph::PartitioningOptions</innerclass>
+      <sectiondef kind="enum">
+      <memberdef kind="enum" id="source_2pbat_2graph_2Color_8h_1aae94ec1f32cf36a23c873b18b0400645" prot="public" static="no" strong="yes">
+        <type></type>
+        <name>EGreedyColorSelectionStrategy</name>
+        <enumvalue id="source_2pbat_2graph_2Color_8h_1aae94ec1f32cf36a23c873b18b0400645a98f052a90774dc8335e422b6076b9da3" prot="public">
+          <name>LeastUsed</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="source_2pbat_2graph_2Color_8h_1aae94ec1f32cf36a23c873b18b0400645a235215d0fea7b04bb18198d5e07e2541" prot="public">
+          <name>FirstAvailable</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/graph/Color.h" line="15" column="41" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/graph/Color.h" bodystart="15" bodyend="15"/>
+      </memberdef>
+      <memberdef kind="enum" id="source_2pbat_2graph_2Color_8h_1ac26166ca4b423603403a335c47224b45" prot="public" static="no" strong="yes">
+        <type></type>
+        <name>EGreedyColorOrderingStrategy</name>
+        <enumvalue id="source_2pbat_2graph_2Color_8h_1ac26166ca4b423603403a335c47224b45a2bd8ab451a35759c5737128e35c8011a" prot="public">
+          <name>Natural</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="source_2pbat_2graph_2Color_8h_1ac26166ca4b423603403a335c47224b45af833dddbfc0d8a5887bd441ff83f6db8" prot="public">
+          <name>SmallestDegree</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="source_2pbat_2graph_2Color_8h_1ac26166ca4b423603403a335c47224b45a2ddb2b46f6e9567f5a44c430f996f536" prot="public">
+          <name>LargestDegree</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/graph/Color.h" line="16" column="40" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/graph/Color.h" bodystart="16" bodyend="16"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="typedef">
+      <memberdef kind="typedef" id="source_2pbat_2graph_2Adjacency_8h_1a6c4587a58be55edaca065fcf882de201" prot="public" static="no">
+        <templateparamlist>
+          <param>
+            <type>class TWeight</type>
+            <defval>Scalar</defval>
+          </param>
+          <param>
+            <type>class TIndex</type>
+            <defval>Index</defval>
+          </param>
+        </templateparamlist>
+        <type>Eigen::Triplet&lt; TWeight, TIndex &gt;</type>
+        <definition>using pbat::graph::WeightedEdge = typedef Eigen::Triplet&lt;TWeight, TIndex&gt;</definition>
+        <argsstring></argsstring>
+        <name>WeightedEdge</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/graph/Adjacency.h" line="18" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/graph/Adjacency.h" bodystart="18" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="func">
+      <memberdef kind="function" id="source_2pbat_2graph_2Adjacency_8h_1a553fe76e627fb5caf639823a4138bfa3" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class TWeightedEdgeIterator</type>
+          </param>
+          <param>
+            <type>class TWeightedEdge</type>
+            <defval>typename std::iterator_traits&lt;TWeightedEdgeIterator&gt;::value_type</defval>
+          </param>
+          <param>
+            <type>class TScalar</type>
+            <defval>std::remove_cvref_t&lt;decltype(std::declval&lt;TWeightedEdge&gt;().value())&gt;</defval>
+          </param>
+          <param>
+            <type>class TIndex</type>
+            <defval>std::remove_cvref_t&lt;decltype(std::declval&lt;TWeightedEdge&gt;().row())&gt;</defval>
+          </param>
+        </templateparamlist>
+        <type>Eigen::SparseMatrix&lt; TScalar, Eigen::RowMajor, TIndex &gt;</type>
+        <definition>Eigen::SparseMatrix&lt;TScalar, Eigen::RowMajor, TIndex&gt; pbat::graph::AdjacencyMatrixFromEdges</definition>
+        <argsstring>(TWeightedEdgeIterator begin, TWeightedEdgeIterator end, TIndex m=TIndex(-1), TIndex n=TIndex(-1))</argsstring>
+        <name>AdjacencyMatrixFromEdges</name>
+        <param>
+          <type>TWeightedEdgeIterator</type>
+          <declname>begin</declname>
+        </param>
+        <param>
+          <type>TWeightedEdgeIterator</type>
+          <declname>end</declname>
+        </param>
+        <param>
+          <type>TIndex</type>
+          <declname>m</declname>
+          <defval>TIndex(-1)</defval>
+        </param>
+        <param>
+          <type>TIndex</type>
+          <declname>n</declname>
+          <defval>TIndex(-1)</defval>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/graph/Adjacency.h" line="25" column="21" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/graph/Adjacency.h" bodystart="25" bodyend="56"/>
+      </memberdef>
+      <memberdef kind="function" id="source_2pbat_2graph_2Adjacency_8h_1af4416e18f2df874097fd12399ed6d549" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class TDerivedA</type>
+          </param>
+          <param>
+            <type>class TScalar</type>
+            <defval>typename TDerivedA::Scalar</defval>
+          </param>
+          <param>
+            <type>std::integral</type>
+            <declname>TIndex</declname>
+            <defname>TIndex</defname>
+            <defval>typename TDerivedA::StorageIndex</defval>
+          </param>
+        </templateparamlist>
+        <type>auto</type>
+        <definition>auto pbat::graph::AdjacencyMatrixPrefix</definition>
+        <argsstring>(Eigen::SparseCompressedBase&lt; TDerivedA &gt; const &amp;A)</argsstring>
+        <name>AdjacencyMatrixPrefix</name>
+        <param>
+          <type>Eigen::SparseCompressedBase&lt; TDerivedA &gt; const &amp;</type>
+          <declname>A</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/graph/Adjacency.h" line="62" column="6" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/graph/Adjacency.h" bodystart="62" bodyend="66"/>
+      </memberdef>
+      <memberdef kind="function" id="source_2pbat_2graph_2Adjacency_8h_1a54c29573233e8e81614d48855793c943" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class TDerivedA</type>
+          </param>
+          <param>
+            <type>class TScalar</type>
+            <defval>typename TDerivedA::Scalar</defval>
+          </param>
+          <param>
+            <type>std::integral</type>
+            <declname>TIndex</declname>
+            <defname>TIndex</defname>
+            <defval>typename TDerivedA::StorageIndex</defval>
+          </param>
+        </templateparamlist>
+        <type>auto</type>
+        <definition>auto pbat::graph::AdjacencyMatrixIndices</definition>
+        <argsstring>(Eigen::SparseCompressedBase&lt; TDerivedA &gt; const &amp;A)</argsstring>
+        <name>AdjacencyMatrixIndices</name>
+        <param>
+          <type>Eigen::SparseCompressedBase&lt; TDerivedA &gt; const &amp;</type>
+          <declname>A</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/graph/Adjacency.h" line="72" column="6" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/graph/Adjacency.h" bodystart="72" bodyend="76"/>
+      </memberdef>
+      <memberdef kind="function" id="source_2pbat_2graph_2Adjacency_8h_1ae94d34837d4b43952f774e6832bb3128" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class TDerivedA</type>
+          </param>
+          <param>
+            <type>class TScalar</type>
+            <defval>typename TDerivedA::Scalar</defval>
+          </param>
+          <param>
+            <type>std::integral</type>
+            <declname>TIndex</declname>
+            <defname>TIndex</defname>
+            <defval>typename TDerivedA::StorageIndex</defval>
+          </param>
+        </templateparamlist>
+        <type>auto</type>
+        <definition>auto pbat::graph::AdjacencyMatrixWeights</definition>
+        <argsstring>(Eigen::SparseCompressedBase&lt; TDerivedA &gt; const &amp;A)</argsstring>
+        <name>AdjacencyMatrixWeights</name>
+        <param>
+          <type>Eigen::SparseCompressedBase&lt; TDerivedA &gt; const &amp;</type>
+          <declname>A</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/graph/Adjacency.h" line="82" column="6" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/graph/Adjacency.h" bodystart="82" bodyend="86"/>
+      </memberdef>
+      <memberdef kind="function" id="source_2pbat_2graph_2Adjacency_8h_1a6df7f45cb88cc38196122d3ebf3ef184" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class TDerivedP</type>
+          </param>
+          <param>
+            <type>std::integral</type>
+            <declname>TIndex</declname>
+            <defname>TIndex</defname>
+            <defval>typename TDerivedP::Scalar</defval>
+          </param>
+        </templateparamlist>
+        <type>std::tuple&lt; Eigen::Vector&lt; TIndex, Eigen::Dynamic &gt;, Eigen::Vector&lt; TIndex, Eigen::Dynamic &gt; &gt;</type>
+        <definition>std::tuple&lt;Eigen::Vector&lt;TIndex, Eigen::Dynamic&gt;, Eigen::Vector&lt;TIndex, Eigen::Dynamic&gt; &gt; pbat::graph::MapToAdjacency</definition>
+        <argsstring>(Eigen::DenseBase&lt; TDerivedP &gt; const &amp;p, TIndex n=TIndex(-1))</argsstring>
+        <name>MapToAdjacency</name>
+        <param>
+          <type>Eigen::DenseBase&lt; TDerivedP &gt; const &amp;</type>
+          <declname>p</declname>
+        </param>
+        <param>
+          <type>TIndex</type>
+          <declname>n</declname>
+          <defval>TIndex(-1)</defval>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/graph/Adjacency.h" line="90" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/graph/Adjacency.h" bodystart="90" bodyend="99"/>
+      </memberdef>
+      <memberdef kind="function" id="source_2pbat_2graph_2Adjacency_8h_1aeeb8189ed58658d208ade64f5daf66d0" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class TDerivedA</type>
+          </param>
+          <param>
+            <type>class TScalar</type>
+            <defval>typename TDerivedA::Scalar</defval>
+          </param>
+          <param>
+            <type>std::integral</type>
+            <declname>TIndex</declname>
+            <defname>TIndex</defname>
+            <defval>typename TDerivedA::StorageIndex</defval>
+          </param>
+        </templateparamlist>
+        <type>auto</type>
+        <definition>auto pbat::graph::MatrixToAdjacency</definition>
+        <argsstring>(Eigen::SparseCompressedBase&lt; TDerivedA &gt; const &amp;A)</argsstring>
+        <name>MatrixToAdjacency</name>
+        <param>
+          <type>Eigen::SparseCompressedBase&lt; TDerivedA &gt; const &amp;</type>
+          <declname>A</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/graph/Adjacency.h" line="105" column="6" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/graph/Adjacency.h" bodystart="105" bodyend="110"/>
+      </memberdef>
+      <memberdef kind="function" id="source_2pbat_2graph_2Adjacency_8h_1a69e4b9a72106fc61acfdf7a99d01ac13" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class TDerivedA</type>
+          </param>
+          <param>
+            <type>class TScalar</type>
+            <defval>typename TDerivedA::Scalar</defval>
+          </param>
+          <param>
+            <type>std::integral</type>
+            <declname>TIndex</declname>
+            <defname>TIndex</defname>
+            <defval>typename TDerivedA::StorageIndex</defval>
+          </param>
+        </templateparamlist>
+        <type>auto</type>
+        <definition>auto pbat::graph::MatrixToWeightedAdjacency</definition>
+        <argsstring>(Eigen::SparseCompressedBase&lt; TDerivedA &gt; const &amp;A)</argsstring>
+        <name>MatrixToWeightedAdjacency</name>
+        <param>
+          <type>Eigen::SparseCompressedBase&lt; TDerivedA &gt; const &amp;</type>
+          <declname>A</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/graph/Adjacency.h" line="116" column="6" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/graph/Adjacency.h" bodystart="116" bodyend="122"/>
+      </memberdef>
+      <memberdef kind="function" id="source_2pbat_2graph_2Adjacency_8h_1a359a3b1f8ee2b5d64f5a80981dd45683" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class TIndex</type>
+            <defval>Index</defval>
+          </param>
+        </templateparamlist>
+        <type>auto</type>
+        <definition>auto pbat::graph::ListOfListsToAdjacency</definition>
+        <argsstring>(std::vector&lt; std::vector&lt; TIndex &gt;&gt; const &amp;lil)</argsstring>
+        <name>ListOfListsToAdjacency</name>
+        <param>
+          <type>std::vector&lt; std::vector&lt; TIndex &gt;&gt; const &amp;</type>
+          <declname>lil</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/graph/Adjacency.h" line="125" column="6" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/graph/Adjacency.h" bodystart="125" bodyend="148"/>
+      </memberdef>
+      <memberdef kind="function" id="source_2pbat_2graph_2Adjacency_8h_1a3b44563432fa5affdc87403cbfdcaff6" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class TDerivedPtr</type>
+          </param>
+          <param>
+            <type>class TDerivedAdj</type>
+          </param>
+          <param>
+            <type>class TIndex</type>
+            <defval>typename TDerivedPtr::Scalar</defval>
+          </param>
+          <param>
+            <type>class Func</type>
+          </param>
+        </templateparamlist>
+        <type>void</type>
+        <definition>void pbat::graph::ForEachEdge</definition>
+        <argsstring>(Eigen::DenseBase&lt; TDerivedPtr &gt; &amp;ptr, Eigen::DenseBase&lt; TDerivedAdj &gt; &amp;adj, Func &amp;&amp;f)</argsstring>
+        <name>ForEachEdge</name>
+        <param>
+          <type>Eigen::DenseBase&lt; TDerivedPtr &gt; &amp;</type>
+          <declname>ptr</declname>
+        </param>
+        <param>
+          <type>Eigen::DenseBase&lt; TDerivedAdj &gt; &amp;</type>
+          <declname>adj</declname>
+        </param>
+        <param>
+          <type>Func &amp;&amp;</type>
+          <declname>f</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/graph/Adjacency.h" line="155" column="6" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/graph/Adjacency.h" bodystart="155" bodyend="168"/>
+      </memberdef>
+      <memberdef kind="function" id="source_2pbat_2graph_2Adjacency_8h_1a7c2c0accc9a57ed6650ef2bb957f7113" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class TDerivedPtr</type>
+          </param>
+          <param>
+            <type>class TDerivedAdj</type>
+          </param>
+          <param>
+            <type>class TIndex</type>
+            <defval>typename TDerivedPtr::Scalar</defval>
+          </param>
+          <param>
+            <type>class Func</type>
+          </param>
+        </templateparamlist>
+        <type>void</type>
+        <definition>void pbat::graph::RemoveEdges</definition>
+        <argsstring>(Eigen::DenseBase&lt; TDerivedPtr &gt; &amp;ptr, Eigen::DenseBase&lt; TDerivedAdj &gt; &amp;adj, Func fShouldDeleteEdge)</argsstring>
+        <name>RemoveEdges</name>
+        <param>
+          <type>Eigen::DenseBase&lt; TDerivedPtr &gt; &amp;</type>
+          <declname>ptr</declname>
+        </param>
+        <param>
+          <type>Eigen::DenseBase&lt; TDerivedAdj &gt; &amp;</type>
+          <declname>adj</declname>
+        </param>
+        <param>
+          <type>Func</type>
+          <declname>fShouldDeleteEdge</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/graph/Adjacency.h" line="175" column="6" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/graph/Adjacency.h" bodystart="175" bodyend="210"/>
+      </memberdef>
+      <memberdef kind="function" id="source_2pbat_2graph_2Color_8h_1a44f2a505d70768632708996b0939203d" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class TDerivedPtr</type>
+          </param>
+          <param>
+            <type>class TDerivedAdj</type>
+          </param>
+          <param>
+            <type>int</type>
+            <declname>NC</declname>
+            <defname>NC</defname>
+            <defval>128</defval>
+          </param>
+          <param>
+            <type>std::integral</type>
+            <declname>TIndex</declname>
+            <defname>TIndex</defname>
+            <defval>typename TDerivedPtr::Scalar</defval>
+          </param>
+        </templateparamlist>
+        <type>Eigen::Vector&lt; TIndex, Eigen::Dynamic &gt;</type>
+        <definition>Eigen::Vector&lt;TIndex, Eigen::Dynamic&gt; pbat::graph::GreedyColor</definition>
+        <argsstring>(Eigen::DenseBase&lt; TDerivedPtr &gt; const &amp;ptr, Eigen::DenseBase&lt; TDerivedAdj &gt; const &amp;adj, EGreedyColorOrderingStrategy eOrderingStrategy=EGreedyColorOrderingStrategy::LargestDegree, EGreedyColorSelectionStrategy eSelectionStrategy=EGreedyColorSelectionStrategy::LeastUsed)</argsstring>
+        <name>GreedyColor</name>
+        <param>
+          <type>Eigen::DenseBase&lt; TDerivedPtr &gt; const &amp;</type>
+          <declname>ptr</declname>
+        </param>
+        <param>
+          <type>Eigen::DenseBase&lt; TDerivedAdj &gt; const &amp;</type>
+          <declname>adj</declname>
+        </param>
+        <param>
+          <type>EGreedyColorOrderingStrategy</type>
+          <declname>eOrderingStrategy</declname>
+          <defval>EGreedyColorOrderingStrategy::LargestDegree</defval>
+        </param>
+        <param>
+          <type>EGreedyColorSelectionStrategy</type>
+          <declname>eSelectionStrategy</declname>
+          <defval>EGreedyColorSelectionStrategy::LeastUsed</defval>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/graph/Color.h" line="23" column="15" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/graph/Color.h" bodystart="23" bodyend="108"/>
+      </memberdef>
+      <memberdef kind="function" id="source_2pbat_2graph_2Mesh_8h_1a261c45199638a67fe25e26c5b7659a84" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class TDerivedE</type>
+          </param>
+          <param>
+            <type>class TDerivedW</type>
+          </param>
+          <param>
+            <type>std::integral</type>
+            <declname>TIndex</declname>
+            <defname>TIndex</defname>
+            <defval>typename TDerivedE::Scalar</defval>
+          </param>
+          <param>
+            <type>class TScalar</type>
+            <defval>typename TDerivedW::Scalar</defval>
+          </param>
+        </templateparamlist>
+        <type>Eigen::SparseMatrix&lt; TScalar, Eigen::ColMajor, TIndex &gt;</type>
+        <definition>Eigen::SparseMatrix&lt;TScalar, Eigen::ColMajor, TIndex&gt; pbat::graph::MeshAdjacencyMatrix</definition>
+        <argsstring>(Eigen::DenseBase&lt; TDerivedE &gt; const &amp;E, Eigen::DenseBase&lt; TDerivedW &gt; const &amp;w, TIndex nNodes=TIndex(-1), bool bVertexToElement=false)</argsstring>
+        <name>MeshAdjacencyMatrix</name>
+        <param>
+          <type>Eigen::DenseBase&lt; TDerivedE &gt; const &amp;</type>
+          <declname>E</declname>
+        </param>
+        <param>
+          <type>Eigen::DenseBase&lt; TDerivedW &gt; const &amp;</type>
+          <declname>w</declname>
+        </param>
+        <param>
+          <type>TIndex</type>
+          <declname>nNodes</declname>
+          <defval>TIndex(-1)</defval>
+        </param>
+        <param>
+          <type>bool</type>
+          <declname>bVertexToElement</declname>
+          <defval>false</defval>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/graph/Mesh.h" line="16" column="21" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/graph/Mesh.h" bodystart="16" bodyend="35"/>
+      </memberdef>
+      <memberdef kind="function" id="source_2pbat_2graph_2Mesh_8h_1a189b74a5df54869e176d414effc0a9a3" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class TDerivedE</type>
+          </param>
+          <param>
+            <type>std::integral</type>
+            <declname>TIndex</declname>
+            <defname>TIndex</defname>
+            <defval>typename TDerivedE::Scalar</defval>
+          </param>
+        </templateparamlist>
+        <type>Eigen::SparseMatrix&lt; TIndex, Eigen::ColMajor, TIndex &gt;</type>
+        <definition>Eigen::SparseMatrix&lt;TIndex, Eigen::ColMajor, TIndex&gt; pbat::graph::MeshAdjacencyMatrix</definition>
+        <argsstring>(Eigen::DenseBase&lt; TDerivedE &gt; const &amp;E, TIndex nNodes=TIndex(-1), bool bVertexToElement=false)</argsstring>
+        <name>MeshAdjacencyMatrix</name>
+        <param>
+          <type>Eigen::DenseBase&lt; TDerivedE &gt; const &amp;</type>
+          <declname>E</declname>
+        </param>
+        <param>
+          <type>TIndex</type>
+          <declname>nNodes</declname>
+          <defval>TIndex(-1)</defval>
+        </param>
+        <param>
+          <type>bool</type>
+          <declname>bVertexToElement</declname>
+          <defval>false</defval>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/graph/Mesh.h" line="38" column="21" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/graph/Mesh.h" bodystart="38" bodyend="49"/>
+      </memberdef>
+      <memberdef kind="function" id="source_2pbat_2graph_2Mesh_8h_1a8b5a15573585289cf76ce6829edb278b" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class TDerivedE</type>
+          </param>
+          <param>
+            <type>std::integral</type>
+            <declname>TIndex</declname>
+            <defname>TIndex</defname>
+            <defval>typename TDerivedE::Scalar</defval>
+          </param>
+        </templateparamlist>
+        <type>Eigen::SparseMatrix&lt; TIndex, Eigen::ColMajor, TIndex &gt;</type>
+        <definition>Eigen::SparseMatrix&lt;TIndex, Eigen::ColMajor, TIndex&gt; pbat::graph::MeshPrimalGraph</definition>
+        <argsstring>(Eigen::DenseBase&lt; TDerivedE &gt; const &amp;E, TIndex nNodes=TIndex(-1))</argsstring>
+        <name>MeshPrimalGraph</name>
+        <param>
+          <type>Eigen::DenseBase&lt; TDerivedE &gt; const &amp;</type>
+          <declname>E</declname>
+        </param>
+        <param>
+          <type>TIndex</type>
+          <declname>nNodes</declname>
+          <defval>TIndex(-1)</defval>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/graph/Mesh.h" line="53" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/graph/Mesh.h" bodystart="53" bodyend="57"/>
+      </memberdef>
+      <memberdef kind="function" id="source_2pbat_2graph_2Mesh_8h_1a1159b1217bc021345a1fd1b82be5ede3" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class TDerivedE</type>
+          </param>
+          <param>
+            <type>std::integral</type>
+            <declname>TIndex</declname>
+            <defname>TIndex</defname>
+            <defval>typename TDerivedE::Scalar</defval>
+          </param>
+        </templateparamlist>
+        <type>Eigen::SparseMatrix&lt; TIndex, Eigen::ColMajor, TIndex &gt;</type>
+        <definition>Eigen::SparseMatrix&lt;TIndex, Eigen::ColMajor, TIndex&gt; pbat::graph::MeshDualGraph</definition>
+        <argsstring>(Eigen::DenseBase&lt; TDerivedE &gt; const &amp;E, TIndex nNodes=TIndex(-1))</argsstring>
+        <name>MeshDualGraph</name>
+        <param>
+          <type>Eigen::DenseBase&lt; TDerivedE &gt; const &amp;</type>
+          <declname>E</declname>
+        </param>
+        <param>
+          <type>TIndex</type>
+          <declname>nNodes</declname>
+          <defval>TIndex(-1)</defval>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/graph/Mesh.h" line="61" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/graph/Mesh.h" bodystart="61" bodyend="65"/>
+      </memberdef>
+      <memberdef kind="function" id="source_2pbat_2graph_2Partition_8cpp_1aa4211167c98f579b9f7a246396dcc49f" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>IndexVectorX</type>
+        <definition>IndexVectorX pbat::graph::Partition</definition>
+        <argsstring>(IndexVectorX const &amp;ptr, IndexVectorX const &amp;adj, IndexVectorX const &amp;wadj, Index nPartitions, PartitioningOptions opts)</argsstring>
+        <name>Partition</name>
+        <param>
+          <type>IndexVectorX const &amp;</type>
+          <declname>ptr</declname>
+        </param>
+        <param>
+          <type>IndexVectorX const &amp;</type>
+          <declname>adj</declname>
+        </param>
+        <param>
+          <type>IndexVectorX const &amp;</type>
+          <declname>wadj</declname>
+        </param>
+        <param>
+          <type>Index</type>
+          <declname>nPartitions</declname>
+        </param>
+        <param>
+          <type><ref refid="structpbat_1_1graph_1_1PartitioningOptions" kindref="compound">PartitioningOptions</ref></type>
+          <declname>opts</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/graph/Partition.cpp" line="17" column="14" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/graph/Partition.cpp" bodystart="17" bodyend="133" declfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/graph/Partition.h" declline="45" declcolumn="14"/>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/graph/Adjacency.h" line="15" column="15"/>
+  </compounddef>
+</doxygen>

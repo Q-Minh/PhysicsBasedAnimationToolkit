@@ -1,0 +1,20 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="structpbat_1_1fem_1_1Line" kind="struct" language="C++" prot="public">
+    <compoundname>pbat::fem::Line</compoundname>
+    <templateparamlist>
+      <param>
+        <type>int</type>
+        <declname>Order</declname>
+        <defname>Order</defname>
+      </param>
+    </templateparamlist>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Line.h" line="14" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Line.h" bodystart="14" bodyend="-1"/>
+    <listofallmembers>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

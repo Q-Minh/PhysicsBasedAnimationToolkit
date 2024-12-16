@@ -18,6 +18,8 @@ The Physics Based Animation Toolkit (PBAT) is a (mostly templated) cross-platfor
 
 ### Features
 
+> _Online documentation coming soon._
+
 - [Finite Element Method](https://hplgit.github.io/fem-book/doc/pub/book/pdf/fem-book-4print-2up.pdf#page=47.07) (FEM) meshes and operators
   - Dimensions `1,2,3`
   - [Lagrange shape functions](https://doc.comsol.com/5.3/doc/com.comsol.help.comsol/comsol_api_xmesh.40.4.html) of order `1,2,3`
@@ -94,7 +96,7 @@ A bunch of Python scripts demonstrating usage of [`pbatoolkit`](https://pypi.org
 ```bash
 python[.exe] path/to/examples/[example].py -i path/to/input/mesh
 ```
-The full interface is always revealed by `-h` or `--help`, i.e.
+The full interface is always revealed by `-h` or `--help`, i.e. 
 ```bash
 python[.exe] path/to/examples/[example].py -h
 ```
@@ -109,9 +111,9 @@ Head over to our hands-on [tutorials section](./doc/tutorial/) to learn more abo
 
 ## Dependencies
 
-See [`vcpkg.json`](./vcpkg.json) for a versioned list of our dependencies, available via [vcpkg](https://github.com/microsoft/vcpkg).
+See [`vcpkg.json`](./vcpkg.json) for a versioned list of our external dependencies, available via [vcpkg](https://github.com/microsoft/vcpkg).
 
-> Use of [vcpkg](https://github.com/microsoft/vcpkg) is not mandatory, as long as dependencies have compatible versions and are discoverable by CMake's [`find_package`](https://cmake.org/cmake/help/latest/command/find_package.html) mechanism.
+> Use of [vcpkg](https://github.com/microsoft/vcpkg) is not mandatory, as long as external dependencies have compatible versions and are discoverable by CMake's [`find_package`](https://cmake.org/cmake/help/latest/command/find_package.html) mechanism.
 
 ### CUDA
 

@@ -1,0 +1,260 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="source_2pbat_2sim_2vbd_2lod_2Level_8cpp" kind="file" language="C++">
+    <compoundname>Level.cpp</compoundname>
+    <includes refid="source_2pbat_2sim_2vbd_2lod_2Level_8h" local="yes">Level.h</includes>
+    <includes local="yes">pbat/graph/Adjacency.h</includes>
+    <includes local="yes">pbat/graph/Color.h</includes>
+    <includes local="yes">pbat/graph/Mesh.h</includes>
+    <incdepgraph>
+      <node id="23">
+        <label>pbat/graph/Mesh.h</label>
+      </node>
+      <node id="13">
+        <label>pbat/math/GaussQuadrature.h</label>
+        <link refid="GaussQuadrature_8h_source"/>
+        <childnode refid="14" relation="include">
+        </childnode>
+        <childnode refid="15" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+      </node>
+      <node id="15">
+        <label>cstdint</label>
+      </node>
+      <node id="5">
+        <label>pbat/Aliases.h</label>
+        <link refid="Aliases_8h_source"/>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>DirichletEnergy.h</label>
+        <link refid="source_2pbat_2sim_2vbd_2lod_2DirichletEnergy_8h_source"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="18" relation="include">
+        </childnode>
+      </node>
+      <node id="6">
+        <label>Eigen/Core</label>
+      </node>
+      <node id="9">
+        <label>pbat/sim/vbd/Mesh.h</label>
+        <link refid="source_2pbat_2sim_2vbd_2Mesh_8h_source"/>
+        <childnode refid="10" relation="include">
+        </childnode>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="17" relation="include">
+        </childnode>
+      </node>
+      <node id="17">
+        <label>pbat/fem/Triangle.h</label>
+        <link refid="Triangle_8h_source"/>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="14" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+      </node>
+      <node id="12">
+        <label>QuadratureRules.h</label>
+        <link refid="QuadratureRules_8h_source"/>
+        <childnode refid="13" relation="include">
+        </childnode>
+        <childnode refid="16" relation="include">
+        </childnode>
+      </node>
+      <node id="16">
+        <label>pbat/math/SymmetricQuadratureRules.h</label>
+        <link refid="SymmetricQuadratureRules_8h_source"/>
+        <childnode refid="14" relation="include">
+        </childnode>
+        <childnode refid="15" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+      </node>
+      <node id="22">
+        <label>pbat/graph/Color.h</label>
+      </node>
+      <node id="7">
+        <label>Eigen/Sparse</label>
+      </node>
+      <node id="11">
+        <label>pbat/fem/Tetrahedron.h</label>
+        <link refid="Tetrahedron_8h_source"/>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="14" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+      </node>
+      <node id="10">
+        <label>pbat/fem/Mesh.h</label>
+      </node>
+      <node id="14">
+        <label>array</label>
+      </node>
+      <node id="18">
+        <label>pbat/sim/vbd/Data.h</label>
+      </node>
+      <node id="19">
+        <label>ElasticEnergy.h</label>
+        <link refid="source_2pbat_2sim_2vbd_2lod_2ElasticEnergy_8h_source"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="18" relation="include">
+        </childnode>
+      </node>
+      <node id="21">
+        <label>pbat/graph/Adjacency.h</label>
+      </node>
+      <node id="8">
+        <label>cstddef</label>
+      </node>
+      <node id="2">
+        <label>Level.h</label>
+        <link refid="source_2pbat_2sim_2vbd_2lod_2Level_8h_source"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="19" relation="include">
+        </childnode>
+        <childnode refid="20" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="18" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+      </node>
+      <node id="4">
+        <label>Quadrature.h</label>
+        <link refid="source_2pbat_2sim_2vbd_2lod_2Quadrature_8h_source"/>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+      </node>
+      <node id="20">
+        <label>MomentumEnergy.h</label>
+        <link refid="source_2pbat_2sim_2vbd_2lod_2MomentumEnergy_8h_source"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="18" relation="include">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Level.cpp</label>
+        <link refid="source_2pbat_2sim_2vbd_2lod_2Level_8cpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="21" relation="include">
+        </childnode>
+        <childnode refid="22" relation="include">
+        </childnode>
+        <childnode refid="23" relation="include">
+        </childnode>
+      </node>
+    </incdepgraph>
+    <innernamespace refid="namespacepbat">pbat</innernamespace>
+    <innernamespace refid="namespacepbat_1_1sim">pbat::sim</innernamespace>
+    <innernamespace refid="namespacepbat_1_1sim_1_1vbd">pbat::sim::vbd</innernamespace>
+    <innernamespace refid="namespacepbat_1_1sim_1_1vbd_1_1lod">pbat::sim::vbd::lod</innernamespace>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="preprocessor">#include<sp/>&quot;Level.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="2"><highlight class="normal"></highlight></codeline>
+<codeline lineno="3"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;pbat/graph/Adjacency.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="4"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;pbat/graph/Color.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="5"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;pbat/graph/Mesh.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="6"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;Level.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="7"><highlight class="normal"></highlight></codeline>
+<codeline lineno="8"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal">pbat<sp/>{</highlight></codeline>
+<codeline lineno="9"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal">sim<sp/>{</highlight></codeline>
+<codeline lineno="10"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal">vbd<sp/>{</highlight></codeline>
+<codeline lineno="11"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal">lod<sp/>{</highlight></codeline>
+<codeline lineno="12"><highlight class="normal"></highlight></codeline>
+<codeline lineno="13" refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Level_1ae6f2e0a3f24d321d9cf2b43469dc50d7" refkind="member"><highlight class="normal"><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Level_1ae6f2e0a3f24d321d9cf2b43469dc50d7" kindref="member">Level::Level</ref>(<ref refid="structpbat_1_1fem_1_1Mesh" kindref="compound">VolumeMesh</ref><sp/>CM)</highlight></codeline>
+<codeline lineno="14"><highlight class="normal"><sp/><sp/><sp/><sp/>:<sp/>x(),</highlight></codeline>
+<codeline lineno="15"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>colors(),</highlight></codeline>
+<codeline lineno="16"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>ptr(),</highlight></codeline>
+<codeline lineno="17"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>adj(),</highlight></codeline>
+<codeline lineno="18"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>mesh(std::move(CM)),</highlight></codeline>
+<codeline lineno="19"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>Qcage(),</highlight></codeline>
+<codeline lineno="20"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>Qdirichlet(),</highlight></codeline>
+<codeline lineno="21"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>Ekinetic(),</highlight></codeline>
+<codeline lineno="22"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>Epotential(),</highlight></codeline>
+<codeline lineno="23"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>Edirichlet()</highlight></codeline>
+<codeline lineno="24"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="25"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Initialize<sp/>coarse<sp/>vertex<sp/>positions<sp/>from<sp/>rest<sp/>pose</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="26"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Level_1ab331b103c090e822c37f0b0192ef6b7b" kindref="member">x</ref><sp/>=<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Level_1a0aef12e785b24c517539b81842e4f834" kindref="member">mesh</ref>.<ref refid="structpbat_1_1fem_1_1Mesh_1abc65a193ee960705ddf64227afb18809" kindref="member">X</ref>;</highlight></codeline>
+<codeline lineno="27"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Compute<sp/>vertex<sp/>parallelization<sp/>scheme</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="28"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>GVV<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/>graph::MeshPrimalGraph(<ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Level_1a0aef12e785b24c517539b81842e4f834" kindref="member">mesh</ref>.<ref refid="structpbat_1_1fem_1_1Mesh_1a384afdf16df5efa27e09f17520402b5b" kindref="member">E</ref>,<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Level_1a0aef12e785b24c517539b81842e4f834" kindref="member">mesh</ref>.<ref refid="structpbat_1_1fem_1_1Mesh_1abc65a193ee960705ddf64227afb18809" kindref="member">X</ref>.cols());</highlight></codeline>
+<codeline lineno="29"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>[GVVp,<sp/>GVVv,<sp/>GVVw]<sp/>=<sp/>graph::MatrixToWeightedAdjacency(GVV);</highlight></codeline>
+<codeline lineno="30"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Level_1ab8f0467295c62ef46be5829376347b38" kindref="member">colors</ref><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/>graph::GreedyColor(</highlight></codeline>
+<codeline lineno="31"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>GVVp,</highlight></codeline>
+<codeline lineno="32"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>GVVv,</highlight></codeline>
+<codeline lineno="33"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>graph::EGreedyColorOrderingStrategy::LargestDegree,</highlight></codeline>
+<codeline lineno="34"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>graph::EGreedyColorSelectionStrategy::LeastUsed);</highlight></codeline>
+<codeline lineno="35"><highlight class="normal"><sp/><sp/><sp/><sp/>std::tie(ptr,<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Level_1a5265a00ded12fad8a1da8271fe867e95" kindref="member">adj</ref>)<sp/>=<sp/>graph::MapToAdjacency(<ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Level_1ab8f0467295c62ef46be5829376347b38" kindref="member">colors</ref>);</highlight></codeline>
+<codeline lineno="36"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="37"><highlight class="normal"></highlight></codeline>
+<codeline lineno="38" refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Level_1a45e5be465cdadb52fa302ef80d3c77f4" refkind="member"><highlight class="normal"><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Level" kindref="compound">Level</ref>&amp;<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Level_1a45e5be465cdadb52fa302ef80d3c77f4" kindref="member">Level::WithCageQuadrature</ref>(<ref refid="structpbat_1_1sim_1_1vbd_1_1Data" kindref="compound">Data</ref><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>problem,<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1CageQuadratureParameters" kindref="compound">CageQuadratureParameters</ref><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>params)</highlight></codeline>
+<codeline lineno="39"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="40"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Level_1a7f387e1420dc1149ce49455172466d3e" kindref="member">Qcage</ref><sp/>=<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1CageQuadrature" kindref="compound">CageQuadrature</ref>(problem.<ref refid="structpbat_1_1sim_1_1vbd_1_1Data_1a0814000764d127a91a05454ee341504d" kindref="member">mesh</ref>,<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Level_1a0aef12e785b24c517539b81842e4f834" kindref="member">mesh</ref>,<sp/>params);</highlight></codeline>
+<codeline lineno="41"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>*</highlight><highlight class="keyword">this</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="42"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="43"><highlight class="normal"></highlight></codeline>
+<codeline lineno="44" refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Level_1ace8b739675222bec7e56a5b4568b8bb6" refkind="member"><highlight class="normal"><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Level" kindref="compound">Level</ref>&amp;<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Level_1ace8b739675222bec7e56a5b4568b8bb6" kindref="member">Level::WithDirichletQuadrature</ref>(<ref refid="structpbat_1_1sim_1_1vbd_1_1Data" kindref="compound">Data</ref><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>problem)</highlight></codeline>
+<codeline lineno="45"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="46"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Level_1acfe804a7d1965f13ae299f0fdb5d8527" kindref="member">Qdirichlet</ref><sp/>=<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1DirichletQuadrature" kindref="compound">DirichletQuadrature</ref>(problem.<ref refid="structpbat_1_1sim_1_1vbd_1_1Data_1a0814000764d127a91a05454ee341504d" kindref="member">mesh</ref>,<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Level_1a0aef12e785b24c517539b81842e4f834" kindref="member">mesh</ref>,<sp/>problem.<ref refid="structpbat_1_1sim_1_1vbd_1_1Data_1a2254c059ec6624402fb8ffab3b825771" kindref="member">m</ref>,<sp/>problem.<ref refid="structpbat_1_1sim_1_1vbd_1_1Data_1a0af80e757ad6d712fd8cb988c2723abe" kindref="member">dbc</ref>);</highlight></codeline>
+<codeline lineno="47"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>*</highlight><highlight class="keyword">this</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="48"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="49"><highlight class="normal"></highlight></codeline>
+<codeline lineno="50" refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Level_1a1dad6a700ed96fa015ab5d0895a16af0" refkind="member"><highlight class="normal"><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Level" kindref="compound">Level</ref>&amp;<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Level_1a1dad6a700ed96fa015ab5d0895a16af0" kindref="member">Level::WithMomentumEnergy</ref>(<ref refid="structpbat_1_1sim_1_1vbd_1_1Data" kindref="compound">Data</ref><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>problem)</highlight></codeline>
+<codeline lineno="51"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="52"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Level_1a75c846fb62f227b05c05cc2a9cc20934" kindref="member">Ekinetic</ref><sp/>=<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1MomentumEnergy" kindref="compound">MomentumEnergy</ref>(problem,<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Level_1a7f387e1420dc1149ce49455172466d3e" kindref="member">Qcage</ref>);</highlight></codeline>
+<codeline lineno="53"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>*</highlight><highlight class="keyword">this</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="54"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="55"><highlight class="normal"></highlight></codeline>
+<codeline lineno="56" refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Level_1a894c1edabea5f8e4565082296e02e71e" refkind="member"><highlight class="normal"><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Level" kindref="compound">Level</ref>&amp;<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Level_1a894c1edabea5f8e4565082296e02e71e" kindref="member">Level::WithElasticEnergy</ref>(<ref refid="structpbat_1_1sim_1_1vbd_1_1Data" kindref="compound">Data</ref><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>problem)</highlight></codeline>
+<codeline lineno="57"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="58"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Level_1a3ad38a1f394b7f894075f8d98587d50c" kindref="member">Epotential</ref><sp/>=<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1ElasticEnergy" kindref="compound">ElasticEnergy</ref>(problem,<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Level_1a7f387e1420dc1149ce49455172466d3e" kindref="member">Qcage</ref>);</highlight></codeline>
+<codeline lineno="59"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>*</highlight><highlight class="keyword">this</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="60"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="61"><highlight class="normal"></highlight></codeline>
+<codeline lineno="62" refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Level_1a3904b372c43336b48d826f5940a21b2b" refkind="member"><highlight class="normal"><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Level" kindref="compound">Level</ref>&amp;<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Level_1a3904b372c43336b48d826f5940a21b2b" kindref="member">Level::WithDirichletEnergy</ref>(<ref refid="structpbat_1_1sim_1_1vbd_1_1Data" kindref="compound">Data</ref><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>problem)</highlight></codeline>
+<codeline lineno="63"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="64"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Level_1a24cabd40d2de252e93fae492b48fcc62" kindref="member">Edirichlet</ref><sp/>=<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1DirichletEnergy" kindref="compound">DirichletEnergy</ref>(problem,<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Level_1acfe804a7d1965f13ae299f0fdb5d8527" kindref="member">Qdirichlet</ref>);</highlight></codeline>
+<codeline lineno="65"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>*</highlight><highlight class="keyword">this</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="66"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="67"><highlight class="normal"></highlight></codeline>
+<codeline lineno="68"><highlight class="normal">}<sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>lod</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="69"><highlight class="normal">}<sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>vbd</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="70"><highlight class="normal">}<sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>sim</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="71"><highlight class="normal">}<sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>pbat</highlight><highlight class="normal"></highlight></codeline>
+    </programlisting>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Level.cpp"/>
+  </compounddef>
+</doxygen>

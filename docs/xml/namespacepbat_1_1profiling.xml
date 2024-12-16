@@ -1,0 +1,96 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="namespacepbat_1_1profiling" kind="namespace" language="C++">
+    <compoundname>pbat::profiling</compoundname>
+    <innernamespace refid="namespacepbat_1_1profiling_1_1detail">pbat::profiling::detail</innernamespace>
+      <sectiondef kind="func">
+      <memberdef kind="function" id="source_2pbat_2profiling_2Profiling_8cpp_1a08881fc2cf4352baeccb6f12a86f7209" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>PBAT_API void pbat::profiling::BeginFrame</definition>
+        <argsstring>(std::string_view name)</argsstring>
+        <name>BeginFrame</name>
+        <param>
+          <type>std::string_view</type>
+          <declname>name</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/profiling/Profiling.cpp" line="18" column="6" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/profiling/Profiling.cpp" bodystart="18" bodyend="27" declfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/profiling/Profiling.h" declline="30" declcolumn="15"/>
+      </memberdef>
+      <memberdef kind="function" id="source_2pbat_2profiling_2Profiling_8cpp_1a7dd706b9da71fb39c5b6229e3ee4b51f" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>PBAT_API void pbat::profiling::EndFrame</definition>
+        <argsstring>(std::string_view name)</argsstring>
+        <name>EndFrame</name>
+        <param>
+          <type>std::string_view</type>
+          <declname>name</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/profiling/Profiling.cpp" line="29" column="6" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/profiling/Profiling.cpp" bodystart="29" bodyend="38" declfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/profiling/Profiling.h" declline="32" declcolumn="15"/>
+      </memberdef>
+      <memberdef kind="function" id="source_2pbat_2profiling_2Profiling_8cpp_1a68771d416de0d6bfba9e054e6dbae466" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>PBAT_API bool pbat::profiling::IsConnectedToServer</definition>
+        <argsstring>()</argsstring>
+        <name>IsConnectedToServer</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/profiling/Profiling.cpp" line="40" column="6" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/profiling/Profiling.cpp" bodystart="40" bodyend="47" declfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/profiling/Profiling.h" declline="34" declcolumn="15"/>
+      </memberdef>
+      <memberdef kind="function" id="source_2pbat_2profiling_2Profiling_8h_1abc7330a708d20cda905f07ebe2c57f00" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class Func</type>
+          </param>
+          <param>
+            <type>class...</type>
+            <declname>Args</declname>
+            <defname>Args</defname>
+          </param>
+        </templateparamlist>
+        <type>std::invoke_result_t&lt; Func, Args... &gt;</type>
+        <definition>std::invoke_result_t&lt;Func, Args...&gt; pbat::profiling::Profile</definition>
+        <argsstring>(std::string const &amp;zoneName, Func &amp;&amp;f, Args &amp;&amp;... args)</argsstring>
+        <name>Profile</name>
+        <param>
+          <type>std::string const &amp;</type>
+          <declname>zoneName</declname>
+        </param>
+        <param>
+          <type>Func &amp;&amp;</type>
+          <declname>f</declname>
+        </param>
+        <param>
+          <type>Args &amp;&amp;...</type>
+          <declname>args</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/profiling/Profiling.h" line="37" column="22" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/profiling/Profiling.h" bodystart="37" bodyend="69"/>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/profiling/Profiling.cpp" line="7" column="19"/>
+  </compounddef>
+</doxygen>

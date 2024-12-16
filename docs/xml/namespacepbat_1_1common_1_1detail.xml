@@ -1,0 +1,12 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="namespacepbat_1_1common_1_1detail" kind="namespace" language="C++">
+    <compoundname>pbat::common::detail</compoundname>
+    <innerclass refid="structpbat_1_1common_1_1detail_1_1Slice" prot="public">pbat::common::detail::Slice</innerclass>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/common/Eigen.h" line="54" column="16"/>
+  </compounddef>
+</doxygen>

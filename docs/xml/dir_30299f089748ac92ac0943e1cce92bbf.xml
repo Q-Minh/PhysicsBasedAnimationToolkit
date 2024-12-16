@@ -1,0 +1,14 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="dir_30299f089748ac92ac0943e1cce92bbf" kind="dir">
+    <compoundname>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim</compoundname>
+    <innerdir refid="dir_ea9264fb8cbdc5ff1faa36c765ca9f4a">/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd</innerdir>
+    <innerdir refid="dir_9f39819a78573ba6abcd88f117b2b69f">/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd</innerdir>
+    <innerfile refid="source_2pbat_2sim_2Sim_8h">Sim.h</innerfile>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/"/>
+  </compounddef>
+</doxygen>

@@ -1,0 +1,102 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="structpbat_1_1sim_1_1vbd_1_1lod_1_1DirichletEnergy" kind="struct" language="C++" prot="public">
+    <compoundname>pbat::sim::vbd::lod::DirichletEnergy</compoundname>
+      <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="structpbat_1_1sim_1_1vbd_1_1lod_1_1DirichletEnergy_1a10a624e1084a26691c24b40948e83724" prot="public" static="no" mutable="no">
+        <type>Scalar</type>
+        <definition>Scalar pbat::sim::vbd::lod::DirichletEnergy::muD</definition>
+        <argsstring></argsstring>
+        <name>muD</name>
+        <initializer>{1}</initializer>
+        <briefdescription>
+<para>Dirichlet penalty coefficient. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/DirichletEnergy.h" line="23" column="12" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/DirichletEnergy.h" bodystart="23" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpbat_1_1sim_1_1vbd_1_1lod_1_1DirichletEnergy_1a557c8baf972321da7bc7008f46974698" prot="public" static="no" mutable="no">
+        <type>MatrixX</type>
+        <definition>MatrixX pbat::sim::vbd::lod::DirichletEnergy::dg</definition>
+        <argsstring></argsstring>
+        <name>dg</name>
+        <briefdescription>
+<para>3x|#quad.pts.| Dirichlet conditions </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/DirichletEnergy.h" line="24" column="13" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/DirichletEnergy.h" bodystart="24" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="public-func">
+      <memberdef kind="function" id="structpbat_1_1sim_1_1vbd_1_1lod_1_1DirichletEnergy_1add1c1f9918095d1a04a9384a9fbeea2e" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>pbat::sim::vbd::lod::DirichletEnergy::DirichletEnergy</definition>
+        <argsstring>()=default</argsstring>
+        <name>DirichletEnergy</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/DirichletEnergy.h" line="15" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="structpbat_1_1sim_1_1vbd_1_1lod_1_1DirichletEnergy_1a513b6736a21128aab37bd9faab6f0897" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>pbat::sim::vbd::lod::DirichletEnergy::DirichletEnergy</definition>
+        <argsstring>(Data const &amp;problem, DirichletQuadrature const &amp;DQ)</argsstring>
+        <name>DirichletEnergy</name>
+        <param>
+          <type><ref refid="structpbat_1_1sim_1_1vbd_1_1Data" kindref="compound">Data</ref> const &amp;</type>
+          <declname>problem</declname>
+        </param>
+        <param>
+          <type><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1DirichletQuadrature" kindref="compound">DirichletQuadrature</ref> const &amp;</type>
+          <declname>DQ</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>problem</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>DQ</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/DirichletEnergy.h" line="21" column="5" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/DirichletEnergy.cpp" bodystart="8" bodyend="13"/>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/DirichletEnergy.h" line="14" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/DirichletEnergy.h" bodystart="13" bodyend="25"/>
+    <listofallmembers>
+      <member refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1DirichletEnergy_1a557c8baf972321da7bc7008f46974698" prot="public" virt="non-virtual"><scope>pbat::sim::vbd::lod::DirichletEnergy</scope><name>dg</name></member>
+      <member refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1DirichletEnergy_1add1c1f9918095d1a04a9384a9fbeea2e" prot="public" virt="non-virtual"><scope>pbat::sim::vbd::lod::DirichletEnergy</scope><name>DirichletEnergy</name></member>
+      <member refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1DirichletEnergy_1a513b6736a21128aab37bd9faab6f0897" prot="public" virt="non-virtual"><scope>pbat::sim::vbd::lod::DirichletEnergy</scope><name>DirichletEnergy</name></member>
+      <member refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1DirichletEnergy_1a10a624e1084a26691c24b40948e83724" prot="public" virt="non-virtual"><scope>pbat::sim::vbd::lod::DirichletEnergy</scope><name>muD</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

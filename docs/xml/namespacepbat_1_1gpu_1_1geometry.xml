@@ -1,0 +1,17 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="namespacepbat_1_1gpu_1_1geometry" kind="namespace" language="C++">
+    <compoundname>pbat::gpu::geometry</compoundname>
+    <innerclass refid="classpbat_1_1gpu_1_1geometry_1_1Bodies" prot="public">pbat::gpu::geometry::Bodies</innerclass>
+    <innerclass refid="classpbat_1_1gpu_1_1geometry_1_1Bvh" prot="public">pbat::gpu::geometry::Bvh</innerclass>
+    <innerclass refid="classpbat_1_1gpu_1_1geometry_1_1BvhQuery" prot="public">pbat::gpu::geometry::BvhQuery</innerclass>
+    <innerclass refid="classpbat_1_1gpu_1_1geometry_1_1Points" prot="public">pbat::gpu::geometry::Points</innerclass>
+    <innerclass refid="classpbat_1_1gpu_1_1geometry_1_1Simplices" prot="public">pbat::gpu::geometry::Simplices</innerclass>
+    <innerclass refid="classpbat_1_1gpu_1_1geometry_1_1SweepAndPrune" prot="public">pbat::gpu::geometry::SweepAndPrune</innerclass>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/geometry/Bvh.h" line="14" column="18"/>
+  </compounddef>
+</doxygen>

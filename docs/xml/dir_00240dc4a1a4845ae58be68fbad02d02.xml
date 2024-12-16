@@ -1,0 +1,12 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="dir_00240dc4a1a4845ae58be68fbad02d02" kind="dir">
+    <compoundname>/workspaces/PhysicsBasedAnimationToolkit/bindings</compoundname>
+    <innerdir refid="dir_d77dc954fbd2d02f3a1f075a922f80fd">/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat</innerdir>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/"/>
+  </compounddef>
+</doxygen>

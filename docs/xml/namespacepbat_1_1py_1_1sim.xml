@@ -1,0 +1,32 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="namespacepbat_1_1py_1_1sim" kind="namespace" language="C++">
+    <compoundname>pbat::py::sim</compoundname>
+    <innernamespace refid="namespacepbat_1_1py_1_1sim_1_1vbd">pbat::py::sim::vbd</innernamespace>
+    <innernamespace refid="namespacepbat_1_1py_1_1sim_1_1xpbd">pbat::py::sim::xpbd</innernamespace>
+      <sectiondef kind="func">
+      <memberdef kind="function" id="Sim_8cpp_1a758d861cbc2c06c217aac702f52c5bbf" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void pbat::py::sim::Bind</definition>
+        <argsstring>(pybind11::module &amp;m)</argsstring>
+        <name>Bind</name>
+        <param>
+          <type>pybind11::module &amp;</type>
+          <declname>m</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/sim/Sim.cpp" line="10" column="6" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/sim/Sim.cpp" bodystart="10" bodyend="18" declfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/sim/Sim.h" declline="10" declcolumn="6"/>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/sim/Sim.cpp" line="8" column="13"/>
+  </compounddef>
+</doxygen>

@@ -1,0 +1,13 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="dir_94d5d4691a330c3da48954b9b81ac55d" kind="dir">
+    <compoundname>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/profiling</compoundname>
+    <innerfile refid="source_2pbat_2profiling_2Profiling_8cpp">Profiling.cpp</innerfile>
+    <innerfile refid="source_2pbat_2profiling_2Profiling_8h">Profiling.h</innerfile>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/profiling/"/>
+  </compounddef>
+</doxygen>

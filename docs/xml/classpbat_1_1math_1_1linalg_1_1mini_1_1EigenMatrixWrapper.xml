@@ -1,0 +1,265 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="classpbat_1_1math_1_1linalg_1_1mini_1_1EigenMatrixWrapper" kind="class" language="C++" prot="public">
+    <compoundname>pbat::math::linalg::mini::EigenMatrixWrapper</compoundname>
+    <templateparamlist>
+      <param>
+        <type>class TDerived</type>
+      </param>
+    </templateparamlist>
+      <sectiondef kind="public-type">
+      <memberdef kind="typedef" id="classpbat_1_1math_1_1linalg_1_1mini_1_1EigenMatrixWrapper_1af0014c4b9305ffbbed95a0d6e39875ec" prot="public" static="no">
+        <type>typename TDerived::Scalar</type>
+        <definition>using pbat::math::linalg::mini::EigenMatrixWrapper&lt; TDerived &gt;::ScalarType =  typename TDerived::Scalar</definition>
+        <argsstring></argsstring>
+        <name>ScalarType</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Eigen.h" line="95" column="5" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Eigen.h" bodystart="95" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="classpbat_1_1math_1_1linalg_1_1mini_1_1EigenMatrixWrapper_1ac9c76a78849a00b7fe276598ad9b3ff3" prot="public" static="no">
+        <type><ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1EigenMatrixWrapper" kindref="compound">EigenMatrixWrapper</ref>&lt; TDerived &gt;</type>
+        <definition>using pbat::math::linalg::mini::EigenMatrixWrapper&lt; TDerived &gt;::SelfType =  EigenMatrixWrapper&lt;TDerived&gt;</definition>
+        <argsstring></argsstring>
+        <name>SelfType</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Eigen.h" line="96" column="5" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Eigen.h" bodystart="96" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="public-static-attrib">
+      <memberdef kind="variable" id="classpbat_1_1math_1_1linalg_1_1mini_1_1EigenMatrixWrapper_1a4058103008364d53f84bd5cfb83e1d4a" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>constexpr int</type>
+        <definition>constexpr int pbat::math::linalg::mini::EigenMatrixWrapper&lt; TDerived &gt;::kRows</definition>
+        <argsstring></argsstring>
+        <name>kRows</name>
+        <initializer>= TDerived::RowsAtCompileTime</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Eigen.h" line="98" column="26" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Eigen.h" bodystart="98" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpbat_1_1math_1_1linalg_1_1mini_1_1EigenMatrixWrapper_1a9214136583083d786d7c9b86dff7bf68" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>constexpr int</type>
+        <definition>constexpr int pbat::math::linalg::mini::EigenMatrixWrapper&lt; TDerived &gt;::kCols</definition>
+        <argsstring></argsstring>
+        <name>kCols</name>
+        <initializer>= TDerived::ColsAtCompileTime</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Eigen.h" line="99" column="26" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Eigen.h" bodystart="99" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpbat_1_1math_1_1linalg_1_1mini_1_1EigenMatrixWrapper_1a4dbe834b0b2090328c67df363b14bc93" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>constexpr bool</type>
+        <definition>constexpr bool pbat::math::linalg::mini::EigenMatrixWrapper&lt; TDerived &gt;::bRowMajor</definition>
+        <argsstring></argsstring>
+        <name>bRowMajor</name>
+        <initializer>= TDerived::IsRowMajor</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Eigen.h" line="100" column="27" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Eigen.h" bodystart="100" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="classpbat_1_1math_1_1linalg_1_1mini_1_1EigenMatrixWrapper_1aa4f9c2ae5cfa4eaabe80314c5fbe4f58" prot="private" static="no" mutable="no">
+        <type>TDerived &amp;</type>
+        <definition>TDerived&amp; pbat::math::linalg::mini::EigenMatrixWrapper&lt; TDerived &gt;::mA</definition>
+        <argsstring></argsstring>
+        <name>mA</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Eigen.h" line="124" column="14" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Eigen.h" bodystart="124" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpbat_1_1math_1_1linalg_1_1mini_1_1EigenMatrixWrapper_1af7cb37de44ca53d06e6805a8e8f9b7d5" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>PBAT_HOST_DEVICE</type>
+        <definition>PBAT_HOST_DEVICE pbat::math::linalg::mini::EigenMatrixWrapper&lt; TDerived &gt;::EigenMatrixWrapper</definition>
+        <argsstring>(TDerived &amp;A)</argsstring>
+        <name>EigenMatrixWrapper</name>
+        <param>
+          <type>TDerived &amp;</type>
+          <declname>A</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Eigen.h" line="102" column="22" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Eigen.h" bodystart="102" bodyend="108"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1math_1_1linalg_1_1mini_1_1EigenMatrixWrapper_1a13c3e41861a3a989b4f4d21e6dd80b89" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>PBAT_HOST_DEVICE void</type>
+        <definition>PBAT_HOST_DEVICE void pbat::math::linalg::mini::EigenMatrixWrapper&lt; TDerived &gt;::SetConstant</definition>
+        <argsstring>(ScalarType k)</argsstring>
+        <name>SetConstant</name>
+        <param>
+          <type>ScalarType</type>
+          <declname>k</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Eigen.h" line="110" column="27" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Eigen.h" bodystart="110" bodyend="110"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1math_1_1linalg_1_1mini_1_1EigenMatrixWrapper_1ae98092e0f708c467d1955b98e74aebe6" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>PBAT_HOST_DEVICE ScalarType</type>
+        <definition>PBAT_HOST_DEVICE ScalarType pbat::math::linalg::mini::EigenMatrixWrapper&lt; TDerived &gt;::operator()</definition>
+        <argsstring>(auto i, auto j) const</argsstring>
+        <name>operator()</name>
+        <param>
+          <type>auto</type>
+          <declname>i</declname>
+        </param>
+        <param>
+          <type>auto</type>
+          <declname>j</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Eigen.h" line="112" column="33" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Eigen.h" bodystart="112" bodyend="112"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1math_1_1linalg_1_1mini_1_1EigenMatrixWrapper_1a8849ee1884e51d70fe4aecffec4c9aef" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>PBAT_HOST_DEVICE ScalarType &amp;</type>
+        <definition>PBAT_HOST_DEVICE ScalarType&amp; pbat::math::linalg::mini::EigenMatrixWrapper&lt; TDerived &gt;::operator()</definition>
+        <argsstring>(auto i, auto j)</argsstring>
+        <name>operator()</name>
+        <param>
+          <type>auto</type>
+          <declname>i</declname>
+        </param>
+        <param>
+          <type>auto</type>
+          <declname>j</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Eigen.h" line="113" column="33" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Eigen.h" bodystart="113" bodyend="113"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1math_1_1linalg_1_1mini_1_1EigenMatrixWrapper_1af4a26ccb8aedd2c9d53f5ec817404f7b" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>PBAT_HOST_DEVICE ScalarType</type>
+        <definition>PBAT_HOST_DEVICE ScalarType pbat::math::linalg::mini::EigenMatrixWrapper&lt; TDerived &gt;::operator()</definition>
+        <argsstring>(auto i) const</argsstring>
+        <name>operator()</name>
+        <param>
+          <type>auto</type>
+          <declname>i</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Eigen.h" line="116" column="33" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Eigen.h" bodystart="116" bodyend="116"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1math_1_1linalg_1_1mini_1_1EigenMatrixWrapper_1aa25dfed581ecee3200320291ec985a6b" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>PBAT_HOST_DEVICE ScalarType</type>
+        <definition>PBAT_HOST_DEVICE ScalarType pbat::math::linalg::mini::EigenMatrixWrapper&lt; TDerived &gt;::operator[]</definition>
+        <argsstring>(auto i) const</argsstring>
+        <name>operator[]</name>
+        <param>
+          <type>auto</type>
+          <declname>i</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Eigen.h" line="117" column="33" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Eigen.h" bodystart="117" bodyend="117"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1math_1_1linalg_1_1mini_1_1EigenMatrixWrapper_1a1109426889f9a63d643191e30d2bff4e" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>PBAT_HOST_DEVICE ScalarType &amp;</type>
+        <definition>PBAT_HOST_DEVICE ScalarType&amp; pbat::math::linalg::mini::EigenMatrixWrapper&lt; TDerived &gt;::operator()</definition>
+        <argsstring>(auto i)</argsstring>
+        <name>operator()</name>
+        <param>
+          <type>auto</type>
+          <declname>i</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Eigen.h" line="118" column="33" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Eigen.h" bodystart="118" bodyend="118"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1math_1_1linalg_1_1mini_1_1EigenMatrixWrapper_1a6bc08033ed70dba40a03ed8fa931fd0b" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>PBAT_HOST_DEVICE ScalarType &amp;</type>
+        <definition>PBAT_HOST_DEVICE ScalarType&amp; pbat::math::linalg::mini::EigenMatrixWrapper&lt; TDerived &gt;::operator[]</definition>
+        <argsstring>(auto i)</argsstring>
+        <name>operator[]</name>
+        <param>
+          <type>auto</type>
+          <declname>i</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Eigen.h" line="119" column="33" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Eigen.h" bodystart="119" bodyend="119"/>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Eigen.h" line="93" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Eigen.h" bodystart="92" bodyend="125"/>
+    <listofallmembers>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1EigenMatrixWrapper_1a4dbe834b0b2090328c67df363b14bc93" prot="public" virt="non-virtual"><scope>pbat::math::linalg::mini::EigenMatrixWrapper</scope><name>bRowMajor</name></member>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1EigenMatrixWrapper_1af7cb37de44ca53d06e6805a8e8f9b7d5" prot="public" virt="non-virtual"><scope>pbat::math::linalg::mini::EigenMatrixWrapper</scope><name>EigenMatrixWrapper</name></member>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1EigenMatrixWrapper_1a9214136583083d786d7c9b86dff7bf68" prot="public" virt="non-virtual"><scope>pbat::math::linalg::mini::EigenMatrixWrapper</scope><name>kCols</name></member>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1EigenMatrixWrapper_1a4058103008364d53f84bd5cfb83e1d4a" prot="public" virt="non-virtual"><scope>pbat::math::linalg::mini::EigenMatrixWrapper</scope><name>kRows</name></member>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1EigenMatrixWrapper_1aa4f9c2ae5cfa4eaabe80314c5fbe4f58" prot="private" virt="non-virtual"><scope>pbat::math::linalg::mini::EigenMatrixWrapper</scope><name>mA</name></member>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1EigenMatrixWrapper_1ae98092e0f708c467d1955b98e74aebe6" prot="public" virt="non-virtual"><scope>pbat::math::linalg::mini::EigenMatrixWrapper</scope><name>operator()</name></member>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1EigenMatrixWrapper_1a8849ee1884e51d70fe4aecffec4c9aef" prot="public" virt="non-virtual"><scope>pbat::math::linalg::mini::EigenMatrixWrapper</scope><name>operator()</name></member>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1EigenMatrixWrapper_1af4a26ccb8aedd2c9d53f5ec817404f7b" prot="public" virt="non-virtual"><scope>pbat::math::linalg::mini::EigenMatrixWrapper</scope><name>operator()</name></member>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1EigenMatrixWrapper_1a1109426889f9a63d643191e30d2bff4e" prot="public" virt="non-virtual"><scope>pbat::math::linalg::mini::EigenMatrixWrapper</scope><name>operator()</name></member>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1EigenMatrixWrapper_1aa25dfed581ecee3200320291ec985a6b" prot="public" virt="non-virtual"><scope>pbat::math::linalg::mini::EigenMatrixWrapper</scope><name>operator[]</name></member>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1EigenMatrixWrapper_1a6bc08033ed70dba40a03ed8fa931fd0b" prot="public" virt="non-virtual"><scope>pbat::math::linalg::mini::EigenMatrixWrapper</scope><name>operator[]</name></member>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1EigenMatrixWrapper_1af0014c4b9305ffbbed95a0d6e39875ec" prot="public" virt="non-virtual"><scope>pbat::math::linalg::mini::EigenMatrixWrapper</scope><name>ScalarType</name></member>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1EigenMatrixWrapper_1ac9c76a78849a00b7fe276598ad9b3ff3" prot="public" virt="non-virtual"><scope>pbat::math::linalg::mini::EigenMatrixWrapper</scope><name>SelfType</name></member>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1EigenMatrixWrapper_1a13c3e41861a3a989b4f4d21e6dd80b89" prot="public" virt="non-virtual"><scope>pbat::math::linalg::mini::EigenMatrixWrapper</scope><name>SetConstant</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

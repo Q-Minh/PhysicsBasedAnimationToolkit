@@ -1,0 +1,25 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="dir_ebd3461654f186916140ec58d7f614f6" kind="dir">
+    <compoundname>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/common</compoundname>
+    <innerfile refid="ArgSort_8cpp">ArgSort.cpp</innerfile>
+    <innerfile refid="ArgSort_8h">ArgSort.h</innerfile>
+    <innerfile refid="Common_8h">Common.h</innerfile>
+    <innerfile refid="common_2Concepts_8h">Concepts.h</innerfile>
+    <innerfile refid="ConstexprFor_8h">ConstexprFor.h</innerfile>
+    <innerfile refid="common_2Eigen_8cpp">Eigen.cpp</innerfile>
+    <innerfile refid="common_2Eigen_8h">Eigen.h</innerfile>
+    <innerfile refid="Hash_8h">Hash.h</innerfile>
+    <innerfile refid="Indexing_8cpp">Indexing.cpp</innerfile>
+    <innerfile refid="Indexing_8h">Indexing.h</innerfile>
+    <innerfile refid="Queue_8cpp">Queue.cpp</innerfile>
+    <innerfile refid="Queue_8h">Queue.h</innerfile>
+    <innerfile refid="common_2Stack_8cpp">Stack.cpp</innerfile>
+    <innerfile refid="common_2Stack_8h">Stack.h</innerfile>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/common/"/>
+  </compounddef>
+</doxygen>

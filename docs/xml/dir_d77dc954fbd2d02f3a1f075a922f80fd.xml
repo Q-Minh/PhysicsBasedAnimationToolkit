@@ -1,0 +1,19 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="dir_d77dc954fbd2d02f3a1f075a922f80fd" kind="dir">
+    <compoundname>/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat</compoundname>
+    <innerdir refid="dir_f945e873d2f0175d68ea2c889a74bbc5">/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem</innerdir>
+    <innerdir refid="dir_62a8e122b54c01776233734963901f2d">/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/geometry</innerdir>
+    <innerdir refid="dir_57d3ede956bee6d1c8a5ae7cafe669e2">/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/gpu</innerdir>
+    <innerdir refid="dir_5d9ff19dddd9059279e2890cc4401539">/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/graph</innerdir>
+    <innerdir refid="dir_c285818ee2054263477e33dea25aeb72">/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/math</innerdir>
+    <innerdir refid="dir_d4771d26b162d7cdef590db638025356">/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/profiling</innerdir>
+    <innerdir refid="dir_b8703e20c11b677bfb7d81d9b9ff98ce">/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/sim</innerdir>
+    <innerfile refid="PythonBindings_8cpp">PythonBindings.cpp</innerfile>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/"/>
+  </compounddef>
+</doxygen>

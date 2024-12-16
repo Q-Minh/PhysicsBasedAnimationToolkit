@@ -1,0 +1,428 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="classpbat_1_1gpu_1_1geometry_1_1Bvh" kind="class" language="C++" prot="public">
+    <compoundname>pbat::gpu::geometry::Bvh</compoundname>
+    <includes refid="source_2pbat_2gpu_2geometry_2Bvh_8h" local="no">Bvh.h</includes>
+      <sectiondef kind="public-type">
+      <memberdef kind="typedef" id="classpbat_1_1gpu_1_1geometry_1_1Bvh_1ada9b4a54e03f905024e735ca90d8e5b3" prot="public" static="no">
+        <type>std::uint32_t</type>
+        <definition>using pbat::gpu::geometry::Bvh::MortonCodeType =  std::uint32_t</definition>
+        <argsstring></argsstring>
+        <name>MortonCodeType</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/geometry/Bvh.h" line="24" column="5" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/geometry/Bvh.h" bodystart="24" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="classpbat_1_1gpu_1_1geometry_1_1Bvh_1a0d64551c83abdd6d211d23ef79890189" prot="private" static="no" mutable="no">
+        <type>BvhImpl *</type>
+        <definition>BvhImpl* pbat::gpu::geometry::Bvh::mImpl</definition>
+        <argsstring></argsstring>
+        <name>mImpl</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/geometry/Bvh.h" line="104" column="13" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/geometry/Bvh.h" bodystart="104" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpbat_1_1gpu_1_1geometry_1_1Bvh_1aeda0eaa7c4604848450b17db3e27eec9" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>PBAT_API</type>
+        <definition>PBAT_API pbat::gpu::geometry::Bvh::Bvh</definition>
+        <argsstring>(std::size_t nPrimitives, std::size_t nOverlaps)</argsstring>
+        <name>Bvh</name>
+        <param>
+          <type>std::size_t</type>
+          <declname>nPrimitives</declname>
+        </param>
+        <param>
+          <type>std::size_t</type>
+          <declname>nOverlaps</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>nPrimitives</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>nOverlaps</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/geometry/Bvh.h" line="31" column="14"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1gpu_1_1geometry_1_1Bvh_1ae9af4f33e1fe34236ef69aaa8d29a7f2" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>pbat::gpu::geometry::Bvh::Bvh</definition>
+        <argsstring>(Bvh const &amp;)=delete</argsstring>
+        <name>Bvh</name>
+        <param>
+          <type><ref refid="classpbat_1_1gpu_1_1geometry_1_1Bvh" kindref="compound">Bvh</ref> const &amp;</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/geometry/Bvh.h" line="33" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1gpu_1_1geometry_1_1Bvh_1a80c7f09ae3556c794922e5b6fba77f33" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpbat_1_1gpu_1_1geometry_1_1Bvh" kindref="compound">Bvh</ref> &amp;</type>
+        <definition>Bvh&amp; pbat::gpu::geometry::Bvh::operator=</definition>
+        <argsstring>(Bvh const &amp;)=delete</argsstring>
+        <name>operator=</name>
+        <param>
+          <type><ref refid="classpbat_1_1gpu_1_1geometry_1_1Bvh" kindref="compound">Bvh</ref> const &amp;</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/geometry/Bvh.h" line="34" column="9"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1gpu_1_1geometry_1_1Bvh_1ae7c06d812ad1b527ebc6a9688621573e" prot="public" static="no" const="no" explicit="no" inline="no" noexcept="yes" virt="non-virtual">
+        <type>PBAT_API</type>
+        <definition>PBAT_API pbat::gpu::geometry::Bvh::Bvh</definition>
+        <argsstring>(Bvh &amp;&amp;other) noexcept</argsstring>
+        <name>Bvh</name>
+        <param>
+          <type><ref refid="classpbat_1_1gpu_1_1geometry_1_1Bvh" kindref="compound">Bvh</ref> &amp;&amp;</type>
+          <declname>other</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/geometry/Bvh.h" line="36" column="14"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1gpu_1_1geometry_1_1Bvh_1ab063a5d1a877b03facc0607a1db18e57" prot="public" static="no" const="no" explicit="no" inline="no" noexcept="yes" virt="non-virtual">
+        <type>PBAT_API <ref refid="classpbat_1_1gpu_1_1geometry_1_1Bvh" kindref="compound">Bvh</ref> &amp;</type>
+        <definition>PBAT_API Bvh&amp; pbat::gpu::geometry::Bvh::operator=</definition>
+        <argsstring>(Bvh &amp;&amp;other) noexcept</argsstring>
+        <name>operator=</name>
+        <param>
+          <type><ref refid="classpbat_1_1gpu_1_1geometry_1_1Bvh" kindref="compound">Bvh</ref> &amp;&amp;</type>
+          <declname>other</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/geometry/Bvh.h" line="37" column="18"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1gpu_1_1geometry_1_1Bvh_1aa40ea4f9b4ebb6cbb4f469b8949a020c" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>PBAT_API void</type>
+        <definition>PBAT_API void pbat::gpu::geometry::Bvh::Build</definition>
+        <argsstring>(Points const &amp;P, Simplices const &amp;S, Eigen::Vector&lt; GpuScalar, 3 &gt; const &amp;min, Eigen::Vector&lt; GpuScalar, 3 &gt; const &amp;max, GpuScalar expansion=std::numeric_limits&lt; GpuScalar &gt;::epsilon())</argsstring>
+        <name>Build</name>
+        <param>
+          <type><ref refid="classpbat_1_1gpu_1_1geometry_1_1Points" kindref="compound">Points</ref> const &amp;</type>
+          <declname>P</declname>
+        </param>
+        <param>
+          <type><ref refid="classpbat_1_1gpu_1_1geometry_1_1Simplices" kindref="compound">Simplices</ref> const &amp;</type>
+          <declname>S</declname>
+        </param>
+        <param>
+          <type>Eigen::Vector&lt; GpuScalar, 3 &gt; const &amp;</type>
+          <declname>min</declname>
+        </param>
+        <param>
+          <type>Eigen::Vector&lt; GpuScalar, 3 &gt; const &amp;</type>
+          <declname>max</declname>
+        </param>
+        <param>
+          <type>GpuScalar</type>
+          <declname>expansion</declname>
+          <defval>std::numeric_limits&lt; GpuScalar &gt;::epsilon()</defval>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>P</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>S</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>expansion</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/geometry/Bvh.h" line="45" column="19"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1gpu_1_1geometry_1_1Bvh_1afa03864af2075c3ff954628962d95188" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>PBAT_API BvhImpl *</type>
+        <definition>PBAT_API BvhImpl* pbat::gpu::geometry::Bvh::Impl</definition>
+        <argsstring>()</argsstring>
+        <name>Impl</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/geometry/Bvh.h" line="52" column="22"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1gpu_1_1geometry_1_1Bvh_1a59595e03c028842e35e092a6537d686d" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>PBAT_API BvhImpl const  *</type>
+        <definition>PBAT_API BvhImpl const* pbat::gpu::geometry::Bvh::Impl</definition>
+        <argsstring>() const</argsstring>
+        <name>Impl</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/geometry/Bvh.h" line="53" column="28"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1gpu_1_1geometry_1_1Bvh_1a92666b47cff0791fd39082ec9fdc9c58" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>PBAT_API GpuIndexMatrixX</type>
+        <definition>PBAT_API GpuIndexMatrixX pbat::gpu::geometry::Bvh::DetectSelfOverlaps</definition>
+        <argsstring>(Simplices const &amp;S)</argsstring>
+        <name>DetectSelfOverlaps</name>
+        <param>
+          <type><ref refid="classpbat_1_1gpu_1_1geometry_1_1Simplices" kindref="compound">Simplices</ref> const &amp;</type>
+          <declname>S</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>S</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The simplices which were used to build this BVH </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/geometry/Bvh.h" line="59" column="30"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1gpu_1_1geometry_1_1Bvh_1a2f0f9075244dd9d15466d1f300cd3759" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>PBAT_API Eigen::Matrix&lt; GpuScalar, Eigen::Dynamic, Eigen::Dynamic &gt;</type>
+        <definition>PBAT_API Eigen::Matrix&lt;GpuScalar, Eigen::Dynamic, Eigen::Dynamic&gt; pbat::gpu::geometry::Bvh::Min</definition>
+        <argsstring>() const</argsstring>
+        <name>Min</name>
+        <briefdescription>
+<para>BVH nodes&apos; box minimums. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para></para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/geometry/Bvh.h" line="64" column="28"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1gpu_1_1geometry_1_1Bvh_1a8cf8370c55b8f27a468840762ae5630a" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>PBAT_API Eigen::Matrix&lt; GpuScalar, Eigen::Dynamic, Eigen::Dynamic &gt;</type>
+        <definition>PBAT_API Eigen::Matrix&lt;GpuScalar, Eigen::Dynamic, Eigen::Dynamic&gt; pbat::gpu::geometry::Bvh::Max</definition>
+        <argsstring>() const</argsstring>
+        <name>Max</name>
+        <briefdescription>
+<para>BVH nodes&apos; box maximums. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para></para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/geometry/Bvh.h" line="69" column="28"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1gpu_1_1geometry_1_1Bvh_1a770309bb5ecdd5eb1b5510592344b70a" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>PBAT_API Eigen::Vector&lt; GpuIndex, Eigen::Dynamic &gt;</type>
+        <definition>PBAT_API Eigen::Vector&lt;GpuIndex, Eigen::Dynamic&gt; pbat::gpu::geometry::Bvh::SimplexOrdering</definition>
+        <argsstring>() const</argsstring>
+        <name>SimplexOrdering</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para></para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/geometry/Bvh.h" line="74" column="28"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1gpu_1_1geometry_1_1Bvh_1a017ba53ee8dac45dbd2335b4f823c245" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>PBAT_API Eigen::Vector&lt; MortonCodeType, Eigen::Dynamic &gt;</type>
+        <definition>PBAT_API Eigen::Vector&lt;MortonCodeType, Eigen::Dynamic&gt; pbat::gpu::geometry::Bvh::MortonCodes</definition>
+        <argsstring>() const</argsstring>
+        <name>MortonCodes</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para></para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/geometry/Bvh.h" line="79" column="28"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1gpu_1_1geometry_1_1Bvh_1a07dcdd9b547a494d9ec5e59955d0a827" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>PBAT_API Eigen::Matrix&lt; GpuIndex, Eigen::Dynamic, 2 &gt;</type>
+        <definition>PBAT_API Eigen::Matrix&lt;GpuIndex, Eigen::Dynamic, 2&gt; pbat::gpu::geometry::Bvh::Child</definition>
+        <argsstring>() const</argsstring>
+        <name>Child</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para></para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/geometry/Bvh.h" line="84" column="28"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1gpu_1_1geometry_1_1Bvh_1a2f61a69a2e323e65772b8808a686203b" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>PBAT_API Eigen::Vector&lt; GpuIndex, Eigen::Dynamic &gt;</type>
+        <definition>PBAT_API Eigen::Vector&lt;GpuIndex, Eigen::Dynamic&gt; pbat::gpu::geometry::Bvh::Parent</definition>
+        <argsstring>() const</argsstring>
+        <name>Parent</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para></para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/geometry/Bvh.h" line="89" column="28"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1gpu_1_1geometry_1_1Bvh_1a4e6cee66e9451e3c2bf3d04697c364a9" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>PBAT_API Eigen::Matrix&lt; GpuIndex, Eigen::Dynamic, 2 &gt;</type>
+        <definition>PBAT_API Eigen::Matrix&lt;GpuIndex, Eigen::Dynamic, 2&gt; pbat::gpu::geometry::Bvh::Rightmost</definition>
+        <argsstring>() const</argsstring>
+        <name>Rightmost</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para></para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/geometry/Bvh.h" line="94" column="28"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1gpu_1_1geometry_1_1Bvh_1a9b4d694cae63a486b1d92b0a00ca2bb3" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>PBAT_API Eigen::Vector&lt; GpuIndex, Eigen::Dynamic &gt;</type>
+        <definition>PBAT_API Eigen::Vector&lt;GpuIndex, Eigen::Dynamic&gt; pbat::gpu::geometry::Bvh::Visits</definition>
+        <argsstring>() const</argsstring>
+        <name>Visits</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para></para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/geometry/Bvh.h" line="99" column="28"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1gpu_1_1geometry_1_1Bvh_1aee5387bdccdcef09d896796d6141fcab" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>PBAT_API</type>
+        <definition>PBAT_API pbat::gpu::geometry::Bvh::~Bvh</definition>
+        <argsstring>()</argsstring>
+        <name>~Bvh</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/geometry/Bvh.h" line="101" column="14"/>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+<para>Linear BVH GPU implementation. </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/geometry/Bvh.h" line="22" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/geometry/Bvh.h" bodystart="21" bodyend="105"/>
+    <listofallmembers>
+      <member refid="classpbat_1_1gpu_1_1geometry_1_1Bvh_1aa40ea4f9b4ebb6cbb4f469b8949a020c" prot="public" virt="non-virtual"><scope>pbat::gpu::geometry::Bvh</scope><name>Build</name></member>
+      <member refid="classpbat_1_1gpu_1_1geometry_1_1Bvh_1aeda0eaa7c4604848450b17db3e27eec9" prot="public" virt="non-virtual"><scope>pbat::gpu::geometry::Bvh</scope><name>Bvh</name></member>
+      <member refid="classpbat_1_1gpu_1_1geometry_1_1Bvh_1ae9af4f33e1fe34236ef69aaa8d29a7f2" prot="public" virt="non-virtual"><scope>pbat::gpu::geometry::Bvh</scope><name>Bvh</name></member>
+      <member refid="classpbat_1_1gpu_1_1geometry_1_1Bvh_1ae7c06d812ad1b527ebc6a9688621573e" prot="public" virt="non-virtual"><scope>pbat::gpu::geometry::Bvh</scope><name>Bvh</name></member>
+      <member refid="classpbat_1_1gpu_1_1geometry_1_1Bvh_1a07dcdd9b547a494d9ec5e59955d0a827" prot="public" virt="non-virtual"><scope>pbat::gpu::geometry::Bvh</scope><name>Child</name></member>
+      <member refid="classpbat_1_1gpu_1_1geometry_1_1Bvh_1a92666b47cff0791fd39082ec9fdc9c58" prot="public" virt="non-virtual"><scope>pbat::gpu::geometry::Bvh</scope><name>DetectSelfOverlaps</name></member>
+      <member refid="classpbat_1_1gpu_1_1geometry_1_1Bvh_1afa03864af2075c3ff954628962d95188" prot="public" virt="non-virtual"><scope>pbat::gpu::geometry::Bvh</scope><name>Impl</name></member>
+      <member refid="classpbat_1_1gpu_1_1geometry_1_1Bvh_1a59595e03c028842e35e092a6537d686d" prot="public" virt="non-virtual"><scope>pbat::gpu::geometry::Bvh</scope><name>Impl</name></member>
+      <member refid="classpbat_1_1gpu_1_1geometry_1_1Bvh_1a8cf8370c55b8f27a468840762ae5630a" prot="public" virt="non-virtual"><scope>pbat::gpu::geometry::Bvh</scope><name>Max</name></member>
+      <member refid="classpbat_1_1gpu_1_1geometry_1_1Bvh_1a0d64551c83abdd6d211d23ef79890189" prot="private" virt="non-virtual"><scope>pbat::gpu::geometry::Bvh</scope><name>mImpl</name></member>
+      <member refid="classpbat_1_1gpu_1_1geometry_1_1Bvh_1a2f0f9075244dd9d15466d1f300cd3759" prot="public" virt="non-virtual"><scope>pbat::gpu::geometry::Bvh</scope><name>Min</name></member>
+      <member refid="classpbat_1_1gpu_1_1geometry_1_1Bvh_1a017ba53ee8dac45dbd2335b4f823c245" prot="public" virt="non-virtual"><scope>pbat::gpu::geometry::Bvh</scope><name>MortonCodes</name></member>
+      <member refid="classpbat_1_1gpu_1_1geometry_1_1Bvh_1ada9b4a54e03f905024e735ca90d8e5b3" prot="public" virt="non-virtual"><scope>pbat::gpu::geometry::Bvh</scope><name>MortonCodeType</name></member>
+      <member refid="classpbat_1_1gpu_1_1geometry_1_1Bvh_1a80c7f09ae3556c794922e5b6fba77f33" prot="public" virt="non-virtual"><scope>pbat::gpu::geometry::Bvh</scope><name>operator=</name></member>
+      <member refid="classpbat_1_1gpu_1_1geometry_1_1Bvh_1ab063a5d1a877b03facc0607a1db18e57" prot="public" virt="non-virtual"><scope>pbat::gpu::geometry::Bvh</scope><name>operator=</name></member>
+      <member refid="classpbat_1_1gpu_1_1geometry_1_1Bvh_1a2f61a69a2e323e65772b8808a686203b" prot="public" virt="non-virtual"><scope>pbat::gpu::geometry::Bvh</scope><name>Parent</name></member>
+      <member refid="classpbat_1_1gpu_1_1geometry_1_1Bvh_1a4e6cee66e9451e3c2bf3d04697c364a9" prot="public" virt="non-virtual"><scope>pbat::gpu::geometry::Bvh</scope><name>Rightmost</name></member>
+      <member refid="classpbat_1_1gpu_1_1geometry_1_1Bvh_1a770309bb5ecdd5eb1b5510592344b70a" prot="public" virt="non-virtual"><scope>pbat::gpu::geometry::Bvh</scope><name>SimplexOrdering</name></member>
+      <member refid="classpbat_1_1gpu_1_1geometry_1_1Bvh_1a9b4d694cae63a486b1d92b0a00ca2bb3" prot="public" virt="non-virtual"><scope>pbat::gpu::geometry::Bvh</scope><name>Visits</name></member>
+      <member refid="classpbat_1_1gpu_1_1geometry_1_1Bvh_1aee5387bdccdcef09d896796d6141fcab" prot="public" virt="non-virtual"><scope>pbat::gpu::geometry::Bvh</scope><name>~Bvh</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

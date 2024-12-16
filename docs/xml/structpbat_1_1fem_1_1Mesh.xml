@@ -1,0 +1,258 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="structpbat_1_1fem_1_1Mesh" kind="struct" language="C++" prot="public">
+    <compoundname>pbat::fem::Mesh</compoundname>
+    <templateparamlist>
+      <param>
+        <type>CElement</type>
+        <declname>TElement</declname>
+        <defname>TElement</defname>
+      </param>
+      <param>
+        <type>int</type>
+        <declname>Dims</declname>
+        <defname>Dims</defname>
+      </param>
+    </templateparamlist>
+      <sectiondef kind="public-type">
+      <memberdef kind="typedef" id="structpbat_1_1fem_1_1Mesh_1a3afbadab6418782fb913d93feb209586" prot="public" static="no">
+        <type>TElement</type>
+        <definition>using pbat::fem::Mesh&lt; TElement, Dims &gt;::ElementType =  TElement</definition>
+        <argsstring></argsstring>
+        <name>ElementType</name>
+        <briefdescription>
+<para>Underlying finite element type. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Mesh.h" line="23" column="5" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Mesh.h" bodystart="23" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="public-static-attrib">
+      <memberdef kind="variable" id="structpbat_1_1fem_1_1Mesh_1ab1642ce106491776f1416890ee9d95ae" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>constexpr int</type>
+        <definition>constexpr int pbat::fem::Mesh&lt; TElement, Dims &gt;::kDims</definition>
+        <argsstring></argsstring>
+        <name>kDims</name>
+        <initializer>= Dims</initializer>
+        <briefdescription>
+<para>Embedding dimensions of the mesh. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Mesh.h" line="24" column="26" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Mesh.h" bodystart="24" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpbat_1_1fem_1_1Mesh_1a0dee3e06e79666d0992f69579e53d399" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>constexpr int</type>
+        <definition>constexpr int pbat::fem::Mesh&lt; TElement, Dims &gt;::kOrder</definition>
+        <argsstring></argsstring>
+        <name>kOrder</name>
+        <initializer>= ElementType::kOrder</initializer>
+        <briefdescription>
+<para>Shape function order. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Mesh.h" line="25" column="26" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Mesh.h" bodystart="25" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="structpbat_1_1fem_1_1Mesh_1abc65a193ee960705ddf64227afb18809" prot="public" static="no" mutable="no">
+        <type>MatrixX</type>
+        <definition>MatrixX pbat::fem::Mesh&lt; TElement, Dims &gt;::X</definition>
+        <argsstring></argsstring>
+        <name>X</name>
+        <briefdescription>
+<para>Dims x |#nodes| nodal positions. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Mesh.h" line="51" column="13" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Mesh.h" bodystart="51" bodyend="-1"/>
+        <referencedby refid="structpbat_1_1sim_1_1vbd_1_1Data_1a7466f7eec8f704576cdc03430314d7e0" compoundref="source_2pbat_2sim_2vbd_2Data_8cpp" startline="108" endline="193">pbat::sim::vbd::Data::Construct</referencedby>
+        <referencedby refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1ElasticEnergy_1a179e3239cdabd7d78a043dd46f257613" compoundref="source_2pbat_2sim_2vbd_2lod_2ElasticEnergy_8cpp" startline="10" endline="16">pbat::sim::vbd::lod::ElasticEnergy::ElasticEnergy</referencedby>
+        <referencedby refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Level_1ae6f2e0a3f24d321d9cf2b43469dc50d7" compoundref="source_2pbat_2sim_2vbd_2lod_2Level_8cpp" startline="13" endline="36">pbat::sim::vbd::lod::Level::Level</referencedby>
+        <referencedby refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a36c5ca3486f6772b43d4490c095cc3be" compoundref="source_2pbat_2sim_2vbd_2multigrid_2Level_8cpp" startline="23" endline="129">pbat::sim::vbd::multigrid::Level::Level</referencedby>
+        <referencedby refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1abc6b7179bef6b4eacaca30beb6420328" compoundref="source_2pbat_2sim_2vbd_2multigrid_2Level_8cpp" startline="131" endline="233">pbat::sim::vbd::multigrid::Level::HyperReduce</referencedby>
+        <referencedby refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a8400962314cd373e84191514273cdda4" compoundref="source_2pbat_2sim_2vbd_2multigrid_2Level_8cpp" startline="246" endline="353">pbat::sim::vbd::multigrid::Level::Smooth</referencedby>
+        <referencedby refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1MomentumEnergy_1a43c0b5dd59e4d2b5e12c3a5499aa5b31" compoundref="source_2pbat_2sim_2vbd_2lod_2MomentumEnergy_8cpp" startline="13" endline="21">pbat::sim::vbd::lod::MomentumEnergy::MomentumEnergy</referencedby>
+        <referencedby refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Prolongation_1aeb5b314c899add9d41d1d9c415877896" compoundref="source_2pbat_2sim_2vbd_2lod_2Prolongation_8cpp" startline="19" endline="32">pbat::sim::vbd::lod::Prolongation::Prolongation</referencedby>
+        <referencedby refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1CageQuadrature_1aa0cb2dfe50e2a696023583aa79ef944f" compoundref="source_2pbat_2sim_2vbd_2lod_2Quadrature_8cpp" startline="114" endline="228">pbat::sim::vbd::lod::CageQuadrature::CageQuadrature</referencedby>
+        <referencedby refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1SurfaceQuadrature_1a1afd0898f60f8f0e71b1f693a5c298e5" compoundref="source_2pbat_2sim_2vbd_2lod_2Quadrature_8cpp" startline="230" endline="255">pbat::sim::vbd::lod::SurfaceQuadrature::SurfaceQuadrature</referencedby>
+        <referencedby refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1DirichletQuadrature_1a12d4a95a8177b8a26535bc92cb756af5" compoundref="source_2pbat_2sim_2vbd_2lod_2Quadrature_8cpp" startline="257" endline="274">pbat::sim::vbd::lod::DirichletQuadrature::DirichletQuadrature</referencedby>
+      </memberdef>
+      <memberdef kind="variable" id="structpbat_1_1fem_1_1Mesh_1a384afdf16df5efa27e09f17520402b5b" prot="public" static="no" mutable="no">
+        <type>IndexMatrixX</type>
+        <definition>IndexMatrixX pbat::fem::Mesh&lt; TElement, Dims &gt;::E</definition>
+        <argsstring></argsstring>
+        <name>E</name>
+        <briefdescription>
+<para>Element::Nodes x |#elements| element nodal indices. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Mesh.h" line="52" column="18" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Mesh.h" bodystart="52" bodyend="-1"/>
+        <referencedby refid="structpbat_1_1sim_1_1vbd_1_1Data_1a7466f7eec8f704576cdc03430314d7e0" compoundref="source_2pbat_2sim_2vbd_2Data_8cpp" startline="108" endline="193">pbat::sim::vbd::Data::Construct</referencedby>
+        <referencedby refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1ElasticEnergy_1a179e3239cdabd7d78a043dd46f257613" compoundref="source_2pbat_2sim_2vbd_2lod_2ElasticEnergy_8cpp" startline="10" endline="16">pbat::sim::vbd::lod::ElasticEnergy::ElasticEnergy</referencedby>
+        <referencedby refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Level_1ae6f2e0a3f24d321d9cf2b43469dc50d7" compoundref="source_2pbat_2sim_2vbd_2lod_2Level_8cpp" startline="13" endline="36">pbat::sim::vbd::lod::Level::Level</referencedby>
+        <referencedby refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a36c5ca3486f6772b43d4490c095cc3be" compoundref="source_2pbat_2sim_2vbd_2multigrid_2Level_8cpp" startline="23" endline="129">pbat::sim::vbd::multigrid::Level::Level</referencedby>
+        <referencedby refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1abc6b7179bef6b4eacaca30beb6420328" compoundref="source_2pbat_2sim_2vbd_2multigrid_2Level_8cpp" startline="131" endline="233">pbat::sim::vbd::multigrid::Level::HyperReduce</referencedby>
+        <referencedby refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a8400962314cd373e84191514273cdda4" compoundref="source_2pbat_2sim_2vbd_2multigrid_2Level_8cpp" startline="246" endline="353">pbat::sim::vbd::multigrid::Level::Smooth</referencedby>
+        <referencedby refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1MomentumEnergy_1a43c0b5dd59e4d2b5e12c3a5499aa5b31" compoundref="source_2pbat_2sim_2vbd_2lod_2MomentumEnergy_8cpp" startline="13" endline="21">pbat::sim::vbd::lod::MomentumEnergy::MomentumEnergy</referencedby>
+        <referencedby refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Prolongation_1aeb5b314c899add9d41d1d9c415877896" compoundref="source_2pbat_2sim_2vbd_2lod_2Prolongation_8cpp" startline="19" endline="32">pbat::sim::vbd::lod::Prolongation::Prolongation</referencedby>
+        <referencedby refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1CageQuadrature_1aa0cb2dfe50e2a696023583aa79ef944f" compoundref="source_2pbat_2sim_2vbd_2lod_2Quadrature_8cpp" startline="114" endline="228">pbat::sim::vbd::lod::CageQuadrature::CageQuadrature</referencedby>
+        <referencedby refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1SurfaceQuadrature_1a1afd0898f60f8f0e71b1f693a5c298e5" compoundref="source_2pbat_2sim_2vbd_2lod_2Quadrature_8cpp" startline="230" endline="255">pbat::sim::vbd::lod::SurfaceQuadrature::SurfaceQuadrature</referencedby>
+        <referencedby refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1DirichletQuadrature_1a12d4a95a8177b8a26535bc92cb756af5" compoundref="source_2pbat_2sim_2vbd_2lod_2Quadrature_8cpp" startline="257" endline="274">pbat::sim::vbd::lod::DirichletQuadrature::DirichletQuadrature</referencedby>
+        <referencedby refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Restriction_1a96ba34ece998c608ffb03f67b3c8e496" compoundref="source_2pbat_2sim_2vbd_2lod_2Restriction_8cpp" startline="24" endline="28">pbat::sim::vbd::lod::Restriction::Apply</referencedby>
+        <referencedby refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Restriction_1af7b613a2fd3f543232339fc7a94f6f00" compoundref="source_2pbat_2sim_2vbd_2lod_2Restriction_8cpp" startline="36" endline="126">pbat::sim::vbd::lod::Restriction::DoApply</referencedby>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="public-func">
+      <memberdef kind="function" id="structpbat_1_1fem_1_1Mesh_1a5fe78035631ae223ddd5e8f8483b31a1" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>pbat::fem::Mesh&lt; TElement, Dims &gt;::Mesh</definition>
+        <argsstring>()=default</argsstring>
+        <name>Mesh</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Mesh.h" line="27" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="structpbat_1_1fem_1_1Mesh_1ab63c20bfe5421ba36915ff9bf92c2523" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>pbat::fem::Mesh&lt; TElement, Dims &gt;::Mesh</definition>
+        <argsstring>(Eigen::Ref&lt; MatrixX const &gt; const &amp;V, Eigen::Ref&lt; IndexMatrixX const &gt; const &amp;C)</argsstring>
+        <name>Mesh</name>
+        <param>
+          <type>Eigen::Ref&lt; MatrixX const &gt; const &amp;</type>
+          <declname>V</declname>
+        </param>
+        <param>
+          <type>Eigen::Ref&lt; IndexMatrixX const &gt; const &amp;</type>
+          <declname>C</declname>
+        </param>
+        <briefdescription>
+<para>Constructs a finite element mesh given some input geometric mesh. The cells of the input mesh should list its vertices in Lagrange order. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>V</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Dims x |#vertices| matrix of vertex positions </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>C</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Element::AffineBase::Vertices x |#cells| matrix of cell vertex indices into V </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Mesh.h" line="34" column="5" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Mesh.h" bodystart="131" bodyend="208"/>
+      </memberdef>
+      <memberdef kind="function" id="structpbat_1_1fem_1_1Mesh_1a810ae14a3d6596c587f83793132e643e" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>int</type>
+            <declname>QuadratureOrder</declname>
+            <defname>QuadratureOrder</defname>
+          </param>
+        </templateparamlist>
+        <type>MatrixX</type>
+        <definition>MatrixX pbat::fem::Mesh&lt; TElement, Dims &gt;::QuadraturePoints</definition>
+        <argsstring>() const</argsstring>
+        <name>QuadraturePoints</name>
+        <briefdescription>
+<para>Compute quadrature points in domain space for on this mesh. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>QuadratureOrder</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para></para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Mesh.h" line="42" column="13" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Mesh.h" bodystart="212" bodyend="234"/>
+        <referencedby refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1abc6b7179bef6b4eacaca30beb6420328" compoundref="source_2pbat_2sim_2vbd_2multigrid_2Level_8cpp" startline="131" endline="233">pbat::sim::vbd::multigrid::Level::HyperReduce</referencedby>
+      </memberdef>
+      <memberdef kind="function" id="structpbat_1_1fem_1_1Mesh_1ada0b0e026ebcafe3bf40d9a122aaa9ca" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>int</type>
+            <declname>QuadratureOrder</declname>
+            <defname>QuadratureOrder</defname>
+          </param>
+        </templateparamlist>
+        <type>Vector&lt; TElement::template QuadratureType&lt; QuadratureOrder &gt;::kPoints &gt;</type>
+        <definition>Vector&lt; TElement::template QuadratureType&lt; QuadratureOrder &gt;::kPoints &gt; pbat::fem::Mesh&lt; TElement, Dims &gt;::QuadratureWeights</definition>
+        <argsstring>() const</argsstring>
+        <name>QuadratureWeights</name>
+        <briefdescription>
+<para>Obtain quadrature weights on the reference element of this mesh. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>QuadratureOrder</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para></para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Mesh.h" line="49" column="13" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Mesh.h" bodystart="239" bodyend="245"/>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Mesh.h" line="22" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Mesh.h" bodystart="21" bodyend="53"/>
+    <listofallmembers>
+      <member refid="structpbat_1_1fem_1_1Mesh_1a384afdf16df5efa27e09f17520402b5b" prot="public" virt="non-virtual"><scope>pbat::fem::Mesh</scope><name>E</name></member>
+      <member refid="structpbat_1_1fem_1_1Mesh_1a3afbadab6418782fb913d93feb209586" prot="public" virt="non-virtual"><scope>pbat::fem::Mesh</scope><name>ElementType</name></member>
+      <member refid="structpbat_1_1fem_1_1Mesh_1ab1642ce106491776f1416890ee9d95ae" prot="public" virt="non-virtual"><scope>pbat::fem::Mesh</scope><name>kDims</name></member>
+      <member refid="structpbat_1_1fem_1_1Mesh_1a0dee3e06e79666d0992f69579e53d399" prot="public" virt="non-virtual"><scope>pbat::fem::Mesh</scope><name>kOrder</name></member>
+      <member refid="structpbat_1_1fem_1_1Mesh_1a5fe78035631ae223ddd5e8f8483b31a1" prot="public" virt="non-virtual"><scope>pbat::fem::Mesh</scope><name>Mesh</name></member>
+      <member refid="structpbat_1_1fem_1_1Mesh_1ab63c20bfe5421ba36915ff9bf92c2523" prot="public" virt="non-virtual"><scope>pbat::fem::Mesh</scope><name>Mesh</name></member>
+      <member refid="structpbat_1_1fem_1_1Mesh_1a810ae14a3d6596c587f83793132e643e" prot="public" virt="non-virtual"><scope>pbat::fem::Mesh</scope><name>QuadraturePoints</name></member>
+      <member refid="structpbat_1_1fem_1_1Mesh_1ada0b0e026ebcafe3bf40d9a122aaa9ca" prot="public" virt="non-virtual"><scope>pbat::fem::Mesh</scope><name>QuadratureWeights</name></member>
+      <member refid="structpbat_1_1fem_1_1Mesh_1abc65a193ee960705ddf64227afb18809" prot="public" virt="non-virtual"><scope>pbat::fem::Mesh</scope><name>X</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

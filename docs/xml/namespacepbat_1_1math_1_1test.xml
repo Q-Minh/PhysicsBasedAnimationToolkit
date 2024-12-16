@@ -1,0 +1,42 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="namespacepbat_1_1math_1_1test" kind="namespace" language="C++">
+    <compoundname>pbat::math::test</compoundname>
+      <sectiondef kind="func">
+      <memberdef kind="function" id="source_2pbat_2math_2MomentFitting_8cpp_1aa67fb4c4e3ccbd618540b261315b50e1" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>auto</type>
+            <declname>Dims</declname>
+            <defname>Dims</defname>
+          </param>
+          <param>
+            <type>auto</type>
+            <declname>Order</declname>
+            <defname>Order</defname>
+          </param>
+        </templateparamlist>
+        <type>void</type>
+        <definition>void pbat::math::test::TestFixedQuadrature</definition>
+        <argsstring>(Scalar precision)</argsstring>
+        <name>TestFixedQuadrature</name>
+        <param>
+          <type>Scalar</type>
+          <declname>precision</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/MomentFitting.cpp" line="15" column="6" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/MomentFitting.cpp" bodystart="15" bodyend="25"/>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/MomentFitting.cpp" line="12" column="14"/>
+  </compounddef>
+</doxygen>

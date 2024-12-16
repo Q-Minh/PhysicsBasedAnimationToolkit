@@ -1,0 +1,25 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="dir_b9d8001f106f41e236951935a9e9febc" kind="dir">
+    <compoundname>/workspaces/PhysicsBasedAnimationToolkit/source/pbat</compoundname>
+    <innerdir refid="dir_ebd3461654f186916140ec58d7f614f6">/workspaces/PhysicsBasedAnimationToolkit/source/pbat/common</innerdir>
+    <innerdir refid="dir_26aabdcd1cc653a28fc0c12eea384ebc">/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem</innerdir>
+    <innerdir refid="dir_cdbde8368a60144aba35499b1d50f893">/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry</innerdir>
+    <innerdir refid="dir_a78b89e200aa19186099d6be194acbad">/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu</innerdir>
+    <innerdir refid="dir_3cdf1189e8e7cee506352e0412e8da7d">/workspaces/PhysicsBasedAnimationToolkit/source/pbat/graph</innerdir>
+    <innerdir refid="dir_5dfd3f532c8a62f79d9960707fbcb17b">/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math</innerdir>
+    <innerdir refid="dir_d1c8710bc4630794f8b7ba1a63f0af99">/workspaces/PhysicsBasedAnimationToolkit/source/pbat/physics</innerdir>
+    <innerdir refid="dir_94d5d4691a330c3da48954b9b81ac55d">/workspaces/PhysicsBasedAnimationToolkit/source/pbat/profiling</innerdir>
+    <innerdir refid="dir_30299f089748ac92ac0943e1cce92bbf">/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim</innerdir>
+    <innerfile refid="Aliases_8h">Aliases.h</innerfile>
+    <innerfile refid="DoctestLoadDLL_8cpp">DoctestLoadDLL.cpp</innerfile>
+    <innerfile refid="DoctestLoadDLL_8h">DoctestLoadDLL.h</innerfile>
+    <innerfile refid="HostDevice_8h">HostDevice.h</innerfile>
+    <innerfile refid="Pbat_8h">Pbat.h</innerfile>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/"/>
+  </compounddef>
+</doxygen>

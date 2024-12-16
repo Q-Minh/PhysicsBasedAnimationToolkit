@@ -1,0 +1,109 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="structpbat_1_1math_1_1SymmetricSimplexPolynomialQuadratureRule_3_012_00_0125_01_4" kind="struct" language="C++" prot="public">
+    <compoundname>pbat::math::SymmetricSimplexPolynomialQuadratureRule&lt; 2, 25 &gt;</compoundname>
+    <templateparamlist>
+    </templateparamlist>
+      <sectiondef kind="public-static-attrib">
+      <memberdef kind="variable" id="structpbat_1_1math_1_1SymmetricSimplexPolynomialQuadratureRule_3_012_00_0125_01_4_1ad22fd3cfedfa18f2d976c7e5aefd348d" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>constexpr std::uint8_t</type>
+        <definition>constexpr std::uint8_t pbat::math::SymmetricSimplexPolynomialQuadratureRule&lt; 2, 25 &gt;::kDims</definition>
+        <argsstring></argsstring>
+        <name>kDims</name>
+        <initializer>= 2</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/SymmetricQuadratureRules.h" line="1181" column="42" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/SymmetricQuadratureRules.h" bodystart="1181" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpbat_1_1math_1_1SymmetricSimplexPolynomialQuadratureRule_3_012_00_0125_01_4_1ab70f667560c0d3577c59a263aae47b5b" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>constexpr std::uint16_t</type>
+        <definition>constexpr std::uint16_t pbat::math::SymmetricSimplexPolynomialQuadratureRule&lt; 2, 25 &gt;::kPoints</definition>
+        <argsstring></argsstring>
+        <name>kPoints</name>
+        <initializer>= 126</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/SymmetricQuadratureRules.h" line="1182" column="43" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/SymmetricQuadratureRules.h" bodystart="1182" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpbat_1_1math_1_1SymmetricSimplexPolynomialQuadratureRule_3_012_00_0125_01_4_1a79f7332d5f79d55729d26c5ebe2c74f0" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>constexpr std::uint8_t</type>
+        <definition>constexpr std::uint8_t pbat::math::SymmetricSimplexPolynomialQuadratureRule&lt; 2, 25 &gt;::kOrder</definition>
+        <argsstring></argsstring>
+        <name>kOrder</name>
+        <initializer>= 25</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/SymmetricQuadratureRules.h" line="1183" column="42" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/SymmetricQuadratureRules.h" bodystart="1183" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpbat_1_1math_1_1SymmetricSimplexPolynomialQuadratureRule_3_012_00_0125_01_4_1a50b0545a1befbff07805fb2a20f21d62" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>constexpr std::array&lt; Scalar, 378 &gt;</type>
+        <definition>constexpr std::array&lt;Scalar, 378&gt; pbat::math::SymmetricSimplexPolynomialQuadratureRule&lt; 2, 25 &gt;::points</definition>
+        <argsstring></argsstring>
+        <name>points</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/SymmetricQuadratureRules.h" line="1184" column="40" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/SymmetricQuadratureRules.h" bodystart="1184" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpbat_1_1math_1_1SymmetricSimplexPolynomialQuadratureRule_3_012_00_0125_01_4_1a71d51efdc9e3604a2eff45682b74384a" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>constexpr std::array&lt; Scalar, 126 &gt;</type>
+        <definition>constexpr std::array&lt;Scalar, 126&gt; pbat::math::SymmetricSimplexPolynomialQuadratureRule&lt; 2, 25 &gt;::weights</definition>
+        <argsstring></argsstring>
+        <name>weights</name>
+        <initializer>= {
+        0.00400279,  0.00400279,  0.00400279,  0.00797354,  0.00797354,  0.00797354,  0.00655457,
+        0.00655457,  0.00655457,  0.0097915,   0.0097915,   0.0097915,   0.00823544,  0.00823544,
+        0.00823544,  0.00427364,  0.00427364,  0.00427364,  0.00408094,  0.00408094,  0.00408094,
+        0.00306057,  0.00306057,  0.00306057,  0.00145425,  0.00145425,  0.00145425,  0.000346138,
+        0.000346138, 0.000346138, 0.000624145, 0.000624145, 0.000624145, 0.000624145, 0.000624145,
+        0.000624145, 0.00170238,  0.00170238,  0.00170238,  0.00170238,  0.00170238,  0.00170238,
+        0.00167983,  0.00167983,  0.00167983,  0.00167983,  0.00167983,  0.00167983,  0.000858078,
+        0.000858078, 0.000858078, 0.000858078, 0.000858078, 0.000858078, 0.000740428, 0.000740428,
+        0.000740428, 0.000740428, 0.000740428, 0.000740428, 0.00175566,  0.00175566,  0.00175566,
+        0.00175566,  0.00175566,  0.00175566,  0.00369678,  0.00369678,  0.00369678,  0.00369678,
+        0.00369678,  0.00369678,  0.00399154,  0.00399154,  0.00399154,  0.00399154,  0.00399154,
+        0.00399154,  0.00217798,  0.00217798,  0.00217798,  0.00217798,  0.00217798,  0.00217798,
+        0.00368253,  0.00368253,  0.00368253,  0.00368253,  0.00368253,  0.00368253,  0.00548179,
+        0.00548179,  0.00548179,  0.00548179,  0.00548179,  0.00548179,  0.00587498,  0.00587498,
+        0.00587498,  0.00587498,  0.00587498,  0.00587498,  0.0050078,   0.0050078,   0.0050078,
+        0.0050078,   0.0050078,   0.0050078,   0.00665482,  0.00665482,  0.00665482,  0.00665482,
+        0.00665482,  0.00665482,  0.00707722,  0.00707722,  0.00707722,  0.00707722,  0.00707722,
+        0.00707722,  0.00744069,  0.00744069,  0.00744069,  0.00744069,  0.00744069,  0.00744069}</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/SymmetricQuadratureRules.h" line="1239" column="40" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/SymmetricQuadratureRules.h" bodystart="1239" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/SymmetricQuadratureRules.h" line="1180" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/SymmetricQuadratureRules.h" bodystart="1179" bodyend="1258"/>
+    <listofallmembers>
+      <member refid="structpbat_1_1math_1_1SymmetricSimplexPolynomialQuadratureRule_3_012_00_0125_01_4_1ad22fd3cfedfa18f2d976c7e5aefd348d" prot="public" virt="non-virtual"><scope>pbat::math::SymmetricSimplexPolynomialQuadratureRule&lt; 2, 25 &gt;</scope><name>kDims</name></member>
+      <member refid="structpbat_1_1math_1_1SymmetricSimplexPolynomialQuadratureRule_3_012_00_0125_01_4_1a79f7332d5f79d55729d26c5ebe2c74f0" prot="public" virt="non-virtual"><scope>pbat::math::SymmetricSimplexPolynomialQuadratureRule&lt; 2, 25 &gt;</scope><name>kOrder</name></member>
+      <member refid="structpbat_1_1math_1_1SymmetricSimplexPolynomialQuadratureRule_3_012_00_0125_01_4_1ab70f667560c0d3577c59a263aae47b5b" prot="public" virt="non-virtual"><scope>pbat::math::SymmetricSimplexPolynomialQuadratureRule&lt; 2, 25 &gt;</scope><name>kPoints</name></member>
+      <member refid="structpbat_1_1math_1_1SymmetricSimplexPolynomialQuadratureRule_3_012_00_0125_01_4_1a50b0545a1befbff07805fb2a20f21d62" prot="public" virt="non-virtual"><scope>pbat::math::SymmetricSimplexPolynomialQuadratureRule&lt; 2, 25 &gt;</scope><name>points</name></member>
+      <member refid="structpbat_1_1math_1_1SymmetricSimplexPolynomialQuadratureRule_3_012_00_0125_01_4_1a71d51efdc9e3604a2eff45682b74384a" prot="public" virt="non-virtual"><scope>pbat::math::SymmetricSimplexPolynomialQuadratureRule&lt; 2, 25 &gt;</scope><name>weights</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>
