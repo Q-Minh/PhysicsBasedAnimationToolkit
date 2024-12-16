@@ -1,6 +1,7 @@
 #include "Integrator.h"
 
 #include "Hierarchy.h"
+#include "pbat/physics/StableNeoHookeanEnergy.h"
 #include "pbat/profiling/Profiling.h"
 #include "pbat/sim/vbd/Kernels.h"
 #include "pbat/sim/vbd/lod/Smoother.h"
@@ -20,6 +21,7 @@ void Integrator::Step(Scalar dt, Index substeps, Hierarchy& H) const
     Scalar sdt         = dt / static_cast<Scalar>(substeps);
     Scalar sdt2        = sdt * sdt;
     auto nVertices     = H.data.x.cols();
+    auto nElements     = H.data.mesh.E.cols();
     for (Index s = 0; s < substeps; ++s)
     {
         // Store previous positions
@@ -64,7 +66,25 @@ void Integrator::Step(Scalar dt, Index substeps, Hierarchy& H) const
             }
             else
             {
+                // Compute element elasticities
+                tbb::parallel_for(Index(0), nElements, [&](Index e) {
+                    using pbat::math::linalg::mini::FromEigen;
+                    using pbat::math::linalg::mini::ToEigen;
+                    physics::StableNeoHookeanEnergy<3> Psi{};
+                    Scalar mu        = H.data.lame(0, e);
+                    Scalar lambda    = H.data.lame(1, e);
+                    auto inds        = H.data.mesh.E(Eigen::placeholders::all, e);
+                    Matrix<3, 4> xe  = H.data.x(Eigen::placeholders::all, inds);
+                    Matrix<4, 3> GNe = H.data.GP.block<4, 3>(0, 3 * e);
+                    Matrix<3, 3> F   = xe * GNe;
+                    H.data.psiE(e)   = Psi.eval(FromEigen(F), mu, lambda);
+                });
+
+                // Update hyper reductions
+                //for (auto& level : H.levels)
+                //    level.HR.Update(H.data);
                 auto lStl = static_cast<std::size_t>(l);
+                H.levels[lStl].HR.Update(H.data);
                 H.levels[lStl].Smooth(sdt, iters, H.data);
             }
         }

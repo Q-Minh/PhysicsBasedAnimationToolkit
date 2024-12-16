@@ -144,6 +144,7 @@ Data& Data::Construct(bool bValidate)
     m  = M.ToLumpedMasses();
     GP = fem::ShapeFunctionGradients<1>(mesh);
     wg = fem::InnerProductWeights<1>(mesh).reshaped();
+    psiE.setZero(mesh.E.cols());
     // Adjacency structures
     IndexMatrixX ilocal             = IndexVector<4>{0, 1, 2, 3}.replicate(1, mesh.E.cols());
     auto GVT                        = graph::MeshAdjacencyMatrix(mesh.E, ilocal, mesh.X.cols());

@@ -6,7 +6,6 @@
 #include "pbat/graph/Adjacency.h"
 #include "pbat/graph/Color.h"
 #include "pbat/graph/Mesh.h"
-#include "pbat/graph/Partition.h"
 #include "pbat/math/linalg/mini/Mini.h"
 #include "pbat/physics/StableNeoHookeanEnergy.h"
 #include "pbat/profiling/Profiling.h"
@@ -31,16 +30,13 @@ Level::Level(Data const& data, VolumeMesh meshIn)
       ilocalE(),
       GEptr(),
       GEadj(),
-      bActiveE(),
-      wgE(),
       ecK(),
       NecK(),
       GKptr(),
       GKadj(),
       GKilocal(),
-      bActiveK(),
-      mK(),
-      bIsDirichletVertex()
+      bIsDirichletVertex(),
+      HR()
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.vbd.multigrid.Level.Construct");
 
@@ -117,119 +113,6 @@ Level::Level(Data const& data, VolumeMesh meshIn)
     auto const nFineVertices = data.mesh.X.cols();
     bIsDirichletVertex.setConstant(nFineVertices, false);
     bIsDirichletVertex(data.dbc).setConstant(true);
-
-#ifdef PBAT_USE_METIS
-    HyperReduce(data);
-#else
-    wgE = data.wg;
-    mK  = data.m;
-    bActiveE.setConstant(nFineElements, true);
-    bActiveK.setConstant(nFineVertices, true);
-#endif
-}
-
-void Level::HyperReduce(Data const& data)
-{
-    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.vbd.multigrid.Level.HyperReduce");
-
-    // Hyper-reduction
-    // 1. Partition root mesh elements into a set of clusters.
-    // 2. In each cluster, pick a single element (i.e. the one closest to the cluster's geometric
-    // center).
-    // 3. Mark that element as active.
-    // 4. Its quadrature weight should be the sum of its cluster's elements' quadrature weights.
-    // 5. Mark each active elements' vertices as active.
-    // 6. Scale each active vertex's mass such that the sum of active vertex masses = sum of vertex
-    // masses.
-    auto const nFineElements = data.mesh.E.cols();
-    auto const nFineVertices = data.mesh.X.cols();
-    bActiveE.setConstant(nFineElements, false);
-    bActiveK.setConstant(nFineVertices, false);
-
-    // Choose coarse level compute budget as 3x its elements, but not surpassing the number of fine
-    // elements.
-    // TODO: Implement smart way to choose computational budget at each coarse level.
-    auto const nCoarseElements = mesh.E.cols();
-    Index nSubsetElements      = std::min(3 * nCoarseElements, nFineElements);
-    // Compute the graph of face-adjacent tetrahedra on the fine mesh
-    auto Gdual = graph::MeshDualGraph(data.mesh.E, nFineVertices);
-    Gdual.prune([]([[maybe_unused]] Index row, [[maybe_unused]] Index col, Index value) {
-        bool const bIsFaceAdjacency = value == 3;
-        return bIsFaceAdjacency;
-    });
-    auto Gdualptr = graph::AdjacencyMatrixPrefix(Gdual);
-    auto Gdualadj = graph::AdjacencyMatrixIndices(Gdual);
-    // Partition the fine mesh using scale-invariant geometric distance between element barycenters
-    // as the weight function.
-    // TODO: Use smarter weight function that exhibits shape and material awareness.
-    MatrixX XEbary = data.mesh.QuadraturePoints<1>();
-    Scalar const scale =
-        (data.mesh.X.rowwise().maxCoeff() - data.mesh.X.rowwise().minCoeff()).norm();
-    Scalar decimalPrecision = 1e4;
-    IndexVectorX Wdual(Gdual.nonZeros());
-    graph::ForEachEdge(Gdualptr, Gdualadj, [&](Index ei, Index ej, Index k) {
-        Scalar dij = (XEbary.col(ei) - XEbary.col(ej)).norm() / scale;
-        Wdual(k)   = static_cast<Index>(dij * decimalPrecision);
-    });
-    IndexVectorX clusters         = graph::Partition(Gdualptr, Gdualadj, Wdual, nSubsetElements);
-    auto [clusterPtr, clusterAdj] = graph::MapToAdjacency(clusters);
-    // Compute the coarse level quadrature weights of active fine elements as the sum of cluster
-    // element weights.
-    VectorX clusterQuadWeights = VectorX::Zero(nSubsetElements);
-    graph::ForEachEdge(clusterPtr, clusterAdj, [&](Index c, Index e, [[maybe_unused]] Index k) {
-        clusterQuadWeights(c) += data.wg(e);
-    });
-    // We use the previously computed weighting scheme to compute "shape-aware" cluster geometric
-    // centers
-    MatrixX clusterCenters = MatrixX::Zero(3, nSubsetElements);
-    graph::ForEachEdge(clusterPtr, clusterAdj, [&](Index c, Index e, [[maybe_unused]] Index k) {
-        clusterCenters.col(c) += data.wg(e) * XEbary.col(e) / clusterQuadWeights(c);
-    });
-    // Find active elements as those closest to cluster centers.
-    // TODO:
-    // We might want to make this adaptive per timestep. This could be
-    // in the form of keeping the clusters pre-computed, but changing the
-    // active element in each cluster at the beginning of each time step
-    // based on strain rate.
-    VectorX clusterMinDistToCenter =
-        VectorX::Constant(nSubsetElements, std::numeric_limits<Scalar>::max());
-    IndexVectorX activeElements(nSubsetElements);
-    graph::ForEachEdge(clusterPtr, clusterAdj, [&](Index c, Index e, [[maybe_unused]] Index k) {
-        Scalar d = (XEbary.col(e) - clusterCenters.col(c)).squaredNorm();
-        if (d >= clusterMinDistToCenter(c))
-            return;
-        activeElements(c)         = e;
-        clusterMinDistToCenter(c) = d;
-    });
-    // Make element vertices active
-    IndexVectorX activeVertices = data.mesh.E(Eigen::placeholders::all, activeElements).reshaped();
-    std::sort(activeVertices.begin(), activeVertices.end());
-    auto const nActiveVertices = std::distance(
-        activeVertices.begin(),
-        std::unique(activeVertices.begin(), activeVertices.end()));
-    activeVertices.conservativeResize(nActiveVertices);
-    bActiveE(activeElements).setConstant(true);
-    bActiveK(activeVertices).setConstant(true);
-    // Compute coarse level quadrature weights
-    // TODO:
-    // Find smarter way to compute coarse quadrature weights.
-    // This could potentially be an adaptive, per-timestep method
-    // that computes a quadrature weight which, when multiplying
-    // its corresponding active element's elasticity, would yield
-    // the sum of its cluster's elements' elastic energies.
-    wgE.setZero(nFineElements);
-    wgE(activeElements) = clusterQuadWeights;
-    // Compute coarse level lumped masses by scaling s.t. total mass is matched,
-    // i.e. \alpha * \sum Mcoarse(i) = Mtotal -> \alpha = Mtotal / \sum Mcoarse(i)
-    Scalar alpha = data.m.sum() / data.m(activeVertices).sum();
-    mK.setZero(nFineVertices);
-    mK(activeVertices) = alpha * data.m(activeVertices);
-
-    // TODO:
-    // Find smart way to reduce quadrature for Dirichlet boundary conditions and
-    // contact constraints. This could be in the form of selecting only a fixed-size
-    // subset of contacts with the deepest penetrations, while the Dirichlet reduction
-    // should be based on shape preservation and can be precomputed.
 }
 
 void Level::Prolong(Data& data) const
@@ -274,11 +157,11 @@ void Level::Smooth(Scalar dt, Index iters, Data& data)
                 for (auto kg = gBegin; kg < gEnd; ++kg)
                 {
                     Index ef = GEadj(kg);
-                    if (not bActiveE(ef))
+                    if (not HR.bActiveE(ef))
                         continue;
 
                     IndexVector<4> ilocal = ilocalE.col(kg);
-                    Scalar wg             = wgE(ef);
+                    Scalar wg             = HR.wgE(ef);
                     Scalar mug            = data.lame(0, ef);
                     Scalar lambdag        = data.lame(1, ef);
                     Matrix<4, 3> GNef     = data.GP.block<4, 3>(0, 3 * ef);
@@ -311,7 +194,7 @@ void Level::Smooth(Scalar dt, Index iters, Data& data)
                 {
                     // Kinetic energy is 1/2 * mi * || (x^k + u*N) - xtilde ||_2^2
                     Index vf                = GKadj(kg);
-                    bool const bIsActive    = bActiveK(vf);
+                    bool const bIsActive    = HR.bActiveK(vf);
                     bool const bIsDirichlet = bIsDirichletVertex(vf);
                     if (not bIsActive and not bIsDirichlet)
                         continue;
@@ -324,7 +207,7 @@ void Level::Smooth(Scalar dt, Index iters, Data& data)
                     SVector<Scalar, 3> x = xk + ue * Ne;
                     if (bIsActive)
                     {
-                        Scalar mvf                = mK(vf);
+                        Scalar mvf                = HR.mK(vf);
                         SVector<Scalar, 3> xtilde = FromEigen(data.xtilde.col(vf).head<3>());
                         gu += Ne(ilocal) * mvf * (x - xtilde);
                         Diag(Hu) += Ne(ilocal) * Ne(ilocal) * mvf;
@@ -350,6 +233,16 @@ void Level::Smooth(Scalar dt, Index iters, Data& data)
         }
     }
     Prolong(data);
+}
+
+void Level::HyperReduce(Data const& data, hypre::Strategies strategy)
+{
+    // TODO: Implement smart way to choose computational budget at each
+    // coarse level.
+    Index const nCoarseElements       = mesh.E.cols();
+    Index const nFineElements         = data.mesh.E.cols();
+    Index const nTargetActiveElements = std::min(3 * nCoarseElements, nFineElements);
+    HR                                = HyperReduction(data, nTargetActiveElements, strategy);
 }
 
 } // namespace multigrid

@@ -1,5 +1,8 @@
 #include "Hierarchy.h"
 
+#include <exception>
+#include <fmt/format.h>
+
 namespace pbat {
 namespace sim {
 namespace vbd {
@@ -33,6 +36,16 @@ Hierarchy::Hierarchy(
         // TODO: Find better strategy for default iterations!
         siters.setConstant(static_cast<Index>(cycle.size()), 5);
     }
+}
+
+void Hierarchy::HyperReduce(std::vector<hypre::Strategies> const& strategies)
+{
+    if (strategies.size() != levels.size())
+        throw std::invalid_argument(
+            fmt::format("Expected {} strategies, but got {}", levels.size(), strategies.size()));
+
+    for (auto l = 0ULL; l < levels.size(); ++l)
+        levels[l].HyperReduce(data, strategies[l]);
 }
 
 } // namespace multigrid
