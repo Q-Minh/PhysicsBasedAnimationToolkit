@@ -1,0 +1,107 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="namespacepbat_1_1sim_1_1vbd_1_1multigrid_1_1kernels" kind="namespace" language="C++">
+    <compoundname>pbat::sim::vbd::multigrid::kernels</compoundname>
+      <sectiondef kind="func">
+      <memberdef kind="function" id="vbd_2multigrid_2Kernels_8h_1a0c02b6e218648da7c8563fa4b00e2b02" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>physics::CHyperElasticEnergy</type>
+            <declname>TPsi</declname>
+            <defname>TPsi</defname>
+          </param>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixIL</declname>
+            <defname>TMatrixIL</defname>
+          </param>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixX</declname>
+            <defname>TMatrixX</defname>
+          </param>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixGN</declname>
+            <defname>TMatrixGN</defname>
+          </param>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixN</declname>
+            <defname>TMatrixN</defname>
+          </param>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixGU</declname>
+            <defname>TMatrixGU</defname>
+          </param>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixHU</declname>
+            <defname>TMatrixHU</defname>
+          </param>
+          <param>
+            <type>class ScalarType</type>
+            <defval>typename TMatrixX::ScalarType</defval>
+          </param>
+        </templateparamlist>
+        <type>PBAT_HOST_DEVICE void</type>
+        <definition>PBAT_HOST_DEVICE void pbat::sim::vbd::multigrid::kernels::AccumulateElasticEnergy</definition>
+        <argsstring>(TPsi const &amp;Psi, TMatrixIL const &amp;ilocal, ScalarType wg, ScalarType mug, ScalarType lambdag, TMatrixX const &amp;xe, TMatrixGN const &amp;GNe, TMatrixN const &amp;N, TMatrixGU &amp;gu, TMatrixHU &amp;Hu)</argsstring>
+        <name>AccumulateElasticEnergy</name>
+        <param>
+          <type>TPsi const &amp;</type>
+          <declname>Psi</declname>
+        </param>
+        <param>
+          <type>TMatrixIL const &amp;</type>
+          <declname>ilocal</declname>
+        </param>
+        <param>
+          <type>ScalarType</type>
+          <declname>wg</declname>
+        </param>
+        <param>
+          <type>ScalarType</type>
+          <declname>mug</declname>
+        </param>
+        <param>
+          <type>ScalarType</type>
+          <declname>lambdag</declname>
+        </param>
+        <param>
+          <type>TMatrixX const &amp;</type>
+          <declname>xe</declname>
+        </param>
+        <param>
+          <type>TMatrixGN const &amp;</type>
+          <declname>GNe</declname>
+        </param>
+        <param>
+          <type>TMatrixN const &amp;</type>
+          <declname>N</declname>
+        </param>
+        <param>
+          <type>TMatrixGU &amp;</type>
+          <declname>gu</declname>
+        </param>
+        <param>
+          <type>TMatrixHU &amp;</type>
+          <declname>Hu</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/multigrid/Kernels.h" line="28" column="23" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/multigrid/Kernels.h" bodystart="28" bodyend="69"/>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/multigrid/Kernels.h" line="15" column="17"/>
+  </compounddef>
+</doxygen>

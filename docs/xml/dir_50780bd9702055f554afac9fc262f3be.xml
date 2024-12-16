@@ -1,0 +1,19 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="dir_50780bd9702055f554afac9fc262f3be" kind="dir">
+    <compoundname>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg</compoundname>
+    <innerdir refid="dir_3423587c588742a843a13447bcdf584c">/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini</innerdir>
+    <innerfile refid="source_2pbat_2math_2linalg_2Cholmod_8cpp">Cholmod.cpp</innerfile>
+    <innerfile refid="source_2pbat_2math_2linalg_2Cholmod_8h">Cholmod.h</innerfile>
+    <innerfile refid="source_2pbat_2math_2linalg_2LinAlg_8h">LinAlg.h</innerfile>
+    <innerfile refid="SelectionMatrix_8cpp">SelectionMatrix.cpp</innerfile>
+    <innerfile refid="SelectionMatrix_8h">SelectionMatrix.h</innerfile>
+    <innerfile refid="SparsityPattern_8cpp">SparsityPattern.cpp</innerfile>
+    <innerfile refid="SparsityPattern_8h">SparsityPattern.h</innerfile>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/"/>
+  </compounddef>
+</doxygen>

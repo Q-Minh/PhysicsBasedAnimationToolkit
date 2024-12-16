@@ -1,0 +1,175 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="namespacepbat_1_1sim_1_1vbd_1_1lod_1_1kernels" kind="namespace" language="C++">
+    <compoundname>pbat::sim::vbd::lod::kernels</compoundname>
+      <sectiondef kind="func">
+      <memberdef kind="function" id="vbd_2lod_2Kernels_8h_1a1b2e6f61b8f9ae6a93a5f39dd33bc62f" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class IndexType</type>
+          </param>
+          <param>
+            <type>physics::CHyperElasticEnergy</type>
+            <declname>TPsi</declname>
+            <defname>TPsi</defname>
+          </param>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixXCG</declname>
+            <defname>TMatrixXCG</defname>
+          </param>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixGNCG</declname>
+            <defname>TMatrixGNCG</defname>
+          </param>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixGI</declname>
+            <defname>TMatrixGI</defname>
+          </param>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixHI</declname>
+            <defname>TMatrixHI</defname>
+          </param>
+          <param>
+            <type>class ScalarType</type>
+            <defval>typename TMatrixXCG::ScalarType</defval>
+          </param>
+        </templateparamlist>
+        <type>PBAT_HOST_DEVICE Scalar</type>
+        <definition>PBAT_HOST_DEVICE Scalar pbat::sim::vbd::lod::kernels::AccumulateElasticEnergy</definition>
+        <argsstring>(IndexType ilocal, ScalarType wg, TPsi const &amp;Psi, ScalarType mug, ScalarType lambdag, TMatrixXCG const &amp;xcg, TMatrixGNCG const &amp;GNcg, TMatrixGI &amp;gi, TMatrixHI &amp;Hi)</argsstring>
+        <name>AccumulateElasticEnergy</name>
+        <param>
+          <type>IndexType</type>
+          <declname>ilocal</declname>
+        </param>
+        <param>
+          <type>ScalarType</type>
+          <declname>wg</declname>
+        </param>
+        <param>
+          <type>TPsi const &amp;</type>
+          <declname>Psi</declname>
+        </param>
+        <param>
+          <type>ScalarType</type>
+          <declname>mug</declname>
+        </param>
+        <param>
+          <type>ScalarType</type>
+          <declname>lambdag</declname>
+        </param>
+        <param>
+          <type>TMatrixXCG const &amp;</type>
+          <declname>xcg</declname>
+        </param>
+        <param>
+          <type>TMatrixGNCG const &amp;</type>
+          <declname>GNcg</declname>
+        </param>
+        <param>
+          <type>TMatrixGI &amp;</type>
+          <declname>gi</declname>
+        </param>
+        <param>
+          <type>TMatrixHI &amp;</type>
+          <declname>Hi</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Kernels.h" line="26" column="25" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Kernels.h" bodystart="26" bodyend="45"/>
+      </memberdef>
+      <memberdef kind="function" id="vbd_2lod_2Kernels_8h_1a45d2af324f3382854c8c8078ce2c41f3" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class IndexType</type>
+          </param>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixXCG</declname>
+            <defname>TMatrixXCG</defname>
+          </param>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixNCG</declname>
+            <defname>TMatrixNCG</defname>
+          </param>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixXTL</declname>
+            <defname>TMatrixXTL</defname>
+          </param>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixGI</declname>
+            <defname>TMatrixGI</defname>
+          </param>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixHI</declname>
+            <defname>TMatrixHI</defname>
+          </param>
+          <param>
+            <type>class ScalarType</type>
+            <defval>typename TMatrixXCG::ScalarType</defval>
+          </param>
+        </templateparamlist>
+        <type>PBAT_HOST_DEVICE Scalar</type>
+        <definition>PBAT_HOST_DEVICE Scalar pbat::sim::vbd::lod::kernels::AccumulateShapeMatchingEnergy</definition>
+        <argsstring>(IndexType ilocal, ScalarType wg, ScalarType rhog, TMatrixXCG const &amp;xcg, TMatrixNCG const &amp;Ncg, TMatrixXTL const &amp;xtarget, TMatrixGI &amp;gi, TMatrixHI &amp;Hi)</argsstring>
+        <name>AccumulateShapeMatchingEnergy</name>
+        <param>
+          <type>IndexType</type>
+          <declname>ilocal</declname>
+        </param>
+        <param>
+          <type>ScalarType</type>
+          <declname>wg</declname>
+        </param>
+        <param>
+          <type>ScalarType</type>
+          <declname>rhog</declname>
+        </param>
+        <param>
+          <type>TMatrixXCG const &amp;</type>
+          <declname>xcg</declname>
+        </param>
+        <param>
+          <type>TMatrixNCG const &amp;</type>
+          <declname>Ncg</declname>
+        </param>
+        <param>
+          <type>TMatrixXTL const &amp;</type>
+          <declname>xtarget</declname>
+        </param>
+        <param>
+          <type>TMatrixGI &amp;</type>
+          <declname>gi</declname>
+        </param>
+        <param>
+          <type>TMatrixHI &amp;</type>
+          <declname>Hi</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Kernels.h" line="55" column="25" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Kernels.h" bodystart="55" bodyend="73"/>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Kernels.h" line="14" column="17"/>
+  </compounddef>
+</doxygen>

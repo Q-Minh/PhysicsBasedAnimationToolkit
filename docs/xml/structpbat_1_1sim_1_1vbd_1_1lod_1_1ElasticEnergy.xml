@@ -1,0 +1,112 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="structpbat_1_1sim_1_1vbd_1_1lod_1_1ElasticEnergy" kind="struct" language="C++" prot="public">
+    <compoundname>pbat::sim::vbd::lod::ElasticEnergy</compoundname>
+      <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="structpbat_1_1sim_1_1vbd_1_1lod_1_1ElasticEnergy_1ae3fb8a3a6c9e40035a0f5013f0a292bc" prot="public" static="no" mutable="no">
+        <type>VectorX</type>
+        <definition>VectorX pbat::sim::vbd::lod::ElasticEnergy::mug</definition>
+        <argsstring></argsstring>
+        <name>mug</name>
+        <briefdescription>
+<para>|#quad.pts.| array of first Lame coefficients at quadrature points </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/ElasticEnergy.h" line="23" column="13" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/ElasticEnergy.h" bodystart="23" bodyend="-1"/>
+        <referencedby refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1ElasticEnergy_1a179e3239cdabd7d78a043dd46f257613" compoundref="source_2pbat_2sim_2vbd_2lod_2ElasticEnergy_8cpp" startline="10" endline="16">ElasticEnergy</referencedby>
+        <referencedby refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Restriction_1af7b613a2fd3f543232339fc7a94f6f00" compoundref="source_2pbat_2sim_2vbd_2lod_2Restriction_8cpp" startline="36" endline="126">pbat::sim::vbd::lod::Restriction::DoApply</referencedby>
+      </memberdef>
+      <memberdef kind="variable" id="structpbat_1_1sim_1_1vbd_1_1lod_1_1ElasticEnergy_1a661332c03e37a3cc8d283654059dc01c" prot="public" static="no" mutable="no">
+        <type>VectorX</type>
+        <definition>VectorX pbat::sim::vbd::lod::ElasticEnergy::lambdag</definition>
+        <argsstring></argsstring>
+        <name>lambdag</name>
+        <briefdescription>
+<para>|#quad.pts.| array of second Lame coefficients at quadrature points </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/ElasticEnergy.h" line="24" column="13" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/ElasticEnergy.h" bodystart="24" bodyend="-1"/>
+        <referencedby refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1ElasticEnergy_1a179e3239cdabd7d78a043dd46f257613" compoundref="source_2pbat_2sim_2vbd_2lod_2ElasticEnergy_8cpp" startline="10" endline="16">ElasticEnergy</referencedby>
+        <referencedby refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Restriction_1af7b613a2fd3f543232339fc7a94f6f00" compoundref="source_2pbat_2sim_2vbd_2lod_2Restriction_8cpp" startline="36" endline="126">pbat::sim::vbd::lod::Restriction::DoApply</referencedby>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="public-func">
+      <memberdef kind="function" id="structpbat_1_1sim_1_1vbd_1_1lod_1_1ElasticEnergy_1a8584c4030d7c303c3165a70266369e2e" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>pbat::sim::vbd::lod::ElasticEnergy::ElasticEnergy</definition>
+        <argsstring>()=default</argsstring>
+        <name>ElasticEnergy</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/ElasticEnergy.h" line="15" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="structpbat_1_1sim_1_1vbd_1_1lod_1_1ElasticEnergy_1a179e3239cdabd7d78a043dd46f257613" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>pbat::sim::vbd::lod::ElasticEnergy::ElasticEnergy</definition>
+        <argsstring>(Data const &amp;problem, CageQuadrature const &amp;CQ)</argsstring>
+        <name>ElasticEnergy</name>
+        <param>
+          <type><ref refid="structpbat_1_1sim_1_1vbd_1_1Data" kindref="compound">Data</ref> const &amp;</type>
+          <declname>problem</declname>
+        </param>
+        <param>
+          <type><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1CageQuadrature" kindref="compound">CageQuadrature</ref> const &amp;</type>
+          <declname>CQ</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>problem</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>CQ</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/ElasticEnergy.h" line="21" column="5" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/ElasticEnergy.cpp" bodystart="10" bodyend="16"/>
+        <references refid="structpbat_1_1fem_1_1Mesh_1a384afdf16df5efa27e09f17520402b5b" compoundref="source_2pbat_2fem_2Mesh_8h" startline="52">pbat::fem::Mesh&lt; TElement, Dims &gt;::E</references>
+        <references refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1ElasticEnergy_1a661332c03e37a3cc8d283654059dc01c" compoundref="source_2pbat_2sim_2vbd_2lod_2ElasticEnergy_8h" startline="24">lambdag</references>
+        <references refid="structpbat_1_1sim_1_1vbd_1_1Data_1af5043269e65921692dd1938cd75e9eb4" compoundref="source_2pbat_2sim_2vbd_2Data_8h" startline="129">pbat::sim::vbd::Data::lame</references>
+        <references refid="structpbat_1_1sim_1_1vbd_1_1Data_1a0814000764d127a91a05454ee341504d" compoundref="source_2pbat_2sim_2vbd_2Data_8h" startline="111">pbat::sim::vbd::Data::mesh</references>
+        <references refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1ElasticEnergy_1ae3fb8a3a6c9e40035a0f5013f0a292bc" compoundref="source_2pbat_2sim_2vbd_2lod_2ElasticEnergy_8h" startline="23">mug</references>
+        <references refid="structpbat_1_1fem_1_1Mesh_1abc65a193ee960705ddf64227afb18809" compoundref="source_2pbat_2fem_2Mesh_8h" startline="51">pbat::fem::Mesh&lt; TElement, Dims &gt;::X</references>
+        <references refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1CageQuadrature_1a1b3cbb03c6c2987415438a9e6c85940e" compoundref="source_2pbat_2sim_2vbd_2lod_2Quadrature_8h" startline="44">pbat::sim::vbd::lod::CageQuadrature::Xg</references>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/ElasticEnergy.h" line="14" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/ElasticEnergy.h" bodystart="13" bodyend="25"/>
+    <listofallmembers>
+      <member refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1ElasticEnergy_1a8584c4030d7c303c3165a70266369e2e" prot="public" virt="non-virtual"><scope>pbat::sim::vbd::lod::ElasticEnergy</scope><name>ElasticEnergy</name></member>
+      <member refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1ElasticEnergy_1a179e3239cdabd7d78a043dd46f257613" prot="public" virt="non-virtual"><scope>pbat::sim::vbd::lod::ElasticEnergy</scope><name>ElasticEnergy</name></member>
+      <member refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1ElasticEnergy_1a661332c03e37a3cc8d283654059dc01c" prot="public" virt="non-virtual"><scope>pbat::sim::vbd::lod::ElasticEnergy</scope><name>lambdag</name></member>
+      <member refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1ElasticEnergy_1ae3fb8a3a6c9e40035a0f5013f0a292bc" prot="public" virt="non-virtual"><scope>pbat::sim::vbd::lod::ElasticEnergy</scope><name>mug</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

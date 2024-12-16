@@ -1,0 +1,205 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="classpbat_1_1sim_1_1xpbd_1_1Integrator" kind="class" language="C++" prot="public">
+    <compoundname>pbat::sim::xpbd::Integrator</compoundname>
+      <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="classpbat_1_1sim_1_1xpbd_1_1Integrator_1a820dd5551f6105339c3a733d68b41f4d" prot="public" static="no" mutable="no">
+        <type>PBAT_API <ref refid="structpbat_1_1sim_1_1xpbd_1_1Data" kindref="compound">Data</ref></type>
+        <definition>PBAT_API Data pbat::sim::xpbd::Integrator::data</definition>
+        <argsstring></argsstring>
+        <name>data</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Integrator.h" line="21" column="19" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Integrator.h" bodystart="21" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="classpbat_1_1sim_1_1xpbd_1_1Integrator_1af92d06f4fe166b6f9de4192f332c6f5c" prot="private" static="no" mutable="no">
+        <type><ref refid="classpbat_1_1geometry_1_1TetrahedralAabbHierarchy" kindref="compound">geometry::TetrahedralAabbHierarchy</ref></type>
+        <definition>geometry::TetrahedralAabbHierarchy pbat::sim::xpbd::Integrator::mTetrahedralBvh</definition>
+        <argsstring></argsstring>
+        <name>mTetrahedralBvh</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Integrator.h" line="29" column="40" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Integrator.h" bodystart="29" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpbat_1_1sim_1_1xpbd_1_1Integrator_1ab6fe6e25ab8f3f44c6252ae029a57292" prot="private" static="no" mutable="no">
+        <type><ref refid="classpbat_1_1geometry_1_1TriangleAabbHierarchy" kindref="compound">geometry::TriangleAabbHierarchy</ref>&lt; 3 &gt;</type>
+        <definition>geometry::TriangleAabbHierarchy&lt;3&gt; pbat::sim::xpbd::Integrator::mTriangleBvh</definition>
+        <argsstring></argsstring>
+        <name>mTriangleBvh</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Integrator.h" line="30" column="37" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Integrator.h" bodystart="30" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpbat_1_1sim_1_1xpbd_1_1Integrator_1acf99e09861472f48410c9c453b349624" prot="private" static="no" mutable="no">
+        <type>std::vector&lt; Index &gt;</type>
+        <definition>std::vector&lt;Index&gt; pbat::sim::xpbd::Integrator::mParticlesInContact</definition>
+        <argsstring></argsstring>
+        <name>mParticlesInContact</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Integrator.h" line="31" column="17" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Integrator.h" bodystart="31" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpbat_1_1sim_1_1xpbd_1_1Integrator_1a436e22b349fd609ce09c4c8b3ed15159" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>PBAT_API</type>
+        <definition>pbat::sim::xpbd::Integrator::Integrator</definition>
+        <argsstring>(Data data)</argsstring>
+        <name>Integrator</name>
+        <param>
+          <type><ref refid="structpbat_1_1sim_1_1xpbd_1_1Data" kindref="compound">Data</ref></type>
+          <declname>data</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Integrator.h" line="17" column="14" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Integrator.cpp" bodystart="15" bodyend="23"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1sim_1_1xpbd_1_1Integrator_1a03aae5ac7abdfb4fe42535abba3a88c3" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>PBAT_API void</type>
+        <definition>void pbat::sim::xpbd::Integrator::Step</definition>
+        <argsstring>(Scalar dt, Index iterations, Index substeps=Index{1})</argsstring>
+        <name>Step</name>
+        <param>
+          <type>Scalar</type>
+          <declname>dt</declname>
+        </param>
+        <param>
+          <type>Index</type>
+          <declname>iterations</declname>
+        </param>
+        <param>
+          <type>Index</type>
+          <declname>substeps</declname>
+          <defval>Index{1}</defval>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Integrator.h" line="19" column="19" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Integrator.cpp" bodystart="25" bodyend="157"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="protected-func">
+      <memberdef kind="function" id="classpbat_1_1sim_1_1xpbd_1_1Integrator_1aee269336a7de0274387784328df01805" prot="protected" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void pbat::sim::xpbd::Integrator::ProjectBlockNeoHookeanConstraints</definition>
+        <argsstring>(Scalar dt, Scalar dt2)</argsstring>
+        <name>ProjectBlockNeoHookeanConstraints</name>
+        <param>
+          <type>Scalar</type>
+          <declname>dt</declname>
+        </param>
+        <param>
+          <type>Scalar</type>
+          <declname>dt2</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Integrator.h" line="24" column="10" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Integrator.cpp" bodystart="159" bodyend="173"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1sim_1_1xpbd_1_1Integrator_1a679e1092721791247dd2747e3b893df2" prot="protected" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void pbat::sim::xpbd::Integrator::ProjectClusteredBlockNeoHookeanConstraints</definition>
+        <argsstring>(Scalar dt, Scalar dt2)</argsstring>
+        <name>ProjectClusteredBlockNeoHookeanConstraints</name>
+        <param>
+          <type>Scalar</type>
+          <declname>dt</declname>
+        </param>
+        <param>
+          <type>Scalar</type>
+          <declname>dt2</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Integrator.h" line="25" column="10" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Integrator.cpp" bodystart="175" bodyend="197"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1sim_1_1xpbd_1_1Integrator_1ae84668639a0b6d9aca6318a875b9b881" prot="protected" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void pbat::sim::xpbd::Integrator::ProjectBlockNeoHookeanConstraint</definition>
+        <argsstring>(Index c, Scalar dt, Scalar dt2)</argsstring>
+        <name>ProjectBlockNeoHookeanConstraint</name>
+        <param>
+          <type>Index</type>
+          <declname>c</declname>
+        </param>
+        <param>
+          <type>Scalar</type>
+          <declname>dt</declname>
+        </param>
+        <param>
+          <type>Scalar</type>
+          <declname>dt2</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Integrator.h" line="26" column="10" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Integrator.cpp" bodystart="199" bodyend="225"/>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <collaborationgraph>
+      <node id="2">
+        <label>pbat::sim::xpbd::Data</label>
+        <link refid="structpbat_1_1sim_1_1xpbd_1_1Data"/>
+      </node>
+      <node id="1">
+        <label>pbat::sim::xpbd::Integrator</label>
+        <link refid="classpbat_1_1sim_1_1xpbd_1_1Integrator"/>
+        <childnode refid="2" relation="usage">
+          <edgelabel>data</edgelabel>
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Integrator.h" line="15" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Integrator.h" bodystart="14" bodyend="32"/>
+    <listofallmembers>
+      <member refid="classpbat_1_1sim_1_1xpbd_1_1Integrator_1a820dd5551f6105339c3a733d68b41f4d" prot="public" virt="non-virtual"><scope>pbat::sim::xpbd::Integrator</scope><name>data</name></member>
+      <member refid="classpbat_1_1sim_1_1xpbd_1_1Integrator_1a436e22b349fd609ce09c4c8b3ed15159" prot="public" virt="non-virtual"><scope>pbat::sim::xpbd::Integrator</scope><name>Integrator</name></member>
+      <member refid="classpbat_1_1sim_1_1xpbd_1_1Integrator_1acf99e09861472f48410c9c453b349624" prot="private" virt="non-virtual"><scope>pbat::sim::xpbd::Integrator</scope><name>mParticlesInContact</name></member>
+      <member refid="classpbat_1_1sim_1_1xpbd_1_1Integrator_1af92d06f4fe166b6f9de4192f332c6f5c" prot="private" virt="non-virtual"><scope>pbat::sim::xpbd::Integrator</scope><name>mTetrahedralBvh</name></member>
+      <member refid="classpbat_1_1sim_1_1xpbd_1_1Integrator_1ab6fe6e25ab8f3f44c6252ae029a57292" prot="private" virt="non-virtual"><scope>pbat::sim::xpbd::Integrator</scope><name>mTriangleBvh</name></member>
+      <member refid="classpbat_1_1sim_1_1xpbd_1_1Integrator_1ae84668639a0b6d9aca6318a875b9b881" prot="protected" virt="non-virtual"><scope>pbat::sim::xpbd::Integrator</scope><name>ProjectBlockNeoHookeanConstraint</name></member>
+      <member refid="classpbat_1_1sim_1_1xpbd_1_1Integrator_1aee269336a7de0274387784328df01805" prot="protected" virt="non-virtual"><scope>pbat::sim::xpbd::Integrator</scope><name>ProjectBlockNeoHookeanConstraints</name></member>
+      <member refid="classpbat_1_1sim_1_1xpbd_1_1Integrator_1a679e1092721791247dd2747e3b893df2" prot="protected" virt="non-virtual"><scope>pbat::sim::xpbd::Integrator</scope><name>ProjectClusteredBlockNeoHookeanConstraints</name></member>
+      <member refid="classpbat_1_1sim_1_1xpbd_1_1Integrator_1a03aae5ac7abdfb4fe42535abba3a88c3" prot="public" virt="non-virtual"><scope>pbat::sim::xpbd::Integrator</scope><name>Step</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

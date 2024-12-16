@@ -1,0 +1,593 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="structpbat_1_1physics_1_1StableNeoHookeanEnergy_3_012_01_4" kind="struct" language="C++" prot="public">
+    <compoundname>pbat::physics::StableNeoHookeanEnergy&lt; 2 &gt;</compoundname>
+    <templateparamlist>
+    </templateparamlist>
+      <sectiondef kind="public-type">
+      <memberdef kind="typedef" id="structpbat_1_1physics_1_1StableNeoHookeanEnergy_3_012_01_4_1a1fbf2ccb1f6a1c5bb6045155e2dc7b0d" prot="public" static="no">
+        <templateparamlist>
+          <param>
+            <type>class TScalar</type>
+          </param>
+          <param>
+            <type>int</type>
+            <declname>M</declname>
+            <defname>M</defname>
+          </param>
+          <param>
+            <type>int</type>
+            <declname>N</declname>
+            <defname>N</defname>
+          </param>
+        </templateparamlist>
+        <type><ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1SMatrix" kindref="compound">pbat::math::linalg::mini::SMatrix</ref>&lt; TScalar, M, N &gt;</type>
+        <definition>using pbat::physics::StableNeoHookeanEnergy&lt; 2 &gt;::SMatrix =  pbat::math::linalg::mini::SMatrix&lt;TScalar, M, N&gt;</definition>
+        <argsstring></argsstring>
+        <name>SMatrix</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/physics/StableNeoHookeanEnergy.h" line="190" column="5" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/physics/StableNeoHookeanEnergy.h" bodystart="190" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="structpbat_1_1physics_1_1StableNeoHookeanEnergy_3_012_01_4_1aa4f1fd1b9b4996b84742cb6b3d6fc371" prot="public" static="no">
+        <templateparamlist>
+          <param>
+            <type>class TScalar</type>
+          </param>
+          <param>
+            <type>int</type>
+            <declname>M</declname>
+            <defname>M</defname>
+          </param>
+        </templateparamlist>
+        <type><ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1SMatrix" kindref="compound">pbat::math::linalg::mini::SVector</ref>&lt; TScalar, M &gt;</type>
+        <definition>using pbat::physics::StableNeoHookeanEnergy&lt; 2 &gt;::SVector =  pbat::math::linalg::mini::SVector&lt;TScalar, M&gt;</definition>
+        <argsstring></argsstring>
+        <name>SVector</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/physics/StableNeoHookeanEnergy.h" line="193" column="5" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/physics/StableNeoHookeanEnergy.h" bodystart="193" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="public-static-attrib">
+      <memberdef kind="variable" id="structpbat_1_1physics_1_1StableNeoHookeanEnergy_3_012_01_4_1aae7b6cdb4f069d9c08311325f0a4a351" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>constexpr auto</type>
+        <definition>constexpr auto pbat::physics::StableNeoHookeanEnergy&lt; 2 &gt;::kDims</definition>
+        <argsstring></argsstring>
+        <name>kDims</name>
+        <initializer>= 2</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/physics/StableNeoHookeanEnergy.h" line="195" column="27" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/physics/StableNeoHookeanEnergy.h" bodystart="195" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="public-func">
+      <memberdef kind="function" id="structpbat_1_1physics_1_1StableNeoHookeanEnergy_3_012_01_4_1a9354ed67f98e713d12e89b84513d31f7" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>math::linalg::mini::CReadableVectorizedMatrix</type>
+            <declname>TMatrix</declname>
+            <defname>TMatrix</defname>
+          </param>
+        </templateparamlist>
+        <type>PBAT_HOST_DEVICE TMatrix::ScalarType</type>
+        <definition>PBAT_HOST_DEVICE TMatrix::ScalarType pbat::physics::StableNeoHookeanEnergy&lt; 2 &gt;::eval</definition>
+        <argsstring>(TMatrix const &amp;F, typename TMatrix::ScalarType mu, typename TMatrix::ScalarType lambda) const</argsstring>
+        <name>eval</name>
+        <param>
+          <type>TMatrix const &amp;</type>
+          <declname>F</declname>
+        </param>
+        <param>
+          <type>typename TMatrix::ScalarType</type>
+          <declname>mu</declname>
+        </param>
+        <param>
+          <type>typename TMatrix::ScalarType</type>
+          <declname>lambda</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/physics/StableNeoHookeanEnergy.h" line="199" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="structpbat_1_1physics_1_1StableNeoHookeanEnergy_3_012_01_4_1ad653b243b4177de48ce95bd5fa98c108" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>math::linalg::mini::CReadableVectorizedMatrix</type>
+            <declname>TMatrix</declname>
+            <defname>TMatrix</defname>
+          </param>
+        </templateparamlist>
+        <type>PBAT_HOST_DEVICE <ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1SMatrix" kindref="compound">SVector</ref>&lt; typename TMatrix::ScalarType, 4 &gt;</type>
+        <definition>PBAT_HOST_DEVICE SVector&lt;typename TMatrix::ScalarType, 4&gt; pbat::physics::StableNeoHookeanEnergy&lt; 2 &gt;::grad</definition>
+        <argsstring>(TMatrix const &amp;F, typename TMatrix::ScalarType mu, typename TMatrix::ScalarType lambda) const</argsstring>
+        <name>grad</name>
+        <param>
+          <type>TMatrix const &amp;</type>
+          <declname>F</declname>
+        </param>
+        <param>
+          <type>typename TMatrix::ScalarType</type>
+          <declname>mu</declname>
+        </param>
+        <param>
+          <type>typename TMatrix::ScalarType</type>
+          <declname>lambda</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/physics/StableNeoHookeanEnergy.h" line="204" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="structpbat_1_1physics_1_1StableNeoHookeanEnergy_3_012_01_4_1acc0b78ac9c4b6a3fb1fd21327b191076" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>math::linalg::mini::CReadableVectorizedMatrix</type>
+            <declname>TMatrix</declname>
+            <defname>TMatrix</defname>
+          </param>
+        </templateparamlist>
+        <type>PBAT_HOST_DEVICE <ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1SMatrix" kindref="compound">SMatrix</ref>&lt; typename TMatrix::ScalarType, 4, 4 &gt;</type>
+        <definition>PBAT_HOST_DEVICE SMatrix&lt;typename TMatrix::ScalarType, 4, 4&gt; pbat::physics::StableNeoHookeanEnergy&lt; 2 &gt;::hessian</definition>
+        <argsstring>(TMatrix const &amp;F, typename TMatrix::ScalarType mu, typename TMatrix::ScalarType lambda) const</argsstring>
+        <name>hessian</name>
+        <param>
+          <type>TMatrix const &amp;</type>
+          <declname>F</declname>
+        </param>
+        <param>
+          <type>typename TMatrix::ScalarType</type>
+          <declname>mu</declname>
+        </param>
+        <param>
+          <type>typename TMatrix::ScalarType</type>
+          <declname>lambda</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/physics/StableNeoHookeanEnergy.h" line="209" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="structpbat_1_1physics_1_1StableNeoHookeanEnergy_3_012_01_4_1afe50915b8e5abdb1aaa6e51a8eaac7a2" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>math::linalg::mini::CReadableVectorizedMatrix</type>
+            <declname>TMatrix</declname>
+            <defname>TMatrix</defname>
+          </param>
+          <param>
+            <type>math::linalg::mini::CWriteableVectorizedMatrix</type>
+            <declname>TMatrixGF</declname>
+            <defname>TMatrixGF</defname>
+          </param>
+        </templateparamlist>
+        <type>PBAT_HOST_DEVICE TMatrix::ScalarType</type>
+        <definition>PBAT_HOST_DEVICE TMatrix::ScalarType pbat::physics::StableNeoHookeanEnergy&lt; 2 &gt;::evalWithGrad</definition>
+        <argsstring>(TMatrix const &amp;F, typename TMatrix::ScalarType mu, typename TMatrix::ScalarType lambda, TMatrixGF &amp;gF) const</argsstring>
+        <name>evalWithGrad</name>
+        <param>
+          <type>TMatrix const &amp;</type>
+          <declname>F</declname>
+        </param>
+        <param>
+          <type>typename TMatrix::ScalarType</type>
+          <declname>mu</declname>
+        </param>
+        <param>
+          <type>typename TMatrix::ScalarType</type>
+          <declname>lambda</declname>
+        </param>
+        <param>
+          <type>TMatrixGF &amp;</type>
+          <declname>gF</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/physics/StableNeoHookeanEnergy.h" line="215" column="51"/>
+      </memberdef>
+      <memberdef kind="function" id="structpbat_1_1physics_1_1StableNeoHookeanEnergy_3_012_01_4_1a07ca5adbd552a062b0be3b46d12ff2bf" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>math::linalg::mini::CReadableVectorizedMatrix</type>
+            <declname>TMatrix</declname>
+            <defname>TMatrix</defname>
+          </param>
+          <param>
+            <type>math::linalg::mini::CWriteableVectorizedMatrix</type>
+            <declname>TMatrixGF</declname>
+            <defname>TMatrixGF</defname>
+          </param>
+          <param>
+            <type>math::linalg::mini::CWriteableVectorizedMatrix</type>
+            <declname>TMatrixHF</declname>
+            <defname>TMatrixHF</defname>
+          </param>
+        </templateparamlist>
+        <type>PBAT_HOST_DEVICE TMatrix::ScalarType</type>
+        <definition>PBAT_HOST_DEVICE TMatrix::ScalarType pbat::physics::StableNeoHookeanEnergy&lt; 2 &gt;::evalWithGradAndHessian</definition>
+        <argsstring>(TMatrix const &amp;F, typename TMatrix::ScalarType mu, typename TMatrix::ScalarType lambda, TMatrixGF &amp;gF, TMatrixHF &amp;HF) const</argsstring>
+        <name>evalWithGradAndHessian</name>
+        <param>
+          <type>TMatrix const &amp;</type>
+          <declname>F</declname>
+        </param>
+        <param>
+          <type>typename TMatrix::ScalarType</type>
+          <declname>mu</declname>
+        </param>
+        <param>
+          <type>typename TMatrix::ScalarType</type>
+          <declname>lambda</declname>
+        </param>
+        <param>
+          <type>TMatrixGF &amp;</type>
+          <declname>gF</declname>
+        </param>
+        <param>
+          <type>TMatrixHF &amp;</type>
+          <declname>HF</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/physics/StableNeoHookeanEnergy.h" line="225" column="51"/>
+      </memberdef>
+      <memberdef kind="function" id="structpbat_1_1physics_1_1StableNeoHookeanEnergy_3_012_01_4_1a5bebc4b3a5ca4c2181b7974a39a771a1" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>math::linalg::mini::CReadableVectorizedMatrix</type>
+            <declname>TMatrix</declname>
+            <defname>TMatrix</defname>
+          </param>
+          <param>
+            <type>math::linalg::mini::CWriteableVectorizedMatrix</type>
+            <declname>TMatrixGF</declname>
+            <defname>TMatrixGF</defname>
+          </param>
+          <param>
+            <type>math::linalg::mini::CWriteableVectorizedMatrix</type>
+            <declname>TMatrixHF</declname>
+            <defname>TMatrixHF</defname>
+          </param>
+        </templateparamlist>
+        <type>PBAT_HOST_DEVICE void</type>
+        <definition>PBAT_HOST_DEVICE void pbat::physics::StableNeoHookeanEnergy&lt; 2 &gt;::gradAndHessian</definition>
+        <argsstring>(TMatrix const &amp;F, typename TMatrix::ScalarType mu, typename TMatrix::ScalarType lambda, TMatrixGF &amp;gF, TMatrixHF &amp;HF) const</argsstring>
+        <name>gradAndHessian</name>
+        <param>
+          <type>TMatrix const &amp;</type>
+          <declname>F</declname>
+        </param>
+        <param>
+          <type>typename TMatrix::ScalarType</type>
+          <declname>mu</declname>
+        </param>
+        <param>
+          <type>typename TMatrix::ScalarType</type>
+          <declname>lambda</declname>
+        </param>
+        <param>
+          <type>TMatrixGF &amp;</type>
+          <declname>gF</declname>
+        </param>
+        <param>
+          <type>TMatrixHF &amp;</type>
+          <declname>HF</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/physics/StableNeoHookeanEnergy.h" line="236" column="27"/>
+      </memberdef>
+      <memberdef kind="function" id="structpbat_1_1physics_1_1StableNeoHookeanEnergy_3_012_01_4_1a8ee0335f11c9c96686c67466804f0063" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>math::linalg::mini::CReadableVectorizedMatrix</type>
+            <declname>TMatrix</declname>
+            <defname>TMatrix</defname>
+          </param>
+        </templateparamlist>
+        <type>PBAT_HOST_DEVICE TMatrix::ScalarType</type>
+        <definition>PBAT_HOST_DEVICE TMatrix::ScalarType pbat::physics::StableNeoHookeanEnergy&lt; 2 &gt;::eval</definition>
+        <argsstring>([[maybe_unused]] TMatrix const &amp;F, [[maybe_unused]] typename TMatrix::ScalarType mu, [[maybe_unused]] typename TMatrix::ScalarType lambda) const</argsstring>
+        <name>eval</name>
+        <param>
+          <attributes>[[maybe_unused]</attributes>
+          <type>] TMatrix const &amp;</type>
+          <declname>F</declname>
+        </param>
+        <param>
+          <attributes>[[maybe_unused]</attributes>
+          <type>] typename TMatrix::ScalarType</type>
+          <declname>mu</declname>
+        </param>
+        <param>
+          <attributes>[[maybe_unused]</attributes>
+          <type>] typename TMatrix::ScalarType</type>
+          <declname>lambda</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/physics/StableNeoHookeanEnergy.h" line="245" column="70" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/physics/StableNeoHookeanEnergy.h" bodystart="245" bodyend="258"/>
+      </memberdef>
+      <memberdef kind="function" id="structpbat_1_1physics_1_1StableNeoHookeanEnergy_3_012_01_4_1a814a91b693fffed5961b6922cc2deec5" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>math::linalg::mini::CReadableVectorizedMatrix</type>
+            <declname>TMatrix</declname>
+            <defname>TMatrix</defname>
+          </param>
+        </templateparamlist>
+        <type>PBAT_HOST_DEVICE <ref refid="structpbat_1_1physics_1_1StableNeoHookeanEnergy" kindref="compound">StableNeoHookeanEnergy</ref>&lt; 2 &gt;::<ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1SMatrix" kindref="compound">SVector</ref>&lt; typename TMatrix::ScalarType, 4 &gt;</type>
+        <definition>PBAT_HOST_DEVICE StableNeoHookeanEnergy&lt;2&gt;::SVector&lt;typename TMatrix::ScalarType, 4&gt; pbat::physics::StableNeoHookeanEnergy&lt; 2 &gt;::grad</definition>
+        <argsstring>([[maybe_unused]] TMatrix const &amp;F, [[maybe_unused]] typename TMatrix::ScalarType mu, [[maybe_unused]] typename TMatrix::ScalarType lambda) const</argsstring>
+        <name>grad</name>
+        <param>
+          <attributes>[[maybe_unused]</attributes>
+          <type>] TMatrix const &amp;</type>
+          <declname>F</declname>
+        </param>
+        <param>
+          <attributes>[[maybe_unused]</attributes>
+          <type>] typename TMatrix::ScalarType</type>
+          <declname>mu</declname>
+        </param>
+        <param>
+          <attributes>[[maybe_unused]</attributes>
+          <type>] typename TMatrix::ScalarType</type>
+          <declname>lambda</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/physics/StableNeoHookeanEnergy.h" line="262" column="24" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/physics/StableNeoHookeanEnergy.h" bodystart="262" bodyend="275"/>
+      </memberdef>
+      <memberdef kind="function" id="structpbat_1_1physics_1_1StableNeoHookeanEnergy_3_012_01_4_1a24ca68f7f147a0e082df477c4e491faa" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>math::linalg::mini::CReadableVectorizedMatrix</type>
+            <declname>TMatrix</declname>
+            <defname>TMatrix</defname>
+          </param>
+        </templateparamlist>
+        <type>PBAT_HOST_DEVICE <ref refid="structpbat_1_1physics_1_1StableNeoHookeanEnergy" kindref="compound">StableNeoHookeanEnergy</ref>&lt; 2 &gt;::<ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1SMatrix" kindref="compound">SMatrix</ref>&lt; typename TMatrix::ScalarType, 4, 4 &gt;</type>
+        <definition>PBAT_HOST_DEVICE StableNeoHookeanEnergy&lt;2&gt;::SMatrix&lt;typename TMatrix::ScalarType, 4, 4&gt; pbat::physics::StableNeoHookeanEnergy&lt; 2 &gt;::hessian</definition>
+        <argsstring>([[maybe_unused]] TMatrix const &amp;F, [[maybe_unused]] typename TMatrix::ScalarType mu, [[maybe_unused]] typename TMatrix::ScalarType lambda) const</argsstring>
+        <name>hessian</name>
+        <param>
+          <attributes>[[maybe_unused]</attributes>
+          <type>] TMatrix const &amp;</type>
+          <declname>F</declname>
+        </param>
+        <param>
+          <attributes>[[maybe_unused]</attributes>
+          <type>] typename TMatrix::ScalarType</type>
+          <declname>mu</declname>
+        </param>
+        <param>
+          <attributes>[[maybe_unused]</attributes>
+          <type>] typename TMatrix::ScalarType</type>
+          <declname>lambda</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/physics/StableNeoHookeanEnergy.h" line="279" column="24" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/physics/StableNeoHookeanEnergy.h" bodystart="279" bodyend="312"/>
+      </memberdef>
+      <memberdef kind="function" id="structpbat_1_1physics_1_1StableNeoHookeanEnergy_3_012_01_4_1a740b62fe3436470054d955fef832566b" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>math::linalg::mini::CReadableVectorizedMatrix</type>
+            <declname>TMatrix</declname>
+            <defname>TMatrix</defname>
+          </param>
+          <param>
+            <type>math::linalg::mini::CWriteableVectorizedMatrix</type>
+            <declname>TMatrixGF</declname>
+            <defname>TMatrixGF</defname>
+          </param>
+        </templateparamlist>
+        <type>PBAT_HOST_DEVICE TMatrix::ScalarType</type>
+        <definition>PBAT_HOST_DEVICE TMatrix::ScalarType pbat::physics::StableNeoHookeanEnergy&lt; 2 &gt;::evalWithGrad</definition>
+        <argsstring>([[maybe_unused]] TMatrix const &amp;F, [[maybe_unused]] typename TMatrix::ScalarType mu, [[maybe_unused]] typename TMatrix::ScalarType lambda, TMatrixGF &amp;gF) const</argsstring>
+        <name>evalWithGrad</name>
+        <param>
+          <attributes>[[maybe_unused]</attributes>
+          <type>] TMatrix const &amp;</type>
+          <declname>F</declname>
+        </param>
+        <param>
+          <attributes>[[maybe_unused]</attributes>
+          <type>] typename TMatrix::ScalarType</type>
+          <declname>mu</declname>
+        </param>
+        <param>
+          <attributes>[[maybe_unused]</attributes>
+          <type>] typename TMatrix::ScalarType</type>
+          <declname>lambda</declname>
+        </param>
+        <param>
+          <type>TMatrixGF &amp;</type>
+          <declname>gF</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/physics/StableNeoHookeanEnergy.h" line="317" column="70" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/physics/StableNeoHookeanEnergy.h" bodystart="317" bodyend="338"/>
+      </memberdef>
+      <memberdef kind="function" id="structpbat_1_1physics_1_1StableNeoHookeanEnergy_3_012_01_4_1a7f84b4ea0c262a06ef22aa46e37dce8d" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>math::linalg::mini::CReadableVectorizedMatrix</type>
+            <declname>TMatrix</declname>
+            <defname>TMatrix</defname>
+          </param>
+          <param>
+            <type>math::linalg::mini::CWriteableVectorizedMatrix</type>
+            <declname>TMatrixGF</declname>
+            <defname>TMatrixGF</defname>
+          </param>
+          <param>
+            <type>math::linalg::mini::CWriteableVectorizedMatrix</type>
+            <declname>TMatrixHF</declname>
+            <defname>TMatrixHF</defname>
+          </param>
+        </templateparamlist>
+        <type>PBAT_HOST_DEVICE TMatrix::ScalarType</type>
+        <definition>PBAT_HOST_DEVICE TMatrix::ScalarType pbat::physics::StableNeoHookeanEnergy&lt; 2 &gt;::evalWithGradAndHessian</definition>
+        <argsstring>([[maybe_unused]] TMatrix const &amp;F, [[maybe_unused]] typename TMatrix::ScalarType mu, [[maybe_unused]] typename TMatrix::ScalarType lambda, TMatrixGF &amp;gF, TMatrixHF &amp;HF) const</argsstring>
+        <name>evalWithGradAndHessian</name>
+        <param>
+          <attributes>[[maybe_unused]</attributes>
+          <type>] TMatrix const &amp;</type>
+          <declname>F</declname>
+        </param>
+        <param>
+          <attributes>[[maybe_unused]</attributes>
+          <type>] typename TMatrix::ScalarType</type>
+          <declname>mu</declname>
+        </param>
+        <param>
+          <attributes>[[maybe_unused]</attributes>
+          <type>] typename TMatrix::ScalarType</type>
+          <declname>lambda</declname>
+        </param>
+        <param>
+          <type>TMatrixGF &amp;</type>
+          <declname>gF</declname>
+        </param>
+        <param>
+          <type>TMatrixHF &amp;</type>
+          <declname>HF</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/physics/StableNeoHookeanEnergy.h" line="344" column="70" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/physics/StableNeoHookeanEnergy.h" bodystart="344" bodyend="395"/>
+      </memberdef>
+      <memberdef kind="function" id="structpbat_1_1physics_1_1StableNeoHookeanEnergy_3_012_01_4_1a60c1e43750184272d942987e207154be" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>math::linalg::mini::CReadableVectorizedMatrix</type>
+            <declname>TMatrix</declname>
+            <defname>TMatrix</defname>
+          </param>
+          <param>
+            <type>math::linalg::mini::CWriteableVectorizedMatrix</type>
+            <declname>TMatrixGF</declname>
+            <defname>TMatrixGF</defname>
+          </param>
+          <param>
+            <type>math::linalg::mini::CWriteableVectorizedMatrix</type>
+            <declname>TMatrixHF</declname>
+            <defname>TMatrixHF</defname>
+          </param>
+        </templateparamlist>
+        <type>PBAT_HOST_DEVICE void</type>
+        <definition>PBAT_HOST_DEVICE void pbat::physics::StableNeoHookeanEnergy&lt; 2 &gt;::gradAndHessian</definition>
+        <argsstring>([[maybe_unused]] TMatrix const &amp;F, [[maybe_unused]] typename TMatrix::ScalarType mu, [[maybe_unused]] typename TMatrix::ScalarType lambda, TMatrixGF &amp;gF, TMatrixHF &amp;HF) const</argsstring>
+        <name>gradAndHessian</name>
+        <param>
+          <attributes>[[maybe_unused]</attributes>
+          <type>] TMatrix const &amp;</type>
+          <declname>F</declname>
+        </param>
+        <param>
+          <attributes>[[maybe_unused]</attributes>
+          <type>] typename TMatrix::ScalarType</type>
+          <declname>mu</declname>
+        </param>
+        <param>
+          <attributes>[[maybe_unused]</attributes>
+          <type>] typename TMatrix::ScalarType</type>
+          <declname>lambda</declname>
+        </param>
+        <param>
+          <type>TMatrixGF &amp;</type>
+          <declname>gF</declname>
+        </param>
+        <param>
+          <type>TMatrixHF &amp;</type>
+          <declname>HF</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/physics/StableNeoHookeanEnergy.h" line="401" column="46" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/physics/StableNeoHookeanEnergy.h" bodystart="401" bodyend="444"/>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/physics/StableNeoHookeanEnergy.h" line="187" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/physics/StableNeoHookeanEnergy.h" bodystart="186" bodyend="242"/>
+    <listofallmembers>
+      <member refid="structpbat_1_1physics_1_1StableNeoHookeanEnergy_3_012_01_4_1a9354ed67f98e713d12e89b84513d31f7" prot="public" virt="non-virtual"><scope>pbat::physics::StableNeoHookeanEnergy&lt; 2 &gt;</scope><name>eval</name></member>
+      <member refid="structpbat_1_1physics_1_1StableNeoHookeanEnergy_3_012_01_4_1a8ee0335f11c9c96686c67466804f0063" prot="public" virt="non-virtual"><scope>pbat::physics::StableNeoHookeanEnergy&lt; 2 &gt;</scope><name>eval</name></member>
+      <member refid="structpbat_1_1physics_1_1StableNeoHookeanEnergy_3_012_01_4_1afe50915b8e5abdb1aaa6e51a8eaac7a2" prot="public" virt="non-virtual"><scope>pbat::physics::StableNeoHookeanEnergy&lt; 2 &gt;</scope><name>evalWithGrad</name></member>
+      <member refid="structpbat_1_1physics_1_1StableNeoHookeanEnergy_3_012_01_4_1a740b62fe3436470054d955fef832566b" prot="public" virt="non-virtual"><scope>pbat::physics::StableNeoHookeanEnergy&lt; 2 &gt;</scope><name>evalWithGrad</name></member>
+      <member refid="structpbat_1_1physics_1_1StableNeoHookeanEnergy_3_012_01_4_1a07ca5adbd552a062b0be3b46d12ff2bf" prot="public" virt="non-virtual"><scope>pbat::physics::StableNeoHookeanEnergy&lt; 2 &gt;</scope><name>evalWithGradAndHessian</name></member>
+      <member refid="structpbat_1_1physics_1_1StableNeoHookeanEnergy_3_012_01_4_1a7f84b4ea0c262a06ef22aa46e37dce8d" prot="public" virt="non-virtual"><scope>pbat::physics::StableNeoHookeanEnergy&lt; 2 &gt;</scope><name>evalWithGradAndHessian</name></member>
+      <member refid="structpbat_1_1physics_1_1StableNeoHookeanEnergy_3_012_01_4_1ad653b243b4177de48ce95bd5fa98c108" prot="public" virt="non-virtual"><scope>pbat::physics::StableNeoHookeanEnergy&lt; 2 &gt;</scope><name>grad</name></member>
+      <member refid="structpbat_1_1physics_1_1StableNeoHookeanEnergy_3_012_01_4_1a814a91b693fffed5961b6922cc2deec5" prot="public" virt="non-virtual"><scope>pbat::physics::StableNeoHookeanEnergy&lt; 2 &gt;</scope><name>grad</name></member>
+      <member refid="structpbat_1_1physics_1_1StableNeoHookeanEnergy_3_012_01_4_1a5bebc4b3a5ca4c2181b7974a39a771a1" prot="public" virt="non-virtual"><scope>pbat::physics::StableNeoHookeanEnergy&lt; 2 &gt;</scope><name>gradAndHessian</name></member>
+      <member refid="structpbat_1_1physics_1_1StableNeoHookeanEnergy_3_012_01_4_1a60c1e43750184272d942987e207154be" prot="public" virt="non-virtual"><scope>pbat::physics::StableNeoHookeanEnergy&lt; 2 &gt;</scope><name>gradAndHessian</name></member>
+      <member refid="structpbat_1_1physics_1_1StableNeoHookeanEnergy_3_012_01_4_1acc0b78ac9c4b6a3fb1fd21327b191076" prot="public" virt="non-virtual"><scope>pbat::physics::StableNeoHookeanEnergy&lt; 2 &gt;</scope><name>hessian</name></member>
+      <member refid="structpbat_1_1physics_1_1StableNeoHookeanEnergy_3_012_01_4_1a24ca68f7f147a0e082df477c4e491faa" prot="public" virt="non-virtual"><scope>pbat::physics::StableNeoHookeanEnergy&lt; 2 &gt;</scope><name>hessian</name></member>
+      <member refid="structpbat_1_1physics_1_1StableNeoHookeanEnergy_3_012_01_4_1aae7b6cdb4f069d9c08311325f0a4a351" prot="public" virt="non-virtual"><scope>pbat::physics::StableNeoHookeanEnergy&lt; 2 &gt;</scope><name>kDims</name></member>
+      <member refid="structpbat_1_1physics_1_1StableNeoHookeanEnergy_3_012_01_4_1a1fbf2ccb1f6a1c5bb6045155e2dc7b0d" prot="public" virt="non-virtual"><scope>pbat::physics::StableNeoHookeanEnergy&lt; 2 &gt;</scope><name>SMatrix</name></member>
+      <member refid="structpbat_1_1physics_1_1StableNeoHookeanEnergy_3_012_01_4_1aa4f1fd1b9b4996b84742cb6b3d6fc371" prot="public" virt="non-virtual"><scope>pbat::physics::StableNeoHookeanEnergy&lt; 2 &gt;</scope><name>SVector</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

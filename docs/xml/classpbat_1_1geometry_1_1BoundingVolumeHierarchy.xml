@@ -1,0 +1,568 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="classpbat_1_1geometry_1_1BoundingVolumeHierarchy" kind="class" language="C++" prot="public">
+    <compoundname>pbat::geometry::BoundingVolumeHierarchy</compoundname>
+    <includes refid="BoundingVolumeHierarchy_8h" local="no">BoundingVolumeHierarchy.h</includes>
+    <templateparamlist>
+      <param>
+        <type>class TDerived</type>
+      </param>
+      <param>
+        <type>class TBoundingVolume</type>
+      </param>
+      <param>
+        <type>class TPrimitive</type>
+      </param>
+      <param>
+        <type>int</type>
+        <declname>Dims</declname>
+        <defname>Dims</defname>
+      </param>
+    </templateparamlist>
+      <sectiondef kind="public-type">
+      <memberdef kind="typedef" id="classpbat_1_1geometry_1_1BoundingVolumeHierarchy_1ae3ac974f1eaf1dc33d3a4fb6e89e817d" prot="public" static="no">
+        <type>TDerived</type>
+        <definition>using pbat::geometry::BoundingVolumeHierarchy&lt; TDerived, TBoundingVolume, TPrimitive, Dims &gt;::DerivedType =  TDerived</definition>
+        <argsstring></argsstring>
+        <name>DerivedType</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/BoundingVolumeHierarchy.h" line="29" column="5" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/BoundingVolumeHierarchy.h" bodystart="29" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="classpbat_1_1geometry_1_1BoundingVolumeHierarchy_1a323a572a1983a6cc0b2303e68279d183" prot="public" static="no">
+        <type>TBoundingVolume</type>
+        <definition>using pbat::geometry::BoundingVolumeHierarchy&lt; TDerived, TBoundingVolume, TPrimitive, Dims &gt;::BoundingVolumeType =  TBoundingVolume</definition>
+        <argsstring></argsstring>
+        <name>BoundingVolumeType</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/BoundingVolumeHierarchy.h" line="30" column="5" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/BoundingVolumeHierarchy.h" bodystart="30" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="classpbat_1_1geometry_1_1BoundingVolumeHierarchy_1a1cc2d500243dbb646ea19f05b4fcae3e" prot="public" static="no">
+        <type>TPrimitive</type>
+        <definition>using pbat::geometry::BoundingVolumeHierarchy&lt; TDerived, TBoundingVolume, TPrimitive, Dims &gt;::PrimitiveType =  TPrimitive</definition>
+        <argsstring></argsstring>
+        <name>PrimitiveType</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/BoundingVolumeHierarchy.h" line="31" column="5" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/BoundingVolumeHierarchy.h" bodystart="31" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="public-static-attrib">
+      <memberdef kind="variable" id="classpbat_1_1geometry_1_1BoundingVolumeHierarchy_1a599e52e7c7b7464d5ad49a087e74f685" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>constexpr auto</type>
+        <definition>constexpr auto pbat::geometry::BoundingVolumeHierarchy&lt; TDerived, TBoundingVolume, TPrimitive, Dims &gt;::kDims</definition>
+        <argsstring></argsstring>
+        <name>kDims</name>
+        <initializer>= Dims</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/BoundingVolumeHierarchy.h" line="32" column="27" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/BoundingVolumeHierarchy.h" bodystart="32" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="friend">
+      <memberdef kind="friend" id="classpbat_1_1geometry_1_1BoundingVolumeHierarchy_1a63ce4d917462a409509a960b41765b55" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class TDerived2</type>
+          </param>
+          <param>
+            <type>class TBoundingVolume2</type>
+          </param>
+          <param>
+            <type>class TPrimitive2</type>
+          </param>
+          <param>
+            <type>int</type>
+            <declname>Dims2</declname>
+            <defname>Dims2</defname>
+          </param>
+        </templateparamlist>
+        <type>friend class</type>
+        <definition>friend class BoundingVolumeHierarchy</definition>
+        <argsstring></argsstring>
+        <name>BoundingVolumeHierarchy</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/BoundingVolumeHierarchy.h" line="35" column="5" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/BoundingVolumeHierarchy.h" bodystart="35" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="protected-attrib">
+      <memberdef kind="variable" id="classpbat_1_1geometry_1_1BoundingVolumeHierarchy_1ad828620c07e5bdfc1cc507eeb068a12c" prot="protected" static="no" mutable="no">
+        <type>std::vector&lt; BoundingVolumeType &gt;</type>
+        <definition>std::vector&lt;BoundingVolumeType&gt; pbat::geometry::BoundingVolumeHierarchy&lt; TDerived, TBoundingVolume, TPrimitive, Dims &gt;::mBoundingVolumes</definition>
+        <argsstring></argsstring>
+        <name>mBoundingVolumes</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/BoundingVolumeHierarchy.h" line="116" column="17" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/BoundingVolumeHierarchy.h" bodystart="116" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpbat_1_1geometry_1_1BoundingVolumeHierarchy_1a1316732dbb7ecebba9da79ce208304c5" prot="protected" static="no" mutable="no">
+        <type><ref refid="classpbat_1_1geometry_1_1KdTree" kindref="compound">KdTree</ref>&lt; kDims &gt;</type>
+        <definition>KdTree&lt;kDims&gt; pbat::geometry::BoundingVolumeHierarchy&lt; TDerived, TBoundingVolume, TPrimitive, Dims &gt;::mKdTree</definition>
+        <argsstring></argsstring>
+        <name>mKdTree</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/BoundingVolumeHierarchy.h" line="117" column="12" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/BoundingVolumeHierarchy.h" bodystart="117" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpbat_1_1geometry_1_1BoundingVolumeHierarchy_1a9af7b63212fba69911db7d48dbe4c3a1" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>pbat::geometry::BoundingVolumeHierarchy&lt; TDerived, TBoundingVolume, TPrimitive, Dims &gt;::BoundingVolumeHierarchy</definition>
+        <argsstring>()=default</argsstring>
+        <name>BoundingVolumeHierarchy</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/BoundingVolumeHierarchy.h" line="37" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1geometry_1_1BoundingVolumeHierarchy_1aa33e2a85b380bebb16dace6fe17ab5ac" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>void</type>
+        <definition>void pbat::geometry::BoundingVolumeHierarchy&lt; TDerived, TBoundingVolume, TPrimitive, Dims &gt;::Construct</definition>
+        <argsstring>(std::size_t nPrimitives, std::size_t maxPointsInLeaf=10u)</argsstring>
+        <name>Construct</name>
+        <param>
+          <type>std::size_t</type>
+          <declname>nPrimitives</declname>
+        </param>
+        <param>
+          <type>std::size_t</type>
+          <declname>maxPointsInLeaf</declname>
+          <defval>10u</defval>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>maxPointsInLeaf</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/BoundingVolumeHierarchy.h" line="43" column="10" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/BoundingVolumeHierarchy.h" bodystart="121" bodyend="136"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1geometry_1_1BoundingVolumeHierarchy_1adb858e89cc8f852571838e8edd7eb776" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>std::vector&lt; BoundingVolumeType &gt; const  &amp;</type>
+        <definition>std::vector&lt;BoundingVolumeType&gt; const&amp; pbat::geometry::BoundingVolumeHierarchy&lt; TDerived, TBoundingVolume, TPrimitive, Dims &gt;::BoundingVolumes</definition>
+        <argsstring>() const</argsstring>
+        <name>BoundingVolumes</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para></para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/BoundingVolumeHierarchy.h" line="48" column="23" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/BoundingVolumeHierarchy.h" bodystart="48" bodyend="48"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1geometry_1_1BoundingVolumeHierarchy_1a227f32152c55e54718dea43feec0d8b4" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>auto</type>
+        <definition>auto pbat::geometry::BoundingVolumeHierarchy&lt; TDerived, TBoundingVolume, TPrimitive, Dims &gt;::PrimitivesInBoundingVolume</definition>
+        <argsstring>(Index bvIdx) const</argsstring>
+        <name>PrimitivesInBoundingVolume</name>
+        <param>
+          <type>Index</type>
+          <declname>bvIdx</declname>
+        </param>
+        <briefdescription>
+<para>Returns the indices of the primitives contained in the bounding volume bvIdx. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>bvIdx</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para></para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/BoundingVolumeHierarchy.h" line="54" column="10" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/BoundingVolumeHierarchy.h" bodystart="140" bodyend="145"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1geometry_1_1BoundingVolumeHierarchy_1a2a29d4e81744fc0c120e3ec9beb0329c" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class FIntersectsBoundingVolume</type>
+          </param>
+          <param>
+            <type>class FIntersectsPrimitive</type>
+          </param>
+        </templateparamlist>
+        <type>std::vector&lt; Index &gt;</type>
+        <definition>std::vector&lt; Index &gt; pbat::geometry::BoundingVolumeHierarchy&lt; TDerived, TBoundingVolume, TPrimitive, Dims &gt;::PrimitivesIntersecting</definition>
+        <argsstring>(FIntersectsBoundingVolume &amp;&amp;ibv, FIntersectsPrimitive &amp;&amp;ip, std::size_t reserve=50ULL) const</argsstring>
+        <name>PrimitivesIntersecting</name>
+        <param>
+          <type>FIntersectsBoundingVolume &amp;&amp;</type>
+          <declname>ibv</declname>
+        </param>
+        <param>
+          <type>FIntersectsPrimitive &amp;&amp;</type>
+          <declname>ip</declname>
+        </param>
+        <param>
+          <type>std::size_t</type>
+          <declname>reserve</declname>
+          <defval>50ULL</defval>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>ibv</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Predicate pred(bv) evaluating to true if the bounding volume bv is intersected. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>ip</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Predicate pred(p) evaluating to true if the primitive p is intersected. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para></para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+<para>&lt; Cannot visit deeper than a leaf node</para>
+<para>&lt; Visit deeper if this bounding volume overlaps with the queried shape</para>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/BoundingVolumeHierarchy.h" line="62" column="17" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/BoundingVolumeHierarchy.h" bodystart="160" bodyend="191"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1geometry_1_1BoundingVolumeHierarchy_1af51532663eabc5e0a3fce30542317b3d" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class FDistanceToBoundingVolume</type>
+          </param>
+          <param>
+            <type>class FDistanceToPrimitive</type>
+          </param>
+        </templateparamlist>
+        <type>std::pair&lt; std::vector&lt; Index &gt;, std::vector&lt; Scalar &gt; &gt;</type>
+        <definition>std::pair&lt; std::vector&lt; Index &gt;, std::vector&lt; Scalar &gt; &gt; pbat::geometry::BoundingVolumeHierarchy&lt; TDerived, TBoundingVolume, TPrimitive, Dims &gt;::NearestPrimitivesTo</definition>
+        <argsstring>(FDistanceToBoundingVolume &amp;&amp;db, FDistanceToPrimitive &amp;&amp;dp, std::size_t K) const</argsstring>
+        <name>NearestPrimitivesTo</name>
+        <param>
+          <type>FDistanceToBoundingVolume &amp;&amp;</type>
+          <declname>db</declname>
+        </param>
+        <param>
+          <type>FDistanceToPrimitive &amp;&amp;</type>
+          <declname>dp</declname>
+        </param>
+        <param>
+          <type>std::size_t</type>
+          <declname>K</declname>
+        </param>
+        <briefdescription>
+<para>Obtains the k nearest neighbours (primitives of this BVH) </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>T</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>db</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Distance function d(b) between bounding volume b and user-owned shape </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>dp</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Distance function d(p) between primitive p and user-owned shape </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>K</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Number of nearest neighbours to query </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para></para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+<para>&lt; Indicates if this QueueItem holds a primitive or a volume</para>
+<para>&lt; Index of the primitive, if this QueueItem holds a primitive, or index of the node, if this QueueItem holds a volume (recall that node_idx = bv_idx + 1)</para>
+<para>&lt; Distance from this QueueItem to p</para>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/BoundingVolumeHierarchy.h" line="76" column="5" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/BoundingVolumeHierarchy.h" bodystart="196" bodyend="272"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1geometry_1_1BoundingVolumeHierarchy_1aabd8e637cfe35f789e8dc3d77d84becf" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>void</type>
+        <definition>void pbat::geometry::BoundingVolumeHierarchy&lt; TDerived, TBoundingVolume, TPrimitive, Dims &gt;::Update</definition>
+        <argsstring>()</argsstring>
+        <name>Update</name>
+        <briefdescription>
+<para>Update the bounding volumes of this BVH. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/BoundingVolumeHierarchy.h" line="82" column="10" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/BoundingVolumeHierarchy.h" bodystart="148" bodyend="155"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1geometry_1_1BoundingVolumeHierarchy_1a8bb7dd78c9d6bff777a8f28f4277488b" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>PrimitiveType</type>
+        <definition>PrimitiveType pbat::geometry::BoundingVolumeHierarchy&lt; TDerived, TBoundingVolume, TPrimitive, Dims &gt;::Primitive</definition>
+        <argsstring>(Index p) const</argsstring>
+        <name>Primitive</name>
+        <param>
+          <type>Index</type>
+          <declname>p</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/BoundingVolumeHierarchy.h" line="85" column="19" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/BoundingVolumeHierarchy.h" bodystart="85" bodyend="88"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1geometry_1_1BoundingVolumeHierarchy_1a231a0d9d9107a96cb3369cc7e151537c" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>auto</type>
+        <definition>auto pbat::geometry::BoundingVolumeHierarchy&lt; TDerived, TBoundingVolume, TPrimitive, Dims &gt;::PrimitiveLocation</definition>
+        <argsstring>(PrimitiveType const &amp;primitive) const</argsstring>
+        <name>PrimitiveLocation</name>
+        <param>
+          <type>PrimitiveType const &amp;</type>
+          <declname>primitive</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/BoundingVolumeHierarchy.h" line="89" column="10" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/BoundingVolumeHierarchy.h" bodystart="89" bodyend="92"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1geometry_1_1BoundingVolumeHierarchy_1a2411b24b598154d4f4f63f6c1baefe53" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class RPrimitiveIndices</type>
+          </param>
+        </templateparamlist>
+        <type>BoundingVolumeType</type>
+        <definition>BoundingVolumeType pbat::geometry::BoundingVolumeHierarchy&lt; TDerived, TBoundingVolume, TPrimitive, Dims &gt;::BoundingVolumeOf</definition>
+        <argsstring>(RPrimitiveIndices &amp;&amp;primitiveIndexRange) const</argsstring>
+        <name>BoundingVolumeOf</name>
+        <param>
+          <type>RPrimitiveIndices &amp;&amp;</type>
+          <declname>primitiveIndexRange</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/BoundingVolumeHierarchy.h" line="94" column="24" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/BoundingVolumeHierarchy.h" bodystart="94" bodyend="97"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="protected-func">
+      <memberdef kind="function" id="classpbat_1_1geometry_1_1BoundingVolumeHierarchy_1aabf91e306d8b51aa514eb82348cbf624" prot="protected" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class TDerived2</type>
+          </param>
+          <param>
+            <type>class TBoundingVolume2</type>
+          </param>
+          <param>
+            <type>class TPrimitive2</type>
+          </param>
+          <param>
+            <type>int</type>
+            <declname>Dims2</declname>
+            <defname>Dims2</defname>
+          </param>
+          <param>
+            <type>class FBoundingVolumesOverlap</type>
+          </param>
+          <param>
+            <type>class FPrimitivesOverlap</type>
+          </param>
+          <param>
+            <type>class FPrimitivesAreAdjacent</type>
+          </param>
+        </templateparamlist>
+        <type>IndexMatrixX</type>
+        <definition>IndexMatrixX pbat::geometry::BoundingVolumeHierarchy&lt; TDerived, TBoundingVolume, TPrimitive, Dims &gt;::OverlappingPrimitivesImpl</definition>
+        <argsstring>(BoundingVolumeHierarchy&lt; TDerived2, TBoundingVolume2, TPrimitive2, Dims2 &gt; const &amp;other, FBoundingVolumesOverlap &amp;&amp;bvo, FPrimitivesOverlap &amp;&amp;po, FPrimitivesAreAdjacent &amp;&amp;PrimitivesAreAdjacent=[](PrimitiveType const &amp;p1, TPrimitive2 const &amp;p2) -&gt; bool { return false;}, std::size_t reserve=50ULL) const</argsstring>
+        <name>OverlappingPrimitivesImpl</name>
+        <param>
+          <type><ref refid="classpbat_1_1geometry_1_1BoundingVolumeHierarchy" kindref="compound">BoundingVolumeHierarchy</ref>&lt; TDerived2, TBoundingVolume2, TPrimitive2, Dims2 &gt; const &amp;</type>
+          <declname>other</declname>
+        </param>
+        <param>
+          <type>FBoundingVolumesOverlap &amp;&amp;</type>
+          <declname>bvo</declname>
+        </param>
+        <param>
+          <type>FPrimitivesOverlap &amp;&amp;</type>
+          <declname>po</declname>
+        </param>
+        <param>
+          <type>FPrimitivesAreAdjacent &amp;&amp;</type>
+          <declname>PrimitivesAreAdjacent</declname>
+          <defval>[](PrimitiveType const &amp;p1, TPrimitive2 const &amp;p2) -&gt; bool { return false;}</defval>
+        </param>
+        <param>
+          <type>std::size_t</type>
+          <declname>reserve</declname>
+          <defval>50ULL</defval>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+<para>&lt; Root bounding volumes of *this and other</para>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/BoundingVolumeHierarchy.h" line="108" column="18" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/BoundingVolumeHierarchy.h" bodystart="284" bodyend="368"/>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+<para>CRTP base class for BVHs. </para>
+    </briefdescription>
+    <detaileddescription>
+<para><parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>TDerived</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Type of the child class (the concrete BVH implementation) </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>TPrimitive</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Type of primitives stored in the BVH </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>TBoundingVolume</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Type of bounding volumes used in the BVH tree </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>Dims</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Embedding dimensionality </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+    </detaileddescription>
+    <collaborationgraph>
+      <node id="1">
+        <label>pbat::geometry::BoundingVolumeHierarchy&lt; TDerived, TBoundingVolume, TPrimitive, Dims &gt;</label>
+        <link refid="classpbat_1_1geometry_1_1BoundingVolumeHierarchy"/>
+        <childnode refid="2" relation="usage">
+          <edgelabel>mKdTree</edgelabel>
+        </childnode>
+      </node>
+      <node id="2">
+        <label>pbat::geometry::KdTree&lt; kDims &gt;</label>
+        <link refid="classpbat_1_1geometry_1_1KdTree"/>
+      </node>
+    </collaborationgraph>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/BoundingVolumeHierarchy.h" line="27" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/BoundingVolumeHierarchy.h" bodystart="26" bodyend="118"/>
+    <listofallmembers>
+      <member refid="classpbat_1_1geometry_1_1BoundingVolumeHierarchy_1a63ce4d917462a409509a960b41765b55" prot="public" virt="non-virtual"><scope>pbat::geometry::BoundingVolumeHierarchy</scope><name>BoundingVolumeHierarchy</name></member>
+      <member refid="classpbat_1_1geometry_1_1BoundingVolumeHierarchy_1a9af7b63212fba69911db7d48dbe4c3a1" prot="public" virt="non-virtual"><scope>pbat::geometry::BoundingVolumeHierarchy</scope><name>BoundingVolumeHierarchy</name></member>
+      <member refid="classpbat_1_1geometry_1_1BoundingVolumeHierarchy_1a2411b24b598154d4f4f63f6c1baefe53" prot="public" virt="non-virtual"><scope>pbat::geometry::BoundingVolumeHierarchy</scope><name>BoundingVolumeOf</name></member>
+      <member refid="classpbat_1_1geometry_1_1BoundingVolumeHierarchy_1adb858e89cc8f852571838e8edd7eb776" prot="public" virt="non-virtual"><scope>pbat::geometry::BoundingVolumeHierarchy</scope><name>BoundingVolumes</name></member>
+      <member refid="classpbat_1_1geometry_1_1BoundingVolumeHierarchy_1a323a572a1983a6cc0b2303e68279d183" prot="public" virt="non-virtual"><scope>pbat::geometry::BoundingVolumeHierarchy</scope><name>BoundingVolumeType</name></member>
+      <member refid="classpbat_1_1geometry_1_1BoundingVolumeHierarchy_1aa33e2a85b380bebb16dace6fe17ab5ac" prot="public" virt="non-virtual"><scope>pbat::geometry::BoundingVolumeHierarchy</scope><name>Construct</name></member>
+      <member refid="classpbat_1_1geometry_1_1BoundingVolumeHierarchy_1ae3ac974f1eaf1dc33d3a4fb6e89e817d" prot="public" virt="non-virtual"><scope>pbat::geometry::BoundingVolumeHierarchy</scope><name>DerivedType</name></member>
+      <member refid="classpbat_1_1geometry_1_1BoundingVolumeHierarchy_1a599e52e7c7b7464d5ad49a087e74f685" prot="public" virt="non-virtual"><scope>pbat::geometry::BoundingVolumeHierarchy</scope><name>kDims</name></member>
+      <member refid="classpbat_1_1geometry_1_1BoundingVolumeHierarchy_1ad828620c07e5bdfc1cc507eeb068a12c" prot="protected" virt="non-virtual"><scope>pbat::geometry::BoundingVolumeHierarchy</scope><name>mBoundingVolumes</name></member>
+      <member refid="classpbat_1_1geometry_1_1BoundingVolumeHierarchy_1a1316732dbb7ecebba9da79ce208304c5" prot="protected" virt="non-virtual"><scope>pbat::geometry::BoundingVolumeHierarchy</scope><name>mKdTree</name></member>
+      <member refid="classpbat_1_1geometry_1_1BoundingVolumeHierarchy_1af51532663eabc5e0a3fce30542317b3d" prot="public" virt="non-virtual"><scope>pbat::geometry::BoundingVolumeHierarchy</scope><name>NearestPrimitivesTo</name></member>
+      <member refid="classpbat_1_1geometry_1_1BoundingVolumeHierarchy_1aabf91e306d8b51aa514eb82348cbf624" prot="protected" virt="non-virtual"><scope>pbat::geometry::BoundingVolumeHierarchy</scope><name>OverlappingPrimitivesImpl</name></member>
+      <member refid="classpbat_1_1geometry_1_1BoundingVolumeHierarchy_1a8bb7dd78c9d6bff777a8f28f4277488b" prot="public" virt="non-virtual"><scope>pbat::geometry::BoundingVolumeHierarchy</scope><name>Primitive</name></member>
+      <member refid="classpbat_1_1geometry_1_1BoundingVolumeHierarchy_1a231a0d9d9107a96cb3369cc7e151537c" prot="public" virt="non-virtual"><scope>pbat::geometry::BoundingVolumeHierarchy</scope><name>PrimitiveLocation</name></member>
+      <member refid="classpbat_1_1geometry_1_1BoundingVolumeHierarchy_1a227f32152c55e54718dea43feec0d8b4" prot="public" virt="non-virtual"><scope>pbat::geometry::BoundingVolumeHierarchy</scope><name>PrimitivesInBoundingVolume</name></member>
+      <member refid="classpbat_1_1geometry_1_1BoundingVolumeHierarchy_1a2a29d4e81744fc0c120e3ec9beb0329c" prot="public" virt="non-virtual"><scope>pbat::geometry::BoundingVolumeHierarchy</scope><name>PrimitivesIntersecting</name></member>
+      <member refid="classpbat_1_1geometry_1_1BoundingVolumeHierarchy_1a1cc2d500243dbb646ea19f05b4fcae3e" prot="public" virt="non-virtual"><scope>pbat::geometry::BoundingVolumeHierarchy</scope><name>PrimitiveType</name></member>
+      <member refid="classpbat_1_1geometry_1_1BoundingVolumeHierarchy_1aabd8e637cfe35f789e8dc3d77d84becf" prot="public" virt="non-virtual"><scope>pbat::geometry::BoundingVolumeHierarchy</scope><name>Update</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

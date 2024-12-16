@@ -1,0 +1,650 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="SubMatrix_8h" kind="file" language="C++">
+    <compoundname>SubMatrix.h</compoundname>
+    <includes refid="Assign_8h" local="yes">Assign.h</includes>
+    <includes refid="math_2linalg_2mini_2Concepts_8h" local="yes">Concepts.h</includes>
+    <includes refid="Transpose_8h" local="yes">Transpose.h</includes>
+    <includes refid="HostDevice_8h" local="yes">pbat/HostDevice.h</includes>
+    <includes local="no">type_traits</includes>
+    <includes local="no">utility</includes>
+    <includedby refid="Api_8h" local="yes">/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Api.h</includedby>
+    <includedby refid="Mini_8h" local="yes">/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Mini.h</includedby>
+    <includedby refid="SubMatrix_8cpp" local="yes">/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/SubMatrix.cpp</includedby>
+    <incdepgraph>
+      <node id="2">
+        <label>Assign.h</label>
+        <link refid="Assign_8h_source"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+      </node>
+      <node id="8">
+        <label>Transpose.h</label>
+        <link refid="Transpose_8h_source"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+      </node>
+      <node id="7">
+        <label>pbat/HostDevice.h</label>
+        <link refid="HostDevice_8h_source"/>
+      </node>
+      <node id="3">
+        <label>Concepts.h</label>
+        <link refid="math_2linalg_2mini_2Concepts_8h_source"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+      </node>
+      <node id="6">
+        <label>utility</label>
+      </node>
+      <node id="1">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/SubMatrix.h</label>
+        <link refid="SubMatrix_8h"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+      </node>
+      <node id="4">
+        <label>concepts</label>
+      </node>
+      <node id="5">
+        <label>type_traits</label>
+      </node>
+    </incdepgraph>
+    <invincdepgraph>
+      <node id="3">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/BinaryOperations.h</label>
+        <link refid="BinaryOperations_8h_source"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="14" relation="include">
+        </childnode>
+      </node>
+      <node id="16">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/DistanceQueries.h</label>
+        <link refid="DistanceQueries_8h_source"/>
+        <childnode refid="17" relation="include">
+        </childnode>
+        <childnode refid="18" relation="include">
+        </childnode>
+        <childnode refid="19" relation="include">
+        </childnode>
+      </node>
+      <node id="30">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Geometry.h</label>
+        <link refid="source_2pbat_2math_2linalg_2mini_2Geometry_8h_source"/>
+        <childnode refid="14" relation="include">
+        </childnode>
+      </node>
+      <node id="27">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/UnaryOperations.h</label>
+        <link refid="UnaryOperations_8h_source"/>
+        <childnode refid="14" relation="include">
+        </childnode>
+      </node>
+      <node id="32">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Inverse.h</label>
+        <link refid="Inverse_8h_source"/>
+        <childnode refid="14" relation="include">
+        </childnode>
+      </node>
+      <node id="20">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/OverlapQueries.h</label>
+        <link refid="OverlapQueries_8h_source"/>
+        <childnode refid="16" relation="include">
+        </childnode>
+        <childnode refid="17" relation="include">
+        </childnode>
+        <childnode refid="18" relation="include">
+        </childnode>
+        <childnode refid="19" relation="include">
+        </childnode>
+      </node>
+      <node id="40">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Repeat.h</label>
+        <link refid="Repeat_8h_source"/>
+        <childnode refid="14" relation="include">
+        </childnode>
+      </node>
+      <node id="31">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Matrix.h</label>
+        <link refid="Matrix_8h_source"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="32" relation="include">
+        </childnode>
+        <childnode refid="14" relation="include">
+        </childnode>
+        <childnode refid="33" relation="include">
+        </childnode>
+        <childnode refid="35" relation="include">
+        </childnode>
+        <childnode refid="36" relation="include">
+        </childnode>
+      </node>
+      <node id="6">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/Pbat.h</label>
+        <link refid="Pbat_8h_source"/>
+      </node>
+      <node id="24">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/LinAlg.h</label>
+        <link refid="source_2pbat_2math_2linalg_2LinAlg_8h_source"/>
+        <childnode refid="25" relation="include">
+        </childnode>
+      </node>
+      <node id="34">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/physics/Physics.h</label>
+        <link refid="Physics_8h_source"/>
+        <childnode refid="6" relation="include">
+        </childnode>
+      </node>
+      <node id="5">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Fem.h</label>
+        <link refid="source_2pbat_2fem_2Fem_8h_source"/>
+        <childnode refid="6" relation="include">
+        </childnode>
+      </node>
+      <node id="26">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Scale.h</label>
+        <link refid="Scale_8h_source"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="14" relation="include">
+        </childnode>
+        <childnode refid="27" relation="include">
+        </childnode>
+      </node>
+      <node id="14">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Mini.h</label>
+        <link refid="Mini_8h_source"/>
+        <childnode refid="15" relation="include">
+        </childnode>
+        <childnode refid="23" relation="include">
+        </childnode>
+        <childnode refid="20" relation="include">
+        </childnode>
+        <childnode refid="16" relation="include">
+        </childnode>
+        <childnode refid="24" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="21" relation="include">
+        </childnode>
+      </node>
+      <node id="21">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Kernels.h</label>
+        <link refid="xpbd_2Kernels_8h_source"/>
+        <childnode refid="22" relation="include">
+        </childnode>
+      </node>
+      <node id="33">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/physics/HyperElasticity.h</label>
+        <link refid="HyperElasticity_8h_source"/>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="34" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+      </node>
+      <node id="9">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Kernels.h</label>
+        <link refid="vbd_2lod_2Kernels_8h_source"/>
+        <childnode refid="10" relation="include">
+        </childnode>
+      </node>
+      <node id="25">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/Math.h</label>
+        <link refid="source_2pbat_2math_2Math_8h_source"/>
+        <childnode refid="6" relation="include">
+        </childnode>
+      </node>
+      <node id="28">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Eigen.h</label>
+        <link refid="math_2linalg_2mini_2Eigen_8h_source"/>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="19" relation="include">
+        </childnode>
+        <childnode refid="14" relation="include">
+        </childnode>
+      </node>
+      <node id="23">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/IntersectionQueries.h</label>
+        <link refid="IntersectionQueries_8h_source"/>
+        <childnode refid="20" relation="include">
+        </childnode>
+        <childnode refid="17" relation="include">
+        </childnode>
+        <childnode refid="21" relation="include">
+        </childnode>
+      </node>
+      <node id="17">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/Geometry.h</label>
+        <link refid="source_2pbat_2geometry_2Geometry_8h_source"/>
+        <childnode refid="6" relation="include">
+        </childnode>
+      </node>
+      <node id="22">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Xpbd.h</label>
+        <link refid="source_2pbat_2sim_2xpbd_2Xpbd_8h_source"/>
+      </node>
+      <node id="10">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Lod.h</label>
+        <link refid="source_2pbat_2sim_2vbd_2lod_2Lod_8h_source"/>
+      </node>
+      <node id="18">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/TetrahedralAabbHierarchy.h</label>
+        <link refid="source_2pbat_2geometry_2TetrahedralAabbHierarchy_8h_source"/>
+        <childnode refid="17" relation="include">
+        </childnode>
+      </node>
+      <node id="12">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/multigrid/Kernels.h</label>
+        <link refid="vbd_2multigrid_2Kernels_8h_source"/>
+        <childnode refid="13" relation="include">
+        </childnode>
+      </node>
+      <node id="37">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Reductions.h</label>
+        <link refid="Reductions_8h_source"/>
+        <childnode refid="38" relation="include">
+        </childnode>
+        <childnode refid="14" relation="include">
+        </childnode>
+      </node>
+      <node id="29">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Flatten.h</label>
+        <link refid="Flatten_8h_source"/>
+        <childnode refid="14" relation="include">
+        </childnode>
+      </node>
+      <node id="39">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Product.h</label>
+        <link refid="Product_8h_source"/>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="37" relation="include">
+        </childnode>
+        <childnode refid="14" relation="include">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Api.h</label>
+        <link refid="Api_8h_source"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="26" relation="include">
+        </childnode>
+        <childnode refid="28" relation="include">
+        </childnode>
+        <childnode refid="29" relation="include">
+        </childnode>
+        <childnode refid="30" relation="include">
+        </childnode>
+        <childnode refid="31" relation="include">
+        </childnode>
+        <childnode refid="37" relation="include">
+        </childnode>
+        <childnode refid="39" relation="include">
+        </childnode>
+        <childnode refid="40" relation="include">
+        </childnode>
+        <childnode refid="41" relation="include">
+        </childnode>
+        <childnode refid="27" relation="include">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/SubMatrix.h</label>
+        <link refid="SubMatrix_8h"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="14" relation="include">
+        </childnode>
+      </node>
+      <node id="15">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/ClosestPointQueries.h</label>
+        <link refid="ClosestPointQueries_8h_source"/>
+        <childnode refid="16" relation="include">
+        </childnode>
+        <childnode refid="20" relation="include">
+        </childnode>
+        <childnode refid="17" relation="include">
+        </childnode>
+        <childnode refid="21" relation="include">
+        </childnode>
+      </node>
+      <node id="36">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/physics/StableNeoHookeanEnergy.h</label>
+        <link refid="StableNeoHookeanEnergy_8h_source"/>
+        <childnode refid="34" relation="include">
+        </childnode>
+      </node>
+      <node id="7">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/HyperElasticPotential.h</label>
+        <link refid="source_2pbat_2fem_2HyperElasticPotential_8h_source"/>
+        <childnode refid="5" relation="include">
+        </childnode>
+      </node>
+      <node id="19">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/TriangleAabbHierarchy.h</label>
+        <link refid="source_2pbat_2geometry_2TriangleAabbHierarchy_8h_source"/>
+        <childnode refid="17" relation="include">
+        </childnode>
+      </node>
+      <node id="8">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/Kernels.h</label>
+        <link refid="vbd_2Kernels_8h_source"/>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="11" relation="include">
+        </childnode>
+      </node>
+      <node id="13">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/multigrid/Multigrid.h</label>
+        <link refid="source_2pbat_2sim_2vbd_2multigrid_2Multigrid_8h_source"/>
+      </node>
+      <node id="4">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/DeformationGradient.h</label>
+        <link refid="DeformationGradient_8h_source"/>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+      </node>
+      <node id="35">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/physics/SaintVenantKirchhoffEnergy.h</label>
+        <link refid="SaintVenantKirchhoffEnergy_8h_source"/>
+        <childnode refid="34" relation="include">
+        </childnode>
+      </node>
+      <node id="11">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/Vbd.h</label>
+        <link refid="source_2pbat_2sim_2vbd_2Vbd_8h_source"/>
+      </node>
+      <node id="41">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Stack.h</label>
+        <link refid="math_2linalg_2mini_2Stack_8h_source"/>
+        <childnode refid="14" relation="include">
+        </childnode>
+      </node>
+      <node id="38">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Norm.h</label>
+        <link refid="Norm_8h_source"/>
+        <childnode refid="14" relation="include">
+        </childnode>
+        <childnode refid="27" relation="include">
+        </childnode>
+      </node>
+    </invincdepgraph>
+    <innerclass refid="classpbat_1_1math_1_1linalg_1_1mini_1_1ConstSubMatrix" prot="public">pbat::math::linalg::mini::ConstSubMatrix</innerclass>
+    <innerclass refid="classpbat_1_1math_1_1linalg_1_1mini_1_1SubMatrix" prot="public">pbat::math::linalg::mini::SubMatrix</innerclass>
+    <innernamespace refid="namespacepbat">pbat</innernamespace>
+    <innernamespace refid="namespacepbat_1_1math">pbat::math</innernamespace>
+    <innernamespace refid="namespacepbat_1_1math_1_1linalg">pbat::math::linalg</innernamespace>
+    <innernamespace refid="namespacepbat_1_1math_1_1linalg_1_1mini">pbat::math::linalg::mini</innernamespace>
+      <sectiondef kind="define">
+      <memberdef kind="define" id="SubMatrix_8h_1a5e6d811518b6c4b613063565bdd36306" prot="public" static="no">
+        <name>PBAT_MINI_SUBMATRIX_API</name>
+        <param><defname>SelfType</defname></param>
+        <initializer>    template &lt;auto S, auto T&gt;                                  \
+    PBAT_HOST_DEVICE [[maybe_unused]] auto Slice(int i, int j) \
+    {                                                          \
+        return SubMatrix&lt;SelfType, S, T&gt;(*this, i, j);         \
+    }                                                          \
+    PBAT_HOST_DEVICE [[maybe_unused]] auto Col(int j)          \
+    {                                                          \
+        return Slice&lt;kRows, 1&gt;(0, j);                          \
+    }                                                          \
+    PBAT_HOST_DEVICE [[maybe_unused]] auto Row(int i)          \
+    {                                                          \
+        return Slice&lt;1, kCols&gt;(i, 0);                          \
+    }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/SubMatrix.h" line="132" column="9" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/SubMatrix.h" bodystart="132" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="define" id="SubMatrix_8h_1af9eae966a8e44671ef80d8a6062e0746" prot="public" static="no">
+        <name>PBAT_MINI_CONST_SUBMATRIX_API</name>
+        <param><defname>SelfType</defname></param>
+        <initializer>    template &lt;auto S, auto T&gt;                                        \
+    PBAT_HOST_DEVICE [[maybe_unused]] auto Slice(int i, int j) const \
+    {                                                                \
+        return ConstSubMatrix&lt;SelfType, S, T&gt;(*this, i, j);          \
+    }                                                                \
+    PBAT_HOST_DEVICE [[maybe_unused]] auto Col(int j) const          \
+    {                                                                \
+        return Slice&lt;kRows, 1&gt;(0, j);                                \
+    }                                                                \
+    PBAT_HOST_DEVICE [[maybe_unused]] auto Row(int i) const          \
+    {                                                                \
+        return Slice&lt;1, kCols&gt;(i, 0);                                \
+    }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/SubMatrix.h" line="147" column="9" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/SubMatrix.h" bodystart="147" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="preprocessor">#ifndef<sp/>PBAT_MATH_LINALG_MINI_SUBMATRIX_H</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="2"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>PBAT_MATH_LINALG_MINI_SUBMATRIX_H</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="3"><highlight class="normal"></highlight></codeline>
+<codeline lineno="4"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;Assign.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="5"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;Concepts.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="6"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;Transpose.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="7"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;pbat/HostDevice.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="8"><highlight class="normal"></highlight></codeline>
+<codeline lineno="9"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;type_traits&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="10"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;utility&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="11"><highlight class="normal"></highlight></codeline>
+<codeline lineno="12"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal">pbat<sp/>{</highlight></codeline>
+<codeline lineno="13"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal">math<sp/>{</highlight></codeline>
+<codeline lineno="14"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal">linalg<sp/>{</highlight></codeline>
+<codeline lineno="15"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal">mini<sp/>{</highlight></codeline>
+<codeline lineno="16"><highlight class="normal"></highlight></codeline>
+<codeline lineno="17"><highlight class="normal"></highlight><highlight class="keyword">template</highlight><highlight class="normal"><sp/>&lt;</highlight><highlight class="keyword">class<sp/></highlight><highlight class="comment">/*CMatrix*/</highlight><highlight class="normal"><sp/>TMatrix,<sp/></highlight><highlight class="keywordtype">int</highlight><highlight class="normal"><sp/>M,<sp/></highlight><highlight class="keywordtype">int</highlight><highlight class="normal"><sp/>N&gt;</highlight></codeline>
+<codeline lineno="18" refid="classpbat_1_1math_1_1linalg_1_1mini_1_1ConstSubMatrix" refkind="compound"><highlight class="normal"></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal"><ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1ConstSubMatrix" kindref="compound">ConstSubMatrix</ref></highlight></codeline>
+<codeline lineno="19"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="20"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="21"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using</highlight><highlight class="normal"><sp/>NestedType<sp/>=<sp/>TMatrix;</highlight></codeline>
+<codeline lineno="22"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using</highlight><highlight class="normal"><sp/>ScalarType<sp/>=<sp/></highlight><highlight class="keyword">typename</highlight><highlight class="normal"><sp/>NestedType::ScalarType;</highlight></codeline>
+<codeline lineno="23"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using</highlight><highlight class="normal"><sp/><ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1ConstSubMatrix" kindref="compound">SelfType</ref><sp/><sp/><sp/>=<sp/><ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1ConstSubMatrix" kindref="compound">ConstSubMatrix&lt;NestedType, M, N&gt;</ref>;</highlight></codeline>
+<codeline lineno="24"><highlight class="normal"></highlight></codeline>
+<codeline lineno="25"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>constexpr<sp/>kRows<sp/><sp/><sp/><sp/><sp/>=<sp/>M;</highlight></codeline>
+<codeline lineno="26"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>constexpr<sp/>kCols<sp/><sp/><sp/><sp/><sp/>=<sp/>N;</highlight></codeline>
+<codeline lineno="27"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/>constexpr<sp/>bRowMajor<sp/>=<sp/>NestedType::bRowMajor;</highlight></codeline>
+<codeline lineno="28"><highlight class="normal"></highlight></codeline>
+<codeline lineno="29"><highlight class="normal"><sp/><sp/><sp/><sp/>PBAT_HOST_DEVICE<sp/><ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1ConstSubMatrix" kindref="compound">ConstSubMatrix</ref>(NestedType<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>A,<sp/></highlight><highlight class="keywordtype">int</highlight><highlight class="normal"><sp/>ib,<sp/></highlight><highlight class="keywordtype">int</highlight><highlight class="normal"><sp/>jb)<sp/>:<sp/>A(A),<sp/>ib(ib),<sp/>jb(jb)</highlight></codeline>
+<codeline lineno="30"><highlight class="normal"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="31"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>static_assert(</highlight></codeline>
+<codeline lineno="32"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>NestedType::kRows<sp/>&gt;=<sp/>M<sp/>and<sp/>NestedType::kCols<sp/>&gt;=<sp/>N<sp/>and<sp/>M<sp/>&gt;<sp/>0<sp/>and<sp/>N<sp/>&gt;<sp/>0,</highlight></codeline>
+<codeline lineno="33"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="stringliteral">&quot;Invalid<sp/>submatrix<sp/>dimensions&quot;</highlight><highlight class="normal">);</highlight></codeline>
+<codeline lineno="34"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="35"><highlight class="normal"></highlight></codeline>
+<codeline lineno="36"><highlight class="normal"><sp/><sp/><sp/><sp/>PBAT_HOST_DEVICE<sp/>constexpr<sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>Rows()</highlight><highlight class="keyword"><sp/>const<sp/></highlight><highlight class="normal">{<sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>kRows;<sp/>}</highlight></codeline>
+<codeline lineno="37"><highlight class="normal"><sp/><sp/><sp/><sp/>PBAT_HOST_DEVICE<sp/>constexpr<sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>Cols()</highlight><highlight class="keyword"><sp/>const<sp/></highlight><highlight class="normal">{<sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>kCols;<sp/>}</highlight></codeline>
+<codeline lineno="38"><highlight class="normal"></highlight></codeline>
+<codeline lineno="39"><highlight class="normal"><sp/><sp/><sp/><sp/>PBAT_HOST_DEVICE<sp/>ScalarType<sp/>operator()(</highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>i,<sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>j)</highlight><highlight class="keyword"><sp/>const<sp/></highlight><highlight class="normal">{<sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>A(ib<sp/>+<sp/>i,<sp/>jb<sp/>+<sp/>j);<sp/>}</highlight></codeline>
+<codeline lineno="40"><highlight class="normal"></highlight></codeline>
+<codeline lineno="41"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Vector(ized)<sp/>access</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="42"><highlight class="normal"><sp/><sp/><sp/><sp/>PBAT_HOST_DEVICE<sp/>ScalarType<sp/>operator()(</highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>i)</highlight><highlight class="keyword"><sp/>const<sp/></highlight><highlight class="normal">{<sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>(*</highlight><highlight class="keyword">this</highlight><highlight class="normal">)(i<sp/>%<sp/>kRows,<sp/>i<sp/>/<sp/>kRows);<sp/>}</highlight></codeline>
+<codeline lineno="43"><highlight class="normal"><sp/><sp/><sp/><sp/>PBAT_HOST_DEVICE<sp/>ScalarType<sp/>operator[](</highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>i)</highlight><highlight class="keyword"><sp/>const<sp/></highlight><highlight class="normal">{<sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>(*</highlight><highlight class="keyword">this</highlight><highlight class="normal">)(i);<sp/>}</highlight></codeline>
+<codeline lineno="44"><highlight class="normal"></highlight></codeline>
+<codeline lineno="45"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">template</highlight><highlight class="normal"><sp/>&lt;auto<sp/>S,<sp/>auto<sp/>T&gt;</highlight></codeline>
+<codeline lineno="46"><highlight class="normal"><sp/><sp/><sp/><sp/>PBAT_HOST_DEVICE<sp/><ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1ConstSubMatrix" kindref="compound">ConstSubMatrix&lt;SelfType, S, T&gt;</ref><sp/>Slice(</highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>i,<sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>j)</highlight><highlight class="keyword"><sp/>const</highlight></codeline>
+<codeline lineno="47"><highlight class="keyword"><sp/><sp/><sp/><sp/></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="48"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/><ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1ConstSubMatrix" kindref="compound">ConstSubMatrix&lt;SelfType, S, T&gt;</ref>(*</highlight><highlight class="keyword">this</highlight><highlight class="normal">,<sp/>i,<sp/>j);</highlight></codeline>
+<codeline lineno="49"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="50"><highlight class="normal"><sp/><sp/><sp/><sp/>PBAT_HOST_DEVICE<sp/><ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1ConstSubMatrix" kindref="compound">ConstSubMatrix&lt;SelfType, kRows, 1&gt;</ref><sp/>Col(</highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>j)</highlight><highlight class="keyword"><sp/>const</highlight></codeline>
+<codeline lineno="51"><highlight class="keyword"><sp/><sp/><sp/><sp/></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="52"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>Slice&lt;kRows,<sp/>1&gt;(0,<sp/>j);</highlight></codeline>
+<codeline lineno="53"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="54"><highlight class="normal"><sp/><sp/><sp/><sp/>PBAT_HOST_DEVICE<sp/><ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1ConstSubMatrix" kindref="compound">ConstSubMatrix&lt;SelfType, 1, kCols&gt;</ref><sp/>Row(</highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>i)</highlight><highlight class="keyword"><sp/>const</highlight></codeline>
+<codeline lineno="55"><highlight class="keyword"><sp/><sp/><sp/><sp/></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="56"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>Slice&lt;1,<sp/>kCols&gt;(i,<sp/>0);</highlight></codeline>
+<codeline lineno="57"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="58"><highlight class="normal"><sp/><sp/><sp/><sp/>PBAT_HOST_DEVICE<sp/><ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1ConstTransposeView" kindref="compound">ConstTransposeView&lt;SelfType const&gt;</ref><sp/>Transpose()</highlight><highlight class="keyword"><sp/>const</highlight></codeline>
+<codeline lineno="59"><highlight class="keyword"><sp/><sp/><sp/><sp/></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="60"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/><ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1ConstTransposeView" kindref="compound">ConstTransposeView&lt;SelfType const&gt;</ref>(*</highlight><highlight class="keyword">this</highlight><highlight class="normal">);</highlight></codeline>
+<codeline lineno="61"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="62"><highlight class="normal"></highlight></codeline>
+<codeline lineno="63"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">private</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="64"><highlight class="normal"><sp/><sp/><sp/><sp/>NestedType<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>A;</highlight></codeline>
+<codeline lineno="65"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">int</highlight><highlight class="normal"><sp/>ib,<sp/>jb;</highlight></codeline>
+<codeline lineno="66"><highlight class="normal">};</highlight></codeline>
+<codeline lineno="67"><highlight class="normal"></highlight></codeline>
+<codeline lineno="68"><highlight class="normal"></highlight><highlight class="keyword">template</highlight><highlight class="normal"><sp/>&lt;</highlight><highlight class="keyword">class<sp/></highlight><highlight class="comment">/*CMatrix*/</highlight><highlight class="normal"><sp/>TMatrix,<sp/></highlight><highlight class="keywordtype">int</highlight><highlight class="normal"><sp/>M,<sp/></highlight><highlight class="keywordtype">int</highlight><highlight class="normal"><sp/>N&gt;</highlight></codeline>
+<codeline lineno="69" refid="classpbat_1_1math_1_1linalg_1_1mini_1_1SubMatrix" refkind="compound"><highlight class="normal"></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal"><ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1SubMatrix" kindref="compound">SubMatrix</ref></highlight></codeline>
+<codeline lineno="70"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="71"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="72"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using</highlight><highlight class="normal"><sp/>NestedType<sp/>=<sp/>TMatrix;</highlight></codeline>
+<codeline lineno="73"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using</highlight><highlight class="normal"><sp/>ScalarType<sp/>=<sp/></highlight><highlight class="keyword">typename</highlight><highlight class="normal"><sp/>NestedType::ScalarType;</highlight></codeline>
+<codeline lineno="74"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using</highlight><highlight class="normal"><sp/><ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1SubMatrix" kindref="compound">SelfType</ref><sp/><sp/><sp/>=<sp/><ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1SubMatrix" kindref="compound">SubMatrix&lt;NestedType, M, N&gt;</ref>;</highlight></codeline>
+<codeline lineno="75"><highlight class="normal"></highlight></codeline>
+<codeline lineno="76"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>constexpr<sp/>kRows<sp/><sp/><sp/><sp/><sp/>=<sp/>M;</highlight></codeline>
+<codeline lineno="77"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>constexpr<sp/>kCols<sp/><sp/><sp/><sp/><sp/>=<sp/>N;</highlight></codeline>
+<codeline lineno="78"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/>constexpr<sp/>bRowMajor<sp/>=<sp/>NestedType::bRowMajor;</highlight></codeline>
+<codeline lineno="79"><highlight class="normal"></highlight></codeline>
+<codeline lineno="80"><highlight class="normal"><sp/><sp/><sp/><sp/>PBAT_HOST_DEVICE<sp/><ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1SubMatrix" kindref="compound">SubMatrix</ref>(NestedType&amp;<sp/>A,<sp/></highlight><highlight class="keywordtype">int</highlight><highlight class="normal"><sp/>ib,<sp/></highlight><highlight class="keywordtype">int</highlight><highlight class="normal"><sp/>jb)<sp/>:<sp/>A(A),<sp/>ib(ib),<sp/>jb(jb)</highlight></codeline>
+<codeline lineno="81"><highlight class="normal"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="82"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>static_assert(</highlight></codeline>
+<codeline lineno="83"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>NestedType::kRows<sp/>&gt;=<sp/>M<sp/>and<sp/>NestedType::kCols<sp/>&gt;=<sp/>N<sp/>and<sp/>M<sp/>&gt;<sp/>0<sp/>and<sp/>N<sp/>&gt;<sp/>0,</highlight></codeline>
+<codeline lineno="84"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="stringliteral">&quot;Invalid<sp/>submatrix<sp/>dimensions&quot;</highlight><highlight class="normal">);</highlight></codeline>
+<codeline lineno="85"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="86"><highlight class="normal"></highlight></codeline>
+<codeline lineno="87"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">template</highlight><highlight class="normal"><sp/>&lt;</highlight><highlight class="keyword">class<sp/></highlight><highlight class="comment">/*CMatrix*/</highlight><highlight class="normal"><sp/>TOtherMatrix&gt;</highlight></codeline>
+<codeline lineno="88"><highlight class="normal"><sp/><sp/><sp/><sp/>PBAT_HOST_DEVICE<sp/><ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1SubMatrix" kindref="compound">SelfType</ref>&amp;<sp/>operator=(TOtherMatrix&amp;&amp;<sp/>B)</highlight></codeline>
+<codeline lineno="89"><highlight class="normal"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="90"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>Assign(*</highlight><highlight class="keyword">this</highlight><highlight class="normal">,<sp/>std::forward&lt;TOtherMatrix&gt;(B));</highlight></codeline>
+<codeline lineno="91"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>*</highlight><highlight class="keyword">this</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="92"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="93"><highlight class="normal"></highlight></codeline>
+<codeline lineno="94"><highlight class="normal"><sp/><sp/><sp/><sp/>PBAT_HOST_DEVICE<sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>Rows()</highlight><highlight class="keyword"><sp/>const<sp/></highlight><highlight class="normal">{<sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>kRows;<sp/>}</highlight></codeline>
+<codeline lineno="95"><highlight class="normal"><sp/><sp/><sp/><sp/>PBAT_HOST_DEVICE<sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>Cols()</highlight><highlight class="keyword"><sp/>const<sp/></highlight><highlight class="normal">{<sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>kCols;<sp/>}</highlight></codeline>
+<codeline lineno="96"><highlight class="normal"></highlight></codeline>
+<codeline lineno="97"><highlight class="normal"><sp/><sp/><sp/><sp/>PBAT_HOST_DEVICE<sp/>ScalarType<sp/>operator()(</highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>i,<sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>j)</highlight><highlight class="keyword"><sp/>const<sp/></highlight><highlight class="normal">{<sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>A(ib<sp/>+<sp/>i,<sp/>jb<sp/>+<sp/>j);<sp/>}</highlight></codeline>
+<codeline lineno="98"><highlight class="normal"><sp/><sp/><sp/><sp/>PBAT_HOST_DEVICE<sp/>ScalarType&amp;<sp/>operator()(</highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>i,<sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>j)<sp/>{<sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>A(ib<sp/>+<sp/>i,<sp/>jb<sp/>+<sp/>j);<sp/>}</highlight></codeline>
+<codeline lineno="99"><highlight class="normal"></highlight></codeline>
+<codeline lineno="100"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Vector(ized)<sp/>access</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="101"><highlight class="normal"><sp/><sp/><sp/><sp/>PBAT_HOST_DEVICE<sp/>ScalarType<sp/>operator()(</highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>i)</highlight><highlight class="keyword"><sp/>const<sp/></highlight><highlight class="normal">{<sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>(*</highlight><highlight class="keyword">this</highlight><highlight class="normal">)(i<sp/>%<sp/>kRows,<sp/>i<sp/>/<sp/>kRows);<sp/>}</highlight></codeline>
+<codeline lineno="102"><highlight class="normal"><sp/><sp/><sp/><sp/>PBAT_HOST_DEVICE<sp/>ScalarType&amp;<sp/>operator()(</highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>i)<sp/>{<sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>(*</highlight><highlight class="keyword">this</highlight><highlight class="normal">)(i<sp/>%<sp/>kRows,<sp/>i<sp/>/<sp/>kRows);<sp/>}</highlight></codeline>
+<codeline lineno="103"><highlight class="normal"><sp/><sp/><sp/><sp/>PBAT_HOST_DEVICE<sp/>ScalarType<sp/>operator[](</highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>i)</highlight><highlight class="keyword"><sp/>const<sp/></highlight><highlight class="normal">{<sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>(*</highlight><highlight class="keyword">this</highlight><highlight class="normal">)(i);<sp/>}</highlight></codeline>
+<codeline lineno="104"><highlight class="normal"><sp/><sp/><sp/><sp/>PBAT_HOST_DEVICE<sp/>ScalarType&amp;<sp/>operator[](</highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>i)<sp/>{<sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>(*</highlight><highlight class="keyword">this</highlight><highlight class="normal">)(i);<sp/>}</highlight></codeline>
+<codeline lineno="105"><highlight class="normal"></highlight></codeline>
+<codeline lineno="106"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">template</highlight><highlight class="normal"><sp/>&lt;auto<sp/>S,<sp/>auto<sp/>T&gt;</highlight></codeline>
+<codeline lineno="107"><highlight class="normal"><sp/><sp/><sp/><sp/>PBAT_HOST_DEVICE<sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>Slice(</highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>i,<sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>j)</highlight></codeline>
+<codeline lineno="108"><highlight class="normal"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="109"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/><ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1SubMatrix" kindref="compound">SubMatrix&lt;SelfType, S, T&gt;</ref>(*</highlight><highlight class="keyword">this</highlight><highlight class="normal">,<sp/>i,<sp/>j);</highlight></codeline>
+<codeline lineno="110"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="111"><highlight class="normal"><sp/><sp/><sp/><sp/>PBAT_HOST_DEVICE<sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>Col(</highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>j)<sp/>{<sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>Slice&lt;kRows,<sp/>1&gt;(0,<sp/>j);<sp/>}</highlight></codeline>
+<codeline lineno="112"><highlight class="normal"><sp/><sp/><sp/><sp/>PBAT_HOST_DEVICE<sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>Row(</highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>i)<sp/>{<sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>Slice&lt;1,<sp/>kCols&gt;(i,<sp/>0);<sp/>}</highlight></codeline>
+<codeline lineno="113"><highlight class="normal"></highlight></codeline>
+<codeline lineno="114"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">template</highlight><highlight class="normal"><sp/>&lt;auto<sp/>S,<sp/>auto<sp/>T&gt;</highlight></codeline>
+<codeline lineno="115"><highlight class="normal"><sp/><sp/><sp/><sp/>PBAT_HOST_DEVICE<sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>Slice(</highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>i,<sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>j)</highlight><highlight class="keyword"><sp/>const</highlight></codeline>
+<codeline lineno="116"><highlight class="keyword"><sp/><sp/><sp/><sp/></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="117"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/><ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1ConstSubMatrix" kindref="compound">ConstSubMatrix&lt;SelfType, S, T&gt;</ref>(*</highlight><highlight class="keyword">this</highlight><highlight class="normal">,<sp/>i,<sp/>j);</highlight></codeline>
+<codeline lineno="118"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="119"><highlight class="normal"><sp/><sp/><sp/><sp/>PBAT_HOST_DEVICE<sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>Col(</highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>j)</highlight><highlight class="keyword"><sp/>const<sp/></highlight><highlight class="normal">{<sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>Slice&lt;kRows,<sp/>1&gt;(0,<sp/>j);<sp/>}</highlight></codeline>
+<codeline lineno="120"><highlight class="normal"><sp/><sp/><sp/><sp/>PBAT_HOST_DEVICE<sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>Row(</highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>i)</highlight><highlight class="keyword"><sp/>const<sp/></highlight><highlight class="normal">{<sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>Slice&lt;1,<sp/>kCols&gt;(i,<sp/>0);<sp/>}</highlight></codeline>
+<codeline lineno="121"><highlight class="normal"></highlight></codeline>
+<codeline lineno="122"><highlight class="normal"><sp/><sp/><sp/><sp/>PBAT_HOST_DEVICE<sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>Transpose()<sp/>{<sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/><ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1TransposeView" kindref="compound">TransposeView&lt;SelfType&gt;</ref>(*</highlight><highlight class="keyword">this</highlight><highlight class="normal">);<sp/>}</highlight></codeline>
+<codeline lineno="123"><highlight class="normal"><sp/><sp/><sp/><sp/>PBAT_HOST_DEVICE<sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>Transpose()</highlight><highlight class="keyword"><sp/>const<sp/></highlight><highlight class="normal">{<sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/><ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1ConstTransposeView" kindref="compound">ConstTransposeView&lt;SelfType&gt;</ref>(*</highlight><highlight class="keyword">this</highlight><highlight class="normal">);<sp/>}</highlight></codeline>
+<codeline lineno="124"><highlight class="normal"></highlight></codeline>
+<codeline lineno="125"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/>SetConstant(</highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>k)<sp/>{<sp/>AssignScalar(*</highlight><highlight class="keyword">this</highlight><highlight class="normal">,<sp/>k);<sp/>}</highlight></codeline>
+<codeline lineno="126"><highlight class="normal"></highlight></codeline>
+<codeline lineno="127"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">private</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="128"><highlight class="normal"><sp/><sp/><sp/><sp/>NestedType&amp;<sp/>A;</highlight></codeline>
+<codeline lineno="129"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">int</highlight><highlight class="normal"><sp/>ib,<sp/>jb;</highlight></codeline>
+<codeline lineno="130"><highlight class="normal">};</highlight></codeline>
+<codeline lineno="131"><highlight class="normal"></highlight></codeline>
+<codeline lineno="132"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>PBAT_MINI_SUBMATRIX_API(SelfType)<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>\</highlight></codeline>
+<codeline lineno="133"><highlight class="preprocessor"><sp/><sp/><sp/><sp/>template<sp/>&lt;auto<sp/>S,<sp/>auto<sp/>T&gt;<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>\</highlight></codeline>
+<codeline lineno="134"><highlight class="preprocessor"><sp/><sp/><sp/><sp/>PBAT_HOST_DEVICE<sp/>[[maybe_unused]]<sp/>auto<sp/>Slice(int<sp/>i,<sp/>int<sp/>j)<sp/>\</highlight></codeline>
+<codeline lineno="135"><highlight class="preprocessor"><sp/><sp/><sp/><sp/>{<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>\</highlight></codeline>
+<codeline lineno="136"><highlight class="preprocessor"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>return<sp/>SubMatrix&lt;SelfType,<sp/>S,<sp/>T&gt;(*this,<sp/>i,<sp/>j);<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>\</highlight></codeline>
+<codeline lineno="137"><highlight class="preprocessor"><sp/><sp/><sp/><sp/>}<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>\</highlight></codeline>
+<codeline lineno="138"><highlight class="preprocessor"><sp/><sp/><sp/><sp/>PBAT_HOST_DEVICE<sp/>[[maybe_unused]]<sp/>auto<sp/>Col(int<sp/>j)<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>\</highlight></codeline>
+<codeline lineno="139"><highlight class="preprocessor"><sp/><sp/><sp/><sp/>{<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>\</highlight></codeline>
+<codeline lineno="140"><highlight class="preprocessor"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>return<sp/>Slice&lt;kRows,<sp/>1&gt;(0,<sp/>j);<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>\</highlight></codeline>
+<codeline lineno="141"><highlight class="preprocessor"><sp/><sp/><sp/><sp/>}<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>\</highlight></codeline>
+<codeline lineno="142"><highlight class="preprocessor"><sp/><sp/><sp/><sp/>PBAT_HOST_DEVICE<sp/>[[maybe_unused]]<sp/>auto<sp/>Row(int<sp/>i)<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>\</highlight></codeline>
+<codeline lineno="143"><highlight class="preprocessor"><sp/><sp/><sp/><sp/>{<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>\</highlight></codeline>
+<codeline lineno="144"><highlight class="preprocessor"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>return<sp/>Slice&lt;1,<sp/>kCols&gt;(i,<sp/>0);<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>\</highlight></codeline>
+<codeline lineno="145"><highlight class="preprocessor"><sp/><sp/><sp/><sp/>}</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="146"><highlight class="normal"></highlight></codeline>
+<codeline lineno="147"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>PBAT_MINI_CONST_SUBMATRIX_API(SelfType)<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>\</highlight></codeline>
+<codeline lineno="148"><highlight class="preprocessor"><sp/><sp/><sp/><sp/>template<sp/>&lt;auto<sp/>S,<sp/>auto<sp/>T&gt;<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>\</highlight></codeline>
+<codeline lineno="149"><highlight class="preprocessor"><sp/><sp/><sp/><sp/>PBAT_HOST_DEVICE<sp/>[[maybe_unused]]<sp/>auto<sp/>Slice(int<sp/>i,<sp/>int<sp/>j)<sp/>const<sp/>\</highlight></codeline>
+<codeline lineno="150"><highlight class="preprocessor"><sp/><sp/><sp/><sp/>{<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>\</highlight></codeline>
+<codeline lineno="151"><highlight class="preprocessor"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>return<sp/>ConstSubMatrix&lt;SelfType,<sp/>S,<sp/>T&gt;(*this,<sp/>i,<sp/>j);<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>\</highlight></codeline>
+<codeline lineno="152"><highlight class="preprocessor"><sp/><sp/><sp/><sp/>}<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>\</highlight></codeline>
+<codeline lineno="153"><highlight class="preprocessor"><sp/><sp/><sp/><sp/>PBAT_HOST_DEVICE<sp/>[[maybe_unused]]<sp/>auto<sp/>Col(int<sp/>j)<sp/>const<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>\</highlight></codeline>
+<codeline lineno="154"><highlight class="preprocessor"><sp/><sp/><sp/><sp/>{<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>\</highlight></codeline>
+<codeline lineno="155"><highlight class="preprocessor"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>return<sp/>Slice&lt;kRows,<sp/>1&gt;(0,<sp/>j);<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>\</highlight></codeline>
+<codeline lineno="156"><highlight class="preprocessor"><sp/><sp/><sp/><sp/>}<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>\</highlight></codeline>
+<codeline lineno="157"><highlight class="preprocessor"><sp/><sp/><sp/><sp/>PBAT_HOST_DEVICE<sp/>[[maybe_unused]]<sp/>auto<sp/>Row(int<sp/>i)<sp/>const<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>\</highlight></codeline>
+<codeline lineno="158"><highlight class="preprocessor"><sp/><sp/><sp/><sp/>{<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>\</highlight></codeline>
+<codeline lineno="159"><highlight class="preprocessor"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>return<sp/>Slice&lt;1,<sp/>kCols&gt;(i,<sp/>0);<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>\</highlight></codeline>
+<codeline lineno="160"><highlight class="preprocessor"><sp/><sp/><sp/><sp/>}</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="161"><highlight class="normal"></highlight></codeline>
+<codeline lineno="162"><highlight class="normal">}<sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>mini</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="163"><highlight class="normal">}<sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>linalg</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="164"><highlight class="normal">}<sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>math</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="165"><highlight class="normal">}<sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>pbat</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="166"><highlight class="normal"></highlight></codeline>
+<codeline lineno="167"><highlight class="normal"></highlight><highlight class="preprocessor">#endif<sp/>//<sp/>PBAT_MATH_LINALG_MINI_SUBMATRIX_H</highlight></codeline>
+    </programlisting>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/SubMatrix.h"/>
+  </compounddef>
+</doxygen>

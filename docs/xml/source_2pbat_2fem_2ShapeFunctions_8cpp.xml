@@ -1,0 +1,542 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="source_2pbat_2fem_2ShapeFunctions_8cpp" kind="file" language="C++">
+    <compoundname>ShapeFunctions.cpp</compoundname>
+    <includes refid="source_2pbat_2fem_2ShapeFunctions_8h" local="yes">ShapeFunctions.h</includes>
+    <includes refid="source_2pbat_2fem_2Jacobian_8h" local="yes">Jacobian.h</includes>
+    <includes refid="source_2pbat_2fem_2Mesh_8h" local="yes">Mesh.h</includes>
+    <includes refid="Tetrahedron_8h" local="yes">Tetrahedron.h</includes>
+    <includes local="no">doctest/doctest.h</includes>
+    <includes refid="ConstexprFor_8h" local="no">pbat/common/ConstexprFor.h</includes>
+    <includes refid="PolynomialBasis_8h" local="no">pbat/math/PolynomialBasis.h</includes>
+    <incdepgraph>
+      <node id="40">
+        <label>pbat/math/PolynomialBasis.h</label>
+        <link refid="PolynomialBasis_8h"/>
+        <childnode refid="41" relation="include">
+        </childnode>
+        <childnode refid="42" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+      </node>
+      <node id="14">
+        <label>Eigen/Cholesky</label>
+      </node>
+      <node id="13">
+        <label>Jacobian.h</label>
+        <link refid="source_2pbat_2fem_2Jacobian_8h_source"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="14" relation="include">
+        </childnode>
+        <childnode refid="15" relation="include">
+        </childnode>
+        <childnode refid="16" relation="include">
+        </childnode>
+        <childnode refid="17" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="18" relation="include">
+        </childnode>
+        <childnode refid="19" relation="include">
+        </childnode>
+        <childnode refid="20" relation="include">
+        </childnode>
+        <childnode refid="21" relation="include">
+        </childnode>
+      </node>
+      <node id="15">
+        <label>Eigen/LU</label>
+      </node>
+      <node id="10">
+        <label>iterator</label>
+      </node>
+      <node id="11">
+        <label>ranges</label>
+      </node>
+      <node id="34">
+        <label>pbat/math/GaussQuadrature.h</label>
+        <link refid="GaussQuadrature_8h_source"/>
+        <childnode refid="35" relation="include">
+        </childnode>
+        <childnode refid="30" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+      </node>
+      <node id="42">
+        <label>numbers</label>
+      </node>
+      <node id="30">
+        <label>cstdint</label>
+      </node>
+      <node id="28">
+        <label>pbat/math/Rational.h</label>
+        <link refid="Rational_8h_source"/>
+        <childnode refid="29" relation="include">
+        </childnode>
+        <childnode refid="30" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="31" relation="include">
+        </childnode>
+      </node>
+      <node id="5">
+        <label>pbat/Aliases.h</label>
+        <link refid="Aliases_8h_source"/>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+      </node>
+      <node id="41">
+        <label>cmath</label>
+      </node>
+      <node id="27">
+        <label>numeric</label>
+      </node>
+      <node id="6">
+        <label>Eigen/Core</label>
+      </node>
+      <node id="20">
+        <label>string</label>
+      </node>
+      <node id="1">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/ShapeFunctions.cpp</label>
+        <link refid="source_2pbat_2fem_2ShapeFunctions_8cpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="13" relation="include">
+        </childnode>
+        <childnode refid="24" relation="include">
+        </childnode>
+        <childnode refid="32" relation="include">
+        </childnode>
+        <childnode refid="37" relation="include">
+        </childnode>
+        <childnode refid="38" relation="include">
+        </childnode>
+        <childnode refid="40" relation="include">
+        </childnode>
+      </node>
+      <node id="26">
+        <label>map</label>
+      </node>
+      <node id="33">
+        <label>QuadratureRules.h</label>
+        <link refid="QuadratureRules_8h_source"/>
+        <childnode refid="34" relation="include">
+        </childnode>
+        <childnode refid="36" relation="include">
+        </childnode>
+      </node>
+      <node id="22">
+        <label>exception</label>
+      </node>
+      <node id="36">
+        <label>pbat/math/SymmetricQuadratureRules.h</label>
+        <link refid="SymmetricQuadratureRules_8h_source"/>
+        <childnode refid="35" relation="include">
+        </childnode>
+        <childnode refid="30" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+      </node>
+      <node id="17">
+        <label>fmt/core.h</label>
+      </node>
+      <node id="37">
+        <label>doctest/doctest.h</label>
+      </node>
+      <node id="29">
+        <label>PhysicsBasedAnimationToolkitExport.h</label>
+      </node>
+      <node id="21">
+        <label>tbb/parallel_for.h</label>
+      </node>
+      <node id="7">
+        <label>Eigen/Sparse</label>
+      </node>
+      <node id="19">
+        <label>pbat/profiling/Profiling.h</label>
+      </node>
+      <node id="31">
+        <label>tuple</label>
+      </node>
+      <node id="9">
+        <label>pbat/common/Concepts.h</label>
+        <link refid="common_2Concepts_8h_source"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+      </node>
+      <node id="23">
+        <label>optional</label>
+      </node>
+      <node id="32">
+        <label>Tetrahedron.h</label>
+        <link refid="Tetrahedron_8h_source"/>
+        <childnode refid="33" relation="include">
+        </childnode>
+        <childnode refid="35" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+      </node>
+      <node id="39">
+        <label>utility</label>
+      </node>
+      <node id="35">
+        <label>array</label>
+      </node>
+      <node id="8">
+        <label>cstddef</label>
+      </node>
+      <node id="24">
+        <label>Mesh.h</label>
+        <link refid="source_2pbat_2fem_2Mesh_8h_source"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="13" relation="include">
+        </childnode>
+        <childnode refid="25" relation="include">
+        </childnode>
+        <childnode refid="22" relation="include">
+        </childnode>
+        <childnode refid="26" relation="include">
+        </childnode>
+        <childnode refid="27" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="18" relation="include">
+        </childnode>
+        <childnode refid="28" relation="include">
+        </childnode>
+        <childnode refid="19" relation="include">
+        </childnode>
+        <childnode refid="11" relation="include">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>ShapeFunctions.h</label>
+        <link refid="source_2pbat_2fem_2ShapeFunctions_8h_source"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="13" relation="include">
+        </childnode>
+        <childnode refid="14" relation="include">
+        </childnode>
+        <childnode refid="15" relation="include">
+        </childnode>
+        <childnode refid="22" relation="include">
+        </childnode>
+        <childnode refid="17" relation="include">
+        </childnode>
+        <childnode refid="23" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="19" relation="include">
+        </childnode>
+        <childnode refid="20" relation="include">
+        </childnode>
+        <childnode refid="21" relation="include">
+        </childnode>
+      </node>
+      <node id="38">
+        <label>pbat/common/ConstexprFor.h</label>
+        <link refid="ConstexprFor_8h_source"/>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="39" relation="include">
+        </childnode>
+      </node>
+      <node id="4">
+        <label>concepts</label>
+      </node>
+      <node id="16">
+        <label>Eigen/SVD</label>
+      </node>
+      <node id="3">
+        <label>Concepts.h</label>
+        <link refid="fem_2Concepts_8h_source"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+      </node>
+      <node id="12">
+        <label>type_traits</label>
+      </node>
+      <node id="25">
+        <label>algorithm</label>
+      </node>
+      <node id="18">
+        <label>pbat/common/Eigen.h</label>
+        <link refid="common_2Eigen_8h_source"/>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="11" relation="include">
+        </childnode>
+      </node>
+    </incdepgraph>
+      <sectiondef kind="func">
+      <memberdef kind="function" id="source_2pbat_2fem_2ShapeFunctions_8cpp_1a6003b1d06ea5988180459122bb67d8f9" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>TEST_CASE</definition>
+        <argsstring>(&quot;[fem] ShapeFunctions&quot;)</argsstring>
+        <name>TEST_CASE</name>
+        <param>
+          <type>&quot; ShapeFunctions&quot;</type>
+          <array>[fem]</array>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/ShapeFunctions.cpp" line="11" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/ShapeFunctions.cpp" bodystart="11" bodyend="87"/>
+      </memberdef>
+      <memberdef kind="function" id="source_2pbat_2fem_2ShapeFunctions_8cpp_1a98f2633fa98e7a4b4eb0996be642b764" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>TEST_CASE</definition>
+        <argsstring>(&quot;[fem] ShapeFunctionGradients&quot;)</argsstring>
+        <name>TEST_CASE</name>
+        <param>
+          <type>&quot; ShapeFunctionGradients&quot;</type>
+          <array>[fem]</array>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/ShapeFunctions.cpp" line="89" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/ShapeFunctions.cpp" bodystart="89" bodyend="134"/>
+      </memberdef>
+      <memberdef kind="function" id="source_2pbat_2fem_2ShapeFunctions_8cpp_1afa3e2b418dc473849dbdafce83336ce9" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>TEST_CASE</definition>
+        <argsstring>(&quot;[fem] ShapeFunctionGradientsAt&quot;)</argsstring>
+        <name>TEST_CASE</name>
+        <param>
+          <type>&quot; ShapeFunctionGradientsAt&quot;</type>
+          <array>[fem]</array>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/ShapeFunctions.cpp" line="136" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/ShapeFunctions.cpp" bodystart="136" bodyend="180"/>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="preprocessor">#include<sp/>&quot;ShapeFunctions.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="2"><highlight class="normal"></highlight></codeline>
+<codeline lineno="3"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;Jacobian.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="4"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;Mesh.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="5"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;Tetrahedron.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="6"><highlight class="normal"></highlight></codeline>
+<codeline lineno="7"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;doctest/doctest.h&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="8"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;pbat/common/ConstexprFor.h&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="9"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;<ref refid="PolynomialBasis_8h" kindref="compound">pbat/math/PolynomialBasis.h</ref>&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="10"><highlight class="normal"></highlight></codeline>
+<codeline lineno="11"><highlight class="normal">TEST_CASE(</highlight><highlight class="stringliteral">&quot;[fem]<sp/>ShapeFunctions&quot;</highlight><highlight class="normal">)</highlight></codeline>
+<codeline lineno="12"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="13"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/>namespace<sp/></highlight><highlight class="normal">pbat;</highlight></codeline>
+<codeline lineno="14"><highlight class="normal"></highlight></codeline>
+<codeline lineno="15"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Cube<sp/>mesh</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="16"><highlight class="normal"><sp/><sp/><sp/><sp/>MatrixX<sp/>V(3,<sp/>8);</highlight></codeline>
+<codeline lineno="17"><highlight class="normal"><sp/><sp/><sp/><sp/>IndexMatrixX<sp/>C(4,<sp/>5);</highlight></codeline>
+<codeline lineno="18"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>clang-format<sp/>off</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="19"><highlight class="normal"><sp/><sp/><sp/><sp/>V<sp/>&lt;&lt;<sp/>0.,<sp/>1.,<sp/>0.,<sp/>1.,<sp/>0.,<sp/>1.,<sp/>0.,<sp/>1.,</highlight></codeline>
+<codeline lineno="20"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>0.,<sp/>0.,<sp/>1.,<sp/>1.,<sp/>0.,<sp/>0.,<sp/>1.,<sp/>1.,</highlight></codeline>
+<codeline lineno="21"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>0.,<sp/>0.,<sp/>0.,<sp/>0.,<sp/>1.,<sp/>1.,<sp/>1.,<sp/>1.;</highlight></codeline>
+<codeline lineno="22"><highlight class="normal"><sp/><sp/><sp/><sp/>C<sp/>&lt;&lt;<sp/>0,<sp/>3,<sp/>5,<sp/>6,<sp/>0,</highlight></codeline>
+<codeline lineno="23"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>1,<sp/>2,<sp/>4,<sp/>7,<sp/>5,</highlight></codeline>
+<codeline lineno="24"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>3,<sp/>0,<sp/>6,<sp/>5,<sp/>3,</highlight></codeline>
+<codeline lineno="25"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>5,<sp/>6,<sp/>0,<sp/>3,<sp/>6;</highlight></codeline>
+<codeline lineno="26"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>clang-format<sp/>on</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="27"><highlight class="normal"><sp/><sp/><sp/><sp/>common::ForRange&lt;1,<sp/>4&gt;([&amp;]&lt;</highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>QuadratureOrder&gt;()<sp/>{</highlight></codeline>
+<codeline lineno="28"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>constexpr<sp/>kOrder<sp/>=<sp/>1;</highlight></codeline>
+<codeline lineno="29"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>constexpr<sp/>kDims<sp/><sp/>=<sp/>3;</highlight></codeline>
+<codeline lineno="30"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using</highlight><highlight class="normal"><sp/>Element<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/><ref refid="structpbat_1_1fem_1_1Tetrahedron" kindref="compound">fem::Tetrahedron&lt;kOrder&gt;</ref>;</highlight></codeline>
+<codeline lineno="31"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using</highlight><highlight class="normal"><sp/>Mesh<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/><ref refid="structpbat_1_1fem_1_1Mesh" kindref="compound">fem::Mesh&lt;Element, kDims&gt;</ref>;</highlight></codeline>
+<codeline lineno="32"><highlight class="normal"></highlight></codeline>
+<codeline lineno="33"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>Mesh<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>mesh{V,<sp/>C};</highlight></codeline>
+<codeline lineno="34"><highlight class="normal"></highlight></codeline>
+<codeline lineno="35"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>MatrixX<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>detJe<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/>fem::DeterminantOfJacobian&lt;QuadratureOrder&gt;(mesh);</highlight></codeline>
+<codeline lineno="36"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>MatrixX<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>intNe<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/>fem::IntegratedShapeFunctions&lt;QuadratureOrder&gt;(mesh,<sp/>detJe);</highlight></codeline>
+<codeline lineno="37"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>numberOfElements<sp/>=<sp/>mesh.E.cols();</highlight></codeline>
+<codeline lineno="38"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>constexpr<sp/>kNodesPerElement<sp/>=<sp/>Element::kNodes;</highlight></codeline>
+<codeline lineno="39"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>CHECK_EQ(intNe.rows(),<sp/>kNodesPerElement);</highlight></codeline>
+<codeline lineno="40"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>CHECK_EQ(intNe.cols(),<sp/>numberOfElements);</highlight></codeline>
+<codeline lineno="41"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>bIsStrictlyPositive<sp/>=<sp/>(intNe.array()<sp/>&gt;<sp/>0.).all();</highlight></codeline>
+<codeline lineno="42"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>CHECK(bIsStrictlyPositive);</highlight></codeline>
+<codeline lineno="43"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>MatrixX<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>gradNe<sp/>=<sp/>fem::ShapeFunctionGradients&lt;QuadratureOrder&gt;(mesh);</highlight></codeline>
+<codeline lineno="44"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>CHECK_EQ(gradNe.rows(),<sp/>kNodesPerElement);</highlight></codeline>
+<codeline lineno="45"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>CHECK_EQ(</highlight></codeline>
+<codeline lineno="46"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>gradNe.cols(),</highlight></codeline>
+<codeline lineno="47"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>Mesh::kDims<sp/>*<sp/>Element::QuadratureType&lt;QuadratureOrder&gt;::kPoints<sp/>*<sp/>numberOfElements);</highlight></codeline>
+<codeline lineno="48"><highlight class="normal"><sp/><sp/><sp/><sp/>});</highlight></codeline>
+<codeline lineno="49"><highlight class="normal"><sp/><sp/><sp/><sp/>common::ForRange&lt;1,<sp/>4&gt;([&amp;]&lt;</highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>PolynomialOrder&gt;()<sp/>{</highlight></codeline>
+<codeline lineno="50"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>constexpr<sp/>kDims<sp/>=<sp/>3;</highlight></codeline>
+<codeline lineno="51"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using</highlight><highlight class="normal"><sp/>Element<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/><ref refid="structpbat_1_1fem_1_1Tetrahedron" kindref="compound">fem::Tetrahedron&lt;PolynomialOrder&gt;</ref>;</highlight></codeline>
+<codeline lineno="52"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using</highlight><highlight class="normal"><sp/>Mesh<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/><ref refid="structpbat_1_1fem_1_1Mesh" kindref="compound">fem::Mesh&lt;Element, kDims&gt;</ref>;</highlight></codeline>
+<codeline lineno="53"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>Mesh<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>mesh{V,<sp/>C};</highlight></codeline>
+<codeline lineno="54"><highlight class="normal"></highlight></codeline>
+<codeline lineno="55"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Arrange<sp/>to<sp/>evaluate<sp/>shape<sp/>functions<sp/>at<sp/>nodes.</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="56"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>Matrix&lt;Element::kDims,<sp/>Element::kNodes&gt;<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>XiRef<sp/>=</highlight></codeline>
+<codeline lineno="57"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>common::ToEigen(Element::Coordinates)</highlight></codeline>
+<codeline lineno="58"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>.reshaped(Element::kDims,<sp/>Element::kNodes)</highlight></codeline>
+<codeline lineno="59"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>.template<sp/>cast&lt;Scalar&gt;()<sp/>/</highlight></codeline>
+<codeline lineno="60"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static_cast&lt;</highlight><highlight class="normal">Scalar</highlight><highlight class="keyword">&gt;</highlight><highlight class="normal">(Element::kOrder);</highlight></codeline>
+<codeline lineno="61"><highlight class="normal"></highlight></codeline>
+<codeline lineno="62"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>numberOfElements<sp/>=<sp/>mesh.<ref refid="structpbat_1_1fem_1_1Mesh_1a384afdf16df5efa27e09f17520402b5b" kindref="member">E</ref>.cols();</highlight></codeline>
+<codeline lineno="63"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>MatrixX<sp/>Xi(Element::kDims,<sp/>numberOfElements<sp/>*<sp/>Element::kNodes);</highlight></codeline>
+<codeline lineno="64"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">for</highlight><highlight class="normal"><sp/>(</highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>e<sp/>=<sp/>0;<sp/>e<sp/>&lt;<sp/>numberOfElements;<sp/>++e)</highlight></codeline>
+<codeline lineno="65"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="66"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>Xi.block&lt;Element::kDims,<sp/>Element::kNodes&gt;(0,<sp/>e<sp/>*<sp/>Element::kNodes)<sp/>=<sp/>XiRef;</highlight></codeline>
+<codeline lineno="67"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="68"><highlight class="normal"></highlight></codeline>
+<codeline lineno="69"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Compute<sp/>shape<sp/>functions<sp/>at<sp/>evaluation<sp/>points</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="70"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>MatrixX<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>N<sp/>=<sp/>fem::ShapeFunctionsAt&lt;Element&gt;(Xi);</highlight></codeline>
+<codeline lineno="71"><highlight class="normal"></highlight></codeline>
+<codeline lineno="72"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Assert</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="73"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>Scalar<sp/>constexpr<sp/>zero<sp/>=<sp/>1e-15;</highlight></codeline>
+<codeline lineno="74"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>CHECK_EQ(N.rows(),<sp/>Element::kNodes);</highlight></codeline>
+<codeline lineno="75"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>CHECK_EQ(N.cols(),<sp/>Xi.cols());</highlight></codeline>
+<codeline lineno="76"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">for</highlight><highlight class="normal"><sp/>(</highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>e<sp/>=<sp/>0;<sp/>e<sp/>&lt;<sp/>numberOfElements;<sp/>++e)</highlight></codeline>
+<codeline lineno="77"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="78"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>Matrix&lt;Element::kNodes,<sp/>Element::kNodes&gt;<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>Ne<sp/>=</highlight></codeline>
+<codeline lineno="79"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>N.block&lt;Element::kNodes,<sp/>Element::kNodes&gt;(0,<sp/>e<sp/>*<sp/>Element::kNodes);</highlight></codeline>
+<codeline lineno="80"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Check<sp/>that<sp/>shape<sp/>functions<sp/>satisfy<sp/>Kronecker<sp/>delta<sp/>property</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="81"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>Matrix&lt;Element::kNodes,<sp/>Element::kNodes&gt;<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>dij<sp/>=</highlight></codeline>
+<codeline lineno="82"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>Ne<sp/>-<sp/>Matrix&lt;Element::kNodes,<sp/>Element::kNodes&gt;::Identity();</highlight></codeline>
+<codeline lineno="83"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>Scalar<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>error<sp/>=<sp/>dij.squaredNorm();</highlight></codeline>
+<codeline lineno="84"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>CHECK_LE(error,<sp/>zero);</highlight></codeline>
+<codeline lineno="85"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="86"><highlight class="normal"><sp/><sp/><sp/><sp/>});</highlight></codeline>
+<codeline lineno="87"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="88"><highlight class="normal"></highlight></codeline>
+<codeline lineno="89"><highlight class="normal">TEST_CASE(</highlight><highlight class="stringliteral">&quot;[fem]<sp/>ShapeFunctionGradients&quot;</highlight><highlight class="normal">)</highlight></codeline>
+<codeline lineno="90"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="91"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/>namespace<sp/></highlight><highlight class="normal">pbat;</highlight></codeline>
+<codeline lineno="92"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>constexpr<sp/>kOrder<sp/>=<sp/>1;</highlight></codeline>
+<codeline lineno="93"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using</highlight><highlight class="normal"><sp/>ElementType<sp/><sp/><sp/><sp/><sp/>=<sp/><ref refid="structpbat_1_1fem_1_1Tetrahedron" kindref="compound">fem::Tetrahedron&lt;kOrder&gt;</ref>;</highlight></codeline>
+<codeline lineno="94"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>constexpr<sp/>kDims<sp/><sp/>=<sp/>ElementType::kDims;</highlight></codeline>
+<codeline lineno="95"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>constexpr<sp/>kNodes<sp/>=<sp/>ElementType::kNodes;</highlight></codeline>
+<codeline lineno="96"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Some<sp/>scaled<sp/>and<sp/>translated<sp/>tetrahedron</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="97"><highlight class="normal"><sp/><sp/><sp/><sp/>Matrix&lt;kDims,<sp/>4&gt;<sp/>X;</highlight></codeline>
+<codeline lineno="98"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>clang-format<sp/>off</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="99"><highlight class="normal"><sp/><sp/><sp/><sp/>X<sp/>&lt;&lt;<sp/>0.,<sp/>1.,<sp/>0.,<sp/>0.,</highlight></codeline>
+<codeline lineno="100"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>0.,<sp/>0.,<sp/>1.,<sp/>0.,</highlight></codeline>
+<codeline lineno="101"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>0.,<sp/>0.,<sp/>0.,<sp/>1.;</highlight></codeline>
+<codeline lineno="102"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>clang-format<sp/>on</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="103"><highlight class="normal"><sp/><sp/><sp/><sp/>Scalar<sp/>constexpr<sp/>scale<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/>2.;</highlight></codeline>
+<codeline lineno="104"><highlight class="normal"><sp/><sp/><sp/><sp/>Vector&lt;kDims&gt;<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>translation<sp/>=<sp/>Vector&lt;kDims&gt;::Ones();</highlight></codeline>
+<codeline lineno="105"><highlight class="normal"><sp/><sp/><sp/><sp/>X<sp/>*=<sp/>scale;</highlight></codeline>
+<codeline lineno="106"><highlight class="normal"><sp/><sp/><sp/><sp/>X.colwise()<sp/>+=<sp/>translation;</highlight></codeline>
+<codeline lineno="107"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>We<sp/>will<sp/>test<sp/>the<sp/>gradients<sp/>at<sp/>barycenter</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="108"><highlight class="normal"><sp/><sp/><sp/><sp/>Vector&lt;kDims&gt;<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>Xi{0.25,<sp/>0.25,<sp/>0.25};</highlight></codeline>
+<codeline lineno="109"><highlight class="normal"><sp/><sp/><sp/><sp/>Vector&lt;kDims<sp/>+<sp/>1&gt;<sp/>BXi{};</highlight></codeline>
+<codeline lineno="110"><highlight class="normal"><sp/><sp/><sp/><sp/>BXi(0)<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/>1.<sp/>-<sp/>Xi.sum();</highlight></codeline>
+<codeline lineno="111"><highlight class="normal"><sp/><sp/><sp/><sp/>BXi.segment(1,<sp/>kDims)<sp/>=<sp/>Xi;</highlight></codeline>
+<codeline lineno="112"><highlight class="normal"></highlight></codeline>
+<codeline lineno="113"><highlight class="normal"><sp/><sp/><sp/><sp/>Matrix&lt;kNodes,<sp/>kDims&gt;<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>GP<sp/>=<sp/>fem::ShapeFunctionGradients&lt;ElementType&gt;(Xi,<sp/>X);</highlight></codeline>
+<codeline lineno="114"><highlight class="normal"></highlight></codeline>
+<codeline lineno="115"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Numerically<sp/>compute<sp/>basis<sp/>functions<sp/>and<sp/>their<sp/>gradients.</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="116"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>We<sp/>know<sp/>that<sp/>the<sp/>basis<sp/>functions<sp/>are<sp/>interpolating<sp/>polynomials,</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="117"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>thus<sp/>we<sp/>simply<sp/>need<sp/>to<sp/>solve<sp/>for<sp/>the<sp/>polynomials<sp/>which<sp/>yield<sp/>the</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="118"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Kronecker<sp/>delta<sp/>at<sp/>nodes,<sp/>i.e.:</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="119"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>P(X_i)^T<sp/>a_j<sp/>=<sp/>\delta_{ij}<sp/>,</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="120"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>where<sp/>a_j<sp/>is<sp/>the<sp/>j^{th}<sp/>column<sp/>of<sp/>some<sp/>matrix<sp/>of<sp/>polynomial<sp/>coefficients<sp/>A.</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="121"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>This<sp/>amounts<sp/>to<sp/>computing<sp/>the<sp/>inverse<sp/>of<sp/>P(X)^T<sp/>.</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="122"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="classpbat_1_1math_1_1MonomialBasis" kindref="compound">math::MonomialBasis&lt;kDims, kOrder&gt;</ref><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>P{};</highlight></codeline>
+<codeline lineno="123"><highlight class="normal"><sp/><sp/><sp/><sp/>Matrix&lt;kNodes,<sp/>kNodes&gt;<sp/>PXT{};</highlight></codeline>
+<codeline lineno="124"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">for</highlight><highlight class="normal"><sp/>(</highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>i<sp/>=<sp/>0;<sp/>i<sp/>&lt;<sp/>kNodes;<sp/>++i)</highlight></codeline>
+<codeline lineno="125"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>PXT.row(i)<sp/>=<sp/>P.eval(X.col(i)).transpose();</highlight></codeline>
+<codeline lineno="126"><highlight class="normal"><sp/><sp/><sp/><sp/>Matrix&lt;kNodes,<sp/>kNodes&gt;<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>A<sp/>=<sp/>PXT.inverse();</highlight></codeline>
+<codeline lineno="127"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Knowing<sp/>that<sp/>the<sp/>i^{th}<sp/>basis<sp/>function<sp/>is<sp/>a_i^T<sp/>P(X),</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="128"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>its<sp/>gradient<sp/>is<sp/>thus<sp/>a_i^T<sp/>\nabla<sp/>P(X).</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="129"><highlight class="normal"><sp/><sp/><sp/><sp/>Matrix&lt;kNodes,<sp/>kDims&gt;<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>GPnumeric<sp/>=<sp/>(P.derivatives(X<sp/>*<sp/>BXi)<sp/>*<sp/>A).transpose();</highlight></codeline>
+<codeline lineno="130"><highlight class="normal"><sp/><sp/><sp/><sp/>Matrix&lt;kNodes,<sp/>kDims&gt;<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>GPerror<sp/><sp/><sp/>=<sp/>GP<sp/>-<sp/>GPnumeric;</highlight></codeline>
+<codeline lineno="131"><highlight class="normal"><sp/><sp/><sp/><sp/>Scalar<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>GPerrorMagnitude<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/>GPerror.squaredNorm();</highlight></codeline>
+<codeline lineno="132"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>constexpr<sp/>eps<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/>1e-14;</highlight></codeline>
+<codeline lineno="133"><highlight class="normal"><sp/><sp/><sp/><sp/>CHECK_LE(GPerrorMagnitude,<sp/>eps);</highlight></codeline>
+<codeline lineno="134"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="135"><highlight class="normal"></highlight></codeline>
+<codeline lineno="136"><highlight class="normal">TEST_CASE(</highlight><highlight class="stringliteral">&quot;[fem]<sp/>ShapeFunctionGradientsAt&quot;</highlight><highlight class="normal">)</highlight></codeline>
+<codeline lineno="137"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="138"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/>namespace<sp/></highlight><highlight class="normal">pbat;</highlight></codeline>
+<codeline lineno="139"><highlight class="normal"></highlight></codeline>
+<codeline lineno="140"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Cube<sp/>mesh</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="141"><highlight class="normal"><sp/><sp/><sp/><sp/>MatrixX<sp/>V(3,<sp/>8);</highlight></codeline>
+<codeline lineno="142"><highlight class="normal"><sp/><sp/><sp/><sp/>IndexMatrixX<sp/>C(4,<sp/>5);</highlight></codeline>
+<codeline lineno="143"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>clang-format<sp/>off</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="144"><highlight class="normal"><sp/><sp/><sp/><sp/>V<sp/>&lt;&lt;<sp/>0.,<sp/>1.,<sp/>0.,<sp/>1.,<sp/>0.,<sp/>1.,<sp/>0.,<sp/>1.,</highlight></codeline>
+<codeline lineno="145"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>0.,<sp/>0.,<sp/>1.,<sp/>1.,<sp/>0.,<sp/>0.,<sp/>1.,<sp/>1.,</highlight></codeline>
+<codeline lineno="146"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>0.,<sp/>0.,<sp/>0.,<sp/>0.,<sp/>1.,<sp/>1.,<sp/>1.,<sp/>1.;</highlight></codeline>
+<codeline lineno="147"><highlight class="normal"><sp/><sp/><sp/><sp/>C<sp/>&lt;&lt;<sp/>0,<sp/>3,<sp/>5,<sp/>6,<sp/>0,</highlight></codeline>
+<codeline lineno="148"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>1,<sp/>2,<sp/>4,<sp/>7,<sp/>5,</highlight></codeline>
+<codeline lineno="149"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>3,<sp/>0,<sp/>6,<sp/>5,<sp/>3,</highlight></codeline>
+<codeline lineno="150"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>5,<sp/>6,<sp/>0,<sp/>3,<sp/>6;</highlight></codeline>
+<codeline lineno="151"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>clang-format<sp/>on</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="152"><highlight class="normal"><sp/><sp/><sp/><sp/>common::ForRange&lt;1,<sp/>4&gt;([&amp;]&lt;</highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>PolynomialOrder&gt;()<sp/>{</highlight></codeline>
+<codeline lineno="153"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>constexpr<sp/>kDims<sp/>=<sp/>3;</highlight></codeline>
+<codeline lineno="154"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using</highlight><highlight class="normal"><sp/>ElementType<sp/><sp/><sp/><sp/>=<sp/><ref refid="structpbat_1_1fem_1_1Tetrahedron" kindref="compound">fem::Tetrahedron&lt;PolynomialOrder&gt;</ref>;</highlight></codeline>
+<codeline lineno="155"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using</highlight><highlight class="normal"><sp/>MeshType<sp/><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/><ref refid="structpbat_1_1fem_1_1Mesh" kindref="compound">fem::Mesh&lt;ElementType, kDims&gt;</ref>;</highlight></codeline>
+<codeline lineno="156"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>MeshType<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>mesh{V,<sp/>C};</highlight></codeline>
+<codeline lineno="157"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>constexpr<sp/>kQuadratureOrder<sp/>=<sp/>PolynomialOrder;</highlight></codeline>
+<codeline lineno="158"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using</highlight><highlight class="normal"><sp/>QuadratureRuleType<sp/>=<sp/></highlight><highlight class="keyword">typename</highlight><highlight class="normal"><sp/>ElementType::template<sp/>QuadratureType&lt;kQuadratureOrder&gt;;</highlight></codeline>
+<codeline lineno="159"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>constexpr<sp/>kQuadPts<sp/><sp/>=<sp/>QuadratureRuleType::kPoints;</highlight></codeline>
+<codeline lineno="160"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>numberOfElements<sp/>=<sp/>mesh.<ref refid="structpbat_1_1fem_1_1Mesh_1a384afdf16df5efa27e09f17520402b5b" kindref="member">E</ref>.cols();</highlight></codeline>
+<codeline lineno="161"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>MatrixX<sp/>Xi(kDims,<sp/>kQuadPts<sp/>*<sp/>numberOfElements);</highlight></codeline>
+<codeline lineno="162"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>IndexVectorX<sp/>Ei(kQuadPts<sp/>*<sp/>numberOfElements);</highlight></codeline>
+<codeline lineno="163"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>Xg<sp/>=<sp/>common::ToEigen(QuadratureRuleType::points)</highlight></codeline>
+<codeline lineno="164"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>.reshaped(QuadratureRuleType::kDims<sp/>+<sp/>1,<sp/>QuadratureRuleType::kPoints)</highlight></codeline>
+<codeline lineno="165"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>.template<sp/>bottomRows&lt;ElementType::kDims&gt;();</highlight></codeline>
+<codeline lineno="166"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">for</highlight><highlight class="normal"><sp/>(</highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>e<sp/>=<sp/>0;<sp/>e<sp/>&lt;<sp/>numberOfElements;<sp/>++e)</highlight></codeline>
+<codeline lineno="167"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="168"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>Ei.segment&lt;kQuadPts&gt;(e<sp/>*<sp/>kQuadPts).setConstant(e);</highlight></codeline>
+<codeline lineno="169"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">for</highlight><highlight class="normal"><sp/>(</highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>g<sp/>=<sp/>0;<sp/>g<sp/>&lt;<sp/>kQuadPts;<sp/>++g)</highlight></codeline>
+<codeline lineno="170"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="171"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>Xi.col(e<sp/>*<sp/>kQuadPts<sp/>+<sp/>g)<sp/>=<sp/>Xg.col(g);</highlight></codeline>
+<codeline lineno="172"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="173"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="174"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>MatrixX<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>GNe<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/>fem::ShapeFunctionGradientsAt(mesh,<sp/>Ei,<sp/>Xi,<sp/></highlight><highlight class="keyword">true</highlight><highlight class="normal">);</highlight></codeline>
+<codeline lineno="175"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>MatrixX<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>GNeExpected<sp/>=<sp/>fem::ShapeFunctionGradients&lt;kQuadratureOrder&gt;(mesh);</highlight></codeline>
+<codeline lineno="176"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>Scalar<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>GNeError<sp/><sp/><sp/><sp/><sp/>=<sp/>(GNe<sp/>-<sp/>GNeExpected).squaredNorm();</highlight></codeline>
+<codeline lineno="177"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>Scalar<sp/>constexpr<sp/>zero<sp/><sp/><sp/><sp/><sp/>=<sp/>1e-15;</highlight></codeline>
+<codeline lineno="178"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>CHECK_LE(GNeError,<sp/>zero);</highlight></codeline>
+<codeline lineno="179"><highlight class="normal"><sp/><sp/><sp/><sp/>});</highlight></codeline>
+<codeline lineno="180"><highlight class="normal">}</highlight></codeline>
+    </programlisting>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/ShapeFunctions.cpp"/>
+  </compounddef>
+</doxygen>

@@ -1,0 +1,308 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="classpbat_1_1py_1_1fem_1_1Mesh" kind="class" language="C++" prot="public">
+    <compoundname>pbat::py::fem::Mesh</compoundname>
+      <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="classpbat_1_1py_1_1fem_1_1Mesh_1afb05a613068b223cb31ca26ca43b1c75" prot="public" static="no" mutable="no">
+        <type>EElement</type>
+        <definition>EElement pbat::py::fem::Mesh::eElement</definition>
+        <argsstring></argsstring>
+        <name>eElement</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/Mesh.h" line="116" column="14" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/Mesh.h" bodystart="116" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpbat_1_1py_1_1fem_1_1Mesh_1a6c28d6aaa790dc99095a726229f65560" prot="public" static="no" mutable="no">
+        <type>int</type>
+        <definition>int pbat::py::fem::Mesh::mOrder</definition>
+        <argsstring></argsstring>
+        <name>mOrder</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/Mesh.h" line="117" column="9" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/Mesh.h" bodystart="117" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpbat_1_1py_1_1fem_1_1Mesh_1a3d5b0086fcfd24b0f439069ce5d81026" prot="public" static="no" mutable="no">
+        <type>int</type>
+        <definition>int pbat::py::fem::Mesh::mDims</definition>
+        <argsstring></argsstring>
+        <name>mDims</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/Mesh.h" line="118" column="9" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/Mesh.h" bodystart="118" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="classpbat_1_1py_1_1fem_1_1Mesh_1aff3a7810b8c06735149f80630d047d27" prot="private" static="no" mutable="no">
+        <type>void *</type>
+        <definition>void* pbat::py::fem::Mesh::mMesh</definition>
+        <argsstring></argsstring>
+        <name>mMesh</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/Mesh.h" line="121" column="10" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/Mesh.h" bodystart="121" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpbat_1_1py_1_1fem_1_1Mesh_1a85b60a96deb897a0ef4c16851b553d73" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>pbat::py::fem::Mesh::Mesh</definition>
+        <argsstring>(Eigen::Ref&lt; MatrixX const &gt; const &amp;V, Eigen::Ref&lt; IndexMatrixX const &gt; const &amp;C, EElement element, int order, int dims)</argsstring>
+        <name>Mesh</name>
+        <param>
+          <type>Eigen::Ref&lt; MatrixX const &gt; const &amp;</type>
+          <declname>V</declname>
+        </param>
+        <param>
+          <type>Eigen::Ref&lt; IndexMatrixX const &gt; const &amp;</type>
+          <declname>C</declname>
+        </param>
+        <param>
+          <type>EElement</type>
+          <declname>element</declname>
+        </param>
+        <param>
+          <type>int</type>
+          <declname>order</declname>
+        </param>
+        <param>
+          <type>int</type>
+          <declname>dims</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/Mesh.h" line="86" column="5" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/Mesh.cpp" bodystart="54" bodyend="63"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1py_1_1fem_1_1Mesh_1ad41411f46bdf0934feda4abf56d9622c" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class Func</type>
+          </param>
+        </templateparamlist>
+        <type>void</type>
+        <definition>void pbat::py::fem::Mesh::Apply</definition>
+        <argsstring>(Func &amp;&amp;f) const</argsstring>
+        <name>Apply</name>
+        <param>
+          <type>Func &amp;&amp;</type>
+          <declname>f</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/Mesh.h" line="94" column="10" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/Mesh.h" bodystart="127" bodyend="133"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1py_1_1fem_1_1Mesh_1a5a8b81f0a2459a96df097165e6c14979" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>auto</type>
+            <declname>MaxQuadratureOrder</declname>
+            <defname>MaxQuadratureOrder</defname>
+          </param>
+          <param>
+            <type>class Func</type>
+          </param>
+        </templateparamlist>
+        <type>void</type>
+        <definition>void pbat::py::fem::Mesh::ApplyWithQuadrature</definition>
+        <argsstring>(Func &amp;&amp;f, int qOrder) const</argsstring>
+        <name>ApplyWithQuadrature</name>
+        <param>
+          <type>Func &amp;&amp;</type>
+          <declname>f</declname>
+        </param>
+        <param>
+          <type>int</type>
+          <declname>qOrder</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/Mesh.h" line="97" column="10" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/Mesh.h" bodystart="136" bodyend="147"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1py_1_1fem_1_1Mesh_1a28ad9ed8f718b4c69be4180d6c08588f" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class MeshType</type>
+          </param>
+        </templateparamlist>
+        <type>MeshType *</type>
+        <definition>MeshType * pbat::py::fem::Mesh::Raw</definition>
+        <argsstring>()</argsstring>
+        <name>Raw</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/Mesh.h" line="100" column="14" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/Mesh.h" bodystart="150" bodyend="158"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1py_1_1fem_1_1Mesh_1abbab5a85e2a21341edf195c263ba8a8e" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class MeshType</type>
+          </param>
+        </templateparamlist>
+        <type>MeshType const  *</type>
+        <definition>MeshType const  * pbat::py::fem::Mesh::Raw</definition>
+        <argsstring>() const</argsstring>
+        <name>Raw</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/Mesh.h" line="103" column="20" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/Mesh.h" bodystart="161" bodyend="169"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1py_1_1fem_1_1Mesh_1a0f2205362b611dfed007c38ec3570af7" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>MatrixX</type>
+        <definition>MatrixX pbat::py::fem::Mesh::QuadraturePoints</definition>
+        <argsstring>(int qOrder) const</argsstring>
+        <name>QuadraturePoints</name>
+        <param>
+          <type>int</type>
+          <declname>qOrder</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/Mesh.h" line="105" column="13" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/Mesh.cpp" bodystart="65" bodyend="75"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1py_1_1fem_1_1Mesh_1a6a9f6d0e82b9e0c1ad94368d21bb3429" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>VectorX</type>
+        <definition>VectorX pbat::py::fem::Mesh::QuadratureWeights</definition>
+        <argsstring>(int qOrder) const</argsstring>
+        <name>QuadratureWeights</name>
+        <param>
+          <type>int</type>
+          <declname>qOrder</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/Mesh.h" line="106" column="13" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/Mesh.cpp" bodystart="77" bodyend="87"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1py_1_1fem_1_1Mesh_1ae544ea0ebbab7531cd5c8fdd0e80f2c1" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>MatrixX const  &amp;</type>
+        <definition>MatrixX &amp; pbat::py::fem::Mesh::X</definition>
+        <argsstring>() const</argsstring>
+        <name>X</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/Mesh.h" line="108" column="19" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/Mesh.cpp" bodystart="89" bodyend="94"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1py_1_1fem_1_1Mesh_1a1e57722ca4765f96ddcef8dab591d569" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>IndexMatrixX const  &amp;</type>
+        <definition>IndexMatrixX &amp; pbat::py::fem::Mesh::E</definition>
+        <argsstring>() const</argsstring>
+        <name>E</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/Mesh.h" line="109" column="24" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/Mesh.cpp" bodystart="96" bodyend="101"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1py_1_1fem_1_1Mesh_1a46e1f81f8a917acbcb188af1e7500175" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>MatrixX &amp;</type>
+        <definition>MatrixX&amp; pbat::py::fem::Mesh::X</definition>
+        <argsstring>()</argsstring>
+        <name>X</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/Mesh.h" line="111" column="13"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1py_1_1fem_1_1Mesh_1aab688243ca4b4fdb922308fe9cea02f0" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>IndexMatrixX &amp;</type>
+        <definition>IndexMatrixX&amp; pbat::py::fem::Mesh::E</definition>
+        <argsstring>()</argsstring>
+        <name>E</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/Mesh.h" line="112" column="18"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1py_1_1fem_1_1Mesh_1a5a177f1626906110ae887c85cf2560d3" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>pbat::py::fem::Mesh::~Mesh</definition>
+        <argsstring>()</argsstring>
+        <name>~Mesh</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/Mesh.h" line="114" column="5" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/Mesh.cpp" bodystart="117" bodyend="121"/>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/Mesh.h" line="84" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/Mesh.h" bodystart="83" bodyend="122"/>
+    <listofallmembers>
+      <member refid="classpbat_1_1py_1_1fem_1_1Mesh_1ad41411f46bdf0934feda4abf56d9622c" prot="public" virt="non-virtual"><scope>pbat::py::fem::Mesh</scope><name>Apply</name></member>
+      <member refid="classpbat_1_1py_1_1fem_1_1Mesh_1a5a8b81f0a2459a96df097165e6c14979" prot="public" virt="non-virtual"><scope>pbat::py::fem::Mesh</scope><name>ApplyWithQuadrature</name></member>
+      <member refid="classpbat_1_1py_1_1fem_1_1Mesh_1a1e57722ca4765f96ddcef8dab591d569" prot="public" virt="non-virtual"><scope>pbat::py::fem::Mesh</scope><name>E</name></member>
+      <member refid="classpbat_1_1py_1_1fem_1_1Mesh_1aab688243ca4b4fdb922308fe9cea02f0" prot="public" virt="non-virtual"><scope>pbat::py::fem::Mesh</scope><name>E</name></member>
+      <member refid="classpbat_1_1py_1_1fem_1_1Mesh_1afb05a613068b223cb31ca26ca43b1c75" prot="public" virt="non-virtual"><scope>pbat::py::fem::Mesh</scope><name>eElement</name></member>
+      <member refid="classpbat_1_1py_1_1fem_1_1Mesh_1a3d5b0086fcfd24b0f439069ce5d81026" prot="public" virt="non-virtual"><scope>pbat::py::fem::Mesh</scope><name>mDims</name></member>
+      <member refid="classpbat_1_1py_1_1fem_1_1Mesh_1a85b60a96deb897a0ef4c16851b553d73" prot="public" virt="non-virtual"><scope>pbat::py::fem::Mesh</scope><name>Mesh</name></member>
+      <member refid="classpbat_1_1py_1_1fem_1_1Mesh_1aff3a7810b8c06735149f80630d047d27" prot="private" virt="non-virtual"><scope>pbat::py::fem::Mesh</scope><name>mMesh</name></member>
+      <member refid="classpbat_1_1py_1_1fem_1_1Mesh_1a6c28d6aaa790dc99095a726229f65560" prot="public" virt="non-virtual"><scope>pbat::py::fem::Mesh</scope><name>mOrder</name></member>
+      <member refid="classpbat_1_1py_1_1fem_1_1Mesh_1a0f2205362b611dfed007c38ec3570af7" prot="public" virt="non-virtual"><scope>pbat::py::fem::Mesh</scope><name>QuadraturePoints</name></member>
+      <member refid="classpbat_1_1py_1_1fem_1_1Mesh_1a6a9f6d0e82b9e0c1ad94368d21bb3429" prot="public" virt="non-virtual"><scope>pbat::py::fem::Mesh</scope><name>QuadratureWeights</name></member>
+      <member refid="classpbat_1_1py_1_1fem_1_1Mesh_1a28ad9ed8f718b4c69be4180d6c08588f" prot="public" virt="non-virtual"><scope>pbat::py::fem::Mesh</scope><name>Raw</name></member>
+      <member refid="classpbat_1_1py_1_1fem_1_1Mesh_1abbab5a85e2a21341edf195c263ba8a8e" prot="public" virt="non-virtual"><scope>pbat::py::fem::Mesh</scope><name>Raw</name></member>
+      <member refid="classpbat_1_1py_1_1fem_1_1Mesh_1ae544ea0ebbab7531cd5c8fdd0e80f2c1" prot="public" virt="non-virtual"><scope>pbat::py::fem::Mesh</scope><name>X</name></member>
+      <member refid="classpbat_1_1py_1_1fem_1_1Mesh_1a46e1f81f8a917acbcb188af1e7500175" prot="public" virt="non-virtual"><scope>pbat::py::fem::Mesh</scope><name>X</name></member>
+      <member refid="classpbat_1_1py_1_1fem_1_1Mesh_1a5a177f1626906110ae887c85cf2560d3" prot="public" virt="non-virtual"><scope>pbat::py::fem::Mesh</scope><name>~Mesh</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

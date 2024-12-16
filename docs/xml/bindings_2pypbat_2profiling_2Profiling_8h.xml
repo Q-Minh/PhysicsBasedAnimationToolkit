@@ -1,0 +1,248 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="bindings_2pypbat_2profiling_2Profiling_8h" kind="file" language="C++">
+    <compoundname>Profiling.h</compoundname>
+    <includes local="no">pybind11/pybind11.h</includes>
+    <includedby refid="source_2pbat_2fem_2Jacobian_8h" local="no">/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Jacobian.h</includedby>
+    <includedby refid="source_2pbat_2fem_2Mesh_8h" local="no">/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Mesh.h</includedby>
+    <includedby refid="source_2pbat_2fem_2ShapeFunctions_8h" local="no">/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/ShapeFunctions.h</includedby>
+    <includedby refid="DivergenceVector_8h" local="no">/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/DivergenceVector.h</includedby>
+    <includedby refid="source_2pbat_2fem_2Gradient_8h" local="no">/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Gradient.h</includedby>
+    <includedby refid="source_2pbat_2fem_2HyperElasticPotential_8h" local="yes">/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/HyperElasticPotential.h</includedby>
+    <includedby refid="LaplacianMatrix_8h" local="no">/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/LaplacianMatrix.h</includedby>
+    <includedby refid="LoadVector_8h" local="no">/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/LoadVector.h</includedby>
+    <includedby refid="source_2pbat_2fem_2MassMatrix_8h" local="no">/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/MassMatrix.h</includedby>
+    <includedby refid="KdTree_8h" local="no">/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/KdTree.h</includedby>
+    <includedby refid="source_2pbat_2geometry_2TetrahedralAabbHierarchy_8h" local="yes">/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/TetrahedralAabbHierarchy.h</includedby>
+    <includedby refid="source_2pbat_2geometry_2TriangleAabbHierarchy_8h" local="no">/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/TriangleAabbHierarchy.h</includedby>
+    <includedby refid="source_2pbat_2graph_2Partition_8cpp" local="yes">/workspaces/PhysicsBasedAnimationToolkit/source/pbat/graph/Partition.cpp</includedby>
+    <includedby refid="SparsityPattern_8h" local="no">/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/SparsityPattern.h</includedby>
+    <includedby refid="LinearOperator_8h" local="no">/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/LinearOperator.h</includedby>
+    <includedby refid="source_2pbat_2sim_2vbd_2Integrator_8cpp" local="yes">/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/Integrator.cpp</includedby>
+    <includedby refid="source_2pbat_2sim_2vbd_2lod_2Integrator_8cpp" local="yes">/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Integrator.cpp</includedby>
+    <includedby refid="source_2pbat_2sim_2vbd_2lod_2Prolongation_8cpp" local="yes">/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Prolongation.cpp</includedby>
+    <includedby refid="source_2pbat_2sim_2vbd_2lod_2Restriction_8cpp" local="yes">/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Restriction.cpp</includedby>
+    <includedby refid="source_2pbat_2sim_2vbd_2lod_2Smoother_8cpp" local="yes">/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Smoother.cpp</includedby>
+    <includedby refid="source_2pbat_2sim_2vbd_2multigrid_2Integrator_8cpp" local="yes">/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/multigrid/Integrator.cpp</includedby>
+    <includedby refid="source_2pbat_2sim_2vbd_2multigrid_2Level_8cpp" local="yes">/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/multigrid/Level.cpp</includedby>
+    <includedby refid="source_2pbat_2sim_2xpbd_2Integrator_8cpp" local="yes">/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Integrator.cpp</includedby>
+    <includedby refid="Bvh_8cpp" local="no">/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/gpu/geometry/Bvh.cpp</includedby>
+    <includedby refid="BvhQuery_8cpp" local="no">/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/gpu/geometry/BvhQuery.cpp</includedby>
+    <includedby refid="Points_8cpp" local="no">/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/gpu/geometry/Points.cpp</includedby>
+    <includedby refid="Simplices_8cpp" local="no">/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/gpu/geometry/Simplices.cpp</includedby>
+    <includedby refid="SweepAndPrune_8cpp" local="no">/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/gpu/geometry/SweepAndPrune.cpp</includedby>
+    <includedby refid="bindings_2pypbat_2gpu_2vbd_2Integrator_8cpp" local="no">/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/gpu/vbd/Integrator.cpp</includedby>
+    <includedby refid="bindings_2pypbat_2gpu_2xpbd_2Integrator_8cpp" local="no">/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/gpu/xpbd/Integrator.cpp</includedby>
+    <includedby refid="bindings_2pypbat_2math_2linalg_2Cholmod_8cpp" local="no">/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/math/linalg/Cholmod.cpp</includedby>
+    <includedby refid="SimplicialLDLT_8cpp" local="no">/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/math/linalg/SimplicialLDLT.cpp</includedby>
+    <includedby refid="bindings_2pypbat_2profiling_2Profiling_8cpp" local="yes">/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/profiling/Profiling.cpp</includedby>
+    <includedby refid="PythonBindings_8cpp" local="yes">/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/PythonBindings.cpp</includedby>
+    <incdepgraph>
+      <node id="2">
+        <label>pybind11/pybind11.h</label>
+      </node>
+      <node id="1">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/profiling/Profiling.h</label>
+        <link refid="bindings_2pypbat_2profiling_2Profiling_8h"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+      </node>
+    </incdepgraph>
+    <invincdepgraph>
+      <node id="2">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Jacobian.h</label>
+        <link refid="source_2pbat_2fem_2Jacobian_8h_source"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+      </node>
+      <node id="14">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/BoundingVolumeHierarchy.h</label>
+        <link refid="BoundingVolumeHierarchy_8h_source"/>
+        <childnode refid="15" relation="include">
+        </childnode>
+        <childnode refid="16" relation="include">
+        </childnode>
+        <childnode refid="17" relation="include">
+        </childnode>
+      </node>
+      <node id="5">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/Pbat.h</label>
+        <link refid="Pbat_8h_source"/>
+      </node>
+      <node id="19">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/LinAlg.h</label>
+        <link refid="source_2pbat_2math_2linalg_2LinAlg_8h_source"/>
+        <childnode refid="20" relation="include">
+        </childnode>
+      </node>
+      <node id="9">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/MassMatrix.h</label>
+        <link refid="source_2pbat_2fem_2MassMatrix_8h_source"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+      </node>
+      <node id="12">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/LaplacianMatrix.h</label>
+        <link refid="LaplacianMatrix_8h_source"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+      </node>
+      <node id="4">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Fem.h</label>
+        <link refid="source_2pbat_2fem_2Fem_8h_source"/>
+        <childnode refid="5" relation="include">
+        </childnode>
+      </node>
+      <node id="7">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Gradient.h</label>
+        <link refid="source_2pbat_2fem_2Gradient_8h_source"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+      </node>
+      <node id="13">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/KdTree.h</label>
+        <link refid="KdTree_8h_source"/>
+        <childnode refid="14" relation="include">
+        </childnode>
+        <childnode refid="15" relation="include">
+        </childnode>
+      </node>
+      <node id="20">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/Math.h</label>
+        <link refid="source_2pbat_2math_2Math_8h_source"/>
+        <childnode refid="5" relation="include">
+        </childnode>
+      </node>
+      <node id="10">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/DivergenceVector.h</label>
+        <link refid="DivergenceVector_8h_source"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+      </node>
+      <node id="15">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/Geometry.h</label>
+        <link refid="source_2pbat_2geometry_2Geometry_8h_source"/>
+        <childnode refid="5" relation="include">
+        </childnode>
+      </node>
+      <node id="16">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/TetrahedralAabbHierarchy.h</label>
+        <link refid="source_2pbat_2geometry_2TetrahedralAabbHierarchy_8h_source"/>
+        <childnode refid="15" relation="include">
+        </childnode>
+      </node>
+      <node id="18">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/SparsityPattern.h</label>
+        <link refid="SparsityPattern_8h_source"/>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="19" relation="include">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Mesh.h</label>
+        <link refid="source_2pbat_2fem_2Mesh_8h_source"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/profiling/Profiling.h</label>
+        <link refid="bindings_2pypbat_2profiling_2Profiling_8h"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="13" relation="include">
+        </childnode>
+        <childnode refid="16" relation="include">
+        </childnode>
+        <childnode refid="17" relation="include">
+        </childnode>
+        <childnode refid="18" relation="include">
+        </childnode>
+        <childnode refid="21" relation="include">
+        </childnode>
+      </node>
+      <node id="11">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/HyperElasticPotential.h</label>
+        <link refid="source_2pbat_2fem_2HyperElasticPotential_8h_source"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+      </node>
+      <node id="6">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/ShapeFunctions.h</label>
+        <link refid="source_2pbat_2fem_2ShapeFunctions_8h_source"/>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+      </node>
+      <node id="17">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/TriangleAabbHierarchy.h</label>
+        <link refid="source_2pbat_2geometry_2TriangleAabbHierarchy_8h_source"/>
+        <childnode refid="15" relation="include">
+        </childnode>
+      </node>
+      <node id="8">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/LoadVector.h</label>
+        <link refid="LoadVector_8h_source"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+      </node>
+      <node id="21">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/LinearOperator.h</label>
+        <link refid="LinearOperator_8h_source"/>
+        <childnode refid="20" relation="include">
+        </childnode>
+      </node>
+    </invincdepgraph>
+    <innernamespace refid="namespacepbat">pbat</innernamespace>
+    <innernamespace refid="namespacepbat_1_1py">pbat::py</innernamespace>
+    <innernamespace refid="namespacepbat_1_1py_1_1profiling">pbat::py::profiling</innernamespace>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="preprocessor">#ifndef<sp/>PYPBAT_PROFILING_PROFILING_H</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="2"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>PYPBAT_PROFILING_PROFILING_H</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="3"><highlight class="normal"></highlight></codeline>
+<codeline lineno="4"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;pybind11/pybind11.h&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="5"><highlight class="normal"></highlight></codeline>
+<codeline lineno="6"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal">pbat<sp/>{</highlight></codeline>
+<codeline lineno="7"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal">py<sp/>{</highlight></codeline>
+<codeline lineno="8"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal">profiling<sp/>{</highlight></codeline>
+<codeline lineno="9"><highlight class="normal"></highlight></codeline>
+<codeline lineno="10"><highlight class="normal"></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/>Bind(pybind11::module&amp;<sp/>m);</highlight></codeline>
+<codeline lineno="11"><highlight class="normal"></highlight></codeline>
+<codeline lineno="12"><highlight class="normal">}<sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>profiling</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="13"><highlight class="normal">}<sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>py</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="14"><highlight class="normal">}<sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>pbat</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="15"><highlight class="normal"></highlight></codeline>
+<codeline lineno="16"><highlight class="normal"></highlight><highlight class="preprocessor">#endif<sp/>//<sp/>PYPBAT_PROFILING_PROFILING_H</highlight></codeline>
+    </programlisting>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/profiling/Profiling.h"/>
+  </compounddef>
+</doxygen>

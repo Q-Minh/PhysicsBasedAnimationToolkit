@@ -1,0 +1,12 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="namespacepbat_1_1test" kind="namespace" language="C++">
+    <compoundname>pbat::test</compoundname>
+    <innerclass refid="structpbat_1_1test_1_1IdentityOperator" prot="public">pbat::test::IdentityOperator</innerclass>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/LinearOperator.cpp" line="6" column="14"/>
+  </compounddef>
+</doxygen>

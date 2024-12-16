@@ -1,0 +1,48 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="dir_3423587c588742a843a13447bcdf584c" kind="dir">
+    <compoundname>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini</compoundname>
+    <innerfile refid="Api_8h">Api.h</innerfile>
+    <innerfile refid="Assign_8cpp">Assign.cpp</innerfile>
+    <innerfile refid="Assign_8h">Assign.h</innerfile>
+    <innerfile refid="BinaryOperations_8cpp">BinaryOperations.cpp</innerfile>
+    <innerfile refid="BinaryOperations_8h">BinaryOperations.h</innerfile>
+    <innerfile refid="math_2linalg_2mini_2Concepts_8h">Concepts.h</innerfile>
+    <innerfile refid="Determinant_8cpp">Determinant.cpp</innerfile>
+    <innerfile refid="Determinant_8h">Determinant.h</innerfile>
+    <innerfile refid="math_2linalg_2mini_2Eigen_8cpp">Eigen.cpp</innerfile>
+    <innerfile refid="math_2linalg_2mini_2Eigen_8h">Eigen.h</innerfile>
+    <innerfile refid="Flatten_8cpp">Flatten.cpp</innerfile>
+    <innerfile refid="Flatten_8h">Flatten.h</innerfile>
+    <innerfile refid="source_2pbat_2math_2linalg_2mini_2Geometry_8cpp">Geometry.cpp</innerfile>
+    <innerfile refid="source_2pbat_2math_2linalg_2mini_2Geometry_8h">Geometry.h</innerfile>
+    <innerfile refid="Inverse_8cpp">Inverse.cpp</innerfile>
+    <innerfile refid="Inverse_8h">Inverse.h</innerfile>
+    <innerfile refid="Matrix_8cpp">Matrix.cpp</innerfile>
+    <innerfile refid="Matrix_8h">Matrix.h</innerfile>
+    <innerfile refid="Mini_8h">Mini.h</innerfile>
+    <innerfile refid="Norm_8cpp">Norm.cpp</innerfile>
+    <innerfile refid="Norm_8h">Norm.h</innerfile>
+    <innerfile refid="Product_8cpp">Product.cpp</innerfile>
+    <innerfile refid="Product_8h">Product.h</innerfile>
+    <innerfile refid="Reductions_8cpp">Reductions.cpp</innerfile>
+    <innerfile refid="Reductions_8h">Reductions.h</innerfile>
+    <innerfile refid="Repeat_8cpp">Repeat.cpp</innerfile>
+    <innerfile refid="Repeat_8h">Repeat.h</innerfile>
+    <innerfile refid="Scale_8cpp">Scale.cpp</innerfile>
+    <innerfile refid="Scale_8h">Scale.h</innerfile>
+    <innerfile refid="math_2linalg_2mini_2Stack_8cpp">Stack.cpp</innerfile>
+    <innerfile refid="math_2linalg_2mini_2Stack_8h">Stack.h</innerfile>
+    <innerfile refid="SubMatrix_8cpp">SubMatrix.cpp</innerfile>
+    <innerfile refid="SubMatrix_8h">SubMatrix.h</innerfile>
+    <innerfile refid="Transpose_8cpp">Transpose.cpp</innerfile>
+    <innerfile refid="Transpose_8h">Transpose.h</innerfile>
+    <innerfile refid="UnaryOperations_8cpp">UnaryOperations.cpp</innerfile>
+    <innerfile refid="UnaryOperations_8h">UnaryOperations.h</innerfile>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/"/>
+  </compounddef>
+</doxygen>

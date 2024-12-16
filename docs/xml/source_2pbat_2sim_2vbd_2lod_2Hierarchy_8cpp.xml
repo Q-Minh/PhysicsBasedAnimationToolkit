@@ -1,0 +1,437 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="source_2pbat_2sim_2vbd_2lod_2Hierarchy_8cpp" kind="file" language="C++">
+    <compoundname>Hierarchy.cpp</compoundname>
+    <includes refid="source_2pbat_2sim_2vbd_2lod_2Hierarchy_8h" local="yes">Hierarchy.h</includes>
+    <includes local="no">exception</includes>
+    <includes local="no">fmt/format.h</includes>
+    <includes local="no">string</includes>
+    <includes refid="Cube_8h" local="yes">pbat/geometry/model/Cube.h</includes>
+    <includes local="no">doctest/doctest.h</includes>
+    <incdepgraph>
+      <node id="34">
+        <label>Enums.h</label>
+        <link refid="geometry_2model_2Enums_8h_source"/>
+      </node>
+      <node id="31">
+        <label>fmt/format.h</label>
+      </node>
+      <node id="14">
+        <label>pbat/math/GaussQuadrature.h</label>
+        <link refid="GaussQuadrature_8h_source"/>
+        <childnode refid="15" relation="include">
+        </childnode>
+        <childnode refid="16" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+      </node>
+      <node id="16">
+        <label>cstdint</label>
+      </node>
+      <node id="22">
+        <label>Prolongation.h</label>
+        <link refid="source_2pbat_2sim_2vbd_2lod_2Prolongation_8h_source"/>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="19" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+      </node>
+      <node id="28">
+        <label>variant</label>
+      </node>
+      <node id="6">
+        <label>pbat/Aliases.h</label>
+        <link refid="Aliases_8h_source"/>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+      </node>
+      <node id="4">
+        <label>DirichletEnergy.h</label>
+        <link refid="source_2pbat_2sim_2vbd_2lod_2DirichletEnergy_8h_source"/>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="19" relation="include">
+        </childnode>
+      </node>
+      <node id="33">
+        <label>pbat/geometry/model/Cube.h</label>
+        <link refid="Cube_8h_source"/>
+        <childnode refid="34" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="26" relation="include">
+        </childnode>
+      </node>
+      <node id="7">
+        <label>Eigen/Core</label>
+      </node>
+      <node id="32">
+        <label>string</label>
+      </node>
+      <node id="10">
+        <label>pbat/sim/vbd/Mesh.h</label>
+        <link refid="source_2pbat_2sim_2vbd_2Mesh_8h_source"/>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="18" relation="include">
+        </childnode>
+      </node>
+      <node id="18">
+        <label>pbat/fem/Triangle.h</label>
+        <link refid="Triangle_8h_source"/>
+        <childnode refid="13" relation="include">
+        </childnode>
+        <childnode refid="15" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+      </node>
+      <node id="13">
+        <label>QuadratureRules.h</label>
+        <link refid="QuadratureRules_8h_source"/>
+        <childnode refid="14" relation="include">
+        </childnode>
+        <childnode refid="17" relation="include">
+        </childnode>
+      </node>
+      <node id="30">
+        <label>exception</label>
+      </node>
+      <node id="17">
+        <label>pbat/math/SymmetricQuadratureRules.h</label>
+        <link refid="SymmetricQuadratureRules_8h_source"/>
+        <childnode refid="15" relation="include">
+        </childnode>
+        <childnode refid="16" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+      </node>
+      <node id="35">
+        <label>doctest/doctest.h</label>
+      </node>
+      <node id="2">
+        <label>Hierarchy.h</label>
+        <link refid="source_2pbat_2sim_2vbd_2lod_2Hierarchy_8h_source"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="22" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="23" relation="include">
+        </childnode>
+        <childnode refid="24" relation="include">
+        </childnode>
+        <childnode refid="19" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+        <childnode refid="27" relation="include">
+        </childnode>
+        <childnode refid="28" relation="include">
+        </childnode>
+        <childnode refid="29" relation="include">
+        </childnode>
+      </node>
+      <node id="8">
+        <label>Eigen/Sparse</label>
+      </node>
+      <node id="25">
+        <label>tuple</label>
+      </node>
+      <node id="29">
+        <label>vector</label>
+      </node>
+      <node id="12">
+        <label>pbat/fem/Tetrahedron.h</label>
+        <link refid="Tetrahedron_8h_source"/>
+        <childnode refid="13" relation="include">
+        </childnode>
+        <childnode refid="15" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+      </node>
+      <node id="11">
+        <label>pbat/fem/Mesh.h</label>
+      </node>
+      <node id="26">
+        <label>utility</label>
+      </node>
+      <node id="15">
+        <label>array</label>
+      </node>
+      <node id="19">
+        <label>pbat/sim/vbd/Data.h</label>
+      </node>
+      <node id="20">
+        <label>ElasticEnergy.h</label>
+        <link refid="source_2pbat_2sim_2vbd_2lod_2ElasticEnergy_8h_source"/>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="19" relation="include">
+        </childnode>
+      </node>
+      <node id="24">
+        <label>pbat/common/Hash.h</label>
+        <link refid="Hash_8h_source"/>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="25" relation="include">
+        </childnode>
+        <childnode refid="26" relation="include">
+        </childnode>
+      </node>
+      <node id="9">
+        <label>cstddef</label>
+      </node>
+      <node id="27">
+        <label>unordered_map</label>
+      </node>
+      <node id="3">
+        <label>Level.h</label>
+        <link refid="source_2pbat_2sim_2vbd_2lod_2Level_8h_source"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="20" relation="include">
+        </childnode>
+        <childnode refid="21" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="19" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+      </node>
+      <node id="23">
+        <label>Restriction.h</label>
+        <link refid="source_2pbat_2sim_2vbd_2lod_2Restriction_8h_source"/>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+      </node>
+      <node id="5">
+        <label>Quadrature.h</label>
+        <link refid="source_2pbat_2sim_2vbd_2lod_2Quadrature_8h_source"/>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Hierarchy.cpp</label>
+        <link refid="source_2pbat_2sim_2vbd_2lod_2Hierarchy_8cpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="30" relation="include">
+        </childnode>
+        <childnode refid="31" relation="include">
+        </childnode>
+        <childnode refid="32" relation="include">
+        </childnode>
+        <childnode refid="33" relation="include">
+        </childnode>
+        <childnode refid="35" relation="include">
+        </childnode>
+      </node>
+      <node id="21">
+        <label>MomentumEnergy.h</label>
+        <link refid="source_2pbat_2sim_2vbd_2lod_2MomentumEnergy_8h_source"/>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="19" relation="include">
+        </childnode>
+      </node>
+    </incdepgraph>
+    <innernamespace refid="namespacepbat">pbat</innernamespace>
+    <innernamespace refid="namespacepbat_1_1sim">pbat::sim</innernamespace>
+    <innernamespace refid="namespacepbat_1_1sim_1_1vbd">pbat::sim::vbd</innernamespace>
+    <innernamespace refid="namespacepbat_1_1sim_1_1vbd_1_1lod">pbat::sim::vbd::lod</innernamespace>
+      <sectiondef kind="func">
+      <memberdef kind="function" id="source_2pbat_2sim_2vbd_2lod_2Hierarchy_8cpp_1a962a53c839d7c26c67fda914a87b1544" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>TEST_CASE</definition>
+        <argsstring>(&quot;[sim][vbd][lod] Hierarchy&quot;)</argsstring>
+        <name>TEST_CASE</name>
+        <param>
+          <type>&quot; Hierarchy&quot;</type>
+          <array>[sim][vbd][lod]</array>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Hierarchy.cpp" line="96" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Hierarchy.cpp" bodystart="96" bodyend="135"/>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="preprocessor">#include<sp/>&quot;Hierarchy.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="2"><highlight class="normal"></highlight></codeline>
+<codeline lineno="3"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;exception&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="4"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;fmt/format.h&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="5"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;string&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="6"><highlight class="normal"></highlight></codeline>
+<codeline lineno="7"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal">pbat<sp/>{</highlight></codeline>
+<codeline lineno="8"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal">sim<sp/>{</highlight></codeline>
+<codeline lineno="9"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal">vbd<sp/>{</highlight></codeline>
+<codeline lineno="10"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal">lod<sp/>{</highlight></codeline>
+<codeline lineno="11"><highlight class="normal"></highlight></codeline>
+<codeline lineno="12" refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Hierarchy_1af6789d836901afeae1c0c9fd8300cc1a" refkind="member"><highlight class="normal"><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Hierarchy_1af6789d836901afeae1c0c9fd8300cc1a" kindref="member">Hierarchy::Hierarchy</ref>(</highlight></codeline>
+<codeline lineno="13"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1Data" kindref="compound">Data</ref><sp/>root,</highlight></codeline>
+<codeline lineno="14"><highlight class="normal"><sp/><sp/><sp/><sp/>std::vector&lt;VolumeMesh&gt;<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>cages,</highlight></codeline>
+<codeline lineno="15"><highlight class="normal"><sp/><sp/><sp/><sp/>Eigen::Ref&lt;IndexVectorX<sp/>const&gt;<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>cycle,</highlight></codeline>
+<codeline lineno="16"><highlight class="normal"><sp/><sp/><sp/><sp/>Eigen::Ref&lt;IndexVectorX<sp/>const&gt;<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>smoothingSchedule,</highlight></codeline>
+<codeline lineno="17"><highlight class="normal"><sp/><sp/><sp/><sp/>Eigen::Ref&lt;IndexVectorX<sp/>const&gt;<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>transitionSchedule,</highlight></codeline>
+<codeline lineno="18"><highlight class="normal"><sp/><sp/><sp/><sp/>std::vector&lt;CageQuadratureParameters&gt;<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>cageQuadParams)</highlight></codeline>
+<codeline lineno="19"><highlight class="normal"><sp/><sp/><sp/><sp/>:<sp/>mRoot(std::move(root)),</highlight></codeline>
+<codeline lineno="20"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>mLevels(),</highlight></codeline>
+<codeline lineno="21"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>mCycle(cycle),</highlight></codeline>
+<codeline lineno="22"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>mSmoothingSchedule(smoothingSchedule),</highlight></codeline>
+<codeline lineno="23"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>mTransitionSchedule(transitionSchedule),</highlight></codeline>
+<codeline lineno="24"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>mTransitions()</highlight></codeline>
+<codeline lineno="25"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="26"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>nCoarseLevels<sp/>=<sp/>cages.size();</highlight></codeline>
+<codeline lineno="27"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Hierarchy_1aeb4999ff3d780928b4a8580e6efd1f8d" kindref="member">mLevels</ref>.reserve(nCoarseLevels);</highlight></codeline>
+<codeline lineno="28"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">for</highlight><highlight class="normal"><sp/>(</highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>l<sp/>=<sp/>0ULL;<sp/>l<sp/>&lt;<sp/>cages.size();<sp/>++l)</highlight></codeline>
+<codeline lineno="29"><highlight class="normal"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="30"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Hierarchy_1aeb4999ff3d780928b4a8580e6efd1f8d" kindref="member">mLevels</ref>.push_back(</highlight></codeline>
+<codeline lineno="31"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Level" kindref="compound">Level</ref>(cages[l])</highlight></codeline>
+<codeline lineno="32"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>.WithCageQuadrature(</highlight></codeline>
+<codeline lineno="33"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Hierarchy_1a396db0be1a0d68047dd9846f313067af" kindref="member">mRoot</ref>,</highlight></codeline>
+<codeline lineno="34"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>cageQuadParams.empty()<sp/>?<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1CageQuadratureParameters" kindref="compound">CageQuadratureParameters</ref>{}<sp/>:<sp/>cageQuadParams[l])</highlight></codeline>
+<codeline lineno="35"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>.<ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Level_1ace8b739675222bec7e56a5b4568b8bb6" kindref="member">WithDirichletQuadrature</ref>(<ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Hierarchy_1a396db0be1a0d68047dd9846f313067af" kindref="member">mRoot</ref>)</highlight></codeline>
+<codeline lineno="36"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>.<ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Level_1a1dad6a700ed96fa015ab5d0895a16af0" kindref="member">WithMomentumEnergy</ref>(<ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Hierarchy_1a396db0be1a0d68047dd9846f313067af" kindref="member">mRoot</ref>)</highlight></codeline>
+<codeline lineno="37"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>.<ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Level_1a894c1edabea5f8e4565082296e02e71e" kindref="member">WithElasticEnergy</ref>(<ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Hierarchy_1a396db0be1a0d68047dd9846f313067af" kindref="member">mRoot</ref>)</highlight></codeline>
+<codeline lineno="38"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>.<ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Level_1a3904b372c43336b48d826f5940a21b2b" kindref="member">WithDirichletEnergy</ref>(<ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Hierarchy_1a396db0be1a0d68047dd9846f313067af" kindref="member">mRoot</ref>));</highlight></codeline>
+<codeline lineno="39"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="40"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(<ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Hierarchy_1aee6c800bbf9e12bd35867955672a5d9f" kindref="member">mCycle</ref>.size()<sp/>==<sp/>0)</highlight></codeline>
+<codeline lineno="41"><highlight class="normal"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="42"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>Index<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>nLevels<sp/>=<sp/></highlight><highlight class="keyword">static_cast&lt;</highlight><highlight class="normal">Index</highlight><highlight class="keyword">&gt;</highlight><highlight class="normal">(<ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Hierarchy_1aeb4999ff3d780928b4a8580e6efd1f8d" kindref="member">mLevels</ref>.size());</highlight></codeline>
+<codeline lineno="43"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Hierarchy_1aee6c800bbf9e12bd35867955672a5d9f" kindref="member">mCycle</ref>.resize(nLevels<sp/>+<sp/>2);</highlight></codeline>
+<codeline lineno="44"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Hierarchy_1aee6c800bbf9e12bd35867955672a5d9f" kindref="member">mCycle</ref>(0)<sp/>=<sp/>Index(-1);</highlight></codeline>
+<codeline lineno="45"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">for</highlight><highlight class="normal"><sp/>(Index<sp/>l<sp/>=<sp/>nLevels<sp/>-<sp/>1,<sp/>k<sp/>=<sp/>1;<sp/>l<sp/>&gt;=<sp/>0;<sp/>--l,<sp/>++k)</highlight></codeline>
+<codeline lineno="46"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Hierarchy_1aee6c800bbf9e12bd35867955672a5d9f" kindref="member">mCycle</ref>(k)<sp/>=<sp/>l;</highlight></codeline>
+<codeline lineno="47"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Hierarchy_1aee6c800bbf9e12bd35867955672a5d9f" kindref="member">mCycle</ref>(nLevels<sp/>+<sp/>1)<sp/>=<sp/>Index(-1);</highlight></codeline>
+<codeline lineno="48"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="49"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(<ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Hierarchy_1ab89b46d363b4a18ff42b0bb6bc14fa67" kindref="member">mSmoothingSchedule</ref>.size()<sp/>==<sp/>0)</highlight></codeline>
+<codeline lineno="50"><highlight class="normal"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="51"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Hierarchy_1ab89b46d363b4a18ff42b0bb6bc14fa67" kindref="member">mSmoothingSchedule</ref>.setConstant(<ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Hierarchy_1aee6c800bbf9e12bd35867955672a5d9f" kindref="member">mCycle</ref>.size(),<sp/>Index(10));</highlight></codeline>
+<codeline lineno="52"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="53"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(<ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Hierarchy_1aba8cd15fd5c8b073dcda3ef735c1cec8" kindref="member">mTransitionSchedule</ref>.size()<sp/>==<sp/>0)</highlight></codeline>
+<codeline lineno="54"><highlight class="normal"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="55"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Hierarchy_1aba8cd15fd5c8b073dcda3ef735c1cec8" kindref="member">mTransitionSchedule</ref>.setConstant(<ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Hierarchy_1aee6c800bbf9e12bd35867955672a5d9f" kindref="member">mCycle</ref>.size()<sp/>-<sp/>1,<sp/>Index(10));</highlight></codeline>
+<codeline lineno="56"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="57"><highlight class="normal"></highlight></codeline>
+<codeline lineno="58"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Hierarchy_1a47fe7d44d752bc3132447a7e4b51fc81" kindref="member">mTransitions</ref>.reserve(<ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Hierarchy_1aba8cd15fd5c8b073dcda3ef735c1cec8" kindref="member">mTransitionSchedule</ref>.size()<sp/>*<sp/>3ULL);</highlight></codeline>
+<codeline lineno="59"><highlight class="normal"><sp/><sp/><sp/><sp/>Index<sp/>lCurrent<sp/>=<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Hierarchy_1aee6c800bbf9e12bd35867955672a5d9f" kindref="member">mCycle</ref>(0);</highlight></codeline>
+<codeline lineno="60"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">for</highlight><highlight class="normal"><sp/>(Index<sp/>lNext<sp/>:<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Hierarchy_1aee6c800bbf9e12bd35867955672a5d9f" kindref="member">mCycle</ref>.tail(<ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Hierarchy_1aee6c800bbf9e12bd35867955672a5d9f" kindref="member">mCycle</ref>.size()<sp/>-<sp/>1))</highlight></codeline>
+<codeline lineno="61"><highlight class="normal"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="62"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>IndexVector&lt;2&gt;<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>transition<sp/>=<sp/>{lCurrent,<sp/>lNext};</highlight></codeline>
+<codeline lineno="63"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>bIsNewTransition<sp/><sp/><sp/><sp/><sp/>=<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Hierarchy_1a47fe7d44d752bc3132447a7e4b51fc81" kindref="member">mTransitions</ref>.find(transition)<sp/>==<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Hierarchy_1a47fe7d44d752bc3132447a7e4b51fc81" kindref="member">mTransitions</ref>.end();</highlight></codeline>
+<codeline lineno="64"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(bIsNewTransition)</highlight></codeline>
+<codeline lineno="65"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="66"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>bIsProlongation<sp/>=<sp/>transition(0)<sp/>&gt;<sp/>transition(1);</highlight></codeline>
+<codeline lineno="67"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>li<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/></highlight><highlight class="keyword">static_cast&lt;</highlight><highlight class="normal">std::size_t</highlight><highlight class="keyword">&gt;</highlight><highlight class="normal">(transition(0));</highlight></codeline>
+<codeline lineno="68"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>lj<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/></highlight><highlight class="keyword">static_cast&lt;</highlight><highlight class="normal">std::size_t</highlight><highlight class="keyword">&gt;</highlight><highlight class="normal">(transition(1));</highlight></codeline>
+<codeline lineno="69"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(bIsProlongation)</highlight></codeline>
+<codeline lineno="70"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="71"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1fem_1_1Mesh" kindref="compound">VolumeMesh</ref><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>CM<sp/>=<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Hierarchy_1aeb4999ff3d780928b4a8580e6efd1f8d" kindref="member">mLevels</ref>[li].mesh;</highlight></codeline>
+<codeline lineno="72"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1fem_1_1Mesh" kindref="compound">VolumeMesh</ref><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>FM<sp/>=<sp/>transition(1)<sp/>&gt;<sp/>-1<sp/>?<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Hierarchy_1aeb4999ff3d780928b4a8580e6efd1f8d" kindref="member">mLevels</ref>[lj].mesh<sp/>:<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Hierarchy_1a396db0be1a0d68047dd9846f313067af" kindref="member">mRoot</ref>.<ref refid="structpbat_1_1sim_1_1vbd_1_1Data_1a0814000764d127a91a05454ee341504d" kindref="member">mesh</ref>;</highlight></codeline>
+<codeline lineno="73"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Hierarchy_1a47fe7d44d752bc3132447a7e4b51fc81" kindref="member">mTransitions</ref>.insert({transition,<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Prolongation" kindref="compound">Prolongation</ref>(FM,<sp/>CM)});</highlight></codeline>
+<codeline lineno="74"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="75"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">else</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="76"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="77"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Level" kindref="compound">Level</ref><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>lc<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Hierarchy_1aeb4999ff3d780928b4a8580e6efd1f8d" kindref="member">mLevels</ref>[lj];</highlight></codeline>
+<codeline lineno="78"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1CageQuadrature" kindref="compound">CageQuadrature</ref><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>CQ<sp/>=<sp/>lc.<ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Level_1a7f387e1420dc1149ce49455172466d3e" kindref="member">Qcage</ref>;</highlight></codeline>
+<codeline lineno="79"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Hierarchy_1a47fe7d44d752bc3132447a7e4b51fc81" kindref="member">mTransitions</ref>.insert({transition,<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Restriction" kindref="compound">Restriction</ref>(CQ)});</highlight></codeline>
+<codeline lineno="80"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="81"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="82"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>lCurrent<sp/>=<sp/>lNext;</highlight></codeline>
+<codeline lineno="83"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="84"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="85"><highlight class="normal"></highlight></codeline>
+<codeline lineno="86"><highlight class="normal">}<sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>lod</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="87"><highlight class="normal">}<sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>vbd</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="88"><highlight class="normal">}<sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>sim</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="89"><highlight class="normal">}<sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>pbat</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="90"><highlight class="normal"></highlight></codeline>
+<codeline lineno="91"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;pbat/geometry/model/Cube.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="92"><highlight class="normal"></highlight></codeline>
+<codeline lineno="93"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;doctest/doctest.h&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="94"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;Hierarchy.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="95"><highlight class="normal"></highlight></codeline>
+<codeline lineno="96"><highlight class="normal">TEST_CASE(</highlight><highlight class="stringliteral">&quot;[sim][vbd][lod]<sp/>Hierarchy&quot;</highlight><highlight class="normal">)</highlight></codeline>
+<codeline lineno="97"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="98"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/>namespace<sp/></highlight><highlight class="normal">pbat;</highlight></codeline>
+<codeline lineno="99"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using</highlight><highlight class="normal"><sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1Data" kindref="compound">sim::vbd::Data</ref>;</highlight></codeline>
+<codeline lineno="100"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using</highlight><highlight class="normal"><sp/><ref refid="structpbat_1_1fem_1_1Mesh" kindref="compound">sim::vbd::VolumeMesh</ref>;</highlight></codeline>
+<codeline lineno="101"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using</highlight><highlight class="normal"><sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Hierarchy" kindref="compound">sim::vbd::lod::Hierarchy</ref>;</highlight></codeline>
+<codeline lineno="102"><highlight class="normal"></highlight></codeline>
+<codeline lineno="103"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>[XR,<sp/>ER]<sp/>=<sp/>geometry::model::Cube();</highlight></codeline>
+<codeline lineno="104"><highlight class="normal"><sp/><sp/><sp/><sp/>XR.colwise()<sp/>-=<sp/>XR.rowwise().mean();</highlight></codeline>
+<codeline lineno="105"><highlight class="normal"><sp/><sp/><sp/><sp/>std::vector&lt;VolumeMesh&gt;<sp/>cages{</highlight></codeline>
+<codeline lineno="106"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>{VolumeMesh(Scalar(1.1)<sp/>*<sp/>XR,<sp/>ER),<sp/>VolumeMesh(Scalar(1.2)<sp/>*<sp/>XR,<sp/>ER)}};</highlight></codeline>
+<codeline lineno="107"><highlight class="normal"><sp/><sp/><sp/><sp/>Data<sp/>root<sp/>=<sp/>Data().WithVolumeMesh(XR,<sp/>ER).Construct();</highlight></codeline>
+<codeline lineno="108"><highlight class="normal"></highlight></codeline>
+<codeline lineno="109"><highlight class="normal"><sp/><sp/><sp/><sp/>SUBCASE(</highlight><highlight class="stringliteral">&quot;Default<sp/>constructor<sp/>parameters&quot;</highlight><highlight class="normal">)</highlight></codeline>
+<codeline lineno="110"><highlight class="normal"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="111"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>Hierarchy<sp/>H(root,<sp/>cages);</highlight></codeline>
+<codeline lineno="112"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>CHECK_GT(H.mCycle.size(),<sp/>0ULL);</highlight></codeline>
+<codeline lineno="113"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>CHECK_EQ(H.mCycle.size(),<sp/>H.mSmoothingSchedule.size());</highlight></codeline>
+<codeline lineno="114"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>CHECK_EQ(H.mCycle.size(),<sp/>H.mTransitionSchedule.size()<sp/>+<sp/>1ULL);</highlight></codeline>
+<codeline lineno="115"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>CHECK_EQ(H.mLevels.size(),<sp/>cages.size());</highlight></codeline>
+<codeline lineno="116"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>CHECK_GT(H.mTransitions.size(),<sp/>0ULL);</highlight></codeline>
+<codeline lineno="117"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>CHECK_EQ(H.mCycle(0),<sp/>Index(-1));</highlight></codeline>
+<codeline lineno="118"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>CHECK_EQ(H.mCycle(H.mCycle.size()<sp/>-<sp/>1),<sp/>Index(-1));</highlight></codeline>
+<codeline lineno="119"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="120"><highlight class="normal"><sp/><sp/><sp/><sp/>SUBCASE(</highlight><highlight class="stringliteral">&quot;User-specified<sp/>constructor<sp/>parameters&quot;</highlight><highlight class="normal">)</highlight></codeline>
+<codeline lineno="121"><highlight class="normal"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="122"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>IndexVectorX<sp/>cycle(7);</highlight></codeline>
+<codeline lineno="123"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>cycle<sp/>&lt;&lt;<sp/>-1,<sp/>0,<sp/>1,<sp/>0,<sp/>1,<sp/>0,<sp/>-1;</highlight></codeline>
+<codeline lineno="124"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>IndexVectorX<sp/>riters(6);</highlight></codeline>
+<codeline lineno="125"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>riters<sp/>&lt;&lt;<sp/>10,<sp/>10,<sp/>10,<sp/>10,<sp/>10,<sp/>10;</highlight></codeline>
+<codeline lineno="126"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>IndexVectorX<sp/>siters(7);</highlight></codeline>
+<codeline lineno="127"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>siters<sp/>&lt;&lt;<sp/>10,<sp/>10,<sp/>10,<sp/>10,<sp/>10,<sp/>10,<sp/>10;</highlight></codeline>
+<codeline lineno="128"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>Hierarchy<sp/>H(root,<sp/>cages,<sp/>cycle,<sp/>siters,<sp/>riters);</highlight></codeline>
+<codeline lineno="129"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>CHECK_EQ(H.mCycle.size(),<sp/>cycle.size());</highlight></codeline>
+<codeline lineno="130"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>CHECK_EQ(H.mSmoothingSchedule.size(),<sp/>siters.size());</highlight></codeline>
+<codeline lineno="131"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>CHECK_EQ(H.mTransitionSchedule.size(),<sp/>riters.size());</highlight></codeline>
+<codeline lineno="132"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>CHECK_EQ(H.mLevels.size(),<sp/>cages.size());</highlight></codeline>
+<codeline lineno="133"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>CHECK_EQ(H.mTransitions.size(),<sp/>4ULL);</highlight></codeline>
+<codeline lineno="134"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="135"><highlight class="normal">}</highlight></codeline>
+    </programlisting>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Hierarchy.cpp"/>
+  </compounddef>
+</doxygen>

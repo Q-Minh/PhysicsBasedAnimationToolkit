@@ -1,0 +1,146 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="source_2pbat_2gpu_2xpbd_2Integrator_8h" kind="file" language="C++">
+    <compoundname>Integrator.h</compoundname>
+    <includes local="yes">PhysicsBasedAnimationToolkitExport.h</includes>
+    <includes refid="gpu_2Aliases_8h" local="yes">pbat/gpu/Aliases.h</includes>
+    <includes local="yes">pbat/sim/xpbd/Data.h</includes>
+    <includes refid="sim_2xpbd_2Enums_8h" local="yes">pbat/sim/xpbd/Enums.h</includes>
+    <includes local="no">array</includes>
+    <includes local="no">vector</includes>
+    <includedby refid="source_2pbat_2gpu_2xpbd_2Xpbd_8h" local="yes">/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/xpbd/Xpbd.h</includedby>
+    <incdepgraph>
+      <node id="5">
+        <label>pbat/sim/xpbd/Data.h</label>
+      </node>
+      <node id="4">
+        <label>Eigen/Core</label>
+      </node>
+      <node id="1">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/xpbd/Integrator.h</label>
+        <link refid="source_2pbat_2gpu_2xpbd_2Integrator_8h"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>pbat/gpu/Aliases.h</label>
+        <link refid="gpu_2Aliases_8h_source"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>PhysicsBasedAnimationToolkitExport.h</label>
+      </node>
+      <node id="6">
+        <label>pbat/sim/xpbd/Enums.h</label>
+        <link refid="sim_2xpbd_2Enums_8h_source"/>
+      </node>
+      <node id="8">
+        <label>vector</label>
+      </node>
+      <node id="7">
+        <label>array</label>
+      </node>
+    </incdepgraph>
+    <invincdepgraph>
+      <node id="2">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/xpbd/Xpbd.h</label>
+        <link refid="source_2pbat_2gpu_2xpbd_2Xpbd_8h_source"/>
+      </node>
+      <node id="1">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/xpbd/Integrator.h</label>
+        <link refid="source_2pbat_2gpu_2xpbd_2Integrator_8h"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+      </node>
+    </invincdepgraph>
+    <innerclass refid="classpbat_1_1gpu_1_1xpbd_1_1Integrator" prot="public">pbat::gpu::xpbd::Integrator</innerclass>
+    <innernamespace refid="namespacepbat">pbat</innernamespace>
+    <innernamespace refid="namespacepbat_1_1gpu">pbat::gpu</innernamespace>
+    <innernamespace refid="namespacepbat_1_1gpu_1_1xpbd">pbat::gpu::xpbd</innernamespace>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="preprocessor">#ifndef<sp/>PBAT_GPU_XPBD_INTEGRATOR_H</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="2"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>PBAT_GPU_XPBD_INTEGRATOR_H</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="3"><highlight class="normal"></highlight></codeline>
+<codeline lineno="4"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;PhysicsBasedAnimationToolkitExport.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="5"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;pbat/gpu/Aliases.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="6"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;pbat/sim/xpbd/Data.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="7"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;pbat/sim/xpbd/Enums.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="8"><highlight class="normal"></highlight></codeline>
+<codeline lineno="9"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;array&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="10"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;vector&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="11"><highlight class="normal"></highlight></codeline>
+<codeline lineno="12"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal">pbat<sp/>{</highlight></codeline>
+<codeline lineno="13"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal">gpu<sp/>{</highlight></codeline>
+<codeline lineno="14"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal">xpbd<sp/>{</highlight></codeline>
+<codeline lineno="15"><highlight class="normal"></highlight></codeline>
+<codeline lineno="16"><highlight class="normal"></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal">IntegratorImpl;</highlight></codeline>
+<codeline lineno="17"><highlight class="normal"></highlight></codeline>
+<codeline lineno="18" refid="classpbat_1_1gpu_1_1xpbd_1_1Integrator" refkind="compound"><highlight class="normal"></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal"><ref refid="classpbat_1_1gpu_1_1xpbd_1_1Integrator" kindref="compound">Integrator</ref></highlight></codeline>
+<codeline lineno="19"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="20"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="21"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using</highlight><highlight class="normal"><sp/><ref refid="structpbat_1_1sim_1_1xpbd_1_1Data" kindref="compound">Data</ref><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/><ref refid="structpbat_1_1sim_1_1xpbd_1_1Data" kindref="compound">pbat::sim::xpbd::Data</ref>;</highlight></codeline>
+<codeline lineno="22"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using</highlight><highlight class="normal"><sp/>EConstraint<sp/>=<sp/>pbat::sim::xpbd::EConstraint;</highlight></codeline>
+<codeline lineno="23"><highlight class="normal"></highlight></codeline>
+<codeline lineno="24"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Constructors</highlight></codeline>
+<codeline lineno="30"><highlight class="comment"></highlight><highlight class="normal"><sp/><sp/><sp/><sp/>PBAT_API<sp/><ref refid="classpbat_1_1gpu_1_1xpbd_1_1Integrator_1a7c5e8d5d96918f470c48f698580b06b5" kindref="member">Integrator</ref>(</highlight></codeline>
+<codeline lineno="31"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1sim_1_1xpbd_1_1Data" kindref="compound">Data</ref><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>data,</highlight></codeline>
+<codeline lineno="32"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::size_t<sp/>nMaxVertexTetrahedronOverlaps,</highlight></codeline>
+<codeline lineno="33"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::size_t<sp/>nMaxVertexTriangleContacts);</highlight></codeline>
+<codeline lineno="34"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="classpbat_1_1gpu_1_1xpbd_1_1Integrator_1a7c5e8d5d96918f470c48f698580b06b5" kindref="member">Integrator</ref>(<ref refid="classpbat_1_1gpu_1_1xpbd_1_1Integrator" kindref="compound">Integrator</ref><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;)<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/></highlight><highlight class="keyword">delete</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="35"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="classpbat_1_1gpu_1_1xpbd_1_1Integrator" kindref="compound">Integrator</ref>&amp;<sp/>operator=(<ref refid="classpbat_1_1gpu_1_1xpbd_1_1Integrator" kindref="compound">Integrator</ref><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;)<sp/>=<sp/></highlight><highlight class="keyword">delete</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="36"><highlight class="normal"><sp/><sp/><sp/><sp/>PBAT_API<sp/><ref refid="classpbat_1_1gpu_1_1xpbd_1_1Integrator_1a7c5e8d5d96918f470c48f698580b06b5" kindref="member">Integrator</ref>(<ref refid="classpbat_1_1gpu_1_1xpbd_1_1Integrator" kindref="compound">Integrator</ref>&amp;&amp;)<sp/>noexcept;</highlight></codeline>
+<codeline lineno="37"><highlight class="normal"><sp/><sp/><sp/><sp/>PBAT_API<sp/><ref refid="classpbat_1_1gpu_1_1xpbd_1_1Integrator" kindref="compound">Integrator</ref>&amp;<sp/>operator=(<ref refid="classpbat_1_1gpu_1_1xpbd_1_1Integrator" kindref="compound">Integrator</ref>&amp;&amp;)<sp/>noexcept;</highlight></codeline>
+<codeline lineno="44"><highlight class="normal"><sp/><sp/><sp/><sp/>PBAT_API<sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="classpbat_1_1gpu_1_1xpbd_1_1Integrator_1af797d48badc1884cc50b5acd0f6dfa5c" kindref="member">Step</ref>(GpuScalar<sp/>dt,<sp/>GpuIndex<sp/>iterations,<sp/>GpuIndex<sp/>substeps);</highlight></codeline>
+<codeline lineno="49"><highlight class="normal"><sp/><sp/><sp/><sp/>PBAT_API<sp/>GpuMatrixX<sp/><ref refid="classpbat_1_1gpu_1_1xpbd_1_1Integrator_1aa6e6f692fd22a40e1b6077e0174042ea" kindref="member">Positions</ref>()<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="54"><highlight class="normal"><sp/><sp/><sp/><sp/>PBAT_API<sp/>std::size_t<sp/><ref refid="classpbat_1_1gpu_1_1xpbd_1_1Integrator_1a09f1e7bb7242eb7d32a5465a2e1b6b0c" kindref="member">NumberOfParticles</ref>()<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="59"><highlight class="normal"><sp/><sp/><sp/><sp/>PBAT_API<sp/>std::size_t<sp/><ref refid="classpbat_1_1gpu_1_1xpbd_1_1Integrator_1ad352613391cf0838ca484b8860b2a35f" kindref="member">NumberOfConstraints</ref>()<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="64"><highlight class="normal"><sp/><sp/><sp/><sp/>PBAT_API<sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="classpbat_1_1gpu_1_1xpbd_1_1Integrator_1ad2fd2874c230073f66dd852448007bcf" kindref="member">SetPositions</ref>(Eigen::Ref&lt;GpuMatrixX<sp/>const&gt;<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>X);</highlight></codeline>
+<codeline lineno="69"><highlight class="normal"><sp/><sp/><sp/><sp/>PBAT_API<sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="classpbat_1_1gpu_1_1xpbd_1_1Integrator_1abd3b3e2f5281c68de6778cf3e8958baa" kindref="member">SetVelocities</ref>(Eigen::Ref&lt;GpuMatrixX<sp/>const&gt;<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>v);</highlight></codeline>
+<codeline lineno="74"><highlight class="normal"><sp/><sp/><sp/><sp/>PBAT_API<sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="classpbat_1_1gpu_1_1xpbd_1_1Integrator_1adec0875558f1e836e4bb024313406190" kindref="member">SetExternalAcceleration</ref>(Eigen::Ref&lt;GpuMatrixX<sp/>const&gt;<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>aext);</highlight></codeline>
+<codeline lineno="79"><highlight class="normal"><sp/><sp/><sp/><sp/>PBAT_API<sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="classpbat_1_1gpu_1_1xpbd_1_1Integrator_1aebf3c01b199e4a06bbf1d5f40df4d448" kindref="member">SetMassInverse</ref>(Eigen::Ref&lt;GpuMatrixX<sp/>const&gt;<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>minv);</highlight></codeline>
+<codeline lineno="84"><highlight class="normal"><sp/><sp/><sp/><sp/>PBAT_API<sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="classpbat_1_1gpu_1_1xpbd_1_1Integrator_1a7013f2e6eb52feb81458c8f4e0fe0f9a" kindref="member">SetLameCoefficients</ref>(Eigen::Ref&lt;GpuMatrixX<sp/>const&gt;<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>l);</highlight></codeline>
+<codeline lineno="90"><highlight class="normal"><sp/><sp/><sp/><sp/>PBAT_API<sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="classpbat_1_1gpu_1_1xpbd_1_1Integrator_1a5eddb176363f7820a6e31603f7c31115" kindref="member">SetCompliance</ref>(Eigen::Ref&lt;GpuMatrixX<sp/>const&gt;<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>alpha,<sp/>EConstraint<sp/>eConstraint);</highlight></codeline>
+<codeline lineno="96"><highlight class="normal"><sp/><sp/><sp/><sp/>PBAT_API<sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="classpbat_1_1gpu_1_1xpbd_1_1Integrator_1a96a5b817c4e3315d30a864075e1c6fb1" kindref="member">SetFrictionCoefficients</ref>(GpuScalar<sp/>muS,<sp/>GpuScalar<sp/>muK);</highlight></codeline>
+<codeline lineno="102"><highlight class="normal"><sp/><sp/><sp/><sp/>PBAT_API<sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="classpbat_1_1gpu_1_1xpbd_1_1Integrator_1afd895f7f904bd27f1c9d46c720a54d86" kindref="member">SetSceneBoundingBox</ref>(</highlight></codeline>
+<codeline lineno="103"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>Eigen::Vector&lt;GpuScalar,<sp/>3&gt;<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>min,</highlight></codeline>
+<codeline lineno="104"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>Eigen::Vector&lt;GpuScalar,<sp/>3&gt;<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>max);</highlight></codeline>
+<codeline lineno="109"><highlight class="normal"><sp/><sp/><sp/><sp/>PBAT_API<sp/>GpuMatrixX<sp/><ref refid="classpbat_1_1gpu_1_1xpbd_1_1Integrator_1a4269fd57bf864b33ecbd12724f17f889" kindref="member">GetVelocity</ref>()<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="114"><highlight class="normal"><sp/><sp/><sp/><sp/>PBAT_API<sp/>GpuMatrixX<sp/><ref refid="classpbat_1_1gpu_1_1xpbd_1_1Integrator_1a297596e388d7141ed3a52aaaf7e81250" kindref="member">GetExternalAcceleration</ref>()<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="119"><highlight class="normal"><sp/><sp/><sp/><sp/>PBAT_API<sp/>GpuVectorX<sp/><ref refid="classpbat_1_1gpu_1_1xpbd_1_1Integrator_1a7b1cdd7952a3a3f04f5f025cbd862f2f" kindref="member">GetMassInverse</ref>()<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="124"><highlight class="normal"><sp/><sp/><sp/><sp/>PBAT_API<sp/>GpuMatrixX<sp/><ref refid="classpbat_1_1gpu_1_1xpbd_1_1Integrator_1a7eb30366009f512a7561c5db987c1793" kindref="member">GetLameCoefficients</ref>()<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="129"><highlight class="normal"><sp/><sp/><sp/><sp/>PBAT_API<sp/>GpuMatrixX<sp/><ref refid="classpbat_1_1gpu_1_1xpbd_1_1Integrator_1ae4d228bbfb1b5d2dbf29ef9bbce362be" kindref="member">GetShapeMatrixInverse</ref>()<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="134"><highlight class="normal"><sp/><sp/><sp/><sp/>PBAT_API<sp/>GpuMatrixX<sp/><ref refid="classpbat_1_1gpu_1_1xpbd_1_1Integrator_1afe19caf55a30f95b9e310db18cbb3d1b" kindref="member">GetRestStableGamma</ref>()<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="140"><highlight class="normal"><sp/><sp/><sp/><sp/>PBAT_API<sp/>GpuMatrixX<sp/><ref refid="classpbat_1_1gpu_1_1xpbd_1_1Integrator_1a62521ffc65d930a7e92dddac236616d5" kindref="member">GetLagrangeMultiplier</ref>(EConstraint<sp/>eConstraint)<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="146"><highlight class="normal"><sp/><sp/><sp/><sp/>PBAT_API<sp/>GpuMatrixX<sp/><ref refid="classpbat_1_1gpu_1_1xpbd_1_1Integrator_1adc46611308b04f2983fe79dbd8ef7aca" kindref="member">GetCompliance</ref>(EConstraint<sp/>eConstraint)<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="152"><highlight class="normal"><sp/><sp/><sp/><sp/>PBAT_API<sp/>GpuIndexMatrixX<sp/><ref refid="classpbat_1_1gpu_1_1xpbd_1_1Integrator_1afdf658e420da9ab0867653ec4eb89cf5" kindref="member">GetVertexTetrahedronCollisionCandidates</ref>()<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="157"><highlight class="normal"><sp/><sp/><sp/><sp/>PBAT_API<sp/>GpuIndexMatrixX<sp/><ref refid="classpbat_1_1gpu_1_1xpbd_1_1Integrator_1aa74733cae74b4c4c00d96d5a3d9390f2" kindref="member">GetVertexTriangleContactPairs</ref>()<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="161"><highlight class="normal"><sp/><sp/><sp/><sp/>PBAT_API<sp/>~<ref refid="classpbat_1_1gpu_1_1xpbd_1_1Integrator" kindref="compound">Integrator</ref>();</highlight></codeline>
+<codeline lineno="162"><highlight class="normal"></highlight></codeline>
+<codeline lineno="163"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">private</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="164"><highlight class="normal"><sp/><sp/><sp/><sp/>IntegratorImpl*<sp/>mImpl;</highlight></codeline>
+<codeline lineno="165"><highlight class="normal">};</highlight></codeline>
+<codeline lineno="166"><highlight class="normal"></highlight></codeline>
+<codeline lineno="167"><highlight class="normal">}<sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>xpbd</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="168"><highlight class="normal">}<sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>gpu</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="169"><highlight class="normal">}<sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>pbat</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="170"><highlight class="normal"></highlight></codeline>
+<codeline lineno="171"><highlight class="normal"></highlight><highlight class="preprocessor">#endif<sp/>//<sp/>PBAT_GPU_XPBD_INTEGRATOR_H</highlight></codeline>
+    </programlisting>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/xpbd/Integrator.h"/>
+  </compounddef>
+</doxygen>

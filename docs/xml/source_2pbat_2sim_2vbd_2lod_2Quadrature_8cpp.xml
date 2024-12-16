@@ -1,0 +1,621 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="source_2pbat_2sim_2vbd_2lod_2Quadrature_8cpp" kind="file" language="C++">
+    <compoundname>Quadrature.cpp</compoundname>
+    <includes refid="source_2pbat_2sim_2vbd_2lod_2Quadrature_8h" local="yes">Quadrature.h</includes>
+    <includes refid="ArgSort_8h" local="yes">pbat/common/ArgSort.h</includes>
+    <includes refid="ConstexprFor_8h" local="yes">pbat/common/ConstexprFor.h</includes>
+    <includes local="yes">pbat/fem/Jacobian.h</includes>
+    <includes local="yes">pbat/fem/ShapeFunctions.h</includes>
+    <includes refid="Triangle_8h" local="yes">pbat/fem/Triangle.h</includes>
+    <includes local="yes">pbat/geometry/MeshBoundary.h</includes>
+    <includes local="yes">pbat/geometry/TetrahedralAabbHierarchy.h</includes>
+    <includes local="yes">pbat/graph/Adjacency.h</includes>
+    <includes local="yes">pbat/graph/Mesh.h</includes>
+    <includes local="yes">pbat/math/MomentFitting.h</includes>
+    <includes local="no">algorithm</includes>
+    <includes local="no">exception</includes>
+    <includes local="no">fmt/format.h</includes>
+    <includes local="no">numeric</includes>
+    <includes local="no">tuple</includes>
+    <includes refid="Cube_8h" local="yes">pbat/geometry/model/Cube.h</includes>
+    <includes local="no">doctest/doctest.h</includes>
+    <incdepgraph>
+      <node id="34">
+        <label>Enums.h</label>
+        <link refid="geometry_2model_2Enums_8h_source"/>
+      </node>
+      <node id="16">
+        <label>pbat/common/ArgSort.h</label>
+        <link refid="ArgSort_8h_source"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="17" relation="include">
+        </childnode>
+        <childnode refid="18" relation="include">
+        </childnode>
+        <childnode refid="19" relation="include">
+        </childnode>
+      </node>
+      <node id="31">
+        <label>fmt/format.h</label>
+      </node>
+      <node id="28">
+        <label>pbat/graph/Mesh.h</label>
+      </node>
+      <node id="11">
+        <label>pbat/math/GaussQuadrature.h</label>
+        <link refid="GaussQuadrature_8h_source"/>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="13" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+      </node>
+      <node id="13">
+        <label>cstdint</label>
+      </node>
+      <node id="3">
+        <label>pbat/Aliases.h</label>
+        <link refid="Aliases_8h_source"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+      </node>
+      <node id="33">
+        <label>pbat/geometry/model/Cube.h</label>
+        <link refid="Cube_8h_source"/>
+        <childnode refid="34" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="22" relation="include">
+        </childnode>
+      </node>
+      <node id="19">
+        <label>numeric</label>
+      </node>
+      <node id="4">
+        <label>Eigen/Core</label>
+      </node>
+      <node id="7">
+        <label>pbat/sim/vbd/Mesh.h</label>
+        <link refid="source_2pbat_2sim_2vbd_2Mesh_8h_source"/>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="15" relation="include">
+        </childnode>
+      </node>
+      <node id="15">
+        <label>pbat/fem/Triangle.h</label>
+        <link refid="Triangle_8h_source"/>
+        <childnode refid="10" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+      </node>
+      <node id="29">
+        <label>pbat/math/MomentFitting.h</label>
+      </node>
+      <node id="10">
+        <label>QuadratureRules.h</label>
+        <link refid="QuadratureRules_8h_source"/>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="14" relation="include">
+        </childnode>
+      </node>
+      <node id="23">
+        <label>pbat/fem/Jacobian.h</label>
+      </node>
+      <node id="26">
+        <label>pbat/geometry/TetrahedralAabbHierarchy.h</label>
+      </node>
+      <node id="30">
+        <label>exception</label>
+      </node>
+      <node id="14">
+        <label>pbat/math/SymmetricQuadratureRules.h</label>
+        <link refid="SymmetricQuadratureRules_8h_source"/>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="13" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+      </node>
+      <node id="35">
+        <label>doctest/doctest.h</label>
+      </node>
+      <node id="5">
+        <label>Eigen/Sparse</label>
+      </node>
+      <node id="32">
+        <label>tuple</label>
+      </node>
+      <node id="1">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Quadrature.cpp</label>
+        <link refid="source_2pbat_2sim_2vbd_2lod_2Quadrature_8cpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="16" relation="include">
+        </childnode>
+        <childnode refid="20" relation="include">
+        </childnode>
+        <childnode refid="23" relation="include">
+        </childnode>
+        <childnode refid="24" relation="include">
+        </childnode>
+        <childnode refid="15" relation="include">
+        </childnode>
+        <childnode refid="25" relation="include">
+        </childnode>
+        <childnode refid="26" relation="include">
+        </childnode>
+        <childnode refid="27" relation="include">
+        </childnode>
+        <childnode refid="28" relation="include">
+        </childnode>
+        <childnode refid="29" relation="include">
+        </childnode>
+        <childnode refid="17" relation="include">
+        </childnode>
+        <childnode refid="30" relation="include">
+        </childnode>
+        <childnode refid="31" relation="include">
+        </childnode>
+        <childnode refid="19" relation="include">
+        </childnode>
+        <childnode refid="32" relation="include">
+        </childnode>
+        <childnode refid="33" relation="include">
+        </childnode>
+        <childnode refid="35" relation="include">
+        </childnode>
+      </node>
+      <node id="9">
+        <label>pbat/fem/Tetrahedron.h</label>
+        <link refid="Tetrahedron_8h_source"/>
+        <childnode refid="10" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+      </node>
+      <node id="8">
+        <label>pbat/fem/Mesh.h</label>
+      </node>
+      <node id="25">
+        <label>pbat/geometry/MeshBoundary.h</label>
+      </node>
+      <node id="22">
+        <label>utility</label>
+      </node>
+      <node id="12">
+        <label>array</label>
+      </node>
+      <node id="27">
+        <label>pbat/graph/Adjacency.h</label>
+      </node>
+      <node id="6">
+        <label>cstddef</label>
+      </node>
+      <node id="20">
+        <label>pbat/common/ConstexprFor.h</label>
+        <link refid="ConstexprFor_8h_source"/>
+        <childnode refid="21" relation="include">
+        </childnode>
+        <childnode refid="22" relation="include">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>Quadrature.h</label>
+        <link refid="source_2pbat_2sim_2vbd_2lod_2Quadrature_8h_source"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+      </node>
+      <node id="18">
+        <label>concepts</label>
+      </node>
+      <node id="24">
+        <label>pbat/fem/ShapeFunctions.h</label>
+      </node>
+      <node id="21">
+        <label>type_traits</label>
+      </node>
+      <node id="17">
+        <label>algorithm</label>
+      </node>
+    </incdepgraph>
+    <innernamespace refid="namespacepbat">pbat</innernamespace>
+    <innernamespace refid="namespacepbat_1_1sim">pbat::sim</innernamespace>
+    <innernamespace refid="namespacepbat_1_1sim_1_1vbd">pbat::sim::vbd</innernamespace>
+    <innernamespace refid="namespacepbat_1_1sim_1_1vbd_1_1lod">pbat::sim::vbd::lod</innernamespace>
+      <sectiondef kind="func">
+      <memberdef kind="function" id="source_2pbat_2sim_2vbd_2lod_2Quadrature_8cpp_1ac4bd05c13826793ed9e4553a2604818c" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>TEST_CASE</definition>
+        <argsstring>(&quot;[sim][vbd][lod] Quadrature&quot;)</argsstring>
+        <name>TEST_CASE</name>
+        <param>
+          <type>&quot; Quadrature&quot;</type>
+          <array>[sim][vbd][lod]</array>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Quadrature.cpp" line="288" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Quadrature.cpp" bodystart="288" bodyend="349"/>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="preprocessor">#include<sp/>&quot;Quadrature.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="2"><highlight class="normal"></highlight></codeline>
+<codeline lineno="3"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;pbat/common/ArgSort.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="4"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;pbat/common/ConstexprFor.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="5"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;pbat/fem/Jacobian.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="6"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;pbat/fem/ShapeFunctions.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="7"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;pbat/fem/Triangle.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="8"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;pbat/geometry/MeshBoundary.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="9"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;pbat/geometry/TetrahedralAabbHierarchy.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="10"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;pbat/graph/Adjacency.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="11"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;pbat/graph/Mesh.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="12"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;pbat/math/MomentFitting.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="13"><highlight class="normal"></highlight></codeline>
+<codeline lineno="14"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;algorithm&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="15"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;exception&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="16"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;fmt/format.h&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="17"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;numeric&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="18"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;tuple&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="19"><highlight class="normal"></highlight></codeline>
+<codeline lineno="20"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal">pbat<sp/>{</highlight></codeline>
+<codeline lineno="21"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal">sim<sp/>{</highlight></codeline>
+<codeline lineno="22"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal">vbd<sp/>{</highlight></codeline>
+<codeline lineno="23"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal">lod<sp/>{</highlight></codeline>
+<codeline lineno="24"><highlight class="normal"></highlight></codeline>
+<codeline lineno="25"><highlight class="normal"></highlight><highlight class="keyword">template</highlight><highlight class="normal"><sp/>&lt;</highlight><highlight class="keyword">class</highlight><highlight class="normal"><sp/>TDerivedEG,<sp/></highlight><highlight class="keyword">class</highlight><highlight class="normal"><sp/>TDerivedWG,<sp/></highlight><highlight class="keyword">class</highlight><highlight class="normal"><sp/>TDerivedXG&gt;</highlight></codeline>
+<codeline lineno="26"><highlight class="normal">std::tuple&lt;IndexVectorX,<sp/>VectorX,<sp/>MatrixX&gt;<sp/>PatchQuadrature(</highlight></codeline>
+<codeline lineno="27"><highlight class="normal"><sp/><sp/><sp/><sp/>VolumeMesh<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>CM,</highlight></codeline>
+<codeline lineno="28"><highlight class="normal"><sp/><sp/><sp/><sp/>Eigen::MatrixBase&lt;TDerivedEG&gt;<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>eg1,</highlight></codeline>
+<codeline lineno="29"><highlight class="normal"><sp/><sp/><sp/><sp/>Eigen::MatrixBase&lt;TDerivedWG&gt;<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>wg1,</highlight></codeline>
+<codeline lineno="30"><highlight class="normal"><sp/><sp/><sp/><sp/>Eigen::MatrixBase&lt;TDerivedXG&gt;<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>Xg1,</highlight></codeline>
+<codeline lineno="31"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">int</highlight><highlight class="normal"><sp/>patchOrder<sp/><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/>2,</highlight></codeline>
+<codeline lineno="32"><highlight class="normal"><sp/><sp/><sp/><sp/>Scalar<sp/>zeroTetVolume<sp/>=<sp/>Scalar(1e-6))</highlight></codeline>
+<codeline lineno="33"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="34"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Find<sp/>empty<sp/>coarse<sp/>elements</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="35"><highlight class="normal"><sp/><sp/><sp/><sp/>IndexVectorX<sp/>egcpy<sp/>=<sp/>eg1;</highlight></codeline>
+<codeline lineno="36"><highlight class="normal"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="37"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::sort(egcpy.begin(),<sp/>egcpy.end());</highlight></codeline>
+<codeline lineno="38"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>it<sp/>=<sp/>std::unique(egcpy.begin(),<sp/>egcpy.end());</highlight></codeline>
+<codeline lineno="39"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>egcpy.conservativeResize(std::distance(egcpy.begin(),<sp/>it));</highlight></codeline>
+<codeline lineno="40"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="41"><highlight class="normal"><sp/><sp/><sp/><sp/>IndexVectorX<sp/>eg2{};</highlight></codeline>
+<codeline lineno="42"><highlight class="normal"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="43"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>IndexVectorX<sp/>eall(CM.E.cols());</highlight></codeline>
+<codeline lineno="44"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::iota(eall.begin(),<sp/>eall.end(),<sp/>Index(0));</highlight></codeline>
+<codeline lineno="45"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>eg2.resizeLike(eall);</highlight></codeline>
+<codeline lineno="46"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>it<sp/>=</highlight></codeline>
+<codeline lineno="47"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::set_difference(eall.begin(),<sp/>eall.end(),<sp/>egcpy.begin(),<sp/>egcpy.end(),<sp/>eg2.begin());</highlight></codeline>
+<codeline lineno="48"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>eg2.conservativeResize(std::distance(eg2.begin(),<sp/>it));</highlight></codeline>
+<codeline lineno="49"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="50"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Return<sp/>input<sp/>quadrature<sp/>if<sp/>it<sp/>was<sp/>already<sp/>fine</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="51"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>bNeedsPatching<sp/>=<sp/>eg2.size()<sp/>&gt;<sp/>0;</highlight></codeline>
+<codeline lineno="52"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(not<sp/>bNeedsPatching)</highlight></codeline>
+<codeline lineno="53"><highlight class="normal"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="54"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>std::make_tuple&lt;IndexVectorX,<sp/>VectorX,<sp/>MatrixX&gt;(eg1,<sp/>wg1,<sp/>Xg1);</highlight></codeline>
+<codeline lineno="55"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="56"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Compute<sp/>&quot;negligible&quot;<sp/>1-pt<sp/>quadrature<sp/>on<sp/>coarse<sp/>empty<sp/>elements</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="57"><highlight class="normal"><sp/><sp/><sp/><sp/>VectorX<sp/>wg2{};</highlight></codeline>
+<codeline lineno="58"><highlight class="normal"><sp/><sp/><sp/><sp/>MatrixX<sp/>Xg2{};</highlight></codeline>
+<codeline lineno="59"><highlight class="normal"><sp/><sp/><sp/><sp/>common::ForRange&lt;1,<sp/>7&gt;([&amp;]&lt;</highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>kOrder&gt;()<sp/>{</highlight></codeline>
+<codeline lineno="60"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(kOrder<sp/>==<sp/>patchOrder)</highlight></codeline>
+<codeline lineno="61"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="62"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>wg2<sp/>=<sp/>fem::InnerProductWeights&lt;kOrder&gt;(CM)(Eigen::placeholders::all,<sp/>eg2).reshaped();</highlight></codeline>
+<codeline lineno="63"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>wg2<sp/>*=<sp/>zeroTetVolume;</highlight></codeline>
+<codeline lineno="64"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>nQuadPtsPerElem<sp/>=<sp/>wg2.size()<sp/>/<sp/>eg2.size();</highlight></codeline>
+<codeline lineno="65"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>eg2q<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/>eg2.replicate(nQuadPtsPerElem,<sp/>1).reshaped();</highlight></codeline>
+<codeline lineno="66"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>Xg2<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/>CM.QuadraturePoints&lt;kOrder&gt;()(Eigen::placeholders::all,<sp/>eg2q);</highlight></codeline>
+<codeline lineno="67"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="68"><highlight class="normal"><sp/><sp/><sp/><sp/>});</highlight></codeline>
+<codeline lineno="69"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Combine<sp/>embedded<sp/>mesh&apos;s<sp/>quadrature<sp/>+<sp/>the<sp/>negligible<sp/>quadrature</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="70"><highlight class="normal"><sp/><sp/><sp/><sp/>MatrixX<sp/>Xg(3,<sp/>Xg1.cols()<sp/>+<sp/>Xg2.cols());</highlight></codeline>
+<codeline lineno="71"><highlight class="normal"><sp/><sp/><sp/><sp/>VectorX<sp/>wg(wg1.size()<sp/>+<sp/>wg2.size());</highlight></codeline>
+<codeline lineno="72"><highlight class="normal"><sp/><sp/><sp/><sp/>IndexVectorX<sp/>eg(eg1.size()<sp/>+<sp/>eg2.size());</highlight></codeline>
+<codeline lineno="73"><highlight class="normal"><sp/><sp/><sp/><sp/>Xg<sp/>&lt;&lt;<sp/>Xg1,<sp/>Xg2;</highlight></codeline>
+<codeline lineno="74"><highlight class="normal"><sp/><sp/><sp/><sp/>wg<sp/>&lt;&lt;<sp/>wg1,<sp/>wg2;</highlight></codeline>
+<codeline lineno="75"><highlight class="normal"><sp/><sp/><sp/><sp/>eg<sp/>&lt;&lt;<sp/>eg1,<sp/>eg2;</highlight></codeline>
+<codeline lineno="76"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>std::make_tuple(eg,<sp/>wg,<sp/>Xg);</highlight></codeline>
+<codeline lineno="77"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="78"><highlight class="normal"></highlight></codeline>
+<codeline lineno="79"><highlight class="normal">CageQuadratureParameters&amp;</highlight></codeline>
+<codeline lineno="80"><highlight class="normal">CageQuadratureParameters::WithStrategy(ECageQuadratureStrategy<sp/>eStrategyIn)</highlight></codeline>
+<codeline lineno="81"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="82"><highlight class="normal"><sp/><sp/><sp/><sp/>eStrategy<sp/>=<sp/>eStrategyIn;</highlight></codeline>
+<codeline lineno="83"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>*</highlight><highlight class="keyword">this</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="84"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="85"><highlight class="normal"></highlight></codeline>
+<codeline lineno="86"><highlight class="normal">CageQuadratureParameters&amp;<sp/>CageQuadratureParameters::WithCageMeshPointsOfOrder(</highlight><highlight class="keywordtype">int</highlight><highlight class="normal"><sp/>order)</highlight></codeline>
+<codeline lineno="87"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="88"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(order<sp/>&lt;<sp/>1<sp/>or<sp/>order<sp/>&gt;<sp/>6)</highlight></codeline>
+<codeline lineno="89"><highlight class="normal"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="90"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">throw</highlight><highlight class="normal"><sp/>std::invalid_argument(</highlight></codeline>
+<codeline lineno="91"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>fmt::format(</highlight><highlight class="stringliteral">&quot;Expected<sp/>1<sp/>&lt;=<sp/>order<sp/>&lt;=<sp/>6,<sp/>but<sp/>got<sp/>order={}&quot;</highlight><highlight class="normal">,<sp/>order));</highlight></codeline>
+<codeline lineno="92"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="93"><highlight class="normal"><sp/><sp/><sp/><sp/>mCageMeshPointsOfOrder<sp/>=<sp/>order;</highlight></codeline>
+<codeline lineno="94"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>*</highlight><highlight class="keyword">this</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="95"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="96"><highlight class="normal"></highlight></codeline>
+<codeline lineno="97"><highlight class="normal">CageQuadratureParameters&amp;<sp/>CageQuadratureParameters::WithPatchCellPointsOfOrder(</highlight><highlight class="keywordtype">int</highlight><highlight class="normal"><sp/>order)</highlight></codeline>
+<codeline lineno="98"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="99"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(order<sp/>&lt;<sp/>1<sp/>or<sp/>order<sp/>&gt;<sp/>6)</highlight></codeline>
+<codeline lineno="100"><highlight class="normal"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="101"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">throw</highlight><highlight class="normal"><sp/>std::invalid_argument(</highlight></codeline>
+<codeline lineno="102"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>fmt::format(</highlight><highlight class="stringliteral">&quot;Expected<sp/>1<sp/>&lt;=<sp/>order<sp/>&lt;=<sp/>6,<sp/>but<sp/>got<sp/>order={}&quot;</highlight><highlight class="normal">,<sp/>order));</highlight></codeline>
+<codeline lineno="103"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="104"><highlight class="normal"><sp/><sp/><sp/><sp/>mPatchCellPointsOfOrder<sp/>=<sp/>order;</highlight></codeline>
+<codeline lineno="105"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>*</highlight><highlight class="keyword">this</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="106"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="107"><highlight class="normal"></highlight></codeline>
+<codeline lineno="108"><highlight class="normal">CageQuadratureParameters&amp;<sp/>CageQuadratureParameters::WithPatchError(Scalar<sp/>err)</highlight></codeline>
+<codeline lineno="109"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="110"><highlight class="normal"><sp/><sp/><sp/><sp/>mPatchTetVolumeError<sp/>=<sp/>err;</highlight></codeline>
+<codeline lineno="111"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>*</highlight><highlight class="keyword">this</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="112"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="113"><highlight class="normal"></highlight></codeline>
+<codeline lineno="114" refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1CageQuadrature_1aa0cb2dfe50e2a696023583aa79ef944f" refkind="member"><highlight class="normal">CageQuadrature::CageQuadrature(</highlight></codeline>
+<codeline lineno="115"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1fem_1_1Mesh" kindref="compound">VolumeMesh</ref><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>FM,</highlight></codeline>
+<codeline lineno="116"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1fem_1_1Mesh" kindref="compound">VolumeMesh</ref><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>CM,</highlight></codeline>
+<codeline lineno="117"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1CageQuadratureParameters" kindref="compound">CageQuadratureParameters</ref><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>params)</highlight></codeline>
+<codeline lineno="118"><highlight class="normal"><sp/><sp/><sp/><sp/>:<sp/>Xg(),<sp/>wg(),<sp/>sg(),<sp/>eg(),<sp/>Ncg(),<sp/>GNcg(),<sp/>efg(),<sp/>Nfg(),<sp/>GNfg(),<sp/>GVGp(),<sp/>GVGg(),<sp/>GVGilocal()</highlight></codeline>
+<codeline lineno="119"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="120"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="classpbat_1_1geometry_1_1TetrahedralAabbHierarchy" kindref="compound">geometry::TetrahedralAabbHierarchy</ref><sp/>fbvh(FM.<ref refid="structpbat_1_1fem_1_1Mesh_1abc65a193ee960705ddf64227afb18809" kindref="member">X</ref>,<sp/>FM.<ref refid="structpbat_1_1fem_1_1Mesh_1a384afdf16df5efa27e09f17520402b5b" kindref="member">E</ref>);</highlight></codeline>
+<codeline lineno="121"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="classpbat_1_1geometry_1_1TetrahedralAabbHierarchy" kindref="compound">geometry::TetrahedralAabbHierarchy</ref><sp/>cbvh(CM.<ref refid="structpbat_1_1fem_1_1Mesh_1abc65a193ee960705ddf64227afb18809" kindref="member">X</ref>,<sp/>CM.<ref refid="structpbat_1_1fem_1_1Mesh_1a384afdf16df5efa27e09f17520402b5b" kindref="member">E</ref>);</highlight></codeline>
+<codeline lineno="122"><highlight class="normal"></highlight></codeline>
+<codeline lineno="123"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">switch</highlight><highlight class="normal"><sp/>(params.eStrategy)</highlight></codeline>
+<codeline lineno="124"><highlight class="normal"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="125"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">case</highlight><highlight class="normal"><sp/>ECageQuadratureStrategy::CageMesh:<sp/>{</highlight></codeline>
+<codeline lineno="126"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Simply<sp/>use<sp/>the<sp/>symmetric<sp/>simplex<sp/>polynomial<sp/>quadrature<sp/>rule<sp/>of<sp/>the<sp/>coarse<sp/>mesh</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="127"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>common::ForRange&lt;1,<sp/>7&gt;([&amp;]&lt;</highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>kCoarsePolynomialOrder&gt;()<sp/>{</highlight></codeline>
+<codeline lineno="128"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(params.mCageMeshPointsOfOrder<sp/>==<sp/>kCoarsePolynomialOrder)</highlight></codeline>
+<codeline lineno="129"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="130"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>Xg<sp/>=<sp/>CM.QuadraturePoints&lt;kCoarsePolynomialOrder&gt;();</highlight></codeline>
+<codeline lineno="131"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>wg<sp/>=<sp/>fem::InnerProductWeights&lt;kCoarsePolynomialOrder&gt;(CM).reshaped();</highlight></codeline>
+<codeline lineno="132"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>eg<sp/>=<sp/>IndexVectorX::LinSpaced(CM.E.cols(),<sp/>Index(0),<sp/>CM.E.cols()<sp/>-<sp/>1)</highlight></codeline>
+<codeline lineno="133"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>.transpose()</highlight></codeline>
+<codeline lineno="134"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>.replicate(Xg.cols()<sp/>/<sp/>CM.E.cols(),<sp/>1)</highlight></codeline>
+<codeline lineno="135"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>.reshaped();</highlight></codeline>
+<codeline lineno="136"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="137"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>});</highlight></codeline>
+<codeline lineno="138"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">break</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="139"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="140"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">case</highlight><highlight class="normal"><sp/>ECageQuadratureStrategy::EmbeddedMesh:<sp/>{</highlight></codeline>
+<codeline lineno="141"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>MatrixX<sp/>Xg1<sp/><sp/><sp/><sp/><sp/><sp/>=<sp/>FM.<ref refid="structpbat_1_1fem_1_1Mesh_1a810ae14a3d6596c587f83793132e643e" kindref="member">QuadraturePoints</ref>&lt;1&gt;();</highlight></codeline>
+<codeline lineno="142"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>IndexVectorX<sp/>eg1<sp/>=<sp/>cbvh.PrimitivesContainingPoints(Xg1);</highlight></codeline>
+<codeline lineno="143"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>VectorX<sp/>wg1<sp/><sp/><sp/><sp/><sp/><sp/>=<sp/>fem::InnerProductWeights&lt;1&gt;(FM).reshaped();</highlight></codeline>
+<codeline lineno="144"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Group<sp/>quadrature<sp/>points<sp/>of<sp/>same<sp/>elements<sp/>together<sp/>to<sp/>improve<sp/>cache<sp/>locality.</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="145"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>IndexVectorX<sp/>eorder<sp/>=</highlight></codeline>
+<codeline lineno="146"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>common::ArgSort(eg1.size(),<sp/>[&amp;](</highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>i,<sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>j)<sp/>{<sp/>return<sp/>eg1(i)<sp/>&lt;<sp/>eg1(j);<sp/>});</highlight></codeline>
+<codeline lineno="147"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Patch<sp/>coarse<sp/>elements<sp/>that<sp/>don&apos;t<sp/>have<sp/>any<sp/>embedded<sp/>quadrature<sp/>point</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="148"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::tie(<ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1CageQuadrature_1a9ee6edaf65d908bcc3ae7c26c8127866" kindref="member">eg</ref>,<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1CageQuadrature_1a5f5e79e5d5779140bea1eac8d97da4f0" kindref="member">wg</ref>,<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1CageQuadrature_1a1b3cbb03c6c2987415438a9e6c85940e" kindref="member">Xg</ref>)<sp/>=<sp/>PatchQuadrature(</highlight></codeline>
+<codeline lineno="149"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>CM,</highlight></codeline>
+<codeline lineno="150"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>eg1(eorder),</highlight></codeline>
+<codeline lineno="151"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>wg1(eorder),</highlight></codeline>
+<codeline lineno="152"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>Xg1(Eigen::placeholders::all,<sp/>eorder),</highlight></codeline>
+<codeline lineno="153"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>params.mPatchCellPointsOfOrder,</highlight></codeline>
+<codeline lineno="154"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>params.mPatchTetVolumeError);</highlight></codeline>
+<codeline lineno="155"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">break</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="156"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="157"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">case</highlight><highlight class="normal"><sp/>ECageQuadratureStrategy::PolynomialSubCellIntegration:<sp/>{</highlight></codeline>
+<codeline lineno="158"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Make<sp/>sure<sp/>to<sp/>have<sp/>over-determined<sp/>moment<sp/>fitting<sp/>systems,<sp/>i.e.<sp/>aim<sp/>for</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="159"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>#quad.pts.<sp/>&gt;=<sp/>2|p|,<sp/>where<sp/>|p|<sp/>is<sp/>the<sp/>size<sp/>of<sp/>the<sp/>polynomial<sp/>basis<sp/>of<sp/>order<sp/>p.</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="160"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>constexpr<sp/>kPolynomialOrder<sp/>=<sp/>1;</highlight></codeline>
+<codeline lineno="161"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>common::ForRange&lt;1,<sp/>7&gt;([&amp;]&lt;</highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>kPolynomialOrderForSufficientPoints&gt;()<sp/>{</highlight></codeline>
+<codeline lineno="162"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Compute<sp/>quadrature<sp/>points<sp/>via<sp/>symmetric<sp/>simplex<sp/>quadrature<sp/>rule<sp/>on<sp/>coarse</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="163"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>mesh</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="164"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(params.mCageMeshPointsOfOrder<sp/>==<sp/>kPolynomialOrderForSufficientPoints)</highlight></codeline>
+<codeline lineno="165"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1CageQuadrature_1a1b3cbb03c6c2987415438a9e6c85940e" kindref="member">Xg</ref><sp/>=<sp/>CM.<ref refid="structpbat_1_1fem_1_1Mesh_1a810ae14a3d6596c587f83793132e643e" kindref="member">QuadraturePoints</ref>&lt;kPolynomialOrderForSufficientPoints&gt;();</highlight></codeline>
+<codeline lineno="166"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>});</highlight></codeline>
+<codeline lineno="167"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>nQuadPtsPerElem<sp/>=<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1CageQuadrature_1a1b3cbb03c6c2987415438a9e6c85940e" kindref="member">Xg</ref>.cols()<sp/>/<sp/>CM.<ref refid="structpbat_1_1fem_1_1Mesh_1a384afdf16df5efa27e09f17520402b5b" kindref="member">E</ref>.cols();</highlight></codeline>
+<codeline lineno="168"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Elements<sp/>containing<sp/>quad.pts.<sp/>are<sp/>ordered<sp/>thus</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="169"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1CageQuadrature_1a9ee6edaf65d908bcc3ae7c26c8127866" kindref="member">eg</ref><sp/>=<sp/>IndexVectorX::LinSpaced(CM.<ref refid="structpbat_1_1fem_1_1Mesh_1a384afdf16df5efa27e09f17520402b5b" kindref="member">E</ref>.cols(),<sp/>Index(0),<sp/>CM.<ref refid="structpbat_1_1fem_1_1Mesh_1a384afdf16df5efa27e09f17520402b5b" kindref="member">E</ref>.cols()<sp/>-<sp/>1)</highlight></codeline>
+<codeline lineno="170"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>.transpose()</highlight></codeline>
+<codeline lineno="171"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>.replicate(nQuadPtsPerElem,<sp/>1)</highlight></codeline>
+<codeline lineno="172"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>.reshaped();</highlight></codeline>
+<codeline lineno="173"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Compute<sp/>quadrature<sp/>weights<sp/>via<sp/>moment<sp/>fitting</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="174"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>MatrixX<sp/>fXg<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/>FM.<ref refid="structpbat_1_1fem_1_1Mesh_1a810ae14a3d6596c587f83793132e643e" kindref="member">QuadraturePoints</ref>&lt;1&gt;();</highlight></codeline>
+<codeline lineno="175"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>VectorX<sp/>fwg<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/>fem::InnerProductWeights&lt;1&gt;(FM).reshaped();</highlight></codeline>
+<codeline lineno="176"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>IndexVectorX<sp/>Sf<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/>cbvh.PrimitivesContainingPoints(fXg);</highlight></codeline>
+<codeline lineno="177"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>MatrixX<sp/>fXi<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/>fem::ReferencePositions(CM,<sp/>Sf,<sp/>fXg,<sp/>10);</highlight></codeline>
+<codeline lineno="178"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>MatrixX<sp/>cXi<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/>fem::ReferencePositions(CM,<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1CageQuadrature_1a9ee6edaf65d908bcc3ae7c26c8127866" kindref="member">eg</ref>,<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1CageQuadrature_1a1b3cbb03c6c2987415438a9e6c85940e" kindref="member">Xg</ref>,<sp/>10);</highlight></codeline>
+<codeline lineno="179"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>nSimplices<sp/><sp/><sp/><sp/><sp/><sp/>=<sp/>CM.<ref refid="structpbat_1_1fem_1_1Mesh_1a384afdf16df5efa27e09f17520402b5b" kindref="member">E</ref>.cols();</highlight></codeline>
+<codeline lineno="180"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>bEvaluateError<sp/><sp/>=<sp/></highlight><highlight class="keyword">true</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="181"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>Index<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>bMaxIterations<sp/>=<sp/>10<sp/>*<sp/>nQuadPtsPerElem;</highlight></codeline>
+<codeline lineno="182"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>Scalar<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>precision<sp/><sp/><sp/><sp/><sp/>=<sp/>1e-10<sp/>*<sp/>fwg.maxCoeff();</highlight></codeline>
+<codeline lineno="183"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>VectorX<sp/>error;</highlight></codeline>
+<codeline lineno="184"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::tie(<ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1CageQuadrature_1a5f5e79e5d5779140bea1eac8d97da4f0" kindref="member">wg</ref>,<sp/>error)<sp/>=<sp/>math::TransferQuadrature&lt;kPolynomialOrder&gt;(</highlight></codeline>
+<codeline lineno="185"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1CageQuadrature_1a9ee6edaf65d908bcc3ae7c26c8127866" kindref="member">eg</ref>,</highlight></codeline>
+<codeline lineno="186"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>cXi,</highlight></codeline>
+<codeline lineno="187"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>Sf,</highlight></codeline>
+<codeline lineno="188"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>fXi,</highlight></codeline>
+<codeline lineno="189"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>fwg,</highlight></codeline>
+<codeline lineno="190"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>nSimplices,</highlight></codeline>
+<codeline lineno="191"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>bEvaluateError,</highlight></codeline>
+<codeline lineno="192"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>bMaxIterations,</highlight></codeline>
+<codeline lineno="193"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>precision);</highlight></codeline>
+<codeline lineno="194"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Find<sp/>all<sp/>non-negligible<sp/>quadrature<sp/>points<sp/>(i.e.<sp/>quadrature<sp/>weight<sp/>&gt;<sp/>0)</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="195"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>Index<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>nQuadPts<sp/>=<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1CageQuadrature_1a5f5e79e5d5779140bea1eac8d97da4f0" kindref="member">wg</ref>.size();</highlight></codeline>
+<codeline lineno="196"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::vector&lt;Index&gt;<sp/>validQuadPts{};</highlight></codeline>
+<codeline lineno="197"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>validQuadPts.reserve(</highlight><highlight class="keyword">static_cast&lt;</highlight><highlight class="normal">std::size_t</highlight><highlight class="keyword">&gt;</highlight><highlight class="normal">(nQuadPts));</highlight></codeline>
+<codeline lineno="198"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">for</highlight><highlight class="normal"><sp/>(Index<sp/>g<sp/>=<sp/>0;<sp/>g<sp/>&lt;<sp/>nQuadPts;<sp/>++g)</highlight></codeline>
+<codeline lineno="199"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(<ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1CageQuadrature_1a5f5e79e5d5779140bea1eac8d97da4f0" kindref="member">wg</ref>(g)<sp/>&gt;<sp/>Scalar(0))</highlight></codeline>
+<codeline lineno="200"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>validQuadPts.push_back(g);</highlight></codeline>
+<codeline lineno="201"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Remove<sp/>negligible<sp/>quadrature<sp/>points<sp/>and<sp/>patch<sp/>the<sp/>quadrature</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="202"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::tie(<ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1CageQuadrature_1a9ee6edaf65d908bcc3ae7c26c8127866" kindref="member">eg</ref>,<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1CageQuadrature_1a5f5e79e5d5779140bea1eac8d97da4f0" kindref="member">wg</ref>,<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1CageQuadrature_1a1b3cbb03c6c2987415438a9e6c85940e" kindref="member">Xg</ref>)<sp/>=<sp/>PatchQuadrature(</highlight></codeline>
+<codeline lineno="203"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>CM,</highlight></codeline>
+<codeline lineno="204"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1CageQuadrature_1a9ee6edaf65d908bcc3ae7c26c8127866" kindref="member">eg</ref>(validQuadPts),</highlight></codeline>
+<codeline lineno="205"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1CageQuadrature_1a5f5e79e5d5779140bea1eac8d97da4f0" kindref="member">wg</ref>(validQuadPts),</highlight></codeline>
+<codeline lineno="206"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1CageQuadrature_1a1b3cbb03c6c2987415438a9e6c85940e" kindref="member">Xg</ref>(Eigen::placeholders::all,<sp/>validQuadPts),</highlight></codeline>
+<codeline lineno="207"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>params.mPatchCellPointsOfOrder,</highlight></codeline>
+<codeline lineno="208"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>params.mPatchTetVolumeError);</highlight></codeline>
+<codeline lineno="209"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">break</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="210"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="211"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="212"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Find<sp/>singular<sp/>quadrature<sp/>points</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="213"><highlight class="normal"><sp/><sp/><sp/><sp/>VectorX<sp/>sd{};</highlight></codeline>
+<codeline lineno="214"><highlight class="normal"><sp/><sp/><sp/><sp/>std::tie(<ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1CageQuadrature_1a9108dadd72bfcc581bb252fd9154e3e5" kindref="member">efg</ref>,<sp/>sd)<sp/>=<sp/>fbvh.NearestPrimitivesToPoints(<ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1CageQuadrature_1a1b3cbb03c6c2987415438a9e6c85940e" kindref="member">Xg</ref>);</highlight></codeline>
+<codeline lineno="215"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1CageQuadrature_1a9d99da11102409ae4c3af40a229611ae" kindref="member">sg</ref><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/>(sd.array()<sp/>&gt;<sp/>Scalar(0));</highlight></codeline>
+<codeline lineno="216"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Precompute<sp/>shape<sp/>functions<sp/>and<sp/>their<sp/>gradients<sp/>at<sp/>quad.pts.</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="217"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>cXig<sp/>=<sp/>fem::ReferencePositions(CM,<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1CageQuadrature_1a9ee6edaf65d908bcc3ae7c26c8127866" kindref="member">eg</ref>,<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1CageQuadrature_1a1b3cbb03c6c2987415438a9e6c85940e" kindref="member">Xg</ref>);</highlight></codeline>
+<codeline lineno="218"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1CageQuadrature_1a8617360bb8a7adc9c378b5c5c8ab1831" kindref="member">Ncg</ref><sp/><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/>fem::ShapeFunctionsAt(CM,<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1CageQuadrature_1a9ee6edaf65d908bcc3ae7c26c8127866" kindref="member">eg</ref>,<sp/>cXig,<sp/></highlight><highlight class="keyword">true</highlight><highlight class="normal">);</highlight></codeline>
+<codeline lineno="219"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1CageQuadrature_1a1fe1c6fcf6c1f6117c9add54a27872b3" kindref="member">GNcg</ref><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/>fem::ShapeFunctionGradientsAt(CM,<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1CageQuadrature_1a9ee6edaf65d908bcc3ae7c26c8127866" kindref="member">eg</ref>,<sp/>cXig,<sp/></highlight><highlight class="keyword">true</highlight><highlight class="normal">);</highlight></codeline>
+<codeline lineno="220"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>fXig<sp/>=<sp/>fem::ReferencePositions(FM,<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1CageQuadrature_1a9108dadd72bfcc581bb252fd9154e3e5" kindref="member">efg</ref>,<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1CageQuadrature_1a1b3cbb03c6c2987415438a9e6c85940e" kindref="member">Xg</ref>);</highlight></codeline>
+<codeline lineno="221"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1CageQuadrature_1a8a971b6ed1d2a0e535886c38ff2069b5" kindref="member">Nfg</ref><sp/><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/>fem::ShapeFunctionsAt(FM,<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1CageQuadrature_1a9108dadd72bfcc581bb252fd9154e3e5" kindref="member">efg</ref>,<sp/>fXig,<sp/></highlight><highlight class="keyword">true</highlight><highlight class="normal">);</highlight></codeline>
+<codeline lineno="222"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1CageQuadrature_1ad7e7da57a859ef32ce20754c574af2bb" kindref="member">GNfg</ref><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/>fem::ShapeFunctionGradientsAt(FM,<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1CageQuadrature_1a9108dadd72bfcc581bb252fd9154e3e5" kindref="member">efg</ref>,<sp/>fXig,<sp/></highlight><highlight class="keyword">true</highlight><highlight class="normal">);</highlight></codeline>
+<codeline lineno="223"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Compute<sp/>vertex-quad.pt.<sp/>adjacency</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="224"><highlight class="normal"><sp/><sp/><sp/><sp/>IndexMatrixX<sp/>ilocal<sp/>=<sp/>IndexVector&lt;4&gt;{0,<sp/>1,<sp/>2,<sp/>3}.replicate(1,<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1CageQuadrature_1a9ee6edaf65d908bcc3ae7c26c8127866" kindref="member">eg</ref>.size());</highlight></codeline>
+<codeline lineno="225"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>G<sp/>=<sp/>graph::MeshAdjacencyMatrix(CM.<ref refid="structpbat_1_1fem_1_1Mesh_1a384afdf16df5efa27e09f17520402b5b" kindref="member">E</ref>(Eigen::placeholders::all,<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1CageQuadrature_1a9ee6edaf65d908bcc3ae7c26c8127866" kindref="member">eg</ref>),<sp/>ilocal,<sp/>CM.<ref refid="structpbat_1_1fem_1_1Mesh_1abc65a193ee960705ddf64227afb18809" kindref="member">X</ref>.cols());</highlight></codeline>
+<codeline lineno="226"><highlight class="normal"><sp/><sp/><sp/><sp/>G<sp/><sp/><sp/><sp/><sp/><sp/>=<sp/>G.transpose();</highlight></codeline>
+<codeline lineno="227"><highlight class="normal"><sp/><sp/><sp/><sp/>std::tie(<ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1CageQuadrature_1a2feff7f52953b97caf1255bc6c5aa982" kindref="member">GVGp</ref>,<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1CageQuadrature_1aba379b1c54f77bfcb86554c0ee4d585e" kindref="member">GVGg</ref>,<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1CageQuadrature_1abd5e63afc087a2de4a7ea6c707d8543d" kindref="member">GVGilocal</ref>)<sp/>=<sp/>graph::MatrixToWeightedAdjacency(G);</highlight></codeline>
+<codeline lineno="228"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="229"><highlight class="normal"></highlight></codeline>
+<codeline lineno="230" refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1SurfaceQuadrature_1a1afd0898f60f8f0e71b1f693a5c298e5" refkind="member"><highlight class="normal">SurfaceQuadrature::SurfaceQuadrature(</highlight></codeline>
+<codeline lineno="231"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1fem_1_1Mesh" kindref="compound">VolumeMesh</ref><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>FM,</highlight></codeline>
+<codeline lineno="232"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1fem_1_1Mesh" kindref="compound">VolumeMesh</ref><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>CM,</highlight></codeline>
+<codeline lineno="233"><highlight class="normal"><sp/><sp/><sp/><sp/>ESurfaceQuadratureStrategy<sp/>eStrategy)</highlight></codeline>
+<codeline lineno="234"><highlight class="normal"><sp/><sp/><sp/><sp/>:<sp/>Xg(),<sp/>wg(),<sp/>eg(),<sp/>GVGp(),<sp/>GVGg(),<sp/>GVGilocal()</highlight></codeline>
+<codeline lineno="235"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="236"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="classpbat_1_1geometry_1_1TetrahedralAabbHierarchy" kindref="compound">geometry::TetrahedralAabbHierarchy</ref><sp/>cbvh(CM.<ref refid="structpbat_1_1fem_1_1Mesh_1abc65a193ee960705ddf64227afb18809" kindref="member">X</ref>,<sp/>CM.<ref refid="structpbat_1_1fem_1_1Mesh_1a384afdf16df5efa27e09f17520402b5b" kindref="member">E</ref>);</highlight></codeline>
+<codeline lineno="237"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Extract<sp/>domain<sp/>boundary</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="238"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>[V,<sp/>F]<sp/>=<sp/>geometry::SimplexMeshBoundary(FM.<ref refid="structpbat_1_1fem_1_1Mesh_1a384afdf16df5efa27e09f17520402b5b" kindref="member">E</ref>,<sp/>FM.<ref refid="structpbat_1_1fem_1_1Mesh_1abc65a193ee960705ddf64227afb18809" kindref="member">X</ref>.cols());</highlight></codeline>
+<codeline lineno="239"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1fem_1_1Mesh" kindref="compound">SurfaceMesh</ref><sp/>S(FM.<ref refid="structpbat_1_1fem_1_1Mesh_1abc65a193ee960705ddf64227afb18809" kindref="member">X</ref>,<sp/>F);</highlight></codeline>
+<codeline lineno="240"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Distribute<sp/>1-pt<sp/>boundary<sp/>triangle<sp/>quadratures<sp/>onto<sp/>boundary<sp/>vertices</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="241"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(eStrategy<sp/>==<sp/>ESurfaceQuadratureStrategy::EmbeddedVertexSinglePointQuadrature)</highlight></codeline>
+<codeline lineno="242"><highlight class="normal"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="243"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>VectorX<sp/>FA<sp/>=<sp/>fem::InnerProductWeights&lt;1&gt;(S).reshaped();</highlight></codeline>
+<codeline lineno="244"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1SurfaceQuadrature_1aa9941dce3ad71012db3fd0ab09d6a49c" kindref="member">Xg</ref><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/>FM.<ref refid="structpbat_1_1fem_1_1Mesh_1abc65a193ee960705ddf64227afb18809" kindref="member">X</ref>(Eigen::placeholders::all,<sp/>V);</highlight></codeline>
+<codeline lineno="245"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1SurfaceQuadrature_1a659336bf536b6f83eecd23eb953ca711" kindref="member">wg</ref>.setZero(<ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1SurfaceQuadrature_1aa9941dce3ad71012db3fd0ab09d6a49c" kindref="member">Xg</ref>.cols());</highlight></codeline>
+<codeline lineno="246"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">for</highlight><highlight class="normal"><sp/>(</highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>d<sp/>=<sp/>0;<sp/>d<sp/>&lt;<sp/>3;<sp/>++d)</highlight></codeline>
+<codeline lineno="247"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1SurfaceQuadrature_1a659336bf536b6f83eecd23eb953ca711" kindref="member">wg</ref>(F.row(d))<sp/>+=<sp/>FA<sp/>/<sp/>Scalar(3);</highlight></codeline>
+<codeline lineno="248"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1SurfaceQuadrature_1ac2ba9cead6650ae655b85ae3064103f6" kindref="member">eg</ref><sp/>=<sp/>cbvh.PrimitivesContainingPoints(<ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1SurfaceQuadrature_1aa9941dce3ad71012db3fd0ab09d6a49c" kindref="member">Xg</ref>);</highlight></codeline>
+<codeline lineno="249"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="250"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Compute<sp/>vertex-quad.pt.<sp/>adjacency</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="251"><highlight class="normal"><sp/><sp/><sp/><sp/>IndexMatrixX<sp/>ilocal<sp/>=<sp/>IndexVector&lt;4&gt;{0,<sp/>1,<sp/>2,<sp/>3}.replicate(1,<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1SurfaceQuadrature_1ac2ba9cead6650ae655b85ae3064103f6" kindref="member">eg</ref>.size());</highlight></codeline>
+<codeline lineno="252"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>G<sp/>=<sp/>graph::MeshAdjacencyMatrix(CM.<ref refid="structpbat_1_1fem_1_1Mesh_1a384afdf16df5efa27e09f17520402b5b" kindref="member">E</ref>(Eigen::placeholders::all,<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1SurfaceQuadrature_1ac2ba9cead6650ae655b85ae3064103f6" kindref="member">eg</ref>),<sp/>ilocal,<sp/>CM.<ref refid="structpbat_1_1fem_1_1Mesh_1abc65a193ee960705ddf64227afb18809" kindref="member">X</ref>.cols());</highlight></codeline>
+<codeline lineno="253"><highlight class="normal"><sp/><sp/><sp/><sp/>G<sp/><sp/><sp/><sp/><sp/><sp/>=<sp/>G.transpose();</highlight></codeline>
+<codeline lineno="254"><highlight class="normal"><sp/><sp/><sp/><sp/>std::tie(<ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1SurfaceQuadrature_1a256d29ce8eff150c4f12d9c2e1e5d6fc" kindref="member">GVGp</ref>,<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1SurfaceQuadrature_1a7a9a5dbfaff661b9b0100f7f5a5bd6b8" kindref="member">GVGg</ref>,<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1SurfaceQuadrature_1a84f3c06d00efa05998f8736c0c34f58d" kindref="member">GVGilocal</ref>)<sp/>=<sp/>graph::MatrixToWeightedAdjacency(G);</highlight></codeline>
+<codeline lineno="255"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="256"><highlight class="normal"></highlight></codeline>
+<codeline lineno="257" refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1DirichletQuadrature_1a12d4a95a8177b8a26535bc92cb756af5" refkind="member"><highlight class="normal">DirichletQuadrature::DirichletQuadrature(</highlight></codeline>
+<codeline lineno="258"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1fem_1_1Mesh" kindref="compound">VolumeMesh</ref><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>FM,</highlight></codeline>
+<codeline lineno="259"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1fem_1_1Mesh" kindref="compound">VolumeMesh</ref><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>CM,</highlight></codeline>
+<codeline lineno="260"><highlight class="normal"><sp/><sp/><sp/><sp/>Eigen::Ref&lt;VectorX<sp/>const&gt;<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>m,</highlight></codeline>
+<codeline lineno="261"><highlight class="normal"><sp/><sp/><sp/><sp/>Eigen::Ref&lt;IndexVectorX<sp/>const&gt;<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>dbcs)</highlight></codeline>
+<codeline lineno="262"><highlight class="normal"><sp/><sp/><sp/><sp/>:<sp/>Xg(),<sp/>wg(),<sp/>eg(),<sp/>Ncg(),<sp/>GVGp(),<sp/>GVGg(),<sp/>GVGilocal()</highlight></codeline>
+<codeline lineno="263"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="264"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="classpbat_1_1geometry_1_1TetrahedralAabbHierarchy" kindref="compound">geometry::TetrahedralAabbHierarchy</ref><sp/>cbvh(CM.<ref refid="structpbat_1_1fem_1_1Mesh_1abc65a193ee960705ddf64227afb18809" kindref="member">X</ref>,<sp/>CM.<ref refid="structpbat_1_1fem_1_1Mesh_1a384afdf16df5efa27e09f17520402b5b" kindref="member">E</ref>);</highlight></codeline>
+<codeline lineno="265"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1DirichletQuadrature_1a71c66874a9e87695d61942d8e768136f" kindref="member">Xg</ref><sp/><sp/>=<sp/>FM.<ref refid="structpbat_1_1fem_1_1Mesh_1abc65a193ee960705ddf64227afb18809" kindref="member">X</ref>(Eigen::placeholders::all,<sp/>dbcs);</highlight></codeline>
+<codeline lineno="266"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1DirichletQuadrature_1a4f6767149235474a21cbe98bca1c51d4" kindref="member">wg</ref><sp/><sp/>=<sp/>m(dbcs);</highlight></codeline>
+<codeline lineno="267"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1DirichletQuadrature_1a5f75d1fd5efb09912c0a198c602676d6" kindref="member">eg</ref><sp/><sp/>=<sp/>cbvh.PrimitivesContainingPoints(<ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1DirichletQuadrature_1a71c66874a9e87695d61942d8e768136f" kindref="member">Xg</ref>);</highlight></codeline>
+<codeline lineno="268"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1DirichletQuadrature_1a76b9c249cf81cf6939ae90478c44f15c" kindref="member">Ncg</ref><sp/>=<sp/>fem::ShapeFunctionsAt(CM,<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1DirichletQuadrature_1a5f75d1fd5efb09912c0a198c602676d6" kindref="member">eg</ref>,<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1DirichletQuadrature_1a71c66874a9e87695d61942d8e768136f" kindref="member">Xg</ref>);</highlight></codeline>
+<codeline lineno="269"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Compute<sp/>vertex-quad.pt.<sp/>adjacency</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="270"><highlight class="normal"><sp/><sp/><sp/><sp/>IndexMatrixX<sp/>ilocal<sp/>=<sp/>IndexVector&lt;4&gt;{0,<sp/>1,<sp/>2,<sp/>3}.replicate(1,<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1DirichletQuadrature_1a5f75d1fd5efb09912c0a198c602676d6" kindref="member">eg</ref>.size());</highlight></codeline>
+<codeline lineno="271"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>G<sp/>=<sp/>graph::MeshAdjacencyMatrix(CM.<ref refid="structpbat_1_1fem_1_1Mesh_1a384afdf16df5efa27e09f17520402b5b" kindref="member">E</ref>(Eigen::placeholders::all,<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1DirichletQuadrature_1a5f75d1fd5efb09912c0a198c602676d6" kindref="member">eg</ref>),<sp/>ilocal,<sp/>CM.<ref refid="structpbat_1_1fem_1_1Mesh_1abc65a193ee960705ddf64227afb18809" kindref="member">X</ref>.cols());</highlight></codeline>
+<codeline lineno="272"><highlight class="normal"><sp/><sp/><sp/><sp/>G<sp/><sp/><sp/><sp/><sp/><sp/>=<sp/>G.transpose();</highlight></codeline>
+<codeline lineno="273"><highlight class="normal"><sp/><sp/><sp/><sp/>std::tie(<ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1DirichletQuadrature_1a5b9fe3fc140cdb4bbeb2e7bb7a0777b9" kindref="member">GVGp</ref>,<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1DirichletQuadrature_1ac274439ff094ac8c8ce4f609dd2dde7d" kindref="member">GVGg</ref>,<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1DirichletQuadrature_1af42ffe26159daa9c6a1ee410ccdcacf3" kindref="member">GVGilocal</ref>)<sp/>=<sp/>graph::MatrixToWeightedAdjacency(G);</highlight></codeline>
+<codeline lineno="274"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="275"><highlight class="normal"></highlight></codeline>
+<codeline lineno="276"><highlight class="normal">}<sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>lod</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="277"><highlight class="normal">}<sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>vbd</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="278"><highlight class="normal">}<sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>sim</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="279"><highlight class="normal">}<sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>pbat</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="280"><highlight class="normal"></highlight></codeline>
+<codeline lineno="281"><highlight class="normal"></highlight><highlight class="preprocessor">#ifdef<sp/>PBAT_WITH_PRECOMPILED_LARGE_MODELS</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="282"><highlight class="normal"></highlight><highlight class="preprocessor"><sp/><sp/><sp/><sp/>#include<sp/>&quot;pbat/geometry/model/Armadillo.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="283"><highlight class="normal"></highlight><highlight class="preprocessor">#endif<sp/>//<sp/>PBAT_WITH_PRECOMPILED_LARGE_MODELS</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="284"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;pbat/geometry/model/Cube.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="285"><highlight class="normal"></highlight></codeline>
+<codeline lineno="286"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;doctest/doctest.h&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="287"><highlight class="normal"></highlight></codeline>
+<codeline lineno="288"><highlight class="normal">TEST_CASE(</highlight><highlight class="stringliteral">&quot;[sim][vbd][lod]<sp/>Quadrature&quot;</highlight><highlight class="normal">)</highlight></codeline>
+<codeline lineno="289"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="290"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/>namespace<sp/></highlight><highlight class="normal">pbat;</highlight></codeline>
+<codeline lineno="291"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using</highlight><highlight class="normal"><sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1CageQuadrature" kindref="compound">sim::vbd::lod::CageQuadrature</ref>;</highlight></codeline>
+<codeline lineno="292"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using</highlight><highlight class="normal"><sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1CageQuadratureParameters" kindref="compound">sim::vbd::lod::CageQuadratureParameters</ref>;</highlight></codeline>
+<codeline lineno="293"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using</highlight><highlight class="normal"><sp/>sim::vbd::lod::ECageQuadratureStrategy;</highlight></codeline>
+<codeline lineno="294"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using</highlight><highlight class="normal"><sp/>sim::vbd::lod::ESurfaceQuadratureStrategy;</highlight></codeline>
+<codeline lineno="295"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using</highlight><highlight class="normal"><sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1SurfaceQuadrature" kindref="compound">sim::vbd::lod::SurfaceQuadrature</ref>;</highlight></codeline>
+<codeline lineno="296"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using</highlight><highlight class="normal"><sp/>VolumeMesh<sp/><sp/>=<sp/><ref refid="structpbat_1_1fem_1_1Mesh" kindref="compound">sim::vbd::VolumeMesh</ref>;</highlight></codeline>
+<codeline lineno="297"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using</highlight><highlight class="normal"><sp/>SurfaceMesh<sp/>=<sp/><ref refid="structpbat_1_1fem_1_1Mesh" kindref="compound">sim::vbd::SurfaceMesh</ref>;</highlight></codeline>
+<codeline lineno="298"><highlight class="normal"></highlight></codeline>
+<codeline lineno="299"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>ActAndAssert<sp/>=</highlight></codeline>
+<codeline lineno="300"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>[](MatrixX<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>VR,<sp/>IndexMatrixX<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>CR,<sp/>MatrixX<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>VC,<sp/>IndexMatrixX<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>CC)<sp/>{</highlight></codeline>
+<codeline lineno="301"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Act</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="302"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>VolumeMesh<sp/>FM(VR,<sp/>CR);</highlight></codeline>
+<codeline lineno="303"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>VolumeMesh<sp/>CM(VC,<sp/>CC);</highlight></codeline>
+<codeline lineno="304"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>CageQuadrature<sp/>Qcage(</highlight></codeline>
+<codeline lineno="305"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>FM,</highlight></codeline>
+<codeline lineno="306"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>CM,</highlight></codeline>
+<codeline lineno="307"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>CageQuadratureParameters{}.WithStrategy(</highlight></codeline>
+<codeline lineno="308"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>ECageQuadratureStrategy::PolynomialSubCellIntegration));</highlight></codeline>
+<codeline lineno="309"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>SurfaceQuadrature<sp/>Qsurf(</highlight></codeline>
+<codeline lineno="310"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>FM,</highlight></codeline>
+<codeline lineno="311"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>CM,</highlight></codeline>
+<codeline lineno="312"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>ESurfaceQuadratureStrategy::EmbeddedVertexSinglePointQuadrature);</highlight></codeline>
+<codeline lineno="313"><highlight class="normal"></highlight></codeline>
+<codeline lineno="314"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Assert</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="315"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>bCageWeightsNonNegative<sp/>=<sp/>(Qcage.wg.array()<sp/>&gt;=<sp/>Scalar(0)).all();</highlight></codeline>
+<codeline lineno="316"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>bSurfWeightsNonNegative<sp/>=<sp/>(Qsurf.wg.array()<sp/>&gt;=<sp/>Scalar(0)).all();</highlight></codeline>
+<codeline lineno="317"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>CHECK(bCageWeightsNonNegative);</highlight></codeline>
+<codeline lineno="318"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>CHECK(bSurfWeightsNonNegative);</highlight></codeline>
+<codeline lineno="319"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>Scalar<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>expectedVolume<sp/>=<sp/>fem::InnerProductWeights&lt;1&gt;(FM).sum();</highlight></codeline>
+<codeline lineno="320"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>Scalar<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>cageQuadEmbeddedVolumeError<sp/>=</highlight></codeline>
+<codeline lineno="321"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::abs(Qcage.wg.sum()<sp/>-<sp/>expectedVolume)<sp/>/<sp/>expectedVolume;</highlight></codeline>
+<codeline lineno="322"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>CHECK_LT(cageQuadEmbeddedVolumeError,<sp/>Scalar(1e-2));</highlight></codeline>
+<codeline lineno="323"><highlight class="normal"></highlight></codeline>
+<codeline lineno="324"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>[FVR,<sp/>FFR]<sp/>=<sp/>geometry::SimplexMeshBoundary(CR,<sp/>VR.cols());</highlight></codeline>
+<codeline lineno="325"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>SurfaceMesh<sp/>SM(VR,<sp/>FFR);</highlight></codeline>
+<codeline lineno="326"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>Scalar<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>expectedSurfaceArea<sp/>=<sp/>fem::InnerProductWeights&lt;1&gt;(SM).sum();</highlight></codeline>
+<codeline lineno="327"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>Scalar<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>surfQuadSurfaceAreaError<sp/>=</highlight></codeline>
+<codeline lineno="328"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::abs(Qsurf.wg.sum()<sp/>-<sp/>expectedSurfaceArea)<sp/>/<sp/>expectedSurfaceArea;</highlight></codeline>
+<codeline lineno="329"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>CHECK_LT(surfQuadSurfaceAreaError,<sp/>Scalar(1e-10));</highlight></codeline>
+<codeline lineno="330"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>};</highlight></codeline>
+<codeline lineno="331"><highlight class="normal"></highlight></codeline>
+<codeline lineno="332"><highlight class="normal"><sp/><sp/><sp/><sp/>SUBCASE(</highlight><highlight class="stringliteral">&quot;Cube&quot;</highlight><highlight class="normal">)</highlight></codeline>
+<codeline lineno="333"><highlight class="normal"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="334"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>[VR,<sp/>CR]<sp/>=<sp/>geometry::model::Cube();</highlight></codeline>
+<codeline lineno="335"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Center<sp/>and<sp/>create<sp/>cage</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="336"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>VR.colwise()<sp/>-=<sp/>VR.rowwise().mean();</highlight></codeline>
+<codeline lineno="337"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>MatrixX<sp/>VC<sp/><sp/><sp/><sp/><sp/><sp/>=<sp/>Scalar(1.1)<sp/>*<sp/>VR;</highlight></codeline>
+<codeline lineno="338"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>IndexMatrixX<sp/>CC<sp/>=<sp/>CR;</highlight></codeline>
+<codeline lineno="339"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>ActAndAssert(VR,<sp/>CR,<sp/>VC,<sp/>CC);</highlight></codeline>
+<codeline lineno="340"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="341"><highlight class="normal"></highlight><highlight class="preprocessor">#ifdef<sp/>PBAT_WITH_PRECOMPILED_LARGE_MODELS</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="342"><highlight class="normal"><sp/><sp/><sp/><sp/>SUBCASE(</highlight><highlight class="stringliteral">&quot;Armadillo&quot;</highlight><highlight class="normal">)</highlight></codeline>
+<codeline lineno="343"><highlight class="normal"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="344"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>[VR,<sp/>CR]<sp/>=<sp/>geometry::model::Armadillo(geometry::model::EMesh::Tetrahedral,<sp/>Index(0));</highlight></codeline>
+<codeline lineno="345"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>[VC,<sp/>CC]<sp/>=<sp/>geometry::model::Armadillo(geometry::model::EMesh::Tetrahedral,<sp/>Index(1));</highlight></codeline>
+<codeline lineno="346"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>ActAndAssert(VR,<sp/>CR,<sp/>VC,<sp/>CC);</highlight></codeline>
+<codeline lineno="347"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="348"><highlight class="normal"></highlight><highlight class="preprocessor">#endif<sp/>//<sp/>PBAT_WITH_PRECOMPILED_LARGE_MODELS</highlight></codeline>
+<codeline lineno="349"><highlight class="preprocessor">}</highlight></codeline>
+    </programlisting>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Quadrature.cpp"/>
+  </compounddef>
+</doxygen>

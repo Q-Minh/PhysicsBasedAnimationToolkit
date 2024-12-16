@@ -1,0 +1,65 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="namespacepbat_1_1py_1_1gpu_1_1xpbd" kind="namespace" language="C++">
+    <compoundname>pbat::py::gpu::xpbd</compoundname>
+      <sectiondef kind="func">
+      <memberdef kind="function" id="bindings_2pypbat_2gpu_2xpbd_2Integrator_8cpp_1a1d6ce35c52106041c73b2f0700bd6647" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void pbat::py::gpu::xpbd::BindIntegrator</definition>
+        <argsstring>([[maybe_unused]] pybind11::module &amp;m)</argsstring>
+        <name>BindIntegrator</name>
+        <param>
+          <attributes>[[maybe_unused]</attributes>
+          <type>] pybind11::module &amp;</type>
+          <declname>m</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/gpu/xpbd/Integrator.cpp" line="17" column="6" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/gpu/xpbd/Integrator.cpp" bodystart="17" bodyend="215"/>
+      </memberdef>
+      <memberdef kind="function" id="bindings_2pypbat_2gpu_2xpbd_2Integrator_8h_1aa185fddac9367a3caf56146daa0d6caa" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void pbat::py::gpu::xpbd::BindIntegrator</definition>
+        <argsstring>(pybind11::module &amp;m)</argsstring>
+        <name>BindIntegrator</name>
+        <param>
+          <type>pybind11::module &amp;</type>
+          <declname>m</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/gpu/xpbd/Integrator.h" line="11" column="6" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/sim/vbd/Integrator.cpp" bodystart="14" bodyend="62" declfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/gpu/xpbd/Integrator.h" declline="11" declcolumn="6"/>
+      </memberdef>
+      <memberdef kind="function" id="gpu_2xpbd_2Xpbd_8cpp_1a6893500a25ca2d561918fb7e812d5b0f" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void pbat::py::gpu::xpbd::Bind</definition>
+        <argsstring>(pybind11::module &amp;m)</argsstring>
+        <name>Bind</name>
+        <param>
+          <type>pybind11::module &amp;</type>
+          <declname>m</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/gpu/xpbd/Xpbd.cpp" line="10" column="6" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/gpu/xpbd/Xpbd.cpp" bodystart="10" bodyend="14" declfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/gpu/xpbd/Xpbd.h" declline="11" declcolumn="6"/>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/gpu/xpbd/Integrator.cpp" line="15" column="14"/>
+  </compounddef>
+</doxygen>

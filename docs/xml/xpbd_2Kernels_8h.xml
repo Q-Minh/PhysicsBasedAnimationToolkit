@@ -1,0 +1,678 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="xpbd_2Kernels_8h" kind="file" language="C++">
+    <compoundname>Kernels.h</compoundname>
+    <includes refid="ConstexprFor_8h" local="yes">pbat/common/ConstexprFor.h</includes>
+    <includes refid="ClosestPointQueries_8h" local="yes">pbat/geometry/ClosestPointQueries.h</includes>
+    <includes refid="IntersectionQueries_8h" local="yes">pbat/geometry/IntersectionQueries.h</includes>
+    <includes refid="Mini_8h" local="yes">pbat/math/linalg/mini/Mini.h</includes>
+    <includes local="no">algorithm</includes>
+    <includedby refid="source_2pbat_2sim_2xpbd_2Integrator_8cpp" local="yes">/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Integrator.cpp</includedby>
+    <includedby refid="xpbd_2Kernels_8cpp" local="yes">/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Kernels.cpp</includedby>
+    <includedby refid="source_2pbat_2sim_2xpbd_2Xpbd_8h" local="yes">/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Xpbd.h</includedby>
+    <incdepgraph>
+      <node id="17">
+        <label>functional</label>
+      </node>
+      <node id="37">
+        <label>limits</label>
+      </node>
+      <node id="11">
+        <label>BinaryOperations.h</label>
+        <link refid="BinaryOperations_8h_source"/>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="15" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="16" relation="include">
+        </childnode>
+        <childnode refid="17" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+      </node>
+      <node id="8">
+        <label>Assign.h</label>
+        <link refid="Assign_8h_source"/>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+      </node>
+      <node id="26">
+        <label>cstdint</label>
+      </node>
+      <node id="22">
+        <label>Geometry.h</label>
+        <link refid="source_2pbat_2math_2linalg_2mini_2Geometry_8h_source"/>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+      </node>
+      <node id="14">
+        <label>Transpose.h</label>
+        <link refid="Transpose_8h_source"/>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+      </node>
+      <node id="40">
+        <label>pbat/Aliases.h</label>
+        <link refid="Aliases_8h_source"/>
+        <childnode refid="20" relation="include">
+        </childnode>
+        <childnode refid="41" relation="include">
+        </childnode>
+        <childnode refid="42" relation="include">
+        </childnode>
+      </node>
+      <node id="35">
+        <label>UnaryOperations.h</label>
+        <link refid="UnaryOperations_8h_source"/>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="29" relation="include">
+        </childnode>
+        <childnode refid="15" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="36" relation="include">
+        </childnode>
+        <childnode refid="16" relation="include">
+        </childnode>
+        <childnode refid="37" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+      </node>
+      <node id="23">
+        <label>Inverse.h</label>
+        <link refid="Inverse_8h_source"/>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="24" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+      </node>
+      <node id="16">
+        <label>cmath</label>
+      </node>
+      <node id="38">
+        <label>cassert</label>
+      </node>
+      <node id="20">
+        <label>Eigen/Core</label>
+      </node>
+      <node id="33">
+        <label>Repeat.h</label>
+        <link refid="Repeat_8h_source"/>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+      </node>
+      <node id="24">
+        <label>Matrix.h</label>
+        <link refid="Matrix_8h_source"/>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="25" relation="include">
+        </childnode>
+        <childnode refid="26" relation="include">
+        </childnode>
+        <childnode refid="27" relation="include">
+        </childnode>
+        <childnode refid="28" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+      </node>
+      <node id="6">
+        <label>pbat/HostDevice.h</label>
+        <link refid="HostDevice_8h_source"/>
+      </node>
+      <node id="9">
+        <label>Concepts.h</label>
+        <link refid="math_2linalg_2mini_2Concepts_8h_source"/>
+        <childnode refid="10" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+      </node>
+      <node id="15">
+        <label>Scale.h</label>
+        <link refid="Scale_8h_source"/>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+      </node>
+      <node id="7">
+        <label>pbat/math/linalg/mini/Mini.h</label>
+        <link refid="Mini_8h_source"/>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="18" relation="include">
+        </childnode>
+        <childnode refid="19" relation="include">
+        </childnode>
+        <childnode refid="21" relation="include">
+        </childnode>
+        <childnode refid="22" relation="include">
+        </childnode>
+        <childnode refid="23" relation="include">
+        </childnode>
+        <childnode refid="24" relation="include">
+        </childnode>
+        <childnode refid="29" relation="include">
+        </childnode>
+        <childnode refid="31" relation="include">
+        </childnode>
+        <childnode refid="30" relation="include">
+        </childnode>
+        <childnode refid="33" relation="include">
+        </childnode>
+        <childnode refid="15" relation="include">
+        </childnode>
+        <childnode refid="34" relation="include">
+        </childnode>
+        <childnode refid="13" relation="include">
+        </childnode>
+        <childnode refid="14" relation="include">
+        </childnode>
+        <childnode refid="35" relation="include">
+        </childnode>
+      </node>
+      <node id="41">
+        <label>Eigen/Sparse</label>
+      </node>
+      <node id="1">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Kernels.h</label>
+        <link refid="xpbd_2Kernels_8h"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="39" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="36" relation="include">
+        </childnode>
+      </node>
+      <node id="28">
+        <label>string.h</label>
+      </node>
+      <node id="19">
+        <label>Eigen.h</label>
+        <link refid="math_2linalg_2mini_2Eigen_8h_source"/>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="20" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+      </node>
+      <node id="43">
+        <label>optional</label>
+      </node>
+      <node id="39">
+        <label>pbat/geometry/IntersectionQueries.h</label>
+        <link refid="IntersectionQueries_8h_source"/>
+        <childnode refid="40" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="25" relation="include">
+        </childnode>
+        <childnode refid="16" relation="include">
+        </childnode>
+        <childnode refid="43" relation="include">
+        </childnode>
+      </node>
+      <node id="18">
+        <label>Determinant.h</label>
+        <link refid="Determinant_8h_source"/>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+      </node>
+      <node id="4">
+        <label>utility</label>
+      </node>
+      <node id="25">
+        <label>array</label>
+      </node>
+      <node id="32">
+        <label>math.h</label>
+      </node>
+      <node id="30">
+        <label>Reductions.h</label>
+        <link refid="Reductions_8h_source"/>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="31" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+      </node>
+      <node id="21">
+        <label>Flatten.h</label>
+        <link refid="Flatten_8h_source"/>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+      </node>
+      <node id="31">
+        <label>Product.h</label>
+        <link refid="Product_8h_source"/>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+      </node>
+      <node id="42">
+        <label>cstddef</label>
+      </node>
+      <node id="12">
+        <label>Api.h</label>
+        <link refid="Api_8h_source"/>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="13" relation="include">
+        </childnode>
+        <childnode refid="14" relation="include">
+        </childnode>
+      </node>
+      <node id="13">
+        <label>SubMatrix.h</label>
+        <link refid="SubMatrix_8h_source"/>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="14" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+      </node>
+      <node id="5">
+        <label>pbat/geometry/ClosestPointQueries.h</label>
+        <link refid="ClosestPointQueries_8h_source"/>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="36" relation="include">
+        </childnode>
+        <childnode refid="38" relation="include">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>pbat/common/ConstexprFor.h</label>
+        <link refid="ConstexprFor_8h_source"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+      </node>
+      <node id="10">
+        <label>concepts</label>
+      </node>
+      <node id="3">
+        <label>type_traits</label>
+      </node>
+      <node id="36">
+        <label>algorithm</label>
+      </node>
+      <node id="27">
+        <label>initializer_list</label>
+      </node>
+      <node id="34">
+        <label>Stack.h</label>
+        <link refid="math_2linalg_2mini_2Stack_8h_source"/>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+      </node>
+      <node id="29">
+        <label>Norm.h</label>
+        <link refid="Norm_8h_source"/>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="30" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="32" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+      </node>
+    </incdepgraph>
+    <invincdepgraph>
+      <node id="1">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Kernels.h</label>
+        <link refid="xpbd_2Kernels_8h"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Xpbd.h</label>
+        <link refid="source_2pbat_2sim_2xpbd_2Xpbd_8h_source"/>
+      </node>
+    </invincdepgraph>
+    <innernamespace refid="namespacepbat">pbat</innernamespace>
+    <innernamespace refid="namespacepbat_1_1sim">pbat::sim</innernamespace>
+    <innernamespace refid="namespacepbat_1_1sim_1_1xpbd">pbat::sim::xpbd</innernamespace>
+    <innernamespace refid="namespacepbat_1_1sim_1_1xpbd_1_1kernels">pbat::sim::xpbd::kernels</innernamespace>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="preprocessor">#ifndef<sp/>PBAT_SIM_XPBD_KERNELS_H</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="2"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>PBAT_SIM_XPBD_KERNELS_H</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="3"><highlight class="normal"></highlight></codeline>
+<codeline lineno="4"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;pbat/common/ConstexprFor.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="5"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;pbat/geometry/ClosestPointQueries.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="6"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;pbat/geometry/IntersectionQueries.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="7"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;pbat/math/linalg/mini/Mini.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="8"><highlight class="normal"></highlight></codeline>
+<codeline lineno="9"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;algorithm&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="10"><highlight class="normal"></highlight></codeline>
+<codeline lineno="11"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal">pbat<sp/>{</highlight></codeline>
+<codeline lineno="12"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal">sim<sp/>{</highlight></codeline>
+<codeline lineno="13"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal">xpbd<sp/>{</highlight></codeline>
+<codeline lineno="14"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal">kernels<sp/>{</highlight></codeline>
+<codeline lineno="15"><highlight class="normal"></highlight></codeline>
+<codeline lineno="16"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal">mini<sp/>=<sp/>pbat::math::linalg::mini;</highlight></codeline>
+<codeline lineno="17"><highlight class="normal"></highlight></codeline>
+<codeline lineno="31"><highlight class="keyword">template</highlight><highlight class="normal"><sp/>&lt;</highlight></codeline>
+<codeline lineno="32"><highlight class="normal"><sp/><sp/><sp/><sp/>mini::CMatrix<sp/>TMatrixXT,</highlight></codeline>
+<codeline lineno="33"><highlight class="normal"><sp/><sp/><sp/><sp/>mini::CMatrix<sp/>TMatrixVT,</highlight></codeline>
+<codeline lineno="34"><highlight class="normal"><sp/><sp/><sp/><sp/>mini::CMatrix<sp/>TMatrixA,</highlight></codeline>
+<codeline lineno="35"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal">ScalarType<sp/>=<sp/></highlight><highlight class="keyword">typename</highlight><highlight class="normal"><sp/>TMatrixXT::ScalarType&gt;</highlight></codeline>
+<codeline lineno="36"><highlight class="normal">PBAT_HOST_DEVICE<sp/><ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1SMatrix" kindref="compound">mini::SVector&lt;ScalarType, TMatrixXT::kRows&gt;</ref><sp/>InitialPosition(</highlight></codeline>
+<codeline lineno="37"><highlight class="normal"><sp/><sp/><sp/><sp/>TMatrixXT<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>xt,</highlight></codeline>
+<codeline lineno="38"><highlight class="normal"><sp/><sp/><sp/><sp/>TMatrixVT<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>vt,</highlight></codeline>
+<codeline lineno="39"><highlight class="normal"><sp/><sp/><sp/><sp/>TMatrixA<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>aext,</highlight></codeline>
+<codeline lineno="40"><highlight class="normal"><sp/><sp/><sp/><sp/>ScalarType<sp/>dt,</highlight></codeline>
+<codeline lineno="41"><highlight class="normal"><sp/><sp/><sp/><sp/>ScalarType<sp/>dt2)</highlight></codeline>
+<codeline lineno="42"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="43"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>xt<sp/>+<sp/>dt<sp/>*<sp/>vt<sp/>+<sp/>dt2<sp/>*<sp/>aext;</highlight></codeline>
+<codeline lineno="44"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="45"><highlight class="normal"></highlight></codeline>
+<codeline lineno="72"><highlight class="keyword">template</highlight><highlight class="normal"><sp/>&lt;</highlight></codeline>
+<codeline lineno="73"><highlight class="normal"><sp/><sp/><sp/><sp/>mini::CMatrix<sp/>TMatrixMinv,</highlight></codeline>
+<codeline lineno="74"><highlight class="normal"><sp/><sp/><sp/><sp/>mini::CMatrix<sp/>TMatrixDmInv,</highlight></codeline>
+<codeline lineno="75"><highlight class="normal"><sp/><sp/><sp/><sp/>mini::CMatrix<sp/>TMatrixAlphaT,</highlight></codeline>
+<codeline lineno="76"><highlight class="normal"><sp/><sp/><sp/><sp/>mini::CMatrix<sp/>TMatrixGamma,</highlight></codeline>
+<codeline lineno="77"><highlight class="normal"><sp/><sp/><sp/><sp/>mini::CMatrix<sp/>TMatrixXTC,</highlight></codeline>
+<codeline lineno="78"><highlight class="normal"><sp/><sp/><sp/><sp/>mini::CMatrix<sp/>TMatrixL,</highlight></codeline>
+<codeline lineno="79"><highlight class="normal"><sp/><sp/><sp/><sp/>mini::CMatrix<sp/>TMatrixXC,</highlight></codeline>
+<codeline lineno="80"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal">ScalarType<sp/>=<sp/></highlight><highlight class="keyword">typename</highlight><highlight class="normal"><sp/>TMatrixMinv::ScalarType&gt;</highlight></codeline>
+<codeline lineno="81"><highlight class="normal">PBAT_HOST_DEVICE<sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/>ProjectBlockNeoHookean(</highlight></codeline>
+<codeline lineno="82"><highlight class="normal"><sp/><sp/><sp/><sp/>TMatrixMinv<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>minvc,</highlight></codeline>
+<codeline lineno="83"><highlight class="normal"><sp/><sp/><sp/><sp/>TMatrixDmInv<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>DmInv,</highlight></codeline>
+<codeline lineno="84"><highlight class="normal"><sp/><sp/><sp/><sp/>ScalarType<sp/>gammaSNHc,</highlight></codeline>
+<codeline lineno="85"><highlight class="normal"><sp/><sp/><sp/><sp/>TMatrixAlphaT<sp/>atildec,</highlight></codeline>
+<codeline lineno="86"><highlight class="normal"><sp/><sp/><sp/><sp/>TMatrixGamma<sp/>gammac,</highlight></codeline>
+<codeline lineno="87"><highlight class="normal"><sp/><sp/><sp/><sp/>TMatrixXTC<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>xtc,</highlight></codeline>
+<codeline lineno="88"><highlight class="normal"><sp/><sp/><sp/><sp/>TMatrixL&amp;<sp/>lambdac,</highlight></codeline>
+<codeline lineno="89"><highlight class="normal"><sp/><sp/><sp/><sp/>TMatrixXC&amp;<sp/>xc)</highlight></codeline>
+<codeline lineno="90"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="91"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/>namespace<sp/></highlight><highlight class="normal">mini;</highlight></codeline>
+<codeline lineno="92"><highlight class="normal"></highlight><highlight class="preprocessor">#if<sp/>defined(CUDART_VERSION)</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="93"><highlight class="normal"></highlight><highlight class="preprocessor"><sp/><sp/><sp/><sp/>#pragma<sp/>nv_diag_suppress<sp/>174</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="94"><highlight class="normal"></highlight><highlight class="preprocessor">#endif</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="95"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Compute<sp/>deviatoric+hydrostatic<sp/>elasticity</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="96"><highlight class="normal"><sp/><sp/><sp/><sp/>SMatrix&lt;ScalarType,<sp/>3,<sp/>3&gt;<sp/>F<sp/>=<sp/>(xc.Slice&lt;3,<sp/>3&gt;(0,<sp/>1)<sp/>-<sp/>Repeat&lt;1,<sp/>3&gt;(xc.Col(0)))<sp/>*<sp/>DmInv;</highlight></codeline>
+<codeline lineno="97"><highlight class="normal"><sp/><sp/><sp/><sp/>ScalarType<sp/>CD<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/>Norm(F);</highlight></codeline>
+<codeline lineno="98"><highlight class="normal"><sp/><sp/><sp/><sp/>SMatrix&lt;ScalarType,<sp/>3,<sp/>4&gt;<sp/>gradCD{};</highlight></codeline>
+<codeline lineno="99"><highlight class="normal"><sp/><sp/><sp/><sp/>gradCD.Slice&lt;3,<sp/>3&gt;(0,<sp/>1)<sp/>=<sp/>(F<sp/>*<sp/>DmInv.Transpose())<sp/>/<sp/>(CD<sp/></highlight><highlight class="comment">/*+<sp/>1e-8*/</highlight><highlight class="normal">);</highlight></codeline>
+<codeline lineno="100"><highlight class="normal"><sp/><sp/><sp/><sp/>gradCD.Col(0)<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/>-(gradCD.Col(1)<sp/>+<sp/>gradCD.Col(2)<sp/>+<sp/>gradCD.Col(3));</highlight></codeline>
+<codeline lineno="101"><highlight class="normal"><sp/><sp/><sp/><sp/>ScalarType<sp/>CH<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/>Determinant(F)<sp/>-<sp/>gammaSNHc;</highlight></codeline>
+<codeline lineno="102"><highlight class="normal"><sp/><sp/><sp/><sp/>SMatrix&lt;ScalarType,<sp/>3,<sp/>3&gt;<sp/>PH{};</highlight></codeline>
+<codeline lineno="103"><highlight class="normal"><sp/><sp/><sp/><sp/>PH.Col(0)<sp/>=<sp/>Cross(F.Col(1),<sp/>F.Col(2));</highlight></codeline>
+<codeline lineno="104"><highlight class="normal"><sp/><sp/><sp/><sp/>PH.Col(1)<sp/>=<sp/>Cross(F.Col(2),<sp/>F.Col(0));</highlight></codeline>
+<codeline lineno="105"><highlight class="normal"><sp/><sp/><sp/><sp/>PH.Col(2)<sp/>=<sp/>Cross(F.Col(0),<sp/>F.Col(1));</highlight></codeline>
+<codeline lineno="106"><highlight class="normal"><sp/><sp/><sp/><sp/>SMatrix&lt;ScalarType,<sp/>3,<sp/>4&gt;<sp/>gradCH{};</highlight></codeline>
+<codeline lineno="107"><highlight class="normal"><sp/><sp/><sp/><sp/>gradCH.Slice&lt;3,<sp/>3&gt;(0,<sp/>1)<sp/>=<sp/>PH<sp/>*<sp/>DmInv.Transpose();</highlight></codeline>
+<codeline lineno="108"><highlight class="normal"><sp/><sp/><sp/><sp/>gradCH.Col(0)<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/>-(gradCH.Col(1)<sp/>+<sp/>gradCH.Col(2)<sp/>+<sp/>gradCH.Col(3));</highlight></codeline>
+<codeline lineno="109"><highlight class="normal"></highlight><highlight class="preprocessor">#if<sp/>defined(CUDART_VERSION)</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="110"><highlight class="normal"></highlight><highlight class="preprocessor"><sp/><sp/><sp/><sp/>#pragma<sp/>nv_diag_default<sp/>174</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="111"><highlight class="normal"></highlight><highlight class="preprocessor">#endif</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="112"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Construct<sp/>2x2<sp/>constraint<sp/>block<sp/>system</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="113"><highlight class="normal"><sp/><sp/><sp/><sp/>SVector&lt;ScalarType,<sp/>2&gt;<sp/>b{</highlight></codeline>
+<codeline lineno="114"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>-(CD<sp/>+<sp/>atildec(0)<sp/>*<sp/>lambdac(0)<sp/>+<sp/>gammac(0)<sp/>*<sp/>Dot(gradCD,<sp/>xc<sp/>-<sp/>xtc)),</highlight></codeline>
+<codeline lineno="115"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>-(CH<sp/>+<sp/>atildec(1)<sp/>*<sp/>lambdac(1)<sp/>+<sp/>gammac(1)<sp/>*<sp/>Dot(gradCH,<sp/>xc<sp/>-<sp/>xtc))};</highlight></codeline>
+<codeline lineno="116"><highlight class="normal"><sp/><sp/><sp/><sp/>SVector&lt;ScalarType,<sp/>2&gt;<sp/>D<sp/>=<sp/>Ones&lt;ScalarType,<sp/>2,<sp/>1&gt;()<sp/>+<sp/>gammac;</highlight></codeline>
+<codeline lineno="117"><highlight class="normal"><sp/><sp/><sp/><sp/>SMatrix&lt;ScalarType,<sp/>2,<sp/>2&gt;<sp/>A{};</highlight></codeline>
+<codeline lineno="118"><highlight class="normal"><sp/><sp/><sp/><sp/>A(0,<sp/>0)<sp/>=</highlight></codeline>
+<codeline lineno="119"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>D(0)<sp/>*<sp/>(minvc(0)<sp/>*<sp/>SquaredNorm(gradCD.Col(0))<sp/>+<sp/>minvc(1)<sp/>*<sp/>SquaredNorm(gradCD.Col(1))<sp/>+</highlight></codeline>
+<codeline lineno="120"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>minvc(2)<sp/>*<sp/>SquaredNorm(gradCD.Col(2))<sp/>+<sp/>minvc(3)<sp/>*<sp/>SquaredNorm(gradCD.Col(3)))<sp/>+</highlight></codeline>
+<codeline lineno="121"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>atildec(0);</highlight></codeline>
+<codeline lineno="122"><highlight class="normal"><sp/><sp/><sp/><sp/>A(1,<sp/>1)<sp/>=</highlight></codeline>
+<codeline lineno="123"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>D(1)<sp/>*<sp/>(minvc(0)<sp/>*<sp/>SquaredNorm(gradCH.Col(0))<sp/>+<sp/>minvc(1)<sp/>*<sp/>SquaredNorm(gradCH.Col(1))<sp/>+</highlight></codeline>
+<codeline lineno="124"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>minvc(2)<sp/>*<sp/>SquaredNorm(gradCH.Col(2))<sp/>+<sp/>minvc(3)<sp/>*<sp/>SquaredNorm(gradCH.Col(3)))<sp/>+</highlight></codeline>
+<codeline lineno="125"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>atildec(1);</highlight></codeline>
+<codeline lineno="126"><highlight class="normal"><sp/><sp/><sp/><sp/>A(0,<sp/>1)<sp/>=</highlight></codeline>
+<codeline lineno="127"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>(minvc(0)<sp/>*<sp/>Dot(gradCD.Col(0),<sp/>gradCH.Col(0))<sp/>+</highlight></codeline>
+<codeline lineno="128"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>minvc(1)<sp/>*<sp/>Dot(gradCD.Col(1),<sp/>gradCH.Col(1))<sp/>+</highlight></codeline>
+<codeline lineno="129"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>minvc(2)<sp/>*<sp/>Dot(gradCD.Col(2),<sp/>gradCH.Col(2))<sp/>+</highlight></codeline>
+<codeline lineno="130"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>minvc(3)<sp/>*<sp/>Dot(gradCD.Col(3),<sp/>gradCH.Col(3)));</highlight></codeline>
+<codeline lineno="131"><highlight class="normal"><sp/><sp/><sp/><sp/>A(1,<sp/>0)<sp/>=<sp/>A(0,<sp/>1);</highlight></codeline>
+<codeline lineno="132"><highlight class="normal"><sp/><sp/><sp/><sp/>A(0,<sp/>1)<sp/>*=<sp/>D(0);</highlight></codeline>
+<codeline lineno="133"><highlight class="normal"><sp/><sp/><sp/><sp/>A(1,<sp/>0)<sp/>*=<sp/>D(1);</highlight></codeline>
+<codeline lineno="134"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Project<sp/>block<sp/>constraint</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="135"><highlight class="normal"><sp/><sp/><sp/><sp/>SVector&lt;ScalarType,<sp/>2&gt;<sp/>dlambda<sp/>=<sp/>Inverse(A)<sp/>*<sp/>b;</highlight></codeline>
+<codeline lineno="136"><highlight class="normal"><sp/><sp/><sp/><sp/>lambdac<sp/>+=<sp/>dlambda;</highlight></codeline>
+<codeline lineno="137"><highlight class="normal"><sp/><sp/><sp/><sp/>pbat::common::ForRange&lt;0,<sp/>4&gt;([&amp;]&lt;</highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>i&gt;()<sp/>{</highlight></codeline>
+<codeline lineno="138"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>xc.Col(i)<sp/>+=<sp/>minvc(i)<sp/>*<sp/>(dlambda(0)<sp/>*<sp/>gradCD.Col(i)<sp/>+<sp/>dlambda(1)<sp/>*<sp/>gradCH.Col(i));</highlight></codeline>
+<codeline lineno="139"><highlight class="normal"><sp/><sp/><sp/><sp/>});</highlight></codeline>
+<codeline lineno="140"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="141"><highlight class="normal"></highlight></codeline>
+<codeline lineno="162"><highlight class="keyword">template</highlight><highlight class="normal"><sp/>&lt;</highlight></codeline>
+<codeline lineno="163"><highlight class="normal"><sp/><sp/><sp/><sp/>mini::CMatrix<sp/>TMatrixXVT,</highlight></codeline>
+<codeline lineno="164"><highlight class="normal"><sp/><sp/><sp/><sp/>mini::CMatrix<sp/>TMatrixXFT,</highlight></codeline>
+<codeline lineno="165"><highlight class="normal"><sp/><sp/><sp/><sp/>mini::CMatrix<sp/>TMatrixXF,</highlight></codeline>
+<codeline lineno="166"><highlight class="normal"><sp/><sp/><sp/><sp/>mini::CMatrix<sp/>TMatrixXV,</highlight></codeline>
+<codeline lineno="167"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal">ScalarType<sp/>=<sp/></highlight><highlight class="keyword">typename</highlight><highlight class="normal"><sp/>TMatrixXV::ScalarType&gt;</highlight></codeline>
+<codeline lineno="168"><highlight class="normal">PBAT_HOST_DEVICE<sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/>ProjectVertexTriangle(</highlight></codeline>
+<codeline lineno="169"><highlight class="normal"><sp/><sp/><sp/><sp/>ScalarType<sp/>minvv,</highlight></codeline>
+<codeline lineno="170"><highlight class="normal"><sp/><sp/><sp/><sp/>TMatrixXVT<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>xvt,</highlight></codeline>
+<codeline lineno="171"><highlight class="normal"><sp/><sp/><sp/><sp/>TMatrixXFT<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>xft,</highlight></codeline>
+<codeline lineno="172"><highlight class="normal"><sp/><sp/><sp/><sp/>TMatrixXF<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>xf,</highlight></codeline>
+<codeline lineno="173"><highlight class="normal"><sp/><sp/><sp/><sp/>ScalarType<sp/>muC,</highlight></codeline>
+<codeline lineno="174"><highlight class="normal"><sp/><sp/><sp/><sp/>ScalarType<sp/>muS,</highlight></codeline>
+<codeline lineno="175"><highlight class="normal"><sp/><sp/><sp/><sp/>ScalarType<sp/>muD,</highlight></codeline>
+<codeline lineno="176"><highlight class="normal"><sp/><sp/><sp/><sp/>ScalarType<sp/>atildec,</highlight></codeline>
+<codeline lineno="177"><highlight class="normal"><sp/><sp/><sp/><sp/>ScalarType<sp/>gammac,</highlight></codeline>
+<codeline lineno="178"><highlight class="normal"><sp/><sp/><sp/><sp/>ScalarType&amp;<sp/>lambdac,</highlight></codeline>
+<codeline lineno="179"><highlight class="normal"><sp/><sp/><sp/><sp/>TMatrixXV&amp;<sp/>xv)</highlight></codeline>
+<codeline lineno="180"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="181"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/>namespace<sp/></highlight><highlight class="normal">mini;</highlight></codeline>
+<codeline lineno="182"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Numerically<sp/>zero<sp/>inverse<sp/>mass<sp/>makes<sp/>the<sp/>Schur<sp/>complement<sp/>ill-conditioned/singular</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="183"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(minvv<sp/>&lt;<sp/>ScalarType(1e-10))</highlight></codeline>
+<codeline lineno="184"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">false</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="185"><highlight class="normal"></highlight></codeline>
+<codeline lineno="186"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Compute<sp/>triangle<sp/>normal</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="187"><highlight class="normal"><sp/><sp/><sp/><sp/>SMatrix&lt;ScalarType,<sp/>3,<sp/>1&gt;<sp/>T1<sp/><sp/><sp/><sp/><sp/>=<sp/>xf.Col(1)<sp/>-<sp/>xf.Col(0);</highlight></codeline>
+<codeline lineno="188"><highlight class="normal"><sp/><sp/><sp/><sp/>SMatrix&lt;ScalarType,<sp/>3,<sp/>1&gt;<sp/>T2<sp/><sp/><sp/><sp/><sp/>=<sp/>xf.Col(2)<sp/>-<sp/>xf.Col(0);</highlight></codeline>
+<codeline lineno="189"><highlight class="normal"><sp/><sp/><sp/><sp/>SMatrix&lt;ScalarType,<sp/>3,<sp/>1&gt;<sp/>n<sp/><sp/><sp/><sp/><sp/><sp/>=<sp/>Cross(T1,<sp/>T2);</highlight></codeline>
+<codeline lineno="190"><highlight class="normal"><sp/><sp/><sp/><sp/>ScalarType<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>doublearea<sp/><sp/><sp/><sp/><sp/><sp/>=<sp/>Norm(n);</highlight></codeline>
+<codeline lineno="191"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>bIsTriangleDegenerate<sp/>=<sp/>doublearea<sp/>&lt;=<sp/>ScalarType(1e-8);</highlight></codeline>
+<codeline lineno="192"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(bIsTriangleDegenerate)</highlight></codeline>
+<codeline lineno="193"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">false</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="194"><highlight class="normal"></highlight></codeline>
+<codeline lineno="195"><highlight class="normal"><sp/><sp/><sp/><sp/>n<sp/>/=<sp/>doublearea;</highlight></codeline>
+<codeline lineno="196"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/>namespace<sp/></highlight><highlight class="normal">pbat::geometry;</highlight></codeline>
+<codeline lineno="197"><highlight class="normal"><sp/><sp/><sp/><sp/>SMatrix&lt;ScalarType,<sp/>3,<sp/>1&gt;<sp/>xc<sp/>=<sp/>ClosestPointQueries::PointOnPlane(xv,<sp/>xf.Col(0),<sp/>n);</highlight></codeline>
+<codeline lineno="198"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Check<sp/>if<sp/>xv<sp/>projects<sp/>to<sp/>the<sp/>triangle&apos;s<sp/>interior<sp/>by<sp/>checking<sp/>its<sp/>barycentric<sp/>coordinates</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="199"><highlight class="normal"><sp/><sp/><sp/><sp/>SMatrix&lt;ScalarType,<sp/>3,<sp/>1&gt;<sp/>b<sp/>=</highlight></codeline>
+<codeline lineno="200"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>IntersectionQueries::TriangleBarycentricCoordinates(xc<sp/>-<sp/>xf.Col(0),<sp/>T1,<sp/>T2);</highlight></codeline>
+<codeline lineno="201"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>If<sp/>xv<sp/>doesn&apos;t<sp/>project<sp/>inside<sp/>triangle,<sp/>then<sp/>we<sp/>don&apos;t<sp/>generate<sp/>a<sp/>contact<sp/>response</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="202"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>clang-format<sp/>off</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="203"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>bIsVertexInsideTriangle<sp/>=<sp/></highlight></codeline>
+<codeline lineno="204"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>(b(0)<sp/>&gt;=<sp/>ScalarType(0))<sp/>and<sp/>(b(0)<sp/>&lt;=<sp/>ScalarType(1))<sp/>and</highlight></codeline>
+<codeline lineno="205"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>(b(1)<sp/>&gt;=<sp/>ScalarType(0))<sp/>and<sp/>(b(1)<sp/>&lt;=<sp/>ScalarType(1))<sp/>and</highlight></codeline>
+<codeline lineno="206"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>(b(2)<sp/>&gt;=<sp/>ScalarType(0))<sp/>and<sp/>(b(2)<sp/>&lt;=<sp/>ScalarType(1));</highlight></codeline>
+<codeline lineno="207"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>clang-format<sp/>on</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="208"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(not<sp/>bIsVertexInsideTriangle)</highlight></codeline>
+<codeline lineno="209"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">false</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="210"><highlight class="normal"></highlight></codeline>
+<codeline lineno="211"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Project<sp/>xv<sp/>onto<sp/>triangle&apos;s<sp/>plane<sp/>into<sp/>xc</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="212"><highlight class="normal"><sp/><sp/><sp/><sp/>ScalarType<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>C<sp/>=<sp/>muC<sp/>*<sp/>Dot(n,<sp/>xv<sp/>-<sp/>xf.Col(0));</highlight></codeline>
+<codeline lineno="213"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>If<sp/>xv<sp/>is<sp/>positively<sp/>oriented<sp/>w.r.t.<sp/>triangles<sp/>xf,<sp/>there<sp/>is<sp/>no<sp/>penetration</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="214"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(C<sp/>&gt;<sp/>ScalarType(0))</highlight></codeline>
+<codeline lineno="215"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">false</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="216"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Prevent<sp/>super<sp/>violent<sp/>projection<sp/>for<sp/>stability,<sp/>i.e.<sp/>if<sp/>the<sp/>collision<sp/>constraint</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="217"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>violation<sp/>is<sp/>already<sp/>too<sp/>large,<sp/>we<sp/>give<sp/>up.</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="218"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>if<sp/>(C<sp/>&lt;<sp/>-1e-2)</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="219"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/><sp/><sp/><sp/><sp/>return<sp/>false;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="220"><highlight class="normal"></highlight></codeline>
+<codeline lineno="221"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Project<sp/>constraints:</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="222"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>We<sp/>assume<sp/>that<sp/>the<sp/>triangle<sp/>is<sp/>static<sp/>(although<sp/>it<sp/>is<sp/>not),<sp/>so<sp/>that<sp/>the<sp/>gradient<sp/>is<sp/>n<sp/>for</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="223"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>the<sp/>vertex.</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="224"><highlight class="normal"></highlight></codeline>
+<codeline lineno="225"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Collision<sp/>constraint</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="226"><highlight class="normal"><sp/><sp/><sp/><sp/>ScalarType<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>D<sp/>=<sp/>ScalarType(1)<sp/>+<sp/>gammac;</highlight></codeline>
+<codeline lineno="227"><highlight class="normal"><sp/><sp/><sp/><sp/>ScalarType<sp/>dlambda<sp/>=</highlight></codeline>
+<codeline lineno="228"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>-(C<sp/>+<sp/>atildec<sp/>*<sp/>lambdac<sp/>+<sp/>gammac<sp/>*<sp/>Dot(n,<sp/>xv<sp/>-<sp/>xvt))<sp/>/<sp/>(D<sp/>*<sp/>minvv<sp/>+<sp/>atildec);</highlight></codeline>
+<codeline lineno="229"><highlight class="normal"><sp/><sp/><sp/><sp/>SMatrix&lt;ScalarType,<sp/>3,<sp/>1&gt;<sp/>dx<sp/>=<sp/>dlambda<sp/>*<sp/>minvv<sp/>*<sp/>n;</highlight></codeline>
+<codeline lineno="230"><highlight class="normal"><sp/><sp/><sp/><sp/>xv<sp/>+=<sp/>dx;</highlight></codeline>
+<codeline lineno="231"><highlight class="normal"><sp/><sp/><sp/><sp/>lambdac<sp/>+=<sp/>dlambda;</highlight></codeline>
+<codeline lineno="232"><highlight class="normal"></highlight></codeline>
+<codeline lineno="233"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Friction<sp/>constraint<sp/>(see<sp/>https://dl.acm.org/doi/10.1145/2601097.2601152)</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="234"><highlight class="normal"><sp/><sp/><sp/><sp/>ScalarType<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>d<sp/><sp/><sp/>=<sp/>Norm(dx);</highlight></codeline>
+<codeline lineno="235"><highlight class="normal"><sp/><sp/><sp/><sp/>dx<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/>(xv<sp/>-<sp/>xvt)<sp/>-<sp/>(xf<sp/>*<sp/>b<sp/>-<sp/>xft<sp/>*<sp/>b);</highlight></codeline>
+<codeline lineno="236"><highlight class="normal"><sp/><sp/><sp/><sp/>dx<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/>dx<sp/>-<sp/>n<sp/>*<sp/>n.Transpose()<sp/>*<sp/>dx;</highlight></codeline>
+<codeline lineno="237"><highlight class="normal"><sp/><sp/><sp/><sp/>ScalarType<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>dxd<sp/>=<sp/>Norm(dx);</highlight></codeline>
+<codeline lineno="238"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(dxd<sp/>&gt;<sp/>muS<sp/>*<sp/>d)</highlight></codeline>
+<codeline lineno="239"><highlight class="normal"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="240"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/>namespace<sp/></highlight><highlight class="normal">std;</highlight></codeline>
+<codeline lineno="241"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>dx<sp/>*=<sp/>min(muD<sp/>*<sp/>d<sp/>/<sp/>dxd,<sp/>ScalarType(1));</highlight></codeline>
+<codeline lineno="242"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="243"><highlight class="normal"></highlight></codeline>
+<codeline lineno="244"><highlight class="normal"><sp/><sp/><sp/><sp/>xv<sp/>+=<sp/>dx;</highlight></codeline>
+<codeline lineno="245"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">true</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="246"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="247"><highlight class="normal"></highlight></codeline>
+<codeline lineno="258"><highlight class="keyword">template</highlight><highlight class="normal"><sp/>&lt;</highlight></codeline>
+<codeline lineno="259"><highlight class="normal"><sp/><sp/><sp/><sp/>mini::CMatrix<sp/>TMatrixXT,</highlight></codeline>
+<codeline lineno="260"><highlight class="normal"><sp/><sp/><sp/><sp/>mini::CMatrix<sp/>TMatrixX,</highlight></codeline>
+<codeline lineno="261"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal">ScalarType<sp/>=<sp/></highlight><highlight class="keyword">typename</highlight><highlight class="normal"><sp/>TMatrixXT::ScalarType&gt;</highlight></codeline>
+<codeline lineno="262"><highlight class="normal">PBAT_HOST_DEVICE<sp/><ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1SMatrix" kindref="compound">mini::SVector&lt;ScalarType, TMatrixXT::kRows&gt;</ref></highlight></codeline>
+<codeline lineno="263"><highlight class="normal">IntegrateVelocity(TMatrixXT<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>xt,<sp/>TMatrixX<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>x,<sp/>ScalarType<sp/>dt)</highlight></codeline>
+<codeline lineno="264"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="265"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>(x<sp/>-<sp/>xt)<sp/>/<sp/>dt;</highlight></codeline>
+<codeline lineno="266"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="267"><highlight class="normal"></highlight></codeline>
+<codeline lineno="268"><highlight class="normal">}<sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>kernels</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="269"><highlight class="normal">}<sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>xpbd</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="270"><highlight class="normal">}<sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>sim</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="271"><highlight class="normal">}<sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>pbat</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="272"><highlight class="normal"></highlight></codeline>
+<codeline lineno="273"><highlight class="normal"></highlight><highlight class="preprocessor">#endif<sp/>//<sp/>PBAT_SIM_XPBD_KERNELS_H</highlight></codeline>
+    </programlisting>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Kernels.h"/>
+  </compounddef>
+</doxygen>

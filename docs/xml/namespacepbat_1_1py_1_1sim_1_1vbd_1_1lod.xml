@@ -1,0 +1,200 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="namespacepbat_1_1py_1_1sim_1_1vbd_1_1lod" kind="namespace" language="C++">
+    <compoundname>pbat::py::sim::vbd::lod</compoundname>
+      <sectiondef kind="func">
+      <memberdef kind="function" id="bindings_2pypbat_2sim_2vbd_2lod_2DirichletEnergy_8cpp_1a47394793f84b21c7210082f89ae80c70" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void pbat::py::sim::vbd::lod::BindDirichletEnergy</definition>
+        <argsstring>(pybind11::module &amp;m)</argsstring>
+        <name>BindDirichletEnergy</name>
+        <param>
+          <type>pybind11::module &amp;</type>
+          <declname>m</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/sim/vbd/lod/DirichletEnergy.cpp" line="13" column="6" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/sim/vbd/lod/DirichletEnergy.cpp" bodystart="13" bodyend="28" declfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/sim/vbd/lod/DirichletEnergy.h" declline="12" declcolumn="6"/>
+      </memberdef>
+      <memberdef kind="function" id="bindings_2pypbat_2sim_2vbd_2lod_2ElasticEnergy_8cpp_1a29280f65fbfd6183eada61f052243d80" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void pbat::py::sim::vbd::lod::BindElasticEnergy</definition>
+        <argsstring>(pybind11::module &amp;m)</argsstring>
+        <name>BindElasticEnergy</name>
+        <param>
+          <type>pybind11::module &amp;</type>
+          <declname>m</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/sim/vbd/lod/ElasticEnergy.cpp" line="13" column="6" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/sim/vbd/lod/ElasticEnergy.cpp" bodystart="13" bodyend="28" declfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/sim/vbd/lod/ElasticEnergy.h" declline="12" declcolumn="6"/>
+      </memberdef>
+      <memberdef kind="function" id="bindings_2pypbat_2sim_2vbd_2lod_2Hierarchy_8cpp_1ab686773b27a292dc213db1b91ce7285b" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void pbat::py::sim::vbd::lod::BindHierarchy</definition>
+        <argsstring>(pybind11::module &amp;m)</argsstring>
+        <name>BindHierarchy</name>
+        <param>
+          <type>pybind11::module &amp;</type>
+          <declname>m</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/sim/vbd/lod/Hierarchy.cpp" line="18" column="6" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/sim/vbd/lod/Hierarchy.cpp" bodystart="18" bodyend="79" declfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/sim/vbd/lod/Hierarchy.h" declline="12" declcolumn="6"/>
+      </memberdef>
+      <memberdef kind="function" id="bindings_2pypbat_2sim_2vbd_2lod_2Integrator_8cpp_1afc72e779ed13b07115c7eeb437e167b9" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void pbat::py::sim::vbd::lod::BindIntegrator</definition>
+        <argsstring>(pybind11::module &amp;m)</argsstring>
+        <name>BindIntegrator</name>
+        <param>
+          <type>pybind11::module &amp;</type>
+          <declname>m</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/sim/vbd/lod/Integrator.cpp" line="12" column="6" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/sim/vbd/lod/Integrator.cpp" bodystart="12" bodyend="25" declfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/sim/vbd/lod/Integrator.h" declline="12" declcolumn="6"/>
+      </memberdef>
+      <memberdef kind="function" id="bindings_2pypbat_2sim_2vbd_2lod_2Level_8cpp_1a54d62f47d41959c40784e965886f7bd6" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void pbat::py::sim::vbd::lod::BindLevel</definition>
+        <argsstring>(pybind11::module &amp;m)</argsstring>
+        <name>BindLevel</name>
+        <param>
+          <type>pybind11::module &amp;</type>
+          <declname>m</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/sim/vbd/lod/Level.cpp" line="15" column="6" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/sim/vbd/lod/Level.cpp" bodystart="15" bodyend="56" declfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/sim/vbd/lod/Level.h" declline="12" declcolumn="6"/>
+      </memberdef>
+      <memberdef kind="function" id="Lod_8cpp_1a01da26022bac44efc8104b2988c653e2" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void pbat::py::sim::vbd::lod::Bind</definition>
+        <argsstring>(pybind11::module &amp;m)</argsstring>
+        <name>Bind</name>
+        <param>
+          <type>pybind11::module &amp;</type>
+          <declname>m</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/sim/vbd/lod/Lod.cpp" line="20" column="6" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/sim/vbd/lod/Lod.cpp" bodystart="20" bodyend="32" declfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/sim/vbd/lod/Lod.h" declline="12" declcolumn="6"/>
+      </memberdef>
+      <memberdef kind="function" id="bindings_2pypbat_2sim_2vbd_2lod_2MomentumEnergy_8cpp_1ab7c16bd754a41fd53baa74d84f8e2a16" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void pbat::py::sim::vbd::lod::BindMomentumEnergy</definition>
+        <argsstring>(pybind11::module &amp;m)</argsstring>
+        <name>BindMomentumEnergy</name>
+        <param>
+          <type>pybind11::module &amp;</type>
+          <declname>m</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/sim/vbd/lod/MomentumEnergy.cpp" line="13" column="6" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/sim/vbd/lod/MomentumEnergy.cpp" bodystart="13" bodyend="31" declfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/sim/vbd/lod/MomentumEnergy.h" declline="12" declcolumn="6"/>
+      </memberdef>
+      <memberdef kind="function" id="bindings_2pypbat_2sim_2vbd_2lod_2Prolongation_8cpp_1a6889c01069ba1568217238375d93adc7" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void pbat::py::sim::vbd::lod::BindProlongation</definition>
+        <argsstring>(pybind11::module &amp;m)</argsstring>
+        <name>BindProlongation</name>
+        <param>
+          <type>pybind11::module &amp;</type>
+          <declname>m</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/sim/vbd/lod/Prolongation.cpp" line="16" column="6" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/sim/vbd/lod/Prolongation.cpp" bodystart="16" bodyend="48" declfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/sim/vbd/lod/Prolongation.h" declline="12" declcolumn="6"/>
+      </memberdef>
+      <memberdef kind="function" id="bindings_2pypbat_2sim_2vbd_2lod_2Quadrature_8cpp_1a2a537a559f8de2f10952b1274b9c159a" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void pbat::py::sim::vbd::lod::BindQuadrature</definition>
+        <argsstring>(pybind11::module &amp;m)</argsstring>
+        <name>BindQuadrature</name>
+        <param>
+          <type>pybind11::module &amp;</type>
+          <declname>m</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/sim/vbd/lod/Quadrature.cpp" line="15" column="6" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/sim/vbd/lod/Quadrature.cpp" bodystart="15" bodyend="168" declfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/sim/vbd/lod/Quadrature.h" declline="12" declcolumn="6"/>
+      </memberdef>
+      <memberdef kind="function" id="bindings_2pypbat_2sim_2vbd_2lod_2Restriction_8cpp_1a7642fc8dbb575bf784e944d5ceb52ec8" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void pbat::py::sim::vbd::lod::BindRestriction</definition>
+        <argsstring>(pybind11::module &amp;m)</argsstring>
+        <name>BindRestriction</name>
+        <param>
+          <type>pybind11::module &amp;</type>
+          <declname>m</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/sim/vbd/lod/Restriction.cpp" line="15" column="6" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/sim/vbd/lod/Restriction.cpp" bodystart="15" bodyend="46" declfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/sim/vbd/lod/Restriction.h" declline="12" declcolumn="6"/>
+      </memberdef>
+      <memberdef kind="function" id="bindings_2pypbat_2sim_2vbd_2lod_2Smoother_8cpp_1a0a1068549c8a009d762a56a73b8764c9" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void pbat::py::sim::vbd::lod::BindSmoother</definition>
+        <argsstring>(pybind11::module &amp;m)</argsstring>
+        <name>BindSmoother</name>
+        <param>
+          <type>pybind11::module &amp;</type>
+          <declname>m</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/sim/vbd/lod/Smoother.cpp" line="14" column="6" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/sim/vbd/lod/Smoother.cpp" bodystart="14" bodyend="38" declfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/sim/vbd/lod/Smoother.h" declline="12" declcolumn="6"/>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/sim/vbd/lod/DirichletEnergy.cpp" line="11" column="13"/>
+  </compounddef>
+</doxygen>

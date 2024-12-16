@@ -1,0 +1,17 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="dir_6912ac55476a434e3c22f6bf0d326401" kind="dir">
+    <compoundname>/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/sim/xpbd</compoundname>
+    <innerfile refid="bindings_2pypbat_2sim_2xpbd_2Data_8cpp">Data.cpp</innerfile>
+    <innerfile refid="bindings_2pypbat_2sim_2xpbd_2Data_8h">Data.h</innerfile>
+    <innerfile refid="bindings_2pypbat_2sim_2xpbd_2Integrator_8cpp">Integrator.cpp</innerfile>
+    <innerfile refid="bindings_2pypbat_2sim_2xpbd_2Integrator_8h">Integrator.h</innerfile>
+    <innerfile refid="sim_2xpbd_2Xpbd_8cpp">Xpbd.cpp</innerfile>
+    <innerfile refid="bindings_2pypbat_2sim_2xpbd_2Xpbd_8h">Xpbd.h</innerfile>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/sim/xpbd/"/>
+  </compounddef>
+</doxygen>

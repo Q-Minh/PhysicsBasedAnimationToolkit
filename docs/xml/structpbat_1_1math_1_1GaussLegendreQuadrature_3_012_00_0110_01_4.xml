@@ -1,0 +1,116 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="structpbat_1_1math_1_1GaussLegendreQuadrature_3_012_00_0110_01_4" kind="struct" language="C++" prot="public">
+    <compoundname>pbat::math::GaussLegendreQuadrature&lt; 2, 10 &gt;</compoundname>
+    <templateparamlist>
+    </templateparamlist>
+      <sectiondef kind="public-static-attrib">
+      <memberdef kind="variable" id="structpbat_1_1math_1_1GaussLegendreQuadrature_3_012_00_0110_01_4_1a0e4aca694e4f0a50f3aa78ddb2b7cebb" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>constexpr std::uint8_t</type>
+        <definition>constexpr std::uint8_t pbat::math::GaussLegendreQuadrature&lt; 2, 10 &gt;::kDims</definition>
+        <argsstring></argsstring>
+        <name>kDims</name>
+        <initializer>= 2</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/GaussQuadrature.h" line="1308" column="42" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/GaussQuadrature.h" bodystart="1308" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpbat_1_1math_1_1GaussLegendreQuadrature_3_012_00_0110_01_4_1a690fb8b2d9e858bdcfe25593c71e7400" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>constexpr std::uint8_t</type>
+        <definition>constexpr std::uint8_t pbat::math::GaussLegendreQuadrature&lt; 2, 10 &gt;::kOrder</definition>
+        <argsstring></argsstring>
+        <name>kOrder</name>
+        <initializer>= 10</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/GaussQuadrature.h" line="1309" column="42" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/GaussQuadrature.h" bodystart="1309" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpbat_1_1math_1_1GaussLegendreQuadrature_3_012_00_0110_01_4_1a516edada59abe5422476184485cdb30c" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>constexpr int</type>
+        <definition>constexpr int pbat::math::GaussLegendreQuadrature&lt; 2, 10 &gt;::kPoints</definition>
+        <argsstring></argsstring>
+        <name>kPoints</name>
+        <initializer>= 100</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/GaussQuadrature.h" line="1310" column="33" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/GaussQuadrature.h" bodystart="1310" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpbat_1_1math_1_1GaussLegendreQuadrature_3_012_00_0110_01_4_1abf0580c9f6c455f0cb72d05249896d31" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>constexpr std::array&lt; Scalar,(kDims+1) *kPoints &gt;</type>
+        <definition>constexpr std::array&lt;Scalar, (kDims + 1) * kPoints&gt; pbat::math::GaussLegendreQuadrature&lt; 2, 10 &gt;::points</definition>
+        <argsstring></argsstring>
+        <name>points</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/GaussQuadrature.h" line="1311" column="40" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/GaussQuadrature.h" bodystart="1311" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpbat_1_1math_1_1GaussLegendreQuadrature_3_012_00_0110_01_4_1a976ab43e117a37b5f70112d4f321312c" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>constexpr std::array&lt; Scalar, kPoints &gt;</type>
+        <definition>constexpr std::array&lt;Scalar, kPoints&gt; pbat::math::GaussLegendreQuadrature&lt; 2, 10 &gt;::weights</definition>
+        <argsstring></argsstring>
+        <name>weights</name>
+        <initializer>= {
+        0.00111126703798616, 0.00249103058916075, 0.00365169557717529, 0.00448809353852918,
+        0.00492574933439800, 0.00492574933439800, 0.00448809353852918, 0.00365169557717529,
+        0.00249103058916075, 0.00111126703798616, 0.00249103058916075, 0.00558392644074074,
+        0.00818568811465094, 0.0100605686206182,  0.0110416235226051,  0.0110416235226051,
+        0.0100605686206182,  0.00818568811465094, 0.00558392644074074, 0.00249103058916075,
+        0.00365169557717529, 0.00818568811465094, 0.0119997085601739,  0.0147481665201700,
+        0.0161863318570953,  0.0161863318570953,  0.0147481665201700,  0.0119997085601739,
+        0.00818568811465094, 0.00365169557717529, 0.00448809353852918, 0.0100605686206182,
+        0.0147481665201700,  0.0181261415321834,  0.0198937096165372,  0.0198937096165372,
+        0.0181261415321834,  0.0147481665201700,  0.0100605686206182,  0.00448809353852918,
+        0.00492574933439800, 0.0110416235226051,  0.0161863318570953,  0.0198937096165372,
+        0.0218336418484002,  0.0218336418484002,  0.0198937096165372,  0.0161863318570953,
+        0.0110416235226051,  0.00492574933439800, 0.00492574933439800, 0.0110416235226051,
+        0.0161863318570953,  0.0198937096165372,  0.0218336418484002,  0.0218336418484002,
+        0.0198937096165372,  0.0161863318570953,  0.0110416235226051,  0.00492574933439800,
+        0.00448809353852918, 0.0100605686206182,  0.0147481665201700,  0.0181261415321834,
+        0.0198937096165372,  0.0198937096165372,  0.0181261415321834,  0.0147481665201700,
+        0.0100605686206182,  0.00448809353852918, 0.00365169557717529, 0.00818568811465094,
+        0.0119997085601739,  0.0147481665201700,  0.0161863318570953,  0.0161863318570953,
+        0.0147481665201700,  0.0119997085601739,  0.00818568811465094, 0.00365169557717529,
+        0.00249103058916075, 0.00558392644074074, 0.00818568811465094, 0.0100605686206182,
+        0.0110416235226051,  0.0110416235226051,  0.0100605686206182,  0.00818568811465094,
+        0.00558392644074074, 0.00249103058916075, 0.00111126703798616, 0.00249103058916075,
+        0.00365169557717529, 0.00448809353852918, 0.00492574933439800, 0.00492574933439800,
+        0.00448809353852918, 0.00365169557717529, 0.00249103058916075, 0.00111126703798616}</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/GaussQuadrature.h" line="1612" column="40" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/GaussQuadrature.h" bodystart="1612" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/GaussQuadrature.h" line="1307" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/GaussQuadrature.h" bodystart="1306" bodyend="1638"/>
+    <listofallmembers>
+      <member refid="structpbat_1_1math_1_1GaussLegendreQuadrature_3_012_00_0110_01_4_1a0e4aca694e4f0a50f3aa78ddb2b7cebb" prot="public" virt="non-virtual"><scope>pbat::math::GaussLegendreQuadrature&lt; 2, 10 &gt;</scope><name>kDims</name></member>
+      <member refid="structpbat_1_1math_1_1GaussLegendreQuadrature_3_012_00_0110_01_4_1a690fb8b2d9e858bdcfe25593c71e7400" prot="public" virt="non-virtual"><scope>pbat::math::GaussLegendreQuadrature&lt; 2, 10 &gt;</scope><name>kOrder</name></member>
+      <member refid="structpbat_1_1math_1_1GaussLegendreQuadrature_3_012_00_0110_01_4_1a516edada59abe5422476184485cdb30c" prot="public" virt="non-virtual"><scope>pbat::math::GaussLegendreQuadrature&lt; 2, 10 &gt;</scope><name>kPoints</name></member>
+      <member refid="structpbat_1_1math_1_1GaussLegendreQuadrature_3_012_00_0110_01_4_1abf0580c9f6c455f0cb72d05249896d31" prot="public" virt="non-virtual"><scope>pbat::math::GaussLegendreQuadrature&lt; 2, 10 &gt;</scope><name>points</name></member>
+      <member refid="structpbat_1_1math_1_1GaussLegendreQuadrature_3_012_00_0110_01_4_1a976ab43e117a37b5f70112d4f321312c" prot="public" virt="non-virtual"><scope>pbat::math::GaussLegendreQuadrature&lt; 2, 10 &gt;</scope><name>weights</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

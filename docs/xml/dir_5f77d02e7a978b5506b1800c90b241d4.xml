@@ -1,0 +1,14 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="dir_5f77d02e7a978b5506b1800c90b241d4" kind="dir">
+    <compoundname>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/vbd</compoundname>
+    <innerdir refid="dir_094600be16b7988805c10c855525da2a">/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/vbd/tests</innerdir>
+    <innerfile refid="source_2pbat_2gpu_2vbd_2Integrator_8h">Integrator.h</innerfile>
+    <innerfile refid="source_2pbat_2gpu_2vbd_2Vbd_8h">Vbd.h</innerfile>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/vbd/"/>
+  </compounddef>
+</doxygen>

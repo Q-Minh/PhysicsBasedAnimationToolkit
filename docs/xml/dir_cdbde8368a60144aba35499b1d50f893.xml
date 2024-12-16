@@ -1,0 +1,35 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="dir_cdbde8368a60144aba35499b1d50f893" kind="dir">
+    <compoundname>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry</compoundname>
+    <innerdir refid="dir_df4186896296b258f38370c7f2be98a9">/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/model</innerdir>
+    <innerfile refid="source_2pbat_2geometry_2AxisAlignedBoundingBox_8cpp">AxisAlignedBoundingBox.cpp</innerfile>
+    <innerfile refid="source_2pbat_2geometry_2AxisAlignedBoundingBox_8h">AxisAlignedBoundingBox.h</innerfile>
+    <innerfile refid="BoundingVolumeHierarchy_8cpp">BoundingVolumeHierarchy.cpp</innerfile>
+    <innerfile refid="BoundingVolumeHierarchy_8h">BoundingVolumeHierarchy.h</innerfile>
+    <innerfile refid="ClosestPointQueries_8cpp">ClosestPointQueries.cpp</innerfile>
+    <innerfile refid="ClosestPointQueries_8h">ClosestPointQueries.h</innerfile>
+    <innerfile refid="DistanceQueries_8cpp">DistanceQueries.cpp</innerfile>
+    <innerfile refid="DistanceQueries_8h">DistanceQueries.h</innerfile>
+    <innerfile refid="source_2pbat_2geometry_2Geometry_8h">Geometry.h</innerfile>
+    <innerfile refid="IntersectionQueries_8cpp">IntersectionQueries.cpp</innerfile>
+    <innerfile refid="IntersectionQueries_8h">IntersectionQueries.h</innerfile>
+    <innerfile refid="KdTree_8cpp">KdTree.cpp</innerfile>
+    <innerfile refid="KdTree_8h">KdTree.h</innerfile>
+    <innerfile refid="source_2pbat_2geometry_2MeshBoundary_8cpp">MeshBoundary.cpp</innerfile>
+    <innerfile refid="source_2pbat_2geometry_2MeshBoundary_8h">MeshBoundary.h</innerfile>
+    <innerfile refid="Morton_8cpp">Morton.cpp</innerfile>
+    <innerfile refid="Morton_8h">Morton.h</innerfile>
+    <innerfile refid="OverlapQueries_8cpp">OverlapQueries.cpp</innerfile>
+    <innerfile refid="OverlapQueries_8h">OverlapQueries.h</innerfile>
+    <innerfile refid="source_2pbat_2geometry_2TetrahedralAabbHierarchy_8cpp">TetrahedralAabbHierarchy.cpp</innerfile>
+    <innerfile refid="source_2pbat_2geometry_2TetrahedralAabbHierarchy_8h">TetrahedralAabbHierarchy.h</innerfile>
+    <innerfile refid="source_2pbat_2geometry_2TriangleAabbHierarchy_8cpp">TriangleAabbHierarchy.cpp</innerfile>
+    <innerfile refid="source_2pbat_2geometry_2TriangleAabbHierarchy_8h">TriangleAabbHierarchy.h</innerfile>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/"/>
+  </compounddef>
+</doxygen>

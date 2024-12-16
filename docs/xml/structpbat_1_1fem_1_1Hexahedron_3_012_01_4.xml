@@ -1,0 +1,210 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="structpbat_1_1fem_1_1Hexahedron_3_012_01_4" kind="struct" language="C++" prot="public">
+    <compoundname>pbat::fem::Hexahedron&lt; 2 &gt;</compoundname>
+    <templateparamlist>
+    </templateparamlist>
+      <sectiondef kind="public-type">
+      <memberdef kind="typedef" id="structpbat_1_1fem_1_1Hexahedron_3_012_01_4_1aca59b21c7c43dae2a916319cd62ff135" prot="public" static="no">
+        <type><ref refid="structpbat_1_1fem_1_1Hexahedron" kindref="compound">Hexahedron</ref>&lt; 1 &gt;</type>
+        <definition>using pbat::fem::Hexahedron&lt; 2 &gt;::AffineBaseType =  Hexahedron&lt;1&gt;</definition>
+        <argsstring></argsstring>
+        <name>AffineBaseType</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Hexahedron.h" line="110" column="5" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Hexahedron.h" bodystart="110" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="structpbat_1_1fem_1_1Hexahedron_3_012_01_4_1a763e851b1217d6bf6d35651bbc190ead" prot="public" static="no">
+        <templateparamlist>
+          <param>
+            <type>int</type>
+            <declname>PolynomialOrder</declname>
+            <defname>PolynomialOrder</defname>
+          </param>
+        </templateparamlist>
+        <type><ref refid="structpbat_1_1math_1_1GaussLegendreQuadrature" kindref="compound">math::GaussLegendreQuadrature</ref>&lt; kDims, PolynomialOrder &gt;</type>
+        <definition>using pbat::fem::Hexahedron&lt; 2 &gt;::QuadratureType =  math::GaussLegendreQuadrature&lt;kDims, PolynomialOrder&gt;</definition>
+        <argsstring></argsstring>
+        <name>QuadratureType</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Hexahedron.h" line="141" column="5" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Hexahedron.h" bodystart="141" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="public-static-attrib">
+      <memberdef kind="variable" id="structpbat_1_1fem_1_1Hexahedron_3_012_01_4_1aafa51d23560761777ae957f8aaac8cea" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>constexpr int</type>
+        <definition>constexpr int pbat::fem::Hexahedron&lt; 2 &gt;::kOrder</definition>
+        <argsstring></argsstring>
+        <name>kOrder</name>
+        <initializer>= 2</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Hexahedron.h" line="112" column="26" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Hexahedron.h" bodystart="112" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpbat_1_1fem_1_1Hexahedron_3_012_01_4_1a7e0449b231ffed966a2f30255b3d2178" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>constexpr int</type>
+        <definition>constexpr int pbat::fem::Hexahedron&lt; 2 &gt;::kDims</definition>
+        <argsstring></argsstring>
+        <name>kDims</name>
+        <initializer>= 3</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Hexahedron.h" line="113" column="26" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Hexahedron.h" bodystart="113" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpbat_1_1fem_1_1Hexahedron_3_012_01_4_1ac63f55da92a50c9fc51fa2dcc47cdb8a" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>constexpr int</type>
+        <definition>constexpr int pbat::fem::Hexahedron&lt; 2 &gt;::kNodes</definition>
+        <argsstring></argsstring>
+        <name>kNodes</name>
+        <initializer>= 27</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Hexahedron.h" line="114" column="26" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Hexahedron.h" bodystart="114" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpbat_1_1fem_1_1Hexahedron_3_012_01_4_1a1c9666c924c74dadfaf1ddb3310e85b6" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>constexpr std::array&lt; int, kNodes *kDims &gt;</type>
+        <definition>constexpr std::array&lt;int, kNodes * kDims&gt; pbat::fem::Hexahedron&lt; 2 &gt;::Coordinates</definition>
+        <argsstring></argsstring>
+        <name>Coordinates</name>
+        <initializer>= {0, 0, 0, 1, 0, 0, 2, 0, 0, 0, 1,
+                                                                    0, 1, 1, 0, 2, 1, 0, 0, 2, 0, 1,
+                                                                    2, 0, 2, 2, 0, 0, 0, 1, 1, 0, 1,
+                                                                    2, 0, 1, 0, 1, 1, 1, 1, 1, 2, 1,
+                                                                    1, 0, 2, 1, 1, 2, 1, 2, 2, 1, 0,
+                                                                    0, 2, 1, 0, 2, 2, 0, 2, 0, 1, 2,
+                                                                    1, 1, 2, 2, 1, 2, 0, 2, 2, 1, 2,
+                                                                    2, 2, 2, 2}</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Divide coordinates by kOrder to obtain actual coordinates in the reference element </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Hexahedron.h" line="115" column="33" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Hexahedron.h" bodystart="115" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpbat_1_1fem_1_1Hexahedron_3_012_01_4_1a221b109e1a75691c86fd9e2066706448" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>constexpr std::array&lt; int, AffineBaseType::kNodes &gt;</type>
+        <definition>constexpr std::array&lt;int, AffineBaseType::kNodes&gt; pbat::fem::Hexahedron&lt; 2 &gt;::Vertices</definition>
+        <argsstring></argsstring>
+        <name>Vertices</name>
+        <initializer>= {
+        0,
+        2,
+        6,
+        8,
+        18,
+        20,
+        24,
+        26}</initializer>
+        <briefdescription>
+<para>Indices into nodes [0,kNodes-1] revealing vertices of the element. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Hexahedron.h" line="129" column="33" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Hexahedron.h" bodystart="129" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpbat_1_1fem_1_1Hexahedron_3_012_01_4_1aeae59bd70136faed70c6bfb7151cd761" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>constexpr bool</type>
+        <definition>constexpr bool pbat::fem::Hexahedron&lt; 2 &gt;::bHasConstantJacobian</definition>
+        <argsstring></argsstring>
+        <name>bHasConstantJacobian</name>
+        <initializer>= false</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Hexahedron.h" line="138" column="27" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Hexahedron.h" bodystart="138" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="public-static-func">
+      <memberdef kind="function" id="structpbat_1_1fem_1_1Hexahedron_3_012_01_4_1a9b2f3c88eb3df3b0beada961101a4c7a" prot="public" static="yes" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class TDerived</type>
+          </param>
+          <param>
+            <type>class TScalar</type>
+            <defval>typename TDerived::Scalar</defval>
+          </param>
+        </templateparamlist>
+        <type>Eigen::Vector&lt; TScalar, kNodes &gt;</type>
+        <definition>static Eigen::Vector&lt;TScalar, kNodes&gt; pbat::fem::Hexahedron&lt; 2 &gt;::N</definition>
+        <argsstring>([[maybe_unused]] Eigen::DenseBase&lt; TDerived &gt; const &amp;X)</argsstring>
+        <name>N</name>
+        <param>
+          <attributes>[[maybe_unused]</attributes>
+          <type>] Eigen::DenseBase&lt; TDerived &gt; const &amp;</type>
+          <declname>X</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Hexahedron.h" line="145" column="5" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Hexahedron.h" bodystart="145" bodyend="207"/>
+      </memberdef>
+      <memberdef kind="function" id="structpbat_1_1fem_1_1Hexahedron_3_012_01_4_1a77d13c43efef6a785bcddd029fa98dc7" prot="public" static="yes" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>Matrix&lt; kNodes, kDims &gt;</type>
+        <definition>static Matrix&lt;kNodes, kDims&gt; pbat::fem::Hexahedron&lt; 2 &gt;::GradN</definition>
+        <argsstring>([[maybe_unused]] Vector&lt; kDims &gt; const &amp;X)</argsstring>
+        <name>GradN</name>
+        <param>
+          <attributes>[[maybe_unused]</attributes>
+          <type>] Vector&lt; kDims &gt; const &amp;</type>
+          <declname>X</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Hexahedron.h" line="209" column="20" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Hexahedron.h" bodystart="209" bodyend="411"/>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Hexahedron.h" line="109" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Hexahedron.h" bodystart="108" bodyend="412"/>
+    <listofallmembers>
+      <member refid="structpbat_1_1fem_1_1Hexahedron_3_012_01_4_1aca59b21c7c43dae2a916319cd62ff135" prot="public" virt="non-virtual"><scope>pbat::fem::Hexahedron&lt; 2 &gt;</scope><name>AffineBaseType</name></member>
+      <member refid="structpbat_1_1fem_1_1Hexahedron_3_012_01_4_1aeae59bd70136faed70c6bfb7151cd761" prot="public" virt="non-virtual"><scope>pbat::fem::Hexahedron&lt; 2 &gt;</scope><name>bHasConstantJacobian</name></member>
+      <member refid="structpbat_1_1fem_1_1Hexahedron_3_012_01_4_1a1c9666c924c74dadfaf1ddb3310e85b6" prot="public" virt="non-virtual"><scope>pbat::fem::Hexahedron&lt; 2 &gt;</scope><name>Coordinates</name></member>
+      <member refid="structpbat_1_1fem_1_1Hexahedron_3_012_01_4_1a77d13c43efef6a785bcddd029fa98dc7" prot="public" virt="non-virtual"><scope>pbat::fem::Hexahedron&lt; 2 &gt;</scope><name>GradN</name></member>
+      <member refid="structpbat_1_1fem_1_1Hexahedron_3_012_01_4_1a7e0449b231ffed966a2f30255b3d2178" prot="public" virt="non-virtual"><scope>pbat::fem::Hexahedron&lt; 2 &gt;</scope><name>kDims</name></member>
+      <member refid="structpbat_1_1fem_1_1Hexahedron_3_012_01_4_1ac63f55da92a50c9fc51fa2dcc47cdb8a" prot="public" virt="non-virtual"><scope>pbat::fem::Hexahedron&lt; 2 &gt;</scope><name>kNodes</name></member>
+      <member refid="structpbat_1_1fem_1_1Hexahedron_3_012_01_4_1aafa51d23560761777ae957f8aaac8cea" prot="public" virt="non-virtual"><scope>pbat::fem::Hexahedron&lt; 2 &gt;</scope><name>kOrder</name></member>
+      <member refid="structpbat_1_1fem_1_1Hexahedron_3_012_01_4_1a9b2f3c88eb3df3b0beada961101a4c7a" prot="public" virt="non-virtual"><scope>pbat::fem::Hexahedron&lt; 2 &gt;</scope><name>N</name></member>
+      <member refid="structpbat_1_1fem_1_1Hexahedron_3_012_01_4_1a763e851b1217d6bf6d35651bbc190ead" prot="public" virt="non-virtual"><scope>pbat::fem::Hexahedron&lt; 2 &gt;</scope><name>QuadratureType</name></member>
+      <member refid="structpbat_1_1fem_1_1Hexahedron_3_012_01_4_1a221b109e1a75691c86fd9e2066706448" prot="public" virt="non-virtual"><scope>pbat::fem::Hexahedron&lt; 2 &gt;</scope><name>Vertices</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

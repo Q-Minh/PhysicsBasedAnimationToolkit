@@ -1,0 +1,221 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="classpbat_1_1math_1_1linalg_1_1mini_1_1SubtractionScalar" kind="class" language="C++" prot="public">
+    <compoundname>pbat::math::linalg::mini::SubtractionScalar</compoundname>
+    <templateparamlist>
+      <param>
+        <type>class TLhsMatrix</type>
+      </param>
+    </templateparamlist>
+      <sectiondef kind="public-type">
+      <memberdef kind="typedef" id="classpbat_1_1math_1_1linalg_1_1mini_1_1SubtractionScalar_1a72d8a0a8754b37dbb73030b0c50c8eaf" prot="public" static="no">
+        <type>TLhsMatrix</type>
+        <definition>using pbat::math::linalg::mini::SubtractionScalar&lt; TLhsMatrix &gt;::LhsNestedType =  TLhsMatrix</definition>
+        <argsstring></argsstring>
+        <name>LhsNestedType</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/BinaryOperations.h" line="121" column="5" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/BinaryOperations.h" bodystart="121" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="classpbat_1_1math_1_1linalg_1_1mini_1_1SubtractionScalar_1a3a4d0a78a15b4a3dd6da974d12d1bd22" prot="public" static="no">
+        <type>typename LhsNestedType::ScalarType</type>
+        <definition>using pbat::math::linalg::mini::SubtractionScalar&lt; TLhsMatrix &gt;::ScalarType =  typename LhsNestedType::ScalarType</definition>
+        <argsstring></argsstring>
+        <name>ScalarType</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/BinaryOperations.h" line="122" column="5" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/BinaryOperations.h" bodystart="122" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="classpbat_1_1math_1_1linalg_1_1mini_1_1SubtractionScalar_1af363187a6c37d67717286ea2babd38e6" prot="public" static="no">
+        <type><ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1SubtractionScalar" kindref="compound">SubtractionScalar</ref>&lt; LhsNestedType &gt;</type>
+        <definition>using pbat::math::linalg::mini::SubtractionScalar&lt; TLhsMatrix &gt;::SelfType =  SubtractionScalar&lt;LhsNestedType&gt;</definition>
+        <argsstring></argsstring>
+        <name>SelfType</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/BinaryOperations.h" line="123" column="5" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/BinaryOperations.h" bodystart="123" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="public-static-attrib">
+      <memberdef kind="variable" id="classpbat_1_1math_1_1linalg_1_1mini_1_1SubtractionScalar_1ae5f077bc97232575fceb4b1ef2b9be3f" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>constexpr auto</type>
+        <definition>constexpr auto pbat::math::linalg::mini::SubtractionScalar&lt; TLhsMatrix &gt;::kRows</definition>
+        <argsstring></argsstring>
+        <name>kRows</name>
+        <initializer>= LhsNestedType::kRows</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/BinaryOperations.h" line="125" column="27" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/BinaryOperations.h" bodystart="125" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpbat_1_1math_1_1linalg_1_1mini_1_1SubtractionScalar_1a2076ff10fec8f95ba470d0f08ff97978" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>constexpr auto</type>
+        <definition>constexpr auto pbat::math::linalg::mini::SubtractionScalar&lt; TLhsMatrix &gt;::kCols</definition>
+        <argsstring></argsstring>
+        <name>kCols</name>
+        <initializer>= LhsNestedType::kCols</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/BinaryOperations.h" line="126" column="27" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/BinaryOperations.h" bodystart="126" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpbat_1_1math_1_1linalg_1_1mini_1_1SubtractionScalar_1a8807fe81cf02aaf398fdd536be86bf9e" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>constexpr bool</type>
+        <definition>constexpr bool pbat::math::linalg::mini::SubtractionScalar&lt; TLhsMatrix &gt;::bRowMajor</definition>
+        <argsstring></argsstring>
+        <name>bRowMajor</name>
+        <initializer>= LhsNestedType::bRowMajor</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/BinaryOperations.h" line="127" column="27" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/BinaryOperations.h" bodystart="127" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="classpbat_1_1math_1_1linalg_1_1mini_1_1SubtractionScalar_1a8230aafc5199abd1325362e1564b226a" prot="private" static="no" mutable="no">
+        <type>LhsNestedType const  &amp;</type>
+        <definition>LhsNestedType const&amp; pbat::math::linalg::mini::SubtractionScalar&lt; TLhsMatrix &gt;::mA</definition>
+        <argsstring></argsstring>
+        <name>mA</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/BinaryOperations.h" line="140" column="25" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/BinaryOperations.h" bodystart="140" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpbat_1_1math_1_1linalg_1_1mini_1_1SubtractionScalar_1aab2d273fecc975d9fe9422d7137785b7" prot="private" static="no" mutable="no">
+        <type>ScalarType</type>
+        <definition>ScalarType pbat::math::linalg::mini::SubtractionScalar&lt; TLhsMatrix &gt;::mK</definition>
+        <argsstring></argsstring>
+        <name>mK</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/BinaryOperations.h" line="141" column="16" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/BinaryOperations.h" bodystart="141" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpbat_1_1math_1_1linalg_1_1mini_1_1SubtractionScalar_1a1df9411efab2d87bfcdd58722d6b7f45" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>PBAT_HOST_DEVICE</type>
+        <definition>PBAT_HOST_DEVICE pbat::math::linalg::mini::SubtractionScalar&lt; TLhsMatrix &gt;::SubtractionScalar</definition>
+        <argsstring>(LhsNestedType const &amp;A, ScalarType k)</argsstring>
+        <name>SubtractionScalar</name>
+        <param>
+          <type>LhsNestedType const &amp;</type>
+          <declname>A</declname>
+        </param>
+        <param>
+          <type>ScalarType</type>
+          <declname>k</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/BinaryOperations.h" line="129" column="22" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/BinaryOperations.h" bodystart="129" bodyend="129"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1math_1_1linalg_1_1mini_1_1SubtractionScalar_1ac5e012e561a2ade13efc14be1a1d77c6" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>PBAT_HOST_DEVICE ScalarType</type>
+        <definition>PBAT_HOST_DEVICE ScalarType pbat::math::linalg::mini::SubtractionScalar&lt; TLhsMatrix &gt;::operator()</definition>
+        <argsstring>(auto i, auto j) const</argsstring>
+        <name>operator()</name>
+        <param>
+          <type>auto</type>
+          <declname>i</declname>
+        </param>
+        <param>
+          <type>auto</type>
+          <declname>j</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/BinaryOperations.h" line="131" column="33" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/BinaryOperations.h" bodystart="131" bodyend="131"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1math_1_1linalg_1_1mini_1_1SubtractionScalar_1ac01595a324d33a14558b56f890272167" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>PBAT_HOST_DEVICE ScalarType</type>
+        <definition>PBAT_HOST_DEVICE ScalarType pbat::math::linalg::mini::SubtractionScalar&lt; TLhsMatrix &gt;::operator()</definition>
+        <argsstring>(auto i) const</argsstring>
+        <name>operator()</name>
+        <param>
+          <type>auto</type>
+          <declname>i</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/BinaryOperations.h" line="134" column="33" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/BinaryOperations.h" bodystart="134" bodyend="134"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1math_1_1linalg_1_1mini_1_1SubtractionScalar_1ab5b8f6c59ad26d09da5ec11d68e886a5" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>PBAT_HOST_DEVICE ScalarType</type>
+        <definition>PBAT_HOST_DEVICE ScalarType pbat::math::linalg::mini::SubtractionScalar&lt; TLhsMatrix &gt;::operator[]</definition>
+        <argsstring>(auto i) const</argsstring>
+        <name>operator[]</name>
+        <param>
+          <type>auto</type>
+          <declname>i</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/BinaryOperations.h" line="135" column="33" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/BinaryOperations.h" bodystart="135" bodyend="135"/>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/BinaryOperations.h" line="119" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/BinaryOperations.h" bodystart="118" bodyend="142"/>
+    <listofallmembers>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1SubtractionScalar_1a8807fe81cf02aaf398fdd536be86bf9e" prot="public" virt="non-virtual"><scope>pbat::math::linalg::mini::SubtractionScalar</scope><name>bRowMajor</name></member>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1SubtractionScalar_1a2076ff10fec8f95ba470d0f08ff97978" prot="public" virt="non-virtual"><scope>pbat::math::linalg::mini::SubtractionScalar</scope><name>kCols</name></member>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1SubtractionScalar_1ae5f077bc97232575fceb4b1ef2b9be3f" prot="public" virt="non-virtual"><scope>pbat::math::linalg::mini::SubtractionScalar</scope><name>kRows</name></member>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1SubtractionScalar_1a72d8a0a8754b37dbb73030b0c50c8eaf" prot="public" virt="non-virtual"><scope>pbat::math::linalg::mini::SubtractionScalar</scope><name>LhsNestedType</name></member>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1SubtractionScalar_1a8230aafc5199abd1325362e1564b226a" prot="private" virt="non-virtual"><scope>pbat::math::linalg::mini::SubtractionScalar</scope><name>mA</name></member>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1SubtractionScalar_1aab2d273fecc975d9fe9422d7137785b7" prot="private" virt="non-virtual"><scope>pbat::math::linalg::mini::SubtractionScalar</scope><name>mK</name></member>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1SubtractionScalar_1ac5e012e561a2ade13efc14be1a1d77c6" prot="public" virt="non-virtual"><scope>pbat::math::linalg::mini::SubtractionScalar</scope><name>operator()</name></member>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1SubtractionScalar_1ac01595a324d33a14558b56f890272167" prot="public" virt="non-virtual"><scope>pbat::math::linalg::mini::SubtractionScalar</scope><name>operator()</name></member>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1SubtractionScalar_1ab5b8f6c59ad26d09da5ec11d68e886a5" prot="public" virt="non-virtual"><scope>pbat::math::linalg::mini::SubtractionScalar</scope><name>operator[]</name></member>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1SubtractionScalar_1a3a4d0a78a15b4a3dd6da974d12d1bd22" prot="public" virt="non-virtual"><scope>pbat::math::linalg::mini::SubtractionScalar</scope><name>ScalarType</name></member>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1SubtractionScalar_1af363187a6c37d67717286ea2babd38e6" prot="public" virt="non-virtual"><scope>pbat::math::linalg::mini::SubtractionScalar</scope><name>SelfType</name></member>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1SubtractionScalar_1a1df9411efab2d87bfcdd58722d6b7f45" prot="public" virt="non-virtual"><scope>pbat::math::linalg::mini::SubtractionScalar</scope><name>SubtractionScalar</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>
