@@ -1,13 +1,9 @@
 #ifndef PBAT_SIM_VBD_MULTIGRID_LEVEL_H
 #define PBAT_SIM_VBD_MULTIGRID_LEVEL_H
 
-#include "DirichletEnergy.h"
-#include "ElasticEnergy.h"
-#include "Mesh.h"
-#include "MomentumEnergy.h"
-#include "Quadrature.h"
 #include "pbat/Aliases.h"
 #include "pbat/sim/vbd/Data.h"
+#include "pbat/sim/vbd/Mesh.h"
 
 namespace pbat {
 namespace sim {
@@ -18,51 +14,63 @@ struct Level
 {
     /**
      * @brief
-     * @param CM This level's finite element mesh
+     * @param data
+     * @param mesh
      */
-    Level(VolumeMesh CM);
-    /**
-     * @brief Constructs this level's cage quadrature
-     * @param problem
-     * @param params
-     * @return
-     */
-    Level& WithCageQuadrature(Data const& problem, CageQuadratureParameters const& params);
-    /**
-     * @brief Constructs this level's Dirichlet quadrature
-     * @param problem
-     * @return
-     */
-    Level& WithDirichletQuadrature(Data const& problem);
-    /**
-     * @brief Constructs this level's momentum energy
-     * @param problem
-     * @return
-     */
-    Level& WithMomentumEnergy(Data const& problem);
-    /**
-     * @brief Constructs this level's elastic energy
-     * @param problem
-     * @return
-     */
-    Level& WithElasticEnergy(Data const& problem);
+    Level(Data const& data, VolumeMesh mesh);
     /**
      * @brief
-     * @param problem
-     * @return
+     * @param data
      */
-    Level& WithDirichletEnergy(Data const& problem);
+    void HyperReduce(Data const& data);
+    /**
+     * @brief
+     * @param data
+     */
+    void Prolong(Data& data) const;
+    /**
+     * @brief
+     * @param dt
+     * @param iters
+     * @param data
+     */
+    void Smooth(Scalar dt, Index iters, Data& data);
 
-    MatrixX x;             ///< 3x|#cage verts| deformed positions
-    IndexVectorX colors;   ///< Coarse vertex graph coloring
-    IndexVectorX ptr, adj; ///< Parallel vertex partitions
+    /**
+     * Coarse mesh discretization
+     */
+    VolumeMesh mesh;         ///< Coarse FEM mesh
+    MatrixX u;               ///< 3x|#cage verts| coarse displacement coefficients
+    IndexVectorX colors;     ///< Coarse vertex graph coloring
+    IndexVectorX Pptr, Padj; ///< Parallel vertex partitions
 
-    VolumeMesh mesh;                ///< Cage linear tetrahedral FEM mesh
-    CageQuadrature Qcage;           ///< Cage volumetric quadrature
-    DirichletQuadrature Qdirichlet; ///< Cage Dirichlet quadrature
-    MomentumEnergy Ekinetic;        ///< \frac{1}{2} \rho || x^c - \Tilde{x} ||_2^2
-    ElasticEnergy Epotential;       ///< \Psi(x^c)
-    DirichletEnergy Edirichlet;     ///< \frac{1}{2} \mu_D || x^c - x_D ||_2^2
+    using BoolVector = Eigen::Vector<bool, Eigen::Dynamic>;
+
+    /**
+     * Elastic energy
+     */
+    IndexMatrixX ecVE; ///< 4x|#fine elems| coarse elements containing 4 vertices of fine elements
+    MatrixX
+        NecVE; ///< 4x|4*#fine elems| coarse element shape functions at 4 vertices of fine elements
+    IndexMatrixX ilocalE;      ///< 4x|#fine elems| coarse vertex local index w.r.t. coarse elements
+                               ///< containing 4 vertices of fine elements
+    IndexVectorX GEptr, GEadj; ///< Coarse vertex -> fine element adjacency graph
+    BoolVector bActiveE; ///< Active elements at this level
+    VectorX wgE; ///< Coarse element quadrature weights
+
+    /**
+     * Kinetic energy
+     */
+    IndexVectorX ecK; ///< |#fine vertices| coarse elements containing fine vertices
+    MatrixX NecK;     ///< 4x|#fine vertices| coarse element shape functions at fine vertices
+    IndexVectorX GKptr, GKadj, GKilocal; ///< Coarse vertex -> fine vertex adjacency graph
+    BoolVector bActiveK; ///< Active vertices at this level
+    VectorX mK; ///< Coarse nodal lumped masses
+
+    /**
+     * Dirichlet energy
+     */
+    BoolVector bIsDirichletVertex;
 };
 
 } // namespace multigrid

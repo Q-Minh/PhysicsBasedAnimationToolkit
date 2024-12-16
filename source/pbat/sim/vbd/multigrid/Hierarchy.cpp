@@ -1,85 +1,37 @@
 #include "Hierarchy.h"
 
-#include <exception>
-#include <fmt/format.h>
-#include <string>
-
 namespace pbat {
 namespace sim {
 namespace vbd {
 namespace multigrid {
 
 Hierarchy::Hierarchy(
-    Data root,
-    std::vector<VolumeMesh> const& cages,
-    Eigen::Ref<IndexVectorX const> const& cycle,
-    Eigen::Ref<IndexVectorX const> const& smoothingSchedule,
-    Eigen::Ref<IndexVectorX const> const& transitionSchedule,
-    std::vector<CageQuadratureParameters> const& cageQuadParams)
-    : mRoot(std::move(root)),
-      mLevels(),
-      mCycle(cycle),
-      mSmoothingSchedule(smoothingSchedule),
-      mTransitionSchedule(transitionSchedule),
-      mTransitions()
+    Data dataIn,
+    std::vector<VolumeMesh> cages,
+    IndexVectorX const& cycleIn,
+    IndexVectorX const& sitersIn)
+    : data(std::move(dataIn)), levels(), cycle(cycleIn), siters(sitersIn)
 {
-    auto const nCoarseLevels = cages.size();
-    mLevels.reserve(nCoarseLevels);
-    for (auto l = 0ULL; l < cages.size(); ++l)
+    levels.reserve(cages.size());
+    for (VolumeMesh& cage : cages)
+        levels.push_back(Level(data, std::move(cage)));
+    // Reasonable defaults
+    if (cycle.size() == 0)
     {
-        mLevels.push_back(
-            Level(cages[l])
-                .WithCageQuadrature(
-                    mRoot,
-                    cageQuadParams.empty() ? CageQuadratureParameters{} : cageQuadParams[l])
-                .WithDirichletQuadrature(mRoot)
-                .WithMomentumEnergy(mRoot)
-                .WithElasticEnergy(mRoot)
-                .WithDirichletEnergy(mRoot));
+        // Standard v-cycle
+        Index nLevels = static_cast<Index>(levels.size());
+        cycle.resize(nLevels * 2 + 1);
+        Index k    = 0;
+        cycle(k++) = Index(-1);
+        for (Index l = 0; l < nLevels; ++l)
+            cycle(k++) = l;
+        for (Index l = 0; l < nLevels; ++l)
+            cycle(k++) = nLevels - l - 2;
     }
-    if (mCycle.size() == 0)
+    if (siters.size() == 0)
     {
-        Index const nLevels = static_cast<Index>(mLevels.size());
-        mCycle.resize(nLevels + 2);
-        mCycle(0) = Index(-1);
-        for (Index l = nLevels - 1, k = 1; l >= 0; --l, ++k)
-            mCycle(k) = l;
-        mCycle(nLevels + 1) = Index(-1);
-    }
-    if (mSmoothingSchedule.size() == 0)
-    {
-        mSmoothingSchedule.setConstant(mCycle.size(), Index(10));
-    }
-    if (mTransitionSchedule.size() == 0)
-    {
-        mTransitionSchedule.setConstant(mCycle.size() - 1, Index(10));
-    }
-
-    mTransitions.reserve(mTransitionSchedule.size() * 3ULL);
-    Index lCurrent = mCycle(0);
-    for (Index lNext : mCycle.tail(mCycle.size() - 1))
-    {
-        IndexVector<2> const transition = {lCurrent, lNext};
-        bool const bIsNewTransition     = mTransitions.find(transition) == mTransitions.end();
-        if (bIsNewTransition)
-        {
-            bool const bIsProlongation = transition(0) > transition(1);
-            auto li                    = static_cast<std::size_t>(transition(0));
-            auto lj                    = static_cast<std::size_t>(transition(1));
-            if (bIsProlongation)
-            {
-                VolumeMesh const& CM = mLevels[li].mesh;
-                VolumeMesh const& FM = transition(1) > -1 ? mLevels[lj].mesh : mRoot.mesh;
-                mTransitions.insert({transition, Prolongation(FM, CM)});
-            }
-            else
-            {
-                Level const& lc          = mLevels[lj];
-                CageQuadrature const& CQ = lc.Qcage;
-                mTransitions.insert({transition, Restriction(CQ)});
-            }
-        }
-        lCurrent = lNext;
+        // TODO: Find better strategy for default iterations!
+        siters.setConstant(static_cast<Index>(cycle.size()), 5);
     }
 }
 
@@ -96,39 +48,17 @@ TEST_CASE("[sim][vbd][multigrid] Hierarchy")
 {
     using namespace pbat;
     using sim::vbd::Data;
+    using sim::vbd::VolumeMesh;
     using sim::vbd::multigrid::Hierarchy;
-    using sim::vbd::multigrid::VolumeMesh;
+    // Arrange
+    auto const [VR, CR]   = geometry::model::Cube(geometry::model::EMesh::Tetrahedral, 2);
+    Data data             = Data().WithVolumeMesh(VR, CR).Construct();
+    auto const [VL2, CL2] = geometry::model::Cube(geometry::model::EMesh::Tetrahedral, 0);
+    auto const [VL1, CL1] = geometry::model::Cube(geometry::model::EMesh::Tetrahedral, 1);
 
-    auto [XR, ER] = geometry::model::Cube();
-    XR.colwise() -= XR.rowwise().mean();
-    std::vector<VolumeMesh> cages{
-        {VolumeMesh(Scalar(1.1) * XR, ER), VolumeMesh(Scalar(1.2) * XR, ER)}};
-    Data root = Data().WithVolumeMesh(XR, ER).Construct();
+    // Act
+    Hierarchy H{std::move(data), {VolumeMesh(VL1, CL1), VolumeMesh(VL2, CL2)}};
 
-    SUBCASE("Default constructor parameters")
-    {
-        Hierarchy H(root, cages);
-        CHECK_GT(H.mCycle.size(), 0ULL);
-        CHECK_EQ(H.mCycle.size(), H.mSmoothingSchedule.size());
-        CHECK_EQ(H.mCycle.size(), H.mTransitionSchedule.size() + 1ULL);
-        CHECK_EQ(H.mLevels.size(), cages.size());
-        CHECK_GT(H.mTransitions.size(), 0ULL);
-        CHECK_EQ(H.mCycle(0), Index(-1));
-        CHECK_EQ(H.mCycle(H.mCycle.size() - 1), Index(-1));
-    }
-    SUBCASE("User-specified constructor parameters")
-    {
-        IndexVectorX cycle(7);
-        cycle << -1, 0, 1, 0, 1, 0, -1;
-        IndexVectorX riters(6);
-        riters << 10, 10, 10, 10, 10, 10;
-        IndexVectorX siters(7);
-        siters << 10, 10, 10, 10, 10, 10, 10;
-        Hierarchy H(root, cages, cycle, siters, riters);
-        CHECK_EQ(H.mCycle.size(), cycle.size());
-        CHECK_EQ(H.mSmoothingSchedule.size(), siters.size());
-        CHECK_EQ(H.mTransitionSchedule.size(), riters.size());
-        CHECK_EQ(H.mLevels.size(), cages.size());
-        CHECK_EQ(H.mTransitions.size(), 4ULL);
-    }
+    // Assert
+    CHECK_EQ(H.siters.size(), H.cycle.size());
 }

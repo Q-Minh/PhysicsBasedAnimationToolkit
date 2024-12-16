@@ -55,7 +55,7 @@ class Ones
     PBAT_MINI_CONST_TRANSPOSE_API(SelfType)
 };
 
-template <class TScalar, int M, int N>
+template <class TScalar, int M, int N = 1>
 class Zeros
 {
   public:

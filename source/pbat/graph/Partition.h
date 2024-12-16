@@ -6,8 +6,6 @@
 namespace pbat {
 namespace graph {
 
-#ifdef PBAT_USE_METIS
-
 struct PartitioningOptions
 {
     enum class EObjective {
@@ -48,9 +46,8 @@ IndexVectorX Partition(
     IndexVectorX const& ptr,
     IndexVectorX const& adj,
     IndexVectorX const& wadj,
-    std::size_t nPartitions,
+    Index nPartitions,
     PartitioningOptions opts = PartitioningOptions{});
-#endif PBAT_USE_METIS
 
 } // namespace graph
 } // namespace pbat

@@ -10,7 +10,6 @@ namespace graph {
 void BindPartition([[maybe_unused]] pybind11::module& m)
 {
     namespace pyb = pybind11;
-#ifdef PBAT_USE_METIS
 
     using pbat::graph::PartitioningOptions;
     pyb::enum_<PartitioningOptions::EObjective>(m, "PartitioningObjective")
@@ -63,7 +62,7 @@ void BindPartition([[maybe_unused]] pybind11::module& m)
         [](IndexVectorX const& ptr,
            IndexVectorX const& adj,
            IndexVectorX const& wadj,
-           std::size_t nPartitions,
+           Index nPartitions,
            PartitioningOptions::EObjective eObjective,
            PartitioningOptions::ECoarseningStrategy eCoarsen,
            PartitioningOptions::EInitialPartitioningStrategy eIP,
@@ -110,7 +109,6 @@ void BindPartition([[maybe_unused]] pybind11::module& m)
         "Partition a weighted directed graph (ptr, adj, wgt) given in sparse compressed format "
         "into n_partitions. Returns the |len(ptr)-1| partitioning map p such that p[v] yields the "
         "partition containing vertex v.");
-#endif // PBAT_USE_METIS
 }
 
 } // namespace graph

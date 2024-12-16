@@ -3,9 +3,10 @@
 
 #include "pbat/Aliases.h"
 #include "pbat/HostDevice.h"
+#include "pbat/fem/DeformationGradient.h"
 #include "pbat/math/linalg/mini/Mini.h"
 #include "pbat/physics/HyperElasticity.h"
-#include "pbat/sim/vbd/Kernels.h"
+#include "pbat/sim/vbd/Mesh.h"
 
 namespace pbat {
 namespace sim {
@@ -16,60 +17,55 @@ namespace kernels {
 namespace mini = math::linalg::mini;
 
 template <
-    class IndexType,
     physics::CHyperElasticEnergy TPsi,
-    mini::CMatrix TMatrixXCG,
-    mini::CMatrix TMatrixGNCG,
-    mini::CMatrix TMatrixGI,
-    mini::CMatrix TMatrixHI,
-    class ScalarType = typename TMatrixXCG::ScalarType>
-PBAT_HOST_DEVICE Scalar AccumulateElasticEnergy(
-    IndexType ilocal,
-    ScalarType wg,
+    mini::CMatrix TMatrixIL,
+    mini::CMatrix TMatrixX,
+    mini::CMatrix TMatrixGN,
+    mini::CMatrix TMatrixN,
+    mini::CMatrix TMatrixGU,
+    mini::CMatrix TMatrixHU,
+    class ScalarType = typename TMatrixX::ScalarType>
+PBAT_HOST_DEVICE void AccumulateElasticEnergy(
     TPsi const& Psi,
+    TMatrixIL const& ilocal,
+    ScalarType wg,
     ScalarType mug,
     ScalarType lambdag,
-    TMatrixXCG const& xcg,
-    TMatrixGNCG const& GNcg,
-    TMatrixGI& gi,
-    TMatrixHI& Hi)
+    TMatrixX const& xe,
+    TMatrixGN const& GNe,
+    TMatrixN const& N,
+    TMatrixGU& gu,
+    TMatrixHU& Hu)
 {
     using namespace mini;
-    SMatrix<Scalar, 3, 3> F = xcg * GNcg;
-    SVector<Scalar, 9> gF;
-    SMatrix<Scalar, 9, 9> HF;
-    Scalar E = Psi.evalWithGradAndHessian(F, mug, lambdag, gF, HF);
-    pbat::sim::vbd::kernels::AccumulateElasticGradient(ilocal, wg, GNcg, gF, gi);
-    pbat::sim::vbd::kernels::AccumulateElasticHessian(ilocal, wg, GNcg, HF, Hi);
-    return E;
-}
-
-template <
-    class IndexType,
-    mini::CMatrix TMatrixXCG,
-    mini::CMatrix TMatrixNCG,
-    mini::CMatrix TMatrixXTL,
-    mini::CMatrix TMatrixGI,
-    mini::CMatrix TMatrixHI,
-    class ScalarType = typename TMatrixXCG::ScalarType>
-PBAT_HOST_DEVICE Scalar AccumulateShapeMatchingEnergy(
-    IndexType ilocal,
-    ScalarType wg,
-    ScalarType rhog,
-    TMatrixXCG const& xcg,
-    TMatrixNCG const& Ncg,
-    TMatrixXTL const& xtarget,
-    TMatrixGI& gi,
-    TMatrixHI& Hi)
-{
-    using namespace mini;
-    auto xc = xcg * Ncg;
-    // Energy is 1/2 w_g rho_g || xc - xf ||_2^2
-    SVector<ScalarType, 3> dx = xc - xtarget;
-    Scalar E                  = Scalar(0.5) * wg * rhog * SquaredNorm(dx);
-    gi += (wg * rhog * Ncg(ilocal)) * dx;
-    Diag(Hi) += wg * rhog * Ncg(ilocal) * Ncg(ilocal);
-    return E;
+    SMatrix<ScalarType, 3, 3> F = xe * GNe;
+    SVector<Scalar, 9> gF       = Zeros<Scalar, 9>();
+    SMatrix<Scalar, 9, 9> HF    = Zeros<Scalar, 9, 9>();
+    Psi.gradAndHessian(F, mug, lambdag, gF, HF);
+    using Element             = typename VolumeMesh::ElementType;
+    SMatrix<Scalar, 3, 3> dHu = Zeros<Scalar, 3, 3>();
+    SVector<Scalar, 3> dgu    = Zeros<Scalar, 3>();
+    for (auto i = 0; i < 4; ++i)
+    {
+        for (auto j = 0; j < 4; ++j)
+        {
+            if (ilocal(i) >= 0 and ilocal(j) >= 0)
+            {
+                auto Hij = fem::HessianBlockWrtDofs<Element, 3>(HF, GNe, i, j);
+                dHu += N(ilocal(i), i) * N(ilocal(j), j) * Hij;
+            }
+        }
+    }
+    for (auto i = 0; i < 4; ++i)
+    {
+        if (ilocal(i) >= 0)
+        {
+            auto gi = fem::GradientSegmentWrtDofs<Element, 3>(gF, GNe, i);
+            dgu += N(ilocal(i), i) * gi;
+        }
+    }
+    Hu += wg * dHu;
+    gu += wg * dgu;
 }
 
 } // namespace kernels

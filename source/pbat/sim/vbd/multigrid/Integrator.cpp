@@ -1,10 +1,9 @@
 #include "Integrator.h"
 
 #include "Hierarchy.h"
-#include "Smoother.h"
-#include "pbat/math/linalg/mini/Mini.h"
 #include "pbat/profiling/Profiling.h"
 #include "pbat/sim/vbd/Kernels.h"
+#include "pbat/sim/vbd/lod/Smoother.h"
 
 #include <tbb/parallel_for.h>
 
@@ -16,73 +15,71 @@ namespace multigrid {
 void Integrator::Step(Scalar dt, Index substeps, Hierarchy& H) const
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.vbd.multigrid.Integrator.Step");
-    Scalar sdt           = dt / static_cast<Scalar>(substeps);
-    Scalar sdt2          = sdt * sdt;
-    auto const nVertices = H.mRoot.x.cols();
-    for (auto s = 0; s < substeps; ++s)
+
+    using RootSmoother = pbat::sim::vbd::lod::Smoother;
+    Scalar sdt         = dt / static_cast<Scalar>(substeps);
+    Scalar sdt2        = sdt * sdt;
+    auto nVertices     = H.data.x.cols();
+    for (Index s = 0; s < substeps; ++s)
     {
-        using namespace math::linalg;
-        using mini::FromEigen;
-        using mini::ToEigen;
         // Store previous positions
-        H.mRoot.xt = H.mRoot.x;
+        H.data.xt = H.data.x;
         // Compute inertial target positions
-        H.mRoot.xtilde = H.mRoot.xt + sdt * H.mRoot.v + sdt2 * H.mRoot.aext;
+        tbb::parallel_for(Index(0), nVertices, [&](Index i) {
+            using pbat::sim::vbd::kernels::InertialTarget;
+            using pbat::math::linalg::mini::FromEigen;
+            using pbat::math::linalg::mini::ToEigen;
+            auto xtilde = InertialTarget(
+                FromEigen(H.data.xt.col(i).head<3>()),
+                FromEigen(H.data.v.col(i).head<3>()),
+                FromEigen(H.data.aext.col(i).head<3>()),
+                sdt,
+                sdt2);
+            H.data.xtilde.col(i) = ToEigen(xtilde);
+        });
         // Initialize block coordinate descent's, i.e. BCD's, solution
         tbb::parallel_for(Index(0), nVertices, [&](Index i) {
             using pbat::sim::vbd::kernels::InitialPositionsForSolve;
+            using pbat::math::linalg::mini::FromEigen;
+            using pbat::math::linalg::mini::ToEigen;
             auto x = InitialPositionsForSolve(
-                FromEigen(H.mRoot.xt.col(i).head<3>()),
-                FromEigen(H.mRoot.vt.col(i).head<3>()),
-                FromEigen(H.mRoot.v.col(i).head<3>()),
-                FromEigen(H.mRoot.aext.col(i).head<3>()),
+                FromEigen(H.data.xt.col(i).head<3>()),
+                FromEigen(H.data.vt.col(i).head<3>()),
+                FromEigen(H.data.v.col(i).head<3>()),
+                FromEigen(H.data.aext.col(i).head<3>()),
                 sdt,
                 sdt2,
-                H.mRoot.strategy);
-            H.mRoot.x.col(i) = ToEigen(x);
+                H.data.strategy);
+            H.data.x.col(i) = ToEigen(x);
         });
-        // Minimize Backward Euler, i.e. BDF1, objective, using hierarchy
-        // 1. Propagate xtilde
-        for (auto& l : H.mLevels)
-            l.Ekinetic.UpdateInertialTargetPositions(H.mRoot);
-        // 2. Cycle
-        IndexVectorX const& cycle = H.mCycle;
-        Smoother S{};
-        Index const nLevelVisits = cycle.size();
-        for (Index c = 0; c < nLevelVisits; ++c)
+        // Hierarchical solve
+        auto nLevelVisits = H.cycle.size();
+        for (auto c = 0; c < nLevelVisits; ++c)
         {
-            // Smooth current level
-            Index lCurrent                 = cycle(c);
-            auto lCurrentStl               = static_cast<std::size_t>(lCurrent);
-            Index siters                   = H.mSmoothingSchedule(c);
-            bool const bCurrentLevelIsRoot = lCurrent < 0;
-            bCurrentLevelIsRoot ? S.Apply(siters, sdt, H.mRoot) :
-                                  S.Apply(siters, sdt, H.mLevels[lCurrentStl]);
-            // Transition to next level
-            bool const bShouldTransition = (c + 1) < nLevelVisits;
-            if (bShouldTransition)
+            Index l     = H.cycle(c);
+            Index iters = H.siters(c);
+            if (l < 0)
             {
-                Index lNext                 = cycle(c + 1);
-                bool const bNextLevelIsRoot = lNext < 0;
-                auto& T                     = H.mTransitions.at({lCurrent, lNext});
-                Index riters                = H.mTransitionSchedule(c);
-                auto lNextStl               = static_cast<std::size_t>(lNext);
-                if (Prolongation* P = std::get_if<Prolongation>(&T))
-                {
-                    bNextLevelIsRoot ? P->Apply(H.mLevels[lCurrentStl], H.mRoot) :
-                                       P->Apply(H.mLevels[lCurrentStl], H.mLevels[lNextStl]);
-                }
-                if (Restriction* R = std::get_if<Restriction>(&T))
-                {
-                    bCurrentLevelIsRoot ?
-                        R->Apply(riters, H.mRoot, H.mLevels[lNextStl]) :
-                        R->Apply(riters, H.mLevels[lCurrentStl], H.mLevels[lNextStl]);
-                }
+                RootSmoother{}.Apply(iters, sdt, H.data);
+            }
+            else
+            {
+                auto lStl = static_cast<std::size_t>(l);
+                H.levels[lStl].Smooth(sdt, iters, H.data);
             }
         }
         // Update velocity
-        H.mRoot.vt = H.mRoot.v;
-        H.mRoot.v  = (H.mRoot.x - H.mRoot.xt) / sdt;
+        H.data.vt = H.data.v;
+        tbb::parallel_for(Index(0), nVertices, [&](Index i) {
+            using pbat::sim::vbd::kernels::IntegrateVelocity;
+            using pbat::math::linalg::mini::FromEigen;
+            using pbat::math::linalg::mini::ToEigen;
+            auto v = IntegrateVelocity(
+                FromEigen(H.data.xt.col(i).head<3>()),
+                FromEigen(H.data.x.col(i).head<3>()),
+                sdt);
+            H.data.v.col(i) = ToEigen(v);
+        });
     }
 }
 
@@ -99,19 +96,28 @@ TEST_CASE("[sim][vbd][multigrid] Integrator")
 {
     using namespace pbat;
     using sim::vbd::Data;
+    using sim::vbd::VolumeMesh;
     using sim::vbd::multigrid::Hierarchy;
     using sim::vbd::multigrid::Integrator;
-    using sim::vbd::multigrid::VolumeMesh;
 
     // Arrange
-    auto [XR, ER] = geometry::model::Cube();
-    XR.colwise() -= XR.rowwise().mean();
-    std::vector<VolumeMesh> cages{
-        {VolumeMesh(Scalar(1.1) * XR, ER), VolumeMesh(Scalar(1.2) * XR, ER)}};
-    Data root = Data().WithVolumeMesh(XR, ER).Construct();
-    Hierarchy H(root, cages);
     Scalar dt{1e-2};
     Index substeps{1};
+    auto const [VR, CR]   = geometry::model::Cube(geometry::model::EMesh::Tetrahedral, 2);
+    auto const [VL1, CL1] = geometry::model::Cube(geometry::model::EMesh::Tetrahedral, 1);
+    auto const [VL2, CL2] = geometry::model::Cube(geometry::model::EMesh::Tetrahedral, 0);
+    IndexVectorX cycle(3);
+    cycle << 1, 0, -1;
+    IndexVectorX siters(3);
+    siters << 2, 1, 1;
+    Hierarchy H{
+        Data()
+            .WithVolumeMesh(VR, CR)
+            .WithInitializationStrategy(sim::vbd::EInitializationStrategy::KineticEnergyMinimum)
+            .Construct(),
+        {VolumeMesh(VL1, CL1), VolumeMesh(VL2, CL2)},
+        cycle,
+        siters};
 
     // Act
     Integrator mvbd{};
@@ -119,7 +125,7 @@ TEST_CASE("[sim][vbd][multigrid] Integrator")
 
     // Assert
     auto constexpr zero                  = Scalar{1e-4};
-    MatrixX dx                           = H.mRoot.x - XR;
+    MatrixX dx                           = H.data.x - VR;
     bool const bVerticesFallUnderGravity = (dx.row(2).array() < Scalar{0}).all();
     CHECK(bVerticesFallUnderGravity);
     bool const bVerticesOnlyFall = (dx.topRows(2).array().abs() < zero).all();

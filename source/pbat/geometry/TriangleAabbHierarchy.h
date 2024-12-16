@@ -40,7 +40,7 @@ class TriangleAabbHierarchy<3> : public BoundingVolumeHierarchy<
     using BaseType =
         BoundingVolumeHierarchy<SelfType, AxisAlignedBoundingBox<kDims>, IndexVector<3>, kDims>;
 
-    TriangleAabbHierarchy(
+    [[maybe_unused]] TriangleAabbHierarchy(
         Eigen::Ref<MatrixX const> const& V,
         Eigen::Ref<IndexMatrixX const> const& C,
         std::size_t maxPointsInLeaf = 10ULL);
@@ -52,7 +52,7 @@ class TriangleAabbHierarchy<3> : public BoundingVolumeHierarchy<
     template <class RPrimitiveIndices>
     BoundingVolumeType BoundingVolumeOf(RPrimitiveIndices&& pinds) const;
 
-    void Update();
+    [[maybe_unused]] void Update();
 
     [[maybe_unused]] IndexMatrixX
     OverlappingPrimitives(SelfType const& bvh, std::size_t reserve = 1000ULL) const;

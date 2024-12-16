@@ -23,7 +23,7 @@ class MassMatrix
     MassMatrix(
         Mesh const& M,
         Eigen::Ref<MatrixX const> const& detJe,
-        Eigen::Ref<VectorX const> const& rho,
+        Eigen::Ref<MatrixX const> const& rho,
         int dims,
         int qOrder);
 
@@ -76,7 +76,7 @@ void BindMassMatrix(pybind11::module& m)
             pyb::init<
                 Mesh const&,
                 Eigen::Ref<MatrixX const> const&,
-                Eigen::Ref<VectorX const> const&,
+                Eigen::Ref<MatrixX const> const&,
                 int,
                 int>(),
             pyb::arg("mesh"),
@@ -132,7 +132,7 @@ MassMatrix::MassMatrix(
 MassMatrix::MassMatrix(
     Mesh const& M,
     Eigen::Ref<MatrixX const> const& detJe,
-    Eigen::Ref<VectorX const> const& rho,
+    Eigen::Ref<MatrixX const> const& rho,
     int dims,
     int qOrder)
     : eMeshElement(M.eElement),

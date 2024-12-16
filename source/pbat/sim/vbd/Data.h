@@ -2,6 +2,7 @@
 #define PBAT_SIM_VBD_DATA_H
 
 #include "Enums.h"
+#include "Mesh.h"
 #include "PhysicsBasedAnimationToolkitExport.h"
 #include "pbat/Aliases.h"
 #include "pbat/fem/Mesh.h"
@@ -15,9 +16,6 @@ namespace vbd {
 PBAT_API struct Data
 {
   public:
-    using Element = pbat::fem::Tetrahedron<1>;
-    using Mesh    = pbat::fem::Mesh<Element, 3>;
-
     /**
      * @brief
      * @param X 3x|#vertices| vertex positions
@@ -110,9 +108,9 @@ PBAT_API struct Data
     Data& Construct(bool bValidate = true);
 
   public:
-    Mesh mesh;      ///< Linear tetrahedral FEM mesh
-    IndexVectorX V; ///< Collision vertices
-    IndexMatrixX F; ///< 3x|#collision triangles| collision triangles (on the boundary of T)
+    VolumeMesh mesh; ///< Linear tetrahedral FEM mesh
+    IndexVectorX V;  ///< Collision vertices
+    IndexMatrixX F;  ///< 3x|#collision triangles| collision triangles (on the boundary of T)
 
     MatrixX x;    ///< 3x|#verts| vertex positions
     MatrixX v;    ///< 3x|#verts| vertex velocities

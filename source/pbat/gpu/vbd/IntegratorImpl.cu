@@ -207,6 +207,9 @@ void IntegratorImpl::Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps, 
                         auto xkm1i = FromBuffers<3, 1>(xkm1, i);
                         auto xki   = FromBuffers<3, 1>(xk, i);
                         ChebyshevUpdate(k, omega, xkm2i, xkm1i, xki);
+                        ToBuffers(xkm2i, xkm2, i);
+                        ToBuffers(xkm1i, xkm1, i);
+                        ToBuffers(xki, x, i);
                     });
             }
         }

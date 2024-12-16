@@ -21,7 +21,7 @@ Data& Data::WithVolumeMesh(
     Eigen::Ref<MatrixX const> const& Vin,
     Eigen::Ref<IndexMatrixX const> const& Ein)
 {
-    this->mesh = Mesh(Vin, Ein);
+    this->mesh = VolumeMesh(Vin, Ein);
     return *this;
 }
 
@@ -140,7 +140,7 @@ Data& Data::Construct(bool bValidate)
     }
     MatrixX detJe = fem::DeterminantOfJacobian<2>(mesh);
     MatrixX rhog  = rhoe.transpose().replicate(detJe.rows(), 1);
-    fem::MassMatrix<Mesh, 2> M(mesh, detJe, rhog, 1);
+    fem::MassMatrix<VolumeMesh, 2> M(mesh, detJe, rhog, 1);
     m  = M.ToLumpedMasses();
     GP = fem::ShapeFunctionGradients<1>(mesh);
     wg = fem::InnerProductWeights<1>(mesh).reshaped();
@@ -148,10 +148,10 @@ Data& Data::Construct(bool bValidate)
     IndexMatrixX ilocal             = IndexVector<4>{0, 1, 2, 3}.replicate(1, mesh.E.cols());
     auto GVT                        = graph::MeshAdjacencyMatrix(mesh.E, ilocal, mesh.X.cols());
     GVT                             = GVT.transpose();
-    std::tie(GVGp, GVGe, GVGilocal) = graph::MatrixToAdjacency(GVT);
+    std::tie(GVGp, GVGe, GVGilocal) = graph::MatrixToWeightedAdjacency(GVT);
     // Parallel partitions
     auto GVV                = graph::MeshPrimalGraph(mesh.E, mesh.X.cols());
-    auto [GVVp, GVVv, GVVw] = graph::MatrixToAdjacency(GVV);
+    auto [GVVp, GVVv, GVVw] = graph::MatrixToWeightedAdjacency(GVV);
     colors                  = graph::GreedyColor(GVVp, GVVv, eOrdering, eSelection);
     std::tie(Pptr, Padj)    = graph::MapToAdjacency(colors);
     // Apply Dirichlet boundary conditions.

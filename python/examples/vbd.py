@@ -91,7 +91,7 @@ if __name__ == "__main__":
         vdbc
     ).with_initialization_strategy(
         pbat.sim.vbd.InitializationStrategy.KineticEnergyMinimum
-    ).construct(validate=False)
+    ).construct(validate=True)
     thread_block_size = 64
 
     vbd = None
@@ -190,7 +190,7 @@ if __name__ == "__main__":
             # Update visuals
             V = vbd.x.T
             if export:
-                ps.screenshot(f"{args.output}/{t}.png")
+                ps.screenshot()
                 # omesh = meshio.Mesh(V, {"tetra": mesh.E.T})
                 # meshio.write(f"{args.output}/{t}.mesh", omesh)
 

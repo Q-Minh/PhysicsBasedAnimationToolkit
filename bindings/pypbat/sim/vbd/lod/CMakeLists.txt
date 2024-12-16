@@ -1,0 +1,31 @@
+target_sources(PhysicsBasedAnimationToolkit_Python
+    PUBLIC
+    FILE_SET api
+    FILES
+    "DirichletEnergy.h"
+    "ElasticEnergy.h"
+    "Hierarchy.h"
+    "Integrator.h"
+    "Level.h"
+    "MomentumEnergy.h"
+    "Lod.h"
+    "Prolongation.h"
+    "Quadrature.h"
+    "Restriction.h"
+    "Smoother.h"
+)
+
+target_sources(PhysicsBasedAnimationToolkit_Python
+    PRIVATE
+    "DirichletEnergy.cpp"
+    "ElasticEnergy.cpp"
+    "Hierarchy.cpp"
+    "Integrator.cpp"
+    "Level.cpp"
+    "MomentumEnergy.cpp"
+    "Lod.cpp"
+    "Prolongation.cpp"
+    "Quadrature.cpp"
+    "Restriction.cpp"
+    "Smoother.cpp"
+)

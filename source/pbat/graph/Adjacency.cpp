@@ -22,7 +22,7 @@ TEST_CASE("[graph] Adjacency")
             5, 6, 0, 3, 6;
     // clang-format on
     auto G                   = graph::MeshPrimalGraph(E, V.cols());
-    auto [ptr, adj, weights] = graph::MatrixToAdjacency(G);
+    auto [ptr, adj, weights] = graph::MatrixToWeightedAdjacency(G);
     auto C                   = graph::GreedyColor(ptr, adj);
     // Act
     auto [Cptr, Cadj] = graph::MapToAdjacency(C);

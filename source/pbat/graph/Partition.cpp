@@ -1,6 +1,7 @@
 #include "Partition.h"
 
 #include "pbat/common/Eigen.h"
+#include "pbat/profiling/Profiling.h"
 
 #ifdef PBAT_USE_METIS
     #include <metis.h>
@@ -13,14 +14,15 @@
 namespace pbat {
 namespace graph {
 
-#ifdef PBAT_USE_METIS
 IndexVectorX Partition(
     IndexVectorX const& ptr,
     IndexVectorX const& adj,
     IndexVectorX const& wadj,
-    std::size_t nPartitions,
+    Index nPartitions,
     PartitioningOptions opts)
 {
+#ifdef PBAT_USE_METIS
+    PBAT_PROFILE_NAMED_SCOPE("pbat.graph.Partition");
     // Use Metis to partition the graph
     auto xadj       = ptr.cast<idx_t>().eval();
     auto adjncy     = adj.cast<idx_t>().eval();
@@ -124,8 +126,11 @@ IndexVectorX Partition(
     }
     auto pbatPart = common::ToEigen(part).cast<Index>();
     return pbatPart;
-}
+#else
+    throw std::runtime_error(
+        "Attempted to use graph partitioning API, but library was not built with METIS.");
 #endif // PBAT_USE_METIS
+}
 
 } // namespace graph
 } // namespace pbat

@@ -2,15 +2,9 @@
 #define PBAT_SIM_VBD_MULTIGRID_HIERARCHY_H
 
 #include "Level.h"
-#include "Mesh.h"
-#include "Prolongation.h"
-#include "Quadrature.h"
-#include "Restriction.h"
-#include "pbat/common/Hash.h"
 #include "pbat/sim/vbd/Data.h"
+#include "pbat/sim/vbd/Mesh.h"
 
-#include <unordered_map>
-#include <variant>
 #include <vector>
 
 namespace pbat {
@@ -20,38 +14,18 @@ namespace multigrid {
 
 struct Hierarchy
 {
-    /**
-     * @brief
-     * @param root Problem defined on the finest mesh
-     * @param cages Ordered list of coarse embedding/cage meshes
-     * @param cycle |#transitions+1| ordered list of transitions, such that the pair (cycle(t),
-     * cycle(t+1)) represents the transition from level cycle(t) to level cycle(t+1). The root level
-     * has index -1 and coarse levels start from index 0.
-     * @param transitionSchedule |#transitions| list of iterations to spend on each transition.
-     * @param smoothingSchedule <|#transitions+1| list of iterations to spend on each visited level
-     * in the cycle.
-     */
     Hierarchy(
-        Data root,
-        std::vector<VolumeMesh> const& cages,
-        Eigen::Ref<IndexVectorX const> const& cycle                 = IndexVectorX{},
-        Eigen::Ref<IndexVectorX const> const& smoothingSchedule     = IndexVectorX{},
-        Eigen::Ref<IndexVectorX const> const& transitionSchedule    = IndexVectorX{},
-        std::vector<CageQuadratureParameters> const& cageQuadParams = {});
+        Data data,
+        std::vector<VolumeMesh> cages,
+        IndexVectorX const& cycle  = {},
+        IndexVectorX const& siters = {});
 
-    Data mRoot;                 ///< Finest mesh
-    std::vector<Level> mLevels; ///< Ordered list of coarse embedding/cage meshes
+    Data data;                 ///< Root level
+    std::vector<Level> levels; ///< Coarse levels
+    IndexVectorX cycle; ///< |#level visits| ordered array of levels to visit during the solve.
+                        ///< Level -1 is the root, 0 the first coarse level, etc.
     IndexVectorX
-        mCycle; ///< |#transitions+1| ordered list of transitions, such that the pair
-                ///< (cycle(t), cycle(t+1)) represents the transition from level cycle(t) to level
-                ///< cycle(t+1). The root level has index -1 and coarse levels start from index 0.
-    IndexVectorX mSmoothingSchedule; ///< <|#transitions+1| list of iterations to spend on each
-                                     ///< visited level in the cycle.
-    IndexVectorX
-        mTransitionSchedule; ///< |#transitions| list of iterations to spend on each transition.
-
-    using Transition = std::variant<Restriction, Prolongation>;
-    std::unordered_map<IndexVector<2>, Transition> mTransitions; ///< Transition operators
+        siters; ///< |#cages+1| max smoother iterations at each level, starting from the root
 };
 
 } // namespace multigrid
