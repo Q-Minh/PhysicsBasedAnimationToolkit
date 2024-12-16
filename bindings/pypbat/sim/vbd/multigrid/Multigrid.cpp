@@ -1,6 +1,7 @@
 #include "Multigrid.h"
 
 #include "Hierarchy.h"
+#include "HyperReduction.h"
 #include "Integrator.h"
 #include "Level.h"
 
@@ -12,6 +13,7 @@ namespace multigrid {
 
 void Bind(pybind11::module& m)
 {
+    BindHyperReduction(m);
     BindLevel(m);
     BindHierarchy(m);
     BindIntegrator(m);

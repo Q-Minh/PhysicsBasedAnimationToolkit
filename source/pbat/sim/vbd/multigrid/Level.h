@@ -1,6 +1,7 @@
 #ifndef PBAT_SIM_VBD_MULTIGRID_LEVEL_H
 #define PBAT_SIM_VBD_MULTIGRID_LEVEL_H
 
+#include "HyperReduction.h"
 #include "pbat/Aliases.h"
 #include "pbat/sim/vbd/Data.h"
 #include "pbat/sim/vbd/Mesh.h"
@@ -22,11 +23,6 @@ struct Level
      * @brief
      * @param data
      */
-    void HyperReduce(Data const& data);
-    /**
-     * @brief
-     * @param data
-     */
     void Prolong(Data& data) const;
     /**
      * @brief
@@ -35,7 +31,12 @@ struct Level
      * @param data
      */
     void Smooth(Scalar dt, Index iters, Data& data);
-
+    /**
+     * @brief
+     * @param data
+     * @param strategy
+     */
+    void HyperReduce(Data const& data, hypre::Strategies strategy);
     /**
      * Coarse mesh discretization
      */
@@ -55,8 +56,6 @@ struct Level
     IndexMatrixX ilocalE;      ///< 4x|#fine elems| coarse vertex local index w.r.t. coarse elements
                                ///< containing 4 vertices of fine elements
     IndexVectorX GEptr, GEadj; ///< Coarse vertex -> fine element adjacency graph
-    BoolVector bActiveE; ///< Active elements at this level
-    VectorX wgE; ///< Coarse element quadrature weights
 
     /**
      * Kinetic energy
@@ -64,13 +63,13 @@ struct Level
     IndexVectorX ecK; ///< |#fine vertices| coarse elements containing fine vertices
     MatrixX NecK;     ///< 4x|#fine vertices| coarse element shape functions at fine vertices
     IndexVectorX GKptr, GKadj, GKilocal; ///< Coarse vertex -> fine vertex adjacency graph
-    BoolVector bActiveK; ///< Active vertices at this level
-    VectorX mK; ///< Coarse nodal lumped masses
 
     /**
      * Dirichlet energy
      */
     BoolVector bIsDirichletVertex;
+
+    HyperReduction HR; ///< Energy hyper reduction scheme
 };
 
 } // namespace multigrid

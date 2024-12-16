@@ -3,6 +3,7 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     FILE_SET api
     FILES
     "Hierarchy.h"
+    "HyperReduction.h"
     "Integrator.h"
     "Kernels.h"
     "Level.h"
@@ -11,6 +12,7 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
 target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     PRIVATE
     "Hierarchy.cpp"
+    "HyperReduction.cpp"
     "Integrator.cpp"
     "Kernels.cpp"
     "Level.cpp"

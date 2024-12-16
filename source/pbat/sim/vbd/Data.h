@@ -155,6 +155,8 @@ PBAT_API struct Data
     Scalar kD{0};                               ///< Uniform damping coefficient
     Scalar kC{1};                               ///< Uniform collision penalty
     Scalar detHZero{1e-7}; ///< Numerical zero for hessian pseudo-singularity check
+
+    VectorX psiE; ///< |#elements| array of elastic energies
 };
 
 } // namespace vbd

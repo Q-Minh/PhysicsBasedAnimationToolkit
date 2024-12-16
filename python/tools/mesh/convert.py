@@ -7,7 +7,7 @@ if __name__ == "__main__":
     )
     parser.add_argument("-i", "--input", help="Path to input mesh", type=str,
                         dest="input", required=True)
-    parser.add_argument("-o", "--output", help="Path to onput mesh", type=str,
+    parser.add_argument("-o", "--output", help="Path to output mesh", type=str,
                         dest="output", required=True)
     args = parser.parse_args()
     

@@ -2,6 +2,7 @@
 #define PBAT_COMMON_INDEXING_H
 
 #include "Concepts.h"
+#include "Eigen.h"
 #include "pbat/Aliases.h"
 
 #include <concepts>
@@ -47,6 +48,23 @@ Eigen::Vector<TIndex, Eigen::Dynamic> Shuffle(TIndex begin, TIndex end)
     std::mt19937 gen{rd()};
     std::ranges::shuffle(inds, gen);
     return inds;
+}
+
+template <
+    std::integral TIndexB,
+    std::integral TIndexE,
+    class Func,
+    class TIndex = std::common_type_t<TIndexB, TIndexE>>
+Eigen::Vector<TIndex, Eigen::Dynamic> Filter(TIndexB begin, TIndexE end, Func&& f)
+{
+    auto filteredView = std::views::iota(
+        static_cast<TIndex>(begin), 
+        static_cast<TIndex>(end)
+    ) | std::views::filter(f);
+    std::vector<TIndex> filtered{};
+    filtered.reserve(static_cast<std::size_t>(end - begin));
+    std::ranges::copy(filteredView, std::back_inserter(filtered));
+    return ToEigen(filtered);
 }
 
 } // namespace common

@@ -52,6 +52,12 @@ void BindHierarchy(pybind11::module& m)
             "level is -1, the immediate coarse level is 0, etc. Defaults to None.\n"
             "siters (list[int] | None): |len(cycle)| list of iterations to spend on "
             "each visited level in the cycle. Defaults to None.\n")
+        .def(
+            "hyper_reduce",
+            &Hierarchy::HyperReduce,
+            pyb::arg("strategies"),
+            "Apply hyper reduction to each coarse level in the hierarchy using its corresponding "
+            "strategy in strategies.")
         .def_readwrite("data", &Hierarchy::data)
         .def_readwrite(
             "levels",

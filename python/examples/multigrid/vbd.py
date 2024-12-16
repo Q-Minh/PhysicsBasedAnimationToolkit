@@ -21,7 +21,8 @@ if __name__ == "__main__":
         dest="cages",
         required=True,
     )
-    parser.add_argument("--cycle", help="Multigrid cycle", nargs="+", dest="cycle")
+    parser.add_argument("--cycle", help="Multigrid cycle",
+                        nargs="+", dest="cycle")
     parser.add_argument(
         "--smoothing-iters",
         help="Smoothing iterations to spend at each level in the cycle",
@@ -80,7 +81,8 @@ if __name__ == "__main__":
 
     # Construct FEM quantities for simulation
     imesh = meshio.read(args.input)
-    V, C = imesh.points.astype(np.float64), imesh.cells_dict["tetra"].astype(np.int64)
+    V, C = imesh.points.astype(
+        np.float64), imesh.cells_dict["tetra"].astype(np.int64)
     center = V.mean(axis=0)
     scale = V.max() - V.min()
     V = (V - center) / scale
@@ -110,12 +112,14 @@ if __name__ == "__main__":
     extent = Xmax - Xmin
     if args.fixed_end == "min":
         Xmax[args.fixed_axis] = (
-            Xmin[args.fixed_axis] + args.percent_fixed * extent[args.fixed_axis]
+            Xmin[args.fixed_axis] + args.percent_fixed *
+            extent[args.fixed_axis]
         )
         Xmin[args.fixed_axis] -= args.percent_fixed * extent[args.fixed_axis]
     elif args.fixed_end == "max":
         Xmin[args.fixed_axis] = (
-            Xmax[args.fixed_axis] - args.percent_fixed * extent[args.fixed_axis]
+            Xmax[args.fixed_axis] - args.percent_fixed *
+            extent[args.fixed_axis]
         )
         Xmax[args.fixed_axis] += args.percent_fixed * extent[args.fixed_axis]
     aabb = pbat.geometry.aabb(np.vstack((Xmin, Xmax)).T)
@@ -139,6 +143,17 @@ if __name__ == "__main__":
     hierarchy = pbat.sim.vbd.multigrid.Hierarchy(
         data, cmeshes, cycle=cycle, siters=siters
     )
+    hypre_strategies = [
+        pbat.sim.vbd.multigrid.HyperReductionStrategies(
+            clustering_strategy=pbat.sim.vbd.multigrid.EClusteringStrategy.Cluster,
+            element_selection_strategy=pbat.sim.vbd.multigrid.EElementSelectionStrategy.MaxElasticEnergy,
+            vertex_selection_strategy=pbat.sim.vbd.multigrid.EVertexSelectionStrategy.ElementVertices,
+            potential_integration_strategy=pbat.sim.vbd.multigrid.EPotentialIntegrationStrategy.MatchPreStepElasticity,
+            kinetic_integration_strategy=pbat.sim.vbd.multigrid.EKineticIntegrationStrategy.MatchTotalMass
+        )
+        for cmesh in cmeshes
+    ]
+    hierarchy.hyper_reduce(hypre_strategies)
     vbd = pbat.sim.vbd.multigrid.Integrator()
 
     ps.set_verbosity(0)
@@ -156,7 +171,7 @@ if __name__ == "__main__":
     for l, level in enumerate(hierarchy.levels):
         vm.add_scalar_quantity(
             f"Level {l} active elements",
-            level.active_elements,
+            level.hyper_reduction.active_elements,
             defined_on="cells",
             cmap="coolwarm",
         )
