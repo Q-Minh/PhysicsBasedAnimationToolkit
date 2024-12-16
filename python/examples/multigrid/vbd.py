@@ -153,6 +153,13 @@ if __name__ == "__main__":
         "Coloring", hierarchy.data.colors, defined_on="vertices", cmap="jet"
     )
     pc = ps.register_point_cloud("Dirichlet", V[vdbc, :])
+    for l, level in enumerate(hierarchy.levels):
+        vm.add_scalar_quantity(
+            f"Level {l} active elements",
+            level.active_elements,
+            defined_on="cells",
+            cmap="coolwarm",
+        )
     dt = 0.01
     substeps = 1
     RdetH = 1e-10

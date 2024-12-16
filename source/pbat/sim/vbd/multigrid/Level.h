@@ -18,7 +18,11 @@ struct Level
      * @param mesh
      */
     Level(Data const& data, VolumeMesh mesh);
-
+    /**
+     * @brief
+     * @param data
+     */
+    void HyperReduce(Data const& data);
     /**
      * @brief
      * @param data
@@ -40,6 +44,8 @@ struct Level
     IndexVectorX colors;     ///< Coarse vertex graph coloring
     IndexVectorX Pptr, Padj; ///< Parallel vertex partitions
 
+    using BoolVector = Eigen::Vector<bool, Eigen::Dynamic>;
+
     /**
      * Elastic energy
      */
@@ -49,6 +55,8 @@ struct Level
     IndexMatrixX ilocalE;      ///< 4x|#fine elems| coarse vertex local index w.r.t. coarse elements
                                ///< containing 4 vertices of fine elements
     IndexVectorX GEptr, GEadj; ///< Coarse vertex -> fine element adjacency graph
+    BoolVector bActiveE; ///< Active elements at this level
+    VectorX wgE; ///< Coarse element quadrature weights
 
     /**
      * Kinetic energy
@@ -56,11 +64,12 @@ struct Level
     IndexVectorX ecK; ///< |#fine vertices| coarse elements containing fine vertices
     MatrixX NecK;     ///< 4x|#fine vertices| coarse element shape functions at fine vertices
     IndexVectorX GKptr, GKadj, GKilocal; ///< Coarse vertex -> fine vertex adjacency graph
+    BoolVector bActiveK; ///< Active vertices at this level
+    VectorX mK; ///< Coarse nodal lumped masses
 
     /**
      * Dirichlet energy
      */
-    using BoolVector = Eigen::Vector<bool, Eigen::Dynamic>;
     BoolVector bIsDirichletVertex;
 };
 

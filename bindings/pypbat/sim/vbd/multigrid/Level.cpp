@@ -73,6 +73,14 @@ void BindLevel(pybind11::module& m)
             &Level::GEadj,
             "Coarse vertex -> fine element adjacency graph indices")
         .def_readwrite(
+            "active_elements",
+            &Level::bActiveE,
+            "|#fine elements| boolean mask identifying active elements at this coarse level")
+        .def_readwrite(
+            "wgE",
+            &Level::wgE,
+            "|#fine elements| quadrature weights at this coarse level")
+        .def_readwrite(
             "ecK",
             &Level::ecK,
             "|#fine vertices| coarse elements containing fine vertices")
@@ -93,6 +101,14 @@ void BindLevel(pybind11::module& m)
             &Level::GKilocal,
             "Coarse vertex -> fine vertex adjacency graph edge weights, i.e. local coarse vertex "
             "indices in embedding coarse elements which contain fine vertices")
+        .def_readwrite(
+            "active_vertices",
+            &Level::bActiveK,
+            "|#fine vertices| boolean mask identifying active vertices at this coarse level")
+        .def_readwrite(
+            "mK",
+            &Level::mK,
+            "|#fine vertices| lumped nodal masses at this coarse level")
         .def_readwrite(
             "is_dirichlet_vertex",
             &Level::bIsDirichletVertex,

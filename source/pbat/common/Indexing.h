@@ -6,6 +6,7 @@
 
 #include <concepts>
 #include <numeric>
+#include <random>
 #include <ranges>
 
 namespace pbat {
@@ -34,6 +35,18 @@ Eigen::Vector<TIndex, Eigen::Dynamic> Counts(auto begin, auto end, TIndex ncount
     for (auto it = begin; it != end; ++it)
         ++counts(*it);
     return counts;
+}
+
+template <std::integral TIndex>
+Eigen::Vector<TIndex, Eigen::Dynamic> Shuffle(TIndex begin, TIndex end)
+{
+    auto iota = std::views::iota(begin, end);
+    Eigen::Vector<TIndex, Eigen::Dynamic> inds(end - begin);
+    std::copy(std::ranges::begin(iota), std::ranges::end(iota), inds.begin());
+    std::random_device rd{};
+    std::mt19937 gen{rd()};
+    std::ranges::shuffle(inds, gen);
+    return inds;
 }
 
 } // namespace common
