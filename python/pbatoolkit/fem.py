@@ -107,7 +107,7 @@ def hyper_elastic_potential(
         GNeg (np.ndarray, optional): Shape function gradients at quadrature points. Defaults to None.
 
     Returns:
-        (pbat.fem.HyperElasticPotential, np.ndarray, np.ndarray, np.ndarray):
+        (pbat.fem.HyperElasticPotential, np.ndarray, np.ndarray, np.ndarray): (hep, eg, wg, GNeg)
     """
     if eg is None or wg is None or GNeg is None:
         wg = _fem.inner_product_weights(
