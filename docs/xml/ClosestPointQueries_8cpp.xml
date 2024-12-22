@@ -1,0 +1,552 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="ClosestPointQueries_8cpp" kind="file" language="C++">
+    <compoundname>ClosestPointQueries.cpp</compoundname>
+    <includes refid="ClosestPointQueries_8h" local="yes">ClosestPointQueries.h</includes>
+    <includes refid="Aliases_8h" local="yes">pbat/Aliases.h</includes>
+    <includes local="no">doctest/doctest.h</includes>
+    <incdepgraph>
+      <node id="16">
+        <label>functional</label>
+      </node>
+      <node id="37">
+        <label>limits</label>
+      </node>
+      <node id="10">
+        <label>BinaryOperations.h</label>
+        <link refid="BinaryOperations_8h_source"/>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="14" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="15" relation="include">
+        </childnode>
+        <childnode refid="16" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+      </node>
+      <node id="5">
+        <label>Assign.h</label>
+        <link refid="Assign_8h_source"/>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+      </node>
+      <node id="26">
+        <label>cstdint</label>
+      </node>
+      <node id="21">
+        <label>Geometry.h</label>
+        <link refid="source_2pbat_2math_2linalg_2mini_2Geometry_8h_source"/>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+      </node>
+      <node id="13">
+        <label>Transpose.h</label>
+        <link refid="Transpose_8h_source"/>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+      </node>
+      <node id="39">
+        <label>pbat/Aliases.h</label>
+        <link refid="Aliases_8h_source"/>
+        <childnode refid="19" relation="include">
+        </childnode>
+        <childnode refid="40" relation="include">
+        </childnode>
+        <childnode refid="41" relation="include">
+        </childnode>
+      </node>
+      <node id="35">
+        <label>UnaryOperations.h</label>
+        <link refid="UnaryOperations_8h_source"/>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="29" relation="include">
+        </childnode>
+        <childnode refid="14" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="36" relation="include">
+        </childnode>
+        <childnode refid="15" relation="include">
+        </childnode>
+        <childnode refid="37" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+      </node>
+      <node id="22">
+        <label>Inverse.h</label>
+        <link refid="Inverse_8h_source"/>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="23" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+      </node>
+      <node id="15">
+        <label>cmath</label>
+      </node>
+      <node id="38">
+        <label>cassert</label>
+      </node>
+      <node id="19">
+        <label>Eigen/Core</label>
+      </node>
+      <node id="33">
+        <label>Repeat.h</label>
+        <link refid="Repeat_8h_source"/>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+      </node>
+      <node id="23">
+        <label>Matrix.h</label>
+        <link refid="Matrix_8h_source"/>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="24" relation="include">
+        </childnode>
+        <childnode refid="25" relation="include">
+        </childnode>
+        <childnode refid="26" relation="include">
+        </childnode>
+        <childnode refid="27" relation="include">
+        </childnode>
+        <childnode refid="28" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>pbat/HostDevice.h</label>
+        <link refid="HostDevice_8h_source"/>
+      </node>
+      <node id="6">
+        <label>Concepts.h</label>
+        <link refid="math_2linalg_2mini_2Concepts_8h_source"/>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/ClosestPointQueries.cpp</label>
+        <link refid="ClosestPointQueries_8cpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="39" relation="include">
+        </childnode>
+        <childnode refid="42" relation="include">
+        </childnode>
+      </node>
+      <node id="14">
+        <label>Scale.h</label>
+        <link refid="Scale_8h_source"/>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+      </node>
+      <node id="42">
+        <label>doctest/doctest.h</label>
+      </node>
+      <node id="4">
+        <label>pbat/math/linalg/mini/Mini.h</label>
+        <link refid="Mini_8h_source"/>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="17" relation="include">
+        </childnode>
+        <childnode refid="18" relation="include">
+        </childnode>
+        <childnode refid="20" relation="include">
+        </childnode>
+        <childnode refid="21" relation="include">
+        </childnode>
+        <childnode refid="22" relation="include">
+        </childnode>
+        <childnode refid="23" relation="include">
+        </childnode>
+        <childnode refid="29" relation="include">
+        </childnode>
+        <childnode refid="31" relation="include">
+        </childnode>
+        <childnode refid="30" relation="include">
+        </childnode>
+        <childnode refid="33" relation="include">
+        </childnode>
+        <childnode refid="14" relation="include">
+        </childnode>
+        <childnode refid="34" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="13" relation="include">
+        </childnode>
+        <childnode refid="35" relation="include">
+        </childnode>
+      </node>
+      <node id="40">
+        <label>Eigen/Sparse</label>
+      </node>
+      <node id="28">
+        <label>string.h</label>
+      </node>
+      <node id="18">
+        <label>Eigen.h</label>
+        <link refid="math_2linalg_2mini_2Eigen_8h_source"/>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="19" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+      </node>
+      <node id="17">
+        <label>Determinant.h</label>
+        <link refid="Determinant_8h_source"/>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+      </node>
+      <node id="9">
+        <label>utility</label>
+      </node>
+      <node id="25">
+        <label>array</label>
+      </node>
+      <node id="32">
+        <label>math.h</label>
+      </node>
+      <node id="30">
+        <label>Reductions.h</label>
+        <link refid="Reductions_8h_source"/>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="31" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+      </node>
+      <node id="20">
+        <label>Flatten.h</label>
+        <link refid="Flatten_8h_source"/>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+      </node>
+      <node id="31">
+        <label>Product.h</label>
+        <link refid="Product_8h_source"/>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+      </node>
+      <node id="41">
+        <label>cstddef</label>
+      </node>
+      <node id="11">
+        <label>Api.h</label>
+        <link refid="Api_8h_source"/>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="13" relation="include">
+        </childnode>
+      </node>
+      <node id="12">
+        <label>SubMatrix.h</label>
+        <link refid="SubMatrix_8h_source"/>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="13" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>ClosestPointQueries.h</label>
+        <link refid="ClosestPointQueries_8h_source"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="36" relation="include">
+        </childnode>
+        <childnode refid="38" relation="include">
+        </childnode>
+      </node>
+      <node id="24">
+        <label>pbat/common/ConstexprFor.h</label>
+        <link refid="ConstexprFor_8h_source"/>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+      </node>
+      <node id="7">
+        <label>concepts</label>
+      </node>
+      <node id="8">
+        <label>type_traits</label>
+      </node>
+      <node id="36">
+        <label>algorithm</label>
+      </node>
+      <node id="27">
+        <label>initializer_list</label>
+      </node>
+      <node id="34">
+        <label>Stack.h</label>
+        <link refid="math_2linalg_2mini_2Stack_8h_source"/>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+      </node>
+      <node id="29">
+        <label>Norm.h</label>
+        <link refid="Norm_8h_source"/>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="30" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="32" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+      </node>
+    </incdepgraph>
+      <sectiondef kind="func">
+      <memberdef kind="function" id="ClosestPointQueries_8cpp_1a545d113d9c0708f241a8e01597cfec33" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>TEST_CASE</definition>
+        <argsstring>(&quot;[geometry] Can obtain closest point on triangle ABC to point P&quot;)</argsstring>
+        <name>TEST_CASE</name>
+        <param>
+          <type>&quot; Can obtain closest point on triangle ABC to point P&quot;</type>
+          <array>[geometry]</array>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/ClosestPointQueries.cpp" line="7" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/ClosestPointQueries.cpp" bodystart="7" bodyend="53"/>
+      </memberdef>
+      <memberdef kind="function" id="ClosestPointQueries_8cpp_1aad538f3b6b49b0c1a9e4c80f0a8aabff" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>TEST_CASE</definition>
+        <argsstring>(&quot;[geometry] Can obtain closest point on tetrahedron ABCD to point P&quot;)</argsstring>
+        <name>TEST_CASE</name>
+        <param>
+          <type>&quot; Can obtain closest point on tetrahedron ABCD to point P&quot;</type>
+          <array>[geometry]</array>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/ClosestPointQueries.cpp" line="55" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/ClosestPointQueries.cpp" bodystart="55" bodyend="83"/>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="preprocessor">#include<sp/>&quot;ClosestPointQueries.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="2"><highlight class="normal"></highlight></codeline>
+<codeline lineno="3"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;pbat/Aliases.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="4"><highlight class="normal"></highlight></codeline>
+<codeline lineno="5"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;doctest/doctest.h&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="6"><highlight class="normal"></highlight></codeline>
+<codeline lineno="7"><highlight class="normal">TEST_CASE(</highlight><highlight class="stringliteral">&quot;[geometry]<sp/>Can<sp/>obtain<sp/>closest<sp/>point<sp/>on<sp/>triangle<sp/>ABC<sp/>to<sp/>point<sp/>P&quot;</highlight><highlight class="normal">)</highlight></codeline>
+<codeline lineno="8"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="9"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/>namespace<sp/></highlight><highlight class="normal">pbat::math::linalg::mini;</highlight></codeline>
+<codeline lineno="10"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using</highlight><highlight class="normal"><sp/>ScalarType<sp/>=<sp/>pbat::Scalar;</highlight></codeline>
+<codeline lineno="11"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1SMatrix" kindref="compound">SVector&lt;ScalarType, 3&gt;</ref><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>A{0.,<sp/>0.,<sp/>0.};</highlight></codeline>
+<codeline lineno="12"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1SMatrix" kindref="compound">SVector&lt;ScalarType, 3&gt;</ref><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>B{1.,<sp/>0.,<sp/>0.};</highlight></codeline>
+<codeline lineno="13"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1SMatrix" kindref="compound">SVector&lt;ScalarType, 3&gt;</ref><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>C{0.,<sp/>1.,<sp/>1.};</highlight></codeline>
+<codeline lineno="14"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1SMatrix" kindref="compound">SVector&lt;ScalarType, 3&gt;</ref><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>n<sp/>=<sp/>Normalized(Cross(B<sp/>-<sp/>A,<sp/>C<sp/>-<sp/>A));</highlight></codeline>
+<codeline lineno="15"><highlight class="normal"><sp/><sp/><sp/><sp/>ScalarType<sp/>constexpr<sp/>eps<sp/><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/>1e-15;</highlight></codeline>
+<codeline lineno="16"><highlight class="normal"></highlight></codeline>
+<codeline lineno="17"><highlight class="normal"><sp/><sp/><sp/><sp/>SUBCASE(</highlight><highlight class="stringliteral">&quot;Point<sp/>is<sp/>in<sp/>triangle&quot;</highlight><highlight class="normal">)</highlight></codeline>
+<codeline lineno="18"><highlight class="normal"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="19"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1SMatrix" kindref="compound">SVector&lt;ScalarType, 3&gt;</ref><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>uvwExpected{0.11,<sp/>0.33,<sp/>0.56};</highlight></codeline>
+<codeline lineno="20"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1SMatrix" kindref="compound">SVector&lt;ScalarType, 3&gt;</ref><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>Pexpected<sp/>=</highlight></codeline>
+<codeline lineno="21"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>uvwExpected(0)<sp/>*<sp/>A<sp/>+<sp/>uvwExpected(1)<sp/>*<sp/>B<sp/>+<sp/>uvwExpected(2)<sp/>*<sp/>C;</highlight></codeline>
+<codeline lineno="22"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1SMatrix" kindref="compound">SVector&lt;ScalarType, 3&gt;</ref><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>uvw<sp/>=</highlight></codeline>
+<codeline lineno="23"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>pbat::geometry::ClosestPointQueries::UvwPointInTriangle(Pexpected,<sp/>A,<sp/>B,<sp/>C);</highlight></codeline>
+<codeline lineno="24"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>CHECK(ToEigen(uvw).isApprox(ToEigen(uvwExpected),<sp/>eps));</highlight></codeline>
+<codeline lineno="25"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1SMatrix" kindref="compound">SVector&lt;ScalarType, 3&gt;</ref><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>P<sp/>=</highlight></codeline>
+<codeline lineno="26"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>pbat::geometry::ClosestPointQueries::PointInTriangle(Pexpected,<sp/>A,<sp/>B,<sp/>C);</highlight></codeline>
+<codeline lineno="27"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>CHECK(ToEigen(P).isApprox(ToEigen(Pexpected),<sp/>eps));</highlight></codeline>
+<codeline lineno="28"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="29"><highlight class="normal"><sp/><sp/><sp/><sp/>SUBCASE(</highlight><highlight class="stringliteral">&quot;Point<sp/>is<sp/>not<sp/>in<sp/>triangle<sp/>and<sp/>closest<sp/>to<sp/>face<sp/>interior&quot;</highlight><highlight class="normal">)</highlight></codeline>
+<codeline lineno="30"><highlight class="normal"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="31"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1SMatrix" kindref="compound">SVector&lt;ScalarType, 3&gt;</ref><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>uvwExpected{0.11,<sp/>0.33,<sp/>0.56};</highlight></codeline>
+<codeline lineno="32"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1SMatrix" kindref="compound">SVector&lt;ScalarType, 3&gt;</ref><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>Pexpected<sp/>=</highlight></codeline>
+<codeline lineno="33"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>uvwExpected(0)<sp/>*<sp/>A<sp/>+<sp/>uvwExpected(1)<sp/>*<sp/>B<sp/>+<sp/>uvwExpected(2)<sp/>*<sp/>C;</highlight></codeline>
+<codeline lineno="34"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>ScalarType<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>d<sp/>=<sp/>0.5;</highlight></codeline>
+<codeline lineno="35"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1SMatrix" kindref="compound">SVector&lt;ScalarType, 3&gt;</ref><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>uvw<sp/>=</highlight></codeline>
+<codeline lineno="36"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>pbat::geometry::ClosestPointQueries::UvwPointInTriangle(Pexpected<sp/>+<sp/>d<sp/>*<sp/>n,<sp/>A,<sp/>B,<sp/>C);</highlight></codeline>
+<codeline lineno="37"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>CHECK(ToEigen(uvw).isApprox(ToEigen(uvwExpected),<sp/>eps));</highlight></codeline>
+<codeline lineno="38"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1SMatrix" kindref="compound">SVector&lt;ScalarType, 3&gt;</ref><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>P<sp/>=<sp/>uvw(0)<sp/>*<sp/>A<sp/>+<sp/>uvw(1)<sp/>*<sp/>B<sp/>+<sp/>uvw(2)<sp/>*<sp/>C;</highlight></codeline>
+<codeline lineno="39"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>CHECK(ToEigen(P).isApprox(ToEigen(Pexpected),<sp/>eps));</highlight></codeline>
+<codeline lineno="40"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="41"><highlight class="normal"><sp/><sp/><sp/><sp/>SUBCASE(</highlight><highlight class="stringliteral">&quot;Point<sp/>is<sp/>not<sp/>in<sp/>triangle<sp/>and<sp/>closest<sp/>to<sp/>a<sp/>triangle<sp/>edge&quot;</highlight><highlight class="normal">)</highlight></codeline>
+<codeline lineno="42"><highlight class="normal"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="43"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1SMatrix" kindref="compound">SVector&lt;ScalarType, 3&gt;</ref><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>uvwExpected{0.25,<sp/>0.75,<sp/>0.};</highlight></codeline>
+<codeline lineno="44"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1SMatrix" kindref="compound">SVector&lt;ScalarType, 3&gt;</ref><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>Pexpected<sp/>=<sp/>uvwExpected(0)<sp/>*<sp/>A<sp/>+<sp/>uvwExpected(1)<sp/>*<sp/>B;</highlight></codeline>
+<codeline lineno="45"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1SMatrix" kindref="compound">SVector&lt;ScalarType, 3&gt;</ref><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>s<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/>Normalized(Cross(B<sp/>-<sp/>A,<sp/>n));</highlight></codeline>
+<codeline lineno="46"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>ScalarType<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>d<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/>0.5;</highlight></codeline>
+<codeline lineno="47"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1SMatrix" kindref="compound">SVector&lt;ScalarType, 3&gt;</ref><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>uvw<sp/>=</highlight></codeline>
+<codeline lineno="48"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>pbat::geometry::ClosestPointQueries::UvwPointInTriangle(Pexpected<sp/>+<sp/>d<sp/>*<sp/>s,<sp/>A,<sp/>B,<sp/>C);</highlight></codeline>
+<codeline lineno="49"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>CHECK(ToEigen(uvw).isApprox(ToEigen(uvwExpected),<sp/>eps));</highlight></codeline>
+<codeline lineno="50"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1SMatrix" kindref="compound">SVector&lt;ScalarType, 3&gt;</ref><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>P<sp/>=<sp/>uvw(0)<sp/>*<sp/>A<sp/>+<sp/>uvw(1)<sp/>*<sp/>B<sp/>+<sp/>uvw(2)<sp/>*<sp/>C;</highlight></codeline>
+<codeline lineno="51"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>CHECK(ToEigen(P).isApprox(ToEigen(Pexpected),<sp/>eps));</highlight></codeline>
+<codeline lineno="52"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="53"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="54"><highlight class="normal"></highlight></codeline>
+<codeline lineno="55"><highlight class="normal">TEST_CASE(</highlight><highlight class="stringliteral">&quot;[geometry]<sp/>Can<sp/>obtain<sp/>closest<sp/>point<sp/>on<sp/>tetrahedron<sp/>ABCD<sp/>to<sp/>point<sp/>P&quot;</highlight><highlight class="normal">)</highlight></codeline>
+<codeline lineno="56"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="57"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using</highlight><highlight class="normal"><sp/>ScalarType<sp/>=<sp/>pbat::Scalar;</highlight></codeline>
+<codeline lineno="58"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/>namespace<sp/></highlight><highlight class="normal">pbat::math::linalg::mini;</highlight></codeline>
+<codeline lineno="59"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1SMatrix" kindref="compound">SVector&lt;ScalarType, 3&gt;</ref><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>A{0.,<sp/>0.,<sp/>0.};</highlight></codeline>
+<codeline lineno="60"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1SMatrix" kindref="compound">SVector&lt;ScalarType, 3&gt;</ref><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>B{1.,<sp/>0.,<sp/>0.};</highlight></codeline>
+<codeline lineno="61"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1SMatrix" kindref="compound">SVector&lt;ScalarType, 3&gt;</ref><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>C{0.,<sp/>1.,<sp/>0.};</highlight></codeline>
+<codeline lineno="62"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1SMatrix" kindref="compound">SVector&lt;ScalarType, 3&gt;</ref><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>D{0.,<sp/>0.,<sp/>1.};</highlight></codeline>
+<codeline lineno="63"><highlight class="normal"><sp/><sp/><sp/><sp/>ScalarType<sp/>constexpr<sp/>eps<sp/>=<sp/>1e-15;</highlight></codeline>
+<codeline lineno="64"><highlight class="normal"></highlight></codeline>
+<codeline lineno="65"><highlight class="normal"><sp/><sp/><sp/><sp/>SUBCASE(</highlight><highlight class="stringliteral">&quot;Point<sp/>is<sp/>in<sp/>tetrahedron&quot;</highlight><highlight class="normal">)</highlight></codeline>
+<codeline lineno="66"><highlight class="normal"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="67"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1SMatrix" kindref="compound">SVector&lt;ScalarType, 4&gt;</ref><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>u{0.25,<sp/>0.25,<sp/>0.25,<sp/>0.25};</highlight></codeline>
+<codeline lineno="68"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1SMatrix" kindref="compound">SVector&lt;ScalarType, 3&gt;</ref><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>Pexpected<sp/>=<sp/>u(0)<sp/>*<sp/>A<sp/>+<sp/>u(1)<sp/>*<sp/>B<sp/>+<sp/>u(2)<sp/>*<sp/>C<sp/>+<sp/>u(3)<sp/>*<sp/>D;</highlight></codeline>
+<codeline lineno="69"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1SMatrix" kindref="compound">SVector&lt;ScalarType, 3&gt;</ref><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>P<sp/>=</highlight></codeline>
+<codeline lineno="70"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>pbat::geometry::ClosestPointQueries::PointInTetrahedron(Pexpected,<sp/>A,<sp/>B,<sp/>C,<sp/>D);</highlight></codeline>
+<codeline lineno="71"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>CHECK(ToEigen(P).isApprox(ToEigen(Pexpected),<sp/>eps));</highlight></codeline>
+<codeline lineno="72"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="73"><highlight class="normal"><sp/><sp/><sp/><sp/>SUBCASE(</highlight><highlight class="stringliteral">&quot;Point<sp/>is<sp/>outside<sp/>tetrahedron&quot;</highlight><highlight class="normal">)</highlight></codeline>
+<codeline lineno="74"><highlight class="normal"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="75"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1SMatrix" kindref="compound">SVector&lt;ScalarType, 4&gt;</ref><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>u{0.25,<sp/>0.25,<sp/>0.,<sp/>0.5};</highlight></codeline>
+<codeline lineno="76"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1SMatrix" kindref="compound">SVector&lt;ScalarType, 3&gt;</ref><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>Pexpected<sp/>=<sp/>u(0)<sp/>*<sp/>A<sp/>+<sp/>u(1)<sp/>*<sp/>B<sp/>+<sp/>u(2)<sp/>*<sp/>C<sp/>+<sp/>u(3)<sp/>*<sp/>D;</highlight></codeline>
+<codeline lineno="77"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1SMatrix" kindref="compound">SVector&lt;ScalarType, 3&gt;</ref><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>n<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/>Normalized(Cross(B<sp/>-<sp/>A,<sp/>D<sp/>-<sp/>A));</highlight></codeline>
+<codeline lineno="78"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>ScalarType<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>t<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/>0.5;</highlight></codeline>
+<codeline lineno="79"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1SMatrix" kindref="compound">SVector&lt;ScalarType, 3&gt;</ref><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>P<sp/>=</highlight></codeline>
+<codeline lineno="80"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>pbat::geometry::ClosestPointQueries::PointInTetrahedron(Pexpected<sp/>+<sp/>t<sp/>*<sp/>n,<sp/>A,<sp/>B,<sp/>C,<sp/>D);</highlight></codeline>
+<codeline lineno="81"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>CHECK(ToEigen(P).isApprox(ToEigen(Pexpected),<sp/>eps));</highlight></codeline>
+<codeline lineno="82"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="83"><highlight class="normal">}</highlight></codeline>
+    </programlisting>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/ClosestPointQueries.cpp"/>
+  </compounddef>
+</doxygen>

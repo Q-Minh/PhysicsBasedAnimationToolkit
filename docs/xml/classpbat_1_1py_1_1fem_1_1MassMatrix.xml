@@ -1,0 +1,343 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="classpbat_1_1py_1_1fem_1_1MassMatrix" kind="class" language="C++" prot="public">
+    <compoundname>pbat::py::fem::MassMatrix</compoundname>
+      <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="classpbat_1_1py_1_1fem_1_1MassMatrix_1ac2dec08a8e91786b86c09f4475c6276a" prot="public" static="no" mutable="no">
+        <type>EElement</type>
+        <definition>EElement pbat::py::fem::MassMatrix::eMeshElement</definition>
+        <argsstring></argsstring>
+        <name>eMeshElement</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/MassMatrix.cpp" line="46" column="14" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/MassMatrix.cpp" bodystart="46" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpbat_1_1py_1_1fem_1_1MassMatrix_1aceb1a8911b42ee658f7910aef61126f5" prot="public" static="no" mutable="no">
+        <type>int</type>
+        <definition>int pbat::py::fem::MassMatrix::mMeshDims</definition>
+        <argsstring></argsstring>
+        <name>mMeshDims</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/MassMatrix.cpp" line="47" column="9" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/MassMatrix.cpp" bodystart="47" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpbat_1_1py_1_1fem_1_1MassMatrix_1a81a23a8acd6c5deeb0837f76d7791940" prot="public" static="no" mutable="no">
+        <type>int</type>
+        <definition>int pbat::py::fem::MassMatrix::mMeshOrder</definition>
+        <argsstring></argsstring>
+        <name>mMeshOrder</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/MassMatrix.cpp" line="48" column="9" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/MassMatrix.cpp" bodystart="48" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpbat_1_1py_1_1fem_1_1MassMatrix_1a149ef6cf181ab6b8b49e08f6b4ef5524" prot="public" static="no" mutable="no">
+        <type>int</type>
+        <definition>int pbat::py::fem::MassMatrix::mOrder</definition>
+        <argsstring></argsstring>
+        <name>mOrder</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/MassMatrix.cpp" line="49" column="9" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/MassMatrix.cpp" bodystart="49" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpbat_1_1py_1_1fem_1_1MassMatrix_1a9cc481f94d8e0520bd1420ddfe6d3de1" prot="public" static="no" mutable="no">
+        <type>int</type>
+        <definition>int pbat::py::fem::MassMatrix::mQuadratureOrder</definition>
+        <argsstring></argsstring>
+        <name>mQuadratureOrder</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/MassMatrix.cpp" line="50" column="9" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/MassMatrix.cpp" bodystart="50" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="public-static-attrib">
+      <memberdef kind="variable" id="classpbat_1_1py_1_1fem_1_1MassMatrix_1a45abffcbc1e104c658281c08d7ebf306" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>constexpr auto</type>
+        <definition>constexpr auto pbat::py::fem::MassMatrix::kMaxQuadratureOrder</definition>
+        <argsstring></argsstring>
+        <name>kMaxQuadratureOrder</name>
+        <initializer>= 6</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/MassMatrix.cpp" line="52" column="27" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/MassMatrix.cpp" bodystart="52" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="classpbat_1_1py_1_1fem_1_1MassMatrix_1ada49ef084eec372c372df59223d82e52" prot="private" static="no" mutable="no">
+        <type>void *</type>
+        <definition>void* pbat::py::fem::MassMatrix::mMassMatrix</definition>
+        <argsstring></argsstring>
+        <name>mMassMatrix</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/MassMatrix.cpp" line="55" column="10" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/MassMatrix.cpp" bodystart="55" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpbat_1_1py_1_1fem_1_1MassMatrix_1a91dd26c22b0c08dc36329fb7b85ff318" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>pbat::py::fem::MassMatrix::MassMatrix</definition>
+        <argsstring>(Mesh const &amp;M, Eigen::Ref&lt; MatrixX const &gt; const &amp;detJe, Scalar rho, int dims, int qOrder)</argsstring>
+        <name>MassMatrix</name>
+        <param>
+          <type><ref refid="classpbat_1_1py_1_1fem_1_1Mesh" kindref="compound">Mesh</ref> const &amp;</type>
+          <declname>M</declname>
+        </param>
+        <param>
+          <type>Eigen::Ref&lt; MatrixX const &gt; const &amp;</type>
+          <declname>detJe</declname>
+        </param>
+        <param>
+          <type>Scalar</type>
+          <declname>rho</declname>
+        </param>
+        <param>
+          <type>int</type>
+          <declname>dims</declname>
+        </param>
+        <param>
+          <type>int</type>
+          <declname>qOrder</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/MassMatrix.cpp" line="16" column="5" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/MassMatrix.cpp" bodystart="109" bodyend="130"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1py_1_1fem_1_1MassMatrix_1abb07a0dd2e2db06fb737a9e97b1a7495" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>pbat::py::fem::MassMatrix::MassMatrix</definition>
+        <argsstring>(Mesh const &amp;M, Eigen::Ref&lt; MatrixX const &gt; const &amp;detJe, Eigen::Ref&lt; MatrixX const &gt; const &amp;rho, int dims, int qOrder)</argsstring>
+        <name>MassMatrix</name>
+        <param>
+          <type><ref refid="classpbat_1_1py_1_1fem_1_1Mesh" kindref="compound">Mesh</ref> const &amp;</type>
+          <declname>M</declname>
+        </param>
+        <param>
+          <type>Eigen::Ref&lt; MatrixX const &gt; const &amp;</type>
+          <declname>detJe</declname>
+        </param>
+        <param>
+          <type>Eigen::Ref&lt; MatrixX const &gt; const &amp;</type>
+          <declname>rho</declname>
+        </param>
+        <param>
+          <type>int</type>
+          <declname>dims</declname>
+        </param>
+        <param>
+          <type>int</type>
+          <declname>qOrder</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/MassMatrix.cpp" line="23" column="5" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/MassMatrix.cpp" bodystart="132" bodyend="153"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1py_1_1fem_1_1MassMatrix_1a4687995bfc548682b90511191ed9e5b7" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>pbat::py::fem::MassMatrix::MassMatrix</definition>
+        <argsstring>(MassMatrix const &amp;)=delete</argsstring>
+        <name>MassMatrix</name>
+        <param>
+          <type><ref refid="classpbat_1_1py_1_1fem_1_1MassMatrix" kindref="compound">MassMatrix</ref> const &amp;</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/MassMatrix.cpp" line="30" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1py_1_1fem_1_1MassMatrix_1a2dbdd234a28d788408e237f29691aa42" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpbat_1_1py_1_1fem_1_1MassMatrix" kindref="compound">MassMatrix</ref> &amp;</type>
+        <definition>MassMatrix&amp; pbat::py::fem::MassMatrix::operator=</definition>
+        <argsstring>(MassMatrix const &amp;)=delete</argsstring>
+        <name>operator=</name>
+        <param>
+          <type><ref refid="classpbat_1_1py_1_1fem_1_1MassMatrix" kindref="compound">MassMatrix</ref> const &amp;</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/MassMatrix.cpp" line="31" column="16"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1py_1_1fem_1_1MassMatrix_1aaeb59473d235c809f778db67626e0943" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class Func</type>
+          </param>
+        </templateparamlist>
+        <type>void</type>
+        <definition>void pbat::py::fem::MassMatrix::Apply</definition>
+        <argsstring>(Func &amp;&amp;f) const</argsstring>
+        <name>Apply</name>
+        <param>
+          <type>Func &amp;&amp;</type>
+          <declname>f</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/MassMatrix.cpp" line="34" column="10" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/MassMatrix.cpp" bodystart="215" bodyend="227"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1py_1_1fem_1_1MassMatrix_1af6a2a7df49d50c3803e6ade8748ac6dd" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>CSCMatrix</type>
+        <definition>CSCMatrix pbat::py::fem::MassMatrix::ToMatrix</definition>
+        <argsstring>() const</argsstring>
+        <name>ToMatrix</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/MassMatrix.cpp" line="36" column="15" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/MassMatrix.cpp" bodystart="155" bodyend="160"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1py_1_1fem_1_1MassMatrix_1a1fc1fdc950a1abff7b143b980ebd0d5c" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>std::tuple&lt; Index, Index &gt;</type>
+        <definition>std::tuple&lt; Index, Index &gt; pbat::py::fem::MassMatrix::Shape</definition>
+        <argsstring>() const</argsstring>
+        <name>Shape</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/MassMatrix.cpp" line="37" column="16" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/MassMatrix.cpp" bodystart="162" bodyend="170"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1py_1_1fem_1_1MassMatrix_1ac2ab655d4deb7e819febe2878b941314" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>MatrixX const  &amp;</type>
+        <definition>MatrixX &amp; pbat::py::fem::MassMatrix::ElementMassMatrices</definition>
+        <argsstring>() const</argsstring>
+        <name>ElementMassMatrices</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/MassMatrix.cpp" line="39" column="19" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/MassMatrix.cpp" bodystart="172" bodyend="179"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1py_1_1fem_1_1MassMatrix_1abe0e6b2823a8d2244b73feabfef64bd3" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>MatrixX &amp;</type>
+        <definition>MatrixX&amp; pbat::py::fem::MassMatrix::ElementMassMatrices</definition>
+        <argsstring>()</argsstring>
+        <name>ElementMassMatrices</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/MassMatrix.cpp" line="40" column="13"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1py_1_1fem_1_1MassMatrix_1a8e7f3e8dcd1493f1af61a0afae78e6b6" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>int const  &amp;</type>
+        <definition>int &amp; pbat::py::fem::MassMatrix::dims</definition>
+        <argsstring>() const</argsstring>
+        <name>dims</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/MassMatrix.cpp" line="41" column="15" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/MassMatrix.cpp" bodystart="190" bodyend="197"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1py_1_1fem_1_1MassMatrix_1a73025bfced1c329b28c985bc4efee3ce" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>int &amp;</type>
+        <definition>int&amp; pbat::py::fem::MassMatrix::dims</definition>
+        <argsstring>()</argsstring>
+        <name>dims</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/MassMatrix.cpp" line="42" column="9"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1py_1_1fem_1_1MassMatrix_1ad2607d255c119a3015404b6d8ed2ac21" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>pbat::py::fem::MassMatrix::~MassMatrix</definition>
+        <argsstring>()</argsstring>
+        <name>~MassMatrix</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/MassMatrix.cpp" line="44" column="5" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/MassMatrix.cpp" bodystart="208" bodyend="212"/>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/MassMatrix.cpp" line="14" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/MassMatrix.cpp" bodystart="13" bodyend="56"/>
+    <listofallmembers>
+      <member refid="classpbat_1_1py_1_1fem_1_1MassMatrix_1aaeb59473d235c809f778db67626e0943" prot="public" virt="non-virtual"><scope>pbat::py::fem::MassMatrix</scope><name>Apply</name></member>
+      <member refid="classpbat_1_1py_1_1fem_1_1MassMatrix_1a8e7f3e8dcd1493f1af61a0afae78e6b6" prot="public" virt="non-virtual"><scope>pbat::py::fem::MassMatrix</scope><name>dims</name></member>
+      <member refid="classpbat_1_1py_1_1fem_1_1MassMatrix_1a73025bfced1c329b28c985bc4efee3ce" prot="public" virt="non-virtual"><scope>pbat::py::fem::MassMatrix</scope><name>dims</name></member>
+      <member refid="classpbat_1_1py_1_1fem_1_1MassMatrix_1ac2ab655d4deb7e819febe2878b941314" prot="public" virt="non-virtual"><scope>pbat::py::fem::MassMatrix</scope><name>ElementMassMatrices</name></member>
+      <member refid="classpbat_1_1py_1_1fem_1_1MassMatrix_1abe0e6b2823a8d2244b73feabfef64bd3" prot="public" virt="non-virtual"><scope>pbat::py::fem::MassMatrix</scope><name>ElementMassMatrices</name></member>
+      <member refid="classpbat_1_1py_1_1fem_1_1MassMatrix_1ac2dec08a8e91786b86c09f4475c6276a" prot="public" virt="non-virtual"><scope>pbat::py::fem::MassMatrix</scope><name>eMeshElement</name></member>
+      <member refid="classpbat_1_1py_1_1fem_1_1MassMatrix_1a45abffcbc1e104c658281c08d7ebf306" prot="public" virt="non-virtual"><scope>pbat::py::fem::MassMatrix</scope><name>kMaxQuadratureOrder</name></member>
+      <member refid="classpbat_1_1py_1_1fem_1_1MassMatrix_1a91dd26c22b0c08dc36329fb7b85ff318" prot="public" virt="non-virtual"><scope>pbat::py::fem::MassMatrix</scope><name>MassMatrix</name></member>
+      <member refid="classpbat_1_1py_1_1fem_1_1MassMatrix_1abb07a0dd2e2db06fb737a9e97b1a7495" prot="public" virt="non-virtual"><scope>pbat::py::fem::MassMatrix</scope><name>MassMatrix</name></member>
+      <member refid="classpbat_1_1py_1_1fem_1_1MassMatrix_1a4687995bfc548682b90511191ed9e5b7" prot="public" virt="non-virtual"><scope>pbat::py::fem::MassMatrix</scope><name>MassMatrix</name></member>
+      <member refid="classpbat_1_1py_1_1fem_1_1MassMatrix_1ada49ef084eec372c372df59223d82e52" prot="private" virt="non-virtual"><scope>pbat::py::fem::MassMatrix</scope><name>mMassMatrix</name></member>
+      <member refid="classpbat_1_1py_1_1fem_1_1MassMatrix_1aceb1a8911b42ee658f7910aef61126f5" prot="public" virt="non-virtual"><scope>pbat::py::fem::MassMatrix</scope><name>mMeshDims</name></member>
+      <member refid="classpbat_1_1py_1_1fem_1_1MassMatrix_1a81a23a8acd6c5deeb0837f76d7791940" prot="public" virt="non-virtual"><scope>pbat::py::fem::MassMatrix</scope><name>mMeshOrder</name></member>
+      <member refid="classpbat_1_1py_1_1fem_1_1MassMatrix_1a149ef6cf181ab6b8b49e08f6b4ef5524" prot="public" virt="non-virtual"><scope>pbat::py::fem::MassMatrix</scope><name>mOrder</name></member>
+      <member refid="classpbat_1_1py_1_1fem_1_1MassMatrix_1a9cc481f94d8e0520bd1420ddfe6d3de1" prot="public" virt="non-virtual"><scope>pbat::py::fem::MassMatrix</scope><name>mQuadratureOrder</name></member>
+      <member refid="classpbat_1_1py_1_1fem_1_1MassMatrix_1a2dbdd234a28d788408e237f29691aa42" prot="public" virt="non-virtual"><scope>pbat::py::fem::MassMatrix</scope><name>operator=</name></member>
+      <member refid="classpbat_1_1py_1_1fem_1_1MassMatrix_1a1fc1fdc950a1abff7b143b980ebd0d5c" prot="public" virt="non-virtual"><scope>pbat::py::fem::MassMatrix</scope><name>Shape</name></member>
+      <member refid="classpbat_1_1py_1_1fem_1_1MassMatrix_1af6a2a7df49d50c3803e6ade8748ac6dd" prot="public" virt="non-virtual"><scope>pbat::py::fem::MassMatrix</scope><name>ToMatrix</name></member>
+      <member refid="classpbat_1_1py_1_1fem_1_1MassMatrix_1ad2607d255c119a3015404b6d8ed2ac21" prot="public" virt="non-virtual"><scope>pbat::py::fem::MassMatrix</scope><name>~MassMatrix</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

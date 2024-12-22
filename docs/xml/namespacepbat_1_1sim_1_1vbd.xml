@@ -1,0 +1,92 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="namespacepbat_1_1sim_1_1vbd" kind="namespace" language="C++">
+    <compoundname>pbat::sim::vbd</compoundname>
+    <innerclass refid="structpbat_1_1sim_1_1vbd_1_1Data" prot="public">pbat::sim::vbd::Data</innerclass>
+    <innerclass refid="classpbat_1_1sim_1_1vbd_1_1Integrator" prot="public">pbat::sim::vbd::Integrator</innerclass>
+    <innernamespace refid="namespacepbat_1_1sim_1_1vbd_1_1kernels">pbat::sim::vbd::kernels</innernamespace>
+    <innernamespace refid="namespacepbat_1_1sim_1_1vbd_1_1lod">pbat::sim::vbd::lod</innernamespace>
+    <innernamespace refid="namespacepbat_1_1sim_1_1vbd_1_1multigrid">pbat::sim::vbd::multigrid</innernamespace>
+      <sectiondef kind="enum">
+      <memberdef kind="enum" id="sim_2vbd_2Enums_8h_1a49a48c4da7aa2382463a659191f38aa3" prot="public" static="no" strong="yes">
+        <type></type>
+        <name>EInitializationStrategy</name>
+        <enumvalue id="sim_2vbd_2Enums_8h_1a49a48c4da7aa2382463a659191f38aa3a52f5e0bc3859bc5f5e25130b6c7e8881" prot="public">
+          <name>Position</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="sim_2vbd_2Enums_8h_1a49a48c4da7aa2382463a659191f38aa3ab19a24ee5c287f42ee1d465dab77ab37" prot="public">
+          <name>Inertia</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="sim_2vbd_2Enums_8h_1a49a48c4da7aa2382463a659191f38aa3a889eb3bcb5af90b102c9d684aac95d17" prot="public">
+          <name>KineticEnergyMinimum</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="sim_2vbd_2Enums_8h_1a49a48c4da7aa2382463a659191f38aa3ad888284d71b739fd6c6ec37e5ebdf87d" prot="public">
+          <name>AdaptiveVbd</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="sim_2vbd_2Enums_8h_1a49a48c4da7aa2382463a659191f38aa3adde13f8e7568ed1f3633221392bdaec2" prot="public">
+          <name>AdaptivePbat</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/Enums.h" line="8" column="35" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/Enums.h" bodystart="8" bodyend="14"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="typedef">
+      <memberdef kind="typedef" id="source_2pbat_2sim_2vbd_2Mesh_8h_1a2220e19ca45029295a1834b4f6b62cd2" prot="public" static="no">
+        <type><ref refid="structpbat_1_1fem_1_1Mesh" kindref="compound">fem::Mesh</ref>&lt; <ref refid="structpbat_1_1fem_1_1Tetrahedron" kindref="compound">fem::Tetrahedron</ref>&lt; 1 &gt;, 3 &gt;</type>
+        <definition>using pbat::sim::vbd::VolumeMesh = typedef fem::Mesh&lt;fem::Tetrahedron&lt;1&gt;, 3&gt;</definition>
+        <argsstring></argsstring>
+        <name>VolumeMesh</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/Mesh.h" line="12" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/Mesh.h" bodystart="12" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="source_2pbat_2sim_2vbd_2Mesh_8h_1af8f95cbb27ed7cb560ec4f248d570312" prot="public" static="no">
+        <type><ref refid="structpbat_1_1fem_1_1Mesh" kindref="compound">fem::Mesh</ref>&lt; <ref refid="structpbat_1_1fem_1_1Triangle" kindref="compound">fem::Triangle</ref>&lt; 1 &gt;, 3 &gt;</type>
+        <definition>using pbat::sim::vbd::SurfaceMesh = typedef fem::Mesh&lt;fem::Triangle&lt;1&gt;, 3&gt;</definition>
+        <argsstring></argsstring>
+        <name>SurfaceMesh</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/Mesh.h" line="13" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/Mesh.h" bodystart="13" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/Data.cpp" line="18" column="13"/>
+  </compounddef>
+</doxygen>

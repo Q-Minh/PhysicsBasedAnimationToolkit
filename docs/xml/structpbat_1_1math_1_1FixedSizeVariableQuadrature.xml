@@ -1,0 +1,113 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="structpbat_1_1math_1_1FixedSizeVariableQuadrature" kind="struct" language="C++" prot="public">
+    <compoundname>pbat::math::FixedSizeVariableQuadrature</compoundname>
+    <includes refid="SymmetricQuadratureRules_8h" local="no">SymmetricQuadratureRules.h</includes>
+    <templateparamlist>
+      <param>
+        <type>class Quad</type>
+      </param>
+    </templateparamlist>
+      <sectiondef kind="public-static-attrib">
+      <memberdef kind="variable" id="structpbat_1_1math_1_1FixedSizeVariableQuadrature_1a2a9ff7ca042758fb95b5172f7e25b643" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>constexpr std::uint8_t</type>
+        <definition>constexpr std::uint8_t pbat::math::FixedSizeVariableQuadrature&lt; Quad &gt;::kDims</definition>
+        <argsstring></argsstring>
+        <name>kDims</name>
+        <initializer>= Quad::kDims</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/SymmetricQuadratureRules.h" line="19" column="42" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/SymmetricQuadratureRules.h" bodystart="19" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpbat_1_1math_1_1FixedSizeVariableQuadrature_1af8cad7668306fd384f95fdfb37f2b22a" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>constexpr std::uint16_t</type>
+        <definition>constexpr std::uint16_t pbat::math::FixedSizeVariableQuadrature&lt; Quad &gt;::kPoints</definition>
+        <argsstring></argsstring>
+        <name>kPoints</name>
+        <initializer>= Quad::kPoints</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/SymmetricQuadratureRules.h" line="20" column="43" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/SymmetricQuadratureRules.h" bodystart="20" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpbat_1_1math_1_1FixedSizeVariableQuadrature_1ab5bee9b19251fc67f96535289df17381" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>constexpr std::uint8_t</type>
+        <definition>constexpr std::uint8_t pbat::math::FixedSizeVariableQuadrature&lt; Quad &gt;::kOrder</definition>
+        <argsstring></argsstring>
+        <name>kOrder</name>
+        <initializer>= Quad::kOrder</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/SymmetricQuadratureRules.h" line="21" column="42" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/SymmetricQuadratureRules.h" bodystart="21" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="structpbat_1_1math_1_1FixedSizeVariableQuadrature_1a9abce8c2cf48b25d35e6f35905332b3e" prot="public" static="no" mutable="no">
+        <type>decltype(Quad::points)</type>
+        <definition>decltype(Quad::points) pbat::math::FixedSizeVariableQuadrature&lt; Quad &gt;::points</definition>
+        <argsstring></argsstring>
+        <name>points</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/SymmetricQuadratureRules.h" line="24" column="14" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/SymmetricQuadratureRules.h" bodystart="24" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpbat_1_1math_1_1FixedSizeVariableQuadrature_1a81113433fb8fc930893354a89eb70898" prot="public" static="no" mutable="no">
+        <type>decltype(Quad::weights)</type>
+        <definition>decltype(Quad::weights) pbat::math::FixedSizeVariableQuadrature&lt; Quad &gt;::weights</definition>
+        <argsstring></argsstring>
+        <name>weights</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/SymmetricQuadratureRules.h" line="25" column="14" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/SymmetricQuadratureRules.h" bodystart="25" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="public-func">
+      <memberdef kind="function" id="structpbat_1_1math_1_1FixedSizeVariableQuadrature_1a70525465659205a8387ceb4c2611a951" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type></type>
+        <definition>pbat::math::FixedSizeVariableQuadrature&lt; Quad &gt;::FixedSizeVariableQuadrature</definition>
+        <argsstring>()</argsstring>
+        <name>FixedSizeVariableQuadrature</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/SymmetricQuadratureRules.h" line="22" column="5" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/SymmetricQuadratureRules.h" bodystart="22" bodyend="22"/>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+<para>Represents a quadrature scheme that can be constructed via existing quadrature schemes. However, this generic quadrature scheme can be modified, i.e. its points and weights are instance member variables. </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/SymmetricQuadratureRules.h" line="18" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/SymmetricQuadratureRules.h" bodystart="17" bodyend="26"/>
+    <listofallmembers>
+      <member refid="structpbat_1_1math_1_1FixedSizeVariableQuadrature_1a70525465659205a8387ceb4c2611a951" prot="public" virt="non-virtual"><scope>pbat::math::FixedSizeVariableQuadrature</scope><name>FixedSizeVariableQuadrature</name></member>
+      <member refid="structpbat_1_1math_1_1FixedSizeVariableQuadrature_1a2a9ff7ca042758fb95b5172f7e25b643" prot="public" virt="non-virtual"><scope>pbat::math::FixedSizeVariableQuadrature</scope><name>kDims</name></member>
+      <member refid="structpbat_1_1math_1_1FixedSizeVariableQuadrature_1ab5bee9b19251fc67f96535289df17381" prot="public" virt="non-virtual"><scope>pbat::math::FixedSizeVariableQuadrature</scope><name>kOrder</name></member>
+      <member refid="structpbat_1_1math_1_1FixedSizeVariableQuadrature_1af8cad7668306fd384f95fdfb37f2b22a" prot="public" virt="non-virtual"><scope>pbat::math::FixedSizeVariableQuadrature</scope><name>kPoints</name></member>
+      <member refid="structpbat_1_1math_1_1FixedSizeVariableQuadrature_1a9abce8c2cf48b25d35e6f35905332b3e" prot="public" virt="non-virtual"><scope>pbat::math::FixedSizeVariableQuadrature</scope><name>points</name></member>
+      <member refid="structpbat_1_1math_1_1FixedSizeVariableQuadrature_1a81113433fb8fc930893354a89eb70898" prot="public" virt="non-virtual"><scope>pbat::math::FixedSizeVariableQuadrature</scope><name>weights</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

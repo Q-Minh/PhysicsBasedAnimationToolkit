@@ -1,0 +1,213 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="classpbat_1_1math_1_1linalg_1_1mini_1_1TiledView" kind="class" language="C++" prot="public">
+    <compoundname>pbat::math::linalg::mini::TiledView</compoundname>
+    <templateparamlist>
+      <param>
+        <type>class TMatrix</type>
+      </param>
+      <param>
+        <type>int</type>
+        <declname>RepeatRows</declname>
+        <defname>RepeatRows</defname>
+      </param>
+      <param>
+        <type>int</type>
+        <declname>RepeatCols</declname>
+        <defname>RepeatCols</defname>
+      </param>
+    </templateparamlist>
+      <sectiondef kind="public-type">
+      <memberdef kind="typedef" id="classpbat_1_1math_1_1linalg_1_1mini_1_1TiledView_1a4da2f8cd0842c5b61f8fd6063ffcbe15" prot="public" static="no">
+        <type>TMatrix</type>
+        <definition>using pbat::math::linalg::mini::TiledView&lt; TMatrix, RepeatRows, RepeatCols &gt;::NestedType =  TMatrix</definition>
+        <argsstring></argsstring>
+        <name>NestedType</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Repeat.h" line="19" column="5" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Repeat.h" bodystart="19" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="classpbat_1_1math_1_1linalg_1_1mini_1_1TiledView_1a64a8759ffc72dbab273eef3e4e8dd9dd" prot="public" static="no">
+        <type>typename NestedType::ScalarType</type>
+        <definition>using pbat::math::linalg::mini::TiledView&lt; TMatrix, RepeatRows, RepeatCols &gt;::ScalarType =  typename NestedType::ScalarType</definition>
+        <argsstring></argsstring>
+        <name>ScalarType</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Repeat.h" line="20" column="5" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Repeat.h" bodystart="20" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="classpbat_1_1math_1_1linalg_1_1mini_1_1TiledView_1a7d9e10be4d0e3affc59a64f173bb3739" prot="public" static="no">
+        <type><ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1TiledView" kindref="compound">TiledView</ref>&lt; NestedType, RepeatRows, RepeatCols &gt;</type>
+        <definition>using pbat::math::linalg::mini::TiledView&lt; TMatrix, RepeatRows, RepeatCols &gt;::SelfType =  TiledView&lt;NestedType, RepeatRows, RepeatCols&gt;</definition>
+        <argsstring></argsstring>
+        <name>SelfType</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Repeat.h" line="21" column="5" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Repeat.h" bodystart="21" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="public-static-attrib">
+      <memberdef kind="variable" id="classpbat_1_1math_1_1linalg_1_1mini_1_1TiledView_1a2ae7ef7256e4943646df5b7b350be2f6" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>constexpr auto</type>
+        <definition>constexpr auto pbat::math::linalg::mini::TiledView&lt; TMatrix, RepeatRows, RepeatCols &gt;::kRows</definition>
+        <argsstring></argsstring>
+        <name>kRows</name>
+        <initializer>= RepeatRows * NestedType::kRows</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Repeat.h" line="23" column="27" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Repeat.h" bodystart="23" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpbat_1_1math_1_1linalg_1_1mini_1_1TiledView_1af51fea1b199a05af20744892f03e7467" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>constexpr auto</type>
+        <definition>constexpr auto pbat::math::linalg::mini::TiledView&lt; TMatrix, RepeatRows, RepeatCols &gt;::kCols</definition>
+        <argsstring></argsstring>
+        <name>kCols</name>
+        <initializer>= RepeatCols * NestedType::kCols</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Repeat.h" line="24" column="27" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Repeat.h" bodystart="24" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpbat_1_1math_1_1linalg_1_1mini_1_1TiledView_1a1968f72edf5f03ce77562efbc5a4490d" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>constexpr bool</type>
+        <definition>constexpr bool pbat::math::linalg::mini::TiledView&lt; TMatrix, RepeatRows, RepeatCols &gt;::bRowMajor</definition>
+        <argsstring></argsstring>
+        <name>bRowMajor</name>
+        <initializer>= NestedType::bRowMajor</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Repeat.h" line="25" column="27" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Repeat.h" bodystart="25" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="classpbat_1_1math_1_1linalg_1_1mini_1_1TiledView_1a3c0970be85a0aee6be6fb1fd11a2de8c" prot="private" static="no" mutable="no">
+        <type>NestedType const  &amp;</type>
+        <definition>NestedType const&amp; pbat::math::linalg::mini::TiledView&lt; TMatrix, RepeatRows, RepeatCols &gt;::A</definition>
+        <argsstring></argsstring>
+        <name>A</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Repeat.h" line="41" column="22" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Repeat.h" bodystart="41" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpbat_1_1math_1_1linalg_1_1mini_1_1TiledView_1acb30ff80beba879bf9f224de88c73a39" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>PBAT_HOST_DEVICE</type>
+        <definition>PBAT_HOST_DEVICE pbat::math::linalg::mini::TiledView&lt; TMatrix, RepeatRows, RepeatCols &gt;::TiledView</definition>
+        <argsstring>(NestedType const &amp;A)</argsstring>
+        <name>TiledView</name>
+        <param>
+          <type>NestedType const &amp;</type>
+          <declname>A</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Repeat.h" line="27" column="22" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Repeat.h" bodystart="27" bodyend="27"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1math_1_1linalg_1_1mini_1_1TiledView_1a1a89a1f22509717622faceefa976c8e3" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>PBAT_HOST_DEVICE ScalarType</type>
+        <definition>PBAT_HOST_DEVICE ScalarType pbat::math::linalg::mini::TiledView&lt; TMatrix, RepeatRows, RepeatCols &gt;::operator()</definition>
+        <argsstring>(auto i, auto j) const</argsstring>
+        <name>operator()</name>
+        <param>
+          <type>auto</type>
+          <declname>i</declname>
+        </param>
+        <param>
+          <type>auto</type>
+          <declname>j</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Repeat.h" line="29" column="33" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Repeat.h" bodystart="29" bodyend="32"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1math_1_1linalg_1_1mini_1_1TiledView_1af4f68235f4d1fbb1133416eb4bd388c8" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>PBAT_HOST_DEVICE ScalarType</type>
+        <definition>PBAT_HOST_DEVICE ScalarType pbat::math::linalg::mini::TiledView&lt; TMatrix, RepeatRows, RepeatCols &gt;::operator()</definition>
+        <argsstring>(auto i) const</argsstring>
+        <name>operator()</name>
+        <param>
+          <type>auto</type>
+          <declname>i</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Repeat.h" line="35" column="33" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Repeat.h" bodystart="35" bodyend="35"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1math_1_1linalg_1_1mini_1_1TiledView_1ae983c5c10cecbe660f45687bd6518f9c" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>PBAT_HOST_DEVICE ScalarType</type>
+        <definition>PBAT_HOST_DEVICE ScalarType pbat::math::linalg::mini::TiledView&lt; TMatrix, RepeatRows, RepeatCols &gt;::operator[]</definition>
+        <argsstring>(auto i) const</argsstring>
+        <name>operator[]</name>
+        <param>
+          <type>auto</type>
+          <declname>i</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Repeat.h" line="36" column="33" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Repeat.h" bodystart="36" bodyend="36"/>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Repeat.h" line="17" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Repeat.h" bodystart="16" bodyend="42"/>
+    <listofallmembers>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1TiledView_1a3c0970be85a0aee6be6fb1fd11a2de8c" prot="private" virt="non-virtual"><scope>pbat::math::linalg::mini::TiledView</scope><name>A</name></member>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1TiledView_1a1968f72edf5f03ce77562efbc5a4490d" prot="public" virt="non-virtual"><scope>pbat::math::linalg::mini::TiledView</scope><name>bRowMajor</name></member>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1TiledView_1af51fea1b199a05af20744892f03e7467" prot="public" virt="non-virtual"><scope>pbat::math::linalg::mini::TiledView</scope><name>kCols</name></member>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1TiledView_1a2ae7ef7256e4943646df5b7b350be2f6" prot="public" virt="non-virtual"><scope>pbat::math::linalg::mini::TiledView</scope><name>kRows</name></member>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1TiledView_1a4da2f8cd0842c5b61f8fd6063ffcbe15" prot="public" virt="non-virtual"><scope>pbat::math::linalg::mini::TiledView</scope><name>NestedType</name></member>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1TiledView_1a1a89a1f22509717622faceefa976c8e3" prot="public" virt="non-virtual"><scope>pbat::math::linalg::mini::TiledView</scope><name>operator()</name></member>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1TiledView_1af4f68235f4d1fbb1133416eb4bd388c8" prot="public" virt="non-virtual"><scope>pbat::math::linalg::mini::TiledView</scope><name>operator()</name></member>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1TiledView_1ae983c5c10cecbe660f45687bd6518f9c" prot="public" virt="non-virtual"><scope>pbat::math::linalg::mini::TiledView</scope><name>operator[]</name></member>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1TiledView_1a64a8759ffc72dbab273eef3e4e8dd9dd" prot="public" virt="non-virtual"><scope>pbat::math::linalg::mini::TiledView</scope><name>ScalarType</name></member>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1TiledView_1a7d9e10be4d0e3affc59a64f173bb3739" prot="public" virt="non-virtual"><scope>pbat::math::linalg::mini::TiledView</scope><name>SelfType</name></member>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1TiledView_1acb30ff80beba879bf9f224de88c73a39" prot="public" virt="non-virtual"><scope>pbat::math::linalg::mini::TiledView</scope><name>TiledView</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

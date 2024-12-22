@@ -1,0 +1,238 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="classpbat_1_1math_1_1linalg_1_1mini_1_1VerticalStack" kind="class" language="C++" prot="public">
+    <compoundname>pbat::math::linalg::mini::VerticalStack</compoundname>
+    <templateparamlist>
+      <param>
+        <type>class TLhsMatrix</type>
+      </param>
+      <param>
+        <type>class TRhsMatrix</type>
+      </param>
+    </templateparamlist>
+      <sectiondef kind="public-type">
+      <memberdef kind="typedef" id="classpbat_1_1math_1_1linalg_1_1mini_1_1VerticalStack_1a6f810bf2c9fa5284a33b4beaaf41a247" prot="public" static="no">
+        <type>TLhsMatrix</type>
+        <definition>using pbat::math::linalg::mini::VerticalStack&lt; TLhsMatrix, TRhsMatrix &gt;::LhsNestedType =  TLhsMatrix</definition>
+        <argsstring></argsstring>
+        <name>LhsNestedType</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Stack.h" line="57" column="5" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Stack.h" bodystart="57" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="classpbat_1_1math_1_1linalg_1_1mini_1_1VerticalStack_1afd3046dab6d2010f8ab531f393801aa4" prot="public" static="no">
+        <type>TRhsMatrix</type>
+        <definition>using pbat::math::linalg::mini::VerticalStack&lt; TLhsMatrix, TRhsMatrix &gt;::RhsNestedType =  TRhsMatrix</definition>
+        <argsstring></argsstring>
+        <name>RhsNestedType</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Stack.h" line="58" column="5" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Stack.h" bodystart="58" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="classpbat_1_1math_1_1linalg_1_1mini_1_1VerticalStack_1a281b27939bc61f636497071efc7f1810" prot="public" static="no">
+        <type>typename LhsNestedType::ScalarType</type>
+        <definition>using pbat::math::linalg::mini::VerticalStack&lt; TLhsMatrix, TRhsMatrix &gt;::ScalarType =  typename LhsNestedType::ScalarType</definition>
+        <argsstring></argsstring>
+        <name>ScalarType</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Stack.h" line="59" column="5" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Stack.h" bodystart="59" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="classpbat_1_1math_1_1linalg_1_1mini_1_1VerticalStack_1a6889054d1bab0952e39332db1af5e3c4" prot="public" static="no">
+        <type><ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1VerticalStack" kindref="compound">VerticalStack</ref>&lt; LhsNestedType, RhsNestedType &gt;</type>
+        <definition>using pbat::math::linalg::mini::VerticalStack&lt; TLhsMatrix, TRhsMatrix &gt;::SelfType =  VerticalStack&lt;LhsNestedType, RhsNestedType&gt;</definition>
+        <argsstring></argsstring>
+        <name>SelfType</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Stack.h" line="60" column="5" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Stack.h" bodystart="60" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="public-static-attrib">
+      <memberdef kind="variable" id="classpbat_1_1math_1_1linalg_1_1mini_1_1VerticalStack_1a8e0884909db07fa99d5d305da765bf68" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>constexpr auto</type>
+        <definition>constexpr auto pbat::math::linalg::mini::VerticalStack&lt; TLhsMatrix, TRhsMatrix &gt;::kRows</definition>
+        <argsstring></argsstring>
+        <name>kRows</name>
+        <initializer>= LhsNestedType::kRows + RhsNestedType::kRows</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Stack.h" line="62" column="27" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Stack.h" bodystart="62" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpbat_1_1math_1_1linalg_1_1mini_1_1VerticalStack_1a57c680341ad56db09e5a07f206650241" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>constexpr auto</type>
+        <definition>constexpr auto pbat::math::linalg::mini::VerticalStack&lt; TLhsMatrix, TRhsMatrix &gt;::kCols</definition>
+        <argsstring></argsstring>
+        <name>kCols</name>
+        <initializer>= LhsNestedType::kCols</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Stack.h" line="63" column="27" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Stack.h" bodystart="63" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpbat_1_1math_1_1linalg_1_1mini_1_1VerticalStack_1a15456a7e986b2f366e36d9a646167b1c" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>constexpr bool</type>
+        <definition>constexpr bool pbat::math::linalg::mini::VerticalStack&lt; TLhsMatrix, TRhsMatrix &gt;::bRowMajor</definition>
+        <argsstring></argsstring>
+        <name>bRowMajor</name>
+        <initializer>= LhsNestedType::bRowMajor</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Stack.h" line="64" column="27" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Stack.h" bodystart="64" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="classpbat_1_1math_1_1linalg_1_1mini_1_1VerticalStack_1a52193684cf2c9ede96466670c5637c20" prot="private" static="no" mutable="no">
+        <type>LhsNestedType const  &amp;</type>
+        <definition>LhsNestedType const&amp; pbat::math::linalg::mini::VerticalStack&lt; TLhsMatrix, TRhsMatrix &gt;::mLhs</definition>
+        <argsstring></argsstring>
+        <name>mLhs</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Stack.h" line="86" column="25" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Stack.h" bodystart="86" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpbat_1_1math_1_1linalg_1_1mini_1_1VerticalStack_1a9619074d209c07ff678779dccaf97dd2" prot="private" static="no" mutable="no">
+        <type>RhsNestedType const  &amp;</type>
+        <definition>RhsNestedType const&amp; pbat::math::linalg::mini::VerticalStack&lt; TLhsMatrix, TRhsMatrix &gt;::mRhs</definition>
+        <argsstring></argsstring>
+        <name>mRhs</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Stack.h" line="87" column="25" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Stack.h" bodystart="87" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpbat_1_1math_1_1linalg_1_1mini_1_1VerticalStack_1a4f9fb0114ef510e1f09e3c1aef2ee493" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>PBAT_HOST_DEVICE</type>
+        <definition>PBAT_HOST_DEVICE pbat::math::linalg::mini::VerticalStack&lt; TLhsMatrix, TRhsMatrix &gt;::VerticalStack</definition>
+        <argsstring>(LhsNestedType const &amp;lhs, RhsNestedType const &amp;rhs)</argsstring>
+        <name>VerticalStack</name>
+        <param>
+          <type>LhsNestedType const &amp;</type>
+          <declname>lhs</declname>
+        </param>
+        <param>
+          <type>RhsNestedType const &amp;</type>
+          <declname>rhs</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Stack.h" line="66" column="22" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Stack.h" bodystart="66" bodyend="72"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1math_1_1linalg_1_1mini_1_1VerticalStack_1abf0855c121a0bb816f9ca10bdfedb672" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>PBAT_HOST_DEVICE ScalarType</type>
+        <definition>PBAT_HOST_DEVICE ScalarType pbat::math::linalg::mini::VerticalStack&lt; TLhsMatrix, TRhsMatrix &gt;::operator()</definition>
+        <argsstring>(auto i, auto j) const</argsstring>
+        <name>operator()</name>
+        <param>
+          <type>auto</type>
+          <declname>i</declname>
+        </param>
+        <param>
+          <type>auto</type>
+          <declname>j</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Stack.h" line="74" column="33" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Stack.h" bodystart="74" bodyend="77"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1math_1_1linalg_1_1mini_1_1VerticalStack_1a96d048fee7992c9c84d50dff9926ded5" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>PBAT_HOST_DEVICE ScalarType</type>
+        <definition>PBAT_HOST_DEVICE ScalarType pbat::math::linalg::mini::VerticalStack&lt; TLhsMatrix, TRhsMatrix &gt;::operator()</definition>
+        <argsstring>(auto i) const</argsstring>
+        <name>operator()</name>
+        <param>
+          <type>auto</type>
+          <declname>i</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Stack.h" line="80" column="33" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Stack.h" bodystart="80" bodyend="80"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1math_1_1linalg_1_1mini_1_1VerticalStack_1a8e262e3b83595b71b3aa016b5e854ca6" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>PBAT_HOST_DEVICE ScalarType</type>
+        <definition>PBAT_HOST_DEVICE ScalarType pbat::math::linalg::mini::VerticalStack&lt; TLhsMatrix, TRhsMatrix &gt;::operator[]</definition>
+        <argsstring>(auto i) const</argsstring>
+        <name>operator[]</name>
+        <param>
+          <type>auto</type>
+          <declname>i</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Stack.h" line="81" column="33" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Stack.h" bodystart="81" bodyend="81"/>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Stack.h" line="55" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Stack.h" bodystart="54" bodyend="88"/>
+    <listofallmembers>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1VerticalStack_1a15456a7e986b2f366e36d9a646167b1c" prot="public" virt="non-virtual"><scope>pbat::math::linalg::mini::VerticalStack</scope><name>bRowMajor</name></member>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1VerticalStack_1a57c680341ad56db09e5a07f206650241" prot="public" virt="non-virtual"><scope>pbat::math::linalg::mini::VerticalStack</scope><name>kCols</name></member>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1VerticalStack_1a8e0884909db07fa99d5d305da765bf68" prot="public" virt="non-virtual"><scope>pbat::math::linalg::mini::VerticalStack</scope><name>kRows</name></member>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1VerticalStack_1a6f810bf2c9fa5284a33b4beaaf41a247" prot="public" virt="non-virtual"><scope>pbat::math::linalg::mini::VerticalStack</scope><name>LhsNestedType</name></member>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1VerticalStack_1a52193684cf2c9ede96466670c5637c20" prot="private" virt="non-virtual"><scope>pbat::math::linalg::mini::VerticalStack</scope><name>mLhs</name></member>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1VerticalStack_1a9619074d209c07ff678779dccaf97dd2" prot="private" virt="non-virtual"><scope>pbat::math::linalg::mini::VerticalStack</scope><name>mRhs</name></member>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1VerticalStack_1abf0855c121a0bb816f9ca10bdfedb672" prot="public" virt="non-virtual"><scope>pbat::math::linalg::mini::VerticalStack</scope><name>operator()</name></member>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1VerticalStack_1a96d048fee7992c9c84d50dff9926ded5" prot="public" virt="non-virtual"><scope>pbat::math::linalg::mini::VerticalStack</scope><name>operator()</name></member>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1VerticalStack_1a8e262e3b83595b71b3aa016b5e854ca6" prot="public" virt="non-virtual"><scope>pbat::math::linalg::mini::VerticalStack</scope><name>operator[]</name></member>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1VerticalStack_1afd3046dab6d2010f8ab531f393801aa4" prot="public" virt="non-virtual"><scope>pbat::math::linalg::mini::VerticalStack</scope><name>RhsNestedType</name></member>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1VerticalStack_1a281b27939bc61f636497071efc7f1810" prot="public" virt="non-virtual"><scope>pbat::math::linalg::mini::VerticalStack</scope><name>ScalarType</name></member>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1VerticalStack_1a6889054d1bab0952e39332db1af5e3c4" prot="public" virt="non-virtual"><scope>pbat::math::linalg::mini::VerticalStack</scope><name>SelfType</name></member>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1VerticalStack_1a4f9fb0114ef510e1f09e3c1aef2ee493" prot="public" virt="non-virtual"><scope>pbat::math::linalg::mini::VerticalStack</scope><name>VerticalStack</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

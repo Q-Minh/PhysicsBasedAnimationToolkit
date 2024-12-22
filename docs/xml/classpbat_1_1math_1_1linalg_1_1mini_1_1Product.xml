@@ -1,0 +1,238 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="classpbat_1_1math_1_1linalg_1_1mini_1_1Product" kind="class" language="C++" prot="public">
+    <compoundname>pbat::math::linalg::mini::Product</compoundname>
+    <templateparamlist>
+      <param>
+        <type>class TLhsMatrix</type>
+      </param>
+      <param>
+        <type>class TRhsMatrix</type>
+      </param>
+    </templateparamlist>
+      <sectiondef kind="public-type">
+      <memberdef kind="typedef" id="classpbat_1_1math_1_1linalg_1_1mini_1_1Product_1a79ff829ea7efa351f3dea416a22982fb" prot="public" static="no">
+        <type>TLhsMatrix</type>
+        <definition>using pbat::math::linalg::mini::Product&lt; TLhsMatrix, TRhsMatrix &gt;::LhsNestedType =  TLhsMatrix</definition>
+        <argsstring></argsstring>
+        <name>LhsNestedType</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Product.h" line="20" column="5" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Product.h" bodystart="20" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="classpbat_1_1math_1_1linalg_1_1mini_1_1Product_1acd9a65dd1fbb86be519cf37d73968c9f" prot="public" static="no">
+        <type>TRhsMatrix</type>
+        <definition>using pbat::math::linalg::mini::Product&lt; TLhsMatrix, TRhsMatrix &gt;::RhsNestedType =  TRhsMatrix</definition>
+        <argsstring></argsstring>
+        <name>RhsNestedType</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Product.h" line="21" column="5" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Product.h" bodystart="21" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="classpbat_1_1math_1_1linalg_1_1mini_1_1Product_1abbbf40393ac18d6d48fd1022588826b9" prot="public" static="no">
+        <type>typename LhsNestedType::ScalarType</type>
+        <definition>using pbat::math::linalg::mini::Product&lt; TLhsMatrix, TRhsMatrix &gt;::ScalarType =  typename LhsNestedType::ScalarType</definition>
+        <argsstring></argsstring>
+        <name>ScalarType</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Product.h" line="23" column="5" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Product.h" bodystart="23" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="classpbat_1_1math_1_1linalg_1_1mini_1_1Product_1a5574636c05f33bb6c6021db4d79a3522" prot="public" static="no">
+        <type><ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1Product" kindref="compound">Product</ref>&lt; LhsNestedType, RhsNestedType &gt;</type>
+        <definition>using pbat::math::linalg::mini::Product&lt; TLhsMatrix, TRhsMatrix &gt;::SelfType =  Product&lt;LhsNestedType, RhsNestedType&gt;</definition>
+        <argsstring></argsstring>
+        <name>SelfType</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Product.h" line="24" column="5" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Product.h" bodystart="24" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="public-static-attrib">
+      <memberdef kind="variable" id="classpbat_1_1math_1_1linalg_1_1mini_1_1Product_1ae4092a673e89ff56241890763f580cf6" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>constexpr auto</type>
+        <definition>constexpr auto pbat::math::linalg::mini::Product&lt; TLhsMatrix, TRhsMatrix &gt;::kRows</definition>
+        <argsstring></argsstring>
+        <name>kRows</name>
+        <initializer>= LhsNestedType::kRows</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Product.h" line="26" column="27" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Product.h" bodystart="26" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpbat_1_1math_1_1linalg_1_1mini_1_1Product_1a228d7a23c7a9c7de7485eadaab341d0b" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>constexpr auto</type>
+        <definition>constexpr auto pbat::math::linalg::mini::Product&lt; TLhsMatrix, TRhsMatrix &gt;::kCols</definition>
+        <argsstring></argsstring>
+        <name>kCols</name>
+        <initializer>= RhsNestedType::kCols</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Product.h" line="27" column="27" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Product.h" bodystart="27" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpbat_1_1math_1_1linalg_1_1mini_1_1Product_1ac936f6e9037ba79b6367a2bd5ee19c2a" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>constexpr bool</type>
+        <definition>constexpr bool pbat::math::linalg::mini::Product&lt; TLhsMatrix, TRhsMatrix &gt;::bRowMajor</definition>
+        <argsstring></argsstring>
+        <name>bRowMajor</name>
+        <initializer>= false</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Product.h" line="28" column="27" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Product.h" bodystart="28" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="classpbat_1_1math_1_1linalg_1_1mini_1_1Product_1a71a9835262cd0ae73bedb58df3b3bbaa" prot="private" static="no" mutable="no">
+        <type>LhsNestedType const  &amp;</type>
+        <definition>LhsNestedType const&amp; pbat::math::linalg::mini::Product&lt; TLhsMatrix, TRhsMatrix &gt;::A</definition>
+        <argsstring></argsstring>
+        <name>A</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Product.h" line="48" column="25" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Product.h" bodystart="48" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpbat_1_1math_1_1linalg_1_1mini_1_1Product_1ad4ff03fed86264b616add76f7cff80b7" prot="private" static="no" mutable="no">
+        <type>RhsNestedType const  &amp;</type>
+        <definition>RhsNestedType const&amp; pbat::math::linalg::mini::Product&lt; TLhsMatrix, TRhsMatrix &gt;::B</definition>
+        <argsstring></argsstring>
+        <name>B</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Product.h" line="49" column="25" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Product.h" bodystart="49" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpbat_1_1math_1_1linalg_1_1mini_1_1Product_1aa95df4b9f01eb2abee7bf0f94790e231" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>PBAT_HOST_DEVICE</type>
+        <definition>PBAT_HOST_DEVICE pbat::math::linalg::mini::Product&lt; TLhsMatrix, TRhsMatrix &gt;::Product</definition>
+        <argsstring>(LhsNestedType const &amp;A, RhsNestedType const &amp;B)</argsstring>
+        <name>Product</name>
+        <param>
+          <type>LhsNestedType const &amp;</type>
+          <declname>A</declname>
+        </param>
+        <param>
+          <type>RhsNestedType const &amp;</type>
+          <declname>B</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Product.h" line="30" column="22" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Product.h" bodystart="30" bodyend="30"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1math_1_1linalg_1_1mini_1_1Product_1af654f58bae7f73bbfddea8d2a1fd164a" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>PBAT_HOST_DEVICE ScalarType</type>
+        <definition>PBAT_HOST_DEVICE ScalarType pbat::math::linalg::mini::Product&lt; TLhsMatrix, TRhsMatrix &gt;::operator()</definition>
+        <argsstring>(auto i, auto j) const</argsstring>
+        <name>operator()</name>
+        <param>
+          <type>auto</type>
+          <declname>i</declname>
+        </param>
+        <param>
+          <type>auto</type>
+          <declname>j</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Product.h" line="32" column="33" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Product.h" bodystart="32" bodyend="39"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1math_1_1linalg_1_1mini_1_1Product_1a35b65e4c7dcd40de71db1e459bdbedd6" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>PBAT_HOST_DEVICE ScalarType</type>
+        <definition>PBAT_HOST_DEVICE ScalarType pbat::math::linalg::mini::Product&lt; TLhsMatrix, TRhsMatrix &gt;::operator()</definition>
+        <argsstring>(auto i) const</argsstring>
+        <name>operator()</name>
+        <param>
+          <type>auto</type>
+          <declname>i</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Product.h" line="42" column="33" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Product.h" bodystart="42" bodyend="42"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1math_1_1linalg_1_1mini_1_1Product_1aa2f2036a830b4f3059e0596ae6cbf2cc" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>PBAT_HOST_DEVICE ScalarType</type>
+        <definition>PBAT_HOST_DEVICE ScalarType pbat::math::linalg::mini::Product&lt; TLhsMatrix, TRhsMatrix &gt;::operator[]</definition>
+        <argsstring>(auto i) const</argsstring>
+        <name>operator[]</name>
+        <param>
+          <type>auto</type>
+          <declname>i</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Product.h" line="43" column="33" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Product.h" bodystart="43" bodyend="43"/>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Product.h" line="18" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Product.h" bodystart="17" bodyend="50"/>
+    <listofallmembers>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1Product_1a71a9835262cd0ae73bedb58df3b3bbaa" prot="private" virt="non-virtual"><scope>pbat::math::linalg::mini::Product</scope><name>A</name></member>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1Product_1ad4ff03fed86264b616add76f7cff80b7" prot="private" virt="non-virtual"><scope>pbat::math::linalg::mini::Product</scope><name>B</name></member>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1Product_1ac936f6e9037ba79b6367a2bd5ee19c2a" prot="public" virt="non-virtual"><scope>pbat::math::linalg::mini::Product</scope><name>bRowMajor</name></member>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1Product_1a228d7a23c7a9c7de7485eadaab341d0b" prot="public" virt="non-virtual"><scope>pbat::math::linalg::mini::Product</scope><name>kCols</name></member>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1Product_1ae4092a673e89ff56241890763f580cf6" prot="public" virt="non-virtual"><scope>pbat::math::linalg::mini::Product</scope><name>kRows</name></member>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1Product_1a79ff829ea7efa351f3dea416a22982fb" prot="public" virt="non-virtual"><scope>pbat::math::linalg::mini::Product</scope><name>LhsNestedType</name></member>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1Product_1af654f58bae7f73bbfddea8d2a1fd164a" prot="public" virt="non-virtual"><scope>pbat::math::linalg::mini::Product</scope><name>operator()</name></member>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1Product_1a35b65e4c7dcd40de71db1e459bdbedd6" prot="public" virt="non-virtual"><scope>pbat::math::linalg::mini::Product</scope><name>operator()</name></member>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1Product_1aa2f2036a830b4f3059e0596ae6cbf2cc" prot="public" virt="non-virtual"><scope>pbat::math::linalg::mini::Product</scope><name>operator[]</name></member>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1Product_1aa95df4b9f01eb2abee7bf0f94790e231" prot="public" virt="non-virtual"><scope>pbat::math::linalg::mini::Product</scope><name>Product</name></member>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1Product_1acd9a65dd1fbb86be519cf37d73968c9f" prot="public" virt="non-virtual"><scope>pbat::math::linalg::mini::Product</scope><name>RhsNestedType</name></member>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1Product_1abbbf40393ac18d6d48fd1022588826b9" prot="public" virt="non-virtual"><scope>pbat::math::linalg::mini::Product</scope><name>ScalarType</name></member>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1Product_1a5574636c05f33bb6c6021db4d79a3522" prot="public" virt="non-virtual"><scope>pbat::math::linalg::mini::Product</scope><name>SelfType</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

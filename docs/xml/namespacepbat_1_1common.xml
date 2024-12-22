@@ -1,0 +1,520 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="namespacepbat_1_1common" kind="namespace" language="C++">
+    <compoundname>pbat::common</compoundname>
+    <innerclass refid="classpbat_1_1common_1_1Queue" prot="public">pbat::common::Queue</innerclass>
+    <innerclass refid="classpbat_1_1common_1_1Stack" prot="public">pbat::common::Stack</innerclass>
+    <innernamespace refid="namespacepbat_1_1common_1_1detail">pbat::common::detail</innernamespace>
+      <sectiondef kind="var">
+      <memberdef kind="variable" id="common_2Concepts_8h_1a20df7fdb8892dca27cb464267480d290" prot="public" static="no" mutable="no">
+        <templateparamlist>
+          <param>
+            <type>class R</type>
+          </param>
+        </templateparamlist>
+        <type>concept</type>
+        <definition>concept pbat::common::CIndexRange</definition>
+        <argsstring></argsstring>
+        <name>CIndexRange</name>
+        <initializer>=
+    std::ranges::range&lt;R&gt; &amp;&amp; std::is_convertible_v&lt;std::ranges::range_value_t&lt;R&gt;, int&gt;</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/common/Concepts.h" line="14" column="9" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/common/Concepts.h" bodystart="14" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="common_2Concepts_8h_1a4a1682c3d77cf28a67acd5b23b890ee3" prot="public" static="no" mutable="no">
+        <templateparamlist>
+          <param>
+            <type>class R</type>
+          </param>
+        </templateparamlist>
+        <type>concept</type>
+        <definition>concept pbat::common::CContiguousIndexRange</definition>
+        <argsstring></argsstring>
+        <name>CContiguousIndexRange</name>
+        <initializer>=
+    CIndexRange&lt;R&gt; &amp;&amp; std::ranges::sized_range&lt;R&gt; &amp;&amp; std::ranges::contiguous_range&lt;R&gt;</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/common/Concepts.h" line="18" column="9" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/common/Concepts.h" bodystart="18" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="common_2Concepts_8h_1ae8ce3171d7f0ad6f210adc250b23b777" prot="public" static="no" mutable="no">
+        <templateparamlist>
+          <param>
+            <type>class R</type>
+          </param>
+        </templateparamlist>
+        <type>concept</type>
+        <definition>concept pbat::common::CArithmeticRange</definition>
+        <argsstring></argsstring>
+        <name>CArithmeticRange</name>
+        <initializer>=
+    std::ranges::range&lt;R&gt; &amp;&amp; std::is_arithmetic_v&lt;std::ranges::range_value_t&lt;R&gt;&gt;</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/common/Concepts.h" line="22" column="9" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/common/Concepts.h" bodystart="22" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="common_2Concepts_8h_1a68dc9bfecd91be39703c1c57309d06cf" prot="public" static="no" mutable="no">
+        <templateparamlist>
+          <param>
+            <type>class R</type>
+          </param>
+        </templateparamlist>
+        <type>concept</type>
+        <definition>concept pbat::common::CContiguousArithmeticRange</definition>
+        <argsstring></argsstring>
+        <name>CContiguousArithmeticRange</name>
+        <initializer>=
+    CArithmeticRange&lt;R&gt; &amp;&amp; std::ranges::sized_range&lt;R&gt; &amp;&amp; std::ranges::contiguous_range&lt;R&gt;</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/common/Concepts.h" line="26" column="9" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/common/Concepts.h" bodystart="26" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="common_2Concepts_8h_1af366374321eabca2770cba5ba3c107dd" prot="public" static="no" mutable="no">
+        <templateparamlist>
+          <param>
+            <type>class R</type>
+          </param>
+        </templateparamlist>
+        <type>concept</type>
+        <definition>concept pbat::common::CContiguousArithmeticMatrixRange</definition>
+        <argsstring></argsstring>
+        <name>CContiguousArithmeticMatrixRange</name>
+        <initializer>= requires(R r)
+{
+    requires std::ranges::range&lt;R&gt;;
+    requires std::ranges::sized_range&lt;R&gt;;
+    requires std::ranges::contiguous_range&lt;R&gt;;
+    {
+        std::ranges::range_value_t&lt;R&gt;::RowsAtCompileTime
+    } -&gt; std::convertible_to&lt;int&gt;;
+    {
+        std::ranges::range_value_t&lt;R&gt;::ColsAtCompileTime
+    } -&gt; std::convertible_to&lt;int&gt;;
+    requires std::is_arithmetic_v&lt;typename std::ranges::range_value_t&lt;R&gt;::Scalar&gt;;
+    {std::ranges::range_value_t&lt;R&gt;::Flags};
+}</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/common/Concepts.h" line="30" column="9" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/common/Concepts.h" bodystart="30" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="func">
+      <memberdef kind="function" id="ArgSort_8h_1a835cf5f0dbe92f856f768a05ca89c9ff" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>std::integral</type>
+            <declname>TIndex</declname>
+            <defname>TIndex</defname>
+          </param>
+          <param>
+            <type>class FLess</type>
+          </param>
+        </templateparamlist>
+        <type>Eigen::Vector&lt; TIndex, Eigen::Dynamic &gt;</type>
+        <definition>Eigen::Vector&lt;TIndex, Eigen::Dynamic&gt; pbat::common::ArgSort</definition>
+        <argsstring>(TIndex n, FLess less)</argsstring>
+        <name>ArgSort</name>
+        <param>
+          <type>TIndex</type>
+          <declname>n</declname>
+        </param>
+        <param>
+          <type>FLess</type>
+          <declname>less</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/common/ArgSort.h" line="14" column="15" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/common/ArgSort.h" bodystart="14" bodyend="21"/>
+      </memberdef>
+      <memberdef kind="function" id="ConstexprFor_8h_1a480d692365ed05e9ec79bc3f95e5d36d" prot="public" static="no" constexpr="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class...</type>
+            <declname>Ts</declname>
+            <defname>Ts</defname>
+          </param>
+          <param>
+            <type>class F</type>
+          </param>
+        </templateparamlist>
+        <type>constexpr void</type>
+        <definition>constexpr void pbat::common::ForTypes</definition>
+        <argsstring>(F &amp;&amp;f)</argsstring>
+        <name>ForTypes</name>
+        <param>
+          <type>F &amp;&amp;</type>
+          <declname>f</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/common/ConstexprFor.h" line="11" column="16" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/common/ConstexprFor.h" bodystart="11" bodyend="14"/>
+      </memberdef>
+      <memberdef kind="function" id="ConstexprFor_8h_1ac5d280ddd3b75d1e8391a5c4c30f72ac" prot="public" static="no" constexpr="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>auto...</type>
+            <declname>Xs</declname>
+            <defname>Xs</defname>
+          </param>
+          <param>
+            <type>class F</type>
+          </param>
+        </templateparamlist>
+        <type>constexpr void</type>
+        <definition>constexpr void pbat::common::ForValues</definition>
+        <argsstring>(F &amp;&amp;f)</argsstring>
+        <name>ForValues</name>
+        <param>
+          <type>F &amp;&amp;</type>
+          <declname>f</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/common/ConstexprFor.h" line="17" column="16" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/common/ConstexprFor.h" bodystart="17" bodyend="20"/>
+      </memberdef>
+      <memberdef kind="function" id="ConstexprFor_8h_1ad51e60890ee897ee1a9932b6899f81a7" prot="public" static="no" constexpr="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>auto</type>
+            <declname>Begin</declname>
+            <defname>Begin</defname>
+          </param>
+          <param>
+            <type>auto</type>
+            <declname>End</declname>
+            <defname>End</defname>
+          </param>
+          <param>
+            <type>typename F</type>
+          </param>
+        </templateparamlist>
+        <type>constexpr void</type>
+        <definition>constexpr void pbat::common::ForRange</definition>
+        <argsstring>(F &amp;&amp;f)</argsstring>
+        <name>ForRange</name>
+        <param>
+          <type>F &amp;&amp;</type>
+          <declname>f</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/common/ConstexprFor.h" line="23" column="16" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/common/ConstexprFor.h" bodystart="23" bodyend="30"/>
+      </memberdef>
+      <memberdef kind="function" id="common_2Eigen_8h_1a512df9ed3106c3a6299a1000c14fc76f" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>CContiguousArithmeticRange</type>
+            <declname>R</declname>
+            <defname>R</defname>
+          </param>
+        </templateparamlist>
+        <type>Eigen::Map&lt; Eigen::Vector&lt; std::ranges::range_value_t&lt; R &gt;, Eigen::Dynamic &gt; const  &gt;</type>
+        <definition>Eigen::Map&lt;Eigen::Vector&lt;std::ranges::range_value_t&lt;R&gt;, Eigen::Dynamic&gt; const&gt; pbat::common::ToEigen</definition>
+        <argsstring>(R &amp;&amp;r)</argsstring>
+        <name>ToEigen</name>
+        <param>
+          <type>R &amp;&amp;</type>
+          <declname>r</declname>
+        </param>
+        <briefdescription>
+<para>Map a range of scalars to an eigen vector of such scalars. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>R</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>r</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para></para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/common/Eigen.h" line="19" column="12" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/common/Eigen.h" bodystart="19" bodyend="25"/>
+      </memberdef>
+      <memberdef kind="function" id="common_2Eigen_8h_1a5c7dd1993d8cafb3e0e9e3e2e7e508a4" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>CContiguousArithmeticMatrixRange</type>
+            <declname>R</declname>
+            <defname>R</defname>
+          </param>
+        </templateparamlist>
+        <type>Eigen::Map&lt; Eigen::Matrix&lt; typename std::ranges::range_value_t&lt; R &gt;::Scalar, Eigen::Dynamic, Eigen::Dynamic &gt; const  &gt;</type>
+        <definition>Eigen::Map&lt;Eigen::Matrix&lt; typename std::ranges::range_value_t&lt;R&gt;::Scalar, Eigen::Dynamic, Eigen::Dynamic&gt; const&gt; pbat::common::ToEigen</definition>
+        <argsstring>(R &amp;&amp;r)</argsstring>
+        <name>ToEigen</name>
+        <param>
+          <type>R &amp;&amp;</type>
+          <declname>r</declname>
+        </param>
+        <briefdescription>
+<para>Map a range of scalar matrices to an eigen vector of such scalars. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>R</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>r</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para></para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/common/Eigen.h" line="38" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/common/Eigen.h" bodystart="38" bodyend="52"/>
+      </memberdef>
+      <memberdef kind="function" id="common_2Eigen_8h_1abd49b77d32cd35798788ce543e960484" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>std::ranges::random_access_range</type>
+            <declname>R</declname>
+            <defname>R</defname>
+          </param>
+        </templateparamlist>
+        <type>auto</type>
+        <definition>auto pbat::common::Slice</definition>
+        <argsstring>(R &amp;&amp;r)</argsstring>
+        <name>Slice</name>
+        <param>
+          <type>R &amp;&amp;</type>
+          <declname>r</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/common/Eigen.h" line="70" column="6" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/common/Eigen.h" bodystart="70" bodyend="73"/>
+      </memberdef>
+      <memberdef kind="function" id="Hash_8h_1a885d9ddd0a8d228a4400bd6966646797" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>typename T</type>
+          </param>
+        </templateparamlist>
+        <type>void</type>
+        <definition>void pbat::common::HashCombineAccumulate</definition>
+        <argsstring>(std::size_t &amp;seed, T const &amp;val)</argsstring>
+        <name>HashCombineAccumulate</name>
+        <param>
+          <type>std::size_t &amp;</type>
+          <declname>seed</declname>
+        </param>
+        <param>
+          <type>T const &amp;</type>
+          <declname>val</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/common/Hash.h" line="14" column="6" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/common/Hash.h" bodystart="14" bodyend="17"/>
+      </memberdef>
+      <memberdef kind="function" id="Hash_8h_1a2e31fc908ee3b2f6014b77805d347c15" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>typename...</type>
+            <declname>Types</declname>
+            <defname>Types</defname>
+          </param>
+        </templateparamlist>
+        <type>std::size_t</type>
+        <definition>std::size_t pbat::common::HashCombine</definition>
+        <argsstring>(const Types &amp;... args)</argsstring>
+        <name>HashCombine</name>
+        <param>
+          <type>const Types &amp;...</type>
+          <declname>args</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/common/Hash.h" line="20" column="13" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/common/Hash.h" bodystart="20" bodyend="25"/>
+      </memberdef>
+      <memberdef kind="function" id="Indexing_8cpp_1a1350da69b174ef9125b5475bcaf9a062" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>pbat::common::TEST_CASE</definition>
+        <argsstring>(&quot;[common] Cumulative sums are computable from any integral range type&quot;)</argsstring>
+        <name>TEST_CASE</name>
+        <param>
+          <type>&quot; Cumulative sums are computable from any integral range type&quot;</type>
+          <array>[common]</array>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/common/Indexing.cpp" line="11" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/common/Indexing.cpp" bodystart="11" bodyend="18"/>
+      </memberdef>
+      <memberdef kind="function" id="Indexing_8h_1a810be1ad663014f41f1982067a6798a7" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>CIndexRange</type>
+            <declname>R</declname>
+            <defname>R</defname>
+          </param>
+          <param>
+            <type>std::integral</type>
+            <declname>TIndex</declname>
+            <defname>TIndex</defname>
+            <defval>std::ranges::range_value_t&lt;R&gt;</defval>
+          </param>
+        </templateparamlist>
+        <type>Eigen::Vector&lt; TIndex, Eigen::Dynamic &gt;</type>
+        <definition>Eigen::Vector&lt;TIndex, Eigen::Dynamic&gt; pbat::common::CumSum</definition>
+        <argsstring>(R &amp;&amp;sizes)</argsstring>
+        <name>CumSum</name>
+        <param>
+          <type>R &amp;&amp;</type>
+          <declname>sizes</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/common/Indexing.h" line="16" column="15" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/common/Indexing.h" bodystart="16" bodyend="27"/>
+      </memberdef>
+      <memberdef kind="function" id="Indexing_8h_1a6a0a962921b92ece60f72a388cfe18be" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>std::integral</type>
+            <declname>TIndex</declname>
+            <defname>TIndex</defname>
+          </param>
+        </templateparamlist>
+        <type>Eigen::Vector&lt; TIndex, Eigen::Dynamic &gt;</type>
+        <definition>Eigen::Vector&lt;TIndex, Eigen::Dynamic&gt; pbat::common::Counts</definition>
+        <argsstring>(auto begin, auto end, TIndex ncounts)</argsstring>
+        <name>Counts</name>
+        <param>
+          <type>auto</type>
+          <declname>begin</declname>
+        </param>
+        <param>
+          <type>auto</type>
+          <declname>end</declname>
+        </param>
+        <param>
+          <type>TIndex</type>
+          <declname>ncounts</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/common/Indexing.h" line="30" column="15" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/common/Indexing.h" bodystart="30" bodyend="38"/>
+      </memberdef>
+      <memberdef kind="function" id="Indexing_8h_1abe78f6b8ae71d1baf07e1f7d25e2332b" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>std::integral</type>
+            <declname>TIndex</declname>
+            <defname>TIndex</defname>
+          </param>
+        </templateparamlist>
+        <type>Eigen::Vector&lt; TIndex, Eigen::Dynamic &gt;</type>
+        <definition>Eigen::Vector&lt;TIndex, Eigen::Dynamic&gt; pbat::common::Shuffle</definition>
+        <argsstring>(TIndex begin, TIndex end)</argsstring>
+        <name>Shuffle</name>
+        <param>
+          <type>TIndex</type>
+          <declname>begin</declname>
+        </param>
+        <param>
+          <type>TIndex</type>
+          <declname>end</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/common/Indexing.h" line="41" column="15" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/common/Indexing.h" bodystart="41" bodyend="50"/>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/common/ArgSort.h" line="11" column="16"/>
+  </compounddef>
+</doxygen>

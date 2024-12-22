@@ -1,0 +1,113 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="Morton_8h" kind="file" language="C++">
+    <compoundname>Morton.h</compoundname>
+    <includes refid="HostDevice_8h" local="yes">pbat/HostDevice.h</includes>
+    <includes local="no">array</includes>
+    <includes local="no">cmath</includes>
+    <includes local="no">cstdint</includes>
+    <includedby refid="source_2pbat_2geometry_2Geometry_8h" local="yes">/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/Geometry.h</includedby>
+    <includedby refid="Morton_8cpp" local="yes">/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/Morton.cpp</includedby>
+    <incdepgraph>
+      <node id="5">
+        <label>cstdint</label>
+      </node>
+      <node id="4">
+        <label>cmath</label>
+      </node>
+      <node id="2">
+        <label>pbat/HostDevice.h</label>
+        <link refid="HostDevice_8h_source"/>
+      </node>
+      <node id="1">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/Morton.h</label>
+        <link refid="Morton_8h"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>array</label>
+      </node>
+    </incdepgraph>
+    <invincdepgraph>
+      <node id="3">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/Pbat.h</label>
+        <link refid="Pbat_8h_source"/>
+      </node>
+      <node id="1">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/Morton.h</label>
+        <link refid="Morton_8h"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/Geometry.h</label>
+        <link refid="source_2pbat_2geometry_2Geometry_8h_source"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+      </node>
+    </invincdepgraph>
+    <innernamespace refid="namespacepbat">pbat</innernamespace>
+    <innernamespace refid="namespacepbat_1_1geometry">pbat::geometry</innernamespace>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="preprocessor">#ifndef<sp/>PBAT_GEOMETRY_MORTON_H</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="2"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>PBAT_GEOMETRY_MORTON_H</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="3"><highlight class="normal"></highlight></codeline>
+<codeline lineno="4"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;pbat/HostDevice.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="5"><highlight class="normal"></highlight></codeline>
+<codeline lineno="6"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;array&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="7"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;cmath&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="8"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;cstdint&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="9"><highlight class="normal"></highlight></codeline>
+<codeline lineno="10"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal">pbat<sp/>{</highlight></codeline>
+<codeline lineno="11"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal">geometry<sp/>{</highlight></codeline>
+<codeline lineno="12"><highlight class="normal"></highlight></codeline>
+<codeline lineno="13"><highlight class="normal"></highlight><highlight class="keyword">using</highlight><highlight class="normal"><sp/>MortonCodeType<sp/>=<sp/>std::uint32_t;</highlight></codeline>
+<codeline lineno="14"><highlight class="normal"></highlight></codeline>
+<codeline lineno="15"><highlight class="normal"></highlight><highlight class="comment">//<sp/>NOTE:</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="16"><highlight class="normal"></highlight><highlight class="comment">//<sp/>We<sp/>make<sp/>these<sp/>(otherwise<sp/>non-templated)<sp/>functions<sp/>inline<sp/>so<sp/>that<sp/>they</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="17"><highlight class="normal"></highlight><highlight class="comment">//<sp/>are<sp/>compiled<sp/>by<sp/>nvcc<sp/>whenever<sp/>this<sp/>header<sp/>is<sp/>included<sp/>in<sp/>cuda<sp/>sources.</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="18"><highlight class="normal"></highlight></codeline>
+<codeline lineno="19"><highlight class="normal"></highlight><highlight class="comment">//<sp/>Expands<sp/>a<sp/>10-bit<sp/>integer<sp/>into<sp/>30<sp/>bits</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="20"><highlight class="normal"></highlight><highlight class="comment">//<sp/>by<sp/>inserting<sp/>2<sp/>zeros<sp/>after<sp/>each<sp/>bit.</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="21"><highlight class="normal">PBAT_HOST_DEVICE<sp/></highlight><highlight class="keyword">inline</highlight><highlight class="normal"><sp/>MortonCodeType<sp/>ExpandBits(MortonCodeType<sp/>v)</highlight></codeline>
+<codeline lineno="22"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="23"><highlight class="normal"><sp/><sp/><sp/><sp/>v<sp/>=<sp/>(v<sp/>*<sp/>0x00010001u)<sp/>&amp;<sp/>0xFF0000FFu;</highlight></codeline>
+<codeline lineno="24"><highlight class="normal"><sp/><sp/><sp/><sp/>v<sp/>=<sp/>(v<sp/>*<sp/>0x00000101u)<sp/>&amp;<sp/>0x0F00F00Fu;</highlight></codeline>
+<codeline lineno="25"><highlight class="normal"><sp/><sp/><sp/><sp/>v<sp/>=<sp/>(v<sp/>*<sp/>0x00000011u)<sp/>&amp;<sp/>0xC30C30C3u;</highlight></codeline>
+<codeline lineno="26"><highlight class="normal"><sp/><sp/><sp/><sp/>v<sp/>=<sp/>(v<sp/>*<sp/>0x00000005u)<sp/>&amp;<sp/>0x49249249u;</highlight></codeline>
+<codeline lineno="27"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>v;</highlight></codeline>
+<codeline lineno="28"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="29"><highlight class="normal"></highlight></codeline>
+<codeline lineno="30"><highlight class="normal"></highlight><highlight class="comment">//<sp/>Calculates<sp/>a<sp/>30-bit<sp/>Morton<sp/>code<sp/>for<sp/>the</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="31"><highlight class="normal"></highlight><highlight class="comment">//<sp/>given<sp/>3D<sp/>point<sp/>located<sp/>within<sp/>the<sp/>unit<sp/>cube<sp/>[0,1].</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="32"><highlight class="normal">[[maybe_unused]]<sp/>PBAT_HOST_DEVICE<sp/></highlight><highlight class="keyword">inline</highlight><highlight class="normal"><sp/>MortonCodeType<sp/>Morton3D(std::array&lt;float,<sp/>3&gt;<sp/>x)</highlight></codeline>
+<codeline lineno="33"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="34"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/>namespace<sp/></highlight><highlight class="normal">std;</highlight></codeline>
+<codeline lineno="35"><highlight class="normal"><sp/><sp/><sp/><sp/>x[0]<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/>min(max(x[0]<sp/>*<sp/>1024.0f,<sp/>0.0f),<sp/>1023.0f);</highlight></codeline>
+<codeline lineno="36"><highlight class="normal"><sp/><sp/><sp/><sp/>x[1]<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/>min(max(x[1]<sp/>*<sp/>1024.0f,<sp/>0.0f),<sp/>1023.0f);</highlight></codeline>
+<codeline lineno="37"><highlight class="normal"><sp/><sp/><sp/><sp/>x[2]<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/>min(max(x[2]<sp/>*<sp/>1024.0f,<sp/>0.0f),<sp/>1023.0f);</highlight></codeline>
+<codeline lineno="38"><highlight class="normal"><sp/><sp/><sp/><sp/>MortonCodeType<sp/>xx<sp/>=<sp/>ExpandBits(</highlight><highlight class="keyword">static_cast&lt;</highlight><highlight class="normal">MortonCodeType</highlight><highlight class="keyword">&gt;</highlight><highlight class="normal">(x[0]));</highlight></codeline>
+<codeline lineno="39"><highlight class="normal"><sp/><sp/><sp/><sp/>MortonCodeType<sp/>yy<sp/>=<sp/>ExpandBits(</highlight><highlight class="keyword">static_cast&lt;</highlight><highlight class="normal">MortonCodeType</highlight><highlight class="keyword">&gt;</highlight><highlight class="normal">(x[1]));</highlight></codeline>
+<codeline lineno="40"><highlight class="normal"><sp/><sp/><sp/><sp/>MortonCodeType<sp/>zz<sp/>=<sp/>ExpandBits(</highlight><highlight class="keyword">static_cast&lt;</highlight><highlight class="normal">MortonCodeType</highlight><highlight class="keyword">&gt;</highlight><highlight class="normal">(x[2]));</highlight></codeline>
+<codeline lineno="41"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>xx<sp/>*<sp/>4<sp/>+<sp/>yy<sp/>*<sp/>2<sp/>+<sp/>zz;</highlight></codeline>
+<codeline lineno="42"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="43"><highlight class="normal"></highlight></codeline>
+<codeline lineno="44"><highlight class="normal">}<sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>geometry</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="45"><highlight class="normal">}<sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>pbat</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="46"><highlight class="normal"></highlight></codeline>
+<codeline lineno="47"><highlight class="normal"></highlight><highlight class="preprocessor">#endif<sp/>//<sp/>PBAT_GEOMETRY_MORTON_H</highlight></codeline>
+    </programlisting>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/Morton.h"/>
+  </compounddef>
+</doxygen>

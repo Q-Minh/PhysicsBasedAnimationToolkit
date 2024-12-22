@@ -1,0 +1,12 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="namespacepbat_1_1gpu_1_1vbd_1_1tests" kind="namespace" language="C++">
+    <compoundname>pbat::gpu::vbd::tests</compoundname>
+    <innerclass refid="classpbat_1_1gpu_1_1vbd_1_1tests_1_1LinearFemMesh" prot="public">pbat::gpu::vbd::tests::LinearFemMesh</innerclass>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/vbd/tests/Fem.cpp" line="13" column="15"/>
+  </compounddef>
+</doxygen>

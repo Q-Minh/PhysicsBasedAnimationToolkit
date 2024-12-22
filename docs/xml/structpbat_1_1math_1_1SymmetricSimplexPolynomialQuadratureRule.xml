@@ -1,0 +1,46 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="structpbat_1_1math_1_1SymmetricSimplexPolynomialQuadratureRule" kind="struct" language="C++" prot="public">
+    <compoundname>pbat::math::SymmetricSimplexPolynomialQuadratureRule</compoundname>
+    <includes refid="SymmetricQuadratureRules_8h" local="no">SymmetricQuadratureRules.h</includes>
+    <templateparamlist>
+      <param>
+        <type>int</type>
+        <declname>Dims</declname>
+        <defname>Dims</defname>
+      </param>
+      <param>
+        <type>int</type>
+        <declname>Order</declname>
+        <defname>Order</defname>
+      </param>
+    </templateparamlist>
+    <briefdescription>
+<para>Symmetric quadrature rule for reference simplices in 1,2,3 dimensions, i.e. with vertices having coordinate values 0 or 1. </para>
+    </briefdescription>
+    <detaileddescription>
+<para>The points are specified as (kDims+1) coordinate tuples in affine coordinates, i.e. the first coordinate = 1 - sum(other kDims coordinates). This is not necessary, and can be removed, but for now, we leave it as is.</para>
+<para><parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>Dims</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>Order</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/SymmetricQuadratureRules.h" line="40" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/SymmetricQuadratureRules.h" bodystart="40" bodyend="-1"/>
+    <listofallmembers>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

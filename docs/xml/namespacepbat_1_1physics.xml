@@ -1,0 +1,91 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="namespacepbat_1_1physics" kind="namespace" language="C++">
+    <compoundname>pbat::physics</compoundname>
+    <innerclass refid="structpbat_1_1physics_1_1SaintVenantKirchhoffEnergy" prot="public">pbat::physics::SaintVenantKirchhoffEnergy</innerclass>
+    <innerclass refid="structpbat_1_1physics_1_1SaintVenantKirchhoffEnergy_3_011_01_4" prot="public">pbat::physics::SaintVenantKirchhoffEnergy&lt; 1 &gt;</innerclass>
+    <innerclass refid="structpbat_1_1physics_1_1SaintVenantKirchhoffEnergy_3_012_01_4" prot="public">pbat::physics::SaintVenantKirchhoffEnergy&lt; 2 &gt;</innerclass>
+    <innerclass refid="structpbat_1_1physics_1_1SaintVenantKirchhoffEnergy_3_013_01_4" prot="public">pbat::physics::SaintVenantKirchhoffEnergy&lt; 3 &gt;</innerclass>
+    <innerclass refid="structpbat_1_1physics_1_1StableNeoHookeanEnergy" prot="public">pbat::physics::StableNeoHookeanEnergy</innerclass>
+    <innerclass refid="structpbat_1_1physics_1_1StableNeoHookeanEnergy_3_011_01_4" prot="public">pbat::physics::StableNeoHookeanEnergy&lt; 1 &gt;</innerclass>
+    <innerclass refid="structpbat_1_1physics_1_1StableNeoHookeanEnergy_3_012_01_4" prot="public">pbat::physics::StableNeoHookeanEnergy&lt; 2 &gt;</innerclass>
+    <innerclass refid="structpbat_1_1physics_1_1StableNeoHookeanEnergy_3_013_01_4" prot="public">pbat::physics::StableNeoHookeanEnergy&lt; 3 &gt;</innerclass>
+      <sectiondef kind="var">
+      <memberdef kind="variable" id="HyperElasticity_8h_1a5ae8c49c1adf82ecef7aa396f6b4157c" prot="public" static="no" mutable="no">
+        <templateparamlist>
+          <param>
+            <type>class T</type>
+          </param>
+        </templateparamlist>
+        <type>concept</type>
+        <definition>concept pbat::physics::CHyperElasticEnergy</definition>
+        <argsstring></argsstring>
+        <name>CHyperElasticEnergy</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/physics/HyperElasticity.h" line="23" column="9" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/physics/HyperElasticity.h" bodystart="23" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="func">
+      <memberdef kind="function" id="HyperElasticity_8cpp_1a6b67d26740d9112ecc6f654fefcf0387" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>std::pair&lt; Scalar, Scalar &gt;</type>
+        <definition>PBAT_API std::pair&lt; Scalar, Scalar &gt; pbat::physics::LameCoefficients</definition>
+        <argsstring>(Scalar Y, Scalar nu)</argsstring>
+        <name>LameCoefficients</name>
+        <param>
+          <type>Scalar</type>
+          <declname>Y</declname>
+        </param>
+        <param>
+          <type>Scalar</type>
+          <declname>nu</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/physics/HyperElasticity.cpp" line="6" column="11" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/physics/HyperElasticity.cpp" bodystart="6" bodyend="11" declfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/physics/HyperElasticity.h" declline="16" declcolumn="20"/>
+      </memberdef>
+      <memberdef kind="function" id="HyperElasticity_8h_1aa2b42c1da3bf53df1a15b9cf25eee9c7" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class TDerivedY</type>
+          </param>
+          <param>
+            <type>class TDerivednu</type>
+          </param>
+        </templateparamlist>
+        <type>std::pair&lt; VectorX, VectorX &gt;</type>
+        <definition>std::pair&lt; VectorX, VectorX &gt; pbat::physics::LameCoefficients</definition>
+        <argsstring>(Eigen::DenseBase&lt; TDerivedY &gt; const &amp;Y, Eigen::DenseBase&lt; TDerivednu &gt; const &amp;nu)</argsstring>
+        <name>LameCoefficients</name>
+        <param>
+          <type>Eigen::DenseBase&lt; TDerivedY &gt; const &amp;</type>
+          <declname>Y</declname>
+        </param>
+        <param>
+          <type>Eigen::DenseBase&lt; TDerivednu &gt; const &amp;</type>
+          <declname>nu</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/physics/HyperElasticity.h" line="65" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/physics/HyperElasticity.h" bodystart="65" bodyend="86" declfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/physics/HyperElasticity.h" declline="20" declcolumn="1"/>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/physics/HyperElasticity.cpp" line="4" column="17"/>
+  </compounddef>
+</doxygen>

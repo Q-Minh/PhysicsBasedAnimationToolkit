@@ -1,0 +1,151 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="Primitives_8h" kind="file" language="C++">
+    <compoundname>Primitives.h</compoundname>
+    <includes local="yes">PhysicsBasedAnimationToolkitExport.h</includes>
+    <includes refid="gpu_2Aliases_8h" local="yes">pbat/gpu/Aliases.h</includes>
+    <includedby refid="source_2pbat_2gpu_2geometry_2Bvh_8h" local="yes">/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/geometry/Bvh.h</includedby>
+    <includedby refid="source_2pbat_2gpu_2geometry_2BvhQuery_8h" local="yes">/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/geometry/BvhQuery.h</includedby>
+    <includedby refid="source_2pbat_2gpu_2geometry_2SweepAndPrune_8h" local="yes">/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/geometry/SweepAndPrune.h</includedby>
+    <includedby refid="Bodies_8cpp" local="no">/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/gpu/geometry/Bodies.cpp</includedby>
+    <includedby refid="Bvh_8cpp" local="no">/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/gpu/geometry/Bvh.cpp</includedby>
+    <includedby refid="BvhQuery_8cpp" local="no">/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/gpu/geometry/BvhQuery.cpp</includedby>
+    <includedby refid="Points_8cpp" local="no">/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/gpu/geometry/Points.cpp</includedby>
+    <includedby refid="Simplices_8cpp" local="no">/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/gpu/geometry/Simplices.cpp</includedby>
+    <includedby refid="SweepAndPrune_8cpp" local="no">/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/gpu/geometry/SweepAndPrune.cpp</includedby>
+    <incdepgraph>
+      <node id="4">
+        <label>Eigen/Core</label>
+      </node>
+      <node id="3">
+        <label>pbat/gpu/Aliases.h</label>
+        <link refid="gpu_2Aliases_8h_source"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>PhysicsBasedAnimationToolkitExport.h</label>
+      </node>
+      <node id="1">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/geometry/Primitives.h</label>
+        <link refid="Primitives_8h"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+      </node>
+    </incdepgraph>
+    <invincdepgraph>
+      <node id="2">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/geometry/Bvh.h</label>
+        <link refid="source_2pbat_2gpu_2geometry_2Bvh_8h_source"/>
+      </node>
+      <node id="1">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/geometry/Primitives.h</label>
+        <link refid="Primitives_8h"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+      </node>
+      <node id="4">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/geometry/SweepAndPrune.h</label>
+        <link refid="source_2pbat_2gpu_2geometry_2SweepAndPrune_8h_source"/>
+      </node>
+      <node id="3">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/geometry/BvhQuery.h</label>
+        <link refid="source_2pbat_2gpu_2geometry_2BvhQuery_8h_source"/>
+      </node>
+    </invincdepgraph>
+    <innerclass refid="classpbat_1_1gpu_1_1geometry_1_1Points" prot="public">pbat::gpu::geometry::Points</innerclass>
+    <innerclass refid="classpbat_1_1gpu_1_1geometry_1_1Simplices" prot="public">pbat::gpu::geometry::Simplices</innerclass>
+    <innerclass refid="classpbat_1_1gpu_1_1geometry_1_1Bodies" prot="public">pbat::gpu::geometry::Bodies</innerclass>
+    <innernamespace refid="namespacepbat">pbat</innernamespace>
+    <innernamespace refid="namespacepbat_1_1gpu">pbat::gpu</innernamespace>
+    <innernamespace refid="namespacepbat_1_1gpu_1_1geometry">pbat::gpu::geometry</innernamespace>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="preprocessor">#ifndef<sp/>PBAT_GPU_GEOMETRY_PRIMITIVES_H</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="2"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>PBAT_GPU_GEOMETRY_PRIMITIVES_H</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="3"><highlight class="normal"></highlight></codeline>
+<codeline lineno="4"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;PhysicsBasedAnimationToolkitExport.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="5"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;pbat/gpu/Aliases.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="6"><highlight class="normal"></highlight></codeline>
+<codeline lineno="7"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal">pbat<sp/>{</highlight></codeline>
+<codeline lineno="8"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal">gpu<sp/>{</highlight></codeline>
+<codeline lineno="9"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal">geometry<sp/>{</highlight></codeline>
+<codeline lineno="10"><highlight class="normal"></highlight></codeline>
+<codeline lineno="11"><highlight class="normal"></highlight><highlight class="keyword">struct<sp/></highlight><highlight class="normal">PointsImpl;</highlight></codeline>
+<codeline lineno="12"><highlight class="normal"></highlight><highlight class="keyword">struct<sp/></highlight><highlight class="normal">SimplicesImpl;</highlight></codeline>
+<codeline lineno="13"><highlight class="normal"></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal">BodiesImpl;</highlight></codeline>
+<codeline lineno="14"><highlight class="normal"></highlight></codeline>
+<codeline lineno="15" refid="classpbat_1_1gpu_1_1geometry_1_1Points" refkind="compound"><highlight class="normal"></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal"><ref refid="classpbat_1_1gpu_1_1geometry_1_1Points" kindref="compound">Points</ref></highlight></codeline>
+<codeline lineno="16"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="17"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="22"><highlight class="normal"><sp/><sp/><sp/><sp/>PBAT_API<sp/><ref refid="classpbat_1_1gpu_1_1geometry_1_1Points_1ac70186a25620b2453e04ef02a5089edb" kindref="member">Points</ref>(Eigen::Ref&lt;GpuMatrixX<sp/>const&gt;<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>V);</highlight></codeline>
+<codeline lineno="27"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="classpbat_1_1gpu_1_1geometry_1_1Points_1ac70186a25620b2453e04ef02a5089edb" kindref="member">Points</ref>(<ref refid="classpbat_1_1gpu_1_1geometry_1_1Points" kindref="compound">Points</ref><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;)<sp/>=<sp/></highlight><highlight class="keyword">delete</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="33"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="classpbat_1_1gpu_1_1geometry_1_1Points" kindref="compound">Points</ref>&amp;<sp/><ref refid="classpbat_1_1gpu_1_1geometry_1_1Points_1aa058c80acebb5acba6f986fb3dce369c" kindref="member">operator=</ref>(<ref refid="classpbat_1_1gpu_1_1geometry_1_1Points" kindref="compound">Points</ref><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;)<sp/>=<sp/></highlight><highlight class="keyword">delete</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="38"><highlight class="normal"><sp/><sp/><sp/><sp/>PBAT_API<sp/><ref refid="classpbat_1_1gpu_1_1geometry_1_1Points_1ac70186a25620b2453e04ef02a5089edb" kindref="member">Points</ref>(<ref refid="classpbat_1_1gpu_1_1geometry_1_1Points" kindref="compound">Points</ref>&amp;&amp;)<sp/>noexcept;</highlight></codeline>
+<codeline lineno="44"><highlight class="normal"><sp/><sp/><sp/><sp/>PBAT_API<sp/><ref refid="classpbat_1_1gpu_1_1geometry_1_1Points" kindref="compound">Points</ref>&amp;<sp/><ref refid="classpbat_1_1gpu_1_1geometry_1_1Points_1aa058c80acebb5acba6f986fb3dce369c" kindref="member">operator=</ref>(<ref refid="classpbat_1_1gpu_1_1geometry_1_1Points" kindref="compound">Points</ref>&amp;&amp;)<sp/>noexcept;</highlight></codeline>
+<codeline lineno="49"><highlight class="normal"><sp/><sp/><sp/><sp/>PBAT_API<sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="classpbat_1_1gpu_1_1geometry_1_1Points_1a19a7d9816492891547437842bfeeafa3" kindref="member">Update</ref>(Eigen::Ref&lt;GpuMatrixX<sp/>const&gt;<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>V);</highlight></codeline>
+<codeline lineno="54"><highlight class="normal"><sp/><sp/><sp/><sp/>PBAT_API<sp/>PointsImpl*<sp/><ref refid="classpbat_1_1gpu_1_1geometry_1_1Points_1adcb59c45fd47b85a1f4537bb8cb817fa" kindref="member">Impl</ref>();</highlight></codeline>
+<codeline lineno="59"><highlight class="normal"><sp/><sp/><sp/><sp/>PBAT_API<sp/>PointsImpl<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">*<sp/><ref refid="classpbat_1_1gpu_1_1geometry_1_1Points_1adcb59c45fd47b85a1f4537bb8cb817fa" kindref="member">Impl</ref>()<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="64"><highlight class="normal"><sp/><sp/><sp/><sp/>PBAT_API<sp/>GpuMatrixX<sp/><ref refid="classpbat_1_1gpu_1_1geometry_1_1Points_1ad9e12f237a3ab5f2a2072b4e53d64cd6" kindref="member">Get</ref>()<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="68"><highlight class="normal"><sp/><sp/><sp/><sp/>PBAT_API<sp/>~<ref refid="classpbat_1_1gpu_1_1geometry_1_1Points" kindref="compound">Points</ref>();</highlight></codeline>
+<codeline lineno="69"><highlight class="normal"></highlight></codeline>
+<codeline lineno="70"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">private</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="71"><highlight class="normal"><sp/><sp/><sp/><sp/>PointsImpl*<sp/>mImpl;</highlight></codeline>
+<codeline lineno="72"><highlight class="normal">};</highlight></codeline>
+<codeline lineno="73"><highlight class="normal"></highlight></codeline>
+<codeline lineno="74" refid="classpbat_1_1gpu_1_1geometry_1_1Simplices" refkind="compound"><highlight class="normal"></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal"><ref refid="classpbat_1_1gpu_1_1geometry_1_1Simplices" kindref="compound">Simplices</ref></highlight></codeline>
+<codeline lineno="75"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="76"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="77"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">enum<sp/>class</highlight><highlight class="normal"><sp/>ESimplexType<sp/>:<sp/>int<sp/>{<sp/>Vertex<sp/>=<sp/>1,<sp/>Edge<sp/>=<sp/>2,<sp/>Triangle<sp/>=<sp/>3,<sp/>Tetrahedron<sp/>=<sp/>4<sp/>};</highlight></codeline>
+<codeline lineno="78"><highlight class="normal"></highlight></codeline>
+<codeline lineno="83"><highlight class="normal"><sp/><sp/><sp/><sp/>PBAT_API<sp/><ref refid="classpbat_1_1gpu_1_1geometry_1_1Simplices_1ac0d1dca0e59fd7ff0953caa9ddffcf8f" kindref="member">Simplices</ref>(Eigen::Ref&lt;GpuIndexMatrixX<sp/>const&gt;<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>C);</highlight></codeline>
+<codeline lineno="88"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="classpbat_1_1gpu_1_1geometry_1_1Simplices_1ac0d1dca0e59fd7ff0953caa9ddffcf8f" kindref="member">Simplices</ref>(<ref refid="classpbat_1_1gpu_1_1geometry_1_1Simplices" kindref="compound">Simplices</ref><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;)<sp/>=<sp/></highlight><highlight class="keyword">delete</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="94"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="classpbat_1_1gpu_1_1geometry_1_1Simplices" kindref="compound">Simplices</ref>&amp;<sp/><ref refid="classpbat_1_1gpu_1_1geometry_1_1Simplices_1a2cdc4316c5406973cd56236246bf0701" kindref="member">operator=</ref>(<ref refid="classpbat_1_1gpu_1_1geometry_1_1Simplices" kindref="compound">Simplices</ref><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;)<sp/>=<sp/></highlight><highlight class="keyword">delete</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="99"><highlight class="normal"><sp/><sp/><sp/><sp/>PBAT_API<sp/><ref refid="classpbat_1_1gpu_1_1geometry_1_1Simplices_1ac0d1dca0e59fd7ff0953caa9ddffcf8f" kindref="member">Simplices</ref>(<ref refid="classpbat_1_1gpu_1_1geometry_1_1Simplices" kindref="compound">Simplices</ref>&amp;&amp;)<sp/>noexcept;</highlight></codeline>
+<codeline lineno="105"><highlight class="normal"><sp/><sp/><sp/><sp/>PBAT_API<sp/><ref refid="classpbat_1_1gpu_1_1geometry_1_1Simplices" kindref="compound">Simplices</ref>&amp;<sp/><ref refid="classpbat_1_1gpu_1_1geometry_1_1Simplices_1a2cdc4316c5406973cd56236246bf0701" kindref="member">operator=</ref>(<ref refid="classpbat_1_1gpu_1_1geometry_1_1Simplices" kindref="compound">Simplices</ref>&amp;&amp;)<sp/>noexcept;</highlight></codeline>
+<codeline lineno="110"><highlight class="normal"><sp/><sp/><sp/><sp/>PBAT_API<sp/>GpuIndexMatrixX<sp/><ref refid="classpbat_1_1gpu_1_1geometry_1_1Simplices_1ae0b17517e839bb8f0410656c0bd78808" kindref="member">Get</ref>()<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="115"><highlight class="normal"><sp/><sp/><sp/><sp/>PBAT_API<sp/>ESimplexType<sp/><ref refid="classpbat_1_1gpu_1_1geometry_1_1Simplices_1a749967454cca3b0434c747f3840d5452" kindref="member">Type</ref>()<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="120"><highlight class="normal"><sp/><sp/><sp/><sp/>PBAT_API<sp/>SimplicesImpl*<sp/><ref refid="classpbat_1_1gpu_1_1geometry_1_1Simplices_1a8c3e07904023d58793d55ea88b2acf9d" kindref="member">Impl</ref>();</highlight></codeline>
+<codeline lineno="125"><highlight class="normal"><sp/><sp/><sp/><sp/>PBAT_API<sp/>SimplicesImpl<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">*<sp/><ref refid="classpbat_1_1gpu_1_1geometry_1_1Simplices_1a8c3e07904023d58793d55ea88b2acf9d" kindref="member">Impl</ref>()<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="129"><highlight class="normal"><sp/><sp/><sp/><sp/>PBAT_API<sp/>~<ref refid="classpbat_1_1gpu_1_1geometry_1_1Simplices" kindref="compound">Simplices</ref>();</highlight></codeline>
+<codeline lineno="130"><highlight class="normal"></highlight></codeline>
+<codeline lineno="131"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">private</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="132"><highlight class="normal"><sp/><sp/><sp/><sp/>SimplicesImpl*<sp/>mImpl;</highlight></codeline>
+<codeline lineno="133"><highlight class="normal">};</highlight></codeline>
+<codeline lineno="134"><highlight class="normal"></highlight></codeline>
+<codeline lineno="135" refid="classpbat_1_1gpu_1_1geometry_1_1Bodies" refkind="compound"><highlight class="normal"></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal"><ref refid="classpbat_1_1gpu_1_1geometry_1_1Bodies" kindref="compound">Bodies</ref></highlight></codeline>
+<codeline lineno="136"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="137"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="142"><highlight class="normal"><sp/><sp/><sp/><sp/>PBAT_API<sp/><ref refid="classpbat_1_1gpu_1_1geometry_1_1Bodies_1aa9d57e5789a657a3d6509588878e251b" kindref="member">Bodies</ref>(Eigen::Ref&lt;GpuIndexVectorX<sp/>const&gt;<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>B);</highlight></codeline>
+<codeline lineno="147"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="classpbat_1_1gpu_1_1geometry_1_1Bodies_1aa9d57e5789a657a3d6509588878e251b" kindref="member">Bodies</ref>(<ref refid="classpbat_1_1gpu_1_1geometry_1_1Bodies" kindref="compound">Bodies</ref><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;)<sp/>=<sp/></highlight><highlight class="keyword">delete</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="153"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="classpbat_1_1gpu_1_1geometry_1_1Bodies" kindref="compound">Bodies</ref>&amp;<sp/><ref refid="classpbat_1_1gpu_1_1geometry_1_1Bodies_1a179d0e43f6ef0b030449b71df892f90c" kindref="member">operator=</ref>(<ref refid="classpbat_1_1gpu_1_1geometry_1_1Bodies" kindref="compound">Bodies</ref><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;)<sp/>=<sp/></highlight><highlight class="keyword">delete</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="158"><highlight class="normal"><sp/><sp/><sp/><sp/>PBAT_API<sp/><ref refid="classpbat_1_1gpu_1_1geometry_1_1Bodies_1aa9d57e5789a657a3d6509588878e251b" kindref="member">Bodies</ref>(<ref refid="classpbat_1_1gpu_1_1geometry_1_1Bodies" kindref="compound">Bodies</ref>&amp;&amp;)<sp/>noexcept;</highlight></codeline>
+<codeline lineno="164"><highlight class="normal"><sp/><sp/><sp/><sp/>PBAT_API<sp/><ref refid="classpbat_1_1gpu_1_1geometry_1_1Bodies" kindref="compound">Bodies</ref>&amp;<sp/><ref refid="classpbat_1_1gpu_1_1geometry_1_1Bodies_1a179d0e43f6ef0b030449b71df892f90c" kindref="member">operator=</ref>(<ref refid="classpbat_1_1gpu_1_1geometry_1_1Bodies" kindref="compound">Bodies</ref>&amp;&amp;)<sp/>noexcept;</highlight></codeline>
+<codeline lineno="169"><highlight class="normal"><sp/><sp/><sp/><sp/>PBAT_API<sp/>GpuIndexMatrixX<sp/><ref refid="classpbat_1_1gpu_1_1geometry_1_1Bodies_1a90cb51e568c42b77e27e3ba8ff8d4f87" kindref="member">Get</ref>()<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="174"><highlight class="normal"><sp/><sp/><sp/><sp/>PBAT_API<sp/>std::size_t<sp/><ref refid="classpbat_1_1gpu_1_1geometry_1_1Bodies_1a5f9f58af51892f9e72650be283456e32" kindref="member">NumberOfBodies</ref>()<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="179"><highlight class="normal"><sp/><sp/><sp/><sp/>PBAT_API<sp/>BodiesImpl*<sp/><ref refid="classpbat_1_1gpu_1_1geometry_1_1Bodies_1a983e1cea391dd22239d8285029466468" kindref="member">Impl</ref>();</highlight></codeline>
+<codeline lineno="184"><highlight class="normal"><sp/><sp/><sp/><sp/>PBAT_API<sp/>BodiesImpl<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">*<sp/><ref refid="classpbat_1_1gpu_1_1geometry_1_1Bodies_1a983e1cea391dd22239d8285029466468" kindref="member">Impl</ref>()<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="188"><highlight class="normal"><sp/><sp/><sp/><sp/>PBAT_API<sp/>~<ref refid="classpbat_1_1gpu_1_1geometry_1_1Bodies" kindref="compound">Bodies</ref>();</highlight></codeline>
+<codeline lineno="189"><highlight class="normal"></highlight></codeline>
+<codeline lineno="190"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">private</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="191"><highlight class="normal"><sp/><sp/><sp/><sp/>BodiesImpl*<sp/>mImpl;</highlight></codeline>
+<codeline lineno="192"><highlight class="normal">};</highlight></codeline>
+<codeline lineno="193"><highlight class="normal"></highlight></codeline>
+<codeline lineno="194"><highlight class="normal">}<sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>geometry</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="195"><highlight class="normal">}<sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>gpu</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="196"><highlight class="normal">}<sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>pbat</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="197"><highlight class="normal"></highlight></codeline>
+<codeline lineno="198"><highlight class="normal"></highlight><highlight class="preprocessor">#endif<sp/>//<sp/>PBAT_GPU_GEOMETRY_PRIMITIVES_H</highlight></codeline>
+    </programlisting>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/geometry/Primitives.h"/>
+  </compounddef>
+</doxygen>

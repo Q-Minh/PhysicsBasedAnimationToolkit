@@ -1,0 +1,96 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="namespacepbat_1_1geometry" kind="namespace" language="C++">
+    <compoundname>pbat::geometry</compoundname>
+    <innerclass refid="classpbat_1_1geometry_1_1AxisAlignedBoundingBox" prot="public">pbat::geometry::AxisAlignedBoundingBox</innerclass>
+    <innerclass refid="classpbat_1_1geometry_1_1BoundingVolumeHierarchy" prot="public">pbat::geometry::BoundingVolumeHierarchy</innerclass>
+    <innerclass refid="classpbat_1_1geometry_1_1KdTree" prot="public">pbat::geometry::KdTree</innerclass>
+    <innerclass refid="structpbat_1_1geometry_1_1KdTreeNode" prot="public">pbat::geometry::KdTreeNode</innerclass>
+    <innerclass refid="classpbat_1_1geometry_1_1TetrahedralAabbHierarchy" prot="public">pbat::geometry::TetrahedralAabbHierarchy</innerclass>
+    <innerclass refid="classpbat_1_1geometry_1_1TriangleAabbHierarchy" prot="public">pbat::geometry::TriangleAabbHierarchy</innerclass>
+    <innerclass refid="classpbat_1_1geometry_1_1TriangleAabbHierarchy_3_012_01_4" prot="public">pbat::geometry::TriangleAabbHierarchy&lt; 2 &gt;</innerclass>
+    <innerclass refid="classpbat_1_1geometry_1_1TriangleAabbHierarchy_3_013_01_4" prot="public">pbat::geometry::TriangleAabbHierarchy&lt; 3 &gt;</innerclass>
+    <innernamespace refid="namespacepbat_1_1geometry_1_1ClosestPointQueries">pbat::geometry::ClosestPointQueries</innernamespace>
+    <innernamespace refid="namespacepbat_1_1geometry_1_1DistanceQueries">pbat::geometry::DistanceQueries</innernamespace>
+    <innernamespace refid="namespacepbat_1_1geometry_1_1IntersectionQueries">pbat::geometry::IntersectionQueries</innernamespace>
+    <innernamespace refid="namespacepbat_1_1geometry_1_1model">pbat::geometry::model</innernamespace>
+    <innernamespace refid="namespacepbat_1_1geometry_1_1OverlapQueries">pbat::geometry::OverlapQueries</innernamespace>
+      <sectiondef kind="typedef">
+      <memberdef kind="typedef" id="Morton_8h_1a545e31e68746db2bafcc4d94404a93be" prot="public" static="no">
+        <type>std::uint32_t</type>
+        <definition>using pbat::geometry::MortonCodeType = typedef std::uint32_t</definition>
+        <argsstring></argsstring>
+        <name>MortonCodeType</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/Morton.h" line="13" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/Morton.h" bodystart="13" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="func">
+      <memberdef kind="function" id="source_2pbat_2geometry_2MeshBoundary_8cpp_1a82dc20eb7200409d6e19baaba4a52894" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>std::tuple&lt; IndexVectorX, IndexMatrixX &gt;</type>
+        <definition>std::tuple&lt; IndexVectorX, IndexMatrixX &gt; pbat::geometry::SimplexMeshBoundary</definition>
+        <argsstring>(IndexMatrixX const &amp;C, Index n)</argsstring>
+        <name>SimplexMeshBoundary</name>
+        <param>
+          <type>IndexMatrixX const &amp;</type>
+          <declname>C</declname>
+        </param>
+        <param>
+          <type>Index</type>
+          <declname>n</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/MeshBoundary.cpp" line="14" column="12" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/MeshBoundary.cpp" bodystart="14" bodyend="99" declfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/MeshBoundary.h" declline="12" declcolumn="1"/>
+      </memberdef>
+      <memberdef kind="function" id="Morton_8h_1a4901d411d4efdcab87a01633da21026f" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>PBAT_HOST_DEVICE MortonCodeType</type>
+        <definition>PBAT_HOST_DEVICE MortonCodeType pbat::geometry::ExpandBits</definition>
+        <argsstring>(MortonCodeType v)</argsstring>
+        <name>ExpandBits</name>
+        <param>
+          <type>MortonCodeType</type>
+          <declname>v</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/Morton.h" line="21" column="40" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/Morton.h" bodystart="21" bodyend="28"/>
+      </memberdef>
+      <memberdef kind="function" id="Morton_8h_1aeb3191ad08c7219e3297f957c6630a49" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>PBAT_HOST_DEVICE MortonCodeType</type>
+        <definition>PBAT_HOST_DEVICE MortonCodeType pbat::geometry::Morton3D</definition>
+        <argsstring>(std::array&lt; float, 3 &gt; x)</argsstring>
+        <name>Morton3D</name>
+        <param>
+          <type>std::array&lt; float, 3 &gt;</type>
+          <declname>x</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/Morton.h" line="32" column="41" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/Morton.h" bodystart="32" bodyend="42"/>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/AxisAlignedBoundingBox.h" line="14" column="18"/>
+  </compounddef>
+</doxygen>

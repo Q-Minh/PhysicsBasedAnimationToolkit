@@ -1,0 +1,18 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="dir_d1c8710bc4630794f8b7ba1a63f0af99" kind="dir">
+    <compoundname>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/physics</compoundname>
+    <innerfile refid="HyperElasticity_8cpp">HyperElasticity.cpp</innerfile>
+    <innerfile refid="HyperElasticity_8h">HyperElasticity.h</innerfile>
+    <innerfile refid="Physics_8h">Physics.h</innerfile>
+    <innerfile refid="SaintVenantKirchhoffEnergy_8cpp">SaintVenantKirchhoffEnergy.cpp</innerfile>
+    <innerfile refid="SaintVenantKirchhoffEnergy_8h">SaintVenantKirchhoffEnergy.h</innerfile>
+    <innerfile refid="StableNeoHookeanEnergy_8cpp">StableNeoHookeanEnergy.cpp</innerfile>
+    <innerfile refid="StableNeoHookeanEnergy_8h">StableNeoHookeanEnergy.h</innerfile>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/physics/"/>
+  </compounddef>
+</doxygen>

@@ -1,0 +1,367 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="structpbat_1_1fem_1_1SymmetricLaplacianMatrix" kind="struct" language="C++" prot="public">
+    <compoundname>pbat::fem::SymmetricLaplacianMatrix</compoundname>
+    <templateparamlist>
+      <param>
+        <type>CMesh</type>
+        <declname>TMesh</declname>
+        <defname>TMesh</defname>
+      </param>
+    </templateparamlist>
+      <sectiondef kind="public-type">
+      <memberdef kind="typedef" id="structpbat_1_1fem_1_1SymmetricLaplacianMatrix_1a18a17e0e214658c058deace3428ff052" prot="public" static="no">
+        <type><ref refid="structpbat_1_1fem_1_1SymmetricLaplacianMatrix" kindref="compound">SymmetricLaplacianMatrix</ref>&lt; TMesh &gt;</type>
+        <definition>using pbat::fem::SymmetricLaplacianMatrix&lt; TMesh &gt;::SelfType =  SymmetricLaplacianMatrix&lt;TMesh&gt;</definition>
+        <argsstring></argsstring>
+        <name>SelfType</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/LaplacianMatrix.h" line="20" column="5" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/LaplacianMatrix.h" bodystart="20" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="structpbat_1_1fem_1_1SymmetricLaplacianMatrix_1af2fd471cc9e099dfd985dfdb6a299973" prot="public" static="no">
+        <type>TMesh</type>
+        <definition>using pbat::fem::SymmetricLaplacianMatrix&lt; TMesh &gt;::MeshType =  TMesh</definition>
+        <argsstring></argsstring>
+        <name>MeshType</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/LaplacianMatrix.h" line="21" column="5" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/LaplacianMatrix.h" bodystart="21" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="structpbat_1_1fem_1_1SymmetricLaplacianMatrix_1a81e0a34b09a9743dc4d5d61eb0abb2b9" prot="public" static="no">
+        <type>typename TMesh::ElementType</type>
+        <definition>using pbat::fem::SymmetricLaplacianMatrix&lt; TMesh &gt;::ElementType =  typename TMesh::ElementType</definition>
+        <argsstring></argsstring>
+        <name>ElementType</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/LaplacianMatrix.h" line="22" column="5" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/LaplacianMatrix.h" bodystart="22" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="public-static-attrib">
+      <memberdef kind="variable" id="structpbat_1_1fem_1_1SymmetricLaplacianMatrix_1a33f624d504385589db1ae4a92d68dfa8" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>constexpr int</type>
+        <definition>constexpr int pbat::fem::SymmetricLaplacianMatrix&lt; TMesh &gt;::kOrder</definition>
+        <argsstring></argsstring>
+        <name>kOrder</name>
+        <initializer>= 2 * (ElementType::kOrder - 1)</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/LaplacianMatrix.h" line="24" column="26" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/LaplacianMatrix.h" bodystart="24" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="structpbat_1_1fem_1_1SymmetricLaplacianMatrix_1a0729053a9efbaaf5dc72251006679b59" prot="public" static="no" mutable="no">
+        <type>MeshType const  &amp;</type>
+        <definition>MeshType const&amp; pbat::fem::SymmetricLaplacianMatrix&lt; TMesh &gt;::mesh</definition>
+        <argsstring></argsstring>
+        <name>mesh</name>
+        <briefdescription>
+<para>The finite element mesh. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/LaplacianMatrix.h" line="59" column="20" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/LaplacianMatrix.h" bodystart="59" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpbat_1_1fem_1_1SymmetricLaplacianMatrix_1a9cf4473d2d1bb3a43600d2663ebd1a13" prot="public" static="no" mutable="no">
+        <type>Eigen::Ref&lt; IndexVectorX const  &gt;</type>
+        <definition>Eigen::Ref&lt;IndexVectorX const&gt; pbat::fem::SymmetricLaplacianMatrix&lt; TMesh &gt;::eg</definition>
+        <argsstring></argsstring>
+        <name>eg</name>
+        <briefdescription>
+<para>|#quad.pts.|x1 array of elements associated with quadrature points </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/LaplacianMatrix.h" line="61" column="9" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/LaplacianMatrix.h" bodystart="61" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpbat_1_1fem_1_1SymmetricLaplacianMatrix_1a946eec37c38431cdf0decc3af3100b84" prot="public" static="no" mutable="no">
+        <type>Eigen::Ref&lt; VectorX const  &gt;</type>
+        <definition>Eigen::Ref&lt;VectorX const&gt; pbat::fem::SymmetricLaplacianMatrix&lt; TMesh &gt;::wg</definition>
+        <argsstring></argsstring>
+        <name>wg</name>
+        <briefdescription>
+<para>|#quad.pts.|x1 array of quadrature weights </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/LaplacianMatrix.h" line="62" column="16" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/LaplacianMatrix.h" bodystart="62" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpbat_1_1fem_1_1SymmetricLaplacianMatrix_1a93ef6286736b1319178196d79b80e669" prot="public" static="no" mutable="no">
+        <type>Eigen::Ref&lt; MatrixX const  &gt;</type>
+        <definition>Eigen::Ref&lt;MatrixX const&gt; pbat::fem::SymmetricLaplacianMatrix&lt; TMesh &gt;::GNeg</definition>
+        <argsstring></argsstring>
+        <name>GNeg</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>|#element nodes|x|<ref refid="structpbat_1_1fem_1_1SymmetricLaplacianMatrix_1aa9f41cd7b467274298540aa19b3665b7" kindref="member">dims</ref> * #quad.pts. * #elements| matrix of element shape function gradients at quadrature points </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/LaplacianMatrix.h" line="64" column="9" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/LaplacianMatrix.h" bodystart="64" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpbat_1_1fem_1_1SymmetricLaplacianMatrix_1afeb5c5e984920f9d3965baf349aaf3e9" prot="public" static="no" mutable="no">
+        <type>MatrixX</type>
+        <definition>MatrixX pbat::fem::SymmetricLaplacianMatrix&lt; TMesh &gt;::deltag</definition>
+        <argsstring></argsstring>
+        <name>deltag</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>|#element nodes| x |#element nodes * #quad.pts.| matrix of element laplacians at quadrature points </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/LaplacianMatrix.h" line="66" column="13" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/LaplacianMatrix.h" bodystart="66" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpbat_1_1fem_1_1SymmetricLaplacianMatrix_1aa9f41cd7b467274298540aa19b3665b7" prot="public" static="no" mutable="no">
+        <type>int</type>
+        <definition>int pbat::fem::SymmetricLaplacianMatrix&lt; TMesh &gt;::dims</definition>
+        <argsstring></argsstring>
+        <name>dims</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Dimensionality of image of FEM function space, i.e. this Laplacian matrix is actually L \kronecker I_{dims \times dims}. Should be &gt;= 1. </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/LaplacianMatrix.h" line="68" column="9" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/LaplacianMatrix.h" bodystart="68" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="public-func">
+      <memberdef kind="function" id="structpbat_1_1fem_1_1SymmetricLaplacianMatrix_1a660d7cd79f99a1412f1f1f7939b80e6f" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type></type>
+        <definition>pbat::fem::SymmetricLaplacianMatrix&lt; TMesh &gt;::SymmetricLaplacianMatrix</definition>
+        <argsstring>(MeshType const &amp;mesh, Eigen::Ref&lt; IndexVectorX const &gt; const &amp;eg, Eigen::Ref&lt; VectorX const &gt; const &amp;wg, Eigen::Ref&lt; MatrixX const &gt; const &amp;GNegg, int dims=1)</argsstring>
+        <name>SymmetricLaplacianMatrix</name>
+        <param>
+          <type>MeshType const &amp;</type>
+          <declname>mesh</declname>
+        </param>
+        <param>
+          <type>Eigen::Ref&lt; IndexVectorX const &gt; const &amp;</type>
+          <declname>eg</declname>
+        </param>
+        <param>
+          <type>Eigen::Ref&lt; VectorX const &gt; const &amp;</type>
+          <declname>wg</declname>
+        </param>
+        <param>
+          <type>Eigen::Ref&lt; MatrixX const &gt; const &amp;</type>
+          <declname>GNegg</declname>
+        </param>
+        <param>
+          <type>int</type>
+          <declname>dims</declname>
+          <defval>1</defval>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/LaplacianMatrix.h" line="26" column="5" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/LaplacianMatrix.h" bodystart="73" bodyend="82"/>
+      </memberdef>
+      <memberdef kind="function" id="structpbat_1_1fem_1_1SymmetricLaplacianMatrix_1a5f741a04c25387eb10644dbe4be274c7" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="structpbat_1_1fem_1_1SymmetricLaplacianMatrix" kindref="compound">SelfType</ref> &amp;</type>
+        <definition>SelfType&amp; pbat::fem::SymmetricLaplacianMatrix&lt; TMesh &gt;::operator=</definition>
+        <argsstring>(SelfType const &amp;)=delete</argsstring>
+        <name>operator=</name>
+        <param>
+          <type><ref refid="structpbat_1_1fem_1_1SymmetricLaplacianMatrix" kindref="compound">SelfType</ref> const &amp;</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/LaplacianMatrix.h" line="33" column="14"/>
+      </memberdef>
+      <memberdef kind="function" id="structpbat_1_1fem_1_1SymmetricLaplacianMatrix_1af15426d457125c6202a83ccbe3b69421" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class TDerivedIn</type>
+          </param>
+          <param>
+            <type>class TDerivedOut</type>
+          </param>
+        </templateparamlist>
+        <type>void</type>
+        <definition>void pbat::fem::SymmetricLaplacianMatrix&lt; TMesh &gt;::Apply</definition>
+        <argsstring>(Eigen::MatrixBase&lt; TDerivedIn &gt; const &amp;x, Eigen::DenseBase&lt; TDerivedOut &gt; &amp;y) const</argsstring>
+        <name>Apply</name>
+        <param>
+          <type>Eigen::MatrixBase&lt; TDerivedIn &gt; const &amp;</type>
+          <declname>x</declname>
+        </param>
+        <param>
+          <type>Eigen::DenseBase&lt; TDerivedOut &gt; &amp;</type>
+          <declname>y</declname>
+        </param>
+        <briefdescription>
+<para>Applies this matrix as a linear operator on x, adding result to y. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>TDerivedIn</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>TDerivedOut</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>x</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>y</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/LaplacianMatrix.h" line="44" column="10" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/LaplacianMatrix.h" bodystart="169" bodyend="207"/>
+      </memberdef>
+      <memberdef kind="function" id="structpbat_1_1fem_1_1SymmetricLaplacianMatrix_1a8829f69967f3550c3d92494e948a8661" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>CSCMatrix</type>
+        <definition>CSCMatrix pbat::fem::SymmetricLaplacianMatrix&lt; TMesh &gt;::ToMatrix</definition>
+        <argsstring>() const</argsstring>
+        <name>ToMatrix</name>
+        <briefdescription>
+<para>Transforms this matrix-free matrix representation into sparse compressed format. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para></para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/LaplacianMatrix.h" line="50" column="15" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/LaplacianMatrix.h" bodystart="85" bodyend="117"/>
+      </memberdef>
+      <memberdef kind="function" id="structpbat_1_1fem_1_1SymmetricLaplacianMatrix_1a72e72564d1b27a611d8276f96eb483cb" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>Index</type>
+        <definition>Index pbat::fem::SymmetricLaplacianMatrix&lt; TMesh &gt;::InputDimensions</definition>
+        <argsstring>() const</argsstring>
+        <name>InputDimensions</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/LaplacianMatrix.h" line="52" column="11" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/LaplacianMatrix.h" bodystart="52" bodyend="52"/>
+      </memberdef>
+      <memberdef kind="function" id="structpbat_1_1fem_1_1SymmetricLaplacianMatrix_1a19d37e680b3569a53a7939cda0e742af" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>Index</type>
+        <definition>Index pbat::fem::SymmetricLaplacianMatrix&lt; TMesh &gt;::OutputDimensions</definition>
+        <argsstring>() const</argsstring>
+        <name>OutputDimensions</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/LaplacianMatrix.h" line="53" column="11" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/LaplacianMatrix.h" bodystart="53" bodyend="53"/>
+      </memberdef>
+      <memberdef kind="function" id="structpbat_1_1fem_1_1SymmetricLaplacianMatrix_1a37d31ded963052eafe5c7768f6873026" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>void</type>
+        <definition>void pbat::fem::SymmetricLaplacianMatrix&lt; TMesh &gt;::ComputeElementLaplacians</definition>
+        <argsstring>()</argsstring>
+        <name>ComputeElementLaplacians</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/LaplacianMatrix.h" line="55" column="10" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/LaplacianMatrix.h" bodystart="120" bodyend="137"/>
+      </memberdef>
+      <memberdef kind="function" id="structpbat_1_1fem_1_1SymmetricLaplacianMatrix_1a12c33c0ed8eba7b8271f48517c3a0f27" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>void</type>
+        <definition>void pbat::fem::SymmetricLaplacianMatrix&lt; TMesh &gt;::CheckValidState</definition>
+        <argsstring>() const</argsstring>
+        <name>CheckValidState</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/LaplacianMatrix.h" line="57" column="10" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/LaplacianMatrix.h" bodystart="140" bodyend="165"/>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/LaplacianMatrix.h" line="18" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/LaplacianMatrix.h" bodystart="17" bodyend="70"/>
+    <listofallmembers>
+      <member refid="structpbat_1_1fem_1_1SymmetricLaplacianMatrix_1af15426d457125c6202a83ccbe3b69421" prot="public" virt="non-virtual"><scope>pbat::fem::SymmetricLaplacianMatrix</scope><name>Apply</name></member>
+      <member refid="structpbat_1_1fem_1_1SymmetricLaplacianMatrix_1a12c33c0ed8eba7b8271f48517c3a0f27" prot="public" virt="non-virtual"><scope>pbat::fem::SymmetricLaplacianMatrix</scope><name>CheckValidState</name></member>
+      <member refid="structpbat_1_1fem_1_1SymmetricLaplacianMatrix_1a37d31ded963052eafe5c7768f6873026" prot="public" virt="non-virtual"><scope>pbat::fem::SymmetricLaplacianMatrix</scope><name>ComputeElementLaplacians</name></member>
+      <member refid="structpbat_1_1fem_1_1SymmetricLaplacianMatrix_1afeb5c5e984920f9d3965baf349aaf3e9" prot="public" virt="non-virtual"><scope>pbat::fem::SymmetricLaplacianMatrix</scope><name>deltag</name></member>
+      <member refid="structpbat_1_1fem_1_1SymmetricLaplacianMatrix_1aa9f41cd7b467274298540aa19b3665b7" prot="public" virt="non-virtual"><scope>pbat::fem::SymmetricLaplacianMatrix</scope><name>dims</name></member>
+      <member refid="structpbat_1_1fem_1_1SymmetricLaplacianMatrix_1a9cf4473d2d1bb3a43600d2663ebd1a13" prot="public" virt="non-virtual"><scope>pbat::fem::SymmetricLaplacianMatrix</scope><name>eg</name></member>
+      <member refid="structpbat_1_1fem_1_1SymmetricLaplacianMatrix_1a81e0a34b09a9743dc4d5d61eb0abb2b9" prot="public" virt="non-virtual"><scope>pbat::fem::SymmetricLaplacianMatrix</scope><name>ElementType</name></member>
+      <member refid="structpbat_1_1fem_1_1SymmetricLaplacianMatrix_1a93ef6286736b1319178196d79b80e669" prot="public" virt="non-virtual"><scope>pbat::fem::SymmetricLaplacianMatrix</scope><name>GNeg</name></member>
+      <member refid="structpbat_1_1fem_1_1SymmetricLaplacianMatrix_1a72e72564d1b27a611d8276f96eb483cb" prot="public" virt="non-virtual"><scope>pbat::fem::SymmetricLaplacianMatrix</scope><name>InputDimensions</name></member>
+      <member refid="structpbat_1_1fem_1_1SymmetricLaplacianMatrix_1a33f624d504385589db1ae4a92d68dfa8" prot="public" virt="non-virtual"><scope>pbat::fem::SymmetricLaplacianMatrix</scope><name>kOrder</name></member>
+      <member refid="structpbat_1_1fem_1_1SymmetricLaplacianMatrix_1a0729053a9efbaaf5dc72251006679b59" prot="public" virt="non-virtual"><scope>pbat::fem::SymmetricLaplacianMatrix</scope><name>mesh</name></member>
+      <member refid="structpbat_1_1fem_1_1SymmetricLaplacianMatrix_1af2fd471cc9e099dfd985dfdb6a299973" prot="public" virt="non-virtual"><scope>pbat::fem::SymmetricLaplacianMatrix</scope><name>MeshType</name></member>
+      <member refid="structpbat_1_1fem_1_1SymmetricLaplacianMatrix_1a5f741a04c25387eb10644dbe4be274c7" prot="public" virt="non-virtual"><scope>pbat::fem::SymmetricLaplacianMatrix</scope><name>operator=</name></member>
+      <member refid="structpbat_1_1fem_1_1SymmetricLaplacianMatrix_1a19d37e680b3569a53a7939cda0e742af" prot="public" virt="non-virtual"><scope>pbat::fem::SymmetricLaplacianMatrix</scope><name>OutputDimensions</name></member>
+      <member refid="structpbat_1_1fem_1_1SymmetricLaplacianMatrix_1a18a17e0e214658c058deace3428ff052" prot="public" virt="non-virtual"><scope>pbat::fem::SymmetricLaplacianMatrix</scope><name>SelfType</name></member>
+      <member refid="structpbat_1_1fem_1_1SymmetricLaplacianMatrix_1a660d7cd79f99a1412f1f1f7939b80e6f" prot="public" virt="non-virtual"><scope>pbat::fem::SymmetricLaplacianMatrix</scope><name>SymmetricLaplacianMatrix</name></member>
+      <member refid="structpbat_1_1fem_1_1SymmetricLaplacianMatrix_1a8829f69967f3550c3d92494e948a8661" prot="public" virt="non-virtual"><scope>pbat::fem::SymmetricLaplacianMatrix</scope><name>ToMatrix</name></member>
+      <member refid="structpbat_1_1fem_1_1SymmetricLaplacianMatrix_1a946eec37c38431cdf0decc3af3100b84" prot="public" virt="non-virtual"><scope>pbat::fem::SymmetricLaplacianMatrix</scope><name>wg</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

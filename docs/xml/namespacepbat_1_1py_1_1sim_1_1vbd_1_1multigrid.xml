@@ -1,0 +1,81 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="namespacepbat_1_1py_1_1sim_1_1vbd_1_1multigrid" kind="namespace" language="C++">
+    <compoundname>pbat::py::sim::vbd::multigrid</compoundname>
+      <sectiondef kind="func">
+      <memberdef kind="function" id="bindings_2pypbat_2sim_2vbd_2multigrid_2Hierarchy_8cpp_1a49c6f0d54206cebf14a5ed497ba57c5a" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void pbat::py::sim::vbd::multigrid::BindHierarchy</definition>
+        <argsstring>(pybind11::module &amp;m)</argsstring>
+        <name>BindHierarchy</name>
+        <param>
+          <type>pybind11::module &amp;</type>
+          <declname>m</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/sim/vbd/multigrid/Hierarchy.cpp" line="16" column="6" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/sim/vbd/multigrid/Hierarchy.cpp" bodystart="16" bodyend="69" declfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/sim/vbd/multigrid/Hierarchy.h" declline="12" declcolumn="6"/>
+      </memberdef>
+      <memberdef kind="function" id="bindings_2pypbat_2sim_2vbd_2multigrid_2Integrator_8cpp_1aef833a13c86e967f88a2bc2d143e5cba" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void pbat::py::sim::vbd::multigrid::BindIntegrator</definition>
+        <argsstring>(pybind11::module &amp;m)</argsstring>
+        <name>BindIntegrator</name>
+        <param>
+          <type>pybind11::module &amp;</type>
+          <declname>m</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/sim/vbd/multigrid/Integrator.cpp" line="12" column="6" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/sim/vbd/multigrid/Integrator.cpp" bodystart="12" bodyend="25" declfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/sim/vbd/multigrid/Integrator.h" declline="12" declcolumn="6"/>
+      </memberdef>
+      <memberdef kind="function" id="bindings_2pypbat_2sim_2vbd_2multigrid_2Level_8cpp_1ad067b0dc8b327c478ef9db7bd914ca4a" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void pbat::py::sim::vbd::multigrid::BindLevel</definition>
+        <argsstring>(pybind11::module &amp;m)</argsstring>
+        <name>BindLevel</name>
+        <param>
+          <type>pybind11::module &amp;</type>
+          <declname>m</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/sim/vbd/multigrid/Level.cpp" line="14" column="6" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/sim/vbd/multigrid/Level.cpp" bodystart="14" bodyend="116" declfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/sim/vbd/multigrid/Level.h" declline="12" declcolumn="6"/>
+      </memberdef>
+      <memberdef kind="function" id="Multigrid_8cpp_1ad9baec9c460fd44583dd242b1df49976" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void pbat::py::sim::vbd::multigrid::Bind</definition>
+        <argsstring>(pybind11::module &amp;m)</argsstring>
+        <name>Bind</name>
+        <param>
+          <type>pybind11::module &amp;</type>
+          <declname>m</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/sim/vbd/multigrid/Multigrid.cpp" line="13" column="6" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/sim/vbd/multigrid/Multigrid.cpp" bodystart="13" bodyend="18" declfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/sim/vbd/multigrid/Multigrid.h" declline="12" declcolumn="6"/>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/sim/vbd/multigrid/Hierarchy.cpp" line="14" column="19"/>
+  </compounddef>
+</doxygen>

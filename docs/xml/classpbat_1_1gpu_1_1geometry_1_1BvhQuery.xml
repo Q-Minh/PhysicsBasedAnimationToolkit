@@ -1,0 +1,388 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="classpbat_1_1gpu_1_1geometry_1_1BvhQuery" kind="class" language="C++" prot="public">
+    <compoundname>pbat::gpu::geometry::BvhQuery</compoundname>
+      <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="classpbat_1_1gpu_1_1geometry_1_1BvhQuery_1adc81de94a15d50e2ebe0888fd23666dd" prot="private" static="no" mutable="no">
+        <type>BvhQueryImpl *</type>
+        <definition>BvhQueryImpl* pbat::gpu::geometry::BvhQuery::mImpl</definition>
+        <argsstring></argsstring>
+        <name>mImpl</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/geometry/BvhQuery.h" line="82" column="18" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/geometry/BvhQuery.h" bodystart="82" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpbat_1_1gpu_1_1geometry_1_1BvhQuery_1a886ca6a675ab41a627de1f3bd667bad8" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>PBAT_API</type>
+        <definition>PBAT_API pbat::gpu::geometry::BvhQuery::BvhQuery</definition>
+        <argsstring>(std::size_t nPrimitives, std::size_t nOverlaps, std::size_t nNearestNeighbours)</argsstring>
+        <name>BvhQuery</name>
+        <param>
+          <type>std::size_t</type>
+          <declname>nPrimitives</declname>
+        </param>
+        <param>
+          <type>std::size_t</type>
+          <declname>nOverlaps</declname>
+        </param>
+        <param>
+          <type>std::size_t</type>
+          <declname>nNearestNeighbours</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/geometry/BvhQuery.h" line="21" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1gpu_1_1geometry_1_1BvhQuery_1a0ff19c9dde29fd3cc9364f1e74017181" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>pbat::gpu::geometry::BvhQuery::BvhQuery</definition>
+        <argsstring>(BvhQuery const &amp;)=delete</argsstring>
+        <name>BvhQuery</name>
+        <param>
+          <type><ref refid="classpbat_1_1gpu_1_1geometry_1_1BvhQuery" kindref="compound">BvhQuery</ref> const &amp;</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/geometry/BvhQuery.h" line="23" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1gpu_1_1geometry_1_1BvhQuery_1a2491182e2ef3931c98805d4f02cdea37" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpbat_1_1gpu_1_1geometry_1_1BvhQuery" kindref="compound">BvhQuery</ref> &amp;</type>
+        <definition>BvhQuery&amp; pbat::gpu::geometry::BvhQuery::operator=</definition>
+        <argsstring>(BvhQuery const &amp;)=delete</argsstring>
+        <name>operator=</name>
+        <param>
+          <type><ref refid="classpbat_1_1gpu_1_1geometry_1_1BvhQuery" kindref="compound">BvhQuery</ref> const &amp;</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/geometry/BvhQuery.h" line="24" column="14"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1gpu_1_1geometry_1_1BvhQuery_1a77276842e6d95a8bbe163956ecd95681" prot="public" static="no" const="no" explicit="no" inline="no" noexcept="yes" virt="non-virtual">
+        <type>PBAT_API</type>
+        <definition>PBAT_API pbat::gpu::geometry::BvhQuery::BvhQuery</definition>
+        <argsstring>(BvhQuery &amp;&amp;other) noexcept</argsstring>
+        <name>BvhQuery</name>
+        <param>
+          <type><ref refid="classpbat_1_1gpu_1_1geometry_1_1BvhQuery" kindref="compound">BvhQuery</ref> &amp;&amp;</type>
+          <declname>other</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/geometry/BvhQuery.h" line="26" column="14"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1gpu_1_1geometry_1_1BvhQuery_1ac4e72f9329f6ffb74adac68656015b49" prot="public" static="no" const="no" explicit="no" inline="no" noexcept="yes" virt="non-virtual">
+        <type>PBAT_API <ref refid="classpbat_1_1gpu_1_1geometry_1_1BvhQuery" kindref="compound">BvhQuery</ref> &amp;</type>
+        <definition>PBAT_API BvhQuery&amp; pbat::gpu::geometry::BvhQuery::operator=</definition>
+        <argsstring>(BvhQuery &amp;&amp;other) noexcept</argsstring>
+        <name>operator=</name>
+        <param>
+          <type><ref refid="classpbat_1_1gpu_1_1geometry_1_1BvhQuery" kindref="compound">BvhQuery</ref> &amp;&amp;</type>
+          <declname>other</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/geometry/BvhQuery.h" line="27" column="23"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1gpu_1_1geometry_1_1BvhQuery_1acdb1c896255a34b0eebe4608699bd719" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>PBAT_API void</type>
+        <definition>PBAT_API void pbat::gpu::geometry::BvhQuery::Build</definition>
+        <argsstring>(Points const &amp;P, Simplices const &amp;S, Eigen::Vector&lt; GpuScalar, 3 &gt; const &amp;min, Eigen::Vector&lt; GpuScalar, 3 &gt; const &amp;max, GpuScalar expansion=std::numeric_limits&lt; GpuScalar &gt;::epsilon())</argsstring>
+        <name>Build</name>
+        <param>
+          <type><ref refid="classpbat_1_1gpu_1_1geometry_1_1Points" kindref="compound">Points</ref> const &amp;</type>
+          <declname>P</declname>
+        </param>
+        <param>
+          <type><ref refid="classpbat_1_1gpu_1_1geometry_1_1Simplices" kindref="compound">Simplices</ref> const &amp;</type>
+          <declname>S</declname>
+        </param>
+        <param>
+          <type>Eigen::Vector&lt; GpuScalar, 3 &gt; const &amp;</type>
+          <declname>min</declname>
+        </param>
+        <param>
+          <type>Eigen::Vector&lt; GpuScalar, 3 &gt; const &amp;</type>
+          <declname>max</declname>
+        </param>
+        <param>
+          <type>GpuScalar</type>
+          <declname>expansion</declname>
+          <defval>std::numeric_limits&lt; GpuScalar &gt;::epsilon()</defval>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>P</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>S</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>min</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>max</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>expansion</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/geometry/BvhQuery.h" line="37" column="19"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1gpu_1_1geometry_1_1BvhQuery_1a7ea4e8bafe08472b82ec3a3c74343981" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>PBAT_API GpuIndexMatrixX</type>
+        <definition>PBAT_API GpuIndexMatrixX pbat::gpu::geometry::BvhQuery::DetectOverlaps</definition>
+        <argsstring>(Points const &amp;P, Simplices const &amp;S1, Simplices const &amp;S2, Bvh const &amp;bvh)</argsstring>
+        <name>DetectOverlaps</name>
+        <param>
+          <type><ref refid="classpbat_1_1gpu_1_1geometry_1_1Points" kindref="compound">Points</ref> const &amp;</type>
+          <declname>P</declname>
+        </param>
+        <param>
+          <type><ref refid="classpbat_1_1gpu_1_1geometry_1_1Simplices" kindref="compound">Simplices</ref> const &amp;</type>
+          <declname>S1</declname>
+        </param>
+        <param>
+          <type><ref refid="classpbat_1_1gpu_1_1geometry_1_1Simplices" kindref="compound">Simplices</ref> const &amp;</type>
+          <declname>S2</declname>
+        </param>
+        <param>
+          <type><ref refid="classpbat_1_1gpu_1_1geometry_1_1Bvh" kindref="compound">Bvh</ref> const &amp;</type>
+          <declname>bvh</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>P</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>S1</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>S2</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>bvh</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>2x|#overlaps| matrix O of overlapping simplices, such that (O(0,k), O(1,k)) yields the k^{th} overlapping pair (si \in S1,sj \in S2). </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/geometry/BvhQuery.h" line="54" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1gpu_1_1geometry_1_1BvhQuery_1ac6e0a2fc0e6aa2bc6ccd88e4a9d0ce39" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>PBAT_API GpuIndexMatrixX</type>
+        <definition>PBAT_API GpuIndexMatrixX pbat::gpu::geometry::BvhQuery::DetectContactPairsFromOverlaps</definition>
+        <argsstring>(Points const &amp;P, Simplices const &amp;S1, Simplices const &amp;S2, Bodies const &amp;BV, Bvh const &amp;bvh, GpuScalar dhat=std::numeric_limits&lt; GpuScalar &gt;::max(), GpuScalar dzero=std::numeric_limits&lt; GpuScalar &gt;::epsilon())</argsstring>
+        <name>DetectContactPairsFromOverlaps</name>
+        <param>
+          <type><ref refid="classpbat_1_1gpu_1_1geometry_1_1Points" kindref="compound">Points</ref> const &amp;</type>
+          <declname>P</declname>
+        </param>
+        <param>
+          <type><ref refid="classpbat_1_1gpu_1_1geometry_1_1Simplices" kindref="compound">Simplices</ref> const &amp;</type>
+          <declname>S1</declname>
+        </param>
+        <param>
+          <type><ref refid="classpbat_1_1gpu_1_1geometry_1_1Simplices" kindref="compound">Simplices</ref> const &amp;</type>
+          <declname>S2</declname>
+        </param>
+        <param>
+          <type><ref refid="classpbat_1_1gpu_1_1geometry_1_1Bodies" kindref="compound">Bodies</ref> const &amp;</type>
+          <declname>BV</declname>
+        </param>
+        <param>
+          <type><ref refid="classpbat_1_1gpu_1_1geometry_1_1Bvh" kindref="compound">Bvh</ref> const &amp;</type>
+          <declname>bvh</declname>
+        </param>
+        <param>
+          <type>GpuScalar</type>
+          <declname>dhat</declname>
+          <defval>std::numeric_limits&lt; GpuScalar &gt;::max()</defval>
+        </param>
+        <param>
+          <type>GpuScalar</type>
+          <declname>dzero</declname>
+          <defval>std::numeric_limits&lt; GpuScalar &gt;::epsilon()</defval>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>P</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Simplex primitive vertex positions </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>S1</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Query primitives </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>S2</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Target primitives </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>BV</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Vertex positions&apos; bodies </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>bvh</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Bounding volume hierarchy over S2 </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>dhat</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Radius of nearest neighbour search space for each query primitive in S1 </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>dzero</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Floating point error considered negligible when comparing &quot;duplicate&quot; nearest neighbours </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>2x|#neighbour pairs| matrix N of nearest neighbour simplices, such that (N(0,k), N(1,k)) yields the k^{th} nearest neighbour pair (si \in S1, sj \in S2), i.e. the simplices sj in S2 nearest to si. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/geometry/BvhQuery.h" line="70" column="30"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1gpu_1_1geometry_1_1BvhQuery_1a5dcab85343d8067c4c13a7ccc1f06403" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>PBAT_API</type>
+        <definition>PBAT_API pbat::gpu::geometry::BvhQuery::~BvhQuery</definition>
+        <argsstring>()</argsstring>
+        <name>~BvhQuery</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/geometry/BvhQuery.h" line="79" column="14"/>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/geometry/BvhQuery.h" line="18" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/geometry/BvhQuery.h" bodystart="17" bodyend="83"/>
+    <listofallmembers>
+      <member refid="classpbat_1_1gpu_1_1geometry_1_1BvhQuery_1acdb1c896255a34b0eebe4608699bd719" prot="public" virt="non-virtual"><scope>pbat::gpu::geometry::BvhQuery</scope><name>Build</name></member>
+      <member refid="classpbat_1_1gpu_1_1geometry_1_1BvhQuery_1a886ca6a675ab41a627de1f3bd667bad8" prot="public" virt="non-virtual"><scope>pbat::gpu::geometry::BvhQuery</scope><name>BvhQuery</name></member>
+      <member refid="classpbat_1_1gpu_1_1geometry_1_1BvhQuery_1a0ff19c9dde29fd3cc9364f1e74017181" prot="public" virt="non-virtual"><scope>pbat::gpu::geometry::BvhQuery</scope><name>BvhQuery</name></member>
+      <member refid="classpbat_1_1gpu_1_1geometry_1_1BvhQuery_1a77276842e6d95a8bbe163956ecd95681" prot="public" virt="non-virtual"><scope>pbat::gpu::geometry::BvhQuery</scope><name>BvhQuery</name></member>
+      <member refid="classpbat_1_1gpu_1_1geometry_1_1BvhQuery_1ac6e0a2fc0e6aa2bc6ccd88e4a9d0ce39" prot="public" virt="non-virtual"><scope>pbat::gpu::geometry::BvhQuery</scope><name>DetectContactPairsFromOverlaps</name></member>
+      <member refid="classpbat_1_1gpu_1_1geometry_1_1BvhQuery_1a7ea4e8bafe08472b82ec3a3c74343981" prot="public" virt="non-virtual"><scope>pbat::gpu::geometry::BvhQuery</scope><name>DetectOverlaps</name></member>
+      <member refid="classpbat_1_1gpu_1_1geometry_1_1BvhQuery_1adc81de94a15d50e2ebe0888fd23666dd" prot="private" virt="non-virtual"><scope>pbat::gpu::geometry::BvhQuery</scope><name>mImpl</name></member>
+      <member refid="classpbat_1_1gpu_1_1geometry_1_1BvhQuery_1a2491182e2ef3931c98805d4f02cdea37" prot="public" virt="non-virtual"><scope>pbat::gpu::geometry::BvhQuery</scope><name>operator=</name></member>
+      <member refid="classpbat_1_1gpu_1_1geometry_1_1BvhQuery_1ac4e72f9329f6ffb74adac68656015b49" prot="public" virt="non-virtual"><scope>pbat::gpu::geometry::BvhQuery</scope><name>operator=</name></member>
+      <member refid="classpbat_1_1gpu_1_1geometry_1_1BvhQuery_1a5dcab85343d8067c4c13a7ccc1f06403" prot="public" virt="non-virtual"><scope>pbat::gpu::geometry::BvhQuery</scope><name>~BvhQuery</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

@@ -1,0 +1,35 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="structstd_1_1hash_3_01tuple_3_01pbat_1_1Index_00_01pbat_1_1Index_00_01pbat_1_1Index_01_4_01_4" kind="struct" language="C++" prot="public">
+    <compoundname>std::hash&lt; tuple&lt; pbat::Index, pbat::Index, pbat::Index &gt; &gt;</compoundname>
+    <templateparamlist>
+    </templateparamlist>
+      <sectiondef kind="public-func">
+      <memberdef kind="function" id="structstd_1_1hash_3_01tuple_3_01pbat_1_1Index_00_01pbat_1_1Index_00_01pbat_1_1Index_01_4_01_4_1a4a0cfba9d5a7bec23c593d8a398c1dcc" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>std::size_t</type>
+        <definition>std::size_t std::hash&lt; tuple&lt; pbat::Index, pbat::Index, pbat::Index &gt; &gt;::operator()</definition>
+        <argsstring>(tuple&lt; pbat::Index, pbat::Index, pbat::Index &gt; const &amp;inds) const</argsstring>
+        <name>operator()</name>
+        <param>
+          <type>tuple&lt; pbat::Index, pbat::Index, pbat::Index &gt; const &amp;</type>
+          <declname>inds</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/common/Hash.h" line="54" column="5" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/common/Hash.h" bodystart="54" bodyend="57"/>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/common/Hash.h" line="52" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/common/Hash.h" bodystart="51" bodyend="58"/>
+    <listofallmembers>
+      <member refid="structstd_1_1hash_3_01tuple_3_01pbat_1_1Index_00_01pbat_1_1Index_00_01pbat_1_1Index_01_4_01_4_1a4a0cfba9d5a7bec23c593d8a398c1dcc" prot="public" virt="non-virtual"><scope>std::hash&lt; tuple&lt; pbat::Index, pbat::Index, pbat::Index &gt; &gt;</scope><name>operator()</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

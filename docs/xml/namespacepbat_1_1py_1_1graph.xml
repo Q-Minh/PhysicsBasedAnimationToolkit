@@ -1,0 +1,116 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="namespacepbat_1_1py_1_1graph" kind="namespace" language="C++">
+    <compoundname>pbat::py::graph</compoundname>
+      <sectiondef kind="func">
+      <memberdef kind="function" id="bindings_2pypbat_2graph_2Adjacency_8cpp_1aebf461cb206f63e178f22f9c3f2ed92b" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void pbat::py::graph::BindAdjacency</definition>
+        <argsstring>(pybind11::module &amp;m)</argsstring>
+        <name>BindAdjacency</name>
+        <param>
+          <type>pybind11::module &amp;</type>
+          <declname>m</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/graph/Adjacency.cpp" line="12" column="6" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/graph/Adjacency.cpp" bodystart="12" bodyend="54" declfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/graph/Adjacency.h" declline="10" declcolumn="6"/>
+      </memberdef>
+      <memberdef kind="function" id="bindings_2pypbat_2graph_2Color_8cpp_1a47a5188615f0affc224eda80ac2a0eb5" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void pbat::py::graph::BindColor</definition>
+        <argsstring>(pybind11::module &amp;m)</argsstring>
+        <name>BindColor</name>
+        <param>
+          <type>pybind11::module &amp;</type>
+          <declname>m</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/graph/Color.cpp" line="11" column="6" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/graph/Color.cpp" bodystart="11" bodyend="56" declfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/graph/Color.h" declline="10" declcolumn="6"/>
+      </memberdef>
+      <memberdef kind="function" id="Graph_8cpp_1add0f4f651b516d42b084610c11ea06c6" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void pbat::py::graph::Bind</definition>
+        <argsstring>(pybind11::module &amp;m)</argsstring>
+        <name>Bind</name>
+        <param>
+          <type>pybind11::module &amp;</type>
+          <declname>m</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/graph/Graph.cpp" line="12" column="6" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/graph/Graph.cpp" bodystart="12" bodyend="18" declfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/graph/Graph.h" declline="10" declcolumn="6"/>
+      </memberdef>
+      <memberdef kind="function" id="bindings_2pypbat_2graph_2Mesh_8cpp_1a2e6e322384d3e92797353e16265ff7df" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void pbat::py::graph::BindMesh</definition>
+        <argsstring>(pybind11::module &amp;m)</argsstring>
+        <name>BindMesh</name>
+        <param>
+          <type>pybind11::module &amp;</type>
+          <declname>m</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/graph/Mesh.cpp" line="10" column="6" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/graph/Mesh.cpp" bodystart="10" bodyend="83" declfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/graph/Mesh.h" declline="10" declcolumn="6"/>
+      </memberdef>
+      <memberdef kind="function" id="bindings_2pypbat_2graph_2Partition_8cpp_1aa3802c1c2a6a9e7a53360c9f6d805b79" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void pbat::py::graph::BindPartition</definition>
+        <argsstring>([[maybe_unused]] pybind11::module &amp;m)</argsstring>
+        <name>BindPartition</name>
+        <param>
+          <attributes>[[maybe_unused]</attributes>
+          <type>] pybind11::module &amp;</type>
+          <declname>m</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/graph/Partition.cpp" line="10" column="6" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/graph/Partition.cpp" bodystart="10" bodyend="112"/>
+      </memberdef>
+      <memberdef kind="function" id="bindings_2pypbat_2graph_2Partition_8h_1a6b7484ed05aa95875218a3aac19cd941" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void pbat::py::graph::BindPartition</definition>
+        <argsstring>(pybind11::module &amp;m)</argsstring>
+        <name>BindPartition</name>
+        <param>
+          <type>pybind11::module &amp;</type>
+          <declname>m</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/graph/Partition.h" line="10" column="6" declfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/graph/Partition.h" declline="10" declcolumn="6"/>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/graph/Adjacency.cpp" line="10" column="15"/>
+  </compounddef>
+</doxygen>

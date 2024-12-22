@@ -1,0 +1,26 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="namespacepbat_1_1profiling_1_1detail" kind="namespace" language="C++">
+    <compoundname>pbat::profiling::detail</compoundname>
+      <sectiondef kind="func">
+      <memberdef kind="function" id="source_2pbat_2profiling_2Profiling_8cpp_1ad803e0a25e0856935724e5444096c823" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>std::array&lt; char, 256 &gt; &amp;</type>
+        <definition>std::array&lt;char, 256&gt;&amp; pbat::profiling::detail::buffer</definition>
+        <argsstring>()</argsstring>
+        <name>buffer</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/profiling/Profiling.cpp" line="10" column="12" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/profiling/Profiling.cpp" bodystart="10" bodyend="14"/>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/profiling/Profiling.cpp" line="8" column="16"/>
+  </compounddef>
+</doxygen>

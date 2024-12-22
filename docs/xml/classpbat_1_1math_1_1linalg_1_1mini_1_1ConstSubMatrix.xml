@@ -1,0 +1,361 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="classpbat_1_1math_1_1linalg_1_1mini_1_1ConstSubMatrix" kind="class" language="C++" prot="public">
+    <compoundname>pbat::math::linalg::mini::ConstSubMatrix</compoundname>
+    <templateparamlist>
+      <param>
+        <type>class TMatrix</type>
+      </param>
+      <param>
+        <type>int</type>
+        <declname>M</declname>
+        <defname>M</defname>
+      </param>
+      <param>
+        <type>int</type>
+        <declname>N</declname>
+        <defname>N</defname>
+      </param>
+    </templateparamlist>
+      <sectiondef kind="public-type">
+      <memberdef kind="typedef" id="classpbat_1_1math_1_1linalg_1_1mini_1_1ConstSubMatrix_1a8d345571dcd4b2affc98374794cae6fe" prot="public" static="no">
+        <type>TMatrix</type>
+        <definition>using pbat::math::linalg::mini::ConstSubMatrix&lt; TMatrix, M, N &gt;::NestedType =  TMatrix</definition>
+        <argsstring></argsstring>
+        <name>NestedType</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/SubMatrix.h" line="21" column="5" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/SubMatrix.h" bodystart="21" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="classpbat_1_1math_1_1linalg_1_1mini_1_1ConstSubMatrix_1aac4a52dffdfe7b3829901b6fbb8f5af5" prot="public" static="no">
+        <type>typename NestedType::ScalarType</type>
+        <definition>using pbat::math::linalg::mini::ConstSubMatrix&lt; TMatrix, M, N &gt;::ScalarType =  typename NestedType::ScalarType</definition>
+        <argsstring></argsstring>
+        <name>ScalarType</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/SubMatrix.h" line="22" column="5" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/SubMatrix.h" bodystart="22" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="classpbat_1_1math_1_1linalg_1_1mini_1_1ConstSubMatrix_1a58061001c44ec32de962a30dbd1a09be" prot="public" static="no">
+        <type><ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1ConstSubMatrix" kindref="compound">ConstSubMatrix</ref>&lt; NestedType, M, N &gt;</type>
+        <definition>using pbat::math::linalg::mini::ConstSubMatrix&lt; TMatrix, M, N &gt;::SelfType =  ConstSubMatrix&lt;NestedType, M, N&gt;</definition>
+        <argsstring></argsstring>
+        <name>SelfType</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/SubMatrix.h" line="23" column="5" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/SubMatrix.h" bodystart="23" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="public-static-attrib">
+      <memberdef kind="variable" id="classpbat_1_1math_1_1linalg_1_1mini_1_1ConstSubMatrix_1ad3ca7dc6d519cce6a8d826638098f7bc" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>constexpr auto</type>
+        <definition>constexpr auto pbat::math::linalg::mini::ConstSubMatrix&lt; TMatrix, M, N &gt;::kRows</definition>
+        <argsstring></argsstring>
+        <name>kRows</name>
+        <initializer>= M</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/SubMatrix.h" line="25" column="27" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/SubMatrix.h" bodystart="25" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpbat_1_1math_1_1linalg_1_1mini_1_1ConstSubMatrix_1a222c2951c04ae6bb72028c98658f347a" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>constexpr auto</type>
+        <definition>constexpr auto pbat::math::linalg::mini::ConstSubMatrix&lt; TMatrix, M, N &gt;::kCols</definition>
+        <argsstring></argsstring>
+        <name>kCols</name>
+        <initializer>= N</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/SubMatrix.h" line="26" column="27" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/SubMatrix.h" bodystart="26" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpbat_1_1math_1_1linalg_1_1mini_1_1ConstSubMatrix_1ae1adb3111529384f47b492e0554a37c4" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>constexpr bool</type>
+        <definition>constexpr bool pbat::math::linalg::mini::ConstSubMatrix&lt; TMatrix, M, N &gt;::bRowMajor</definition>
+        <argsstring></argsstring>
+        <name>bRowMajor</name>
+        <initializer>= NestedType::bRowMajor</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/SubMatrix.h" line="27" column="27" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/SubMatrix.h" bodystart="27" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="classpbat_1_1math_1_1linalg_1_1mini_1_1ConstSubMatrix_1a4d6637daa6de171cf333bf661025f7ab" prot="private" static="no" mutable="no">
+        <type>NestedType const  &amp;</type>
+        <definition>NestedType const&amp; pbat::math::linalg::mini::ConstSubMatrix&lt; TMatrix, M, N &gt;::A</definition>
+        <argsstring></argsstring>
+        <name>A</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/SubMatrix.h" line="64" column="22" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/SubMatrix.h" bodystart="64" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpbat_1_1math_1_1linalg_1_1mini_1_1ConstSubMatrix_1a2cb49a1b01d0739d1e6f7204541b43fb" prot="private" static="no" mutable="no">
+        <type>int</type>
+        <definition>int pbat::math::linalg::mini::ConstSubMatrix&lt; TMatrix, M, N &gt;::ib</definition>
+        <argsstring></argsstring>
+        <name>ib</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/SubMatrix.h" line="65" column="9" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/SubMatrix.h" bodystart="65" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpbat_1_1math_1_1linalg_1_1mini_1_1ConstSubMatrix_1afb7d6544e27f8114cc635789c113a4a9" prot="private" static="no" mutable="no">
+        <type>int</type>
+        <definition>int pbat::math::linalg::mini::ConstSubMatrix&lt; TMatrix, M, N &gt;::jb</definition>
+        <argsstring></argsstring>
+        <name>jb</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/SubMatrix.h" line="65" column="12" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/SubMatrix.h" bodystart="65" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpbat_1_1math_1_1linalg_1_1mini_1_1ConstSubMatrix_1abdb3d27370bdcb1f41ea1162168bac12" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>PBAT_HOST_DEVICE</type>
+        <definition>PBAT_HOST_DEVICE pbat::math::linalg::mini::ConstSubMatrix&lt; TMatrix, M, N &gt;::ConstSubMatrix</definition>
+        <argsstring>(NestedType const &amp;A, int ib, int jb)</argsstring>
+        <name>ConstSubMatrix</name>
+        <param>
+          <type>NestedType const &amp;</type>
+          <declname>A</declname>
+        </param>
+        <param>
+          <type>int</type>
+          <declname>ib</declname>
+        </param>
+        <param>
+          <type>int</type>
+          <declname>jb</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/SubMatrix.h" line="29" column="22" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/SubMatrix.h" bodystart="29" bodyend="34"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1math_1_1linalg_1_1mini_1_1ConstSubMatrix_1a2c0482d40afc592488b6b4ce1a99795c" prot="public" static="no" constexpr="yes" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>constexpr PBAT_HOST_DEVICE auto</type>
+        <definition>constexpr PBAT_HOST_DEVICE auto pbat::math::linalg::mini::ConstSubMatrix&lt; TMatrix, M, N &gt;::Rows</definition>
+        <argsstring>() const</argsstring>
+        <name>Rows</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/SubMatrix.h" line="36" column="37" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/SubMatrix.h" bodystart="36" bodyend="36"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1math_1_1linalg_1_1mini_1_1ConstSubMatrix_1af9993028300db6751c1d6135c0039ac4" prot="public" static="no" constexpr="yes" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>constexpr PBAT_HOST_DEVICE auto</type>
+        <definition>constexpr PBAT_HOST_DEVICE auto pbat::math::linalg::mini::ConstSubMatrix&lt; TMatrix, M, N &gt;::Cols</definition>
+        <argsstring>() const</argsstring>
+        <name>Cols</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/SubMatrix.h" line="37" column="37" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/SubMatrix.h" bodystart="37" bodyend="37"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1math_1_1linalg_1_1mini_1_1ConstSubMatrix_1a7f4425626849ebe874f7614f8807e080" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>PBAT_HOST_DEVICE ScalarType</type>
+        <definition>PBAT_HOST_DEVICE ScalarType pbat::math::linalg::mini::ConstSubMatrix&lt; TMatrix, M, N &gt;::operator()</definition>
+        <argsstring>(auto i, auto j) const</argsstring>
+        <name>operator()</name>
+        <param>
+          <type>auto</type>
+          <declname>i</declname>
+        </param>
+        <param>
+          <type>auto</type>
+          <declname>j</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/SubMatrix.h" line="39" column="33" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/SubMatrix.h" bodystart="39" bodyend="39"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1math_1_1linalg_1_1mini_1_1ConstSubMatrix_1a94ddfe20cdaf43d05a15f31ed30d6d77" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>PBAT_HOST_DEVICE ScalarType</type>
+        <definition>PBAT_HOST_DEVICE ScalarType pbat::math::linalg::mini::ConstSubMatrix&lt; TMatrix, M, N &gt;::operator()</definition>
+        <argsstring>(auto i) const</argsstring>
+        <name>operator()</name>
+        <param>
+          <type>auto</type>
+          <declname>i</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/SubMatrix.h" line="42" column="33" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/SubMatrix.h" bodystart="42" bodyend="42"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1math_1_1linalg_1_1mini_1_1ConstSubMatrix_1ad5fbbeea670b8c6fe761031deb85794a" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>PBAT_HOST_DEVICE ScalarType</type>
+        <definition>PBAT_HOST_DEVICE ScalarType pbat::math::linalg::mini::ConstSubMatrix&lt; TMatrix, M, N &gt;::operator[]</definition>
+        <argsstring>(auto i) const</argsstring>
+        <name>operator[]</name>
+        <param>
+          <type>auto</type>
+          <declname>i</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/SubMatrix.h" line="43" column="33" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/SubMatrix.h" bodystart="43" bodyend="43"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1math_1_1linalg_1_1mini_1_1ConstSubMatrix_1a99b4399cf4f9f5e003f716aaf3de2e5f" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>auto</type>
+            <declname>S</declname>
+            <defname>S</defname>
+          </param>
+          <param>
+            <type>auto</type>
+            <declname>T</declname>
+            <defname>T</defname>
+          </param>
+        </templateparamlist>
+        <type>PBAT_HOST_DEVICE <ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1ConstSubMatrix" kindref="compound">ConstSubMatrix</ref>&lt; <ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1ConstSubMatrix" kindref="compound">SelfType</ref>, S, T &gt;</type>
+        <definition>PBAT_HOST_DEVICE ConstSubMatrix&lt;SelfType, S, T&gt; pbat::math::linalg::mini::ConstSubMatrix&lt; TMatrix, M, N &gt;::Slice</definition>
+        <argsstring>(auto i, auto j) const</argsstring>
+        <name>Slice</name>
+        <param>
+          <type>auto</type>
+          <declname>i</declname>
+        </param>
+        <param>
+          <type>auto</type>
+          <declname>j</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/SubMatrix.h" line="46" column="37" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/SubMatrix.h" bodystart="46" bodyend="49"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1math_1_1linalg_1_1mini_1_1ConstSubMatrix_1a660ac1ed9f9726a19612314c39e4bddf" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>PBAT_HOST_DEVICE <ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1ConstSubMatrix" kindref="compound">ConstSubMatrix</ref>&lt; <ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1ConstSubMatrix" kindref="compound">SelfType</ref>, kRows, 1 &gt;</type>
+        <definition>PBAT_HOST_DEVICE ConstSubMatrix&lt;SelfType, kRows, 1&gt; pbat::math::linalg::mini::ConstSubMatrix&lt; TMatrix, M, N &gt;::Col</definition>
+        <argsstring>(auto j) const</argsstring>
+        <name>Col</name>
+        <param>
+          <type>auto</type>
+          <declname>j</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/SubMatrix.h" line="50" column="37" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/SubMatrix.h" bodystart="50" bodyend="53"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1math_1_1linalg_1_1mini_1_1ConstSubMatrix_1a71cd7e38dafa82b121deed23509a6113" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>PBAT_HOST_DEVICE <ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1ConstSubMatrix" kindref="compound">ConstSubMatrix</ref>&lt; <ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1ConstSubMatrix" kindref="compound">SelfType</ref>, 1, kCols &gt;</type>
+        <definition>PBAT_HOST_DEVICE ConstSubMatrix&lt;SelfType, 1, kCols&gt; pbat::math::linalg::mini::ConstSubMatrix&lt; TMatrix, M, N &gt;::Row</definition>
+        <argsstring>(auto i) const</argsstring>
+        <name>Row</name>
+        <param>
+          <type>auto</type>
+          <declname>i</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/SubMatrix.h" line="54" column="37" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/SubMatrix.h" bodystart="54" bodyend="57"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1math_1_1linalg_1_1mini_1_1ConstSubMatrix_1a2cd1efb1cdd09e146e3c37887b69aad1" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>PBAT_HOST_DEVICE <ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1ConstTransposeView" kindref="compound">ConstTransposeView</ref>&lt; <ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1ConstSubMatrix" kindref="compound">SelfType</ref> const  &gt;</type>
+        <definition>PBAT_HOST_DEVICE ConstTransposeView&lt;SelfType const&gt; pbat::math::linalg::mini::ConstSubMatrix&lt; TMatrix, M, N &gt;::Transpose</definition>
+        <argsstring>() const</argsstring>
+        <name>Transpose</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/SubMatrix.h" line="58" column="41" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/SubMatrix.h" bodystart="58" bodyend="61"/>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/SubMatrix.h" line="19" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/SubMatrix.h" bodystart="18" bodyend="66"/>
+    <listofallmembers>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1ConstSubMatrix_1a4d6637daa6de171cf333bf661025f7ab" prot="private" virt="non-virtual"><scope>pbat::math::linalg::mini::ConstSubMatrix</scope><name>A</name></member>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1ConstSubMatrix_1ae1adb3111529384f47b492e0554a37c4" prot="public" virt="non-virtual"><scope>pbat::math::linalg::mini::ConstSubMatrix</scope><name>bRowMajor</name></member>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1ConstSubMatrix_1a660ac1ed9f9726a19612314c39e4bddf" prot="public" virt="non-virtual"><scope>pbat::math::linalg::mini::ConstSubMatrix</scope><name>Col</name></member>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1ConstSubMatrix_1af9993028300db6751c1d6135c0039ac4" prot="public" virt="non-virtual"><scope>pbat::math::linalg::mini::ConstSubMatrix</scope><name>Cols</name></member>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1ConstSubMatrix_1abdb3d27370bdcb1f41ea1162168bac12" prot="public" virt="non-virtual"><scope>pbat::math::linalg::mini::ConstSubMatrix</scope><name>ConstSubMatrix</name></member>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1ConstSubMatrix_1a2cb49a1b01d0739d1e6f7204541b43fb" prot="private" virt="non-virtual"><scope>pbat::math::linalg::mini::ConstSubMatrix</scope><name>ib</name></member>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1ConstSubMatrix_1afb7d6544e27f8114cc635789c113a4a9" prot="private" virt="non-virtual"><scope>pbat::math::linalg::mini::ConstSubMatrix</scope><name>jb</name></member>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1ConstSubMatrix_1a222c2951c04ae6bb72028c98658f347a" prot="public" virt="non-virtual"><scope>pbat::math::linalg::mini::ConstSubMatrix</scope><name>kCols</name></member>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1ConstSubMatrix_1ad3ca7dc6d519cce6a8d826638098f7bc" prot="public" virt="non-virtual"><scope>pbat::math::linalg::mini::ConstSubMatrix</scope><name>kRows</name></member>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1ConstSubMatrix_1a8d345571dcd4b2affc98374794cae6fe" prot="public" virt="non-virtual"><scope>pbat::math::linalg::mini::ConstSubMatrix</scope><name>NestedType</name></member>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1ConstSubMatrix_1a7f4425626849ebe874f7614f8807e080" prot="public" virt="non-virtual"><scope>pbat::math::linalg::mini::ConstSubMatrix</scope><name>operator()</name></member>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1ConstSubMatrix_1a94ddfe20cdaf43d05a15f31ed30d6d77" prot="public" virt="non-virtual"><scope>pbat::math::linalg::mini::ConstSubMatrix</scope><name>operator()</name></member>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1ConstSubMatrix_1ad5fbbeea670b8c6fe761031deb85794a" prot="public" virt="non-virtual"><scope>pbat::math::linalg::mini::ConstSubMatrix</scope><name>operator[]</name></member>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1ConstSubMatrix_1a71cd7e38dafa82b121deed23509a6113" prot="public" virt="non-virtual"><scope>pbat::math::linalg::mini::ConstSubMatrix</scope><name>Row</name></member>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1ConstSubMatrix_1a2c0482d40afc592488b6b4ce1a99795c" prot="public" virt="non-virtual"><scope>pbat::math::linalg::mini::ConstSubMatrix</scope><name>Rows</name></member>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1ConstSubMatrix_1aac4a52dffdfe7b3829901b6fbb8f5af5" prot="public" virt="non-virtual"><scope>pbat::math::linalg::mini::ConstSubMatrix</scope><name>ScalarType</name></member>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1ConstSubMatrix_1a58061001c44ec32de962a30dbd1a09be" prot="public" virt="non-virtual"><scope>pbat::math::linalg::mini::ConstSubMatrix</scope><name>SelfType</name></member>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1ConstSubMatrix_1a99b4399cf4f9f5e003f716aaf3de2e5f" prot="public" virt="non-virtual"><scope>pbat::math::linalg::mini::ConstSubMatrix</scope><name>Slice</name></member>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1ConstSubMatrix_1a2cd1efb1cdd09e146e3c37887b69aad1" prot="public" virt="non-virtual"><scope>pbat::math::linalg::mini::ConstSubMatrix</scope><name>Transpose</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

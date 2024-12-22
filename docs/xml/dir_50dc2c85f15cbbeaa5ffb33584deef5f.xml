@@ -1,0 +1,19 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="dir_50dc2c85f15cbbeaa5ffb33584deef5f" kind="dir">
+    <compoundname>/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/sim/vbd</compoundname>
+    <innerdir refid="dir_a5c8fe2b735e1b7feb4b2e80a209b73f">/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/sim/vbd/lod</innerdir>
+    <innerdir refid="dir_8e089e516d0c49c01ceed2723ace67c4">/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/sim/vbd/multigrid</innerdir>
+    <innerfile refid="bindings_2pypbat_2sim_2vbd_2Data_8cpp">Data.cpp</innerfile>
+    <innerfile refid="bindings_2pypbat_2sim_2vbd_2Data_8h">Data.h</innerfile>
+    <innerfile refid="bindings_2pypbat_2sim_2vbd_2Integrator_8cpp">Integrator.cpp</innerfile>
+    <innerfile refid="bindings_2pypbat_2sim_2vbd_2Integrator_8h">Integrator.h</innerfile>
+    <innerfile refid="sim_2vbd_2Vbd_8cpp">Vbd.cpp</innerfile>
+    <innerfile refid="bindings_2pypbat_2sim_2vbd_2Vbd_8h">Vbd.h</innerfile>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/sim/vbd/"/>
+  </compounddef>
+</doxygen>

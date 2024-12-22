@@ -1,0 +1,199 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="structpbat_1_1fem_1_1Line_3_011_01_4" kind="struct" language="C++" prot="public">
+    <compoundname>pbat::fem::Line&lt; 1 &gt;</compoundname>
+    <templateparamlist>
+    </templateparamlist>
+      <sectiondef kind="public-type">
+      <memberdef kind="typedef" id="structpbat_1_1fem_1_1Line_3_011_01_4_1a5e2c50f4cb91ada5845ab174bd269654" prot="public" static="no">
+        <type><ref refid="structpbat_1_1fem_1_1Line" kindref="compound">Line</ref>&lt; 1 &gt;</type>
+        <definition>using pbat::fem::Line&lt; 1 &gt;::AffineBaseType =  Line&lt;1&gt;</definition>
+        <argsstring></argsstring>
+        <name>AffineBaseType</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Line.h" line="19" column="5" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Line.h" bodystart="19" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="structpbat_1_1fem_1_1Line_3_011_01_4_1a98cbff0bf6c17b6ec8f55d7b817e699d" prot="public" static="no">
+        <templateparamlist>
+          <param>
+            <type>int</type>
+            <declname>PolynomialOrder</declname>
+            <defname>PolynomialOrder</defname>
+          </param>
+        </templateparamlist>
+        <type><ref refid="structpbat_1_1math_1_1GaussLegendreQuadrature" kindref="compound">math::GaussLegendreQuadrature</ref>&lt; kDims, PolynomialOrder &gt;</type>
+        <definition>using pbat::fem::Line&lt; 1 &gt;::QuadratureType =  math::GaussLegendreQuadrature&lt;kDims, PolynomialOrder&gt;</definition>
+        <argsstring></argsstring>
+        <name>QuadratureType</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Line.h" line="33" column="5" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Line.h" bodystart="33" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="public-static-attrib">
+      <memberdef kind="variable" id="structpbat_1_1fem_1_1Line_3_011_01_4_1ad9834a9af345c92e86bdf53afa26e6e1" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>constexpr int</type>
+        <definition>constexpr int pbat::fem::Line&lt; 1 &gt;::kOrder</definition>
+        <argsstring></argsstring>
+        <name>kOrder</name>
+        <initializer>= 1</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Line.h" line="21" column="26" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Line.h" bodystart="21" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpbat_1_1fem_1_1Line_3_011_01_4_1abf23030f03b6e81e92d1e79055a0f9c6" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>constexpr int</type>
+        <definition>constexpr int pbat::fem::Line&lt; 1 &gt;::kDims</definition>
+        <argsstring></argsstring>
+        <name>kDims</name>
+        <initializer>= 1</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Line.h" line="22" column="26" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Line.h" bodystart="22" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpbat_1_1fem_1_1Line_3_011_01_4_1a252d8850157fa14fba8adc16d89e4eb1" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>constexpr int</type>
+        <definition>constexpr int pbat::fem::Line&lt; 1 &gt;::kNodes</definition>
+        <argsstring></argsstring>
+        <name>kNodes</name>
+        <initializer>= 2</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Line.h" line="23" column="26" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Line.h" bodystart="23" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpbat_1_1fem_1_1Line_3_011_01_4_1afcf6cf328c50f82e74af441fb475f94e" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>constexpr std::array&lt; int, kNodes *kDims &gt;</type>
+        <definition>constexpr std::array&lt;int, kNodes * kDims&gt; pbat::fem::Line&lt; 1 &gt;::Coordinates</definition>
+        <argsstring></argsstring>
+        <name>Coordinates</name>
+        <initializer>= {
+        0,
+        1}</initializer>
+        <briefdescription>
+<para>Divide coordinates by kOrder to obtain actual coordinates in the reference element. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Line.h" line="24" column="33" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Line.h" bodystart="24" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpbat_1_1fem_1_1Line_3_011_01_4_1a3e2e9c6abe18a4bbe735848830da23f5" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>constexpr std::array&lt; int, AffineBaseType::kNodes &gt;</type>
+        <definition>constexpr std::array&lt;int, AffineBaseType::kNodes&gt; pbat::fem::Line&lt; 1 &gt;::Vertices</definition>
+        <argsstring></argsstring>
+        <name>Vertices</name>
+        <initializer>= {
+        0,
+        1}</initializer>
+        <briefdescription>
+<para>Indices into nodes [0,kNodes-1] revealing vertices of the element. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Line.h" line="27" column="33" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Line.h" bodystart="27" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpbat_1_1fem_1_1Line_3_011_01_4_1aede69ae20d33cfa3217c48470e8a5c70" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>constexpr bool</type>
+        <definition>constexpr bool pbat::fem::Line&lt; 1 &gt;::bHasConstantJacobian</definition>
+        <argsstring></argsstring>
+        <name>bHasConstantJacobian</name>
+        <initializer>= true</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Line.h" line="30" column="27" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Line.h" bodystart="30" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="public-static-func">
+      <memberdef kind="function" id="structpbat_1_1fem_1_1Line_3_011_01_4_1a32c929186fda83932a826a7f0b2abe61" prot="public" static="yes" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class TDerived</type>
+          </param>
+          <param>
+            <type>class TScalar</type>
+            <defval>typename TDerived::Scalar</defval>
+          </param>
+        </templateparamlist>
+        <type>Eigen::Vector&lt; TScalar, kNodes &gt;</type>
+        <definition>static Eigen::Vector&lt;TScalar, kNodes&gt; pbat::fem::Line&lt; 1 &gt;::N</definition>
+        <argsstring>([[maybe_unused]] Eigen::DenseBase&lt; TDerived &gt; const &amp;X)</argsstring>
+        <name>N</name>
+        <param>
+          <attributes>[[maybe_unused]</attributes>
+          <type>] Eigen::DenseBase&lt; TDerived &gt; const &amp;</type>
+          <declname>X</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Line.h" line="37" column="5" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Line.h" bodystart="37" bodyend="44"/>
+      </memberdef>
+      <memberdef kind="function" id="structpbat_1_1fem_1_1Line_3_011_01_4_1a2e74a10b967b90ab7ad3caec23164b5b" prot="public" static="yes" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>Matrix&lt; kNodes, kDims &gt;</type>
+        <definition>static Matrix&lt;kNodes, kDims&gt; pbat::fem::Line&lt; 1 &gt;::GradN</definition>
+        <argsstring>([[maybe_unused]] Vector&lt; kDims &gt; const &amp;X)</argsstring>
+        <name>GradN</name>
+        <param>
+          <attributes>[[maybe_unused]</attributes>
+          <type>] Vector&lt; kDims &gt; const &amp;</type>
+          <declname>X</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Line.h" line="46" column="20" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Line.h" bodystart="46" bodyend="53"/>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Line.h" line="18" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Line.h" bodystart="17" bodyend="54"/>
+    <listofallmembers>
+      <member refid="structpbat_1_1fem_1_1Line_3_011_01_4_1a5e2c50f4cb91ada5845ab174bd269654" prot="public" virt="non-virtual"><scope>pbat::fem::Line&lt; 1 &gt;</scope><name>AffineBaseType</name></member>
+      <member refid="structpbat_1_1fem_1_1Line_3_011_01_4_1aede69ae20d33cfa3217c48470e8a5c70" prot="public" virt="non-virtual"><scope>pbat::fem::Line&lt; 1 &gt;</scope><name>bHasConstantJacobian</name></member>
+      <member refid="structpbat_1_1fem_1_1Line_3_011_01_4_1afcf6cf328c50f82e74af441fb475f94e" prot="public" virt="non-virtual"><scope>pbat::fem::Line&lt; 1 &gt;</scope><name>Coordinates</name></member>
+      <member refid="structpbat_1_1fem_1_1Line_3_011_01_4_1a2e74a10b967b90ab7ad3caec23164b5b" prot="public" virt="non-virtual"><scope>pbat::fem::Line&lt; 1 &gt;</scope><name>GradN</name></member>
+      <member refid="structpbat_1_1fem_1_1Line_3_011_01_4_1abf23030f03b6e81e92d1e79055a0f9c6" prot="public" virt="non-virtual"><scope>pbat::fem::Line&lt; 1 &gt;</scope><name>kDims</name></member>
+      <member refid="structpbat_1_1fem_1_1Line_3_011_01_4_1a252d8850157fa14fba8adc16d89e4eb1" prot="public" virt="non-virtual"><scope>pbat::fem::Line&lt; 1 &gt;</scope><name>kNodes</name></member>
+      <member refid="structpbat_1_1fem_1_1Line_3_011_01_4_1ad9834a9af345c92e86bdf53afa26e6e1" prot="public" virt="non-virtual"><scope>pbat::fem::Line&lt; 1 &gt;</scope><name>kOrder</name></member>
+      <member refid="structpbat_1_1fem_1_1Line_3_011_01_4_1a32c929186fda83932a826a7f0b2abe61" prot="public" virt="non-virtual"><scope>pbat::fem::Line&lt; 1 &gt;</scope><name>N</name></member>
+      <member refid="structpbat_1_1fem_1_1Line_3_011_01_4_1a98cbff0bf6c17b6ec8f55d7b817e699d" prot="public" virt="non-virtual"><scope>pbat::fem::Line&lt; 1 &gt;</scope><name>QuadratureType</name></member>
+      <member refid="structpbat_1_1fem_1_1Line_3_011_01_4_1a3e2e9c6abe18a4bbe735848830da23f5" prot="public" virt="non-virtual"><scope>pbat::fem::Line&lt; 1 &gt;</scope><name>Vertices</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>
