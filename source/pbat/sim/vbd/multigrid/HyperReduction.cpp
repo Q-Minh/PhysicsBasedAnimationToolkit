@@ -7,8 +7,10 @@
 #include "pbat/graph/Partition.h"
 #include "pbat/profiling/Profiling.h"
 #include "pbat/sim/vbd/Data.h"
+#include "pbat/sim/vbd/Mesh.h"
 
 #include <ranges>
+#include <tbb/parallel_for.h>
 #include <utility>
 
 namespace pbat {
@@ -38,8 +40,8 @@ HyperReduction::HyperReduction(
     Data const& data,
     Index nTargetActiveElements,
     hypre::Strategies strategiesIn)
-    : bActiveE(BoolVectorX::Constant(data.mesh.E.cols(), true)),
-      bActiveK(BoolVectorX::Constant(data.mesh.X.cols(), true)),
+    : bActiveE(BoolVectorX::Constant(data.E.cols(), true)),
+      bActiveK(BoolVectorX::Constant(data.X.cols(), true)),
       wgE(data.wg),
       mK(data.m),
       clusterPtr(),
@@ -50,12 +52,12 @@ HyperReduction::HyperReduction(
 
     if (strategies.eClustering == hypre::EClusteringStrategy::Cluster)
     {
-        auto const nFineElements = data.mesh.E.cols();
-        auto const nFineVertices = data.mesh.X.cols();
+        auto const nFineElements = data.E.cols();
+        auto const nFineVertices = data.X.cols();
 
         // Choose coarse level compute budget as 3x its elements, but not surpassing the number of
         // fine elements. Compute the graph of face-adjacent tetrahedra on the fine mesh
-        auto Gdual = graph::MeshDualGraph(data.mesh.E, nFineVertices);
+        auto Gdual = graph::MeshDualGraph(data.E, nFineVertices);
         Gdual.prune([]([[maybe_unused]] Index row, [[maybe_unused]] Index col, Index value) {
             bool const bIsFaceAdjacency = value == 3;
             return bIsFaceAdjacency;
@@ -65,9 +67,9 @@ HyperReduction::HyperReduction(
         // Partition the fine mesh using scale-invariant geometric distance between element
         // barycenters as the weight function.
         // TODO: Use smarter weight function that exhibits shape and material awareness.
-        MatrixX XEbary = data.mesh.QuadraturePoints<1>();
-        Scalar const scale =
-            (data.mesh.X.rowwise().maxCoeff() - data.mesh.X.rowwise().minCoeff()).norm();
+        VolumeMeshView mesh{data.X, data.E};
+        MatrixX XEbary     = mesh.QuadraturePoints<1>();
+        Scalar const scale = (data.X.rowwise().maxCoeff() - data.X.rowwise().minCoeff()).norm();
         Scalar decimalPrecision = 1e4;
         IndexVectorX Wdual(Gdual.nonZeros());
         graph::ForEachEdge(Gdualptr, Gdualadj, [&](Index ei, Index ej, Index k) {
@@ -117,7 +119,7 @@ HyperReduction::HyperReduction(
                 common::Filter(0, nFineElements, [&](Index ef) { return bActiveE(ef); });
             // Make element vertices active
             IndexVectorX activeVertices =
-                data.mesh.E(Eigen::placeholders::all, activeElements).reshaped();
+                data.E(Eigen::placeholders::all, activeElements).reshaped();
             std::sort(activeVertices.begin(), activeVertices.end());
             auto const nActiveVertices = std::distance(
                 activeVertices.begin(),
@@ -205,7 +207,7 @@ void HyperReduction::Update(Data const& data)
     if (strategies.ePotentialIntegration ==
         hypre::EPotentialIntegrationStrategy::MatchPreStepElasticity)
     {
-        auto nFineElements = data.mesh.E.cols();
+        auto nFineElements = data.E.cols();
         IndexVectorX activeElements =
             common::Filter(0, nFineElements, [&](Index e) { return bActiveE(e); });
         // For each active element EA, we want to find an appropriate quadrature weight wEA
@@ -234,14 +236,14 @@ void HyperReduction::Update(Data const& data)
                 common::Filter(0, bActiveE.size(), [&](Index e) { return bActiveE(e); });
             // Make element vertices active
             IndexVectorX activeVertices =
-                data.mesh.E(Eigen::placeholders::all, activeElements).reshaped();
+                data.E(Eigen::placeholders::all, activeElements).reshaped();
             bActiveK(activeVertices).setConstant(true);
         }
         if (strategies.eKineticIntegration == hypre::EKineticIntegrationStrategy::MatchTotalMass)
         {
             IndexVectorX activeVertices =
                 common::Filter(0, bActiveK.size(), [&](Index v) { return bActiveK(v); });
-            auto nFineElements = data.mesh.E.cols();
+            auto nFineElements = data.E.cols();
             IndexVectorX activeElements =
                 common::Filter(0, nFineElements, [&](Index e) { return bActiveE(e); });
             mK.setZero();

@@ -4,7 +4,7 @@
 #include "pbat/physics/StableNeoHookeanEnergy.h"
 #include "pbat/profiling/Profiling.h"
 #include "pbat/sim/vbd/Kernels.h"
-#include "pbat/sim/vbd/lod/Smoother.h"
+#include "pbat/sim/vbd/multigrid/Smoother.h"
 
 #include <tbb/parallel_for.h>
 
@@ -17,11 +17,11 @@ void Integrator::Step(Scalar dt, Index substeps, Hierarchy& H) const
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.vbd.multigrid.Integrator.Step");
 
-    using RootSmoother = pbat::sim::vbd::lod::Smoother;
+    using RootSmoother = pbat::sim::vbd::multigrid::Smoother;
     Scalar sdt         = dt / static_cast<Scalar>(substeps);
     Scalar sdt2        = sdt * sdt;
     auto nVertices     = H.data.x.cols();
-    auto nElements     = H.data.mesh.E.cols();
+    auto nElements     = H.data.E.cols();
     for (Index s = 0; s < substeps; ++s)
     {
         // Store previous positions
@@ -73,7 +73,7 @@ void Integrator::Step(Scalar dt, Index substeps, Hierarchy& H) const
                     physics::StableNeoHookeanEnergy<3> Psi{};
                     Scalar mu        = H.data.lame(0, e);
                     Scalar lambda    = H.data.lame(1, e);
-                    auto inds        = H.data.mesh.E(Eigen::placeholders::all, e);
+                    auto inds        = H.data.E(Eigen::placeholders::all, e);
                     Matrix<3, 4> xe  = H.data.x(Eigen::placeholders::all, inds);
                     Matrix<4, 3> GNe = H.data.GP.block<4, 3>(0, 3 * e);
                     Matrix<3, 3> F   = xe * GNe;
@@ -81,7 +81,7 @@ void Integrator::Step(Scalar dt, Index substeps, Hierarchy& H) const
                 });
 
                 // Update hyper reductions
-                //for (auto& level : H.levels)
+                // for (auto& level : H.levels)
                 //    level.HR.Update(H.data);
                 auto lStl = static_cast<std::size_t>(l);
                 H.levels[lStl].HR.Update(H.data);

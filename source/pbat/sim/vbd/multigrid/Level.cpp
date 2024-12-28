@@ -64,12 +64,12 @@ Level::Level(Data const& data, VolumeMesh meshIn)
     //    contains at least one fine vertex of ef.
     // 4. For each (vc,ef), we look at all 4 ec in the column ef of ecVE, and determine which local
     //    vertex index vc corresponds to, or set it to -1 if it doesn't apply.
-    auto const nFineElements = data.mesh.E.cols();
+    auto const nFineElements = data.E.cols();
     ecVE.resize(4, nFineElements);
     NecVE.resize(4, 4 * nFineElements);
     for (auto i = 0; i < 4; ++i)
     {
-        auto ithVertexPositions = data.mesh.X(Eigen::placeholders::all, data.mesh.E.row(i));
+        auto ithVertexPositions = data.X(Eigen::placeholders::all, data.E.row(i));
         ecVE.row(i)             = cbvh.PrimitivesContainingPoints(ithVertexPositions);
         NecVE(Eigen::placeholders::all, Eigen::seqN(i, nFineElements, 4)) =
             fem::ShapeFunctionsAt(mesh, ecVE.row(i), ithVertexPositions);
@@ -99,8 +99,8 @@ Level::Level(Data const& data, VolumeMesh meshIn)
     });
 
     // Kinetic energy
-    ecK                 = cbvh.PrimitivesContainingPoints(data.mesh.X);
-    NecK                = fem::ShapeFunctionsAt(mesh, ecK, data.mesh.X);
+    ecK                 = cbvh.PrimitivesContainingPoints(data.X);
+    NecK                = fem::ShapeFunctionsAt(mesh, ecK, data.X);
     IndexMatrixX ilocal = IndexVector<4>{0, 1, 2, 3}.replicate(1, ecK.size());
     G                   = graph::MeshAdjacencyMatrix(
         mesh.E(Eigen::placeholders::all, ecK),
@@ -110,7 +110,7 @@ Level::Level(Data const& data, VolumeMesh meshIn)
     std::tie(GKptr, GKadj, GKilocal) = graph::MatrixToWeightedAdjacency(G);
 
     // Dirichlet energy
-    auto const nFineVertices = data.mesh.X.cols();
+    auto const nFineVertices = data.X.cols();
     bIsDirichletVertex.setConstant(nFineVertices, false);
     bIsDirichletVertex(data.dbc).setConstant(true);
 }
@@ -166,7 +166,7 @@ void Level::Smooth(Scalar dt, Index iters, Data& data)
                     Scalar lambdag        = data.lame(1, ef);
                     Matrix<4, 3> GNef     = data.GP.block<4, 3>(0, 3 * ef);
                     Matrix<4, 4> N        = NecVE.block<4, 4>(0, 4 * ef);
-                    Matrix<3, 4> xe       = data.x(Eigen::placeholders::all, data.mesh.E.col(ef));
+                    Matrix<3, 4> xe       = data.x(Eigen::placeholders::all, data.E.col(ef));
                     IndexMatrix<4, 4> ec  = mesh.E(Eigen::placeholders::all, ecVE.col(ef));
                     for (auto iflocal = 0; iflocal < 4; ++iflocal)
                     {
@@ -218,7 +218,7 @@ void Level::Smooth(Scalar dt, Index iters, Data& data)
                         // NOTE: We should have an explicit matrix of Dirichlet boundary conditions
                         // so that we can control them, rather than always having them as rest
                         // positions.
-                        SVector<Scalar, 3> xD = FromEigen(data.mesh.X.col(vf).head<3>());
+                        SVector<Scalar, 3> xD = FromEigen(data.X.col(vf).head<3>());
                         // Dirichlet energy is 1/2 muD * || (x^k + u*N) - d(x) ||_2^2
                         gu += Ne(ilocal) * data.muD * (x - xD);
                         Diag(Hu) += Ne(ilocal) * Ne(ilocal) * data.muD;
@@ -240,7 +240,7 @@ void Level::HyperReduce(Data const& data, hypre::Strategies strategy)
     // TODO: Implement smart way to choose computational budget at each
     // coarse level.
     Index const nCoarseElements       = mesh.E.cols();
-    Index const nFineElements         = data.mesh.E.cols();
+    Index const nFineElements         = data.E.cols();
     Index const nTargetActiveElements = std::min(3 * nCoarseElements, nFineElements);
     HR                                = HyperReduction(data, nTargetActiveElements, strategy);
 }

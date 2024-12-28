@@ -1,9 +1,11 @@
 #ifndef PBAT_GRAPH_COLOR_H
 #define PBAT_GRAPH_COLOR_H
 
+#include "Enums.h"
 #include "pbat/Aliases.h"
 #include "pbat/common/ArgSort.h"
 #include "pbat/common/Stack.h"
+#include "pbat/profiling/Profiling.h"
 
 #include <algorithm>
 #include <concepts>
@@ -11,9 +13,6 @@
 
 namespace pbat {
 namespace graph {
-
-enum class EGreedyColorSelectionStrategy { LeastUsed, FirstAvailable };
-enum class EGreedyColorOrderingStrategy { Natural, SmallestDegree, LargestDegree };
 
 template <
     class TDerivedPtr,
@@ -26,6 +25,8 @@ Eigen::Vector<TIndex, Eigen::Dynamic> GreedyColor(
     EGreedyColorOrderingStrategy eOrderingStrategy   = EGreedyColorOrderingStrategy::LargestDegree,
     EGreedyColorSelectionStrategy eSelectionStrategy = EGreedyColorSelectionStrategy::LeastUsed)
 {
+    PBAT_PROFILE_NAMED_SCOPE("pbat.graph.GreedyColor");
+
     common::Stack<TIndex, NC> palette{};
     common::Stack<bool, NC> usable{};
     TIndex const n        = ptr.size() - 1;

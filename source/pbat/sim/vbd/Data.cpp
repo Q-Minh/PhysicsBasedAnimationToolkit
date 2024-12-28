@@ -4,8 +4,10 @@
 #include "pbat/fem/MassMatrix.h"
 #include "pbat/fem/ShapeFunctions.h"
 #include "pbat/graph/Adjacency.h"
+#include "pbat/graph/Color.h"
 #include "pbat/graph/Mesh.h"
 #include "pbat/physics/HyperElasticity.h"
+#include "Mesh.h"
 
 #include <algorithm>
 #include <exception>
@@ -21,7 +23,8 @@ Data& Data::WithVolumeMesh(
     Eigen::Ref<MatrixX const> const& Vin,
     Eigen::Ref<IndexMatrixX const> const& Ein)
 {
-    this->mesh = VolumeMesh(Vin, Ein);
+    this->X = Vin;
+    this->E = Ein;
     return *this;
 }
 
@@ -108,7 +111,7 @@ Data& Data::WithHessianDeterminantZeroUnder(Scalar zero)
 Data& Data::Construct(bool bValidate)
 {
     // Vertex data
-    x = mesh.X;
+    x = X;
     if (xt.size() == 0)
     {
         xt = x;
@@ -130,14 +133,15 @@ Data& Data::Construct(bool bValidate)
     if (lame.size() == 0)
     {
         auto const [mu, lambda] = physics::LameCoefficients(Scalar(1e6), Scalar(0.45));
-        lame.resize(2, mesh.E.cols());
+        lame.resize(2, E.cols());
         lame.row(0).setConstant(mu);
         lame.row(1).setConstant(lambda);
     }
     if (rhoe.size() == 0)
     {
-        rhoe.setConstant(mesh.E.cols(), Scalar(1e3));
+        rhoe.setConstant(E.cols(), Scalar(1e3));
     }
+    VolumeMesh mesh{X, E};
     MatrixX detJe = fem::DeterminantOfJacobian<2>(mesh);
     MatrixX rhog  = rhoe.transpose().replicate(detJe.rows(), 1);
     fem::MassMatrix<VolumeMesh, 2> M(mesh, detJe, rhog, 1);

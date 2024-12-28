@@ -17,5 +17,4 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     "Mesh.cpp"
 )
 
-add_subdirectory(lod)
 add_subdirectory(multigrid)

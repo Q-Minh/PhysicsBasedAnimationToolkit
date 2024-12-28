@@ -22,7 +22,7 @@ IntegratorImpl::IntegratorImpl(Data const& data)
     : X(data.x.cast<GpuScalar>()),
       V(data.V.cast<GpuIndex>().transpose()),
       F(data.F.cast<GpuIndex>()),
-      T(data.mesh.E.cast<GpuIndex>()),
+      T(data.E.cast<GpuIndex>()),
       mPositionsAtT(data.xt.cols()),
       mInertialTargetPositions(data.xtilde.cols()),
       mChebyshevPositionsM2(data.xchebm2.cols()),
@@ -209,7 +209,7 @@ void IntegratorImpl::Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps, 
                         ChebyshevUpdate(k, omega, xkm2i, xkm1i, xki);
                         ToBuffers(xkm2i, xkm2, i);
                         ToBuffers(xkm1i, xkm1, i);
-                        ToBuffers(xki, x, i);
+                        ToBuffers(xki, xk, i);
                     });
             }
         }
