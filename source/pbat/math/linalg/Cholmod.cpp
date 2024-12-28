@@ -114,7 +114,7 @@ TEST_CASE("[math][linalg] Cholmod")
     }
     SUBCASE("Can downdate Cholesky factors")
     {
-        CSCMatrix const U      = MatrixX::Zero(n, m).sparseView();
+        CSCMatrix const U      = zero * MatrixX::Random(n, m).sparseView();
         bool const bFactorized = LLT.Compute(A);
         CHECK(bFactorized);
         bool const bFactorizationUpdated = LLT.Downdate(U);

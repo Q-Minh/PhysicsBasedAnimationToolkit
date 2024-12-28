@@ -138,6 +138,8 @@ TEST_CASE("[sim][vbd][multigrid] Integrator")
         {VolumeMesh(VL1, CL1), VolumeMesh(VL2, CL2)},
         cycle,
         siters};
+    std::vector<sim::vbd::multigrid::hypre::Strategies> hrStrategies(2);
+    H.HyperReduce(hrStrategies);
 
     // Act
     Integrator mvbd{};
