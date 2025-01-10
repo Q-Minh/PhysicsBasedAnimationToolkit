@@ -34,8 +34,7 @@ if __name__ == "__main__":
     V = np.vstack((V.copy(), V.copy()))
     T = np.vstack((T.copy(), T + nverts))
     F = np.vstack((F.copy(), F + nverts))
-    vinds = np.linspace(
-        0, V.shape[0]-1, num=V.shape[0], dtype=np.int32)[np.newaxis, :]
+    vinds = np.arange(V.shape[0], dtype=np.int32)[np.newaxis, :]
     SV = pbat.gpu.geometry.Simplices(
         vinds)
     ST = pbat.gpu.geometry.Simplices(T.T)

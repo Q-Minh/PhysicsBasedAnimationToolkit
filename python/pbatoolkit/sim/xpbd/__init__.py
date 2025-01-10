@@ -79,8 +79,7 @@ def partition_clustered_mesh_constraint_graph(
     Cptr, Cadj = map_to_adjacency(clustering)
     # Compute edges between the clusters, i.e. the supernodal graph's edges
     GGTsizes = GGT.indptr[1:] - GGT.indptr[:-1]
-    SGu = clustering[np.repeat(np.linspace(
-        0, clustering.shape[0]-1, clustering.shape[0], dtype=np.int64), GGTsizes)]
+    SGu = clustering[np.repeat(np.arange(clustering.shape[0], dtype=np.int64), GGTsizes)]
     SGv = clustering[GGT.indices]
     inds = np.unique(SGu + clustering.shape[0]*SGv, return_index=True)[1]
     SGu, SGv = SGu[inds], SGv[inds]
