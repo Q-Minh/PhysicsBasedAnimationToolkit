@@ -155,6 +155,10 @@ PBAT_API struct Data
     Scalar detHZero{1e-7}; ///< Numerical zero for hessian pseudo-singularity check
 
     VectorX psiE; ///< |#elements| array of elastic energies
+    MatrixX mGreenStrainsAtT; ///< 3x3*|#elems| array of element strain tensors at time t
+    MatrixX mGreenStrains; ///< 3x3*|#elems| array of element strain tensors at time t+dt
+    VectorX mStrainRates; ///< |#elems| array of element strain rates
+    IndexVectorX mStrainRateOrder; ///< |#elems| array of element strain rate sorted order
 };
 
 } // namespace vbd

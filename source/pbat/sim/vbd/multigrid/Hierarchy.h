@@ -1,7 +1,6 @@
 #ifndef PBAT_SIM_VBD_MULTIGRID_HIERARCHY_H
 #define PBAT_SIM_VBD_MULTIGRID_HIERARCHY_H
 
-#include "HyperReduction.h"
 #include "Level.h"
 #include "pbat/sim/vbd/Data.h"
 #include "pbat/sim/vbd/Mesh.h"
@@ -20,8 +19,6 @@ struct Hierarchy
         std::vector<VolumeMesh> cages,
         IndexVectorX const& cycle  = {},
         IndexVectorX const& siters = {});
-
-    void HyperReduce(std::vector<hypre::Strategies> const& strategies);
 
     Data data;                 ///< Root level
     std::vector<Level> levels; ///< Coarse levels

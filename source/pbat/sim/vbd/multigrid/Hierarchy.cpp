@@ -38,16 +38,6 @@ Hierarchy::Hierarchy(
     }
 }
 
-void Hierarchy::HyperReduce(std::vector<hypre::Strategies> const& strategies)
-{
-    if (strategies.size() != levels.size())
-        throw std::invalid_argument(
-            fmt::format("Expected {} strategies, but got {}", levels.size(), strategies.size()));
-
-    for (auto l = 0ULL; l < levels.size(); ++l)
-        levels[l].HyperReduce(data, strategies[l]);
-}
-
 } // namespace multigrid
 } // namespace vbd
 } // namespace sim

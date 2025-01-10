@@ -1,5 +1,6 @@
 #include "Data.h"
 
+#include "Mesh.h"
 #include "pbat/fem/Jacobian.h"
 #include "pbat/fem/MassMatrix.h"
 #include "pbat/fem/ShapeFunctions.h"
@@ -7,7 +8,6 @@
 #include "pbat/graph/Color.h"
 #include "pbat/graph/Mesh.h"
 #include "pbat/physics/HyperElasticity.h"
-#include "Mesh.h"
 
 #include <algorithm>
 #include <exception>
@@ -129,7 +129,7 @@ Data& Data::Construct(bool bValidate)
     xchebm2.resizeLike(x);
     xchebm1.resizeLike(x);
     vt.resizeLike(x);
-    // Material parameters
+    // Element data
     if (lame.size() == 0)
     {
         auto const [mu, lambda] = physics::LameCoefficients(Scalar(1e6), Scalar(0.45));
@@ -149,6 +149,10 @@ Data& Data::Construct(bool bValidate)
     GP = fem::ShapeFunctionGradients<1>(mesh);
     wg = fem::InnerProductWeights<1>(mesh).reshaped();
     psiE.setZero(mesh.E.cols());
+    mGreenStrainsAtT.setZero(3, 3 * mesh.E.cols());
+    mGreenStrains.setZero(3, 3 * mesh.E.cols());
+    mStrainRates.setZero(mesh.E.cols());
+    mStrainRateOrder.setLinSpaced(mesh.E.cols(), Index(0), mesh.E.cols() - Index(1));
     // Adjacency structures
     IndexMatrixX ilocal             = IndexVector<4>{0, 1, 2, 3}.replicate(1, mesh.E.cols());
     auto GVT                        = graph::MeshAdjacencyMatrix(mesh.E, ilocal, mesh.X.cols());

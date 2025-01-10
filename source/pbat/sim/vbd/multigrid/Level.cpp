@@ -19,6 +19,13 @@ namespace sim {
 namespace vbd {
 namespace multigrid {
 
+// Use mini API
+using pbat::math::linalg::mini::FromEigen;
+using pbat::math::linalg::mini::SMatrix;
+using pbat::math::linalg::mini::SVector;
+using pbat::math::linalg::mini::ToEigen;
+using pbat::math::linalg::mini::Zeros;
+
 Level::Level(Data const& data, VolumeMesh meshIn)
     : mesh(std::move(meshIn)),
       u(),
@@ -36,7 +43,7 @@ Level::Level(Data const& data, VolumeMesh meshIn)
       GKadj(),
       GKilocal(),
       bIsDirichletVertex(),
-      HR()
+      HR(data, std::min(3 * mesh.E.cols(), data.E.cols()))
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.vbd.multigrid.Level.Construct");
 
@@ -113,6 +120,103 @@ Level::Level(Data const& data, VolumeMesh meshIn)
     auto const nFineVertices = data.X.cols();
     bIsDirichletVertex.setConstant(nFineVertices, false);
     bIsDirichletVertex(data.dbc).setConstant(true);
+
+    // Coarse element to fine element adjacency graph for hyper reduction
+    std::tie(GCFptr, GCFadj) = graph::MatrixToAdjacency(graph::MeshAdjacencyMatrix(
+        ecVE,
+        mesh.E.cols(),
+        true /*bVertexToElement*/,
+        true /*bHasDuplicates*/));
+    GCFrank.setZero(GCFadj.size());
+    GCFparent.setZero(GCFadj.size());
+}
+
+static void ComputeElasticEnergyDerivatives(
+    Data const& data,
+    const Level& level,
+    Index i,
+    Scalar dt2,
+    SMatrix<Scalar, 3, 3>& Hu,
+    SVector<Scalar, 3>& gu)
+{
+    auto gBegin = level.GEptr(i);
+    auto gEnd   = level.GEptr(i + 1);
+    for (auto kg = gBegin; kg < gEnd; ++kg)
+    {
+        Index ef = level.GEadj(kg);
+        if (not level.HR.bActiveE(ef))
+            continue;
+
+        IndexVector<4> ilocal = level.ilocalE.col(kg);
+        Scalar wg             = level.HR.wgE(ef);
+        Scalar mug            = data.lame(0, ef);
+        Scalar lambdag        = data.lame(1, ef);
+        Matrix<4, 3> GNef     = data.GP.block<4, 3>(0, 3 * ef);
+        Matrix<4, 4> N        = level.NecVE.block<4, 4>(0, 4 * ef);
+        Matrix<3, 4> xe       = data.x(Eigen::placeholders::all, data.E.col(ef));
+        IndexMatrix<4, 4> ec  = level.mesh.E(Eigen::placeholders::all, level.ecVE.col(ef));
+        for (auto iflocal = 0; iflocal < 4; ++iflocal)
+        {
+            xe.col(iflocal) += level.u(Eigen::placeholders::all, ec.col(iflocal)) * N.col(iflocal);
+        }
+        using kernels::AccumulateElasticEnergy;
+        AccumulateElasticEnergy(
+            physics::StableNeoHookeanEnergy<3>{},
+            FromEigen(ilocal),
+            dt2 * wg,
+            mug,
+            lambdag,
+            FromEigen(xe),
+            FromEigen(GNef),
+            FromEigen(N),
+            gu,
+            Hu);
+    }
+}
+
+static void ComputeKineticAndDirichletEnergyDerivatives(
+    Data const& data,
+    const Level& level,
+    Index i,
+    SMatrix<Scalar, 3, 3>& Hu,
+    SVector<Scalar, 3>& gu)
+{
+    auto gBegin = level.GKptr(i);
+    auto gEnd   = level.GKptr(i + 1);
+    for (auto kg = gBegin; kg < gEnd; ++kg)
+    {
+        // Kinetic energy is 1/2 * mi * || (x^k + u*N) - xtilde ||_2^2
+        Index vf                = level.GKadj(kg);
+        bool const bIsActive    = level.HR.bActiveK(vf);
+        bool const bIsDirichlet = level.bIsDirichletVertex(vf);
+        if (not bIsActive and not bIsDirichlet)
+            continue;
+        Index ilocal          = level.GKilocal(kg);
+        Index ec              = level.ecK(vf);
+        SVector<Scalar, 4> Ne = FromEigen(level.NecK.col(vf).head<4>());
+        SVector<Scalar, 3> xk = FromEigen(data.x.col(vf).head<3>());
+        SMatrix<Scalar, 3, 4> ue =
+            FromEigen(level.u(Eigen::placeholders::all, level.mesh.E.col(ec)).block<3, 4>(0, 0));
+        SVector<Scalar, 3> x = xk + ue * Ne;
+        if (bIsActive)
+        {
+            Scalar mvf                = level.HR.mK(vf);
+            SVector<Scalar, 3> xtilde = FromEigen(data.xtilde.col(vf).head<3>());
+            gu += Ne(ilocal) * mvf * (x - xtilde);
+            Diag(Hu) += Ne(ilocal) * Ne(ilocal) * mvf;
+        }
+        // Dirichlet energy
+        if (bIsDirichlet)
+        {
+            // NOTE: We should have an explicit matrix of Dirichlet boundary conditions
+            // so that we can control them, rather than always having them as rest
+            // positions.
+            SVector<Scalar, 3> xD = FromEigen(data.X.col(vf).head<3>());
+            // Dirichlet energy is 1/2 muD * || (x^k + u*N) - d(x) ||_2^2
+            gu += Ne(ilocal) * data.muD * (x - xD);
+            Diag(Hu) += Ne(ilocal) * Ne(ilocal) * data.muD;
+        }
+    }
 }
 
 void Level::Prolong(Data& data) const
@@ -139,91 +243,11 @@ void Level::Smooth(Scalar dt, Index iters, Data& data)
             auto pBegin = Pptr(p);
             auto pEnd   = Pptr(p + 1);
             tbb::parallel_for(pBegin, pEnd, [&](Index kp) {
-                Index i     = Padj(kp);
-                auto gBegin = GEptr(i);
-                auto gEnd   = GEptr(i + 1);
-                // Use mini API
-                using pbat::math::linalg::mini::ToEigen;
-                using pbat::math::linalg::mini::FromEigen;
-                using pbat::math::linalg::mini::SMatrix;
-                using pbat::math::linalg::mini::SVector;
-                using pbat::math::linalg::mini::Zeros;
-
-                // Compute energy derivatives
+                Index i                  = Padj(kp);
                 SMatrix<Scalar, 3, 3> Hu = Zeros<Scalar, 3, 3>();
                 SVector<Scalar, 3> gu    = Zeros<Scalar, 3>();
-
-                // Elastic energy
-                for (auto kg = gBegin; kg < gEnd; ++kg)
-                {
-                    Index ef = GEadj(kg);
-                    if (not HR.bActiveE(ef))
-                        continue;
-
-                    IndexVector<4> ilocal = ilocalE.col(kg);
-                    Scalar wg             = HR.wgE(ef);
-                    Scalar mug            = data.lame(0, ef);
-                    Scalar lambdag        = data.lame(1, ef);
-                    Matrix<4, 3> GNef     = data.GP.block<4, 3>(0, 3 * ef);
-                    Matrix<4, 4> N        = NecVE.block<4, 4>(0, 4 * ef);
-                    Matrix<3, 4> xe       = data.x(Eigen::placeholders::all, data.E.col(ef));
-                    IndexMatrix<4, 4> ec  = mesh.E(Eigen::placeholders::all, ecVE.col(ef));
-                    for (auto iflocal = 0; iflocal < 4; ++iflocal)
-                    {
-                        xe.col(iflocal) +=
-                            u(Eigen::placeholders::all, ec.col(iflocal)) * N.col(iflocal);
-                    }
-                    using kernels::AccumulateElasticEnergy;
-                    AccumulateElasticEnergy(
-                        physics::StableNeoHookeanEnergy<3>{},
-                        FromEigen(ilocal),
-                        dt2 * wg,
-                        mug,
-                        lambdag,
-                        FromEigen(xe),
-                        FromEigen(GNef),
-                        FromEigen(N),
-                        gu,
-                        Hu);
-                }
-
-                // Kinetic + Dirichlet energy
-                gBegin = GKptr(i);
-                gEnd   = GKptr(i + 1);
-                for (auto kg = gBegin; kg < gEnd; ++kg)
-                {
-                    // Kinetic energy is 1/2 * mi * || (x^k + u*N) - xtilde ||_2^2
-                    Index vf                = GKadj(kg);
-                    bool const bIsActive    = HR.bActiveK(vf);
-                    bool const bIsDirichlet = bIsDirichletVertex(vf);
-                    if (not bIsActive and not bIsDirichlet)
-                        continue;
-                    Index ilocal          = GKilocal(kg);
-                    Index ec              = ecK(vf);
-                    SVector<Scalar, 4> Ne = FromEigen(NecK.col(vf).head<4>());
-                    SVector<Scalar, 3> xk = FromEigen(data.x.col(vf).head<3>());
-                    SMatrix<Scalar, 3, 4> ue =
-                        FromEigen(u(Eigen::placeholders::all, mesh.E.col(ec)).block<3, 4>(0, 0));
-                    SVector<Scalar, 3> x = xk + ue * Ne;
-                    if (bIsActive)
-                    {
-                        Scalar mvf                = HR.mK(vf);
-                        SVector<Scalar, 3> xtilde = FromEigen(data.xtilde.col(vf).head<3>());
-                        gu += Ne(ilocal) * mvf * (x - xtilde);
-                        Diag(Hu) += Ne(ilocal) * Ne(ilocal) * mvf;
-                    }
-                    // Dirichlet energy
-                    if (bIsDirichlet)
-                    {
-                        // NOTE: We should have an explicit matrix of Dirichlet boundary conditions
-                        // so that we can control them, rather than always having them as rest
-                        // positions.
-                        SVector<Scalar, 3> xD = FromEigen(data.X.col(vf).head<3>());
-                        // Dirichlet energy is 1/2 muD * || (x^k + u*N) - d(x) ||_2^2
-                        gu += Ne(ilocal) * data.muD * (x - xD);
-                        Diag(Hu) += Ne(ilocal) * Ne(ilocal) * data.muD;
-                    }
-                }
+                ComputeElasticEnergyDerivatives(data, *this, i, dt2, Hu, gu);
+                ComputeKineticAndDirichletEnergyDerivatives(data, *this, i, Hu, gu);
                 // Integrate
                 if (std::abs(Determinant(Hu)) < data.detHZero)
                     return;
@@ -235,14 +259,9 @@ void Level::Smooth(Scalar dt, Index iters, Data& data)
     Prolong(data);
 }
 
-void Level::HyperReduce(Data const& data, hypre::Strategies strategy)
+void Level::Reduce([[maybe_unused]] Data const& data)
 {
-    // TODO: Implement smart way to choose computational budget at each
-    // coarse level.
-    Index const nCoarseElements       = mesh.E.cols();
-    Index const nFineElements         = data.E.cols();
-    Index const nTargetActiveElements = std::min(3 * nCoarseElements, nFineElements);
-    HR                                = HyperReduction(data, nTargetActiveElements, strategy);
+    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.vbd.multigrid.Level.Reduce");
 }
 
 } // namespace multigrid
