@@ -31,12 +31,12 @@ HyperReduction::HyperReduction(Hierarchy const& hierarchy, Index clusterSize)
         hierarchy.data.E,
         hierarchy.data.X.cols(),
         graph::EMeshDualGraphOptions::FaceAdjacent));
-    auto nNodes                = Gptr.size() - 1;
     std::size_t nLevels        = hierarchy.levels.size();
     for (std::size_t l = 0; l < nLevels; l++)
     {
-        // Reduce the graph via partitioning
-        auto nPartitions = nNodes / clusterSize;
+        // Reduce the graph via partitioning/clustering
+        auto nGraphNodes = Gptr.size() - 1;
+        auto nPartitions = nGraphNodes / clusterSize;
         graph::PartitioningOptions opts{};
         opts.eCoarseningStrategy =
             graph::PartitioningOptions::ECoarseningStrategy::SortedHeavyEdgeMatching;
@@ -48,10 +48,10 @@ HyperReduction::HyperReduction(Hierarchy const& hierarchy, Index clusterSize)
         // Store the l^{th} level clustering
         std::tie(Cptr[l], Cadj[l]) = graph::MapToAdjacency(clustering);
         // Compute the supernodal graph (i.e. graph of clusters) as next graph to partition
-        auto Gsizes = Gptr(Eigen::seqN(1, Gptr.size() - 1)) - Gptr(Eigen::seqN(0, Gptr.size() - 1));
-        auto iota   = IndexVectorX::LinSpaced(clustering.size(), 0, clustering.size() - 1);
-        auto SGu    = clustering(common::Repeat(iota, Gsizes));
-        auto SGv    = clustering(Gadj);
+        auto Gsizes   = Gptr(Eigen::seqN(1, nGraphNodes)) - Gptr(Eigen::seqN(0, nGraphNodes));
+        auto iota     = IndexVectorX::LinSpaced(clustering.size(), 0, clustering.size() - 1);
+        auto SGu      = clustering(common::Repeat(iota, Gsizes));
+        auto SGv      = clustering(Gadj);
         auto edgeView = std::views::iota(0, SGu.size()) | std::views::transform([&](auto i) {
                             return graph::WeightedEdge(SGu(i), SGv(i), Gwts(i));
                         }) |
