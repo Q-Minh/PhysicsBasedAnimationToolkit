@@ -3,29 +3,28 @@
 
 #include "pbat/Aliases.h"
 
+#include <vector>
+
 namespace pbat {
 namespace sim {
 namespace vbd {
-
-struct Data;
-
 namespace multigrid {
+
+struct Hierarchy;
 
 struct HyperReduction
 {
-    using BoolVectorX = Eigen::Vector<bool, Eigen::Dynamic>;
+    HyperReduction(Hierarchy const& hierarchy, Index clusterSize = 5);
 
-    HyperReduction(
-        Data const& data,
-        Index nTargetActiveElements = Index(-1));
+    /**
+     * @brief Hierarchical clustering of mesh elements
+     */
+    std::vector<IndexVectorX> Cptr;
+    std::vector<IndexVectorX> Cadj;
 
-    BoolVectorX bActiveE; ///<
-    BoolVectorX bActiveK; ///<
-
-    VectorX wgE; ///<
-    VectorX mK;  ///<
-
-    Index nTargetActiveElements; ///< 
+    std::vector<VectorX>
+        Ep;       ///< |#levels+1| linear polynomial errors at fine elements and at each level
+    Scalar EpMax; ///< Maximum allowable linear polynomial error in any cluster
 };
 
 } // namespace multigrid

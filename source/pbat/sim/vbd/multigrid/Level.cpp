@@ -42,8 +42,7 @@ Level::Level(Data const& data, VolumeMesh meshIn)
       GKptr(),
       GKadj(),
       GKilocal(),
-      bIsDirichletVertex(),
-      HR(data, std::min(3 * mesh.E.cols(), data.E.cols()))
+      bIsDirichletVertex()
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.vbd.multigrid.Level.Construct");
 
@@ -143,12 +142,9 @@ static void ComputeElasticEnergyDerivatives(
     auto gEnd   = level.GEptr(i + 1);
     for (auto kg = gBegin; kg < gEnd; ++kg)
     {
-        Index ef = level.GEadj(kg);
-        if (not level.HR.bActiveE(ef))
-            continue;
-
+        Index ef              = level.GEadj(kg);
         IndexVector<4> ilocal = level.ilocalE.col(kg);
-        Scalar wg             = level.HR.wgE(ef);
+        Scalar wg             = data.wg(ef);
         Scalar mug            = data.lame(0, ef);
         Scalar lambdag        = data.lame(1, ef);
         Matrix<4, 3> GNef     = data.GP.block<4, 3>(0, 3 * ef);
@@ -187,24 +183,18 @@ static void ComputeKineticAndDirichletEnergyDerivatives(
     {
         // Kinetic energy is 1/2 * mi * || (x^k + u*N) - xtilde ||_2^2
         Index vf                = level.GKadj(kg);
-        bool const bIsActive    = level.HR.bActiveK(vf);
         bool const bIsDirichlet = level.bIsDirichletVertex(vf);
-        if (not bIsActive and not bIsDirichlet)
-            continue;
-        Index ilocal          = level.GKilocal(kg);
-        Index ec              = level.ecK(vf);
-        SVector<Scalar, 4> Ne = FromEigen(level.NecK.col(vf).head<4>());
-        SVector<Scalar, 3> xk = FromEigen(data.x.col(vf).head<3>());
+        Index ilocal            = level.GKilocal(kg);
+        Index ec                = level.ecK(vf);
+        SVector<Scalar, 4> Ne   = FromEigen(level.NecK.col(vf).head<4>());
+        SVector<Scalar, 3> xk   = FromEigen(data.x.col(vf).head<3>());
         SMatrix<Scalar, 3, 4> ue =
             FromEigen(level.u(Eigen::placeholders::all, level.mesh.E.col(ec)).block<3, 4>(0, 0));
-        SVector<Scalar, 3> x = xk + ue * Ne;
-        if (bIsActive)
-        {
-            Scalar mvf                = level.HR.mK(vf);
-            SVector<Scalar, 3> xtilde = FromEigen(data.xtilde.col(vf).head<3>());
-            gu += Ne(ilocal) * mvf * (x - xtilde);
-            Diag(Hu) += Ne(ilocal) * Ne(ilocal) * mvf;
-        }
+        SVector<Scalar, 3> x      = xk + ue * Ne;
+        Scalar mvf                = data.m(vf);
+        SVector<Scalar, 3> xtilde = FromEigen(data.xtilde.col(vf).head<3>());
+        gu += Ne(ilocal) * mvf * (x - xtilde);
+        Diag(Hu) += Ne(ilocal) * Ne(ilocal) * mvf;
         // Dirichlet energy
         if (bIsDirichlet)
         {

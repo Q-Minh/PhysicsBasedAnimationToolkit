@@ -74,7 +74,7 @@ struct Level
      * Energy hyper reduction
      */
     IndexVectorX GCFptr, GCFadj, GCFrank, GCFparent; ///< Coarse element -> fine element adjacency graph
-    HyperReduction HR; ///< Energy hyper reduction scheme
+    // HyperReduction HR; ///< Energy hyper reduction scheme
 };
 
 } // namespace multigrid

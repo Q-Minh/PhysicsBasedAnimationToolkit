@@ -72,12 +72,39 @@ MeshPrimalGraph(Eigen::DenseBase<TDerivedE> const& E, TIndex nNodes = TIndex(-1)
     return G * G.transpose();
 }
 
+enum class EMeshDualGraphOptions : std::int32_t {
+    VertexAdjacent = 0b001,
+    EdgeAdjacent   = 0b010,
+    FaceAdjacent   = 0b100,
+    All            = 0b111
+};
+
 template <class TDerivedE, std::integral TIndex = typename TDerivedE::Scalar>
-Eigen::SparseMatrix<TIndex, Eigen::ColMajor, TIndex>
-MeshDualGraph(Eigen::DenseBase<TDerivedE> const& E, TIndex nNodes = TIndex(-1))
+Eigen::SparseMatrix<TIndex, Eigen::ColMajor, TIndex> MeshDualGraph(
+    Eigen::DenseBase<TDerivedE> const& E,
+    TIndex nNodes              = TIndex(-1),
+    EMeshDualGraphOptions opts = EMeshDualGraphOptions::All)
 {
-    auto const G = MeshAdjacencyMatrix(E, nNodes);
-    return G.transpose() * G;
+    auto const G           = MeshAdjacencyMatrix(E, nNodes);
+    using SparseMatrixType = Eigen::SparseMatrix<TIndex, Eigen::ColMajor, TIndex>;
+    SparseMatrixType GTG   = G.transpose() * G;
+    if (opts == EMeshDualGraphOptions::All)
+        return GTG;
+    auto flags = static_cast<std::int32_t>(opts);
+    bool const bKeepFaceAdjacencies =
+        flags & static_cast<std::int32_t>(EMeshDualGraphOptions::FaceAdjacent);
+    bool const bKeepEdgeAdjacencies =
+        flags & static_cast<std::int32_t>(EMeshDualGraphOptions::EdgeAdjacent);
+    bool const bKeepVertexAdjacencies =
+        flags & static_cast<std::int32_t>(EMeshDualGraphOptions::VertexAdjacent);
+    auto const fKeepAdjacency = [=](auto row, auto col, auto degree) {
+        bool const bKeep = (degree == 3 and bKeepFaceAdjacencies) or
+                           (degree == 2 and bKeepEdgeAdjacencies) or
+                           (degree == 1 and bKeepVertexAdjacencies);
+        return bKeep;
+    };
+    GTG.prune(fKeepAdjacency);
+    return GTG;
 }
 
 } // namespace graph

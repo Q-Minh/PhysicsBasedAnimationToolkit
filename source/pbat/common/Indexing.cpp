@@ -17,5 +17,24 @@ TEST_CASE("[common] Cumulative sums are computable from any integral range type"
     CHECK_EQ(cs, csExpected);
 }
 
+TEST_CASE("[common] Repeat on Eigen vectors works as expected")
+{
+    using namespace pbat;
+    VectorX x(3);
+    x << 1.0, 2.0, 3.0;
+
+    IndexVectorX r(3);
+    r << 2, 3, 1;
+
+    VectorX expected(6);
+    expected << 1.0, 1.0, 2.0, 2.0, 2.0, 3.0;
+
+    VectorX result = common::Repeat(x, r);
+
+    CHECK_EQ(result.size(), expected.size());
+    bool const bAreEqual = (result.array() == expected.array()).all();
+    CHECK(bAreEqual);
+}
+
 } // namespace common
 } // namespace pbat

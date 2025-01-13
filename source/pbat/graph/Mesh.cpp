@@ -21,7 +21,7 @@ TEST_CASE("[graph] Mesh")
     // Act
     auto G  = graph::MeshAdjacencyMatrix(E, V.cols());
     auto GP = graph::MeshPrimalGraph(E, V.cols());
-    auto GD = graph::MeshDualGraph(E, V.cols());
+    auto GD = graph::MeshDualGraph(E, V.cols(), graph::EMeshDualGraphOptions::All);
     // Assert
     CHECK_EQ(GP.rows(), V.cols());
     CHECK_EQ(GP.cols(), V.cols());

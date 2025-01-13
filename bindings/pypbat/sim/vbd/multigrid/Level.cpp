@@ -98,8 +98,7 @@ void BindLevel(pybind11::module& m)
         .def_readwrite(
             "is_dirichlet_vertex",
             &Level::bIsDirichletVertex,
-            "Boolean mask identifying Dirichlet constrained vertices")
-        .def_readwrite("hyper_reduction", &Level::HR, "Hyper reduction scheme at this level");
+            "Boolean mask identifying Dirichlet constrained vertices");
 }
 
 } // namespace multigrid
