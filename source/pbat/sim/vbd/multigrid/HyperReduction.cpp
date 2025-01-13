@@ -48,10 +48,13 @@ HyperReduction::HyperReduction(Hierarchy const& hierarchy, Index clusterSize)
         // Store the l^{th} level clustering
         std::tie(Cptr[l], Cadj[l]) = graph::MapToAdjacency(clustering);
         // Compute the supernodal graph (i.e. graph of clusters) as next graph to partition
-        auto Gsizes   = Gptr(Eigen::seqN(1, nGraphNodes)) - Gptr(Eigen::seqN(0, nGraphNodes));
-        auto iota     = IndexVectorX::LinSpaced(clustering.size(), 0, clustering.size() - 1);
-        auto SGu      = clustering(common::Repeat(iota, Gsizes));
-        auto SGv      = clustering(Gadj);
+        auto Gsizes = Gptr(Eigen::seqN(1, nGraphNodes)) - Gptr(Eigen::seqN(0, nGraphNodes));
+        auto u      = common::Repeat(
+            IndexVectorX::LinSpaced(clustering.size(), 0, clustering.size() - 1),
+            Gsizes);
+        auto const& v = Gadj;
+        auto SGu      = clustering(u);
+        auto SGv      = clustering(v);
         auto edgeView = std::views::iota(0, SGu.size()) | std::views::transform([&](auto i) {
                             return graph::WeightedEdge(SGu(i), SGv(i), Gwts(i));
                         }) |
