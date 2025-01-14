@@ -64,6 +64,9 @@ void HyperReduction::ConstructHierarchicalClustering(Hierarchy const& hierarchy,
         auto clustering  = graph::Partition(Gptr, Gadj, Gwts, nPartitions, opts);
         // Store the l^{th} level clustering
         std::tie(Cptr[l], Cadj[l]) = graph::MapToAdjacency(clustering);
+        // Exit if coarsest level reached
+        if (l + 1 == nLevels)
+            break;
         // Compute the supernodal graph (i.e. graph of clusters) as next graph to partition
         auto Gsizes = Gptr(Eigen::seqN(1, nGraphNodes)) - Gptr(Eigen::seqN(0, nGraphNodes));
         auto u      = common::Repeat(
@@ -109,8 +112,9 @@ void HyperReduction::SelectClusterRepresentatives(Hierarchy const& hierarchy)
     {
         auto const& cptr     = Cptr[l];
         auto const& cadj     = Cadj[l];
-        auto& ec             = eC[l];
         auto const nClusters = cptr.size() - 1;
+        auto& ec             = eC[l];
+        ec.resize(nClusters);
         tbb::parallel_for(Index(0), nClusters, [&](Index c) {
             auto const& cluster = cadj(Eigen::seqN(cptr(c), cptr(c + 1)));
             auto const& Xc      = centroids(Eigen::placeholders::all, cluster);
