@@ -2,9 +2,6 @@
 
 #include "pbat/common/Eigen.h"
 #include "pbat/common/Indexing.h"
-#include "pbat/fem/Jacobian.h"
-#include "pbat/fem/Tetrahedron.h"
-#include "pbat/geometry/TetrahedralAabbHierarchy.h"
 #include "pbat/graph/Adjacency.h"
 #include "pbat/graph/Mesh.h"
 #include "pbat/graph/Partition.h"
