@@ -1,10 +1,15 @@
 #include "HyperReduction.h"
 
+#include "pbat/common/Eigen.h"
 #include "pbat/common/Indexing.h"
+#include "pbat/fem/Jacobian.h"
+#include "pbat/fem/Tetrahedron.h"
 #include "pbat/geometry/TetrahedralAabbHierarchy.h"
 #include "pbat/graph/Adjacency.h"
 #include "pbat/graph/Mesh.h"
 #include "pbat/graph/Partition.h"
+#include "pbat/math/PolynomialBasis.h"
+#include "pbat/math/SymmetricQuadratureRules.h"
 #include "pbat/profiling/Profiling.h"
 #include "pbat/sim/vbd/Data.h"
 #include "pbat/sim/vbd/Mesh.h"
@@ -23,7 +28,7 @@ HyperReduction::HyperReduction(Hierarchy const& hierarchy, Index clusterSize)
     : Cptr(hierarchy.levels.size()),
       Cadj(hierarchy.levels.size()),
       eC(hierarchy.levels.size()),
-      PinvC(hierarchy.levels.size()),
+      ApInvC(hierarchy.levels.size()),
       Ep(hierarchy.levels.size() + 1),
       EpMax(1e-6)
 {
@@ -56,7 +61,7 @@ void HyperReduction::ConstructHierarchicalClustering(Hierarchy const& hierarchy,
 
     // Construct the clustering at each level
     auto nLevels = hierarchy.levels.size();
-    for (decltype(nLevels) l = 0; l < nLevels; l++)
+    for (decltype(nLevels) l = 0; l < nLevels; ++l)
     {
         // Reduce the graph via partitioning/clustering
         auto nGraphNodes = Gptr.size() - 1;
@@ -102,28 +107,28 @@ void HyperReduction::SelectClusterRepresentatives(Hierarchy const& hierarchy)
 
     // Compute element centroids
     tbb::parallel_for(Index(0), nElements, [&](Index e) {
-        auto const& x    = X(E.col(e));
+        auto const& x    = X(Eigen::placeholders::all, E.col(e));
         centroids.col(e) = x.rowwise().mean();
     });
 
     // Select each level's cluster representatives
     auto nLevels = hierarchy.levels.size();
-    for (decltype(nLevels) l = 0; l < nLevels; l++)
+    for (decltype(nLevels) l = 0; l < nLevels; ++l)
     {
         auto const& cptr     = Cptr[l];
         auto const& cadj     = Cadj[l];
         auto const nClusters = cptr.size() - 1;
-        auto& ec             = eC[l];
-        ec.resize(nClusters);
+        auto& ecL            = eC[l];
+        ecL.resize(nClusters);
         tbb::parallel_for(Index(0), nClusters, [&](Index c) {
-            auto const& cluster = cadj(Eigen::seqN(cptr(c), cptr(c + 1)));
+            auto const& cluster = cadj(Eigen::seq(cptr(c), cptr(c + 1) - 1));
             auto const& Xc      = centroids(Eigen::placeholders::all, cluster);
             auto const muXc     = Xc.rowwise().mean().eval();
             auto const d2mu     = (Xc.array().colwise() - muXc.array()).colwise().squaredNorm();
             Index eMu;
-            Scalar d2eMu     = d2mu.minCoeff(&eMu);
-            ec(c)            = cluster(eMu);
-            centroids.col(c) = muXc;
+            [[maybe_unused]] Scalar d2eMu = d2mu.minCoeff(&eMu);
+            ecL(c)                        = cluster(eMu);
+            centroids.col(c)              = muXc;
         });
     }
 }
@@ -133,9 +138,48 @@ void HyperReduction::PrecomputeInversePolynomialMatrices(Hierarchy const& hierar
     PBAT_PROFILE_NAMED_SCOPE(
         "pbat.sim.vbd.multigrid.HyperReduction.PrecomputeInversePolynomialMatrices");
 
+    auto const& data = hierarchy.data;
+    auto const& E    = data.E;
+    auto const& detJe =
+        data.wg; // wg = detJe*wge, but with a single wge per tetrahedron, we have wge=1
+    auto nFineElements = E.cols();
+    MatrixX Ap(4, 4 * nFineElements);
+    Ap.setZero();
+
+    // Compute the element polynomial inner product matrices
+    using Polynomial = math::MonomialBasis<3, 1>;
+    using Quadrature = math::SymmetricSimplexPolynomialQuadratureRule<3, 2>;
+    tbb::parallel_for(Index(0), nFineElements, [&](Index e) {
+        auto const& Xe = data.X(Eigen::placeholders::all, E.col(e));
+        auto Xig       = common::ToEigen(Quadrature::points)
+                       .reshaped(Quadrature::kDims + 1, Quadrature::kPoints);
+        auto wg  = common::ToEigen(Quadrature::weights);
+        auto Ape = Ap.block<4, 4>(0, 4 * e);
+        for (auto g = 0; g < Quadrature::kPoints; ++g)
+        {
+            auto Xg = Xe * Xig.col(g);
+            auto P  = Polynomial{}.eval(Xg);
+            Ape += wg(g) * P * P.transpose() * detJe(e);
+        }
+    });
+
+    // Compute the inverse of the per cluster polynomial inner product matrices
     auto nLevels = hierarchy.levels.size();
-    for (decltype(nLevels) l = 0; l < nLevels; l++)
+    for (decltype(nLevels) l = 0; l < nLevels; ++l)
     {
+        auto const& cptr     = Cptr[l];
+        auto const& cadj     = Cadj[l];
+        auto const nClusters = cptr.size() - 1;
+        ApInvC[l].resize(4, 4 * nClusters);
+        auto& ApInvL = ApInvC[l];
+        tbb::parallel_for(Index(0), nClusters, [&](Index c) {
+            auto const& cluster = cadj(Eigen::seq(cptr(c), cptr(c + 1) - 1));
+            auto Apc            = Ap.block<4, 4>(0, 4 * cluster(0));
+            for (auto cc = 1; cc < cluster.size(); ++cc)
+                Apc += Ap.block<4, 4>(0, 4 * cluster(cc));
+            auto ApInvc = ApInvL.block<4, 4>(0, 4 * c);
+            ApInvc      = Apc.inverse();
+        });
     }
 }
 
