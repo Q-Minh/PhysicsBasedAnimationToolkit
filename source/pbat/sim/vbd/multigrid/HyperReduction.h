@@ -14,7 +14,17 @@ struct Hierarchy;
 
 struct HyperReduction
 {
+    static constexpr auto kPolynomialOrder      = 1;
+    static constexpr auto kDims                 = 3;
+
     HyperReduction(Hierarchy const& hierarchy, Index clusterSize = 5);
+    /**
+     * @brief
+     *
+     * @param nElements
+     * @param nLevels
+     */
+    void AllocateWorkspace(Index nElements, std::size_t nLevels);
     /**
      * @brief Construct the hierarchical clustering of mesh elements
      *
