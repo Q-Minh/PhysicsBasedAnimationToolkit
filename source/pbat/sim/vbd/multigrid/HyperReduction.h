@@ -14,10 +14,24 @@ struct Hierarchy;
 
 struct HyperReduction
 {
-    static constexpr auto kPolynomialOrder      = 1;
-    static constexpr auto kDims                 = 3;
+    static constexpr auto kPolynomialOrder = 1;
+    static constexpr auto kDims            = 3;
 
+    HyperReduction() = default;
+    /**
+     * @brief
+     *
+     * @param hierarchy
+     * @param clusterSize
+     */
     HyperReduction(Hierarchy const& hierarchy, Index clusterSize = 5);
+    /**
+     * @brief
+     *
+     * @param hierarchy
+     * @param clusterSize
+     */
+    void Construct(Hierarchy const& hierarchy, Index clusterSize = 5);
     /**
      * @brief
      *
@@ -58,8 +72,8 @@ struct HyperReduction
                 ///< coefficients are \int_{\Omega^c} P_i(X) P_j(X) dx, where \Omega^c is cluster
                 ///< c's domain, and P_k(X) is the k^{th} polynomial basis.
     std::vector<VectorX>
-        Ep;       ///< |#levels+1| linear polynomial errors at fine elements and at each level
-    Scalar EpMax; ///< Maximum allowable linear polynomial error in any cluster
+        Ep;             ///< |#levels+1| linear polynomial errors at fine elements and at each level
+    Scalar EpMax{1e-6}; ///< Maximum allowable linear polynomial error in any cluster
 };
 
 } // namespace multigrid

@@ -21,13 +21,12 @@ namespace sim {
 namespace vbd {
 namespace multigrid {
 
-HyperReduction::HyperReduction(Hierarchy const& hierarchy, Index clusterSize)
-    : Cptr(hierarchy.levels.size()),
-      Cadj(hierarchy.levels.size()),
-      eC(hierarchy.levels.size()),
-      ApInvC(hierarchy.levels.size()),
-      Ep(hierarchy.levels.size() + 1),
-      EpMax(1e-6)
+HyperReduction::HyperReduction(Hierarchy const& hierarchy, Index clusterSize) : HyperReduction()
+{
+    Construct(hierarchy, clusterSize);
+}
+
+void HyperReduction::Construct(Hierarchy const& hierarchy, Index clusterSize)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.vbd.multigrid.HyperReduction.Construct");
     ConstructHierarchicalClustering(hierarchy, clusterSize);
@@ -40,6 +39,9 @@ HyperReduction::HyperReduction(Hierarchy const& hierarchy, Index clusterSize)
 
 void HyperReduction::AllocateWorkspace(Index nElements, std::size_t nLevels)
 {
+    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.vbd.multigrid.HyperReduction.AllocateWorkspace");
+    eC.resize(nLevels);
+    ApInvC.resize(nLevels);
     Ep.resize(nLevels + 1);
     Ep.front().resize(nElements);
     for (decltype(nLevels) l = 0; l < nLevels; ++l)
@@ -55,6 +57,9 @@ void HyperReduction::ConstructHierarchicalClustering(Hierarchy const& hierarchy,
 {
     PBAT_PROFILE_NAMED_SCOPE(
         "pbat.sim.vbd.multigrid.HyperReduction.ConstructHierarchicalClustering");
+
+    Cptr.resize(hierarchy.levels.size());
+    Cadj.resize(hierarchy.levels.size());
 
     // Construct the graph of face-adjacent fine mesh elements
     IndexVectorX Gptr, Gadj, Gwts;
