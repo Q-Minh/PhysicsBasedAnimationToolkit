@@ -76,7 +76,7 @@ struct HyperReduction
         ApInvC; ///< |#levels| list of 4x|4*#clusters| of A_p^{-1} matrices, such that A_p's
                 ///< coefficients are \int_{\Omega^c} P_i(X) P_j(X) dx, where \Omega^c is cluster
                 ///< c's domain, and P_k(X) is the k^{th} polynomial basis.
-    MatrixX bC; ///< #dimsx|#elements| array of integrated target fields
+    std::vector<MatrixX> bC; ///< #dimsx|#elements| array of integrated target fields
     std::vector<VectorX> wC; ///< |#levels| cluster quad. weights
     IndexVectorX eC;         ///< Representative elements of each cluster
     std::vector<MatrixX> up; ///< |#levels| list of |#clusters| cluster polynomials

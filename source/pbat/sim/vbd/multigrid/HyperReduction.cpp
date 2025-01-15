@@ -24,6 +24,12 @@ namespace sim {
 namespace vbd {
 namespace multigrid {
 
+using Polynomial = math::MonomialBasis<HyperReduction::kDims, HyperReduction::kPolynomialOrder>;
+using Quadrature = math::SymmetricSimplexPolynomialQuadratureRule<
+    HyperReduction::kDims,
+    2 * HyperReduction::kPolynomialOrder>;
+static auto constexpr kPolyCoeffs = static_cast<Index>(Polynomial::kSize);
+
 HyperReduction::HyperReduction(Hierarchy const& hierarchy, Index clusterSize) : HyperReduction()
 {
     Construct(hierarchy, clusterSize);
@@ -43,13 +49,14 @@ void HyperReduction::AllocateWorkspace(std::size_t nLevels)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.vbd.multigrid.HyperReduction.AllocateWorkspace");
     ApInvC.resize(nLevels);
+    bC.resize(nLevels + 1);
     wC.resize(nLevels);
     up.resize(nLevels);
     Ep.resize(nLevels);
     for (decltype(nLevels) l = 0; l < nLevels; ++l)
     {
         auto const nClusters = Cptr[l].size() - 1;
-        ApInvC[l].resize(4, 4 * nClusters);
+        ApInvC[l].resize(kPolyCoeffs, kPolyCoeffs * nClusters);
         wC[l].resize(nClusters);
         Ep[l].resize(nClusters);
     }
@@ -145,23 +152,21 @@ void HyperReduction::PrecomputeInversePolynomialMatrices(Hierarchy const& hierar
     auto const& detJe =
         data.wg; // wg = detJe*wge, but with a single wge per tetrahedron, we have wge=1
     auto nFineElements = E.cols();
-    MatrixX Ap(4, 4 * nFineElements);
+    MatrixX Ap(kPolyCoeffs, kPolyCoeffs * nFineElements);
     Ap.setZero();
 
     // Compute the element polynomial inner product matrices
-    using Polynomial = math::MonomialBasis<kDims, kPolynomialOrder>;
-    using Quadrature = math::SymmetricSimplexPolynomialQuadratureRule<kDims, 2 * kPolynomialOrder>;
     tbb::parallel_for(Index(0), nFineElements, [&](Index e) {
         auto const& Xe = data.X(Eigen::placeholders::all, E.col(e));
         auto Xig       = common::ToEigen(Quadrature::points)
                        .reshaped(Quadrature::kDims + 1, Quadrature::kPoints);
         auto wg  = common::ToEigen(Quadrature::weights);
-        auto Ape = Ap.block<4, 4>(0, 4 * e);
+        auto Ape = Ap.block<kPolyCoeffs, kPolyCoeffs>(0, kPolyCoeffs * e);
         for (auto g = 0; g < Quadrature::kPoints; ++g)
         {
             auto Xg = Xe * Xig.col(g);
-            auto P  = Polynomial{}.eval(Xg);
-            Ape += wg(g) * P * P.transpose() * detJe(e);
+            auto Pg = Polynomial{}.eval(Xg);
+            Ape += wg(g) * Pg * Pg.transpose() * detJe(e);
         }
     });
 
@@ -172,13 +177,17 @@ void HyperReduction::PrecomputeInversePolynomialMatrices(Hierarchy const& hierar
         auto const& cptr     = Cptr[l];
         auto const& cadj     = Cadj[l];
         auto const nClusters = cptr.size() - 1;
+        ApInvC[l].setZero();
         tbb::parallel_for(Index(0), nClusters, [&](Index c) {
-            auto const& cluster = cadj(Eigen::seq(cptr(c), cptr(c + 1) - 1));
-            auto Apc            = Ap.block<4, 4>(0, 4 * cluster(0));
-            for (auto cc = 1; cc < cluster.size(); ++cc)
-                Apc += Ap.block<4, 4>(0, 4 * cluster(cc));
-            auto ApInvc = ApInvC[l].block<4, 4>(0, 4 * c);
-            ApInvc      = Apc.inverse();
+            auto cluster = cadj(Eigen::seq(cptr(c), cptr(c + 1) - 1));
+            auto ApInvc  = ApInvC[l].block<kPolyCoeffs, kPolyCoeffs>(0, kPolyCoeffs * c);
+            for (auto cc = 0; cc < cluster.size(); ++cc)
+            {
+                auto const& App = (l == 0) ? Ap : ApInvC[l - 1];
+                auto Apcc       = App.block<kPolyCoeffs, kPolyCoeffs>(0, kPolyCoeffs * cluster(cc));
+                ApInvc += Apcc;
+            }
+            ApInvc = ApInvc.inverse().eval();
         });
     }
 }
@@ -188,25 +197,22 @@ void HyperReduction::ComputeLinearPolynomialErrors(
     Eigen::Ref<MatrixX const> const& u)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.vbd.multigrid.HyperReduction.ComputeLinearPolynomialErrors");
-    using Quadrature  = math::SymmetricSimplexPolynomialQuadratureRule<kDims, 2 * kPolynomialOrder>;
-    using Polynomial  = math::MonomialBasis<kDims, kPolynomialOrder>;
     using Tetrahedron = typename vbd::VolumeMesh::ElementType;
 
-    Data const& data           = hierarchy.data;
-    auto const dims            = u.rows();
-    auto constexpr kPolyCoeffs = static_cast<Index>(Polynomial::kSize);
+    Data const& data = hierarchy.data;
+    auto const dims  = u.rows();
     // Integrate element displacements
     auto nFineElements = C.front().size();
-    bC.setZero(dims * kPolyCoeffs, nFineElements);
+    bC.front().setZero(dims * kPolyCoeffs, nFineElements);
     auto const& detJe = data.wg;
     auto Ne           = fem::ShapeFunctions<Tetrahedron, 2 * kPolynomialOrder>();
     tbb::parallel_for(Index(0), nFineElements, [&](Index e) {
-        auto const& Xe = data.X(Eigen::placeholders::all, data.E.col(e));
-        auto const& ue = u(Eigen::placeholders::all, data.E.col(e));
+        auto const Xe  = data.X(Eigen::placeholders::all, data.E.col(e));
+        auto const ue  = u(Eigen::placeholders::all, data.E.col(e));
         auto const wg  = common::ToEigen(Quadrature::weights);
         auto const Xig = common::ToEigen(Quadrature::points)
                              .reshaped(Quadrature::kDims + 1, Quadrature::kPoints);
-        auto bCe = bC.col(e).reshaped(kPolyCoeffs, dims);
+        auto bCe = bC.front().col(e).reshaped(kPolyCoeffs, dims);
         for (auto g = 0; g < Quadrature::kPoints; ++g)
         {
             auto Xg = Xe * Xig.col(g);
@@ -225,14 +231,15 @@ void HyperReduction::ComputeLinearPolynomialErrors(
         auto const& cadj     = Cadj[l];
         auto const nClusters = cptr.size() - 1;
         up[l].resize(dims * kPolyCoeffs, nClusters);
+        bC[l + 1].resize(dims * kPolyCoeffs, nClusters);
         tbb::parallel_for(Index(0), nClusters, [&](Index c) {
             auto cluster = cadj(Eigen::seq(cptr(c), cptr(c + 1) - 1));
             // Integrate cluster displacements
-            bC.col(c) = bC(Eigen::placeholders::all, cluster).rowwise().sum();
+            bC[l + 1].col(c) = bC[l](Eigen::placeholders::all, cluster).rowwise().sum();
             // Solve least-squares polynomial matching problem
-            auto ApInvc = ApInvC[l].block<4, 4>(0, 4 * c);
+            auto ApInvc = ApInvC[l].block<kPolyCoeffs, kPolyCoeffs>(0, kPolyCoeffs * c);
             auto Uplc   = up[l].col(c).reshaped(kPolyCoeffs, dims);
-            auto Bc     = bC.col(c).reshaped(kPolyCoeffs, dims);
+            auto Bc     = bC[l + 1].col(c).reshaped(kPolyCoeffs, dims);
             Uplc        = ApInvc * Bc;
         });
     }
@@ -246,7 +253,7 @@ void HyperReduction::ComputeLinearPolynomialErrors(
         auto const nClusters = cptr.size() - 1;
         tbb::parallel_for(Index(0), nClusters, [&](Index c) {
             auto cluster              = cadj(Eigen::seq(cptr(c), cptr(c + 1) - 1));
-            auto Upc                  = up[l].col(c).reshaped(kPolyCoeffs, dims).transpose();
+            auto Upc                  = up[l].col(c).reshaped(kPolyCoeffs, dims);
             bool const bIsFinestLevel = (l == 0);
             if (bIsFinestLevel)
             {
@@ -259,7 +266,7 @@ void HyperReduction::ComputeLinearPolynomialErrors(
                     {
                         auto ug = ue * Ne.col(g);
                         auto Pg = Polynomial{}.eval(Xe * Ne.col(g));
-                        Ep[l](c) += wg(g) * (Upc * Pg - ug).squaredNorm() * detJe(e);
+                        Ep[l](c) += wg(g) * (Upc.transpose() * Pg - ug).squaredNorm() * detJe(e);
                     }
                 }
                 eC(c) = cluster(0);
@@ -279,7 +286,7 @@ void HyperReduction::ComputeLinearPolynomialErrors(
                     auto Pg        = Polynomial{}.eval(Xg);
                     auto ug        = ue.rowwise().mean();
                     // Accumulate this cluster's error w.r.t. its children
-                    Ep[l](c) += wgc * (Upc * Pg - ug).squaredNorm();
+                    Ep[l](c) += wgc * (Upc.transpose() * Pg - ug).squaredNorm();
                 }
                 // Store the representative element of this cluster as this cluster's first child's
                 // representative element
@@ -355,9 +362,9 @@ TEST_CASE("[sim][vbd][multigrid] HyperReduction")
             CHECK_EQ(expectedTotalVolume, doctest::Approx(volumeAtLevelL));
         }
     }
-    SUBCASE("Per-cluster polynomial displacements have vanishing error") 
+    SUBCASE("Per-cluster polynomial displacements have vanishing error")
     {
-        auto nNodes = H.data.X.cols();
+        auto nNodes          = H.data.X.cols();
         MatrixX uTranslation = MatrixX::Ones(3, nNodes);
         HR.ComputeLinearPolynomialErrors(H, uTranslation);
         for (decltype(nLevels) l = 0; l < nLevels; ++l)
