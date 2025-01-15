@@ -31,14 +31,13 @@ void HyperReduction::Construct(Hierarchy const& hierarchy, Index clusterSize)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.vbd.multigrid.HyperReduction.Construct");
     ConstructHierarchicalClustering(hierarchy, clusterSize);
-    auto nElements = hierarchy.data.E.cols();
-    auto nLevels   = hierarchy.levels.size();
-    AllocateWorkspace(nElements, nLevels);
+    auto nLevels = hierarchy.levels.size();
+    AllocateWorkspace(nLevels);
     SelectClusterRepresentatives(hierarchy);
     PrecomputeInversePolynomialMatrices(hierarchy);
 }
 
-void HyperReduction::AllocateWorkspace(Index nElements, std::size_t nLevels)
+void HyperReduction::AllocateWorkspace(std::size_t nLevels)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.vbd.multigrid.HyperReduction.AllocateWorkspace");
     eC.resize(nLevels);
@@ -224,7 +223,7 @@ void HyperReduction::ComputeLinearPolynomialErrors(
             b.col(e) += wg(g) * ug * detJe(e);
         }
     });
-    // Solve cluster polynomial matching problems 
+    // Solve cluster polynomial matching problems
     auto nLevels = Cptr.size();
     for (decltype(nLevels) l = 0; l < nLevels; ++l)
     {
@@ -232,7 +231,6 @@ void HyperReduction::ComputeLinearPolynomialErrors(
         auto const& cadj     = Cadj[l];
         auto const nClusters = cptr.size() - 1;
         up[l].resize(Polynomial::kSize, nClusters);
-        auto& ep = Ep[l];
         tbb::parallel_for(Index(0), nClusters, [&](Index c) {
             auto cluster = cadj(Eigen::seq(cptr(c), cptr(c + 1) - 1));
             // Integrate cluster displacements
@@ -244,7 +242,6 @@ void HyperReduction::ComputeLinearPolynomialErrors(
         });
     }
     // Integrate element polynomial errors
-    
 }
 
 } // namespace multigrid
@@ -314,5 +311,8 @@ TEST_CASE("[sim][vbd][multigrid] HyperReduction")
             CHECK_EQ(nRepresentatives, nUnique);
         }
     }
-    SUBCASE("Per-cluster polynomial displacements have vanishing error") {}
+    SUBCASE("Per-cluster polynomial displacements have vanishing error") 
+    {
+        
+    }
 }

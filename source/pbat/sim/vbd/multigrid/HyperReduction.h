@@ -35,10 +35,9 @@ struct HyperReduction
     /**
      * @brief
      *
-     * @param nElements
      * @param nLevels
      */
-    void AllocateWorkspace(Index nElements, std::size_t nLevels);
+    void AllocateWorkspace(std::size_t nLevels);
     /**
      * @brief Construct the hierarchical clustering of mesh elements
      *
@@ -80,7 +79,7 @@ struct HyperReduction
                 ///< coefficients are \int_{\Omega^c} P_i(X) P_j(X) dx, where \Omega^c is cluster
                 ///< c's domain, and P_k(X) is the k^{th} polynomial basis.
     MatrixX b;  ///< #dimsx|#elements| array of integrated target fields
-    std::vector<MatrixX> up;  ///< |#levels| list of |#clusters| cluster polynomials
+    std::vector<MatrixX> up; ///< |#levels| list of |#clusters| cluster polynomials
     std::vector<VectorX> Ep; ///< |#levels| linear polynomial errors at each level
     Scalar EpMax{1e-6};      ///< Maximum allowable linear polynomial error in any cluster
 };
