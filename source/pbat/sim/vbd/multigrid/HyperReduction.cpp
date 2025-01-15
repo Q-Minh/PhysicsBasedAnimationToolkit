@@ -51,6 +51,7 @@ void HyperReduction::AllocateWorkspace(std::size_t nLevels)
     ApInvC.resize(nLevels);
     bC.resize(nLevels + 1);
     wC.resize(nLevels);
+    eC.resize(nLevels);
     up.resize(nLevels);
     Ep.resize(nLevels);
     for (decltype(nLevels) l = 0; l < nLevels; ++l)
@@ -58,10 +59,9 @@ void HyperReduction::AllocateWorkspace(std::size_t nLevels)
         auto const nClusters = Cptr[l].size() - 1;
         ApInvC[l].resize(kPolyCoeffs, kPolyCoeffs * nClusters);
         wC[l].resize(nClusters);
+        eC[l].resize(nClusters);
         Ep[l].resize(nClusters);
     }
-    auto nClustersAtFinestLevel = Cptr.front().size() - 1;
-    eC.resize(nClustersAtFinestLevel);
 }
 
 void HyperReduction::ConstructHierarchicalClustering(Hierarchy const& hierarchy, Index clusterSize)
@@ -269,7 +269,7 @@ void HyperReduction::ComputeLinearPolynomialErrors(
                         Ep[l](c) += wg(g) * (Upc.transpose() * Pg - ug).squaredNorm() * detJe(e);
                     }
                 }
-                eC(c) = cluster(0);
+                eC[l](c) = cluster(0);
             }
             else
             {
@@ -278,7 +278,7 @@ void HyperReduction::ComputeLinearPolynomialErrors(
                     // Accumulate errors from child clusters
                     Ep[l](c) += Ep[l - 1](cc);
                     // Compute integrand at child cluster's representative element's centroid
-                    Index e        = eC(cc);
+                    Index e        = eC[l - 1](cc);
                     Scalar wgc     = wC[l - 1](cc);
                     auto const& Xe = data.X(Eigen::placeholders::all, data.E.col(e));
                     auto const& ue = u(Eigen::placeholders::all, data.E.col(e));
@@ -290,7 +290,7 @@ void HyperReduction::ComputeLinearPolynomialErrors(
                 }
                 // Store the representative element of this cluster as this cluster's first child's
                 // representative element
-                eC(c) = eC(cluster(0));
+                eC[l](c) = eC[l - 1](cluster(0));
             }
         });
     }
