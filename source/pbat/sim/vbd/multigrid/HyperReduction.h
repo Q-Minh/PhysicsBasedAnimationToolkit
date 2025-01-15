@@ -58,6 +58,14 @@ struct HyperReduction
      * @param hierarchy
      */
     void PrecomputeInversePolynomialMatrices(Hierarchy const& hierarchy);
+    /**
+     * @brief
+     *
+     * @param u
+     * @param hierarchy
+     */
+    void
+    ComputeLinearPolynomialErrors(Hierarchy const& hierarchy, Eigen::Ref<MatrixX const> const& u);
 
     /**
      * @brief Hierarchical clustering of mesh elements
@@ -71,9 +79,10 @@ struct HyperReduction
         ApInvC; ///< |#levels| list of 4x|4*#clusters| of A_p^{-1} matrices, such that A_p's
                 ///< coefficients are \int_{\Omega^c} P_i(X) P_j(X) dx, where \Omega^c is cluster
                 ///< c's domain, and P_k(X) is the k^{th} polynomial basis.
-    std::vector<VectorX>
-        Ep;             ///< |#levels+1| linear polynomial errors at fine elements and at each level
-    Scalar EpMax{1e-6}; ///< Maximum allowable linear polynomial error in any cluster
+    MatrixX b;  ///< #dimsx|#elements| array of integrated target fields
+    std::vector<MatrixX> up;  ///< |#levels| list of |#clusters| cluster polynomials
+    std::vector<VectorX> Ep; ///< |#levels| linear polynomial errors at each level
+    Scalar EpMax{1e-6};      ///< Maximum allowable linear polynomial error in any cluster
 };
 
 } // namespace multigrid
