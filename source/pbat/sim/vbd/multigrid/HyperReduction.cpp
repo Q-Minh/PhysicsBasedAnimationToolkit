@@ -3,6 +3,7 @@
 #include "pbat/common/Eigen.h"
 #include "pbat/common/Indexing.h"
 #include "pbat/fem/ShapeFunctions.h"
+#include "pbat/geometry/TetrahedralAabbHierarchy.h"
 #include "pbat/graph/Adjacency.h"
 #include "pbat/graph/Mesh.h"
 #include "pbat/graph/Partition.h"
@@ -13,6 +14,7 @@
 #include "pbat/sim/vbd/Mesh.h"
 #include "pbat/sim/vbd/multigrid/Hierarchy.h"
 
+#include <fmt/format.h>
 #include <ranges>
 #include <tbb/parallel_for.h>
 #include <utility>
@@ -33,24 +35,26 @@ void HyperReduction::Construct(Hierarchy const& hierarchy, Index clusterSize)
     ConstructHierarchicalClustering(hierarchy, clusterSize);
     auto nLevels = hierarchy.levels.size();
     AllocateWorkspace(nLevels);
-    SelectClusterRepresentatives(hierarchy);
+    ComputeClusterQuadratureWeights(hierarchy);
     PrecomputeInversePolynomialMatrices(hierarchy);
 }
 
 void HyperReduction::AllocateWorkspace(std::size_t nLevels)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.vbd.multigrid.HyperReduction.AllocateWorkspace");
-    eC.resize(nLevels);
     ApInvC.resize(nLevels);
+    wC.resize(nLevels);
     up.resize(nLevels);
     Ep.resize(nLevels);
     for (decltype(nLevels) l = 0; l < nLevels; ++l)
     {
         auto const nClusters = Cptr[l].size() - 1;
-        eC[l].resize(nClusters);
         ApInvC[l].resize(4, 4 * nClusters);
+        wC[l].resize(nClusters);
         Ep[l].resize(nClusters);
     }
+    auto nClustersAtFinestLevel = Cptr.front().size() - 1;
+    eC.resize(nClustersAtFinestLevel);
 }
 
 void HyperReduction::ConstructHierarchicalClustering(Hierarchy const& hierarchy, Index clusterSize)
@@ -58,8 +62,10 @@ void HyperReduction::ConstructHierarchicalClustering(Hierarchy const& hierarchy,
     PBAT_PROFILE_NAMED_SCOPE(
         "pbat.sim.vbd.multigrid.HyperReduction.ConstructHierarchicalClustering");
 
-    Cptr.resize(hierarchy.levels.size());
-    Cadj.resize(hierarchy.levels.size());
+    auto nLevels = hierarchy.levels.size();
+    C.resize(nLevels);
+    Cptr.resize(nLevels);
+    Cadj.resize(nLevels);
 
     // Construct the graph of face-adjacent fine mesh elements
     IndexVectorX Gptr, Gadj, Gwts;
@@ -78,26 +84,23 @@ void HyperReduction::ConstructHierarchicalClustering(Hierarchy const& hierarchy,
     opts.bIdentifyConnectedComponents   = true;
 
     // Construct the clustering at each level
-    auto nLevels = hierarchy.levels.size();
     for (decltype(nLevels) l = 0; l < nLevels; ++l)
     {
         // Reduce the graph via partitioning/clustering
         auto nGraphNodes = Gptr.size() - 1;
         auto nPartitions = nGraphNodes / clusterSize;
-        auto clustering  = graph::Partition(Gptr, Gadj, Gwts, nPartitions, opts);
+        C[l]             = graph::Partition(Gptr, Gadj, Gwts, nPartitions, opts);
         // Store the l^{th} level clustering
-        std::tie(Cptr[l], Cadj[l]) = graph::MapToAdjacency(clustering);
+        std::tie(Cptr[l], Cadj[l]) = graph::MapToAdjacency(C[l]);
         // Exit if coarsest level reached
         if (l + 1 == nLevels)
             break;
         // Compute the supernodal graph (i.e. graph of clusters) as next graph to partition
         auto Gsizes = Gptr(Eigen::seqN(1, nGraphNodes)) - Gptr(Eigen::seqN(0, nGraphNodes));
-        auto u      = common::Repeat(
-            IndexVectorX::LinSpaced(clustering.size(), 0, clustering.size() - 1),
-            Gsizes);
+        auto u = common::Repeat(IndexVectorX::LinSpaced(C[l].size(), 0, C[l].size() - 1), Gsizes);
         auto const& v = Gadj;
-        auto SGu      = clustering(u);
-        auto SGv      = clustering(v);
+        auto SGu      = C[l](u);
+        auto SGv      = C[l](v);
         auto edgeView = std::views::iota(0, SGu.size()) | std::views::transform([&](auto i) {
                             return graph::WeightedEdge(SGu(i), SGv(i), Gwts(i));
                         }) |
@@ -112,25 +115,13 @@ void HyperReduction::ConstructHierarchicalClustering(Hierarchy const& hierarchy,
     }
 }
 
-void HyperReduction::SelectClusterRepresentatives(Hierarchy const& hierarchy)
+void HyperReduction::ComputeClusterQuadratureWeights(Hierarchy const& hierarchy)
 {
-    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.vbd.multigrid.HyperReduction.SelectClusterRepresentatives");
+    PBAT_PROFILE_NAMED_SCOPE(
+        "pbat.sim.vbd.multigrid.HyperReduction.ComputeClusterQuadratureWeights");
 
-    auto const& data     = hierarchy.data;
-    auto const& E        = data.E;
-    auto const& X        = data.X;
-    auto const nElements = E.cols();
-    auto const dims      = X.rows();
-    MatrixX centroids(dims, nElements);
-
-    // Compute element centroids
-    tbb::parallel_for(Index(0), nElements, [&](Index e) {
-        auto const& x    = X(Eigen::placeholders::all, E.col(e));
-        centroids.col(e) = x.rowwise().mean();
-    });
-
-    // Select each level's cluster representatives
-    auto nLevels = hierarchy.levels.size();
+    auto const& data = hierarchy.data;
+    auto nLevels     = hierarchy.levels.size();
     for (decltype(nLevels) l = 0; l < nLevels; ++l)
     {
         auto const& cptr     = Cptr[l];
@@ -138,13 +129,8 @@ void HyperReduction::SelectClusterRepresentatives(Hierarchy const& hierarchy)
         auto const nClusters = cptr.size() - 1;
         tbb::parallel_for(Index(0), nClusters, [&](Index c) {
             auto const& cluster = cadj(Eigen::seq(cptr(c), cptr(c + 1) - 1));
-            auto const& Xc      = centroids(Eigen::placeholders::all, cluster);
-            auto const muXc     = Xc.rowwise().mean().eval();
-            auto const d2mu     = (Xc.array().colwise() - muXc.array()).colwise().squaredNorm();
-            Index eMu;
-            [[maybe_unused]] Scalar d2eMu = d2mu.minCoeff(&eMu);
-            eC[l](c)                      = cluster(eMu);
-            centroids.col(c)              = muXc;
+            auto const wg       = (l == 0) ? data.wg : wC[l - 1];
+            wC[l](c)            = wg(cluster).sum();
         });
     }
 }
@@ -202,25 +188,33 @@ void HyperReduction::ComputeLinearPolynomialErrors(
     Eigen::Ref<MatrixX const> const& u)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.vbd.multigrid.HyperReduction.ComputeLinearPolynomialErrors");
-
-    Data const& data = hierarchy.data;
-    b.resizeLike(u);
-    b.setZero();
-    Ep.front().setZero();
-    // Integrate element displacements
     using Quadrature  = math::SymmetricSimplexPolynomialQuadratureRule<kDims, 2 * kPolynomialOrder>;
     using Polynomial  = math::MonomialBasis<kDims, kPolynomialOrder>;
     using Tetrahedron = typename vbd::VolumeMesh::ElementType;
-    auto nFineElements = eC.front().size();
-    auto const& detJe  = data.wg;
-    auto Ne            = fem::ShapeFunctions<Tetrahedron, 2 * kPolynomialOrder>();
+
+    Data const& data           = hierarchy.data;
+    auto const dims            = u.rows();
+    auto constexpr kPolyCoeffs = static_cast<Index>(Polynomial::kSize);
+    // Integrate element displacements
+    auto nFineElements = C.front().size();
+    bC.setZero(dims * kPolyCoeffs, nFineElements);
+    auto const& detJe = data.wg;
+    auto Ne           = fem::ShapeFunctions<Tetrahedron, 2 * kPolynomialOrder>();
     tbb::parallel_for(Index(0), nFineElements, [&](Index e) {
+        auto const& Xe = data.X(Eigen::placeholders::all, data.E.col(e));
         auto const& ue = u(Eigen::placeholders::all, data.E.col(e));
-        auto const& wg = common::ToEigen(Quadrature::weights);
+        auto const wg  = common::ToEigen(Quadrature::weights);
+        auto const Xig = common::ToEigen(Quadrature::points)
+                             .reshaped(Quadrature::kDims + 1, Quadrature::kPoints);
+        auto bCe = bC.col(e).reshaped(kPolyCoeffs, dims);
         for (auto g = 0; g < Quadrature::kPoints; ++g)
         {
+            auto Xg = Xe * Xig.col(g);
+            auto Pg = Polynomial{}.eval(Xg);
             auto ug = ue * Ne.col(g);
-            b.col(e) += wg(g) * ug * detJe(e);
+            // \int_{\Omega^e} P(X_g) u(X_g) \partial \Omega^e
+            for (auto d = 0; d < dims; ++d)
+                bCe.col(d) += wg(g) * Pg * ug(d) * detJe(e);
         }
     });
     // Solve cluster polynomial matching problems
@@ -230,18 +224,69 @@ void HyperReduction::ComputeLinearPolynomialErrors(
         auto const& cptr     = Cptr[l];
         auto const& cadj     = Cadj[l];
         auto const nClusters = cptr.size() - 1;
-        up[l].resize(Polynomial::kSize, nClusters);
+        up[l].resize(dims * kPolyCoeffs, nClusters);
         tbb::parallel_for(Index(0), nClusters, [&](Index c) {
             auto cluster = cadj(Eigen::seq(cptr(c), cptr(c + 1) - 1));
             // Integrate cluster displacements
-            auto bC  = b(Eigen::placeholders::all, cluster);
-            b.col(c) = bC.colwise().sum();
+            bC.col(c) = bC(Eigen::placeholders::all, cluster).rowwise().sum();
             // Solve least-squares polynomial matching problem
-            auto ApInvc  = ApInvC[l].block<4, 4>(0, 4 * c);
-            up[l].col(c) = (ApInvc * b.col(c)).eval();
+            auto ApInvc = ApInvC[l].block<4, 4>(0, 4 * c);
+            auto Uplc   = up[l].col(c).reshaped(kPolyCoeffs, dims);
+            auto Bc     = bC.col(c).reshaped(kPolyCoeffs, dims);
+            Uplc        = ApInvc * Bc;
         });
     }
-    // Integrate element polynomial errors
+    // Integrate cluster polynomial errors
+    // \int_{\Omega^c} | P^c(X) u^c - u(X) |_2^2 \partial \Omega^c
+    for (decltype(nLevels) l = 0; l < nLevels; ++l)
+    {
+        Ep[l].setZero();
+        auto const& cptr     = Cptr[l];
+        auto const& cadj     = Cadj[l];
+        auto const nClusters = cptr.size() - 1;
+        tbb::parallel_for(Index(0), nClusters, [&](Index c) {
+            auto cluster              = cadj(Eigen::seq(cptr(c), cptr(c + 1) - 1));
+            auto Upc                  = up[l].col(c).reshaped(kPolyCoeffs, dims).transpose();
+            bool const bIsFinestLevel = (l == 0);
+            if (bIsFinestLevel)
+            {
+                for (Index e : cluster)
+                {
+                    auto const& Xe = data.X(Eigen::placeholders::all, data.E.col(e));
+                    auto const& ue = u(Eigen::placeholders::all, data.E.col(e));
+                    auto const& wg = common::ToEigen(Quadrature::weights);
+                    for (auto g = 0; g < Quadrature::kPoints; ++g)
+                    {
+                        auto ug = ue * Ne.col(g);
+                        auto Pg = Polynomial{}.eval(Xe * Ne.col(g));
+                        Ep[l](c) += wg(g) * (Upc * Pg - ug).squaredNorm() * detJe(e);
+                    }
+                }
+                eC(c) = cluster(0);
+            }
+            else
+            {
+                for (Index cc : cluster)
+                {
+                    // Accumulate errors from child clusters
+                    Ep[l](c) += Ep[l - 1](cc);
+                    // Compute integrand at child cluster's representative element's centroid
+                    Index e        = eC(cc);
+                    Scalar wgc     = wC[l - 1](cc);
+                    auto const& Xe = data.X(Eigen::placeholders::all, data.E.col(e));
+                    auto const& ue = u(Eigen::placeholders::all, data.E.col(e));
+                    auto Xg        = Xe.rowwise().mean();
+                    auto Pg        = Polynomial{}.eval(Xg);
+                    auto ug        = ue.rowwise().mean();
+                    // Accumulate this cluster's error w.r.t. its children
+                    Ep[l](c) += wgc * (Upc * Pg - ug).squaredNorm();
+                }
+                // Store the representative element of this cluster as this cluster's first child's
+                // representative element
+                eC(c) = eC(cluster(0));
+            }
+        });
+    }
 }
 
 } // namespace multigrid
@@ -300,19 +345,25 @@ TEST_CASE("[sim][vbd][multigrid] HyperReduction")
             }
         }
     }
-    SUBCASE("Cluster representatives have no duplicates at each level")
+    SUBCASE("Cluster quadrature weights reproduce the fine mesh's total weight")
     {
+        Scalar const expectedTotalVolume = H.data.wg.sum();
         for (decltype(nLevels) l = 0; l < nLevels; ++l)
         {
-            auto const nCluster         = HR.Cptr[l].size() - 1;
-            auto const nRepresentatives = HR.eC[l].size();
-            auto const nUnique = std::unordered_set<Index>(HR.eC[l].begin(), HR.eC[l].end()).size();
-            CHECK_EQ(nCluster, nRepresentatives);
-            CHECK_EQ(nRepresentatives, nUnique);
+            auto const& wc            = HR.wC[l];
+            auto const volumeAtLevelL = wc.sum();
+            CHECK_EQ(expectedTotalVolume, doctest::Approx(volumeAtLevelL));
         }
     }
     SUBCASE("Per-cluster polynomial displacements have vanishing error") 
     {
-        
+        auto nNodes = H.data.X.cols();
+        MatrixX uTranslation = MatrixX::Ones(3, nNodes);
+        HR.ComputeLinearPolynomialErrors(H, uTranslation);
+        for (decltype(nLevels) l = 0; l < nLevels; ++l)
+        {
+            auto const& Ep = HR.Ep[l];
+            CHECK_EQ(Ep.maxCoeff(), doctest::Approx(0.0));
+        }
     }
 }

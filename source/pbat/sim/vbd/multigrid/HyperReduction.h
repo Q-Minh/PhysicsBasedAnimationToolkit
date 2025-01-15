@@ -46,11 +46,9 @@ struct HyperReduction
      */
     void ConstructHierarchicalClustering(Hierarchy const& hierarchy, Index clusterSize);
     /**
-     * @brief
-     *
-     * @param hierarchy
+     * @brief Compute the quadrature weights for each cluster
      */
-    void SelectClusterRepresentatives(Hierarchy const& hierarchy);
+    void ComputeClusterQuadratureWeights(Hierarchy const& hierarchy);
     /**
      * @brief
      *
@@ -69,16 +67,18 @@ struct HyperReduction
     /**
      * @brief Hierarchical clustering of mesh elements
      */
+    std::vector<IndexVectorX> C; ///< |#levels| list of clustering maps from fine level to coarse
+                                 ///< level, i.e. maps u^{l} to u^{l+1}
     std::vector<IndexVectorX> Cptr;
     std::vector<IndexVectorX> Cadj;
 
-    std::vector<IndexVectorX> eC; ///< |#levels| list of |#clusters| arrays of representative
-                                  ///< elements in each cluster of the corresponding level
     std::vector<MatrixX>
         ApInvC; ///< |#levels| list of 4x|4*#clusters| of A_p^{-1} matrices, such that A_p's
                 ///< coefficients are \int_{\Omega^c} P_i(X) P_j(X) dx, where \Omega^c is cluster
                 ///< c's domain, and P_k(X) is the k^{th} polynomial basis.
-    MatrixX b;  ///< #dimsx|#elements| array of integrated target fields
+    MatrixX bC; ///< #dimsx|#elements| array of integrated target fields
+    std::vector<VectorX> wC; ///< |#levels| cluster quad. weights
+    IndexVectorX eC;         ///< Representative elements of each cluster
     std::vector<MatrixX> up; ///< |#levels| list of |#clusters| cluster polynomials
     std::vector<VectorX> Ep; ///< |#levels| linear polynomial errors at each level
     Scalar EpMax{1e-6};      ///< Maximum allowable linear polynomial error in any cluster
