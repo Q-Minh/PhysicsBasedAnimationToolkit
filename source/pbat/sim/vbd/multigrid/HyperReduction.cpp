@@ -181,13 +181,20 @@ void HyperReduction::PrecomputeInversePolynomialMatrices(Hierarchy const& hierar
         tbb::parallel_for(Index(0), nClusters, [&](Index c) {
             auto cluster = cadj(Eigen::seq(cptr(c), cptr(c + 1) - 1));
             auto ApInvc  = ApInvC[l].block<kPolyCoeffs, kPolyCoeffs>(0, kPolyCoeffs * c);
-            for (auto cc = 0; cc < cluster.size(); ++cc)
+            for (auto cc : cluster)
             {
                 auto const& App = (l == 0) ? Ap : ApInvC[l - 1];
-                auto Apcc       = App.block<kPolyCoeffs, kPolyCoeffs>(0, kPolyCoeffs * cluster(cc));
+                auto Apcc       = App.block<kPolyCoeffs, kPolyCoeffs>(0, kPolyCoeffs * cc);
                 ApInvc += Apcc;
             }
-            ApInvc = ApInvc.inverse().eval();
+        });
+    }
+    for (decltype(nLevels) l = 0; l < nLevels; ++l)
+    {
+        auto const nClusters = Cptr[l].size() - 1;
+        tbb::parallel_for(Index(0), nClusters, [&](Index c) {
+            auto ApInvc = ApInvC[l].block<kPolyCoeffs, kPolyCoeffs>(0, kPolyCoeffs * c);
+            ApInvc      = ApInvc.inverse().eval();
         });
     }
 }
@@ -364,13 +371,24 @@ TEST_CASE("[sim][vbd][multigrid] HyperReduction")
     }
     SUBCASE("Per-cluster polynomial displacements have vanishing error")
     {
-        auto nNodes          = H.data.X.cols();
-        MatrixX uTranslation = MatrixX::Ones(3, nNodes);
-        HR.ComputeLinearPolynomialErrors(H, uTranslation);
-        for (decltype(nLevels) l = 0; l < nLevels; ++l)
+        auto const fComputeAndCheckVanishingError = [&](Eigen::Ref<MatrixX const> const& u) {
+            HR.ComputeLinearPolynomialErrors(H, u);
+            for (decltype(nLevels) l = 0; l < nLevels; ++l)
+            {
+                auto const& Ep = HR.Ep[l];
+                CHECK_EQ(Ep.maxCoeff(), doctest::Approx(0.0));
+            }
+        };
+        auto nNodes = H.data.X.cols();
+        SUBCASE("Displacement is translation")
         {
-            auto const& Ep = HR.Ep[l];
-            CHECK_EQ(Ep.maxCoeff(), doctest::Approx(0.0));
+            MatrixX u = MatrixX::Ones(3, nNodes);
+            fComputeAndCheckVanishingError(u);
+        }
+        SUBCASE("Displacement is scaling")
+        {
+            MatrixX u = Vector<3>::Random().asDiagonal() * H.data.X - H.data.X;
+            fComputeAndCheckVanishingError(u);
         }
     }
 }
