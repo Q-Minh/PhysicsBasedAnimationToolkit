@@ -4,6 +4,7 @@
 
 #include "IntegratorImpl.cuh"
 #include "Kernels.cuh"
+#include "pbat/common/ConstexprFor.h"
 #include "pbat/gpu/common/Cuda.cuh"
 #include "pbat/gpu/common/Eigen.cuh"
 #include "pbat/math/linalg/mini/Mini.h"
@@ -48,8 +49,7 @@ IntegratorImpl::IntegratorImpl(Data const& data)
       mInitializationStrategy(data.strategy),
       mGpuThreadBlockSize(64),
       mStream(common::Device(common::EDeviceSelectionPreference::HighestComputeCapability)
-                  .create_stream(/*synchronize_with_default_stream=*/false)),
-      mbUseParallelReduction(false)
+                  .create_stream(/*synchronize_with_default_stream=*/false))
 {
     common::ToBuffer(data.v, mVelocities);
     common::ToBuffer(data.aext, mExternalAcceleration);
@@ -96,7 +96,6 @@ void IntegratorImpl::Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps, 
     bdf.FC                              = mCollidingTriangles.Raw();
     bdf.nCollidingTriangles             = mCollidingTriangleCount.Raw();
     bdf.F                               = F.inds.Raw();
-    bdf.bUseParallelReduction           = mbUseParallelReduction;
 
     // NOTE:
     // For some reason, thrust::async::copy does not play well with cuda-api-wrapper streams. I am
@@ -162,8 +161,6 @@ void IntegratorImpl::Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps, 
         // Initialize Chebyshev semi-iterative method
         GpuScalar rho2 = rho * rho;
         GpuScalar omega{};
-        auto kDynamicSharedMemoryCapacity = static_cast<cuda::memory::shared::size_t>(
-            mGpuThreadBlockSize * bdf.ExpectedSharedMemoryPerThreadInBytes());
         // Minimize Backward Euler, i.e. BDF1, objective
         for (auto k = 0; k < iterations; ++k)
         {
@@ -179,16 +176,26 @@ void IntegratorImpl::Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps, 
                 bdf.partition = mPadj.Raw() + pBegin;
                 auto const nVerticesInPartition =
                     static_cast<cuda::grid::dimension_t>(pEnd - pBegin);
-                auto bcdLaunchConfiguration =
-                    cuda::launch_config_builder()
-                        .block_size(mGpuThreadBlockSize)
-                        .dynamic_shared_memory_size(kDynamicSharedMemoryCapacity)
-                        .grid_size(nVerticesInPartition)
-                        .build();
-                mStream.enqueue.kernel_launch(
-                    kernels::MinimizeBackwardEuler,
-                    bcdLaunchConfiguration,
-                    bdf);
+                pbat::common::ForValues<32, 64, 128, 256>([&]<auto kBlockThreads>() {
+                    if (mGpuThreadBlockSize > kBlockThreads / 2 and
+                        mGpuThreadBlockSize <= kBlockThreads)
+                    {
+                        auto const kDynamicSharedMemoryCapacity =
+                            static_cast<cuda::memory::shared::size_t>(
+                                sizeof(typename kernels::BackwardEulerMinimization::BlockStorage<
+                                       kBlockThreads>));
+                        auto bcdLaunchConfiguration =
+                            cuda::launch_config_builder()
+                                .block_size(kBlockThreads)
+                                .dynamic_shared_memory_size(kDynamicSharedMemoryCapacity)
+                                .grid_size(nVerticesInPartition)
+                                .build();
+                        mStream.enqueue.kernel_launch(
+                            kernels::MinimizeBackwardEuler<kBlockThreads>,
+                            bcdLaunchConfiguration,
+                            bdf);
+                    }
+                });
             }
 
             if (bUseChebyshevAcceleration)
@@ -318,12 +325,7 @@ void IntegratorImpl::SetInitializationStrategy(EInitializationStrategy strategy)
 
 void IntegratorImpl::SetBlockSize(GpuIndex blockSize)
 {
-    mGpuThreadBlockSize = blockSize;
-}
-
-void IntegratorImpl::UseParallelReduction(bool bUseParallelReduction)
-{
-    mbUseParallelReduction = bUseParallelReduction;
+    mGpuThreadBlockSize = std::clamp(blockSize, GpuIndex{32}, GpuIndex{256});
 }
 
 common::Buffer<GpuScalar, 3> const& IntegratorImpl::GetVelocity() const

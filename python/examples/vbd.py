@@ -120,7 +120,8 @@ if __name__ == "__main__":
     ps.set_program_name("Vertex Block Descent")
     ps.init()
     vm = ps.register_volume_mesh("Simulation mesh", V, C)
-    vm.add_scalar_quantity("Coloring", data.colors, defined_on="vertices", cmap="jet")
+    vm.add_scalar_quantity("Coloring", data.colors,
+                           defined_on="vertices", cmap="jet")
     pc = ps.register_point_cloud("Dirichlet", V[vdbc, :])
     dt = 0.01
     iterations = 20
@@ -128,7 +129,6 @@ if __name__ == "__main__":
     rho_chebyshev = 1.
     RdetH = 1e-10
     kD = 0.
-    use_parallel_reduction = False
     animate = False
     export = False
     t = 0
@@ -138,7 +138,7 @@ if __name__ == "__main__":
     def callback():
         global dt, iterations, substeps
         global rho_chebyshev, initialization_strategy, RdetH, kD
-        global use_parallel_reduction, thread_block_size
+        global thread_block_size
         global animate, export, t
         global profiler
 
@@ -153,8 +153,6 @@ if __name__ == "__main__":
             "Residual det(H)", RdetH, format="%.15f")
         changed, thread_block_size = imgui.InputInt(
             "Thread block size", thread_block_size)
-        changed, use_parallel_reduction = imgui.Checkbox(
-            "2-level parallelism", use_parallel_reduction)
         changed = imgui.BeginCombo(
             "Initialization strategy", str(initialization_strategy).split('.')[-1])
         if changed:
@@ -180,7 +178,6 @@ if __name__ == "__main__":
 
         if args.gpu:
             vbd.set_gpu_block_size(thread_block_size)
-            vbd.use_parallel_reduction(use_parallel_reduction)
 
         if animate or step:
             profiler.begin_frame("Physics")

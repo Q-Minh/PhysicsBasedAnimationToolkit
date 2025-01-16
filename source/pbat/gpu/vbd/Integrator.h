@@ -115,11 +115,6 @@ class Integrator
      */
     PBAT_API void SetBlockSize(GpuIndex blockSize);
     /**
-     * @brief 
-     * @param bUseParallelReduction Use parallel reduction to accumulate vertex derivatives
-     */
-    PBAT_API void UseParallelReduction(bool bUseParallelReduction = true);
-    /**
      * @brief
      * @return |#dims|x|#vertices| array of vertex positions
      */

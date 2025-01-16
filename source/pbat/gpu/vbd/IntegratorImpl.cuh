@@ -107,11 +107,6 @@ class IntegratorImpl
      * @param blockSize
      */
     void SetBlockSize(GpuIndex blockSize);
-    /**
-     * @brief
-     * @param bUseParallelReduction Use parallel reduction to accumulate vertex derivatives
-     */
-    void UseParallelReduction(bool bUseParallelReduction = true);
 
     /**
      * @brief
@@ -187,8 +182,6 @@ class IntegratorImpl
         mInitializationStrategy;  ///< Strategy to use to determine the initial BCD iterate
     GpuIndex mGpuThreadBlockSize; ///< Number of threads per CUDA thread block
     cuda::stream_t mStream;       ///< Cuda stream on which this VBD instance will run
-
-    bool mbUseParallelReduction; ///< Use parallel reduction to accumulate vertex derivatives
 };
 
 } // namespace vbd

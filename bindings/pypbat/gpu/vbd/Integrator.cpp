@@ -181,12 +181,7 @@ void BindIntegrator([[maybe_unused]] pybind11::module& m)
             &Integrator::SetBlockSize,
             pyb::arg("num_threads_per_block") = 64,
             "Sets the number of threads per GPU thread block used for time integration "
-            "minimization.")
-        .def(
-            "use_parallel_reduction",
-            &Integrator::UseParallelReduction,
-            pyb::arg("use") = true,
-            "Use parallel reduction to accumulate vertex derivatives.");
+            "minimization.");
 #endif // PBAT_USE_CUDA
 }
 
