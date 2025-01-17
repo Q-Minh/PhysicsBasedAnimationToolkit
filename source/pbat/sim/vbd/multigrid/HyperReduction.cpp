@@ -387,7 +387,8 @@ TEST_CASE("[sim][vbd][multigrid] HyperReduction")
         }
         SUBCASE("Displacement is scaling")
         {
-            MatrixX u = Vector<3>::Random().asDiagonal() * H.data.X - H.data.X;
+            Vector<3> s = Vector<3>::Random();
+            MatrixX u   = s.asDiagonal() * H.data.X - H.data.X;
             fComputeAndCheckVanishingError(u);
         }
     }
