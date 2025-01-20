@@ -16,7 +16,10 @@ Integrator::Integrator(Data dataIn)
     : data(std::move(dataIn)),
       mTetrahedralBvh(data.x, data.T),
       mTriangleBvh(data.x, data.F),
-      mParticlesInContact()
+      mParticlesInContact(),
+      mTetsInContact(),
+      mTrianglesInContact(),
+      mSquaredDistancesToTriangles()
 {
     auto const nCollisionVertices = static_cast<std::size_t>(data.V.size());
     mParticlesInContact.reserve(nCollisionVertices);
@@ -47,25 +50,20 @@ void Integrator::Step(Scalar dt, Index iterations, Index substeps)
                data.V(i) == tet(3);
         // clang-format on
     };
-    IndexVectorX tetsInContact = mTetrahedralBvh.PrimitivesContainingPoints(
+    mTetsInContact = mTetrahedralBvh.PrimitivesContainingPoints(
         data.x(Eigen::placeholders::all, data.V),
         fCullPointTet,
         bParallelize);
     mParticlesInContact.clear();
-    for (auto i = 0; i < tetsInContact.size(); ++i)
-    {
-        if (tetsInContact(i) >= Index(0))
-        {
+    for (auto i = 0; i < mTetsInContact.size(); ++i)
+        if (mTetsInContact(i) >= Index(0))
             mParticlesInContact.push_back(static_cast<Index>(i));
-        }
-    }
-    Index const nParticlesInContact = static_cast<Index>(mParticlesInContact.size());
     // Find nearest boundary face
     auto const fCullPointTriangle = [&](Index i, IndexVector<3> const& tri) {
         auto iStl = static_cast<std::size_t>(i);
         return data.BV(data.V(mParticlesInContact[iStl])) == data.BV(tri(0));
     };
-    auto const [mTrianglesInContact, mSquaredDistancesToTriangles] =
+    std::tie(mTrianglesInContact, mSquaredDistancesToTriangles) =
         mTriangleBvh.NearestPrimitivesToPoints(
             data.x(Eigen::placeholders::all, data.V(mParticlesInContact)),
             fCullPointTriangle,
@@ -103,45 +101,7 @@ void Integrator::Step(Scalar dt, Index iterations, Index substeps)
             }
 
             // Solve contact constraints
-            auto& alphaContact  = data.alpha[static_cast<int>(EConstraint::Collision)];
-            auto& betaContact   = data.beta[static_cast<int>(EConstraint::Collision)];
-            auto& lambdaContact = data.lambda[static_cast<int>(EConstraint::Collision)];
-            tbb::parallel_for(Index(0), nParticlesInContact, [&, dt = sdt, dt2 = sdt2](Index c) {
-                auto cStl                    = static_cast<std::size_t>(c);
-                auto sv                      = mParticlesInContact[cStl];
-                auto v                       = data.V(mParticlesInContact[cStl]);
-                auto f                       = mTrianglesInContact(c);
-                IndexVector<3> fv            = data.F.col(f);
-                Scalar minvv                 = data.minv(v);
-                mini::SVector<Scalar, 3> xvt = FromEigen(data.xt.col(v).head<3>());
-                mini::SMatrix<Scalar, 3, 3> xft =
-                    FromEigen(data.xt(Eigen::placeholders::all, fv).block<3, 3>(0, 0));
-                mini::SMatrix<Scalar, 3, 3> xf =
-                    FromEigen(data.x(Eigen::placeholders::all, fv).block<3, 3>(0, 0));
-                mini::SVector<Scalar, 3> xv = FromEigen(data.x.col(v).head<3>());
-                Scalar atildec              = alphaContact(c) / dt2;
-                Scalar gammac               = atildec * betaContact(c) * dt;
-                Scalar lambdac              = lambdaContact(c);
-                Scalar muc                  = data.muV(sv);
-
-                bool const bProject = kernels::ProjectVertexTriangle(
-                    minvv,
-                    xvt,
-                    xft,
-                    xf,
-                    muc,
-                    data.muS,
-                    data.muD,
-                    atildec,
-                    gammac,
-                    lambdac,
-                    xv);
-                if (bProject)
-                {
-                    lambdaContact(c) = lambdac;
-                }
-                data.xb.col(v) = ToEigen(xv);
-            });
+            ProjectContactConstraints(sdt, sdt2);
             data.x(Eigen::placeholders::all, data.V(mParticlesInContact)) =
                 data.xb(Eigen::placeholders::all, data.V(mParticlesInContact));
         }
@@ -194,6 +154,53 @@ void Integrator::ProjectClusteredBlockNeoHookeanConstraints(Scalar dt, Scalar dt
             }
         });
     }
+}
+
+void Integrator::ProjectContactConstraints(Scalar dt, Scalar dt2)
+{
+    using namespace math::linalg;
+    using mini::FromEigen;
+    using mini::ToEigen;
+    auto& alphaContact              = data.alpha[static_cast<int>(EConstraint::Collision)];
+    auto& betaContact               = data.beta[static_cast<int>(EConstraint::Collision)];
+    auto& lambdaContact             = data.lambda[static_cast<int>(EConstraint::Collision)];
+    Index const nParticlesInContact = static_cast<Index>(mParticlesInContact.size());
+    tbb::parallel_for(Index(0), nParticlesInContact, [&, dt, dt2](Index c) {
+        auto cStl                    = static_cast<std::size_t>(c);
+        auto sv                      = mParticlesInContact[cStl];
+        auto v                       = data.V(mParticlesInContact[cStl]);
+        auto f                       = mTrianglesInContact(c);
+        IndexVector<3> fv            = data.F.col(f);
+        Scalar minvv                 = data.minv(v);
+        mini::SVector<Scalar, 3> xvt = FromEigen(data.xt.col(v).head<3>());
+        mini::SMatrix<Scalar, 3, 3> xft =
+            FromEigen(data.xt(Eigen::placeholders::all, fv).block<3, 3>(0, 0));
+        mini::SMatrix<Scalar, 3, 3> xf =
+            FromEigen(data.x(Eigen::placeholders::all, fv).block<3, 3>(0, 0));
+        mini::SVector<Scalar, 3> xv = FromEigen(data.x.col(v).head<3>());
+        Scalar atildec              = alphaContact(c) / dt2;
+        Scalar gammac               = atildec * betaContact(c) * dt;
+        Scalar lambdac              = lambdaContact(c);
+        Scalar muc                  = data.muV(sv);
+
+        bool const bProject = kernels::ProjectVertexTriangle(
+            minvv,
+            xvt,
+            xft,
+            xf,
+            muc,
+            data.muS,
+            data.muD,
+            atildec,
+            gammac,
+            lambdac,
+            xv);
+        if (bProject)
+        {
+            lambdaContact(c) = lambdac;
+        }
+        data.xb.col(v) = ToEigen(xv);
+    });
 }
 
 void Integrator::ProjectBlockNeoHookeanConstraint(Index c, Scalar dt, Scalar dt2)
