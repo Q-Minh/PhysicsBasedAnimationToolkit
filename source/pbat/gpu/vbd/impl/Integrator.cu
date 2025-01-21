@@ -2,7 +2,7 @@
 #include "pbat/gpu/DisableWarnings.h"
 // clang-format on
 
-#include "IntegratorImpl.cuh"
+#include "Integrator.cuh"
 #include "Kernels.cuh"
 #include "pbat/common/ConstexprFor.h"
 #include "pbat/gpu/common/Cuda.cuh"
@@ -18,8 +18,9 @@
 namespace pbat {
 namespace gpu {
 namespace vbd {
+namespace impl {
 
-IntegratorImpl::IntegratorImpl(Data const& data)
+Integrator::Integrator(Data const& data)
     : X(data.x.cast<GpuScalar>()),
       V(data.V.cast<GpuIndex>().transpose()),
       F(data.F.cast<GpuIndex>()),
@@ -68,7 +69,7 @@ IntegratorImpl::IntegratorImpl(Data const& data)
     common::ToBuffer(data.Padj.cast<GpuIndex>().eval(), mPadj);
 }
 
-void IntegratorImpl::Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps, GpuScalar rho)
+void Integrator::Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps, GpuScalar rho)
 {
     GpuScalar sdt                        = dt / static_cast<GpuScalar>(substeps);
     GpuScalar sdt2                       = sdt * sdt;
@@ -244,47 +245,47 @@ void IntegratorImpl::Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps, 
     mStream.synchronize();
 }
 
-void IntegratorImpl::SetPositions(Eigen::Ref<GpuMatrixX const> const& Xin)
+void Integrator::SetPositions(Eigen::Ref<GpuMatrixX const> const& Xin)
 {
     common::ToBuffer(Xin, X.x);
 }
 
-void IntegratorImpl::SetVelocities(Eigen::Ref<GpuMatrixX const> const& v)
+void Integrator::SetVelocities(Eigen::Ref<GpuMatrixX const> const& v)
 {
     common::ToBuffer(v, mVelocities);
 }
 
-void IntegratorImpl::SetExternalAcceleration(Eigen::Ref<GpuMatrixX const> const& aext)
+void Integrator::SetExternalAcceleration(Eigen::Ref<GpuMatrixX const> const& aext)
 {
     common::ToBuffer(aext, mExternalAcceleration);
 }
 
-void IntegratorImpl::SetMass(Eigen::Ref<GpuVectorX const> const& m)
+void Integrator::SetMass(Eigen::Ref<GpuVectorX const> const& m)
 {
     common::ToBuffer(m, mMass);
 }
 
-void IntegratorImpl::SetQuadratureWeights(Eigen::Ref<GpuVectorX const> const& wg)
+void Integrator::SetQuadratureWeights(Eigen::Ref<GpuVectorX const> const& wg)
 {
     common::ToBuffer(wg, mQuadratureWeights);
 }
 
-void IntegratorImpl::SetShapeFunctionGradients(Eigen::Ref<GpuMatrixX const> const& GP)
+void Integrator::SetShapeFunctionGradients(Eigen::Ref<GpuMatrixX const> const& GP)
 {
     common::ToBuffer(GP, mShapeFunctionGradients);
 }
 
-void IntegratorImpl::SetLameCoefficients(Eigen::Ref<GpuMatrixX const> const& l)
+void Integrator::SetLameCoefficients(Eigen::Ref<GpuMatrixX const> const& l)
 {
     common::ToBuffer(l, mLameCoefficients);
 }
 
-void IntegratorImpl::SetNumericalZeroForHessianDeterminant(GpuScalar zero)
+void Integrator::SetNumericalZeroForHessianDeterminant(GpuScalar zero)
 {
     mDetHZero = zero;
 }
 
-void IntegratorImpl::SetVertexTetrahedronAdjacencyList(
+void Integrator::SetVertexTetrahedronAdjacencyList(
     Eigen::Ref<GpuIndexVectorX const> const& GVTp,
     Eigen::Ref<GpuIndexVectorX const> const& GVTn,
     Eigen::Ref<GpuIndexVectorX const> const& GVTilocal)
@@ -305,12 +306,12 @@ void IntegratorImpl::SetVertexTetrahedronAdjacencyList(
     common::ToBuffer(GVTilocal, mVertexTetrahedronLocalVertexIndices);
 }
 
-void IntegratorImpl::SetRayleighDampingCoefficient(GpuScalar kD)
+void Integrator::SetRayleighDampingCoefficient(GpuScalar kD)
 {
     mRayleighDamping = kD;
 }
 
-void IntegratorImpl::SetVertexPartitions(
+void Integrator::SetVertexPartitions(
     Eigen::Ref<GpuIndexVectorX const> const& Pptr,
     Eigen::Ref<GpuIndexVectorX const> const& Padj)
 {
@@ -318,54 +319,55 @@ void IntegratorImpl::SetVertexPartitions(
     common::ToBuffer(Padj, mPadj);
 }
 
-void IntegratorImpl::SetInitializationStrategy(EInitializationStrategy strategy)
+void Integrator::SetInitializationStrategy(EInitializationStrategy strategy)
 {
     mInitializationStrategy = strategy;
 }
 
-void IntegratorImpl::SetBlockSize(GpuIndex blockSize)
+void Integrator::SetBlockSize(GpuIndex blockSize)
 {
     mGpuThreadBlockSize = std::clamp(blockSize, GpuIndex{32}, GpuIndex{256});
 }
 
-common::Buffer<GpuScalar, 3> const& IntegratorImpl::GetVelocity() const
+common::Buffer<GpuScalar, 3> const& Integrator::GetVelocity() const
 {
     return mVelocities;
 }
 
-common::Buffer<GpuScalar, 3> const& IntegratorImpl::GetExternalAcceleration() const
+common::Buffer<GpuScalar, 3> const& Integrator::GetExternalAcceleration() const
 {
     return mExternalAcceleration;
 }
 
-common::Buffer<GpuScalar> const& IntegratorImpl::GetMass() const
+common::Buffer<GpuScalar> const& Integrator::GetMass() const
 {
     return mMass;
 }
 
-common::Buffer<GpuScalar> const& IntegratorImpl::GetShapeFunctionGradients() const
+common::Buffer<GpuScalar> const& Integrator::GetShapeFunctionGradients() const
 {
     return mShapeFunctionGradients;
 }
 
-common::Buffer<GpuScalar> const& IntegratorImpl::GetLameCoefficients() const
+common::Buffer<GpuScalar> const& Integrator::GetLameCoefficients() const
 {
     return mLameCoefficients;
 }
 
+} // namespace impl
 } // namespace vbd
 } // namespace gpu
 } // namespace pbat
 
 #include "pbat/common/Eigen.h"
-#include "tests/Fem.h"
+#include "pbat/gpu/vbd/tests/Fem.h"
 
 #include <Eigen/SparseCore>
 #include <doctest/doctest.h>
 #include <span>
 #include <vector>
 
-TEST_CASE("[gpu][vbd] IntegratorImpl")
+TEST_CASE("[gpu][vbd] Integrator")
 {
     using namespace pbat;
     using pbat::common::ToEigen;
@@ -394,8 +396,8 @@ TEST_CASE("[gpu][vbd] IntegratorImpl")
     auto constexpr iterations = 10;
 
     // Act
-    using pbat::gpu::vbd::IntegratorImpl;
-    IntegratorImpl vbd{sim::vbd::Data().WithVolumeMesh(P, T).WithSurfaceMesh(V, F).Construct()};
+    using pbat::gpu::vbd::impl::Integrator;
+    Integrator vbd{sim::vbd::Data().WithVolumeMesh(P, T).WithSurfaceMesh(V, F).Construct()};
     vbd.Step(dt, iterations, substeps);
 
     // Assert

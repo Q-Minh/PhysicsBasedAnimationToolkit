@@ -1,12 +1,12 @@
-#ifndef PBAT_GPU_XPBD_INTEGRATOR_IMPL_CUH
-#define PBAT_GPU_XPBD_INTEGRATOR_IMPL_CUH
+#ifndef PBAT_GPU_XPBD_IMPL_INTEGRATOR_CUH
+#define PBAT_GPU_XPBD_IMPL_INTEGRATOR_CUH
 
 #include "pbat/Aliases.h"
 #include "pbat/gpu/Aliases.h"
 #include "pbat/gpu/common/Buffer.cuh"
-#include "pbat/gpu/geometry/BvhImpl.cuh"
-#include "pbat/gpu/geometry/BvhQueryImpl.cuh"
-#include "pbat/gpu/geometry/PrimitivesImpl.cuh"
+#include "pbat/gpu/geometry/impl/Bvh.cuh"
+#include "pbat/gpu/geometry/impl/BvhQuery.cuh"
+#include "pbat/gpu/geometry/impl/Primitives.cuh"
 #include "pbat/sim/xpbd/Data.h"
 #include "pbat/sim/xpbd/Enums.h"
 
@@ -17,16 +17,17 @@
 namespace pbat {
 namespace gpu {
 namespace xpbd {
+namespace impl {
 
-class IntegratorImpl
+class Integrator
 {
   public:
     using EConstraint                      = pbat::sim::xpbd::EConstraint;
     static auto constexpr kConstraintTypes = static_cast<int>(EConstraint::NumberOfConstraintTypes);
 
     using Data                   = pbat::sim::xpbd::Data;
-    using CollisionCandidateType = typename geometry::BvhQueryImpl::OverlapType;
-    using ContactPairType        = typename geometry::BvhQueryImpl::NearestNeighbourPairType;
+    using CollisionCandidateType = typename geometry::impl::BvhQuery::OverlapType;
+    using ContactPairType        = typename geometry::impl::BvhQuery::NearestNeighbourPairType;
 
     /**
      * @brief Construct a new Integrator Impl object
@@ -35,7 +36,7 @@ class IntegratorImpl
      * @param nMaxVertexTetrahedronOverlaps
      * @param nMaxVertexTriangleContacts
      */
-    IntegratorImpl(
+    Integrator(
         Data const& data,
         std::size_t nMaxVertexTetrahedronOverlaps,
         std::size_t nMaxVertexTriangleContacts);
@@ -174,16 +175,16 @@ class IntegratorImpl
     void ProjectClusteredBlockNeoHookeanConstraints(thrust::device_event& e, Scalar dt, Scalar dt2);
 
   public:
-    geometry::PointsImpl X;    ///< Vertex/particle positions
-    geometry::SimplicesImpl V; ///< Boundary vertex simplices
-    geometry::SimplicesImpl F; ///< Boundary triangle simplices
-    geometry::SimplicesImpl T; ///< Tetrahedral simplices
+    geometry::impl::Points X;    ///< Vertex/particle positions
+    geometry::impl::Simplices V; ///< Boundary vertex simplices
+    geometry::impl::Simplices F; ///< Boundary triangle simplices
+    geometry::impl::Simplices T; ///< Tetrahedral simplices
 
-    geometry::BodiesImpl BV; ///< Bodies of particles
+    geometry::impl::Bodies BV; ///< Bodies of particles
   private:
-    geometry::BvhImpl Tbvh;        ///< Tetrahedron bvh
-    geometry::BvhImpl Fbvh;        ///< Triangle bvh (over boundary mesh)
-    geometry::BvhQueryImpl Vquery; ///< BVH vertex queries
+    geometry::impl::Bvh Tbvh;        ///< Tetrahedron bvh
+    geometry::impl::Bvh Fbvh;        ///< Triangle bvh (over boundary mesh)
+    geometry::impl::BvhQuery Vquery; ///< BVH vertex queries
 
     common::Buffer<GpuScalar, 3> mPositions;            ///< Vertex/particle positions at time t
     common::Buffer<GpuScalar, 3> mPositionBuffer;       ///< Vertex/particle positions buffer
@@ -222,8 +223,9 @@ class IntegratorImpl
     Eigen::Vector<GpuScalar, 3> Smin, Smax; ///< Scene bounding box
 };
 
+} // namespace impl
 } // namespace xpbd
 } // namespace gpu
 } // namespace pbat
 
-#endif // PBAT_GPU_XPBD_INTEGRATOR_IMPL_CUH
+#endif // PBAT_GPU_XPBD_IMPL_INTEGRATOR_CUH

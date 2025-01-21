@@ -1,5 +1,5 @@
-#ifndef PBAT_GPU_GEOMETRY_PRIMITIVES_IMPL_CUH
-#define PBAT_GPU_GEOMETRY_PRIMITIVES_IMPL_CUH
+#ifndef PBAT_GPU_GEOMETRY_IMPL_PRIMITIVES_CUH
+#define PBAT_GPU_GEOMETRY_IMPL_PRIMITIVES_CUH
 
 #include "pbat/Aliases.h"
 #include "pbat/gpu/Aliases.h"
@@ -10,14 +10,15 @@
 namespace pbat {
 namespace gpu {
 namespace geometry {
+namespace impl {
 
-struct PointsImpl
+struct Points
 {
     /**
      * @brief
      * @param V |#dims|x|#vertices| array of vertex positions
      */
-    PointsImpl(Eigen::Ref<GpuMatrixX const> const& V);
+    Points(Eigen::Ref<GpuMatrixX const> const& V);
     /**
      * @brief
      * @return
@@ -37,7 +38,7 @@ struct PointsImpl
     common::Buffer<GpuScalar, 3> x; ///< Point coordinates
 };
 
-struct SimplicesImpl
+struct Simplices
 {
     /**
      * @brief Type of mesh simplex. The enum's integer value reveals the number of vertices which
@@ -45,7 +46,7 @@ struct SimplicesImpl
      */
     enum class ESimplexType : int { Vertex = 1, Edge = 2, Triangle = 3, Tetrahedron = 4 };
 
-    SimplicesImpl(Eigen::Ref<GpuIndexMatrixX const> const& C);
+    Simplices(Eigen::Ref<GpuIndexMatrixX const> const& C);
     /**
      * @brief
      * @return
@@ -61,10 +62,10 @@ struct SimplicesImpl
               ///< then inds[m][i] != inds[m][j] for m=0,1,2,3.
 };
 
-class BodiesImpl
+class Bodies
 {
   public:
-    BodiesImpl(Eigen::Ref<GpuIndexVectorX const> const& B);
+    Bodies(Eigen::Ref<GpuIndexVectorX const> const& B);
 
     GpuIndex NumberOfBodies() const;
 
@@ -75,8 +76,9 @@ class BodiesImpl
     GpuIndex nBodies;
 };
 
+} // namespace impl
 } // namespace geometry
 } // namespace gpu
 } // namespace pbat
 
-#endif // PBAT_GPU_GEOMETRY_PRIMITIVES_IMPL_CUH
+#endif // PBAT_GPU_GEOMETRY_IMPL_PRIMITIVES_CUH

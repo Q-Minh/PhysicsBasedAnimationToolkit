@@ -1,7 +1,8 @@
-#ifndef PBAT_GPU_GEOMETRY_BVH_QUERY_IMPL_KERNELS_CUH
-#define PBAT_GPU_GEOMETRY_BVH_QUERY_IMPL_KERNELS_CUH
+#ifndef PBAT_GPU_GEOMETRY_IMPL_BVHQUERYKERNELS_H
+#define PBAT_GPU_GEOMETRY_IMPL_BVHQUERYKERNELS_H
 
-#include "BvhQueryImpl.cuh"
+#include "BvhQuery.cuh"
+#include "Primitives.cuh"
 #include "pbat/HostDevice.h"
 #include "pbat/common/Queue.h"
 #include "pbat/common/Stack.h"
@@ -10,7 +11,6 @@
 #include "pbat/geometry/OverlapQueries.h"
 #include "pbat/gpu/Aliases.h"
 #include "pbat/gpu/common/SynchronizedList.cuh"
-#include "pbat/gpu/geometry/PrimitivesImpl.cuh"
 #include "pbat/math/linalg/mini/Mini.h"
 
 #include <array>
@@ -18,6 +18,7 @@
 namespace pbat {
 namespace gpu {
 namespace geometry {
+namespace impl {
 namespace BvhQueryImplKernels {
 
 namespace mini = pbat::math::linalg::mini;
@@ -74,7 +75,7 @@ struct FComputeMortonCode
 
 struct FDetectOverlaps
 {
-    using OverlapType = typename BvhQueryImpl::OverlapType;
+    using OverlapType = typename BvhQuery::OverlapType;
 
     PBAT_DEVICE bool AreSimplicesTopologicallyAdjacent(GpuIndex si, GpuIndex sj) const
     {
@@ -108,8 +109,8 @@ struct FDetectOverlaps
 
     PBAT_DEVICE bool AreSimplicesOverlapping(GpuIndex si, GpuIndex sj) const
     {
-        if (querySimplexType == SimplicesImpl::ESimplexType::Vertex and
-            targetSimplexType == SimplicesImpl::ESimplexType::Tetrahedron)
+        if (querySimplexType == Simplices::ESimplexType::Vertex and
+            targetSimplexType == Simplices::ESimplexType::Tetrahedron)
         {
             return VertexTetrahedronOverlap(si, sj);
         }
@@ -165,13 +166,13 @@ struct FDetectOverlaps
 
     std::array<GpuScalar const*, 3> x;
 
-    SimplicesImpl::ESimplexType querySimplexType;
+    Simplices::ESimplexType querySimplexType;
     GpuIndex* querySimplex;
     std::array<GpuIndex const*, 4> queryInds;
     std::array<GpuScalar*, 3> queryB;
     std::array<GpuScalar*, 3> queryE;
 
-    SimplicesImpl::ESimplexType targetSimplexType;
+    Simplices::ESimplexType targetSimplexType;
     GpuIndex const* simplex;
     std::array<GpuIndex const*, 4> inds;
     std::array<GpuScalar const*, 3> b;
@@ -184,8 +185,8 @@ struct FDetectOverlaps
 
 struct FContactPairs
 {
-    using OverlapType              = typename BvhQueryImpl::OverlapType;
-    using NearestNeighbourPairType = typename BvhQueryImpl::NearestNeighbourPairType;
+    using OverlapType              = typename BvhQuery::OverlapType;
+    using NearestNeighbourPairType = typename BvhQuery::NearestNeighbourPairType;
 
     PBAT_DEVICE GpuScalar MinDistance(
         mini::SVector<GpuScalar, 3> const& X,
@@ -299,8 +300,11 @@ struct FContactPairs
         BranchAndBound traversal{FromBuffers<3, 1>(x, v), R, dzero, v};
         Push(
             traversal,
-            0,
-            MinDistance(traversal.X, FromBuffers<3, 1>(b, 0), FromBuffers<3, 1>(e, 0)));
+            0 /* root node */,
+            MinDistance(
+                traversal.X,
+                FromBuffers<3, 1>(b, 0),
+                FromBuffers<3, 1>(e, 0)) /* distance from query point to root's aabb */);
         do
         {
             assert(not traversal.stack.IsFull());
@@ -357,8 +361,9 @@ struct FContactPairs
 };
 
 } // namespace BvhQueryImplKernels
+} // namespace impl
 } // namespace geometry
 } // namespace gpu
 } // namespace pbat
 
-#endif // PBAT_GPU_GEOMETRY_BVH_QUERY_IMPL_KERNELS_CUH
+#endif // PBAT_GPU_GEOMETRY_IMPL_BVHQUERYKERNELS_H

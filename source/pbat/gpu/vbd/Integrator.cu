@@ -3,14 +3,14 @@
 // clang-format on
 
 #include "Integrator.h"
-#include "IntegratorImpl.cuh"
+#include "impl/Integrator.cuh"
 #include "pbat/gpu/common/Eigen.cuh"
 
 namespace pbat {
 namespace gpu {
 namespace vbd {
 
-Integrator::Integrator(Data const& data) : mImpl(new IntegratorImpl(data)) {}
+Integrator::Integrator(Data const& data) : mImpl(new impl::Integrator(data)) {}
 
 Integrator::Integrator(Integrator&& other) noexcept : mImpl(other.mImpl)
 {

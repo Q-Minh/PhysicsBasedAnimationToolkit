@@ -1,5 +1,5 @@
-#ifndef PBAT_GPU_BVH_QUERY_CUH
-#define PBAT_GPU_BVH_QUERY_CUH
+#ifndef PBAT_GPU_GEOMETRY_BVHQUERY_H
+#define PBAT_GPU_GEOMETRY_BVHQUERY_H
 
 #include "PhysicsBasedAnimationToolkitExport.h"
 #include "pbat/gpu/Aliases.h"
@@ -11,8 +11,9 @@
 namespace pbat {
 namespace gpu {
 namespace geometry {
-
-class BvhQueryImpl;
+namespace impl {
+class BvhQuery;
+} // namespace impl
 
 class BvhQuery
 {
@@ -79,11 +80,11 @@ class BvhQuery
     PBAT_API ~BvhQuery();
 
   private:
-    BvhQueryImpl* mImpl;
+    impl::BvhQuery* mImpl;
 };
 
 } // namespace geometry
 } // namespace gpu
 } // namespace pbat
 
-#endif // PBAT_GPU_BVH_QUERY_CUH
+#endif // PBAT_GPU_GEOMETRY_BVHQUERY_H

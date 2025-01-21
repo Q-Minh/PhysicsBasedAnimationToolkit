@@ -1,8 +1,8 @@
-#ifndef PBAT_GPU_BVH_QUERY_IMPL_CUH
-#define PBAT_GPU_BVH_QUERY_IMPL_CUH
+#ifndef PBAT_GPU_GEOMETRY_IMPL_BVHQUERY_H
+#define PBAT_GPU_GEOMETRY_IMPL_BVHQUERY_H
 
-#include "BvhImpl.cuh"
-#include "PrimitivesImpl.cuh"
+#include "Bvh.cuh"
+#include "Primitives.cuh"
 #include "pbat/gpu/Aliases.h"
 #include "pbat/gpu/common/Buffer.cuh"
 #include "pbat/gpu/common/SynchronizedList.cuh"
@@ -16,23 +16,24 @@
 namespace pbat {
 namespace gpu {
 namespace geometry {
+namespace impl {
 
 /**
  * @brief Query object reporting geometric test results between simplex sets
  */
-class BvhQueryImpl
+class BvhQuery
 {
   public:
-    using OverlapType              = typename BvhImpl::OverlapType;
+    using OverlapType              = typename Bvh::OverlapType;
     using NearestNeighbourPairType = cuda::std::pair<GpuIndex, GpuIndex>;
-    using MortonCodeType           = typename BvhImpl::MortonCodeType;
+    using MortonCodeType           = typename Bvh::MortonCodeType;
 
     /**
      * @brief
      * @param nPrimitives
      * @param nOverlaps
      */
-    BvhQueryImpl(std::size_t nPrimitives, std::size_t nOverlaps, std::size_t nNearestNeighbours);
+    BvhQuery(std::size_t nPrimitives, std::size_t nOverlaps, std::size_t nNearestNeighbours);
 
     /**
      * @brief
@@ -43,8 +44,8 @@ class BvhQueryImpl
      * @param expansion
      */
     void Build(
-        PointsImpl const& P,
-        SimplicesImpl const& S,
+        Points const& P,
+        Simplices const& S,
         Eigen::Vector<GpuScalar, 3> const& min,
         Eigen::Vector<GpuScalar, 3> const& max,
         GpuScalar expansion = std::numeric_limits<GpuScalar>::epsilon());
@@ -56,11 +57,7 @@ class BvhQueryImpl
      * @param S2 Target primitives
      * @param bvh Bounding volume hierarchy over S2
      */
-    void DetectOverlaps(
-        PointsImpl const& P,
-        SimplicesImpl const& S1,
-        SimplicesImpl const& S2,
-        BvhImpl const& bvh);
+    void DetectOverlaps(Points const& P, Simplices const& S1, Simplices const& S2, Bvh const& bvh);
 
     /**
      * @brief
@@ -74,11 +71,11 @@ class BvhQueryImpl
      * neighbours
      */
     void DetectContactPairsFromOverlaps(
-        PointsImpl const& P,
-        SimplicesImpl const& S1,
-        SimplicesImpl const& S2,
-        BodiesImpl const& BV,
-        BvhImpl const& bvh,
+        Points const& P,
+        Simplices const& S1,
+        Simplices const& S2,
+        Bodies const& BV,
+        Bvh const& bvh,
         GpuScalar dhat  = std::numeric_limits<GpuScalar>::max(),
         GpuScalar dzero = std::numeric_limits<GpuScalar>::epsilon());
 
@@ -101,8 +98,9 @@ class BvhQueryImpl
     common::SynchronizedList<NearestNeighbourPairType> neighbours; ///< Detected nearest neighbours
 };
 
+} // namespace impl
 } // namespace geometry
 } // namespace gpu
 } // namespace pbat
 
-#endif // PBAT_GPU_BVH_IMPL_CUH
+#endif // PBAT_GPU_GEOMETRY_IMPL_BVHQUERY_H

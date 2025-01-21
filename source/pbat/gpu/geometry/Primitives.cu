@@ -3,7 +3,7 @@
 // clang-format on
 
 #include "Primitives.h"
-#include "PrimitivesImpl.cuh"
+#include "impl/Primitives.cuh"
 #include "pbat/gpu/common/Eigen.cuh"
 
 #include <array>
@@ -13,7 +13,7 @@ namespace pbat {
 namespace gpu {
 namespace geometry {
 
-Points::Points(Eigen::Ref<GpuMatrixX const> const& V) : mImpl(new PointsImpl(V)) {}
+Points::Points(Eigen::Ref<GpuMatrixX const> const& V) : mImpl(new impl::Points(V)) {}
 
 Points::Points(Points&& other) noexcept : mImpl(other.mImpl)
 {
@@ -34,12 +34,12 @@ void Points::Update(Eigen::Ref<GpuMatrixX const> const& V)
     mImpl->Update(V);
 }
 
-PointsImpl* Points::Impl()
+impl::Points* Points::Impl()
 {
     return mImpl;
 }
 
-PointsImpl const* Points::Impl() const
+impl::Points const* Points::Impl() const
 {
     return mImpl;
 }
@@ -55,7 +55,7 @@ Points::~Points()
         delete mImpl;
 }
 
-Simplices::Simplices(Eigen::Ref<GpuIndexMatrixX const> const& C) : mImpl(new SimplicesImpl(C)) {}
+Simplices::Simplices(Eigen::Ref<GpuIndexMatrixX const> const& C) : mImpl(new impl::Simplices(C)) {}
 
 Simplices::Simplices(Simplices&& other) noexcept : mImpl(other.mImpl)
 {
@@ -87,12 +87,12 @@ Simplices::ESimplexType Simplices::Type() const
     return static_cast<ESimplexType>(mImpl->eSimplexType);
 }
 
-SimplicesImpl* Simplices::Impl()
+impl::Simplices* Simplices::Impl()
 {
     return mImpl;
 }
 
-SimplicesImpl const* Simplices::Impl() const
+impl::Simplices const* Simplices::Impl() const
 {
     return mImpl;
 }
@@ -103,7 +103,7 @@ Simplices::~Simplices()
         delete mImpl;
 }
 
-Bodies::Bodies(Eigen::Ref<GpuIndexVectorX const> const& B) : mImpl(new BodiesImpl(B)) {}
+Bodies::Bodies(Eigen::Ref<GpuIndexVectorX const> const& B) : mImpl(new impl::Bodies(B)) {}
 
 Bodies::Bodies(Bodies&& other) noexcept : mImpl(other.mImpl)
 {
@@ -129,12 +129,12 @@ std::size_t Bodies::NumberOfBodies() const
     return mImpl->NumberOfBodies();
 }
 
-BodiesImpl* geometry::Bodies::Impl()
+impl::Bodies* geometry::Bodies::Impl()
 {
     return mImpl;
 }
 
-BodiesImpl const* geometry::Bodies::Impl() const
+impl::Bodies const* geometry::Bodies::Impl() const
 {
     return mImpl;
 }

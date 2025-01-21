@@ -1,9 +1,9 @@
-#ifndef PBAT_GPU_BVH_CUH
-#define PBAT_GPU_BVH_CUH
+#ifndef PBAT_GPU_GEOMETRY_BVH_H
+#define PBAT_GPU_GEOMETRY_BVH_H
 
+#include "PhysicsBasedAnimationToolkitExport.h"
 #include "Primitives.h"
 #include "pbat/gpu/Aliases.h"
-#include "PhysicsBasedAnimationToolkitExport.h"
 
 #include <Eigen/Core>
 #include <cstddef>
@@ -12,8 +12,9 @@
 namespace pbat {
 namespace gpu {
 namespace geometry {
-
-class BvhImpl;
+namespace impl {
+class Bvh;
+} // namespace impl
 
 /**
  * @brief Linear BVH GPU implementation
@@ -49,8 +50,8 @@ class Bvh
         Eigen::Vector<GpuScalar, 3> const& max,
         GpuScalar expansion = std::numeric_limits<GpuScalar>::epsilon());
 
-    PBAT_API BvhImpl* Impl();
-    PBAT_API BvhImpl const* Impl() const;
+    PBAT_API impl::Bvh* Impl();
+    PBAT_API impl::Bvh const* Impl() const;
 
     /**
      * @brief
@@ -101,11 +102,11 @@ class Bvh
     PBAT_API ~Bvh();
 
   private:
-    BvhImpl* mImpl;
+    impl::Bvh* mImpl;
 };
 
 } // namespace geometry
 } // namespace gpu
 } // namespace pbat
 
-#endif // PBAT_GPU_BVH_CUH
+#endif // PBAT_GPU_GEOMETRY_BVH_H

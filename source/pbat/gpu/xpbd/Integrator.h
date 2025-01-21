@@ -12,8 +12,11 @@
 namespace pbat {
 namespace gpu {
 namespace xpbd {
+namespace impl {
 
-class IntegratorImpl;
+class Integrator;
+
+} // namespace impl
 
 class Integrator
 {
@@ -161,7 +164,7 @@ class Integrator
     PBAT_API ~Integrator();
 
   private:
-    IntegratorImpl* mImpl;
+    impl::Integrator* mImpl;
 };
 
 } // namespace xpbd

@@ -1,7 +1,7 @@
-#ifndef PBAT_GPU_BVH_IMPL_CUH
-#define PBAT_GPU_BVH_IMPL_CUH
+#ifndef PBAT_GPU_GEOMETRY_IMPL_BVH_CUH
+#define PBAT_GPU_GEOMETRY_IMPL_BVH_CUH
 
-#include "PrimitivesImpl.cuh"
+#include "Primitives.cuh"
 #include "pbat/geometry/Morton.h"
 #include "pbat/gpu/Aliases.h"
 #include "pbat/gpu/common/Buffer.cuh"
@@ -17,6 +17,7 @@
 namespace pbat {
 namespace gpu {
 namespace geometry {
+namespace impl {
 
 /**
  * @brief Radix-tree linear BVH
@@ -24,16 +25,16 @@ namespace geometry {
  * See
  * https://research.nvidia.com/sites/default/files/pubs/2012-06_Maximizing-Parallelism-in/karras2012hpg_paper.pdf#page=4.43
  */
-class BvhImpl
+class Bvh
 {
   public:
     using OverlapType    = cuda::std::pair<GpuIndex, GpuIndex>;
     using MortonCodeType = pbat::geometry::MortonCodeType;
 
-    friend class BvhQueryImpl;
+    friend class BvhQuery;
 
     static_assert(
-        std::is_same_v<GpuIndex, int>,
+        std::is_same_v<GpuIndex, std::int32_t>,
         "gpu::BvhImpl only supported for 32-bit signed integer indices");
 
     /**
@@ -41,7 +42,7 @@ class BvhImpl
      * @param nPrimitives
      * @param nOverlaps
      */
-    BvhImpl(std::size_t nPrimitives, std::size_t nOverlaps);
+    Bvh(std::size_t nPrimitives, std::size_t nOverlaps);
 
     /**
      * @brief
@@ -50,8 +51,8 @@ class BvhImpl
      * @param expansion
      */
     void Build(
-        PointsImpl const& P,
-        SimplicesImpl const& S,
+        Points const& P,
+        Simplices const& S,
         Eigen::Vector<GpuScalar, 3> const& min,
         Eigen::Vector<GpuScalar, 3> const& max,
         GpuScalar expansion = std::numeric_limits<GpuScalar>::epsilon());
@@ -60,7 +61,7 @@ class BvhImpl
      * @brief
      * @param S The simplices which were used to build this BVH
      */
-    void DetectSelfOverlaps(SimplicesImpl const& S);
+    void DetectSelfOverlaps(Simplices const& S);
 
     /**
      * @brief
@@ -130,8 +131,9 @@ class BvhImpl
     common::SynchronizedList<OverlapType> overlaps; ///< Detected overlaps
 };
 
+} // namespace impl
 } // namespace geometry
 } // namespace gpu
 } // namespace pbat
 
-#endif // PBAT_GPU_BVH_IMPL_CUH
+#endif // PBAT_GPU_GEOMETRY_BVHIMPL_H

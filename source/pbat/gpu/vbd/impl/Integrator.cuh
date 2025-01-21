@@ -1,9 +1,9 @@
-#ifndef PBAT_GPU_VBD_INTEGRATOR_IMPL_CUH
-#define PBAT_GPU_VBD_INTEGRATOR_IMPL_CUH
+#ifndef PBAT_GPU_VBD_IMPL_INTEGRATOR_CUH
+#define PBAT_GPU_VBD_IMPL_INTEGRATOR_CUH
 
 #include "pbat/gpu/Aliases.h"
 #include "pbat/gpu/common/Buffer.cuh"
-#include "pbat/gpu/geometry/PrimitivesImpl.cuh"
+#include "pbat/gpu/geometry/impl/Primitives.cuh"
 #include "pbat/sim/vbd/Data.h"
 #include "pbat/sim/vbd/Enums.h"
 
@@ -13,14 +13,15 @@
 namespace pbat {
 namespace gpu {
 namespace vbd {
+namespace impl {
 
-class IntegratorImpl
+class Integrator
 {
   public:
     using EInitializationStrategy = pbat::sim::vbd::EInitializationStrategy;
     using Data                    = pbat::sim::vbd::Data;
 
-    IntegratorImpl(Data const& data);
+    Integrator(Data const& data);
     /**
      * @brief
      * @param dt
@@ -135,10 +136,10 @@ class IntegratorImpl
     common::Buffer<GpuScalar> const& GetLameCoefficients() const;
 
   public:
-    geometry::PointsImpl X;    ///< Current vertex positions
-    geometry::SimplicesImpl V; ///< Boundary vertex simplices
-    geometry::SimplicesImpl F; ///< Boundary triangle simplices
-    geometry::SimplicesImpl T; ///< Tetrahedral mesh elements
+    geometry::impl::Points X;    ///< Current vertex positions
+    geometry::impl::Simplices V; ///< Boundary vertex simplices
+    geometry::impl::Simplices F; ///< Boundary triangle simplices
+    geometry::impl::Simplices T; ///< Tetrahedral mesh elements
   private:
     common::Buffer<GpuScalar, 3> mPositionsAtT;            ///< Previous vertex positions
     common::Buffer<GpuScalar, 3> mInertialTargetPositions; ///< Inertial target for vertex positions
@@ -184,8 +185,9 @@ class IntegratorImpl
     cuda::stream_t mStream;       ///< Cuda stream on which this VBD instance will run
 };
 
+} // namespace impl
 } // namespace vbd
 } // namespace gpu
 } // namespace pbat
 
-#endif // PBAT_GPU_VBD_INTEGRATOR_IMPL_CUH
+#endif // PBAT_GPU_VBD_IMPL_INTEGRATOR_CUH

@@ -9,8 +9,11 @@
 namespace pbat {
 namespace gpu {
 namespace vbd {
+namespace impl {
 
-class IntegratorImpl;
+class Integrator;
+
+} // namespace impl
 
 class Integrator
 {
@@ -103,7 +106,9 @@ class Integrator
      * @param Pptr
      * @param Padj
      */
-    PBAT_API void SetVertexPartitions(Eigen::Ref<GpuIndexVectorX const> const& Pptr, Eigen::Ref<GpuIndexVectorX const> const& Padj);
+    PBAT_API void SetVertexPartitions(
+        Eigen::Ref<GpuIndexVectorX const> const& Pptr,
+        Eigen::Ref<GpuIndexVectorX const> const& Padj);
     /**
      * @brief Sets the initialization strategy to kick-start the time step minimization
      * @param strategy
@@ -126,7 +131,7 @@ class Integrator
     PBAT_API GpuMatrixX GetVelocities() const;
 
   private:
-    IntegratorImpl* mImpl;
+    impl::Integrator* mImpl;
 };
 
 } // namespace vbd

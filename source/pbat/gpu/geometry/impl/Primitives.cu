@@ -2,7 +2,7 @@
 #include "pbat/gpu/DisableWarnings.h"
 // clang-format on
 
-#include "PrimitivesImpl.cuh"
+#include "Primitives.cuh"
 #include "pbat/gpu/common/Eigen.cuh"
 
 #include <array>
@@ -14,29 +14,30 @@
 namespace pbat {
 namespace gpu {
 namespace geometry {
+namespace impl {
 
-PointsImpl::PointsImpl(Eigen::Ref<GpuMatrixX const> const& V) : x()
+Points::Points(Eigen::Ref<GpuMatrixX const> const& V) : x()
 {
     Update(V);
 }
 
-std::size_t PointsImpl::NumberOfPoints() const
+std::size_t Points::NumberOfPoints() const
 {
     return x.Size();
 }
 
-std::size_t PointsImpl::Dimensions() const
+std::size_t Points::Dimensions() const
 {
     return x.Dimensions();
 }
 
-void PointsImpl::Update(Eigen::Ref<GpuMatrixX const> const& V)
+void Points::Update(Eigen::Ref<GpuMatrixX const> const& V)
 {
     x.Resize(V.cols());
     common::ToBuffer(V, x);
 }
 
-SimplicesImpl::SimplicesImpl(Eigen::Ref<GpuIndexMatrixX const> const& C) : eSimplexType(), inds()
+Simplices::Simplices(Eigen::Ref<GpuIndexMatrixX const> const& C) : eSimplexType(), inds()
 {
     if (C.size() > 0)
     {
@@ -66,22 +67,23 @@ SimplicesImpl::SimplicesImpl(Eigen::Ref<GpuIndexMatrixX const> const& C) : eSimp
     }
 }
 
-GpuIndex SimplicesImpl::NumberOfSimplices() const
+GpuIndex Simplices::NumberOfSimplices() const
 {
     return static_cast<GpuIndex>(inds.Size());
 }
 
-BodiesImpl::BodiesImpl(Eigen::Ref<GpuIndexVectorX const> const& B)
+Bodies::Bodies(Eigen::Ref<GpuIndexVectorX const> const& B)
     : body(B.size()), nBodies(static_cast<GpuIndex>(B.maxCoeff() + 1))
 {
     common::ToBuffer(B, body);
 }
 
-GpuIndex BodiesImpl::NumberOfBodies() const
+GpuIndex Bodies::NumberOfBodies() const
 {
     return nBodies;
 }
 
+} // namespace impl
 } // namespace geometry
 } // namespace gpu
 } // namespace pbat
@@ -103,15 +105,15 @@ TEST_CASE("[gpu][geometry] Simplices")
     E << 1, 0, 2,
          2, 1, 3;
     // clang-format on
-    gpu::geometry::PointsImpl P(V);
+    gpu::geometry::impl::Points P(V);
     for (auto d = 0; d < P.x.Dimensions(); ++d)
     {
         std::vector<GpuScalar> const PxGpu{P.x[d].begin(), P.x[d].end()};
         std::vector<GpuScalar> const PxEigen{V.row(d).begin(), V.row(d).end()};
         CHECK_EQ(PxGpu, PxEigen);
     }
-    gpu::geometry::SimplicesImpl S(E);
-    CHECK_EQ(S.eSimplexType, gpu::geometry::SimplicesImpl::ESimplexType::Edge);
+    gpu::geometry::impl::Simplices S(E);
+    CHECK_EQ(S.eSimplexType, gpu::geometry::impl::Simplices::ESimplexType::Edge);
     auto const nSimplexVertices = static_cast<int>(S.eSimplexType);
     for (auto m = 0; m < nSimplexVertices; ++m)
     {

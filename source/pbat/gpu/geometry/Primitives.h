@@ -7,10 +7,13 @@
 namespace pbat {
 namespace gpu {
 namespace geometry {
+namespace impl {
 
-struct PointsImpl;
-struct SimplicesImpl;
-class BodiesImpl;
+struct Points;
+struct Simplices;
+class Bodies;
+
+} // namespace impl
 
 class Points
 {
@@ -51,12 +54,12 @@ class Points
      * @brief
      * @return
      */
-    PBAT_API PointsImpl* Impl();
+    PBAT_API impl::Points* Impl();
     /**
      * @brief
      * @return
      */
-    PBAT_API PointsImpl const* Impl() const;
+    PBAT_API impl::Points const* Impl() const;
     /**
      * @brief
      * @return
@@ -68,7 +71,7 @@ class Points
     PBAT_API ~Points();
 
   private:
-    PointsImpl* mImpl;
+    impl::Points* mImpl;
 };
 
 class Simplices
@@ -117,19 +120,19 @@ class Simplices
      * @brief
      * @return
      */
-    PBAT_API SimplicesImpl* Impl();
+    PBAT_API impl::Simplices* Impl();
     /**
      * @brief
      * @return
      */
-    PBAT_API SimplicesImpl const* Impl() const;
+    PBAT_API impl::Simplices const* Impl() const;
     /**
      * @brief
      */
     PBAT_API ~Simplices();
 
   private:
-    SimplicesImpl* mImpl;
+    impl::Simplices* mImpl;
 };
 
 class Bodies
@@ -176,19 +179,19 @@ class Bodies
      * @brief
      * @return
      */
-    PBAT_API BodiesImpl* Impl();
+    PBAT_API impl::Bodies* Impl();
     /**
      * @brief
      * @return
      */
-    PBAT_API BodiesImpl const* Impl() const;
+    PBAT_API impl::Bodies const* Impl() const;
     /**
      * @brief
      */
     PBAT_API ~Bodies();
 
   private:
-    BodiesImpl* mImpl;
+    impl::Bodies* mImpl;
 };
 
 } // namespace geometry

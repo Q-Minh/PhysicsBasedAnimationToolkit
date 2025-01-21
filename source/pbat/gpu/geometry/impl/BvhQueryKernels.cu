@@ -2,4 +2,4 @@
 #include "pbat/gpu/DisableWarnings.h"
 // clang-format on
 
-#include "SweepAndPruneImplKernels.cuh"
+#include "BvhQueryKernels.cuh"

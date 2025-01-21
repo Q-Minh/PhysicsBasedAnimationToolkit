@@ -1,7 +1,7 @@
-#ifndef PBAT_GPU_SWEEP_AND_PRUNE_IMPL_CUH
-#define PBAT_GPU_SWEEP_AND_PRUNE_IMPL_CUH
+#ifndef PBAT_GPU_GEOMETRY_IMPL_SWEEPANDPRUNE_H
+#define PBAT_GPU_GEOMETRY_IMPL_SWEEPANDPRUNE_H
 
-#include "PrimitivesImpl.cuh"
+#include "Primitives.cuh"
 #include "pbat/gpu/Aliases.h"
 #include "pbat/gpu/common/Buffer.cuh"
 #include "pbat/gpu/common/SynchronizedList.cuh"
@@ -14,8 +14,9 @@
 namespace pbat {
 namespace gpu {
 namespace geometry {
+namespace impl {
 
-class SweepAndPruneImpl
+class SweepAndPrune
 {
   public:
     using OverlapType = cuda::std::pair<GpuIndex, GpuIndex>;
@@ -26,7 +27,7 @@ class SweepAndPruneImpl
      * @param nPrimitives
      * @param nOverlaps
      */
-    SweepAndPruneImpl(std::size_t nPrimitives, std::size_t nOverlaps);
+    SweepAndPrune(std::size_t nPrimitives, std::size_t nOverlaps);
 
     /**
      * @brief Compute overlapping, topologically non-adjacent simplices between S1 and S2
@@ -35,9 +36,9 @@ class SweepAndPruneImpl
      * @param S2
      */
     void SortAndSweep(
-        PointsImpl const& P,
-        SimplicesImpl const& S1,
-        SimplicesImpl const& S2,
+        Points const& P,
+        Simplices const& S1,
+        Simplices const& S2,
         GpuScalar expansion = std::numeric_limits<GpuScalar>::epsilon());
 
     /**
@@ -66,8 +67,9 @@ class SweepAndPruneImpl
     common::SynchronizedList<OverlapType> overlaps; ///< Simplex box overlaps
 };
 
+} // namespace impl
 } // namespace geometry
 } // namespace gpu
 } // namespace pbat
 
-#endif // PBAT_GPU_SWEEP_AND_PRUNE_IMPL_CUH
+#endif // PBAT_GPU_GEOMETRY_IMPL_SWEEPANDPRUNE_H

@@ -1,5 +1,5 @@
-#ifndef PBAT_GPU_SWEEP_AND_PRUNE_H
-#define PBAT_GPU_SWEEP_AND_PRUNE_H
+#ifndef PBAT_GPU_GEOMETRY_SWEEPANDPRUNE_H
+#define PBAT_GPU_GEOMETRY_SWEEPANDPRUNE_H
 
 #include "PhysicsBasedAnimationToolkitExport.h"
 #include "Primitives.h"
@@ -12,8 +12,11 @@
 namespace pbat {
 namespace gpu {
 namespace geometry {
+namespace impl {
 
-class SweepAndPruneImpl;
+class SweepAndPrune;
+
+} // namespace impl
 
 class SweepAndPrune
 {
@@ -35,11 +38,11 @@ class SweepAndPrune
     PBAT_API ~SweepAndPrune();
 
   private:
-    SweepAndPruneImpl* mImpl;
+    impl::SweepAndPrune* mImpl;
 };
 
 } // namespace geometry
 } // namespace gpu
 } // namespace pbat
 
-#endif // PBAT_GPU_SWEEP_AND_PRUNE_H
+#endif // PBAT_GPU_GEOMETRY_SWEEPANDPRUNE_H

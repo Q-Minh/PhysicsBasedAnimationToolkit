@@ -2,8 +2,8 @@
 #include "pbat/gpu/DisableWarnings.h"
 // clang-format on
 
-#include "SweepAndPruneImpl.cuh"
-#include "SweepAndPruneImplKernels.cuh"
+#include "SweepAndPrune.cuh"
+#include "SweepAndPruneKernels.cuh"
 
 #include <exception>
 #include <string>
@@ -17,8 +17,9 @@
 namespace pbat {
 namespace gpu {
 namespace geometry {
+namespace impl {
 
-SweepAndPruneImpl::SweepAndPruneImpl(std::size_t nPrimitives, std::size_t nOverlaps)
+SweepAndPrune::SweepAndPrune(std::size_t nPrimitives, std::size_t nOverlaps)
     : binds(nPrimitives),
       sinds(nPrimitives),
       b(nPrimitives),
@@ -29,10 +30,10 @@ SweepAndPruneImpl::SweepAndPruneImpl(std::size_t nPrimitives, std::size_t nOverl
 {
 }
 
-void SweepAndPruneImpl::SortAndSweep(
-    PointsImpl const& P,
-    SimplicesImpl const& S1,
-    SimplicesImpl const& S2,
+void SweepAndPrune::SortAndSweep(
+    Points const& P,
+    Simplices const& S1,
+    Simplices const& S2,
     GpuScalar expansion)
 {
     auto const nBoxes = S1.NumberOfSimplices() + S2.NumberOfSimplices();
@@ -64,7 +65,7 @@ void SweepAndPruneImpl::SortAndSweep(
         thrust::device,
         thrust::make_counting_iterator(0),
         thrust::make_counting_iterator(S1.NumberOfSimplices()),
-        SweepAndPruneImplKernels::FComputeAabb{
+        SweepAndPruneKernels::FComputeAabb{
             P.x.Raw(),
             sinds.Raw(),
             static_cast<int>(S1.eSimplexType),
@@ -75,7 +76,7 @@ void SweepAndPruneImpl::SortAndSweep(
         thrust::device,
         thrust::make_counting_iterator(S1.NumberOfSimplices()),
         thrust::make_counting_iterator(nBoxes),
-        SweepAndPruneImplKernels::FComputeAabb{
+        SweepAndPruneKernels::FComputeAabb{
             P.x.Raw(),
             sinds.Raw(),
             static_cast<int>(S2.eSimplexType),
@@ -84,13 +85,13 @@ void SweepAndPruneImpl::SortAndSweep(
             expansion});
 
     // 2. Compute mean and variance of bounding box centers
-    SweepAndPruneImplKernels::FComputeMean fComputeMean{b.Raw(), e.Raw(), mu.Raw(), nBoxes};
+    SweepAndPruneKernels::FComputeMean fComputeMean{b.Raw(), e.Raw(), mu.Raw(), nBoxes};
     thrust::for_each(
         thrust::device,
         thrust::make_counting_iterator(0),
         thrust::make_counting_iterator(nBoxes),
         fComputeMean);
-    SweepAndPruneImplKernels::FComputeVariance
+    SweepAndPruneKernels::FComputeVariance
         fComputeVariance{b.Raw(), e.Raw(), mu.Raw(), sigma.Raw(), nBoxes};
     thrust::for_each(
         thrust::device,
@@ -117,7 +118,7 @@ void SweepAndPruneImpl::SortAndSweep(
     thrust::sort_by_key(thrust::device, b[saxis].begin(), b[saxis].begin() + nBoxes, zip);
 
     // 4. Sweep to find overlaps
-    SweepAndPruneImplKernels::FSweep fSweep{
+    SweepAndPruneKernels::FSweep fSweep{
         binds.Raw(),
         sinds.Raw(),
         {S1.NumberOfSimplices(), S2.NumberOfSimplices()},
@@ -134,21 +135,22 @@ void SweepAndPruneImpl::SortAndSweep(
         fSweep);
 }
 
-std::size_t SweepAndPruneImpl::NumberOfAllocatedBoxes() const
+std::size_t SweepAndPrune::NumberOfAllocatedBoxes() const
 {
     return binds.Size();
 }
 
-std::size_t SweepAndPruneImpl::NumberOfAllocatedOverlaps() const
+std::size_t SweepAndPrune::NumberOfAllocatedOverlaps() const
 {
     return overlaps.Capacity();
 }
 
-std::vector<typename SweepAndPruneImpl::OverlapType> SweepAndPruneImpl::Overlaps() const
+std::vector<typename SweepAndPrune::OverlapType> SweepAndPrune::Overlaps() const
 {
     return overlaps.Get();
 }
 
+} // namespace impl
 } // namespace geometry
 } // namespace gpu
 } // namespace pbat
@@ -175,7 +177,7 @@ TEST_CASE("[gpu][geometry] Sweep and prune")
           5,
           6;
     // clang-format on
-    using OverlapType = gpu::geometry::SweepAndPruneImpl::OverlapType;
+    using OverlapType = gpu::geometry::impl::SweepAndPrune::OverlapType;
     struct Hash
     {
         std::size_t operator()(OverlapType const& overlap) const
@@ -185,11 +187,11 @@ TEST_CASE("[gpu][geometry] Sweep and prune")
     };
     using OverlapSetType = std::unordered_set<OverlapType, Hash>;
     OverlapSetType overlapsExpected{{{0, 0}, {1, 0}}};
-    gpu::geometry::PointsImpl P(V);
-    gpu::geometry::SimplicesImpl S1(E1);
-    gpu::geometry::SimplicesImpl S2(F2);
+    gpu::geometry::impl::Points P(V);
+    gpu::geometry::impl::Simplices S1(E1);
+    gpu::geometry::impl::Simplices S2(F2);
     // Act
-    gpu::geometry::SweepAndPruneImpl sap(4, 2);
+    gpu::geometry::impl::SweepAndPrune sap(4, 2);
     sap.SortAndSweep(P, S1, S2);
     std::vector<OverlapType> overlaps = sap.Overlaps();
     // Assert

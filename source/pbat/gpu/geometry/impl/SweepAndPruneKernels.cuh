@@ -1,8 +1,8 @@
-#ifndef PBAT_GPU_GEOMETRY_BVH_QUERY_IMPL_KERNELS_CUH
-#define PBAT_GPU_GEOMETRY_BVH_QUERY_IMPL_KERNELS_CUH
+#ifndef PBAT_GPU_GEOMETRY_IMPL_SWEEP_AND_PRUNE_KERNELS_CUH
+#define PBAT_GPU_GEOMETRY_IMPL_SWEEP_AND_PRUNE_KERNELS_CUH
 
+#include "SweepAndPrune.cuh"
 #include "pbat/HostDevice.h"
-#include "SweepAndPruneImpl.cuh"
 #include "pbat/gpu/Aliases.h"
 #include "pbat/gpu/common/SynchronizedList.cuh"
 
@@ -12,7 +12,8 @@
 namespace pbat {
 namespace gpu {
 namespace geometry {
-namespace SweepAndPruneImplKernels {
+namespace impl {
+namespace SweepAndPruneKernels {
 
 struct FComputeAabb
 {
@@ -85,7 +86,7 @@ struct FComputeVariance
 
 struct FSweep
 {
-    using OverlapType = typename SweepAndPruneImpl::OverlapType;
+    using OverlapType = typename SweepAndPrune::OverlapType;
 
     /**
      * @brief If (si,sj) are from the same simplex set, or if (si,sj) share a common vertex, they
@@ -141,9 +142,10 @@ struct FSweep
     common::DeviceSynchronizedList<OverlapType> overlaps;
 };
 
-} // namespace SweepAndPruneImplKernels
+} // namespace SweepAndPruneKernels
+} // namespace impl
 } // namespace geometry
 } // namespace gpu
 } // namespace pbat
 
-#endif // PBAT_GPU_GEOMETRY_BVH_QUERY_IMPL_KERNELS_CUH
+#endif // PBAT_GPU_GEOMETRY_IMPL_SWEEP_AND_PRUNE_KERNELS_CUH

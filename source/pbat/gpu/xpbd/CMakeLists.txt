@@ -7,12 +7,7 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
 )
 target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     PRIVATE
-    FILE_SET implementation
-    FILES
-    "IntegratorImpl.cuh"
-)
-target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
-    PRIVATE
     "Integrator.cu"
-    "IntegratorImpl.cu"
 )
+
+add_subdirectory(impl)

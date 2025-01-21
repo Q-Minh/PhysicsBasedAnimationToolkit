@@ -2,7 +2,7 @@
 #include "pbat/gpu/DisableWarnings.h"
 // clang-format on
 
-#include "IntegratorImpl.cuh"
+#include "Integrator.cuh"
 #include "pbat/gpu/common/Eigen.cuh"
 #include "pbat/math/linalg/mini/Mini.h"
 #include "pbat/sim/xpbd/Kernels.h"
@@ -15,8 +15,9 @@
 namespace pbat {
 namespace gpu {
 namespace xpbd {
+namespace impl {
 
-IntegratorImpl::IntegratorImpl(
+Integrator::Integrator(
     Data const& data,
     std::size_t nMaxVertexTetrahedronOverlaps,
     std::size_t nMaxVertexTriangleContacts)
@@ -88,7 +89,7 @@ IntegratorImpl::IntegratorImpl(
     common::ToBuffer(data.muV, mPenalty);
 }
 
-void IntegratorImpl::Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps)
+void Integrator::Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps)
 {
     GpuScalar const sdt       = dt / static_cast<GpuScalar>(substeps);
     GpuScalar const sdt2      = sdt * sdt;
@@ -235,56 +236,54 @@ void IntegratorImpl::Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps)
     }
 }
 
-std::size_t IntegratorImpl::NumberOfParticles() const
+std::size_t Integrator::NumberOfParticles() const
 {
     return X.x.Size();
 }
 
-std::size_t IntegratorImpl::NumberOfConstraints() const
+std::size_t Integrator::NumberOfConstraints() const
 {
     return T.inds.Size();
 }
 
-void IntegratorImpl::SetPositions(Eigen::Ref<GpuMatrixX const> const& Xin)
+void Integrator::SetPositions(Eigen::Ref<GpuMatrixX const> const& Xin)
 {
     common::ToBuffer(Xin, X.x);
     mPositions = X.x;
 }
 
-void IntegratorImpl::SetVelocities(Eigen::Ref<GpuMatrixX const> const& vIn)
+void Integrator::SetVelocities(Eigen::Ref<GpuMatrixX const> const& vIn)
 {
     common::ToBuffer(vIn, mVelocities);
 }
 
-void IntegratorImpl::SetExternalAcceleration(Eigen::Ref<GpuMatrixX const> const& aext)
+void Integrator::SetExternalAcceleration(Eigen::Ref<GpuMatrixX const> const& aext)
 {
     common::ToBuffer(aext, mExternalAcceleration);
 }
 
-void IntegratorImpl::SetMassInverse(Eigen::Ref<GpuMatrixX const> const& minv)
+void Integrator::SetMassInverse(Eigen::Ref<GpuMatrixX const> const& minv)
 {
     common::ToBuffer(minv, mMassInverses);
 }
 
-void IntegratorImpl::SetLameCoefficients(Eigen::Ref<GpuMatrixX const> const& l)
+void Integrator::SetLameCoefficients(Eigen::Ref<GpuMatrixX const> const& l)
 {
     common::ToBuffer(l, mLame);
 }
 
-void IntegratorImpl::SetCompliance(
-    Eigen::Ref<GpuMatrixX const> const& alpha,
-    EConstraint eConstraint)
+void Integrator::SetCompliance(Eigen::Ref<GpuMatrixX const> const& alpha, EConstraint eConstraint)
 {
     common::ToBuffer(alpha, mCompliance[static_cast<int>(eConstraint)]);
 }
 
-void IntegratorImpl::SetFrictionCoefficients(GpuScalar muS, GpuScalar muK)
+void Integrator::SetFrictionCoefficients(GpuScalar muS, GpuScalar muK)
 {
     mStaticFrictionCoefficient  = muS;
     mDynamicFrictionCoefficient = muK;
 }
 
-void IntegratorImpl::SetSceneBoundingBox(
+void Integrator::SetSceneBoundingBox(
     Eigen::Vector<GpuScalar, 3> const& min,
     Eigen::Vector<GpuScalar, 3> const& max)
 {
@@ -292,55 +291,53 @@ void IntegratorImpl::SetSceneBoundingBox(
     Smax = max;
 }
 
-common::Buffer<GpuScalar, 3> const& IntegratorImpl::GetVelocity() const
+common::Buffer<GpuScalar, 3> const& Integrator::GetVelocity() const
 {
     return mVelocities;
 }
 
-common::Buffer<GpuScalar, 3> const& IntegratorImpl::GetExternalAcceleration() const
+common::Buffer<GpuScalar, 3> const& Integrator::GetExternalAcceleration() const
 {
     return mExternalAcceleration;
 }
 
-common::Buffer<GpuScalar> const& IntegratorImpl::GetMassInverse() const
+common::Buffer<GpuScalar> const& Integrator::GetMassInverse() const
 {
     return mMassInverses;
 }
 
-common::Buffer<GpuScalar> const& IntegratorImpl::GetLameCoefficients() const
+common::Buffer<GpuScalar> const& Integrator::GetLameCoefficients() const
 {
     return mLame;
 }
 
-common::Buffer<GpuScalar> const& IntegratorImpl::GetShapeMatrixInverse() const
+common::Buffer<GpuScalar> const& Integrator::GetShapeMatrixInverse() const
 {
     return mShapeMatrixInverses;
 }
 
-common::Buffer<GpuScalar> const& IntegratorImpl::GetRestStableGamma() const
+common::Buffer<GpuScalar> const& Integrator::GetRestStableGamma() const
 {
     return mRestStableGamma;
 }
 
-common::Buffer<GpuScalar> const&
-IntegratorImpl::GetLagrangeMultiplier(EConstraint eConstraint) const
+common::Buffer<GpuScalar> const& Integrator::GetLagrangeMultiplier(EConstraint eConstraint) const
 {
     return mLagrangeMultipliers[static_cast<int>(eConstraint)];
 }
 
-common::Buffer<GpuScalar> const& IntegratorImpl::GetCompliance(EConstraint eConstraint) const
+common::Buffer<GpuScalar> const& Integrator::GetCompliance(EConstraint eConstraint) const
 {
     return mCompliance[static_cast<int>(eConstraint)];
 }
 
-std::vector<typename IntegratorImpl::CollisionCandidateType>
-IntegratorImpl::GetVertexTetrahedronCollisionCandidates() const
+std::vector<typename Integrator::CollisionCandidateType>
+Integrator::GetVertexTetrahedronCollisionCandidates() const
 {
     return Vquery.overlaps.Get();
 }
 
-std::vector<typename IntegratorImpl::ContactPairType>
-IntegratorImpl::GetVertexTriangleContactPairs() const
+std::vector<typename Integrator::ContactPairType> Integrator::GetVertexTriangleContactPairs() const
 {
     return Vquery.neighbours.Get();
 }
@@ -375,10 +372,7 @@ PBAT_DEVICE static void ProjectBlockNeoHookeanConstraint(
     ToBuffers(xc, Tc.Transpose(), x);
 }
 
-void IntegratorImpl::ProjectBlockNeoHookeanConstraints(
-    thrust::device_event& e,
-    Scalar dt,
-    Scalar dt2)
+void Integrator::ProjectBlockNeoHookeanConstraints(thrust::device_event& e, Scalar dt, Scalar dt2)
 {
     auto const snhConstraintId = static_cast<int>(EConstraint::StableNeoHookean);
     auto const nPartitions     = static_cast<Index>(mPptr.size()) - 1;
@@ -420,7 +414,7 @@ void IntegratorImpl::ProjectBlockNeoHookeanConstraints(
     }
 }
 
-void IntegratorImpl::ProjectClusteredBlockNeoHookeanConstraints(
+void Integrator::ProjectClusteredBlockNeoHookeanConstraints(
     thrust::device_event& e,
     Scalar dt,
     Scalar dt2)
@@ -473,6 +467,7 @@ void IntegratorImpl::ProjectClusteredBlockNeoHookeanConstraints(
     }
 }
 
+} // namespace impl
 } // namespace xpbd
 } // namespace gpu
 } // namespace pbat

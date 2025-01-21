@@ -3,14 +3,14 @@
 // clang-format on
 
 #include "Bvh.h"
-#include "BvhImpl.cuh"
+#include "impl/Bvh.cuh"
 
 namespace pbat {
 namespace gpu {
 namespace geometry {
 
 Bvh::Bvh(std::size_t nPrimitives, std::size_t nOverlaps)
-    : mImpl(new BvhImpl(nPrimitives, nOverlaps))
+    : mImpl(new impl::Bvh(nPrimitives, nOverlaps))
 {
 }
 
@@ -38,12 +38,12 @@ void Bvh::Build(
     mImpl->Build(*P.Impl(), *S.Impl(), min, max, expansion);
 }
 
-BvhImpl* Bvh::Impl()
+impl::Bvh* Bvh::Impl()
 {
     return mImpl;
 }
 
-BvhImpl const* Bvh::Impl() const
+impl::Bvh const* Bvh::Impl() const
 {
     return mImpl;
 }

@@ -3,14 +3,14 @@
 // clang-format on
 
 #include "SweepAndPrune.h"
-#include "SweepAndPruneImpl.cuh"
+#include "impl/SweepAndPrune.cuh"
 
 namespace pbat {
 namespace gpu {
 namespace geometry {
 
 SweepAndPrune::SweepAndPrune(std::size_t nPrimitives, std::size_t nOverlaps)
-    : mImpl(new SweepAndPruneImpl(nPrimitives, nOverlaps))
+    : mImpl(new impl::SweepAndPrune(nPrimitives, nOverlaps))
 {
 }
 

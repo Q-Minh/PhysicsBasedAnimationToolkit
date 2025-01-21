@@ -2,11 +2,12 @@
 #define PBAT_GPU_ALIASES_H
 
 #include <Eigen/Core>
+#include <cstdint>
 
 namespace pbat {
 
 using GpuScalar = float;
-using GpuIndex  = int;
+using GpuIndex  = std::int32_t;
 
 using GpuMatrixX      = Eigen::Matrix<GpuScalar, Eigen::Dynamic, Eigen::Dynamic>;
 using GpuIndexMatrixX = Eigen::Matrix<GpuIndex, Eigen::Dynamic, Eigen::Dynamic>;

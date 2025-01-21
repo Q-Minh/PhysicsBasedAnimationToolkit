@@ -3,15 +3,14 @@
 // clang-format on
 
 #include "BvhQuery.h"
-#include "BvhQueryImpl.cuh"
-#include "PrimitivesImpl.cuh"
+#include "impl/BvhQuery.cuh"
 
 namespace pbat {
 namespace gpu {
 namespace geometry {
 
 BvhQuery::BvhQuery(std::size_t nPrimitives, std::size_t nOverlaps, std::size_t nNearestNeighbours)
-    : mImpl(new BvhQueryImpl(nPrimitives, nOverlaps, nNearestNeighbours))
+    : mImpl(new impl::BvhQuery(nPrimitives, nOverlaps, nNearestNeighbours))
 {
 }
 

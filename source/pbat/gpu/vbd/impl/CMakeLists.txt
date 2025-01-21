@@ -1,14 +1,12 @@
 target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
-    PUBLIC
-    FILE_SET api
+    PRIVATE
+    FILE_SET implementation
     FILES
-    "Integrator.h"
-    "Vbd.h"
+    "Integrator.cuh"
+    "Kernels.cuh"
 )
 target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     PRIVATE
     "Integrator.cu"
+    "Kernels.cu"
 )
-
-add_subdirectory(impl)
-add_subdirectory(tests)

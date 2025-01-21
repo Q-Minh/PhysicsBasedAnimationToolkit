@@ -2,8 +2,8 @@
 #include "pbat/gpu/DisableWarnings.h"
 // clang-format on
 
-#include "BvhQueryImpl.cuh"
-#include "BvhQueryImplKernels.cuh"
+#include "BvhQuery.cuh"
+#include "BvhQueryKernels.cuh"
 
 #include <exception>
 #include <string>
@@ -16,11 +16,9 @@
 namespace pbat {
 namespace gpu {
 namespace geometry {
+namespace impl {
 
-BvhQueryImpl::BvhQueryImpl(
-    std::size_t nPrimitives,
-    std::size_t nOverlaps,
-    std::size_t nNearestNeighbours)
+BvhQuery::BvhQuery(std::size_t nPrimitives, std::size_t nOverlaps, std::size_t nNearestNeighbours)
     : simplex(nPrimitives),
       morton(nPrimitives),
       b(nPrimitives),
@@ -30,9 +28,9 @@ BvhQueryImpl::BvhQueryImpl(
 {
 }
 
-void BvhQueryImpl::Build(
-    PointsImpl const& P,
-    SimplicesImpl const& S,
+void BvhQuery::Build(
+    Points const& P,
+    Simplices const& S,
     Eigen::Vector<GpuScalar, 3> const& min,
     Eigen::Vector<GpuScalar, 3> const& max,
     GpuScalar expansion)
@@ -80,11 +78,11 @@ void BvhQueryImpl::Build(
     thrust::stable_sort_by_key(thrust::device, morton.Data(), morton.Data() + n, zip);
 }
 
-void BvhQueryImpl::DetectOverlaps(
-    PointsImpl const& P,
-    SimplicesImpl const& S1,
-    SimplicesImpl const& S2,
-    BvhImpl const& bvh)
+void BvhQuery::DetectOverlaps(
+    Points const& P,
+    Simplices const& S1,
+    Simplices const& S2,
+    Bvh const& bvh)
 {
     auto const nQueries = S1.NumberOfSimplices();
     if (NumberOfSimplices() < nQueries)
@@ -117,21 +115,21 @@ void BvhQueryImpl::DetectOverlaps(
             overlaps.Raw()});
 }
 
-void BvhQueryImpl::DetectContactPairsFromOverlaps(
-    PointsImpl const& P,
-    SimplicesImpl const& S1,
-    SimplicesImpl const& S2,
-    BodiesImpl const& BV,
-    BvhImpl const& bvh,
+void BvhQuery::DetectContactPairsFromOverlaps(
+    Points const& P,
+    Simplices const& S1,
+    Simplices const& S2,
+    Bodies const& BV,
+    Bvh const& bvh,
     GpuScalar dhat,
     GpuScalar dzero)
 {
-    if (S1.eSimplexType != SimplicesImpl::ESimplexType::Vertex)
+    if (S1.eSimplexType != Simplices::ESimplexType::Vertex)
     {
         std::string const what = "Only vertex simplices are supported as the query simplices";
         throw std::invalid_argument(what);
     }
-    if (S2.eSimplexType != SimplicesImpl::ESimplexType::Triangle)
+    if (S2.eSimplexType != Simplices::ESimplexType::Triangle)
     {
         std::string const what = "Only triangle simplices are supported as the target simplices";
         throw std::invalid_argument(what);
@@ -165,21 +163,22 @@ void BvhQueryImpl::DetectContactPairsFromOverlaps(
             neighbours.Raw()});
 }
 
-std::size_t BvhQueryImpl::NumberOfSimplices() const
+std::size_t BvhQuery::NumberOfSimplices() const
 {
     return simplex.Size();
 }
 
-std::size_t BvhQueryImpl::NumberOfAllocatedOverlaps() const
+std::size_t BvhQuery::NumberOfAllocatedOverlaps() const
 {
     return overlaps.Capacity();
 }
 
-std::size_t BvhQueryImpl::NumberOfAllocatedNeighbours() const
+std::size_t BvhQuery::NumberOfAllocatedNeighbours() const
 {
     return neighbours.Capacity();
 }
 
+} // namespace impl
 } // namespace geometry
 } // namespace gpu
 } // namespace pbat
@@ -204,7 +203,7 @@ auto hstack(auto A1, auto A2)
 } // namespace gpu
 } // namespace pbat
 
-TEST_CASE("[gpu][geometry] BvhQueryImpl")
+TEST_CASE("[gpu][geometry] BvhQuery")
 {
     using namespace pbat;
     using namespace pbat::gpu::geometry::test;
@@ -242,11 +241,11 @@ TEST_CASE("[gpu][geometry] BvhQueryImpl")
     GpuIndexMatrixX BV = hstack<GpuIndexMatrixX>(
         GpuIndexVectorX::Zero(V.cols() / 2).reshaped(1, V.cols() / 2),
         GpuIndexVectorX::Ones(V.cols() / 2).reshaped(1, V.cols() / 2));
-    using gpu::geometry::BodiesImpl;
-    using gpu::geometry::BvhImpl;
-    using gpu::geometry::BvhQueryImpl;
-    using gpu::geometry::PointsImpl;
-    using gpu::geometry::SimplicesImpl;
+    using gpu::geometry::impl::Bodies;
+    using gpu::geometry::impl::Bvh;
+    using gpu::geometry::impl::BvhQuery;
+    using gpu::geometry::impl::Points;
+    using gpu::geometry::impl::Simplices;
     auto constexpr nExpectedOverlaps                     = 2;
     auto constexpr nFalseOverlaps                        = 7;
     auto constexpr nExpectedNearestNeighbours            = 2;
@@ -262,15 +261,15 @@ TEST_CASE("[gpu][geometry] BvhQueryImpl")
     GpuScalar constexpr dhat{1};
     GpuScalar constexpr dzero{0};
 
-    PointsImpl PG(P);
-    SimplicesImpl VG(V);
-    SimplicesImpl FG(F);
-    SimplicesImpl TG(T);
-    BodiesImpl BVG(BV.reshaped());
+    Points PG(P);
+    Simplices VG(V);
+    Simplices FG(F);
+    Simplices TG(T);
+    Bodies BVG(BV.reshaped());
 
-    BvhImpl Tbvh(T.cols(), nExpectedOverlaps + nFalseOverlaps);
-    BvhImpl Fbvh(F.cols(), 0);
-    BvhQueryImpl Vquery(
+    Bvh Tbvh(T.cols(), nExpectedOverlaps + nFalseOverlaps);
+    Bvh Fbvh(F.cols(), 0);
+    BvhQuery Vquery(
         V.cols(),
         nExpectedOverlaps,
         nExpectedNearestNeighbours + nFalseNearestNeighbours);
