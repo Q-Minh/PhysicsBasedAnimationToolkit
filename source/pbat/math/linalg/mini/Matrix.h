@@ -1,5 +1,5 @@
-#ifndef PBAT_MATH_LINALG_MINI_MATRIX_CUH
-#define PBAT_MATH_LINALG_MINI_MATRIX_CUH
+#ifndef PBAT_MATH_LINALG_MINI_MATRIX_H
+#define PBAT_MATH_LINALG_MINI_MATRIX_H
 
 #include "Api.h"
 #include "Concepts.h"
@@ -349,4 +349,4 @@ PBAT_HOST_DEVICE void ToBuffers(
 } // namespace math
 } // namespace pbat
 
-#endif // PBAT_MATH_LINALG_MINI_MATRIX_CUH
+#endif // PBAT_MATH_LINALG_MINI_MATRIX_H

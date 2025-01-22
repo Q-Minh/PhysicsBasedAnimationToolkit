@@ -1,13 +1,11 @@
 #ifndef PBAT_GPU_GEOMETRY_SWEEPANDPRUNE_H
 #define PBAT_GPU_GEOMETRY_SWEEPANDPRUNE_H
 
+#include "Aabb.h"
 #include "PhysicsBasedAnimationToolkitExport.h"
-#include "Primitives.h"
-#include "pbat/Aliases.h"
 #include "pbat/gpu/Aliases.h"
 
 #include <cstddef>
-#include <limits>
 
 namespace pbat {
 namespace gpu {
@@ -28,17 +26,28 @@ class SweepAndPrune
 
     PBAT_API SweepAndPrune(SweepAndPrune&&) noexcept;
     PBAT_API SweepAndPrune& operator=(SweepAndPrune&&) noexcept;
-
-    PBAT_API IndexMatrixX SortAndSweep(
-        Points const& P,
-        Simplices const& S1,
-        Simplices const& S2,
-        Scalar expansion = static_cast<Scalar>(std::numeric_limits<GpuScalar>::epsilon()));
+    /**
+     * @brief
+     *
+     * @param aabbs
+     * @return 2x|#overlaps| matrix of overlap pairs in aabbs
+     */
+    PBAT_API GpuIndexMatrixX SortAndSweep(Aabb& aabbs);
+    /**
+     * @brief
+     *
+     * @param n Number of primitives in the first set [0, n)
+     * @param aabbs AABBs over primitives of the first [0,n) and second set [n, aabbs.size())
+     * @return 2x|#overlaps| matrix of overlap pairs between primitives of the first (row 0) and
+     * second set (row 1)
+     */
+    PBAT_API GpuIndexMatrixX SortAndSweep(GpuIndex n, Aabb& aabbs);
 
     PBAT_API ~SweepAndPrune();
 
   private:
-    impl::SweepAndPrune* mImpl;
+    impl::SweepAndPrune* mImpl; ///<
+    void* mOverlaps; ///< gpu::common::SynchronizedList<cuda::std::pair<GpuIndex, GpuIndex>>*
 };
 
 } // namespace geometry

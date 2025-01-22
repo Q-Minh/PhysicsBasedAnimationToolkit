@@ -9,7 +9,6 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     "BvhQueryKernels.cuh"
     "Primitives.cuh"
     "SweepAndPrune.cuh"
-    "SweepAndPruneKernels.cuh"
 )
 target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     PRIVATE
@@ -20,5 +19,4 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     "BvhQueryKernels.cu"
     "Primitives.cu"
     "SweepAndPrune.cu"
-    "SweepAndPruneKernels.cu"
 )

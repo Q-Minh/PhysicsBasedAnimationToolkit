@@ -1,5 +1,5 @@
-#ifndef PBAT_GPU_COMMON_CUDA_CUH
-#define PBAT_GPU_COMMON_CUDA_CUH
+#ifndef PBAT_GPU_COMMON_CUDA_H
+#define PBAT_GPU_COMMON_CUDA_H
 
 #include <cuda/api/device.hpp>
 #include <cuda/api/devices.hpp>
@@ -20,4 +20,4 @@ cuda::device_t Device(EDeviceSelectionPreference preference);
 } // namespace gpu
 } // namespace pbat
 
-#endif // PBAT_GPU_COMMON_CUDA_CUH
+#endif // PBAT_GPU_COMMON_CUDA_H

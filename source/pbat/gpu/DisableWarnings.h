@@ -1,5 +1,5 @@
-#ifndef PBAT_GPU_DISABLE_WARNINGS_H
-#define PBAT_GPU_DISABLE_WARNINGS_H
+#ifndef PBAT_GPU_DISABLEWARNINGS_H
+#define PBAT_GPU_DISABLEWARNINGS_H
 
 /**
  * @brief Disables the following warnings.
@@ -30,4 +30,4 @@
     #pragma nv_diag_suppress 3189
 #endif
 
-#endif // PBAT_GPU_DISABLE_WARNINGS_H
+#endif // PBAT_GPU_DISABLEWARNINGS_H

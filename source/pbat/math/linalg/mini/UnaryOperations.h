@@ -1,5 +1,5 @@
-#ifndef PBAT_MATH_LINALG_MINI_UNARY_OPERATIONS_H
-#define PBAT_MATH_LINALG_MINI_UNARY_OPERATIONS_H
+#ifndef PBAT_MATH_LINALG_MINI_UNARYOPERATIONS_H
+#define PBAT_MATH_LINALG_MINI_UNARYOPERATIONS_H
 
 #include "Api.h"
 #include "Concepts.h"
@@ -178,4 +178,4 @@ PBAT_HOST_DEVICE auto operator/(typename std::remove_cvref_t<TMatrix>::ScalarTyp
 } // namespace math
 } // namespace pbat
 
-#endif // PBAT_MATH_LINALG_MINI_UNARY_OPERATIONS_H
+#endif // PBAT_MATH_LINALG_MINI_UNARYOPERATIONS_H

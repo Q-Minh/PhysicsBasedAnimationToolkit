@@ -5,6 +5,7 @@ if(PBAT_USE_CUDA)
         FILES
         "Aliases.h"
         "DisableWarnings.h"
+        "Gpu.h"
     )
 
     add_subdirectory(common)

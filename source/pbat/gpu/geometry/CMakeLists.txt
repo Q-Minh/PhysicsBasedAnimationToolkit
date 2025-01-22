@@ -4,6 +4,7 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     FILES
     "Bvh.h"
     "BvhQuery.h"
+    "Geometry.h"
     "Primitives.h"
     "SweepAndPrune.h"
 )

@@ -4,14 +4,22 @@
 
 #include "SweepAndPrune.h"
 #include "impl/SweepAndPrune.cuh"
+#include "pbat/gpu/common/SynchronizedList.cuh"
+
+#include <cuda/std/utility>
 
 namespace pbat {
 namespace gpu {
 namespace geometry {
 
 SweepAndPrune::SweepAndPrune(std::size_t nPrimitives, std::size_t nOverlaps)
-    : mImpl(new impl::SweepAndPrune(nPrimitives, nOverlaps))
+    : mImpl(new impl::SweepAndPrune(nPrimitives)),
+      mOverlaps(new common::SynchronizedList<cuda::std::pair<GpuIndex, GpuIndex>>(nOverlaps))
 {
+    static_assert(
+        alignof(cuda::std::pair<GpuIndex, GpuIndex>) == sizeof(GpuIndex) and
+            sizeof(cuda::std::pair<GpuIndex, GpuIndex>) == 2 * sizeof(GpuIndex),
+        "Assumed that std::vector<cuda::std::pair<GpuIndex, GpuIndex>> is contiguous");
 }
 
 SweepAndPrune::SweepAndPrune(SweepAndPrune&& other) noexcept : mImpl(other.mImpl)
@@ -28,27 +36,66 @@ SweepAndPrune& SweepAndPrune::operator=(SweepAndPrune&& other) noexcept
     return *this;
 }
 
-IndexMatrixX SweepAndPrune::SortAndSweep(
-    Points const& P,
-    Simplices const& S1,
-    Simplices const& S2,
-    Scalar expansion)
+GpuIndexMatrixX SweepAndPrune::SortAndSweep(Aabb& aabbs)
 {
-    mImpl->SortAndSweep(*P.Impl(), *S1.Impl(), *S2.Impl(), static_cast<GpuScalar>(expansion));
-    auto const overlapPairs = mImpl->Overlaps();
-    IndexMatrixX overlaps(2, overlapPairs.size());
-    for (auto o = 0; o < overlapPairs.size(); ++o)
+    auto constexpr kDims = impl::SweepAndPrune::kDims;
+    if (aabbs.Dimensions() != kDims)
     {
-        overlaps(0, o) = overlapPairs[o].first;
-        overlaps(1, o) = overlapPairs[o].second;
+        throw std::invalid_argument(
+            "Expected AABBs to have 3 dimensions, but got " + std::to_string(aabbs.Dimensions()));
     }
-    return overlaps;
+    auto* aabbImpl     = static_cast<impl::Aabb<kDims>*>(aabbs.Impl());
+    using Overlap      = cuda::std::pair<GpuIndex, GpuIndex>;
+    using OverlapPairs = common::SynchronizedList<Overlap>;
+    auto* overlaps     = static_cast<OverlapPairs*>(mOverlaps);
+    mImpl->SortAndSweep(
+        *aabbImpl,
+        [o = overlaps->Raw()] PBAT_DEVICE(GpuIndex si, GpuIndex sj) mutable {
+            o.Append(cuda::std::make_pair(si, sj));
+        });
+    auto O         = overlaps->Get();
+    auto nOverlaps = static_cast<GpuIndex>(O.size());
+    GpuIndex* data = reinterpret_cast<GpuIndex*>(std::addressof(O.front()));
+    return Eigen::Map<GpuIndexMatrixX>(data, 2, nOverlaps);
+}
+
+PBAT_API GpuIndexMatrixX SweepAndPrune::SortAndSweep(GpuIndex n, Aabb& aabbs)
+{
+    auto constexpr kDims = impl::SweepAndPrune::kDims;
+    if (aabbs.Dimensions() != kDims)
+    {
+        throw std::invalid_argument(
+            "Expected AABBs to have 3 dimensions, but got " + std::to_string(aabbs.Dimensions()));
+    }
+    auto* aabbImpl     = static_cast<impl::Aabb<kDims>*>(aabbs.Impl());
+    using Overlap      = cuda::std::pair<GpuIndex, GpuIndex>;
+    using OverlapPairs = common::SynchronizedList<Overlap>;
+    auto* overlaps     = static_cast<OverlapPairs*>(mOverlaps);
+    mImpl->SortAndSweep(
+        *aabbImpl,
+        [n, o = overlaps->Raw()] PBAT_DEVICE(GpuIndex si, GpuIndex sj) mutable {
+            if (si < n and sj >= n)
+                o.Append(cuda::std::make_pair(si, sj - n));
+            if (si >= n and sj < n)
+                o.Append(cuda::std::make_pair(sj, si - n));
+        });
+    auto O         = overlaps->Get();
+    auto nOverlaps = static_cast<GpuIndex>(O.size());
+    GpuIndex* data = reinterpret_cast<GpuIndex*>(std::addressof(O.front()));
+    return Eigen::Map<GpuIndexMatrixX>(data, 2, nOverlaps);
 }
 
 SweepAndPrune::~SweepAndPrune()
 {
     if (mImpl != nullptr)
+    {
         delete mImpl;
+    }
+    if (mOverlaps != nullptr)
+    {
+        delete static_cast<common::SynchronizedList<cuda::std::pair<GpuIndex, GpuIndex>>*>(
+            mOverlaps);
+    }
 }
 
 } // namespace geometry
