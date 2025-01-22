@@ -39,7 +39,7 @@ void Aabb::Construct(Eigen::Ref<GpuMatrixX const> const& L, Eigen::Ref<GpuMatrix
     {
         throw std::invalid_argument("Expected L and U to have the same shape.");
     }
-    Resize(L.rows(), L.cols());
+    Resize(static_cast<GpuIndex>(L.rows()), static_cast<GpuIndex>(L.cols()));
     pbat::common::ForRange<1, 4>([&]<auto kDims>() {
         if (mDims == kDims)
         {
@@ -135,3 +135,52 @@ void Aabb::Deallocate()
 } // namespace geometry
 } // namespace gpu
 } // namespace pbat
+
+#include <doctest/doctest.h>
+
+TEST_CASE("[gpu][geometry] Aabb")
+{
+    using namespace pbat;
+    // Arrange
+    // Cube mesh
+    GpuMatrixX P(3, 8);
+    GpuIndexMatrixX T(4, 5);
+    // clang-format off
+    P << 0.f, 1.f, 0.f, 1.f, 0.f, 1.f, 0.f, 1.f,
+         0.f, 0.f, 1.f, 1.f, 0.f, 0.f, 1.f, 1.f,
+         0.f, 0.f, 0.f, 0.f, 1.f, 1.f, 1.f, 1.f;
+    T << 0, 3, 5, 6, 0,
+         1, 2, 4, 7, 5,
+         3, 0, 6, 5, 3,
+         5, 6, 0, 3, 6;
+    // clang-format on
+    auto const dims  = static_cast<GpuIndex>(P.rows());
+    auto const nTets = static_cast<GpuIndex>(T.cols());
+    GpuMatrixX VT(dims * nTets, T.rows());
+    for (auto d = 0; d < T.rows(); ++d)
+        VT.col(d) = P(Eigen::placeholders::all, T.row(d)).reshaped();
+    auto Lexpected = VT.rowwise().minCoeff().reshaped(dims, nTets).eval();
+    auto Uexpected = VT.rowwise().maxCoeff().reshaped(dims, nTets).eval();
+
+    // Act
+    using gpu::geometry::Aabb;
+    Aabb aabb(1, 8);
+    CHECK_EQ(aabb.Dimensions(), 1);
+    CHECK_EQ(aabb.Size(), 8);
+    CHECK_NE(aabb.Impl(), nullptr);
+    SUBCASE("Resize")
+    {
+        aabb.Resize(dims, nTets);
+        CHECK_EQ(aabb.Dimensions(), dims);
+        CHECK_EQ(aabb.Size(), nTets);
+        CHECK_NE(aabb.Impl(), nullptr);
+        SUBCASE("Construct")
+        {
+            aabb.Construct(Lexpected, Uexpected);
+            auto L              = aabb.Lower();
+            auto U              = aabb.Upper();
+            bool const bIsEqual = L.isApprox(Lexpected) and U.isApprox(Uexpected);
+            CHECK(bIsEqual);
+        }
+    }
+}
