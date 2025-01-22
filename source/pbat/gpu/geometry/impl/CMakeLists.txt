@@ -4,7 +4,6 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     FILES
     "Aabb.cuh"
     "Bvh.cuh"
-    "BvhKernels.cuh"
     "BvhQuery.cuh"
     "BvhQueryKernels.cuh"
     "Primitives.cuh"
@@ -14,7 +13,6 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     PRIVATE
     "Aabb.cu"
     "Bvh.cu"
-    "BvhKernels.cu"
     "BvhQuery.cu"
     "BvhQueryKernels.cu"
     "Primitives.cu"

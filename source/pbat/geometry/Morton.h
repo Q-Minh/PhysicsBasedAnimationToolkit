@@ -6,6 +6,7 @@
 #include <array>
 #include <cmath>
 #include <cstdint>
+#include <type_traits>
 
 namespace pbat {
 namespace geometry {
@@ -29,15 +30,19 @@ PBAT_HOST_DEVICE inline MortonCodeType ExpandBits(MortonCodeType v)
 
 // Calculates a 30-bit Morton code for the
 // given 3D point located within the unit cube [0,1].
-[[maybe_unused]] PBAT_HOST_DEVICE inline MortonCodeType Morton3D(std::array<float, 3> x)
+template <class Point>
+requires std::is_convertible_v<
+    decltype(std::declval<Point>()[std::declval<int>()]),
+    float> [[maybe_unused]] PBAT_HOST_DEVICE inline MortonCodeType
+Morton3D(Point x)
 {
     using namespace std;
-    x[0]              = min(max(x[0] * 1024.0f, 0.0f), 1023.0f);
-    x[1]              = min(max(x[1] * 1024.0f, 0.0f), 1023.0f);
-    x[2]              = min(max(x[2] * 1024.0f, 0.0f), 1023.0f);
-    MortonCodeType xx = ExpandBits(static_cast<MortonCodeType>(x[0]));
-    MortonCodeType yy = ExpandBits(static_cast<MortonCodeType>(x[1]));
-    MortonCodeType zz = ExpandBits(static_cast<MortonCodeType>(x[2]));
+    MortonCodeType xx =
+        ExpandBits(static_cast<MortonCodeType>(min(max(x[0] * 1024.0f, 0.0f), 1023.0f)));
+    MortonCodeType yy =
+        ExpandBits(static_cast<MortonCodeType>(min(max(x[1] * 1024.0f, 0.0f), 1023.0f)));
+    MortonCodeType zz =
+        ExpandBits(static_cast<MortonCodeType>(min(max(x[2] * 1024.0f, 0.0f), 1023.0f)));
     return xx * 4 + yy * 2 + zz;
 }
 

@@ -3,6 +3,7 @@
 
 #include "Assign.h"
 #include "BinaryOperations.h"
+#include "Cast.h"
 #include "Concepts.h"
 #include "Determinant.h"
 #include "Eigen.h"

@@ -1,5 +1,5 @@
-#ifndef PBAT_GEOMETRY_OVERLAP_QUERIES_H
-#define PBAT_GEOMETRY_OVERLAP_QUERIES_H
+#ifndef PBAT_GEOMETRY_OVERLAPQUERIES_H
+#define PBAT_GEOMETRY_OVERLAPQUERIES_H
 
 #include "ClosestPointQueries.h"
 #include "IntersectionQueries.h"
@@ -1292,4 +1292,4 @@ PBAT_HOST_DEVICE bool TetrahedronSphere(
 } // namespace geometry
 } // namespace pbat
 
-#endif // PBAT_GEOMETRY_OVERLAP_QUERIES_H
+#endif // PBAT_GEOMETRY_OVERLAPQUERIES_H

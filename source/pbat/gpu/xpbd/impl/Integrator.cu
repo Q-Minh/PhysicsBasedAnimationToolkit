@@ -19,15 +19,15 @@ namespace impl {
 
 Integrator::Integrator(
     Data const& data,
-    std::size_t nMaxVertexTetrahedronOverlaps,
-    std::size_t nMaxVertexTriangleContacts)
+    GpuIndex nMaxVertexTetrahedronOverlaps,
+    GpuIndex nMaxVertexTriangleContacts)
     : X(data.x.cast<GpuScalar>()),
       V(data.V.cast<GpuIndex>().transpose()),
       F(data.F.cast<GpuIndex>()),
       T(data.T.cast<GpuIndex>()),
       BV(data.BV.cast<GpuIndex>()),
-      Tbvh(data.T.cols(), 0),
-      Fbvh(data.F.cols(), 0),
+      Tbvh(static_cast<GpuIndex>(data.T.cols())),
+      Fbvh(static_cast<GpuIndex>(data.F.cols())),
       Vquery(data.V.size(), nMaxVertexTetrahedronOverlaps, nMaxVertexTriangleContacts),
       mPositions(data.x.cols()),
       mPositionBuffer(nMaxVertexTriangleContacts),
@@ -96,8 +96,8 @@ void Integrator::Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps)
     GpuIndex const nParticles = static_cast<GpuIndex>(NumberOfParticles());
     // Detect collision candidates and setup collision constraint solve
     GpuScalar constexpr expansion{0};
-    Tbvh.Build(X, T, Smin, Smax, expansion);
-    Fbvh.Build(X, F, Smin, Smax, expansion);
+    // Tbvh.Build(X, T, Smin, Smax, expansion);
+    // Fbvh.Build(X, F, Smin, Smax, expansion);
     Vquery.Build(X, V, Smin, Smax, expansion);
     Vquery.DetectOverlaps(X, V, T, Tbvh);
     Vquery.DetectContactPairsFromOverlaps(X, V, F, BV, Fbvh);
@@ -421,7 +421,7 @@ void Integrator::ProjectClusteredBlockNeoHookeanConstraints(
 {
     auto const snhConstraintId    = static_cast<int>(EConstraint::StableNeoHookean);
     auto const nClusterPartitions = static_cast<Index>(mSGptr.size()) - 1;
-    for (auto cp = 0ULL; cp < nClusterPartitions; ++cp)
+    for (Index cp = 0; cp < nClusterPartitions; ++cp)
     {
         auto cpbegin = mSGptr[cp];
         auto cpend   = mSGptr[cp + 1];

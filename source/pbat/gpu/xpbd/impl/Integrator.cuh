@@ -1,5 +1,5 @@
-#ifndef PBAT_GPU_XPBD_IMPL_INTEGRATOR_CUH
-#define PBAT_GPU_XPBD_IMPL_INTEGRATOR_CUH
+#ifndef PBAT_GPU_XPBD_IMPL_INTEGRATOR_H
+#define PBAT_GPU_XPBD_IMPL_INTEGRATOR_H
 
 #include "pbat/Aliases.h"
 #include "pbat/gpu/Aliases.h"
@@ -38,8 +38,8 @@ class Integrator
      */
     Integrator(
         Data const& data,
-        std::size_t nMaxVertexTetrahedronOverlaps,
-        std::size_t nMaxVertexTriangleContacts);
+        GpuIndex nMaxVertexTetrahedronOverlaps,
+        GpuIndex nMaxVertexTriangleContacts);
     /**
      * @brief
      * @param dt
@@ -228,4 +228,4 @@ class Integrator
 } // namespace gpu
 } // namespace pbat
 
-#endif // PBAT_GPU_XPBD_IMPL_INTEGRATOR_CUH
+#endif // PBAT_GPU_XPBD_IMPL_INTEGRATOR_H

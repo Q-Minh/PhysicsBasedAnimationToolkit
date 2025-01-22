@@ -29,7 +29,7 @@ class Bvh
      * @param nPrimitives
      * @param nOverlaps
      */
-    PBAT_API Bvh(std::size_t nPrimitives, std::size_t nOverlaps);
+    PBAT_API Bvh(GpuIndex nPrimitives, GpuIndex nOverlaps);
 
     Bvh(Bvh const&)            = delete;
     Bvh& operator=(Bvh const&) = delete;
@@ -57,22 +57,22 @@ class Bvh
      * @brief
      * @param S The simplices which were used to build this BVH
      */
-    PBAT_API GpuIndexMatrixX DetectSelfOverlaps(Simplices const& S);
+    // PBAT_API GpuIndexMatrixX DetectSelfOverlaps(Simplices const& S);
     /**
      * @brief BVH nodes' box minimums
      * @return
      */
-    PBAT_API Eigen::Matrix<GpuScalar, Eigen::Dynamic, Eigen::Dynamic> Min() const;
+    PBAT_API GpuMatrixX Min() const;
     /**
      * @brief BVH nodes' box maximums
      * @return
      */
-    PBAT_API Eigen::Matrix<GpuScalar, Eigen::Dynamic, Eigen::Dynamic> Max() const;
+    PBAT_API GpuMatrixX Max() const;
     /**
      * @brief
      * @return
      */
-    PBAT_API Eigen::Vector<GpuIndex, Eigen::Dynamic> SimplexOrdering() const;
+    PBAT_API GpuIndexVectorX SimplexOrdering() const;
     /**
      * @brief
      * @return
@@ -82,22 +82,22 @@ class Bvh
      * @brief
      * @return
      */
-    PBAT_API Eigen::Matrix<GpuIndex, Eigen::Dynamic, 2> Child() const;
+    PBAT_API GpuIndexMatrixX Child() const;
     /**
      * @brief
      * @return
      */
-    PBAT_API Eigen::Vector<GpuIndex, Eigen::Dynamic> Parent() const;
+    PBAT_API GpuIndexVectorX Parent() const;
     /**
      * @brief
      * @return
      */
-    PBAT_API Eigen::Matrix<GpuIndex, Eigen::Dynamic, 2> Rightmost() const;
+    PBAT_API GpuIndexMatrixX Rightmost() const;
     /**
      * @brief
      * @return
      */
-    PBAT_API Eigen::Vector<GpuIndex, Eigen::Dynamic> Visits() const;
+    PBAT_API GpuIndexVectorX Visits() const;
 
     PBAT_API ~Bvh();
 

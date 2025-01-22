@@ -4,13 +4,14 @@
 
 #include "Bvh.h"
 #include "impl/Bvh.cuh"
+#include "pbat/gpu/common/Eigen.cuh"
 
 namespace pbat {
 namespace gpu {
 namespace geometry {
 
-Bvh::Bvh(std::size_t nPrimitives, std::size_t nOverlaps)
-    : mImpl(new impl::Bvh(nPrimitives, nOverlaps))
+Bvh::Bvh(GpuIndex nPrimitives, [[maybe_unused]] GpuIndex nOverlaps)
+    : mImpl(new impl::Bvh(nPrimitives))
 {
 }
 
@@ -29,13 +30,13 @@ Bvh& Bvh::operator=(Bvh&& other) noexcept
 }
 
 void Bvh::Build(
-    Points const& P,
-    Simplices const& S,
-    Eigen::Vector<GpuScalar, 3> const& min,
-    Eigen::Vector<GpuScalar, 3> const& max,
-    GpuScalar expansion)
+    [[maybe_unused]] Points const& P,
+    [[maybe_unused]] Simplices const& S,
+    [[maybe_unused]] Eigen::Vector<GpuScalar, 3> const& min,
+    [[maybe_unused]] Eigen::Vector<GpuScalar, 3> const& max,
+    [[maybe_unused]] GpuScalar expansion)
 {
-    mImpl->Build(*P.Impl(), *S.Impl(), min, max, expansion);
+    // mImpl->Build(*P.Impl(), *S.Impl(), min, max, expansion);
 }
 
 impl::Bvh* Bvh::Impl()
@@ -48,57 +49,57 @@ impl::Bvh const* Bvh::Impl() const
     return mImpl;
 }
 
-GpuIndexMatrixX Bvh::DetectSelfOverlaps(Simplices const& S)
+// GpuIndexMatrixX Bvh::DetectSelfOverlaps(Simplices const& S)
+// {
+//     mImpl->DetectSelfOverlaps(*S.Impl());
+//     auto overlaps = mImpl->overlaps.Get();
+//     GpuIndexMatrixX O(2, overlaps.size());
+//     for (auto o = 0; o < overlaps.size(); ++o)
+//     {
+//         O(0, o) = overlaps[o].first;
+//         O(1, o) = overlaps[o].second;
+//     }
+//     return O;
+// }
+
+GpuMatrixX Bvh::Min() const
 {
-    mImpl->DetectSelfOverlaps(*S.Impl());
-    auto overlaps = mImpl->overlaps.Get();
-    GpuIndexMatrixX O(2, overlaps.size());
-    for (auto o = 0; o < overlaps.size(); ++o)
-    {
-        O(0, o) = overlaps[o].first;
-        O(1, o) = overlaps[o].second;
-    }
-    return O;
+    return gpu::common::ToEigen(mImpl->iaabbs.b);
 }
 
-Eigen::Matrix<GpuScalar, Eigen::Dynamic, Eigen::Dynamic> Bvh::Min() const
+GpuMatrixX Bvh::Max() const
 {
-    return mImpl->Min();
+    return gpu::common::ToEigen(mImpl->iaabbs.e);
 }
 
-Eigen::Matrix<GpuScalar, Eigen::Dynamic, Eigen::Dynamic> Bvh::Max() const
+GpuIndexVectorX Bvh::SimplexOrdering() const
 {
-    return mImpl->Max();
-}
-
-Eigen::Vector<GpuIndex, Eigen::Dynamic> Bvh::SimplexOrdering() const
-{
-    return mImpl->SimplexOrdering();
+    return gpu::common::ToEigen(mImpl->inds);
 }
 
 Eigen::Vector<typename Bvh::MortonCodeType, Eigen::Dynamic> Bvh::MortonCodes() const
 {
-    return mImpl->MortonCodes();
+    return gpu::common::ToEigen(mImpl->morton);
 }
 
-Eigen::Matrix<GpuIndex, Eigen::Dynamic, 2> Bvh::Child() const
+GpuIndexMatrixX Bvh::Child() const
 {
-    return mImpl->Child();
+    return gpu::common::ToEigen(mImpl->child).transpose();
 }
 
-Eigen::Vector<GpuIndex, Eigen::Dynamic> Bvh::Parent() const
+GpuIndexVectorX Bvh::Parent() const
 {
-    return mImpl->Parent();
+    return gpu::common::ToEigen(mImpl->parent);
 }
 
-Eigen::Matrix<GpuIndex, Eigen::Dynamic, 2> Bvh::Rightmost() const
+GpuIndexMatrixX Bvh::Rightmost() const
 {
-    return mImpl->Rightmost();
+    return gpu::common::ToEigen(mImpl->rightmost).transpose();
 }
 
-Eigen::Vector<GpuIndex, Eigen::Dynamic> Bvh::Visits() const
+GpuIndexVectorX Bvh::Visits() const
 {
-    return mImpl->Visits();
+    return gpu::common::ToEigen(mImpl->visits);
 }
 
 Bvh::~Bvh()

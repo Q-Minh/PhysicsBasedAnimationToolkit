@@ -1,17 +1,19 @@
 #ifndef PBAT_GPU_GEOMETRY_IMPL_BVH_CUH
 #define PBAT_GPU_GEOMETRY_IMPL_BVH_CUH
 
-#include "Primitives.cuh"
+#include "Aabb.cuh"
+#include "pbat/common/Stack.h"
 #include "pbat/geometry/Morton.h"
+#include "pbat/geometry/OverlapQueries.h"
 #include "pbat/gpu/Aliases.h"
 #include "pbat/gpu/common/Buffer.cuh"
-#include "pbat/gpu/common/SynchronizedList.cuh"
-#include "pbat/gpu/common/Var.cuh"
+#include "pbat/math/linalg/mini/Mini.h"
 
-#include <Eigen/Core>
-#include <cuda/std/cmath>
-#include <cuda/std/utility>
-#include <limits>
+#include <exception>
+#include <string>
+#include <thrust/execution_policy.h>
+#include <thrust/for_each.h>
+#include <thrust/iterator/counting_iterator.h>
 #include <type_traits>
 
 namespace pbat {
@@ -28,8 +30,9 @@ namespace impl {
 class Bvh
 {
   public:
-    using OverlapType    = cuda::std::pair<GpuIndex, GpuIndex>;
-    using MortonCodeType = pbat::geometry::MortonCodeType;
+    static auto constexpr kDims = 3;
+    using OverlapType           = cuda::std::pair<GpuIndex, GpuIndex>;
+    using MortonCodeType        = pbat::geometry::MortonCodeType;
 
     friend class BvhQuery;
 
@@ -39,97 +42,123 @@ class Bvh
 
     /**
      * @brief
-     * @param nPrimitives
-     * @param nOverlaps
+     * @param nBoxes
      */
-    Bvh(std::size_t nPrimitives, std::size_t nOverlaps);
+    Bvh(GpuIndex nBoxes);
 
     /**
      * @brief
-     * @param P
-     * @param S
-     * @param expansion
+     * @param aabbs Primitive aabbs
+     * @param min World bounding box minimum
+     * @param max World bounding box maximum
      */
     void Build(
-        Points const& P,
-        Simplices const& S,
-        Eigen::Vector<GpuScalar, 3> const& min,
-        Eigen::Vector<GpuScalar, 3> const& max,
-        GpuScalar expansion = std::numeric_limits<GpuScalar>::epsilon());
+        Aabb<kDims>& aabbs,
+        Eigen::Vector<GpuScalar, kDims> const& min,
+        Eigen::Vector<GpuScalar, kDims> const& max);
+    /**
+     * @brief
+     *
+     * @tparam FOnOverlapDetected
+     * @param aabbs The same aabbs that were given to Build(), otherwise undefined behavior.
+     * @param fOnOverlapDetected Callback called on detected overlaps with signature void
+     * f(GpuIndex,GpuIndex)
+     */
+    template <class FOnOverlapDetected>
+    void DetectOverlaps(Aabb<kDims>& aabbs, FOnOverlapDetected&& fOnOverlapDetected);
 
-    /**
-     * @brief
-     * @param S The simplices which were used to build this BVH
-     */
-    void DetectSelfOverlaps(Simplices const& S);
-
-    /**
-     * @brief
-     * @return
-     */
-    std::size_t NumberOfAllocatedBoxes() const;
-    /**
-     * @brief BVH nodes' box minimums
-     * @return
-     */
-    Eigen::Matrix<GpuScalar, Eigen::Dynamic, Eigen::Dynamic> Min() const;
-    /**
-     * @brief BVH nodes' box maximums
-     * @return
-     */
-    Eigen::Matrix<GpuScalar, Eigen::Dynamic, Eigen::Dynamic> Max() const;
-    /**
-     * @brief
-     * @return
-     */
-    Eigen::Vector<GpuIndex, Eigen::Dynamic> SimplexOrdering() const;
-    /**
-     * @brief
-     * @return
-     */
-    Eigen::Vector<MortonCodeType, Eigen::Dynamic> MortonCodes() const;
-    /**
-     * @brief
-     * @return
-     */
-    Eigen::Matrix<GpuIndex, Eigen::Dynamic, 2> Child() const;
-    /**
-     * @brief
-     * @return
-     */
-    Eigen::Vector<GpuIndex, Eigen::Dynamic> Parent() const;
-    /**
-     * @brief
-     * @return
-     */
-    Eigen::Matrix<GpuIndex, Eigen::Dynamic, 2> Rightmost() const;
-    /**
-     * @brief
-     * @return
-     */
-    Eigen::Vector<GpuIndex, Eigen::Dynamic> Visits() const;
-
-  private:
-    common::Buffer<GpuIndex> simplex;      ///< Box/Simplex indices
-    common::Buffer<MortonCodeType> morton; ///< Morton codes of simplices
+    common::Buffer<GpuIndex> inds;         ///< n leaf box indices
+    common::Buffer<MortonCodeType> morton; ///< n morton codes of leaf boxes
     common::Buffer<GpuIndex, 2>
-        child; ///< Left and right children. If child[lr][i] > n - 2, then it is
+        child; ///< (n-1)x2 left and right children. If child[lr][i] > n - 2, then it is
                ///< a leaf node, otherwise an internal node. lr == 0 -> left
                ///< child buffer, while lr == 1 -> right child buffer. i == 0 -> root node.
-    common::Buffer<GpuIndex> parent;       ///< parent[i] -> index of parent node of node i.
-                                           ///< parent[0] == -1 <=> root node has no parent.
-    common::Buffer<GpuIndex, 2> rightmost; ///< rightmost[lr][i] -> right most leaf in left (lr ==
-                                           ///< 0) or right (lr == 1) subtree.
-    common::Buffer<GpuScalar, 3> b,
-        e; ///< Simplex and internal node bounding boxes. The first n-1 boxes are internal node
-           ///< bounding boxes. The next n boxes are leaf node (i.e. simplex) bounding boxes. The
-           ///< box 0 is always the root.
-    common::Buffer<GpuIndex> visits; ///< Atomic counter of internal node visits
+    common::Buffer<GpuIndex> parent; ///< (2n-1) parent map, s.t. parent[i] -> index of parent node
+                                     ///< of node i. parent[0] == -1 <=> root node has no parent.
+    common::Buffer<GpuIndex, 2>
+        rightmost; ///< (n-1) rightmost map, s.t. rightmost[lr][i] -> right most leaf in left (lr ==
+                   ///< 0) or right (lr == 1) subtree.
+    Aabb<kDims> iaabbs; ///< (n-1) internal node bounding boxes for n leaf node bounding boxes. The
+                        ///< box 0 is always the root.
+    common::Buffer<GpuIndex> visits; ///< (n-1) atomic counters of internal node visits
                                      ///< for bottom-up bounding box computations
-
-  public:
-    common::SynchronizedList<OverlapType> overlaps; ///< Detected overlaps
 };
+
+template <class FOnOverlapDetected>
+inline void Bvh::DetectOverlaps(Aabb<kDims>& aabbs, FOnOverlapDetected&& fOnOverlapDetected)
+{
+    auto const nLeafBoxes = aabbs.Size();
+    thrust::for_each(
+        thrust::device,
+        thrust::make_counting_iterator(0),
+        thrust::make_counting_iterator(nLeafBoxes),
+        [inds      = inds.Raw(),
+         child     = child.Raw(),
+         rightmost = rightmost.Raw(),
+         b         = aabbs.b.Raw(),
+         e         = aabbs.e.Raw(),
+         ib        = iaabbs.b.Raw(),
+         ie        = iaabbs.e.Raw(),
+         leafBegin = nLeafBoxes - 1,
+         fOnOverlapDetected =
+             std::forward<FOnOverlapDetected>(fOnOverlapDetected)] PBAT_DEVICE(GpuIndex s) mutable {
+            // Traverse nodes depth-first starting from the root=0 node
+            using pbat::common::Stack;
+            using namespace pbat::math::linalg;
+            using namespace pbat::geometry;
+            auto const leaf = leafBegin + s;
+            auto Ls         = mini::FromBuffers<3, 1>(b, s);
+            auto Us         = mini::FromBuffers<3, 1>(e, s);
+            Stack<GpuIndex, 64> stack{};
+            stack.Push(0);
+            do
+            {
+                assert(not stack.IsFull());
+                GpuIndex const node = stack.Pop();
+                // Check each child node for overlap.
+                GpuIndex const lc       = child[0][node];
+                GpuIndex const rc       = child[1][node];
+                bool const bIsLeftLeaf  = lc >= leafBegin;
+                bool const bIsRightLeaf = rc >= leafBegin;
+                auto Llc                = bIsLeftLeaf ? mini::FromBuffers<3, 1>(b, lc - leafBegin) :
+                                                        mini::FromBuffers<3, 1>(ib, lc);
+                auto Ulc                = bIsLeftLeaf ? mini::FromBuffers<3, 1>(e, lc - leafBegin) :
+                                                        mini::FromBuffers<3, 1>(ie, lc);
+                auto Lrc = bIsRightLeaf ? mini::FromBuffers<3, 1>(b, rc - leafBegin) :
+                                          mini::FromBuffers<3, 1>(ib, rc);
+                auto Urc = bIsRightLeaf ? mini::FromBuffers<3, 1>(e, rc - leafBegin) :
+                                          mini::FromBuffers<3, 1>(ie, rc);
+                bool const bLeftBoxOverlaps =
+                    OverlapQueries::AxisAlignedBoundingBoxes(Ls, Us, Llc, Ulc) and
+                    (rightmost[0][node] > leaf);
+                bool const bRightBoxOverlaps =
+                    OverlapQueries::AxisAlignedBoundingBoxes(Ls, Us, Lrc, Urc) and
+                    (rightmost[1][node] > leaf);
+
+                // Leaf overlaps another leaf node
+                if (bLeftBoxOverlaps and bIsLeftLeaf)
+                {
+                    GpuIndex const si = inds[s];
+                    GpuIndex const sj = inds[lc - leafBegin];
+                    fOnOverlapDetected(si, sj);
+                }
+                if (bRightBoxOverlaps and bIsRightLeaf)
+                {
+                    GpuIndex const si = inds[s];
+                    GpuIndex const sj = inds[rc - leafBegin];
+                    fOnOverlapDetected(si, sj);
+                }
+
+                // Leaf overlaps an internal node -> traverse
+                bool const bTraverseLeft  = bLeftBoxOverlaps and not bIsLeftLeaf;
+                bool const bTraverseRight = bRightBoxOverlaps and not bIsRightLeaf;
+                if (bTraverseLeft)
+                    stack.Push(lc);
+                if (bTraverseRight)
+                    stack.Push(rc);
+            } while (not stack.IsEmpty());
+        });
+}
 
 } // namespace impl
 } // namespace geometry

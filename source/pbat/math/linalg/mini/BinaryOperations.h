@@ -225,14 +225,15 @@ class MatrixScalarPredicate
   public:
     using CompareType = Compare;
     using NestedType  = TMatrix;
-    using ScalarType  = typename NestedType::ScalarType;
+    using ScalarType  = bool;
     using SelfType    = MatrixScalarPredicate<NestedType, CompareType>;
 
     static auto constexpr kRows     = NestedType::kRows;
     static auto constexpr kCols     = NestedType::kCols;
     static bool constexpr bRowMajor = NestedType::bRowMajor;
 
-    PBAT_HOST_DEVICE MatrixScalarPredicate(NestedType const& A, ScalarType k, CompareType comp)
+    PBAT_HOST_DEVICE
+    MatrixScalarPredicate(NestedType const& A, typename NestedType::ScalarType k, CompareType comp)
         : mA(A), mK(k), mComparator(comp)
     {
     }
@@ -250,7 +251,7 @@ class MatrixScalarPredicate
 
   private:
     NestedType const& mA;
-    ScalarType mK;
+    typename NestedType::ScalarType mK;
     CompareType mComparator;
 };
 
@@ -261,7 +262,7 @@ class MatrixMatrixPredicate
     using CompareType   = Compare;
     using LhsNestedType = TLhsMatrix;
     using RhsNestedType = TRhsMatrix;
-    using ScalarType    = typename LhsNestedType::ScalarType;
+    using ScalarType    = bool;
     using SelfType      = MatrixMatrixPredicate<LhsNestedType, RhsNestedType, CompareType>;
 
     static auto constexpr kRows     = LhsNestedType::kRows;

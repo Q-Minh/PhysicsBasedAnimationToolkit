@@ -13,8 +13,8 @@ namespace xpbd {
 
 Integrator::Integrator(
     Data const& data,
-    std::size_t nMaxVertexTetrahedronOverlaps,
-    std::size_t nMaxVertexTriangleContacts)
+    GpuIndex nMaxVertexTetrahedronOverlaps,
+    GpuIndex nMaxVertexTriangleContacts)
     : mImpl(new impl::Integrator{data, nMaxVertexTetrahedronOverlaps, nMaxVertexTriangleContacts})
 {
 }

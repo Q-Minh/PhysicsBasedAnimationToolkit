@@ -32,8 +32,8 @@ class Integrator
      */
     PBAT_API Integrator(
         Data const& data,
-        std::size_t nMaxVertexTetrahedronOverlaps,
-        std::size_t nMaxVertexTriangleContacts);
+        GpuIndex nMaxVertexTetrahedronOverlaps,
+        GpuIndex nMaxVertexTriangleContacts);
     Integrator(Integrator const&)            = delete;
     Integrator& operator=(Integrator const&) = delete;
     PBAT_API Integrator(Integrator&&) noexcept;

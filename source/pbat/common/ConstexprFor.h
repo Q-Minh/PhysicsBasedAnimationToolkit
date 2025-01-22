@@ -1,5 +1,5 @@
-#ifndef PBAT_COMMON_CONSTEXPR_FOR_H
-#define PBAT_COMMON_CONSTEXPR_FOR_H
+#ifndef PBAT_COMMON_CONSTEXPRFOR_H
+#define PBAT_COMMON_CONSTEXPRFOR_H
 
 #include <type_traits>
 #include <utility>
@@ -32,4 +32,4 @@ constexpr void ForRange(F&& f)
 } // namespace common
 } // namespace pbat
 
-#endif // PBAT_COMMON_CONSTEXPR_FOR_H
+#endif // PBAT_COMMON_CONSTEXPRFOR_H
