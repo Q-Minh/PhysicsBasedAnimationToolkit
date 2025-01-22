@@ -415,7 +415,7 @@ Eigen::Vector<GpuIndex, Eigen::Dynamic> Bvh::Visits() const
 
 #pragma nv_diag_suppress 177
 
-TEST_CASE("[gpu][geometry] Bvh")
+TEST_CASE("[gpu][geometry][impl] Bvh")
 {
     using namespace pbat;
     // Cube mesh

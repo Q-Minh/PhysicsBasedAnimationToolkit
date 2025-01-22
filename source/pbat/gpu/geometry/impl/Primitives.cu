@@ -91,7 +91,7 @@ GpuIndex Bodies::NumberOfBodies() const
 #include <doctest/doctest.h>
 #include <vector>
 
-TEST_CASE("[gpu][geometry] Simplices")
+TEST_CASE("[gpu][geometry][impl] Primitives")
 {
     using namespace pbat;
     GpuMatrixX V(3, 4);

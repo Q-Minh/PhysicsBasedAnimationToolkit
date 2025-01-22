@@ -203,7 +203,7 @@ auto hstack(auto A1, auto A2)
 } // namespace gpu
 } // namespace pbat
 
-TEST_CASE("[gpu][geometry] BvhQuery")
+TEST_CASE("[gpu][geometry][impl] BvhQuery")
 {
     using namespace pbat;
     using namespace pbat::gpu::geometry::test;

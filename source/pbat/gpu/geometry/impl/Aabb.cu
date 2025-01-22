@@ -69,7 +69,7 @@ void RunAabbTests()
 } // namespace gpu
 } // namespace pbat
 
-TEST_CASE("[gpu][geometry] Aabb")
+TEST_CASE("[gpu][geometry][impl] Aabb")
 {
     pbat::gpu::geometry::impl::test::RunAabbTests();
 }

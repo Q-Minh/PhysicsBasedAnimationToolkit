@@ -97,7 +97,7 @@ GpuMatrixX Aabb::Lower() const
         if (mImpl and mDims == kDims)
         {
             auto* impl = static_cast<impl::Aabb<kDims>*>(mImpl);
-            L = common::ToEigen(impl->b.Get()).reshaped(impl->b.Dimensions(), impl->b.Size());
+            L = pbat::common::ToEigen(impl->b.Get()).reshaped(impl->b.Dimensions(), impl->b.Size());
         }
     });
     return L;
@@ -110,7 +110,7 @@ GpuMatrixX Aabb::Upper() const
         if (mImpl and mDims == kDims)
         {
             auto* impl = static_cast<impl::Aabb<kDims>*>(mImpl);
-            U = common::ToEigen(impl->e.Get()).reshaped(impl->e.Dimensions(), impl->e.Size());
+            U = pbat::common::ToEigen(impl->e.Get()).reshaped(impl->e.Dimensions(), impl->e.Size());
         }
     });
     return U;

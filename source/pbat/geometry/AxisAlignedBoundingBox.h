@@ -1,6 +1,6 @@
 
-#ifndef PBAT_GEOMETRY_AXIS_ALIGNED_BOUNDING_BOX_H
-#define PBAT_GEOMETRY_AXIS_ALIGNED_BOUNDING_BOX_H
+#ifndef PBAT_GEOMETRY_AXISALIGNEDBOUNDINGBOX_H
+#define PBAT_GEOMETRY_AXISALIGNEDBOUNDINGBOX_H
 
 #include <Eigen/Geometry>
 #include <array>
@@ -113,4 +113,4 @@ AxisAlignedBoundingBox<Dims>::contained(Eigen::MatrixBase<TDerived> const& P) co
 } // namespace geometry
 } // namespace pbat
 
-#endif // PBAT_GEOMETRY_AXIS_ALIGNED_BOUNDING_BOX_H
+#endif // PBAT_GEOMETRY_AXISALIGNEDBOUNDINGBOX_H

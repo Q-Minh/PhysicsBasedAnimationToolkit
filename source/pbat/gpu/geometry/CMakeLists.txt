@@ -2,6 +2,7 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     PUBLIC
     FILE_SET api
     FILES
+    "Aabb.h"
     "Bvh.h"
     "BvhQuery.h"
     "Geometry.h"
@@ -10,6 +11,7 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
 )
 target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     PRIVATE
+    "Aabb.cu"
     "Bvh.cu"
     "BvhQuery.cu"
     "Primitives.cu"

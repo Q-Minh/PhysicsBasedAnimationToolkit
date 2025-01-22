@@ -127,7 +127,7 @@ void RunSweepAndPruneTests()
 } // namespace gpu
 } // namespace pbat
 
-TEST_CASE("[gpu][geometry] Sweep and prune")
+TEST_CASE("[gpu][geometry][impl] Sweep and prune")
 {
     pbat::gpu::geometry::impl::test::RunSweepAndPruneTests();
 }

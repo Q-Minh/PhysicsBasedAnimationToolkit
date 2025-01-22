@@ -35,9 +35,10 @@ class Aabb
     /**
      * @brief
      *
+     * @param dims
      * @param nPrimitives
      */
-    PBAT_API void Resize(GpuIndex nPrimitives);
+    PBAT_API void Resize(GpuIndex dims, GpuIndex nPrimitives);
     /**
      * @brief
      *

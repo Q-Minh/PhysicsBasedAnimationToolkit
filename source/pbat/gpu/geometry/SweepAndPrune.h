@@ -46,6 +46,8 @@ class SweepAndPrune
     PBAT_API ~SweepAndPrune();
 
   private:
+    void Deallocate();
+
     impl::SweepAndPrune* mImpl; ///<
     void* mOverlaps; ///< gpu::common::SynchronizedList<cuda::std::pair<GpuIndex, GpuIndex>>*
 };
