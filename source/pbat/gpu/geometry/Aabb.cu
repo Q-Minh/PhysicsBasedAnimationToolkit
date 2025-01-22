@@ -15,9 +15,9 @@ namespace pbat {
 namespace gpu {
 namespace geometry {
 
-Aabb::Aabb(GpuIndex dims, GpuIndex nPrimitives) : mDims(dims), mImpl(nullptr)
+Aabb::Aabb(GpuIndex dims, GpuIndex nBoxes) : mDims(dims), mImpl(nullptr)
 {
-    Resize(dims, nPrimitives);
+    Resize(dims, nBoxes);
 }
 
 Aabb::Aabb(Aabb&& other) noexcept : mImpl(other.mImpl)
@@ -50,7 +50,7 @@ void Aabb::Construct(Eigen::Ref<GpuMatrixX const> const& L, Eigen::Ref<GpuMatrix
     });
 }
 
-void Aabb::Resize(GpuIndex dims, GpuIndex nPrimitives)
+void Aabb::Resize(GpuIndex dims, GpuIndex nBoxes)
 {
     if (dims < 1 or dims > 3)
     {
@@ -66,19 +66,19 @@ void Aabb::Resize(GpuIndex dims, GpuIndex nPrimitives)
     {
         pbat::common::ForRange<1, 4>([&]<auto kDims>() {
             if (mDims == kDims)
-                static_cast<impl::Aabb<kDims>*>(mImpl)->Resize(nPrimitives);
+                static_cast<impl::Aabb<kDims>*>(mImpl)->Resize(nBoxes);
         });
     }
     else
     {
         pbat::common::ForRange<1, 4>([&]<auto kDims>() {
             if (mDims == kDims)
-                mImpl = new impl::Aabb<kDims>(nPrimitives);
+                mImpl = new impl::Aabb<kDims>(nBoxes);
         });
     }
 }
 
-std::size_t Aabb::Size() const
+GpuIndex Aabb::Size() const
 {
     if (not mImpl)
         return 0;
@@ -87,7 +87,7 @@ std::size_t Aabb::Size() const
         if (mDims == kDims)
             size = static_cast<impl::Aabb<kDims>*>(mImpl)->Size();
     });
-    return size;
+    return static_cast<GpuIndex>(size);
 }
 
 GpuMatrixX Aabb::Lower() const

@@ -1,5 +1,6 @@
 #include "Geometry.h"
 
+#include "Aabb.h"
 #include "Bodies.h"
 #include "Bvh.h"
 #include "BvhQuery.h"
@@ -14,6 +15,7 @@ namespace geometry {
 
 void Bind(pybind11::module& m)
 {
+    BindAabb(m);
     BindPoints(m);
     BindSimplices(m);
     BindBodies(m);

@@ -15,9 +15,9 @@ class Aabb
      * @brief Construct a new Aabb object
      *
      * @param dims Embedding dimensionality > 0
-     * @param nPrimitives
+     * @param nBoxes
      */
-    PBAT_API Aabb(GpuIndex dims = 3, GpuIndex nPrimitives = 0);
+    PBAT_API Aabb(GpuIndex dims = 3, GpuIndex nBoxes = 0);
 
     Aabb(Aabb const&)            = delete;
     Aabb& operator=(Aabb const&) = delete;
@@ -36,27 +36,27 @@ class Aabb
      * @brief
      *
      * @param dims
-     * @param nPrimitives
+     * @param nBoxes
      */
-    PBAT_API void Resize(GpuIndex dims, GpuIndex nPrimitives);
-    /**
-     * @brief
-     *
-     * @return std::size_t
-     */
-    PBAT_API std::size_t Size() const;
+    PBAT_API void Resize(GpuIndex dims, GpuIndex nBoxes);
     /**
      * @brief
      *
      * @return GpuIndex
      */
-    PBAT_API GpuIndex Dimensions() const { return mDims; }
+    PBAT_API GpuIndex Size() const;
+    /**
+     * @brief
+     *
+     * @return GpuIndex
+     */
+    [[maybe_unused]] GpuIndex Dimensions() const { return mDims; }
     /**
      * @brief
      *
      * @return void*
      */
-    PBAT_API void* Impl() { return mImpl; }
+    [[maybe_unused]] void* Impl() { return mImpl; }
     /**
      * @brief
      *

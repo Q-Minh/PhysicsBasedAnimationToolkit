@@ -1,7 +1,7 @@
 #include "SweepAndPrune.h"
 
 #include <cstddef>
-#include <pbat/gpu/geometry/Primitives.h>
+#include <pbat/gpu/geometry/Aabb.h>
 #include <pbat/gpu/geometry/SweepAndPrune.h>
 #include <pbat/profiling/Profiling.h>
 #include <pybind11/eigen.h>
@@ -28,25 +28,34 @@ void BindSweepAndPrune([[maybe_unused]] pybind11::module& m)
             pyb::arg("max_overlaps"))
         .def(
             "sort_and_sweep",
-            [](SweepAndPrune& sap,
-               Points const& P,
-               Simplices const& S1,
-               Simplices const& S2,
-               Scalar expansion) {
+            [](SweepAndPrune& sap, Aabb& aabbs) {
                 return pbat::profiling::Profile(
                     "pbat.gpu.geometry.SweepAndPrune.SortAndSweep",
                     [&]() {
-                        IndexMatrixX O = sap.SortAndSweep(P, S1, S2, expansion);
+                        auto O = sap.SortAndSweep(aabbs);
                         return O;
                     });
             },
-            pyb::arg("points"),
-            pyb::arg("lsimplices"),
-            pyb::arg("rsimplices"),
-            pyb::arg("expansion") = 0.f,
-            "Detect overlaps between bounding boxes of lsimplices and rsimplices, where lsimplices "
-            "= rsimplices yields self-overlapping primitive pairs. Simplices in lsimplices and "
-            "rsimplices must index into points.");
+            pyb::arg("aabbs"),
+            "Detect all overlaps between bounding boxes in aabbs.")
+        .def(
+            "sort_and_sweep",
+            [](SweepAndPrune& sap, GpuIndex n, Aabb& aabbs) {
+                return pbat::profiling::Profile(
+                    "pbat.gpu.geometry.SweepAndPrune.SortAndSweep",
+                    [&]() {
+                        auto O = sap.SortAndSweep(n, aabbs);
+                        return O;
+                    });
+            },
+            pyb::arg("n"),
+            pyb::arg("aabbs"),
+            "Detect all overlaps between bounding boxes of subsets S1 (of size n) and S2 (of size "
+            "#aabbs-n) of aabbs.\n"
+            "Args:\n"
+            "n (int): Number of primitives in the first set [0, n)\n"
+            "aabbs (Aabb): AABBs over primitives of the first [0,n) and second set [n, "
+            "aabbs.size())");
 #endif // PBAT_USE_CUDA
 }
 

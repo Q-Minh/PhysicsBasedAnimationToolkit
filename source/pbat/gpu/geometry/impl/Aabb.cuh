@@ -21,8 +21,8 @@ template <auto kDims>
 struct Aabb
 {
     Aabb() = default;
-    Aabb(GpuIndex nPrimitives) : b(nPrimitives), e(nPrimitives) {}
-    void Resize(GpuIndex nPrimitives);
+    Aabb(GpuIndex nBoxes) : b(nBoxes), e(nBoxes) {}
+    void Resize(GpuIndex nBoxes);
 
     template <class FLowerUpper>
     void Construct(FLowerUpper&& fLowerUpper);
@@ -37,11 +37,11 @@ template <class FLowerUpper>
 inline void Aabb<kDims>::Construct(FLowerUpper&& fLowerUpper)
 {
     using namespace pbat::math::linalg;
-    auto const nPrimitives = static_cast<GpuIndex>(b.Size());
+    auto const nBoxes = static_cast<GpuIndex>(b.Size());
     thrust::for_each(
         thrust::device,
         thrust::counting_iterator<GpuIndex>(0),
-        thrust::counting_iterator<GpuIndex>(nPrimitives),
+        thrust::counting_iterator<GpuIndex>(nBoxes),
         [b           = b.Raw(),
          e           = e.Raw(),
          fLowerUpper = std::forward<FLowerUpper>(fLowerUpper)] PBAT_DEVICE(GpuIndex p) {
@@ -53,10 +53,10 @@ inline void Aabb<kDims>::Construct(FLowerUpper&& fLowerUpper)
 }
 
 template <auto kDims>
-inline void Aabb<kDims>::Resize(GpuIndex nPrimitives)
+inline void Aabb<kDims>::Resize(GpuIndex nBoxes)
 {
-    b.Resize(nPrimitives);
-    e.Resize(nPrimitives);
+    b.Resize(nBoxes);
+    e.Resize(nBoxes);
 }
 
 } // namespace impl
