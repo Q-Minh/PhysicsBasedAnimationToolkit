@@ -6,6 +6,7 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     "Bvh.cuh"
     "BvhQuery.cuh"
     "BvhQueryKernels.cuh"
+    "Morton.cuh"
     "Primitives.cuh"
     "SweepAndPrune.cuh"
 )
@@ -15,6 +16,7 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     "Bvh.cu"
     "BvhQuery.cu"
     "BvhQueryKernels.cu"
+    "Morton.cu"
     "Primitives.cu"
     "SweepAndPrune.cu"
 )

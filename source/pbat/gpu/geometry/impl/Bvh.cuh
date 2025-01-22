@@ -2,6 +2,7 @@
 #define PBAT_GPU_GEOMETRY_IMPL_BVH_CUH
 
 #include "Aabb.cuh"
+#include "Morton.cuh"
 #include "pbat/common/Stack.h"
 #include "pbat/geometry/Morton.h"
 #include "pbat/geometry/OverlapQueries.h"
@@ -54,8 +55,8 @@ class Bvh
      */
     void Build(
         Aabb<kDims>& aabbs,
-        Eigen::Vector<GpuScalar, kDims> const& min,
-        Eigen::Vector<GpuScalar, kDims> const& max);
+        Morton::Bound const& min,
+        Morton::Bound const& max);
     /**
      * @brief
      *

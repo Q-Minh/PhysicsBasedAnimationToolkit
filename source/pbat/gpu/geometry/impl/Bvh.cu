@@ -129,8 +129,8 @@ Bvh::Bvh(GpuIndex nBoxes)
 
 void Bvh::Build(
     Aabb<kDims>& aabbs,
-    Eigen::Vector<GpuScalar, 3> const& WL,
-    Eigen::Vector<GpuScalar, 3> const& WU)
+    Morton::Bound const& WL,
+    Morton::Bound const& WU)
 {
     using namespace pbat::math::linalg;
     auto const n         = static_cast<GpuIndex>(aabbs.Size());
@@ -142,24 +142,7 @@ void Bvh::Build(
     visits.SetConstant(GpuIndex(0));
 
     // 2. Compute Morton codes for each leaf node
-    mini::SVector<GpuScalar, 3> sb{WL(0), WL(1), WL(2)};
-    mini::SVector<GpuScalar, 3> sbe{WU(0) - WL(0), WU(1) - WL(1), WU(2) - WL(2)};
-    thrust::for_each(
-        thrust::device,
-        thrust::make_counting_iterator(0),
-        thrust::make_counting_iterator(n),
-        [sb, sbe, b = b.Raw(), e = e.Raw(), morton = morton.Raw()] PBAT_DEVICE(auto s) {
-            // Compute Morton code of the centroid of the bounding box of simplex s
-            auto L  = mini::FromBuffers<3, 1>(b, s);
-            auto U  = mini::FromBuffers<3, 1>(e, s);
-            auto cd = GpuScalar{0.5} * (L + U);
-            mini::SVector<GpuScalar, 3> c{
-                (cd[0] - sb[0]) / sbe[0],
-                (cd[1] - sb[1]) / sbe[1],
-                (cd[2] - sb[2]) / sbe[2]};
-            using pbat::geometry::Morton3D;
-            morton[s] = Morton3D(c);
-        });
+    Morton::Encode(aabbs, WL, WU, morton);
 
     // 3. Sort leaves based on Morton codes
     thrust::sequence(thrust::device, inds.Data(), inds.Data() + n);
@@ -343,6 +326,7 @@ TEST_CASE("[gpu][geometry][impl] Bvh")
     using Overlap            = cuda::std::pair<GpuIndex, GpuIndex>;
     using Overlaps           = gpu::common::SynchronizedList<Overlap>;
     using FOnOverlapDetected = gpu::geometry::impl::test::Bvh::FOnOverlapDetected;
+    using namespace math::linalg;
     SUBCASE("Connected non self-overlapping mesh")
     {
         // Arrange
@@ -354,7 +338,7 @@ TEST_CASE("[gpu][geometry][impl] Bvh")
         Overlaps overlaps(1);
         // Act
         Bvh bvh(aabbs.Size());
-        bvh.Build(aabbs, Vmin, Vmax);
+        bvh.Build(aabbs, mini::FromEigen(Vmin), mini::FromEigen(Vmax));
         bvh.DetectOverlaps(aabbs, FOnOverlapDetected{CG.Raw(), overlaps.Raw()});
         // Assert
         assert_cube(bvh);
@@ -378,7 +362,7 @@ TEST_CASE("[gpu][geometry][impl] Bvh")
         Overlaps overlaps(2 * nExpectedOverlaps);
         // Act
         Bvh bvh(aabbs.Size());
-        bvh.Build(aabbs, Vmin, Vmax);
+        bvh.Build(aabbs, mini::FromEigen(Vmin), mini::FromEigen(Vmax));
         bvh.DetectOverlaps(aabbs, FOnOverlapDetected{CG.Raw(), overlaps.Raw()});
         // Assert
         assert_cube(bvh);
