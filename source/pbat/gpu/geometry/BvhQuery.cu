@@ -21,10 +21,13 @@ BvhQuery::BvhQuery(BvhQuery&& other) noexcept : mImpl(other.mImpl)
 
 BvhQuery& BvhQuery::operator=(BvhQuery&& other) noexcept
 {
-    if (mImpl != nullptr)
-        delete mImpl;
-    mImpl       = other.mImpl;
-    other.mImpl = nullptr;
+    if (this != &other)
+    {
+        if (mImpl != nullptr)
+            delete mImpl;
+        mImpl       = other.mImpl;
+        other.mImpl = nullptr;
+    }
     return *this;
 }
 

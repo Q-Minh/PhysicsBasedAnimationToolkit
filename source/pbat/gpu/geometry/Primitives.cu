@@ -22,10 +22,13 @@ Points::Points(Points&& other) noexcept : mImpl(other.mImpl)
 
 Points& Points::operator=(Points&& other) noexcept
 {
-    if (mImpl != nullptr)
-        delete mImpl;
-    mImpl       = other.mImpl;
-    other.mImpl = nullptr;
+    if (this != &other)
+    {
+        if (mImpl != nullptr)
+            delete mImpl;
+        mImpl       = other.mImpl;
+        other.mImpl = nullptr;
+    }
     return *this;
 }
 
@@ -67,10 +70,13 @@ Simplices::Simplices(Simplices&& other) noexcept : mImpl(other.mImpl)
 
 Simplices& Simplices::operator=(Simplices&& other) noexcept
 {
-    if (mImpl != nullptr)
-        delete mImpl;
-    mImpl       = other.mImpl;
-    other.mImpl = nullptr;
+    if (this != &other)
+    {
+        if (mImpl != nullptr)
+            delete mImpl;
+        mImpl       = other.mImpl;
+        other.mImpl = nullptr;
+    }
     return *this;
 }
 
@@ -115,10 +121,13 @@ Bodies::Bodies(Bodies&& other) noexcept : mImpl(other.mImpl)
 
 Bodies& geometry::Bodies::operator=(Bodies&& other) noexcept
 {
-    if (mImpl != nullptr)
-        delete mImpl;
-    mImpl       = other.mImpl;
-    other.mImpl = nullptr;
+    if (this != &other)
+    {
+        if (mImpl != nullptr)
+            delete mImpl;
+        mImpl       = other.mImpl;
+        other.mImpl = nullptr;
+    }
     return *this;
 }
 

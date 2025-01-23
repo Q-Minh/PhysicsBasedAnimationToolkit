@@ -35,12 +35,14 @@ Bvh::Bvh(Bvh&& other) noexcept : mImpl(other.mImpl), mOverlaps(other.mOverlaps)
 
 Bvh& Bvh::operator=(Bvh&& other) noexcept
 {
-    if (mImpl != nullptr or mOverlaps != nullptr)
+    if (this != &other)
+    {
         Deallocate();
-    mImpl           = other.mImpl;
-    mOverlaps       = other.mOverlaps;
-    other.mImpl     = nullptr;
-    other.mOverlaps = nullptr;
+        mImpl           = other.mImpl;
+        mOverlaps       = other.mOverlaps;
+        other.mImpl     = nullptr;
+        other.mOverlaps = nullptr;
+    }
     return *this;
 }
 

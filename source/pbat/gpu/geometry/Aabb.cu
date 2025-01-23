@@ -27,9 +27,12 @@ Aabb::Aabb(Aabb&& other) noexcept : mImpl(other.mImpl)
 
 PBAT_API Aabb& Aabb::operator=(Aabb&& other) noexcept
 {
-    Deallocate();
-    mImpl       = other.mImpl;
-    other.mImpl = nullptr;
+    if (this != &other)
+    {
+        Deallocate();
+        mImpl       = other.mImpl;
+        other.mImpl = nullptr;
+    }
     return *this;
 }
 

@@ -32,13 +32,15 @@ SweepAndPrune::SweepAndPrune(SweepAndPrune&& other) noexcept
 
 SweepAndPrune& SweepAndPrune::operator=(SweepAndPrune&& other) noexcept
 {
-    if (mImpl != nullptr or mOverlaps != nullptr)
+    if (this != &other)
+    {
         Deallocate();
-    mImpl           = other.mImpl;
-    mOverlaps       = other.mOverlaps;
-    other.mImpl     = nullptr;
-    other.mOverlaps = nullptr;
-    return *this;
+        mImpl           = other.mImpl;
+        mOverlaps       = other.mOverlaps;
+        other.mImpl     = nullptr;
+        other.mOverlaps = nullptr;
+        return *this;
+    }
 }
 
 GpuIndexMatrixX SweepAndPrune::SortAndSweep(Aabb& aabbs)

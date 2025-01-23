@@ -19,10 +19,13 @@ Integrator::Integrator(Integrator&& other) noexcept : mImpl(other.mImpl)
 
 Integrator& Integrator::operator=(Integrator&& other) noexcept
 {
-    if (mImpl != nullptr)
-        delete mImpl;
-    mImpl       = other.mImpl;
-    other.mImpl = nullptr;
+    if (this != &other)
+    {
+        if (mImpl != nullptr)
+            delete mImpl;
+        mImpl       = other.mImpl;
+        other.mImpl = nullptr;
+    }
     return *this;
 }
 
