@@ -7,18 +7,19 @@
 
 #include <cstddef>
 
+namespace pbat::gpu::impl::geometry {
+class SweepAndPrune;
+} // namespace pbat::gpu::impl::geometry
+
 namespace pbat {
 namespace gpu {
 namespace geometry {
-namespace impl {
-
-class SweepAndPrune;
-
-} // namespace impl
 
 class SweepAndPrune
 {
   public:
+    using Impl = impl::geometry::SweepAndPrune;
+
     PBAT_API SweepAndPrune(std::size_t nPrimitives, std::size_t nOverlaps);
 
     SweepAndPrune(SweepAndPrune const&)            = delete;
@@ -36,9 +37,9 @@ class SweepAndPrune
     /**
      * @brief
      *
-     * @param set |#aabbs| map of indices of aabbs to their corresponding set, i.e. set[i] = j means that aabb
-     * i belongs to set j.
-     * @param aabbs 
+     * @param set |#aabbs| map of indices of aabbs to their corresponding set, i.e. set[i] = j means
+     * that aabb i belongs to set j.
+     * @param aabbs
      * @return 2x|#overlaps| matrix of overlap pairs between boxes of different sets
      */
     PBAT_API GpuIndexMatrixX
@@ -49,7 +50,7 @@ class SweepAndPrune
   private:
     void Deallocate();
 
-    impl::SweepAndPrune* mImpl; ///<
+    Impl* mImpl; ///<
     void* mOverlaps; ///< gpu::common::SynchronizedList<cuda::std::pair<GpuIndex, GpuIndex>>*
 };
 

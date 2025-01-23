@@ -10,12 +10,13 @@
 #include <cstddef>
 #include <limits>
 
+namespace pbat::gpu::impl::geometry {
+class Bvh;
+} // namespace pbat::gpu::impl::geometry
+
 namespace pbat {
 namespace gpu {
 namespace geometry {
-namespace impl {
-class Bvh;
-} // namespace impl
 
 /**
  * @brief Linear BVH GPU implementation
@@ -102,8 +103,8 @@ class Bvh
      */
     PBAT_API GpuIndexVectorX Visits() const;
 
-    PBAT_API impl::Bvh* Impl();
-    PBAT_API impl::Bvh const* Impl() const;
+    PBAT_API impl::geometry::Bvh* Impl();
+    PBAT_API impl::geometry::Bvh const* Impl() const;
     /**
      * @brief
      *
@@ -114,7 +115,7 @@ class Bvh
   private:
     void Deallocate();
 
-    impl::Bvh* mImpl;
+    impl::geometry::Bvh* mImpl;
     void* mOverlaps; ///< gpu::common::SynchronizedList<cuda::std::pair<GpuIndex, GpuIndex>>*
 };
 

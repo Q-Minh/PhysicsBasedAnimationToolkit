@@ -10,6 +10,7 @@
  * sources in some cases.
  */
 
+#include "common/Common.h"
 #include "geometry/Geometry.h"
 #include "vbd/Vbd.h"
 #include "xpbd/Xpbd.h"

@@ -3,10 +3,10 @@
 // clang-format on
 
 #include "Aabb.h"
-#include "impl/Aabb.cuh"
 #include "pbat/common/ConstexprFor.h"
 #include "pbat/common/Eigen.h"
-#include "pbat/gpu/common/Eigen.cuh"
+#include "pbat/gpu/impl/common/Eigen.cuh"
+#include "pbat/gpu/impl/geometry/Aabb.cuh"
 
 #include <exception>
 #include <string>
@@ -43,9 +43,9 @@ void Aabb::Construct(Eigen::Ref<GpuMatrixX const> const& L, Eigen::Ref<GpuMatrix
     pbat::common::ForRange<1, 4>([&]<auto kDims>() {
         if (mDims == kDims)
         {
-            auto* impl = static_cast<impl::Aabb<kDims>*>(mImpl);
-            gpu::common::ToBuffer(L, impl->b);
-            gpu::common::ToBuffer(U, impl->e);
+            auto* impl = static_cast<impl::geometry::Aabb<kDims>*>(mImpl);
+            impl::common::ToBuffer(L, impl->b);
+            impl::common::ToBuffer(U, impl->e);
         }
     });
 }
@@ -66,14 +66,14 @@ void Aabb::Resize(GpuIndex dims, GpuIndex nBoxes)
     {
         pbat::common::ForRange<1, 4>([&]<auto kDims>() {
             if (mDims == kDims)
-                static_cast<impl::Aabb<kDims>*>(mImpl)->Resize(nBoxes);
+                static_cast<impl::geometry::Aabb<kDims>*>(mImpl)->Resize(nBoxes);
         });
     }
     else
     {
         pbat::common::ForRange<1, 4>([&]<auto kDims>() {
             if (mDims == kDims)
-                mImpl = new impl::Aabb<kDims>(nBoxes);
+                mImpl = new impl::geometry::Aabb<kDims>(nBoxes);
         });
     }
 }
@@ -85,7 +85,7 @@ GpuIndex Aabb::Size() const
     std::size_t size;
     pbat::common::ForRange<1, 4>([&]<auto kDims>() {
         if (mDims == kDims)
-            size = static_cast<impl::Aabb<kDims>*>(mImpl)->Size();
+            size = static_cast<impl::geometry::Aabb<kDims>*>(mImpl)->Size();
     });
     return static_cast<GpuIndex>(size);
 }
@@ -96,8 +96,8 @@ GpuMatrixX Aabb::Lower() const
     pbat::common::ForRange<1, 4>([&]<auto kDims>() {
         if (mImpl and mDims == kDims)
         {
-            auto* impl = static_cast<impl::Aabb<kDims>*>(mImpl);
-            L = pbat::common::ToEigen(impl->b.Get()).reshaped(impl->b.Dimensions(), impl->b.Size());
+            auto* impl = static_cast<impl::geometry::Aabb<kDims>*>(mImpl);
+            L          = impl::common::ToEigen(impl->b);
         }
     });
     return L;
@@ -109,8 +109,8 @@ GpuMatrixX Aabb::Upper() const
     pbat::common::ForRange<1, 4>([&]<auto kDims>() {
         if (mImpl and mDims == kDims)
         {
-            auto* impl = static_cast<impl::Aabb<kDims>*>(mImpl);
-            U = pbat::common::ToEigen(impl->e.Get()).reshaped(impl->e.Dimensions(), impl->e.Size());
+            auto* impl = static_cast<impl::geometry::Aabb<kDims>*>(mImpl);
+            U          = impl::common::ToEigen(impl->e);
         }
     });
     return U;
@@ -126,7 +126,7 @@ void Aabb::Deallocate()
     pbat::common::ForRange<1, 4>([&]<auto kDims>() {
         if (mImpl and mDims == kDims)
         {
-            delete static_cast<impl::Aabb<kDims>*>(mImpl);
+            delete static_cast<impl::geometry::Aabb<kDims>*>(mImpl);
             mImpl = nullptr;
         }
     });

@@ -6,14 +6,13 @@
 #include "pbat/sim/vbd/Data.h"
 #include "pbat/sim/vbd/Enums.h"
 
+namespace pbat::gpu::impl::vbd {
+class Integrator;
+} // namespace pbat::gpu::impl::vbd
+
 namespace pbat {
 namespace gpu {
 namespace vbd {
-namespace impl {
-
-class Integrator;
-
-} // namespace impl
 
 class Integrator
 {
@@ -131,7 +130,7 @@ class Integrator
     PBAT_API GpuMatrixX GetVelocities() const;
 
   private:
-    impl::Integrator* mImpl;
+    impl::vbd::Integrator* mImpl;
 };
 
 } // namespace vbd

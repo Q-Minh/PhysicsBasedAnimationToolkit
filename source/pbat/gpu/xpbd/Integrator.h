@@ -9,14 +9,13 @@
 #include <array>
 #include <vector>
 
+namespace pbat::gpu::impl::xpbd {
+class Integrator;
+} // namespace pbat::gpu::impl::xpbd
+
 namespace pbat {
 namespace gpu {
 namespace xpbd {
-namespace impl {
-
-class Integrator;
-
-} // namespace impl
 
 class Integrator
 {
@@ -164,7 +163,7 @@ class Integrator
     PBAT_API ~Integrator();
 
   private:
-    impl::Integrator* mImpl;
+    impl::xpbd::Integrator* mImpl;
 };
 
 } // namespace xpbd

@@ -3,14 +3,14 @@
 // clang-format on
 
 #include "Integrator.h"
-#include "impl/Integrator.cuh"
-#include "pbat/gpu/common/Eigen.cuh"
+#include "pbat/gpu/impl/common/Eigen.cuh"
+#include "pbat/gpu/impl/vbd/Integrator.cuh"
 
 namespace pbat {
 namespace gpu {
 namespace vbd {
 
-Integrator::Integrator(Data const& data) : mImpl(new impl::Integrator(data)) {}
+Integrator::Integrator(Data const& data) : mImpl(new impl::vbd::Integrator(data)) {}
 
 Integrator::Integrator(Integrator&& other) noexcept : mImpl(other.mImpl)
 {
@@ -109,12 +109,12 @@ void Integrator::SetBlockSize(GpuIndex blockSize)
 
 GpuMatrixX Integrator::GetPositions() const
 {
-    return common::ToEigen(mImpl->X.x);
+    return impl::common::ToEigen(mImpl->X.x);
 }
 
 GpuMatrixX Integrator::GetVelocities() const
 {
-    return common::ToEigen(mImpl->GetVelocity());
+    return impl::common::ToEigen(mImpl->GetVelocity());
 }
 
 } // namespace vbd

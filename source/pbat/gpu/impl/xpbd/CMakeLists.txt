@@ -1,12 +1,11 @@
 target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
-    PUBLIC
-    FILE_SET api
+    PRIVATE
+    FILE_SET implementation
     FILES
-    "Buffer.h"
-    "Common.h"
+    "Integrator.cuh"
+    "Xpbd.h"
 )
-
 target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     PRIVATE
-    "Buffer.cu"
+    "Integrator.cu"
 )

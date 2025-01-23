@@ -8,12 +8,13 @@
 
 #include <cstddef>
 
+namespace pbat::gpu::impl::geometry {
+class BvhQuery;
+} // namespace pbat::gpu::impl::geometry
+
 namespace pbat {
 namespace gpu {
 namespace geometry {
-namespace impl {
-class BvhQuery;
-} // namespace impl
 
 class BvhQuery
 {
@@ -80,7 +81,7 @@ class BvhQuery
     PBAT_API ~BvhQuery();
 
   private:
-    impl::BvhQuery* mImpl;
+    impl::geometry::BvhQuery* mImpl;
 };
 
 } // namespace geometry

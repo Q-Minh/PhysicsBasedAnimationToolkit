@@ -9,5 +9,3 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     PRIVATE
     "Integrator.cu"
 )
-
-add_subdirectory(impl)

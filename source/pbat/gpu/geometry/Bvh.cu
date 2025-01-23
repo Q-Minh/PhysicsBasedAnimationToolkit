@@ -3,10 +3,10 @@
 // clang-format on
 
 #include "Bvh.h"
-#include "impl/Bvh.cuh"
-#include "pbat/gpu/common/Buffer.cuh"
-#include "pbat/gpu/common/Eigen.cuh"
-#include "pbat/gpu/common/SynchronizedList.cuh"
+#include "pbat/gpu/impl/common/Buffer.cuh"
+#include "pbat/gpu/impl/common/Eigen.cuh"
+#include "pbat/gpu/impl/common/SynchronizedList.cuh"
+#include "pbat/gpu/impl/geometry/Bvh.cuh"
 #include "pbat/math/linalg/mini/Eigen.h"
 
 #include <cuda/std/utility>
@@ -18,8 +18,8 @@ namespace gpu {
 namespace geometry {
 
 Bvh::Bvh(GpuIndex nPrimitives, [[maybe_unused]] GpuIndex nOverlaps)
-    : mImpl(new impl::Bvh(nPrimitives)),
-      mOverlaps(new common::SynchronizedList<cuda::std::pair<GpuIndex, GpuIndex>>(nOverlaps))
+    : mImpl(new impl::geometry::Bvh(nPrimitives)),
+      mOverlaps(new impl::common::SynchronizedList<cuda::std::pair<GpuIndex, GpuIndex>>(nOverlaps))
 {
     static_assert(
         alignof(cuda::std::pair<GpuIndex, GpuIndex>) == sizeof(GpuIndex) and
@@ -50,31 +50,32 @@ void Bvh::Build(
     Eigen::Vector<GpuScalar, 3> const& max)
 {
     using namespace pbat::math::linalg;
-    if (aabbs.Dimensions() != impl::Bvh::kDims)
+    if (aabbs.Dimensions() != impl::geometry::Bvh::kDims)
     {
         throw std::invalid_argument(
-            "Expected AABBs to have " + std::to_string(impl::Bvh::kDims) + " dimensions, but got " +
-            std::to_string(aabbs.Dimensions()));
+            "Expected AABBs to have " + std::to_string(impl::geometry::Bvh::kDims) +
+            " dimensions, but got " + std::to_string(aabbs.Dimensions()));
     }
     mImpl->Build(
-        *static_cast<impl::Aabb<impl::Bvh::kDims>*>(aabbs.Impl()),
+        *static_cast<impl::geometry::Aabb<impl::geometry::Bvh::kDims>*>(aabbs.Impl()),
         mini::FromEigen(min),
         mini::FromEigen(max));
 }
 
 GpuIndexMatrixX Bvh::DetectOverlaps(Aabb const& aabbs)
 {
-    if (aabbs.Dimensions() != impl::Bvh::kDims)
+    if (aabbs.Dimensions() != impl::geometry::Bvh::kDims)
     {
         throw std::invalid_argument(
-            "Expected AABBs to have " + std::to_string(impl::Bvh::kDims) + " dimensions, but got " +
-            std::to_string(aabbs.Dimensions()));
+            "Expected AABBs to have " + std::to_string(impl::geometry::Bvh::kDims) +
+            " dimensions, but got " + std::to_string(aabbs.Dimensions()));
     }
     auto overlaps =
-        static_cast<common::SynchronizedList<cuda::std::pair<GpuIndex, GpuIndex>>*>(mOverlaps);
+        static_cast<impl::common::SynchronizedList<cuda::std::pair<GpuIndex, GpuIndex>>*>(
+            mOverlaps);
     overlaps->Clear();
     mImpl->DetectOverlaps(
-        *static_cast<impl::Aabb<impl::Bvh::kDims>*>(aabbs.Impl()),
+        *static_cast<impl::geometry::Aabb<impl::geometry::Bvh::kDims>*>(aabbs.Impl()),
         [o = overlaps->Raw()] PBAT_DEVICE(GpuIndex si, GpuIndex sj) mutable {
             o.Append(cuda::std::make_pair(si, sj));
         });
@@ -86,22 +87,23 @@ GpuIndexMatrixX Bvh::DetectOverlaps(Aabb const& aabbs)
 
 GpuIndexMatrixX Bvh::DetectOverlaps(Eigen::Ref<GpuIndexVectorX const> const& set, Aabb const& aabbs)
 {
-    if (aabbs.Dimensions() != impl::Bvh::kDims)
+    if (aabbs.Dimensions() != impl::geometry::Bvh::kDims)
     {
         throw std::invalid_argument(
-            "Expected AABBs to have " + std::to_string(impl::Bvh::kDims) + " dimensions, but got " +
-            std::to_string(aabbs.Dimensions()));
+            "Expected AABBs to have " + std::to_string(impl::geometry::Bvh::kDims) +
+            " dimensions, but got " + std::to_string(aabbs.Dimensions()));
     }
     // NOTE:
     // Unfortunately, we have to allocate on-the-fly here.
     // We should define a type-erased CPU wrapper over gpu::common::Buffer to prevent this.
-    gpu::common::Buffer<GpuIndex> S(set.size());
-    gpu::common::ToBuffer(set, S);
+    impl::common::Buffer<GpuIndex> S(set.size());
+    impl::common::ToBuffer(set, S);
     auto overlaps =
-        static_cast<common::SynchronizedList<cuda::std::pair<GpuIndex, GpuIndex>>*>(mOverlaps);
+        static_cast<impl::common::SynchronizedList<cuda::std::pair<GpuIndex, GpuIndex>>*>(
+            mOverlaps);
     overlaps->Clear();
     mImpl->DetectOverlaps(
-        *static_cast<impl::Aabb<impl::Bvh::kDims>*>(aabbs.Impl()),
+        *static_cast<impl::geometry::Aabb<impl::geometry::Bvh::kDims>*>(aabbs.Impl()),
         [S = S.Raw(), o = overlaps->Raw()] PBAT_DEVICE(GpuIndex si, GpuIndex sj) mutable {
             if (S[si] != S[sj])
                 o.Append(cuda::std::make_pair(si, sj));
@@ -114,42 +116,42 @@ GpuIndexMatrixX Bvh::DetectOverlaps(Eigen::Ref<GpuIndexVectorX const> const& set
 
 GpuMatrixX Bvh::Min() const
 {
-    return gpu::common::ToEigen(mImpl->iaabbs.b);
+    return impl::common::ToEigen(mImpl->iaabbs.b);
 }
 
 GpuMatrixX Bvh::Max() const
 {
-    return gpu::common::ToEigen(mImpl->iaabbs.e);
+    return impl::common::ToEigen(mImpl->iaabbs.e);
 }
 
 GpuIndexVectorX Bvh::LeafOrdering() const
 {
-    return gpu::common::ToEigen(mImpl->inds);
+    return impl::common::ToEigen(mImpl->inds);
 }
 
 Eigen::Vector<typename Bvh::MortonCodeType, Eigen::Dynamic> Bvh::MortonCodes() const
 {
-    return gpu::common::ToEigen(mImpl->morton);
+    return impl::common::ToEigen(mImpl->morton);
 }
 
 GpuIndexMatrixX Bvh::Child() const
 {
-    return gpu::common::ToEigen(mImpl->child).transpose();
+    return impl::common::ToEigen(mImpl->child).transpose();
 }
 
 GpuIndexVectorX Bvh::Parent() const
 {
-    return gpu::common::ToEigen(mImpl->parent);
+    return impl::common::ToEigen(mImpl->parent);
 }
 
 GpuIndexMatrixX Bvh::Rightmost() const
 {
-    return gpu::common::ToEigen(mImpl->rightmost).transpose();
+    return impl::common::ToEigen(mImpl->rightmost).transpose();
 }
 
 GpuIndexVectorX Bvh::Visits() const
 {
-    return gpu::common::ToEigen(mImpl->visits);
+    return impl::common::ToEigen(mImpl->visits);
 }
 
 Bvh::~Bvh()
@@ -157,12 +159,12 @@ Bvh::~Bvh()
     Deallocate();
 }
 
-impl::Bvh* Bvh::Impl()
+impl::geometry::Bvh* Bvh::Impl()
 {
     return mImpl;
 }
 
-impl::Bvh const* Bvh::Impl() const
+impl::geometry::Bvh const* Bvh::Impl() const
 {
     return mImpl;
 }
@@ -175,7 +177,7 @@ void Bvh::Deallocate()
     }
     if (mOverlaps != nullptr)
     {
-        delete static_cast<common::SynchronizedList<cuda::std::pair<GpuIndex, GpuIndex>>*>(
+        delete static_cast<impl::common::SynchronizedList<cuda::std::pair<GpuIndex, GpuIndex>>*>(
             mOverlaps);
     }
 }

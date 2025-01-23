@@ -3,8 +3,8 @@
 // clang-format on
 
 #include "Primitives.h"
-#include "impl/Primitives.cuh"
-#include "pbat/gpu/common/Eigen.cuh"
+#include "pbat/gpu/impl/common/Eigen.cuh"
+#include "pbat/gpu/impl/geometry/Primitives.cuh"
 
 #include <array>
 #include <thrust/copy.h>
@@ -13,7 +13,7 @@ namespace pbat {
 namespace gpu {
 namespace geometry {
 
-Points::Points(Eigen::Ref<GpuMatrixX const> const& V) : mImpl(new impl::Points(V)) {}
+Points::Points(Eigen::Ref<GpuMatrixX const> const& V) : mImpl(new impl::geometry::Points(V)) {}
 
 Points::Points(Points&& other) noexcept : mImpl(other.mImpl)
 {
@@ -34,19 +34,19 @@ void Points::Update(Eigen::Ref<GpuMatrixX const> const& V)
     mImpl->Update(V);
 }
 
-impl::Points* Points::Impl()
+impl::geometry::Points* Points::Impl()
 {
     return mImpl;
 }
 
-impl::Points const* Points::Impl() const
+impl::geometry::Points const* Points::Impl() const
 {
     return mImpl;
 }
 
 GpuMatrixX Points::Get() const
 {
-    return common::ToEigen(mImpl->x);
+    return impl::common::ToEigen(mImpl->x);
 }
 
 Points::~Points()
@@ -55,7 +55,10 @@ Points::~Points()
         delete mImpl;
 }
 
-Simplices::Simplices(Eigen::Ref<GpuIndexMatrixX const> const& C) : mImpl(new impl::Simplices(C)) {}
+Simplices::Simplices(Eigen::Ref<GpuIndexMatrixX const> const& C)
+    : mImpl(new impl::geometry::Simplices(C))
+{
+}
 
 Simplices::Simplices(Simplices&& other) noexcept : mImpl(other.mImpl)
 {
@@ -87,12 +90,12 @@ Simplices::ESimplexType Simplices::Type() const
     return static_cast<ESimplexType>(mImpl->eSimplexType);
 }
 
-impl::Simplices* Simplices::Impl()
+impl::geometry::Simplices* Simplices::Impl()
 {
     return mImpl;
 }
 
-impl::Simplices const* Simplices::Impl() const
+impl::geometry::Simplices const* Simplices::Impl() const
 {
     return mImpl;
 }
@@ -103,7 +106,7 @@ Simplices::~Simplices()
         delete mImpl;
 }
 
-Bodies::Bodies(Eigen::Ref<GpuIndexVectorX const> const& B) : mImpl(new impl::Bodies(B)) {}
+Bodies::Bodies(Eigen::Ref<GpuIndexVectorX const> const& B) : mImpl(new impl::geometry::Bodies(B)) {}
 
 Bodies::Bodies(Bodies&& other) noexcept : mImpl(other.mImpl)
 {
@@ -121,7 +124,7 @@ Bodies& geometry::Bodies::operator=(Bodies&& other) noexcept
 
 GpuIndexMatrixX geometry::Bodies::Get() const
 {
-    return common::ToEigen(mImpl->body);
+    return impl::common::ToEigen(mImpl->body);
 }
 
 std::size_t Bodies::NumberOfBodies() const
@@ -129,12 +132,12 @@ std::size_t Bodies::NumberOfBodies() const
     return mImpl->NumberOfBodies();
 }
 
-impl::Bodies* geometry::Bodies::Impl()
+impl::geometry::Bodies* geometry::Bodies::Impl()
 {
     return mImpl;
 }
 
-impl::Bodies const* geometry::Bodies::Impl() const
+impl::geometry::Bodies const* geometry::Bodies::Impl() const
 {
     return mImpl;
 }

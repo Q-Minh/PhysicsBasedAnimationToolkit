@@ -3,9 +3,9 @@
 // clang-format on
 
 #include "SweepAndPrune.h"
-#include "impl/SweepAndPrune.cuh"
-#include "pbat/gpu/common/Eigen.cuh"
-#include "pbat/gpu/common/SynchronizedList.cuh"
+#include "pbat/gpu/impl/common/Eigen.cuh"
+#include "pbat/gpu/impl/common/SynchronizedList.cuh"
+#include "pbat/gpu/impl/geometry/SweepAndPrune.cuh"
 
 #include <cuda/std/utility>
 
@@ -14,8 +14,8 @@ namespace gpu {
 namespace geometry {
 
 SweepAndPrune::SweepAndPrune(std::size_t nPrimitives, std::size_t nOverlaps)
-    : mImpl(new impl::SweepAndPrune(nPrimitives)),
-      mOverlaps(new common::SynchronizedList<cuda::std::pair<GpuIndex, GpuIndex>>(nOverlaps))
+    : mImpl(new impl::geometry::SweepAndPrune(nPrimitives)),
+      mOverlaps(new impl::common::SynchronizedList<cuda::std::pair<GpuIndex, GpuIndex>>(nOverlaps))
 {
     static_assert(
         alignof(cuda::std::pair<GpuIndex, GpuIndex>) == sizeof(GpuIndex) and
@@ -43,15 +43,15 @@ SweepAndPrune& SweepAndPrune::operator=(SweepAndPrune&& other) noexcept
 
 GpuIndexMatrixX SweepAndPrune::SortAndSweep(Aabb& aabbs)
 {
-    auto constexpr kDims = impl::SweepAndPrune::kDims;
+    auto constexpr kDims = impl::geometry::SweepAndPrune::kDims;
     if (aabbs.Dimensions() != kDims)
     {
         throw std::invalid_argument(
             "Expected AABBs to have 3 dimensions, but got " + std::to_string(aabbs.Dimensions()));
     }
-    auto* aabbImpl     = static_cast<impl::Aabb<kDims>*>(aabbs.Impl());
+    auto* aabbImpl     = static_cast<impl::geometry::Aabb<kDims>*>(aabbs.Impl());
     using Overlap      = cuda::std::pair<GpuIndex, GpuIndex>;
-    using OverlapPairs = common::SynchronizedList<Overlap>;
+    using OverlapPairs = impl::common::SynchronizedList<Overlap>;
     auto* overlaps     = static_cast<OverlapPairs*>(mOverlaps);
     overlaps->Clear();
     mImpl->SortAndSweep(
@@ -68,20 +68,20 @@ GpuIndexMatrixX SweepAndPrune::SortAndSweep(Aabb& aabbs)
 PBAT_API GpuIndexMatrixX
 SweepAndPrune::SortAndSweep(Eigen::Ref<GpuIndexVectorX const> const& set, Aabb& aabbs)
 {
-    auto constexpr kDims = impl::SweepAndPrune::kDims;
+    auto constexpr kDims = impl::geometry::SweepAndPrune::kDims;
     if (aabbs.Dimensions() != kDims)
     {
         throw std::invalid_argument(
             "Expected AABBs to have 3 dimensions, but got " + std::to_string(aabbs.Dimensions()));
     }
-    auto* aabbImpl = static_cast<impl::Aabb<kDims>*>(aabbs.Impl());
+    auto* aabbImpl = static_cast<impl::geometry::Aabb<kDims>*>(aabbs.Impl());
     // NOTE:
     // Unfortunately, we have to allocate on-the-fly here.
     // We should define a type-erased CPU wrapper over gpu::common::Buffer to prevent this.
-    gpu::common::Buffer<GpuIndex> S(set.size());
-    gpu::common::ToBuffer(set, S);
+    gpu::impl::common::Buffer<GpuIndex> S(set.size());
+    gpu::impl::common::ToBuffer(set, S);
     using Overlap      = cuda::std::pair<GpuIndex, GpuIndex>;
-    using OverlapPairs = common::SynchronizedList<Overlap>;
+    using OverlapPairs = impl::common::SynchronizedList<Overlap>;
     auto* overlaps     = static_cast<OverlapPairs*>(mOverlaps);
     overlaps->Clear();
     mImpl->SortAndSweep(
@@ -109,7 +109,7 @@ void SweepAndPrune::Deallocate()
     }
     if (mOverlaps != nullptr)
     {
-        delete static_cast<common::SynchronizedList<cuda::std::pair<GpuIndex, GpuIndex>>*>(
+        delete static_cast<impl::common::SynchronizedList<cuda::std::pair<GpuIndex, GpuIndex>>*>(
             mOverlaps);
     }
 }

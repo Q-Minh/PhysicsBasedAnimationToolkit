@@ -8,6 +8,7 @@ if(PBAT_USE_CUDA)
         "Gpu.h"
     )
 
+    add_subdirectory(impl)
     add_subdirectory(common)
     add_subdirectory(geometry)
     add_subdirectory(xpbd)
