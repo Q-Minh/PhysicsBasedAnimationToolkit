@@ -1,7 +1,7 @@
 #include "Bvh.h"
 
+#include <pbat/gpu/geometry/Aabb.h>
 #include <pbat/gpu/geometry/Bvh.h>
-#include <pbat/gpu/geometry/Primitives.h>
 #include <pbat/profiling/Profiling.h>
 #include <pybind11/eigen.h>
 
@@ -17,7 +17,7 @@ void BindBvh([[maybe_unused]] pybind11::module& m)
     using namespace pbat::gpu::geometry;
     pyb::class_<Bvh>(m, "Bvh")
         .def(
-            pyb::init([](std::size_t nPrimitives, std::size_t nOverlaps) {
+            pyb::init([](GpuIndex nPrimitives, GpuIndex nOverlaps) {
                 return pbat::profiling::Profile("pbat.gpu.geometry.Bvh.Construct", [&]() {
                     Bvh bvh(nPrimitives, nOverlaps);
                     return bvh;
@@ -30,41 +30,58 @@ void BindBvh([[maybe_unused]] pybind11::module& m)
         .def(
             "build",
             [](Bvh& bvh,
-               Points const& P,
-               Simplices const& S,
+               Aabb& aabbs,
                Eigen::Vector<GpuScalar, 3> const& min,
-               Eigen::Vector<GpuScalar, 3> const& max,
-               GpuScalar expansion) {
+               Eigen::Vector<GpuScalar, 3> const& max) {
                 pbat::profiling::Profile("pbat.gpu.geometry.Bvh.Build", [&]() {
-                    bvh.Build(P, S, min, max, expansion);
+                    bvh.Build(aabbs, min, max);
                 });
             },
-            pyb::arg("P"),
-            pyb::arg("S"),
+            pyb::arg("aabbs"),
             pyb::arg("min"),
             pyb::arg("max"),
-            pyb::arg("expansion") = GpuScalar{0},
-            "Constructs, on the GPU, a bounding volume hierarchy of axis-aligned boxes over the "
-            "simplex set S with vertex positions P. (min,max) denote the extremeties of an "
-            "axis-aligned bounding box embedding (P,S). expansion inflates the BVH nodes' bounding "
-            "boxes as set by the user.")
+            "Constructs, on the GPU, a bounding volume hierarchy of axis-aligned boxes. (min,max) "
+            "denote the extremeties of an axis-aligned bounding box embedding."
+            "Args:\n"
+            "aabbs (pbat.gpu.geometry.Aabb): Axis-aligned bounding boxes over primitives\n"
+            "min (np.ndarray[3]): World axis-aligned box's min endpoint\n"
+            "max (np.ndarray[3]): World axis-aligned box's max endpoint")
         .def(
-            "detect_self_overlaps",
-            [](Bvh& bvh, Simplices const& S) {
-                return pbat::profiling::Profile("pbat.gpu.geometry.Bvh.DetectSelfOverlaps", [&]() {
-                    return bvh.DetectSelfOverlaps(S);
+            "detect_overlaps",
+            [](Bvh& bvh, Aabb const& aabbs) {
+                return pbat::profiling::Profile("pbat.gpu.geometry.Bvh.DetectOverlaps", [&]() {
+                    return bvh.DetectOverlaps(aabbs);
                 });
             },
-            pyb::arg("S"),
-            "Detect self-overlaps (si,sj) between bounding boxes of simplices (si,sj) of S into a "
-            "2x|#overlaps| array, where si < sj. S must index into points P and was used in the "
-            "most recent call to build.")
-        .def_property_readonly("b", &Bvh::Min, "BVH nodes' box minimums")
-        .def_property_readonly("e", &Bvh::Max, "BVH nodes' box maximums")
+            pyb::arg("aabbs"),
+            "Detect self-overlaps (bi,bj) between bounding boxes of aabbs into a "
+            "2x|#overlaps| array, where bi < bj. aabbs must be the one used in the "
+            "last call to build()."
+            "Args:\n"
+            "aabbs (pbat.gpu.geometry.Aabb): Axis-aligned bounding boxes over primitives")
+        .def(
+            "detect_overlaps",
+            [](Bvh& bvh, Eigen::Ref<GpuIndexVectorX const> const& set, Aabb const& aabbs) {
+                return pbat::profiling::Profile("pbat.gpu.geometry.Bvh.DetectOverlaps", [&]() {
+                    return bvh.DetectOverlaps(set, aabbs);
+                });
+            },
+            pyb::arg("aabbs"),
+            pyb::arg("set"),
+            "Detect self-overlaps (bi,bj) between bounding boxes of aabbs into a "
+            "2x|#overlaps| array, where bi < bj. Additionally, we only consider pairs (bi,bj) s.t. "
+            "set[bi] != set[bj], i.e. overlaps are detected between different sets. aabbs must be "
+            "the one used in the last call to build().\n"
+            "Args:\n"
+            "set (np.ndarray): Map of indices of aabbs to their corresponding set, i.e. set[i] = "
+            "j, where i is a box and j is its corresponding set.\n"
+            "aabbs (pbat.gpu.geometry.Aabb): Axis-aligned bounding boxes over primitives")
+        .def_property_readonly("min", &Bvh::Min, "BVH nodes' box minimums")
+        .def_property_readonly("max", &Bvh::Max, "BVH nodes' box maximums")
         .def_property_readonly(
-            "simplex",
-            &Bvh::SimplexOrdering,
-            "Simplex indices ordered by Morton encoding")
+            "ordering",
+            &Bvh::LeafOrdering,
+            "Box indices ordered by Morton encoding")
         .def_property_readonly("morton", &Bvh::MortonCodes, "Sorted morton codes of simplices")
         .def_property_readonly(
             "child",

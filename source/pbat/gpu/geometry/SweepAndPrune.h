@@ -36,12 +36,13 @@ class SweepAndPrune
     /**
      * @brief
      *
-     * @param n Number of primitives in the first set [0, n)
-     * @param aabbs AABBs over primitives of the first [0,n) and second set [n, aabbs.size())
-     * @return 2x|#overlaps| matrix of overlap pairs between primitives of the first (row 0) and
-     * second set (row 1)
+     * @param set |#aabbs| map of indices of aabbs to their corresponding set, i.e. set[i] = j means that aabb
+     * i belongs to set j.
+     * @param aabbs 
+     * @return 2x|#overlaps| matrix of overlap pairs between boxes of different sets
      */
-    PBAT_API GpuIndexMatrixX SortAndSweep(GpuIndex n, Aabb& aabbs);
+    PBAT_API GpuIndexMatrixX
+    SortAndSweep(Eigen::Ref<GpuIndexVectorX const> const& set, Aabb& aabbs);
 
     PBAT_API ~SweepAndPrune();
 

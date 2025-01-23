@@ -127,16 +127,13 @@ Bvh::Bvh(GpuIndex nBoxes)
     parent.SetConstant(GpuIndex(-1));
 }
 
-void Bvh::Build(
-    Aabb<kDims>& aabbs,
-    Morton::Bound const& WL,
-    Morton::Bound const& WU)
+void Bvh::Build(Aabb<kDims>& aabbs, Morton::Bound const& WL, Morton::Bound const& WU)
 {
     using namespace pbat::math::linalg;
-    auto const n         = static_cast<GpuIndex>(aabbs.Size());
-    auto const leafBegin = n - 1;
-    auto& b              = aabbs.b;
-    auto& e              = aabbs.e;
+    GpuIndex const n                = aabbs.Size();
+    GpuIndex const leafBegin        = n - 1;
+    common::Buffer<GpuScalar, 3>& b = aabbs.b;
+    common::Buffer<GpuScalar, 3>& e = aabbs.e;
 
     // 1. Reset intermediate data
     visits.SetConstant(GpuIndex(0));
@@ -178,10 +175,13 @@ void Bvh::Build(
         thrust::device,
         thrust::make_counting_iterator(n - 1),
         thrust::make_counting_iterator(2 * n - 1),
-        [parent = parent.Raw(),
+        [leafBegin,
+         parent = parent.Raw(),
          child  = child.Raw(),
-         b      = ib.Raw(),
-         e      = ie.Raw(),
+         b      = b.Raw(),
+         e      = e.Raw(),
+         ib     = ib.Raw(),
+         ie     = ie.Raw(),
          visits = visits.Raw()] PBAT_DEVICE(auto leaf) {
             auto p = parent[leaf];
             auto k = 0;
@@ -196,12 +196,20 @@ void Bvh::Build(
                 if (ap++ == 0)
                     break;
 
-                GpuIndex lc = child[0][p];
-                GpuIndex rc = child[1][p];
+                GpuIndex lc             = child[0][p];
+                GpuIndex rc             = child[1][p];
+                bool const bIsLeftLeaf  = lc >= leafBegin;
+                bool const bIsRightLeaf = rc >= leafBegin;
+                lc -= bIsLeftLeaf * leafBegin;
+                rc -= bIsRightLeaf * leafBegin;
+                auto bl = bIsLeftLeaf ? b : ib;
+                auto el = bIsLeftLeaf ? e : ie;
+                auto br = bIsRightLeaf ? b : ib;
+                auto er = bIsRightLeaf ? e : ie;
                 for (auto d = 0; d < 3; ++d)
                 {
-                    b[d][p] = min(b[d][lc], b[d][rc]);
-                    e[d][p] = max(e[d][lc], e[d][rc]);
+                    ib[d][p] = min(bl[d][lc], br[d][rc]);
+                    ie[d][p] = max(el[d][lc], er[d][rc]);
                 }
                 // Move up the binary tree
                 p = parent[p];
@@ -278,7 +286,13 @@ TEST_CASE("[gpu][geometry][impl] Bvh")
     // clang-format on
     using gpu::geometry::impl::Aabb;
     using gpu::geometry::impl::Bvh;
-    auto const assert_cube = [](Bvh const& bvh) {
+    auto Vmin                = V.topRows<3>().rowwise().minCoeff().eval();
+    auto Vmax                = V.topRows<3>().rowwise().maxCoeff().eval();
+    using Overlap            = cuda::std::pair<GpuIndex, GpuIndex>;
+    using Overlaps           = gpu::common::SynchronizedList<Overlap>;
+    using FOnOverlapDetected = gpu::geometry::impl::test::Bvh::FOnOverlapDetected;
+    using namespace math::linalg;
+    auto const fCheckCubeBvhTopology = [](Bvh const& bvh) {
         auto child = gpu::common::ToEigen(bvh.child).transpose().eval();
         CHECK_EQ(child.rows(), 4);
         CHECK_EQ(child.cols(), 2);
@@ -320,13 +334,34 @@ TEST_CASE("[gpu][geometry][impl] Bvh")
         bool const bTwoVisitsPerInternalNode = (visits.array() == 2).all();
         CHECK(bTwoVisitsPerInternalNode);
     };
-    GpuScalar constexpr expansion = std::numeric_limits<GpuScalar>::epsilon();
-    auto const Vmin          = (V.topRows<3>().rowwise().minCoeff().array() - expansion).eval();
-    auto const Vmax          = (V.topRows<3>().rowwise().maxCoeff().array() + expansion).eval();
-    using Overlap            = cuda::std::pair<GpuIndex, GpuIndex>;
-    using Overlaps           = gpu::common::SynchronizedList<Overlap>;
-    using FOnOverlapDetected = gpu::geometry::impl::test::Bvh::FOnOverlapDetected;
-    using namespace math::linalg;
+    auto const fCheckInternalBoundingBoxComputation = [](Bvh const& bvh, Aabb<3> const& aabbs) {
+        GpuIndexMatrixX child     = gpu::common::ToEigen(bvh.child);
+        GpuMatrixX ib             = gpu::common::ToEigen(bvh.iaabbs.b);
+        GpuMatrixX ie             = gpu::common::ToEigen(bvh.iaabbs.e);
+        GpuMatrixX b              = gpu::common::ToEigen(aabbs.b);
+        GpuMatrixX e              = gpu::common::ToEigen(aabbs.e);
+        auto const nInternalNodes = bvh.iaabbs.Size();
+        // For all internal nodes, check that their bounding box is the "union" of their children's
+        for (auto i = 0; i < nInternalNodes; ++i)
+        {
+            auto lc           = child(0, i);
+            auto rc           = child(1, i);
+            auto lmin         = lc < nInternalNodes ? ib.col(lc).head<3>().eval() :
+                                                      b.col(lc - nInternalNodes).head<3>().eval();
+            auto lmax         = lc < nInternalNodes ? ie.col(lc).head<3>().eval() :
+                                                      e.col(lc - nInternalNodes).head<3>().eval();
+            auto rmin         = rc < nInternalNodes ? ib.col(rc).head<3>().eval() :
+                                                      b.col(rc - nInternalNodes).head<3>().eval();
+            auto rmax         = rc < nInternalNodes ? ie.col(rc).head<3>().eval() :
+                                                      e.col(rc - nInternalNodes).head<3>().eval();
+            auto iminExpected = lmin.cwiseMin(rmin).head<3>().eval();
+            auto imaxExpected = lmax.cwiseMax(rmax).head<3>().eval();
+            auto imin         = ib.col(i).head<3>().eval();
+            auto imax         = ie.col(i).head<3>().eval();
+            CHECK(imin.isApprox(iminExpected));
+            CHECK(imax.isApprox(imaxExpected));
+        }
+    };
     SUBCASE("Connected non self-overlapping mesh")
     {
         // Arrange
@@ -341,8 +376,9 @@ TEST_CASE("[gpu][geometry][impl] Bvh")
         bvh.Build(aabbs, mini::FromEigen(Vmin), mini::FromEigen(Vmax));
         bvh.DetectOverlaps(aabbs, FOnOverlapDetected{CG.Raw(), overlaps.Raw()});
         // Assert
-        assert_cube(bvh);
         CHECK_EQ(overlaps.Size(), 0);
+        fCheckCubeBvhTopology(bvh);
+        fCheckInternalBoundingBoxComputation(bvh, aabbs);
     }
     SUBCASE("Disconnected mesh")
     {
@@ -365,7 +401,43 @@ TEST_CASE("[gpu][geometry][impl] Bvh")
         bvh.Build(aabbs, mini::FromEigen(Vmin), mini::FromEigen(Vmax));
         bvh.DetectOverlaps(aabbs, FOnOverlapDetected{CG.Raw(), overlaps.Raw()});
         // Assert
-        assert_cube(bvh);
         CHECK_EQ(overlaps.Size(), nExpectedOverlaps);
+        fCheckCubeBvhTopology(bvh);
+        fCheckInternalBoundingBoxComputation(bvh, aabbs);
+    }
+    SUBCASE("Non-overlapping line segment collection")
+    {
+        // Arrange
+        // Bunch of disconnected line segments that do not overlap.
+        V.setZero(3, 10);
+        for (auto d = 0; d < 3; ++d)
+        {
+            V.row(d).setLinSpaced(GpuScalar(0), GpuScalar(9));
+            V.row(d).reshaped(2, 5).row(1).array() -= GpuScalar(0.1);
+        }
+        Vmin = V.rowwise().minCoeff().eval();
+        Vmax = V.rowwise().maxCoeff().eval();
+        C.resize(4, 5);
+        C.topRows(2).reshaped().setLinSpaced(0, static_cast<GpuIndex>(V.cols() - 1));
+        C.bottomRows(2).reshaped().setLinSpaced(0, static_cast<GpuIndex>(V.cols() - 1));
+        // Swap some columns of C to make sure that the order of simplices does not matter.
+        C.col(0).swap(C.col(1));
+        C.col(2).swap(C.col(3));
+        gpu::common::Buffer<GpuScalar, 3> VG(V.cols());
+        gpu::common::ToBuffer(V, VG);
+        gpu::common::Buffer<GpuIndex, 4> CG(C.cols());
+        gpu::common::ToBuffer(C, CG);
+        Aabb<3> aabbs{VG, CG};
+        GpuIndex const nExpectedOverlaps{0};
+        Overlaps overlaps(2 * nExpectedOverlaps);
+
+        // Act
+        Bvh bvh(aabbs.Size());
+        bvh.Build(aabbs, mini::FromEigen(Vmin), mini::FromEigen(Vmax));
+        bvh.DetectOverlaps(aabbs, FOnOverlapDetected{CG.Raw(), overlaps.Raw()});
+
+        // Assert
+        CHECK_EQ(overlaps.Size(), nExpectedOverlaps);
+        fCheckInternalBoundingBoxComputation(bvh, aabbs);
     }
 }

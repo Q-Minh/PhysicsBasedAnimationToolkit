@@ -27,8 +27,8 @@ void BindIntegrator([[maybe_unused]] pybind11::module& m)
     pyb::class_<Integrator>(m, "Integrator")
         .def(
             pyb::init([](Data const& data,
-                         std::size_t nMaxVertexTetrahedronOverlaps,
-                         std::size_t nMaxVertexTriangleContacts) {
+                         GpuIndex nMaxVertexTetrahedronOverlaps,
+                         GpuIndex nMaxVertexTriangleContacts) {
                 return pbat::profiling::Profile("pbat.gpu.xpbd.Integrator.Construct", [&]() {
                     Integrator xpbd(
                         data,

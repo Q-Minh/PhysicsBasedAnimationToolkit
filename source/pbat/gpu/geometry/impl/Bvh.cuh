@@ -53,10 +53,7 @@ class Bvh
      * @param min World bounding box minimum
      * @param max World bounding box maximum
      */
-    void Build(
-        Aabb<kDims>& aabbs,
-        Morton::Bound const& min,
-        Morton::Bound const& max);
+    void Build(Aabb<kDims>& aabbs, Morton::Bound const& min, Morton::Bound const& max);
     /**
      * @brief
      *
@@ -66,7 +63,7 @@ class Bvh
      * f(GpuIndex,GpuIndex)
      */
     template <class FOnOverlapDetected>
-    void DetectOverlaps(Aabb<kDims>& aabbs, FOnOverlapDetected&& fOnOverlapDetected);
+    void DetectOverlaps(Aabb<kDims> const& aabbs, FOnOverlapDetected&& fOnOverlapDetected);
 
     common::Buffer<GpuIndex> inds;         ///< n leaf box indices
     common::Buffer<MortonCodeType> morton; ///< n morton codes of leaf boxes
@@ -86,7 +83,7 @@ class Bvh
 };
 
 template <class FOnOverlapDetected>
-inline void Bvh::DetectOverlaps(Aabb<kDims>& aabbs, FOnOverlapDetected&& fOnOverlapDetected)
+inline void Bvh::DetectOverlaps(Aabb<kDims> const& aabbs, FOnOverlapDetected&& fOnOverlapDetected)
 {
     auto const nLeafBoxes = aabbs.Size();
     thrust::for_each(

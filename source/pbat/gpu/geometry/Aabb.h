@@ -60,6 +60,12 @@ class Aabb
     /**
      * @brief
      *
+     * @return void*
+     */
+    [[maybe_unused]] void* Impl() const { return mImpl; }
+    /**
+     * @brief
+     *
      * @return GpuMatrixX
      */
     PBAT_API GpuMatrixX Lower() const;

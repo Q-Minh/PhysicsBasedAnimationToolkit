@@ -40,22 +40,22 @@ void BindSweepAndPrune([[maybe_unused]] pybind11::module& m)
             "Detect all overlaps between bounding boxes in aabbs.")
         .def(
             "sort_and_sweep",
-            [](SweepAndPrune& sap, GpuIndex n, Aabb& aabbs) {
+            [](SweepAndPrune& sap, Eigen::Ref<GpuIndexVectorX const> const& set, Aabb& aabbs) {
                 return pbat::profiling::Profile(
                     "pbat.gpu.geometry.SweepAndPrune.SortAndSweep",
                     [&]() {
-                        auto O = sap.SortAndSweep(n, aabbs);
+                        auto O = sap.SortAndSweep(set, aabbs);
                         return O;
                     });
             },
-            pyb::arg("n"),
+            pyb::arg("set"),
             pyb::arg("aabbs"),
             "Detect all overlaps between bounding boxes of subsets S1 (of size n) and S2 (of size "
             "#aabbs-n) of aabbs.\n"
             "Args:\n"
-            "n (int): Number of primitives in the first set [0, n)\n"
-            "aabbs (Aabb): AABBs over primitives of the first [0,n) and second set [n, "
-            "aabbs.size())");
+            "set (np.ndarray): Map of indices of aabbs to their corresponding set, i.e. set[i] = "
+            "j, where i is a box and j is its corresponding set.\n"
+            "aabbs (pbat.gpu.geometry.Aabb): Axis-aligned bounding boxes over primitives");
 #endif // PBAT_USE_CUDA
 }
 

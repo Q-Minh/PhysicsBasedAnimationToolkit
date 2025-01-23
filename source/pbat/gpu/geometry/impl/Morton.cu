@@ -1,3 +1,7 @@
+// clang-format off
+#include "pbat/gpu/DisableWarnings.h"
+// clang-format on
+
 #include "Morton.cuh"
 #include "pbat/HostDevice.h"
 #include "pbat/common/ConstexprFor.h"

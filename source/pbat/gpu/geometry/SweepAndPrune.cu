@@ -4,6 +4,7 @@
 
 #include "SweepAndPrune.h"
 #include "impl/SweepAndPrune.cuh"
+#include "pbat/gpu/common/Eigen.cuh"
 #include "pbat/gpu/common/SynchronizedList.cuh"
 
 #include <cuda/std/utility>
@@ -22,17 +23,21 @@ SweepAndPrune::SweepAndPrune(std::size_t nPrimitives, std::size_t nOverlaps)
         "Assumed that std::vector<cuda::std::pair<GpuIndex, GpuIndex>> is contiguous");
 }
 
-SweepAndPrune::SweepAndPrune(SweepAndPrune&& other) noexcept : mImpl(other.mImpl)
+SweepAndPrune::SweepAndPrune(SweepAndPrune&& other) noexcept
+    : mImpl(other.mImpl), mOverlaps(other.mOverlaps)
 {
-    other.mImpl = nullptr;
+    other.mImpl     = nullptr;
+    other.mOverlaps = nullptr;
 }
 
 SweepAndPrune& SweepAndPrune::operator=(SweepAndPrune&& other) noexcept
 {
-    if (mImpl != nullptr)
+    if (mImpl != nullptr or mOverlaps != nullptr)
         Deallocate();
-    mImpl       = other.mImpl;
-    other.mImpl = nullptr;
+    mImpl           = other.mImpl;
+    mOverlaps       = other.mOverlaps;
+    other.mImpl     = nullptr;
+    other.mOverlaps = nullptr;
     return *this;
 }
 
@@ -48,6 +53,7 @@ GpuIndexMatrixX SweepAndPrune::SortAndSweep(Aabb& aabbs)
     using Overlap      = cuda::std::pair<GpuIndex, GpuIndex>;
     using OverlapPairs = common::SynchronizedList<Overlap>;
     auto* overlaps     = static_cast<OverlapPairs*>(mOverlaps);
+    overlaps->Clear();
     mImpl->SortAndSweep(
         *aabbImpl,
         [o = overlaps->Raw()] PBAT_DEVICE(GpuIndex si, GpuIndex sj) mutable {
@@ -59,7 +65,8 @@ GpuIndexMatrixX SweepAndPrune::SortAndSweep(Aabb& aabbs)
     return Eigen::Map<GpuIndexMatrixX>(data, 2, nOverlaps);
 }
 
-PBAT_API GpuIndexMatrixX SweepAndPrune::SortAndSweep(GpuIndex n, Aabb& aabbs)
+PBAT_API GpuIndexMatrixX
+SweepAndPrune::SortAndSweep(Eigen::Ref<GpuIndexVectorX const> const& set, Aabb& aabbs)
 {
     auto constexpr kDims = impl::SweepAndPrune::kDims;
     if (aabbs.Dimensions() != kDims)
@@ -67,17 +74,21 @@ PBAT_API GpuIndexMatrixX SweepAndPrune::SortAndSweep(GpuIndex n, Aabb& aabbs)
         throw std::invalid_argument(
             "Expected AABBs to have 3 dimensions, but got " + std::to_string(aabbs.Dimensions()));
     }
-    auto* aabbImpl     = static_cast<impl::Aabb<kDims>*>(aabbs.Impl());
+    auto* aabbImpl = static_cast<impl::Aabb<kDims>*>(aabbs.Impl());
+    // NOTE:
+    // Unfortunately, we have to allocate on-the-fly here.
+    // We should define a type-erased CPU wrapper over gpu::common::Buffer to prevent this.
+    gpu::common::Buffer<GpuIndex> S(set.size());
+    gpu::common::ToBuffer(set, S);
     using Overlap      = cuda::std::pair<GpuIndex, GpuIndex>;
     using OverlapPairs = common::SynchronizedList<Overlap>;
     auto* overlaps     = static_cast<OverlapPairs*>(mOverlaps);
+    overlaps->Clear();
     mImpl->SortAndSweep(
         *aabbImpl,
-        [n, o = overlaps->Raw()] PBAT_DEVICE(GpuIndex si, GpuIndex sj) mutable {
-            if (si < n and sj >= n)
-                o.Append(cuda::std::make_pair(si, sj - n));
-            if (si >= n and sj < n)
-                o.Append(cuda::std::make_pair(sj, si - n));
+        [S = S.Raw(), o = overlaps->Raw()] PBAT_DEVICE(GpuIndex si, GpuIndex sj) mutable {
+            if (S[si] != S[sj])
+                o.Append(cuda::std::make_pair(si, sj));
         });
     auto O         = overlaps->Get();
     auto nOverlaps = static_cast<GpuIndex>(O.size());
@@ -147,10 +158,16 @@ TEST_CASE("[gpu][geometry] SweepAndPrune")
     Aabb aabbs(3, nEdges + nTriangles);
     aabbs.Construct(L, U);
     GpuIndexMatrixX Oexpected(2, 2);
-    Oexpected << 0, 1, 0, 0;
+    // clang-format off
+    Oexpected << nEdges+0, nEdges+0, /*face 0 = nEdges+0*/
+                 1, 0;
+    // clang-format on
     // Act
     gpu::geometry::SweepAndPrune sap(nEdges + nTriangles, 4);
-    GpuIndexMatrixX O = sap.SortAndSweep(nEdges, aabbs);
+    GpuIndexVectorX set(nEdges + nTriangles);
+    set.segment(0, nEdges).setZero();
+    set.segment(nEdges, nTriangles).setOnes();
+    GpuIndexMatrixX O = sap.SortAndSweep(set, aabbs);
     // Assert
     CHECK_EQ(O.rows(), 2);
     CHECK_EQ(O.cols(), Oexpected.cols());
@@ -159,7 +176,8 @@ TEST_CASE("[gpu][geometry] SweepAndPrune")
     {
         // Find overlap in expected overlaps
         for (auto oe = 0; oe < Oexpected.cols(); ++oe)
-            if (O(0, o) == Oexpected(0, oe) and O(1, o) == Oexpected(1, oe))
+            if ((O(0, o) == Oexpected(0, oe) and O(1, o) == Oexpected(1, oe)) or
+                (O(0, o) == Oexpected(1, oe) and O(1, o) == Oexpected(0, oe)))
                 ++detected(oe);
     }
     bool const bAllOverlapsDetectedOnce = (detected.array() == GpuIndex(1)).all();
