@@ -2,15 +2,12 @@ target_sources(PhysicsBasedAnimationToolkit_Python
     PUBLIC
     FILE_SET api
     FILES
-    "Gpu.h"
+    "Buffer.h"
+    "Common.h"
 )
 
 target_sources(PhysicsBasedAnimationToolkit_Python
     PRIVATE
-    "Gpu.cpp"
+    "Buffer.cpp"
+    "Common.cpp"
 )
-
-add_subdirectory(common)
-add_subdirectory(geometry)
-add_subdirectory(xpbd)
-add_subdirectory(vbd)

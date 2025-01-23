@@ -39,8 +39,8 @@ SweepAndPrune& SweepAndPrune::operator=(SweepAndPrune&& other) noexcept
         mOverlaps       = other.mOverlaps;
         other.mImpl     = nullptr;
         other.mOverlaps = nullptr;
-        return *this;
     }
+    return *this;
 }
 
 GpuIndexMatrixX SweepAndPrune::SortAndSweep(Aabb& aabbs)
@@ -67,8 +67,7 @@ GpuIndexMatrixX SweepAndPrune::SortAndSweep(Aabb& aabbs)
     return Eigen::Map<GpuIndexMatrixX>(data, 2, nOverlaps);
 }
 
-PBAT_API GpuIndexMatrixX
-SweepAndPrune::SortAndSweep(Eigen::Ref<GpuIndexVectorX const> const& set, Aabb& aabbs)
+PBAT_API GpuIndexMatrixX SweepAndPrune::SortAndSweep(common::Buffer const& set, Aabb& aabbs)
 {
     auto constexpr kDims = impl::geometry::SweepAndPrune::kDims;
     if (aabbs.Dimensions() != kDims)
@@ -76,19 +75,24 @@ SweepAndPrune::SortAndSweep(Eigen::Ref<GpuIndexVectorX const> const& set, Aabb& 
         throw std::invalid_argument(
             "Expected AABBs to have 3 dimensions, but got " + std::to_string(aabbs.Dimensions()));
     }
-    auto* aabbImpl = static_cast<impl::geometry::Aabb<kDims>*>(aabbs.Impl());
+    if (set.Size() != aabbs.Size() and set.Dims() != 1 and
+        set.Type() != common::Buffer::EType::int32)
+    {
+        throw std::invalid_argument(
+            "Expected set to have the same size as AABBs and be a 1D vector of type int32");
+    }
+    auto* aabbImpl      = static_cast<impl::geometry::Aabb<kDims>*>(aabbs.Impl());
+    auto const* setImpl = static_cast<impl::common::Buffer<GpuIndex> const*>(set.Impl());
     // NOTE:
     // Unfortunately, we have to allocate on-the-fly here.
     // We should define a type-erased CPU wrapper over gpu::common::Buffer to prevent this.
-    gpu::impl::common::Buffer<GpuIndex> S(set.size());
-    gpu::impl::common::ToBuffer(set, S);
     using Overlap      = cuda::std::pair<GpuIndex, GpuIndex>;
     using OverlapPairs = impl::common::SynchronizedList<Overlap>;
     auto* overlaps     = static_cast<OverlapPairs*>(mOverlaps);
     overlaps->Clear();
     mImpl->SortAndSweep(
         *aabbImpl,
-        [S = S.Raw(), o = overlaps->Raw()] PBAT_DEVICE(GpuIndex si, GpuIndex sj) mutable {
+        [S = setImpl->Raw(), o = overlaps->Raw()] PBAT_DEVICE(GpuIndex si, GpuIndex sj) mutable {
             if (S[si] != S[sj])
                 o.Append(cuda::std::make_pair(si, sj));
         });
@@ -169,7 +173,8 @@ TEST_CASE("[gpu][geometry] SweepAndPrune")
     GpuIndexVectorX set(nEdges + nTriangles);
     set.segment(0, nEdges).setZero();
     set.segment(nEdges, nTriangles).setOnes();
-    GpuIndexMatrixX O = sap.SortAndSweep(set, aabbs);
+    gpu::common::Buffer setBuffer(set);
+    GpuIndexMatrixX O = sap.SortAndSweep(setBuffer, aabbs);
     // Assert
     CHECK_EQ(O.rows(), 2);
     CHECK_EQ(O.cols(), Oexpected.cols());

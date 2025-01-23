@@ -57,6 +57,28 @@ Buffer& Buffer::operator=(Buffer&& other) noexcept
     return *this;
 }
 
+#define DEFINE_BUFFER_COPY_CONSTRUCTOR(T, Tenum)                                               \
+    Buffer::Buffer(Data<T> const& data)                                                        \
+        : Buffer(                                                                              \
+              (data.rows() == 1 or data.cols() == 1) ? 1 : static_cast<GpuIndex>(data.rows()), \
+              (data.rows() == 1 or data.cols() == 1) ? static_cast<GpuIndex>(data.size()) :    \
+                                                       static_cast<GpuIndex>(data.cols()),     \
+              Tenum)                                                                           \
+    {                                                                                          \
+        *this = data;                                                                          \
+    }
+
+DEFINE_BUFFER_COPY_CONSTRUCTOR(std::uint8_t, EType::uint8);
+DEFINE_BUFFER_COPY_CONSTRUCTOR(std::uint16_t, EType::uint16);
+DEFINE_BUFFER_COPY_CONSTRUCTOR(std::uint32_t, EType::uint32);
+DEFINE_BUFFER_COPY_CONSTRUCTOR(std::uint64_t, EType::uint64);
+DEFINE_BUFFER_COPY_CONSTRUCTOR(std::int8_t, EType::int8);
+DEFINE_BUFFER_COPY_CONSTRUCTOR(std::int16_t, EType::int16);
+DEFINE_BUFFER_COPY_CONSTRUCTOR(std::int32_t, EType::int32);
+DEFINE_BUFFER_COPY_CONSTRUCTOR(std::int64_t, EType::int64);
+DEFINE_BUFFER_COPY_CONSTRUCTOR(float, EType::float32);
+DEFINE_BUFFER_COPY_CONSTRUCTOR(double, EType::float64);
+
 #define DEFINE_BUFFER_ASSIGNMENT_OPERATOR(T)                                              \
     Buffer& Buffer::operator=(Data<T> const& data)                                        \
     {                                                                                     \
@@ -258,16 +280,26 @@ TEST_CASE("[gpu][common] Buffer")
         CHECK(buf.Type() == Buffer::EType::float32);
         CHECK(buf.Size() == 10);
     }
-    SUBCASE("Buffer assignment")
+    SUBCASE("Buffer constructor")
     {
-        Buffer buf(1, 10, Buffer::EType::float32);
-        Eigen::MatrixXf A = Eigen::MatrixXf::Random(10, 1);
-        buf               = A;
-        CHECK(buf.Dims() == 1);
+        GpuMatrixX A = GpuMatrixX::Random(2, 10);
+        Buffer buf(A);
+        CHECK(buf.Dims() == 2);
         CHECK(buf.Type() == Buffer::EType::float32);
         CHECK(buf.Size() == 10);
-        impl::common::Buffer<float, 1>* impl =
-            static_cast<impl::common::Buffer<float, 1>*>(buf.Impl());
+        auto* impl    = static_cast<impl::common::Buffer<float, 2>*>(buf.Impl());
+        GpuMatrixX AG = impl::common::ToEigen(*impl);
+        CHECK(AG.isApprox(A));
+    }
+    SUBCASE("Buffer assignment")
+    {
+        Buffer buf(2, 10, Buffer::EType::float32);
+        GpuMatrixX A = GpuMatrixX::Random(2, 10);
+        buf          = A;
+        CHECK(buf.Dims() == 2);
+        CHECK(buf.Type() == Buffer::EType::float32);
+        CHECK(buf.Size() == 10);
+        auto* impl    = static_cast<impl::common::Buffer<float, 2>*>(buf.Impl());
         GpuMatrixX AG = impl::common::ToEigen(*impl);
         CHECK(AG.isApprox(A));
     }

@@ -87,7 +87,7 @@ GpuIndexMatrixX Bvh::DetectOverlaps(Aabb const& aabbs)
     return Eigen::Map<GpuIndexMatrixX>(data, 2, nOverlaps);
 }
 
-GpuIndexMatrixX Bvh::DetectOverlaps(Eigen::Ref<GpuIndexVectorX const> const& set, Aabb const& aabbs)
+GpuIndexMatrixX Bvh::DetectOverlaps(common::Buffer const& set, Aabb const& aabbs)
 {
     if (aabbs.Dimensions() != impl::geometry::Bvh::kDims)
     {
@@ -95,18 +95,21 @@ GpuIndexMatrixX Bvh::DetectOverlaps(Eigen::Ref<GpuIndexVectorX const> const& set
             "Expected AABBs to have " + std::to_string(impl::geometry::Bvh::kDims) +
             " dimensions, but got " + std::to_string(aabbs.Dimensions()));
     }
-    // NOTE:
-    // Unfortunately, we have to allocate on-the-fly here.
-    // We should define a type-erased CPU wrapper over gpu::common::Buffer to prevent this.
-    impl::common::Buffer<GpuIndex> S(set.size());
-    impl::common::ToBuffer(set, S);
+    if (set.Size() != aabbs.Size() and set.Dims() != 1 and
+        set.Type() != common::Buffer::EType::int32)
+    {
+        throw std::invalid_argument(
+            "Expected set to have the same size as AABBs and be a 1D vector of type int32");
+    }
+    auto* aabbImpl = static_cast<impl::geometry::Aabb<impl::geometry::Bvh::kDims>*>(aabbs.Impl());
+    auto const* setImpl = static_cast<impl::common::Buffer<GpuIndex> const*>(set.Impl());
     auto overlaps =
         static_cast<impl::common::SynchronizedList<cuda::std::pair<GpuIndex, GpuIndex>>*>(
             mOverlaps);
     overlaps->Clear();
     mImpl->DetectOverlaps(
-        *static_cast<impl::geometry::Aabb<impl::geometry::Bvh::kDims>*>(aabbs.Impl()),
-        [S = S.Raw(), o = overlaps->Raw()] PBAT_DEVICE(GpuIndex si, GpuIndex sj) mutable {
+        *aabbImpl,
+        [S = setImpl->Raw(), o = overlaps->Raw()] PBAT_DEVICE(GpuIndex si, GpuIndex sj) mutable {
             if (S[si] != S[sj])
                 o.Append(cuda::std::make_pair(si, sj));
         });
@@ -237,11 +240,12 @@ TEST_CASE("[gpu][geometry] Bvh")
     GpuIndexVectorX set(nEdges + nTriangles);
     set.segment(0, nEdges).setZero();
     set.segment(nEdges, nTriangles).setOnes();
+    gpu::common::Buffer setBuffer(set);
 
     // Act
     gpu::geometry::Bvh bvh(nEdges + nTriangles, 4);
     bvh.Build(aabbs, wmin, wmax);
-    GpuIndexMatrixX O = bvh.DetectOverlaps(set, aabbs);
+    GpuIndexMatrixX O = bvh.DetectOverlaps(setBuffer, aabbs);
 
     // Assert
     CHECK_EQ(O.rows(), 2);

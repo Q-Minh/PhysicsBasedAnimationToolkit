@@ -23,6 +23,17 @@ class Buffer
     PBAT_API Buffer(Buffer&& other) noexcept;
     PBAT_API Buffer& operator=(Buffer&& other) noexcept;
 
+    PBAT_API Buffer(Data<std::uint8_t> const& data);
+    PBAT_API Buffer(Data<std::uint16_t> const& data);
+    PBAT_API Buffer(Data<std::uint32_t> const& data);
+    PBAT_API Buffer(Data<std::uint64_t> const& data);
+    PBAT_API Buffer(Data<std::int8_t> const& data);
+    PBAT_API Buffer(Data<std::int16_t> const& data);
+    PBAT_API Buffer(Data<std::int32_t> const& data);
+    PBAT_API Buffer(Data<std::int64_t> const& data);
+    PBAT_API Buffer(Data<float> const& data);
+    PBAT_API Buffer(Data<double> const& data);
+
     PBAT_API Buffer& operator=(Data<std::uint8_t> const& data);
     PBAT_API Buffer& operator=(Data<std::uint16_t> const& data);
     PBAT_API Buffer& operator=(Data<std::uint32_t> const& data);

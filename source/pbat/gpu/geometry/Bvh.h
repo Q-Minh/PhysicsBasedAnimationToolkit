@@ -5,6 +5,7 @@
 #include "PhysicsBasedAnimationToolkitExport.h"
 #include "pbat/geometry/Morton.h"
 #include "pbat/gpu/Aliases.h"
+#include "pbat/gpu/common/Buffer.h"
 
 #include <Eigen/Core>
 #include <cstddef>
@@ -56,12 +57,11 @@ class Bvh
      * @brief
      *
      * @param set |#aabbs| map of indices of aabbs to their corresponding set, i.e. set[i] = j means
-     * that aabb i belongs to set j.
+     * that aabb i belongs to set j. Must be a 1D Buffer of type GpuIndex of the same size as aabbs.
      * @param aabbs
      * @return 2x|#overlaps| matrix of overlap pairs between boxes of different sets
      */
-    PBAT_API GpuIndexMatrixX
-    DetectOverlaps(Eigen::Ref<GpuIndexVectorX const> const& set, Aabb const& aabbs);
+    PBAT_API GpuIndexMatrixX DetectOverlaps(common::Buffer const& set, Aabb const& aabbs);
     /**
      * @brief BVH nodes' box minimums
      * @return

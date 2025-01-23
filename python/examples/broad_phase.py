@@ -39,6 +39,7 @@ if __name__ == "__main__":
     parent = np.hstack(
         [np.zeros(n_tets, dtype=np.int32), np.ones(n_tets, dtype=np.int32)]
     )
+    parent = pbat.gpu.common.Buffer(parent)
     C = np.vstack([C, C + V.shape[0]]).astype(np.int32)
     sap = pbat.gpu.geometry.SweepAndPrune(C.shape[0], 24 * C.shape[0])
     bvh = pbat.gpu.geometry.Bvh(C.shape[0], 24 * C.shape[0])
@@ -48,7 +49,7 @@ if __name__ == "__main__":
 
     # Setup animation
     V = np.vstack([V, V])
-    height = 4
+    height = 3
     vimin = V[:n_pts, -1].argmin()
     vimax = V[:n_pts, -1].argmax()
     zmin = V[vimin, -1]

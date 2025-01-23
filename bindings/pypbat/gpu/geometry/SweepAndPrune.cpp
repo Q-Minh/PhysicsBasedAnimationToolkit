@@ -16,6 +16,7 @@ void BindSweepAndPrune([[maybe_unused]] pybind11::module& m)
 #ifdef PBAT_USE_CUDA
     namespace pyb = pybind11;
     using namespace pbat::gpu::geometry;
+    using pbat::gpu::common::Buffer;
     pyb::class_<SweepAndPrune>(m, "SweepAndPrune")
         .def(
             pyb::init([](std::size_t maxBoxes, std::size_t maxOverlaps) {
@@ -40,7 +41,7 @@ void BindSweepAndPrune([[maybe_unused]] pybind11::module& m)
             "Detect all overlaps between bounding boxes in aabbs.")
         .def(
             "sort_and_sweep",
-            [](SweepAndPrune& sap, Eigen::Ref<GpuIndexVectorX const> const& set, Aabb& aabbs) {
+            [](SweepAndPrune& sap, Buffer const& set, Aabb& aabbs) {
                 return pbat::profiling::Profile(
                     "pbat.gpu.geometry.SweepAndPrune.SortAndSweep",
                     [&]() {

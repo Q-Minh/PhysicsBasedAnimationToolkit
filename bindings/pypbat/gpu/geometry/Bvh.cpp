@@ -15,6 +15,7 @@ void BindBvh([[maybe_unused]] pybind11::module& m)
 #ifdef PBAT_USE_CUDA
     namespace pyb = pybind11;
     using namespace pbat::gpu::geometry;
+    using pbat::gpu::common::Buffer;
     pyb::class_<Bvh>(m, "Bvh")
         .def(
             pyb::init([](GpuIndex nPrimitives, GpuIndex nOverlaps) {
@@ -61,7 +62,7 @@ void BindBvh([[maybe_unused]] pybind11::module& m)
             "aabbs (pbat.gpu.geometry.Aabb): Axis-aligned bounding boxes over primitives")
         .def(
             "detect_overlaps",
-            [](Bvh& bvh, Eigen::Ref<GpuIndexVectorX const> const& set, Aabb const& aabbs) {
+            [](Bvh& bvh, Buffer const& set, Aabb const& aabbs) {
                 return pbat::profiling::Profile("pbat.gpu.geometry.Bvh.DetectOverlaps", [&]() {
                     return bvh.DetectOverlaps(set, aabbs);
                 });
