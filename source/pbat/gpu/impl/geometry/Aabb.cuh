@@ -7,8 +7,8 @@
 #include "pbat/math/linalg/mini/Matrix.h"
 #include "pbat/math/linalg/mini/UnaryOperations.h"
 
+#include <algorithm>
 #include <cstddef>
-#include <limits>
 #include <thrust/execution_policy.h>
 #include <thrust/for_each.h>
 #include <thrust/iterator/counting_iterator.h>
@@ -32,12 +32,13 @@ struct Aabb
     void Resize(GpuIndex nBoxes);
 
     template <class FLowerUpper>
-    void Construct(FLowerUpper&& fLowerUpper);
+    void Construct(FLowerUpper&& fLowerUpper, GpuIndex first = 0, GpuIndex last = -1);
 
     template <auto kSimplexVerts>
     void Construct(
         common::Buffer<GpuScalar, kDims> const& V,
-        common::Buffer<GpuIndex, kSimplexVerts> const& S);
+        common::Buffer<GpuIndex, kSimplexVerts> const& S,
+        GpuIndex start = 0);
 
     GpuIndex Size() const { return static_cast<GpuIndex>(b.Size()); }
 
@@ -55,21 +56,22 @@ inline Aabb<kDims>::Aabb(
 
 template <auto kDims>
 template <class FLowerUpper>
-inline void Aabb<kDims>::Construct(FLowerUpper&& fLowerUpper)
+inline void Aabb<kDims>::Construct(FLowerUpper&& fLowerUpper, GpuIndex first, GpuIndex last)
 {
     using namespace pbat::math::linalg;
     auto const nBoxes = static_cast<GpuIndex>(b.Size());
+    last              = last < 0 ? nBoxes : last;
     thrust::for_each(
         thrust::device,
-        thrust::counting_iterator<GpuIndex>(0),
-        thrust::counting_iterator<GpuIndex>(nBoxes),
-        [b           = b.Raw(),
+        thrust::counting_iterator<GpuIndex>(first),
+        thrust::counting_iterator<GpuIndex>(last),
+        [first,
+         b           = b.Raw(),
          e           = e.Raw(),
-         fLowerUpper = std::forward<FLowerUpper>(fLowerUpper)] PBAT_DEVICE(GpuIndex p) {
-            pbat::common::ForRange<0, kDims>([b, e, p, LU = fLowerUpper(p)] PBAT_DEVICE<auto d>() {
-                b[d][p] = LU(d, 0);
-                e[d][p] = LU(d, 1);
-            });
+         fLowerUpper = std::forward<FLowerUpper>(fLowerUpper)] PBAT_DEVICE(GpuIndex i) {
+            mini::SMatrix<GpuScalar, kDims, 2> LU = fLowerUpper(i - first);
+            mini::ToBuffers(LU.Col(0), b, i);
+            mini::ToBuffers(LU.Col(1), e, i);
         });
 }
 
@@ -77,21 +79,26 @@ template <auto kDims>
 template <auto kSimplexVerts>
 inline void Aabb<kDims>::Construct(
     common::Buffer<GpuScalar, kDims> const& V,
-    common::Buffer<GpuIndex, kSimplexVerts> const& S)
+    common::Buffer<GpuIndex, kSimplexVerts> const& S,
+    GpuIndex start)
 {
     using namespace pbat::math::linalg;
-    auto const nBoxes = static_cast<GpuIndex>(S.Size());
-    Resize(nBoxes);
+    auto const nSimplices = static_cast<GpuIndex>(S.Size());
+    auto const nBoxes     = Size();
+    if (nBoxes < nSimplices)
+        Resize(nSimplices);
+    auto const end = std::min(start + nSimplices, nBoxes);
     thrust::for_each(
         thrust::device,
-        thrust::counting_iterator(0),
-        thrust::counting_iterator(nBoxes),
-        [b = b.Raw(), e = e.Raw(), V = V.Raw(), S = S.Raw()] PBAT_DEVICE(GpuIndex s) {
+        thrust::counting_iterator(start),
+        thrust::counting_iterator(end),
+        [start, b = b.Raw(), e = e.Raw(), V = V.Raw(), S = S.Raw()] PBAT_DEVICE(GpuIndex i) {
+            auto s    = i - start;
             auto inds = mini::FromBuffers<kSimplexVerts, 1>(S, s);
             auto P    = mini::FromBuffers(V, inds.Transpose());
-            pbat::common::ForRange<0, kDims>([b, e, s, &P] PBAT_DEVICE<auto d>() {
-                b[d][s] = Min(P.Row(d));
-                e[d][s] = Max(P.Row(d));
+            pbat::common::ForRange<0, kDims>([i, b, e, &P] PBAT_DEVICE<auto d>() {
+                b[d][i] = Min(P.Row(d));
+                e[d][i] = Max(P.Row(d));
             });
         });
 }
