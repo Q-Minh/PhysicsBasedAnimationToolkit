@@ -33,13 +33,13 @@ struct Aabb
     void Resize(GpuIndex nBoxes);
 
     template <class FLowerUpper>
-    void Construct(FLowerUpper&& fLowerUpper, GpuIndex first = 0, GpuIndex last = -1);
+    void Construct(FLowerUpper&& fLowerUpper, GpuIndex begin = 0, GpuIndex end = -1);
 
     template <auto kSimplexVerts>
     void Construct(
         common::Buffer<GpuScalar, kDims> const& V,
         common::Buffer<GpuIndex, kSimplexVerts> const& S,
-        GpuIndex start = 0);
+        GpuIndex begin = 0);
 
     GpuIndex Size() const { return static_cast<GpuIndex>(b.Size()); }
 
@@ -57,21 +57,21 @@ inline Aabb<kDims>::Aabb(
 
 template <auto kDims>
 template <class FLowerUpper>
-inline void Aabb<kDims>::Construct(FLowerUpper&& fLowerUpper, GpuIndex first, GpuIndex last)
+inline void Aabb<kDims>::Construct(FLowerUpper&& fLowerUpper, GpuIndex begin, GpuIndex end)
 {
     PBAT_PROFILE_NAMED_CUDA_HOST_SCOPE_START(ctx, "pbat.gpu.impl.geometry.Aabb.Construct");
     using namespace pbat::math::linalg;
     auto const nBoxes = static_cast<GpuIndex>(b.Size());
-    last              = last < 0 ? nBoxes : last;
+    end               = end < 0 ? nBoxes : end;
     thrust::for_each(
         thrust::device,
-        thrust::counting_iterator<GpuIndex>(first),
-        thrust::counting_iterator<GpuIndex>(last),
-        [first,
+        thrust::counting_iterator<GpuIndex>(begin),
+        thrust::counting_iterator<GpuIndex>(end),
+        [begin,
          b           = b.Raw(),
          e           = e.Raw(),
          fLowerUpper = std::forward<FLowerUpper>(fLowerUpper)] PBAT_DEVICE(GpuIndex i) {
-            mini::SMatrix<GpuScalar, kDims, 2> LU = fLowerUpper(i - first);
+            mini::SMatrix<GpuScalar, kDims, 2> LU = fLowerUpper(i - begin);
             mini::ToBuffers(LU.Col(0), b, i);
             mini::ToBuffers(LU.Col(1), e, i);
         });
@@ -83,7 +83,7 @@ template <auto kSimplexVerts>
 inline void Aabb<kDims>::Construct(
     common::Buffer<GpuScalar, kDims> const& V,
     common::Buffer<GpuIndex, kSimplexVerts> const& S,
-    GpuIndex start)
+    GpuIndex begin)
 {
     PBAT_PROFILE_NAMED_CUDA_HOST_SCOPE_START(ctx, "pbat.gpu.impl.geometry.Aabb.Construct");
     using namespace pbat::math::linalg;
@@ -91,13 +91,13 @@ inline void Aabb<kDims>::Construct(
     auto const nBoxes     = Size();
     if (nBoxes < nSimplices)
         Resize(nSimplices);
-    auto const end = std::min(start + nSimplices, nBoxes);
+    auto const end = std::min(begin + nSimplices, nBoxes);
     thrust::for_each(
         thrust::device,
-        thrust::counting_iterator(start),
+        thrust::counting_iterator(begin),
         thrust::counting_iterator(end),
-        [start, b = b.Raw(), e = e.Raw(), V = V.Raw(), S = S.Raw()] PBAT_DEVICE(GpuIndex i) {
-            auto s    = i - start;
+        [begin, b = b.Raw(), e = e.Raw(), V = V.Raw(), S = S.Raw()] PBAT_DEVICE(GpuIndex i) {
+            auto s    = i - begin;
             auto inds = mini::FromBuffers<kSimplexVerts, 1>(S, s);
             auto P    = mini::FromBuffers(V, inds.Transpose());
             pbat::common::ForRange<0, kDims>([i, b, e, &P] PBAT_DEVICE<auto d>() {
