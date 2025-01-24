@@ -5,6 +5,7 @@
 #include "Integrator.cuh"
 #include "pbat/gpu/impl/common/Eigen.cuh"
 #include "pbat/math/linalg/mini/Mini.h"
+#include "pbat/profiling/Profiling.h"
 #include "pbat/sim/xpbd/Kernels.h"
 
 #include <thrust/async/for_each.h>
@@ -91,6 +92,8 @@ Integrator::Integrator(
 
 void Integrator::Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps)
 {
+    PBAT_PROFILE_NAMED_CUDA_HOST_SCOPE_START(ctx, "pbat.gpu.impl.xpbd.Integrator.Step");
+
     GpuScalar const sdt       = dt / static_cast<GpuScalar>(substeps);
     GpuScalar const sdt2      = sdt * sdt;
     GpuIndex const nParticles = static_cast<GpuIndex>(NumberOfParticles());
@@ -234,6 +237,8 @@ void Integrator::Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps)
             });
         e.wait();
     }
+    
+    PBAT_PROFILE_CUDA_HOST_SCOPE_END(ctx);
 }
 
 std::size_t Integrator::NumberOfParticles() const

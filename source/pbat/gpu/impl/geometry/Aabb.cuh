@@ -6,6 +6,7 @@
 #include "pbat/gpu/impl/common/Buffer.cuh"
 #include "pbat/math/linalg/mini/Matrix.h"
 #include "pbat/math/linalg/mini/UnaryOperations.h"
+#include "pbat/profiling/Profiling.h"
 
 #include <algorithm>
 #include <cstddef>
@@ -58,6 +59,7 @@ template <auto kDims>
 template <class FLowerUpper>
 inline void Aabb<kDims>::Construct(FLowerUpper&& fLowerUpper, GpuIndex first, GpuIndex last)
 {
+    PBAT_PROFILE_NAMED_CUDA_HOST_SCOPE_START(ctx, "pbat.gpu.impl.geometry.Aabb.Construct");
     using namespace pbat::math::linalg;
     auto const nBoxes = static_cast<GpuIndex>(b.Size());
     last              = last < 0 ? nBoxes : last;
@@ -73,6 +75,7 @@ inline void Aabb<kDims>::Construct(FLowerUpper&& fLowerUpper, GpuIndex first, Gp
             mini::ToBuffers(LU.Col(0), b, i);
             mini::ToBuffers(LU.Col(1), e, i);
         });
+    PBAT_PROFILE_CUDA_HOST_SCOPE_END(ctx);
 }
 
 template <auto kDims>
@@ -82,6 +85,7 @@ inline void Aabb<kDims>::Construct(
     common::Buffer<GpuIndex, kSimplexVerts> const& S,
     GpuIndex start)
 {
+    PBAT_PROFILE_NAMED_CUDA_HOST_SCOPE_START(ctx, "pbat.gpu.impl.geometry.Aabb.Construct");
     using namespace pbat::math::linalg;
     auto const nSimplices = static_cast<GpuIndex>(S.Size());
     auto const nBoxes     = Size();
@@ -101,13 +105,16 @@ inline void Aabb<kDims>::Construct(
                 e[d][i] = Max(P.Row(d));
             });
         });
+    PBAT_PROFILE_CUDA_HOST_SCOPE_END(ctx);
 }
 
 template <auto kDims>
 inline void Aabb<kDims>::Resize(GpuIndex nBoxes)
 {
+    PBAT_PROFILE_NAMED_CUDA_HOST_SCOPE_START(ctx, "pbat.gpu.impl.geometry.Aabb.Resize");
     b.Resize(nBoxes);
     e.Resize(nBoxes);
+    PBAT_PROFILE_CUDA_HOST_SCOPE_END(ctx);
 }
 
 } // namespace geometry

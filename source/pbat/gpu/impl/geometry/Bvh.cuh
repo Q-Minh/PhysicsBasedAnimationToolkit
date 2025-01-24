@@ -9,6 +9,7 @@
 #include "pbat/gpu/Aliases.h"
 #include "pbat/gpu/impl/common/Buffer.cuh"
 #include "pbat/math/linalg/mini/Mini.h"
+#include "pbat/profiling/Profiling.h"
 
 #include <exception>
 #include <string>
@@ -85,6 +86,7 @@ class Bvh
 template <class FOnOverlapDetected>
 inline void Bvh::DetectOverlaps(Aabb<kDims> const& aabbs, FOnOverlapDetected&& fOnOverlapDetected)
 {
+    PBAT_PROFILE_NAMED_CUDA_HOST_SCOPE_START(ctx, "pbat.gpu.impl.geometry.Bvh.DetectOverlaps");
     auto const nLeafBoxes = aabbs.Size();
     thrust::for_each(
         thrust::device,
@@ -156,6 +158,7 @@ inline void Bvh::DetectOverlaps(Aabb<kDims> const& aabbs, FOnOverlapDetected&& f
                     stack.Push(rc);
             } while (not stack.IsEmpty());
         });
+    PBAT_PROFILE_CUDA_HOST_SCOPE_END(ctx);
 }
 
 } // namespace geometry

@@ -2,7 +2,6 @@
 
 #include <pbat/gpu/geometry/Aabb.h>
 #include <pbat/gpu/geometry/Bvh.h>
-#include <pbat/profiling/Profiling.h>
 #include <pybind11/eigen.h>
 
 namespace pbat {
@@ -18,26 +17,14 @@ void BindBvh([[maybe_unused]] pybind11::module& m)
     using pbat::gpu::common::Buffer;
     pyb::class_<Bvh>(m, "Bvh")
         .def(
-            pyb::init([](GpuIndex nPrimitives, GpuIndex nOverlaps) {
-                return pbat::profiling::Profile("pbat.gpu.geometry.Bvh.Construct", [&]() {
-                    Bvh bvh(nPrimitives, nOverlaps);
-                    return bvh;
-                });
-            }),
+            pyb::init<GpuIndex, GpuIndex>(),
             pyb::arg("max_boxes"),
             pyb::arg("max_overlaps"),
             "Allocate BVH on GPU for max_boxes primitives, which can detect a maximum of "
             "max_overlaps box overlaps.")
         .def(
             "build",
-            [](Bvh& bvh,
-               Aabb& aabbs,
-               Eigen::Vector<GpuScalar, 3> const& min,
-               Eigen::Vector<GpuScalar, 3> const& max) {
-                pbat::profiling::Profile("pbat.gpu.geometry.Bvh.Build", [&]() {
-                    bvh.Build(aabbs, min, max);
-                });
-            },
+            &Bvh::Build,
             pyb::arg("aabbs"),
             pyb::arg("min"),
             pyb::arg("max"),
@@ -49,11 +36,7 @@ void BindBvh([[maybe_unused]] pybind11::module& m)
             "max (np.ndarray[3]): World axis-aligned box's max endpoint")
         .def(
             "detect_overlaps",
-            [](Bvh& bvh, Aabb const& aabbs) {
-                return pbat::profiling::Profile("pbat.gpu.geometry.Bvh.DetectOverlaps", [&]() {
-                    return bvh.DetectOverlaps(aabbs);
-                });
-            },
+            [](Bvh& bvh, Aabb const& aabbs) { return bvh.DetectOverlaps(aabbs); },
             pyb::arg("aabbs"),
             "Detect self-overlaps (bi,bj) between bounding boxes of aabbs into a "
             "2x|#overlaps| array, where bi < bj. aabbs must be the one used in the "
@@ -63,9 +46,7 @@ void BindBvh([[maybe_unused]] pybind11::module& m)
         .def(
             "detect_overlaps",
             [](Bvh& bvh, Buffer const& set, Aabb const& aabbs) {
-                return pbat::profiling::Profile("pbat.gpu.geometry.Bvh.DetectOverlaps", [&]() {
-                    return bvh.DetectOverlaps(set, aabbs);
-                });
+                return bvh.DetectOverlaps(set, aabbs);
             },
             pyb::arg("aabbs"),
             pyb::arg("set"),

@@ -8,6 +8,7 @@
 #include "pbat/gpu/impl/common/Cuda.cuh"
 #include "pbat/gpu/impl/common/Eigen.cuh"
 #include "pbat/math/linalg/mini/Mini.h"
+#include "pbat/profiling/Profiling.h"
 #include "pbat/sim/vbd/Kernels.h"
 
 #include <cuda/api.hpp>
@@ -71,6 +72,8 @@ Integrator::Integrator(Data const& data)
 
 void Integrator::Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps, GpuScalar rho)
 {
+    PBAT_PROFILE_NAMED_CUDA_HOST_SCOPE_START(ctx, "pbat.gpu.impl.vbd.Integrator.Step");
+
     GpuScalar sdt                        = dt / static_cast<GpuScalar>(substeps);
     GpuScalar sdt2                       = sdt * sdt;
     GpuIndex const nVertices             = static_cast<GpuIndex>(X.NumberOfPoints());
@@ -243,6 +246,8 @@ void Integrator::Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps, GpuS
             });
     }
     mStream.synchronize();
+
+    PBAT_PROFILE_CUDA_HOST_SCOPE_END(ctx);
 }
 
 void Integrator::SetPositions(Eigen::Ref<GpuMatrixX const> const& Xin)

@@ -2,7 +2,6 @@
 
 #include <pbat/gpu/Aliases.h>
 #include <pbat/gpu/xpbd/Integrator.h>
-#include <pbat/profiling/Profiling.h>
 #include <pbat/sim/xpbd/Data.h>
 #include <pbat/sim/xpbd/Enums.h>
 #include <pybind11/eigen.h>
@@ -26,17 +25,7 @@ void BindIntegrator([[maybe_unused]] pybind11::module& m)
 
     pyb::class_<Integrator>(m, "Integrator")
         .def(
-            pyb::init([](Data const& data,
-                         GpuIndex nMaxVertexTetrahedronOverlaps,
-                         GpuIndex nMaxVertexTriangleContacts) {
-                return pbat::profiling::Profile("pbat.gpu.xpbd.Integrator.Construct", [&]() {
-                    Integrator xpbd(
-                        data,
-                        nMaxVertexTetrahedronOverlaps,
-                        nMaxVertexTriangleContacts);
-                    return xpbd;
-                });
-            }),
+            pyb::init<Data const&, GpuIndex, GpuIndex>(),
             pyb::arg("data"),
             pyb::arg("max_vertex_tetrahedron_overlaps"),
             pyb::arg("max_vertex_triangle_contacts"),
@@ -46,131 +35,57 @@ void BindIntegrator([[maybe_unused]] pybind11::module& m)
             "specifies maximum number of collision constraints that will be supported.")
         .def(
             "step",
-            [](Integrator& xpbd, GpuScalar dt, GpuIndex iterations, GpuIndex substeps) {
-                pbat::profiling::Profile("pbat.gpu.xpbd.Integrator.Step", [&]() {
-                    xpbd.Step(dt, iterations, substeps);
-                });
-            },
+            &Integrator::Step,
             pyb::arg("dt")         = 0.01f,
             pyb::arg("iterations") = 10,
             pyb::arg("substeps")   = 5,
             "Integrate 1 time step in time")
         .def_property(
             "x",
-            [](Integrator const& xpbd) {
-                return pbat::profiling::Profile("pbat.gpu.xpbd.Integrator.GetPositions", [&]() {
-                    GpuMatrixX X = xpbd.Positions();
-                    return X;
-                });
-            },
-            [](Integrator& xpbd, Eigen::Ref<GpuMatrixX const> const& X) {
-                pbat::profiling::Profile("pbat.gpu.xpbd.Integrator.SetPositions", [&]() {
-                    xpbd.SetPositions(X);
-                });
-            },
+            &Integrator::Positions,
+            &Integrator::SetPositions,
             "|#dims|x|#particles| particle positions")
         .def_property(
             "v",
-            [](Integrator const& xpbd) {
-                return pbat::profiling::Profile("pbat.gpu.xpbd.Integrator.GetVelocities", [&]() {
-                    GpuMatrixX v = xpbd.GetVelocity();
-                    return v;
-                });
-            },
-            [](Integrator& xpbd, Eigen::Ref<GpuMatrixX const> const& v) {
-                pbat::profiling::Profile("pbat.gpu.xpbd.Integrator.SetVelocities", [&]() {
-                    xpbd.SetVelocities(v);
-                });
-            },
+            &Integrator::GetVelocity,
+            &Integrator::SetVelocities,
             "|#dims|x|#particles| particle velocities")
         .def_property(
             "aext",
-            [](Integrator const& xpbd) {
-                return pbat::profiling::Profile(
-                    "pbat.gpu.xpbd.Integrator.GetExternalAcceleration",
-                    [&]() {
-                        GpuMatrixX f = xpbd.GetExternalAcceleration();
-                        return f;
-                    });
-            },
-            [](Integrator& xpbd, Eigen::Ref<GpuMatrixX const> const& f) {
-                pbat::profiling::Profile("pbat.gpu.xpbd.Integrator.SetExternalAcceleration", [&]() {
-                    xpbd.SetExternalAcceleration(f);
-                });
-            },
+            &Integrator::GetExternalAcceleration,
+            &Integrator::SetExternalAcceleration,
             "|#dims|x|#particles| particle external accelerations")
         .def_property(
             "minv",
-            [](Integrator const& xpbd) {
-                return pbat::profiling::Profile("pbat.gpu.xpbd.Integrator.GetMassInverse", [&]() {
-                    GpuVectorX minv = xpbd.GetMassInverse();
-                    return minv;
-                });
-            },
-            [](Integrator& xpbd, Eigen::Ref<GpuMatrixX const> const& minv) {
-                pbat::profiling::Profile("pbat.gpu.xpbd.Integrator.SetMassInverse", [&]() {
-                    xpbd.SetMassInverse(minv);
-                });
-            },
+            &Integrator::GetMassInverse,
+            &Integrator::SetMassInverse,
             "|#particles| particle mass inverses")
         .def_property(
             "lame",
-            [](Integrator const& xpbd) {
-                return pbat::profiling::Profile(
-                    "pbat.gpu.xpbd.Integrator.GetLameCoefficients",
-                    [&]() {
-                        GpuMatrixX lame = xpbd.GetLameCoefficients();
-                        return lame;
-                    });
-            },
-            [](Integrator& xpbd, Eigen::Ref<GpuMatrixX const> const& lame) {
-                pbat::profiling::Profile("pbat.gpu.xpbd.Integrator.SetLameCoefficients", [&]() {
-                    xpbd.SetLameCoefficients(lame);
-                });
-            },
+            &Integrator::GetLameCoefficients,
+            &Integrator::SetLameCoefficients,
             "2x|#elements| Lame coefficients")
         .def_property_readonly(
             "shape_matrix_inverse",
-            [](Integrator const& xpbd) {
-                return pbat::profiling::Profile(
-                    "pbat.gpu.xpbd.Integrator.GetShapeMatrixInverse",
-                    [&]() {
-                        GpuMatrixX DmInv = xpbd.GetShapeMatrixInverse();
-                        return DmInv;
-                    });
-            },
+            &Integrator::GetShapeMatrixInverse,
             "3x|3*#elements| element shape matrix inverses")
         .def(
             "lagrange",
-            [](Integrator const& xpbd, EConstraint eConstraint) {
-                return pbat::profiling::Profile(
-                    "pbat.gpu.xpbd.Integrator.GetLagrangeMultiplier",
-                    [&]() {
-                        GpuMatrixX lambda = xpbd.GetLagrangeMultiplier(eConstraint);
-                        return lambda;
-                    });
-            },
+            &Integrator::GetLagrangeMultiplier,
+            pyb::arg("constraint_type"),
             "|#lagrange multiplier per constraint|x|#constraint of type eConstraint| lagrange "
             "multipliers")
         .def(
             "alpha",
-            [](Integrator const& xpbd, EConstraint eConstraint) {
-                return pbat::profiling::Profile("pbat.gpu.xpbd.Integrator.GetCompliance", [&]() {
-                    GpuMatrixX alpha = xpbd.GetCompliance(eConstraint);
-                    return alpha;
-                });
-            },
+            &Integrator::GetCompliance,
+            pyb::arg("constraint_type"),
             "|#lagrange multiplier per constraint|x|#constraint of type eConstraint| constraint "
             "compliances")
         .def(
             "set_compliance",
-            [](Integrator& xpbd,
-               Eigen::Ref<GpuMatrixX const> const& alpha,
-               EConstraint eConstraint) {
-                return pbat::profiling::Profile("pbat.gpu.xpbd.Integrator.SetCompliance", [&]() {
-                    xpbd.SetCompliance(alpha, eConstraint);
-                });
-            },
+            &Integrator::SetCompliance,
+            pyb::arg("alpha"),
+            pyb::arg("constraint_type"),
             "Set the |#lagrange multiplier per constraint|x|#constraint of type eConstraint| "
             "constraint compliances for the given constraint type")
         .def_property(
@@ -189,26 +104,12 @@ void BindIntegrator([[maybe_unused]] pybind11::module& m)
             "Tuple of (min,max) scene bounding box extremities.")
         .def_property_readonly(
             "vertex_tetrahedron_overlaps",
-            [](Integrator const& xpbd) {
-                return pbat::profiling::Profile(
-                    "pbat.gpu.xpbd.Integrator.GetVertexTetrahedronCollisionCandidates",
-                    [&]() {
-                        GpuIndexMatrixX O = xpbd.GetVertexTetrahedronCollisionCandidates();
-                        return O;
-                    });
-            },
+            &Integrator::GetVertexTetrahedronCollisionCandidates,
             "2x|#overlap| vertex tetrahedron overlap pairs O, s.t. O[0,:] and O[1,:] yield "
             "overlapping vertices and tetrahedra, respectively.")
         .def_property_readonly(
             "vertex_triangle_contacts",
-            [](Integrator const& xpbd) {
-                return pbat::profiling::Profile(
-                    "pbat.gpu.xpbd.Integrator.GetVertexTriangleContactPairs",
-                    [&]() {
-                        GpuIndexMatrixX C = xpbd.GetVertexTriangleContactPairs();
-                        return C;
-                    });
-            },
+            &Integrator::GetVertexTriangleContactPairs,
             "2x|#contacts| vertex triangle contacts pairs C, s.t. C[0,:] and C[1,:] yield "
             "contacting vertices and triangles, respectively.");
 #endif // PBAT_USE_CUDA

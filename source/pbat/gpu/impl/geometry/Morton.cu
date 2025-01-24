@@ -6,6 +6,7 @@
 #include "pbat/HostDevice.h"
 #include "pbat/common/ConstexprFor.h"
 #include "pbat/math/linalg/mini/Mini.h"
+#include "pbat/profiling/Profiling.h"
 
 #include <array>
 #include <thrust/execution_policy.h>
@@ -23,6 +24,7 @@ void Morton::Encode(
     Bound const& wmax,
     common::Buffer<Code>& morton)
 {
+    PBAT_PROFILE_NAMED_CUDA_HOST_SCOPE_START(ctx, "pbat.gpu.impl.geometry.Morton.Encode");
     auto const nBoxes = aabbs.Size();
     if (morton.Size() < nBoxes)
         morton.Resize(nBoxes);
@@ -41,6 +43,7 @@ void Morton::Encode(
             using pbat::geometry::Morton3D;
             m[i] = Morton3D(c);
         });
+    PBAT_PROFILE_CUDA_HOST_SCOPE_END(ctx);
 }
 
 } // namespace geometry

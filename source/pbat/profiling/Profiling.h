@@ -3,17 +3,27 @@
 
 #include "PhysicsBasedAnimationToolkitExport.h"
 
-#if defined(PBAT_HAS_TRACY_PROFILER) and not defined(__CUDACC__)
-    #define PBAT_CAN_USE_TRACY
-#endif
-
-#ifdef PBAT_CAN_USE_TRACY
-    #include <tracy/Tracy.hpp>
-    #define PBAT_PROFILE_SCOPE             ZoneScoped
-    #define PBAT_PROFILE_NAMED_SCOPE(name) ZoneScopedN(name)
+#if defined(PBAT_HAS_TRACY_PROFILER)
+    #if not defined(__CUDACC__)
+        #define PBAT_CAN_USE_TRACY_CPP
+        #include <tracy/Tracy.hpp>
+        #define PBAT_PROFILE_SCOPE             ZoneScoped
+        #define PBAT_PROFILE_NAMED_SCOPE(name) ZoneScopedN(name)
+    #else
+        #define PBAT_CAN_USE_TRACY_C
+        #include <tracy/TracyC.h>
+        #define PBAT_PROFILE_SCOPE
+        #define PBAT_PROFILE_NAMED_SCOPE(name)
+        #define PBAT_PROFILE_CUDA_HOST_SCOPE_START(var)             TracyCZone(var, true)
+        #define PBAT_PROFILE_NAMED_CUDA_HOST_SCOPE_START(var, name) TracyCZoneN(var, name, true)
+        #define PBAT_PROFILE_CUDA_HOST_SCOPE_END(var)               TracyCZoneEnd(var)
+    #endif // __CUDACC__
 #else
     #define PBAT_PROFILE_SCOPE
     #define PBAT_PROFILE_NAMED_SCOPE(name)
+    #define PBAT_PROFILE_CUDA_HOST_SCOPE_START(var)
+    #define PBAT_PROFILE_CUDA_HOST_SCOPE_START(var, name)
+    #define PBAT_PROFILE_CUDA_HOST_SCOPE_END(var)
 #endif // PBAT_CAN_USE_TRACY
 
 #include <map>
@@ -33,7 +43,7 @@ PBAT_API bool IsConnectedToServer();
 template <class Func, class... Args>
 std::invoke_result_t<Func, Args...> Profile(std::string const& zoneName, Func&& f, Args&&... args)
 {
-#ifdef PBAT_CAN_USE_TRACY
+#ifdef PBAT_CAN_USE_TRACY_CPP
     static auto constexpr line = (uint32_t)TracyLine;
     struct SourceLocationData
     {
