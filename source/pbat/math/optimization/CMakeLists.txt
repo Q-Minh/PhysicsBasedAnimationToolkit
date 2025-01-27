@@ -1,11 +1,11 @@
-target_sources(
-    PUBLIC PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
+target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
+    PUBLIC 
     FILE_SET api
     FILES
     "Optimization.h"
     "BranchAndBound.h"
 )
-target_sources(
+target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     PRIVATE
     "BranchAndBound.cpp"
 )
