@@ -1,5 +1,5 @@
 target_sources(
-    PUBLIC
+    PUBLIC PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     FILE_SET api
     FILES
     "Optimization.h"
