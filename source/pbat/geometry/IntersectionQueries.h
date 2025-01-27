@@ -1,5 +1,5 @@
-﻿#ifndef PBAT_GEOMETRY_INTERSECTION_QUERIES_H
-#define PBAT_GEOMETRY_INTERSECTION_QUERIES_H
+﻿#ifndef PBAT_GEOMETRY_INTERSECTIONQUERIES_H
+#define PBAT_GEOMETRY_INTERSECTIONQUERIES_H
 
 #include "pbat/Aliases.h"
 #include "pbat/HostDevice.h"
@@ -498,4 +498,4 @@ UvwTriangles3D(
 } // namespace geometry
 } // namespace pbat
 
-#endif // PBAT_GEOMETRY_INTERSECTION_QUERIES_H
+#endif // PBAT_GEOMETRY_INTERSECTIONQUERIES_H
