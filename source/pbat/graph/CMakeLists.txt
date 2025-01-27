@@ -4,6 +4,7 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     FILES
     "Adjacency.h"
     "Color.h"
+    "Enums.h"
     "Graph.h"
     "Mesh.h"
     "Partition.h"

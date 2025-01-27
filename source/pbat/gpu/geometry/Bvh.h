@@ -1,19 +1,23 @@
-#ifndef PBAT_GPU_BVH_CUH
-#define PBAT_GPU_BVH_CUH
+#ifndef PBAT_GPU_GEOMETRY_BVH_H
+#define PBAT_GPU_GEOMETRY_BVH_H
 
-#include "Primitives.h"
-#include "pbat/gpu/Aliases.h"
+#include "Aabb.h"
 #include "PhysicsBasedAnimationToolkitExport.h"
+#include "pbat/geometry/Morton.h"
+#include "pbat/gpu/Aliases.h"
+#include "pbat/gpu/common/Buffer.h"
 
 #include <Eigen/Core>
 #include <cstddef>
 #include <limits>
 
+namespace pbat::gpu::impl::geometry {
+class Bvh;
+} // namespace pbat::gpu::impl::geometry
+
 namespace pbat {
 namespace gpu {
 namespace geometry {
-
-class BvhImpl;
 
 /**
  * @brief Linear BVH GPU implementation
@@ -21,21 +25,19 @@ class BvhImpl;
 class Bvh
 {
   public:
-    using MortonCodeType = std::uint32_t;
+    using MortonCodeType = pbat::geometry::MortonCodeType;
 
     /**
      * @brief
-     * @param nPrimitives
+     * @param nBoxes
      * @param nOverlaps
      */
-    PBAT_API Bvh(std::size_t nPrimitives, std::size_t nOverlaps);
+    PBAT_API Bvh(GpuIndex nBoxes, GpuIndex nOverlaps);
 
     Bvh(Bvh const&)            = delete;
     Bvh& operator=(Bvh const&) = delete;
-
     PBAT_API Bvh(Bvh&& other) noexcept;
     PBAT_API Bvh& operator=(Bvh&& other) noexcept;
-
     /**
      * @brief
      * @param P
@@ -43,35 +45,38 @@ class Bvh
      * @param expansion
      */
     PBAT_API void Build(
-        Points const& P,
-        Simplices const& S,
+        Aabb& aabbs,
         Eigen::Vector<GpuScalar, 3> const& min,
-        Eigen::Vector<GpuScalar, 3> const& max,
-        GpuScalar expansion = std::numeric_limits<GpuScalar>::epsilon());
-
-    PBAT_API BvhImpl* Impl();
-    PBAT_API BvhImpl const* Impl() const;
-
+        Eigen::Vector<GpuScalar, 3> const& max);
     /**
      * @brief
      * @param S The simplices which were used to build this BVH
      */
-    PBAT_API GpuIndexMatrixX DetectSelfOverlaps(Simplices const& S);
+    PBAT_API GpuIndexMatrixX DetectOverlaps(Aabb const& aabbs);
+    /**
+     * @brief
+     *
+     * @param set |#aabbs| map of indices of aabbs to their corresponding set, i.e. set[i] = j means
+     * that aabb i belongs to set j. Must be a 1D Buffer of type GpuIndex of the same size as aabbs.
+     * @param aabbs
+     * @return 2x|#overlaps| matrix of overlap pairs between boxes of different sets
+     */
+    PBAT_API GpuIndexMatrixX DetectOverlaps(common::Buffer const& set, Aabb const& aabbs);
     /**
      * @brief BVH nodes' box minimums
      * @return
      */
-    PBAT_API Eigen::Matrix<GpuScalar, Eigen::Dynamic, Eigen::Dynamic> Min() const;
+    PBAT_API GpuMatrixX Min() const;
     /**
      * @brief BVH nodes' box maximums
      * @return
      */
-    PBAT_API Eigen::Matrix<GpuScalar, Eigen::Dynamic, Eigen::Dynamic> Max() const;
+    PBAT_API GpuMatrixX Max() const;
     /**
      * @brief
      * @return
      */
-    PBAT_API Eigen::Vector<GpuIndex, Eigen::Dynamic> SimplexOrdering() const;
+    PBAT_API GpuIndexVectorX LeafOrdering() const;
     /**
      * @brief
      * @return
@@ -81,31 +86,41 @@ class Bvh
      * @brief
      * @return
      */
-    PBAT_API Eigen::Matrix<GpuIndex, Eigen::Dynamic, 2> Child() const;
+    PBAT_API GpuIndexMatrixX Child() const;
     /**
      * @brief
      * @return
      */
-    PBAT_API Eigen::Vector<GpuIndex, Eigen::Dynamic> Parent() const;
+    PBAT_API GpuIndexVectorX Parent() const;
     /**
      * @brief
      * @return
      */
-    PBAT_API Eigen::Matrix<GpuIndex, Eigen::Dynamic, 2> Rightmost() const;
+    PBAT_API GpuIndexMatrixX Rightmost() const;
     /**
      * @brief
      * @return
      */
-    PBAT_API Eigen::Vector<GpuIndex, Eigen::Dynamic> Visits() const;
+    PBAT_API GpuIndexVectorX Visits() const;
 
+    PBAT_API impl::geometry::Bvh* Impl();
+    PBAT_API impl::geometry::Bvh const* Impl() const;
+    /**
+     * @brief
+     *
+     * @return
+     */
     PBAT_API ~Bvh();
 
   private:
-    BvhImpl* mImpl;
+    void Deallocate();
+
+    impl::geometry::Bvh* mImpl;
+    void* mOverlaps; ///< gpu::common::SynchronizedList<cuda::std::pair<GpuIndex, GpuIndex>>*
 };
 
 } // namespace geometry
 } // namespace gpu
 } // namespace pbat
 
-#endif // PBAT_GPU_BVH_CUH
+#endif // PBAT_GPU_GEOMETRY_BVH_H

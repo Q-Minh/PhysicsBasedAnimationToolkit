@@ -14,6 +14,10 @@ class Integrator
 {
   public:
     void Step(Scalar dt, Index substeps, Hierarchy& hierarchy) const;
+    void ComputeAndSortStrainRates(Hierarchy& H, Scalar sdt) const;
+    void ComputeInertialTargetPositions(Hierarchy& H, Scalar sdt, Scalar sdt2) const;
+    void InitializeBCD(Hierarchy& H, Scalar sdt, Scalar sdt2) const; 
+    void UpdateVelocity(Hierarchy& H, Scalar sdt) const; 
 
   private:
 };

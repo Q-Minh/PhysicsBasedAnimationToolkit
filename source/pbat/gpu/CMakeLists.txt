@@ -5,8 +5,10 @@ if(PBAT_USE_CUDA)
         FILES
         "Aliases.h"
         "DisableWarnings.h"
+        "Gpu.h"
     )
 
+    add_subdirectory(impl)
     add_subdirectory(common)
     add_subdirectory(geometry)
     add_subdirectory(xpbd)

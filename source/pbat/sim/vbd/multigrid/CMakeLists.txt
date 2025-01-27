@@ -8,6 +8,7 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     "Kernels.h"
     "Level.h"
     "Multigrid.h"
+    "Smoother.h"
 )
 target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     PRIVATE
@@ -16,4 +17,5 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     "Integrator.cpp"
     "Kernels.cpp"
     "Level.cpp"
+    "Smoother.cpp"
 )

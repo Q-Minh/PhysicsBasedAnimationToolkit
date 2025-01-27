@@ -3,9 +3,9 @@
 // clang-format on
 
 #include "Integrator.h"
-#include "IntegratorImpl.cuh"
-#include "pbat/gpu/common/Buffer.cuh"
-#include "pbat/gpu/common/Eigen.cuh"
+#include "pbat/gpu/impl/common/Buffer.cuh"
+#include "pbat/gpu/impl/common/Eigen.cuh"
+#include "pbat/gpu/impl/xpbd/Integrator.cuh"
 
 namespace pbat {
 namespace gpu {
@@ -13,9 +13,12 @@ namespace xpbd {
 
 Integrator::Integrator(
     Data const& data,
-    std::size_t nMaxVertexTetrahedronOverlaps,
-    std::size_t nMaxVertexTriangleContacts)
-    : mImpl(new IntegratorImpl{data, nMaxVertexTetrahedronOverlaps, nMaxVertexTriangleContacts})
+    GpuIndex nMaxVertexTetrahedronOverlaps,
+    GpuIndex nMaxVertexTriangleContacts)
+    : mImpl(new impl::xpbd::Integrator{
+          data,
+          nMaxVertexTetrahedronOverlaps,
+          nMaxVertexTriangleContacts})
 {
 }
 
@@ -26,10 +29,13 @@ Integrator::Integrator(Integrator&& other) noexcept : mImpl(other.mImpl)
 
 Integrator& Integrator::operator=(Integrator&& other) noexcept
 {
-    if (mImpl != nullptr)
-        delete mImpl;
-    mImpl       = other.mImpl;
-    other.mImpl = nullptr;
+    if (this != &other)
+    {
+        if (mImpl != nullptr)
+            delete mImpl;
+        mImpl       = other.mImpl;
+        other.mImpl = nullptr;
+    }
     return *this;
 }
 
@@ -40,7 +46,7 @@ void Integrator::Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps)
 
 GpuMatrixX Integrator::Positions() const
 {
-    return common::ToEigen(mImpl->X.x);
+    return impl::common::ToEigen(mImpl->X.x);
 }
 
 std::size_t Integrator::NumberOfParticles() const
@@ -80,7 +86,7 @@ void Integrator::SetLameCoefficients(Eigen::Ref<GpuMatrixX const> const& l)
 
 void Integrator::SetCompliance(Eigen::Ref<GpuMatrixX const> const& alpha, EConstraint eConstraint)
 {
-    mImpl->SetCompliance(alpha, static_cast<IntegratorImpl::EConstraint>(eConstraint));
+    mImpl->SetCompliance(alpha, static_cast<impl::xpbd::Integrator::EConstraint>(eConstraint));
 }
 
 void Integrator::SetFrictionCoefficients(GpuScalar muS, GpuScalar muK)
@@ -97,41 +103,41 @@ void Integrator::SetSceneBoundingBox(
 
 GpuMatrixX Integrator::GetVelocity() const
 {
-    return common::ToEigen(mImpl->GetVelocity());
+    return impl::common::ToEigen(mImpl->GetVelocity());
 }
 
 GpuMatrixX Integrator::GetExternalAcceleration() const
 {
-    return common::ToEigen(mImpl->GetExternalAcceleration());
+    return impl::common::ToEigen(mImpl->GetExternalAcceleration());
 }
 
 GpuVectorX Integrator::GetMassInverse() const
 {
-    return common::ToEigen(mImpl->GetMassInverse());
+    return impl::common::ToEigen(mImpl->GetMassInverse());
 }
 
 GpuMatrixX Integrator::GetLameCoefficients() const
 {
-    auto lame = common::ToEigen(mImpl->GetLameCoefficients());
+    auto lame = impl::common::ToEigen(mImpl->GetLameCoefficients());
     return lame.reshaped(2, lame.size() / 2);
 }
 
 GpuMatrixX Integrator::GetShapeMatrixInverse() const
 {
-    auto DmInv = common::ToEigen(mImpl->GetShapeMatrixInverse());
+    auto DmInv = impl::common::ToEigen(mImpl->GetShapeMatrixInverse());
     return DmInv.reshaped(3, DmInv.size() / 3);
 }
 
 GpuMatrixX Integrator::GetRestStableGamma() const
 {
-    auto gamma = common::ToEigen(mImpl->GetRestStableGamma());
+    auto gamma = impl::common::ToEigen(mImpl->GetRestStableGamma());
     return gamma.reshaped(2, gamma.size() / 2);
 }
 
 GpuMatrixX Integrator::GetLagrangeMultiplier(EConstraint eConstraint) const
 {
-    auto lambda = common::ToEigen(
-        mImpl->GetLagrangeMultiplier(static_cast<IntegratorImpl::EConstraint>(eConstraint)));
+    auto lambda = impl::common::ToEigen(mImpl->GetLagrangeMultiplier(
+        static_cast<impl::xpbd::Integrator::EConstraint>(eConstraint)));
     if (eConstraint == EConstraint::StableNeoHookean)
     {
         lambda.resize(2, lambda.size() / 2);
@@ -141,8 +147,8 @@ GpuMatrixX Integrator::GetLagrangeMultiplier(EConstraint eConstraint) const
 
 GpuMatrixX Integrator::GetCompliance(EConstraint eConstraint) const
 {
-    auto compliance = common::ToEigen(
-        mImpl->GetCompliance(static_cast<IntegratorImpl::EConstraint>(eConstraint)));
+    auto compliance = impl::common::ToEigen(
+        mImpl->GetCompliance(static_cast<impl::xpbd::Integrator::EConstraint>(eConstraint)));
     if (eConstraint == EConstraint::StableNeoHookean)
     {
         compliance.resize(2, compliance.size() / 2);
@@ -152,7 +158,7 @@ GpuMatrixX Integrator::GetCompliance(EConstraint eConstraint) const
 
 GpuIndexMatrixX Integrator::GetVertexTetrahedronCollisionCandidates() const
 {
-    std::vector<typename IntegratorImpl::CollisionCandidateType> const overlaps =
+    std::vector<typename impl::xpbd::Integrator::CollisionCandidateType> const overlaps =
         mImpl->GetVertexTetrahedronCollisionCandidates();
     GpuIndexMatrixX O(2, overlaps.size());
     for (auto o = 0; o < overlaps.size(); ++o)
@@ -165,7 +171,7 @@ GpuIndexMatrixX Integrator::GetVertexTetrahedronCollisionCandidates() const
 
 GpuIndexMatrixX Integrator::GetVertexTriangleContactPairs() const
 {
-    std::vector<typename IntegratorImpl::CollisionCandidateType> const contacts =
+    std::vector<typename impl::xpbd::Integrator::CollisionCandidateType> const contacts =
         mImpl->GetVertexTriangleContactPairs();
     GpuIndexMatrixX C(2, contacts.size());
     for (auto c = 0; c < contacts.size(); ++c)

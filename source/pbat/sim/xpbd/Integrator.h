@@ -23,12 +23,17 @@ class Integrator
   protected:
     void ProjectBlockNeoHookeanConstraints(Scalar dt, Scalar dt2);
     void ProjectClusteredBlockNeoHookeanConstraints(Scalar dt, Scalar dt2);
+    void ProjectContactConstraints(Scalar dt, Scalar dt2);
     void ProjectBlockNeoHookeanConstraint(Index c, Scalar dt, Scalar dt2);
 
   private:
     geometry::TetrahedralAabbHierarchy mTetrahedralBvh;
     geometry::TriangleAabbHierarchy<3> mTriangleBvh;
     std::vector<Index> mParticlesInContact;
+
+    IndexVectorX mTetsInContact;
+    IndexVectorX mTrianglesInContact;
+    VectorX mSquaredDistancesToTriangles;
 };
 
 } // namespace xpbd

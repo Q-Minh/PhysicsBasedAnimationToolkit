@@ -6,11 +6,13 @@
 #include "pbat/sim/vbd/Data.h"
 #include "pbat/sim/vbd/Enums.h"
 
+namespace pbat::gpu::impl::vbd {
+class Integrator;
+} // namespace pbat::gpu::impl::vbd
+
 namespace pbat {
 namespace gpu {
 namespace vbd {
-
-class IntegratorImpl;
 
 class Integrator
 {
@@ -103,7 +105,9 @@ class Integrator
      * @param Pptr
      * @param Padj
      */
-    PBAT_API void SetVertexPartitions(Eigen::Ref<GpuIndexVectorX const> const& Pptr, Eigen::Ref<GpuIndexVectorX const> const& Padj);
+    PBAT_API void SetVertexPartitions(
+        Eigen::Ref<GpuIndexVectorX const> const& Pptr,
+        Eigen::Ref<GpuIndexVectorX const> const& Padj);
     /**
      * @brief Sets the initialization strategy to kick-start the time step minimization
      * @param strategy
@@ -114,11 +118,6 @@ class Integrator
      * @param blockSize #threads per block, should be a multiple of 32
      */
     PBAT_API void SetBlockSize(GpuIndex blockSize);
-    /**
-     * @brief 
-     * @param bUseParallelReduction Use parallel reduction to accumulate vertex derivatives
-     */
-    PBAT_API void UseParallelReduction(bool bUseParallelReduction = true);
     /**
      * @brief
      * @return |#dims|x|#vertices| array of vertex positions
@@ -131,7 +130,7 @@ class Integrator
     PBAT_API GpuMatrixX GetVelocities() const;
 
   private:
-    IntegratorImpl* mImpl;
+    impl::vbd::Integrator* mImpl;
 };
 
 } // namespace vbd

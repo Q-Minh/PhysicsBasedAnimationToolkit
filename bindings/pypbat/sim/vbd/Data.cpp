@@ -82,14 +82,8 @@ void BindData(pybind11::module& m)
             &Data::WithHessianDeterminantZeroUnder,
             pyb::arg("zero"))
         .def("construct", &Data::Construct, pyb::arg("validate") = true)
-        .def_property(
-            "X",
-            [](Data const& data) { return data.mesh.X; },
-            [](Data& data, Eigen::Ref<MatrixX const> const& X) { data.mesh.X = X; })
-        .def_property(
-            "E",
-            [](Data const& data) { return data.mesh.E; },
-            [](Data& data, Eigen::Ref<IndexMatrixX const> const& E) { data.mesh.E = E; })
+        .def_readwrite("X", &Data::X)
+        .def_readwrite("E", &Data::E)
         .def_readwrite("V", &Data::V)
         .def_readwrite("F", &Data::F)
         .def_readwrite("x", &Data::x)

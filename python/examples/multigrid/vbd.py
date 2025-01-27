@@ -143,17 +143,6 @@ if __name__ == "__main__":
     hierarchy = pbat.sim.vbd.multigrid.Hierarchy(
         data, cmeshes, cycle=cycle, siters=siters
     )
-    hypre_strategies = [
-        pbat.sim.vbd.multigrid.HyperReductionStrategies(
-            clustering_strategy=pbat.sim.vbd.multigrid.EClusteringStrategy.Cluster,
-            element_selection_strategy=pbat.sim.vbd.multigrid.EElementSelectionStrategy.MaxElasticEnergy,
-            vertex_selection_strategy=pbat.sim.vbd.multigrid.EVertexSelectionStrategy.ElementVertices,
-            potential_integration_strategy=pbat.sim.vbd.multigrid.EPotentialIntegrationStrategy.MatchPreStepElasticity,
-            kinetic_integration_strategy=pbat.sim.vbd.multigrid.EKineticIntegrationStrategy.MatchTotalMass
-        )
-        for cmesh in cmeshes
-    ]
-    hierarchy.hyper_reduce(hypre_strategies)
     vbd = pbat.sim.vbd.multigrid.Integrator()
 
     ps.set_verbosity(0)

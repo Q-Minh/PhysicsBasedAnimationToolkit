@@ -4,13 +4,15 @@
 #include "PhysicsBasedAnimationToolkitExport.h"
 #include "pbat/gpu/Aliases.h"
 
+namespace pbat::gpu::impl::geometry {
+struct Points;
+struct Simplices;
+class Bodies;
+} // namespace pbat::gpu::impl::geometry
+
 namespace pbat {
 namespace gpu {
 namespace geometry {
-
-struct PointsImpl;
-struct SimplicesImpl;
-class BodiesImpl;
 
 class Points
 {
@@ -51,12 +53,12 @@ class Points
      * @brief
      * @return
      */
-    PBAT_API PointsImpl* Impl();
+    PBAT_API impl::geometry::Points* Impl();
     /**
      * @brief
      * @return
      */
-    PBAT_API PointsImpl const* Impl() const;
+    PBAT_API impl::geometry::Points const* Impl() const;
     /**
      * @brief
      * @return
@@ -68,7 +70,7 @@ class Points
     PBAT_API ~Points();
 
   private:
-    PointsImpl* mImpl;
+    impl::geometry::Points* mImpl;
 };
 
 class Simplices
@@ -117,19 +119,19 @@ class Simplices
      * @brief
      * @return
      */
-    PBAT_API SimplicesImpl* Impl();
+    PBAT_API impl::geometry::Simplices* Impl();
     /**
      * @brief
      * @return
      */
-    PBAT_API SimplicesImpl const* Impl() const;
+    PBAT_API impl::geometry::Simplices const* Impl() const;
     /**
      * @brief
      */
     PBAT_API ~Simplices();
 
   private:
-    SimplicesImpl* mImpl;
+    impl::geometry::Simplices* mImpl;
 };
 
 class Bodies
@@ -176,19 +178,19 @@ class Bodies
      * @brief
      * @return
      */
-    PBAT_API BodiesImpl* Impl();
+    PBAT_API impl::geometry::Bodies* Impl();
     /**
      * @brief
      * @return
      */
-    PBAT_API BodiesImpl const* Impl() const;
+    PBAT_API impl::geometry::Bodies const* Impl() const;
     /**
      * @brief
      */
     PBAT_API ~Bodies();
 
   private:
-    BodiesImpl* mImpl;
+    impl::geometry::Bodies* mImpl;
 };
 
 } // namespace geometry

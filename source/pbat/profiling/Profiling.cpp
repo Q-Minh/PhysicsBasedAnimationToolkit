@@ -22,28 +22,38 @@ void BeginFrame(std::string_view name)
     auto const size = std::min(buf.size() - 1, name.size());
     std::memcpy(buf.data(), name.data(), size);
     buf[size] = '\0';
+    #if defined(PBAT_CAN_USE_TRACY_CPP)
     FrameMarkStart(buf.data());
+    #elif defined(PBAT_CAN_USE_TRACY_C)
+    TracyCFrameMarkStart(buf.data());
+    #endif
 #endif // PBAT_HAS_TRACY_PROFILER
 }
 
 void EndFrame(std::string_view name)
 {
-#ifdef PBAT_HAS_TRACY_PROFILER
+#if defined(PBAT_HAS_TRACY_PROFILER)
     auto& buf       = detail::buffer();
     auto const size = std::min(buf.size() - 1, name.size());
     std::memcpy(buf.data(), name.data(), std::min(buf.size(), name.size()));
     buf[size] = '\0';
+    #if defined(PBAT_CAN_USE_TRACY_CPP)
     FrameMarkEnd(buf.data());
+    #elif defined(PBAT_CAN_USE_TRACY_C)
+    TracyCFrameMarkEnd(buf.data());
+    #endif
 #endif // PBAT_HAS_TRACY_PROFILER
 }
 
 bool IsConnectedToServer()
 {
-#ifdef PBAT_HAS_TRACY_PROFILER
+#if defined(PBAT_CAN_USE_TRACY_CPP)
     return TracyIsConnected;
+#elif defined(PBAT_CAN_USE_TRACY_C)
+    return TracyCIsConnected;
 #else
     return false;
-#endif // PBAT_HAS_TRACY_PROFILER
+#endif
 }
 
 } // namespace profiling

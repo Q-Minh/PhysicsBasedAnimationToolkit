@@ -3,15 +3,14 @@
 // clang-format on
 
 #include "BvhQuery.h"
-#include "BvhQueryImpl.cuh"
-#include "PrimitivesImpl.cuh"
+#include "pbat/gpu/impl/geometry/BvhQuery.cuh"
 
 namespace pbat {
 namespace gpu {
 namespace geometry {
 
 BvhQuery::BvhQuery(std::size_t nPrimitives, std::size_t nOverlaps, std::size_t nNearestNeighbours)
-    : mImpl(new BvhQueryImpl(nPrimitives, nOverlaps, nNearestNeighbours))
+    : mImpl(new impl::geometry::BvhQuery(nPrimitives, nOverlaps, nNearestNeighbours))
 {
 }
 
@@ -22,10 +21,13 @@ BvhQuery::BvhQuery(BvhQuery&& other) noexcept : mImpl(other.mImpl)
 
 BvhQuery& BvhQuery::operator=(BvhQuery&& other) noexcept
 {
-    if (mImpl != nullptr)
-        delete mImpl;
-    mImpl       = other.mImpl;
-    other.mImpl = nullptr;
+    if (this != &other)
+    {
+        if (mImpl != nullptr)
+            delete mImpl;
+        mImpl       = other.mImpl;
+        other.mImpl = nullptr;
+    }
     return *this;
 }
 

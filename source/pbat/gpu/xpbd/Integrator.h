@@ -9,11 +9,13 @@
 #include <array>
 #include <vector>
 
+namespace pbat::gpu::impl::xpbd {
+class Integrator;
+} // namespace pbat::gpu::impl::xpbd
+
 namespace pbat {
 namespace gpu {
 namespace xpbd {
-
-class IntegratorImpl;
 
 class Integrator
 {
@@ -29,8 +31,8 @@ class Integrator
      */
     PBAT_API Integrator(
         Data const& data,
-        std::size_t nMaxVertexTetrahedronOverlaps,
-        std::size_t nMaxVertexTriangleContacts);
+        GpuIndex nMaxVertexTetrahedronOverlaps,
+        GpuIndex nMaxVertexTriangleContacts);
     Integrator(Integrator const&)            = delete;
     Integrator& operator=(Integrator const&) = delete;
     PBAT_API Integrator(Integrator&&) noexcept;
@@ -161,7 +163,7 @@ class Integrator
     PBAT_API ~Integrator();
 
   private:
-    IntegratorImpl* mImpl;
+    impl::xpbd::Integrator* mImpl;
 };
 
 } // namespace xpbd

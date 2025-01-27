@@ -32,11 +32,12 @@ struct Level
      */
     void Smooth(Scalar dt, Index iters, Data& data);
     /**
-     * @brief
-     * @param data
-     * @param strategy
+     * @brief 
+     * 
+     * @param data 
      */
-    void HyperReduce(Data const& data, hypre::Strategies strategy);
+    void Reduce(Data const& data);
+
     /**
      * Coarse mesh discretization
      */
@@ -69,7 +70,11 @@ struct Level
      */
     BoolVector bIsDirichletVertex;
 
-    HyperReduction HR; ///< Energy hyper reduction scheme
+    /**
+     * Energy hyper reduction
+     */
+    IndexVectorX GCFptr, GCFadj, GCFrank, GCFparent; ///< Coarse element -> fine element adjacency graph
+    // HyperReduction HR; ///< Energy hyper reduction scheme
 };
 
 } // namespace multigrid

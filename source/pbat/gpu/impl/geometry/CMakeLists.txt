@@ -1,0 +1,23 @@
+target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
+    PRIVATE
+    FILE_SET implementation
+    FILES
+    "Aabb.cuh"
+    "Bvh.cuh"
+    "BvhQuery.cuh"
+    "BvhQueryKernels.cuh"
+    "Geometry.h"
+    "Morton.cuh"
+    "Primitives.cuh"
+    "SweepAndPrune.cuh"
+)
+target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
+    PRIVATE
+    "Aabb.cu"
+    "Bvh.cu"
+    "BvhQuery.cu"
+    "BvhQueryKernels.cu"
+    "Morton.cu"
+    "Primitives.cu"
+    "SweepAndPrune.cu"
+)

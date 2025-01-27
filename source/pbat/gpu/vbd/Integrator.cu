@@ -3,14 +3,14 @@
 // clang-format on
 
 #include "Integrator.h"
-#include "IntegratorImpl.cuh"
-#include "pbat/gpu/common/Eigen.cuh"
+#include "pbat/gpu/impl/common/Eigen.cuh"
+#include "pbat/gpu/impl/vbd/Integrator.cuh"
 
 namespace pbat {
 namespace gpu {
 namespace vbd {
 
-Integrator::Integrator(Data const& data) : mImpl(new IntegratorImpl(data)) {}
+Integrator::Integrator(Data const& data) : mImpl(new impl::vbd::Integrator(data)) {}
 
 Integrator::Integrator(Integrator&& other) noexcept : mImpl(other.mImpl)
 {
@@ -19,10 +19,13 @@ Integrator::Integrator(Integrator&& other) noexcept : mImpl(other.mImpl)
 
 Integrator& Integrator::operator=(Integrator&& other) noexcept
 {
-    if (mImpl != nullptr)
-        delete mImpl;
-    mImpl       = other.mImpl;
-    other.mImpl = nullptr;
+    if (this != &other)
+    {
+        if (mImpl != nullptr)
+            delete mImpl;
+        mImpl       = other.mImpl;
+        other.mImpl = nullptr;
+    }
     return *this;
 }
 
@@ -107,19 +110,14 @@ void Integrator::SetBlockSize(GpuIndex blockSize)
     mImpl->SetBlockSize(blockSize);
 }
 
-PBAT_API void Integrator::UseParallelReduction(bool bUseParallelReduction)
-{
-    mImpl->UseParallelReduction(bUseParallelReduction);
-}
-
 GpuMatrixX Integrator::GetPositions() const
 {
-    return common::ToEigen(mImpl->X.x);
+    return impl::common::ToEigen(mImpl->X.x);
 }
 
 GpuMatrixX Integrator::GetVelocities() const
 {
-    return common::ToEigen(mImpl->GetVelocity());
+    return impl::common::ToEigen(mImpl->GetVelocity());
 }
 
 } // namespace vbd

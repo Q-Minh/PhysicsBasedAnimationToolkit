@@ -1,5 +1,5 @@
-﻿#ifndef PBAT_GEOMETRY_CLOSEST_POINT_QUERIES_H
-#define PBAT_GEOMETRY_CLOSEST_POINT_QUERIES_H
+﻿#ifndef PBAT_GEOMETRY_CLOSESTPOINTQUERIES_H
+#define PBAT_GEOMETRY_CLOSESTPOINTQUERIES_H
 
 #include "pbat/HostDevice.h"
 #include "pbat/math/linalg/mini/Mini.h"
@@ -305,4 +305,4 @@ PBAT_HOST_DEVICE mini::SVector<typename TMatrixP::ScalarType, TMatrixP::kRows> P
 } // namespace geometry
 } // namespace pbat
 
-#endif // PBAT_GEOMETRY_CLOSEST_POINT_QUERIES_H
+#endif // PBAT_GEOMETRY_CLOSESTPOINTQUERIES_H

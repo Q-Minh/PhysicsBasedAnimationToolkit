@@ -1,9 +1,11 @@
 #include "Data.h"
 
+#include "Mesh.h"
 #include "pbat/fem/Jacobian.h"
 #include "pbat/fem/MassMatrix.h"
 #include "pbat/fem/ShapeFunctions.h"
 #include "pbat/graph/Adjacency.h"
+#include "pbat/graph/Color.h"
 #include "pbat/graph/Mesh.h"
 #include "pbat/physics/HyperElasticity.h"
 
@@ -21,7 +23,8 @@ Data& Data::WithVolumeMesh(
     Eigen::Ref<MatrixX const> const& Vin,
     Eigen::Ref<IndexMatrixX const> const& Ein)
 {
-    this->mesh = VolumeMesh(Vin, Ein);
+    this->X = Vin;
+    this->E = Ein;
     return *this;
 }
 
@@ -108,7 +111,7 @@ Data& Data::WithHessianDeterminantZeroUnder(Scalar zero)
 Data& Data::Construct(bool bValidate)
 {
     // Vertex data
-    x = mesh.X;
+    x = X;
     if (xt.size() == 0)
     {
         xt = x;
@@ -126,18 +129,19 @@ Data& Data::Construct(bool bValidate)
     xchebm2.resizeLike(x);
     xchebm1.resizeLike(x);
     vt.resizeLike(x);
-    // Material parameters
+    // Element data
     if (lame.size() == 0)
     {
         auto const [mu, lambda] = physics::LameCoefficients(Scalar(1e6), Scalar(0.45));
-        lame.resize(2, mesh.E.cols());
+        lame.resize(2, E.cols());
         lame.row(0).setConstant(mu);
         lame.row(1).setConstant(lambda);
     }
     if (rhoe.size() == 0)
     {
-        rhoe.setConstant(mesh.E.cols(), Scalar(1e3));
+        rhoe.setConstant(E.cols(), Scalar(1e3));
     }
+    VolumeMesh mesh{X, E};
     MatrixX detJe = fem::DeterminantOfJacobian<2>(mesh);
     MatrixX rhog  = rhoe.transpose().replicate(detJe.rows(), 1);
     fem::MassMatrix<VolumeMesh, 2> M(mesh, detJe, rhog, 1);
@@ -145,6 +149,10 @@ Data& Data::Construct(bool bValidate)
     GP = fem::ShapeFunctionGradients<1>(mesh);
     wg = fem::InnerProductWeights<1>(mesh).reshaped();
     psiE.setZero(mesh.E.cols());
+    mGreenStrainsAtT.setZero(3, 3 * mesh.E.cols());
+    mGreenStrains.setZero(3, 3 * mesh.E.cols());
+    mStrainRates.setZero(mesh.E.cols());
+    mStrainRateOrder.setLinSpaced(mesh.E.cols(), Index(0), mesh.E.cols() - Index(1));
     // Adjacency structures
     IndexMatrixX ilocal             = IndexVector<4>{0, 1, 2, 3}.replicate(1, mesh.E.cols());
     auto GVT                        = graph::MeshAdjacencyMatrix(mesh.E, ilocal, mesh.X.cols());

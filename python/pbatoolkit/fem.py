@@ -68,8 +68,7 @@ def gradient(mesh, quadrature_order: int = 1, eg: np.ndarray = None, GNeg: np.nd
         GNeg = _fem.shape_function_gradients(
             mesh, quadrature_order=quadrature_order)
         n_quadpts_per_element = GNeg.shape[1] / (mesh.dims * mesh.E.shape[1])
-        eg = np.linspace(0, mesh.E.shape[1]-1,
-                         num=mesh.E.shape[1], dtype=np.int64)
+        eg = np.arange(mesh.E.shape[1], dtype=np.int64)
         eg = np.repeat(eg, n_quadpts_per_element)
 
     G = _fem.Gradient(mesh, eg, GNeg)
@@ -107,13 +106,12 @@ def hyper_elastic_potential(
         GNeg (np.ndarray, optional): Shape function gradients at quadrature points. Defaults to None.
 
     Returns:
-        (pbat.fem.HyperElasticPotential, np.ndarray, np.ndarray, np.ndarray):
+        (pbat.fem.HyperElasticPotential, np.ndarray, np.ndarray, np.ndarray): (hep, eg, wg, GNeg)
     """
     if eg is None or wg is None or GNeg is None:
         wg = _fem.inner_product_weights(
             mesh, quadrature_order=quadrature_order)
-        eg = np.linspace(0, mesh.E.shape[1]-1,
-                         num=mesh.E.shape[1], dtype=np.int64)
+        eg = np.arange(mesh.E.shape[1], dtype=np.int64)
         eg = np.repeat(eg, wg.shape[0])
         wg = wg.flatten(order="F")
         GNeg = _fem.shape_function_gradients(
@@ -150,8 +148,7 @@ def laplacian(
     if eg is None or wg is None or GNeg is None:
         wg = _fem.inner_product_weights(
             mesh, quadrature_order=quadrature_order)
-        eg = np.linspace(0, mesh.E.shape[1]-1,
-                         num=mesh.E.shape[1], dtype=np.int64)
+        eg = np.arange(mesh.E.shape[1], dtype=np.int64)
         eg = np.repeat(eg, wg.shape[0])
         wg = wg.flatten(order="F")
         GNeg = _fem.shape_function_gradients(

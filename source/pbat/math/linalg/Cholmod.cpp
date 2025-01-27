@@ -28,7 +28,7 @@ MatrixX Cholmod::Solve(Eigen::Ref<MatrixX const> const& B) const
     cholmod_dense cholmod_B{};
     cholmod_B.nrow  = static_cast<size_t>(B.rows());
     cholmod_B.ncol  = static_cast<size_t>(B.cols());
-    cholmod_B.nzmax = static_cast<size_t>(B.nonZeros());
+    cholmod_B.nzmax = static_cast<size_t>(B.size());
     cholmod_B.d     = static_cast<size_t>(B.rows());
     cholmod_B.x     = const_cast<Scalar*>(B.data());
     cholmod_B.xtype = CHOLMOD_REAL;
@@ -40,10 +40,12 @@ MatrixX Cholmod::Solve(Eigen::Ref<MatrixX const> const& B) const
         &cholmod_B,
         const_cast<cholmod_common*>(&mCholmodCommon));
 
-    return Eigen::Map<MatrixX const>(
+    MatrixX X = Eigen::Map<MatrixX const>(
         static_cast<Scalar*>(cholmod_X->x),
         static_cast<Eigen::Index>(mCholmodL->n),
         B.cols());
+    cholmod_free_dense(&cholmod_X, const_cast<cholmod_common*>(&mCholmodCommon));
+    return X;
 }
 
 Cholmod::~Cholmod()
@@ -112,7 +114,7 @@ TEST_CASE("[math][linalg] Cholmod")
     }
     SUBCASE("Can downdate Cholesky factors")
     {
-        CSCMatrix const U      = MatrixX::Zero(n, m).sparseView();
+        CSCMatrix const U      = zero * MatrixX::Random(n, m).sparseView();
         bool const bFactorized = LLT.Compute(A);
         CHECK(bFactorized);
         bool const bFactorizationUpdated = LLT.Downdate(U);

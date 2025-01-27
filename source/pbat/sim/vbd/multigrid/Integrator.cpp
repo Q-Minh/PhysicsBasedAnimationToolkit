@@ -1,10 +1,11 @@
 #include "Integrator.h"
 
 #include "Hierarchy.h"
+#include "pbat/common/ArgSort.h"
 #include "pbat/physics/StableNeoHookeanEnergy.h"
 #include "pbat/profiling/Profiling.h"
 #include "pbat/sim/vbd/Kernels.h"
-#include "pbat/sim/vbd/lod/Smoother.h"
+#include "pbat/sim/vbd/multigrid/Smoother.h"
 
 #include <tbb/parallel_for.h>
 
@@ -13,47 +14,98 @@ namespace sim {
 namespace vbd {
 namespace multigrid {
 
+void Integrator::ComputeAndSortStrainRates(Hierarchy& H, Scalar sdt) const
+{
+    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.vbd.multigrid.Integrator.ComputeAndSortStrainRates");
+    auto nElements = H.data.E.cols();
+    tbb::parallel_for(Index(0), nElements, [&](Index e) {
+        auto inds      = H.data.E(Eigen::placeholders::all, e);
+        auto xe        = H.data.x(Eigen::placeholders::all, inds);
+        auto GNe       = H.data.GP.block<4, 3>(0, 3 * e);
+        Matrix<3, 3> F = xe * GNe;
+        // E = 1/2 (F^T F - I)
+        Matrix<3, 3> E = F.transpose() * F;
+        E.diagonal().array() -= Scalar(1);
+        E *= Scalar(0.5);
+        auto GreenStrain       = H.data.mGreenStrains.block<3, 3>(0, 3 * e);
+        auto GreenStrainAtT    = H.data.mGreenStrainsAtT.block<3, 3>(0, 3 * e);
+        GreenStrainAtT         = GreenStrain;
+        GreenStrain            = E;
+        Matrix<3, 3> Edot      = (GreenStrain - GreenStrainAtT) / sdt;
+        H.data.mStrainRates(e) = Edot.norm();
+    });
+    std::sort(
+        H.data.mStrainRateOrder.begin(),
+        H.data.mStrainRateOrder.end(),
+        [&](Index ei, Index ej) { return H.data.mStrainRates(ei) < H.data.mStrainRates(ej); });
+}
+
+void Integrator::ComputeInertialTargetPositions(Hierarchy& H, Scalar sdt, Scalar sdt2) const
+{
+    auto nVertices = H.data.x.cols();
+    tbb::parallel_for(Index(0), nVertices, [&](Index i) {
+        using pbat::sim::vbd::kernels::InertialTarget;
+        using pbat::math::linalg::mini::FromEigen;
+        using pbat::math::linalg::mini::ToEigen;
+        auto xtilde = InertialTarget(
+            FromEigen(H.data.xt.col(i).head<3>()),
+            FromEigen(H.data.v.col(i).head<3>()),
+            FromEigen(H.data.aext.col(i).head<3>()),
+            sdt,
+            sdt2);
+        H.data.xtilde.col(i) = ToEigen(xtilde);
+    });
+}
+
+void Integrator::InitializeBCD(Hierarchy& H, Scalar sdt, Scalar sdt2) const
+{
+    auto nVertices = H.data.x.cols();
+    tbb::parallel_for(Index(0), nVertices, [&](Index i) {
+        using pbat::sim::vbd::kernels::InitialPositionsForSolve;
+        using pbat::math::linalg::mini::FromEigen;
+        using pbat::math::linalg::mini::ToEigen;
+        auto x = InitialPositionsForSolve(
+            FromEigen(H.data.xt.col(i).head<3>()),
+            FromEigen(H.data.vt.col(i).head<3>()),
+            FromEigen(H.data.v.col(i).head<3>()),
+            FromEigen(H.data.aext.col(i).head<3>()),
+            sdt,
+            sdt2,
+            H.data.strategy);
+        H.data.x.col(i) = ToEigen(x);
+    });
+}
+
+void Integrator::UpdateVelocity(Hierarchy& H, Scalar sdt) const
+{
+    auto nVertices = H.data.x.cols();
+    H.data.vt      = H.data.v;
+    tbb::parallel_for(Index(0), nVertices, [&](Index i) {
+        using pbat::sim::vbd::kernels::IntegrateVelocity;
+        using pbat::math::linalg::mini::FromEigen;
+        using pbat::math::linalg::mini::ToEigen;
+        auto v = IntegrateVelocity(
+            FromEigen(H.data.xt.col(i).head<3>()),
+            FromEigen(H.data.x.col(i).head<3>()),
+            sdt);
+        H.data.v.col(i) = ToEigen(v);
+    });
+}
+
 void Integrator::Step(Scalar dt, Index substeps, Hierarchy& H) const
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.vbd.multigrid.Integrator.Step");
 
-    using RootSmoother = pbat::sim::vbd::lod::Smoother;
+    using RootSmoother = pbat::sim::vbd::multigrid::Smoother;
     Scalar sdt         = dt / static_cast<Scalar>(substeps);
     Scalar sdt2        = sdt * sdt;
-    auto nVertices     = H.data.x.cols();
-    auto nElements     = H.data.mesh.E.cols();
     for (Index s = 0; s < substeps; ++s)
     {
+        ComputeAndSortStrainRates(H, sdt);
         // Store previous positions
         H.data.xt = H.data.x;
-        // Compute inertial target positions
-        tbb::parallel_for(Index(0), nVertices, [&](Index i) {
-            using pbat::sim::vbd::kernels::InertialTarget;
-            using pbat::math::linalg::mini::FromEigen;
-            using pbat::math::linalg::mini::ToEigen;
-            auto xtilde = InertialTarget(
-                FromEigen(H.data.xt.col(i).head<3>()),
-                FromEigen(H.data.v.col(i).head<3>()),
-                FromEigen(H.data.aext.col(i).head<3>()),
-                sdt,
-                sdt2);
-            H.data.xtilde.col(i) = ToEigen(xtilde);
-        });
-        // Initialize block coordinate descent's, i.e. BCD's, solution
-        tbb::parallel_for(Index(0), nVertices, [&](Index i) {
-            using pbat::sim::vbd::kernels::InitialPositionsForSolve;
-            using pbat::math::linalg::mini::FromEigen;
-            using pbat::math::linalg::mini::ToEigen;
-            auto x = InitialPositionsForSolve(
-                FromEigen(H.data.xt.col(i).head<3>()),
-                FromEigen(H.data.vt.col(i).head<3>()),
-                FromEigen(H.data.v.col(i).head<3>()),
-                FromEigen(H.data.aext.col(i).head<3>()),
-                sdt,
-                sdt2,
-                H.data.strategy);
-            H.data.x.col(i) = ToEigen(x);
-        });
+        ComputeInertialTargetPositions(H, sdt, sdt2);
+        InitializeBCD(H, sdt, sdt2);
         // Hierarchical solve
         auto nLevelVisits = H.cycle.size();
         for (auto c = 0; c < nLevelVisits; ++c)
@@ -66,40 +118,11 @@ void Integrator::Step(Scalar dt, Index substeps, Hierarchy& H) const
             }
             else
             {
-                // Compute element elasticities
-                tbb::parallel_for(Index(0), nElements, [&](Index e) {
-                    using pbat::math::linalg::mini::FromEigen;
-                    using pbat::math::linalg::mini::ToEigen;
-                    physics::StableNeoHookeanEnergy<3> Psi{};
-                    Scalar mu        = H.data.lame(0, e);
-                    Scalar lambda    = H.data.lame(1, e);
-                    auto inds        = H.data.mesh.E(Eigen::placeholders::all, e);
-                    Matrix<3, 4> xe  = H.data.x(Eigen::placeholders::all, inds);
-                    Matrix<4, 3> GNe = H.data.GP.block<4, 3>(0, 3 * e);
-                    Matrix<3, 3> F   = xe * GNe;
-                    H.data.psiE(e)   = Psi.eval(FromEigen(F), mu, lambda);
-                });
-
-                // Update hyper reductions
-                //for (auto& level : H.levels)
-                //    level.HR.Update(H.data);
                 auto lStl = static_cast<std::size_t>(l);
-                H.levels[lStl].HR.Update(H.data);
                 H.levels[lStl].Smooth(sdt, iters, H.data);
             }
         }
-        // Update velocity
-        H.data.vt = H.data.v;
-        tbb::parallel_for(Index(0), nVertices, [&](Index i) {
-            using pbat::sim::vbd::kernels::IntegrateVelocity;
-            using pbat::math::linalg::mini::FromEigen;
-            using pbat::math::linalg::mini::ToEigen;
-            auto v = IntegrateVelocity(
-                FromEigen(H.data.xt.col(i).head<3>()),
-                FromEigen(H.data.x.col(i).head<3>()),
-                sdt);
-            H.data.v.col(i) = ToEigen(v);
-        });
+        UpdateVelocity(H, sdt);
     }
 }
 
@@ -140,7 +163,7 @@ TEST_CASE("[sim][vbd][multigrid] Integrator")
         siters};
 
     // Act
-    Integrator mvbd{};
+    Integrator mvbd{};  
     mvbd.Step(dt, substeps, H);
 
     // Assert

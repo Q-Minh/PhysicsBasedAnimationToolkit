@@ -3,9 +3,9 @@
 #define PBAT_FEM_TETRAHEDRON_H
 
 #include "QuadratureRules.h"
+#include "pbat/Aliases.h"
 
 #include <array>
-#include <pbat/Aliases.h>
 
 namespace pbat {
 namespace fem {
@@ -73,9 +73,10 @@ struct Tetrahedron<2>
     static int constexpr kDims                                   = 3;
     static int constexpr kNodes                                  = 10;
     static std::array<int, kNodes * kDims> constexpr Coordinates = {
-        0, 0, 0, 1, 0, 0, 2, 0, 0, 0, 1, 0, 1, 1, 0, 0,
-        2, 0, 0, 0, 1, 1, 0, 1, 0, 1, 1, 0, 0, 2}; ///< Divide coordinates by kOrder to obtain
-                                                   ///< actual coordinates in the reference element
+        0, 0, 0, 1, 0, 0, 2, 0, 0, 0, 1, 0, 1, 1, 0,
+        0, 2, 0, 0, 0, 1, 1, 0, 1, 0, 1, 1, 0, 0, 2}; ///< Divide coordinates by kOrder to obtain
+                                                      ///< actual coordinates in the reference
+                                                      ///< element
     static std::array<int, AffineBaseType::kNodes> constexpr Vertices =
         {0, 2, 5, 9}; ///< Indices into nodes [0,kNodes-1] revealing vertices of the element
     static bool constexpr bHasConstantJacobian = false;

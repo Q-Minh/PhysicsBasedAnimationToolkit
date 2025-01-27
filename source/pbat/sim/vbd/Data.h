@@ -2,12 +2,9 @@
 #define PBAT_SIM_VBD_DATA_H
 
 #include "Enums.h"
-#include "Mesh.h"
 #include "PhysicsBasedAnimationToolkitExport.h"
 #include "pbat/Aliases.h"
-#include "pbat/fem/Mesh.h"
-#include "pbat/fem/Tetrahedron.h"
-#include "pbat/graph/Color.h"
+#include "pbat/graph/Enums.h"
 
 namespace pbat {
 namespace sim {
@@ -108,7 +105,8 @@ PBAT_API struct Data
     Data& Construct(bool bValidate = true);
 
   public:
-    VolumeMesh mesh; ///< Linear tetrahedral FEM mesh
+    MatrixX X; ///< 3x|#verts| FEM nodal positions
+    IndexMatrixX E; ///< 4x|#elems| FEM linear tetrahedral elements
     IndexVectorX V;  ///< Collision vertices
     IndexMatrixX F;  ///< 3x|#collision triangles| collision triangles (on the boundary of T)
 
@@ -157,10 +155,14 @@ PBAT_API struct Data
     Scalar detHZero{1e-7}; ///< Numerical zero for hessian pseudo-singularity check
 
     VectorX psiE; ///< |#elements| array of elastic energies
+    MatrixX mGreenStrainsAtT; ///< 3x3*|#elems| array of element strain tensors at time t
+    MatrixX mGreenStrains; ///< 3x3*|#elems| array of element strain tensors at time t+dt
+    VectorX mStrainRates; ///< |#elems| array of element strain rates
+    IndexVectorX mStrainRateOrder; ///< |#elems| array of element strain rate sorted order
 };
 
 } // namespace vbd
 } // namespace sim
 } // namespace pbat
 
-#endif // PBAT_SIM_XPBD_DATA_H
+#endif // PBAT_SIM_VBD_DATA_H

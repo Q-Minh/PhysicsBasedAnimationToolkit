@@ -1,5 +1,5 @@
-#ifndef PBAT_GEOMETRY_DISTANCE_QUERIES_H
-#define PBAT_GEOMETRY_DISTANCE_QUERIES_H
+#ifndef PBAT_GEOMETRY_DISTANCEQUERIES_H
+#define PBAT_GEOMETRY_DISTANCEQUERIES_H
 
 #include "ClosestPointQueries.h"
 #include "OverlapQueries.h"
@@ -137,7 +137,7 @@ PBAT_HOST_DEVICE typename TMatrixL1::ScalarType AxisAlignedBoundingBoxes(
     auto constexpr kDims                = TMatrixL1::kRows;
     mini::SVector<ScalarType, kDims> LI = Max(L1, L2);
     mini::SVector<ScalarType, kDims> UI = Min(U1, U2);
-    auto LGU                            = LI > UI;
+    auto LGU                            = Cast<ScalarType>(LI > UI);
     mini::SVector<ScalarType, kDims> DI = LI - UI;
     ScalarType d2                       = Dot(LGU, Squared(DI));
     return d2;
@@ -222,4 +222,4 @@ PBAT_HOST_DEVICE typename TMatrixX::ScalarType SphereTriangle(
 } // namespace geometry
 } // namespace pbat
 
-#endif // PBAT_GEOMETRY_DISTANCE_QUERIES_H
+#endif // PBAT_GEOMETRY_DISTANCEQUERIES_H

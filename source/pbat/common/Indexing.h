@@ -57,14 +57,31 @@ template <
     class TIndex = std::common_type_t<TIndexB, TIndexE>>
 Eigen::Vector<TIndex, Eigen::Dynamic> Filter(TIndexB begin, TIndexE end, Func&& f)
 {
-    auto filteredView = std::views::iota(
-        static_cast<TIndex>(begin), 
-        static_cast<TIndex>(end)
-    ) | std::views::filter(f);
+    auto filteredView = std::views::iota(static_cast<TIndex>(begin), static_cast<TIndex>(end)) |
+                        std::views::filter(f);
     std::vector<TIndex> filtered{};
     filtered.reserve(static_cast<std::size_t>(end - begin));
     std::ranges::copy(filteredView, std::back_inserter(filtered));
     return ToEigen(filtered);
+}
+
+template <
+    class TDerivedX,
+    class TDerivedR,
+    class TScalar        = typename TDerivedX::Scalar,
+    std::integral TIndex = typename TDerivedR::Scalar>
+Eigen::Vector<TScalar, Eigen::Dynamic>
+Repeat(Eigen::DenseBase<TDerivedX> const& x, Eigen::DenseBase<TDerivedR> const& r)
+{
+    using VectorType = Eigen::Vector<TScalar, Eigen::Dynamic>;
+    VectorType y(r.sum());
+    for (Index i = 0, k = 0; i < r.size(); ++i)
+    {
+        auto ri                  = r(i);
+        y.segment(k, ri).array() = x(i);
+        k += ri;
+    }
+    return y;
 }
 
 } // namespace common

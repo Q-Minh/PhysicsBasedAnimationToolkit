@@ -2,6 +2,7 @@ target_sources(PhysicsBasedAnimationToolkit_Python
     PUBLIC
     FILE_SET api
     FILES
+    "Aabb.h"
     "Bodies.h"
     "Bvh.h"
     "BvhQuery.h"
@@ -13,6 +14,7 @@ target_sources(PhysicsBasedAnimationToolkit_Python
 
 target_sources(PhysicsBasedAnimationToolkit_Python
     PRIVATE
+    "Aabb.cpp"
     "Bodies.cpp"
     "Bvh.cpp"
     "BvhQuery.cpp"

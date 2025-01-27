@@ -2,34 +2,18 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     PUBLIC
     FILE_SET api
     FILES
+    "Aabb.h"
     "Bvh.h"
     "BvhQuery.h"
+    "Geometry.h"
     "Primitives.h"
     "SweepAndPrune.h"
 )
 target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     PRIVATE
-    FILE_SET implementation
-    FILES
-    "BvhImpl.cuh"
-    "BvhImplKernels.cuh"
-    "BvhQueryImpl.cuh"
-    "BvhQueryImplKernels.cuh"
-    "PrimitivesImpl.cuh"
-    "SweepAndPruneImpl.cuh"
-    "SweepAndPruneImplKernels.cuh"
-)
-target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
-    PRIVATE
+    "Aabb.cu"
     "Bvh.cu"
-    "BvhImpl.cu"
-    "BvhImplKernels.cu"
     "BvhQuery.cu"
-    "BvhQueryImpl.cu"
-    "BvhQueryImplKernels.cu"
     "Primitives.cu"
-    "PrimitivesImpl.cu"
     "SweepAndPrune.cu"
-    "SweepAndPruneImpl.cu"
-    "SweepAndPruneImplKernels.cu"
 )

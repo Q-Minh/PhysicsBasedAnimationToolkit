@@ -327,8 +327,12 @@ if __name__ == "__main__":
         "-i", "--input", help="Path to input mesh", dest="input", required=True)
     parser.add_argument("-t", "--translation", help="Vertical translation", type=float,
                         dest="translation", default=0.1)
-    parser.add_argument("--percent-fixed", help="Percentage of input mesh's bottom to fix", type=float,
-                        dest="percent_fixed", default=0.1)
+    parser.add_argument("--percent-fixed", help="Percentage of input mesh to fix", type=float,
+                        dest="percent_fixed", default=0.01)
+    parser.add_argument("--fixed-axis", help="Axis 0 | 1 | 2 (x=0,y=1,z=2) in which to fix a certain percentage of the scene's mesh", type=int,
+                        dest="fixed_axis", default=2)
+    parser.add_argument("--fixed-end", help="min | max, whether to fix from the min or the max of the scene mesh's bounding box", type=str, default="min",
+                        dest="fixed_end")
     parser.add_argument("-m", "--mass-density", help="Mass density", type=float,
                         dest="rho", default=1000.)
     parser.add_argument("-Y", "--young-modulus", help="Young's modulus", type=float,
@@ -337,6 +341,7 @@ if __name__ == "__main__":
                         dest="nu", default=0.45)
     parser.add_argument(
         "-c", "--copy", help="Number of copies of input model", type=int, dest="ncopy", default=1)
+    parser.add_argument("--export-state", help="Export states at every frame", action="store_true", dest="export_state")
     args = parser.parse_args()
 
     # Load input meshes and combine them into 1 mesh
@@ -395,9 +400,15 @@ if __name__ == "__main__":
     # Fix some percentage of bottom of the input models as Dirichlet boundary conditions
     Xmin = mesh.X.min(axis=1)
     Xmax = mesh.X.max(axis=1)
-    dX = Xmax - Xmin
-    Xmax[-1] = Xmin[-1] + args.percent_fixed*dX[-1]
-    Xmin[-1] = Xmin[-1] - 1e-4
+    extent = Xmax - Xmin
+    if args.fixed_end == "min":
+        Xmax[args.fixed_axis] = Xmin[args.fixed_axis] + \
+            args.percent_fixed*extent[args.fixed_axis]
+        Xmin[args.fixed_axis] -= args.percent_fixed*extent[args.fixed_axis]
+    elif args.fixed_end == "max":
+        Xmin[args.fixed_axis] = Xmax[args.fixed_axis] - \
+            args.percent_fixed*extent[args.fixed_axis]
+        Xmax[args.fixed_axis] += args.percent_fixed * extent[args.fixed_axis]
     aabb = pbat.geometry.aabb(np.vstack((Xmin, Xmax)).T)
     vdbc = aabb.contained(mesh.X)
     dbcs = np.array(vdbc)[:, np.newaxis]
@@ -422,6 +433,7 @@ if __name__ == "__main__":
     animate = False
     newton_maxiter = 10
     newton_rtol = 1e-5
+    t = 0
 
     profiler = pbat.profiling.Profiler()
     # ipctk.set_logger_level(ipctk.LoggerLevel.trace)
@@ -430,7 +442,7 @@ if __name__ == "__main__":
         global x, v, dt
         global dhat, dmin, mu
         global newton_maxiter, newton_rtol
-        global animate, step
+        global animate, step, t
 
         changed, dt = imgui.InputFloat("dt", dt)
         changed, dhat = imgui.InputFloat(
@@ -447,7 +459,7 @@ if __name__ == "__main__":
         step = imgui.Button("step")
 
         if animate or step:
-            ps.screenshot()
+            ps.screenshot()     
             profiler.begin_frame("Physics")
             params = Parameters(mesh, x, v, a, M, hep, dt, cmesh,
                                 cconstraints, fconstraints, dhat, dmin, mu, epsv)
@@ -459,13 +471,19 @@ if __name__ == "__main__":
             updater = BarrierUpdater(params)
             xtp1 = newton(x, f, g, H, solver, ccd,
                           newton_maxiter, newton_rtol, updater)
+            
             v = (xtp1 - x) / dt
             x = xtp1
             BX = to_surface(x, mesh, cmesh)
             profiler.end_frame("Physics")
+            
+            if args.export_state:
+                np.savez(f"state.frame.{t}.npz", x=x, v=v)
 
             # Update visuals
             vm.update_vertex_positions(BX)
+
+            t = t + 1
 
     ps.set_user_callback(callback)
     ps.show()

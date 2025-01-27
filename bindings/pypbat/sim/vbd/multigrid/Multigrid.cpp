@@ -13,9 +13,9 @@ namespace multigrid {
 
 void Bind(pybind11::module& m)
 {
-    BindHyperReduction(m);
     BindLevel(m);
     BindHierarchy(m);
+    BindHyperReduction(m);
     BindIntegrator(m);
 }
 

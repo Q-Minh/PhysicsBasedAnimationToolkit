@@ -52,6 +52,40 @@ struct Mesh
     IndexMatrixX E; ///< Element::Nodes x |#elements| element nodal indices
 };
 
+template <CElement TElement, int Dims>
+struct LinearMeshView
+{
+    using ElementType           = TElement;            ///< Underlying finite element type
+    static int constexpr kDims  = Dims;                ///< Embedding dimensions of the mesh
+    static int constexpr kOrder = ElementType::kOrder; ///< Shape function order
+
+    /**
+     * @brief Constructs a finite element mesh given some input geometric mesh. The cells of the
+     * input mesh should list its vertices in Lagrange order.
+     * @param V Dims x |#vertices| matrix of vertex positions
+     * @param C Element::AffineBase::Vertices x |#cells| matrix of cell vertex indices into V
+     */
+    LinearMeshView(Eigen::Ref<MatrixX const> const& V, Eigen::Ref<IndexMatrixX const> const& C);
+
+    /**
+     * @brief Compute quadrature points in domain space for on this mesh.
+     * @tparam QuadratureOrder
+     * @return
+     */
+    template <int QuadratureOrder>
+    MatrixX QuadraturePoints() const;
+    /**
+     * @brief Obtain quadrature weights on the reference element of this mesh
+     * @tparam QuadratureOrder
+     * @return
+     */
+    template <int QuadratureOrder>
+    Vector<TElement::template QuadratureType<QuadratureOrder>::kPoints> QuadratureWeights() const;
+
+    Eigen::Ref<MatrixX const> X;      ///< Dims x |#nodes| nodal positions
+    Eigen::Ref<IndexMatrixX const> E; ///< Element::Nodes x |#elements| element nodal indices
+};
+
 template <CElement TElement>
 class NodalKey
 {
@@ -207,22 +241,23 @@ Mesh<TElement, Dims>::Mesh(
     }
 }
 
-template <CElement TElement, int Dims>
-template <int QuadratureOrder>
-inline MatrixX Mesh<TElement, Dims>::QuadraturePoints() const
+template <CElement TElement, int Dims, int QuadratureOrder, class TDerivedX, class TDerivedE>
+inline MatrixX
+MeshQuadraturePoints(Eigen::MatrixBase<TDerivedX> const& X, Eigen::MatrixBase<TDerivedE> const& E)
 {
+    using ElementType           = TElement;
     using AffineElementType     = typename ElementType::AffineBaseType;
     using QuadratureRuleType    = typename ElementType::template QuadratureType<QuadratureOrder>;
     auto constexpr kQuadPts     = QuadratureRuleType::kPoints;
     auto const numberOfElements = E.cols();
     auto const XgRef            = common::ToEigen(QuadratureRuleType::points)
                            .reshaped(QuadratureRuleType::kDims + 1, kQuadPts);
-    MatrixX Xg(kDims, numberOfElements * kQuadPts);
+    MatrixX Xg(Dims, numberOfElements * kQuadPts);
     for (auto e = 0; e < numberOfElements; ++e)
     {
         auto const nodes                = E.col(e);
         auto const vertices             = nodes(ElementType::Vertices);
-        auto constexpr kRowsJ           = kDims;
+        auto constexpr kRowsJ           = Dims;
         auto constexpr kColsJ           = AffineElementType::kNodes;
         Matrix<kRowsJ, kColsJ> const Ve = X(Eigen::placeholders::all, vertices);
         for (auto g = 0; g < kQuadPts; ++g)
@@ -235,13 +270,72 @@ inline MatrixX Mesh<TElement, Dims>::QuadraturePoints() const
 
 template <CElement TElement, int Dims>
 template <int QuadratureOrder>
-inline Vector<TElement::template QuadratureType<QuadratureOrder>::kPoints>
-Mesh<TElement, Dims>::QuadratureWeights() const
+inline MatrixX Mesh<TElement, Dims>::QuadraturePoints() const
 {
+    return MeshQuadraturePoints<ElementType, kDims, QuadratureOrder>(X, E);
+}
+
+template <CElement TElement, int Dims, int QuadratureOrder>
+inline MatrixX MeshQuadratureWeights()
+{
+    using ElementType         = TElement;
     using QuadratureRuleType  = typename ElementType::template QuadratureType<QuadratureOrder>;
     auto constexpr kQuadPts   = QuadratureRuleType::kPoints;
     Vector<kQuadPts> const wg = common::ToEigen(QuadratureRuleType::weights);
     return wg;
+}
+
+template <CElement TElement, int Dims>
+template <int QuadratureOrder>
+inline Vector<TElement::template QuadratureType<QuadratureOrder>::kPoints>
+Mesh<TElement, Dims>::QuadratureWeights() const
+{
+    return MeshQuadratureWeights<ElementType, kDims, QuadratureOrder>();
+}
+
+template <CElement TElement, int Dims>
+inline LinearMeshView<TElement, Dims>::LinearMeshView(
+    Eigen::Ref<MatrixX const> const& V,
+    Eigen::Ref<IndexMatrixX const> const& C)
+    : X(V), E(C)
+{
+    static_assert(TElement::kOrder == 1, "TElement must be a linear element");
+    auto const nNodesPerElement = C.rows();
+    if (nNodesPerElement != TElement::kNodes)
+    {
+        throw std::invalid_argument(fmt::format(
+            "Expected {}x{} elements, but got {}x{}",
+            TElement::kNodes,
+            C.cols(),
+            C.rows(),
+            C.cols()));
+    }
+    if (V.rows() != Dims)
+    {
+        throw std::invalid_argument(
+            fmt::format("Expected {}x{} nodes, but got {}x{}", Dims, V.cols(), V.rows(), V.cols()));
+    }
+    if (V.rows() < TElement::kDims)
+    {
+        throw std::invalid_argument(fmt::format(
+            "Nodal coordinates must have dimensions > {} for the requested element",
+            TElement::kDims));
+    }
+}
+
+template <CElement TElement, int Dims>
+template <int QuadratureOrder>
+inline MatrixX LinearMeshView<TElement, Dims>::QuadraturePoints() const
+{
+    return MeshQuadraturePoints<ElementType, kDims, QuadratureOrder>(X, E);
+}
+
+template <CElement TElement, int Dims>
+template <int QuadratureOrder>
+inline Vector<TElement::template QuadratureType<QuadratureOrder>::kPoints>
+LinearMeshView<TElement, Dims>::QuadratureWeights() const
+{
+    return MeshQuadratureWeights<ElementType, kDims, QuadratureOrder>();
 }
 
 } // namespace fem

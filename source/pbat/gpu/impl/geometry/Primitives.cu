@@ -1,0 +1,131 @@
+// clang-format off
+#include "pbat/gpu/DisableWarnings.h"
+// clang-format on
+
+#include "Primitives.cuh"
+#include "pbat/gpu/impl/common/Eigen.cuh"
+
+#include <array>
+#include <exception>
+#include <string>
+#include <thrust/copy.h>
+#include <thrust/execution_policy.h>
+
+namespace pbat {
+namespace gpu {
+namespace impl {
+namespace geometry {
+
+Points::Points(Eigen::Ref<GpuMatrixX const> const& V) : x()
+{
+    Update(V);
+}
+
+std::size_t Points::NumberOfPoints() const
+{
+    return x.Size();
+}
+
+std::size_t Points::Dimensions() const
+{
+    return x.Dimensions();
+}
+
+void Points::Update(Eigen::Ref<GpuMatrixX const> const& V)
+{
+    x.Resize(V.cols());
+    common::ToBuffer(V, x);
+}
+
+Simplices::Simplices(Eigen::Ref<GpuIndexMatrixX const> const& C) : eSimplexType(), inds()
+{
+    if (C.size() > 0)
+    {
+        if ((C.rows() < static_cast<int>(ESimplexType::Vertex)) or
+            (C.rows() > static_cast<int>(ESimplexType::Tetrahedron)))
+        {
+            std::string const what =
+                "Expected cell index array with either 1,2,3 or 4 rows, corresponding to "
+                "vertex,edge,triangle "
+                "or tetrahedron simplices, but got " +
+                std::to_string(C.rows()) + " rows instead ";
+            throw std::invalid_argument(what);
+        }
+
+        eSimplexType = static_cast<ESimplexType>(C.rows());
+        for (auto m = 0; m < 4; ++m)
+            inds[m].resize(C.cols());
+        for (auto m = 0; m < C.rows(); ++m)
+        {
+            thrust::copy(C.row(m).begin(), C.row(m).end(), inds[m].begin());
+        }
+        auto const ninds = (-C.row(0).array() - 1).eval();
+        for (auto m = C.rows(); m < 4; ++m)
+        {
+            thrust::copy(ninds.begin(), ninds.end(), inds[m].begin());
+        }
+    }
+}
+
+GpuIndex Simplices::NumberOfSimplices() const
+{
+    return static_cast<GpuIndex>(inds.Size());
+}
+
+Bodies::Bodies(Eigen::Ref<GpuIndexVectorX const> const& B)
+    : body(B.size()), nBodies(static_cast<GpuIndex>(B.maxCoeff() + 1))
+{
+    common::ToBuffer(B, body);
+}
+
+GpuIndex Bodies::NumberOfBodies() const
+{
+    return nBodies;
+}
+
+} // namespace geometry
+} // namespace impl
+} // namespace gpu
+} // namespace pbat
+
+#include <doctest/doctest.h>
+#include <vector>
+
+TEST_CASE("[gpu][impl][geometry] Primitives")
+{
+    using namespace pbat;
+    GpuMatrixX V(3, 4);
+    // clang-format off
+    V << 0., 1., 2., 3.,
+         0., 0., 0., 0.,
+         0., 10., 20., 30.;
+    // clang-format on
+    GpuIndexMatrixX E(2, 3);
+    // clang-format off
+    E << 1, 0, 2,
+         2, 1, 3;
+    // clang-format on
+    gpu::impl::geometry::Points P(V);
+    for (auto d = 0; d < P.x.Dimensions(); ++d)
+    {
+        std::vector<GpuScalar> const PxGpu{P.x[d].begin(), P.x[d].end()};
+        std::vector<GpuScalar> const PxEigen{V.row(d).begin(), V.row(d).end()};
+        CHECK_EQ(PxGpu, PxEigen);
+    }
+    gpu::impl::geometry::Simplices S(E);
+    CHECK_EQ(S.eSimplexType, gpu::impl::geometry::Simplices::ESimplexType::Edge);
+    auto const nSimplexVertices = static_cast<int>(S.eSimplexType);
+    for (auto m = 0; m < nSimplexVertices; ++m)
+    {
+        std::vector<GpuIndex> indsGpu{S.inds[m].begin(), S.inds[m].end()};
+        std::vector<GpuIndex> indsEigen{E.row(m).begin(), E.row(m).end()};
+        CHECK_EQ(indsGpu, indsEigen);
+    }
+    auto const nindsEigen = (-E.row(0).array() - 1).eval();
+    for (auto m = nSimplexVertices; m < S.inds.Dimensions(); ++m)
+    {
+        std::vector<GpuIndex> indsGpu{S.inds[m].begin(), S.inds[m].end()};
+        std::vector<GpuIndex> indsEigen{nindsEigen.begin(), nindsEigen.end()};
+        CHECK_EQ(indsGpu, indsEigen);
+    }
+}

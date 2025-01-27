@@ -15,9 +15,9 @@ namespace pbat {
 namespace graph {
 
 IndexVectorX Partition(
-    IndexVectorX const& ptr,
-    IndexVectorX const& adj,
-    IndexVectorX const& wadj,
+    Eigen::Ref<IndexVectorX const> const& ptr,
+    Eigen::Ref<IndexVectorX const> const& adj,
+    Eigen::Ref<IndexVectorX const> const& wadj,
     Index nPartitions,
     PartitioningOptions opts)
 {

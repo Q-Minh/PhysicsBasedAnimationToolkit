@@ -1,19 +1,12 @@
 target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
-    PRIVATE
-    FILE_SET implementation
+    PUBLIC
+    FILE_SET api
     FILES
-    "Buffer.cuh"
-    "Cuda.cuh"
-    "Eigen.cuh"
-    "SynchronizedList.cuh"
-    "Var.cuh"
+    "Buffer.h"
+    "Common.h"
 )
 
 target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     PRIVATE
     "Buffer.cu"
-    "Cuda.cu"
-    "Eigen.cu"
-    "SynchronizedList.cu"
-    "Var.cu"
 )

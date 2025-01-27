@@ -2,12 +2,12 @@
 #define PBAT_PHYSICS_HYPER_ELASTICITY_H
 
 #include "PhysicsBasedAnimationToolkitExport.h"
+#include "pbat/Aliases.h"
 #include "pbat/math/linalg/mini/Matrix.h"
 
 #include <concepts>
 #include <exception>
 #include <fmt/core.h>
-#include <pbat/Aliases.h>
 #include <string>
 
 namespace pbat {
@@ -34,7 +34,7 @@ concept CHyperElasticEnergy = requires(T t)
     {
         t.hessian(math::linalg::mini::SMatrix<Scalar, T::kDims * T::kDims>{}, Scalar{}, Scalar{})
     } -> std::convertible_to<
-        math::linalg::mini::SMatrix<Scalar, T::kDims * T::kDims, T::kDims * T::kDims>>;
+          math::linalg::mini::SMatrix<Scalar, T::kDims * T::kDims, T::kDims * T::kDims>>;
     {
         t.evalWithGrad(
             math::linalg::mini::SMatrix<Scalar, T::kDims * T::kDims>{},
