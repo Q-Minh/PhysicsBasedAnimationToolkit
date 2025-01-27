@@ -11,4 +11,4 @@ notebook==6.5
 jupyter-contrib-nbextensions==0.7.0
 markdown
 jinja2==3.0.3
-pybind11-stubgen=2.5.1
+pybind11-stubgen==2.5.1
