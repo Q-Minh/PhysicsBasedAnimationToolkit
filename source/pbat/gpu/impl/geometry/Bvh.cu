@@ -227,7 +227,7 @@ void Bvh::Build(Aabb<kDims>& aabbs, Morton::Bound const& WL, Morton::Bound const
             assert(k < 64);
         });
     PBAT_PROFILE_CUDA_HOST_SCOPE_END(iaabbCtx);
-    
+
     PBAT_PROFILE_CUDA_HOST_SCOPE_END(ctx);
 }
 
@@ -238,6 +238,7 @@ void Bvh::Build(Aabb<kDims>& aabbs, Morton::Bound const& WL, Morton::Bound const
 
 #include "pbat/common/ConstexprFor.h"
 #include "pbat/common/Eigen.h"
+#include "pbat/geometry/DistanceQueries.h"
 #include "pbat/gpu/impl/common/SynchronizedList.cuh"
 
 #include <algorithm>
@@ -271,6 +272,53 @@ struct FOnOverlapDetected
             o.Append(Overlap{si, sj});
         }
     };
+};
+
+using TQuery = pbat::math::linalg::mini::SVector<GpuScalar, 3>;
+using TLeaf  = pbat::math::linalg::mini::SMatrix<GpuScalar, 3, 4>;
+using TPoint = pbat::math::linalg::mini::SVector<GpuScalar, 3>;
+using math::linalg::mini::FromBuffers;
+
+namespace DistanceQueries = pbat::geometry::DistanceQueries;
+
+struct FGetQueryObject
+{
+    std::array<GpuScalar*, 3> pts;
+    PBAT_DEVICE TQuery operator()(GpuIndex q) const { return FromBuffers<3, 1>(pts, q); }
+};
+
+struct FGetLeafObject
+{
+    std::array<GpuScalar*, 3> verts;
+    std::array<GpuIndex*, 4> tets;
+    PBAT_DEVICE TLeaf operator()(GpuIndex i) const
+    {
+        auto inds = FromBuffers<4, 1>(tets, i);
+        auto xe   = FromBuffers(verts, inds.Transpose());
+        return xe;
+    }
+};
+
+struct FDistancePointAabb
+{
+    PBAT_DEVICE GpuScalar operator()(TQuery const& Q, TPoint const& L, TPoint const& U) const
+    {
+        return DistanceQueries::PointAxisAlignedBoundingBox(Q, L, U);
+    }
+};
+
+struct FDistancePointTetrahedron
+{
+    PBAT_DEVICE GpuScalar operator()(TQuery const& Q, TLeaf const& T) const
+    {
+        return DistanceQueries::PointTetrahedron(Q, T.Col(0), T.Col(1), T.Col(2), T.Col(3));
+    }
+};
+
+struct FSetNearestNeighbour
+{
+    GpuIndex* NN;
+    PBAT_DEVICE void operator()(GpuIndex q, GpuIndex v) const { NN[q] = v; }
 };
 
 } // namespace Bvh
@@ -455,5 +503,47 @@ TEST_CASE("[gpu][impl][geometry] Bvh")
         // Assert
         CHECK_EQ(overlaps.Size(), nExpectedOverlaps);
         fCheckInternalBoundingBoxComputation(bvh, aabbs);
+    }
+    SUBCASE("Nearest neighbour search")
+    {
+        // Arrange
+        GpuMatrixX QP(3, C.cols());
+        QP.col(0) << GpuScalar(0.), GpuScalar(0.), GpuScalar(0.);
+        QP.col(1) << GpuScalar(0.), GpuScalar(1.), GpuScalar(1.);
+        QP.col(2) << GpuScalar(0.), GpuScalar(0.), GpuScalar(1.);
+        QP.col(3) << GpuScalar(1.), GpuScalar(1.), GpuScalar(1.);
+        QP.col(4) << GpuScalar(0.5), GpuScalar(0.5), GpuScalar(0.5);
+
+        Buffer<GpuScalar, 3> VG(V.cols());
+        ToBuffer(V, VG);
+        Buffer<GpuIndex, 4> CG(C.cols());
+        ToBuffer(C, CG);
+        Buffer<GpuScalar, 3> QPG(QP.cols());
+        ToBuffer(QP, QPG);
+        Buffer<GpuIndex> NNG(C.cols());
+        NNG.SetConstant(GpuIndex(-1));
+        Aabb<3> aabbs{VG, CG};
+
+        // Act
+        using TQuery = math::linalg::mini::SVector<GpuScalar, 3>;
+        using TLeaf  = math::linalg::mini::SMatrix<GpuScalar, 3, 4>;
+        using TPoint = math::linalg::mini::SVector<GpuScalar, 3>;
+
+        Bvh bvh(aabbs.Size());
+        bvh.Build(aabbs, mini::FromEigen(Vmin), mini::FromEigen(Vmax));
+        using math::linalg::mini::FromBuffers;
+        bvh.NearestNeighbours(
+            aabbs,
+            static_cast<GpuIndex>(QP.cols()),
+            gpu::impl::geometry::test::Bvh::FGetQueryObject{QPG.Raw()},
+            gpu::impl::geometry::test::Bvh::FGetLeafObject{VG.Raw(), CG.Raw()},
+            gpu::impl::geometry::test::Bvh::FDistancePointAabb{},
+            gpu::impl::geometry::test::Bvh::FDistancePointTetrahedron{},
+            gpu::impl::geometry::test::Bvh::FSetNearestNeighbour{NNG.Raw()});
+
+        // Assert
+        GpuIndexVectorX NN = ToEigen(NNG);
+        for (auto c = 0; c < C.cols(); ++c)
+            CHECK_EQ(NN(c), c);
     }
 }
