@@ -3,6 +3,7 @@
 
 #include "Aabb.cuh"
 #include "Morton.cuh"
+#include "pbat/common/Queue.h"
 #include "pbat/common/Stack.h"
 #include "pbat/geometry/Morton.h"
 #include "pbat/geometry/OverlapQueries.h"
@@ -83,7 +84,7 @@ class Bvh
      * @param fMinDistanceToBox Callable to get minimum distance to box with signature GpuScalar
      * @param fDistanceToleaf Callable to get distance to leaf with signature GpuScalar
      * @param fOnNearestNeighbourFound Callable to get nearest neighbour with signature void
-     * f(GpuIndex
+     * f(GpuIndex, GpuIndex, GpuScalar)
      * @param upper Upper bound for distance (i.e. search radius)
      * @param eps Epsilon for distance comparison
      */
@@ -92,7 +93,9 @@ class Bvh
         class FGetLeafObject,
         class FMinDistanceToBox,
         class FDistanceToLeaf,
-        class FOnNearestNeighbourFound>
+        class FOnNearestNeighbourFound,
+        auto kQueueSize = 8,
+        auto kStackSize = 64>
     void NearestNeighbours(
         Aabb<kDims> const& aabbs,
         GpuIndex nQueries,
@@ -102,7 +105,7 @@ class Bvh
         FDistanceToLeaf&& fDistanceToleaf,
         FOnNearestNeighbourFound&& fOnNearestNeighbourFound,
         GpuScalar upper = std::numeric_limits<GpuScalar>::max(),
-        GpuScalar eps   = std::numeric_limits<GpuScalar>::lowest());
+        GpuScalar eps   = GpuScalar(0));
 
     common::Buffer<GpuIndex> inds;         ///< n leaf box indices
     common::Buffer<MortonCodeType> morton; ///< n morton codes of leaf boxes
@@ -204,7 +207,9 @@ template <
     class FGetLeafObject,
     class FMinDistanceToBox,
     class FDistanceToLeaf,
-    class FOnNearestNeighbourFound>
+    class FOnNearestNeighbourFound,
+    auto kQueueSize,
+    auto kStackSize>
 inline void Bvh::NearestNeighbours(
     Aabb<kDims> const& aabbs,
     GpuIndex nQueries,
@@ -236,9 +241,9 @@ inline void Bvh::NearestNeighbours(
         std::is_invocable_v<FDistanceToLeaf, TQuery, TLeaf>,
         "FDistanceToLeaf must be callable with signature GpuScalar f(TQuery, TLeaf)");
     static_assert(
-        std::is_invocable_v<FOnNearestNeighbourFound, GpuIndex, GpuIndex>,
+        std::is_invocable_v<FOnNearestNeighbourFound, GpuIndex, GpuIndex, GpuScalar>,
         "FOnNearestNeighbourFound must be callable with signature void f(GpuIndex query, GpuIndex "
-        "leaf)");
+        "leaf, GpuScalar dmin)");
 
     thrust::for_each(
         thrust::device,
@@ -258,12 +263,14 @@ inline void Bvh::NearestNeighbours(
          fOnNearestNeighbourFound = std::forward<FOnNearestNeighbourFound>(
              fOnNearestNeighbourFound)] PBAT_DEVICE(GpuIndex q) mutable {
             using pbat::math::linalg::mini::FromBuffers;
-            using Stack = pbat::common::Stack<GpuIndex, 64>;
+            using Stack = pbat::common::Stack<GpuIndex, kStackSize>;
+            using Queue = pbat::common::Queue<GpuIndex, kQueueSize>;
 
             // Depth-first branch and bound distance minimization
             Stack dfs{};
-            TQuery query{fGetQueryObject(q)};
-            GpuIndex nn{-1};
+            Queue nn{};
+            GpuScalar dmin{upper};
+            TQuery const query = fGetQueryObject(q);
 
             dfs.Push(0 /*root*/);
             do
@@ -274,9 +281,10 @@ inline void Bvh::NearestNeighbours(
                 bool const bIsLeafNode = i >= leafBegin;
                 if (not bIsLeafNode)
                 {
-                    auto L = FromBuffers<3, 1>(ib, i);
-                    auto U = FromBuffers<3, 1>(ie, i);
-                    if (fMinDistanceToBox(query, L, U) < upper)
+                    auto L       = FromBuffers<3, 1>(ib, i);
+                    auto U       = FromBuffers<3, 1>(ie, i);
+                    GpuScalar db = fMinDistanceToBox(query, L, U);
+                    if (db < dmin)
                     {
                         dfs.Push(child[0][i]);
                         dfs.Push(child[1][i]);
@@ -286,16 +294,23 @@ inline void Bvh::NearestNeighbours(
                 {
                     GpuIndex const leaf = inds[i - leafBegin];
                     GpuScalar const d   = fDistanceToLeaf(query, fGetLeafObject(leaf));
-                    if (d < upper)
+                    if (d < dmin)
                     {
-                        nn    = leaf;
-                        upper = d;
+                        nn.Clear();
+                        nn.Push(leaf);
+                        dmin = d;
+                    }
+                    else if (d < dmin + eps and not nn.IsFull())
+                    {
+                        nn.Push(leaf);
                     }
                 }
             } while (not dfs.IsEmpty());
-            if (nn >= 0)
+            while (not nn.IsEmpty())
             {
-                fOnNearestNeighbourFound(q, nn);
+                GpuIndex const leaf = nn.Top();
+                nn.Pop();
+                fOnNearestNeighbourFound(q, leaf, dmin);
             }
         });
 

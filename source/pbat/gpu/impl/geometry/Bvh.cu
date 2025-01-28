@@ -318,7 +318,12 @@ struct FDistancePointTetrahedron
 struct FSetNearestNeighbour
 {
     GpuIndex* NN;
-    PBAT_DEVICE void operator()(GpuIndex q, GpuIndex v) const { NN[q] = v; }
+    GpuScalar* dNN;
+    PBAT_DEVICE void operator()(GpuIndex q, GpuIndex e, GpuScalar dmin) const
+    {
+        NN[q]  = e;
+        dNN[q] = dmin;
+    }
 };
 
 } // namespace Bvh
@@ -508,8 +513,8 @@ TEST_CASE("[gpu][impl][geometry] Bvh")
     {
         // Arrange
         GpuMatrixX QP(3, C.cols());
-        QP.col(0) << GpuScalar(0.), GpuScalar(0.), GpuScalar(0.);
-        QP.col(1) << GpuScalar(0.), GpuScalar(1.), GpuScalar(1.);
+        QP.col(0) << GpuScalar(1.), GpuScalar(0.), GpuScalar(0.);
+        QP.col(1) << GpuScalar(0.), GpuScalar(1.), GpuScalar(0.);
         QP.col(2) << GpuScalar(0.), GpuScalar(0.), GpuScalar(1.);
         QP.col(3) << GpuScalar(1.), GpuScalar(1.), GpuScalar(1.);
         QP.col(4) << GpuScalar(0.5), GpuScalar(0.5), GpuScalar(0.5);
@@ -522,16 +527,13 @@ TEST_CASE("[gpu][impl][geometry] Bvh")
         ToBuffer(QP, QPG);
         Buffer<GpuIndex> NNG(C.cols());
         NNG.SetConstant(GpuIndex(-1));
+        Buffer<GpuScalar> dNNG(C.cols());
+        dNNG.SetConstant(std::numeric_limits<GpuScalar>::max());
         Aabb<3> aabbs{VG, CG};
 
         // Act
-        using TQuery = math::linalg::mini::SVector<GpuScalar, 3>;
-        using TLeaf  = math::linalg::mini::SMatrix<GpuScalar, 3, 4>;
-        using TPoint = math::linalg::mini::SVector<GpuScalar, 3>;
-
         Bvh bvh(aabbs.Size());
         bvh.Build(aabbs, mini::FromEigen(Vmin), mini::FromEigen(Vmax));
-        using math::linalg::mini::FromBuffers;
         bvh.NearestNeighbours(
             aabbs,
             static_cast<GpuIndex>(QP.cols()),
@@ -539,11 +541,15 @@ TEST_CASE("[gpu][impl][geometry] Bvh")
             gpu::impl::geometry::test::Bvh::FGetLeafObject{VG.Raw(), CG.Raw()},
             gpu::impl::geometry::test::Bvh::FDistancePointAabb{},
             gpu::impl::geometry::test::Bvh::FDistancePointTetrahedron{},
-            gpu::impl::geometry::test::Bvh::FSetNearestNeighbour{NNG.Raw()});
+            gpu::impl::geometry::test::Bvh::FSetNearestNeighbour{NNG.Raw(), dNNG.Raw()});
 
         // Assert
         GpuIndexVectorX NN = ToEigen(NNG);
+        GpuVectorX dNN     = ToEigen(dNNG);
         for (auto c = 0; c < C.cols(); ++c)
+        {
             CHECK_EQ(NN(c), c);
+            CHECK_EQ(dNN(c), GpuScalar(0));
+        }
     }
 }

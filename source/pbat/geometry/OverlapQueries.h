@@ -402,9 +402,7 @@ template <mini::CMatrix TMatrixP, mini::CMatrix TMatrixL, mini::CMatrix TMatrixU
 PBAT_HOST_DEVICE bool
 PointAxisAlignedBoundingBox(TMatrixP const& P, TMatrixL const& L, TMatrixU const& U)
 {
-    // bool bIsInsideBox{true};
-    auto constexpr kDims = TMatrixL::kRows;
-    bool bIsOutsideBox   = Any((P < L) or (P > U));
+    bool bIsOutsideBox = Any((P < L) or (P > U));
     return not bIsOutsideBox;
 }
 
