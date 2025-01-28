@@ -326,6 +326,14 @@ struct FSetNearestNeighbour
     }
 };
 
+struct FDistanceUpperBound
+{
+    PBAT_DEVICE GpuScalar operator()(GpuIndex q) const
+    {
+        return std::numeric_limits<GpuScalar>::max();
+    }
+};
+
 } // namespace Bvh
 } // namespace test
 } // namespace geometry
@@ -541,6 +549,7 @@ TEST_CASE("[gpu][impl][geometry] Bvh")
             gpu::impl::geometry::test::Bvh::FGetLeafObject{VG.Raw(), CG.Raw()},
             gpu::impl::geometry::test::Bvh::FDistancePointAabb{},
             gpu::impl::geometry::test::Bvh::FDistancePointTetrahedron{},
+            gpu::impl::geometry::test::Bvh::FDistanceUpperBound{},
             gpu::impl::geometry::test::Bvh::FSetNearestNeighbour{NNG.Raw(), dNNG.Raw()});
 
         // Assert
