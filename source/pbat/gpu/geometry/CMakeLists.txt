@@ -4,7 +4,6 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     FILES
     "Aabb.h"
     "Bvh.h"
-    "BvhQuery.h"
     "Geometry.h"
     "Primitives.h"
     "SweepAndPrune.h"
@@ -13,7 +12,6 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     PRIVATE
     "Aabb.cu"
     "Bvh.cu"
-    "BvhQuery.cu"
     "Primitives.cu"
     "SweepAndPrune.cu"
 )

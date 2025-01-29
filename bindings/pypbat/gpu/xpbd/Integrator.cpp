@@ -25,10 +25,8 @@ void BindIntegrator([[maybe_unused]] pybind11::module& m)
 
     pyb::class_<Integrator>(m, "Integrator")
         .def(
-            pyb::init<Data const&, GpuIndex, GpuIndex>(),
+            pyb::init<Data const&>(),
             pyb::arg("data"),
-            pyb::arg("max_vertex_tetrahedron_overlaps"),
-            pyb::arg("max_vertex_triangle_contacts"),
             "Constructs an XPBD algorithm with the given data, where "
             "max_vertex_tetrahedron_overlaps specifies the size of memory preallocated for "
             "vertex-tetrahedron overlaps detected in the broad phase. max_vertex_triangle_contacts "
@@ -47,40 +45,9 @@ void BindIntegrator([[maybe_unused]] pybind11::module& m)
             "|#dims|x|#particles| particle positions")
         .def_property(
             "v",
-            &Integrator::GetVelocity,
+            nullptr,
             &Integrator::SetVelocities,
             "|#dims|x|#particles| particle velocities")
-        .def_property(
-            "aext",
-            &Integrator::GetExternalAcceleration,
-            &Integrator::SetExternalAcceleration,
-            "|#dims|x|#particles| particle external accelerations")
-        .def_property(
-            "minv",
-            &Integrator::GetMassInverse,
-            &Integrator::SetMassInverse,
-            "|#particles| particle mass inverses")
-        .def_property(
-            "lame",
-            &Integrator::GetLameCoefficients,
-            &Integrator::SetLameCoefficients,
-            "2x|#elements| Lame coefficients")
-        .def_property_readonly(
-            "shape_matrix_inverse",
-            &Integrator::GetShapeMatrixInverse,
-            "3x|3*#elements| element shape matrix inverses")
-        .def(
-            "lagrange",
-            &Integrator::GetLagrangeMultiplier,
-            pyb::arg("constraint_type"),
-            "|#lagrange multiplier per constraint|x|#constraint of type eConstraint| lagrange "
-            "multipliers")
-        .def(
-            "alpha",
-            &Integrator::GetCompliance,
-            pyb::arg("constraint_type"),
-            "|#lagrange multiplier per constraint|x|#constraint of type eConstraint| constraint "
-            "compliances")
         .def(
             "set_compliance",
             &Integrator::SetCompliance,
@@ -101,17 +68,7 @@ void BindIntegrator([[maybe_unused]] pybind11::module& m)
             [](Integrator& xpbd,
                std::pair<Eigen::Vector<GpuScalar, 3> const&, Eigen::Vector<GpuScalar, 3> const&>
                    box) { xpbd.SetSceneBoundingBox(box.first, box.second); },
-            "Tuple of (min,max) scene bounding box extremities.")
-        .def_property_readonly(
-            "vertex_tetrahedron_overlaps",
-            &Integrator::GetVertexTetrahedronCollisionCandidates,
-            "2x|#overlap| vertex tetrahedron overlap pairs O, s.t. O[0,:] and O[1,:] yield "
-            "overlapping vertices and tetrahedra, respectively.")
-        .def_property_readonly(
-            "vertex_triangle_contacts",
-            &Integrator::GetVertexTriangleContactPairs,
-            "2x|#contacts| vertex triangle contacts pairs C, s.t. C[0,:] and C[1,:] yield "
-            "contacting vertices and triangles, respectively.");
+            "Tuple of (min,max) scene bounding box extremities.");
 #endif // PBAT_USE_CUDA
 }
 

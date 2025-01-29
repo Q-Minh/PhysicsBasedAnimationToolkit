@@ -29,10 +29,7 @@ class Integrator
      * @param V
      * @param T
      */
-    PBAT_API Integrator(
-        Data const& data,
-        GpuIndex nMaxVertexTetrahedronOverlaps,
-        GpuIndex nMaxVertexTriangleContacts);
+    PBAT_API Integrator(Data const& data);
     Integrator(Integrator const&)            = delete;
     Integrator& operator=(Integrator const&) = delete;
     PBAT_API Integrator(Integrator&&) noexcept;
@@ -49,16 +46,6 @@ class Integrator
      * @return
      */
     PBAT_API GpuMatrixX Positions() const;
-    /**
-     * @brief
-     * @return
-     */
-    PBAT_API std::size_t NumberOfParticles() const;
-    /**
-     * @brief
-     * @return
-     */
-    PBAT_API std::size_t NumberOfConstraints() const;
     /**
      * @brief
      * @param X
