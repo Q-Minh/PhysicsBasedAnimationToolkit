@@ -130,69 +130,77 @@ Bvh::Bvh(GpuIndex nBoxes)
 void Bvh::Build(Aabb<kDims>& aabbs, Morton::Bound const& WL, Morton::Bound const& WU)
 {
     PBAT_PROFILE_NAMED_CUDA_HOST_SCOPE_START(ctx, "pbat.gpu.impl.geometry.Bvh.Build");
-    using namespace pbat::math::linalg;
-    GpuIndex const n                = aabbs.Size();
-    GpuIndex const leafBegin        = n - 1;
-    common::Buffer<GpuScalar, 3>& b = aabbs.b;
-    common::Buffer<GpuScalar, 3>& e = aabbs.e;
+    GpuIndex const n = aabbs.Size();
+    SortByMortonCode(aabbs, WL, WU);
+    BuildTree(n);
+    ConstructBoxes(aabbs);
+    PBAT_PROFILE_CUDA_HOST_SCOPE_END(ctx);
+}
 
-    // 1. Reset intermediate data
-    visits.SetConstant(GpuIndex(0));
+void Bvh::SortByMortonCode(Aabb<kDims>& aabbs, Morton::Bound const& WL, Morton::Bound const& WU)
+{
+    PBAT_PROFILE_NAMED_CUDA_HOST_SCOPE_START(
+        sortCtx,
+        "pbat.gpu.impl.geometry.Bvh.SortByMortonCode");
 
-    // 2. Compute Morton codes for each leaf node
-    Morton::Encode(aabbs, WL, WU, morton);
-
-    // 3. Sort leaves based on Morton codes
-    PBAT_PROFILE_NAMED_CUDA_HOST_SCOPE_START(sortCtx, "pbat.gpu.impl.geometry.Bvh.Build.Sort");
+    auto const n = aabbs.Size();
+    morton.Encode(aabbs, WL, WU);
     thrust::sequence(thrust::device, inds.Data(), inds.Data() + n);
     auto zip = thrust::make_zip_iterator(
-        b[0].begin(),
-        b[1].begin(),
-        b[2].begin(),
-        e[0].begin(),
-        e[1].begin(),
-        e[2].begin(),
+        aabbs.b[0].begin(),
+        aabbs.b[1].begin(),
+        aabbs.b[2].begin(),
+        aabbs.e[0].begin(),
+        aabbs.e[1].begin(),
+        aabbs.e[2].begin(),
         inds.Data());
     // Using a stable sort preserves the initial ordering of simplex indices 0...n-1, resulting in
     // simplices sorted by Morton codes first, and then by simplex index.
-    thrust::stable_sort_by_key(thrust::device, morton.Data(), morton.Data() + n, zip);
-    PBAT_PROFILE_CUDA_HOST_SCOPE_END(sortCtx);
+    thrust::stable_sort_by_key(thrust::device, morton.codes.Data(), morton.codes.Data() + n, zip);
 
-    // 4. Construct hierarchy
-    PBAT_PROFILE_NAMED_CUDA_HOST_SCOPE_START(
-        hierarchyCtx,
-        "pbat.gpu.impl.geometry.Bvh.Build.Hierarchy");
+    PBAT_PROFILE_CUDA_HOST_SCOPE_END(sortCtx);
+}
+
+void Bvh::BuildTree(GpuIndex n)
+{
+    PBAT_PROFILE_NAMED_CUDA_HOST_SCOPE_START(hierarchyCtx, "pbat.gpu.impl.geometry.Bvh.BuildTree");
     thrust::for_each(
         thrust::device,
         thrust::make_counting_iterator(0),
         thrust::make_counting_iterator(n - 1),
         kernels::FGenerateHierarchy{
-            morton.Raw(),
+            morton.codes.Raw(),
             child.Raw(),
             parent.Raw(),
             rightmost.Raw(),
-            leafBegin,
+            n - 1,
             n});
     PBAT_PROFILE_CUDA_HOST_SCOPE_END(hierarchyCtx);
+}
 
-    // 5. Construct internal node bounding boxes
+void Bvh::ConstructBoxes(Aabb<kDims>& aabbs)
+{
     PBAT_PROFILE_NAMED_CUDA_HOST_SCOPE_START(
         iaabbCtx,
         "pbat.gpu.impl.geometry.Bvh.Build.InternalAabbs");
-    auto& ib = iaabbs.b;
-    auto& ie = iaabbs.e;
+    visits.SetConstant(GpuIndex(0));
+    auto const n = aabbs.Size();
+    auto& b      = aabbs.b;
+    auto& e      = aabbs.e;
+    auto& ib     = iaabbs.b;
+    auto& ie     = iaabbs.e;
     thrust::for_each(
         thrust::device,
         thrust::make_counting_iterator(n - 1),
         thrust::make_counting_iterator(2 * n - 1),
-        [leafBegin,
-         parent = parent.Raw(),
-         child  = child.Raw(),
-         b      = b.Raw(),
-         e      = e.Raw(),
-         ib     = ib.Raw(),
-         ie     = ie.Raw(),
-         visits = visits.Raw()] PBAT_DEVICE(auto leaf) {
+        [leafBegin = n - 1,
+         parent    = parent.Raw(),
+         child     = child.Raw(),
+         b         = b.Raw(),
+         e         = e.Raw(),
+         ib        = ib.Raw(),
+         ie        = ie.Raw(),
+         visits    = visits.Raw()] PBAT_DEVICE(auto leaf) {
             auto p = parent[leaf];
             auto k = 0;
             for (; (k < 64) and (p >= 0); ++k)
@@ -227,8 +235,6 @@ void Bvh::Build(Aabb<kDims>& aabbs, Morton::Bound const& WL, Morton::Bound const
             assert(k < 64);
         });
     PBAT_PROFILE_CUDA_HOST_SCOPE_END(iaabbCtx);
-
-    PBAT_PROFILE_CUDA_HOST_SCOPE_END(ctx);
 }
 
 } // namespace geometry

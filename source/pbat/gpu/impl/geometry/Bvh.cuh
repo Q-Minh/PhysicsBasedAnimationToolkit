@@ -50,12 +50,32 @@ class Bvh
     Bvh(GpuIndex nBoxes);
 
     /**
-     * @brief
+     * @brief Build BVH from primitive aabbs
      * @param aabbs Primitive aabbs
      * @param min World bounding box minimum
      * @param max World bounding box maximum
      */
     void Build(Aabb<kDims>& aabbs, Morton::Bound const& min, Morton::Bound const& max);
+    /**
+     * @brief
+     *
+     * @param aabbs
+     * @param min
+     * @param max
+     */
+    void SortByMortonCode(Aabb<kDims>& aabbs, Morton::Bound const& min, Morton::Bound const& max);
+    /**
+     * @brief Builds the BVH's hierarchy, assuming primitives have been sorted.
+     *
+     * @param n Number of leaf boxes
+     */
+    void BuildTree(GpuIndex n);
+    /**
+     * @brief Computes internal node bounding boxes, assuming the BVH's hierarchy is built.
+     *
+     * @param aabbs
+     */
+    void ConstructBoxes(Aabb<kDims>& aabbs);
     /**
      * @brief
      *
@@ -156,8 +176,8 @@ class Bvh
         FDistanceUpperBound&& fDistanceUpperBound,
         FOnFound&& fOnFound);
 
-    common::Buffer<GpuIndex> inds;         ///< n leaf box indices
-    common::Buffer<MortonCodeType> morton; ///< n morton codes of leaf boxes
+    common::Buffer<GpuIndex> inds; ///< n leaf box indices
+    Morton morton;                 ///< Morton codes of leaf boxes
     common::Buffer<GpuIndex, 2>
         child; ///< (n-1)x2 left and right children. If child[lr][i] > n - 2, then it is
                ///< a leaf node, otherwise an internal node. lr == 0 -> left

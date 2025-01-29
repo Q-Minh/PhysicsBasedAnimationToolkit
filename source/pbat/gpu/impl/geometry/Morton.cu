@@ -18,16 +18,14 @@ namespace gpu {
 namespace impl {
 namespace geometry {
 
-void Morton::Encode(
-    Aabb<3> const& aabbs,
-    Bound const& wmin,
-    Bound const& wmax,
-    common::Buffer<Code>& morton)
+Morton::Morton(std::size_t n) : codes(n) {}
+
+void Morton::Encode(Aabb<3> const& aabbs, Bound const& wmin, Bound const& wmax)
 {
     PBAT_PROFILE_NAMED_CUDA_HOST_SCOPE_START(ctx, "pbat.gpu.impl.geometry.Morton.Encode");
     auto const nBoxes = aabbs.Size();
-    if (morton.Size() < nBoxes)
-        morton.Resize(nBoxes);
+    if (codes.Size() < nBoxes)
+        codes.Resize(nBoxes);
 
     using namespace pbat::math::linalg;
     mini::SVector<GpuScalar, 3> sb  = wmin;
@@ -35,7 +33,7 @@ void Morton::Encode(
     thrust::for_each(
         thrust::counting_iterator<GpuIndex>(0),
         thrust::counting_iterator<GpuIndex>(nBoxes),
-        [sb, sbe, b = aabbs.b.Raw(), e = aabbs.e.Raw(), m = morton.Raw()] PBAT_DEVICE(GpuIndex i) {
+        [sb, sbe, b = aabbs.b.Raw(), e = aabbs.e.Raw(), m = codes.Raw()] PBAT_DEVICE(GpuIndex i) {
             // Compute Morton code of the centroid of the bounding box of simplex s
             std::array<GpuScalar, 3> c{};
             pbat::common::ForRange<0, 3>(
