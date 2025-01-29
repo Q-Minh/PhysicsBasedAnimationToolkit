@@ -6,6 +6,7 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
 )
 
 add_subdirectory(common)
+add_subdirectory(contact)
 add_subdirectory(geometry)
 add_subdirectory(vbd)
 add_subdirectory(xpbd)

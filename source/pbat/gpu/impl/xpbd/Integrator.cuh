@@ -4,6 +4,7 @@
 #include "pbat/Aliases.h"
 #include "pbat/gpu/Aliases.h"
 #include "pbat/gpu/impl/common/Buffer.cuh"
+#include "pbat/gpu/impl/contact/VertexTriangleMixedCcdDcd.cuh"
 #include "pbat/gpu/impl/geometry/Bvh.cuh"
 #include "pbat/gpu/impl/geometry/Primitives.cuh"
 #include "pbat/sim/xpbd/Data.h"
@@ -85,8 +86,7 @@ class Integrator
     common::Buffer<GpuIndex, 4> T;  ///< Tetrahedral simplices
     common::Buffer<GpuIndex> B;     ///< Bodies of boundary vertices
 
-    geometry::Bvh Tbvh; ///< (Line segment + tetrahedron) bvh
-    geometry::Bvh Fbvh; ///< Triangle bvh (over boundary mesh)
+    contact::VertexTriangleMixedCcdDcd cd; ///< Contact detection system
 
     common::Buffer<GpuScalar, 3> xt;   ///< Vertex/particle positions at time t
     common::Buffer<GpuScalar, 3> xb;   ///< Vertex/particle positions buffer
