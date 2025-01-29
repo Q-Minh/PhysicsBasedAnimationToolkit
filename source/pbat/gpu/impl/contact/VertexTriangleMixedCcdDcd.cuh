@@ -15,8 +15,15 @@ class VertexTriangleMixedCcdDcd
     static auto constexpr kDims          = 3;
     static auto constexpr kMaxNeighbours = 8;
 
-    VertexTriangleMixedCcdDcd(GpuIndex nVertices, GpuIndex nTriangles);
-
+    /**
+     * @brief Construct a new Vertex Triangle Mixed Ccd Dcd object
+     *
+     * @param V
+     * @param F
+     */
+    VertexTriangleMixedCcdDcd(
+        common::Buffer<GpuIndex> const& V,
+        common::Buffer<GpuIndex, 3> const& F);
     /**
      * @brief Computes the initial active set.
      *
@@ -28,14 +35,14 @@ class VertexTriangleMixedCcdDcd
      *
      * @param xt
      * @param xtp1
-     * @param V
-     * @param F
+     * @param wmin
+     * @param wmax
      */
     void InitializeActiveSet(
         common::Buffer<GpuScalar, 3> const& xt,
         common::Buffer<GpuScalar, 3> const& xtp1,
-        common::Buffer<GpuIndex> const& V,
-        common::Buffer<GpuIndex, 3> const& F);
+        geometry::Morton::Bound const& wmin,
+        geometry::Morton::Bound const& wmax);
     /**
      * @brief The active set is updated by recomputing nearest neighbours f of i, using current
      * signed distances sd(i,f) as a warm-start.
@@ -51,8 +58,10 @@ class VertexTriangleMixedCcdDcd
     void FinalizeActiveSet(common::Buffer<GpuScalar, 3> const& x);
 
   private:
-    common::Buffer<Index> inds; ///< |#pts| point indices i
-    geometry::Morton morton;    ///< |#pts| morton codes for points
+    common::Buffer<GpuIndex> V;    ///< Vertices
+    common::Buffer<GpuIndex, 3> F; ///< Triangles
+    common::Buffer<Index> inds;    ///< |#pts| point indices i
+    geometry::Morton morton;       ///< |#pts| morton codes for points
     geometry::Aabb<kDims>
         Paabbs; ///< |#pts| axis-aligned bounding boxes of swept points (i.e. line segments)
     geometry::Aabb<kDims>
@@ -60,6 +69,7 @@ class VertexTriangleMixedCcdDcd
     geometry::Bvh Fbvh; ///< Bounding volume hierarchy over (potentially swept) triangles
     common::Buffer<bool> active; ///< |#pts| active mask
     common::Buffer<Index> av;    ///< Active vertices (i.e. indices of active points)
+    GpuIndex nActive;            ///< Number of active vertices
     common::Buffer<Index> nn;    ///< |#pts*kMaxNeighbours| nearest neighbours f to pts i.
                                  ///< nn[i*kMaxNeighbours+j] < 0 if no neighbour
     common::Buffer<Scalar> sd;   ///< |#pts| signed distance min_f sd(i,f) to surface

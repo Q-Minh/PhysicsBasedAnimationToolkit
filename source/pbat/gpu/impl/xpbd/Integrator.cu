@@ -24,7 +24,7 @@ Integrator::Integrator(Data const& data)
       F(data.F.cols()),
       T(data.T.cols()),
       B(data.BV.size()),
-      cd(static_cast<GpuIndex>(data.V.size()), static_cast<GpuIndex>(data.F.cols())),
+      cd(V, F),
       xt(data.x.cols()),
       xb(data.x.cols()),
       v(data.v.cols()),
@@ -105,13 +105,15 @@ void Integrator::Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps)
     // 6. For each overlapping pair (i, jkl), mark i as active
     // 7. Compact (sorted) active vertices into an active vertex list (thrust::copy_if from "active
     // mask buffer" to "active vertices buffer" should be sufficient)
-    // 8. Compute AABBs of (non-swept) triangles
-    // 9. Build triangle BVH over triangles
-    // 10. Find nearest triangles f to active vertices i to form contact pairs (i, f) and compute
-    // the signed distances sd(i,f)
 
     for (auto s = 0; s < substeps; ++s)
     {
+        // Update active set
+        // 1. Compute AABBs of triangles at current iterate xk
+        // 2. Update triangle BVH boxes
+        // 3. Find nearest triangles f to active vertices i to form contact pairs (i, f) and
+        // update the signed distances min_f sd(i,f)
+
         // Store previous positions
         xt = x;
         // Reset "Lagrange" multipliers

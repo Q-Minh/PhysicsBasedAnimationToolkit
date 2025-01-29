@@ -297,7 +297,7 @@ struct FGetLeafObject
 {
     std::array<GpuScalar*, 3> verts;
     std::array<GpuIndex*, 4> tets;
-    PBAT_DEVICE TLeaf operator()(GpuIndex i) const
+    PBAT_DEVICE TLeaf operator()([[maybe_unused]] GpuIndex leaf, GpuIndex i) const
     {
         auto inds = FromBuffers<4, 1>(tets, i);
         auto xe   = FromBuffers(verts, inds.Transpose());
@@ -325,7 +325,8 @@ struct FSetNearestNeighbour
 {
     GpuIndex* NN;
     GpuScalar* dNN;
-    PBAT_DEVICE void operator()(GpuIndex q, GpuIndex e, GpuScalar dmin) const
+    PBAT_DEVICE void
+    operator()(GpuIndex q, GpuIndex e, GpuScalar dmin, [[maybe_unused]] GpuIndex k) const
     {
         NN[q]  = e;
         dNN[q] = dmin;
