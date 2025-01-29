@@ -111,7 +111,6 @@ void Integrator::Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps)
     // 10. Find nearest triangles f to active vertices i to form contact pairs (i, f) and compute
     // the signed distances sd(i,f)
 
-    // Determine active vertices/particles
     for (auto s = 0; s < substeps; ++s)
     {
         // Store previous positions
