@@ -96,8 +96,21 @@ void Integrator::Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps)
     GpuScalar const sdt2      = sdt * sdt;
     GpuIndex const nParticles = static_cast<GpuIndex>(x.Size());
     // Detect collision candidates and setup collision constraint solve
-    // GpuScalar constexpr expansion{0};
     // TODO:
+    // 1. Compute AABBs of line segments x_i^t -> \Tilde{x_i}
+    // 2. Sort line segment AABBs via Morton encoding (thrust::sort_by_key on "morton codes" and
+    // active mask buffer)
+    // 3. Compute AABBs of linearly swept triangles x_{jkl} -> \Tilde{x_{jkl}}
+    // 4. Build triangle BVH over swept triangle volumes
+    // 5. Detect overlaps between line segments and swept triangles
+    // 6. For each overlapping pair (i, jkl), mark i as active
+    // 7. Compact (sorted) active vertices into an active vertex list (thrust::copy_if from "active
+    // mask buffer" to "active vertices buffer" should be sufficient)
+    // 8. Compute AABBs of (non-swept) triangles
+    // 9. Build triangle BVH over triangles
+    // 10. Find nearest triangles f to active vertices i to form contact pairs (i, f) and compute
+    // the signed distances sd(i,f)
+
     // Determine active vertices/particles
     for (auto s = 0; s < substeps; ++s)
     {
@@ -219,6 +232,11 @@ void Integrator::Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps)
                 auto vi = IntegrateVelocity(FromBuffers<3, 1>(xt, i), FromBuffers<3, 1>(x, i), dt);
                 ToBuffers(vi, v, i);
             });
+
+        // TODO:
+        // 1. Update nearest neighbours f of i with a warm-started (using sd(i,f) as a query upper
+        // bound) nearest neighbour search over the triangle BVH.
+
         e.wait();
     }
 
