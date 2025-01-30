@@ -1,11 +1,13 @@
 #ifndef PBAT_GPU_IMPL_CONTACT_VERTEXTRIANGLEMIXEDCCDDCD_H
 #define PBAT_GPU_IMPL_CONTACT_VERTEXTRIANGLEMIXEDCCDDCD_H
 
+#include "pbat/geometry/DistanceQueries.h"
 #include "pbat/gpu/Aliases.h"
 #include "pbat/gpu/impl/common/Buffer.cuh"
 #include "pbat/gpu/impl/geometry/Aabb.cuh"
 #include "pbat/gpu/impl/geometry/Bvh.cuh"
 #include "pbat/gpu/impl/geometry/Morton.cuh"
+#include "pbat/math/linalg/mini/Mini.h"
 
 namespace pbat::gpu::impl::contact {
 
@@ -18,12 +20,14 @@ class VertexTriangleMixedCcdDcd
     /**
      * @brief Construct a new Vertex Triangle Mixed Ccd Dcd object
      *
+     * @param B
      * @param V
      * @param F
      */
     VertexTriangleMixedCcdDcd(
-        common::Buffer<GpuIndex> const& V,
-        common::Buffer<GpuIndex, 3> const& F);
+        Eigen::Ref<GpuIndexVectorX const> const& B,
+        Eigen::Ref<GpuIndexVectorX const> const& V,
+        Eigen::Ref<GpuIndexMatrixX const> const& F);
     /**
      * @brief Computes the initial active set.
      *
@@ -45,7 +49,7 @@ class VertexTriangleMixedCcdDcd
         geometry::Morton::Bound const& wmax);
     /**
      * @brief The active set is updated by recomputing nearest neighbours f of i, using current
-     * signed distances sd(i,f) as a warm-start.
+     * distances d(i,f) as a warm-start.
      *
      * @param x
      */
@@ -56,24 +60,91 @@ class VertexTriangleMixedCcdDcd
      * @param x
      */
     void FinalizeActiveSet(common::Buffer<GpuScalar, 3> const& x);
+    /**
+     * @brief
+     *
+     * @tparam FOnNearestNeighbourFound
+     * @param x
+     * @param fOnNearestNeighbourFound
+     */
+    template <class FOnNearestNeighbourFound>
+    void ForEachNearestNeighbour(
+        common::Buffer<GpuScalar, 3> const& x,
+        FOnNearestNeighbourFound fOnNearestNeighbourFound);
+
+    /**
+     * @brief
+     *
+     * @param x
+     */
+    void UpdateBvh(common::Buffer<GpuScalar, 3> const& x);
 
   private:
+    common::Buffer<GpuIndex> B;    ///< |#pts| body map
     common::Buffer<GpuIndex> V;    ///< Vertices
     common::Buffer<GpuIndex, 3> F; ///< Triangles
-    common::Buffer<Index> inds;    ///< |#pts| point indices i
-    geometry::Morton morton;       ///< |#pts| morton codes for points
+    common::Buffer<Index> inds;    ///< |#verts| point indices i
+    geometry::Morton morton;       ///< |#verts| morton codes for points
     geometry::Aabb<kDims>
-        Paabbs; ///< |#pts| axis-aligned bounding boxes of swept points (i.e. line segments)
+        Paabbs; ///< |#verts| axis-aligned bounding boxes of swept points (i.e. line segments)
     geometry::Aabb<kDims>
         Faabbs;         ///< |#tris| axis-aligned bounding boxes of (potentially swept) triangles
     geometry::Bvh Fbvh; ///< Bounding volume hierarchy over (potentially swept) triangles
-    common::Buffer<bool> active; ///< |#pts| active mask
-    common::Buffer<Index> av;    ///< Active vertices (i.e. indices of active points)
-    GpuIndex nActive;            ///< Number of active vertices
-    common::Buffer<Index> nn;    ///< |#pts*kMaxNeighbours| nearest neighbours f to pts i.
-                                 ///< nn[i*kMaxNeighbours+j] < 0 if no neighbour
-    common::Buffer<Scalar> sd;   ///< |#pts| signed distance min_f sd(i,f) to surface
+    common::Buffer<bool> active;         ///< |#verts| active mask
+    common::Buffer<Index> av;            ///< Active vertices (i.e. indices of active points)
+    GpuIndex nActive;                    ///< Number of active vertices
+    common::Buffer<Index> nn;            ///< |#verts*kMaxNeighbours| nearest neighbours f to pts i.
+                                         ///< nn[i*kMaxNeighbours+j] < 0 if no neighbour
+    common::Buffer<GpuScalar> distances; ///< |#verts| squared distance min_f sd(i,f) to surface
 };
+
+template <class FOnNearestNeighbourFound>
+inline void VertexTriangleMixedCcdDcd::ForEachNearestNeighbour(
+    common::Buffer<GpuScalar, 3> const& x,
+    FOnNearestNeighbourFound fOnNearestNeighbourFound)
+{
+    using namespace pbat::math::linalg::mini;
+    auto fGetQueryObject = [x = x.Raw(), V = V.Raw(), av = av.Raw()] PBAT_DEVICE(GpuIndex q) {
+        GpuIndex const v = av[q];
+        return FromBuffers<3, 1>(x, V[v]);
+    };
+    auto fGetLeafObject = [x = x.Raw(),
+                           F = F.Raw()] PBAT_DEVICE([[maybe_unused]] GpuIndex leaf, GpuIndex f) {
+        auto fv                           = FromBuffers<3, 1>(F, f);
+        SMatrix<GpuScalar, 3, 3> const xf = FromBuffers(x, fv.Transpose());
+        return xf;
+    };
+    auto fMinDistanceToBox = [] PBAT_DEVICE(
+                                 SVector<GpuScalar, 3> const& xi,
+                                 SVector<GpuScalar, 3> const& L,
+                                 SVector<GpuScalar, 3> const& U) {
+        return pbat::geometry::DistanceQueries::PointAxisAlignedBoundingBox(xi, L, U);
+    };
+    auto fDistanceToLeaf = [] PBAT_DEVICE(
+                               SVector<GpuScalar, 3> const& xi,
+                               SMatrix<GpuScalar, 3, 3> const& xf) {
+        return pbat::geometry::DistanceQueries::PointTriangle(xi, xf.Col(0), xf.Col(1), xf.Col(2));
+    };
+    auto fDistanceUpperBound = [d = distances.Raw(), av = av.Raw()] PBAT_DEVICE(GpuIndex q) {
+        return d[av[q]];
+    };
+    Fbvh.NearestNeighbours<
+        decltype(fGetQueryObject),
+        decltype(fGetLeafObject),
+        decltype(fMinDistanceToBox),
+        decltype(fDistanceToLeaf),
+        decltype(fDistanceUpperBound),
+        decltype(fOnNearestNeighbourFound),
+        kMaxNeighbours>(
+        Faabbs,
+        nActive,
+        fGetQueryObject,
+        fGetLeafObject,
+        fMinDistanceToBox,
+        fDistanceToLeaf,
+        fDistanceUpperBound,
+        fOnNearestNeighbourFound);
+}
 
 } // namespace pbat::gpu::impl::contact
 

@@ -24,7 +24,7 @@ Integrator::Integrator(Data const& data)
       F(data.F.cols()),
       T(data.T.cols()),
       B(data.BV.size()),
-      cd(V, F),
+      cd(data.BV.cast<GpuIndex>(), data.V.cast<GpuIndex>(), data.F.cast<GpuIndex>()),
       xt(data.x.cols()),
       xb(data.x.cols()),
       v(data.v.cols()),

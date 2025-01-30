@@ -178,6 +178,47 @@ PBAT_HOST_DEVICE bool LineSegmentTriangle3D(
     TMatrixC const& C);
 
 /**
+ * @brief Tests overlap between line segment PQ and the swept volume spanned by linear interpolation
+ * of A1B1C1 to A2B2C2
+ *
+ * @tparam TMatrixP
+ * @tparam TMatrixQ
+ * @tparam TMatrixA1
+ * @tparam TMatrixB1
+ * @tparam TMatrixC1
+ * @tparam TMatrixA2
+ * @tparam TMatrixB2
+ * @tparam TMatrixC2
+ * @param P
+ * @param Q
+ * @param A1
+ * @param B1
+ * @param C1
+ * @param A2
+ * @param B2
+ * @param C2
+ * @return
+ */
+template <
+    mini::CMatrix TMatrixP,
+    mini::CMatrix TMatrixQ,
+    mini::CMatrix TMatrixA1,
+    mini::CMatrix TMatrixB1,
+    mini::CMatrix TMatrixC1,
+    mini::CMatrix TMatrixA2,
+    mini::CMatrix TMatrixB2,
+    mini::CMatrix TMatrixC2>
+PBAT_HOST_DEVICE bool LineSegmentSweptTriangle3D(
+    TMatrixP const& P,
+    TMatrixQ const& Q,
+    TMatrixA1 const& A1,
+    TMatrixB1 const& B1,
+    TMatrixC1 const& C1,
+    TMatrixA2 const& A2,
+    TMatrixB2 const& B2,
+    TMatrixC2 const& C2);
+
+/**
  * @brief Tests for overlap between plane (P,n) and axis-aligned bounding box (low,up)
  * @param P
  * @param n
@@ -577,6 +618,69 @@ PBAT_HOST_DEVICE bool LineSegmentTriangle3D(
     TMatrixC const& C)
 {
     return IntersectionQueries::UvwLineSegmentTriangle3D(P, Q, A, B, C).has_value();
+}
+
+template <
+    mini::CMatrix TMatrixP,
+    mini::CMatrix TMatrixQ,
+    mini::CMatrix TMatrixA1,
+    mini::CMatrix TMatrixB1,
+    mini::CMatrix TMatrixC1,
+    mini::CMatrix TMatrixA2,
+    mini::CMatrix TMatrixB2,
+    mini::CMatrix TMatrixC2>
+PBAT_HOST_DEVICE bool LineSegmentSweptTriangle3D(
+    TMatrixP const& P,
+    TMatrixQ const& Q,
+    TMatrixA1 const& A1,
+    TMatrixB1 const& B1,
+    TMatrixC1 const& C1,
+    TMatrixA2 const& A2,
+    TMatrixB2 const& B2,
+    TMatrixC2 const& C2)
+{
+    // We can construct the swept volume by intersecting the following half-planes:
+    // 1. Plane spanned by A1B1C1
+    // 2. Planed spanned by A2C2B2
+    // 3. Plane spanned by A1A2B2B1 -> 2 triangles A1A2B2 and A1B2B1
+    // 4. Plane spanned by B1B2C2C1 -> 2 triangles B1B2C2 and B1C2C1
+    // 5. Plane spanned by C1C2A2A1 -> 2 triangles C1C2A2 and C1A2A1
+
+    using ScalarType            = typename TMatrixP::ScalarType;
+    static auto constexpr kDims = 3;
+
+    auto const fSignWrtPlane = [=](auto const& P, auto const& A, auto const& B, auto const& C) {
+        mini::SVector<ScalarType, kDims> const n = Cross(B - A, C - A);
+        return Dot(P - A, n);
+    };
+
+    // Linearly swept triangle is a convex shape, check for PQ inside the volume.
+    // clang-format off
+    bool const bIsPqInside = fSignWrtPlane(P, A1, B1, C1) <= ScalarType(0) and
+                             fSignWrtPlane(P, A2, C2, B2) <= ScalarType(0) and
+                             fSignWrtPlane(P, A1, A2, B2) <= ScalarType(0) and
+                             fSignWrtPlane(P, B1, B2, C2) <= ScalarType(0) and
+                             fSignWrtPlane(P, C1, C2, A2) <= ScalarType(0) and
+                             fSignWrtPlane(Q, A1, B1, C1) <= ScalarType(0) and
+                             fSignWrtPlane(Q, A2, B2, C2) <= ScalarType(0) and
+                             fSignWrtPlane(Q, A1, A2, B2) <= ScalarType(0) and
+                             fSignWrtPlane(Q, B1, B2, C2) <= ScalarType(0) and
+                             fSignWrtPlane(Q, C1, C2, A2) <= ScalarType(0);
+    // clang-format on
+    if (bIsPqInside)
+        return true;
+
+    // Check for intersection of PQ with each triangle on the boundary of the swept volume.
+    // clang-format off
+    return LineSegmentTriangle3D(P, Q, A1, B1, C1) or 
+           LineSegmentTriangle3D(P, Q, A2, C2, B2) or 
+           LineSegmentTriangle3D(P, Q, A1, A2, B2) or 
+           LineSegmentTriangle3D(P, Q, A1, B2, B1) or 
+           LineSegmentTriangle3D(P, Q, B1, B2, C2) or 
+           LineSegmentTriangle3D(P, Q, B1, C2, C1) or 
+           LineSegmentTriangle3D(P, Q, C1, C2, A2) or 
+           LineSegmentTriangle3D(P, Q, C1, A2, A1);
+    // clang-format on
 }
 
 template <

@@ -89,6 +89,20 @@ class Bvh
     /**
      * @brief
      *
+     * @tparam FOnFound
+     * @tparam kStackSize
+     * @param leafAabbs
+     * @param queryAabbs
+     * @param fOnOverlapDetected
+     */
+    template <class FOnOverlapDetected, auto kStackSize = 64>
+    void DetectOverlaps(
+        Aabb<kDims> const& leafAabbs,
+        Aabb<kDims> const& queryAabbs,
+        FOnOverlapDetected fOnOverlapDetected);
+    /**
+     * @brief
+     *
      * @tparam FGetQueryObject Callable with signature TQuery f(GpuIndex)
      * @tparam FGetLeafObject Callable with signature TLeaf f(GpuIndex leaf, GpuIndex i)
      * @tparam FMinDistanceToBox Callable with signature GpuScalar f(TQuery, Point, Point) where
@@ -127,12 +141,12 @@ class Bvh
     void NearestNeighbours(
         Aabb<kDims> const& aabbs,
         GpuIndex nQueries,
-        FGetQueryObject&& fGetQueryObject,
-        FGetLeafObject&& fGetLeafObject,
-        FMinDistanceToBox&& fMinDistanceToBox,
-        FDistanceToLeaf&& fDistanceToleaf,
-        FDistanceUpperBound&& fDistanceUpperBound,
-        FOnNearestNeighbourFound&& fOnNearestNeighbourFound,
+        FGetQueryObject fGetQueryObject,
+        FGetLeafObject fGetLeafObject,
+        FMinDistanceToBox fMinDistanceToBox,
+        FDistanceToLeaf fDistanceToleaf,
+        FDistanceUpperBound fDistanceUpperBound,
+        FOnNearestNeighbourFound fOnNearestNeighbourFound,
         GpuScalar eps = GpuScalar(0));
     /**
      * @brief
@@ -143,8 +157,8 @@ class Bvh
      * Point=pbat::math::linalg::mini::SVector<GpuScalar, 3>
      * @tparam FDistanceToLeaf Callable with signature GpuScalar f(TQuery, TLeaf)
      * @tparam FDistanceUpperBound Callable with signature GpuScalar f(GpuIndex)
-     * @tparam FOnFound Callable with signature void f(GpuIndex query, GpuIndex
-     * leaf, GpuScalar d)
+     * @tparam FOnFound Callable with signature void f(GpuIndex q, TQuery query, GpuIndex leafIdx,
+     * GpuIndex i, TLeaf leaf, GpuScalar d)
      * @tparam kStackSize Branch and bound minimization's depth-first search stack size
      *
      * @param aabbs The same aabbs that were given to Build(), otherwise undefined behavior.
@@ -157,8 +171,8 @@ class Bvh
      * f(TQuery,TLeaf)
      * @param fDistanceUpperBound Callable to get query q's distance upper bound with signature
      * GpuScalar f(GpuIndex)
-     * @param fOnFound Callable for handling satisfied queries with signature void
-     * f(GpuIndex, GpuIndex, GpuScalar)
+     * @param fOnFound Callable for handling satisfied queries with signature
+     * void f(GpuIndex q, TQuery query, GpuIndex leafIdx, GpuIndex i, TLeaf leaf, GpuScalar d)
      */
     template <
         class FGetQueryObject,
@@ -171,12 +185,12 @@ class Bvh
     void RangeSearch(
         Aabb<kDims> const& aabbs,
         GpuIndex nQueries,
-        FGetQueryObject&& fGetQueryObject,
-        FGetLeafObject&& fGetLeafObject,
-        FMinDistanceToBox&& fMinDistanceToBox,
-        FDistanceToLeaf&& fDistanceToleaf,
-        FDistanceUpperBound&& fDistanceUpperBound,
-        FOnFound&& fOnFound);
+        FGetQueryObject fGetQueryObject,
+        FGetLeafObject fGetLeafObject,
+        FMinDistanceToBox fMinDistanceToBox,
+        FDistanceToLeaf fDistanceToleaf,
+        FDistanceUpperBound fDistanceUpperBound,
+        FOnFound fOnFound);
 
     common::Buffer<GpuIndex> inds; ///< n leaf box indices
     Morton morton;                 ///< Morton codes of leaf boxes
@@ -273,6 +287,83 @@ inline void Bvh::DetectOverlaps(Aabb<kDims> const& aabbs, FOnOverlapDetected&& f
     PBAT_PROFILE_CUDA_HOST_SCOPE_END(ctx);
 }
 
+template <class FOnOverlapDetected, auto kStackSize>
+inline void Bvh::DetectOverlaps(
+    Aabb<kDims> const& leafAabbs,
+    Aabb<kDims> const& queryAabbs,
+    FOnOverlapDetected fOnOverlapDetected)
+{
+    PBAT_PROFILE_NAMED_CUDA_HOST_SCOPE_START(ctx, "pbat.gpu.impl.geometry.Bvh.DetectOverlaps");
+
+    static_assert(
+        std::is_invocable_v<FOnOverlapDetected, GpuIndex, GpuIndex>,
+        "FOnOverlapDetected must be callable with signature void f(GpuIndex,GpuIndex)");
+
+    using namespace pbat::math::linalg;
+    auto fGetQueryObject = [b = queryAabbs.b.Raw(),
+                            e = queryAabbs.e.Raw()] PBAT_DEVICE(GpuIndex q) {
+        mini::SMatrix<GpuScalar, 3, 2> LU;
+        LU.Col(0) = mini::FromBuffers<3, 1>(b, q);
+        LU.Col(1) = mini::FromBuffers<3, 1>(e, q);
+        return LU;
+    };
+    auto fGetLeafObject =
+        [b = leafAabbs.b.Raw(),
+         e = leafAabbs.e.Raw()] PBAT_DEVICE(GpuIndex leaf, [[maybe_unused]] GpuIndex i) {
+            mini::SMatrix<GpuScalar, 3, 2> LU;
+            LU.Col(0) = mini::FromBuffers<3, 1>(b, leaf);
+            LU.Col(1) = mini::FromBuffers<3, 1>(e, leaf);
+            return LU;
+        };
+    auto fMinDistanceToBox = [] PBAT_DEVICE(
+                                 mini::SMatrix<GpuScalar, 3, 2> const& LU1,
+                                 mini::SVector<GpuScalar, 3> const& L2,
+                                 mini::SVector<GpuScalar, 3> const& U2) {
+        bool const bBoxesOverlap = pbat::geometry::OverlapQueries::AxisAlignedBoundingBoxes(
+            LU1.Col(0),
+            LU1.Col(1),
+            L2,
+            U2);
+        return static_cast<GpuScalar>(not bBoxesOverlap);
+    };
+    auto fDistanceToLeaf = [] PBAT_DEVICE(
+                               mini::SMatrix<GpuScalar, 3, 2> const& LU1,
+                               mini::SMatrix<GpuScalar, 3, 2> const& LU2) {
+        return GpuScalar(0);
+    };
+    auto fQueryUpperBound = [] PBAT_DEVICE(GpuIndex q) {
+        return GpuScalar(0);
+    };
+    auto fOnFound = [fOnOverlapDetected] PBAT_DEVICE(
+                        GpuIndex q,
+                        [[maybe_unused]] mini::SMatrix<GpuScalar, 3, 2> const& LU1,
+                        [[maybe_unused]] GpuIndex leaf,
+                        GpuIndex i,
+                        [[maybe_unused]] mini::SMatrix<GpuScalar, 3, 2> const& LU2,
+                        [[maybe_unused]] GpuScalar d) {
+        fOnOverlapDetected(q, i);
+    };
+
+    this->RangeSearch<
+        decltype(fGetQueryObject),
+        decltype(fGetLeafObject),
+        decltype(fMinDistanceToBox),
+        decltype(fDistanceToLeaf),
+        decltype(fQueryUpperBound),
+        decltype(fOnFound),
+        kStackSize>(
+        leafAabbs,
+        queryAabbs.Size(),
+        fGetQueryObject,
+        fGetLeafObject,
+        fMinDistanceToBox,
+        fDistanceToLeaf,
+        fQueryUpperBound,
+        fOnFound);
+
+    PBAT_PROFILE_CUDA_HOST_SCOPE_END(ctx);
+}
+
 template <
     class FGetQueryObject,
     class FGetLeafObject,
@@ -285,12 +376,12 @@ template <
 inline void Bvh::NearestNeighbours(
     Aabb<kDims> const& aabbs,
     GpuIndex nQueries,
-    FGetQueryObject&& fGetQueryObject,
-    FGetLeafObject&& fGetLeafObject,
-    FMinDistanceToBox&& fMinDistanceToBox,
-    FDistanceToLeaf&& fDistanceToleaf,
-    FDistanceUpperBound&& fDistanceUpperBound,
-    FOnNearestNeighbourFound&& fOnNearestNeighbourFound,
+    FGetQueryObject fGetQueryObject,
+    FGetLeafObject fGetLeafObject,
+    FMinDistanceToBox fMinDistanceToBox,
+    FDistanceToLeaf fDistanceToLeaf,
+    FDistanceUpperBound fDistanceUpperBound,
+    FOnNearestNeighbourFound fOnNearestNeighbourFound,
     GpuScalar eps)
 {
     PBAT_PROFILE_NAMED_CUDA_HOST_SCOPE_START(ctx, "pbat.gpu.impl.geometry.Bvh.NearestNeighbours");
@@ -330,20 +421,19 @@ inline void Bvh::NearestNeighbours(
         thrust::make_counting_iterator(0),
         thrust::make_counting_iterator(nQueries),
         [eps,
-         leafBegin                = aabbs.Size() - 1,
-         inds                     = inds.Raw(),
-         b                        = aabbs.b.Raw(),
-         e                        = aabbs.e.Raw(),
-         ib                       = iaabbs.b.Raw(),
-         ie                       = iaabbs.e.Raw(),
-         child                    = child.Raw(),
-         fGetQueryObject          = std::forward<FGetQueryObject>(fGetQueryObject),
-         fGetLeafObject           = std::forward<FGetLeafObject>(fGetLeafObject),
-         fMinDistanceToBox        = std::forward<FMinDistanceToBox>(fMinDistanceToBox),
-         fDistanceToLeaf          = std::forward<FDistanceToLeaf>(fDistanceToleaf),
-         fDistanceUpperBound      = std::forward<FDistanceUpperBound>(fDistanceUpperBound),
-         fOnNearestNeighbourFound = std::forward<FOnNearestNeighbourFound>(
-             fOnNearestNeighbourFound)] PBAT_DEVICE(GpuIndex q) mutable {
+         fGetQueryObject,
+         fGetLeafObject,
+         fMinDistanceToBox,
+         fDistanceToLeaf,
+         fDistanceUpperBound,
+         fOnNearestNeighbourFound,
+         leafBegin = aabbs.Size() - 1,
+         inds      = inds.Raw(),
+         b         = aabbs.b.Raw(),
+         e         = aabbs.e.Raw(),
+         ib        = iaabbs.b.Raw(),
+         ie        = iaabbs.e.Raw(),
+         child     = child.Raw()] PBAT_DEVICE(GpuIndex q) mutable {
             using pbat::math::linalg::mini::FromBuffers;
             using Stack = pbat::common::Stack<GpuIndex, kStackSize>;
             using Queue = pbat::common::Queue<GpuIndex, kQueueSize>;
@@ -358,38 +448,38 @@ inline void Bvh::NearestNeighbours(
             do
             {
                 assert(not dfs.IsFull());
-                GpuIndex i = dfs.Top();
+                GpuIndex nodeIdx = dfs.Top();
                 dfs.Pop();
-                bool const bIsLeafNode = i >= leafBegin;
+                bool const bIsLeafNode = nodeIdx >= leafBegin;
                 if (not bIsLeafNode)
                 {
-                    auto L = FromBuffers<3, 1>(ib, i);
-                    auto U = FromBuffers<3, 1>(ie, i);
+                    auto L = FromBuffers<3, 1>(ib, nodeIdx);
+                    auto U = FromBuffers<3, 1>(ie, nodeIdx);
                     if (fMinDistanceToBox(query, L, U) < dmin)
                     {
-                        dfs.Push(child[0][i]);
-                        dfs.Push(child[1][i]);
+                        dfs.Push(child[0][nodeIdx]);
+                        dfs.Push(child[1][nodeIdx]);
                     }
                 }
                 else
                 {
-                    i -= leafBegin;
-                    auto L             = FromBuffers<3, 1>(b, i);
-                    auto U             = FromBuffers<3, 1>(e, i);
+                    nodeIdx -= leafBegin;
+                    auto L             = FromBuffers<3, 1>(b, nodeIdx);
+                    auto U             = FromBuffers<3, 1>(e, nodeIdx);
                     GpuScalar const db = fMinDistanceToBox(query, L, U);
                     if (db < dmin)
                     {
-                        GpuIndex const leaf = inds[i];
-                        GpuScalar const d   = fDistanceToLeaf(query, fGetLeafObject(i, leaf));
+                        GpuIndex const i  = inds[nodeIdx];
+                        GpuScalar const d = fDistanceToLeaf(query, fGetLeafObject(nodeIdx, i));
                         if (d < dmin)
                         {
                             nn.Clear();
-                            nn.Push(leaf);
+                            nn.Push(i);
                             dmin = d;
                         }
                         else if (d < dmin + eps and not nn.IsFull())
                         {
-                            nn.Push(leaf);
+                            nn.Push(i);
                         }
                     }
                 }
@@ -397,9 +487,9 @@ inline void Bvh::NearestNeighbours(
             GpuIndex k{0};
             while (not nn.IsEmpty())
             {
-                GpuIndex const leaf = nn.Top();
+                GpuIndex const i = nn.Top();
                 nn.Pop();
-                fOnNearestNeighbourFound(q, leaf, dmin, k++);
+                fOnNearestNeighbourFound(q, i, dmin, k++);
             }
         });
 
@@ -417,12 +507,12 @@ template <
 inline void Bvh::RangeSearch(
     Aabb<kDims> const& aabbs,
     GpuIndex nQueries,
-    FGetQueryObject&& fGetQueryObject,
-    FGetLeafObject&& fGetLeafObject,
-    FMinDistanceToBox&& fMinDistanceToBox,
-    FDistanceToLeaf&& fDistanceToleaf,
-    FDistanceUpperBound&& fDistanceUpperBound,
-    FOnFound&& fOnFound)
+    FGetQueryObject fGetQueryObject,
+    FGetLeafObject fGetLeafObject,
+    FMinDistanceToBox fMinDistanceToBox,
+    FDistanceToLeaf fDistanceToleaf,
+    FDistanceUpperBound fDistanceUpperBound,
+    FOnFound fOnFound)
 {
     PBAT_PROFILE_NAMED_CUDA_HOST_SCOPE_START(ctx, "pbat.gpu.impl.geometry.Bvh.RangeSearch");
 
@@ -451,9 +541,9 @@ inline void Bvh::RangeSearch(
             std::is_convertible_v<std::invoke_result_t<FDistanceUpperBound, GpuIndex>, GpuScalar>,
         "FDistanceUpperBound must be callable with signature GpuScalar f(GpuIndex)");
     static_assert(
-        std::is_invocable_v<FOnFound, GpuIndex, GpuIndex, GpuScalar>,
-        "FOnFound must be callable with signature void f(GpuIndex query, GpuIndex "
-        "leaf, GpuScalar dmin)");
+        std::is_invocable_v<FOnFound, GpuIndex, TQuery, GpuIndex, GpuIndex, TLeaf, GpuScalar>,
+        "FOnFound must be callable with signature void f(GpuIndex q, TQuery query, GpuIndex "
+        "leafIdx, GpuIndex i, TLeaf leaf, GpuScalar d)");
 
     thrust::for_each(
         thrust::device,
@@ -484,32 +574,33 @@ inline void Bvh::RangeSearch(
             do
             {
                 assert(not dfs.IsFull());
-                GpuIndex i = dfs.Top();
+                GpuIndex nodeIdx = dfs.Top();
                 dfs.Pop();
-                bool const bIsLeafNode = i >= leafBegin;
+                bool const bIsLeafNode = nodeIdx >= leafBegin;
                 if (not bIsLeafNode)
                 {
-                    auto L = FromBuffers<3, 1>(ib, i);
-                    auto U = FromBuffers<3, 1>(ie, i);
+                    auto L = FromBuffers<3, 1>(ib, nodeIdx);
+                    auto U = FromBuffers<3, 1>(ie, nodeIdx);
                     if (fMinDistanceToBox(query, L, U) <= upper)
                     {
-                        dfs.Push(child[0][i]);
-                        dfs.Push(child[1][i]);
+                        dfs.Push(child[0][nodeIdx]);
+                        dfs.Push(child[1][nodeIdx]);
                     }
                 }
                 else
                 {
-                    i -= leafBegin;
-                    auto L             = FromBuffers<3, 1>(b, i);
-                    auto U             = FromBuffers<3, 1>(e, i);
+                    nodeIdx -= leafBegin;
+                    auto L             = FromBuffers<3, 1>(b, nodeIdx);
+                    auto U             = FromBuffers<3, 1>(e, nodeIdx);
                     GpuScalar const db = fMinDistanceToBox(query, L, U);
                     if (db <= upper)
                     {
-                        GpuIndex const leaf = inds[i];
-                        GpuScalar const d   = fDistanceToLeaf(query, fGetLeafObject(i, leaf));
+                        GpuIndex const i  = inds[nodeIdx];
+                        TLeaf const leaf  = fGetLeafObject(nodeIdx, i);
+                        GpuScalar const d = fDistanceToLeaf(query, leaf);
                         if (d <= upper)
                         {
-                            fOnFound(q, leaf, d);
+                            fOnFound(q, query, nodeIdx, i, leaf, d);
                         }
                     }
                 }
