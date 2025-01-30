@@ -79,22 +79,24 @@ class VertexTriangleMixedCcdDcd
      */
     void UpdateBvh(common::Buffer<GpuScalar, 3> const& x);
 
-  private:
+  public:
+    common::Buffer<Index> av;      ///< Active vertices (i.e. indices of active points)
+    GpuIndex nActive;              ///< Number of active vertices
+    common::Buffer<Index> nn;      ///< |#verts*kMaxNeighbours| nearest neighbours f to pts i.
+                                   ///< nn[i*kMaxNeighbours+j] < 0 if no neighbour
     common::Buffer<GpuIndex> B;    ///< |#pts| body map
     common::Buffer<GpuIndex> V;    ///< Vertices
     common::Buffer<GpuIndex, 3> F; ///< Triangles
-    common::Buffer<Index> inds;    ///< |#verts| point indices i
-    geometry::Morton morton;       ///< |#verts| morton codes for points
+
+  private:
+    common::Buffer<Index> inds; ///< |#verts| point indices i
+    geometry::Morton morton;    ///< |#verts| morton codes for points
     geometry::Aabb<kDims>
         Paabbs; ///< |#verts| axis-aligned bounding boxes of swept points (i.e. line segments)
     geometry::Aabb<kDims>
         Faabbs;         ///< |#tris| axis-aligned bounding boxes of (potentially swept) triangles
     geometry::Bvh Fbvh; ///< Bounding volume hierarchy over (potentially swept) triangles
     common::Buffer<bool> active;         ///< |#verts| active mask
-    common::Buffer<Index> av;            ///< Active vertices (i.e. indices of active points)
-    GpuIndex nActive;                    ///< Number of active vertices
-    common::Buffer<Index> nn;            ///< |#verts*kMaxNeighbours| nearest neighbours f to pts i.
-                                         ///< nn[i*kMaxNeighbours+j] < 0 if no neighbour
     common::Buffer<GpuScalar> distances; ///< |#verts| squared distance min_f sd(i,f) to surface
 };
 

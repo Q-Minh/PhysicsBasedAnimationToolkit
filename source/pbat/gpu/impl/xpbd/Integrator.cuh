@@ -11,7 +11,6 @@
 #include "pbat/sim/xpbd/Enums.h"
 
 #include <array>
-#include <thrust/future.h>
 #include <vector>
 
 namespace pbat {
@@ -76,15 +75,13 @@ class Integrator
     // Ideally, these would not be public, but nvcc will otherwise report that
     // "The enclosing parent function ("[...]") for an extended __device__ lambda
     // cannot have private or protected access within its class"
-    void ProjectBlockNeoHookeanConstraints(thrust::device_event& e, Scalar dt, Scalar dt2);
-    void ProjectClusteredBlockNeoHookeanConstraints(thrust::device_event& e, Scalar dt, Scalar dt2);
+    void ProjectBlockNeoHookeanConstraints(GpuScalar dt, GpuScalar dt2);
+    void ProjectClusteredBlockNeoHookeanConstraints(GpuScalar dt, GpuScalar dt2);
+    void ProjectCollisionConstraints(GpuScalar dt, GpuScalar dt2);
 
   public:
     common::Buffer<GpuScalar, 3> x; ///< Vertex/particle positions
-    common::Buffer<GpuIndex> V;     ///< Boundary vertices
-    common::Buffer<GpuIndex, 3> F;  ///< Boundary triangles
     common::Buffer<GpuIndex, 4> T;  ///< Tetrahedral simplices
-    common::Buffer<GpuIndex> B;     ///< Bodies of boundary vertices
 
     contact::VertexTriangleMixedCcdDcd cd; ///< Contact detection system
 

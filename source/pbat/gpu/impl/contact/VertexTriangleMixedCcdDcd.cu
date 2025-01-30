@@ -5,6 +5,7 @@
 #include "VertexTriangleMixedCcdDcd.cuh"
 #include "pbat/common/ConstexprFor.h"
 #include "pbat/geometry/OverlapQueries.h"
+#include "pbat/gpu/impl/common/Eigen.cuh"
 #include "pbat/math/linalg/mini/Mini.h"
 #include "pbat/profiling/Profiling.h"
 
@@ -22,7 +23,10 @@ VertexTriangleMixedCcdDcd::VertexTriangleMixedCcdDcd(
     Eigen::Ref<GpuIndexVectorX const> const& Bin,
     Eigen::Ref<GpuIndexVectorX const> const& Vin,
     Eigen::Ref<GpuIndexMatrixX const> const& Fin)
-    : B(Bin.size()),
+    : av(Vin.size()),
+      nActive(0),
+      nn(Vin.size() * kMaxNeighbours),
+      B(Bin.size()),
       V(Vin.size()),
       F(Fin.size()),
       inds(Vin.size()),
@@ -31,15 +35,16 @@ VertexTriangleMixedCcdDcd::VertexTriangleMixedCcdDcd(
       Faabbs(static_cast<GpuIndex>(Fin.size())),
       Fbvh(static_cast<GpuIndex>(Fin.size())),
       active(Vin.size()),
-      av(Vin.size()),
-      nActive(0),
-      nn(Vin.size() * kMaxNeighbours),
       distances(Vin.size())
 {
     thrust::sequence(inds.Data(), inds.Data() + inds.Size());
     active.SetConstant(false);
     av.SetConstant(-1);
     distances.SetConstant(std::numeric_limits<GpuScalar>::max());
+
+    common::ToBuffer(Bin, B);
+    common::ToBuffer(Vin, V);
+    common::ToBuffer(Fin, F);
 }
 
 void VertexTriangleMixedCcdDcd::InitializeActiveSet(
@@ -48,6 +53,10 @@ void VertexTriangleMixedCcdDcd::InitializeActiveSet(
     geometry::Morton::Bound const& wmin,
     geometry::Morton::Bound const& wmax)
 {
+    PBAT_PROFILE_NAMED_CUDA_HOST_SCOPE_START(
+        ctx,
+        "pbat.gpu.impl.contact.VertexTriangleMixedCcdDcd.InitializeActiveSet");
+
     auto const nVerts = Paabbs.Size();
     // 1. Compute aabbs of the swept points (i.e. line segments)
     Paabbs.Construct(
@@ -140,10 +149,16 @@ void VertexTriangleMixedCcdDcd::InitializeActiveSet(
         av.Data(),
         [active = active.Raw()] PBAT_DEVICE(GpuIndex v) { return active[v]; });
     nActive = static_cast<GpuIndex>(thrust::distance(av.Data(), it));
+
+    PBAT_PROFILE_CUDA_HOST_SCOPE_END(ctx);
 }
 
 void VertexTriangleMixedCcdDcd::UpdateActiveSet(common::Buffer<GpuScalar, 3> const& x)
 {
+    PBAT_PROFILE_NAMED_CUDA_HOST_SCOPE_START(
+        ctx,
+        "pbat.gpu.impl.contact.VertexTriangleMixedCcdDcd.UpdateActiveSet");
+
     UpdateBvh(x);
     // Compute distance from V to F via nn search
     using namespace pbat::math::linalg::mini;
@@ -159,11 +174,17 @@ void VertexTriangleMixedCcdDcd::UpdateActiveSet(common::Buffer<GpuScalar, 3> con
             // Add active contact (i,f)
             nn[v * kMaxNeighbours + k] = f;
         });
+
+    PBAT_PROFILE_CUDA_HOST_SCOPE_END(ctx);
 }
 
 void VertexTriangleMixedCcdDcd::FinalizeActiveSet(
     [[maybe_unused]] common::Buffer<GpuScalar, 3> const& x)
 {
+    PBAT_PROFILE_NAMED_CUDA_HOST_SCOPE_START(
+        ctx,
+        "pbat.gpu.impl.contact.VertexTriangleMixedCcdDcd.FinalizeActiveSet");
+
     UpdateBvh(x);
     this->ForEachNearestNeighbour(
         x,
@@ -189,6 +210,8 @@ void VertexTriangleMixedCcdDcd::FinalizeActiveSet(
             d[v]                      = bIsPenetrating * dmin + (not bIsPenetrating) * dmax;
             active[v]                 = bIsPenetrating;
         });
+
+    PBAT_PROFILE_CUDA_HOST_SCOPE_END(ctx);
 }
 
 void pbat::gpu::impl::contact::VertexTriangleMixedCcdDcd::UpdateBvh(

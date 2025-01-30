@@ -20,10 +20,7 @@ namespace xpbd {
 
 Integrator::Integrator(Data const& data)
     : x(data.x.cols()),
-      V(data.V.size()),
-      F(data.F.cols()),
       T(data.T.cols()),
-      B(data.BV.size()),
       cd(data.BV.cast<GpuIndex>(), data.V.cast<GpuIndex>(), data.F.cast<GpuIndex>()),
       xt(data.x.cols()),
       xb(data.x.cols()),
@@ -49,10 +46,7 @@ Integrator::Integrator(Data const& data)
     // Initialize particle data
     common::ToBuffer(data.x, x);
     common::ToBuffer(data.v, v);
-    common::ToBuffer(data.V, V);
-    common::ToBuffer(data.F, F);
     common::ToBuffer(data.T, T);
-    common::ToBuffer(data.BV, B);
     common::ToBuffer(data.aext, aext);
     common::ToBuffer(data.minv, minv);
     common::ToBuffer(data.lame, lame);
@@ -94,25 +88,37 @@ void Integrator::Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps)
     GpuScalar const sdt       = dt / static_cast<GpuScalar>(substeps);
     GpuScalar const sdt2      = sdt * sdt;
     GpuIndex const nParticles = static_cast<GpuIndex>(x.Size());
-    // Detect collision candidates and setup collision constraint solve
-    // TODO:
-    // 1. Compute AABBs of line segments x_i^t -> \Tilde{x_i}
-    // 2. Sort line segment AABBs via Morton encoding (thrust::sort_by_key on "morton codes" and
-    // active mask buffer)
-    // 3. Compute AABBs of linearly swept triangles x_{jkl} -> \Tilde{x_{jkl}}
-    // 4. Build triangle BVH over swept triangle volumes
-    // 5. Detect overlaps between line segments and swept triangles
-    // 6. For each overlapping pair (i, jkl), mark i as active
-    // 7. Compact (sorted) active vertices into an active vertex list (thrust::copy_if from "active
-    // mask buffer" to "active vertices buffer" should be sufficient)
 
+    // Determine active contact vertices for the whole step using predicted positions
+    thrust::for_each(
+        thrust::device,
+        thrust::make_counting_iterator(0),
+        thrust::make_counting_iterator(nParticles),
+        [dt,
+         dt2  = dt * dt,
+         xt   = xt.Raw(),
+         x    = x.Raw(),
+         vt   = v.Raw(),
+         aext = aext.Raw()] PBAT_DEVICE(GpuIndex i) {
+            using pbat::sim::xpbd::kernels::InitialPosition;
+            using namespace pbat::math::linalg::mini;
+            auto xi = InitialPosition(
+                FromBuffers<3, 1>(xt, i),
+                FromBuffers<3, 1>(vt, i),
+                FromBuffers<3, 1>(aext, i),
+                dt,
+                dt2);
+            ToBuffers(xi, x, i);
+        });
+    using pbat::math::linalg::mini::FromEigen;
+    cd.InitializeActiveSet(xt, x, FromEigen(Smin), FromEigen(Smax));
+
+    // Use substepping for accelerated convergence
     for (auto s = 0; s < substeps; ++s)
     {
-        // Update active set
-        // 1. Compute AABBs of triangles at current iterate xk
-        // 2. Update triangle BVH boxes
-        // 3. Find nearest triangles f to active vertices i to form contact pairs (i, f) and
-        // update the signed distances min_f sd(i,f)
+        PBAT_PROFILE_NAMED_CUDA_HOST_SCOPE_START(
+            subStepCtx,
+            "pbat.gpu.impl.xpbd.Integrator.Step.SubStep");
 
         // Store previous positions
         xt = x;
@@ -122,7 +128,7 @@ void Integrator::Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps)
             lagrange[d].SetConstant(GpuScalar(0));
         }
         // Initialize constraint solve
-        thrust::device_event e = thrust::async::for_each(
+        thrust::for_each(
             thrust::device,
             thrust::make_counting_iterator<GpuIndex>(0),
             thrust::make_counting_iterator<GpuIndex>(nParticles),
@@ -142,88 +148,30 @@ void Integrator::Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps)
                     dt2);
                 ToBuffers(xi, x, i);
             });
+        // Update active set
+        cd.UpdateActiveSet(x);
         // Solve constraints
+        PBAT_PROFILE_NAMED_CUDA_HOST_SCOPE_START(
+            constraintSolveCtx,
+            "pbat.gpu.impl.xpbd.Integrator.Step.ConstraintSolve");
         for (auto k = 0; k < iterations; ++k)
         {
             // Elastic constraints
             bool const bHasClusterPartitions = not SGptr.empty();
             if (bHasClusterPartitions)
             {
-                ProjectClusteredBlockNeoHookeanConstraints(e, sdt, sdt2);
+                ProjectClusteredBlockNeoHookeanConstraints(sdt, sdt2);
             }
             else
             {
-                ProjectBlockNeoHookeanConstraints(e, sdt, sdt2);
+                ProjectBlockNeoHookeanConstraints(sdt, sdt2);
             }
-            // Collision constraints
-            /*auto const collisionConstraintId = static_cast<int>(EConstraint::Collision);
-            e                                = thrust::async::for_each(
-                thrust::device.after(e),
-                thrust::make_counting_iterator<GpuIndex>(0),
-                thrust::make_counting_iterator<GpuIndex>(nContacts),
-                [x      = x.Raw(),
-                 xb     = xb.Raw(),
-                 xt     = xt.Raw(),
-                 lambda = lagrange[collisionConstraintId].Raw(),
-                 alpha  = alpha[collisionConstraintId].Raw(),
-                 beta   = beta[collisionConstraintId].Raw(),
-                 V      = V.Raw(),
-                 F      = F.Raw(),
-                 minv   = minv.Raw(),
-                 dt     = sdt,
-                 dt2    = sdt2,
-                 muC    = muC.Raw(),
-                 muS    = muS,
-                 muD    = muK] PBAT_DEVICE(GpuIndex c) {
-                    using pbat::sim::xpbd::kernels::ProjectVertexTriangle;
-                    using namespace pbat::math::linalg::mini;
-                    auto sv = pairs[c].first;
-                    auto v  = V[0][sv];
-                    SVector<GpuIndex, 3> f{
-                        F[0][pairs[c].second],
-                        F[1][pairs[c].second],
-                        F[2][pairs[c].second]};
-                    GpuScalar minvv              = minv[v];
-                    SVector<GpuScalar, 3> xvt    = FromBuffers<3, 1>(xt, v);
-                    SVector<GpuScalar, 3> xv     = FromBuffers<3, 1>(x, v);
-                    SMatrix<GpuScalar, 3, 3> xft = FromBuffers(xt, f.Transpose());
-                    SMatrix<GpuScalar, 3, 3> xf  = FromBuffers(x, f.Transpose());
-                    GpuScalar atildec            = alpha[c] / dt2;
-                    GpuScalar gammac             = atildec * beta[c] * dt;
-                    GpuScalar lambdac            = lambda[c];
-                    GpuScalar muc                = muC[sv];
-                    bool const bProject          = ProjectVertexTriangle(
-                        minvv,
-                        xvt,
-                        xft,
-                        xf,
-                        muc,
-                        muS,
-                        muD,
-                        atildec,
-                        gammac,
-                        lambdac,
-                        xv);
-                    if (bProject)
-                    {
-                        lambda[c] = lambdac;
-                    }
-                    ToBuffers(xv, xb, c);
-                });
-            e = thrust::async::for_each(
-                thrust::device.after(e),
-                thrust::make_counting_iterator<GpuIndex>(0),
-                thrust::make_counting_iterator<GpuIndex>(nContacts),
-                [x = x.Raw(), xb = xb.Raw(), V = V.Raw()] PBAT_DEVICE(GpuIndex c) {
-                    using namespace pbat::math::linalg::mini;
-                    auto v                   = CV[0][pairs[c].first];
-                    SVector<GpuScalar, 3> xv = FromBuffers<3, 1>(xb, c);
-                    ToBuffers(xv, x, v);
-                });*/
+            ProjectCollisionConstraints(sdt, sdt2);
         }
+        PBAT_PROFILE_CUDA_HOST_SCOPE_END(constraintSolveCtx);
         // Update simulation state
-        e = thrust::async::for_each(
-            thrust::device.after(e),
+        thrust::for_each(
+            thrust::device,
             thrust::make_counting_iterator<GpuIndex>(0),
             thrust::make_counting_iterator<GpuIndex>(nParticles),
             [xt = xt.Raw(), x = x.Raw(), v = v.Raw(), dt = sdt] PBAT_DEVICE(GpuIndex i) {
@@ -233,12 +181,9 @@ void Integrator::Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps)
                 ToBuffers(vi, v, i);
             });
 
-        // TODO:
-        // 1. Update nearest neighbours f of i with a warm-started (using sd(i,f) as a query upper
-        // bound) nearest neighbour search over the triangle BVH.
-
-        e.wait();
+        PBAT_PROFILE_CUDA_HOST_SCOPE_END(subStepCtx);
     }
+    cd.FinalizeActiveSet(x);
 
     PBAT_PROFILE_CUDA_HOST_SCOPE_END(ctx);
 }
@@ -302,7 +247,7 @@ PBAT_DEVICE static void ProjectBlockNeoHookeanConstraint(
     ToBuffers(xc, Tc.Transpose(), x);
 }
 
-void Integrator::ProjectBlockNeoHookeanConstraints(thrust::device_event& e, Scalar dt, Scalar dt2)
+void Integrator::ProjectBlockNeoHookeanConstraints(GpuScalar dt, GpuScalar dt2)
 {
     auto const snhConstraintId = static_cast<int>(EConstraint::StableNeoHookean);
     auto const nPartitions     = static_cast<Index>(Pptr.size()) - 1;
@@ -310,8 +255,8 @@ void Integrator::ProjectBlockNeoHookeanConstraints(thrust::device_event& e, Scal
     {
         auto pbegin = Pptr[p];
         auto pend   = Pptr[p + 1];
-        e           = thrust::async::for_each(
-            thrust::device.after(e),
+        thrust::for_each(
+            thrust::device,
             thrust::make_counting_iterator(pbegin),
             thrust::make_counting_iterator(pend),
             [partition = Padj.Raw(),
@@ -344,10 +289,7 @@ void Integrator::ProjectBlockNeoHookeanConstraints(thrust::device_event& e, Scal
     }
 }
 
-void Integrator::ProjectClusteredBlockNeoHookeanConstraints(
-    thrust::device_event& e,
-    Scalar dt,
-    Scalar dt2)
+void Integrator::ProjectClusteredBlockNeoHookeanConstraints(GpuScalar dt, GpuScalar dt2)
 {
     auto const snhConstraintId    = static_cast<int>(EConstraint::StableNeoHookean);
     auto const nClusterPartitions = static_cast<Index>(SGptr.size()) - 1;
@@ -355,8 +297,8 @@ void Integrator::ProjectClusteredBlockNeoHookeanConstraints(
     {
         auto cpbegin = SGptr[cp];
         auto cpend   = SGptr[cp + 1];
-        e            = thrust::async::for_each(
-            thrust::device.after(e),
+        thrust::for_each(
+            thrust::device,
             thrust::make_counting_iterator(cpbegin),
             thrust::make_counting_iterator(cpend),
             [SGadj    = SGadj.Raw(),
@@ -395,6 +337,81 @@ void Integrator::ProjectClusteredBlockNeoHookeanConstraints(
                 }
             });
     }
+}
+
+void Integrator::ProjectCollisionConstraints(GpuScalar dt, GpuScalar dt2)
+{
+    auto const collisionConstraintId = static_cast<int>(EConstraint::Collision);
+    thrust::for_each(
+        thrust::device,
+        thrust::make_counting_iterator(0),
+        thrust::make_counting_iterator(cd.nActive),
+        [dt,
+         dt2,
+         x      = x.Raw(),
+         xb     = xb.Raw(),
+         xt     = xt.Raw(),
+         lambda = lagrange[collisionConstraintId].Raw(),
+         alpha  = alpha[collisionConstraintId].Raw(),
+         beta   = beta[collisionConstraintId].Raw(),
+         V      = cd.V.Raw(),
+         F      = cd.F.Raw(),
+         av     = cd.av.Raw(),
+         nn     = cd.nn.Raw(),
+         minv   = minv.Raw(),
+         muC    = muC.Raw(),
+         muS    = muS,
+         muD    = muK] PBAT_DEVICE(GpuIndex c) {
+            using pbat::sim::xpbd::kernels::ProjectVertexTriangle;
+            using namespace pbat::math::linalg::mini;
+            GpuIndex const v              = av[c];
+            GpuIndex const i              = V[v];
+            auto constexpr kMaxNeighbours = decltype(cd)::kMaxNeighbours;
+            auto kb                       = v * kMaxNeighbours;
+            for (auto k = 0; k < kMaxNeighbours; ++k)
+            {
+                auto f = nn[kb + k];
+                if (f < 0)
+                    break;
+                auto fv                      = FromBuffers<3, 1>(F, f);
+                SMatrix<GpuScalar, 3, 3> xft = FromBuffers(xt, fv.Transpose());
+                SMatrix<GpuScalar, 3, 3> xf  = FromBuffers(x, fv.Transpose());
+                SVector<GpuScalar, 3> xvt    = FromBuffers<3, 1>(xt, i);
+                SVector<GpuScalar, 3> xv     = FromBuffers<3, 1>(x, i);
+                GpuScalar minvv              = minv[i];
+                GpuScalar atildec            = alpha[c] / dt2;
+                GpuScalar gammac             = atildec * beta[c] * dt;
+                GpuScalar lambdac            = lambda[c];
+                GpuScalar muc                = muC[v];
+                bool const bProject          = ProjectVertexTriangle(
+                    minvv,
+                    xvt,
+                    xft,
+                    xf,
+                    muc,
+                    muS,
+                    muD,
+                    atildec,
+                    gammac,
+                    lambdac,
+                    xv);
+                if (bProject)
+                {
+                    lambda[c] = lambdac;
+                }
+                ToBuffers(xv, xb, c);
+            }
+        });
+    thrust::for_each(
+        thrust::device,
+        thrust::make_counting_iterator<GpuIndex>(0),
+        thrust::make_counting_iterator<GpuIndex>(cd.nActive),
+        [x = x.Raw(), xb = xb.Raw(), V = cd.V.Raw(), av = cd.av.Raw()] PBAT_DEVICE(GpuIndex c) {
+            using namespace pbat::math::linalg::mini;
+            GpuIndex const i         = V[av[c]];
+            SVector<GpuScalar, 3> xv = FromBuffers<3, 1>(xb, c);
+            ToBuffers(xv, x, i);
+        });
 }
 
 } // namespace xpbd
