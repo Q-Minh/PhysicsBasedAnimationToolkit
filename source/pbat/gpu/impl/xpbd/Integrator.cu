@@ -45,6 +45,7 @@ Integrator::Integrator(Data const& data)
 {
     // Initialize particle data
     common::ToBuffer(data.x, x);
+    xt = x;
     common::ToBuffer(data.v, v);
     common::ToBuffer(data.T, T);
     common::ToBuffer(data.aext, aext);
@@ -120,8 +121,6 @@ void Integrator::Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps)
             subStepCtx,
             "pbat.gpu.impl.xpbd.Integrator.Step.SubStep");
 
-        // Store previous positions
-        xt = x;
         // Reset "Lagrange" multipliers
         for (auto d = 0; d < kConstraintTypes; ++d)
         {
@@ -179,6 +178,7 @@ void Integrator::Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps)
                 using namespace pbat::math::linalg::mini;
                 auto vi = IntegrateVelocity(FromBuffers<3, 1>(xt, i), FromBuffers<3, 1>(x, i), dt);
                 ToBuffers(vi, v, i);
+                ToBuffers(FromBuffers<3, 1>(x, i), xt, i);
             });
 
         PBAT_PROFILE_CUDA_HOST_SCOPE_END(subStepCtx);
