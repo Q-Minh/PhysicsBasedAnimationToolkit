@@ -128,7 +128,9 @@ inline void VertexTriangleMixedCcdDcd::ForEachNearestNeighbour(
         return pbat::geometry::DistanceQueries::PointTriangle(xi, xf.Col(0), xf.Col(1), xf.Col(2));
     };
     auto fDistanceUpperBound = [d = distances.Raw(), av = av.Raw()] PBAT_DEVICE(GpuIndex q) {
-        return d[av[q]];
+        // TODO: Try warm-starting the NN search!
+        // return d[av[q]];
+        return std::numeric_limits<GpuScalar>::max();
     };
     Fbvh.NearestNeighbours<
         decltype(fGetQueryObject),
