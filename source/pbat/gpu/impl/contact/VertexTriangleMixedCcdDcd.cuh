@@ -71,7 +71,6 @@ class VertexTriangleMixedCcdDcd
     void ForEachNearestNeighbour(
         common::Buffer<GpuScalar, 3> const& x,
         FOnNearestNeighbourFound fOnNearestNeighbourFound);
-
     /**
      * @brief
      *
@@ -80,17 +79,17 @@ class VertexTriangleMixedCcdDcd
     void UpdateBvh(common::Buffer<GpuScalar, 3> const& x);
 
   public:
-    common::Buffer<Index> av;      ///< Active vertices (i.e. indices of active points)
+    common::Buffer<GpuIndex> av;   ///< Active vertices (i.e. indices of active points)
     GpuIndex nActive;              ///< Number of active vertices
-    common::Buffer<Index> nn;      ///< |#verts*kMaxNeighbours| nearest neighbours f to pts i.
+    common::Buffer<GpuIndex> nn;   ///< |#verts*kMaxNeighbours| nearest neighbours f to pts i.
                                    ///< nn[i*kMaxNeighbours+j] < 0 if no neighbour
     common::Buffer<GpuIndex> B;    ///< |#pts| body map
     common::Buffer<GpuIndex> V;    ///< Vertices
     common::Buffer<GpuIndex, 3> F; ///< Triangles
 
   private:
-    common::Buffer<Index> inds; ///< |#verts| point indices i
-    geometry::Morton morton;    ///< |#verts| morton codes for points
+    common::Buffer<GpuIndex> inds; ///< |#verts| point indices i
+    geometry::Morton morton;       ///< |#verts| morton codes for points
     geometry::Aabb<kDims>
         Paabbs; ///< |#verts| axis-aligned bounding boxes of swept points (i.e. line segments)
     geometry::Aabb<kDims>
@@ -116,20 +115,25 @@ inline void VertexTriangleMixedCcdDcd::ForEachNearestNeighbour(
                                  SVector<GpuScalar, 3> const& U) {
         return pbat::geometry::DistanceQueries::PointAxisAlignedBoundingBox(xi, L, U);
     };
-    auto fDistanceToLeaf = [x = x.Raw(), V = V.Raw(), F = F.Raw(), B = B.Raw(), av=av.Raw()] PBAT_DEVICE(
-                               GpuIndex q,
-                               SVector<GpuScalar, 3> const& xi,
-                               [[maybe_unused]] GpuIndex leaf,
-                               GpuIndex f) {
-        GpuIndex const i         = V[av[q]];
-        auto fv                  = FromBuffers<3, 1>(F, f);
-        bool const bFromSameBody = B[i] == B[fv[0]];
-        if (bFromSameBody)
-            return std::numeric_limits<GpuScalar>::max();
+    auto fDistanceToLeaf =
+        [x = x.Raw(), V = V.Raw(), F = F.Raw(), B = B.Raw(), av = av.Raw()] PBAT_DEVICE(
+            GpuIndex q,
+            SVector<GpuScalar, 3> const& xi,
+            [[maybe_unused]] GpuIndex leaf,
+            GpuIndex f) {
+            GpuIndex const i         = V[av[q]];
+            auto fv                  = FromBuffers<3, 1>(F, f);
+            bool const bFromSameBody = B[i] == B[fv[0]];
+            if (bFromSameBody)
+                return std::numeric_limits<GpuScalar>::max();
 
-        SMatrix<GpuScalar, 3, 3> const xf = FromBuffers(x, fv.Transpose());
-        return pbat::geometry::DistanceQueries::PointTriangle(xi, xf.Col(0), xf.Col(1), xf.Col(2));
-    };
+            SMatrix<GpuScalar, 3, 3> const xf = FromBuffers(x, fv.Transpose());
+            return pbat::geometry::DistanceQueries::PointTriangle(
+                xi,
+                xf.Col(0),
+                xf.Col(1),
+                xf.Col(2));
+        };
     auto fDistanceUpperBound = [d = distances.Raw(), av = av.Raw()] PBAT_DEVICE(GpuIndex q) {
         // TODO: Try warm-starting the NN search!
         // return d[av[q]];

@@ -9,6 +9,7 @@ if(PBAT_USE_CUDA)
     )
 
     add_subdirectory(impl)
+    add_subdirectory(contact)
     add_subdirectory(common)
     add_subdirectory(geometry)
     add_subdirectory(xpbd)

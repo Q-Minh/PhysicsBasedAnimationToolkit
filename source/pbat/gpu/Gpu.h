@@ -11,6 +11,7 @@
  */
 
 #include "common/Common.h"
+#include "contact/Contact.h"
 #include "geometry/Geometry.h"
 #include "vbd/Vbd.h"
 #include "xpbd/Xpbd.h"

@@ -2,16 +2,12 @@ target_sources(PhysicsBasedAnimationToolkit_Python
     PUBLIC
     FILE_SET api
     FILES
-    "Gpu.h"
+    "Contact.h"
+    "VertexTriangleMixedCcdDcd.h"
 )
 
 target_sources(PhysicsBasedAnimationToolkit_Python
     PRIVATE
-    "Gpu.cpp"
+    "Contact.cpp"
+    "VertexTriangleMixedCcdDcd.cpp"
 )
-
-add_subdirectory(common)
-add_subdirectory(contact)
-add_subdirectory(geometry)
-add_subdirectory(xpbd)
-add_subdirectory(vbd)
