@@ -110,21 +110,24 @@ inline void VertexTriangleMixedCcdDcd::ForEachNearestNeighbour(
         GpuIndex const v = av[q];
         return FromBuffers<3, 1>(x, V[v]);
     };
-    auto fGetLeafObject = [x = x.Raw(),
-                           F = F.Raw()] PBAT_DEVICE([[maybe_unused]] GpuIndex leaf, GpuIndex f) {
-        auto fv                           = FromBuffers<3, 1>(F, f);
-        SMatrix<GpuScalar, 3, 3> const xf = FromBuffers(x, fv.Transpose());
-        return xf;
-    };
     auto fMinDistanceToBox = [] PBAT_DEVICE(
                                  SVector<GpuScalar, 3> const& xi,
                                  SVector<GpuScalar, 3> const& L,
                                  SVector<GpuScalar, 3> const& U) {
         return pbat::geometry::DistanceQueries::PointAxisAlignedBoundingBox(xi, L, U);
     };
-    auto fDistanceToLeaf = [] PBAT_DEVICE(
+    auto fDistanceToLeaf = [x = x.Raw(), V = V.Raw(), F = F.Raw(), B = B.Raw(), av=av.Raw()] PBAT_DEVICE(
+                               GpuIndex q,
                                SVector<GpuScalar, 3> const& xi,
-                               SMatrix<GpuScalar, 3, 3> const& xf) {
+                               [[maybe_unused]] GpuIndex leaf,
+                               GpuIndex f) {
+        GpuIndex const i         = V[av[q]];
+        auto fv                  = FromBuffers<3, 1>(F, f);
+        bool const bFromSameBody = B[i] == B[fv[0]];
+        if (bFromSameBody)
+            return std::numeric_limits<GpuScalar>::max();
+
+        SMatrix<GpuScalar, 3, 3> const xf = FromBuffers(x, fv.Transpose());
         return pbat::geometry::DistanceQueries::PointTriangle(xi, xf.Col(0), xf.Col(1), xf.Col(2));
     };
     auto fDistanceUpperBound = [d = distances.Raw(), av = av.Raw()] PBAT_DEVICE(GpuIndex q) {
@@ -134,7 +137,6 @@ inline void VertexTriangleMixedCcdDcd::ForEachNearestNeighbour(
     };
     Fbvh.NearestNeighbours<
         decltype(fGetQueryObject),
-        decltype(fGetLeafObject),
         decltype(fMinDistanceToBox),
         decltype(fDistanceToLeaf),
         decltype(fDistanceUpperBound),
@@ -143,7 +145,6 @@ inline void VertexTriangleMixedCcdDcd::ForEachNearestNeighbour(
         Faabbs,
         nActive,
         fGetQueryObject,
-        fGetLeafObject,
         fMinDistanceToBox,
         fDistanceToLeaf,
         fDistanceUpperBound,

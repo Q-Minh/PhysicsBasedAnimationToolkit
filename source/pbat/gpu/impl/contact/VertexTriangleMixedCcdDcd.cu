@@ -139,7 +139,7 @@ void VertexTriangleMixedCcdDcd::InitializeActiveSet(
                 xf.Col(0),
                 xf.Col(1),
                 xf.Col(2));
-            // Make particle i active since if it might penetrate
+            // Make particle i active since it might penetrate
             active[i] = bIntersects;
         });
     // 6. Compact active vertices in sorted order

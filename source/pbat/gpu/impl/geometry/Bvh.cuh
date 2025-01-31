@@ -89,11 +89,12 @@ class Bvh
     /**
      * @brief
      *
-     * @tparam FOnFound
+     * @tparam FOnOverlapDetected
      * @tparam kStackSize
      * @param leafAabbs
      * @param queryAabbs
-     * @param fOnOverlapDetected
+     * @param fOnOverlapDetected Callback called on detected overlaps with signature void f(GpuIndex
+     * q, GpuIndex i)
      */
     template <class FOnOverlapDetected, auto kStackSize = 64>
     void DetectOverlaps(
@@ -104,10 +105,10 @@ class Bvh
      * @brief
      *
      * @tparam FGetQueryObject Callable with signature TQuery f(GpuIndex)
-     * @tparam FGetLeafObject Callable with signature TLeaf f(GpuIndex leaf, GpuIndex i)
      * @tparam FMinDistanceToBox Callable with signature GpuScalar f(TQuery, Point, Point) where
      * Point=pbat::math::linalg::mini::SVector<GpuScalar, 3>
-     * @tparam FDistanceToLeaf Callable with signature GpuScalar f(TQuery, TLeaf)
+     * @tparam FDistanceToLeaf Callable with signature GpuScalar f(GpuIndex q, TQuery query,
+     GpuIndex leaf, " "GpuIndex i)
      * @tparam FDistanceUpperBound Callable with signature GpuScalar f(GpuIndex)
      * @tparam FOnNearestNeighbourFound Callable with signature void f(GpuIndex query, GpuIndex
      * i, GpuScalar d, GpuIndex k)
@@ -117,12 +118,10 @@ class Bvh
      * @param aabbs The same aabbs that were given to Build(), otherwise undefined behavior.
      * @param nQueries Number of queries
      * @param fGetQueryObject Callable to get query object with signature TQuery f(GpuIndex)
-     * @param fGetLeafObject Callable to get leaf object with signature TLeaf f(GpuIndex leaf,
-     * GpuIndex i)
      * @param fMinDistanceToBox Callable to get minimum distance to box with signature GpuScalar
      * f(TQuery, Point, Point)
-     * @param fDistanceToleaf Callable to get distance to leaf with signature GpuScalar f(TQuery,
-     * TLeaf)
+     * @param fDistanceToleaf Callable to get distance to leaf with signature f(GpuIndex q, TQuery
+     query, GpuIndex leaf, " "GpuIndex i)
      * @param fDistanceUpperBound Callable to get query q's distance upper bound with signature
      * GpuScalar f(GpuIndex)
      * @param fOnNearestNeighbourFound Callable to get nearest neighbour with signature void
@@ -131,7 +130,6 @@ class Bvh
      */
     template <
         class FGetQueryObject,
-        class FGetLeafObject,
         class FMinDistanceToBox,
         class FDistanceToLeaf,
         class FDistanceUpperBound,
@@ -142,7 +140,6 @@ class Bvh
         Aabb<kDims> const& aabbs,
         GpuIndex nQueries,
         FGetQueryObject fGetQueryObject,
-        FGetLeafObject fGetLeafObject,
         FMinDistanceToBox fMinDistanceToBox,
         FDistanceToLeaf fDistanceToleaf,
         FDistanceUpperBound fDistanceUpperBound,
@@ -152,10 +149,10 @@ class Bvh
      * @brief
      *
      * @tparam FGetQueryObject Callable with signature TQuery f(GpuIndex)
-     * @tparam FGetLeafObject Callable with signature TLeaf f(GpuIndex leaf, GpuIndex i)
      * @tparam FMinDistanceToBox Callable with signature GpuScalar f(TQuery, Point, Point) where
      * Point=pbat::math::linalg::mini::SVector<GpuScalar, 3>
-     * @tparam FDistanceToLeaf Callable with signature GpuScalar f(TQuery, TLeaf)
+     * @tparam FDistanceToLeaf Callable with signature GpuScalar
+     * f(GpuIndex q, TQuery query, GpuIndex leaf, GpuIndex i)
      * @tparam FDistanceUpperBound Callable with signature GpuScalar f(GpuIndex)
      * @tparam FOnFound Callable with signature void f(GpuIndex q, TQuery query, GpuIndex leafIdx,
      * GpuIndex i, TLeaf leaf, GpuScalar d)
@@ -164,19 +161,16 @@ class Bvh
      * @param aabbs The same aabbs that were given to Build(), otherwise undefined behavior.
      * @param nQueries Number of queries
      * @param fGetQueryObject Callable to get query object with signature TQuery f(GpuIndex)
-     * @param fGetLeafObject Callable to get leaf object with signature TLeaf f(GpuIndex leaf,
-     * GpuIndex i)
      * @param fMinDistanceToBox Callable to get minimum distance to box with signature GpuScalar
      * @param fDistanceToleaf Callable to get distance to leaf with signature GpuScalar
-     * f(TQuery,TLeaf)
+     * f(GpuIndex q, TQuery query, GpuIndex leaf, GpuIndex i)
      * @param fDistanceUpperBound Callable to get query q's distance upper bound with signature
      * GpuScalar f(GpuIndex)
      * @param fOnFound Callable for handling satisfied queries with signature
-     * void f(GpuIndex q, TQuery query, GpuIndex leafIdx, GpuIndex i, TLeaf leaf, GpuScalar d)
+     * void f(GpuIndex q, GpuIndex leafIdx, GpuIndex i, GpuScalar d)
      */
     template <
         class FGetQueryObject,
-        class FGetLeafObject,
         class FMinDistanceToBox,
         class FDistanceToLeaf,
         class FDistanceUpperBound,
@@ -186,7 +180,6 @@ class Bvh
         Aabb<kDims> const& aabbs,
         GpuIndex nQueries,
         FGetQueryObject fGetQueryObject,
-        FGetLeafObject fGetLeafObject,
         FMinDistanceToBox fMinDistanceToBox,
         FDistanceToLeaf fDistanceToleaf,
         FDistanceUpperBound fDistanceUpperBound,
@@ -307,14 +300,6 @@ inline void Bvh::DetectOverlaps(
         LU.Col(1) = mini::FromBuffers<3, 1>(e, q);
         return LU;
     };
-    auto fGetLeafObject =
-        [b = leafAabbs.b.Raw(),
-         e = leafAabbs.e.Raw()] PBAT_DEVICE(GpuIndex leaf, [[maybe_unused]] GpuIndex i) {
-            mini::SMatrix<GpuScalar, 3, 2> LU;
-            LU.Col(0) = mini::FromBuffers<3, 1>(b, leaf);
-            LU.Col(1) = mini::FromBuffers<3, 1>(e, leaf);
-            return LU;
-        };
     auto fMinDistanceToBox = [] PBAT_DEVICE(
                                  mini::SMatrix<GpuScalar, 3, 2> const& LU1,
                                  mini::SVector<GpuScalar, 3> const& L2,
@@ -327,8 +312,10 @@ inline void Bvh::DetectOverlaps(
         return static_cast<GpuScalar>(not bBoxesOverlap);
     };
     auto fDistanceToLeaf = [] PBAT_DEVICE(
-                               mini::SMatrix<GpuScalar, 3, 2> const& LU1,
-                               mini::SMatrix<GpuScalar, 3, 2> const& LU2) {
+                               [[maybe_unused]] GpuIndex q,
+                               [[maybe_unused]] mini::SMatrix<GpuScalar, 3, 2> const& LUQ,
+                               [[maybe_unused]] GpuIndex leaf,
+                               [[maybe_unused]] GpuIndex i) {
         return GpuScalar(0);
     };
     auto fQueryUpperBound = [] PBAT_DEVICE(GpuIndex q) {
@@ -336,17 +323,14 @@ inline void Bvh::DetectOverlaps(
     };
     auto fOnFound = [fOnOverlapDetected] PBAT_DEVICE(
                         GpuIndex q,
-                        [[maybe_unused]] mini::SMatrix<GpuScalar, 3, 2> const& LU1,
                         [[maybe_unused]] GpuIndex leaf,
                         GpuIndex i,
-                        [[maybe_unused]] mini::SMatrix<GpuScalar, 3, 2> const& LU2,
                         [[maybe_unused]] GpuScalar d) {
         fOnOverlapDetected(q, i);
     };
 
     this->RangeSearch<
         decltype(fGetQueryObject),
-        decltype(fGetLeafObject),
         decltype(fMinDistanceToBox),
         decltype(fDistanceToLeaf),
         decltype(fQueryUpperBound),
@@ -355,7 +339,6 @@ inline void Bvh::DetectOverlaps(
         leafAabbs,
         queryAabbs.Size(),
         fGetQueryObject,
-        fGetLeafObject,
         fMinDistanceToBox,
         fDistanceToLeaf,
         fQueryUpperBound,
@@ -366,7 +349,6 @@ inline void Bvh::DetectOverlaps(
 
 template <
     class FGetQueryObject,
-    class FGetLeafObject,
     class FMinDistanceToBox,
     class FDistanceToLeaf,
     class FDistanceUpperBound,
@@ -377,7 +359,6 @@ inline void Bvh::NearestNeighbours(
     Aabb<kDims> const& aabbs,
     GpuIndex nQueries,
     FGetQueryObject fGetQueryObject,
-    FGetLeafObject fGetLeafObject,
     FMinDistanceToBox fMinDistanceToBox,
     FDistanceToLeaf fDistanceToLeaf,
     FDistanceUpperBound fDistanceUpperBound,
@@ -387,15 +368,11 @@ inline void Bvh::NearestNeighbours(
     PBAT_PROFILE_NAMED_CUDA_HOST_SCOPE_START(ctx, "pbat.gpu.impl.geometry.Bvh.NearestNeighbours");
 
     using TQuery = std::invoke_result_t<FGetQueryObject, GpuIndex>;
-    using TLeaf  = std::invoke_result_t<FGetLeafObject, GpuIndex, GpuIndex>;
     using Point  = pbat::math::linalg::mini::SVector<GpuScalar, kDims>;
 
     static_assert(
         std::is_invocable_v<FGetQueryObject, GpuIndex> and not std::is_same_v<TQuery, void>,
         "FGetQueryObject must be callable with signature TQuery f(GpuIndex)");
-    static_assert(
-        std::is_invocable_v<FGetLeafObject, GpuIndex, GpuIndex> and not std::is_same_v<TLeaf, void>,
-        "FGetLeafObject must be callable with signature TLeaf f(GpuIndex,GpuIndex)");
     static_assert(
         std::is_invocable_v<FMinDistanceToBox, TQuery, Point, Point> and
             std::is_convertible_v<
@@ -404,9 +381,13 @@ inline void Bvh::NearestNeighbours(
         "FMinDistanceToBox must be callable with signature GpuScalar f(TQuery, Point, Point) where "
         "Point=pbat::math::linalg::mini::SVector<GpuScalar, 3>");
     static_assert(
-        std::is_invocable_v<FDistanceToLeaf, TQuery, TLeaf> and
-            std::is_convertible_v<std::invoke_result_t<FDistanceToLeaf, TQuery, TLeaf>, GpuScalar>,
-        "FDistanceToLeaf must be callable with signature GpuScalar f(TQuery, TLeaf)");
+        std::is_invocable_v<FDistanceToLeaf, GpuIndex, TQuery, GpuIndex, GpuIndex> and
+            std::is_convertible_v<
+                std::invoke_result_t<FDistanceToLeaf, GpuIndex, TQuery, GpuIndex, GpuIndex>,
+                GpuScalar>,
+        "FDistanceToLeaf must be callable with signature GpuScalar f(GpuIndex, TQuery query, "
+        "GpuIndex leaf, "
+        "GpuIndex i)");
     static_assert(
         std::is_invocable_v<FDistanceUpperBound, GpuIndex> and
             std::is_convertible_v<std::invoke_result_t<FDistanceUpperBound, GpuIndex>, GpuScalar>,
@@ -422,7 +403,6 @@ inline void Bvh::NearestNeighbours(
         thrust::make_counting_iterator(nQueries),
         [eps,
          fGetQueryObject,
-         fGetLeafObject,
          fMinDistanceToBox,
          fDistanceToLeaf,
          fDistanceUpperBound,
@@ -470,7 +450,7 @@ inline void Bvh::NearestNeighbours(
                     if (db < dmin)
                     {
                         GpuIndex const i  = inds[nodeIdx];
-                        GpuScalar const d = fDistanceToLeaf(query, fGetLeafObject(nodeIdx, i));
+                        GpuScalar const d = fDistanceToLeaf(q, query, nodeIdx, i);
                         if (d < dmin)
                         {
                             nn.Clear();
@@ -498,7 +478,6 @@ inline void Bvh::NearestNeighbours(
 
 template <
     class FGetQueryObject,
-    class FGetLeafObject,
     class FMinDistanceToBox,
     class FDistanceToLeaf,
     class FDistanceUpperBound,
@@ -508,7 +487,6 @@ inline void Bvh::RangeSearch(
     Aabb<kDims> const& aabbs,
     GpuIndex nQueries,
     FGetQueryObject fGetQueryObject,
-    FGetLeafObject fGetLeafObject,
     FMinDistanceToBox fMinDistanceToBox,
     FDistanceToLeaf fDistanceToleaf,
     FDistanceUpperBound fDistanceUpperBound,
@@ -517,14 +495,10 @@ inline void Bvh::RangeSearch(
     PBAT_PROFILE_NAMED_CUDA_HOST_SCOPE_START(ctx, "pbat.gpu.impl.geometry.Bvh.RangeSearch");
 
     using TQuery = std::invoke_result_t<FGetQueryObject, GpuIndex>;
-    using TLeaf  = std::invoke_result_t<FGetLeafObject, GpuIndex, GpuIndex>;
     using Point  = pbat::math::linalg::mini::SVector<GpuScalar, kDims>;
     static_assert(
         std::is_invocable_v<FGetQueryObject, GpuIndex> and not std::is_same_v<TQuery, void>,
         "FGetQueryObject must be callable with signature TQuery f(GpuIndex)");
-    static_assert(
-        std::is_invocable_v<FGetLeafObject, GpuIndex, GpuIndex> and not std::is_same_v<TLeaf, void>,
-        "FGetLeafObject must be callable with signature TLeaf f(GpuIndex,GpuIndex)");
     static_assert(
         std::is_invocable_v<FMinDistanceToBox, TQuery, Point, Point> and
             std::is_convertible_v<
@@ -533,17 +507,21 @@ inline void Bvh::RangeSearch(
         "FMinDistanceToBox must be callable with signature GpuScalar f(TQuery, Point, Point) where "
         "Point=pbat::math::linalg::mini::SVector<GpuScalar, 3>");
     static_assert(
-        std::is_invocable_v<FDistanceToLeaf, TQuery, TLeaf> and
-            std::is_convertible_v<std::invoke_result_t<FDistanceToLeaf, TQuery, TLeaf>, GpuScalar>,
-        "FDistanceToLeaf must be callable with signature GpuScalar f(TQuery, TLeaf)");
+        std::is_invocable_v<FDistanceToLeaf, GpuIndex, TQuery, GpuIndex, GpuIndex> and
+            std::is_convertible_v<
+                std::invoke_result_t<FDistanceToLeaf, GpuIndex, TQuery, GpuIndex, GpuIndex>,
+                GpuScalar>,
+        "FDistanceToLeaf must be callable with signature GpuScalar f(GpuIndex q, TQuery query, "
+        "GpuIndex leaf, "
+        "GpuIndex i)");
     static_assert(
         std::is_invocable_v<FDistanceUpperBound, GpuIndex> and
             std::is_convertible_v<std::invoke_result_t<FDistanceUpperBound, GpuIndex>, GpuScalar>,
         "FDistanceUpperBound must be callable with signature GpuScalar f(GpuIndex)");
     static_assert(
-        std::is_invocable_v<FOnFound, GpuIndex, TQuery, GpuIndex, GpuIndex, TLeaf, GpuScalar>,
-        "FOnFound must be callable with signature void f(GpuIndex q, TQuery query, GpuIndex "
-        "leafIdx, GpuIndex i, TLeaf leaf, GpuScalar d)");
+        std::is_invocable_v<FOnFound, GpuIndex, GpuIndex, GpuIndex, GpuScalar>,
+        "FOnFound must be callable with signature void f(GpuIndex q, GpuIndex "
+        "leafIdx, GpuIndex i, GpuScalar d)");
 
     thrust::for_each(
         thrust::device,
@@ -557,7 +535,6 @@ inline void Bvh::RangeSearch(
          ie                  = iaabbs.e.Raw(),
          child               = child.Raw(),
          fGetQueryObject     = std::forward<FGetQueryObject>(fGetQueryObject),
-         fGetLeafObject      = std::forward<FGetLeafObject>(fGetLeafObject),
          fMinDistanceToBox   = std::forward<FMinDistanceToBox>(fMinDistanceToBox),
          fDistanceToLeaf     = std::forward<FDistanceToLeaf>(fDistanceToleaf),
          fDistanceUpperBound = std::forward<FDistanceUpperBound>(fDistanceUpperBound),
@@ -596,11 +573,10 @@ inline void Bvh::RangeSearch(
                     if (db <= upper)
                     {
                         GpuIndex const i  = inds[nodeIdx];
-                        TLeaf const leaf  = fGetLeafObject(nodeIdx, i);
-                        GpuScalar const d = fDistanceToLeaf(query, leaf);
+                        GpuScalar const d = fDistanceToLeaf(q, query, nodeIdx, i);
                         if (d <= upper)
                         {
-                            fOnFound(q, query, nodeIdx, i, leaf, d);
+                            fOnFound(q, nodeIdx, i, d);
                         }
                     }
                 }

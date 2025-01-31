@@ -293,18 +293,6 @@ struct FGetQueryObject
     PBAT_DEVICE TQuery operator()(GpuIndex q) const { return FromBuffers<3, 1>(pts, q); }
 };
 
-struct FGetLeafObject
-{
-    std::array<GpuScalar*, 3> verts;
-    std::array<GpuIndex*, 4> tets;
-    PBAT_DEVICE TLeaf operator()([[maybe_unused]] GpuIndex leaf, GpuIndex i) const
-    {
-        auto inds = FromBuffers<4, 1>(tets, i);
-        auto xe   = FromBuffers(verts, inds.Transpose());
-        return xe;
-    }
-};
-
 struct FDistancePointAabb
 {
     PBAT_DEVICE GpuScalar operator()(TQuery const& Q, TPoint const& L, TPoint const& U) const
@@ -315,9 +303,14 @@ struct FDistancePointAabb
 
 struct FDistancePointTetrahedron
 {
-    PBAT_DEVICE GpuScalar operator()(TQuery const& Q, TLeaf const& T) const
+    std::array<GpuScalar*, 3> verts;
+    std::array<GpuIndex*, 4> tets;
+    PBAT_DEVICE GpuScalar
+    operator()([[maybe_unused]] GpuIndex q, TQuery const& Q, GpuIndex leaf, GpuIndex i) const
     {
-        return DistanceQueries::PointTetrahedron(Q, T.Col(0), T.Col(1), T.Col(2), T.Col(3));
+        auto inds = FromBuffers<4, 1>(tets, i);
+        auto xe   = FromBuffers(verts, inds.Transpose());
+        return DistanceQueries::PointTetrahedron(Q, xe.Col(0), xe.Col(1), xe.Col(2), xe.Col(3));
     }
 };
 
@@ -553,9 +546,8 @@ TEST_CASE("[gpu][impl][geometry] Bvh")
             aabbs,
             static_cast<GpuIndex>(QP.cols()),
             gpu::impl::geometry::test::Bvh::FGetQueryObject{QPG.Raw()},
-            gpu::impl::geometry::test::Bvh::FGetLeafObject{VG.Raw(), CG.Raw()},
             gpu::impl::geometry::test::Bvh::FDistancePointAabb{},
-            gpu::impl::geometry::test::Bvh::FDistancePointTetrahedron{},
+            gpu::impl::geometry::test::Bvh::FDistancePointTetrahedron{VG.Raw(), CG.Raw()},
             gpu::impl::geometry::test::Bvh::FDistanceUpperBound{},
             gpu::impl::geometry::test::Bvh::FSetNearestNeighbour{NNG.Raw(), dNNG.Raw()});
 
