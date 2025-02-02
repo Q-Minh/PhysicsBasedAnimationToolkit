@@ -18,11 +18,11 @@ class Morton
     using Bound = pbat::math::linalg::mini::SVector<GpuScalar, 3>;
     using Code  = pbat::geometry::MortonCodeType;
 
-    static void Encode(
-        Aabb<3> const& aabbs,
-        Bound const& wmin,
-        Bound const& wmax,
-        common::Buffer<Code>& morton);
+    Morton(std::size_t n);
+
+    void Encode(Aabb<3> const& aabbs, Bound const& wmin, Bound const& wmax);
+
+    common::Buffer<Code> codes;
 };
 
 } // namespace geometry

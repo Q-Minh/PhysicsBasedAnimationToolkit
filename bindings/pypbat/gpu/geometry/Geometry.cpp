@@ -3,7 +3,6 @@
 #include "Aabb.h"
 #include "Bodies.h"
 #include "Bvh.h"
-#include "BvhQuery.h"
 #include "Points.h"
 #include "Simplices.h"
 #include "SweepAndPrune.h"
@@ -21,7 +20,6 @@ void Bind(pybind11::module& m)
     BindBodies(m);
     BindSweepAndPrune(m);
     BindBvh(m);
-    BindBvhQuery(m);
 }
 
 } // namespace geometry

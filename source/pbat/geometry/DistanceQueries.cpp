@@ -60,3 +60,33 @@ TEST_CASE("[geometry] Squared distance between axis-aligned bounding boxes can b
         CHECK_EQ(d2sym, d2Expected);
     }
 }
+
+TEST_CASE("[geometry] Squared distance between point and axis-aligned bounding box can be computed")
+{
+    using namespace pbat::math::linalg::mini;
+    using ScalarType = pbat::Scalar;
+    SUBCASE("Point is inside AABB")
+    {
+        // Arrange
+        SVector<ScalarType, 3> const P{1., 0., 0.};
+        SVector<ScalarType, 3> const L{0., 0., 0.};
+        SVector<ScalarType, 3> const U{1., 1., 1.};
+        // Act
+        ScalarType const d2 = pbat::geometry::DistanceQueries::PointAxisAlignedBoundingBox(P, L, U);
+        // Assert
+        ScalarType constexpr d2Expected = 0.;
+        CHECK_EQ(d2, d2Expected);
+    }
+    SUBCASE("Point is outside AABB")
+    {
+        // Arrange
+        SVector<ScalarType, 3> const P{2., 2., 2.};
+        SVector<ScalarType, 3> const L{-1., -1., -1.};
+        SVector<ScalarType, 3> const U{1., 1., 1.};
+        // Act
+        ScalarType const d2 = pbat::geometry::DistanceQueries::PointAxisAlignedBoundingBox(P, L, U);
+        // Assert
+        ScalarType constexpr d2Expected = 3.;
+        CHECK_EQ(d2, d2Expected);
+    }
+}

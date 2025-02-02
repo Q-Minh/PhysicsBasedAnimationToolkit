@@ -136,7 +136,7 @@ GpuIndexVectorX Bvh::LeafOrdering() const
 
 Eigen::Vector<typename Bvh::MortonCodeType, Eigen::Dynamic> Bvh::MortonCodes() const
 {
-    return impl::common::ToEigen(mImpl->morton);
+    return impl::common::ToEigen(mImpl->morton.codes);
 }
 
 GpuIndexMatrixX Bvh::Child() const

@@ -130,69 +130,77 @@ Bvh::Bvh(GpuIndex nBoxes)
 void Bvh::Build(Aabb<kDims>& aabbs, Morton::Bound const& WL, Morton::Bound const& WU)
 {
     PBAT_PROFILE_NAMED_CUDA_HOST_SCOPE_START(ctx, "pbat.gpu.impl.geometry.Bvh.Build");
-    using namespace pbat::math::linalg;
-    GpuIndex const n                = aabbs.Size();
-    GpuIndex const leafBegin        = n - 1;
-    common::Buffer<GpuScalar, 3>& b = aabbs.b;
-    common::Buffer<GpuScalar, 3>& e = aabbs.e;
+    GpuIndex const n = aabbs.Size();
+    SortByMortonCode(aabbs, WL, WU);
+    BuildTree(n);
+    ConstructBoxes(aabbs);
+    PBAT_PROFILE_CUDA_HOST_SCOPE_END(ctx);
+}
 
-    // 1. Reset intermediate data
-    visits.SetConstant(GpuIndex(0));
+void Bvh::SortByMortonCode(Aabb<kDims>& aabbs, Morton::Bound const& WL, Morton::Bound const& WU)
+{
+    PBAT_PROFILE_NAMED_CUDA_HOST_SCOPE_START(
+        sortCtx,
+        "pbat.gpu.impl.geometry.Bvh.SortByMortonCode");
 
-    // 2. Compute Morton codes for each leaf node
-    Morton::Encode(aabbs, WL, WU, morton);
-
-    // 3. Sort leaves based on Morton codes
-    PBAT_PROFILE_NAMED_CUDA_HOST_SCOPE_START(sortCtx, "pbat.gpu.impl.geometry.Bvh.Build.Sort");
+    auto const n = aabbs.Size();
+    morton.Encode(aabbs, WL, WU);
     thrust::sequence(thrust::device, inds.Data(), inds.Data() + n);
     auto zip = thrust::make_zip_iterator(
-        b[0].begin(),
-        b[1].begin(),
-        b[2].begin(),
-        e[0].begin(),
-        e[1].begin(),
-        e[2].begin(),
+        aabbs.b[0].begin(),
+        aabbs.b[1].begin(),
+        aabbs.b[2].begin(),
+        aabbs.e[0].begin(),
+        aabbs.e[1].begin(),
+        aabbs.e[2].begin(),
         inds.Data());
     // Using a stable sort preserves the initial ordering of simplex indices 0...n-1, resulting in
     // simplices sorted by Morton codes first, and then by simplex index.
-    thrust::stable_sort_by_key(thrust::device, morton.Data(), morton.Data() + n, zip);
-    PBAT_PROFILE_CUDA_HOST_SCOPE_END(sortCtx);
+    thrust::stable_sort_by_key(thrust::device, morton.codes.Data(), morton.codes.Data() + n, zip);
 
-    // 4. Construct hierarchy
-    PBAT_PROFILE_NAMED_CUDA_HOST_SCOPE_START(
-        hierarchyCtx,
-        "pbat.gpu.impl.geometry.Bvh.Build.Hierarchy");
+    PBAT_PROFILE_CUDA_HOST_SCOPE_END(sortCtx);
+}
+
+void Bvh::BuildTree(GpuIndex n)
+{
+    PBAT_PROFILE_NAMED_CUDA_HOST_SCOPE_START(hierarchyCtx, "pbat.gpu.impl.geometry.Bvh.BuildTree");
     thrust::for_each(
         thrust::device,
         thrust::make_counting_iterator(0),
         thrust::make_counting_iterator(n - 1),
         kernels::FGenerateHierarchy{
-            morton.Raw(),
+            morton.codes.Raw(),
             child.Raw(),
             parent.Raw(),
             rightmost.Raw(),
-            leafBegin,
+            n - 1,
             n});
     PBAT_PROFILE_CUDA_HOST_SCOPE_END(hierarchyCtx);
+}
 
-    // 5. Construct internal node bounding boxes
+void Bvh::ConstructBoxes(Aabb<kDims>& aabbs)
+{
     PBAT_PROFILE_NAMED_CUDA_HOST_SCOPE_START(
         iaabbCtx,
         "pbat.gpu.impl.geometry.Bvh.Build.InternalAabbs");
-    auto& ib = iaabbs.b;
-    auto& ie = iaabbs.e;
+    visits.SetConstant(GpuIndex(0));
+    auto const n = aabbs.Size();
+    auto& b      = aabbs.b;
+    auto& e      = aabbs.e;
+    auto& ib     = iaabbs.b;
+    auto& ie     = iaabbs.e;
     thrust::for_each(
         thrust::device,
         thrust::make_counting_iterator(n - 1),
         thrust::make_counting_iterator(2 * n - 1),
-        [leafBegin,
-         parent = parent.Raw(),
-         child  = child.Raw(),
-         b      = b.Raw(),
-         e      = e.Raw(),
-         ib     = ib.Raw(),
-         ie     = ie.Raw(),
-         visits = visits.Raw()] PBAT_DEVICE(auto leaf) {
+        [leafBegin = n - 1,
+         parent    = parent.Raw(),
+         child     = child.Raw(),
+         b         = b.Raw(),
+         e         = e.Raw(),
+         ib        = ib.Raw(),
+         ie        = ie.Raw(),
+         visits    = visits.Raw()] PBAT_DEVICE(auto leaf) {
             auto p = parent[leaf];
             auto k = 0;
             for (; (k < 64) and (p >= 0); ++k)
@@ -227,8 +235,6 @@ void Bvh::Build(Aabb<kDims>& aabbs, Morton::Bound const& WL, Morton::Bound const
             assert(k < 64);
         });
     PBAT_PROFILE_CUDA_HOST_SCOPE_END(iaabbCtx);
-    
-    PBAT_PROFILE_CUDA_HOST_SCOPE_END(ctx);
 }
 
 } // namespace geometry
@@ -238,6 +244,7 @@ void Bvh::Build(Aabb<kDims>& aabbs, Morton::Bound const& WL, Morton::Bound const
 
 #include "pbat/common/ConstexprFor.h"
 #include "pbat/common/Eigen.h"
+#include "pbat/geometry/DistanceQueries.h"
 #include "pbat/gpu/impl/common/SynchronizedList.cuh"
 
 #include <algorithm>
@@ -271,6 +278,60 @@ struct FOnOverlapDetected
             o.Append(Overlap{si, sj});
         }
     };
+};
+
+using TQuery = pbat::math::linalg::mini::SVector<GpuScalar, 3>;
+using TLeaf  = pbat::math::linalg::mini::SMatrix<GpuScalar, 3, 4>;
+using TPoint = pbat::math::linalg::mini::SVector<GpuScalar, 3>;
+using math::linalg::mini::FromBuffers;
+
+namespace DistanceQueries = pbat::geometry::DistanceQueries;
+
+struct FGetQueryObject
+{
+    std::array<GpuScalar*, 3> pts;
+    PBAT_DEVICE TQuery operator()(GpuIndex q) const { return FromBuffers<3, 1>(pts, q); }
+};
+
+struct FDistancePointAabb
+{
+    PBAT_DEVICE GpuScalar operator()(TQuery const& Q, TPoint const& L, TPoint const& U) const
+    {
+        return DistanceQueries::PointAxisAlignedBoundingBox(Q, L, U);
+    }
+};
+
+struct FDistancePointTetrahedron
+{
+    std::array<GpuScalar*, 3> verts;
+    std::array<GpuIndex*, 4> tets;
+    PBAT_DEVICE GpuScalar
+    operator()([[maybe_unused]] GpuIndex q, TQuery const& Q, GpuIndex leaf, GpuIndex i) const
+    {
+        auto inds = FromBuffers<4, 1>(tets, i);
+        auto xe   = FromBuffers(verts, inds.Transpose());
+        return DistanceQueries::PointTetrahedron(Q, xe.Col(0), xe.Col(1), xe.Col(2), xe.Col(3));
+    }
+};
+
+struct FSetNearestNeighbour
+{
+    GpuIndex* NN;
+    GpuScalar* dNN;
+    PBAT_DEVICE void
+    operator()(GpuIndex q, GpuIndex e, GpuScalar dmin, [[maybe_unused]] GpuIndex k) const
+    {
+        NN[q]  = e;
+        dNN[q] = dmin;
+    }
+};
+
+struct FDistanceUpperBound
+{
+    PBAT_DEVICE GpuScalar operator()(GpuIndex q) const
+    {
+        return std::numeric_limits<GpuScalar>::max();
+    }
 };
 
 } // namespace Bvh
@@ -455,5 +516,48 @@ TEST_CASE("[gpu][impl][geometry] Bvh")
         // Assert
         CHECK_EQ(overlaps.Size(), nExpectedOverlaps);
         fCheckInternalBoundingBoxComputation(bvh, aabbs);
+    }
+    SUBCASE("Nearest neighbour search")
+    {
+        // Arrange
+        GpuMatrixX QP(3, C.cols());
+        QP.col(0) << GpuScalar(1.), GpuScalar(0.), GpuScalar(0.);
+        QP.col(1) << GpuScalar(0.), GpuScalar(1.), GpuScalar(0.);
+        QP.col(2) << GpuScalar(0.), GpuScalar(0.), GpuScalar(1.);
+        QP.col(3) << GpuScalar(1.), GpuScalar(1.), GpuScalar(1.);
+        QP.col(4) << GpuScalar(0.5), GpuScalar(0.5), GpuScalar(0.5);
+
+        Buffer<GpuScalar, 3> VG(V.cols());
+        ToBuffer(V, VG);
+        Buffer<GpuIndex, 4> CG(C.cols());
+        ToBuffer(C, CG);
+        Buffer<GpuScalar, 3> QPG(QP.cols());
+        ToBuffer(QP, QPG);
+        Buffer<GpuIndex> NNG(C.cols());
+        NNG.SetConstant(GpuIndex(-1));
+        Buffer<GpuScalar> dNNG(C.cols());
+        dNNG.SetConstant(std::numeric_limits<GpuScalar>::max());
+        Aabb<3> aabbs{VG, CG};
+
+        // Act
+        Bvh bvh(aabbs.Size());
+        bvh.Build(aabbs, mini::FromEigen(Vmin), mini::FromEigen(Vmax));
+        bvh.NearestNeighbours(
+            aabbs,
+            static_cast<GpuIndex>(QP.cols()),
+            gpu::impl::geometry::test::Bvh::FGetQueryObject{QPG.Raw()},
+            gpu::impl::geometry::test::Bvh::FDistancePointAabb{},
+            gpu::impl::geometry::test::Bvh::FDistancePointTetrahedron{VG.Raw(), CG.Raw()},
+            gpu::impl::geometry::test::Bvh::FDistanceUpperBound{},
+            gpu::impl::geometry::test::Bvh::FSetNearestNeighbour{NNG.Raw(), dNNG.Raw()});
+
+        // Assert
+        GpuIndexVectorX NN = ToEigen(NNG);
+        GpuVectorX dNN     = ToEigen(dNNG);
+        for (auto c = 0; c < C.cols(); ++c)
+        {
+            CHECK_EQ(NN(c), c);
+            CHECK_EQ(dNN(c), GpuScalar(0));
+        }
     }
 }

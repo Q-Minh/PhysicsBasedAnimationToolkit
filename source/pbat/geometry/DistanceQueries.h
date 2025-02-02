@@ -102,6 +102,21 @@ PBAT_HOST_DEVICE typename TMatrixX::ScalarType
 PointPlane(TMatrixX const& X, TMatrixP const& P, TMatrixN const& n);
 
 /**
+ * @brief Obtains the signed distance of X w.r.t. plane spanned by ABC
+ * @param X
+ * @param P
+ * @param n
+ * @return
+ */
+template <
+    mini::CMatrix TMatrixX,
+    mini::CMatrix TMatrixA,
+    mini::CMatrix TMatrixB,
+    mini::CMatrix TMatrixC>
+PBAT_HOST_DEVICE typename TMatrixX::ScalarType
+PointPlane(TMatrixX const& X, TMatrixA const& A, TMatrixB const& B, TMatrixC const& C);
+
+/**
  * @brief Obtains the squared distance between sphere (X,R) and triangle ABC.
  * @param X
  * @param R
@@ -200,6 +215,18 @@ PBAT_HOST_DEVICE typename TMatrixX::ScalarType
 PointPlane(TMatrixX const& X, TMatrixP const& P, TMatrixN const& n)
 {
     return Dot(X - P, n);
+}
+
+template <
+    mini::CMatrix TMatrixX,
+    mini::CMatrix TMatrixA,
+    mini::CMatrix TMatrixB,
+    mini::CMatrix TMatrixC>
+PBAT_HOST_DEVICE typename TMatrixX::ScalarType
+PointPlane(TMatrixX const& X, TMatrixA const& A, TMatrixB const& B, TMatrixC const& C)
+{
+    auto const n = Cross(B - A, C - A);
+    return PointPlane(X, A, n);
 }
 
 template <

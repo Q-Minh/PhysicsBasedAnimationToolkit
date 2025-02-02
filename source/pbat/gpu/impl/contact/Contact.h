@@ -1,0 +1,6 @@
+#ifndef PBAT_GPU_IMPL_CONTACT_CONTACT_H
+#define PBAT_GPU_IMPL_CONTACT_CONTACT_H
+
+#include "VertexTriangleMixedCcdDcd.cuh"
+
+#endif // PBAT_GPU_IMPL_CONTACT_CONTACT_H

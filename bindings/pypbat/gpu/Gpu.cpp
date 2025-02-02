@@ -1,6 +1,7 @@
 #include "Gpu.h"
 
 #include "common/Common.h"
+#include "contact/Contact.h"
 #include "geometry/Geometry.h"
 #include "vbd/Vbd.h"
 #include "xpbd/Xpbd.h"
@@ -16,6 +17,8 @@ void Bind(pybind11::module& m)
     common::Bind(mcommon);
     auto mgeometry = m.def_submodule("geometry");
     geometry::Bind(mgeometry);
+    auto mcontact = m.def_submodule("contact");
+    contact::Bind(mcontact);
     auto mxpbd = m.def_submodule("xpbd");
     xpbd::Bind(mxpbd);
     auto mvbd = m.def_submodule("vbd");

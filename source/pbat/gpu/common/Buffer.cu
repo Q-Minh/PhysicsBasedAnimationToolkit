@@ -8,6 +8,7 @@
 #include "pbat/gpu/impl/common/Eigen.cuh"
 
 #include <exception>
+#include <iostream>
 #include <string>
 #include <type_traits>
 
@@ -17,10 +18,6 @@ namespace common {
 
 Buffer::Buffer(GpuIndex dims, GpuIndex n, EType type) : mDims(-1), mType(), mImpl(nullptr)
 {
-    if (dims < 1 || dims > kMaxDims)
-    {
-        throw std::invalid_argument("Expected 1 <= dims <= kMaxDims.");
-    }
     switch (type)
     {
         case EType::uint8: mType = typeid(std::uint8_t).name(); break;
@@ -57,27 +54,22 @@ Buffer& Buffer::operator=(Buffer&& other) noexcept
     return *this;
 }
 
-#define DEFINE_BUFFER_COPY_CONSTRUCTOR(T, Tenum)                                               \
-    Buffer::Buffer(Data<T> const& data)                                                        \
-        : Buffer(                                                                              \
-              (data.rows() == 1 or data.cols() == 1) ? 1 : static_cast<GpuIndex>(data.rows()), \
-              (data.rows() == 1 or data.cols() == 1) ? static_cast<GpuIndex>(data.size()) :    \
-                                                       static_cast<GpuIndex>(data.cols()),     \
-              Tenum)                                                                           \
-    {                                                                                          \
-        *this = data;                                                                          \
+#define DEFINE_BUFFER_CONSTRUCTOR_FROM_DATA(T)                                               \
+    Buffer::Buffer(Data<T> const& data) : mDims(-1), mType(typeid(T).name()), mImpl(nullptr) \
+    {                                                                                        \
+        *this = data;                                                                        \
     }
 
-DEFINE_BUFFER_COPY_CONSTRUCTOR(std::uint8_t, EType::uint8);
-DEFINE_BUFFER_COPY_CONSTRUCTOR(std::uint16_t, EType::uint16);
-DEFINE_BUFFER_COPY_CONSTRUCTOR(std::uint32_t, EType::uint32);
-DEFINE_BUFFER_COPY_CONSTRUCTOR(std::uint64_t, EType::uint64);
-DEFINE_BUFFER_COPY_CONSTRUCTOR(std::int8_t, EType::int8);
-DEFINE_BUFFER_COPY_CONSTRUCTOR(std::int16_t, EType::int16);
-DEFINE_BUFFER_COPY_CONSTRUCTOR(std::int32_t, EType::int32);
-DEFINE_BUFFER_COPY_CONSTRUCTOR(std::int64_t, EType::int64);
-DEFINE_BUFFER_COPY_CONSTRUCTOR(float, EType::float32);
-DEFINE_BUFFER_COPY_CONSTRUCTOR(double, EType::float64);
+DEFINE_BUFFER_CONSTRUCTOR_FROM_DATA(std::uint8_t);
+DEFINE_BUFFER_CONSTRUCTOR_FROM_DATA(std::uint16_t);
+DEFINE_BUFFER_CONSTRUCTOR_FROM_DATA(std::uint32_t);
+DEFINE_BUFFER_CONSTRUCTOR_FROM_DATA(std::uint64_t);
+DEFINE_BUFFER_CONSTRUCTOR_FROM_DATA(std::int8_t);
+DEFINE_BUFFER_CONSTRUCTOR_FROM_DATA(std::int16_t);
+DEFINE_BUFFER_CONSTRUCTOR_FROM_DATA(std::int32_t);
+DEFINE_BUFFER_CONSTRUCTOR_FROM_DATA(std::int64_t);
+DEFINE_BUFFER_CONSTRUCTOR_FROM_DATA(float);
+DEFINE_BUFFER_CONSTRUCTOR_FROM_DATA(double);
 
 #define DEFINE_BUFFER_ASSIGNMENT_OPERATOR(T)                                              \
     Buffer& Buffer::operator=(Data<T> const& data)                                        \
@@ -86,7 +78,9 @@ DEFINE_BUFFER_COPY_CONSTRUCTOR(double, EType::float64);
         {                                                                                 \
             throw std::invalid_argument("Input data does not match this Buffer's type."); \
         }                                                                                 \
-        pbat::common::ForRange<0, kMaxDims>([&]<auto kDims>() {                           \
+        bool const bIsVector = data.size() == data.rows() or data.size() == data.cols();  \
+        Resize(bIsVector ? 1 : data.rows(), bIsVector ? data.size() : data.cols());       \
+        pbat::common::ForRange<1, kMaxDims + 1>([&]<auto kDims>() {                       \
             if (mDims == kDims)                                                           \
             {                                                                             \
                 impl::common::ToBuffer(                                                   \
@@ -136,7 +130,7 @@ Buffer::EType Buffer::Type() const
 std::size_t Buffer::Size() const
 {
     std::size_t size{0};
-    pbat::common::ForRange<0, kMaxDims>([&]<auto kDims>() {
+    pbat::common::ForRange<1, kMaxDims + 1>([&]<auto kDims>() {
         if (mDims == kDims)
         {
             pbat::common::ForTypes<
@@ -167,10 +161,14 @@ void Buffer::Resize(GpuIndex n)
 
 void Buffer::Resize(GpuIndex dims, GpuIndex n)
 {
+    if (dims < 1 || dims > kMaxDims)
+    {
+        throw std::invalid_argument("Expected 1 <= dims <= kMaxDims.");
+    }
     bool const bShouldAllocate = dims != mDims;
     if (bShouldAllocate)
         Deallocate();
-    pbat::common::ForRange<0, kMaxDims>([&]<auto kDims>() {
+    pbat::common::ForRange<1, kMaxDims + 1>([&]<auto kDims>() {
         if (dims == kDims)
         {
             if (bShouldAllocate)
@@ -236,7 +234,7 @@ void Buffer::Deallocate()
 {
     if (mImpl != nullptr)
     {
-        pbat::common::ForRange<0, kMaxDims>([&]<auto kDims>() {
+        pbat::common::ForRange<1, kMaxDims + 1>([&]<auto kDims>() {
             if (mDims == kDims)
             {
                 pbat::common::ForTypes<

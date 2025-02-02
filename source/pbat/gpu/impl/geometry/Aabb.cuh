@@ -88,10 +88,9 @@ inline void Aabb<kDims>::Construct(
     PBAT_PROFILE_NAMED_CUDA_HOST_SCOPE_START(ctx, "pbat.gpu.impl.geometry.Aabb.Construct");
     using namespace pbat::math::linalg;
     auto const nSimplices = static_cast<GpuIndex>(S.Size());
-    auto const nBoxes     = Size();
-    if (nBoxes < nSimplices)
+    if (Size() < nSimplices)
         Resize(nSimplices);
-    auto const end = std::min(begin + nSimplices, nBoxes);
+    auto const end = std::min(begin + nSimplices, Size());
     thrust::for_each(
         thrust::device,
         thrust::counting_iterator(begin),
