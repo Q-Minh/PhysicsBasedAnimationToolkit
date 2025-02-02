@@ -1,0 +1,48 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="SelectionMatrix_8cpp" kind="file" language="C++">
+    <compoundname>SelectionMatrix.cpp</compoundname>
+    <includes refid="SelectionMatrix_8h" local="yes">SelectionMatrix.h</includes>
+    <incdepgraph>
+      <node id="2">
+        <label>SelectionMatrix.h</label>
+        <link refid="SelectionMatrix_8h_source"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>pbat/Aliases.h</label>
+        <link refid="Aliases_8h_source"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+      </node>
+      <node id="4">
+        <label>Eigen/Core</label>
+      </node>
+      <node id="5">
+        <label>Eigen/Sparse</label>
+      </node>
+      <node id="6">
+        <label>cstddef</label>
+      </node>
+      <node id="1">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/SelectionMatrix.cpp</label>
+        <link refid="SelectionMatrix_8cpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+      </node>
+    </incdepgraph>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="preprocessor">#include<sp/>&quot;SelectionMatrix.h&quot;</highlight></codeline>
+    </programlisting>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/SelectionMatrix.cpp"/>
+  </compounddef>
+</doxygen>

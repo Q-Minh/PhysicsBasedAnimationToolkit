@@ -1,0 +1,492 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="Api_8h" kind="file" language="C++">
+    <compoundname>Api.h</compoundname>
+    <includes refid="Assign_8h" local="yes">Assign.h</includes>
+    <includes refid="math_2linalg_2mini_2Concepts_8h" local="yes">Concepts.h</includes>
+    <includes refid="SubMatrix_8h" local="yes">SubMatrix.h</includes>
+    <includes refid="Transpose_8h" local="yes">Transpose.h</includes>
+    <includedby refid="BinaryOperations_8h" local="yes">/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/BinaryOperations.h</includedby>
+    <includedby refid="Scale_8h" local="yes">/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Scale.h</includedby>
+    <includedby refid="math_2linalg_2mini_2Eigen_8h" local="yes">/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Eigen.h</includedby>
+    <includedby refid="Flatten_8h" local="yes">/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Flatten.h</includedby>
+    <includedby refid="source_2pbat_2math_2linalg_2mini_2Geometry_8h" local="yes">/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Geometry.h</includedby>
+    <includedby refid="Matrix_8h" local="yes">/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Matrix.h</includedby>
+    <includedby refid="Reductions_8h" local="yes">/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Reductions.h</includedby>
+    <includedby refid="Product_8h" local="yes">/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Product.h</includedby>
+    <includedby refid="Repeat_8h" local="yes">/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Repeat.h</includedby>
+    <includedby refid="math_2linalg_2mini_2Stack_8h" local="yes">/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Stack.h</includedby>
+    <includedby refid="UnaryOperations_8h" local="yes">/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/UnaryOperations.h</includedby>
+    <incdepgraph>
+      <node id="2">
+        <label>Assign.h</label>
+        <link refid="Assign_8h_source"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+      </node>
+      <node id="9">
+        <label>Transpose.h</label>
+        <link refid="Transpose_8h_source"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+      </node>
+      <node id="7">
+        <label>pbat/HostDevice.h</label>
+        <link refid="HostDevice_8h_source"/>
+      </node>
+      <node id="3">
+        <label>Concepts.h</label>
+        <link refid="math_2linalg_2mini_2Concepts_8h_source"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+      </node>
+      <node id="6">
+        <label>utility</label>
+      </node>
+      <node id="1">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Api.h</label>
+        <link refid="Api_8h"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+      </node>
+      <node id="8">
+        <label>SubMatrix.h</label>
+        <link refid="SubMatrix_8h_source"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+      </node>
+      <node id="4">
+        <label>concepts</label>
+      </node>
+      <node id="5">
+        <label>type_traits</label>
+      </node>
+    </incdepgraph>
+    <invincdepgraph>
+      <node id="2">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/BinaryOperations.h</label>
+        <link refid="BinaryOperations_8h_source"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="13" relation="include">
+        </childnode>
+      </node>
+      <node id="15">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/DistanceQueries.h</label>
+        <link refid="DistanceQueries_8h_source"/>
+        <childnode refid="16" relation="include">
+        </childnode>
+        <childnode refid="17" relation="include">
+        </childnode>
+        <childnode refid="18" relation="include">
+        </childnode>
+      </node>
+      <node id="29">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Geometry.h</label>
+        <link refid="source_2pbat_2math_2linalg_2mini_2Geometry_8h_source"/>
+        <childnode refid="13" relation="include">
+        </childnode>
+      </node>
+      <node id="26">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/UnaryOperations.h</label>
+        <link refid="UnaryOperations_8h_source"/>
+        <childnode refid="13" relation="include">
+        </childnode>
+      </node>
+      <node id="31">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Inverse.h</label>
+        <link refid="Inverse_8h_source"/>
+        <childnode refid="13" relation="include">
+        </childnode>
+      </node>
+      <node id="19">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/OverlapQueries.h</label>
+        <link refid="OverlapQueries_8h_source"/>
+        <childnode refid="15" relation="include">
+        </childnode>
+        <childnode refid="16" relation="include">
+        </childnode>
+        <childnode refid="17" relation="include">
+        </childnode>
+        <childnode refid="18" relation="include">
+        </childnode>
+      </node>
+      <node id="39">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Repeat.h</label>
+        <link refid="Repeat_8h_source"/>
+        <childnode refid="13" relation="include">
+        </childnode>
+      </node>
+      <node id="30">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Matrix.h</label>
+        <link refid="Matrix_8h_source"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="31" relation="include">
+        </childnode>
+        <childnode refid="13" relation="include">
+        </childnode>
+        <childnode refid="32" relation="include">
+        </childnode>
+        <childnode refid="34" relation="include">
+        </childnode>
+        <childnode refid="35" relation="include">
+        </childnode>
+      </node>
+      <node id="5">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/Pbat.h</label>
+        <link refid="Pbat_8h_source"/>
+      </node>
+      <node id="23">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/LinAlg.h</label>
+        <link refid="source_2pbat_2math_2linalg_2LinAlg_8h_source"/>
+        <childnode refid="24" relation="include">
+        </childnode>
+      </node>
+      <node id="33">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/physics/Physics.h</label>
+        <link refid="Physics_8h_source"/>
+        <childnode refid="5" relation="include">
+        </childnode>
+      </node>
+      <node id="4">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Fem.h</label>
+        <link refid="source_2pbat_2fem_2Fem_8h_source"/>
+        <childnode refid="5" relation="include">
+        </childnode>
+      </node>
+      <node id="25">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Scale.h</label>
+        <link refid="Scale_8h_source"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="13" relation="include">
+        </childnode>
+        <childnode refid="26" relation="include">
+        </childnode>
+      </node>
+      <node id="13">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Mini.h</label>
+        <link refid="Mini_8h_source"/>
+        <childnode refid="14" relation="include">
+        </childnode>
+        <childnode refid="22" relation="include">
+        </childnode>
+        <childnode refid="19" relation="include">
+        </childnode>
+        <childnode refid="15" relation="include">
+        </childnode>
+        <childnode refid="23" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="20" relation="include">
+        </childnode>
+      </node>
+      <node id="20">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Kernels.h</label>
+        <link refid="xpbd_2Kernels_8h_source"/>
+        <childnode refid="21" relation="include">
+        </childnode>
+      </node>
+      <node id="32">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/physics/HyperElasticity.h</label>
+        <link refid="HyperElasticity_8h_source"/>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="33" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="11" relation="include">
+        </childnode>
+      </node>
+      <node id="8">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Kernels.h</label>
+        <link refid="vbd_2lod_2Kernels_8h_source"/>
+        <childnode refid="9" relation="include">
+        </childnode>
+      </node>
+      <node id="24">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/Math.h</label>
+        <link refid="source_2pbat_2math_2Math_8h_source"/>
+        <childnode refid="5" relation="include">
+        </childnode>
+      </node>
+      <node id="27">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Eigen.h</label>
+        <link refid="math_2linalg_2mini_2Eigen_8h_source"/>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="18" relation="include">
+        </childnode>
+        <childnode refid="13" relation="include">
+        </childnode>
+      </node>
+      <node id="22">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/IntersectionQueries.h</label>
+        <link refid="IntersectionQueries_8h_source"/>
+        <childnode refid="19" relation="include">
+        </childnode>
+        <childnode refid="16" relation="include">
+        </childnode>
+        <childnode refid="20" relation="include">
+        </childnode>
+      </node>
+      <node id="16">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/Geometry.h</label>
+        <link refid="source_2pbat_2geometry_2Geometry_8h_source"/>
+        <childnode refid="5" relation="include">
+        </childnode>
+      </node>
+      <node id="21">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Xpbd.h</label>
+        <link refid="source_2pbat_2sim_2xpbd_2Xpbd_8h_source"/>
+      </node>
+      <node id="9">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Lod.h</label>
+        <link refid="source_2pbat_2sim_2vbd_2lod_2Lod_8h_source"/>
+      </node>
+      <node id="17">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/TetrahedralAabbHierarchy.h</label>
+        <link refid="source_2pbat_2geometry_2TetrahedralAabbHierarchy_8h_source"/>
+        <childnode refid="16" relation="include">
+        </childnode>
+      </node>
+      <node id="11">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/multigrid/Kernels.h</label>
+        <link refid="vbd_2multigrid_2Kernels_8h_source"/>
+        <childnode refid="12" relation="include">
+        </childnode>
+      </node>
+      <node id="36">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Reductions.h</label>
+        <link refid="Reductions_8h_source"/>
+        <childnode refid="37" relation="include">
+        </childnode>
+        <childnode refid="13" relation="include">
+        </childnode>
+      </node>
+      <node id="28">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Flatten.h</label>
+        <link refid="Flatten_8h_source"/>
+        <childnode refid="13" relation="include">
+        </childnode>
+      </node>
+      <node id="38">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Product.h</label>
+        <link refid="Product_8h_source"/>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="36" relation="include">
+        </childnode>
+        <childnode refid="13" relation="include">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Api.h</label>
+        <link refid="Api_8h"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="25" relation="include">
+        </childnode>
+        <childnode refid="27" relation="include">
+        </childnode>
+        <childnode refid="28" relation="include">
+        </childnode>
+        <childnode refid="29" relation="include">
+        </childnode>
+        <childnode refid="30" relation="include">
+        </childnode>
+        <childnode refid="36" relation="include">
+        </childnode>
+        <childnode refid="38" relation="include">
+        </childnode>
+        <childnode refid="39" relation="include">
+        </childnode>
+        <childnode refid="40" relation="include">
+        </childnode>
+        <childnode refid="26" relation="include">
+        </childnode>
+      </node>
+      <node id="14">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/ClosestPointQueries.h</label>
+        <link refid="ClosestPointQueries_8h_source"/>
+        <childnode refid="15" relation="include">
+        </childnode>
+        <childnode refid="19" relation="include">
+        </childnode>
+        <childnode refid="16" relation="include">
+        </childnode>
+        <childnode refid="20" relation="include">
+        </childnode>
+      </node>
+      <node id="35">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/physics/StableNeoHookeanEnergy.h</label>
+        <link refid="StableNeoHookeanEnergy_8h_source"/>
+        <childnode refid="33" relation="include">
+        </childnode>
+      </node>
+      <node id="6">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/HyperElasticPotential.h</label>
+        <link refid="source_2pbat_2fem_2HyperElasticPotential_8h_source"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+      </node>
+      <node id="18">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/TriangleAabbHierarchy.h</label>
+        <link refid="source_2pbat_2geometry_2TriangleAabbHierarchy_8h_source"/>
+        <childnode refid="16" relation="include">
+        </childnode>
+      </node>
+      <node id="7">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/Kernels.h</label>
+        <link refid="vbd_2Kernels_8h_source"/>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+      </node>
+      <node id="12">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/multigrid/Multigrid.h</label>
+        <link refid="source_2pbat_2sim_2vbd_2multigrid_2Multigrid_8h_source"/>
+      </node>
+      <node id="3">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/DeformationGradient.h</label>
+        <link refid="DeformationGradient_8h_source"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="11" relation="include">
+        </childnode>
+      </node>
+      <node id="34">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/physics/SaintVenantKirchhoffEnergy.h</label>
+        <link refid="SaintVenantKirchhoffEnergy_8h_source"/>
+        <childnode refid="33" relation="include">
+        </childnode>
+      </node>
+      <node id="10">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/Vbd.h</label>
+        <link refid="source_2pbat_2sim_2vbd_2Vbd_8h_source"/>
+      </node>
+      <node id="40">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Stack.h</label>
+        <link refid="math_2linalg_2mini_2Stack_8h_source"/>
+        <childnode refid="13" relation="include">
+        </childnode>
+      </node>
+      <node id="37">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Norm.h</label>
+        <link refid="Norm_8h_source"/>
+        <childnode refid="13" relation="include">
+        </childnode>
+        <childnode refid="26" relation="include">
+        </childnode>
+      </node>
+    </invincdepgraph>
+      <sectiondef kind="define">
+      <memberdef kind="define" id="Api_8h_1a4c7e59c5bd5404e31e73d42867a8b4f8" prot="public" static="no">
+        <name>PBAT_MINI_READ_API</name>
+        <param><defname>SelfType</defname></param>
+        <initializer>    PBAT_MINI_DIMENSIONS_API                \
+    PBAT_MINI_CONST_SUBMATRIX_API(SelfType) \
+    PBAT_MINI_CONST_TRANSPOSE_API(SelfType)</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Api.h" line="9" column="9" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Api.h" bodystart="9" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="define" id="Api_8h_1a0c3fed08716238012def2dc14eb4aab3" prot="public" static="no">
+        <name>PBAT_MINI_READ_WRITE_API</name>
+        <param><defname>SelfType</defname></param>
+        <initializer>    PBAT_MINI_DIMENSIONS_API                \
+    PBAT_MINI_ASSIGN_API(SelfType)          \
+    PBAT_MINI_SUBMATRIX_API(SelfType)       \
+    PBAT_MINI_CONST_SUBMATRIX_API(SelfType) \
+    PBAT_MINI_TRANSPOSE_API(SelfType)       \
+    PBAT_MINI_CONST_TRANSPOSE_API(SelfType)</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Api.h" line="14" column="9" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Api.h" bodystart="14" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="preprocessor">#ifndef<sp/>PBAT_MATH_LINALG_MINI_API_H</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="2"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>PBAT_MATH_LINALG_MINI_API_H</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="3"><highlight class="normal"></highlight></codeline>
+<codeline lineno="4"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;Assign.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="5"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;Concepts.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="6"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;SubMatrix.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="7"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;Transpose.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="8"><highlight class="normal"></highlight></codeline>
+<codeline lineno="9"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>PBAT_MINI_READ_API(SelfType)<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>\</highlight></codeline>
+<codeline lineno="10"><highlight class="preprocessor"><sp/><sp/><sp/><sp/>PBAT_MINI_DIMENSIONS_API<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>\</highlight></codeline>
+<codeline lineno="11"><highlight class="preprocessor"><sp/><sp/><sp/><sp/>PBAT_MINI_CONST_SUBMATRIX_API(SelfType)<sp/>\</highlight></codeline>
+<codeline lineno="12"><highlight class="preprocessor"><sp/><sp/><sp/><sp/>PBAT_MINI_CONST_TRANSPOSE_API(SelfType)</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="13"><highlight class="normal"></highlight></codeline>
+<codeline lineno="14"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>PBAT_MINI_READ_WRITE_API(SelfType)<sp/><sp/>\</highlight></codeline>
+<codeline lineno="15"><highlight class="preprocessor"><sp/><sp/><sp/><sp/>PBAT_MINI_DIMENSIONS_API<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>\</highlight></codeline>
+<codeline lineno="16"><highlight class="preprocessor"><sp/><sp/><sp/><sp/>PBAT_MINI_ASSIGN_API(SelfType)<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>\</highlight></codeline>
+<codeline lineno="17"><highlight class="preprocessor"><sp/><sp/><sp/><sp/>PBAT_MINI_SUBMATRIX_API(SelfType)<sp/><sp/><sp/><sp/><sp/><sp/><sp/>\</highlight></codeline>
+<codeline lineno="18"><highlight class="preprocessor"><sp/><sp/><sp/><sp/>PBAT_MINI_CONST_SUBMATRIX_API(SelfType)<sp/>\</highlight></codeline>
+<codeline lineno="19"><highlight class="preprocessor"><sp/><sp/><sp/><sp/>PBAT_MINI_TRANSPOSE_API(SelfType)<sp/><sp/><sp/><sp/><sp/><sp/><sp/>\</highlight></codeline>
+<codeline lineno="20"><highlight class="preprocessor"><sp/><sp/><sp/><sp/>PBAT_MINI_CONST_TRANSPOSE_API(SelfType)</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="21"><highlight class="normal"></highlight></codeline>
+<codeline lineno="22"><highlight class="normal"></highlight><highlight class="preprocessor">#endif<sp/>//<sp/>PBAT_MATH_LINALG_MINI_API_H</highlight></codeline>
+    </programlisting>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Api.h"/>
+  </compounddef>
+</doxygen>

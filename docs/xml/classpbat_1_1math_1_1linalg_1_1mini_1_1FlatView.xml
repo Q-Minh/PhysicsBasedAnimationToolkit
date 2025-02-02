@@ -1,0 +1,204 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="classpbat_1_1math_1_1linalg_1_1mini_1_1FlatView" kind="class" language="C++" prot="public">
+    <compoundname>pbat::math::linalg::mini::FlatView</compoundname>
+    <templateparamlist>
+      <param>
+        <type>class TMatrix</type>
+      </param>
+    </templateparamlist>
+      <sectiondef kind="public-type">
+      <memberdef kind="typedef" id="classpbat_1_1math_1_1linalg_1_1mini_1_1FlatView_1a6034573eca446914ce03d66c866b5324" prot="public" static="no">
+        <type>TMatrix</type>
+        <definition>using pbat::math::linalg::mini::FlatView&lt; TMatrix &gt;::NestedType =  TMatrix</definition>
+        <argsstring></argsstring>
+        <name>NestedType</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Flatten.h" line="19" column="5" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Flatten.h" bodystart="19" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="classpbat_1_1math_1_1linalg_1_1mini_1_1FlatView_1ab2ea055cae349eec93c51986a43a97cf" prot="public" static="no">
+        <type>typename NestedType::ScalarType</type>
+        <definition>using pbat::math::linalg::mini::FlatView&lt; TMatrix &gt;::ScalarType =  typename NestedType::ScalarType</definition>
+        <argsstring></argsstring>
+        <name>ScalarType</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Flatten.h" line="20" column="5" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Flatten.h" bodystart="20" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="classpbat_1_1math_1_1linalg_1_1mini_1_1FlatView_1ae35210536fa509d6a2de7d6d81085312" prot="public" static="no">
+        <type><ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1FlatView" kindref="compound">FlatView</ref>&lt; NestedType &gt;</type>
+        <definition>using pbat::math::linalg::mini::FlatView&lt; TMatrix &gt;::SelfType =  FlatView&lt;NestedType&gt;</definition>
+        <argsstring></argsstring>
+        <name>SelfType</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Flatten.h" line="21" column="5" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Flatten.h" bodystart="21" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="public-static-attrib">
+      <memberdef kind="variable" id="classpbat_1_1math_1_1linalg_1_1mini_1_1FlatView_1ade3447da15b8c16b7e320b5197afc06a" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>constexpr auto</type>
+        <definition>constexpr auto pbat::math::linalg::mini::FlatView&lt; TMatrix &gt;::kRows</definition>
+        <argsstring></argsstring>
+        <name>kRows</name>
+        <initializer>= NestedType::kRows * NestedType::kCols</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Flatten.h" line="23" column="27" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Flatten.h" bodystart="23" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpbat_1_1math_1_1linalg_1_1mini_1_1FlatView_1a2de73682be418e597e7aa71ac21911fd" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>constexpr auto</type>
+        <definition>constexpr auto pbat::math::linalg::mini::FlatView&lt; TMatrix &gt;::kCols</definition>
+        <argsstring></argsstring>
+        <name>kCols</name>
+        <initializer>= 1</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Flatten.h" line="24" column="27" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Flatten.h" bodystart="24" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpbat_1_1math_1_1linalg_1_1mini_1_1FlatView_1aa2126bbe17ffaaff44366c5e9605e2c6" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>constexpr bool</type>
+        <definition>constexpr bool pbat::math::linalg::mini::FlatView&lt; TMatrix &gt;::bRowMajor</definition>
+        <argsstring></argsstring>
+        <name>bRowMajor</name>
+        <initializer>= false</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Flatten.h" line="25" column="27" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Flatten.h" bodystart="25" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="classpbat_1_1math_1_1linalg_1_1mini_1_1FlatView_1a4453c29ad3f81164406e8341c3f1d8b4" prot="private" static="no" mutable="no">
+        <type>NestedType const  &amp;</type>
+        <definition>NestedType const&amp; pbat::math::linalg::mini::FlatView&lt; TMatrix &gt;::mA</definition>
+        <argsstring></argsstring>
+        <name>mA</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Flatten.h" line="38" column="22" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Flatten.h" bodystart="38" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpbat_1_1math_1_1linalg_1_1mini_1_1FlatView_1a46a5c4edc9cb07eec19531ddfc2d550b" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>PBAT_HOST_DEVICE</type>
+        <definition>PBAT_HOST_DEVICE pbat::math::linalg::mini::FlatView&lt; TMatrix &gt;::FlatView</definition>
+        <argsstring>(NestedType const &amp;A)</argsstring>
+        <name>FlatView</name>
+        <param>
+          <type>NestedType const &amp;</type>
+          <declname>A</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Flatten.h" line="27" column="22" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Flatten.h" bodystart="27" bodyend="27"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1math_1_1linalg_1_1mini_1_1FlatView_1ac19b41e233d330b9ac0277b64448f858" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>PBAT_HOST_DEVICE ScalarType</type>
+        <definition>PBAT_HOST_DEVICE ScalarType pbat::math::linalg::mini::FlatView&lt; TMatrix &gt;::operator()</definition>
+        <argsstring>(auto i, [[maybe_unused]] auto j) const</argsstring>
+        <name>operator()</name>
+        <param>
+          <type>auto</type>
+          <declname>i</declname>
+        </param>
+        <param>
+          <attributes>[[maybe_unused]</attributes>
+          <type>] auto</type>
+          <declname>j</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Flatten.h" line="29" column="33" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Flatten.h" bodystart="29" bodyend="29"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1math_1_1linalg_1_1mini_1_1FlatView_1a73ee406e15b750d3953c93087d9f1e2f" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>PBAT_HOST_DEVICE ScalarType</type>
+        <definition>PBAT_HOST_DEVICE ScalarType pbat::math::linalg::mini::FlatView&lt; TMatrix &gt;::operator()</definition>
+        <argsstring>(auto i) const</argsstring>
+        <name>operator()</name>
+        <param>
+          <type>auto</type>
+          <declname>i</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Flatten.h" line="32" column="33" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Flatten.h" bodystart="32" bodyend="32"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1math_1_1linalg_1_1mini_1_1FlatView_1a48cf50862f2dfa74e711c2a1ebdfed20" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>PBAT_HOST_DEVICE ScalarType</type>
+        <definition>PBAT_HOST_DEVICE ScalarType pbat::math::linalg::mini::FlatView&lt; TMatrix &gt;::operator[]</definition>
+        <argsstring>(auto i) const</argsstring>
+        <name>operator[]</name>
+        <param>
+          <type>auto</type>
+          <declname>i</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Flatten.h" line="33" column="33" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Flatten.h" bodystart="33" bodyend="33"/>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Flatten.h" line="17" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Flatten.h" bodystart="16" bodyend="39"/>
+    <listofallmembers>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1FlatView_1aa2126bbe17ffaaff44366c5e9605e2c6" prot="public" virt="non-virtual"><scope>pbat::math::linalg::mini::FlatView</scope><name>bRowMajor</name></member>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1FlatView_1a46a5c4edc9cb07eec19531ddfc2d550b" prot="public" virt="non-virtual"><scope>pbat::math::linalg::mini::FlatView</scope><name>FlatView</name></member>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1FlatView_1a2de73682be418e597e7aa71ac21911fd" prot="public" virt="non-virtual"><scope>pbat::math::linalg::mini::FlatView</scope><name>kCols</name></member>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1FlatView_1ade3447da15b8c16b7e320b5197afc06a" prot="public" virt="non-virtual"><scope>pbat::math::linalg::mini::FlatView</scope><name>kRows</name></member>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1FlatView_1a4453c29ad3f81164406e8341c3f1d8b4" prot="private" virt="non-virtual"><scope>pbat::math::linalg::mini::FlatView</scope><name>mA</name></member>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1FlatView_1a6034573eca446914ce03d66c866b5324" prot="public" virt="non-virtual"><scope>pbat::math::linalg::mini::FlatView</scope><name>NestedType</name></member>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1FlatView_1ac19b41e233d330b9ac0277b64448f858" prot="public" virt="non-virtual"><scope>pbat::math::linalg::mini::FlatView</scope><name>operator()</name></member>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1FlatView_1a73ee406e15b750d3953c93087d9f1e2f" prot="public" virt="non-virtual"><scope>pbat::math::linalg::mini::FlatView</scope><name>operator()</name></member>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1FlatView_1a48cf50862f2dfa74e711c2a1ebdfed20" prot="public" virt="non-virtual"><scope>pbat::math::linalg::mini::FlatView</scope><name>operator[]</name></member>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1FlatView_1ab2ea055cae349eec93c51986a43a97cf" prot="public" virt="non-virtual"><scope>pbat::math::linalg::mini::FlatView</scope><name>ScalarType</name></member>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1FlatView_1ae35210536fa509d6a2de7d6d81085312" prot="public" virt="non-virtual"><scope>pbat::math::linalg::mini::FlatView</scope><name>SelfType</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

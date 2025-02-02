@@ -1,0 +1,20 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="dir_da044ad40a72abb6e572a4d952a449c8" kind="dir">
+    <compoundname>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/multigrid</compoundname>
+    <innerfile refid="source_2pbat_2sim_2vbd_2multigrid_2Hierarchy_8cpp">Hierarchy.cpp</innerfile>
+    <innerfile refid="source_2pbat_2sim_2vbd_2multigrid_2Hierarchy_8h">Hierarchy.h</innerfile>
+    <innerfile refid="source_2pbat_2sim_2vbd_2multigrid_2Integrator_8cpp">Integrator.cpp</innerfile>
+    <innerfile refid="source_2pbat_2sim_2vbd_2multigrid_2Integrator_8h">Integrator.h</innerfile>
+    <innerfile refid="vbd_2multigrid_2Kernels_8cpp">Kernels.cpp</innerfile>
+    <innerfile refid="vbd_2multigrid_2Kernels_8h">Kernels.h</innerfile>
+    <innerfile refid="source_2pbat_2sim_2vbd_2multigrid_2Level_8cpp">Level.cpp</innerfile>
+    <innerfile refid="source_2pbat_2sim_2vbd_2multigrid_2Level_8h">Level.h</innerfile>
+    <innerfile refid="source_2pbat_2sim_2vbd_2multigrid_2Multigrid_8h">Multigrid.h</innerfile>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/multigrid/"/>
+  </compounddef>
+</doxygen>

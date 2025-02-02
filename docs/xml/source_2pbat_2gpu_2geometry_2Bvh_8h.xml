@@ -1,0 +1,128 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="source_2pbat_2gpu_2geometry_2Bvh_8h" kind="file" language="C++">
+    <compoundname>Bvh.h</compoundname>
+    <includes refid="Primitives_8h" local="yes">Primitives.h</includes>
+    <includes refid="gpu_2Aliases_8h" local="yes">pbat/gpu/Aliases.h</includes>
+    <includes local="yes">PhysicsBasedAnimationToolkitExport.h</includes>
+    <includes local="no">Eigen/Core</includes>
+    <includes local="no">cstddef</includes>
+    <includes local="no">limits</includes>
+    <incdepgraph>
+      <node id="7">
+        <label>limits</label>
+      </node>
+      <node id="5">
+        <label>Eigen/Core</label>
+      </node>
+      <node id="4">
+        <label>pbat/gpu/Aliases.h</label>
+        <link refid="gpu_2Aliases_8h_source"/>
+        <childnode refid="5" relation="include">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>PhysicsBasedAnimationToolkitExport.h</label>
+      </node>
+      <node id="1">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/geometry/Bvh.h</label>
+        <link refid="source_2pbat_2gpu_2geometry_2Bvh_8h"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>Primitives.h</label>
+        <link refid="Primitives_8h_source"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+      </node>
+      <node id="6">
+        <label>cstddef</label>
+      </node>
+    </incdepgraph>
+    <innerclass refid="classpbat_1_1gpu_1_1geometry_1_1Bvh" prot="public">pbat::gpu::geometry::Bvh</innerclass>
+    <innernamespace refid="namespacepbat">pbat</innernamespace>
+    <innernamespace refid="namespacepbat_1_1gpu">pbat::gpu</innernamespace>
+    <innernamespace refid="namespacepbat_1_1gpu_1_1geometry">pbat::gpu::geometry</innernamespace>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="preprocessor">#ifndef<sp/>PBAT_GPU_BVH_CUH</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="2"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>PBAT_GPU_BVH_CUH</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="3"><highlight class="normal"></highlight></codeline>
+<codeline lineno="4"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;Primitives.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="5"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;pbat/gpu/Aliases.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="6"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;PhysicsBasedAnimationToolkitExport.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="7"><highlight class="normal"></highlight></codeline>
+<codeline lineno="8"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;Eigen/Core&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="9"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;cstddef&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="10"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;limits&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="11"><highlight class="normal"></highlight></codeline>
+<codeline lineno="12"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal">pbat<sp/>{</highlight></codeline>
+<codeline lineno="13"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal">gpu<sp/>{</highlight></codeline>
+<codeline lineno="14"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal">geometry<sp/>{</highlight></codeline>
+<codeline lineno="15"><highlight class="normal"></highlight></codeline>
+<codeline lineno="16"><highlight class="normal"></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal">BvhImpl;</highlight></codeline>
+<codeline lineno="17"><highlight class="normal"></highlight></codeline>
+<codeline lineno="21" refid="classpbat_1_1gpu_1_1geometry_1_1Bvh" refkind="compound"><highlight class="keyword">class<sp/></highlight><highlight class="normal"><ref refid="classpbat_1_1gpu_1_1geometry_1_1Bvh" kindref="compound">Bvh</ref></highlight></codeline>
+<codeline lineno="22"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="23"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="24"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using</highlight><highlight class="normal"><sp/>MortonCodeType<sp/>=<sp/>std::uint32_t;</highlight></codeline>
+<codeline lineno="25"><highlight class="normal"></highlight></codeline>
+<codeline lineno="31"><highlight class="normal"><sp/><sp/><sp/><sp/>PBAT_API<sp/><ref refid="classpbat_1_1gpu_1_1geometry_1_1Bvh_1aeda0eaa7c4604848450b17db3e27eec9" kindref="member">Bvh</ref>(std::size_t<sp/>nPrimitives,<sp/>std::size_t<sp/>nOverlaps);</highlight></codeline>
+<codeline lineno="32"><highlight class="normal"></highlight></codeline>
+<codeline lineno="33"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="classpbat_1_1gpu_1_1geometry_1_1Bvh_1aeda0eaa7c4604848450b17db3e27eec9" kindref="member">Bvh</ref>(<ref refid="classpbat_1_1gpu_1_1geometry_1_1Bvh" kindref="compound">Bvh</ref><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;)<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/></highlight><highlight class="keyword">delete</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="34"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="classpbat_1_1gpu_1_1geometry_1_1Bvh" kindref="compound">Bvh</ref>&amp;<sp/>operator=(<ref refid="classpbat_1_1gpu_1_1geometry_1_1Bvh" kindref="compound">Bvh</ref><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;)<sp/>=<sp/></highlight><highlight class="keyword">delete</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="35"><highlight class="normal"></highlight></codeline>
+<codeline lineno="36"><highlight class="normal"><sp/><sp/><sp/><sp/>PBAT_API<sp/><ref refid="classpbat_1_1gpu_1_1geometry_1_1Bvh_1aeda0eaa7c4604848450b17db3e27eec9" kindref="member">Bvh</ref>(<ref refid="classpbat_1_1gpu_1_1geometry_1_1Bvh" kindref="compound">Bvh</ref>&amp;&amp;<sp/>other)<sp/>noexcept;</highlight></codeline>
+<codeline lineno="37"><highlight class="normal"><sp/><sp/><sp/><sp/>PBAT_API<sp/><ref refid="classpbat_1_1gpu_1_1geometry_1_1Bvh" kindref="compound">Bvh</ref>&amp;<sp/>operator=(<ref refid="classpbat_1_1gpu_1_1geometry_1_1Bvh" kindref="compound">Bvh</ref>&amp;&amp;<sp/>other)<sp/>noexcept;</highlight></codeline>
+<codeline lineno="38"><highlight class="normal"></highlight></codeline>
+<codeline lineno="45"><highlight class="normal"><sp/><sp/><sp/><sp/>PBAT_API<sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="classpbat_1_1gpu_1_1geometry_1_1Bvh_1aa40ea4f9b4ebb6cbb4f469b8949a020c" kindref="member">Build</ref>(</highlight></codeline>
+<codeline lineno="46"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="classpbat_1_1gpu_1_1geometry_1_1Points" kindref="compound">Points</ref><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>P,</highlight></codeline>
+<codeline lineno="47"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="classpbat_1_1gpu_1_1geometry_1_1Simplices" kindref="compound">Simplices</ref><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>S,</highlight></codeline>
+<codeline lineno="48"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>Eigen::Vector&lt;GpuScalar,<sp/>3&gt;<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>min,</highlight></codeline>
+<codeline lineno="49"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>Eigen::Vector&lt;GpuScalar,<sp/>3&gt;<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>max,</highlight></codeline>
+<codeline lineno="50"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>GpuScalar<sp/>expansion<sp/>=<sp/>std::numeric_limits&lt;GpuScalar&gt;::epsilon());</highlight></codeline>
+<codeline lineno="51"><highlight class="normal"></highlight></codeline>
+<codeline lineno="52"><highlight class="normal"><sp/><sp/><sp/><sp/>PBAT_API<sp/>BvhImpl*<sp/>Impl();</highlight></codeline>
+<codeline lineno="53"><highlight class="normal"><sp/><sp/><sp/><sp/>PBAT_API<sp/>BvhImpl<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">*<sp/>Impl()<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="54"><highlight class="normal"></highlight></codeline>
+<codeline lineno="59"><highlight class="normal"><sp/><sp/><sp/><sp/>PBAT_API<sp/>GpuIndexMatrixX<sp/><ref refid="classpbat_1_1gpu_1_1geometry_1_1Bvh_1a92666b47cff0791fd39082ec9fdc9c58" kindref="member">DetectSelfOverlaps</ref>(<ref refid="classpbat_1_1gpu_1_1geometry_1_1Simplices" kindref="compound">Simplices</ref><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>S);</highlight></codeline>
+<codeline lineno="64"><highlight class="normal"><sp/><sp/><sp/><sp/>PBAT_API<sp/>Eigen::Matrix&lt;GpuScalar,<sp/>Eigen::Dynamic,<sp/>Eigen::Dynamic&gt;<sp/><ref refid="classpbat_1_1gpu_1_1geometry_1_1Bvh_1a2f0f9075244dd9d15466d1f300cd3759" kindref="member">Min</ref>()<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="69"><highlight class="normal"><sp/><sp/><sp/><sp/>PBAT_API<sp/>Eigen::Matrix&lt;GpuScalar,<sp/>Eigen::Dynamic,<sp/>Eigen::Dynamic&gt;<sp/><ref refid="classpbat_1_1gpu_1_1geometry_1_1Bvh_1a8cf8370c55b8f27a468840762ae5630a" kindref="member">Max</ref>()<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="74"><highlight class="normal"><sp/><sp/><sp/><sp/>PBAT_API<sp/>Eigen::Vector&lt;GpuIndex,<sp/>Eigen::Dynamic&gt;<sp/><ref refid="classpbat_1_1gpu_1_1geometry_1_1Bvh_1a770309bb5ecdd5eb1b5510592344b70a" kindref="member">SimplexOrdering</ref>()<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="79"><highlight class="normal"><sp/><sp/><sp/><sp/>PBAT_API<sp/>Eigen::Vector&lt;MortonCodeType,<sp/>Eigen::Dynamic&gt;<sp/><ref refid="classpbat_1_1gpu_1_1geometry_1_1Bvh_1a017ba53ee8dac45dbd2335b4f823c245" kindref="member">MortonCodes</ref>()<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="84"><highlight class="normal"><sp/><sp/><sp/><sp/>PBAT_API<sp/>Eigen::Matrix&lt;GpuIndex,<sp/>Eigen::Dynamic,<sp/>2&gt;<sp/><ref refid="classpbat_1_1gpu_1_1geometry_1_1Bvh_1a07dcdd9b547a494d9ec5e59955d0a827" kindref="member">Child</ref>()<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="89"><highlight class="normal"><sp/><sp/><sp/><sp/>PBAT_API<sp/>Eigen::Vector&lt;GpuIndex,<sp/>Eigen::Dynamic&gt;<sp/><ref refid="classpbat_1_1gpu_1_1geometry_1_1Bvh_1a2f61a69a2e323e65772b8808a686203b" kindref="member">Parent</ref>()<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="94"><highlight class="normal"><sp/><sp/><sp/><sp/>PBAT_API<sp/>Eigen::Matrix&lt;GpuIndex,<sp/>Eigen::Dynamic,<sp/>2&gt;<sp/><ref refid="classpbat_1_1gpu_1_1geometry_1_1Bvh_1a4e6cee66e9451e3c2bf3d04697c364a9" kindref="member">Rightmost</ref>()<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="99"><highlight class="normal"><sp/><sp/><sp/><sp/>PBAT_API<sp/>Eigen::Vector&lt;GpuIndex,<sp/>Eigen::Dynamic&gt;<sp/><ref refid="classpbat_1_1gpu_1_1geometry_1_1Bvh_1a9b4d694cae63a486b1d92b0a00ca2bb3" kindref="member">Visits</ref>()<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="100"><highlight class="normal"></highlight></codeline>
+<codeline lineno="101"><highlight class="normal"><sp/><sp/><sp/><sp/>PBAT_API<sp/>~<ref refid="classpbat_1_1gpu_1_1geometry_1_1Bvh" kindref="compound">Bvh</ref>();</highlight></codeline>
+<codeline lineno="102"><highlight class="normal"></highlight></codeline>
+<codeline lineno="103"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">private</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="104"><highlight class="normal"><sp/><sp/><sp/><sp/>BvhImpl*<sp/>mImpl;</highlight></codeline>
+<codeline lineno="105"><highlight class="normal">};</highlight></codeline>
+<codeline lineno="106"><highlight class="normal"></highlight></codeline>
+<codeline lineno="107"><highlight class="normal">}<sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>geometry</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="108"><highlight class="normal">}<sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>gpu</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="109"><highlight class="normal">}<sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>pbat</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="110"><highlight class="normal"></highlight></codeline>
+<codeline lineno="111"><highlight class="normal"></highlight><highlight class="preprocessor">#endif<sp/>//<sp/>PBAT_GPU_BVH_CUH</highlight></codeline>
+    </programlisting>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/geometry/Bvh.h"/>
+  </compounddef>
+</doxygen>

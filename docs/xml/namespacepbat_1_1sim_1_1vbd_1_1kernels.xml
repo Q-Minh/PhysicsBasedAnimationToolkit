@@ -1,0 +1,557 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="namespacepbat_1_1sim_1_1vbd_1_1kernels" kind="namespace" language="C++">
+    <compoundname>pbat::sim::vbd::kernels</compoundname>
+      <sectiondef kind="func">
+      <memberdef kind="function" id="vbd_2Kernels_8h_1ac0378f5c0bbec851382e14e0f5f656be" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixXT</declname>
+            <defname>TMatrixXT</defname>
+          </param>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixVT</declname>
+            <defname>TMatrixVT</defname>
+          </param>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixA</declname>
+            <defname>TMatrixA</defname>
+          </param>
+          <param>
+            <type>class ScalarType</type>
+            <defval>typename TMatrixXT::ScalarType</defval>
+          </param>
+        </templateparamlist>
+        <type>PBAT_HOST_DEVICE <ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1SMatrix" kindref="compound">mini::SVector</ref>&lt; ScalarType, TMatrixXT::kRows &gt;</type>
+        <definition>PBAT_HOST_DEVICE mini::SVector&lt;ScalarType, TMatrixXT::kRows&gt; pbat::sim::vbd::kernels::InertialTarget</definition>
+        <argsstring>(TMatrixXT const &amp;xt, TMatrixVT const &amp;vt, TMatrixA const &amp;aext, ScalarType dt, ScalarType dt2)</argsstring>
+        <name>InertialTarget</name>
+        <param>
+          <type>TMatrixXT const &amp;</type>
+          <declname>xt</declname>
+        </param>
+        <param>
+          <type>TMatrixVT const &amp;</type>
+          <declname>vt</declname>
+        </param>
+        <param>
+          <type>TMatrixA const &amp;</type>
+          <declname>aext</declname>
+        </param>
+        <param>
+          <type>ScalarType</type>
+          <declname>dt</declname>
+        </param>
+        <param>
+          <type>ScalarType</type>
+          <declname>dt2</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/Kernels.h" line="26" column="32" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/Kernels.h" bodystart="26" bodyend="34"/>
+      </memberdef>
+      <memberdef kind="function" id="vbd_2Kernels_8h_1a3ca237b3ad3eeb9e1edad9f96d1b8dd1" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixXT</declname>
+            <defname>TMatrixXT</defname>
+          </param>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixVTM1</declname>
+            <defname>TMatrixVTM1</defname>
+          </param>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixVT</declname>
+            <defname>TMatrixVT</defname>
+          </param>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixA</declname>
+            <defname>TMatrixA</defname>
+          </param>
+          <param>
+            <type>class ScalarType</type>
+            <defval>typename TMatrixXT::ScalarType</defval>
+          </param>
+        </templateparamlist>
+        <type>PBAT_HOST_DEVICE <ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1SMatrix" kindref="compound">mini::SVector</ref>&lt; ScalarType, TMatrixXT::kRows &gt;</type>
+        <definition>PBAT_HOST_DEVICE mini::SVector&lt;ScalarType, TMatrixXT::kRows&gt; pbat::sim::vbd::kernels::InitialPositionsForSolve</definition>
+        <argsstring>(TMatrixXT const &amp;xt, TMatrixVTM1 const &amp;vtm1, TMatrixVT const &amp;vt, TMatrixA const &amp;aext, ScalarType dt, ScalarType dt2, EInitializationStrategy strategy)</argsstring>
+        <name>InitialPositionsForSolve</name>
+        <param>
+          <type>TMatrixXT const &amp;</type>
+          <declname>xt</declname>
+        </param>
+        <param>
+          <type>TMatrixVTM1 const &amp;</type>
+          <declname>vtm1</declname>
+        </param>
+        <param>
+          <type>TMatrixVT const &amp;</type>
+          <declname>vt</declname>
+        </param>
+        <param>
+          <type>TMatrixA const &amp;</type>
+          <declname>aext</declname>
+        </param>
+        <param>
+          <type>ScalarType</type>
+          <declname>dt</declname>
+        </param>
+        <param>
+          <type>ScalarType</type>
+          <declname>dt2</declname>
+        </param>
+        <param>
+          <type>EInitializationStrategy</type>
+          <declname>strategy</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/Kernels.h" line="42" column="32" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/Kernels.h" bodystart="42" bodyend="91"/>
+      </memberdef>
+      <memberdef kind="function" id="vbd_2Kernels_8h_1ab539a39fd4ce8a792eccb5c144af86c3" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class ScalarType</type>
+          </param>
+          <param>
+            <type>class IndexType</type>
+          </param>
+        </templateparamlist>
+        <type>PBAT_HOST ScalarType</type>
+        <definition>PBAT_HOST ScalarType pbat::sim::vbd::kernels::ChebyshevOmega</definition>
+        <argsstring>(IndexType k, ScalarType rho2, ScalarType omega={})</argsstring>
+        <name>ChebyshevOmega</name>
+        <param>
+          <type>IndexType</type>
+          <declname>k</declname>
+        </param>
+        <param>
+          <type>ScalarType</type>
+          <declname>rho2</declname>
+        </param>
+        <param>
+          <type>ScalarType</type>
+          <declname>omega</declname>
+          <defval>{}</defval>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/Kernels.h" line="94" column="22" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/Kernels.h" bodystart="94" bodyend="99"/>
+      </memberdef>
+      <memberdef kind="function" id="vbd_2Kernels_8h_1ae7cb643ed3f51d7af4a5d3abe489a8cb" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixXKM2</declname>
+            <defname>TMatrixXKM2</defname>
+          </param>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixXKM1</declname>
+            <defname>TMatrixXKM1</defname>
+          </param>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixXK</declname>
+            <defname>TMatrixXK</defname>
+          </param>
+          <param>
+            <type>class IndexType</type>
+          </param>
+          <param>
+            <type>class ScalarType</type>
+            <defval>typename TMatrixXK::ScalarType</defval>
+          </param>
+        </templateparamlist>
+        <type>PBAT_HOST_DEVICE void</type>
+        <definition>PBAT_HOST_DEVICE void pbat::sim::vbd::kernels::ChebyshevUpdate</definition>
+        <argsstring>(IndexType k, ScalarType omega, TMatrixXKM2 &amp;xkm2, TMatrixXKM1 &amp;xkm1, TMatrixXK &amp;xk)</argsstring>
+        <name>ChebyshevUpdate</name>
+        <param>
+          <type>IndexType</type>
+          <declname>k</declname>
+        </param>
+        <param>
+          <type>ScalarType</type>
+          <declname>omega</declname>
+        </param>
+        <param>
+          <type>TMatrixXKM2 &amp;</type>
+          <declname>xkm2</declname>
+        </param>
+        <param>
+          <type>TMatrixXKM1 &amp;</type>
+          <declname>xkm1</declname>
+        </param>
+        <param>
+          <type>TMatrixXK &amp;</type>
+          <declname>xk</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/Kernels.h" line="108" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/Kernels.h" bodystart="108" bodyend="116"/>
+      </memberdef>
+      <memberdef kind="function" id="vbd_2Kernels_8h_1a00eaed5205fc2777f53cac060a1518f3" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixXT</declname>
+            <defname>TMatrixXT</defname>
+          </param>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixX</declname>
+            <defname>TMatrixX</defname>
+          </param>
+          <param>
+            <type>class ScalarType</type>
+            <defval>typename TMatrixXT::ScalarType</defval>
+          </param>
+        </templateparamlist>
+        <type>PBAT_HOST_DEVICE <ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1SMatrix" kindref="compound">mini::SVector</ref>&lt; ScalarType, TMatrixXT::kRows &gt;</type>
+        <definition>PBAT_HOST_DEVICE mini::SVector&lt;ScalarType, TMatrixXT::kRows&gt; pbat::sim::vbd::kernels::IntegrateVelocity</definition>
+        <argsstring>(TMatrixXT const &amp;xt, TMatrixX const &amp;x, ScalarType dt)</argsstring>
+        <name>IntegrateVelocity</name>
+        <param>
+          <type>TMatrixXT const &amp;</type>
+          <declname>xt</declname>
+        </param>
+        <param>
+          <type>TMatrixX const &amp;</type>
+          <declname>x</declname>
+        </param>
+        <param>
+          <type>ScalarType</type>
+          <declname>dt</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/Kernels.h" line="123" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/Kernels.h" bodystart="123" bodyend="126"/>
+      </memberdef>
+      <memberdef kind="function" id="vbd_2Kernels_8h_1a01346b8a224c4f6531744064ae183b2e" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixGP</declname>
+            <defname>TMatrixGP</defname>
+          </param>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixHF</declname>
+            <defname>TMatrixHF</defname>
+          </param>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixHI</declname>
+            <defname>TMatrixHI</defname>
+          </param>
+          <param>
+            <type>class IndexType</type>
+          </param>
+          <param>
+            <type>class ScalarType</type>
+            <defval>typename TMatrixGP::ScalarType</defval>
+          </param>
+        </templateparamlist>
+        <type>PBAT_HOST_DEVICE void</type>
+        <definition>PBAT_HOST_DEVICE void pbat::sim::vbd::kernels::AccumulateElasticHessian</definition>
+        <argsstring>(IndexType ilocal, ScalarType wg, TMatrixGP const &amp;GP, TMatrixHF const &amp;HF, TMatrixHI &amp;Hi)</argsstring>
+        <name>AccumulateElasticHessian</name>
+        <param>
+          <type>IndexType</type>
+          <declname>ilocal</declname>
+        </param>
+        <param>
+          <type>ScalarType</type>
+          <declname>wg</declname>
+        </param>
+        <param>
+          <type>TMatrixGP const &amp;</type>
+          <declname>GP</declname>
+        </param>
+        <param>
+          <type>TMatrixHF const &amp;</type>
+          <declname>HF</declname>
+        </param>
+        <param>
+          <type>TMatrixHI &amp;</type>
+          <declname>Hi</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/Kernels.h" line="134" column="23" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/Kernels.h" bodystart="134" bodyend="149"/>
+      </memberdef>
+      <memberdef kind="function" id="vbd_2Kernels_8h_1a8af3d6a1d1106c689ec18a3be5b93816" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixGP</declname>
+            <defname>TMatrixGP</defname>
+          </param>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixGF</declname>
+            <defname>TMatrixGF</defname>
+          </param>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixGI</declname>
+            <defname>TMatrixGI</defname>
+          </param>
+          <param>
+            <type>class IndexType</type>
+          </param>
+          <param>
+            <type>class ScalarType</type>
+            <defval>typename TMatrixGP::ScalarType</defval>
+          </param>
+        </templateparamlist>
+        <type>PBAT_HOST_DEVICE void</type>
+        <definition>PBAT_HOST_DEVICE void pbat::sim::vbd::kernels::AccumulateElasticGradient</definition>
+        <argsstring>(IndexType ilocal, ScalarType wg, TMatrixGP const &amp;GP, TMatrixGF const &amp;gF, TMatrixGI &amp;gi)</argsstring>
+        <name>AccumulateElasticGradient</name>
+        <param>
+          <type>IndexType</type>
+          <declname>ilocal</declname>
+        </param>
+        <param>
+          <type>ScalarType</type>
+          <declname>wg</declname>
+        </param>
+        <param>
+          <type>TMatrixGP const &amp;</type>
+          <declname>GP</declname>
+        </param>
+        <param>
+          <type>TMatrixGF const &amp;</type>
+          <declname>gF</declname>
+        </param>
+        <param>
+          <type>TMatrixGI &amp;</type>
+          <declname>gi</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/Kernels.h" line="157" column="23" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/Kernels.h" bodystart="157" bodyend="168"/>
+      </memberdef>
+      <memberdef kind="function" id="vbd_2Kernels_8h_1a691d96919604ce6d4e1e1082d43f2e14" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixXT</declname>
+            <defname>TMatrixXT</defname>
+          </param>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixX</declname>
+            <defname>TMatrixX</defname>
+          </param>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixG</declname>
+            <defname>TMatrixG</defname>
+          </param>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixH</declname>
+            <defname>TMatrixH</defname>
+          </param>
+          <param>
+            <type>class ScalarType</type>
+            <defval>typename TMatrixXT::ScalarType</defval>
+          </param>
+        </templateparamlist>
+        <type>PBAT_HOST_DEVICE void</type>
+        <definition>PBAT_HOST_DEVICE void pbat::sim::vbd::kernels::AddDamping</definition>
+        <argsstring>(ScalarType dt, TMatrixXT const &amp;xt, TMatrixX const &amp;x, ScalarType kD, TMatrixG &amp;g, TMatrixH &amp;H)</argsstring>
+        <name>AddDamping</name>
+        <param>
+          <type>ScalarType</type>
+          <declname>dt</declname>
+        </param>
+        <param>
+          <type>TMatrixXT const &amp;</type>
+          <declname>xt</declname>
+        </param>
+        <param>
+          <type>TMatrixX const &amp;</type>
+          <declname>x</declname>
+        </param>
+        <param>
+          <type>ScalarType</type>
+          <declname>kD</declname>
+        </param>
+        <param>
+          <type>TMatrixG &amp;</type>
+          <declname>g</declname>
+        </param>
+        <param>
+          <type>TMatrixH &amp;</type>
+          <declname>H</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/Kernels.h" line="176" column="23" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/Kernels.h" bodystart="176" bodyend="188"/>
+      </memberdef>
+      <memberdef kind="function" id="vbd_2Kernels_8h_1a5b1ad8a0823f8d6dc4da5491922be4f9" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixXTL</declname>
+            <defname>TMatrixXTL</defname>
+          </param>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixX</declname>
+            <defname>TMatrixX</defname>
+          </param>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixG</declname>
+            <defname>TMatrixG</defname>
+          </param>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixH</declname>
+            <defname>TMatrixH</defname>
+          </param>
+          <param>
+            <type>class ScalarType</type>
+            <defval>typename TMatrixXTL::ScalarType</defval>
+          </param>
+        </templateparamlist>
+        <type>PBAT_HOST_DEVICE void</type>
+        <definition>PBAT_HOST_DEVICE void pbat::sim::vbd::kernels::AddInertiaDerivatives</definition>
+        <argsstring>(ScalarType dt2, ScalarType m, TMatrixXTL const &amp;xtilde, TMatrixX const &amp;x, TMatrixG &amp;g, TMatrixH &amp;H)</argsstring>
+        <name>AddInertiaDerivatives</name>
+        <param>
+          <type>ScalarType</type>
+          <declname>dt2</declname>
+        </param>
+        <param>
+          <type>ScalarType</type>
+          <declname>m</declname>
+        </param>
+        <param>
+          <type>TMatrixXTL const &amp;</type>
+          <declname>xtilde</declname>
+        </param>
+        <param>
+          <type>TMatrixX const &amp;</type>
+          <declname>x</declname>
+        </param>
+        <param>
+          <type>TMatrixG &amp;</type>
+          <declname>g</declname>
+        </param>
+        <param>
+          <type>TMatrixH &amp;</type>
+          <declname>H</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/Kernels.h" line="196" column="23" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/Kernels.h" bodystart="196" bodyend="208"/>
+      </memberdef>
+      <memberdef kind="function" id="vbd_2Kernels_8h_1a25490c0cb5bc7704e0ce20fabcd77edf" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixX</declname>
+            <defname>TMatrixX</defname>
+          </param>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixG</declname>
+            <defname>TMatrixG</defname>
+          </param>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixH</declname>
+            <defname>TMatrixH</defname>
+          </param>
+          <param>
+            <type>class ScalarType</type>
+            <defval>typename TMatrixX::ScalarType</defval>
+          </param>
+        </templateparamlist>
+        <type>PBAT_HOST_DEVICE void</type>
+        <definition>PBAT_HOST_DEVICE void pbat::sim::vbd::kernels::IntegratePositions</definition>
+        <argsstring>(TMatrixG const &amp;g, TMatrixH const &amp;H, TMatrixX &amp;x, ScalarType detHZero=ScalarType(1e-7))</argsstring>
+        <name>IntegratePositions</name>
+        <param>
+          <type>TMatrixG const &amp;</type>
+          <declname>g</declname>
+        </param>
+        <param>
+          <type>TMatrixH const &amp;</type>
+          <declname>H</declname>
+        </param>
+        <param>
+          <type>TMatrixX &amp;</type>
+          <declname>x</declname>
+        </param>
+        <param>
+          <type>ScalarType</type>
+          <declname>detHZero</declname>
+          <defval>ScalarType(1e-7)</defval>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/Kernels.h" line="215" column="23" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/Kernels.h" bodystart="215" bodyend="225"/>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/Kernels.h" line="17" column="17"/>
+  </compounddef>
+</doxygen>

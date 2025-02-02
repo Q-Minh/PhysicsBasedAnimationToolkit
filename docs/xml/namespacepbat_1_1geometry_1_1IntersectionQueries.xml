@@ -1,0 +1,918 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="namespacepbat_1_1geometry_1_1IntersectionQueries" kind="namespace" language="C++">
+    <compoundname>pbat::geometry::IntersectionQueries</compoundname>
+      <sectiondef kind="func">
+      <memberdef kind="function" id="IntersectionQueries_8h_1a5f110f2ac4a1b76726a87694f3301ab9" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixAP</declname>
+            <defname>TMatrixAP</defname>
+          </param>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixAB</declname>
+            <defname>TMatrixAB</defname>
+          </param>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixAC</declname>
+            <defname>TMatrixAC</defname>
+          </param>
+        </templateparamlist>
+        <type>PBAT_HOST_DEVICE <ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1SMatrix" kindref="compound">mini::SMatrix</ref>&lt; typename TMatrixAP::ScalarType, 3, 1 &gt;</type>
+        <definition>PBAT_HOST_DEVICE mini::SMatrix&lt;typename TMatrixAP::ScalarType, 3, 1&gt; pbat::geometry::IntersectionQueries::TriangleBarycentricCoordinates</definition>
+        <argsstring>(TMatrixAP const &amp;AP, TMatrixAB const &amp;AB, TMatrixAC const &amp;AC)</argsstring>
+        <name>TriangleBarycentricCoordinates</name>
+        <param>
+          <type>TMatrixAP const &amp;</type>
+          <declname>AP</declname>
+        </param>
+        <param>
+          <type>TMatrixAB const &amp;</type>
+          <declname>AB</declname>
+        </param>
+        <param>
+          <type>TMatrixAC const &amp;</type>
+          <declname>AC</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/IntersectionQueries.h" line="20" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/IntersectionQueries.h" bodystart="20" bodyend="38"/>
+      </memberdef>
+      <memberdef kind="function" id="IntersectionQueries_8h_1acf92f10a46b8038d888f9b9d7c9fbea3" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixP</declname>
+            <defname>TMatrixP</defname>
+          </param>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixA</declname>
+            <defname>TMatrixA</defname>
+          </param>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixB</declname>
+            <defname>TMatrixB</defname>
+          </param>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixC</declname>
+            <defname>TMatrixC</defname>
+          </param>
+        </templateparamlist>
+        <type>PBAT_HOST_DEVICE <ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1SMatrix" kindref="compound">mini::SVector</ref>&lt; typename TMatrixP::ScalarType, 3 &gt;</type>
+        <definition>PBAT_HOST_DEVICE mini::SVector&lt;typename TMatrixP::ScalarType, 3&gt; pbat::geometry::IntersectionQueries::TriangleBarycentricCoordinates</definition>
+        <argsstring>(TMatrixP const &amp;P, TMatrixA const &amp;A, TMatrixB const &amp;B, TMatrixC const &amp;C)</argsstring>
+        <name>TriangleBarycentricCoordinates</name>
+        <param>
+          <type>TMatrixP const &amp;</type>
+          <declname>P</declname>
+        </param>
+        <param>
+          <type>TMatrixA const &amp;</type>
+          <declname>A</declname>
+        </param>
+        <param>
+          <type>TMatrixB const &amp;</type>
+          <declname>B</declname>
+        </param>
+        <param>
+          <type>TMatrixC const &amp;</type>
+          <declname>C</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>TMatrixP</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>TMatrixA</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>TMatrixB</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>TMatrixC</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>P</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Point from which to compute barycentric coordinates. Must be in the plane spanned by triangle ABC. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>A</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>B</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>C</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para></para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/IntersectionQueries.h" line="58" column="32" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/IntersectionQueries.h" bodystart="58" bodyend="70"/>
+      </memberdef>
+      <memberdef kind="function" id="IntersectionQueries_8h_1ab6b7b968ffd68d4a10658b5cbc23668a" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixL1</declname>
+            <defname>TMatrixL1</defname>
+          </param>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixU1</declname>
+            <defname>TMatrixU1</defname>
+          </param>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixL2</declname>
+            <defname>TMatrixL2</defname>
+          </param>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixU2</declname>
+            <defname>TMatrixU2</defname>
+          </param>
+        </templateparamlist>
+        <type>PBAT_HOST_DEVICE <ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1SMatrix" kindref="compound">mini::SMatrix</ref>&lt; typename TMatrixL1::ScalarType, TMatrixL1::Rows, 2 &gt;</type>
+        <definition>PBAT_HOST_DEVICE mini::SMatrix&lt; typename TMatrixL1::ScalarType, TMatrixL1::Rows, 2 &gt; pbat::geometry::IntersectionQueries::AxisAlignedBoundingBoxes</definition>
+        <argsstring>(TMatrixL1 const &amp;L1, TMatrixU1 const &amp;U1, TMatrixL2 const &amp;L2, TMatrixU2 const &amp;U2)</argsstring>
+        <name>AxisAlignedBoundingBoxes</name>
+        <param>
+          <type>TMatrixL1 const &amp;</type>
+          <declname>L1</declname>
+        </param>
+        <param>
+          <type>TMatrixU1 const &amp;</type>
+          <declname>U1</declname>
+        </param>
+        <param>
+          <type>TMatrixL2 const &amp;</type>
+          <declname>L2</declname>
+        </param>
+        <param>
+          <type>TMatrixU2 const &amp;</type>
+          <declname>U2</declname>
+        </param>
+        <briefdescription>
+<para>Computes the intersection volume between 2 axis aligned bounding boxes. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>aabb1</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>aabb2</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para></para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/IntersectionQueries.h" line="237" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/IntersectionQueries.h" bodystart="237" bodyend="248" declfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/IntersectionQueries.h" declline="84" declcolumn="1"/>
+      </memberdef>
+      <memberdef kind="function" id="IntersectionQueries_8h_1abe13b0b118d5df0e64cf41bfd68f0d1f" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixP</declname>
+            <defname>TMatrixP</defname>
+          </param>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixQ</declname>
+            <defname>TMatrixQ</defname>
+          </param>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixC</declname>
+            <defname>TMatrixC</defname>
+          </param>
+        </templateparamlist>
+        <type>PBAT_HOST_DEVICE std::optional&lt; <ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1SMatrix" kindref="compound">mini::SVector</ref>&lt; typename TMatrixP::ScalarType, TMatrixP::kRows &gt; &gt;</type>
+        <definition>PBAT_HOST_DEVICE std::optional&lt; mini::SVector&lt; typename TMatrixP::ScalarType, TMatrixP::kRows &gt; &gt; pbat::geometry::IntersectionQueries::LineSegmentSphere</definition>
+        <argsstring>(TMatrixP const &amp;P, TMatrixQ const &amp;Q, TMatrixC const &amp;C, typename TMatrixC::ScalarType R)</argsstring>
+        <name>LineSegmentSphere</name>
+        <param>
+          <type>TMatrixP const &amp;</type>
+          <declname>P</declname>
+        </param>
+        <param>
+          <type>TMatrixQ const &amp;</type>
+          <declname>Q</declname>
+        </param>
+        <param>
+          <type>TMatrixC const &amp;</type>
+          <declname>C</declname>
+        </param>
+        <param>
+          <type>typename TMatrixC::ScalarType</type>
+          <declname>R</declname>
+        </param>
+        <briefdescription>
+<para>Computes the intersection point, if any, between a line segment PQ and a sphere (C,r). If there are 2 intersection points, returns the one closest to P along PQ. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>P</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>Q</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>C</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>R</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para></para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/IntersectionQueries.h" line="252" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/IntersectionQueries.h" bodystart="252" bodyend="285" declfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/IntersectionQueries.h" declline="101" declcolumn="1"/>
+      </memberdef>
+      <memberdef kind="function" id="IntersectionQueries_8h_1a2a139a388eb51fe0d767a555dcec0f0b" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixP</declname>
+            <defname>TMatrixP</defname>
+          </param>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixQ</declname>
+            <defname>TMatrixQ</defname>
+          </param>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixA</declname>
+            <defname>TMatrixA</defname>
+          </param>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixB</declname>
+            <defname>TMatrixB</defname>
+          </param>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixC</declname>
+            <defname>TMatrixC</defname>
+          </param>
+        </templateparamlist>
+        <type>PBAT_HOST_DEVICE std::optional&lt; <ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1SMatrix" kindref="compound">mini::SVector</ref>&lt; typename TMatrixP::ScalarType, TMatrixP::kRows &gt; &gt;</type>
+        <definition>PBAT_HOST_DEVICE std::optional&lt; mini::SVector&lt; typename TMatrixP::ScalarType, TMatrixP::kRows &gt; &gt; pbat::geometry::IntersectionQueries::LineSegmentPlane3D</definition>
+        <argsstring>(TMatrixP const &amp;P, TMatrixQ const &amp;Q, TMatrixA const &amp;A, TMatrixB const &amp;B, TMatrixC const &amp;C)</argsstring>
+        <name>LineSegmentPlane3D</name>
+        <param>
+          <type>TMatrixP const &amp;</type>
+          <declname>P</declname>
+        </param>
+        <param>
+          <type>TMatrixQ const &amp;</type>
+          <declname>Q</declname>
+        </param>
+        <param>
+          <type>TMatrixA const &amp;</type>
+          <declname>A</declname>
+        </param>
+        <param>
+          <type>TMatrixB const &amp;</type>
+          <declname>B</declname>
+        </param>
+        <param>
+          <type>TMatrixC const &amp;</type>
+          <declname>C</declname>
+        </param>
+        <briefdescription>
+<para>Computes the intersection point, if any, between a line including points P,Q and the plane spanned by triangle ABC, in 3D. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>TMatrixQ</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>TMatrixA</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>TMatrixB</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>TMatrixC</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>TMatrixP</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>P</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>Q</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>A</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>B</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>C</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para></para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/IntersectionQueries.h" line="294" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/IntersectionQueries.h" bodystart="294" bodyend="310" declfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/IntersectionQueries.h" declline="129" declcolumn="1"/>
+      </memberdef>
+      <memberdef kind="function" id="IntersectionQueries_8h_1a45ae7f0ef730f4e04d9b37e8a9752c8d" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixP</declname>
+            <defname>TMatrixP</defname>
+          </param>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixQ</declname>
+            <defname>TMatrixQ</defname>
+          </param>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixN</declname>
+            <defname>TMatrixN</defname>
+          </param>
+        </templateparamlist>
+        <type>PBAT_HOST_DEVICE std::optional&lt; <ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1SMatrix" kindref="compound">mini::SVector</ref>&lt; typename TMatrixP::ScalarType, TMatrixP::kRows &gt; &gt;</type>
+        <definition>PBAT_HOST_DEVICE std::optional&lt; mini::SVector&lt; typename TMatrixP::ScalarType, TMatrixP::kRows &gt; &gt; pbat::geometry::IntersectionQueries::LineSegmentPlane3D</definition>
+        <argsstring>(TMatrixP const &amp;P, TMatrixQ const &amp;Q, TMatrixN const &amp;n, typename TMatrixN::ScalarType d)</argsstring>
+        <name>LineSegmentPlane3D</name>
+        <param>
+          <type>TMatrixP const &amp;</type>
+          <declname>P</declname>
+        </param>
+        <param>
+          <type>TMatrixQ const &amp;</type>
+          <declname>Q</declname>
+        </param>
+        <param>
+          <type>TMatrixN const &amp;</type>
+          <declname>n</declname>
+        </param>
+        <param>
+          <type>typename TMatrixN::ScalarType</type>
+          <declname>d</declname>
+        </param>
+        <briefdescription>
+<para>Computes the intersection point, if any, between a line including points P,Q and the plane (n,d), in 3D. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>TMatrixP</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>TMatrixQ</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>TMatrixN</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>P</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>Q</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>n</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>d</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para></para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/IntersectionQueries.h" line="314" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/IntersectionQueries.h" bodystart="314" bodyend="333" declfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/IntersectionQueries.h" declline="150" declcolumn="1"/>
+      </memberdef>
+      <memberdef kind="function" id="IntersectionQueries_8h_1a7f2225e26f9cf494ec737613e7c441bc" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixP</declname>
+            <defname>TMatrixP</defname>
+          </param>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixQ</declname>
+            <defname>TMatrixQ</defname>
+          </param>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixA</declname>
+            <defname>TMatrixA</defname>
+          </param>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixB</declname>
+            <defname>TMatrixB</defname>
+          </param>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixC</declname>
+            <defname>TMatrixC</defname>
+          </param>
+        </templateparamlist>
+        <type>PBAT_HOST_DEVICE std::optional&lt; <ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1SMatrix" kindref="compound">mini::SVector</ref>&lt; typename TMatrixP::ScalarType, 3 &gt; &gt;</type>
+        <definition>PBAT_HOST_DEVICE std::optional&lt; mini::SVector&lt; typename TMatrixP::ScalarType, 3 &gt; &gt; pbat::geometry::IntersectionQueries::UvwLineTriangle3D</definition>
+        <argsstring>(TMatrixP const &amp;P, TMatrixQ const &amp;Q, TMatrixA const &amp;A, TMatrixB const &amp;B, TMatrixC const &amp;C)</argsstring>
+        <name>UvwLineTriangle3D</name>
+        <param>
+          <type>TMatrixP const &amp;</type>
+          <declname>P</declname>
+        </param>
+        <param>
+          <type>TMatrixQ const &amp;</type>
+          <declname>Q</declname>
+        </param>
+        <param>
+          <type>TMatrixA const &amp;</type>
+          <declname>A</declname>
+        </param>
+        <param>
+          <type>TMatrixB const &amp;</type>
+          <declname>B</declname>
+        </param>
+        <param>
+          <type>TMatrixC const &amp;</type>
+          <declname>C</declname>
+        </param>
+        <briefdescription>
+<para>Computes the intersection point, if any, between a line including points P,Q and a triangle ABC, in 3D. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>P</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>Q</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>A</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>B</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>C</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para></para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+<para>Ericson, Christer. Real-time collision detection. Crc Press, 2004. section 5.3.4</para>
+<para>Ericson, Christer. Real-time collision detection. Crc Press, 2004. section 5.3.4</para>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/IntersectionQueries.h" line="341" column="32" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/IntersectionQueries.h" bodystart="341" bodyend="401" declfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/IntersectionQueries.h" declline="172" declcolumn="32"/>
+      </memberdef>
+      <memberdef kind="function" id="IntersectionQueries_8h_1a8b9b3e70d61ab428b59aebf659ee9832" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixP</declname>
+            <defname>TMatrixP</defname>
+          </param>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixQ</declname>
+            <defname>TMatrixQ</defname>
+          </param>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixA</declname>
+            <defname>TMatrixA</defname>
+          </param>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixB</declname>
+            <defname>TMatrixB</defname>
+          </param>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixC</declname>
+            <defname>TMatrixC</defname>
+          </param>
+        </templateparamlist>
+        <type>PBAT_HOST_DEVICE std::optional&lt; <ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1SMatrix" kindref="compound">mini::SVector</ref>&lt; typename TMatrixP::ScalarType, 3 &gt; &gt;</type>
+        <definition>PBAT_HOST_DEVICE std::optional&lt; mini::SVector&lt; typename TMatrixP::ScalarType, 3 &gt; &gt; pbat::geometry::IntersectionQueries::UvwLineSegmentTriangle3D</definition>
+        <argsstring>(TMatrixP const &amp;P, TMatrixQ const &amp;Q, TMatrixA const &amp;A, TMatrixB const &amp;B, TMatrixC const &amp;C)</argsstring>
+        <name>UvwLineSegmentTriangle3D</name>
+        <param>
+          <type>TMatrixP const &amp;</type>
+          <declname>P</declname>
+        </param>
+        <param>
+          <type>TMatrixQ const &amp;</type>
+          <declname>Q</declname>
+        </param>
+        <param>
+          <type>TMatrixA const &amp;</type>
+          <declname>A</declname>
+        </param>
+        <param>
+          <type>TMatrixB const &amp;</type>
+          <declname>B</declname>
+        </param>
+        <param>
+          <type>TMatrixC const &amp;</type>
+          <declname>C</declname>
+        </param>
+        <briefdescription>
+<para>Computes the intersection point, if any, between a line segment delimited by points P,Q and a triangle ABC, in 3D. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>P</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>Q</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>A</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>B</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>C</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para></para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/IntersectionQueries.h" line="410" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/IntersectionQueries.h" bodystart="410" bodyend="445" declfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/IntersectionQueries.h" declline="196" declcolumn="1"/>
+      </memberdef>
+      <memberdef kind="function" id="IntersectionQueries_8h_1abce907819fe543aa661945063bf64a9c" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixA1</declname>
+            <defname>TMatrixA1</defname>
+          </param>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixB1</declname>
+            <defname>TMatrixB1</defname>
+          </param>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixC1</declname>
+            <defname>TMatrixC1</defname>
+          </param>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixA2</declname>
+            <defname>TMatrixA2</defname>
+          </param>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixB2</declname>
+            <defname>TMatrixB2</defname>
+          </param>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixC2</declname>
+            <defname>TMatrixC2</defname>
+          </param>
+        </templateparamlist>
+        <type>PBAT_HOST_DEVICE std::array&lt; std::optional&lt; <ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1SMatrix" kindref="compound">mini::SVector</ref>&lt; typename TMatrixA1::ScalarType, 3 &gt; &gt;, 6u &gt;</type>
+        <definition>PBAT_HOST_DEVICE std::array&lt; std::optional&lt; mini::SVector&lt; typename TMatrixA1::ScalarType, 3 &gt; &gt;, 6u &gt; pbat::geometry::IntersectionQueries::UvwTriangles3D</definition>
+        <argsstring>(TMatrixA1 const &amp;A1, TMatrixB1 const &amp;B1, TMatrixC1 const &amp;C1, TMatrixA2 const &amp;A2, TMatrixB2 const &amp;B2, TMatrixC2 const &amp;C2)</argsstring>
+        <name>UvwTriangles3D</name>
+        <param>
+          <type>TMatrixA1 const &amp;</type>
+          <declname>A1</declname>
+        </param>
+        <param>
+          <type>TMatrixB1 const &amp;</type>
+          <declname>B1</declname>
+        </param>
+        <param>
+          <type>TMatrixC1 const &amp;</type>
+          <declname>C1</declname>
+        </param>
+        <param>
+          <type>TMatrixA2 const &amp;</type>
+          <declname>A2</declname>
+        </param>
+        <param>
+          <type>TMatrixB2 const &amp;</type>
+          <declname>B2</declname>
+        </param>
+        <param>
+          <type>TMatrixC2 const &amp;</type>
+          <declname>C2</declname>
+        </param>
+        <briefdescription>
+<para>Computes intersection points between 3 edges (as line segments) of triangle A1B1C1 and triangle A2B2C2, and intersection points between 3 edges (as line segments) of triangle A2B2C2 and triangle A1B1C1, in 3D. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>A1</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>B1</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>C1</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>A2</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>B2</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>C2</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para></para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/IntersectionQueries.h" line="455" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/IntersectionQueries.h" bodystart="455" bodyend="495" declfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/IntersectionQueries.h" declline="223" declcolumn="1"/>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/IntersectionQueries.h" line="14" column="29"/>
+  </compounddef>
+</doxygen>

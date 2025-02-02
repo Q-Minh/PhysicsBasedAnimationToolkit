@@ -1,0 +1,39 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="dir_26aabdcd1cc653a28fc0c12eea384ebc" kind="dir">
+    <compoundname>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem</compoundname>
+    <innerfile refid="fem_2Concepts_8h">Concepts.h</innerfile>
+    <innerfile refid="DeformationGradient_8cpp">DeformationGradient.cpp</innerfile>
+    <innerfile refid="DeformationGradient_8h">DeformationGradient.h</innerfile>
+    <innerfile refid="DivergenceVector_8cpp">DivergenceVector.cpp</innerfile>
+    <innerfile refid="DivergenceVector_8h">DivergenceVector.h</innerfile>
+    <innerfile refid="source_2pbat_2fem_2Fem_8h">Fem.h</innerfile>
+    <innerfile refid="source_2pbat_2fem_2Gradient_8cpp">Gradient.cpp</innerfile>
+    <innerfile refid="source_2pbat_2fem_2Gradient_8h">Gradient.h</innerfile>
+    <innerfile refid="Hexahedron_8h">Hexahedron.h</innerfile>
+    <innerfile refid="source_2pbat_2fem_2HyperElasticPotential_8cpp">HyperElasticPotential.cpp</innerfile>
+    <innerfile refid="source_2pbat_2fem_2HyperElasticPotential_8h">HyperElasticPotential.h</innerfile>
+    <innerfile refid="source_2pbat_2fem_2Jacobian_8cpp">Jacobian.cpp</innerfile>
+    <innerfile refid="source_2pbat_2fem_2Jacobian_8h">Jacobian.h</innerfile>
+    <innerfile refid="LaplacianMatrix_8cpp">LaplacianMatrix.cpp</innerfile>
+    <innerfile refid="LaplacianMatrix_8h">LaplacianMatrix.h</innerfile>
+    <innerfile refid="Line_8h">Line.h</innerfile>
+    <innerfile refid="LoadVector_8cpp">LoadVector.cpp</innerfile>
+    <innerfile refid="LoadVector_8h">LoadVector.h</innerfile>
+    <innerfile refid="source_2pbat_2fem_2MassMatrix_8cpp">MassMatrix.cpp</innerfile>
+    <innerfile refid="source_2pbat_2fem_2MassMatrix_8h">MassMatrix.h</innerfile>
+    <innerfile refid="source_2pbat_2fem_2Mesh_8cpp">Mesh.cpp</innerfile>
+    <innerfile refid="source_2pbat_2fem_2Mesh_8h">Mesh.h</innerfile>
+    <innerfile refid="QuadratureRules_8h">QuadratureRules.h</innerfile>
+    <innerfile refid="Quadrilateral_8h">Quadrilateral.h</innerfile>
+    <innerfile refid="source_2pbat_2fem_2ShapeFunctions_8cpp">ShapeFunctions.cpp</innerfile>
+    <innerfile refid="source_2pbat_2fem_2ShapeFunctions_8h">ShapeFunctions.h</innerfile>
+    <innerfile refid="Tetrahedron_8h">Tetrahedron.h</innerfile>
+    <innerfile refid="Triangle_8h">Triangle.h</innerfile>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/"/>
+  </compounddef>
+</doxygen>

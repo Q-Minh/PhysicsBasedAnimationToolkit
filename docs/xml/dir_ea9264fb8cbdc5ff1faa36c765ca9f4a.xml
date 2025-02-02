@@ -1,0 +1,23 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="dir_ea9264fb8cbdc5ff1faa36c765ca9f4a" kind="dir">
+    <compoundname>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd</compoundname>
+    <innerdir refid="dir_8d1befc4dcb8b2b882b2b5b4675702ae">/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod</innerdir>
+    <innerdir refid="dir_da044ad40a72abb6e572a4d952a449c8">/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/multigrid</innerdir>
+    <innerfile refid="source_2pbat_2sim_2vbd_2Data_8cpp">Data.cpp</innerfile>
+    <innerfile refid="source_2pbat_2sim_2vbd_2Data_8h">Data.h</innerfile>
+    <innerfile refid="sim_2vbd_2Enums_8h">Enums.h</innerfile>
+    <innerfile refid="source_2pbat_2sim_2vbd_2Integrator_8cpp">Integrator.cpp</innerfile>
+    <innerfile refid="source_2pbat_2sim_2vbd_2Integrator_8h">Integrator.h</innerfile>
+    <innerfile refid="vbd_2Kernels_8cpp">Kernels.cpp</innerfile>
+    <innerfile refid="vbd_2Kernels_8h">Kernels.h</innerfile>
+    <innerfile refid="source_2pbat_2sim_2vbd_2Mesh_8cpp">Mesh.cpp</innerfile>
+    <innerfile refid="source_2pbat_2sim_2vbd_2Mesh_8h">Mesh.h</innerfile>
+    <innerfile refid="source_2pbat_2sim_2vbd_2Vbd_8h">Vbd.h</innerfile>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/"/>
+  </compounddef>
+</doxygen>

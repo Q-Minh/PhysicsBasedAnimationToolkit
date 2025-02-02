@@ -1,0 +1,139 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="PythonBindings_8cpp" kind="file" language="C++">
+    <compoundname>PythonBindings.cpp</compoundname>
+    <includes refid="bindings_2pypbat_2fem_2Fem_8h" local="yes">fem/Fem.h</includes>
+    <includes refid="bindings_2pypbat_2geometry_2Geometry_8h" local="yes">geometry/Geometry.h</includes>
+    <includes refid="Gpu_8h" local="yes">gpu/Gpu.h</includes>
+    <includes refid="bindings_2pypbat_2graph_2Graph_8h" local="yes">graph/Graph.h</includes>
+    <includes refid="bindings_2pypbat_2math_2Math_8h" local="yes">math/Math.h</includes>
+    <includes refid="bindings_2pypbat_2profiling_2Profiling_8h" local="yes">profiling/Profiling.h</includes>
+    <includes refid="bindings_2pypbat_2sim_2Sim_8h" local="yes">sim/Sim.h</includes>
+    <includes local="no">pybind11/pybind11.h</includes>
+    <incdepgraph>
+      <node id="2">
+        <label>fem/Fem.h</label>
+        <link refid="bindings_2pypbat_2fem_2Fem_8h_source"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+      </node>
+      <node id="5">
+        <label>gpu/Gpu.h</label>
+        <link refid="Gpu_8h_source"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+      </node>
+      <node id="4">
+        <label>geometry/Geometry.h</label>
+        <link refid="bindings_2pypbat_2geometry_2Geometry_8h_source"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+      </node>
+      <node id="9">
+        <label>sim/Sim.h</label>
+        <link refid="bindings_2pypbat_2sim_2Sim_8h_source"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>pybind11/pybind11.h</label>
+      </node>
+      <node id="7">
+        <label>math/Math.h</label>
+        <link refid="bindings_2pypbat_2math_2Math_8h_source"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+      </node>
+      <node id="8">
+        <label>profiling/Profiling.h</label>
+        <link refid="bindings_2pypbat_2profiling_2Profiling_8h_source"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+      </node>
+      <node id="6">
+        <label>graph/Graph.h</label>
+        <link refid="bindings_2pypbat_2graph_2Graph_8h_source"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/PythonBindings.cpp</label>
+        <link refid="PythonBindings_8cpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+      </node>
+    </incdepgraph>
+      <sectiondef kind="func">
+      <memberdef kind="function" id="PythonBindings_8cpp_1a9b4fcafc2a6c5931f8e63f38680d3f43" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>PYBIND11_MODULE</definition>
+        <argsstring>(_pbat, m)</argsstring>
+        <name>PYBIND11_MODULE</name>
+        <param>
+          <type>_pbat</type>
+        </param>
+        <param>
+          <type>m</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/PythonBindings.cpp" line="11" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/PythonBindings.cpp" bodystart="11" bodyend="30"/>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="preprocessor">#include<sp/>&quot;fem/Fem.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="2"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;geometry/Geometry.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="3"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;gpu/Gpu.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="4"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;graph/Graph.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="5"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;math/Math.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="6"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;profiling/Profiling.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="7"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;sim/Sim.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="8"><highlight class="normal"></highlight></codeline>
+<codeline lineno="9"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;pybind11/pybind11.h&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="10"><highlight class="normal"></highlight></codeline>
+<codeline lineno="11"><highlight class="normal">PYBIND11_MODULE(_pbat,<sp/>m)</highlight></codeline>
+<codeline lineno="12"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="13"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal">pyb<sp/><sp/><sp/>=<sp/>pybind11;</highlight></codeline>
+<codeline lineno="14"><highlight class="normal"><sp/><sp/><sp/><sp/>m.doc()<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/></highlight><highlight class="stringliteral">&quot;Physics<sp/>Based<sp/>Animation<sp/>Toolkit&apos;s<sp/>python<sp/>bindings&quot;</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="15"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>mprofiling<sp/>=<sp/>m.def_submodule(</highlight><highlight class="stringliteral">&quot;profiling&quot;</highlight><highlight class="normal">);</highlight></codeline>
+<codeline lineno="16"><highlight class="normal"><sp/><sp/><sp/><sp/>pbat::py::profiling::Bind(mprofiling);</highlight></codeline>
+<codeline lineno="17"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>mfem<sp/>=<sp/>m.def_submodule(</highlight><highlight class="stringliteral">&quot;fem&quot;</highlight><highlight class="normal">);</highlight></codeline>
+<codeline lineno="18"><highlight class="normal"><sp/><sp/><sp/><sp/>pbat::py::fem::Bind(mfem);</highlight></codeline>
+<codeline lineno="19"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>mgeometry<sp/>=<sp/>m.def_submodule(</highlight><highlight class="stringliteral">&quot;geometry&quot;</highlight><highlight class="normal">);</highlight></codeline>
+<codeline lineno="20"><highlight class="normal"><sp/><sp/><sp/><sp/>pbat::py::geometry::Bind(mgeometry);</highlight></codeline>
+<codeline lineno="21"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>mgraph<sp/>=<sp/>m.def_submodule(</highlight><highlight class="stringliteral">&quot;graph&quot;</highlight><highlight class="normal">);</highlight></codeline>
+<codeline lineno="22"><highlight class="normal"><sp/><sp/><sp/><sp/>pbat::py::graph::Bind(mgraph);</highlight></codeline>
+<codeline lineno="23"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>mmath<sp/>=<sp/>m.def_submodule(</highlight><highlight class="stringliteral">&quot;math&quot;</highlight><highlight class="normal">);</highlight></codeline>
+<codeline lineno="24"><highlight class="normal"><sp/><sp/><sp/><sp/>pbat::py::math::Bind(mmath);</highlight></codeline>
+<codeline lineno="25"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>msim<sp/>=<sp/>m.def_submodule(</highlight><highlight class="stringliteral">&quot;sim&quot;</highlight><highlight class="normal">);</highlight></codeline>
+<codeline lineno="26"><highlight class="normal"><sp/><sp/><sp/><sp/>pbat::py::sim::Bind(msim);</highlight></codeline>
+<codeline lineno="27"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Bind<sp/>GPU<sp/>module<sp/>at<sp/>the<sp/>end,<sp/>since<sp/>it<sp/>is<sp/>layered<sp/>on<sp/>top<sp/>of<sp/>non-GPU<sp/>modules</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="28"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>mgpu<sp/>=<sp/>m.def_submodule(</highlight><highlight class="stringliteral">&quot;gpu&quot;</highlight><highlight class="normal">);</highlight></codeline>
+<codeline lineno="29"><highlight class="normal"><sp/><sp/><sp/><sp/>pbat::py::gpu::Bind(mgpu);</highlight></codeline>
+<codeline lineno="30"><highlight class="normal">}</highlight></codeline>
+    </programlisting>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/PythonBindings.cpp"/>
+  </compounddef>
+</doxygen>

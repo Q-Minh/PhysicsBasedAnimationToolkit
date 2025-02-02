@@ -1,0 +1,241 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="classpbat_1_1gpu_1_1geometry_1_1Bodies" kind="class" language="C++" prot="public">
+    <compoundname>pbat::gpu::geometry::Bodies</compoundname>
+      <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="classpbat_1_1gpu_1_1geometry_1_1Bodies_1aae2300a420b98d3a42af21388ef2df66" prot="private" static="no" mutable="no">
+        <type>BodiesImpl *</type>
+        <definition>BodiesImpl* pbat::gpu::geometry::Bodies::mImpl</definition>
+        <argsstring></argsstring>
+        <name>mImpl</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/geometry/Primitives.h" line="191" column="16" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/geometry/Primitives.h" bodystart="191" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpbat_1_1gpu_1_1geometry_1_1Bodies_1aa9d57e5789a657a3d6509588878e251b" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>PBAT_API</type>
+        <definition>PBAT_API pbat::gpu::geometry::Bodies::Bodies</definition>
+        <argsstring>(Eigen::Ref&lt; GpuIndexVectorX const &gt; const &amp;B)</argsstring>
+        <name>Bodies</name>
+        <param>
+          <type>Eigen::Ref&lt; GpuIndexVectorX const &gt; const &amp;</type>
+          <declname>B</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>B</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/geometry/Primitives.h" line="142" column="14"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1gpu_1_1geometry_1_1Bodies_1ad23b43322d75216f75252207787e6021" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>pbat::gpu::geometry::Bodies::Bodies</definition>
+        <argsstring>(Bodies const &amp;)=delete</argsstring>
+        <name>Bodies</name>
+        <param>
+          <type><ref refid="classpbat_1_1gpu_1_1geometry_1_1Bodies" kindref="compound">Bodies</ref> const &amp;</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+</parameternamelist>
+<parameterdescription>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/geometry/Primitives.h" line="147" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1gpu_1_1geometry_1_1Bodies_1a179d0e43f6ef0b030449b71df892f90c" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpbat_1_1gpu_1_1geometry_1_1Bodies" kindref="compound">Bodies</ref> &amp;</type>
+        <definition>Bodies&amp; pbat::gpu::geometry::Bodies::operator=</definition>
+        <argsstring>(Bodies const &amp;)=delete</argsstring>
+        <name>operator=</name>
+        <param>
+          <type><ref refid="classpbat_1_1gpu_1_1geometry_1_1Bodies" kindref="compound">Bodies</ref> const &amp;</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+</parameternamelist>
+<parameterdescription>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/geometry/Primitives.h" line="153" column="12"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1gpu_1_1geometry_1_1Bodies_1a95f25e52add26c19ce5240680a957d28" prot="public" static="no" const="no" explicit="no" inline="no" noexcept="yes" virt="non-virtual">
+        <type>PBAT_API</type>
+        <definition>PBAT_API pbat::gpu::geometry::Bodies::Bodies</definition>
+        <argsstring>(Bodies &amp;&amp;) noexcept</argsstring>
+        <name>Bodies</name>
+        <param>
+          <type><ref refid="classpbat_1_1gpu_1_1geometry_1_1Bodies" kindref="compound">Bodies</ref> &amp;&amp;</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+</parameternamelist>
+<parameterdescription>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/geometry/Primitives.h" line="158" column="14"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1gpu_1_1geometry_1_1Bodies_1a5326dd0b638c9e51efa10bf33126802c" prot="public" static="no" const="no" explicit="no" inline="no" noexcept="yes" virt="non-virtual">
+        <type>PBAT_API <ref refid="classpbat_1_1gpu_1_1geometry_1_1Bodies" kindref="compound">Bodies</ref> &amp;</type>
+        <definition>PBAT_API Bodies&amp; pbat::gpu::geometry::Bodies::operator=</definition>
+        <argsstring>(Bodies &amp;&amp;) noexcept</argsstring>
+        <name>operator=</name>
+        <param>
+          <type><ref refid="classpbat_1_1gpu_1_1geometry_1_1Bodies" kindref="compound">Bodies</ref> &amp;&amp;</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+</parameternamelist>
+<parameterdescription>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/geometry/Primitives.h" line="164" column="21"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1gpu_1_1geometry_1_1Bodies_1a90cb51e568c42b77e27e3ba8ff8d4f87" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>PBAT_API GpuIndexMatrixX</type>
+        <definition>PBAT_API GpuIndexMatrixX pbat::gpu::geometry::Bodies::Get</definition>
+        <argsstring>() const</argsstring>
+        <name>Get</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para></para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/geometry/Primitives.h" line="169" column="30"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1gpu_1_1geometry_1_1Bodies_1a5f9f58af51892f9e72650be283456e32" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>PBAT_API std::size_t</type>
+        <definition>PBAT_API std::size_t pbat::gpu::geometry::Bodies::NumberOfBodies</definition>
+        <argsstring>() const</argsstring>
+        <name>NumberOfBodies</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para></para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/geometry/Primitives.h" line="174" column="26"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1gpu_1_1geometry_1_1Bodies_1a983e1cea391dd22239d8285029466468" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>PBAT_API BodiesImpl *</type>
+        <definition>PBAT_API BodiesImpl* pbat::gpu::geometry::Bodies::Impl</definition>
+        <argsstring>()</argsstring>
+        <name>Impl</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para></para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/geometry/Primitives.h" line="179" column="25"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1gpu_1_1geometry_1_1Bodies_1ad9311964db53dd6e3d96db2f918d4e36" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>PBAT_API BodiesImpl const  *</type>
+        <definition>PBAT_API BodiesImpl const* pbat::gpu::geometry::Bodies::Impl</definition>
+        <argsstring>() const</argsstring>
+        <name>Impl</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para></para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/geometry/Primitives.h" line="184" column="31"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1gpu_1_1geometry_1_1Bodies_1a183f6c06c470ad14ba1599d9d84ecd9b" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>PBAT_API</type>
+        <definition>PBAT_API pbat::gpu::geometry::Bodies::~Bodies</definition>
+        <argsstring>()</argsstring>
+        <name>~Bodies</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/geometry/Primitives.h" line="188" column="14"/>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/geometry/Primitives.h" line="136" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/geometry/Primitives.h" bodystart="135" bodyend="192"/>
+    <listofallmembers>
+      <member refid="classpbat_1_1gpu_1_1geometry_1_1Bodies_1aa9d57e5789a657a3d6509588878e251b" prot="public" virt="non-virtual"><scope>pbat::gpu::geometry::Bodies</scope><name>Bodies</name></member>
+      <member refid="classpbat_1_1gpu_1_1geometry_1_1Bodies_1ad23b43322d75216f75252207787e6021" prot="public" virt="non-virtual"><scope>pbat::gpu::geometry::Bodies</scope><name>Bodies</name></member>
+      <member refid="classpbat_1_1gpu_1_1geometry_1_1Bodies_1a95f25e52add26c19ce5240680a957d28" prot="public" virt="non-virtual"><scope>pbat::gpu::geometry::Bodies</scope><name>Bodies</name></member>
+      <member refid="classpbat_1_1gpu_1_1geometry_1_1Bodies_1a90cb51e568c42b77e27e3ba8ff8d4f87" prot="public" virt="non-virtual"><scope>pbat::gpu::geometry::Bodies</scope><name>Get</name></member>
+      <member refid="classpbat_1_1gpu_1_1geometry_1_1Bodies_1a983e1cea391dd22239d8285029466468" prot="public" virt="non-virtual"><scope>pbat::gpu::geometry::Bodies</scope><name>Impl</name></member>
+      <member refid="classpbat_1_1gpu_1_1geometry_1_1Bodies_1ad9311964db53dd6e3d96db2f918d4e36" prot="public" virt="non-virtual"><scope>pbat::gpu::geometry::Bodies</scope><name>Impl</name></member>
+      <member refid="classpbat_1_1gpu_1_1geometry_1_1Bodies_1aae2300a420b98d3a42af21388ef2df66" prot="private" virt="non-virtual"><scope>pbat::gpu::geometry::Bodies</scope><name>mImpl</name></member>
+      <member refid="classpbat_1_1gpu_1_1geometry_1_1Bodies_1a5f9f58af51892f9e72650be283456e32" prot="public" virt="non-virtual"><scope>pbat::gpu::geometry::Bodies</scope><name>NumberOfBodies</name></member>
+      <member refid="classpbat_1_1gpu_1_1geometry_1_1Bodies_1a179d0e43f6ef0b030449b71df892f90c" prot="public" virt="non-virtual"><scope>pbat::gpu::geometry::Bodies</scope><name>operator=</name></member>
+      <member refid="classpbat_1_1gpu_1_1geometry_1_1Bodies_1a5326dd0b638c9e51efa10bf33126802c" prot="public" virt="non-virtual"><scope>pbat::gpu::geometry::Bodies</scope><name>operator=</name></member>
+      <member refid="classpbat_1_1gpu_1_1geometry_1_1Bodies_1a183f6c06c470ad14ba1599d9d84ecd9b" prot="public" virt="non-virtual"><scope>pbat::gpu::geometry::Bodies</scope><name>~Bodies</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

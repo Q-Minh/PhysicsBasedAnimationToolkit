@@ -1,0 +1,1487 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="namespacepbat_1_1math" kind="namespace" language="C++">
+    <compoundname>pbat::math</compoundname>
+    <innerclass refid="classpbat_1_1math_1_1DivergenceFreePolynomialBasis" prot="public">pbat::math::DivergenceFreePolynomialBasis</innerclass>
+    <innerclass refid="classpbat_1_1math_1_1DivergenceFreePolynomialBasis_3_011_00_011_01_4" prot="public">pbat::math::DivergenceFreePolynomialBasis&lt; 1, 1 &gt;</innerclass>
+    <innerclass refid="classpbat_1_1math_1_1DivergenceFreePolynomialBasis_3_011_00_012_01_4" prot="public">pbat::math::DivergenceFreePolynomialBasis&lt; 1, 2 &gt;</innerclass>
+    <innerclass refid="classpbat_1_1math_1_1DivergenceFreePolynomialBasis_3_011_00_013_01_4" prot="public">pbat::math::DivergenceFreePolynomialBasis&lt; 1, 3 &gt;</innerclass>
+    <innerclass refid="classpbat_1_1math_1_1DivergenceFreePolynomialBasis_3_011_00_014_01_4" prot="public">pbat::math::DivergenceFreePolynomialBasis&lt; 1, 4 &gt;</innerclass>
+    <innerclass refid="classpbat_1_1math_1_1DivergenceFreePolynomialBasis_3_012_00_011_01_4" prot="public">pbat::math::DivergenceFreePolynomialBasis&lt; 2, 1 &gt;</innerclass>
+    <innerclass refid="classpbat_1_1math_1_1DivergenceFreePolynomialBasis_3_012_00_012_01_4" prot="public">pbat::math::DivergenceFreePolynomialBasis&lt; 2, 2 &gt;</innerclass>
+    <innerclass refid="classpbat_1_1math_1_1DivergenceFreePolynomialBasis_3_012_00_013_01_4" prot="public">pbat::math::DivergenceFreePolynomialBasis&lt; 2, 3 &gt;</innerclass>
+    <innerclass refid="classpbat_1_1math_1_1DivergenceFreePolynomialBasis_3_012_00_014_01_4" prot="public">pbat::math::DivergenceFreePolynomialBasis&lt; 2, 4 &gt;</innerclass>
+    <innerclass refid="classpbat_1_1math_1_1DivergenceFreePolynomialBasis_3_013_00_011_01_4" prot="public">pbat::math::DivergenceFreePolynomialBasis&lt; 3, 1 &gt;</innerclass>
+    <innerclass refid="classpbat_1_1math_1_1DivergenceFreePolynomialBasis_3_013_00_012_01_4" prot="public">pbat::math::DivergenceFreePolynomialBasis&lt; 3, 2 &gt;</innerclass>
+    <innerclass refid="classpbat_1_1math_1_1DivergenceFreePolynomialBasis_3_013_00_013_01_4" prot="public">pbat::math::DivergenceFreePolynomialBasis&lt; 3, 3 &gt;</innerclass>
+    <innerclass refid="classpbat_1_1math_1_1DivergenceFreePolynomialBasis_3_013_00_014_01_4" prot="public">pbat::math::DivergenceFreePolynomialBasis&lt; 3, 4 &gt;</innerclass>
+    <innerclass refid="structpbat_1_1math_1_1DynamicQuadrature" prot="public">pbat::math::DynamicQuadrature</innerclass>
+    <innerclass refid="structpbat_1_1math_1_1FixedSizeVariableQuadrature" prot="public">pbat::math::FixedSizeVariableQuadrature</innerclass>
+    <innerclass refid="structpbat_1_1math_1_1GaussLegendreQuadrature" prot="public">pbat::math::GaussLegendreQuadrature</innerclass>
+    <innerclass refid="structpbat_1_1math_1_1GaussLegendreQuadrature_3_011_00_011_01_4" prot="public">pbat::math::GaussLegendreQuadrature&lt; 1, 1 &gt;</innerclass>
+    <innerclass refid="structpbat_1_1math_1_1GaussLegendreQuadrature_3_011_00_0110_01_4" prot="public">pbat::math::GaussLegendreQuadrature&lt; 1, 10 &gt;</innerclass>
+    <innerclass refid="structpbat_1_1math_1_1GaussLegendreQuadrature_3_011_00_012_01_4" prot="public">pbat::math::GaussLegendreQuadrature&lt; 1, 2 &gt;</innerclass>
+    <innerclass refid="structpbat_1_1math_1_1GaussLegendreQuadrature_3_011_00_013_01_4" prot="public">pbat::math::GaussLegendreQuadrature&lt; 1, 3 &gt;</innerclass>
+    <innerclass refid="structpbat_1_1math_1_1GaussLegendreQuadrature_3_011_00_014_01_4" prot="public">pbat::math::GaussLegendreQuadrature&lt; 1, 4 &gt;</innerclass>
+    <innerclass refid="structpbat_1_1math_1_1GaussLegendreQuadrature_3_011_00_015_01_4" prot="public">pbat::math::GaussLegendreQuadrature&lt; 1, 5 &gt;</innerclass>
+    <innerclass refid="structpbat_1_1math_1_1GaussLegendreQuadrature_3_011_00_016_01_4" prot="public">pbat::math::GaussLegendreQuadrature&lt; 1, 6 &gt;</innerclass>
+    <innerclass refid="structpbat_1_1math_1_1GaussLegendreQuadrature_3_011_00_017_01_4" prot="public">pbat::math::GaussLegendreQuadrature&lt; 1, 7 &gt;</innerclass>
+    <innerclass refid="structpbat_1_1math_1_1GaussLegendreQuadrature_3_011_00_018_01_4" prot="public">pbat::math::GaussLegendreQuadrature&lt; 1, 8 &gt;</innerclass>
+    <innerclass refid="structpbat_1_1math_1_1GaussLegendreQuadrature_3_011_00_019_01_4" prot="public">pbat::math::GaussLegendreQuadrature&lt; 1, 9 &gt;</innerclass>
+    <innerclass refid="structpbat_1_1math_1_1GaussLegendreQuadrature_3_012_00_011_01_4" prot="public">pbat::math::GaussLegendreQuadrature&lt; 2, 1 &gt;</innerclass>
+    <innerclass refid="structpbat_1_1math_1_1GaussLegendreQuadrature_3_012_00_0110_01_4" prot="public">pbat::math::GaussLegendreQuadrature&lt; 2, 10 &gt;</innerclass>
+    <innerclass refid="structpbat_1_1math_1_1GaussLegendreQuadrature_3_012_00_012_01_4" prot="public">pbat::math::GaussLegendreQuadrature&lt; 2, 2 &gt;</innerclass>
+    <innerclass refid="structpbat_1_1math_1_1GaussLegendreQuadrature_3_012_00_013_01_4" prot="public">pbat::math::GaussLegendreQuadrature&lt; 2, 3 &gt;</innerclass>
+    <innerclass refid="structpbat_1_1math_1_1GaussLegendreQuadrature_3_012_00_014_01_4" prot="public">pbat::math::GaussLegendreQuadrature&lt; 2, 4 &gt;</innerclass>
+    <innerclass refid="structpbat_1_1math_1_1GaussLegendreQuadrature_3_012_00_015_01_4" prot="public">pbat::math::GaussLegendreQuadrature&lt; 2, 5 &gt;</innerclass>
+    <innerclass refid="structpbat_1_1math_1_1GaussLegendreQuadrature_3_012_00_016_01_4" prot="public">pbat::math::GaussLegendreQuadrature&lt; 2, 6 &gt;</innerclass>
+    <innerclass refid="structpbat_1_1math_1_1GaussLegendreQuadrature_3_012_00_017_01_4" prot="public">pbat::math::GaussLegendreQuadrature&lt; 2, 7 &gt;</innerclass>
+    <innerclass refid="structpbat_1_1math_1_1GaussLegendreQuadrature_3_012_00_018_01_4" prot="public">pbat::math::GaussLegendreQuadrature&lt; 2, 8 &gt;</innerclass>
+    <innerclass refid="structpbat_1_1math_1_1GaussLegendreQuadrature_3_012_00_019_01_4" prot="public">pbat::math::GaussLegendreQuadrature&lt; 2, 9 &gt;</innerclass>
+    <innerclass refid="structpbat_1_1math_1_1GaussLegendreQuadrature_3_013_00_011_01_4" prot="public">pbat::math::GaussLegendreQuadrature&lt; 3, 1 &gt;</innerclass>
+    <innerclass refid="structpbat_1_1math_1_1GaussLegendreQuadrature_3_013_00_0110_01_4" prot="public">pbat::math::GaussLegendreQuadrature&lt; 3, 10 &gt;</innerclass>
+    <innerclass refid="structpbat_1_1math_1_1GaussLegendreQuadrature_3_013_00_012_01_4" prot="public">pbat::math::GaussLegendreQuadrature&lt; 3, 2 &gt;</innerclass>
+    <innerclass refid="structpbat_1_1math_1_1GaussLegendreQuadrature_3_013_00_013_01_4" prot="public">pbat::math::GaussLegendreQuadrature&lt; 3, 3 &gt;</innerclass>
+    <innerclass refid="structpbat_1_1math_1_1GaussLegendreQuadrature_3_013_00_014_01_4" prot="public">pbat::math::GaussLegendreQuadrature&lt; 3, 4 &gt;</innerclass>
+    <innerclass refid="structpbat_1_1math_1_1GaussLegendreQuadrature_3_013_00_015_01_4" prot="public">pbat::math::GaussLegendreQuadrature&lt; 3, 5 &gt;</innerclass>
+    <innerclass refid="structpbat_1_1math_1_1GaussLegendreQuadrature_3_013_00_016_01_4" prot="public">pbat::math::GaussLegendreQuadrature&lt; 3, 6 &gt;</innerclass>
+    <innerclass refid="structpbat_1_1math_1_1GaussLegendreQuadrature_3_013_00_017_01_4" prot="public">pbat::math::GaussLegendreQuadrature&lt; 3, 7 &gt;</innerclass>
+    <innerclass refid="structpbat_1_1math_1_1GaussLegendreQuadrature_3_013_00_018_01_4" prot="public">pbat::math::GaussLegendreQuadrature&lt; 3, 8 &gt;</innerclass>
+    <innerclass refid="structpbat_1_1math_1_1GaussLegendreQuadrature_3_013_00_019_01_4" prot="public">pbat::math::GaussLegendreQuadrature&lt; 3, 9 &gt;</innerclass>
+    <innerclass refid="classpbat_1_1math_1_1LinearOperator" prot="public">pbat::math::LinearOperator</innerclass>
+    <innerclass refid="classpbat_1_1math_1_1MonomialBasis" prot="public">pbat::math::MonomialBasis</innerclass>
+    <innerclass refid="classpbat_1_1math_1_1MonomialBasis_3_011_00_011_01_4" prot="public">pbat::math::MonomialBasis&lt; 1, 1 &gt;</innerclass>
+    <innerclass refid="classpbat_1_1math_1_1MonomialBasis_3_011_00_012_01_4" prot="public">pbat::math::MonomialBasis&lt; 1, 2 &gt;</innerclass>
+    <innerclass refid="classpbat_1_1math_1_1MonomialBasis_3_011_00_013_01_4" prot="public">pbat::math::MonomialBasis&lt; 1, 3 &gt;</innerclass>
+    <innerclass refid="classpbat_1_1math_1_1MonomialBasis_3_011_00_014_01_4" prot="public">pbat::math::MonomialBasis&lt; 1, 4 &gt;</innerclass>
+    <innerclass refid="classpbat_1_1math_1_1MonomialBasis_3_012_00_011_01_4" prot="public">pbat::math::MonomialBasis&lt; 2, 1 &gt;</innerclass>
+    <innerclass refid="classpbat_1_1math_1_1MonomialBasis_3_012_00_012_01_4" prot="public">pbat::math::MonomialBasis&lt; 2, 2 &gt;</innerclass>
+    <innerclass refid="classpbat_1_1math_1_1MonomialBasis_3_012_00_013_01_4" prot="public">pbat::math::MonomialBasis&lt; 2, 3 &gt;</innerclass>
+    <innerclass refid="classpbat_1_1math_1_1MonomialBasis_3_012_00_014_01_4" prot="public">pbat::math::MonomialBasis&lt; 2, 4 &gt;</innerclass>
+    <innerclass refid="classpbat_1_1math_1_1MonomialBasis_3_013_00_011_01_4" prot="public">pbat::math::MonomialBasis&lt; 3, 1 &gt;</innerclass>
+    <innerclass refid="classpbat_1_1math_1_1MonomialBasis_3_013_00_012_01_4" prot="public">pbat::math::MonomialBasis&lt; 3, 2 &gt;</innerclass>
+    <innerclass refid="classpbat_1_1math_1_1MonomialBasis_3_013_00_013_01_4" prot="public">pbat::math::MonomialBasis&lt; 3, 3 &gt;</innerclass>
+    <innerclass refid="classpbat_1_1math_1_1MonomialBasis_3_013_00_014_01_4" prot="public">pbat::math::MonomialBasis&lt; 3, 4 &gt;</innerclass>
+    <innerclass refid="classpbat_1_1math_1_1OrthonormalPolynomialBasis" prot="public">pbat::math::OrthonormalPolynomialBasis</innerclass>
+    <innerclass refid="classpbat_1_1math_1_1OrthonormalPolynomialBasis_3_011_00_011_01_4" prot="public">pbat::math::OrthonormalPolynomialBasis&lt; 1, 1 &gt;</innerclass>
+    <innerclass refid="classpbat_1_1math_1_1OrthonormalPolynomialBasis_3_011_00_012_01_4" prot="public">pbat::math::OrthonormalPolynomialBasis&lt; 1, 2 &gt;</innerclass>
+    <innerclass refid="classpbat_1_1math_1_1OrthonormalPolynomialBasis_3_011_00_013_01_4" prot="public">pbat::math::OrthonormalPolynomialBasis&lt; 1, 3 &gt;</innerclass>
+    <innerclass refid="classpbat_1_1math_1_1OrthonormalPolynomialBasis_3_011_00_014_01_4" prot="public">pbat::math::OrthonormalPolynomialBasis&lt; 1, 4 &gt;</innerclass>
+    <innerclass refid="classpbat_1_1math_1_1OrthonormalPolynomialBasis_3_012_00_011_01_4" prot="public">pbat::math::OrthonormalPolynomialBasis&lt; 2, 1 &gt;</innerclass>
+    <innerclass refid="classpbat_1_1math_1_1OrthonormalPolynomialBasis_3_012_00_012_01_4" prot="public">pbat::math::OrthonormalPolynomialBasis&lt; 2, 2 &gt;</innerclass>
+    <innerclass refid="classpbat_1_1math_1_1OrthonormalPolynomialBasis_3_012_00_013_01_4" prot="public">pbat::math::OrthonormalPolynomialBasis&lt; 2, 3 &gt;</innerclass>
+    <innerclass refid="classpbat_1_1math_1_1OrthonormalPolynomialBasis_3_012_00_014_01_4" prot="public">pbat::math::OrthonormalPolynomialBasis&lt; 2, 4 &gt;</innerclass>
+    <innerclass refid="classpbat_1_1math_1_1OrthonormalPolynomialBasis_3_013_00_011_01_4" prot="public">pbat::math::OrthonormalPolynomialBasis&lt; 3, 1 &gt;</innerclass>
+    <innerclass refid="classpbat_1_1math_1_1OrthonormalPolynomialBasis_3_013_00_012_01_4" prot="public">pbat::math::OrthonormalPolynomialBasis&lt; 3, 2 &gt;</innerclass>
+    <innerclass refid="classpbat_1_1math_1_1OrthonormalPolynomialBasis_3_013_00_013_01_4" prot="public">pbat::math::OrthonormalPolynomialBasis&lt; 3, 3 &gt;</innerclass>
+    <innerclass refid="classpbat_1_1math_1_1OrthonormalPolynomialBasis_3_013_00_014_01_4" prot="public">pbat::math::OrthonormalPolynomialBasis&lt; 3, 4 &gt;</innerclass>
+    <innerclass refid="structpbat_1_1math_1_1OverflowChecked" prot="public">pbat::math::OverflowChecked</innerclass>
+    <innerclass refid="structpbat_1_1math_1_1Rational" prot="public">pbat::math::Rational</innerclass>
+    <innerclass refid="structpbat_1_1math_1_1SymmetricSimplexPolynomialQuadratureRule" prot="public">pbat::math::SymmetricSimplexPolynomialQuadratureRule</innerclass>
+    <innerclass refid="structpbat_1_1math_1_1SymmetricSimplexPolynomialQuadratureRule_3_011_00_010_01_4" prot="public">pbat::math::SymmetricSimplexPolynomialQuadratureRule&lt; 1, 0 &gt;</innerclass>
+    <innerclass refid="structpbat_1_1math_1_1SymmetricSimplexPolynomialQuadratureRule_3_011_00_011_01_4" prot="public">pbat::math::SymmetricSimplexPolynomialQuadratureRule&lt; 1, 1 &gt;</innerclass>
+    <innerclass refid="structpbat_1_1math_1_1SymmetricSimplexPolynomialQuadratureRule_3_011_00_0111_01_4" prot="public">pbat::math::SymmetricSimplexPolynomialQuadratureRule&lt; 1, 11 &gt;</innerclass>
+    <innerclass refid="structpbat_1_1math_1_1SymmetricSimplexPolynomialQuadratureRule_3_011_00_0113_01_4" prot="public">pbat::math::SymmetricSimplexPolynomialQuadratureRule&lt; 1, 13 &gt;</innerclass>
+    <innerclass refid="structpbat_1_1math_1_1SymmetricSimplexPolynomialQuadratureRule_3_011_00_0115_01_4" prot="public">pbat::math::SymmetricSimplexPolynomialQuadratureRule&lt; 1, 15 &gt;</innerclass>
+    <innerclass refid="structpbat_1_1math_1_1SymmetricSimplexPolynomialQuadratureRule_3_011_00_0117_01_4" prot="public">pbat::math::SymmetricSimplexPolynomialQuadratureRule&lt; 1, 17 &gt;</innerclass>
+    <innerclass refid="structpbat_1_1math_1_1SymmetricSimplexPolynomialQuadratureRule_3_011_00_0119_01_4" prot="public">pbat::math::SymmetricSimplexPolynomialQuadratureRule&lt; 1, 19 &gt;</innerclass>
+    <innerclass refid="structpbat_1_1math_1_1SymmetricSimplexPolynomialQuadratureRule_3_011_00_0121_01_4" prot="public">pbat::math::SymmetricSimplexPolynomialQuadratureRule&lt; 1, 21 &gt;</innerclass>
+    <innerclass refid="structpbat_1_1math_1_1SymmetricSimplexPolynomialQuadratureRule_3_011_00_013_01_4" prot="public">pbat::math::SymmetricSimplexPolynomialQuadratureRule&lt; 1, 3 &gt;</innerclass>
+    <innerclass refid="structpbat_1_1math_1_1SymmetricSimplexPolynomialQuadratureRule_3_011_00_015_01_4" prot="public">pbat::math::SymmetricSimplexPolynomialQuadratureRule&lt; 1, 5 &gt;</innerclass>
+    <innerclass refid="structpbat_1_1math_1_1SymmetricSimplexPolynomialQuadratureRule_3_011_00_017_01_4" prot="public">pbat::math::SymmetricSimplexPolynomialQuadratureRule&lt; 1, 7 &gt;</innerclass>
+    <innerclass refid="structpbat_1_1math_1_1SymmetricSimplexPolynomialQuadratureRule_3_011_00_019_01_4" prot="public">pbat::math::SymmetricSimplexPolynomialQuadratureRule&lt; 1, 9 &gt;</innerclass>
+    <innerclass refid="structpbat_1_1math_1_1SymmetricSimplexPolynomialQuadratureRule_3_012_00_010_01_4" prot="public">pbat::math::SymmetricSimplexPolynomialQuadratureRule&lt; 2, 0 &gt;</innerclass>
+    <innerclass refid="structpbat_1_1math_1_1SymmetricSimplexPolynomialQuadratureRule_3_012_00_011_01_4" prot="public">pbat::math::SymmetricSimplexPolynomialQuadratureRule&lt; 2, 1 &gt;</innerclass>
+    <innerclass refid="structpbat_1_1math_1_1SymmetricSimplexPolynomialQuadratureRule_3_012_00_0110_01_4" prot="public">pbat::math::SymmetricSimplexPolynomialQuadratureRule&lt; 2, 10 &gt;</innerclass>
+    <innerclass refid="structpbat_1_1math_1_1SymmetricSimplexPolynomialQuadratureRule_3_012_00_0111_01_4" prot="public">pbat::math::SymmetricSimplexPolynomialQuadratureRule&lt; 2, 11 &gt;</innerclass>
+    <innerclass refid="structpbat_1_1math_1_1SymmetricSimplexPolynomialQuadratureRule_3_012_00_0112_01_4" prot="public">pbat::math::SymmetricSimplexPolynomialQuadratureRule&lt; 2, 12 &gt;</innerclass>
+    <innerclass refid="structpbat_1_1math_1_1SymmetricSimplexPolynomialQuadratureRule_3_012_00_0113_01_4" prot="public">pbat::math::SymmetricSimplexPolynomialQuadratureRule&lt; 2, 13 &gt;</innerclass>
+    <innerclass refid="structpbat_1_1math_1_1SymmetricSimplexPolynomialQuadratureRule_3_012_00_0114_01_4" prot="public">pbat::math::SymmetricSimplexPolynomialQuadratureRule&lt; 2, 14 &gt;</innerclass>
+    <innerclass refid="structpbat_1_1math_1_1SymmetricSimplexPolynomialQuadratureRule_3_012_00_0115_01_4" prot="public">pbat::math::SymmetricSimplexPolynomialQuadratureRule&lt; 2, 15 &gt;</innerclass>
+    <innerclass refid="structpbat_1_1math_1_1SymmetricSimplexPolynomialQuadratureRule_3_012_00_0116_01_4" prot="public">pbat::math::SymmetricSimplexPolynomialQuadratureRule&lt; 2, 16 &gt;</innerclass>
+    <innerclass refid="structpbat_1_1math_1_1SymmetricSimplexPolynomialQuadratureRule_3_012_00_0117_01_4" prot="public">pbat::math::SymmetricSimplexPolynomialQuadratureRule&lt; 2, 17 &gt;</innerclass>
+    <innerclass refid="structpbat_1_1math_1_1SymmetricSimplexPolynomialQuadratureRule_3_012_00_0118_01_4" prot="public">pbat::math::SymmetricSimplexPolynomialQuadratureRule&lt; 2, 18 &gt;</innerclass>
+    <innerclass refid="structpbat_1_1math_1_1SymmetricSimplexPolynomialQuadratureRule_3_012_00_0119_01_4" prot="public">pbat::math::SymmetricSimplexPolynomialQuadratureRule&lt; 2, 19 &gt;</innerclass>
+    <innerclass refid="structpbat_1_1math_1_1SymmetricSimplexPolynomialQuadratureRule_3_012_00_012_01_4" prot="public">pbat::math::SymmetricSimplexPolynomialQuadratureRule&lt; 2, 2 &gt;</innerclass>
+    <innerclass refid="structpbat_1_1math_1_1SymmetricSimplexPolynomialQuadratureRule_3_012_00_0120_01_4" prot="public">pbat::math::SymmetricSimplexPolynomialQuadratureRule&lt; 2, 20 &gt;</innerclass>
+    <innerclass refid="structpbat_1_1math_1_1SymmetricSimplexPolynomialQuadratureRule_3_012_00_0121_01_4" prot="public">pbat::math::SymmetricSimplexPolynomialQuadratureRule&lt; 2, 21 &gt;</innerclass>
+    <innerclass refid="structpbat_1_1math_1_1SymmetricSimplexPolynomialQuadratureRule_3_012_00_0122_01_4" prot="public">pbat::math::SymmetricSimplexPolynomialQuadratureRule&lt; 2, 22 &gt;</innerclass>
+    <innerclass refid="structpbat_1_1math_1_1SymmetricSimplexPolynomialQuadratureRule_3_012_00_0123_01_4" prot="public">pbat::math::SymmetricSimplexPolynomialQuadratureRule&lt; 2, 23 &gt;</innerclass>
+    <innerclass refid="structpbat_1_1math_1_1SymmetricSimplexPolynomialQuadratureRule_3_012_00_0124_01_4" prot="public">pbat::math::SymmetricSimplexPolynomialQuadratureRule&lt; 2, 24 &gt;</innerclass>
+    <innerclass refid="structpbat_1_1math_1_1SymmetricSimplexPolynomialQuadratureRule_3_012_00_0125_01_4" prot="public">pbat::math::SymmetricSimplexPolynomialQuadratureRule&lt; 2, 25 &gt;</innerclass>
+    <innerclass refid="structpbat_1_1math_1_1SymmetricSimplexPolynomialQuadratureRule_3_012_00_0126_01_4" prot="public">pbat::math::SymmetricSimplexPolynomialQuadratureRule&lt; 2, 26 &gt;</innerclass>
+    <innerclass refid="structpbat_1_1math_1_1SymmetricSimplexPolynomialQuadratureRule_3_012_00_0127_01_4" prot="public">pbat::math::SymmetricSimplexPolynomialQuadratureRule&lt; 2, 27 &gt;</innerclass>
+    <innerclass refid="structpbat_1_1math_1_1SymmetricSimplexPolynomialQuadratureRule_3_012_00_0128_01_4" prot="public">pbat::math::SymmetricSimplexPolynomialQuadratureRule&lt; 2, 28 &gt;</innerclass>
+    <innerclass refid="structpbat_1_1math_1_1SymmetricSimplexPolynomialQuadratureRule_3_012_00_0129_01_4" prot="public">pbat::math::SymmetricSimplexPolynomialQuadratureRule&lt; 2, 29 &gt;</innerclass>
+    <innerclass refid="structpbat_1_1math_1_1SymmetricSimplexPolynomialQuadratureRule_3_012_00_013_01_4" prot="public">pbat::math::SymmetricSimplexPolynomialQuadratureRule&lt; 2, 3 &gt;</innerclass>
+    <innerclass refid="structpbat_1_1math_1_1SymmetricSimplexPolynomialQuadratureRule_3_012_00_014_01_4" prot="public">pbat::math::SymmetricSimplexPolynomialQuadratureRule&lt; 2, 4 &gt;</innerclass>
+    <innerclass refid="structpbat_1_1math_1_1SymmetricSimplexPolynomialQuadratureRule_3_012_00_015_01_4" prot="public">pbat::math::SymmetricSimplexPolynomialQuadratureRule&lt; 2, 5 &gt;</innerclass>
+    <innerclass refid="structpbat_1_1math_1_1SymmetricSimplexPolynomialQuadratureRule_3_012_00_016_01_4" prot="public">pbat::math::SymmetricSimplexPolynomialQuadratureRule&lt; 2, 6 &gt;</innerclass>
+    <innerclass refid="structpbat_1_1math_1_1SymmetricSimplexPolynomialQuadratureRule_3_012_00_017_01_4" prot="public">pbat::math::SymmetricSimplexPolynomialQuadratureRule&lt; 2, 7 &gt;</innerclass>
+    <innerclass refid="structpbat_1_1math_1_1SymmetricSimplexPolynomialQuadratureRule_3_012_00_018_01_4" prot="public">pbat::math::SymmetricSimplexPolynomialQuadratureRule&lt; 2, 8 &gt;</innerclass>
+    <innerclass refid="structpbat_1_1math_1_1SymmetricSimplexPolynomialQuadratureRule_3_012_00_019_01_4" prot="public">pbat::math::SymmetricSimplexPolynomialQuadratureRule&lt; 2, 9 &gt;</innerclass>
+    <innerclass refid="structpbat_1_1math_1_1SymmetricSimplexPolynomialQuadratureRule_3_013_00_010_01_4" prot="public">pbat::math::SymmetricSimplexPolynomialQuadratureRule&lt; 3, 0 &gt;</innerclass>
+    <innerclass refid="structpbat_1_1math_1_1SymmetricSimplexPolynomialQuadratureRule_3_013_00_011_01_4" prot="public">pbat::math::SymmetricSimplexPolynomialQuadratureRule&lt; 3, 1 &gt;</innerclass>
+    <innerclass refid="structpbat_1_1math_1_1SymmetricSimplexPolynomialQuadratureRule_3_013_00_0110_01_4" prot="public">pbat::math::SymmetricSimplexPolynomialQuadratureRule&lt; 3, 10 &gt;</innerclass>
+    <innerclass refid="structpbat_1_1math_1_1SymmetricSimplexPolynomialQuadratureRule_3_013_00_0111_01_4" prot="public">pbat::math::SymmetricSimplexPolynomialQuadratureRule&lt; 3, 11 &gt;</innerclass>
+    <innerclass refid="structpbat_1_1math_1_1SymmetricSimplexPolynomialQuadratureRule_3_013_00_0112_01_4" prot="public">pbat::math::SymmetricSimplexPolynomialQuadratureRule&lt; 3, 12 &gt;</innerclass>
+    <innerclass refid="structpbat_1_1math_1_1SymmetricSimplexPolynomialQuadratureRule_3_013_00_0113_01_4" prot="public">pbat::math::SymmetricSimplexPolynomialQuadratureRule&lt; 3, 13 &gt;</innerclass>
+    <innerclass refid="structpbat_1_1math_1_1SymmetricSimplexPolynomialQuadratureRule_3_013_00_0114_01_4" prot="public">pbat::math::SymmetricSimplexPolynomialQuadratureRule&lt; 3, 14 &gt;</innerclass>
+    <innerclass refid="structpbat_1_1math_1_1SymmetricSimplexPolynomialQuadratureRule_3_013_00_0115_01_4" prot="public">pbat::math::SymmetricSimplexPolynomialQuadratureRule&lt; 3, 15 &gt;</innerclass>
+    <innerclass refid="structpbat_1_1math_1_1SymmetricSimplexPolynomialQuadratureRule_3_013_00_0116_01_4" prot="public">pbat::math::SymmetricSimplexPolynomialQuadratureRule&lt; 3, 16 &gt;</innerclass>
+    <innerclass refid="structpbat_1_1math_1_1SymmetricSimplexPolynomialQuadratureRule_3_013_00_0117_01_4" prot="public">pbat::math::SymmetricSimplexPolynomialQuadratureRule&lt; 3, 17 &gt;</innerclass>
+    <innerclass refid="structpbat_1_1math_1_1SymmetricSimplexPolynomialQuadratureRule_3_013_00_0118_01_4" prot="public">pbat::math::SymmetricSimplexPolynomialQuadratureRule&lt; 3, 18 &gt;</innerclass>
+    <innerclass refid="structpbat_1_1math_1_1SymmetricSimplexPolynomialQuadratureRule_3_013_00_0119_01_4" prot="public">pbat::math::SymmetricSimplexPolynomialQuadratureRule&lt; 3, 19 &gt;</innerclass>
+    <innerclass refid="structpbat_1_1math_1_1SymmetricSimplexPolynomialQuadratureRule_3_013_00_012_01_4" prot="public">pbat::math::SymmetricSimplexPolynomialQuadratureRule&lt; 3, 2 &gt;</innerclass>
+    <innerclass refid="structpbat_1_1math_1_1SymmetricSimplexPolynomialQuadratureRule_3_013_00_0120_01_4" prot="public">pbat::math::SymmetricSimplexPolynomialQuadratureRule&lt; 3, 20 &gt;</innerclass>
+    <innerclass refid="structpbat_1_1math_1_1SymmetricSimplexPolynomialQuadratureRule_3_013_00_013_01_4" prot="public">pbat::math::SymmetricSimplexPolynomialQuadratureRule&lt; 3, 3 &gt;</innerclass>
+    <innerclass refid="structpbat_1_1math_1_1SymmetricSimplexPolynomialQuadratureRule_3_013_00_014_01_4" prot="public">pbat::math::SymmetricSimplexPolynomialQuadratureRule&lt; 3, 4 &gt;</innerclass>
+    <innerclass refid="structpbat_1_1math_1_1SymmetricSimplexPolynomialQuadratureRule_3_013_00_015_01_4" prot="public">pbat::math::SymmetricSimplexPolynomialQuadratureRule&lt; 3, 5 &gt;</innerclass>
+    <innerclass refid="structpbat_1_1math_1_1SymmetricSimplexPolynomialQuadratureRule_3_013_00_016_01_4" prot="public">pbat::math::SymmetricSimplexPolynomialQuadratureRule&lt; 3, 6 &gt;</innerclass>
+    <innerclass refid="structpbat_1_1math_1_1SymmetricSimplexPolynomialQuadratureRule_3_013_00_017_01_4" prot="public">pbat::math::SymmetricSimplexPolynomialQuadratureRule&lt; 3, 7 &gt;</innerclass>
+    <innerclass refid="structpbat_1_1math_1_1SymmetricSimplexPolynomialQuadratureRule_3_013_00_018_01_4" prot="public">pbat::math::SymmetricSimplexPolynomialQuadratureRule&lt; 3, 8 &gt;</innerclass>
+    <innerclass refid="structpbat_1_1math_1_1SymmetricSimplexPolynomialQuadratureRule_3_013_00_019_01_4" prot="public">pbat::math::SymmetricSimplexPolynomialQuadratureRule&lt; 3, 9 &gt;</innerclass>
+    <innernamespace refid="namespacepbat_1_1math_1_1linalg">pbat::math::linalg</innernamespace>
+    <innernamespace refid="namespacepbat_1_1math_1_1test">pbat::math::test</innernamespace>
+      <sectiondef kind="var">
+      <memberdef kind="variable" id="math_2Concepts_8h_1ae14e7ab8997bb0ae5469831d9b61da70" prot="public" static="no" mutable="no">
+        <templateparamlist>
+          <param>
+            <type>class T</type>
+          </param>
+        </templateparamlist>
+        <type>concept</type>
+        <definition>concept pbat::math::CPolynomialBasis</definition>
+        <argsstring></argsstring>
+        <name>CPolynomialBasis</name>
+        <initializer>= requires(T t)
+{
+    requires std::is_integral_v&lt;decltype(T::kDims)&gt;;
+    requires std::is_integral_v&lt;decltype(T::kOrder)&gt;;
+    requires std::is_integral_v&lt;decltype(T::kSize)&gt;;
+    {
+        t.eval(Vector&lt;T::kDims&gt;{})
+    } -&gt; std::convertible_to&lt;Vector&lt;T::kSize&gt;&gt;;
+    {
+        t.derivatives(Vector&lt;T::kDims&gt;{})
+    } -&gt; std::convertible_to&lt;Matrix&lt;T::kDims, T::kSize&gt;&gt;;
+    {
+        t.antiderivatives(Vector&lt;T::kDims&gt;{})
+    } -&gt; std::convertible_to&lt;Matrix&lt;T::kSize, T::kDims&gt;&gt;;
+}</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/Concepts.h" line="12" column="9" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/Concepts.h" bodystart="12" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="math_2Concepts_8h_1a57a42cbbf887aaab757cfc93da252b65" prot="public" static="no" mutable="no">
+        <templateparamlist>
+          <param>
+            <type>class T</type>
+          </param>
+        </templateparamlist>
+        <type>concept</type>
+        <definition>concept pbat::math::CVectorPolynomialBasis</definition>
+        <argsstring></argsstring>
+        <name>CVectorPolynomialBasis</name>
+        <initializer>= requires(T t)
+{
+    requires std::is_integral_v&lt;decltype(T::kDims)&gt;;
+    requires std::is_integral_v&lt;decltype(T::kOrder)&gt;;
+    requires std::is_integral_v&lt;decltype(T::kSize)&gt;;
+    {
+        t.eval(Vector&lt;T::kDims&gt;{})
+    } -&gt; std::convertible_to&lt;Matrix&lt;T::kSize, T::kDims&gt;&gt;;
+}</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/Concepts.h" line="29" column="9" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/Concepts.h" bodystart="29" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="math_2Concepts_8h_1add1c8147e184ced6bec8361c2081d462" prot="public" static="no" mutable="no">
+        <templateparamlist>
+          <param>
+            <type>class Q</type>
+          </param>
+        </templateparamlist>
+        <type>concept</type>
+        <definition>concept pbat::math::CQuadratureRule</definition>
+        <argsstring></argsstring>
+        <name>CQuadratureRule</name>
+        <initializer>= requires(Q q)
+{
+    requires std::integral&lt;decltype(Q::kDims)&gt;;
+    requires common::CContiguousArithmeticRange&lt;decltype(q.points)&gt;;
+    requires common::CContiguousArithmeticRange&lt;decltype(q.weights)&gt;;
+    {
+        q.points.size()
+    } -&gt; std::convertible_to&lt;int&gt;;
+    {
+        q.weights.size()
+    } -&gt; std::convertible_to&lt;int&gt;;
+}</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/Concepts.h" line="40" column="9" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/Concepts.h" bodystart="40" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="math_2Concepts_8h_1a101e8774d7e6ce21331bba2b5b7845fe" prot="public" static="no" mutable="no">
+        <templateparamlist>
+          <param>
+            <type>class Q</type>
+          </param>
+        </templateparamlist>
+        <type>concept</type>
+        <definition>concept pbat::math::CFixedPointQuadratureRule</definition>
+        <argsstring></argsstring>
+        <name>CFixedPointQuadratureRule</name>
+        <initializer>= requires(Q q)
+{
+    requires CQuadratureRule&lt;Q&gt;;
+    requires std::is_integral_v&lt;decltype(Q::kPoints)&gt;;
+    {q.points.size() / q.weights.size() == Q::kDims};
+    {q.weights.size() == Q::kPoints};
+}</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/Concepts.h" line="54" column="9" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/Concepts.h" bodystart="54" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="math_2Concepts_8h_1a7391fdc8144a24b63a05477f034c331e" prot="public" static="no" mutable="no">
+        <templateparamlist>
+          <param>
+            <type>class Q</type>
+          </param>
+        </templateparamlist>
+        <type>concept</type>
+        <definition>concept pbat::math::CPolynomialQuadratureRule</definition>
+        <argsstring></argsstring>
+        <name>CPolynomialQuadratureRule</name>
+        <initializer>= requires(Q q)
+{
+    requires CQuadratureRule&lt;Q&gt;;
+    requires std::is_integral_v&lt;decltype(Q::kOrder)&gt;;
+}</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/Concepts.h" line="63" column="9" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/Concepts.h" bodystart="63" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="math_2Concepts_8h_1a235751640677bfdfd7abac49173d6bd4" prot="public" static="no" mutable="no">
+        <templateparamlist>
+          <param>
+            <type>class Q</type>
+          </param>
+        </templateparamlist>
+        <type>concept</type>
+        <definition>concept pbat::math::CFixedPointPolynomialQuadratureRule</definition>
+        <argsstring></argsstring>
+        <name>CFixedPointPolynomialQuadratureRule</name>
+        <initializer>=
+    CFixedPointQuadratureRule&lt;Q&gt; and CPolynomialQuadratureRule&lt;Q&gt;</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/Concepts.h" line="70" column="9" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/Concepts.h" bodystart="70" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="LinearOperator_8h_1abcb59bce196417c0e3a2bd2165d4e400" prot="public" static="no" mutable="no">
+        <templateparamlist>
+          <param>
+            <type>class T</type>
+          </param>
+        </templateparamlist>
+        <type>concept</type>
+        <definition>concept pbat::math::CLinearOperator</definition>
+        <argsstring></argsstring>
+        <name>CLinearOperator</name>
+        <initializer>= requires(T t)
+{
+    {
+        t.OutputDimensions()
+    } -&gt; std::convertible_to&lt;int&gt;;
+    {
+        t.InputDimensions()
+    } -&gt; std::convertible_to&lt;int&gt;;
+    {t.Apply(VectorX{}, std::declval&lt;VectorX&amp;&gt;())};
+    {t.Apply(MatrixX{}, std::declval&lt;MatrixX&amp;&gt;())};
+    {
+        t.ToMatrix()
+    } -&gt; std::convertible_to&lt;CSCMatrix&gt;;
+}</initializer>
+        <briefdescription>
+<para>Concept for operator that satisfies linearity in the mathematical sense. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>Linear operators satisfy L(ax+bz) = a*L(x) + b*L(z), hence simply scale and add the input (1st parameter of Apply) prior to the Apply member function to obtain the desired result. Often, the user wishes to obtain the result of multiple applications of linear operators, hence we should not overwrite the out variable (2nd parameter of Apply), but simply add to it. To subtract from it, simply negate the input x, i.e. L(-x) = -L(x) by linearity. </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/LinearOperator.h" line="24" column="9" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/LinearOperator.h" bodystart="24" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="func">
+      <memberdef kind="function" id="IntegerArithmeticChecks_8h_1af6354d9820e3b600691dd6ea48d9d002" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>std::integral</type>
+            <declname>Integer</declname>
+            <defname>Integer</defname>
+          </param>
+        </templateparamlist>
+        <type>bool</type>
+        <definition>bool pbat::math::AddOverflows</definition>
+        <argsstring>(Integer a, Integer b)</argsstring>
+        <name>AddOverflows</name>
+        <param>
+          <type>Integer</type>
+          <declname>a</declname>
+        </param>
+        <param>
+          <type>Integer</type>
+          <declname>b</declname>
+        </param>
+        <briefdescription>
+<para>Checks if the operation a+b is not in the range of values representable by the type of Integer. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>Integer</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>a</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>b</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para></para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/IntegerArithmeticChecks.h" line="20" column="6" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/IntegerArithmeticChecks.h" bodystart="20" bodyend="38"/>
+      </memberdef>
+      <memberdef kind="function" id="IntegerArithmeticChecks_8h_1ad656b96dc60c4b75e6db64a1714fb9a3" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>std::integral</type>
+            <declname>Integer</declname>
+            <defname>Integer</defname>
+          </param>
+        </templateparamlist>
+        <type>bool</type>
+        <definition>bool pbat::math::MultiplyOverflows</definition>
+        <argsstring>(Integer a, Integer b)</argsstring>
+        <name>MultiplyOverflows</name>
+        <param>
+          <type>Integer</type>
+          <declname>a</declname>
+        </param>
+        <param>
+          <type>Integer</type>
+          <declname>b</declname>
+        </param>
+        <briefdescription>
+<para>Checks if the operation a*b is not in the range of values representable by the type of Integer. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>Integer</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>a</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>b</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para></para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/IntegerArithmeticChecks.h" line="49" column="6" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/IntegerArithmeticChecks.h" bodystart="49" bodyend="69"/>
+      </memberdef>
+      <memberdef kind="function" id="IntegerArithmeticChecks_8h_1abf12b4b36e2909b7f876cb51422d7d4f" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>std::integral</type>
+            <declname>Integer</declname>
+            <defname>Integer</defname>
+          </param>
+        </templateparamlist>
+        <type>bool</type>
+        <definition>bool pbat::math::NegationOverflows</definition>
+        <argsstring>(Integer a)</argsstring>
+        <name>NegationOverflows</name>
+        <param>
+          <type>Integer</type>
+          <declname>a</declname>
+        </param>
+        <briefdescription>
+<para>Checks if the operation -a is not in the range of values representable by the type of Integer. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>Integer</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>a</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para></para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/IntegerArithmeticChecks.h" line="79" column="6" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/IntegerArithmeticChecks.h" bodystart="79" bodyend="94"/>
+      </memberdef>
+      <memberdef kind="function" id="LinearOperator_8h_1a82ad63da57bc574df63312b4d1a3263d" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>CLinearOperator...</type>
+            <declname>TLinearOperators</declname>
+            <defname>TLinearOperators</defname>
+          </param>
+        </templateparamlist>
+        <type><ref refid="classpbat_1_1math_1_1LinearOperator" kindref="compound">LinearOperator</ref>&lt; TLinearOperators... &gt;</type>
+        <definition>LinearOperator&lt;TLinearOperators...&gt; pbat::math::ComposeLinearOperators</definition>
+        <argsstring>(TLinearOperators const &amp;... inOps)</argsstring>
+        <name>ComposeLinearOperators</name>
+        <param>
+          <type>TLinearOperators const &amp;...</type>
+          <declname>inOps</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/LinearOperator.h" line="138" column="16" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/LinearOperator.h" bodystart="138" bodyend="141"/>
+      </memberdef>
+      <memberdef kind="function" id="source_2pbat_2math_2MomentFitting_8h_1a91c284be6ef9a49eaad8679ffea26d11" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>CPolynomialBasis</type>
+            <declname>TBasis</declname>
+            <defname>TBasis</defname>
+          </param>
+          <param>
+            <type>CFixedPointPolynomialQuadratureRule</type>
+            <declname>TQuad</declname>
+            <defname>TQuad</defname>
+          </param>
+        </templateparamlist>
+        <type>Matrix&lt; TBasis::kSize, TQuad::kPoints &gt;</type>
+        <definition>Matrix&lt;TBasis::kSize, TQuad::kPoints&gt; pbat::math::ReferenceMomentFittingMatrix</definition>
+        <argsstring>(TBasis const &amp;Pb, TQuad const &amp;Q)</argsstring>
+        <name>ReferenceMomentFittingMatrix</name>
+        <param>
+          <type>TBasis const &amp;</type>
+          <declname>Pb</declname>
+        </param>
+        <param>
+          <type>TQuad const &amp;</type>
+          <declname>Q</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/MomentFitting.h" line="33" column="8" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/MomentFitting.h" bodystart="33" bodyend="45"/>
+      </memberdef>
+      <memberdef kind="function" id="source_2pbat_2math_2MomentFitting_8h_1a4070a7918ad2d400e3d6b46f21628980" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>CPolynomialBasis</type>
+            <declname>TBasis</declname>
+            <defname>TBasis</defname>
+          </param>
+          <param>
+            <type>CPolynomialQuadratureRule</type>
+            <declname>TQuad</declname>
+            <defname>TQuad</defname>
+          </param>
+        </templateparamlist>
+        <type>Matrix&lt; TBasis::kSize, Eigen::Dynamic &gt;</type>
+        <definition>Matrix&lt;TBasis::kSize, Eigen::Dynamic&gt; pbat::math::ReferenceMomentFittingMatrix</definition>
+        <argsstring>(TBasis const &amp;Pb, TQuad const &amp;Q)</argsstring>
+        <name>ReferenceMomentFittingMatrix</name>
+        <param>
+          <type>TBasis const &amp;</type>
+          <declname>Pb</declname>
+        </param>
+        <param>
+          <type>TQuad const &amp;</type>
+          <declname>Q</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/MomentFitting.h" line="48" column="8" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/MomentFitting.h" bodystart="48" bodyend="59"/>
+      </memberdef>
+      <memberdef kind="function" id="source_2pbat_2math_2MomentFitting_8h_1a658f5800ec1f75c32669cae17052832d" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>CPolynomialBasis</type>
+            <declname>TBasis</declname>
+            <defname>TBasis</defname>
+          </param>
+          <param>
+            <type>class TDerivedXg</type>
+          </param>
+        </templateparamlist>
+        <type>Matrix&lt; TBasis::kSize, Eigen::Dynamic &gt;</type>
+        <definition>Matrix&lt;TBasis::kSize, Eigen::Dynamic&gt; pbat::math::ReferenceMomentFittingMatrix</definition>
+        <argsstring>(TBasis const &amp;Pb, Eigen::MatrixBase&lt; TDerivedXg &gt; const &amp;Xg)</argsstring>
+        <name>ReferenceMomentFittingMatrix</name>
+        <param>
+          <type>TBasis const &amp;</type>
+          <declname>Pb</declname>
+        </param>
+        <param>
+          <type>Eigen::MatrixBase&lt; TDerivedXg &gt; const &amp;</type>
+          <declname>Xg</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/MomentFitting.h" line="63" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/MomentFitting.h" bodystart="63" bodyend="74"/>
+      </memberdef>
+      <memberdef kind="function" id="source_2pbat_2math_2MomentFitting_8h_1a60a5d434e57fb32d7d04db8804fad0c0" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class TDerivedP</type>
+          </param>
+          <param>
+            <type>class TDerivedB</type>
+          </param>
+        </templateparamlist>
+        <type>VectorX</type>
+        <definition>VectorX pbat::math::MomentFittedWeights</definition>
+        <argsstring>(Eigen::MatrixBase&lt; TDerivedP &gt; const &amp;P, Eigen::DenseBase&lt; TDerivedB &gt; const &amp;b, Index maxIterations=10, Scalar precision=std::numeric_limits&lt; Scalar &gt;::epsilon())</argsstring>
+        <name>MomentFittedWeights</name>
+        <param>
+          <type>Eigen::MatrixBase&lt; TDerivedP &gt; const &amp;</type>
+          <declname>P</declname>
+        </param>
+        <param>
+          <type>Eigen::DenseBase&lt; TDerivedB &gt; const &amp;</type>
+          <declname>b</declname>
+        </param>
+        <param>
+          <type>Index</type>
+          <declname>maxIterations</declname>
+          <defval>10</defval>
+        </param>
+        <param>
+          <type>Scalar</type>
+          <declname>precision</declname>
+          <defval>std::numeric_limits&lt; Scalar &gt;::epsilon()</defval>
+        </param>
+        <briefdescription>
+<para>Computes non-negative quadrature weights wg by moment fitting. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>TDerivedP</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>TDerivedB</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>P</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Moment fitting matrix </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>b</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Target integrated polynomials </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>maxIterations</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Maximum number of non-negative least-squares active set solver </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>precision</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Convergence threshold </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para></para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/MomentFitting.h" line="87" column="9" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/MomentFitting.h" bodystart="87" bodyend="111"/>
+      </memberdef>
+      <memberdef kind="function" id="source_2pbat_2math_2MomentFitting_8h_1a7a957de07002ebdda85d6db7c6330982" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>CPolynomialBasis</type>
+            <declname>Polynomial</declname>
+            <defname>Polynomial</defname>
+          </param>
+          <param>
+            <type>class TDerivedXg</type>
+          </param>
+          <param>
+            <type>class TDerivedWg</type>
+          </param>
+        </templateparamlist>
+        <type>Vector&lt; Polynomial::kSize &gt;</type>
+        <definition>Vector&lt;Polynomial::kSize&gt; pbat::math::Integrate</definition>
+        <argsstring>(Polynomial const &amp;P, Eigen::MatrixBase&lt; TDerivedXg &gt; const &amp;Xg, Eigen::DenseBase&lt; TDerivedWg &gt; const &amp;wg)</argsstring>
+        <name>Integrate</name>
+        <param>
+          <type>Polynomial const &amp;</type>
+          <declname>P</declname>
+        </param>
+        <param>
+          <type>Eigen::MatrixBase&lt; TDerivedXg &gt; const &amp;</type>
+          <declname>Xg</declname>
+        </param>
+        <param>
+          <type>Eigen::DenseBase&lt; TDerivedWg &gt; const &amp;</type>
+          <declname>wg</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>Polynomial</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>TDerivedXg</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>TDerivedWg</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>P</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>Xg</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>|#dims|x|#quad.pts.| </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>wg</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>|#quad.pts.|x1 </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para></para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/MomentFitting.h" line="124" column="8" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/MomentFitting.h" bodystart="124" bodyend="134"/>
+      </memberdef>
+      <memberdef kind="function" id="source_2pbat_2math_2MomentFitting_8h_1a9119231df253fe1947acf2126516c9cf" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>CPolynomialBasis</type>
+            <declname>Polynomial</declname>
+            <defname>Polynomial</defname>
+          </param>
+          <param>
+            <type>class TDerivedXg1</type>
+          </param>
+          <param>
+            <type>class TDerivedXg2</type>
+          </param>
+          <param>
+            <type>class TDerivedWg2</type>
+          </param>
+        </templateparamlist>
+        <type>Vector&lt; TDerivedXg1::ColsAtCompileTime &gt;</type>
+        <definition>Vector&lt;TDerivedXg1::ColsAtCompileTime&gt; pbat::math::TransferQuadrature</definition>
+        <argsstring>(Polynomial const &amp;P, Eigen::MatrixBase&lt; TDerivedXg1 &gt; const &amp;Xg1, Eigen::MatrixBase&lt; TDerivedXg2 &gt; const &amp;Xg2, Eigen::DenseBase&lt; TDerivedWg2 &gt; const &amp;wg2, Index maxIterations=10, Scalar precision=std::numeric_limits&lt; Scalar &gt;::epsilon())</argsstring>
+        <name>TransferQuadrature</name>
+        <param>
+          <type>Polynomial const &amp;</type>
+          <declname>P</declname>
+        </param>
+        <param>
+          <type>Eigen::MatrixBase&lt; TDerivedXg1 &gt; const &amp;</type>
+          <declname>Xg1</declname>
+        </param>
+        <param>
+          <type>Eigen::MatrixBase&lt; TDerivedXg2 &gt; const &amp;</type>
+          <declname>Xg2</declname>
+        </param>
+        <param>
+          <type>Eigen::DenseBase&lt; TDerivedWg2 &gt; const &amp;</type>
+          <declname>wg2</declname>
+        </param>
+        <param>
+          <type>Index</type>
+          <declname>maxIterations</declname>
+          <defval>10</defval>
+        </param>
+        <param>
+          <type>Scalar</type>
+          <declname>precision</declname>
+          <defval>std::numeric_limits&lt; Scalar &gt;::epsilon()</defval>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>TDerivedXg1</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>TDerivedXg2</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>TDerivedWg2</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>Polynomial</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>P</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>Xg1</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>|#dims|x|#new quad.pts.| </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>Xg2</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>|#dims|x|#old quad.pts.| </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>wg2</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>|#old quad.pts.|x1 </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>maxIterations</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Maximum number of non-negative least-squares active set solver </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>precision</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Convergence threshold </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para></para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/MomentFitting.h" line="151" column="8" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/MomentFitting.h" bodystart="151" bodyend="163"/>
+      </memberdef>
+      <memberdef kind="function" id="source_2pbat_2math_2MomentFitting_8h_1a65b3ded73da653ded342b276f841518a" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>auto</type>
+            <declname>Order</declname>
+            <defname>Order</defname>
+          </param>
+          <param>
+            <type>class TDerivedS1</type>
+          </param>
+          <param>
+            <type>class TDerivedXi1</type>
+          </param>
+          <param>
+            <type>class TDerivedS2</type>
+          </param>
+          <param>
+            <type>class TDerivedXi2</type>
+          </param>
+          <param>
+            <type>class TDerivedWg2</type>
+          </param>
+        </templateparamlist>
+        <type>std::pair&lt; VectorX, VectorX &gt;</type>
+        <definition>std::pair&lt;VectorX, VectorX&gt; pbat::math::TransferQuadrature</definition>
+        <argsstring>(Eigen::DenseBase&lt; TDerivedS1 &gt; const &amp;S1, Eigen::MatrixBase&lt; TDerivedXi1 &gt; const &amp;Xi1, Eigen::DenseBase&lt; TDerivedS2 &gt; const &amp;S2, Eigen::MatrixBase&lt; TDerivedXi2 &gt; const &amp;Xi2, Eigen::DenseBase&lt; TDerivedWg2 &gt; const &amp;wi2, Index nSimplices=-1, bool bEvaluateError=false, Index maxIterations=10, Scalar precision=std::numeric_limits&lt; Scalar &gt;::epsilon())</argsstring>
+        <name>TransferQuadrature</name>
+        <param>
+          <type>Eigen::DenseBase&lt; TDerivedS1 &gt; const &amp;</type>
+          <declname>S1</declname>
+        </param>
+        <param>
+          <type>Eigen::MatrixBase&lt; TDerivedXi1 &gt; const &amp;</type>
+          <declname>Xi1</declname>
+        </param>
+        <param>
+          <type>Eigen::DenseBase&lt; TDerivedS2 &gt; const &amp;</type>
+          <declname>S2</declname>
+        </param>
+        <param>
+          <type>Eigen::MatrixBase&lt; TDerivedXi2 &gt; const &amp;</type>
+          <declname>Xi2</declname>
+        </param>
+        <param>
+          <type>Eigen::DenseBase&lt; TDerivedWg2 &gt; const &amp;</type>
+          <declname>wi2</declname>
+        </param>
+        <param>
+          <type>Index</type>
+          <declname>nSimplices</declname>
+          <defval>-1</defval>
+        </param>
+        <param>
+          <type>bool</type>
+          <declname>bEvaluateError</declname>
+          <defval>false</defval>
+        </param>
+        <param>
+          <type>Index</type>
+          <declname>maxIterations</declname>
+          <defval>10</defval>
+        </param>
+        <param>
+          <type>Scalar</type>
+          <declname>precision</declname>
+          <defval>std::numeric_limits&lt; Scalar &gt;::epsilon()</defval>
+        </param>
+        <briefdescription>
+<para>Obtain weights wi1 by transferring an existing quadrature rule (Xi2,wi2) defined on a domain composed of simplices onto a new quadrature rule (Xi1,wi1) defined on the same domain, given fixed quadrature points Xi1. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>Order</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Order of the quadrature rules </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>TDerivedS1</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>TDerivedXi1</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>TDerivedS2</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>TDerivedXi2</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>TDerivedWg2</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>S1</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>1x|Xi1.cols()| Index array giving the simplex containing the corresponding quadrature point in columns of Xi1. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>Xi1</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>|#dims|x|#new quad.pts.| array of quadrature point positions defined in reference simplex space </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>S2</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>|Xi2.cols()|x1 index array giving the simplex containing the corresponding quadrature point in columns of Xi2. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>Xi2</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>|#dims|x|#old quad.pts.| array of quadrature point positions defined in reference simplex space </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>wi2</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>|#old quad.pts.|x1 array of quadrature weights </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>nSimplices</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>bEvaluateError</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Whether to compute the integration error on the new quadrature rule </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>maxIterations</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Maximum number of non-negative least-squares active set solver </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>precision</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Convergence threshold </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>(w, e) where w are the quadrature weights associated with points Xi1, and e is the integration error in each simplex (zeros if not bEvaluateError). </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/MomentFitting.h" line="199" column="11" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/MomentFitting.h" bodystart="199" bodyend="292"/>
+      </memberdef>
+      <memberdef kind="function" id="source_2pbat_2math_2MomentFitting_8h_1a7c60476c04c752080248dea4490adeb8" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>int</type>
+            <declname>Order</declname>
+            <defname>Order</defname>
+          </param>
+          <param>
+            <type>class TDerivedS1</type>
+          </param>
+          <param>
+            <type>class TDerivedX1</type>
+          </param>
+          <param>
+            <type>class TDerivedS2</type>
+          </param>
+          <param>
+            <type>class TDerivedX2</type>
+          </param>
+          <param>
+            <type>class TDerivedW2</type>
+          </param>
+        </templateparamlist>
+        <type>std::tuple&lt; MatrixX, MatrixX, IndexVectorX &gt;</type>
+        <definition>std::tuple&lt;MatrixX , MatrixX , IndexVectorX &gt; pbat::math::ReferenceMomentFittingSystems</definition>
+        <argsstring>(Eigen::DenseBase&lt; TDerivedS1 &gt; const &amp;S1, Eigen::MatrixBase&lt; TDerivedX1 &gt; const &amp;X1, Eigen::DenseBase&lt; TDerivedS2 &gt; const &amp;S2, Eigen::MatrixBase&lt; TDerivedX2 &gt; const &amp;X2, Eigen::DenseBase&lt; TDerivedW2 &gt; const &amp;w2, Index nSimplices=Index(-1))</argsstring>
+        <name>ReferenceMomentFittingSystems</name>
+        <param>
+          <type>Eigen::DenseBase&lt; TDerivedS1 &gt; const &amp;</type>
+          <declname>S1</declname>
+        </param>
+        <param>
+          <type>Eigen::MatrixBase&lt; TDerivedX1 &gt; const &amp;</type>
+          <declname>X1</declname>
+        </param>
+        <param>
+          <type>Eigen::DenseBase&lt; TDerivedS2 &gt; const &amp;</type>
+          <declname>S2</declname>
+        </param>
+        <param>
+          <type>Eigen::MatrixBase&lt; TDerivedX2 &gt; const &amp;</type>
+          <declname>X2</declname>
+        </param>
+        <param>
+          <type>Eigen::DenseBase&lt; TDerivedW2 &gt; const &amp;</type>
+          <declname>w2</declname>
+        </param>
+        <param>
+          <type>Index</type>
+          <declname>nSimplices</declname>
+          <defval>Index(-1)</defval>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>Order</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>TDerivedS1</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>TDerivedX1</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>TDerivedS2</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>TDerivedX2</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>TDerivedW2</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>S1</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>X1</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>S2</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>X2</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>w2</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>std::tuple&lt;MatrixX, MatrixX, IndexVectorX&gt; </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/MomentFitting.h" line="318" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/MomentFitting.h" bodystart="318" bodyend="420"/>
+      </memberdef>
+      <memberdef kind="function" id="source_2pbat_2math_2MomentFitting_8h_1a58d4cdbb1fe6d7af504590cece8a8ed8" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class TDerivedM</type>
+          </param>
+          <param>
+            <type>class TDerivedP</type>
+          </param>
+        </templateparamlist>
+        <type>CSRMatrix</type>
+        <definition>CSRMatrix pbat::math::BlockDiagonalReferenceMomentFittingSystem</definition>
+        <argsstring>(Eigen::MatrixBase&lt; TDerivedM &gt; const &amp;M, Eigen::DenseBase&lt; TDerivedP &gt; const &amp;P)</argsstring>
+        <name>BlockDiagonalReferenceMomentFittingSystem</name>
+        <param>
+          <type>Eigen::MatrixBase&lt; TDerivedM &gt; const &amp;</type>
+          <declname>M</declname>
+        </param>
+        <param>
+          <type>Eigen::DenseBase&lt; TDerivedP &gt; const &amp;</type>
+          <declname>P</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>TDerivedM</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>TDerivedP</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>M</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>P</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>CSRMatrix The block diagonal row sparse matrix GM, whose diagonal blocks are the individual reference moment fitting matrices in M, such that GM @ w = B.reshaped() is the global sparse linear system to solve for quadrature weights w. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/MomentFitting.h" line="434" column="11" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/MomentFitting.h" bodystart="434" bodyend="471"/>
+      </memberdef>
+      <memberdef kind="function" id="Rational_8h_1a050b90561ef12502d6e95c466ba05428" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>std::integral</type>
+            <declname>Integer</declname>
+            <defname>Integer</defname>
+          </param>
+        </templateparamlist>
+        <type><ref refid="structpbat_1_1math_1_1Rational" kindref="compound">Rational</ref></type>
+        <definition>Rational pbat::math::operator-</definition>
+        <argsstring>(Integer a, Rational const &amp;b)</argsstring>
+        <name>operator-</name>
+        <param>
+          <type>Integer</type>
+          <declname>a</declname>
+        </param>
+        <param>
+          <type><ref refid="structpbat_1_1math_1_1Rational" kindref="compound">Rational</ref> const &amp;</type>
+          <declname>b</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/Rational.h" line="109" column="17" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/Rational.h" bodystart="109" bodyend="112"/>
+      </memberdef>
+      <memberdef kind="function" id="Rational_8h_1aa8bc93cf63e3a48989ec7030fc05d6f9" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>std::integral</type>
+            <declname>Integer</declname>
+            <defname>Integer</defname>
+          </param>
+        </templateparamlist>
+        <type><ref refid="structpbat_1_1math_1_1Rational" kindref="compound">Rational</ref></type>
+        <definition>Rational pbat::math::operator+</definition>
+        <argsstring>(Integer a, Rational const &amp;b)</argsstring>
+        <name>operator+</name>
+        <param>
+          <type>Integer</type>
+          <declname>a</declname>
+        </param>
+        <param>
+          <type><ref refid="structpbat_1_1math_1_1Rational" kindref="compound">Rational</ref> const &amp;</type>
+          <declname>b</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/Rational.h" line="115" column="17" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/Rational.h" bodystart="115" bodyend="118"/>
+      </memberdef>
+      <memberdef kind="function" id="Rational_8h_1a39ce251935f526490f3d0edf66019b87" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>std::integral</type>
+            <declname>Integer</declname>
+            <defname>Integer</defname>
+          </param>
+        </templateparamlist>
+        <type><ref refid="structpbat_1_1math_1_1Rational" kindref="compound">Rational</ref></type>
+        <definition>Rational pbat::math::operator*</definition>
+        <argsstring>(Integer a, Rational const &amp;b)</argsstring>
+        <name>operator*</name>
+        <param>
+          <type>Integer</type>
+          <declname>a</declname>
+        </param>
+        <param>
+          <type><ref refid="structpbat_1_1math_1_1Rational" kindref="compound">Rational</ref> const &amp;</type>
+          <declname>b</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/Rational.h" line="121" column="17" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/Rational.h" bodystart="121" bodyend="124"/>
+      </memberdef>
+      <memberdef kind="function" id="Rational_8h_1a595c5ee597d093d48d380c657a5a52f7" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>std::integral</type>
+            <declname>Integer</declname>
+            <defname>Integer</defname>
+          </param>
+        </templateparamlist>
+        <type><ref refid="structpbat_1_1math_1_1Rational" kindref="compound">Rational</ref></type>
+        <definition>Rational pbat::math::operator/</definition>
+        <argsstring>(Integer a, Rational const &amp;b)</argsstring>
+        <name>operator/</name>
+        <param>
+          <type>Integer</type>
+          <declname>a</declname>
+        </param>
+        <param>
+          <type><ref refid="structpbat_1_1math_1_1Rational" kindref="compound">Rational</ref> const &amp;</type>
+          <declname>b</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/Rational.h" line="127" column="17" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/Rational.h" bodystart="127" bodyend="130"/>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/Concepts.h" line="9" column="14"/>
+  </compounddef>
+</doxygen>

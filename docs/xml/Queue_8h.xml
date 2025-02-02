@@ -1,0 +1,88 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="Queue_8h" kind="file" language="C++">
+    <compoundname>Queue.h</compoundname>
+    <includes refid="HostDevice_8h" local="yes">pbat/HostDevice.h</includes>
+    <includedby refid="Common_8h" local="yes">/workspaces/PhysicsBasedAnimationToolkit/source/pbat/common/Common.h</includedby>
+    <includedby refid="Queue_8cpp" local="yes">/workspaces/PhysicsBasedAnimationToolkit/source/pbat/common/Queue.cpp</includedby>
+    <incdepgraph>
+      <node id="2">
+        <label>pbat/HostDevice.h</label>
+        <link refid="HostDevice_8h_source"/>
+      </node>
+      <node id="1">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/common/Queue.h</label>
+        <link refid="Queue_8h"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+      </node>
+    </incdepgraph>
+    <invincdepgraph>
+      <node id="2">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/common/Common.h</label>
+        <link refid="Common_8h_source"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/Pbat.h</label>
+        <link refid="Pbat_8h_source"/>
+      </node>
+      <node id="1">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/common/Queue.h</label>
+        <link refid="Queue_8h"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+      </node>
+    </invincdepgraph>
+    <innerclass refid="classpbat_1_1common_1_1Queue" prot="public">pbat::common::Queue</innerclass>
+    <innernamespace refid="namespacepbat">pbat</innernamespace>
+    <innernamespace refid="namespacepbat_1_1common">pbat::common</innernamespace>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="preprocessor">#ifndef<sp/>PBAT_COMMON_QUEUE_H</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="2"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>PBAT_COMMON_QUEUE_H</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="3"><highlight class="normal"></highlight></codeline>
+<codeline lineno="4"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;pbat/HostDevice.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="5"><highlight class="normal"></highlight></codeline>
+<codeline lineno="6"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal">pbat<sp/>{</highlight></codeline>
+<codeline lineno="7"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal">common<sp/>{</highlight></codeline>
+<codeline lineno="8"><highlight class="normal"></highlight></codeline>
+<codeline lineno="9"><highlight class="normal"></highlight><highlight class="keyword">template</highlight><highlight class="normal"><sp/>&lt;</highlight><highlight class="keyword">class</highlight><highlight class="normal"><sp/>T,<sp/>auto<sp/>kCapacity<sp/>=<sp/>64&gt;</highlight></codeline>
+<codeline lineno="10" refid="classpbat_1_1common_1_1Queue" refkind="compound"><highlight class="normal"></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal"><ref refid="classpbat_1_1common_1_1Queue" kindref="compound">Queue</ref></highlight></codeline>
+<codeline lineno="11"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="12"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="13"><highlight class="normal"><sp/><sp/><sp/><sp/>PBAT_HOST_DEVICE<sp/><ref refid="classpbat_1_1common_1_1Queue" kindref="compound">Queue</ref>()<sp/>:<sp/>queue{},<sp/>begin{0},<sp/>end{0}<sp/>{}</highlight></codeline>
+<codeline lineno="14"><highlight class="normal"><sp/><sp/><sp/><sp/>PBAT_HOST_DEVICE<sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/>Push(T<sp/>value)</highlight></codeline>
+<codeline lineno="15"><highlight class="normal"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="16"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>queue[end]<sp/>=<sp/>value;</highlight></codeline>
+<codeline lineno="17"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>end<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/>(end<sp/>+<sp/>1)<sp/>%<sp/>kCapacity;</highlight></codeline>
+<codeline lineno="18"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>++n;</highlight></codeline>
+<codeline lineno="19"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="20"><highlight class="normal"><sp/><sp/><sp/><sp/>PBAT_HOST_DEVICE<sp/>T<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>Top()</highlight><highlight class="keyword"><sp/>const<sp/></highlight><highlight class="normal">{<sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>queue[begin];<sp/>}</highlight></codeline>
+<codeline lineno="21"><highlight class="normal"><sp/><sp/><sp/><sp/>PBAT_HOST_DEVICE<sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/>Pop()</highlight></codeline>
+<codeline lineno="22"><highlight class="normal"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="23"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>begin<sp/>=<sp/>(begin<sp/>+<sp/>1)<sp/>%<sp/>kCapacity;</highlight></codeline>
+<codeline lineno="24"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>--n;</highlight></codeline>
+<codeline lineno="25"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="26"><highlight class="normal"><sp/><sp/><sp/><sp/>PBAT_HOST_DEVICE<sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/>IsFull()</highlight><highlight class="keyword"><sp/>const<sp/></highlight><highlight class="normal">{<sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>n<sp/>==<sp/>kCapacity;<sp/>}</highlight></codeline>
+<codeline lineno="27"><highlight class="normal"><sp/><sp/><sp/><sp/>PBAT_HOST_DEVICE<sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/>IsEmpty()</highlight><highlight class="keyword"><sp/>const<sp/></highlight><highlight class="normal">{<sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>n<sp/>==<sp/>0;<sp/>}</highlight></codeline>
+<codeline lineno="28"><highlight class="normal"><sp/><sp/><sp/><sp/>PBAT_HOST_DEVICE<sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>Size()</highlight><highlight class="keyword"><sp/>const<sp/></highlight><highlight class="normal">{<sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>n;<sp/>}</highlight></codeline>
+<codeline lineno="29"><highlight class="normal"><sp/><sp/><sp/><sp/>PBAT_HOST_DEVICE<sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/>Clear()<sp/>{<sp/>begin<sp/>=<sp/>end<sp/>=<sp/>n<sp/>=<sp/>0;<sp/>}</highlight></codeline>
+<codeline lineno="30"><highlight class="normal"></highlight></codeline>
+<codeline lineno="31"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">private</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="32"><highlight class="normal"><sp/><sp/><sp/><sp/>T<sp/>queue[kCapacity];</highlight></codeline>
+<codeline lineno="33"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">int</highlight><highlight class="normal"><sp/>begin,<sp/>end,<sp/>n;</highlight></codeline>
+<codeline lineno="34"><highlight class="normal">};</highlight></codeline>
+<codeline lineno="35"><highlight class="normal"></highlight></codeline>
+<codeline lineno="36"><highlight class="normal">}<sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>common</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="37"><highlight class="normal">}<sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>pbat</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="38"><highlight class="normal"></highlight></codeline>
+<codeline lineno="39"><highlight class="normal"></highlight><highlight class="preprocessor">#endif<sp/>//<sp/>PBAT_COMMON_QUEUE_H</highlight></codeline>
+    </programlisting>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/common/Queue.h"/>
+  </compounddef>
+</doxygen>

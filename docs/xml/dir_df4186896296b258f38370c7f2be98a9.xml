@@ -1,0 +1,17 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="dir_df4186896296b258f38370c7f2be98a9" kind="dir">
+    <compoundname>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/model</compoundname>
+    <innerfile refid="Armadillo_8cpp">Armadillo.cpp</innerfile>
+    <innerfile refid="Armadillo_8h">Armadillo.h</innerfile>
+    <innerfile refid="Cube_8cpp">Cube.cpp</innerfile>
+    <innerfile refid="Cube_8h">Cube.h</innerfile>
+    <innerfile refid="geometry_2model_2Enums_8h">Enums.h</innerfile>
+    <innerfile refid="Model_8h">Model.h</innerfile>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/model/"/>
+  </compounddef>
+</doxygen>

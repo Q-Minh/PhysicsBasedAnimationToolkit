@@ -1,0 +1,166 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="classpbat_1_1gpu_1_1geometry_1_1SweepAndPrune" kind="class" language="C++" prot="public">
+    <compoundname>pbat::gpu::geometry::SweepAndPrune</compoundname>
+      <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="classpbat_1_1gpu_1_1geometry_1_1SweepAndPrune_1aafdc26093a0977deb548d94762fefda8" prot="private" static="no" mutable="no">
+        <type>SweepAndPruneImpl *</type>
+        <definition>SweepAndPruneImpl* pbat::gpu::geometry::SweepAndPrune::mImpl</definition>
+        <argsstring></argsstring>
+        <name>mImpl</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/geometry/SweepAndPrune.h" line="38" column="23" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/geometry/SweepAndPrune.h" bodystart="38" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpbat_1_1gpu_1_1geometry_1_1SweepAndPrune_1ac3ea361642919edf002d907a0ebd6dd5" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>PBAT_API</type>
+        <definition>PBAT_API pbat::gpu::geometry::SweepAndPrune::SweepAndPrune</definition>
+        <argsstring>(std::size_t nPrimitives, std::size_t nOverlaps)</argsstring>
+        <name>SweepAndPrune</name>
+        <param>
+          <type>std::size_t</type>
+          <declname>nPrimitives</declname>
+        </param>
+        <param>
+          <type>std::size_t</type>
+          <declname>nOverlaps</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/geometry/SweepAndPrune.h" line="21" column="14"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1gpu_1_1geometry_1_1SweepAndPrune_1ad51f92b6755611c5e5fe735c0de1c89b" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>pbat::gpu::geometry::SweepAndPrune::SweepAndPrune</definition>
+        <argsstring>(SweepAndPrune const &amp;)=delete</argsstring>
+        <name>SweepAndPrune</name>
+        <param>
+          <type><ref refid="classpbat_1_1gpu_1_1geometry_1_1SweepAndPrune" kindref="compound">SweepAndPrune</ref> const &amp;</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/geometry/SweepAndPrune.h" line="23" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1gpu_1_1geometry_1_1SweepAndPrune_1a8c3adcfd01ce50b5e2f88da07b6fdad1" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpbat_1_1gpu_1_1geometry_1_1SweepAndPrune" kindref="compound">SweepAndPrune</ref> &amp;</type>
+        <definition>SweepAndPrune&amp; pbat::gpu::geometry::SweepAndPrune::operator=</definition>
+        <argsstring>(SweepAndPrune const &amp;)=delete</argsstring>
+        <name>operator=</name>
+        <param>
+          <type><ref refid="classpbat_1_1gpu_1_1geometry_1_1SweepAndPrune" kindref="compound">SweepAndPrune</ref> const &amp;</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/geometry/SweepAndPrune.h" line="24" column="19"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1gpu_1_1geometry_1_1SweepAndPrune_1a9d2c45ac8057248f6d09b67f4c7043c8" prot="public" static="no" const="no" explicit="no" inline="no" noexcept="yes" virt="non-virtual">
+        <type>PBAT_API</type>
+        <definition>PBAT_API pbat::gpu::geometry::SweepAndPrune::SweepAndPrune</definition>
+        <argsstring>(SweepAndPrune &amp;&amp;) noexcept</argsstring>
+        <name>SweepAndPrune</name>
+        <param>
+          <type><ref refid="classpbat_1_1gpu_1_1geometry_1_1SweepAndPrune" kindref="compound">SweepAndPrune</ref> &amp;&amp;</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/geometry/SweepAndPrune.h" line="26" column="14"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1gpu_1_1geometry_1_1SweepAndPrune_1a293acd042c614118f31ef206b6226e2c" prot="public" static="no" const="no" explicit="no" inline="no" noexcept="yes" virt="non-virtual">
+        <type>PBAT_API <ref refid="classpbat_1_1gpu_1_1geometry_1_1SweepAndPrune" kindref="compound">SweepAndPrune</ref> &amp;</type>
+        <definition>PBAT_API SweepAndPrune&amp; pbat::gpu::geometry::SweepAndPrune::operator=</definition>
+        <argsstring>(SweepAndPrune &amp;&amp;) noexcept</argsstring>
+        <name>operator=</name>
+        <param>
+          <type><ref refid="classpbat_1_1gpu_1_1geometry_1_1SweepAndPrune" kindref="compound">SweepAndPrune</ref> &amp;&amp;</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/geometry/SweepAndPrune.h" line="27" column="28"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1gpu_1_1geometry_1_1SweepAndPrune_1ac1b22e383bd5592315e213d98d51ec4a" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>PBAT_API IndexMatrixX</type>
+        <definition>PBAT_API IndexMatrixX pbat::gpu::geometry::SweepAndPrune::SortAndSweep</definition>
+        <argsstring>(Points const &amp;P, Simplices const &amp;S1, Simplices const &amp;S2, Scalar expansion=static_cast&lt; Scalar &gt;(std::numeric_limits&lt; GpuScalar &gt;::epsilon()))</argsstring>
+        <name>SortAndSweep</name>
+        <param>
+          <type><ref refid="classpbat_1_1gpu_1_1geometry_1_1Points" kindref="compound">Points</ref> const &amp;</type>
+          <declname>P</declname>
+        </param>
+        <param>
+          <type><ref refid="classpbat_1_1gpu_1_1geometry_1_1Simplices" kindref="compound">Simplices</ref> const &amp;</type>
+          <declname>S1</declname>
+        </param>
+        <param>
+          <type><ref refid="classpbat_1_1gpu_1_1geometry_1_1Simplices" kindref="compound">Simplices</ref> const &amp;</type>
+          <declname>S2</declname>
+        </param>
+        <param>
+          <type>Scalar</type>
+          <declname>expansion</declname>
+          <defval>static_cast&lt; Scalar &gt;(std::numeric_limits&lt; GpuScalar &gt;::epsilon())</defval>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/geometry/SweepAndPrune.h" line="29" column="27"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1gpu_1_1geometry_1_1SweepAndPrune_1ae90cdbcfa97eb996e927a8b57b78f37e" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>PBAT_API</type>
+        <definition>PBAT_API pbat::gpu::geometry::SweepAndPrune::~SweepAndPrune</definition>
+        <argsstring>()</argsstring>
+        <name>~SweepAndPrune</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/geometry/SweepAndPrune.h" line="35" column="14"/>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/geometry/SweepAndPrune.h" line="19" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/geometry/SweepAndPrune.h" bodystart="18" bodyend="39"/>
+    <listofallmembers>
+      <member refid="classpbat_1_1gpu_1_1geometry_1_1SweepAndPrune_1aafdc26093a0977deb548d94762fefda8" prot="private" virt="non-virtual"><scope>pbat::gpu::geometry::SweepAndPrune</scope><name>mImpl</name></member>
+      <member refid="classpbat_1_1gpu_1_1geometry_1_1SweepAndPrune_1a8c3adcfd01ce50b5e2f88da07b6fdad1" prot="public" virt="non-virtual"><scope>pbat::gpu::geometry::SweepAndPrune</scope><name>operator=</name></member>
+      <member refid="classpbat_1_1gpu_1_1geometry_1_1SweepAndPrune_1a293acd042c614118f31ef206b6226e2c" prot="public" virt="non-virtual"><scope>pbat::gpu::geometry::SweepAndPrune</scope><name>operator=</name></member>
+      <member refid="classpbat_1_1gpu_1_1geometry_1_1SweepAndPrune_1ac1b22e383bd5592315e213d98d51ec4a" prot="public" virt="non-virtual"><scope>pbat::gpu::geometry::SweepAndPrune</scope><name>SortAndSweep</name></member>
+      <member refid="classpbat_1_1gpu_1_1geometry_1_1SweepAndPrune_1ac3ea361642919edf002d907a0ebd6dd5" prot="public" virt="non-virtual"><scope>pbat::gpu::geometry::SweepAndPrune</scope><name>SweepAndPrune</name></member>
+      <member refid="classpbat_1_1gpu_1_1geometry_1_1SweepAndPrune_1ad51f92b6755611c5e5fe735c0de1c89b" prot="public" virt="non-virtual"><scope>pbat::gpu::geometry::SweepAndPrune</scope><name>SweepAndPrune</name></member>
+      <member refid="classpbat_1_1gpu_1_1geometry_1_1SweepAndPrune_1a9d2c45ac8057248f6d09b67f4c7043c8" prot="public" virt="non-virtual"><scope>pbat::gpu::geometry::SweepAndPrune</scope><name>SweepAndPrune</name></member>
+      <member refid="classpbat_1_1gpu_1_1geometry_1_1SweepAndPrune_1ae90cdbcfa97eb996e927a8b57b78f37e" prot="public" virt="non-virtual"><scope>pbat::gpu::geometry::SweepAndPrune</scope><name>~SweepAndPrune</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

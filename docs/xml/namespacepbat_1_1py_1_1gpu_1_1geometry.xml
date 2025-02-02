@@ -1,0 +1,240 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="namespacepbat_1_1py_1_1gpu_1_1geometry" kind="namespace" language="C++">
+    <compoundname>pbat::py::gpu::geometry</compoundname>
+      <sectiondef kind="func">
+      <memberdef kind="function" id="Bodies_8cpp_1a672261252b886a70f267f35e230481c0" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void pbat::py::gpu::geometry::BindBodies</definition>
+        <argsstring>([[maybe_unused]] pybind11::module &amp;m)</argsstring>
+        <name>BindBodies</name>
+        <param>
+          <attributes>[[maybe_unused]</attributes>
+          <type>] pybind11::module &amp;</type>
+          <declname>m</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/gpu/geometry/Bodies.cpp" line="11" column="6" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/gpu/geometry/Bodies.cpp" bodystart="11" bodyend="28"/>
+      </memberdef>
+      <memberdef kind="function" id="Bodies_8h_1a56fe3982f95cfc1f0f3bb7e64f7ac45f" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void pbat::py::gpu::geometry::BindBodies</definition>
+        <argsstring>(pybind11::module &amp;m)</argsstring>
+        <name>BindBodies</name>
+        <param>
+          <type>pybind11::module &amp;</type>
+          <declname>m</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/gpu/geometry/Bodies.h" line="11" column="6" declfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/gpu/geometry/Bodies.h" declline="11" declcolumn="6"/>
+      </memberdef>
+      <memberdef kind="function" id="Bvh_8cpp_1ae7a6773acd5a315b11cadad730c4daee" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void pbat::py::gpu::geometry::BindBvh</definition>
+        <argsstring>([[maybe_unused]] pybind11::module &amp;m)</argsstring>
+        <name>BindBvh</name>
+        <param>
+          <attributes>[[maybe_unused]</attributes>
+          <type>] pybind11::module &amp;</type>
+          <declname>m</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/gpu/geometry/Bvh.cpp" line="13" column="6" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/gpu/geometry/Bvh.cpp" bodystart="13" bodyend="88"/>
+      </memberdef>
+      <memberdef kind="function" id="bindings_2pypbat_2gpu_2geometry_2Bvh_8h_1aeb9cab7ce33d9d4d09c2c03505f8cb24" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void pbat::py::gpu::geometry::BindBvh</definition>
+        <argsstring>(pybind11::module &amp;m)</argsstring>
+        <name>BindBvh</name>
+        <param>
+          <type>pybind11::module &amp;</type>
+          <declname>m</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/gpu/geometry/Bvh.h" line="11" column="6" declfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/gpu/geometry/Bvh.h" declline="11" declcolumn="6"/>
+      </memberdef>
+      <memberdef kind="function" id="BvhQuery_8cpp_1a1a614ec368711d49e360809606c8adc8" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void pbat::py::gpu::geometry::BindBvhQuery</definition>
+        <argsstring>([[maybe_unused]] pybind11::module &amp;m)</argsstring>
+        <name>BindBvhQuery</name>
+        <param>
+          <attributes>[[maybe_unused]</attributes>
+          <type>] pybind11::module &amp;</type>
+          <declname>m</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/gpu/geometry/BvhQuery.cpp" line="14" column="6" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/gpu/geometry/BvhQuery.cpp" bodystart="14" bodyend="102"/>
+      </memberdef>
+      <memberdef kind="function" id="bindings_2pypbat_2gpu_2geometry_2BvhQuery_8h_1aaa57a237f42c877df0e75513ca1abc81" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void pbat::py::gpu::geometry::BindBvhQuery</definition>
+        <argsstring>(pybind11::module &amp;m)</argsstring>
+        <name>BindBvhQuery</name>
+        <param>
+          <type>pybind11::module &amp;</type>
+          <declname>m</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/gpu/geometry/BvhQuery.h" line="11" column="6" declfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/gpu/geometry/BvhQuery.h" declline="11" declcolumn="6"/>
+      </memberdef>
+      <memberdef kind="function" id="bindings_2pypbat_2gpu_2geometry_2Geometry_8cpp_1a557b8b041f4337ac92414453b4269a56" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void pbat::py::gpu::geometry::Bind</definition>
+        <argsstring>(pybind11::module &amp;m)</argsstring>
+        <name>Bind</name>
+        <param>
+          <type>pybind11::module &amp;</type>
+          <declname>m</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/gpu/geometry/Geometry.cpp" line="15" column="6" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/gpu/geometry/Geometry.cpp" bodystart="15" bodyend="23" declfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/gpu/geometry/Geometry.h" declline="11" declcolumn="6"/>
+      </memberdef>
+      <memberdef kind="function" id="Points_8cpp_1a93099dca32dae55aea4062bff3bb2338" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void pbat::py::gpu::geometry::BindPoints</definition>
+        <argsstring>([[maybe_unused]] pybind11::module &amp;m)</argsstring>
+        <name>BindPoints</name>
+        <param>
+          <attributes>[[maybe_unused]</attributes>
+          <type>] pybind11::module &amp;</type>
+          <declname>m</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/gpu/geometry/Points.cpp" line="12" column="6" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/gpu/geometry/Points.cpp" bodystart="12" bodyend="43"/>
+      </memberdef>
+      <memberdef kind="function" id="Points_8h_1a168108b4d28af7d66b4a60c4f533f4d3" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void pbat::py::gpu::geometry::BindPoints</definition>
+        <argsstring>(pybind11::module &amp;m)</argsstring>
+        <name>BindPoints</name>
+        <param>
+          <type>pybind11::module &amp;</type>
+          <declname>m</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/gpu/geometry/Points.h" line="11" column="6" declfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/gpu/geometry/Points.h" declline="11" declcolumn="6"/>
+      </memberdef>
+      <memberdef kind="function" id="Simplices_8cpp_1a1f592e41bb1ef907ff49572c9175d612" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void pbat::py::gpu::geometry::BindSimplices</definition>
+        <argsstring>([[maybe_unused]] pybind11::module &amp;m)</argsstring>
+        <name>BindSimplices</name>
+        <param>
+          <attributes>[[maybe_unused]</attributes>
+          <type>] pybind11::module &amp;</type>
+          <declname>m</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/gpu/geometry/Simplices.cpp" line="12" column="6" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/gpu/geometry/Simplices.cpp" bodystart="12" bodyend="52"/>
+      </memberdef>
+      <memberdef kind="function" id="Simplices_8h_1aeaeb7055d9451541ed3347d263d3e38e" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void pbat::py::gpu::geometry::BindSimplices</definition>
+        <argsstring>(pybind11::module &amp;m)</argsstring>
+        <name>BindSimplices</name>
+        <param>
+          <type>pybind11::module &amp;</type>
+          <declname>m</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/gpu/geometry/Simplices.h" line="11" column="6" declfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/gpu/geometry/Simplices.h" declline="11" declcolumn="6"/>
+      </memberdef>
+      <memberdef kind="function" id="SweepAndPrune_8cpp_1aee249d8146bf7c0e0f804a9c6b14fbac" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void pbat::py::gpu::geometry::BindSweepAndPrune</definition>
+        <argsstring>([[maybe_unused]] pybind11::module &amp;m)</argsstring>
+        <name>BindSweepAndPrune</name>
+        <param>
+          <attributes>[[maybe_unused]</attributes>
+          <type>] pybind11::module &amp;</type>
+          <declname>m</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/gpu/geometry/SweepAndPrune.cpp" line="14" column="6" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/gpu/geometry/SweepAndPrune.cpp" bodystart="14" bodyend="51"/>
+      </memberdef>
+      <memberdef kind="function" id="bindings_2pypbat_2gpu_2geometry_2SweepAndPrune_8h_1ae0ffe2304956c71b0d12b8c3842bf144" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void pbat::py::gpu::geometry::BindSweepAndPrune</definition>
+        <argsstring>(pybind11::module &amp;m)</argsstring>
+        <name>BindSweepAndPrune</name>
+        <param>
+          <type>pybind11::module &amp;</type>
+          <declname>m</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/gpu/geometry/SweepAndPrune.h" line="11" column="6" declfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/gpu/geometry/SweepAndPrune.h" declline="11" declcolumn="6"/>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/gpu/geometry/Bodies.cpp" line="9" column="18"/>
+  </compounddef>
+</doxygen>

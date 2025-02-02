@@ -1,0 +1,593 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="structpbat_1_1physics_1_1SaintVenantKirchhoffEnergy_3_013_01_4" kind="struct" language="C++" prot="public">
+    <compoundname>pbat::physics::SaintVenantKirchhoffEnergy&lt; 3 &gt;</compoundname>
+    <templateparamlist>
+    </templateparamlist>
+      <sectiondef kind="public-type">
+      <memberdef kind="typedef" id="structpbat_1_1physics_1_1SaintVenantKirchhoffEnergy_3_013_01_4_1ac2eb030eb7f05a6b0e488410d8259180" prot="public" static="no">
+        <templateparamlist>
+          <param>
+            <type>class TScalar</type>
+          </param>
+          <param>
+            <type>int</type>
+            <declname>M</declname>
+            <defname>M</defname>
+          </param>
+          <param>
+            <type>int</type>
+            <declname>N</declname>
+            <defname>N</defname>
+          </param>
+        </templateparamlist>
+        <type><ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1SMatrix" kindref="compound">pbat::math::linalg::mini::SMatrix</ref>&lt; TScalar, M, N &gt;</type>
+        <definition>using pbat::physics::SaintVenantKirchhoffEnergy&lt; 3 &gt;::SMatrix =  pbat::math::linalg::mini::SMatrix&lt;TScalar, M, N&gt;</definition>
+        <argsstring></argsstring>
+        <name>SMatrix</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/physics/SaintVenantKirchhoffEnergy.h" line="521" column="5" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/physics/SaintVenantKirchhoffEnergy.h" bodystart="521" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="structpbat_1_1physics_1_1SaintVenantKirchhoffEnergy_3_013_01_4_1ad6b29e7c4006c17bb623b11bd56833bb" prot="public" static="no">
+        <templateparamlist>
+          <param>
+            <type>class TScalar</type>
+          </param>
+          <param>
+            <type>int</type>
+            <declname>M</declname>
+            <defname>M</defname>
+          </param>
+        </templateparamlist>
+        <type><ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1SMatrix" kindref="compound">pbat::math::linalg::mini::SVector</ref>&lt; TScalar, M &gt;</type>
+        <definition>using pbat::physics::SaintVenantKirchhoffEnergy&lt; 3 &gt;::SVector =  pbat::math::linalg::mini::SVector&lt;TScalar, M&gt;</definition>
+        <argsstring></argsstring>
+        <name>SVector</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/physics/SaintVenantKirchhoffEnergy.h" line="524" column="5" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/physics/SaintVenantKirchhoffEnergy.h" bodystart="524" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="public-static-attrib">
+      <memberdef kind="variable" id="structpbat_1_1physics_1_1SaintVenantKirchhoffEnergy_3_013_01_4_1a352f4d3bae05492179109ba520d8c1f3" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>constexpr auto</type>
+        <definition>constexpr auto pbat::physics::SaintVenantKirchhoffEnergy&lt; 3 &gt;::kDims</definition>
+        <argsstring></argsstring>
+        <name>kDims</name>
+        <initializer>= 3</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/physics/SaintVenantKirchhoffEnergy.h" line="526" column="27" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/physics/SaintVenantKirchhoffEnergy.h" bodystart="526" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="public-func">
+      <memberdef kind="function" id="structpbat_1_1physics_1_1SaintVenantKirchhoffEnergy_3_013_01_4_1a81893fff48ceaf0067f8b57850279140" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>math::linalg::mini::CReadableVectorizedMatrix</type>
+            <declname>TMatrix</declname>
+            <defname>TMatrix</defname>
+          </param>
+        </templateparamlist>
+        <type>PBAT_HOST_DEVICE TMatrix::ScalarType</type>
+        <definition>PBAT_HOST_DEVICE TMatrix::ScalarType pbat::physics::SaintVenantKirchhoffEnergy&lt; 3 &gt;::eval</definition>
+        <argsstring>(TMatrix const &amp;F, typename TMatrix::ScalarType mu, typename TMatrix::ScalarType lambda) const</argsstring>
+        <name>eval</name>
+        <param>
+          <type>TMatrix const &amp;</type>
+          <declname>F</declname>
+        </param>
+        <param>
+          <type>typename TMatrix::ScalarType</type>
+          <declname>mu</declname>
+        </param>
+        <param>
+          <type>typename TMatrix::ScalarType</type>
+          <declname>lambda</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/physics/SaintVenantKirchhoffEnergy.h" line="530" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="structpbat_1_1physics_1_1SaintVenantKirchhoffEnergy_3_013_01_4_1a892438513b4e0c64a28c696e55a103a0" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>math::linalg::mini::CReadableVectorizedMatrix</type>
+            <declname>TMatrix</declname>
+            <defname>TMatrix</defname>
+          </param>
+        </templateparamlist>
+        <type>PBAT_HOST_DEVICE <ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1SMatrix" kindref="compound">SVector</ref>&lt; typename TMatrix::ScalarType, 9 &gt;</type>
+        <definition>PBAT_HOST_DEVICE SVector&lt;typename TMatrix::ScalarType, 9&gt; pbat::physics::SaintVenantKirchhoffEnergy&lt; 3 &gt;::grad</definition>
+        <argsstring>(TMatrix const &amp;F, typename TMatrix::ScalarType mu, typename TMatrix::ScalarType lambda) const</argsstring>
+        <name>grad</name>
+        <param>
+          <type>TMatrix const &amp;</type>
+          <declname>F</declname>
+        </param>
+        <param>
+          <type>typename TMatrix::ScalarType</type>
+          <declname>mu</declname>
+        </param>
+        <param>
+          <type>typename TMatrix::ScalarType</type>
+          <declname>lambda</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/physics/SaintVenantKirchhoffEnergy.h" line="535" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="structpbat_1_1physics_1_1SaintVenantKirchhoffEnergy_3_013_01_4_1a23233af665a79bb61fb4afc81b00b0e3" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>math::linalg::mini::CReadableVectorizedMatrix</type>
+            <declname>TMatrix</declname>
+            <defname>TMatrix</defname>
+          </param>
+        </templateparamlist>
+        <type>PBAT_HOST_DEVICE <ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1SMatrix" kindref="compound">SMatrix</ref>&lt; typename TMatrix::ScalarType, 9, 9 &gt;</type>
+        <definition>PBAT_HOST_DEVICE SMatrix&lt;typename TMatrix::ScalarType, 9, 9&gt; pbat::physics::SaintVenantKirchhoffEnergy&lt; 3 &gt;::hessian</definition>
+        <argsstring>(TMatrix const &amp;F, typename TMatrix::ScalarType mu, typename TMatrix::ScalarType lambda) const</argsstring>
+        <name>hessian</name>
+        <param>
+          <type>TMatrix const &amp;</type>
+          <declname>F</declname>
+        </param>
+        <param>
+          <type>typename TMatrix::ScalarType</type>
+          <declname>mu</declname>
+        </param>
+        <param>
+          <type>typename TMatrix::ScalarType</type>
+          <declname>lambda</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/physics/SaintVenantKirchhoffEnergy.h" line="540" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="structpbat_1_1physics_1_1SaintVenantKirchhoffEnergy_3_013_01_4_1a1808d5188e42adf2ef98af2c949993fe" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>math::linalg::mini::CReadableVectorizedMatrix</type>
+            <declname>TMatrix</declname>
+            <defname>TMatrix</defname>
+          </param>
+          <param>
+            <type>math::linalg::mini::CWriteableVectorizedMatrix</type>
+            <declname>TMatrixGF</declname>
+            <defname>TMatrixGF</defname>
+          </param>
+        </templateparamlist>
+        <type>PBAT_HOST_DEVICE TMatrix::ScalarType</type>
+        <definition>PBAT_HOST_DEVICE TMatrix::ScalarType pbat::physics::SaintVenantKirchhoffEnergy&lt; 3 &gt;::evalWithGrad</definition>
+        <argsstring>(TMatrix const &amp;F, typename TMatrix::ScalarType mu, typename TMatrix::ScalarType lambda, TMatrixGF &amp;gF) const</argsstring>
+        <name>evalWithGrad</name>
+        <param>
+          <type>TMatrix const &amp;</type>
+          <declname>F</declname>
+        </param>
+        <param>
+          <type>typename TMatrix::ScalarType</type>
+          <declname>mu</declname>
+        </param>
+        <param>
+          <type>typename TMatrix::ScalarType</type>
+          <declname>lambda</declname>
+        </param>
+        <param>
+          <type>TMatrixGF &amp;</type>
+          <declname>gF</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/physics/SaintVenantKirchhoffEnergy.h" line="546" column="51"/>
+      </memberdef>
+      <memberdef kind="function" id="structpbat_1_1physics_1_1SaintVenantKirchhoffEnergy_3_013_01_4_1a739c0c9ada4dea004897dbfb21e82f7c" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>math::linalg::mini::CReadableVectorizedMatrix</type>
+            <declname>TMatrix</declname>
+            <defname>TMatrix</defname>
+          </param>
+          <param>
+            <type>math::linalg::mini::CWriteableVectorizedMatrix</type>
+            <declname>TMatrixGF</declname>
+            <defname>TMatrixGF</defname>
+          </param>
+          <param>
+            <type>math::linalg::mini::CWriteableVectorizedMatrix</type>
+            <declname>TMatrixHF</declname>
+            <defname>TMatrixHF</defname>
+          </param>
+        </templateparamlist>
+        <type>PBAT_HOST_DEVICE TMatrix::ScalarType</type>
+        <definition>PBAT_HOST_DEVICE TMatrix::ScalarType pbat::physics::SaintVenantKirchhoffEnergy&lt; 3 &gt;::evalWithGradAndHessian</definition>
+        <argsstring>(TMatrix const &amp;F, typename TMatrix::ScalarType mu, typename TMatrix::ScalarType lambda, TMatrixGF &amp;gF, TMatrixHF &amp;HF) const</argsstring>
+        <name>evalWithGradAndHessian</name>
+        <param>
+          <type>TMatrix const &amp;</type>
+          <declname>F</declname>
+        </param>
+        <param>
+          <type>typename TMatrix::ScalarType</type>
+          <declname>mu</declname>
+        </param>
+        <param>
+          <type>typename TMatrix::ScalarType</type>
+          <declname>lambda</declname>
+        </param>
+        <param>
+          <type>TMatrixGF &amp;</type>
+          <declname>gF</declname>
+        </param>
+        <param>
+          <type>TMatrixHF &amp;</type>
+          <declname>HF</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/physics/SaintVenantKirchhoffEnergy.h" line="556" column="51"/>
+      </memberdef>
+      <memberdef kind="function" id="structpbat_1_1physics_1_1SaintVenantKirchhoffEnergy_3_013_01_4_1a1efe122acb3c2b1beddf3fa1a0d73d0c" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>math::linalg::mini::CReadableVectorizedMatrix</type>
+            <declname>TMatrix</declname>
+            <defname>TMatrix</defname>
+          </param>
+          <param>
+            <type>math::linalg::mini::CWriteableVectorizedMatrix</type>
+            <declname>TMatrixGF</declname>
+            <defname>TMatrixGF</defname>
+          </param>
+          <param>
+            <type>math::linalg::mini::CWriteableVectorizedMatrix</type>
+            <declname>TMatrixHF</declname>
+            <defname>TMatrixHF</defname>
+          </param>
+        </templateparamlist>
+        <type>PBAT_HOST_DEVICE void</type>
+        <definition>PBAT_HOST_DEVICE void pbat::physics::SaintVenantKirchhoffEnergy&lt; 3 &gt;::gradAndHessian</definition>
+        <argsstring>(TMatrix const &amp;F, typename TMatrix::ScalarType mu, typename TMatrix::ScalarType lambda, TMatrixGF &amp;gF, TMatrixHF &amp;HF) const</argsstring>
+        <name>gradAndHessian</name>
+        <param>
+          <type>TMatrix const &amp;</type>
+          <declname>F</declname>
+        </param>
+        <param>
+          <type>typename TMatrix::ScalarType</type>
+          <declname>mu</declname>
+        </param>
+        <param>
+          <type>typename TMatrix::ScalarType</type>
+          <declname>lambda</declname>
+        </param>
+        <param>
+          <type>TMatrixGF &amp;</type>
+          <declname>gF</declname>
+        </param>
+        <param>
+          <type>TMatrixHF &amp;</type>
+          <declname>HF</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/physics/SaintVenantKirchhoffEnergy.h" line="567" column="27"/>
+      </memberdef>
+      <memberdef kind="function" id="structpbat_1_1physics_1_1SaintVenantKirchhoffEnergy_3_013_01_4_1a033dc559105c4411fef2f47c2af0c62e" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>math::linalg::mini::CReadableVectorizedMatrix</type>
+            <declname>TMatrix</declname>
+            <defname>TMatrix</defname>
+          </param>
+        </templateparamlist>
+        <type>PBAT_HOST_DEVICE TMatrix::ScalarType</type>
+        <definition>PBAT_HOST_DEVICE TMatrix::ScalarType pbat::physics::SaintVenantKirchhoffEnergy&lt; 3 &gt;::eval</definition>
+        <argsstring>([[maybe_unused]] TMatrix const &amp;F, [[maybe_unused]] typename TMatrix::ScalarType mu, [[maybe_unused]] typename TMatrix::ScalarType lambda) const</argsstring>
+        <name>eval</name>
+        <param>
+          <attributes>[[maybe_unused]</attributes>
+          <type>] TMatrix const &amp;</type>
+          <declname>F</declname>
+        </param>
+        <param>
+          <attributes>[[maybe_unused]</attributes>
+          <type>] typename TMatrix::ScalarType</type>
+          <declname>mu</declname>
+        </param>
+        <param>
+          <attributes>[[maybe_unused]</attributes>
+          <type>] typename TMatrix::ScalarType</type>
+          <declname>lambda</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/physics/SaintVenantKirchhoffEnergy.h" line="576" column="74" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/physics/SaintVenantKirchhoffEnergy.h" bodystart="576" bodyend="602"/>
+      </memberdef>
+      <memberdef kind="function" id="structpbat_1_1physics_1_1SaintVenantKirchhoffEnergy_3_013_01_4_1a1b62e65d46e0e8f3b4416a70993e7479" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>math::linalg::mini::CReadableVectorizedMatrix</type>
+            <declname>TMatrix</declname>
+            <defname>TMatrix</defname>
+          </param>
+        </templateparamlist>
+        <type>PBAT_HOST_DEVICE <ref refid="structpbat_1_1physics_1_1SaintVenantKirchhoffEnergy" kindref="compound">SaintVenantKirchhoffEnergy</ref>&lt; 3 &gt;::<ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1SMatrix" kindref="compound">SVector</ref>&lt; typename TMatrix::ScalarType, 9 &gt;</type>
+        <definition>PBAT_HOST_DEVICE SaintVenantKirchhoffEnergy&lt;3&gt;::SVector&lt;typename TMatrix::ScalarType, 9&gt; pbat::physics::SaintVenantKirchhoffEnergy&lt; 3 &gt;::grad</definition>
+        <argsstring>([[maybe_unused]] TMatrix const &amp;F, [[maybe_unused]] typename TMatrix::ScalarType mu, [[maybe_unused]] typename TMatrix::ScalarType lambda) const</argsstring>
+        <name>grad</name>
+        <param>
+          <attributes>[[maybe_unused]</attributes>
+          <type>] TMatrix const &amp;</type>
+          <declname>F</declname>
+        </param>
+        <param>
+          <attributes>[[maybe_unused]</attributes>
+          <type>] typename TMatrix::ScalarType</type>
+          <declname>mu</declname>
+        </param>
+        <param>
+          <attributes>[[maybe_unused]</attributes>
+          <type>] typename TMatrix::ScalarType</type>
+          <declname>lambda</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/physics/SaintVenantKirchhoffEnergy.h" line="606" column="28" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/physics/SaintVenantKirchhoffEnergy.h" bodystart="606" bodyend="639"/>
+      </memberdef>
+      <memberdef kind="function" id="structpbat_1_1physics_1_1SaintVenantKirchhoffEnergy_3_013_01_4_1a8a8ff74c6b7df67fc891a5086da1c9cb" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>math::linalg::mini::CReadableVectorizedMatrix</type>
+            <declname>TMatrix</declname>
+            <defname>TMatrix</defname>
+          </param>
+        </templateparamlist>
+        <type>PBAT_HOST_DEVICE <ref refid="structpbat_1_1physics_1_1SaintVenantKirchhoffEnergy" kindref="compound">SaintVenantKirchhoffEnergy</ref>&lt; 3 &gt;::<ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1SMatrix" kindref="compound">SMatrix</ref>&lt; typename TMatrix::ScalarType, 9, 9 &gt;</type>
+        <definition>PBAT_HOST_DEVICE SaintVenantKirchhoffEnergy&lt;3&gt;::SMatrix&lt;typename TMatrix::ScalarType, 9, 9&gt; pbat::physics::SaintVenantKirchhoffEnergy&lt; 3 &gt;::hessian</definition>
+        <argsstring>([[maybe_unused]] TMatrix const &amp;F, [[maybe_unused]] typename TMatrix::ScalarType mu, [[maybe_unused]] typename TMatrix::ScalarType lambda) const</argsstring>
+        <name>hessian</name>
+        <param>
+          <attributes>[[maybe_unused]</attributes>
+          <type>] TMatrix const &amp;</type>
+          <declname>F</declname>
+        </param>
+        <param>
+          <attributes>[[maybe_unused]</attributes>
+          <type>] typename TMatrix::ScalarType</type>
+          <declname>mu</declname>
+        </param>
+        <param>
+          <attributes>[[maybe_unused]</attributes>
+          <type>] typename TMatrix::ScalarType</type>
+          <declname>lambda</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/physics/SaintVenantKirchhoffEnergy.h" line="643" column="28" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/physics/SaintVenantKirchhoffEnergy.h" bodystart="643" bodyend="818"/>
+      </memberdef>
+      <memberdef kind="function" id="structpbat_1_1physics_1_1SaintVenantKirchhoffEnergy_3_013_01_4_1a7f924bc2c4ddb1a47f826bfed564ff37" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>math::linalg::mini::CReadableVectorizedMatrix</type>
+            <declname>TMatrix</declname>
+            <defname>TMatrix</defname>
+          </param>
+          <param>
+            <type>math::linalg::mini::CWriteableVectorizedMatrix</type>
+            <declname>TMatrixGF</declname>
+            <defname>TMatrixGF</defname>
+          </param>
+        </templateparamlist>
+        <type>PBAT_HOST_DEVICE TMatrix::ScalarType</type>
+        <definition>PBAT_HOST_DEVICE TMatrix::ScalarType pbat::physics::SaintVenantKirchhoffEnergy&lt; 3 &gt;::evalWithGrad</definition>
+        <argsstring>([[maybe_unused]] TMatrix const &amp;F, [[maybe_unused]] typename TMatrix::ScalarType mu, [[maybe_unused]] typename TMatrix::ScalarType lambda, TMatrixGF &amp;gF) const</argsstring>
+        <name>evalWithGrad</name>
+        <param>
+          <attributes>[[maybe_unused]</attributes>
+          <type>] TMatrix const &amp;</type>
+          <declname>F</declname>
+        </param>
+        <param>
+          <attributes>[[maybe_unused]</attributes>
+          <type>] typename TMatrix::ScalarType</type>
+          <declname>mu</declname>
+        </param>
+        <param>
+          <attributes>[[maybe_unused]</attributes>
+          <type>] typename TMatrix::ScalarType</type>
+          <declname>lambda</declname>
+        </param>
+        <param>
+          <type>TMatrixGF &amp;</type>
+          <declname>gF</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/physics/SaintVenantKirchhoffEnergy.h" line="823" column="74" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/physics/SaintVenantKirchhoffEnergy.h" bodystart="823" bodyend="871"/>
+      </memberdef>
+      <memberdef kind="function" id="structpbat_1_1physics_1_1SaintVenantKirchhoffEnergy_3_013_01_4_1a4cedee4de41c840f36a35b453ffca83a" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>math::linalg::mini::CReadableVectorizedMatrix</type>
+            <declname>TMatrix</declname>
+            <defname>TMatrix</defname>
+          </param>
+          <param>
+            <type>math::linalg::mini::CWriteableVectorizedMatrix</type>
+            <declname>TMatrixGF</declname>
+            <defname>TMatrixGF</defname>
+          </param>
+          <param>
+            <type>math::linalg::mini::CWriteableVectorizedMatrix</type>
+            <declname>TMatrixHF</declname>
+            <defname>TMatrixHF</defname>
+          </param>
+        </templateparamlist>
+        <type>PBAT_HOST_DEVICE TMatrix::ScalarType</type>
+        <definition>PBAT_HOST_DEVICE TMatrix::ScalarType pbat::physics::SaintVenantKirchhoffEnergy&lt; 3 &gt;::evalWithGradAndHessian</definition>
+        <argsstring>([[maybe_unused]] TMatrix const &amp;F, [[maybe_unused]] typename TMatrix::ScalarType mu, [[maybe_unused]] typename TMatrix::ScalarType lambda, TMatrixGF &amp;gF, TMatrixHF &amp;HF) const</argsstring>
+        <name>evalWithGradAndHessian</name>
+        <param>
+          <attributes>[[maybe_unused]</attributes>
+          <type>] TMatrix const &amp;</type>
+          <declname>F</declname>
+        </param>
+        <param>
+          <attributes>[[maybe_unused]</attributes>
+          <type>] typename TMatrix::ScalarType</type>
+          <declname>mu</declname>
+        </param>
+        <param>
+          <attributes>[[maybe_unused]</attributes>
+          <type>] typename TMatrix::ScalarType</type>
+          <declname>lambda</declname>
+        </param>
+        <param>
+          <type>TMatrixGF &amp;</type>
+          <declname>gF</declname>
+        </param>
+        <param>
+          <type>TMatrixHF &amp;</type>
+          <declname>HF</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/physics/SaintVenantKirchhoffEnergy.h" line="877" column="74" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/physics/SaintVenantKirchhoffEnergy.h" bodystart="877" bodyend="1085"/>
+      </memberdef>
+      <memberdef kind="function" id="structpbat_1_1physics_1_1SaintVenantKirchhoffEnergy_3_013_01_4_1a534fd88721ecbdec43ec25788a1506ca" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>math::linalg::mini::CReadableVectorizedMatrix</type>
+            <declname>TMatrix</declname>
+            <defname>TMatrix</defname>
+          </param>
+          <param>
+            <type>math::linalg::mini::CWriteableVectorizedMatrix</type>
+            <declname>TMatrixGF</declname>
+            <defname>TMatrixGF</defname>
+          </param>
+          <param>
+            <type>math::linalg::mini::CWriteableVectorizedMatrix</type>
+            <declname>TMatrixHF</declname>
+            <defname>TMatrixHF</defname>
+          </param>
+        </templateparamlist>
+        <type>PBAT_HOST_DEVICE void</type>
+        <definition>PBAT_HOST_DEVICE void pbat::physics::SaintVenantKirchhoffEnergy&lt; 3 &gt;::gradAndHessian</definition>
+        <argsstring>([[maybe_unused]] TMatrix const &amp;F, [[maybe_unused]] typename TMatrix::ScalarType mu, [[maybe_unused]] typename TMatrix::ScalarType lambda, TMatrixGF &amp;gF, TMatrixHF &amp;HF) const</argsstring>
+        <name>gradAndHessian</name>
+        <param>
+          <attributes>[[maybe_unused]</attributes>
+          <type>] TMatrix const &amp;</type>
+          <declname>F</declname>
+        </param>
+        <param>
+          <attributes>[[maybe_unused]</attributes>
+          <type>] typename TMatrix::ScalarType</type>
+          <declname>mu</declname>
+        </param>
+        <param>
+          <attributes>[[maybe_unused]</attributes>
+          <type>] typename TMatrix::ScalarType</type>
+          <declname>lambda</declname>
+        </param>
+        <param>
+          <type>TMatrixGF &amp;</type>
+          <declname>gF</declname>
+        </param>
+        <param>
+          <type>TMatrixHF &amp;</type>
+          <declname>HF</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/physics/SaintVenantKirchhoffEnergy.h" line="1091" column="50" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/physics/SaintVenantKirchhoffEnergy.h" bodystart="1091" bodyend="1287"/>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/physics/SaintVenantKirchhoffEnergy.h" line="518" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/physics/SaintVenantKirchhoffEnergy.h" bodystart="517" bodyend="573"/>
+    <listofallmembers>
+      <member refid="structpbat_1_1physics_1_1SaintVenantKirchhoffEnergy_3_013_01_4_1a81893fff48ceaf0067f8b57850279140" prot="public" virt="non-virtual"><scope>pbat::physics::SaintVenantKirchhoffEnergy&lt; 3 &gt;</scope><name>eval</name></member>
+      <member refid="structpbat_1_1physics_1_1SaintVenantKirchhoffEnergy_3_013_01_4_1a033dc559105c4411fef2f47c2af0c62e" prot="public" virt="non-virtual"><scope>pbat::physics::SaintVenantKirchhoffEnergy&lt; 3 &gt;</scope><name>eval</name></member>
+      <member refid="structpbat_1_1physics_1_1SaintVenantKirchhoffEnergy_3_013_01_4_1a1808d5188e42adf2ef98af2c949993fe" prot="public" virt="non-virtual"><scope>pbat::physics::SaintVenantKirchhoffEnergy&lt; 3 &gt;</scope><name>evalWithGrad</name></member>
+      <member refid="structpbat_1_1physics_1_1SaintVenantKirchhoffEnergy_3_013_01_4_1a7f924bc2c4ddb1a47f826bfed564ff37" prot="public" virt="non-virtual"><scope>pbat::physics::SaintVenantKirchhoffEnergy&lt; 3 &gt;</scope><name>evalWithGrad</name></member>
+      <member refid="structpbat_1_1physics_1_1SaintVenantKirchhoffEnergy_3_013_01_4_1a739c0c9ada4dea004897dbfb21e82f7c" prot="public" virt="non-virtual"><scope>pbat::physics::SaintVenantKirchhoffEnergy&lt; 3 &gt;</scope><name>evalWithGradAndHessian</name></member>
+      <member refid="structpbat_1_1physics_1_1SaintVenantKirchhoffEnergy_3_013_01_4_1a4cedee4de41c840f36a35b453ffca83a" prot="public" virt="non-virtual"><scope>pbat::physics::SaintVenantKirchhoffEnergy&lt; 3 &gt;</scope><name>evalWithGradAndHessian</name></member>
+      <member refid="structpbat_1_1physics_1_1SaintVenantKirchhoffEnergy_3_013_01_4_1a892438513b4e0c64a28c696e55a103a0" prot="public" virt="non-virtual"><scope>pbat::physics::SaintVenantKirchhoffEnergy&lt; 3 &gt;</scope><name>grad</name></member>
+      <member refid="structpbat_1_1physics_1_1SaintVenantKirchhoffEnergy_3_013_01_4_1a1b62e65d46e0e8f3b4416a70993e7479" prot="public" virt="non-virtual"><scope>pbat::physics::SaintVenantKirchhoffEnergy&lt; 3 &gt;</scope><name>grad</name></member>
+      <member refid="structpbat_1_1physics_1_1SaintVenantKirchhoffEnergy_3_013_01_4_1a1efe122acb3c2b1beddf3fa1a0d73d0c" prot="public" virt="non-virtual"><scope>pbat::physics::SaintVenantKirchhoffEnergy&lt; 3 &gt;</scope><name>gradAndHessian</name></member>
+      <member refid="structpbat_1_1physics_1_1SaintVenantKirchhoffEnergy_3_013_01_4_1a534fd88721ecbdec43ec25788a1506ca" prot="public" virt="non-virtual"><scope>pbat::physics::SaintVenantKirchhoffEnergy&lt; 3 &gt;</scope><name>gradAndHessian</name></member>
+      <member refid="structpbat_1_1physics_1_1SaintVenantKirchhoffEnergy_3_013_01_4_1a23233af665a79bb61fb4afc81b00b0e3" prot="public" virt="non-virtual"><scope>pbat::physics::SaintVenantKirchhoffEnergy&lt; 3 &gt;</scope><name>hessian</name></member>
+      <member refid="structpbat_1_1physics_1_1SaintVenantKirchhoffEnergy_3_013_01_4_1a8a8ff74c6b7df67fc891a5086da1c9cb" prot="public" virt="non-virtual"><scope>pbat::physics::SaintVenantKirchhoffEnergy&lt; 3 &gt;</scope><name>hessian</name></member>
+      <member refid="structpbat_1_1physics_1_1SaintVenantKirchhoffEnergy_3_013_01_4_1a352f4d3bae05492179109ba520d8c1f3" prot="public" virt="non-virtual"><scope>pbat::physics::SaintVenantKirchhoffEnergy&lt; 3 &gt;</scope><name>kDims</name></member>
+      <member refid="structpbat_1_1physics_1_1SaintVenantKirchhoffEnergy_3_013_01_4_1ac2eb030eb7f05a6b0e488410d8259180" prot="public" virt="non-virtual"><scope>pbat::physics::SaintVenantKirchhoffEnergy&lt; 3 &gt;</scope><name>SMatrix</name></member>
+      <member refid="structpbat_1_1physics_1_1SaintVenantKirchhoffEnergy_3_013_01_4_1ad6b29e7c4006c17bb623b11bd56833bb" prot="public" virt="non-virtual"><scope>pbat::physics::SaintVenantKirchhoffEnergy&lt; 3 &gt;</scope><name>SVector</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

@@ -1,0 +1,237 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="classpbat_1_1common_1_1Stack" kind="class" language="C++" prot="public">
+    <compoundname>pbat::common::Stack</compoundname>
+    <templateparamlist>
+      <param>
+        <type>class T</type>
+      </param>
+      <param>
+        <type>auto</type>
+        <declname>kCapacity</declname>
+        <defname>kCapacity</defname>
+        <defval>64</defval>
+      </param>
+    </templateparamlist>
+      <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="classpbat_1_1common_1_1Stack_1a4b301f2b4c31f10f30fcf024d673965f" prot="private" static="no" mutable="no">
+        <type>T</type>
+        <definition>T pbat::common::Stack&lt; T, kCapacity &gt;::stack[kCapacity]</definition>
+        <argsstring>[kCapacity]</argsstring>
+        <name>stack</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/common/Stack.h" line="28" column="7" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/common/Stack.h" bodystart="28" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpbat_1_1common_1_1Stack_1afdb5c84a981fd2bfb309540deff73acd" prot="private" static="no" mutable="no">
+        <type>int</type>
+        <definition>int pbat::common::Stack&lt; T, kCapacity &gt;::size</definition>
+        <argsstring></argsstring>
+        <name>size</name>
+        <briefdescription>
+<para>Serves as both the stack pointer and the number of elements in the stack. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/common/Stack.h" line="29" column="9" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/common/Stack.h" bodystart="29" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpbat_1_1common_1_1Stack_1a183e8a4eafd7140dee396c9cc87a33cc" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>PBAT_HOST_DEVICE</type>
+        <definition>PBAT_HOST_DEVICE pbat::common::Stack&lt; T, kCapacity &gt;::Stack</definition>
+        <argsstring>()</argsstring>
+        <name>Stack</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/common/Stack.h" line="13" column="22" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/common/Stack.h" bodystart="13" bodyend="13"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1common_1_1Stack_1a94de333198cc9722657c8a7946320f82" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>PBAT_HOST_DEVICE void</type>
+        <definition>PBAT_HOST_DEVICE void pbat::common::Stack&lt; T, kCapacity &gt;::Push</definition>
+        <argsstring>(T value)</argsstring>
+        <name>Push</name>
+        <param>
+          <type>T</type>
+          <declname>value</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/common/Stack.h" line="14" column="27" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/common/Stack.h" bodystart="14" bodyend="14"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1common_1_1Stack_1ac657a6d6b08d99909d945329c5bfb5ec" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>PBAT_HOST_DEVICE T</type>
+        <definition>PBAT_HOST_DEVICE T pbat::common::Stack&lt; T, kCapacity &gt;::Pop</definition>
+        <argsstring>()</argsstring>
+        <name>Pop</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/common/Stack.h" line="15" column="24" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/common/Stack.h" bodystart="15" bodyend="15"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1common_1_1Stack_1a6e0084b76e44a743af2bf29d04afc6a1" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>PBAT_HOST_DEVICE T const  &amp;</type>
+        <definition>PBAT_HOST_DEVICE T const&amp; pbat::common::Stack&lt; T, kCapacity &gt;::Top</definition>
+        <argsstring>() const</argsstring>
+        <name>Top</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/common/Stack.h" line="16" column="30" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/common/Stack.h" bodystart="16" bodyend="16"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1common_1_1Stack_1a5ea4e23911508ebdbdb3e1c8ce5e77f5" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>PBAT_HOST_DEVICE auto</type>
+        <definition>PBAT_HOST_DEVICE auto pbat::common::Stack&lt; T, kCapacity &gt;::Size</definition>
+        <argsstring>() const</argsstring>
+        <name>Size</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/common/Stack.h" line="17" column="27" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/common/Stack.h" bodystart="17" bodyend="17"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1common_1_1Stack_1a47c081cccd7f16a2aa779b286c2da1db" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>PBAT_HOST_DEVICE bool</type>
+        <definition>PBAT_HOST_DEVICE bool pbat::common::Stack&lt; T, kCapacity &gt;::IsEmpty</definition>
+        <argsstring>() const</argsstring>
+        <name>IsEmpty</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/common/Stack.h" line="18" column="27" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/common/Stack.h" bodystart="18" bodyend="18"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1common_1_1Stack_1ae61f3b394576bc26301c98a87342337d" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>PBAT_HOST_DEVICE bool</type>
+        <definition>PBAT_HOST_DEVICE bool pbat::common::Stack&lt; T, kCapacity &gt;::IsFull</definition>
+        <argsstring>() const</argsstring>
+        <name>IsFull</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/common/Stack.h" line="19" column="27" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/common/Stack.h" bodystart="19" bodyend="19"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1common_1_1Stack_1a903321a8663d0a0b0e1fd917d3dbbaaf" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>PBAT_HOST_DEVICE void</type>
+        <definition>PBAT_HOST_DEVICE void pbat::common::Stack&lt; T, kCapacity &gt;::Clear</definition>
+        <argsstring>()</argsstring>
+        <name>Clear</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/common/Stack.h" line="20" column="27" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/common/Stack.h" bodystart="20" bodyend="20"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1common_1_1Stack_1a75cc7885f58a083a4d6af5af871bbd56" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>PBAT_HOST_DEVICE T &amp;</type>
+        <definition>PBAT_HOST_DEVICE T&amp; pbat::common::Stack&lt; T, kCapacity &gt;::operator[]</definition>
+        <argsstring>(auto i)</argsstring>
+        <name>operator[]</name>
+        <param>
+          <type>auto</type>
+          <declname>i</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/common/Stack.h" line="21" column="24" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/common/Stack.h" bodystart="21" bodyend="21"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1common_1_1Stack_1a2e766c6827c6e2f29104a926d54820b0" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>PBAT_HOST_DEVICE T const  &amp;</type>
+        <definition>PBAT_HOST_DEVICE T const&amp; pbat::common::Stack&lt; T, kCapacity &gt;::operator[]</definition>
+        <argsstring>(auto i) const</argsstring>
+        <name>operator[]</name>
+        <param>
+          <type>auto</type>
+          <declname>i</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/common/Stack.h" line="22" column="30" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/common/Stack.h" bodystart="22" bodyend="22"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1common_1_1Stack_1a7bd228d1eb2698a876be7d4c4f76e5dd" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>PBAT_HOST_DEVICE T *</type>
+        <definition>PBAT_HOST_DEVICE T* pbat::common::Stack&lt; T, kCapacity &gt;::begin</definition>
+        <argsstring>()</argsstring>
+        <name>begin</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/common/Stack.h" line="24" column="24" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/common/Stack.h" bodystart="24" bodyend="24"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1common_1_1Stack_1a7afc7e9071a363e6614eae451a4e3b45" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>PBAT_HOST_DEVICE T *</type>
+        <definition>PBAT_HOST_DEVICE T* pbat::common::Stack&lt; T, kCapacity &gt;::end</definition>
+        <argsstring>()</argsstring>
+        <name>end</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/common/Stack.h" line="25" column="24" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/common/Stack.h" bodystart="25" bodyend="25"/>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/common/Stack.h" line="11" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/common/Stack.h" bodystart="10" bodyend="30"/>
+    <listofallmembers>
+      <member refid="classpbat_1_1common_1_1Stack_1a7bd228d1eb2698a876be7d4c4f76e5dd" prot="public" virt="non-virtual"><scope>pbat::common::Stack</scope><name>begin</name></member>
+      <member refid="classpbat_1_1common_1_1Stack_1a903321a8663d0a0b0e1fd917d3dbbaaf" prot="public" virt="non-virtual"><scope>pbat::common::Stack</scope><name>Clear</name></member>
+      <member refid="classpbat_1_1common_1_1Stack_1a7afc7e9071a363e6614eae451a4e3b45" prot="public" virt="non-virtual"><scope>pbat::common::Stack</scope><name>end</name></member>
+      <member refid="classpbat_1_1common_1_1Stack_1a47c081cccd7f16a2aa779b286c2da1db" prot="public" virt="non-virtual"><scope>pbat::common::Stack</scope><name>IsEmpty</name></member>
+      <member refid="classpbat_1_1common_1_1Stack_1ae61f3b394576bc26301c98a87342337d" prot="public" virt="non-virtual"><scope>pbat::common::Stack</scope><name>IsFull</name></member>
+      <member refid="classpbat_1_1common_1_1Stack_1a75cc7885f58a083a4d6af5af871bbd56" prot="public" virt="non-virtual"><scope>pbat::common::Stack</scope><name>operator[]</name></member>
+      <member refid="classpbat_1_1common_1_1Stack_1a2e766c6827c6e2f29104a926d54820b0" prot="public" virt="non-virtual"><scope>pbat::common::Stack</scope><name>operator[]</name></member>
+      <member refid="classpbat_1_1common_1_1Stack_1ac657a6d6b08d99909d945329c5bfb5ec" prot="public" virt="non-virtual"><scope>pbat::common::Stack</scope><name>Pop</name></member>
+      <member refid="classpbat_1_1common_1_1Stack_1a94de333198cc9722657c8a7946320f82" prot="public" virt="non-virtual"><scope>pbat::common::Stack</scope><name>Push</name></member>
+      <member refid="classpbat_1_1common_1_1Stack_1afdb5c84a981fd2bfb309540deff73acd" prot="private" virt="non-virtual"><scope>pbat::common::Stack</scope><name>size</name></member>
+      <member refid="classpbat_1_1common_1_1Stack_1a5ea4e23911508ebdbdb3e1c8ce5e77f5" prot="public" virt="non-virtual"><scope>pbat::common::Stack</scope><name>Size</name></member>
+      <member refid="classpbat_1_1common_1_1Stack_1a4b301f2b4c31f10f30fcf024d673965f" prot="private" virt="non-virtual"><scope>pbat::common::Stack</scope><name>stack</name></member>
+      <member refid="classpbat_1_1common_1_1Stack_1a183e8a4eafd7140dee396c9cc87a33cc" prot="public" virt="non-virtual"><scope>pbat::common::Stack</scope><name>Stack</name></member>
+      <member refid="classpbat_1_1common_1_1Stack_1a6e0084b76e44a743af2bf29d04afc6a1" prot="public" virt="non-virtual"><scope>pbat::common::Stack</scope><name>Top</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

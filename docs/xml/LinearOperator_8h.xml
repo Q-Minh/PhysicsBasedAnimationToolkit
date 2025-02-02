@@ -1,0 +1,280 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="LinearOperator_8h" kind="file" language="C++">
+    <compoundname>LinearOperator.h</compoundname>
+    <includes local="no">concepts</includes>
+    <includes local="no">exception</includes>
+    <includes refid="Aliases_8h" local="no">pbat/Aliases.h</includes>
+    <includes local="no">pbat/profiling/Profiling.h</includes>
+    <includes local="no">tuple</includes>
+    <includedby refid="source_2pbat_2fem_2Gradient_8cpp" local="no">/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Gradient.cpp</includedby>
+    <includedby refid="source_2pbat_2fem_2HyperElasticPotential_8cpp" local="no">/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/HyperElasticPotential.cpp</includedby>
+    <includedby refid="LaplacianMatrix_8cpp" local="no">/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/LaplacianMatrix.cpp</includedby>
+    <includedby refid="source_2pbat_2fem_2MassMatrix_8cpp" local="no">/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/MassMatrix.cpp</includedby>
+    <includedby refid="LinearOperator_8cpp" local="yes">/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/LinearOperator.cpp</includedby>
+    <includedby refid="source_2pbat_2math_2Math_8h" local="yes">/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/Math.h</includedby>
+    <incdepgraph>
+      <node id="4">
+        <label>pbat/Aliases.h</label>
+        <link refid="Aliases_8h_source"/>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+      </node>
+      <node id="5">
+        <label>Eigen/Core</label>
+      </node>
+      <node id="3">
+        <label>exception</label>
+      </node>
+      <node id="6">
+        <label>Eigen/Sparse</label>
+      </node>
+      <node id="8">
+        <label>pbat/profiling/Profiling.h</label>
+      </node>
+      <node id="9">
+        <label>tuple</label>
+      </node>
+      <node id="7">
+        <label>cstddef</label>
+      </node>
+      <node id="2">
+        <label>concepts</label>
+      </node>
+      <node id="1">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/LinearOperator.h</label>
+        <link refid="LinearOperator_8h"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+      </node>
+    </incdepgraph>
+    <invincdepgraph>
+      <node id="3">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/Pbat.h</label>
+        <link refid="Pbat_8h_source"/>
+      </node>
+      <node id="2">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/Math.h</label>
+        <link refid="source_2pbat_2math_2Math_8h_source"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/LinearOperator.h</label>
+        <link refid="LinearOperator_8h"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+      </node>
+    </invincdepgraph>
+    <innerclass refid="classpbat_1_1math_1_1LinearOperator" prot="public">pbat::math::LinearOperator</innerclass>
+    <innerclass refid="structEigen_1_1internal_1_1traits_3_01pbat_1_1math_1_1LinearOperator_3_01TLinearOperators_8_8_8_01_4_01_4" prot="public">Eigen::internal::traits&lt; pbat::math::LinearOperator&lt; TLinearOperators... &gt; &gt;</innerclass>
+    <innerclass refid="classpbat_1_1math_1_1LinearOperator" prot="public">pbat::math::LinearOperator</innerclass>
+    <innerclass refid="structEigen_1_1internal_1_1generic__product__impl_3_01Lhs_00_01Rhs_00_01SparseShape_00_01DenseShape_00_01ProductType_01_4" prot="public">Eigen::internal::generic_product_impl&lt; Lhs, Rhs, SparseShape, DenseShape, ProductType &gt;</innerclass>
+    <innernamespace refid="namespacepbat">pbat</innernamespace>
+    <innernamespace refid="namespacepbat_1_1math">pbat::math</innernamespace>
+    <innernamespace refid="namespaceEigen">Eigen</innernamespace>
+    <innernamespace refid="namespaceEigen_1_1internal">Eigen::internal</innernamespace>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="preprocessor">#ifndef<sp/>PBAT_MATH_LINEAR_OPERATOR_H</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="2"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>PBAT_MATH_LINEAR_OPERATOR_H</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="3"><highlight class="normal"></highlight></codeline>
+<codeline lineno="4"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;concepts&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="5"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;exception&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="6"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;pbat/Aliases.h&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="7"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;pbat/profiling/Profiling.h&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="8"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;tuple&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="9"><highlight class="normal"></highlight></codeline>
+<codeline lineno="10"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal">pbat<sp/>{</highlight></codeline>
+<codeline lineno="11"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal">math<sp/>{</highlight></codeline>
+<codeline lineno="12"><highlight class="normal"></highlight></codeline>
+<codeline lineno="23"><highlight class="keyword">template</highlight><highlight class="normal"><sp/>&lt;</highlight><highlight class="keyword">class</highlight><highlight class="normal"><sp/>T&gt;</highlight></codeline>
+<codeline lineno="24"><highlight class="normal">concept<sp/>CLinearOperator<sp/>=<sp/>requires(T<sp/>t)</highlight></codeline>
+<codeline lineno="25"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="26"><highlight class="normal"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="27"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>t.OutputDimensions()</highlight></codeline>
+<codeline lineno="28"><highlight class="normal"><sp/><sp/><sp/><sp/>}<sp/>-&gt;<sp/>std::convertible_to&lt;int&gt;;</highlight></codeline>
+<codeline lineno="29"><highlight class="normal"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="30"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>t.InputDimensions()</highlight></codeline>
+<codeline lineno="31"><highlight class="normal"><sp/><sp/><sp/><sp/>}<sp/>-&gt;<sp/>std::convertible_to&lt;int&gt;;</highlight></codeline>
+<codeline lineno="32"><highlight class="normal"><sp/><sp/><sp/><sp/>{t.Apply(VectorX{},<sp/>std::declval&lt;VectorX&amp;&gt;())};</highlight></codeline>
+<codeline lineno="33"><highlight class="normal"><sp/><sp/><sp/><sp/>{t.Apply(MatrixX{},<sp/>std::declval&lt;MatrixX&amp;&gt;())};</highlight></codeline>
+<codeline lineno="34"><highlight class="normal"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="35"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>t.ToMatrix()</highlight></codeline>
+<codeline lineno="36"><highlight class="normal"><sp/><sp/><sp/><sp/>}<sp/>-&gt;<sp/>std::convertible_to&lt;CSCMatrix&gt;;</highlight></codeline>
+<codeline lineno="37"><highlight class="normal">};</highlight></codeline>
+<codeline lineno="38"><highlight class="normal"></highlight></codeline>
+<codeline lineno="39"><highlight class="normal"></highlight><highlight class="keyword">template</highlight><highlight class="normal"><sp/>&lt;CLinearOperator...<sp/>TLinearOperators&gt;</highlight></codeline>
+<codeline lineno="40" refid="classpbat_1_1math_1_1LinearOperator" refkind="compound"><highlight class="normal"></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal"><ref refid="classpbat_1_1math_1_1LinearOperator" kindref="compound">LinearOperator</ref>;</highlight></codeline>
+<codeline lineno="41"><highlight class="normal"></highlight></codeline>
+<codeline lineno="42"><highlight class="normal">}<sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>math</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="43"><highlight class="normal">}<sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>pbat</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="44"><highlight class="normal"></highlight></codeline>
+<codeline lineno="45"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal">Eigen<sp/>{</highlight></codeline>
+<codeline lineno="46"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal">internal<sp/>{</highlight></codeline>
+<codeline lineno="47"><highlight class="normal"></highlight></codeline>
+<codeline lineno="48"><highlight class="normal"></highlight><highlight class="keyword">template</highlight><highlight class="normal"><sp/>&lt;pbat::math::CLinearOperator...<sp/>TLinearOperators&gt;</highlight></codeline>
+<codeline lineno="49" refid="structEigen_1_1internal_1_1traits_3_01pbat_1_1math_1_1LinearOperator_3_01TLinearOperators_8_8_8_01_4_01_4" refkind="compound"><highlight class="normal"></highlight><highlight class="keyword">struct<sp/></highlight><highlight class="normal">traits&lt;pbat::math::LinearOperator&lt;TLinearOperators...&gt;&gt;</highlight></codeline>
+<codeline lineno="50"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="51"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using</highlight><highlight class="normal"><sp/>Scalar<sp/><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/>pbat::Scalar;</highlight></codeline>
+<codeline lineno="52"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using</highlight><highlight class="normal"><sp/>StorageIndex<sp/>=<sp/>pbat::CSCMatrix::StorageIndex;</highlight></codeline>
+<codeline lineno="53"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using</highlight><highlight class="normal"><sp/>StorageKind<sp/><sp/>=<sp/>Sparse;</highlight></codeline>
+<codeline lineno="54"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using</highlight><highlight class="normal"><sp/>XprKind<sp/><sp/><sp/><sp/><sp/><sp/>=<sp/>MatrixXpr;</highlight></codeline>
+<codeline lineno="55"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">enum</highlight><highlight class="normal"><sp/>{</highlight></codeline>
+<codeline lineno="56"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>RowsAtCompileTime<sp/><sp/><sp/><sp/>=<sp/>Dynamic,</highlight></codeline>
+<codeline lineno="57"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>ColsAtCompileTime<sp/><sp/><sp/><sp/>=<sp/>Dynamic,</highlight></codeline>
+<codeline lineno="58"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>MaxRowsAtCompileTime<sp/>=<sp/>Dynamic,</highlight></codeline>
+<codeline lineno="59"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>MaxColsAtCompileTime<sp/>=<sp/>Dynamic,</highlight></codeline>
+<codeline lineno="60"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>Flags<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/>0</highlight></codeline>
+<codeline lineno="61"><highlight class="normal"><sp/><sp/><sp/><sp/>};</highlight></codeline>
+<codeline lineno="62"><highlight class="normal">};</highlight></codeline>
+<codeline lineno="63"><highlight class="normal"></highlight></codeline>
+<codeline lineno="64"><highlight class="normal">}<sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>internal</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="65"><highlight class="normal">}<sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>Eigen</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="66"><highlight class="normal"></highlight></codeline>
+<codeline lineno="67"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal">pbat<sp/>{</highlight></codeline>
+<codeline lineno="68"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal">math<sp/>{</highlight></codeline>
+<codeline lineno="69"><highlight class="normal"></highlight></codeline>
+<codeline lineno="79"><highlight class="keyword">template</highlight><highlight class="normal"><sp/>&lt;CLinearOperator...<sp/>TLinearOperators&gt;</highlight></codeline>
+<codeline lineno="80"><highlight class="normal"></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal">LinearOperator<sp/>:<sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal"><sp/>Eigen::EigenBase&lt;LinearOperator&lt;TLinearOperators...&gt;&gt;</highlight></codeline>
+<codeline lineno="81"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="82"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="83"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using</highlight><highlight class="normal"><sp/>SelfType<sp/>=<sp/>LinearOperator&lt;TLinearOperators...&gt;;</highlight></codeline>
+<codeline lineno="84"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using</highlight><highlight class="normal"><sp/>BaseType<sp/>=<sp/>Eigen::EigenBase&lt;SelfType&gt;;</highlight></codeline>
+<codeline lineno="85"><highlight class="normal"></highlight></codeline>
+<codeline lineno="89" refid="classpbat_1_1math_1_1LinearOperator_1a94ea0ffe59f6c950e954c82f78036410" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using</highlight><highlight class="normal"><sp/><ref refid="classpbat_1_1math_1_1LinearOperator_1a94ea0ffe59f6c950e954c82f78036410" kindref="member">Scalar</ref><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/>pbat::Scalar;</highlight></codeline>
+<codeline lineno="90"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using</highlight><highlight class="normal"><sp/>RealScalar<sp/><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/>pbat::Scalar;</highlight></codeline>
+<codeline lineno="91"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using</highlight><highlight class="normal"><sp/>StorageIndex<sp/><sp/><sp/><sp/><sp/>=<sp/></highlight><highlight class="keyword">typename</highlight><highlight class="normal"><sp/>CSCMatrix::StorageIndex;</highlight></codeline>
+<codeline lineno="92"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using</highlight><highlight class="normal"><sp/><ref refid="classpbat_1_1math_1_1LinearOperator" kindref="compound">NestedExpression</ref><sp/>=<sp/><ref refid="classpbat_1_1math_1_1LinearOperator" kindref="compound">SelfType</ref>;</highlight></codeline>
+<codeline lineno="93"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">enum</highlight><highlight class="normal"><sp/>{</highlight></codeline>
+<codeline lineno="94"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>ColsAtCompileTime<sp/><sp/><sp/><sp/>=<sp/>Eigen::Dynamic,</highlight></codeline>
+<codeline lineno="95"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>MaxColsAtCompileTime<sp/>=<sp/>Eigen::Dynamic,</highlight></codeline>
+<codeline lineno="96"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>IsRowMajor<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/></highlight><highlight class="keyword">false</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="97"><highlight class="normal"><sp/><sp/><sp/><sp/>};</highlight></codeline>
+<codeline lineno="98"><highlight class="normal"></highlight></codeline>
+<codeline lineno="99"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="classpbat_1_1math_1_1LinearOperator" kindref="compound">LinearOperator</ref>(TLinearOperators<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;...<sp/>inOps);</highlight></codeline>
+<codeline lineno="100"><highlight class="normal"></highlight></codeline>
+<codeline lineno="101"><highlight class="normal"><sp/><sp/><sp/><sp/>SelfType&amp;<sp/>operator=(SelfType<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;)<sp/>=<sp/></highlight><highlight class="keyword">delete</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="102"><highlight class="normal"></highlight></codeline>
+<codeline lineno="111"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">template</highlight><highlight class="normal"><sp/>&lt;</highlight><highlight class="keyword">class</highlight><highlight class="normal"><sp/>TDerivedIn,<sp/></highlight><highlight class="keyword">class</highlight><highlight class="normal"><sp/>TDerivedOut&gt;</highlight></codeline>
+<codeline lineno="112"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="classpbat_1_1math_1_1LinearOperator_1a5870e596d2cda27dbf412c695200dd54" kindref="member">Apply</ref>(Eigen::MatrixBase&lt;TDerivedIn&gt;<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>x,<sp/>Eigen::DenseBase&lt;TDerivedOut&gt;&amp;<sp/>y)<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="113"><highlight class="normal"></highlight></codeline>
+<codeline lineno="118"><highlight class="normal"><sp/><sp/><sp/><sp/>CSCMatrix<sp/><ref refid="classpbat_1_1math_1_1LinearOperator_1a87af21b0bf248a89ba9d8dce51f1ca1a" kindref="member">ToMatrix</ref>()<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="119"><highlight class="normal"></highlight></codeline>
+<codeline lineno="120"><highlight class="normal"><sp/><sp/><sp/><sp/>pbat::Index<sp/>OutputDimensions()<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="121"><highlight class="normal"><sp/><sp/><sp/><sp/>pbat::Index<sp/>InputDimensions()<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="122"><highlight class="normal"></highlight></codeline>
+<codeline lineno="123"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>For<sp/>Eigen<sp/>compatibility</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="124"><highlight class="normal"><sp/><sp/><sp/><sp/>BaseType::Index<sp/>rows()</highlight><highlight class="keyword"><sp/>const<sp/></highlight><highlight class="normal">{<sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">static_cast&lt;</highlight><highlight class="normal">BaseType::Index</highlight><highlight class="keyword">&gt;</highlight><highlight class="normal">(OutputDimensions());<sp/>}</highlight></codeline>
+<codeline lineno="125"><highlight class="normal"><sp/><sp/><sp/><sp/>BaseType::Index<sp/>cols()</highlight><highlight class="keyword"><sp/>const<sp/></highlight><highlight class="normal">{<sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">static_cast&lt;</highlight><highlight class="normal">BaseType::Index</highlight><highlight class="keyword">&gt;</highlight><highlight class="normal">(InputDimensions());<sp/>}</highlight></codeline>
+<codeline lineno="126"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">template</highlight><highlight class="normal"><sp/>&lt;</highlight><highlight class="keyword">class</highlight><highlight class="normal"><sp/>Rhs&gt;</highlight></codeline>
+<codeline lineno="127"><highlight class="normal"><sp/><sp/><sp/><sp/>Eigen::Product&lt;SelfType,<sp/>Rhs,<sp/>Eigen::AliasFreeProduct&gt;</highlight></codeline>
+<codeline lineno="128"><highlight class="normal"><sp/><sp/><sp/><sp/>operator*(Eigen::MatrixBase&lt;Rhs&gt;<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>x)</highlight><highlight class="keyword"><sp/>const</highlight></codeline>
+<codeline lineno="129"><highlight class="keyword"><sp/><sp/><sp/><sp/></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="130"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>Eigen::Product&lt;SelfType,<sp/>Rhs,<sp/>Eigen::AliasFreeProduct&gt;(*</highlight><highlight class="keyword">this</highlight><highlight class="normal">,<sp/>x.derived());</highlight></codeline>
+<codeline lineno="131"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="132"><highlight class="normal"></highlight></codeline>
+<codeline lineno="133"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">private</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="134"><highlight class="normal"><sp/><sp/><sp/><sp/>std::tuple&lt;TLinearOperators<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;...&gt;<sp/>ops;</highlight></codeline>
+<codeline lineno="135"><highlight class="normal">};</highlight></codeline>
+<codeline lineno="136"><highlight class="normal"></highlight></codeline>
+<codeline lineno="137"><highlight class="normal"></highlight><highlight class="keyword">template</highlight><highlight class="normal"><sp/>&lt;CLinearOperator...<sp/>TLinearOperators&gt;</highlight></codeline>
+<codeline lineno="138"><highlight class="normal">LinearOperator&lt;TLinearOperators...&gt;<sp/>ComposeLinearOperators(TLinearOperators<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;...<sp/>inOps)</highlight></codeline>
+<codeline lineno="139"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="140"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>LinearOperator(inOps...);</highlight></codeline>
+<codeline lineno="141"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="142"><highlight class="normal"></highlight></codeline>
+<codeline lineno="143"><highlight class="normal"></highlight><highlight class="keyword">template</highlight><highlight class="normal"><sp/>&lt;CLinearOperator...<sp/>TLinearOperators&gt;</highlight></codeline>
+<codeline lineno="144"><highlight class="normal"></highlight><highlight class="keyword">inline</highlight><highlight class="normal"><sp/>LinearOperator&lt;TLinearOperators...&gt;::LinearOperator(TLinearOperators<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;...<sp/>inOps)</highlight></codeline>
+<codeline lineno="145"><highlight class="normal"><sp/><sp/><sp/><sp/>:<sp/>ops(std::make_tuple(std::cref(inOps)...))</highlight></codeline>
+<codeline lineno="146"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="147"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>bInputDimensionsMatch<sp/>=<sp/>std::apply(</highlight></codeline>
+<codeline lineno="148"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>[</highlight><highlight class="keyword">this</highlight><highlight class="normal">](</highlight><highlight class="keyword">auto</highlight><highlight class="normal">...<sp/>op)<sp/>-&gt;<sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/>{</highlight></codeline>
+<codeline lineno="149"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>((InputDimensions()<sp/>==<sp/>op.InputDimensions())<sp/>and<sp/>...);</highlight></codeline>
+<codeline lineno="150"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>},</highlight></codeline>
+<codeline lineno="151"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>ops);</highlight></codeline>
+<codeline lineno="152"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>bOutputDimensionsMatch<sp/>=<sp/>std::apply(</highlight></codeline>
+<codeline lineno="153"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>[</highlight><highlight class="keyword">this</highlight><highlight class="normal">](</highlight><highlight class="keyword">auto</highlight><highlight class="normal">...<sp/>op)<sp/>-&gt;<sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/>{</highlight></codeline>
+<codeline lineno="154"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>((OutputDimensions()<sp/>==<sp/>op.OutputDimensions())<sp/>and<sp/>...);</highlight></codeline>
+<codeline lineno="155"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>},</highlight></codeline>
+<codeline lineno="156"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>ops);</highlight></codeline>
+<codeline lineno="157"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(not(bInputDimensionsMatch<sp/>and<sp/>bOutputDimensionsMatch))</highlight></codeline>
+<codeline lineno="158"><highlight class="normal"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="159"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">throw</highlight><highlight class="normal"><sp/>std::invalid_argument(</highlight></codeline>
+<codeline lineno="160"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="stringliteral">&quot;Dimensionality<sp/>mismatch<sp/>found<sp/>in<sp/>CompositeLinearOperator&apos;s<sp/>linear<sp/>operators.&quot;</highlight><highlight class="normal">);</highlight></codeline>
+<codeline lineno="161"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="162"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="163"><highlight class="normal"></highlight></codeline>
+<codeline lineno="164"><highlight class="normal"></highlight><highlight class="keyword">template</highlight><highlight class="normal"><sp/>&lt;CLinearOperator...<sp/>TLinearOperators&gt;</highlight></codeline>
+<codeline lineno="165"><highlight class="normal"></highlight><highlight class="keyword">template</highlight><highlight class="normal"><sp/>&lt;</highlight><highlight class="keyword">class</highlight><highlight class="normal"><sp/>TDerivedIn,<sp/></highlight><highlight class="keyword">class</highlight><highlight class="normal"><sp/>TDerivedOut&gt;</highlight></codeline>
+<codeline lineno="166" refid="classpbat_1_1math_1_1LinearOperator_1a5870e596d2cda27dbf412c695200dd54" refkind="member"><highlight class="normal"></highlight><highlight class="keyword">inline</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="classpbat_1_1math_1_1LinearOperator_1a5870e596d2cda27dbf412c695200dd54" kindref="member">LinearOperator&lt;TLinearOperators...&gt;::Apply</ref>(</highlight></codeline>
+<codeline lineno="167"><highlight class="normal"><sp/><sp/><sp/><sp/>Eigen::MatrixBase&lt;TDerivedIn&gt;<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>x,</highlight></codeline>
+<codeline lineno="168"><highlight class="normal"><sp/><sp/><sp/><sp/>Eigen::DenseBase&lt;TDerivedOut&gt;&amp;<sp/>y)</highlight><highlight class="keyword"><sp/>const</highlight></codeline>
+<codeline lineno="169"><highlight class="keyword"></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="170"><highlight class="normal"><sp/><sp/><sp/><sp/>PBAT_PROFILE_NAMED_SCOPE(</highlight><highlight class="stringliteral">&quot;pbat.math.LinearOperator.Apply&quot;</highlight><highlight class="normal">);</highlight></codeline>
+<codeline lineno="171"><highlight class="normal"><sp/><sp/><sp/><sp/>std::apply([&amp;](</highlight><highlight class="keyword">auto</highlight><highlight class="normal">...<sp/>op)<sp/>{<sp/>(op.Apply(x,<sp/>y),<sp/>...);<sp/>},<sp/>ops);</highlight></codeline>
+<codeline lineno="172"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="173"><highlight class="normal"></highlight></codeline>
+<codeline lineno="174"><highlight class="normal"></highlight><highlight class="keyword">template</highlight><highlight class="normal"><sp/>&lt;CLinearOperator...<sp/>TLinearOperators&gt;</highlight></codeline>
+<codeline lineno="175" refid="classpbat_1_1math_1_1LinearOperator_1a87af21b0bf248a89ba9d8dce51f1ca1a" refkind="member"><highlight class="normal"></highlight><highlight class="keyword">inline</highlight><highlight class="normal"><sp/>CSCMatrix<sp/><ref refid="classpbat_1_1math_1_1LinearOperator_1a87af21b0bf248a89ba9d8dce51f1ca1a" kindref="member">LinearOperator&lt;TLinearOperators...&gt;::ToMatrix</ref>()</highlight><highlight class="keyword"><sp/>const</highlight></codeline>
+<codeline lineno="176"><highlight class="keyword"></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="177"><highlight class="normal"><sp/><sp/><sp/><sp/>PBAT_PROFILE_NAMED_SCOPE(</highlight><highlight class="stringliteral">&quot;pbat.math.LinearOperator.ToMatrix&quot;</highlight><highlight class="normal">);</highlight></codeline>
+<codeline lineno="178"><highlight class="normal"><sp/><sp/><sp/><sp/>CSCMatrix<sp/>M(OutputDimensions(),<sp/>InputDimensions());</highlight></codeline>
+<codeline lineno="179"><highlight class="normal"><sp/><sp/><sp/><sp/>std::apply([&amp;](</highlight><highlight class="keyword">auto</highlight><highlight class="normal">...<sp/>op)<sp/>{<sp/>((M<sp/>+=<sp/>op.ToMatrix()),<sp/>...);<sp/>},<sp/>ops);</highlight></codeline>
+<codeline lineno="180"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>M;</highlight></codeline>
+<codeline lineno="181"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="182"><highlight class="normal"></highlight></codeline>
+<codeline lineno="183"><highlight class="normal"></highlight><highlight class="keyword">template</highlight><highlight class="normal"><sp/>&lt;CLinearOperator...<sp/>TLinearOperators&gt;</highlight></codeline>
+<codeline lineno="184"><highlight class="normal"></highlight><highlight class="keyword">inline</highlight><highlight class="normal"><sp/>Index<sp/><ref refid="classpbat_1_1math_1_1LinearOperator" kindref="compound">LinearOperator&lt;TLinearOperators...&gt;::OutputDimensions</ref>()</highlight><highlight class="keyword"><sp/>const</highlight></codeline>
+<codeline lineno="185"><highlight class="keyword"></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="186"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>std::get&lt;0&gt;(ops).OutputDimensions();</highlight></codeline>
+<codeline lineno="187"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="188"><highlight class="normal"></highlight></codeline>
+<codeline lineno="189"><highlight class="normal"></highlight><highlight class="keyword">template</highlight><highlight class="normal"><sp/>&lt;CLinearOperator...<sp/>TLinearOperators&gt;</highlight></codeline>
+<codeline lineno="190"><highlight class="normal"></highlight><highlight class="keyword">inline</highlight><highlight class="normal"><sp/>Index<sp/>LinearOperator&lt;TLinearOperators...&gt;::InputDimensions()</highlight><highlight class="keyword"><sp/>const</highlight></codeline>
+<codeline lineno="191"><highlight class="keyword"></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="192"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>std::get&lt;0&gt;(ops).InputDimensions();</highlight></codeline>
+<codeline lineno="193"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="194"><highlight class="normal"></highlight></codeline>
+<codeline lineno="195"><highlight class="normal">}<sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>math</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="196"><highlight class="normal">}<sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>pbat</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="197"><highlight class="normal"></highlight></codeline>
+<codeline lineno="198"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal">Eigen<sp/>{</highlight></codeline>
+<codeline lineno="199"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal">internal<sp/>{</highlight></codeline>
+<codeline lineno="200"><highlight class="normal"></highlight></codeline>
+<codeline lineno="224"><highlight class="keyword">template</highlight><highlight class="normal"><sp/>&lt;pbat::math::CLinearOperator<sp/>Lhs,<sp/></highlight><highlight class="keyword">typename</highlight><highlight class="normal"><sp/>Rhs,<sp/></highlight><highlight class="keywordtype">int</highlight><highlight class="normal"><sp/>ProductType&gt;</highlight></codeline>
+<codeline lineno="225" refid="structEigen_1_1internal_1_1generic__product__impl_3_01Lhs_00_01Rhs_00_01SparseShape_00_01DenseShape_00_01ProductType_01_4" refkind="compound"><highlight class="normal"></highlight><highlight class="keyword">struct<sp/></highlight><highlight class="normal">generic_product_impl&lt;Lhs,<sp/>Rhs,<sp/>SparseShape,<sp/>DenseShape,<sp/>ProductType&gt;</highlight></codeline>
+<codeline lineno="226"><highlight class="normal"><sp/><sp/><sp/><sp/>:<sp/>generic_product_impl_base&lt;Lhs,<sp/>Rhs,<sp/>generic_product_impl&lt;Lhs,<sp/>Rhs&gt;&gt;</highlight></codeline>
+<codeline lineno="227"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="228"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">typedef</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">typename</highlight><highlight class="normal"><sp/>Product&lt;Lhs,<sp/>Rhs&gt;::Scalar<sp/>Scalar;</highlight></codeline>
+<codeline lineno="229"><highlight class="normal"></highlight></codeline>
+<codeline lineno="230"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">template</highlight><highlight class="normal"><sp/>&lt;</highlight><highlight class="keyword">typename</highlight><highlight class="normal"><sp/>Dst&gt;</highlight></codeline>
+<codeline lineno="231"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/>scaleAndAddTo(Dst&amp;<sp/>dst,<sp/>Lhs<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>lhs,<sp/>Rhs<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>rhs,<sp/>Scalar<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>alpha)</highlight></codeline>
+<codeline lineno="232"><highlight class="normal"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="233"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>lhs.Apply(alpha<sp/>*<sp/>rhs,<sp/>dst);</highlight></codeline>
+<codeline lineno="234"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="235"><highlight class="normal">};</highlight></codeline>
+<codeline lineno="236"><highlight class="normal"></highlight></codeline>
+<codeline lineno="237"><highlight class="normal">}<sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>internal</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="238"><highlight class="normal">}<sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>Eigen</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="239"><highlight class="normal"></highlight></codeline>
+<codeline lineno="240"><highlight class="normal"></highlight><highlight class="preprocessor">#endif<sp/>//<sp/>PBAT_MATH_LINEAR_OPERATOR_H</highlight></codeline>
+    </programlisting>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/LinearOperator.h"/>
+  </compounddef>
+</doxygen>

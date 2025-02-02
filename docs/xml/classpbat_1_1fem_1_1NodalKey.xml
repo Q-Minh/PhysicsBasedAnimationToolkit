@@ -1,0 +1,179 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="classpbat_1_1fem_1_1NodalKey" kind="class" language="C++" prot="public">
+    <compoundname>pbat::fem::NodalKey</compoundname>
+    <templateparamlist>
+      <param>
+        <type>CElement</type>
+        <declname>TElement</declname>
+        <defname>TElement</defname>
+      </param>
+    </templateparamlist>
+      <sectiondef kind="public-type">
+      <memberdef kind="typedef" id="classpbat_1_1fem_1_1NodalKey_1aaec8e1425468a73857a2bf2c5829b8d6" prot="public" static="no">
+        <type><ref refid="classpbat_1_1fem_1_1NodalKey" kindref="compound">NodalKey</ref>&lt; TElement &gt;</type>
+        <definition>using pbat::fem::NodalKey&lt; TElement &gt;::SelfType =  NodalKey&lt;TElement&gt;</definition>
+        <argsstring></argsstring>
+        <name>SelfType</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Mesh.h" line="59" column="5" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Mesh.h" bodystart="59" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="public-static-attrib">
+      <memberdef kind="variable" id="classpbat_1_1fem_1_1NodalKey_1ac2995d5c8f95f6936f9c53f2688e29fe" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>constexpr int</type>
+        <definition>constexpr int pbat::fem::NodalKey&lt; TElement &gt;::kVertices</definition>
+        <argsstring></argsstring>
+        <name>kVertices</name>
+        <initializer>= TElement::AffineBaseType::kNodes</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Mesh.h" line="60" column="26" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Mesh.h" bodystart="60" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="classpbat_1_1fem_1_1NodalKey_1a2e5d84d0a99f9df1e1aeb011a00eb9f9" prot="private" static="no" mutable="no">
+        <type>IndexVector&lt; kVertices &gt;</type>
+        <definition>IndexVector&lt;kVertices&gt; pbat::fem::NodalKey&lt; TElement &gt;::mCellVertices</definition>
+        <argsstring></argsstring>
+        <name>mCellVertices</name>
+        <briefdescription>
+<para>Cell vertex indices. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Mesh.h" line="124" column="17" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Mesh.h" bodystart="124" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpbat_1_1fem_1_1NodalKey_1ad0ab33ab8c12ff4f1c429cac26d43383" prot="private" static="no" mutable="no">
+        <type>IndexVector&lt; kVertices &gt;</type>
+        <definition>IndexVector&lt;kVertices&gt; pbat::fem::NodalKey&lt; TElement &gt;::mSortOrder</definition>
+        <argsstring></argsstring>
+        <name>mSortOrder</name>
+        <briefdescription>
+<para>Ordering of the cell vertices. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Mesh.h" line="125" column="17" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Mesh.h" bodystart="125" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpbat_1_1fem_1_1NodalKey_1a1ea1e69e54c10bc8647dde1b48c4b8f5" prot="private" static="no" mutable="no">
+        <type>Eigen::Vector&lt; <ref refid="structpbat_1_1math_1_1Rational" kindref="compound">math::Rational</ref>, kVertices &gt;</type>
+        <definition>Eigen::Vector&lt;math::Rational, kVertices&gt; pbat::fem::NodalKey&lt; TElement &gt;::mN</definition>
+        <argsstring></argsstring>
+        <name>mN</name>
+        <briefdescription>
+<para>Node&apos;s affine shape function values. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Mesh.h" line="126" column="19" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Mesh.h" bodystart="126" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpbat_1_1fem_1_1NodalKey_1ad8dab0a343bc6d925186297e9e3f9293" prot="private" static="no" mutable="no">
+        <type>int</type>
+        <definition>int pbat::fem::NodalKey&lt; TElement &gt;::mSize</definition>
+        <argsstring></argsstring>
+        <name>mSize</name>
+        <briefdescription>
+<para>Number of non-zero affine shape function values. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Mesh.h" line="127" column="9" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Mesh.h" bodystart="127" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpbat_1_1fem_1_1NodalKey_1adda4bfaaa1b9e54e69bb1bc7c8e88109" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type></type>
+        <definition>pbat::fem::NodalKey&lt; TElement &gt;::NodalKey</definition>
+        <argsstring>(IndexVector&lt; kVertices &gt; const &amp;cellVertices, IndexVector&lt; kVertices &gt; const &amp;sortOrder, Eigen::Vector&lt; math::Rational, kVertices &gt; const &amp;N)</argsstring>
+        <name>NodalKey</name>
+        <param>
+          <type>IndexVector&lt; kVertices &gt; const &amp;</type>
+          <declname>cellVertices</declname>
+        </param>
+        <param>
+          <type>IndexVector&lt; kVertices &gt; const &amp;</type>
+          <declname>sortOrder</declname>
+        </param>
+        <param>
+          <type>Eigen::Vector&lt; <ref refid="structpbat_1_1math_1_1Rational" kindref="compound">math::Rational</ref>, kVertices &gt; const &amp;</type>
+          <declname>N</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Mesh.h" line="62" column="5" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Mesh.h" bodystart="62" bodyend="74"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1fem_1_1NodalKey_1aae0f826feed4864b08fd1bae7a7638d2" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool pbat::fem::NodalKey&lt; TElement &gt;::operator==</definition>
+        <argsstring>(SelfType const &amp;rhs) const</argsstring>
+        <name>operator==</name>
+        <param>
+          <type><ref refid="classpbat_1_1fem_1_1NodalKey" kindref="compound">SelfType</ref> const &amp;</type>
+          <declname>rhs</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Mesh.h" line="76" column="10" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Mesh.h" bodystart="76" bodyend="96"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1fem_1_1NodalKey_1a09e473291adf5cff51e186d0c268c76f" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool pbat::fem::NodalKey&lt; TElement &gt;::operator&lt;</definition>
+        <argsstring>(SelfType const &amp;rhs) const</argsstring>
+        <name>operator&lt;</name>
+        <param>
+          <type><ref refid="classpbat_1_1fem_1_1NodalKey" kindref="compound">SelfType</ref> const &amp;</type>
+          <declname>rhs</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Mesh.h" line="98" column="5" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Mesh.h" bodystart="98" bodyend="121"/>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Mesh.h" line="57" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/fem/Mesh.h" bodystart="56" bodyend="128"/>
+    <listofallmembers>
+      <member refid="classpbat_1_1fem_1_1NodalKey_1ac2995d5c8f95f6936f9c53f2688e29fe" prot="public" virt="non-virtual"><scope>pbat::fem::NodalKey</scope><name>kVertices</name></member>
+      <member refid="classpbat_1_1fem_1_1NodalKey_1a2e5d84d0a99f9df1e1aeb011a00eb9f9" prot="private" virt="non-virtual"><scope>pbat::fem::NodalKey</scope><name>mCellVertices</name></member>
+      <member refid="classpbat_1_1fem_1_1NodalKey_1a1ea1e69e54c10bc8647dde1b48c4b8f5" prot="private" virt="non-virtual"><scope>pbat::fem::NodalKey</scope><name>mN</name></member>
+      <member refid="classpbat_1_1fem_1_1NodalKey_1ad8dab0a343bc6d925186297e9e3f9293" prot="private" virt="non-virtual"><scope>pbat::fem::NodalKey</scope><name>mSize</name></member>
+      <member refid="classpbat_1_1fem_1_1NodalKey_1ad0ab33ab8c12ff4f1c429cac26d43383" prot="private" virt="non-virtual"><scope>pbat::fem::NodalKey</scope><name>mSortOrder</name></member>
+      <member refid="classpbat_1_1fem_1_1NodalKey_1adda4bfaaa1b9e54e69bb1bc7c8e88109" prot="public" virt="non-virtual"><scope>pbat::fem::NodalKey</scope><name>NodalKey</name></member>
+      <member refid="classpbat_1_1fem_1_1NodalKey_1a09e473291adf5cff51e186d0c268c76f" prot="public" virt="non-virtual"><scope>pbat::fem::NodalKey</scope><name>operator&lt;</name></member>
+      <member refid="classpbat_1_1fem_1_1NodalKey_1aae0f826feed4864b08fd1bae7a7638d2" prot="public" virt="non-virtual"><scope>pbat::fem::NodalKey</scope><name>operator==</name></member>
+      <member refid="classpbat_1_1fem_1_1NodalKey_1aaec8e1425468a73857a2bf2c5829b8d6" prot="public" virt="non-virtual"><scope>pbat::fem::NodalKey</scope><name>SelfType</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

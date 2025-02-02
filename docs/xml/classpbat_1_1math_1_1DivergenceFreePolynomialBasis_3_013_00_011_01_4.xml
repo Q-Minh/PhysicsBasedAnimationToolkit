@@ -1,0 +1,85 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="classpbat_1_1math_1_1DivergenceFreePolynomialBasis_3_013_00_011_01_4" kind="class" language="C++" prot="public">
+    <compoundname>pbat::math::DivergenceFreePolynomialBasis&lt; 3, 1 &gt;</compoundname>
+    <includes refid="PolynomialBasis_8h" local="no">PolynomialBasis.h</includes>
+    <templateparamlist>
+    </templateparamlist>
+      <sectiondef kind="public-static-attrib">
+      <memberdef kind="variable" id="classpbat_1_1math_1_1DivergenceFreePolynomialBasis_3_013_00_011_01_4_1a9fa454df2e0f28b6f71247eec376e952" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>constexpr std::size_t</type>
+        <definition>constexpr std::size_t pbat::math::DivergenceFreePolynomialBasis&lt; 3, 1 &gt;::kDims</definition>
+        <argsstring></argsstring>
+        <name>kDims</name>
+        <initializer>= 3</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/PolynomialBasis.h" line="4385" column="41" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/PolynomialBasis.h" bodystart="4385" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpbat_1_1math_1_1DivergenceFreePolynomialBasis_3_013_00_011_01_4_1a31685132b5463f00c65bf63e95c96393" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>constexpr std::size_t</type>
+        <definition>constexpr std::size_t pbat::math::DivergenceFreePolynomialBasis&lt; 3, 1 &gt;::kOrder</definition>
+        <argsstring></argsstring>
+        <name>kOrder</name>
+        <initializer>= 1</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/PolynomialBasis.h" line="4386" column="41" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/PolynomialBasis.h" bodystart="4386" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpbat_1_1math_1_1DivergenceFreePolynomialBasis_3_013_00_011_01_4_1aaf4b647d69174e9af8e9576264ed7483" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>constexpr std::size_t</type>
+        <definition>constexpr std::size_t pbat::math::DivergenceFreePolynomialBasis&lt; 3, 1 &gt;::kSize</definition>
+        <argsstring></argsstring>
+        <name>kSize</name>
+        <initializer>= 11</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/PolynomialBasis.h" line="4387" column="41" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/PolynomialBasis.h" bodystart="4387" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpbat_1_1math_1_1DivergenceFreePolynomialBasis_3_013_00_011_01_4_1a9a94f65a82d01835096eefb60bc1ea3f" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>Matrix&lt; kSize, kDims &gt;</type>
+        <definition>Matrix&lt;kSize, kDims&gt; pbat::math::DivergenceFreePolynomialBasis&lt; 3, 1 &gt;::eval</definition>
+        <argsstring>([[maybe_unused]] Vector&lt; kDims &gt; const &amp;X) const</argsstring>
+        <name>eval</name>
+        <param>
+          <attributes>[[maybe_unused]</attributes>
+          <type>] Vector&lt; kDims &gt; const &amp;</type>
+          <declname>X</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/PolynomialBasis.h" line="4389" column="13" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/PolynomialBasis.h" bodystart="4389" bodyend="4436"/>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+<para>Divergence free polynomial basis on reference tetrahedron </para>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/PolynomialBasis.h" line="4383" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/PolynomialBasis.h" bodystart="4382" bodyend="4437"/>
+    <listofallmembers>
+      <member refid="classpbat_1_1math_1_1DivergenceFreePolynomialBasis_3_013_00_011_01_4_1a9a94f65a82d01835096eefb60bc1ea3f" prot="public" virt="non-virtual"><scope>pbat::math::DivergenceFreePolynomialBasis&lt; 3, 1 &gt;</scope><name>eval</name></member>
+      <member refid="classpbat_1_1math_1_1DivergenceFreePolynomialBasis_3_013_00_011_01_4_1a9fa454df2e0f28b6f71247eec376e952" prot="public" virt="non-virtual"><scope>pbat::math::DivergenceFreePolynomialBasis&lt; 3, 1 &gt;</scope><name>kDims</name></member>
+      <member refid="classpbat_1_1math_1_1DivergenceFreePolynomialBasis_3_013_00_011_01_4_1a31685132b5463f00c65bf63e95c96393" prot="public" virt="non-virtual"><scope>pbat::math::DivergenceFreePolynomialBasis&lt; 3, 1 &gt;</scope><name>kOrder</name></member>
+      <member refid="classpbat_1_1math_1_1DivergenceFreePolynomialBasis_3_013_00_011_01_4_1aaf4b647d69174e9af8e9576264ed7483" prot="public" virt="non-virtual"><scope>pbat::math::DivergenceFreePolynomialBasis&lt; 3, 1 &gt;</scope><name>kSize</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

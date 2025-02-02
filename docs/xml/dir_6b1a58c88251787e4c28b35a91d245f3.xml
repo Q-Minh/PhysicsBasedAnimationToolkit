@@ -1,0 +1,15 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="dir_6b1a58c88251787e4c28b35a91d245f3" kind="dir">
+    <compoundname>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/geometry</compoundname>
+    <innerfile refid="source_2pbat_2gpu_2geometry_2Bvh_8h">Bvh.h</innerfile>
+    <innerfile refid="source_2pbat_2gpu_2geometry_2BvhQuery_8h">BvhQuery.h</innerfile>
+    <innerfile refid="Primitives_8h">Primitives.h</innerfile>
+    <innerfile refid="source_2pbat_2gpu_2geometry_2SweepAndPrune_8h">SweepAndPrune.h</innerfile>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/geometry/"/>
+  </compounddef>
+</doxygen>

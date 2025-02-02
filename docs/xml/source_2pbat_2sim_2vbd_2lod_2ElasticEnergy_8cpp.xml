@@ -1,0 +1,160 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="source_2pbat_2sim_2vbd_2lod_2ElasticEnergy_8cpp" kind="file" language="C++">
+    <compoundname>ElasticEnergy.cpp</compoundname>
+    <includes refid="source_2pbat_2sim_2vbd_2lod_2ElasticEnergy_8h" local="yes">ElasticEnergy.h</includes>
+    <includes local="yes">pbat/geometry/TetrahedralAabbHierarchy.h</includes>
+    <incdepgraph>
+      <node id="1">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/ElasticEnergy.cpp</label>
+        <link refid="source_2pbat_2sim_2vbd_2lod_2ElasticEnergy_8cpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="18" relation="include">
+        </childnode>
+      </node>
+      <node id="12">
+        <label>pbat/math/GaussQuadrature.h</label>
+        <link refid="GaussQuadrature_8h_source"/>
+        <childnode refid="13" relation="include">
+        </childnode>
+        <childnode refid="14" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+      </node>
+      <node id="14">
+        <label>cstdint</label>
+      </node>
+      <node id="4">
+        <label>pbat/Aliases.h</label>
+        <link refid="Aliases_8h_source"/>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+      </node>
+      <node id="5">
+        <label>Eigen/Core</label>
+      </node>
+      <node id="8">
+        <label>pbat/sim/vbd/Mesh.h</label>
+        <link refid="source_2pbat_2sim_2vbd_2Mesh_8h_source"/>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+        <childnode refid="16" relation="include">
+        </childnode>
+      </node>
+      <node id="16">
+        <label>pbat/fem/Triangle.h</label>
+        <link refid="Triangle_8h_source"/>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="13" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+      </node>
+      <node id="11">
+        <label>QuadratureRules.h</label>
+        <link refid="QuadratureRules_8h_source"/>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="15" relation="include">
+        </childnode>
+      </node>
+      <node id="18">
+        <label>pbat/geometry/TetrahedralAabbHierarchy.h</label>
+      </node>
+      <node id="15">
+        <label>pbat/math/SymmetricQuadratureRules.h</label>
+        <link refid="SymmetricQuadratureRules_8h_source"/>
+        <childnode refid="13" relation="include">
+        </childnode>
+        <childnode refid="14" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+      </node>
+      <node id="6">
+        <label>Eigen/Sparse</label>
+      </node>
+      <node id="10">
+        <label>pbat/fem/Tetrahedron.h</label>
+        <link refid="Tetrahedron_8h_source"/>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="13" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+      </node>
+      <node id="9">
+        <label>pbat/fem/Mesh.h</label>
+      </node>
+      <node id="13">
+        <label>array</label>
+      </node>
+      <node id="17">
+        <label>pbat/sim/vbd/Data.h</label>
+      </node>
+      <node id="2">
+        <label>ElasticEnergy.h</label>
+        <link refid="source_2pbat_2sim_2vbd_2lod_2ElasticEnergy_8h_source"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="17" relation="include">
+        </childnode>
+      </node>
+      <node id="7">
+        <label>cstddef</label>
+      </node>
+      <node id="3">
+        <label>Quadrature.h</label>
+        <link refid="source_2pbat_2sim_2vbd_2lod_2Quadrature_8h_source"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+      </node>
+    </incdepgraph>
+    <innernamespace refid="namespacepbat">pbat</innernamespace>
+    <innernamespace refid="namespacepbat_1_1sim">pbat::sim</innernamespace>
+    <innernamespace refid="namespacepbat_1_1sim_1_1vbd">pbat::sim::vbd</innernamespace>
+    <innernamespace refid="namespacepbat_1_1sim_1_1vbd_1_1lod">pbat::sim::vbd::lod</innernamespace>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="preprocessor">#include<sp/>&quot;ElasticEnergy.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="2"><highlight class="normal"></highlight></codeline>
+<codeline lineno="3"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;pbat/geometry/TetrahedralAabbHierarchy.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="4"><highlight class="normal"></highlight></codeline>
+<codeline lineno="5"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal">pbat<sp/>{</highlight></codeline>
+<codeline lineno="6"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal">sim<sp/>{</highlight></codeline>
+<codeline lineno="7"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal">vbd<sp/>{</highlight></codeline>
+<codeline lineno="8"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal">lod<sp/>{</highlight></codeline>
+<codeline lineno="9"><highlight class="normal"></highlight></codeline>
+<codeline lineno="10" refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1ElasticEnergy_1a179e3239cdabd7d78a043dd46f257613" refkind="member"><highlight class="normal">ElasticEnergy::ElasticEnergy(<ref refid="structpbat_1_1sim_1_1vbd_1_1Data" kindref="compound">Data</ref><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>problem,<sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1CageQuadrature" kindref="compound">CageQuadrature</ref><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>CQ)<sp/>:<sp/>mug(),<sp/>lambdag()</highlight></codeline>
+<codeline lineno="11"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="12"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="classpbat_1_1geometry_1_1TetrahedralAabbHierarchy" kindref="compound">geometry::TetrahedralAabbHierarchy</ref><sp/>bvh(problem.<ref refid="structpbat_1_1sim_1_1vbd_1_1Data_1a0814000764d127a91a05454ee341504d" kindref="member">mesh</ref>.<ref refid="structpbat_1_1fem_1_1Mesh_1abc65a193ee960705ddf64227afb18809" kindref="member">X</ref>,<sp/>problem.<ref refid="structpbat_1_1sim_1_1vbd_1_1Data_1a0814000764d127a91a05454ee341504d" kindref="member">mesh</ref>.<ref refid="structpbat_1_1fem_1_1Mesh_1a384afdf16df5efa27e09f17520402b5b" kindref="member">E</ref>);</highlight></codeline>
+<codeline lineno="13"><highlight class="normal"><sp/><sp/><sp/><sp/>IndexVectorX<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>efg<sp/>=<sp/>bvh.NearestPrimitivesToPoints(CQ.<ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1CageQuadrature_1a1b3cbb03c6c2987415438a9e6c85940e" kindref="member">Xg</ref>).first;</highlight></codeline>
+<codeline lineno="14"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1ElasticEnergy_1ae3fb8a3a6c9e40035a0f5013f0a292bc" kindref="member">mug</ref><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/>problem.<ref refid="structpbat_1_1sim_1_1vbd_1_1Data_1af5043269e65921692dd1938cd75e9eb4" kindref="member">lame</ref>(0,<sp/>efg);</highlight></codeline>
+<codeline lineno="15"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1ElasticEnergy_1a661332c03e37a3cc8d283654059dc01c" kindref="member">lambdag</ref><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/>problem.<ref refid="structpbat_1_1sim_1_1vbd_1_1Data_1af5043269e65921692dd1938cd75e9eb4" kindref="member">lame</ref>(1,<sp/>efg);</highlight></codeline>
+<codeline lineno="16"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="17"><highlight class="normal"></highlight></codeline>
+<codeline lineno="18"><highlight class="normal">}<sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>lod</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="19"><highlight class="normal">}<sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>vbd</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="20"><highlight class="normal">}<sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>sim</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="21"><highlight class="normal">}<sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>pbat</highlight><highlight class="normal"></highlight></codeline>
+    </programlisting>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/ElasticEnergy.cpp"/>
+  </compounddef>
+</doxygen>

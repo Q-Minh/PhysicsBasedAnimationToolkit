@@ -1,0 +1,228 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="classpbat_1_1py_1_1fem_1_1Gradient" kind="class" language="C++" prot="public">
+    <compoundname>pbat::py::fem::Gradient</compoundname>
+      <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="classpbat_1_1py_1_1fem_1_1Gradient_1a69571640cab34648afbf0d2b821364dd" prot="public" static="no" mutable="no">
+        <type>EElement</type>
+        <definition>EElement pbat::py::fem::Gradient::eMeshElement</definition>
+        <argsstring></argsstring>
+        <name>eMeshElement</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/Gradient.cpp" line="31" column="14" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/Gradient.cpp" bodystart="31" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpbat_1_1py_1_1fem_1_1Gradient_1a1f5f2f62c2c456701f865f895b85ad1b" prot="public" static="no" mutable="no">
+        <type>int</type>
+        <definition>int pbat::py::fem::Gradient::mMeshDims</definition>
+        <argsstring></argsstring>
+        <name>mMeshDims</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/Gradient.cpp" line="32" column="9" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/Gradient.cpp" bodystart="32" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpbat_1_1py_1_1fem_1_1Gradient_1a5cd63d88a00f0eac38146604a25c255a" prot="public" static="no" mutable="no">
+        <type>int</type>
+        <definition>int pbat::py::fem::Gradient::mMeshOrder</definition>
+        <argsstring></argsstring>
+        <name>mMeshOrder</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/Gradient.cpp" line="33" column="9" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/Gradient.cpp" bodystart="33" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpbat_1_1py_1_1fem_1_1Gradient_1a86c7fe5991e4a61f6bf5baa39095b7be" prot="public" static="no" mutable="no">
+        <type>int</type>
+        <definition>int pbat::py::fem::Gradient::mDims</definition>
+        <argsstring></argsstring>
+        <name>mDims</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/Gradient.cpp" line="34" column="9" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/Gradient.cpp" bodystart="34" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpbat_1_1py_1_1fem_1_1Gradient_1a3e9b059c724a8a8aa244e91136a3c883" prot="public" static="no" mutable="no">
+        <type>int</type>
+        <definition>int pbat::py::fem::Gradient::mOrder</definition>
+        <argsstring></argsstring>
+        <name>mOrder</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/Gradient.cpp" line="35" column="9" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/Gradient.cpp" bodystart="35" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="classpbat_1_1py_1_1fem_1_1Gradient_1a8b9bfff7e13e2ac7c26c3f1b31766933" prot="private" static="no" mutable="no">
+        <type>void *</type>
+        <definition>void* pbat::py::fem::Gradient::mGradient</definition>
+        <argsstring></argsstring>
+        <name>mGradient</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/Gradient.cpp" line="38" column="10" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/Gradient.cpp" bodystart="38" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpbat_1_1py_1_1fem_1_1Gradient_1a98f269eca50d00d92291065687f21d0d" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>pbat::py::fem::Gradient::Gradient</definition>
+        <argsstring>(Mesh const &amp;M, Eigen::Ref&lt; IndexVectorX const &gt; const &amp;eg, Eigen::Ref&lt; MatrixX const &gt; const &amp;GNeg)</argsstring>
+        <name>Gradient</name>
+        <param>
+          <type><ref refid="classpbat_1_1py_1_1fem_1_1Mesh" kindref="compound">Mesh</ref> const &amp;</type>
+          <declname>M</declname>
+        </param>
+        <param>
+          <type>Eigen::Ref&lt; IndexVectorX const &gt; const &amp;</type>
+          <declname>eg</declname>
+        </param>
+        <param>
+          <type>Eigen::Ref&lt; MatrixX const &gt; const &amp;</type>
+          <declname>GNeg</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/Gradient.cpp" line="16" column="5" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/Gradient.cpp" bodystart="62" bodyend="79"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1py_1_1fem_1_1Gradient_1a1a3af6d746d1ce418cdf79f67af2cb4f" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>pbat::py::fem::Gradient::Gradient</definition>
+        <argsstring>(Gradient const &amp;)=delete</argsstring>
+        <name>Gradient</name>
+        <param>
+          <type><ref refid="classpbat_1_1py_1_1fem_1_1Gradient" kindref="compound">Gradient</ref> const &amp;</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/Gradient.cpp" line="21" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1py_1_1fem_1_1Gradient_1aa56839ba825736c0c269503080e21330" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpbat_1_1py_1_1fem_1_1Gradient" kindref="compound">Gradient</ref> &amp;</type>
+        <definition>Gradient&amp; pbat::py::fem::Gradient::operator=</definition>
+        <argsstring>(Gradient const &amp;)=delete</argsstring>
+        <name>operator=</name>
+        <param>
+          <type><ref refid="classpbat_1_1py_1_1fem_1_1Gradient" kindref="compound">Gradient</ref> const &amp;</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/Gradient.cpp" line="22" column="14"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1py_1_1fem_1_1Gradient_1ac94497ebdf9d6e6f43e942f594c89f9b" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class Func</type>
+          </param>
+        </templateparamlist>
+        <type>void</type>
+        <definition>void pbat::py::fem::Gradient::Apply</definition>
+        <argsstring>(Func &amp;&amp;f) const</argsstring>
+        <name>Apply</name>
+        <param>
+          <type>Func &amp;&amp;</type>
+          <declname>f</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/Gradient.cpp" line="25" column="10" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/Gradient.cpp" bodystart="105" bodyend="112"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1py_1_1fem_1_1Gradient_1a3540f2eb05248077501153ba006fe070" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>CSCMatrix</type>
+        <definition>CSCMatrix pbat::py::fem::Gradient::ToMatrix</definition>
+        <argsstring>() const</argsstring>
+        <name>ToMatrix</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/Gradient.cpp" line="27" column="15" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/Gradient.cpp" bodystart="81" bodyend="86"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1py_1_1fem_1_1Gradient_1a4f38d06f1ad175d59bf6a4f962ce93ae" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>std::tuple&lt; Index, Index &gt;</type>
+        <definition>std::tuple&lt; Index, Index &gt; pbat::py::fem::Gradient::Shape</definition>
+        <argsstring>() const</argsstring>
+        <name>Shape</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/Gradient.cpp" line="28" column="16" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/Gradient.cpp" bodystart="88" bodyend="96"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1py_1_1fem_1_1Gradient_1a4e67d3e0824bc33edb2bc4cdf150055d" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>pbat::py::fem::Gradient::~Gradient</definition>
+        <argsstring>()</argsstring>
+        <name>~Gradient</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/Gradient.cpp" line="29" column="5" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/Gradient.cpp" bodystart="98" bodyend="102"/>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/Gradient.cpp" line="14" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/Gradient.cpp" bodystart="13" bodyend="39"/>
+    <listofallmembers>
+      <member refid="classpbat_1_1py_1_1fem_1_1Gradient_1ac94497ebdf9d6e6f43e942f594c89f9b" prot="public" virt="non-virtual"><scope>pbat::py::fem::Gradient</scope><name>Apply</name></member>
+      <member refid="classpbat_1_1py_1_1fem_1_1Gradient_1a69571640cab34648afbf0d2b821364dd" prot="public" virt="non-virtual"><scope>pbat::py::fem::Gradient</scope><name>eMeshElement</name></member>
+      <member refid="classpbat_1_1py_1_1fem_1_1Gradient_1a98f269eca50d00d92291065687f21d0d" prot="public" virt="non-virtual"><scope>pbat::py::fem::Gradient</scope><name>Gradient</name></member>
+      <member refid="classpbat_1_1py_1_1fem_1_1Gradient_1a1a3af6d746d1ce418cdf79f67af2cb4f" prot="public" virt="non-virtual"><scope>pbat::py::fem::Gradient</scope><name>Gradient</name></member>
+      <member refid="classpbat_1_1py_1_1fem_1_1Gradient_1a86c7fe5991e4a61f6bf5baa39095b7be" prot="public" virt="non-virtual"><scope>pbat::py::fem::Gradient</scope><name>mDims</name></member>
+      <member refid="classpbat_1_1py_1_1fem_1_1Gradient_1a8b9bfff7e13e2ac7c26c3f1b31766933" prot="private" virt="non-virtual"><scope>pbat::py::fem::Gradient</scope><name>mGradient</name></member>
+      <member refid="classpbat_1_1py_1_1fem_1_1Gradient_1a1f5f2f62c2c456701f865f895b85ad1b" prot="public" virt="non-virtual"><scope>pbat::py::fem::Gradient</scope><name>mMeshDims</name></member>
+      <member refid="classpbat_1_1py_1_1fem_1_1Gradient_1a5cd63d88a00f0eac38146604a25c255a" prot="public" virt="non-virtual"><scope>pbat::py::fem::Gradient</scope><name>mMeshOrder</name></member>
+      <member refid="classpbat_1_1py_1_1fem_1_1Gradient_1a3e9b059c724a8a8aa244e91136a3c883" prot="public" virt="non-virtual"><scope>pbat::py::fem::Gradient</scope><name>mOrder</name></member>
+      <member refid="classpbat_1_1py_1_1fem_1_1Gradient_1aa56839ba825736c0c269503080e21330" prot="public" virt="non-virtual"><scope>pbat::py::fem::Gradient</scope><name>operator=</name></member>
+      <member refid="classpbat_1_1py_1_1fem_1_1Gradient_1a4f38d06f1ad175d59bf6a4f962ce93ae" prot="public" virt="non-virtual"><scope>pbat::py::fem::Gradient</scope><name>Shape</name></member>
+      <member refid="classpbat_1_1py_1_1fem_1_1Gradient_1a3540f2eb05248077501153ba006fe070" prot="public" virt="non-virtual"><scope>pbat::py::fem::Gradient</scope><name>ToMatrix</name></member>
+      <member refid="classpbat_1_1py_1_1fem_1_1Gradient_1a4e67d3e0824bc33edb2bc4cdf150055d" prot="public" virt="non-virtual"><scope>pbat::py::fem::Gradient</scope><name>~Gradient</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

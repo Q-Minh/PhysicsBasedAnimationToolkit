@@ -1,0 +1,12 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="dir_b2f33c71d4aa5e7af42a1ca61ff5af1b" kind="dir">
+    <compoundname>/workspaces/PhysicsBasedAnimationToolkit/source</compoundname>
+    <innerdir refid="dir_b9d8001f106f41e236951935a9e9febc">/workspaces/PhysicsBasedAnimationToolkit/source/pbat</innerdir>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/"/>
+  </compounddef>
+</doxygen>

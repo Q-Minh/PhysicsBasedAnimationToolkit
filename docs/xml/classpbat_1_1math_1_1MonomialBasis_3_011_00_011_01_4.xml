@@ -1,0 +1,123 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="classpbat_1_1math_1_1MonomialBasis_3_011_00_011_01_4" kind="class" language="C++" prot="public">
+    <compoundname>pbat::math::MonomialBasis&lt; 1, 1 &gt;</compoundname>
+    <includes refid="PolynomialBasis_8h" local="no">PolynomialBasis.h</includes>
+    <templateparamlist>
+    </templateparamlist>
+      <sectiondef kind="public-static-attrib">
+      <memberdef kind="variable" id="classpbat_1_1math_1_1MonomialBasis_3_011_00_011_01_4_1a9364279d4be52d6bc600622f9df41a7b" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>constexpr std::size_t</type>
+        <definition>constexpr std::size_t pbat::math::MonomialBasis&lt; 1, 1 &gt;::kDims</definition>
+        <argsstring></argsstring>
+        <name>kDims</name>
+        <initializer>= 1</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/PolynomialBasis.h" line="36" column="41" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/PolynomialBasis.h" bodystart="36" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpbat_1_1math_1_1MonomialBasis_3_011_00_011_01_4_1ac79d9f3477a0138298bb9bb9a30e2620" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>constexpr std::size_t</type>
+        <definition>constexpr std::size_t pbat::math::MonomialBasis&lt; 1, 1 &gt;::kOrder</definition>
+        <argsstring></argsstring>
+        <name>kOrder</name>
+        <initializer>= 1</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/PolynomialBasis.h" line="37" column="41" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/PolynomialBasis.h" bodystart="37" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpbat_1_1math_1_1MonomialBasis_3_011_00_011_01_4_1af50b05e06da293c04c03c59613c185d4" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>constexpr std::size_t</type>
+        <definition>constexpr std::size_t pbat::math::MonomialBasis&lt; 1, 1 &gt;::kSize</definition>
+        <argsstring></argsstring>
+        <name>kSize</name>
+        <initializer>= 2</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/PolynomialBasis.h" line="38" column="41" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/PolynomialBasis.h" bodystart="38" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpbat_1_1math_1_1MonomialBasis_3_011_00_011_01_4_1a3e93bd9efa04bd07840f36635361875d" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>Vector&lt; kSize &gt;</type>
+        <definition>Vector&lt;kSize&gt; pbat::math::MonomialBasis&lt; 1, 1 &gt;::eval</definition>
+        <argsstring>([[maybe_unused]] Vector&lt; kDims &gt; const &amp;X) const</argsstring>
+        <name>eval</name>
+        <param>
+          <attributes>[[maybe_unused]</attributes>
+          <type>] Vector&lt; kDims &gt; const &amp;</type>
+          <declname>X</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/PolynomialBasis.h" line="40" column="13" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/PolynomialBasis.h" bodystart="40" bodyend="46"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1math_1_1MonomialBasis_3_011_00_011_01_4_1a0aa1ba06b4b5fdbaaf3d57fed36bf3bb" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>Matrix&lt; kDims, kSize &gt;</type>
+        <definition>Matrix&lt;kDims, kSize&gt; pbat::math::MonomialBasis&lt; 1, 1 &gt;::derivatives</definition>
+        <argsstring>([[maybe_unused]] Vector&lt; kDims &gt; const &amp;X) const</argsstring>
+        <name>derivatives</name>
+        <param>
+          <attributes>[[maybe_unused]</attributes>
+          <type>] Vector&lt; kDims &gt; const &amp;</type>
+          <declname>X</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/PolynomialBasis.h" line="48" column="13" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/PolynomialBasis.h" bodystart="48" bodyend="55"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1math_1_1MonomialBasis_3_011_00_011_01_4_1a05cbd75395b81dbef61cc5377e691ec3" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>Matrix&lt; kSize, kDims &gt;</type>
+        <definition>Matrix&lt;kSize, kDims&gt; pbat::math::MonomialBasis&lt; 1, 1 &gt;::antiderivatives</definition>
+        <argsstring>([[maybe_unused]] Vector&lt; kDims &gt; const &amp;X) const</argsstring>
+        <name>antiderivatives</name>
+        <param>
+          <attributes>[[maybe_unused]</attributes>
+          <type>] Vector&lt; kDims &gt; const &amp;</type>
+          <declname>X</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/PolynomialBasis.h" line="58" column="5" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/PolynomialBasis.h" bodystart="58" bodyend="65"/>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+<para>Monomial basis in 1D </para>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/PolynomialBasis.h" line="34" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/PolynomialBasis.h" bodystart="33" bodyend="66"/>
+    <listofallmembers>
+      <member refid="classpbat_1_1math_1_1MonomialBasis_3_011_00_011_01_4_1a05cbd75395b81dbef61cc5377e691ec3" prot="public" virt="non-virtual"><scope>pbat::math::MonomialBasis&lt; 1, 1 &gt;</scope><name>antiderivatives</name></member>
+      <member refid="classpbat_1_1math_1_1MonomialBasis_3_011_00_011_01_4_1a0aa1ba06b4b5fdbaaf3d57fed36bf3bb" prot="public" virt="non-virtual"><scope>pbat::math::MonomialBasis&lt; 1, 1 &gt;</scope><name>derivatives</name></member>
+      <member refid="classpbat_1_1math_1_1MonomialBasis_3_011_00_011_01_4_1a3e93bd9efa04bd07840f36635361875d" prot="public" virt="non-virtual"><scope>pbat::math::MonomialBasis&lt; 1, 1 &gt;</scope><name>eval</name></member>
+      <member refid="classpbat_1_1math_1_1MonomialBasis_3_011_00_011_01_4_1a9364279d4be52d6bc600622f9df41a7b" prot="public" virt="non-virtual"><scope>pbat::math::MonomialBasis&lt; 1, 1 &gt;</scope><name>kDims</name></member>
+      <member refid="classpbat_1_1math_1_1MonomialBasis_3_011_00_011_01_4_1ac79d9f3477a0138298bb9bb9a30e2620" prot="public" virt="non-virtual"><scope>pbat::math::MonomialBasis&lt; 1, 1 &gt;</scope><name>kOrder</name></member>
+      <member refid="classpbat_1_1math_1_1MonomialBasis_3_011_00_011_01_4_1af50b05e06da293c04c03c59613c185d4" prot="public" virt="non-virtual"><scope>pbat::math::MonomialBasis&lt; 1, 1 &gt;</scope><name>kSize</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

@@ -1,0 +1,245 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="structpbat_1_1sim_1_1vbd_1_1lod_1_1Prolongation" kind="struct" language="C++" prot="public">
+    <compoundname>pbat::sim::vbd::lod::Prolongation</compoundname>
+      <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="structpbat_1_1sim_1_1vbd_1_1lod_1_1Prolongation_1a630ee1b62fda664ed7456b4b2331f523" prot="public" static="no" mutable="no">
+        <type>IndexVectorX</type>
+        <definition>IndexVectorX pbat::sim::vbd::lod::Prolongation::ec</definition>
+        <argsstring></argsstring>
+        <name>ec</name>
+        <briefdescription>
+<para>|#fine verts| array of coarse cage elements containing fine mesh vertices </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Prolongation.h" line="48" column="18" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Prolongation.h" bodystart="48" bodyend="-1"/>
+        <referencedby refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Prolongation_1aeb5b314c899add9d41d1d9c415877896" compoundref="source_2pbat_2sim_2vbd_2lod_2Prolongation_8cpp" startline="19" endline="32">Prolongation</referencedby>
+        <referencedby refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Prolongation_1a5b9b51bef858451848f5830d336ce155" compoundref="source_2pbat_2sim_2vbd_2lod_2Prolongation_8cpp" startline="46" endline="56">DoApply</referencedby>
+      </memberdef>
+      <memberdef kind="variable" id="structpbat_1_1sim_1_1vbd_1_1lod_1_1Prolongation_1ab73e41f51d2553a5e1ac65036b7a7e94" prot="public" static="no" mutable="no">
+        <type>MatrixX</type>
+        <definition>MatrixX pbat::sim::vbd::lod::Prolongation::Nc</definition>
+        <argsstring></argsstring>
+        <name>Nc</name>
+        <briefdescription>
+<para>4x|#fine verts| array of coarse cage shape functions at fine mesh vertices </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Prolongation.h" line="49" column="13" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Prolongation.h" bodystart="49" bodyend="-1"/>
+        <referencedby refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Prolongation_1aeb5b314c899add9d41d1d9c415877896" compoundref="source_2pbat_2sim_2vbd_2lod_2Prolongation_8cpp" startline="19" endline="32">Prolongation</referencedby>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="public-func">
+      <memberdef kind="function" id="structpbat_1_1sim_1_1vbd_1_1lod_1_1Prolongation_1aa73f225a334650a5d71ac0b223f9aba0" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>pbat::sim::vbd::lod::Prolongation::Prolongation</definition>
+        <argsstring>()=default</argsstring>
+        <name>Prolongation</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Prolongation.h" line="21" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="structpbat_1_1sim_1_1vbd_1_1lod_1_1Prolongation_1aeb5b314c899add9d41d1d9c415877896" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>pbat::sim::vbd::lod::Prolongation::Prolongation</definition>
+        <argsstring>(VolumeMesh const &amp;FM, VolumeMesh const &amp;CM)</argsstring>
+        <name>Prolongation</name>
+        <param>
+          <type><ref refid="structpbat_1_1fem_1_1Mesh" kindref="compound">VolumeMesh</ref> const &amp;</type>
+          <declname>FM</declname>
+        </param>
+        <param>
+          <type><ref refid="structpbat_1_1fem_1_1Mesh" kindref="compound">VolumeMesh</ref> const &amp;</type>
+          <declname>CM</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>FM</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>CM</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Prolongation.h" line="27" column="5" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Prolongation.cpp" bodystart="19" bodyend="32"/>
+        <references refid="structpbat_1_1fem_1_1Mesh_1a384afdf16df5efa27e09f17520402b5b" compoundref="source_2pbat_2fem_2Mesh_8h" startline="52">pbat::fem::Mesh&lt; TElement, Dims &gt;::E</references>
+        <references refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Prolongation_1a630ee1b62fda664ed7456b4b2331f523" compoundref="source_2pbat_2sim_2vbd_2lod_2Prolongation_8h" startline="48">ec</references>
+        <references refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Prolongation_1ab73e41f51d2553a5e1ac65036b7a7e94" compoundref="source_2pbat_2sim_2vbd_2lod_2Prolongation_8h" startline="49">Nc</references>
+        <references refid="structpbat_1_1fem_1_1Mesh_1abc65a193ee960705ddf64227afb18809" compoundref="source_2pbat_2fem_2Mesh_8h" startline="51">pbat::fem::Mesh&lt; TElement, Dims &gt;::X</references>
+      </memberdef>
+      <memberdef kind="function" id="structpbat_1_1sim_1_1vbd_1_1lod_1_1Prolongation_1ac2fe8b5e0fab75cd2ea6bade404d495d" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void pbat::sim::vbd::lod::Prolongation::Apply</definition>
+        <argsstring>(Level const &amp;lc, Level &amp;lf) const</argsstring>
+        <name>Apply</name>
+        <param>
+          <type><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Level" kindref="compound">Level</ref> const &amp;</type>
+          <declname>lc</declname>
+        </param>
+        <param>
+          <type><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Level" kindref="compound">Level</ref> &amp;</type>
+          <declname>lf</declname>
+        </param>
+        <briefdescription>
+<para>Prolong coarse level lc to fine level lf. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>iters</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>lc</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>lf</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Prolongation.h" line="34" column="10" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Prolongation.cpp" bodystart="34" bodyend="38"/>
+        <references refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Prolongation_1a5b9b51bef858451848f5830d336ce155" compoundref="source_2pbat_2sim_2vbd_2lod_2Prolongation_8cpp" startline="46" endline="56">DoApply</references>
+        <references refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Level_1ab331b103c090e822c37f0b0192ef6b7b" compoundref="source_2pbat_2sim_2vbd_2lod_2Level_8h" startline="56">pbat::sim::vbd::lod::Level::x</references>
+      </memberdef>
+      <memberdef kind="function" id="structpbat_1_1sim_1_1vbd_1_1lod_1_1Prolongation_1a5a8e270e7a4f37a424afc356b47354f6" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void pbat::sim::vbd::lod::Prolongation::Apply</definition>
+        <argsstring>(Level const &amp;lc, Data &amp;lf) const</argsstring>
+        <name>Apply</name>
+        <param>
+          <type><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Level" kindref="compound">Level</ref> const &amp;</type>
+          <declname>lc</declname>
+        </param>
+        <param>
+          <type><ref refid="structpbat_1_1sim_1_1vbd_1_1Data" kindref="compound">Data</ref> &amp;</type>
+          <declname>lf</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>lc</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>lf</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Prolongation.h" line="40" column="10" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Prolongation.cpp" bodystart="40" bodyend="44"/>
+        <references refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Prolongation_1a5b9b51bef858451848f5830d336ce155" compoundref="source_2pbat_2sim_2vbd_2lod_2Prolongation_8cpp" startline="46" endline="56">DoApply</references>
+        <references refid="structpbat_1_1sim_1_1vbd_1_1Data_1a2a0bd0abb260a15041042f27078ab0d9" compoundref="source_2pbat_2sim_2vbd_2Data_8h" startline="115">pbat::sim::vbd::Data::x</references>
+      </memberdef>
+      <memberdef kind="function" id="structpbat_1_1sim_1_1vbd_1_1lod_1_1Prolongation_1a5b9b51bef858451848f5830d336ce155" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void pbat::sim::vbd::lod::Prolongation::DoApply</definition>
+        <argsstring>(Level const &amp;lc, Eigen::Ref&lt; MatrixX &gt; xf) const</argsstring>
+        <name>DoApply</name>
+        <param>
+          <type><ref refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Level" kindref="compound">Level</ref> const &amp;</type>
+          <declname>lc</declname>
+        </param>
+        <param>
+          <type>Eigen::Ref&lt; MatrixX &gt;</type>
+          <declname>xf</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>lc</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>xf</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Prolongation.h" line="46" column="10" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Prolongation.cpp" bodystart="46" bodyend="56"/>
+        <references refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Prolongation_1a630ee1b62fda664ed7456b4b2331f523" compoundref="source_2pbat_2sim_2vbd_2lod_2Prolongation_8h" startline="48">ec</references>
+        <references refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Level_1a0aef12e785b24c517539b81842e4f834" compoundref="source_2pbat_2sim_2vbd_2lod_2Level_8h" startline="60">pbat::sim::vbd::lod::Level::mesh</references>
+        <references refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Level_1ab331b103c090e822c37f0b0192ef6b7b" compoundref="source_2pbat_2sim_2vbd_2lod_2Level_8h" startline="56">pbat::sim::vbd::lod::Level::x</references>
+        <referencedby refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Prolongation_1ac2fe8b5e0fab75cd2ea6bade404d495d" compoundref="source_2pbat_2sim_2vbd_2lod_2Prolongation_8cpp" startline="34" endline="38">Apply</referencedby>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Prolongation.h" line="20" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/lod/Prolongation.h" bodystart="19" bodyend="50"/>
+    <listofallmembers>
+      <member refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Prolongation_1ac2fe8b5e0fab75cd2ea6bade404d495d" prot="public" virt="non-virtual"><scope>pbat::sim::vbd::lod::Prolongation</scope><name>Apply</name></member>
+      <member refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Prolongation_1a5a8e270e7a4f37a424afc356b47354f6" prot="public" virt="non-virtual"><scope>pbat::sim::vbd::lod::Prolongation</scope><name>Apply</name></member>
+      <member refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Prolongation_1a5b9b51bef858451848f5830d336ce155" prot="public" virt="non-virtual"><scope>pbat::sim::vbd::lod::Prolongation</scope><name>DoApply</name></member>
+      <member refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Prolongation_1a630ee1b62fda664ed7456b4b2331f523" prot="public" virt="non-virtual"><scope>pbat::sim::vbd::lod::Prolongation</scope><name>ec</name></member>
+      <member refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Prolongation_1ab73e41f51d2553a5e1ac65036b7a7e94" prot="public" virt="non-virtual"><scope>pbat::sim::vbd::lod::Prolongation</scope><name>Nc</name></member>
+      <member refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Prolongation_1aa73f225a334650a5d71ac0b223f9aba0" prot="public" virt="non-virtual"><scope>pbat::sim::vbd::lod::Prolongation</scope><name>Prolongation</name></member>
+      <member refid="structpbat_1_1sim_1_1vbd_1_1lod_1_1Prolongation_1aeb5b314c899add9d41d1d9c415877896" prot="public" virt="non-virtual"><scope>pbat::sim::vbd::lod::Prolongation</scope><name>Prolongation</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

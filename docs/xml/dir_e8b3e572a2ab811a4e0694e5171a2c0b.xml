@@ -1,0 +1,15 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="dir_e8b3e572a2ab811a4e0694e5171a2c0b" kind="dir">
+    <compoundname>/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/gpu/vbd</compoundname>
+    <innerfile refid="bindings_2pypbat_2gpu_2vbd_2Integrator_8cpp">Integrator.cpp</innerfile>
+    <innerfile refid="bindings_2pypbat_2gpu_2vbd_2Integrator_8h">Integrator.h</innerfile>
+    <innerfile refid="gpu_2vbd_2Vbd_8cpp">Vbd.cpp</innerfile>
+    <innerfile refid="bindings_2pypbat_2gpu_2vbd_2Vbd_8h">Vbd.h</innerfile>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/gpu/vbd/"/>
+  </compounddef>
+</doxygen>

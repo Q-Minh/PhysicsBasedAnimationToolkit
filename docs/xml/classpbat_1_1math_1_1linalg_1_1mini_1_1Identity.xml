@@ -1,0 +1,165 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="classpbat_1_1math_1_1linalg_1_1mini_1_1Identity" kind="class" language="C++" prot="public">
+    <compoundname>pbat::math::linalg::mini::Identity</compoundname>
+    <templateparamlist>
+      <param>
+        <type>class TScalar</type>
+      </param>
+      <param>
+        <type>int</type>
+        <declname>M</declname>
+        <defname>M</defname>
+      </param>
+      <param>
+        <type>int</type>
+        <declname>N</declname>
+        <defname>N</defname>
+      </param>
+    </templateparamlist>
+      <sectiondef kind="public-type">
+      <memberdef kind="typedef" id="classpbat_1_1math_1_1linalg_1_1mini_1_1Identity_1aef2a19d9d61cb1943b0a8fe9af91f845" prot="public" static="no">
+        <type>TScalar</type>
+        <definition>using pbat::math::linalg::mini::Identity&lt; TScalar, M, N &gt;::ScalarType =  TScalar</definition>
+        <argsstring></argsstring>
+        <name>ScalarType</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Matrix.h" line="100" column="5" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Matrix.h" bodystart="100" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="classpbat_1_1math_1_1linalg_1_1mini_1_1Identity_1aee2ec4060fe7267773bc3a4c64c4d554" prot="public" static="no">
+        <type><ref refid="classpbat_1_1math_1_1linalg_1_1mini_1_1Identity" kindref="compound">Identity</ref>&lt; ScalarType, M, N &gt;</type>
+        <definition>using pbat::math::linalg::mini::Identity&lt; TScalar, M, N &gt;::SelfType =  Identity&lt;ScalarType, M, N&gt;</definition>
+        <argsstring></argsstring>
+        <name>SelfType</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Matrix.h" line="101" column="5" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Matrix.h" bodystart="101" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="public-static-attrib">
+      <memberdef kind="variable" id="classpbat_1_1math_1_1linalg_1_1mini_1_1Identity_1abbac9814b333336ba7b73db71c1a5f95" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>constexpr auto</type>
+        <definition>constexpr auto pbat::math::linalg::mini::Identity&lt; TScalar, M, N &gt;::kRows</definition>
+        <argsstring></argsstring>
+        <name>kRows</name>
+        <initializer>= M</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Matrix.h" line="103" column="27" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Matrix.h" bodystart="103" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpbat_1_1math_1_1linalg_1_1mini_1_1Identity_1ab6282bb4caefe10ca19e7f9f4eff57ef" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>constexpr auto</type>
+        <definition>constexpr auto pbat::math::linalg::mini::Identity&lt; TScalar, M, N &gt;::kCols</definition>
+        <argsstring></argsstring>
+        <name>kCols</name>
+        <initializer>= N</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Matrix.h" line="104" column="27" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Matrix.h" bodystart="104" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpbat_1_1math_1_1linalg_1_1mini_1_1Identity_1aac9440bc6d0567f78178a610d371d02f" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>constexpr bool</type>
+        <definition>constexpr bool pbat::math::linalg::mini::Identity&lt; TScalar, M, N &gt;::bRowMajor</definition>
+        <argsstring></argsstring>
+        <name>bRowMajor</name>
+        <initializer>= false</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Matrix.h" line="105" column="27" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Matrix.h" bodystart="105" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpbat_1_1math_1_1linalg_1_1mini_1_1Identity_1ab5fcc65465d35016b3b02ceed11bccf8" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>PBAT_HOST_DEVICE ScalarType</type>
+        <definition>PBAT_HOST_DEVICE ScalarType pbat::math::linalg::mini::Identity&lt; TScalar, M, N &gt;::operator()</definition>
+        <argsstring>(auto i, auto j) const</argsstring>
+        <name>operator()</name>
+        <param>
+          <type>auto</type>
+          <declname>i</declname>
+        </param>
+        <param>
+          <type>auto</type>
+          <declname>j</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Matrix.h" line="107" column="33" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Matrix.h" bodystart="107" bodyend="110"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1math_1_1linalg_1_1mini_1_1Identity_1a6be874c54537b5f7051142b7392d9866" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>PBAT_HOST_DEVICE ScalarType</type>
+        <definition>PBAT_HOST_DEVICE ScalarType pbat::math::linalg::mini::Identity&lt; TScalar, M, N &gt;::operator()</definition>
+        <argsstring>(auto i) const</argsstring>
+        <name>operator()</name>
+        <param>
+          <type>auto</type>
+          <declname>i</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Matrix.h" line="113" column="33" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Matrix.h" bodystart="113" bodyend="113"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1math_1_1linalg_1_1mini_1_1Identity_1a86047c6cdb2d31bb3d6c9741d0878d12" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>PBAT_HOST_DEVICE ScalarType</type>
+        <definition>PBAT_HOST_DEVICE ScalarType pbat::math::linalg::mini::Identity&lt; TScalar, M, N &gt;::operator[]</definition>
+        <argsstring>(auto i) const</argsstring>
+        <name>operator[]</name>
+        <param>
+          <type>auto</type>
+          <declname>i</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Matrix.h" line="114" column="33" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Matrix.h" bodystart="114" bodyend="114"/>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Matrix.h" line="98" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/mini/Matrix.h" bodystart="97" bodyend="117"/>
+    <listofallmembers>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1Identity_1aac9440bc6d0567f78178a610d371d02f" prot="public" virt="non-virtual"><scope>pbat::math::linalg::mini::Identity</scope><name>bRowMajor</name></member>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1Identity_1ab6282bb4caefe10ca19e7f9f4eff57ef" prot="public" virt="non-virtual"><scope>pbat::math::linalg::mini::Identity</scope><name>kCols</name></member>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1Identity_1abbac9814b333336ba7b73db71c1a5f95" prot="public" virt="non-virtual"><scope>pbat::math::linalg::mini::Identity</scope><name>kRows</name></member>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1Identity_1ab5fcc65465d35016b3b02ceed11bccf8" prot="public" virt="non-virtual"><scope>pbat::math::linalg::mini::Identity</scope><name>operator()</name></member>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1Identity_1a6be874c54537b5f7051142b7392d9866" prot="public" virt="non-virtual"><scope>pbat::math::linalg::mini::Identity</scope><name>operator()</name></member>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1Identity_1a86047c6cdb2d31bb3d6c9741d0878d12" prot="public" virt="non-virtual"><scope>pbat::math::linalg::mini::Identity</scope><name>operator[]</name></member>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1Identity_1aef2a19d9d61cb1943b0a8fe9af91f845" prot="public" virt="non-virtual"><scope>pbat::math::linalg::mini::Identity</scope><name>ScalarType</name></member>
+      <member refid="classpbat_1_1math_1_1linalg_1_1mini_1_1Identity_1aee2ec4060fe7267773bc3a4c64c4d554" prot="public" virt="non-virtual"><scope>pbat::math::linalg::mini::Identity</scope><name>SelfType</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

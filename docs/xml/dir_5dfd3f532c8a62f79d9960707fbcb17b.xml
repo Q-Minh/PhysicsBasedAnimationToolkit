@@ -1,0 +1,28 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="dir_5dfd3f532c8a62f79d9960707fbcb17b" kind="dir">
+    <compoundname>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math</compoundname>
+    <innerdir refid="dir_50780bd9702055f554afac9fc262f3be">/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/linalg</innerdir>
+    <innerfile refid="math_2Concepts_8h">Concepts.h</innerfile>
+    <innerfile refid="GaussQuadrature_8cpp">GaussQuadrature.cpp</innerfile>
+    <innerfile refid="GaussQuadrature_8h">GaussQuadrature.h</innerfile>
+    <innerfile refid="IntegerArithmeticChecks_8cpp">IntegerArithmeticChecks.cpp</innerfile>
+    <innerfile refid="IntegerArithmeticChecks_8h">IntegerArithmeticChecks.h</innerfile>
+    <innerfile refid="LinearOperator_8cpp">LinearOperator.cpp</innerfile>
+    <innerfile refid="LinearOperator_8h">LinearOperator.h</innerfile>
+    <innerfile refid="source_2pbat_2math_2Math_8h">Math.h</innerfile>
+    <innerfile refid="source_2pbat_2math_2MomentFitting_8cpp">MomentFitting.cpp</innerfile>
+    <innerfile refid="source_2pbat_2math_2MomentFitting_8h">MomentFitting.h</innerfile>
+    <innerfile refid="PolynomialBasis_8cpp">PolynomialBasis.cpp</innerfile>
+    <innerfile refid="PolynomialBasis_8h">PolynomialBasis.h</innerfile>
+    <innerfile refid="Rational_8cpp">Rational.cpp</innerfile>
+    <innerfile refid="Rational_8h">Rational.h</innerfile>
+    <innerfile refid="SymmetricQuadratureRules_8cpp">SymmetricQuadratureRules.cpp</innerfile>
+    <innerfile refid="SymmetricQuadratureRules_8h">SymmetricQuadratureRules.h</innerfile>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/math/"/>
+  </compounddef>
+</doxygen>

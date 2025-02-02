@@ -1,0 +1,602 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="namespacepbat_1_1geometry_1_1DistanceQueries" kind="namespace" language="C++">
+    <compoundname>pbat::geometry::DistanceQueries</compoundname>
+      <sectiondef kind="func">
+      <memberdef kind="function" id="DistanceQueries_8h_1a8dc9a05cf173e8dc50e2fc894c1db3f4" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixL1</declname>
+            <defname>TMatrixL1</defname>
+          </param>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixU1</declname>
+            <defname>TMatrixU1</defname>
+          </param>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixL2</declname>
+            <defname>TMatrixL2</defname>
+          </param>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixU2</declname>
+            <defname>TMatrixU2</defname>
+          </param>
+        </templateparamlist>
+        <type>PBAT_HOST_DEVICE TMatrixL1::ScalarType</type>
+        <definition>PBAT_HOST_DEVICE TMatrixL1::ScalarType pbat::geometry::DistanceQueries::AxisAlignedBoundingBoxes</definition>
+        <argsstring>(TMatrixL1 const &amp;L1, TMatrixU1 const &amp;U1, TMatrixL2 const &amp;L2, TMatrixU2 const &amp;U2)</argsstring>
+        <name>AxisAlignedBoundingBoxes</name>
+        <param>
+          <type>TMatrixL1 const &amp;</type>
+          <declname>L1</declname>
+        </param>
+        <param>
+          <type>TMatrixU1 const &amp;</type>
+          <declname>U1</declname>
+        </param>
+        <param>
+          <type>TMatrixL2 const &amp;</type>
+          <declname>L2</declname>
+        </param>
+        <param>
+          <type>TMatrixU2 const &amp;</type>
+          <declname>U2</declname>
+        </param>
+        <briefdescription>
+<para>Obtain squared distance between 2 axis-aligned bounding boxes. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>L1</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>1st AABB&apos;s lower corner </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>U1</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>1st AABB&apos;s upper corner </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>L2</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>2nd AABB&apos;s lower corner </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>U2</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>2nd AABB&apos;s upper corner </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para></para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/DistanceQueries.h" line="130" column="49" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/DistanceQueries.h" bodystart="130" bodyend="144" declfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/DistanceQueries.h" declline="30" declcolumn="49"/>
+      </memberdef>
+      <memberdef kind="function" id="DistanceQueries_8h_1aa9584df3e9fe9d74e86dd2dd6455a36e" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixP</declname>
+            <defname>TMatrixP</defname>
+          </param>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixL</declname>
+            <defname>TMatrixL</defname>
+          </param>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixU</declname>
+            <defname>TMatrixU</defname>
+          </param>
+        </templateparamlist>
+        <type>PBAT_HOST_DEVICE TMatrixP::ScalarType</type>
+        <definition>PBAT_HOST_DEVICE TMatrixP::ScalarType pbat::geometry::DistanceQueries::PointAxisAlignedBoundingBox</definition>
+        <argsstring>(TMatrixP const &amp;P, TMatrixL const &amp;L, TMatrixU const &amp;U)</argsstring>
+        <name>PointAxisAlignedBoundingBox</name>
+        <param>
+          <type>TMatrixP const &amp;</type>
+          <declname>P</declname>
+        </param>
+        <param>
+          <type>TMatrixL const &amp;</type>
+          <declname>L</declname>
+        </param>
+        <param>
+          <type>TMatrixU const &amp;</type>
+          <declname>U</declname>
+        </param>
+        <briefdescription>
+<para>Obtain squared distance between point P and axis-aligned box (L,U) </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>TMatrixP</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>TMatrixL</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>TMatrixU</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>P</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>L</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>U</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para></para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/DistanceQueries.h" line="148" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/DistanceQueries.h" bodystart="148" bodyend="157" declfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/DistanceQueries.h" declline="48" declcolumn="1"/>
+      </memberdef>
+      <memberdef kind="function" id="DistanceQueries_8h_1afc484b4c95f25f231273c890695dad6c" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixP</declname>
+            <defname>TMatrixP</defname>
+          </param>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixA</declname>
+            <defname>TMatrixA</defname>
+          </param>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixB</declname>
+            <defname>TMatrixB</defname>
+          </param>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixC</declname>
+            <defname>TMatrixC</defname>
+          </param>
+        </templateparamlist>
+        <type>PBAT_HOST_DEVICE TMatrixP::ScalarType</type>
+        <definition>PBAT_HOST_DEVICE TMatrixP::ScalarType pbat::geometry::DistanceQueries::PointTriangle</definition>
+        <argsstring>(TMatrixP const &amp;P, TMatrixA const &amp;A, TMatrixB const &amp;B, TMatrixC const &amp;C)</argsstring>
+        <name>PointTriangle</name>
+        <param>
+          <type>TMatrixP const &amp;</type>
+          <declname>P</declname>
+        </param>
+        <param>
+          <type>TMatrixA const &amp;</type>
+          <declname>A</declname>
+        </param>
+        <param>
+          <type>TMatrixB const &amp;</type>
+          <declname>B</declname>
+        </param>
+        <param>
+          <type>TMatrixC const &amp;</type>
+          <declname>C</declname>
+        </param>
+        <briefdescription>
+<para>Obtain squared distance between point P and triangle ABC. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>P</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>A</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>B</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>C</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para></para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/DistanceQueries.h" line="165" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/DistanceQueries.h" bodystart="165" bodyend="169" declfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/DistanceQueries.h" declline="64" declcolumn="1"/>
+      </memberdef>
+      <memberdef kind="function" id="DistanceQueries_8h_1a66113ba396a19e44ba2e78144bc4f459" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixP</declname>
+            <defname>TMatrixP</defname>
+          </param>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixA</declname>
+            <defname>TMatrixA</defname>
+          </param>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixB</declname>
+            <defname>TMatrixB</defname>
+          </param>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixC</declname>
+            <defname>TMatrixC</defname>
+          </param>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixD</declname>
+            <defname>TMatrixD</defname>
+          </param>
+        </templateparamlist>
+        <type>PBAT_HOST_DEVICE TMatrixP::ScalarType</type>
+        <definition>PBAT_HOST_DEVICE TMatrixP::ScalarType pbat::geometry::DistanceQueries::PointTetrahedron</definition>
+        <argsstring>(TMatrixP const &amp;P, TMatrixA const &amp;A, TMatrixB const &amp;B, TMatrixC const &amp;C, TMatrixD const &amp;D)</argsstring>
+        <name>PointTetrahedron</name>
+        <param>
+          <type>TMatrixP const &amp;</type>
+          <declname>P</declname>
+        </param>
+        <param>
+          <type>TMatrixA const &amp;</type>
+          <declname>A</declname>
+        </param>
+        <param>
+          <type>TMatrixB const &amp;</type>
+          <declname>B</declname>
+        </param>
+        <param>
+          <type>TMatrixC const &amp;</type>
+          <declname>C</declname>
+        </param>
+        <param>
+          <type>TMatrixD const &amp;</type>
+          <declname>D</declname>
+        </param>
+        <briefdescription>
+<para>Obtain squared distance between point P and tetrahedron ABCD. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>TMatrixP</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>TMatrixA</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>TMatrixB</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>TMatrixC</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>TMatrixD</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>P</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>A</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>B</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>C</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>D</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para></para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/DistanceQueries.h" line="177" column="48" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/DistanceQueries.h" bodystart="177" bodyend="196" declfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/DistanceQueries.h" declline="86" declcolumn="48"/>
+      </memberdef>
+      <memberdef kind="function" id="DistanceQueries_8h_1aaf0051dc47885176ef2682939c684a54" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixX</declname>
+            <defname>TMatrixX</defname>
+          </param>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixP</declname>
+            <defname>TMatrixP</defname>
+          </param>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixN</declname>
+            <defname>TMatrixN</defname>
+          </param>
+        </templateparamlist>
+        <type>PBAT_HOST_DEVICE TMatrixX::ScalarType</type>
+        <definition>PBAT_HOST_DEVICE TMatrixX::ScalarType pbat::geometry::DistanceQueries::PointPlane</definition>
+        <argsstring>(TMatrixX const &amp;X, TMatrixP const &amp;P, TMatrixN const &amp;n)</argsstring>
+        <name>PointPlane</name>
+        <param>
+          <type>TMatrixX const &amp;</type>
+          <declname>X</declname>
+        </param>
+        <param>
+          <type>TMatrixP const &amp;</type>
+          <declname>P</declname>
+        </param>
+        <param>
+          <type>TMatrixN const &amp;</type>
+          <declname>n</declname>
+        </param>
+        <briefdescription>
+<para>Obtains the signed distance of X w.r.t. plane (P,n) </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>X</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>P</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>n</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para></para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/DistanceQueries.h" line="200" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/DistanceQueries.h" bodystart="200" bodyend="203" declfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/DistanceQueries.h" declline="102" declcolumn="1"/>
+      </memberdef>
+      <memberdef kind="function" id="DistanceQueries_8h_1ae8af81b57997a7127a85aab93d5c2dff" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixX</declname>
+            <defname>TMatrixX</defname>
+          </param>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixA</declname>
+            <defname>TMatrixA</defname>
+          </param>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixB</declname>
+            <defname>TMatrixB</defname>
+          </param>
+          <param>
+            <type>mini::CMatrix</type>
+            <declname>TMatrixC</declname>
+            <defname>TMatrixC</defname>
+          </param>
+        </templateparamlist>
+        <type>PBAT_HOST_DEVICE TMatrixX::ScalarType</type>
+        <definition>PBAT_HOST_DEVICE TMatrixX::ScalarType pbat::geometry::DistanceQueries::SphereTriangle</definition>
+        <argsstring>(TMatrixX const &amp;X, typename TMatrixX::ScalarType R, TMatrixA const &amp;A, TMatrixB const &amp;B, TMatrixC const &amp;C)</argsstring>
+        <name>SphereTriangle</name>
+        <param>
+          <type>TMatrixX const &amp;</type>
+          <declname>X</declname>
+        </param>
+        <param>
+          <type>typename TMatrixX::ScalarType</type>
+          <declname>R</declname>
+        </param>
+        <param>
+          <type>TMatrixA const &amp;</type>
+          <declname>A</declname>
+        </param>
+        <param>
+          <type>TMatrixB const &amp;</type>
+          <declname>B</declname>
+        </param>
+        <param>
+          <type>TMatrixC const &amp;</type>
+          <declname>C</declname>
+        </param>
+        <briefdescription>
+<para>Obtains the squared distance between sphere (X,R) and triangle ABC. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>X</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>R</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>A</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>B</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>C</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para></para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/DistanceQueries.h" line="210" column="48" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/DistanceQueries.h" bodystart="210" bodyend="219" declfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/DistanceQueries.h" declline="118" declcolumn="48"/>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/geometry/DistanceQueries.h" line="13" column="25"/>
+  </compounddef>
+</doxygen>

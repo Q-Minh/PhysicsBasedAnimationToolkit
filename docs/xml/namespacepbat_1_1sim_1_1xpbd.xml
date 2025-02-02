@@ -1,0 +1,49 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="namespacepbat_1_1sim_1_1xpbd" kind="namespace" language="C++">
+    <compoundname>pbat::sim::xpbd</compoundname>
+    <innerclass refid="structpbat_1_1sim_1_1xpbd_1_1Data" prot="public">pbat::sim::xpbd::Data</innerclass>
+    <innerclass refid="classpbat_1_1sim_1_1xpbd_1_1Integrator" prot="public">pbat::sim::xpbd::Integrator</innerclass>
+    <innernamespace refid="namespacepbat_1_1sim_1_1xpbd_1_1kernels">pbat::sim::xpbd::kernels</innernamespace>
+      <sectiondef kind="enum">
+      <memberdef kind="enum" id="sim_2xpbd_2Enums_8h_1a6d5457b944722f4d8e66d2cc61c539ad" prot="public" static="no" strong="yes">
+        <type>int</type>
+        <name>EConstraint</name>
+        <enumvalue id="sim_2xpbd_2Enums_8h_1a6d5457b944722f4d8e66d2cc61c539ada5293ce2e7bfdcdc074590919af132e39" prot="public">
+          <name>StableNeoHookean</name>
+          <initializer>= 0</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="sim_2xpbd_2Enums_8h_1a6d5457b944722f4d8e66d2cc61c539ada15fb6ccbd11ebebcea2b48dc477f3561" prot="public">
+          <name>Collision</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="sim_2xpbd_2Enums_8h_1a6d5457b944722f4d8e66d2cc61c539adade3f353e88da2402e996f869bc5111ee" prot="public">
+          <name>NumberOfConstraintTypes</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Enums.h" line="8" column="23" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Enums.h" bodystart="8" bodyend="8"/>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/xpbd/Data.cpp" line="13" column="14"/>
+  </compounddef>
+</doxygen>

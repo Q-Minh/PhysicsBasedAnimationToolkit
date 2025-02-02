@@ -1,0 +1,593 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level" kind="struct" language="C++" prot="public">
+    <compoundname>pbat::sim::vbd::multigrid::Level</compoundname>
+      <sectiondef kind="public-type">
+      <memberdef kind="typedef" id="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a1c29788c32f2bd08fd3bd2924b62e1a2" prot="public" static="no">
+        <type>Eigen::Vector&lt; bool, Eigen::Dynamic &gt;</type>
+        <definition>using pbat::sim::vbd::multigrid::Level::BoolVector =  Eigen::Vector&lt;bool, Eigen::Dynamic&gt;</definition>
+        <argsstring></argsstring>
+        <name>BoolVector</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/multigrid/Level.h" line="47" column="5" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/multigrid/Level.h" bodystart="47" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1ab8a508431690592254dd834a827a1f74" prot="public" static="no" mutable="no">
+        <type><ref refid="structpbat_1_1fem_1_1Mesh" kindref="compound">VolumeMesh</ref></type>
+        <definition>VolumeMesh pbat::sim::vbd::multigrid::Level::mesh</definition>
+        <argsstring></argsstring>
+        <name>mesh</name>
+        <briefdescription>
+<para>Coarse FEM mesh. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>Coarse mesh discretization </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/multigrid/Level.h" line="42" column="16" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/multigrid/Level.h" bodystart="42" bodyend="-1"/>
+        <referencedby refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a36c5ca3486f6772b43d4490c095cc3be" compoundref="source_2pbat_2sim_2vbd_2multigrid_2Level_8cpp" startline="23" endline="129">Level</referencedby>
+        <referencedby refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1abc6b7179bef6b4eacaca30beb6420328" compoundref="source_2pbat_2sim_2vbd_2multigrid_2Level_8cpp" startline="131" endline="233">HyperReduce</referencedby>
+        <referencedby refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a8400962314cd373e84191514273cdda4" compoundref="source_2pbat_2sim_2vbd_2multigrid_2Level_8cpp" startline="246" endline="353">Smooth</referencedby>
+      </memberdef>
+      <memberdef kind="variable" id="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a9cb9f579145195025d2e5e751e6b16dc" prot="public" static="no" mutable="no">
+        <type>MatrixX</type>
+        <definition>MatrixX pbat::sim::vbd::multigrid::Level::u</definition>
+        <argsstring></argsstring>
+        <name>u</name>
+        <briefdescription>
+<para>3x|#cage verts| coarse displacement coefficients </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/multigrid/Level.h" line="43" column="13" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/multigrid/Level.h" bodystart="43" bodyend="-1"/>
+        <referencedby refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a36c5ca3486f6772b43d4490c095cc3be" compoundref="source_2pbat_2sim_2vbd_2multigrid_2Level_8cpp" startline="23" endline="129">Level</referencedby>
+        <referencedby refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a8400962314cd373e84191514273cdda4" compoundref="source_2pbat_2sim_2vbd_2multigrid_2Level_8cpp" startline="246" endline="353">Smooth</referencedby>
+      </memberdef>
+      <memberdef kind="variable" id="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1af9c1dddf690c4fa1d924d574276a7de8" prot="public" static="no" mutable="no">
+        <type>IndexVectorX</type>
+        <definition>IndexVectorX pbat::sim::vbd::multigrid::Level::colors</definition>
+        <argsstring></argsstring>
+        <name>colors</name>
+        <briefdescription>
+<para>Coarse vertex graph coloring. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/multigrid/Level.h" line="44" column="18" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/multigrid/Level.h" bodystart="44" bodyend="-1"/>
+        <referencedby refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a36c5ca3486f6772b43d4490c095cc3be" compoundref="source_2pbat_2sim_2vbd_2multigrid_2Level_8cpp" startline="23" endline="129">Level</referencedby>
+      </memberdef>
+      <memberdef kind="variable" id="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a144be259f91a7c4f44e3a627c1e6ea82" prot="public" static="no" mutable="no">
+        <type>IndexVectorX</type>
+        <definition>IndexVectorX pbat::sim::vbd::multigrid::Level::Pptr</definition>
+        <argsstring></argsstring>
+        <name>Pptr</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/multigrid/Level.h" line="45" column="18" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/multigrid/Level.h" bodystart="45" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a9b30ad5129f3ad7795fde1bf4c61cd67" prot="public" static="no" mutable="no">
+        <type>IndexVectorX</type>
+        <definition>IndexVectorX pbat::sim::vbd::multigrid::Level::Padj</definition>
+        <argsstring></argsstring>
+        <name>Padj</name>
+        <briefdescription>
+<para>Parallel vertex partitions. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/multigrid/Level.h" line="45" column="23" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/multigrid/Level.h" bodystart="45" bodyend="-1"/>
+        <referencedby refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a36c5ca3486f6772b43d4490c095cc3be" compoundref="source_2pbat_2sim_2vbd_2multigrid_2Level_8cpp" startline="23" endline="129">Level</referencedby>
+        <referencedby refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a8400962314cd373e84191514273cdda4" compoundref="source_2pbat_2sim_2vbd_2multigrid_2Level_8cpp" startline="246" endline="353">Smooth</referencedby>
+      </memberdef>
+      <memberdef kind="variable" id="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1af2b4a49b4bcaea445229f49b7afd5c68" prot="public" static="no" mutable="no">
+        <type>IndexMatrixX</type>
+        <definition>IndexMatrixX pbat::sim::vbd::multigrid::Level::ecVE</definition>
+        <argsstring></argsstring>
+        <name>ecVE</name>
+        <briefdescription>
+<para>4x|#fine elems| coarse elements containing 4 vertices of fine elements </para>
+        </briefdescription>
+        <detaileddescription>
+<para>Elastic energy </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/multigrid/Level.h" line="52" column="18" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/multigrid/Level.h" bodystart="52" bodyend="-1"/>
+        <referencedby refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a36c5ca3486f6772b43d4490c095cc3be" compoundref="source_2pbat_2sim_2vbd_2multigrid_2Level_8cpp" startline="23" endline="129">Level</referencedby>
+        <referencedby refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a8400962314cd373e84191514273cdda4" compoundref="source_2pbat_2sim_2vbd_2multigrid_2Level_8cpp" startline="246" endline="353">Smooth</referencedby>
+      </memberdef>
+      <memberdef kind="variable" id="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a15ada99e6a2788cd0875074ec11241cd" prot="public" static="no" mutable="no">
+        <type>MatrixX</type>
+        <definition>MatrixX pbat::sim::vbd::multigrid::Level::NecVE</definition>
+        <argsstring></argsstring>
+        <name>NecVE</name>
+        <briefdescription>
+<para>4x|4*#fine elems| coarse element shape functions at 4 vertices of fine elements </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/multigrid/Level.h" line="54" column="9" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/multigrid/Level.h" bodystart="54" bodyend="-1"/>
+        <referencedby refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a36c5ca3486f6772b43d4490c095cc3be" compoundref="source_2pbat_2sim_2vbd_2multigrid_2Level_8cpp" startline="23" endline="129">Level</referencedby>
+        <referencedby refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a8400962314cd373e84191514273cdda4" compoundref="source_2pbat_2sim_2vbd_2multigrid_2Level_8cpp" startline="246" endline="353">Smooth</referencedby>
+      </memberdef>
+      <memberdef kind="variable" id="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a76b7c7412be98e35731817eb90d35abf" prot="public" static="no" mutable="no">
+        <type>IndexMatrixX</type>
+        <definition>IndexMatrixX pbat::sim::vbd::multigrid::Level::ilocalE</definition>
+        <argsstring></argsstring>
+        <name>ilocalE</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>4x|#fine elems| coarse vertex local index w.r.t. coarse elements containing 4 vertices of fine elements </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/multigrid/Level.h" line="55" column="18" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/multigrid/Level.h" bodystart="55" bodyend="-1"/>
+        <referencedby refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a36c5ca3486f6772b43d4490c095cc3be" compoundref="source_2pbat_2sim_2vbd_2multigrid_2Level_8cpp" startline="23" endline="129">Level</referencedby>
+        <referencedby refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a8400962314cd373e84191514273cdda4" compoundref="source_2pbat_2sim_2vbd_2multigrid_2Level_8cpp" startline="246" endline="353">Smooth</referencedby>
+      </memberdef>
+      <memberdef kind="variable" id="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a4640ebfc8bdee1f28a1151714366c39b" prot="public" static="no" mutable="no">
+        <type>IndexVectorX</type>
+        <definition>IndexVectorX pbat::sim::vbd::multigrid::Level::GEptr</definition>
+        <argsstring></argsstring>
+        <name>GEptr</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/multigrid/Level.h" line="57" column="18" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/multigrid/Level.h" bodystart="57" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a47d8c865309e3e4b11dd7e2c87836392" prot="public" static="no" mutable="no">
+        <type>IndexVectorX</type>
+        <definition>IndexVectorX pbat::sim::vbd::multigrid::Level::GEadj</definition>
+        <argsstring></argsstring>
+        <name>GEadj</name>
+        <briefdescription>
+<para>Coarse vertex -&gt; fine element adjacency graph. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/multigrid/Level.h" line="57" column="24" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/multigrid/Level.h" bodystart="57" bodyend="-1"/>
+        <referencedby refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a36c5ca3486f6772b43d4490c095cc3be" compoundref="source_2pbat_2sim_2vbd_2multigrid_2Level_8cpp" startline="23" endline="129">Level</referencedby>
+        <referencedby refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a8400962314cd373e84191514273cdda4" compoundref="source_2pbat_2sim_2vbd_2multigrid_2Level_8cpp" startline="246" endline="353">Smooth</referencedby>
+      </memberdef>
+      <memberdef kind="variable" id="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a23f1f16b587f670ba5d906194a70c38d" prot="public" static="no" mutable="no">
+        <type>BoolVector</type>
+        <definition>BoolVector pbat::sim::vbd::multigrid::Level::bActiveE</definition>
+        <argsstring></argsstring>
+        <name>bActiveE</name>
+        <briefdescription>
+<para>Active elements at this level. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/multigrid/Level.h" line="58" column="16" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/multigrid/Level.h" bodystart="58" bodyend="-1"/>
+        <referencedby refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a36c5ca3486f6772b43d4490c095cc3be" compoundref="source_2pbat_2sim_2vbd_2multigrid_2Level_8cpp" startline="23" endline="129">Level</referencedby>
+        <referencedby refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1abc6b7179bef6b4eacaca30beb6420328" compoundref="source_2pbat_2sim_2vbd_2multigrid_2Level_8cpp" startline="131" endline="233">HyperReduce</referencedby>
+        <referencedby refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a8400962314cd373e84191514273cdda4" compoundref="source_2pbat_2sim_2vbd_2multigrid_2Level_8cpp" startline="246" endline="353">Smooth</referencedby>
+      </memberdef>
+      <memberdef kind="variable" id="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1ad618e3eed689aefa9303c3160e685286" prot="public" static="no" mutable="no">
+        <type>VectorX</type>
+        <definition>VectorX pbat::sim::vbd::multigrid::Level::wgE</definition>
+        <argsstring></argsstring>
+        <name>wgE</name>
+        <briefdescription>
+<para>Coarse element quadrature weights. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/multigrid/Level.h" line="59" column="13" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/multigrid/Level.h" bodystart="59" bodyend="-1"/>
+        <referencedby refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a36c5ca3486f6772b43d4490c095cc3be" compoundref="source_2pbat_2sim_2vbd_2multigrid_2Level_8cpp" startline="23" endline="129">Level</referencedby>
+        <referencedby refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1abc6b7179bef6b4eacaca30beb6420328" compoundref="source_2pbat_2sim_2vbd_2multigrid_2Level_8cpp" startline="131" endline="233">HyperReduce</referencedby>
+        <referencedby refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a8400962314cd373e84191514273cdda4" compoundref="source_2pbat_2sim_2vbd_2multigrid_2Level_8cpp" startline="246" endline="353">Smooth</referencedby>
+      </memberdef>
+      <memberdef kind="variable" id="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1af5c6f09ec649781789a621d72720a007" prot="public" static="no" mutable="no">
+        <type>IndexVectorX</type>
+        <definition>IndexVectorX pbat::sim::vbd::multigrid::Level::ecK</definition>
+        <argsstring></argsstring>
+        <name>ecK</name>
+        <briefdescription>
+<para>|#fine vertices| coarse elements containing fine vertices </para>
+        </briefdescription>
+        <detaileddescription>
+<para>Kinetic energy </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/multigrid/Level.h" line="64" column="18" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/multigrid/Level.h" bodystart="64" bodyend="-1"/>
+        <referencedby refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a36c5ca3486f6772b43d4490c095cc3be" compoundref="source_2pbat_2sim_2vbd_2multigrid_2Level_8cpp" startline="23" endline="129">Level</referencedby>
+        <referencedby refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a8400962314cd373e84191514273cdda4" compoundref="source_2pbat_2sim_2vbd_2multigrid_2Level_8cpp" startline="246" endline="353">Smooth</referencedby>
+      </memberdef>
+      <memberdef kind="variable" id="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1aa1cf1126c61010f6cc1b3ed2be9a469f" prot="public" static="no" mutable="no">
+        <type>MatrixX</type>
+        <definition>MatrixX pbat::sim::vbd::multigrid::Level::NecK</definition>
+        <argsstring></argsstring>
+        <name>NecK</name>
+        <briefdescription>
+<para>4x|#fine vertices| coarse element shape functions at fine vertices </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/multigrid/Level.h" line="65" column="13" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/multigrid/Level.h" bodystart="65" bodyend="-1"/>
+        <referencedby refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a36c5ca3486f6772b43d4490c095cc3be" compoundref="source_2pbat_2sim_2vbd_2multigrid_2Level_8cpp" startline="23" endline="129">Level</referencedby>
+        <referencedby refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a8400962314cd373e84191514273cdda4" compoundref="source_2pbat_2sim_2vbd_2multigrid_2Level_8cpp" startline="246" endline="353">Smooth</referencedby>
+      </memberdef>
+      <memberdef kind="variable" id="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a21efc1b122442bd7dee3e510713d4a4f" prot="public" static="no" mutable="no">
+        <type>IndexVectorX</type>
+        <definition>IndexVectorX pbat::sim::vbd::multigrid::Level::GKptr</definition>
+        <argsstring></argsstring>
+        <name>GKptr</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/multigrid/Level.h" line="66" column="18" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/multigrid/Level.h" bodystart="66" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a49b3ee60426c72ce02f1c05eed85d738" prot="public" static="no" mutable="no">
+        <type>IndexVectorX</type>
+        <definition>IndexVectorX pbat::sim::vbd::multigrid::Level::GKadj</definition>
+        <argsstring></argsstring>
+        <name>GKadj</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/multigrid/Level.h" line="66" column="24" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/multigrid/Level.h" bodystart="66" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a75949b0ce4f4dc4a37d5fe0947413026" prot="public" static="no" mutable="no">
+        <type>IndexVectorX</type>
+        <definition>IndexVectorX pbat::sim::vbd::multigrid::Level::GKilocal</definition>
+        <argsstring></argsstring>
+        <name>GKilocal</name>
+        <briefdescription>
+<para>Coarse vertex -&gt; fine vertex adjacency graph. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/multigrid/Level.h" line="66" column="30" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/multigrid/Level.h" bodystart="66" bodyend="-1"/>
+        <referencedby refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a36c5ca3486f6772b43d4490c095cc3be" compoundref="source_2pbat_2sim_2vbd_2multigrid_2Level_8cpp" startline="23" endline="129">Level</referencedby>
+        <referencedby refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a8400962314cd373e84191514273cdda4" compoundref="source_2pbat_2sim_2vbd_2multigrid_2Level_8cpp" startline="246" endline="353">Smooth</referencedby>
+      </memberdef>
+      <memberdef kind="variable" id="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1ae5ea2cc51674c045f3c2e85bd82cbf99" prot="public" static="no" mutable="no">
+        <type>BoolVector</type>
+        <definition>BoolVector pbat::sim::vbd::multigrid::Level::bActiveK</definition>
+        <argsstring></argsstring>
+        <name>bActiveK</name>
+        <briefdescription>
+<para>Active vertices at this level. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/multigrid/Level.h" line="67" column="16" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/multigrid/Level.h" bodystart="67" bodyend="-1"/>
+        <referencedby refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a36c5ca3486f6772b43d4490c095cc3be" compoundref="source_2pbat_2sim_2vbd_2multigrid_2Level_8cpp" startline="23" endline="129">Level</referencedby>
+        <referencedby refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1abc6b7179bef6b4eacaca30beb6420328" compoundref="source_2pbat_2sim_2vbd_2multigrid_2Level_8cpp" startline="131" endline="233">HyperReduce</referencedby>
+        <referencedby refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a8400962314cd373e84191514273cdda4" compoundref="source_2pbat_2sim_2vbd_2multigrid_2Level_8cpp" startline="246" endline="353">Smooth</referencedby>
+      </memberdef>
+      <memberdef kind="variable" id="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1aed31fc53836d0a471329bf6f76e6ed41" prot="public" static="no" mutable="no">
+        <type>VectorX</type>
+        <definition>VectorX pbat::sim::vbd::multigrid::Level::mK</definition>
+        <argsstring></argsstring>
+        <name>mK</name>
+        <briefdescription>
+<para>Coarse nodal lumped masses. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/multigrid/Level.h" line="68" column="13" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/multigrid/Level.h" bodystart="68" bodyend="-1"/>
+        <referencedby refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a36c5ca3486f6772b43d4490c095cc3be" compoundref="source_2pbat_2sim_2vbd_2multigrid_2Level_8cpp" startline="23" endline="129">Level</referencedby>
+        <referencedby refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1abc6b7179bef6b4eacaca30beb6420328" compoundref="source_2pbat_2sim_2vbd_2multigrid_2Level_8cpp" startline="131" endline="233">HyperReduce</referencedby>
+        <referencedby refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a8400962314cd373e84191514273cdda4" compoundref="source_2pbat_2sim_2vbd_2multigrid_2Level_8cpp" startline="246" endline="353">Smooth</referencedby>
+      </memberdef>
+      <memberdef kind="variable" id="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1afdebab3dd80f85c6e94375ec4100334e" prot="public" static="no" mutable="no">
+        <type>BoolVector</type>
+        <definition>BoolVector pbat::sim::vbd::multigrid::Level::bIsDirichletVertex</definition>
+        <argsstring></argsstring>
+        <name>bIsDirichletVertex</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Dirichlet energy </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/multigrid/Level.h" line="73" column="16" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/multigrid/Level.h" bodystart="73" bodyend="-1"/>
+        <referencedby refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a36c5ca3486f6772b43d4490c095cc3be" compoundref="source_2pbat_2sim_2vbd_2multigrid_2Level_8cpp" startline="23" endline="129">Level</referencedby>
+        <referencedby refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a8400962314cd373e84191514273cdda4" compoundref="source_2pbat_2sim_2vbd_2multigrid_2Level_8cpp" startline="246" endline="353">Smooth</referencedby>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="public-func">
+      <memberdef kind="function" id="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a36c5ca3486f6772b43d4490c095cc3be" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>pbat::sim::vbd::multigrid::Level::Level</definition>
+        <argsstring>(Data const &amp;data, VolumeMesh mesh)</argsstring>
+        <name>Level</name>
+        <param>
+          <type><ref refid="structpbat_1_1sim_1_1vbd_1_1Data" kindref="compound">Data</ref> const &amp;</type>
+          <declname>data</declname>
+        </param>
+        <param>
+          <type><ref refid="structpbat_1_1fem_1_1Mesh" kindref="compound">VolumeMesh</ref></type>
+          <declname>mesh</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>data</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>mesh</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/multigrid/Level.h" line="20" column="5" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/multigrid/Level.cpp" bodystart="23" bodyend="129"/>
+        <references refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a23f1f16b587f670ba5d906194a70c38d" compoundref="source_2pbat_2sim_2vbd_2multigrid_2Level_8h" startline="58">bActiveE</references>
+        <references refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1ae5ea2cc51674c045f3c2e85bd82cbf99" compoundref="source_2pbat_2sim_2vbd_2multigrid_2Level_8h" startline="67">bActiveK</references>
+        <references refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1afdebab3dd80f85c6e94375ec4100334e" compoundref="source_2pbat_2sim_2vbd_2multigrid_2Level_8h" startline="73">bIsDirichletVertex</references>
+        <references refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1af9c1dddf690c4fa1d924d574276a7de8" compoundref="source_2pbat_2sim_2vbd_2multigrid_2Level_8h" startline="44">colors</references>
+        <references refid="structpbat_1_1sim_1_1vbd_1_1Data_1a0af80e757ad6d712fd8cb988c2723abe" compoundref="source_2pbat_2sim_2vbd_2Data_8h" startline="140">pbat::sim::vbd::Data::dbc</references>
+        <references refid="structpbat_1_1fem_1_1Mesh_1a384afdf16df5efa27e09f17520402b5b" compoundref="source_2pbat_2fem_2Mesh_8h" startline="52">pbat::fem::Mesh&lt; TElement, Dims &gt;::E</references>
+        <references refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1af5c6f09ec649781789a621d72720a007" compoundref="source_2pbat_2sim_2vbd_2multigrid_2Level_8h" startline="64">ecK</references>
+        <references refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1af2b4a49b4bcaea445229f49b7afd5c68" compoundref="source_2pbat_2sim_2vbd_2multigrid_2Level_8h" startline="52">ecVE</references>
+        <references refid="structpbat_1_1sim_1_1vbd_1_1Data_1a65e365755f7b8b39de4fc1f46dbd883e" compoundref="source_2pbat_2sim_2vbd_2Data_8h" startline="142">pbat::sim::vbd::Data::eOrdering</references>
+        <references refid="structpbat_1_1sim_1_1vbd_1_1Data_1a5f6eed3ae91f2ba44f10ebf7ffd8ebb7" compoundref="source_2pbat_2sim_2vbd_2Data_8h" startline="145">pbat::sim::vbd::Data::eSelection</references>
+        <references refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a47d8c865309e3e4b11dd7e2c87836392" compoundref="source_2pbat_2sim_2vbd_2multigrid_2Level_8h" startline="57">GEadj</references>
+        <references refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a75949b0ce4f4dc4a37d5fe0947413026" compoundref="source_2pbat_2sim_2vbd_2multigrid_2Level_8h" startline="66">GKilocal</references>
+        <references refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1abc6b7179bef6b4eacaca30beb6420328" compoundref="source_2pbat_2sim_2vbd_2multigrid_2Level_8cpp" startline="131" endline="233">HyperReduce</references>
+        <references refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a76b7c7412be98e35731817eb90d35abf" compoundref="source_2pbat_2sim_2vbd_2multigrid_2Level_8h" startline="55">ilocalE</references>
+        <references refid="structpbat_1_1sim_1_1vbd_1_1Data_1a2254c059ec6624402fb8ffab3b825771" compoundref="source_2pbat_2sim_2vbd_2Data_8h" startline="118">pbat::sim::vbd::Data::m</references>
+        <references refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1ab8a508431690592254dd834a827a1f74" compoundref="source_2pbat_2sim_2vbd_2multigrid_2Level_8h" startline="42">mesh</references>
+        <references refid="structpbat_1_1sim_1_1vbd_1_1Data_1a0814000764d127a91a05454ee341504d" compoundref="source_2pbat_2sim_2vbd_2Data_8h" startline="111">pbat::sim::vbd::Data::mesh</references>
+        <references refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1aed31fc53836d0a471329bf6f76e6ed41" compoundref="source_2pbat_2sim_2vbd_2multigrid_2Level_8h" startline="68">mK</references>
+        <references refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1aa1cf1126c61010f6cc1b3ed2be9a469f" compoundref="source_2pbat_2sim_2vbd_2multigrid_2Level_8h" startline="65">NecK</references>
+        <references refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a15ada99e6a2788cd0875074ec11241cd" compoundref="source_2pbat_2sim_2vbd_2multigrid_2Level_8h" startline="54">NecVE</references>
+        <references refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a9b30ad5129f3ad7795fde1bf4c61cd67" compoundref="source_2pbat_2sim_2vbd_2multigrid_2Level_8h" startline="45">Padj</references>
+        <references refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a9cb9f579145195025d2e5e751e6b16dc" compoundref="source_2pbat_2sim_2vbd_2multigrid_2Level_8h" startline="43">u</references>
+        <references refid="structpbat_1_1sim_1_1vbd_1_1Data_1af7202dd6a57b205d8b245e0fc007b160" compoundref="source_2pbat_2sim_2vbd_2Data_8h" startline="126">pbat::sim::vbd::Data::wg</references>
+        <references refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1ad618e3eed689aefa9303c3160e685286" compoundref="source_2pbat_2sim_2vbd_2multigrid_2Level_8h" startline="59">wgE</references>
+        <references refid="structpbat_1_1fem_1_1Mesh_1abc65a193ee960705ddf64227afb18809" compoundref="source_2pbat_2fem_2Mesh_8h" startline="51">pbat::fem::Mesh&lt; TElement, Dims &gt;::X</references>
+      </memberdef>
+      <memberdef kind="function" id="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1abc6b7179bef6b4eacaca30beb6420328" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void pbat::sim::vbd::multigrid::Level::HyperReduce</definition>
+        <argsstring>(Data const &amp;data)</argsstring>
+        <name>HyperReduce</name>
+        <param>
+          <type><ref refid="structpbat_1_1sim_1_1vbd_1_1Data" kindref="compound">Data</ref> const &amp;</type>
+          <declname>data</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>data</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/multigrid/Level.h" line="25" column="10" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/multigrid/Level.cpp" bodystart="131" bodyend="233"/>
+        <references refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a23f1f16b587f670ba5d906194a70c38d" compoundref="source_2pbat_2sim_2vbd_2multigrid_2Level_8h" startline="58">bActiveE</references>
+        <references refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1ae5ea2cc51674c045f3c2e85bd82cbf99" compoundref="source_2pbat_2sim_2vbd_2multigrid_2Level_8h" startline="67">bActiveK</references>
+        <references refid="structpbat_1_1fem_1_1Mesh_1a384afdf16df5efa27e09f17520402b5b" compoundref="source_2pbat_2fem_2Mesh_8h" startline="52">pbat::fem::Mesh&lt; TElement, Dims &gt;::E</references>
+        <references refid="structpbat_1_1sim_1_1vbd_1_1Data_1a2254c059ec6624402fb8ffab3b825771" compoundref="source_2pbat_2sim_2vbd_2Data_8h" startline="118">pbat::sim::vbd::Data::m</references>
+        <references refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1ab8a508431690592254dd834a827a1f74" compoundref="source_2pbat_2sim_2vbd_2multigrid_2Level_8h" startline="42">mesh</references>
+        <references refid="structpbat_1_1sim_1_1vbd_1_1Data_1a0814000764d127a91a05454ee341504d" compoundref="source_2pbat_2sim_2vbd_2Data_8h" startline="111">pbat::sim::vbd::Data::mesh</references>
+        <references refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1aed31fc53836d0a471329bf6f76e6ed41" compoundref="source_2pbat_2sim_2vbd_2multigrid_2Level_8h" startline="68">mK</references>
+        <references refid="structpbat_1_1fem_1_1Mesh_1a810ae14a3d6596c587f83793132e643e" compoundref="source_2pbat_2fem_2Mesh_8h" startline="212" endline="234">pbat::fem::Mesh&lt; TElement, Dims &gt;::QuadraturePoints</references>
+        <references refid="structpbat_1_1sim_1_1vbd_1_1Data_1af7202dd6a57b205d8b245e0fc007b160" compoundref="source_2pbat_2sim_2vbd_2Data_8h" startline="126">pbat::sim::vbd::Data::wg</references>
+        <references refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1ad618e3eed689aefa9303c3160e685286" compoundref="source_2pbat_2sim_2vbd_2multigrid_2Level_8h" startline="59">wgE</references>
+        <references refid="structpbat_1_1fem_1_1Mesh_1abc65a193ee960705ddf64227afb18809" compoundref="source_2pbat_2fem_2Mesh_8h" startline="51">pbat::fem::Mesh&lt; TElement, Dims &gt;::X</references>
+        <referencedby refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a36c5ca3486f6772b43d4490c095cc3be" compoundref="source_2pbat_2sim_2vbd_2multigrid_2Level_8cpp" startline="23" endline="129">Level</referencedby>
+      </memberdef>
+      <memberdef kind="function" id="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a9a1a48eb8d79156416b7ce3187082718" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void pbat::sim::vbd::multigrid::Level::Prolong</definition>
+        <argsstring>(Data &amp;data) const</argsstring>
+        <name>Prolong</name>
+        <param>
+          <type><ref refid="structpbat_1_1sim_1_1vbd_1_1Data" kindref="compound">Data</ref> &amp;</type>
+          <declname>data</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>data</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/multigrid/Level.h" line="30" column="10" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/multigrid/Level.cpp" bodystart="235" bodyend="244"/>
+        <references refid="structpbat_1_1sim_1_1vbd_1_1Data_1a2a0bd0abb260a15041042f27078ab0d9" compoundref="source_2pbat_2sim_2vbd_2Data_8h" startline="115">pbat::sim::vbd::Data::x</references>
+        <referencedby refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a8400962314cd373e84191514273cdda4" compoundref="source_2pbat_2sim_2vbd_2multigrid_2Level_8cpp" startline="246" endline="353">Smooth</referencedby>
+      </memberdef>
+      <memberdef kind="function" id="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a8400962314cd373e84191514273cdda4" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void pbat::sim::vbd::multigrid::Level::Smooth</definition>
+        <argsstring>(Scalar dt, Index iters, Data &amp;data)</argsstring>
+        <name>Smooth</name>
+        <param>
+          <type>Scalar</type>
+          <declname>dt</declname>
+        </param>
+        <param>
+          <type>Index</type>
+          <declname>iters</declname>
+        </param>
+        <param>
+          <type><ref refid="structpbat_1_1sim_1_1vbd_1_1Data" kindref="compound">Data</ref> &amp;</type>
+          <declname>data</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>dt</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>iters</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>data</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/multigrid/Level.h" line="37" column="10" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/multigrid/Level.cpp" bodystart="246" bodyend="353"/>
+        <references refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a23f1f16b587f670ba5d906194a70c38d" compoundref="source_2pbat_2sim_2vbd_2multigrid_2Level_8h" startline="58">bActiveE</references>
+        <references refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1ae5ea2cc51674c045f3c2e85bd82cbf99" compoundref="source_2pbat_2sim_2vbd_2multigrid_2Level_8h" startline="67">bActiveK</references>
+        <references refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1afdebab3dd80f85c6e94375ec4100334e" compoundref="source_2pbat_2sim_2vbd_2multigrid_2Level_8h" startline="73">bIsDirichletVertex</references>
+        <references refid="structpbat_1_1sim_1_1vbd_1_1Data_1a3f5c9dc1a0032e5497ba4cf856fe261e" compoundref="source_2pbat_2sim_2vbd_2Data_8h" startline="157">pbat::sim::vbd::Data::detHZero</references>
+        <references refid="structpbat_1_1fem_1_1Mesh_1a384afdf16df5efa27e09f17520402b5b" compoundref="source_2pbat_2fem_2Mesh_8h" startline="52">pbat::fem::Mesh&lt; TElement, Dims &gt;::E</references>
+        <references refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1af5c6f09ec649781789a621d72720a007" compoundref="source_2pbat_2sim_2vbd_2multigrid_2Level_8h" startline="64">ecK</references>
+        <references refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1af2b4a49b4bcaea445229f49b7afd5c68" compoundref="source_2pbat_2sim_2vbd_2multigrid_2Level_8h" startline="52">ecVE</references>
+        <references refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a47d8c865309e3e4b11dd7e2c87836392" compoundref="source_2pbat_2sim_2vbd_2multigrid_2Level_8h" startline="57">GEadj</references>
+        <references refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a75949b0ce4f4dc4a37d5fe0947413026" compoundref="source_2pbat_2sim_2vbd_2multigrid_2Level_8h" startline="66">GKilocal</references>
+        <references refid="structpbat_1_1sim_1_1vbd_1_1Data_1acb06d13aaccc6827135488ff05b9baac" compoundref="source_2pbat_2sim_2vbd_2Data_8h" startline="127">pbat::sim::vbd::Data::GP</references>
+        <references refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a76b7c7412be98e35731817eb90d35abf" compoundref="source_2pbat_2sim_2vbd_2multigrid_2Level_8h" startline="55">ilocalE</references>
+        <references refid="structpbat_1_1sim_1_1vbd_1_1Data_1af5043269e65921692dd1938cd75e9eb4" compoundref="source_2pbat_2sim_2vbd_2Data_8h" startline="129">pbat::sim::vbd::Data::lame</references>
+        <references refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1ab8a508431690592254dd834a827a1f74" compoundref="source_2pbat_2sim_2vbd_2multigrid_2Level_8h" startline="42">mesh</references>
+        <references refid="structpbat_1_1sim_1_1vbd_1_1Data_1a0814000764d127a91a05454ee341504d" compoundref="source_2pbat_2sim_2vbd_2Data_8h" startline="111">pbat::sim::vbd::Data::mesh</references>
+        <references refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1aed31fc53836d0a471329bf6f76e6ed41" compoundref="source_2pbat_2sim_2vbd_2multigrid_2Level_8h" startline="68">mK</references>
+        <references refid="structpbat_1_1sim_1_1vbd_1_1Data_1a1a29fe9009b7f1592fea20cf22c8edff" compoundref="source_2pbat_2sim_2vbd_2Data_8h" startline="139">pbat::sim::vbd::Data::muD</references>
+        <references refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1aa1cf1126c61010f6cc1b3ed2be9a469f" compoundref="source_2pbat_2sim_2vbd_2multigrid_2Level_8h" startline="65">NecK</references>
+        <references refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a15ada99e6a2788cd0875074ec11241cd" compoundref="source_2pbat_2sim_2vbd_2multigrid_2Level_8h" startline="54">NecVE</references>
+        <references refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a9b30ad5129f3ad7795fde1bf4c61cd67" compoundref="source_2pbat_2sim_2vbd_2multigrid_2Level_8h" startline="45">Padj</references>
+        <references refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a9a1a48eb8d79156416b7ce3187082718" compoundref="source_2pbat_2sim_2vbd_2multigrid_2Level_8cpp" startline="235" endline="244">Prolong</references>
+        <references refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a9cb9f579145195025d2e5e751e6b16dc" compoundref="source_2pbat_2sim_2vbd_2multigrid_2Level_8h" startline="43">u</references>
+        <references refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1ad618e3eed689aefa9303c3160e685286" compoundref="source_2pbat_2sim_2vbd_2multigrid_2Level_8h" startline="59">wgE</references>
+        <references refid="structpbat_1_1fem_1_1Mesh_1abc65a193ee960705ddf64227afb18809" compoundref="source_2pbat_2fem_2Mesh_8h" startline="51">pbat::fem::Mesh&lt; TElement, Dims &gt;::X</references>
+        <references refid="structpbat_1_1sim_1_1vbd_1_1Data_1a2a0bd0abb260a15041042f27078ab0d9" compoundref="source_2pbat_2sim_2vbd_2Data_8h" startline="115">pbat::sim::vbd::Data::x</references>
+        <references refid="structpbat_1_1sim_1_1vbd_1_1Data_1a4fec3531f1dee1ae4ef57c4faf34aeb7" compoundref="source_2pbat_2sim_2vbd_2Data_8h" startline="121">pbat::sim::vbd::Data::xtilde</references>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <collaborationgraph>
+      <node id="2">
+        <label>pbat::fem::Mesh&lt; fem::Tetrahedron&lt; 1 &gt;, 3 &gt;</label>
+        <link refid="structpbat_1_1fem_1_1Mesh"/>
+      </node>
+      <node id="1">
+        <label>pbat::sim::vbd::multigrid::Level</label>
+        <link refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level"/>
+        <childnode refid="2" relation="usage">
+          <edgelabel>mesh</edgelabel>
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/multigrid/Level.h" line="14" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/multigrid/Level.h" bodystart="13" bodyend="74"/>
+    <listofallmembers>
+      <member refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a23f1f16b587f670ba5d906194a70c38d" prot="public" virt="non-virtual"><scope>pbat::sim::vbd::multigrid::Level</scope><name>bActiveE</name></member>
+      <member refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1ae5ea2cc51674c045f3c2e85bd82cbf99" prot="public" virt="non-virtual"><scope>pbat::sim::vbd::multigrid::Level</scope><name>bActiveK</name></member>
+      <member refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1afdebab3dd80f85c6e94375ec4100334e" prot="public" virt="non-virtual"><scope>pbat::sim::vbd::multigrid::Level</scope><name>bIsDirichletVertex</name></member>
+      <member refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a1c29788c32f2bd08fd3bd2924b62e1a2" prot="public" virt="non-virtual"><scope>pbat::sim::vbd::multigrid::Level</scope><name>BoolVector</name></member>
+      <member refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1af9c1dddf690c4fa1d924d574276a7de8" prot="public" virt="non-virtual"><scope>pbat::sim::vbd::multigrid::Level</scope><name>colors</name></member>
+      <member refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1af5c6f09ec649781789a621d72720a007" prot="public" virt="non-virtual"><scope>pbat::sim::vbd::multigrid::Level</scope><name>ecK</name></member>
+      <member refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1af2b4a49b4bcaea445229f49b7afd5c68" prot="public" virt="non-virtual"><scope>pbat::sim::vbd::multigrid::Level</scope><name>ecVE</name></member>
+      <member refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a47d8c865309e3e4b11dd7e2c87836392" prot="public" virt="non-virtual"><scope>pbat::sim::vbd::multigrid::Level</scope><name>GEadj</name></member>
+      <member refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a4640ebfc8bdee1f28a1151714366c39b" prot="public" virt="non-virtual"><scope>pbat::sim::vbd::multigrid::Level</scope><name>GEptr</name></member>
+      <member refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a49b3ee60426c72ce02f1c05eed85d738" prot="public" virt="non-virtual"><scope>pbat::sim::vbd::multigrid::Level</scope><name>GKadj</name></member>
+      <member refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a75949b0ce4f4dc4a37d5fe0947413026" prot="public" virt="non-virtual"><scope>pbat::sim::vbd::multigrid::Level</scope><name>GKilocal</name></member>
+      <member refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a21efc1b122442bd7dee3e510713d4a4f" prot="public" virt="non-virtual"><scope>pbat::sim::vbd::multigrid::Level</scope><name>GKptr</name></member>
+      <member refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1abc6b7179bef6b4eacaca30beb6420328" prot="public" virt="non-virtual"><scope>pbat::sim::vbd::multigrid::Level</scope><name>HyperReduce</name></member>
+      <member refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a76b7c7412be98e35731817eb90d35abf" prot="public" virt="non-virtual"><scope>pbat::sim::vbd::multigrid::Level</scope><name>ilocalE</name></member>
+      <member refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a36c5ca3486f6772b43d4490c095cc3be" prot="public" virt="non-virtual"><scope>pbat::sim::vbd::multigrid::Level</scope><name>Level</name></member>
+      <member refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1ab8a508431690592254dd834a827a1f74" prot="public" virt="non-virtual"><scope>pbat::sim::vbd::multigrid::Level</scope><name>mesh</name></member>
+      <member refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1aed31fc53836d0a471329bf6f76e6ed41" prot="public" virt="non-virtual"><scope>pbat::sim::vbd::multigrid::Level</scope><name>mK</name></member>
+      <member refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1aa1cf1126c61010f6cc1b3ed2be9a469f" prot="public" virt="non-virtual"><scope>pbat::sim::vbd::multigrid::Level</scope><name>NecK</name></member>
+      <member refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a15ada99e6a2788cd0875074ec11241cd" prot="public" virt="non-virtual"><scope>pbat::sim::vbd::multigrid::Level</scope><name>NecVE</name></member>
+      <member refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a9b30ad5129f3ad7795fde1bf4c61cd67" prot="public" virt="non-virtual"><scope>pbat::sim::vbd::multigrid::Level</scope><name>Padj</name></member>
+      <member refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a144be259f91a7c4f44e3a627c1e6ea82" prot="public" virt="non-virtual"><scope>pbat::sim::vbd::multigrid::Level</scope><name>Pptr</name></member>
+      <member refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a9a1a48eb8d79156416b7ce3187082718" prot="public" virt="non-virtual"><scope>pbat::sim::vbd::multigrid::Level</scope><name>Prolong</name></member>
+      <member refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a8400962314cd373e84191514273cdda4" prot="public" virt="non-virtual"><scope>pbat::sim::vbd::multigrid::Level</scope><name>Smooth</name></member>
+      <member refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1a9cb9f579145195025d2e5e751e6b16dc" prot="public" virt="non-virtual"><scope>pbat::sim::vbd::multigrid::Level</scope><name>u</name></member>
+      <member refid="structpbat_1_1sim_1_1vbd_1_1multigrid_1_1Level_1ad618e3eed689aefa9303c3160e685286" prot="public" virt="non-virtual"><scope>pbat::sim::vbd::multigrid::Level</scope><name>wgE</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

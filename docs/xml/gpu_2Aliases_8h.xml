@@ -1,0 +1,113 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="gpu_2Aliases_8h" kind="file" language="C++">
+    <compoundname>Aliases.h</compoundname>
+    <includes local="no">Eigen/Core</includes>
+    <includedby refid="Primitives_8h" local="yes">/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/geometry/Primitives.h</includedby>
+    <includedby refid="source_2pbat_2gpu_2geometry_2Bvh_8h" local="yes">/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/geometry/Bvh.h</includedby>
+    <includedby refid="source_2pbat_2gpu_2geometry_2BvhQuery_8h" local="yes">/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/geometry/BvhQuery.h</includedby>
+    <includedby refid="source_2pbat_2gpu_2geometry_2SweepAndPrune_8h" local="yes">/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/geometry/SweepAndPrune.h</includedby>
+    <includedby refid="source_2pbat_2gpu_2vbd_2Integrator_8h" local="yes">/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/vbd/Integrator.h</includedby>
+    <includedby refid="source_2pbat_2gpu_2xpbd_2Integrator_8h" local="yes">/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/xpbd/Integrator.h</includedby>
+    <includedby refid="bindings_2pypbat_2gpu_2vbd_2Integrator_8cpp" local="no">/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/gpu/vbd/Integrator.cpp</includedby>
+    <includedby refid="bindings_2pypbat_2gpu_2xpbd_2Integrator_8cpp" local="no">/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/gpu/xpbd/Integrator.cpp</includedby>
+    <incdepgraph>
+      <node id="2">
+        <label>Eigen/Core</label>
+      </node>
+      <node id="1">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/Aliases.h</label>
+        <link refid="gpu_2Aliases_8h"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+      </node>
+    </incdepgraph>
+    <invincdepgraph>
+      <node id="7">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/vbd/Vbd.h</label>
+        <link refid="source_2pbat_2gpu_2vbd_2Vbd_8h_source"/>
+      </node>
+      <node id="9">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/xpbd/Xpbd.h</label>
+        <link refid="source_2pbat_2gpu_2xpbd_2Xpbd_8h_source"/>
+      </node>
+      <node id="6">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/vbd/Integrator.h</label>
+        <link refid="source_2pbat_2gpu_2vbd_2Integrator_8h_source"/>
+        <childnode refid="7" relation="include">
+        </childnode>
+      </node>
+      <node id="8">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/xpbd/Integrator.h</label>
+        <link refid="source_2pbat_2gpu_2xpbd_2Integrator_8h_source"/>
+        <childnode refid="9" relation="include">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/Aliases.h</label>
+        <link refid="gpu_2Aliases_8h"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/geometry/Bvh.h</label>
+        <link refid="source_2pbat_2gpu_2geometry_2Bvh_8h_source"/>
+      </node>
+      <node id="2">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/geometry/Primitives.h</label>
+        <link refid="Primitives_8h_source"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+      </node>
+      <node id="5">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/geometry/SweepAndPrune.h</label>
+        <link refid="source_2pbat_2gpu_2geometry_2SweepAndPrune_8h_source"/>
+      </node>
+      <node id="4">
+        <label>/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/geometry/BvhQuery.h</label>
+        <link refid="source_2pbat_2gpu_2geometry_2BvhQuery_8h_source"/>
+      </node>
+    </invincdepgraph>
+    <innernamespace refid="namespacepbat">pbat</innernamespace>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="preprocessor">#ifndef<sp/>PBAT_GPU_ALIASES_H</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="2"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>PBAT_GPU_ALIASES_H</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="3"><highlight class="normal"></highlight></codeline>
+<codeline lineno="4"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;Eigen/Core&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="5"><highlight class="normal"></highlight></codeline>
+<codeline lineno="6"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal">pbat<sp/>{</highlight></codeline>
+<codeline lineno="7"><highlight class="normal"></highlight></codeline>
+<codeline lineno="8"><highlight class="normal"></highlight><highlight class="keyword">using</highlight><highlight class="normal"><sp/>GpuScalar<sp/>=<sp/>float;</highlight></codeline>
+<codeline lineno="9"><highlight class="normal"></highlight><highlight class="keyword">using</highlight><highlight class="normal"><sp/>GpuIndex<sp/><sp/>=<sp/>int;</highlight></codeline>
+<codeline lineno="10"><highlight class="normal"></highlight></codeline>
+<codeline lineno="11"><highlight class="normal"></highlight><highlight class="keyword">using</highlight><highlight class="normal"><sp/>GpuMatrixX<sp/><sp/><sp/><sp/><sp/><sp/>=<sp/>Eigen::Matrix&lt;GpuScalar,<sp/>Eigen::Dynamic,<sp/>Eigen::Dynamic&gt;;</highlight></codeline>
+<codeline lineno="12"><highlight class="normal"></highlight><highlight class="keyword">using</highlight><highlight class="normal"><sp/>GpuIndexMatrixX<sp/>=<sp/>Eigen::Matrix&lt;GpuIndex,<sp/>Eigen::Dynamic,<sp/>Eigen::Dynamic&gt;;</highlight></codeline>
+<codeline lineno="13"><highlight class="normal"></highlight></codeline>
+<codeline lineno="14"><highlight class="normal"></highlight><highlight class="keyword">using</highlight><highlight class="normal"><sp/>GpuVectorX<sp/><sp/><sp/><sp/><sp/><sp/>=<sp/>Eigen::Vector&lt;GpuScalar,<sp/>Eigen::Dynamic&gt;;</highlight></codeline>
+<codeline lineno="15"><highlight class="normal"></highlight><highlight class="keyword">using</highlight><highlight class="normal"><sp/>GpuIndexVectorX<sp/>=<sp/>Eigen::Vector&lt;GpuIndex,<sp/>Eigen::Dynamic&gt;;</highlight></codeline>
+<codeline lineno="16"><highlight class="normal"></highlight></codeline>
+<codeline lineno="17"><highlight class="normal">}<sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>pbat</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="18"><highlight class="normal"></highlight></codeline>
+<codeline lineno="19"><highlight class="normal"></highlight><highlight class="preprocessor">#endif<sp/>//<sp/>PBAT_GPU_ALIASES_H</highlight></codeline>
+    </programlisting>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/source/pbat/gpu/Aliases.h"/>
+  </compounddef>
+</doxygen>

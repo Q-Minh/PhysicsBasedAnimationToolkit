@@ -1,0 +1,278 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
+  <compounddef id="classpbat_1_1py_1_1fem_1_1Laplacian" kind="class" language="C++" prot="public">
+    <compoundname>pbat::py::fem::Laplacian</compoundname>
+      <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="classpbat_1_1py_1_1fem_1_1Laplacian_1ae924e8c4abaddd09adb408425eae6390" prot="public" static="no" mutable="no">
+        <type>EElement</type>
+        <definition>EElement pbat::py::fem::Laplacian::eMeshElement</definition>
+        <argsstring></argsstring>
+        <name>eMeshElement</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/Laplacian.cpp" line="39" column="14" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/Laplacian.cpp" bodystart="39" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpbat_1_1py_1_1fem_1_1Laplacian_1ad346a987c6450aacda1a7aa8a7e1b51b" prot="public" static="no" mutable="no">
+        <type>int</type>
+        <definition>int pbat::py::fem::Laplacian::mMeshDims</definition>
+        <argsstring></argsstring>
+        <name>mMeshDims</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/Laplacian.cpp" line="40" column="9" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/Laplacian.cpp" bodystart="40" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpbat_1_1py_1_1fem_1_1Laplacian_1ae4ccb77c99687caf92bbef99a723db06" prot="public" static="no" mutable="no">
+        <type>int</type>
+        <definition>int pbat::py::fem::Laplacian::mMeshOrder</definition>
+        <argsstring></argsstring>
+        <name>mMeshOrder</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/Laplacian.cpp" line="41" column="9" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/Laplacian.cpp" bodystart="41" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpbat_1_1py_1_1fem_1_1Laplacian_1af791e9243cf51e69dcee0157fda6ab19" prot="public" static="no" mutable="no">
+        <type>int</type>
+        <definition>int pbat::py::fem::Laplacian::mOrder</definition>
+        <argsstring></argsstring>
+        <name>mOrder</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/Laplacian.cpp" line="42" column="9" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/Laplacian.cpp" bodystart="42" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="classpbat_1_1py_1_1fem_1_1Laplacian_1a1888c643f866df3db8baf19b6d6f0a38" prot="private" static="no" mutable="no">
+        <type>void *</type>
+        <definition>void* pbat::py::fem::Laplacian::mLaplacian</definition>
+        <argsstring></argsstring>
+        <name>mLaplacian</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/Laplacian.cpp" line="45" column="10" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/Laplacian.cpp" bodystart="45" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpbat_1_1py_1_1fem_1_1Laplacian_1af0dd296304e52916ccdb1f353904c951" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>pbat::py::fem::Laplacian::Laplacian</definition>
+        <argsstring>(Mesh const &amp;M, Eigen::Ref&lt; IndexVectorX const &gt; const &amp;eg, Eigen::Ref&lt; MatrixX const &gt; const &amp;wg, Eigen::Ref&lt; MatrixX const &gt; const &amp;GNeg, int dims)</argsstring>
+        <name>Laplacian</name>
+        <param>
+          <type><ref refid="classpbat_1_1py_1_1fem_1_1Mesh" kindref="compound">Mesh</ref> const &amp;</type>
+          <declname>M</declname>
+        </param>
+        <param>
+          <type>Eigen::Ref&lt; IndexVectorX const &gt; const &amp;</type>
+          <declname>eg</declname>
+        </param>
+        <param>
+          <type>Eigen::Ref&lt; MatrixX const &gt; const &amp;</type>
+          <declname>wg</declname>
+        </param>
+        <param>
+          <type>Eigen::Ref&lt; MatrixX const &gt; const &amp;</type>
+          <declname>GNeg</declname>
+        </param>
+        <param>
+          <type>int</type>
+          <declname>dims</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/Laplacian.cpp" line="16" column="5" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/Laplacian.cpp" bodystart="85" bodyend="102"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1py_1_1fem_1_1Laplacian_1a3666d02b5b36420d5c7537aa1c673d0a" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>pbat::py::fem::Laplacian::Laplacian</definition>
+        <argsstring>(Laplacian const &amp;)=delete</argsstring>
+        <name>Laplacian</name>
+        <param>
+          <type><ref refid="classpbat_1_1py_1_1fem_1_1Laplacian" kindref="compound">Laplacian</ref> const &amp;</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/Laplacian.cpp" line="23" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1py_1_1fem_1_1Laplacian_1a50d1ae2471a0a08506cc1756fdb86144" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpbat_1_1py_1_1fem_1_1Laplacian" kindref="compound">Laplacian</ref> &amp;</type>
+        <definition>Laplacian&amp; pbat::py::fem::Laplacian::operator=</definition>
+        <argsstring>(Laplacian const &amp;)=delete</argsstring>
+        <name>operator=</name>
+        <param>
+          <type><ref refid="classpbat_1_1py_1_1fem_1_1Laplacian" kindref="compound">Laplacian</ref> const &amp;</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/Laplacian.cpp" line="24" column="15"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1py_1_1fem_1_1Laplacian_1acff8cfb28031b14062337c16e932adc0" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class Func</type>
+          </param>
+        </templateparamlist>
+        <type>void</type>
+        <definition>void pbat::py::fem::Laplacian::Apply</definition>
+        <argsstring>(Func &amp;&amp;f) const</argsstring>
+        <name>Apply</name>
+        <param>
+          <type>Func &amp;&amp;</type>
+          <declname>f</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/Laplacian.cpp" line="27" column="10" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/Laplacian.cpp" bodystart="164" bodyend="171"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1py_1_1fem_1_1Laplacian_1a2c28816888d7065c056bd4e8f0f2868c" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>CSCMatrix</type>
+        <definition>CSCMatrix pbat::py::fem::Laplacian::ToMatrix</definition>
+        <argsstring>() const</argsstring>
+        <name>ToMatrix</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/Laplacian.cpp" line="29" column="15" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/Laplacian.cpp" bodystart="104" bodyend="109"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1py_1_1fem_1_1Laplacian_1a05beacd782f95dae97118a65eb26d4fd" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>std::tuple&lt; Index, Index &gt;</type>
+        <definition>std::tuple&lt; Index, Index &gt; pbat::py::fem::Laplacian::Shape</definition>
+        <argsstring>() const</argsstring>
+        <name>Shape</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/Laplacian.cpp" line="30" column="16" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/Laplacian.cpp" bodystart="111" bodyend="119"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1py_1_1fem_1_1Laplacian_1a2d8916ef4324f42625c5b3dc59992a57" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>MatrixX const  &amp;</type>
+        <definition>MatrixX &amp; pbat::py::fem::Laplacian::ElementLaplacians</definition>
+        <argsstring>() const</argsstring>
+        <name>ElementLaplacians</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/Laplacian.cpp" line="32" column="19" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/Laplacian.cpp" bodystart="121" bodyend="128"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1py_1_1fem_1_1Laplacian_1a4887a9045147bf3222427e1876025726" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>MatrixX &amp;</type>
+        <definition>MatrixX&amp; pbat::py::fem::Laplacian::ElementLaplacians</definition>
+        <argsstring>()</argsstring>
+        <name>ElementLaplacians</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/Laplacian.cpp" line="33" column="13"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1py_1_1fem_1_1Laplacian_1afeb64d2ed9a497167f9d8cc06fc207be" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>int const  &amp;</type>
+        <definition>int &amp; pbat::py::fem::Laplacian::dims</definition>
+        <argsstring>() const</argsstring>
+        <name>dims</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/Laplacian.cpp" line="34" column="15" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/Laplacian.cpp" bodystart="139" bodyend="146"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1py_1_1fem_1_1Laplacian_1a2bad2d9f68248ac4e0d22ad8907bd6a1" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>int &amp;</type>
+        <definition>int&amp; pbat::py::fem::Laplacian::dims</definition>
+        <argsstring>()</argsstring>
+        <name>dims</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/Laplacian.cpp" line="35" column="9"/>
+      </memberdef>
+      <memberdef kind="function" id="classpbat_1_1py_1_1fem_1_1Laplacian_1a791f037c9a37cd4f6f062de8152e9f8a" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>pbat::py::fem::Laplacian::~Laplacian</definition>
+        <argsstring>()</argsstring>
+        <name>~Laplacian</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/Laplacian.cpp" line="37" column="5" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/Laplacian.cpp" bodystart="157" bodyend="161"/>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/Laplacian.cpp" line="14" column="1" bodyfile="/workspaces/PhysicsBasedAnimationToolkit/bindings/pypbat/fem/Laplacian.cpp" bodystart="13" bodyend="46"/>
+    <listofallmembers>
+      <member refid="classpbat_1_1py_1_1fem_1_1Laplacian_1acff8cfb28031b14062337c16e932adc0" prot="public" virt="non-virtual"><scope>pbat::py::fem::Laplacian</scope><name>Apply</name></member>
+      <member refid="classpbat_1_1py_1_1fem_1_1Laplacian_1afeb64d2ed9a497167f9d8cc06fc207be" prot="public" virt="non-virtual"><scope>pbat::py::fem::Laplacian</scope><name>dims</name></member>
+      <member refid="classpbat_1_1py_1_1fem_1_1Laplacian_1a2bad2d9f68248ac4e0d22ad8907bd6a1" prot="public" virt="non-virtual"><scope>pbat::py::fem::Laplacian</scope><name>dims</name></member>
+      <member refid="classpbat_1_1py_1_1fem_1_1Laplacian_1a2d8916ef4324f42625c5b3dc59992a57" prot="public" virt="non-virtual"><scope>pbat::py::fem::Laplacian</scope><name>ElementLaplacians</name></member>
+      <member refid="classpbat_1_1py_1_1fem_1_1Laplacian_1a4887a9045147bf3222427e1876025726" prot="public" virt="non-virtual"><scope>pbat::py::fem::Laplacian</scope><name>ElementLaplacians</name></member>
+      <member refid="classpbat_1_1py_1_1fem_1_1Laplacian_1ae924e8c4abaddd09adb408425eae6390" prot="public" virt="non-virtual"><scope>pbat::py::fem::Laplacian</scope><name>eMeshElement</name></member>
+      <member refid="classpbat_1_1py_1_1fem_1_1Laplacian_1af0dd296304e52916ccdb1f353904c951" prot="public" virt="non-virtual"><scope>pbat::py::fem::Laplacian</scope><name>Laplacian</name></member>
+      <member refid="classpbat_1_1py_1_1fem_1_1Laplacian_1a3666d02b5b36420d5c7537aa1c673d0a" prot="public" virt="non-virtual"><scope>pbat::py::fem::Laplacian</scope><name>Laplacian</name></member>
+      <member refid="classpbat_1_1py_1_1fem_1_1Laplacian_1a1888c643f866df3db8baf19b6d6f0a38" prot="private" virt="non-virtual"><scope>pbat::py::fem::Laplacian</scope><name>mLaplacian</name></member>
+      <member refid="classpbat_1_1py_1_1fem_1_1Laplacian_1ad346a987c6450aacda1a7aa8a7e1b51b" prot="public" virt="non-virtual"><scope>pbat::py::fem::Laplacian</scope><name>mMeshDims</name></member>
+      <member refid="classpbat_1_1py_1_1fem_1_1Laplacian_1ae4ccb77c99687caf92bbef99a723db06" prot="public" virt="non-virtual"><scope>pbat::py::fem::Laplacian</scope><name>mMeshOrder</name></member>
+      <member refid="classpbat_1_1py_1_1fem_1_1Laplacian_1af791e9243cf51e69dcee0157fda6ab19" prot="public" virt="non-virtual"><scope>pbat::py::fem::Laplacian</scope><name>mOrder</name></member>
+      <member refid="classpbat_1_1py_1_1fem_1_1Laplacian_1a50d1ae2471a0a08506cc1756fdb86144" prot="public" virt="non-virtual"><scope>pbat::py::fem::Laplacian</scope><name>operator=</name></member>
+      <member refid="classpbat_1_1py_1_1fem_1_1Laplacian_1a05beacd782f95dae97118a65eb26d4fd" prot="public" virt="non-virtual"><scope>pbat::py::fem::Laplacian</scope><name>Shape</name></member>
+      <member refid="classpbat_1_1py_1_1fem_1_1Laplacian_1a2c28816888d7065c056bd4e8f0f2868c" prot="public" virt="non-virtual"><scope>pbat::py::fem::Laplacian</scope><name>ToMatrix</name></member>
+      <member refid="classpbat_1_1py_1_1fem_1_1Laplacian_1a791f037c9a37cd4f6f062de8152e9f8a" prot="public" virt="non-virtual"><scope>pbat::py::fem::Laplacian</scope><name>~Laplacian</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>
