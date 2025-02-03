@@ -473,14 +473,28 @@ TEST_CASE("[gpu][impl][geometry] Bvh")
         auto const nSimplices        = aabbs.Size();
         auto const nExpectedOverlaps = (nSimplices * (nSimplices + 1) / 2) - nSimplices;
         Overlaps overlaps(2 * nExpectedOverlaps);
-        // Act
+
         Bvh bvh(aabbs.Size());
         bvh.Build(aabbs, mini::FromEigen(Vmin), mini::FromEigen(Vmax));
-        bvh.DetectOverlaps(aabbs, FOnOverlapDetected{CG.Raw(), overlaps.Raw()});
-        // Assert
-        CHECK_EQ(overlaps.Size(), nExpectedOverlaps);
         fCheckCubeBvhTopology(bvh);
         fCheckInternalBoundingBoxComputation(bvh, aabbs);
+
+        SUBCASE("Using self overlap detection")
+        {
+            // Act
+            bvh.DetectOverlaps(aabbs, FOnOverlapDetected{CG.Raw(), overlaps.Raw()});
+            auto const nOverlaps = overlaps.Size();
+            // Assert
+            CHECK_EQ(nOverlaps, nExpectedOverlaps);
+        }
+        SUBCASE("Using other overlap detection")
+        {
+            // Act
+            bvh.DetectOverlaps(aabbs, aabbs, FOnOverlapDetected{CG.Raw(), overlaps.Raw()});
+            auto const nOverlaps = overlaps.Size();
+            // Assert
+            CHECK_EQ(nOverlaps, 2 * nExpectedOverlaps);
+        }
     }
     SUBCASE("Non-overlapping line segment collection")
     {
@@ -508,14 +522,26 @@ TEST_CASE("[gpu][impl][geometry] Bvh")
         GpuIndex const nExpectedOverlaps{0};
         Overlaps overlaps(2 * nExpectedOverlaps);
 
-        // Act
         Bvh bvh(aabbs.Size());
         bvh.Build(aabbs, mini::FromEigen(Vmin), mini::FromEigen(Vmax));
-        bvh.DetectOverlaps(aabbs, FOnOverlapDetected{CG.Raw(), overlaps.Raw()});
-
-        // Assert
-        CHECK_EQ(overlaps.Size(), nExpectedOverlaps);
         fCheckInternalBoundingBoxComputation(bvh, aabbs);
+
+        SUBCASE("Using self overlap detection")
+        {
+            // Act
+            bvh.DetectOverlaps(aabbs, FOnOverlapDetected{CG.Raw(), overlaps.Raw()});
+
+            // Assert
+            CHECK_EQ(overlaps.Size(), nExpectedOverlaps);
+        }
+        SUBCASE("Using other overlap detection")
+        {
+            // Act
+            bvh.DetectOverlaps(aabbs, aabbs, FOnOverlapDetected{CG.Raw(), overlaps.Raw()});
+
+            // Assert
+            CHECK_EQ(overlaps.Size(), nExpectedOverlaps);
+        }
     }
     SUBCASE("Nearest neighbour search")
     {

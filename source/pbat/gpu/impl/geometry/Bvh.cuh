@@ -325,7 +325,7 @@ inline void Bvh::DetectOverlaps(
                         GpuIndex q,
                         [[maybe_unused]] GpuIndex leaf,
                         GpuIndex i,
-                        [[maybe_unused]] GpuScalar d) {
+                        [[maybe_unused]] GpuScalar d) mutable {
         fOnOverlapDetected(q, i);
     };
 
