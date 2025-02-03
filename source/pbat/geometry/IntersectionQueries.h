@@ -430,8 +430,7 @@ UvwLineSegmentTriangle3D(
     if (bIsSegmentParallelToTriangle)
         return {};
     // Compute intersection t value of pq with plane of triangle. A ray
-    // intersects iff 0 <= t. Segment intersects iff 0 <= t <= ScalarType(1) Delay
-    // dividing by d until intersection has been found to pierce triangle
+    // intersects iff 0 <= t. Segment intersects iff 0 <= t <= ScalarType(1).
     ScalarType const t = Dot(n, A - P) / d;
     if (t < ScalarType(0) or t > ScalarType(1))
         return {};

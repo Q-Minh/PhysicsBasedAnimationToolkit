@@ -110,6 +110,138 @@ TEST_CASE("[geometry] AABB against sphere overlap predicate can be obtained")
     }
 }
 
+TEST_CASE("[geometry] Line segment swept triangle overlap predicate can be obtained")
+{
+    using namespace pbat::math::linalg::mini;
+    using ScalarType = pbat::Scalar;
+    SUBCASE("Line segment intersects non-degenerate swept triangle")
+    {
+        SUBCASE("Swept triangle is non-degenerate")
+        {
+            SVector<ScalarType, 3> const A1{0., 0., 0.};
+            SVector<ScalarType, 3> const B1{1., 0., 0.};
+            SVector<ScalarType, 3> const C1{0., 1., 0.};
+            SVector<ScalarType, 3> const A2{0., 0., 1.};
+            SVector<ScalarType, 3> const B2{1., 0., 1.};
+            SVector<ScalarType, 3> const C2{0., 1., 1.};
+            SVector<ScalarType, 3> const P{0.2, 0.2, -1.};
+            SVector<ScalarType, 3> const Q{0.2, 0.2, 1.};
+            bool const bOverlaps = pbat::geometry::OverlapQueries::LineSegmentSweptTriangle3D(
+                P,
+                Q,
+                A1,
+                B1,
+                C1,
+                A2,
+                B2,
+                C2);
+            CHECK(bOverlaps);
+        }
+        SUBCASE("Swept triangle is non-degenerate and inverted")
+        {
+            SVector<ScalarType, 3> const A1{0., 0., 0.};
+            SVector<ScalarType, 3> const B1{1., 0., 0.};
+            SVector<ScalarType, 3> const C1{0., 1., 0.};
+            SVector<ScalarType, 3> const A2{0., 0., -1.};
+            SVector<ScalarType, 3> const B2{1., 0., -1.};
+            SVector<ScalarType, 3> const C2{0., 1., -1.};
+            SVector<ScalarType, 3> const P{0.2, 0.2, -1.};
+            SVector<ScalarType, 3> const Q{0.2, 0.2, 1.};
+            bool const bOverlaps = pbat::geometry::OverlapQueries::LineSegmentSweptTriangle3D(
+                P,
+                Q,
+                A1,
+                B1,
+                C1,
+                A2,
+                B2,
+                C2);
+            CHECK(bOverlaps);
+        }
+        SUBCASE("Swept triangle is degenerate")
+        {
+            SVector<ScalarType, 3> const A1{0., 0., 0.};
+            SVector<ScalarType, 3> const B1{1., 0., 0.};
+            SVector<ScalarType, 3> const C1{0., 1., 0.};
+            SVector<ScalarType, 3> const P{0.2, 0.2, -1.};
+            SVector<ScalarType, 3> const Q{0.2, 0.2, 1.};
+            bool const bOverlaps = pbat::geometry::OverlapQueries::LineSegmentSweptTriangle3D(
+                P,
+                Q,
+                A1,
+                B1,
+                C1,
+                A1,
+                B1,
+                C1);
+            CHECK(bOverlaps);
+        }
+    }
+    SUBCASE("Line segment does not intersect non-degenerate triangle")
+    {
+        SUBCASE("Swept triangle is non-degenerate")
+        {
+            SVector<ScalarType, 3> const A1{0., 0., 0.};
+            SVector<ScalarType, 3> const B1{1., 0., 0.};
+            SVector<ScalarType, 3> const C1{0., 1., 0.};
+            SVector<ScalarType, 3> const A2{0., 0., 1.};
+            SVector<ScalarType, 3> const B2{1., 0., 1.};
+            SVector<ScalarType, 3> const C2{0., 1., 1.};
+            SVector<ScalarType, 3> const P{2., 2., -1.};
+            SVector<ScalarType, 3> const Q{2., 2., 1.};
+            bool const bOverlaps = pbat::geometry::OverlapQueries::LineSegmentSweptTriangle3D(
+                P,
+                Q,
+                A1,
+                B1,
+                C1,
+                A2,
+                B2,
+                C2);
+            CHECK_FALSE(bOverlaps);
+        }
+        SUBCASE("Swept triangle is non-degenerate and inverted")
+        {
+            SVector<ScalarType, 3> const A1{0., 0., 0.};
+            SVector<ScalarType, 3> const B1{1., 0., 0.};
+            SVector<ScalarType, 3> const C1{0., 1., 0.};
+            SVector<ScalarType, 3> const A2{0., 0., -1.};
+            SVector<ScalarType, 3> const B2{1., 0., -1.};
+            SVector<ScalarType, 3> const C2{0., 1., -1.};
+            SVector<ScalarType, 3> const P{2., 2., -1.};
+            SVector<ScalarType, 3> const Q{2., 2., 0.};
+            bool const bOverlaps = pbat::geometry::OverlapQueries::LineSegmentSweptTriangle3D(
+                P,
+                Q,
+                A1,
+                B1,
+                C1,
+                A2,
+                B2,
+                C2);
+            CHECK_FALSE(bOverlaps);
+        }
+        SUBCASE("Swept triangle is degenerate")
+        {
+            SVector<ScalarType, 3> const A1{0., 0., 0.};
+            SVector<ScalarType, 3> const B1{1., 0., 0.};
+            SVector<ScalarType, 3> const C1{0., 1., 0.};
+            SVector<ScalarType, 3> const P{2., 2., -1.};
+            SVector<ScalarType, 3> const Q{2., 2., 1.};
+            bool const bOverlaps = pbat::geometry::OverlapQueries::LineSegmentSweptTriangle3D(
+                P,
+                Q,
+                A1,
+                B1,
+                C1,
+                A1,
+                B1,
+                C1);
+            CHECK_FALSE(bOverlaps);
+        }
+    }
+}
+
 TEST_CASE("[geometry] Plane against AABB overlap predicate can be obtained")
 {
     using namespace pbat::math::linalg::mini;
