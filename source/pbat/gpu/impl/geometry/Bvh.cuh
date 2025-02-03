@@ -428,8 +428,7 @@ inline void Bvh::NearestNeighbours(
             do
             {
                 assert(not dfs.IsFull());
-                GpuIndex nodeIdx = dfs.Top();
-                dfs.Pop();
+                GpuIndex nodeIdx       = dfs.Pop();
                 bool const bIsLeafNode = nodeIdx >= leafBegin;
                 if (not bIsLeafNode)
                 {
@@ -551,8 +550,7 @@ inline void Bvh::RangeSearch(
             do
             {
                 assert(not dfs.IsFull());
-                GpuIndex nodeIdx = dfs.Top();
-                dfs.Pop();
+                GpuIndex nodeIdx       = dfs.Pop();
                 bool const bIsLeafNode = nodeIdx >= leafBegin;
                 if (not bIsLeafNode)
                 {
