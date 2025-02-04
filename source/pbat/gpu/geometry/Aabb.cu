@@ -53,6 +53,32 @@ void Aabb::Construct(Eigen::Ref<GpuMatrixX const> const& L, Eigen::Ref<GpuMatrix
     });
 }
 
+void Aabb::Construct(
+    Eigen::Ref<GpuMatrixX const> const& P,
+    Eigen::Ref<GpuIndexMatrixX const> const& S)
+{
+    if (P.rows() != 3)
+    {
+        throw std::invalid_argument(
+            "Expected P to have 3 rows, but got " + std::to_string(P.rows()));
+    }
+    auto constexpr kDims    = 3;
+    auto const nSimplices   = static_cast<GpuIndex>(S.cols());
+    auto const nSimplexDims = static_cast<GpuIndex>(S.rows());
+    Resize(kDims, nSimplices);
+    pbat::common::ForRange<2, 5>([&]<auto kSimplexDims>() {
+        if (nSimplexDims == kSimplexDims)
+        {
+            auto* impl = static_cast<impl::geometry::Aabb<kDims>*>(mImpl);
+            impl::common::Buffer<GpuScalar, kDims> PG(P.cols());
+            impl::common::ToBuffer(P, PG);
+            impl::common::Buffer<GpuIndex, kSimplexDims> SG(S.cols());
+            impl::common::ToBuffer(S, SG);
+            impl->Construct<kSimplexDims>(PG, SG);
+        }
+    });
+}
+
 void Aabb::Resize(GpuIndex dims, GpuIndex nBoxes)
 {
     if (dims < 1 or dims > 3)

@@ -58,6 +58,36 @@ void BindBvh([[maybe_unused]] pybind11::module& m)
             "set (np.ndarray): Map of indices of aabbs to their corresponding set, i.e. set[i] = "
             "j, where i is a box and j is its corresponding set.\n"
             "aabbs (pbat.gpu.geometry.Aabb): Axis-aligned bounding boxes over primitives")
+        .def(
+            "point_triangle_nearest_neighbours",
+            &Bvh::PointTriangleNearestNeighbors,
+            pyb::arg("aabbs"),
+            pyb::arg("X"),
+            pyb::arg("V"),
+            pyb::arg("F"),
+            "Find the nearest triangle to each point in X. The output is a |#X| matrix of nearest "
+            "triangle indices to corresponding columns in X.\n\n"
+            "Args:\n"
+            "   aabbs (pbat.gpu.geometry.Aabb): Axis-aligned bounding boxes over triangles given "
+            "to Build()\n"
+            "   X (np.ndarray): 3x|#pts| query points to find nearest triangles to\n"
+            "   V (np.ndarray): Triangle vertex positions\n"
+            "   F (np.ndarray): Triangle vertex indices")
+        .def(
+            "point_tetrahedron_nearest_neighbours",
+            &Bvh::PointTetrahedronNearestNeighbors,
+            pyb::arg("aabbs"),
+            pyb::arg("X"),
+            pyb::arg("V"),
+            pyb::arg("T"),
+            "Find the nearest tetrahedron to each point in X. The output is a |#X| matrix of "
+            "nearest tetrahedron indices to corresponding columns in X.\n\n"
+            "Args:\n"
+            "   aabbs (pbat.gpu.geometry.Aabb): Axis-aligned bounding boxes over tetrahedra given "
+            "to Build()\n"
+            "   X (np.ndarray): 3x|#pts| query points to find nearest tetrahedra to\n"
+            "   V (np.ndarray): Tetrahedron vertex positions\n"
+            "   T (np.ndarray): Tetrahedron vertex indices")
         .def_property_readonly("min", &Bvh::Min, "BVH nodes' box minimums")
         .def_property_readonly("max", &Bvh::Max, "BVH nodes' box maximums")
         .def_property_readonly(

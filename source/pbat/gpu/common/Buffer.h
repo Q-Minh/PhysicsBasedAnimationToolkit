@@ -12,7 +12,7 @@ class Buffer
 {
   public:
     enum class EType { uint8, uint16, uint32, uint64, int8, int16, int32, int64, float32, float64 };
-    static auto constexpr kMaxDims = 3;
+    static auto constexpr kMaxDims = 4;
 
     template <class T>
     using Data = Eigen::Ref<Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> const>;

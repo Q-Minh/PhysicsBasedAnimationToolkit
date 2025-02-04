@@ -25,10 +25,24 @@ void BindAabb(pybind11::module& m)
         .def("resize", &Aabb::Resize, pyb::arg("dims"), pyb::arg("n_aabb"), "Resize aabb array")
         .def(
             "construct",
-            &Aabb::Construct,
+            [](Aabb& aabb,
+               Eigen::Ref<GpuMatrixX const> const& L,
+               Eigen::Ref<GpuMatrixX const> const& U) { aabb.Construct(L, U); },
             pyb::arg("min"),
             pyb::arg("max"),
             "Set min/max endpoints of aabbs as |#dims|x|#boxes| arrays")
+        .def(
+            "construct",
+            [](Aabb& aabb,
+               Eigen::Ref<GpuMatrixX const> const& P,
+               Eigen::Ref<GpuIndexMatrixX const> const& S) { aabb.Construct(P, S); },
+            pyb::arg("P"),
+            pyb::arg("S"),
+            "Construct aabbs from simplex mesh (P,S)\n\n"
+            "Args:\n"
+            "P (np.ndarray): 3x|#pts| array of points\n"
+            "S (np.ndarray): Kx|#simplices| array of simplices where K is the number of vertices "
+            "per simplex")
         .def_property_readonly("n_boxes", &Aabb::Size, "Number of aabbs")
         .def_property_readonly("dims", &Aabb::Dimensions, "Embedding dimensionality")
         .def_property_readonly("min", &Aabb::Lower, "min endpoints of aabbs")

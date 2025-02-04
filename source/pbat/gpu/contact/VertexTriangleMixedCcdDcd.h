@@ -1,6 +1,7 @@
 #ifndef PBAT_GPU_CONTACT_VERTEXTRIANGLEMIXEDCCDDCD_H
 #define PBAT_GPU_CONTACT_VERTEXTRIANGLEMIXEDCCDDCD_H
 
+#include "PhysicsBasedAnimationToolkitExport.h"
 #include "pbat/gpu/Aliases.h"
 #include "pbat/gpu/common/Buffer.h"
 
@@ -22,7 +23,7 @@ class VertexTriangleMixedCcdDcd
      * @param V
      * @param F
      */
-    VertexTriangleMixedCcdDcd(
+    PBAT_API VertexTriangleMixedCcdDcd(
         Eigen::Ref<GpuIndexVectorX const> const& B,
         Eigen::Ref<GpuIndexVectorX const> const& V,
         Eigen::Ref<GpuIndexMatrixX const> const& F);
@@ -30,8 +31,8 @@ class VertexTriangleMixedCcdDcd
     VertexTriangleMixedCcdDcd(VertexTriangleMixedCcdDcd const&)            = delete;
     VertexTriangleMixedCcdDcd& operator=(VertexTriangleMixedCcdDcd const&) = delete;
 
-    VertexTriangleMixedCcdDcd(VertexTriangleMixedCcdDcd&& other) noexcept;
-    VertexTriangleMixedCcdDcd& operator=(VertexTriangleMixedCcdDcd&& other) noexcept;
+    PBAT_API VertexTriangleMixedCcdDcd(VertexTriangleMixedCcdDcd&& other) noexcept;
+    PBAT_API VertexTriangleMixedCcdDcd& operator=(VertexTriangleMixedCcdDcd&& other) noexcept;
 
     /**
      * @brief Computes the initial active set.
@@ -41,7 +42,7 @@ class VertexTriangleMixedCcdDcd
      * @param wmin
      * @param wmax
      */
-    void InitializeActiveSet(
+    PBAT_API void InitializeActiveSet(
         common::Buffer const& xt,
         common::Buffer const& xtp1,
         Eigen::Vector<GpuScalar, kDims> const& wmin,
@@ -52,27 +53,27 @@ class VertexTriangleMixedCcdDcd
      * @param x
      * @param bComputeBoxes If true, computes the bounding boxes of (non-swept) triangles.
      */
-    void UpdateActiveSet(common::Buffer const& x, bool bComputeBoxes = true);
+    PBAT_API void UpdateActiveSet(common::Buffer const& x, bool bComputeBoxes = true);
     /**
      * @brief Removes inactive vertices from the active set.
      *
      * @param x
      * @param bComputeBoxes If true, computes the bounding boxes of (non-swept) triangles.
      */
-    void FinalizeActiveSet(common::Buffer const& x, bool bComputeBoxes = true);
+    PBAT_API void FinalizeActiveSet(common::Buffer const& x, bool bComputeBoxes = true);
     /**
      * @brief
      *
      * @return GpuIndexMatrixX 2x|#vertex-triangle constraints| matrix where each column is a
      * vertex-triangle constraint.
      */
-    GpuIndexMatrixX ActiveVertexTriangleConstraints() const;
+    PBAT_API GpuIndexMatrixX ActiveVertexTriangleConstraints() const;
     /**
      * @brief
      *
      * @return GpuIndexVectorX
      */
-    GpuIndexVectorX ActiveVertices() const;
+    PBAT_API GpuIndexVectorX ActiveVertices() const;
     /**
      * @brief Destroy the Vertex Triangle Mixed Ccd Dcd object
      *

@@ -3,6 +3,7 @@
 // clang-format on
 
 #include "Bvh.h"
+#include "pbat/geometry/DistanceQueries.h"
 #include "pbat/gpu/impl/common/Buffer.cuh"
 #include "pbat/gpu/impl/common/Eigen.cuh"
 #include "pbat/gpu/impl/common/SynchronizedList.cuh"
@@ -117,6 +118,145 @@ GpuIndexMatrixX Bvh::DetectOverlaps(common::Buffer const& set, Aabb const& aabbs
     auto nOverlaps = static_cast<GpuIndex>(O.size());
     GpuIndex* data = reinterpret_cast<GpuIndex*>(std::addressof(O.front()));
     return Eigen::Map<GpuIndexMatrixX>(data, 2, nOverlaps);
+}
+
+PBAT_API GpuIndexMatrixX Bvh::PointTriangleNearestNeighbors(
+    Aabb const& aabbs,
+    common::Buffer const& X,
+    common::Buffer const& V,
+    common::Buffer const& F)
+{
+    if (aabbs.Dimensions() != impl::geometry::Bvh::kDims)
+    {
+        throw std::invalid_argument(
+            "Expected AABBs to have " + std::to_string(impl::geometry::Bvh::kDims) +
+            " dimensions, but got " + std::to_string(aabbs.Dimensions()));
+    }
+    if (X.Dims() != impl::geometry::Bvh::kDims and X.Type() != common::Buffer::EType::float32)
+    {
+        throw std::invalid_argument(
+            "Expected X (of type float32) to have " + std::to_string(impl::geometry::Bvh::kDims) +
+            " dimensions, but got " + std::to_string(X.Dims()));
+    }
+    if (V.Dims() != impl::geometry::Bvh::kDims and V.Type() != common::Buffer::EType::float32)
+    {
+        throw std::invalid_argument(
+            "Expected V (of type float32) to have " + std::to_string(impl::geometry::Bvh::kDims) +
+            " dimensions, but got " + std::to_string(V.Dims()));
+    }
+    if (F.Dims() != 3 and F.Type() != common::Buffer::EType::int32)
+    {
+        throw std::invalid_argument(
+            "Expected F (of type int32) to have 3 dimensions, but got " + std::to_string(F.Dims()));
+    }
+    impl::common::Buffer<GpuIndex> nn(X.Size());
+    nn.SetConstant(-1);
+    auto const* aabbImpl =
+        static_cast<impl::geometry::Aabb<impl::geometry::Bvh::kDims> const*>(aabbs.Impl());
+    auto const* XImpl = static_cast<impl::common::Buffer<GpuScalar, 3> const*>(X.Impl());
+    auto const* VImpl = static_cast<impl::common::Buffer<GpuScalar, 3> const*>(V.Impl());
+    auto const* FImpl = static_cast<impl::common::Buffer<GpuIndex, 3> const*>(F.Impl());
+    using namespace pbat::math::linalg::mini;
+    mImpl->NearestNeighbours(
+        *aabbImpl,
+        XImpl->Size(),
+        [X = XImpl->Raw()] PBAT_DEVICE(GpuIndex q) { return FromBuffers<3, 1>(X, q); },
+        [] PBAT_DEVICE(
+            SVector<GpuScalar, 3> const& X,
+            SVector<GpuScalar, 3> const& L,
+            SVector<GpuScalar, 3> const& U) {
+            return pbat::geometry::DistanceQueries::PointAxisAlignedBoundingBox(X, L, U);
+        },
+        [V = VImpl->Raw(), F = FImpl->Raw()] PBAT_DEVICE(
+            [[maybe_unused]] GpuIndex q,
+            SVector<GpuScalar, 3> const& X,
+            [[maybe_unused]] GpuIndex leaf,
+            GpuIndex f) {
+            auto fv = FromBuffers<3, 1>(F, f);
+            auto xf = FromBuffers(V, fv.Transpose());
+            return pbat::geometry::DistanceQueries::PointTriangle(
+                X,
+                xf.Col(0),
+                xf.Col(1),
+                xf.Col(2));
+        },
+        [] PBAT_DEVICE(GpuIndex q) { return std::numeric_limits<GpuScalar>::max(); },
+        [nn = nn.Raw()] PBAT_DEVICE(
+            GpuIndex q,
+            GpuIndex f,
+            [[maybe_unused]] GpuScalar dmin,
+            [[maybe_unused]] GpuIndex k) { nn[q] = f; });
+    return impl::common::ToEigen(nn);
+}
+
+PBAT_API GpuIndexMatrixX Bvh::PointTetrahedronNearestNeighbors(
+    Aabb const& aabbs,
+    common::Buffer const& X,
+    common::Buffer const& V,
+    common::Buffer const& T)
+{
+    if (aabbs.Dimensions() != impl::geometry::Bvh::kDims)
+    {
+        throw std::invalid_argument(
+            "Expected AABBs to have " + std::to_string(impl::geometry::Bvh::kDims) +
+            " dimensions, but got " + std::to_string(aabbs.Dimensions()));
+    }
+    if (X.Dims() != impl::geometry::Bvh::kDims and X.Type() != common::Buffer::EType::float32)
+    {
+        throw std::invalid_argument(
+            "Expected X (of type float32) to have " + std::to_string(impl::geometry::Bvh::kDims) +
+            " dimensions, but got " + std::to_string(X.Dims()));
+    }
+    if (V.Dims() != impl::geometry::Bvh::kDims and V.Type() != common::Buffer::EType::float32)
+    {
+        throw std::invalid_argument(
+            "Expected V (of type float32) to have " + std::to_string(impl::geometry::Bvh::kDims) +
+            " dimensions, but got " + std::to_string(V.Dims()));
+    }
+    if (T.Dims() != 4 and T.Type() != common::Buffer::EType::int32)
+    {
+        throw std::invalid_argument(
+            "Expected T (of type int32) to have 4 dimensions, but got " + std::to_string(T.Dims()));
+    }
+    impl::common::Buffer<GpuIndex> nn(X.Size());
+    nn.SetConstant(-1);
+    auto const* aabbImpl =
+        static_cast<impl::geometry::Aabb<impl::geometry::Bvh::kDims> const*>(aabbs.Impl());
+    auto const* XImpl = static_cast<impl::common::Buffer<GpuScalar, 3> const*>(X.Impl());
+    auto const* VImpl = static_cast<impl::common::Buffer<GpuScalar, 3> const*>(V.Impl());
+    auto const* TImpl = static_cast<impl::common::Buffer<GpuIndex, 3> const*>(T.Impl());
+    using namespace pbat::math::linalg::mini;
+    mImpl->NearestNeighbours(
+        *aabbImpl,
+        XImpl->Size(),
+        [X = XImpl->Raw()] PBAT_DEVICE(GpuIndex q) { return FromBuffers<3, 1>(X, q); },
+        [] PBAT_DEVICE(
+            SVector<GpuScalar, 3> const& X,
+            SVector<GpuScalar, 3> const& L,
+            SVector<GpuScalar, 3> const& U) {
+            return pbat::geometry::DistanceQueries::PointAxisAlignedBoundingBox(X, L, U);
+        },
+        [V = VImpl->Raw(), T = TImpl->Raw()] PBAT_DEVICE(
+            [[maybe_unused]] GpuIndex q,
+            SVector<GpuScalar, 3> const& X,
+            [[maybe_unused]] GpuIndex leaf,
+            GpuIndex t) {
+            auto tv = FromBuffers<3, 1>(T, t);
+            auto xt = FromBuffers(V, tv.Transpose());
+            return pbat::geometry::DistanceQueries::PointTetrahedron(
+                X,
+                xt.Col(0),
+                xt.Col(1),
+                xt.Col(2),
+                xt.Col(3));
+        },
+        [] PBAT_DEVICE(GpuIndex q) { return std::numeric_limits<GpuScalar>::max(); },
+        [nn = nn.Raw()] PBAT_DEVICE(
+            GpuIndex q,
+            GpuIndex t,
+            [[maybe_unused]] GpuScalar dmin,
+            [[maybe_unused]] GpuIndex k) { nn[q] = t; });
+    return impl::common::ToEigen(nn);
 }
 
 GpuMatrixX Bvh::Min() const

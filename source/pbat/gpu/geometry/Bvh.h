@@ -63,6 +63,34 @@ class Bvh
      */
     PBAT_API GpuIndexMatrixX DetectOverlaps(common::Buffer const& set, Aabb const& aabbs);
     /**
+     * @brief
+     *
+     * @param aabbs
+     * @param X 3x|#pts| matrix of NN query points
+     * @param V 3x|#verts| matrix of vertices
+     * @param F 3x|#triangles| matrix of triangle vertex indices
+     * @return |#X| matrix of nearest triangles to corresponding columns in X
+     */
+    PBAT_API GpuIndexMatrixX PointTriangleNearestNeighbors(
+        Aabb const& aabbs,
+        common::Buffer const& X,
+        common::Buffer const& V,
+        common::Buffer const& F);
+    /**
+     * @brief
+     *
+     * @param aabbs
+     * @param X 3x|#pts| matrix of NN query points
+     * @param V 3x|#verts| matrix of vertices
+     * @param t 4x|#tets| matrix of tet vertex indices
+     * @return |#X| matrix of nearest tets to corresponding columns in X
+     */
+    PBAT_API GpuIndexMatrixX PointTetrahedronNearestNeighbors(
+        Aabb const& aabbs,
+        common::Buffer const& X,
+        common::Buffer const& V,
+        common::Buffer const& T);
+    /**
      * @brief BVH nodes' box minimums
      * @return
      */

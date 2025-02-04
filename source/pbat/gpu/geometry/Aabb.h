@@ -35,6 +35,14 @@ class Aabb
     /**
      * @brief
      *
+     * @param P 3x|#pts| array of points
+     * @param S Kx|#simplices| array of simplices where K>1 is the number of vertices per simplex
+     */
+    PBAT_API void
+    Construct(Eigen::Ref<GpuMatrixX const> const& P, Eigen::Ref<GpuIndexMatrixX const> const& S);
+    /**
+     * @brief
+     *
      * @param dims
      * @param nBoxes
      */
