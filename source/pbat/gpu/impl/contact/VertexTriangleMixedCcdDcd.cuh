@@ -52,14 +52,16 @@ class VertexTriangleMixedCcdDcd
      * distances d(i,f) as a warm-start.
      *
      * @param x
+     * @param bComputeBoxes If true, recomputes the AABBs of the (non-swept) triangles.
      */
-    void UpdateActiveSet(common::Buffer<GpuScalar, 3> const& x);
+    void UpdateActiveSet(common::Buffer<GpuScalar, 3> const& x, bool bComputeBoxes = true);
     /**
      * @brief Finalizes the active set by removing all pairs (i, f) such that sd(i,f) > 0.
      *
      * @param x
+     * @param bComputeBoxes If true, recomputes the AABBs of the (non-swept) triangles.
      */
-    void FinalizeActiveSet(common::Buffer<GpuScalar, 3> const& x);
+    void FinalizeActiveSet(common::Buffer<GpuScalar, 3> const& x, bool bComputeBoxes = true);
     /**
      * @brief
      *
@@ -87,7 +89,6 @@ class VertexTriangleMixedCcdDcd
     common::Buffer<GpuIndex> V;    ///< Vertices
     common::Buffer<GpuIndex, 3> F; ///< Triangles
 
-  private:
     common::Buffer<GpuIndex> inds; ///< |#verts| point indices i
     geometry::Morton morton;       ///< |#verts| morton codes for points
     geometry::Aabb<kDims>

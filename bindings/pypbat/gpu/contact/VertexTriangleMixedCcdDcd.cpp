@@ -46,21 +46,31 @@ void BindVertexTriangleMixedCcdDcd(pybind11::module& m)
             "update_active_set",
             &VertexTriangleMixedCcdDcd::UpdateActiveSet,
             pyb::arg("x"),
+            pyb::arg("bComputeBoxes") = true,
             "Updates constraints involved with active vertices\n\n"
             "Args:\n"
-            "    x (pbat.gpu.common.Buffer): 3x|#points| buffer of current point positions")
+            "    x (pbat.gpu.common.Buffer): 3x|#points| buffer of current point positions\n"
+            "    bComputeBoxes (bool): If true, computes the bounding boxes of (non-swept) "
+            "triangles")
         .def(
             "finalize_active_set",
             &VertexTriangleMixedCcdDcd::FinalizeActiveSet,
             pyb::arg("x"),
+            pyb::arg("bComputeBoxes") = true,
             "Removes inactive vertices from the active set\n\n"
             "Args:\n"
-            "    x (pbat.gpu.common.Buffer): 3x|#points| buffer of current point positions")
+            "    x (pbat.gpu.common.Buffer): 3x|#points| buffer of current point positions\n"
+            "    bComputeBoxes (bool): If true, computes the bounding boxes of (non-swept) "
+            "triangles")
         .def_property_readonly(
             "active_set",
             &VertexTriangleMixedCcdDcd::ActiveVertexTriangleConstraints,
             "Returns a 2x|#vertex-triangle constraints| matrix where each column is a "
-            "vertex-triangle constraint pair");
+            "vertex-triangle constraint pair")
+        .def_property_readonly(
+            "active_vertices",
+            &VertexTriangleMixedCcdDcd::ActiveVertices,
+            "Returns 1D array of active vertex indices into V");
 }
 
 } // namespace pbat::py::gpu::contact

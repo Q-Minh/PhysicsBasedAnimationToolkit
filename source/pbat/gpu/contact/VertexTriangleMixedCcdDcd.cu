@@ -9,6 +9,7 @@
 #include "pbat/gpu/impl/contact/VertexTriangleMixedCcdDcd.cuh"
 #include "pbat/math/linalg/mini/Eigen.h"
 
+#include <algorithm>
 #include <exception>
 #include <string>
 
@@ -65,7 +66,7 @@ void VertexTriangleMixedCcdDcd::InitializeActiveSet(
     mImpl->InitializeActiveSet(*xtImpl, *xtp1Impl, FromEigen(wmin), FromEigen(wmax));
 }
 
-void VertexTriangleMixedCcdDcd::UpdateActiveSet(common::Buffer const& x)
+void VertexTriangleMixedCcdDcd::UpdateActiveSet(common::Buffer const& x, bool bComputeBoxes)
 {
     if (x.Dims() != kDims || x.Type() != common::Buffer::EType::float32)
     {
@@ -74,10 +75,10 @@ void VertexTriangleMixedCcdDcd::UpdateActiveSet(common::Buffer const& x)
             std::to_string(x.Dims()) + "x" + std::to_string(x.Size()) + " instead.");
     }
     auto const* xImpl = static_cast<impl::common::Buffer<GpuScalar, 3> const*>(x.Impl());
-    mImpl->UpdateActiveSet(*xImpl);
+    mImpl->UpdateActiveSet(*xImpl, bComputeBoxes);
 }
 
-void VertexTriangleMixedCcdDcd::FinalizeActiveSet(common::Buffer const& x)
+void VertexTriangleMixedCcdDcd::FinalizeActiveSet(common::Buffer const& x, bool bComputeBoxes)
 {
     if (x.Dims() != kDims || x.Type() != common::Buffer::EType::float32)
     {
@@ -86,14 +87,14 @@ void VertexTriangleMixedCcdDcd::FinalizeActiveSet(common::Buffer const& x)
             std::to_string(x.Dims()) + "x" + std::to_string(x.Size()) + " instead.");
     }
     auto const* xImpl = static_cast<impl::common::Buffer<GpuScalar, 3> const*>(x.Impl());
-    mImpl->FinalizeActiveSet(*xImpl);
+    mImpl->FinalizeActiveSet(*xImpl, bComputeBoxes);
 }
 
 GpuIndexMatrixX VertexTriangleMixedCcdDcd::ActiveVertexTriangleConstraints() const
 {
     auto constexpr kMaxNeighbours = impl::contact::VertexTriangleMixedCcdDcd::kMaxNeighbours;
-    auto const nActive            = mImpl->nActive;
-    GpuIndexVectorX av            = impl::common::ToEigen(mImpl->av);
+    GpuIndexVectorX av            = ActiveVertices();
+    auto nActive                  = av.size();
     GpuIndexMatrixX nn            = impl::common::ToEigen(mImpl->nn).reshaped(
         kMaxNeighbours,
         mImpl->nn.Size() / kMaxNeighbours);
@@ -117,6 +118,18 @@ GpuIndexMatrixX VertexTriangleMixedCcdDcd::ActiveVertexTriangleConstraints() con
         }
     }
     return A;
+}
+
+GpuIndexVectorX VertexTriangleMixedCcdDcd::ActiveVertices() const
+{
+    auto active  = mImpl->active.Get();
+    auto nActive = std::count(active.begin(), active.end(), true);
+    GpuIndexVectorX av(nActive);
+    GpuIndex k{0};
+    for (auto i = 0ULL; i < active.size(); ++i)
+        if (active[i])
+            av(k++) = static_cast<GpuIndex>(i);
+    return av;
 }
 
 VertexTriangleMixedCcdDcd::~VertexTriangleMixedCcdDcd()

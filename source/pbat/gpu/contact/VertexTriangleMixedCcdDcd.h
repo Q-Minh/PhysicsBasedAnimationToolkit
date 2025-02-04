@@ -50,14 +50,16 @@ class VertexTriangleMixedCcdDcd
      * @brief Updates constraints involved with active vertices.
      *
      * @param x
+     * @param bComputeBoxes If true, computes the bounding boxes of (non-swept) triangles.
      */
-    void UpdateActiveSet(common::Buffer const& x);
+    void UpdateActiveSet(common::Buffer const& x, bool bComputeBoxes = true);
     /**
      * @brief Removes inactive vertices from the active set.
      *
      * @param x
+     * @param bComputeBoxes If true, computes the bounding boxes of (non-swept) triangles.
      */
-    void FinalizeActiveSet(common::Buffer const& x);
+    void FinalizeActiveSet(common::Buffer const& x, bool bComputeBoxes = true);
     /**
      * @brief
      *
@@ -66,8 +68,14 @@ class VertexTriangleMixedCcdDcd
      */
     GpuIndexMatrixX ActiveVertexTriangleConstraints() const;
     /**
+     * @brief
+     *
+     * @return GpuIndexVectorX
+     */
+    GpuIndexVectorX ActiveVertices() const;
+    /**
      * @brief Destroy the Vertex Triangle Mixed Ccd Dcd object
-     * 
+     *
      */
     ~VertexTriangleMixedCcdDcd();
 

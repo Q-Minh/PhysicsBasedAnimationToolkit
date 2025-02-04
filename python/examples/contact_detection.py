@@ -23,14 +23,12 @@ if __name__ == "__main__":
 
     # Initial mesh quantities
     nverts = V.shape[0]
-    ntets = T.shape[0]
     nfaces = F.shape[0]
     BV = np.hstack((np.zeros(nverts, dtype=np.int32), np.ones(nverts, dtype=np.int32)))
 
     # Duplicate input mesh into 2 separate meshes
     V = np.vstack((V.copy(), V.copy()))
-    T = np.vstack((T.copy(), T + nverts))
-    F = np.vstack((F.copy(), F + nverts))
+    F = np.vstack((F.copy(), F.copy() + nverts))
     vinds = np.unique(F)
     cd = pbat.gpu.contact.VertexTriangleMixedCcdDcd(BV, vinds, F.T)
     XTG = pbat.gpu.common.Buffer(V.T)
@@ -79,6 +77,7 @@ if __name__ == "__main__":
                 ps.screenshot(f"{args.output}/{t}.png")
 
             profiler.begin_frame("Physics")
+            XTG.set(V.T)
             if V[vimax, -1] >= zmax:
                 direction[0] = -1
             if V[vimin, -1] <= zmin:
@@ -94,23 +93,17 @@ if __name__ == "__main__":
             XG.set(V.T)
             cd.initialize_active_set(XTG, XG, min, max)
             cd.update_active_set(XG)
-            cd.finalize_active_set(XG)
-            XTG.set(V.T)
-
             A = cd.active_set
-            AV = np.zeros(V.shape[0])
+            # cd.finalize_active_set(XG)
             AF = np.zeros(F.shape[0])
-            AV[vinds[A[0, :]]] = 1
             AF[A[1, :]] = 1
 
-            sm.add_scalar_quantity(
-                "Active Vertices", AV, enabled=True, cmap="coolwarm", vminmax=(0, 1)
-            )
+            pc = ps.register_point_cloud("Active Vertices", V[vinds[A[0, :]], :])
             sm.add_scalar_quantity(
                 "Active Triangles",
                 AF,
                 defined_on="faces",
-                enabled=False,
+                enabled=True,
                 cmap="coolwarm",
                 vminmax=(0, 1),
             )

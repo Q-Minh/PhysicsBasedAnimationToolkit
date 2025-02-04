@@ -57,11 +57,10 @@ void VertexTriangleMixedCcdDcd::InitializeActiveSet(
         ctx,
         "pbat.gpu.impl.contact.VertexTriangleMixedCcdDcd.InitializeActiveSet");
 
-    auto const nVerts = Paabbs.Size();
     // 1. Compute aabbs of the swept points (i.e. line segments)
     Paabbs.Construct(
-        [xt = xt.Raw(), x = xtp1.Raw(), V = V.Raw(), inds = inds.Raw()] PBAT_DEVICE(GpuIndex v) {
-            GpuIndex const i = V[inds[v]];
+        [xt = xt.Raw(), x = xtp1.Raw(), V = V.Raw(), inds = inds.Raw()] PBAT_DEVICE(GpuIndex q) {
+            GpuIndex const i = V[inds[q]];
             using namespace pbat::math::linalg::mini;
             SMatrix<GpuScalar, 3, 2> xe;
             xe.Col(0) = FromBuffers<3, 1>(xt, i);
@@ -83,17 +82,14 @@ void VertexTriangleMixedCcdDcd::InitializeActiveSet(
         Paabbs.e[0].begin(),
         Paabbs.e[1].begin(),
         Paabbs.e[2].begin());
-    thrust::sort_by_key(morton.codes.Data(), morton.codes.Data() + nVerts, zip);
+    thrust::sort_by_key(morton.codes.Data(), morton.codes.Data() + morton.codes.Size(), zip);
     // 3. Compute aabbs of the swept triangle volumes
     Faabbs.Construct([xt = xt.Raw(), x = xtp1.Raw(), F = F.Raw()] PBAT_DEVICE(GpuIndex f) {
         using namespace pbat::math::linalg::mini;
+        auto fv = FromBuffers<3, 1>(F, f);
         SMatrix<GpuScalar, 3, 6> xf;
-        xf.Col(0) = FromBuffers<3, 1>(xt, F[0][f]);
-        xf.Col(1) = FromBuffers<3, 1>(xt, F[1][f]);
-        xf.Col(2) = FromBuffers<3, 1>(xt, F[2][f]);
-        xf.Col(3) = FromBuffers<3, 1>(x, F[0][f]);
-        xf.Col(4) = FromBuffers<3, 1>(x, F[1][f]);
-        xf.Col(5) = FromBuffers<3, 1>(x, F[2][f]);
+        xf.Slice<3, 3>(0, 0) = FromBuffers(xt, fv.Transpose());
+        xf.Slice<3, 3>(0, 3) = FromBuffers(x, fv.Transpose());
         SMatrix<GpuScalar, 3, 2> LU;
         pbat::common::ForRange<0, kDims>([&]<auto d>() {
             LU(d, 0) = Min(xf.Row(d));
@@ -115,37 +111,38 @@ void VertexTriangleMixedCcdDcd::InitializeActiveSet(
          inds   = inds.Raw(),
          active = active.Raw()] PBAT_DEVICE(GpuIndex q, GpuIndex f) {
             // If i is already active, skip costly checks
-            GpuIndex const i = V[inds[q]];
-            if (active[i])
+            GpuIndex const v = inds[q];
+            if (active[v])
                 return;
 
+            GpuIndex const i = V[v];
             using namespace pbat::math::linalg::mini;
             // Reject potential self collisions
             auto fv                  = FromBuffers<3, 1>(F, f);
             bool const bFromSameBody = (B[i] == B[fv[0]]);
             if (bFromSameBody)
                 return;
-            // Check if swept point intersects swept triangle
-            SMatrix<GpuScalar, 3, 3> const xtf = FromBuffers(xt, fv.Transpose());
-            SMatrix<GpuScalar, 3, 3> const xf  = FromBuffers(x, fv.Transpose());
-            SVector<GpuScalar, 3> const xtv    = FromBuffers<3, 1>(xt, i);
-            SVector<GpuScalar, 3> const xv     = FromBuffers<3, 1>(x, i);
-            bool const bIntersects = pbat::geometry::OverlapQueries::LineSegmentSweptTriangle3D(
-                xtv,
-                xv,
-                xtf.Col(0),
-                xtf.Col(1),
-                xtf.Col(2),
-                xf.Col(0),
-                xf.Col(1),
-                xf.Col(2));
-            // Make particle i active since it might penetrate
-            active[i] = bIntersects;
+            // // Check if swept point intersects swept triangle
+            // SMatrix<GpuScalar, 3, 3> const xtf = FromBuffers(xt, fv.Transpose());
+            // SMatrix<GpuScalar, 3, 3> const xf  = FromBuffers(x, fv.Transpose());
+            // SVector<GpuScalar, 3> const xtv    = FromBuffers<3, 1>(xt, i);
+            // SVector<GpuScalar, 3> const xv     = FromBuffers<3, 1>(x, i);
+            // bool const bIntersects = pbat::geometry::OverlapQueries::LineSegmentSweptTriangle3D(
+            //     xtv,
+            //     xv,
+            //     xtf.Col(0),
+            //     xtf.Col(1),
+            //     xtf.Col(2),
+            //     xf.Col(0),
+            //     xf.Col(1),
+            //     xf.Col(2));
+            // // Make particle i active since it might penetrate
+            active[v] = true /*bIntersects*/;
         });
     // 6. Compact active vertices in sorted order
     auto it = thrust::copy_if(
         inds.Data(),
-        inds.Data() + nVerts,
+        inds.Data() + inds.Size(),
         av.Data(),
         [active = active.Raw()] PBAT_DEVICE(GpuIndex v) { return active[v]; });
     nActive = static_cast<GpuIndex>(thrust::distance(av.Data(), it));
@@ -153,13 +150,16 @@ void VertexTriangleMixedCcdDcd::InitializeActiveSet(
     PBAT_PROFILE_CUDA_HOST_SCOPE_END(ctx);
 }
 
-void VertexTriangleMixedCcdDcd::UpdateActiveSet(common::Buffer<GpuScalar, 3> const& x)
+void VertexTriangleMixedCcdDcd::UpdateActiveSet(
+    common::Buffer<GpuScalar, 3> const& x,
+    bool bComputeBoxes)
 {
     PBAT_PROFILE_NAMED_CUDA_HOST_SCOPE_START(
         ctx,
         "pbat.gpu.impl.contact.VertexTriangleMixedCcdDcd.UpdateActiveSet");
 
-    UpdateBvh(x);
+    if (bComputeBoxes)
+        UpdateBvh(x);
     // Compute distance from V to F via nn search
     using namespace pbat::math::linalg::mini;
     nn.SetConstant(GpuIndex(-1));
@@ -167,25 +167,38 @@ void VertexTriangleMixedCcdDcd::UpdateActiveSet(common::Buffer<GpuScalar, 3> con
         x,
         [av = av.Raw(),
          d  = distances.Raw(),
-         nn = nn.Raw()] PBAT_DEVICE(GpuIndex q, GpuIndex f, GpuScalar dmin, GpuIndex k) {
+         nn = nn.Raw(),
+         V  = V.Raw(),
+         F  = F.Raw(),
+         B  = B.Raw()] PBAT_DEVICE(GpuIndex q, GpuIndex f, GpuScalar dmin, GpuIndex k) {
             GpuIndex const v = av[q];
             // Store approximate squared distance to surface
             d[v] = dmin;
             // Add active contact (i,f)
             nn[v * kMaxNeighbours + k] = f;
+            // printf(
+            //     "v: %d, f: %d, dmin: %f, k: %d, B(v)=%d, B(f)=%d\n",
+            //     v,
+            //     f,
+            //     dmin,
+            //     k,
+            //     B[V[v]],
+            //     B[F[0][f]]);
         });
 
     PBAT_PROFILE_CUDA_HOST_SCOPE_END(ctx);
 }
 
 void VertexTriangleMixedCcdDcd::FinalizeActiveSet(
-    [[maybe_unused]] common::Buffer<GpuScalar, 3> const& x)
+    common::Buffer<GpuScalar, 3> const& x,
+    bool bComputeBoxes)
 {
     PBAT_PROFILE_NAMED_CUDA_HOST_SCOPE_START(
         ctx,
         "pbat.gpu.impl.contact.VertexTriangleMixedCcdDcd.FinalizeActiveSet");
 
-    UpdateBvh(x);
+    if (bComputeBoxes)
+        UpdateBvh(x);
     this->ForEachNearestNeighbour(
         x,
         [x      = x.Raw(),
@@ -201,7 +214,7 @@ void VertexTriangleMixedCcdDcd::FinalizeActiveSet(
             auto xv = FromBuffers<3, 1>(x, V[v]);
             auto fv = FromBuffers<3, 1>(F, f);
             auto xf = FromBuffers(x, fv.Transpose());
-            GpuScalar sgn =
+            GpuScalar const sgn =
                 pbat::geometry::DistanceQueries::PointPlane(xv, xf.Col(0), xf.Col(1), xf.Col(2));
             // Remove inactive vertices
             bool const bIsPenetrating = sgn < GpuScalar(0);
