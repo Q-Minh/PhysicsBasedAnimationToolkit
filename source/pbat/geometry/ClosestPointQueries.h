@@ -149,8 +149,8 @@ PointOnAxisAlignedBoundingBox(TMatrixX const& P, TMatrixL const& L, TMatrixU con
      * Ericson, Christer. Real-time collision detection. Crc Press, 2004. section 5.ScalarType(1)3
      */
     mini::SVector<typename TMatrixX::ScalarType, TMatrixX::kRows> X = P;
-    for (auto i = 0; i < P.Rows(); ++i)
-        X(i) = min(max(X(i), L(i)), U(i));
+    pbat::common::ForRange<0, TMatrixX::kRows>(
+        [&]<auto i>() { X(i) = min(max(X(i), L(i)), U(i)); });
     return X;
 }
 

@@ -432,9 +432,10 @@ inline void Bvh::NearestNeighbours(
                 bool const bIsLeafNode = nodeIdx >= leafBegin;
                 if (not bIsLeafNode)
                 {
-                    auto L = FromBuffers<3, 1>(ib, nodeIdx);
-                    auto U = FromBuffers<3, 1>(ie, nodeIdx);
-                    if (fMinDistanceToBox(query, L, U) < dmin)
+                    auto L  = FromBuffers<3, 1>(ib, nodeIdx);
+                    auto U  = FromBuffers<3, 1>(ie, nodeIdx);
+                    auto db = fMinDistanceToBox(query, L, U);
+                    if (db < dmin)
                     {
                         dfs.Push(child[0][nodeIdx]);
                         dfs.Push(child[1][nodeIdx]);

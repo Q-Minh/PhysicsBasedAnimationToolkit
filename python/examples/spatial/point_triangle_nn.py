@@ -27,7 +27,7 @@ if __name__ == "__main__":
     bvh.build(aabbs, min, max)
 
     # GPU quantities
-    X = np.zeros((3, 2), dtype=np.float32, order="F")
+    X = np.zeros((3,1), dtype=np.float32, order="F")
     XG = pbat.gpu.common.Buffer(X)
     VG = pbat.gpu.common.Buffer(V.T)
     FG = pbat.gpu.common.Buffer(F.T)
@@ -51,6 +51,7 @@ if __name__ == "__main__":
         changed[1], X[1, :] = imgui.SliderFloat("Y", X[1, 0], v_min=-5, v_max=5)
         changed[2], X[2, :] = imgui.SliderFloat("Z", X[2, 0], v_min=-5, v_max=5)
         pc.update_point_positions(X.T)
+        XG.set(X)
         nn = bvh.point_triangle_nearest_neighbours(aabbs, XG, VG, FG)
         nnmap[:] = 0
         nnmap[nn] = 1

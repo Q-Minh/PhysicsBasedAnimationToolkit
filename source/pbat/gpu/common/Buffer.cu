@@ -78,10 +78,7 @@ DEFINE_BUFFER_CONSTRUCTOR_FROM_DATA(double);
         {                                                                                 \
             throw std::invalid_argument("Input data does not match this Buffer's type."); \
         }                                                                                 \
-        bool const bIsVector = data.size() == data.rows() or data.size() == data.cols();  \
-        Resize(                                                                           \
-            static_cast<GpuIndex>(bIsVector ? 1 : data.rows()),                           \
-            static_cast<GpuIndex>(bIsVector ? data.size() : data.cols()));                \
+        Resize(static_cast<GpuIndex>(data.rows()), static_cast<GpuIndex>(data.cols()));   \
         pbat::common::ForRange<1, kMaxDims + 1>([&]<auto kDims>() {                       \
             if (mDims == kDims)                                                           \
             {                                                                             \
