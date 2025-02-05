@@ -380,7 +380,7 @@ TEST_CASE("[gpu][geometry] Bvh")
     GpuIndexVectorX set(nEdges + nTriangles);
     set.segment(0, nEdges).setZero();
     set.segment(nEdges, nTriangles).setOnes();
-    gpu::common::Buffer setBuffer(set);
+    gpu::common::Buffer setBuffer(set.transpose());
 
     // Act
     gpu::geometry::Bvh bvh(nEdges + nTriangles, 4);

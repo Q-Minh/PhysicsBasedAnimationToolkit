@@ -83,9 +83,6 @@ PBAT_API GpuIndexMatrixX SweepAndPrune::SortAndSweep(common::Buffer const& set, 
     }
     auto* aabbImpl      = static_cast<impl::geometry::Aabb<kDims>*>(aabbs.Impl());
     auto const* setImpl = static_cast<impl::common::Buffer<GpuIndex> const*>(set.Impl());
-    // NOTE:
-    // Unfortunately, we have to allocate on-the-fly here.
-    // We should define a type-erased CPU wrapper over gpu::common::Buffer to prevent this.
     using Overlap      = cuda::std::pair<GpuIndex, GpuIndex>;
     using OverlapPairs = impl::common::SynchronizedList<Overlap>;
     auto* overlaps     = static_cast<OverlapPairs*>(mOverlaps);
@@ -173,7 +170,7 @@ TEST_CASE("[gpu][geometry] SweepAndPrune")
     GpuIndexVectorX set(nEdges + nTriangles);
     set.segment(0, nEdges).setZero();
     set.segment(nEdges, nTriangles).setOnes();
-    gpu::common::Buffer setBuffer(set);
+    gpu::common::Buffer setBuffer(set.transpose());
     GpuIndexMatrixX O = sap.SortAndSweep(setBuffer, aabbs);
     // Assert
     CHECK_EQ(O.rows(), 2);
