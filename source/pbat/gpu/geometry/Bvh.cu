@@ -159,7 +159,7 @@ PBAT_API GpuIndexMatrixX Bvh::PointTriangleNearestNeighbors(
     using namespace pbat::math::linalg::mini;
     mImpl->NearestNeighbours(
         *aabbImpl,
-        XImpl->Size(),
+        static_cast<GpuIndex>(XImpl->Size()),
         [X = XImpl->Raw()] PBAT_DEVICE(GpuIndex q) { return FromBuffers<3, 1>(X, q); },
         [] PBAT_DEVICE(
             SVector<GpuScalar, 3> const& X,
@@ -228,7 +228,7 @@ PBAT_API GpuIndexMatrixX Bvh::PointTetrahedronNearestNeighbors(
     using namespace pbat::math::linalg::mini;
     mImpl->NearestNeighbours(
         *aabbImpl,
-        XImpl->Size(),
+        static_cast<GpuIndex>(XImpl->Size()),
         [X = XImpl->Raw()] PBAT_DEVICE(GpuIndex q) { return FromBuffers<3, 1>(X, q); },
         [] PBAT_DEVICE(
             SVector<GpuScalar, 3> const& X,
