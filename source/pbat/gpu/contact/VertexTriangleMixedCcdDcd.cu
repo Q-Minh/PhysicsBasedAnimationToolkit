@@ -108,13 +108,13 @@ GpuIndexMatrixX VertexTriangleMixedCcdDcd::ActiveVertexTriangleConstraints() con
     }
     auto const nConstraints = counts.sum();
     GpuIndexMatrixX A(2, nConstraints);
-    for (auto j = 0; j < nActive; ++j)
+    for (auto j = 0, c = 0; j < nActive; ++j)
     {
-        for (auto k = 0; k < counts(j); ++k)
+        for (auto k = 0; k < counts(j); ++k, ++c)
         {
             auto v  = av(j);
-            A(0, j) = v;
-            A(1, j) = nn(k, v);
+            A(0, c) = v;
+            A(1, c) = nn(k, v);
         }
     }
     return A;
@@ -122,14 +122,18 @@ GpuIndexMatrixX VertexTriangleMixedCcdDcd::ActiveVertexTriangleConstraints() con
 
 GpuIndexVectorX VertexTriangleMixedCcdDcd::ActiveVertices() const
 {
-    auto active  = mImpl->active.Get();
-    auto nActive = std::count(active.begin(), active.end(), true);
-    GpuIndexVectorX av(nActive);
-    GpuIndex k{0};
-    for (auto i = 0ULL; i < active.size(); ++i)
-        if (active[i])
-            av(k++) = static_cast<GpuIndex>(i);
-    return av;
+    auto av = impl::common::ToEigen(mImpl->av);
+    return av.reshaped().head(mImpl->nActive);
+}
+
+std::vector<bool> VertexTriangleMixedCcdDcd::ActiveMask() const
+{
+    return mImpl->active.Get();
+}
+
+void VertexTriangleMixedCcdDcd::SetNearestNeighbourFloatingPointTolerance(GpuScalar eps)
+{
+    mImpl->eps = eps;
 }
 
 VertexTriangleMixedCcdDcd::~VertexTriangleMixedCcdDcd()

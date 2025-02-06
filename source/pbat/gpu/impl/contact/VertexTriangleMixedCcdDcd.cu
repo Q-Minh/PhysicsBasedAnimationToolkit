@@ -35,7 +35,8 @@ VertexTriangleMixedCcdDcd::VertexTriangleMixedCcdDcd(
       Faabbs(static_cast<GpuIndex>(Fin.cols())),
       Fbvh(static_cast<GpuIndex>(Fin.cols())),
       active(Vin.size()),
-      distances(Vin.size())
+      distances(Vin.size()),
+      eps(std::numeric_limits<GpuScalar>::epsilon())
 {
     thrust::sequence(inds.Data(), inds.Data() + inds.Size());
     active.SetConstant(false);
@@ -123,10 +124,10 @@ void VertexTriangleMixedCcdDcd::InitializeActiveSet(
             if (bFromSameBody)
                 return;
             // Check if swept point intersects swept triangle
-            SMatrix<GpuScalar, 3, 3> const xtf = FromBuffers(xt, fv.Transpose());
-            SMatrix<GpuScalar, 3, 3> const xf  = FromBuffers(x, fv.Transpose());
-            SVector<GpuScalar, 3> const xtv    = FromBuffers<3, 1>(xt, i);
-            SVector<GpuScalar, 3> const xv     = FromBuffers<3, 1>(x, i);
+            // SMatrix<GpuScalar, 3, 3> const xtf = FromBuffers(xt, fv.Transpose());
+            // SMatrix<GpuScalar, 3, 3> const xf  = FromBuffers(x, fv.Transpose());
+            // SVector<GpuScalar, 3> const xtv    = FromBuffers<3, 1>(xt, i);
+            // SVector<GpuScalar, 3> const xv     = FromBuffers<3, 1>(x, i);
             // NOTE:
             // This test is too sophiscated and computationally intensive, to be honest...
             // There are many degeneracies that can occur by sweeping a triangle arbitrarily.
@@ -166,7 +167,6 @@ void VertexTriangleMixedCcdDcd::UpdateActiveSet(
     if (bComputeBoxes)
         UpdateBvh(x);
     // Compute distance from V to F via nn search
-    using namespace pbat::math::linalg::mini;
     nn.SetConstant(GpuIndex(-1));
     this->ForEachNearestNeighbour(
         x,
@@ -211,10 +211,10 @@ void VertexTriangleMixedCcdDcd::FinalizeActiveSet(
             GpuScalar const sgn =
                 pbat::geometry::DistanceQueries::PointPlane(xv, xf.Col(0), xf.Col(1), xf.Col(2));
             // Remove inactive vertices
-            bool const bIsPenetrating = sgn < GpuScalar(0);
-            auto dmax                 = std::numeric_limits<GpuScalar>::max();
+            bool const bIsPenetrating = sgn <= GpuScalar(0);
+            auto constexpr dmax       = std::numeric_limits<GpuScalar>::max();
             d[v]                      = bIsPenetrating * dmin + (not bIsPenetrating) * dmax;
-            active[v]                 = /*bIsPenetrating*/ false;
+            active[v]                 = bIsPenetrating;
         });
 
     PBAT_PROFILE_CUDA_HOST_SCOPE_END(ctx);

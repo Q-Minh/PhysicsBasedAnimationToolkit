@@ -5,6 +5,8 @@
 #include "pbat/gpu/Aliases.h"
 #include "pbat/gpu/common/Buffer.h"
 
+#include <vector>
+
 namespace pbat::gpu::impl::contact {
 class VertexTriangleMixedCcdDcd;
 } // namespace pbat::gpu::impl::contact
@@ -74,6 +76,18 @@ class VertexTriangleMixedCcdDcd
      * @return GpuIndexVectorX
      */
     PBAT_API GpuIndexVectorX ActiveVertices() const;
+    /**
+     * @brief
+     *
+     * @return PBAT_API
+     */
+    PBAT_API std::vector<bool> ActiveMask() const;
+    /**
+     * @brief Set the Nearest Neighbour floating point equality tolerance.
+     *
+     * @param eps
+     */
+    PBAT_API void SetNearestNeighbourFloatingPointTolerance(GpuScalar eps);
     /**
      * @brief Destroy the Vertex Triangle Mixed Ccd Dcd object
      *

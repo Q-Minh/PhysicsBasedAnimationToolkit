@@ -98,6 +98,7 @@ class VertexTriangleMixedCcdDcd
     geometry::Bvh Fbvh; ///< Bounding volume hierarchy over (potentially swept) triangles
     common::Buffer<bool> active;         ///< |#verts| active mask
     common::Buffer<GpuScalar> distances; ///< |#verts| squared distance min_f sd(i,f) to surface
+    GpuScalar eps;                       ///< Tolerance for NN searches
 };
 
 template <class FOnNearestNeighbourFound>
@@ -153,7 +154,8 @@ inline void VertexTriangleMixedCcdDcd::ForEachNearestNeighbour(
         fMinDistanceToBox,
         fDistanceToLeaf,
         fDistanceUpperBound,
-        fOnNearestNeighbourFound);
+        fOnNearestNeighbourFound,
+        eps);
 }
 
 } // namespace pbat::gpu::impl::contact

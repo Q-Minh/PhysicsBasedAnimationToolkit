@@ -4,6 +4,7 @@
 
 #include <pbat/gpu/contact/VertexTriangleMixedCcdDcd.h>
 #include <pybind11/eigen.h>
+#include <pybind11/stl.h>
 
 namespace pbat::py::gpu::contact {
 
@@ -62,6 +63,11 @@ void BindVertexTriangleMixedCcdDcd(pybind11::module& m)
             "    x (pbat.gpu.common.Buffer): 3x|#points| buffer of current point positions\n"
             "    bComputeBoxes (bool): If true, computes the bounding boxes of (non-swept) "
             "triangles")
+        .def_property(
+            "eps",
+            nullptr,
+            &VertexTriangleMixedCcdDcd::SetNearestNeighbourFloatingPointTolerance,
+            "Floating point tolerance for nearest neighbour search")
         .def_property_readonly(
             "active_set",
             &VertexTriangleMixedCcdDcd::ActiveVertexTriangleConstraints,
@@ -70,7 +76,11 @@ void BindVertexTriangleMixedCcdDcd(pybind11::module& m)
         .def_property_readonly(
             "active_vertices",
             &VertexTriangleMixedCcdDcd::ActiveVertices,
-            "Returns 1D array of active vertex indices into V");
+            "Returns |#active verts| 1D array of active vertex indices into V")
+        .def_property_readonly(
+            "active_mask",
+            &VertexTriangleMixedCcdDcd::ActiveMask,
+            "Returns |#verts| 1D mask for active vertices");
 }
 
 } // namespace pbat::py::gpu::contact

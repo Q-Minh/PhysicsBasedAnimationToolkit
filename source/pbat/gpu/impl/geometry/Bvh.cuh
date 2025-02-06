@@ -430,12 +430,14 @@ inline void Bvh::NearestNeighbours(
                 assert(not dfs.IsFull());
                 GpuIndex nodeIdx       = dfs.Pop();
                 bool const bIsLeafNode = nodeIdx >= leafBegin;
+                auto lo                = dmin - eps;
+                auto hi                = dmin + eps;
                 if (not bIsLeafNode)
                 {
                     auto L  = FromBuffers<3, 1>(ib, nodeIdx);
                     auto U  = FromBuffers<3, 1>(ie, nodeIdx);
                     auto db = fMinDistanceToBox(query, L, U);
-                    if (db < dmin)
+                    if (db <= hi)
                     {
                         dfs.Push(child[0][nodeIdx]);
                         dfs.Push(child[1][nodeIdx]);
@@ -447,17 +449,17 @@ inline void Bvh::NearestNeighbours(
                     auto L             = FromBuffers<3, 1>(b, nodeIdx);
                     auto U             = FromBuffers<3, 1>(e, nodeIdx);
                     GpuScalar const db = fMinDistanceToBox(query, L, U);
-                    if (db < dmin)
+                    if (db <= hi)
                     {
                         GpuIndex const i  = inds[nodeIdx];
                         GpuScalar const d = fDistanceToLeaf(q, query, nodeIdx, i);
-                        if (d < dmin)
+                        if (d < lo)
                         {
                             nn.Clear();
                             nn.Push(i);
                             dmin = d;
                         }
-                        else if (d < dmin + eps and not nn.IsFull())
+                        else if (d <= hi and not nn.IsFull())
                         {
                             nn.Push(i);
                         }
