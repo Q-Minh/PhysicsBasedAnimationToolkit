@@ -41,7 +41,10 @@ Integrator::Integrator(Data const& data)
       Cadj(data.Cadj.size()),
       muC(data.muV.size()),
       muS{static_cast<GpuScalar>(data.muS)},
-      muK{static_cast<GpuScalar>(data.muD)}
+      muK{static_cast<GpuScalar>(data.muD)},
+      Smin{},
+      Smax{},
+      mActiveSetUpdateFrequency{static_cast<GpuIndex>(data.mActiveSetUpdateFrequency)}
 {
     // Initialize particle data
     common::ToBuffer(data.x, x);
@@ -148,7 +151,8 @@ void Integrator::Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps)
                 ToBuffers(xi, x, i);
             });
         // Update active set
-        cd.UpdateActiveSet(x);
+        if (s % mActiveSetUpdateFrequency == 0)
+            cd.UpdateActiveSet(x);
         // Solve constraints
         PBAT_PROFILE_NAMED_CUDA_HOST_SCOPE_START(
             constraintSolveCtx,
@@ -249,6 +253,10 @@ PBAT_DEVICE static void ProjectBlockNeoHookeanConstraint(
 
 void Integrator::ProjectBlockNeoHookeanConstraints(GpuScalar dt, GpuScalar dt2)
 {
+    PBAT_PROFILE_NAMED_CUDA_HOST_SCOPE_START(
+        ctx,
+        "pbat.gpu.impl.xpbd.Integrator.ProjectBlockNeoHookeanConstraints");
+
     auto const snhConstraintId = static_cast<int>(EConstraint::StableNeoHookean);
     auto const nPartitions     = static_cast<Index>(Pptr.size()) - 1;
     for (auto p = 0; p < nPartitions; ++p)
@@ -287,10 +295,16 @@ void Integrator::ProjectBlockNeoHookeanConstraints(GpuScalar dt, GpuScalar dt2)
                     c);
             });
     }
+
+    PBAT_PROFILE_CUDA_HOST_SCOPE_END(ctx);
 }
 
 void Integrator::ProjectClusteredBlockNeoHookeanConstraints(GpuScalar dt, GpuScalar dt2)
 {
+    PBAT_PROFILE_NAMED_CUDA_HOST_SCOPE_START(
+        ctx,
+        "pbat.gpu.impl.xpbd.Integrator.ProjectClusteredBlockNeoHookeanConstraints");
+
     auto const snhConstraintId    = static_cast<int>(EConstraint::StableNeoHookean);
     auto const nClusterPartitions = static_cast<Index>(SGptr.size()) - 1;
     for (Index cp = 0; cp < nClusterPartitions; ++cp)
@@ -337,10 +351,16 @@ void Integrator::ProjectClusteredBlockNeoHookeanConstraints(GpuScalar dt, GpuSca
                 }
             });
     }
+
+    PBAT_PROFILE_CUDA_HOST_SCOPE_END(ctx);
 }
 
 void Integrator::ProjectCollisionConstraints(GpuScalar dt, GpuScalar dt2)
 {
+    PBAT_PROFILE_NAMED_CUDA_HOST_SCOPE_START(
+        ctx,
+        "pbat.gpu.impl.xpbd.Integrator.ProjectCollisionConstraints");
+
     auto const collisionConstraintId = static_cast<int>(EConstraint::Collision);
     thrust::for_each(
         thrust::device,
@@ -368,6 +388,8 @@ void Integrator::ProjectCollisionConstraints(GpuScalar dt, GpuScalar dt2)
             GpuIndex const i              = V[v];
             auto constexpr kMaxNeighbours = decltype(cd)::kMaxNeighbours;
             auto kb                       = v * kMaxNeighbours;
+            SVector<GpuScalar, 3> xvt     = FromBuffers<3, 1>(xt, i);
+            SVector<GpuScalar, 3> xv      = FromBuffers<3, 1>(x, i);
             for (auto k = 0; k < kMaxNeighbours; ++k)
             {
                 auto f = nn[kb + k];
@@ -376,8 +398,6 @@ void Integrator::ProjectCollisionConstraints(GpuScalar dt, GpuScalar dt2)
                 auto fv                      = FromBuffers<3, 1>(F, f);
                 SMatrix<GpuScalar, 3, 3> xft = FromBuffers(xt, fv.Transpose());
                 SMatrix<GpuScalar, 3, 3> xf  = FromBuffers(x, fv.Transpose());
-                SVector<GpuScalar, 3> xvt    = FromBuffers<3, 1>(xt, i);
-                SVector<GpuScalar, 3> xv     = FromBuffers<3, 1>(x, i);
                 GpuScalar minvv              = minv[i];
                 GpuScalar atildec            = alpha[c] / dt2;
                 GpuScalar gammac             = atildec * beta[c] * dt;
@@ -399,8 +419,8 @@ void Integrator::ProjectCollisionConstraints(GpuScalar dt, GpuScalar dt2)
                 {
                     lambda[c] = lambdac;
                 }
-                ToBuffers(xv, xb, c);
             }
+            ToBuffers(xv, xb, c);
         });
     thrust::for_each(
         thrust::device,
@@ -412,6 +432,8 @@ void Integrator::ProjectCollisionConstraints(GpuScalar dt, GpuScalar dt2)
             SVector<GpuScalar, 3> xv = FromBuffers<3, 1>(xb, c);
             ToBuffers(xv, x, i);
         });
+
+    PBAT_PROFILE_CUDA_HOST_SCOPE_END(ctx);
 }
 
 } // namespace xpbd

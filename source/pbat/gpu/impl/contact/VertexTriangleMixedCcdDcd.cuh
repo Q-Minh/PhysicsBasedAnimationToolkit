@@ -96,9 +96,9 @@ class VertexTriangleMixedCcdDcd
     geometry::Aabb<kDims>
         Faabbs;         ///< |#tris| axis-aligned bounding boxes of (potentially swept) triangles
     geometry::Bvh Fbvh; ///< Bounding volume hierarchy over (potentially swept) triangles
-    common::Buffer<bool> active;         ///< |#verts| active mask
-    common::Buffer<GpuScalar> distances; ///< |#verts| squared distance min_f sd(i,f) to surface
-    GpuScalar eps;                       ///< Tolerance for NN searches
+    common::Buffer<bool> active;      ///< |#verts| active mask
+    common::Buffer<GpuScalar> dupper; ///< |#verts| NN search radius
+    GpuScalar eps;                    ///< Tolerance for NN searches
 };
 
 template <class FOnNearestNeighbourFound>
@@ -136,10 +136,9 @@ inline void VertexTriangleMixedCcdDcd::ForEachNearestNeighbour(
                 xf.Col(1),
                 xf.Col(2));
         };
-    auto fDistanceUpperBound = [d = distances.Raw(), av = av.Raw()] PBAT_DEVICE(GpuIndex q) {
-        // TODO: Try warm-starting the NN search!
-        // return d[av[q]];
-        return std::numeric_limits<GpuScalar>::max();
+    auto fDistanceUpperBound = [dupper = dupper.Raw(), av = av.Raw()] PBAT_DEVICE(GpuIndex q) {
+        // Try warm-starting the NN search!
+        return dupper[av[q]];
     };
     Fbvh.NearestNeighbours<
         decltype(fGetQueryObject),

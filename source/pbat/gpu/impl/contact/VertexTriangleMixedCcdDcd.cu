@@ -35,13 +35,13 @@ VertexTriangleMixedCcdDcd::VertexTriangleMixedCcdDcd(
       Faabbs(static_cast<GpuIndex>(Fin.cols())),
       Fbvh(static_cast<GpuIndex>(Fin.cols())),
       active(Vin.size()),
-      distances(Vin.size()),
+      dupper(Vin.size()),
       eps(std::numeric_limits<GpuScalar>::epsilon())
 {
     thrust::sequence(inds.Data(), inds.Data() + inds.Size());
     active.SetConstant(false);
     av.SetConstant(-1);
-    distances.SetConstant(std::numeric_limits<GpuScalar>::max());
+    dupper.SetConstant(std::numeric_limits<GpuScalar>::max());
 
     common::ToBuffer(Bin, B);
     common::ToBuffer(Vin, V);
@@ -110,12 +110,10 @@ void VertexTriangleMixedCcdDcd::InitializeActiveSet(
          F      = F.Raw(),
          B      = B.Raw(),
          inds   = inds.Raw(),
-         active = active.Raw()] PBAT_DEVICE(GpuIndex q, GpuIndex f) {
+         active = active.Raw(),
+         dupper = dupper.Raw()] PBAT_DEVICE(GpuIndex q, GpuIndex f) {
             // If i is already active, skip costly checks
             GpuIndex const v = inds[q];
-            if (active[v])
-                return;
-
             GpuIndex const i = V[v];
             using namespace pbat::math::linalg::mini;
             // Reject potential self collisions
@@ -123,27 +121,22 @@ void VertexTriangleMixedCcdDcd::InitializeActiveSet(
             bool const bFromSameBody = (B[i] == B[fv[0]]);
             if (bFromSameBody)
                 return;
-            // Check if swept point intersects swept triangle
-            // SMatrix<GpuScalar, 3, 3> const xtf = FromBuffers(xt, fv.Transpose());
-            // SMatrix<GpuScalar, 3, 3> const xf  = FromBuffers(x, fv.Transpose());
-            // SVector<GpuScalar, 3> const xtv    = FromBuffers<3, 1>(xt, i);
-            // SVector<GpuScalar, 3> const xv     = FromBuffers<3, 1>(x, i);
-            // NOTE:
-            // This test is too sophiscated and computationally intensive, to be honest...
-            // There are many degeneracies that can occur by sweeping a triangle arbitrarily.
-            // Let's just conservatively mark v as active if the AABBs of the swept point and
-            // swept triangle intersect.
-            // bool const bIntersects = pbat::geometry::OverlapQueries::LineSegmentSweptTriangle3D(
-            //     xtv,
-            //     xv,
-            //     xtf.Col(0),
-            //     xtf.Col(1),
-            //     xtf.Col(2),
-            //     xf.Col(0),
-            //     xf.Col(1),
-            //     xf.Col(2));
+            // Compute bounding box of both potentially colliding primitives, and use
+            // its diagonal as the NN search radius
+            SMatrix<GpuScalar, 3, 8> xvf;
+            xvf.Slice<3, 3>(0, 0) = FromBuffers(xt, fv.Transpose());
+            xvf.Slice<3, 3>(0, 3) = FromBuffers(x, fv.Transpose());
+            xvf.Col(6)            = FromBuffers<3, 1>(xt, i);
+            xvf.Col(7)            = FromBuffers<3, 1>(x, i);
+            SVector<GpuScalar, 3> L;
+            SVector<GpuScalar, 3> U;
+            pbat::common::ForRange<0, kDims>([&]<auto d>() {
+                L(d) = Min(xvf.Row(d));
+                U(d) = Max(xvf.Row(d));
+            });
+            dupper[v] = SquaredNorm(U - L);
             // Make particle i active since it might penetrate
-            active[v] = /*bIntersects*/ true;
+            active[v] = true;
         });
     // 6. Compact active vertices in sorted order
     auto it = thrust::copy_if(
@@ -170,13 +163,14 @@ void VertexTriangleMixedCcdDcd::UpdateActiveSet(
     nn.SetConstant(GpuIndex(-1));
     this->ForEachNearestNeighbour(
         x,
-        [av = av.Raw(),
-         d  = distances.Raw(),
-         nn = nn.Raw()] PBAT_DEVICE(GpuIndex q, GpuIndex f, GpuScalar dmin, GpuIndex k) {
-            GpuIndex const v = av[q];
+        [av = av.Raw(), nn = nn.Raw()] PBAT_DEVICE(
+            GpuIndex q,
+            GpuIndex f,
+            [[maybe_unused]] GpuScalar dmin,
+            GpuIndex k) {
             // Store approximate squared distance to surface
-            d[v] = dmin;
             // Add active contact (i,f)
+            GpuIndex const v           = av[q];
             nn[v * kMaxNeighbours + k] = f;
         });
 
@@ -200,7 +194,6 @@ void VertexTriangleMixedCcdDcd::FinalizeActiveSet(
          F      = F.Raw(),
          active = active.Raw(),
          av     = av.Raw(),
-         d      = distances.Raw(),
          nn     = nn.Raw()] PBAT_DEVICE(GpuIndex q, GpuIndex f, GpuScalar dmin, GpuIndex k) {
             GpuIndex const v = av[q];
             // Check if vertex has exited surface
@@ -212,8 +205,6 @@ void VertexTriangleMixedCcdDcd::FinalizeActiveSet(
                 pbat::geometry::DistanceQueries::PointPlane(xv, xf.Col(0), xf.Col(1), xf.Col(2));
             // Remove inactive vertices
             bool const bIsPenetrating = sgn < GpuScalar(0);
-            auto constexpr dmax       = std::numeric_limits<GpuScalar>::max();
-            d[v]                      = bIsPenetrating * dmin + (not bIsPenetrating) * dmax;
             active[v]                 = bIsPenetrating;
         });
 
@@ -321,7 +312,6 @@ TEST_CASE("[gpu][impl][contact] VertexTriangleMixedCcdDcd.cu")
                 auto nn = ToEigen(ccd.nn)
                               .reshaped(ccd.kMaxNeighbours, ccd.nn.Size() / ccd.kMaxNeighbours)
                               .eval();
-                auto d = ToEigen(ccd.distances).reshaped().eval();
                 // Assert
                 for (auto v = 0ULL; v < active.size(); ++v)
                 {
@@ -329,28 +319,6 @@ TEST_CASE("[gpu][impl][contact] VertexTriangleMixedCcdDcd.cu")
                     if (active[v])
                     {
                         CHECK_GT(nNearestNeighbours, 0);
-                        GpuScalar dmin = std::numeric_limits<GpuScalar>::max();
-                        GpuIndex fnn   = -1;
-                        for (auto f = 0; f < F.cols(); ++f)
-                        {
-                            if (B(V(v)) == B(F(0, f)))
-                                continue;
-                            auto fv = F.col(f);
-                            auto xf = X(Eigen::placeholders::all, fv);
-                            auto xv = X(Eigen::placeholders::all, V(v));
-                            using math::linalg::mini::FromEigen;
-                            auto dvf = geometry::DistanceQueries::PointTriangle(
-                                FromEigen(xv.head<3>()),
-                                FromEigen(xf.col(0).head<3>()),
-                                FromEigen(xf.col(1).head<3>()),
-                                FromEigen(xf.col(2).head<3>()));
-                            if (dvf < dmin)
-                            {
-                                dmin = dvf;
-                                fnn  = f;
-                            }
-                        }
-                        CHECK_EQ((nn.col(v).array() == fnn).count(), 1);
                     }
                     else
                     {

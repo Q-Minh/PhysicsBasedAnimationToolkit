@@ -84,6 +84,13 @@ if __name__ == "__main__":
         "--muC", help="Vertex collision penalty", type=float, dest="muC", default=1e1
     )
     parser.add_argument(
+        "--contact-set-update-frequency",
+        help="Contact set update frequency",
+        type=int,
+        dest="contact_set_update_frequency",
+        default=10,
+    )
+    parser.add_argument(
         "-t",
         "--translation",
         help="Distance in z axis between every input mesh as multiplier of input mesh extents",
@@ -185,8 +192,9 @@ if __name__ == "__main__":
         .with_damping(
             np.full(VC.shape[0], args.betaC), pbat.sim.xpbd.Constraint.Collision
         )
-        .with_collision_penalties(muC)
+        # .with_collision_penalties(muC)
         .with_friction_coefficients(0.6, 0.4)
+        .with_active_set_update_frequency(args.contact_set_update_frequency)
         .with_dirichlet_vertices(vdbc)
         .with_partitions(Pptr, Padj)
     )

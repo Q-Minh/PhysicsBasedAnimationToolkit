@@ -74,6 +74,11 @@ void BindData(pybind11::module& m)
             pyb::arg("muV"),
             "Sets the |#collision vertices| array of collision penalty coefficients.")
         .def(
+            "with_active_set_update_frequency",
+            &Data::WithActiveSetUpdateFrequency,
+            pyb::arg("frequency"),
+            "Sets the contact constraint active set update frequency.")
+        .def(
             "with_compliance",
             &Data::WithCompliance,
             pyb::arg("alpha"),

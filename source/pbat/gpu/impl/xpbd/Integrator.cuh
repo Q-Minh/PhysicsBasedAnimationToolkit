@@ -118,6 +118,7 @@ class Integrator
     GpuScalar muS;                          ///< Coulomb static friction coefficient
     GpuScalar muK;                          ///< Coulomb dynamic friction coefficient
     Eigen::Vector<GpuScalar, 3> Smin, Smax; ///< Scene bounding box
+    GpuIndex mActiveSetUpdateFrequency;    ///< Active set update frequency
 };
 
 } // namespace xpbd

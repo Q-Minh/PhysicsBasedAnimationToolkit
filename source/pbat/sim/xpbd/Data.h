@@ -26,6 +26,7 @@ PBAT_API struct Data
     Data& WithElasticMaterial(Eigen::Ref<MatrixX const> const& lame);
     Data& WithCollisionPenalties(Eigen::Ref<VectorX const> const& muV);
     Data& WithFrictionCoefficients(Scalar muS, Scalar muD);
+    Data& WithActiveSetUpdateFrequency(Index frequency);
     Data& WithDamping(Eigen::Ref<VectorX> const& beta, EConstraint constraint);
     Data& WithCompliance(Eigen::Ref<VectorX> const& alpha, EConstraint constraint);
     Data& WithPartitions(std::vector<Index> const& Pptr, std::vector<Index> const& Padj);
@@ -57,9 +58,10 @@ PBAT_API struct Data
     MatrixX DmInv;    ///< 3x3x|#elements| array of material shape matrix inverses
     VectorX gammaSNH; ///< 1. + mu/lambda, where mu,lambda are Lame coefficients
 
-    VectorX muV;     ///< |#collision vertices| array of collision penalties
-    Scalar muS{0.3}; ///< Static friction coefficient
-    Scalar muD{0.2}; ///< Dynamic friction coefficient
+    VectorX muV;                        ///< |#collision vertices| array of collision penalties
+    Scalar muS{0.3};                    ///< Static friction coefficient
+    Scalar muD{0.2};                    ///< Dynamic friction coefficient
+    Index mActiveSetUpdateFrequency{1}; ///< Contact active set update frequency
 
     std::array<VectorX, static_cast<int>(EConstraint::NumberOfConstraintTypes)>
         alpha; ///< Compliance
@@ -83,7 +85,7 @@ PBAT_API struct Data
     std::vector<Index> SGadj; ///< Supernodal constraint graph's partition adjacency
     std::vector<Index> Cptr;  ///< Flattened cluster pointers, where [Cptr[c], Cptr[c+1]) gives
                               ///< indices into C to obtain cluster c's constraints
-    std::vector<Index> Cadj;     ///< Constraint indices in each cluster
+    std::vector<Index> Cadj;  ///< Constraint indices in each cluster
 };
 
 } // namespace xpbd

@@ -74,6 +74,12 @@ Data& Data::WithFrictionCoefficients(Scalar muSin, Scalar muDin)
     return *this;
 }
 
+Data& Data::WithActiveSetUpdateFrequency(Index frequency)
+{
+    this->mActiveSetUpdateFrequency = frequency;
+    return *this;
+}
+
 Data& Data::WithDamping(Eigen::Ref<VectorX> const& betaIn, EConstraint constraint)
 {
     this->beta[static_cast<std::size_t>(constraint)] = betaIn;
