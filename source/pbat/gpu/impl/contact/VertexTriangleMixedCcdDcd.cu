@@ -28,12 +28,12 @@ VertexTriangleMixedCcdDcd::VertexTriangleMixedCcdDcd(
       nn(Vin.size() * kMaxNeighbours),
       B(Bin.size()),
       V(Vin.size()),
-      F(Fin.size()),
+      F(Fin.cols()),
       inds(Vin.size()),
       morton(Vin.size()),
       Paabbs(static_cast<GpuIndex>(Vin.size())),
-      Faabbs(static_cast<GpuIndex>(Fin.size())),
-      Fbvh(static_cast<GpuIndex>(Fin.size())),
+      Faabbs(static_cast<GpuIndex>(Fin.cols())),
+      Fbvh(static_cast<GpuIndex>(Fin.cols())),
       active(Vin.size()),
       distances(Vin.size())
 {
@@ -122,11 +122,16 @@ void VertexTriangleMixedCcdDcd::InitializeActiveSet(
             bool const bFromSameBody = (B[i] == B[fv[0]]);
             if (bFromSameBody)
                 return;
-            // // Check if swept point intersects swept triangle
-            // SMatrix<GpuScalar, 3, 3> const xtf = FromBuffers(xt, fv.Transpose());
-            // SMatrix<GpuScalar, 3, 3> const xf  = FromBuffers(x, fv.Transpose());
-            // SVector<GpuScalar, 3> const xtv    = FromBuffers<3, 1>(xt, i);
-            // SVector<GpuScalar, 3> const xv     = FromBuffers<3, 1>(x, i);
+            // Check if swept point intersects swept triangle
+            SMatrix<GpuScalar, 3, 3> const xtf = FromBuffers(xt, fv.Transpose());
+            SMatrix<GpuScalar, 3, 3> const xf  = FromBuffers(x, fv.Transpose());
+            SVector<GpuScalar, 3> const xtv    = FromBuffers<3, 1>(xt, i);
+            SVector<GpuScalar, 3> const xv     = FromBuffers<3, 1>(x, i);
+            // NOTE:
+            // This test is too sophiscated and computationally intensive, to be honest...
+            // There are many degeneracies that can occur by sweeping a triangle arbitrarily.
+            // Let's just conservatively mark v as active if the AABBs of the swept point and
+            // swept triangle intersect.
             // bool const bIntersects = pbat::geometry::OverlapQueries::LineSegmentSweptTriangle3D(
             //     xtv,
             //     xv,
@@ -136,8 +141,8 @@ void VertexTriangleMixedCcdDcd::InitializeActiveSet(
             //     xf.Col(0),
             //     xf.Col(1),
             //     xf.Col(2));
-            // // Make particle i active since it might penetrate
-            active[v] = true /*bIntersects*/;
+            // Make particle i active since it might penetrate
+            active[v] = /*bIntersects*/ true;
         });
     // 6. Compact active vertices in sorted order
     auto it = thrust::copy_if(
@@ -167,23 +172,12 @@ void VertexTriangleMixedCcdDcd::UpdateActiveSet(
         x,
         [av = av.Raw(),
          d  = distances.Raw(),
-         nn = nn.Raw(),
-         V  = V.Raw(),
-         F  = F.Raw(),
-         B  = B.Raw()] PBAT_DEVICE(GpuIndex q, GpuIndex f, GpuScalar dmin, GpuIndex k) {
+         nn = nn.Raw()] PBAT_DEVICE(GpuIndex q, GpuIndex f, GpuScalar dmin, GpuIndex k) {
             GpuIndex const v = av[q];
             // Store approximate squared distance to surface
             d[v] = dmin;
             // Add active contact (i,f)
             nn[v * kMaxNeighbours + k] = f;
-            // printf(
-            //     "v: %d, f: %d, dmin: %f, k: %d, B(v)=%d, B(f)=%d\n",
-            //     v,
-            //     f,
-            //     dmin,
-            //     k,
-            //     B[V[v]],
-            //     B[F[0][f]]);
         });
 
     PBAT_PROFILE_CUDA_HOST_SCOPE_END(ctx);
@@ -220,7 +214,7 @@ void VertexTriangleMixedCcdDcd::FinalizeActiveSet(
             bool const bIsPenetrating = sgn < GpuScalar(0);
             auto dmax                 = std::numeric_limits<GpuScalar>::max();
             d[v]                      = bIsPenetrating * dmin + (not bIsPenetrating) * dmax;
-            active[v]                 = bIsPenetrating;
+            active[v]                 = /*bIsPenetrating*/ false;
         });
 
     PBAT_PROFILE_CUDA_HOST_SCOPE_END(ctx);
@@ -237,8 +231,8 @@ void pbat::gpu::impl::contact::VertexTriangleMixedCcdDcd::UpdateBvh(
         SMatrix<GpuScalar, 3, 3> xf = FromBuffers(x, fv.Transpose());
         SMatrix<GpuScalar, 3, 2> LU;
         pbat::common::ForRange<0, kDims>([&]<auto d>() {
-            LU(0, d) = Min(xf.Row(d));
-            LU(1, d) = Max(xf.Row(d));
+            LU(d, 0) = Min(xf.Row(d));
+            LU(d, 1) = Max(xf.Row(d));
         });
         return LU;
     });
@@ -247,3 +241,130 @@ void pbat::gpu::impl::contact::VertexTriangleMixedCcdDcd::UpdateBvh(
 }
 
 } // namespace pbat::gpu::impl::contact
+
+#include "pbat/geometry/model/Cube.h"
+
+#include <doctest/doctest.h>
+#include <ranges>
+
+TEST_CASE("[gpu][impl][contact] VertexTriangleMixedCcdDcd.cu")
+{
+    using namespace pbat;
+    using gpu::impl::common::Buffer;
+    using gpu::impl::common::ToBuffer;
+    using gpu::impl::common::ToEigen;
+    using gpu::impl::contact::VertexTriangleMixedCcdDcd;
+    using gpu::impl::geometry::Morton;
+
+    SUBCASE("Bottom tetrahedron's top vertex penetrating top tetrahedron's bottom face")
+    {
+        // Arrange
+        // (2 tets with bottom tet penetrating the top tet via bottom tet's top vertex through the
+        // top tet's bottom face)
+        auto constexpr nVerts        = 4;
+        auto constexpr nCells        = 1;
+        auto constexpr kDims         = 3;
+        auto constexpr kFacesPerCell = 4;
+        GpuMatrixX XT(kDims, 2 * nVerts);
+        GpuIndexMatrixX T(4, 2 * nCells);
+        GpuIndexMatrixX F(3, 2 * nCells * kFacesPerCell);
+        GpuIndexVectorX V(2 * nVerts);
+        // clang-format off
+        XT << 0.f, 1.f, 0.f, 0.1f, 0.f  , 1.f  , 0.f  ,  0.1f,
+            0.f, 0.f, 1.f, 0.1f, 0.f  , 0.f  , 1.f  ,  0.1f,
+            0.f, 0.f, 0.f, 1.f , 1.01f, 1.01f, 1.01f, 2.01f;
+        T << 0, 4,
+            1, 5,
+            2, 6,
+            3, 7;
+        F << 0, 1, 2, 0, 4, 5, 6, 4,
+            1, 2, 0, 2, 5, 6, 4, 6,
+            3, 3, 3, 1, 7, 7, 7, 5;
+        V << 0, 1, 2, 3, 4, 5, 6, 7;
+        // clang-format on
+        GpuMatrixX X = XT;
+        Eigen::Vector<GpuScalar, kDims> dX{0.f, 0.f, 0.01f};
+        X.leftCols(nVerts).colwise() += dX;
+        X.rightCols(nVerts).colwise() -= dX;
+        GpuIndexVectorX B(2 * nVerts);
+        B.head(nVerts).setZero();
+        B.tail(nVerts).setOnes();
+        Morton::Bound const wmin{0.f, 0.f, 0.f};
+        Morton::Bound const wmax{1.f, 1.f, 2.01f};
+
+        Buffer<GpuScalar, 3> xt(XT.cols());
+        Buffer<GpuScalar, 3> x(X.cols());
+        ToBuffer(XT, xt);
+        ToBuffer(X, x);
+
+        // Act
+        VertexTriangleMixedCcdDcd ccd(B, V, F);
+        SUBCASE("InitializeActiveSet")
+        {
+            // Act
+            ccd.InitializeActiveSet(xt, x, wmin, wmax);
+            // Assert
+            auto active = ccd.active.Get();
+            auto av     = ToEigen(ccd.av);
+
+            auto const nExpectedActiveVertices = 4; ///< Bottom tet's top vertex (1 vert) passing
+                                                    ///< through top tet's bottom triangle (3 verts)
+            auto const nExpectedInactiveVertices = V.size() - nExpectedActiveVertices;
+            CHECK_EQ(ccd.nActive, nExpectedActiveVertices);
+            CHECK_EQ(std::ranges::count(active, true), nExpectedActiveVertices);
+            CHECK((av.array() == 3).any());
+            CHECK_EQ((av.array() == -1).count(), nExpectedInactiveVertices);
+            SUBCASE("UpdateActiveSet")
+            {
+                // Act
+                ccd.UpdateActiveSet(x);
+                auto nn = ToEigen(ccd.nn)
+                              .reshaped(ccd.kMaxNeighbours, ccd.nn.Size() / ccd.kMaxNeighbours)
+                              .eval();
+                auto d = ToEigen(ccd.distances).reshaped().eval();
+                // Assert
+                for (auto v = 0ULL; v < active.size(); ++v)
+                {
+                    auto const nNearestNeighbours = (nn.col(v).array() != -1).count();
+                    if (active[v])
+                    {
+                        CHECK_GT(nNearestNeighbours, 0);
+                        GpuScalar dmin = std::numeric_limits<GpuScalar>::max();
+                        GpuIndex fnn   = -1;
+                        for (auto f = 0; f < F.cols(); ++f)
+                        {
+                            if (B(V(v)) == B(F(0, f)))
+                                continue;
+                            auto fv = F.col(f);
+                            auto xf = X(Eigen::placeholders::all, fv);
+                            auto xv = X(Eigen::placeholders::all, V(v));
+                            using math::linalg::mini::FromEigen;
+                            auto dvf = geometry::DistanceQueries::PointTriangle(
+                                FromEigen(xv.head<3>()),
+                                FromEigen(xf.col(0).head<3>()),
+                                FromEigen(xf.col(1).head<3>()),
+                                FromEigen(xf.col(2).head<3>()));
+                            if (dvf < dmin)
+                            {
+                                dmin = dvf;
+                                fnn  = f;
+                            }
+                        }
+                        CHECK_EQ((nn.col(v).array() == fnn).count(), 1);
+                    }
+                    else
+                    {
+                        CHECK_EQ(nNearestNeighbours, 0);
+                    }
+                }
+                SUBCASE("FinalizeActiveSet")
+                {
+                    // Act
+                    ccd.FinalizeActiveSet(x);
+                    // Assert
+                }
+            }
+        }
+    }
+    SUBCASE("Vertically stacked cubes") {}
+}

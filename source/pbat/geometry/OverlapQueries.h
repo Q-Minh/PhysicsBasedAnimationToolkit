@@ -649,11 +649,24 @@ PBAT_HOST_DEVICE bool LineSegmentSweptTriangle3D(
     using ScalarType            = typename TMatrixP::ScalarType;
     static auto constexpr kDims = 3;
 
-    auto const fSignWrtPlane = [=](auto const& P, auto const& A, auto const& B, auto const& C) {
+    auto const fSignWrtPlane = [=](auto const& X, auto const& A, auto const& B, auto const& C) {
         mini::SVector<ScalarType, kDims> const n = Cross(B - A, C - A);
-        auto const d                             = Dot(P - A, n);
+        auto const d                             = Dot(X - A, n);
         return d;
     };
+
+    // Check if triangles are coplanar
+    bool const bCoplanar = fSignWrtPlane(A1, A2, B2, C2) == ScalarType(0) and
+                           fSignWrtPlane(B1, A2, B2, C2) == ScalarType(0) and
+                           fSignWrtPlane(C1, A2, B2, C2) == ScalarType(0);
+    if (bCoplanar)
+    {
+        // WARNING:
+        // We are not handling this correctly... Ideally, we would form a polygon on the plane from
+        // the swept triangles, and intersect our line segment with that polygon. For now, let's
+        // just check for intersection between the line segment and both triangles.
+        return LineSegmentTriangle3D(P, Q, A1, B1, C1) or LineSegmentTriangle3D(P, Q, A2, C2, B2);
+    }
 
     // Linearly swept triangle is a convex shape, check for PQ inside the volume.
     // Because the triangle orientation can be inverted, we need to check for 2 cases:
@@ -661,18 +674,18 @@ PBAT_HOST_DEVICE bool LineSegmentSweptTriangle3D(
     // 2. All positive signs
     // We do this by simply counting the number of negative signs and checking the count.
     // clang-format off
-    int const negSignCount = static_cast<int>(fSignWrtPlane(P, A1, B1, C1) <= ScalarType(0)) +
-                             static_cast<int>(fSignWrtPlane(P, A2, C2, B2) <= ScalarType(0)) +
-                             static_cast<int>(fSignWrtPlane(P, A1, A2, B2) <= ScalarType(0)) +
-                             static_cast<int>(fSignWrtPlane(P, B1, B2, C2) <= ScalarType(0)) +
-                             static_cast<int>(fSignWrtPlane(P, C1, C2, A2) <= ScalarType(0)) +
-                             static_cast<int>(fSignWrtPlane(Q, A1, B1, C1) <= ScalarType(0)) +
-                             static_cast<int>(fSignWrtPlane(Q, A2, C2, B2) <= ScalarType(0)) +
-                             static_cast<int>(fSignWrtPlane(Q, A1, A2, B2) <= ScalarType(0)) +
-                             static_cast<int>(fSignWrtPlane(Q, B1, B2, C2) <= ScalarType(0)) +
-                             static_cast<int>(fSignWrtPlane(Q, C1, C2, A2) <= ScalarType(0));
-
-    bool const bIsPqInside = negSignCount == 10 or negSignCount == 0;
+    mini::SVector<ScalarType, 10> sgn{};
+    sgn(0) = fSignWrtPlane(P, A1, B1, C1);
+    sgn(1) = fSignWrtPlane(P, A2, C2, B2);
+    sgn(2) = fSignWrtPlane(P, A1, A2, B2);
+    sgn(3) = fSignWrtPlane(P, B1, B2, C2);
+    sgn(4) = fSignWrtPlane(P, C1, C2, A2);
+    sgn(5) = fSignWrtPlane(Q, A1, B1, C1);
+    sgn(6) = fSignWrtPlane(Q, A2, C2, B2);
+    sgn(7) = fSignWrtPlane(Q, A1, A2, B2);
+    sgn(8) = fSignWrtPlane(Q, B1, B2, C2);
+    sgn(9) = fSignWrtPlane(Q, C1, C2, A2);
+    bool const bIsPqInside = All(sgn <= ScalarType(0)) or All(sgn >= ScalarType(0));
     // clang-format on
     if (bIsPqInside)
         return true;

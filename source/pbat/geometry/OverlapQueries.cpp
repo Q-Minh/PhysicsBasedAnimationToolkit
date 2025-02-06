@@ -114,7 +114,7 @@ TEST_CASE("[geometry] Line segment swept triangle overlap predicate can be obtai
 {
     using namespace pbat::math::linalg::mini;
     using ScalarType = pbat::Scalar;
-    SUBCASE("Line segment intersects non-degenerate swept triangle")
+    SUBCASE("Line segment intersects swept triangle")
     {
         SUBCASE("Swept triangle is non-degenerate")
         {

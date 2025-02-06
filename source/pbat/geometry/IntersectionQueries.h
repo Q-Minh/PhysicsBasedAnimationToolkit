@@ -423,7 +423,7 @@ UvwLineSegmentTriangle3D(
     mini::SVector<ScalarType, kDims> const PQ = Q - P;
     mini::SVector<ScalarType, kDims> const n  = Cross(AB, AC);
     // Compute denominator d. If d == 0, segment is parallel to triangle, so exit early
-    ScalarType constexpr eps = 1e-15;
+    ScalarType constexpr eps = static_cast<ScalarType>(1e-15);
     ScalarType const d       = Dot(PQ, n);
     using namespace std;
     bool const bIsSegmentParallelToTriangle = abs(d) < eps;

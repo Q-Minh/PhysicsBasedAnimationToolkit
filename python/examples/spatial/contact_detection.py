@@ -94,7 +94,7 @@ if __name__ == "__main__":
             cd.initialize_active_set(XTG, XG, min, max)
             cd.update_active_set(XG)
             A = cd.active_set
-            # cd.finalize_active_set(XG)
+            cd.finalize_active_set(XG)
             AF = np.zeros(F.shape[0])
             AF[A[1, :]] = 1
 
