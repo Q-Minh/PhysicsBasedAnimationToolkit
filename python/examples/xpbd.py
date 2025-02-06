@@ -81,6 +81,16 @@ if __name__ == "__main__":
         default=0.0,
     )
     parser.add_argument(
+        "--muS", help="Static friction coefficient", type=float, dest="muS", default=0.6
+    )
+    parser.add_argument(
+        "--muD",
+        help="Dynamic friction coefficient",
+        type=float,
+        dest="muD",
+        default=0.4,
+    )
+    parser.add_argument(
         "--muC", help="Vertex collision penalty", type=float, dest="muC", default=1e1
     )
     parser.add_argument(
@@ -165,15 +175,15 @@ if __name__ == "__main__":
 
     # Setup XPBD
     VC = np.unique(F)
-    dblA = igl.doublearea(V, F)
-    muC = np.zeros(V.shape[0])
-    for d in range(3):
-        muC[F[:, d]] += (1 / 6) * dblA
-    muC = args.muC * muC[VC]
-    vc_ordering = pbat.graph.GreedyColorOrderingStrategy.LargestDegree
-    vc_selection = pbat.graph.GreedyColorSelectionStrategy.LeastUsed
+    # dblA = igl.doublearea(V, F)
+    # muC = np.zeros(V.shape[0])
+    # for d in range(3):
+    #     muC[F[:, d]] += (1 / 6) * dblA
+    # muC = args.muC * muC[VC]
+    gc_ordering = pbat.graph.GreedyColorOrderingStrategy.LargestDegree
+    gc_selection = pbat.graph.GreedyColorSelectionStrategy.LeastUsed
     Pptr, Padj, GC = pbat.sim.xpbd.partition_mesh_constraints(
-        mesh.X, mesh.E, ordering=vc_ordering, selection=vc_selection
+        mesh.X, mesh.E, ordering=gc_ordering, selection=gc_selection
     )
     data = (
         pbat.sim.xpbd.Data()
@@ -193,7 +203,7 @@ if __name__ == "__main__":
             np.full(VC.shape[0], args.betaC), pbat.sim.xpbd.Constraint.Collision
         )
         # .with_collision_penalties(muC)
-        .with_friction_coefficients(0.6, 0.4)
+        .with_friction_coefficients(args.muS, args.muD)
         .with_active_set_update_frequency(args.contact_set_update_frequency)
         .with_dirichlet_vertices(vdbc)
         .with_partitions(Pptr, Padj)
@@ -248,8 +258,6 @@ if __name__ == "__main__":
         changed, dt = imgui.InputFloat("dt", dt)
         changed, iterations = imgui.InputInt("Iterations", iterations)
         changed, substeps = imgui.InputInt("Substeps", substeps)
-        # alphac_changed, alphac = imgui.InputFloat(
-        #     "Collision compliance", alphac, format="%.10f")
         changed, animate = imgui.Checkbox("Animate", animate)
         changed, export = imgui.Checkbox("Export", export)
         step = imgui.Button("Step")
@@ -260,10 +268,6 @@ if __name__ == "__main__":
             xpbd.v = np.zeros(mesh.X.shape)
             vm.update_vertex_positions(mesh.X.T)
             t = 0
-
-        # if alphac_changed:
-        #     xpbd.set_compliance(
-        #         alphac * np.ones(VC.shape[1]), pbat.sim.xpbd.ConstraintType.Collision)
 
         if animate or step:
             profiler.begin_frame("Physics")
