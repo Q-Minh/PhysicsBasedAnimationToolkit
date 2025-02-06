@@ -110,9 +110,16 @@ void Integrator::SetBlockSize(GpuIndex blockSize)
     mImpl->SetBlockSize(blockSize);
 }
 
+void Integrator::SetSceneBoundingBox(
+    Eigen::Vector<GpuScalar, 3> const& min,
+    Eigen::Vector<GpuScalar, 3> const& max)
+{
+    mImpl->SetSceneBoundingBox(min, max);
+}
+
 GpuMatrixX Integrator::GetPositions() const
 {
-    return impl::common::ToEigen(mImpl->X.x);
+    return impl::common::ToEigen(mImpl->x);
 }
 
 GpuMatrixX Integrator::GetVelocities() const

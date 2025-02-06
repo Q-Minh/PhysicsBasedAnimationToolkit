@@ -9,13 +9,13 @@ import itertools
 
 
 def combine(V: list, C: list):
-    Vsizes = [Vi.shape[0] for Vi in V]
-    Csizes = [Ci.shape[0] for Ci in C]
-    Voffsets = list(itertools.accumulate(Vsizes))
-    C = [C[i] + Voffsets[i] - Vsizes[i] for i in range(len(C))]
+    NV = [Vi.shape[0] for Vi in V]
+    offsets = list(itertools.accumulate(NV))
+    C = [C[i] + offsets[i] - NV[i] for i in range(len(C))]
     C = np.vstack(C)
     V = np.vstack(V)
-    return V, C
+    B = np.hstack([np.full(NV[i], i) for i in range(len(NV))])
+    return V, C, B
 
 
 if __name__ == "__main__":
@@ -104,7 +104,7 @@ if __name__ == "__main__":
         extent = V[i][:, -1].max() - V[i][:, -1].min()
         offset = V[i][:, -1].max() - V[i + 1][:, -1].min()
         V[i + 1][:, -1] += offset + extent * args.translation
-    V, C = combine(V, C)
+    V, C, B = combine(V, C)
     mesh = pbat.fem.Mesh(V.T, C.T, element=pbat.fem.Element.Tetrahedron, order=1)
     F = igl.boundary_facets(C)
     F[:, :2] = np.roll(F[:, :2], shift=1, axis=1)
@@ -138,6 +138,7 @@ if __name__ == "__main__":
         pbat.sim.vbd.Data()
         .with_volume_mesh(V.T, C.T)
         .with_surface_mesh(np.unique(F), F.T)
+        .with_bodies(B)
         .with_material(rhoe, mue, lambdae)
         .with_dirichlet_vertices(vdbc)
         .with_initialization_strategy(
@@ -239,6 +240,11 @@ if __name__ == "__main__":
 
             # Update visuals
             V = vbd.x.T
+            if hasattr(pbat.gpu.vbd, "Integrator") and isinstance(
+                vbd, pbat.gpu.vbd.Integrator
+            ):
+                min, max = np.min(V, axis=0), np.max(V, axis=0)
+                vbd.scene_bounding_box = min, max
             if export:
                 ps.screenshot()
                 # omesh = meshio.Mesh(V, {"tetra": mesh.E.T})

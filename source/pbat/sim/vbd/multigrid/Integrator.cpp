@@ -14,30 +14,32 @@ namespace sim {
 namespace vbd {
 namespace multigrid {
 
-void Integrator::ComputeAndSortStrainRates(Hierarchy& H, Scalar sdt) const
+void Integrator::ComputeAndSortStrainRates(
+    [[maybe_unused]] Hierarchy& H,
+    [[maybe_unused]] Scalar sdt) const
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.vbd.multigrid.Integrator.ComputeAndSortStrainRates");
-    auto nElements = H.data.E.cols();
-    tbb::parallel_for(Index(0), nElements, [&](Index e) {
-        auto inds      = H.data.E(Eigen::placeholders::all, e);
-        auto xe        = H.data.x(Eigen::placeholders::all, inds);
-        auto GNe       = H.data.GP.block<4, 3>(0, 3 * e);
-        Matrix<3, 3> F = xe * GNe;
-        // E = 1/2 (F^T F - I)
-        Matrix<3, 3> E = F.transpose() * F;
-        E.diagonal().array() -= Scalar(1);
-        E *= Scalar(0.5);
-        auto GreenStrain       = H.data.mGreenStrains.block<3, 3>(0, 3 * e);
-        auto GreenStrainAtT    = H.data.mGreenStrainsAtT.block<3, 3>(0, 3 * e);
-        GreenStrainAtT         = GreenStrain;
-        GreenStrain            = E;
-        Matrix<3, 3> Edot      = (GreenStrain - GreenStrainAtT) / sdt;
-        H.data.mStrainRates(e) = Edot.norm();
-    });
-    std::sort(
-        H.data.mStrainRateOrder.begin(),
-        H.data.mStrainRateOrder.end(),
-        [&](Index ei, Index ej) { return H.data.mStrainRates(ei) < H.data.mStrainRates(ej); });
+    // auto nElements = H.data.E.cols();
+    // tbb::parallel_for(Index(0), nElements, [&](Index e) {
+    //     auto inds      = H.data.E(Eigen::placeholders::all, e);
+    //     auto xe        = H.data.x(Eigen::placeholders::all, inds);
+    //     auto GNe       = H.data.GP.block<4, 3>(0, 3 * e);
+    //     Matrix<3, 3> F = xe * GNe;
+    //     // E = 1/2 (F^T F - I)
+    //     Matrix<3, 3> E = F.transpose() * F;
+    //     E.diagonal().array() -= Scalar(1);
+    //     E *= Scalar(0.5);
+    //     auto GreenStrain       = H.data.mGreenStrains.block<3, 3>(0, 3 * e);
+    //     auto GreenStrainAtT    = H.data.mGreenStrainsAtT.block<3, 3>(0, 3 * e);
+    //     GreenStrainAtT         = GreenStrain;
+    //     GreenStrain            = E;
+    //     Matrix<3, 3> Edot      = (GreenStrain - GreenStrainAtT) / sdt;
+    //     H.data.mStrainRates(e) = Edot.norm();
+    // });
+    // std::sort(
+    //     H.data.mStrainRateOrder.begin(),
+    //     H.data.mStrainRateOrder.end(),
+    //     [&](Index ei, Index ej) { return H.data.mStrainRates(ei) < H.data.mStrainRates(ej); });
 }
 
 void Integrator::ComputeInertialTargetPositions(Hierarchy& H, Scalar sdt, Scalar sdt2) const
@@ -163,7 +165,7 @@ TEST_CASE("[sim][vbd][multigrid] Integrator")
         siters};
 
     // Act
-    Integrator mvbd{};  
+    Integrator mvbd{};
     mvbd.Step(dt, substeps, H);
 
     // Assert

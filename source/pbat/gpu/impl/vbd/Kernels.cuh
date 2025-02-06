@@ -47,7 +47,7 @@ struct BackwardEulerMinimization
     GpuIndex* FC; ///< |#vertices|x|nMaxCollidingTrianglesPerVertex| array of colliding triangles
     GpuIndex* nCollidingTriangles; ///< |#vertices| array of the number of colliding triangles
                                    ///< for each vertex.
-    std::array<GpuIndex*, 4> F;    ///< 3x|#collision triangles| array of triangles
+    std::array<GpuIndex*, 3> F;    ///< 3x|#collision triangles| array of triangles
 
     GpuIndex*
         partition; ///< List of vertex indices that can be processed independently, i.e. in parallel

@@ -120,6 +120,15 @@ class Integrator
     PBAT_API void SetBlockSize(GpuIndex blockSize);
     /**
      * @brief
+     * @param min
+     * @param max
+     */
+    PBAT_API void SetSceneBoundingBox(
+        Eigen::Vector<GpuScalar, 3> const& min,
+        Eigen::Vector<GpuScalar, 3> const& max);
+    /**
+     *
+     * @brief
      * @return |#dims|x|#vertices| array of vertex positions
      */
     PBAT_API GpuMatrixX GetPositions() const;

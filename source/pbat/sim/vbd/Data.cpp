@@ -37,6 +37,12 @@ Data& Data::WithSurfaceMesh(
     return *this;
 }
 
+Data& Data::WithBodies(Eigen::Ref<IndexVectorX const> const& Bin)
+{
+    this->B = Bin;
+    return *this;
+}
+
 Data& Data::WithVelocity(Eigen::Ref<MatrixX const> const& vIn)
 {
     this->v = vIn;
@@ -102,6 +108,12 @@ Data& Data::WithCollisionPenalty(Scalar kCIn)
     return *this;
 }
 
+Data& Data::WithActiveSetUpdateFrequency(Index activeSetUpdateFrequency)
+{
+    this->mActiveSetUpdateFrequency = activeSetUpdateFrequency;
+    return *this;
+}
+
 Data& Data::WithHessianDeterminantZeroUnder(Scalar zero)
 {
     this->detHZero = zero;
@@ -148,11 +160,6 @@ Data& Data::Construct(bool bValidate)
     m  = M.ToLumpedMasses();
     GP = fem::ShapeFunctionGradients<1>(mesh);
     wg = fem::InnerProductWeights<1>(mesh).reshaped();
-    psiE.setZero(mesh.E.cols());
-    mGreenStrainsAtT.setZero(3, 3 * mesh.E.cols());
-    mGreenStrains.setZero(3, 3 * mesh.E.cols());
-    mStrainRates.setZero(mesh.E.cols());
-    mStrainRateOrder.setLinSpaced(mesh.E.cols(), Index(0), mesh.E.cols() - Index(1));
     // Adjacency structures
     IndexMatrixX ilocal             = IndexVector<4>{0, 1, 2, 3}.replicate(1, mesh.E.cols());
     auto GVT                        = graph::MeshAdjacencyMatrix(mesh.E, ilocal, mesh.X.cols());
@@ -184,6 +191,7 @@ Data& Data::Construct(bool bValidate)
             x.cols() == v.cols() and
             x.cols() == aext.cols() and
             x.cols() == m.size() and 
+            x.cols() == B.size() and
             x.rows() == xt.rows() and
             x.rows() == v.rows() and
             x.rows() == aext.rows() and
@@ -192,8 +200,8 @@ Data& Data::Construct(bool bValidate)
         if (not bPerVertexQuantityDimensionsValid)
         {
             std::string const what = fmt::format(
-                "x, v, aext and m must have same #columns={} as x, and "
-                "3 rows (except m)",
+                "x, v, aext, m and B must have same #columns={} as x, and "
+                "3 rows (except m and B)",
                 x.cols());
             throw std::invalid_argument(what);
         }

@@ -41,6 +41,13 @@ void BindData(pybind11::module& m)
             "Sets the collision mesh as array of 1x|#collision vertices| indices V into positions "
             "X and 3x|#collision triangles| indices into X.")
         .def(
+            "with_bodies",
+            &Data::WithBodies,
+            pyb::arg("B"),
+            "Sets the body indices of each vertex.\n\n"
+            "Args:\n"
+            "    B (numpy.ndarray): 1x|#nodes| array of body indices.")
+        .def(
             "with_velocity",
             &Data::WithVelocity,
             pyb::arg("v"),
@@ -77,6 +84,12 @@ void BindData(pybind11::module& m)
             pyb::arg("strategy"))
         .def("with_rayleigh_damping", &Data::WithRayleighDamping, pyb::arg("kD"))
         .def("with_collision_penalty", &Data::WithCollisionPenalty, pyb::arg("kC"))
+        .def(
+            "with_active_set_update_frequency",
+            &Data::WithActiveSetUpdateFrequency,
+            pyb::arg("frequency"),
+            "Sets the contact constraint active set update frequency in a given time step (i.e. "
+            "update vertex-triangle contact pairs every 'frequency' substeps).")
         .def(
             "with_hessian_determinant_zero",
             &Data::WithHessianDeterminantZeroUnder,

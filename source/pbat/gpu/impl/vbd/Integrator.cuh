@@ -1,8 +1,9 @@
-#ifndef PBAT_GPU_IMPL_VBD_INTEGRATOR_CUH
-#define PBAT_GPU_IMPL_VBD_INTEGRATOR_CUH
+#ifndef PBAT_GPU_IMPL_VBD_INTEGRATOR_H
+#define PBAT_GPU_IMPL_VBD_INTEGRATOR_H
 
 #include "pbat/gpu/Aliases.h"
 #include "pbat/gpu/impl/common/Buffer.cuh"
+#include "pbat/gpu/impl/contact/VertexTriangleMixedCcdDcd.cuh"
 #include "pbat/gpu/impl/geometry/Primitives.cuh"
 #include "pbat/sim/vbd/Data.h"
 #include "pbat/sim/vbd/Enums.h"
@@ -105,6 +106,14 @@ class Integrator
     void SetInitializationStrategy(EInitializationStrategy strategy);
     /**
      * @brief
+     * @param min
+     * @param max
+     */
+    void SetSceneBoundingBox(
+        Eigen::Vector<GpuScalar, 3> const& min,
+        Eigen::Vector<GpuScalar, 3> const& max);
+    /**
+     * @brief
      * @param blockSize
      */
     void SetBlockSize(GpuIndex blockSize);
@@ -136,11 +145,14 @@ class Integrator
     common::Buffer<GpuScalar> const& GetLameCoefficients() const;
 
   public:
-    geometry::Points X;    ///< Current vertex positions
-    geometry::Simplices V; ///< Boundary vertex simplices
-    geometry::Simplices F; ///< Boundary triangle simplices
-    geometry::Simplices T; ///< Tetrahedral mesh elements
+    common::Buffer<GpuScalar, 3> x;
+    common::Buffer<GpuIndex, 4> T; ///< Tetrahedral mesh elements
   private:
+    Eigen::Vector<GpuScalar, 3> mWorldMin; ///< World AABB min
+    Eigen::Vector<GpuScalar, 3> mWorldMax; ///< World AABB max
+    GpuIndex mActiveSetUpdateFrequency;    ///< Active set update frequency
+    contact::VertexTriangleMixedCcdDcd cd; ///< Collision detector
+
     common::Buffer<GpuScalar, 3> mPositionsAtT;            ///< Previous vertex positions
     common::Buffer<GpuScalar, 3> mInertialTargetPositions; ///< Inertial target for vertex positions
     common::Buffer<GpuScalar, 3>
@@ -165,15 +177,8 @@ class Integrator
     common::Buffer<GpuIndex> mVertexTetrahedronLocalVertexIndices; ///< Vertex-tetrahedron adjacency
                                                                    ///< list's ilocal property
 
-    GpuScalar mRayleighDamping;               ///< Rayleigh damping coefficient
-    GpuScalar mCollisionPenalty;              ///< Collision penalty coefficient
-    GpuIndex mMaxCollidingTrianglesPerVertex; ///< Memory capacity for storing vertex triangle
-                                              ///< collision constraints
-
-    common::Buffer<GpuIndex> mCollidingTriangles; ///< |#vertices|x|mMaxCollidingTrianglesPerVertex|
-                                                  ///< array of colliding triangles
-    common::Buffer<GpuIndex> mCollidingTriangleCount; ///< |#vertices| array of the number of
-                                                      ///< colliding triangles for each vertex.
+    GpuScalar mRayleighDamping;  ///< Rayleigh damping coefficient
+    GpuScalar mCollisionPenalty; ///< Collision penalty coefficient
 
     GpuIndexVectorX mPptr; ///< |#partitions+1| partition pointers, s.t. the range [Pptr[p],
                            ///< Pptr[p+1]) indexes into Padj vertices from partition p
@@ -190,4 +195,4 @@ class Integrator
 } // namespace gpu
 } // namespace pbat
 
-#endif // PBAT_GPU_IMPL_VBD_INTEGRATOR_CUH
+#endif // PBAT_GPU_IMPL_VBD_INTEGRATOR_H

@@ -22,10 +22,10 @@ namespace impl {
 namespace vbd {
 
 Integrator::Integrator(Data const& data)
-    : X(data.x.cast<GpuScalar>()),
-      V(data.V.cast<GpuIndex>().transpose()),
-      F(data.F.cast<GpuIndex>()),
-      T(data.E.cast<GpuIndex>()),
+    : x(data.x.cols()),
+      T(data.E.cols()),
+      cd(data.B.cast<GpuIndex>(), data.V.cast<GpuIndex>(), data.F.cast<GpuIndex>()),
+      mActiveSetUpdateFrequency(static_cast<GpuIndex>(data.mActiveSetUpdateFrequency)),
       mPositionsAtT(data.xt.cols()),
       mInertialTargetPositions(data.xtilde.cols()),
       mChebyshevPositionsM2(data.xchebm2.cols()),
@@ -43,9 +43,6 @@ Integrator::Integrator(Data const& data)
       mVertexTetrahedronLocalVertexIndices(data.GVGilocal.size()),
       mRayleighDamping(static_cast<GpuScalar>(data.kD)),
       mCollisionPenalty(static_cast<GpuScalar>(data.kC)),
-      mMaxCollidingTrianglesPerVertex(8),
-      mCollidingTriangles(8 * data.x.cols()),
-      mCollidingTriangleCount(data.x.cols()),
       mPptr(data.Pptr.cast<GpuIndex>()),
       mPadj(data.Padj.size()),
       mInitializationStrategy(data.strategy),
@@ -53,6 +50,9 @@ Integrator::Integrator(Data const& data)
       mStream(common::Device(common::EDeviceSelectionPreference::HighestComputeCapability)
                   .create_stream(/*synchronize_with_default_stream=*/false))
 {
+    common::ToBuffer(data.x, x);
+    mPositionsAtT = x;
+    common::ToBuffer(data.E, T);
     common::ToBuffer(data.v, mVelocities);
     common::ToBuffer(data.aext, mExternalAcceleration);
     common::ToBuffer(data.m, mMass);
@@ -76,8 +76,30 @@ void Integrator::Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps, GpuS
 
     GpuScalar sdt                        = dt / static_cast<GpuScalar>(substeps);
     GpuScalar sdt2                       = sdt * sdt;
-    GpuIndex const nVertices             = static_cast<GpuIndex>(X.NumberOfPoints());
+    GpuIndex const nVertices             = static_cast<GpuIndex>(x.Size());
     bool const bUseChebyshevAcceleration = rho > GpuScalar{0} and rho < GpuScalar{1};
+
+    // Initialize active set
+    thrust::for_each(
+        thrust::device,
+        thrust::make_counting_iterator<GpuIndex>(0),
+        thrust::make_counting_iterator<GpuIndex>(nVertices),
+        [dt,
+         dt2      = dt * dt,
+         xt       = mPositionsAtT.Raw(),
+         vt       = mVelocities.Raw(),
+         aext     = mExternalAcceleration.Raw(),
+         x        = x.Raw(),
+         strategy = mInitializationStrategy] PBAT_DEVICE(auto i) {
+            using namespace pbat::math::linalg::mini;
+            auto xti   = FromBuffers<3, 1>(xt, i);
+            auto vti   = FromBuffers<3, 1>(vt, i);
+            auto aexti = FromBuffers<3, 1>(aext, i);
+            auto xi    = xti + dt * vti + dt2 * aexti;
+            ToBuffers(xi, x, i);
+        });
+    using pbat::math::linalg::mini::FromEigen;
+    cd.InitializeActiveSet(mPositionsAtT, x, FromEigen(mWorldMin), FromEigen(mWorldMax));
 
     kernels::BackwardEulerMinimization bdf{};
     bdf.dt                              = sdt;
@@ -85,8 +107,8 @@ void Integrator::Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps, GpuS
     bdf.m                               = mMass.Raw();
     bdf.xtilde                          = mInertialTargetPositions.Raw();
     bdf.xt                              = mPositionsAtT.Raw();
-    bdf.x                               = X.x.Raw();
-    bdf.T                               = T.inds.Raw();
+    bdf.x                               = x.Raw();
+    bdf.T                               = T.Raw();
     bdf.wg                              = mQuadratureWeights.Raw();
     bdf.GP                              = mShapeFunctionGradients.Raw();
     bdf.lame                            = mLameCoefficients.Raw();
@@ -96,31 +118,15 @@ void Integrator::Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps, GpuS
     bdf.GVTilocal                       = mVertexTetrahedronLocalVertexIndices.Raw();
     bdf.kD                              = mRayleighDamping;
     bdf.kC                              = mCollisionPenalty;
-    bdf.nMaxCollidingTrianglesPerVertex = mMaxCollidingTrianglesPerVertex;
-    bdf.FC                              = mCollidingTriangles.Raw();
-    bdf.nCollidingTriangles             = mCollidingTriangleCount.Raw();
-    bdf.F                               = F.inds.Raw();
+    bdf.nMaxCollidingTrianglesPerVertex = cd.kMaxNeighbours;
+    bdf.F                               = cd.F.Raw();
 
-    // NOTE:
-    // For some reason, thrust::async::copy does not play well with cuda-api-wrapper streams. I am
-    // guessing it has to do with synchronize_with_default_stream=false?
-    mStream.device().make_current();
     for (auto s = 0; s < substeps; ++s)
     {
         using namespace pbat::math::linalg::mini;
-        // Store previous positions
-        for (auto d = 0; d < X.x.Dimensions(); ++d)
-        {
-            cuda::memory::async::copy(
-                thrust::raw_pointer_cast(mPositionsAtT[d].data()),
-                thrust::raw_pointer_cast(X.x[d].data()),
-                X.x.Size() * sizeof(GpuScalar),
-                mStream);
-        }
         // Compute inertial target positions
-        thrust::device_event e = thrust::async::for_each(
-            // Share thrust's underlying CUDA stream with cuda-api-wrappers
-            thrust::device.on(mStream.handle()),
+        thrust::for_each(
+            thrust::device,
             thrust::make_counting_iterator<GpuIndex>(0),
             thrust::make_counting_iterator<GpuIndex>(nVertices),
             [xt     = mPositionsAtT.Raw(),
@@ -139,15 +145,15 @@ void Integrator::Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps, GpuS
                 ToBuffers(y, xtilde, i);
             });
         // Initialize block coordinate descent's, i.e. BCD's, solution
-        e = thrust::async::for_each(
-            thrust::device.on(mStream.handle()),
+        thrust::for_each(
+            thrust::device,
             thrust::make_counting_iterator<GpuIndex>(0),
             thrust::make_counting_iterator<GpuIndex>(nVertices),
             [xt       = mPositionsAtT.Raw(),
              vtm1     = mVelocitiesAtT.Raw(),
              vt       = mVelocities.Raw(),
              aext     = mExternalAcceleration.Raw(),
-             x        = X.x.Raw(),
+             x        = x.Raw(),
              dt       = sdt,
              dt2      = sdt2,
              strategy = mInitializationStrategy] PBAT_DEVICE(auto i) {
@@ -162,6 +168,9 @@ void Integrator::Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps, GpuS
                     strategy);
                 ToBuffers(x0, x, i);
             });
+        // Update active set
+        if (s % mActiveSetUpdateFrequency == 0)
+            cd.UpdateActiveSet(x);
         // Initialize Chebyshev semi-iterative method
         GpuScalar rho2 = rho * rho;
         GpuScalar omega{};
@@ -194,7 +203,7 @@ void Integrator::Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps, GpuS
                                 .dynamic_shared_memory_size(kDynamicSharedMemoryCapacity)
                                 .grid_size(nVerticesInPartition)
                                 .build();
-                        mStream.enqueue.kernel_launch(
+                        cuda::device::current::get().launch(
                             kernels::MinimizeBackwardEuler<kBlockThreads>,
                             bcdLaunchConfiguration,
                             bdf);
@@ -204,15 +213,15 @@ void Integrator::Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps, GpuS
 
             if (bUseChebyshevAcceleration)
             {
-                e = thrust::async::for_each(
-                    thrust::device.on(mStream.handle()),
+                thrust::for_each(
+                    thrust::device,
                     thrust::make_counting_iterator<GpuIndex>(0),
                     thrust::make_counting_iterator<GpuIndex>(nVertices),
                     [k     = k,
                      omega = omega,
                      xkm2  = mChebyshevPositionsM2.Raw(),
                      xkm1  = mChebyshevPositionsM1.Raw(),
-                     xk    = X.x.Raw()] PBAT_DEVICE(auto i) {
+                     xk    = x.Raw()] PBAT_DEVICE(auto i) {
                         using pbat::sim::vbd::kernels::ChebyshevUpdate;
                         auto xkm2i = FromBuffers<3, 1>(xkm2, i);
                         auto xkm1i = FromBuffers<3, 1>(xkm1, i);
@@ -225,34 +234,29 @@ void Integrator::Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps, GpuS
             }
         }
         // Update velocities
-        for (auto d = 0; d < mVelocities.Dimensions(); ++d)
-        {
-            cuda::memory::async::copy(
-                thrust::raw_pointer_cast(mVelocitiesAtT[d].data()),
-                thrust::raw_pointer_cast(mVelocities[d].data()),
-                mVelocities.Size() * sizeof(GpuScalar),
-                mStream);
-        }
-        e = thrust::async::for_each(
-            thrust::device.on(mStream.handle()),
+        mVelocitiesAtT = mVelocities;
+        thrust::for_each(
+            thrust::device,
             thrust::make_counting_iterator<GpuIndex>(0),
             thrust::make_counting_iterator<GpuIndex>(nVertices),
-            [xt = mPositionsAtT.Raw(), x = X.x.Raw(), v = mVelocities.Raw(), dt = sdt] PBAT_DEVICE(
+            [xt = mPositionsAtT.Raw(), x = x.Raw(), v = mVelocities.Raw(), dt = sdt] PBAT_DEVICE(
                 auto i) {
                 using pbat::sim::vbd::kernels::IntegrateVelocity;
                 auto vtp1 =
                     IntegrateVelocity(FromBuffers<3, 1>(xt, i), FromBuffers<3, 1>(x, i), dt);
                 ToBuffers(vtp1, v, i);
             });
+        // Store past positions
+        mPositionsAtT = x;
     }
-    mStream.synchronize();
+    cd.FinalizeActiveSet(x);
 
     PBAT_PROFILE_CUDA_HOST_SCOPE_END(ctx);
 }
 
 void Integrator::SetPositions(Eigen::Ref<GpuMatrixX const> const& Xin)
 {
-    common::ToBuffer(Xin, X.x);
+    common::ToBuffer(Xin, x);
 }
 
 void Integrator::SetVelocities(Eigen::Ref<GpuMatrixX const> const& v)
@@ -329,6 +333,14 @@ void Integrator::SetInitializationStrategy(EInitializationStrategy strategy)
     mInitializationStrategy = strategy;
 }
 
+void Integrator::SetSceneBoundingBox(
+    Eigen::Vector<GpuScalar, 3> const& min,
+    Eigen::Vector<GpuScalar, 3> const& max)
+{
+    mWorldMin = min;
+    mWorldMax = max;
+}
+
 void Integrator::SetBlockSize(GpuIndex blockSize)
 {
     mGpuThreadBlockSize = std::clamp(blockSize, GpuIndex{32}, GpuIndex{256});
@@ -398,16 +410,19 @@ TEST_CASE("[gpu][impl][vbd] Integrator")
     auto constexpr dt         = GpuScalar{1e-2};
     auto constexpr substeps   = 1;
     auto constexpr iterations = 10;
+    auto const worldMin       = P.rowwise().minCoeff().cast<GpuScalar>().eval();
+    auto const worldMax       = P.rowwise().maxCoeff().cast<GpuScalar>().eval();
 
     // Act
     using pbat::gpu::impl::vbd::Integrator;
     Integrator vbd{sim::vbd::Data().WithVolumeMesh(P, T).WithSurfaceMesh(V, F).Construct()};
+    vbd.SetSceneBoundingBox(worldMin, worldMax);
     vbd.Step(dt, iterations, substeps);
 
     // Assert
     auto constexpr zero = GpuScalar{1e-4};
     GpuMatrixX dx =
-        ToEigen(vbd.X.x.Get()).reshaped(P.cols(), P.rows()).transpose() - P.cast<GpuScalar>();
+        ToEigen(vbd.x.Get()).reshaped(P.cols(), P.rows()).transpose() - P.cast<GpuScalar>();
     bool const bVerticesFallUnderGravity = (dx.row(2).array() < GpuScalar{0}).all();
     CHECK(bVerticesFallUnderGravity);
     bool const bVerticesOnlyFall = (dx.topRows(2).array().abs() < zero).all();

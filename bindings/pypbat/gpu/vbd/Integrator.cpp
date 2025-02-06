@@ -117,7 +117,14 @@ void BindIntegrator([[maybe_unused]] pybind11::module& m)
             nullptr,
             &Integrator::SetBlockSize,
             "Number of threads per GPU thread block used for time integration "
-            "minimization.");
+            "minimization.")
+        .def_property(
+            "scene_bounding_box",
+            nullptr,
+            [](Integrator& vbd,
+               std::pair<Eigen::Vector<GpuScalar, 3> const&, Eigen::Vector<GpuScalar, 3> const&>
+                   box) { vbd.SetSceneBoundingBox(box.first, box.second); },
+            "Tuple of (min,max) scene bounding box extremities.");
 #endif // PBAT_USE_CUDA
 }
 

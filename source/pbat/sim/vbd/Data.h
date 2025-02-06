@@ -32,6 +32,13 @@ PBAT_API struct Data
         Eigen::Ref<IndexMatrixX const> const& F);
     /**
      * @brief
+     *
+     * @param B
+     * @return Data&
+     */
+    Data& WithBodies(Eigen::Ref<IndexVectorX const> const& B);
+    /**
+     * @brief
      * @param v 3x|#verts| vertex velocities
      * @return
      */
@@ -93,6 +100,13 @@ PBAT_API struct Data
     Data& WithCollisionPenalty(Scalar kC);
     /**
      * @brief
+     *
+     * @param activeSetUpdateFrequency
+     * @return Data&
+     */
+    Data& WithActiveSetUpdateFrequency(Index activeSetUpdateFrequency);
+    /**
+     * @brief
      * @param zero
      * @return
      */
@@ -105,10 +119,11 @@ PBAT_API struct Data
     Data& Construct(bool bValidate = true);
 
   public:
-    MatrixX X; ///< 3x|#verts| FEM nodal positions
+    MatrixX X;      ///< 3x|#verts| FEM nodal positions
     IndexMatrixX E; ///< 4x|#elems| FEM linear tetrahedral elements
-    IndexVectorX V;  ///< Collision vertices
-    IndexMatrixX F;  ///< 3x|#collision triangles| collision triangles (on the boundary of T)
+    IndexVectorX B; ///< |#verts| array of body indices
+    IndexVectorX V; ///< Collision vertices
+    IndexMatrixX F; ///< 3x|#collision triangles| collision triangles (on the boundary of T)
 
     MatrixX x;    ///< 3x|#verts| vertex positions
     MatrixX v;    ///< 3x|#verts| vertex velocities
@@ -152,13 +167,8 @@ PBAT_API struct Data
         EInitializationStrategy::AdaptivePbat}; ///< BCD optimization initialization strategy
     Scalar kD{0};                               ///< Uniform damping coefficient
     Scalar kC{1};                               ///< Uniform collision penalty
+    Index mActiveSetUpdateFrequency{1};         ///< Active set update frequency
     Scalar detHZero{1e-7}; ///< Numerical zero for hessian pseudo-singularity check
-
-    VectorX psiE; ///< |#elements| array of elastic energies
-    MatrixX mGreenStrainsAtT; ///< 3x3*|#elems| array of element strain tensors at time t
-    MatrixX mGreenStrains; ///< 3x3*|#elems| array of element strain tensors at time t+dt
-    VectorX mStrainRates; ///< |#elems| array of element strain rates
-    IndexVectorX mStrainRateOrder; ///< |#elems| array of element strain rate sorted order
 };
 
 } // namespace vbd
