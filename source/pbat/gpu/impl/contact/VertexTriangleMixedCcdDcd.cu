@@ -211,7 +211,7 @@ void VertexTriangleMixedCcdDcd::FinalizeActiveSet(
             GpuScalar const sgn =
                 pbat::geometry::DistanceQueries::PointPlane(xv, xf.Col(0), xf.Col(1), xf.Col(2));
             // Remove inactive vertices
-            bool const bIsPenetrating = sgn <= GpuScalar(0);
+            bool const bIsPenetrating = sgn < GpuScalar(0);
             auto constexpr dmax       = std::numeric_limits<GpuScalar>::max();
             d[v]                      = bIsPenetrating * dmin + (not bIsPenetrating) * dmax;
             active[v]                 = bIsPenetrating;
