@@ -93,11 +93,14 @@ PBAT_API struct Data
      */
     Data& WithRayleighDamping(Scalar kD);
     /**
-     * @brief
-     * @param kC
-     * @return
+     * @brief 
+     * 
+     * @param muC 
+     * @param muF 
+     * @param epsv 
+     * @return Data& 
      */
-    Data& WithCollisionPenalty(Scalar kC);
+    Data& WithContactParameters(Scalar muC, Scalar muF, Scalar epsv);
     /**
      * @brief
      *
@@ -166,9 +169,12 @@ PBAT_API struct Data
     EInitializationStrategy strategy{
         EInitializationStrategy::AdaptivePbat}; ///< BCD optimization initialization strategy
     Scalar kD{0};                               ///< Uniform damping coefficient
-    Scalar kC{1};                               ///< Uniform collision penalty
-    Index mActiveSetUpdateFrequency{1};         ///< Active set update frequency
-    Scalar detHZero{1e-7}; ///< Numerical zero for hessian pseudo-singularity check
+    Scalar muC{1e6};                            ///< Uniform collision penalty
+    Scalar muF{0.3};                            ///< Uniform friction coefficient
+    Scalar epsv{1e-3}; ///< IPC's relative velocity threshold for static to dynamic friction's
+                       ///< smooth transition
+    Index mActiveSetUpdateFrequency{1}; ///< Active set update frequency
+    Scalar detHZero{1e-7};              ///< Numerical zero for hessian pseudo-singularity check
 };
 
 } // namespace vbd

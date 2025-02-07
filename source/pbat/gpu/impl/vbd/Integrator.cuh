@@ -183,8 +183,11 @@ class Integrator
     common::Buffer<GpuIndex> mVertexTetrahedronLocalVertexIndices; ///< Vertex-tetrahedron adjacency
                                                                    ///< list's ilocal property
 
-    GpuScalar mRayleighDamping;  ///< Rayleigh damping coefficient
-    GpuScalar mCollisionPenalty; ///< Collision penalty coefficient
+    GpuScalar mRayleighDamping;                         ///< Rayleigh damping coefficient
+    GpuScalar mCollisionPenalty;                        ///< Collision penalty coefficient
+    GpuScalar mFrictionCoefficient;                     ///< Coefficient of friction
+    GpuScalar mSmoothFrictionRelativeVelocityThreshold; ///< IPC smooth friction transition
+                                                        ///< function's relative velocity threshold
 
     GpuIndexVectorX mPptr; ///< |#partitions+1| partition pointers, s.t. the range [Pptr[p],
                            ///< Pptr[p+1]) indexes into Padj vertices from partition p

@@ -102,9 +102,11 @@ Data& Data::WithRayleighDamping(Scalar kDIn)
     return *this;
 }
 
-Data& Data::WithCollisionPenalty(Scalar kCIn)
+Data& Data::WithContactParameters(Scalar muCin, Scalar muFin, Scalar epsvIn)
 {
-    this->kC = kCIn;
+    this->muC  = muCin;
+    this->muF  = muFin;
+    this->epsv = epsvIn;
     return *this;
 }
 

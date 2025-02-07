@@ -90,6 +90,16 @@ if __name__ == "__main__":
         "--muC", help="Collision penalty", type=float, default=1e6, dest="muC"
     )
     parser.add_argument(
+        "--muF", help="Friction coefficient", type=float, default=0.3, dest="muF"
+    )
+    parser.add_argument(
+        "--epsv",
+        help="Relative tangential velocity threshold for contact constraints",
+        type=float,
+        default=1e-2,
+        dest="epsv",
+    )
+    parser.add_argument(
         "--use-gpu",
         help="Run GPU implementation of VBD",
         action="store_true",
@@ -147,7 +157,7 @@ if __name__ == "__main__":
         .with_initialization_strategy(
             pbat.sim.vbd.InitializationStrategy.KineticEnergyMinimum
         )
-        .with_collision_penalty(args.muC)
+        .with_contact_parameters(args.muC, args.muF, args.epsv)
         .construct(validate=True)
     )
     thread_block_size = 64

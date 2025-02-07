@@ -12,6 +12,7 @@
 #include "pbat/physics/HyperElasticity.h"
 
 #include <cmath>
+#include <limits>
 
 namespace pbat {
 namespace sim {
@@ -192,36 +193,51 @@ PBAT_HOST_DEVICE void AddDamping(
 /**
  * @brief
  *
+ * @tparam TMatrixXTV
  * @tparam TMatrixXV
+ * @tparam TMatrixXTF
  * @tparam TMatrixXF
  * @tparam TMatrixG
  * @tparam TMatrixH
  * @tparam TMatrixXV::ScalarType
- * @param xv
- * @param xf
- * @param muC
- * @param g
- * @param H
+ * @param xtv 3x1 vertex positions at time t
+ * @param xv 3x1 vertex positions
+ * @param xtf 3x1 triangle positions at time t
+ * @param xf 3x1 triangle positions
+ * @param dt Time step
+ * @param muC Collision penalty
+ * @param muF Friction coefficient
+ * @param epsv IPC's relative velocity threshold for static to dynamic friction's smooth transition
+ * @param g Vertex gradient
+ * @param H Vertex hessian
  * @return
  */
 template <
+    mini::CMatrix TMatrixXTV,
     mini::CMatrix TMatrixXV,
+    mini::CMatrix TMatrixXTF,
     mini::CMatrix TMatrixXF,
     mini::CMatrix TMatrixG,
     mini::CMatrix TMatrixH,
     class ScalarType = typename TMatrixXV::ScalarType>
 PBAT_HOST_DEVICE void AccumulateVertexTriangleContact(
+    TMatrixXTV const& xtv,
     TMatrixXV const& xv,
+    TMatrixXTF const& xtf,
     TMatrixXF const& xf,
+    ScalarType dt,
     ScalarType muC,
+    ScalarType muF,
+    ScalarType epsv,
     TMatrixG& g,
     TMatrixH& H)
 {
     using namespace mini;
     // Compute triangle normal
-    SMatrix<ScalarType, 3, 1> T1     = xf.Col(1) - xf.Col(0);
-    SMatrix<ScalarType, 3, 1> T2     = xf.Col(2) - xf.Col(0);
-    SMatrix<ScalarType, 3, 1> n      = Cross(T1, T2);
+    SMatrix<ScalarType, 3, 2> T{};
+    T.Col(0)                         = xf.Col(1) - xf.Col(0);
+    T.Col(1)                         = xf.Col(2) - xf.Col(0);
+    SVector<ScalarType, 3> n         = Cross(T.Col(0), T.Col(1));
     ScalarType const doublearea      = Norm(n);
     bool const bIsTriangleDegenerate = doublearea <= ScalarType(1e-8);
     if (bIsTriangleDegenerate)
@@ -229,10 +245,10 @@ PBAT_HOST_DEVICE void AccumulateVertexTriangleContact(
 
     n /= doublearea;
     using namespace pbat::geometry;
-    SMatrix<ScalarType, 3, 1> xc = ClosestPointQueries::PointOnPlane(xv, xf.Col(0), n);
+    SVector<ScalarType, 3> xc = ClosestPointQueries::PointOnPlane(xv, xf.Col(0), n);
     // Check if xv projects to the triangle's interior by checking its barycentric coordinates
-    SMatrix<ScalarType, 3, 1> b =
-        IntersectionQueries::TriangleBarycentricCoordinates(xc - xf.Col(0), T1, T2);
+    SVector<ScalarType, 3> b =
+        IntersectionQueries::TriangleBarycentricCoordinates(xc - xf.Col(0), T.Col(0), T.Col(1));
     // If xv doesn't project inside triangle, then we don't generate a contact response
     // clang-format off
     bool const bIsVertexInsideTriangle = 
@@ -243,12 +259,28 @@ PBAT_HOST_DEVICE void AccumulateVertexTriangleContact(
     if (not bIsVertexInsideTriangle)
         return;
 
-    // Energy is \frac{1}{2} muC [(xv - xb)^T n]^2
-    ScalarType const d = min(ScalarType(0), Dot(xv - xf * b, n));
+    // Collision energy is \frac{1}{2} \mu_C [(xv - xb)^T n]^2
+    SVector<ScalarType, 3> xb = xf * b;
+    ScalarType const d        = min(ScalarType(0), Dot(xv - xb, n));
+    SVector<ScalarType, 3> gn = muC * d * n;
     // Gradient is muC [(xv - xb)^T n] I_{d x d} n
-    g += muC * d * n;
+    g += gn;
     // Hessian is muC n n^T
     H += muC * (n * n.Transpose());
+
+    // IPC smooth friction energy is \mu_F
+    T.Col(1)                 = Cross(n, T.Col(0)); ///< Binormal
+    auto xtb                 = xtf * b;
+    auto dx                  = (xv - xtv) - (xb - xtb);
+    SVector<ScalarType, 2> u = T.Transpose() * dx;
+    ScalarType unorm         = Norm(u) + std::numeric_limits<ScalarType>::epsilon();
+    ScalarType lambda        = Dot(gn, n);
+    ScalarType uepsvh        = unorm / (epsv * dt);
+    ScalarType f1            = (uepsvh < 1) ? 2 * uepsvh - (uepsvh * uepsvh) : ScalarType(1);
+    // Gradient is \mu_F \lambda T f1 \frac{u}{\norm{u}}
+    ScalarType muFlambdaf1unorm = (muF * lambda * f1) / unorm;
+    g += muFlambdaf1unorm * T * u;
+    H += muFlambdaf1unorm * T * T.Transpose();
 }
 
 template <

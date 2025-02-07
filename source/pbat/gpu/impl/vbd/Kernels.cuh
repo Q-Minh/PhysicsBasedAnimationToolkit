@@ -41,8 +41,10 @@ struct BackwardEulerMinimization
     GpuIndex* GVTn;      ///< Vertex-tetrahedron adjacency list's neighbour list
     GpuIndex* GVTilocal; ///< Vertex-tetrahedron adjacency list's ilocal property
 
-    GpuScalar kD; ///< Rayleigh damping coefficient
-    GpuScalar kC; ///< Collision penalty
+    GpuScalar kD;   ///< Rayleigh damping coefficient
+    GpuScalar muC;  ///< Collision penalty
+    GpuScalar muF;  ///< Coefficient of friction
+    GpuScalar epsv; ///< IPC smooth friction transition function's relative velocity threshold
     static auto constexpr kMaxCollidingTrianglesPerVertex = 8;
     GpuIndex* fc;               ///< |#vertices|x|kMaxCollidingTrianglesPerVertex| array of
                                 ///< colliding triangles
@@ -111,7 +113,6 @@ __global__ void MinimizeBackwardEuler(BackwardEulerMinimization BDF)
     AddDamping(BDF.dt, xti, xi, BDF.kD, gi, Hi);
 
     // 3. Add contact energy
-    GpuScalar const muC                = BDF.kC;
     static auto constexpr kMaxContacts = BackwardEulerMinimization::kMaxCollidingTrianglesPerVertex;
     SVector<GpuIndex, kMaxContacts> f  = FromFlatBuffer<kMaxContacts, 1>(BDF.fc, i);
     for (auto c = 0; c < kMaxContacts; ++c)
@@ -120,8 +121,19 @@ __global__ void MinimizeBackwardEuler(BackwardEulerMinimization BDF)
         {
             using pbat::sim::vbd::kernels::AccumulateVertexTriangleContact;
             auto finds = FromBuffers<3, 1>(BDF.F, f(c));
+            auto xtf   = FromBuffers(BDF.xt, finds.Transpose());
             auto xf    = FromBuffers(BDF.x, finds.Transpose());
-            AccumulateVertexTriangleContact(xi, xf, muC, gi, Hi);
+            AccumulateVertexTriangleContact(
+                xti,
+                xi,
+                xtf,
+                xf,
+                BDF.dt,
+                BDF.muC,
+                BDF.muF,
+                BDF.epsv,
+                gi,
+                Hi);
         }
     }
 

@@ -46,7 +46,9 @@ Integrator::Integrator(Data const& data)
       mVertexTetrahedronNeighbours(data.GVGe.size()),
       mVertexTetrahedronLocalVertexIndices(data.GVGilocal.size()),
       mRayleighDamping(static_cast<GpuScalar>(data.kD)),
-      mCollisionPenalty(static_cast<GpuScalar>(data.kC)),
+      mCollisionPenalty(static_cast<GpuScalar>(data.muC)),
+      mFrictionCoefficient(static_cast<GpuScalar>(data.muF)),
+      mSmoothFrictionRelativeVelocityThreshold(static_cast<GpuScalar>(data.epsv)),
       mPptr(data.Pptr.cast<GpuIndex>()),
       mPadj(data.Padj.size()),
       mInitializationStrategy(data.strategy),
@@ -125,7 +127,9 @@ void Integrator::Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps, GpuS
     bdf.GVTn      = mVertexTetrahedronNeighbours.Raw();
     bdf.GVTilocal = mVertexTetrahedronLocalVertexIndices.Raw();
     bdf.kD        = mRayleighDamping;
-    bdf.kC        = mCollisionPenalty;
+    bdf.muC       = mCollisionPenalty;
+    bdf.muF       = mFrictionCoefficient;
+    bdf.epsv      = mSmoothFrictionRelativeVelocityThreshold;
     bdf.fc        = fc.Raw();
     bdf.F         = cd.F.Raw();
 

@@ -83,7 +83,18 @@ void BindData(pybind11::module& m)
             &Data::WithInitializationStrategy,
             pyb::arg("strategy"))
         .def("with_rayleigh_damping", &Data::WithRayleighDamping, pyb::arg("kD"))
-        .def("with_collision_penalty", &Data::WithCollisionPenalty, pyb::arg("kC"))
+        .def(
+            "with_contact_parameters",
+            &Data::WithContactParameters,
+            pyb::arg("muC"),
+            pyb::arg("muF"),
+            pyb::arg("epsv"),
+            "Sets the variational contact model's parameters.\n\n"
+            "Args:\n"
+            "    muC (float): Collision penalty\n"
+            "    muF (float): Friction coefficient\n"
+            "    epsv (float): IPC's relative velocity threshold for static to dynamic friction's "
+            "smooth transition.")
         .def(
             "with_active_set_update_frequency",
             &Data::WithActiveSetUpdateFrequency,
@@ -119,7 +130,9 @@ void BindData(pybind11::module& m)
         .def_readwrite("Padj", &Data::Padj)
         .def_readwrite("strategy", &Data::strategy)
         .def_readwrite("kD", &Data::kD)
-        .def_readwrite("kC", &Data::kC)
+        .def_readwrite("muC", &Data::muC)
+        .def_readwrite("muF", &Data::muF)
+        .def_readwrite("epsv", &Data::epsv)
         .def_readwrite("detH_zero", &Data::detHZero);
 }
 
