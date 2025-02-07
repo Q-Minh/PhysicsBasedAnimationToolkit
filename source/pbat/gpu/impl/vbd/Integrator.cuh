@@ -152,13 +152,19 @@ class Integrator
     Eigen::Vector<GpuScalar, 3> mWorldMax; ///< World AABB max
     GpuIndex mActiveSetUpdateFrequency;    ///< Active set update frequency
     contact::VertexTriangleMixedCcdDcd cd; ///< Collision detector
+    common::Buffer<GpuIndex>
+        fc; ///< |#verts*kMaxCollidingTrianglesPerVertex| array of vertex-triangle contact pairs
+            ///< (i,f), s.t. f = fc[i*kMaxCollidingTrianglesPerVertex+c] for 0 <= c <
+            ///< kMaxCollidingTrianglesPerVertex. If f(c) < 0, there is no contact, and f(c+j) < 0
+            ///< is also true, for j > 0.
 
     common::Buffer<GpuScalar, 3> mPositionsAtT;            ///< Previous vertex positions
     common::Buffer<GpuScalar, 3> mInertialTargetPositions; ///< Inertial target for vertex positions
     common::Buffer<GpuScalar, 3>
         mChebyshevPositionsM2; ///< x^{k-2} used in Chebyshev semi-iterative method
     common::Buffer<GpuScalar, 3>
-        mChebyshevPositionsM1; ///< x^{k-1} used in Chebyshev semi-iterative method
+        mChebyshevPositionsM1;       ///< x^{k-1} used in Chebyshev semi-iterative method
+    common::Buffer<GpuScalar, 3> xb; ///< Write buffer for positions which handles data races
     common::Buffer<GpuScalar, 3> mVelocitiesAtT;        ///< Previous vertex velocities
     common::Buffer<GpuScalar, 3> mVelocities;           ///< Current vertex velocities
     common::Buffer<GpuScalar, 3> mExternalAcceleration; ///< External acceleration

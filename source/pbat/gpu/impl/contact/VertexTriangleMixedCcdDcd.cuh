@@ -81,18 +81,18 @@ class VertexTriangleMixedCcdDcd
     void UpdateBvh(common::Buffer<GpuScalar, 3> const& x);
 
   public:
-    common::Buffer<GpuIndex> av;   ///< Active vertices (i.e. indices of active points)
+    common::Buffer<GpuIndex> av;   ///< Active vertices
     GpuIndex nActive;              ///< Number of active vertices
-    common::Buffer<GpuIndex> nn;   ///< |#verts*kMaxNeighbours| nearest neighbours f to pts i.
-                                   ///< nn[i*kMaxNeighbours+j] < 0 if no neighbour
+    common::Buffer<GpuIndex> nn;   ///< |#verts*kMaxNeighbours| nearest neighbours f to vertices v.
+                                   ///< nn[v*kMaxNeighbours+j] < 0 if no neighbour
     common::Buffer<GpuIndex> B;    ///< |#pts| body map
     common::Buffer<GpuIndex> V;    ///< Vertices
     common::Buffer<GpuIndex, 3> F; ///< Triangles
 
-    common::Buffer<GpuIndex> inds; ///< |#verts| point indices i
-    geometry::Morton morton;       ///< |#verts| morton codes for points
+    common::Buffer<GpuIndex> inds; ///< |#verts| vertex indices v
+    geometry::Morton morton;       ///< |#verts| morton codes for vertices
     geometry::Aabb<kDims>
-        Paabbs; ///< |#verts| axis-aligned bounding boxes of swept points (i.e. line segments)
+        Paabbs; ///< |#verts| axis-aligned bounding boxes of swept vertices (i.e. line segments)
     geometry::Aabb<kDims>
         Faabbs;         ///< |#tris| axis-aligned bounding boxes of (potentially swept) triangles
     geometry::Bvh Fbvh; ///< Bounding volume hierarchy over (potentially swept) triangles

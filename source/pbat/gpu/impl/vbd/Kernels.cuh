@@ -1,5 +1,5 @@
-#ifndef PBAT_GPU_VBD_KERNELS_CUH
-#define PBAT_GPU_VBD_KERNELS_CUH
+#ifndef PBAT_GPU_IMPL_VBD_KERNELS_H
+#define PBAT_GPU_IMPL_VBD_KERNELS_H
 
 #include "pbat/HostDevice.h"
 #include "pbat/gpu/Aliases.h"
@@ -28,6 +28,7 @@ struct BackwardEulerMinimization
     std::array<GpuScalar*, 3> xtilde; ///< Inertial target
     std::array<GpuScalar*, 3> xt;     ///< Previous vertex positions
     std::array<GpuScalar*, 3> x;      ///< Vertex positions
+    std::array<GpuScalar*, 3> xb;     ///< Vertex position write buffer
 
     std::array<GpuIndex*, 4> T; ///< 4x|#elements| array of tetrahedra
     GpuScalar* wg;              ///< |#elements| array of quadrature weights
@@ -40,14 +41,12 @@ struct BackwardEulerMinimization
     GpuIndex* GVTn;      ///< Vertex-tetrahedron adjacency list's neighbour list
     GpuIndex* GVTilocal; ///< Vertex-tetrahedron adjacency list's ilocal property
 
-    GpuScalar kD;                             ///< Rayleigh damping coefficient
-    GpuScalar kC;                             ///< Collision penalty
-    GpuIndex nMaxCollidingTrianglesPerVertex; ///< Memory capacity for storing vertex triangle
-                                              ///< collision constraints
-    GpuIndex* FC; ///< |#vertices|x|nMaxCollidingTrianglesPerVertex| array of colliding triangles
-    GpuIndex* nCollidingTriangles; ///< |#vertices| array of the number of colliding triangles
-                                   ///< for each vertex.
-    std::array<GpuIndex*, 3> F;    ///< 3x|#collision triangles| array of triangles
+    GpuScalar kD; ///< Rayleigh damping coefficient
+    GpuScalar kC; ///< Collision penalty
+    static auto constexpr kMaxCollidingTrianglesPerVertex = 8;
+    GpuIndex* fc;               ///< |#vertices|x|kMaxCollidingTrianglesPerVertex| array of
+                                ///< colliding triangles
+    std::array<GpuIndex*, 3> F; ///< 3x|#collision triangles| array of triangles
 
     GpuIndex*
         partition; ///< List of vertex indices that can be processed independently, i.e. in parallel
@@ -104,19 +103,37 @@ __global__ void MinimizeBackwardEuler(BackwardEulerMinimization BDF)
     auto Hi = Hgi.Slice<3, 3>(0, 0);
     auto gi = Hgi.Col(3);
 
-    // 3. Time integrate vertex position
-    GpuScalar mi                  = BDF.m[i];
-    SVector<GpuScalar, 3> xti     = FromBuffers<3, 1>(BDF.xt, i);
-    SVector<GpuScalar, 3> xitilde = FromBuffers<3, 1>(BDF.xtilde, i);
-    SVector<GpuScalar, 3> xi      = FromBuffers<3, 1>(BDF.x, i);
+    // 3. Add stiffness damping
+    GpuScalar mi              = BDF.m[i];
+    SVector<GpuScalar, 3> xti = FromBuffers<3, 1>(BDF.xt, i);
+    SVector<GpuScalar, 3> xi  = FromBuffers<3, 1>(BDF.x, i);
     using pbat::sim::vbd::kernels::AddDamping;
-    using pbat::sim::vbd::kernels::AddInertiaDerivatives;
     AddDamping(BDF.dt, xti, xi, BDF.kD, gi, Hi);
+
+    // 3. Add contact energy
+    GpuScalar const muC                = BDF.kC;
+    static auto constexpr kMaxContacts = BackwardEulerMinimization::kMaxCollidingTrianglesPerVertex;
+    SVector<GpuIndex, kMaxContacts> f  = FromFlatBuffer<kMaxContacts, 1>(BDF.fc, i);
+    for (auto c = 0; c < kMaxContacts; ++c)
+    {
+        if (f(c) >= 0)
+        {
+            using pbat::sim::vbd::kernels::AccumulateVertexTriangleContact;
+            auto finds = FromBuffers<3, 1>(BDF.F, f(c));
+            auto xf    = FromBuffers(BDF.x, finds.Transpose());
+            AccumulateVertexTriangleContact(xi, xf, muC, gi, Hi);
+        }
+    }
+
+    // 4. Add inertial term
+    SVector<GpuScalar, 3> xitilde = FromBuffers<3, 1>(BDF.xtilde, i);
+    using pbat::sim::vbd::kernels::AddInertiaDerivatives;
     AddInertiaDerivatives(BDF.dt2, mi, xitilde, xi, gi, Hi);
-    // 4. Integrate positions
+
+    // 5. Integrate positions
     using pbat::sim::vbd::kernels::IntegratePositions;
     IntegratePositions(gi, Hi, xi, BDF.detHZero);
-    ToBuffers(xi, BDF.x, i);
+    ToBuffers(xi, BDF.xb, i);
 };
 
 } // namespace kernels
@@ -125,4 +142,4 @@ __global__ void MinimizeBackwardEuler(BackwardEulerMinimization BDF)
 } // namespace gpu
 } // namespace pbat
 
-#endif // PBAT_GPU_VBD_KERNELS_CUH
+#endif // PBAT_GPU_IMPL_VBD_KERNELS_H

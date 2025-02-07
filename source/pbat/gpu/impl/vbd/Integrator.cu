@@ -24,12 +24,16 @@ namespace vbd {
 Integrator::Integrator(Data const& data)
     : x(data.x.cols()),
       T(data.E.cols()),
+      mWorldMin(),
+      mWorldMax(),
       cd(data.B.cast<GpuIndex>(), data.V.cast<GpuIndex>(), data.F.cast<GpuIndex>()),
+      fc(data.x.cols() * kernels::BackwardEulerMinimization::kMaxCollidingTrianglesPerVertex),
       mActiveSetUpdateFrequency(static_cast<GpuIndex>(data.mActiveSetUpdateFrequency)),
       mPositionsAtT(data.xt.cols()),
       mInertialTargetPositions(data.xtilde.cols()),
       mChebyshevPositionsM2(data.xchebm2.cols()),
       mChebyshevPositionsM1(data.xchebm1.cols()),
+      xb(data.x.cols()),
       mVelocitiesAtT(data.vt.cols()),
       mVelocities(data.v.cols()),
       mExternalAcceleration(data.aext.cols()),
@@ -53,6 +57,9 @@ Integrator::Integrator(Data const& data)
     common::ToBuffer(data.x, x);
     mPositionsAtT = x;
     common::ToBuffer(data.E, T);
+
+    fc.SetConstant(GpuIndex(-1));
+
     common::ToBuffer(data.v, mVelocities);
     common::ToBuffer(data.aext, mExternalAcceleration);
     common::ToBuffer(data.m, mMass);
@@ -102,28 +109,32 @@ void Integrator::Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps, GpuS
     cd.InitializeActiveSet(mPositionsAtT, x, FromEigen(mWorldMin), FromEigen(mWorldMax));
 
     kernels::BackwardEulerMinimization bdf{};
-    bdf.dt                              = sdt;
-    bdf.dt2                             = sdt2;
-    bdf.m                               = mMass.Raw();
-    bdf.xtilde                          = mInertialTargetPositions.Raw();
-    bdf.xt                              = mPositionsAtT.Raw();
-    bdf.x                               = x.Raw();
-    bdf.T                               = T.Raw();
-    bdf.wg                              = mQuadratureWeights.Raw();
-    bdf.GP                              = mShapeFunctionGradients.Raw();
-    bdf.lame                            = mLameCoefficients.Raw();
-    bdf.detHZero                        = mDetHZero;
-    bdf.GVTp                            = mVertexTetrahedronPrefix.Raw();
-    bdf.GVTn                            = mVertexTetrahedronNeighbours.Raw();
-    bdf.GVTilocal                       = mVertexTetrahedronLocalVertexIndices.Raw();
-    bdf.kD                              = mRayleighDamping;
-    bdf.kC                              = mCollisionPenalty;
-    bdf.nMaxCollidingTrianglesPerVertex = cd.kMaxNeighbours;
-    bdf.F                               = cd.F.Raw();
+    bdf.dt        = sdt;
+    bdf.dt2       = sdt2;
+    bdf.m         = mMass.Raw();
+    bdf.xtilde    = mInertialTargetPositions.Raw();
+    bdf.xt        = mPositionsAtT.Raw();
+    bdf.x         = x.Raw();
+    bdf.xb        = xb.Raw();
+    bdf.T         = T.Raw();
+    bdf.wg        = mQuadratureWeights.Raw();
+    bdf.GP        = mShapeFunctionGradients.Raw();
+    bdf.lame      = mLameCoefficients.Raw();
+    bdf.detHZero  = mDetHZero;
+    bdf.GVTp      = mVertexTetrahedronPrefix.Raw();
+    bdf.GVTn      = mVertexTetrahedronNeighbours.Raw();
+    bdf.GVTilocal = mVertexTetrahedronLocalVertexIndices.Raw();
+    bdf.kD        = mRayleighDamping;
+    bdf.kC        = mCollisionPenalty;
+    bdf.fc        = fc.Raw();
+    bdf.F         = cd.F.Raw();
 
     for (auto s = 0; s < substeps; ++s)
     {
-        using namespace pbat::math::linalg::mini;
+        using pbat::math::linalg::mini::FromBuffers;
+        using pbat::math::linalg::mini::FromFlatBuffer;
+        using pbat::math::linalg::mini::ToBuffers;
+        using pbat::math::linalg::mini::ToFlatBuffer;
         // Compute inertial target positions
         thrust::for_each(
             thrust::device,
@@ -170,7 +181,29 @@ void Integrator::Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps, GpuS
             });
         // Update active set
         if (s % mActiveSetUpdateFrequency == 0)
+        {
             cd.UpdateActiveSet(x);
+            static auto constexpr kMaxContacts =
+                kernels::BackwardEulerMinimization::kMaxCollidingTrianglesPerVertex;
+            static auto constexpr kMaxNeighbours =
+                contact::VertexTriangleMixedCcdDcd::kMaxNeighbours;
+            thrust::for_each(
+                thrust::device,
+                cd.av.Data(),
+                cd.av.Data() + cd.nActive,
+                [V = cd.V.Raw(), nn = cd.nn.Raw(), fc = fc.Raw()] PBAT_DEVICE(GpuIndex v) {
+                    using namespace pbat::math::linalg::mini;
+                    GpuIndex i = V[v];
+                    SVector<GpuIndex, kMaxNeighbours> nnv =
+                        FromFlatBuffer<kMaxNeighbours, 1>(nn, v);
+                    SVector<GpuIndex, kMaxContacts> f = -Ones<GpuIndex, kMaxContacts, 1>();
+                    auto const top                    = min(kMaxContacts, kMaxNeighbours);
+                    for (auto c = 0; c < top; ++c)
+                        if (nnv(c) >= 0)
+                            f(c) = nnv(c);
+                    ToFlatBuffer(f, fc, i);
+                });
+        }
         // Initialize Chebyshev semi-iterative method
         GpuScalar rho2 = rho * rho;
         GpuScalar omega{};
@@ -209,6 +242,15 @@ void Integrator::Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps, GpuS
                             bdf);
                     }
                 });
+                // Copy xb back to x
+                thrust::for_each(
+                    thrust::device,
+                    bdf.partition,
+                    bdf.partition + nVerticesInPartition,
+                    [xb = xb.Raw(), x = x.Raw()] PBAT_DEVICE(GpuIndex i) {
+                        using namespace pbat::math::linalg::mini;
+                        ToBuffers(FromBuffers<3, 1>(xb, i), x, i);
+                    });
             }
 
             if (bUseChebyshevAcceleration)
@@ -257,11 +299,13 @@ void Integrator::Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps, GpuS
 void Integrator::SetPositions(Eigen::Ref<GpuMatrixX const> const& Xin)
 {
     common::ToBuffer(Xin, x);
+    mPositionsAtT = x;
 }
 
 void Integrator::SetVelocities(Eigen::Ref<GpuMatrixX const> const& v)
 {
     common::ToBuffer(v, mVelocities);
+    mVelocitiesAtT = mVelocities;
 }
 
 void Integrator::SetExternalAcceleration(Eigen::Ref<GpuMatrixX const> const& aext)
@@ -415,7 +459,11 @@ TEST_CASE("[gpu][impl][vbd] Integrator")
 
     // Act
     using pbat::gpu::impl::vbd::Integrator;
-    Integrator vbd{sim::vbd::Data().WithVolumeMesh(P, T).WithSurfaceMesh(V, F).Construct()};
+    Integrator vbd{sim::vbd::Data()
+                       .WithVolumeMesh(P, T)
+                       .WithSurfaceMesh(V, F)
+                       .WithBodies(IndexVectorX::Ones(P.cols()))
+                       .Construct()};
     vbd.SetSceneBoundingBox(worldMin, worldMax);
     vbd.Step(dt, iterations, substeps);
 

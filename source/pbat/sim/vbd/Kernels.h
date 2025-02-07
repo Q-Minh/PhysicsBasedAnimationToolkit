@@ -6,6 +6,8 @@
 #include "pbat/common/ConstexprFor.h"
 #include "pbat/fem/DeformationGradient.h"
 #include "pbat/fem/Tetrahedron.h"
+#include "pbat/geometry/ClosestPointQueries.h"
+#include "pbat/geometry/IntersectionQueries.h"
 #include "pbat/math/linalg/mini/Mini.h"
 #include "pbat/physics/HyperElasticity.h"
 
@@ -187,6 +189,68 @@ PBAT_HOST_DEVICE void AddDamping(
     H *= ScalarType{1} + D;
 }
 
+/**
+ * @brief
+ *
+ * @tparam TMatrixXV
+ * @tparam TMatrixXF
+ * @tparam TMatrixG
+ * @tparam TMatrixH
+ * @tparam TMatrixXV::ScalarType
+ * @param xv
+ * @param xf
+ * @param muC
+ * @param g
+ * @param H
+ * @return
+ */
+template <
+    mini::CMatrix TMatrixXV,
+    mini::CMatrix TMatrixXF,
+    mini::CMatrix TMatrixG,
+    mini::CMatrix TMatrixH,
+    class ScalarType = typename TMatrixXV::ScalarType>
+PBAT_HOST_DEVICE void AccumulateVertexTriangleContact(
+    TMatrixXV const& xv,
+    TMatrixXF const& xf,
+    ScalarType muC,
+    TMatrixG& g,
+    TMatrixH& H)
+{
+    using namespace mini;
+    // Compute triangle normal
+    SMatrix<ScalarType, 3, 1> T1     = xf.Col(1) - xf.Col(0);
+    SMatrix<ScalarType, 3, 1> T2     = xf.Col(2) - xf.Col(0);
+    SMatrix<ScalarType, 3, 1> n      = Cross(T1, T2);
+    ScalarType const doublearea      = Norm(n);
+    bool const bIsTriangleDegenerate = doublearea <= ScalarType(1e-8);
+    if (bIsTriangleDegenerate)
+        return;
+
+    n /= doublearea;
+    using namespace pbat::geometry;
+    SMatrix<ScalarType, 3, 1> xc = ClosestPointQueries::PointOnPlane(xv, xf.Col(0), n);
+    // Check if xv projects to the triangle's interior by checking its barycentric coordinates
+    SMatrix<ScalarType, 3, 1> b =
+        IntersectionQueries::TriangleBarycentricCoordinates(xc - xf.Col(0), T1, T2);
+    // If xv doesn't project inside triangle, then we don't generate a contact response
+    // clang-format off
+    bool const bIsVertexInsideTriangle = 
+        (b(0) >= ScalarType(0)) and (b(0) <= ScalarType(1)) and
+        (b(1) >= ScalarType(0)) and (b(1) <= ScalarType(1)) and
+        (b(2) >= ScalarType(0)) and (b(2) <= ScalarType(1));
+    // clang-format on
+    if (not bIsVertexInsideTriangle)
+        return;
+
+    // Energy is \frac{1}{2} muC [(xv - xb)^T n]^2
+    ScalarType const d = min(ScalarType(0), Dot(xv - xf * b, n));
+    // Gradient is muC [(xv - xb)^T n] I_{d x d} n
+    g += muC * d * n;
+    // Hessian is muC n n^T
+    H += muC * (n * n.Transpose());
+}
+
 template <
     mini::CMatrix TMatrixXTL,
     mini::CMatrix TMatrixX,
@@ -223,6 +287,7 @@ PBAT_HOST_DEVICE void IntegratePositions(
         return;
     x -= (Inverse(H) * g);
 }
+
 } // namespace kernels
 } // namespace vbd
 } // namespace sim

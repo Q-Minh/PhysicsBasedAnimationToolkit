@@ -87,6 +87,9 @@ if __name__ == "__main__":
         dest="fixed_end",
     )
     parser.add_argument(
+        "--muC", help="Collision penalty", type=float, default=1e6, dest="muC"
+    )
+    parser.add_argument(
         "--use-gpu",
         help="Run GPU implementation of VBD",
         action="store_true",
@@ -144,6 +147,7 @@ if __name__ == "__main__":
         .with_initialization_strategy(
             pbat.sim.vbd.InitializationStrategy.KineticEnergyMinimum
         )
+        .with_collision_penalty(args.muC)
         .construct(validate=True)
     )
     thread_block_size = 64
