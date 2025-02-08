@@ -115,26 +115,28 @@ __global__ void MinimizeBackwardEuler(BackwardEulerMinimization BDF)
     // 3. Add contact energy
     static auto constexpr kMaxContacts = BackwardEulerMinimization::kMaxCollidingTrianglesPerVertex;
     SVector<GpuIndex, kMaxContacts> f  = FromFlatBuffer<kMaxContacts, 1>(BDF.fc, i);
-    for (auto c = 0; c < kMaxContacts; ++c)
+    auto nContacts               = Dot(Ones<GpuIndex, kMaxContacts>(), f >= 0);
+    GpuScalar muC = BDF.muC / nContacts;
+    for (auto c = 0; c < nContacts; ++c)
     {
-        if (f(c) >= 0)
-        {
-            using pbat::sim::vbd::kernels::AccumulateVertexTriangleContact;
-            auto finds = FromBuffers<3, 1>(BDF.F, f(c));
-            auto xtf   = FromBuffers(BDF.xt, finds.Transpose());
-            auto xf    = FromBuffers(BDF.x, finds.Transpose());
-            AccumulateVertexTriangleContact(
-                xti,
-                xi,
-                xtf,
-                xf,
-                BDF.dt,
-                BDF.muC,
-                BDF.muF,
-                BDF.epsv,
-                gi,
-                Hi);
-        }
+        if (f(c) < 0)
+            break;
+
+        using pbat::sim::vbd::kernels::AccumulateVertexTriangleContact;
+        auto finds = FromBuffers<3, 1>(BDF.F, f(c));
+        auto xtf   = FromBuffers(BDF.xt, finds.Transpose());
+        auto xf    = FromBuffers(BDF.x, finds.Transpose());
+        AccumulateVertexTriangleContact(
+            xti,
+            xi,
+            xtf,
+            xf,
+            BDF.dt,
+            muC,
+            BDF.muF,
+            BDF.epsv,
+            gi,
+            Hi);
     }
 
     // 4. Add inertial term

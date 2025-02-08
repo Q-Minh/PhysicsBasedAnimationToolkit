@@ -251,20 +251,17 @@ PBAT_HOST_DEVICE void AccumulateVertexTriangleContact(
         IntersectionQueries::TriangleBarycentricCoordinates(xc - xf.Col(0), T.Col(0), T.Col(1));
     // If xv doesn't project inside triangle, then we don't generate a contact response
     // clang-format off
-    bool const bIsVertexInsideTriangle = 
-        (b(0) >= ScalarType(0)) and (b(0) <= ScalarType(1)) and
-        (b(1) >= ScalarType(0)) and (b(1) <= ScalarType(1)) and
-        (b(2) >= ScalarType(0)) and (b(2) <= ScalarType(1));
+    bool const bIsVertexInsideTriangle = All(b >= ScalarType(0) and b <= ScalarType(1));
     // clang-format on
     if (not bIsVertexInsideTriangle)
         return;
 
     // Collision energy is \frac{1}{2} \mu_C [(xv - xb)^T n]^2
     SVector<ScalarType, 3> xb = xf * b;
-    ScalarType const d        = min(ScalarType(0), Dot(xv - xb, n));
-    SVector<ScalarType, 3> gn = muC * d * n;
+    ScalarType d              = min(ScalarType(0), Dot(xv - xb, n));
+    ScalarType lambda         = muC * d;
     // Gradient is muC [(xv - xb)^T n] I_{d x d} n
-    g += gn;
+    g += lambda * n;
     // Hessian is muC n n^T
     H += muC * (n * n.Transpose());
 
@@ -274,11 +271,10 @@ PBAT_HOST_DEVICE void AccumulateVertexTriangleContact(
     auto dx                  = (xv - xtv) - (xb - xtb);
     SVector<ScalarType, 2> u = T.Transpose() * dx;
     ScalarType unorm         = Norm(u) + std::numeric_limits<ScalarType>::epsilon();
-    ScalarType lambda        = Dot(gn, n);
     ScalarType uepsvh        = unorm / (epsv * dt);
     ScalarType f1            = (uepsvh < 1) ? 2 * uepsvh - (uepsvh * uepsvh) : ScalarType(1);
     // Gradient is \mu_F \lambda T f1 \frac{u}{\norm{u}}
-    ScalarType muFlambdaf1unorm = (muF * lambda * f1) / unorm;
+    ScalarType muFlambdaf1unorm = (muF * abs(lambda) * f1) / unorm;
     g += muFlambdaf1unorm * T * u;
     H += muFlambdaf1unorm * T * T.Transpose();
 }

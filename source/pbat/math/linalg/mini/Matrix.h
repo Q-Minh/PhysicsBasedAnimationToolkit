@@ -17,7 +17,7 @@ namespace math {
 namespace linalg {
 namespace mini {
 
-template <class TScalar, int M, int N>
+template <class TScalar, int M, int N=1>
 class Ones
 {
   public:
