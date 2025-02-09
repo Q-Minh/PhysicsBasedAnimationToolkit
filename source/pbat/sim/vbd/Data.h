@@ -93,12 +93,12 @@ PBAT_API struct Data
      */
     Data& WithRayleighDamping(Scalar kD);
     /**
-     * @brief 
-     * 
-     * @param muC 
-     * @param muF 
-     * @param epsv 
-     * @return Data& 
+     * @brief
+     *
+     * @param muC
+     * @param muF
+     * @param epsv
+     * @return Data&
      */
     Data& WithContactParameters(Scalar muC, Scalar muF, Scalar epsv);
     /**
@@ -127,6 +127,8 @@ PBAT_API struct Data
     IndexVectorX B; ///< |#verts| array of body indices
     IndexVectorX V; ///< Collision vertices
     IndexMatrixX F; ///< 3x|#collision triangles| collision triangles (on the boundary of T)
+    VectorX XVA;    ///< |#verts| vertex areas (i.e. triangle areas distributed onto vertices for
+                 ///< boundary integration)
 
     MatrixX x;    ///< 3x|#verts| vertex positions
     MatrixX v;    ///< 3x|#verts| vertex velocities

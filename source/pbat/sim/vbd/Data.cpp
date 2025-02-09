@@ -9,6 +9,7 @@
 #include "pbat/graph/Mesh.h"
 #include "pbat/physics/HyperElasticity.h"
 
+#include <Eigen/Geometry>
 #include <algorithm>
 #include <exception>
 #include <fmt/format.h>
@@ -32,8 +33,19 @@ Data& Data::WithSurfaceMesh(
     Eigen::Ref<IndexVectorX const> const& Vin,
     Eigen::Ref<IndexMatrixX const> const& Fin)
 {
-    this->V = Vin;
-    this->F = Fin;
+    this->V  = Vin;
+    this->F  = Fin;
+    auto FAB = X(Eigen::placeholders::all, F.row(1)) - X(Eigen::placeholders::all, F.row(0));
+    auto FAC = X(Eigen::placeholders::all, F.row(2)) - X(Eigen::placeholders::all, F.row(0));
+    XVA.setZero(X.cols());
+    for (auto f = 0; f < F.cols(); ++f)
+    {
+        auto AB      = FAB.col(f).head<3>().eval();
+        auto AC      = FAC.col(f).head<3>().eval();
+        auto dblarea = AB.cross(AC).norm();
+        for (auto i : F.col(f))
+            XVA(i) += dblarea / 6;
+    }
     return *this;
 }
 
