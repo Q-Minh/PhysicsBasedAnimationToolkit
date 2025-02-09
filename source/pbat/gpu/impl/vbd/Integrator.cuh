@@ -158,6 +158,7 @@ class Integrator
             ///< kMaxCollidingTrianglesPerVertex. If f(c) < 0, there is no contact, and f(c+j) < 0
             ///< is also true, for j > 0.
     common::Buffer<GpuScalar> XVA; ///< |x.Size()| array of vertex areas for contact response
+    common::Buffer<GpuScalar> FA;  ///< |F.Size()| array of triangle areas for contact response
 
     common::Buffer<GpuScalar, 3> mPositionsAtT;            ///< Previous vertex positions
     common::Buffer<GpuScalar, 3> mInertialTargetPositions; ///< Inertial target for vertex positions

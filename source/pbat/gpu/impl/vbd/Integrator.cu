@@ -29,6 +29,7 @@ Integrator::Integrator(Data const& data)
       cd(data.B.cast<GpuIndex>(), data.V.cast<GpuIndex>(), data.F.cast<GpuIndex>()),
       fc(data.x.cols() * kernels::BackwardEulerMinimization::kMaxCollidingTrianglesPerVertex),
       XVA(data.XVA.size()),
+      FA(data.FA.size()),
       mActiveSetUpdateFrequency(static_cast<GpuIndex>(data.mActiveSetUpdateFrequency)),
       mPositionsAtT(data.xt.cols()),
       mInertialTargetPositions(data.xtilde.cols()),
@@ -63,6 +64,7 @@ Integrator::Integrator(Data const& data)
 
     fc.SetConstant(GpuIndex(-1));
     common::ToBuffer(data.XVA, XVA);
+    common::ToBuffer(data.FA, FA);
 
     common::ToBuffer(data.v, mVelocities);
     common::ToBuffer(data.aext, mExternalAcceleration);
@@ -135,6 +137,7 @@ void Integrator::Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps, GpuS
     bdf.fc        = fc.Raw();
     bdf.F         = cd.F.Raw();
     bdf.XVA       = XVA.Raw();
+    bdf.FA        = FA.Raw();
 
     for (auto s = 0; s < substeps; ++s)
     {

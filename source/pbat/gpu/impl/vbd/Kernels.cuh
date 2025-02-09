@@ -50,6 +50,7 @@ struct BackwardEulerMinimization
                                 ///< colliding triangles
     std::array<GpuIndex*, 3> F; ///< 3x|#collision triangles| array of triangles
     GpuScalar* XVA;             ///< |#vertices| array of vertex areas
+    GpuScalar* FA;              ///< |#collision triangles| array of face areas
 
     GpuIndex*
         partition; ///< List of vertex indices that can be processed independently, i.e. in parallel
@@ -117,17 +118,28 @@ __global__ void MinimizeBackwardEuler(BackwardEulerMinimization BDF)
     static auto constexpr kMaxContacts = BackwardEulerMinimization::kMaxCollidingTrianglesPerVertex;
     SVector<GpuIndex, kMaxContacts> f  = FromFlatBuffer<kMaxContacts, 1>(BDF.fc, i);
     auto nContacts                     = Dot(Ones<GpuIndex, kMaxContacts>(), f >= 0);
-    GpuScalar muC                      = (BDF.XVA[i] * BDF.muC) / nContacts;
+    SVector<GpuScalar, kMaxContacts> fa = Zeros<GpuIndex, kMaxContacts>();
+    for (auto c = 0; c < nContacts; ++c)
+        fa(c) = BDF.FA[f(c)];
+    auto sumfa    = Dot(fa, Ones<GpuScalar, kMaxContacts>());
+    GpuScalar muC = (BDF.XVA[i] * BDF.muC) / sumfa;
     for (auto c = 0; c < nContacts; ++c)
     {
-        if (f(c) < 0)
-            break;
-
         using pbat::sim::vbd::kernels::AccumulateVertexTriangleContact;
         auto finds = FromBuffers<3, 1>(BDF.F, f(c));
         auto xtf   = FromBuffers(BDF.xt, finds.Transpose());
         auto xf    = FromBuffers(BDF.x, finds.Transpose());
-        AccumulateVertexTriangleContact(xti, xi, xtf, xf, BDF.dt, muC, BDF.muF, BDF.epsv, gi, Hi);
+        AccumulateVertexTriangleContact(
+            xti,
+            xi,
+            xtf,
+            xf,
+            BDF.dt,
+            fa(c) * muC,
+            BDF.muF,
+            BDF.epsv,
+            gi,
+            Hi);
     }
 
     // 4. Add inertial term

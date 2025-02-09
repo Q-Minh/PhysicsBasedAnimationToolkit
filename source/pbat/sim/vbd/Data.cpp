@@ -38,6 +38,7 @@ Data& Data::WithSurfaceMesh(
     auto FAB = X(Eigen::placeholders::all, F.row(1)) - X(Eigen::placeholders::all, F.row(0));
     auto FAC = X(Eigen::placeholders::all, F.row(2)) - X(Eigen::placeholders::all, F.row(0));
     XVA.setZero(X.cols());
+    FA.resize(F.cols());
     for (auto f = 0; f < F.cols(); ++f)
     {
         auto AB      = FAB.col(f).head<3>().eval();
@@ -45,6 +46,7 @@ Data& Data::WithSurfaceMesh(
         auto dblarea = AB.cross(AC).norm();
         for (auto i : F.col(f))
             XVA(i) += dblarea / 6;
+        FA(f) = dblarea / 2;
     }
     return *this;
 }
