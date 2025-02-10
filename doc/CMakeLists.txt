@@ -1,8 +1,8 @@
 find_package(Doxygen REQUIRED)
 if (DOXYGEN_FOUND)
     set(DOXYGEN_PROJECT_BRIEF "Cross-platform C++20 library of algorithms and data structures commonly used in computer graphics research on physically-based simulation.")
-    set(DOXYGEN_PROJECT_LOGO "imgs/pbat.svg")
-    set(DOXYGEN_PROJECT_ICON "imgs/entei.icon.png")
+    set(DOXYGEN_PROJECT_LOGO "img/pbat.svg")
+    set(DOXYGEN_PROJECT_ICON "img/entei.icon.png")
     set(DOXYGEN_CREATE_SUBDIRS "YES")
     list(
         APPEND 
@@ -31,6 +31,7 @@ if (DOXYGEN_FOUND)
         "*.py"
     )
     set(DOXYGEN_GENERATE_HTML "YES")
+    set(DOXYGEN_IMAGE_PATH "img")
     set(DOXYGEN_USE_MATHJAX "YES")
     set(DOXYGEN_MATHJAX_VERSION "MathJax_3")
     set(DOXYGEN_GENERATE_TREEVIEW "YES")
@@ -54,8 +55,16 @@ if (DOXYGEN_FOUND)
     set(DOXYGEN_HTML_COPY_CLIPBOARD "NO")
     doxygen_add_docs(
         PhysicsBasedAnimationToolkit_Docs
-        ${CMAKE_SOURCE_DIR}/source
-        ${CMAKE_SOURCE_DIR}/python/pbatoolkit
+        "${CMAKE_SOURCE_DIR}/source"
+        "${CMAKE_SOURCE_DIR}/python/pbatoolkit"
+        # List markdown files manually to ensure correct order
+        "main.md"
+        "features.md"
+        "quickstart.md"
+        "configuration.md"
+        "build.md"
+        "install.md"
+        "profiling.md"
         ALL
         COMMENT "Generating docs"
     )
