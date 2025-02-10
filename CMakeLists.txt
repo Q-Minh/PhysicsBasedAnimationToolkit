@@ -20,6 +20,7 @@ option(PBAT_USE_SUITESPARSE
 option(PBAT_BUILD_SHARED_LIBS "Build as shared library" OFF)
 option(PBAT_USE_CUDA "Link to CUDA Toolkit for GPU API" OFF)
 option(PBAT_PRECOMPILE_LARGE_MODELS "Precompile large 3d models in geometry/model" OFF)
+option(PBAT_BUILD_DOC "Build documentation" OFF)
 
 # Global settings
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
@@ -65,6 +66,10 @@ endif()
 
 if(PBAT_BUILD_TESTS)
     add_subdirectory(tests)
+endif()
+
+if (PBAT_BUILD_DOC)
+    add_subdirectory(doc)
 endif()
 
 # Install
