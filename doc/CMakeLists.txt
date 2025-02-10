@@ -61,6 +61,7 @@ if (DOXYGEN_FOUND)
         "main.md"
         "features.md"
         "quickstart.md"
+        "dependencies.md"
         "configuration.md"
         "build.md"
         "install.md"
