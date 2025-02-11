@@ -1,3 +1,13 @@
+/**
+ * @file Adjacency.h
+ * @author Quoc-Minh Ton-That (tonthat.quocminh@gmail.com)
+ * @brief Adjacency matrix utilities
+ * @date 2025-02-10
+ *
+ * @copyright Copyright (c) 2025
+ * @ingroup graph
+ */
+
 #ifndef PBAT_GRAPH_ADJACENCY_H
 #define PBAT_GRAPH_ADJACENCY_H
 
@@ -14,9 +24,31 @@
 namespace pbat {
 namespace graph {
 
+/**
+ * @brief Weighted edge (wrapper around Eigen triplet type)
+ *
+ * @tparam TWeight Scalar type of the graph edge weights
+ * @tparam TIndex Index type of the graph vertices
+ */
 template <class TWeight = Scalar, class TIndex = Index>
 using WeightedEdge = Eigen::Triplet<TWeight, TIndex>;
 
+/**
+ * @brief Construct adjacency matrix from edge/triplet list
+ *
+ * @tparam TWeightedEdgeIterator Iterator type of the edge list
+ * @tparam TWeightedEdge Type of the edge
+ * @tparam TScalar Scalar type of the graph edge weights
+ * @tparam TIndex Index type of the graph vertices
+ * @param begin Iterator to the beginning of the edge list
+ * @param end Iterator to the end of the edge list
+ * @param m Number of rows of the adjacency matrix. If not provided (i.e. m < 0), it is inferred
+ * from the edge list.
+ * @param n Number of columns of the adjacency matrix. If not provided (i.e. n < 0), it is inferred
+ * from the edge list.
+ * @return Eigen::SparseMatrix<TScalar, Eigen::RowMajor, TIndex> Adjacency matrix
+ * @ingroup graph
+ */
 template <
     class TWeightedEdgeIterator,
     class TWeightedEdge = typename std::iterator_traits<TWeightedEdgeIterator>::value_type,
@@ -55,6 +87,16 @@ Eigen::SparseMatrix<TScalar, Eigen::RowMajor, TIndex> AdjacencyMatrixFromEdges(
     return G;
 }
 
+/**
+ * @brief Non-owning wrapper around the offset pointers of a compressed sparse matrix
+ *
+ * @tparam TDerivedA Type of input adjacency matrix
+ * @tparam TScalar Scalar type of the graph edge weights
+ * @tparam TIndex Index type of the graph vertices
+ * @param A Input adjacency matrix
+ * @return auto Non-owning wrapper around the offset pointers of the adjacency matrix
+ * @ingroup graph
+ */
 template <
     class TDerivedA,
     class TScalar        = typename TDerivedA::Scalar,
@@ -65,6 +107,16 @@ auto AdjacencyMatrixPrefix(Eigen::SparseCompressedBase<TDerivedA> const& A)
     return Eigen::Map<IndexVectorType const>(A.outerIndexPtr(), A.outerSize() + 1);
 }
 
+/**
+ * @brief Non-owning wrapper around the indices of a compressed sparse matrix
+ *
+ * @tparam TDerivedA Type of input adjacency matrix
+ * @tparam TScalar Scalar type of the graph edge weights
+ * @tparam TIndex Index type of the graph vertices
+ * @param A Input adjacency matrix
+ * @return auto Non-owning wrapper around the indices of the adjacency matrix
+ * @ingroup graph
+ */
 template <
     class TDerivedA,
     class TScalar        = typename TDerivedA::Scalar,
@@ -75,6 +127,16 @@ auto AdjacencyMatrixIndices(Eigen::SparseCompressedBase<TDerivedA> const& A)
     return Eigen::Map<IndexVectorType const>(A.innerIndexPtr(), A.nonZeros());
 }
 
+/**
+ * @brief Non-owning wrapper around the weights of a compressed sparse matrix
+ *
+ * @tparam TDerivedA Type of input adjacency matrix
+ * @tparam TScalar Scalar type of the graph edge weights
+ * @tparam TIndex Index type of the graph vertices
+ * @param A Input adjacency matrix
+ * @return auto Non-owning wrapper around the weights of the adjacency matrix
+ * @ingroup graph
+ */
 template <
     class TDerivedA,
     class TScalar        = typename TDerivedA::Scalar,
@@ -85,6 +147,19 @@ auto AdjacencyMatrixWeights(Eigen::SparseCompressedBase<TDerivedA> const& A)
     return Eigen::Map<WeightVectorType const>(A.valuePtr(), A.nonZeros());
 }
 
+/**
+ * @brief Construct adjacency list in compressed sparse format from a map p s.t. p(i) is the index
+ * of the vertex adjacent to i
+ *
+ * @tparam TDerivedP Type of input map
+ * @tparam TScalar Scalar type of the graph edge weights
+ * @param p Input map
+ * @param n Number of vertices in the graph. If not provided (i.e. n < 0), it is inferred from the
+ * map.
+ * @return std::tuple<Eigen::Vector<TIndex, Eigen::Dynamic>, Eigen::Vector<TIndex, Eigen::Dynamic>>
+ * Tuple of the offset pointers and indices of the adjacency list
+ * @ingroup graph
+ */
 template <class TDerivedP, std::integral TIndex = typename TDerivedP::Scalar>
 std::tuple<Eigen::Vector<TIndex, Eigen::Dynamic>, Eigen::Vector<TIndex, Eigen::Dynamic>>
 MapToAdjacency(Eigen::DenseBase<TDerivedP> const& p, TIndex n = TIndex(-1))
@@ -98,6 +173,16 @@ MapToAdjacency(Eigen::DenseBase<TDerivedP> const& p, TIndex n = TIndex(-1))
     return std::make_tuple(ptr, adj);
 }
 
+/**
+ * @brief Obtain the offset and indices arrays of an input adjacency matrix
+ *
+ * @tparam TDerivedA Type of input adjacency matrix
+ * @tparam TScalar Scalar type of the graph edge weights
+ * @tparam TIndex Index type of the graph vertices
+ * @param A Input adjacency matrix
+ * @return auto Tuple of the offset pointers and indices of the adjacency matrix
+ * @ingroup graph
+ */
 template <
     class TDerivedA,
     class TScalar        = typename TDerivedA::Scalar,
@@ -109,6 +194,16 @@ auto MatrixToAdjacency(Eigen::SparseCompressedBase<TDerivedA> const& A)
         AdjacencyMatrixIndices<TDerivedA, TScalar, TIndex>(A.derived()));
 }
 
+/**
+ * @brief Construct adjacency list in compressed sparse format from an input adjacency matrix
+ *
+ * @tparam TDerivedA Type of input adjacency matrix
+ * @tparam TScalar Scalar type of the graph edge weights
+ * @tparam TIndex Index type of the graph vertices
+ * @param A Input adjacency matrix
+ * @return auto Tuple of the offset pointers, indices, and weights of the adjacency matrix
+ * @ingroup graph
+ */
 template <
     class TDerivedA,
     class TScalar        = typename TDerivedA::Scalar,
@@ -121,6 +216,15 @@ auto MatrixToWeightedAdjacency(Eigen::SparseCompressedBase<TDerivedA> const& A)
         AdjacencyMatrixWeights<TDerivedA, TScalar, TIndex>(A.derived()));
 }
 
+/**
+ * @brief Construct adjacency list in compressed sparse format from an input adjacency list in list
+ * of lists format
+ *
+ * @tparam TIndex Index type of the graph vertices
+ * @param lil Input adjacency list in list of lists format
+ * @return auto Tuple of the offset pointers and indices of the adjacency list
+ * @ingroup graph
+ */
 template <class TIndex = Index>
 auto ListOfListsToAdjacency(std::vector<std::vector<TIndex>> const& lil)
 {
@@ -147,6 +251,19 @@ auto ListOfListsToAdjacency(std::vector<std::vector<TIndex>> const& lil)
     return std::make_tuple(ptr, adj);
 }
 
+/**
+ * @brief Edge iteration over the adjacency list in compressed sparse format
+ *
+ * @tparam TDerivedPtr Eigen dense expression of the offset pointers of the adjacency list
+ * @tparam TDerivedAdj Eigen dense expression of the indices of the adjacency list
+ * @tparam TIndex Index type of the graph vertices
+ * @tparam Func Callable type of the edge iteration function
+ * @param ptr Offset pointers of the adjacency list
+ * @param adj Indices of the adjacency list
+ * @param f Callable function to be applied to each edge with signature `void(TIndex i, TIndex j,
+ * TIndex k)`
+ * @ingroup graph
+ */
 template <
     class TDerivedPtr,
     class TDerivedAdj,
@@ -167,6 +284,19 @@ void ForEachEdge(Eigen::DenseBase<TDerivedPtr>& ptr, Eigen::DenseBase<TDerivedAd
     }
 }
 
+/**
+ * @brief In-place removal of edges from the adjacency list in compressed sparse format
+ *
+ * @tparam TDerivedPtr Eigen dense expression of the offset pointers of the adjacency list
+ * @tparam TDerivedAdj Eigen dense expression of the indices of the adjacency list
+ * @tparam TIndex Index type of the graph vertices
+ * @tparam Func Callable type of the edge removal function with signature `bool(TIndex i, TIndex j)`
+ * @param ptr Offset pointers of the adjacency list
+ * @param adj Indices of the adjacency list
+ * @param fShouldDeleteEdge Callable function to determine if an edge should be removed with
+ * signature `bool(TIndex i, TIndex j)`
+ * @ingroup graph
+ */
 template <
     class TDerivedPtr,
     class TDerivedAdj,

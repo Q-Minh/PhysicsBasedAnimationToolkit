@@ -1,3 +1,13 @@
+/**
+ * @file Color.h
+ * @author Quoc-Minh Ton-That (tonthat.quocminh@gmail.com)
+ * @brief Graph coloring algorithms
+ * @date 2025-02-10
+ *
+ * @copyright Copyright (c) 2025
+ * @ingroup graph
+ */
+
 #ifndef PBAT_GRAPH_COLOR_H
 #define PBAT_GRAPH_COLOR_H
 
@@ -14,6 +24,21 @@
 namespace pbat {
 namespace graph {
 
+/**
+ * @brief Greedy graph coloring algorithm
+ *
+ * @tparam TDerivedPtr Eigen dense expression for offset pointers of the adjacency list
+ * @tparam TDerivedAdj Eigen dense expression for indices of the adjacency list
+ * @tparam NC Color palette capacity
+ * @tparam TIndex Index type for vertices
+ * @param ptr Offset pointers array of the adjacency list
+ * @param adj Indices array of the adjacency list
+ * @param eOrderingStrategy Vertex visiting order strategy
+ * @param eSelectionStrategy Color selection strategy
+ * @return Eigen::Vector<TIndex, Eigen::Dynamic> |#vertices| array mapping vertices to their
+ * associated color
+ * @ingroup graph
+ */
 template <
     class TDerivedPtr,
     class TDerivedAdj,
