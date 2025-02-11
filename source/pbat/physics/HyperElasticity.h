@@ -1,3 +1,13 @@
+/**
+ * @file HyperElasticity.h
+ * @author Quoc-Minh Ton-That (tonthat.quocminh@gmail.com)
+ * @brief
+ * @date 2025-02-10
+ *
+ * @copyright Copyright (c) 2025
+ * @ingroup physics
+ */
+
 #ifndef PBAT_PHYSICS_HYPER_ELASTICITY_H
 #define PBAT_PHYSICS_HYPER_ELASTICITY_H
 
@@ -13,12 +23,36 @@
 namespace pbat {
 namespace physics {
 
+/**
+ * @brief Compute the Lame coefficients from Young's modulus and Poisson's ratio
+ *
+ * @param Y Young's modulus
+ * @param nu Poisson's ratio
+ * @return std::pair<Scalar, Scalar> Lame coefficients (mu, lambda)
+ * @ingroup physics
+ */
 PBAT_API std::pair<Scalar, Scalar> LameCoefficients(Scalar Y, Scalar nu);
 
+/**
+ * @brief Compute the Lame coefficients from Young's modulus and Poisson's ratio
+ *
+ * @tparam TDerivedY Eigen dense expression of vector of Young's moduli
+ * @tparam TDerivednu Eigen dense expression of vector of Poisson's ratios
+ * @param Y Vector of Young's moduli
+ * @param nu Vector of Poisson's ratios
+ * @return std::pair<VectorX, VectorX> Lame coefficients (mu, lambda)
+ * @ingroup physics
+ */
 template <class TDerivedY, class TDerivednu>
 std::pair<VectorX, VectorX>
 LameCoefficients(Eigen::DenseBase<TDerivedY> const& Y, Eigen::DenseBase<TDerivednu> const& nu);
 
+/**
+ * @brief Concept for hyperelastic energy
+ *
+ * @tparam T Type to check
+ * @ingroup physics
+ */
 template <class T>
 concept CHyperElasticEnergy = requires(T t)
 {
@@ -34,7 +68,7 @@ concept CHyperElasticEnergy = requires(T t)
     {
         t.hessian(math::linalg::mini::SMatrix<Scalar, T::kDims * T::kDims>{}, Scalar{}, Scalar{})
     } -> std::convertible_to<
-          math::linalg::mini::SMatrix<Scalar, T::kDims * T::kDims, T::kDims * T::kDims>>;
+        math::linalg::mini::SMatrix<Scalar, T::kDims * T::kDims, T::kDims * T::kDims>>;
     {
         t.evalWithGrad(
             math::linalg::mini::SMatrix<Scalar, T::kDims * T::kDims>{},

@@ -23,6 +23,9 @@
         #include <tracy/Tracy.hpp>
         #define PBAT_PROFILE_SCOPE             ZoneScoped
         #define PBAT_PROFILE_NAMED_SCOPE(name) ZoneScopedN(name)
+        #define PBAT_PROFILE_CUDA_HOST_SCOPE_START(var)
+        #define PBAT_PROFILE_CUDA_HOST_SCOPE_START(var, name)
+        #define PBAT_PROFILE_CUDA_HOST_SCOPE_END(var)
     #else
         #define PBAT_CAN_USE_TRACY_C
         #include <tracy/TracyC.h>
@@ -39,6 +42,61 @@
     #define PBAT_PROFILE_CUDA_HOST_SCOPE_START(var, name)
     #define PBAT_PROFILE_CUDA_HOST_SCOPE_END(var)
 #endif // PBAT_CAN_USE_TRACY
+
+/**
+ * @def PBAT_HAS_TRACY_PROFILER
+ * This macro is set if the Tracy profiler is enabled
+ * @ingroup profiling
+ */
+
+/**
+ * @def PBAT_CAN_USE_TRACY_CPP
+ * This macro is set if the Tracy profiler is enabled and the Tracy C++ API is available.
+ * In general, in CUDA source files, the Tracy C API is used instead so that PBAT_CAN_USE_TRACY_CPP
+ * will not be set.
+ * @ingroup profiling
+ */
+
+/**
+ * @def PBAT_PROFILE_SCOPE
+ * This macro is used to profile a scope with the Tracy profiler.
+ * @ingroup profiling
+ */
+
+/**
+ * @def PBAT_PROFILE_NAMED_SCOPE(name)
+ * This macro is used to profile a named scope with name \a name with the Tracy profiler.
+ * @ingroup profiling
+ */
+
+/**
+ * @def PBAT_CAN_USE_TRACY_C
+ * This macro is set if the Tracy profiler is enabled and the Tracy C API is available.
+ * In general, in CUDA source files, the Tracy C API is used instead so that PBAT_CAN_USE_TRACY_C
+ * will be set.
+ * @ingroup profiling
+ */
+
+/**
+ * @def PBAT_PROFILE_CUDA_HOST_SCOPE_START(var)
+ * This macro is used to profile a scope with the Tracy profiler in a CUDA host function.
+ * The variable \a var is used to store the scope context.
+ * @ingroup profiling
+ */
+
+/**
+ * @def PBAT_PROFILE_NAMED_CUDA_HOST_SCOPE_START(var, name)
+ * This macro is used to profile a named scope with name \a name with the Tracy profiler in a CUDA
+ * host function. The variable \a var is used to store the scope context.
+ * @ingroup profiling
+ */
+
+/**
+ * @def PBAT_PROFILE_CUDA_HOST_SCOPE_END(var)
+ * This macro is used to end a scope with the Tracy profiler in a CUDA host function.
+ * The variable \a var refers to the stored scope context.
+ * @ingroup profiling
+ */
 
 #include <map>
 #include <string>

@@ -34,19 +34,28 @@ def stvk(F, mu, llambda):
     trE = E.trace()
     EtE = E.transpose() * E
     EddotE = EtE.trace()
-    return mu*EddotE + (llambda / 2) * trE**2
+    return mu * EddotE + (llambda / 2) * trE**2
 
 
 def neohookean(F, mu, llambda):
-    alpha = 1 + mu/llambda
+    alpha = 1 + mu / llambda
     d = F.shape[0]
-    return (mu/2) * (I2(F) - d) + (llambda / 2) * (I3(F) - alpha)**2
+    return (mu / 2) * (I2(F) - d) + (llambda / 2) * (I3(F) - alpha) ** 2
 
 
 def codegen(fpsi, energy_name: str):
     source = []
 
     header = f"""
+/**
+ * @file 
+ * @author Quoc-Minh Ton-That (tonthat.quocminh@gmail.com)
+ * @brief {energy_name} hyperelastic energy
+ * 
+ * @copyright Copyright (c) 2025
+ * @ingroup physics
+ */
+
 #ifndef PBAT_PHYSICS_{energy_name.upper()}_H
 #define PBAT_PHYSICS_{energy_name.upper()}_H
 
@@ -64,48 +73,72 @@ struct {energy_name};
 """
     source.append(header)
 
-    for d in range(1, 3+1):
-        mu, llambda = sp.symbols(
-            "mu lambda", real=True)
-        vecF = sp.Matrix(
-            sp.MatrixSymbol("F", d*d, 1))
+    for d in range(1, 3 + 1):
+        mu, llambda = sp.symbols("mu lambda", real=True)
+        vecF = sp.Matrix(sp.MatrixSymbol("F", d * d, 1))
         F = vecF.reshape(d, d).transpose()
         psi = fpsi(F, mu, llambda)
         gradpsi = sp.derive_by_array(psi, vecF)
-        hesspsi = sp.derive_by_array(
-            gradpsi, vecF)[:, 0, :, 0]
-        psicode = cg.codegen(psi, lhs=sp.Symbol("psi"),
-                             scalar_type="ScalarType")
+        hesspsi = sp.derive_by_array(gradpsi, vecF)[:, 0, :, 0]
+        psicode = cg.codegen(psi, lhs=sp.Symbol("psi"), scalar_type="ScalarType")
         gradpsicode = cg.codegen(
-            gradpsi, lhs=sp.MatrixSymbol("G", *gradpsi.shape), scalar_type="ScalarType")
-        hesspsicode = cg.codegen(hesspsi.transpose(
-        ), lhs=sp.MatrixSymbol("H", vecF.shape[0], vecF.shape[0]), scalar_type="ScalarType")
-        evalgradpsi = cg.codegen([psi, gradpsi], lhs=[sp.Symbol(
-            "psi"), sp.MatrixSymbol("gF", *gradpsi.shape)], scalar_type="ScalarType")
-        evalgradhesspsi = cg.codegen([psi, gradpsi, hesspsi], lhs=[
-            sp.Symbol("psi"),
-            sp.MatrixSymbol("gF", *gradpsi.shape),
-            sp.MatrixSymbol(
-                "HF", vecF.shape[0], vecF.shape[0])
-        ], scalar_type="ScalarType")
-        gradhesspsi = cg.codegen([gradpsi, hesspsi], lhs=[
-            sp.MatrixSymbol("gF", *gradpsi.shape),
-            sp.MatrixSymbol(
-                "HF", vecF.shape[0], vecF.shape[0])
-        ], scalar_type="ScalarType")
+            gradpsi, lhs=sp.MatrixSymbol("G", *gradpsi.shape), scalar_type="ScalarType"
+        )
+        hesspsicode = cg.codegen(
+            hesspsi.transpose(),
+            lhs=sp.MatrixSymbol("H", vecF.shape[0], vecF.shape[0]),
+            scalar_type="ScalarType",
+        )
+        evalgradpsi = cg.codegen(
+            [psi, gradpsi],
+            lhs=[sp.Symbol("psi"), sp.MatrixSymbol("gF", *gradpsi.shape)],
+            scalar_type="ScalarType",
+        )
+        evalgradhesspsi = cg.codegen(
+            [psi, gradpsi, hesspsi],
+            lhs=[
+                sp.Symbol("psi"),
+                sp.MatrixSymbol("gF", *gradpsi.shape),
+                sp.MatrixSymbol("HF", vecF.shape[0], vecF.shape[0]),
+            ],
+            scalar_type="ScalarType",
+        )
+        gradhesspsi = cg.codegen(
+            [gradpsi, hesspsi],
+            lhs=[
+                sp.MatrixSymbol("gF", *gradpsi.shape),
+                sp.MatrixSymbol("HF", vecF.shape[0], vecF.shape[0]),
+            ],
+            scalar_type="ScalarType",
+        )
         impl = f"""
+/**
+ * @brief {energy_name} hyperelastic energy for {d}D
+ * 
+ * @tparam Dims Dimension of the space
+ * @ingroup physics
+ */
 template <>
 struct {energy_name}<{d}>
 {{
     public:
         template <class TScalar, int M, int N>
-        using SMatrix = pbat::math::linalg::mini::SMatrix<TScalar, M, N>;
+        using SMatrix = pbat::math::linalg::mini::SMatrix<TScalar, M, N>; ///< Scalar matrix type
 
         template <class TScalar, int M>
-        using SVector = pbat::math::linalg::mini::SVector<TScalar, M>;
+        using SVector = pbat::math::linalg::mini::SVector<TScalar, M>; ///< Scalar vector type
 
-        static auto constexpr kDims = {d};
+        static auto constexpr kDims = {d}; ///< Dimension of space
 
+        /**
+         * @brief Evaluate the elastic energy
+         * 
+         * @tparam TMatrix Matrix type
+         * @param F Deformation gradient
+         * @param mu First Lame coefficient
+         * @param lambda Second Lame coefficient
+         * @return ScalarType Energy
+         */
         template <math::linalg::mini::CReadableVectorizedMatrix TMatrix>
         PBAT_HOST_DEVICE
         typename TMatrix::ScalarType
@@ -114,6 +147,15 @@ struct {energy_name}<{d}>
             typename TMatrix::ScalarType mu,
             typename TMatrix::ScalarType lambda) const;
 
+        /**
+         * @brief Evaluate the elastic energy gradient
+         * 
+         * @tparam TMatrix Matrix type
+         * @param F Deformation gradient
+         * @param mu First Lame coefficient
+         * @param lambda Second Lame coefficient
+         * @return ScalarType Energy gradient
+         */
         template <math::linalg::mini::CReadableVectorizedMatrix TMatrix>
         PBAT_HOST_DEVICE
         SVector<typename TMatrix::ScalarType, {vecF.shape[0]}>
@@ -122,6 +164,15 @@ struct {energy_name}<{d}>
             typename TMatrix::ScalarType mu,
             typename TMatrix::ScalarType lambda) const;
 
+        /**
+         * @brief Evaluate the elastic energy hessian
+         * 
+         * @tparam TMatrix Matrix type
+         * @param F Deformation gradient
+         * @param mu First Lame coefficient
+         * @param lambda Second Lame coefficient
+         * @return ScalarType Energy hessian
+         */
         template <math::linalg::mini::CReadableVectorizedMatrix TMatrix>
         PBAT_HOST_DEVICE
         SMatrix<typename TMatrix::ScalarType, {vecF.shape[0]},{vecF.shape[0]}>
@@ -130,6 +181,16 @@ struct {energy_name}<{d}>
             typename TMatrix::ScalarType mu,
             typename TMatrix::ScalarType lambda) const;
 
+        /**
+         * @brief Evaluate the elastic energy and its gradient
+         * 
+         * @tparam TMatrix Matrix type
+         * @param F Deformation gradient
+         * @param mu First Lame coefficient
+         * @param lambda Second Lame coefficient
+         * @param gF Gradient w.r.t. F
+         * @return ScalarType Energy and its gradient
+         */
         template <
             math::linalg::mini::CReadableVectorizedMatrix TMatrix, 
             math::linalg::mini::CWriteableVectorizedMatrix TMatrixGF
@@ -142,6 +203,17 @@ struct {energy_name}<{d}>
             typename TMatrix::ScalarType lambda,
             TMatrixGF& gF) const;
 
+        /**
+         * @brief Evaluate the elastic energy with its gradient and hessian
+         * 
+         * @tparam TMatrix Matrix type
+         * @param F Deformation gradient
+         * @param mu First Lame coefficient
+         * @param lambda Second Lame coefficient
+         * @param gF Gradient w.r.t. F
+         * @param HF Hessian w.r.t. F
+         * @return ScalarType Energy and its gradient and hessian
+         */
         template <
             math::linalg::mini::CReadableVectorizedMatrix TMatrix,
             math::linalg::mini::CWriteableVectorizedMatrix TMatrixGF, 
@@ -156,6 +228,16 @@ struct {energy_name}<{d}>
             TMatrixGF& gF,
             TMatrixHF& HF) const;
 
+        /**
+         * @brief Evaluate the elastic energy gradient and hessian
+         * 
+         * @tparam TMatrix Matrix type
+         * @param F Deformation gradient
+         * @param mu First Lame coefficient
+         * @param lambda Second Lame coefficient
+         * @param gF Gradient w.r.t. F
+         * @param HF Hessian w.r.t. F
+         */
         template <
             math::linalg::mini::CReadableVectorizedMatrix TMatrix,
             math::linalg::mini::CWriteableVectorizedMatrix TMatrixGF, 
@@ -302,7 +384,7 @@ void
 if __name__ == "__main__":
     energies = [
         (stvk, "SaintVenantKirchhoffEnergy"),
-        (neohookean, "StableNeoHookeanEnergy")
+        (neohookean, "StableNeoHookeanEnergy"),
     ]
     for fpsi, energy_name in energies:
         codegen(fpsi, energy_name)

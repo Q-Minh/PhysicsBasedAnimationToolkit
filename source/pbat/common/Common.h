@@ -1,19 +1,19 @@
 /**
+ * @defgroup common Common
+ */
+
+/**
  * @file Common.h
  * @author Quoc-Minh Ton-That (tonthat.quocminh@gmail.com)
- * @brief
+ * @brief This file includes all the common headers
  * @date 2025-02-10
  *
  * @copyright Copyright (c) 2025
- *
+ * @ingroup common
  */
 
 #ifndef PBAT_COMMON_COMMON_H
 #define PBAT_COMMON_COMMON_H
-
-/**
- * @defgroup common Common
- */
 
 /**
  * @brief

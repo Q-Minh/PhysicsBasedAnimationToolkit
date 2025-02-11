@@ -1,3 +1,12 @@
+/**
+ * @file StableNeoHookeanEnergy.h
+ * @author Quoc-Minh Ton-That (tonthat.quocminh@gmail.com)
+ * @brief Stable Neo-Hookean hyperelastic energy
+ * @date 2025-02-10
+ *
+ * @copyright Copyright (c) 2025
+ * @ingroup physics
+ */
 
 #ifndef PBAT_PHYSICS_STABLENEOHOOKEANENERGY_H
 #define PBAT_PHYSICS_STABLENEOHOOKEANENERGY_H
@@ -14,33 +23,76 @@ namespace physics {
 template <int Dims>
 struct StableNeoHookeanEnergy;
 
+/**
+ * @brief Stable Neo-Hookean hyperelastic energy for 1D
+ *
+ * @tparam Dims Dimension of the space
+ * @ingroup physics
+ */
 template <>
 struct StableNeoHookeanEnergy<1>
 {
   public:
     template <class TScalar, int M, int N>
-    using SMatrix = pbat::math::linalg::mini::SMatrix<TScalar, M, N>;
+    using SMatrix = pbat::math::linalg::mini::SMatrix<TScalar, M, N>; ///< Scalar matrix type
 
     template <class TScalar, int M>
-    using SVector = pbat::math::linalg::mini::SVector<TScalar, M>;
+    using SVector = pbat::math::linalg::mini::SVector<TScalar, M>; ///< Scalar vector type
 
-    static auto constexpr kDims = 1;
+    static auto constexpr kDims = 1; ///< Dimension of the space
 
+    /**
+     * @brief Evaluate the elastic energy
+     *
+     * @tparam TMatrix Matrix type
+     * @param F Deformation gradient
+     * @param mu First Lame coefficient
+     * @param lambda Second Lame coefficient
+     * @return ScalarType Energy
+     */
     template <math::linalg::mini::CReadableVectorizedMatrix TMatrix>
     PBAT_HOST_DEVICE typename TMatrix::ScalarType
     eval(TMatrix const& F, typename TMatrix::ScalarType mu, typename TMatrix::ScalarType lambda)
         const;
 
+    /**
+     * @brief Evaluate the elastic energy gradient
+     *
+     * @tparam TMatrix Matrix type
+     * @param F Deformation gradient
+     * @param mu First Lame coefficient
+     * @param lambda Second Lame coefficient
+     * @return ScalarType Energy gradient
+     */
     template <math::linalg::mini::CReadableVectorizedMatrix TMatrix>
     PBAT_HOST_DEVICE SVector<typename TMatrix::ScalarType, 1>
     grad(TMatrix const& F, typename TMatrix::ScalarType mu, typename TMatrix::ScalarType lambda)
         const;
 
+    /**
+     * @brief Evaluate the elastic energy hessian
+     *
+     * @tparam TMatrix Matrix type
+     * @param F Deformation gradient
+     * @param mu First Lame coefficient
+     * @param lambda Second Lame coefficient
+     * @return ScalarType Energy hessian
+     */
     template <math::linalg::mini::CReadableVectorizedMatrix TMatrix>
     PBAT_HOST_DEVICE SMatrix<typename TMatrix::ScalarType, 1, 1>
     hessian(TMatrix const& F, typename TMatrix::ScalarType mu, typename TMatrix::ScalarType lambda)
         const;
 
+    /**
+     * @brief Evaluate the elastic energy and its gradient
+     *
+     * @tparam TMatrix Matrix type
+     * @param F Deformation gradient
+     * @param mu First Lame coefficient
+     * @param lambda Second Lame coefficient
+     * @param gF Gradient w.r.t. F
+     * @return ScalarType Energy and its gradient
+     */
     template <
         math::linalg::mini::CReadableVectorizedMatrix TMatrix,
         math::linalg::mini::CWriteableVectorizedMatrix TMatrixGF>
@@ -50,6 +102,17 @@ struct StableNeoHookeanEnergy<1>
         typename TMatrix::ScalarType lambda,
         TMatrixGF& gF) const;
 
+    /**
+     * @brief Evaluate the elastic energy with its gradient and hessian
+     *
+     * @tparam TMatrix Matrix type
+     * @param F Deformation gradient
+     * @param mu First Lame coefficient
+     * @param lambda Second Lame coefficient
+     * @param gF Gradient w.r.t. F
+     * @param HF Hessian w.r.t. F
+     * @return ScalarType Energy and its gradient and hessian
+     */
     template <
         math::linalg::mini::CReadableVectorizedMatrix TMatrix,
         math::linalg::mini::CWriteableVectorizedMatrix TMatrixGF,
@@ -61,6 +124,16 @@ struct StableNeoHookeanEnergy<1>
         TMatrixGF& gF,
         TMatrixHF& HF) const;
 
+    /**
+     * @brief Evaluate the elastic energy gradient and hessian
+     *
+     * @tparam TMatrix Matrix type
+     * @param F Deformation gradient
+     * @param mu First Lame coefficient
+     * @param lambda Second Lame coefficient
+     * @param gF Gradient w.r.t. F
+     * @param HF Hessian w.r.t. F
+     */
     template <
         math::linalg::mini::CReadableVectorizedMatrix TMatrix,
         math::linalg::mini::CWriteableVectorizedMatrix TMatrixGF,
@@ -86,6 +159,15 @@ PBAT_HOST_DEVICE typename TMatrix::ScalarType StableNeoHookeanEnergy<1>::eval(
     return psi;
 }
 
+/**
+ * @brief
+ *
+ * @tparam TMatrix
+ * @param F
+ * @param mu
+ * @param lambda
+ * @return PBAT_HOST_DEVICE
+ */
 template <math::linalg::mini::CReadableVectorizedMatrix TMatrix>
 PBAT_HOST_DEVICE StableNeoHookeanEnergy<1>::SVector<typename TMatrix::ScalarType, 1>
 StableNeoHookeanEnergy<1>::grad(
@@ -99,6 +181,15 @@ StableNeoHookeanEnergy<1>::grad(
     return G;
 }
 
+/**
+ * @brief
+ *
+ * @tparam TMatrix
+ * @param F
+ * @param mu
+ * @param lambda
+ * @return PBAT_HOST_DEVICE
+ */
 template <math::linalg::mini::CReadableVectorizedMatrix TMatrix>
 PBAT_HOST_DEVICE StableNeoHookeanEnergy<1>::SMatrix<typename TMatrix::ScalarType, 1, 1>
 StableNeoHookeanEnergy<1>::hessian(
@@ -182,33 +273,76 @@ PBAT_HOST_DEVICE void StableNeoHookeanEnergy<1>::gradAndHessian(
     HF[0]            = lambda + mu;
 }
 
+/**
+ * @brief Stable Neo-Hookean hyperelastic energy for 2D
+ *
+ * @tparam Dims Dimension of the space
+ * @ingroup physics
+ */
 template <>
 struct StableNeoHookeanEnergy<2>
 {
   public:
     template <class TScalar, int M, int N>
-    using SMatrix = pbat::math::linalg::mini::SMatrix<TScalar, M, N>;
+    using SMatrix = pbat::math::linalg::mini::SMatrix<TScalar, M, N>; ///< Scalar matrix type
 
     template <class TScalar, int M>
-    using SVector = pbat::math::linalg::mini::SVector<TScalar, M>;
+    using SVector = pbat::math::linalg::mini::SVector<TScalar, M>; ///< Scalar vector type
 
-    static auto constexpr kDims = 2;
+    static auto constexpr kDims = 2; ///< Dimension of the space
 
+    /**
+     * @brief Evaluate the elastic energy
+     *
+     * @tparam TMatrix Matrix type
+     * @param F Deformation gradient
+     * @param mu First Lame coefficient
+     * @param lambda Second Lame coefficient
+     * @return ScalarType Energy
+     */
     template <math::linalg::mini::CReadableVectorizedMatrix TMatrix>
     PBAT_HOST_DEVICE typename TMatrix::ScalarType
     eval(TMatrix const& F, typename TMatrix::ScalarType mu, typename TMatrix::ScalarType lambda)
         const;
 
+    /**
+     * @brief Evaluate the elastic energy gradient
+     *
+     * @tparam TMatrix Matrix type
+     * @param F Deformation gradient
+     * @param mu First Lame coefficient
+     * @param lambda Second Lame coefficient
+     * @return ScalarType Energy gradient
+     */
     template <math::linalg::mini::CReadableVectorizedMatrix TMatrix>
     PBAT_HOST_DEVICE SVector<typename TMatrix::ScalarType, 4>
     grad(TMatrix const& F, typename TMatrix::ScalarType mu, typename TMatrix::ScalarType lambda)
         const;
 
+    /**
+     * @brief Evaluate the elastic energy hessian
+     *
+     * @tparam TMatrix Matrix type
+     * @param F Deformation gradient
+     * @param mu First Lame coefficient
+     * @param lambda Second Lame coefficient
+     * @return ScalarType Energy hessian
+     */
     template <math::linalg::mini::CReadableVectorizedMatrix TMatrix>
     PBAT_HOST_DEVICE SMatrix<typename TMatrix::ScalarType, 4, 4>
     hessian(TMatrix const& F, typename TMatrix::ScalarType mu, typename TMatrix::ScalarType lambda)
         const;
 
+    /**
+     * @brief Evaluate the elastic energy and its gradient
+     *
+     * @tparam TMatrix Matrix type
+     * @param F Deformation gradient
+     * @param mu First Lame coefficient
+     * @param lambda Second Lame coefficient
+     * @param gF Gradient w.r.t. F
+     * @return ScalarType Energy and its gradient
+     */
     template <
         math::linalg::mini::CReadableVectorizedMatrix TMatrix,
         math::linalg::mini::CWriteableVectorizedMatrix TMatrixGF>
@@ -218,6 +352,17 @@ struct StableNeoHookeanEnergy<2>
         typename TMatrix::ScalarType lambda,
         TMatrixGF& gF) const;
 
+    /**
+     * @brief Evaluate the elastic energy with its gradient and hessian
+     *
+     * @tparam TMatrix Matrix type
+     * @param F Deformation gradient
+     * @param mu First Lame coefficient
+     * @param lambda Second Lame coefficient
+     * @param gF Gradient w.r.t. F
+     * @param HF Hessian w.r.t. F
+     * @return ScalarType Energy and its gradient and hessian
+     */
     template <
         math::linalg::mini::CReadableVectorizedMatrix TMatrix,
         math::linalg::mini::CWriteableVectorizedMatrix TMatrixGF,
@@ -229,6 +374,16 @@ struct StableNeoHookeanEnergy<2>
         TMatrixGF& gF,
         TMatrixHF& HF) const;
 
+    /**
+     * @brief Evaluate the elastic energy gradient and hessian
+     *
+     * @tparam TMatrix Matrix type
+     * @param F Deformation gradient
+     * @param mu First Lame coefficient
+     * @param lambda Second Lame coefficient
+     * @param gF Gradient w.r.t. F
+     * @param HF Hessian w.r.t. F
+     */
     template <
         math::linalg::mini::CReadableVectorizedMatrix TMatrix,
         math::linalg::mini::CWriteableVectorizedMatrix TMatrixGF,
@@ -257,6 +412,15 @@ PBAT_HOST_DEVICE typename TMatrix::ScalarType StableNeoHookeanEnergy<2>::eval(
     return psi;
 }
 
+/**
+ * @brief
+ *
+ * @tparam TMatrix
+ * @param F
+ * @param mu
+ * @param lambda
+ * @return PBAT_HOST_DEVICE
+ */
 template <math::linalg::mini::CReadableVectorizedMatrix TMatrix>
 PBAT_HOST_DEVICE StableNeoHookeanEnergy<2>::SVector<typename TMatrix::ScalarType, 4>
 StableNeoHookeanEnergy<2>::grad(
@@ -274,6 +438,15 @@ StableNeoHookeanEnergy<2>::grad(
     return G;
 }
 
+/**
+ * @brief
+ *
+ * @tparam TMatrix
+ * @param F
+ * @param mu
+ * @param lambda
+ * @return PBAT_HOST_DEVICE
+ */
 template <math::linalg::mini::CReadableVectorizedMatrix TMatrix>
 PBAT_HOST_DEVICE StableNeoHookeanEnergy<2>::SMatrix<typename TMatrix::ScalarType, 4, 4>
 StableNeoHookeanEnergy<2>::hessian(
@@ -443,33 +616,76 @@ PBAT_HOST_DEVICE void StableNeoHookeanEnergy<2>::gradAndHessian(
     HF[15]              = lambda * ((F[0]) * (F[0])) + mu;
 }
 
+/**
+ * @brief Stable Neo-Hookean hyperelastic energy for 3D
+ *
+ * @tparam Dims Dimension of the space
+ * @ingroup physics
+ */
 template <>
 struct StableNeoHookeanEnergy<3>
 {
   public:
     template <class TScalar, int M, int N>
-    using SMatrix = pbat::math::linalg::mini::SMatrix<TScalar, M, N>;
+    using SMatrix = pbat::math::linalg::mini::SMatrix<TScalar, M, N>; ///< Scalar matrix type
 
     template <class TScalar, int M>
-    using SVector = pbat::math::linalg::mini::SVector<TScalar, M>;
+    using SVector = pbat::math::linalg::mini::SVector<TScalar, M>; ///< Scalar vector type
 
-    static auto constexpr kDims = 3;
+    static auto constexpr kDims = 3; ///< Dimension of the space
 
+    /**
+     * @brief Evaluate the elastic energy
+     *
+     * @tparam TMatrix Matrix type
+     * @param F Deformation gradient
+     * @param mu First Lame coefficient
+     * @param lambda Second Lame coefficient
+     * @return ScalarType Energy
+     */
     template <math::linalg::mini::CReadableVectorizedMatrix TMatrix>
     PBAT_HOST_DEVICE typename TMatrix::ScalarType
     eval(TMatrix const& F, typename TMatrix::ScalarType mu, typename TMatrix::ScalarType lambda)
         const;
 
+    /**
+     * @brief Evaluate the elastic energy gradient
+     *
+     * @tparam TMatrix Matrix type
+     * @param F Deformation gradient
+     * @param mu First Lame coefficient
+     * @param lambda Second Lame coefficient
+     * @return ScalarType Energy gradient
+     */
     template <math::linalg::mini::CReadableVectorizedMatrix TMatrix>
     PBAT_HOST_DEVICE SVector<typename TMatrix::ScalarType, 9>
     grad(TMatrix const& F, typename TMatrix::ScalarType mu, typename TMatrix::ScalarType lambda)
         const;
 
+    /**
+     * @brief Evaluate the elastic energy hessian
+     *
+     * @tparam TMatrix Matrix type
+     * @param F Deformation gradient
+     * @param mu First Lame coefficient
+     * @param lambda Second Lame coefficient
+     * @return ScalarType Energy hessian
+     */
     template <math::linalg::mini::CReadableVectorizedMatrix TMatrix>
     PBAT_HOST_DEVICE SMatrix<typename TMatrix::ScalarType, 9, 9>
     hessian(TMatrix const& F, typename TMatrix::ScalarType mu, typename TMatrix::ScalarType lambda)
         const;
 
+    /**
+     * @brief Evaluate the elastic energy and its gradient
+     *
+     * @tparam TMatrix Matrix type
+     * @param F Deformation gradient
+     * @param mu First Lame coefficient
+     * @param lambda Second Lame coefficient
+     * @param gF Gradient w.r.t. F
+     * @return ScalarType Energy and its gradient
+     */
     template <
         math::linalg::mini::CReadableVectorizedMatrix TMatrix,
         math::linalg::mini::CWriteableVectorizedMatrix TMatrixGF>
@@ -479,6 +695,17 @@ struct StableNeoHookeanEnergy<3>
         typename TMatrix::ScalarType lambda,
         TMatrixGF& gF) const;
 
+    /**
+     * @brief Evaluate the elastic energy with its gradient and hessian
+     *
+     * @tparam TMatrix Matrix type
+     * @param F Deformation gradient
+     * @param mu First Lame coefficient
+     * @param lambda Second Lame coefficient
+     * @param gF Gradient w.r.t. F
+     * @param HF Hessian w.r.t. F
+     * @return ScalarType Energy and its gradient and hessian
+     */
     template <
         math::linalg::mini::CReadableVectorizedMatrix TMatrix,
         math::linalg::mini::CWriteableVectorizedMatrix TMatrixGF,
@@ -490,6 +717,16 @@ struct StableNeoHookeanEnergy<3>
         TMatrixGF& gF,
         TMatrixHF& HF) const;
 
+    /**
+     * @brief Evaluate the elastic energy gradient and hessian
+     *
+     * @tparam TMatrix Matrix type
+     * @param F Deformation gradient
+     * @param mu First Lame coefficient
+     * @param lambda Second Lame coefficient
+     * @param gF Gradient w.r.t. F
+     * @param HF Hessian w.r.t. F
+     */
     template <
         math::linalg::mini::CReadableVectorizedMatrix TMatrix,
         math::linalg::mini::CWriteableVectorizedMatrix TMatrixGF,
@@ -522,6 +759,15 @@ PBAT_HOST_DEVICE typename TMatrix::ScalarType StableNeoHookeanEnergy<3>::eval(
     return psi;
 }
 
+/**
+ * @brief
+ *
+ * @tparam TMatrix
+ * @param F
+ * @param mu
+ * @param lambda
+ * @return PBAT_HOST_DEVICE
+ */
 template <math::linalg::mini::CReadableVectorizedMatrix TMatrix>
 PBAT_HOST_DEVICE StableNeoHookeanEnergy<3>::SVector<typename TMatrix::ScalarType, 9>
 StableNeoHookeanEnergy<3>::grad(
@@ -553,6 +799,15 @@ StableNeoHookeanEnergy<3>::grad(
     return G;
 }
 
+/**
+ * @brief
+ *
+ * @tparam TMatrix
+ * @param F
+ * @param mu
+ * @param lambda
+ * @return PBAT_HOST_DEVICE
+ */
 template <math::linalg::mini::CReadableVectorizedMatrix TMatrix>
 PBAT_HOST_DEVICE StableNeoHookeanEnergy<3>::SMatrix<typename TMatrix::ScalarType, 9, 9>
 StableNeoHookeanEnergy<3>::hessian(
