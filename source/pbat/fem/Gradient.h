@@ -1,3 +1,13 @@
+/**
+ * @file Gradient.h
+ * @author Quoc-Minh Ton-That (tonthat.quocminh@gmail.com)
+ * @brief FEM gradient operator
+ * @date 2025-02-11
+ * 
+ * @copyright Copyright (c) 2025
+ * 
+ */
+
 #ifndef PBAT_FEM_GRADIENT_H
 #define PBAT_FEM_GRADIENT_H
 

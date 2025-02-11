@@ -1,5 +1,15 @@
-#ifndef PBAT_FEM_DEFORMATION_GRADIENT_H
-#define PBAT_FEM_DEFORMATION_GRADIENT_H
+/**
+ * @file DeformationGradient.h
+ * @author Quoc-Minh Ton-That (tonthat.quocminh@gmail.com)
+ * @brief Functions to compute deformation gradient and its derivatives.
+ * @date 2025-02-11
+ *
+ * @copyright Copyright (c) 2025
+ *
+ */
+
+#ifndef PBAT_FEM_DEFORMATIONGRADIENT_H
+#define PBAT_FEM_DEFORMATIONGRADIENT_H
 
 #include "Concepts.h"
 #include "pbat/Aliases.h"
@@ -245,4 +255,4 @@ HessianWrtDofs(TMatrixHF const& HF, TMatrixGP const& GP)
 } // namespace fem
 } // namespace pbat
 
-#endif // PBAT_FEM_DEFORMATION_GRADIENT_H
+#endif // PBAT_FEM_DEFORMATIONGRADIENT_H

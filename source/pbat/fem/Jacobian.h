@@ -1,3 +1,14 @@
+/**
+ * @file Jacobian.h
+ * @author Quoc-Minh Ton-That (tonthat.quocminh@gmail.com)
+ * @brief Functions to compute jacobians, their determinants, domain quadrature weights and mapping
+ * domain to reference space.
+ * @date 2025-02-11
+ *
+ * @copyright Copyright (c) 2025
+ *
+ */
+
 #ifndef PBAT_FEM_JACOBIAN_H
 #define PBAT_FEM_JACOBIAN_H
 
@@ -16,6 +27,16 @@
 namespace pbat {
 namespace fem {
 
+/**
+ * @brief Given a map \f$ x(\xi) = \sum_i x_i N_i(\xi) \f$, where \f$ \xi \in \Omega^{\text{ref}}
+ * \f$ is in reference space coordinates, computes \f$ \nabla_\xi x \f$.
+ *
+ * @tparam TElement FEM element type
+ * @tparam TDerived Eigen matrix expression for map coefficients
+ * @param X Reference space coordinates \f$ \xi \f$
+ * @param x Map coefficients \f$ \mathbf{x} \f$
+ * @return Matrix<TDerived::RowsAtCompileTime, TElement::kDims>
+ */
 template <CElement TElement, class TDerived>
 [[maybe_unused]] Matrix<TDerived::RowsAtCompileTime, TElement::kDims>
 Jacobian(Vector<TElement::kDims> const& X, Eigen::MatrixBase<TDerived> const& x)
@@ -26,6 +47,16 @@ Jacobian(Vector<TElement::kDims> const& X, Eigen::MatrixBase<TDerived> const& x)
     return J;
 }
 
+/**
+ * @brief Computes the determinant of a (potentially non-square) Jacobian matrix.
+ *
+ * If the Jacobian matrix is square, the determinant is computed directly, otherwise the singular
+ * values \f$ \sigma_i \f$ are computed and their product \f$ \Pi_i \sigma_i \f$ is returned.
+ *
+ * @tparam TDerived Eigen matrix expression
+ * @param J Jacobian matrix
+ * @return Scalar Determinant of the Jacobian matrix
+ */
 template <class TDerived>
 [[maybe_unused]] Scalar DeterminantOfJacobian(Eigen::MatrixBase<TDerived> const& J)
 {
@@ -44,8 +75,9 @@ template <class TDerived>
  * @tparam QuadratureOrder
  * @tparam TMesh
  * @param mesh
- * @return |#quad.pts.|x|#elements| matrix of element jacobian determinants at element quadrature
- * points
+ * @return \f$ \mathbf{D}^J \in \mathbb{R}^{|G^e| \times |E| } \f$ matrix of element jacobian
+ * determinants at element quadrature points, where \f$ |G^e| \f$ is the number of quadrature points
+ * per element and \f$ |E| \f$ is the number of elements.
  */
 template <int QuadratureOrder, CMesh TMesh>
 MatrixX DeterminantOfJacobian(TMesh const& mesh)
@@ -87,12 +119,18 @@ MatrixX DeterminantOfJacobian(TMesh const& mesh)
 }
 
 /**
- * @brief
+ * @brief Computes the inner product weights \f$ \mathbf{w}_{ge} \in \mathbb{R}^{|G^e| \times |E|}
+ * \f$ such that \f$ \int_\Omega \cdot d\Omega = \sum_e \sum_g w_{ge} \cdot \f$.
  *
- * @tparam QuadratureOrder
- * @tparam TMesh
- * @param mesh
- * @return MatrixX
+ * In other words, \f$ w_{ge} = w_g \det(J^e_g) \f$ where \f$ J^e_g \f$ is the Jacobian of the
+ * element map at the \f$ g^\text{{th} \f$ quadrature point and \f$ w_g \f$ is the \f$ g^\text{th}
+ * \f$ quadrature weight.
+ *
+ * @tparam QuadratureOrder Quadrature order
+ * @tparam TMesh Mesh type
+ * @param mesh FEM mesh
+ * @return MatrixX |# quad.pts.|x|# elements| matrix of quadrature weights multiplied by jacobian
+ * determinants at element quadrature points
  */
 template <int QuadratureOrder, CMesh TMesh>
 MatrixX InnerProductWeights(TMesh const& mesh)
@@ -106,15 +144,16 @@ MatrixX InnerProductWeights(TMesh const& mesh)
 }
 
 /**
- * @brief
+ * @brief Computes the inner product weights \f$ \mathbf{w}_{ge} \in \mathbb{R}^{|G^e| \times |E|}
+ * \f$ such that \f$ \int_\Omega \cdot d\Omega = \sum_e \sum_g w_{ge} \cdot \f$.
  *
- * @tparam QuadratureOrder
- * @tparam TMesh
- * @tparam TDerivedDetJe
- * @param mesh
- * @param detJe
- * @return |#quad.pts.|x|#elements| matrix of quadrature weights multiplied by jacobian determinants
- * at element quadrature points
+ * @tparam QuadratureOrder Quadrature order
+ * @tparam TMesh Mesh type
+ * @tparam TDerivedDetJe Eigen matrix expression for jacobian determinants at quadrature points
+ * @param mesh FEM mesh
+ * @param detJe Matrix of jacobian determinants at element quadrature points
+ * @return |# quad.pts.|x|# elements| matrix of quadrature weights multiplied by jacobian
+ * determinants at element quadrature points
  */
 template <int QuadratureOrder, CMesh TMesh, class TDerivedDetJe>
 MatrixX InnerProductWeights(TMesh const& mesh, Eigen::MatrixBase<TDerivedDetJe> const& detJe)
@@ -137,6 +176,33 @@ MatrixX InnerProductWeights(TMesh const& mesh, Eigen::MatrixBase<TDerivedDetJe> 
     return Ihat;
 }
 
+/**
+ * @brief Computes the reference position \f$ \xi \f$ such that \f$ x(\xi) = x \f$.
+ * This inverse problem is solved using Gauss-Newton iterations.
+ *
+ * We need to solve the inverse problem
+ * \f[
+ * \min_\xi f(\xi) = 1/2 ||x(\xi) - X||_2^2
+ * \f]
+ * to find the reference position \f$ \xi \f$ that corresponds to the domain position \f$ X \f$ in
+ * the element whose vertices are \f$ x \f$.
+ *
+ * We use Gauss-Newton iterations on \f$ \min f \f$.
+ * This gives the iteration 
+ * \f[
+ * dx^{k+1} = [H(\xi^k)]^{-1} J_x(\xi^k)^T (x(\xi^k) - X)
+ * \f]
+ * where \f$ H(\xi^k) = J_x(\xi^k)^T J_x(\xi^k) \f$.
+ *
+ * @tparam TElement FEM element type
+ * @tparam TDerivedX Eigen matrix expression for reference positions
+ * @tparam TDerivedx Eigen matrix expression for domain positions
+ * @param X Reference positions \f$ \xi \f$
+ * @param x Domain positions \f$ x \f$
+ * @param maxIterations Maximum number of Gauss-Newton iterations
+ * @param eps Convergence tolerance
+ * @return Vector<TElement::kDims> Reference position \f$ \xi \f$
+ */
 template <CElement TElement, class TDerivedX, class TDerivedx>
 Vector<TElement::kDims> ReferencePosition(
     Eigen::MatrixBase<TDerivedX> const& X,
@@ -144,14 +210,6 @@ Vector<TElement::kDims> ReferencePosition(
     int const maxIterations = 5,
     Scalar const eps        = 1e-10)
 {
-    // We need to solve the inverse problem \argmin_\Xi f(\Xi) = 1/2 ||x(\Xi) - X||_2^2
-    // to find the reference position \Xi that corresponds to the domain position X in the element
-    // whose vertices are x.
-
-    // We use Gauss-Newton iterations on \argmin f.
-    // This gives the iteration dx^k = [H(\Xi^k)]^{-1} J_x(\Xi^k)^T (x(\Xi^k) - X),
-    // where H(\Xi^k) = J_x(\Xi^k)^T J_x(\Xi^k).
-
     using ElementType = TElement;
     assert(x.cols() == ElementType::kNodes);
     auto constexpr kDims    = ElementType::kDims;
@@ -195,17 +253,20 @@ Vector<TElement::kDims> ReferencePosition(
 }
 
 /**
- * @brief
- * @tparam TDerivedE
- * @tparam TDerivedX
- * @tparam TMesh
- * @param mesh
- * @param E
- * @param X
- * @param maxIterations
- * @param eps
- * @return |#element dims| x |X.cols()| matrix of reference positions associated with domain points
+ * @brief Computes reference positions \f$ \xi \f$ such that \f$ X(\xi) = X_n \f$ for every point in
+ * \f$ \mathbf{X} \in \mathbb{R}^{d \times n} \f$.
+ *
+ * @tparam TDerivedE Eigen matrix expression for indices of elements
+ * @tparam TDerivedX Eigen matrix expression for domain positions
+ * @tparam TMesh FEM mesh type
+ * @param mesh FEM mesh
+ * @param E Indices of elements
+ * @param X Domain positions
+ * @param maxIterations Maximum number of Gauss-Newton iterations
+ * @param eps Convergence tolerance
+ * @return |# element dims| x n matrix of reference positions associated with domain points
  * X in corresponding elements E
+ * @pre E.size() == X.cols()
  */
 template <CMesh TMesh, class TDerivedE, class TDerivedX>
 MatrixX ReferencePositions(

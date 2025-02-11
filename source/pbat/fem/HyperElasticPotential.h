@@ -1,3 +1,13 @@
+/**
+ * @file HyperElasticPotential.h
+ * @author Quoc-Minh Ton-That (tonthat.quocminh@gmail.com)
+ * @brief Hyper elastic potential energy
+ * @date 2025-02-11
+ * 
+ * @copyright Copyright (c) 2025
+ * 
+ */
+
 #ifndef PBA_FEM_HYPER_ELASTIC_POTENTIAL_H
 #define PBA_FEM_HYPER_ELASTIC_POTENTIAL_H
 

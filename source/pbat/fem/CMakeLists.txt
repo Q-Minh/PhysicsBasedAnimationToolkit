@@ -4,7 +4,6 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     FILES
     "Concepts.h"
     "DeformationGradient.h"
-    "DivergenceVector.h"
     "Fem.h"
     "Gradient.h"
     "Hexahedron.h"
@@ -24,7 +23,6 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
 target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     PRIVATE
     "DeformationGradient.cpp"
-    "DivergenceVector.cpp"
     "Gradient.cpp"
     "HyperElasticPotential.cpp"
     "Jacobian.cpp"
