@@ -241,6 +241,15 @@ def codegen(felement, p: int, element_name: str):
     """
 
     header = f"""
+/**
+ * @file 
+ * @author Quoc-Minh Ton-That (tonthat.quocminh@gmail.com)
+ * @brief {element_name} finite element
+ * @date 2025-02-11
+ * 
+ * @copyright Copyright (c) 2025
+ * 
+ */
 #ifndef PBAT_FEM_{element_name.upper()}_H
 #define PBAT_FEM_{element_name.upper()}_H
 
@@ -252,11 +261,28 @@ def codegen(felement, p: int, element_name: str):
 namespace pbat {{
 namespace fem {{
 
+namespace detail {{
+
 template <int Order>
 struct {element_name};
+
+}} // namespace detail
+
+/**
+ * @brief {element_name} finite element
+ * 
+ * Satisfies concept CElement  
+ *
+ * @tparam Order Polynomial order
+ */
+template <int Order>
+using {element_name} = typename detail::{element_name}<Order>;
+
+namespace detail {{
 """
 
     footer = f"""
+}} // namespace detail
 }} // namespace fem
 }} // namespace pbat
 

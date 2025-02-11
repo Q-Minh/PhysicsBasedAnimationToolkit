@@ -1,3 +1,13 @@
+/**
+ * @file 
+ * @author Quoc-Minh Ton-That (tonthat.quocminh@gmail.com)
+ * @brief Quadrilateral finite element
+ * @date 2025-02-11
+ * 
+ * @copyright Copyright (c) 2025
+ * 
+ */
+
 
 #ifndef PBAT_FEM_QUADRILATERAL_H
 #define PBAT_FEM_QUADRILATERAL_H
@@ -10,8 +20,22 @@
 namespace pbat {
 namespace fem {
 
+namespace detail {
 template <int Order>
 struct Quadrilateral;
+} // namespace detail
+
+/**
+ * @brief Quadrilateral finite element
+ * 
+ * Satisfies concept CElement
+ *
+ * @tparam Order Polynomial order of the element
+ */
+template <int Order>
+using Quadrilateral = typename detail::Quadrilateral<Order>;
+
+namespace detail {
 
 template <>
 struct Quadrilateral<1>
@@ -376,6 +400,7 @@ struct Quadrilateral<3>
     }
 };
 
+} // namespace detail
 } // namespace fem
 } // namespace pbat
 

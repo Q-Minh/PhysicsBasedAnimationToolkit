@@ -1,4 +1,12 @@
-
+/**
+ * @file Hexahedron.h
+ * @author Quoc-Minh Ton-That (tonthat.quocminh@gmail.com)
+ * @brief Hexahedron finite element
+ * @date 2025-02-11
+ *
+ * @copyright Copyright (c) 2025
+ *
+ */
 #ifndef PBAT_FEM_HEXAHEDRON_H
 #define PBAT_FEM_HEXAHEDRON_H
 
@@ -10,8 +18,22 @@
 namespace pbat {
 namespace fem {
 
+namespace detail {
 template <int Order>
 struct Hexahedron;
+} // namespace detail
+
+/**
+ * @brief Hexahedron finite element
+ *
+ * Satisfies concept CElement
+ *
+ * @tparam Order Polynomial order of the element
+ */
+template <int Order>
+using Hexahedron = typename detail::Hexahedron<Order>;
+
+namespace detail {
 
 template <>
 struct Hexahedron<1>
@@ -22,9 +44,9 @@ struct Hexahedron<1>
     static int constexpr kDims                                   = 3;
     static int constexpr kNodes                                  = 8;
     static std::array<int, kNodes * kDims> constexpr Coordinates = {
-        0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 1, 0, 0,
-        0, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1}; ///< Divide coordinates by kOrder to obtain actual
-                                          ///< coordinates in the reference element
+        0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 1, 0,
+        0, 0, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1}; ///< Divide coordinates by kOrder to obtain actual
+                                             ///< coordinates in the reference element
     static std::array<int, AffineBaseType::kNodes> constexpr Vertices = {
         0,
         1,
@@ -1201,6 +1223,7 @@ struct Hexahedron<3>
     }
 };
 
+} // namespace detail
 } // namespace fem
 } // namespace pbat
 

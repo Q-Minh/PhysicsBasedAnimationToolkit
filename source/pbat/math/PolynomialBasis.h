@@ -8,8 +8,8 @@
  * 
  */
 
-#ifndef PBAT_MATH_POLYNOMIAL_BASIS_H
-#define PBAT_MATH_POLYNOMIAL_BASIS_H
+#ifndef PBAT_MATH_POLYNOMIALBASIS_H
+#define PBAT_MATH_POLYNOMIALBASIS_H
 
 /**
  * @file PolynomialBasis.h
@@ -5663,4 +5663,4 @@ class DivergenceFreePolynomialBasis<3, 4>
 } // namespace math
 } // namespace pbat
 
-#endif // PBAT_MATH_POLYNOMIAL_BASIS_H
+#endif // PBAT_MATH_POLYNOMIALBASIS_H

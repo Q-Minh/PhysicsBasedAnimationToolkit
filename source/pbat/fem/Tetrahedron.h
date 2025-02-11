@@ -1,3 +1,12 @@
+/**
+ * @file 
+ * @author Quoc-Minh Ton-That (tonthat.quocminh@gmail.com)
+ * @brief Tetrahedron finite element
+ * @date 2025-02-11
+ * 
+ * @copyright Copyright (c) 2025
+ * 
+ */
 
 #ifndef PBAT_FEM_TETRAHEDRON_H
 #define PBAT_FEM_TETRAHEDRON_H
@@ -10,9 +19,22 @@
 namespace pbat {
 namespace fem {
 
+namespace detail {
 template <int Order>
 struct Tetrahedron;
+} // namespace detail
 
+/**
+ * @brief Tetrahedron finite element
+ * 
+ * Satisfies concept CElement
+ *
+ * @tparam Order Polynomial order of the element
+ */
+template <int Order>
+using Tetrahedron = typename detail::Tetrahedron<Order>;
+
+namespace detail {
 template <>
 struct Tetrahedron<1>
 {
@@ -346,6 +368,7 @@ struct Tetrahedron<3>
     }
 };
 
+} // namespace detail
 } // namespace fem
 } // namespace pbat
 

@@ -1,3 +1,12 @@
+/**
+ * @file 
+ * @author Quoc-Minh Ton-That (tonthat.quocminh@gmail.com)
+ * @brief Line segment finite element
+ * @date 2025-02-11
+ * 
+ * @copyright Copyright (c) 2025
+ * 
+ */
 
 #ifndef PBAT_FEM_LINE_H
 #define PBAT_FEM_LINE_H
@@ -10,8 +19,22 @@
 namespace pbat {
 namespace fem {
 
+namespace detail {
 template <int Order>
 struct Line;
+} // namespace detail
+
+/**
+ * @brief Line segment finite element
+ * 
+ * Satisfies concept CElement
+ *
+ * @tparam Order Polynomial order of the element
+ */
+template <int Order>
+using Line = typename detail::Line<Order>;
+
+namespace detail {
 
 template <>
 struct Line<1>
@@ -161,6 +184,7 @@ struct Line<3>
     }
 };
 
+} // namespace detail
 } // namespace fem
 } // namespace pbat
 
