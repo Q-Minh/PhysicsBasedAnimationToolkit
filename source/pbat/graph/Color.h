@@ -35,7 +35,7 @@ namespace graph {
  * @param adj Indices array of the adjacency list
  * @param eOrderingStrategy Vertex visiting order strategy
  * @param eSelectionStrategy Color selection strategy
- * @return Eigen::Vector<TIndex, Eigen::Dynamic> |#vertices| array mapping vertices to their
+ * @return Eigen::Vector<TIndex, Eigen::Dynamic> |# vertices| array mapping vertices to their
  * associated color
  * @ingroup graph
  */

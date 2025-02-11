@@ -130,6 +130,7 @@ def header(file):
 namespace pbat {
 namespace math {
 
+namespace detail {
 template <int Dims, int Order>
 class MonomialBasis;
 
@@ -138,6 +139,20 @@ class OrthonormalPolynomialBasis;
 
 template <int Dims, int Order>
 class DivergenceFreePolynomialBasis;
+
+} // namespace detail
+
+
+template <int Dims, int Order>
+using MonomialBasis = typename detail::MonomialBasis<Dims, Order>;
+
+template <int Dims, int Order>
+using OrthonormalPolynomialBasis = typename detail::OrthonormalPolynomialBasis<Dims, Order>;
+
+template <int Dims, int Order>
+using DivergenceFreePolynomialBasis = typename detail::DivergenceFreePolynomialBasis<Dims, Order>;
+
+namespace detail {
 """
     )
 
@@ -145,6 +160,7 @@ class DivergenceFreePolynomialBasis;
 def footer(file):
     file.write(
         """
+} // namespace detail
 } // namespace math
 } // namespace pbat
 

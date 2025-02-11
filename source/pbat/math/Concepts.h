@@ -1,3 +1,13 @@
+/**
+ * @file Concepts.h
+ * @author Quoc-Minh Ton-That (tonthat.quocminh@gmail.com)
+ * @brief This file contains the concepts used in the math module.
+ * @date 2025-02-11
+ * 
+ * @copyright Copyright (c) 2025
+ * 
+ */
+
 #ifndef PBAT_MATH_CONCEPTS_H
 #define PBAT_MATH_CONCEPTS_H
 
@@ -8,6 +18,11 @@
 namespace pbat {
 namespace math {
 
+/**
+ * @brief
+ *
+ * @tparam T
+ */
 template <class T>
 concept CPolynomialBasis = requires(T t)
 {
@@ -25,6 +40,11 @@ concept CPolynomialBasis = requires(T t)
     } -> std::convertible_to<Matrix<T::kSize, T::kDims>>;
 };
 
+/**
+ * @brief
+ *
+ * @tparam T
+ */
 template <class T>
 concept CVectorPolynomialBasis = requires(T t)
 {
@@ -36,6 +56,11 @@ concept CVectorPolynomialBasis = requires(T t)
     } -> std::convertible_to<Matrix<T::kSize, T::kDims>>;
 };
 
+/**
+ * @brief
+ *
+ * @tparam Q
+ */
 template <class Q>
 concept CQuadratureRule = requires(Q q)
 {
@@ -50,6 +75,11 @@ concept CQuadratureRule = requires(Q q)
     } -> std::convertible_to<int>;
 };
 
+/**
+ * @brief
+ *
+ * @tparam Q
+ */
 template <class Q>
 concept CFixedPointQuadratureRule = requires(Q q)
 {
@@ -59,6 +89,11 @@ concept CFixedPointQuadratureRule = requires(Q q)
     {q.weights.size() == Q::kPoints};
 };
 
+/**
+ * @brief
+ *
+ * @tparam Q
+ */
 template <class Q>
 concept CPolynomialQuadratureRule = requires(Q q)
 {
@@ -66,6 +101,11 @@ concept CPolynomialQuadratureRule = requires(Q q)
     requires std::is_integral_v<decltype(Q::kOrder)>;
 };
 
+/**
+ * @brief
+ *
+ * @tparam Q
+ */
 template <class Q>
 concept CFixedPointPolynomialQuadratureRule =
     CFixedPointQuadratureRule<Q> and CPolynomialQuadratureRule<Q>;

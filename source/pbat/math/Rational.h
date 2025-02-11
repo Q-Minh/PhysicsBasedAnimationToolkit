@@ -1,3 +1,13 @@
+/**
+ * @file Rational.h
+ * @author Quoc-Minh Ton-That (tonthat.quocminh@gmail.com)
+ * @brief Fixed size rational number representation using std::int64_t as numerator and denominator.
+ * @date 2025-02-11
+ *
+ * @copyright Copyright (c) 2025
+ *
+ */
+
 #ifndef PBAT_MATH_RATIONAL_H
 #define PBAT_MATH_RATIONAL_H
 
@@ -11,7 +21,8 @@ namespace pbat {
 namespace math {
 
 /**
- * @brief Fixed size rational number representation using std::int64_t as numerator and denominator.
+ * @brief Fixed size rational number \f$ \frac{a}{b} \f$ using std::int64_t for numerator and
+ * denominator.
  *
  */
 struct PBAT_API Rational
@@ -24,8 +35,9 @@ struct PBAT_API Rational
     /**
      * @brief Construct a new Rational object
      *
-     * @param a
-     * @param b
+     * @tparam Integer Integral type
+     * @param a Numerator
+     * @param b Denominator
      */
     template <std::integral Integer>
     Rational(Integer a, Integer b)
@@ -35,69 +47,70 @@ struct PBAT_API Rational
     /**
      * @brief Construct a new Rational object
      *
-     * @param value
+     * @tparam Integer Integral type
+     * @param value Numerator
+     * @post Denominator is set to 1
      */
     template <std::integral Integer>
     Rational(Integer value) : a(static_cast<std::int64_t>(value)), b(1)
     {
     }
     /**
-     * @brief
-     * @param
-     * @return
+     * @brief Addition operation
+     * @param other Right-hand side operand
+     * @return Rational Result of addition
      */
-    Rational operator+(Rational const&) const;
+    Rational operator+(Rational const& other) const;
     /**
-     * @brief
-     * @param
-     * @return
+     * @brief Subtraction operation
+     * @param other Right-hand side operand
+     * @return Rational Result of subtraction
      */
-    Rational operator-(Rational const&) const;
+    Rational operator-(Rational const& other) const;
     /**
-     * @brief
-     * @return
+     * @brief Negation operation
+     * @return Rational Result of negation
      */
     Rational operator-() const;
     /**
-     * @brief
-     * @param
-     * @return
+     * @brief Multiplication operation
+     * @param other Right-hand side operand
+     * @return Rational Result of multiplication
      */
-    Rational operator*(Rational const&) const;
+    Rational operator*(Rational const& other) const;
     /**
-     * @brief
-     * @param
-     * @return
+     * @brief Division operation
+     * @param other Right-hand side operand
+     * @return Rational Result of division
      */
-    Rational operator/(Rational const&) const;
+    Rational operator/(Rational const& other) const;
     /**
-     * @brief
-     * @param
-     * @return
+     * @brief Equality operation
+     * @param other Right-hand side operand
+     * @return true if equal
      */
-    bool operator==(Rational const&) const;
+    bool operator==(Rational const& other) const;
     /**
-     * @brief
-     * @param
-     * @return
+     * @brief Less-than operation
+     * @param other Right-hand side operand
+     * @return true if not equal
      */
-    bool operator<(Rational const&) const;
+    bool operator<(Rational const& other) const;
     /**
-     * @brief
+     * @brief Change internal rational representation to have %denominator denominator.
      *
-     * @param denominator
-     * @return true
-     * @return false
+     * @param denominator New denominator
+     * @return true if successful
      */
     bool Rebase(std::int64_t denominator);
     /**
-     * @brief
+     * @brief Cast to Scalar
      *
      * @return Scalar
      */
     explicit operator Scalar() const;
     /**
-     * @brief Attempts to reduce magnitude of a,b by eliminating common divisor
+     * @brief Attempts to reduce magnitude of \f$ a,b \f$ by eliminating common divisor
      */
     void simplify();
 
@@ -105,24 +118,56 @@ struct PBAT_API Rational
     std::int64_t b; ///< Denominator
 };
 
+/**
+ * @brief Subtraction operation between Rational and integral type
+ *
+ * @tparam Integer Integral type
+ * @param a Left operand
+ * @param b Right operand
+ * @return Rational Result of subtraction
+ */
 template <std::integral Integer>
 inline Rational operator-(Integer a, Rational const& b)
 {
     return (-b) + a;
 }
 
+/**
+ * @brief Addition operation between Rational and integral type
+ *
+ * @tparam Integer Integral type
+ * @param a Left operand
+ * @param b Right operand
+ * @return Rational Result of addition
+ */
 template <std::integral Integer>
 inline Rational operator+(Integer a, Rational const& b)
 {
     return b + a;
 }
 
+/**
+ * @brief Multiplication operation between Rational and integral type
+ *
+ * @tparam Integer Integral type
+ * @param a Left operand
+ * @param b Right operand
+ * @return Rational Result of multiplication
+ */
 template <std::integral Integer>
 inline Rational operator*(Integer a, Rational const& b)
 {
     return b * a;
 }
 
+/**
+ * @brief Division operation between Rational and integral type
+ *
+ * @tparam Integer Integral type
+ * @param a Left operand
+ * @param b Right operand
+ * @return Rational Result of division
+ */
 template <std::integral Integer>
 inline Rational operator/(Integer a, Rational const& b)
 {

@@ -18,6 +18,12 @@
 #ifndef PBAT_GRAPH_GRAPH_H
 #define PBAT_GRAPH_GRAPH_H
 
+/**
+ * @namespace pbat::graph Graph algorithms and data structures
+ */
+namespace pbat::graph {
+};
+
 #include "Adjacency.h"
 #include "Color.h"
 #include "Enums.h"

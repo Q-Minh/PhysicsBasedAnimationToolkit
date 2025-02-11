@@ -1,3 +1,13 @@
+/**
+ * @file IntegerArithmeticChecks.h
+ * @author Quoc-Minh Ton-That (tonthat.quocminh@gmail.com)
+ * @brief This file provides functions to check for integer arithmetic overflow.
+ * @date 2025-02-11
+ *
+ * @copyright Copyright (c) 2025
+ *
+ */
+
 #ifndef PBAT_MATH_INTEGER_ARITHMETIC_CHECKS_H
 #define PBAT_MATH_INTEGER_ARITHMETIC_CHECKS_H
 
@@ -9,12 +19,12 @@ namespace pbat {
 namespace math {
 
 /**
- * @brief Checks if the operation a+b is not in the range of values representable by the type of
- * Integer.
- * @tparam Integer
- * @param a
- * @param b
- * @return
+ * @brief Checks if the operation \f$ a+b \f$ is not in the range of values representable by the
+ * type Integer.
+ * @tparam Integer The type of the integers to check for overflow.
+ * @param a Left operand
+ * @param b Right operand
+ * @return True if the operation overflows, false otherwise.
  */
 template <std::integral Integer>
 bool AddOverflows(Integer a, Integer b)
@@ -38,12 +48,12 @@ bool AddOverflows(Integer a, Integer b)
 }
 
 /**
- * @brief Checks if the operation a*b is not in the range of values representable by the type of
- * Integer.
- * @tparam Integer
- * @param a
- * @param b
- * @return
+ * @brief Checks if the operation \f$ ab \f$ is not in the range of values representable by the type
+ * of Integer.
+ * @tparam Integer The type of the integers to check for overflow.
+ * @param a Left operand
+ * @param b Right operand
+ * @return True if the operation overflows, false otherwise.
  */
 template <std::integral Integer>
 bool MultiplyOverflows(Integer a, Integer b)
@@ -69,11 +79,11 @@ bool MultiplyOverflows(Integer a, Integer b)
 }
 
 /**
- * @brief Checks if the operation -a is not in the range of values representable by the type of
- * Integer.
- * @tparam Integer
- * @param a
- * @return
+ * @brief Checks if the operation \f$ -a \f$ is not in the range of values representable by the type
+ * of Integer.
+ * @tparam Integer The type of the integers to check for overflow.
+ * @param a Operand
+ * @return True if the operation overflows, false otherwise.
  */
 template <std::integral Integer>
 bool NegationOverflows(Integer a)
@@ -95,43 +105,91 @@ bool NegationOverflows(Integer a)
 
 /**
  * @brief Wrapper around integer types that throws when integer overflow is detected
- * @tparam Integer
+ * @tparam Integer The type of the integer to wrap
  */
 template <std::integral Integer>
 struct OverflowChecked
 {
-    using SelfType = OverflowChecked<Integer>;
+    using SelfType = OverflowChecked<Integer>; ///< Instance type
 
+    /**
+     * @brief Dereference operator
+     *
+     * @return Integer& Underlying integer value
+     */
     Integer& operator*() { return value; }
+    /**
+     * @brief Const dereference operator
+     *
+     * @return Integer const& Underlying integer value
+     */
     Integer const& operator*() const { return value; }
+    /**
+     * @brief Negation operator
+     *
+     * @return SelfType Negated value
+     */
     SelfType operator-() const
     {
         if (NegationOverflows(value))
             throw std::overflow_error("Negation overflow");
         return SelfType{-value};
     }
+    /**
+     * @brief Addition operator
+     *
+     * @param rhs Right-hand side operand
+     * @return SelfType Sum of the two operands
+     */
     SelfType operator+(SelfType rhs) const
     {
         if (AddOverflows(value, rhs.value))
             throw std::overflow_error("Addition overflow");
         return SelfType{value + rhs.value};
     }
+    /**
+     * @brief Multiplication operator
+     *
+     * @param rhs Right-hand side operand
+     * @return SelfType Product of the two operands
+     */
     SelfType operator*(SelfType rhs) const
     {
         if (MultiplyOverflows(value, rhs.value))
             throw std::overflow_error("Multiplication overflow");
         return SelfType{value * rhs.value};
     }
+    /**
+     * @brief Subtraction operator
+     *
+     * @param rhs Right-hand side operand
+     * @return SelfType Difference of the two operands
+     */
     SelfType operator-(SelfType rhs) const { return (*this) + -rhs; }
+    /**
+     * @brief Division operator
+     *
+     * @param rhs Right-hand side operand
+     * @return SelfType Quotient of the two operands
+     */
     SelfType operator/(SelfType rhs) const { return SelfType{value / rhs.value}; }
+    /**
+     * @brief Division operator
+     *
+     * @param rhs Right-hand side operand
+     * @return SelfType& Quotient of the two operands
+     */
     template <std::integral OtherInteger>
     SelfType operator/(OtherInteger value) const
     {
         return SelfType{this->value / value};
     }
+    /**
+     * @brief Cast operator to underlying type
+     */
     operator Integer() const { return value; }
 
-    Integer value;
+    Integer value; ///< Underlying integer value
 };
 
 } // namespace math

@@ -1,3 +1,13 @@
+/**
+ * @file SymmetricQuadratureRules.h
+ * @author Quoc-Minh Ton-That (tonthat.quocminh@gmail.com)
+ * @brief Symmetric quadrature rules for reference simplices in dimensions \f$ d=1,2,3 \f$.
+ * @date 2025-02-11
+ *
+ * @copyright Copyright (c) 2025
+ *
+ */
+
 #ifndef PBAT_MATH_SYMMETRIC_QUADRATURE_RULES_H
 #define PBAT_MATH_SYMMETRIC_QUADRATURE_RULES_H
 
@@ -10,34 +20,80 @@ namespace math {
 
 /**
  * @brief Represents a quadrature scheme that can be constructed via existing quadrature schemes.
+ *
  * However, this generic quadrature scheme can be modified, i.e. its points and weights are instance
  * member variables.
  */
 template <class Quad>
 struct FixedSizeVariableQuadrature
 {
-    inline static std::uint8_t constexpr kDims    = Quad::kDims;
-    inline static std::uint16_t constexpr kPoints = Quad::kPoints;
-    inline static std::uint8_t constexpr kOrder   = Quad::kOrder;
+    inline static std::uint8_t constexpr kDims    = Quad::kDims;   ///< Spatial dimensions
+    inline static std::uint16_t constexpr kPoints = Quad::kPoints; ///< Number of quadrature points
+    inline static std::uint8_t constexpr kOrder   = Quad::kOrder;  ///< Polynomial order
     FixedSizeVariableQuadrature() : points(Quad::points), weights(Quad::weights) {}
 
-    decltype(Quad::points) points;
-    decltype(Quad::weights) weights;
+    decltype(Quad::points) points;   ///< Quadrature points
+    decltype(Quad::weights) weights; ///< Quadrature weights
 };
 
-/**
- * @brief Symmetric quadrature rule for reference simplices in 1,2,3 dimensions, i.e. with vertices
- * having coordinate values 0 or 1.
- *
- * The points are specified as (kDims+1) coordinate tuples in affine
- * coordinates, i.e. the first coordinate = 1 - sum(other kDims coordinates). This is not necessary,
- * and can be removed, but for now, we leave it as is.
- *
- * @tparam Dims
- * @tparam Order
- */
+namespace detail {
 template <int Dims, int Order>
 struct SymmetricSimplexPolynomialQuadratureRule;
+} // namespace detail
+
+/**
+ * @brief Symmetric quadrature rule for reference simplices in dimensions \f$ d=1,2,3 \f$.
+ *
+ * The points are specified as \f$ d+1 \f$ coordinate tuples in affine
+ * coordinates, i.e. the first coordinate \f$ X_0 = 1 - \sum_{i=1}^d X_i \f$.
+ *
+ * Every point belongs to the reference simplex, e.g.
+ * - the line segment \f$ 0,1 \f$ in 1D,
+ * - the triangle \f$
+ * \begin{pmatrix} 0 \\ 0 \end{pmatrix},
+ * \begin{pmatrix} 1 \\ 0 \end{pmatrix},
+ * \begin{pmatrix} 0 \\ 1 \end{pmatrix}
+ * \f$ in 2D, and
+ * - the tetrahedron \f$
+ * \begin{pmatrix} 0 \\ 0 \\ 0 \end{pmatrix},
+ * \begin{pmatrix} 1 \\ 0 \\ 0 \end{pmatrix},
+ * \begin{pmatrix} 0 \\ 1 \\ 0 \end{pmatrix},
+ * \begin{pmatrix} 0 \\ 0 \\ 1\end{pmatrix}
+ * \f$ in 3D.
+ *
+ SymmetricSimplexPolynomialQuadratureRule instantiations expose static members
+ * ```cpp
+ * template <int Dims, int Order>
+ * struct SymmetricSimplexPolynomialQuadratureRule
+ * {
+ *     inline static std::uint8_t constexpr kDims;
+ *     inline static std::uint8_t constexpr kOrder;
+ *     inline static int constexpr kPoints;
+ *     inline static std::array<Scalar, (kDims + 1) * kPoints> constexpr points;
+ *     inline static std::array<Scalar, kPoints> constexpr weights;
+ * };
+ * ```
+ *
+ * Example usage:
+ * ```cpp
+ * using Quad = SymmetricSimplexPolynomialQuadratureRule<3, 2>;
+ * auto Xg = pbat::common::ToEigen(Quad::points).reshaped(Quad::kDims + 1, Quad::kPoints);
+ * auto wg = pbat::common::ToEigen(Quad::weights);
+ * for (auto g = 0; g < Quad::kPoints; ++g)
+ * {
+ *     auto X = Xg.col(g).segment(1, Quad::kDims);
+ *     integrand += wg(g)*f(X);
+ * }
+ * ```
+ *
+ * @tparam Dims Dimension of the reference simplex
+ * @tparam Order Polynomial order of the quadrature rule
+ */
+template <int Dims, int Order>
+using SymmetricSimplexPolynomialQuadratureRule =
+    typename detail::SymmetricSimplexPolynomialQuadratureRule<Dims, Order>;
+
+namespace detail {
 
 template <>
 struct SymmetricSimplexPolynomialQuadratureRule<1, 0>
@@ -4190,6 +4246,7 @@ struct SymmetricSimplexPolynomialQuadratureRule<3, 20>
         0.000189803, 0.000189803, 0.000189803, 0.000189803, 0.000189803, 0.000189803};
 };
 
+} // namespace detail
 } // namespace math
 } // namespace pbat
 

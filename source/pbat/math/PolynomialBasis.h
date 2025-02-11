@@ -1,3 +1,13 @@
+/**
+ * @file PolynomialBasis.h
+ * @author Quoc-Minh Ton-That (tonthat.quocminh@gmail.com)
+ * @brief Polynomial basis in dimensions d and order p.
+ * @date 2025-02-11
+ * 
+ * @copyright Copyright (c) 2025
+ * 
+ */
+
 #ifndef PBAT_MATH_POLYNOMIAL_BASIS_H
 #define PBAT_MATH_POLYNOMIAL_BASIS_H
 
@@ -16,6 +26,8 @@
 namespace pbat {
 namespace math {
 
+namespace detail {
+
 template <int Dims, int Order>
 class MonomialBasis;
 
@@ -24,6 +36,179 @@ class OrthonormalPolynomialBasis;
 
 template <int Dims, int Order>
 class DivergenceFreePolynomialBasis;
+
+} // namespace detail
+
+/**
+ * @brief Polynomial basis \f$ \left\{ \Pi_{i=1}^{d} \mathbf{X}_i^{p_i} \; \text{s.t.} \; 0 \leq
+ * \sum_{i=1}^d p_i \leq p \right\} \f$ in dimensions \f$ d \f$ and order \f$ p \f$.
+ *
+ * See [Monomial basis](https://en.wikipedia.org/wiki/Monomial_basis).
+ *
+ * @tparam Dims Spatial dimensions
+ * @tparam Order Polynomial order
+ */
+template <int Dims, int Order>
+struct MonomialBasis : detail::MonomialBasis<Dims, Order>
+{
+  public:
+    using BaseType                             = detail::MonomialBasis<Dims, Order>; ///< Base type
+    inline static constexpr std::size_t kDims  = BaseType::kDims;  ///< Spatial dimensions
+    inline static constexpr std::size_t kOrder = BaseType::kOrder; ///< Polynomial order
+    inline static constexpr std::size_t kSize  = BaseType::kSize;  ///< Number of basis functions
+    /**
+     * @brief
+     *
+     * @param X
+     * @return Vector<kSize>
+     */
+    [[maybe_unused]] Vector<kSize> eval([[maybe_unused]] Vector<kDims> const& X) const
+    {
+        return BaseType::eval(X);
+    }
+    /**
+     * @brief
+     *
+     * @param X
+     * @return Matrix<kDims, kSize>
+     */
+    [[maybe_unused]] Matrix<kDims, kSize> derivatives([[maybe_unused]] Vector<kDims> const& X) const
+    {
+        return BaseType::derivatives(X);
+    }
+    /**
+     * @brief
+     *
+     * @param X
+     * @return Matrix<kSize, kDims>
+     */
+    [[maybe_unused]] Matrix<kSize, kDims>
+    antiderivatives([[maybe_unused]] Vector<kDims> const& X) const
+    {
+        return BaseType::antiderivatives(X);
+    }
+};
+
+/**
+ * @brief Orthonormal polynomial basis \f$ \left\{ P_i(X) \right\} \f$ in dimensions \f$ d \f$ and
+ * order \f$ p
+ * \f$.
+ *
+ * The basis is orthonormal with respect to the inner product
+ * \f[
+ *      \langle f, g \rangle = \int_{\Omega^d} f(X) g(X) \, d\Omega^d
+ * \f]
+ * where \f$ \Omega^d \f$ is the reference simplex in dimensions \f$ d \f$, e.g.
+ * - the line segment \f$ 0,1 \f$ in 1D,
+ * - the triangle \f$
+ * \begin{pmatrix} 0 \\ 0 \end{pmatrix},
+ * \begin{pmatrix} 1 \\ 0 \end{pmatrix},
+ * \begin{pmatrix} 0 \\ 1 \end{pmatrix}
+ * \f$ in 2D, and
+ * - the tetrahedron \f$
+ * \begin{pmatrix} 0 \\ 0 \\ 0 \end{pmatrix},
+ * \begin{pmatrix} 1 \\ 0 \\ 0 \end{pmatrix},
+ * \begin{pmatrix} 0 \\ 1 \\ 0 \end{pmatrix},
+ * \begin{pmatrix} 0 \\ 0 \\ 1\end{pmatrix}
+ * \f$ in 3D.
+ *
+ * In other words,
+ * \f[
+ *     \langle P_i, P_j \rangle = \delta_{ij}
+ * \f]
+ * where \f$ \delta_{ij} \f$ is the Kronecker delta.
+ *
+ * See [Orthogonal polynomials](https://en.wikipedia.org/wiki/Orthogonal_polynomials).
+ *
+ * @tparam Dims Spatial dimensions
+ * @tparam Order Polynomial order
+ */
+template <int Dims, int Order>
+struct OrthonormalPolynomialBasis : detail::OrthonormalPolynomialBasis<Dims, Order>
+{
+  public:
+    using BaseType = typename detail::OrthonormalPolynomialBasis<Dims, Order>; ///< Base type
+    inline static constexpr std::size_t kDims  = BaseType::kDims;  ///< Spatial dimensions
+    inline static constexpr std::size_t kOrder = BaseType::kOrder; ///< Polynomial order
+    inline static constexpr std::size_t kSize  = BaseType::kSize;  ///< Number of basis functions
+    /**
+     * @brief
+     *
+     * @param X
+     * @return Vector<kSize>
+     */
+    [[maybe_unused]] Vector<kSize> eval([[maybe_unused]] Vector<kDims> const& X) const
+    {
+        return BaseType::eval(X);
+    }
+    /**
+     * @brief
+     *
+     * @param X
+     * @return Matrix<kDims, kSize>
+     */
+    [[maybe_unused]] Matrix<kDims, kSize> derivatives([[maybe_unused]] Vector<kDims> const& X) const
+    {
+        return BaseType::derivatives(X);
+    }
+    /**
+     * @brief
+     *
+     * @param X
+     * @return Matrix<kSize, kDims>
+     */
+    [[maybe_unused]] Matrix<kSize, kDims>
+    antiderivatives([[maybe_unused]] Vector<kDims> const& X) const
+    {
+        return BaseType::antiderivatives(X);
+    }
+};
+
+/**
+ * @brief Divergence-free polynomial basis \f$ \left\{ \mathbf{P}_i(X) \; \text{s.t.} \; \nabla_X
+ * \mathbf{P}_i = 0 \right\} \f$ in dimensions \f$ d \f$ and order \f$ p \f$.
+ *
+ * The basis satisfies \f$ \nabla_X \cdot \mathbf{P}_i = 0 \f$ on the reference simplex in
+ * dimensions \f$ d \f$, e.g.
+ * - the line segment \f$ 0,1 \f$ in 1D,
+ * - the triangle \f$
+ * \begin{pmatrix} 0 \\ 0 \end{pmatrix},
+ * \begin{pmatrix} 1 \\ 0 \end{pmatrix},
+ * \begin{pmatrix} 0 \\ 1 \end{pmatrix}
+ * \f$ in 2D, and
+ * - the tetrahedron \f$
+ * \begin{pmatrix} 0 \\ 0 \\ 0 \end{pmatrix},
+ * \begin{pmatrix} 1 \\ 0 \\ 0 \end{pmatrix},
+ * \begin{pmatrix} 0 \\ 1 \\ 0 \end{pmatrix},
+ * \begin{pmatrix} 0 \\ 0 \\ 1\end{pmatrix}
+ * \f$ in 3D.
+ *
+ * See \cite muller2013highly
+ *
+ * @tparam Dims Spatial dimensions
+ * @tparam Order Polynomial order
+ */
+template <int Dims, int Order>
+struct DivergenceFreePolynomialBasis : detail::DivergenceFreePolynomialBasis<Dims, Order>
+{
+  public:
+    using BaseType = typename detail::DivergenceFreePolynomialBasis<Dims, Order>; ///< Base type
+    inline static constexpr std::size_t kDims  = BaseType::kDims;  ///< Spatial dimensions
+    inline static constexpr std::size_t kOrder = BaseType::kOrder; ///< Polynomial order
+    inline static constexpr std::size_t kSize  = BaseType::kSize;  ///< Number of basis functions
+    /**
+     * @brief
+     *
+     * @param X
+     * @return Matrix<kSize, kDims>
+     */
+    [[maybe_unused]] Matrix<kSize, kDims> eval([[maybe_unused]] Vector<kDims> const& X) const
+    {
+        return BaseType::eval(X);
+    }
+};
+
+namespace detail {
 
 /**
  * Monomial basis in 1D
@@ -5474,6 +5659,7 @@ class DivergenceFreePolynomialBasis<3, 4>
     }
 };
 
+} // namespace detail
 } // namespace math
 } // namespace pbat
 

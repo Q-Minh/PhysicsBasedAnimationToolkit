@@ -1,3 +1,13 @@
+/**
+ * @file LinearOperator.h
+ * @author Quoc-Minh Ton-That (tonthat.quocminh@gmail.com)
+ * @brief Linear operator concept and composite type
+ * @date 2025-02-11
+ * 
+ * @copyright Copyright (c) 2025
+ * 
+ */
+
 #ifndef PBAT_MATH_LINEAR_OPERATOR_H
 #define PBAT_MATH_LINEAR_OPERATOR_H
 
@@ -13,11 +23,11 @@ namespace math {
 /**
  * @brief Concept for operator that satisfies linearity in the mathematical sense.
  *
- * Linear operators satisfy L(ax+bz) = a*L(x) + b*L(z), hence simply scale and add the
+ * Linear operators satisfy \f$ L(ax+bz) = a*L(x) + b*L(z) \f$, hence simply scale and add the
  * input (1st parameter of Apply) prior to the Apply member function to obtain the desired result.
  * Often, the user wishes to obtain the result of multiple applications of linear operators,
  * hence we should not overwrite the out variable (2nd parameter of Apply), but simply add to it. To
- * subtract from it, simply negate the input x, i.e. L(-x) = -L(x) by linearity.
+ * subtract from it, simply negate the input x, i.e. \f$ L(-x) = -L(x) \f$ by linearity.
  *
  */
 template <class T>
@@ -68,34 +78,43 @@ namespace pbat {
 namespace math {
 
 /**
- * @brief Zero-overhead composite type satisfying the CLinearOperator concept. Provides
+ * @brief Zero-overhead composite type satisfying the CLinearOperator concept.
+ *
+ * Provides
  * interoperability with the Eigen API, i.e. can be used in product expression, and is usable in any
  * IterativeLinearSolver (with suitable preconditioner, i.e. the preconditioner should not be
  * constructible by analyzing matrix coefficients, since LinearOperator does not require storing any
  * matrix).
  *
- * @tparam ...TLinearOperators
+ * Refer to LinearOperator.cpp for usage examples.
+ *
+ * @tparam ...TLinearOperators List of linear operators to be composed ordered from left to right.
  */
 template <CLinearOperator... TLinearOperators>
 class LinearOperator : public Eigen::EigenBase<LinearOperator<TLinearOperators...>>
 {
   public:
-    using SelfType = LinearOperator<TLinearOperators...>;
-    using BaseType = Eigen::EigenBase<SelfType>;
+    using SelfType = LinearOperator<TLinearOperators...>; ///< Instance type
+    using BaseType = Eigen::EigenBase<SelfType>;          ///< EigenBase type
 
-    /**
-     * @brief Typedefs for Eigen compatibility
-     */
-    using Scalar           = pbat::Scalar;
-    using RealScalar       = pbat::Scalar;
-    using StorageIndex     = typename CSCMatrix::StorageIndex;
-    using NestedExpression = SelfType;
+    using Scalar           = pbat::Scalar;                     ///< Eigen typedef
+    using RealScalar       = pbat::Scalar;                     ///< Eigen typedef
+    using StorageIndex     = typename CSCMatrix::StorageIndex; ///< Eigen typedef
+    using NestedExpression = SelfType;                         ///< Eigen typedef
     enum {
         ColsAtCompileTime    = Eigen::Dynamic,
         MaxColsAtCompileTime = Eigen::Dynamic,
         IsRowMajor           = false
     };
 
+    /**
+     * @brief Construct a new Linear Operator object from a list of linear operators.
+     *
+     * @param inOps List of linear operators to be composed ordered from left to right.
+     *
+     * @note Given linear operators' lifetimes must exceed the lifetime of this LinearOperator
+     * object.
+     */
     LinearOperator(TLinearOperators const&... inOps);
 
     SelfType& operator=(SelfType const&) = delete;
@@ -103,26 +122,57 @@ class LinearOperator : public Eigen::EigenBase<LinearOperator<TLinearOperators..
     /**
      * @brief Applies all linear operators on x, adding result to y.
      *
-     * @tparam TDerivedIn
-     * @tparam TDerivedOut
-     * @param x
-     * @param y
+     * @tparam TDerivedIn Eigen matrix expression.
+     * @tparam TDerivedOut Writeable Eigen matrix expression.
+     * @param x Input vector or matrix.
+     * @param y Output vector or matrix.
+     * @pre x.rows() == InputDimensions() and y.rows() == OutputDimensions()
      */
     template <class TDerivedIn, class TDerivedOut>
     void Apply(Eigen::MatrixBase<TDerivedIn> const& x, Eigen::DenseBase<TDerivedOut>& y) const;
 
     /**
      * @brief Construct the matrix of all underlying matrices obtained by Lops.
-     * @return
+     * @return CSCMatrix The compressed sparse column matrix representation of the linear operator.
      */
     CSCMatrix ToMatrix() const;
 
+    /**
+     * @brief Number of rows
+     *
+     * @return pbat::Index
+     */
     pbat::Index OutputDimensions() const;
+    /**
+     * @brief Number of columns
+     *
+     * @return pbat::Index
+     */
     pbat::Index InputDimensions() const;
 
     // For Eigen compatibility
+
+    /**
+     * @brief Number of rows (Eigen compatibility)
+     *
+     * @return BaseType::Index
+     */
     BaseType::Index rows() const { return static_cast<BaseType::Index>(OutputDimensions()); }
+    /**
+     * @brief Number of columns (Eigen compatibility)
+     *
+     * @return BaseType::Index
+     */
     BaseType::Index cols() const { return static_cast<BaseType::Index>(InputDimensions()); }
+
+    /**
+     * @brief Lazily left-multiply x by this linear operator.
+     *
+     * @tparam Rhs Right-hand side matrix or vector expression
+     * @param x Right-hand side matrix or vector
+     * @return Eigen::Product<SelfType, Rhs, Eigen::AliasFreeProduct> Eigen expression of the
+     * product of this linear operator and x.
+     */
     template <class Rhs>
     Eigen::Product<SelfType, Rhs, Eigen::AliasFreeProduct>
     operator*(Eigen::MatrixBase<Rhs> const& x) const
@@ -134,6 +184,15 @@ class LinearOperator : public Eigen::EigenBase<LinearOperator<TLinearOperators..
     std::tuple<TLinearOperators const&...> ops;
 };
 
+/**
+ * @brief Compose multiple linear operators into a single linear operator.
+ *
+ * Refer to LinearOperator.cpp for usage examples.
+ *
+ * @tparam TLinearOperators Linear operator parameter types
+ * @param inOps Linear operators to be composed
+ * @return LinearOperator<TLinearOperators...> Composed linear operator
+ */
 template <CLinearOperator... TLinearOperators>
 LinearOperator<TLinearOperators...> ComposeLinearOperators(TLinearOperators const&... inOps)
 {

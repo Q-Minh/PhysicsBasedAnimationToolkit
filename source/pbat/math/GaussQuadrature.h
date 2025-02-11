@@ -1,6 +1,16 @@
+/**
+ * @file GaussQuadrature.h
+ * @author Quoc-Minh Ton-That (tonthat.quocminh@gmail.com)
+ * @brief Gauss-Legendre quadrature schemes over the unit box in dimensions 1, 2, 3
+ * @date 2025-02-11
+ * 
+ * @copyright Copyright (c) 2025
+ * 
+ */
 
-#ifndef PBAT_MATH_GAUSS_QUADRATURE_H
-#define PBAT_MATH_GAUSS_QUADRATURE_H
+
+#ifndef PBAT_MATH_GAUSSQUADRATURE_H
+#define PBAT_MATH_GAUSSQUADRATURE_H
 
 #include <array>
 #include <cstdint>
@@ -9,18 +19,51 @@
 namespace pbat {
 namespace math {
 
-/**
- * @brief Shifted Gauss Legendre quadrature scheme over the unit box [0,1] in Dims dimensions.
- *
- * The points are specified as (kDims+1) coordinate tuples in affine
- * coordinates, i.e. the first coordinate = 1 - sum(other kDims coordinates). This is not necessary,
- * and can be removed, but for now, we leave it as is.
- *
- * @tparam Dims
- * @tparam Order
- */
+namespace detail {
 template <int Dims, int Order>
 struct GaussLegendreQuadrature;
+} // namespace detail
+
+/**
+ * @brief Shifted Gauss-Legendre quadrature scheme over the unit box \f$ 0 \leq X \leq 1 \;
+ * \text{s.t.} \; X \in \mathbb{R}^d \f$ in dimensions \f$ d=1,2,3 \f$.
+ *
+ * The points are specified as \f$ d+1 \f$ coordinate tuples in affine
+ * coordinates, i.e. the first coordinate \f$ X_0 = 1 - \sum_{i=1}^d X_i \f$.
+ *
+ * GaussLegendreQuadrature instantiations expose static members
+ * ```cpp
+ * template <int Dims, int Order>
+ * struct GaussLegendreQuadrature
+ * {
+ *     inline static std::uint8_t constexpr kDims;
+ *     inline static std::uint8_t constexpr kOrder;
+ *     inline static int constexpr kPoints;
+ *     inline static std::array<Scalar, (kDims + 1) * kPoints> constexpr points;
+ *     inline static std::array<Scalar, kPoints> constexpr weights;
+ * };
+ * ```
+ *
+ * Example usage:
+ * ```cpp
+ * using Quad = GaussLegendreQuadrature<3, 2>;
+ * auto Xg = pbat::common::ToEigen(Quad::points).reshaped(Quad::kDims + 1, Quad::kPoints);
+ * auto wg = pbat::common::ToEigen(Quad::weights);
+ * for (auto g = 0; g < Quad::kPoints; ++g)
+ * {
+ *     auto X = Xg.col(g).segment(1, Quad::kDims);
+ *     integrand += wg(g)*f(X);
+ * }
+ * ```
+ *
+ * @tparam Dims Spatial dimensions
+ * @tparam Order Polynomial quadrature order
+ *
+ */
+template <int Dims, int Order>
+using GaussLegendreQuadrature = typename detail::GaussLegendreQuadrature<Dims, Order>;
+
+namespace detail {
 
 template <>
 struct GaussLegendreQuadrature<1, 1>
@@ -5526,7 +5569,8 @@ struct GaussLegendreQuadrature<3, 10>
         0.000149613614798725, 0.000121731726568416, 8.30401790468641e-5,  3.70448336543065e-5};
 };
 
+} // namespace detail
 } // namespace math
 } // namespace pbat
 
-#endif // PBAT_MATH_GAUSS_QUADRATURE_H
+#endif // PBAT_MATH_GAUSSQUADRATURE_H

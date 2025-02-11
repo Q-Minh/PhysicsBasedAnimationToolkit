@@ -17,6 +17,8 @@ if (DOXYGEN_FOUND)
         "*::detail::*"
         "test::*"
         "*::test::*"
+        "internal::*"
+        "*::internal::*"
     )
     set(DOXYGEN_SORT_GROUP_NAMES "YES")
     list(
@@ -54,6 +56,19 @@ if (DOXYGEN_FOUND)
         "js/doxygen-awesome-tabs.js"
     )
     set(DOXYGEN_HTML_COPY_CLIPBOARD "NO")
+
+    find_program(BIBTEX_EXECUTABLE bibtex)
+    find_program(PERL_EXECUTABLE perl)
+    if (BIBTEX_EXECUTABLE AND PERL_EXECUTABLE)
+        list(
+            APPEND 
+            DOXYGEN_CITE_BIB_FILES
+            "latex/bibliography.bib"
+        )
+    else()
+        message(WARNING "PBAT[doc] -- BibTeX and Perl not found, bibliography will not be generated")
+    endif()
+
     doxygen_add_docs(
         PhysicsBasedAnimationToolkit_Docs
         "${CMAKE_SOURCE_DIR}/source"
