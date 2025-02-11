@@ -5,7 +5,6 @@
  * @date 2025-02-10
  *
  * @copyright Copyright (c) 2025
- * @ingroup common
  */
 
 #ifndef PBAT_COMMON_H
@@ -26,7 +25,6 @@ namespace common {
  * @tparam T Hashable type
  * @param seed Starting hash value
  * @param val Value to hash
- * @ingroup common
  */
 template <typename T>
 void HashCombineAccumulate(std::size_t& seed, T const& val)
@@ -40,7 +38,6 @@ void HashCombineAccumulate(std::size_t& seed, T const& val)
  * @tparam Types Hashable types
  * @param args Arguments to hash
  * @return std::size_t Hash value
- * @ingroup common
  */
 template <typename... Types>
 std::size_t HashCombine(const Types&... args)

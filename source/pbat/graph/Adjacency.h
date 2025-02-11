@@ -5,7 +5,6 @@
  * @date 2025-02-10
  *
  * @copyright Copyright (c) 2025
- * @ingroup graph
  */
 
 #ifndef PBAT_GRAPH_ADJACENCY_H
@@ -47,7 +46,6 @@ using WeightedEdge = Eigen::Triplet<TWeight, TIndex>;
  * @param n Number of columns of the adjacency matrix. If not provided (i.e. n < 0), it is inferred
  * from the edge list.
  * @return Eigen::SparseMatrix<TScalar, Eigen::RowMajor, TIndex> Adjacency matrix
- * @ingroup graph
  */
 template <
     class TWeightedEdgeIterator,
@@ -95,7 +93,6 @@ Eigen::SparseMatrix<TScalar, Eigen::RowMajor, TIndex> AdjacencyMatrixFromEdges(
  * @tparam TIndex Index type of the graph vertices
  * @param A Input adjacency matrix
  * @return auto Non-owning wrapper around the offset pointers of the adjacency matrix
- * @ingroup graph
  */
 template <
     class TDerivedA,
@@ -115,7 +112,6 @@ auto AdjacencyMatrixPrefix(Eigen::SparseCompressedBase<TDerivedA> const& A)
  * @tparam TIndex Index type of the graph vertices
  * @param A Input adjacency matrix
  * @return auto Non-owning wrapper around the indices of the adjacency matrix
- * @ingroup graph
  */
 template <
     class TDerivedA,
@@ -135,7 +131,6 @@ auto AdjacencyMatrixIndices(Eigen::SparseCompressedBase<TDerivedA> const& A)
  * @tparam TIndex Index type of the graph vertices
  * @param A Input adjacency matrix
  * @return auto Non-owning wrapper around the weights of the adjacency matrix
- * @ingroup graph
  */
 template <
     class TDerivedA,
@@ -158,7 +153,6 @@ auto AdjacencyMatrixWeights(Eigen::SparseCompressedBase<TDerivedA> const& A)
  * map.
  * @return std::tuple<Eigen::Vector<TIndex, Eigen::Dynamic>, Eigen::Vector<TIndex, Eigen::Dynamic>>
  * Tuple of the offset pointers and indices of the adjacency list
- * @ingroup graph
  */
 template <class TDerivedP, std::integral TIndex = typename TDerivedP::Scalar>
 std::tuple<Eigen::Vector<TIndex, Eigen::Dynamic>, Eigen::Vector<TIndex, Eigen::Dynamic>>
@@ -181,7 +175,6 @@ MapToAdjacency(Eigen::DenseBase<TDerivedP> const& p, TIndex n = TIndex(-1))
  * @tparam TIndex Index type of the graph vertices
  * @param A Input adjacency matrix
  * @return auto Tuple of the offset pointers and indices of the adjacency matrix
- * @ingroup graph
  */
 template <
     class TDerivedA,
@@ -202,7 +195,6 @@ auto MatrixToAdjacency(Eigen::SparseCompressedBase<TDerivedA> const& A)
  * @tparam TIndex Index type of the graph vertices
  * @param A Input adjacency matrix
  * @return auto Tuple of the offset pointers, indices, and weights of the adjacency matrix
- * @ingroup graph
  */
 template <
     class TDerivedA,
@@ -223,7 +215,6 @@ auto MatrixToWeightedAdjacency(Eigen::SparseCompressedBase<TDerivedA> const& A)
  * @tparam TIndex Index type of the graph vertices
  * @param lil Input adjacency list in list of lists format
  * @return auto Tuple of the offset pointers and indices of the adjacency list
- * @ingroup graph
  */
 template <class TIndex = Index>
 auto ListOfListsToAdjacency(std::vector<std::vector<TIndex>> const& lil)
@@ -262,7 +253,6 @@ auto ListOfListsToAdjacency(std::vector<std::vector<TIndex>> const& lil)
  * @param adj Indices of the adjacency list
  * @param f Callable function to be applied to each edge with signature `void(TIndex i, TIndex j,
  * TIndex k)`
- * @ingroup graph
  */
 template <
     class TDerivedPtr,
@@ -295,7 +285,6 @@ void ForEachEdge(Eigen::DenseBase<TDerivedPtr>& ptr, Eigen::DenseBase<TDerivedAd
  * @param adj Indices of the adjacency list
  * @param fShouldDeleteEdge Callable function to determine if an edge should be removed with
  * signature `bool(TIndex i, TIndex j)`
- * @ingroup graph
  */
 template <
     class TDerivedPtr,

@@ -24,7 +24,6 @@ namespace fem {
  * @param GP Basis function gradients
  * @return Deformation gradient matrix
  *
- * @ingroup fem
  */
 template <CElement TElement, class TDerivedx, class TDerivedX>
 Matrix<TDerivedx::RowsAtCompileTime, TElement::kDims>
@@ -49,7 +48,6 @@ DeformationGradient(Eigen::MatrixBase<TDerivedx> const& x, Eigen::MatrixBase<TDe
  * @param i Basis function index
  * @return \f$ d \times 1 \f$ vector \f$ \frac{\partial \Psi}{\partial \mathbf{x}_i} \f$
  *
- * @ingroup fem
  */
 template <
     CElement TElement,
@@ -108,7 +106,6 @@ GradientSegmentWrtDofs(TMatrixGF const& GF, TMatrixGP const& GP, auto i)
  * @param GP \f$ * \times d \f$ basis function gradients \f$ \nabla \mathbf{N}_i \f$
  * @return \f$ d \times 1 \f$ vector \f$ \frac{\partial \Psi}{\partial \mathbf{x}_i} \f$
  *
- * @ingroup fem
  */
 template <
     CElement TElement,
@@ -152,7 +149,6 @@ GradientWrtDofs(TMatrixGF const& GF, TMatrixGP const& GP)
  * @return \f$ d \times d \f$ matrix \f$ \frac{\partial^2 \Psi}{\partial \mathbf{x}_i \partial
  * \mathbf{x}_j} \f$
  *
- * @ingroup fem
  */
 template <
     CElement TElement,
@@ -215,7 +211,6 @@ HessianBlockWrtDofs(TMatrixHF const& HF, TMatrixGP const& GP, auto i, auto j)
  * @param GP \f$ * \times d \f$ basis function gradients \f$ \nabla \mathbf{N}_i \f$
  * @return \f$ d^2 \times d^2 \f$ matrix \f$ \frac{\partial^2 \Psi}{\partial \mathbf{x}^2} \f$
  *
- * @ingroup fem
  */
 template <
     CElement TElement,

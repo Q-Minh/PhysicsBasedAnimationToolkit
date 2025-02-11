@@ -5,7 +5,6 @@
  * @date 2025-02-10
  *
  * @copyright Copyright (c) 2025
- * @ingroup physics
  */
 
 #ifndef PBAT_PHYSICS_HYPER_ELASTICITY_H
@@ -29,7 +28,6 @@ namespace physics {
  * @param Y Young's modulus
  * @param nu Poisson's ratio
  * @return std::pair<Scalar, Scalar> Lame coefficients (mu, lambda)
- * @ingroup physics
  */
 PBAT_API std::pair<Scalar, Scalar> LameCoefficients(Scalar Y, Scalar nu);
 
@@ -41,7 +39,6 @@ PBAT_API std::pair<Scalar, Scalar> LameCoefficients(Scalar Y, Scalar nu);
  * @param Y Vector of Young's moduli
  * @param nu Vector of Poisson's ratios
  * @return std::pair<VectorX, VectorX> Lame coefficients (mu, lambda)
- * @ingroup physics
  */
 template <class TDerivedY, class TDerivednu>
 std::pair<VectorX, VectorX>
@@ -51,7 +48,6 @@ LameCoefficients(Eigen::DenseBase<TDerivedY> const& Y, Eigen::DenseBase<TDerived
  * @brief Concept for hyperelastic energy
  *
  * @tparam T Type to check
- * @ingroup physics
  */
 template <class T>
 concept CHyperElasticEnergy = requires(T t)

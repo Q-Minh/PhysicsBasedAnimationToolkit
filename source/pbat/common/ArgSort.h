@@ -5,7 +5,6 @@
  * @date 2025-02-10
  *
  * @copyright Copyright (c) 2025
- * @ingroup common
  */
 
 #ifndef PBAT_COMMON_ARG_SORT_H
@@ -28,7 +27,6 @@ namespace common {
  * @param n Number of elements
  * @param less Less-than comparison function object
  * @return Eigen::Vector<TIndex, Eigen::Dynamic>
- * @ingroup common
  */
 template <std::integral TIndex, class FLess>
 Eigen::Vector<TIndex, Eigen::Dynamic> ArgSort(TIndex n, FLess less)

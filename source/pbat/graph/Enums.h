@@ -5,7 +5,6 @@
  * @date 2025-02-10
  *
  * @copyright Copyright (c) 2025
- * @ingroup graph
  */
 
 #ifndef PBAT_GRAPH_ENUMS_H
@@ -16,7 +15,6 @@ namespace graph {
 
 /**
  * @brief Enumeration of color selection strategies for graph coloring algorithms
- * @ingroup graph
  */
 enum class EGreedyColorSelectionStrategy {
     LeastUsed,     ///< Select the least used color from the color palette
@@ -25,7 +23,6 @@ enum class EGreedyColorSelectionStrategy {
 
 /**
  * @brief Enumeration of vertex traversal ordering strategies for graph coloring algorithms
- * @ingroup graph
  */
 enum class EGreedyColorOrderingStrategy {
     Natural,        ///< Natural ordering of the vertices (i.e. [0,n-1])

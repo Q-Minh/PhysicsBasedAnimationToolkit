@@ -5,7 +5,6 @@
  * @date 2025-02-10
  *
  * @copyright Copyright (c) 2025
- * @ingroup common
  */
 
 #ifndef PBAT_COMMON_QUEUE_H
@@ -21,7 +20,6 @@ namespace common {
  *
  * @tparam T Type of the elements in the queue
  * @tparam kCapacity Maximum number of elements in the queue
- * @ingroup common
  */
 template <class T, auto kCapacity = 64>
 class Queue

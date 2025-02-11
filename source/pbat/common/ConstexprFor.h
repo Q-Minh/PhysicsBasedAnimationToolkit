@@ -5,7 +5,6 @@
  * @date 2025-02-10
  *
  * @copyright Copyright (c) 2025
- * @ingroup common
  *
  */
 
@@ -24,7 +23,6 @@ namespace common {
  * @tparam Ts Types to loop over
  * @tparam F Callable with signature `void operator()<T>()`
  * @param f Function object to call
- * @ingroup common
  */
 template <class... Ts, class F>
 constexpr void ForTypes(F&& f)
@@ -38,7 +36,6 @@ constexpr void ForTypes(F&& f)
  * @tparam Xs Values to loop over
  * @tparam F Callable with signature `void operator()<X>()`
  * @param f Function object to call
- * @ingroup common
  */
 template <auto... Xs, class F>
 constexpr void ForValues(F&& f)
@@ -53,7 +50,6 @@ constexpr void ForValues(F&& f)
  * @tparam End Ending loop index (exclusive)
  * @tparam F Callable with signature `void operator()<decltype(Begin)>()`
  * @param f Function object to call
- * @ingroup common
  */
 template <auto Begin, auto End, typename F>
 constexpr void ForRange(F&& f)

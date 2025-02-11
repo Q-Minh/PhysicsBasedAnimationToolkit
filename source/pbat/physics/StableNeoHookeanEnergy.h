@@ -5,7 +5,6 @@
  * @date 2025-02-10
  *
  * @copyright Copyright (c) 2025
- * @ingroup physics
  */
 
 #ifndef PBAT_PHYSICS_STABLENEOHOOKEANENERGY_H
@@ -27,7 +26,6 @@ struct StableNeoHookeanEnergy;
  * @brief Stable Neo-Hookean hyperelastic energy for 1D
  *
  * @tparam Dims Dimension of the space
- * @ingroup physics
  */
 template <>
 struct StableNeoHookeanEnergy<1>
@@ -277,7 +275,6 @@ PBAT_HOST_DEVICE void StableNeoHookeanEnergy<1>::gradAndHessian(
  * @brief Stable Neo-Hookean hyperelastic energy for 2D
  *
  * @tparam Dims Dimension of the space
- * @ingroup physics
  */
 template <>
 struct StableNeoHookeanEnergy<2>
@@ -620,7 +617,6 @@ PBAT_HOST_DEVICE void StableNeoHookeanEnergy<2>::gradAndHessian(
  * @brief Stable Neo-Hookean hyperelastic energy for 3D
  *
  * @tparam Dims Dimension of the space
- * @ingroup physics
  */
 template <>
 struct StableNeoHookeanEnergy<3>

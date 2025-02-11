@@ -3,7 +3,6 @@
  * @author Quoc-Minh Ton-That (tonthat.quocminh@gmail.com)
  * @brief 
  * @date 2025-02-10
- * @ingroup fem
  * 
  * @copyright Copyright (c) 2025
  * 

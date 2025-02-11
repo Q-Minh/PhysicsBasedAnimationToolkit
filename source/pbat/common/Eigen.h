@@ -5,7 +5,6 @@
  * @date 2025-02-10
  *
  * @copyright Copyright (c) 2025
- * @ingroup common
  */
 
 #ifndef PBAT_COMMON_EIGEN_H
@@ -24,7 +23,6 @@ namespace common {
  * @tparam R Range type
  * @param r Range
  * @return Eigen vector adaptor
- * @ingroup common
  */
 template <CContiguousArithmeticRange R>
 Eigen::Map<Eigen::Vector<std::ranges::range_value_t<R>, Eigen::Dynamic> const> ToEigen(R&& r)
@@ -40,7 +38,6 @@ Eigen::Map<Eigen::Vector<std::ranges::range_value_t<R>, Eigen::Dynamic> const> T
  * @tparam R Range type
  * @param r Range
  * @return Eigen matrix adaptor
- * @ingroup common
  */
 template <CContiguousArithmeticMatrixRange R>
 Eigen::Map<Eigen::Matrix<
@@ -84,7 +81,6 @@ struct Slice
  * @tparam R Range type
  * @param r Range
  * @return Type with size(), operator[] and operator() for Eigen advanced indexing
- * @ingroup common
  */
 template <std::ranges::random_access_range R>
 auto Slice(R&& r)

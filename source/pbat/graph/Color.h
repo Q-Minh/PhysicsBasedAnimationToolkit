@@ -5,7 +5,6 @@
  * @date 2025-02-10
  *
  * @copyright Copyright (c) 2025
- * @ingroup graph
  */
 
 #ifndef PBAT_GRAPH_COLOR_H
@@ -37,7 +36,6 @@ namespace graph {
  * @param eSelectionStrategy Color selection strategy
  * @return Eigen::Vector<TIndex, Eigen::Dynamic> |# vertices| array mapping vertices to their
  * associated color
- * @ingroup graph
  */
 template <
     class TDerivedPtr,

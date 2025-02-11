@@ -5,7 +5,6 @@
  * @date 2025-02-10
  *
  * @copyright Copyright (c) 2025
- * @ingroup physics
  */
 
 #ifndef PBAT_PHYSICS_SAINTVENANTKIRCHHOFFENERGY_H
@@ -27,7 +26,6 @@ struct SaintVenantKirchhoffEnergy;
  * @brief Saint-Venant Kirchhoff hyperelastic energy for 1D
  *
  * @tparam Dims Dimension of the space
- * @ingroup physics
  */
 template <>
 struct SaintVenantKirchhoffEnergy<1>
@@ -293,7 +291,6 @@ PBAT_HOST_DEVICE void SaintVenantKirchhoffEnergy<1>::gradAndHessian(
  * @brief Saint-Venant Kirchhoff hyperelastic energy for 2D
  *
  * @tparam Dims Dimension of the space
- * @ingroup physics
  */
 template <>
 struct SaintVenantKirchhoffEnergy<2>
@@ -690,7 +687,6 @@ PBAT_HOST_DEVICE void SaintVenantKirchhoffEnergy<2>::gradAndHessian(
  * @brief Saint-Venant Kirchhoff hyperelastic energy for 3D
  *
  * @tparam Dims Dimension of the space
- * @ingroup physics
  */
 template <>
 struct SaintVenantKirchhoffEnergy<3>

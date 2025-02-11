@@ -5,7 +5,6 @@
  * @date 2025-02-10
  *
  * @copyright Copyright (c) 2025
- * @ingroup common
  */
 
 #ifndef PBAT_COMMON_CONCEPTS_H
@@ -24,7 +23,6 @@ namespace common {
  * @brief Range of integer types
  *
  * @tparam R
- * @ingroup common
  */
 template <class R>
 concept CIndexRange =
@@ -34,7 +32,6 @@ concept CIndexRange =
  * @brief Contiguous range of integer types
  *
  * @tparam R
- * @ingroup common
  */
 template <class R>
 concept CContiguousIndexRange =
@@ -44,7 +41,6 @@ concept CContiguousIndexRange =
  * @brief Range of arithmetic types
  *
  * @tparam R
- * @ingroup common
  */
 template <class R>
 concept CArithmeticRange =
@@ -54,7 +50,6 @@ concept CArithmeticRange =
  * @brief Contiguous range of arithmetic types
  *
  * @tparam R
- * @ingroup common
  */
 template <class R>
 concept CContiguousArithmeticRange =
@@ -64,7 +59,6 @@ concept CContiguousArithmeticRange =
  * @brief Range of Eigen fixed-size matrix types
  *
  * @tparam R
- * @ingroup common
  */
 template <class R>
 concept CContiguousArithmeticMatrixRange = requires(R r)

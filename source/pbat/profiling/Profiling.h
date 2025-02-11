@@ -1,15 +1,10 @@
 /**
- * @defgroup profiling Profiling
- */
-
-/**
  * @file Profiling.h
  * @author Quoc-Minh Ton-That (tonthat.quocminh@gmail.com)
  * @brief Profiling utilities for the Physics-Based Animation Toolkit (PBAT)
  * @date 2025-02-10
  *
  * @copyright Copyright (c) 2025
- * @ingroup profiling
  */
 
 #ifndef PBAT_PROFILING_PROFILING_H
@@ -43,7 +38,6 @@
 /**
  * @def PBAT_HAS_TRACY_PROFILER
  * This macro is set if the Tracy profiler is enabled
- * @ingroup profiling
  */
 
 /**
@@ -51,19 +45,16 @@
  * This macro is set if the Tracy profiler is enabled and the Tracy C++ API is available.
  * In general, in CUDA source files, the Tracy C API is used instead so that PBAT_CAN_USE_TRACY_CPP
  * will not be set.
- * @ingroup profiling
  */
 
 /**
  * @def PBAT_PROFILE_SCOPE
  * This macro is used to profile a scope with the Tracy profiler.
- * @ingroup profiling
  */
 
 /**
  * @def PBAT_PROFILE_NAMED_SCOPE(name)
  * This macro is used to profile a named scope with name \a name with the Tracy profiler.
- * @ingroup profiling
  */
 
 /**
@@ -71,28 +62,24 @@
  * This macro is set if the Tracy profiler is enabled and the Tracy C API is available.
  * In general, in CUDA source files, the Tracy C API is used instead so that PBAT_CAN_USE_TRACY_C
  * will be set.
- * @ingroup profiling
  */
 
 /**
  * @def PBAT_PROFILE_CUDA_HOST_SCOPE_START(var)
  * This macro is used to profile a scope with the Tracy profiler in a CUDA host function.
  * The variable \a var is used to store the scope context.
- * @ingroup profiling
  */
 
 /**
  * @def PBAT_PROFILE_NAMED_CUDA_HOST_SCOPE_START(var, name)
  * This macro is used to profile a named scope with name \a name with the Tracy profiler in a CUDA
  * host function. The variable \a var is used to store the scope context.
- * @ingroup profiling
  */
 
 /**
  * @def PBAT_PROFILE_CUDA_HOST_SCOPE_END(var)
  * This macro is used to end a scope with the Tracy profiler in a CUDA host function.
  * The variable \a var refers to the stored scope context.
- * @ingroup profiling
  */
 
 #include <map>
@@ -108,7 +95,6 @@ namespace profiling {
  *
  * @pre The frame name's length must not exceed 256 characters
  * @param name Frame name
- * @ingroup profiling
  */
 PBAT_API void BeginFrame(std::string_view name);
 
@@ -117,7 +103,6 @@ PBAT_API void BeginFrame(std::string_view name);
  *
  * @pre The frame name's length must not exceed 256 characters
  * @param name Frame name
- * @ingroup profiling
  */
 PBAT_API void EndFrame(std::string_view name);
 
@@ -137,7 +122,6 @@ PBAT_API bool IsConnectedToServer();
  * @param f Function to profile
  * @param args Arguments to the function
  * @return std::invoke_result_t<Func, Args...> Result of the function
- * @ingroup profiling
  * @note This function is only available if the Tracy profiler is enabled
  */
 template <class Func, class... Args>

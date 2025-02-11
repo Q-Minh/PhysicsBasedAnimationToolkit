@@ -53,7 +53,6 @@ def codegen(fpsi, energy_name: str):
  * @brief {energy_name} hyperelastic energy {"\cite smith2018snh" if energy_name == "StableNeoHookeanEnergy" else ""}
  * 
  * @copyright Copyright (c) 2025
- * @ingroup physics
  */
 
 #ifndef PBAT_PHYSICS_{energy_name.upper()}_H
@@ -116,7 +115,6 @@ struct {energy_name};
  * @brief {energy_name} hyperelastic energy for {d}D
  * 
  * @tparam Dims Dimension of the space
- * @ingroup physics
  */
 template <>
 struct {energy_name}<{d}>

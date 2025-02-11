@@ -1,15 +1,10 @@
 /**
- * @defgroup fem FEM
- */
-
-/**
  * @file Fem.h
  * @author Quoc-Minh Ton-That (tonthat.quocminh@gmail.com)
  * @brief This file includes all the FEM related headers
  * @date 2025-02-10
  *
  * @copyright Copyright (c) 2025
- * @ingroup fem
  */
 
 #ifndef PBAT_FEM_FEM_H

@@ -5,7 +5,6 @@
  * @date 2025-02-10
  *
  * @copyright Copyright (c) 2025
- * @ingroup common
  */
 
 #ifndef PBAT_COMMON_INDEXING_H
@@ -30,7 +29,6 @@ namespace common {
  * @tparam TIndex Type of the integers
  * @param sizes Range of integers
  * @return Eigen::Vector<TIndex, Eigen::Dynamic> Cumulative sum of the range
- * @ingroup common
  */
 template <CIndexRange R, std::integral TIndex = std::ranges::range_value_t<R>>
 Eigen::Vector<TIndex, Eigen::Dynamic> CumSum(R&& sizes)
@@ -54,7 +52,6 @@ Eigen::Vector<TIndex, Eigen::Dynamic> CumSum(R&& sizes)
  * @param end Range end (exclusive)
  * @param ncounts Upper bound on values in range
  * @return Eigen::Vector<TIndex, Eigen::Dynamic> Counts of each integer in the range
- * @ingroup common
  */
 template <std::integral TIndex>
 Eigen::Vector<TIndex, Eigen::Dynamic> Counts(auto begin, auto end, TIndex ncounts)
@@ -74,7 +71,6 @@ Eigen::Vector<TIndex, Eigen::Dynamic> Counts(auto begin, auto end, TIndex ncount
  * @param begin Start of the range (inclusive)
  * @param end End of the range (exclusive)
  * @return Eigen::Vector<TIndex, Eigen::Dynamic> Shuffled range of integers
- * @ingroup common
  */
 template <std::integral TIndex>
 Eigen::Vector<TIndex, Eigen::Dynamic> Shuffle(TIndex begin, TIndex end)
@@ -99,7 +95,6 @@ Eigen::Vector<TIndex, Eigen::Dynamic> Shuffle(TIndex begin, TIndex end)
  * @param end End of the range (exclusive)
  * @param f Predicate function to filter the range
  * @return Eigen::Vector<TIndex, Eigen::Dynamic> Filtered range of integers
- * @ingroup common
  */
 template <
     std::integral TIndexB,
@@ -128,7 +123,6 @@ Eigen::Vector<TIndex, Eigen::Dynamic> Filter(TIndexB begin, TIndexE end, Func&& 
  * @param x Values to repeat
  * @param r Repetition vector
  * @return Eigen::Vector<TScalar, Eigen::Dynamic> Vector with repeated elements
- * @ingroup common
  */
 template <
     class TDerivedX,

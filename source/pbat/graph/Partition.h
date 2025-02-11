@@ -5,7 +5,6 @@
  * @date 2025-02-10
  *
  * @copyright Copyright (c) 2025
- * @ingroup graph
  */
 
 #ifndef PBAT_GRAPH_PARTITION_H
@@ -21,7 +20,6 @@ namespace graph {
  *
  * Refer to [METIS](https://github.com/KarypisLab/METIS) manual for more details on each option.
  *
- * @ingroup graph
  */
 struct PartitioningOptions
 {
@@ -83,7 +81,6 @@ struct PartitioningOptions
  * @param nPartitions Number of desired partitions
  * @param opts Partitioning options
  * @return IndexVectorX |# vertices| array p of partition indices (i.e. p[i] = partition of vertex i)
- * @ingroup graph
  */
 IndexVectorX Partition(
     Eigen::Ref<IndexVectorX const> const& ptr,
