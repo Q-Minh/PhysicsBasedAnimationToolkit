@@ -1,3 +1,17 @@
+/**
+ * @defgroup profiling Profiling
+ */
+
+/**
+ * @file Profiling.h
+ * @author Quoc-Minh Ton-That (tonthat.quocminh@gmail.com)
+ * @brief Profiling utilities for the Physics-Based Animation Toolkit (PBAT)
+ * @date 2025-02-10
+ *
+ * @copyright Copyright (c) 2025
+ * @ingroup profiling
+ */
+
 #ifndef PBAT_PROFILING_PROFILING_H
 #define PBAT_PROFILING_PROFILING_H
 
@@ -34,12 +48,43 @@
 namespace pbat {
 namespace profiling {
 
+/**
+ * @brief Begin a profiling frame with the given name
+ *
+ * @pre The frame name's length must not exceed 256 characters
+ * @param name Frame name
+ * @ingroup profiling
+ */
 PBAT_API void BeginFrame(std::string_view name);
 
+/**
+ * @brief End the current profiling frame
+ *
+ * @pre The frame name's length must not exceed 256 characters
+ * @param name Frame name
+ * @ingroup profiling
+ */
 PBAT_API void EndFrame(std::string_view name);
 
+/**
+ * @brief Check if PBAT's Tracy client is connected to the Tracy profiler server
+ *
+ * @return true if connected, false otherwise
+ */
 PBAT_API bool IsConnectedToServer();
 
+/**
+ * @brief Profile a function as a Tracy named zone
+ *
+ * @tparam Func Type of the function to profile
+ * @tparam Args Types of the arguments to the function
+ * @param zoneName Name of the zone
+ * @param f Function to profile
+ * @param args Arguments to the function
+ * @return std::invoke_result_t<Func, Args...> Result of the function
+ * @ingroup profiling
+ * @note This function is only available if the Tracy profiler is enabled
+ */
 template <class Func, class... Args>
 std::invoke_result_t<Func, Args...> Profile(std::string const& zoneName, Func&& f, Args&&... args)
 {
