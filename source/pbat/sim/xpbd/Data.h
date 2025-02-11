@@ -30,6 +30,17 @@ PBAT_API struct Data
     Data& WithDamping(Eigen::Ref<VectorX> const& beta, EConstraint constraint);
     Data& WithCompliance(Eigen::Ref<VectorX> const& alpha, EConstraint constraint);
     Data& WithPartitions(std::vector<Index> const& Pptr, std::vector<Index> const& Padj);
+    /**
+     * @brief
+     *
+     * See Ton-That et al. 2023 \cite tonthat2023parallel for more details.
+     *
+     * @param SGptr
+     * @param SGadj
+     * @param Cptr
+     * @param Cadj
+     * @return Data&
+     */
     Data& WithClusterPartitions(
         std::vector<Index> const& SGptr,
         std::vector<Index> const& SGadj,

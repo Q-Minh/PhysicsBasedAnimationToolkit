@@ -50,7 +50,7 @@ def codegen(fpsi, energy_name: str):
 /**
  * @file 
  * @author Quoc-Minh Ton-That (tonthat.quocminh@gmail.com)
- * @brief {energy_name} hyperelastic energy
+ * @brief {energy_name} hyperelastic energy {"\cite smith2018snh" if energy_name == "StableNeoHookeanEnergy" else ""}
  * 
  * @copyright Copyright (c) 2025
  * @ingroup physics

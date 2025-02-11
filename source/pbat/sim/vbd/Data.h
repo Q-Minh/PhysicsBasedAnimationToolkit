@@ -95,6 +95,8 @@ PBAT_API struct Data
     /**
      * @brief
      *
+     * Li et al. 2020 \cite li2020ipc
+     *
      * @param muC
      * @param muF
      * @param epsv
@@ -174,8 +176,8 @@ PBAT_API struct Data
     Scalar kD{0};                               ///< Uniform damping coefficient
     Scalar muC{1e6};                            ///< Uniform collision penalty
     Scalar muF{0.3};                            ///< Uniform friction coefficient
-    Scalar epsv{1e-3}; ///< IPC's relative velocity threshold for static to dynamic friction's
-                       ///< smooth transition
+    Scalar epsv{1e-3}; ///< IPC \cite li2020ipc 's relative velocity threshold for static to dynamic
+                       ///< friction's smooth transition
     Index mActiveSetUpdateFrequency{1}; ///< Active set update frequency
     Scalar detHZero{1e-7};              ///< Numerical zero for hessian pseudo-singularity check
 };

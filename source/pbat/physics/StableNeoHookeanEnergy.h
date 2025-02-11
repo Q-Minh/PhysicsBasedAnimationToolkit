@@ -1,7 +1,7 @@
 /**
  * @file StableNeoHookeanEnergy.h
  * @author Quoc-Minh Ton-That (tonthat.quocminh@gmail.com)
- * @brief Stable Neo-Hookean hyperelastic energy
+ * @brief Stable Neo-Hookean \cite smith2018snh hyperelastic energy
  * @date 2025-02-10
  *
  * @copyright Copyright (c) 2025

@@ -75,6 +75,8 @@ struct PartitioningOptions
 /**
  * @brief Partition input graph
  *
+ * Internally delegates to METIS @cite karypis1997metis
+ * 
  * @param ptr Offset pointers of adjacency list
  * @param adj Indices of adjacency list
  * @param wadj Edge weights of adjacency list

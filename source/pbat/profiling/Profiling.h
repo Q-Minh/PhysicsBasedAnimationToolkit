@@ -23,9 +23,6 @@
         #include <tracy/Tracy.hpp>
         #define PBAT_PROFILE_SCOPE             ZoneScoped
         #define PBAT_PROFILE_NAMED_SCOPE(name) ZoneScopedN(name)
-        #define PBAT_PROFILE_CUDA_HOST_SCOPE_START(var)
-        #define PBAT_PROFILE_CUDA_HOST_SCOPE_START(var, name)
-        #define PBAT_PROFILE_CUDA_HOST_SCOPE_END(var)
     #else
         #define PBAT_CAN_USE_TRACY_C
         #include <tracy/TracyC.h>

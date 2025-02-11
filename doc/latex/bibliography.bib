@@ -13,3 +13,113 @@ abstract = {SUMMARY We introduce a new method for the numerical integration over
 year = {2013}
 }
 
+@article{karypis1997metis,
+  title={METIS: A software package for partitioning unstructured graphs, partitioning meshes, and computing fill-reducing orderings of sparse matrices},
+  author={Karypis, George and Kumar, Vipin},
+  year={1997}
+}
+
+@article{tonthat2023parallel,
+title = {Parallel block Neo-Hookean XPBD using graph clustering},
+journal = {Computers & Graphics},
+volume = {110},
+pages = {1-10},
+year = {2023},
+issn = {0097-8493},
+doi = {https://doi.org/10.1016/j.cag.2022.10.009},
+url = {https://www.sciencedirect.com/science/article/pii/S009784932200187X},
+author = {Quoc-Minh Ton-That and Paul G. Kry and Sheldon Andrews},
+keywords = {Finite element method, Physics-based animation, Soft body simulation, Elasticity, Real-time physics},
+abstract = {The eXtended Position Based Dynamics algorithm (XPBD) enables unified simulation of various materials from fluids to both elastic solids and stiff solids. In particular, finite element based neo-Hookean models can simulate near incompressible materials by means of a decoupled compliant constraint formulation. Due to XPBD’s reliance on local constraint projections in the solver loop, its computational nature lends itself to parallelization by means of graph coloring algorithms used to determine partitions of independent constraints which can be solved simultaneously. However, minimal graph coloring is bounded from below by the maximum valence of the finite element mesh, thus hindering parallelization opportunities. In this paper, we propose a novel graph clustering approach on the constraint graph which groups highly dependent constraints into supernodes. By applying graph coloring on the supernodal constraint graph, we are able to significantly reduce the number of partitions, thus enhancing parallelization of the solver. Furthermore, we accelerate convergence of the neo-Hookean XPBD solver by a coupled constraint formulation, resulting in enhanced stability and efficiency compared to previous approaches.}
+}
+
+@article{anka2024vbd,
+author = {Chen, Anka He and Liu, Ziheng and Yang, Yin and Yuksel, Cem},
+title = {Vertex Block Descent},
+year = {2024},
+issue_date = {July 2024},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+volume = {43},
+number = {4},
+issn = {0730-0301},
+url = {https://doi.org/10.1145/3658179},
+doi = {10.1145/3658179},
+abstract = {We introduce vertex block descent, a block coordinate descent solution for the variational form of implicit Euler through vertex-level Gauss-Seidel iterations. It operates with local vertex position updates that achieve reductions in global variational energy with maximized parallelism. This forms a physics solver that can achieve numerical convergence with unconditional stability and exceptional computation performance. It can also fit in a given computation budget by simply limiting the iteration count while maintaining its stability and superior convergence rate.We present and evaluate our method in the context of elastic body dynamics, providing details of all essential components and showing that it outperforms alternative techniques. In addition, we discuss and show examples of how our method can be used for other simulation systems, including particle-based simulations and rigid bodies.},
+journal = {ACM Trans. Graph.},
+month = jul,
+articleno = {116},
+numpages = {16},
+keywords = {physics-based simulation, elastic body, rigid body, time integration}
+}
+
+
+@inproceedings{bender2015position,
+booktitle = {EG 2015 - Tutorials},
+editor = {M. Zwicker and C. Soler},
+title = {{Position-Based Simulation Methods in Computer Graphics}},
+author = {Bender, Jan and Müller, Matthias and Macklin, Miles},
+year = {2015},
+publisher = {The Eurographics Association},
+ISBN = {},
+DOI = {10.2312/egt.20151045},
+url = {https://doi.org/10.2312/egt.20151045}
+}        
+
+@inproceedings{macklin2021neo,
+author = {Macklin, Miles and Muller, Matthias},
+title = {A Constraint-based Formulation of Stable Neo-Hookean Materials},
+year = {2021},
+isbn = {9781450391313},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+url = {https://doi.org/10.1145/3487983.3488289},
+doi = {10.1145/3487983.3488289},
+abstract = {In computer graphics, soft body simulation is often used to animate soft tissue on characters or rubber like objects. Both are highly incompressible, however commonly used models such as co-rotational FEM, show significant volume loss, even under moderate strain. The Neo-Hookean model has recently become popular in graphics. It has superior volume conservation, recovers from inverted states, and does not require a polar decomposition. However, solvers for Neo-Hookean finite-element problems are typically based on Newton methods, which require energy Hessians, their Eigen-decomposition, and sophisticated linear solvers. In addition, minimizing the energy directly in this way does not accommodate modeling incompressible materials since it would require infinitely stiff forces. In this paper we present a constraint-based model of the Neo-Hookean energy. By decomposing the energy into deviatoric (distortional), and hydrostatic (volume preserving) constraints, we can apply iterative constrained-optimization methods that require only first-order gradients. We compare our constraint-based formulation to state-of-the-art force-based solvers and show that our method is often an order of magnitude more efficient for stiff volume preserving materials.},
+booktitle = {Proceedings of the 14th ACM SIGGRAPH Conference on Motion, Interaction and Games},
+articleno = {12},
+numpages = {7},
+keywords = {elasticity, finite element method, physically-based animation, real-time physics},
+location = {Virtual Event, Switzerland},
+series = {MIG '21}
+}
+
+@article{smith2018snh,
+author = {Smith, Breannan and Goes, Fernando De and Kim, Theodore},
+title = {Stable Neo-Hookean Flesh Simulation},
+year = {2018},
+issue_date = {April 2018},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+volume = {37},
+number = {2},
+issn = {0730-0301},
+url = {https://doi.org/10.1145/3180491},
+doi = {10.1145/3180491},
+abstract = {Nonlinear hyperelastic energies play a key role in capturing the fleshy appearance of virtual characters. Real-world, volume-preserving biological tissues have Poisson’s ratios near 1/2, but numerical simulation within this regime is notoriously challenging. In order to robustly capture these visual characteristics, we present a novel version of Neo-Hookean elasticity. Our model maintains the fleshy appearance of the Neo-Hookean model, exhibits superior volume preservation, and is robust to extreme kinematic rotations and inversions. We obtain closed-form expressions for the eigenvalues and eigenvectors of all of the system’s components, which allows us to directly project the Hessian to semipositive definiteness, and also leads to insights into the numerical behavior of the material. These findings also inform the design of more sophisticated hyperelastic models, which we explore by applying our analysis to Fung and Arruda-Boyce elasticity. We provide extensive comparisons against existing material models.},
+journal = {ACM Trans. Graph.},
+month = mar,
+articleno = {12},
+numpages = {15},
+keywords = {elasticity, Physically-based simulation}
+}
+
+@article{li2020ipc,
+author = {Li, Minchen and Ferguson, Zachary and Schneider, Teseo and Langlois, Timothy and Zorin, Denis and Panozzo, Daniele and Jiang, Chenfanfu and Kaufman, Danny M.},
+title = {Incremental potential contact: intersection-and inversion-free, large-deformation dynamics},
+year = {2020},
+issue_date = {August 2020},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+volume = {39},
+number = {4},
+issn = {0730-0301},
+url = {https://doi.org/10.1145/3386569.3392425},
+doi = {10.1145/3386569.3392425},
+abstract = {Contacts weave through every aspect of our physical world, from daily household chores to acts of nature. Modeling and predictive computation of these phenomena for solid mechanics is important to every discipline concerned with the motion of mechanical systems, including engineering and animation. Nevertheless, efficiently time-stepping accurate and consistent simulations of real-world contacting elastica remains an outstanding computational challenge. To model the complex interaction of deforming solids in contact we propose Incremental Potential Contact (IPC) - a new model and algorithm for variationally solving implicitly time-stepped nonlinear elastodynamics. IPC maintains an intersection- and inversion-free trajectory regardless of material parameters, time step sizes, impact velocities, severity of deformation, or boundary conditions enforced.Constructed with a custom nonlinear solver, IPC enables efficient resolution of time-stepping problems with separate, user-exposed accuracy tolerances that allow independent specification of the physical accuracy of the dynamics and the geometric accuracy of surface-to-surface conformation. This enables users to decouple, as needed per application, desired accuracies for a simulation's dynamics and geometry.The resulting time stepper solves contact problems that are intersection-free (and thus robust), inversion-free, efficient (at speeds comparable to or faster than available methods that lack both convergence and feasibility), and accurate (solved to user-specified accuracies). To our knowledge this is the first implicit time-stepping method, across both the engineering and graphics literature that can consistently enforce these guarantees as we vary simulation parameters.In an extensive comparison of available simulation methods, research libraries and commercial codes we confirm that available engineering and computer graphics methods, while each succeeding admirably in custom-tuned regimes, often fail with instabilities, egregious constraint violations and/or inaccurate and implausible solutions, as we vary input materials, contact numbers and time step. We also exercise IPC across a wide range of existing and new benchmark tests and demonstrate its accurate solution over a broad sweep of reasonable time-step sizes and beyond (up to h = 2s) across challenging large-deformation, large-contact stress-test scenarios with meshes composed of up to 2.3M tetrahedra and processing up to 498K contacts per time step. For applications requiring high-accuracy we demonstrate tight convergence on all measures. While, for applications requiring lower accuracies, e.g. animation, we confirm IPC can ensure feasibility and plausibility even when specified tolerances are lowered for efficiency.},
+journal = {ACM Trans. Graph.},
+month = aug,
+articleno = {49},
+numpages = {20},
+keywords = {constrained optimization, contact mechanics, elastodynamics, friction}
+}

@@ -1,7 +1,7 @@
 /**
  * @file Vbd.h
  * @author Quoc-Minh Ton-That (tonthat.quocminh@gmail.com)
- * @brief This file includes PBAT'S [Vertex Block Descent](https://dl.acm.org/doi/10.1145/3658179)
+ * @brief This file includes PBAT'S Vertex Block Descent \cite anka2024vbd
  * public GPU API
  * @date 2025-02-11
  *
@@ -14,7 +14,7 @@
 
 /**
  * @namespace pbat::gpu::vbd 
- * @brief Vertex Block Descent (VBD) public GPU API
+ * @brief Vertex Block Descent (VBD) \cite anka2024vbd public GPU API
  */
 namespace pbat::gpu::vbd {
 } // namespace pbat::gpu::vbd
