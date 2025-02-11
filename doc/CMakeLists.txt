@@ -51,6 +51,7 @@ if (DOXYGEN_FOUND)
         "js/doxygen-awesome-fragment-copy-button.js"
         "js/doxygen-awesome-paragraph-link.js"
         "js/doxygen-awesome-interactive-toc.js"
+        "js/doxygen-awesome-tabs.js"
     )
     set(DOXYGEN_HTML_COPY_CLIPBOARD "NO")
     doxygen_add_docs(

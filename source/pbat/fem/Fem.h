@@ -16,7 +16,8 @@
 #define PBAT_FEM_FEM_H
 
 /**
- * @brief
+ * @namespace pbat::fem 
+ * @brief Finite Element Method (FEM)
  */
 namespace pbat::fem {
 } // namespace pbat::fem

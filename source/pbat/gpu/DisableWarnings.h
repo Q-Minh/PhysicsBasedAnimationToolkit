@@ -1,16 +1,28 @@
+/**
+ * @file DisableWarnings.h
+ * @author Quoc-Minh Ton-That (tonthat.quocminh@gmail.com)
+ * @brief Disables irrelevant warnings in GPU sources.
+ * @date 2025-02-11
+ *
+ * @copyright Copyright (c) 2025
+ * @details
+ * Disables the following warnings.
+ * - `Unknown pragmas`: [Eigen](https://eigen.tuxfamily.org/index.php?title=Main_Page) uses the old
+ * nvcc `diag_suppress` directive, which has now been changed to `nv_diag_suppress`. See
+ * [here](https://docs.nvidia.com/cuda/cuda-compiler-driver-nvcc/index.html#nvcc-command-options-diagnostic-options).
+ * - `Structure padded`: [thrust::cub](https://nvidia.github.io/cccl/cub/) always emits `structure
+ * padded due to alignment specifier` warning.
+ * - `Conditional expression is constant`:
+ * [Eigen](https://eigen.tuxfamily.org/index.php?title=Main_Page) has many of these, which would be
+ * resolved with `if constexpr`, but [Eigen](https://eigen.tuxfamily.org/index.php?title=Main_Page)
+ * needs to be backwards compatible with previous c++ standards.
+ * - `was declared deprecated`: [cuda-api-wrappers](https://github.com/eyalroz/cuda-api-wrappers)
+ * includes deprecated cuda features.
+ */
+
 #ifndef PBAT_GPU_DISABLEWARNINGS_H
 #define PBAT_GPU_DISABLEWARNINGS_H
 
-/**
- * @brief Disables the following warnings.
- *
- * 1. Unknown pragmas: Eigen uses the old nvcc "diag_suppress" directive, which has now been changed
- * to "nv_diag_suppress".
- * 2. Structure padded: thrust::cub always emits structure padded due to alignment specifier warning
- * 3. Conditional expression is constant: Eigen has many of these, which would be resolved with if constexpr, but Eigen needs to be backwards compatible with previous c++ standards.
- * 4. was declared deprecated: cuda-api-wrappers includes deprecated cuda features.
- *
- */
 #if defined(__clang__)
     #pragma clang diagnostic ignored "-Wunknown-pragmas"
     #pragma clang diagnostic ignored "-Wpadded"

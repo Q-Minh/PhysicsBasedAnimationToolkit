@@ -9,3 +9,21 @@ Overview {#mainpage}
 
 ![](img/entei.icon.png)
 
+<div class="tabbed">
+- <b class="tab-title">C++</b>
+  ```cpp
+  #include <pbat/Pbat.h>
+  ```
+- <b class="tab-title">Python</b>
+  ```python
+  import pbatoolkit as pbat
+  ```
+</div>
+
+<div class="section_buttons">
+
+|                    Next |
+|------------------------:|
+| [features](features.md) |
+
+</div>

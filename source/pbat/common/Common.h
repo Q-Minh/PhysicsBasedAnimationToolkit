@@ -16,8 +16,8 @@
 #define PBAT_COMMON_COMMON_H
 
 /**
- * @brief
- *
+ * @namespace pbat::common 
+ * @brief Common functionality.
  */
 namespace pbat::common {
 } // namespace pbat::common

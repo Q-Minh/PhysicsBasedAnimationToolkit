@@ -1,17 +1,24 @@
+/**
+ * @file Sim.h
+ * @author Quoc-Minh Ton-That (tonthat.quocminh@gmail.com)
+ * @brief This file includes all of PBAT'S simulation algorithm implementations.
+ * @date 2025-02-11
+ * 
+ * @copyright Copyright (c) 2025
+ * 
+ */
+
 #ifndef PBAT_SIM_SIM_H
 #define PBAT_SIM_SIM_H
 
-#include "Vbd.h"
-#include "Xpbd.h"
+/**
+ * @namespace pbat::sim 
+ * @brief PBAT simulation algorithms
+ */
+namespace pbat::sim {
+} // namespace pbat::sim
 
-#include <pybind11/pybind11.h>
-
-namespace pbat {
-namespace sim {
-
-void Bind(pybind11::module& m);
-
-} // namespace sim
-} // namespace pbat
+#include "vbd/Vbd.h"
+#include "xpbd/Xpbd.h"
 
 #endif // PBAT_SIM_SIM_H

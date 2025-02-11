@@ -1,5 +1,8 @@
 /**
  * @defgroup graph Graph
+ * 
+ * @brief Graph algorithms and data structures
+ * 
  */
 
 /**
@@ -17,6 +20,7 @@
 
 #include "Adjacency.h"
 #include "Color.h"
+#include "Enums.h"
 #include "Mesh.h"
 #include "Partition.h"
 
