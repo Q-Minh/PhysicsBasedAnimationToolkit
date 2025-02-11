@@ -1,3 +1,13 @@
+/**
+ * @file Indexing.h
+ * @author Quoc-Minh Ton-That (tonthat.quocminh@gmail.com)
+ * @brief
+ * @date 2025-02-10
+ *
+ * @copyright Copyright (c) 2025
+ * @ingroup common
+ */
+
 #ifndef PBAT_COMMON_INDEXING_H
 #define PBAT_COMMON_INDEXING_H
 
@@ -13,6 +23,15 @@
 namespace pbat {
 namespace common {
 
+/**
+ * @brief Cumulative sum of a range of integers
+ *
+ * @tparam R Integer range type
+ * @tparam TIndex Type of the integers
+ * @param sizes Range of integers
+ * @return Eigen::Vector<TIndex, Eigen::Dynamic> Cumulative sum of the range
+ * @ingroup common
+ */
 template <CIndexRange R, std::integral TIndex = std::ranges::range_value_t<R>>
 Eigen::Vector<TIndex, Eigen::Dynamic> CumSum(R&& sizes)
 {
@@ -27,6 +46,16 @@ Eigen::Vector<TIndex, Eigen::Dynamic> CumSum(R&& sizes)
     return cs;
 }
 
+/**
+ * @brief Counts the number of occurrences of each integer in a contiguous range
+ *
+ * @tparam TIndex Integer type of counts
+ * @param begin Range begin
+ * @param end Range end (exclusive)
+ * @param ncounts Upper bound on values in range
+ * @return Eigen::Vector<TIndex, Eigen::Dynamic> Counts of each integer in the range
+ * @ingroup common
+ */
 template <std::integral TIndex>
 Eigen::Vector<TIndex, Eigen::Dynamic> Counts(auto begin, auto end, TIndex ncounts)
 {
@@ -38,6 +67,15 @@ Eigen::Vector<TIndex, Eigen::Dynamic> Counts(auto begin, auto end, TIndex ncount
     return counts;
 }
 
+/**
+ * @brief Randomly shuffle a range of integers
+ *
+ * @tparam TIndex Integer type of the range
+ * @param begin Start of the range (inclusive)
+ * @param end End of the range (exclusive)
+ * @return Eigen::Vector<TIndex, Eigen::Dynamic> Shuffled range of integers
+ * @ingroup common
+ */
 template <std::integral TIndex>
 Eigen::Vector<TIndex, Eigen::Dynamic> Shuffle(TIndex begin, TIndex end)
 {
@@ -50,6 +88,19 @@ Eigen::Vector<TIndex, Eigen::Dynamic> Shuffle(TIndex begin, TIndex end)
     return inds;
 }
 
+/**
+ * @brief Filters a range of integers based on a predicate function
+ *
+ * @tparam TIndexB Type of the beginning index
+ * @tparam TIndexE Type of the ending index
+ * @tparam Func Predicate function type (TIndex -> bool)
+ * @tparam TIndex Common type of the indices
+ * @param begin Start of the range (inclusive)
+ * @param end End of the range (exclusive)
+ * @param f Predicate function to filter the range
+ * @return Eigen::Vector<TIndex, Eigen::Dynamic> Filtered range of integers
+ * @ingroup common
+ */
 template <
     std::integral TIndexB,
     std::integral TIndexE,
@@ -65,6 +116,20 @@ Eigen::Vector<TIndex, Eigen::Dynamic> Filter(TIndexB begin, TIndexE end, Func&& 
     return ToEigen(filtered);
 }
 
+/**
+ * @brief Repeats elements of a vector according to a repetition vector
+ *
+ * Similar to [numpy.repeat](https://numpy.org/doc/stable/reference/generated/numpy.repeat.html)
+ *
+ * @tparam TDerivedX Eigen dense expression of the input vector
+ * @tparam TDerivedR Eigen dense expression of the repetition vector
+ * @tparam TScalar Scalar type of the input vector
+ * @tparam TIndex Integer type of the repetition vector
+ * @param x Values to repeat
+ * @param r Repetition vector
+ * @return Eigen::Vector<TScalar, Eigen::Dynamic> Vector with repeated elements
+ * @ingroup common
+ */
 template <
     class TDerivedX,
     class TDerivedR,

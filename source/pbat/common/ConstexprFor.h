@@ -1,3 +1,14 @@
+/**
+ * @file ConstexprFor.h
+ * @author Quoc-Minh Ton-That (tonthat.quocminh@gmail.com)
+ * @brief Compile-time for loops
+ * @date 2025-02-10
+ *
+ * @copyright Copyright (c) 2025
+ * @ingroup common
+ *
+ */
+
 #ifndef PBAT_COMMON_CONSTEXPRFOR_H
 #define PBAT_COMMON_CONSTEXPRFOR_H
 
@@ -7,18 +18,43 @@
 namespace pbat {
 namespace common {
 
+/**
+ * @brief Compile-time for loop over types
+ *
+ * @tparam Ts Types to loop over
+ * @tparam F Callable with signature `void operator()<T>()`
+ * @param f Function object to call
+ * @ingroup common
+ */
 template <class... Ts, class F>
 constexpr void ForTypes(F&& f)
 {
     (f.template operator()<Ts>(), ...);
 }
 
+/**
+ * @brief Compile-time for loop over values
+ *
+ * @tparam Xs Values to loop over
+ * @tparam F Callable with signature `void operator()<X>()`
+ * @param f Function object to call
+ * @ingroup common
+ */
 template <auto... Xs, class F>
 constexpr void ForValues(F&& f)
 {
     (f.template operator()<Xs>(), ...);
 }
 
+/**
+ * @brief Compile-time for loop over a range of values
+ *
+ * @tparam Begin Starting loop index
+ * @tparam End Ending loop index (exclusive)
+ * @tparam F Callable with signature `void operator()<decltype(Begin)>()`
+ * @param f Function object to call
+ * @ingroup common
+ */
 template <auto Begin, auto End, typename F>
 constexpr void ForRange(F&& f)
 {

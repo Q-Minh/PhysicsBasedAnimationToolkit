@@ -1,3 +1,13 @@
+/**
+ * @file Concepts.h
+ * @author Quoc-Minh Ton-That (tonthat.quocminh@gmail.com)
+ * @brief Concepts for common types
+ * @date 2025-02-10
+ *
+ * @copyright Copyright (c) 2025
+ * @ingroup common
+ */
+
 #ifndef PBAT_COMMON_CONCEPTS_H
 #define PBAT_COMMON_CONCEPTS_H
 
@@ -10,22 +20,52 @@
 namespace pbat {
 namespace common {
 
+/**
+ * @brief Range of integer types
+ *
+ * @tparam R
+ * @ingroup common
+ */
 template <class R>
 concept CIndexRange =
     std::ranges::range<R> && std::is_convertible_v<std::ranges::range_value_t<R>, int>;
 
+/**
+ * @brief Contiguous range of integer types
+ *
+ * @tparam R
+ * @ingroup common
+ */
 template <class R>
 concept CContiguousIndexRange =
     CIndexRange<R> && std::ranges::sized_range<R> && std::ranges::contiguous_range<R>;
 
+/**
+ * @brief Range of arithmetic types
+ *
+ * @tparam R
+ * @ingroup common
+ */
 template <class R>
 concept CArithmeticRange =
     std::ranges::range<R> && std::is_arithmetic_v<std::ranges::range_value_t<R>>;
 
+/**
+ * @brief Contiguous range of arithmetic types
+ *
+ * @tparam R
+ * @ingroup common
+ */
 template <class R>
 concept CContiguousArithmeticRange =
     CArithmeticRange<R> && std::ranges::sized_range<R> && std::ranges::contiguous_range<R>;
 
+/**
+ * @brief Range of Eigen fixed-size matrix types
+ *
+ * @tparam R
+ * @ingroup common
+ */
 template <class R>
 concept CContiguousArithmeticMatrixRange = requires(R r)
 {

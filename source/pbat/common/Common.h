@@ -1,5 +1,26 @@
+/**
+ * @file Common.h
+ * @author Quoc-Minh Ton-That (tonthat.quocminh@gmail.com)
+ * @brief
+ * @date 2025-02-10
+ *
+ * @copyright Copyright (c) 2025
+ *
+ */
+
 #ifndef PBAT_COMMON_COMMON_H
 #define PBAT_COMMON_COMMON_H
+
+/**
+ * @defgroup common Common
+ */
+
+/**
+ * @brief
+ *
+ */
+namespace pbat::common {
+} // namespace pbat::common
 
 #include "ArgSort.h"
 #include "Concepts.h"

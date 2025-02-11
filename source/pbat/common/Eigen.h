@@ -1,3 +1,13 @@
+/**
+ * @file Eigen.h
+ * @author Quoc-Minh Ton-That (tonthat.quocminh@gmail.com)
+ * @brief Eigen adaptors for ranges
+ * @date 2025-02-10
+ *
+ * @copyright Copyright (c) 2025
+ * @ingroup common
+ */
+
 #ifndef PBAT_COMMON_EIGEN_H
 #define PBAT_COMMON_EIGEN_H
 
@@ -11,9 +21,10 @@ namespace common {
 
 /**
  * @brief Map a range of scalars to an eigen vector of such scalars
- * @tparam R
- * @param r
- * @return
+ * @tparam R Range type
+ * @param r Range
+ * @return Eigen vector adaptor
+ * @ingroup common
  */
 template <CContiguousArithmeticRange R>
 Eigen::Map<Eigen::Vector<std::ranges::range_value_t<R>, Eigen::Dynamic> const> ToEigen(R&& r)
@@ -26,9 +37,10 @@ Eigen::Map<Eigen::Vector<std::ranges::range_value_t<R>, Eigen::Dynamic> const> T
 
 /**
  * @brief Map a range of scalar matrices to an eigen vector of such scalars
- * @tparam R
- * @param r
- * @return
+ * @tparam R Range type
+ * @param r Range
+ * @return Eigen matrix adaptor
+ * @ingroup common
  */
 template <CContiguousArithmeticMatrixRange R>
 Eigen::Map<Eigen::Matrix<
@@ -66,6 +78,14 @@ struct Slice
 
 } // namespace detail
 
+/**
+ * @brief Slice view over a range for Eigen advanced indexing
+ *
+ * @tparam R Range type
+ * @param r Range
+ * @return Type with size(), operator[] and operator() for Eigen advanced indexing
+ * @ingroup common
+ */
 template <std::ranges::random_access_range R>
 auto Slice(R&& r)
 {
