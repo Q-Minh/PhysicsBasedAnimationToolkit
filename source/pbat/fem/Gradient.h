@@ -3,9 +3,9 @@
  * @author Quoc-Minh Ton-That (tonthat.quocminh@gmail.com)
  * @brief FEM gradient operator
  * @date 2025-02-11
- * 
+ *
  * @copyright Copyright (c) 2025
- * 
+ *
  */
 
 #ifndef PBAT_FEM_GRADIENT_H
@@ -25,10 +25,30 @@ namespace pbat {
 namespace fem {
 
 /**
- * @brief Represents an FEM gradient operator that takes some function discretized at mesh nodes,
- * and returns its gradient at element quadrature points:
+ * @brief Represents an FEM gradient operator \f$ \mathbf{G} \in \mathbb{R}^{dg \times n} \f$
  *
- * \sum_j u_j \nabla \phi_j(X_g) ] \forall e \in E
+ * @details
+ * Given a function \f$ u(X) \f$ discretized at mesh nodes \f$ X_i \f$
+ * \f[
+ * \nabla u(X) = \sum_j u_j \nabla \phi_j(X) \; \forall \; e \in E
+ * \f]
+ * where \f$ \nabla \phi_j(X) \f$ is the gradient of the shape function \f$ \phi_j(X) \f$ at element
+ * \f$ e \f$.
+ *
+ * The gradient operator \f$ \mathbf{G} \f$ is thus defined as the matrix
+ * \f[
+ * \mathbf{G}^k = \begin{bmatrix} \frac{\partial \phi_i}{\partial X_k} \end{bmatrix} \in
+ * \mathbb{R}^{n \times n}
+ * \f]
+ *
+ * where \f$ n \f$ is the number of nodes in the mesh and \f$ 1 \leq k \leq d \f$ is a spatial
+ * dimension of the domain.
+ * \f[
+ * \mathbf{G} = \begin{bmatrix} \mathbf{G}^1 \\ \vdots \\ \mathbf{G}^d \end{bmatrix} \in
+ * \mathbb{R}^{dg \times n}
+ * \f]
+ *
+ * where \f$ g \f$ is the number of evaluation points.
  *
  * @tparam TMesh
  */
@@ -36,18 +56,20 @@ template <CMesh TMesh>
 struct Gradient
 {
   public:
-    using SelfType              = Gradient<TMesh>;
-    using MeshType              = TMesh;
-    using ElementType           = typename TMesh::ElementType;
-    static int constexpr kDims  = MeshType::kDims;
-    static int constexpr kOrder = (ElementType::kOrder > 1) ? (ElementType::kOrder - 1) : 1;
+    using SelfType              = Gradient<TMesh>;             ///< Self type
+    using MeshType              = TMesh;                       ///< Mesh type
+    using ElementType           = typename TMesh::ElementType; ///< Element type
+    static int constexpr kDims  = MeshType::kDims; ///< Number of domain spatial dimensions
+    static int constexpr kOrder = (ElementType::kOrder > 1) ?
+                                      (ElementType::kOrder - 1) :
+                                      1; ///< Polynomial order of the gradient operator
 
     /**
      * @brief
-     * @param mesh
-     * @param eg |#quad.pts.|x1 array of element indices associated with quadrature points
-     * @param GNeg |#element nodes|x|#dims * #quad.pts.| matrix of element shape function gradients
-     * at quadrature points points
+     * @param mesh The finite element mesh
+     * @param eg |# quad.pts.| x 1 array of element indices associated with quadrature points
+     * @param GNeg |# element nodes|x|# dims * # quad.pts.| matrix of element shape function
+     * gradients at quadrature points points
      */
     Gradient(
         MeshType const& mesh,
@@ -59,32 +81,45 @@ struct Gradient
     /**
      * @brief Applies the gradient matrix as a linear operator on x, adding result to y.
      *
-     * @tparam TDerivedIn
-     * @tparam TDerivedOut
-     * @param x
-     * @param y
+     * @tparam TDerivedIn Input matrix type
+     * @tparam TDerivedOut Output matrix type
+     * @param x Input matrix
+     * @param y Output matrix
      */
     template <class TDerivedIn, class TDerivedOut>
     void Apply(Eigen::MatrixBase<TDerivedIn> const& x, Eigen::DenseBase<TDerivedOut>& y) const;
 
     /**
-     * @brief Transforms this matrix-free mass matrix representation into sparse compressed format.
-     * @return
+     * @brief Transforms this matrix-free Gradient operator into sparse compressed format.
+     * @return CSCMatrix Sparse compressed column matrix representation of the Gradient operator
      */
     CSCMatrix ToMatrix() const;
 
+    /**
+     * @brief
+     *
+     * @return Index
+     */
     Index InputDimensions() const { return mesh.X.cols(); }
+    /**
+     * @brief
+     *
+     * @return Index
+     */
     Index OutputDimensions() const { return kDims * eg.size(); }
 
+    /**
+     * @brief Checks the validity of the gradient operator
+     */
     void CheckValidState() const;
 
     MeshType const& mesh; ///< The finite element mesh
 
     Eigen::Ref<IndexVectorX const>
-        eg; ///< |#quad.pts.|x1 array of element indices corresponding to quadrature points
-    Eigen::Ref<MatrixX const>
-        GNeg; ///< |#element nodes|x|#dims * #quad.pts. * #elements|
-              ///< matrix of element shape function gradients at quadrature points
+        eg; ///< |# quad.pts.|x1 array of element indices corresponding to quadrature points
+    Eigen::Ref<MatrixX const> GNeg; ///< |# element nodes|x|# dims * # quad.pts. * # elements|
+                                    ///< matrix of element shape function gradients at quadrature
+                                    ///< points. See ShapeFunctionGradients().
 };
 
 template <CMesh TMesh>
