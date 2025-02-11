@@ -1,3 +1,24 @@
+/**
+ * @file Fem.h
+ * @author Quoc-Minh Ton-That (tonthat.quocminh@gmail.com)
+ * @brief 
+ * @date 2025-02-10
+ * 
+ * @copyright Copyright (c) 2025
+ * 
+ */
+
+/**
+ * @defgroup fem Finite Element Method (FEM) module
+ * 
+ */
+
+/**
+ * @brief 
+ */
+namespace pbat::fem {
+} // namespace pbat::fem
+
 #ifndef PBAT_FEM_FEM_H
 #define PBAT_FEM_FEM_H
 

@@ -11,17 +11,20 @@ namespace pbat {
 namespace fem {
 
 /**
- * @brief Computes the deformation gradient dx(X)/dX of the deformation map x(X).
+ * @brief Computes the deformation gradient \f$ \frac{\partial \mathbf{x}(X)}{\partial X} \f$ of the
+ * deformation map \f$ \mathbf{x}(X) \f$.
  *
- * If the problem is discretized with displacement coefficients u = x(X) - X,
- * then simply feed this function with argument x = X + u.
+ * If the problem is discretized with displacement coefficients \f$ \mathbf{u} = \mathbf{x}(X) - X
+ * \f$, then simply feed this function with argument \f$ \mathbf{x} = X + \mathbf{u} \f$.
  *
- * @tparam TDerivedU
- * @tparam TDerivedX
- * @tparam TElement
+ * @tparam TDerivedU Eigen matrix expression
+ * @tparam TDerivedX Eigen matrix expression
+ * @tparam TElement FEM element type
  * @param x Matrix of column-wise position nodal coefficients
  * @param GP Basis function gradients
- * @return
+ * @return Deformation gradient matrix
+ *
+ * @ingroup fem
  */
 template <CElement TElement, class TDerivedx, class TDerivedX>
 Matrix<TDerivedx::RowsAtCompileTime, TElement::kDims>
@@ -31,16 +34,22 @@ DeformationGradient(Eigen::MatrixBase<TDerivedx> const& x, Eigen::MatrixBase<TDe
 }
 
 /**
- * @brief Extracts the i^{th} segment of GradientWrtDofs()
- * @tparam TElement
+ * @brief Computes \f$ \frac{\partial \Psi}{\partial \mathbf{x}_i} \in \mathbb{R}^d \f$, i.e. the
+ * gradient of a scalar function \f$ \Psi \f$ w.r.t. the \f$ i^{\text{th}}
+ * \f$ node's degrees of freedom.
+ *
+ * @tparam TElement FEM element type
  * @tparam Dims Problem dimensionality
- * @tparam TMatrixGF
- * @tparam TMatrixGP
- * @tparam Scalar
- * @param GF Gradient w.r.t. vectorized deformation gradient vec(F)
- * @param GP Basis function gradients
- * @param i The segment to extract
- * @return
+ * @tparam TMatrixGF Mini matrix type
+ * @tparam TMatrixGP Mini matrix type
+ * @tparam Scalar Coefficient type of returned gradient
+ * @param GF \f$ d^2 \times 1 \f$ gradient of \f$ \Psi \f$ w.r.t. vectorized jacobian \f$
+ * \text{vec}(\mathbf{F}) \f$
+ * @param GP \f$ * \times d \f$ basis function gradients \f$ \nabla \mathbf{N}_i \f$
+ * @param i Basis function index
+ * @return \f$ d \times 1 \f$ vector \f$ \frac{\partial \Psi}{\partial \mathbf{x}_i} \f$
+ *
+ * @ingroup fem
  */
 template <
     CElement TElement,
@@ -61,27 +70,45 @@ GradientSegmentWrtDofs(TMatrixGF const& GF, TMatrixGP const& GP, auto i)
 }
 
 /**
- * @brief Computes gradient w.r.t. FEM degrees of freedom x of some function of deformation gradient
- * F, U(F(x)) via chain rule. This is effectively a rank-3 to rank-1 tensor contraction.
+ * @brief Computes gradient w.r.t. FEM degrees of freedom \f$ x \f$ of scalar function \f$
+ * \Psi(\mathbf{F}) \f$, where \f$ F \f$ is the jacobian of \f$ x \f$, via chain rule. This is
+ * effectively a rank-3 to rank-1 tensor contraction.
  *
- * dF/dxi = d/dxi xi gi^T, xi \in R^d, gi \in R^d
+ * Let \f$ \mathbf{g}_i \f$ be the \f$ i^{\text{th}} \f$ basis function gradient, then
  *
- * dvec(F)/dxi = gi \kronecker I_{d x d} \in R^{d^2 x d}
+ * \f[
+ * \frac{\partial \mathbf{F}}{\partial \mathbf{x}_i} = \frac{\partial}{\partial \mathbf{x}_i}
+ * \mathbf{x}_i \mathbf{g}_i^T, \mathbf{x}_i \in R^d, \mathbf{g}_i \in R^d
+ * \f]
  *
- * dPsi/dxi = dPsi/dvec(F) * dvec(F)/dxi
- *        = [ dp1_{d x 1} --- dpd_{d x 1} ] [  gi1 I_{d x d}
- *                                                  |
- *                                             gid I_{d x d} ]
- *        = \sum_{k=1}^{d} dpk_{d x 1} * gik
+ * Thus,
+ * \f[
+ * \frac{\partial \text{vec}(\mathbf{F})}{\partial \mathbf{x}_i} = \mathbf{g}_i \otimes
+ * \mathbf{I}_{d x d} \in R^{d^2 \times d}
+ * \f]
  *
- * @tparam TElement
+ * With \f$ \mathbf{G}_F = \nabla_{\text{vec}(\mathbf{F})} \Psi \in \mathbb{R}^{d^2} \f$,
+ * and \f$ \mathbf{G}_F^k \f$ the \f$ k^\text{th} \; d \times 1 \f$ block of \f$ \mathbf{G}_F \f$,
+ * then
+ *
+ * \f[
+ * \frac{\partial \Psi}{\partial \mathbf{x}_i}
+ * = \frac{\partial \Psi}{\partial \text{vec}(\mathbf{F})} \frac{\partial
+ * \text{vec}(\mathbf{F})}{\partial \mathbf{x}_i}
+ * = \sum_{k=1}^{d} \mathbf{G}_F^k \mathbf{g}_{ik}
+ * \f]
+ *
+ * @tparam TElement FEM element type
  * @tparam Dims Problem dimensionality
- * @tparam TMatrixGF
- * @tparam TMatrixGP
- * @tparam Scalar
- * @param GF Gradient w.r.t. vectorized deformation gradient vec(F)
- * @param GP Basis function gradients
- * @return
+ * @tparam TMatrixGF Mini matrix type
+ * @tparam TMatrixGP Mini matrix type
+ * @tparam Scalar Coefficient type of returned gradient
+ * @param GF \f$ d^2 \times 1 \f$ gradient of \f$ \Psi \f$ w.r.t. vectorized jacobian \f$
+ * \text{vec}(\mathbf{F}) \f$
+ * @param GP \f$ * \times d \f$ basis function gradients \f$ \nabla \mathbf{N}_i \f$
+ * @return \f$ d \times 1 \f$ vector \f$ \frac{\partial \Psi}{\partial \mathbf{x}_i} \f$
+ *
+ * @ingroup fem
  */
 template <
     CElement TElement,
@@ -107,17 +134,25 @@ GradientWrtDofs(TMatrixGF const& GF, TMatrixGP const& GP)
 }
 
 /**
- * @brief Extracts the ij^{th} block of HessianWrtDofs
- * @tparam TElement
+ * @brief Computes \f$ \frac{\partial^2 \Psi}{\partial \mathbf{x}_i \partial \mathbf{x}_j} \f$, i.e.
+ * the hessian of a scalar function \f$ \Psi \f$ w.r.t. the \f$ i^{\text{th}} \f$ and \f$
+ * j^{\text{th}} \f$ node's degrees of freedom.
+ *
+ * @tparam TElement FEM element type
  * @tparam Dims Problem dimensionality
- * @tparam TMatrixHF
- * @tparam TMatrixGP
- * @tparam Scalar
- * @param HF Hessian of energy w.r.t. vectorized deformation gradient vec(F)
- * @param GP Basis function gradients
- * @param i
- * @param j
- * @return
+ * @tparam TMatrixHF Mini matrix type
+ * @tparam TMatrixGP Mini matrix type
+ * @tparam Scalar Coefficient type of returned hessian
+ * @param HF \f$ d^2 \times d^2 \f$ hessian of \f$ \Psi \f$ w.r.t. vectorized jacobian \f$
+ * \text{vec}(\mathbf{F}) \f$, i.e. \f$ \frac{\partial^2 \Psi}{\partial \text{vec}(\mathbf{F})^2}
+ * \f$
+ * @param GP \f$ * \times d \f$ basis function gradients \f$ \nabla \mathbf{N}_i \f$
+ * @param i Basis function index
+ * @param j Basis function index
+ * @return \f$ d \times d \f$ matrix \f$ \frac{\partial^2 \Psi}{\partial \mathbf{x}_i \partial
+ * \mathbf{x}_j} \f$
+ *
+ * @ingroup fem
  */
 template <
     CElement TElement,
@@ -141,20 +176,46 @@ HessianBlockWrtDofs(TMatrixHF const& HF, TMatrixGP const& GP, auto i, auto j)
 }
 
 /**
- * @brief Computes hessian w.r.t. FEM degrees of freedom x of some function of deformation gradient
- * F, U(F(x)) via chain rule. This is effectively a rank-4 to rank-2 tensor contraction.
+ * @brief Computes hessian w.r.t. FEM degrees of freedom \f$ x \f$ of scalar function \f$
+ * \Psi(\mathbf{F}) \f$, where \f$ F \f$ is the jacobian of \f$ x \f$, via chain rule. This is
+ * effectively a rank-4 to rank-2 tensor contraction.
  *
- * dPsi/dxi = \sum_{k=1}^{d} dpk_{d x 1} * gik (see GradientWrtDofs)
- * d^2 Psi / dxi dxj = \sum_{ki=1}^{d} \sum_{kj=1}^{d} d^2 gi_{ki} p_{ki,kj}  gj_{kj}
+ * Let \f$ \mathbf{g}_i \f$ be the \f$ i^{\text{th}} \f$ basis function gradient, then
  *
- * @tparam TElement
+ * \f[
+ * \frac{\partial \mathbf{F}}{\partial \mathbf{x}_i} = \frac{\partial}{\partial
+ * \mathbf{x}_i} \mathbf{x}_i \mathbf{g}_i^T, \mathbf{x}_i \in R^d, \mathbf{g}_i \in R^d
+ * \f]
+ *
+ * Thus,
+ * \f[
+ * \frac{\partial \text{vec}(\mathbf{F})}{\partial \mathbf{x}_i} = \mathbf{g}_i \otimes
+ * \mathbf{I}_{d x d} \in R^{d^2 \times d}
+ * \f]
+ *
+ * With \f$ \mathbf{H}_F = \nabla^2_{\text{vec}(\mathbf{F})} \Psi \in \mathbb{R}^{d^2 \times d^2}
+ * \f$, and \f$ \mathbf{H}_F^{uv} \f$ the \f$ (u,v)^\text{th} \; d \times d \f$ block of \f$
+ * \mathbf{H}_F \f$, then
+ *
+ * \f[
+ * \frac{\partial^2 \Psi}{\partial \mathbf{x}_i \partial \mathbf{x}_j}
+ * = \frac{\partial^2 \Psi}{\partial \text{vec}(\mathbf{F})^2} \frac{\partial^2
+ * \text{vec}(\mathbf{F})}{\partial \mathbf{x}_i \partial \mathbf{x}_j}
+ * = \sum_{u=1}^{d} \sum_{v=1}^{d} \mathbf{H}_F^{uv} \mathbf{g}_{iu} \mathbf{g}_{jv}
+ * \f]
+ *
+ * @tparam TElement FEM element type
  * @tparam Dims Problem dimensionality
- * @tparam TMatrixHF
- * @tparam TMatrixGP
- * @tparam Scalar
- * @param HF Hessian of energy w.r.t. vectorized deformation gradient vec(F)
- * @param GP Basis function gradients
- * @return
+ * @tparam TMatrixHF Mini matrix type
+ * @tparam TMatrixGP Mini matrix type
+ * @tparam Scalar Coefficient type of returned hessian
+ * @param HF \f$ d^2 \times d^2 \f$ hessian of \f$ \Psi \f$ w.r.t. vectorized jacobian \f$
+ * \text{vec}(\mathbf{F}) \f$, i.e. \f$ \frac{\partial^2 \Psi}{\partial \text{vec}(\mathbf{F})^2}
+ * \f$
+ * @param GP \f$ * \times d \f$ basis function gradients \f$ \nabla \mathbf{N}_i \f$
+ * @return \f$ d^2 \times d^2 \f$ matrix \f$ \frac{\partial^2 \Psi}{\partial \mathbf{x}^2} \f$
+ *
+ * @ingroup fem
  */
 template <
     CElement TElement,
