@@ -1,4 +1,14 @@
-﻿#ifndef PBAT_GEOMETRY_INTERSECTIONQUERIES_H
+﻿/**
+ * @file IntersectionQueries.h
+ * @author Quoc-Minh Ton-That (tonthat.quocminh@gmail.com)
+ * @brief This file contains functions to answer intersection queries.
+ * @date 2025-02-12
+ *
+ * @copyright Copyright (c) 2025
+ *
+ */
+
+#ifndef PBAT_GEOMETRY_INTERSECTIONQUERIES_H
 #define PBAT_GEOMETRY_INTERSECTIONQUERIES_H
 
 #include "pbat/Aliases.h"
@@ -11,13 +21,30 @@
 
 namespace pbat {
 namespace geometry {
+/**
+ * @brief This namespace contains functions to answer intersection queries.
+ */
 namespace IntersectionQueries {
 
 namespace mini = math::linalg::mini;
 
+/**
+ * @brief Computes the barycentric coordinates of point P with respect to the triangle spanned by
+ * vertices A, B, and C.
+ *
+ * @tparam TMatrixAP Matrix type of the vector from A to P
+ * @tparam TMatrixAB Matrix type of the vector from A to B
+ * @tparam TMatrixAC Matrix type of the vector from A to C
+ * @param AP The vector from A to P
+ * @param AB The vector from A to B
+ * @param AC The vector from A to C
+ * @return The barycentric coordinates of P with respect to the triangle ABC
+ * @pre AP, AB, and AC are coplanar
+ */
 template <mini::CMatrix TMatrixAP, mini::CMatrix TMatrixAB, mini::CMatrix TMatrixAC>
-PBAT_HOST_DEVICE mini::SMatrix<typename TMatrixAP::ScalarType, 3, 1>
+PBAT_HOST_DEVICE auto
 TriangleBarycentricCoordinates(TMatrixAP const& AP, TMatrixAB const& AB, TMatrixAC const& AC)
+    -> mini::SMatrix<typename TMatrixAP::ScalarType, 3, 1>
 {
     using ScalarType = typename TMatrixAP::ScalarType;
     using namespace mini;
@@ -38,28 +65,30 @@ TriangleBarycentricCoordinates(TMatrixAP const& AP, TMatrixAB const& AB, TMatrix
 };
 
 /**
- * @brief
- * @tparam TMatrixP
- * @tparam TMatrixA
- * @tparam TMatrixB
- * @tparam TMatrixC
- * @param P Point from which to compute barycentric coordinates. Must be in the plane spanned by
- * triangle ABC.
- * @param A
- * @param B
- * @param C
- * @return
+ * @brief Computes the barycentric coordinates of point P with respect to the triangle spanned by
+ * vertices A, B, and C.
+ *
+ * @tparam TMatrixP Matrix type of the point P
+ * @tparam TMatrixA Matrix type of the vertex A
+ * @tparam TMatrixB Matrix type of the vertex B
+ * @tparam TMatrixC Matrix type of the vertex C
+ * @param P Point from which to compute barycentric coordinates.
+ * @param A Vertex A of the triangle
+ * @param B Vertex B of the triangle
+ * @param C Vertex C of the triangle
+ * @return The barycentric coordinates of P with respect to the triangle ABC
+ * @pre P is in the plane spanned by triangle ABC.
  */
 template <
     mini::CMatrix TMatrixP,
     mini::CMatrix TMatrixA,
     mini::CMatrix TMatrixB,
     mini::CMatrix TMatrixC>
-PBAT_HOST_DEVICE mini::SVector<typename TMatrixP::ScalarType, 3> TriangleBarycentricCoordinates(
+PBAT_HOST_DEVICE auto TriangleBarycentricCoordinates(
     TMatrixP const& P,
     TMatrixA const& A,
     TMatrixB const& B,
-    TMatrixC const& C)
+    TMatrixC const& C) -> mini::SVector<typename TMatrixP::ScalarType, 3>
 {
     using ScalarType                          = typename TMatrixP::ScalarType;
     auto constexpr kRows                      = TMatrixP::kRows;
@@ -71,53 +100,55 @@ PBAT_HOST_DEVICE mini::SVector<typename TMatrixP::ScalarType, 3> TriangleBarycen
 
 /**
  * @brief Computes the intersection volume between 2 axis aligned bounding boxes
- * @param aabb1
- * @param aabb2
- * @return
+ * @param aabb1 Axis aligned bounding box 1
+ * @param aabb2 Axis aligned bounding box 2
+ * @return The intersection volume between the 2 AABBs
  */
 template <
     mini::CMatrix TMatrixL1,
     mini::CMatrix TMatrixU1,
     mini::CMatrix TMatrixL2,
     mini::CMatrix TMatrixU2>
-PBAT_HOST_DEVICE mini::SMatrix<typename TMatrixL1::ScalarType, TMatrixL1::Rows, 2>
-AxisAlignedBoundingBoxes(
+PBAT_HOST_DEVICE auto AxisAlignedBoundingBoxes(
     TMatrixL1 const& L1,
     TMatrixU1 const& U1,
     TMatrixL2 const& L2,
-    TMatrixU2 const& U2);
+    TMatrixU2 const& U2) -> mini::SMatrix<typename TMatrixL1::ScalarType, TMatrixL1::Rows, 2>;
 
 /**
  * @brief Computes the intersection point, if any, between a line segment PQ and a sphere (C,r).
+ *
  * If there are 2 intersection points, returns the one closest to P along PQ.
- * @param P
- * @param Q
- * @param C
- * @param R
- * @return
+ *
+ * @param P The start point of the line segment
+ * @param Q The end point of the line segment
+ * @param C The center of the sphere
+ * @param R The radius of the sphere
+ * @return The intersection point, if any
  */
 template <mini::CMatrix TMatrixP, mini::CMatrix TMatrixQ, mini::CMatrix TMatrixC>
-PBAT_HOST_DEVICE std::optional<mini::SVector<typename TMatrixP::ScalarType, TMatrixP::kRows>>
-LineSegmentSphere(
+PBAT_HOST_DEVICE auto LineSegmentSphere(
     TMatrixP const& P,
     TMatrixQ const& Q,
     TMatrixC const& C,
-    typename TMatrixC::ScalarType R);
+    typename TMatrixC::ScalarType R)
+    -> std::optional<mini::SVector<typename TMatrixP::ScalarType, TMatrixP::kRows>>;
 
 /**
  * @brief Computes the intersection point, if any, between a line including points P,Q and the
  * plane spanned by triangle ABC, in 3D.
- * @tparam TMatrixQ
- * @tparam TMatrixA
- * @tparam TMatrixB
- * @tparam TMatrixC
- * @tparam TMatrixP
- * @param P
- * @param Q
- * @param A
- * @param B
- * @param C
- * @return
+ *
+ * @tparam TMatrixP Matrix type of the point P
+ * @tparam TMatrixQ Matrix type of the point Q
+ * @tparam TMatrixA Matrix type of the vertex A
+ * @tparam TMatrixB Matrix type of the vertex B
+ * @tparam TMatrixC Matrix type of the vertex C
+ * @param P The start point of the line
+ * @param Q The end point of the line
+ * @param A Vertex A of the triangle
+ * @param B Vertex B of the triangle
+ * @param C Vertex C of the triangle
+ * @return The intersection point, if any
  */
 template <
     mini::CMatrix TMatrixP,
@@ -125,43 +156,50 @@ template <
     mini::CMatrix TMatrixA,
     mini::CMatrix TMatrixB,
     mini::CMatrix TMatrixC>
-PBAT_HOST_DEVICE std::optional<mini::SVector<typename TMatrixP::ScalarType, TMatrixP::kRows>>
-LineSegmentPlane3D(
+PBAT_HOST_DEVICE auto LineSegmentPlane3D(
     TMatrixP const& P,
     TMatrixQ const& Q,
     TMatrixA const& A,
     TMatrixB const& B,
-    TMatrixC const& C);
+    TMatrixC const& C)
+    -> std::optional<mini::SVector<typename TMatrixP::ScalarType, TMatrixP::kRows>>;
 
 /**
  * @brief Computes the intersection point, if any, between a line including points P,Q and the
  * plane (n,d), in 3D.
- * @tparam TMatrixP
- * @tparam TMatrixQ
- * @tparam TMatrixN
- * @param P
- * @param Q
- * @param n
- * @param d
- * @return
+ *
+ * @tparam TMatrixP Matrix type of the point P
+ * @tparam TMatrixQ Matrix type of the point Q
+ * @tparam TMatrixN Matrix type of the normal vector of the plane
+ * @param P The start point of the line
+ * @param Q The end point of the line
+ * @param n The normal vector of the plane
+ * @param d The distance from the origin to the plane
+ * @return The intersection point, if any
  */
 template <mini::CMatrix TMatrixP, mini::CMatrix TMatrixQ, mini::CMatrix TMatrixN>
-PBAT_HOST_DEVICE std::optional<mini::SVector<typename TMatrixP::ScalarType, TMatrixP::kRows>>
-LineSegmentPlane3D(
+PBAT_HOST_DEVICE auto LineSegmentPlane3D(
     TMatrixP const& P,
     TMatrixQ const& Q,
     TMatrixN const& n,
-    typename TMatrixN::ScalarType d);
+    typename TMatrixN::ScalarType d)
+    -> std::optional<mini::SVector<typename TMatrixP::ScalarType, TMatrixP::kRows>>;
 
 /**
  * @brief Computes the intersection point, if any, between a line including points P,Q and a
  * triangle ABC, in 3D.
- * @param P
- * @param Q
- * @param A
- * @param B
- * @param C
- * @return
+ *
+ * @tparam TMatrixP Matrix type of the point P
+ * @tparam TMatrixQ Matrix type of the point Q
+ * @tparam TMatrixA Matrix type of the vertex A
+ * @tparam TMatrixB Matrix type of the vertex B
+ * @tparam TMatrixC Matrix type of the vertex C
+ * @param P The start point of the line
+ * @param Q The end point of the line
+ * @param A Vertex A of the triangle
+ * @param B Vertex B of the triangle
+ * @param C Vertex C of the triangle
+ * @return The intersection point, if any
  */
 template <
     mini::CMatrix TMatrixP,
@@ -169,22 +207,28 @@ template <
     mini::CMatrix TMatrixA,
     mini::CMatrix TMatrixB,
     mini::CMatrix TMatrixC>
-PBAT_HOST_DEVICE std::optional<mini::SVector<typename TMatrixP::ScalarType, 3>> UvwLineTriangle3D(
+PBAT_HOST_DEVICE auto UvwLineTriangle3D(
     TMatrixP const& P,
     TMatrixQ const& Q,
     TMatrixA const& A,
     TMatrixB const& B,
-    TMatrixC const& C);
+    TMatrixC const& C) -> std::optional<mini::SVector<typename TMatrixP::ScalarType, 3>>;
 
 /**
  * @brief Computes the intersection point, if any, between a line segment delimited by points
  * P,Q and a triangle ABC, in 3D.
- * @param P
- * @param Q
- * @param A
- * @param B
- * @param C
- * @return
+ * 
+ * @tparam TMatrixP Matrix type of the point P
+ * @tparam TMatrixQ Matrix type of the point Q
+ * @tparam TMatrixA Matrix type of the vertex A
+ * @tparam TMatrixB Matrix type of the vertex B
+ * @tparam TMatrixC Matrix type of the vertex C
+ * @param P The start point of the line segment
+ * @param Q The end point of the line segment
+ * @param A Vertex A of the triangle
+ * @param B Vertex B of the triangle
+ * @param C Vertex C of the triangle
+ * @return The intersection point, if any
  */
 template <
     mini::CMatrix TMatrixP,
@@ -192,25 +236,31 @@ template <
     mini::CMatrix TMatrixA,
     mini::CMatrix TMatrixB,
     mini::CMatrix TMatrixC>
-PBAT_HOST_DEVICE std::optional<mini::SVector<typename TMatrixP::ScalarType, 3>>
-UvwLineSegmentTriangle3D(
+PBAT_HOST_DEVICE auto UvwLineSegmentTriangle3D(
     TMatrixP const& P,
     TMatrixQ const& Q,
     TMatrixA const& A,
     TMatrixB const& B,
-    TMatrixC const& C);
+    TMatrixC const& C) -> std::optional<mini::SVector<typename TMatrixP::ScalarType, 3>>;
 
 /**
  * @brief Computes intersection points between 3 edges (as line segments) of triangle A1B1C1 and
  * triangle A2B2C2, and intersection points between 3 edges (as line segments) of triangle
  * A2B2C2 and triangle A1B1C1, in 3D.
- * @param A1
- * @param B1
- * @param C1
- * @param A2
- * @param B2
- * @param C2
- * @return
+ * 
+ * @tparam TMatrixA1 Matrix type of the vertex A1 of triangle 1
+ * @tparam TMatrixB1 Matrix type of the vertex B1 of triangle 1
+ * @tparam TMatrixC1 Matrix type of the vertex C1 of triangle 1
+ * @tparam TMatrixA2 Matrix type of the vertex A2 of triangle 2
+ * @tparam TMatrixB2 Matrix type of the vertex B2 of triangle 2
+ * @tparam TMatrixC2 Matrix type of the vertex C2 of triangle 2
+ * @param A1 Vertex A of triangle 1
+ * @param B1 Vertex B of triangle 1
+ * @param C1 Vertex C of triangle 1
+ * @param A2 Vertex A of triangle 2
+ * @param B2 Vertex B of triangle 2
+ * @param C2 Vertex C of triangle 2
+ * @return The intersection points, if any
  */
 template <
     mini::CMatrix TMatrixA1,
@@ -219,26 +269,25 @@ template <
     mini::CMatrix TMatrixA2,
     mini::CMatrix TMatrixB2,
     mini::CMatrix TMatrixC2>
-PBAT_HOST_DEVICE std::array<std::optional<mini::SVector<typename TMatrixA1::ScalarType, 3>>, 6u>
-UvwTriangles3D(
+PBAT_HOST_DEVICE auto UvwTriangles3D(
     TMatrixA1 const& A1,
     TMatrixB1 const& B1,
     TMatrixC1 const& C1,
     TMatrixA2 const& A2,
     TMatrixB2 const& B2,
-    TMatrixC2 const& C2);
+    TMatrixC2 const& C2)
+    -> std::array<std::optional<mini::SVector<typename TMatrixA1::ScalarType, 3>>, 6u>;
 
 template <
     mini::CMatrix TMatrixL1,
     mini::CMatrix TMatrixU1,
     mini::CMatrix TMatrixL2,
     mini::CMatrix TMatrixU2>
-PBAT_HOST_DEVICE mini::SMatrix<typename TMatrixL1::ScalarType, TMatrixL1::Rows, 2>
-AxisAlignedBoundingBoxes(
+PBAT_HOST_DEVICE auto AxisAlignedBoundingBoxes(
     TMatrixL1 const& L1,
     TMatrixU1 const& U1,
     TMatrixL2 const& L2,
-    TMatrixU2 const& U2)
+    TMatrixU2 const& U2) -> mini::SMatrix<typename TMatrixL1::ScalarType, TMatrixL1::Rows, 2>
 {
     using ScalarType = typename TMatrixL1::ScalarType;
     mini::SMatrix<ScalarType, TMatrixL1::Rows, 2> LU;
@@ -248,12 +297,12 @@ AxisAlignedBoundingBoxes(
 }
 
 template <mini::CMatrix TMatrixP, mini::CMatrix TMatrixQ, mini::CMatrix TMatrixC>
-PBAT_HOST_DEVICE std::optional<mini::SVector<typename TMatrixP::ScalarType, TMatrixP::kRows>>
-LineSegmentSphere(
+PBAT_HOST_DEVICE auto LineSegmentSphere(
     TMatrixP const& P,
     TMatrixQ const& Q,
     TMatrixC const& C,
     typename TMatrixC::ScalarType R)
+    -> std::optional<mini::SVector<typename TMatrixP::ScalarType, TMatrixP::kRows>>
 {
     using ScalarType                          = typename TMatrixP::ScalarType;
     auto constexpr kRows                      = TMatrixP::kRows;
@@ -290,13 +339,13 @@ template <
     mini::CMatrix TMatrixA,
     mini::CMatrix TMatrixB,
     mini::CMatrix TMatrixC>
-PBAT_HOST_DEVICE std::optional<mini::SVector<typename TMatrixP::ScalarType, TMatrixP::kRows>>
-LineSegmentPlane3D(
+PBAT_HOST_DEVICE auto LineSegmentPlane3D(
     TMatrixP const& P,
     TMatrixQ const& Q,
     TMatrixA const& A,
     TMatrixB const& B,
     TMatrixC const& C)
+    -> std::optional<mini::SVector<typename TMatrixP::ScalarType, TMatrixP::kRows>>
 {
     using ScalarType     = typename TMatrixP::ScalarType;
     auto constexpr kRows = TMatrixP::kRows;
@@ -310,12 +359,12 @@ LineSegmentPlane3D(
 }
 
 template <mini::CMatrix TMatrixP, mini::CMatrix TMatrixQ, mini::CMatrix TMatrixN>
-PBAT_HOST_DEVICE std::optional<mini::SVector<typename TMatrixP::ScalarType, TMatrixP::kRows>>
-LineSegmentPlane3D(
+PBAT_HOST_DEVICE auto LineSegmentPlane3D(
     TMatrixP const& P,
     TMatrixQ const& Q,
     TMatrixN const& n,
     typename TMatrixN::ScalarType d)
+    -> std::optional<mini::SVector<typename TMatrixP::ScalarType, TMatrixP::kRows>>
 {
     using ScalarType     = typename TMatrixP::ScalarType;
     auto constexpr kRows = TMatrixP::kRows;
@@ -338,12 +387,12 @@ template <
     mini::CMatrix TMatrixA,
     mini::CMatrix TMatrixB,
     mini::CMatrix TMatrixC>
-PBAT_HOST_DEVICE std::optional<mini::SVector<typename TMatrixP::ScalarType, 3>> UvwLineTriangle3D(
+PBAT_HOST_DEVICE auto UvwLineTriangle3D(
     TMatrixP const& P,
     TMatrixQ const& Q,
     TMatrixA const& A,
     TMatrixB const& B,
-    TMatrixC const& C)
+    TMatrixC const& C) -> std::optional<mini::SVector<typename TMatrixP::ScalarType, 3>>
 {
     using ScalarType     = typename TMatrixP::ScalarType;
     auto constexpr kRows = TMatrixP::kRows;
@@ -406,13 +455,12 @@ template <
     mini::CMatrix TMatrixA,
     mini::CMatrix TMatrixB,
     mini::CMatrix TMatrixC>
-PBAT_HOST_DEVICE std::optional<mini::SVector<typename TMatrixP::ScalarType, 3>>
-UvwLineSegmentTriangle3D(
+PBAT_HOST_DEVICE auto UvwLineSegmentTriangle3D(
     TMatrixP const& P,
     TMatrixQ const& Q,
     TMatrixA const& A,
     TMatrixB const& B,
-    TMatrixC const& C)
+    TMatrixC const& C) -> std::optional<mini::SVector<typename TMatrixP::ScalarType, 3>>
 {
     using ScalarType     = typename TMatrixP::ScalarType;
     auto constexpr kRows = TMatrixP::kRows;
@@ -450,14 +498,14 @@ template <
     mini::CMatrix TMatrixA2,
     mini::CMatrix TMatrixB2,
     mini::CMatrix TMatrixC2>
-PBAT_HOST_DEVICE std::array<std::optional<mini::SVector<typename TMatrixA1::ScalarType, 3>>, 6u>
-UvwTriangles3D(
+PBAT_HOST_DEVICE auto UvwTriangles3D(
     TMatrixA1 const& A1,
     TMatrixB1 const& B1,
     TMatrixC1 const& C1,
     TMatrixA2 const& A2,
     TMatrixB2 const& B2,
     TMatrixC2 const& C2)
+    -> std::array<std::optional<mini::SVector<typename TMatrixA1::ScalarType, 3>>, 6u>
 {
     using ScalarType     = typename TMatrixA1::ScalarType;
     auto constexpr kRows = TMatrixA1::kRows;
@@ -478,9 +526,9 @@ UvwTriangles3D(
     // NOTE: Maybe handle degenerate triangles? Or maybe we should require the user to check
     // that.
     // - For a colinear triangle, we can perform line segment against triangle test.
-    // - For 2 colinear triangles, we can perform line segment against line segment.
+    // - For 2 colinear triangles, we can perform line segment against line segment test.
     // - For a triangle collapsed to a point, we perform point in triangle test.
-    // - FOr 2 triangles collapsed to a point, we check if both points are numerically the same.
+    // - For 2 triangles collapsed to a point, we check if both points are numerically the same.
 
     // Test 3 edges of each triangle against the other triangle
     std::array<std::optional<mini::SVector<ScalarType, 3>>, 6u> intersections{
