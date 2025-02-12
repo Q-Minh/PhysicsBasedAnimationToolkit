@@ -1,4 +1,13 @@
-
+/**
+ * @file AxisAlignedBoundingBox.h
+ * @author Quoc-Minh Ton-That (tonthat.quocminh@gmail.com)
+ * @brief Axis-aligned bounding box class
+ * @version 0.1
+ * @date 2025-02-12
+ *
+ * @copyright Copyright (c) 2025
+ *
+ */
 #ifndef PBAT_GEOMETRY_AXISALIGNEDBOUNDINGBOX_H
 #define PBAT_GEOMETRY_AXISALIGNEDBOUNDINGBOX_H
 
@@ -13,30 +22,72 @@
 namespace pbat {
 namespace geometry {
 
+/**
+ * @brief Axis-aligned bounding box class
+ *
+ * @note This class is a thin wrapper around Eigen::AlignedBox
+ *
+ * @tparam Dims Number of dimensions
+ */
 template <int Dims>
 class AxisAlignedBoundingBox : public Eigen::AlignedBox<Scalar, Dims>
 {
   public:
-    using BaseType = Eigen::AlignedBox<Scalar, Dims>;
-    using SelfType = AxisAlignedBoundingBox;
+    using BaseType = Eigen::AlignedBox<Scalar, Dims>; ///< Base type
+    using SelfType = AxisAlignedBoundingBox;          ///< Self type
 
-    static auto constexpr kDims = Dims;
+    static auto constexpr kDims = Dims; ///< Number of dimensions
 
     AxisAlignedBoundingBox() = default;
 
+    /**
+     * @brief Copy construct AxisAlignedBoundingBox from Eigen::AlignedBox
+     * @param box Eigen::AlignedBox
+     */
     AxisAlignedBoundingBox(BaseType const& box);
+    /**
+     * @brief Move construct AxisAlignedBoundingBox from Eigen::AlignedBox
+     * @param box Eigen::AlignedBox
+     */
     AxisAlignedBoundingBox(BaseType&& box);
+    /**
+     * @brief Copy assign AxisAlignedBoundingBox from Eigen::AlignedBox
+     * @param box Eigen::AlignedBox
+     * @return AxisAlignedBoundingBox& Reference to this
+     */
     AxisAlignedBoundingBox& operator=(BaseType const& box);
+    /**
+     * @brief Move assign AxisAlignedBoundingBox from Eigen::AlignedBox
+     * @param box Eigen::AlignedBox
+     * @return AxisAlignedBoundingBox& Reference to this
+     */
     AxisAlignedBoundingBox& operator=(BaseType&& box);
-
+    /**
+     * @brief Construct AxisAlignedBoundingBox from min and max endpoints
+     * @tparam TDerivedMin Eigen dense expression type
+     * @tparam TDerivedMax Eigen dense expression type
+     * @param min Min endpoint
+     * @param max Max endpoint
+     * @pre `min.rows() == Dims` and `max.rows() == Dims`
+     */
     template <class TDerivedMin, class TDerivedMax>
     AxisAlignedBoundingBox(
         Eigen::DenseBase<TDerivedMin> const& min,
         Eigen::DenseBase<TDerivedMax> const& max);
-
+    /**
+     * @brief Construct AxisAlignedBoundingBox over a set of points
+     * @tparam TDerived Eigen dense expression type
+     * @param P Points
+     * @pre `P.rows() == Dims`
+     */
     template <class TDerived>
     AxisAlignedBoundingBox(Eigen::DenseBase<TDerived> const& P);
-
+    /**
+     * @brief Get indices of points in P contained in the bounding box
+     * @tparam TDerived Eigen dense expression type
+     * @param P Points
+     * @return std::vector<Index> Indices of points in P contained in the bounding box
+     */
     template <class TDerived>
     std::vector<Index> contained(Eigen::MatrixBase<TDerived> const& P) const;
 };
