@@ -30,7 +30,7 @@ namespace fem {
  * The precise definition of the Laplacian matrix's symmetric part is given by
  * \f$ \mathbf{L}_{ij} = \int_\Omega -\nabla \phi_i \cdot \nabla \phi_j d\Omega \f$.
  *
- * * @todo Explain the Laplacian matrix and its construction and link to my higher-level FEM crash
+ * @todo Explain the Laplacian matrix and its construction and link to my higher-level FEM crash
  * course doc.
  *
  * This matrix-free Laplacian requires the following inputs:

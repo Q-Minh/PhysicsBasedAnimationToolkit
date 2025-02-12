@@ -49,6 +49,8 @@ namespace fem {
  * \f]
  *
  * where \f$ g \f$ is the number of evaluation points.
+ * 
+ * @note Link to my higher-level FEM crash course doc.
  *
  * @tparam TMesh
  */
