@@ -1,5 +1,4 @@
-Overview {#mainpage}
-===
+\mainpage Overview
 
 [![build](https://github.com/Q-Minh/PhysicsBasedAnimationToolkit/actions/workflows/pyinstall.yml/badge.svg)](https://github.com/Q-Minh/PhysicsBasedAnimationToolkit/actions/workflows/pyinstall.yml)
 [![wheels](https://github.com/Q-Minh/PhysicsBasedAnimationToolkit/actions/workflows/wheels.yml/badge.svg?event=release)](https://github.com/Q-Minh/PhysicsBasedAnimationToolkit/actions/workflows/wheels.yml)
@@ -20,10 +19,13 @@ Overview {#mainpage}
   ```
 </div>
 
+- \subpage features
+- \subpage quickstart
+
 <div class="section_buttons">
 
 |                    Next |
 |------------------------:|
-| [features](features.md) |
+| \ref features           |
 
 </div>
