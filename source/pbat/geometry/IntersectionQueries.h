@@ -100,8 +100,14 @@ PBAT_HOST_DEVICE auto TriangleBarycentricCoordinates(
 
 /**
  * @brief Computes the intersection volume between 2 axis aligned bounding boxes
- * @param aabb1 Axis aligned bounding box 1
- * @param aabb2 Axis aligned bounding box 2
+ * @tparam TMatrixL1 Matrix type of the lower bound of AABB 1
+ * @tparam TMatrixU1 Matrix type of the upper bound of AABB 1
+ * @tparam TMatrixL2 Matrix type of the lower bound of AABB 2
+ * @tparam TMatrixU2 Matrix type of the upper bound of AABB 2
+ * @param L1 The lower bound of AABB 1
+ * @param U1 The upper bound of AABB 1
+ * @param L2 The lower bound of AABB 2
+ * @param U2 The upper bound of AABB 2
  * @return The intersection volume between the 2 AABBs
  */
 template <
