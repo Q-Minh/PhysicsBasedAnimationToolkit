@@ -1,4 +1,14 @@
-﻿#ifndef PBAT_GEOMETRY_CLOSESTPOINTQUERIES_H
+﻿/**
+ * @file ClosestPointQueries.h
+ * @author Quoc-Minh Ton-That (tonthat.quocminh@gmail.com)
+ * @brief This file contains functions to answer closest point queries.
+ * @date 2025-02-12
+ *
+ * @copyright Copyright (c) 2025
+ *
+ */
+
+#ifndef PBAT_GEOMETRY_CLOSESTPOINTQUERIES_H
 #define PBAT_GEOMETRY_CLOSESTPOINTQUERIES_H
 
 #include "pbat/HostDevice.h"
@@ -9,86 +19,92 @@
 
 namespace pbat {
 namespace geometry {
+/**
+ * @brief This namespace contains functions to answer closest point queries.
+ */
 namespace ClosestPointQueries {
 
 namespace mini = math::linalg::mini;
 
 /**
  * @brief Obtain the point on the plane (P,n) closest to the point X.
- * @param X
- * @param P
- * @param n
- * @return
+ * @param X Query point
+ * @param P Point on the plane
+ * @param n Normal of the plane
+ * @return Point on the plane closest to X
  */
 template <mini::CMatrix TMatrixX, mini::CMatrix TMatrixP, mini::CMatrix TMatrixN>
-PBAT_HOST_DEVICE mini::SVector<typename TMatrixX::ScalarType, TMatrixX::kRows>
-PointOnPlane(TMatrixX const& X, TMatrixP const& P, TMatrixN const& n);
+PBAT_HOST_DEVICE auto PointOnPlane(TMatrixX const& X, TMatrixP const& P, TMatrixN const& n)
+    -> mini::SVector<typename TMatrixX::ScalarType, TMatrixX::kRows>;
 
 /**
  * @brief Obtain the point on the line segment PQ closest to the point X.
- * @param X
- * @param P
- * @param Q
- * @return
+ * @param X Query point
+ * @param P Start point of the line segment
+ * @param Q End point of the line segment
+ * @return Point on the line segment closest to X
  */
 template <mini::CMatrix TMatrixX, mini::CMatrix TMatrixP, mini::CMatrix TMatrixQ>
-PBAT_HOST_DEVICE mini::SVector<typename TMatrixX::ScalarType, TMatrixX::kRows>
-PointOnLineSegment(TMatrixX const& X, TMatrixP const& P, TMatrixQ const& Q);
+PBAT_HOST_DEVICE auto PointOnLineSegment(TMatrixX const& X, TMatrixP const& P, TMatrixQ const& Q)
+    -> mini::SVector<typename TMatrixX::ScalarType, TMatrixX::kRows>;
 
 /**
  * @brief Obtain the point on the axis-aligned bounding box (AABB) defined by the lower
- * and upper corners closest to the point P.
- * @param P
- * @param L
- * @param U
- * @return
+ * and upper corners closest to the point X.
+ * @param X Query point
+ * @param L Lower corner of the AABB
+ * @param U Upper corner of the AABB
+ * @return Point on the AABB closest to X
  */
 template <mini::CMatrix TMatrixX, mini::CMatrix TMatrixL, mini::CMatrix TMatrixU>
-PBAT_HOST_DEVICE mini::SVector<typename TMatrixX::ScalarType, TMatrixX::kRows>
-PointOnAxisAlignedBoundingBox(TMatrixX const& X, TMatrixL const& L, TMatrixU const& U);
+PBAT_HOST_DEVICE auto
+PointOnAxisAlignedBoundingBox(TMatrixX const& X, TMatrixL const& L, TMatrixU const& U)
+    -> mini::SVector<typename TMatrixX::ScalarType, TMatrixX::kRows>;
 
 /**
  * @brief Obtain the point on the triangle ABC closest to the point P in barycentric coordinates.
- * @param P
- * @param A
- * @param B
- * @param C
- * @return
+ * @param P Query point
+ * @param A Vertex A of the triangle
+ * @param B Vertex B of the triangle
+ * @param C Vertex C of the triangle
+ * @return Barycentric coordinates of the point in the triangle closest to P
  */
 template <
     mini::CMatrix TMatrixP,
     mini::CMatrix TMatrixA,
     mini::CMatrix TMatrixB,
     mini::CMatrix TMatrixC>
-PBAT_HOST_DEVICE mini::SVector<typename TMatrixP::ScalarType, 3>
-UvwPointInTriangle(TMatrixP const& P, TMatrixA const& A, TMatrixB const& B, TMatrixC const& C);
+PBAT_HOST_DEVICE auto
+UvwPointInTriangle(TMatrixP const& P, TMatrixA const& A, TMatrixB const& B, TMatrixC const& C)
+    -> mini::SVector<typename TMatrixP::ScalarType, 3>;
 
 /**
  * @brief Obtain the point on the triangle ABC closest to the point P.
- * @param P
- * @param A
- * @param B
- * @param C
- * @return
+ * @param P Query point
+ * @param A Vertex A of the triangle
+ * @param B Vertex B of the triangle
+ * @param C Vertex C of the triangle
+ * @return Point in the triangle closest to P
  */
 template <
     mini::CMatrix TMatrixP,
     mini::CMatrix TMatrixA,
     mini::CMatrix TMatrixB,
     mini::CMatrix TMatrixC>
-PBAT_HOST_DEVICE mini::SVector<typename TMatrixP::ScalarType, TMatrixP::kRows>
-PointInTriangle(TMatrixP const& P, TMatrixA const& A, TMatrixB const& B, TMatrixC const& C);
+PBAT_HOST_DEVICE auto
+PointInTriangle(TMatrixP const& P, TMatrixA const& A, TMatrixB const& B, TMatrixC const& C)
+    -> mini::SVector<typename TMatrixP::ScalarType, TMatrixP::kRows>;
 
 /**
  * @brief Obtain the point in the tetrahedron ABCD closest to the point P. The order of ABCD
  * must be such that all faces ABC, ACD, ADB and BDC are oriented with outwards pointing normals
  * when viewed from outside the tetrahedron.
- * @param P
- * @param A
- * @param B
- * @param C
- * @param D
- * @return
+ * @param P Query point
+ * @param A Vertex A of the tetrahedron
+ * @param B Vertex B of the tetrahedron
+ * @param C Vertex C of the tetrahedron
+ * @param D Vertex D of the tetrahedron
+ * @return Point in the tetrahedron closest to P
  */
 template <
     mini::CMatrix TMatrixP,
@@ -96,16 +112,16 @@ template <
     mini::CMatrix TMatrixB,
     mini::CMatrix TMatrixC,
     mini::CMatrix TMatrixD>
-PBAT_HOST_DEVICE mini::SVector<typename TMatrixP::ScalarType, TMatrixP::kRows> PointInTetrahedron(
+PBAT_HOST_DEVICE auto PointInTetrahedron(
     TMatrixP const& P,
     TMatrixA const& A,
     TMatrixB const& B,
     TMatrixC const& C,
-    TMatrixD const& D);
+    TMatrixD const& D) -> mini::SVector<typename TMatrixP::ScalarType, TMatrixP::kRows>;
 
 template <mini::CMatrix TMatrixX, mini::CMatrix TMatrixP, mini::CMatrix TMatrixN>
-PBAT_HOST_DEVICE mini::SVector<typename TMatrixX::ScalarType, TMatrixX::kRows>
-PointOnPlane(TMatrixX const& X, TMatrixP const& P, TMatrixN const& n)
+PBAT_HOST_DEVICE auto PointOnPlane(TMatrixX const& X, TMatrixP const& P, TMatrixN const& n)
+    -> mini::SVector<typename TMatrixX::ScalarType, TMatrixX::kRows>
 {
     using namespace std;
     using ScalarType = typename TMatrixX::ScalarType;
@@ -122,8 +138,8 @@ PointOnPlane(TMatrixX const& X, TMatrixP const& P, TMatrixN const& n)
 }
 
 template <mini::CMatrix TMatrixX, mini::CMatrix TMatrixP, mini::CMatrix TMatrixQ>
-PBAT_HOST_DEVICE mini::SVector<typename TMatrixX::ScalarType, TMatrixX::kRows>
-PointOnLineSegment(TMatrixX const& X, TMatrixP const& P, TMatrixQ const& Q)
+PBAT_HOST_DEVICE auto PointOnLineSegment(TMatrixX const& X, TMatrixP const& P, TMatrixQ const& Q)
+    -> mini::SVector<typename TMatrixX::ScalarType, TMatrixX::kRows>
 {
     using ScalarType = typename TMatrixX::ScalarType;
     using namespace std;
@@ -141,8 +157,9 @@ PointOnLineSegment(TMatrixX const& X, TMatrixP const& P, TMatrixQ const& Q)
 }
 
 template <mini::CMatrix TMatrixX, mini::CMatrix TMatrixL, mini::CMatrix TMatrixU>
-PBAT_HOST_DEVICE mini::SVector<typename TMatrixX::ScalarType, TMatrixX::kRows>
+PBAT_HOST_DEVICE auto
 PointOnAxisAlignedBoundingBox(TMatrixX const& P, TMatrixL const& L, TMatrixU const& U)
+    -> mini::SVector<typename TMatrixX::ScalarType, TMatrixX::kRows>
 {
     using namespace std;
     /**
@@ -159,8 +176,9 @@ template <
     mini::CMatrix TMatrixA,
     mini::CMatrix TMatrixB,
     mini::CMatrix TMatrixC>
-PBAT_HOST_DEVICE mini::SVector<typename TMatrixP::ScalarType, 3>
+PBAT_HOST_DEVICE auto
 UvwPointInTriangle(TMatrixP const& P, TMatrixA const& A, TMatrixB const& B, TMatrixC const& C)
+    -> mini::SVector<typename TMatrixP::ScalarType, 3>
 {
     using ScalarType = typename TMatrixP::ScalarType;
     /**
@@ -243,8 +261,9 @@ template <
     mini::CMatrix TMatrixA,
     mini::CMatrix TMatrixB,
     mini::CMatrix TMatrixC>
-PBAT_HOST_DEVICE mini::SVector<typename TMatrixP::ScalarType, TMatrixP::kRows>
+PBAT_HOST_DEVICE auto
 PointInTriangle(TMatrixP const& P, TMatrixA const& A, TMatrixB const& B, TMatrixC const& C)
+    -> mini::SVector<typename TMatrixP::ScalarType, TMatrixP::kRows>
 {
     auto uvw = UvwPointInTriangle(P, A, B, C);
     return A * uvw(0) + B * uvw(1) + C * uvw(2);
@@ -256,12 +275,12 @@ template <
     mini::CMatrix TMatrixB,
     mini::CMatrix TMatrixC,
     mini::CMatrix TMatrixD>
-PBAT_HOST_DEVICE mini::SVector<typename TMatrixP::ScalarType, TMatrixP::kRows> PointInTetrahedron(
+PBAT_HOST_DEVICE auto PointInTetrahedron(
     TMatrixP const& P,
     TMatrixA const& A,
     TMatrixB const& B,
     TMatrixC const& C,
-    TMatrixD const& D)
+    TMatrixD const& D) -> mini::SVector<typename TMatrixP::ScalarType, TMatrixP::kRows>
 {
     using ScalarType     = typename TMatrixP::ScalarType;
     auto constexpr kRows = TMatrixP::kRows;
