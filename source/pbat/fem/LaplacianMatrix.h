@@ -132,7 +132,7 @@ struct SymmetricLaplacianMatrix
     MatrixX deltag; ///< `|# element nodes| x |# element nodes * # quad.pts.|` matrix of element
                     ///< laplacians at quadrature points
     int dims; ///< Dimensionality of image of FEM function space, i.e. this Laplacian matrix is
-              ///< actually \f$ L \kronecker I_{dims \times dims} \f$. Must have `dims >= 1`.
+              ///< actually \f$ L \otimes I_{d} \f$. Must have `dims >= 1`.
 };
 
 template <CMesh TMesh>

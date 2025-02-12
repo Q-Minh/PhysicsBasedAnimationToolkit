@@ -91,9 +91,7 @@ struct LoadVector
                ///< (IntegratedShapeFunctions()).
     Eigen::Ref<MatrixX const> detJe; ///< `|# element quadrature points|x|# elements|` matrix of
                                      ///< jacobian determinants at element quadrature points
-    int dims; ///< Dimensionality of image of FEM function space, i.e. this load vector is
-              ///< actually \f$ \mathbf{f} \kronecker 1_{dims \times dims} \f$. Should have `dims >=
-              ///< 1`.
+    int dims; ///< Dimensionality of external loading. Should have `dims >= 1`.
 };
 
 template <CMesh TMesh, int QuadratureOrder>
