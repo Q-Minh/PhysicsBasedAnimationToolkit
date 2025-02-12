@@ -87,7 +87,12 @@ if (DOXYGEN_FOUND)
         ALL
         COMMENT "Generating docs"
     )
-    install(DIRECTORY ${DOXYGEN_OUTPUT_DIR}/html DESTINATION share/doc)
+
+    # See https://cmake.org/cmake/help/latest/module/FindDoxygen.html#variable:DOXYGEN_OUTPUT_DIRECTORY
+    install(
+        DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/html 
+        DESTINATION share/doc
+        COMPONENT Docs)
 else()
     message(FATAL_ERROR "Doxygen needs to be installed to generate the documentation")
 endif()
