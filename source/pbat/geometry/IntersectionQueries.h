@@ -405,7 +405,7 @@ PBAT_HOST_DEVICE auto UvwLineTriangle3D(
     auto constexpr kDims = 3;
     static_assert(kRows == kDims, "This overlap test is specialized for 3D");
     /**
-     * Ericson, Christer. Real-time collision detection. Crc Press, 2004. section 5.3.4
+     * See \cite ericson2004real section 5.3.4
      */
     mini::SVector<ScalarType, kDims> const PQ = Q - P;
     mini::SVector<ScalarType, kDims> const PA = A - P;

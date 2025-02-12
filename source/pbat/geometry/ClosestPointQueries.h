@@ -152,7 +152,7 @@ PBAT_HOST_DEVICE auto PointOnPlane(TMatrixX const& X, TMatrixP const& P, TMatrix
     assert(bIsNormalUnit);
 #endif
     /**
-     * Ericson, Christer. Real-time collision detection. Crc Press, 2004. section 5.ScalarType(1)1
+     * See \cite ericson2004real section 5.11
      */
     ScalarType const t                                = Dot(n, X - P);
     mini::SVector<ScalarType, TMatrixX::kRows> Xplane = X - t * n;
@@ -166,7 +166,7 @@ PBAT_HOST_DEVICE auto PointOnLineSegment(TMatrixX const& X, TMatrixP const& P, T
     using ScalarType = typename TMatrixX::ScalarType;
     using namespace std;
     /**
-     * Ericson, Christer. Real-time collision detection. Crc Press, 2004. section 5.ScalarType(1)2
+     * See \cite ericson2004real section 5.12
      */
     mini::SVector<ScalarType, TMatrixX::kRows> const PQ = Q - P;
     // Project X onto PQ, computing parameterized position R(t) = P + t*(Q � P)
@@ -185,7 +185,7 @@ PointOnAxisAlignedBoundingBox(TMatrixX const& P, TMatrixL const& L, TMatrixU con
 {
     using namespace std;
     /**
-     * Ericson, Christer. Real-time collision detection. Crc Press, 2004. section 5.ScalarType(1)3
+     * See \cite ericson2004real section 5.13
      */
     mini::SVector<typename TMatrixX::ScalarType, TMatrixX::kRows> X = P;
     pbat::common::ForRange<0, TMatrixX::kRows>(
@@ -204,7 +204,7 @@ UvwPointInTriangle(TMatrixP const& P, TMatrixA const& A, TMatrixB const& B, TMat
 {
     using ScalarType = typename TMatrixP::ScalarType;
     /**
-     * Ericson, Christer. Real-time collision detection. Crc Press, 2004. section 5.ScalarType(1)5
+     * See \cite ericson2004real section 5.15
      */
 
     // Check if P in vertex region outside A
@@ -310,7 +310,7 @@ PBAT_HOST_DEVICE auto PointInTetrahedron(
     static_assert(kRows == kDims, "This overlap test is specialized for 3D");
 
     /**
-     * Ericson, Christer. Real-time collision detection. Crc Press, 2004. section 5.ScalarType(1)6
+     * See \cite ericson2004real section 5.16
      */
 
     // Start out assuming point inside all halfspaces, so closest to itself

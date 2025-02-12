@@ -1,3 +1,13 @@
+/**
+ * @file OverlapQueries.h
+ * @author Quoc-Minh Ton-That (tonthat.quocminh@gmail.com)
+ * @brief This file contains functions to answer overlap queries.
+ * @date 2025-02-12
+ *
+ * @copyright Copyright (c) 2025
+ *
+ */
+
 #ifndef PBAT_GEOMETRY_OVERLAPQUERIES_H
 #define PBAT_GEOMETRY_OVERLAPQUERIES_H
 
@@ -11,35 +21,38 @@
 
 namespace pbat {
 namespace geometry {
+/**
+ * @brief This namespace contains functions to answer overlap queries.
+ */
 namespace OverlapQueries {
 
 namespace mini = math::linalg::mini;
 
 /**
- * @brief
- * @tparam TMatrixP
- * @tparam TMatrixL
- * @tparam TMatrixU
- * @param P
- * @param L
- * @param U
- * @return
+ * @brief Tests for overlap between point P and axis-aligned bounding box (L,U)
+ * @tparam TMatrixP Point matrix type
+ * @tparam TMatrixL Lower corner matrix type
+ * @tparam TMatrixU Upper corner matrix type
+ * @param P Point
+ * @param L Lower corner of the box
+ * @param U Upper corner of the box
+ * @return True if P is inside the box, false otherwise
  */
 template <mini::CMatrix TMatrixP, mini::CMatrix TMatrixL, mini::CMatrix TMatrixU>
 PBAT_HOST_DEVICE bool
 PointAxisAlignedBoundingBox(TMatrixP const& P, TMatrixL const& L, TMatrixU const& U);
 
 /**
- * @brief
- * @tparam TMatrixP
- * @tparam TMatrixA
- * @tparam TMatrixB
- * @tparam TMatrixC
- * @param P
- * @param A
- * @param B
- * @param C
- * @return
+ * @brief Tests for overlap between point P and triangle ABC
+ * @tparam TMatrixP Point matrix type
+ * @tparam TMatrixA Vertex A matrix type
+ * @tparam TMatrixB Vertex B matrix type
+ * @tparam TMatrixC Vertex C matrix type
+ * @param P Point
+ * @param A Vertex A of the triangle
+ * @param B Vertex B of the triangle
+ * @param C Vertex C of the triangle
+ * @return True if P is inside the triangle, false otherwise
  */
 template <
     mini::CMatrix TMatrixP,
@@ -51,12 +64,17 @@ PointTriangle(TMatrixP const& P, TMatrixA const& A, TMatrixB const& B, TMatrixC 
 
 /**
  * @brief Checks if point P is contained in tetrahedron ABCD, in at least 3D.
- * @param P
- * @param A
- * @param B
- * @param C
- * @param D
- * @return
+ * @tparam TMatrixP Point matrix type
+ * @tparam TMatrixA Vertex A matrix type
+ * @tparam TMatrixB Vertex B matrix type
+ * @tparam TMatrixC Vertex C matrix type
+ * @tparam TMatrixD Vertex D matrix type
+ * @param P Point
+ * @param A Vertex A of the tetrahedron
+ * @param B Vertex B of the tetrahedron
+ * @param C Vertex C of the tetrahedron
+ * @param D Vertex D of the tetrahedron
+ * @return True if P is inside the tetrahedron, false otherwise
  */
 template <
     mini::CMatrix TMatrixP,
@@ -73,11 +91,13 @@ PBAT_HOST_DEVICE bool PointTetrahedron3D(
 
 /**
  * @brief Tests for overlap between sphere (C1,R1) and sphere (C2,R2).
- * @param c1
- * @param r1
- * @param c2
- * @param r2
- * @return
+ * @tparam TMatrixC1 Center matrix type of the first sphere
+ * @tparam TMatrixC2 Center matrix type of the second sphere
+ * @param c1 Center of the first sphere
+ * @param r1 Radius of the first sphere
+ * @param c2 Center of the second sphere
+ * @param r2 Radius of the second sphere
+ * @return True if the spheres overlap, false otherwise
  */
 template <mini::CMatrix TMatrixC1, mini::CMatrix TMatrixC2>
 PBAT_HOST_DEVICE bool Spheres(
@@ -89,11 +109,15 @@ PBAT_HOST_DEVICE bool Spheres(
 /**
  * @brief Tests for overlap between axis-aligned bounding box (L1,U1) and axis-aligned
  * bounding box (L2,U2)
- * @param L1
- * @param U1
- * @param L2
- * @param U2
- * @return
+ * @tparam TMatrixL1 Matrix type of the lower bound of AABB 1
+ * @tparam TMatrixU1 Matrix type of the upper bound of AABB 1
+ * @tparam TMatrixL2 Matrix type of the lower bound of AABB 2
+ * @tparam TMatrixU2 Matrix type of the upper bound of AABB 2
+ * @param L1 The lower bound of AABB 1
+ * @param U1 The upper bound of AABB 1
+ * @param L2 The lower bound of AABB 2
+ * @param U2 The upper bound of AABB 2
+ * @return True if the AABBs overlap, false otherwise
  */
 template <
     mini::CMatrix TMatrixL1,
@@ -108,11 +132,14 @@ PBAT_HOST_DEVICE bool AxisAlignedBoundingBoxes(
 
 /**
  * @brief Tests for overlap between sphere (c,r) and axis-aligned bounding box (low,up)
- * @param C
- * @param R
- * @param L
- * @param U
- * @return
+ * @tparam TMatrixC Center matrix type of the sphere
+ * @tparam TMatrixL Lower corner matrix type of the box
+ * @tparam TMatrixU Upper corner matrix type of the box
+ * @param C Center of the sphere
+ * @param R Radius of the sphere
+ * @param L Lower corner of the box
+ * @param U Upper corner of the box
+ * @return True if the sphere and box overlap, false otherwise
  */
 template <mini::CMatrix TMatrixC, mini::CMatrix TMatrixL, mini::CMatrix TMatrixU>
 PBAT_HOST_DEVICE bool SphereAxisAlignedBoundingBox(
@@ -122,12 +149,15 @@ PBAT_HOST_DEVICE bool SphereAxisAlignedBoundingBox(
     TMatrixU const& U);
 
 /**
- * @brief
- * @param P
- * @param Q
- * @param C
- * @param R
- * @return
+ * @brief Tests for overlap between line segment PQ and sphere (C,R)
+ * @tparam TMatrixP Start point matrix type
+ * @tparam TMatrixQ End point matrix type
+ * @tparam TMatrixC Center matrix type
+ * @param P Start point of the line segment
+ * @param Q End point of the line segment
+ * @param C Center of the sphere
+ * @param R Radius of the sphere
+ * @return True if the line segment and sphere overlap, false otherwise
  */
 template <mini::CMatrix TMatrixP, mini::CMatrix TMatrixQ, mini::CMatrix TMatrixC>
 PBAT_HOST_DEVICE bool LineSegmentSphere(
@@ -137,12 +167,16 @@ PBAT_HOST_DEVICE bool LineSegmentSphere(
     typename TMatrixC::ScalarType R);
 
 /**
- * @brief
- * @param P
- * @param Q
- * @param L
- * @param U
- * @return
+ * @brief Tests for overlap between line segment PQ and axis-aligned bounding box (L,U)
+ * @tparam TMatrixP Start point matrix type
+ * @tparam TMatrixQ End point matrix type
+ * @tparam TMatrixL Lower corner matrix type
+ * @tparam TMatrixU Upper corner matrix type
+ * @param P Start point of the line segment
+ * @param Q End point of the line segment
+ * @param L Lower corner of the box
+ * @param U Upper corner of the box
+ * @return True if the line segment and box overlap, false otherwise
  */
 template <
     mini::CMatrix TMatrixP,
@@ -157,12 +191,17 @@ PBAT_HOST_DEVICE bool LineSegmentAxisAlignedBoundingBox(
 
 /**
  * @brief Detects if the line segment PQ passes through the triangle ABC, in 3D.
- * @param P
- * @param Q
- * @param A
- * @param B
- * @param C
- * @return
+ * @tparam TMatrixP Matrix type of the start point of the line segment
+ * @tparam TMatrixQ Matrix type of the end point of the line segment
+ * @tparam TMatrixA Matrix type of the vertex A of the triangle
+ * @tparam TMatrixB Matrix type of the vertex B of the triangle
+ * @tparam TMatrixC Matrix type of the vertex C of the triangle
+ * @param P Start point of the line segment
+ * @param Q End point of the line segment
+ * @param A Vertex A of the triangle
+ * @param B Vertex B of the triangle
+ * @param C Vertex C of the triangle
+ * @return True if the line segment passes through the triangle, false otherwise
  */
 template <
     mini::CMatrix TMatrixP,
@@ -181,23 +220,25 @@ PBAT_HOST_DEVICE bool LineSegmentTriangle3D(
  * @brief Tests overlap between line segment PQ and the swept volume spanned by linear interpolation
  * of A1B1C1 to A2B2C2
  *
- * @tparam TMatrixP
- * @tparam TMatrixQ
- * @tparam TMatrixA1
- * @tparam TMatrixB1
- * @tparam TMatrixC1
- * @tparam TMatrixA2
- * @tparam TMatrixB2
- * @tparam TMatrixC2
- * @param P
- * @param Q
- * @param A1
- * @param B1
- * @param C1
- * @param A2
- * @param B2
- * @param C2
- * @return
+ * @warning This function does not handle degeneracies yet. I don't suggest using it for now.
+ *
+ * @tparam TMatrixP Start point matrix type
+ * @tparam TMatrixQ End point matrix type
+ * @tparam TMatrixA1 Matrix type of the vertex A1 of triangle 1
+ * @tparam TMatrixB1 Matrix type of the vertex B1 of triangle 1
+ * @tparam TMatrixC1 Matrix type of the vertex C1 of triangle 1
+ * @tparam TMatrixA2 Matrix type of the vertex A2 of triangle 2
+ * @tparam TMatrixB2 Matrix type of the vertex B2 of triangle 2
+ * @tparam TMatrixC2 Matrix type of the vertex C2 of triangle 2
+ * @param P Start point of the line segment
+ * @param Q End point of the line segment
+ * @param A1 Vertex A of triangle 1
+ * @param B1 Vertex B of triangle 1
+ * @param C1 Vertex C of triangle 1
+ * @param A2 Vertex A of triangle 2
+ * @param B2 Vertex B of triangle 2
+ * @param C2 Vertex C of triangle 2
+ * @return True if the line segment passes through the swept volume, false otherwise
  */
 template <
     mini::CMatrix TMatrixP,
@@ -220,11 +261,15 @@ PBAT_HOST_DEVICE bool LineSegmentSweptTriangle3D(
 
 /**
  * @brief Tests for overlap between plane (P,n) and axis-aligned bounding box (low,up)
- * @param P
- * @param n
- * @param L
- * @param U
- * @return
+ * @tparam TMatrixP Point on the plane matrix type
+ * @tparam TMatrixN Normal of the plane matrix type
+ * @tparam TMatrixL Lower corner matrix type
+ * @tparam TMatrixU Upper corner matrix type
+ * @param P Point on the plane
+ * @param n Normal of the plane
+ * @param L Lower corner of the box
+ * @param U Upper corner of the box
+ * @return True if the plane and box overlap, false otherwise
  */
 template <
     mini::CMatrix TMatrixP,
@@ -239,12 +284,17 @@ PBAT_HOST_DEVICE bool PlaneAxisAlignedBoundingBox(
 
 /**
  * @brief Tests for overlap between triangle ABC and axis-aligned bounding box (low,up)
- * @param A
- * @param B
- * @param C
- * @param L
- * @param U
- * @return
+ * @tparam TMatrixA Vertex A matrix type
+ * @tparam TMatrixB Vertex B matrix type
+ * @tparam TMatrixC Vertex C matrix type
+ * @tparam TMatrixL Lower corner matrix type
+ * @tparam TMatrixU Upper corner matrix type
+ * @param A Vertex A of the triangle
+ * @param B Vertex B of the triangle
+ * @param C Vertex C of the triangle
+ * @param L Lower corner of the box
+ * @param U Upper corner of the box
+ * @return True if the triangle and box overlap, false otherwise
  */
 template <
     mini::CMatrix TMatrixA,
@@ -262,13 +312,19 @@ PBAT_HOST_DEVICE bool TriangleAxisAlignedBoundingBox(
 /**
  * @brief Tests for overlap between tetrahedron ABCD and axis-aligned bounding box (L,U), in at
  * least 3D.
- * @param A
- * @param B
- * @param C
- * @param D
- * @param L
- * @param U
- * @return
+ * @tparam TMatrixA Vertex A matrix type
+ * @tparam TMatrixB Vertex B matrix type
+ * @tparam TMatrixC Vertex C matrix type
+ * @tparam TMatrixD Vertex D matrix type
+ * @tparam TMatrixL Lower corner matrix type
+ * @tparam TMatrixU Upper corner matrix type
+ * @param A Vertex A of the tetrahedron
+ * @param B Vertex B of the tetrahedron
+ * @param C Vertex C of the tetrahedron
+ * @param D Vertex D of the tetrahedron
+ * @param L Lower corner of the box
+ * @param U Upper corner of the box
+ * @return True if the tetrahedron and box overlap, false otherwise
  */
 template <
     mini::CMatrix TMatrixA,
@@ -287,13 +343,19 @@ PBAT_HOST_DEVICE bool TetrahedronAxisAlignedBoundingBox(
 
 /**
  * @brief Tests for overlap between triangle A1B1C1 and triangle A2B2C2, in 2D.
- * @param A1
- * @param B1
- * @param C1
- * @param A2
- * @param B2
- * @param C2
- * @return
+ * @tparam TMatrixA1 Matrix type of vertex A1 of triangle 1
+ * @tparam TMatrixB1 Matrix type of vertex B1 of triangle 1
+ * @tparam TMatrixC1 Matrix type of vertex C1 of triangle 1
+ * @tparam TMatrixA2 Matrix type of vertex A2 of triangle 2
+ * @tparam TMatrixB2 Matrix type of vertex B2 of triangle 2
+ * @tparam TMatrixC2 Matrix type of vertex C2 of triangle 2
+ * @param A1 Vertex A of triangle 1
+ * @param B1 Vertex B of triangle 1
+ * @param C1 Vertex C of triangle 1
+ * @param A2 Vertex A of triangle 2
+ * @param B2 Vertex B of triangle 2
+ * @param C2 Vertex C of triangle 2
+ * @return True if the triangles overlap, false otherwise
  */
 template <
     mini::CMatrix TMatrixA1,
@@ -312,13 +374,19 @@ PBAT_HOST_DEVICE bool Triangles2D(
 
 /**
  * @brief Tests for overlap between triangle A1B1C1 and triangle A2B2C2, in 3D.
- * @param A1
- * @param B1
- * @param C1
- * @param A2
- * @param B2
- * @param C2
- * @return
+ * @tparam TMatrixA1 Matrix type of vertex A1 of triangle 1
+ * @tparam TMatrixB1 Matrix type of vertex B1 of triangle 1
+ * @tparam TMatrixC1 Matrix type of vertex C1 of triangle 1
+ * @tparam TMatrixA2 Matrix type of vertex A2 of triangle 2
+ * @tparam TMatrixB2 Matrix type of vertex B2 of triangle 2
+ * @tparam TMatrixC2 Matrix type of vertex C2 of triangle 2
+ * @param A1 Vertex A of triangle 1
+ * @param B1 Vertex B of triangle 1
+ * @param C1 Vertex C of triangle 1
+ * @param A2 Vertex A of triangle 2
+ * @param B2 Vertex B of triangle 2
+ * @param C2 Vertex C of triangle 2
+ * @return True if the triangles overlap, false otherwise
  */
 template <
     mini::CMatrix TMatrixA1,
@@ -337,14 +405,21 @@ PBAT_HOST_DEVICE bool Triangles3D(
 
 /**
  * @brief Tests for overlap between triangle ABC and tetrahedron IJKL, in at least 3D.
- * @param A
- * @param B
- * @param C
- * @param I
- * @param J
- * @param K
- * @param L
- * @return
+ * @tparam TMatrixA Matrix type of vertex A of the triangle
+ * @tparam TMatrixB Matrix type of vertex B of the triangle
+ * @tparam TMatrixC Matrix type of vertex C of the triangle
+ * @tparam TMatrixI Matrix type of vertex I of the tetrahedron
+ * @tparam TMatrixJ Matrix type of vertex J of the tetrahedron
+ * @tparam TMatrixK Matrix type of vertex K of the tetrahedron
+ * @tparam TMatrixL Matrix type of vertex L of the tetrahedron
+ * @param A Vertex A of the triangle
+ * @param B Vertex B of the triangle
+ * @param C Vertex C of the triangle
+ * @param I Vertex I of the tetrahedron
+ * @param J Vertex J of the tetrahedron
+ * @param K Vertex K of the tetrahedron
+ * @param L Vertex L of the tetrahedron
+ * @return True if the triangle and tetrahedron overlap, false otherwise
  */
 template <
     mini::CMatrix TMatrixA,
@@ -365,15 +440,23 @@ PBAT_HOST_DEVICE bool TriangleTetrahedron(
 
 /**
  * @brief Tests for overlap between tetrahedron A1B1C1D1 and tetrahedron A2B2C2D2, in at least 3D.
- * @param A1
- * @param B1
- * @param C1
- * @param D1
- * @param A2
- * @param B2
- * @param C2
- * @param D2
- * @return
+ * @tparam TMatrixA1 Matrix type of vertex A1 of tetrahedron 1
+ * @tparam TMatrixB1 Matrix type of vertex B1 of tetrahedron 1
+ * @tparam TMatrixC1 Matrix type of vertex C1 of tetrahedron 1
+ * @tparam TMatrixD1 Matrix type of vertex D1 of tetrahedron 1
+ * @tparam TMatrixA2 Matrix type of vertex A2 of tetrahedron 2
+ * @tparam TMatrixB2 Matrix type of vertex B2 of tetrahedron 2
+ * @tparam TMatrixC2 Matrix type of vertex C2 of tetrahedron 2
+ * @tparam TMatrixD2 Matrix type of vertex D2 of tetrahedron 2
+ * @param A1 Vertex A of tetrahedron 1
+ * @param B1 Vertex B of tetrahedron 1
+ * @param C1 Vertex C of tetrahedron 1
+ * @param D1 Vertex D of tetrahedron 1
+ * @param A2 Vertex A of tetrahedron 2
+ * @param B2 Vertex B of tetrahedron 2
+ * @param C2 Vertex C of tetrahedron 2
+ * @param D2 Vertex D of tetrahedron 2
+ * @return True if the tetrahedra overlap, false otherwise
  */
 template <
     mini::CMatrix TMatrixA1,
@@ -395,13 +478,17 @@ PBAT_HOST_DEVICE bool Tetrahedra(
     TMatrixD2 const& D2);
 
 /**
- * @brief Tests for overlap between a triangle ABC and a sphere with center C of radius R
- * @param A
- * @param B
- * @param C
- * @param c
- * @param r
- * @return
+ * @brief Tests for overlap between a triangle ABC and a sphere with center c of radius R
+ * @tparam TMatrixA Vertex A matrix type
+ * @tparam TMatrixB Vertex B matrix type
+ * @tparam TMatrixC Vertex C matrix type
+ * @tparam TMatrixSC Center matrix type of the sphere
+ * @param A Vertex A of the triangle
+ * @param B Vertex B of the triangle
+ * @param C Vertex C of the triangle
+ * @param c Center of the sphere
+ * @param r Radius of the sphere
+ * @return True if the triangle and sphere overlap, false otherwise
  */
 template <
     mini::CMatrix TMatrixA,
@@ -416,14 +503,19 @@ PBAT_HOST_DEVICE bool TriangleSphere(
     typename TMatrixSC::ScalarType R);
 
 /**
- * @brief Tests for overlap between a tetrahedron ABCD and a sphere with center C of radius R
- * @param A
- * @param B
- * @param C
- * @param D
- * @param c
- * @param r
- * @return
+ * @brief Tests for overlap between a tetrahedron ABCD and a sphere with center c of radius R
+ * @tparam TMatrixA Vertex A matrix type
+ * @tparam TMatrixB Vertex B matrix type
+ * @tparam TMatrixC Vertex C matrix type
+ * @tparam TMatrixD Vertex D matrix type
+ * @tparam TMatrixSC Center matrix type of the sphere
+ * @param A Vertex A of the tetrahedron
+ * @param B Vertex B of the tetrahedron
+ * @param C Vertex C of the tetrahedron
+ * @param D Vertex D of the tetrahedron
+ * @param c Center of the sphere
+ * @param r Radius of the sphere
+ * @return True if the tetrahedron and sphere overlap, false otherwise
  */
 template <
     mini::CMatrix TMatrixA,
@@ -741,7 +833,7 @@ PBAT_HOST_DEVICE bool TriangleAxisAlignedBoundingBox(
     TMatrixU const& U)
 {
     /**
-     * Ericson, Christer. Real-time collision detection. Crc Press, 2004. section 5.2.9
+     * See \cite ericson2004real section 5.2.9
      */
 
     using ScalarType     = typename TMatrixA::ScalarType;
