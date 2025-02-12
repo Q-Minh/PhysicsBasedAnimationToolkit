@@ -3,9 +3,9 @@
  * @author Quoc-Minh Ton-That (tonthat.quocminh@gmail.com)
  * @brief Hyper elastic potential energy
  * @date 2025-02-11
- * 
+ *
  * @copyright Copyright (c) 2025
- * 
+ *
  */
 
 #ifndef PBA_FEM_HYPER_ELASTIC_POTENTIAL_H
@@ -32,27 +32,45 @@ namespace pbat {
 namespace fem {
 
 /**
- * @brief
- * @tparam TMesh
- * @tparam THyperElasticEnergy
+ * @brief Total hyper elastic potential \f$ U(\mathbf{x}) = \int_\Omega \Psi(\mathbf{F}) d\Omega \f$
+ *
+ * where \f$ \mathbf{F} \f$ is the deformation gradient and \f$ \Psi \f$ is the hyper elastic energy
+ * density.
+ *
+ * HyperElasticPotential's depends on a \f$ |Q| \f$-point quadrature specified by element
+ * indices \f$ e_g \f$, quadrature weights \f$ w_g \f$, and shape function gradients \f$ \nabla
+ * \phi_g \f$ at quadrature points. This allows users to try out different quadrature rules
+ * seamlessly.
+ *
+ * @tparam TMesh Type satisfying concept CMesh
+ * @tparam THyperElasticEnergy Type satisfying concept CHyperElasticEnergy
  */
 template <CMesh TMesh, physics::CHyperElasticEnergy THyperElasticEnergy>
 struct HyperElasticPotential
 {
   public:
-    using SelfType          = HyperElasticPotential<TMesh, THyperElasticEnergy>;
-    using MeshType          = TMesh;
-    using ElementType       = typename TMesh::ElementType;
-    using ElasticEnergyType = THyperElasticEnergy;
+    using SelfType          = HyperElasticPotential<TMesh, THyperElasticEnergy>; ///< Self type
+    using MeshType          = TMesh;                                             ///< Mesh type
+    using ElementType       = typename TMesh::ElementType; ///< FEM element type
+    using ElasticEnergyType = THyperElasticEnergy;         ///< Hyper elastic energy density type
     static_assert(
         MeshType::kDims == ElasticEnergyType::kDims,
         "Embedding dimensions of mesh must match dimensionality of hyper elastic energy.");
 
-    static auto constexpr kDims = THyperElasticEnergy::kDims;
-    static int constexpr kOrder = ElementType::kOrder - 1;
+    static auto constexpr kDims = THyperElasticEnergy::kDims; ///< Number of spatial dimensions
 
     SelfType& operator=(SelfType const&) = delete;
 
+    /**
+     * @brief Construct a new Hyper Elastic Potential object
+     *
+     * @param mesh FEM mesh
+     * @param eg \f$ |Q| \f$ array of element indices at quadrature points
+     * @param wg \f$ |Q| \f$ array of quadrature weights
+     * @param GNeg Shape function gradients at quadrature points. See ShapeFunctionGradients().
+     * @param Y Young's modulus
+     * @param nu Poisson's ratio
+     */
     HyperElasticPotential(
         MeshType const& mesh,
         Eigen::Ref<IndexVectorX const> const& eg,
@@ -60,7 +78,18 @@ struct HyperElasticPotential
         Eigen::Ref<MatrixX const> const& GNeg,
         Scalar Y,
         Scalar nu);
-
+    /**
+     * @brief Construct a new Hyper Elastic Potential object
+     *
+     * @tparam TDerivedY Eigen dense expression type
+     * @tparam TDerivednu Eigen dense expression type
+     * @param mesh FEM mesh
+     * @param eg \f$ |Q| \f$ array of element indices at quadrature points
+     * @param wg \f$ |Q| \f$ array of quadrature weights
+     * @param GNeg Shape function gradients at quadrature points. See ShapeFunctionGradients().
+     * @param Y \f$ |Q| \f$ Young's moduli
+     * @param nu \f$ |Q| \f$ Poisson's ratios
+     */
     template <class TDerivedY, class TDerivednu>
     HyperElasticPotential(
         MeshType const& mesh,
@@ -69,7 +98,20 @@ struct HyperElasticPotential
         Eigen::Ref<MatrixX const> const& GNeg,
         Eigen::DenseBase<TDerivedY> const& Y,
         Eigen::DenseBase<TDerivednu> const& nu);
-
+    /**
+     * @brief Construct a new Hyper Elastic Potential object
+     *
+     * Eagerly computes element elasticity (and its derivatives)
+     *
+     * @tparam TDerived Eigen matrix expression type
+     * @param mesh FEM mesh
+     * @param eg \f$ |Q| \f$ array of element indices at quadrature points
+     * @param wg \f$ |Q| \f$ array of quadrature weights
+     * @param GNeg Shape function gradients at quadrature points. See ShapeFunctionGradients().
+     * @param x \f$ d \times n \f$ matrix of deformed nodal positions
+     * @param Y Young's modulus
+     * @param nu Poisson's ratio
+     */
     template <class TDerived>
     HyperElasticPotential(
         MeshType const& mesh,
@@ -79,7 +121,22 @@ struct HyperElasticPotential
         Eigen::MatrixBase<TDerived> const& x,
         Scalar Y,
         Scalar nu);
-
+    /**
+     * @brief Construct a new Hyper Elastic Potential object
+     *
+     * Eagerly computes element elasticity (and its derivatives)
+     *
+     * @tparam TDerivedx Eigen matrix expression type
+     * @tparam TDerivedY Eigen dense expression type
+     * @tparam TDerivednu Eigen dense expression type
+     * @param mesh FEM mesh
+     * @param eg \f$ |Q| \f$ array of element indices at quadrature points
+     * @param wg \f$ |Q| \f$ array of quadrature weights
+     * @param GNeg Shape function gradients at quadrature points. See ShapeFunctionGradients().
+     * @param x \f$ d \times n \f$ matrix of deformed nodal positions
+     * @param Y \f$ |Q| \f$ Young's moduli
+     * @param nu \f$ |Q| \f$ Poisson's ratios
+     */
     template <class TDerivedx, class TDerivedY, class TDerivednu>
     HyperElasticPotential(
         MeshType const& mesh,
@@ -89,9 +146,22 @@ struct HyperElasticPotential
         Eigen::MatrixBase<TDerivedx> const& x,
         Eigen::DenseBase<TDerivedY> const& Y,
         Eigen::DenseBase<TDerivednu> const& nu);
-
+    /**
+     * @brief Precomputes the sparsity pattern of the hessian matrix
+     *
+     * Enables parallel sparse hessian assembly in all future operations.
+     */
     void PrecomputeHessianSparsity();
-
+    /**
+     * @brief Computes the element elasticity and its derivatives at the given shape
+     *
+     * @tparam TDerived Eigen matrix expression type
+     * @param x \f$ d \times n \f$ matrix of deformed nodal positions
+     * @param bWithGradient Compute gradient
+     * @param bWithHessian Compute hessian
+     * @param bUseSpdProjection Project per quadrature point hessians to nearest symmetric positive
+     * definite (SPD) matrix
+     */
     template <class TDerived>
     void ComputeElementElasticity(
         Eigen::MatrixBase<TDerived> const& x,
@@ -103,53 +173,70 @@ struct HyperElasticPotential
      * @brief Applies the hessian matrix of this potential as a linear operator on x, adding result
      * to y.
      *
-     * @tparam TDerivedIn
-     * @tparam TDerivedOut
-     * @param x
-     * @param y
+     * @tparam TDerivedIn Input matrix type
+     * @tparam TDerivedOut Output matrix type
+     * @param x Input matrix
+     * @param y Output matrix
      */
     template <class TDerivedIn, class TDerivedOut>
     void Apply(Eigen::MatrixBase<TDerivedIn> const& x, Eigen::DenseBase<TDerivedOut>& y) const;
 
     /**
      * @brief Transforms this matrix-free hessian matrix representation into sparse compressed
-     * format.
-     * @return
+     * column format.
+     * @return CSCMatrix Sparse compressed column matrix representation of the hessian operator
      */
     CSCMatrix ToMatrix() const;
 
     /**
-     * @brief Transforms this element-wise gradient representation into the global gradient.
-     * @return
+     * @brief Transforms this per quadrature point gradient representation into the global gradient.
+     * @return VectorX Global gradient
      */
     VectorX ToVector() const;
 
     /**
-     * @brief Computes the elastic potential
-     * @return
+     * @brief Computes the total elastic potential
+     * @return Scalar Total elastic potential
      */
     Scalar Eval() const;
 
+    /**
+     * @brief Number of input dimensions
+     *
+     * Effectively the number of nodes in the system
+     *
+     * @return Index
+     */
     Index InputDimensions() const;
+    /**
+     * @brief Number of output dimensions
+     *
+     * Effectively the number of nodes in the system
+     *
+     * @return Index
+     */
     Index OutputDimensions() const;
-
+    /**
+     * @brief Checks the validity of the held data
+     */
     void CheckValidState() const;
 
     MeshType const& mesh; ///< The finite element mesh
     Eigen::Ref<IndexVectorX const>
         eg;                       ///< Maps quadrature point index g to its corresponding element e
-    Eigen::Ref<VectorX const> wg; ///< |#quad.pts.|x# array of quadrature points on the mesh
+    Eigen::Ref<VectorX const> wg; ///< Vector of quadrature weights \f$ w \in \mathbb{R}^{|Q|} \f$
     Eigen::Ref<MatrixX const>
-        GNeg; ///< |ElementType::kNodes| x |MeshType::kDims * # element quadrature points *
-              ///< #elements| element shape function gradients
+        GNeg; ///< `|ElementType::kNodes| x |MeshType::kDims * # element quadrature points *
+              ///< # elements|` shape function gradients at quadrature points
 
-    VectorX mug;     ///< |#quad.pts.|x1 1st Lame coefficient
-    VectorX lambdag; ///< |#quad.pts.|x1 2nd Lame coefficient
-    MatrixX Hg;      ///< |(ElementType::kNodes*kDims)| x |#quad.pts. *
-                     ///< (ElementType::kNodes*kDims)| element hessian matrices at quadrature points
-    MatrixX Gg;      ///< |ElementType::kNodes*kDims| x |#quad.pts.| element gradient vectors at
+    VectorX mug; ///< 1st Lame coefficients \f$ \mu \in \mathbb{R}^{|Q|} \f$ at quadrature points
+    VectorX lambdag; ///< 2nd Lame coefficients \f$ \lambda \in \mathbb{R}^{|Q|} \f$ at quadrature
+                     ///< points
+    MatrixX Hg;      ///< `|(ElementType::kNodes*kDims)| x |# quad.pts. *
+                     ///< ElementType::kNodes*kDims|` element hessian matrices at quadrature points
+    MatrixX Gg;      ///< `|ElementType::kNodes*kDims| x |#quad.pts.|` element gradient vectors at
                      ///< quadrature points
-    VectorX Ug;      ///< |#quad.pts.| x 1 element elastic potentials at quadrature points
+    VectorX Ug;      ///< `|# quad.pts.|` array of elastic potentials at quadrature points
     math::linalg::SparsityPattern GH; ///< Directed adjacency graph of hessian
 };
 
