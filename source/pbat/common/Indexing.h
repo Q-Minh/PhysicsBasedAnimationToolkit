@@ -31,7 +31,7 @@ namespace common {
  * @return Eigen::Vector<TIndex, Eigen::Dynamic> Cumulative sum of the range
  */
 template <CIndexRange R, std::integral TIndex = std::ranges::range_value_t<R>>
-Eigen::Vector<TIndex, Eigen::Dynamic> CumSum(R&& sizes)
+auto CumSum(R&& sizes) -> Eigen::Vector<TIndex, Eigen::Dynamic>
 {
     namespace rng         = std::ranges;
     using IndexVectorType = Eigen::Vector<TIndex, Eigen::Dynamic>;
@@ -54,7 +54,7 @@ Eigen::Vector<TIndex, Eigen::Dynamic> CumSum(R&& sizes)
  * @return Eigen::Vector<TIndex, Eigen::Dynamic> Counts of each integer in the range
  */
 template <std::integral TIndex>
-Eigen::Vector<TIndex, Eigen::Dynamic> Counts(auto begin, auto end, TIndex ncounts)
+auto Counts(auto begin, auto end, TIndex ncounts) -> Eigen::Vector<TIndex, Eigen::Dynamic>
 {
     using IndexVectorType = Eigen::Vector<TIndex, Eigen::Dynamic>;
     IndexVectorType counts(ncounts);
@@ -73,7 +73,7 @@ Eigen::Vector<TIndex, Eigen::Dynamic> Counts(auto begin, auto end, TIndex ncount
  * @return Eigen::Vector<TIndex, Eigen::Dynamic> Shuffled range of integers
  */
 template <std::integral TIndex>
-Eigen::Vector<TIndex, Eigen::Dynamic> Shuffle(TIndex begin, TIndex end)
+auto Shuffle(TIndex begin, TIndex end) -> Eigen::Vector<TIndex, Eigen::Dynamic>
 {
     auto iota = std::views::iota(begin, end);
     Eigen::Vector<TIndex, Eigen::Dynamic> inds(end - begin);
@@ -101,7 +101,7 @@ template <
     std::integral TIndexE,
     class Func,
     class TIndex = std::common_type_t<TIndexB, TIndexE>>
-Eigen::Vector<TIndex, Eigen::Dynamic> Filter(TIndexB begin, TIndexE end, Func&& f)
+auto Filter(TIndexB begin, TIndexE end, Func&& f) -> Eigen::Vector<TIndex, Eigen::Dynamic>
 {
     auto filteredView = std::views::iota(static_cast<TIndex>(begin), static_cast<TIndex>(end)) |
                         std::views::filter(f);
@@ -129,8 +129,8 @@ template <
     class TDerivedR,
     class TScalar        = typename TDerivedX::Scalar,
     std::integral TIndex = typename TDerivedR::Scalar>
-Eigen::Vector<TScalar, Eigen::Dynamic>
-Repeat(Eigen::DenseBase<TDerivedX> const& x, Eigen::DenseBase<TDerivedR> const& r)
+auto Repeat(Eigen::DenseBase<TDerivedX> const& x, Eigen::DenseBase<TDerivedR> const& r)
+    -> Eigen::Vector<TScalar, Eigen::Dynamic>
 {
     using VectorType = Eigen::Vector<TScalar, Eigen::Dynamic>;
     VectorType y(r.sum());

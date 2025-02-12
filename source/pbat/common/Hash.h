@@ -52,27 +52,51 @@ std::size_t HashCombine(const Types&... args)
 
 namespace std {
 
+/**
+ * @brief Hash function for pair of Index
+ */
 template <>
 struct hash<pair<pbat::Index, pbat::Index>>
 {
+    /**
+     * @brief Hash function for pair of Index
+     * @param inds Pair of indices
+     * @return std::size_t Hash value
+     */
     [[maybe_unused]] std::size_t operator()(pair<pbat::Index, pbat::Index> const& inds) const
     {
         return pbat::common::HashCombine(inds.first, inds.second);
     }
 };
 
+/**
+ * @brief Hash function for 2-tuple of Index
+ */
 template <>
 struct hash<tuple<pbat::Index, pbat::Index>>
 {
+    /**
+     * @brief Hash function for 2-tuple of Index
+     * @param inds 2-tuple of indices
+     * @return std::size_t Hash value
+     */
     [[maybe_unused]] std::size_t operator()(tuple<pbat::Index, pbat::Index> const& inds) const
     {
         return pbat::common::HashCombine(get<0>(inds), get<1>(inds));
     }
 };
 
+/**
+ * @brief Hash function for 3-tuple of Index
+ */
 template <>
 struct hash<tuple<pbat::Index, pbat::Index, pbat::Index>>
 {
+    /**
+     * @brief Hash function for 3-tuple of Index
+     * @param inds 3-tuple of indices
+     * @return std::size_t Hash value
+     */
     [[maybe_unused]] std::size_t
     operator()(tuple<pbat::Index, pbat::Index, pbat::Index> const& inds) const
     {
@@ -80,18 +104,34 @@ struct hash<tuple<pbat::Index, pbat::Index, pbat::Index>>
     }
 };
 
+/**
+ * @brief Hash function for pbat::IndexVector<2>
+ */
 template <>
 struct hash<pbat::IndexVector<2>>
 {
+    /**
+     * @brief Hash function for pbat::IndexVector<2>
+     * @param inds Index vector
+     * @return std::size_t Hash value
+     */
     [[maybe_unused]] std::size_t operator()(pbat::IndexVector<2> const& inds) const
     {
         return pbat::common::HashCombine(inds(0), inds(1));
     }
 };
 
+/**
+ * @brief Hash function for pbat::IndexVector<3>
+ */
 template <>
 struct hash<pbat::IndexVector<3>>
 {
+    /**
+     * @brief Hash function for pbat::IndexVector<3>
+     * @param inds Index vector
+     * @return std::size_t Hash value
+     */
     [[maybe_unused]] std::size_t operator()(pbat::IndexVector<3> const& inds) const
     {
         return pbat::common::HashCombine(inds(0), inds(1), inds(2));

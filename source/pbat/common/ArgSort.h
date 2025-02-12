@@ -29,7 +29,7 @@ namespace common {
  * @return Eigen::Vector<TIndex, Eigen::Dynamic>
  */
 template <std::integral TIndex, class FLess>
-Eigen::Vector<TIndex, Eigen::Dynamic> ArgSort(TIndex n, FLess less)
+auto ArgSort(TIndex n, FLess less) -> Eigen::Vector<TIndex, Eigen::Dynamic>
 {
     using IndexVectorType = Eigen::Vector<TIndex, Eigen::Dynamic>;
     IndexVectorType inds(n);

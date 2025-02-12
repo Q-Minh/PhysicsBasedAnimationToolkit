@@ -25,7 +25,8 @@ namespace common {
  * @return Eigen vector adaptor
  */
 template <CContiguousArithmeticRange R>
-Eigen::Map<Eigen::Vector<std::ranges::range_value_t<R>, Eigen::Dynamic> const> ToEigen(R&& r)
+auto ToEigen(R&& r)
+    -> Eigen::Map<Eigen::Vector<std::ranges::range_value_t<R>, Eigen::Dynamic> const>
 {
     namespace rng = std::ranges;
     return Eigen::Map<Eigen::Vector<std::ranges::range_value_t<R>, Eigen::Dynamic> const>(
@@ -40,11 +41,10 @@ Eigen::Map<Eigen::Vector<std::ranges::range_value_t<R>, Eigen::Dynamic> const> T
  * @return Eigen matrix adaptor
  */
 template <CContiguousArithmeticMatrixRange R>
-Eigen::Map<Eigen::Matrix<
+auto ToEigen(R&& r) -> Eigen::Map<Eigen::Matrix<
     typename std::ranges::range_value_t<R>::Scalar,
     Eigen::Dynamic,
     Eigen::Dynamic> const>
-ToEigen(R&& r)
 {
     namespace rng   = std::ranges;
     using ValueType = rng::range_value_t<R>;
