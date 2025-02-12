@@ -3,6 +3,7 @@
 #include "Matrix.h"
 #include "pbat/Aliases.h"
 
+#include <Eigen/LU>
 #include <cmath>
 #include <doctest/doctest.h>
 
