@@ -1,5 +1,15 @@
-#ifndef PBAT_GEOMETRY_TETRAHEDRAL_AABB_HIERARCHY_H
-#define PBAT_GEOMETRY_TETRAHEDRAL_AABB_HIERARCHY_H
+/**
+ * @file TetrahedralAabbHierarchy.h
+ * @author Quoc-Minh Ton-That (tonthat.quocminh@gmail.com)
+ * @brief This file contains the TetrahedralAabbHierarchy class.
+ * @date 2025-02-12
+ *
+ * @copyright Copyright (c) 2025
+ *
+ */
+
+#ifndef PBAT_GEOMETRY_TETRAHEDRALAABBHIERARCHY_H
+#define PBAT_GEOMETRY_TETRAHEDRALAABBHIERARCHY_H
 
 #include "AxisAlignedBoundingBox.h"
 #include "BoundingVolumeHierarchy.h"
@@ -17,6 +27,9 @@
 namespace pbat {
 namespace geometry {
 
+/**
+ * @brief Tetrahedral AABB hierarchy class.
+ */
 class TetrahedralAabbHierarchy : public BoundingVolumeHierarchy<
                                      TetrahedralAabbHierarchy,
                                      AxisAlignedBoundingBox<3>,
@@ -24,58 +37,122 @@ class TetrahedralAabbHierarchy : public BoundingVolumeHierarchy<
                                      3>
 {
   public:
-    static auto constexpr kDims = 3;
-    using SelfType              = TetrahedralAabbHierarchy;
-    using BaseType =
-        BoundingVolumeHierarchy<SelfType, AxisAlignedBoundingBox<kDims>, IndexVector<4>, kDims>;
+    static auto constexpr kDims = 3;                        ///< Dimension of the space
+    using SelfType              = TetrahedralAabbHierarchy; ///< Type of this class
+    using BaseType              = BoundingVolumeHierarchy<
+                     SelfType,
+                     AxisAlignedBoundingBox<kDims>,
+                     IndexVector<4>,
+                     kDims>; ///< Base type
 
+    /**
+     * @brief Construct a TetrahedralAabbHierarchy from a tetrahedral mesh (V,C)
+     * @param V `|kDims|x|# verts|` vertex positions
+     * @param C `4x|# tetrahedra|` cell indices into V
+     * @param maxPointsInLeaf Maximum number of points in a leaf node
+     */
     PBAT_API TetrahedralAabbHierarchy(
         Eigen::Ref<MatrixX const> const& V,
         Eigen::Ref<IndexMatrixX const> const& C,
         std::size_t maxPointsInLeaf = 10ULL);
 
+    /**
+     * @brief Returns the primitive at index p
+     * @param p Index of the primitive
+     * @return The primitive at index p
+     */
     PBAT_API PrimitiveType Primitive(Index p) const;
-
+    /**
+     * @brief Returns the location of the primitive
+     * @param primitive The primitive
+     * @return The location of the primitive
+     */
     PBAT_API Vector<kDims> PrimitiveLocation(PrimitiveType const& primitive) const;
-
+    /**
+     * @brief Returns the bounding volume of the primitive
+     * @tparam RPrimitiveIndices Index range type
+     * @param pinds Range of primitive indices
+     * @return The bounding volume of the primitives pinds
+     */
     template <class RPrimitiveIndices>
     BoundingVolumeType BoundingVolumeOf(RPrimitiveIndices&& pinds) const;
-
+    /**
+     * @brief Updates the AABBs
+     */
     PBAT_API void Update();
-
+    /**
+     * @brief Returns the overlapping primitives of this BVH and another BVH
+     * @param bvh The other BVH
+     * @param reserve Estimated number of overlapping primitives to reserve memory for
+     * @return `2x|# overlaps|` matrix `O` of overlapping primitive pairs s.t. primitives `O(0,o)`
+     * in this bvh, and `O(1,o)` in the other bvh overlap.
+     */
     PBAT_API IndexMatrixX
     OverlappingPrimitives(TetrahedralAabbHierarchy const& bvh, std::size_t reserve = 1000ULL) const;
-
+    /**
+     * @brief For each point in P, returns the index of the primitive containing it
+     * @tparam TDerivedP Eigen matrix type
+     * @tparam FCull Culling function type
+     * @param P `|kDims|x|# points|` matrix of points
+     * @param fCull Culling function
+     * @param bParallelize Whether to parallelize the computation
+     * @return `|# points|` vector of primitive indices containing the points
+     */
     template <class TDerivedP, class FCull>
     IndexVectorX PrimitivesContainingPoints(
         Eigen::MatrixBase<TDerivedP> const& P,
         FCull fCull,
         bool bParallelize = true) const;
-
+    /**
+     * @brief For each point in P, returns the index of the primitive containing it
+     * @tparam TDerivedP Eigen matrix type
+     * @param P `|kDims|x|# points|` matrix of points
+     * @param bParallelize Whether to parallelize the computation
+     * @return `|# points|` vector of primitive indices containing the points
+     */
     template <class TDerivedP>
     IndexVectorX PrimitivesContainingPoints(
         Eigen::MatrixBase<TDerivedP> const& P,
         bool bParallelize = true) const;
-
+    /**
+     * @brief For each point in P, returns the index of the nearest primitive to it
+     * @tparam TDerivedP Eigen matrix type
+     * @param P `|kDims|x|# points|` matrix of points
+     * @param bParallelize Whether to parallelize the computation
+     * @return `|# points|` vector of nearest primitive indices to the points
+     */
     template <class TDerivedP>
-    std::pair<IndexVectorX, VectorX> NearestPrimitivesToPoints(
-        Eigen::MatrixBase<TDerivedP> const& P,
-        bool bParallelize = true) const;
-
+    auto
+    NearestPrimitivesToPoints(Eigen::MatrixBase<TDerivedP> const& P, bool bParallelize = true) const
+        -> std::pair<IndexVectorX, VectorX>;
+    /**
+     * @brief Returns this BVH's bounding volumes
+     * @return This BVH's bounding volumes
+     */
     [[maybe_unused]] auto const& GetBoundingVolumes() const { return mBoundingVolumes; }
-
+    /**
+     * @brief Updates this BVH's mesh's vertex positions
+     * @tparam TDerivedP Eigen matrix type
+     * @param P `|kDims|x|# verts|` matrix of vertex positions
+     */
     template <class TDerivedP>
     void SetV(Eigen::MatrixBase<TDerivedP> const& P)
     {
         V = P;
     }
-
+    /**
+     * @brief Returns this BVH's mesh's vertex positions
+     * @return This BVH's mesh's vertex positions
+     */
     [[maybe_unused]] auto GetV() const { return V; }
-
+    /**
+     * @brief Returns this BVH's mesh's cell indices
+     * @return This BVH's mesh's cell indices
+     */
     [[maybe_unused]] auto GetC() const { return C; }
 
-    Eigen::Ref<MatrixX const> V;
-    Eigen::Ref<IndexMatrixX const> C;
+    Eigen::Ref<MatrixX const> V;      ///< `|kDims|x|# verts|` vertex positions
+    Eigen::Ref<IndexMatrixX const> C; ///< `4x|# tetrahedra|` cell indices into V
 };
 
 template <class RPrimitiveIndices>
@@ -136,9 +213,9 @@ inline IndexVectorX TetrahedralAabbHierarchy::PrimitivesContainingPoints(
 }
 
 template <class TDerivedP>
-inline std::pair<IndexVectorX, VectorX> TetrahedralAabbHierarchy::NearestPrimitivesToPoints(
+inline auto TetrahedralAabbHierarchy::NearestPrimitivesToPoints(
     Eigen::MatrixBase<TDerivedP> const& P,
-    bool bParallelize) const
+    bool bParallelize) const -> std::pair<IndexVectorX, VectorX>
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.geometry.TetrahedralAabbHierarchy.NearestPrimitivesToPoints");
     using math::linalg::mini::FromEigen;
@@ -180,4 +257,4 @@ inline std::pair<IndexVectorX, VectorX> TetrahedralAabbHierarchy::NearestPrimiti
 } // namespace geometry
 } // namespace pbat
 
-#endif // PBAT_GEOMETRY_TETRAHEDRAL_AABB_HIERARCHY_H
+#endif // PBAT_GEOMETRY_TETRAHEDRALAABBHIERARCHY_H
