@@ -1,3 +1,13 @@
+/**
+ * @file LaplacianMatrix.h
+ * @author Quoc-Minh Ton-That (tonthat.quocminh@gmail.com)
+ * @brief SymmetricLaplacianMatrix API and implementation.
+ * @date 2025-02-11
+ *
+ * @copyright Copyright (c) 2025
+ *
+ */
+
 #ifndef PBAT_FEM_LAPLACIAN_MATRIX_H
 #define PBAT_FEM_LAPLACIAN_MATRIX_H
 
@@ -13,16 +23,55 @@
 namespace pbat {
 namespace fem {
 
+/**
+ * @brief A matrix-free representation of the symmetric part of the Laplacian \f$\Delta u\f$ of a
+ * finite element discretized function \f$ u(X) \f$ under Galerkin projection.
+ *
+ * The precise definition of the Laplacian matrix's symmetric part is given by
+ * \f$ \mathbf{L}_{ij} = \int_\Omega -\nabla \phi_i \cdot \nabla \phi_j d\Omega \f$.
+ *
+ * * @todo Explain the Laplacian matrix and its construction and link to my higher-level FEM crash
+ * course doc.
+ *
+ * This matrix-free Laplacian requires the following inputs:
+ * - A finite element `mesh` satisfying concept CMesh
+ * - A vector of element indices `eg`, associating each quadrature point with an element
+ * - A vector of quadrature weights `wg`
+ * - A matrix `GNegg` of element shape function gradients at quadrature points (see
+ * ShapeFunctionGradients())
+ * - An integer `dims` specifying the dimensionality of the image of the FEM function space
+ *
+ * @note
+ * The user-provided quadrature rule is injected into the Laplacian operator, allowing for
+ * arbitrary quadrature rules to be used. Since Laplacians of higher-dimensional functions
+ * are only one-dimensional Laplacian 'kroneckered' with the identity matrix, the Laplacian
+ * matrix is actually \f$ L \otimes I_{d \times d} \f$ where \f$ d \f$ is the function's
+ * dimensionality, but we need not store the duplicate entries.
+ *
+ * @tparam TMesh Type satisfying concept CMesh
+ */
 template <CMesh TMesh>
 struct SymmetricLaplacianMatrix
 {
   public:
-    using SelfType    = SymmetricLaplacianMatrix<TMesh>;
-    using MeshType    = TMesh;
-    using ElementType = typename TMesh::ElementType;
+    using SelfType    = SymmetricLaplacianMatrix<TMesh>; ///< Self type
+    using MeshType    = TMesh;                           ///< Mesh type
+    using ElementType = typename TMesh::ElementType;     ///< Element type
 
-    static int constexpr kOrder = 2 * (ElementType::kOrder - 1);
+    static int constexpr kOrder =
+        2 * (ElementType::kOrder - 1); ///< Polynomial order of the Laplacian matrix
 
+    /**
+     * @brief Construct a new symmetric Laplacian operator
+     *
+     * @param mesh Finite element mesh
+     * @param eg Element indices associating each quadrature point with an element
+     * @param wg Quadrature weights
+     * @param GNegg Element shape function gradients at quadrature points
+     * @param dims Dimensionality of the image of the FEM function space
+     * @pre `eg.size() == wg.size()` and `GNegg.rows() == mesh.E.rows()` and `dims >= 1`
+     * 
+     */
     SymmetricLaplacianMatrix(
         MeshType const& mesh,
         Eigen::Ref<IndexVectorX const> const& eg,
@@ -35,38 +84,55 @@ struct SymmetricLaplacianMatrix
     /**
      * @brief Applies this matrix as a linear operator on x, adding result to y.
      *
-     * @tparam TDerivedIn
-     * @tparam TDerivedOut
-     * @param x
-     * @param y
+     * @tparam TDerivedIn Input matrix type
+     * @tparam TDerivedOut Output matrix type
+     * @param x Input matrix
+     * @param y Output matrix
+     * @pre x.rows() == InputDimensions() and y.rows() == OutputDimensions() and y.cols() ==
+     * x.cols()
      */
     template <class TDerivedIn, class TDerivedOut>
     void Apply(Eigen::MatrixBase<TDerivedIn> const& x, Eigen::DenseBase<TDerivedOut>& y) const;
 
     /**
      * @brief Transforms this matrix-free matrix representation into sparse compressed format.
-     * @return
+     * @return CSCMatrix Sparse compressed column matrix representation of this Laplacian matrix
      */
     CSCMatrix ToMatrix() const;
 
+    /**
+     * @brief Number of input dimensions
+     *
+     * @return Index
+     */
     Index InputDimensions() const { return dims * mesh.X.cols(); }
+    /**
+     * @brief Number of output dimensions
+     *
+     * @return Index
+     */
     Index OutputDimensions() const { return InputDimensions(); }
 
+    /**
+     * @brief Compute and store the element laplacians
+     */
     void ComputeElementLaplacians();
-
+    /**
+     * @brief Check if the state of this Laplacian matrix is valid
+     */
     void CheckValidState() const;
 
     MeshType const& mesh; ///< The finite element mesh
     Eigen::Ref<IndexVectorX const>
-        eg; ///< |#quad.pts.|x1 array of elements associated with quadrature points
-    Eigen::Ref<VectorX const> wg; ///< |#quad.pts.|x1 array of quadrature weights
+        eg; ///< `|# quad.pts.|x1` array of elements associated with quadrature points
+    Eigen::Ref<VectorX const> wg; ///< `|# quad.pts.|x1` array of quadrature weights
     Eigen::Ref<MatrixX const>
-        GNeg;       ///< |#element nodes|x|#dims * #quad.pts. * #elements|
+        GNeg;       ///< `|# element nodes|x|# dims * # quad.pts. * # elements|`
                     ///< matrix of element shape function gradients at quadrature points
-    MatrixX deltag; ///< |#element nodes| x |#element nodes * #quad.pts.| matrix of element
+    MatrixX deltag; ///< `|# element nodes| x |# element nodes * # quad.pts.|` matrix of element
                     ///< laplacians at quadrature points
     int dims; ///< Dimensionality of image of FEM function space, i.e. this Laplacian matrix is
-              ///< actually L \kronecker I_{dims \times dims}. Should be >= 1.
+              ///< actually \f$ L \kronecker I_{dims \times dims} \f$. Must have `dims >= 1`.
 };
 
 template <CMesh TMesh>
