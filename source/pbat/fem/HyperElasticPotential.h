@@ -70,6 +70,8 @@ struct HyperElasticPotential
      * @param GNeg Shape function gradients at quadrature points. See ShapeFunctionGradients().
      * @param Y Young's modulus
      * @param nu Poisson's ratio
+     * @pre `eg.size() == wg.size()` and `GNeg.rows() == mesh.E.rows()`
+     * @pre `Y.size() == wg.size()` and `nu.size() == wg.size()`
      */
     HyperElasticPotential(
         MeshType const& mesh,
@@ -89,6 +91,8 @@ struct HyperElasticPotential
      * @param GNeg Shape function gradients at quadrature points. See ShapeFunctionGradients().
      * @param Y \f$ |Q| \f$ Young's moduli
      * @param nu \f$ |Q| \f$ Poisson's ratios
+     * @pre `eg.size() == wg.size()` and `GNeg.rows() == mesh.E.rows()`
+     * @pre `Y.size() == wg.size()` and `nu.size() == wg.size()`
      */
     template <class TDerivedY, class TDerivednu>
     HyperElasticPotential(
@@ -111,6 +115,9 @@ struct HyperElasticPotential
      * @param x \f$ d \times n \f$ matrix of deformed nodal positions
      * @param Y Young's modulus
      * @param nu Poisson's ratio
+     * @pre `eg.size() == wg.size()` and `GNeg.rows() == mesh.E.rows()`
+     * @pre `x.rows() == mesh.X.rows() * mesh.kDims`
+     * @pre `Y.size() == wg.size()` and `nu.size() == wg.size()`
      */
     template <class TDerived>
     HyperElasticPotential(
@@ -136,6 +143,9 @@ struct HyperElasticPotential
      * @param x \f$ d \times n \f$ matrix of deformed nodal positions
      * @param Y \f$ |Q| \f$ Young's moduli
      * @param nu \f$ |Q| \f$ Poisson's ratios
+     * @pre `eg.size() == wg.size()` and `GNeg.rows() == mesh.E.rows()`
+     * @pre `x.rows() == mesh.X.rows() * mesh.kDims`
+     * @pre `Y.size() == wg.size()` and `nu.size() == wg.size()`
      */
     template <class TDerivedx, class TDerivedY, class TDerivednu>
     HyperElasticPotential(
@@ -161,6 +171,7 @@ struct HyperElasticPotential
      * @param bWithHessian Compute hessian
      * @param bUseSpdProjection Project per quadrature point hessians to nearest symmetric positive
      * definite (SPD) matrix
+     * @pre `x.rows() == mesh.X.rows() * mesh.kDims`
      */
     template <class TDerived>
     void ComputeElementElasticity(
@@ -177,6 +188,7 @@ struct HyperElasticPotential
      * @tparam TDerivedOut Output matrix type
      * @param x Input matrix
      * @param y Output matrix
+     * @pre x.rows() == InputDimensions() and y.rows() == InputDimensions() and y.cols() == x.cols()
      */
     template <class TDerivedIn, class TDerivedOut>
     void Apply(Eigen::MatrixBase<TDerivedIn> const& x, Eigen::DenseBase<TDerivedOut>& y) const;
