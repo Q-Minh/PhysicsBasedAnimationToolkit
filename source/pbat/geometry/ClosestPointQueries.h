@@ -28,6 +28,9 @@ namespace mini = math::linalg::mini;
 
 /**
  * @brief Obtain the point on the plane (P,n) closest to the point X.
+ * @tparam TMatrixX Query point matrix type
+ * @tparam TMatrixP Point on the plane matrix type
+ * @tparam TMatrixN Normal of the plane matrix type
  * @param X Query point
  * @param P Point on the plane
  * @param n Normal of the plane
@@ -39,6 +42,9 @@ PBAT_HOST_DEVICE auto PointOnPlane(TMatrixX const& X, TMatrixP const& P, TMatrix
 
 /**
  * @brief Obtain the point on the line segment PQ closest to the point X.
+ * @tparam TMatrixX Query point matrix type
+ * @tparam TMatrixP Start point of the line segment matrix type
+ * @tparam TMatrixQ End point of the line segment matrix type
  * @param X Query point
  * @param P Start point of the line segment
  * @param Q End point of the line segment
@@ -51,6 +57,9 @@ PBAT_HOST_DEVICE auto PointOnLineSegment(TMatrixX const& X, TMatrixP const& P, T
 /**
  * @brief Obtain the point on the axis-aligned bounding box (AABB) defined by the lower
  * and upper corners closest to the point X.
+ * @tparam TMatrixX Query point matrix type
+ * @tparam TMatrixL Lower corner of the AABB matrix type
+ * @tparam TMatrixU Upper corner of the AABB matrix type
  * @param X Query point
  * @param L Lower corner of the AABB
  * @param U Upper corner of the AABB
@@ -63,6 +72,10 @@ PointOnAxisAlignedBoundingBox(TMatrixX const& X, TMatrixL const& L, TMatrixU con
 
 /**
  * @brief Obtain the point on the triangle ABC closest to the point P in barycentric coordinates.
+ * @tparam TMatrixP Query point matrix type
+ * @tparam TMatrixA Vertex A of the triangle matrix type
+ * @tparam TMatrixB Vertex B of the triangle matrix type
+ * @tparam TMatrixC Vertex C of the triangle matrix type
  * @param P Query point
  * @param A Vertex A of the triangle
  * @param B Vertex B of the triangle
@@ -80,6 +93,10 @@ UvwPointInTriangle(TMatrixP const& P, TMatrixA const& A, TMatrixB const& B, TMat
 
 /**
  * @brief Obtain the point on the triangle ABC closest to the point P.
+ * @tparam TMatrixP Query point matrix type
+ * @tparam TMatrixA Vertex A of the triangle matrix type
+ * @tparam TMatrixB Vertex B of the triangle matrix type
+ * @tparam TMatrixC Vertex C of the triangle matrix type
  * @param P Query point
  * @param A Vertex A of the triangle
  * @param B Vertex B of the triangle
@@ -99,6 +116,11 @@ PointInTriangle(TMatrixP const& P, TMatrixA const& A, TMatrixB const& B, TMatrix
  * @brief Obtain the point in the tetrahedron ABCD closest to the point P. The order of ABCD
  * must be such that all faces ABC, ACD, ADB and BDC are oriented with outwards pointing normals
  * when viewed from outside the tetrahedron.
+ * @tparam TMatrixP Query point matrix type
+ * @tparam TMatrixA Vertex A of the tetrahedron matrix type
+ * @tparam TMatrixB Vertex B of the tetrahedron matrix type
+ * @tparam TMatrixC Vertex C of the tetrahedron matrix type
+ * @tparam TMatrixD Vertex D of the tetrahedron matrix type
  * @param P Query point
  * @param A Vertex A of the tetrahedron
  * @param B Vertex B of the tetrahedron
