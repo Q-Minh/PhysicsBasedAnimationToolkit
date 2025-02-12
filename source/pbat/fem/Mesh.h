@@ -271,6 +271,7 @@ Mesh<TElement, Dims>::Mesh(
 }
 
 namespace detail {
+    
 template <CElement TElement, int Dims, int QuadratureOrder, class TDerivedX, class TDerivedE>
 inline MatrixX
 MeshQuadraturePoints(Eigen::MatrixBase<TDerivedX> const& X, Eigen::MatrixBase<TDerivedE> const& E)
