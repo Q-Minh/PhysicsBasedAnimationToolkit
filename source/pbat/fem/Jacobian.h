@@ -38,8 +38,9 @@ namespace fem {
  * @return Matrix<TDerived::RowsAtCompileTime, TElement::kDims>
  */
 template <CElement TElement, class TDerived>
-[[maybe_unused]] Matrix<TDerived::RowsAtCompileTime, TElement::kDims>
+[[maybe_unused]] auto
 Jacobian(Vector<TElement::kDims> const& X, Eigen::MatrixBase<TDerived> const& x)
+    -> Matrix<TDerived::RowsAtCompileTime, TElement::kDims>
 {
     assert(x.cols() == TElement::kNodes);
     auto constexpr kDimsOut                   = TDerived::RowsAtCompileTime;
@@ -188,7 +189,7 @@ MatrixX InnerProductWeights(TMesh const& mesh, Eigen::MatrixBase<TDerivedDetJe> 
  * the element whose vertices are \f$ x \f$.
  *
  * We use Gauss-Newton iterations on \f$ \min f \f$.
- * This gives the iteration 
+ * This gives the iteration
  * \f[
  * dx^{k+1} = [H(\xi^k)]^{-1} J_x(\xi^k)^T (x(\xi^k) - X)
  * \f]

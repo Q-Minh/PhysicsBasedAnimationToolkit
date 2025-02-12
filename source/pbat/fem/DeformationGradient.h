@@ -36,8 +36,9 @@ namespace fem {
  *
  */
 template <CElement TElement, class TDerivedx, class TDerivedX>
-Matrix<TDerivedx::RowsAtCompileTime, TElement::kDims>
-DeformationGradient(Eigen::MatrixBase<TDerivedx> const& x, Eigen::MatrixBase<TDerivedX> const& GP)
+auto DeformationGradient(
+    Eigen::MatrixBase<TDerivedx> const& x,
+    Eigen::MatrixBase<TDerivedX> const& GP) -> Matrix<TDerivedx::RowsAtCompileTime, TElement::kDims>
 {
     return x * GP;
 }
@@ -65,8 +66,8 @@ template <
     math::linalg::mini::CMatrix TMatrixGF,
     math::linalg::mini::CMatrix TMatrixGP,
     class ScalarType = typename TMatrixGF::ScalarType>
-math::linalg::mini::SVector<ScalarType, Dims>
-GradientSegmentWrtDofs(TMatrixGF const& GF, TMatrixGP const& GP, auto i)
+auto GradientSegmentWrtDofs(TMatrixGF const& GF, TMatrixGP const& GP, auto i)
+    -> math::linalg::mini::SVector<ScalarType, Dims>
 {
     using namespace math::linalg::mini;
     SVector<ScalarType, Dims> dPsidx = Zeros<ScalarType, Dims, 1>{};
@@ -123,8 +124,8 @@ template <
     math::linalg::mini::CMatrix TMatrixGF,
     math::linalg::mini::CMatrix TMatrixGP,
     class ScalarType = typename TMatrixGF::ScalarType>
-math::linalg::mini::SVector<ScalarType, TElement::kNodes * Dims>
-GradientWrtDofs(TMatrixGF const& GF, TMatrixGP const& GP)
+auto GradientWrtDofs(TMatrixGF const& GF, TMatrixGP const& GP)
+    -> math::linalg::mini::SVector<ScalarType, TElement::kNodes * Dims>
 {
     auto constexpr kRows = TElement::kNodes * Dims;
     using namespace math::linalg::mini;
@@ -166,8 +167,8 @@ template <
     math::linalg::mini::CMatrix TMatrixHF,
     math::linalg::mini::CMatrix TMatrixGP,
     class ScalarType = typename TMatrixHF::ScalarType>
-math::linalg::mini::SMatrix<ScalarType, Dims, Dims>
-HessianBlockWrtDofs(TMatrixHF const& HF, TMatrixGP const& GP, auto i, auto j)
+auto HessianBlockWrtDofs(TMatrixHF const& HF, TMatrixGP const& GP, auto i, auto j)
+    -> math::linalg::mini::SMatrix<ScalarType, Dims, Dims>
 {
     using namespace math::linalg::mini;
     SMatrix<ScalarType, Dims, Dims> d2Psidx2 = Zeros<ScalarType, Dims, Dims>{};
@@ -228,8 +229,8 @@ template <
     math::linalg::mini::CMatrix TMatrixHF,
     math::linalg::mini::CMatrix TMatrixGP,
     class ScalarType = typename TMatrixHF::ScalarType>
-math::linalg::mini::SMatrix<ScalarType, TElement::kNodes * Dims, TElement::kNodes * Dims>
-HessianWrtDofs(TMatrixHF const& HF, TMatrixGP const& GP)
+auto HessianWrtDofs(TMatrixHF const& HF, TMatrixGP const& GP)
+    -> math::linalg::mini::SMatrix<ScalarType, TElement::kNodes * Dims, TElement::kNodes * Dims>
 {
     auto constexpr kRows = TElement::kNodes * Dims;
     auto constexpr kCols = TElement::kNodes * Dims;

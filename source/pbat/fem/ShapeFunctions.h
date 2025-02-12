@@ -36,8 +36,8 @@ namespace fem {
  * of dimensions |# element nodes| x |# quad.pts.|
  */
 template <CElement TElement, int QuadratureOrder>
-Matrix<TElement::kNodes, TElement::template QuadratureType<QuadratureOrder>::kPoints>
-ShapeFunctions()
+auto ShapeFunctions()
+    -> Matrix<TElement::kNodes, TElement::template QuadratureType<QuadratureOrder>::kPoints>
 {
     using QuadratureRuleType = typename TElement::template QuadratureType<QuadratureOrder>;
     using ElementType        = TElement;
@@ -275,7 +275,7 @@ MatrixX IntegratedShapeFunctions(TMesh const& mesh, Eigen::DenseBase<TDerived> c
  * \f{eqnarray*}{
  * \xi &= J^{-1} (X - X_0) \\
  * \nabla_X N(\xi(X)) &= \nabla_\xi N * J^{-1} \\
- * \nabla_X \phi^T  &= J^{-T} \left[ \nabla_\xi N \right]^T 
+ * \nabla_X \phi^T  &= J^{-T} \left[ \nabla_\xi N \right]^T
  * \f}
  * @note
  * If J is rectangular, then
@@ -283,7 +283,7 @@ MatrixX IntegratedShapeFunctions(TMesh const& mesh, Eigen::DenseBase<TDerived> c
  * (J^T J) \xi      &= J^T (X - X_0) \\
  * \xi              &= (J^T J)^{-1} J^T (X - X_0) \\
  * \nabla_X N(\xi(X)) &= \nabla_\xi N * (J^T J)^{-1} J^T \\
- * \left[ \nabla_X \phi \right]^T  &= J (J^T J)^{-1} \left[ \nabla_\xi N \right]^T 
+ * \left[ \nabla_X \phi \right]^T  &= J (J^T J)^{-1} \left[ \nabla_\xi N \right]^T
  * \f}
  * @note
  * For non-linear elements, like hexahedra or quadrilaterals, the accuracy of the gradients
@@ -299,9 +299,9 @@ MatrixX IntegratedShapeFunctions(TMesh const& mesh, Eigen::DenseBase<TDerived> c
  * @return |# nodes|x|Dims| matrix of basis function gradients in rows
  */
 template <CElement TElement, class TDerivedXi, class TDerivedX>
-Matrix<TElement::kNodes, TDerivedX::RowsAtCompileTime> ShapeFunctionGradients(
+auto ShapeFunctionGradients(
     Eigen::MatrixBase<TDerivedXi> const& Xi,
-    Eigen::MatrixBase<TDerivedX> const& X)
+    Eigen::MatrixBase<TDerivedX> const& X) -> Matrix<TElement::kNodes, TDerivedX::RowsAtCompileTime>
 {
     auto constexpr kInputDims           = TElement::kDims;
     auto constexpr kOutputDims          = TDerivedX::RowsAtCompileTime;
