@@ -83,6 +83,7 @@ if (DOXYGEN_FOUND)
         "install.md"
         "profiling.md"
         "userguide.md"
+        "gallery.md"
         ALL
         COMMENT "Generating docs"
     )

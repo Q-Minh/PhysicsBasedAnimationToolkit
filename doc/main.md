@@ -8,19 +8,13 @@
 
 ![](img/entei.icon.png)
 
-<div class="tabbed">
-- <b class="tab-title">C++</b>
-  ```cpp
-  #include <pbat/Pbat.h>
-  ```
-- <b class="tab-title">Python</b>
-  ```python
-  import pbatoolkit as pbat
-  ```
-</div>
+The Physics Based Animation Toolkit (PBAT) is a cross-platform C++20 library of algorithms and data structures commonly used in computer graphics research on physically-based simulation in dimensions `1,2,3`. For most use cases, we recommend using our library via its Python interface, enabling seamless integration into Python's ecosystem of powerful scientific computing packages.
+
+\note Currently, the `master` branch may contain breaking changes at any point in time. We recommend users to use specific git tags, i.e. via `git checkout v<major>.<minor>.<patch>`, where the version `<major>.<minor>.<patch>` matches the installed `pbatoolkit`'s version downloaded from PyPI (i.e. from `pip install pbatoolkit`).
 
 - \subpage features
 - \subpage quickstart
+- \subpage gallery
 
 <div class="section_buttons">
 
