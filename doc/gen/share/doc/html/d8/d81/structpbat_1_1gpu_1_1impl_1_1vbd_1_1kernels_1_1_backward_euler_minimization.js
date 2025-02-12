@@ -1,0 +1,27 @@
+var structpbat_1_1gpu_1_1impl_1_1vbd_1_1kernels_1_1_backward_euler_minimization =
+[
+    [ "detHZero", "d8/d81/structpbat_1_1gpu_1_1impl_1_1vbd_1_1kernels_1_1_backward_euler_minimization.html#a37b164565a1f40c6325beb53aae5e83f", null ],
+    [ "dt", "d8/d81/structpbat_1_1gpu_1_1impl_1_1vbd_1_1kernels_1_1_backward_euler_minimization.html#adeff2c7b6b9fe772f2f0f17402f92192", null ],
+    [ "dt2", "d8/d81/structpbat_1_1gpu_1_1impl_1_1vbd_1_1kernels_1_1_backward_euler_minimization.html#ab9ae0a6e6ab94316f6fd470c2a50351b", null ],
+    [ "epsv", "d8/d81/structpbat_1_1gpu_1_1impl_1_1vbd_1_1kernels_1_1_backward_euler_minimization.html#a2ed25ca1c80546d1690e39cacf491895", null ],
+    [ "F", "d8/d81/structpbat_1_1gpu_1_1impl_1_1vbd_1_1kernels_1_1_backward_euler_minimization.html#a73287df9809ae32f6c083929e8d10666", null ],
+    [ "FA", "d8/d81/structpbat_1_1gpu_1_1impl_1_1vbd_1_1kernels_1_1_backward_euler_minimization.html#a5fbdd948c917f6f62bf19bae055eb50b", null ],
+    [ "fc", "d8/d81/structpbat_1_1gpu_1_1impl_1_1vbd_1_1kernels_1_1_backward_euler_minimization.html#a7fc7ea62086480d9b6ecfb4b1b2ec02c", null ],
+    [ "GP", "d8/d81/structpbat_1_1gpu_1_1impl_1_1vbd_1_1kernels_1_1_backward_euler_minimization.html#afeff7bb6cb46247eb3d055e736524ee1", null ],
+    [ "GVTilocal", "d8/d81/structpbat_1_1gpu_1_1impl_1_1vbd_1_1kernels_1_1_backward_euler_minimization.html#aa7ff68264693493732872be2f73bcbf7", null ],
+    [ "GVTn", "d8/d81/structpbat_1_1gpu_1_1impl_1_1vbd_1_1kernels_1_1_backward_euler_minimization.html#aaadbbf8e9a16e26b967b55c14727a435", null ],
+    [ "GVTp", "d8/d81/structpbat_1_1gpu_1_1impl_1_1vbd_1_1kernels_1_1_backward_euler_minimization.html#a02f10bb7df233147854f2dd65778d7a4", null ],
+    [ "kD", "d8/d81/structpbat_1_1gpu_1_1impl_1_1vbd_1_1kernels_1_1_backward_euler_minimization.html#a5b716d3bfcb8fa4cea3e20972e509f7e", null ],
+    [ "lame", "d8/d81/structpbat_1_1gpu_1_1impl_1_1vbd_1_1kernels_1_1_backward_euler_minimization.html#a36945bb306add5a71420176663ee2f67", null ],
+    [ "m", "d8/d81/structpbat_1_1gpu_1_1impl_1_1vbd_1_1kernels_1_1_backward_euler_minimization.html#a874e6c1e8e6b980e541822a1f39cb7e2", null ],
+    [ "muC", "d8/d81/structpbat_1_1gpu_1_1impl_1_1vbd_1_1kernels_1_1_backward_euler_minimization.html#a57968bcbea4f6473dbbd153c723abc94", null ],
+    [ "muF", "d8/d81/structpbat_1_1gpu_1_1impl_1_1vbd_1_1kernels_1_1_backward_euler_minimization.html#a648068592e9c33122137b67829f088f0", null ],
+    [ "partition", "d8/d81/structpbat_1_1gpu_1_1impl_1_1vbd_1_1kernels_1_1_backward_euler_minimization.html#a597e756081fe8cb0f2177adb78d7f443", null ],
+    [ "T", "d8/d81/structpbat_1_1gpu_1_1impl_1_1vbd_1_1kernels_1_1_backward_euler_minimization.html#af5916e79de189b524ca558eeac0faa6e", null ],
+    [ "wg", "d8/d81/structpbat_1_1gpu_1_1impl_1_1vbd_1_1kernels_1_1_backward_euler_minimization.html#a5f97330e05e2dd33bd186e847a063d35", null ],
+    [ "x", "d8/d81/structpbat_1_1gpu_1_1impl_1_1vbd_1_1kernels_1_1_backward_euler_minimization.html#a9ea93a150b695f4ccc26ef052434e8a7", null ],
+    [ "xb", "d8/d81/structpbat_1_1gpu_1_1impl_1_1vbd_1_1kernels_1_1_backward_euler_minimization.html#aa5743450bd95a4257fd2b9497259facb", null ],
+    [ "xt", "d8/d81/structpbat_1_1gpu_1_1impl_1_1vbd_1_1kernels_1_1_backward_euler_minimization.html#a44f136f7ed87d535c4e09238fa583ea9", null ],
+    [ "xtilde", "d8/d81/structpbat_1_1gpu_1_1impl_1_1vbd_1_1kernels_1_1_backward_euler_minimization.html#aba59bd89e14aa66c5197a9b995c22f7d", null ],
+    [ "XVA", "d8/d81/structpbat_1_1gpu_1_1impl_1_1vbd_1_1kernels_1_1_backward_euler_minimization.html#a46d4199f9b0621bf41d7e274b4c38193", null ]
+];
