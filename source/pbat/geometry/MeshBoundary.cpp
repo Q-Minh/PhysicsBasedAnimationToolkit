@@ -11,7 +11,7 @@
 namespace pbat {
 namespace geometry {
 
-std::tuple<IndexVectorX, IndexMatrixX> SimplexMeshBoundary(IndexMatrixX const& C, Index n)
+auto SimplexMeshBoundary(IndexMatrixX const& C, Index n) -> std::tuple<IndexVectorX, IndexMatrixX>
 {
     if (n < 0)
         n = C.maxCoeff() + 1;

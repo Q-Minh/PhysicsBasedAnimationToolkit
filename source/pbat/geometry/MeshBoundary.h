@@ -27,8 +27,8 @@ namespace geometry {
  * @param n The number of vertices in the mesh. If -1, the number of vertices is computed from C.
  * @return A tuple containing the boundary vertices and the boundary facets
  */
-std::tuple<IndexVectorX, IndexMatrixX>
-SimplexMeshBoundary(IndexMatrixX const& C, Index n = Index(-1));
+auto SimplexMeshBoundary(IndexMatrixX const& C, Index n = Index(-1))
+    -> std::tuple<IndexVectorX, IndexMatrixX>;
 
 } // namespace geometry
 } // namespace pbat
