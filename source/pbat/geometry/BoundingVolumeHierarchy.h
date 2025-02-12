@@ -1,5 +1,15 @@
-#ifndef PBAT_GEOMETRY_BOUNDING_VOLUME_HIERARCHY_H
-#define PBAT_GEOMETRY_BOUNDING_VOLUME_HIERARCHY_H
+/**
+ * @file BoundingVolumeHierarchy.h
+ * @author Quoc-Minh Ton-That (tonthat.quocminh@gmail.com)
+ * @brief Bounding volume hierarchy (BVH) implementation for spatial partitioning of primitives.
+ * @date 2025-02-12
+ *
+ * @copyright Copyright (c) 2025
+ *
+ */
+
+#ifndef PBAT_GEOMETRY_BOUNDINGVOLUMEHIERARCHY_H
+#define PBAT_GEOMETRY_BOUNDINGVOLUMEHIERARCHY_H
 
 #include "KdTree.h"
 
@@ -18,18 +28,18 @@ namespace geometry {
  * @brief CRTP base class for BVHs.
  *
  * @tparam TDerived Type of the child class (the concrete BVH implementation)
- * @tparam TPrimitive Type of primitives stored in the BVH
  * @tparam TBoundingVolume Type of bounding volumes used in the BVH tree
+ * @tparam TPrimitive Type of primitives stored in the BVH
  * @tparam Dims Embedding dimensionality
  */
 template <class TDerived, class TBoundingVolume, class TPrimitive, int Dims>
 class BoundingVolumeHierarchy
 {
   public:
-    using DerivedType           = TDerived;
-    using BoundingVolumeType    = TBoundingVolume;
-    using PrimitiveType         = TPrimitive;
-    static auto constexpr kDims = Dims;
+    using DerivedType           = TDerived;        ///< Actual type
+    using BoundingVolumeType    = TBoundingVolume; ///< Type of bounding volumes
+    using PrimitiveType         = TPrimitive;      ///< Type of primitives
+    static auto constexpr kDims = Dims;            ///< Embedding dimensionality
 
     template <class TDerived2, class TBoundingVolume2, class TPrimitive2, int Dims2>
     friend class BoundingVolumeHierarchy;
@@ -37,25 +47,33 @@ class BoundingVolumeHierarchy
     BoundingVolumeHierarchy() = default;
 
     /**
-     * @brief
-     * @param maxPointsInLeaf
+     * @brief Construct the BVH from a set of primitives
+     * @param nPrimitives Number of primitives
+     * @param maxPointsInLeaf Maximum number of primitives in a leaf node
      */
     void Construct(std::size_t nPrimitives, std::size_t maxPointsInLeaf = 10u);
     /**
-     * @brief
-     * @return
+     * @brief Returns the bounding volumes of this BVH
+     * @return Bounding volumes
      */
-    std::vector<BoundingVolumeType> const& BoundingVolumes() const { return mBoundingVolumes; }
+    auto BoundingVolumes() const -> std::vector<BoundingVolumeType> const&
+    {
+        return mBoundingVolumes;
+    }
     /**
      * @brief Returns the indices of the primitives contained in the bounding volume bvIdx
-     * @param bvIdx
-     * @return
+     * @param bvIdx Index of the bounding volume
+     * @return Range of indices of the primitives
      */
     auto PrimitivesInBoundingVolume(Index bvIdx) const;
     /**
-     * @brief
+     * @brief Returns the indices of the primitives intersecting the bounding volume bv
+     * @tparam FIntersectsBoundingVolume Callable with signature `bool pred(BoundingVolume const&)`
+     * @tparam FIntersectsPrimitive Callable with signature `bool pred(Primitive const&)`
+     * primitive `p` is intersected.
      * @param ibv Predicate pred(bv) evaluating to true if the bounding volume bv is intersected.
      * @param ip Predicate pred(p) evaluating to true if the primitive p is intersected.
+     * @param reserve Estimated number of intersecting primitives to reserve in memory
      * @return
      */
     template <class FIntersectsBoundingVolume, class FIntersectsPrimitive>
@@ -65,16 +83,19 @@ class BoundingVolumeHierarchy
         std::size_t reserve = 50ULL) const;
     /**
      * @brief Obtains the k nearest neighbours (primitives of this BVH)
-     * @tparam T
+     * @tparam FDistanceToBoundingVolume Callable with signature `Scalar pred(BoundingVolume
+     * const&)`
+     * @tparam FDistanceToPrimitive Callable with signature `Scalar pred(Primitive const&)`
      * @param db Distance function d(b) between bounding volume b and user-owned shape
      * @param dp Distance function d(p) between primitive p and user-owned shape
      * @param K Number of nearest neighbours to query
-     * @return
+     * @return Pair of vectors containing the indices of the nearest primitives and their
+     * distances
      */
     template <class FDistanceToBoundingVolume, class FDistanceToPrimitive>
-    std::pair<std::vector<Index>, std::vector<Scalar>>
+    auto
     NearestPrimitivesTo(FDistanceToBoundingVolume&& db, FDistanceToPrimitive&& dp, std::size_t K)
-        const;
+        const -> std::pair<std::vector<Index>, std::vector<Scalar>>;
 
     /**
      * @brief Update the bounding volumes of this BVH
@@ -82,14 +103,34 @@ class BoundingVolumeHierarchy
     void Update();
 
     // Static virtual functions (CRTP)
+
+    /**
+     * @brief Returns the primitive at index p
+     * @note This function must be implemented by the derived class
+     * @param p Index of the primitive
+     * @return Primitive at index p
+     */
     PrimitiveType Primitive(Index p) const
     {
         return static_cast<TDerived const*>(this)->Primitive(p);
     }
+    /**
+     * @brief Returns the location of the primitive
+     * @note This function must be implemented by the derived class
+     * @param primitive Primitive
+     * @return Location of the primitive
+     */
     auto PrimitiveLocation(PrimitiveType const& primitive) const
     {
         return static_cast<TDerived const*>(this)->PrimitiveLocation(primitive);
     }
+    /**
+     * @brief Returns the bounding volume of the primitives in the range [first, last)
+     * @note This function must be implemented by the derived class
+     * @tparam RPrimitiveIndices Range of primitive indices
+     * @param primitiveIndexRange Range of primitive indices
+     * @return Bounding volume of the primitives
+     */
     template <class RPrimitiveIndices>
     BoundingVolumeType BoundingVolumeOf(RPrimitiveIndices&& primitiveIndexRange) const
     {
@@ -97,6 +138,28 @@ class BoundingVolumeHierarchy
     }
 
   protected:
+    /**
+     * @brief Returns the indices of the primitives overlapping between this BVH and another BVH
+     * @tparam TDerived2 Type of the other BVH
+     * @tparam TBoundingVolume2 Type of bounding volumes of the other BVH
+     * @tparam TPrimitive2 Type of primitives of the other BVH
+     * @tparam FBoundingVolumesOverlap Callable with signature `bool pred(BoundingVolume const&,
+     * BoundingVolume2 const&)`
+     * @tparam FPrimitivesOverlap Callable with signature `bool pred(Primitive const&, Primitive2
+     * const&)`
+     * @tparam FPrimitivesAreAdjacent Callable with signature `bool pred(Primitive const&,
+     * Primitive2 const&)`
+     * @tparam Dims2 Embedding dimensionality of the other BVH
+     * @param other Other BVH
+     * @param bvo Predicate pred(bv1, bv2) evaluating to true if the bounding volumes bv1 and bv2
+     * overlap
+     * @param po Predicate pred(p1, p2) evaluating to true if the primitives p1 and p2 overlap
+     * @param PrimitivesAreAdjacent Predicate pred(p1, p2) evaluating to true if the primitives p1
+     * and p2 are adjacent
+     * @param reserve Estimated number of overlapping primitives to reserve in memory
+     * @return `2 x |# overlaps|` matrix of overlapping primitive indices
+     *
+     */
     template <
         class TDerived2,
         class TBoundingVolume2,
@@ -113,8 +176,8 @@ class BoundingVolumeHierarchy
             [](PrimitiveType const& p1, TPrimitive2 const& p2) -> bool { return false; },
         std::size_t reserve = 50ULL) const;
 
-    std::vector<BoundingVolumeType> mBoundingVolumes;
-    KdTree<kDims> mKdTree;
+    std::vector<BoundingVolumeType> mBoundingVolumes; ///< Bounding volumes of the BVH
+    KdTree<kDims> mKdTree; ///< K-d tree used to store the primitives and the BVH tree
 };
 
 template <class TDerived, class TBoundingVolume, class TPrimitive, int Dims>
@@ -176,14 +239,14 @@ BoundingVolumeHierarchy<TDerived, TBoundingVolume, TPrimitive, Dims>::Primitives
                     intersectingPrimitives.push_back(idx);
                 }
             }
-            return false; ///< Cannot visit deeper than a leaf node
+            return false; // Cannot visit deeper than a leaf node
         }
         else
         {
             auto const bvIdxStl          = static_cast<std::size_t>(bvIdx);
             BoundingVolumeType const& bv = mBoundingVolumes[bvIdxStl];
-            return ibv(bv); ///< Visit deeper if this bounding volume overlaps with the
-                            ///< queried shape
+            return ibv(bv); // Visit deeper if this bounding volume overlaps with the
+                            // queried shape
         }
     });
 
@@ -192,11 +255,11 @@ BoundingVolumeHierarchy<TDerived, TBoundingVolume, TPrimitive, Dims>::Primitives
 
 template <class TDerived, class TBoundingVolume, class TPrimitive, int Dims>
 template <class FDistanceToBoundingVolume, class FDistanceToPrimitive>
-inline std::pair<std::vector<Index>, std::vector<Scalar>>
+inline auto
 BoundingVolumeHierarchy<TDerived, TBoundingVolume, TPrimitive, Dims>::NearestPrimitivesTo(
     FDistanceToBoundingVolume&& db,
     FDistanceToPrimitive&& dp,
-    std::size_t K) const
+    std::size_t K) const -> std::pair<std::vector<Index>, std::vector<Scalar>>
 {
     std::vector<Index> neighbours{};
     std::vector<Scalar> distances{};
@@ -206,11 +269,11 @@ BoundingVolumeHierarchy<TDerived, TBoundingVolume, TPrimitive, Dims>::NearestPri
     enum class EQueueItem { Volume, Primitive };
     struct QueueItem
     {
-        EQueueItem type; ///< Indicates if this QueueItem holds a primitive or a volume
-        Index idx;       ///< Index of the primitive, if this QueueItem holds a primitive, or index
-                         ///< of the node, if this QueueItem holds a volume (recall that node_idx =
-                         ///< bv_idx + 1)
-        Scalar d;        ///< Distance from this QueueItem to p
+        EQueueItem type; // Indicates if this QueueItem holds a primitive or a volume
+        Index idx;       // Index of the primitive, if this QueueItem holds a primitive, or index
+                         // of the node, if this QueueItem holds a volume (recall that node_idx =
+                         // bv_idx + 1)
+        Scalar d;        // Distance from this QueueItem to p
     };
     auto const MakeVolumeQueueItem = [&](Index bvIdx) {
         auto const bvIdxStl          = static_cast<std::size_t>(bvIdx);
@@ -297,7 +360,7 @@ BoundingVolumeHierarchy<TDerived, TBoundingVolume, TPrimitive, Dims>::Overlappin
 
     using PrimitivePairType = std::pair<Index, Index>;
     std::stack<PrimitivePairType> stack{};
-    stack.push({0, 0}); ///< Root bounding volumes of *this and other
+    stack.push({0, 0}); // Root bounding volumes of *this and other
     while (!stack.empty())
     {
         auto const [n1, n2] = stack.top();
@@ -370,4 +433,4 @@ BoundingVolumeHierarchy<TDerived, TBoundingVolume, TPrimitive, Dims>::Overlappin
 } // namespace geometry
 } // namespace pbat
 
-#endif // PBAT_GEOMETRY_BOUNDING_VOLUME_HIERARCHY_H
+#endif // PBAT_GEOMETRY_BOUNDINGVOLUMEHIERARCHY_H
