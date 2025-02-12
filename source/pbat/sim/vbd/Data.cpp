@@ -26,6 +26,10 @@ Data& Data::WithVolumeMesh(
 {
     this->X = Vin;
     this->E = Ein;
+    if (this->B.size() == 0)
+    {
+        this->B.setOnes(X.cols());
+    }
     return *this;
 }
 

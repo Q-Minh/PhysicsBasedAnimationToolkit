@@ -1,5 +1,169 @@
 #include "TriangleAabbHierarchy.h"
 
+namespace pbat::geometry {
+
+TriangleAabbHierarchy3D::TriangleAabbHierarchy3D(
+    Eigen::Ref<MatrixX const> const& V,
+    Eigen::Ref<IndexMatrixX const> const& C,
+    std::size_t maxPointsInLeaf)
+    : V(V), C(C)
+{
+    PBAT_PROFILE_NAMED_SCOPE("pbat.geometry.TriangleAabbHierarchy3D.Construct");
+    auto constexpr kRowsC = static_cast<int>(PrimitiveType::RowsAtCompileTime);
+    if (V.rows() != kDims and C.rows() != kRowsC)
+    {
+        std::string const what = fmt::format(
+            "Expected vertex positions V of dimensions {}x|#verts| and triangle vertex indices "
+            "C of dimensions {}x|#triangles|, but got V={}x{} and C={}x{}.",
+            kDims,
+            kRowsC,
+            V.rows(),
+            V.cols(),
+            C.rows(),
+            C.cols());
+        throw std::invalid_argument(what);
+    }
+    Construct(static_cast<std::size_t>(C.cols()), maxPointsInLeaf);
+}
+
+TriangleAabbHierarchy3D::PrimitiveType TriangleAabbHierarchy3D::Primitive(Index p) const
+{
+    PrimitiveType const inds = C.col(p);
+    return inds;
+}
+
+Vector<TriangleAabbHierarchy3D::kDims>
+TriangleAabbHierarchy3D::PrimitiveLocation(PrimitiveType const& primitive) const
+{
+    return V(Eigen::placeholders::all, primitive).rowwise().mean();
+}
+
+void TriangleAabbHierarchy3D::Update()
+{
+    PBAT_PROFILE_NAMED_SCOPE("pbat.geometry.TriangleAabbHierarchy3D.Update");
+    BaseType::Update();
+}
+
+IndexMatrixX
+TriangleAabbHierarchy3D::OverlappingPrimitives(SelfType const& bvh, std::size_t reserve) const
+{
+    PBAT_PROFILE_NAMED_SCOPE("pbat.geometry.TriangleAabbHierarchy3D.OverlappingPrimitives");
+    using math::linalg::mini::FromEigen;
+    return this->OverlappingPrimitivesImpl<SelfType, BoundingVolumeType, PrimitiveType, kDims>(
+        bvh,
+        [](BoundingVolumeType const& bv1, BoundingVolumeType const& bv2) -> bool {
+            return OverlapQueries::AxisAlignedBoundingBoxes(
+                FromEigen(bv1.min()),
+                FromEigen(bv1.max()),
+                FromEigen(bv2.min()),
+                FromEigen(bv2.max()));
+        },
+        [&](PrimitiveType const& p1, PrimitiveType const& p2) -> bool {
+            auto const V1 = V(Eigen::placeholders::all, p1);
+            auto const V2 = bvh.V(Eigen::placeholders::all, p2);
+            return OverlapQueries::Triangles3D(
+                FromEigen(V1.col(0).head<kDims>()),
+                FromEigen(V1.col(1).head<kDims>()),
+                FromEigen(V1.col(2).head<kDims>()),
+                FromEigen(V2.col(0).head<kDims>()),
+                FromEigen(V2.col(1).head<kDims>()),
+                FromEigen(V2.col(2).head<kDims>()));
+        },
+        [&](PrimitiveType const& p1, PrimitiveType const& p2) -> bool {
+            if (this == &bvh)
+            {
+                for (auto i : p1)
+                    for (auto j : p2)
+                        if (i == j)
+                            return true;
+            }
+            return false;
+        },
+        reserve);
+}
+
+TriangleAabbHierarchy2D::TriangleAabbHierarchy2D(
+    Eigen::Ref<MatrixX const> const& V,
+    Eigen::Ref<IndexMatrixX const> const& C,
+    std::size_t maxPointsInLeaf)
+    : V(V), C(C)
+{
+    PBAT_PROFILE_NAMED_SCOPE("pbat.geometry.TriangleAabbHierarchy2D.Construct");
+    auto constexpr kRowsC = static_cast<int>(PrimitiveType::RowsAtCompileTime);
+    if (V.rows() != kDims and C.rows() != kRowsC)
+    {
+        std::string const what = fmt::format(
+            "Expected vertex positions V of dimensions {}x|#verts| and triangle vertex indices "
+            "C of dimensions {}x|#triangles|, but got V={}x{} and C={}x{}.",
+            kDims,
+            kRowsC,
+            V.rows(),
+            V.cols(),
+            C.rows(),
+            C.cols());
+        throw std::invalid_argument(what);
+    }
+    Construct(static_cast<std::size_t>(C.cols()), maxPointsInLeaf);
+}
+
+TriangleAabbHierarchy2D::PrimitiveType TriangleAabbHierarchy2D::Primitive(Index p) const
+{
+    PrimitiveType const inds = C.col(p);
+    return inds;
+}
+
+Vector<TriangleAabbHierarchy2D::kDims>
+TriangleAabbHierarchy2D::PrimitiveLocation(PrimitiveType const& primitive) const
+{
+    return V(Eigen::placeholders::all, primitive).rowwise().mean();
+}
+
+void TriangleAabbHierarchy2D::Update()
+{
+    PBAT_PROFILE_NAMED_SCOPE("pbat.geometry.TriangleAabbHierarchy2D.Update");
+    BaseType::Update();
+}
+
+IndexMatrixX
+TriangleAabbHierarchy2D::OverlappingPrimitives(SelfType const& bvh, std::size_t reserve) const
+{
+    PBAT_PROFILE_NAMED_SCOPE("pbat.geometry.TriangleAabbHierarchy2D.OverlappingPrimitives");
+    using math::linalg::mini::FromEigen;
+    return this->OverlappingPrimitivesImpl<SelfType, BoundingVolumeType, PrimitiveType, kDims>(
+        bvh,
+        [](BoundingVolumeType const& bv1, BoundingVolumeType const& bv2) -> bool {
+            return OverlapQueries::AxisAlignedBoundingBoxes(
+                FromEigen(bv1.min()),
+                FromEigen(bv1.max()),
+                FromEigen(bv2.min()),
+                FromEigen(bv2.max()));
+        },
+        [&](PrimitiveType const& p1, PrimitiveType const& p2) -> bool {
+            auto const V1 = V(Eigen::placeholders::all, p1);
+            auto const V2 = bvh.V(Eigen::placeholders::all, p2);
+            return OverlapQueries::Triangles2D(
+                FromEigen(V1.col(0).head<kDims>()),
+                FromEigen(V1.col(1).head<kDims>()),
+                FromEigen(V1.col(2).head<kDims>()),
+                FromEigen(V2.col(0).head<kDims>()),
+                FromEigen(V2.col(1).head<kDims>()),
+                FromEigen(V2.col(2).head<kDims>()));
+        },
+        [&](PrimitiveType const& p1, PrimitiveType const& p2) -> bool {
+            if (this == &bvh)
+            {
+                for (auto i : p1)
+                    for (auto j : p2)
+                        if (i == j)
+                            return true;
+            }
+            return false;
+        },
+        reserve);
+}
+
+} // namespace pbat::geometry
+
 #include "pbat/Aliases.h"
 #include "pbat/math/linalg/mini/Eigen.h"
 
@@ -23,7 +187,7 @@ TEST_CASE("[geometry] TriangleAabbHierarchy")
         // clang-format on
         std::size_t constexpr kMaxPointsInLeaf = 1ULL;
         auto constexpr kDims                   = 2;
-        geometry::TriangleAabbHierarchy<kDims> bvh(V, C, kMaxPointsInLeaf);
+        geometry::TriangleAabbHierarchy2D bvh(V, C, kMaxPointsInLeaf);
         CHECK_EQ(bvh.V.rows(), V.rows());
         CHECK_EQ(bvh.V.cols(), V.cols());
         CHECK_EQ(bvh.C.rows(), C.rows());
@@ -54,7 +218,7 @@ TEST_CASE("[geometry] TriangleAabbHierarchy")
             CHECK_GT(primitiveIdx, Index{-1});
         }
 
-        geometry::TriangleAabbHierarchy<kDims> const otherBvh{bvh};
+        geometry::TriangleAabbHierarchy2D const otherBvh{bvh};
         IndexMatrix<2, Eigen::Dynamic> const overlappingP = bvh.OverlappingPrimitives(otherBvh);
         auto const nPrimitives                            = static_cast<std::size_t>(C.cols());
         std::vector<std::size_t> overlapCounts(nPrimitives, 0ULL);
@@ -73,7 +237,7 @@ TEST_CASE("[geometry] TriangleAabbHierarchy")
         CHECK_EQ(nSelfOverlappingPrimitives, 0);
 
         // If points haven't changed, update should preserve the same volumes.
-        std::vector<geometry::TriangleAabbHierarchy<kDims>::BoundingVolumeType> const bvsExpected =
+        std::vector<geometry::TriangleAabbHierarchy2D::BoundingVolumeType> const bvsExpected =
             bvh.GetBoundingVolumes();
         bvh.Update();
         auto const nBvs = bvh.GetBoundingVolumes().size();
@@ -109,7 +273,7 @@ TEST_CASE("[geometry] TriangleAabbHierarchy")
 
         std::size_t constexpr kMaxPointsInLeaf = 1ULL;
         auto constexpr kDims                   = 3;
-        geometry::TriangleAabbHierarchy<kDims> bvh(V, C, kMaxPointsInLeaf);
+        geometry::TriangleAabbHierarchy3D bvh(V, C, kMaxPointsInLeaf);
         CHECK_EQ(bvh.V.rows(), V.rows());
         CHECK_EQ(bvh.V.cols(), V.cols());
         CHECK_EQ(bvh.C.rows(), C.rows());
@@ -154,7 +318,7 @@ TEST_CASE("[geometry] TriangleAabbHierarchy")
         CHECK_EQ(nSelfOverlappingPrimitives, 0);
 
         // If points haven't changed, update should preserve the same volumes.
-        std::vector<geometry::TriangleAabbHierarchy<kDims>::BoundingVolumeType> const bvsExpected =
+        std::vector<geometry::TriangleAabbHierarchy3D::BoundingVolumeType> const bvsExpected =
             bvh.GetBoundingVolumes();
         bvh.Update();
         auto const nBvs = bvh.GetBoundingVolumes().size();

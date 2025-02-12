@@ -28,7 +28,7 @@ class Integrator
 
   private:
     geometry::TetrahedralAabbHierarchy mTetrahedralBvh;
-    geometry::TriangleAabbHierarchy<3> mTriangleBvh;
+    geometry::TriangleAabbHierarchy3D mTriangleBvh;
     std::vector<Index> mParticlesInContact;
 
     IndexVectorX mTetsInContact;

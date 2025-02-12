@@ -48,8 +48,8 @@ class TetrahedralAabbHierarchy : public BoundingVolumeHierarchy<
     /**
      * @brief Construct a TetrahedralAabbHierarchy from a tetrahedral mesh (V,C)
      * @param V `|kDims|x|# verts|` vertex positions
-     * @param C `4x|# tetrahedra|` cell indices into V
-     * @param maxPointsInLeaf Maximum number of points in a leaf node
+     * @param C `4x|# tetrahedra|` cell vertex indices into V
+     * @param maxPointsInLeaf Maximum number of simplices in a leaf node
      */
     PBAT_API TetrahedralAabbHierarchy(
         Eigen::Ref<MatrixX const> const& V,
