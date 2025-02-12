@@ -196,36 +196,36 @@ struct HyperElasticPotential
     /**
      * @brief Transforms this matrix-free hessian matrix representation into sparse compressed
      * column format.
-     * @return CSCMatrix Sparse compressed column matrix representation of the hessian operator
+     * @return Sparse compressed column matrix representation of the hessian operator
      */
     CSCMatrix ToMatrix() const;
 
     /**
      * @brief Transforms this per quadrature point gradient representation into the global gradient.
-     * @return VectorX Global gradient
+     * @return Global gradient
      */
     VectorX ToVector() const;
 
     /**
      * @brief Computes the total elastic potential
-     * @return Scalar Total elastic potential
+     * @return Total elastic potential
      */
     Scalar Eval() const;
 
     /**
-     * @brief Number of input dimensions
+     * @brief Number of columns
      *
      * Effectively the number of nodes in the system
      *
-     * @return Index
+     * @return Number of columns
      */
     Index InputDimensions() const;
     /**
-     * @brief Number of output dimensions
+     * @brief Number of rows
      *
      * Effectively the number of nodes in the system
      *
-     * @return Index
+     * @return Number of rows
      */
     Index OutputDimensions() const;
     /**

@@ -34,7 +34,7 @@ PBAT_API struct Data
      * @brief
      *
      * @param B
-     * @return Data&
+     * @return 
      */
     Data& WithBodies(Eigen::Ref<IndexVectorX const> const& B);
     /**
@@ -100,14 +100,14 @@ PBAT_API struct Data
      * @param muC
      * @param muF
      * @param epsv
-     * @return Data&
+     * @return 
      */
     Data& WithContactParameters(Scalar muC, Scalar muF, Scalar epsv);
     /**
      * @brief
      *
      * @param activeSetUpdateFrequency
-     * @return Data&
+     * @return 
      */
     Data& WithActiveSetUpdateFrequency(Index activeSetUpdateFrequency);
     /**

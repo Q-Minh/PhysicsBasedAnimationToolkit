@@ -24,26 +24,27 @@ namespace graph {
  * @tparam TDerivedW Eigen dense expression for element-vertex weights
  * @tparam TIndex Type of indices used in element array
  * @tparam TScalar Type of weights
- * @param E |#nodes per element|x|#elements| array of element indices
- * @param w |#nodes per element|x|#elements| array of element-vertex weights
- * @param nNodes Number of nodes in the mesh. If nNodes < 1, the number of nodes is inferred from E.
+ * @param E `|# nodes per element|x|# elements|` array of element indices
+ * @param w `|# nodes per element|x|# elements|` array of element-vertex weights
+ * @param nNodes Number of nodes in the mesh. If `nNodes < 1`, the number of nodes is inferred from
+ * E.
  * @param bVertexToElement If true, the adjacency matrix maps vertices to elements, rather than
  * elements to vertices
  * @param bHasDuplicates If true, duplicate entries in the input mesh will be handled
- * @return Eigen::SparseMatrix<TScalar, Eigen::ColMajor, TIndex> Adjacency matrix of requested mesh
- * connectivity
+ * @return Adjacency matrix of requested mesh connectivity
+ * @pre `E.rows() == w.rows()` and `E.cols() == w.cols()`
  */
 template <
     class TDerivedE,
     class TDerivedW,
     std::integral TIndex = typename TDerivedE::Scalar,
     class TScalar        = typename TDerivedW::Scalar>
-Eigen::SparseMatrix<TScalar, Eigen::ColMajor, TIndex> MeshAdjacencyMatrix(
+auto MeshAdjacencyMatrix(
     Eigen::DenseBase<TDerivedE> const& E,
     Eigen::DenseBase<TDerivedW> const& w,
     TIndex nNodes         = TIndex(-1),
     bool bVertexToElement = false,
-    bool bHasDuplicates   = false)
+    bool bHasDuplicates   = false) -> Eigen::SparseMatrix<TScalar, Eigen::ColMajor, TIndex>
 {
     if (nNodes < 0)
         nNodes = E.maxCoeff() + TIndex(1);
@@ -78,19 +79,19 @@ Eigen::SparseMatrix<TScalar, Eigen::ColMajor, TIndex> MeshAdjacencyMatrix(
  *
  * @tparam TDerivedE Eigen dense expression for mesh elements
  * @tparam TIndex Type of indices used in element array
- * @param E |#nodes per element|x|#elements| array of element indices
- * @param nNodes Number of nodes in the mesh. If nNodes < 1, the number of nodes is inferred from E.
+ * @param E `|# nodes per element|x|# elements|` array of element indices
+ * @param nNodes Number of nodes in the mesh. If `nNodes < 1`, the number of nodes is inferred from
+ * E.
  * @param bVertexToElement If true, the adjacency matrix maps vertices to elements, rather than
  * @param bHasDuplicates If true, duplicate entries in the input mesh will be handled
- * @return Eigen::SparseMatrix<TIndex, Eigen::ColMajor, TIndex> Adjacency matrix of requested mesh
- * connectivity
+ * @return Adjacency matrix of requested mesh connectivity
  */
 template <class TDerivedE, std::integral TIndex = typename TDerivedE::Scalar>
-Eigen::SparseMatrix<TIndex, Eigen::ColMajor, TIndex> MeshAdjacencyMatrix(
+auto MeshAdjacencyMatrix(
     Eigen::DenseBase<TDerivedE> const& E,
     TIndex nNodes         = TIndex(-1),
     bool bVertexToElement = false,
-    bool bHasDuplicates   = false)
+    bool bHasDuplicates   = false) -> Eigen::SparseMatrix<TIndex, Eigen::ColMajor, TIndex>
 {
     using WeightMatrixType = Eigen::Matrix<TIndex, Eigen::Dynamic, Eigen::Dynamic>;
     return MeshAdjacencyMatrix(
@@ -106,14 +107,14 @@ Eigen::SparseMatrix<TIndex, Eigen::ColMajor, TIndex> MeshAdjacencyMatrix(
  *
  * @tparam TDerivedE Eigen dense expression for mesh elements
  * @tparam TIndex Type of indices used in element array
- * @param E |#nodes per element|x|#elements| array of element indices
- * @param nNodes Number of nodes in the mesh. If nNodes < 1, the number of nodes is inferred from E.
- * @return Eigen::SparseMatrix<TIndex, Eigen::ColMajor, TIndex> Primal graph of the input mesh
-
+ * @param E `|# nodes per element|x|# elements|` array of element indices
+ * @param nNodes Number of nodes in the mesh. If `nNodes < 1`, the number of nodes is inferred from
+ * E.
+ * @return Primal graph of the input mesh
  */
 template <class TDerivedE, std::integral TIndex = typename TDerivedE::Scalar>
-Eigen::SparseMatrix<TIndex, Eigen::ColMajor, TIndex>
-MeshPrimalGraph(Eigen::DenseBase<TDerivedE> const& E, TIndex nNodes = TIndex(-1))
+auto MeshPrimalGraph(Eigen::DenseBase<TDerivedE> const& E, TIndex nNodes = TIndex(-1))
+    -> Eigen::SparseMatrix<TIndex, Eigen::ColMajor, TIndex>
 {
     auto const G = MeshAdjacencyMatrix(E, nNodes);
     return G * G.transpose();
@@ -134,16 +135,18 @@ enum class EMeshDualGraphOptions : std::int32_t {
  *
  * @tparam TDerivedE Eigen dense expression for mesh elements
  * @tparam TIndex Type of indices used in element array
- * @param E |#nodes per element|x|#elements| array of element indices
- * @param nNodes Number of nodes in the mesh. If nNodes < 1, the number of nodes is inferred from E.
+ * @param E `|# nodes per element|x|# elements|` array of element indices
+ * @param nNodes Number of nodes in the mesh. If `nNodes < 1`, the number of nodes is inferred from
+ * E.
  * @param opts Adjacency types to keep in the dual graph
- * @return Eigen::SparseMatrix<TIndex, Eigen::ColMajor, TIndex> Dual graph of the input mesh
+ * @return Dual graph of the input mesh
  */
 template <class TDerivedE, std::integral TIndex = typename TDerivedE::Scalar>
-Eigen::SparseMatrix<TIndex, Eigen::ColMajor, TIndex> MeshDualGraph(
+auto MeshDualGraph(
     Eigen::DenseBase<TDerivedE> const& E,
     TIndex nNodes              = TIndex(-1),
     EMeshDualGraphOptions opts = EMeshDualGraphOptions::All)
+    -> Eigen::SparseMatrix<TIndex, Eigen::ColMajor, TIndex>
 {
     auto const G           = MeshAdjacencyMatrix(E, nNodes);
     using SparseMatrixType = Eigen::SparseMatrix<TIndex, Eigen::ColMajor, TIndex>;

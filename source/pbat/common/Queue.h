@@ -31,8 +31,8 @@ class Queue
     PBAT_HOST_DEVICE Queue() : queue{}, begin{0}, end{0}, n{0} {}
     /**
      * @brief Add element to the queue
-     *
      * @param value Element to add
+     * @pre The queue is not full
      */
     PBAT_HOST_DEVICE void Push(T value)
     {
@@ -42,12 +42,13 @@ class Queue
     }
     /**
      * @brief Get the next element in the queue
-     *
-     * @return const& T Next element in the queue
+     * @return Next element in the queue
+     * @pre The queue is not empty
      */
     PBAT_HOST_DEVICE T const& Top() const { return queue[begin]; }
     /**
      * @brief Remove the next element in the queue
+     * @pre The queue is not empty
      */
     PBAT_HOST_DEVICE void Pop()
     {
@@ -57,19 +58,19 @@ class Queue
     /**
      * @brief Check if the queue is full
      *
-     * @return bool True if the queue is full
+     * @return True if the queue is full
      */
     PBAT_HOST_DEVICE bool IsFull() const { return n == Capacity(); }
     /**
      * @brief Check if the queue is empty
      *
-     * @return bool True if the queue is empty
+     * @return True if the queue is empty
      */
     PBAT_HOST_DEVICE bool IsEmpty() const { return n == 0; }
     /**
      * @brief Get the number of elements in the queue
      *
-     * @return auto Number of elements in the queue
+     * @return Number of elements in the queue
      */
     PBAT_HOST_DEVICE auto Size() const { return n; }
     /**
@@ -79,7 +80,7 @@ class Queue
     /**
      * @brief Get the maximum number of elements in the queue
      *
-     * @return constexpr auto Maximum number of elements in the queue
+     * @return Maximum number of elements in the queue
      */
     PBAT_HOST_DEVICE constexpr auto Capacity() const { return kCapacity; }
 

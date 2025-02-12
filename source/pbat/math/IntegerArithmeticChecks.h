@@ -115,19 +115,19 @@ struct OverflowChecked
     /**
      * @brief Dereference operator
      *
-     * @return Integer& Underlying integer value
+     * @return Underlying integer value
      */
     Integer& operator*() { return value; }
     /**
      * @brief Const dereference operator
      *
-     * @return Integer const& Underlying integer value
+     * @return Underlying integer value
      */
     Integer const& operator*() const { return value; }
     /**
      * @brief Negation operator
      *
-     * @return SelfType Negated value
+     * @return Negated value
      */
     SelfType operator-() const
     {
@@ -139,7 +139,7 @@ struct OverflowChecked
      * @brief Addition operator
      *
      * @param rhs Right-hand side operand
-     * @return SelfType Sum of the two operands
+     * @return Sum of the two operands
      */
     SelfType operator+(SelfType rhs) const
     {
@@ -151,7 +151,7 @@ struct OverflowChecked
      * @brief Multiplication operator
      *
      * @param rhs Right-hand side operand
-     * @return SelfType Product of the two operands
+     * @return Product of the two operands
      */
     SelfType operator*(SelfType rhs) const
     {
@@ -163,26 +163,26 @@ struct OverflowChecked
      * @brief Subtraction operator
      *
      * @param rhs Right-hand side operand
-     * @return SelfType Difference of the two operands
+     * @return Difference of the two operands
      */
     SelfType operator-(SelfType rhs) const { return (*this) + -rhs; }
     /**
      * @brief Division operator
      *
      * @param rhs Right-hand side operand
-     * @return SelfType Quotient of the two operands
+     * @return Quotient of the two operands
      */
     SelfType operator/(SelfType rhs) const { return SelfType{value / rhs.value}; }
     /**
      * @brief Division operator
      *
      * @param rhs Right-hand side operand
-     * @return SelfType& Quotient of the two operands
+     * @return Quotient of the two operands
      */
     template <std::integral OtherInteger>
-    SelfType operator/(OtherInteger value) const
+    SelfType operator/(OtherInteger rhs) const
     {
-        return SelfType{this->value / value};
+        return SelfType{this->value / rhs};
     }
     /**
      * @brief Cast operator to underlying type

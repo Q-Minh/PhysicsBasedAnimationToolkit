@@ -28,7 +28,7 @@ namespace common {
  * @tparam R Integer range type
  * @tparam TIndex Type of the integers
  * @param sizes Range of integers
- * @return Eigen::Vector<TIndex, Eigen::Dynamic> Cumulative sum of the range
+ * @return Cumulative sum of the range
  */
 template <CIndexRange R, std::integral TIndex = std::ranges::range_value_t<R>>
 auto CumSum(R&& sizes) -> Eigen::Vector<TIndex, Eigen::Dynamic>
@@ -51,7 +51,7 @@ auto CumSum(R&& sizes) -> Eigen::Vector<TIndex, Eigen::Dynamic>
  * @param begin Range begin
  * @param end Range end (exclusive)
  * @param ncounts Upper bound on values in range
- * @return Eigen::Vector<TIndex, Eigen::Dynamic> Counts of each integer in the range
+ * @return Counts of each integer in the range
  */
 template <std::integral TIndex>
 auto Counts(auto begin, auto end, TIndex ncounts) -> Eigen::Vector<TIndex, Eigen::Dynamic>
@@ -70,7 +70,7 @@ auto Counts(auto begin, auto end, TIndex ncounts) -> Eigen::Vector<TIndex, Eigen
  * @tparam TIndex Integer type of the range
  * @param begin Start of the range (inclusive)
  * @param end End of the range (exclusive)
- * @return Eigen::Vector<TIndex, Eigen::Dynamic> Shuffled range of integers
+ * @return Shuffled range of integers
  */
 template <std::integral TIndex>
 auto Shuffle(TIndex begin, TIndex end) -> Eigen::Vector<TIndex, Eigen::Dynamic>
@@ -94,7 +94,7 @@ auto Shuffle(TIndex begin, TIndex end) -> Eigen::Vector<TIndex, Eigen::Dynamic>
  * @param begin Start of the range (inclusive)
  * @param end End of the range (exclusive)
  * @param f Predicate function to filter the range
- * @return Eigen::Vector<TIndex, Eigen::Dynamic> Filtered range of integers
+ * @return Filtered range of integers
  */
 template <
     std::integral TIndexB,
@@ -122,7 +122,7 @@ auto Filter(TIndexB begin, TIndexE end, Func&& f) -> Eigen::Vector<TIndex, Eigen
  * @tparam TIndex Integer type of the repetition vector
  * @param x Values to repeat
  * @param r Repetition vector
- * @return Eigen::Vector<TScalar, Eigen::Dynamic> Vector with repeated elements
+ * @return Vector with repeated elements
  */
 template <
     class TDerivedX,

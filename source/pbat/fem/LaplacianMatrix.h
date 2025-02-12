@@ -96,20 +96,20 @@ struct SymmetricLaplacianMatrix
 
     /**
      * @brief Transforms this matrix-free matrix representation into sparse compressed format.
-     * @return CSCMatrix Sparse compressed column matrix representation of this Laplacian matrix
+     * @return Sparse compressed column matrix representation of this Laplacian matrix
      */
     CSCMatrix ToMatrix() const;
 
     /**
-     * @brief Number of input dimensions
+     * @brief Number of columns
      *
-     * @return Index
+     * @return Number of columns
      */
     Index InputDimensions() const { return dims * mesh.X.cols(); }
     /**
-     * @brief Number of output dimensions
+     * @brief Number of rows
      *
-     * @return Index
+     * @return Number of rows
      */
     Index OutputDimensions() const { return InputDimensions(); }
 

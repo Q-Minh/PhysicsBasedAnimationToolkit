@@ -39,7 +39,7 @@ PBAT_API struct Data
      * @param SGadj
      * @param Cptr
      * @param Cadj
-     * @return Data&
+     * @return 
      */
     Data& WithClusterPartitions(
         std::vector<Index> const& SGptr,

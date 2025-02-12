@@ -58,30 +58,30 @@ struct PBAT_API Rational
     /**
      * @brief Addition operation
      * @param other Right-hand side operand
-     * @return Rational Result of addition
+     * @return Result of addition
      */
     Rational operator+(Rational const& other) const;
     /**
      * @brief Subtraction operation
      * @param other Right-hand side operand
-     * @return Rational Result of subtraction
+     * @return Result of subtraction
      */
     Rational operator-(Rational const& other) const;
     /**
      * @brief Negation operation
-     * @return Rational Result of negation
+     * @return Result of negation
      */
     Rational operator-() const;
     /**
      * @brief Multiplication operation
      * @param other Right-hand side operand
-     * @return Rational Result of multiplication
+     * @return Result of multiplication
      */
     Rational operator*(Rational const& other) const;
     /**
      * @brief Division operation
      * @param other Right-hand side operand
-     * @return Rational Result of division
+     * @return Result of division
      */
     Rational operator/(Rational const& other) const;
     /**
@@ -106,7 +106,7 @@ struct PBAT_API Rational
     /**
      * @brief Cast to Scalar
      *
-     * @return Scalar
+     * @return 
      */
     explicit operator Scalar() const;
     /**
@@ -124,7 +124,7 @@ struct PBAT_API Rational
  * @tparam Integer Integral type
  * @param a Left operand
  * @param b Right operand
- * @return Rational Result of subtraction
+ * @return Result of subtraction
  */
 template <std::integral Integer>
 inline Rational operator-(Integer a, Rational const& b)
@@ -138,7 +138,7 @@ inline Rational operator-(Integer a, Rational const& b)
  * @tparam Integer Integral type
  * @param a Left operand
  * @param b Right operand
- * @return Rational Result of addition
+ * @return Result of addition
  */
 template <std::integral Integer>
 inline Rational operator+(Integer a, Rational const& b)
@@ -152,7 +152,7 @@ inline Rational operator+(Integer a, Rational const& b)
  * @tparam Integer Integral type
  * @param a Left operand
  * @param b Right operand
- * @return Rational Result of multiplication
+ * @return Result of multiplication
  */
 template <std::integral Integer>
 inline Rational operator*(Integer a, Rational const& b)
@@ -166,7 +166,7 @@ inline Rational operator*(Integer a, Rational const& b)
  * @tparam Integer Integral type
  * @param a Left operand
  * @param b Right operand
- * @return Rational Result of division
+ * @return Result of division
  */
 template <std::integral Integer>
 inline Rational operator/(Integer a, Rational const& b)

@@ -80,7 +80,7 @@ struct PartitioningOptions
  * @param wadj Edge weights of adjacency list
  * @param nPartitions Number of desired partitions
  * @param opts Partitioning options
- * @return IndexVectorX |# vertices| array p of partition indices (i.e. p[i] = partition of vertex i)
+ * @return `|# vertices|` array p of partition indices (i.e. p[i] = partition of vertex i)
  */
 IndexVectorX Partition(
     Eigen::Ref<IndexVectorX const> const& ptr,

@@ -60,7 +60,7 @@ struct MonomialBasis : detail::MonomialBasis<Dims, Order>
      * @brief
      *
      * @param X
-     * @return Vector<kSize>
+     * @return 
      */
     [[maybe_unused]] Vector<kSize> eval([[maybe_unused]] Vector<kDims> const& X) const
     {
@@ -70,7 +70,7 @@ struct MonomialBasis : detail::MonomialBasis<Dims, Order>
      * @brief
      *
      * @param X
-     * @return Matrix<kDims, kSize>
+     * @return 
      */
     [[maybe_unused]] Matrix<kDims, kSize> derivatives([[maybe_unused]] Vector<kDims> const& X) const
     {
@@ -80,7 +80,7 @@ struct MonomialBasis : detail::MonomialBasis<Dims, Order>
      * @brief
      *
      * @param X
-     * @return Matrix<kSize, kDims>
+     * @return 
      */
     [[maybe_unused]] Matrix<kSize, kDims>
     antiderivatives([[maybe_unused]] Vector<kDims> const& X) const
@@ -135,7 +135,7 @@ struct OrthonormalPolynomialBasis : detail::OrthonormalPolynomialBasis<Dims, Ord
      * @brief
      *
      * @param X
-     * @return Vector<kSize>
+     * @return 
      */
     [[maybe_unused]] Vector<kSize> eval([[maybe_unused]] Vector<kDims> const& X) const
     {
@@ -145,7 +145,7 @@ struct OrthonormalPolynomialBasis : detail::OrthonormalPolynomialBasis<Dims, Ord
      * @brief
      *
      * @param X
-     * @return Matrix<kDims, kSize>
+     * @return 
      */
     [[maybe_unused]] Matrix<kDims, kSize> derivatives([[maybe_unused]] Vector<kDims> const& X) const
     {
@@ -155,7 +155,7 @@ struct OrthonormalPolynomialBasis : detail::OrthonormalPolynomialBasis<Dims, Ord
      * @brief
      *
      * @param X
-     * @return Matrix<kSize, kDims>
+     * @return 
      */
     [[maybe_unused]] Matrix<kSize, kDims>
     antiderivatives([[maybe_unused]] Vector<kDims> const& X) const
@@ -200,7 +200,7 @@ struct DivergenceFreePolynomialBasis : detail::DivergenceFreePolynomialBasis<Dim
      * @brief
      *
      * @param X
-     * @return Matrix<kSize, kDims>
+     * @return 
      */
     [[maybe_unused]] Matrix<kSize, kDims> eval([[maybe_unused]] Vector<kDims> const& X) const
     {

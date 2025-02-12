@@ -3,9 +3,9 @@
  * @author Quoc-Minh Ton-That (tonthat.quocminh@gmail.com)
  * @brief Linear operator concept and composite type
  * @date 2025-02-11
- * 
+ *
  * @copyright Copyright (c) 2025
- * 
+ *
  */
 
 #ifndef PBAT_MATH_LINEAR_OPERATOR_H
@@ -133,20 +133,18 @@ class LinearOperator : public Eigen::EigenBase<LinearOperator<TLinearOperators..
 
     /**
      * @brief Construct the matrix of all underlying matrices obtained by Lops.
-     * @return CSCMatrix The compressed sparse column matrix representation of the linear operator.
+     * @return The compressed sparse column matrix representation of the linear operator.
      */
     CSCMatrix ToMatrix() const;
 
     /**
      * @brief Number of rows
-     *
-     * @return pbat::Index
+     * @return Number of rows
      */
     pbat::Index OutputDimensions() const;
     /**
      * @brief Number of columns
-     *
-     * @return pbat::Index
+     * @return Number of columns
      */
     pbat::Index InputDimensions() const;
 
@@ -154,14 +152,12 @@ class LinearOperator : public Eigen::EigenBase<LinearOperator<TLinearOperators..
 
     /**
      * @brief Number of rows (Eigen compatibility)
-     *
-     * @return BaseType::Index
+     * @return Number of rows
      */
     BaseType::Index rows() const { return static_cast<BaseType::Index>(OutputDimensions()); }
     /**
      * @brief Number of columns (Eigen compatibility)
-     *
-     * @return BaseType::Index
+     * @return Number of columns
      */
     BaseType::Index cols() const { return static_cast<BaseType::Index>(InputDimensions()); }
 
@@ -170,8 +166,7 @@ class LinearOperator : public Eigen::EigenBase<LinearOperator<TLinearOperators..
      *
      * @tparam Rhs Right-hand side matrix or vector expression
      * @param x Right-hand side matrix or vector
-     * @return Eigen::Product<SelfType, Rhs, Eigen::AliasFreeProduct> Eigen expression of the
-     * product of this linear operator and x.
+     * @return Eigen expression of the product of this linear operator and x.
      */
     template <class Rhs>
     Eigen::Product<SelfType, Rhs, Eigen::AliasFreeProduct>
@@ -191,7 +186,7 @@ class LinearOperator : public Eigen::EigenBase<LinearOperator<TLinearOperators..
  *
  * @tparam TLinearOperators Linear operator parameter types
  * @param inOps Linear operators to be composed
- * @return LinearOperator<TLinearOperators...> Composed linear operator
+ * @return Composed linear operator
  */
 template <CLinearOperator... TLinearOperators>
 LinearOperator<TLinearOperators...> ComposeLinearOperators(TLinearOperators const&... inOps)

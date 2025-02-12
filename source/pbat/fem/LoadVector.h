@@ -68,7 +68,7 @@ struct LoadVector
 
     /**
      * @brief Transforms this element-wise load vector representation into a global load vector.
-     * @return VectorX Global load vector
+     * @return Global load vector
      */
     VectorX ToVector() const;
 

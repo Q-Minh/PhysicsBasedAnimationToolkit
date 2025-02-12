@@ -49,7 +49,7 @@ namespace fem {
  * \f]
  *
  * where \f$ g \f$ is the number of evaluation points.
- * 
+ *
  * @note Link to my higher-level FEM crash course doc.
  *
  * @tparam TMesh
@@ -93,20 +93,18 @@ struct Gradient
 
     /**
      * @brief Transforms this matrix-free Gradient operator into sparse compressed format.
-     * @return CSCMatrix Sparse compressed column matrix representation of the Gradient operator
+     * @return Sparse compressed column matrix representation of the Gradient operator
      */
     CSCMatrix ToMatrix() const;
 
     /**
-     * @brief
-     *
-     * @return Index
+     * @brief Returns the number columns
+     * @return Number of columns
      */
     Index InputDimensions() const { return mesh.X.cols(); }
     /**
-     * @brief
-     *
-     * @return Index
+     * @brief Returns the number of rows
+     * @return Number of rows
      */
     Index OutputDimensions() const { return kDims * eg.size(); }
 
@@ -118,8 +116,8 @@ struct Gradient
     MeshType const& mesh; ///< The finite element mesh
 
     Eigen::Ref<IndexVectorX const>
-        eg; ///< |# quad.pts.|x1 array of element indices corresponding to quadrature points
-    Eigen::Ref<MatrixX const> GNeg; ///< |# element nodes|x|# dims * # quad.pts. * # elements|
+        eg; ///< `|# quad.pts.|x1` array of element indices corresponding to quadrature points
+    Eigen::Ref<MatrixX const> GNeg; ///< `|# element nodes|x|# dims * # quad.pts. * # elements|`
                                     ///< matrix of element shape function gradients at quadrature
                                     ///< points. See ShapeFunctionGradients().
 };

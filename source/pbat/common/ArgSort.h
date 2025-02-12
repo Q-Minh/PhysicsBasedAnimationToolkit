@@ -26,7 +26,7 @@ namespace common {
  * @tparam FLess Callable with signature `bool(TIndex, TIndex)`
  * @param n Number of elements
  * @param less Less-than comparison function object
- * @return Eigen::Vector<TIndex, Eigen::Dynamic>
+ * @return `|n|` array of indices that would sort the input array
  */
 template <std::integral TIndex, class FLess>
 auto ArgSort(TIndex n, FLess less) -> Eigen::Vector<TIndex, Eigen::Dynamic>

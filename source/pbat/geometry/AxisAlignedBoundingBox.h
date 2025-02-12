@@ -53,13 +53,13 @@ class AxisAlignedBoundingBox : public Eigen::AlignedBox<Scalar, Dims>
     /**
      * @brief Copy assign AxisAlignedBoundingBox from Eigen::AlignedBox
      * @param box Eigen::AlignedBox
-     * @return AxisAlignedBoundingBox& Reference to this
+     * @return Reference to this
      */
     AxisAlignedBoundingBox& operator=(BaseType const& box);
     /**
      * @brief Move assign AxisAlignedBoundingBox from Eigen::AlignedBox
      * @param box Eigen::AlignedBox
-     * @return AxisAlignedBoundingBox& Reference to this
+     * @return Reference to this
      */
     AxisAlignedBoundingBox& operator=(BaseType&& box);
     /**
@@ -86,7 +86,7 @@ class AxisAlignedBoundingBox : public Eigen::AlignedBox<Scalar, Dims>
      * @brief Get indices of points in P contained in the bounding box
      * @tparam TDerived Eigen dense expression type
      * @param P Points
-     * @return std::vector<Index> Indices of points in P contained in the bounding box
+     * @return Indices of points in P contained in the bounding box
      */
     template <class TDerived>
     std::vector<Index> contained(Eigen::MatrixBase<TDerived> const& P) const;

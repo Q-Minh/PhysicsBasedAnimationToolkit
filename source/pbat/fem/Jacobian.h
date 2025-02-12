@@ -35,7 +35,7 @@ namespace fem {
  * @tparam TDerived Eigen matrix expression for map coefficients
  * @param X Reference space coordinates \f$ \xi \f$
  * @param x Map coefficients \f$ \mathbf{x} \f$
- * @return Matrix<TDerived::RowsAtCompileTime, TElement::kDims>
+ * @return \f$ \nabla_\xi x \f$
  */
 template <CElement TElement, class TDerived>
 [[maybe_unused]] auto
@@ -56,7 +56,7 @@ Jacobian(Vector<TElement::kDims> const& X, Eigen::MatrixBase<TDerived> const& x)
  *
  * @tparam TDerived Eigen matrix expression
  * @param J Jacobian matrix
- * @return Scalar Determinant of the Jacobian matrix
+ * @return Determinant of the Jacobian matrix
  */
 template <class TDerived>
 [[maybe_unused]] Scalar DeterminantOfJacobian(Eigen::MatrixBase<TDerived> const& J)
@@ -130,7 +130,7 @@ MatrixX DeterminantOfJacobian(TMesh const& mesh)
  * @tparam QuadratureOrder Quadrature order
  * @tparam TMesh Mesh type
  * @param mesh FEM mesh
- * @return MatrixX |# quad.pts.|x|# elements| matrix of quadrature weights multiplied by jacobian
+ * @return `|# quad.pts.|x|# elements|` matrix of quadrature weights multiplied by jacobian
  * determinants at element quadrature points
  */
 template <int QuadratureOrder, CMesh TMesh>
@@ -153,7 +153,7 @@ MatrixX InnerProductWeights(TMesh const& mesh)
  * @tparam TDerivedDetJe Eigen matrix expression for jacobian determinants at quadrature points
  * @param mesh FEM mesh
  * @param detJe Matrix of jacobian determinants at element quadrature points
- * @return |# quad.pts.|x|# elements| matrix of quadrature weights multiplied by jacobian
+ * @return `|# quad.pts.|x|# elements|` matrix of quadrature weights multiplied by jacobian
  * determinants at element quadrature points
  */
 template <int QuadratureOrder, CMesh TMesh, class TDerivedDetJe>
@@ -202,7 +202,7 @@ MatrixX InnerProductWeights(TMesh const& mesh, Eigen::MatrixBase<TDerivedDetJe> 
  * @param x Domain positions \f$ x \f$
  * @param maxIterations Maximum number of Gauss-Newton iterations
  * @param eps Convergence tolerance
- * @return Vector<TElement::kDims> Reference position \f$ \xi \f$
+ * @return Reference position \f$ \xi \f$
  */
 template <CElement TElement, class TDerivedX, class TDerivedx>
 Vector<TElement::kDims> ReferencePosition(
@@ -265,9 +265,9 @@ Vector<TElement::kDims> ReferencePosition(
  * @param X Domain positions
  * @param maxIterations Maximum number of Gauss-Newton iterations
  * @param eps Convergence tolerance
- * @return |# element dims| x n matrix of reference positions associated with domain points
+ * @return `|# element dims| x n` matrix of reference positions associated with domain points
  * X in corresponding elements E
- * @pre E.size() == X.cols()
+ * @pre `E.size() == X.cols()`
  */
 template <CMesh TMesh, class TDerivedE, class TDerivedX>
 MatrixX ReferencePositions(

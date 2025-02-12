@@ -135,7 +135,7 @@ struct {energy_name}<{d}>
          * @param F Deformation gradient
          * @param mu First Lame coefficient
          * @param lambda Second Lame coefficient
-         * @return ScalarType Energy
+         * @return Energy
          */
         template <math::linalg::mini::CReadableVectorizedMatrix TMatrix>
         PBAT_HOST_DEVICE
@@ -152,7 +152,7 @@ struct {energy_name}<{d}>
          * @param F Deformation gradient
          * @param mu First Lame coefficient
          * @param lambda Second Lame coefficient
-         * @return ScalarType Energy gradient
+         * @return Energy gradient
          */
         template <math::linalg::mini::CReadableVectorizedMatrix TMatrix>
         PBAT_HOST_DEVICE
@@ -169,7 +169,7 @@ struct {energy_name}<{d}>
          * @param F Deformation gradient
          * @param mu First Lame coefficient
          * @param lambda Second Lame coefficient
-         * @return ScalarType Energy hessian
+         * @return Energy hessian
          */
         template <math::linalg::mini::CReadableVectorizedMatrix TMatrix>
         PBAT_HOST_DEVICE
@@ -187,7 +187,7 @@ struct {energy_name}<{d}>
          * @param mu First Lame coefficient
          * @param lambda Second Lame coefficient
          * @param gF Gradient w.r.t. F
-         * @return ScalarType Energy and its gradient
+         * @return Energy and its gradient
          */
         template <
             math::linalg::mini::CReadableVectorizedMatrix TMatrix, 
@@ -210,7 +210,7 @@ struct {energy_name}<{d}>
          * @param lambda Second Lame coefficient
          * @param gF Gradient w.r.t. F
          * @param HF Hessian w.r.t. F
-         * @return ScalarType Energy and its gradient and hessian
+         * @return Energy and its gradient and hessian
          */
         template <
             math::linalg::mini::CReadableVectorizedMatrix TMatrix,

@@ -27,7 +27,7 @@ namespace physics {
  *
  * @param Y Young's modulus
  * @param nu Poisson's ratio
- * @return std::pair<Scalar, Scalar> Lame coefficients (mu, lambda)
+ * @return Lame coefficients (mu, lambda)
  */
 PBAT_API std::pair<Scalar, Scalar> LameCoefficients(Scalar Y, Scalar nu);
 
@@ -38,7 +38,7 @@ PBAT_API std::pair<Scalar, Scalar> LameCoefficients(Scalar Y, Scalar nu);
  * @tparam TDerivednu Eigen dense expression of vector of Poisson's ratios
  * @param Y Vector of Young's moduli
  * @param nu Vector of Poisson's ratios
- * @return std::pair<VectorX, VectorX> Lame coefficients (mu, lambda)
+ * @return Lame coefficients (mu, lambda)
  */
 template <class TDerivedY, class TDerivednu>
 std::pair<VectorX, VectorX>

@@ -38,19 +38,19 @@ class Stack
     /**
      * @brief Remove the top element from the stack
      *
-     * @return T Top element of the stack
+     * @return Top element of the stack
      */
     PBAT_HOST_DEVICE T Pop() { return stack[--size]; }
     /**
      * @brief Get the top element of the stack
      *
-     * @return const& T Top element of the stack
+     * @return Top element of the stack
      */
     PBAT_HOST_DEVICE T const& Top() const { return stack[size - 1]; }
     /**
      * @brief Get the number of elements in the stack
      *
-     * @return auto Number of elements in the stack
+     * @return Number of elements in the stack
      */
     PBAT_HOST_DEVICE auto Size() const { return size; }
     /**
@@ -73,30 +73,30 @@ class Stack
      * @brief Access element at index i
      *
      * @note No bounds checking
-     * @pre i < size and i >= 0
+     * @pre `i < size` and `i >= 0`
      * @param i Index of the element
-     * @return T& Reference to the element at index i
+     * @return Reference to the element at index i
      */
     PBAT_HOST_DEVICE T& operator[](auto i) { return stack[i]; }
     /**
      * @brief Read-only access element at index i
      *
      * @note No bounds checking
-     * @pre i < size and i >= 0
+     * @pre `i < size` and `i >= 0`
      * @param i Index of the element
-     * @return const& T Reference to the element at index i
+     * @return Reference to the element at index i
      */
     PBAT_HOST_DEVICE T const& operator[](auto i) const { return stack[i]; }
     /**
      * @brief Pointer to the beginning of the stack
      *
-     * @return T* Pointer to the beginning of the stack
+     * @return Pointer to the beginning of the stack
      */
     PBAT_HOST_DEVICE T* begin() { return stack; }
     /**
      * @brief Pointer to the end of the stack
      *
-     * @return T* Pointer to the end of the stack
+     * @return Pointer to the end of the stack
      */
     PBAT_HOST_DEVICE T* end() { return stack + size; }
 

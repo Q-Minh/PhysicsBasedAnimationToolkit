@@ -8,8 +8,8 @@
  *
  */
 
-#ifndef PBAT_MATH_MOMENT_FITTING_H
-#define PBAT_MATH_MOMENT_FITTING_H
+#ifndef PBAT_MATH_MOMENTFITTING_H
+#define PBAT_MATH_MOMENTFITTING_H
 
 #include "Concepts.h"
 #include "PolynomialBasis.h"
@@ -54,7 +54,7 @@ struct DynamicQuadrature
  * @tparam TQuad Quadrature rule type
  * @param Pb Polynomial basis
  * @param Q Quadrature rule
- * @return Matrix<TBasis::kSize, TQuad::kPoints> Moment fitting matrix
+ * @return Moment fitting matrix
  */
 template <CPolynomialBasis TBasis, CFixedPointPolynomialQuadratureRule TQuad>
 Matrix<TBasis::kSize, TQuad::kPoints> ReferenceMomentFittingMatrix(TBasis const& Pb, TQuad const& Q)
@@ -78,7 +78,7 @@ Matrix<TBasis::kSize, TQuad::kPoints> ReferenceMomentFittingMatrix(TBasis const&
  * @tparam TQuad Quadrature rule type
  * @param Pb Polynomial basis
  * @param Q Quadrature rule
- * @return Matrix<TBasis::kSize, Eigen::Dynamic> Moment fitting matrix
+ * @return Moment fitting matrix
  */
 template <CPolynomialBasis TBasis, CPolynomialQuadratureRule TQuad>
 Matrix<TBasis::kSize, Eigen::Dynamic> ReferenceMomentFittingMatrix(TBasis const& Pb, TQuad const& Q)
@@ -101,7 +101,7 @@ Matrix<TBasis::kSize, Eigen::Dynamic> ReferenceMomentFittingMatrix(TBasis const&
  * @tparam TDerivedXg Eigen expression for quadrature points
  * @param Pb Polynomial basis
  * @param Xg Quadrature points
- * @return Matrix<TBasis::kSize, Eigen::Dynamic> Moment fitting matrix
+ * @return Moment fitting matrix
  */
 template <CPolynomialBasis TBasis, class TDerivedXg>
 Matrix<TBasis::kSize, Eigen::Dynamic>
@@ -127,7 +127,7 @@ ReferenceMomentFittingMatrix(TBasis const& Pb, Eigen::MatrixBase<TDerivedXg> con
  * @param b Target integrated polynomials \f$ \mathbf{b} \in \mathbb{R}^s \f$
  * @param maxIterations Maximum number of non-negative least-squares active set solver
  * @param precision Convergence threshold
- * @return VectorX Non-negative quadrature weights \f$ \mathbf{w} \in \mathbb{R}^n \f$
+ * @return Non-negative quadrature weights \f$ \mathbf{w} \in \mathbb{R}^n \f$
  */
 template <class TDerivedP, class TDerivedB>
 VectorX MomentFittedWeights(
@@ -165,7 +165,7 @@ VectorX MomentFittedWeights(
  * @param P Polynomial basis
  * @param Xg \f$ d \times n \f$ array of quadrature point positions defined in reference space
  * @param wg \f$ n \times 1 \f$ array of quadrature weights
- * @return Vector<Polynomial::kSize> \f$ s \times 1 \f$ array of integrated polynomials
+ * @return \f$ s \times 1 \f$ array of integrated polynomials
  */
 template <CPolynomialBasis Polynomial, class TDerivedXg, class TDerivedWg>
 Vector<Polynomial::kSize> Integrate(
@@ -197,7 +197,7 @@ Vector<Polynomial::kSize> Integrate(
  * @param wg2 \f$ n_2 \times 1 \f$ array \f$ w_g^2 \f$ of existing quadrature weights
  * @param maxIterations Maximum number of non-negative least-squares active set solver
  * @param precision Convergence threshold
- * @return Vector<TDerivedXg1::ColsAtCompileTime> \f$ n_1 \times 1 \f$ array of quadrature weights
+ * @return \f$ n_1 \times 1 \f$ array of quadrature weights
  */
 template <CPolynomialBasis Polynomial, class TDerivedXg1, class TDerivedXg2, class TDerivedWg2>
 Vector<TDerivedXg1::ColsAtCompileTime> TransferQuadrature(
@@ -239,7 +239,7 @@ Vector<TDerivedXg1::ColsAtCompileTime> TransferQuadrature(
  * @param bEvaluateError Whether to compute the integration error on the new quadrature rule
  * @param maxIterations Maximum number of non-negative least-squares active set solver
  * @param precision Convergence threshold
- * @return std::pair<VectorX, VectorX> `(w, e)` where `w` are the quadrature weights associated with
+ * @return `(w, e)` where `w` are the quadrature weights associated with
  * points `Xi1`, and `e` is the integration error in each simplex (zeros if `not bEvaluateError`).
  */
 template <
@@ -366,7 +366,7 @@ std::pair<VectorX, VectorX> TransferQuadrature(
  * @param w2 \f$ n_2 \times 1 \f$ array \f$ w_g^2 \f$ of existing quadrature weights
  * @param nSimplices Number of simplices in the domain. If `nSimplices < 1`, the number of simplices
  * is inferred from S1 and S2.
- * @return std::tuple<MatrixX, MatrixX, IndexVectorX> `(P, B, prefix)` where `P` is the moment
+ * @return `(P, B, prefix)` where `P` is the moment
  * fitting matrix, `B` is the target integrated polynomials, and `prefix` is the prefix into columns
  * of `P` for each simplex, i.e. the block `P[:,prefix[s]:prefix[s+1]] = B[:,s]` represents the
  * moment fitting system for simplex `s`.
@@ -491,7 +491,7 @@ ReferenceMomentFittingSystems(
  * @tparam TDerivedP Eigen vector expression for prefix into columns of moment fitting matrices
  * @param M Moment fitting matrices
  * @param P Prefix into columns of moment fitting matrices
- * @return CSRMatrix The block diagonal row sparse matrix \f$ \mathbf{A} \f$, whose diagonal blocks
+ * @return The block diagonal row sparse matrix \f$ \mathbf{A} \f$, whose diagonal blocks
  * are the individual reference moment fitting matrices in M, such that \f$ \mathbf{A} \mathbf{w} =
  * \text{vec}(\mathbf{B}) \f$ is the global sparse linear system to solve for quadrature weights \f$
  * \mathbf{w} \f$.
@@ -539,4 +539,4 @@ CSRMatrix BlockDiagonalReferenceMomentFittingSystem(
 } // namespace math
 } // namespace pbat
 
-#endif // PBAT_MATH_MOMENT_FITTING_H
+#endif // PBAT_MATH_MOMENTFITTING_H

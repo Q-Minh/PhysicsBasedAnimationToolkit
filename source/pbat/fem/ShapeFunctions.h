@@ -33,7 +33,7 @@ namespace fem {
  * @tparam TElement Element type
  * @tparam QuadratureOrder Quadrature order
  * @return The shape function values of each node at quadrature points, stored in a matrix
- * of dimensions |# element nodes| x |# quad.pts.|
+ * of dimensions `|# element nodes| x |# quad.pts.|`
  */
 template <CElement TElement, int QuadratureOrder>
 auto ShapeFunctions()
@@ -58,7 +58,7 @@ auto ShapeFunctions()
  * @tparam QuadratureOrder Quadrature order
  * @tparam TMesh Mesh type
  * @param mesh FEM mesh
- * @return CSRMatrix |# elements * # quad.pts.| x |# nodes| shape function matrix
+ * @return `|# elements * # quad.pts.| x |# nodes|` shape function matrix
  */
 template <int QuadratureOrder, CMesh TMesh>
 CSRMatrix ShapeFunctionMatrix(TMesh const& mesh)
@@ -97,10 +97,10 @@ CSRMatrix ShapeFunctionMatrix(TMesh const& mesh)
  * @tparam TDerivedE Eigen type
  * @tparam TDerivedX Eigen type
  * @param mesh FEM mesh
- * @param eg |# quad.pts.| array of elements associated with quadrature points
- * @param Xg |# dims|x|# quad.pts.| array of quadrature points in reference space
+ * @param eg `|# quad.pts.|` array of elements associated with quadrature points
+ * @param Xg `|# dims|x|# quad.pts.|` array of quadrature points in reference space
  * @param bXgInReferenceSpace Consider evaluation points Xg have coordinates in reference space
- * @return CSRMatrix |# quad.pts.| x |# nodes| shape function matrix
+ * @return `|# quad.pts.| x |# nodes|` shape function matrix
  */
 template <CMesh TMesh, class TDerivedE, class TDerivedX>
 CSRMatrix ShapeFunctionMatrix(
@@ -142,8 +142,8 @@ CSRMatrix ShapeFunctionMatrix(
  * @brief Compute shape functions at the given reference positions
  * @tparam TElement Element type
  * @tparam TDerivedXi Eigen dense expression type for reference positions
- * @param Xi |# dims|x|# quad.pts.| evaluation points
- * @return MatrixX |# element nodes| x |Xi.cols()| matrix of nodal shape functions at reference
+ * @param Xi `|# dims|x|# quad.pts.|` evaluation points
+ * @return `|# element nodes| x |Xi.cols()|` matrix of nodal shape functions at reference
  * points Xi
  */
 template <CElement TElement, class TDerivedXi>
@@ -172,10 +172,10 @@ MatrixX ShapeFunctionsAt(Eigen::DenseBase<TDerivedXi> const& Xi)
  * @tparam TDerivedE Eigen dense expression type for element indices
  * @tparam TDerivedXg Eigen dense expression type for evaluation points
  * @param mesh FEM mesh
- * @param eg |# quad.pts.| array of elements associated with quadrature points
- * @param Xg |# dims|x|# quad.pts.| evaluation points
+ * @param eg `|# quad.pts.|` array of elements associated with quadrature points
+ * @param Xg `|# dims|x|# quad.pts.|` evaluation points
  * @param bXgInReferenceSpace Consider evaluation points Xg as having coordinates in reference space
- * @return MatrixX |# element nodes| x |Xg.cols()| matrix of nodal shape functions at reference
+ * @return `|# element nodes| x |Xg.cols()|` matrix of nodal shape functions at reference
  * points Xg
  */
 template <CMesh TMesh, class TDerivedE, class TDerivedXg>
@@ -199,8 +199,8 @@ MatrixX ShapeFunctionsAt(
  * @tparam TMesh Mesh type
  * @tparam QuadratureOrder Quadrature order
  * @param mesh FEM mesh
- * @param detJe |# quad.pts.| x |# elements| matrix of element jacobian determinants
- * @return MatrixX |# element nodes|x|# elements|
+ * @param detJe `|# quad.pts.| x |# elements|` matrix of element jacobian determinants
+ * @return `|# element nodes|x|# elements|`
  */
 template <int QuadratureOrder, CMesh TMesh, class TDerived>
 MatrixX IntegratedShapeFunctions(TMesh const& mesh, Eigen::DenseBase<TDerived> const& detJe)
@@ -296,7 +296,7 @@ MatrixX IntegratedShapeFunctions(TMesh const& mesh, Eigen::DenseBase<TDerived> c
  * @tparam TElement Element type
  * @param Xi Point in reference element at which to evaluate the gradients
  * @param X Element vertices, i.e. nodes of affine element
- * @return |# nodes|x|Dims| matrix of basis function gradients in rows
+ * @return `|# nodes|x|Dims|` matrix of basis function gradients in rows
  */
 template <CElement TElement, class TDerivedXi, class TDerivedX>
 auto ShapeFunctionGradients(
@@ -338,7 +338,7 @@ auto ShapeFunctionGradients(
  * @tparam Order Quadrature order
  * @tparam TMesh Mesh type
  * @param mesh FEM mesh
- * @return |# element nodes| x |# dims * # quad.pts. * # elements| matrix of shape function
+ * @return `|# element nodes| x |# dims * # quad.pts. * # elements|` matrix of shape function
  * gradients
  */
 template <int QuadratureOrder, CMesh TMesh>
@@ -377,10 +377,10 @@ MatrixX ShapeFunctionGradients(TMesh const& mesh)
  * @tparam TDerivedXg Eigen dense expression type for evaluation points
  * @tparam TMesh Mesh type
  * @param mesh FEM mesh
- * @param E |# eval.pts.| array of elements associated with evaluation points
- * @param Xg |# dims|x|# eval.pts.| evaluation points
+ * @param E `|# eval.pts.|` array of elements associated with evaluation points
+ * @param Xg `|# dims|x|# eval.pts.|` evaluation points
  * @param bXgInReferenceSpace Consider evaluation points Xg as having coordinates in reference space
- * @return |# element nodes| x |E.size() * mesh.dims| nodal shape function gradients at evaluation
+ * @return `|# element nodes| x |E.size() * mesh.dims|` nodal shape function gradients at evaluation
  * points Xg
  */
 template <CMesh TMesh, class TDerivedE, class TDerivedXg>

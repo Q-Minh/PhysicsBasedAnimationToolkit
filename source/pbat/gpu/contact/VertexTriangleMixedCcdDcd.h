@@ -66,20 +66,20 @@ class VertexTriangleMixedCcdDcd
     /**
      * @brief
      *
-     * @return GpuIndexMatrixX 2x|#vertex-triangle constraints| matrix where each column is a
+     * @return `2x|#vertex-triangle constraints|` matrix where each column is a
      * vertex-triangle constraint.
      */
     PBAT_API GpuIndexMatrixX ActiveVertexTriangleConstraints() const;
     /**
      * @brief
      *
-     * @return GpuIndexVectorX
+     * @return 
      */
     PBAT_API GpuIndexVectorX ActiveVertices() const;
     /**
      * @brief
      *
-     * @return PBAT_API
+     * @return 
      */
     PBAT_API std::vector<bool> ActiveMask() const;
     /**

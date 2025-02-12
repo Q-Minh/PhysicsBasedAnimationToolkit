@@ -13,7 +13,7 @@ namespace linalg {
  * @tparam TDerivedC
  * @param C
  * @param n
- * @return CSCMatrix
+ * @return 
  */
 template <class TDerivedC>
 CSCMatrix SelectionMatrix(Eigen::DenseBase<TDerivedC> const& C, Index n = Index(-1))

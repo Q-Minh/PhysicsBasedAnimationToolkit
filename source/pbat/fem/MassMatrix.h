@@ -94,26 +94,26 @@ struct MassMatrix
     /**
      * @brief Transforms this matrix-free mass matrix representation into sparse compressed column
      * format.
-     * @return CSCMatrix Sparse compressed column matrix representation of this mass matrix
+     * @return Sparse compressed column matrix representation of this mass matrix
      */
     CSCMatrix ToMatrix() const;
 
     /**
      * @brief Diagonalizes (via mass lumping) this mass matrix into vector representation.
-     * @return VectorX Vector of lumped masses
+     * @return Vector of lumped masses
      */
     VectorX ToLumpedMasses() const;
 
     /**
      * @brief Number of input dimensions.
      *
-     * @return Index
+     * @return Number of input dimensions
      */
     Index InputDimensions() const { return dims * mesh.X.cols(); }
     /**
      * @brief Number of output dimensions.
      *
-     * @return Index
+     * @return Number of output dimensions
      */
     Index OutputDimensions() const { return InputDimensions(); }
 

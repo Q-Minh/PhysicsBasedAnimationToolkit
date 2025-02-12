@@ -50,37 +50,37 @@ class Aabb
     /**
      * @brief
      *
-     * @return GpuIndex
+     * @return 
      */
     PBAT_API GpuIndex Size() const;
     /**
      * @brief
      *
-     * @return GpuIndex
+     * @return 
      */
     [[maybe_unused]] GpuIndex Dimensions() const { return mDims; }
     /**
      * @brief
      *
-     * @return void*
+     * @return 
      */
     [[maybe_unused]] void* Impl() { return mImpl; }
     /**
      * @brief
      *
-     * @return void*
+     * @return 
      */
     [[maybe_unused]] void* Impl() const { return mImpl; }
     /**
      * @brief
      *
-     * @return GpuMatrixX
+     * @return 
      */
     PBAT_API GpuMatrixX Lower() const;
     /**
      * @brief
      *
-     * @return GpuMatrixX
+     * @return 
      */
     PBAT_API GpuMatrixX Upper() const;
     /**

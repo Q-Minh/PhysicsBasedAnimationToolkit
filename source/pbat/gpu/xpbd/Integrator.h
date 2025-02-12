@@ -136,7 +136,7 @@ class Integrator
     /**
      * @brief Get the vertex-tetrahedron collision candidates list
      *
-     * @return GpuIndexMatrixX 2x|#collision candidates|
+     * @return 2x|#collision candidates|
      */
     PBAT_API GpuIndexMatrixX GetVertexTetrahedronCollisionCandidates() const;
     /**

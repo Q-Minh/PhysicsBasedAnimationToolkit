@@ -121,7 +121,7 @@ PBAT_API bool IsConnectedToServer();
  * @param zoneName Name of the zone
  * @param f Function to profile
  * @param args Arguments to the function
- * @return std::invoke_result_t<Func, Args...> Result of the function
+ * @return Result of the function
  * @note This function is only available if the Tracy profiler is enabled
  */
 template <class Func, class... Args>
