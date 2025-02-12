@@ -1,3 +1,13 @@
+/**
+ * @file MassMatrix.h
+ * @author Quoc-Minh Ton-That (tonthat.quocminh@gmail.com)
+ * @brief MassMatrix API and implementation.
+ * @date 2025-02-11
+ *
+ * @copyright Copyright (c) 2025
+ *
+ */
+
 #ifndef PBAT_FEM_MASS_MATRIX_H
 #define PBAT_FEM_MASS_MATRIX_H
 
@@ -15,23 +25,34 @@
 namespace pbat {
 namespace fem {
 
+/**
+ * @brief A matrix-free representation of a finite element mass matrix \f$ \mathbf{M}_{ij} =
+ * \int_\Omega \rho(X) \phi_i(X) \phi_j(X) \f$.
+ *
+ * \note Link to my higher-level FEM crash course doc.
+ *
+ * @tparam TMesh Type satisfying concept CMesh
+ * @tparam QuadratureOrder Quadrature order for integrating the mass matrix
+ */
 template <CMesh TMesh, int QuadratureOrder>
 struct MassMatrix
 {
   public:
-    using SelfType              = MassMatrix<TMesh, QuadratureOrder>;
-    using MeshType              = TMesh;
-    using ElementType           = typename TMesh::ElementType;
-    using QuadratureRuleType    = typename ElementType::template QuadratureType<QuadratureOrder>;
-    static int constexpr kOrder = 2 * ElementType::kOrder;
-    static int constexpr kQuadratureOrder = QuadratureOrder;
+    using SelfType    = MassMatrix<TMesh, QuadratureOrder>; ///< Self type
+    using MeshType    = TMesh;                              ///< Mesh type
+    using ElementType = typename TMesh::ElementType;        ///< Element type
+    using QuadratureRuleType =
+        typename ElementType::template QuadratureType<QuadratureOrder>; ///< Quadrature rule type
+    static int constexpr kOrder = 2 * ElementType::kOrder; ///< Polynomial order of the mass matrix
+    static int constexpr kQuadratureOrder = QuadratureOrder; ///< Quadrature order
 
     /**
-     * @brief
-     * @param mesh
-     * @param detJe |#quad.pts.|x|#elements| affine element jacobian determinants at quadrature
+     * @brief Construct a MassMatrix
+     * @param mesh Finite element mesh
+     * @param detJe `|# quad.pts.|x|# elements|` affine element jacobian determinants at quadrature
      * points
      * @param rho Uniform mass density
+     * @param dims Dimensionality of image of FEM function space. Should have `dims >= 1`.
      */
     MassMatrix(
         MeshType const& mesh,
@@ -40,12 +61,13 @@ struct MassMatrix
         int dims   = 1);
 
     /**
-     * @brief
-     * @tparam TDerived
-     * @param mesh
-     * @param detJe |#quad.pts.|x|#elements| affine element jacobian determinants at quadrature
+     * @brief Construct a MassMatrix
+     * @tparam TDerived Eigen dense expression type
+     * @param mesh Finite element mesh
+     * @param detJe `|# quad.pts.|x|# elements|` affine element jacobian determinants at quadrature
      * points
-     * @param rho |#quad.pts.|x|#elements| mass density per quadrature point
+     * @param rho `|# quad.pts.|x|# elements|` mass density per quadrature point
+     * @param dims Dimensionality of image of FEM function space. Should have `dims >= 1`.
      */
     template <class TDerived>
     MassMatrix(
@@ -59,47 +81,64 @@ struct MassMatrix
     /**
      * @brief Applies this mass matrix as a linear operator on x, adding result to y.
      *
-     * @tparam TDerivedIn
-     * @tparam TDerivedOut
-     * @param x
-     * @param y
+     * @tparam TDerivedIn Eigen dense expression type
+     * @tparam TDerivedOut Eigen dense expression type
+     * @param x Input vector/matrix
+     * @param y Output vector/matrix
+     * @pre `x.rows() == |#nodes*dims|` and `y.rows() == |#nodes*dims|` and `x.cols() == y.cols()`
+     * and `dims >= 1`
      */
     template <class TDerivedIn, class TDerivedOut>
     void Apply(Eigen::MatrixBase<TDerivedIn> const& x, Eigen::DenseBase<TDerivedOut>& y) const;
 
     /**
-     * @brief Transforms this matrix-free mass matrix representation into sparse compressed format.
-     * @return
+     * @brief Transforms this matrix-free mass matrix representation into sparse compressed column
+     * format.
+     * @return CSCMatrix Sparse compressed column matrix representation of this mass matrix
      */
     CSCMatrix ToMatrix() const;
 
     /**
-     * @brief
-     * @return
+     * @brief Diagonalizes (via mass lumping) this mass matrix into vector representation.
+     * @return VectorX Vector of lumped masses
      */
     VectorX ToLumpedMasses() const;
 
+    /**
+     * @brief Number of input dimensions.
+     *
+     * @return Index
+     */
     Index InputDimensions() const { return dims * mesh.X.cols(); }
+    /**
+     * @brief Number of output dimensions.
+     *
+     * @return Index
+     */
     Index OutputDimensions() const { return InputDimensions(); }
 
     /**
-     * @brief
-     * @tparam TDerived
-     * @param rho |#quad.pts.|x|#elements| piecewise constant mass density
+     * @brief Computes element mass matrices.
+     * @tparam TDerived Eigen dense expression type
+     * @param rho `|# quad.pts.|x|# elements|` piecewise constant mass density
      */
     template <class TDerived>
     void ComputeElementMassMatrices(Eigen::DenseBase<TDerived> const& rho);
 
+    /**
+     * @brief Checks if this mass matrix is in a valid state.
+     */
     void CheckValidState() const;
 
     MeshType const& mesh;            ///< The finite element mesh
-    Eigen::Ref<MatrixX const> detJe; ///< |# element quadrature points| x |# elements| matrix of
+    Eigen::Ref<MatrixX const> detJe; ///< `|# element quadrature points| x |# elements|` matrix of
                                      ///< jacobian determinants at element quadrature points
-    MatrixX Me; ///< |#element nodes|x|#element nodes * #elements| element mass matrices
+    MatrixX Me; ///< `|# element nodes|x|# element nodes * # elements|` element mass matrices
                 ///< for 1-dimensional problems. For d-dimensional problems, these mass matrices
-                ///< should be Kroneckered with the d-dimensional identity matrix.
+                ///< should be Kroneckered with the \f$ d \f$-dimensional identity matrix 
+                ///< \f$ \mathbf{I}_d \f$.
     int dims; ///< Dimensionality of image of FEM function space, i.e. this mass matrix is actually
-              ///< M \kronecker I_{dims \times dims}. Should be >= 1.
+              ///< \f$ \mathbf{M} \otimes \mathbf{I}_{d} \f$. Should have `dims >= 1`.
 };
 
 template <CMesh TMesh, int QuadratureOrder>
