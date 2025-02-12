@@ -93,10 +93,10 @@ PBAT_HOST_DEVICE bool PointTetrahedron3D(
  * @brief Tests for overlap between sphere (C1,R1) and sphere (C2,R2).
  * @tparam TMatrixC1 Center matrix type of the first sphere
  * @tparam TMatrixC2 Center matrix type of the second sphere
- * @param c1 Center of the first sphere
- * @param r1 Radius of the first sphere
- * @param c2 Center of the second sphere
- * @param r2 Radius of the second sphere
+ * @param C1 Center of the first sphere
+ * @param R1 Radius of the first sphere
+ * @param C2 Center of the second sphere
+ * @param R2 Radius of the second sphere
  * @return True if the spheres overlap, false otherwise
  */
 template <mini::CMatrix TMatrixC1, mini::CMatrix TMatrixC2>
@@ -478,7 +478,7 @@ PBAT_HOST_DEVICE bool Tetrahedra(
     TMatrixD2 const& D2);
 
 /**
- * @brief Tests for overlap between a triangle ABC and a sphere with center c of radius R
+ * @brief Tests for overlap between a triangle ABC and a sphere with center SC of radius R
  * @tparam TMatrixA Vertex A matrix type
  * @tparam TMatrixB Vertex B matrix type
  * @tparam TMatrixC Vertex C matrix type
@@ -486,8 +486,8 @@ PBAT_HOST_DEVICE bool Tetrahedra(
  * @param A Vertex A of the triangle
  * @param B Vertex B of the triangle
  * @param C Vertex C of the triangle
- * @param c Center of the sphere
- * @param r Radius of the sphere
+ * @param SC Center of the sphere
+ * @param R Radius of the sphere
  * @return True if the triangle and sphere overlap, false otherwise
  */
 template <
@@ -503,7 +503,7 @@ PBAT_HOST_DEVICE bool TriangleSphere(
     typename TMatrixSC::ScalarType R);
 
 /**
- * @brief Tests for overlap between a tetrahedron ABCD and a sphere with center c of radius R
+ * @brief Tests for overlap between a tetrahedron ABCD and a sphere with center SC of radius R
  * @tparam TMatrixA Vertex A matrix type
  * @tparam TMatrixB Vertex B matrix type
  * @tparam TMatrixC Vertex C matrix type
@@ -513,8 +513,8 @@ PBAT_HOST_DEVICE bool TriangleSphere(
  * @param B Vertex B of the tetrahedron
  * @param C Vertex C of the tetrahedron
  * @param D Vertex D of the tetrahedron
- * @param c Center of the sphere
- * @param r Radius of the sphere
+ * @param SC Center of the sphere
+ * @param R Radius of the sphere
  * @return True if the tetrahedron and sphere overlap, false otherwise
  */
 template <
