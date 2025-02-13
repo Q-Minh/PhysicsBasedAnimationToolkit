@@ -6,6 +6,7 @@
 #include "pbat/gpu/impl/common/Buffer.cuh"
 #include "pbat/profiling/Profiling.h"
 
+#include <cuda/functional>
 #include <thrust/execution_policy.h>
 #include <thrust/for_each.h>
 #include <thrust/iterator/counting_iterator.h>
@@ -40,14 +41,14 @@ class SweepAndPrune
      * @param aabbs
      */
     template <class FOnOverlapDetected>
-    void SortAndSweep(Aabb<kDims>& aabbs, FOnOverlapDetected fOnOverlapDetected);
+    void SortAndSweep(Aabb<kDims>& aabbs, FOnOverlapDetected&& fOnOverlapDetected);
 
   private:
     common::Buffer<GpuIndex> inds; ///< Box indices
 };
 
 template <class FOnOverlapDetected>
-inline void SweepAndPrune::SortAndSweep(Aabb<kDims>& aabbs, FOnOverlapDetected fOnOverlapDetected)
+inline void SweepAndPrune::SortAndSweep(Aabb<kDims>& aabbs, FOnOverlapDetected&& fOnOverlapDetected)
 {
     PBAT_PROFILE_NAMED_CUDA_HOST_SCOPE_START(
         ctx,
@@ -75,8 +76,9 @@ inline void SweepAndPrune::SortAndSweep(Aabb<kDims>& aabbs, FOnOverlapDetected f
             thrust::device,
             thrust::make_counting_iterator(0),
             thrust::make_counting_iterator(nBoxes),
-            [b = b.Raw()[d], e = e.Raw()[d], div = GpuScalar(2) * nBoxes] PBAT_DEVICE(
-                GpuIndex i) -> GpuScalar { return (b[i] + e[i]) / div; },
+            cuda::proclaim_return_type<GpuScalar>(
+                [b = b.Raw()[d], e = e.Raw()[d], div = 2 * nBoxes] PBAT_DEVICE(
+                    GpuIndex i) -> GpuScalar { return (b[i] + e[i]) / div; }),
             GpuScalar(0),
             thrust::plus<GpuScalar>());
     }
@@ -86,12 +88,13 @@ inline void SweepAndPrune::SortAndSweep(Aabb<kDims>& aabbs, FOnOverlapDetected f
             thrust::device,
             thrust::make_counting_iterator(0),
             thrust::make_counting_iterator(nBoxes),
-            [b = b.Raw()[d], e = e.Raw()[d], mu = mu[d], nBoxes] PBAT_DEVICE(
-                GpuIndex i) -> GpuScalar {
-                GpuScalar cd       = (b[i] + e[i]) / GpuScalar(2);
-                GpuScalar const dx = cd - mu;
-                return dx * dx / static_cast<GpuScalar>(nBoxes);
-            },
+            cuda::proclaim_return_type<GpuScalar>(
+                [b = b.Raw()[d], e = e.Raw()[d], mu = mu[d], nBoxes] PBAT_DEVICE(
+                    GpuIndex i) -> GpuScalar {
+                    GpuScalar cd       = (b[i] + e[i]) / GpuScalar(2);
+                    GpuScalar const dx = cd - mu;
+                    return dx * dx / nBoxes;
+                }),
             GpuScalar(0),
             thrust::plus<GpuScalar>());
     }
@@ -124,10 +127,11 @@ inline void SweepAndPrune::SortAndSweep(Aabb<kDims>& aabbs, FOnOverlapDetected f
         [nBoxes,
          saxis,
          axis,
-         fOnOverlapDetected,
          b    = b.Raw(),
          e    = e.Raw(),
-         inds = inds.Raw()] PBAT_DEVICE(GpuIndex i) mutable {
+         inds = inds.Raw(),
+         fOnOverlapDetected =
+             std::forward<FOnOverlapDetected>(fOnOverlapDetected)] PBAT_DEVICE(GpuIndex i) mutable {
             for (auto j = i + 1; (j < nBoxes) and (e[saxis][i] >= b[saxis][j]); ++j)
             {
                 // NOTE:
