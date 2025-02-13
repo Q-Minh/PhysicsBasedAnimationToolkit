@@ -18,7 +18,7 @@ void BindTriangleAabbHierarchy(pybind11::module& m)
         pbat::geometry::TriangleAabbHierarchy2D,
         pbat::geometry::TriangleAabbHierarchy3D>([&]<class BvhType>() {
         auto constexpr kDims        = BvhType::kDims;
-        std::string const className = []() {
+        std::string const className = [kDims]() {
             if constexpr (kDims == 2)
                 return "TriangleAabbHierarchy2D";
             else if constexpr (kDims == 3)
