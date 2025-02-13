@@ -40,14 +40,14 @@ class SweepAndPrune
      * @param aabbs
      */
     template <class FOnOverlapDetected>
-    void SortAndSweep(Aabb<kDims>& aabbs, FOnOverlapDetected&& fOnOverlapDetected);
+    void SortAndSweep(Aabb<kDims>& aabbs, FOnOverlapDetected fOnOverlapDetected);
 
   private:
     common::Buffer<GpuIndex> inds; ///< Box indices
 };
 
 template <class FOnOverlapDetected>
-inline void SweepAndPrune::SortAndSweep(Aabb<kDims>& aabbs, FOnOverlapDetected&& fOnOverlapDetected)
+inline void SweepAndPrune::SortAndSweep(Aabb<kDims>& aabbs, FOnOverlapDetected fOnOverlapDetected)
 {
     PBAT_PROFILE_NAMED_CUDA_HOST_SCOPE_START(
         ctx,
@@ -124,11 +124,10 @@ inline void SweepAndPrune::SortAndSweep(Aabb<kDims>& aabbs, FOnOverlapDetected&&
         [nBoxes,
          saxis,
          axis,
+         fOnOverlapDetected,
          b    = b.Raw(),
          e    = e.Raw(),
-         inds = inds.Raw(),
-         fOnOverlapDetected =
-             std::forward<FOnOverlapDetected>(fOnOverlapDetected)] PBAT_DEVICE(GpuIndex i) mutable {
+         inds = inds.Raw()] PBAT_DEVICE(GpuIndex i) mutable {
             for (auto j = i + 1; (j < nBoxes) and (e[saxis][i] >= b[saxis][j]); ++j)
             {
                 // NOTE:
