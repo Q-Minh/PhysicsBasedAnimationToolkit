@@ -104,12 +104,13 @@ void RunSweepAndPruneTests()
     gpu::impl::geometry::SweepAndPrune sap{};
     sap.SortAndSweep(
         aabbs,
-        [nEdges, o = overlaps.Raw()] PBAT_DEVICE(GpuIndex si, GpuIndex sj) mutable -> void {
-            if (si < nEdges and sj >= nEdges)
-                o.Append(OverlapType{si, sj - nEdges});
-            if (si >= nEdges and sj < nEdges)
-                o.Append(OverlapType{sj, si - nEdges});
-        });
+        cuda::proclaim_return_type<void>(
+            [nEdges, o = overlaps.Raw()] PBAT_DEVICE(GpuIndex si, GpuIndex sj) mutable {
+                if (si < nEdges and sj >= nEdges)
+                    o.Append(OverlapType{si, sj - nEdges});
+                if (si >= nEdges and sj < nEdges)
+                    o.Append(OverlapType{sj, si - nEdges});
+            }));
     std::vector<OverlapType> overlapsCpu = overlaps.Get();
     // Assert
     for (OverlapType overlap : overlapsCpu)
