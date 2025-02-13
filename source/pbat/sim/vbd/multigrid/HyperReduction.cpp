@@ -108,8 +108,9 @@ void HyperReduction::ConstructHierarchicalClustering(Hierarchy const& hierarchy,
         auto const& v = Gadj;
         auto SGu      = C[l](u);
         auto SGv      = C[l](v);
-        auto edgeView = std::views::iota(0, SGu.size()) | std::views::transform([&](auto i) {
-                            return graph::WeightedEdge(SGu(i), SGv(i), Gwts(i));
+        auto edgeView = std::views::iota(Index(0), static_cast<Index>(SGu.size())) |
+                        std::views::transform([&](Index i) {
+                            return graph::WeightedEdge<Index, Index>(SGu(i), SGv(i), Gwts(i));
                         }) |
                         std::views::common;
         // NOTE:
