@@ -34,9 +34,25 @@ void SweepAndPrune::Reserve(std::size_t nPrimitives)
 
 namespace pbat {
 namespace gpu {
-namespace geometry {
 namespace impl {
+namespace geometry {
 namespace test {
+namespace SweepAndPrune {
+
+struct FOnOverlapDetected
+{
+    using Overlap = cuda::std::pair<GpuIndex, GpuIndex>;
+
+    GpuIndex nEdges;
+    common::DeviceSynchronizedList<Overlap> o;
+    PBAT_DEVICE void operator()(GpuIndex si, GpuIndex sj)
+    {
+        if (si < nEdges and sj >= nEdges)
+            o.Append(Overlap{si, sj - nEdges});
+        if (si >= nEdges and sj < nEdges)
+            o.Append(Overlap{sj, si - nEdges});
+    }
+};
 
 void RunSweepAndPruneTests()
 {
@@ -102,15 +118,7 @@ void RunSweepAndPruneTests()
     // Act
     gpu::impl::common::SynchronizedList<OverlapType> overlaps(3 * overlapsExpected.size());
     gpu::impl::geometry::SweepAndPrune sap{};
-    sap.SortAndSweep(
-        aabbs,
-        cuda::proclaim_return_type<void>(
-            [nEdges, o = overlaps.Raw()] PBAT_DEVICE(GpuIndex si, GpuIndex sj) mutable {
-                if (si < nEdges and sj >= nEdges)
-                    o.Append(OverlapType{si, sj - nEdges});
-                if (si >= nEdges and sj < nEdges)
-                    o.Append(OverlapType{sj, si - nEdges});
-            }));
+    sap.SortAndSweep(aabbs, FOnOverlapDetected{nEdges, overlaps.Raw()});
     std::vector<OverlapType> overlapsCpu = overlaps.Get();
     // Assert
     for (OverlapType overlap : overlapsCpu)
@@ -123,13 +131,14 @@ void RunSweepAndPruneTests()
     CHECK(overlapsExpected.empty());
 }
 
+} // namespace SweepAndPrune
 } // namespace test
-} // namespace impl
 } // namespace geometry
+} // namespace impl
 } // namespace gpu
 } // namespace pbat
 
 TEST_CASE("[gpu][impl][geometry] Sweep and prune")
 {
-    pbat::gpu::geometry::impl::test::RunSweepAndPruneTests();
+    pbat::gpu::impl::geometry::test::SweepAndPrune::RunSweepAndPruneTests();
 }
