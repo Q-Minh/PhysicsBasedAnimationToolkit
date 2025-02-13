@@ -1,6 +1,7 @@
 #ifndef PBAT_GPU_IMPL_VBD_INTEGRATOR_H
 #define PBAT_GPU_IMPL_VBD_INTEGRATOR_H
 
+#include "Kernels.cuh"
 #include "pbat/gpu/Aliases.h"
 #include "pbat/gpu/impl/common/Buffer.cuh"
 #include "pbat/gpu/impl/contact/VertexTriangleMixedCcdDcd.cuh"
@@ -144,6 +145,50 @@ class Integrator
      */
     common::Buffer<GpuScalar> const& GetLameCoefficients() const;
 
+    /**
+     * @brief Detect candidate contact pairs for the current time step
+     *
+     * @param dt Time step
+     */
+    void InitializeActiveSet(GpuScalar dt);
+    /**
+     * @brief Compute the inertial target positions of the BDF1 objective
+     *
+     * @param sdt Time step
+     * @param sdt2 Time step squared
+     */
+    void ComputeInertialTargets(GpuScalar sdt, GpuScalar sdt2);
+    /**
+     * @brief Compute starting point of BCD minimization
+     *
+     * @param sdt Time step
+     * @param sdt2 Time step squared
+     */
+    void InitializeBcdSolution(GpuScalar sdt, GpuScalar sdt2);
+    /**
+     * @brief Computes active contact pairs in the current configuration
+     *
+     */
+    void UpdateActiveSet();
+    /**
+     * @brief Use VBD to iterate on the BDF minimization problem
+     *
+     * @param bdf Device BDF minimization problem
+     * @param iterations Number of iterations
+     * @param rho Chebyshev semi-iterative method's estimated spectral radius. If `rho >= 1`,
+     * Chebyshev acceleration is not used.
+     */
+    void SolveBdfWithVbd(
+        kernels::BackwardEulerMinimization& bdf,
+        GpuIndex iterations,
+        GpuScalar rho);
+    /**
+     * @brief Update the BDF state (i.e. positions and velocities) after solving the BDF minimization
+     *
+     * @param sdt Time step
+     */
+    void UpdateBdfState(GpuScalar sdt);
+
   public:
     common::Buffer<GpuScalar, 3> x;
     common::Buffer<GpuIndex, 4> T; ///< Tetrahedral mesh elements
@@ -199,6 +244,8 @@ class Integrator
         mInitializationStrategy;  ///< Strategy to use to determine the initial BCD iterate
     GpuIndex mGpuThreadBlockSize; ///< Number of threads per CUDA thread block
     cuda::stream_t mStream;       ///< Cuda stream on which this VBD instance will run
+
+    kernels::BackwardEulerMinimization BdfDeviceParameters(GpuScalar dt, GpuScalar dt2);
 };
 
 } // namespace vbd
