@@ -14,10 +14,18 @@ namespace geometry {
 void BindTriangleAabbHierarchy(pybind11::module& m)
 {
     namespace pyb = pybind11;
-    pbat::common::ForValues<2, 3>([&]<auto Dims>() {
-        auto constexpr kDims        = Dims;
-        std::string const className = "TriangleAabbHierarchy" + std::to_string(kDims) + "D";
-        using BvhType               = pbat::geometry::TriangleAabbHierarchy<kDims>;
+    pbat::common::ForTypes<
+        pbat::geometry::TriangleAabbHierarchy2D,
+        pbat::geometry::TriangleAabbHierarchy3D>([&]<class BvhType>() {
+        auto constexpr kDims        = BvhType::kDims;
+        std::string const className = []() {
+            if constexpr (kDims == 2)
+                return "TriangleAabbHierarchy2D";
+            else if constexpr (kDims == 3)
+                return "TriangleAabbHierarchy3D";
+            else
+                static_assert(kDims == 2 || kDims == 3, "Only 2D and 3D BVHs are supported.");
+        }();
         pyb::class_<BvhType>(m, className.data())
             .def(
                 pyb::init(
