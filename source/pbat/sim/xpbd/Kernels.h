@@ -93,19 +93,19 @@ PBAT_HOST_DEVICE void ProjectBlockNeoHookean(
     #pragma nv_diag_suppress 174
 #endif
     // Compute deviatoric+hydrostatic elasticity
-    SMatrix<ScalarType, 3, 3> F = (xc.Slice<3, 3>(0, 1) - Repeat<1, 3>(xc.Col(0))) * DmInv;
+    SMatrix<ScalarType, 3, 3> F = (xc.template Slice<3, 3>(0, 1) - Repeat<1, 3>(xc.Col(0))) * DmInv;
     ScalarType CD               = Norm(F);
     SMatrix<ScalarType, 3, 4> gradCD{};
-    gradCD.Slice<3, 3>(0, 1) = (F * DmInv.Transpose()) / (CD /*+ 1e-8*/);
-    gradCD.Col(0)            = -(gradCD.Col(1) + gradCD.Col(2) + gradCD.Col(3));
-    ScalarType CH            = Determinant(F) - gammaSNHc;
+    gradCD.template Slice<3, 3>(0, 1) = (F * DmInv.Transpose()) / (CD /*+ 1e-8*/);
+    gradCD.Col(0)                     = -(gradCD.Col(1) + gradCD.Col(2) + gradCD.Col(3));
+    ScalarType CH                     = Determinant(F) - gammaSNHc;
     SMatrix<ScalarType, 3, 3> PH{};
     PH.Col(0) = Cross(F.Col(1), F.Col(2));
     PH.Col(1) = Cross(F.Col(2), F.Col(0));
     PH.Col(2) = Cross(F.Col(0), F.Col(1));
     SMatrix<ScalarType, 3, 4> gradCH{};
-    gradCH.Slice<3, 3>(0, 1) = PH * DmInv.Transpose();
-    gradCH.Col(0)            = -(gradCH.Col(1) + gradCH.Col(2) + gradCH.Col(3));
+    gradCH.template Slice<3, 3>(0, 1) = PH * DmInv.Transpose();
+    gradCH.Col(0)                     = -(gradCH.Col(1) + gradCH.Col(2) + gradCH.Col(3));
 #if defined(CUDART_VERSION)
     #pragma nv_diag_default 174
 #endif

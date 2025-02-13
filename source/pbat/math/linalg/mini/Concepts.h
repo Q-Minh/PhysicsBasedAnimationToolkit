@@ -1,5 +1,5 @@
-#ifndef PBAT_MATH_LINALG_MINI_CONCEPTS_CUH
-#define PBAT_MATH_LINALG_MINI_CONCEPTS_CUH
+#ifndef PBAT_MATH_LINALG_MINI_CONCEPTS_H
+#define PBAT_MATH_LINALG_MINI_CONCEPTS_H
 
 #include <concepts>
 #include <type_traits>
@@ -131,4 +131,4 @@ concept CWriteableVectorizedMatrix = CMatrix<TMatrix>;
         return kCols;                            \
     }
 
-#endif // PBAT_MATH_LINALG_MINI_CONCEPTS_CUH
+#endif // PBAT_MATH_LINALG_MINI_CONCEPTS_H
