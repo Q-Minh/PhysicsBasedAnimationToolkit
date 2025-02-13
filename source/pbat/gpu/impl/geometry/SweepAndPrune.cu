@@ -107,9 +107,9 @@ void RunSweepAndPruneTests()
         aabbs,
         [nEdges, o = overlaps.Raw()] PBAT_DEVICE(GpuIndex si, GpuIndex sj) mutable {
             if (si < nEdges and sj >= nEdges)
-                o.Append(Overlap{si, sj - nEdges});
+                o.Append(OverlapType{si, sj - nEdges});
             if (si >= nEdges and sj < nEdges)
-                o.Append(Overlap{sj, si - nEdges});
+                o.Append(OverlapType{sj, si - nEdges});
         });
     std::vector<OverlapType> overlapsCpu = overlaps.Get();
     // Assert
