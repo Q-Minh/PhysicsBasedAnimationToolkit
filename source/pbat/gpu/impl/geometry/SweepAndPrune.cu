@@ -27,6 +27,7 @@ void SweepAndPrune::Reserve(std::size_t nPrimitives)
 #include "pbat/gpu/impl/common/SynchronizedList.cuh"
 #include "pbat/math/linalg/mini/Mini.h"
 
+#include <cuda/functional>
 #include <cuda/std/utility>
 #include <doctest/doctest.h>
 #include <unordered_set>
@@ -103,7 +104,7 @@ void RunSweepAndPruneTests()
     gpu::impl::geometry::SweepAndPrune sap{};
     sap.SortAndSweep(
         aabbs,
-        [nEdges, o = overlaps.Raw()] PBAT_DEVICE(GpuIndex si, GpuIndex sj) mutable {
+        [nEdges, o = overlaps.Raw()] PBAT_DEVICE(GpuIndex si, GpuIndex sj) mutable -> void {
             if (si < nEdges and sj >= nEdges)
                 o.Append(OverlapType{si, sj - nEdges});
             if (si >= nEdges and sj < nEdges)
