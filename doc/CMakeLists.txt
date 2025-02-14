@@ -92,7 +92,9 @@ if (DOXYGEN_FOUND)
     install(
         DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/html 
         DESTINATION share/doc
-        COMPONENT Docs)
+        COMPONENT Docs
+        EXCLUDE_FROM_ALL
+    )
 else()
     message(FATAL_ERROR "Doxygen needs to be installed to generate the documentation")
 endif()
