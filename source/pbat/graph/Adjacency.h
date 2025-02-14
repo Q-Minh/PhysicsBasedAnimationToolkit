@@ -32,11 +32,19 @@ namespace graph {
 template <class TWeight = Scalar, class TIndex = Index>
 using WeightedEdge = Eigen::Triplet<TWeight, TIndex>;
 
+/**
+ * @brief Traits for WeightedEdge
+ *
+ * @tparam TWeightedEdge WeightedEdge type instance
+ */
 template <class TWeightedEdge>
 struct WeightedEdgeTraits
 {
-    using ScalarType = std::remove_cvref_t<decltype(std::declval<TWeightedEdge>().value())>;
-    using IndexType  = std::remove_cvref_t<decltype(std::declval<TWeightedEdge>().row())>;
+    using ScalarType = std::remove_cvref_t<
+        decltype(std::declval<TWeightedEdge>().value())>; ///< Scalar type of the graph edge weights
+    using IndexType =
+        std::remove_cvref_t<decltype(std::declval<TWeightedEdge>().row())>; ///< Index type of the
+                                                                            ///< graph vertices
 };
 
 /**
