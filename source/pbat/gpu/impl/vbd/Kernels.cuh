@@ -10,6 +10,8 @@
 #include <array>
 #include <cstddef>
 #include <cub/block/block_reduce.cuh>
+#include <cuda/api/device.hpp>
+#include <cuda/api/launch_config_builder.hpp>
 #include <limits>
 
 namespace pbat {
@@ -55,19 +57,36 @@ struct BackwardEulerMinimization
     GpuIndex*
         partition; ///< List of vertex indices that can be processed independently, i.e. in parallel
 
-    using ElasticDerivativeStorageType = SMatrix<GpuScalar, 3, 4>;
-    template <auto kBlockThreads>
-    using BlockReduce = cub::BlockReduce<ElasticDerivativeStorageType, kBlockThreads>;
-    template <auto kBlockThreads>
-    using BlockStorage = typename BlockReduce<kBlockThreads>::TempStorage;
+    GpuIndex nVertices; ///< Number of vertices
+    GpuScalar* Uetr;    ///< `|# elements|` elastic energies (used for Trust Region acceleration)
+    std::array<GpuScalar*, 3> ftr; ///< `3 x |# verts|` per-vertex objective function values (used
+                                   ///< for Trust Region acceleration)
+    GpuScalar* Rtr;                ///< `|# verts|` Trust Region radius
 };
 
 template <auto kBlockThreads>
-__global__ void MinimizeBackwardEuler(BackwardEulerMinimization BDF)
+__global__ void VbdIteration(BackwardEulerMinimization BDF);
+
+template <auto kBlockThreads>
+struct VbdIterationTraits
+{
+  public:
+    using ElasticDerivativeStorageType = SMatrix<GpuScalar, 3, 4>;
+    using BlockReduce  = cub::BlockReduce<ElasticDerivativeStorageType, kBlockThreads>;
+    using BlockStorage = typename BlockReduce::TempStorage;
+
+    static auto constexpr kDynamicSharedMemorySize = sizeof(BlockStorage);
+
+    static auto Kernel() { return &VbdIteration<kBlockThreads>; }
+};
+
+template <auto kBlockThreads>
+__global__ void VbdIteration(BackwardEulerMinimization BDF)
 {
     // Get thread info
-    using BlockReduce  = typename BackwardEulerMinimization::BlockReduce<kBlockThreads>;
-    using BlockStorage = typename BackwardEulerMinimization::BlockStorage<kBlockThreads>;
+    using Traits       = VbdIterationTraits<kBlockThreads>;
+    using BlockReduce  = typename Traits::BlockReduce;
+    using BlockStorage = typename Traits::BlockStorage;
     extern __shared__ __align__(alignof(BlockStorage)) char shared[];
     auto tid = threadIdx.x;
     auto bid = blockIdx.x;
@@ -76,7 +95,8 @@ __global__ void MinimizeBackwardEuler(BackwardEulerMinimization BDF)
     GpuIndex i                 = BDF.partition[bid]; // Vertex index
     GpuIndex GVTbegin          = BDF.GVTp[i];
     GpuIndex nAdjacentElements = BDF.GVTp[i + 1] - GVTbegin;
-    // 1. Compute vertex-element elastic energy derivatives w.r.t. i and store them in shared memory
+    // 1. Compute vertex-element elastic energy derivatives w.r.t. i and store them in shared
+    // memory
     SMatrix<GpuScalar, 3, 4> Hgt = Zeros<GpuScalar, 3, 4>();
     auto Ht                      = Hgt.Slice<3, 3>(0, 0);
     auto gt                      = Hgt.Col(3);
@@ -138,8 +158,8 @@ __global__ void MinimizeBackwardEuler(BackwardEulerMinimization BDF)
             fa(c) * muC,
             BDF.muF,
             BDF.epsv,
-            gi,
-            Hi);
+            &gi,
+            &Hi);
     }
 
     // 4. Add inertial term
@@ -151,7 +171,113 @@ __global__ void MinimizeBackwardEuler(BackwardEulerMinimization BDF)
     using pbat::sim::vbd::kernels::IntegratePositions;
     IntegratePositions(gi, Hi, xi, BDF.detHZero);
     ToBuffers(xi, BDF.xb, i);
+}
+
+template <auto kBlockThreads>
+__global__ static void AccumulateVertexEnergies(BackwardEulerMinimization BDF);
+
+template <auto kBlockThreads>
+struct AccumulateVertexEnergiesTraits
+{
+  public:
+    using BlockReduce  = cub::BlockReduce<GpuScalar, kBlockThreads>;
+    using BlockStorage = typename BlockReduce::TempStorage;
+
+    static auto constexpr kDynamicSharedMemorySize = sizeof(BlockStorage);
+
+    static auto Kernel() { return &AccumulateVertexEnergies<kBlockThreads>; }
 };
+
+template <auto kBlockThreads>
+__global__ static void AccumulateVertexEnergies(BackwardEulerMinimization BDF)
+{
+    using Traits       = AccumulateVertexEnergiesTraits<kBlockThreads>;
+    using BlockReduce  = typename Traits::BlockReduce;
+    using BlockStorage = typename Traits::BlockStorage;
+    extern __shared__ __align__(alignof(BlockStorage)) char shared[];
+
+    auto tid = threadIdx.x;
+    auto bid = blockIdx.x;
+    auto i   = bid;
+
+    // Vertex objective function
+    GpuScalar fi{0};
+
+    // 1. Compute total vertex elastic energy
+    GpuIndex GVTbegin          = BDF.GVTp[i];
+    GpuIndex nAdjacentElements = BDF.GVTp[i + 1] - GVTbegin;
+    for (auto elocal = tid; elocal < nAdjacentElements; elocal += kBlockThreads)
+    {
+        GpuIndex e = BDF.GVTn[GVTbegin + elocal];
+        fi += BDF.Uetr[e];
+    }
+    fi = BlockReduce(reinterpret_cast<BlockStorage&>(shared)).Sum(fi);
+    if (tid > 0)
+        return;
+
+    // Load vertex data
+    GpuScalar mi              = BDF.m[i];
+    SVector<GpuScalar, 3> xti = FromBuffers<3, 1>(BDF.xt, i);
+    SVector<GpuScalar, 3> xi  = FromBuffers<3, 1>(BDF.x, i);
+
+    // 2. Add contact energy
+    static auto constexpr kMaxContacts = BackwardEulerMinimization::kMaxCollidingTrianglesPerVertex;
+    SVector<GpuIndex, kMaxContacts> f  = FromFlatBuffer<kMaxContacts, 1>(BDF.fc, i);
+    auto nContacts                     = Dot(Ones<GpuIndex, kMaxContacts>(), f >= 0);
+    SVector<GpuScalar, kMaxContacts> fa = Zeros<GpuIndex, kMaxContacts>();
+    for (auto c = 0; c < nContacts; ++c)
+        fa(c) = BDF.FA[f(c)];
+    auto sumfa    = Dot(fa, Ones<GpuScalar, kMaxContacts>());
+    GpuScalar muC = (BDF.XVA[i] * BDF.muC) / sumfa;
+    for (auto c = 0; c < nContacts; ++c)
+    {
+        using pbat::sim::vbd::kernels::AccumulateVertexTriangleContact;
+        auto finds = FromBuffers<3, 1>(BDF.F, f(c));
+        auto xtf   = FromBuffers(BDF.xt, finds.Transpose());
+        auto xf    = FromBuffers(BDF.x, finds.Transpose());
+        fi += AccumulateVertexTriangleContact(
+            xti,
+            xi,
+            xtf,
+            xf,
+            BDF.dt,
+            fa(c) * muC,
+            BDF.muF,
+            BDF.epsv,
+            static_cast<SVector<GpuScalar, 3>*>(nullptr),
+            static_cast<SMatrix<GpuScalar, 3, 3>*>(nullptr));
+    }
+
+    // 4. Add inertial term
+    SVector<GpuScalar, 3> xitilde = FromBuffers<3, 1>(BDF.xtilde, i);
+    fi += GpuScalar(0.5) * mi * SquaredNorm(xi - xti);
+
+    // 5. Store vertex objective function
+    // BDF.ftr[k % 3] = fi;
+}
+
+template <template <auto> class TKernelTraits, class... TArgs>
+void Invoke(GpuIndex nBlocks, GpuIndex nThreads, TArgs&&... args)
+{
+    pbat::common::ForValues<32, 64, 128, 256, 512>([&]<auto kBlockThreads>() {
+        if (nThreads > kBlockThreads / 2 and nThreads <= kBlockThreads)
+        {
+            using KernelTraitsType        = TKernelTraits<kBlockThreads>;
+            auto kDynamicSharedMemorySize = static_cast<cuda::memory::shared::size_t>(
+                sizeof(KernelTraitsType::kDynamicSharedMemorySize));
+            auto kernelLaunchConfiguration =
+                cuda::launch_config_builder()
+                    .block_size(kBlockThreads)
+                    .dynamic_shared_memory_size(kDynamicSharedMemorySize)
+                    .grid_size(nBlocks)
+                    .build();
+            cuda::device::current::get().launch(
+                KernelTraitsType::Kernel(),
+                kernelLaunchConfiguration,
+                std::forward<TArgs>(args)...);
+        }
+    });
+}
 
 } // namespace kernels
 } // namespace vbd

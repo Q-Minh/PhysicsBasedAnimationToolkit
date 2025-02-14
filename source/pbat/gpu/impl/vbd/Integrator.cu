@@ -32,8 +32,11 @@ Integrator::Integrator(Data const& data)
       mActiveSetUpdateFrequency(static_cast<GpuIndex>(data.mActiveSetUpdateFrequency)),
       mPositionsAtT(data.xt.cols()),
       mInertialTargetPositions(data.xtilde.cols()),
-      mChebyshevPositionsM2(data.xchebm2.cols()),
-      mChebyshevPositionsM1(data.xchebm1.cols()),
+      xkm2(data.xchebm2.cols()),
+      xkm1(data.xchebm1.cols()),
+      Uetr(data.E.cols()),
+      ftr(data.X.cols()),
+      Rtr(data.X.cols()),
       xb(data.x.cols()),
       mVelocitiesAtT(data.vt.cols()),
       mVelocities(data.v.cols()),
@@ -103,54 +106,6 @@ void Integrator::Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps, GpuS
     cd.FinalizeActiveSet(x);
 
     PBAT_PROFILE_CUDA_HOST_SCOPE_END(ctx);
-}
-
-void Integrator::UpdateBdfState(GpuScalar sdt)
-{
-    GpuIndex const nVertices = static_cast<GpuIndex>(x.Size());
-    mVelocitiesAtT           = mVelocities;
-    thrust::for_each(
-        thrust::device,
-        thrust::make_counting_iterator<GpuIndex>(0),
-        thrust::make_counting_iterator<GpuIndex>(nVertices),
-        [xt = mPositionsAtT.Raw(), x = x.Raw(), v = mVelocities.Raw(), dt = sdt] PBAT_DEVICE(
-            auto i) {
-            using pbat::sim::vbd::kernels::IntegrateVelocity;
-            using pbat::math::linalg::mini::FromBuffers;
-            using pbat::math::linalg::mini::ToBuffers;
-            auto vtp1 = IntegrateVelocity(FromBuffers<3, 1>(xt, i), FromBuffers<3, 1>(x, i), dt);
-            ToBuffers(vtp1, v, i);
-        });
-    mPositionsAtT = x;
-}
-
-kernels::BackwardEulerMinimization Integrator::BdfDeviceParameters(GpuScalar dt, GpuScalar dt2)
-{
-    kernels::BackwardEulerMinimization bdf{};
-    bdf.dt        = dt;
-    bdf.dt2       = dt2;
-    bdf.m         = mMass.Raw();
-    bdf.xtilde    = mInertialTargetPositions.Raw();
-    bdf.xt        = mPositionsAtT.Raw();
-    bdf.x         = x.Raw();
-    bdf.xb        = xb.Raw();
-    bdf.T         = T.Raw();
-    bdf.wg        = mQuadratureWeights.Raw();
-    bdf.GP        = mShapeFunctionGradients.Raw();
-    bdf.lame      = mLameCoefficients.Raw();
-    bdf.detHZero  = mDetHZero;
-    bdf.GVTp      = mVertexTetrahedronPrefix.Raw();
-    bdf.GVTn      = mVertexTetrahedronNeighbours.Raw();
-    bdf.GVTilocal = mVertexTetrahedronLocalVertexIndices.Raw();
-    bdf.kD        = mRayleighDamping;
-    bdf.muC       = mCollisionPenalty;
-    bdf.muF       = mFrictionCoefficient;
-    bdf.epsv      = mSmoothFrictionRelativeVelocityThreshold;
-    bdf.fc        = fc.Raw();
-    bdf.F         = cd.F.Raw();
-    bdf.XVA       = XVA.Raw();
-    bdf.FA        = FA.Raw();
-    return bdf;
 }
 
 void Integrator::SetPositions(Eigen::Ref<GpuMatrixX const> const& Xin)
@@ -384,7 +339,6 @@ void Integrator::SolveBdfWithVbd(
     bool bUseChebyshevAcceleration = rho > GpuScalar{0} and rho < GpuScalar{1};
     GpuScalar rho2                 = rho * rho;
     GpuScalar omega{};
-    GpuIndex const nVertices = static_cast<GpuIndex>(x.Size());
 
     for (auto k = 0; k < iterations; ++k)
     {
@@ -399,25 +353,10 @@ void Integrator::SolveBdfWithVbd(
             auto pEnd                       = mPptr[p + 1];
             bdf.partition                   = mPadj.Raw() + pBegin;
             auto const nVerticesInPartition = static_cast<cuda::grid::dimension_t>(pEnd - pBegin);
-            pbat::common::ForValues<32, 64, 128, 256>([&]<auto kBlockThreads>() {
-                if (mGpuThreadBlockSize > kBlockThreads / 2 and
-                    mGpuThreadBlockSize <= kBlockThreads)
-                {
-                    auto const kDynamicSharedMemoryCapacity = static_cast<
-                        cuda::memory::shared::size_t>(sizeof(
-                        typename kernels::BackwardEulerMinimization::BlockStorage<kBlockThreads>));
-                    auto bcdLaunchConfiguration =
-                        cuda::launch_config_builder()
-                            .block_size(kBlockThreads)
-                            .dynamic_shared_memory_size(kDynamicSharedMemoryCapacity)
-                            .grid_size(nVerticesInPartition)
-                            .build();
-                    cuda::device::current::get().launch(
-                        kernels::MinimizeBackwardEuler<kBlockThreads>,
-                        bcdLaunchConfiguration,
-                        bdf);
-                }
-            });
+            kernels::Invoke<kernels::VbdIterationTraits>(
+                nVerticesInPartition,
+                mGpuThreadBlockSize,
+                bdf);
             // Copy xb back to x
             thrust::for_each(
                 thrust::device,
@@ -430,29 +369,132 @@ void Integrator::SolveBdfWithVbd(
         }
 
         if (bUseChebyshevAcceleration)
-        {
-            thrust::for_each(
-                thrust::device,
-                thrust::make_counting_iterator<GpuIndex>(0),
-                thrust::make_counting_iterator<GpuIndex>(nVertices),
-                [k     = k,
-                 omega = omega,
-                 xkm2  = mChebyshevPositionsM2.Raw(),
-                 xkm1  = mChebyshevPositionsM1.Raw(),
-                 xk    = x.Raw()] PBAT_DEVICE(auto i) {
-                    using pbat::sim::vbd::kernels::ChebyshevUpdate;
-                    using pbat::math::linalg::mini::FromBuffers;
-                    using pbat::math::linalg::mini::ToBuffers;
-                    auto xkm2i = FromBuffers<3, 1>(xkm2, i);
-                    auto xkm1i = FromBuffers<3, 1>(xkm1, i);
-                    auto xki   = FromBuffers<3, 1>(xk, i);
-                    ChebyshevUpdate(k, omega, xkm2i, xkm1i, xki);
-                    ToBuffers(xkm2i, xkm2, i);
-                    ToBuffers(xkm1i, xkm1, i);
-                    ToBuffers(xki, xk, i);
-                });
-        }
+            UpdateChebyshevIterates(k, omega);
     }
+}
+
+void Integrator::UpdateBdfState(GpuScalar sdt)
+{
+    GpuIndex const nVertices = static_cast<GpuIndex>(x.Size());
+    mVelocitiesAtT           = mVelocities;
+    thrust::for_each(
+        thrust::device,
+        thrust::make_counting_iterator<GpuIndex>(0),
+        thrust::make_counting_iterator<GpuIndex>(nVertices),
+        [xt = mPositionsAtT.Raw(), x = x.Raw(), v = mVelocities.Raw(), dt = sdt] PBAT_DEVICE(
+            auto i) {
+            using pbat::sim::vbd::kernels::IntegrateVelocity;
+            using pbat::math::linalg::mini::FromBuffers;
+            using pbat::math::linalg::mini::ToBuffers;
+            auto vtp1 = IntegrateVelocity(FromBuffers<3, 1>(xt, i), FromBuffers<3, 1>(x, i), dt);
+            ToBuffers(vtp1, v, i);
+        });
+    mPositionsAtT = x;
+}
+
+void Integrator::ComputeVertexEnergies(kernels::BackwardEulerMinimization& bdf)
+{
+    // Compute element energies
+    auto const nElements = static_cast<GpuIndex>(T.Size());
+    thrust::for_each(
+        thrust::device,
+        thrust::make_counting_iterator(0),
+        thrust::make_counting_iterator(nElements),
+        [x    = x.Raw(),
+         T    = T.Raw(),
+         GP   = mShapeFunctionGradients.Raw(),
+         lame = mLameCoefficients.Raw(),
+         w    = mQuadratureWeights.Raw(),
+         Ue   = Uetr.Raw()] PBAT_DEVICE(GpuIndex e) {
+            using namespace pbat::math::linalg::mini;
+            auto tinds                   = FromBuffers<4, 1>(T, e);
+            auto xe                      = FromBuffers(x, tinds.Transpose());
+            SMatrix<GpuScalar, 4, 3> GPe = FromFlatBuffer<4, 3>(GP, e);
+            SVector<GpuScalar, 2> lamee  = FromFlatBuffer<2, 1>(lame, e);
+            GpuScalar wg                 = w[e];
+            SMatrix<GpuScalar, 3, 3> Fe  = xe * GPe;
+            pbat::physics::StableNeoHookeanEnergy<3> Psi{};
+            Ue[e] = wg * Psi.eval(Fe, lamee(0), lamee(1));
+        });
+    // Reduce into vertex energies
+    auto const nVertices = static_cast<GpuIndex>(x.Size());
+    kernels::Invoke<kernels::AccumulateVertexEnergiesTraits>(nVertices, mGpuThreadBlockSize, bdf);
+}
+
+void Integrator::UpdateChebyshevIterates(GpuIndex k, GpuScalar omega)
+{
+    auto const nVertices = static_cast<GpuIndex>(x.Size());
+    thrust::for_each(
+        thrust::device,
+        thrust::make_counting_iterator(0),
+        thrust::make_counting_iterator(nVertices),
+        [k = k, omega = omega, xkm2 = xkm2.Raw(), xkm1 = xkm1.Raw(), xk = x.Raw()] PBAT_DEVICE(
+            auto i) {
+            using pbat::sim::vbd::kernels::ChebyshevUpdate;
+            using pbat::math::linalg::mini::FromBuffers;
+            using pbat::math::linalg::mini::ToBuffers;
+            auto xkm2i = FromBuffers<3, 1>(xkm2, i);
+            auto xkm1i = FromBuffers<3, 1>(xkm1, i);
+            auto xki   = FromBuffers<3, 1>(xk, i);
+            ChebyshevUpdate(k, omega, xkm2i, xkm1i, xki);
+            ToBuffers(xkm2i, xkm2, i);
+            ToBuffers(xkm1i, xkm1, i);
+            ToBuffers(xki, xk, i);
+        });
+}
+
+void Integrator::UpdateTrustRegionIterates()
+{
+    auto const nVertices = static_cast<GpuIndex>(x.Size());
+    thrust::for_each(
+        thrust::device,
+        thrust::make_counting_iterator(0),
+        thrust::make_counting_iterator(nVertices),
+        [xkm2 = xkm2.Raw(), xkm1 = xkm1.Raw(), xk = x.Raw()] PBAT_DEVICE(auto i) {
+            using pbat::math::linalg::mini::FromBuffers;
+            using pbat::math::linalg::mini::ToBuffers;
+            auto xkm2i = FromBuffers<3, 1>(xkm2, i);
+            auto xkm1i = FromBuffers<3, 1>(xkm1, i);
+            auto xki   = FromBuffers<3, 1>(xk, i);
+            xkm2i      = xkm1i;
+            xkm1i      = xki;
+            ToBuffers(xkm2i, xkm2, i);
+            ToBuffers(xkm1i, xkm1, i);
+            ToBuffers(xki, xk, i);
+        });
+}
+
+kernels::BackwardEulerMinimization Integrator::BdfDeviceParameters(GpuScalar dt, GpuScalar dt2)
+{
+    kernels::BackwardEulerMinimization bdf{};
+    bdf.dt        = dt;
+    bdf.dt2       = dt2;
+    bdf.m         = mMass.Raw();
+    bdf.xtilde    = mInertialTargetPositions.Raw();
+    bdf.xt        = mPositionsAtT.Raw();
+    bdf.x         = x.Raw();
+    bdf.xb        = xb.Raw();
+    bdf.T         = T.Raw();
+    bdf.wg        = mQuadratureWeights.Raw();
+    bdf.GP        = mShapeFunctionGradients.Raw();
+    bdf.lame      = mLameCoefficients.Raw();
+    bdf.detHZero  = mDetHZero;
+    bdf.GVTp      = mVertexTetrahedronPrefix.Raw();
+    bdf.GVTn      = mVertexTetrahedronNeighbours.Raw();
+    bdf.GVTilocal = mVertexTetrahedronLocalVertexIndices.Raw();
+    bdf.kD        = mRayleighDamping;
+    bdf.muC       = mCollisionPenalty;
+    bdf.muF       = mFrictionCoefficient;
+    bdf.epsv      = mSmoothFrictionRelativeVelocityThreshold;
+    bdf.fc        = fc.Raw();
+    bdf.F         = cd.F.Raw();
+    bdf.XVA       = XVA.Raw();
+    bdf.FA        = FA.Raw();
+    bdf.nVertices = static_cast<GpuIndex>(x.Size());
+    bdf.Uetr      = Uetr.Raw();
+    bdf.ftr       = ftr.Raw();
+    bdf.Rtr       = Rtr.Raw();
+    return bdf;
 }
 
 } // namespace vbd

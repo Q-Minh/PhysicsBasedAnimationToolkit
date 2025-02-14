@@ -1,13 +1,29 @@
+/**
+ * @file Integrator.cuh
+ * @author Quoc-Minh Ton-That (tonthat.quocminh@gmail.com)
+ * @brief VBD integrator implementation
+ * @date 2025-02-14
+ *
+ * @copyright Copyright (c) 2025
+ *
+ */
+
 #ifndef PBAT_GPU_IMPL_VBD_INTEGRATOR_H
 #define PBAT_GPU_IMPL_VBD_INTEGRATOR_H
 
-#include "Kernels.cuh"
 #include "pbat/gpu/Aliases.h"
 #include "pbat/gpu/impl/common/Buffer.cuh"
 #include "pbat/gpu/impl/contact/VertexTriangleMixedCcdDcd.cuh"
-#include "pbat/gpu/impl/geometry/Primitives.cuh"
 #include "pbat/sim/vbd/Data.h"
 #include "pbat/sim/vbd/Enums.h"
+// clang-format off
+/**
+ * @warning Kernels.cuh includes cuda-api-wrappers headers, whose cuda::span interferes with 
+ * libcu++ (i.e. libcudacxx) cuda::span. To avoid compilation errors, we include Kernels.cuh after all other
+ * headers, and we do not use cuda::span when both libcu++ and cuda-api-wrappers headers are present.
+ */
+#include "Kernels.cuh"
+// clang-format on
 
 #include <cuda/api/stream.hpp>
 #include <vector>
@@ -178,20 +194,35 @@ class Integrator
      * @param rho Chebyshev semi-iterative method's estimated spectral radius. If `rho >= 1`,
      * Chebyshev acceleration is not used.
      */
-    void SolveBdfWithVbd(
-        kernels::BackwardEulerMinimization& bdf,
-        GpuIndex iterations,
-        GpuScalar rho);
+    void
+    SolveBdfWithVbd(kernels::BackwardEulerMinimization& bdf, GpuIndex iterations, GpuScalar rho);
     /**
-     * @brief Update the BDF state (i.e. positions and velocities) after solving the BDF minimization
+     * @brief Update the BDF state (i.e. positions and velocities) after solving the BDF
+     * minimization
      *
      * @param sdt Time step
      */
     void UpdateBdfState(GpuScalar sdt);
+    /**
+     * @brief
+     *
+     * @param bdf
+     */
+    void ComputeVertexEnergies(kernels::BackwardEulerMinimization& bdf);
+    /**
+     * @brief
+     *
+     */
+    void UpdateChebyshevIterates(GpuIndex k, GpuScalar omega);
+    /**
+     * @brief
+     *
+     */
+    void UpdateTrustRegionIterates();
 
   public:
-    common::Buffer<GpuScalar, 3> x;
-    common::Buffer<GpuIndex, 4> T; ///< Tetrahedral mesh elements
+    common::Buffer<GpuScalar, 3> x; ///< Vertex positions
+    common::Buffer<GpuIndex, 4> T;  ///< Tetrahedral mesh elements
   private:
     Eigen::Vector<GpuScalar, 3> mWorldMin; ///< World AABB min
     Eigen::Vector<GpuScalar, 3> mWorldMax; ///< World AABB max
@@ -208,10 +239,16 @@ class Integrator
     common::Buffer<GpuScalar, 3> mPositionsAtT;            ///< Previous vertex positions
     common::Buffer<GpuScalar, 3> mInertialTargetPositions; ///< Inertial target for vertex positions
     common::Buffer<GpuScalar, 3>
-        mChebyshevPositionsM2; ///< x^{k-2} used in Chebyshev semi-iterative method
+        xkm2; ///< x^{k-2} used in acceleration schemes (Chebyshev, Trust Region)
     common::Buffer<GpuScalar, 3>
-        mChebyshevPositionsM1;       ///< x^{k-1} used in Chebyshev semi-iterative method
-    common::Buffer<GpuScalar, 3> xb; ///< Write buffer for positions which handles data races
+        xkm1; ///< x^{k-1} used in acceleration schemes (Chebyshev, Trust Region)
+    common::Buffer<GpuScalar> Uetr;   ///< `|# elements|` elastic energies (used for Trust Region
+                                      ///< acceleration)
+    common::Buffer<GpuScalar, 3> ftr; ///< `3 x |# verts|` per-vertex objective function values
+                                      ///< (used for Trust Region acceleration)
+    common::Buffer<GpuScalar> Rtr;    ///< `|# verts|` Trust Region radius
+    common::Buffer<GpuScalar, 3> xb;  ///< Write buffer for positions which handles data races
+
     common::Buffer<GpuScalar, 3> mVelocitiesAtT;        ///< Previous vertex velocities
     common::Buffer<GpuScalar, 3> mVelocities;           ///< Current vertex velocities
     common::Buffer<GpuScalar, 3> mExternalAcceleration; ///< External acceleration

@@ -94,7 +94,7 @@ PBAT_HOST_DEVICE mini::SVector<ScalarType, TMatrixXT::kRows> InitialPositionsFor
 }
 
 template <class ScalarType, class IndexType>
-PBAT_HOST ScalarType ChebyshevOmega(IndexType k, ScalarType rho2, ScalarType omega = {})
+PBAT_HOST ScalarType ChebyshevOmega(IndexType k, ScalarType rho2, ScalarType omega)
 {
     return (k == IndexType(0)) ? ScalarType{1} :
            (k == IndexType(1)) ? ScalarType{2} / (ScalarType{2} - rho2) :
@@ -220,7 +220,7 @@ template <
     mini::CMatrix TMatrixG,
     mini::CMatrix TMatrixH,
     class ScalarType = typename TMatrixXV::ScalarType>
-PBAT_HOST_DEVICE void AccumulateVertexTriangleContact(
+PBAT_HOST_DEVICE ScalarType AccumulateVertexTriangleContact(
     TMatrixXTV const& xtv,
     TMatrixXV const& xv,
     TMatrixXTF const& xtf,
@@ -229,10 +229,12 @@ PBAT_HOST_DEVICE void AccumulateVertexTriangleContact(
     ScalarType muC,
     ScalarType muF,
     ScalarType epsv,
-    TMatrixG& g,
-    TMatrixH& H)
+    TMatrixG* g = nullptr,
+    TMatrixH* H = nullptr)
 {
     using namespace mini;
+    ScalarType E{0};
+
     // Compute triangle normal
     SMatrix<ScalarType, 3, 2> T{};
     T.Col(0)                         = xf.Col(1) - xf.Col(0);
@@ -241,7 +243,7 @@ PBAT_HOST_DEVICE void AccumulateVertexTriangleContact(
     ScalarType const doublearea      = Norm(n);
     bool const bIsTriangleDegenerate = doublearea <= ScalarType(1e-8);
     if (bIsTriangleDegenerate)
-        return;
+        return E;
 
     n /= doublearea;
     using namespace pbat::geometry;
@@ -254,29 +256,49 @@ PBAT_HOST_DEVICE void AccumulateVertexTriangleContact(
     bool const bIsVertexInsideTriangle = All(b >= ScalarType(0) and b <= ScalarType(1));
     // clang-format on
     if (not bIsVertexInsideTriangle)
-        return;
+        return E;
 
-    // Collision energy is \frac{1}{2} \mu_C [(xv - xb)^T n]^2
+    // Collision energy is \f$ \frac{1}{2} \mu_C [(x_v - x_b)^T n]^2 \f$
     SVector<ScalarType, 3> xb = xf * b;
     ScalarType d              = min(ScalarType(0), Dot(xv - xb, n));
     ScalarType lambda         = muC * d;
-    // Gradient is muC [(xv - xb)^T n] I_{d x d} n
-    g += lambda * n;
-    // Hessian is muC n n^T
-    H += muC * (n * n.Transpose());
+    E += ScalarType(0.5) * lambda * d;
+    // Gradient is \f$ \mu_C [(x_v - x_b)^T n] I_{d \times d} n \f$
+    if (g)
+        (*g) += lambda * n;
+    // Hessian is \f$ \mu_C n n^T \f$
+    if (H)
+        (*H) += muC * (n * n.Transpose());
 
-    // IPC smooth friction energy is \mu_F
+    // IPC smooth friction energy
     T.Col(1)                 = Cross(n, T.Col(0)); ///< Binormal
     auto xtb                 = xtf * b;
     auto dx                  = (xv - xtv) - (xb - xtb);
     SVector<ScalarType, 2> u = T.Transpose() * dx;
     ScalarType unorm         = Norm(u) + std::numeric_limits<ScalarType>::epsilon();
-    ScalarType uepsvh        = unorm / (epsv * dt);
+    ScalarType epsvh         = epsv * dt;
+    ScalarType muFlambda     = muF * abs(lambda);
+    ScalarType uepsvh        = unorm / epsvh;
     ScalarType f1            = (uepsvh < 1) ? 2 * uepsvh - (uepsvh * uepsvh) : ScalarType(1);
-    // Gradient is \mu_F \lambda T f1 \frac{u}{\norm{u}}
-    ScalarType muFlambdaf1unorm = (muF * abs(lambda) * f1) / unorm;
-    g += muFlambdaf1unorm * T * u;
-    H += muFlambdaf1unorm * T * T.Transpose();
+    // Gradient is \f$ \mu_F \lambda_N T f1(|u|) \frac{u}{|u|}} \f$
+    ScalarType muFlambdaf1unorm = muFlambda * f1 / unorm;
+    if (g)
+        (*g) += muFlambdaf1unorm * T * u;
+    if (H)
+        (*H) += muFlambdaf1unorm * T * T.Transpose();
+    // Energy is \f$ \mu_F \lambda_N f_0(|u|) \f$, where
+    // \f$ f_0(y) = f_1'(y) \f$ and \f$ f_0(\eps_\nu h) = \eps_\nu h \f$
+    // This yields \f$ f_0(y) = 1/3 \eps_\nu h + \frac{y^2}{\eps_\nu h} - \frac{y^3}{3 \eps_\nu^2
+    // h^2} \f$
+    ScalarType unorm2 = unorm * unorm;
+    // clang-format off
+    ScalarType f0     = 
+        (ScalarType(1) / ScalarType(3) * epsvh) + 
+        (unorm2 / epsvh) -
+        (unorm2 * unorm / (ScalarType(3) * epsvh * epsvh));
+    // clang-format on
+    E += muFlambda * f0;
+    return E;
 }
 
 template <
