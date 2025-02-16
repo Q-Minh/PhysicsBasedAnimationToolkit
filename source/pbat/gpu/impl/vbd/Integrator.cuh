@@ -33,18 +33,28 @@ namespace gpu {
 namespace impl {
 namespace vbd {
 
+/**
+ * @brief VBD integrator \cite anka2024vbd
+ *
+ */
 class Integrator
 {
   public:
-    using EInitializationStrategy = pbat::sim::vbd::EInitializationStrategy;
-    using Data                    = pbat::sim::vbd::Data;
+    using EInitializationStrategy =
+        pbat::sim::vbd::EInitializationStrategy; ///< Enum type for initialization strategy
+    using Data = pbat::sim::vbd::Data;           ///< Data type for VBD
 
+    /**
+     * @brief Construct Integrator from data
+     *
+     * @param data VBD simulation scenario
+     */
     Integrator(Data const& data);
     /**
-     * @brief
-     * @param dt
-     * @param iterations
-     * @param substeps
+     * @brief Execute one simulation step
+     * @param dt Time step
+     * @param iterations Number of optimization iterations per substep
+     * @param substeps Number of substeps
      * @param rho Chebyshev semi-iterative method's estimated spectral radius. If rho >= 1,
      * Chebyshev acceleration is not used.
      */
@@ -54,112 +64,18 @@ class Integrator
         GpuIndex substeps = GpuIndex{1},
         GpuScalar rho     = GpuScalar{1});
     /**
-     * @brief
-     * @param X
-     */
-    void SetPositions(Eigen::Ref<GpuMatrixX const> const& X);
-    /**
-     * @brief
-     * @param v
-     */
-    void SetVelocities(Eigen::Ref<GpuMatrixX const> const& v);
-    /**
-     * @brief
-     * @param aext
-     */
-    void SetExternalAcceleration(Eigen::Ref<GpuMatrixX const> const& aext);
-    /**
-     * @brief
-     * @param m
-     */
-    void SetMass(Eigen::Ref<GpuVectorX const> const& m);
-    /**
-     * @brief
-     * @param wg
-     */
-    void SetQuadratureWeights(Eigen::Ref<GpuVectorX const> const& wg);
-    /**
-     * @brief
-     * @param GP
-     */
-    void SetShapeFunctionGradients(Eigen::Ref<GpuMatrixX const> const& GP);
-    /**
-     * @brief
-     * @param l
-     */
-    void SetLameCoefficients(Eigen::Ref<GpuMatrixX const> const& l);
-    /**
-     * @brief
-     * @param zero
-     */
-    void SetNumericalZeroForHessianDeterminant(GpuScalar zero);
-    /**
-     * @brief
-     * @param GVTp
-     * @param GVTn
-     * @param GVTilocal
-     */
-    void SetVertexTetrahedronAdjacencyList(
-        Eigen::Ref<GpuIndexVectorX const> const& GVTp,
-        Eigen::Ref<GpuIndexVectorX const> const& GVTn,
-        Eigen::Ref<GpuIndexVectorX const> const& GVTilocal);
-    /**
-     * @brief
-     * @param kD
-     */
-    void SetRayleighDampingCoefficient(GpuScalar kD);
-    /**
-     * @brief
-     * @param Pptr
-     * @param Padj
-     */
-    void SetVertexPartitions(
-        Eigen::Ref<GpuIndexVectorX const> const& Pptr,
-        Eigen::Ref<GpuIndexVectorX const> const& Padj);
-    /**
-     * @brief
-     * @param strategy
-     */
-    void SetInitializationStrategy(EInitializationStrategy strategy);
-    /**
-     * @brief
-     * @param min
-     * @param max
+     * @brief Set the bounding box over the scene used for spatial partitioning
+     * @param min Minimum corner
+     * @param max Maximum corner
      */
     void SetSceneBoundingBox(
         Eigen::Vector<GpuScalar, 3> const& min,
         Eigen::Vector<GpuScalar, 3> const& max);
     /**
-     * @brief
-     * @param blockSize
+     * @brief Set the number of threads per GPU block for per-vertex elastic energy computation
+     * @param blockSize Number of threads per block
      */
     void SetBlockSize(GpuIndex blockSize);
-
-    /**
-     * @brief
-     * @return
-     */
-    common::Buffer<GpuScalar, 3> const& GetVelocity() const;
-    /**
-     * @brief
-     * @return
-     */
-    common::Buffer<GpuScalar, 3> const& GetExternalAcceleration() const;
-    /**
-     * @brief
-     * @return
-     */
-    common::Buffer<GpuScalar> const& GetMass() const;
-    /**
-     * @brief
-     * @return
-     */
-    common::Buffer<GpuScalar> const& GetShapeFunctionGradients() const;
-    /**
-     * @brief
-     * @return
-     */
-    common::Buffer<GpuScalar> const& GetLameCoefficients() const;
 
     /**
      * @brief Detect candidate contact pairs for the current time step
@@ -183,7 +99,6 @@ class Integrator
     void InitializeBcdSolution(GpuScalar sdt, GpuScalar sdt2);
     /**
      * @brief Computes active contact pairs in the current configuration
-     *
      */
     void UpdateActiveSet();
     /**
@@ -204,44 +119,47 @@ class Integrator
      */
     void UpdateBdfState(GpuScalar sdt);
     /**
-     * @brief
+     * @brief Compute the per-vertex proxy energies \f$ \frac{1}{2} m_i |\mathbf{x}_i -
+     * \tilde{\mathbf{x}_i}|_2^2 + h^2 \sum_{e \in \text{adj}(i)} w_e \Psi_e + \sum_{c \in (i,f)}
+     * \left[ \frac{1}{2} \mu_C d^2 + \mu_F \lambda_N f_0(|\mathbf{u}|) \right] \f$
      *
-     * @param bdf
+     * @param bdf Device BDF minimization problem
      */
     void ComputeVertexEnergies(kernels::BackwardEulerMinimization& bdf);
     /**
-     * @brief
+     * @brief Update \f$ x^k, x^{k-1}, x^{k-2} \f$ using Chebyshev acceleration
      *
+     * @param k Current iteration
+     * @param omega Chebyshev semi-iterative method's relaxation parameter
      */
     void UpdateChebyshevIterates(GpuIndex k, GpuScalar omega);
     /**
-     * @brief
-     *
+     * @brief Update \f$ x^k, x^{k-1}, x^{k-2} \f$
      */
     void UpdateTrustRegionIterates();
 
   public:
     common::Buffer<GpuScalar, 3> x; ///< Vertex positions
     common::Buffer<GpuIndex, 4> T;  ///< Tetrahedral mesh elements
-  private:
+
     Eigen::Vector<GpuScalar, 3> mWorldMin; ///< World AABB min
     Eigen::Vector<GpuScalar, 3> mWorldMax; ///< World AABB max
     GpuIndex mActiveSetUpdateFrequency;    ///< Active set update frequency
     contact::VertexTriangleMixedCcdDcd cd; ///< Collision detector
     common::Buffer<GpuIndex>
-        fc; ///< |#verts*kMaxCollidingTrianglesPerVertex| array of vertex-triangle contact pairs
-            ///< (i,f), s.t. f = fc[i*kMaxCollidingTrianglesPerVertex+c] for 0 <= c <
-            ///< kMaxCollidingTrianglesPerVertex. If f(c) < 0, there is no contact, and f(c+j) < 0
-            ///< is also true, for j > 0.
-    common::Buffer<GpuScalar> XVA; ///< |x.Size()| array of vertex areas for contact response
-    common::Buffer<GpuScalar> FA;  ///< |F.Size()| array of triangle areas for contact response
+        fc; ///< `|# verts * kMaxCollidingTrianglesPerVertex|` array of vertex-triangle contact
+            ///< pairs `(i,f)`, s.t. `f = fc[i*kMaxCollidingTrianglesPerVertex+c]` for `0 <= c <
+            ///< kMaxCollidingTrianglesPerVertex`. If `f(c) < 0`, there is no contact, and `f(c+j) <
+            ///< 0` is also true, for `j > 0`.
+    common::Buffer<GpuScalar> XVA; ///< `|x.Size()|` array of vertex areas for contact response
+    common::Buffer<GpuScalar> FA;  ///< `|F.Size()|` array of triangle areas for contact response
 
     common::Buffer<GpuScalar, 3> mPositionsAtT;            ///< Previous vertex positions
     common::Buffer<GpuScalar, 3> mInertialTargetPositions; ///< Inertial target for vertex positions
     common::Buffer<GpuScalar, 3>
-        xkm2; ///< x^{k-2} used in acceleration schemes (Chebyshev, Trust Region)
+        xkm2; ///< \f$ x^{k-2} \f$ used in acceleration schemes (Chebyshev, Trust Region)
     common::Buffer<GpuScalar, 3>
-        xkm1; ///< x^{k-1} used in acceleration schemes (Chebyshev, Trust Region)
+        xkm1; ///< \f$ x^{k-1} \f$ used in acceleration schemes (Chebyshev, Trust Region)
     common::Buffer<GpuScalar> Uetr;   ///< `|# elements|` elastic energies (used for Trust Region
                                       ///< acceleration)
     common::Buffer<GpuScalar, 3> ftr; ///< `3 x |# verts|` per-vertex objective function values
@@ -254,10 +172,11 @@ class Integrator
     common::Buffer<GpuScalar, 3> mExternalAcceleration; ///< External acceleration
     common::Buffer<GpuScalar> mMass;                    ///< Lumped mass matrix diagonals
 
-    common::Buffer<GpuScalar> mQuadratureWeights; ///< |#elements| array of quadrature weights (i.e.
-                                                  ///< tetrahedron volumes for order 1)
-    common::Buffer<GpuScalar> mShapeFunctionGradients; ///< 4x3x|#elements| shape function gradients
-    common::Buffer<GpuScalar> mLameCoefficients; ///< 2x|#elements| 1st and 2nd Lame parameters
+    common::Buffer<GpuScalar> mQuadratureWeights; ///< `|# elements|` array of quadrature weights
+                                                  ///< (i.e. tetrahedron volumes for order 1)
+    common::Buffer<GpuScalar>
+        mShapeFunctionGradients;                 ///< `4x3x|# elements|` shape function gradients
+    common::Buffer<GpuScalar> mLameCoefficients; ///< `2x|# elements|` 1st and 2nd Lame parameters
     GpuScalar mDetHZero;                         ///< Numerical zero for hessian determinant check
 
     common::Buffer<GpuIndex>
@@ -273,8 +192,8 @@ class Integrator
     GpuScalar mSmoothFrictionRelativeVelocityThreshold; ///< IPC smooth friction transition
                                                         ///< function's relative velocity threshold
 
-    GpuIndexVectorX mPptr; ///< |#partitions+1| partition pointers, s.t. the range [Pptr[p],
-                           ///< Pptr[p+1]) indexes into Padj vertices from partition p
+    GpuIndexVectorX mPptr; ///< `|#partitions+1|` partition pointers, s.t. the range `[Pptr[p],
+                           ///< Pptr[p+1])` indexes into `Padj` vertices from partition `p`
     common::Buffer<GpuIndex> mPadj; ///< Partition vertices
 
     EInitializationStrategy

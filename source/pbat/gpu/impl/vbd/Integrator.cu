@@ -108,87 +108,6 @@ void Integrator::Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps, GpuS
     PBAT_PROFILE_CUDA_HOST_SCOPE_END(ctx);
 }
 
-void Integrator::SetPositions(Eigen::Ref<GpuMatrixX const> const& Xin)
-{
-    common::ToBuffer(Xin, x);
-    mPositionsAtT = x;
-}
-
-void Integrator::SetVelocities(Eigen::Ref<GpuMatrixX const> const& v)
-{
-    common::ToBuffer(v, mVelocities);
-    mVelocitiesAtT = mVelocities;
-}
-
-void Integrator::SetExternalAcceleration(Eigen::Ref<GpuMatrixX const> const& aext)
-{
-    common::ToBuffer(aext, mExternalAcceleration);
-}
-
-void Integrator::SetMass(Eigen::Ref<GpuVectorX const> const& m)
-{
-    common::ToBuffer(m, mMass);
-}
-
-void Integrator::SetQuadratureWeights(Eigen::Ref<GpuVectorX const> const& wg)
-{
-    common::ToBuffer(wg, mQuadratureWeights);
-}
-
-void Integrator::SetShapeFunctionGradients(Eigen::Ref<GpuMatrixX const> const& GP)
-{
-    common::ToBuffer(GP, mShapeFunctionGradients);
-}
-
-void Integrator::SetLameCoefficients(Eigen::Ref<GpuMatrixX const> const& l)
-{
-    common::ToBuffer(l, mLameCoefficients);
-}
-
-void Integrator::SetNumericalZeroForHessianDeterminant(GpuScalar zero)
-{
-    mDetHZero = zero;
-}
-
-void Integrator::SetVertexTetrahedronAdjacencyList(
-    Eigen::Ref<GpuIndexVectorX const> const& GVTp,
-    Eigen::Ref<GpuIndexVectorX const> const& GVTn,
-    Eigen::Ref<GpuIndexVectorX const> const& GVTilocal)
-{
-    if (GVTn.size() != GVTilocal.size())
-    {
-        std::ostringstream ss{};
-        ss << "Expected vertex-tetrahedron adjacency graph's neighbour array and data (ilocal) "
-              "array to have the same size, but got neighbours="
-           << GVTn.size() << ", ilocal=" << GVTilocal.size() << " \n";
-        throw std::invalid_argument(ss.str());
-    }
-
-    common::ToBuffer(GVTp, mVertexTetrahedronPrefix);
-    mVertexTetrahedronNeighbours.Resize(GVTn.size());
-    mVertexTetrahedronLocalVertexIndices.Resize(GVTilocal.size());
-    common::ToBuffer(GVTn, mVertexTetrahedronNeighbours);
-    common::ToBuffer(GVTilocal, mVertexTetrahedronLocalVertexIndices);
-}
-
-void Integrator::SetRayleighDampingCoefficient(GpuScalar kD)
-{
-    mRayleighDamping = kD;
-}
-
-void Integrator::SetVertexPartitions(
-    Eigen::Ref<GpuIndexVectorX const> const& Pptr,
-    Eigen::Ref<GpuIndexVectorX const> const& Padj)
-{
-    mPptr = Pptr;
-    common::ToBuffer(Padj, mPadj);
-}
-
-void Integrator::SetInitializationStrategy(EInitializationStrategy strategy)
-{
-    mInitializationStrategy = strategy;
-}
-
 void Integrator::SetSceneBoundingBox(
     Eigen::Vector<GpuScalar, 3> const& min,
     Eigen::Vector<GpuScalar, 3> const& max)
@@ -200,31 +119,6 @@ void Integrator::SetSceneBoundingBox(
 void Integrator::SetBlockSize(GpuIndex blockSize)
 {
     mGpuThreadBlockSize = std::clamp(blockSize, GpuIndex{32}, GpuIndex{256});
-}
-
-common::Buffer<GpuScalar, 3> const& Integrator::GetVelocity() const
-{
-    return mVelocities;
-}
-
-common::Buffer<GpuScalar, 3> const& Integrator::GetExternalAcceleration() const
-{
-    return mExternalAcceleration;
-}
-
-common::Buffer<GpuScalar> const& Integrator::GetMass() const
-{
-    return mMass;
-}
-
-common::Buffer<GpuScalar> const& Integrator::GetShapeFunctionGradients() const
-{
-    return mShapeFunctionGradients;
-}
-
-common::Buffer<GpuScalar> const& Integrator::GetLameCoefficients() const
-{
-    return mLameCoefficients;
 }
 
 void Integrator::InitializeActiveSet(GpuScalar dt)
