@@ -55,23 +55,6 @@ void BindIntegrator([[maybe_unused]] pybind11::module& m)
             nullptr,
             &Integrator::SetExternalAcceleration,
             "|#dims|x|#vertices| vertex external accelerations")
-        .def_property("m", nullptr, &Integrator::SetMass, "|#vertices| lumped masses")
-        .def_property(
-            "wg",
-            nullptr,
-            &Integrator::SetQuadratureWeights,
-            "|#elements| array of quadrature weights")
-        .def_property(
-            "GNe",
-            nullptr,
-            &Integrator::SetShapeFunctionGradients,
-            "4x3x|#elements| array of shape function gradients, stored column-wise (i.e. the 4x3 "
-            "element shape function gradient matrices are flattened in column-major format)")
-        .def_property(
-            "lame",
-            nullptr,
-            &Integrator::SetLameCoefficients,
-            "2x|#elements| Lame coefficients")
         .def_property(
             "detH_residual",
             nullptr,
@@ -79,34 +62,10 @@ void BindIntegrator([[maybe_unused]] pybind11::module& m)
             "Numerical zero used in Hessian determinant check for approximate singularity "
             "detection")
         .def_property(
-            "GVT",
-            nullptr,
-            [](Integrator& vbd,
-               std::tuple<
-                   Eigen::Ref<GpuIndexVectorX const>,
-                   Eigen::Ref<GpuIndexVectorX const>,
-                   Eigen::Ref<GpuIndexVectorX const>> const& GVT) {
-                vbd.SetVertexTetrahedronAdjacencyList(
-                    std::get<0>(GVT),
-                    std::get<1>(GVT),
-                    std::get<2>(GVT));
-            },
-            "3-tuple (prefix,neighbours,data) representing the compressed column storage graph "
-            "representation of the vertex-tetrahedron adjacency list. The data property yields the "
-            "local vertex index associated with a pair (i,e) of vertex i adjacent to element e.")
-        .def_property(
             "kD",
             nullptr,
             &Integrator::SetRayleighDampingCoefficient,
             "Uniform Rayleigh damping coefficient on the mesh.")
-        .def_property(
-            "partitions",
-            nullptr,
-            [](Integrator& vbd,
-               std::pair<Eigen::Ref<GpuIndexVectorX const>, Eigen::Ref<GpuIndexVectorX const>>
-                   partitions) { vbd.SetVertexPartitions(partitions.first, partitions.second); },
-            "Vertex partitions for the parallel time integration minimization solve as list of "
-            "lists of vertex indices")
         .def_property(
             "strategy",
             nullptr,
