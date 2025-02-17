@@ -1,3 +1,13 @@
+/**
+ * @file Kernels.cuh
+ * @author Quoc-Minh Ton-That (tonthat.quocminh@gmail.com)
+ * @brief VBD kernels
+ * @date 2025-02-16
+ *
+ * @copyright Copyright (c) 2025
+ *
+ */
+
 #ifndef PBAT_GPU_IMPL_VBD_KERNELS_H
 #define PBAT_GPU_IMPL_VBD_KERNELS_H
 
@@ -18,10 +28,17 @@ namespace pbat {
 namespace gpu {
 namespace impl {
 namespace vbd {
+/**
+ * @namespace pbat::gpu::impl::vbd::kernels
+ * @brief Device-side VBD kernels
+ */
 namespace kernels {
 
 using namespace pbat::math::linalg::mini;
 
+/**
+ * @brief Device-side BFD1 minimization problem
+ */
 struct BackwardEulerMinimization
 {
     GpuScalar dt;                     ///< Time step
@@ -32,10 +49,10 @@ struct BackwardEulerMinimization
     std::array<GpuScalar*, 3> x;      ///< Vertex positions
     std::array<GpuScalar*, 3> xb;     ///< Vertex position write buffer
 
-    std::array<GpuIndex*, 4> T; ///< 4x|#elements| array of tetrahedra
-    GpuScalar* wg;              ///< |#elements| array of quadrature weights
-    GpuScalar* GP;              ///< 4x3x|#elements| array of shape function gradients
-    GpuScalar* lame;            ///< 2x|#elements| of 1st and 2nd Lame coefficients
+    std::array<GpuIndex*, 4> T; ///< `4x|# elements|` array of tetrahedra
+    GpuScalar* wg;              ///< `|# elements|` array of quadrature weights
+    GpuScalar* GP;              ///< `4x3x|# elements|` array of shape function gradients
+    GpuScalar* lame;            ///< `2x|# elements|` of 1st and 2nd Lame coefficients
     GpuScalar detHZero;         ///< Numerical zero for hessian determinant check
     // GpuScalar const* kD;                  ///< |#elements| array of damping coefficients
 
@@ -47,12 +64,13 @@ struct BackwardEulerMinimization
     GpuScalar muC;  ///< Collision penalty
     GpuScalar muF;  ///< Coefficient of friction
     GpuScalar epsv; ///< IPC smooth friction transition function's relative velocity threshold
-    static auto constexpr kMaxCollidingTrianglesPerVertex = 8;
-    GpuIndex* fc;               ///< |#vertices|x|kMaxCollidingTrianglesPerVertex| array of
+    static auto constexpr kMaxCollidingTrianglesPerVertex =
+        8;                      ///< Maximum number of colliding triangles per vertex
+    GpuIndex* fc;               ///< `|# vertices|x|kMaxCollidingTrianglesPerVertex|` array of
                                 ///< colliding triangles
-    std::array<GpuIndex*, 3> F; ///< 3x|#collision triangles| array of triangles
-    GpuScalar* XVA;             ///< |#vertices| array of vertex areas
-    GpuScalar* FA;              ///< |#collision triangles| array of face areas
+    std::array<GpuIndex*, 3> F; ///< `3x|# collision triangles|` array of triangles
+    GpuScalar* XVA;             ///< `|# vertices|` array of vertex areas
+    GpuScalar* FA;              ///< `|# collision triangles|` array of face areas
 
     GpuIndex*
         partition; ///< List of vertex indices that can be processed independently, i.e. in parallel
@@ -67,19 +85,35 @@ struct BackwardEulerMinimization
 template <auto kBlockThreads>
 __global__ void VbdIteration(BackwardEulerMinimization BDF);
 
+/**
+ * @brief Traits for VBD iteration kernel
+ * @tparam kBlockThreads Number of threads per block
+ */
 template <auto kBlockThreads>
 struct VbdIterationTraits
 {
   public:
-    using ElasticDerivativeStorageType = SMatrix<GpuScalar, 3, 4>;
-    using BlockReduce  = cub::BlockReduce<ElasticDerivativeStorageType, kBlockThreads>;
-    using BlockStorage = typename BlockReduce::TempStorage;
+    using ElasticDerivativeStorageType = SMatrix<GpuScalar, 3, 4>; ///< Type of data to reduce
+    using BlockReduce =
+        cub::BlockReduce<ElasticDerivativeStorageType, kBlockThreads>; ///< Reduction
+    using BlockStorage = typename BlockReduce::TempStorage;            ///< Storage for reduction
 
-    static auto constexpr kDynamicSharedMemorySize = sizeof(BlockStorage);
+    static auto constexpr kDynamicSharedMemorySize =
+        sizeof(BlockStorage); ///< Dynamic shared memory size
 
+    /**
+     * @brief Get the raw kernel
+     * @return Handle to the kernel
+     */
     static auto Kernel() { return &VbdIteration<kBlockThreads>; }
 };
 
+/**
+ * @brief VBD iteration kernel
+ *
+ * @tparam kBlockThreads Number of threads per block
+ * @param BDF BDF1 time-stepping minimization problem
+ */
 template <auto kBlockThreads>
 __global__ void VbdIteration(BackwardEulerMinimization BDF)
 {
@@ -176,18 +210,34 @@ __global__ void VbdIteration(BackwardEulerMinimization BDF)
 template <auto kBlockThreads>
 __global__ static void AccumulateVertexEnergies(BackwardEulerMinimization BDF);
 
+/**
+ * @brief Traits for vertex energy accumulation kernel
+ *
+ * @tparam kBlockThreads Number of threads per block
+ */
 template <auto kBlockThreads>
 struct AccumulateVertexEnergiesTraits
 {
   public:
-    using BlockReduce  = cub::BlockReduce<GpuScalar, kBlockThreads>;
-    using BlockStorage = typename BlockReduce::TempStorage;
+    using BlockReduce  = cub::BlockReduce<GpuScalar, kBlockThreads>; ///< Reduction
+    using BlockStorage = typename BlockReduce::TempStorage;          ///< Storage for reduction
 
-    static auto constexpr kDynamicSharedMemorySize = sizeof(BlockStorage);
+    static auto constexpr kDynamicSharedMemorySize =
+        sizeof(BlockStorage); ///< Dynamic shared memory size
 
+    /**
+     * @brief Get the raw kernel
+     * @return Handle to the kernel
+     */
     static auto Kernel() { return &AccumulateVertexEnergies<kBlockThreads>; }
 };
 
+/**
+ * @brief Accumulate vertex energies kernel
+ *
+ * @tparam kBlockThreads Number of threads per block
+ * @param BDF BDF1 time-stepping minimization problem
+ */
 template <auto kBlockThreads>
 __global__ static void AccumulateVertexEnergies(BackwardEulerMinimization BDF)
 {

@@ -201,6 +201,12 @@ class Integrator
     GpuIndex mGpuThreadBlockSize; ///< Number of threads per CUDA thread block
     cuda::stream_t mStream;       ///< Cuda stream on which this VBD instance will run
 
+    /**
+     * @brief Obtain Backward Euler time stepping minimization problem for device code
+     * @param dt Time step
+     * @param dt2 Time step squared
+     * @return Backward Euler minimization problem for device code
+     */
     kernels::BackwardEulerMinimization BdfDeviceParameters(GpuScalar dt, GpuScalar dt2);
 };
 

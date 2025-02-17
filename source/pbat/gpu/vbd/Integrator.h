@@ -1,3 +1,13 @@
+/**
+ * @file Integrator.h
+ * @author Quoc-Minh Ton-That (tonthat.quocminh@gmail.com)
+ * @brief VBD integrator public API
+ * @date 2025-02-16
+ *
+ * @copyright Copyright (c) 2025
+ *
+ */
+
 #ifndef PBAT_GPU_VBD_INTEGRATOR_H
 #define PBAT_GPU_VBD_INTEGRATOR_H
 
