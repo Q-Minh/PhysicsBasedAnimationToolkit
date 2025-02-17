@@ -306,6 +306,15 @@ __global__ static void AccumulateVertexEnergies(BackwardEulerMinimization BDF)
     // BDF.ftr[k % 3] = fi;
 }
 
+/**
+ * @brief Invokes a VBD kernel on the GPU with the specified number of blocks and threads
+ *
+ * @tparam TKernelTraits Kernel traits type
+ * @tparam TArgs Argument types
+ * @param nBlocks Grid size
+ * @param nThreads Block size
+ * @param args Arguments to pass to the kernel
+ */
 template <template <auto> class TKernelTraits, class... TArgs>
 void Invoke(GpuIndex nBlocks, GpuIndex nThreads, TArgs&&... args)
 {
