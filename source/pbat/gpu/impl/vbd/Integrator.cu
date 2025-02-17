@@ -96,12 +96,14 @@ void Integrator::Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps, GpuS
     auto bdf = BdfDeviceParameters(sdt, sdt2);
     for (auto s = 0; s < substeps; ++s)
     {
+        PBAT_PROFILE_NAMED_CUDA_HOST_SCOPE_START(subCtx, "pbat.gpu.impl.vbd.Integrator.SubStep");
         ComputeInertialTargets(sdt, sdt2);
         InitializeBcdSolution(sdt, sdt2);
         if (s % mActiveSetUpdateFrequency == 0)
             UpdateActiveSet();
-        SolveBdfWithVbd(bdf, iterations, rho);
+        Solve(bdf, iterations, rho);
         UpdateBdfState(sdt);
+        PBAT_PROFILE_CUDA_HOST_SCOPE_END(subCtx);
     }
     cd.FinalizeActiveSet(x);
 
@@ -123,6 +125,10 @@ void Integrator::SetBlockSize(GpuIndex blockSize)
 
 void Integrator::InitializeActiveSet(GpuScalar dt)
 {
+    PBAT_PROFILE_NAMED_CUDA_HOST_SCOPE_START(
+        ctx,
+        "pbat.gpu.impl.vbd.Integrator.InitializeActiveSet");
+
     GpuIndex const nVertices = static_cast<GpuIndex>(x.Size());
     thrust::for_each(
         thrust::device,
@@ -144,10 +150,16 @@ void Integrator::InitializeActiveSet(GpuScalar dt)
         });
     using pbat::math::linalg::mini::FromEigen;
     cd.InitializeActiveSet(mPositionsAtT, x, FromEigen(mWorldMin), FromEigen(mWorldMax));
+
+    PBAT_PROFILE_CUDA_HOST_SCOPE_END(ctx);
 }
 
 void Integrator::ComputeInertialTargets(GpuScalar sdt, GpuScalar sdt2)
 {
+    PBAT_PROFILE_NAMED_CUDA_HOST_SCOPE_START(
+        ctx,
+        "pbat.gpu.impl.vbd.Integrator.ComputeInertialTargets");
+
     GpuIndex const nVertices = static_cast<GpuIndex>(x.Size());
     thrust::for_each(
         thrust::device,
@@ -170,10 +182,16 @@ void Integrator::ComputeInertialTargets(GpuScalar sdt, GpuScalar sdt2)
                 dt2);
             ToBuffers(y, xtilde, i);
         });
+
+    PBAT_PROFILE_CUDA_HOST_SCOPE_END(ctx);
 }
 
 void Integrator::InitializeBcdSolution(GpuScalar sdt, GpuScalar sdt2)
 {
+    PBAT_PROFILE_NAMED_CUDA_HOST_SCOPE_START(
+        ctx,
+        "pbat.gpu.impl.vbd.Integrator.InitializeBcdSolution");
+
     GpuIndex const nVertices = static_cast<GpuIndex>(x.Size());
     thrust::for_each(
         thrust::device,
@@ -200,10 +218,14 @@ void Integrator::InitializeBcdSolution(GpuScalar sdt, GpuScalar sdt2)
                 strategy);
             ToBuffers(x0, x, i);
         });
+
+    PBAT_PROFILE_CUDA_HOST_SCOPE_END(ctx);
 }
 
 void Integrator::UpdateActiveSet()
 {
+    PBAT_PROFILE_NAMED_CUDA_HOST_SCOPE_START(ctx, "pbat.gpu.impl.vbd.Integrator.UpdateActiveSet");
+
     cd.UpdateActiveSet(x);
     static auto constexpr kMaxContacts =
         kernels::BackwardEulerMinimization::kMaxCollidingTrianglesPerVertex;
@@ -223,48 +245,93 @@ void Integrator::UpdateActiveSet()
                     f(c) = nnv(c);
             ToFlatBuffer(f, fc, i);
         });
+
+    PBAT_PROFILE_CUDA_HOST_SCOPE_END(ctx);
 }
 
-void Integrator::SolveBdfWithVbd(
+void Integrator::Solve(kernels::BackwardEulerMinimization& bdf, GpuIndex iterations, GpuScalar rho)
+{
+    bool bUseChebyshevAcceleration = rho > GpuScalar{0} and rho < GpuScalar{1};
+    bool bUseTrustRegion           = false;
+    bool bRunVanillaVbd            = not bUseChebyshevAcceleration and not bUseTrustRegion;
+    if (bRunVanillaVbd)
+        SolveWithVanillaVbd(bdf, iterations);
+    if (bUseChebyshevAcceleration)
+        SolveWithChebyshevVbd(bdf, iterations, rho);
+}
+
+void Integrator::SolveWithVanillaVbd(kernels::BackwardEulerMinimization& bdf, GpuIndex iterations)
+{
+    PBAT_PROFILE_NAMED_CUDA_HOST_SCOPE_START(
+        ctx,
+        "pbat.gpu.impl.vbd.Integrator.SolveWithVanillaVbd");
+    for (auto k = 0; k < iterations; ++k)
+    {
+        RunVbdIteration(bdf);
+    }
+    PBAT_PROFILE_CUDA_HOST_SCOPE_END(ctx);
+}
+
+void Integrator::SolveWithChebyshevVbd(
     kernels::BackwardEulerMinimization& bdf,
     GpuIndex iterations,
     GpuScalar rho)
 {
-    bool bUseChebyshevAcceleration = rho > GpuScalar{0} and rho < GpuScalar{1};
-    GpuScalar rho2                 = rho * rho;
+    PBAT_PROFILE_NAMED_CUDA_HOST_SCOPE_START(
+        ctx,
+        "pbat.gpu.impl.vbd.Integrator.SolveWithChebyshevVbd");
+    GpuScalar rho2 = rho * rho;
     GpuScalar omega{};
-
     for (auto k = 0; k < iterations; ++k)
     {
         using pbat::sim::vbd::kernels::ChebyshevOmega;
-        if (bUseChebyshevAcceleration)
-            omega = ChebyshevOmega(k, rho2, omega);
-
-        auto const nPartitions = mPptr.size() - 1;
-        for (auto p = 0; p < nPartitions; ++p)
-        {
-            auto pBegin                     = mPptr[p];
-            auto pEnd                       = mPptr[p + 1];
-            bdf.partition                   = mPadj.Raw() + pBegin;
-            auto const nVerticesInPartition = static_cast<cuda::grid::dimension_t>(pEnd - pBegin);
-            kernels::Invoke<kernels::VbdIterationTraits>(
-                nVerticesInPartition,
-                mGpuThreadBlockSize,
-                bdf);
-            // Copy xb back to x
-            thrust::for_each(
-                thrust::device,
-                bdf.partition,
-                bdf.partition + nVerticesInPartition,
-                [xb = xb.Raw(), x = x.Raw()] PBAT_DEVICE(GpuIndex i) {
-                    using namespace pbat::math::linalg::mini;
-                    ToBuffers(FromBuffers<3, 1>(xb, i), x, i);
-                });
-        }
-
-        if (bUseChebyshevAcceleration)
-            UpdateChebyshevIterates(k, omega);
+        omega = ChebyshevOmega(k, rho2, omega);
+        RunVbdIteration(bdf);
+        UpdateChebyshevIterates(k, omega);
     }
+    PBAT_PROFILE_CUDA_HOST_SCOPE_END(ctx);
+}
+
+void Integrator::SolveWithTrustRegionVbd(
+    kernels::BackwardEulerMinimization& bdf,
+    GpuIndex iterations)
+{
+    PBAT_PROFILE_NAMED_CUDA_HOST_SCOPE_START(
+        ctx,
+        "pbat.gpu.impl.vbd.Integrator.SolveWithTrustRegionVbd");
+    // ComputeVertexEnergies(bdf);
+    for (auto k = 0; k < iterations; ++k)
+    {
+        RunVbdIteration(bdf);
+    }
+    PBAT_PROFILE_CUDA_HOST_SCOPE_END(ctx);
+}
+
+void Integrator::RunVbdIteration(kernels::BackwardEulerMinimization& bdf)
+{
+    PBAT_PROFILE_NAMED_CUDA_HOST_SCOPE_START(ctx, "pbat.gpu.impl.vbd.Integrator.RunVbdIteration");
+    auto const nPartitions = mPptr.size() - 1;
+    for (auto p = 0; p < nPartitions; ++p)
+    {
+        auto pBegin                     = mPptr[p];
+        auto pEnd                       = mPptr[p + 1];
+        bdf.partition                   = mPadj.Raw() + pBegin;
+        auto const nVerticesInPartition = static_cast<cuda::grid::dimension_t>(pEnd - pBegin);
+        kernels::Invoke<kernels::VbdIterationTraits>(
+            nVerticesInPartition,
+            mGpuThreadBlockSize,
+            bdf);
+        // Copy xb back to x
+        thrust::for_each(
+            thrust::device,
+            bdf.partition,
+            bdf.partition + nVerticesInPartition,
+            [xb = xb.Raw(), x = x.Raw()] PBAT_DEVICE(GpuIndex i) {
+                using namespace pbat::math::linalg::mini;
+                ToBuffers(FromBuffers<3, 1>(xb, i), x, i);
+            });
+    }
+    PBAT_PROFILE_CUDA_HOST_SCOPE_END(ctx);
 }
 
 void Integrator::UpdateBdfState(GpuScalar sdt)

@@ -109,8 +109,38 @@ class Integrator
      * @param rho Chebyshev semi-iterative method's estimated spectral radius. If `rho >= 1`,
      * Chebyshev acceleration is not used.
      */
-    void
-    SolveBdfWithVbd(kernels::BackwardEulerMinimization& bdf, GpuIndex iterations, GpuScalar rho);
+    void Solve(kernels::BackwardEulerMinimization& bdf, GpuIndex iterations, GpuScalar rho);
+    /**
+     * @brief Solve the BDF minimization problem using the vanilla VBD method
+     *
+     * @param bdf The device BDF minimization problem
+     * @param iterations Number of iterations
+     */
+    void SolveWithVanillaVbd(kernels::BackwardEulerMinimization& bdf, GpuIndex iterations);
+    /**
+     * @brief Use Chebyshev semi-iterative method to accelerate the BDF minimization
+     *
+     * @param bdf Device BDF minimization problem
+     * @param iterations Number of iterations
+     * @param rho Chebyshev semi-iterative method's estimated spectral radius
+     */
+    void SolveWithChebyshevVbd(
+        kernels::BackwardEulerMinimization& bdf,
+        GpuIndex iterations,
+        GpuScalar rho);
+    /**
+     * @brief Use Trust Region method to accelerate VBD's BDF minimization
+     *
+     * @param bdf Device BDF minimization problem
+     * @param iterations Number of iterations
+     */
+    void SolveWithTrustRegionVbd(kernels::BackwardEulerMinimization& bdf, GpuIndex iterations);
+    /**
+     * @brief Run a single iteration of the VBD's BDF minimization
+     *
+     * @param bdf Device BDF minimization problem
+     */
+    void RunVbdIteration(kernels::BackwardEulerMinimization& bdf);
     /**
      * @brief Update the BDF state (i.e. positions and velocities) after solving the BDF
      * minimization
