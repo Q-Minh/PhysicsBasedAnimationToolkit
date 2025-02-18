@@ -458,6 +458,16 @@ void Integrator::SolveWithLinearTrustRegionVbd(
     PBAT_PROFILE_CUDA_HOST_SCOPE_END(ctx);
 }
 
+void gpu::impl::vbd::Integrator::SolveWithCurvedTrustRegionVbd(
+    kernels::BackwardEulerMinimization& bdf,
+    GpuIndex iterations)
+{
+    PBAT_PROFILE_NAMED_CUDA_HOST_SCOPE_START(
+        ctx,
+        "pbat.gpu.impl.vbd.Integrator.SolveWithCurvedTrustRegionVbd");
+    PBAT_PROFILE_CUDA_HOST_SCOPE_END(ctx);
+}
+
 void Integrator::RunVbdIteration(kernels::BackwardEulerMinimization& bdf)
 {
     PBAT_PROFILE_NAMED_CUDA_HOST_SCOPE_START(ctx, "pbat.gpu.impl.vbd.Integrator.RunVbdIteration");

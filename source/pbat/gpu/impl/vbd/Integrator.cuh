@@ -137,6 +137,17 @@ class Integrator
     void
     SolveWithLinearTrustRegionVbd(kernels::BackwardEulerMinimization& bdf, GpuIndex iterations);
     /**
+     * @brief Use Trust Region method to accelerate VBD's BDF minimization with curved (quadratic)
+     * accelerated path.
+     * 
+     * @todo Implement
+     *
+     * @param bdf Device BDF minimization problem
+     * @param iterations Number of iterations
+     */
+    void
+    SolveWithCurvedTrustRegionVbd(kernels::BackwardEulerMinimization& bdf, GpuIndex iterations);
+    /**
      * @brief Run a single iteration of the VBD's BDF minimization
      *
      * @param bdf Device BDF minimization problem
