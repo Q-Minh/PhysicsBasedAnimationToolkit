@@ -75,13 +75,18 @@ struct BackwardEulerMinimization
     GpuIndex*
         partition; ///< List of vertex indices that can be processed independently, i.e. in parallel
 
-    GpuIndex nVertices; ///< Number of vertices
-    GpuScalar* Uetr;    ///< `|# elements|` elastic energies (used for Trust Region acceleration)
-    std::array<GpuScalar*, 3> ftr; ///< `3 x |# verts|` per-vertex objective function values (used
-                                   ///< for Trust Region acceleration)
-    GpuScalar* Rtr;                ///< `|# verts|` Trust Region radius
+    GpuIndex nVertices;        ///< Number of vertices
+    GpuScalar* Uetr;           ///< `|# elements|` elastic energies
+    GpuScalar* ftr;            ///< `|# verts|` per-vertex objective function values (used
+                               ///< for Trust Region acceleration)
 };
 
+/**
+ * @brief VBD iteration kernel
+ *
+ * @tparam kBlockThreads Number of threads per block
+ * @param BDF BDF1 time-stepping minimization problem
+ */
 template <auto kBlockThreads>
 __global__ void VbdIteration(BackwardEulerMinimization BDF);
 
@@ -108,12 +113,6 @@ struct VbdIterationTraits
     static auto Kernel() { return &VbdIteration<kBlockThreads>; }
 };
 
-/**
- * @brief VBD iteration kernel
- *
- * @tparam kBlockThreads Number of threads per block
- * @param BDF BDF1 time-stepping minimization problem
- */
 template <auto kBlockThreads>
 __global__ void VbdIteration(BackwardEulerMinimization BDF)
 {
@@ -124,9 +123,9 @@ __global__ void VbdIteration(BackwardEulerMinimization BDF)
     extern __shared__ __align__(alignof(BlockStorage)) char shared[];
     auto tid = threadIdx.x;
     auto bid = blockIdx.x;
-
+    // Vertex index
+    GpuIndex i = BDF.partition[bid];
     // Get vertex-tet adjacency information
-    GpuIndex i                 = BDF.partition[bid]; // Vertex index
     GpuIndex GVTbegin          = BDF.GVTp[i];
     GpuIndex nAdjacentElements = BDF.GVTp[i + 1] - GVTbegin;
     // 1. Compute vertex-element elastic energy derivatives w.r.t. i and store them in shared
@@ -208,7 +207,7 @@ __global__ void VbdIteration(BackwardEulerMinimization BDF)
 }
 
 template <auto kBlockThreads>
-__global__ static void AccumulateVertexEnergies(BackwardEulerMinimization BDF);
+__global__ void AccumulateVertexEnergies(BackwardEulerMinimization BDF);
 
 /**
  * @brief Traits for vertex energy accumulation kernel
@@ -239,7 +238,7 @@ struct AccumulateVertexEnergiesTraits
  * @param BDF BDF1 time-stepping minimization problem
  */
 template <auto kBlockThreads>
-__global__ static void AccumulateVertexEnergies(BackwardEulerMinimization BDF)
+__global__ void AccumulateVertexEnergies(BackwardEulerMinimization BDF)
 {
     using Traits       = AccumulateVertexEnergiesTraits<kBlockThreads>;
     using BlockReduce  = typename Traits::BlockReduce;
@@ -247,8 +246,7 @@ __global__ static void AccumulateVertexEnergies(BackwardEulerMinimization BDF)
     extern __shared__ __align__(alignof(BlockStorage)) char shared[];
 
     auto tid = threadIdx.x;
-    auto bid = blockIdx.x;
-    auto i   = bid;
+    auto i   = blockIdx.x;
 
     // Vertex objective function
     GpuScalar fi{0};
@@ -301,9 +299,8 @@ __global__ static void AccumulateVertexEnergies(BackwardEulerMinimization BDF)
 
     // 4. Add inertial term
     fi += GpuScalar(0.5) * mi * SquaredNorm(xi - xti);
-
     // 5. Store vertex objective function
-    // BDF.ftr[k % 3] = fi;
+    BDF.ftr[i] = fi;
 }
 
 /**

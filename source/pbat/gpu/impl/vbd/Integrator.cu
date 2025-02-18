@@ -11,6 +11,7 @@
 #include "pbat/sim/vbd/Kernels.h"
 
 #include <cuda/api.hpp>
+#include <cuda/functional>
 // #include <thrust/async/copy.h>
 #include <thrust/async/for_each.h>
 #include <thrust/execution_policy.h>
@@ -36,7 +37,6 @@ Integrator::Integrator(Data const& data)
       xkm1(data.xchebm1.cols()),
       Uetr(data.E.cols()),
       ftr(data.X.cols()),
-      Rtr(data.X.cols()),
       xb(data.x.cols()),
       mVelocitiesAtT(data.vt.cols()),
       mVelocities(data.v.cols()),
@@ -292,17 +292,168 @@ void Integrator::SolveWithChebyshevVbd(
     PBAT_PROFILE_CUDA_HOST_SCOPE_END(ctx);
 }
 
-void Integrator::SolveWithTrustRegionVbd(
+void Integrator::SolveWithLinearTrustRegionVbd(
     kernels::BackwardEulerMinimization& bdf,
     GpuIndex iterations)
 {
     PBAT_PROFILE_NAMED_CUDA_HOST_SCOPE_START(
         ctx,
-        "pbat.gpu.impl.vbd.Integrator.SolveWithTrustRegionVbd");
-    // ComputeVertexEnergies(bdf);
+        "pbat.gpu.impl.vbd.Integrator.SolveWithLinearTrustRegionVbd");
+
+    static auto constexpr kNumPastIterates = decltype(ftr)::kDims;
+    auto const fObjective                  = [this, &bdf]() {
+        ComputeVertexEnergies(bdf);
+        return thrust::reduce(
+            thrust::device,
+            ftr[kNumPastIterates - 1].begin(),
+            ftr[kNumPastIterates - 1].end(),
+            GpuScalar{0});
+    };
+    Eigen::Vector<GpuScalar, kNumPastIterates> fk{};
+    auto const fUpdateTrustRegionIterates = [this, &fk]() {
+        UpdateTrustRegionIterates();
+        pbat::common::ForRange<0, kNumPastIterates - 1>([&]<auto k>() { fk[k] = fk[k + 1]; });
+    };
+
+    // Quadratic energy proxy
+    Eigen::Matrix<GpuScalar, 3, 3> Qinv{};
+    // Q can be derived by simply considering the quadratic function
+    // q(t)=at^2 + bt + c, where q(-1)=f^{k-2}, q(0)=f^{k-1}, q(1)=f^k
+    // Then, Qinv=Q^{-1}
+    // clang-format off
+    Qinv <<  GpuScalar(0.5), GpuScalar(-1), GpuScalar(0.5),
+            GpuScalar(-0.5),  GpuScalar(0), GpuScalar(0.5),
+              GpuScalar(0.),  GpuScalar(1), GpuScalar(0);
+    // clang-format on
+    Eigen::Vector<GpuScalar, 3> abc{};
+    auto const fProxy = [&abc](GpuScalar t) {
+        return abc(0) * t * t + abc(1) * t + abc(2);
+    };
+
+    // Compute step size
+    auto const fSquaredStepSize = [this]() {
+        auto const nVertices = static_cast<GpuIndex>(x.Size());
+        return thrust::transform_reduce(
+            thrust::device,
+            thrust::make_counting_iterator(0),
+            thrust::make_counting_iterator(nVertices),
+            cuda::proclaim_return_type<GpuScalar>(
+                [x = x.Raw(), xkm1 = xkm1.Raw()] PBAT_DEVICE(GpuIndex i) {
+                    using namespace pbat::math::linalg::mini;
+                    auto xkp1 = FromBuffers<3, 1>(x, i);
+                    auto xk   = FromBuffers<3, 1>(xkm1, i);
+                    return SquaredNorm(xkp1 - xk);
+                }),
+            GpuScalar{0},
+            thrust::plus<GpuScalar>());
+    };
+
+    // Compute TR step
+    auto const fTrStep = [this](GpuScalar t) {
+        auto const nVertices = static_cast<GpuIndex>(x.Size());
+        thrust::for_each(
+            thrust::device,
+            thrust::make_counting_iterator(0),
+            thrust::make_counting_iterator(nVertices),
+            [x = x.Raw(), xkm1 = xkm1.Raw(), t] PBAT_DEVICE(GpuIndex i) {
+                using namespace pbat::math::linalg::mini;
+                auto xkp1 = FromBuffers<3, 1>(x, i);
+                auto xk   = FromBuffers<3, 1>(xkm1, i);
+                auto xtr  = xk + t * (xkp1 - xk);
+                ToBuffers(xtr, x, i);
+            });
+    };
+
+    // Rollback TR step
+    auto const fRollbackTrStep = [this](GpuScalar t) {
+        auto const nVertices = static_cast<GpuIndex>(x.Size());
+        thrust::for_each(
+            thrust::device,
+            thrust::make_counting_iterator(0),
+            thrust::make_counting_iterator(nVertices),
+            [x = x.Raw(), xkm1 = xkm1.Raw(), t] PBAT_DEVICE(GpuIndex i) {
+                using namespace pbat::math::linalg::mini;
+                // x^{k+1}-x^k = t \Delta x
+                auto xkp1 = FromBuffers<3, 1>(x, i);
+                auto xk   = FromBuffers<3, 1>(xkm1, i);
+                auto dx   = (xkp1 - xk) / t;
+                ToBuffers(xk + dx, x, i);
+            });
+    };
+
+    // TR parameters
+    GpuScalar constexpr eta{0.2f};
+    GpuScalar constexpr tau{2};
+    GpuScalar R2{0};
+    GpuScalar constexpr zero{1e-6f};
+
+    // TR VBD
+    fk(kNumPastIterates - 1) = fObjective();
     for (auto k = 0; k < iterations; ++k)
     {
-        RunVbdIteration(bdf);
+        if (k >= kNumPastIterates - 1)
+        {
+            // 1. Compute af,bf,cf s.t. fproxy(t) = af*t^2 + bf*t + cf
+            // and fproxy(-1)=f^{k-2}, fproxy(0)=f^{k-1}, fproxy(1)=f^k
+            abc = Qinv * fk;
+            // 2. Throw away x^{k-2},
+            // Now fk[kNumPastIterates-3] = f^{k-1}, fk[kNumPastIterates-2] = f^k
+            // xkm2 = x^{k-1}, xkm1 = x^k
+            fUpdateTrustRegionIterates();
+            // 3. Compute VBD step, after which x = x^k + \Delta x
+            RunVbdIteration(bdf);
+            GpuScalar dx2 = fSquaredStepSize(); // |\Delta x|_2^2
+            if (R2 < dx2 + zero)
+            {
+                // Initialize radius to tau times the VBD step size
+                // R=tau*|\Delta x|_2
+                // => R^2=tau^2*|\Delta x|_2^2
+                R2 = tau * tau * dx2;
+            }
+            // 4. Compute TR accelerated step
+            GpuScalar constexpr lower{1};
+            GpuScalar const upper = std::sqrt(R2 / dx2);
+            GpuScalar t           = -abc(1) / (GpuScalar{2} * abc(0)); // Minimum of fproxy
+            t                     = std::clamp(t, lower, upper);       // Enforce TR constraint
+            fTrStep(t); // Now x = x^{k-1} + t * \Delta x
+            // 5. Compute energy at TR step
+            fk(kNumPastIterates - 1) =
+                fObjective(); // Now fk[kNumPastIterates-1] = f(x^{k-1} + t * \Delta x)
+            GpuScalar fNextActual = fk(kNumPastIterates - 1);
+            GpuScalar fCurrentActual =
+                fk(kNumPastIterates - 2); // Recall f[kNumPastIterates-2] = f^k
+            GpuScalar fNextProxy = fProxy(t);
+            GpuScalar fCurrentProxy =
+                fk(kNumPastIterates -
+                   3); // Recall fproxy(0) = f^{k-1}, and fk[kNumPastIterates-3] = f^{k-1}
+            GpuScalar const rho = (fCurrentActual - fNextActual) / (fCurrentProxy - fNextProxy);
+            // 6. Accept or reject TR step, simultaneously updating TR radius
+            bool const bStepAccepted = rho > eta;
+            if (bStepAccepted)
+            {
+                bool const bIsStepAtBound = std::abs(dx2 - R2) < zero;
+                if (bIsStepAtBound)
+                {
+                    // R' = tau*R
+                    // -> R'^2 = tau^2*R^2
+                    R2 *= tau * tau;
+                }
+            }
+            else
+            {
+                // R' = R/tau
+                // -> R'^2 = R^2/tau^2
+                R2 /= tau * tau;
+                fRollbackTrStep(t);
+                fk(kNumPastIterates - 1) = fObjective();
+            }
+        }
+        else
+        {
+            fUpdateTrustRegionIterates();
+            RunVbdIteration(bdf);
+            fk(kNumPastIterates - 1) = fObjective();
+        }
     }
     PBAT_PROFILE_CUDA_HOST_SCOPE_END(ctx);
 }
@@ -336,6 +487,7 @@ void Integrator::RunVbdIteration(kernels::BackwardEulerMinimization& bdf)
 
 void Integrator::UpdateBdfState(GpuScalar sdt)
 {
+    PBAT_PROFILE_NAMED_CUDA_HOST_SCOPE_START(ctx, "pbat.gpu.impl.vbd.Integrator.UpdateBdfState");
     GpuIndex const nVertices = static_cast<GpuIndex>(x.Size());
     mVelocitiesAtT           = mVelocities;
     thrust::for_each(
@@ -351,11 +503,14 @@ void Integrator::UpdateBdfState(GpuScalar sdt)
             ToBuffers(vtp1, v, i);
         });
     mPositionsAtT = x;
+    PBAT_PROFILE_CUDA_HOST_SCOPE_END(ctx);
 }
 
-void Integrator::ComputeVertexEnergies(kernels::BackwardEulerMinimization& bdf)
+void Integrator::ComputeElementElasticEnergies()
 {
-    // Compute element energies
+    PBAT_PROFILE_NAMED_CUDA_HOST_SCOPE_START(
+        ctx,
+        "pbat.gpu.impl.vbd.Integrator.ComputeElementElasticEnergies");
     auto const nElements = static_cast<GpuIndex>(T.Size());
     thrust::for_each(
         thrust::device,
@@ -377,13 +532,26 @@ void Integrator::ComputeVertexEnergies(kernels::BackwardEulerMinimization& bdf)
             pbat::physics::StableNeoHookeanEnergy<3> Psi{};
             Ue[e] = wg * Psi.eval(Fe, lamee(0), lamee(1));
         });
-    // Reduce into vertex energies
+    PBAT_PROFILE_CUDA_HOST_SCOPE_END(ctx);
+}
+
+void Integrator::ComputeVertexEnergies(kernels::BackwardEulerMinimization& bdf)
+{
+    PBAT_PROFILE_NAMED_CUDA_HOST_SCOPE_START(
+        ctx,
+        "pbat.gpu.impl.vbd.Integrator.ComputeVertexEnergies");
+    // Reduce into element energies into vertices
+    ComputeElementElasticEnergies();
     auto const nVertices = static_cast<GpuIndex>(x.Size());
     kernels::Invoke<kernels::AccumulateVertexEnergiesTraits>(nVertices, mGpuThreadBlockSize, bdf);
+    PBAT_PROFILE_CUDA_HOST_SCOPE_END(ctx);
 }
 
 void Integrator::UpdateChebyshevIterates(GpuIndex k, GpuScalar omega)
 {
+    PBAT_PROFILE_NAMED_CUDA_HOST_SCOPE_START(
+        ctx,
+        "pbat.gpu.impl.vbd.Integrator.UpdateChebyshevIterates");
     auto const nVertices = static_cast<GpuIndex>(x.Size());
     thrust::for_each(
         thrust::device,
@@ -402,16 +570,21 @@ void Integrator::UpdateChebyshevIterates(GpuIndex k, GpuScalar omega)
             ToBuffers(xkm1i, xkm1, i);
             ToBuffers(xki, xk, i);
         });
+    PBAT_PROFILE_CUDA_HOST_SCOPE_END(ctx);
 }
 
 void Integrator::UpdateTrustRegionIterates()
 {
+    PBAT_PROFILE_NAMED_CUDA_HOST_SCOPE_START(
+        ctx,
+        "pbat.gpu.impl.vbd.Integrator.UpdateTrustRegionIterates");
     auto const nVertices = static_cast<GpuIndex>(x.Size());
     thrust::for_each(
         thrust::device,
         thrust::make_counting_iterator(0),
         thrust::make_counting_iterator(nVertices),
-        [xkm2 = xkm2.Raw(), xkm1 = xkm1.Raw(), xk = x.Raw()] PBAT_DEVICE(auto i) {
+        [xkm2 = xkm2.Raw(), xkm1 = xkm1.Raw(), xk = x.Raw(), ftr = ftr.Raw()] PBAT_DEVICE(
+            GpuIndex i) {
             using pbat::math::linalg::mini::FromBuffers;
             using pbat::math::linalg::mini::ToBuffers;
             auto xkm2i = FromBuffers<3, 1>(xkm2, i);
@@ -422,7 +595,10 @@ void Integrator::UpdateTrustRegionIterates()
             ToBuffers(xkm2i, xkm2, i);
             ToBuffers(xkm1i, xkm1, i);
             ToBuffers(xki, xk, i);
+            static auto constexpr kMaxPastIterates = std::tuple_size_v<decltype(ftr)> - 1;
+            pbat::common::ForRange<0, kMaxPastIterates>([&]<auto k> { ftr[k][i] = ftr[k + 1][i]; });
         });
+    PBAT_PROFILE_CUDA_HOST_SCOPE_END(ctx);
 }
 
 kernels::BackwardEulerMinimization Integrator::BdfDeviceParameters(GpuScalar dt, GpuScalar dt2)
@@ -453,8 +629,7 @@ kernels::BackwardEulerMinimization Integrator::BdfDeviceParameters(GpuScalar dt,
     bdf.FA        = FA.Raw();
     bdf.nVertices = static_cast<GpuIndex>(x.Size());
     bdf.Uetr      = Uetr.Raw();
-    bdf.ftr       = ftr.Raw();
-    bdf.Rtr       = Rtr.Raw();
+    bdf.ftr       = ftr.Raw().back();
     return bdf;
 }
 

@@ -134,7 +134,8 @@ class Integrator
      * @param bdf Device BDF minimization problem
      * @param iterations Number of iterations
      */
-    void SolveWithTrustRegionVbd(kernels::BackwardEulerMinimization& bdf, GpuIndex iterations);
+    void
+    SolveWithLinearTrustRegionVbd(kernels::BackwardEulerMinimization& bdf, GpuIndex iterations);
     /**
      * @brief Run a single iteration of the VBD's BDF minimization
      *
@@ -167,6 +168,10 @@ class Integrator
      * @brief Update \f$ x^k, x^{k-1}, x^{k-2} \f$
      */
     void UpdateTrustRegionIterates();
+    /**
+     * @brief Compute the per-element elastic energies
+     */
+    void ComputeElementElasticEnergies();
 
   public:
     common::Buffer<GpuScalar, 3> x; ///< Vertex positions
@@ -194,7 +199,6 @@ class Integrator
                                       ///< acceleration)
     common::Buffer<GpuScalar, 3> ftr; ///< `3 x |# verts|` per-vertex objective function values
                                       ///< (used for Trust Region acceleration)
-    common::Buffer<GpuScalar> Rtr;    ///< `|# verts|` Trust Region radius
     common::Buffer<GpuScalar, 3> xb;  ///< Write buffer for positions which handles data races
 
     common::Buffer<GpuScalar, 3> mVelocitiesAtT;        ///< Previous vertex velocities

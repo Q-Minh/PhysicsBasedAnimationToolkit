@@ -20,8 +20,9 @@ template <class T, int D = 1>
 class Buffer
 {
   public:
-    using SelfType  = Buffer<T, D>;
-    using ValueType = T;
+    using SelfType              = Buffer<T, D>;
+    using ValueType             = T;
+    static auto constexpr kDims = D;
 
     Buffer(std::size_t count = 0ULL);
 
@@ -48,7 +49,7 @@ class Buffer
     std::conditional_t<(D > 1), std::array<T*, D>, T*> Raw();
     std::conditional_t<(D > 1), std::array<T const*, D>, T const*> Raw() const;
 
-    constexpr int Dimensions() const { return D; }
+    constexpr auto Dimensions() const { return D; }
 
   private:
     std::array<thrust::device_vector<T>, D> mBuffers;
