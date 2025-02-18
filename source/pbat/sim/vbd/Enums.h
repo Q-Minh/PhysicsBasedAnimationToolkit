@@ -1,9 +1,7 @@
 #ifndef PBAT_SIM_VBD_ENUMS_H
 #define PBAT_SIM_VBD_ENUMS_H
 
-namespace pbat {
-namespace sim {
-namespace vbd {
+namespace pbat::sim::vbd {
 
 enum class EInitializationStrategy {
     Position,
@@ -13,8 +11,12 @@ enum class EInitializationStrategy {
     AdaptivePbat
 };
 
-} // namespace vbd
-} // namespace sim
-} // namespace pbat
+enum class EAccelerationStrategy {
+    None,
+    Chebyshev,
+    TrustRegion
+};
+
+} // namespace pbat::sim::vbd
 
 #endif // PBAT_SIM_VBD_ENUMS_H

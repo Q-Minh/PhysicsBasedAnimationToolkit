@@ -106,6 +106,13 @@ if __name__ == "__main__":
         dest="gpu",
         default=False,
     )
+    parser.add_argument(
+        "--rho-chebyshev",
+        help="Chebyshev estimated spectral radius. Chebyshev acceleration is disabled if 0 < rho < 1 is not true",
+        type=float,
+        default=1.0,
+        dest="rho_chebyshev",
+    )
     args = parser.parse_args()
 
     # Construct FEM quantities for simulation
@@ -158,8 +165,10 @@ if __name__ == "__main__":
             pbat.sim.vbd.InitializationStrategy.KineticEnergyMinimum
         )
         .with_contact_parameters(args.muC, args.muF, args.epsv)
-        .construct(validate=True)
     )
+    if args.rho_chebyshev < 1.0 and args.rho_chebyshev > 0.0:
+        data = data.with_chebyshev_acceleration(args.rho_chebyshev)
+    data = data.construct(validate=True)
     thread_block_size = 64
 
     vbd = None
@@ -212,7 +221,6 @@ if __name__ == "__main__":
         changed, dt = imgui.InputFloat("dt", dt)
         changed, iterations = imgui.InputInt("Iterations", iterations)
         changed, substeps = imgui.InputInt("Substeps", substeps)
-        changed, rho_chebyshev = imgui.InputFloat("Chebyshev rho", rho_chebyshev)
         changed, kD = imgui.InputFloat("Damping", kD, format="%.8f")
         changed, RdetH = imgui.InputFloat("Residual det(H)", RdetH, format="%.15f")
         changed, thread_block_size = imgui.InputInt(
@@ -249,7 +257,7 @@ if __name__ == "__main__":
 
         if animate or step:
             profiler.begin_frame("Physics")
-            vbd.step(dt, iterations, substeps, rho_chebyshev)
+            vbd.step(dt, iterations, substeps)
             profiler.end_frame("Physics")
 
             # Update visuals

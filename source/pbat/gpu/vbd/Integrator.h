@@ -66,14 +66,8 @@ class Integrator
      * @param dt Time step
      * @param iterations Number of optimization iterations per substep
      * @param substeps Number of substeps
-     * @param rho Chebyshev semi-iterative method's estimated spectral radius. If rho >= 1,
-     * Chebyshev acceleration is not used.
      */
-    PBAT_API void Step(
-        GpuScalar dt,
-        GpuIndex iterations,
-        GpuIndex substeps = GpuIndex{1},
-        GpuScalar rho     = GpuScalar{1});
+    PBAT_API void Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps = GpuIndex{1});
     /**
      * @brief Set the vertex positions
      * @param X `3x|# vertices|` array of vertex positions

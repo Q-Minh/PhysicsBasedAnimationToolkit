@@ -16,9 +16,7 @@
 #include <string>
 #include <unordered_set>
 
-namespace pbat {
-namespace sim {
-namespace vbd {
+namespace pbat::sim::vbd {
 
 Data& Data::WithVolumeMesh(
     Eigen::Ref<MatrixX const> const& Vin,
@@ -140,6 +138,22 @@ Data& Data::WithHessianDeterminantZeroUnder(Scalar zero)
     return *this;
 }
 
+Data& Data::WithChebyshevAcceleration(Scalar rhoIn)
+{
+    this->rho           = rhoIn;
+    this->eAcceleration = EAccelerationStrategy::Chebyshev;
+    return *this;
+}
+
+Data& Data::WithTrustRegionAcceleration(Scalar etaIn, Scalar tauIn, bool bCurvedIn)
+{
+    this->eta           = etaIn;
+    this->tau           = tauIn;
+    this->bCurved       = bCurvedIn;
+    this->eAcceleration = EAccelerationStrategy::TrustRegion;
+    return *this;
+}
+
 Data& Data::Construct(bool bValidate)
 {
     // Vertex data
@@ -225,10 +239,30 @@ Data& Data::Construct(bool bValidate)
                 x.cols());
             throw std::invalid_argument(what);
         }
+
+        switch (eAcceleration)
+        {
+            case EAccelerationStrategy::None: break;
+            case EAccelerationStrategy::Chebyshev:
+                if (rho <= 0 or rho >= 1)
+                {
+                    throw std::invalid_argument("Expected 0 < rho < 1");
+                }
+                break;
+            case EAccelerationStrategy::TrustRegion:
+                if (eta < 0)
+                {
+                    throw std::invalid_argument("Expected eta >= 0");
+                }
+                if (tau <= 0)
+                {
+                    throw std::invalid_argument("Expected tau > 0");
+                }
+                break;
+            default: break;
+        }
     }
     return *this;
 }
 
-} // namespace vbd
-} // namespace sim
-} // namespace pbat
+} // namespace pbat::sim::vbd

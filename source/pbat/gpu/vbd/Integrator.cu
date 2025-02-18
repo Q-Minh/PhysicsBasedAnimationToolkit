@@ -5,13 +5,27 @@
 #include "Integrator.h"
 #include "pbat/gpu/impl/common/Buffer.cuh"
 #include "pbat/gpu/impl/common/Eigen.cuh"
+#include "pbat/gpu/impl/vbd/ChebyshevIntegrator.cuh"
 #include "pbat/gpu/impl/vbd/Integrator.cuh"
+#include "pbat/gpu/impl/vbd/TrustRegionIntegrator.cuh"
 
-namespace pbat {
-namespace gpu {
-namespace vbd {
+namespace pbat::gpu::vbd {
 
-Integrator::Integrator(Data const& data) : mImpl(new impl::vbd::Integrator(data)) {}
+Integrator::Integrator(Data const& data) : mImpl(nullptr)
+{
+    using EAccelerationStrategy = pbat::sim::vbd::EAccelerationStrategy;
+    switch (data.eAcceleration)
+    {
+        case EAccelerationStrategy::None: mImpl = new impl::vbd::Integrator(data); break;
+        case EAccelerationStrategy::Chebyshev:
+            mImpl = new impl::vbd::ChebyshevIntegrator(data);
+            break;
+        case EAccelerationStrategy::TrustRegion:
+            mImpl = new impl::vbd::TrustRegionIntegrator(data);
+            break;
+        default: mImpl = new impl::vbd::Integrator(data); break;
+    }
+}
 
 Integrator::Integrator(Integrator&& other) noexcept : mImpl(other.mImpl)
 {
@@ -36,9 +50,9 @@ Integrator::~Integrator()
         delete mImpl;
 }
 
-void Integrator::Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps, GpuScalar rho)
+void Integrator::Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps)
 {
-    mImpl->Step(dt, iterations, substeps, rho);
+    mImpl->Step(dt, iterations, substeps);
 }
 
 void Integrator::SetPositions(Eigen::Ref<GpuMatrixX const> const& X)
@@ -95,6 +109,4 @@ GpuMatrixX Integrator::GetVelocities() const
     return impl::common::ToEigen(mImpl->mVelocities);
 }
 
-} // namespace vbd
-} // namespace gpu
-} // namespace pbat
+} // namespace pbat::gpu::vbd

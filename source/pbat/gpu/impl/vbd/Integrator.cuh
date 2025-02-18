@@ -28,10 +28,7 @@
 #include <cuda/api/stream.hpp>
 #include <vector>
 
-namespace pbat {
-namespace gpu {
-namespace impl {
-namespace vbd {
+namespace pbat::gpu::impl::vbd {
 
 /**
  * @brief VBD integrator \cite anka2024vbd
@@ -55,14 +52,8 @@ class Integrator
      * @param dt Time step
      * @param iterations Number of optimization iterations per substep
      * @param substeps Number of substeps
-     * @param rho Chebyshev semi-iterative method's estimated spectral radius. If rho >= 1,
-     * Chebyshev acceleration is not used.
      */
-    void Step(
-        GpuScalar dt,
-        GpuIndex iterations,
-        GpuIndex substeps = GpuIndex{1},
-        GpuScalar rho     = GpuScalar{1});
+    void Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps = GpuIndex{1});
     /**
      * @brief Set the bounding box over the scene used for spatial partitioning
      * @param min Minimum corner
@@ -102,51 +93,14 @@ class Integrator
      */
     void UpdateActiveSet();
     /**
-     * @brief Use VBD to iterate on the BDF minimization problem
+     * @brief VBD to iterate on the BDF minimization problem
      *
-     * @param bdf Device BDF minimization problem
-     * @param iterations Number of iterations
-     * @param rho Chebyshev semi-iterative method's estimated spectral radius. If `rho >= 1`,
-     * Chebyshev acceleration is not used.
-     */
-    void Solve(kernels::BackwardEulerMinimization& bdf, GpuIndex iterations, GpuScalar rho);
-    /**
-     * @brief Solve the BDF minimization problem using the vanilla VBD method
-     *
-     * @param bdf The device BDF minimization problem
-     * @param iterations Number of iterations
-     */
-    void SolveWithVanillaVbd(kernels::BackwardEulerMinimization& bdf, GpuIndex iterations);
-    /**
-     * @brief Use Chebyshev semi-iterative method to accelerate the BDF minimization
-     *
-     * @param bdf Device BDF minimization problem
-     * @param iterations Number of iterations
-     * @param rho Chebyshev semi-iterative method's estimated spectral radius
-     */
-    void SolveWithChebyshevVbd(
-        kernels::BackwardEulerMinimization& bdf,
-        GpuIndex iterations,
-        GpuScalar rho);
-    /**
-     * @brief Use Trust Region method to accelerate VBD's BDF minimization
+     * Override this method to implement different VBD optimization strategies
      *
      * @param bdf Device BDF minimization problem
      * @param iterations Number of iterations
      */
-    void
-    SolveWithLinearTrustRegionVbd(kernels::BackwardEulerMinimization& bdf, GpuIndex iterations);
-    /**
-     * @brief Use Trust Region method to accelerate VBD's BDF minimization with curved (quadratic)
-     * accelerated path.
-     * 
-     * @todo Implement
-     *
-     * @param bdf Device BDF minimization problem
-     * @param iterations Number of iterations
-     */
-    void
-    SolveWithCurvedTrustRegionVbd(kernels::BackwardEulerMinimization& bdf, GpuIndex iterations);
+    virtual void Solve(kernels::BackwardEulerMinimization& bdf, GpuIndex iterations);
     /**
      * @brief Run a single iteration of the VBD's BDF minimization
      *
@@ -160,29 +114,6 @@ class Integrator
      * @param sdt Time step
      */
     void UpdateBdfState(GpuScalar sdt);
-    /**
-     * @brief Compute the per-vertex proxy energies \f$ \frac{1}{2} m_i |\mathbf{x}_i -
-     * \tilde{\mathbf{x}_i}|_2^2 + h^2 \sum_{e \in \text{adj}(i)} w_e \Psi_e + \sum_{c \in (i,f)}
-     * \left[ \frac{1}{2} \mu_C d^2 + \mu_F \lambda_N f_0(|\mathbf{u}|) \right] \f$
-     *
-     * @param bdf Device BDF minimization problem
-     */
-    void ComputeVertexEnergies(kernels::BackwardEulerMinimization& bdf);
-    /**
-     * @brief Update \f$ x^k, x^{k-1}, x^{k-2} \f$ using Chebyshev acceleration
-     *
-     * @param k Current iteration
-     * @param omega Chebyshev semi-iterative method's relaxation parameter
-     */
-    void UpdateChebyshevIterates(GpuIndex k, GpuScalar omega);
-    /**
-     * @brief Update \f$ x^k, x^{k-1}, x^{k-2} \f$
-     */
-    void UpdateTrustRegionIterates();
-    /**
-     * @brief Compute the per-element elastic energies
-     */
-    void ComputeElementElasticEnergies();
 
   public:
     common::Buffer<GpuScalar, 3> x; ///< Vertex positions
@@ -202,15 +133,7 @@ class Integrator
 
     common::Buffer<GpuScalar, 3> mPositionsAtT;            ///< Previous vertex positions
     common::Buffer<GpuScalar, 3> mInertialTargetPositions; ///< Inertial target for vertex positions
-    common::Buffer<GpuScalar, 3>
-        xkm2; ///< \f$ x^{k-2} \f$ used in acceleration schemes (Chebyshev, Trust Region)
-    common::Buffer<GpuScalar, 3>
-        xkm1; ///< \f$ x^{k-1} \f$ used in acceleration schemes (Chebyshev, Trust Region)
-    common::Buffer<GpuScalar> Uetr;   ///< `|# elements|` elastic energies (used for Trust Region
-                                      ///< acceleration)
-    common::Buffer<GpuScalar, 3> ftr; ///< `3 x |# verts|` per-vertex objective function values
-                                      ///< (used for Trust Region acceleration)
-    common::Buffer<GpuScalar, 3> xb;  ///< Write buffer for positions which handles data races
+    common::Buffer<GpuScalar, 3> xb; ///< Write buffer for positions which handles data races
 
     common::Buffer<GpuScalar, 3> mVelocitiesAtT;        ///< Previous vertex velocities
     common::Buffer<GpuScalar, 3> mVelocities;           ///< Current vertex velocities
@@ -255,9 +178,6 @@ class Integrator
     kernels::BackwardEulerMinimization BdfDeviceParameters(GpuScalar dt, GpuScalar dt2);
 };
 
-} // namespace vbd
-} // namespace impl
-} // namespace gpu
-} // namespace pbat
+} // namespace pbat::gpu::impl::vbd
 
 #endif // PBAT_GPU_IMPL_VBD_INTEGRATOR_H

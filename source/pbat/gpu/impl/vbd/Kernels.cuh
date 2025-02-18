@@ -22,17 +22,14 @@
 #include <cub/block/block_reduce.cuh>
 #include <cuda/api/device.hpp>
 #include <cuda/api/launch_config_builder.hpp>
+#include <cuda/std/tuple>
 #include <limits>
 
-namespace pbat {
-namespace gpu {
-namespace impl {
-namespace vbd {
 /**
  * @namespace pbat::gpu::impl::vbd::kernels
  * @brief Device-side VBD kernels
  */
-namespace kernels {
+namespace pbat::gpu::impl::vbd::kernels {
 
 using namespace pbat::math::linalg::mini;
 
@@ -74,11 +71,46 @@ struct BackwardEulerMinimization
 
     GpuIndex*
         partition; ///< List of vertex indices that can be processed independently, i.e. in parallel
+};
 
-    GpuIndex nVertices;        ///< Number of vertices
-    GpuScalar* Uetr;           ///< `|# elements|` elastic energies
-    GpuScalar* ftr;            ///< `|# verts|` per-vertex objective function values (used
-                               ///< for Trust Region acceleration)
+/**
+ * @brief Penalty rescaler for mesh independent contact response
+ * @tparam kMaxContacts Maximum number of contacts per vertex
+ */
+template <auto kMaxContacts>
+struct ContactPenalty
+{
+    /**
+     * @brief Construct a new ContactPenalty object
+     *
+     * @param i Vertex index
+     * @param fc `|# verts * kMaxContacts|` contacting triangles `(i,f)`
+     * @param XVA `|# verts|` vertex areas
+     * @param FA `|# collision triangles|` triangle areas
+     * @param muC User-supplied collision penalty
+     */
+    PBAT_HOST_DEVICE
+    ContactPenalty(GpuIndex i, GpuIndex* fc, GpuScalar* XVA, GpuScalar* FA, GpuScalar muC)
+        : f(FromFlatBuffer<kMaxContacts, 1>(fc, i)),
+          nContacts(Dot(Ones<GpuIndex, kMaxContacts>(), f >= 0)),
+          fa(Zeros<GpuIndex, kMaxContacts>()),
+          kC()
+    {
+        // Scale contact energies via mesh vertex areas and triangle areas to achieve
+        // pseudo mesh-independent contact response
+        for (auto c = 0; c < nContacts; ++c)
+            fa(c) = FA[f(c)];
+        auto sumfa = Dot(fa, Ones<GpuScalar, kMaxContacts>()); // Total triangle area
+        kC         = (XVA[i] * muC) / sumfa;                   // Area-scaled collision penalty
+    }
+    PBAT_HOST_DEVICE GpuIndex Triangle(GpuIndex c) const { return f(c); }
+    PBAT_HOST_DEVICE GpuScalar Penalty(GpuIndex c) const { return kC * fa(c); }
+
+    SVector<GpuIndex, kMaxContacts> f;   ///< Contacting triangles
+    GpuIndex nContacts;                  ///< Number of contacts
+    SVector<GpuScalar, kMaxContacts> fa; ///< Triangle areas
+    GpuScalar
+        kC; ///< Area-scaled collision penalty multiplier s.t. muC = kC*fa(c) for a given contact c
 };
 
 /**
@@ -170,17 +202,11 @@ __global__ void VbdIteration(BackwardEulerMinimization BDF)
 
     // 3. Add contact energy
     static auto constexpr kMaxContacts = BackwardEulerMinimization::kMaxCollidingTrianglesPerVertex;
-    SVector<GpuIndex, kMaxContacts> f  = FromFlatBuffer<kMaxContacts, 1>(BDF.fc, i);
-    auto nContacts                     = Dot(Ones<GpuIndex, kMaxContacts>(), f >= 0);
-    SVector<GpuScalar, kMaxContacts> fa = Zeros<GpuIndex, kMaxContacts>();
-    for (auto c = 0; c < nContacts; ++c)
-        fa(c) = BDF.FA[f(c)];
-    auto sumfa    = Dot(fa, Ones<GpuScalar, kMaxContacts>());
-    GpuScalar muC = (BDF.XVA[i] * BDF.muC) / sumfa;
-    for (auto c = 0; c < nContacts; ++c)
+    kernels::ContactPenalty<kMaxContacts> cp{i, BDF.fc, BDF.XVA, BDF.FA, BDF.muC};
+    for (auto c = 0; c < cp.nContacts; ++c)
     {
         using pbat::sim::vbd::kernels::AccumulateVertexTriangleContact;
-        auto finds = FromBuffers<3, 1>(BDF.F, f(c));
+        auto finds = FromBuffers<3, 1>(BDF.F, cp.Triangle(c));
         auto xtf   = FromBuffers(BDF.xt, finds.Transpose());
         auto xf    = FromBuffers(BDF.x, finds.Transpose());
         AccumulateVertexTriangleContact(
@@ -189,7 +215,7 @@ __global__ void VbdIteration(BackwardEulerMinimization BDF)
             xtf,
             xf,
             BDF.dt,
-            fa(c) * muC,
+            cp.Penalty(c),
             BDF.muF,
             BDF.epsv,
             &gi,
@@ -204,103 +230,6 @@ __global__ void VbdIteration(BackwardEulerMinimization BDF)
     using pbat::sim::vbd::kernels::IntegratePositions;
     IntegratePositions(gi, Hi, xi, BDF.detHZero);
     ToBuffers(xi, BDF.xb, i);
-}
-
-template <auto kBlockThreads>
-__global__ void AccumulateVertexEnergies(BackwardEulerMinimization BDF);
-
-/**
- * @brief Traits for vertex energy accumulation kernel
- *
- * @tparam kBlockThreads Number of threads per block
- */
-template <auto kBlockThreads>
-struct AccumulateVertexEnergiesTraits
-{
-  public:
-    using BlockReduce  = cub::BlockReduce<GpuScalar, kBlockThreads>; ///< Reduction
-    using BlockStorage = typename BlockReduce::TempStorage;          ///< Storage for reduction
-
-    static auto constexpr kDynamicSharedMemorySize =
-        sizeof(BlockStorage); ///< Dynamic shared memory size
-
-    /**
-     * @brief Get the raw kernel
-     * @return Handle to the kernel
-     */
-    static auto Kernel() { return &AccumulateVertexEnergies<kBlockThreads>; }
-};
-
-/**
- * @brief Accumulate vertex energies kernel
- *
- * @tparam kBlockThreads Number of threads per block
- * @param BDF BDF1 time-stepping minimization problem
- */
-template <auto kBlockThreads>
-__global__ void AccumulateVertexEnergies(BackwardEulerMinimization BDF)
-{
-    using Traits       = AccumulateVertexEnergiesTraits<kBlockThreads>;
-    using BlockReduce  = typename Traits::BlockReduce;
-    using BlockStorage = typename Traits::BlockStorage;
-    extern __shared__ __align__(alignof(BlockStorage)) char shared[];
-
-    auto tid = threadIdx.x;
-    auto i   = blockIdx.x;
-
-    // Vertex objective function
-    GpuScalar fi{0};
-
-    // 1. Compute total vertex elastic energy
-    GpuIndex GVTbegin          = BDF.GVTp[i];
-    GpuIndex nAdjacentElements = BDF.GVTp[i + 1] - GVTbegin;
-    for (auto elocal = tid; elocal < nAdjacentElements; elocal += kBlockThreads)
-    {
-        GpuIndex e = BDF.GVTn[GVTbegin + elocal];
-        fi += BDF.Uetr[e];
-    }
-    fi = BlockReduce(reinterpret_cast<BlockStorage&>(shared)).Sum(fi);
-    if (tid > 0)
-        return;
-
-    // Load vertex data
-    GpuScalar mi                  = BDF.m[i];
-    SVector<GpuScalar, 3> xti     = FromBuffers<3, 1>(BDF.xt, i);
-    SVector<GpuScalar, 3> xitilde = FromBuffers<3, 1>(BDF.xtilde, i);
-    SVector<GpuScalar, 3> xi      = FromBuffers<3, 1>(BDF.x, i);
-
-    // 2. Add contact energy
-    static auto constexpr kMaxContacts = BackwardEulerMinimization::kMaxCollidingTrianglesPerVertex;
-    SVector<GpuIndex, kMaxContacts> f  = FromFlatBuffer<kMaxContacts, 1>(BDF.fc, i);
-    auto nContacts                     = Dot(Ones<GpuIndex, kMaxContacts>(), f >= 0);
-    SVector<GpuScalar, kMaxContacts> fa = Zeros<GpuIndex, kMaxContacts>();
-    for (auto c = 0; c < nContacts; ++c)
-        fa(c) = BDF.FA[f(c)];
-    auto sumfa    = Dot(fa, Ones<GpuScalar, kMaxContacts>());
-    GpuScalar muC = (BDF.XVA[i] * BDF.muC) / sumfa;
-    for (auto c = 0; c < nContacts; ++c)
-    {
-        using pbat::sim::vbd::kernels::AccumulateVertexTriangleContact;
-        auto finds = FromBuffers<3, 1>(BDF.F, f(c));
-        auto xtf   = FromBuffers(BDF.xt, finds.Transpose());
-        auto xf    = FromBuffers(BDF.x, finds.Transpose());
-        fi += AccumulateVertexTriangleContact(
-            xti,
-            xi,
-            xtf,
-            xf,
-            BDF.dt,
-            fa(c) * muC,
-            BDF.muF,
-            BDF.epsv,
-            static_cast<SVector<GpuScalar, 3>*>(nullptr),
-            static_cast<SMatrix<GpuScalar, 3, 3>*>(nullptr));
-    }
-
-    // 4. Add inertial term
-    fi += GpuScalar(0.5) * mi * SquaredNorm(xi - xti);
-    // 5. Store vertex objective function
-    BDF.ftr[i] = fi;
 }
 
 /**
@@ -335,10 +264,6 @@ void Invoke(GpuIndex nBlocks, GpuIndex nThreads, TArgs&&... args)
     });
 }
 
-} // namespace kernels
-} // namespace vbd
-} // namespace impl
-} // namespace gpu
-} // namespace pbat
+} // namespace pbat::gpu::impl::vbd::kernels
 
 #endif // PBAT_GPU_IMPL_VBD_KERNELS_H

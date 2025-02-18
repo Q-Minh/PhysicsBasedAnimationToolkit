@@ -34,12 +34,11 @@ void BindIntegrator([[maybe_unused]] pybind11::module& m)
             pyb::arg("dt")         = GpuScalar{0.01},
             pyb::arg("iterations") = GpuIndex{20},
             pyb::arg("substeps")   = GpuIndex{1},
-            pyb::arg("rho")        = GpuScalar{1},
-            "Integrate 1 time step in time using a uniform time discretization dt. Use iterations "
-            "iterations for the time integration minimization. Substepping can be specified in "
-            "substeps, such that substeps*iterations total iterations will be executed. rho < 1 "
-            "yields a spectral radius estimate for Chebyshev semi-iterative method acceleration, "
-            "inactive if rho >= 1.")
+            "Integrate 1 time step.\n\n"
+            "Args:\n"
+            "    dt (float): Time step\n"
+            "    iterations (int): Number of optimization iterations per substep\n"
+            "    substeps (int): Number of substeps")
         .def_property(
             "x",
             &Integrator::GetPositions,
