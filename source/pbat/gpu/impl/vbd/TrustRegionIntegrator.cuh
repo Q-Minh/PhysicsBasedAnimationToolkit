@@ -136,7 +136,16 @@ class TrustRegionIntegrator : public Integrator
      * \f]
      *
      * Because the lead matrix is constant, we can precompute its inverse \f$ \mathbf{Q}^{-1} \f$,
-     * which we store.
+     * which we store as 
+     * 
+     * \f[
+     * \mathbf{Q}^{-1} = 
+     * \begin{bmatrix}
+     * 0.5 & -1 & 0.5 \\
+     * -0.5 & 0 & 0.5 \\
+     * 0 & 1 & 0
+     * \end{bmatrix}
+     * \f]
      *
      * For any 3 consecutive function values \f$ f^{k-2}, f^{k-1}, f^k \f$ at corresponding states
      * \f$ x^{k-2}, x^{k-1}, x^k \f$, we can compute the coefficients \f$ \mathbf{a_Q} \f$ of the

@@ -25,14 +25,7 @@ TrustRegionIntegrator::TrustRegionIntegrator(Data const& data)
       aQ(),
       bUseCurvedPath(data.bCurved)
 {
-    // Q can be derived by simply considering the quadratic function
-    // q(t)=at^2 + bt + c, where q(-1)=f^{k-2}, q(0)=f^{k-1}, q(1)=f^k
-    // Then, Qinv=Q^{-1}
-    // clang-format off
-    // Qinv <<  GpuScalar(0.5), GpuScalar(-1), GpuScalar(0.5),
-    //         GpuScalar(-0.5),  GpuScalar(0), GpuScalar(0.5),
-    //            GpuScalar(0),  GpuScalar(1), GpuScalar(0);
-    // clang-format on
+    // See ConstructModel() for details
     Qinv(0, 0) = GpuScalar(0.5);
     Qinv(0, 1) = GpuScalar(-1);
     Qinv(0, 2) = GpuScalar(0.5);
