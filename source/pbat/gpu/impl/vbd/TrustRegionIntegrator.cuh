@@ -100,12 +100,18 @@ class TrustRegionIntegrator : public Integrator
      * @brief Compute the model function's minimizer \f$ t^* = \text{arg}\min_t m(t) \f$
      *
      * With \f$ m(t) = a_f t^2 + b_f t + c_f \f$, the minimizer is easily found by root-finding
-     * the stationary condition \f$ m'(t^*) = 2a_ft+b_f = 0 \f$, which yields 
+     * the stationary condition \f$ m'(t^*) = 2a_ft+b_f = 0 \f$, which yields
      * \f[
      * t^* = -\frac{b_f}{2 a_f}
      * \f]
+     *
+     * There can be 2 degeneracies:
+     * 1. If \f$ a_f = 0, b_f \neq 0 \f$, the function is linear. In this case, we return
+     * \f$ t^* = \begin{cases} -\inf & b_f > 0 \\ +\inf & \text{otherwise} \end{cases} \f$
+     * 2. If \f$ a_f = b_f = 0 \f$, the function is constant. In this case, we return one of the
+     * solutions \f$ t^* = 0 \f$.
      * 
-     * @return \f$ t^* \f$
+     * @return The model function's minimizer
      */
     GpuScalar ModelOptimalStep() const;
     /**
@@ -136,10 +142,10 @@ class TrustRegionIntegrator : public Integrator
      * \f]
      *
      * Because the lead matrix is constant, we can precompute its inverse \f$ \mathbf{Q}^{-1} \f$,
-     * which we store as 
-     * 
+     * which we store as
+     *
      * \f[
-     * \mathbf{Q}^{-1} = 
+     * \mathbf{Q}^{-1} =
      * \begin{bmatrix}
      * 0.5 & -1 & 0.5 \\
      * -0.5 & 0 & 0.5 \\

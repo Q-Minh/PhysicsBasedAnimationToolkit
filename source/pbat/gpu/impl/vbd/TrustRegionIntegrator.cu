@@ -292,7 +292,23 @@ GpuScalar TrustRegionIntegrator::ModelFunction(GpuScalar t) const
 
 GpuScalar TrustRegionIntegrator::ModelOptimalStep() const
 {
-    return -aQ(1) / (GpuScalar{2} * aQ(0));
+    static GpuScalar constexpr zero = std::numeric_limits<GpuScalar>::lowest();
+    bool const bIsQuadratic         = std::abs(aQ(0)) > zero;
+    bool const bIsLinear            = not bIsQuadratic and std::abs(aQ(1)) > zero;
+    if (bIsQuadratic)
+    {
+        return -aQ(1) / (GpuScalar{2} * aQ(0));
+    }
+    else if (bIsLinear)
+    {
+        // If slope of linear function is positive, minimum is -inf, else +inf
+        static GpuScalar constexpr inf = std::numeric_limits<GpuScalar>::max();
+        return aQ(1) > 0 ? -inf : inf;
+    }
+    else
+    {
+        return GpuScalar{0}; // Constant function is minimized everywhere, return trivial solution
+    }
 }
 
 void TrustRegionIntegrator::ConstructModel()
@@ -364,3 +380,70 @@ void TrustRegionIntegrator::RollbackLinearStep(GpuScalar t)
 }
 
 } // namespace pbat::gpu::impl::vbd
+
+#include "pbat/common/Eigen.h"
+
+#include <Eigen/SparseCore>
+#include <doctest/doctest.h>
+#include <span>
+#include <vector>
+
+TEST_CASE("[gpu][impl][vbd] TrustRegionIntegrator")
+{
+    using namespace pbat;
+    using pbat::common::ToEigen;
+    // Arrange
+    // Cube mesh
+    MatrixX P(3, 8);
+    IndexMatrixX V(1, 8);
+    IndexMatrixX T(4, 5);
+    IndexMatrixX F(3, 12);
+    // clang-format off
+    P << 0.f, 1.f, 0.f, 1.f, 0.f, 1.f, 0.f, 1.f,
+         0.f, 0.f, 1.f, 1.f, 0.f, 0.f, 1.f, 1.f,
+         0.f, 0.f, 0.f, 0.f, 1.f, 1.f, 1.f, 1.f;
+    T << 0, 3, 5, 6, 0,
+         1, 2, 4, 7, 5,
+         3, 0, 6, 5, 3,
+         5, 6, 0, 3, 6;
+    F << 0, 1, 1, 3, 3, 2, 2, 0, 0, 0, 4, 5,
+         1, 5, 3, 7, 2, 6, 0, 4, 3, 2, 5, 7,
+         4, 4, 5, 5, 7, 7, 6, 6, 1, 3, 6, 6;
+    // clang-format on
+    V.reshaped().setLinSpaced(0, static_cast<Index>(P.cols() - 1));
+    // Problem parameters
+    auto constexpr dt         = GpuScalar{1e-2};
+    auto constexpr substeps   = 1;
+    auto constexpr iterations = 10;
+    auto const worldMin       = P.rowwise().minCoeff().cast<GpuScalar>().eval();
+    auto const worldMax       = P.rowwise().maxCoeff().cast<GpuScalar>().eval();
+    Scalar constexpr eta{0.1};
+    Scalar constexpr tau{2.};
+
+    SUBCASE("Free fall")
+    {
+        auto data = sim::vbd::Data().WithVolumeMesh(P, T).WithSurfaceMesh(V, F);
+        SUBCASE("Linear path")
+        {
+            data.WithTrustRegionAcceleration(eta, tau, false);
+        }
+        SUBCASE("Curved path")
+        {
+            data.WithTrustRegionAcceleration(eta, tau, true);
+        }
+        // Act
+        using pbat::gpu::impl::vbd::TrustRegionIntegrator;
+        TrustRegionIntegrator vbd{data.Construct()};
+        vbd.SetSceneBoundingBox(worldMin, worldMax);
+        vbd.Step(dt, iterations, substeps);
+
+        // Assert
+        auto constexpr zero = GpuScalar{1e-4};
+        GpuMatrixX dx =
+            ToEigen(vbd.x.Get()).reshaped(P.cols(), P.rows()).transpose() - P.cast<GpuScalar>();
+        bool const bVerticesFallUnderGravity = (dx.row(2).array() < GpuScalar{0}).all();
+        CHECK(bVerticesFallUnderGravity);
+        bool const bVerticesOnlyFall = (dx.topRows(2).array().abs() < zero).all();
+        CHECK(bVerticesOnlyFall);
+    }
+}
