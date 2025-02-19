@@ -116,15 +116,20 @@ void TrustRegionIntegrator::SolveWithLinearAcceleratedPath(
             }
             if (bStepAccepted)
             {
+                PBAT_PROFILE_LOG_LITERAL("Accepted TR step");
                 bool const bIsStepAtUpperBound = (upper - t) < zero; // upper >= t after std::clamp
                 // Increase TR radius if our model function is accurate
                 // and the optimal step was outside the current trust region
                 if (bIsStepAtUpperBound)
+                {
+                    PBAT_PROFILE_LOG_LITERAL("Increasing TR radius");
                     R2 *= tau * tau; // R' = tau*R -> R'^2 = tau^2*R^2
+                }
             }
             else
             {
                 // Decrease TR radius if our model function is inaccurate
+                PBAT_PROFILE_LOG_LITERAL("Rejected TR step. Decreasing TR radius");
                 R2 /= tau * tau; // R' = R/tau -> R'^2 = R^2/tau^2
                 if (bShouldTryAcceleratedStep)
                     RollbackLinearStep(t); // fall-back to initial VBD step
@@ -292,7 +297,7 @@ GpuScalar TrustRegionIntegrator::ModelFunction(GpuScalar t) const
 
 GpuScalar TrustRegionIntegrator::ModelOptimalStep() const
 {
-    static GpuScalar constexpr zero = std::numeric_limits<GpuScalar>::lowest();
+    static GpuScalar constexpr zero = std::numeric_limits<GpuScalar>::min();
     bool const bIsQuadratic         = std::abs(aQ(0)) > zero;
     bool const bIsLinear            = not bIsQuadratic and std::abs(aQ(1)) > zero;
     if (bIsQuadratic)
@@ -382,6 +387,7 @@ void TrustRegionIntegrator::RollbackLinearStep(GpuScalar t)
 } // namespace pbat::gpu::impl::vbd
 
 #include "pbat/common/Eigen.h"
+#include "pbat/physics/HyperElasticity.h"
 
 #include <Eigen/SparseCore>
 #include <doctest/doctest.h>
@@ -419,10 +425,17 @@ TEST_CASE("[gpu][impl][vbd] TrustRegionIntegrator")
     auto const worldMax       = P.rowwise().maxCoeff().cast<GpuScalar>().eval();
     Scalar constexpr eta{0.1};
     Scalar constexpr tau{2.};
+    Scalar constexpr Y{1e7};
+    Scalar constexpr nu{0.45};
+    Scalar constexpr rho{1e3};
+    auto const [mu, lambda] = physics::LameCoefficients(Y, nu);
 
     SUBCASE("Free fall")
     {
-        auto data = sim::vbd::Data().WithVolumeMesh(P, T).WithSurfaceMesh(V, F);
+        auto data = sim::vbd::Data().WithVolumeMesh(P, T).WithSurfaceMesh(V, F).WithMaterial(
+            VectorX::Constant(T.cols(), rho),
+            VectorX::Constant(T.cols(), mu),
+            VectorX::Constant(T.cols(), lambda));
         SUBCASE("Linear path")
         {
             data.WithTrustRegionAcceleration(eta, tau, false);

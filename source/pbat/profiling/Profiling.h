@@ -18,6 +18,8 @@
         #include <tracy/Tracy.hpp>
         #define PBAT_PROFILE_SCOPE             ZoneScoped
         #define PBAT_PROFILE_NAMED_SCOPE(name) ZoneScopedN(name)
+        #define PBAT_PROFILE_LOG(txt, size)    TracyMessage(txt, size)
+        #define PBAT_PROFILE_LOG_LITERAL(txt)  TracyMessageL(txt)
     #else
         #define PBAT_CAN_USE_TRACY_C
         #include <tracy/TracyC.h>
@@ -26,6 +28,8 @@
         #define PBAT_PROFILE_CUDA_HOST_SCOPE_START(var)             TracyCZone(var, true)
         #define PBAT_PROFILE_NAMED_CUDA_HOST_SCOPE_START(var, name) TracyCZoneN(var, name, true)
         #define PBAT_PROFILE_CUDA_HOST_SCOPE_END(var)               TracyCZoneEnd(var)
+        #define PBAT_PROFILE_LOG(txt, size)                         TracyCMessage(txt, size)
+        #define PBAT_PROFILE_LOG_LITERAL(txt)                       TracyCMessageL(txt)
     #endif // __CUDACC__
 #else
     #define PBAT_PROFILE_SCOPE
@@ -33,6 +37,8 @@
     #define PBAT_PROFILE_CUDA_HOST_SCOPE_START(var)
     #define PBAT_PROFILE_CUDA_HOST_SCOPE_START(var, name)
     #define PBAT_PROFILE_CUDA_HOST_SCOPE_END(var)
+    #define PBAT_PROFILE_LOG(txt, size)
+    #define PBAT_PROFILE_LOG_LITERAL(txt)
 #endif // PBAT_CAN_USE_TRACY
 
 /**
