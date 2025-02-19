@@ -19,8 +19,8 @@ PBAT_API struct Data
      *
      * If body map has not been set, all vertices are assumed to belong to the same body.
      *
-     * @param X 3x|#vertices| vertex positions
-     * @param E 4x|#elements| tetrahedra
+     * @param X `3x|# vertices|` vertex positions
+     * @param E `4x|# elements|` tetrahedra
      * @return Reference to this
      */
     Data&
@@ -28,7 +28,7 @@ PBAT_API struct Data
     /**
      * @brief Collision mesh
      * @param V Collision vertices
-     * @param F 3x|#collision triangles| collision triangles (on the boundary of T)
+     * @param F `3x|# collision triangles|` collision triangles (on the boundary of T)
      * @return Reference to this
      * @pre WithVolumeMesh() must be called before this
      */
@@ -132,6 +132,7 @@ PBAT_API struct Data
      * @param tau Trust Region radius increase factor
      * @param bCurved Use curved accelerated path, otherwise use linear path. Default is true.
      * @return Reference to this
+     * @pre `tau > 1` and `eta > 0`
      */
     Data& WithTrustRegionAcceleration(Scalar eta, Scalar tau, bool bCurved = true);
     /**
@@ -142,76 +143,60 @@ PBAT_API struct Data
     Data& Construct(bool bValidate = true);
 
   public:
-    /**
-     * Simulation mesh
-     */
-    MatrixX X;      ///< 3x|#verts| FEM nodal positions
-    IndexMatrixX E; ///< 4x|#elems| FEM linear tetrahedral elements
+    // Simulation mesh
+    MatrixX X;      ///< `3x|# verts|` FEM nodal positions
+    IndexMatrixX E; ///< `4x|# elems|` FEM linear tetrahedral elements
 
-    /**
-     * Collision mesh
-     */
-    IndexVectorX B; ///< |#verts| array of body indices
+    // Collision mesh
+    IndexVectorX B; ///< `|# verts|` array of body indices
     IndexVectorX V; ///< Collision vertices
-    IndexMatrixX F; ///< 3x|#collision triangles| collision triangles (on the boundary of T)
-    VectorX XVA;    ///< |#verts| vertex areas (i.e. triangle areas distributed onto vertices for
+    IndexMatrixX F; ///< `3x|#collision triangles|` collision triangles (on the boundary of T)
+    VectorX XVA;    ///< `|# verts|` vertex areas (i.e. triangle areas distributed onto vertices for
                     ///< boundary integration)
-    VectorX FA;     ///< |#collision triangles| triangle areas
+    VectorX FA;     ///< `|# collision triangles|` triangle areas
 
-    /**
-     * Vertex data
-     */
-    MatrixX x;    ///< 3x|#verts| vertex positions
-    MatrixX v;    ///< 3x|#verts| vertex velocities
-    MatrixX aext; ///< 3x|#verts| vertex external accelerations
-    VectorX m;    ///< |#verts| vertex masses
+    // Vertex data
+    MatrixX x;    ///< `3x|# verts|` vertex positions
+    MatrixX v;    ///< `3x|# verts|` vertex velocities
+    MatrixX aext; ///< `3x|# verts|` vertex external accelerations
+    VectorX m;    ///< `|# verts|` vertex masses
 
-    MatrixX xt;     ///< 3x|#verts| previous vertex positions
-    MatrixX xtilde; ///< 3x|#verts| inertial target positions
-    MatrixX vt;     ///< 3x|#verts| previous vertex velocities
+    MatrixX xt;     ///< `3x|# verts|` previous vertex positions
+    MatrixX xtilde; ///< `3x|# verts|` inertial target positions
+    MatrixX vt;     ///< `3x|# verts|` previous vertex velocities
 
-    /**
-     * Element data
-     */
-    VectorX wg;   ///< |#elems| quadrature weights
-    MatrixX GP;   ///< |#elem.nodes|x|#dims*#elems| shape function gradients at elems
-    VectorX rhoe; ///< |#elems| mass densities
-    MatrixX lame; ///< 2x|#elems| Lame coefficients
+    // Element data
+    VectorX wg;   ///< `|# elems|` quadrature weights
+    MatrixX GP;   ///< `|# elem.nodes|x|# dims*# elems|` shape function gradients at elems
+    VectorX rhoe; ///< `|# elems|` mass densities
+    MatrixX lame; ///< `2x|# elems|` Lame coefficients
 
-    /**
-     * Vertex-element adjacency graph
-     */
-    IndexVectorX GVGp;      ///< |#verts+1| prefixes into GVGg
-    IndexVectorX GVGe;      ///< |# of vertex-elems edges| element indices s.t.
-                            ///< GVGe[k] for GVGp[i] <= k < GVGp[i+1] gives the element index of
-                            ///< adjacent to vertex i for the neighbouring elems
-    IndexVectorX GVGilocal; ///< |# of vertex-elems edges| local vertex indices s.t.
-                            ///< GVGilocal[k] for GVGp[i] <= k < GVGp[i+1] gives the local index of
-                            ///< vertex i for the neighbouring elems
+    // Vertex-element adjacency graph
+    IndexVectorX GVGp;      ///< `|# verts+1|` prefixes into GVGg
+    IndexVectorX GVGe;      ///< `|# of vertex-elems adjacencies|` element indices s.t.
+                            ///< `GVGe[k] for GVGp[i] <= k < GVGp[i+1]` gives the element `e`
+                            ///< adjacent to vertex `i`
+    IndexVectorX GVGilocal; ///< `|# of vertex-elems adjacencies|` local vertex indices s.t.
+                            ///< `GVGilocal[k] for GVGp[i] <= k < GVGp[i+1]` gives the local vertex
+                            ///< index of vertex `i` in element `e=GVGe[k]`
 
-    /**
-     * Dirichlet boundary conditions
-     */
+    // Dirichlet boundary conditions
     Scalar muD{1};    ///< Dirichlet penalty coefficient
     IndexVectorX dbc; ///< Dirichlet constrained vertices (sorted)
 
-    /**
-     * Parallelization
-     */
+    // Parallelization
     graph::EGreedyColorOrderingStrategy eOrdering{
         graph::EGreedyColorOrderingStrategy::LargestDegree}; ///< Vertex graph coloring ordering
                                                              ///< strategy
     graph::EGreedyColorSelectionStrategy eSelection{
         graph::EGreedyColorSelectionStrategy::LeastUsed}; ///< Vertex graph coloring selection
                                                           ///< strategy
-    IndexVectorX colors;                                  ///< |#vertices| map of vertex colors
-    IndexVectorX Pptr; ///< |#partitions+1| partition pointers, s.t. the range [Pptr[p], Pptr[p+1])
-                       ///< indexes into Padj vertices from partition p
-    IndexVectorX Padj; ///< Partition vertices
+    IndexVectorX colors;                                  ///< `|# vertices|` map of vertex colors
+    IndexVectorX Pptr; ///< `|# partitions+1|` partition pointers, s.t. the range `[Pptr[p],
+                       ///< Pptr[p+1])` indexes into Padj from partition `p`
+    IndexVectorX Padj; ///< `|# verts|` partition vertices
 
-    /**
-     * Time integration optimization parameters
-     */
+    // Time integration optimization parameters
     EInitializationStrategy strategy{
         EInitializationStrategy::AdaptivePbat}; ///< BCD optimization initialization strategy
     Scalar kD{0};                               ///< Uniform damping coefficient
@@ -223,16 +208,12 @@ PBAT_API struct Data
     Scalar detHZero{1e-7};              ///< Numerical zero for hessian pseudo-singularity check
     EAccelerationStrategy eAcceleration{EAccelerationStrategy::None}; ///< Acceleration strategy
 
-    /**
-     * Chebyshev acceleration
-     */
+    // Chebyshev acceleration
     Scalar rho{1};   ///< Chebyshev acceleration estimated spectral radius
-    MatrixX xchebm2; ///< 3x|#verts| x^{k-2} used in Chebyshev semi-iterative method
-    MatrixX xchebm1; ///< 3x|#verts| x^{k-1} used in Chebyshev semi-iterative method
+    MatrixX xchebm2; ///< `3x|# verts|` \f$ x^{k-2} \f$ used in Chebyshev semi-iterative method
+    MatrixX xchebm1; ///< `3x|# verts|` \f$ x^{k-1} \f$ used in Chebyshev semi-iterative method
 
-    /**
-     * Trust Region acceleration
-     */
+    // Trust Region acceleration
     Scalar eta{0.2};    ///< Trust Region energy reduction accuracy threshold
     Scalar tau{2};      ///< Trust Region radius increase factor
     bool bCurved{true}; ///< Use curved accelerated path, otherwise use linear path

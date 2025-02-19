@@ -254,9 +254,9 @@ Data& Data::Construct(bool bValidate)
                 {
                     throw std::invalid_argument("Expected eta >= 0");
                 }
-                if (tau <= 0)
+                if (tau <= 1)
                 {
-                    throw std::invalid_argument("Expected tau > 0");
+                    throw std::invalid_argument("Expected tau > 1");
                 }
                 break;
             default: break;
