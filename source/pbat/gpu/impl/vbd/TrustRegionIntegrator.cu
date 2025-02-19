@@ -110,7 +110,7 @@ void TrustRegionIntegrator::SolveWithLinearAcceleratedPath(
             {
                 TakeLinearStep(t);
                 // Compute actual vs expected energy reduction ratio
-                fk = fObjective(); // Now fk[kNumPastIterates-1] = f(x^{k-1} + t * \Delta x)
+                fk                 = fObjective();
                 GpuScalar fNext    = fk;
                 GpuScalar fCurrent = fkm1;
                 GpuScalar mNext    = ModelFunction(t);
@@ -118,19 +118,20 @@ void TrustRegionIntegrator::SolveWithLinearAcceleratedPath(
                                            // bShouldTryAcceleratedStep, so fproxy(1) > fproxy(t)
                 GpuScalar const rho = (fCurrent - fNext) / (mCurrent - mNext);
                 // Accept step if model function is accurate enough (i.e. the expected energy
-                // reduction matches the actual energy reduction "well")
+                // reduction "matches" the actual energy reduction)
                 bStepAccepted = rho > eta;
             }
             if (bStepAccepted)
             {
                 bool const bIsStepAtUpperBound = (upper - t) < zero; // upper >= t after std::clamp
+                // Increase TR radius if our model function is accurate
+                // and the optimal step was outside the current trust region
                 if (bIsStepAtUpperBound)
-                {
                     R2 *= tau * tau; // R' = tau*R -> R'^2 = tau^2*R^2
-                }
             }
             else
             {
+                // Decrease TR radius if our model function is inaccurate
                 R2 /= tau * tau; // R' = R/tau -> R'^2 = R^2/tau^2
                 if (bShouldTryAcceleratedStep)
                     RollbackLinearStep(t); // fall-back to initial VBD step
