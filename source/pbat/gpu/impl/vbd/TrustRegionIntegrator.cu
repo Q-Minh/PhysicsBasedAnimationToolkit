@@ -205,7 +205,7 @@ GpuScalar TrustRegionIntegrator::ObjectiveFunction(GpuScalar dt, GpuScalar dt2)
             using namespace pbat::math::linalg::mini;
             auto xi      = FromBuffers<3, 1>(x, i);
             auto xitilde = FromBuffers<3, 1>(xtilde, i);
-            return GpuScalar(0.5) * m[i] * SquaredNorm(xi - xitilde);
+            return m[i] * SquaredNorm(xi - xitilde);
         }),
         GpuScalar{0},
         thrust::plus<GpuScalar>());
@@ -260,7 +260,7 @@ GpuScalar TrustRegionIntegrator::ObjectiveFunction(GpuScalar dt, GpuScalar dt2)
         GpuScalar{0},
         thrust::plus<GpuScalar>());
 
-    GpuScalar f = K + dt2 * U + C;
+    GpuScalar f = K / 2 + dt2 * U + C;
     PBAT_PROFILE_CUDA_HOST_SCOPE_END(ctx);
     return f;
 }
