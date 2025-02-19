@@ -81,52 +81,59 @@ void TrustRegionIntegrator::SolveWithLinearAcceleratedPath(
     {
         if (k >= kNumPastIterates - 1)
         {
-            ConstructProxy();
-            // 2. Throw away x^{k-2},
-            // Now fk <- f^{k-1}, f^{k-1} <- f^k
+            ConstructModel();
+            // After update
+            // fk <- f^{k-1}, f^{k-1} <- f^k
             // x^{k-2} <- x^{k-1}, x^{k-1} <- x^k
             UpdateIterates();
-            // 3. Compute VBD step, after which x = x^k + \Delta x
+            // Compute VBD step, after which x^k = x^{k-1} + \Delta x
             RunVbdIteration(bdf);
             GpuScalar dx2 = SquaredStepSize(); // |\Delta x|_2^2
+            // Ensure TR radius is not smaller than the VBD step,
+            // so that we can potentially improve it.
             if (R2 < dx2 + zero)
             {
-                // Initialize radius to tau times the VBD step size
+                // Heuristically initialize radius to tau times the VBD step size.
                 // R=tau*|\Delta x|_2
                 // => R^2=tau^2*|\Delta x|_2^2
                 R2 = tau * tau * dx2;
             }
-            // 4. Compute TR accelerated step
+            // Compute accelerated step by minimizing model function subject to TR constraint
             GpuScalar constexpr lower{1};
-            GpuScalar const upper = std::sqrt(R2 / dx2);
-            GpuScalar t           = -aQ(1) / (GpuScalar{2} * aQ(0)); // Minimum of fproxy
-            t                     = std::clamp(t, lower, upper);     // Enforce TR constraint
-            TakeLinearStep(t); // Now x = x^{k-1} + t * \Delta x
-            // 5. Compute energy at TR step
-            fk = fObjective(); // Now fk[kNumPastIterates-1] = f(x^{k-1} + t * \Delta x)
-            GpuScalar fNextActual    = fk;
-            GpuScalar fCurrentActual = fkm1; // Recall f^{k-1} = f^k
-            GpuScalar fNextProxy     = ProxyObjectiveFunction(t);
-            GpuScalar fCurrentProxy  = fkm2; // Recall fproxy(0) = f^{k-1}, and f^{k-2} = f^{k-1}
-            GpuScalar const rho = (fCurrentActual - fNextActual) / (fCurrentProxy - fNextProxy);
-            // 6. Accept or reject TR step, simultaneously updating TR radius
-            bool const bStepAccepted = rho > eta;
+            GpuScalar const upper = std::sqrt(R2 / dx2); // \f$ t_{\text{upper}} |\Delta x| = R \f$
+            GpuScalar const tstar = ModelOptimalStep();
+            GpuScalar const t     = std::clamp(tstar, lower, upper);
+            bool const bIsStepAtLowerBound       = std::abs(t - lower) < zero;
+            bool const bShouldTryAcceleratedStep = not bIsStepAtLowerBound;
+            bool bStepAccepted{false};
+            if (bShouldTryAcceleratedStep)
+            {
+                TakeLinearStep(t);
+                // Compute actual vs expected energy reduction ratio
+                fk = fObjective(); // Now fk[kNumPastIterates-1] = f(x^{k-1} + t * \Delta x)
+                GpuScalar fNext    = fk;
+                GpuScalar fCurrent = fkm1;
+                GpuScalar mNext    = ModelFunction(t);
+                GpuScalar mCurrent = fkm1; // fproxy(1) = f^{k-1}, and t > 1 when
+                                           // bShouldTryAcceleratedStep, so fproxy(1) > fproxy(t)
+                GpuScalar const rho = (fCurrent - fNext) / (mCurrent - mNext);
+                // Accept step if model function is accurate enough (i.e. the expected energy
+                // reduction matches the actual energy reduction "well")
+                bStepAccepted = rho > eta;
+            }
             if (bStepAccepted)
             {
-                bool const bIsStepAtBound = std::abs(dx2 - R2) < zero;
-                if (bIsStepAtBound)
+                bool const bIsStepAtUpperBound = (upper - t) < zero; // upper >= t after std::clamp
+                if (bIsStepAtUpperBound)
                 {
-                    // R' = tau*R
-                    // -> R'^2 = tau^2*R^2
-                    R2 *= tau * tau;
+                    R2 *= tau * tau; // R' = tau*R -> R'^2 = tau^2*R^2
                 }
             }
             else
             {
-                // R' = R/tau
-                // -> R'^2 = R^2/tau^2
-                R2 /= tau * tau;
-                RollbackLinearStep(t);
+                R2 /= tau * tau; // R' = R/tau -> R'^2 = R^2/tau^2
+                if (bShouldTryAcceleratedStep)
+                    RollbackLinearStep(t); // fall-back to initial VBD step
                 fk = fObjective();
             }
         }
@@ -284,15 +291,18 @@ void TrustRegionIntegrator::UpdateIterates()
     PBAT_PROFILE_CUDA_HOST_SCOPE_END(ctx);
 }
 
-GpuScalar TrustRegionIntegrator::ProxyObjectiveFunction(GpuScalar t) const
+GpuScalar TrustRegionIntegrator::ModelFunction(GpuScalar t) const
 {
     return aQ(0) * t * t + aQ(1) * t + aQ(2);
 }
 
-void TrustRegionIntegrator::ConstructProxy()
+GpuScalar TrustRegionIntegrator::ModelOptimalStep() const
 {
-    // 1. Compute af,bf,cf s.t. fproxy(t) = af*t^2 + bf*t + cf
-    // and fproxy(-1)=f^{k-2}, fproxy(0)=f^{k-1}, fproxy(1)=f^k
+    return -aQ(1) / (GpuScalar{2} * aQ(0));
+}
+
+void TrustRegionIntegrator::ConstructModel()
+{
     using Vector3 = pbat::math::linalg::mini::SVector<GpuScalar, 3>;
     aQ            = Qinv * Vector3{fkm2, fkm1, fk};
 }

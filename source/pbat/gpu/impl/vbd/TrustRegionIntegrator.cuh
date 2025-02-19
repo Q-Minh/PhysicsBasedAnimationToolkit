@@ -50,14 +50,21 @@ class TrustRegionIntegrator : public Integrator
     void
     SolveWithCurvedAccelerationPath(kernels::BackwardEulerMinimization& bdf, GpuIndex iterations);
     /**
-     * @brief Compute the objective function value at \f$ x^k \f$, i.e.
+     * @brief Compute the objective function value at \f$ x^k \f$
      *
      * \f[
+     * f(\mathbf{x}) =
      * \sum_i \frac{1}{2} m_i |\mathbf{x}_i -
      * \tilde{\mathbf{x}_i}|_2^2 + h^2 \sum_{e} w_e \Psi_e +
      * \sum_{c \in (i,f)}
      * \left[ \frac{1}{2} \mu_C d^2 + \mu_F \lambda_N f_0(|\mathbf{u}|) \right]
      * \f]
+     * is evaluated using parallel reductions over:
+     * 1. vertices
+     * 2. elements
+     * 3. contacts
+     *
+     * See \cite anka2024vbd and \cite li2020ipc for details.
      *
      * @param dt Time step
      * @param dt2 Time step squared
@@ -74,35 +81,111 @@ class TrustRegionIntegrator : public Integrator
      */
 
     /**
-     * @brief Update \f$ x^k, x^{k-1}, x^{k-2}, f(x^k), f(x^{k-1}), f(x^{k-2}) \f$
+     * @brief Rotates \f$ x^k, x^{k-1}, x^{k-2} and f(x^k), f(x^{k-1}), f(x^{k-2}) \f$
+     *
+     * Sets \f$ x^{k-1} \leftarrow x^k \f$ and \f$ x^{k-2} \leftarrow x^{k-1} \f$ and
+     * \f$ f(x^{k-1}) \leftarrow f(x^k) \f$ and \f$ f(x^{k-2}) \leftarrow f(x^{k-1}) \f$.
      */
     void UpdateIterates();
     /**
-     * @brief Compute the Trust-Region proxy objective function
+     * @brief Compute the Trust-Region model function \f$ f_{\text{model}}(t) \f$
+     *
+     * See ConstructModel() for details.
+     *
      * @param t Point on accelerated path
-     * @return Proxy objective function value
+     * @return Model function value
      */
-    GpuScalar ProxyObjectiveFunction(GpuScalar t) const;
+    GpuScalar ModelFunction(GpuScalar t) const;
+    /**
+     * @brief Compute the model function's minimizer \f$ t^* = \text{arg}\min_t m(t) \f$
+     *
+     * With \f$ m(t) = a_f t^2 + b_f t + c_f \f$, the minimizer is easily found by root-finding
+     * the stationary condition \f$ m'(t^*) = 2a_ft+b_f = 0 \f$, which yields 
+     * \f[
+     * t^* = -\frac{b_f}{2 a_f}
+     * \f]
+     * 
+     * @return \f$ t^* \f$
+     */
+    GpuScalar ModelOptimalStep() const;
     /**
      * @brief Update the Trust-Region model function (i.e. the quadratic energy proxy along
      * accelerated path)
+     *
+     * Compute \f$ \mathbf{a_Q}=\begin{bmatrix} a_f & b_f & b_f \end{bmatrix} \f$ s.t.
+     * \f[
+     * f_{\text{model}}(t) = \mathbf{a_Q}^T \mathbf{P}_2(t) = a_f t^2 + b_f t + c_f
+     * \f]
+     * and \f$ f_{\text{model}}(-1) = f^{k-2} \f$, \f$ f_{\text{model}}(0) = f^{k-1} \f$, \f$
+     * f_{\text{model}}(1) = f^k \f$ .
+     *
+     * This leads to the system of equations
+     * \f[
+     * \begin{bmatrix}
+     * 1 & -1 & 1 \\
+     * 0 & 0 & 1 \\
+     * 1 & 1 & 1
+     * \end{bmatrix}
+     * \begin{bmatrix} a_f \\ b_f \\ c_f \end{bmatrix} =
+     * \begin{bmatrix} f(\mathbf{x}^{k-2}) \\ f(\mathbf{x}^{k-1}) \\ f(\mathbf{x}^k) \end{bmatrix}
+     * \f]
+     *
+     * or equivalently
+     * \f[
+     * \mathbf{Q} \mathbf{a_Q} = \mathbf{f}
+     * \f]
+     *
+     * Because the lead matrix is constant, we can precompute its inverse \f$ \mathbf{Q}^{-1} \f$,
+     * which we store.
+     *
+     * For any 3 consecutive function values \f$ f^{k-2}, f^{k-1}, f^k \f$ at corresponding states
+     * \f$ x^{k-2}, x^{k-1}, x^k \f$, we can compute the coefficients \f$ \mathbf{a_Q} \f$ of the
+     * quadratic energy proxy function \f$ f_{\text{model}}(t) \f$ as
+     * \f$ \mathbf{a_Q} = \mathbf{Q}^{-1} \mathbf{f} \f$.
+     *
+     * @post `aQ` is such that `ModelFunction(-1) = fkm2`, `ModelFunction(0) =
+     * fkm1` and `ModelFunction(1) = fk`.
      */
-    void ConstructProxy();
+    void ConstructModel();
     /**
      * @brief Compute the squared step size \f$ |x^k - x^{k-1}|_2^2 \f$
+     *
+     * \f[
+     * |x^k - x^{k-1}|_2^2 = \sum_i |\mathbf{x}_i^k - \mathbf{x}_i^{k-1}|_2^2
+     * \f]
+     * which we compute via parallel reduction over vertices.
+     *
      * @return \f$ |x^k - x^{k-1}|_2^2 \f$
      */
     GpuScalar SquaredStepSize() const;
     /**
      * @brief Take a linear step along the accelerated path
      * @param t Step size
-     * @post `xtr = xkm1 + t * (x - xkm1)`
+     *
+     * Computes the linear trust-region accelerated step as
+     * \f[
+     * x_{\text{TR}} = x^{k-1} + t (x^k - x^{k-1})
+     * \f]
+     * using corresponding states in `xkm1` and `x`.
+     * Then, overwrites `x` with `xtr`.
+     *
+     * @post `x <- xkm1 + t * (x - xkm1)`
      */
     void TakeLinearStep(GpuScalar t);
     /**
      * @brief Rollback the linear step along the accelerated path
      * @param t Step size
-     * @post `x = xkm1 + (xtr - xkm1) / t`
+     *
+     * Computes the rollback of the linear trust-region accelerated step as
+     * \f[
+     * x = x^{k-1} + \frac{x_{\text{TR}} - x^{k-1}}{t}
+     * \f]
+     * using corresponding states in `xkm1` and `x`, where `x` currently stores \f$ x_{\text{TR}}
+     * \f$. Then, overwrites `x`.
+     *
+     * @note See TakeLinearStep() for the forward step.
+     *
+     * @post `x <- xkm1 + (x - xkm1) / t`
      */
     void RollbackLinearStep(GpuScalar t);
 
@@ -115,7 +198,7 @@ class TrustRegionIntegrator : public Integrator
                                        ///< values at \f$ x^k, x^{k-1}, x^{k-2} \f$
 
     pbat::math::linalg::mini::SMatrix<GpuScalar, 3, 3>
-        Qinv; ///< Inverse of the quadratic energy proxy matrix
+        Qinv; ///< Inverse of the quadratic energy proxy matrix. See ConstructModel().
     pbat::math::linalg::mini::SVector<GpuScalar, 3> aQ; ///< Quadratic energy proxy coefficients
     bool bUseCurvedPath;                                ///< Whether to use curved path or not
 };
