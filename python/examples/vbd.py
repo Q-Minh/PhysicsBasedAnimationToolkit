@@ -113,6 +113,32 @@ if __name__ == "__main__":
         default=1.0,
         dest="rho_chebyshev",
     )
+    parser.add_argument(
+        "--use-trust-region",
+        help="Use trust region acceleration",
+        action="store_true",
+        dest="use_trust_region",
+        default=False,
+    )
+    parser.add_argument(
+        "--use-curved-tr",
+        help="Use curved trust region path",
+        action="store_true",
+        dest="use_curved_tr",
+        default=False,
+    )
+    parser.add_argument(
+        "--tr-eta",
+        help="Trust region energy reduction ratio threshold",
+        type=float,
+        default=0.1,
+    )
+    parser.add_argument(
+        "--tr-tau",
+        help="Trust region radius scaling factor",
+        type=float,
+        default=2.0,
+    )
     args = parser.parse_args()
 
     # Construct FEM quantities for simulation
@@ -168,6 +194,10 @@ if __name__ == "__main__":
     )
     if args.rho_chebyshev < 1.0 and args.rho_chebyshev > 0.0:
         data = data.with_chebyshev_acceleration(args.rho_chebyshev)
+    if args.use_trust_region:
+        data = data.with_trust_region_acceleration(
+            args.tr_eta, args.tr_tau, args.use_curved_tr
+        )
     data = data.construct(validate=True)
     thread_block_size = 64
 
