@@ -40,6 +40,7 @@
 
 #if defined(CUDART_VERSION)
     #pragma nv_diag_suppress 3189
+    #pragma nv_diag_suppress 27 // Character out of range warning when using fmt::format
 #endif
 
 #endif // PBAT_GPU_DISABLEWARNINGS_H

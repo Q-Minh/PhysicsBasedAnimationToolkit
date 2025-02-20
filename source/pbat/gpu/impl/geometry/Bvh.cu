@@ -129,19 +129,16 @@ Bvh::Bvh(GpuIndex nBoxes)
 
 void Bvh::Build(Aabb<kDims>& aabbs, Morton::Bound const& WL, Morton::Bound const& WU)
 {
-    PBAT_PROFILE_NAMED_CUDA_HOST_SCOPE_START(ctx, "pbat.gpu.impl.geometry.Bvh.Build");
+    PBAT_PROFILE_CUDA_NAMED_SCOPE("pbat.gpu.impl.geometry.Bvh.Build");
     GpuIndex const n = aabbs.Size();
     SortByMortonCode(aabbs, WL, WU);
     BuildTree(n);
     ConstructBoxes(aabbs);
-    PBAT_PROFILE_CUDA_HOST_SCOPE_END(ctx);
 }
 
 void Bvh::SortByMortonCode(Aabb<kDims>& aabbs, Morton::Bound const& WL, Morton::Bound const& WU)
 {
-    PBAT_PROFILE_NAMED_CUDA_HOST_SCOPE_START(
-        sortCtx,
-        "pbat.gpu.impl.geometry.Bvh.SortByMortonCode");
+    PBAT_PROFILE_CUDA_NAMED_SCOPE("pbat.gpu.impl.geometry.Bvh.SortByMortonCode");
 
     auto const n = aabbs.Size();
     morton.Encode(aabbs, WL, WU);
@@ -157,13 +154,11 @@ void Bvh::SortByMortonCode(Aabb<kDims>& aabbs, Morton::Bound const& WL, Morton::
     // Using a stable sort preserves the initial ordering of simplex indices 0...n-1, resulting in
     // simplices sorted by Morton codes first, and then by simplex index.
     thrust::stable_sort_by_key(thrust::device, morton.codes.Data(), morton.codes.Data() + n, zip);
-
-    PBAT_PROFILE_CUDA_HOST_SCOPE_END(sortCtx);
 }
 
 void Bvh::BuildTree(GpuIndex n)
 {
-    PBAT_PROFILE_NAMED_CUDA_HOST_SCOPE_START(hierarchyCtx, "pbat.gpu.impl.geometry.Bvh.BuildTree");
+    PBAT_PROFILE_CUDA_NAMED_SCOPE("pbat.gpu.impl.geometry.Bvh.BuildTree");
     thrust::for_each(
         thrust::device,
         thrust::make_counting_iterator(0),
@@ -175,14 +170,11 @@ void Bvh::BuildTree(GpuIndex n)
             rightmost.Raw(),
             n - 1,
             n});
-    PBAT_PROFILE_CUDA_HOST_SCOPE_END(hierarchyCtx);
 }
 
 void Bvh::ConstructBoxes(Aabb<kDims>& aabbs)
 {
-    PBAT_PROFILE_NAMED_CUDA_HOST_SCOPE_START(
-        iaabbCtx,
-        "pbat.gpu.impl.geometry.Bvh.Build.InternalAabbs");
+    PBAT_PROFILE_CUDA_NAMED_SCOPE("pbat.gpu.impl.geometry.Bvh.Build.InternalAabbs");
     visits.SetConstant(GpuIndex(0));
     auto const n = aabbs.Size();
     auto& b      = aabbs.b;
@@ -234,7 +226,6 @@ void Bvh::ConstructBoxes(Aabb<kDims>& aabbs)
             }
             assert(k < 64);
         });
-    PBAT_PROFILE_CUDA_HOST_SCOPE_END(iaabbCtx);
 }
 
 } // namespace geometry

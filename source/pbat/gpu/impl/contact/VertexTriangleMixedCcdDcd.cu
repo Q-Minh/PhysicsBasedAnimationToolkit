@@ -6,8 +6,8 @@
 #include "pbat/common/ConstexprFor.h"
 #include "pbat/geometry/OverlapQueries.h"
 #include "pbat/gpu/impl/common/Eigen.cuh"
+#include "pbat/gpu/profiling/Profiling.h"
 #include "pbat/math/linalg/mini/Mini.h"
-#include "pbat/profiling/Profiling.h"
 
 #include <limits>
 #include <thrust/copy.h>
@@ -54,8 +54,7 @@ void VertexTriangleMixedCcdDcd::InitializeActiveSet(
     geometry::Morton::Bound const& wmin,
     geometry::Morton::Bound const& wmax)
 {
-    PBAT_PROFILE_NAMED_CUDA_HOST_SCOPE_START(
-        ctx,
+    PBAT_PROFILE_CUDA_NAMED_SCOPE(
         "pbat.gpu.impl.contact.VertexTriangleMixedCcdDcd.InitializeActiveSet");
 
     // 1. Compute aabbs of the swept points (i.e. line segments)
@@ -145,16 +144,13 @@ void VertexTriangleMixedCcdDcd::InitializeActiveSet(
         av.Data(),
         [active = active.Raw()] PBAT_DEVICE(GpuIndex v) { return active[v]; });
     nActive = static_cast<GpuIndex>(thrust::distance(av.Data(), it));
-
-    PBAT_PROFILE_CUDA_HOST_SCOPE_END(ctx);
 }
 
 void VertexTriangleMixedCcdDcd::UpdateActiveSet(
     common::Buffer<GpuScalar, 3> const& x,
     bool bComputeBoxes)
 {
-    PBAT_PROFILE_NAMED_CUDA_HOST_SCOPE_START(
-        ctx,
+    PBAT_PROFILE_CUDA_NAMED_SCOPE(
         "pbat.gpu.impl.contact.VertexTriangleMixedCcdDcd.UpdateActiveSet");
 
     if (bComputeBoxes)
@@ -173,16 +169,13 @@ void VertexTriangleMixedCcdDcd::UpdateActiveSet(
             GpuIndex const v           = av[q];
             nn[v * kMaxNeighbours + k] = f;
         });
-
-    PBAT_PROFILE_CUDA_HOST_SCOPE_END(ctx);
 }
 
 void VertexTriangleMixedCcdDcd::FinalizeActiveSet(
     common::Buffer<GpuScalar, 3> const& x,
     bool bComputeBoxes)
 {
-    PBAT_PROFILE_NAMED_CUDA_HOST_SCOPE_START(
-        ctx,
+    PBAT_PROFILE_CUDA_NAMED_SCOPE(
         "pbat.gpu.impl.contact.VertexTriangleMixedCcdDcd.FinalizeActiveSet");
 
     if (bComputeBoxes)
@@ -207,8 +200,6 @@ void VertexTriangleMixedCcdDcd::FinalizeActiveSet(
             bool const bIsPenetrating = sgn < GpuScalar(0);
             active[v]                 = bIsPenetrating;
         });
-
-    PBAT_PROFILE_CUDA_HOST_SCOPE_END(ctx);
 }
 
 void pbat::gpu::impl::contact::VertexTriangleMixedCcdDcd::UpdateBvh(

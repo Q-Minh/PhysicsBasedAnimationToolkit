@@ -3,8 +3,8 @@
 // clang-format on
 
 #include "TrustRegionIntegrator.cuh"
+#include "pbat/gpu/profiling/Profiling.h"
 #include "pbat/math/linalg/mini/Mini.h"
-#include "pbat/profiling/Profiling.h"
 #include "pbat/sim/vbd/Kernels.h"
 
 #include <cuda/functional>
@@ -53,8 +53,7 @@ void TrustRegionIntegrator::SolveWithLinearAcceleratedPath(
     kernels::BackwardEulerMinimization& bdf,
     GpuIndex iterations)
 {
-    PBAT_PROFILE_NAMED_CUDA_HOST_SCOPE_START(
-        ctx,
+    PBAT_PROFILE_CUDA_NAMED_SCOPE(
         "pbat.gpu.impl.vbd.TrustRegionIntegrator.SolveWithLinearAcceleratedPath");
 
     static auto constexpr kNumPastIterates = 3; ///< fk, fkm1, fkm2
@@ -69,9 +68,12 @@ void TrustRegionIntegrator::SolveWithLinearAcceleratedPath(
     GpuScalar constexpr zero{1e-6f};
 
     // TR VBD
+    PBAT_PROFILE_CUDA_CLOG("----------");
     fk = fObjective();
+    PBAT_PROFILE_CUDA_PLOT("vbd.TRI -- f(x)", fk);
     for (auto k = 0; k < iterations; ++k)
     {
+        PBAT_PROFILE_CUDA_FLOG("iter={} -----", k);
         if (k >= kNumPastIterates - 1)
         {
             ConstructModel();
@@ -82,6 +84,7 @@ void TrustRegionIntegrator::SolveWithLinearAcceleratedPath(
             // Compute VBD step, after which x^k = x^{k-1} + \Delta x
             RunVbdIteration(bdf);
             GpuScalar dx2 = SquaredStepSize(); // |\Delta x|_2^2
+            PBAT_PROFILE_CUDA_FLOG("dx2={}", dx2);
             // Ensure TR radius is not smaller than the VBD step,
             // so that we can potentially improve it.
             if (R2 < dx2 + zero)
@@ -91,11 +94,14 @@ void TrustRegionIntegrator::SolveWithLinearAcceleratedPath(
                 // => R^2=tau^2*|\Delta x|_2^2
                 R2 = tau * tau * dx2;
             }
+            PBAT_PROFILE_CUDA_FLOG("TR radius={}", std::sqrt(R2));
             // Compute accelerated step by minimizing model function subject to TR constraint
             GpuScalar constexpr lower{1};
             GpuScalar const upper = std::sqrt(R2 / dx2); // \f$ t_{\text{upper}} |\Delta x| = R \f$
+            PBAT_PROFILE_CUDA_FLOG("TR step upper={}", upper);
             GpuScalar const tstar = ModelOptimalStep();
             GpuScalar const t     = std::clamp(tstar, lower, upper);
+            PBAT_PROFILE_CUDA_FLOG("t={},t*={}", t, tstar);
             bool const bIsStepAtLowerBound       = std::abs(t - lower) < zero;
             bool const bShouldTryAcceleratedStep = not bIsStepAtLowerBound;
             bool bStepAccepted{false};
@@ -113,23 +119,23 @@ void TrustRegionIntegrator::SolveWithLinearAcceleratedPath(
                 // Accept step if model function is accurate enough (i.e. the expected energy
                 // reduction "matches" the actual energy reduction)
                 bStepAccepted = rho > eta;
+                PBAT_PROFILE_CUDA_FLOG("rho={},eta={}", rho, eta);
             }
             if (bStepAccepted)
             {
-                PBAT_PROFILE_LOG_LITERAL("Accepted TR step");
+                PBAT_PROFILE_CUDA_CLOG("Accepted TR step");
                 bool const bIsStepAtUpperBound = (upper - t) < zero; // upper >= t after std::clamp
                 // Increase TR radius if our model function is accurate
                 // and the optimal step was outside the current trust region
                 if (bIsStepAtUpperBound)
                 {
-                    PBAT_PROFILE_LOG_LITERAL("Increasing TR radius");
                     R2 *= tau * tau; // R' = tau*R -> R'^2 = tau^2*R^2
                 }
             }
             else
             {
                 // Decrease TR radius if our model function is inaccurate
-                PBAT_PROFILE_LOG_LITERAL("Rejected TR step. Decreasing TR radius");
+                PBAT_PROFILE_CUDA_CLOG("Rejected TR step");
                 R2 /= tau * tau; // R' = R/tau -> R'^2 = R^2/tau^2
                 if (bShouldTryAcceleratedStep)
                     RollbackLinearStep(t); // fall-back to initial VBD step
@@ -144,26 +150,21 @@ void TrustRegionIntegrator::SolveWithLinearAcceleratedPath(
             RunVbdIteration(bdf);
             fk = fObjective();
         }
+        PBAT_PROFILE_CUDA_PLOT("vbd.TRI -- f(x)", fk);
     }
-    PBAT_PROFILE_CUDA_HOST_SCOPE_END(ctx);
 }
 
 void TrustRegionIntegrator::SolveWithCurvedAccelerationPath(
     [[maybe_unused]] kernels::BackwardEulerMinimization& bdf,
     [[maybe_unused]] GpuIndex iterations)
 {
-    PBAT_PROFILE_NAMED_CUDA_HOST_SCOPE_START(
-        ctx,
+    PBAT_PROFILE_CUDA_NAMED_SCOPE(
         "pbat.gpu.impl.vbd.TrustRegionIntegrator.SolveWithCurvedAccelerationPath");
-
-    PBAT_PROFILE_CUDA_HOST_SCOPE_END(ctx);
 }
 
 GpuScalar TrustRegionIntegrator::ObjectiveFunction(GpuScalar dt, GpuScalar dt2)
 {
-    PBAT_PROFILE_NAMED_CUDA_HOST_SCOPE_START(
-        ctx,
-        "pbat.gpu.impl.vbd.TrustRegionIntegrator.ObjectiveFunction");
+    PBAT_PROFILE_CUDA_NAMED_SCOPE("pbat.gpu.impl.vbd.TrustRegionIntegrator.ObjectiveFunction");
 
     auto const nElements = static_cast<GpuIndex>(T.Size());
     auto const nVertices = static_cast<GpuIndex>(x.Size());
@@ -259,15 +260,12 @@ GpuScalar TrustRegionIntegrator::ObjectiveFunction(GpuScalar dt, GpuScalar dt2)
         thrust::plus<GpuScalar>());
 
     GpuScalar f = K / 2 + dt2 * U + C;
-    PBAT_PROFILE_CUDA_HOST_SCOPE_END(ctx);
     return f;
 }
 
 void TrustRegionIntegrator::UpdateIterates()
 {
-    PBAT_PROFILE_NAMED_CUDA_HOST_SCOPE_START(
-        ctx,
-        "pbat.gpu.impl.vbd.TrustRegionIntegrator.UpdateIterates");
+    PBAT_PROFILE_CUDA_NAMED_SCOPE("pbat.gpu.impl.vbd.TrustRegionIntegrator.UpdateIterates");
     auto const nVertices = static_cast<GpuIndex>(x.Size());
     thrust::for_each(
         thrust::device,
@@ -287,7 +285,6 @@ void TrustRegionIntegrator::UpdateIterates()
         });
     fkm2 = fkm1;
     fkm1 = fk;
-    PBAT_PROFILE_CUDA_HOST_SCOPE_END(ctx);
 }
 
 GpuScalar TrustRegionIntegrator::ModelFunction(GpuScalar t) const
@@ -324,9 +321,7 @@ void TrustRegionIntegrator::ConstructModel()
 
 GpuScalar TrustRegionIntegrator::SquaredStepSize() const
 {
-    PBAT_PROFILE_NAMED_CUDA_HOST_SCOPE_START(
-        ctx,
-        "pbat.gpu.impl.vbd.TrustRegionIntegrator.SquaredStepSize");
+    PBAT_PROFILE_CUDA_NAMED_SCOPE("pbat.gpu.impl.vbd.TrustRegionIntegrator.SquaredStepSize");
     auto const nVertices = static_cast<GpuIndex>(x.Size());
     auto dx2             = thrust::transform_reduce(
         thrust::device,
@@ -341,15 +336,12 @@ GpuScalar TrustRegionIntegrator::SquaredStepSize() const
             }),
         GpuScalar{0},
         thrust::plus<GpuScalar>());
-    PBAT_PROFILE_CUDA_HOST_SCOPE_END(ctx);
     return dx2;
 }
 
 void TrustRegionIntegrator::TakeLinearStep(GpuScalar t)
 {
-    PBAT_PROFILE_NAMED_CUDA_HOST_SCOPE_START(
-        ctx,
-        "pbat.gpu.impl.vbd.TrustRegionIntegrator.TakeLinearStep");
+    PBAT_PROFILE_CUDA_NAMED_SCOPE("pbat.gpu.impl.vbd.TrustRegionIntegrator.TakeLinearStep");
     auto const nVertices = static_cast<GpuIndex>(x.Size());
     thrust::for_each(
         thrust::device,
@@ -362,14 +354,11 @@ void TrustRegionIntegrator::TakeLinearStep(GpuScalar t)
             auto xtr  = xk + t * (xkp1 - xk);
             ToBuffers(xtr, x, i);
         });
-    PBAT_PROFILE_CUDA_HOST_SCOPE_END(ctx);
 }
 
 void TrustRegionIntegrator::RollbackLinearStep(GpuScalar t)
 {
-    PBAT_PROFILE_NAMED_CUDA_HOST_SCOPE_START(
-        ctx,
-        "pbat.gpu.impl.vbd.TrustRegionIntegrator.RollbackLinearStep");
+    PBAT_PROFILE_CUDA_NAMED_SCOPE("pbat.gpu.impl.vbd.TrustRegionIntegrator.RollbackLinearStep");
     auto const nVertices = static_cast<GpuIndex>(x.Size());
     thrust::for_each(
         thrust::device,
@@ -381,7 +370,6 @@ void TrustRegionIntegrator::RollbackLinearStep(GpuScalar t)
             auto xk  = FromBuffers<3, 1>(xkm1, i);
             ToBuffers(xk + (xtr - xk) / t, x, i);
         });
-    PBAT_PROFILE_CUDA_HOST_SCOPE_END(ctx);
 }
 
 } // namespace pbat::gpu::impl::vbd
