@@ -21,20 +21,10 @@ TrustRegionIntegrator::TrustRegionIntegrator(Data const& data)
       tau(static_cast<GpuScalar>(data.tau)),
       xkm1(data.X.cols()),
       xkm2(data.X.cols()),
-      Qinv(),
+      Q(),
       aQ(),
       bUseCurvedPath(data.bCurved)
 {
-    // See ConstructModel() for details
-    Qinv(0, 0) = GpuScalar(0.5);
-    Qinv(0, 1) = GpuScalar(-1);
-    Qinv(0, 2) = GpuScalar(0.5);
-    Qinv(1, 0) = GpuScalar(-0.5);
-    Qinv(1, 1) = GpuScalar(0);
-    Qinv(1, 2) = GpuScalar(0.5);
-    Qinv(2, 0) = GpuScalar(0);
-    Qinv(2, 1) = GpuScalar(1);
-    Qinv(2, 2) = GpuScalar(0);
 }
 
 void TrustRegionIntegrator::Solve(kernels::BackwardEulerMinimization& bdf, GpuIndex iterations)
@@ -70,6 +60,7 @@ void TrustRegionIntegrator::SolveWithLinearAcceleratedPath(
     // TR VBD
     PBAT_PROFILE_CUDA_CLOG("----------");
     fk = fObjective();
+    tk = GpuScalar{-1};
     PBAT_PROFILE_CUDA_PLOT("vbd.TRI -- f(x)", fk);
     for (auto k = 0; k < iterations; ++k)
     {
@@ -77,9 +68,18 @@ void TrustRegionIntegrator::SolveWithLinearAcceleratedPath(
         if (k >= kNumPastIterates - 1)
         {
             ConstructModel();
+            PBAT_PROFILE_CUDA_FLOG(
+                "Model function -> aQ={},{},{}, tkm2={},tkm1={},tk={}",
+                aQ(0),
+                aQ(1),
+                aQ(2),
+                tkm2,
+                tkm1,
+                tk);
             // After update
             // fk <- f^{k-1}, f^{k-1} <- f^k
             // x^{k-2} <- x^{k-1}, x^{k-1} <- x^k
+            // tk <- 0, t^{k-1} <- t^{k-1} - t^k, t^{k-2} <- t^{k-2} - t^k
             UpdateIterates();
             // Compute VBD step, after which x^k = x^{k-1} + \Delta x
             RunVbdIteration(bdf);
@@ -96,6 +96,7 @@ void TrustRegionIntegrator::SolveWithLinearAcceleratedPath(
             }
             PBAT_PROFILE_CUDA_FLOG("TR radius={}", std::sqrt(R2));
             // Compute accelerated step by minimizing model function subject to TR constraint
+            // TODO: Determine lower and upper t bounds
             GpuScalar constexpr lower{1};
             GpuScalar const upper = std::sqrt(R2 / dx2); // \f$ t_{\text{upper}} |\Delta x| = R \f$
             PBAT_PROFILE_CUDA_FLOG("TR step upper={}", upper);
@@ -113,8 +114,8 @@ void TrustRegionIntegrator::SolveWithLinearAcceleratedPath(
                 GpuScalar fNext    = fk;
                 GpuScalar fCurrent = fkm1;
                 GpuScalar mNext    = ModelFunction(t);
-                GpuScalar mCurrent = fkm1; // fproxy(1) = f^{k-1}, and t > 1 when
-                                           // bShouldTryAcceleratedStep, so fproxy(1) > fproxy(t)
+                GpuScalar mCurrent =
+                    fkm1; // t > 1 when bShouldTryAcceleratedStep, so fproxy(0) > fproxy(t)
                 GpuScalar const rho = (fCurrent - fNext) / (mCurrent - mNext);
                 // Accept step if model function is accurate enough (i.e. the expected energy
                 // reduction "matches" the actual energy reduction)
@@ -131,6 +132,7 @@ void TrustRegionIntegrator::SolveWithLinearAcceleratedPath(
                 {
                     R2 *= tau * tau; // R' = tau*R -> R'^2 = tau^2*R^2
                 }
+                tk = t;
             }
             else
             {
@@ -140,6 +142,7 @@ void TrustRegionIntegrator::SolveWithLinearAcceleratedPath(
                 if (bShouldTryAcceleratedStep)
                     RollbackLinearStep(t); // fall-back to initial VBD step
                 fk = fObjective();
+                tk = tkm1 + 1;
             }
         }
         else
@@ -149,6 +152,7 @@ void TrustRegionIntegrator::SolveWithLinearAcceleratedPath(
             UpdateIterates();
             RunVbdIteration(bdf);
             fk = fObjective();
+            tk = k;
         }
         PBAT_PROFILE_CUDA_PLOT("vbd.TRI -- f(x)", fk);
     }
@@ -285,6 +289,8 @@ void TrustRegionIntegrator::UpdateIterates()
         });
     fkm2 = fkm1;
     fkm1 = fk;
+    tkm2 = tkm1;
+    tkm1 = tk;
 }
 
 GpuScalar TrustRegionIntegrator::ModelFunction(GpuScalar t) const
@@ -295,16 +301,19 @@ GpuScalar TrustRegionIntegrator::ModelFunction(GpuScalar t) const
 GpuScalar TrustRegionIntegrator::ModelOptimalStep() const
 {
     static GpuScalar constexpr zero = std::numeric_limits<GpuScalar>::min();
+    static GpuScalar constexpr inf  = std::numeric_limits<GpuScalar>::max();
     bool const bIsQuadratic         = std::abs(aQ(0)) > zero;
     bool const bIsLinear            = not bIsQuadratic and std::abs(aQ(1)) > zero;
     if (bIsQuadratic)
     {
-        return -aQ(1) / (GpuScalar{2} * aQ(0));
+        bool const bIsPositiveDefinite = aQ(0) > zero;
+        // If quadratic function is positive definite, minimum is -b/2a, else +-inf, so we take the
+        // positive optimum, so that we always step forward.
+        return bIsPositiveDefinite ? -aQ(1) / (GpuScalar{2} * aQ(0)) : inf;
     }
     else if (bIsLinear)
     {
         // If slope of linear function is positive, minimum is -inf, else +inf
-        static GpuScalar constexpr inf = std::numeric_limits<GpuScalar>::max();
         return aQ(1) > 0 ? -inf : inf;
     }
     else
@@ -316,7 +325,20 @@ GpuScalar TrustRegionIntegrator::ModelOptimalStep() const
 void TrustRegionIntegrator::ConstructModel()
 {
     using Vector3 = pbat::math::linalg::mini::SVector<GpuScalar, 3>;
-    aQ            = Qinv * Vector3{fkm2, fkm1, fk};
+    // Translate time so that tk = 0
+    tkm2 -= tk;
+    tkm1 -= tk;
+    tk      = GpuScalar{0};
+    Q(0, 0) = tkm2 * tkm2;
+    Q(1, 0) = tkm1 * tkm1;
+    Q(2, 0) = tk * tk;
+    Q(0, 1) = tkm2;
+    Q(1, 1) = tkm1;
+    Q(2, 1) = tk;
+    Q(0, 2) = GpuScalar{1};
+    Q(1, 2) = GpuScalar{1};
+    Q(2, 2) = GpuScalar{1};
+    aQ      = Inverse(Q) * Vector3{fkm2, fkm1, fk};
 }
 
 GpuScalar TrustRegionIntegrator::SquaredStepSize() const

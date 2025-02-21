@@ -81,10 +81,11 @@ class TrustRegionIntegrator : public Integrator
      */
 
     /**
-     * @brief Rotates \f$ x^k, x^{k-1}, x^{k-2} and f(x^k), f(x^{k-1}), f(x^{k-2}) \f$
+     * @brief Rotates \f$ x^k, x^{k-1}, x^{k-2} and f(x^k), f(x^{k-1}), f(x^{k-2}) and t_k, t_{k-1}, t_{k-2} \f$
      *
      * Sets \f$ x^{k-1} \leftarrow x^k \f$ and \f$ x^{k-2} \leftarrow x^{k-1} \f$ and
-     * \f$ f(x^{k-1}) \leftarrow f(x^k) \f$ and \f$ f(x^{k-2}) \leftarrow f(x^{k-1}) \f$.
+     * \f$ f(x^{k-1}) \leftarrow f(x^k) \f$ and \f$ f(x^{k-2}) \leftarrow f(x^{k-1}) \f$ and 
+     * \f$ t_{k-1} \leftarrow t_k \f$ and \f$ t_{k-2} \leftarrow t_{k-1} \f$.
      */
     void UpdateIterates();
     /**
@@ -110,7 +111,7 @@ class TrustRegionIntegrator : public Integrator
      * \f$ t^* = \begin{cases} -\inf & b_f > 0 \\ +\inf & \text{otherwise} \end{cases} \f$
      * 2. If \f$ a_f = b_f = 0 \f$, the function is constant. In this case, we return one of the
      * solutions \f$ t^* = 0 \f$.
-     * 
+     *
      * @return The model function's minimizer
      */
     GpuScalar ModelOptimalStep() const;
@@ -128,9 +129,9 @@ class TrustRegionIntegrator : public Integrator
      * This leads to the system of equations
      * \f[
      * \begin{bmatrix}
-     * 1 & -1 & 1 \\
-     * 0 & 0 & 1 \\
-     * 1 & 1 & 1
+     * t_{k-2}^2 & t_{k-2} & 1 \\
+     * t_{k-1}^2 & t_{k-1} & 1 \\
+     * t_k^2 & t_k & 1
      * \end{bmatrix}
      * \begin{bmatrix} a_f \\ b_f \\ c_f \end{bmatrix} =
      * \begin{bmatrix} f(\mathbf{x}^{k-2}) \\ f(\mathbf{x}^{k-1}) \\ f(\mathbf{x}^k) \end{bmatrix}
@@ -141,16 +142,11 @@ class TrustRegionIntegrator : public Integrator
      * \mathbf{Q} \mathbf{a_Q} = \mathbf{f}
      * \f]
      *
-     * Because the lead matrix is constant, we can precompute its inverse \f$ \mathbf{Q}^{-1} \f$,
-     * which we store as
+     * Because the lead matrix is constant, we can compute its inverse and solve for \f$
+     * \mathbf{a_Q}, i.e.
      *
      * \f[
-     * \mathbf{Q}^{-1} =
-     * \begin{bmatrix}
-     * 0.5 & -1 & 0.5 \\
-     * -0.5 & 0 & 0.5 \\
-     * 0 & 1 & 0
-     * \end{bmatrix}
+     * \mathbf{a_Q} = \mathbf{Q}^{-1} \mathbf{f}
      * \f]
      *
      * For any 3 consecutive function values \f$ f^{k-2}, f^{k-1}, f^k \f$ at corresponding states
@@ -158,8 +154,9 @@ class TrustRegionIntegrator : public Integrator
      * quadratic energy proxy function \f$ f_{\text{model}}(t) \f$ as
      * \f$ \mathbf{a_Q} = \mathbf{Q}^{-1} \mathbf{f} \f$.
      *
-     * @post `aQ` is such that `ModelFunction(-1) = fkm2`, `ModelFunction(0) =
-     * fkm1` and `ModelFunction(1) = fk`.
+     * @post `aQ` is such that `ModelFunction(t_{k-2}) = fkm2`, `ModelFunction(t_{k-1}) =
+     * fkm1` and `ModelFunction(t_k) = fk`.
+     * @post `tkm2, tkm1, tk` are translated such that `tk = 0`
      */
     void ConstructModel();
     /**
@@ -211,9 +208,10 @@ class TrustRegionIntegrator : public Integrator
     common::Buffer<GpuScalar, 3> xkm2; ///< `3x|# verts|` \f$ x^{k-2} \f$
     GpuScalar fk, fkm1, fkm2;          ///< objective function
                                        ///< values at \f$ x^k, x^{k-1}, x^{k-2} \f$
+    GpuScalar tk, tkm1, tkm2; ///< Points along accelerated path at \f$ x^k, x^{k-1}, x^{k-2} \f$
 
     pbat::math::linalg::mini::SMatrix<GpuScalar, 3, 3>
-        Qinv; ///< Inverse of the quadratic energy proxy matrix. See ConstructModel().
+        Q; ///< Quadratic energy proxy matrix. See ConstructModel().
     pbat::math::linalg::mini::SVector<GpuScalar, 3> aQ; ///< Quadratic energy proxy coefficients
     bool bUseCurvedPath;                                ///< Whether to use curved path or not
 };
