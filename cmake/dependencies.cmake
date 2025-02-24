@@ -1,5 +1,6 @@
 include(FetchContent)
 
+find_package(Boost CONFIG REQUIRED COMPONENTS math)
 find_package(doctest CONFIG REQUIRED)
 find_package(fmt CONFIG REQUIRED)
 find_package(range-v3 CONFIG REQUIRED)
@@ -77,7 +78,16 @@ if(PBAT_USE_CUDA)
         enable_language(CUDA)
         find_package(CUDAToolkit REQUIRED)
         find_package(cuda-api-wrappers CONFIG REQUIRED)
+        set_target_properties(cuda-api-wrappers::runtime-and-driver PROPERTIES SYSTEM ON)
     else()
         message(FATAL_ERROR "PBAT -- Could not find CMAKE_CUDA_COMPILER=${CMAKE_CUDA_COMPILER}")
     endif()
+endif()
+
+if(PBAT_BUILD_DOC)
+    find_package(
+        Doxygen 
+        REQUIRED 
+        OPTIONAL_COMPONENTS dot mscgen dia
+    )
 endif()

@@ -46,7 +46,7 @@ jobs:
         uses: lukka/run-vcpkg@v11
         with:
           vcpkgDirectory: ${{ github.workspace }}/vcpkg
-          vcpkgGitCommitId: 055721089e8037d4d617250814d11f881e557549
+          vcpkgGitCommitId: 060c2708a31314fad5af86ca5a1fc5009e3bddce
 
       - uses: pypa/cibuildwheel@v2.19.0
         env:

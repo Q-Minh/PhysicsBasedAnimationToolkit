@@ -18,7 +18,11 @@
         },
         {
             "name": "tbb",
-            "version>=": "2021.11.0"
+            "version>=": "2022.0.0"
+        },
+        {
+            "name": "boost-math",
+            "version>=": "1.86.0"
         },
         {
             "name": "doctest",
@@ -49,7 +53,7 @@
             "dependencies": [
                 {
                     "name": "metis",
-                    "version>=": "2022-07-27#0"
+                    "version>=": "2022-07-27"
                 }
             ]
         },
@@ -58,7 +62,7 @@
             "dependencies": [
                 {
                     "name": "pybind11",
-                    "version>=": "2.11.1"
+                    "version>=": "2.13.6"
                 }
             ]
         },
@@ -67,10 +71,10 @@
             "dependencies": [
                 {
                     "name": "cuda-api-wrappers",
-                    "version>=": "0.6.7"
+                    "version>=": "0.7.1"
                 }
             ]
         }
     },
-    "builtin-baseline": "055721089e8037d4d617250814d11f881e557549"
+    "builtin-baseline": "060c2708a31314fad5af86ca5a1fc5009e3bddce"
 }

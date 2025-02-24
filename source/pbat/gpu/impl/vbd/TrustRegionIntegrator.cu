@@ -7,6 +7,7 @@
 #include "pbat/math/linalg/mini/Mini.h"
 #include "pbat/sim/vbd/Kernels.h"
 
+#include <boost/math/tools/quartic_roots.hpp>
 #include <cuda/functional>
 #include <thrust/execution_policy.h>
 #include <thrust/for_each.h>
@@ -152,7 +153,7 @@ void TrustRegionIntegrator::SolveWithLinearAcceleratedPath(
             UpdateIterates();
             RunVbdIteration(bdf);
             fk = fObjective();
-            tk = k;
+            tk = static_cast<GpuScalar>(k);
         }
         PBAT_PROFILE_CUDA_PLOT("vbd.TRI -- f(x)", fk);
     }

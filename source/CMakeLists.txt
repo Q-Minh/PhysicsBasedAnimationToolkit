@@ -45,6 +45,7 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
 add_subdirectory(pbat)
 target_link_libraries(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     PUBLIC
+    Boost::math
     doctest::doctest
     Eigen3::Eigen
     fmt::fmt
@@ -102,22 +103,25 @@ if(PBAT_USE_CUDA)
         CUDA_SEPARABLE_COMPILATION ON
         CUDA_RESOLVE_DEVICE_SYMBOLS ON
     )
-
-    get_target_property(_pbat_sources PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit SOURCES)
-
-    foreach(_source IN ITEMS ${_pbat_sources})
-        get_filename_component(_extension ${_source} LAST_EXT)
-
-        if(_extension STREQUAL ".cu")
-            set_source_files_properties(${_source}
-                PROPERTIES
-                COMPILE_OPTIONS
-                "--expt-relaxed-constexpr;--extended-lambda"
-                COMPILE_DEFINITIONS
-                "_SILENCE_ALL_CXX20_DEPRECATION_WARNINGS"
-            )
-        endif()
-    endforeach()
+    target_compile_options(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
+        PRIVATE
+        $<$<COMPILE_LANGUAGE:CUDA>:
+            -Xcompiler="/utf-8";
+            --expt-relaxed-constexpr;
+            --extended-lambda;
+        >
+    )
+    target_compile_definitions(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
+        PRIVATE
+        $<$<COMPILE_LANGUAGE:CUDA>:
+            _SILENCE_ALL_CXX20_DEPRECATION_WARNINGS 
+            # WARNING: 
+            # Disable unicode support in fmt for CUDA sources. 
+            # I don't know how to fix this!!
+            # See https://forums.developer.nvidia.com/t/utf-8-option-for-the-host-function-in-cuda-msvc/312739/11
+            -DFMT_UNICODE=0 
+        >
+    )
 endif()
 
 # Make source tree appear as on file system in IDEs
