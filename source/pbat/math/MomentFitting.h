@@ -12,11 +12,12 @@
 #define PBAT_MATH_MOMENTFITTING_H
 
 #include "Concepts.h"
-#include "PolynomialBasis.h"
 #include "pbat/Aliases.h"
 #include "pbat/common/ArgSort.h"
 #include "pbat/common/Eigen.h"
 #include "pbat/common/Indexing.h"
+#include "pbat/math/polynomial/Basis.h"
+#include "pbat/math/polynomial/Concepts.h"
 
 #include <algorithm>
 #include <exception>
@@ -56,7 +57,7 @@ struct DynamicQuadrature
  * @param Q Quadrature rule
  * @return Moment fitting matrix
  */
-template <CPolynomialBasis TBasis, CFixedPointPolynomialQuadratureRule TQuad>
+template <polynomial::CBasis TBasis, CFixedPointPolynomialQuadratureRule TQuad>
 Matrix<TBasis::kSize, TQuad::kPoints> ReferenceMomentFittingMatrix(TBasis const& Pb, TQuad const& Q)
 {
     static_assert(
@@ -80,7 +81,7 @@ Matrix<TBasis::kSize, TQuad::kPoints> ReferenceMomentFittingMatrix(TBasis const&
  * @param Q Quadrature rule
  * @return Moment fitting matrix
  */
-template <CPolynomialBasis TBasis, CPolynomialQuadratureRule TQuad>
+template <polynomial::CBasis TBasis, CPolynomialQuadratureRule TQuad>
 Matrix<TBasis::kSize, Eigen::Dynamic> ReferenceMomentFittingMatrix(TBasis const& Pb, TQuad const& Q)
 {
     static_assert(
@@ -103,7 +104,7 @@ Matrix<TBasis::kSize, Eigen::Dynamic> ReferenceMomentFittingMatrix(TBasis const&
  * @param Xg Quadrature points
  * @return Moment fitting matrix
  */
-template <CPolynomialBasis TBasis, class TDerivedXg>
+template <polynomial::CBasis TBasis, class TDerivedXg>
 Matrix<TBasis::kSize, Eigen::Dynamic>
 ReferenceMomentFittingMatrix(TBasis const& Pb, Eigen::MatrixBase<TDerivedXg> const& Xg)
 {
@@ -167,7 +168,7 @@ VectorX MomentFittedWeights(
  * @param wg \f$ n \times 1 \f$ array of quadrature weights
  * @return \f$ s \times 1 \f$ array of integrated polynomials
  */
-template <CPolynomialBasis Polynomial, class TDerivedXg, class TDerivedWg>
+template <polynomial::CBasis Polynomial, class TDerivedXg, class TDerivedWg>
 Vector<Polynomial::kSize> Integrate(
     Polynomial const& P,
     Eigen::MatrixBase<TDerivedXg> const& Xg,
@@ -199,7 +200,7 @@ Vector<Polynomial::kSize> Integrate(
  * @param precision Convergence threshold
  * @return \f$ n_1 \times 1 \f$ array of quadrature weights
  */
-template <CPolynomialBasis Polynomial, class TDerivedXg1, class TDerivedXg2, class TDerivedWg2>
+template <polynomial::CBasis Polynomial, class TDerivedXg1, class TDerivedXg2, class TDerivedWg2>
 Vector<TDerivedXg1::ColsAtCompileTime> TransferQuadrature(
     Polynomial const& P,
     Eigen::MatrixBase<TDerivedXg1> const& Xg1,
@@ -280,7 +281,7 @@ std::pair<VectorX, VectorX> TransferQuadrature(
                           bEvaluateError](auto const& Xg1, auto const& Xg2, auto const& wg2) {
         if (Xg1.rows() == 1)
         {
-            OrthonormalPolynomialBasis<1, Order> P{};
+            polynomial::OrthonormalBasis<1, Order> P{};
             auto w = TransferQuadrature(P, Xg1, Xg2, wg2, maxIterations, precision);
             Scalar error(0);
             if (bEvaluateError)
@@ -293,7 +294,7 @@ std::pair<VectorX, VectorX> TransferQuadrature(
         }
         if (Xg1.rows() == 2)
         {
-            OrthonormalPolynomialBasis<2, Order> P{};
+            polynomial::OrthonormalBasis<2, Order> P{};
             auto w = TransferQuadrature(P, Xg1, Xg2, wg2, maxIterations, precision);
             Scalar error(0);
             if (bEvaluateError)
@@ -306,7 +307,7 @@ std::pair<VectorX, VectorX> TransferQuadrature(
         }
         if (Xg1.rows() == 3)
         {
-            OrthonormalPolynomialBasis<3, Order> P{};
+            polynomial::OrthonormalBasis<3, Order> P{};
             auto w = TransferQuadrature(P, Xg1, Xg2, wg2, maxIterations, precision);
             Scalar error(0);
             if (bEvaluateError)
@@ -404,11 +405,11 @@ ReferenceMomentFittingSystems(
     // Assemble moment fitting matrices and their rhs
     auto fPolyRows = [](MatrixX const& Xg) {
         if (Xg.rows() == 1)
-            return OrthonormalPolynomialBasis<1, Order>::kSize;
+            return polynomial::OrthonormalBasis<1, Order>::kSize;
         if (Xg.rows() == 2)
-            return OrthonormalPolynomialBasis<2, Order>::kSize;
+            return polynomial::OrthonormalBasis<2, Order>::kSize;
         if (Xg.rows() == 3)
-            return OrthonormalPolynomialBasis<3, Order>::kSize;
+            return polynomial::OrthonormalBasis<3, Order>::kSize;
         throw std::invalid_argument(
             "Expected quadrature points in reference simplex space of dimensions (i.e. rows) 1,2 "
             "or 3.");
@@ -417,21 +418,21 @@ ReferenceMomentFittingSystems(
         [](auto const& Xg1, auto const& Xg2, auto const& wg2) -> std::pair<MatrixX, VectorX> {
         if (Xg1.rows() == 1)
         {
-            OrthonormalPolynomialBasis<1, Order> P{};
+            polynomial::OrthonormalBasis<1, Order> P{};
             auto M = ReferenceMomentFittingMatrix(P, Xg1);
             auto b = Integrate(P, Xg2, wg2);
             return {M, b};
         }
         if (Xg1.rows() == 2)
         {
-            OrthonormalPolynomialBasis<2, Order> P{};
+            polynomial::OrthonormalBasis<2, Order> P{};
             auto M = ReferenceMomentFittingMatrix(P, Xg1);
             auto b = Integrate(P, Xg2, wg2);
             return {M, b};
         }
         if (Xg1.rows() == 3)
         {
-            OrthonormalPolynomialBasis<3, Order> P{};
+            polynomial::OrthonormalBasis<3, Order> P{};
             auto M = ReferenceMomentFittingMatrix(P, Xg1);
             auto b = Integrate(P, Xg2, wg2);
             return {M, b};

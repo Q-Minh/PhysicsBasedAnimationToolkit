@@ -3,10 +3,10 @@
 #include "Jacobian.h"
 #include "Mesh.h"
 #include "Tetrahedron.h"
+#include "pbat/common/ConstexprFor.h"
+#include "pbat/math/polynomial/Basis.h"
 
 #include <doctest/doctest.h>
-#include <pbat/common/ConstexprFor.h>
-#include <pbat/math/PolynomialBasis.h>
 
 TEST_CASE("[fem] ShapeFunctions")
 {
@@ -119,7 +119,7 @@ TEST_CASE("[fem] ShapeFunctionGradients")
     // P(X_i)^T a_j = \delta_{ij} ,
     // where a_j is the j^{th} column of some matrix of polynomial coefficients A.
     // This amounts to computing the inverse of P(X)^T .
-    math::MonomialBasis<kDims, kOrder> const P{};
+    math::polynomial::MonomialBasis<kDims, kOrder> const P{};
     Matrix<kNodes, kNodes> PXT{};
     for (auto i = 0; i < kNodes; ++i)
         PXT.row(i) = P.eval(X.col(i)).transpose();

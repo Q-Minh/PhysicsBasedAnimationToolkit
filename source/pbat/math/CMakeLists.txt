@@ -8,7 +8,6 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     "LinearOperator.h"
     "Math.h"
     "MomentFitting.h"
-    "PolynomialBasis.h"
     "Rational.h"
     "SymmetricQuadratureRules.h"
 )
@@ -18,10 +17,10 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     "IntegerArithmeticChecks.cpp"
     "LinearOperator.cpp"
     "MomentFitting.cpp"
-    "PolynomialBasis.cpp"
     "Rational.cpp"
     "SymmetricQuadratureRules.cpp"
 )
 
 add_subdirectory(linalg)
 add_subdirectory(optimization)
+add_subdirectory(polynomial)

@@ -1,9 +1,9 @@
 #include "MomentFitting.h"
 
-#include "PolynomialBasis.h"
 #include "SymmetricQuadratureRules.h"
 #include "pbat/common/ConstexprFor.h"
 #include "pbat/common/Eigen.h"
+#include "pbat/math/polynomial/Basis.h"
 
 #include <doctest/doctest.h>
 
@@ -14,7 +14,7 @@ namespace test {
 template <auto Dims, auto Order>
 void TestFixedQuadrature(Scalar precision)
 {
-    pbat::math::OrthonormalPolynomialBasis<Dims, Order> P{};
+    pbat::math::polynomial::OrthonormalBasis<Dims, Order> P{};
     pbat::math::SymmetricSimplexPolynomialQuadratureRule<Dims, Order> Q{};
     auto Xg = pbat::common::ToEigen(Q.points).reshaped(Q.kDims + 1, Q.kPoints);
     auto wg = pbat::common::ToEigen(Q.weights);
@@ -93,9 +93,10 @@ TEST_CASE("[math] MomentFitting")
                 X2.bottomRows(kDims),
                 w2);
             CSRMatrix GM = math::BlockDiagonalReferenceMomentFittingSystem(M, P);
-            CHECK_EQ(GM.rows(), 2 * math::OrthonormalPolynomialBasis<kDims, kOrder>::kSize);
+            using math::polynomial::OrthonormalBasis;
+            CHECK_EQ(GM.rows(), 2 * OrthonormalBasis<kDims, kOrder>::kSize);
             CHECK_EQ(GM.cols(), 8);
-            CHECK_EQ(GM.nonZeros(), 2 * math::OrthonormalPolynomialBasis<kDims, kOrder>::kSize * 4);
+            CHECK_EQ(GM.nonZeros(), 2 * OrthonormalBasis<kDims, kOrder>::kSize * 4);
         }
     }
 }

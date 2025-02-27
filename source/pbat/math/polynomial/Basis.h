@@ -1,30 +1,22 @@
-/**
- * @file PolynomialBasis.h
- * @author Quoc-Minh Ton-That (tonthat.quocminh@gmail.com)
- * @brief Polynomial basis in dimensions d and order p.
- * @date 2025-02-11
- * 
- * @copyright Copyright (c) 2025
- * 
- */
-
-#ifndef PBAT_MATH_POLYNOMIALBASIS_H
-#define PBAT_MATH_POLYNOMIALBASIS_H
+#ifndef PBAT_MATH_POLYNOMIAL_BASIS_H
+#define PBAT_MATH_POLYNOMIAL_BASIS_H
 
 /**
- * @file PolynomialBasis.h
+ * @file Basis.h
  *
  * All the polynomials defined are based on expressions computed symbolically in the script
  * polynomial_basis.py (or equivalently polynomial_basis.ipynb).
  *
  */
 
+#include "pbat/Aliases.h"
+
 #include <cmath>
 #include <numbers>
-#include <pbat/Aliases.h>
 
 namespace pbat {
 namespace math {
+namespace polynomial {
 
 namespace detail {
 
@@ -32,10 +24,10 @@ template <int Dims, int Order>
 class MonomialBasis;
 
 template <int Dims, int Order>
-class OrthonormalPolynomialBasis;
+class OrthonormalBasis;
 
 template <int Dims, int Order>
-class DivergenceFreePolynomialBasis;
+class DivergenceFreeBasis;
 
 } // namespace detail
 
@@ -60,7 +52,7 @@ struct MonomialBasis : detail::MonomialBasis<Dims, Order>
      * @brief
      *
      * @param X
-     * @return 
+     * @return
      */
     [[maybe_unused]] Vector<kSize> eval([[maybe_unused]] Vector<kDims> const& X) const
     {
@@ -70,7 +62,7 @@ struct MonomialBasis : detail::MonomialBasis<Dims, Order>
      * @brief
      *
      * @param X
-     * @return 
+     * @return
      */
     [[maybe_unused]] Matrix<kDims, kSize> derivatives([[maybe_unused]] Vector<kDims> const& X) const
     {
@@ -80,7 +72,7 @@ struct MonomialBasis : detail::MonomialBasis<Dims, Order>
      * @brief
      *
      * @param X
-     * @return 
+     * @return
      */
     [[maybe_unused]] Matrix<kSize, kDims>
     antiderivatives([[maybe_unused]] Vector<kDims> const& X) const
@@ -124,10 +116,10 @@ struct MonomialBasis : detail::MonomialBasis<Dims, Order>
  * @tparam Order Polynomial order
  */
 template <int Dims, int Order>
-struct OrthonormalPolynomialBasis : detail::OrthonormalPolynomialBasis<Dims, Order>
+struct OrthonormalBasis : detail::OrthonormalBasis<Dims, Order>
 {
   public:
-    using BaseType = typename detail::OrthonormalPolynomialBasis<Dims, Order>; ///< Base type
+    using BaseType = typename detail::OrthonormalBasis<Dims, Order>; ///< Base type
     inline static constexpr std::size_t kDims  = BaseType::kDims;  ///< Spatial dimensions
     inline static constexpr std::size_t kOrder = BaseType::kOrder; ///< Polynomial order
     inline static constexpr std::size_t kSize  = BaseType::kSize;  ///< Number of basis functions
@@ -135,7 +127,7 @@ struct OrthonormalPolynomialBasis : detail::OrthonormalPolynomialBasis<Dims, Ord
      * @brief
      *
      * @param X
-     * @return 
+     * @return
      */
     [[maybe_unused]] Vector<kSize> eval([[maybe_unused]] Vector<kDims> const& X) const
     {
@@ -145,7 +137,7 @@ struct OrthonormalPolynomialBasis : detail::OrthonormalPolynomialBasis<Dims, Ord
      * @brief
      *
      * @param X
-     * @return 
+     * @return
      */
     [[maybe_unused]] Matrix<kDims, kSize> derivatives([[maybe_unused]] Vector<kDims> const& X) const
     {
@@ -155,7 +147,7 @@ struct OrthonormalPolynomialBasis : detail::OrthonormalPolynomialBasis<Dims, Ord
      * @brief
      *
      * @param X
-     * @return 
+     * @return
      */
     [[maybe_unused]] Matrix<kSize, kDims>
     antiderivatives([[maybe_unused]] Vector<kDims> const& X) const
@@ -189,10 +181,10 @@ struct OrthonormalPolynomialBasis : detail::OrthonormalPolynomialBasis<Dims, Ord
  * @tparam Order Polynomial order
  */
 template <int Dims, int Order>
-struct DivergenceFreePolynomialBasis : detail::DivergenceFreePolynomialBasis<Dims, Order>
+struct DivergenceFreeBasis : detail::DivergenceFreeBasis<Dims, Order>
 {
   public:
-    using BaseType = typename detail::DivergenceFreePolynomialBasis<Dims, Order>; ///< Base type
+    using BaseType = typename detail::DivergenceFreeBasis<Dims, Order>; ///< Base type
     inline static constexpr std::size_t kDims  = BaseType::kDims;  ///< Spatial dimensions
     inline static constexpr std::size_t kOrder = BaseType::kOrder; ///< Polynomial order
     inline static constexpr std::size_t kSize  = BaseType::kSize;  ///< Number of basis functions
@@ -200,7 +192,7 @@ struct DivergenceFreePolynomialBasis : detail::DivergenceFreePolynomialBasis<Dim
      * @brief
      *
      * @param X
-     * @return 
+     * @return
      */
     [[maybe_unused]] Matrix<kSize, kDims> eval([[maybe_unused]] Vector<kDims> const& X) const
     {
@@ -1462,7 +1454,7 @@ class MonomialBasis<3, 4>
  */
 
 template <>
-class OrthonormalPolynomialBasis<1, 1>
+class OrthonormalBasis<1, 1>
 {
   public:
     inline static constexpr std::size_t kDims  = 1;
@@ -1499,7 +1491,7 @@ class OrthonormalPolynomialBasis<1, 1>
 };
 
 template <>
-class OrthonormalPolynomialBasis<1, 2>
+class OrthonormalBasis<1, 2>
 {
   public:
     inline static constexpr std::size_t kDims  = 1;
@@ -1541,7 +1533,7 @@ class OrthonormalPolynomialBasis<1, 2>
 };
 
 template <>
-class OrthonormalPolynomialBasis<1, 3>
+class OrthonormalBasis<1, 3>
 {
   public:
     inline static constexpr std::size_t kDims  = 1;
@@ -1593,7 +1585,7 @@ class OrthonormalPolynomialBasis<1, 3>
 };
 
 template <>
-class OrthonormalPolynomialBasis<1, 4>
+class OrthonormalBasis<1, 4>
 {
   public:
     inline static constexpr std::size_t kDims  = 1;
@@ -1653,7 +1645,7 @@ class OrthonormalPolynomialBasis<1, 4>
  */
 
 template <>
-class OrthonormalPolynomialBasis<2, 1>
+class OrthonormalBasis<2, 1>
 {
   public:
     inline static constexpr std::size_t kDims  = 2;
@@ -1705,7 +1697,7 @@ class OrthonormalPolynomialBasis<2, 1>
 };
 
 template <>
-class OrthonormalPolynomialBasis<2, 2>
+class OrthonormalBasis<2, 2>
 {
   public:
     inline static constexpr std::size_t kDims  = 2;
@@ -1792,7 +1784,7 @@ class OrthonormalPolynomialBasis<2, 2>
 };
 
 template <>
-class OrthonormalPolynomialBasis<2, 3>
+class OrthonormalBasis<2, 3>
 {
   public:
     inline static constexpr std::size_t kDims  = 2;
@@ -1953,7 +1945,7 @@ class OrthonormalPolynomialBasis<2, 3>
 };
 
 template <>
-class OrthonormalPolynomialBasis<2, 4>
+class OrthonormalBasis<2, 4>
 {
   public:
     inline static constexpr std::size_t kDims  = 2;
@@ -2226,7 +2218,7 @@ class OrthonormalPolynomialBasis<2, 4>
  */
 
 template <>
-class OrthonormalPolynomialBasis<3, 1>
+class OrthonormalBasis<3, 1>
 {
   public:
     inline static constexpr std::size_t kDims  = 3;
@@ -2302,7 +2294,7 @@ class OrthonormalPolynomialBasis<3, 1>
 };
 
 template <>
-class OrthonormalPolynomialBasis<3, 2>
+class OrthonormalBasis<3, 2>
 {
   public:
     inline static constexpr std::size_t kDims  = 3;
@@ -2502,7 +2494,7 @@ class OrthonormalPolynomialBasis<3, 2>
 };
 
 template <>
-class OrthonormalPolynomialBasis<3, 3>
+class OrthonormalBasis<3, 3>
 {
   public:
     inline static constexpr std::size_t kDims  = 3;
@@ -3013,7 +3005,7 @@ class OrthonormalPolynomialBasis<3, 3>
 };
 
 template <>
-class OrthonormalPolynomialBasis<3, 4>
+class OrthonormalBasis<3, 4>
 {
   public:
     inline static constexpr std::size_t kDims  = 3;
@@ -4240,7 +4232,7 @@ class OrthonormalPolynomialBasis<3, 4>
  */
 
 template <>
-class DivergenceFreePolynomialBasis<1, 1>
+class DivergenceFreeBasis<1, 1>
 {
   public:
     inline static constexpr std::size_t kDims  = 1;
@@ -4257,7 +4249,7 @@ class DivergenceFreePolynomialBasis<1, 1>
 };
 
 template <>
-class DivergenceFreePolynomialBasis<1, 2>
+class DivergenceFreeBasis<1, 2>
 {
   public:
     inline static constexpr std::size_t kDims  = 1;
@@ -4274,7 +4266,7 @@ class DivergenceFreePolynomialBasis<1, 2>
 };
 
 template <>
-class DivergenceFreePolynomialBasis<1, 3>
+class DivergenceFreeBasis<1, 3>
 {
   public:
     inline static constexpr std::size_t kDims  = 1;
@@ -4291,7 +4283,7 @@ class DivergenceFreePolynomialBasis<1, 3>
 };
 
 template <>
-class DivergenceFreePolynomialBasis<1, 4>
+class DivergenceFreeBasis<1, 4>
 {
   public:
     inline static constexpr std::size_t kDims  = 1;
@@ -4312,7 +4304,7 @@ class DivergenceFreePolynomialBasis<1, 4>
  */
 
 template <>
-class DivergenceFreePolynomialBasis<2, 1>
+class DivergenceFreeBasis<2, 1>
 {
   public:
     inline static constexpr std::size_t kDims  = 2;
@@ -4340,7 +4332,7 @@ class DivergenceFreePolynomialBasis<2, 1>
 };
 
 template <>
-class DivergenceFreePolynomialBasis<2, 2>
+class DivergenceFreeBasis<2, 2>
 {
   public:
     inline static constexpr std::size_t kDims  = 2;
@@ -4382,7 +4374,7 @@ class DivergenceFreePolynomialBasis<2, 2>
 };
 
 template <>
-class DivergenceFreePolynomialBasis<2, 3>
+class DivergenceFreeBasis<2, 3>
 {
   public:
     inline static constexpr std::size_t kDims  = 2;
@@ -4450,7 +4442,7 @@ class DivergenceFreePolynomialBasis<2, 3>
 };
 
 template <>
-class DivergenceFreePolynomialBasis<2, 4>
+class DivergenceFreeBasis<2, 4>
 {
   public:
     inline static constexpr std::size_t kDims  = 2;
@@ -4564,7 +4556,7 @@ class DivergenceFreePolynomialBasis<2, 4>
  */
 
 template <>
-class DivergenceFreePolynomialBasis<3, 1>
+class DivergenceFreeBasis<3, 1>
 {
   public:
     inline static constexpr std::size_t kDims  = 3;
@@ -4622,7 +4614,7 @@ class DivergenceFreePolynomialBasis<3, 1>
 };
 
 template <>
-class DivergenceFreePolynomialBasis<3, 2>
+class DivergenceFreeBasis<3, 2>
 {
   public:
     inline static constexpr std::size_t kDims  = 3;
@@ -4759,7 +4751,7 @@ class DivergenceFreePolynomialBasis<3, 2>
 };
 
 template <>
-class DivergenceFreePolynomialBasis<3, 3>
+class DivergenceFreeBasis<3, 3>
 {
   public:
     inline static constexpr std::size_t kDims  = 3;
@@ -5053,7 +5045,7 @@ class DivergenceFreePolynomialBasis<3, 3>
 };
 
 template <>
-class DivergenceFreePolynomialBasis<3, 4>
+class DivergenceFreeBasis<3, 4>
 {
   public:
     inline static constexpr std::size_t kDims  = 3;
@@ -5660,7 +5652,8 @@ class DivergenceFreePolynomialBasis<3, 4>
 };
 
 } // namespace detail
+} // namespace polynomial
 } // namespace math
 } // namespace pbat
 
-#endif // PBAT_MATH_POLYNOMIALBASIS_H
+#endif // PBAT_MATH_POLYNOMIAL_BASIS_H

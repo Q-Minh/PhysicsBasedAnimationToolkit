@@ -7,8 +7,8 @@
 #include "pbat/graph/Adjacency.h"
 #include "pbat/graph/Mesh.h"
 #include "pbat/graph/Partition.h"
-#include "pbat/math/PolynomialBasis.h"
 #include "pbat/math/SymmetricQuadratureRules.h"
+#include "pbat/math/polynomial/Basis.h"
 #include "pbat/profiling/Profiling.h"
 #include "pbat/sim/vbd/Data.h"
 #include "pbat/sim/vbd/Mesh.h"
@@ -24,7 +24,8 @@ namespace sim {
 namespace vbd {
 namespace multigrid {
 
-using Polynomial = math::MonomialBasis<HyperReduction::kDims, HyperReduction::kPolynomialOrder>;
+using Polynomial =
+    math::polynomial::MonomialBasis<HyperReduction::kDims, HyperReduction::kPolynomialOrder>;
 using Quadrature = math::SymmetricSimplexPolynomialQuadratureRule<
     HyperReduction::kDims,
     2 * HyperReduction::kPolynomialOrder>;

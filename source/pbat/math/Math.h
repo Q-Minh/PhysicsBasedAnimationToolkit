@@ -12,7 +12,7 @@
 #define PBAT_MATH_MATH_H
 
 /**
- * @namespace pbat::math 
+ * @namespace pbat::math
  * @brief Math related functionality.
  */
 namespace pbat::math {
@@ -23,9 +23,9 @@ namespace pbat::math {
 #include "IntegerArithmeticChecks.h"
 #include "LinearOperator.h"
 #include "MomentFitting.h"
-#include "PolynomialBasis.h"
 #include "Rational.h"
 #include "SymmetricQuadratureRules.h"
 #include "linalg/LinAlg.h"
+#include "polynomial/Polynomial.h"
 
 #endif // PBAT_MATH_MATH_H
