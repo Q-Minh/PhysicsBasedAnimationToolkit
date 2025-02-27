@@ -45,7 +45,6 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
 add_subdirectory(pbat)
 target_link_libraries(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     PUBLIC
-    Boost::math
     doctest::doctest
     Eigen3::Eigen
     fmt::fmt

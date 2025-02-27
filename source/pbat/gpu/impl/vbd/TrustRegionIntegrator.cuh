@@ -81,10 +81,11 @@ class TrustRegionIntegrator : public Integrator
      */
 
     /**
-     * @brief Rotates \f$ x^k, x^{k-1}, x^{k-2} and f(x^k), f(x^{k-1}), f(x^{k-2}) and t_k, t_{k-1}, t_{k-2} \f$
+     * @brief Rotates \f$ x^k, x^{k-1}, x^{k-2} and f(x^k), f(x^{k-1}), f(x^{k-2}) and t_k, t_{k-1},
+     * t_{k-2} \f$
      *
      * Sets \f$ x^{k-1} \leftarrow x^k \f$ and \f$ x^{k-2} \leftarrow x^{k-1} \f$ and
-     * \f$ f(x^{k-1}) \leftarrow f(x^k) \f$ and \f$ f(x^{k-2}) \leftarrow f(x^{k-1}) \f$ and 
+     * \f$ f(x^{k-1}) \leftarrow f(x^k) \f$ and \f$ f(x^{k-2}) \leftarrow f(x^{k-1}) \f$ and
      * \f$ t_{k-1} \leftarrow t_k \f$ and \f$ t_{k-2} \leftarrow t_{k-1} \f$.
      */
     void UpdateIterates();
@@ -201,6 +202,52 @@ class TrustRegionIntegrator : public Integrator
      */
     void RollbackLinearStep(GpuScalar t);
 
+    using Matrix3 =
+        pbat::math::linalg::mini::SMatrix<GpuScalar, 3, 3>;          ///< Short-hand for 3x3 matrix
+    using Vector3 = pbat::math::linalg::mini::SVector<GpuScalar, 3>; ///< Short-hand for 3-vector
+    using Vector5 = pbat::math::linalg::mini::SVector<Scalar, 5>;    ///< Short-hand for 5-vector
+
+    /**
+     * @brief Compute the coefficients of the polynomial constraint
+     * \f$ |\mathbf{x}(t) - \mathbf{x}_k|_2^2 - R^2 = 0 \f$
+     *
+     * The constraint is a quartic polynomial in \f$ t \f$.
+     * The constant coefficient \f$ \sigma_0 = \tilde{\sigma_0} - R^2 \f$, hence we store
+     * \f$ \tilde{\sigma_0} \f$ in `sigmax[0]`. This makes it flexible to parameterize the
+     * polynomial by the radius \f$ R \f$.
+     */
+    void ComputePolynomialConstraintCoefficients();
+    /**
+     * @brief Find the nearest future time \f$ t^* \f$ such that the curved path crosses the trust
+     * region's boundary.
+     *
+     * @param R2 Trust region radius squared
+     * @return Nearest future time \f$ t^* \f$ s.t. \f$ |\mathbf{x}(t^*) - \mathbf{x}_k|_2^2 = R^2
+     * \f$
+     * @pre ComputePolynomialConstraintCoefficients() must be called before this function.
+     */
+    Scalar SolveCurvedTrustRegionConstraint(Scalar R2) const;
+    /**
+     * @brief Compute the coefficients of the curved path
+     *
+     * The coefficients \f$ a_{i,d}, b_{i,d}, c_{i,d} \f$ are computed such that
+     * \f[
+     * x_{i,d}(t) = a_{i,d} (t-t_k)^2 + b_{i,d} (t-t_k) + c_{i,d}
+     * \f]
+     *
+     * The translation \f$ t - t_k \f$ is done so that the Vandermonde matrix is well-conditioned.
+     */
+    void ComputeCurvedPath();
+    /**
+     * @brief Take a quadratic step along the curved accelerated path
+     * @param t Step size
+     */
+    void TakeCurvedStep(GpuScalar t);
+    /**
+     * @brief Rollback the quadratic step along the curved accelerated path
+     */
+    void RollbackCurvedStep();
+
   private:
     GpuScalar eta;                     ///< Trust Region energy reduction accuracy threshold
     GpuScalar tau;                     ///< Trust Region radius increase factor
@@ -210,10 +257,14 @@ class TrustRegionIntegrator : public Integrator
                                        ///< values at \f$ x^k, x^{k-1}, x^{k-2} \f$
     GpuScalar tk, tkm1, tkm2; ///< Points along accelerated path at \f$ x^k, x^{k-1}, x^{k-2} \f$
 
-    pbat::math::linalg::mini::SMatrix<GpuScalar, 3, 3>
-        Q; ///< Quadratic energy proxy matrix. See ConstructModel().
-    pbat::math::linalg::mini::SVector<GpuScalar, 3> aQ; ///< Quadratic energy proxy coefficients
-    bool bUseCurvedPath;                                ///< Whether to use curved path or not
+    Matrix3 Q;        ///< Quadratic energy proxy matrix. See ConstructModel().
+    Vector3 aQ;       ///< Quadratic energy proxy coefficients
+    GpuScalar am, bm; ///< Linear model function coefficients s.t. \f$ m_k(t) = a_m t + b_m \f$
+    Vector5 sigmax;   ///< Trust-Region curved path constraint polynomial coefficients
+    common::Buffer<GpuScalar, 3> ax; ///< Curved path quadratic coefficients
+    common::Buffer<GpuScalar, 3> bx; ///< Curved path linear coefficients
+    common::Buffer<GpuScalar, 3> cx; ///< Curved path constant coefficients
+    bool bUseCurvedPath;             ///< Whether to use curved path or not
 };
 
 } // namespace pbat::gpu::impl::vbd

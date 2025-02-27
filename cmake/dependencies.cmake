@@ -1,6 +1,5 @@
 include(FetchContent)
 
-find_package(Boost CONFIG REQUIRED COMPONENTS math)
 find_package(doctest CONFIG REQUIRED)
 find_package(fmt CONFIG REQUIRED)
 find_package(range-v3 CONFIG REQUIRED)

@@ -1,3 +1,7 @@
+// clang-format off
+#include "pbat/gpu/DisableWarnings.h"
+// clang-format on
+
 #include "Profiling.h"
 
 namespace pbat::gpu::profiling {

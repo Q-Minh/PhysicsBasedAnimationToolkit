@@ -7,7 +7,6 @@
 #include "pbat/math/linalg/mini/Mini.h"
 #include "pbat/sim/vbd/Kernels.h"
 
-#include <boost/math/tools/quartic_roots.hpp>
 #include <cuda/functional>
 #include <thrust/execution_policy.h>
 #include <thrust/for_each.h>
@@ -24,6 +23,12 @@ TrustRegionIntegrator::TrustRegionIntegrator(Data const& data)
       xkm2(data.X.cols()),
       Q(),
       aQ(),
+      am(),
+      bm(),
+      sigmax(),
+      ax(data.X.cols()),
+      bx(data.X.cols()),
+      cx(data.X.cols()),
       bUseCurvedPath(data.bCurved)
 {
 }
@@ -165,6 +170,96 @@ void TrustRegionIntegrator::SolveWithCurvedAccelerationPath(
 {
     PBAT_PROFILE_CUDA_NAMED_SCOPE(
         "pbat.gpu.impl.vbd.TrustRegionIntegrator.SolveWithCurvedAccelerationPath");
+
+    static auto constexpr kNumPastIterates = 3; ///< fk, fkm1, fkm2
+
+    // Objective function
+    auto const fObjective = [this, &bdf]() {
+        return ObjectiveFunction(bdf.dt, bdf.dt2);
+    };
+
+    // TR parameters
+    Scalar R2min             = std::numeric_limits<Scalar>::epsilon();
+    Scalar R2                = R2min;
+    GpuScalar constexpr zero = std::numeric_limits<GpuScalar>::min();
+
+    // TR VBD
+    PBAT_PROFILE_CUDA_CLOG("----------");
+    fk = fObjective();
+    tk = GpuScalar{-1};
+    PBAT_PROFILE_CUDA_PLOT("vbd.TRI -- f(x)", fk);
+    for (auto k = 0; k < iterations; ++k)
+    {
+        PBAT_PROFILE_CUDA_FLOG("iter={} -----", k);
+        if (k >= kNumPastIterates - 1)
+        {
+            PBAT_PROFILE_CUDA_FLOG("TR radius={}", std::sqrt(R2));
+            ConstructModel();
+            PBAT_PROFILE_CUDA_FLOG(
+                "Model function -> am={},bm={}, tkm2={},tkm1={},tk={}",
+                am,
+                bm,
+                tkm2,
+                tkm1,
+                tk);
+            ComputeCurvedPath();
+            ComputePolynomialConstraintCoefficients();
+            UpdateIterates();
+            Scalar const upper    = SolveCurvedTrustRegionConstraint(R2);
+            GpuScalar const tstar = ModelOptimalStep();
+            GpuScalar const t     = std::clamp(tstar, zero, static_cast<GpuScalar>(upper));
+            PBAT_PROFILE_CUDA_FLOG("t={},t*={},tup={}", t, tstar, upper);
+            bool const bIsStepAtLowerBound       = (t - zero) < zero;
+            bool const bShouldTryAcceleratedStep = not bIsStepAtLowerBound;
+            bool bStepAccepted{false};
+            if (bShouldTryAcceleratedStep)
+            {
+                TakeCurvedStep(t);
+                // Compute actual vs expected energy reduction ratio
+                fk                  = fObjective();
+                GpuScalar fnext     = fk;
+                GpuScalar fprev     = fkm1; // fkm1 <- fk after UpdateIterates()
+                GpuScalar mnext     = ModelFunction(t);
+                GpuScalar mprev     = ModelFunction(tk);
+                GpuScalar const rho = (fnext - fprev) / (mnext - mprev);
+                // Accept step if model function is accurate enough (i.e. the expected energy
+                // reduction "matches" the actual energy reduction)
+                bStepAccepted = rho > eta;
+                PBAT_PROFILE_CUDA_FLOG("rho={},eta={}", rho, eta);
+            }
+            if (bStepAccepted)
+            {
+                PBAT_PROFILE_CUDA_CLOG("Accepted TR step");
+                bool const bIsStepAtUpperBound = (upper - t) < zero; // upper >= t after std::clamp
+                // Increase TR radius if our model function is accurate
+                // and the optimal step was outside the current trust region
+                if (bIsStepAtUpperBound)
+                    R2 *= tau * tau; // R' = tau*R -> R'^2 = tau^2*R^2
+                tk = t;
+            }
+            else
+            {
+                // Decrease TR radius if our model function is inaccurate
+                PBAT_PROFILE_CUDA_CLOG("Rejected TR step");
+                R2 = std::max(R2 / (tau * tau), R2min); // R' = R/tau -> R'^2 = R^2/tau^2
+                if (bShouldTryAcceleratedStep)
+                    RollbackCurvedStep();
+                RunVbdIteration(bdf); // fall-back to initial VBD step
+                fk = fObjective();
+                tk = tkm1 + 1;
+            }
+        }
+        else
+        {
+            // Un-accelerated VBD iterations, with additional bookkeeping of past iterates and
+            // objective function values
+            UpdateIterates();
+            RunVbdIteration(bdf);
+            fk = fObjective();
+            tk = static_cast<GpuScalar>(k);
+        }
+        PBAT_PROFILE_CUDA_PLOT("vbd.TRI -- f(x)", fk);
+    }
 }
 
 GpuScalar TrustRegionIntegrator::ObjectiveFunction(GpuScalar dt, GpuScalar dt2)
@@ -296,50 +391,81 @@ void TrustRegionIntegrator::UpdateIterates()
 
 GpuScalar TrustRegionIntegrator::ModelFunction(GpuScalar t) const
 {
-    return aQ(0) * t * t + aQ(1) * t + aQ(2);
+    if (bUseCurvedPath)
+        return am * t + bm;
+    else
+        return aQ(0) * t * t + aQ(1) * t + aQ(2);
 }
 
 GpuScalar TrustRegionIntegrator::ModelOptimalStep() const
 {
     static GpuScalar constexpr zero = std::numeric_limits<GpuScalar>::min();
     static GpuScalar constexpr inf  = std::numeric_limits<GpuScalar>::max();
-    bool const bIsQuadratic         = std::abs(aQ(0)) > zero;
-    bool const bIsLinear            = not bIsQuadratic and std::abs(aQ(1)) > zero;
-    if (bIsQuadratic)
+    if (bUseCurvedPath)
     {
-        bool const bIsPositiveDefinite = aQ(0) > zero;
-        // If quadratic function is positive definite, minimum is -b/2a, else +-inf, so we take the
-        // positive optimum, so that we always step forward.
-        return bIsPositiveDefinite ? -aQ(1) / (GpuScalar{2} * aQ(0)) : inf;
-    }
-    else if (bIsLinear)
-    {
-        // If slope of linear function is positive, minimum is -inf, else +inf
-        return aQ(1) > 0 ? -inf : inf;
+        return (am > zero) ? -inf : inf;
     }
     else
     {
-        return GpuScalar{0}; // Constant function is minimized everywhere, return trivial solution
+        bool const bIsQuadratic = std::abs(aQ(0)) > zero;
+        bool const bIsLinear    = not bIsQuadratic and std::abs(aQ(1)) > zero;
+        if (bIsQuadratic)
+        {
+            bool const bIsPositiveDefinite = aQ(0) > zero;
+            // If quadratic function is positive definite, minimum is -b/2a, else +-inf, so we take
+            // the positive optimum, so that we always step forward.
+            return bIsPositiveDefinite ? -aQ(1) / (GpuScalar{2} * aQ(0)) : inf;
+        }
+        else if (bIsLinear)
+        {
+            // If slope of linear function is positive, minimum is -inf, else +inf
+            return aQ(1) > 0 ? -inf : inf;
+        }
+        else
+        {
+            return GpuScalar{
+                0}; // Constant function is minimized everywhere, return trivial solution
+        }
     }
 }
 
 void TrustRegionIntegrator::ConstructModel()
 {
-    using Vector3 = pbat::math::linalg::mini::SVector<GpuScalar, 3>;
-    // Translate time so that tk = 0
-    tkm2 -= tk;
-    tkm1 -= tk;
-    tk      = GpuScalar{0};
-    Q(0, 0) = tkm2 * tkm2;
-    Q(1, 0) = tkm1 * tkm1;
-    Q(2, 0) = tk * tk;
-    Q(0, 1) = tkm2;
-    Q(1, 1) = tkm1;
-    Q(2, 1) = tk;
-    Q(0, 2) = GpuScalar{1};
-    Q(1, 2) = GpuScalar{1};
-    Q(2, 2) = GpuScalar{1};
-    aQ      = Inverse(Q) * Vector3{fkm2, fkm1, fk};
+    if (bUseCurvedPath)
+    {
+        using Matrix32 = pbat::math::linalg::mini::SMatrix<GpuScalar, 3, 2>;
+        using Matrix22 = pbat::math::linalg::mini::SMatrix<GpuScalar, 2, 2>;
+        using Vector2  = pbat::math::linalg::mini::SVector<GpuScalar, 2>;
+        Matrix32 J;
+        J(0, 0)      = tkm2;
+        J(1, 0)      = tkm1;
+        J(2, 0)      = tk;
+        J(0, 1)      = GpuScalar(1);
+        J(1, 1)      = GpuScalar(1);
+        J(2, 1)      = GpuScalar(1);
+        Matrix22 JTJ = J.Transpose() * J;
+        Vector2 JTf  = J.Transpose() * Vector3{fkm2, fkm1, fk};
+        auto abf     = Inverse(JTJ) * JTf;
+        am           = abf(0);
+        bm           = abf(1);
+    }
+    else
+    {
+        // Translate time so that tk = 0
+        tkm2 -= tk;
+        tkm1 -= tk;
+        tk      = GpuScalar{0};
+        Q(0, 0) = tkm2 * tkm2;
+        Q(1, 0) = tkm1 * tkm1;
+        Q(2, 0) = tk * tk;
+        Q(0, 1) = tkm2;
+        Q(1, 1) = tkm1;
+        Q(2, 1) = tk;
+        Q(0, 2) = GpuScalar{1};
+        Q(1, 2) = GpuScalar{1};
+        Q(2, 2) = GpuScalar{1};
+        aQ      = Inverse(Q) * Vector3{fkm2, fkm1, fk};
+    }
 }
 
 GpuScalar TrustRegionIntegrator::SquaredStepSize() const
@@ -393,6 +519,259 @@ void TrustRegionIntegrator::RollbackLinearStep(GpuScalar t)
             auto xk  = FromBuffers<3, 1>(xkm1, i);
             ToBuffers(xk + (xtr - xk) / t, x, i);
         });
+}
+
+void TrustRegionIntegrator::ComputePolynomialConstraintCoefficients()
+{
+    PBAT_PROFILE_CUDA_NAMED_SCOPE(
+        "pbat.gpu.impl.vbd.TrustRegionIntegrator.ComputePolynomialConstraintCoefficients");
+
+    auto const nVertices = static_cast<GpuIndex>(x.Size());
+    auto begin           = thrust::make_counting_iterator(0);
+    auto end             = thrust::make_counting_iterator(nVertices);
+    sigmax(0)            = thrust::transform_reduce(
+        thrust::device,
+        begin,
+        end,
+        cuda::proclaim_return_type<Scalar>([ax = ax.Raw(), tk = tk, tkm2 = tkm2] PBAT_DEVICE(
+                                               GpuIndex i) {
+            using namespace pbat::math::linalg::mini;
+            auto axi = FromBuffers<3, 1>(ax, i);
+            Scalar const z0 =
+                1.0 / (((tk) * (tk) * (tk) * (tk)) - 4 * ((tk) * (tk) * (tk)) * tkm2 +
+                       6 * ((tk) * (tk)) * ((tkm2) * (tkm2)) - 4 * tk * ((tkm2) * (tkm2) * (tkm2)) +
+                       ((tkm2) * (tkm2) * (tkm2) * (tkm2)));
+            return z0 * ((axi[0]) * (axi[0])) + z0 * ((axi[1]) * (axi[1])) +
+                   z0 * ((axi[2]) * (axi[2]));
+        }),
+        Scalar{0},
+        thrust::plus<Scalar>());
+    sigmax(1) = thrust::transform_reduce(
+        thrust::device,
+        begin,
+        end,
+        cuda::proclaim_return_type<Scalar>(
+            [ax = ax.Raw(), bx = bx.Raw(), tk = tk, tkm2 = tkm2] PBAT_DEVICE(GpuIndex i) {
+                using namespace pbat::math::linalg::mini;
+                auto axi        = FromBuffers<3, 1>(ax, i);
+                auto bxi        = FromBuffers<3, 1>(bx, i);
+                Scalar const z0 = ((tk) * (tk) * (tk));
+                Scalar const z1 = ((tkm2) * (tkm2) * (tkm2));
+                Scalar const z2 = ((tkm2) * (tkm2));
+                Scalar const z3 = ((tk) * (tk));
+                Scalar const z4 = 1.0 / (3 * tk * z2 - 3 * tkm2 * z3 + z0 - z1);
+                Scalar const z5 = 4 * tk;
+                Scalar const z6 =
+                    z5 / (((tk) * (tk) * (tk) * (tk)) + ((tkm2) * (tkm2) * (tkm2) * (tkm2)) -
+                          4 * tkm2 * z0 - z1 * z5 + 6 * z2 * z3);
+                return 2 * z4 * axi[0] * bxi[0] + 2 * z4 * axi[1] * bxi[1] +
+                       2 * z4 * axi[2] * bxi[2] - z6 * ((axi[0]) * (axi[0])) -
+                       z6 * ((axi[1]) * (axi[1])) - z6 * ((axi[2]) * (axi[2]));
+            }),
+        Scalar{0},
+        thrust::plus<Scalar>());
+    sigmax(2) = thrust::transform_reduce(
+        thrust::device,
+        begin,
+        end,
+        cuda::proclaim_return_type<Scalar>([xk   = x.Raw(),
+                                            ax   = ax.Raw(),
+                                            bx   = bx.Raw(),
+                                            cx   = cx.Raw(),
+                                            tk   = tk,
+                                            tkm2 = tkm2] PBAT_DEVICE(GpuIndex i) {
+            using namespace pbat::math::linalg::mini;
+            auto xki         = FromBuffers<3, 1>(xk, i);
+            auto axi         = FromBuffers<3, 1>(ax, i);
+            auto bxi         = FromBuffers<3, 1>(bx, i);
+            auto cxi         = FromBuffers<3, 1>(cx, i);
+            Scalar const z0  = ((tk) * (tk));
+            Scalar const z1  = ((tkm2) * (tkm2));
+            Scalar const z2  = 1.0 / (-2 * tk * tkm2 + z0 + z1);
+            Scalar const z3  = 2 * z2;
+            Scalar const z4  = z3 * axi[0];
+            Scalar const z5  = z3 * axi[1];
+            Scalar const z6  = z3 * axi[2];
+            Scalar const z7  = ((tk) * (tk) * (tk));
+            Scalar const z8  = ((tkm2) * (tkm2) * (tkm2));
+            Scalar const z9  = 6 * tk / (3 * tk * z1 - 3 * tkm2 * z0 + z7 - z8);
+            Scalar const z10 = 6 * z0;
+            Scalar const z11 =
+                z10 / (((tk) * (tk) * (tk) * (tk)) - 4 * tk * z8 +
+                       ((tkm2) * (tkm2) * (tkm2) * (tkm2)) - 4 * tkm2 * z7 + z1 * z10);
+            return z11 * ((axi[0]) * (axi[0])) + z11 * ((axi[1]) * (axi[1])) +
+                   z11 * ((axi[2]) * (axi[2])) + z2 * ((bxi[0]) * (bxi[0])) +
+                   z2 * ((bxi[1]) * (bxi[1])) + z2 * ((bxi[2]) * (bxi[2])) + z4 * cxi[0] -
+                   z4 * xki[0] + z5 * cxi[1] - z5 * xki[1] + z6 * cxi[2] - z6 * xki[2] -
+                   z9 * axi[0] * bxi[0] - z9 * axi[1] * bxi[1] - z9 * axi[2] * bxi[2];
+        }),
+        Scalar{0},
+        thrust::plus<Scalar>());
+    sigmax(3) = thrust::transform_reduce(
+        thrust::device,
+        begin,
+        end,
+        cuda::proclaim_return_type<Scalar>([xk   = x.Raw(),
+                                            ax   = ax.Raw(),
+                                            bx   = bx.Raw(),
+                                            cx   = cx.Raw(),
+                                            tk   = tk,
+                                            tkm2 = tkm2] PBAT_DEVICE(GpuIndex i) {
+            using namespace pbat::math::linalg::mini;
+            auto axi         = FromBuffers<3, 1>(ax, i);
+            auto bxi         = FromBuffers<3, 1>(bx, i);
+            auto cxi         = FromBuffers<3, 1>(cx, i);
+            auto xki         = FromBuffers<3, 1>(xk, i);
+            Scalar const z0  = 1.0 / (tk - tkm2);
+            Scalar const z1  = 2 * z0;
+            Scalar const z2  = ((tk) * (tk));
+            Scalar const z3  = ((tkm2) * (tkm2));
+            Scalar const z4  = 2 * tk;
+            Scalar const z5  = 1.0 / (-tkm2 * z4 + z2 + z3);
+            Scalar const z6  = z4 * z5;
+            Scalar const z7  = 4 * tk;
+            Scalar const z8  = z5 * z7;
+            Scalar const z9  = ((tk) * (tk) * (tk));
+            Scalar const z10 = ((tkm2) * (tkm2) * (tkm2));
+            Scalar const z11 = 1.0 / (3 * tk * z3 - 3 * tkm2 * z2 - z10 + z9);
+            Scalar const z12 = 4 * z9;
+            Scalar const z13 =
+                z12 / (((tk) * (tk) * (tk) * (tk)) + ((tkm2) * (tkm2) * (tkm2) * (tkm2)) -
+                       tkm2 * z12 - z10 * z7 + 6 * z2 * z3);
+            return 4 * tk * z5 * axi[0] * xki[0] + 4 * tk * z5 * axi[1] * xki[1] +
+                   4 * tk * z5 * axi[2] * xki[2] + 2 * z0 * bxi[0] * cxi[0] +
+                   2 * z0 * bxi[1] * cxi[1] + 2 * z0 * bxi[2] * cxi[2] - z1 * bxi[0] * xki[0] -
+                   z1 * bxi[1] * xki[1] - z1 * bxi[2] * xki[2] + 6 * z11 * z2 * axi[0] * bxi[0] +
+                   6 * z11 * z2 * axi[1] * bxi[1] + 6 * z11 * z2 * axi[2] * bxi[2] -
+                   z13 * ((axi[0]) * (axi[0])) - z13 * ((axi[1]) * (axi[1])) -
+                   z13 * ((axi[2]) * (axi[2])) - z6 * ((bxi[0]) * (bxi[0])) -
+                   z6 * ((bxi[1]) * (bxi[1])) - z6 * ((bxi[2]) * (bxi[2])) - z8 * axi[0] * cxi[0] -
+                   z8 * axi[1] * cxi[1] - z8 * axi[2] * cxi[2];
+        }),
+        Scalar{0},
+        thrust::plus<Scalar>());
+    sigmax(4) = thrust::transform_reduce(
+        thrust::device,
+        begin,
+        end,
+        cuda::proclaim_return_type<Scalar>([xk   = x.Raw(),
+                                            ax   = ax.Raw(),
+                                            bx   = bx.Raw(),
+                                            cx   = cx.Raw(),
+                                            tk   = tk,
+                                            tkm2 = tkm2] PBAT_DEVICE(GpuIndex i) {
+            using namespace pbat::math::linalg::mini;
+            auto xki         = FromBuffers<3, 1>(xk, i);
+            auto axi         = FromBuffers<3, 1>(ax, i);
+            auto bxi         = FromBuffers<3, 1>(bx, i);
+            auto cxi         = FromBuffers<3, 1>(cx, i);
+            Scalar const z0  = 2 * cxi[0];
+            Scalar const z1  = 2 * cxi[1];
+            Scalar const z2  = 2 * cxi[2];
+            Scalar const z3  = 1.0 / (tk - tkm2);
+            Scalar const z4  = tk * z3;
+            Scalar const z5  = 2 * tk;
+            Scalar const z6  = z3 * z5;
+            Scalar const z7  = ((tk) * (tk));
+            Scalar const z8  = ((tkm2) * (tkm2));
+            Scalar const z9  = z7 / (-tkm2 * z5 + z7 + z8);
+            Scalar const z10 = 2 * z9;
+            Scalar const z11 = ((tk) * (tk) * (tk) * (tk));
+            Scalar const z12 = ((tkm2) * (tkm2) * (tkm2));
+            Scalar const z13 = ((tk) * (tk) * (tk));
+            Scalar const z14 = z11 / (-4 * tk * z12 + ((tkm2) * (tkm2) * (tkm2) * (tkm2)) -
+                                      4 * tkm2 * z13 + z11 + 6 * z7 * z8);
+            Scalar const z15 = 2 * z13 / (3 * tk * z8 - 3 * tkm2 * z7 - z12 + z13);
+            return -z0 * z4 * bxi[0] + z0 * z9 * axi[0] - z0 * xki[0] - z1 * z4 * bxi[1] +
+                   z1 * z9 * axi[1] - z1 * xki[1] - z10 * axi[0] * xki[0] - z10 * axi[1] * xki[1] -
+                   z10 * axi[2] * xki[2] + z14 * ((axi[0]) * (axi[0])) +
+                   z14 * ((axi[1]) * (axi[1])) + z14 * ((axi[2]) * (axi[2])) -
+                   z15 * axi[0] * bxi[0] - z15 * axi[1] * bxi[1] - z15 * axi[2] * bxi[2] -
+                   z2 * z4 * bxi[2] + z2 * z9 * axi[2] - z2 * xki[2] + z6 * bxi[0] * xki[0] +
+                   z6 * bxi[1] * xki[1] + z6 * bxi[2] * xki[2] + z9 * ((bxi[0]) * (bxi[0])) +
+                   z9 * ((bxi[1]) * (bxi[1])) + z9 * ((bxi[2]) * (bxi[2])) + ((cxi[0]) * (cxi[0])) +
+                   ((cxi[1]) * (cxi[1])) + ((cxi[2]) * (cxi[2])) + ((xki[0]) * (xki[0])) +
+                   ((xki[1]) * (xki[1])) + ((xki[2]) * (xki[2]));
+        }),
+        Scalar{0},
+        thrust::plus<Scalar>());
+}
+
+Scalar TrustRegionIntegrator::SolveCurvedTrustRegionConstraint([[maybe_unused]] Scalar R2) const
+{
+    return Scalar();
+}
+
+void TrustRegionIntegrator::ComputeCurvedPath()
+{
+    cx                   = x; // c_{i,d} = x_k^{i,d}
+    auto const nVertices = static_cast<GpuIndex>(x.Size());
+    thrust::for_each(
+        thrust::device,
+        thrust::make_counting_iterator(0),
+        thrust::make_counting_iterator(nVertices),
+        [xk   = x.Raw(),
+         xkm1 = xkm1.Raw(),
+         xkm2 = xkm2.Raw(),
+         ax   = ax.Raw(),
+         bx   = bx.Raw(),
+         tkm2 = tkm2,
+         tkm1 = tkm1,
+         tk   = tk] PBAT_DEVICE(GpuIndex i) {
+            using namespace pbat::math::linalg::mini;
+            using Matrix2 = pbat::math::linalg::mini::SMatrix<GpuScalar, 2, 2>;
+            // NOTE: tbar_{k-2} = \frac{t_{k-2} - t_k}{t_k - t_{k-2}} = -1
+            GpuScalar tbarkm1 = (tkm1 - tk) / (tk - tkm2);
+            Matrix2 V;
+            V(0, 0)        = GpuScalar(1);
+            V(1, 0)        = tbarkm1 * tbarkm1;
+            V(0, 1)        = GpuScalar(-1);
+            V(1, 1)        = tbarkm1;
+            auto Vinv      = Inverse(V);
+            using Matrix32 = pbat::math::linalg::mini::SMatrix<GpuScalar, 3, 2>;
+            Matrix32 AB;
+            pbat::common::ForRange<0, 3>([&]<auto d>() {
+                using Vector2 = pbat::math::linalg::mini::SVector<GpuScalar, 2>;
+                Vector2 b{xkm2[d][i] - xk[d][i], xkm1[d][i] - xk[d][i]};
+                auto ab  = (Vinv * b);
+                AB(d, 0) = ab(0);
+                AB(d, 1) = ab(1);
+            });
+            ToBuffers(AB.Col(0), ax, i);
+            ToBuffers(AB.Col(1), bx, i);
+        });
+}
+
+void TrustRegionIntegrator::TakeCurvedStep(GpuScalar t)
+{
+    auto tbar            = (t - tk) / (tk - tkm2);
+    auto const nVertices = static_cast<GpuIndex>(x.Size());
+    thrust::for_each(
+        thrust::device,
+        thrust::make_counting_iterator(0),
+        thrust::make_counting_iterator(nVertices),
+        [x    = x.Raw(),
+         xkm1 = xkm1.Raw(),
+         xkm2 = xkm2.Raw(),
+         ax   = ax.Raw(),
+         bx   = bx.Raw(),
+         cx   = cx.Raw(),
+         tbar] PBAT_DEVICE(GpuIndex i) {
+            using namespace pbat::math::linalg::mini;
+            auto axi = FromBuffers<3, 1>(ax, i);
+            auto bxi = FromBuffers<3, 1>(bx, i);
+            auto cxi = FromBuffers<3, 1>(cx, i);
+            auto xtr = axi * tbar * tbar + bxi * tbar + cxi;
+            ToBuffers(xtr, x, i);
+        });
+}
+
+void TrustRegionIntegrator::RollbackCurvedStep()
+{
+    // Recall that x(t) = ax (t-t_k)^2 + bx (t-t_k) + cx .
+    // We know that x(t_k) = x_k, thus
+    // x(t_k) = cx = x_k
+    x = cx;
 }
 
 } // namespace pbat::gpu::impl::vbd

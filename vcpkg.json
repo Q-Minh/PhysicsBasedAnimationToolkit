@@ -21,10 +21,6 @@
             "version>=": "2022.0.0"
         },
         {
-            "name": "boost-math",
-            "version>=": "1.86.0"
-        },
-        {
             "name": "doctest",
             "version>=": "2.4.11"
         }
