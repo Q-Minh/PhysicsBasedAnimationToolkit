@@ -130,3 +130,22 @@ keywords = {constrained optimization, contact mechanics, elastodynamics, frictio
   year={2004},
   publisher={Crc Press}
 }
+
+@article{cem2022polyroot,
+author = {Yuksel, Cem},
+title = {High-Performance Polynomial Root Finding for Graphics},
+year = {2022},
+issue_date = {July 2022},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+volume = {5},
+number = {3},
+url = {https://doi.org/10.1145/3543865},
+doi = {10.1145/3543865},
+abstract = {We present a computationally-efficient and numerically-robust algorithm for finding real roots of polynomials. It begins with determining the intervals where the given polynomial is monotonic. Then, it performs a robust variant of Newton iterations to find the real root within each interval, providing fast and guaranteed convergence and satisfying the given error bound, as permitted by the numerical precision used.For cubic polynomials, the algorithm is more accurate and faster than both the analytical solution and directly applying Newton iterations. It trivially extends to polynomials with arbitrary degrees, but it is limited to finding the real roots only and has quadratic worst-case complexity in terms of the polynomial's degree.We show that our method outperforms alternative polynomial solutions we tested up to degree 20. We also present an example rendering application with a known efficient numerical solution and show that our method provides faster, more accurate, and more robust solutions by solving polynomials of degree 10.},
+journal = {Proc. ACM Comput. Graph. Interact. Tech.},
+month = jul,
+articleno = {27},
+numpages = {15},
+keywords = {quartic solver, cubic solver, Polynomial solver, Newton iterations}
+}

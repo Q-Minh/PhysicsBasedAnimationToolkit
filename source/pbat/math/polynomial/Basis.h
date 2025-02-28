@@ -1,13 +1,19 @@
-#ifndef PBAT_MATH_POLYNOMIAL_BASIS_H
-#define PBAT_MATH_POLYNOMIAL_BASIS_H
-
 /**
  * @file Basis.h
+ * @author Quoc-Minh Ton-That (tonthat.quocminh@gmail.com)
+ * @brief Basis polynomials in \f$ d=1,2,3 \f$ dimensions and orders \f$ p=1,2,3,4 \f$.
  *
  * All the polynomials defined are based on expressions computed symbolically in the script
  * polynomial_basis.py (or equivalently polynomial_basis.ipynb).
  *
+ * @date 2025-02-27
+ *
+ * @copyright Copyright (c) 2025
+ *
  */
+
+#ifndef PBAT_MATH_POLYNOMIAL_BASIS_H
+#define PBAT_MATH_POLYNOMIAL_BASIS_H
 
 #include "pbat/Aliases.h"
 
@@ -120,9 +126,9 @@ struct OrthonormalBasis : detail::OrthonormalBasis<Dims, Order>
 {
   public:
     using BaseType = typename detail::OrthonormalBasis<Dims, Order>; ///< Base type
-    inline static constexpr std::size_t kDims  = BaseType::kDims;  ///< Spatial dimensions
-    inline static constexpr std::size_t kOrder = BaseType::kOrder; ///< Polynomial order
-    inline static constexpr std::size_t kSize  = BaseType::kSize;  ///< Number of basis functions
+    inline static constexpr std::size_t kDims  = BaseType::kDims;    ///< Spatial dimensions
+    inline static constexpr std::size_t kOrder = BaseType::kOrder;   ///< Polynomial order
+    inline static constexpr std::size_t kSize  = BaseType::kSize;    ///< Number of basis functions
     /**
      * @brief
      *
@@ -185,9 +191,9 @@ struct DivergenceFreeBasis : detail::DivergenceFreeBasis<Dims, Order>
 {
   public:
     using BaseType = typename detail::DivergenceFreeBasis<Dims, Order>; ///< Base type
-    inline static constexpr std::size_t kDims  = BaseType::kDims;  ///< Spatial dimensions
-    inline static constexpr std::size_t kOrder = BaseType::kOrder; ///< Polynomial order
-    inline static constexpr std::size_t kSize  = BaseType::kSize;  ///< Number of basis functions
+    inline static constexpr std::size_t kDims  = BaseType::kDims;       ///< Spatial dimensions
+    inline static constexpr std::size_t kOrder = BaseType::kOrder;      ///< Polynomial order
+    inline static constexpr std::size_t kSize  = BaseType::kSize; ///< Number of basis functions
     /**
      * @brief
      *

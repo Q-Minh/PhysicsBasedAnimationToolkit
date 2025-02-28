@@ -1,3 +1,13 @@
+/**
+ * @file Concepts.h
+ * @author Quoc-Minh Ton-That (tonthat.quocminh@gmail.com)
+ * @brief Concepts for polynomial basis
+ * @date 2025-02-27
+ *
+ * @copyright Copyright (c) 2025
+ *
+ */
+
 #ifndef PBAT_MATH_POLYNOMIAL_CONCEPTS_H
 #define PBAT_MATH_POLYNOMIAL_CONCEPTS_H
 
