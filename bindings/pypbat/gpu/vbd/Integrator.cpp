@@ -46,6 +46,7 @@ void BindIntegrator([[maybe_unused]] pybind11::module& m)
             pyb::arg("iterations") = GpuIndex{20},
             pyb::arg("substeps")   = GpuIndex{1},
             pyb::arg("t"),
+            pyb::arg("dir") = ".",
             "Integrate 1 time step and trace the result to disk.\n"
             "The result is saved in the current working directory as matrix market files.\n"
             "Filenames follow the pattern {variable}.t.{timestep}.s.{substep}[.k.{iteration}].mtx\n"
@@ -54,7 +55,9 @@ void BindIntegrator([[maybe_unused]] pybind11::module& m)
             "    dt (float): Time step. Defaults to 0.01.\n"
             "    iterations (int): Number of optimization iterations per substep. Defaults to 20.\n"
             "    substeps (int): Number of substeps. Defaults to 1.\n"
-            "    t (int): Current time step")
+            "    t (int): Current time step\n"
+            "    dir (str): Directory to save the matrix market files. Defaults to the current "
+            "working directory.")
         .def_property(
             "x",
             &Integrator::GetPositions,

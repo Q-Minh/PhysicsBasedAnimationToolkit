@@ -16,6 +16,8 @@
 #include "pbat/sim/vbd/Data.h"
 #include "pbat/sim/vbd/Enums.h"
 
+#include <string_view>
+
 namespace pbat::gpu::impl::vbd {
 class Integrator;
 } // namespace pbat::gpu::impl::vbd
@@ -78,8 +80,14 @@ class Integrator
      * @param iterations Number of optimization iterations per substep
      * @param substeps Number of substeps
      * @param t Current time step
+     * @param dir Directory to save the matrix market files
      */
-    PBAT_API void TracedStep(GpuScalar dt, GpuIndex iterations, GpuIndex substeps, GpuIndex t);
+    PBAT_API void TracedStep(
+        GpuScalar dt,
+        GpuIndex iterations,
+        GpuIndex substeps,
+        GpuIndex t,
+        std::string_view dir = ".");
     /**
      * @brief Set the vertex positions
      * @param X `3x|# vertices|` array of vertex positions

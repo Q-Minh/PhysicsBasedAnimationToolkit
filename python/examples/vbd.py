@@ -139,6 +139,13 @@ if __name__ == "__main__":
         type=float,
         default=2.0,
     )
+    parser.add_argument(
+        "--trace",
+        help="Enable trace output",
+        action="store_true",
+        dest="trace",
+        default=False,
+    )
     args = parser.parse_args()
 
     # Construct FEM quantities for simulation
@@ -287,7 +294,10 @@ if __name__ == "__main__":
 
         if animate or step:
             profiler.begin_frame("Physics")
-            vbd.step(dt, iterations, substeps)
+            if args.trace:
+                vbd.traced_step(dt, iterations, substeps, t, dir=args.output)
+            else:
+                vbd.step(dt, iterations, substeps)
             profiler.end_frame("Physics")
 
             # Update visuals

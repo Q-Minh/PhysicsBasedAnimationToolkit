@@ -26,6 +26,7 @@
 // clang-format on
 
 #include <cuda/api/stream.hpp>
+#include <string_view>
 #include <vector>
 
 namespace pbat::gpu::impl::vbd {
@@ -64,8 +65,14 @@ class Integrator
      * @param iterations Number of optimization iterations per substep
      * @param substeps Number of substeps
      * @param t Current time step
+     * @param dir Directory to save matrix market files
      */
-    void TracedStep(GpuScalar dt, GpuIndex iterations, GpuIndex substeps, GpuIndex t);
+    void TracedStep(
+        GpuScalar dt,
+        GpuIndex iterations,
+        GpuIndex substeps,
+        GpuIndex t,
+        std::string_view dir = ".");
     /**
      * @brief Set the bounding box over the scene used for spatial partitioning
      * @param min Minimum corner
@@ -122,12 +129,14 @@ class Integrator
      * @param iterations Number of iterations
      * @param t Current time step
      * @param s Current substep
+     * @param dir Directory to save matrix market files
      */
     void TracedSolve(
         kernels::BackwardEulerMinimization& bdf,
         GpuIndex iterations,
         GpuIndex t,
-        GpuIndex s);
+        GpuIndex s,
+        std::string_view dir);
     /**
      * @brief Run a single iteration of the VBD's BDF minimization
      *

@@ -55,9 +55,14 @@ void Integrator::Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps)
     mImpl->Step(dt, iterations, substeps);
 }
 
-void Integrator::TracedStep(GpuScalar dt, GpuIndex iterations, GpuIndex substeps, GpuIndex t)
+void Integrator::TracedStep(
+    GpuScalar dt,
+    GpuIndex iterations,
+    GpuIndex substeps,
+    GpuIndex t,
+    std::string_view dir)
 {
-    mImpl->TracedStep(dt, iterations, substeps, t);
+    mImpl->TracedStep(dt, iterations, substeps, t, dir);
 }
 
 void Integrator::SetPositions(Eigen::Ref<GpuMatrixX const> const& X)
