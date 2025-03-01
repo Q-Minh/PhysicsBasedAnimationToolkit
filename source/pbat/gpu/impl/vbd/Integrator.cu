@@ -15,6 +15,7 @@
 // #include <thrust/async/copy.h>
 #include <thrust/async/for_each.h>
 #include <thrust/execution_policy.h>
+#include <unsupported/Eigen/SparseExtra>
 
 namespace pbat::gpu::impl::vbd {
 
@@ -97,6 +98,31 @@ void Integrator::Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps)
         this->Solve(bdf, iterations); // Template method solve
         UpdateBdfState(sdt);
         PBAT_PROFILE_CUDA_HOST_SCOPE_END(subCtx);
+    }
+    cd.FinalizeActiveSet(x);
+}
+
+void Integrator::TracedStep(GpuScalar dt, GpuIndex iterations, GpuIndex substeps, GpuIndex t)
+{
+    PBAT_PROFILE_CUDA_NAMED_SCOPE("pbat.gpu.impl.vbd.Integrator.TracedStep");
+    GpuScalar sdt  = dt / static_cast<GpuScalar>(substeps);
+    GpuScalar sdt2 = sdt * sdt;
+
+    InitializeActiveSet(dt);
+    auto bdf = BdfDeviceParameters(sdt, sdt2);
+    for (auto s = 0; s < substeps; ++s)
+    {
+        ComputeInertialTargets(sdt, sdt2);
+        Eigen::saveMarketDense(
+            common::ToEigen(mInertialTargetPositions),
+            fmt::format("xtilde.t.{}.s.{}.mtx", t, s));
+        InitializeBcdSolution(sdt, sdt2);
+        // TODO:
+        // Should trace information about the contact energies too.
+        if (s % mActiveSetUpdateFrequency == 0)
+            UpdateActiveSet();
+        this->TracedSolve(bdf, iterations, t, s); // Template method solve
+        UpdateBdfState(sdt);
     }
     cd.FinalizeActiveSet(x);
 }
@@ -233,6 +259,22 @@ void Integrator::Solve(kernels::BackwardEulerMinimization& bdf, GpuIndex iterati
     {
         RunVbdIteration(bdf);
     }
+}
+
+void Integrator::TracedSolve(
+    kernels::BackwardEulerMinimization& bdf,
+    GpuIndex iterations,
+    GpuIndex t,
+    GpuIndex s)
+{
+    for (auto k = 0; k < iterations; ++k)
+    {
+        Eigen::saveMarketDense(common::ToEigen(x), fmt::format("x.t.{}.s.{}.k.{}.mtx", t, s, k));
+        RunVbdIteration(bdf);
+    }
+    Eigen::saveMarketDense(
+        common::ToEigen(x),
+        fmt::format("x.t.{}.s.{}.k.{}.mtx", t, s, iterations));
 }
 
 void Integrator::RunVbdIteration(kernels::BackwardEulerMinimization& bdf)

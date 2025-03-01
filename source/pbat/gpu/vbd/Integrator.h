@@ -69,6 +69,18 @@ class Integrator
      */
     PBAT_API void Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps = GpuIndex{1});
     /**
+     * @brief Execute one simulation step and trace the result
+     *
+     * * Saves matrix market files which follow the pattern
+     * `{variable}.t.{timestep}.s.{substep}[.k.{iteration}].mtx`
+     *
+     * @param dt Time step
+     * @param iterations Number of optimization iterations per substep
+     * @param substeps Number of substeps
+     * @param t Current time step
+     */
+    PBAT_API void TracedStep(GpuScalar dt, GpuIndex iterations, GpuIndex substeps, GpuIndex t);
+    /**
      * @brief Set the vertex positions
      * @param X `3x|# vertices|` array of vertex positions
      */

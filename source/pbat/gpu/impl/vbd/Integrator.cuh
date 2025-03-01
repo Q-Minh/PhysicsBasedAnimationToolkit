@@ -55,6 +55,18 @@ class Integrator
      */
     void Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps = GpuIndex{1});
     /**
+     * @brief Execute one simulation step with tracing to disk.
+     *
+     * Saves matrix market files which follow the pattern
+     * `{variable}.t.{timestep}.s.{substep}[.k.{iteration}].mtx`
+     *
+     * @param dt Time step
+     * @param iterations Number of optimization iterations per substep
+     * @param substeps Number of substeps
+     * @param t Current time step
+     */
+    void TracedStep(GpuScalar dt, GpuIndex iterations, GpuIndex substeps, GpuIndex t);
+    /**
      * @brief Set the bounding box over the scene used for spatial partitioning
      * @param min Minimum corner
      * @param max Maximum corner
@@ -101,6 +113,21 @@ class Integrator
      * @param iterations Number of iterations
      */
     virtual void Solve(kernels::BackwardEulerMinimization& bdf, GpuIndex iterations);
+    /**
+     * @brief VBD to iterate on the BDF minimization problem
+     *
+     * Saves all iterates to disk.
+     *
+     * @param bdf Device BDF minimization problem
+     * @param iterations Number of iterations
+     * @param t Current time step
+     * @param s Current substep
+     */
+    void TracedSolve(
+        kernels::BackwardEulerMinimization& bdf,
+        GpuIndex iterations,
+        GpuIndex t,
+        GpuIndex s);
     /**
      * @brief Run a single iteration of the VBD's BDF minimization
      *
