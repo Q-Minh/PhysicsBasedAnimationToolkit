@@ -53,15 +53,6 @@
                 }
             ]
         },
-        "python": {
-            "description": "Enable building Python bindings",
-            "dependencies": [
-                {
-                    "name": "pybind11",
-                    "version>=": "2.13.6"
-                }
-            ]
-        },
         "cuda": {
             "description": "Use CUDA for GPU accelerated modules",
             "dependencies": [

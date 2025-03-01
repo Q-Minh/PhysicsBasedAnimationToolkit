@@ -134,7 +134,6 @@
             "name": "python",
             "hidden": true,
             "cacheVariables": {
-                "VCPKG_MANIFEST_FEATURES": "python",
                 "PBAT_BUILD_PYTHON_BINDINGS": {
                     "type": "BOOL",
                     "value": "ON"
@@ -186,15 +185,12 @@
             "inherits": [
                 "default",
                 "profile",
-                "pic"
+                "pic",
+                "python"
             ],
             "cacheVariables": {
-                "VCPKG_MANIFEST_FEATURES": "cuda;python",
+                "VCPKG_MANIFEST_FEATURES": "cuda",
                 "PBAT_USE_CUDA": {
-                    "type": "BOOL",
-                    "value": "ON"
-                },
-                "PBAT_BUILD_PYTHON_BINDINGS": {
                     "type": "BOOL",
                     "value": "ON"
                 }

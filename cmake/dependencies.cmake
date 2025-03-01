@@ -17,8 +17,18 @@ if(NOT TARGET Eigen3::Eigen)
 endif()
 
 if(PBAT_BUILD_PYTHON_BINDINGS)
-    find_package(Python COMPONENTS Interpreter Development.Module REQUIRED)
-    find_package(pybind11 CONFIG REQUIRED)
+    find_package(
+        Python 
+        COMPONENTS Development.Module 
+        REQUIRED
+    )
+    FetchContent_Declare(
+        _pybind11
+        GIT_REPOSITORY https://github.com/pybind/pybind11.git
+        GIT_TAG v2.13.6
+        GIT_PROGRESS TRUE
+    )
+    FetchContent_MakeAvailable(_pybind11)
 endif()
 
 if(PBAT_ENABLE_PROFILER)
