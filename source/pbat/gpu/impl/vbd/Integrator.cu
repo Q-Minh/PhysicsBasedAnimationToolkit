@@ -110,6 +110,21 @@ void Integrator::TracedStep(
     std::string_view dir)
 {
     PBAT_PROFILE_CUDA_NAMED_SCOPE("pbat.gpu.impl.vbd.Integrator.TracedStep");
+
+    bool const bIsFirstFrame = t == 0;
+    if (bIsFirstFrame)
+    {
+        Eigen::saveMarketDense(common::ToEigen(T).transpose(), fmt::format("{}/T.mtx", dir));
+        Eigen::saveMarketDense(common::ToEigen(mMass), fmt::format("{}/M.mtx", dir));
+        Eigen::saveMarketDense(common::ToEigen(mQuadratureWeights), fmt::format("{}/wg.mtx", dir));
+        Eigen::saveMarketDense(
+            common::ToEigen(mShapeFunctionGradients).reshaped(4, 3 * T.Size()),
+            fmt::format("{}/GP.mtx", dir));
+        Eigen::saveMarketDense(
+            common::ToEigen(mLameCoefficients).reshaped(2, T.Size()).transpose(),
+            fmt::format("{}/lame.mtx", dir));
+    }
+
     GpuScalar sdt  = dt / static_cast<GpuScalar>(substeps);
     GpuScalar sdt2 = sdt * sdt;
 
@@ -119,7 +134,7 @@ void Integrator::TracedStep(
     {
         ComputeInertialTargets(sdt, sdt2);
         Eigen::saveMarketDense(
-            common::ToEigen(mInertialTargetPositions),
+            common::ToEigen(mInertialTargetPositions).transpose(),
             fmt::format("{}/xtilde.t.{}.s.{}.mtx", dir, t, s));
         InitializeBcdSolution(sdt, sdt2);
         // TODO:
@@ -276,12 +291,12 @@ void Integrator::TracedSolve(
     for (auto k = 0; k < iterations; ++k)
     {
         Eigen::saveMarketDense(
-            common::ToEigen(x),
+            common::ToEigen(x).transpose(),
             fmt::format("{}/x.t.{}.s.{}.k.{}.mtx", dir, t, s, k));
         RunVbdIteration(bdf);
     }
     Eigen::saveMarketDense(
-        common::ToEigen(x),
+        common::ToEigen(x).transpose(),
         fmt::format("{}/x.t.{}.s.{}.k.{}.mtx", dir, t, s, iterations));
 }
 
