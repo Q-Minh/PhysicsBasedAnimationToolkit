@@ -210,8 +210,6 @@ PBAT_API struct Data
 
     // Chebyshev acceleration
     Scalar rho{1};   ///< Chebyshev acceleration estimated spectral radius
-    MatrixX xchebm2; ///< `3x|# verts|` \f$ x^{k-2} \f$ used in Chebyshev semi-iterative method
-    MatrixX xchebm1; ///< `3x|# verts|` \f$ x^{k-1} \f$ used in Chebyshev semi-iterative method
 
     // Trust Region acceleration
     Scalar eta{0.2};    ///< Trust Region energy reduction accuracy threshold

@@ -14,10 +14,16 @@ class Integrator
   public:
     PBAT_API Integrator(Data data);
 
-    PBAT_API void
-    Step(Scalar dt, Index iterations, Index substeps = Index{1}, Scalar rho = Scalar{1});
+    PBAT_API void Step(Scalar dt, Index iterations, Index substeps = Index{1});
 
     PBAT_API Data data;
+
+    virtual ~Integrator() = default;
+
+  protected:
+    PBAT_API void InitializeSolve(Scalar sdt, Scalar sdt2);
+    PBAT_API void RunVbdIteration(Scalar sdt, Scalar sdt2);
+    PBAT_API virtual void Solve(Scalar sdt, Scalar sdt2, Index iterations);
 };
 
 } // namespace vbd

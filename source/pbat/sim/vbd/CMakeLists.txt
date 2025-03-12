@@ -2,6 +2,7 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     PUBLIC
     FILE_SET api
     FILES
+    "ChebyshevIntegrator.h"
     "Vbd.h"
     "Data.h"
     "Enums.h"
@@ -11,6 +12,7 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
 )
 target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     PRIVATE
+    "ChebyshevIntegrator.cpp"
     "Data.cpp"
     "Kernels.cpp"
     "Integrator.cpp"

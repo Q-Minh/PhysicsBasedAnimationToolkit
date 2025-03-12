@@ -172,8 +172,6 @@ Data& Data::Construct(bool bValidate)
         aext.colwise() = Vector<3>{Scalar(0), Scalar(0), Scalar(-9.81)};
     }
     xtilde.resizeLike(x);
-    xchebm2.resizeLike(x);
-    xchebm1.resizeLike(x);
     vt.resizeLike(x);
     // Element data
     if (lame.size() == 0)

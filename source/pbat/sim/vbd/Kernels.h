@@ -94,7 +94,7 @@ PBAT_HOST_DEVICE mini::SVector<ScalarType, TMatrixXT::kRows> InitialPositionsFor
 }
 
 template <class ScalarType, class IndexType>
-PBAT_HOST ScalarType ChebyshevOmega(IndexType k, ScalarType rho2, ScalarType omega)
+PBAT_HOST [[maybe_unused]] ScalarType ChebyshevOmega(IndexType k, ScalarType rho2, ScalarType omega)
 {
     return (k == IndexType(0)) ? ScalarType{1} :
            (k == IndexType(1)) ? ScalarType{2} / (ScalarType{2} - rho2) :
@@ -107,7 +107,7 @@ template <
     mini::CMatrix TMatrixXK,
     class IndexType,
     class ScalarType = typename TMatrixXK::ScalarType>
-PBAT_HOST_DEVICE void
+PBAT_HOST_DEVICE [[maybe_unused]] void
 ChebyshevUpdate(IndexType k, ScalarType omega, TMatrixXKM2& xkm2, TMatrixXKM1& xkm1, TMatrixXK& xk)
 {
     if (k > 1)
