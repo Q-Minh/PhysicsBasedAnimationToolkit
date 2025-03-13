@@ -8,8 +8,9 @@ namespace py {
 namespace gpu {
 namespace common {
 
-void BindBuffer(pybind11::module& m)
+void BindBuffer([[maybe_unused]] pybind11::module& m)
 {
+#ifdef PBAT_USE_CUDA
     namespace pyb = pybind11;
 
     using pbat::gpu::common::Buffer;
@@ -58,6 +59,7 @@ void BindBuffer(pybind11::module& m)
         .def_property_readonly("dims", &Buffer::Dims)
         .def_property_readonly("type", &Buffer::Type)
         .def_property_readonly("size", &Buffer::Size);
+#endif // PBAT_USE_CUDA
 }
 
 } // namespace common

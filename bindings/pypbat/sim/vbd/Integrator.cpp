@@ -1,5 +1,7 @@
 #include "Integrator.h"
 
+#include <memory>
+#include <pbat/sim/vbd/ChebyshevIntegrator.h>
 #include <pbat/sim/vbd/Data.h>
 #include <pbat/sim/vbd/Enums.h>
 #include <pbat/sim/vbd/Integrator.h>
@@ -15,12 +17,18 @@ void BindIntegrator(pybind11::module& m)
 {
     namespace pyb    = pybind11;
     using ScalarType = pbat::Scalar;
+    using pbat::sim::vbd::ChebyshevIntegrator;
     using pbat::sim::vbd::Data;
+    using pbat::sim::vbd::EAccelerationStrategy;
     using pbat::sim::vbd::EInitializationStrategy;
     using pbat::sim::vbd::Integrator;
     pyb::class_<Integrator>(m, "Integrator")
         .def(
-            pyb::init([](Data const& data) { return Integrator(data); }),
+            pyb::init([](Data const& data) -> std::unique_ptr<Integrator> {
+                if (data.eAcceleration == EAccelerationStrategy::Chebyshev)
+                    return std::make_unique<ChebyshevIntegrator>(data);
+                return std::make_unique<Integrator>(data);
+            }),
             "Construct a VBD integrator initialized with data. To access the data "
             "during simulation, go through the pbat.sim.vbd.Integrator.data member.")
         .def(
@@ -29,8 +37,12 @@ void BindIntegrator(pybind11::module& m)
             pyb::arg("dt"),
             pyb::arg("iterations"),
             pyb::arg("substeps") = 1,
-            pyb::arg("rho")      = ScalarType(1),
-            "Integrate the VBD simulation 1 time step.")
+            "Integrate the VBD simulation 1 time step.\n\n"
+            "Args:\n"
+            "    dt (float): Time step size.\n"
+            "    iterations (int): Number of iterations to solve the non-linear optimization "
+            "problem.\n"
+            "    substeps (int): Number of substeps to take per time step.")
         .def_property(
             "x",
             [](Integrator const& self) { return self.data.x; },
@@ -41,23 +53,6 @@ void BindIntegrator(pybind11::module& m)
             [](Integrator const& self) { return self.data.v; },
             [](Integrator& self, Eigen::Ref<MatrixX const> const& v) { self.data.v = v; },
             "3x|#nodes| nodal velocities")
-        .def_property(
-            "strategy",
-            [](Integrator const& self) { return self.data.strategy; },
-            [](Integrator& self, EInitializationStrategy strategy) {
-                self.data.strategy = strategy;
-            },
-            "Initialization strategy for non-linear optimization solve.")
-        .def_property(
-            "kD",
-            [](Integrator const& self) { return self.data.kD; },
-            [](Integrator& self, Scalar kD) { self.data.kD = kD; },
-            "Rayleigh damping coefficient.")
-        .def_property(
-            "detH_residual",
-            [](Integrator const& self) { return self.data.detHZero; },
-            [](Integrator& self, Scalar detHZero) { self.data.detHZero = detHZero; },
-            "Numerical zero used in 'singular' hessian determinant check.")
         .def_readwrite("data", &Integrator::data);
 }
 

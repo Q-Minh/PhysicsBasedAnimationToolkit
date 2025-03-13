@@ -8,7 +8,7 @@ namespace py {
 namespace gpu {
 namespace geometry {
 
-void BindAabb(pybind11::module& m)
+void BindAabb([[maybe_unused]] pybind11::module& m)
 {
 #ifdef PBAT_USE_CUDA
     namespace pyb = pybind11;

@@ -8,8 +8,9 @@
 
 namespace pbat::py::gpu::contact {
 
-void BindVertexTriangleMixedCcdDcd(pybind11::module& m)
+void BindVertexTriangleMixedCcdDcd([[maybe_unused]] pybind11::module& m)
 {
+#ifdef PBAT_USE_CUDA
     namespace pyb = pybind11;
     using namespace pbat::gpu::contact;
 
@@ -81,6 +82,7 @@ void BindVertexTriangleMixedCcdDcd(pybind11::module& m)
             "active_mask",
             &VertexTriangleMixedCcdDcd::ActiveMask,
             "Returns |#verts| 1D mask for active vertices");
+#endif // PBAT_USE_CUDA
 }
 
 } // namespace pbat::py::gpu::contact
