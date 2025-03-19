@@ -141,25 +141,11 @@ void NearestNeighbour(
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.geometry.NearestNeighbour");
 
-    common::Stack<TIndex, kStackDepth> dfs{};
     common::Queue<TIndex, kQueueSize> nn{};
-    if (fLower(root) <= fUpper)
-        dfs.Push(root);
-
-    do
-    {
-        TIndex const node = dfs.Pop();
-        if (not fIsLeaf(node))
-        {
-            // Recurse into children unless minimum cannot be found in their subdomain
-            common::ForRange<0, N>([&]<auto i> {
-                TIndex const child = fChild.template operator()<i>(node);
-                if (child >= 0)
-                    if (fLower(child) <= fUpper)
-                        dfs.Push(child);
-            });
-        }
-        else
+    auto fVisit = [&](TIndex node) {
+        if (fLower(node) > fUpper)
+            return false;
+        if (fIsLeaf(node))
         {
             TIndex const nLeafObjects = fLeafSize(node);
             for (TIndex i = 0; i < nLeafObjects; ++i)
@@ -180,7 +166,13 @@ void NearestNeighbour(
                 }
             }
         }
-    } while (not dfs.IsEmpty());
+        return true;
+    };
+    using FVisit = decltype(fVisit);
+    common::TraverseNAryTreePseudoPreOrder<FVisit, FChild, TIndex, N, kStackDepth>(
+        fVisit,
+        fChild,
+        root);
     TIndex k{0};
     while (not nn.IsEmpty())
     {
