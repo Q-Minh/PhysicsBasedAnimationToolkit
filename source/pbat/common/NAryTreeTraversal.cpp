@@ -14,10 +14,6 @@ TEST_CASE("[common] NAryTreeTraversal")
     std::array<Node, 5> nodes{Node{1, 4}, Node{2, 3}, Node{}, Node{}, Node{}};
     std::vector<Index> result{};
     result.reserve(nodes.size());
-    auto const fVisit = [&result](Index node) {
-        result.push_back(node);
-        return true;
-    };
     auto const fChildren = [&nodes]<auto c>(Index node) {
         if constexpr (c == 0)
             return nodes[static_cast<std::size_t>(node)].l;
@@ -26,6 +22,10 @@ TEST_CASE("[common] NAryTreeTraversal")
     };
     SUBCASE("Pre-order")
     {
+        auto const fVisit = [&result](Index node) {
+            result.push_back(node);
+            return true;
+        };
         // Act
         pbat::common::TraverseNAryTreePseudoPreOrder(fVisit, fChildren);
         // Assert
@@ -42,6 +42,9 @@ TEST_CASE("[common] NAryTreeTraversal")
     }
     SUBCASE("Post-order")
     {
+        auto const fVisit = [&result](Index node) {
+            result.push_back(node);
+        };
         // Act
         pbat::common::TraverseNAryTreePseudoPostOrder(fVisit, fChildren);
         // Assert

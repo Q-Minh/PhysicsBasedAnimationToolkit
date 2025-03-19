@@ -36,8 +36,7 @@ PBAT_HOST_DEVICE void TraverseNAryTreePseudoPreOrder(FVisit fVisit, FChild fChil
  * @tparam N Number of children per node
  * @tparam kStackDepth Maximum depth of the traversal's stack. The actual stack depth will be
  * N*kStackDepth.
- * @param fVisit `bool(TIndex node)` function to visit a node. Returns true if node's sub-tree
- * should be visited.
+ * @param fVisit `void(TIndex node)` function to visit a node.
  * @param fChild `template <TIndex c> TIndex(TIndex node)` function to get child c of a node.
  * Returns the child index or -1 if no child.
  * @param root Index of the root node to start the search from
@@ -45,6 +44,9 @@ PBAT_HOST_DEVICE void TraverseNAryTreePseudoPreOrder(FVisit fVisit, FChild fChil
  * @note The traversal is deemed "pseudo" post-order because each visited node's children are
  * visited in arbitrary order. The only guarantee is that a parent node is visited after its
  * children. This is due to compile-time loops not being able to guarantee the order of execution.
+ *
+ * @note The visitor does not support sub-tree pruning, since visited nodes are always processed
+ * after their sub-tree.
  */
 template <class FVisit, class FChild, class TIndex = Index, auto N = 2, auto kStackDepth = 64>
 PBAT_HOST_DEVICE void
@@ -86,8 +88,7 @@ PBAT_HOST_DEVICE void TraverseNAryTreePseudoPostOrder(FVisit fVisit, FChild fChi
         dfs.Pop();
         if (visit.bChildrenVisited)
         {
-            if (not fVisit(visit.node))
-                continue;
+            fVisit(visit.node);
         }
         else
         {
