@@ -28,10 +28,9 @@ void BindTriangleAabbHierarchy(pybind11::module& m)
         }();
         pyb::class_<BvhType>(m, className.data())
             .def(
-                pyb::init(
-                    [](Eigen::Ref<MatrixX const> const& V,
-                       Eigen::Ref<IndexMatrixX const> const& C,
-                       std::size_t maxPointsInLeaf) { return BvhType(V, C, maxPointsInLeaf); }),
+                pyb::init([](Eigen::Ref<MatrixX const> const& V,
+                             Eigen::Ref<IndexMatrixX const> const& C,
+                             Index maxPointsInLeaf) { return BvhType(V, C, maxPointsInLeaf); }),
                 pyb::arg("V").noconvert(),
                 pyb::arg("C").noconvert(),
                 pyb::arg("max_points_in_leaf") = 10ULL)

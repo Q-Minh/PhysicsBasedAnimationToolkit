@@ -54,7 +54,7 @@ class TetrahedralAabbHierarchy : public BoundingVolumeHierarchy<
     PBAT_API TetrahedralAabbHierarchy(
         Eigen::Ref<MatrixX const> const& V,
         Eigen::Ref<IndexMatrixX const> const& C,
-        std::size_t maxPointsInLeaf = 10ULL);
+        Index maxPointsInLeaf = 10);
 
     /**
      * @brief Returns the primitive at index p

@@ -55,7 +55,7 @@ class TriangleAabbHierarchy3D : public BoundingVolumeHierarchy<
     TriangleAabbHierarchy3D(
         Eigen::Ref<MatrixX const> const& V,
         Eigen::Ref<IndexMatrixX const> const& C,
-        std::size_t maxPointsInLeaf = 10ULL);
+        Index maxPointsInLeaf = 10);
     /**
      * @brief Returns the primitive at index p
      * @param p Index of the primitive
@@ -278,7 +278,7 @@ class TriangleAabbHierarchy2D : public BoundingVolumeHierarchy<
     TriangleAabbHierarchy2D(
         Eigen::Ref<MatrixX const> const& V,
         Eigen::Ref<IndexMatrixX const> const& C,
-        std::size_t maxPointsInLeaf = 10ULL);
+        Index maxPointsInLeaf = 10);
     /**
      * @brief Returns the primitive at index p
      * @param p Index of the primitive

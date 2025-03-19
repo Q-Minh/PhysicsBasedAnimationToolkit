@@ -13,7 +13,7 @@ namespace geometry {
 TetrahedralAabbHierarchy::TetrahedralAabbHierarchy(
     Eigen::Ref<MatrixX const> const& V,
     Eigen::Ref<IndexMatrixX const> const& C,
-    std::size_t maxPointsInLeaf)
+    Index maxPointsInLeaf)
     : V(V), C(C)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.geometry.TetrahedralAabbHierarchy.Construct");
@@ -31,7 +31,7 @@ TetrahedralAabbHierarchy::TetrahedralAabbHierarchy(
             C.cols());
         throw std::invalid_argument(what);
     }
-    Construct(static_cast<std::size_t>(C.cols()), maxPointsInLeaf);
+    Construct(C.cols(), maxPointsInLeaf);
 }
 
 TetrahedralAabbHierarchy::PrimitiveType TetrahedralAabbHierarchy::Primitive(Index p) const

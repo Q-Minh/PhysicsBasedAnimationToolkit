@@ -8,8 +8,8 @@
  *
  */
 
-#ifndef PBAT_GEOMETRY_KD_TREE_H
-#define PBAT_GEOMETRY_KD_TREE_H
+#ifndef PBAT_GEOMETRY_KDTREE_H
+#define PBAT_GEOMETRY_KDTREE_H
 
 #include "AxisAlignedBoundingBox.h"
 
@@ -33,11 +33,9 @@ struct KdTreeNode
     Index rc{-1}; ///< Index of right child of this node in the KDTree. -1 if no right child.
 
     Index begin{
-        -1}; ///< Index to first point encapsulated in this node's AABB in the permutation list.
-    std::size_t n{0}; ///< Number of points encapsulated in this node's AABB starting from begin and
-                      ///< continuing in contiguous memory in the permutation list until begin + n.
-
-    Index depth{0}; ///< Depth of this node in the KDTree.
+        -1};    ///< Index to first point encapsulated in this node's AABB in the permutation list.
+    Index n{0}; ///< Number of points encapsulated in this node's AABB starting from begin and
+                ///< continuing in contiguous memory in the permutation list until begin + n.
     /**
      * @brief Returns true if this node has a left child, false otherwise
      * @return true if this node has a left child, false otherwise
@@ -80,7 +78,7 @@ class KdTree
      * @param maxPointsInLeaf Maximum number of points in a leaf node
      */
     template <class TDerivedP>
-    KdTree(Eigen::DenseBase<TDerivedP> const& P, std::size_t maxPointsInLeaf = 10);
+    KdTree(Eigen::DenseBase<TDerivedP> const& P, Index maxPointsInLeaf = 10);
 
   private:
     inline static auto const fStopDefault = [](auto, auto) {
@@ -119,7 +117,7 @@ class KdTree
      * @param maxPointsInLeaf Maximum number of points in a leaf node
      */
     template <class TDerivedP>
-    void Construct(Eigen::DenseBase<TDerivedP> const& P, std::size_t maxPointsInLeaf);
+    void Construct(Eigen::DenseBase<TDerivedP> const& P, Index maxPointsInLeaf);
 
     /**
      * @brief Returns the nodes of the k-D tree
@@ -134,7 +132,7 @@ class KdTree
      *
      * @return Permutation of the points in the k-D tree
      */
-    std::vector<Index> const& Permutation() const { return mPermutation; }
+    IndexVectorX const& Permutation() const { return mPermutation; }
     /**
      * @brief Returns the points in a node
      * @param nodeIdx Index of the node
@@ -166,8 +164,8 @@ class KdTree
         Eigen::DenseBase<TDerivedP> const& P,
         AxisAlignedBoundingBox<Dims> const& aabb,
         Index const begin,
-        std::size_t const n,
-        std::size_t maxPointsInLeaf);
+        Index const n,
+        Index maxPointsInLeaf);
     /**
      * @brief Adds a node to the k-D tree's node list
      *
@@ -175,21 +173,20 @@ class KdTree
      * rooted in the added node
      * @param n Number of points in the permutation list starting from begin contained in the
      * sub-tree rooted in the added node
-     * @param depth Depth of the added node in the k-D tree
      * @return Index of the added node in the k-D tree's node list
      */
-    Index AddNode(Index begin, std::size_t n, Index depth);
+    Index AddNode(Index begin, Index n);
 
   private:
-    std::vector<Index> mPermutation; ///< mPermutation[i] gives the index of point i in
-                                     ///< the original points list given to
-                                     ///< construct(std::vector<Vector3> const& points).
-    std::vector<KdTreeNode> mNodes;  ///< KDTree nodes.
+    IndexVectorX mPermutation;      ///< mPermutation[i] gives the index of point i in
+                                    ///< the original points list given to
+                                    ///< construct(std::vector<Vector3> const& points).
+    std::vector<KdTreeNode> mNodes; ///< KDTree nodes.
 };
 
 template <int Dims>
 template <class TDerivedP>
-inline KdTree<Dims>::KdTree(Eigen::DenseBase<TDerivedP> const& P, std::size_t maxPointsInLeaf)
+inline KdTree<Dims>::KdTree(Eigen::DenseBase<TDerivedP> const& P, Index maxPointsInLeaf)
 {
     Construct(P, maxPointsInLeaf);
 }
@@ -251,20 +248,19 @@ inline void KdTree<Dims>::DepthFirstSearch(FVisit visit, FStop stop, Index root)
 
 template <int Dims>
 template <class TDerivedP>
-inline void
-KdTree<Dims>::Construct(Eigen::DenseBase<TDerivedP> const& P, std::size_t maxPointsInLeaf)
+inline void KdTree<Dims>::Construct(Eigen::DenseBase<TDerivedP> const& P, Index maxPointsInLeaf)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.geometry.KdTree.Construct");
-    std::size_t const n = static_cast<std::size_t>(P.cols());
+    Index const n = P.cols();
     mNodes.clear();
-    mNodes.reserve(n);
-    auto iota = std::views::iota(Index{0}, static_cast<Index>(n));
-    mPermutation.assign(iota.begin(), iota.end());
+    mNodes.reserve(static_cast<std::size_t>(n));
+    auto iota = std::views::iota(Index{0}, n);
+    mPermutation.resize(n);
+    std::copy(iota.begin(), iota.end(), mPermutation.data());
 
     geometry::AxisAlignedBoundingBox<Dims> const aabb{P};
-    auto const depth   = 0;
     auto const begin   = 0;
-    auto const rootIdx = AddNode(begin, n, depth);
+    auto const rootIdx = AddNode(begin, n);
     DoConstruct(rootIdx, P, aabb, begin, n, maxPointsInLeaf);
 }
 
@@ -275,8 +271,8 @@ inline void KdTree<Dims>::DoConstruct(
     Eigen::DenseBase<TDerivedP> const& P,
     AxisAlignedBoundingBox<Dims> const& aabb,
     Index const begin,
-    std::size_t const n,
-    std::size_t maxPointsInLeaf)
+    Index const n,
+    Index maxPointsInLeaf)
 {
     if (n <= maxPointsInLeaf)
         return;
@@ -284,30 +280,28 @@ inline void KdTree<Dims>::DoConstruct(
     Eigen::Index dimension{};
     (aabb.max() - aabb.min()).maxCoeff(&dimension);
 
-    std::size_t const halfnStl   = n / 2;
-    Index const halfn            = static_cast<Index>(halfnStl);
-    std::size_t const nodeIdxStl = static_cast<std::size_t>(nodeIdx);
+    Index const halfn = n / 2;
 
     std::nth_element(
-        mPermutation.begin() + begin,
-        mPermutation.begin() + begin + halfn,
-        mPermutation.begin() + begin + static_cast<Index>(n),
+        mPermutation.data() + begin,
+        mPermutation.data() + begin + halfn,
+        mPermutation.data() + begin + n,
         [&](Index const lhs, Index const rhs) { return P(dimension, lhs) < P(dimension, rhs); });
 
-    auto const depth      = mNodes[nodeIdxStl].depth;
-    auto lnode            = AddNode(begin, halfnStl, depth + 1u);
-    auto rnode            = AddNode(begin + halfn, n - halfnStl, depth + 1u);
-    mNodes[nodeIdxStl].lc = lnode;
-    mNodes[nodeIdxStl].rc = rnode;
+    auto& node = mNodes[static_cast<std::size_t>(nodeIdx)];
+    auto lnode = AddNode(begin, halfn);
+    auto rnode = AddNode(begin + halfn, n - halfn);
+    node.lc    = lnode;
+    node.rc    = rnode;
 
-    Scalar const split           = P(dimension, mPermutation[begin + halfnStl]);
+    Scalar const split           = P(dimension, mPermutation[begin + halfn]);
     AxisAlignedBoundingBox laabb = aabb;
     laabb.max()(dimension)       = split;
     AxisAlignedBoundingBox raabb = aabb;
     raabb.min()(dimension)       = split;
 
-    DoConstruct(mNodes[nodeIdxStl].lc, P, laabb, begin, halfnStl, maxPointsInLeaf);
-    DoConstruct(mNodes[nodeIdxStl].rc, P, raabb, begin + halfn, n - halfnStl, maxPointsInLeaf);
+    DoConstruct(node.lc, P, laabb, begin, halfn, maxPointsInLeaf);
+    DoConstruct(node.rc, P, raabb, begin + halfn, n - halfn, maxPointsInLeaf);
 }
 
 template <int Dims>
@@ -326,13 +320,12 @@ inline auto KdTree<Dims>::PointsInNode(KdTreeNode const& node) const
 }
 
 template <int Dims>
-inline Index KdTree<Dims>::AddNode(Index begin, std::size_t n, Index depth)
+inline Index KdTree<Dims>::AddNode(Index begin, Index n)
 {
     Index const nodeIdx = static_cast<Index>(mNodes.size());
     KdTreeNode node{};
     node.begin = begin;
     node.n     = n;
-    node.depth = depth;
     mNodes.push_back(node);
     return nodeIdx;
 }
@@ -340,4 +333,4 @@ inline Index KdTree<Dims>::AddNode(Index begin, std::size_t n, Index depth)
 } // namespace geometry
 } // namespace pbat
 
-#endif // PBAT_GEOMETRY_KD_TREE_H
+#endif // PBAT_GEOMETRY_KDTREE_H

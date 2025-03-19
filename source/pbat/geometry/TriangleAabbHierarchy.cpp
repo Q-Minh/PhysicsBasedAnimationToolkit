@@ -5,7 +5,7 @@ namespace pbat::geometry {
 TriangleAabbHierarchy3D::TriangleAabbHierarchy3D(
     Eigen::Ref<MatrixX const> const& V,
     Eigen::Ref<IndexMatrixX const> const& C,
-    std::size_t maxPointsInLeaf)
+    Index maxPointsInLeaf)
     : V(V), C(C)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.geometry.TriangleAabbHierarchy3D.Construct");
@@ -23,7 +23,7 @@ TriangleAabbHierarchy3D::TriangleAabbHierarchy3D(
             C.cols());
         throw std::invalid_argument(what);
     }
-    Construct(static_cast<std::size_t>(C.cols()), maxPointsInLeaf);
+    Construct(C.cols(), maxPointsInLeaf);
 }
 
 TriangleAabbHierarchy3D::PrimitiveType TriangleAabbHierarchy3D::Primitive(Index p) const
@@ -85,7 +85,7 @@ TriangleAabbHierarchy3D::OverlappingPrimitives(SelfType const& bvh, std::size_t 
 TriangleAabbHierarchy2D::TriangleAabbHierarchy2D(
     Eigen::Ref<MatrixX const> const& V,
     Eigen::Ref<IndexMatrixX const> const& C,
-    std::size_t maxPointsInLeaf)
+    Index maxPointsInLeaf)
     : V(V), C(C)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.geometry.TriangleAabbHierarchy2D.Construct");
@@ -103,7 +103,7 @@ TriangleAabbHierarchy2D::TriangleAabbHierarchy2D(
             C.cols());
         throw std::invalid_argument(what);
     }
-    Construct(static_cast<std::size_t>(C.cols()), maxPointsInLeaf);
+    Construct(C.cols(), maxPointsInLeaf);
 }
 
 TriangleAabbHierarchy2D::PrimitiveType TriangleAabbHierarchy2D::Primitive(Index p) const

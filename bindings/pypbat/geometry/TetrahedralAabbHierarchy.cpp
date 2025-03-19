@@ -17,7 +17,7 @@ void BindTetrahedralAabbHierarchy(pybind11::module& m)
         .def(
             pyb::init([](Eigen::Ref<MatrixX const> const& V,
                          Eigen::Ref<IndexMatrixX const> const& C,
-                         std::size_t maxPointsInLeaf) {
+                         Index maxPointsInLeaf) {
                 return TetrahedralAabbHierarchy(V, C, maxPointsInLeaf);
             }),
             pyb::arg("V").noconvert(),

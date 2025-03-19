@@ -51,7 +51,7 @@ class BoundingVolumeHierarchy
      * @param nPrimitives Number of primitives
      * @param maxPointsInLeaf Maximum number of primitives in a leaf node
      */
-    void Construct(std::size_t nPrimitives, std::size_t maxPointsInLeaf = 10u);
+    void Construct(Index nPrimitives, Index maxPointsInLeaf = 10);
     /**
      * @brief Returns the bounding volumes of this BVH
      * @return Bounding volumes
@@ -182,8 +182,8 @@ class BoundingVolumeHierarchy
 
 template <class TDerived, class TBoundingVolume, class TPrimitive, int Dims>
 inline void BoundingVolumeHierarchy<TDerived, TBoundingVolume, TPrimitive, Dims>::Construct(
-    std::size_t nPrimitives,
-    std::size_t maxPointsInLeaf)
+    Index nPrimitives,
+    Index maxPointsInLeaf)
 {
     Matrix<Dims, Eigen::Dynamic> P(Dims, nPrimitives);
     for (auto p = 0; p < P.cols(); ++p)
@@ -411,7 +411,9 @@ BoundingVolumeHierarchy<TDerived, TBoundingVolume, TPrimitive, Dims>::Overlappin
         }
         else
         {
-            if (node1.depth < node2.depth)
+            auto const n1n = node1.n;
+            auto const n2n = node2.n;
+            if (n1n > n2n)
             {
                 if (node1.HasLeftChild())
                     stack.push({node1.lc, n2});

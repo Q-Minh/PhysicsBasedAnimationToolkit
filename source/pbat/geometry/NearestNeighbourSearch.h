@@ -148,12 +148,12 @@ void NearestNeighbour(
 
     do
     {
-        TIndex node = dfs.Pop();
+        TIndex const node = dfs.Pop();
         if (not fIsLeaf(node))
         {
             // Recurse into children unless minimum cannot be found in their subdomain
             common::ForRange<0, N>([&]<auto i> {
-                auto const child = fChild.template operator()<i>(node);
+                TIndex const child = fChild.template operator()<i>(node);
                 if (child >= 0)
                     if (fLower(child) <= fUpper)
                         dfs.Push(child);
@@ -161,13 +161,13 @@ void NearestNeighbour(
         }
         else
         {
-            auto nLeafObjects = fLeafSize(node);
-            for (auto i = 0; i < nLeafObjects; ++i)
+            TIndex const nLeafObjects = fLeafSize(node);
+            for (TIndex i = 0; i < nLeafObjects; ++i)
             {
-                TIndex o      = fLeafObject(node, i);
-                auto const d  = fDistance(o);
-                auto const lo = fUpper - eps;
-                auto const hi = fUpper + eps;
+                TIndex o         = fLeafObject(node, i);
+                TScalar const d  = fDistance(o);
+                TScalar const lo = fUpper - eps;
+                TScalar const hi = fUpper + eps;
                 if (d < lo)
                 {
                     nn.Clear();
@@ -225,14 +225,10 @@ void KNearestNeighbours(
         TScalar d;       // Distance from this QueueItem to p
     };
     auto const fMakeNodeQueueItem = [&](TIndex node) {
-        TScalar const d = fLower(node);
-        QueueItem const q{EQueueItem::Node, node, d};
-        return q;
+        return QueueItem{EQueueItem::Node, node, fLower(node)};
     };
     auto const fMakeObjectQueueItem = [&](TIndex object) {
-        TScalar const d = fDistance(object);
-        QueueItem const q{EQueueItem::Object, object, d};
-        return q;
+        return QueueItem{EQueueItem::Object, object, fDistance(object)};
     };
     auto const fGreater = [](QueueItem const& q1, QueueItem const& q2) {
         return q1.d > q2.d;
@@ -253,11 +249,11 @@ void KNearestNeighbours(
             break;
         if (q.type == EQueueItem::Node)
         {
-            auto node = q.idx;
+            TIndex const node = q.idx;
             if (fIsLeaf(node))
             {
-                auto const nLeafObjects = fLeafSize(node);
-                for (auto i = 0; i < nLeafObjects; ++i)
+                TIndex const nLeafObjects = fLeafSize(node);
+                for (TIndex i = 0; i < nLeafObjects; ++i)
                 {
                     TIndex const o = fLeafObject(node, i);
                     heap.push(fMakeObjectQueueItem(o));
@@ -266,7 +262,7 @@ void KNearestNeighbours(
             else
             {
                 common::ForRange<0, N>([&]<auto i> {
-                    auto const child = fChild.template operator()<i>(node);
+                    TIndex const child = fChild.template operator()<i>(node);
                     if (child >= 0)
                         heap.push(fMakeNodeQueueItem(child));
                 });
