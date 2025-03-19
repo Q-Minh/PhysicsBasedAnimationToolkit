@@ -6,6 +6,7 @@
 #include "pbat/common/NAryTreeTraversal.h"
 #include "pbat/common/Queue.h"
 #include "pbat/common/Stack.h"
+#include "pbat/profiling/Profiling.h"
 
 #include <algorithm>
 #include <array>
@@ -138,6 +139,8 @@ void NearestNeighbour(
     TScalar eps,
     TIndex root)
 {
+    PBAT_PROFILE_NAMED_SCOPE("pbat.geometry.NearestNeighbour");
+
     common::Stack<TIndex, kStackDepth> dfs{};
     common::Queue<TIndex, kQueueSize> nn{};
     if (fLower(root) <= fUpper)
@@ -210,6 +213,8 @@ void KNearestNeighbours(
     TScalar fUpper,
     TIndex root)
 {
+    PBAT_PROFILE_NAMED_SCOPE("pbat.geometry.KNearestNeighbours");
+
     enum class EQueueItem { Node, Object };
     struct QueueItem
     {
