@@ -6,6 +6,7 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
         "Common.h"
         "Concepts.h"
         "ConstexprFor.h"
+        "NAryTreeTraversal.h"
         "Eigen.h"
         "Hash.h"
         "Indexing.h"
@@ -15,6 +16,7 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
 target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
 PRIVATE
     "ArgSort.cpp"
+    "NAryTreeTraversal.cpp"
     "Eigen.cpp"
     "Indexing.cpp"
     "Queue.cpp"
