@@ -25,7 +25,7 @@ namespace pbat::geometry {
  * @tparam FLeafObject Callable with signature `TIndex(TIndex node, TIndex i)`
  * @tparam FNodeOverlaps Callable with signature `bool(TIndex node)`
  * @tparam FObjectOverlaps Callable with signature `bool(TIndex o)`
- * @tparam FOnFound Callable with signature `void(Index o)`
+ * @tparam FOnFound Callable with signature `void(Index o, Index k)`
  * @tparam N Max number of children per node
  * @tparam TScalar Type of the scalar distance
  * @tparam TIndex Type of the index
@@ -183,6 +183,7 @@ void Overlaps(
     TIndex root)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.geometry.Overlaps");
+    Index k{0};
     auto fVisit = [&](TIndex node) {
         if (not fNodeOverlaps(node))
             return false;
@@ -193,7 +194,7 @@ void Overlaps(
             {
                 TIndex o = fLeafObject(node, i);
                 if (fObjectOverlaps(o))
-                    fOnFound(o);
+                    fOnFound(o, k++);
             }
         }
         return true;

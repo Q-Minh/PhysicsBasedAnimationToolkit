@@ -45,7 +45,7 @@ TEST_CASE("[geometry] SpatialSearch")
         auto j = nodes[node].begin + i;
         return inds(j);
     };
-    
+
     using pbat::math::linalg::mini::FromEigen;
     SUBCASE("Overlaps")
     {
@@ -66,7 +66,7 @@ TEST_CASE("[geometry] SpatialSearch")
                         FromEigen(aabbs[static_cast<std::size_t>(node)].max()));
                 },
                 [&](Index o) { return p.isApprox(P.col(o)); },
-                [&](Index o) { overlapping = o; });
+                [&](Index o, [[maybe_unused]] Index k) { overlapping = o; });
             // Assert
             CHECK_EQ(overlapping, i);
         }

@@ -2,6 +2,7 @@
 #define PBAT_GEOMETRY_AABBHIERARCHY_H
 
 #include "KdTree.h"
+#include "SpatialSearch.h"
 #include "pbat/Aliases.h"
 #include "pbat/common/NAryTreeTraversal.h"
 #include "pbat/profiling/Profiling.h"
@@ -62,6 +63,59 @@ class AabbHierarchy
      */
     template <class TDerivedB>
     void Update(Eigen::DenseBase<TDerivedB> const& B);
+    /**
+     * @brief Find all objects that overlap with some user-defined query
+     *
+     * @tparam FNodeOverlaps Function with signature `bool(Index n)`
+     * @tparam FObjectOverlaps Function with signature `bool(Index o)`
+     * @tparam FOnOverlap Function with signature `void(Index n, Index o)`
+     * @param fNodeOverlaps Function to determine if a node overlaps with the query
+     * @param fObjectOverlaps Function to determine if an object overlaps with the query
+     * @param fOnOverlap Function to process an overlap
+     */
+    template <class FNodeOverlaps, class FObjectOverlaps, class FOnOverlap>
+    void
+    Overlaps(FNodeOverlaps fNodeOverlaps, FObjectOverlaps fObjectOverlaps, FOnOverlap fOnOverlap)
+        const;
+    /**
+     * @brief Find the nearest neighbour to some user-defined query. If there are multiple nearest
+     * neighbours, we may return a certain number > 1 of them.
+     *
+     * @tparam FDistanceToNode Function with signature `Scalar(Index n)`
+     * @tparam FDistanceToObject Function with signature `Scalar(Index o)`
+     * @tparam FOnNearestNeighbour Function with signature `void(Index o, Scalar d, Index k)`
+     * @param fDistanceToNode Function to compute the distance to a node
+     * @param fDistanceToObject Function to compute the distance to an object
+     * @param fOnNearestNeighbour Function to process a nearest neighbour
+     * @param radius Maximum distance to search for nearest neighbours
+     * @param eps Maximum distance error
+     */
+    template <class FDistanceToNode, class FDistanceToObject, class FOnNearestNeighbour>
+    void NearestNeighbour(
+        FDistanceToNode fDistanceToNode,
+        FDistanceToObject fDistanceToObject,
+        FOnNearestNeighbour fOnNearestNeighbour,
+        Scalar radius = std::numeric_limits<Scalar>::max(),
+        Scalar eps    = Scalar(0)) const;
+    /**
+     * @brief Find the K nearest neighbours to some user-defined query.
+     *
+     * @tparam FDistanceToNode Function with signature `Scalar(Index n)`
+     * @tparam FDistanceToObject Function with signature `Scalar(Index o)`
+     * @tparam FOnNearestNeighbour Function with signature `void(Index o, Scalar d, Index k)`
+     * @param fDistanceToNode Function to compute the distance to a node
+     * @param fDistanceToObject Function to compute the distance to an object
+     * @param fOnNearestNeighbour Function to process a nearest neighbour
+     * @param K Number of nearest neighbours to find
+     * @param radius Maximum distance to search for nearest neighbours
+     */
+    template <class FDistanceToNode, class FDistanceToObject, class FOnNearestNeighbour>
+    void KNearestNeighbours(
+        FDistanceToNode fDistanceToNode,
+        FDistanceToObject fDistanceToObject,
+        FOnNearestNeighbour fOnNearestNeighbour,
+        Index K,
+        Scalar radius = std::numeric_limits<Scalar>::max()) const;
 
   private:
     Matrix<2 * kDims, Eigen::Dynamic>
@@ -135,6 +189,89 @@ inline void AabbHierarchy<kDims>::Update(Eigen::DenseBase<TDerivedB> const& B)
             else
                 return nodes[n].rc;
         });
+}
+
+template <auto kDims>
+template <class FNodeOverlaps, class FObjectOverlaps, class FOnOverlap>
+inline void AabbHierarchy<kDims>::Overlaps(
+    FNodeOverlaps fNodeOverlaps,
+    FObjectOverlaps fObjectOverlaps,
+    FOnOverlap fOnOverlap) const
+{
+    PBAT_PROFILE_NAMED_SCOPE("pbat.geometry.AabbHierarchy.Overlaps");
+    KdTreeNode const* nodes  = tree.Nodes().data();
+    IndexVectorX const& perm = tree.Permutation();
+    geometry::Overlaps(
+        [&]<auto c>(Index n) -> Index {
+            if constexpr (c == 0)
+                return nodes[n].lc;
+            else
+                return nodes[n].rc;
+        },
+        [&](Index n) { return nodes[n].IsLeaf(); },
+        [&](Index n) { return nodes[n].n; },
+        [&](Index n, Index i) { return perm(nodes[n].begin + i); },
+        fNodeOverlaps,
+        fObjectOverlaps,
+        fOnOverlap);
+}
+
+template <auto kDims>
+template <class FDistanceToNode, class FDistanceToObject, class FOnNearestNeighbour>
+inline void AabbHierarchy<kDims>::NearestNeighbour(
+    FDistanceToNode fDistanceToNode,
+    FDistanceToObject fDistanceToObject,
+    FOnNearestNeighbour fOnNearestNeighbour,
+    Scalar radius,
+    Scalar eps) const
+{
+    PBAT_PROFILE_NAMED_SCOPE("pbat.geometry.AabbHierarchy.NearestNeighbour");
+    KdTreeNode const* nodes  = tree.Nodes().data();
+    IndexVectorX const& perm = tree.Permutation();
+    geometry::NearestNeighbour(
+        [&]<auto c>(Index n) -> Index {
+            if constexpr (c == 0)
+                return nodes[n].lc;
+            else
+                return nodes[n].rc;
+        },
+        [&](Index n) { return nodes[n].IsLeaf(); },
+        [&](Index n) { return nodes[n].n; },
+        [&](Index n, Index i) { return perm(nodes[n].begin + i); },
+        fDistanceToNode,
+        fDistanceToObject,
+        fOnNearestNeighbour,
+        radius,
+        eps);
+}
+
+template <auto kDims>
+template <class FDistanceToNode, class FDistanceToObject, class FOnNearestNeighbour>
+inline void AabbHierarchy<kDims>::KNearestNeighbours(
+    FDistanceToNode fDistanceToNode,
+    FDistanceToObject fDistanceToObject,
+    FOnNearestNeighbour fOnNearestNeighbour,
+    Index K,
+    Scalar radius) const
+{
+    PBAT_PROFILE_NAMED_SCOPE("pbat.geometry.AabbHierarchy.KNearestNeighbours");
+    KdTreeNode const* nodes  = tree.Nodes().data();
+    IndexVectorX const& perm = tree.Permutation();
+    geometry::KNearestNeighbours(
+        [&]<auto c>(Index n) -> Index {
+            if constexpr (c == 0)
+                return nodes[n].lc;
+            else
+                return nodes[n].rc;
+        },
+        [&](Index n) { return nodes[n].IsLeaf(); },
+        [&](Index n) { return nodes[n].n; },
+        [&](Index n, Index i) { return perm(nodes[n].begin + i); },
+        fDistanceToNode,
+        fDistanceToObject,
+        fOnNearestNeighbour,
+        K,
+        radius);
 }
 
 } // namespace pbat::geometry
