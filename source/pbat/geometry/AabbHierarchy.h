@@ -39,7 +39,7 @@ class AabbHierarchy
      * @param maxPointsInLeaf Maximum number of points in a leaf node
      */
     template <class TDerived>
-    AabbHierarchy(Eigen::DenseBase<TDerived> const& B, Index maxPointsInLeaf = 10);
+    AabbHierarchy(Eigen::DenseBase<TDerived> const& B, Index maxPointsInLeaf = 8);
     /**
      * @brief Construct an Aabb Hierarchy from an input AABB matrix LU
      *
@@ -48,7 +48,7 @@ class AabbHierarchy
      * B.col(o).head<kDims>() is the lower bound and B.col(o).tail<kDims>() is the upper bound.
      */
     template <class TDerived>
-    void Construct(Eigen::DenseBase<TDerived> const& B, Index maxPointsInLeaf = 10);
+    void Construct(Eigen::DenseBase<TDerived> const& B, Index maxPointsInLeaf = 8);
     /**
      * @brief Recomputes k-D tree node AABBs given the object AABBs
      *
@@ -166,9 +166,13 @@ inline void AabbHierarchy<kDims>::Update(Eigen::DenseBase<TDerivedB> const& B)
             KdTreeNode const& node = nodes[n];
             if (node.IsLeaf())
             {
-                auto inds               = perm(Eigen::seqN(node.begin, node.n));
-                LU.col(n).head<kDims>() = B(Eigen::placeholders::all, inds).rowwise().minCoeff();
-                LU.col(n).tail<kDims>() = B(Eigen::placeholders::all, inds).rowwise().maxCoeff();
+                auto inds = perm(Eigen::seqN(node.begin, node.n));
+                LU.col(n).head<kDims>() =
+                    B.template topRows<kDims>(Eigen::placeholders::all, inds).rowwise().minCoeff();
+                LU.col(n).tail<kDims>() =
+                    B.template bottomRows<kDims>(Eigen::placeholders::all, inds)
+                        .rowwise()
+                        .maxCoeff();
             }
             else
             {

@@ -33,7 +33,7 @@ void BindTriangleAabbHierarchy(pybind11::module& m)
                              Index maxPointsInLeaf) { return BvhType(V, C, maxPointsInLeaf); }),
                 pyb::arg("V").noconvert(),
                 pyb::arg("C").noconvert(),
-                pyb::arg("max_points_in_leaf") = 10ULL)
+                pyb::arg("max_points_in_leaf") = 8)
             .def_property_readonly_static(
                 "dims",
                 [](pyb::object /*self*/) { return BvhType::kDims; })

@@ -78,7 +78,7 @@ class KdTree
      * @param maxPointsInLeaf Maximum number of points in a leaf node
      */
     template <class TDerivedP>
-    KdTree(Eigen::DenseBase<TDerivedP> const& P, Index maxPointsInLeaf = 10);
+    KdTree(Eigen::DenseBase<TDerivedP> const& P, Index maxPointsInLeaf = 8);
 
   private:
     inline static auto const fStopDefault = [](auto, auto) {
