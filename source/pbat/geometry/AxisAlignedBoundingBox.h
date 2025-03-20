@@ -160,17 +160,41 @@ AxisAlignedBoundingBox<Dims>::contained(Eigen::MatrixBase<TDerived> const& P) co
     return inds;
 }
 
+/**
+ * @brief Computes AABBs of nClusters kDims-dimensional point clusters
+ *
+ * @tparam kDims Spatial dimension
+ * @tparam kClusterNodes Number of nodes in a cluster
+ * @tparam FCluster Function with signature `auto (Index) -> std::convertible_to<Matrix<kDims,
+ * kClusterNodes>>`
+ * @tparam TDerivedB Eigen dense expression type
+ * @param fCluster Function to get the cluster at index `c`
+ * @param nClusters Number of clusters
+ * @param B 2*kDims x |# clusters| output AABBs
+ */
 template <auto kDims, auto kClusterNodes, class FCluster, class TDerivedB>
 inline void ClustersToAabbs(FCluster fCluster, Index nClusters, Eigen::DenseBase<TDerivedB>& B)
 {
     for (auto c = 0; c < nClusters; ++c)
     {
         Matrix<kDims, kClusterNodes> XC = fCluster(c);
-        B.col(c).head<3>()              = XC.rowwise().minCoeff();
-        B.col(c).tail<3>()              = XC.rowwise().maxCoeff();
+        B.col(c).head<kDims>()          = XC.rowwise().minCoeff();
+        B.col(c).tail<kDims>()          = XC.rowwise().maxCoeff();
     }
 }
 
+/**
+ * @brief Computes AABBs of nElemNodes simplex mesh elements in kDims dimensions
+ *
+ * @tparam kDims Spatial dimension
+ * @tparam kElemNodes Number of nodes in an element
+ * @tparam TDerivedX Eigen dense expression type
+ * @tparam TDerivedE Eigen dense expression type
+ * @tparam TDerivedB Eigen dense expression type
+ * @param X `kDims x |# nodes|` matrix of node positions
+ * @param E `kElemNodes x |# elements|` matrix of element node indices
+ * @param B 2*kDims x |# elements| output AABBs
+ */
 template <auto kDims, auto kElemNodes, class TDerivedX, class TDerivedE, class TDerivedB>
 inline void MeshToAabbs(
     Eigen::DenseBase<TDerivedX> const& X,
