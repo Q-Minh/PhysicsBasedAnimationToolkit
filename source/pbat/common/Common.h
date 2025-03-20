@@ -11,7 +11,7 @@
 #define PBAT_COMMON_COMMON_H
 
 /**
- * @namespace pbat::common 
+ * @namespace pbat::common
  * @brief Common functionality.
  */
 namespace pbat::common {
@@ -23,6 +23,7 @@ namespace pbat::common {
 #include "Eigen.h"
 #include "Hash.h"
 #include "Indexing.h"
+#include "NAryTreeTraversal.h"
 #include "Queue.h"
 #include "Stack.h"
 

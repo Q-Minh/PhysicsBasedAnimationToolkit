@@ -1,16 +1,17 @@
-#include "NearestNeighbourSearch.h"
+#include "SpatialSearch.h"
 
 #include "AxisAlignedBoundingBox.h"
 #include "KdTree.h"
 #include "pbat/common/Eigen.h"
 #include "pbat/geometry/DistanceQueries.h"
+#include "pbat/geometry/OverlapQueries.h"
 #include "pbat/math/linalg/mini/Matrix.h"
 
 #include <Eigen/Core>
 #include <doctest/doctest.h>
 #include <vector>
 
-TEST_CASE("[geometry] NearestNeighbourSearch")
+TEST_CASE("[geometry] SpatialSearch")
 {
     using namespace pbat;
     // Arrange
@@ -19,41 +20,75 @@ TEST_CASE("[geometry] NearestNeighbourSearch")
     using Aabb           = geometry::AxisAlignedBoundingBox<kDims>;
     using KdTree         = geometry::KdTree<kDims>;
     KdTree tree{P};
-    auto const& nodes = tree.Nodes();
+    auto const nNodes = tree.Nodes().size();
+    auto const* nodes = tree.Nodes().data();
     auto const& inds  = tree.Permutation();
-
-    std::vector<Aabb> aabbs(nodes.size());
-    for (auto i = 0ULL; i < nodes.size(); ++i)
+    // Compute node AABBs in the O(n log n) way
+    std::vector<Aabb> aabbs(nNodes);
+    for (auto i = 0ULL; i < nNodes; ++i)
         for (auto p : tree.PointsInNode(static_cast<Index>(i)))
             aabbs[i].extend(P.col(p));
-
+    // Define branch and bound tree getters here
+    auto const fChild = [&]<auto c>(Index node) {
+        if constexpr (c == 0)
+            return nodes[node].lc;
+        else
+            return nodes[node].rc;
+    };
+    auto const fIsLeaf = [&](Index node) {
+        return nodes[node].IsLeafNode();
+    };
+    auto const fLeafSize = [&](Index node) {
+        return nodes[node].n;
+    };
+    auto const fLeafObject = [&](Index node, Index i) {
+        auto j = nodes[node].begin + i;
+        return inds(j);
+    };
+    
+    using pbat::math::linalg::mini::FromEigen;
+    SUBCASE("Overlaps")
+    {
+        // Act
+        for (auto i = 0; i < P.cols(); ++i)
+        {
+            auto const p = P.col(i).head<kDims>();
+            Index overlapping{-1};
+            geometry::Overlaps(
+                fChild,
+                fIsLeaf,
+                fLeafSize,
+                fLeafObject,
+                [&](Index node) {
+                    return geometry::OverlapQueries::PointAxisAlignedBoundingBox(
+                        FromEigen(p),
+                        FromEigen(aabbs[static_cast<std::size_t>(node)].min()),
+                        FromEigen(aabbs[static_cast<std::size_t>(node)].max()));
+                },
+                [&](Index o) { return p.isApprox(P.col(o)); },
+                [&](Index o) { overlapping = o; });
+            // Assert
+            CHECK_EQ(overlapping, i);
+        }
+    }
+    // Arrange
     Vector<3> const p = Vector<3>::Random();
     VectorX d2        = (P.colwise() - p).colwise().squaredNorm();
-
-    using pbat::math::linalg::mini::FromEigen;
     SUBCASE("Nearest neighbour")
     {
         // Act
         Index nn{-1};
         Scalar dmin{std::numeric_limits<Scalar>::max()};
         geometry::NearestNeighbour(
-            [&]<auto c>(Index node) {
-                if constexpr (c == 0)
-                    return nodes[static_cast<std::size_t>(node)].lc;
-                else
-                    return nodes[static_cast<std::size_t>(node)].rc;
-            },
-            [&](Index node) { return nodes[static_cast<std::size_t>(node)].IsLeafNode(); },
+            fChild,
+            fIsLeaf,
+            fLeafSize,
+            fLeafObject,
             [&](Index node) {
                 return geometry::DistanceQueries::PointAxisAlignedBoundingBox(
                     FromEigen(p),
                     FromEigen(aabbs[static_cast<std::size_t>(node)].min()),
                     FromEigen(aabbs[static_cast<std::size_t>(node)].max()));
-            },
-            [&](Index node) { return nodes[static_cast<std::size_t>(node)].n; },
-            [&](Index node, Index i) {
-                auto j = nodes[static_cast<std::size_t>(node)].begin + i;
-                return inds(j);
             },
             [&](Index o) { return (p - P.col(o)).squaredNorm(); },
             [&](Index o, Scalar d, [[maybe_unused]] Index k) {
@@ -73,23 +108,15 @@ TEST_CASE("[geometry] NearestNeighbourSearch")
         Index nn[K];
         Scalar dmin[K];
         geometry::KNearestNeighbours(
-            [&]<auto c>(Index node) {
-                if constexpr (c == 0)
-                    return nodes[static_cast<std::size_t>(node)].lc;
-                else
-                    return nodes[static_cast<std::size_t>(node)].rc;
-            },
-            [&](Index node) { return nodes[static_cast<std::size_t>(node)].IsLeafNode(); },
+            fChild,
+            fIsLeaf,
+            fLeafSize,
+            fLeafObject,
             [&](Index node) {
                 return geometry::DistanceQueries::PointAxisAlignedBoundingBox(
                     FromEigen(p),
                     FromEigen(aabbs[static_cast<std::size_t>(node)].min()),
                     FromEigen(aabbs[static_cast<std::size_t>(node)].max()));
-            },
-            [&](Index node) { return nodes[static_cast<std::size_t>(node)].n; },
-            [&](Index node, Index i) {
-                auto j = nodes[static_cast<std::size_t>(node)].begin + i;
-                return inds(j);
             },
             [&](Index o) { return (p - P.col(o)).squaredNorm(); },
             [&](Index o, Scalar d, Index k) {

@@ -1,5 +1,5 @@
-#ifndef PBAT_GEOMETRY_NEARESTNEIGHBOURSEARCH_H
-#define PBAT_GEOMETRY_NEARESTNEIGHBOURSEARCH_H
+#ifndef PBAT_GEOMETRY_SPATIALSEARCH_H
+#define PBAT_GEOMETRY_SPATIALSEARCH_H
 
 #include "pbat/Aliases.h"
 #include "pbat/common/ConstexprFor.h"
@@ -21,9 +21,55 @@ namespace pbat::geometry {
  *
  * @tparam FChild Callable with signature `template <auto c> Index(TIndex node)`
  * @tparam FIsLeaf Callable with signature `bool(TIndex node)`
- * @tparam FDistanceLowerBound Callable with signature `Scalar(TIndex node)`
  * @tparam FLeafSize Callable with signature `TIndex(TIndex node)`
  * @tparam FLeafObject Callable with signature `TIndex(TIndex node, TIndex i)`
+ * @tparam FNodeOverlaps Callable with signature `bool(TIndex node)`
+ * @tparam FObjectOverlaps Callable with signature `bool(TIndex o)`
+ * @tparam FOnFound Callable with signature `void(Index o)`
+ * @tparam N Max number of children per node
+ * @tparam TScalar Type of the scalar distance
+ * @tparam TIndex Type of the index
+ * @tparam kStackDepth Maximum depth of the traversal's stack
+ * @tparam kQueueSize Maximum size of the nearest neighbour queue
+ * @param fChild Function to get child c of a node. Returns the child index or -1 if no child.
+ * @param fIsLeaf Function to determine if a node is a leaf node
+ * @param fLeafSize Function to get the number of leaf objects in a node
+ * @param fLeafObject Function to get the i-th leaf object in a node
+ * @param fNodeOverlaps Function to determine if a node overlaps with the query
+ * @param fObjectOverlaps Function to determine if an object overlaps with the query
+ * @param fOnFound Function to call when a nearest neighbour is found
+ * @param root Index of the root node to start the search from
+ */
+template <
+    class FChild,
+    class FIsLeaf,
+    class FLeafSize,
+    class FLeafObject,
+    class FNodeOverlap,
+    class FObjectOverlap,
+    class FOnFound,
+    auto N           = 2,
+    class TScalar    = Scalar,
+    class TIndex     = Index,
+    auto kStackDepth = 64>
+void Overlaps(
+    FChild fChild,
+    FIsLeaf fIsLeaf,
+    FLeafSize fLeafSize,
+    FLeafObject fLeafObject,
+    FNodeOverlap fNodeOverlaps,
+    FObjectOverlap fObjectOverlaps,
+    FOnFound fOnFound,
+    TIndex root = 0);
+
+/**
+ * @brief Find distance minimizing objects in branch and bound tree rooted in root
+ *
+ * @tparam FChild Callable with signature `template <auto c> Index(TIndex node)`
+ * @tparam FIsLeaf Callable with signature `bool(TIndex node)`
+ * @tparam FLeafSize Callable with signature `TIndex(TIndex node)`
+ * @tparam FLeafObject Callable with signature `TIndex(TIndex node, TIndex i)`
+ * @tparam FDistanceLowerBound Callable with signature `Scalar(TIndex node)`
  * @tparam FDistance Callable with signature `TScalar(TIndex o)`
  * @tparam FOnFound Callable with signature `void(Index o, Scalar d, Index k)`
  * @tparam N Max number of children per node
@@ -33,9 +79,9 @@ namespace pbat::geometry {
  * @tparam kQueueSize Maximum size of the nearest neighbour queue
  * @param fChild Function to get child c of a node. Returns the child index or -1 if no child.
  * @param fIsLeaf Function to determine if a node is a leaf node
- * @param fLower Function to compute the lower bound of the distance to node
  * @param fLeafSize Function to get the number of leaf objects in a node
  * @param fLeafObject Function to get the i-th leaf object in a node
+ * @param fLower Function to compute the lower bound of the distance to node
  * @param fDistance Function to compute the distance to object
  * @param fOnFound Function to call when a nearest neighbour is found
  * @param fUpper Upper bound of the distance to the nearest neighbour
@@ -45,9 +91,9 @@ namespace pbat::geometry {
 template <
     class FChild,
     class FIsLeaf,
-    class FDistanceLowerBound,
     class FLeafSize,
     class FLeafObject,
+    class FDistanceLowerBound,
     class FDistance,
     class FOnFound,
     auto N           = 2,
@@ -58,9 +104,9 @@ template <
 void NearestNeighbour(
     FChild fChild,
     FIsLeaf fIsLeaf,
-    FDistanceLowerBound fLower,
     FLeafSize fLeafSize,
     FLeafObject fLeafObject,
+    FDistanceLowerBound fLower,
     FDistance fDistance,
     FOnFound fOnFound,
     TScalar fUpper = std::numeric_limits<TScalar>::max(),
@@ -72,9 +118,9 @@ void NearestNeighbour(
  *
  * @tparam FChild Callable with signature `template <auto c> Index(TIndex node)`
  * @tparam FIsLeaf Callable with signature `bool(TIndex node)`
- * @tparam FDistanceLowerBound Callable with signature `TScalar(TIndex node)`
  * @tparam FLeafSize Callable with signature `TIndex(TIndex node)`
  * @tparam FLeafObject Callable with signature `TIndex(TIndex node, TIndex i)`
+ * @tparam FDistanceLowerBound Callable with signature `TScalar(TIndex node)`
  * @tparam FDistance Callable with signature `TScalar(TIndex o)`
  * @tparam FOnFound Callable with signature `void(TIndex o, TScalar d, TIndex k)`
  * @tparam N Max number of children per node
@@ -82,9 +128,9 @@ void NearestNeighbour(
  * @tparam TIndex Type of the index
  * @param fChild Function to get child c of a node. Returns the child index or -1 if no child.
  * @param fIsLeaf Function to determine if a node is a leaf node
- * @param fLower Function to compute the lower bound of the distance to node
  * @param fLeafSize Function to get the number of leaf objects in a node
  * @param fLeafObject Function to get the i-th leaf object in a node
+ * @param fLower Function to compute the lower bound of the distance to node
  * @param fDistance Function to compute the distance to object
  * @param fOnFound Function to call when a nearest neighbour is found
  * @param K Number of nearest neighbours to find
@@ -94,9 +140,9 @@ void NearestNeighbour(
 template <
     class FChild,
     class FIsLeaf,
-    class FDistanceLowerBound,
     class FLeafSize,
     class FLeafObject,
+    class FDistanceLowerBound,
     class FDistance,
     class FOnFound,
     auto N        = 2,
@@ -105,9 +151,9 @@ template <
 void KNearestNeighbours(
     FChild fChild,
     FIsLeaf fIsLeaf,
-    FDistanceLowerBound fLower,
     FLeafSize fLeafSize,
     FLeafObject fLeafObject,
+    FDistanceLowerBound fLower,
     FDistance fDistance,
     FOnFound fOnFound,
     TIndex K,
@@ -117,9 +163,54 @@ void KNearestNeighbours(
 template <
     class FChild,
     class FIsLeaf,
-    class FDistanceLowerBound,
     class FLeafSize,
     class FLeafObject,
+    class FNodeOverlap,
+    class FObjectOverlap,
+    class FOnFound,
+    auto N,
+    class TScalar,
+    class TIndex,
+    auto kStackDepth>
+void Overlaps(
+    FChild fChild,
+    FIsLeaf fIsLeaf,
+    FLeafSize fLeafSize,
+    FLeafObject fLeafObject,
+    FNodeOverlap fNodeOverlaps,
+    FObjectOverlap fObjectOverlaps,
+    FOnFound fOnFound,
+    TIndex root)
+{
+    PBAT_PROFILE_NAMED_SCOPE("pbat.geometry.Overlaps");
+    auto fVisit = [&](TIndex node) {
+        if (not fNodeOverlaps(node))
+            return false;
+        if (fIsLeaf(node))
+        {
+            TIndex const nLeafObjects = fLeafSize(node);
+            for (TIndex i = 0; i < nLeafObjects; ++i)
+            {
+                TIndex o = fLeafObject(node, i);
+                if (fObjectOverlaps(o))
+                    fOnFound(o);
+            }
+        }
+        return true;
+    };
+    using FVisit = decltype(fVisit);
+    common::TraverseNAryTreePseudoPreOrder<FVisit, FChild, TIndex, N, kStackDepth>(
+        fVisit,
+        fChild,
+        root);
+}
+
+template <
+    class FChild,
+    class FIsLeaf,
+    class FLeafSize,
+    class FLeafObject,
+    class FDistanceLowerBound,
     class FDistance,
     class FOnFound,
     auto N,
@@ -130,9 +221,9 @@ template <
 void NearestNeighbour(
     FChild fChild,
     FIsLeaf fIsLeaf,
-    FDistanceLowerBound fLower,
     FLeafSize fLeafSize,
     FLeafObject fLeafObject,
+    FDistanceLowerBound fLower,
     FDistance fDistance,
     FOnFound fOnFound,
     TScalar fUpper,
@@ -185,9 +276,9 @@ void NearestNeighbour(
 template <
     class FChild,
     class FIsLeaf,
-    class FDistanceLowerBound,
     class FLeafSize,
     class FLeafObject,
+    class FDistanceLowerBound,
     class FDistance,
     class FOnFound,
     auto N,
@@ -196,9 +287,9 @@ template <
 void KNearestNeighbours(
     FChild fChild,
     FIsLeaf fIsLeaf,
-    FDistanceLowerBound fLower,
     FLeafSize fLeafSize,
     FLeafObject fLeafObject,
+    FDistanceLowerBound fLower,
     FDistance fDistance,
     FOnFound fOnFound,
     TIndex K,
@@ -271,4 +362,4 @@ void KNearestNeighbours(
 
 } // namespace pbat::geometry
 
-#endif // PBAT_GEOMETRY_NEARESTNEIGHBOURSEARCH_H
+#endif // PBAT_GEOMETRY_SPATIALSEARCH_H

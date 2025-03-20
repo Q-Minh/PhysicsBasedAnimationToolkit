@@ -2,6 +2,7 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     PUBLIC
     FILE_SET api
     FILES
+    "AabbHierarchy.h"
     "AxisAlignedBoundingBox.h"
     "BoundingVolumeHierarchy.h"
     "ClosestPointQueries.h"
@@ -11,13 +12,14 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     "KdTree.h"
     "MeshBoundary.h"
     "Morton.h"
-    "NearestNeighbourSearch.h"
+    "SpatialSearch.h"
     "OverlapQueries.h"
     "TetrahedralAabbHierarchy.h"
     "TriangleAabbHierarchy.h"
 )
 target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     PRIVATE
+    "AabbHierarchy.cpp"
     "AxisAlignedBoundingBox.cpp"
     "BoundingVolumeHierarchy.cpp"
     "ClosestPointQueries.cpp"
@@ -26,7 +28,7 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     "KdTree.cpp"
     "MeshBoundary.cpp"
     "Morton.cpp"
-    "NearestNeighbourSearch.cpp"
+    "SpatialSearch.cpp"
     "OverlapQueries.cpp"
     "TetrahedralAabbHierarchy.cpp"
     "TriangleAabbHierarchy.cpp"

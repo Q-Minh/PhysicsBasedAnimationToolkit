@@ -19,8 +19,7 @@
 #include <string>
 #include <vector>
 
-namespace pbat {
-namespace geometry {
+namespace pbat::geometry {
 
 /**
  * @brief Axis-aligned bounding box class
@@ -161,7 +160,20 @@ AxisAlignedBoundingBox<Dims>::contained(Eigen::MatrixBase<TDerived> const& P) co
     return inds;
 }
 
-} // namespace geometry
-} // namespace pbat
+template <auto kDims, auto kElemNodes, class TDerivedX, class TDerivedE, class TDerivedB>
+inline void MeshToAabbs(
+    Eigen::DenseBase<TDerivedX> const& X,
+    Eigen::DenseBase<TDerivedE> const& E,
+    Eigen::DenseBase<TDerivedB>& B)
+{
+    for (auto e = 0; e < E.cols(); ++e)
+    {
+        auto XE = X(Eigen::placeholders::all, E.col(e)).block<kDims, kElemNodes>(0, 0).eval();
+        B.col(e).head<3>() = XE.rowwise().minCoeff();
+        B.col(e).tail<3>() = XE.rowwise().maxCoeff();
+    }
+}
+
+} // namespace pbat::geometry
 
 #endif // PBAT_GEOMETRY_AXISALIGNEDBOUNDINGBOX_H

@@ -18,6 +18,7 @@
 namespace pbat::geometry {
 } // namespace pbat::geometry
 
+#include "AabbHierarchy.h"
 #include "AxisAlignedBoundingBox.h"
 #include "BoundingVolumeHierarchy.h"
 #include "ClosestPointQueries.h"
@@ -26,6 +27,7 @@ namespace pbat::geometry {
 #include "KdTree.h"
 #include "Morton.h"
 #include "OverlapQueries.h"
+#include "SpatialSearch.h"
 #include "TetrahedralAabbHierarchy.h"
 #include "TriangleAabbHierarchy.h"
 
