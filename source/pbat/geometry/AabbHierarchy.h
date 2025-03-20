@@ -66,7 +66,8 @@ class AabbHierarchy
     /**
      * @brief Find all objects that overlap with some user-defined query
      *
-     * @tparam FNodeOverlaps Function with signature `bool(Index n)`
+     * @tparam FNodeOverlaps Function with signature `template <class TDerivedL, class TDerivedU>
+     * bool(TDerivedL const& L, TDerivedU const& U)`
      * @tparam FObjectOverlaps Function with signature `bool(Index o)`
      * @tparam FOnOverlap Function with signature `void(Index n, Index o)`
      * @param fNodeOverlaps Function to determine if a node overlaps with the query
@@ -81,7 +82,8 @@ class AabbHierarchy
      * @brief Find the nearest neighbour to some user-defined query. If there are multiple nearest
      * neighbours, we may return a certain number > 1 of them.
      *
-     * @tparam FDistanceToNode Function with signature `Scalar(Index n)`
+     * @tparam FDistanceToNode Function with signature `template <class TDerivedL, class TDerivedU>
+     * Scalar(TDerivedL const& L, TDerivedU const& U)`
      * @tparam FDistanceToObject Function with signature `Scalar(Index o)`
      * @tparam FOnNearestNeighbour Function with signature `void(Index o, Scalar d, Index k)`
      * @param fDistanceToNode Function to compute the distance to a node
@@ -100,7 +102,8 @@ class AabbHierarchy
     /**
      * @brief Find the K nearest neighbours to some user-defined query.
      *
-     * @tparam FDistanceToNode Function with signature `Scalar(Index n)`
+     * @tparam FDistanceToNode Function with signature `template <class TDerivedL, class TDerivedU>
+     * Scalar(TDerivedL const& L, TDerivedU const& U)`
      * @tparam FDistanceToObject Function with signature `Scalar(Index o)`
      * @tparam FOnNearestNeighbour Function with signature `void(Index o, Scalar d, Index k)`
      * @param fDistanceToNode Function to compute the distance to a node
@@ -211,7 +214,13 @@ inline void AabbHierarchy<kDims>::Overlaps(
         [&](Index n) { return nodes[n].IsLeaf(); },
         [&](Index n) { return nodes[n].n; },
         [&](Index n, Index i) { return perm(nodes[n].begin + i); },
-        fNodeOverlaps,
+        [&](Index n) {
+            auto L          = LU.col(n).head<kDims>();
+            auto U          = LU.col(n).tail<kDims>();
+            using TDerivedL = decltype(L);
+            using TDerivedU = decltype(U);
+            return fNodeOverlaps.template operator()<TDerivedL, TDerivedU>(L, U);
+        },
         fObjectOverlaps,
         fOnOverlap);
 }
@@ -238,7 +247,13 @@ inline void AabbHierarchy<kDims>::NearestNeighbour(
         [&](Index n) { return nodes[n].IsLeaf(); },
         [&](Index n) { return nodes[n].n; },
         [&](Index n, Index i) { return perm(nodes[n].begin + i); },
-        fDistanceToNode,
+        [&](Index n) {
+            auto L          = LU.col(n).head<kDims>();
+            auto U          = LU.col(n).tail<kDims>();
+            using TDerivedL = decltype(L);
+            using TDerivedU = decltype(U);
+            return fDistanceToNode.template operator()<TDerivedL, TDerivedU>(L, U);
+        },
         fDistanceToObject,
         fOnNearestNeighbour,
         radius,
@@ -267,7 +282,13 @@ inline void AabbHierarchy<kDims>::KNearestNeighbours(
         [&](Index n) { return nodes[n].IsLeaf(); },
         [&](Index n) { return nodes[n].n; },
         [&](Index n, Index i) { return perm(nodes[n].begin + i); },
-        fDistanceToNode,
+        [&](Index n) {
+            auto L          = LU.col(n).head<kDims>();
+            auto U          = LU.col(n).tail<kDims>();
+            using TDerivedL = decltype(L);
+            using TDerivedU = decltype(U);
+            return fDistanceToNode.template operator()<TDerivedL, TDerivedU>(L, U);
+        },
         fDistanceToObject,
         fOnNearestNeighbour,
         K,
