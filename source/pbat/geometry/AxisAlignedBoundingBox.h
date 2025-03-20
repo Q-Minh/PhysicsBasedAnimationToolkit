@@ -160,18 +160,29 @@ AxisAlignedBoundingBox<Dims>::contained(Eigen::MatrixBase<TDerived> const& P) co
     return inds;
 }
 
+template <auto kDims, auto kClusterNodes, class FCluster, class TDerivedB>
+inline void ClustersToAabbs(FCluster fCluster, Index nClusters, Eigen::DenseBase<TDerivedB>& B)
+{
+    for (auto c = 0; c < nClusters; ++c)
+    {
+        Matrix<kDims, kClusterNodes> XC = fCluster(c);
+        B.col(c).head<3>()              = XC.rowwise().minCoeff();
+        B.col(c).tail<3>()              = XC.rowwise().maxCoeff();
+    }
+}
+
 template <auto kDims, auto kElemNodes, class TDerivedX, class TDerivedE, class TDerivedB>
 inline void MeshToAabbs(
     Eigen::DenseBase<TDerivedX> const& X,
     Eigen::DenseBase<TDerivedE> const& E,
     Eigen::DenseBase<TDerivedB>& B)
 {
-    for (auto e = 0; e < E.cols(); ++e)
-    {
-        auto XE = X(Eigen::placeholders::all, E.col(e)).block<kDims, kElemNodes>(0, 0).eval();
-        B.col(e).head<3>() = XE.rowwise().minCoeff();
-        B.col(e).tail<3>() = XE.rowwise().maxCoeff();
-    }
+    ClustersToAabbs<kDims, kElemNodes>(
+        [&](Index e) {
+            return X(Eigen::placeholders::all, E.col(e)).block<kDims, kElemNodes>(0, 0);
+        },
+        E.cols(),
+        B);
 }
 
 } // namespace pbat::geometry
