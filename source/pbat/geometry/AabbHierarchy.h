@@ -43,6 +43,8 @@ class AabbHierarchy
     /**
      * @brief Construct an Aabb Hierarchy from an input AABB matrix LU
      *
+     * Construction is approximately O(n log n) time complexity due to k-D tree construction.
+     *
      * @tparam TDerived Type of the input matrix
      * @param B 2*kDims x |# objects| matrix of object AABBs, such that for an object o,
      * B.col(o).head<kDims>() is the lower bound and B.col(o).tail<kDims>() is the upper bound.
@@ -151,7 +153,7 @@ AabbHierarchy<kDims>::Construct(Eigen::DenseBase<TDerived> const& B, Index maxPo
     LU.resize(2 * kDims, nNodes);
     LU.topRows<kDims>().setConstant(std::numeric_limits<Scalar>::max());
     LU.bottomRows<kDims>().setConstant(std::numeric_limits<Scalar>::lowest());
-    ComputeNodeAabbs(B);
+    Update(B);
 }
 
 template <auto kDims>
