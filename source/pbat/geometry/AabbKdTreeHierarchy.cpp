@@ -1,12 +1,12 @@
-#include "AabbHierarchy.h"
+#include "AabbKdTreeHierarchy.h"
 
 #include <doctest/doctest.h>
 
-TEST_CASE("[geometry] AabbHierarchy")
+TEST_CASE("[geometry] AabbKdTreeHierarchy")
 {
     using namespace pbat;
     using namespace pbat::geometry;
 
     static auto constexpr kDims = 3;
-    AabbHierarchy<kDims> aabbHierarchy{};
+    AabbKdTreeHierarchy<kDims> aabbHierarchy{};
 }

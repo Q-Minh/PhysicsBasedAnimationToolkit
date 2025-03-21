@@ -313,10 +313,8 @@ BoundingVolumeHierarchy<TDerived, TBoundingVolume, TPrimitive, Dims>::NearestPri
             }
             else
             {
-                if (node.HasLeftChild())
-                    queue.push(MakeVolumeQueueItem(node.lc));
-                if (node.HasRightChild())
-                    queue.push(MakeVolumeQueueItem(node.rc));
+                queue.push(MakeVolumeQueueItem(node.Left()));
+                queue.push(MakeVolumeQueueItem(node.Right()));
             }
         }
         else
@@ -397,17 +395,13 @@ BoundingVolumeHierarchy<TDerived, TBoundingVolume, TPrimitive, Dims>::Overlappin
         }
         else if (bIsNode1Leaf and not bIsNode2Leaf)
         {
-            if (node2.HasLeftChild())
-                stack.push({n1, node2.lc});
-            if (node2.HasRightChild())
-                stack.push({n1, node2.rc});
+            stack.push({n1, node2.Left()});
+            stack.push({n1, node2.Right()});
         }
         else if (not bIsNode1Leaf and bIsNode2Leaf)
         {
-            if (node1.HasLeftChild())
-                stack.push({node1.lc, n2});
-            if (node1.HasRightChild())
-                stack.push({node1.rc, n2});
+            stack.push({node1.Left(), n2});
+            stack.push({node1.Right(), n2});
         }
         else
         {
@@ -415,17 +409,13 @@ BoundingVolumeHierarchy<TDerived, TBoundingVolume, TPrimitive, Dims>::Overlappin
             auto const n2n = node2.n;
             if (n1n > n2n)
             {
-                if (node1.HasLeftChild())
-                    stack.push({node1.lc, n2});
-                if (node1.HasRightChild())
-                    stack.push({node1.rc, n2});
+                stack.push({node1.Left(), n2});
+                stack.push({node1.Right(), n2});
             }
             else
             {
-                if (node2.HasLeftChild())
-                    stack.push({n1, node2.lc});
-                if (node2.HasRightChild())
-                    stack.push({n1, node2.rc});
+                stack.push({n1, node2.Left()});
+                stack.push({n1, node2.Right()});
             }
         }
     }

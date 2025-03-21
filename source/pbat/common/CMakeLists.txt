@@ -6,19 +6,21 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
         "Common.h"
         "Concepts.h"
         "ConstexprFor.h"
-        "NAryTreeTraversal.h"
         "Eigen.h"
         "Hash.h"
+        "Heap.h"
         "Indexing.h"
+        "NAryTreeTraversal.h"
         "Queue.h"
         "Stack.h"
 )
 target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
 PRIVATE
     "ArgSort.cpp"
-    "NAryTreeTraversal.cpp"
     "Eigen.cpp"
+    "Heap.cpp"
     "Indexing.cpp"
     "Queue.cpp"
+    "NAryTreeTraversal.cpp"
     "Stack.cpp"
 )

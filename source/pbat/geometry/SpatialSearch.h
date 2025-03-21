@@ -1,12 +1,22 @@
+/**
+ * @file SpatialSearch.h
+ * @author Quoc-Minh Ton-That (tonthat.quocminh@gmail.com)
+ * @brief Generic efficient spatial search query implementations
+ * @date 2025-02-10
+ *
+ * @copyright Copyright (c) 2025
+ */
+
 #ifndef PBAT_GEOMETRY_SPATIALSEARCH_H
 #define PBAT_GEOMETRY_SPATIALSEARCH_H
 
 #include "pbat/Aliases.h"
+#include "pbat/HostDevice.h"
 #include "pbat/common/ConstexprFor.h"
+#include "pbat/common/Heap.h"
 #include "pbat/common/NAryTreeTraversal.h"
 #include "pbat/common/Queue.h"
 #include "pbat/common/Stack.h"
-#include "pbat/profiling/Profiling.h"
 
 #include <algorithm>
 #include <array>
@@ -52,7 +62,7 @@ template <
     class TScalar    = Scalar,
     class TIndex     = Index,
     auto kStackDepth = 64>
-void Overlaps(
+PBAT_HOST_DEVICE void Overlaps(
     FChild fChild,
     FIsLeaf fIsLeaf,
     FLeafSize fLeafSize,
@@ -101,7 +111,7 @@ template <
     class TIndex     = Index,
     auto kStackDepth = 64,
     auto kQueueSize  = 8>
-void NearestNeighbour(
+PBAT_HOST_DEVICE void NearestNeighbour(
     FChild fChild,
     FIsLeaf fIsLeaf,
     FLeafSize fLeafSize,
@@ -145,10 +155,11 @@ template <
     class FDistanceLowerBound,
     class FDistance,
     class FOnFound,
-    auto N        = 2,
-    class TScalar = Scalar,
-    class TIndex  = Index>
-void KNearestNeighbours(
+    auto N             = 2,
+    class TScalar      = Scalar,
+    class TIndex       = Index,
+    auto kHeapCapacity = 128>
+PBAT_HOST_DEVICE void KNearestNeighbours(
     FChild fChild,
     FIsLeaf fIsLeaf,
     FLeafSize fLeafSize,
@@ -182,9 +193,8 @@ void Overlaps(
     FOnFound fOnFound,
     TIndex root)
 {
-    PBAT_PROFILE_NAMED_SCOPE("pbat.geometry.Overlaps");
     Index k{0};
-    auto fVisit = [&](TIndex node) {
+    auto fVisit = [&] PBAT_HOST_DEVICE(TIndex node) {
         if (not fNodeOverlaps(node))
             return false;
         if (fIsLeaf(node))
@@ -231,10 +241,8 @@ void NearestNeighbour(
     TScalar eps,
     TIndex root)
 {
-    PBAT_PROFILE_NAMED_SCOPE("pbat.geometry.NearestNeighbour");
-
     common::Queue<TIndex, kQueueSize> nn{};
-    auto fVisit = [&](TIndex node) {
+    auto fVisit = [&] PBAT_HOST_DEVICE(TIndex node) {
         if (fLower(node) > fUpper)
             return false;
         if (fIsLeaf(node))
@@ -284,7 +292,8 @@ template <
     class FOnFound,
     auto N,
     class TScalar,
-    class TIndex>
+    class TIndex,
+    auto kHeapCapacity>
 void KNearestNeighbours(
     FChild fChild,
     FIsLeaf fIsLeaf,
@@ -297,8 +306,6 @@ void KNearestNeighbours(
     TScalar fUpper,
     TIndex root)
 {
-    PBAT_PROFILE_NAMED_SCOPE("pbat.geometry.KNearestNeighbours");
-
     enum class EQueueItem { Node, Object };
     struct QueueItem
     {
@@ -308,27 +315,24 @@ void KNearestNeighbours(
                          // bv_idx + 1)
         TScalar d;       // Distance from this QueueItem to p
     };
-    auto const fMakeNodeQueueItem = [&](TIndex node) {
+    auto fMakeNodeQueueItem = [&](TIndex node) {
         return QueueItem{EQueueItem::Node, node, fLower(node)};
     };
-    auto const fMakeObjectQueueItem = [&](TIndex object) {
+    auto fMakeObjectQueueItem = [&](TIndex object) {
         return QueueItem{EQueueItem::Object, object, fDistance(object)};
     };
-    auto const fGreater = [](QueueItem const& q1, QueueItem const& q2) {
+    auto fGreater = [](QueueItem const& q1, QueueItem const& q2) {
         return q1.d > q2.d;
     };
-    using Comparator    = decltype(fGreater);
-    using Container     = std::vector<QueueItem>;
-    using PriorityQueue = std::priority_queue<QueueItem, Container, Comparator>;
-    Container allocation{};
-    allocation.reserve(64 * N);
-    PriorityQueue heap{fGreater, std::move(allocation)};
-    heap.push(fMakeNodeQueueItem(root));
+    using Comparator = decltype(fGreater);
+    using Container  = std::vector<QueueItem>;
+    using MinHeap    = common::Heap<QueueItem, Comparator, kHeapCapacity>;
+    MinHeap heap{fGreater};
+    heap.Push(fMakeNodeQueueItem(root));
     TIndex k{0};
-    while (not heap.empty())
+    while (not heap.IsEmpty())
     {
-        QueueItem const q = heap.top();
-        heap.pop();
+        QueueItem const q = heap.Pop();
         if (q.d > fUpper)
             break;
         if (q.type == EQueueItem::Node)
@@ -340,7 +344,7 @@ void KNearestNeighbours(
                 for (TIndex i = 0; i < nLeafObjects; ++i)
                 {
                     TIndex const o = fLeafObject(node, i);
-                    heap.push(fMakeObjectQueueItem(o));
+                    heap.Push(fMakeObjectQueueItem(o));
                 }
             }
             else
@@ -348,7 +352,7 @@ void KNearestNeighbours(
                 common::ForRange<0, N>([&]<auto i> {
                     TIndex const child = fChild.template operator()<i>(node);
                     if (child >= 0)
-                        heap.push(fMakeNodeQueueItem(child));
+                        heap.Push(fMakeNodeQueueItem(child));
                 });
             }
         }

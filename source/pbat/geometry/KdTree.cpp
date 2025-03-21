@@ -22,7 +22,8 @@ TEST_CASE("[geometry] KdTree")
         }
         IndexVectorX const& permutation = kdTree.Permutation();
         CHECK_EQ(permutation.size(), N);
-        IndexVectorX counts(N, 0);
+        IndexVectorX counts(N);
+        counts.setZero();
         for (auto idx : permutation)
             ++counts(idx);
         bool const bIndicesAreUnique = (counts.array() == 1).all();

@@ -31,9 +31,9 @@ TEST_CASE("[geometry] SpatialSearch")
     // Define branch and bound tree getters here
     auto const fChild = [&]<auto c>(Index node) {
         if constexpr (c == 0)
-            return nodes[node].lc;
+            return nodes[node].Left();
         else
-            return nodes[node].rc;
+            return nodes[node].Right();
     };
     auto const fIsLeaf = [&](Index node) {
         return nodes[node].IsLeafNode();

@@ -1,5 +1,14 @@
-#ifndef PBAT_GEOMETRY_AABBHIERARCHY_H
-#define PBAT_GEOMETRY_AABBHIERARCHY_H
+/**
+ * @file AabbKdTreeHierarchy.h
+ * @author Quoc-Minh Ton-That (tonthat.quocminh@gmail.com)
+ * @brief BVH over axis-aligned bounding boxes using a k-D tree
+ * @date 2025-02-10
+ *
+ * @copyright Copyright (c) 2025
+ */
+
+#ifndef PBAT_GEOMETRY_AABBKDTREEHIERARCHY_H
+#define PBAT_GEOMETRY_AABBKDTREEHIERARCHY_H
 
 #include "KdTree.h"
 #include "SpatialSearch.h"
@@ -17,7 +26,7 @@ namespace pbat::geometry {
  * This BVH does not store the AABBs themselves, only the tree topology and the AABBs of the tree
  * nodes. The user is responsible for storing the objects and their AABBs. Doing so allows this BVH
  * implementation to support arbitrary object types. When objects move, the user should update the
- * AABBs and call AabbHierarchy::Update() to recompute the tree node AABBs.
+ * AABBs and call AabbKdTreeHierarchy::Update() to recompute the tree node AABBs.
  *
  * @note This BVH implementation relies on a static k-D tree, thus tree topology cannot be
  * modified after construction. In other words, dynamic insertion/deletion of objects
@@ -26,12 +35,12 @@ namespace pbat::geometry {
  * @tparam kDims Number of spatial dimensions
  */
 template <auto kDims>
-class AabbHierarchy
+class AabbKdTreeHierarchy
 {
   public:
-    AabbHierarchy() = default;
+    AabbKdTreeHierarchy() = default;
     /**
-     * @brief Construct an Aabb Hierarchy from an input AABB matrix LU
+     * @brief Construct an Aabb Hierarchy from an input AABB matrix B
      *
      * @tparam TDerived Type of the input matrix
      * @param B 2*kDims x |# objects| matrix of object AABBs, such that for an object o,
@@ -39,9 +48,9 @@ class AabbHierarchy
      * @param maxPointsInLeaf Maximum number of points in a leaf node
      */
     template <class TDerived>
-    AabbHierarchy(Eigen::DenseBase<TDerived> const& B, Index maxPointsInLeaf = 8);
+    AabbKdTreeHierarchy(Eigen::DenseBase<TDerived> const& B, Index maxPointsInLeaf = 8);
     /**
-     * @brief Construct an Aabb Hierarchy from an input AABB matrix LU
+     * @brief Construct an Aabb Hierarchy from an input AABB matrix B
      *
      * Construction is approximately O(n log n) time complexity due to k-D tree construction.
      *
@@ -124,18 +133,18 @@ class AabbHierarchy
 
   private:
     Matrix<2 * kDims, Eigen::Dynamic>
-        LU;             ///< 2*kDims x |# k-D tree nodes| matrix of AABBs, such that
-                        ///< for a node node, LU.col(node).head<kDims>() is the lower
-                        ///< bound and LU.col(node).tail<kDims>() is the upper bound.
+        IB;             ///< 2*kDims x |# k-D tree nodes| matrix of AABBs, such that
+                        ///< for a node node, IB.col(node).head<kDims>() is the lower
+                        ///< bound and IB.col(node).tail<kDims>() is the upper bound.
     KdTree<kDims> tree; ///< KdTree over the AABBs
 };
 
 template <auto kDims>
 template <class TDerived>
-inline AabbHierarchy<kDims>::AabbHierarchy(
+inline AabbKdTreeHierarchy<kDims>::AabbKdTreeHierarchy(
     Eigen::DenseBase<TDerived> const& B,
     Index maxPointsInLeaf)
-    : LU(), tree()
+    : IB(), tree()
 {
     Construct(B, maxPointsInLeaf);
 }
@@ -143,24 +152,24 @@ inline AabbHierarchy<kDims>::AabbHierarchy(
 template <auto kDims>
 template <class TDerived>
 inline void
-AabbHierarchy<kDims>::Construct(Eigen::DenseBase<TDerived> const& B, Index maxPointsInLeaf)
+AabbKdTreeHierarchy<kDims>::Construct(Eigen::DenseBase<TDerived> const& B, Index maxPointsInLeaf)
 {
-    PBAT_PROFILE_NAMED_SCOPE("pbat.geometry.AabbHierarchy.Construct");
+    PBAT_PROFILE_NAMED_SCOPE("pbat.geometry.AabbKdTreeHierarchy.Construct");
     Matrix<kDims, Eigen::Dynamic> P =
         0.5 * (B.template topRows<kDims>() + B.template bottomRows<kDims>());
     tree.Construct(P, maxPointsInLeaf);
     auto const nNodes = static_cast<Index>(tree.Nodes().size());
-    LU.resize(2 * kDims, nNodes);
-    LU.topRows<kDims>().setConstant(std::numeric_limits<Scalar>::max());
-    LU.bottomRows<kDims>().setConstant(std::numeric_limits<Scalar>::lowest());
+    IB.resize(2 * kDims, nNodes);
+    IB.template topRows<kDims>().setConstant(std::numeric_limits<Scalar>::max());
+    IB.template bottomRows<kDims>().setConstant(std::numeric_limits<Scalar>::lowest());
     Update(B);
 }
 
 template <auto kDims>
 template <class TDerivedB>
-inline void AabbHierarchy<kDims>::Update(Eigen::DenseBase<TDerivedB> const& B)
+inline void AabbKdTreeHierarchy<kDims>::Update(Eigen::DenseBase<TDerivedB> const& B)
 {
-    PBAT_PROFILE_NAMED_SCOPE("pbat.geometry.AabbHierarchy.Update");
+    PBAT_PROFILE_NAMED_SCOPE("pbat.geometry.AabbKdTreeHierarchy.Update");
     KdTreeNode const* nodes  = tree.Nodes().data();
     IndexVectorX const& perm = tree.Permutation();
     common::TraverseNAryTreePseudoPostOrder(
@@ -169,60 +178,54 @@ inline void AabbHierarchy<kDims>::Update(Eigen::DenseBase<TDerivedB> const& B)
             if (node.IsLeaf())
             {
                 auto inds = perm(Eigen::seqN(node.begin, node.n));
-                LU.col(n).head<kDims>() =
+                IB.col(n).head<kDims>() =
                     B.template topRows<kDims>(Eigen::placeholders::all, inds).rowwise().minCoeff();
-                LU.col(n).tail<kDims>() =
+                IB.col(n).tail<kDims>() =
                     B.template bottomRows<kDims>(Eigen::placeholders::all, inds)
                         .rowwise()
                         .maxCoeff();
             }
             else
             {
-                auto const fUpdate = [&](Index c) {
-                    auto cmin = LU.col(c).head<kDims>();
-                    auto cmax = LU.col(c).tail<kDims>();
-                    auto nmin = LU.col(n).head<kDims>();
-                    auto nmax = LU.col(n).tail<kDims>();
-                    nmin      = nmin.cwiseMin(cmin);
-                    nmax      = nmax.cwiseMax(cmax);
-                };
-                if (node.lc)
-                    fUpdate(node.lc);
-                if (node.rc)
-                    fUpdate(node.rc);
+                // Our k-D tree's internal nodes always have both children.
+                auto nbox          = IB.col(n);
+                auto lbox          = IB.col(node.Left());
+                auto rbox          = IB.col(node.Right());
+                nbox.head<kDims>() = lbox.head<kDims>().cwiseMin(rbox.head<kDims>());
+                nbox.tail<kDims>() = lbox.tail<kDims>().cwiseMax(rbox.tail<kDims>());
             }
         },
         [&]<auto c>(Index n) -> Index {
             if constexpr (c == 0)
-                return nodes[n].lc;
+                return nodes[n].Left();
             else
-                return nodes[n].rc;
+                return nodes[n].Right();
         });
 }
 
 template <auto kDims>
 template <class FNodeOverlaps, class FObjectOverlaps, class FOnOverlap>
-inline void AabbHierarchy<kDims>::Overlaps(
+inline void AabbKdTreeHierarchy<kDims>::Overlaps(
     FNodeOverlaps fNodeOverlaps,
     FObjectOverlaps fObjectOverlaps,
     FOnOverlap fOnOverlap) const
 {
-    PBAT_PROFILE_NAMED_SCOPE("pbat.geometry.AabbHierarchy.Overlaps");
+    PBAT_PROFILE_NAMED_SCOPE("pbat.geometry.AabbKdTreeHierarchy.Overlaps");
     KdTreeNode const* nodes  = tree.Nodes().data();
     IndexVectorX const& perm = tree.Permutation();
     geometry::Overlaps(
         [&]<auto c>(Index n) -> Index {
             if constexpr (c == 0)
-                return nodes[n].lc;
+                return nodes[n].Left();
             else
-                return nodes[n].rc;
+                return nodes[n].Right();
         },
         [&](Index n) { return nodes[n].IsLeaf(); },
         [&](Index n) { return nodes[n].n; },
         [&](Index n, Index i) { return perm(nodes[n].begin + i); },
         [&](Index n) {
-            auto L          = LU.col(n).head<kDims>();
-            auto U          = LU.col(n).tail<kDims>();
+            auto L          = IB.col(n).head<kDims>();
+            auto U          = IB.col(n).tail<kDims>();
             using TDerivedL = decltype(L);
             using TDerivedU = decltype(U);
             return fNodeOverlaps.template operator()<TDerivedL, TDerivedU>(L, U);
@@ -233,29 +236,29 @@ inline void AabbHierarchy<kDims>::Overlaps(
 
 template <auto kDims>
 template <class FDistanceToNode, class FDistanceToObject, class FOnNearestNeighbour>
-inline void AabbHierarchy<kDims>::NearestNeighbour(
+inline void AabbKdTreeHierarchy<kDims>::NearestNeighbour(
     FDistanceToNode fDistanceToNode,
     FDistanceToObject fDistanceToObject,
     FOnNearestNeighbour fOnNearestNeighbour,
     Scalar radius,
     Scalar eps) const
 {
-    PBAT_PROFILE_NAMED_SCOPE("pbat.geometry.AabbHierarchy.NearestNeighbour");
+    PBAT_PROFILE_NAMED_SCOPE("pbat.geometry.AabbKdTreeHierarchy.NearestNeighbour");
     KdTreeNode const* nodes  = tree.Nodes().data();
     IndexVectorX const& perm = tree.Permutation();
     geometry::NearestNeighbour(
         [&]<auto c>(Index n) -> Index {
             if constexpr (c == 0)
-                return nodes[n].lc;
+                return nodes[n].Left();
             else
-                return nodes[n].rc;
+                return nodes[n].Right();
         },
         [&](Index n) { return nodes[n].IsLeaf(); },
         [&](Index n) { return nodes[n].n; },
         [&](Index n, Index i) { return perm(nodes[n].begin + i); },
         [&](Index n) {
-            auto L          = LU.col(n).head<kDims>();
-            auto U          = LU.col(n).tail<kDims>();
+            auto L          = IB.col(n).head<kDims>();
+            auto U          = IB.col(n).tail<kDims>();
             using TDerivedL = decltype(L);
             using TDerivedU = decltype(U);
             return fDistanceToNode.template operator()<TDerivedL, TDerivedU>(L, U);
@@ -268,29 +271,29 @@ inline void AabbHierarchy<kDims>::NearestNeighbour(
 
 template <auto kDims>
 template <class FDistanceToNode, class FDistanceToObject, class FOnNearestNeighbour>
-inline void AabbHierarchy<kDims>::KNearestNeighbours(
+inline void AabbKdTreeHierarchy<kDims>::KNearestNeighbours(
     FDistanceToNode fDistanceToNode,
     FDistanceToObject fDistanceToObject,
     FOnNearestNeighbour fOnNearestNeighbour,
     Index K,
     Scalar radius) const
 {
-    PBAT_PROFILE_NAMED_SCOPE("pbat.geometry.AabbHierarchy.KNearestNeighbours");
+    PBAT_PROFILE_NAMED_SCOPE("pbat.geometry.AabbKdTreeHierarchy.KNearestNeighbours");
     KdTreeNode const* nodes  = tree.Nodes().data();
     IndexVectorX const& perm = tree.Permutation();
     geometry::KNearestNeighbours(
         [&]<auto c>(Index n) -> Index {
             if constexpr (c == 0)
-                return nodes[n].lc;
+                return nodes[n].Left();
             else
-                return nodes[n].rc;
+                return nodes[n].Right();
         },
         [&](Index n) { return nodes[n].IsLeaf(); },
         [&](Index n) { return nodes[n].n; },
         [&](Index n, Index i) { return perm(nodes[n].begin + i); },
         [&](Index n) {
-            auto L          = LU.col(n).head<kDims>();
-            auto U          = LU.col(n).tail<kDims>();
+            auto L          = IB.col(n).head<kDims>();
+            auto U          = IB.col(n).tail<kDims>();
             using TDerivedL = decltype(L);
             using TDerivedU = decltype(U);
             return fDistanceToNode.template operator()<TDerivedL, TDerivedU>(L, U);
@@ -303,4 +306,4 @@ inline void AabbHierarchy<kDims>::KNearestNeighbours(
 
 } // namespace pbat::geometry
 
-#endif // PBAT_GEOMETRY_AABBHIERARCHY_H
+#endif // PBAT_GEOMETRY_AABBKDTREEHIERARCHY_H

@@ -1,3 +1,12 @@
+/**
+ * @file NAryTreeTraversal.h
+ * @author Quoc-Minh Ton-That (tonthat.quocminh@gmail.com)
+ * @brief Generic n-ary tree traversals
+ * @date 2025-02-10
+ *
+ * @copyright Copyright (c) 2025
+ */
+
 #ifndef PBAT_COMMON_NARYTREETRAVERSAL_H
 #define PBAT_COMMON_NARYTREETRAVERSAL_H
 
@@ -59,8 +68,7 @@ PBAT_HOST_DEVICE void TraverseNAryTreePseudoPreOrder(FVisit fVisit, FChild fChil
     dfs.Push(root);
     while (not dfs.IsEmpty())
     {
-        auto const node = dfs.Top();
-        dfs.Pop();
+        TIndex const node = dfs.Pop();
         if (not fVisit(node))
             continue;
 

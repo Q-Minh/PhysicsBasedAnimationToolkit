@@ -22,6 +22,7 @@ namespace pbat::common {
 #include "ConstexprFor.h"
 #include "Eigen.h"
 #include "Hash.h"
+#include "Heap.h"
 #include "Indexing.h"
 #include "NAryTreeTraversal.h"
 #include "Queue.h"

@@ -2,7 +2,7 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     PUBLIC
     FILE_SET api
     FILES
-    "AabbHierarchy.h"
+    "AabbKdTreeHierarchy.h"
     "AxisAlignedBoundingBox.h"
     "BoundingVolumeHierarchy.h"
     "ClosestPointQueries.h"
@@ -19,7 +19,7 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
 )
 target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     PRIVATE
-    "AabbHierarchy.cpp"
+    "AabbKdTreeHierarchy.cpp"
     "AxisAlignedBoundingBox.cpp"
     "BoundingVolumeHierarchy.cpp"
     "ClosestPointQueries.cpp"
