@@ -185,7 +185,7 @@ template <
     auto N             = 2,
     class TScalar      = Scalar,
     class TIndex       = Index,
-    auto kHeapCapacity = 128>
+    auto kHeapCapacity = 64>
 PBAT_HOST_DEVICE void KNearestNeighbours(
     FChild fChild,
     FIsLeaf fIsLeaf,
