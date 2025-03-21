@@ -249,6 +249,7 @@ void Overlaps(
     common::Stack<TIndex, kStackDepth> stack{};
     if (not fVisit(root))
         return;
+    stack.Push(root);
     while (not stack.IsEmpty())
     {
         TIndex const node = stack.Pop();
