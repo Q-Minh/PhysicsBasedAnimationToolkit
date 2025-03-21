@@ -15,10 +15,11 @@ TEST_CASE("[geometry] SpatialSearch")
 {
     using namespace pbat;
     // Arrange
-    auto constexpr kDims = 3;
-    MatrixX P            = MatrixX::Random(kDims, 100);
-    using Aabb           = geometry::AxisAlignedBoundingBox<kDims>;
-    using KdTree         = geometry::KdTree<kDims>;
+    auto constexpr kDims   = 3;
+    auto constexpr kPoints = 100;
+    MatrixX P              = MatrixX::Random(kDims, kPoints);
+    using Aabb             = geometry::AxisAlignedBoundingBox<kDims>;
+    using KdTree           = geometry::KdTree<kDims>;
     KdTree tree{P};
     auto const nNodes = tree.Nodes().size();
     auto const* nodes = tree.Nodes().data();
@@ -79,6 +80,11 @@ TEST_CASE("[geometry] SpatialSearch")
         // Act
         Index nn{-1};
         Scalar dmin{std::numeric_limits<Scalar>::max()};
+        bool bUseBestFirstSearch{false};
+        SUBCASE("Best-first order")
+        {
+            bUseBestFirstSearch = true;
+        }
         geometry::NearestNeighbour(
             fChild,
             fIsLeaf,
@@ -94,7 +100,8 @@ TEST_CASE("[geometry] SpatialSearch")
             [&](Index o, Scalar d, [[maybe_unused]] Index k) {
                 nn   = o;
                 dmin = d;
-            });
+            },
+            bUseBestFirstSearch);
         // Assert
         Index nnExpected;
         Scalar dminExpected = d2.minCoeff(&nnExpected);
