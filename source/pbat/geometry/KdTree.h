@@ -12,6 +12,7 @@
 #define PBAT_GEOMETRY_KDTREE_H
 
 #include "AxisAlignedBoundingBox.h"
+#include "pbat/common/Stack.h"
 
 #include <algorithm>
 #include <pbat/Aliases.h>
@@ -141,27 +142,6 @@ class KdTree
      */
     auto PointsInNode(KdTreeNode const& node) const;
 
-  protected:
-    /**
-     * @brief Recursive construct call that constructs a sub-tree of the full k-D tree
-     * @tparam TDerivedP Eigen dense expression type
-     * @param nodeIdx Index of the sub-tree root node
-     * @param P Points to construct the k-D tree from
-     * @param aabb Axis-aligned bounding box of the points contained in the sub-tree
-     * @param begin Index of the first point in the permutation list contained in the sub-tree
-     * @param n Number of points in the permutation list starting from begin contained in the
-     * sub-tree
-     * @param maxPointsInLeaf Maximum number of points in a leaf node
-     */
-    template <class TDerivedP>
-    void DoConstruct(
-        Index const nodeIdx,
-        Eigen::DenseBase<TDerivedP> const& P,
-        AxisAlignedBoundingBox<Dims> const& aabb,
-        Index const begin,
-        Index const n,
-        Index maxPointsInLeaf);
-
   private:
     IndexVectorX mPermutation;      ///< mPermutation[i] gives the index of point i in
                                     ///< the original points list given to
@@ -181,21 +161,70 @@ template <class TDerivedP>
 inline void KdTree<Dims>::Construct(Eigen::DenseBase<TDerivedP> const& P, Index maxPointsInLeaf)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.geometry.KdTree.Construct");
-    Index const n            = P.cols();
-    auto const nMaxLeafNodes = (n / maxPointsInLeaf) + (n % maxPointsInLeaf != 0);
+    // Our k-D tree is a full binary tree (i.e. # nodes = 2*leaves - 1). We try to estimate
+    // the number of leaf nodes to reserve memory up-front and prevent any reallocation, but without
+    // excessively using up memory. We estimate the number of nodes per leaf to be 80% of the
+    // maximum number of points in a leaf node.
+    Index const nPoints                      = P.cols();
+    Scalar constexpr kEstimatedLeafOccupancy = 0.8;
+    auto const nEstimatedNodesPerLeaf =
+        (maxPointsInLeaf > 1) ?
+            static_cast<Index>(std::ceil(kEstimatedLeafOccupancy * maxPointsInLeaf)) :
+            1;
+    auto const nEstimatedLeafNodes =
+        (nPoints / nEstimatedNodesPerLeaf) + (nPoints % nEstimatedNodesPerLeaf != 0);
     mNodes.clear();
-    // Our k-D tree is a full binary tree (i.e. # nodes = 2*leaves - 1). The estimated number of
-    // leaf nodes is nMaxLeafNodes and should be a good upper bound.
-    mNodes.reserve(static_cast<std::size_t>(2 * nMaxLeafNodes - 1));
-    auto iota = std::views::iota(Index{0}, n);
-    mPermutation.resize(n);
+    mNodes.reserve(static_cast<std::size_t>(2 * nEstimatedLeafNodes - 1));
+    auto iota = std::views::iota(Index{0}, nPoints);
+    mPermutation.resize(nPoints);
     std::copy(iota.begin(), iota.end(), mPermutation.data());
 
-    geometry::AxisAlignedBoundingBox<Dims> const aabb{P};
-    auto constexpr begin = 0;
-    auto constexpr root  = 0;
-    mNodes.emplace_back(begin, n, KdTreeNode::kLeafNodeLeftChild);
-    DoConstruct(root, P, aabb, begin, n, maxPointsInLeaf);
+    // Top-down construction of the k-D tree
+    struct StackFrame
+    {
+        geometry::AxisAlignedBoundingBox<Dims> aabb;
+        Index nodeIdx;
+        Index begin;
+        Index n;
+    };
+    common::Stack<StackFrame, 128> stack{};
+    std::size_t constexpr root = 0;
+    stack.Push({geometry::AxisAlignedBoundingBox<Dims>{P}, root, 0, nPoints});
+    mNodes.emplace_back(0, nPoints, KdTreeNode::kLeafNodeLeftChild);
+    while (not stack.IsEmpty())
+    {
+        auto const [aabb, nodeIdx, begin, n] = stack.Pop();
+        if (n <= maxPointsInLeaf)
+            continue;
+
+        // Find the dimension with the largest extent
+        Eigen::Index dimension{};
+        (aabb.max() - aabb.min()).maxCoeff(&dimension);
+        // Partition the points along the dimension on left/right sides of median
+        Index const halfn = n / 2;
+        std::nth_element(
+            mPermutation.data() + begin,
+            mPermutation.data() + begin + halfn,
+            mPermutation.data() + begin + n,
+            [&](Index const lhs, Index const rhs) {
+                return P(dimension, lhs) < P(dimension, rhs);
+            });
+        // Set the left (and implicitly right) child index of the current node
+        mNodes[static_cast<std::size_t>(nodeIdx)].c = static_cast<Index>(mNodes.size());
+        // Split bounding box into child boxes
+        Scalar const split           = P(dimension, mPermutation[begin + halfn]);
+        AxisAlignedBoundingBox laabb = aabb;
+        laabb.max()(dimension)       = split;
+        AxisAlignedBoundingBox raabb = aabb;
+        raabb.min()(dimension)       = split;
+        // Store left/right node contiguously in memory
+        mNodes.emplace_back(begin, halfn, KdTreeNode::kLeafNodeLeftChild);
+        mNodes.emplace_back(begin + halfn, n - halfn, KdTreeNode::kLeafNodeLeftChild);
+        // Schedule left and right sub-tree constructions
+        stack.Push({laabb, mNodes[static_cast<std::size_t>(nodeIdx)].Left(), begin, halfn});
+        stack.Push(
+            {raabb, mNodes[static_cast<std::size_t>(nodeIdx)].Right(), begin + halfn, n - halfn});
+    }
 }
 
 template <int Dims>
@@ -266,47 +295,6 @@ inline auto KdTree<Dims>::PointsInNode(KdTreeNode const& node) const
     namespace vi = std::views;
     auto indrng  = mPermutation | vi::drop(node.begin) | vi::take(node.n);
     return indrng;
-}
-
-template <int Dims>
-template <class TDerivedP>
-inline void KdTree<Dims>::DoConstruct(
-    Index const nodeIdx,
-    Eigen::DenseBase<TDerivedP> const& P,
-    AxisAlignedBoundingBox<Dims> const& aabb,
-    Index const begin,
-    Index const n,
-    Index maxPointsInLeaf)
-{
-    if (n <= maxPointsInLeaf)
-        return;
-
-    Eigen::Index dimension{};
-    (aabb.max() - aabb.min()).maxCoeff(&dimension);
-
-    Index const halfn = n / 2;
-
-    std::nth_element(
-        mPermutation.data() + begin,
-        mPermutation.data() + begin + halfn,
-        mPermutation.data() + begin + n,
-        [&](Index const lhs, Index const rhs) { return P(dimension, lhs) < P(dimension, rhs); });
-
-    auto& node = mNodes[static_cast<std::size_t>(nodeIdx)];
-    node.c     = static_cast<Index>(mNodes.size());
-    mNodes.emplace_back(begin, halfn, KdTreeNode::kLeafNodeLeftChild);
-    mNodes.emplace_back(begin + halfn, n - halfn, KdTreeNode::kLeafNodeLeftChild);
-
-    Scalar const split           = P(dimension, mPermutation[begin + halfn]);
-    AxisAlignedBoundingBox laabb = aabb;
-    laabb.max()(dimension)       = split;
-    AxisAlignedBoundingBox raabb = aabb;
-    raabb.min()(dimension)       = split;
-
-    // NOTE: mNodes might have been reallocated, which would invalidate the variable (a reference)
-    // "node". But probably not, since we reserve enough memory. Should take the time to prove this.
-    DoConstruct(node.Left(), P, laabb, begin, halfn, maxPointsInLeaf);
-    DoConstruct(node.Right(), P, raabb, begin + halfn, n - halfn, maxPointsInLeaf);
 }
 
 } // namespace geometry
