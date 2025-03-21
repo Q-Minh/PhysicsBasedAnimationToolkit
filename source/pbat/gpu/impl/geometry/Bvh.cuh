@@ -26,9 +26,9 @@ namespace geometry {
 
 /**
  * @brief Radix-tree linear BVH
+ * 
+ * Implements of @cite karras2012maxpartree
  *
- * See
- * https://research.nvidia.com/sites/default/files/pubs/2012-06_Maximizing-Parallelism-in/karras2012hpg_paper.pdf#page=4.43
  */
 class Bvh
 {
