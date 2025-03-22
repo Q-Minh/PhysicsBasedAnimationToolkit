@@ -3,6 +3,7 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     FILE_SET api
     FILES 
         "ArgSort.h"
+        "BinaryRadixTree.h"
         "Common.h"
         "Concepts.h"
         "ConstexprFor.h"
@@ -17,6 +18,7 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
 target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
 PRIVATE
     "ArgSort.cpp"
+    "BinaryRadixTree.cpp"
     "Eigen.cpp"
     "Heap.cpp"
     "Indexing.cpp"
