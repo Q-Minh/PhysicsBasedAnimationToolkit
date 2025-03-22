@@ -38,7 +38,7 @@ class BinaryRadixTree
     BinaryRadixTree(Eigen::DenseBase<TDerived> const& codes);
 
     /**
-     * @brief Construct a Radix Tree from a sorted list of integral codes
+     * @brief Construct a Radix Tree from a sorted list of unsigned integral codes
      *
      * Implementation has average linear time complexity \f$ O(n) \f$, where \f$ n \f$ is the number
      * of codes/leaves. We do not prove the worst case time complexity, but it is most probably the
@@ -176,8 +176,9 @@ inline void BinaryRadixTree<TIndex>::Construct(Eigen::DenseBase<TDerived> const&
 {
     using CodeType = typename TDerived::Scalar;
     static_assert(
-        std::is_integral_v<CodeType> and not std::is_same_v<CodeType, bool>,
-        "Codes must be integral");
+        std::is_integral_v<CodeType> and std::is_unsigned_v<CodeType> and
+            not std::is_same_v<CodeType, bool>,
+        "Codes must be of unsigned integral type");
 
     TIndex const nLeaves   = codes.size();
     TIndex const nInternal = nLeaves - 1;
