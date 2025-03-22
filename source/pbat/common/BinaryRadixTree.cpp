@@ -16,4 +16,11 @@ TEST_CASE("[common] BinaryRadixTree")
     // Assert
     CHECK_EQ(tree.LeafCount(), n);
     CHECK_EQ(tree.InternalNodeCount(), n - 1);
+    for (auto i = 0; i < tree.InternalNodeCount(); ++i)
+    {
+        auto lc = tree.Left(i);
+        auto rc = tree.Right(i);
+        CHECK_EQ(tree.Parent(lc), i);
+        CHECK_EQ(tree.Parent(rc), i);
+    }
 }

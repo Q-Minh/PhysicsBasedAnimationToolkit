@@ -126,6 +126,33 @@ class BinaryRadixTree
      * @return Number of leaf nodes
      */
     TIndex LeafCount() const { return mParent.size() - InternalNodeCount(); }
+    /**
+     * @brief Check if a node is a leaf
+     *
+     * @param i Index of the node
+     * @return true if the node is a leaf, false otherwise
+     */
+    bool IsLeaf(TIndex i) const { return i >= InternalNodeCount(); }
+    /**
+     * @brief Get the root of the tree
+     *
+     * @return Index of the root node
+     */
+    constexpr TIndex Root() const { return 0; }
+    /**
+     * @brief Get the index of the code associated with a leaf node
+     *
+     * @param leaf Index of the leaf node
+     * @return Index of the code
+     */
+    TIndex CodeIndex(TIndex leaf) const { return leaf - InternalNodeCount(); }
+    /**
+     * @brief Get the index of the leaf node associated with a code
+     *
+     * @param codeIdx Index of the code
+     * @return Index of the leaf node
+     */
+    TIndex LeafIndex(TIndex codeIdx) const { return codeIdx + InternalNodeCount(); }
 
   private:
     Eigen::Matrix<TIndex, 2, Eigen::Dynamic>
