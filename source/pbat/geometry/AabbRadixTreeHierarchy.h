@@ -189,9 +189,9 @@ inline void AabbRadixTreeHierarchy<kDims>::Update(Eigen::DenseBase<TDerivedB> co
         },
         [&]<auto c>(Index n) -> Index {
             if constexpr (c == 0)
-                return tree.Left(n);
+                return tree.IsLeaf(n) ? -1 : tree.Left(n);
             else
-                return tree.Right(n);
+                return tree.IsLeaf(n) ? -1 : tree.Right(n);
         });
 }
 
@@ -203,12 +203,12 @@ inline void AabbRadixTreeHierarchy<kDims>::Overlaps(
     FOnOverlap fOnOverlap) const
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.geometry.AabbRadixTreeHierarchy.Overlaps");
-    common::TraverseNAryTreePseudoPostOrder(
+    geometry::Overlaps(
         [&]<auto c>(Index n) -> Index {
             if constexpr (c == 0)
-                return tree.Left(n);
+                return tree.IsLeaf(n) ? -1 : tree.Left(n);
             else
-                return tree.Right(n);
+                return tree.IsLeaf(n) ? -1 : tree.Right(n);
         },
         [&](Index n) { return tree.IsLeaf(n); },
         []([[maybe_unused]] Index n) { return 1; },
@@ -239,9 +239,9 @@ inline void AabbRadixTreeHierarchy<kDims>::NearestNeighbour(
     geometry::NearestNeighbour(
         [&]<auto c>(Index n) -> Index {
             if constexpr (c == 0)
-                return tree.Left(n);
+                return tree.IsLeaf(n) ? -1 : tree.Left(n);
             else
-                return tree.Right(n);
+                return tree.IsLeaf(n) ? -1 : tree.Right(n);
         },
         [&](Index n) { return tree.IsLeaf(n); },
         []([[maybe_unused]] Index n) { return 1; },
@@ -275,9 +275,9 @@ inline void AabbRadixTreeHierarchy<kDims>::KNearestNeighbours(
     geometry::KNearestNeighbours(
         [&]<auto c>(Index n) -> Index {
             if constexpr (c == 0)
-                return tree.Left(n);
+                return tree.IsLeaf(n) ? -1 : tree.Left(n);
             else
-                return tree.Right(n);
+                return tree.IsLeaf(n) ? -1 : tree.Right(n);
         },
         [&](Index n) { return tree.IsLeaf(n); },
         []([[maybe_unused]] Index n) { return 1; },
