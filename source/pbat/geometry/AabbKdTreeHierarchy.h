@@ -52,11 +52,12 @@ class AabbKdTreeHierarchy
     /**
      * @brief Construct an Aabb Hierarchy from an input AABB matrix B
      *
-     * Construction is approximately O(n log n) time complexity due to k-D tree construction.
+     * Construction has \f$ O(n log n) \f$ average time complexity due to k-D tree construction.
      *
      * @tparam TDerived Type of the input matrix
      * @param B 2*kDims x |# objects| matrix of object AABBs, such that for an object o,
      * B.col(o).head<kDims>() is the lower bound and B.col(o).tail<kDims>() is the upper bound.
+     * @param maxPointsInLeaf Maximum number of points in a leaf node
      */
     template <class TDerived>
     void Construct(Eigen::DenseBase<TDerived> const& B, Index maxPointsInLeaf = 8);

@@ -82,9 +82,10 @@ class KdTree
      * The median is chosen along the largest axis at each node of the tree, where the left child
      * will inherit the parent node's points less than the median and the right child will inherit
      * the rest. At each node, we use std::nth_element, i.e. introselect, which has
-     * \f$ O(n) \f$ average complexity and \f$ O(n log(n)) \f$ worst-case complexity, to partition
-     * the points in-place. The largest k-D tree occurs when `maxPointsInLeaf == 1`, and the tree is
-     * always a full binary tree with \f$ 2n - 1 \f$ nodes.
+     * \f$ O(n) \f$ average complexity (and \f$ O(n) \f$ worst-case complexity in recent
+     * compiler versions, i.e. [Microsoft STL](https://github.com/microsoft/STL/pull/5100)), to
+     * partition the points in-place. The largest k-D tree occurs when `maxPointsInLeaf == 1`, and
+     * the tree is always a full binary tree with \f$ 2n - 1 \f$ nodes.
      *
      * Thus, tree construction has \f$ O(n log(n)) \f$ average, and \f$ O(n log^2 n) \f$
      * worst-case time complexity.
