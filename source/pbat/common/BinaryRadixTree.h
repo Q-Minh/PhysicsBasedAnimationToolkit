@@ -153,6 +153,32 @@ class BinaryRadixTree
      * @return Index of the leaf node
      */
     TIndex LeafIndex(TIndex codeIdx) const { return codeIdx + InternalNodeCount(); }
+    /**
+     * @brief Get the children array of the tree
+     *
+     * @return 2 x |# internal nodes| matrix c, s.t. c(0,i) -> left child of internal node i,
+     * c(1,i) -> right child of internal node i
+     */
+    auto Children() const { return mChild; }
+    /**
+     * @brief Left child array of the tree
+     *
+     * @return |# internal nodes| vector l, s.t. l(i) -> left child of internal node i
+     */
+    auto Left() const { return mChild.row(0); }
+    /**
+     * @brief Right child array of the tree
+     *
+     * @return |# internal nodes| vector r, s.t. r(i) -> right child of internal node i
+     */
+    auto Right() const { return mChild.row(1); }
+    /**
+     * @brief Get the parent array of the tree
+     *
+     * @note The root node is its own parent, i.e. p(0) == 0 is true
+     * @return |# internal + leaf nodes| vector p, s.t. p(i) -> parent of node i
+     */
+    auto Parent() const { return mParent; }
 
   private:
     Eigen::Matrix<TIndex, 2, Eigen::Dynamic>
