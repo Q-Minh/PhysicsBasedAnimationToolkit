@@ -320,7 +320,7 @@ inline void AabbRadixTreeHierarchy<kDims>::SortMortonCodes()
 {
     std::iota(inds.begin(), inds.end(), 0);
     cppsort::ska_sort(inds.begin(), inds.end(), [&](IndexType i) { return codes(i); });
-    common::Permute(codes.begin(), codes.end(), inds.begin(), inds.end());
+    common::Permute(codes.begin(), codes.end(), inds.begin());
 }
 
 } // namespace pbat::geometry

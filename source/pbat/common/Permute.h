@@ -1,53 +1,61 @@
 #ifndef PBAT_COMMON_PERMUTE_H
 #define PBAT_COMMON_PERMUTE_H
 
-#include <algorithm>
 #include <concepts>
 #include <iterator>
-#include <utility>
 
 namespace pbat::common {
 
 /**
- * @brief
+ * @brief Permute the values in-place according to the permutation
  *
- * @tparam TValuesBegin
- * @tparam TValuesEnd
- * @tparam TPermutationBegin
- * @tparam TPermutationEnd
- * @param vb
- * @param ve
- * @param pb
- * @param pe
+ * Taken from https://stackoverflow.com/a/60917997/8239925
+ *
+ * @tparam TValuesBegin Iterator type to the beginning of the values
+ * @tparam TValuesEnd Iterator type to the end of the values
+ * @tparam TPermutationBegin Iterator type to the beginning of the permutation
+ * @param vb Iterator to the beginning of values
+ * @param ve Iterator to the end of values
+ * @param pb Iterator to the beginning of permutation
+ *
+ * @note The permutation is modified in-place for the duration of the function, but is restored to
+ * its original state before returning.
+ *
+ * @post The permutation referenced by `p` is un-modified.
+ * @post The values referenced by `[vb, ve)` are permuted according to the permutation.
  */
 template <
     std::random_access_iterator TValuesBegin,
     std::random_access_iterator TValuesEnd,
-    std::random_access_iterator TPermutationBegin,
-    std::random_access_iterator TPermutationEnd>
-void Permute(TValuesBegin vb, TValuesEnd ve, TPermutationBegin pb, TPermutationEnd pe)
+    std::random_access_iterator TPermutationBegin>
+void Permute(TValuesBegin vb, TValuesEnd ve, TPermutationBegin p)
 {
     using PermutationIndex = std::iterator_traits<TPermutationBegin>::value_type;
     static_assert(
         std::is_integral_v<PermutationIndex> and std::is_signed_v<PermutationIndex>,
         "Permutation index must be signed integer");
-    auto n   = std::distance(vb, ve);
-    auto vit = vb;
-    auto pit = pb;
-    for (decltype(n) i = 0; i < n; ++i)
+    auto n            = std::distance(vb, ve);
+    using PtrDiffType = decltype(n);
+    for (PtrDiffType i = 0; i < n; ++i)
     {
-        auto pit = pb + i;
-        while (*pit >= 0)
+        auto pi = *(p + i);
+        if (pi < 0)
+            continue;
+        auto value = *(vb + i);
+        auto xi    = i;
+        while (pi != i)
         {
-            PermutationIndex const p = *pit;
-            std::iter_swap(vb + i, vb + p);
-            *pit -= n;
-            pit = pb + p;
+            *(p + xi) -= n;
+            *(vb + xi) = *(vb + pi);
+            xi         = pi;
+            pi         = *(p + xi);
         }
+        *(vb + xi) = value;
+        *(p + xi) -= n;
     }
-    for (decltype(n) i = 0; i < n; ++i)
+    for (PtrDiffType i = 0; i < n; ++i)
     {
-        *(pb + i) += n;
+        *(p + i) += n;
     }
 }
 
