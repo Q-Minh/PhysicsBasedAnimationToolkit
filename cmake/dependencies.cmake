@@ -11,12 +11,12 @@ if(NOT TARGET Eigen3::Eigen)
         GIT_REPOSITORY https://gitlab.com/libeigen/eigen
         GIT_TAG 7fd305ecae2410714cde018cb6851f49138568c8
         GIT_PROGRESS TRUE
+        SYSTEM
     )
     FetchContent_MakeAvailable(eigen)
-    set_target_properties(eigen PROPERTIES SYSTEM ON)
 endif()
 
-if(PBAT_BUILD_PYTHON_BINDINGS)
+if(PBAT_BUILD_PYTHON_BINDINGS AND NOT TARGET pybind11::headers)
     find_package(
         Python 
         COMPONENTS Development.Module 
@@ -27,11 +27,12 @@ if(PBAT_BUILD_PYTHON_BINDINGS)
         GIT_REPOSITORY https://github.com/pybind/pybind11.git
         GIT_TAG v2.13.6
         GIT_PROGRESS TRUE
+        SYSTEM
     )
     FetchContent_MakeAvailable(_pybind11)
 endif()
 
-if(PBAT_ENABLE_PROFILER)
+if(PBAT_ENABLE_PROFILER AND NOT TARGET Tracy::TracyClient)
     set(TRACY_ON_DEMAND ${PBAT_PROFILE_ON_DEMAND} CACHE BOOL "" FORCE)
     FetchContent_Declare(
         tracy
@@ -39,9 +40,21 @@ if(PBAT_ENABLE_PROFILER)
         GIT_TAG v0.10
         GIT_SHALLOW TRUE
         GIT_PROGRESS TRUE
+        SYSTEM
     )
     FetchContent_MakeAvailable(tracy)
-    set_target_properties(TracyClient PROPERTIES SYSTEM ON)
+endif()
+
+if(NOT TARGET cpp-sort::cpp-sort)
+    FetchContent_Declare(
+        _cppsort
+        GIT_REPOSITORY https://github.com/Morwenn/cpp-sort.git
+        GIT_TAG d4345b968c7d3a4ca1a7543c0c4b8677fe278262
+        GIT_SHALLOW TRUE
+        GIT_PROGRESS TRUE
+        SYSTEM
+    )
+    FetchContent_MakeAvailable(_cppsort)
 endif()
 
 if(PBAT_USE_INTEL_MKL)

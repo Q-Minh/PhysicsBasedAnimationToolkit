@@ -1,5 +1,7 @@
 #include "TriangleAabbHierarchy.h"
 
+#include <fmt/format.h>
+
 namespace pbat::geometry {
 
 TriangleAabbHierarchy3D::TriangleAabbHierarchy3D(

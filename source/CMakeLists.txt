@@ -45,6 +45,7 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
 add_subdirectory(pbat)
 target_link_libraries(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     PUBLIC
+    cpp-sort::cpp-sort
     doctest::doctest
     Eigen3::Eigen
     fmt::fmt

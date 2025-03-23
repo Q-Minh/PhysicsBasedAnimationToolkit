@@ -13,10 +13,7 @@
 
 #include <Eigen/Geometry>
 #include <array>
-#include <exception>
-#include <fmt/format.h>
 #include <pbat/Aliases.h>
-#include <string>
 #include <vector>
 
 namespace pbat::geometry {
@@ -127,20 +124,8 @@ inline AxisAlignedBoundingBox<Dims>::AxisAlignedBoundingBox(
 template <int Dims>
 template <class TDerived>
 inline AxisAlignedBoundingBox<Dims>::AxisAlignedBoundingBox(Eigen::DenseBase<TDerived> const& P)
+    : BaseType(P.rowwise().minCoeff(), P.rowwise().maxCoeff())
 {
-    if (P.rows() != Dims)
-    {
-        std::string const what = fmt::format(
-            "Expected points P of dimensions {}x|#points|, but got {}x{}",
-            Dims,
-            P.rows(),
-            P.cols());
-        throw std::invalid_argument(what);
-    }
-    for (auto i = 0; i < P.cols(); ++i)
-    {
-        BaseType::template extend(P.col(i));
-    }
 }
 
 template <int Dims>

@@ -25,6 +25,7 @@ namespace pbat::common {
 #include "Heap.h"
 #include "Indexing.h"
 #include "NAryTreeTraversal.h"
+#include "Permute.h"
 #include "Queue.h"
 #include "Stack.h"
 

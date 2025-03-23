@@ -3,6 +3,7 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     FILE_SET api
     FILES
     "AabbKdTreeHierarchy.h"
+    "AabbRadixTreeHierarchy.h"
     "AxisAlignedBoundingBox.h"
     "BoundingVolumeHierarchy.h"
     "ClosestPointQueries.h"
@@ -20,6 +21,7 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
 target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     PRIVATE
     "AabbKdTreeHierarchy.cpp"
+    "AabbRadixTreeHierarchy.cpp"
     "AxisAlignedBoundingBox.cpp"
     "BoundingVolumeHierarchy.cpp"
     "ClosestPointQueries.cpp"

@@ -92,21 +92,19 @@ class BinaryRadixTree
     template <class TDerived>
     void Construct(Eigen::DenseBase<TDerived> const& codes);
     /**
-     * @brief Get the left child of an internal node
+     * @brief Get the left child of node `i`
      *
-     * @param i Index of the internal node
-     * @return Index of the left child. If the node is a leaf, the index is offset by # internal
-     * nodes.
+     * @param i Index of the node
+     * @return Index of the left child, `-1` if `i` is leaf.
      */
-    TIndex Left(TIndex i) const { return mChild(0, i); }
+    TIndex Left(TIndex i) const { return (not IsLeaf(i)) * mChild(0, i) + IsLeaf(i) * TIndex(-1); }
     /**
-     * @brief Get the right child of an internal node
+     * @brief Get the right child of node `i`
      *
      * @param i Index of the internal node
-     * @return Index of the right child. If the node is a leaf, the index is offset by # internal
-     * nodes.
+     * @return Index of the right child, `-1` if `i` is leaf.
      */
-    TIndex Right(TIndex i) const { return mChild(1, i); }
+    TIndex Right(TIndex i) const { return (not IsLeaf(i)) * mChild(1, i) + IsLeaf(i) * TIndex(-1); }
     /**
      * @brief Get the parent of a node
      *

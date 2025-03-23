@@ -12,6 +12,7 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
         "Heap.h"
         "Indexing.h"
         "NAryTreeTraversal.h"
+        "Permute.h"
         "Queue.h"
         "Stack.h"
 )
@@ -23,6 +24,7 @@ PRIVATE
     "Heap.cpp"
     "Indexing.cpp"
     "Queue.cpp"
+    "Permute.cpp"
     "NAryTreeTraversal.cpp"
     "Stack.cpp"
 )

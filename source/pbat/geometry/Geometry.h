@@ -18,7 +18,8 @@
 namespace pbat::geometry {
 } // namespace pbat::geometry
 
-#include "AabbHierarchy.h"
+#include "AabbKdTreeHierarchy.h"
+#include "AabbRadixTreeHierarchy.h"
 #include "AxisAlignedBoundingBox.h"
 #include "BoundingVolumeHierarchy.h"
 #include "ClosestPointQueries.h"
