@@ -13,14 +13,30 @@ TEST_CASE("[common] BinaryRadixTree")
     std::sort(codes.begin(), codes.end());
     // Act
     pbat::common::BinaryRadixTree tree{codes};
+    auto const nLeaves   = tree.LeafCount();
+    auto const nInternal = tree.InternalNodeCount();
     // Assert
-    CHECK_EQ(tree.LeafCount(), n);
-    CHECK_EQ(tree.InternalNodeCount(), n - 1);
+    CHECK_EQ(nLeaves, n);
+    CHECK_EQ(nInternal, n - 1);
     for (auto i = 0; i < tree.InternalNodeCount(); ++i)
     {
         auto lc = tree.Left(i);
         auto rc = tree.Right(i);
         CHECK_EQ(tree.Parent(lc), i);
         CHECK_EQ(tree.Parent(rc), i);
+    }
+    pbat::IndexVectorX nParentsFromChildren(n - 1);
+    nParentsFromChildren.setZero();
+    for (auto i = 0; i < nInternal + nLeaves; ++i)
+    {
+        auto const p = tree.Parent(i);
+        CHECK_LT(p, nInternal);
+        ++nParentsFromChildren(p);
+    }
+    // Root node has self-parent loop
+    CHECK_EQ(nParentsFromChildren(0), 3);
+    for (auto i = 1; i < nInternal; ++i)
+    {
+        CHECK_EQ(nParentsFromChildren(i), 2);
     }
 }

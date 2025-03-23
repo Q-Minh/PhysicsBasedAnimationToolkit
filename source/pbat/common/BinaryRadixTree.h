@@ -159,7 +159,7 @@ class BinaryRadixTree
         mChild; ///< 2x|# internal nodes| matrix, s.t. mChild(0,i) ->
                 ///< left child of internal node i, mChild(1,i) ->
                 ///< right child of internal node i
-    Eigen::Vector<TIndex, Eigen::Dynamic> mParent; ///< |# internal +leaf nodes| vector, s.t.
+    Eigen::Vector<TIndex, Eigen::Dynamic> mParent; ///< |# internal + leaf nodes| vector, s.t.
                                                    ///< mParent(i) -> parent of node i
 };
 
@@ -179,9 +179,12 @@ inline void BinaryRadixTree<TIndex>::Construct(Eigen::DenseBase<TDerived> const&
         std::is_integral_v<CodeType> and std::is_unsigned_v<CodeType> and
             not std::is_same_v<CodeType, bool>,
         "Codes must be of unsigned integral type");
+    auto constexpr nBits = sizeof(CodeType) * 8;
+    static_assert(nBits <= 64, "CodeType must have at most 64 bits");
 
-    TIndex const nLeaves   = codes.size();
-    TIndex const nInternal = nLeaves - 1;
+    std::uint64_t constexpr msb = 0b1ULL << (nBits - 1);
+    TIndex const nLeaves        = codes.size();
+    TIndex const nInternal      = nLeaves - 1;
     mChild.resize(2, nInternal);
     mParent.resize(nLeaves + nInternal);
 
@@ -202,40 +205,27 @@ inline void BinaryRadixTree<TIndex>::Construct(Eigen::DenseBase<TDerived> const&
         // Compute range [first, last] of codes covered by the node.
         // If the node is a left child, its range is reversed (i.e. end -> begin).
         // If the node is a right child, its range is not reversed (i.e. begin -> end).
-        bool bReversed = node.begin > node.end;
-        auto first     = (not bReversed) * node.begin + bReversed * node.end;
-        auto last      = (not bReversed) * node.end + bReversed * node.begin;
+        bool const bReversed = node.begin > node.end;
+        auto const first     = (not bReversed) * node.begin + bReversed * node.end;
+        auto const last      = (not bReversed) * node.end + bReversed * node.begin;
         // Find the split position
-        TIndex split = first;
-        auto cfirst  = codes(first);
-        auto clast   = codes(last);
-        // If first and last codes are the same, all the codes in between are the same
-        // and we can split the node right down the middle without binary search.
-        if (cfirst == clast)
-        {
-            split += ((last - first + 1) >> 1);
-        }
-        // Otherwise, we perform a binary search to find the split position.
-        else
-        {
-            CodeType const mask =
-                ~CodeType(0) /*bitwise ones*/ >> fCommonPrefixLength(cfirst, clast);
-            auto begin = codes.begin() + first;
-            auto end   = codes.begin() + last + 1;
-            split += std::distance(
-                begin,
-                std::upper_bound(begin, end, cfirst, [&](CodeType ci, CodeType cj) {
-                    return (mask & ci) < (mask & cj);
-                }));
-        }
+        auto const cfirst  = codes(first);
+        auto const clast   = codes(last);
+        auto const mask    = msb >> fCommonPrefixLength(cfirst, clast);
+        auto const begin   = codes.begin() + first;
+        auto const end     = codes.begin() + last + 1;
+        auto const upper   = std::upper_bound(begin, end, cfirst, [&](CodeType ci, CodeType cj) {
+            return (mask & ci) < (mask & cj);
+        });
+        TIndex const split = first + std::distance(begin, upper);
         // The left and right child ranges are split as [first, split-1] and [split,last],
         // respectively.
         TIndex lc = split - 1;
         TIndex rc = split;
         // Ranges of size 1 indicate leaf nodes. We offset leaf indices by the number of internal
         // nodes.
-        bool bIsLeftLeaf  = (lc == first);
-        bool bIsRightLeaf = (rc == last);
+        bool const bIsLeftLeaf  = (lc == first);
+        bool const bIsRightLeaf = (rc == last);
         lc += bIsLeftLeaf * nInternal;
         rc += bIsRightLeaf * nInternal;
         // Set parent-child relationships
