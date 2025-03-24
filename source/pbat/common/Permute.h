@@ -9,7 +9,7 @@ namespace pbat::common {
 /**
  * @brief Permute the values in-place according to the permutation
  *
- * Taken from https://stackoverflow.com/a/60917997/8239925
+ * Taken from [SO](https://stackoverflow.com/a/60917997/8239925)
  *
  * @tparam TValuesBegin Iterator type to the beginning of the values
  * @tparam TValuesEnd Iterator type to the end of the values
