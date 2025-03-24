@@ -1,5 +1,6 @@
 #ifndef PBAT_SIM_CONTACT_CONTACT_H
 #define PBAT_SIM_CONTACT_CONTACT_H
 
+#include "MultibodyCcd.h"
 
 #endif // PBAT_SIM_CONTACT_CONTACT_H
