@@ -38,6 +38,8 @@ template <auto kDims>
 class AabbKdTreeHierarchy
 {
   public:
+    static auto constexpr kDims = kDims; ///< Number of spatial dimensions
+
     AabbKdTreeHierarchy() = default;
     /**
      * @brief Construct an Aabb Hierarchy from an input AABB matrix B
@@ -229,7 +231,9 @@ inline void AabbKdTreeHierarchy<kDims>::Overlaps(
             auto U          = IB.col(n).tail<kDims>();
             using TDerivedL = decltype(L);
             using TDerivedU = decltype(U);
-            return fNodeOverlaps.template operator()<TDerivedL, TDerivedU>(L, U);
+            return fNodeOverlaps.template operator()<TDerivedL, TDerivedU>(
+                Eigen::MatrixBase<TDerivedL>(L),
+                Eigen::MatrixBase<TDerivedU>(U));
         },
         fObjectOverlaps,
         fOnOverlap);
@@ -266,6 +270,7 @@ inline void AabbKdTreeHierarchy<kDims>::NearestNeighbour(
         },
         fDistanceToObject,
         fOnNearestNeighbour,
+        false /*bUseBestFirstSearch*/,
         radius,
         eps);
 }

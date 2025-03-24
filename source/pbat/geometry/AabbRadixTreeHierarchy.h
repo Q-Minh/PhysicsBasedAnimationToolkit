@@ -20,7 +20,8 @@ template <auto kDims>
 class AabbRadixTreeHierarchy
 {
   public:
-    using IndexType = Index; ///< Type of the indices
+    using IndexType             = Index; ///< Type of the indices
+    static auto constexpr kDims = kDims; ///< Number of spatial dimensions
 
     AabbRadixTreeHierarchy() = default;
     /**
@@ -247,17 +248,18 @@ inline void AabbRadixTreeHierarchy<kDims>::NearestNeighbour(
         []([[maybe_unused]] Index n) { return 1; },
         [&](Index n, [[maybe_unused]] Index i) { return inds(tree.CodeIndex(n)); },
         [&](Index n) {
-            auto L           = IB.col(n).head<kDims>();
-            auto U           = IB.col(n).tail<kDims>();
-            using TDerivedL  = decltype(L);
-            using TDerivedU  = decltype(U);
+            using TDerivedL  = decltype(IB.col(n).head<kDims>());
+            using TDerivedU  = decltype(IB.col(n).tail<kDims>());
             using ScalarType = std::invoke_result_t<FDistanceToNode, TDerivedL, TDerivedU>;
             if (tree.IsLeaf(n))
                 return ScalarType(0); // Radix tree leaf nodes correspond to individual objects
+            auto L = IB.col(n).head<kDims>();
+            auto U = IB.col(n).tail<kDims>();
             return fDistanceToNode.template operator()<TDerivedL, TDerivedU>(L, U);
         },
         fDistanceToObject,
         fOnNearestNeighbour,
+        false /*bUseBestFirstSearch*/,
         radius,
         eps);
 }
@@ -283,13 +285,13 @@ inline void AabbRadixTreeHierarchy<kDims>::KNearestNeighbours(
         []([[maybe_unused]] Index n) { return 1; },
         [&](Index n, [[maybe_unused]] Index i) { return inds(tree.CodeIndex(n)); },
         [&](Index n) {
-            auto L           = IB.col(n).head<kDims>();
-            auto U           = IB.col(n).tail<kDims>();
-            using TDerivedL  = decltype(L);
-            using TDerivedU  = decltype(U);
+            using TDerivedL  = decltype(IB.col(n).head<kDims>());
+            using TDerivedU  = decltype(IB.col(n).tail<kDims>());
             using ScalarType = std::invoke_result_t<FDistanceToNode, TDerivedL, TDerivedU>;
             if (tree.IsLeaf(n))
                 return ScalarType(0); // Radix tree leaf nodes correspond to individual objects
+            auto L = IB.col(n).head<kDims>();
+            auto U = IB.col(n).tail<kDims>();
             return fDistanceToNode.template operator()<TDerivedL, TDerivedU>(L, U);
         },
         fDistanceToObject,
@@ -302,6 +304,7 @@ template <auto kDims>
 template <class TDerivedB>
 inline void AabbRadixTreeHierarchy<kDims>::ComputeMortonCodes(Eigen::DenseBase<TDerivedB> const& B)
 {
+    PBAT_PROFILE_NAMED_SCOPE("pbat.geometry.AabbRadixTreeHierarchy.ComputeMortonCodes");
     Vector<kDims> min     = B.template topRows<kDims>().rowwise().minCoeff();
     auto max              = B.template bottomRows<kDims>().rowwise().maxCoeff();
     Vector<kDims> extents = max - min;
@@ -318,6 +321,7 @@ inline void AabbRadixTreeHierarchy<kDims>::ComputeMortonCodes(Eigen::DenseBase<T
 template <auto kDims>
 inline void AabbRadixTreeHierarchy<kDims>::SortMortonCodes()
 {
+    PBAT_PROFILE_NAMED_SCOPE("pbat.geometry.AabbRadixTreeHierarchy.SortMortonCodes");
     std::iota(inds.begin(), inds.end(), 0);
     cppsort::ska_sort(inds.begin(), inds.end(), [&](IndexType i) { return codes(i); });
     common::Permute(codes.begin(), codes.end(), inds.begin());
