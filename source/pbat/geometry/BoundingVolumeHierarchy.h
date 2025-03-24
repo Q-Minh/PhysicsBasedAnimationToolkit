@@ -229,7 +229,7 @@ BoundingVolumeHierarchy<TDerived, TBoundingVolume, TPrimitive, Dims>::Primitives
     intersectingPrimitives.reserve(reserve);
 
     mKdTree.DepthFirstSearch([&](Index bvIdx, KdTreeNode const& node) -> bool {
-        if (node.IsLeafNode())
+        if (node.IsLeaf())
         {
             for (auto const idx : mKdTree.PointsInNode(node))
             {
@@ -304,7 +304,7 @@ BoundingVolumeHierarchy<TDerived, TBoundingVolume, TPrimitive, Dims>::NearestPri
         {
             auto const qIdxStl     = static_cast<std::size_t>(q.idx);
             KdTreeNode const& node = nodes[qIdxStl];
-            if (node.IsLeafNode())
+            if (node.IsLeaf())
             {
                 for (auto const pIdx : mKdTree.PointsInNode(node))
                 {
@@ -372,8 +372,8 @@ BoundingVolumeHierarchy<TDerived, TBoundingVolume, TPrimitive, Dims>::Overlappin
 
         KdTreeNode const& node1 = nodes1[n1Stl];
         KdTreeNode const& node2 = nodes2[n2Stl];
-        bool const bIsNode1Leaf = node1.IsLeafNode();
-        bool const bIsNode2Leaf = node2.IsLeafNode();
+        bool const bIsNode1Leaf = node1.IsLeaf();
+        bool const bIsNode2Leaf = node2.IsLeaf();
         if (bIsNode1Leaf and bIsNode2Leaf)
         {
             for (auto const p1 : mKdTree.PointsInNode(node1))

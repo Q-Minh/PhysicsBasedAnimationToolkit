@@ -37,7 +37,7 @@ TEST_CASE("[geometry] SpatialSearch")
             return nodes[node].Right();
     };
     auto const fIsLeaf = [&](Index node) {
-        return nodes[node].IsLeafNode();
+        return nodes[node].IsLeaf();
     };
     auto const fLeafSize = [&](Index node) {
         return nodes[node].n;

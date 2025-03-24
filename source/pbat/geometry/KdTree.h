@@ -39,12 +39,12 @@ struct KdTreeNode
      * @brief Returns true if this node is a leaf node, false otherwise
      * @return true if this node is a leaf node, false otherwise
      */
-    [[maybe_unused]] bool IsLeafNode() const { return c == -2; }
+    [[maybe_unused]] bool IsLeaf() const { return c == -2; }
     /**
      * @brief Returns true if this node is an internal node, false otherwise
      * @return true if this node is an internal node, false otherwise
      */
-    [[maybe_unused]] bool IsInternalNode() const { return not IsLeafNode(); }
+    [[maybe_unused]] bool IsInternal() const { return not IsLeaf(); }
     /**
      * @brief Returns left child node
      * @return Index of left child node

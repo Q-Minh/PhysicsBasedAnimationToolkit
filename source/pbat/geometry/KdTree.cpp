@@ -15,7 +15,7 @@ TEST_CASE("[geometry] KdTree")
         geometry::KdTree<Dims> const kdTree(P, maxPointsInLeaf);
         for (auto const& node : kdTree.Nodes())
         {
-            if (node.IsLeafNode())
+            if (node.IsLeaf())
             {
                 CHECK_LE(node.n, maxPointsInLeaf);
             }

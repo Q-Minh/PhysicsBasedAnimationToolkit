@@ -180,13 +180,11 @@ inline void AabbKdTreeHierarchy<kDims>::Update(Eigen::DenseBase<TDerivedB> const
             KdTreeNode const& node = nodes[n];
             if (node.IsLeaf())
             {
-                auto inds = perm(Eigen::seqN(node.begin, node.n));
-                IB.col(n).head<kDims>() =
-                    B.template topRows<kDims>(Eigen::placeholders::all, inds).rowwise().minCoeff();
-                IB.col(n).tail<kDims>() =
-                    B.template bottomRows<kDims>(Eigen::placeholders::all, inds)
-                        .rowwise()
-                        .maxCoeff();
+                auto inds               = perm(Eigen::seqN(node.begin, node.n));
+                auto BL                 = B.template topRows<kDims>();
+                auto BU                 = B.template bottomRows<kDims>();
+                IB.col(n).head<kDims>() = BL(Eigen::placeholders::all, inds).rowwise().minCoeff();
+                IB.col(n).tail<kDims>() = BU(Eigen::placeholders::all, inds).rowwise().maxCoeff();
             }
             else
             {
@@ -231,9 +229,7 @@ inline void AabbKdTreeHierarchy<kDims>::Overlaps(
             auto U          = IB.col(n).tail<kDims>();
             using TDerivedL = decltype(L);
             using TDerivedU = decltype(U);
-            return fNodeOverlaps.template operator()<TDerivedL, TDerivedU>(
-                Eigen::MatrixBase<TDerivedL>(L),
-                Eigen::MatrixBase<TDerivedU>(U));
+            return fNodeOverlaps.template operator()<TDerivedL, TDerivedU>(L, U);
         },
         fObjectOverlaps,
         fOnOverlap);
