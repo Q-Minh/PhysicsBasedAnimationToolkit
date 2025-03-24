@@ -21,7 +21,7 @@
 namespace pbat::geometry {
 
 /**
- * @brief Bounding volume hierarchy over axis-aligned bounding boxes.
+ * @brief Axis-aligned k-D tree hierarchy of axis-aligned bounding boxes.
  *
  * This BVH does not store the AABBs themselves, only the tree topology and the AABBs of the tree
  * nodes. The user is responsible for storing the objects and their AABBs. Doing so allows this BVH

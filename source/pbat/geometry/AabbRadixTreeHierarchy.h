@@ -16,6 +16,19 @@
 
 namespace pbat::geometry {
 
+/**
+ * @brief Axis-aligned radix tree hierarchy of axis-aligned bounding boxes.
+ *
+ * This BVH does not store the AABBs themselves, only the tree topology and the AABBs of the tree
+ * nodes. The user is responsible for storing the objects and their AABBs. Doing so allows this BVH
+ * implementation to support arbitrary object types.
+ *
+ * @note This BVH implementation relies on a binary radix tree, thus tree topology should be rebuilt
+ * from scratch whenever updates are required. However, this aabb radix tree construction has
+ * average time complexity of \f$ O(n) \f$ and worst-case time complexity of \f$ O(n log n) \f$.
+ *
+ * @tparam kDims Number of spatial dimensions
+ */
 template <auto kDims>
 class AabbRadixTreeHierarchy
 {
