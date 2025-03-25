@@ -72,7 +72,6 @@ class MultibodyTriangleMeshMixedCcdDcd
         Eigen::DenseBase<TDerivedE> const& E,
         Eigen::DenseBase<TDerivedFP> const& FP,
         Eigen::DenseBase<TDerivedF> const& F);
-
     /**
      * @brief Prepare the multibody CCD system for collision detection
      * @tparam TDerivedX Eigen type of the input vertex positions
@@ -109,6 +108,38 @@ class MultibodyTriangleMeshMixedCcdDcd
         Eigen::DenseBase<TDerivedE> const& E,
         Eigen::DenseBase<TDerivedFP> const& FP,
         Eigen::DenseBase<TDerivedF> const& F);
+    /**
+     * @brief Update the active set of vertex-triangle and edge-edge contact pairs
+     *
+     * Finds all earliest vertex-triangle and edge-edge intersections in the linear trajectory
+     * \f$ \mathbf{x} = (1-\lambda) \mathbf{x}(t) + \lambda \mathbf{x}(t+1) \; \forall \; \lambda
+     * \in [0,1]\f$ for inactive vertices and adds them to the corresponding active sets.
+     *
+     * Find all nearest vertex-triangle pairs for active vertices and adds them to the
+     * corresponding active set.
+     *
+     * @tparam TDerivedXT Eigen type of vertex positions at time t
+     * @tparam TDerivedX Eigen type of vertex positions at time t+1
+     * @param XT `kDims x |# vertices|` matrix of vertex positions at time t
+     * @param X `kDims x |# vertices|` matrix of vertex positions at time t+1
+     */
+    template <class TDerivedXT, class TDerivedX>
+    void
+    UpdateActiveSet(Eigen::DenseBase<TDerivedXT> const& XT, Eigen::DenseBase<TDerivedX> const& X);
+    /**
+     * @brief Finalize the active set of vertex-triangle and edge-edge contact pairs
+     *
+     * - Removes all vertex-triangle and edge-edge contact pairs that are resolved from the active
+     * set.
+     * - Marks all active vertices as inactive if their signed distance to the nearest triangle is
+     * positive.
+     * - Marks all vertices from unresolved active vertex-triangle contact pairs as active.
+     *
+     * @tparam TDerivedX Eigen type of vertex positions at time t+1
+     * @param X `kDims x |# vertices|` matrix of vertex positions at time t+1
+     */
+    template <class TDerivedX>
+    void FinalizeActiveSet(Eigen::DenseBase<TDerivedX> const& X);
 
   protected:
     /**
@@ -139,15 +170,27 @@ class MultibodyTriangleMeshMixedCcdDcd
     void RecomputeBodyBvh();
 
   private:
+    /**
+     * @brief Prefix sums over mesh primitives
+     */
+
     IndexVectorX mVP; ///< `|# objects + 1|` prefix sum of vertex pointers into `V`
     IndexVectorX mEP; ///< `|# objects + 1|` prefix sum of edge pointers into `E`
     IndexVectorX mFP; ///< `|# objects + 1|` prefix sum of triangle pointers into `F`
+
+    /**
+     * @brief Mesh primitives
+     */
 
     IndexVectorX mV; ///< Flattened `|# objects|` list of `|# collision verts|` vertex arrays
     IndexMatrix<2, Eigen::Dynamic>
         mE; ///< Flattened `|# objects|` list of `2x|# collision edges|` edge arrays
     IndexMatrix<3, Eigen::Dynamic>
         mF; ///< Flattened `|# objects|` list of `3x|# collision triangles|` triangle arrays
+
+    /**
+     * @brief Mesh primitive AABBs
+     */
 
     Matrix<kDims, Eigen::Dynamic> mVertexAabbs; ///< Flattened `|# objects|` list of `2*kDims x |#
     ///< vertices|` axis-aligned bounding boxes
@@ -156,13 +199,40 @@ class MultibodyTriangleMeshMixedCcdDcd
     Matrix<kDims, Eigen::Dynamic> mTriangleAabbs; ///< Flattened `|# objects|` list of `2*kDims x |#
     ///< triangles|` axis-aligned bounding boxes
 
+    /**
+     * @brief Mesh BVHs
+     */
+
     std::vector<VertexBvh> mVertexBvhs;     ///< `|# objects|` list of mesh vertex BVHs
     std::vector<EdgeBvh> mEdgeBvhs;         ///< `|# objects|` list of mesh edge BVHs
     std::vector<TriangleBvh> mTriangleBvhs; ///< `|# objects|` list of mesh triangle BVHs
 
+    /**
+     * @brief Body AABBs and BVH
+     */
+
     Matrix<kDims, Eigen::Dynamic>
         mBodyAabbs;   ///< `2*kDims x |# objects|` axis-aligned bounding boxes over each object
     BodyBvh mBodyBvh; ///< BVH over all objects in the world
+
+    /**
+     * @brief Active set
+     */
+    Eigen::Vector<bool, Eigen::Dynamic>
+        mActiveVertices;                      ///< `|# collision vertices|` list of active vertices
+    IndexVectorX mActiveVertexTrianglePrefix; ///< `|# collision vertices|` prefix sum of active
+                                              ///< vertex-triangle contact pairs `(v,f)`, s.t.
+                                              ///< `mActiveTriangles[mActiveVertexTrianglePrefix(v),
+                                              ///< mActiveVertexTrianglePrefix(v+1))` are active
+                                              ///< triangles `f`
+    IndexVectorX mActiveTriangles; ///< `|# active vertex-triangle pairs|` list of triangles `f`
+                                   ///< from active vertex-triangle pairs `(v,f)`
+    IndexVectorX mActiveEdgeEdgePrefix; ///< `|# collision edges|` prefix sum of active edge-edge
+                                        ///< contact pairs `(ei,ej)`, s.t.
+                                        ///< `mActiveEdges[mActiveEdgeEdgePrefix(ei),
+                                        ///< mActiveEdgeEdgePrefix(ei+1))` are active edges `ej`
+    IndexVectorX mActiveEdges; ///< `|# active edge-edge pairs|` list of edges `ej` from active
+                               ///< edge-edge pairs `(ei,ej)`
 };
 
 template <
@@ -194,7 +264,12 @@ inline MultibodyTriangleMeshMixedCcdDcd::MultibodyTriangleMeshMixedCcdDcd(
       mEdgeBvhs(),
       mTriangleBvhs(),
       mBodyAabbs(kDims, VP.size() - 1),
-      mBodyBvh()
+      mBodyBvh(),
+      mActiveVertices(V.cols(), false),
+      mActiveVertexTrianglePrefix(V.cols() + 1, 0),
+      mActiveTriangles(F.cols() /*reasonable preallocation*/),
+      mActiveEdgeEdgePrefix(E.cols() + 1, 0),
+      mActiveEdges(E.cols() /*reasonable preallocation*/)
 {
     Prepare(
         X.derived(),
