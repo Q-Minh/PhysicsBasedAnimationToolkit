@@ -176,7 +176,7 @@ inline void AabbRadixTreeHierarchy<kDims>::Construct(Eigen::DenseBase<TDerived> 
     inds.resize(n);
     ComputeMortonCodes(B);
     SortMortonCodes();
-    tree.Construct(codes, true);
+    tree.Construct(codes);
     IB.resize(2 * kDims, tree.InternalNodeCount());
 }
 
@@ -189,28 +189,24 @@ inline void AabbRadixTreeHierarchy<kDims>::Update(Eigen::DenseBase<TDerivedB> co
     IB.template bottomRows<kDims>().setConstant(std::numeric_limits<Scalar>::lowest());
     common::TraverseNAryTreePseudoPostOrder(
         [&](Index n) {
-            if (tree.IsLeaf(n))
-            {
-                auto i             = inds(tree.CodeIndex(n));
-                auto nbox          = B.col(i);
-                auto pbox          = IB.col(tree.Parent(n));
-                pbox.head<kDims>() = pbox.head<kDims>().cwiseMin(nbox.head<kDims>());
-                pbox.tail<kDims>() = pbox.tail<kDims>().cwiseMax(nbox.tail<kDims>());
-            }
-            else
-            {
-                auto nbox = IB.col(n);
-                auto pbox = IB.col(
-                    tree.Parent(n)); // tree.Parent(tree.Root()) == tree.Root(), so this is safe
-                pbox.head<kDims>() = pbox.head<kDims>().cwiseMin(nbox.head<kDims>());
-                pbox.tail<kDims>() = pbox.tail<kDims>().cwiseMax(nbox.tail<kDims>());
-            }
+            // n is guaranteed to be internal node, due to our fChild functor
+            auto L  = IB.col(n).head<kDims>();
+            auto U  = IB.col(n).tail<kDims>();
+            auto lc = tree.Left(n);
+            auto rc = tree.Right(n);
+            auto LB = tree.IsLeaf(lc) ? B.col(inds(tree.CodeIndex(lc))).head<2 * kDims>().eval() :
+                                        IB.col(lc).head<2 * kDims>().eval();
+            auto RB = tree.IsLeaf(rc) ? B.col(inds(tree.CodeIndex(rc))).head<2 * kDims>().eval() :
+                                        IB.col(rc).head<2 * kDims>().eval();
+            L       = LB.head<kDims>().cwiseMin(RB.head<kDims>());
+            U       = LB.tail<kDims>().cwiseMax(RB.tail<kDims>());
         },
+        // fChild functor that only returns non-leaf children
         [&]<auto c>(Index n) -> Index {
             if constexpr (c == 0)
-                return tree.IsLeaf(n) ? -1 : tree.Left(n);
+                return tree.IsLeaf(tree.Left(n)) ? -1 : tree.Left(n);
             else
-                return tree.IsLeaf(n) ? -1 : tree.Right(n);
+                return tree.IsLeaf(tree.Right(n)) ? -1 : tree.Right(n);
         });
 }
 
