@@ -6,13 +6,14 @@
 TEST_CASE("[common] BinaryRadixTree")
 {
     // Arrange
-    auto constexpr n = 10;
-    using CodeType   = std::uint32_t;
-    using EigenCodes = Eigen::Vector<CodeType, Eigen::Dynamic>;
-    auto codes       = EigenCodes::Random(n).eval();
+    auto constexpr n            = 10;
+    bool constexpr bStoreParent = true;
+    using CodeType              = std::uint32_t;
+    using EigenCodes            = Eigen::Vector<CodeType, Eigen::Dynamic>;
+    auto codes                  = EigenCodes::Random(n).eval();
     std::sort(codes.begin(), codes.end());
     // Act
-    pbat::common::BinaryRadixTree tree{codes};
+    pbat::common::BinaryRadixTree tree{codes, bStoreParent};
     auto const nLeaves   = tree.LeafCount();
     auto const nInternal = tree.InternalNodeCount();
     // Assert

@@ -61,9 +61,7 @@ class AabbRadixTreeHierarchy
      * @brief Recomputes k-D tree node AABBs given the object AABBs
      *
      * A sequential post-order traversal of the k-D tree is performed, i.e. bottom up nodal AABB
-     * computation, leading to \f$ O(n) \f$ time complexity. The traversal should be have some
-     * respectable cache-efficiency at the tree-level, since nodes and their 2 children are stored
-     * contiguously in memory. However, objects stored in leaves are generally spread out in memory.
+     * computation, leading to \f$ O(n) \f$ time complexity.
      *
      * @tparam TDerivedB Type of the input matrix
      * @param B 2*kDims x |# objects| matrix of object AABBs, such that for an object o,
@@ -128,6 +126,14 @@ class AabbRadixTreeHierarchy
         Index K,
         Scalar radius = std::numeric_limits<Scalar>::max()) const;
 
+    /**
+     * @brief Get the internal node bounding boxes
+     * @return `2*kDims x |# internal nodes|` matrix of AABBs, such that for an internal node node,
+     * IB.col(node).head<kDims>() is the lower bound and IB.col(node).tail<kDims>() is the upper
+     * bound.
+     */
+    auto InternalNodeBoundingBoxes() const { return IB; }
+
   protected:
     /**
      * @brief Compute Morton codes for the AABBs
@@ -170,9 +176,8 @@ inline void AabbRadixTreeHierarchy<kDims>::Construct(Eigen::DenseBase<TDerived> 
     inds.resize(n);
     ComputeMortonCodes(B);
     SortMortonCodes();
-    tree.Construct(codes);
+    tree.Construct(codes, true);
     IB.resize(2 * kDims, tree.InternalNodeCount());
-    Update(B);
 }
 
 template <auto kDims>

@@ -20,6 +20,7 @@ TEST_CASE("[geometry] AabbKdTreeHierarchy")
     B.bottomRows<kDims>() = B.topRows<kDims>();
     // Act
     geometry::AabbKdTreeHierarchy<kDims> tree{B, kMaxPointsInLeaf};
+    tree.Update(B);
     // Assert
     using math::linalg::mini::FromEigen;
     VectorX sd(n);

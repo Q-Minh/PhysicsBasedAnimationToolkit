@@ -33,9 +33,10 @@ class BinaryRadixTree
      *
      * @tparam TDerived Type of the Eigen expression for codes
      * @param codes Sorted list of integral codes
+     * @param bStoreParent Store parent indices/relationships if true
      */
     template <class TDerived>
-    BinaryRadixTree(Eigen::DenseBase<TDerived> const& codes);
+    BinaryRadixTree(Eigen::DenseBase<TDerived> const& codes, bool bStoreParent = false);
 
     /**
      * @brief Construct a Radix Tree from a sorted list of unsigned integral codes
@@ -88,9 +89,10 @@ class BinaryRadixTree
      *
      * @tparam TDerived Type of the Eigen expression for codes
      * @param codes Sorted list of integral codes
+     * @param bStoreParent Store parent indices/relationships if true
      */
     template <class TDerived>
-    void Construct(Eigen::DenseBase<TDerived> const& codes);
+    void Construct(Eigen::DenseBase<TDerived> const& codes, bool bStoreParent = false);
     /**
      * @brief Get the left child of internal node `i`
      *
@@ -179,6 +181,12 @@ class BinaryRadixTree
      * @return `|# internal + leaf nodes|` vector `p`, s.t. `p(i)` -> parent of node `i`
      */
     auto Parent() const { return mParent; }
+    /**
+     * @brief Check if the tree has parent relationships
+     *
+     * @return true if the tree has parent relationships, false otherwise
+     */
+    bool HasParentRelationship() const { return mParent.size() > 0; }
 
   private:
     Eigen::Matrix<TIndex, 2, Eigen::Dynamic>
@@ -191,14 +199,17 @@ class BinaryRadixTree
 
 template <class TIndex>
 template <class TDerived>
-inline BinaryRadixTree<TIndex>::BinaryRadixTree(Eigen::DenseBase<TDerived> const& codes)
+inline BinaryRadixTree<TIndex>::BinaryRadixTree(
+    Eigen::DenseBase<TDerived> const& codes,
+    bool bStoreParent)
 {
-    Construct(codes.derived());
+    Construct(codes.derived(), bStoreParent);
 }
 
 template <class TIndex>
 template <class TDerived>
-inline void BinaryRadixTree<TIndex>::Construct(Eigen::DenseBase<TDerived> const& codes)
+inline void
+BinaryRadixTree<TIndex>::Construct(Eigen::DenseBase<TDerived> const& codes, bool bStoreParent)
 {
     using CodeType = typename TDerived::Scalar;
     static_assert(
@@ -212,7 +223,7 @@ inline void BinaryRadixTree<TIndex>::Construct(Eigen::DenseBase<TDerived> const&
     TIndex const nLeaves        = codes.size();
     TIndex const nInternal      = nLeaves - 1;
     mChild.resize(2, nInternal);
-    mParent.resize(nLeaves + nInternal);
+    mParent.resize(bStoreParent * (nLeaves + nInternal));
 
     struct Node
     {
@@ -224,7 +235,7 @@ inline void BinaryRadixTree<TIndex>::Construct(Eigen::DenseBase<TDerived> const&
     };
     pbat::common::Stack<Node, 64> stack{};
     stack.Push({0, nLeaves - 1});
-    // Loop over internal nodes
+    // Top-down construction over internal nodes
     while (not stack.IsEmpty())
     {
         Node const node = stack.Pop();
@@ -257,15 +268,22 @@ inline void BinaryRadixTree<TIndex>::Construct(Eigen::DenseBase<TDerived> const&
         // Set parent-child relationships
         mChild(0, node.begin) = lc;
         mChild(1, node.begin) = rc;
-        mParent(lc)           = node.begin;
-        mParent(rc)           = node.begin;
         // Only recurse into internal nodes
         if (not bIsLeftLeaf)
             stack.Push({lc, first});
         if (not bIsRightLeaf)
             stack.Push({rc, last});
     }
-    mParent(0) = 0;
+    // Store parent relationships if requested
+    if (bStoreParent)
+    {
+        mParent(0) = 0;
+        for (auto i = 0; i < nInternal; ++i)
+        {
+            mParent(Left(i))  = i;
+            mParent(Right(i)) = i;
+        }
+    }
 }
 
 } // namespace pbat::common

@@ -18,6 +18,7 @@ TEST_CASE("[geometry] AabbRadixTreeHierarchy")
     B.bottomRows<kDims>() = B.topRows<kDims>();
     // Act
     geometry::AabbRadixTreeHierarchy<kDims> tree{B};
+    tree.Update(B);
     // Assert
     using math::linalg::mini::FromEigen;
     VectorX sd(n);

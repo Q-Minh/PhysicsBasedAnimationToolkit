@@ -134,6 +134,14 @@ class AabbKdTreeHierarchy
         Index K,
         Scalar radius = std::numeric_limits<Scalar>::max()) const;
 
+    /**
+     * @brief Get the internal node bounding boxes
+     * @return `2*kDims x |# internal nodes|` matrix of AABBs, such that for an internal node node,
+     * IB.col(node).head<kDims>() is the lower bound and IB.col(node).tail<kDims>() is the upper
+     * bound.
+     */
+    auto InternalNodeBoundingBoxes() const { return IB; }
+
   private:
     Matrix<2 * kDims, Eigen::Dynamic>
         IB;             ///< 2*kDims x |# k-D tree nodes| matrix of AABBs, such that
@@ -165,7 +173,6 @@ AabbKdTreeHierarchy<kDims>::Construct(Eigen::DenseBase<TDerived> const& B, Index
     IB.resize(2 * kDims, nNodes);
     IB.template topRows<kDims>().setConstant(std::numeric_limits<Scalar>::max());
     IB.template bottomRows<kDims>().setConstant(std::numeric_limits<Scalar>::lowest());
-    Update(B);
 }
 
 template <auto kDims>
