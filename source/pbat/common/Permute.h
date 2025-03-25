@@ -21,14 +21,14 @@ namespace pbat::common {
  * @note The permutation is modified in-place for the duration of the function, but is restored to
  * its original state before returning.
  *
- * @post The permutation referenced by `p` is un-modified.
+ * @post The permutation referenced by `pb` is un-modified.
  * @post The values referenced by `[vb, ve)` are permuted according to the permutation.
  */
 template <
     std::random_access_iterator TValuesBegin,
     std::random_access_iterator TValuesEnd,
     std::random_access_iterator TPermutationBegin>
-void Permute(TValuesBegin vb, TValuesEnd ve, TPermutationBegin p)
+void Permute(TValuesBegin vb, TValuesEnd ve, TPermutationBegin pb)
 {
     using PermutationIndex = std::iterator_traits<TPermutationBegin>::value_type;
     static_assert(
@@ -38,24 +38,24 @@ void Permute(TValuesBegin vb, TValuesEnd ve, TPermutationBegin p)
     using PtrDiffType = decltype(n);
     for (PtrDiffType i = 0; i < n; ++i)
     {
-        auto pi = *(p + i);
+        auto pi = *(pb + i);
         if (pi < 0)
             continue;
         auto value = *(vb + i);
         auto xi    = i;
         while (pi != i)
         {
-            *(p + xi) -= n;
+            *(pb + xi) -= n;
             *(vb + xi) = *(vb + pi);
             xi         = pi;
-            pi         = *(p + xi);
+            pi         = *(pb + xi);
         }
         *(vb + xi) = value;
-        *(p + xi) -= n;
+        *(pb + xi) -= n;
     }
     for (PtrDiffType i = 0; i < n; ++i)
     {
-        *(p + i) += n;
+        *(pb + i) += n;
     }
 }
 

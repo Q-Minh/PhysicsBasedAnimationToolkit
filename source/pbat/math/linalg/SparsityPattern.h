@@ -1,3 +1,14 @@
+/**
+ * @file SparsityPattern.h
+ * @author Quoc-Minh Ton-That (tonthat.quocminh@gmail.com)
+ * @brief This file contains a sparsity pattern precomputer to accelerate sparse matrix assembly via
+ * parallelism.
+ * @date 2025-03-25
+ *
+ * @copyright Copyright (c) 2025
+ *
+ */
+
 #ifndef PBAT_MATH_LINALG_SPARSITY_PATTERN_H
 #define PBAT_MATH_LINALG_SPARSITY_PATTERN_H
 
@@ -21,11 +32,23 @@ namespace pbat {
 namespace math {
 namespace linalg {
 
+/**
+ * @brief Sparsity pattern precomputer to accelerate sparse matrix assembly.
+ */
 class SparsityPattern
 {
   public:
     PBAT_API SparsityPattern() = default;
 
+    /**
+     * @brief Construct a new Sparsity Pattern object from non-zero matrix entries
+     * @tparam TRowIndexRange Range type for row indices
+     * @tparam TColIndexRange Range type for column indices
+     * @param nRows Number of rows
+     * @param nCols Number of columns
+     * @param rowIndices Row indices of matrix entries
+     * @param colIndices Column indices of matrix entries
+     */
     template <
         common::CContiguousIndexRange TRowIndexRange,
         common::CContiguousIndexRange TColIndexRange>
@@ -34,16 +57,32 @@ class SparsityPattern
         Index nCols,
         TRowIndexRange&& rowIndices,
         TColIndexRange&& colIndices);
-
+    /**
+     * @brief Compute the sparsity pattern from non-zero matrix entries
+     * @tparam TRowIndexRange Range type for row indices
+     * @tparam TColIndexRange Range type for column indices
+     * @param nRows Number of rows
+     * @param nCols Number of columns
+     * @param rowIndices Row indices of matrix entries
+     * @param colIndices Column indices of matrix entries
+     */
     template <
         common::CContiguousIndexRange TRowIndexRange,
         common::CContiguousIndexRange TColIndexRange>
     void
     Compute(Index nRows, Index nCols, TRowIndexRange&& rowIndices, TColIndexRange&& colIndices);
-
+    /**
+     * @brief Assemble sparse matrix from matrix non-zeros
+     * @tparam TNonZeroRange Range type for non-zero values
+     * @param nonZeros Non-zero values of the matrix
+     * @return Sparse matrix in compressed storage column format
+     */
     template <common::CArithmeticRange TNonZeroRange>
     CSCMatrix ToMatrix(TNonZeroRange&& nonZeros) const;
-
+    /**
+     * @brief Check if the sparsity pattern is empty
+     * @return true if the sparsity pattern is empty
+     */
     PBAT_API bool IsEmpty() const;
 
   private:

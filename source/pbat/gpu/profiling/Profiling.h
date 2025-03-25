@@ -72,14 +72,25 @@
  */
 namespace pbat::gpu::profiling {
 
+/**
+ * @brief RAII class wrapping Tracy zones for CUDA host code
+ */
 class Zone
 {
   public:
+#ifdef PBAT_CAN_USE_TRACY_C
     Zone(TracyCZoneCtx* ctx);
+#else
+    Zone(void* ctx);
+#endif
     ~Zone();
 
   private:
+#ifdef PBAT_CAN_USE_TRACY_C
     TracyCZoneCtx* mContext;
+#else
+    void* mContext;
+#endif
 };
 
 } // namespace pbat::gpu::profiling

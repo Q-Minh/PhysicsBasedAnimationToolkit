@@ -3088,7 +3088,7 @@ namespace pbat::math::polynomial {
 
 namespace detail {
 template <class T, auto N>
-using CArray = T[N];
+using CArray = T[N]; ///< C-style array alias.
 } // namespace detail
 
 /**

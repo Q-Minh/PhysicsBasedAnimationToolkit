@@ -405,9 +405,9 @@ inline IndexVectorX TriangleAabbHierarchy2D::PrimitivesContainingPoints(
 }
 
 template <class TDerivedP>
-inline std::pair<IndexVectorX, VectorX> TriangleAabbHierarchy2D::NearestPrimitivesToPoints(
+inline auto TriangleAabbHierarchy2D::NearestPrimitivesToPoints(
     Eigen::MatrixBase<TDerivedP> const& P,
-    bool bParallelize) const
+    bool bParallelize) const -> std::pair<IndexVectorX, VectorX>
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.geometry.TriangleAabbHierarchy2D.NearestPrimitivesToPoints");
     using math::linalg::mini::FromEigen;
@@ -442,7 +442,7 @@ inline std::pair<IndexVectorX, VectorX> TriangleAabbHierarchy2D::NearestPrimitiv
         for (auto i = 0; i < P.cols(); ++i)
             FindNearestPrimitive(i);
     }
-    return {p, d};
+    return std::make_pair(p, d);
 }
 
 } // namespace pbat::geometry
