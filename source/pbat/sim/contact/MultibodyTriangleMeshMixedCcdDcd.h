@@ -12,6 +12,7 @@
 #define PBAT_SIM_CONTACT_MULTIBODYTRIANGLEMESHMIXEDCCDDCD_H
 
 #include "pbat/Aliases.h"
+#include "pbat/common/CountingSort.h"
 #include "pbat/geometry/AabbKdTreeHierarchy.h"
 #include "pbat/geometry/AabbRadixTreeHierarchy.h"
 #include "pbat/geometry/ClosestPointQueries.h"
@@ -35,6 +36,22 @@ class MultibodyTriangleMeshMixedCcdDcd
     using VertexBvh             = geometry::AabbKdTreeHierarchy<kDims>; ///< BVH over mesh vertices
     using EdgeBvh               = geometry::AabbKdTreeHierarchy<kDims>; ///< BVH over mesh edges
     using TriangleBvh           = geometry::AabbKdTreeHierarchy<kDims>; ///< BVH over mesh triangles
+
+    /**
+     * @brief Vertex-triangle contact pair
+     */
+    struct VertexTriangleContact
+    {
+        Index v, f; ///< Vertex-triangle pair
+    };
+    /**
+     * @brief Vertex-edge contact pair
+     */
+    struct VertexEdgeContact
+    {
+        Index v, e; ///< Vertex-edge pair
+        Scalar b;   ///< Barycentric weight of the vertex on the edge
+    };
 
     /**
      * @brief Default constructor
@@ -216,6 +233,13 @@ class MultibodyTriangleMeshMixedCcdDcd
      * @brief Recompute body BVH tree and internal node bounding boxes
      */
     void RecomputeBodyBvh();
+    /**
+     * @brief Sort active sets by vertex
+     *
+     * A counting sort is used such that time complexity is \f$ O(n+k) \f$
+     * where n is the number of contacts, and k is the number of vertices.
+     */
+    void SortActiveSets();
 
   private:
     /**
@@ -268,11 +292,14 @@ class MultibodyTriangleMeshMixedCcdDcd
     /**
      * @brief Active set
      */
-    IndexVectorX mCountingSortRange; ///< `|# collision vertices|` counting sort workspace
-    std::vector<std::pair<Index, Index>>
+    IndexVectorX
+        mVertexTriangleCountingSortRange; ///< `|# collision vertices|` counting sort workspace
+    std::vector<VertexTriangleContact>
         mActiveVertexTrianglePairs; ///< `|# active vertex-triangle pairs|` list of pairs (v,f)
-    std::vector<std::pair<Index, Index>>
-        mActiveEdgeEdgePairs; ///< `|# active edge-edge pairs|` list of pairs (ei,ej)
+    IndexVectorX mVertexEdgeCountingSortRange; ///< `|# collision vertices|` counting sort workspace
+    std::vector<VertexEdgeContact>
+        mActiveEdgeEdgePairs; ///< `|2 * # active edge-edge pairs|` list of pairs (ei,ej) stored as
+                              ///< list of (v1,ej), (v2,ej) where ei=(v1,v2)
 
     /**
      * @brief DCD
@@ -342,8 +369,9 @@ inline void MultibodyTriangleMeshMixedCcdDcd::Prepare(
     mEdgeAabbs.resize(2 * kDims, E.cols());
     mTriangleAabbs.resize(2 * kDims, F.cols());
     mBodyAabbs.resize(2 * kDims, VP.size() - 1);
-    mCountingSortRange.setZero(V.cols());
+    mVertexTriangleCountingSortRange.setZero(V.cols() + 1);
     mActiveVertexTrianglePairs.reserve(V.cols() /*reasonable preallocation*/);
+    mVertexEdgeCountingSortRange.setZero(V.cols() + 1);
     mActiveEdgeEdgePairs.reserve(E.cols() /*reasonable preallocation*/);
     mDcdVertexBodyPairs.reserve(V.cols() /*reasonable preallocation*/);
     mDcdBodies.reserve(VP.size() - 1 /* # objects */);
@@ -408,6 +436,10 @@ inline void MultibodyTriangleMeshMixedCcdDcd::UpdateActiveSet(
 
     // e) For each body pair (bi,bj), find all earliest (inactive) vertex-triangle and edge-edge
     // intersections and add them to the active set
+
+    // 3. Sort active sets by vertex. This will group all contacts per-vertex to speed-up the
+    // contact handling algorithm.
+    SortActiveSets();
 }
 
 template <class TDerivedX>

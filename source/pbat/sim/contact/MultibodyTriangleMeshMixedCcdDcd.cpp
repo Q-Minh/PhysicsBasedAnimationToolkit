@@ -71,4 +71,41 @@ void MultibodyTriangleMeshMixedCcdDcd::RecomputeBodyBvh()
     mBodyBvh.Update(L, U);
 }
 
+void MultibodyTriangleMeshMixedCcdDcd::SortActiveSets()
+{
+    auto const nVerts                 = mVertexTriangleCountingSortRange.size() - 1;
+    auto const fKeyFromVertexTriangle = [](VertexTriangleContact const& vf) {
+        return vf.v;
+    };
+    pbat::common::CountingSort(
+        mVertexTriangleCountingSortRange.data(),
+        mVertexTriangleCountingSortRange.data() + nVerts,
+        mActiveVertexTrianglePairs.begin(),
+        mActiveVertexTrianglePairs.end(),
+        Index(0),
+        fKeyFromVertexTriangle);
+    pbat::common::PrefixSumFromSortedKeys(
+        mActiveVertexTrianglePairs.begin(),
+        mActiveVertexTrianglePairs.end(),
+        mVertexTriangleCountingSortRange.data() + 1,
+        mVertexTriangleCountingSortRange.data() + nVerts + 1,
+        fKeyFromVertexTriangle);
+    auto const fKeyFromVertexEdge = [](VertexEdgeContact const& ve) {
+        return ve.v;
+    };
+    pbat::common::CountingSort(
+        mVertexTriangleCountingSortRange.data(),
+        mVertexTriangleCountingSortRange.data() + nVerts,
+        mActiveEdgeEdgePairs.begin(),
+        mActiveEdgeEdgePairs.end(),
+        Index(0),
+        fKeyFromVertexEdge);
+    pbat::common::PrefixSumFromSortedKeys(
+        mActiveEdgeEdgePairs.begin(),
+        mActiveEdgeEdgePairs.end(),
+        mVertexEdgeCountingSortRange.data() + 1,
+        mVertexEdgeCountingSortRange.data() + nVerts + 1,
+        fKeyFromVertexEdge);
+}
+
 } // namespace pbat::sim::contact
