@@ -7,6 +7,7 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
         "Common.h"
         "Concepts.h"
         "ConstexprFor.h"
+        "CountingSort.h"
         "Eigen.h"
         "Hash.h"
         "Heap.h"
@@ -20,6 +21,7 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
 PRIVATE
     "ArgSort.cpp"
     "BinaryRadixTree.cpp"
+    "CountingSort.cpp"
     "Eigen.cpp"
     "Heap.cpp"
     "Indexing.cpp"

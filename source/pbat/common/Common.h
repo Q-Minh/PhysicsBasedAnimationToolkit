@@ -20,6 +20,7 @@ namespace pbat::common {
 #include "ArgSort.h"
 #include "Concepts.h"
 #include "ConstexprFor.h"
+#include "CountingSort.h"
 #include "Eigen.h"
 #include "Hash.h"
 #include "Heap.h"
