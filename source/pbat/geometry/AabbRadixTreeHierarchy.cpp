@@ -14,19 +14,21 @@ TEST_CASE("[geometry] AabbRadixTreeHierarchy")
     auto constexpr kDims = 3;
     auto constexpr n     = 10;
     Matrix<2 * kDims, Eigen::Dynamic> B(2 * kDims, n);
-    B.topRows<kDims>().setRandom();
-    B.bottomRows<kDims>() = B.topRows<kDims>();
+    auto BL = B.topRows<kDims>();
+    auto BU = B.bottomRows<kDims>();
+    BL.setRandom();
+    BU = BL;
     // Act
-    geometry::AabbRadixTreeHierarchy<kDims> tree{B};
-    tree.Update(B);
+    geometry::AabbRadixTreeHierarchy<kDims> tree{BL, BU};
+    tree.Update(BL, BU);
     // Assert
     using math::linalg::mini::FromEigen;
     VectorX sd(n);
     IndexVectorX nn(n);
     for (auto i = 0; i < n; ++i)
     {
-        auto P = B.col(i).head<kDims>();
-        sd     = (B.topRows<kDims>().colwise() - P).colwise().squaredNorm();
+        auto P = BL.col(i);
+        sd     = (BL.colwise() - P).colwise().squaredNorm();
         // Point i overlaps only with point i
         tree.Overlaps(
             [&]<class TL, class TU>(TL const& L, TU const& U) {

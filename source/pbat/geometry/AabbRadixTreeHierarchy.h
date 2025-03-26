@@ -41,22 +41,28 @@ class AabbRadixTreeHierarchy
      * @brief Construct an AabbRadixTreeHierarchy from an input AABB matrix B
      *
      * @tparam TDerived Type of the input matrix
-     * @param B 2*kDims x |# objects| matrix of object AABBs, such that for an object o,
-     * B.col(o).head<kDims>() is the lower bound and B.col(o).tail<kDims>() is the upper bound.
+     * @param L kDims x |# objects| matrix of object AABB lower bounds, such that for an object o,
+     * L.col(o).head<kDims>() is the lower bound.
+     * @param U kDims x |# objects| matrix of object AABB upper bounds, such that for an object o,
+     * U.col(o).head<kDims>() is the upper bound.
      */
-    template <class TDerived>
-    AabbRadixTreeHierarchy(Eigen::DenseBase<TDerived> const& B);
+    template <class TDerivedL, class TDerivedU>
+    AabbRadixTreeHierarchy(
+        Eigen::DenseBase<TDerivedL> const& L,
+        Eigen::DenseBase<TDerivedU> const& U);
     /**
      * @brief Construct an AabbRadixTreeHierarchy from an input AABB matrix B
      *
      * Construction has \f$ O(n log n) \f$ average time complexity due to morton code sorting.
      *
      * @tparam TDerived Type of the input matrix
-     * @param B 2*kDims x |# objects| matrix of object AABBs, such that for an object o,
-     * B.col(o).head<kDims>() is the lower bound and B.col(o).tail<kDims>() is the upper bound.
+     * @param L kDims x |# objects| matrix of object AABB lower bounds, such that for an object o,
+     * L.col(o).head<kDims>() is the lower bound.
+     * @param U kDims x |# objects| matrix of object AABB upper bounds, such that for an object o,
+     * U.col(o).head<kDims>() is the upper bound.
      */
-    template <class TDerived>
-    void Construct(Eigen::DenseBase<TDerived> const& B);
+    template <class TDerivedL, class TDerivedU>
+    void Construct(Eigen::DenseBase<TDerivedL> const& L, Eigen::DenseBase<TDerivedU> const& U);
     /**
      * @brief Recomputes k-D tree node AABBs given the object AABBs
      *
@@ -64,11 +70,13 @@ class AabbRadixTreeHierarchy
      * computation, leading to \f$ O(n) \f$ time complexity.
      *
      * @tparam TDerivedB Type of the input matrix
-     * @param B 2*kDims x |# objects| matrix of object AABBs, such that for an object o,
-     * B.col(o).head<kDims>() is the lower bound and B.col(o).tail<kDims>() is the upper bound.
+     * @param L kDims x |# objects| matrix of object AABB lower bounds, such that for an object o,
+     * L.col(o).head<kDims>() is the lower bound.
+     * @param U kDims x |# objects| matrix of object AABB upper bounds, such that for an object o,
+     * U.col(o).head<kDims>() is the upper bound.
      */
-    template <class TDerivedB>
-    void Update(Eigen::DenseBase<TDerivedB> const& B);
+    template <class TDerivedL, class TDerivedU>
+    void Update(Eigen::DenseBase<TDerivedL> const& L, Eigen::DenseBase<TDerivedU> const& U);
     /**
      * @brief Find all objects that overlap with some user-defined query
      *
@@ -133,17 +141,25 @@ class AabbRadixTreeHierarchy
      * bound.
      */
     auto InternalNodeBoundingBoxes() const { return IB; }
+    /**
+     * @brief Get the underlying tree hierarchy
+     * @return Binary radix tree
+     */
+    auto Tree() const -> common::BinaryRadixTree<IndexType> const& { return tree; }
 
   protected:
     /**
      * @brief Compute Morton codes for the AABBs
      *
      * @tparam TDerivedB Type of the input matrix
-     * @param B 2*kDims x |# objects| matrix of object AABBs, such that for an object o,
-     * B.col(o).head<kDims>() is the lower bound and B.col(o).tail<kDims>() is the upper bound.
+     * @param L kDims x |# objects| matrix of object AABB lower bounds, such that for an object o,
+     * L.col(o).head<kDims>() is the lower bound.
+     * @param U kDims x |# objects| matrix of object AABB upper bounds, such that for an object o,
+     * U.col(o).head<kDims>() is the upper bound.
      */
-    template <class TDerivedB>
-    void ComputeMortonCodes(Eigen::DenseBase<TDerivedB> const& B);
+    template <class TDerivedL, class TDerivedU>
+    void
+    ComputeMortonCodes(Eigen::DenseBase<TDerivedL> const& L, Eigen::DenseBase<TDerivedU> const& U);
     /**
      * @brief Sort the Morton codes
      */
@@ -160,29 +176,35 @@ class AabbRadixTreeHierarchy
 };
 
 template <auto kDims>
-template <class TDerived>
-inline AabbRadixTreeHierarchy<kDims>::AabbRadixTreeHierarchy(Eigen::DenseBase<TDerived> const& B)
+template <class TDerivedL, class TDerivedU>
+inline AabbRadixTreeHierarchy<kDims>::AabbRadixTreeHierarchy(
+    Eigen::DenseBase<TDerivedL> const& L,
+    Eigen::DenseBase<TDerivedU> const& U)
 {
-    Construct(B.derived());
+    Construct(L.derived(), U.derived());
 }
 
 template <auto kDims>
-template <class TDerived>
-inline void AabbRadixTreeHierarchy<kDims>::Construct(Eigen::DenseBase<TDerived> const& B)
+template <class TDerivedL, class TDerivedU>
+inline void AabbRadixTreeHierarchy<kDims>::Construct(
+    Eigen::DenseBase<TDerivedL> const& L,
+    Eigen::DenseBase<TDerivedU> const& U)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.geometry.AabbRadixTreeHierarchy.Construct");
-    auto const n = B.cols();
+    auto const n = L.cols();
     codes.resize(n);
     inds.resize(n);
-    ComputeMortonCodes(B);
+    ComputeMortonCodes(L.derived(), U.derived());
     SortMortonCodes();
     tree.Construct(codes);
     IB.resize(2 * kDims, tree.InternalNodeCount());
 }
 
 template <auto kDims>
-template <class TDerivedB>
-inline void AabbRadixTreeHierarchy<kDims>::Update(Eigen::DenseBase<TDerivedB> const& B)
+template <class TDerivedL, class TDerivedU>
+inline void AabbRadixTreeHierarchy<kDims>::Update(
+    Eigen::DenseBase<TDerivedL> const& L,
+    Eigen::DenseBase<TDerivedU> const& U)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.geometry.AabbRadixTreeHierarchy.Update");
     IB.template topRows<kDims>().setConstant(std::numeric_limits<Scalar>::max());
@@ -190,16 +212,33 @@ inline void AabbRadixTreeHierarchy<kDims>::Update(Eigen::DenseBase<TDerivedB> co
     common::TraverseNAryTreePseudoPostOrder(
         [&](Index n) {
             // n is guaranteed to be internal node, due to our fChild functor
-            auto L  = IB.col(n).head<kDims>();
-            auto U  = IB.col(n).tail<kDims>();
-            auto lc = tree.Left(n);
-            auto rc = tree.Right(n);
-            auto LB = tree.IsLeaf(lc) ? B.col(inds(tree.CodeIndex(lc))).head<2 * kDims>().eval() :
-                                        IB.col(lc).head<2 * kDims>().eval();
-            auto RB = tree.IsLeaf(rc) ? B.col(inds(tree.CodeIndex(rc))).head<2 * kDims>().eval() :
-                                        IB.col(rc).head<2 * kDims>().eval();
-            L       = LB.head<kDims>().cwiseMin(RB.head<kDims>());
-            U       = LB.tail<kDims>().cwiseMax(RB.tail<kDims>());
+            auto const lc = tree.Left(n);
+            auto const rc = tree.Right(n);
+            Vector<kDims> LL, LU, RL, RU;
+            if (tree.IsLeaf(lc))
+            {
+                auto i = inds(tree.CodeIndex(lc));
+                LL     = L.col(i).head<kDims>();
+                LU     = U.col(i).head<kDims>();
+            }
+            else
+            {
+                LL = IB.col(lc).head<kDims>();
+                LU = IB.col(lc).tail<kDims>();
+            }
+            if (tree.IsLeaf(rc))
+            {
+                auto i = inds(tree.CodeIndex(rc));
+                RL     = L.col(i).head<kDims>();
+                RU     = U.col(i).head<kDims>();
+            }
+            else
+            {
+                RL = IB.col(rc).head<kDims>();
+                RU = IB.col(rc).tail<kDims>();
+            }
+            IB.col(n).head<kDims>() = LL.cwiseMin(RL);
+            IB.col(n).tail<kDims>() = LU.cwiseMax(RU);
         },
         // fChild functor that only returns non-leaf children
         [&]<auto c>(Index n) -> Index {
@@ -315,20 +354,21 @@ inline void AabbRadixTreeHierarchy<kDims>::KNearestNeighbours(
 }
 
 template <auto kDims>
-template <class TDerivedB>
-inline void AabbRadixTreeHierarchy<kDims>::ComputeMortonCodes(Eigen::DenseBase<TDerivedB> const& B)
+template <class TDerivedL, class TDerivedU>
+inline void AabbRadixTreeHierarchy<kDims>::ComputeMortonCodes(
+    Eigen::DenseBase<TDerivedL> const& L,
+    Eigen::DenseBase<TDerivedU> const& U)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.geometry.AabbRadixTreeHierarchy.ComputeMortonCodes");
-    Vector<kDims> min     = B.template topRows<kDims>().rowwise().minCoeff();
-    auto max              = B.template bottomRows<kDims>().rowwise().maxCoeff();
+    Vector<kDims> min     = L.rowwise().minCoeff();
+    Vector<kDims> max     = U.rowwise().maxCoeff();
     Vector<kDims> extents = max - min;
-    for (Index i = 0; i < B.cols(); ++i)
+    auto C                = 0.5 * (L.derived() + U.derived());
+    for (Index i = 0; i < L.cols(); ++i)
     {
-        Vector<kDims> centroid =
-            0.5 * (B.col(i).template head<kDims>() + B.col(i).template tail<kDims>());
-        common::ForRange<0, kDims>(
-            [&]<auto d>() { centroid(d) = (centroid(d) - min(d)) / extents(d); });
-        codes(i) = Morton3D(centroid);
+        Vector<kDims> center;
+        common::ForRange<0, kDims>([&]<auto d>() { center(d) = (C(d, i) - min(d)) / extents(d); });
+        codes(i) = Morton3D(center);
     }
 }
 
@@ -336,6 +376,14 @@ template <auto kDims>
 inline void AabbRadixTreeHierarchy<kDims>::SortMortonCodes()
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.geometry.AabbRadixTreeHierarchy.SortMortonCodes");
+    // NOTE:
+    // It would potentially be more efficient not to re-sort from scratch every time, due to
+    // this std::iota call. If we kept the inds ordering between calls, we would benefit from
+    // significant performance speedups of certain sorting algorithms on nearly sorted input.
+    // However, this would mean that in the call to ComputeMortonCodes, we would have to
+    // recompute the Morton codes in the same order as the previous call, which will not
+    // exploit cache locality of iterating through B's columns. This is a trade-off that
+    // should be considered if performance is critical.
     std::iota(inds.begin(), inds.end(), 0);
     cppsort::ska_sort(inds.begin(), inds.end(), [&](IndexType i) { return codes(i); });
     common::Permute(codes.begin(), codes.end(), inds.begin());

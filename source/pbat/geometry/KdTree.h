@@ -139,6 +139,11 @@ class KdTree
      * @return Range of points in the node
      */
     auto PointsInNode(KdTreeNode const& node) const;
+    /**
+     * @brief Returns the root node index
+     * @return Root node index
+     */
+    Index constexpr Root() const { return 0; }
 
   private:
     IndexVectorX mPermutation;      ///< mPermutation[i] gives the index of point i in

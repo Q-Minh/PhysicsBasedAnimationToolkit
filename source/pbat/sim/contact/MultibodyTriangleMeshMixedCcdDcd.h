@@ -46,15 +46,15 @@ class MultibodyTriangleMeshMixedCcdDcd
      * @tparam TDerivedFP Eigen type of the input face prefix sum
      * @tparam TDerivedF Eigen type of the input faces
      * @param X `kDims x |# vertices|` matrix of vertex positions
-     * @param VP `|# objects + 1|` prefix sum of vertex pointers into `V` s.t. `V(VP(o):VP(o+1))`
-     * are collision vertices of object `o`
+     * @param VP `|# objects + 1| x 1` prefix sum of vertex pointers into `V` s.t.
+     * `V(VP(o):VP(o+1))` are collision vertices of object `o`
      * @param V `|# vertices|` vertex array
-     * @param EP `|# objects + 1|` prefix sum of edge pointers into `E` s.t. `E(EP(o):EP(o+1))`
-     * are collision edges of object `o`
-     * @param E `|# edges|` edge array
-     * @param FP `|# objects + 1|` prefix sum of triangle pointers into `F` s.t. `F(FP(o):FP(o+1))`
-     * are collision triangles of object `o`
-     * @param F `|# triangles|` triangle array
+     * @param EP `|# objects + 1| x 1` prefix sum of edge pointers into `E` s.t.
+     * `E(EP(o):EP(o+1))` are collision edges of object `o`
+     * @param E `2 x |# edges|` edge array
+     * @param FP `|# objects + 1| x 1` prefix sum of triangle pointers into `F` s.t.
+     * `F(FP(o):FP(o+1))` are collision triangles of object `o`
+     * @param F `3 x |# triangles|` triangle array
      */
     template <
         class TDerivedX,
@@ -82,15 +82,15 @@ class MultibodyTriangleMeshMixedCcdDcd
      * @tparam TDerivedFP Eigen type of the input face prefix sum
      * @tparam TDerivedF Eigen type of the input faces
      * @param X `kDims x |# vertices|` matrix of vertex positions
-     * @param VP `|# objects + 1|` prefix sum of vertex pointers into `V` s.t. `V(VP(o):VP(o+1))`
-     * are collision vertices of object `o`
+     * @param VP `|# objects + 1| x 1` prefix sum of vertex pointers into `V` s.t.
+     * `V(VP(o):VP(o+1))` are collision vertices of object `o`
      * @param V `|# vertices|` vertex array
-     * @param EP `|# objects + 1|` prefix sum of edge pointers into `E` s.t. `E(EP(o):EP(o+1))` are
-     * collision edges of object `o`
-     * @param E `|# edges|` edge array
-     * @param FP `|# objects + 1|` prefix sum of triangle pointers into `F` s.t. `F(FP(o):FP(o+1))`
-     * are collision triangles of object `o`
-     * @param F `|# triangles|` triangle array
+     * @param EP `|# objects + 1| x 1` prefix sum of edge pointers into `E` s.t. `E(EP(o):EP(o+1))`
+     * are collision edges of object `o`
+     * @param E `2 x |# edges|` edge array
+     * @param FP `|# objects + 1| x 1` prefix sum of triangle pointers into `F` s.t.
+     * `F(FP(o):FP(o+1))` are collision triangles of object `o`
+     * @param F `3 x |# triangles|` triangle array
      */
     template <
         class TDerivedX,
@@ -111,21 +111,24 @@ class MultibodyTriangleMeshMixedCcdDcd
     /**
      * @brief Update the active set of vertex-triangle and edge-edge contact pairs
      *
-     * Finds all earliest vertex-triangle and edge-edge intersections in the linear trajectory
-     * \f$ \mathbf{x} = (1-\lambda) \mathbf{x}(t) + \lambda \mathbf{x}(t+1) \; \forall \; \lambda
-     * \in [0,1]\f$ for inactive vertices and adds them to the corresponding active sets.
-     *
-     * Find all nearest vertex-triangle pairs for active vertices and adds them to the
+     * Finds all nearest vertex-triangle pairs for active vertices and adds them to the
      * corresponding active set.
+     *
+     * Finds all earliest vertex-triangle and edge-edge intersections in the linear trajectory
+     * \f$ \mathbf{x} = (1-\Delta t) \mathbf{x}(t) + \Delta t \mathbf{x}(t+1) \; \forall \; \Delta t
+     * \in [0,1]\f$ for inactive vertices and adds them to the corresponding active sets.
      *
      * @tparam TDerivedXT Eigen type of vertex positions at time t
      * @tparam TDerivedX Eigen type of vertex positions at time t+1
      * @param XT `kDims x |# vertices|` matrix of vertex positions at time t
      * @param X `kDims x |# vertices|` matrix of vertex positions at time t+1
+     * @param XK `kDims x |# vertices|` matrix of current vertex positions
      */
-    template <class TDerivedXT, class TDerivedX>
-    void
-    UpdateActiveSet(Eigen::DenseBase<TDerivedXT> const& XT, Eigen::DenseBase<TDerivedX> const& X);
+    template <class TDerivedXT, class TDerivedX, class TDerivedXK>
+    void UpdateActiveSet(
+        Eigen::DenseBase<TDerivedXT> const& XT,
+        Eigen::DenseBase<TDerivedX> const& X,
+        Eigen::DenseBase<TDerivedXK> const& XK);
     /**
      * @brief Finalize the active set of vertex-triangle and edge-edge contact pairs
      *
@@ -143,27 +146,62 @@ class MultibodyTriangleMeshMixedCcdDcd
 
   protected:
     /**
-     * @brief Compute axis-aligned bounding boxes for linearly swept vertices, edges and triangles
+     * @brief Compute axis-aligned bounding boxes for linearly swept vertices
      *
-     * @tparam TDerivedXT Eigen type of vertex positions at time t
-     * @tparam TDerivedX Eigen type of vertex positions at time t+1
+     * @tparam TDerivedX Eigen type of vertex positions
      * @param XT `kDims x |# vertices|` matrix of vertex positions at time t
      * @param X `kDims x |# vertices|` matrix of vertex positions at time t+1
      */
     template <class TDerivedXT, class TDerivedX>
-    void ComputeAabbs(Eigen::DenseBase<TDerivedXT> const& XT, Eigen::DenseBase<TDerivedX> const& X);
+    void ComputeVertexAabbs(
+        Eigen::DenseBase<TDerivedXT> const& XT,
+        Eigen::DenseBase<TDerivedX> const& X);
     /**
-     * @brief Compute axis-aligned bounding boxes for vertices, edges and triangles
-     *
+     * @brief Compute axis-aligned bounding boxes for linearly swept edges
+     * @tparam TDerivedX Eigen type of vertex positions
+     * @param XT `kDims x |# vertices|` matrix of vertex positions at time t
+     * @param X `kDims x |# vertices|` matrix of vertex positions at time t+1
+     */
+    template <class TDerivedXT, class TDerivedX>
+    void
+    ComputeEdgeAabbs(Eigen::DenseBase<TDerivedXT> const& XT, Eigen::DenseBase<TDerivedX> const& X);
+    /**
+     * @brief Compute axis-aligned bounding boxes for triangles
      * @tparam TDerivedX Eigen type of vertex positions
      * @param X `kDims x |# vertices|` matrix of vertex positions
+     * @param bForDcd Flag to indicate if the computation is for DCD
      */
     template <class TDerivedX>
-    void ComputeAabbs(Eigen::DenseBase<TDerivedX> const& X);
+    void ComputeTriangleAabbs(Eigen::DenseBase<TDerivedX> const& X, bool bForDcd = false);
     /**
-     * @brief Recompute mesh BVH bounding boxes
+     * @brief Compute axis-aligned bounding boxes for linearly swept triangles
+     * @tparam TDerivedX Eigen type of vertex positions
+     * @param XT `kDims x |# vertices|` matrix of vertex positions at time t
+     * @param X `kDims x |# vertices|` matrix of vertex positions at time t+1
      */
-    void UpdateMeshBvhs();
+    template <class TDerivedXT, class TDerivedX>
+    void ComputeTriangleAabbs(
+        Eigen::DenseBase<TDerivedXT> const& XT,
+        Eigen::DenseBase<TDerivedX> const& X);
+    /**
+     * @brief Computes body AABBs from mesh vertex BVHs
+     * @pre (Vertex) mesh BVHs must be up-to-date before calling this function, i.e. via a call to
+     * `UpdateMeshVertexBvhs`
+     */
+    void UpdateBodyAabbs();
+    /**
+     * @brief Recompute mesh vertex BVH bounding boxes
+     */
+    void UpdateMeshVertexBvhs();
+    /**
+     * @brief Recompute mesh edge BVH bounding boxes
+     */
+    void UpdateMeshEdgeBvhs();
+    /**
+     * @brief Recompute mesh triangle BVH bounding boxes
+     * @param bForDcd Flag to indicate if the computation is for DCD
+     */
+    void UpdateMeshTriangleBvhs(bool bForDcd = false);
     /**
      * @brief Recompute body BVH tree and internal node bounding boxes
      */
@@ -192,11 +230,13 @@ class MultibodyTriangleMeshMixedCcdDcd
      * @brief Mesh primitive AABBs
      */
 
-    Matrix<kDims, Eigen::Dynamic> mVertexAabbs; ///< Flattened `|# objects|` list of `2*kDims x |#
+    Matrix<2 * kDims, Eigen::Dynamic>
+        mVertexAabbs; ///< Flattened `|# objects|` list of `2*kDims x |#
     ///< vertices|` axis-aligned bounding boxes
-    Matrix<kDims, Eigen::Dynamic> mEdgeAabbs; ///< Flattened `|# objects|` list of `2*kDims x |#
+    Matrix<2 * kDims, Eigen::Dynamic> mEdgeAabbs; ///< Flattened `|# objects|` list of `2*kDims x |#
     ///< edges|` axis-aligned bounding boxes
-    Matrix<kDims, Eigen::Dynamic> mTriangleAabbs; ///< Flattened `|# objects|` list of `2*kDims x |#
+    Matrix<2 * kDims, Eigen::Dynamic>
+        mTriangleAabbs; ///< Flattened `|# objects|` list of `2*kDims x |#
     ///< triangles|` axis-aligned bounding boxes
 
     /**
@@ -211,7 +251,7 @@ class MultibodyTriangleMeshMixedCcdDcd
      * @brief Body AABBs and BVH
      */
 
-    Matrix<kDims, Eigen::Dynamic>
+    Matrix<2 * kDims, Eigen::Dynamic>
         mBodyAabbs;   ///< `2*kDims x |# objects|` axis-aligned bounding boxes over each object
     BodyBvh mBodyBvh; ///< BVH over all objects in the world
 
@@ -219,7 +259,7 @@ class MultibodyTriangleMeshMixedCcdDcd
      * @brief Active set
      */
     Eigen::Vector<bool, Eigen::Dynamic>
-        mActiveVertices;                      ///< `|# collision vertices|` list of active vertices
+        mIsVertexActive;                      ///< `|# collision vertices|` mask of active vertices
     IndexVectorX mActiveVertexTrianglePrefix; ///< `|# collision vertices|` prefix sum of active
                                               ///< vertex-triangle contact pairs `(v,f)`, s.t.
                                               ///< `mActiveTriangles[mActiveVertexTrianglePrefix(v),
@@ -233,6 +273,20 @@ class MultibodyTriangleMeshMixedCcdDcd
                                         ///< mActiveEdgeEdgePrefix(ei+1))` are active edges `ej`
     IndexVectorX mActiveEdges; ///< `|# active edge-edge pairs|` list of edges `ej` from active
                                ///< edge-edge pairs `(ei,ej)`
+
+    /**
+     * @brief DCD
+     *
+     * We store stream-compacted penetrating vertices and penetrated bodies between time steps to
+     * trim down DCD to only those vertices and bodies that are in contact.
+     */
+
+    Index mNDcdVertices; ///< Number of active vertices
+    IndexMatrix<2, Eigen::Dynamic>
+        mDcdVertexBodyPairs; ///< `2 x |# penetrating vertices|` list (v,o) of active vertices v
+                             ///< penetrating object o
+    Index mNDcdBodies;       ///< Number of penetrated bodies
+    IndexVectorX mDcdBodies; ///< `|# penetrated bodies|` list of penetrated bodies
 };
 
 template <
@@ -251,25 +305,6 @@ inline MultibodyTriangleMeshMixedCcdDcd::MultibodyTriangleMeshMixedCcdDcd(
     Eigen::DenseBase<TDerivedE> const& E,
     Eigen::DenseBase<TDerivedFP> const& FP,
     Eigen::DenseBase<TDerivedF> const& F)
-    : mVP(VP),
-      mEP(EP),
-      mFP(FP),
-      mV(V),
-      mE(E),
-      mF(F),
-      mVertexAabbs(kDims, V.cols()),
-      mEdgeAabbs(kDims, E.cols()),
-      mTriangleAabbs(kDims, F.cols()),
-      mVertexBvhs(),
-      mEdgeBvhs(),
-      mTriangleBvhs(),
-      mBodyAabbs(kDims, VP.size() - 1),
-      mBodyBvh(),
-      mActiveVertices(V.cols(), false),
-      mActiveVertexTrianglePrefix(V.cols() + 1, 0),
-      mActiveTriangles(F.cols() /*reasonable preallocation*/),
-      mActiveEdgeEdgePrefix(E.cols() + 1, 0),
-      mActiveEdges(E.cols() /*reasonable preallocation*/)
 {
     Prepare(
         X.derived(),
@@ -305,93 +340,168 @@ inline void MultibodyTriangleMeshMixedCcdDcd::Prepare(
     mV  = V;
     mE  = E;
     mF  = F;
-    // Allocate memory for spatial acceleration data structures
+    // Allocate memory for AABBs and active sets
+    mVertexAabbs.resize(2 * kDims, V.cols());
+    mEdgeAabbs.resize(2 * kDims, E.cols());
+    mTriangleAabbs.resize(2 * kDims, F.cols());
+    mBodyAabbs.resize(2 * kDims, VP.size() - 1);
+    mIsVertexActive.resize(V.cols());
+    mIsVertexActive.setConstant(false);
+    mActiveVertexTrianglePrefix.resize(V.cols() + 1);
+    mActiveVertexTrianglePrefix.setZero();
+    mActiveTriangles.resize(F.cols() /*reasonable preallocation*/);
+    mActiveEdgeEdgePrefix.resize(E.cols() + 1);
+    mActiveEdgeEdgePrefix.setZero();
+    mActiveEdges.resize(E.cols() /*reasonable preallocation*/);
+    mNDcdVertices = 0;
+    mDcdVertexBodyPairs.resize(2, V.cols() /*reasonable preallocation*/);
+    mNDcdBodies = 0;
+    mDcdBodies.resize(VP.size() - 1 /* # objects */);
+    // Allocate memory for mesh BVHs
     auto const nObjects = mVP.size() - 1;
-    mBodyAabbs.resize(kDims, nObjects);
-    mVertexAabbs.resize(kDims, V.cols());
-    mEdgeAabbs.resize(kDims, E.cols());
-    mTriangleAabbs.resize(kDims, F.cols());
-    // Compute static mesh primitive AABBs for tree construction
-    ComputeAabbs(X.derived());
-    // Construct mesh BVHs
     mVertexBvhs.resize(nObjects);
     mEdgeBvhs.resize(nObjects);
     mTriangleBvhs.resize(nObjects);
+    // Compute static mesh primitive AABBs for tree construction
+    ComputeVertexAabbs(X.derived(), X.derived());
+    ComputeEdgeAabbs(X.derived(), X.derived());
+    ComputeTriangleAabbs(X.derived(), false /*bForDcd*/);
+    // Construct mesh BVHs
     for (auto o = 0; o < nObjects; ++o)
     {
         auto VB = mVertexAabbs(Eigen::placeholders::all, Eigen::seq(mVP(o), mVP(o + 1) - 1));
         auto EB = mEdgeAabbs(Eigen::placeholders::all, Eigen::seq(mEP(o), mEP(o + 1) - 1));
         auto FB = mTriangleAabbs(Eigen::placeholders::all, Eigen::seq(mFP(o), mFP(o + 1) - 1));
         // Construct object o's mesh BVH tree topology
-        mVertexBvhs[o].Construct(VB);
-        mEdgeBvhs[o].Construct(EB);
-        mTriangleBvhs[o].Construct(FB);
+        mVertexBvhs[o].Construct(VB.topRows<kDims>(), VB.bottomRows<kDims>());
+        mEdgeBvhs[o].Construct(EB.topRows<kDims>(), EB.bottomRows<kDims>());
+        mTriangleBvhs[o].Construct(FB.topRows<kDims>(), FB.bottomRows<kDims>());
         // Compute object o's AABB
-        mBodyAabbs.col(o).head<kDims>() = VB.rowwise().minCoeff();
-        mBodyAabbs.col(o).tail<kDims>() = VB.rowwise().maxCoeff();
+        auto XVo = X(Eigen::placeholders::all, Eigen::seq(mVP(o), mVP(o + 1) - 1));
+        mBodyAabbs.col(o).head<kDims>() = XVo.rowwise().minCoeff();
+        mBodyAabbs.col(o).tail<kDims>() = XVo.rowwise().maxCoeff();
     }
-    // Construct body BVH
+    // Construct body BVH to allocate memory
     mBodyBvh.Construct(mBodyAabbs);
 }
 
+template <class TDerivedXT, class TDerivedX, class TDerivedXK>
+inline void MultibodyTriangleMeshMixedCcdDcd::UpdateActiveSet(
+    Eigen::DenseBase<TDerivedXT> const& XT,
+    Eigen::DenseBase<TDerivedX> const& X,
+    Eigen::DenseBase<TDerivedXK> const& XK)
+{
+    // 1. Perform DCD for active vertex-triangle pairs (v,f,vo,fo), where v is body vo's vertex and
+    // f is body fo's triangle.
+
+    // a) Recompute triangle AABBs of penetrated bodies of fo
+    ComputeTriangleAabbs(XK, true /*bForDcd*/);
+    // b) Update BVH bounding boxes of meshes fo
+    UpdateMeshTriangleBvhs(true /*bForDcd*/);
+    // c) Compute nearest (active) vertex-triangle pairs (v,f) and add them to the active set
+
+    // 2. Perform CCD for (inactive) vertex-triangle and edge-edge pairs.
+
+    // a) Compute AABBs for linearly swept vertices, edges and triangles
+    ComputeVertexAabbs(XT, X);
+    ComputeEdgeAabbs(XT, X);
+    ComputeTriangleAabbs(XT, X);
+    // b) Update mesh BVH bounding boxes
+    UpdateMeshVertexBvhs();
+    UpdateMeshEdgeBvhs();
+    UpdateMeshTriangleBvhs();
+    // c) Recompute body BVH tree and internal node bounding boxes
+    UpdateBodyAabbs();
+    RecomputeBodyBvh();
+    // d) Find potentially contacting body pairs (bi,bj)
+
+    // e) For each body pair (bi,bj), find all earliest (inactive) vertex-triangle and edge-edge
+    // intersections and add them to the active set
+}
+
 template <class TDerivedXT, class TDerivedX>
-inline void MultibodyTriangleMeshMixedCcdDcd::ComputeAabbs(
+inline void MultibodyTriangleMeshMixedCcdDcd::ComputeVertexAabbs(
     Eigen::DenseBase<TDerivedXT> const& XT,
     Eigen::DenseBase<TDerivedX> const& X)
 {
+    auto XTV = XT.template topRows<kDims>()(Eigen::placeholders::all, mV);
+    auto XV  = X.template topRows<kDims>()(Eigen::placeholders::all, mV);
     for (auto v = 0; v < mV.cols(); ++v)
     {
-        auto i   = mV(v);
-        auto XTV = XT.col(i).head<kDims>();
-        auto XV  = X.col(i).head<kDims>();
-        auto L   = mVertexAabbs.col(v).head<kDims>();
-        auto U   = mVertexAabbs.col(v).tail<kDims>();
-        L        = XTV.cwiseMin(XV);
-        U        = XTV.cwiseMax(XV);
+        auto i = mV(v);
+        auto L = mVertexAabbs.col(v).head<kDims>();
+        auto U = mVertexAabbs.col(v).tail<kDims>();
+        L      = XTV.col(i).cwiseMin(XV.col(i));
+        U      = XTV.col(i).cwiseMin(XV.col(i));
     }
+}
+
+template <class TDerivedXT, class TDerivedX>
+inline void MultibodyTriangleMeshMixedCcdDcd::ComputeEdgeAabbs(
+    Eigen::DenseBase<TDerivedXT> const& XT,
+    Eigen::DenseBase<TDerivedX> const& X)
+{
     for (auto e = 0; e < mE.cols(); ++e)
     {
         Matrix<kDims, 2 * 2> XE;
-        XE.block<kDims, 2>(0, 0) = XT(Eigen::placeholders::all, mE.col(e));
-        XE.block<kDims, 2>(0, 2) = X(Eigen::placeholders::all, mE.col(e));
-        auto L                   = mEdgeAabbs.col(e).head<kDims>();
-        auto U                   = mEdgeAabbs.col(e).tail<kDims>();
-        L                        = XE.rowwise().minCoeff();
-        U                        = XE.rowwise().maxCoeff();
-    }
-    for (auto f = 0; f < mF.cols(); ++f)
-    {
-        Matrix<kDims, 2 * 3> XF;
-        XF.block<kDims, 3>(0, 0) = XT(Eigen::placeholders::all, mF.col(f));
-        XF.block<kDims, 3>(0, 3) = X(Eigen::placeholders::all, mF.col(f));
-        auto L                   = mTriangleAabbs.col(f).head<kDims>();
-        auto U                   = mTriangleAabbs.col(f).tail<kDims>();
-        L                        = XF.rowwise().minCoeff();
-        U                        = XF.rowwise().maxCoeff();
+        XE.leftCols<2>()  = XT(Eigen::placeholders::all, mE.col(e)).block<kDims, 2>(0, 0).eval();
+        XE.rightCols<2>() = X(Eigen::placeholders::all, mE.col(e)).block<kDims, 2>(0, 0).eval();
+        auto L            = mEdgeAabbs.col(e).head<kDims>();
+        auto U            = mEdgeAabbs.col(e).tail<kDims>();
+        L                 = XE.rowwise().minCoeff();
+        U                 = XE.rowwise().maxCoeff();
     }
 }
 
 template <class TDerivedX>
-inline void MultibodyTriangleMeshMixedCcdDcd::ComputeAabbs(Eigen::DenseBase<TDerivedX> const& X)
+inline void MultibodyTriangleMeshMixedCcdDcd::ComputeTriangleAabbs(
+    Eigen::DenseBase<TDerivedX> const& X,
+    bool bForDcd)
 {
-    auto XV                          = X(Eigen::placeholders::all, mV);
-    mVertexAabbs.topRows<kDims>()    = XV;
-    mVertexAabbs.bottomRows<kDims>() = XV;
-    for (auto e = 0; e < mE.cols(); ++e)
+    if (bForDcd)
     {
-        auto XE = X(Eigen::placeholders::all, mE.col(e)).block<kDims, 2>(0, 0).eval();
-        auto L  = mEdgeAabbs.col(e).head<kDims>();
-        auto U  = mEdgeAabbs.col(e).tail<kDims>();
-        L       = XE.rowwise().minCoeff();
-        U       = XE.rowwise().maxCoeff();
+        for (auto k = 0; k < mNDcdBodies; ++k)
+        {
+            auto o     = mDcdBodies(k);
+            auto begin = mFP(o);
+            auto end   = mFP(o + 1);
+            for (auto f = begin; f < end; ++f)
+            {
+                auto XF = X(Eigen::placeholders::all, mF.col(f)).block<kDims, 3>(0, 0).eval();
+                auto L  = mTriangleAabbs.col(f).head<kDims>();
+                auto U  = mTriangleAabbs.col(f).tail<kDims>();
+                L       = XF.rowwise().minCoeff();
+                U       = XF.rowwise().maxCoeff();
+            }
+        }
     }
+    else
+    {
+        for (auto f = 0; f < mF.cols(); ++f)
+        {
+            auto XF = X(Eigen::placeholders::all, mF.col(f)).block<kDims, 3>(0, 0).eval();
+            auto L  = mTriangleAabbs.col(f).head<kDims>();
+            auto U  = mTriangleAabbs.col(f).tail<kDims>();
+            L       = XF.rowwise().minCoeff();
+            U       = XF.rowwise().maxCoeff();
+        }
+    }
+}
+
+template <class TDerivedXT, class TDerivedX>
+inline void MultibodyTriangleMeshMixedCcdDcd::ComputeTriangleAabbs(
+    Eigen::DenseBase<TDerivedXT> const& XT,
+    Eigen::DenseBase<TDerivedX> const& X)
+{
     for (auto f = 0; f < mF.cols(); ++f)
     {
-        auto XF = X(Eigen::placeholders::all, mF.col(f)).block<kDims, 3>(0, 0).eval();
-        auto L  = mTriangleAabbs.col(f).head<kDims>();
-        auto U  = mTriangleAabbs.col(f).tail<kDims>();
-        L       = XF.rowwise().minCoeff();
-        U       = XF.rowwise().maxCoeff();
+        Matrix<kDims, 2 * 3> XF;
+        XF.leftCols<3>()  = XT(Eigen::placeholders::all, mF.col(f)).block<kDims, 3>(0, 0).eval();
+        XF.rightCols<3>() = X(Eigen::placeholders::all, mF.col(f)).block<kDims, 3>(0, 0).eval();
+        auto L            = mTriangleAabbs.col(f).head<kDims>();
+        auto U            = mTriangleAabbs.col(f).tail<kDims>();
+        L                 = XF.rowwise().minCoeff();
+        U                 = XF.rowwise().maxCoeff();
     }
 }
 

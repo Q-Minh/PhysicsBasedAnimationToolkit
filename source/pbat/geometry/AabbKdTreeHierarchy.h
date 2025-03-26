@@ -42,27 +42,37 @@ class AabbKdTreeHierarchy
 
     AabbKdTreeHierarchy() = default;
     /**
-     * @brief Construct an Aabb Hierarchy from an input AABB matrix B
+     * @brief Construct an Aabb Hierarchy from an input AABB matrices L, U
      *
-     * @tparam TDerived Type of the input matrix
-     * @param B 2*kDims x |# objects| matrix of object AABBs, such that for an object o,
-     * B.col(o).head<kDims>() is the lower bound and B.col(o).tail<kDims>() is the upper bound.
+     * @tparam TDerivedL Type of the lower bound matrix
+     * @tparam TDerivedU Type of the upper bound matrix
+     * @param L kDims x |# objects| matrix of object AABB lower bounds, such that for an object o,
+     * L.col(o) is the lower bound.
+     * @param U kDims x |# objects| matrix of object AABB upper bounds, such that for an object o,
+     * U.col(o) is the upper bound.
      * @param maxPointsInLeaf Maximum number of points in a leaf node
      */
-    template <class TDerived>
-    AabbKdTreeHierarchy(Eigen::DenseBase<TDerived> const& B, Index maxPointsInLeaf = 8);
+    template <class TDerivedL, class TDerivedU>
+    AabbKdTreeHierarchy(
+        Eigen::DenseBase<TDerivedL> const& L,
+        Eigen::DenseBase<TDerivedU> const& U,
+        Index maxPointsInLeaf = 8);
     /**
      * @brief Construct an Aabb Hierarchy from an input AABB matrix B
      *
-     * Construction has \f$ O(n log n) \f$ average time complexity due to k-D tree construction.
-     *
-     * @tparam TDerived Type of the input matrix
-     * @param B 2*kDims x |# objects| matrix of object AABBs, such that for an object o,
-     * B.col(o).head<kDims>() is the lower bound and B.col(o).tail<kDims>() is the upper bound.
+     * @tparam TDerivedL Type of the lower bound matrix
+     * @tparam TDerivedU Type of the upper bound matrix
+     * @param L kDims x |# objects| matrix of object AABB lower bounds, such that for an object o,
+     * L.col(o) is the lower bound.
+     * @param U kDims x |# objects| matrix of object AABB upper bounds, such that for an object o,
+     * U.col(o) is the upper bound.
      * @param maxPointsInLeaf Maximum number of points in a leaf node
      */
-    template <class TDerived>
-    void Construct(Eigen::DenseBase<TDerived> const& B, Index maxPointsInLeaf = 8);
+    template <class TDerivedL, class TDerivedU>
+    void Construct(
+        Eigen::DenseBase<TDerivedL> const& L,
+        Eigen::DenseBase<TDerivedU> const& U,
+        Index maxPointsInLeaf = 8);
     /**
      * @brief Recomputes k-D tree node AABBs given the object AABBs
      *
@@ -71,12 +81,15 @@ class AabbKdTreeHierarchy
      * respectable cache-efficiency at the tree-level, since nodes and their 2 children are stored
      * contiguously in memory. However, objects stored in leaves are generally spread out in memory.
      *
-     * @tparam TDerivedB Type of the input matrix
-     * @param B 2*kDims x |# objects| matrix of object AABBs, such that for an object o,
-     * B.col(o).head<kDims>() is the lower bound and B.col(o).tail<kDims>() is the upper bound.
+     * @tparam TDerivedL Type of the lower bound matrix
+     * @tparam TDerivedU Type of the upper bound matrix
+     * @param L kDims x |# objects| matrix of object AABB lower bounds, such that for an object o,
+     * L.col(o) is the lower bound.
+     * @param U kDims x |# objects| matrix of object AABB upper bounds, such that for an object o,
+     * U.col(o) is the upper bound.
      */
-    template <class TDerivedB>
-    void Update(Eigen::DenseBase<TDerivedB> const& B);
+    template <class TDerivedL, class TDerivedU>
+    void Update(Eigen::DenseBase<TDerivedL> const& L, Eigen::DenseBase<TDerivedU> const& U);
     /**
      * @brief Find all objects that overlap with some user-defined query
      *
@@ -133,14 +146,18 @@ class AabbKdTreeHierarchy
         FOnNearestNeighbour fOnNearestNeighbour,
         Index K,
         Scalar radius = std::numeric_limits<Scalar>::max()) const;
-
     /**
      * @brief Get the internal node bounding boxes
      * @return `2*kDims x |# internal nodes|` matrix of AABBs, such that for an internal node node,
      * IB.col(node).head<kDims>() is the lower bound and IB.col(node).tail<kDims>() is the upper
      * bound.
      */
-    auto InternalNodeBoundingBoxes() const { return IB; }
+    auto InternalNodeBoundingBoxes() const -> Matrix<2 * kDims, Eigen::Dynamic> { return IB; }
+    /**
+     * @brief Get the underlying k-D tree
+     * @return The k-D tree hierarchy
+     */
+    auto Tree() const -> KdTree<kDims> const& { return tree; }
 
   private:
     Matrix<2 * kDims, Eigen::Dynamic>
@@ -151,23 +168,24 @@ class AabbKdTreeHierarchy
 };
 
 template <auto kDims>
-template <class TDerived>
+template <class TDerivedL, class TDerivedU>
 inline AabbKdTreeHierarchy<kDims>::AabbKdTreeHierarchy(
-    Eigen::DenseBase<TDerived> const& B,
+    Eigen::DenseBase<TDerivedL> const& L,
+    Eigen::DenseBase<TDerivedU> const& U,
     Index maxPointsInLeaf)
-    : IB(), tree()
 {
-    Construct(B, maxPointsInLeaf);
+    Construct(L, U, maxPointsInLeaf);
 }
 
 template <auto kDims>
-template <class TDerived>
-inline void
-AabbKdTreeHierarchy<kDims>::Construct(Eigen::DenseBase<TDerived> const& B, Index maxPointsInLeaf)
+template <class TDerivedL, class TDerivedU>
+inline void AabbKdTreeHierarchy<kDims>::Construct(
+    Eigen::DenseBase<TDerivedL> const& L,
+    Eigen::DenseBase<TDerivedU> const& U,
+    Index maxPointsInLeaf)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.geometry.AabbKdTreeHierarchy.Construct");
-    Matrix<kDims, Eigen::Dynamic> P =
-        0.5 * (B.template topRows<kDims>() + B.template bottomRows<kDims>());
+    Matrix<kDims, Eigen::Dynamic> P = 0.5 * (L.derived() + U.derived());
     tree.Construct(P, maxPointsInLeaf);
     auto const nNodes = static_cast<Index>(tree.Nodes().size());
     IB.resize(2 * kDims, nNodes);
@@ -176,8 +194,10 @@ AabbKdTreeHierarchy<kDims>::Construct(Eigen::DenseBase<TDerived> const& B, Index
 }
 
 template <auto kDims>
-template <class TDerivedB>
-inline void AabbKdTreeHierarchy<kDims>::Update(Eigen::DenseBase<TDerivedB> const& B)
+template <class TDerivedL, class TDerivedU>
+inline void AabbKdTreeHierarchy<kDims>::Update(
+    Eigen::DenseBase<TDerivedL> const& L,
+    Eigen::DenseBase<TDerivedU> const& U)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.geometry.AabbKdTreeHierarchy.Update");
     KdTreeNode const* nodes  = tree.Nodes().data();
@@ -188,10 +208,8 @@ inline void AabbKdTreeHierarchy<kDims>::Update(Eigen::DenseBase<TDerivedB> const
             if (node.IsLeaf())
             {
                 auto inds               = perm(Eigen::seqN(node.begin, node.n));
-                auto BL                 = B.template topRows<kDims>();
-                auto BU                 = B.template bottomRows<kDims>();
-                IB.col(n).head<kDims>() = BL(Eigen::placeholders::all, inds).rowwise().minCoeff();
-                IB.col(n).tail<kDims>() = BU(Eigen::placeholders::all, inds).rowwise().maxCoeff();
+                IB.col(n).head<kDims>() = L(Eigen::placeholders::all, inds).rowwise().minCoeff();
+                IB.col(n).tail<kDims>() = U(Eigen::placeholders::all, inds).rowwise().maxCoeff();
             }
             else
             {
