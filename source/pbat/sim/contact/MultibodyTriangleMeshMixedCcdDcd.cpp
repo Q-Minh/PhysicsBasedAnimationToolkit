@@ -41,12 +41,16 @@ void MultibodyTriangleMeshMixedCcdDcd::UpdateMeshTriangleBvhs(bool bForDcd)
 {
     if (bForDcd)
     {
-        for (auto k = 0; k < mNDcdBodies; ++k)
+#include "pbat/warning/Push.h"
+#include "pbat/warning/SignConversion.h"
+        auto const nDcdBodies = mDcdBodies.size();
+        for (auto k = 0; k < nDcdBodies; ++k)
         {
-            auto o  = mDcdBodies(k);
+            auto o  = mDcdBodies[k];
             auto FB = mTriangleAabbs(Eigen::placeholders::all, Eigen::seq(mFP(o), mFP(o + 1) - 1));
             mTriangleBvhs[o].Update(FB.topRows<kDims>(), FB.bottomRows<kDims>());
         }
+#include "pbat/warning/Pop.h"
     }
     else
     {
@@ -61,8 +65,10 @@ void MultibodyTriangleMeshMixedCcdDcd::UpdateMeshTriangleBvhs(bool bForDcd)
 
 void MultibodyTriangleMeshMixedCcdDcd::RecomputeBodyBvh()
 {
-    mBodyBvh.Construct(mBodyAabbs);
-    mBodyBvh.Update(mBodyAabbs);
+    auto L = mBodyAabbs.topRows<kDims>();
+    auto U = mBodyAabbs.bottomRows<kDims>();
+    mBodyBvh.Construct(L, U);
+    mBodyBvh.Update(L, U);
 }
 
 } // namespace pbat::sim::contact
