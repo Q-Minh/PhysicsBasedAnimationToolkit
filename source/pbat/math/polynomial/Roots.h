@@ -3148,6 +3148,8 @@ inline std::array<TScalar, N> Roots(
  * @brief Computes the each real root of a degree N polynomial in the range [min,max] in increasing
  * order.
  *
+ *
+ *
  * @note We use the expensive but most accurate method from @cite cem2022polyroot
  *
  * @tparam FOnRoot Callable type with signature `bool(TScalar root)`.
@@ -3158,15 +3160,16 @@ inline std::array<TScalar, N> Roots(
  * @param coeffs Coefficients of the polynomial.
  * @param min Minimum value of the search range.
  * @param max Maximum value of the search range.
+ * @return true if root finding is terminated by fOnRoot. Otherwise, returns false.
  */
 template <class FOnRoot, auto N, class TScalar = Scalar>
-inline void ForEachRoot(
+inline bool ForEachRoot(
     FOnRoot&& fOnRoot,
     std::array<TScalar, N + 1> const& coeffs,
     TScalar min = std::numeric_limits<TScalar>::lowest(),
     TScalar max = std::numeric_limits<TScalar>::max())
 {
-    detail::cy::PolynomialForEachRoot<N, TScalar, true>(
+    return detail::cy::PolynomialForEachRoot<N, TScalar, true>(
         std::forward<FOnRoot>(fOnRoot),
         *reinterpret_cast<detail::CArray<TScalar, N + 1> const*>(coeffs.data()),
         min,

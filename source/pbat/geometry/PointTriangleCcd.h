@@ -1,7 +1,18 @@
+/**
+ * @file PointTriangleCcd.h
+ * @author Quoc-Minh Ton-That (tonthat.quocminh@gmail.com)
+ * @brief Point-triangle continuous collision detection (CCD) implementation
+ * @date 2025-03-27
+ *
+ * @copyright Copyright (c) 2025
+ *
+ */
+
 #ifndef PBAT_GEOMETRY_POINTTRIANGLECCD_H
 #define PBAT_GEOMETRY_POINTTRIANGLECCD_H
 
 #include "IntersectionQueries.h"
+#include "pbat/HostDevice.h"
 #include "pbat/math/linalg/mini/Concepts.h"
 #include "pbat/math/linalg/mini/Matrix.h"
 #include "pbat/math/linalg/mini/Reductions.h"
@@ -54,7 +65,7 @@ template <
     math::linalg::mini::CReadableVectorizedMatrix TB,
     math::linalg::mini::CReadableVectorizedMatrix TC,
     class TScalar = typename TX::Scalar>
-std::array<TScalar, 4> PointTriangleCcdUnivariatePolynomial(
+PBAT_HOST_DEVICE std::array<TScalar, 4> PointTriangleCcdUnivariatePolynomial(
     TXT const& XT,
     TAT const& AT,
     TBT const& BT,
@@ -74,8 +85,8 @@ std::array<TScalar, 4> PointTriangleCcdUnivariatePolynomial(
  * \f[
  * \langle \mathbf{n}(t), \mathbf{q}(t) \rangle = 0 ,
  * \f]
- * where \f$ \mathbf{n}(t) = (\mathbf{b}(t) - \mathbf{a}) \times (\mathbf{c}(t) - \mathbf{a}) \f$
- * and \f$ \mathbf{q}(t) = \mathbf{x}(t) - \mathbf{a} \f$ using polynomial root finder from
+ * where \f$ \mathbf{n}(t) = (\mathbf{b}(t) - \mathbf{a}(t)) \times (\mathbf{c}(t) - \mathbf{a}(t))
+ * \f$ and \f$ \mathbf{q}(t) = \mathbf{x}(t) - \mathbf{a}(t) \f$ using polynomial root finder from
  * @cite cem2022polyroot.
  *
  * See @cite provot1997collision and @cite ZachFerg2021CcdBenchmark for more details.
@@ -110,8 +121,8 @@ template <
     math::linalg::mini::CReadableVectorizedMatrix TA,
     math::linalg::mini::CReadableVectorizedMatrix TB,
     math::linalg::mini::CReadableVectorizedMatrix TC,
-    class TScalar = typename TX::Scalar>
-auto PointTriangleCcd(
+    class TScalar = typename TX::ScalarType>
+PBAT_HOST_DEVICE auto PointTriangleCcd(
     TXT const& XT,
     TAT const& AT,
     TBT const& BT,
@@ -121,36 +132,34 @@ auto PointTriangleCcd(
     TB const& B,
     TC const& C) -> math::linalg::mini::SVector<TScalar, 4>
 {
+    auto constexpr kDims = TXT::kRows;
     // 1. Form co-planarity polynomial
     std::array<TScalar, 4> const coeffs =
         detail::PointTriangleCcdUnivariatePolynomial(XT, AT, BT, CT, X, A, B, C);
     // 2. Filter roots
     using namespace pbat::math::linalg::mini;
     SVector<TScalar, 4> r;
-    r[0] = std::numeric_limits<TScalar>::max();
-    math::polynomial::ForEachRoot(
+    bool const bIntersectionFound = math::polynomial::ForEachRoot(
         [&](TScalar t) {
-            if (std::isnan(t))
-                return true;
             // 3. Compute barycentric coordinates of intersection point at earliest root
-            auto uvw = r.template Slice<3, 1>(1, 0);
-            uvw      = IntersectionQueries::TriangleBarycentricCoordinates(
-                XT + t * (X - XT),
-                AT + t * (A - AT),
-                BT + t * (B - BT),
-                CT + t * (C - CT));
+            auto uvw                  = r.template Slice<3, 1>(1, 0);
+            SVector<TScalar, kDims> x = XT + t * (X - XT);
+            SVector<TScalar, kDims> a = AT + t * (A - AT);
+            SVector<TScalar, kDims> b = BT + t * (B - BT);
+            SVector<TScalar, kDims> c = CT + t * (C - CT);
+            uvw = IntersectionQueries::TriangleBarycentricCoordinates(x, a, b, c);
             bool const bIsInsideTriangle = All((uvw >= TScalar(0)) and (uvw <= TScalar(1)));
             // Point and triangle intersect at t, if X(t) is inside the triangle (A(t), B(t), C(t))
-            if (bIsInsideTriangle)
-                r[0] = std::min(r[0], t);
-            return false;
+            r[0] = bIsInsideTriangle * t + (not bIsInsideTriangle) * r[0];
+            // Exit as soon as an intersection is found, since we are traversing roots from earliest
+            // to latest time of impact
+            return bIsInsideTriangle;
         },
         coeffs,
         TScalar(0),
         TScalar(1));
     // Compute return value
-    if (r[0] == std::numeric_limits<TScalar>::max())
-        r[0] = TScalar(-1);
+    r[0] = bIntersectionFound * r[0] + (not bIntersectionFound) * TScalar(-1);
     return r;
 }
 
@@ -165,8 +174,8 @@ template <
     math::linalg::mini::CReadableVectorizedMatrix TA,
     math::linalg::mini::CReadableVectorizedMatrix TB,
     math::linalg::mini::CReadableVectorizedMatrix TC,
-    class TScalar = typename TX::Scalar>
-std::array<TScalar, 4> PointTriangleCcdUnivariatePolynomial(
+    class TScalar>
+PBAT_HOST_DEVICE std::array<TScalar, 4> PointTriangleCcdUnivariatePolynomial(
     TXT const& XT,
     TAT const& AT,
     TBT const& BT,

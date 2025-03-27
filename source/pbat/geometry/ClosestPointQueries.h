@@ -141,6 +141,103 @@ PBAT_HOST_DEVICE auto PointInTetrahedron(
     TMatrixC const& C,
     TMatrixD const& D) -> mini::SVector<typename TMatrixP::ScalarType, TMatrixP::kRows>;
 
+/**
+ * @brief Find closest points on two lines defined by points P1, Q1 and P2, Q2.
+ *
+ * We find closest points by minimizing
+ * \f[
+ * \begin{align*}
+ * f(\alpha, \beta) &= | (P1 + \alpha d_1) - (P2 + \beta d_2) |^2 \\
+ * &= | (P1 - P2) + (\alpha d_1 - \beta d_2) |^2 ,
+ * \end{align*}
+ * \f]
+ * where \f$ d_1 = Q1 - P1 \f$ and \f$ d_2 = Q2 - P2 \f$.
+ *
+ * We can expand \f$ f \f$ to obtain
+ * \f[
+ * \begin{align*}
+ * f(\alpha,\beta) &= |P1-P2|^2 + 2 (P1-P2)^T (\alpha d_1 - \beta d_2) + | (\alpha d_1 - \beta d_2)
+ * |^2 \\
+ * &= |P1-P2|^2 + 2 (P1-P2)^T (\alpha d_1 - \beta d_2) + \alpha^2 |d_1|^2 - 2 \alpha \beta d_1^T d_2
+ * + \beta^2 |d_2|^2 .
+ * \end{align*}
+ * \f]
+ *
+ * The gradients are thus
+ * \f[
+ * \begin{align*}
+ * \frac{\partial f}{\partial \alpha} &= 2 (P1-P2)^T d_1 + 2 \alpha |d_1|^2 - 2 \beta d_1^T d_2 \\
+ * \frac{\partial f}{\partial \beta} &= -2 (P1-P2)^T d_2 - 2 \alpha d_1^T d_2 + 2 \beta |d_2|^2
+ * \end{align*}
+ * \f]
+ *
+ * Setting the gradients to zero, we obtain the following equations
+ * \f[
+ * \begin{align*}
+ * \beta &= \frac{(P1-P2)^T d_2 + \alpha d_1^T d_2}{|d_2|^2} \\
+ * &= \frac{(P1-P2+\alpha d_1)^T d_2}{|d_2|^2} \\
+ * \alpha &= \frac{\beta d_1^T d_2 - (P1-P2)^T d_1}{|d_1|^2} .
+ * \end{align*}
+ * \f]
+ *
+ * Injecting the first equation into the second, we obtain
+ * \f[
+ * \begin{align*}
+ * \alpha &= \frac{-(P1-P2)^T d_1}{|d_1|^2} + \frac{(P1-P2)^T d_2 + \alpha d_1^T d_2}{|d_1|^2
+ * |d_2|^2} d_1^T d_2 \\
+ * \alpha &= \frac{-(P1-P2)^T d_1}{|d_1|^2} + \frac{(P1-P2)^T d_2}{|d_1|^2 |d_2|^2} d_1^T d_2 +
+ * \alpha \frac{(d_1^T d_2)^2}{|d_1|^2 |d_2|^2} \\
+ * (1 - \frac{(d_1^T d_2)^2}{|d_1|^2 |d_2|^2}) \alpha &= \frac{-(P1-P2)^T d_1}{|d_1|^2} +
+ * \frac{(P1-P2)^T d_2}{|d_1|^2 |d_2|^2} d_1^T d_2 \\
+ * (1 - \frac{(d_1^T d_2)^2}{|d_1|^2 |d_2|^2}) \alpha &= \frac{(P1-P2)^T (d_2 d_1^T d_2 - |d_2|^2
+ * d_1)}{|d_1|^2 |d_2|^2} \\
+ * (|d_1|^2 |d_2|^2 - (d_1^T d_2)^2) \alpha &= (P1-P2)^T (d_2 d_1^T d_2 - |d_2|^2 d_1) .
+ * \end{align*}
+ * \f]
+ * which allows solving for \f$ \alpha \f$ first, then \f$ \beta \f$.
+ *
+ * Note that if the lines are parallel, then by definition,
+ * \f[
+ * \begin{align*}
+ * d_1^T d_2 &= |d_1| |d_2| \cos(\theta) \\
+ * &= |d_1| |d_2| \\
+ * (d_1^T d_2)^2 &= |d_1|^2 |d_2|^2 \\
+ * |d_1|^2 |d_2|^2 - (d_1^T d_2)^2 &= 0 .
+ * \end{align*}
+ * \f]
+ *
+ * In that case, we choose \f$ \alpha = 0 \f$ and return the corresponding \f$ \beta \f$.
+ * If any line \f$ d_i = 0 \f$, it is degenerated into a point. In that case, we choose the
+ * closest point on the other line.
+ * If both lines are degenerated into points, the solution is \f$ \alpha, \beta = 0 \f$.
+ *
+ * @tparam TMatrixP1 Type of the input matrix P1
+ * @tparam TMatrixQ1 Type of the input matrix Q1
+ * @tparam TMatrixP2 Type of the input matrix P2
+ * @tparam TMatrixQ2 Type of the input matrix Q2
+ * @tparam TScalar Type of the scalar
+ * @param P1 Point 1 on line 1
+ * @param Q1 Point 2 on line 1
+ * @param P2 Point 1 on line 2
+ * @param Q2 Point 2 on line 2
+ * @param eps Numerical error tolerance for zero checks
+ * @return 2-vector \f$ (\alpha, \beta) \f$ such that the closest points are \f$ P1 + \alpha * (Q1 -
+ * P1) \f$ and \f$ P2 + \beta * (Q2 - P2) \f$
+ * @pre `eps >= 0`
+ */
+template <
+    mini::CMatrix TMatrixP1,
+    mini::CMatrix TMatrixQ1,
+    mini::CMatrix TMatrixP2,
+    mini::CMatrix TMatrixQ2,
+    class TScalar = typename TMatrixP1::ScalarType>
+PBAT_HOST_DEVICE auto Lines(
+    TMatrixP1 const& P1,
+    TMatrixQ1 const& Q1,
+    TMatrixP2 const& P2,
+    TMatrixQ2 const& Q2,
+    TScalar eps = std::numeric_limits<TScalar>::min()) -> mini::SVector<TScalar, 2>;
+
 template <mini::CMatrix TMatrixX, mini::CMatrix TMatrixP, mini::CMatrix TMatrixN>
 PBAT_HOST_DEVICE auto PointOnPlane(TMatrixX const& X, TMatrixP const& P, TMatrixN const& n)
     -> mini::SVector<typename TMatrixX::ScalarType, TMatrixX::kRows>
@@ -340,6 +437,51 @@ PBAT_HOST_DEVICE auto PointInTetrahedron(
     TestFace(C, A, D);
     TestFace(A, C, B);
     return X;
+}
+
+template <
+    mini::CMatrix TMatrixP1,
+    mini::CMatrix TMatrixQ1,
+    mini::CMatrix TMatrixP2,
+    mini::CMatrix TMatrixQ2,
+    class TScalar>
+PBAT_HOST_DEVICE auto Lines(
+    TMatrixP1 const& P1,
+    TMatrixQ1 const& Q1,
+    TMatrixP2 const& P2,
+    TMatrixQ2 const& Q2,
+    TScalar eps) -> mini::SVector<TScalar, 2>
+{
+    auto constexpr kDims                     = TMatrixP1::kRows;
+    mini::SVector<TScalar, kDims> const d1   = Q1 - P1;
+    mini::SVector<TScalar, kDims> const d2   = Q2 - P2;
+    mini::SVector<TScalar, kDims> const P2P1 = P1 - P2;
+    TScalar const d1sq                       = SquaredNorm(d1);
+    TScalar const d2sq                       = SquaredNorm(d2);
+    TScalar const d1d2                       = Dot(d1, d2);
+    TScalar const similarity                 = d1sq * d2sq - d1d2 * d1d2;
+    bool const bIsLine1Degenerate            = d1sq <= eps;
+    bool const bIsLine2Degenerate            = d2sq <= eps;
+    bool const bAreParallel                  = (-eps <= similarity) and (similarity <= eps);
+    TScalar alpha{0}, beta{0};
+    if (not(bIsLine1Degenerate and bIsLine2Degenerate))
+    {
+        if (bIsLine1Degenerate)
+        {
+            beta = Dot(P2P1, d2) / d2sq;
+        }
+        else if (bIsLine2Degenerate)
+        {
+            alpha = -Dot(P2P1, d1) / d1sq;
+        }
+        else
+        {
+            if (not bAreParallel)
+                alpha = Dot(P2P1, d2 * d1d2 - d2sq * d1) / similarity;
+            beta = Dot(P2P1 + alpha * d1, d2) / d2sq;
+        }
+    }
+    return mini::SVector<TScalar, 2>{alpha, beta};
 }
 
 } // namespace ClosestPointQueries

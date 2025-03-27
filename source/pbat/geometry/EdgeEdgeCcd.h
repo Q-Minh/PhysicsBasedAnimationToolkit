@@ -1,6 +1,18 @@
+/**
+ * @file EdgeEdgeCcd.h
+ * @author Quoc-Minh Ton-That (tonthat.quocminh@gmail.com)
+ * @brief Edge-edge continuous collision detection (CCD) implementation
+ * @date 2025-03-27
+ *
+ * @copyright Copyright (c) 2025
+ *
+ */
+
 #ifndef PBAT_GEOMETRY_EDGEEDGECCD_H
 #define PBAT_GEOMETRY_EDGEEDGECCD_H
 
+#include "pbat/HostDevice.h"
+#include "pbat/geometry/ClosestPointQueries.h"
 #include "pbat/math/linalg/mini/Concepts.h"
 #include "pbat/math/linalg/mini/Matrix.h"
 #include "pbat/math/linalg/mini/Reductions.h"
@@ -19,8 +31,8 @@ namespace detail {
  * \f[
  * \langle \mathbf{n}(t), \mathbf{q}(t) \rangle = 0 ,
  * \f]
- * where \f$ \mathbf{n}(t) = (\mathbf{b}(t) - \mathbf{a}) \times (\mathbf{c}(t) - \mathbf{a}) \f$
- * and \f$ \mathbf{q}(t) = \mathbf{x}(t) - \mathbf{a} \f$
+ * where \f$ \mathbf{n}(t) = (\mathbf{q}_1(t) - \mathbf{p}_1(t)) \times (\mathbf{q}_2(t) -
+ * \mathbf{p}_2(t)) \f$ and \f$ \mathbf{q}(t) = \mathbf{x}(t) - \mathbf{p}_1(t) \f$
  *
  * @note Code-generated from python/geometry/ccd.py
  *
@@ -53,7 +65,7 @@ template <
     math::linalg::mini::CReadableVectorizedMatrix TP2,
     math::linalg::mini::CReadableVectorizedMatrix TQ2,
     class TScalar = typename TP1T::Scalar>
-std::array<TScalar, 4> EdgeEdgeCcdUnivariatePolynomial(
+PBAT_HOST_DEVICE std::array<TScalar, 4> EdgeEdgeCcdUnivariatePolynomial(
     TP1T const& P1T,
     TQ1T const& Q1T,
     TP2T const& P2T,
@@ -67,16 +79,16 @@ std::array<TScalar, 4> EdgeEdgeCcdUnivariatePolynomial(
 
 /**
  * @brief Computes the time of impact \f$ t^* \f$ and barycentric coordinates \f$ \mathbf{\beta} \f$
- * of the intersection point between an edge (P1,Q1) and another edge (P2,Q2) moving along a linear
- * trajectory.
+ * of the intersection point between an edge \f$ (P1,Q1) \f$ and another edge \f$ (P2,Q2) \f$ moving
+ * along a linear trajectory.
  *
  * Solves for inexact roots (if any) in the range [0,1] of the polynomial
  * \f[
  * \langle \mathbf{n}(t), \mathbf{q}(t) \rangle = 0 ,
  * \f]
- * where \f$ \mathbf{n}(t) = (\mathbf{b}(t) - \mathbf{a}) \times (\mathbf{c}(t) - \mathbf{a}) \f$
- * and \f$ \mathbf{q}(t) = \mathbf{x}(t) - \mathbf{a} \f$ using polynomial root finder from
- * @cite cem2022polyroot.
+ * where \f$ \mathbf{n}(t) = (\mathbf{q}_1(t) - \mathbf{p}_1(t)) \times (\mathbf{q}_2(t) -
+ * \mathbf{p}_2(t)) \f$ and \f$ \mathbf{q}(t) = \mathbf{p}_2(t) - \mathbf{p}_1(t) \f$ using
+ * polynomial root finder from @cite cem2022polyroot.
  *
  * See @cite provot1997collision and @cite ZachFerg2021CcdBenchmark for more details.
  *
@@ -99,8 +111,8 @@ std::array<TScalar, 4> EdgeEdgeCcdUnivariatePolynomial(
  * @param Q2 Matrix of the final positions of the point Q on edge 2
  * @return 3-vector containing the time of impact and the barycentric coordinates
  * @post If no intersection is found, `r[0] < 0`, otherwise `r[0]` is the earliest time of impact
- * @post `r[1]` and `r[2]` are the barycentric coordinates of the intersection point along (P1,Q1)
- * and (P2,Q2) respectively
+ * @post `r[1]` and `r[2]` are the barycentric coordinates of the intersection point along \f$
+ * (P1,Q1) \f$ and \f$ (P2,Q2) \f$ respectively
  */
 template <
     math::linalg::mini::CReadableVectorizedMatrix TP1T,
@@ -111,8 +123,8 @@ template <
     math::linalg::mini::CReadableVectorizedMatrix TQ1,
     math::linalg::mini::CReadableVectorizedMatrix TP2,
     math::linalg::mini::CReadableVectorizedMatrix TQ2,
-    class TScalar = typename TP1T::Scalar>
-auto EdgeEdgeCcd(
+    class TScalar = typename TP1T::ScalarType>
+PBAT_HOST_DEVICE auto EdgeEdgeCcd(
     TP1T const& P1T,
     TQ1T const& Q1T,
     TP2T const& P2T,
@@ -122,33 +134,40 @@ auto EdgeEdgeCcd(
     TP2 const& P2,
     TQ2 const& Q2) -> math::linalg::mini::SVector<TScalar, 3>
 {
+    auto constexpr kDims = TP1T::kRows;
     // 1. Form co-planarity polynomial
     std::array<TScalar, 4> const coeffs =
         detail::EdgeEdgeCcdUnivariatePolynomial(P1T, Q1T, P2T, Q2T, P1, Q1, P2, Q2);
     // 2. Filter roots
     using namespace pbat::math::linalg::mini;
     SVector<TScalar, 3> r;
-    r[0] = std::numeric_limits<TScalar>::max();
-    math::polynomial::ForEachRoot(
+    bool const bIntersectionFound = math::polynomial::ForEachRoot(
         [&](TScalar t) {
-            if (std::isnan(t))
-                return true;
-            // 3. Compute barycentric coordinates of intersection point at earliest root
-            auto uvw = r.template Slice<2, 1>(1, 0);
-            // TODO: Compute barycentric coordinates!!
-            // 4. Check if intersection point is inside both edges
-            bool const bIsInsideEdge1 = uvw[0] >= TScalar(0) and uvw[0] <= TScalar(1);
-            bool const bIsInsideEdge2 = uvw[1] >= TScalar(0) and uvw[1] <= TScalar(1);
-            if (bIsInsideEdge1 and bIsInsideEdge2)
-                r[0] = std::min(r[0], t);
-            return false;
+            // 3. Compute barycentric coordinates of intersection point (if any) at root
+            auto uv                          = r.template Slice<2, 1>(1, 0);
+            SVector<TScalar, kDims> const p1 = P1T + t * (P1 - P1T);
+            SVector<TScalar, kDims> const q1 = Q1T + t * (Q1 - Q1T);
+            SVector<TScalar, kDims> const p2 = P2T + t * (P2 - P2T);
+            SVector<TScalar, kDims> const q2 = Q2T + t * (Q2 - Q2T);
+            auto constexpr zero              = std::numeric_limits<TScalar>::min();
+            uv                               = ClosestPointQueries::Lines(p1, q1, p2, q2, zero);
+            // 4. Check if there is any intersection point, i.e. closest points on lines must be in
+            // the line segments, and the distance between the closest points must be zero.
+            bool const bIsInsideEdges  = All((uv >= TScalar(0)) and (uv <= TScalar(1)));
+            auto const cp1             = p1 + uv[0] * (q1 - p1);
+            auto const cp2             = p2 + uv[1] * (q2 - p2);
+            TScalar const d2           = SquaredNorm(cp1 - cp2);
+            bool const bIsIntersection = (d2 <= zero) and bIsInsideEdges;
+            r[0]                       = bIsIntersection * t + (not bIsIntersection) * r[0];
+            // Exit as soon as an intersection is found, since we are traversing roots from earliest
+            // to latest time of impact
+            return bIsIntersection;
         },
         coeffs,
         TScalar(0),
         TScalar(1));
     // Compute return value
-    if (r[0] == std::numeric_limits<TScalar>::max())
-        r[0] = TScalar(-1);
+    r[0] = bIntersectionFound * r[0] + (not bIntersectionFound) * TScalar(-1);
     return r;
 }
 
@@ -163,8 +182,8 @@ template <
     math::linalg::mini::CReadableVectorizedMatrix TQ1,
     math::linalg::mini::CReadableVectorizedMatrix TP2,
     math::linalg::mini::CReadableVectorizedMatrix TQ2,
-    class TScalar = typename TP1T::Scalar>
-std::array<TScalar, 4> EdgeEdgeCcdUnivariatePolynomial(
+    class TScalar>
+PBAT_HOST_DEVICE std::array<TScalar, 4> EdgeEdgeCcdUnivariatePolynomial(
     TP1T const& P1T,
     TQ1T const& Q1T,
     TP2T const& P2T,
