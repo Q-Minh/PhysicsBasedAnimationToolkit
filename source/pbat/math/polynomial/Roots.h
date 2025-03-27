@@ -3083,6 +3083,7 @@ inline bool PolynomialForEachRoot(RootCallback callback, ftype const coef[N + 1]
 #include "pbat/Aliases.h"
 
 #include <array>
+#include <utility>
 
 namespace pbat::math::polynomial {
 
@@ -3118,7 +3119,7 @@ inline bool HasRoot(
 /**
  * @brief Computes all real roots of a degree N polynomial in the range [min,max].
  *
- * @note We use the expensive but most accurate method from \cite cem2022polyroot
+ * @note We use the expensive but most accurate method from @cite cem2022polyroot
  * @tparam N Degree of the polynomial.
  * @tparam TScalar Scalar type of the polynomial.
  * @param coeffs Coefficients of the polynomial.
@@ -3141,6 +3142,36 @@ inline std::array<TScalar, N> Roots(
         max,
         TScalar(0));
     return roots;
+}
+
+/**
+ * @brief Computes the each real root of a degree N polynomial in the range [min,max] in increasing
+ * order.
+ *
+ * @note We use the expensive but most accurate method from @cite cem2022polyroot
+ *
+ * @tparam FOnRoot Callable type with signature `bool(TScalar root)`.
+ * @tparam N Degree of the polynomial.
+ * @tparam TScalar Scalar type of the polynomial.
+ * @param fOnRoot Callable object to be called for each root. If the callable returns true, the
+ * iteration stops.
+ * @param coeffs Coefficients of the polynomial.
+ * @param min Minimum value of the search range.
+ * @param max Maximum value of the search range.
+ */
+template <class FOnRoot, auto N, class TScalar = Scalar>
+inline void ForEachRoot(
+    FOnRoot&& fOnRoot,
+    std::array<TScalar, N + 1> const& coeffs,
+    TScalar min = std::numeric_limits<TScalar>::lowest(),
+    TScalar max = std::numeric_limits<TScalar>::max())
+{
+    detail::cy::PolynomialForEachRoot<N, TScalar, true>(
+        std::forward<FOnRoot>(fOnRoot),
+        *reinterpret_cast<detail::CArray<TScalar, N + 1> const*>(coeffs.data()),
+        min,
+        max,
+        TScalar(0));
 }
 
 } // namespace pbat::math::polynomial
