@@ -30,9 +30,9 @@ if __name__ == "__main__":
     t = sp.Symbol("t", real=True)
 
     x = XT + t * (X - XT)
-    a = AT + t * (A - XT)
-    b = BT + t * (B - XT)
-    c = CT + t * (C - XT)
+    a = AT + t * (A - AT)
+    b = BT + t * (B - BT)
+    c = CT + t * (C - CT)
     n = cross(b - a, c - a)
     q = x - a
     f = dot(n, q)

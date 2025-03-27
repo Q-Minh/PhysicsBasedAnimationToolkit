@@ -3152,8 +3152,8 @@ inline std::array<TScalar, N> Roots(
  *
  * @note We use the expensive but most accurate method from @cite cem2022polyroot
  *
- * @tparam FOnRoot Callable type with signature `bool(TScalar root)`.
  * @tparam N Degree of the polynomial.
+ * @tparam FOnRoot Callable type with signature `bool(TScalar root)`.
  * @tparam TScalar Scalar type of the polynomial.
  * @param fOnRoot Callable object to be called for each root. If the callable returns true, the
  * iteration stops.
@@ -3162,7 +3162,7 @@ inline std::array<TScalar, N> Roots(
  * @param max Maximum value of the search range.
  * @return true if root finding is terminated by fOnRoot. Otherwise, returns false.
  */
-template <class FOnRoot, auto N, class TScalar = Scalar>
+template <auto N, class FOnRoot, class TScalar = Scalar>
 inline bool ForEachRoot(
     FOnRoot&& fOnRoot,
     std::array<TScalar, N + 1> const& coeffs,
