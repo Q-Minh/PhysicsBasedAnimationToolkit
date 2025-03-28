@@ -14,6 +14,7 @@
 #include "SpatialSearch.h"
 #include "pbat/Aliases.h"
 #include "pbat/common/NAryTreeTraversal.h"
+#include "pbat/geometry/OverlapQueries.h"
 #include "pbat/profiling/Profiling.h"
 
 #include <Eigen/Core>
@@ -38,7 +39,8 @@ template <auto kDims>
 class AabbKdTreeHierarchy
 {
   public:
-    static auto constexpr kDims = kDims; ///< Number of spatial dimensions
+    static auto constexpr kDims = kDims;         ///< Number of spatial dimensions
+    using SelfType = AabbKdTreeHierarchy<kDims>; ///< Type of this template instantiation
 
     AabbKdTreeHierarchy() = default;
     /**
@@ -146,6 +148,31 @@ class AabbKdTreeHierarchy
         FOnNearestNeighbour fOnNearestNeighbour,
         Index K,
         Scalar radius = std::numeric_limits<Scalar>::max()) const;
+    /**
+     * @brief Find all object pairs that overlap
+     *
+     * @tparam FObjectsOverlap Function with signature `bool(Index o1, Index o2)`
+     * @tparam FOnSelfOverlap Function with signature `void(Index o1, Index o2, Index k)`
+     * @param fObjectsOverlap Function to determine if 2 objects from this tree overlap
+     * @param fOnSelfOverlap Function to process an overlap
+     */
+    template <class FObjectsOverlap, class FOnSelfOverlap>
+    void SelfOverlaps(FObjectsOverlap fObjectsOverlap, FOnSelfOverlap fOnSelfOverlap) const;
+    /**
+     * @brief Find all object pairs that overlap with another hierarchy
+     *
+     * @tparam FObjectsOverlap Callable with signature `bool(Index o1, Index o2)`
+     * @tparam FOnOverlap Callable with signature `void(Index o1, Index o2, Index k)`
+     * @param fObjectsOverlap Function to determine if 2 objects (o1,o2) overlap, where o1 is an
+     * object from this tree and o2 is an object from the rhs tree
+     * @param fOnOverlap Function to process an overlap (o1,o2) where o1 is an object from this tree
+     * and o2 is an object from the rhs tree
+     * @param rhs Other hierarchy to compare against
+     */
+    template <class FObjectsOverlap, class FOnOverlap>
+    void
+    Overlaps(FObjectsOverlap fObjectsOverlap, FOnOverlap fOnOverlap, SelfType const& rhs) const;
+
     /**
      * @brief Get the internal node bounding boxes
      * @return `2*kDims x |# internal nodes|` matrix of AABBs, such that for an internal node node,
@@ -329,6 +356,101 @@ inline void AabbKdTreeHierarchy<kDims>::KNearestNeighbours(
         fOnNearestNeighbour,
         K,
         radius);
+}
+
+template <auto kDims>
+template <class FObjectsOverlap, class FOnSelfOverlap>
+inline void AabbKdTreeHierarchy<kDims>::SelfOverlaps(
+    FObjectsOverlap fObjectsOverlap,
+    FOnSelfOverlap fOnSelfOverlap) const
+{
+    PBAT_PROFILE_NAMED_SCOPE("pbat.geometry.AabbKdTreeHierarchy.SelfOverlaps");
+    KdTreeNode const* nodes  = tree.Nodes().data();
+    IndexVectorX const& perm = tree.Permutation();
+    geometry::SelfOverlaps(
+        [&]<auto c>(Index n) -> Index {
+            if constexpr (c == 0)
+                return nodes[n].Left();
+            else
+                return nodes[n].Right();
+        },
+        [&](Index n) { return nodes[n].IsLeaf(); },
+        [&](Index n) { return nodes[n].n; },
+        [&](Index n, Index i) { return perm(nodes[n].begin + i); },
+        [&](Index n1, Index n2) {
+            auto L1 = IB.col(n1).head<kDims>();
+            auto U1 = IB.col(n1).tail<kDims>();
+            auto L2 = IB.col(n2).head<kDims>();
+            auto U2 = IB.col(n2).tail<kDims>();
+            return geometry::OverlapQueries::AxisAlignedBoundingBoxes(L1, U1, L2, U2);
+        },
+        fObjectsOverlap,
+        fOnSelfOverlap);
+}
+
+template <auto kDims>
+template <class FObjectsOverlap, class FOnOverlap>
+inline void AabbKdTreeHierarchy<kDims>::Overlaps(
+    FObjectsOverlap fObjectsOverlap,
+    FOnOverlap fOnOverlap,
+    SelfType const& rhs) const
+{
+    PBAT_PROFILE_NAMED_SCOPE("pbat.geometry.AabbKdTreeHierarchy.Overlaps");
+    // This tree will be the left-hand side tree
+    KdTreeNode const* nodes  = tree.Nodes().data();
+    IndexVectorX const& perm = tree.Permutation();
+    auto const fChildLhs     = [&]<auto c>(Index n) -> Index {
+        if constexpr (c == 0)
+            return nodes[n].Left();
+        else
+            return nodes[n].Right();
+    };
+    auto const fIsLeafLhs = [&](Index n) {
+        return nodes[n].IsLeaf();
+    };
+    auto const fLeafSizeLhs = []([[maybe_unused]] Index n) {
+        return nodes[n].n;
+    };
+    auto const fLeafObjectLhs = [&](Index n, [[maybe_unused]] Index i) {
+        return perm(nodes[n].begin + i);
+    };
+    // This tree will be the right-hand side tree
+    KdTreeNode const* nodesRhs  = rhs.tree.Nodes().data();
+    IndexVectorX const& permRhs = rhs.tree.Permutation();
+    auto const fChildRhs        = [&]<auto c>(Index n) -> Index {
+        if constexpr (c == 0)
+            return nodesRhs[n].Left();
+        else
+            return nodesRhs[n].Right();
+    };
+    auto const fIsLeafRhs = [&](Index n) {
+        return nodesRhs[n].IsLeaf();
+    };
+    auto const fLeafSizeRhs = []([[maybe_unused]] Index n) {
+        return nodesRhs[n].n;
+    };
+    auto const fLeafObjectRhs = [&](Index n, [[maybe_unused]] Index i) {
+        return permRhs(nodesRhs[n].begin + i);
+    };
+    // Register overlaps
+    geometry::Overlaps(
+        fChildLhs,
+        fIsLeafLhs,
+        fLeafSizeLhs,
+        fLeafObjectLhs,
+        fChildRhs,
+        fIsLeafRhs,
+        fLeafSizeRhs,
+        fLeafObjectRhs,
+        [&](Index n1, Index n2) {
+            auto L1 = IB.col(n1).head<kDims>();
+            auto U1 = IB.col(n1).tail<kDims>();
+            auto L2 = rhs.IB.col(n2).head<kDims>();
+            auto U2 = rhs.IB.col(n2).tail<kDims>();
+            return geometry::OverlapQueries::AxisAlignedBoundingBoxes(L1, U1, L2, U2);
+        },
+        fObjectsOverlap,
+        fOnOverlap);
 }
 
 } // namespace pbat::geometry

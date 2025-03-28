@@ -168,8 +168,8 @@ template <
     class FIsLeaf,
     class FLeafSize,
     class FLeafObject,
-    class FNodeOverlap,
-    class FObjectOverlap,
+    class FNodesOverlap,
+    class FObjectsOverlap,
     class FOnFound,
     auto N           = 2,
     class TIndex     = Index,
@@ -179,8 +179,8 @@ PBAT_HOST_DEVICE bool SelfOverlaps(
     FIsLeaf fIsLeaf,
     FLeafSize fLeafSize,
     FLeafObject fLeafObject,
-    FNodeOverlap fNodesOverlap,
-    FObjectOverlap fObjectsOverlap,
+    FNodesOverlap fNodesOverlap,
+    FObjectsOverlap fObjectsOverlap,
     FOnFound fOnFound,
     TIndex root = 0);
 
@@ -491,8 +491,8 @@ template <
     class FIsLeaf,
     class FLeafSize,
     class FLeafObject,
-    class FNodeOverlap,
-    class FObjectOverlap,
+    class FNodesOverlap,
+    class FObjectsOverlap,
     class FOnFound,
     auto N,
     class TIndex,
@@ -502,8 +502,8 @@ PBAT_HOST_DEVICE bool SelfOverlaps(
     FIsLeaf fIsLeaf,
     FLeafSize fLeafSize,
     FLeafObject fLeafObject,
-    FNodeOverlap fNodesOverlap,
-    FObjectOverlap fObjectsOverlap,
+    FNodesOverlap fNodesOverlap,
+    FObjectsOverlap fObjectsOverlap,
     FOnFound fOnFound,
     TIndex root)
 {
