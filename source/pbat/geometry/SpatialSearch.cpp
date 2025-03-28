@@ -64,7 +64,7 @@ TEST_CASE("[geometry] SpatialSearch")
         {
             auto const p = P.col(i).head<kDims>();
             Index overlapping{-1};
-            geometry::Overlaps(
+            bool const bTraversalCompleted = geometry::Overlaps(
                 fChild,
                 fIsLeaf,
                 fLeafSize,
@@ -78,6 +78,7 @@ TEST_CASE("[geometry] SpatialSearch")
                 [&](Index o) { return p.isApprox(P.col(o)); },
                 [&](Index o, [[maybe_unused]] Index k) { overlapping = o; });
             // Assert
+            CHECK(bTraversalCompleted);
             CHECK_EQ(overlapping, i);
         }
     }
@@ -144,7 +145,7 @@ TEST_CASE("[geometry] SpatialSearch")
         {
             bUseBestFirstSearch = true;
         }
-        geometry::NearestNeighbour(
+        bool const bTraversalCompleted = geometry::NearestNeighbour(
             fChild,
             fIsLeaf,
             fLeafSize,
@@ -164,6 +165,7 @@ TEST_CASE("[geometry] SpatialSearch")
         // Assert
         Index nnExpected;
         Scalar dminExpected = d2.minCoeff(&nnExpected);
+        CHECK(bTraversalCompleted);
         CHECK_EQ(nn, nnExpected);
         CHECK_EQ(dmin, dminExpected);
     }
@@ -173,7 +175,7 @@ TEST_CASE("[geometry] SpatialSearch")
         static Index constexpr K = 5;
         Index nn[K];
         Scalar dmin[K];
-        geometry::KNearestNeighbours(
+        bool const bTraversalCompleted = geometry::KNearestNeighbours(
             fChild,
             fIsLeaf,
             fLeafSize,
@@ -191,6 +193,7 @@ TEST_CASE("[geometry] SpatialSearch")
             },
             K);
         // Assert
+        CHECK(bTraversalCompleted);
         for (auto k = 0; k < K; ++k)
         {
             Index nnExpected;
