@@ -4,6 +4,7 @@ namespace pbat::sim::contact {
 
 void MultibodyTriangleMeshMixedCcdDcd::UpdateBodyAabbs()
 {
+    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.MultibodyTriangleMeshMixedCcdDcd.UpdateBodyAabbs");
     auto const nObjects = mBodyAabbs.cols();
     for (auto o = 0; o < nObjects; ++o)
     {
@@ -19,6 +20,8 @@ void MultibodyTriangleMeshMixedCcdDcd::UpdateBodyAabbs()
 
 void MultibodyTriangleMeshMixedCcdDcd::UpdateMeshVertexBvhs()
 {
+    PBAT_PROFILE_NAMED_SCOPE(
+        "pbat.sim.contact.MultibodyTriangleMeshMixedCcdDcd.UpdateMeshVertexBvhs");
     auto const nObjects = mBodyAabbs.cols();
     for (auto o = 0; o < nObjects; ++o)
     {
@@ -29,6 +32,8 @@ void MultibodyTriangleMeshMixedCcdDcd::UpdateMeshVertexBvhs()
 
 void MultibodyTriangleMeshMixedCcdDcd::UpdateMeshEdgeBvhs()
 {
+    PBAT_PROFILE_NAMED_SCOPE(
+        "pbat.sim.contact.MultibodyTriangleMeshMixedCcdDcd.UpdateMeshEdgeBvhs");
     auto const nObjects = mBodyAabbs.cols();
     for (auto o = 0; o < nObjects; ++o)
     {
@@ -41,6 +46,8 @@ void MultibodyTriangleMeshMixedCcdDcd::UpdateMeshTriangleBvhs(bool bForDcd)
 {
     if (bForDcd)
     {
+        PBAT_PROFILE_NAMED_SCOPE(
+            "pbat.sim.contact.MultibodyTriangleMeshMixedCcdDcd.UpdateMeshTriangleBvhs.ForDcd");
 #include "pbat/warning/Push.h"
 #include "pbat/warning/SignConversion.h"
         auto const nDcdBodies = mDcdBodies.size();
@@ -54,6 +61,8 @@ void MultibodyTriangleMeshMixedCcdDcd::UpdateMeshTriangleBvhs(bool bForDcd)
     }
     else
     {
+        PBAT_PROFILE_NAMED_SCOPE(
+            "pbat.sim.contact.MultibodyTriangleMeshMixedCcdDcd.UpdateMeshTriangleBvhs");
         auto const nObjects = mBodyAabbs.cols();
         for (auto o = 0; o < nObjects; ++o)
         {
@@ -65,6 +74,7 @@ void MultibodyTriangleMeshMixedCcdDcd::UpdateMeshTriangleBvhs(bool bForDcd)
 
 void MultibodyTriangleMeshMixedCcdDcd::RecomputeBodyBvh()
 {
+    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.MultibodyTriangleMeshMixedCcdDcd.RecomputeBodyBvh");
     auto L = mBodyAabbs.topRows<kDims>();
     auto U = mBodyAabbs.bottomRows<kDims>();
     mBodyBvh.Construct(L, U);
@@ -73,10 +83,13 @@ void MultibodyTriangleMeshMixedCcdDcd::RecomputeBodyBvh()
 
 void MultibodyTriangleMeshMixedCcdDcd::SortActiveSets()
 {
-    auto const nVerts                 = mVertexTriangleCountingSortRange.size() - 1;
+    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.MultibodyTriangleMeshMixedCcdDcd.SortActiveSets");
+    auto const nVerts = mVertexTriangleCountingSortRange.size() - 1;
+    // Sort vertex-triangle active contacts
     auto const fKeyFromVertexTriangle = [](VertexTriangleContact const& vf) {
         return vf.v;
     };
+    mVertexTriangleCountingSortRange.setZero();
     pbat::common::CountingSort(
         mVertexTriangleCountingSortRange.data(),
         mVertexTriangleCountingSortRange.data() + nVerts,
@@ -84,22 +97,26 @@ void MultibodyTriangleMeshMixedCcdDcd::SortActiveSets()
         mActiveVertexTrianglePairs.end(),
         Index(0),
         fKeyFromVertexTriangle);
+    mVertexTriangleCountingSortRange[0] = 0;
     pbat::common::PrefixSumFromSortedKeys(
         mActiveVertexTrianglePairs.begin(),
         mActiveVertexTrianglePairs.end(),
         mVertexTriangleCountingSortRange.data() + 1,
         mVertexTriangleCountingSortRange.data() + nVerts + 1,
         fKeyFromVertexTriangle);
+    // Sort vertex-edge active contacts
     auto const fKeyFromVertexEdge = [](VertexEdgeContact const& ve) {
         return ve.v;
     };
+    mVertexEdgeCountingSortRange.setZero();
     pbat::common::CountingSort(
-        mVertexTriangleCountingSortRange.data(),
-        mVertexTriangleCountingSortRange.data() + nVerts,
+        mVertexEdgeCountingSortRange.data(),
+        mVertexEdgeCountingSortRange.data() + nVerts,
         mActiveEdgeEdgePairs.begin(),
         mActiveEdgeEdgePairs.end(),
         Index(0),
         fKeyFromVertexEdge);
+    mVertexEdgeCountingSortRange[0] = 0;
     pbat::common::PrefixSumFromSortedKeys(
         mActiveEdgeEdgePairs.begin(),
         mActiveEdgeEdgePairs.end(),

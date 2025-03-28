@@ -15,10 +15,12 @@
 #include "pbat/common/CountingSort.h"
 #include "pbat/geometry/AabbKdTreeHierarchy.h"
 #include "pbat/geometry/AabbRadixTreeHierarchy.h"
-#include "pbat/geometry/ClosestPointQueries.h"
 #include "pbat/geometry/DistanceQueries.h"
+#include "pbat/geometry/EdgeEdgeCcd.h"
 #include "pbat/geometry/OverlapQueries.h"
+#include "pbat/geometry/PointTriangleCcd.h"
 #include "pbat/math/linalg/mini/Eigen.h"
+#include "pbat/profiling/Profiling.h"
 
 #include <utility>
 #include <vector>
@@ -292,11 +294,14 @@ class MultibodyTriangleMeshMixedCcdDcd
     /**
      * @brief Active set
      */
+    Eigen::Vector<bool, Eigen::Dynamic>
+        mActiveVertexMask; ///< `|# collision vertices|` boolean mask for active collision vertices
     IndexVectorX
-        mVertexTriangleCountingSortRange; ///< `|# collision vertices|` counting sort workspace
+        mVertexTriangleCountingSortRange; ///< `|# collision vertices + 1|` counting sort workspace
     std::vector<VertexTriangleContact>
         mActiveVertexTrianglePairs; ///< `|# active vertex-triangle pairs|` list of pairs (v,f)
-    IndexVectorX mVertexEdgeCountingSortRange; ///< `|# collision vertices|` counting sort workspace
+    IndexVectorX
+        mVertexEdgeCountingSortRange; ///< `|# collision vertices + 1|` counting sort workspace
     std::vector<VertexEdgeContact>
         mActiveEdgeEdgePairs; ///< `|2 * # active edge-edge pairs|` list of pairs (ei,ej) stored as
                               ///< list of (v1,ej), (v2,ej) where ei=(v1,v2)
@@ -357,6 +362,7 @@ inline void MultibodyTriangleMeshMixedCcdDcd::Prepare(
     Eigen::DenseBase<TDerivedFP> const& FP,
     Eigen::DenseBase<TDerivedF> const& F)
 {
+    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.MultibodyTriangleMeshMixedCcdDcd.Prepare");
     // Store input triangle meshes
     mVP = VP;
     mEP = EP;
@@ -369,9 +375,11 @@ inline void MultibodyTriangleMeshMixedCcdDcd::Prepare(
     mEdgeAabbs.resize(2 * kDims, E.cols());
     mTriangleAabbs.resize(2 * kDims, F.cols());
     mBodyAabbs.resize(2 * kDims, VP.size() - 1);
-    mVertexTriangleCountingSortRange.setZero(V.cols() + 1);
+    mActiveVertexMask.resize(V.cols());
+    mActiveVertexMask.setConstant(false);
+    mVertexTriangleCountingSortRange.resize(V.cols() + 1);
     mActiveVertexTrianglePairs.reserve(V.cols() /*reasonable preallocation*/);
-    mVertexEdgeCountingSortRange.setZero(V.cols() + 1);
+    mVertexEdgeCountingSortRange.resize(V.cols() + 1);
     mActiveEdgeEdgePairs.reserve(E.cols() /*reasonable preallocation*/);
     mDcdVertexBodyPairs.reserve(V.cols() /*reasonable preallocation*/);
     mDcdBodies.reserve(VP.size() - 1 /* # objects */);
@@ -409,6 +417,7 @@ inline void MultibodyTriangleMeshMixedCcdDcd::UpdateActiveSet(
     Eigen::DenseBase<TDerivedX> const& X,
     Eigen::DenseBase<TDerivedXK> const& XK)
 {
+    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.MultibodyTriangleMeshMixedCcdDcd.UpdateActiveSet");
     // 1. Perform DCD for active vertex-triangle pairs (v,f,vo,fo), where v is body vo's vertex and
     // f is body fo's triangle.
 
@@ -446,6 +455,8 @@ template <class TDerivedX>
 inline void MultibodyTriangleMeshMixedCcdDcd::AddDcdVertexTrianglePairsToActiveSet(
     Eigen::DenseBase<TDerivedX> const& X)
 {
+    PBAT_PROFILE_NAMED_SCOPE(
+        "pbat.sim.contact.MultibodyTriangleMeshMixedCcdDcd.AddDcdVertexTrianglePairsToActiveSet");
 #include "pbat/warning/Push.h"
 #include "pbat/warning/SignConversion.h"
     auto const nPairs = mDcdVertexBodyPairs.size();
@@ -482,6 +493,8 @@ inline void MultibodyTriangleMeshMixedCcdDcd::ComputeVertexAabbs(
     Eigen::DenseBase<TDerivedXT> const& XT,
     Eigen::DenseBase<TDerivedX> const& X)
 {
+    PBAT_PROFILE_NAMED_SCOPE(
+        "pbat.sim.contact.MultibodyTriangleMeshMixedCcdDcd.ComputeVertexAabbs");
     auto XTV = XT.template topRows<kDims>()(Eigen::placeholders::all, mV);
     auto XV  = X.template topRows<kDims>()(Eigen::placeholders::all, mV);
     for (auto v = 0; v < mV.cols(); ++v)
@@ -499,6 +512,7 @@ inline void MultibodyTriangleMeshMixedCcdDcd::ComputeEdgeAabbs(
     Eigen::DenseBase<TDerivedXT> const& XT,
     Eigen::DenseBase<TDerivedX> const& X)
 {
+    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.MultibodyTriangleMeshMixedCcdDcd.ComputeEdgeAabbs");
     for (auto e = 0; e < mE.cols(); ++e)
     {
         Matrix<kDims, 2 * 2> XE;
@@ -515,6 +529,8 @@ template <class TDerivedX>
 inline void
 MultibodyTriangleMeshMixedCcdDcd::ComputeDcdTriangleAabbs(Eigen::DenseBase<TDerivedX> const& X)
 {
+    PBAT_PROFILE_NAMED_SCOPE(
+        "pbat.sim.contact.MultibodyTriangleMeshMixedCcdDcd.ComputeDcdTriangleAabbs");
 #include "pbat/warning/Push.h"
 #include "pbat/warning/SignConversion.h"
     auto const nDcdBodies = mDcdBodies.size();
@@ -540,6 +556,8 @@ inline void MultibodyTriangleMeshMixedCcdDcd::ComputeTriangleAabbs(
     Eigen::DenseBase<TDerivedXT> const& XT,
     Eigen::DenseBase<TDerivedX> const& X)
 {
+    PBAT_PROFILE_NAMED_SCOPE(
+        "pbat.sim.contact.MultibodyTriangleMeshMixedCcdDcd.ComputeTriangleAabbs");
     for (auto f = 0; f < mF.cols(); ++f)
     {
         Matrix<kDims, 2 * 3> XF;
