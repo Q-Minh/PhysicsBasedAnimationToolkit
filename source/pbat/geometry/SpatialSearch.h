@@ -425,14 +425,14 @@ PBAT_HOST_DEVICE bool Overlaps(
         common::ForRange<0, NRhs>([&]<auto i> PBAT_HOST_DEVICE() {
             TIndex const childRhs = fChildRhs.template operator()<i>(p.nRhs);
             if (childRhs >= 0 and not stack.IsFull())
-                stack.Push({p.nLhs, p.childRhs, p.levelLhs, p.levelRhs + 1});
+                stack.Push({p.nLhs, childRhs, p.levelLhs, p.levelRhs + 1});
         });
     };
     auto const fRecurseLeft = [&] PBAT_HOST_DEVICE(Pair const& p) {
         common::ForRange<0, NLhs>([&]<auto i> PBAT_HOST_DEVICE() {
             TIndex const childLhs = fChildLhs.template operator()<i>(p.nLhs);
             if (childLhs >= 0 and not stack.IsFull())
-                stack.Push({p.childLhs, p.nRhs, p.levelLhs + 1, p.levelRhs});
+                stack.Push({childLhs, p.nRhs, p.levelLhs + 1, p.levelRhs});
         });
     };
     // Traverse top-down

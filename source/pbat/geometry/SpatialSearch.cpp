@@ -11,7 +11,7 @@
 #include <Eigen/Core>
 #include <algorithm>
 #include <doctest/doctest.h>
-#include <unordered_set>
+#include <unordered_map>
 #include <vector>
 
 TEST_CASE("[geometry] SpatialSearch")
@@ -28,15 +28,15 @@ TEST_CASE("[geometry] SpatialSearch")
     auto const* nodes = tree.Nodes().data();
     auto const& inds  = tree.Permutation();
     // Compute node AABBs in the O(n log n) way
-    std::vector<Aabb> aabbs(nNodes);
-    auto const fComputeAabbs = [&]() {
+    auto const fComputeAabbs = [&](MatrixX const& X, std::vector<Aabb>& aabbs) {
         for (auto i = 0ULL; i < nNodes; ++i)
         {
             aabbs[i].setEmpty();
             for (auto p : tree.PointsInNode(static_cast<Index>(i)))
-                aabbs[i].extend(P.col(p));
+                aabbs[i].extend(X.col(p));
         }
     };
+    std::vector<Aabb> aabbs(nNodes);
     // Define branch and bound tree getters here
     auto const fChild = [&]<auto c>(Index node) {
         if constexpr (c == 0)
@@ -54,7 +54,7 @@ TEST_CASE("[geometry] SpatialSearch")
         auto j = nodes[node].begin + i;
         return inds(j);
     };
-    fComputeAabbs();
+    fComputeAabbs(P, aabbs);
 
     using pbat::math::linalg::mini::FromEigen;
     SUBCASE("Overlaps")
@@ -82,9 +82,55 @@ TEST_CASE("[geometry] SpatialSearch")
             CHECK_EQ(overlapping, i);
         }
     }
+    SUBCASE("Tree-tree overlaps")
+    {
+        std::unordered_map<std::pair<Index, Index>, Index> overlaps{};
+        overlaps.reserve(kPoints * 2);
+        // Arrange
+        MatrixX P2 = P;
+        P2.leftCols(kPoints / 2).setRandom();
+        std::vector<Aabb> aabbs2(nNodes);
+        fComputeAabbs(P2, aabbs2);
+        Index nOverlaps{0};
+        auto const fNodesOverlap = [&](Index n1, Index n2) {
+            return geometry::OverlapQueries::AxisAlignedBoundingBoxes(
+                FromEigen(aabbs[static_cast<std::size_t>(n1)].min()),
+                FromEigen(aabbs[static_cast<std::size_t>(n1)].max()),
+                FromEigen(aabbs2[static_cast<std::size_t>(n2)].min()),
+                FromEigen(aabbs2[static_cast<std::size_t>(n2)].max()));
+        };
+        auto const fObjectsOverlap = [&](Index o1, Index o2) {
+            return (P.col(o1).isApprox(P2.col(o2)));
+        };
+        auto const fOnFound = [&](Index o1, Index o2, [[maybe_unused]] Index k) {
+            ++nOverlaps;
+            ++overlaps[{std::min(o1, o2), std::max(o1, o2)}];
+        };
+        // Act
+        bool const bTraversalCompleted = geometry::Overlaps(
+            fChild,
+            fIsLeaf,
+            fLeafSize,
+            fLeafObject,
+            fChild,
+            fIsLeaf,
+            fLeafSize,
+            fLeafObject,
+            fNodesOverlap,
+            fObjectsOverlap,
+            fOnFound);
+        // Assert
+        CHECK(bTraversalCompleted);
+        CHECK_EQ(nOverlaps, kPoints / 2);
+        CHECK_EQ(overlaps.size(), kPoints / 2);
+        for (auto [key, value] : overlaps)
+        {
+            CHECK_EQ(value, 1); // Each pair should be found only once
+        }
+    }
     SUBCASE("Self-Overlaps")
     {
-        std::unordered_set<std::pair<Index, Index>> overlaps{};
+        std::unordered_map<std::pair<Index, Index>, Index> overlaps{};
         overlaps.reserve(kPoints * 2);
         Index nOverlaps{0};
         auto const fNodesOverlap = [&](Index n1, Index n2) {
@@ -99,7 +145,7 @@ TEST_CASE("[geometry] SpatialSearch")
         };
         auto const fCheckOverlap = [&](Index o1, Index o2, [[maybe_unused]] Index k) {
             ++nOverlaps;
-            overlaps.insert({std::min(o1, o2), std::max(o1, o2)});
+            ++overlaps[{std::min(o1, o2), std::max(o1, o2)}];
         };
         // Act
         geometry::SelfOverlaps(
@@ -115,7 +161,7 @@ TEST_CASE("[geometry] SpatialSearch")
         CHECK(overlaps.empty());
         // Arrange
         P.rightCols(kPoints / 2) = P.leftCols(kPoints / 2);
-        fComputeAabbs();
+        fComputeAabbs(P, aabbs);
         // Act
         bool const bTraversalCompleted = geometry::SelfOverlaps(
             fChild,
@@ -129,8 +175,12 @@ TEST_CASE("[geometry] SpatialSearch")
         CHECK(bTraversalCompleted);
         CHECK_EQ(nOverlaps, kPoints / 2);
         CHECK_EQ(overlaps.size(), kPoints / 2);
-        for (auto [o1, o2] : overlaps)
+        for (auto [key, value] : overlaps)
+        {
+            auto const [o1, o2] = key;
             CHECK_NE(o1, o2);
+            CHECK_EQ(value, 1); // Each pair should be found only once
+        }
     }
     // Arrange
     Vector<3> const p = Vector<3>::Random();
