@@ -3,12 +3,15 @@
 #include "AxisAlignedBoundingBox.h"
 #include "KdTree.h"
 #include "pbat/common/Eigen.h"
+#include "pbat/common/Hash.h"
 #include "pbat/geometry/DistanceQueries.h"
 #include "pbat/geometry/OverlapQueries.h"
 #include "pbat/math/linalg/mini/Matrix.h"
 
 #include <Eigen/Core>
+#include <algorithm>
 #include <doctest/doctest.h>
+#include <unordered_set>
 #include <vector>
 
 TEST_CASE("[geometry] SpatialSearch")
@@ -26,9 +29,14 @@ TEST_CASE("[geometry] SpatialSearch")
     auto const& inds  = tree.Permutation();
     // Compute node AABBs in the O(n log n) way
     std::vector<Aabb> aabbs(nNodes);
-    for (auto i = 0ULL; i < nNodes; ++i)
-        for (auto p : tree.PointsInNode(static_cast<Index>(i)))
-            aabbs[i].extend(P.col(p));
+    auto const fComputeAabbs = [&]() {
+        for (auto i = 0ULL; i < nNodes; ++i)
+        {
+            aabbs[i].setEmpty();
+            for (auto p : tree.PointsInNode(static_cast<Index>(i)))
+                aabbs[i].extend(P.col(p));
+        }
+    };
     // Define branch and bound tree getters here
     auto const fChild = [&]<auto c>(Index node) {
         if constexpr (c == 0)
@@ -46,6 +54,7 @@ TEST_CASE("[geometry] SpatialSearch")
         auto j = nodes[node].begin + i;
         return inds(j);
     };
+    fComputeAabbs();
 
     using pbat::math::linalg::mini::FromEigen;
     SUBCASE("Overlaps")
@@ -71,6 +80,56 @@ TEST_CASE("[geometry] SpatialSearch")
             // Assert
             CHECK_EQ(overlapping, i);
         }
+    }
+    SUBCASE("Self-Overlaps")
+    {
+        std::unordered_set<std::pair<Index, Index>> overlaps{};
+        overlaps.reserve(kPoints * 2);
+        Index nOverlaps{0};
+        auto const fNodesOverlap = [&](Index n1, Index n2) {
+            return geometry::OverlapQueries::AxisAlignedBoundingBoxes(
+                FromEigen(aabbs[static_cast<std::size_t>(n1)].min()),
+                FromEigen(aabbs[static_cast<std::size_t>(n1)].max()),
+                FromEigen(aabbs[static_cast<std::size_t>(n2)].min()),
+                FromEigen(aabbs[static_cast<std::size_t>(n2)].max()));
+        };
+        auto const fObjectsOverlap = [&](Index o1, Index o2) {
+            return (P.col(o1).isApprox(P.col(o2)));
+        };
+        auto const fCheckOverlap = [&](Index o1, Index o2, [[maybe_unused]] Index k) {
+            ++nOverlaps;
+            overlaps.insert({std::min(o1, o2), std::max(o1, o2)});
+        };
+        // Act
+        geometry::SelfOverlaps(
+            fChild,
+            fIsLeaf,
+            fLeafSize,
+            fLeafObject,
+            fNodesOverlap,
+            fObjectsOverlap,
+            fCheckOverlap);
+        // Assert
+        CHECK_EQ(nOverlaps, 0);
+        CHECK(overlaps.empty());
+        // Arrange
+        P.rightCols(kPoints / 2) = P.leftCols(kPoints / 2);
+        fComputeAabbs();
+        // Act
+        bool const bTraversalCompleted = geometry::SelfOverlaps(
+            fChild,
+            fIsLeaf,
+            fLeafSize,
+            fLeafObject,
+            fNodesOverlap,
+            fObjectsOverlap,
+            fCheckOverlap);
+        // Assert
+        CHECK(bTraversalCompleted);
+        CHECK_EQ(nOverlaps, kPoints / 2);
+        CHECK_EQ(overlaps.size(), kPoints / 2);
+        for (auto [o1, o2] : overlaps)
+            CHECK_NE(o1, o2);
     }
     // Arrange
     Vector<3> const p = Vector<3>::Random();

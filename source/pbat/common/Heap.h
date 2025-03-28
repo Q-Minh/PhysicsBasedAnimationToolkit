@@ -74,6 +74,12 @@ class Heap
      * @return true if the heap is empty, false otherwise
      */
     PBAT_HOST_DEVICE bool IsEmpty() const { return size == 0; }
+    /**
+     * @brief Check if the heap is full
+     *
+     * @return true if the heap is full, false otherwise
+     */
+    PBAT_HOST_DEVICE bool IsFull() const { return size == kCapacity; }
 
   private:
     T heap[kCapacity]; ///< Buffer allocated for storing elements

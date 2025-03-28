@@ -27,17 +27,16 @@
 namespace pbat::geometry {
 
 /**
- * @brief Find distance minimizing objects in branch and bound tree rooted in root
+ * @brief Find all nodes in a branch and bound tree that overlap with a given object
  *
- * @tparam FChild Callable with signature `template <auto c> Index(TIndex node)`
+ * @tparam FChild Callable with signature `template <auto c> TIndex(TIndex node)`
  * @tparam FIsLeaf Callable with signature `bool(TIndex node)`
  * @tparam FLeafSize Callable with signature `TIndex(TIndex node)`
  * @tparam FLeafObject Callable with signature `TIndex(TIndex node, TIndex i)`
  * @tparam FNodeOverlaps Callable with signature `bool(TIndex node)`
  * @tparam FObjectOverlaps Callable with signature `bool(TIndex o)`
- * @tparam FOnFound Callable with signature `void(Index o, Index k)`
+ * @tparam FOnFound Callable with signature `void(TIndex o, TIndex k)`
  * @tparam N Max number of children per node
- * @tparam TScalar Type of the scalar distance
  * @tparam TIndex Type of the index
  * @tparam kStackDepth Maximum depth of the traversal's stack
  * @tparam kQueueSize Maximum size of the nearest neighbour queue
@@ -49,6 +48,8 @@ namespace pbat::geometry {
  * @param fObjectOverlaps Function to determine if an object overlaps with the query
  * @param fOnFound Function to call when a nearest neighbour is found
  * @param root Index of the root node to start the search from
+ * @return true if the traversal completed, false if it was stopped early due to insufficient stack
+ * capacity
  */
 template <
     class FChild,
@@ -59,16 +60,127 @@ template <
     class FObjectOverlap,
     class FOnFound,
     auto N           = 2,
-    class TScalar    = Scalar,
     class TIndex     = Index,
     auto kStackDepth = 64>
-PBAT_HOST_DEVICE void Overlaps(
+PBAT_HOST_DEVICE bool Overlaps(
     FChild fChild,
     FIsLeaf fIsLeaf,
     FLeafSize fLeafSize,
     FLeafObject fLeafObject,
     FNodeOverlap fNodeOverlaps,
     FObjectOverlap fObjectOverlaps,
+    FOnFound fOnFound,
+    TIndex root = 0);
+
+/**
+ * @brief Computes overlaps between two branch and bound trees
+ * @tparam FChildLhs Callable with signature `template <auto c> TIndex(TIndex node)`
+ * @tparam FIsLeafLhs Callable with signature `bool(TIndex node)`
+ * @tparam FLeafSizeLhs Callable with signature `TIndex(TIndex node)`
+ * @tparam FLeafObjectLhs Callable with signature `TIndex(TIndex node, TIndex i)`
+ * @tparam FChildRhs Callable with signature `template <auto c> TIndex(TIndex node)`
+ * @tparam FIsLeafRhs Callable with signature `bool(TIndex node)`
+ * @tparam FLeafSizeRhs Callable with signature `TIndex(TIndex node)`
+ * @tparam FLeafObjectRhs Callable with signature `TIndex(TIndex node, TIndex i)`
+ * @tparam FNodesOverlap Callable with signature `bool(TIndex nlhs, TIndex nrhs)`
+ * @tparam FObjectsOverlap Callable with signature `bool(TIndex olhs, TIndex orhs)`
+ * @tparam FOnFound Callable with signature `void(TIndex olhs, TIndex orhs, TIndex k)`
+ * @tparam NLhs Number of children per node in the left tree
+ * @tparam NRhs Number of children per node in the right tree
+ * @tparam TIndex Type of the index
+ * @tparam kStackDepth Maximum depth of the traversal's stack
+ * @param fChildLhs Function to get child c of a node in the left tree. Returns the child index or
+ * -1 if no child.
+ * @param fIsLeafLhs Function to determine if a node is a leaf node in the left tree
+ * @param fLeafSizeLhs Function to get the number of leaf objects in a node in the left tree
+ * @param fLeafObjectLhs Function to get the i-th leaf object in a node in the left tree
+ * @param fChildRhs Function to get child c of a node in the right tree. Returns the child index or
+ * -1 if no child.
+ * @param fIsLeafRhs Function to determine if a node is a leaf node in the right tree
+ * @param fLeafSizeRhs Function to get the number of leaf objects in a node in the right tree
+ * @param fLeafObjectRhs Function to get the i-th leaf object in a node in the right tree
+ * @param fNodesOverlap Function to determine if two nodes overlap
+ * @param fObjectsOverlap Function to determine if two objects overlap
+ * @param fOnFound Function to call when an overlap is found
+ * @param rootLhs Index of the root node in the left tree to start the search from
+ * @param rootRhs Index of the root node in the right tree to start the search from
+ * @return true if the traversal completed, false if it was stopped early due to insufficient stack
+ * capacity
+ */
+template <
+    class FChildLhs,
+    class FIsLeafLhs,
+    class FLeafSizeLhs,
+    class FLeafObjectLhs,
+    class FChildRhs,
+    class FIsLeafRhs,
+    class FLeafSizeRhs,
+    class FLeafObjectRhs,
+    class FNodesOverlap,
+    class FObjectsOverlap,
+    class FOnFound,
+    auto NLhs        = 2,
+    auto NRhs        = 2,
+    class TIndex     = Index,
+    auto kStackDepth = 128>
+PBAT_HOST_DEVICE bool Overlaps(
+    FChildLhs fChildLhs,
+    FIsLeafLhs fIsLeafLhs,
+    FLeafSizeLhs fLeafSizeLhs,
+    FLeafObjectLhs fLeafObjectLhs,
+    FChildRhs fChildRhs,
+    FIsLeafRhs fIsLeafRhs,
+    FLeafSizeRhs fLeafSizeRhs,
+    FLeafObjectRhs fLeafObjectRhs,
+    FNodesOverlap fNodesOverlap,
+    FObjectsOverlap fObjectsOverlap,
+    FOnFound fOnFound,
+    TIndex rootLhs = 0,
+    TIndex rootRhs = 0);
+
+/**
+ * @brief Compute overlapping nodes from a branch and bound tree rooted in root
+ *
+ * @tparam FChild Callable with signature `template <auto c> Index(TIndex node)`
+ * @tparam FIsLeaf Callable with signature `bool(TIndex node)`
+ * @tparam FLeafSize Callable with signature `TIndex(TIndex node)`
+ * @tparam FLeafObject Callable with signature `TIndex(TIndex node, TIndex i)`
+ * @tparam FNodesOverlap Callable with signature `bool(TIndex n1, TIndex n2)`
+ * @tparam FObjectsOverlap Callable with signature `bool(TIndex o1, TIndex o2)`
+ * @tparam FOnFound Callable with signature `void(TIndex o1, TIndex o2, TIndex k)`
+ * @tparam N Max number of children per node
+ * @tparam TIndex Type of the index
+ * @tparam kStackDepth Maximum depth of the traversal's stack
+ * @tparam kQueueSize Maximum size of the nearest neighbour queue
+ * @param fChild Function to get child c of a node. Returns the child index or -1 if no child.
+ * @param fIsLeaf Function to determine if a node is a leaf node
+ * @param fLeafSize Function to get the number of leaf objects in a node
+ * @param fLeafObject Function to get the i-th leaf object in a node
+ * @param fNodesOverlap Function to determine if 2 nodes overlap
+ * @param fObjectsOverlap Function to determine if 2 objects overlap
+ * @param fOnFound Function to call when a nearest neighbour is found
+ * @param root Index of the root node to start the search from
+ * @return true if the traversal completed, false if it was stopped early due to insufficient stack
+ * capacity
+ */
+template <
+    class FChild,
+    class FIsLeaf,
+    class FLeafSize,
+    class FLeafObject,
+    class FNodeOverlap,
+    class FObjectOverlap,
+    class FOnFound,
+    auto N           = 2,
+    class TIndex     = Index,
+    auto kStackDepth = 128>
+PBAT_HOST_DEVICE bool SelfOverlaps(
+    FChild fChild,
+    FIsLeaf fIsLeaf,
+    FLeafSize fLeafSize,
+    FLeafObject fLeafObject,
+    FNodeOverlap fNodesOverlap,
+    FObjectOverlap fObjectsOverlap,
     FOnFound fOnFound,
     TIndex root = 0);
 
@@ -91,13 +203,13 @@ PBAT_HOST_DEVICE void Overlaps(
  * @note Another approach for tweaking the performance of the NN search is to provide a tight
  * initial upper bound fUpper, which will help prune most of the search space.
  *
- * @tparam FChild Callable with signature `template <auto c> Index(TIndex node)`
+ * @tparam FChild Callable with signature `template <auto c> TIndex(TIndex node)`
  * @tparam FIsLeaf Callable with signature `bool(TIndex node)`
  * @tparam FLeafSize Callable with signature `TIndex(TIndex node)`
  * @tparam FLeafObject Callable with signature `TIndex(TIndex node, TIndex i)`
- * @tparam FDistanceLowerBound Callable with signature `Scalar(TIndex node)`
+ * @tparam FDistanceLowerBound Callable with signature `TScalar(TIndex node)`
  * @tparam FDistance Callable with signature `TScalar(TIndex o)`
- * @tparam FOnFound Callable with signature `void(Index o, Scalar d, Index k)`
+ * @tparam FOnFound Callable with signature `void(TIndex o, TScalar d, TIndex k)`
  * @tparam N Max number of children per node
  * @tparam TScalar Type of the scalar distance
  * @tparam TIndex Type of the index
@@ -114,6 +226,8 @@ PBAT_HOST_DEVICE void Overlaps(
  * @param fUpper Upper bound of the distance to the nearest neighbour
  * @param eps Epsilon to consider objects at the same distance
  * @param root Index of the root node to start the search from
+ * @return true if the traversal completed, false if it was stopped early due to insufficient stack
+ * capacity
  */
 template <
     class FChild,
@@ -128,7 +242,7 @@ template <
     class TIndex     = Index,
     auto kStackDepth = 64,
     auto kQueueSize  = 8>
-PBAT_HOST_DEVICE void NearestNeighbour(
+PBAT_HOST_DEVICE bool NearestNeighbour(
     FChild fChild,
     FIsLeaf fIsLeaf,
     FLeafSize fLeafSize,
@@ -153,7 +267,7 @@ PBAT_HOST_DEVICE void NearestNeighbour(
  * smaller than a generic depth-first traversal. However, the stack memory requirements are higher,
  * due to storing node indices, distances, and types (i.e. node or leaf object).
  *
- * @tparam FChild Callable with signature `template <auto c> Index(TIndex node)`
+ * @tparam FChild Callable with signature `template <auto c> TIndex(TIndex node)`
  * @tparam FIsLeaf Callable with signature `bool(TIndex node)`
  * @tparam FLeafSize Callable with signature `TIndex(TIndex node)`
  * @tparam FLeafObject Callable with signature `TIndex(TIndex node, TIndex i)`
@@ -173,6 +287,8 @@ PBAT_HOST_DEVICE void NearestNeighbour(
  * @param K Number of nearest neighbours to find
  * @param fUpper Upper bound of the distance to the nearest neighbour
  * @param root Index of the root node to start the search from
+ * @return true if the traversal completed, false if it was stopped early due to insufficient stack
+ * capacity
  */
 template <
     class FChild,
@@ -186,7 +302,7 @@ template <
     class TScalar      = Scalar,
     class TIndex       = Index,
     auto kHeapCapacity = 64>
-PBAT_HOST_DEVICE void KNearestNeighbours(
+PBAT_HOST_DEVICE bool KNearestNeighbours(
     FChild fChild,
     FIsLeaf fIsLeaf,
     FLeafSize fLeafSize,
@@ -207,10 +323,9 @@ template <
     class FObjectOverlap,
     class FOnFound,
     auto N,
-    class TScalar,
     class TIndex,
     auto kStackDepth>
-void Overlaps(
+bool Overlaps(
     FChild fChild,
     FIsLeaf fIsLeaf,
     FLeafSize fLeafSize,
@@ -248,18 +363,275 @@ void Overlaps(
     //     root);
     common::Stack<TIndex, kStackDepth> stack{};
     if (not fVisit(root))
-        return;
+        return true;
     stack.Push(root);
     while (not stack.IsEmpty())
     {
+        if (stack.IsFull())
+            return false;
         TIndex const node = stack.Pop();
-        common::ForRange<0, N>([&]<auto i> {
+        common::ForRange<0, N>([&]<auto i> PBAT_HOST_DEVICE() {
             TIndex const child = fChild.template operator()<i>(node);
             if (child >= 0)
-                if (fVisit(child))
+                if (fVisit(child) and not stack.IsFull())
                     stack.Push(child);
         });
     }
+    return true;
+}
+
+template <
+    class FChildLhs,
+    class FIsLeafLhs,
+    class FLeafSizeLhs,
+    class FLeafObjectLhs,
+    class FChildRhs,
+    class FIsLeafRhs,
+    class FLeafSizeRhs,
+    class FLeafObjectRhs,
+    class FNodesOverlap,
+    class FObjectsOverlap,
+    class FOnFound,
+    auto NLhs,
+    auto NRhs,
+    class TIndex,
+    auto kStackDepth>
+PBAT_HOST_DEVICE bool Overlaps(
+    FChildLhs fChildLhs,
+    FIsLeafLhs fIsLeafLhs,
+    FLeafSizeLhs fLeafSizeLhs,
+    FLeafObjectLhs fLeafObjectLhs,
+    FChildRhs fChildRhs,
+    FIsLeafRhs fIsLeafRhs,
+    FLeafSizeRhs fLeafSizeRhs,
+    FLeafObjectRhs fLeafObjectRhs,
+    FNodesOverlap fNodesOverlap,
+    FObjectsOverlap fObjectsOverlap,
+    FOnFound fOnFound,
+    TIndex rootLhs,
+    TIndex rootRhs)
+{
+#include "pbat/warning/Push.h"
+#include "pbat/warning/SignConversion.h"
+    struct Pair
+    {
+        TIndex nLhs;
+        TIndex nRhs;
+        std::int16_t levelLhs;
+        std::int16_t levelRhs;
+    };
+    common::Stack<Pair, kStackDepth> stack{};
+    auto const fRecurseRight = [&] PBAT_HOST_DEVICE(Pair const& p) {
+        common::ForRange<0, NRhs>([&]<auto i> PBAT_HOST_DEVICE() {
+            TIndex const childRhs = fChildRhs.template operator()<i>(p.nRhs);
+            if (childRhs >= 0 and not stack.IsFull())
+                stack.Push({p.nLhs, p.childRhs, p.levelLhs, p.levelRhs + 1});
+        });
+    };
+    auto const fRecurseLeft = [&] PBAT_HOST_DEVICE(Pair const& p) {
+        common::ForRange<0, NLhs>([&]<auto i> PBAT_HOST_DEVICE() {
+            TIndex const childLhs = fChildLhs.template operator()<i>(p.nLhs);
+            if (childLhs >= 0 and not stack.IsFull())
+                stack.Push({p.childLhs, p.nRhs, p.levelLhs + 1, p.levelRhs});
+        });
+    };
+    // Traverse top-down
+    TIndex k{0};
+    stack.Push({rootLhs, rootRhs, std::int16_t{0}, std::int16_t{0}});
+    while (not stack.IsEmpty())
+    {
+        if (stack.IsFull())
+            return false;
+        Pair const p = stack.Pop();
+        if (not fNodesOverlap(p.nLhs, p.nRhs))
+            continue;
+        bool const bIsLhsLeaf = fIsLeafLhs(p.nLhs);
+        bool const bIsRhsLeaf = fIsLeafRhs(p.nRhs);
+        if (bIsLhsLeaf and bIsRhsLeaf)
+        {
+            TIndex const nLeafObjectsLhs = fLeafSizeLhs(p.nLhs);
+            TIndex const nLeafObjectsRhs = fLeafSizeRhs(p.nRhs);
+            for (TIndex i = 0; i < nLeafObjectsLhs; ++i)
+            {
+                TIndex const oLhs = fLeafObjectLhs(p.nLhs, i);
+                for (TIndex j = 0; j < nLeafObjectsRhs; ++j)
+                {
+                    TIndex const oRhs = fLeafObjectRhs(p.nRhs, j);
+                    if (fObjectsOverlap(oLhs, oRhs))
+                        fOnFound(oLhs, oRhs, k++);
+                }
+            }
+        }
+        else if (bIsLhsLeaf and not bIsRhsLeaf)
+        {
+            fRecurseRight(p);
+        }
+        else if (not bIsLhsLeaf and bIsRhsLeaf)
+        {
+            fRecurseLeft(p);
+        }
+        else
+        {
+            if (p.levelLhs > p.levelRhs)
+            {
+                fRecurseRight(p);
+            }
+            else
+            {
+                fRecurseLeft(p);
+            }
+        }
+    }
+    return true;
+#include "pbat/warning/Pop.h"
+};
+
+template <
+    class FChild,
+    class FIsLeaf,
+    class FLeafSize,
+    class FLeafObject,
+    class FNodeOverlap,
+    class FObjectOverlap,
+    class FOnFound,
+    auto N,
+    class TIndex,
+    auto kStackDepth>
+PBAT_HOST_DEVICE bool SelfOverlaps(
+    FChild fChild,
+    FIsLeaf fIsLeaf,
+    FLeafSize fLeafSize,
+    FLeafObject fLeafObject,
+    FNodeOverlap fNodesOverlap,
+    FObjectOverlap fObjectsOverlap,
+    FOnFound fOnFound,
+    TIndex root)
+{
+#include "pbat/warning/Push.h"
+#include "pbat/warning/SignConversion.h"
+    struct Pair
+    {
+        TIndex nLhs;
+        TIndex nRhs;
+        std::int16_t levelLhs;
+        std::int16_t levelRhs;
+    };
+    common::Stack<Pair, kStackDepth> stack{};
+    auto const fRecurseRight = [&] PBAT_HOST_DEVICE(Pair const& p) {
+        common::ForRange<0, N>([&]<auto i> PBAT_HOST_DEVICE() {
+            TIndex const childRhs = fChild.template operator()<i>(p.nRhs);
+            if (childRhs >= 0 and not stack.IsFull())
+                stack.Push({p.nLhs, childRhs, p.levelLhs, p.levelRhs + 1});
+        });
+    };
+    auto const fRecurseLeft = [&] PBAT_HOST_DEVICE(Pair const& p) {
+        common::ForRange<0, N>([&]<auto i> PBAT_HOST_DEVICE() {
+            TIndex const childLhs = fChild.template operator()<i>(p.nLhs);
+            if (childLhs >= 0 and not stack.IsFull())
+                stack.Push({childLhs, p.nRhs, p.levelLhs + 1, p.levelRhs});
+        });
+    };
+    // For any given nodes (n,a) where a is an ancestor of n, it is guaranteed that
+    // (n,a) are overlapping, since n is embedded in a. We need to find a way to avoid
+    // adding pairs (n,a) to the stack. A pair (ni,nj) should only exist or be tested
+    // if neither ni nor nj is an ancestor of the other.
+    TIndex k{0};
+    stack.Push({root, root, std::int16_t{0}, std::int16_t{0}});
+    while (not stack.IsEmpty())
+    {
+        if (stack.IsFull())
+            return false;
+        Pair const p = stack.Pop();
+        // This is a node visitor, not a pair to check for overlap, add children to stack
+        if (p.nLhs == p.nRhs)
+        {
+            TIndex const n = p.nLhs;
+            if (fIsLeaf(n))
+            {
+                TIndex const nLeafObjects = fLeafSize(n);
+                for (TIndex i = 0; i < nLeafObjects; ++i)
+                {
+                    for (TIndex j = i + 1; j < nLeafObjects; ++j)
+                    {
+                        TIndex const oLhs = fLeafObject(n, i);
+                        TIndex const oRhs = fLeafObject(n, j);
+                        if (fObjectsOverlap(oLhs, oRhs))
+                            fOnFound(oLhs, oRhs, k++);
+                    }
+                }
+            }
+            else
+            {
+                // Collect children
+                std::array<TIndex, N> children;
+                common::ForRange<0, N>([&]<auto i> PBAT_HOST_DEVICE() {
+                    children[i] = fChild.template operator()<i>(n);
+                });
+                // Add node visitors first, so that we don't traverse the whole tree in one go
+                common::ForRange<0, N>([&]<auto i> PBAT_HOST_DEVICE() {
+                    if (stack.IsFull())
+                        return;
+                    if (children[i] < 0)
+                        return;
+                    std::int16_t const nextLevel = p.levelLhs + std::int16_t{1};
+                    stack.Push({children[i], children[i], nextLevel, nextLevel});
+                });
+                // Add all distinct child pairs to the stack
+                common::ForRange<0, N>([&]<auto i> PBAT_HOST_DEVICE() {
+                    if (children[i] < 0)
+                        return;
+                    std::int16_t const nextLevel = p.levelLhs + std::int16_t{1};
+                    common::ForRange<i + 1, N>([&]<auto j> PBAT_HOST_DEVICE() {
+                        if (stack.IsFull())
+                            return;
+                        if (children[j] < 0)
+                            return;
+                        stack.Push({children[i], children[j], nextLevel, nextLevel});
+                    });
+                });
+            }
+        }
+        else
+        {
+            if (not fNodesOverlap(p.nLhs, p.nRhs))
+                continue;
+
+            bool const bIsLeftLeaf  = fIsLeaf(p.nLhs);
+            bool const bIsRightLeaf = fIsLeaf(p.nRhs);
+            if (bIsLeftLeaf and bIsRightLeaf)
+            {
+                TIndex const nLeafObjectsLhs = fLeafSize(p.nLhs);
+                TIndex const nLeafObjectsRhs = fLeafSize(p.nRhs);
+                for (TIndex i = 0; i < nLeafObjectsLhs; ++i)
+                {
+                    TIndex const oLhs = fLeafObject(p.nLhs, i);
+                    for (TIndex j = 0; j < nLeafObjectsRhs; ++j)
+                    {
+                        TIndex const oRhs = fLeafObject(p.nRhs, j);
+                        if (fObjectsOverlap(oLhs, oRhs))
+                            fOnFound(oLhs, oRhs, k++);
+                    }
+                }
+            }
+            else if (bIsLeftLeaf and not bIsRightLeaf)
+            {
+                fRecurseRight(p);
+            }
+            else if (not bIsLeftLeaf and bIsRightLeaf)
+            {
+                fRecurseLeft(p);
+            }
+            else
+            {
+                if (p.levelLhs > p.levelRhs)
+                    fRecurseRight(p);
+                else
+                    fRecurseLeft(p);
+            }
+        }
+    }
+    return true;
+#include "pbat/warning/Pop.h"
 }
 
 template <
@@ -275,7 +647,7 @@ template <
     class TIndex,
     auto kStackDepth,
     auto kQueueSize>
-void NearestNeighbour(
+bool NearestNeighbour(
     FChild fChild,
     FIsLeaf fIsLeaf,
     FLeafSize fLeafSize,
@@ -325,7 +697,7 @@ void NearestNeighbour(
     // order.
     common::Stack<TIndex, kStackDepth> stack{};
     if (not fVisit(root))
-        return;
+        return true;
     stack.Push(root);
     if (bUseBestFirstSearch)
     {
@@ -334,8 +706,10 @@ void NearestNeighbour(
         std::array<TScalar, N> lowers{};
         while (not stack.IsEmpty())
         {
+            if (stack.IsFull())
+                return false;
             TIndex const node = stack.Pop();
-            common::ForRange<0, N>([&]<auto i> {
+            common::ForRange<0, N>([&]<auto i> PBAT_HOST_DEVICE() {
                 TIndex const child   = fChild.template operator()<i>(node);
                 ordering[i]          = i;
                 children[i]          = child;
@@ -361,7 +735,7 @@ void NearestNeighbour(
                 auto const i = ordering[j];
                 if (children[i] >= 0)
                 {
-                    if (fDoVisit(children[i], lowers[i]))
+                    if (fDoVisit(children[i], lowers[i]) and not stack.IsFull())
                         stack.Push(children[i]);
                 }
                 else
@@ -384,11 +758,13 @@ void NearestNeighbour(
         //     root);
         while (not stack.IsEmpty())
         {
+            if (stack.IsFull())
+                return false;
             TIndex const node = stack.Pop();
-            common::ForRange<0, N>([&]<auto i> {
+            common::ForRange<0, N>([&]<auto i> PBAT_HOST_DEVICE() {
                 TIndex const child = fChild.template operator()<i>(node);
                 if (child >= 0)
-                    if (fVisit(child))
+                    if (fVisit(child) and not stack.IsFull())
                         stack.Push(child);
             });
         }
@@ -400,6 +776,7 @@ void NearestNeighbour(
         nn.Pop();
         fOnFound(o, fUpper, k++);
     }
+    return true;
 }
 
 template <
@@ -414,7 +791,7 @@ template <
     class TScalar,
     class TIndex,
     auto kHeapCapacity>
-void KNearestNeighbours(
+bool KNearestNeighbours(
     FChild fChild,
     FIsLeaf fIsLeaf,
     FLeafSize fLeafSize,
@@ -452,6 +829,9 @@ void KNearestNeighbours(
     TIndex k{0};
     while (not heap.IsEmpty())
     {
+        if (heap.IsFull())
+            return false;
+
         QueueItem const q = heap.Pop();
         if (q.d > fUpper)
             break;
@@ -463,15 +843,18 @@ void KNearestNeighbours(
                 TIndex const nLeafObjects = fLeafSize(node);
                 for (TIndex i = 0; i < nLeafObjects; ++i)
                 {
-                    TIndex const o = fLeafObject(node, i);
-                    heap.Push(fMakeObjectQueueItem(o));
+                    if (not heap.IsFull())
+                    {
+                        TIndex const o = fLeafObject(node, i);
+                        heap.Push(fMakeObjectQueueItem(o));
+                    }
                 }
             }
             else
             {
-                common::ForRange<0, N>([&]<auto i> {
+                common::ForRange<0, N>([&]<auto i> PBAT_HOST_DEVICE() {
                     TIndex const child = fChild.template operator()<i>(node);
-                    if (child >= 0)
+                    if (child >= 0 and not heap.IsFull())
                         heap.Push(fMakeNodeQueueItem(child));
                 });
             }
@@ -483,6 +866,7 @@ void KNearestNeighbours(
                 break;
         }
     }
+    return true;
 }
 
 } // namespace pbat::geometry
