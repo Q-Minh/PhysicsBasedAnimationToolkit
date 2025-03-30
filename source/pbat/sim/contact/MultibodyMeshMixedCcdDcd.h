@@ -98,18 +98,18 @@ class MultibodyMeshMixedCcdDcd
      * @tparam TDerivedFP Eigen type of the input face prefix sum
      * @tparam TDerivedTP Eigen type of the input tetrahedron prefix sum
      * @param X `kDims x |# vertices|` matrix of vertex positions
+     * @param V `|# vertices|` vertex array
+     * @param E `2 x |# edges|` edge array
+     * @param F `3 x |# triangles|` triangle array
+     * @param T `4 x |# tetrahedra|` tetrahedron array
      * @param VP `|# objects + 1| x 1` prefix sum of vertex pointers into `V` s.t.
      * `V(VP(o):VP(o+1))` are collision vertices of object `o`
-     * @param V `|# vertices|` vertex array
      * @param EP `|# objects + 1| x 1` prefix sum of edge pointers into `E` s.t. `E(EP(o):EP(o+1))`
      * are collision edges of object `o`
-     * @param E `2 x |# edges|` edge array
      * @param FP `|# objects + 1| x 1` prefix sum of triangle pointers into `F` s.t.
      * `F(FP(o):FP(o+1))` are collision triangles of object `o`
-     * @param F `3 x |# triangles|` triangle array
      * @param TP `|# objects + 1| x 1` prefix sum of tetrahedron pointers into `T` s.t.
      * `T(TP(o):TP(o+1))` are collision tetrahedra of object `o`
-     * @param T `4 x |# tetrahedra|` tetrahedron array
      */
     template <
         class TDerivedX,
@@ -119,14 +119,14 @@ class MultibodyMeshMixedCcdDcd
         class TDerivedTP>
     MultibodyMeshMixedCcdDcd(
         Eigen::DenseBase<TDerivedX> const& X,
-        Eigen::DenseBase<TDerivedVP> const& VP,
         Eigen::Ref<IndexVectorX const> const& V,
-        Eigen::DenseBase<TDerivedEP> const& EP,
         Eigen::Ref<IndexMatrix<2, Eigen::Dynamic> const> const& E,
-        Eigen::DenseBase<TDerivedFP> const& FP,
         Eigen::Ref<IndexMatrix<3, Eigen::Dynamic> const> const& F,
-        Eigen::DenseBase<TDerivedTP> const& TP,
-        Eigen::Ref<IndexMatrix<4, Eigen::Dynamic> const> const& T);
+        Eigen::Ref<IndexMatrix<4, Eigen::Dynamic> const> const& T,
+        Eigen::DenseBase<TDerivedVP> const& VP,
+        Eigen::DenseBase<TDerivedEP> const& EP,
+        Eigen::DenseBase<TDerivedFP> const& FP,
+        Eigen::DenseBase<TDerivedTP> const& TP);
     /**
      * @brief Prepare the multibody CCD system for collision detection
      * @tparam TDerivedX Eigen type of the input vertex positions
@@ -135,18 +135,18 @@ class MultibodyMeshMixedCcdDcd
      * @tparam TDerivedFP Eigen type of the input face prefix sum
      * @tparam TDerivedTP Eigen type of the input tetrahedron prefix sum
      * @param X `kDims x |# vertices|` matrix of vertex positions
+     * @param V `|# vertices|` vertex array
+     * @param E `2 x |# edges|` edge array
+     * @param F `3 x |# triangles|` triangle array
+     * @param T `4 x |# tetrahedra|` tetrahedron array
      * @param VP `|# objects + 1| x 1` prefix sum of vertex pointers into `V` s.t.
      * `V(VP(o):VP(o+1))` are collision vertices of object `o`
-     * @param V `|# vertices|` vertex array
      * @param EP `|# objects + 1| x 1` prefix sum of edge pointers into `E` s.t. `E(EP(o):EP(o+1))`
      * are collision edges of object `o`
-     * @param E `2 x |# edges|` edge array
      * @param FP `|# objects + 1| x 1` prefix sum of triangle pointers into `F` s.t.
      * `F(FP(o):FP(o+1))` are collision triangles of object `o`
-     * @param F `3 x |# triangles|` triangle array
      * @param TP `|# objects + 1| x 1` prefix sum of tetrahedron pointers into `T` s.t.
      * `T(TP(o):TP(o+1))` are collision tetrahedra of object `o`
-     * @param T `4 x |# tetrahedra|` tetrahedron array
      */
     template <
         class TDerivedX,
@@ -156,14 +156,14 @@ class MultibodyMeshMixedCcdDcd
         class TDerivedTP>
     void Prepare(
         Eigen::DenseBase<TDerivedX> const& X,
-        Eigen::DenseBase<TDerivedVP> const& VP,
         Eigen::Ref<IndexVectorX const> const& V,
-        Eigen::DenseBase<TDerivedEP> const& EP,
         Eigen::Ref<IndexMatrix<2, Eigen::Dynamic> const> const& E,
-        Eigen::DenseBase<TDerivedFP> const& FP,
         Eigen::Ref<IndexMatrix<3, Eigen::Dynamic> const> const& F,
-        Eigen::DenseBase<TDerivedTP> const& TP,
-        Eigen::Ref<IndexMatrix<4, Eigen::Dynamic> const> const& T);
+        Eigen::Ref<IndexMatrix<4, Eigen::Dynamic> const> const& T,
+        Eigen::DenseBase<TDerivedVP> const& VP,
+        Eigen::DenseBase<TDerivedEP> const& EP,
+        Eigen::DenseBase<TDerivedFP> const& FP,
+        Eigen::DenseBase<TDerivedTP> const& TP);
     /**
      * @brief Update the active set of vertex-triangle and edge-edge contact pairs
      *
@@ -474,14 +474,14 @@ class MultibodyMeshMixedCcdDcd
 template <class TDerivedX, class TDerivedVP, class TDerivedEP, class TDerivedFP, class TDerivedTP>
 inline MultibodyMeshMixedCcdDcd::MultibodyMeshMixedCcdDcd(
     Eigen::DenseBase<TDerivedX> const& X,
-    Eigen::DenseBase<TDerivedVP> const& VP,
     Eigen::Ref<IndexVectorX const> const& V,
-    Eigen::DenseBase<TDerivedEP> const& EP,
     Eigen::Ref<IndexMatrix<2, Eigen::Dynamic> const> const& E,
-    Eigen::DenseBase<TDerivedFP> const& FP,
     Eigen::Ref<IndexMatrix<3, Eigen::Dynamic> const> const& F,
-    Eigen::DenseBase<TDerivedTP> const& TP,
-    Eigen::Ref<IndexMatrix<4, Eigen::Dynamic> const> const& T)
+    Eigen::Ref<IndexMatrix<4, Eigen::Dynamic> const> const& T,
+    Eigen::DenseBase<TDerivedVP> const& VP,
+    Eigen::DenseBase<TDerivedEP> const& EP,
+    Eigen::DenseBase<TDerivedFP> const& FP,
+    Eigen::DenseBase<TDerivedTP> const& TP)
 {
     Prepare(
         X.derived(),
@@ -496,14 +496,14 @@ inline MultibodyMeshMixedCcdDcd::MultibodyMeshMixedCcdDcd(
 template <class TDerivedX, class TDerivedVP, class TDerivedEP, class TDerivedFP, class TDerivedTP>
 inline void MultibodyMeshMixedCcdDcd::Prepare(
     Eigen::DenseBase<TDerivedX> const& X,
-    Eigen::DenseBase<TDerivedVP> const& VP,
     Eigen::Ref<IndexVectorX const> const& V,
-    Eigen::DenseBase<TDerivedEP> const& EP,
     Eigen::Ref<IndexMatrix<2, Eigen::Dynamic> const> const& E,
-    Eigen::DenseBase<TDerivedFP> const& FP,
     Eigen::Ref<IndexMatrix<3, Eigen::Dynamic> const> const& F,
-    Eigen::DenseBase<TDerivedTP> const& TP,
-    Eigen::Ref<IndexMatrix<4, Eigen::Dynamic> const> const& T)
+    Eigen::Ref<IndexMatrix<4, Eigen::Dynamic> const> const& T,
+    Eigen::DenseBase<TDerivedVP> const& VP,
+    Eigen::DenseBase<TDerivedEP> const& EP,
+    Eigen::DenseBase<TDerivedFP> const& FP,
+    Eigen::DenseBase<TDerivedTP> const& TP)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.MultibodyMeshMixedCcdDcd.Prepare");
     // Store input triangle meshes
