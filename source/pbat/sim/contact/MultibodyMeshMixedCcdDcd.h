@@ -93,10 +93,6 @@ class MultibodyMeshMixedCcdDcd
      * @brief Construct a new TriangleMeshMultibodyCcd object from input triangle meshes
      *
      * @tparam TDerivedX Eigen type of the input vertex positions
-     * @tparam TDerivedVP Eigen type of the input vertex prefix sum
-     * @tparam TDerivedEP Eigen type of the input edge prefix sum
-     * @tparam TDerivedFP Eigen type of the input face prefix sum
-     * @tparam TDerivedTP Eigen type of the input tetrahedron prefix sum
      * @param X `kDims x |# vertices|` matrix of vertex positions
      * @param V `|# vertices|` vertex array
      * @param E `2 x |# edges|` edge array
@@ -111,22 +107,17 @@ class MultibodyMeshMixedCcdDcd
      * @param TP `|# objects + 1| x 1` prefix sum of tetrahedron pointers into `T` s.t.
      * `T(TP(o):TP(o+1))` are collision tetrahedra of object `o`
      */
-    template <
-        class TDerivedX,
-        class TDerivedVP,
-        class TDerivedEP,
-        class TDerivedFP,
-        class TDerivedTP>
+    template <class TDerivedX>
     MultibodyMeshMixedCcdDcd(
         Eigen::DenseBase<TDerivedX> const& X,
         Eigen::Ref<IndexVectorX const> const& V,
         Eigen::Ref<IndexMatrix<2, Eigen::Dynamic> const> const& E,
         Eigen::Ref<IndexMatrix<3, Eigen::Dynamic> const> const& F,
         Eigen::Ref<IndexMatrix<4, Eigen::Dynamic> const> const& T,
-        Eigen::DenseBase<TDerivedVP> const& VP,
-        Eigen::DenseBase<TDerivedEP> const& EP,
-        Eigen::DenseBase<TDerivedFP> const& FP,
-        Eigen::DenseBase<TDerivedTP> const& TP);
+        Eigen::Ref<IndexVectorX const> const& VP,
+        Eigen::Ref<IndexVectorX const> const& EP,
+        Eigen::Ref<IndexVectorX const> const& FP,
+        Eigen::Ref<IndexVectorX const> const& TP);
     /**
      * @brief Prepare the multibody CCD system for collision detection
      * @tparam TDerivedX Eigen type of the input vertex positions
@@ -148,22 +139,17 @@ class MultibodyMeshMixedCcdDcd
      * @param TP `|# objects + 1| x 1` prefix sum of tetrahedron pointers into `T` s.t.
      * `T(TP(o):TP(o+1))` are collision tetrahedra of object `o`
      */
-    template <
-        class TDerivedX,
-        class TDerivedVP,
-        class TDerivedEP,
-        class TDerivedFP,
-        class TDerivedTP>
+    template <class TDerivedX>
     void Prepare(
         Eigen::DenseBase<TDerivedX> const& X,
         Eigen::Ref<IndexVectorX const> const& V,
         Eigen::Ref<IndexMatrix<2, Eigen::Dynamic> const> const& E,
         Eigen::Ref<IndexMatrix<3, Eigen::Dynamic> const> const& F,
         Eigen::Ref<IndexMatrix<4, Eigen::Dynamic> const> const& T,
-        Eigen::DenseBase<TDerivedVP> const& VP,
-        Eigen::DenseBase<TDerivedEP> const& EP,
-        Eigen::DenseBase<TDerivedFP> const& FP,
-        Eigen::DenseBase<TDerivedTP> const& TP);
+        Eigen::Ref<IndexVectorX const> const& VP,
+        Eigen::Ref<IndexVectorX const> const& EP,
+        Eigen::Ref<IndexVectorX const> const& FP,
+        Eigen::Ref<IndexVectorX const> const& TP);
     /**
      * @brief Update the active set of vertex-triangle and edge-edge contact pairs
      *
@@ -418,10 +404,13 @@ class MultibodyMeshMixedCcdDcd
      * @brief Prefix sums over mesh primitives
      */
 
-    IndexVectorX mVP; ///< `|# objects + 1|` prefix sum of vertex pointers into `V`
-    IndexVectorX mEP; ///< `|# objects + 1|` prefix sum of edge pointers into `E`
-    IndexVectorX mFP; ///< `|# objects + 1|` prefix sum of triangle pointers into `F`
-    IndexVectorX mTP; ///< `|# objects + 1|` prefix sum of tetrahedron pointers into `T`
+    Eigen::Ref<IndexVectorX const>
+        mVP; ///< `|# objects + 1|` prefix sum of vertex pointers into `V`
+    Eigen::Ref<IndexVectorX const> mEP; ///< `|# objects + 1|` prefix sum of edge pointers into `E`
+    Eigen::Ref<IndexVectorX const>
+        mFP; ///< `|# objects + 1|` prefix sum of triangle pointers into `F`
+    Eigen::Ref<IndexVectorX const>
+        mTP; ///< `|# objects + 1|` prefix sum of tetrahedron pointers into `T`
 
     /**
      * @brief Mesh primitives
@@ -471,17 +460,17 @@ class MultibodyMeshMixedCcdDcd
     Eigen::Vector<bool, Eigen::Dynamic> mPenetratingVertexMask; ///< Active vertex mask
 };
 
-template <class TDerivedX, class TDerivedVP, class TDerivedEP, class TDerivedFP, class TDerivedTP>
+template <class TDerivedX>
 inline MultibodyMeshMixedCcdDcd::MultibodyMeshMixedCcdDcd(
     Eigen::DenseBase<TDerivedX> const& X,
     Eigen::Ref<IndexVectorX const> const& V,
     Eigen::Ref<IndexMatrix<2, Eigen::Dynamic> const> const& E,
     Eigen::Ref<IndexMatrix<3, Eigen::Dynamic> const> const& F,
     Eigen::Ref<IndexMatrix<4, Eigen::Dynamic> const> const& T,
-    Eigen::DenseBase<TDerivedVP> const& VP,
-    Eigen::DenseBase<TDerivedEP> const& EP,
-    Eigen::DenseBase<TDerivedFP> const& FP,
-    Eigen::DenseBase<TDerivedTP> const& TP)
+    Eigen::Ref<IndexVectorX const> const& VP,
+    Eigen::Ref<IndexVectorX const> const& EP,
+    Eigen::Ref<IndexVectorX const> const& FP,
+    Eigen::Ref<IndexVectorX const> const& TP)
 {
     Prepare(
         X.derived(),
@@ -493,17 +482,17 @@ inline MultibodyMeshMixedCcdDcd::MultibodyMeshMixedCcdDcd(
         F.derived());
 }
 
-template <class TDerivedX, class TDerivedVP, class TDerivedEP, class TDerivedFP, class TDerivedTP>
+template <class TDerivedX>
 inline void MultibodyMeshMixedCcdDcd::Prepare(
     Eigen::DenseBase<TDerivedX> const& X,
     Eigen::Ref<IndexVectorX const> const& V,
     Eigen::Ref<IndexMatrix<2, Eigen::Dynamic> const> const& E,
     Eigen::Ref<IndexMatrix<3, Eigen::Dynamic> const> const& F,
     Eigen::Ref<IndexMatrix<4, Eigen::Dynamic> const> const& T,
-    Eigen::DenseBase<TDerivedVP> const& VP,
-    Eigen::DenseBase<TDerivedEP> const& EP,
-    Eigen::DenseBase<TDerivedFP> const& FP,
-    Eigen::DenseBase<TDerivedTP> const& TP)
+    Eigen::Ref<IndexVectorX const> const& VP,
+    Eigen::Ref<IndexVectorX const> const& EP,
+    Eigen::Ref<IndexVectorX const> const& FP,
+    Eigen::Ref<IndexVectorX const> const& TP)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.MultibodyMeshMixedCcdDcd.Prepare");
     // Store input triangle meshes
