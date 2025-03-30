@@ -602,7 +602,8 @@ inline void MultibodyMeshMixedCcdDcd::UpdateDcdActiveSet(
     ComputeVertexAabbs(X);
     ComputeTriangleAabbs(X);
     ComputeTetrahedronAabbs(X);
-    // Update BVH bounding boxes of penetrated bodies
+    // Update BVH bounding boxes
+    UpdateMeshVertexBvhs();
     UpdateMeshTriangleBvhs();
     UpdateMeshTetrahedronBvhs();
     // Rebuild world tree
@@ -651,29 +652,28 @@ inline void MultibodyMeshMixedCcdDcd::HandleDcdPairs(
 #include "pbat/warning/Push.h"
 #include "pbat/warning/SignConversion.h"
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.MultibodyMeshMixedCcdDcd.HandleDcdPairs");
-    // Define distance functions
-    Vector<kDims> XC;
-    auto const fDistanceToBox = [&]<class TL, class TU>(TL const& L, TU const& U) {
-        using math::linalg::mini::FromEigen;
-        return geometry::DistanceQueries::PointAxisAlignedBoundingBox(
-            FromEigen(XC),
-            FromEigen(L),
-            FromEigen(U));
-    };
-    auto const fDistanceToTriangle = [&](Index f) {
-        using math::linalg::mini::FromEigen;
-        Matrix<kDims, 3> XF = X(Eigen::placeholders::all, mF.col(f));
-        return geometry::DistanceQueries::PointTriangle(
-            FromEigen(XC),
-            FromEigen(XF.col(0)),
-            FromEigen(XF.col(1)),
-            FromEigen(XF.col(2)));
-    };
     // Report vertex-triangle contacts for each DCD penetrating vertex
     ForEachPenetratingVertex([&](Index i, Index o) {
         mPenetratingVertexMask[i] = true;
         // Contact point is vertex position
-        XC = X.col(i);
+        Vector<kDims> const XC = X.col(i);
+        // Define point-aabb and point-triangle distance functions for vertex i
+        auto const fDistanceToBox = [&]<class TL, class TU>(TL const& L, TU const& U) {
+            using math::linalg::mini::FromEigen;
+            return geometry::DistanceQueries::PointAxisAlignedBoundingBox(
+                FromEigen(XC),
+                FromEigen(L),
+                FromEigen(U));
+        };
+        auto const fDistanceToTriangle = [&](Index f) {
+            using math::linalg::mini::FromEigen;
+            Matrix<kDims, 3> XF = X(Eigen::placeholders::all, mF.col(f));
+            return geometry::DistanceQueries::PointTriangle(
+                FromEigen(XC),
+                FromEigen(XF.col(0)),
+                FromEigen(XF.col(1)),
+                FromEigen(XF.col(2)));
+        };
         // Find nearest surface point (i.e. triangle)
         mTriangleBvhs[o].NearestNeighbour(
             fDistanceToBox,
@@ -847,9 +847,13 @@ inline void MultibodyMeshMixedCcdDcd::ForEachPenetratingVertex(
             mVertexBvhs[oi].Overlaps(
                 mTetrahedronBvhs[oj],
                 [&](Index v, Index t) {
-                    i                    = mV(mVP(oi) + v);
+                    // Global vertex and tetrahedron indices
+                    v = mVP(oi) + v;
+                    t = mTP(oj) + t;
+                    // Run overlap test
+                    i                    = mV(v);
                     xi                   = X.col(i);
-                    IndexVector<4> tinds = mT.col(mTP(oj) + t);
+                    IndexVector<4> tinds = mT.col(t);
                     Matrix<kDims, 4> XT  = X(Eigen::placeholders::all, tinds);
                     using math::linalg::mini::FromEigen;
                     return geometry::OverlapQueries::PointTetrahedron3D(
@@ -905,6 +909,7 @@ inline void MultibodyMeshMixedCcdDcd::ReportVertexTriangleCcdContacts(
                 FromEigen(XF.col(0)),
                 FromEigen(XF.col(1)),
                 FromEigen(XF.col(2)));
+            // Report if contact found
             auto const t           = tbeta[0];
             bool const bIntersects = t >= Scalar(0);
             if (bIntersects)
@@ -931,10 +936,15 @@ inline void MultibodyMeshMixedCcdDcd::ReportEdgeEdgeCcdContacts(
          fOnEdgeEdgeContactPair =
              std::forward<FOnEdgeEdgeContactPair>(fOnEdgeEdgeContactPair)](Index ei, Index ej) {
             // Global edge indices
-            ei                    = mEP(oi) + ei;
-            ej                    = mEP(oj) + ej;
+            ei = mEP(oi) + ei;
+            ej = mEP(oj) + ej;
+            // Global edge vertex indices
             IndexVector<2> eindsi = mE.col(ei);
             IndexVector<2> eindsj = mE.col(ej);
+            // Do not report contact if any vertex is already penetrating
+            if (mPenetratingVertexMask[eindsi[0]] or mPenetratingVertexMask[eindsi[1]] or
+                mPenetratingVertexMask[eindsj[0]] or mPenetratingVertexMask[eindsj[1]])
+                return false;
             // Run inexact CCD
             Matrix<kDims, 2> XTei = XT(Eigen::placeholders::all, eindsi);
             Matrix<kDims, 2> Xei  = X(Eigen::placeholders::all, eindsi);
@@ -950,6 +960,7 @@ inline void MultibodyMeshMixedCcdDcd::ReportEdgeEdgeCcdContacts(
                 FromEigen(Xei.col(1)),
                 FromEigen(Xej.col(0)),
                 FromEigen(Xej.col(1)));
+            // Report if contact found
             auto const t           = tbeta[0];
             bool const bIntersects = t >= Scalar(0);
             if (bIntersects)
