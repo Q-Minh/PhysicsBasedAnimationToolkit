@@ -39,34 +39,16 @@ namespace pbat::sim::contact {
  * multibody system.
  *
  * We consider potentially colliding vertex-triangle and edge-edge pairs as contact constraints.
- * We maintain a cache of pairs (v,o) and (e,o) of active vertices and edges penetrating object o
- * between time steps to trim down DCD to only those vertices and edges that are already in contact.
- * Every other inactive vertex and edge is checked for earliest intersection using CCD in the linear
- * trajectory
+ * Vertices found to currently penetrate a body are marked as active and generate vertex-triangle
+ * constraints from discrete collision detection. Inactive vertices and edges are checked for
+ * earliest intersection using CCD in the linear trajectory
  * \f$ \mathbf{x} = (1-\Delta t) \mathbf{x}(t) + \Delta t \mathbf{x}(t+1) \; \forall \; \Delta t \in
  * [0,1]\f$.`
  *
  * We adopt a tree of tree approach for broadphase culling. In both DCD and CCD, we first perform a
  * body-level broadphase using a BVH over all bodies in the world. For each potentially colliding
- * body pair (bi,bj), we perform a mesh-level broadphase using BVHs over the mesh vertices, edges
- * and triangles of bi and bj. For DCD, we consider vertex-triangle and edge-triangle pairs. For
- * CCD, we consider vertex-triangle and edge-edge pairs. After active set determination, we finalize
- * the active set by removing resolved contact pairs and marking active vertices/edges as inactive
- * if they do not intersect any tetrahedron (i.e. do not penetrate the bodies' volume).
- *
- * At a high level, our algorithm can be summarized as follows.
- *
- * A) The active set determination:
- * 1. Report DCD vertex-triangle and edge-triangle contacts for active vertices and edges.
- * 2. Report CCD vertex-triangle and edge-edge contacts for inactive vertices and edges.
- * 3. Mark each (v,o) and (e,o) pair of active vertices and edges potentially penetrating objects o
- * (in steps 1. and 2.).
- *
- * B) The active set finalization:
- * 1. Deactivate any active vertex/edge if they do not intersect a tetrahedron. If an edge does
- * intersect a tetrahedron, we also need to determine a point on the edge that penetrates the
- * tetrahedron, which will be use to create an edge-triangle contact in the next time step.
- * 2. Stream-compact remaining active vertices/edges and penetrated bodies.
+ * body pair (bi,bj), we perform a mesh-level broadphase using BVHs over the mesh vertices, edges,
+ * triangles and tetrahedra of bi and bj.
  *
  * @note We should parallelize our algorithm via multi-threading and SIMD instructions for massive
  * speedup. Using 32-bit floating point numbers and integer indices would also speed up the
@@ -254,19 +236,20 @@ class MultibodyMeshMixedCcdDcd
 
   protected:
     /**
-     * @brief Add DCD vertex-triangle and edge-triangle pairs to the active set
+     * @brief Report DCD vertex-triangle contacts
      * @tparam FOnVertexTriangleContactPair Callback function with signature
      * `void(VertexTriangleContact c)`
      * @tparam TDerivedX Eigen type of vertex positions
      * @param X `kDims x |# vertices|` matrix of vertex positions
      * @param fOnVertexTriangleContactPair Callback function for vertex-triangle contact pairs
+     * @pre Vertex, triangle, tetrahedron and body BVHs must be up-to-date
      */
     template <class FOnVertexTriangleContactPair, class TDerivedX>
     void HandleDcdPairs(
         Eigen::DenseBase<TDerivedX> const& X,
         FOnVertexTriangleContactPair&& fOnVertexTriangleContactPair);
     /**
-     * @brief Add CCD vertex-triangle and edge-edge pairs to the active set
+     * @brief Report CCD (inactive) vertex-triangle and edge-edge pairs
      *
      * @tparam FOnVertexTriangleContactPair Callback function with signature
      * `void(VertexTriangleContact c)`
@@ -277,6 +260,9 @@ class MultibodyMeshMixedCcdDcd
      * @param X `kDims x |# vertices|` matrix of vertex positions at time t+1
      * @param fOnVertexTriangleContactPair Callback function for vertex-triangle contact pairs
      * @param fOnEdgeEdgeContactPair Callback function for edge-edge contact pairs
+     * @pre UpdateDcdActiveSet must be called prior to calling this function so that the active
+     * vertex mask is up-to-date, and vertex, edge, triangle and body BVHs must be up-to-date using
+     * linear trajectory \f$ x(t) -> x(t+1) \f$.
      */
     template <
         class FOnVertexTriangleContactPair,
@@ -389,16 +375,16 @@ class MultibodyMeshMixedCcdDcd
         Eigen::DenseBase<TDerivedX> const& X,
         FOnPenetratingVertex&& fOnPenetratingVertex);
     /**
-     * @brief
+     * @brief Report vertex triangle contact pairs from CCD
      *
-     * @tparam FOnVertexTriangleContactPair
-     * @tparam TDerivedXT
-     * @tparam TDerivedX
-     * @param XT
-     * @param X
-     * @param oi
-     * @param oj
-     * @param fOnVertexTriangleContactPair
+     * @tparam FOnVertexTriangleContactPair Callable with signature `void(VertexTriangleContact c)`
+     * @tparam TDerivedXT Eigen type of vertex positions at time t
+     * @tparam TDerivedX Eigen type of vertex positions at time t+1
+     * @param XT `kDims x |# vertices|` matrix of vertex positions at time t
+     * @param X `kDims x |# vertices|` matrix of vertex positions at time t+1
+     * @param oi Object index i
+     * @param oj Object index j
+     * @param fOnVertexTriangleContactPair Callback function for vertex-triangle contact pairs
      */
     template <class FOnVertexTriangleContactPair, class TDerivedXT, class TDerivedX>
     void ReportVertexTriangleCcdContacts(
@@ -408,16 +394,16 @@ class MultibodyMeshMixedCcdDcd
         Index oj,
         FOnVertexTriangleContactPair fOnVertexTriangleContactPair);
     /**
-     * @brief
+     * @brief Report edge edge contact pairs from CCD
      *
-     * @tparam FOnEdgeEdgeContactPair
-     * @tparam TDerivedXT
-     * @tparam TDerivedX
-     * @param XT
-     * @param X
-     * @param oi
-     * @param oj
-     * @param fOnEdgeEdgeContactPair
+     * @tparam FOnEdgeEdgeContactPair Callable with signature `void(EdgeEdgeContact c)`
+     * @tparam TDerivedXT Eigen type of vertex positions at time t
+     * @tparam TDerivedX Eigen type of vertex positions at time t+1
+     * @param XT `kDims x |# vertices|` matrix of vertex positions at time t
+     * @param X `kDims x |# vertices|` matrix of vertex positions at time t+1
+     * @param oi Object index i
+     * @param oj Object index j
+     * @param fOnEdgeEdgeContactPair Callback function for edge-edge contact pairs
      */
     template <class FOnEdgeEdgeContactPair, class TDerivedXT, class TDerivedX>
     void ReportEdgeEdgeCcdContacts(
