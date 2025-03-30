@@ -18,6 +18,6 @@
 namespace pbat::sim::contact {
 } // namespace pbat::sim::contact
 
-#include "MultibodyTriangleMeshMixedCcdDcd.h"
+#include "MultibodyMeshMixedCcdDcd.h"
 
 #endif // PBAT_SIM_CONTACT_CONTACT_H

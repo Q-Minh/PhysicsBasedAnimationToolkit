@@ -223,7 +223,7 @@ PBAT_HOST_DEVICE auto UvwLineTriangle3D(
 /**
  * @brief Computes the intersection point, if any, between a line segment delimited by points
  * P,Q and a triangle ABC, in 3D.
- * 
+ *
  * @tparam TMatrixP Matrix type of the point P
  * @tparam TMatrixQ Matrix type of the point Q
  * @tparam TMatrixA Matrix type of the vertex A
@@ -234,7 +234,9 @@ PBAT_HOST_DEVICE auto UvwLineTriangle3D(
  * @param A Vertex A of the triangle
  * @param B Vertex B of the triangle
  * @param C Vertex C of the triangle
- * @return The intersection point, if any
+ * @return The intersection point as a 4-vector, if any, where the last 3 elements are the
+ * barycentric coordinates of the intersection point with respect to the triangle ABC, and the first
+ * element is the barycentric coordinate of the intersection point with respect to line segment PQ
  */
 template <
     mini::CMatrix TMatrixP,
@@ -247,13 +249,13 @@ PBAT_HOST_DEVICE auto UvwLineSegmentTriangle3D(
     TMatrixQ const& Q,
     TMatrixA const& A,
     TMatrixB const& B,
-    TMatrixC const& C) -> std::optional<mini::SVector<typename TMatrixP::ScalarType, 3>>;
+    TMatrixC const& C) -> std::optional<mini::SVector<typename TMatrixP::ScalarType, 4>>;
 
 /**
  * @brief Computes intersection points between 3 edges (as line segments) of triangle A1B1C1 and
  * triangle A2B2C2, and intersection points between 3 edges (as line segments) of triangle
  * A2B2C2 and triangle A1B1C1, in 3D.
- * 
+ *
  * @tparam TMatrixA1 Matrix type of the vertex A1 of triangle 1
  * @tparam TMatrixB1 Matrix type of the vertex B1 of triangle 1
  * @tparam TMatrixC1 Matrix type of the vertex C1 of triangle 1
@@ -466,7 +468,7 @@ PBAT_HOST_DEVICE auto UvwLineSegmentTriangle3D(
     TMatrixQ const& Q,
     TMatrixA const& A,
     TMatrixB const& B,
-    TMatrixC const& C) -> std::optional<mini::SVector<typename TMatrixP::ScalarType, 3>>
+    TMatrixC const& C) -> std::optional<mini::SVector<typename TMatrixP::ScalarType, 4>>
 {
     using ScalarType     = typename TMatrixP::ScalarType;
     auto constexpr kRows = TMatrixP::kRows;
@@ -490,11 +492,14 @@ PBAT_HOST_DEVICE auto UvwLineSegmentTriangle3D(
         return {};
     // Compute barycentric coordinate components and test if within bounds
     mini::SVector<ScalarType, kDims> const I = P + t * PQ;
-    mini::SVector<ScalarType, 3> const uvw   = TriangleBarycentricCoordinates(I, A, B, C);
+    mini::SVector<ScalarType, 4> uvwt;
+    auto uvw                     = uvwt.Slice<3, 1>(1, 0);
+    uvw                          = TriangleBarycentricCoordinates(I, A, B, C);
     bool const bIsInsideTriangle = All((uvw >= ScalarType(0)) and (uvw <= ScalarType(1)));
     if (not bIsInsideTriangle)
         return {};
-    return uvw;
+    uvwt(0) = t;
+    return uvwt;
 }
 
 template <
@@ -537,13 +542,25 @@ PBAT_HOST_DEVICE auto UvwTriangles3D(
     // - For 2 triangles collapsed to a point, we check if both points are numerically the same.
 
     // Test 3 edges of each triangle against the other triangle
-    std::array<std::optional<mini::SVector<ScalarType, 3>>, 6u> intersections{
-        UvwLineSegmentTriangle3D(A1, B1, A2, B2, C2),
-        UvwLineSegmentTriangle3D(B1, C1, A2, B2, C2),
-        UvwLineSegmentTriangle3D(C1, A1, A2, B2, C2),
-        UvwLineSegmentTriangle3D(A2, B2, A1, B1, C1),
-        UvwLineSegmentTriangle3D(B2, C2, A1, B1, C1),
-        UvwLineSegmentTriangle3D(C2, A2, A1, B1, C1)};
+    std::array<std::optional<mini::SVector<ScalarType, 3>>, 6u> intersections;
+    auto uvwt = UvwLineSegmentTriangle3D(A1, B1, A2, B2, C2);
+    if (uvwt)
+        intersections[0] = uvwt->Slice<3, 1>(1, 0);
+    uvwt = UvwLineSegmentTriangle3D(B1, C1, A2, B2, C2);
+    if (uvwt)
+        intersections[1] = uvwt->Slice<3, 1>(1, 0);
+    uvwt = UvwLineSegmentTriangle3D(C1, A1, A2, B2, C2);
+    if (uvwt)
+        intersections[2] = uvwt->Slice<3, 1>(1, 0);
+    uvwt = UvwLineSegmentTriangle3D(A2, B2, A1, B1, C1);
+    if (uvwt)
+        intersections[3] = uvwt->Slice<3, 1>(1, 0);
+    uvwt = UvwLineSegmentTriangle3D(B2, C2, A1, B1, C1);
+    if (uvwt)
+        intersections[4] = uvwt->Slice<3, 1>(1, 0);
+    uvwt = UvwLineSegmentTriangle3D(C2, A2, A1, B1, C1);
+    if (uvwt)
+        intersections[5] = uvwt->Slice<3, 1>(1, 0);
     return intersections;
 }
 

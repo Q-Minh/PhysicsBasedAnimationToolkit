@@ -150,15 +150,15 @@ class AabbRadixTreeHierarchy
      *
      * @tparam FObjectsOverlap Callable with signature `bool(Index o1, Index o2)`
      * @tparam FOnOverlap Callable with signature `void(Index o1, Index o2, Index k)`
+     * @param rhs Other hierarchy to compare against
      * @param fObjectsOverlap Function to determine if 2 objects (o1,o2) overlap, where o1 is an
      * object from this tree and o2 is an object from the rhs tree
      * @param fOnOverlap Function to process an overlap (o1,o2) where o1 is an object from this tree
      * and o2 is an object from the rhs tree
-     * @param rhs Other hierarchy to compare against
      */
     template <class FObjectsOverlap, class FOnOverlap>
     void
-    Overlaps(FObjectsOverlap fObjectsOverlap, FOnOverlap fOnOverlap, SelfType const& rhs) const;
+    Overlaps(SelfType const& rhs, FObjectsOverlap fObjectsOverlap, FOnOverlap fOnOverlap) const;
 
     /**
      * @brief Get the internal node bounding boxes
@@ -412,9 +412,9 @@ inline void AabbRadixTreeHierarchy<kDims>::SelfOverlaps(
 template <auto kDims>
 template <class FObjectsOverlap, class FOnOverlap>
 inline void AabbRadixTreeHierarchy<kDims>::Overlaps(
+    SelfType const& rhs,
     FObjectsOverlap fObjectsOverlap,
-    FOnOverlap fOnOverlap,
-    SelfType const& rhs) const
+    FOnOverlap fOnOverlap) const
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.geometry.AabbRadixTreeHierarchy.Overlaps");
     // This tree will be the left-hand side tree

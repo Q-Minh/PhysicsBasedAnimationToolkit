@@ -3,9 +3,9 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     FILE_SET api
     FILES
     "Contact.h"
-    "TriangleMeshMultibodyCcd.h"
+    "MultibodyMeshMixedCcdDcd.h"
 )
 target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     PRIVATE
-    "TriangleMeshMultibodyCcd.cpp"
+    "MultibodyMeshMixedCcdDcd.cpp"
 )
