@@ -68,7 +68,7 @@ TEST_CASE("[sim][vbd] ChebyshevIntegrator")
     using pbat::sim::vbd::ChebyshevIntegrator;
     ChebyshevIntegrator cvbd{sim::vbd::Data()
                                  .WithVolumeMesh(P, T)
-                                 .WithSurfaceMesh(V, T)
+                                 .WithSurfaceMesh(V, F)
                                  .WithChebyshevAcceleration(rho)
                                  .Construct()};
     cvbd.Step(dt, iterations, substeps);

@@ -14,6 +14,7 @@ namespace pbat::sim::vbd {
 PBAT_API struct Data
 {
   public:
+    static auto constexpr kDims = 3; ///< Number of spatial dimensions
     /**
      * @brief Simulation mesh
      *
@@ -144,32 +145,34 @@ PBAT_API struct Data
 
   public:
     // Simulation mesh
-    MatrixX X;      ///< `3x|# verts|` FEM nodal positions
-    IndexMatrixX E; ///< `4x|# elems|` FEM linear tetrahedral elements
+    Matrix<kDims, Eigen::Dynamic> X;  ///< `3x|# verts|` FEM nodal positions
+    IndexMatrix<4, Eigen::Dynamic> E; ///< `4x|# elems|` FEM linear tetrahedral elements
 
     // Collision mesh
     IndexVectorX B; ///< `|# verts|` array of body indices
     IndexVectorX V; ///< Collision vertices
-    IndexMatrixX F; ///< `3x|#collision triangles|` collision triangles (on the boundary of T)
-    VectorX XVA;    ///< `|# verts|` vertex areas (i.e. triangle areas distributed onto vertices for
-                    ///< boundary integration)
-    VectorX FA;     ///< `|# collision triangles|` triangle areas
+    IndexMatrix<3, Eigen::Dynamic>
+        F;       ///< `3x|#collision triangles|` collision triangles (on the boundary of T)
+    VectorX XVA; ///< `|# verts|` vertex areas (i.e. triangle areas distributed onto vertices for
+                 ///< boundary integration)
+    VectorX FA;  ///< `|# collision triangles|` triangle areas
 
     // Vertex data
-    MatrixX x;    ///< `3x|# verts|` vertex positions
-    MatrixX v;    ///< `3x|# verts|` vertex velocities
-    MatrixX aext; ///< `3x|# verts|` vertex external accelerations
-    VectorX m;    ///< `|# verts|` vertex masses
+    Matrix<kDims, Eigen::Dynamic> x;    ///< `3x|# verts|` vertex positions
+    Matrix<kDims, Eigen::Dynamic> v;    ///< `3x|# verts|` vertex velocities
+    Matrix<kDims, Eigen::Dynamic> aext; ///< `3x|# verts|` vertex external accelerations
+    VectorX m;                          ///< `|# verts|` vertex masses
 
-    MatrixX xt;     ///< `3x|# verts|` previous vertex positions
-    MatrixX xtilde; ///< `3x|# verts|` inertial target positions
-    MatrixX vt;     ///< `3x|# verts|` previous vertex velocities
+    Matrix<kDims, Eigen::Dynamic> xt;     ///< `3x|# verts|` previous vertex positions
+    Matrix<kDims, Eigen::Dynamic> xtilde; ///< `3x|# verts|` inertial target positions
+    Matrix<kDims, Eigen::Dynamic> vt;     ///< `3x|# verts|` previous vertex velocities
 
     // Element data
-    VectorX wg;   ///< `|# elems|` quadrature weights
-    MatrixX GP;   ///< `|# elem.nodes|x|# dims*# elems|` shape function gradients at elems
+    VectorX wg; ///< `|# elems|` quadrature weights
+    Matrix<4, Eigen::Dynamic>
+        GP;       ///< `|# elem.nodes|x|# dims*# elems|` shape function gradients at elems
     VectorX rhoe; ///< `|# elems|` mass densities
-    MatrixX lame; ///< `2x|# elems|` Lame coefficients
+    Matrix<2, Eigen::Dynamic> lame; ///< `2x|# elems|` Lame coefficients
 
     // Vertex-element adjacency graph
     IndexVectorX GVGp;      ///< `|# verts+1|` prefixes into GVGg
@@ -209,7 +212,7 @@ PBAT_API struct Data
     EAccelerationStrategy eAcceleration{EAccelerationStrategy::None}; ///< Acceleration strategy
 
     // Chebyshev acceleration
-    Scalar rho{1};   ///< Chebyshev acceleration estimated spectral radius
+    Scalar rho{1}; ///< Chebyshev acceleration estimated spectral radius
 
     // Trust Region acceleration
     Scalar eta{0.2};    ///< Trust Region energy reduction accuracy threshold

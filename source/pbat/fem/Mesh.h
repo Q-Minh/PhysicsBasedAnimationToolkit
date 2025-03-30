@@ -36,9 +36,10 @@ namespace fem {
 template <CElement TElement, int Dims>
 struct Mesh
 {
-    using ElementType           = TElement;            ///< Underlying finite element type
-    static int constexpr kDims  = Dims;                ///< Embedding dimensions of the mesh
-    static int constexpr kOrder = ElementType::kOrder; ///< Shape function order
+    using ElementType                     = TElement; ///< Underlying finite element type
+    static int constexpr kDims            = Dims;     ///< Embedding dimensions of the mesh
+    static int constexpr kOrder           = ElementType::kOrder; ///< Shape function order
+    static int constexpr kNodesPerElement = ElementType::kNodes; ///< Number of nodes per element
 
     Mesh() = default;
     /**
@@ -65,8 +66,9 @@ struct Mesh
     template <int QuadratureOrder>
     Vector<TElement::template QuadratureType<QuadratureOrder>::kPoints> QuadratureWeights() const;
 
-    MatrixX X;      ///< `kDims x |# nodes|` nodal positions
-    IndexMatrixX E; ///< `|Element::Nodes| x |# elements|` element nodal indices
+    Matrix<kDims, Eigen::Dynamic> X; ///< `kDims x |# nodes|` nodal positions
+    IndexMatrix<kNodesPerElement, Eigen::Dynamic>
+        E; ///< `|Element::Nodes| x |# elements|` element nodal indices
 };
 
 /**
@@ -79,9 +81,10 @@ struct Mesh
 template <CElement TElement, int Dims>
 struct LinearMeshView
 {
-    using ElementType           = TElement;            ///< Underlying finite element type
-    static int constexpr kDims  = Dims;                ///< Embedding dimensions of the mesh
-    static int constexpr kOrder = ElementType::kOrder; ///< Shape function order
+    using ElementType                     = TElement; ///< Underlying finite element type
+    static int constexpr kDims            = Dims;     ///< Embedding dimensions of the mesh
+    static int constexpr kOrder           = ElementType::kOrder; ///< Shape function order
+    static int constexpr kNodesPerElement = ElementType::kNodes; ///< Number of nodes per element
 
     /**
      * @brief Constructs a finite element mesh given some input geometric mesh.
@@ -107,8 +110,9 @@ struct LinearMeshView
     template <int QuadratureOrder>
     Vector<TElement::template QuadratureType<QuadratureOrder>::kPoints> QuadratureWeights() const;
 
-    Eigen::Ref<MatrixX const> X;      ///< `kDims x |# nodes|` nodal positions
-    Eigen::Ref<IndexMatrixX const> E; ///< `|Element::Nodes| x |# elements|` element nodal indices
+    Eigen::Ref<Matrix<kDims, Eigen::Dynamic> const> X; ///< `kDims x |# nodes|` nodal positions
+    Eigen::Ref<IndexMatrix<kNodesPerElement, Eigen::Dynamic> const>
+        E; ///< `|Element::Nodes| x |# elements|` element nodal indices
 };
 
 namespace detail {
@@ -271,7 +275,7 @@ Mesh<TElement, Dims>::Mesh(
 }
 
 namespace detail {
-    
+
 template <CElement TElement, int Dims, int QuadratureOrder, class TDerivedX, class TDerivedE>
 inline MatrixX
 MeshQuadraturePoints(Eigen::MatrixBase<TDerivedX> const& X, Eigen::MatrixBase<TDerivedE> const& E)

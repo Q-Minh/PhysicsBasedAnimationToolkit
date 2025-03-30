@@ -151,7 +151,7 @@ TEST_CASE("[sim][vbd] Integrator")
     // Act
     using pbat::common::ToEigen;
     using pbat::sim::vbd::Integrator;
-    Integrator vbd{sim::vbd::Data().WithVolumeMesh(P, T).WithSurfaceMesh(V, T).Construct()};
+    Integrator vbd{sim::vbd::Data().WithVolumeMesh(P, T).WithSurfaceMesh(V, F).Construct()};
     vbd.Step(dt, iterations, substeps);
 
     // Assert
