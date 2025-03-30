@@ -4,5 +4,6 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     FILES
     "Push.h"
     "Pop.h"
+    "SignCompare.h"
     "SignConversion.h"
 )
