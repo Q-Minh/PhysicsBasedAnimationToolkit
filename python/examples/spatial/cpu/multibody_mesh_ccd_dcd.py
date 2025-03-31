@@ -28,6 +28,20 @@ if __name__ == "__main__":
         type=float,
         default=0.05,
     )
+    parser.add_argument(
+        "--frequency",
+        help="Frequency of the oscillation",
+        dest="frequency",
+        type=float,
+        default=1.2,
+    )
+    parser.add_argument(
+        "--amplitude",
+        help="Amplitude of the oscillation",
+        dest="amplitude",
+        type=float,
+        default=1.2,
+    )
     args = parser.parse_args()
 
     # Load input mesh
@@ -64,9 +78,7 @@ if __name__ == "__main__":
     ps.set_program_name("3D multibody mesh CCD and DCD contact detection algorithm")
 
     vm = [ps.register_volume_mesh(f"Mesh {m}", VI, T) for m, VI in enumerate(meshes)]
-
     t = 0
-
     def callback():
         global t
         for m, VI in enumerate(meshes):
@@ -75,7 +87,7 @@ if __name__ == "__main__":
             offset = args.separation * extents
             dir = np.ones(3)
             dir[r] = -1
-            u = 1.2 * dir * offset * np.sin(t * 2)
+            u = args.amplitude * dir * offset * np.sin(t * args.frequency)
             vm[m].update_vertex_positions(VI + u)
         t = t + 1 / 60
 
