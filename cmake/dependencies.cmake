@@ -48,10 +48,8 @@ endif()
 if(NOT TARGET cpp-sort::cpp-sort)
     FetchContent_Declare(
         _cppsort
-        # GIT_REPOSITORY https://github.com/Morwenn/cpp-sort.git
-        # GIT_TAG 1.16.0
-        GIT_REPOSITORY https://github.com/Q-Minh/cpp-sort
-        GIT_TAG 7c87a8775ca37a80dd2a518a5f5da9b049555b60
+        GIT_REPOSITORY https://github.com/Morwenn/cpp-sort.git
+        GIT_TAG 739e02e13d276b5b5a28e0981c7c6c3d55b03b6e
         GIT_SHALLOW TRUE
         GIT_PROGRESS TRUE
         SYSTEM

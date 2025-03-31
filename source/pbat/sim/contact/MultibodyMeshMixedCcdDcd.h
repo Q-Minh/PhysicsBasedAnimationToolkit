@@ -1,7 +1,8 @@
 /**
  * @file MultibodyMeshMixedCcdDcd.h
  * @author Quoc-Minh Ton-That (tonthat.quocminh@gmail.com)
- * @brief This file contains a multibody (triangle) mesh continuous collision detection system.
+ * @brief This file contains a multibody (tetrahedral) mesh mixed discrete and continuous collision
+ * detection system.
  * @date 2025-03-25
  *
  * @copyright Copyright (c) 2025
