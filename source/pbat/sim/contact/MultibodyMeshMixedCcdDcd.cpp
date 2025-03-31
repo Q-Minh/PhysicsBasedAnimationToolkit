@@ -13,10 +13,9 @@ void MultibodyMeshMixedCcdDcd::ComputeBodyAabbs()
         auto const& bvh = mVertexBvhs[o];
         auto LO         = mBodyAabbs.col(o).head<kDims>();
         auto UO         = mBodyAabbs.col(o).tail<kDims>();
-        auto const& IBO = bvh.InternalNodeBoundingBoxes();
         Index root      = bvh.Tree().Root();
-        LO              = IBO.col(root).head<kDims>();
-        UO              = IBO.col(root).tail<kDims>();
+        LO              = bvh.Lower(root);
+        UO              = bvh.Upper(root);
     }
 #include "pbat/warning/Pop.h"
 }
@@ -87,3 +86,9 @@ void MultibodyMeshMixedCcdDcd::RecomputeBodyBvh()
 }
 
 } // namespace pbat::sim::contact
+
+#include "pbat/geometry/MeshBoundary.h"
+
+#include <doctest/doctest.h>
+
+TEST_CASE("[sim][contact] MultibodyMeshMixedCcdDcd") {}

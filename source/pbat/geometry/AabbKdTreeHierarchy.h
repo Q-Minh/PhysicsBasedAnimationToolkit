@@ -189,6 +189,20 @@ class AabbKdTreeHierarchy
      * @return The k-D tree hierarchy
      */
     auto Tree() const -> KdTree<kDims> const& { return tree; }
+    /**
+     * @brief Obtain the lower bound of the AABB of a node
+     * @param node Node index
+     * @return Lower bound of the AABB of the node
+     * @pre `0 <= node < InternalNodeBoundingBoxes().cols()`
+     */
+    auto Lower(Index node) const { return IB.col(node).head<kDims>(); }
+    /**
+     * @brief Obtain the upper bound of the AABB of a node
+     * @param node Node index
+     * @return Upper bound of the AABB of the node
+     * @pre `0 <= node < InternalNodeBoundingBoxes().cols()`
+     */
+    auto Upper(Index node) const { return IB.col(node).tail<kDims>(); }
 
   private:
     Matrix<2 * kDims, Eigen::Dynamic>

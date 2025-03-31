@@ -117,6 +117,7 @@ if __name__ == "__main__":
     ]
     TS = [T for _ in range(gheight) for _ in range(gcols) for _ in range(grows)]
     X, V, E, F, T, VP, EP, FP, TP = build_multibody_system(VS, TS)
+    mcd = pbat.sim.contact.MultibodyMeshMixedCcdDcd(X, V, E, F, T, VP, EP, FP, TP)
     U = np.zeros_like(X)
 
     ps.init()
@@ -130,19 +131,30 @@ if __name__ == "__main__":
     sm = ps.register_surface_mesh("Surface mesh", X.T, F.T)
 
     t = 0
+    animate = False
+    profiler = pbat.profiling.Profiler()
+
     def callback():
-        global t
-        U[:] = 0
-        for m in range(VP.shape[0] - 1):
-            r = m % 3
-            # Update mesh position
-            offset = args.separation * extents
-            dir = np.ones(3)
-            dir[r] = -1
-            u = args.amplitude * dir * offset * np.sin(t * args.frequency)
-            U[:, V[VP[m]:VP[m + 1]]] = u[:, np.newaxis]
-        sm.update_vertex_positions((X+U).T)
-        t = t + 1 / 60
+        global t, animate
+
+        changed, animate = imgui.Checkbox("Animate", animate)
+        step = imgui.Button("Step")
+
+        if animate or step:
+            profiler.begin_frame("Physics")
+            U[:] = 0
+            for m in range(VP.shape[0] - 1):
+                r = m % 3
+                # Update mesh position
+                offset = args.separation * extents
+                dir = np.ones(3)
+                dir[r] = -1
+                u = args.amplitude * dir * offset * np.sin(t * args.frequency)
+                U[:, V[VP[m] : VP[m + 1]]] = u[:, np.newaxis]
+            v, f = mcd.dcd_pairs(X)
+            profiler.end_frame("Physics")
+            sm.update_vertex_positions((X + U).T)
+            t = t + 1 / 60
 
     ps.set_user_callback(callback)
     ps.show()

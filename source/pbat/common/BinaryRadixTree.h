@@ -246,15 +246,23 @@ BinaryRadixTree<TIndex>::Construct(Eigen::DenseBase<TDerived> const& codes, bool
         auto const first     = (not bReversed) * node.begin + bReversed * node.end;
         auto const last      = (not bReversed) * node.end + bReversed * node.begin;
         // Find the split position
-        auto const cfirst  = codes(first);
-        auto const clast   = codes(last);
-        auto const mask    = msb >> fCommonPrefixLength(cfirst, clast);
-        auto const begin   = codes.begin() + first;
-        auto const end     = codes.begin() + last + 1;
-        auto const upper   = std::upper_bound(begin, end, cfirst, [&](CodeType ci, CodeType cj) {
-            return (mask & ci) < (mask & cj);
-        });
-        TIndex const split = first + std::distance(begin, upper);
+        TIndex split      = first;
+        auto const cfirst = codes(first);
+        auto const clast  = codes(last);
+        if (cfirst == clast)
+        {
+            split += (last - first + 1) / 2;
+        }
+        else
+        {
+            auto const mask  = msb >> fCommonPrefixLength(cfirst, clast);
+            auto const begin = codes.begin() + first;
+            auto const end   = codes.begin() + last + 1;
+            auto const upper = std::upper_bound(begin, end, cfirst, [&](CodeType ci, CodeType cj) {
+                return (mask & ci) < (mask & cj);
+            });
+            split += std::distance(begin, upper);
+        }
         // The left and right child ranges are split as [first, split-1] and [split,last],
         // respectively.
         TIndex lc = split - 1;
