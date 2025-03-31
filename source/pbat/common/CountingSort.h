@@ -104,20 +104,17 @@ void CountingSort(
  * @tparam TValuesBegin
  * @tparam TValuesEnd
  * @tparam TWorkBegin
- * @tparam TWorkEnd
  * @param vb
  * @param ve
  * @param wb
- * @param we
  * @param fKey
  */
 template <
     std::random_access_iterator TValuesBegin,
     std::random_access_iterator TValuesEnd,
     std::random_access_iterator TWorkBegin,
-    std::random_access_iterator TWorkEnd,
     class FKey>
-void PrefixSumFromSortedKeys(TValuesBegin vb, TValuesEnd ve, TWorkBegin wb, TWorkEnd we, FKey fKey)
+void PrefixSumFromSortedKeys(TValuesBegin vb, TValuesEnd ve, TWorkBegin wb, FKey fKey)
 {
     using KeyType =
         std::invoke_result_t<FKey, typename std::iterator_traits<TValuesBegin>::value_type>;

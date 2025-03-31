@@ -1,5 +1,6 @@
 include(CMakeFindDependencyMacro)
 
+find_dependency(cpp-sort)
 find_dependency(doctest)
 find_dependency(Eigen3)
 find_dependency(fmt)

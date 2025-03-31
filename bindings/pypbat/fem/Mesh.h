@@ -1,6 +1,7 @@
 #ifndef PYPBAT_FEM_MESH_H
 #define PYPBAT_FEM_MESH_H
 
+#include <Eigen/Core>
 #include <exception>
 #include <fmt/core.h>
 #include <pbat/Aliases.h>
@@ -105,11 +106,8 @@ class Mesh
     MatrixX QuadraturePoints(int qOrder) const;
     VectorX QuadratureWeights(int qOrder) const;
 
-    MatrixX const& X() const;
-    IndexMatrixX const& E() const;
-
-    MatrixX& X();
-    IndexMatrixX& E();
+    Eigen::Map<MatrixX> X() const;
+    Eigen::Map<IndexMatrixX> E() const;
 
     ~Mesh();
 

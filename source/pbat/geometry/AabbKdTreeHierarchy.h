@@ -15,6 +15,7 @@
 #include "pbat/Aliases.h"
 #include "pbat/common/NAryTreeTraversal.h"
 #include "pbat/geometry/OverlapQueries.h"
+#include "pbat/math/linalg/mini/Eigen.h"
 #include "pbat/profiling/Profiling.h"
 
 #include <Eigen/Core>
@@ -381,11 +382,16 @@ inline void AabbKdTreeHierarchy<kDims>::SelfOverlaps(
         [&](Index n) { return nodes[n].n; },
         [&](Index n, Index i) { return perm(nodes[n].begin + i); },
         [&](Index n1, Index n2) {
+            using math::linalg::mini::FromEigen;
             auto L1 = IB.col(n1).head<kDims>();
             auto U1 = IB.col(n1).tail<kDims>();
             auto L2 = IB.col(n2).head<kDims>();
             auto U2 = IB.col(n2).tail<kDims>();
-            return geometry::OverlapQueries::AxisAlignedBoundingBoxes(L1, U1, L2, U2);
+            return geometry::OverlapQueries::AxisAlignedBoundingBoxes(
+                FromEigen(L1),
+                FromEigen(U1),
+                FromEigen(L2),
+                FromEigen(U2));
         },
         fObjectsOverlap,
         fOnSelfOverlap);
@@ -411,7 +417,7 @@ inline void AabbKdTreeHierarchy<kDims>::Overlaps(
     auto const fIsLeafLhs = [&](Index n) {
         return nodes[n].IsLeaf();
     };
-    auto const fLeafSizeLhs = []([[maybe_unused]] Index n) {
+    auto const fLeafSizeLhs = [&]([[maybe_unused]] Index n) {
         return nodes[n].n;
     };
     auto const fLeafObjectLhs = [&](Index n, [[maybe_unused]] Index i) {
@@ -429,7 +435,7 @@ inline void AabbKdTreeHierarchy<kDims>::Overlaps(
     auto const fIsLeafRhs = [&](Index n) {
         return nodesRhs[n].IsLeaf();
     };
-    auto const fLeafSizeRhs = []([[maybe_unused]] Index n) {
+    auto const fLeafSizeRhs = [&]([[maybe_unused]] Index n) {
         return nodesRhs[n].n;
     };
     auto const fLeafObjectRhs = [&](Index n, [[maybe_unused]] Index i) {
@@ -446,11 +452,16 @@ inline void AabbKdTreeHierarchy<kDims>::Overlaps(
         fLeafSizeRhs,
         fLeafObjectRhs,
         [&](Index n1, Index n2) {
+            using math::linalg::mini::FromEigen;
             auto L1 = IB.col(n1).head<kDims>();
             auto U1 = IB.col(n1).tail<kDims>();
             auto L2 = rhs.IB.col(n2).head<kDims>();
             auto U2 = rhs.IB.col(n2).tail<kDims>();
-            return geometry::OverlapQueries::AxisAlignedBoundingBoxes(L1, U1, L2, U2);
+            return geometry::OverlapQueries::AxisAlignedBoundingBoxes(
+                FromEigen(L1),
+                FromEigen(U1),
+                FromEigen(L2),
+                FromEigen(U2));
         },
         fObjectsOverlap,
         fOnOverlap);

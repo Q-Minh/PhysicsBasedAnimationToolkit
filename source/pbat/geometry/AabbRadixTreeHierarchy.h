@@ -10,6 +10,7 @@
 #include "pbat/common/Permute.h"
 #include "pbat/geometry/Morton.h"
 #include "pbat/geometry/OverlapQueries.h"
+#include "pbat/math/linalg/mini/Eigen.h"
 #include "pbat/profiling/Profiling.h"
 
 #include <cpp-sort/sorters/ska_sorter.h>
@@ -399,11 +400,16 @@ inline void AabbRadixTreeHierarchy<kDims>::SelfOverlaps(
         [&](Index n1, Index n2) {
             if (tree.IsLeaf(n1) or tree.IsLeaf(n2))
                 return true; // Radix tree leaf nodes correspond to individual objects
+            using math::linalg::mini::FromEigen;
             auto L1 = IB.col(n1).head<kDims>();
             auto U1 = IB.col(n1).tail<kDims>();
             auto L2 = IB.col(n2).head<kDims>();
             auto U2 = IB.col(n2).tail<kDims>();
-            return geometry::OverlapQueries::AxisAlignedBoundingBoxes(L1, U1, L2, U2);
+            return geometry::OverlapQueries::AxisAlignedBoundingBoxes(
+                FromEigen(L1),
+                FromEigen(U1),
+                FromEigen(L2),
+                FromEigen(U2));
         },
         fObjectsOverlap,
         fOnSelfOverlap);
@@ -462,11 +468,16 @@ inline void AabbRadixTreeHierarchy<kDims>::Overlaps(
         [&](Index n1, Index n2) {
             if (tree.IsLeaf(n1) or rhs.tree.IsLeaf(n2))
                 return true; // Radix tree leaf nodes correspond to individual objects
+            using math::linalg::mini::FromEigen;
             auto L1 = IB.col(n1).head<kDims>();
             auto U1 = IB.col(n1).tail<kDims>();
             auto L2 = rhs.IB.col(n2).head<kDims>();
             auto U2 = rhs.IB.col(n2).tail<kDims>();
-            return geometry::OverlapQueries::AxisAlignedBoundingBoxes(L1, U1, L2, U2);
+            return geometry::OverlapQueries::AxisAlignedBoundingBoxes(
+                FromEigen(L1),
+                FromEigen(U1),
+                FromEigen(L2),
+                FromEigen(U2));
         },
         fObjectsOverlap,
         fOnOverlap);

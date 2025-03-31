@@ -1,5 +1,6 @@
 #include "Sim.h"
 
+#include "contact/Contact.h"
 #include "vbd/Vbd.h"
 #include "xpbd/Xpbd.h"
 
@@ -11,6 +12,8 @@ void Bind(pybind11::module& m)
 {
     namespace pyb = pybind11;
 
+    auto mcontact = m.def_submodule("contact");
+    contact::Bind(mcontact);
     auto mxpbd = m.def_submodule("xpbd");
     xpbd::Bind(mxpbd);
     auto mvbd = m.def_submodule("vbd");

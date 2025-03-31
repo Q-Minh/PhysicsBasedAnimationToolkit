@@ -43,7 +43,7 @@ namespace pbat::sim::contact {
  * constraints from discrete collision detection. Inactive vertices and edges are checked for
  * earliest intersection using CCD in the linear trajectory
  * \f$ \mathbf{x} = (1-\Delta t) \mathbf{x}(t) + \Delta t \mathbf{x}(t+1) \; \forall \; \Delta t \in
- * [0,1]\f$.`
+ * [0,1]\f$.
  *
  * We adopt a tree of tree approach for broadphase culling. In both DCD and CCD, we first perform a
  * body-level broadphase using a BVH over all bodies in the world. For each potentially colliding
@@ -70,9 +70,10 @@ class MultibodyMeshMixedCcdDcd
      */
     struct VertexTriangleContact
     {
-        using TriangleVertices = math::linalg::mini::SVector<Index, 3>;
+        using TriangleVertices = math::linalg::mini::SVector<Index, 3>; ///< Triangle vertices
 
-        Index i, f;           ///< Vertex-triangle pair
+        Index i;              ///< Vertex index
+        Index f;              ///< Triangle index
         TriangleVertices fjs; ///< Triangle vertices
     };
     /**
@@ -80,11 +81,14 @@ class MultibodyMeshMixedCcdDcd
      */
     struct EdgeEdgeContact
     {
-        using EdgeBarycentricCoordinates = math::linalg::mini::SVector<Scalar, 2>;
-        using EdgeVertices               = math::linalg::mini::SVector<Index, 2>;
+        using EdgeBarycentricCoordinates =
+            math::linalg::mini::SVector<Scalar, 2>;                 ///< Barycentric coordinates
+        using EdgeVertices = math::linalg::mini::SVector<Index, 2>; ///< Edge vertices
 
-        Index ei, ej;          ///< Edge-edge pair
-        EdgeVertices eis, ejs; ///< Edge indices
+        Index ei;         ///< Edge 1
+        Index ej;         ///< Edge 2
+        EdgeVertices eis; ///< Edge 1 vertices
+        EdgeVertices ejs; ///< Edge 2 vertices
         EdgeBarycentricCoordinates
             beta; ///< Barycentric weights of the intersection point on each edges
     };
@@ -109,38 +113,6 @@ class MultibodyMeshMixedCcdDcd
      */
     template <class TDerivedX>
     MultibodyMeshMixedCcdDcd(
-        Eigen::DenseBase<TDerivedX> const& X,
-        Eigen::Ref<IndexVectorX const> const& V,
-        Eigen::Ref<IndexMatrix<2, Eigen::Dynamic> const> const& E,
-        Eigen::Ref<IndexMatrix<3, Eigen::Dynamic> const> const& F,
-        Eigen::Ref<IndexMatrix<4, Eigen::Dynamic> const> const& T,
-        Eigen::Ref<IndexVectorX const> const& VP,
-        Eigen::Ref<IndexVectorX const> const& EP,
-        Eigen::Ref<IndexVectorX const> const& FP,
-        Eigen::Ref<IndexVectorX const> const& TP);
-    /**
-     * @brief Prepare the multibody CCD system for collision detection
-     * @tparam TDerivedX Eigen type of the input vertex positions
-     * @tparam TDerivedVP Eigen type of the input vertex prefix sum
-     * @tparam TDerivedEP Eigen type of the input edge prefix sum
-     * @tparam TDerivedFP Eigen type of the input face prefix sum
-     * @tparam TDerivedTP Eigen type of the input tetrahedron prefix sum
-     * @param X `kDims x |# vertices|` matrix of vertex positions
-     * @param V `|# vertices|` vertex array
-     * @param E `2 x |# edges|` edge array
-     * @param F `3 x |# triangles|` triangle array
-     * @param T `4 x |# tetrahedra|` tetrahedron array
-     * @param VP `|# objects + 1| x 1` prefix sum of vertex pointers into `V` s.t.
-     * `V(VP(o):VP(o+1))` are collision vertices of object `o`
-     * @param EP `|# objects + 1| x 1` prefix sum of edge pointers into `E` s.t. `E(EP(o):EP(o+1))`
-     * are collision edges of object `o`
-     * @param FP `|# objects + 1| x 1` prefix sum of triangle pointers into `F` s.t.
-     * `F(FP(o):FP(o+1))` are collision triangles of object `o`
-     * @param TP `|# objects + 1| x 1` prefix sum of tetrahedron pointers into `T` s.t.
-     * `T(TP(o):TP(o+1))` are collision tetrahedra of object `o`
-     */
-    template <class TDerivedX>
-    void Prepare(
         Eigen::DenseBase<TDerivedX> const& X,
         Eigen::Ref<IndexVectorX const> const& V,
         Eigen::Ref<IndexMatrix<2, Eigen::Dynamic> const> const& E,
@@ -471,39 +443,11 @@ inline MultibodyMeshMixedCcdDcd::MultibodyMeshMixedCcdDcd(
     Eigen::Ref<IndexVectorX const> const& EP,
     Eigen::Ref<IndexVectorX const> const& FP,
     Eigen::Ref<IndexVectorX const> const& TP)
+    : mVP(VP), mEP(EP), mFP(FP), mTP(TP), mV(V), mE(E), mF(F), mT(T)
 {
-    Prepare(
-        X.derived(),
-        VP.derived(),
-        V.derived(),
-        EP.derived(),
-        E.derived(),
-        FP.derived(),
-        F.derived());
-}
-
-template <class TDerivedX>
-inline void MultibodyMeshMixedCcdDcd::Prepare(
-    Eigen::DenseBase<TDerivedX> const& X,
-    Eigen::Ref<IndexVectorX const> const& V,
-    Eigen::Ref<IndexMatrix<2, Eigen::Dynamic> const> const& E,
-    Eigen::Ref<IndexMatrix<3, Eigen::Dynamic> const> const& F,
-    Eigen::Ref<IndexMatrix<4, Eigen::Dynamic> const> const& T,
-    Eigen::Ref<IndexVectorX const> const& VP,
-    Eigen::Ref<IndexVectorX const> const& EP,
-    Eigen::Ref<IndexVectorX const> const& FP,
-    Eigen::Ref<IndexVectorX const> const& TP)
-{
-    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.MultibodyMeshMixedCcdDcd.Prepare");
-    // Store input triangle meshes
-    mVP = VP;
-    mEP = EP;
-    mFP = FP;
-    mTP = TP;
-    mV  = V;
-    mE  = E;
-    mF  = F;
-    mT  = T;
+    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.MultibodyMeshMixedCcdDcd.Construct");
+#include "pbat/warning/Push.h"
+#include "pbat/warning/SignConversion.h"
     // Allocate memory for AABBs and active sets
     mVertexAabbs.resize(2 * kDims, V.cols());
     mEdgeAabbs.resize(2 * kDims, E.cols());
@@ -541,7 +485,8 @@ inline void MultibodyMeshMixedCcdDcd::Prepare(
         mBodyAabbs.col(o).tail<kDims>() = XVo.rowwise().maxCoeff();
     }
     // Construct body BVH to allocate memory
-    mBodyBvh.Construct(mBodyAabbs);
+    mBodyBvh.Construct(mBodyAabbs.topRows<kDims>(), mBodyAabbs.bottomRows<kDims>());
+#include "pbat/warning/Pop.h"
 }
 
 template <
@@ -573,6 +518,7 @@ inline void MultibodyMeshMixedCcdDcd::UpdateDcdActiveSet(
     Eigen::DenseBase<TDerivedX> const& X,
     FOnVertexTriangleContactPair&& fOnVertexTriangleContactPair)
 {
+    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.MultibodyMeshMixedCcdDcd.UpdateDcdActiveSet");
     // Update AABBs for discrete collision detection
     ComputeVertexAabbs(X);
     ComputeTriangleAabbs(X);
@@ -600,6 +546,7 @@ inline void MultibodyMeshMixedCcdDcd::UpdateCcdActiveSet(
     FOnVertexTriangleContactPair&& fOnVertexTriangleContactPair,
     FOnEdgeEdgeContactPair&& fOnEdgeEdgeContactPair)
 {
+    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.MultibodyMeshMixedCcdDcd.UpdateCcdActiveSet");
     // Compute AABBs for linearly swept vertices, edges and triangles
     ComputeVertexAabbs(XT, X);
     ComputeEdgeAabbs(XT, X);
@@ -628,7 +575,8 @@ inline void MultibodyMeshMixedCcdDcd::HandleDcdPairs(
 #include "pbat/warning/SignConversion.h"
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.MultibodyMeshMixedCcdDcd.HandleDcdPairs");
     // Report vertex-triangle contacts for each DCD penetrating vertex
-    ForEachPenetratingVertex([&](Index i, Index o) {
+    ForEachPenetratingVertex(X.derived(), [&](Index i, Index o) {
+        // Mark vertex as penetrating so that it doesn't participe in CCD
         mPenetratingVertexMask[i] = true;
         // Contact point is vertex position
         Vector<kDims> const XC = X.col(i);
@@ -676,6 +624,7 @@ inline void MultibodyMeshMixedCcdDcd::HandleCcdPairs(
     FOnVertexTriangleContactPair&& fOnVertexTriangleContactPair,
     FOnEdgeEdgeContactPair&& fOnEdgeEdgeContactPair)
 {
+    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.MultibodyMeshMixedCcdDcd.HandleCcdPairs");
     ForEachBodyPair([&](Index oi, Index oj) {
         ReportVertexTriangleCcdContacts(
             XT,
@@ -701,6 +650,7 @@ inline void MultibodyMeshMixedCcdDcd::HandleCcdPairs(
 template <class TDerivedX>
 inline void MultibodyMeshMixedCcdDcd::ComputeVertexAabbs(Eigen::DenseBase<TDerivedX> const& X)
 {
+    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.MultibodyMeshMixedCcdDcd.ComputeVertexAabbs");
     auto XV                          = X(Eigen::placeholders::all, mV);
     mVertexAabbs.topRows<kDims>()    = XV;
     mVertexAabbs.bottomRows<kDims>() = XV;
@@ -796,13 +746,19 @@ inline void MultibodyMeshMixedCcdDcd::ComputeTetrahedronAabbs(Eigen::DenseBase<T
 template <class FOnBodyPair>
 inline void MultibodyMeshMixedCcdDcd::ForEachBodyPair(FOnBodyPair&& fOnBodyPair)
 {
+    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.MultibodyMeshMixedCcdDcd.ForEachBodyPair");
     mBodyBvh.SelfOverlaps(
         [&](Index o1, Index o2) {
+            using math::linalg::mini::FromEigen;
             auto L1 = mBodyAabbs.col(o1).head<kDims>();
             auto U1 = mBodyAabbs.col(o1).tail<kDims>();
             auto L2 = mBodyAabbs.col(o2).head<kDims>();
             auto U2 = mBodyAabbs.col(o2).tail<kDims>();
-            return geometry::OverlapQueries::AxisAlignedBoundingBoxes(L1, U1, L2, U2);
+            return geometry::OverlapQueries::AxisAlignedBoundingBoxes(
+                FromEigen(L1),
+                FromEigen(U1),
+                FromEigen(L2),
+                FromEigen(U2));
         },
         [fOnBodyPair = std::forward<FOnBodyPair>(
              fOnBodyPair)](Index oi, Index oj, [[maybe_unused]] Index k) { fOnBodyPair(oi, oj); });
@@ -813,6 +769,7 @@ inline void MultibodyMeshMixedCcdDcd::ForEachPenetratingVertex(
     Eigen::DenseBase<TDerivedX> const& X,
     FOnPenetratingVertex&& fOnPenetratingVertex)
 {
+    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.MultibodyMeshMixedCcdDcd.ForEachPenetratingVertex");
     auto const fVisitPenetratingVerticesOf =
         [&,
          fOnPenetratingVertex =
@@ -857,6 +814,8 @@ inline void MultibodyMeshMixedCcdDcd::ReportVertexTriangleCcdContacts(
     Index oj,
     FOnVertexTriangleContactPair fOnVertexTriangleContactPair)
 {
+    PBAT_PROFILE_NAMED_SCOPE(
+        "pbat.sim.contact.MultibodyMeshMixedCcdDcd.ReportVertexTriangleCcdContacts");
     mVertexBvhs[oi].Overlaps(
         mTriangleBvhs[oj],
         [&,
@@ -905,6 +864,7 @@ inline void MultibodyMeshMixedCcdDcd::ReportEdgeEdgeCcdContacts(
     Index oj,
     FOnEdgeEdgeContactPair&& fOnEdgeEdgeContactPair)
 {
+    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.MultibodyMeshMixedCcdDcd.ReportEdgeEdgeCcdContacts");
     mEdgeBvhs[oi].Overlaps(
         mEdgeBvhs[oj],
         [&,
@@ -942,7 +902,7 @@ inline void MultibodyMeshMixedCcdDcd::ReportEdgeEdgeCcdContacts(
             {
                 auto uv = tbeta.Slice<2, 1>(1, 0);
                 fOnEdgeEdgeContactPair(
-                    EdgeEdgeContact{ei, ej, FromEigen(eindsi), FromEigen(eindsj), FromEigen(uv)});
+                    EdgeEdgeContact{ei, ej, FromEigen(eindsi), FromEigen(eindsj), uv});
             }
             return bIntersects;
         },

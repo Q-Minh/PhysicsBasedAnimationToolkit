@@ -86,32 +86,22 @@ VectorX Mesh::QuadratureWeights(int qOrder) const
     return WG;
 }
 
-MatrixX const& Mesh::X() const
+Eigen::Map<MatrixX> Mesh::X() const
 {
-    MatrixX* XN = nullptr;
-    Apply([&]<class MeshType>(MeshType* mesh) { XN = std::addressof(mesh->X); });
-    return *XN;
+    Eigen::Map<MatrixX> XN{nullptr, 0, 0};
+    Apply([&]<class MeshType>(MeshType* mesh) {
+        XN = Eigen::Map<MatrixX>(mesh->X.data(), mesh->X.rows(), mesh->X.cols());
+    });
+    return XN;
 }
 
-IndexMatrixX const& Mesh::E() const
+Eigen::Map<IndexMatrixX> Mesh::E() const
 {
-    IndexMatrixX* EN = nullptr;
-    Apply([&]<class MeshType>(MeshType* mesh) { EN = std::addressof(mesh->E); });
-    return *EN;
-}
-
-MatrixX& Mesh::X()
-{
-    MatrixX* XN = nullptr;
-    Apply([&]<class MeshType>(MeshType* mesh) { XN = std::addressof(mesh->X); });
-    return *XN;
-}
-
-IndexMatrixX& Mesh::E()
-{
-    IndexMatrixX* EN = nullptr;
-    Apply([&]<class MeshType>(MeshType* mesh) { EN = std::addressof(mesh->E); });
-    return *EN;
+    Eigen::Map<IndexMatrixX> EN{nullptr, 0, 0};
+    Apply([&]<class MeshType>(MeshType* mesh) {
+        EN = Eigen::Map<IndexMatrixX>(mesh->E.data(), mesh->E.rows(), mesh->E.cols());
+    });
+    return EN;
 }
 
 Mesh::~Mesh()

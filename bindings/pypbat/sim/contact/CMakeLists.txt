@@ -2,12 +2,11 @@ target_sources(PhysicsBasedAnimationToolkit_Python
     PUBLIC
     FILE_SET api
     FILES
-    "Sim.h"
+    "Contact.h"
+    "MultibodyMeshMixedCcdDcd.h"
 )
 target_sources(PhysicsBasedAnimationToolkit_Python
     PRIVATE
-    "Sim.cpp"
+    "Contact.cpp"
+    "MultibodyMeshMixedCcdDcd.cpp"
 )
-add_subdirectory(contact)
-add_subdirectory(vbd)
-add_subdirectory(xpbd)

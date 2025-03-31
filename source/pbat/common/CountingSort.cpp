@@ -91,7 +91,6 @@ TEST_CASE("[common] CountingSort")
             objects.begin(),
             objects.end(),
             workspace.begin(),
-            workspace.end(),
             fKey);
         CHECK_EQ(workspace[0], 2);
         CHECK_EQ(workspace[1], 3);
