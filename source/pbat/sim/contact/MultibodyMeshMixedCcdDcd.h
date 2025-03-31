@@ -577,7 +577,7 @@ inline void MultibodyMeshMixedCcdDcd::HandleDcdPairs(
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.MultibodyMeshMixedCcdDcd.HandleDcdPairs");
     // Report vertex-triangle contacts for each DCD penetrating vertex
     ForEachPenetratingVertex(X.derived(), [&](Index i, Index o) {
-        // Mark vertex as penetrating so that it doesn't participe in CCD
+        // Mark vertex as penetrating so that it doesn't participate in CCD
         mPenetratingVertexMask[i] = true;
         // Contact point is vertex position
         Vector<kDims> const XC = X.col(i);

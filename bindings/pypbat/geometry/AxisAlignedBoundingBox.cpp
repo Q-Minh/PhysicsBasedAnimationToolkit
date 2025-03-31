@@ -87,6 +87,28 @@ void BindAxisAlignedBoundingBox(pybind11::module& m)
                 pyb::arg("t"))
             .def_property_readonly("volume", &AabbType::volume);
     });
+    m.def(
+        "mesh_to_aabbs",
+        [](Eigen::Ref<MatrixX const> const& X, Eigen::Ref<IndexMatrixX const> const& E) {
+            MatrixX B(2 * X.rows(), E.cols());
+            common::ForRange<1, 4>([&]<auto kDims>() {
+                common::ForRange<1, 5>([&]<auto kElemNodes>() {
+                    if (kDims == X.rows() and E.cols() == kElemNodes)
+                    {
+                        pbat::geometry::MeshToAabbs<kDims, kElemNodes>(X, E, B);
+                    }
+                });
+            });
+            return B;
+        },
+        pyb::arg("X"),
+        pyb::arg("E"),
+        "Compute axis-aligned bounding boxes (AABBs) for a mesh.\n\n"
+        "Args:\n"
+        "    X: `kDims x |# vertices|` matrix of vertex positions\n"
+        "    E: `kElemNodes x |# elements|` matrix of element connectivity\n\n"
+        "Returns:\n"
+        "    `2*kDims x |# elements|` matrix of axis-aligned bounding boxes\n\n");
 }
 
 } // namespace geometry
