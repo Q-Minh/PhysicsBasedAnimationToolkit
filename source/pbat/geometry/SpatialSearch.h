@@ -568,19 +568,18 @@ PBAT_HOST_DEVICE bool SelfOverlaps(
                     children[i] = fChild.template operator()<i>(n);
                 });
                 // Add node visitors first, so that we don't traverse the whole tree in one go
+                std::int16_t const nextLevel = p.levelLhs + std::int16_t{1};
                 common::ForRange<0, N>([&]<auto i> PBAT_HOST_DEVICE() {
                     if (stack.IsFull())
                         return;
                     if (children[i] < 0)
                         return;
-                    std::int16_t const nextLevel = p.levelLhs + std::int16_t{1};
                     stack.Push({children[i], children[i], nextLevel, nextLevel});
                 });
                 // Add all distinct child pairs to the stack
                 common::ForRange<0, N>([&]<auto i> PBAT_HOST_DEVICE() {
                     if (children[i] < 0)
                         return;
-                    std::int16_t const nextLevel = p.levelLhs + std::int16_t{1};
                     common::ForRange<i + 1, N>([&]<auto j> PBAT_HOST_DEVICE() {
                         if (stack.IsFull())
                             return;
