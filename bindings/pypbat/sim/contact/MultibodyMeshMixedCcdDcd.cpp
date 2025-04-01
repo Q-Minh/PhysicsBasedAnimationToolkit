@@ -113,7 +113,95 @@ void BindMultibodyMeshMixedCcdDcd([[maybe_unused]] pybind11::module& m)
             "Args:\n"
             "    XK (numpy.ndarray): `3 x |# verts|` mesh vertex positions at current time\n"
             "Returns:\n"
-            "    Tuple[List[int], List[int]]: (v,f) lists of vertex-triangle contact pairs");
+            "    Tuple[List[int], List[int]]: (v,f) lists of vertex-triangle contact pairs")
+        .def_property_readonly(
+            "body_aabbs",
+            &MultibodyMeshMixedCcdDcd::GetBodyAabbs,
+            "`2*kDims x |# bodies|` array of body AABBs")
+        .def(
+            "compute_vertex_aabbs",
+            [](MultibodyMeshMixedCcdDcd& self, Eigen::Ref<MatrixX const> const& X) {
+                self.ComputeVertexAabbs(X);
+            },
+            pyb::arg("X"),
+            "Compute vertex AABBs for mesh vertex BVHs\n\n"
+            "Args:\n"
+            "    X (numpy.ndarray): `3 x |# verts|` mesh vertex positions")
+        .def(
+            "compute_vertex_aabbs",
+            [](MultibodyMeshMixedCcdDcd& self,
+               Eigen::Ref<MatrixX const> const& XT,
+               Eigen::Ref<MatrixX const> const& X) { self.ComputeVertexAabbs(XT, X); },
+            pyb::arg("XT"),
+            pyb::arg("X"),
+            "Compute vertex AABBs for mesh vertex BVHs\n\n"
+            "Args:\n"
+            "    XT (numpy.ndarray): `3 x |# verts|` mesh vertex positions at time t\n"
+            "    X (numpy.ndarray): `3 x |# verts|` mesh vertex positions at time t+1")
+        .def(
+            "compute_edge_aabbs",
+            [](MultibodyMeshMixedCcdDcd& self,
+               Eigen::Ref<MatrixX const> const& XT,
+               Eigen::Ref<MatrixX const> const& X) { self.ComputeEdgeAabbs(XT, X); },
+            pyb::arg("XT"),
+            pyb::arg("X"),
+            "Compute edge AABBs for mesh edge BVHs\n\n"
+            "Args:\n"
+            "    XT (numpy.ndarray): `3 x |# verts|` mesh vertex positions at time t\n"
+            "    X (numpy.ndarray): `3 x |# verts|` mesh vertex positions at time t+1")
+        .def(
+            "compute_triangle_aabbs",
+            [](MultibodyMeshMixedCcdDcd& self, Eigen::Ref<MatrixX const> const& X) {
+                self.ComputeTriangleAabbs(X);
+            },
+            pyb::arg("X"),
+            "Compute triangle AABBs for mesh triangle BVHs\n\n"
+            "Args:\n"
+            "    X (numpy.ndarray): `3 x |# verts|` mesh vertex positions")
+        .def(
+            "compute_triangle_aabbs",
+            [](MultibodyMeshMixedCcdDcd& self,
+               Eigen::Ref<MatrixX const> const& XT,
+               Eigen::Ref<MatrixX const> const& X) { self.ComputeTriangleAabbs(XT, X); },
+            pyb::arg("XT"),
+            pyb::arg("X"),
+            "Compute triangle AABBs for mesh triangle BVHs\n\n"
+            "Args:\n"
+            "    XT (numpy.ndarray): `3 x |# verts|` mesh vertex positions at time t\n"
+            "    X (numpy.ndarray): `3 x |# verts|` mesh vertex positions at time t+1")
+        .def(
+            "compute_tetrahedron_aabbs",
+            [](MultibodyMeshMixedCcdDcd& self, Eigen::Ref<MatrixX const> const& X) {
+                self.ComputeTetrahedronAabbs(X);
+            },
+            pyb::arg("X"),
+            "Compute tetrahedron AABBs for mesh tetrahedron BVHs\n\n"
+            "Args:\n"
+            "    X (numpy.ndarray): `3 x |# verts|` mesh vertex positions")
+        .def(
+            "compute_body_aabbs",
+            &MultibodyMeshMixedCcdDcd::ComputeBodyAabbs,
+            "Compute body AABBs from mesh vertex BVHs")
+        .def(
+            "update_mesh_vertex_bvhs",
+            &MultibodyMeshMixedCcdDcd::UpdateMeshVertexBvhs,
+            "Recompute mesh vertex BVHs' bounding volumes")
+        .def(
+            "update_mesh_edge_bvhs",
+            &MultibodyMeshMixedCcdDcd::UpdateMeshEdgeBvhs,
+            "Recompute mesh edge BVHs' bounding volumes")
+        .def(
+            "update_mesh_triangle_bvhs",
+            &MultibodyMeshMixedCcdDcd::UpdateMeshTriangleBvhs,
+            "Recompute mesh triangle BVHs' bounding volumes")
+        .def(
+            "update_mesh_tetrahedron_bvhs",
+            &MultibodyMeshMixedCcdDcd::UpdateMeshTetrahedronBvhs,
+            "Recompute mesh tetrahedron BVHs' bounding volumes")
+        .def(
+            "recompute_body_bvh",
+            &MultibodyMeshMixedCcdDcd::RecomputeBodyBvh,
+            "Recompute body BVH tree and internal node bounding volumes");
 }
 
 } // namespace pbat::py::sim::contact

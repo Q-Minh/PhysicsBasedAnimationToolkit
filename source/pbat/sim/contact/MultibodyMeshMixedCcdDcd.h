@@ -193,46 +193,14 @@ class MultibodyMeshMixedCcdDcd
         FOnVertexTriangleContactPair&& fOnVertexTriangleContactPair,
         FOnEdgeEdgeContactPair&& fOnEdgeEdgeContactPair);
 
-  protected:
     /**
-     * @brief Report DCD vertex-triangle contacts
-     * @tparam FOnVertexTriangleContactPair Callback function with signature
-     * `void(VertexTriangleContact c)`
-     * @tparam TDerivedX Eigen type of vertex positions
-     * @param X `kDims x |# vertices|` matrix of vertex positions
-     * @param fOnVertexTriangleContactPair Callback function for vertex-triangle contact pairs
-     * @pre Vertex, triangle, tetrahedron and body BVHs must be up-to-date
-     */
-    template <class FOnVertexTriangleContactPair, class TDerivedX>
-    void HandleDcdPairs(
-        Eigen::DenseBase<TDerivedX> const& X,
-        FOnVertexTriangleContactPair&& fOnVertexTriangleContactPair);
-    /**
-     * @brief Report CCD (inactive) vertex-triangle and edge-edge pairs
+     * @brief Get the body Aabbs of this scene. This is mostly useful for debugging.
      *
-     * @tparam FOnVertexTriangleContactPair Callback function with signature
-     * `void(VertexTriangleContact c)`
-     * @tparam FOnEdgeEdgeContactPair Callback function with signature `void(EdgeEdgeContact c)`
-     * @tparam TDerivedXT Eigen type of vertex positions at time t
-     * @tparam TDerivedX Eigen type of vertex positions at time t+1
-     * @param XT `kDims x |# vertices|` matrix of vertex positions at time t
-     * @param X `kDims x |# vertices|` matrix of vertex positions at time t+1
-     * @param fOnVertexTriangleContactPair Callback function for vertex-triangle contact pairs
-     * @param fOnEdgeEdgeContactPair Callback function for edge-edge contact pairs
-     * @pre UpdateDcdActiveSet must be called prior to calling this function so that the active
-     * vertex mask is up-to-date, and vertex, edge, triangle and body BVHs must be up-to-date using
-     * linear trajectory \f$ x(t) -> x(t+1) \f$.
+     * @return ``2*kDims x |# objects|` matrix of axis-aligned bounding boxes over each object in
+     * the scene.
      */
-    template <
-        class FOnVertexTriangleContactPair,
-        class FOnEdgeEdgeContactPair,
-        class TDerivedXT,
-        class TDerivedX>
-    void HandleCcdPairs(
-        Eigen::DenseBase<TDerivedXT> const& XT,
-        Eigen::DenseBase<TDerivedX> const& X,
-        FOnVertexTriangleContactPair&& fOnVertexTriangleContactPair,
-        FOnEdgeEdgeContactPair&& fOnEdgeEdgeContactPair);
+    [[maybe_unused]] auto const& GetBodyAabbs() const { return mBodyAabbs; }
+
     /**
      * @brief Compute axis-aligned bounding boxes for vertices
      *
@@ -278,6 +246,11 @@ class MultibodyMeshMixedCcdDcd
     void ComputeTriangleAabbs(
         Eigen::DenseBase<TDerivedXT> const& XT,
         Eigen::DenseBase<TDerivedX> const& X);
+
+    /**
+     * @brief We make AABB and BVH computation public for debugging purposes
+     */
+
     /**
      * @brief Compute axis-aligned bounding boxes for tetrahedra
      * @tparam TDerivedX Eigen type of vertex positions
@@ -311,6 +284,47 @@ class MultibodyMeshMixedCcdDcd
      * @brief Recompute body BVH tree and internal node bounding boxes
      */
     void RecomputeBodyBvh();
+
+  protected:
+    /**
+     * @brief Report DCD vertex-triangle contacts
+     * @tparam FOnVertexTriangleContactPair Callback function with signature
+     * `void(VertexTriangleContact c)`
+     * @tparam TDerivedX Eigen type of vertex positions
+     * @param X `kDims x |# vertices|` matrix of vertex positions
+     * @param fOnVertexTriangleContactPair Callback function for vertex-triangle contact pairs
+     * @pre Vertex, triangle, tetrahedron and body BVHs must be up-to-date
+     */
+    template <class FOnVertexTriangleContactPair, class TDerivedX>
+    void HandleDcdPairs(
+        Eigen::DenseBase<TDerivedX> const& X,
+        FOnVertexTriangleContactPair&& fOnVertexTriangleContactPair);
+    /**
+     * @brief Report CCD (inactive) vertex-triangle and edge-edge pairs
+     *
+     * @tparam FOnVertexTriangleContactPair Callback function with signature
+     * `void(VertexTriangleContact c)`
+     * @tparam FOnEdgeEdgeContactPair Callback function with signature `void(EdgeEdgeContact c)`
+     * @tparam TDerivedXT Eigen type of vertex positions at time t
+     * @tparam TDerivedX Eigen type of vertex positions at time t+1
+     * @param XT `kDims x |# vertices|` matrix of vertex positions at time t
+     * @param X `kDims x |# vertices|` matrix of vertex positions at time t+1
+     * @param fOnVertexTriangleContactPair Callback function for vertex-triangle contact pairs
+     * @param fOnEdgeEdgeContactPair Callback function for edge-edge contact pairs
+     * @pre UpdateDcdActiveSet must be called prior to calling this function so that the active
+     * vertex mask is up-to-date, and vertex, edge, triangle and body BVHs must be up-to-date using
+     * linear trajectory \f$ x(t) -> x(t+1) \f$.
+     */
+    template <
+        class FOnVertexTriangleContactPair,
+        class FOnEdgeEdgeContactPair,
+        class TDerivedXT,
+        class TDerivedX>
+    void HandleCcdPairs(
+        Eigen::DenseBase<TDerivedXT> const& XT,
+        Eigen::DenseBase<TDerivedX> const& X,
+        FOnVertexTriangleContactPair&& fOnVertexTriangleContactPair,
+        FOnEdgeEdgeContactPair&& fOnEdgeEdgeContactPair);
     /**
      * @brief Loop over all potentially colliding body pairs
      *
@@ -567,87 +581,6 @@ inline void MultibodyMeshMixedCcdDcd::UpdateCcdActiveSet(
         std::forward<FOnEdgeEdgeContactPair>(fOnEdgeEdgeContactPair));
 }
 
-template <class FOnVertexTriangleContactPair, class TDerivedX>
-inline void MultibodyMeshMixedCcdDcd::HandleDcdPairs(
-    Eigen::DenseBase<TDerivedX> const& X,
-    FOnVertexTriangleContactPair&& fOnVertexTriangleContactPair)
-{
-#include "pbat/warning/Push.h"
-#include "pbat/warning/SignConversion.h"
-    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.MultibodyMeshMixedCcdDcd.HandleDcdPairs");
-    // Report vertex-triangle contacts for each DCD penetrating vertex
-    ForEachPenetratingVertex(X.derived(), [&](Index i, Index o) {
-        // Mark vertex as penetrating so that it doesn't participate in CCD
-        mPenetratingVertexMask[i] = true;
-        // Contact point is vertex position
-        Vector<kDims> const XC = X.col(i);
-        // Define point-aabb and point-triangle distance functions for vertex i
-        auto const fDistanceToBox = [&]<class TL, class TU>(TL const& L, TU const& U) {
-            using math::linalg::mini::FromEigen;
-            return geometry::DistanceQueries::PointAxisAlignedBoundingBox(
-                FromEigen(XC),
-                FromEigen(L),
-                FromEigen(U));
-        };
-        auto const fDistanceToTriangle = [&](Index f) {
-            using math::linalg::mini::FromEigen;
-            Matrix<kDims, 3> XF = X(Eigen::placeholders::all, mF.col(f));
-            return geometry::DistanceQueries::PointTriangle(
-                FromEigen(XC),
-                FromEigen(XF.col(0)),
-                FromEigen(XF.col(1)),
-                FromEigen(XF.col(2)));
-        };
-        // Find nearest surface point (i.e. triangle)
-        mTriangleBvhs[o].NearestNeighbour(
-            fDistanceToBox,
-            fDistanceToTriangle,
-            [&, fReport = std::forward<FOnVertexTriangleContactPair>(fOnVertexTriangleContactPair)](
-                Index f,
-                [[maybe_unused]] Scalar d,
-                [[maybe_unused]] Index k) {
-                using math::linalg::mini::FromEigen;
-                f = mFP(o) + f;
-                fReport(VertexTriangleContact{i, f, FromEigen(mF.col(f))});
-            });
-    });
-#include "pbat/warning/Pop.h"
-}
-
-template <
-    class FOnVertexTriangleContactPair,
-    class FOnEdgeEdgeContactPair,
-    class TDerivedXT,
-    class TDerivedX>
-inline void MultibodyMeshMixedCcdDcd::HandleCcdPairs(
-    Eigen::DenseBase<TDerivedXT> const& XT,
-    Eigen::DenseBase<TDerivedX> const& X,
-    FOnVertexTriangleContactPair&& fOnVertexTriangleContactPair,
-    FOnEdgeEdgeContactPair&& fOnEdgeEdgeContactPair)
-{
-    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.MultibodyMeshMixedCcdDcd.HandleCcdPairs");
-    ForEachBodyPair([&](Index oi, Index oj) {
-        ReportVertexTriangleCcdContacts(
-            XT,
-            X,
-            oi,
-            oj,
-            std::forward<FOnVertexTriangleContactPair>(fOnVertexTriangleContactPair));
-        ReportVertexTriangleCcdContacts(
-            XT,
-            X,
-            oj,
-            oi,
-            std::forward<FOnVertexTriangleContactPair>(fOnVertexTriangleContactPair));
-        ReportEdgeEdgeCcdContacts(
-            XT,
-            X,
-            oi,
-            oj,
-            std::forward<FOnEdgeEdgeContactPair>(fOnEdgeEdgeContactPair));
-    });
-}
-
 template <class TDerivedX>
 inline void MultibodyMeshMixedCcdDcd::ComputeVertexAabbs(Eigen::DenseBase<TDerivedX> const& X)
 {
@@ -742,6 +675,87 @@ inline void MultibodyMeshMixedCcdDcd::ComputeTetrahedronAabbs(Eigen::DenseBase<T
         L      = XT.rowwise().minCoeff();
         U      = XT.rowwise().maxCoeff();
     }
+}
+
+template <class FOnVertexTriangleContactPair, class TDerivedX>
+inline void MultibodyMeshMixedCcdDcd::HandleDcdPairs(
+    Eigen::DenseBase<TDerivedX> const& X,
+    FOnVertexTriangleContactPair&& fOnVertexTriangleContactPair)
+{
+#include "pbat/warning/Push.h"
+#include "pbat/warning/SignConversion.h"
+    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.MultibodyMeshMixedCcdDcd.HandleDcdPairs");
+    // Report vertex-triangle contacts for each DCD penetrating vertex
+    ForEachPenetratingVertex(X.derived(), [&](Index i, Index o) {
+        // Mark vertex as penetrating so that it doesn't participate in CCD
+        mPenetratingVertexMask[i] = true;
+        // Contact point is vertex position
+        Vector<kDims> const XC = X.col(i);
+        // Define point-aabb and point-triangle distance functions for vertex i
+        auto const fDistanceToBox = [&]<class TL, class TU>(TL const& L, TU const& U) {
+            using math::linalg::mini::FromEigen;
+            return geometry::DistanceQueries::PointAxisAlignedBoundingBox(
+                FromEigen(XC),
+                FromEigen(L),
+                FromEigen(U));
+        };
+        auto const fDistanceToTriangle = [&](Index f) {
+            using math::linalg::mini::FromEigen;
+            Matrix<kDims, 3> XF = X(Eigen::placeholders::all, mF.col(f));
+            return geometry::DistanceQueries::PointTriangle(
+                FromEigen(XC),
+                FromEigen(XF.col(0)),
+                FromEigen(XF.col(1)),
+                FromEigen(XF.col(2)));
+        };
+        // Find nearest surface point (i.e. triangle)
+        mTriangleBvhs[o].NearestNeighbour(
+            fDistanceToBox,
+            fDistanceToTriangle,
+            [&, fReport = std::forward<FOnVertexTriangleContactPair>(fOnVertexTriangleContactPair)](
+                Index f,
+                [[maybe_unused]] Scalar d,
+                [[maybe_unused]] Index k) {
+                using math::linalg::mini::FromEigen;
+                f = mFP(o) + f;
+                fReport(VertexTriangleContact{i, f, FromEigen(mF.col(f))});
+            });
+    });
+#include "pbat/warning/Pop.h"
+}
+
+template <
+    class FOnVertexTriangleContactPair,
+    class FOnEdgeEdgeContactPair,
+    class TDerivedXT,
+    class TDerivedX>
+inline void MultibodyMeshMixedCcdDcd::HandleCcdPairs(
+    Eigen::DenseBase<TDerivedXT> const& XT,
+    Eigen::DenseBase<TDerivedX> const& X,
+    FOnVertexTriangleContactPair&& fOnVertexTriangleContactPair,
+    FOnEdgeEdgeContactPair&& fOnEdgeEdgeContactPair)
+{
+    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.MultibodyMeshMixedCcdDcd.HandleCcdPairs");
+    ForEachBodyPair([&](Index oi, Index oj) {
+        ReportVertexTriangleCcdContacts(
+            XT,
+            X,
+            oi,
+            oj,
+            std::forward<FOnVertexTriangleContactPair>(fOnVertexTriangleContactPair));
+        ReportVertexTriangleCcdContacts(
+            XT,
+            X,
+            oj,
+            oi,
+            std::forward<FOnVertexTriangleContactPair>(fOnVertexTriangleContactPair));
+        ReportEdgeEdgeCcdContacts(
+            XT,
+            X,
+            oi,
+            oj,
+            std::forward<FOnEdgeEdgeContactPair>(fOnEdgeEdgeContactPair));
+    });
 }
 
 template <class FOnBodyPair>
