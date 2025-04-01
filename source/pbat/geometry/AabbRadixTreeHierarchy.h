@@ -110,7 +110,7 @@ class AabbRadixTreeHierarchy
      * @param eps Maximum distance error
      */
     template <class FDistanceToNode, class FDistanceToObject, class FOnNearestNeighbour>
-    void NearestNeighbour(
+    void NearestNeighbours(
         FDistanceToNode fDistanceToNode,
         FDistanceToObject fDistanceToObject,
         FOnNearestNeighbour fOnNearestNeighbour,
@@ -309,15 +309,15 @@ inline void AabbRadixTreeHierarchy<kDims>::Overlaps(
 
 template <auto kDims>
 template <class FDistanceToNode, class FDistanceToObject, class FOnNearestNeighbour>
-inline void AabbRadixTreeHierarchy<kDims>::NearestNeighbour(
+inline void AabbRadixTreeHierarchy<kDims>::NearestNeighbours(
     FDistanceToNode fDistanceToNode,
     FDistanceToObject fDistanceToObject,
     FOnNearestNeighbour fOnNearestNeighbour,
     Scalar radius,
     Scalar eps) const
 {
-    PBAT_PROFILE_NAMED_SCOPE("pbat.geometry.AabbRadixTreeHierarchy.NearestNeighbour");
-    geometry::NearestNeighbour(
+    PBAT_PROFILE_NAMED_SCOPE("pbat.geometry.AabbRadixTreeHierarchy.NearestNeighbours");
+    geometry::DfsAllNearestNeighbours(
         [&]<auto c>(Index n) -> Index {
             if constexpr (c == 0)
                 return tree.IsLeaf(n) ? -1 : tree.Left(n);

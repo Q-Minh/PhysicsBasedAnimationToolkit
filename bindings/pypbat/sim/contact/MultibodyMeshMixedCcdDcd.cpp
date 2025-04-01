@@ -115,6 +115,22 @@ void BindMultibodyMeshMixedCcdDcd([[maybe_unused]] pybind11::module& m)
             "Returns:\n"
             "    Tuple[List[int], List[int]]: (v,f) lists of vertex-triangle contact pairs")
         .def_property_readonly(
+            "vertex_aabbs",
+            &MultibodyMeshMixedCcdDcd::GetVertexAabbs,
+            "`2*kDims x |# bodies|` array of vertex AABBs")
+        .def_property_readonly(
+            "edge_aabbs",
+            &MultibodyMeshMixedCcdDcd::GetEdgeAabbs,
+            "`2*kDims x |# bodies|` array of edge AABBs")
+        .def_property_readonly(
+            "triangle_aabbs",
+            &MultibodyMeshMixedCcdDcd::GetTriangleAabbs,
+            "`2*kDims x |# bodies|` array of triangle AABBs")
+        .def_property_readonly(
+            "tetrahedron_aabbs",
+            &MultibodyMeshMixedCcdDcd::GetTetrahedronAabbs,
+            "`2*kDims x |# bodies|` array of tetrahedron AABBs")
+        .def_property_readonly(
             "body_aabbs",
             &MultibodyMeshMixedCcdDcd::GetBodyAabbs,
             "`2*kDims x |# bodies|` array of body AABBs")
@@ -201,7 +217,51 @@ void BindMultibodyMeshMixedCcdDcd([[maybe_unused]] pybind11::module& m)
         .def(
             "recompute_body_bvh",
             &MultibodyMeshMixedCcdDcd::RecomputeBodyBvh,
-            "Recompute body BVH tree and internal node bounding volumes");
+            "Recompute body BVH tree and internal node bounding volumes")
+        .def_property_readonly(
+            "body_pairs",
+            [](MultibodyMeshMixedCcdDcd const& self) {
+#include <pbat/warning/Push.h>
+#include <pbat/warning/SignConversion.h>
+                // We will store the results in these vectors
+                auto const nBodies = self.BodyCount();
+                std::vector<Index> oi;
+                std::vector<Index> oj;
+                oj.reserve(nBodies);
+                oi.reserve(nBodies);
+                // Detect DCD contact pairs
+                self.ForEachBodyPair([&](Index i, Index j) {
+                    oi.push_back(i);
+                    oj.push_back(j);
+                });
+#include <pbat/warning/Pop.h>
+                return std::make_tuple(oi, oj);
+            },
+            "Get the body pairs for the multibody mesh CCD system\n\n"
+            "Returns:\n"
+            "    Tuple[List[int], List[int]]: list of body pairs (oi,oj)")
+        .def(
+            "vertex_body_pairs",
+            [](MultibodyMeshMixedCcdDcd const& self, Eigen::Ref<MatrixX const> const& XK) {
+#include <pbat/warning/Push.h>
+#include <pbat/warning/SignConversion.h>
+                // We will store the results in these vectors
+                auto const nVertices = self.VertexCount();
+                std::vector<Index> vi;
+                std::vector<Index> oi;
+                vi.reserve(nVertices);
+                oi.reserve(nVertices);
+                // Detect DCD contact pairs
+                self.ForEachPenetratingVertex(XK, [&](Index i, Index o) {
+                    vi.push_back(i);
+                    oi.push_back(o);
+                });
+#include <pbat/warning/Pop.h>
+                return std::make_tuple(vi, oi);
+            },
+            "Get the vertex-body pairs of DCD query\n\n"
+            "Returns:\n"
+            "    Tuple[List[int], List[int]]: list of vertex-body pairs (v,o)");
 }
 
 } // namespace pbat::py::sim::contact

@@ -242,7 +242,7 @@ template <
     class TIndex     = Index,
     auto kStackDepth = 64,
     auto kQueueSize  = 8>
-PBAT_HOST_DEVICE bool NearestNeighbour(
+PBAT_HOST_DEVICE bool DfsAllNearestNeighbours(
     FChild fChild,
     FIsLeaf fIsLeaf,
     FLeafSize fLeafSize,
@@ -256,7 +256,116 @@ PBAT_HOST_DEVICE bool NearestNeighbour(
     TIndex root              = 0);
 
 /**
- * @brief Find the K distance minimizers in a branch and bound tree rooted in root
+ * @brief Traverse objects in a branch and bound tree rooted in root in increasing order of distance
+ *
+ * @note This function is a branch and bound tree traversal algorithm, similar to NearestNeighbour.
+ * However, we maintain a min-distance-heap of all visited nodes so far, whose space complexities
+ * hould scale linearly w.r.t. the height of the tree, i.e. O(log(n)), where n is the number of
+ * nodes in the tree. By always visiting nodes closest to the query first, we quickly restrict the
+ * upper bound, pruning most of the search space. Each node visit costs approximately O(log(log(n)),
+ * due to heap insertions and deletions, but the total number of visits is expected to be much
+ * smaller than a generic depth-first traversal. However, the stack memory requirements are much
+ * higher, due to storing node indices, distances, and types (i.e. node or leaf object), and due to
+ * the search order not necessarily obeying a depth-first traversal.
+ *
+ * @tparam FChild Callable with signature `template <auto c> TIndex(TIndex node)`
+ * @tparam FIsLeaf Callable with signature `bool(TIndex node)`
+ * @tparam FLeafSize Callable with signature `TIndex(TIndex node)`
+ * @tparam FLeafObject Callable with signature `TIndex(TIndex node, TIndex i)`
+ * @tparam FDistanceLowerBound Callable with signature `TScalar(TIndex node)`
+ * @tparam FDistance Callable with signature `TScalar(TIndex o)`
+ * @tparam FOnFound Callable with signature `bool(TIndex o, TScalar d, TIndex k)`
+ * @tparam N Max number of children per node
+ * @tparam TScalar Type of the scalar distance
+ * @tparam TIndex Type of the index
+ * @param fChild Function to get child c of a node. Returns the child index or -1 if no child.
+ * @param fIsLeaf Function to determine if a node is a leaf node
+ * @param fLeafSize Function to get the number of leaf objects in a node
+ * @param fLeafObject Function to get the i-th leaf object in a node
+ * @param fLower Function to compute the lower bound of the distance to node
+ * @param fDistance Function to compute the distance to object
+ * @param fOnFound Function to call when a nearest neighbour is found, returns true if the search
+ * should continue
+ * @param fUpper Upper bound of the distance to the nearest neighbour
+ * @param root Index of the root node to start the search from
+ * @return true if the traversal completed, false if it was stopped early due to insufficient stack
+ * capacity
+ */
+template <
+    class FChild,
+    class FIsLeaf,
+    class FLeafSize,
+    class FLeafObject,
+    class FDistanceLowerBound,
+    class FDistance,
+    class FOnFound,
+    auto N             = 2,
+    class TScalar      = Scalar,
+    class TIndex       = Index,
+    auto kHeapCapacity = N * 1024>
+PBAT_HOST_DEVICE bool NearestToFurthestNeighbours(
+    FChild fChild,
+    FIsLeaf fIsLeaf,
+    FLeafSize fLeafSize,
+    FLeafObject fLeafObject,
+    FDistanceLowerBound fLower,
+    FDistance fDistance,
+    FOnFound fOnFound,
+    TScalar fUpper = std::numeric_limits<TScalar>::max(),
+    TIndex root    = 0);
+
+/**
+ * @brief Find all global distance minimizers in a branch and bound tree rooted in root
+ *
+ * @tparam FChild Callable with signature `template <auto c> TIndex(TIndex node)`
+ * @tparam FIsLeaf Callable with signature `bool(TIndex node)`
+ * @tparam FLeafSize Callable with signature `TIndex(TIndex node)`
+ * @tparam FLeafObject Callable with signature `TIndex(TIndex node, TIndex i)`
+ * @tparam FDistanceLowerBound Callable with signature `TScalar(TIndex node)`
+ * @tparam FDistance Callable with signature `TScalar(TIndex o)`
+ * @tparam FOnFound Callable with signature `void(TIndex o, TScalar d, TIndex k)`
+ * @tparam N Max number of children per node
+ * @tparam TScalar Type of the scalar distance
+ * @tparam TIndex Type of the index
+ * @param fChild Function to get child c of a node. Returns the child index or -1 if no child.
+ * @param fIsLeaf Function to determine if a node is a leaf node
+ * @param fLeafSize Function to get the number of leaf objects in a node
+ * @param fLeafObject Function to get the i-th leaf object in a node
+ * @param fLower Function to compute the lower bound of the distance to node
+ * @param fDistance Function to compute the distance to object
+ * @param fOnFound Function to call when a nearest neighbour is found
+ * @param fUpper Upper bound of the distance to the nearest neighbour
+ * @param root Index of the root node to start the search from
+ * @return true if the traversal completed, false if it was stopped early due to insufficient stack
+ * capacity
+ */
+template <
+    class FChild,
+    class FIsLeaf,
+    class FLeafSize,
+    class FLeafObject,
+    class FDistanceLowerBound,
+    class FDistance,
+    class FOnFound,
+    auto N             = 2,
+    class TScalar      = Scalar,
+    class TIndex       = Index,
+    auto kHeapCapacity = N * 1024>
+PBAT_HOST_DEVICE bool AllNearestNeighbours(
+    FChild fChild,
+    FIsLeaf fIsLeaf,
+    FLeafSize fLeafSize,
+    FLeafObject fLeafObject,
+    FDistanceLowerBound fLower,
+    FDistance fDistance,
+    FOnFound fOnFound,
+    TScalar fUpper = std::numeric_limits<TScalar>::max(),
+    TScalar eps    = TScalar(0),
+    TIndex root    = 0);
+
+/**
+ * @brief Find the (sorted) K objects with the smallest distances in a branch and bound tree rooted
+ * in root
  *
  * @note This function is a branch and bound tree traversal algorithm, similar to NearestNeighbour.
  * However, we maintain a min-distance-heap of all visited nodes so far, whose space complexities
@@ -301,7 +410,7 @@ template <
     auto N             = 2,
     class TScalar      = Scalar,
     class TIndex       = Index,
-    auto kHeapCapacity = 64>
+    auto kHeapCapacity = N * 1024>
 PBAT_HOST_DEVICE bool KNearestNeighbours(
     FChild fChild,
     FIsLeaf fIsLeaf,
@@ -646,7 +755,7 @@ template <
     class TIndex,
     auto kStackDepth,
     auto kQueueSize>
-bool NearestNeighbour(
+bool DfsAllNearestNeighbours(
     FChild fChild,
     FIsLeaf fIsLeaf,
     FLeafSize fLeafSize,
@@ -790,7 +899,7 @@ template <
     class TScalar,
     class TIndex,
     auto kHeapCapacity>
-bool KNearestNeighbours(
+bool NearestToFurthestNeighbours(
     FChild fChild,
     FIsLeaf fIsLeaf,
     FLeafSize fLeafSize,
@@ -798,7 +907,6 @@ bool KNearestNeighbours(
     FDistanceLowerBound fLower,
     FDistance fDistance,
     FOnFound fOnFound,
-    TIndex K,
     TScalar fUpper,
     TIndex root)
 {
@@ -860,12 +968,119 @@ bool KNearestNeighbours(
         }
         else
         {
-            fOnFound(q.idx, q.d, k++);
-            if (k == K)
+            bool const bContinue = fOnFound(q.idx, q.d, k++);
+            if (not bContinue)
                 break;
         }
     }
     return true;
+}
+
+template <
+    class FChild,
+    class FIsLeaf,
+    class FLeafSize,
+    class FLeafObject,
+    class FDistanceLowerBound,
+    class FDistance,
+    class FOnFound,
+    auto N,
+    class TScalar,
+    class TIndex,
+    auto kHeapCapacity>
+PBAT_HOST_DEVICE bool AllNearestNeighbours(
+    FChild fChild,
+    FIsLeaf fIsLeaf,
+    FLeafSize fLeafSize,
+    FLeafObject fLeafObject,
+    FDistanceLowerBound fLower,
+    FDistance fDistance,
+    FOnFound fOnFound,
+    TScalar fUpper,
+    TScalar eps,
+    TIndex root)
+{
+    TScalar dmin;
+    auto fOnFoundWrapper = [&](TIndex o, TScalar d, TIndex k) {
+        if (k == 0)
+            dmin = d;
+        bool const bIsNearest = d <= dmin + eps;
+        if (bIsNearest)
+            fOnFound(o, d, k);
+        return bIsNearest;
+    };
+    return NearestToFurthestNeighbours<
+        FChild,
+        FIsLeaf,
+        FLeafSize,
+        FLeafObject,
+        FDistanceLowerBound,
+        FDistance,
+        decltype(fOnFoundWrapper),
+        N,
+        TScalar,
+        TIndex,
+        kHeapCapacity>(
+        fChild,
+        fIsLeaf,
+        fLeafSize,
+        fLeafObject,
+        fLower,
+        fDistance,
+        fOnFoundWrapper,
+        fUpper,
+        root);
+}
+
+template <
+    class FChild,
+    class FIsLeaf,
+    class FLeafSize,
+    class FLeafObject,
+    class FDistanceLowerBound,
+    class FDistance,
+    class FOnFound,
+    auto N,
+    class TScalar,
+    class TIndex,
+    auto kHeapCapacity>
+bool KNearestNeighbours(
+    FChild fChild,
+    FIsLeaf fIsLeaf,
+    FLeafSize fLeafSize,
+    FLeafObject fLeafObject,
+    FDistanceLowerBound fLower,
+    FDistance fDistance,
+    FOnFound fOnFound,
+    TIndex K,
+    TScalar fUpper,
+    TIndex root)
+{
+    auto fOnFoundWrapper = [&](TIndex o, TScalar d, TIndex k) {
+        fOnFound(o, d, k);
+        return (k + 1) < K;
+    };
+    return NearestToFurthestNeighbours<
+        FChild,
+        FIsLeaf,
+        FLeafSize,
+        FLeafObject,
+        FDistanceLowerBound,
+        FDistance,
+        decltype(fOnFoundWrapper),
+        N,
+        TScalar,
+        TIndex,
+        kHeapCapacity>(
+        fChild,
+        fIsLeaf,
+        fLeafSize,
+        fLeafObject,
+        fLower,
+        fDistance,
+        fOnFoundWrapper,
+        fUpper,
+        root);
 }
 
 } // namespace pbat::geometry

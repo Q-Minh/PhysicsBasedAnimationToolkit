@@ -119,6 +119,8 @@ if __name__ == "__main__":
     X, V, E, F, T, VP, EP, FP, TP = build_multibody_system(VS, TS)
     mcd = pbat.sim.contact.MultibodyMeshMixedCcdDcd(X, V, E, F, T, VP, EP, FP, TP)
     U = np.zeros_like(X)
+    XT = X.copy()
+    XTP1 = X.copy()
 
     ps.init()
     ps.set_verbosity(0)
@@ -129,28 +131,25 @@ if __name__ == "__main__":
     ps.set_program_name("3D multibody mesh CCD and DCD contact detection algorithm")
 
     sm = ps.register_surface_mesh("Surface mesh", X.T, F.T)
-
-    BB = mcd.body_aabbs
-    BL = BB[:3, :]
-    BU = BB[3:, :]
-    nboxes = BL.shape[1]
-    BV = np.hstack([BL, BU])
-    BE = np.vstack([np.arange(nboxes), np.arange(nboxes) + nboxes])
-    cn = ps.register_curve_network("Body AABBs", BV.T, BE.T)
+    sm.set_transparency(0.5)
+    sm.set_edge_width(1)
 
     t = 0
     animate = False
+    n_body_pairs = 0
+    n_contact_pairs = 0
     profiler = pbat.profiling.Profiler()
 
     def callback():
         global t, animate
-        global U
+        global U, XT, XTP1, n_body_pairs, n_contact_pairs
 
         changed, animate = imgui.Checkbox("Animate", animate)
         step = imgui.Button("Step")
 
         if animate or step:
             profiler.begin_frame("Physics")
+            XT = XTP1
             U[:] = 0
             for m in range(VP.shape[0] - 1):
                 r = m % 3
@@ -161,15 +160,32 @@ if __name__ == "__main__":
                 u = args.amplitude * dir * offset * np.sin(t * args.frequency)
                 U[:, V[VP[m] : VP[m + 1]]] = u[:, np.newaxis]
             XTP1 = X + U
+            # v, f, ei, ej = mcd.all_pairs(XT, XTP1, XT)
             v, f = mcd.dcd_pairs(XTP1)
+            oi, oj = mcd.body_pairs
             profiler.end_frame("Physics")
-            BB = mcd.body_aabbs
-            BL = BB[:3, :]
-            BU = BB[3:, :]
-            BV = np.hstack([BL, BU])
-            cn.update_node_positions(BV.T)
+
+            n_contact_pairs = len(v) # + len(ei)
+            n_body_pairs = len(oi)
+            ps.register_point_cloud("DCD verts", XTP1[:, v].T)
+            oo = np.unique(np.vstack([oi, oj]))
+            fcolors = np.zeros(F.shape[1], dtype=np.float64)
+            for oi in oo:
+                fcolors[FP[oi] : FP[oi + 1]] = 1.0
+            sm.add_scalar_quantity(
+                "Overlapping body",
+                fcolors,
+                defined_on="faces",
+                enabled=True,
+                cmap="coolwarm",
+                vminmax=(0, 1),
+            )
             sm.update_vertex_positions(XTP1.T)
+
             t = t + 1 / 60
+
+        imgui.Text(f"# of contact pairs={n_contact_pairs}")
+        imgui.Text(f"# of body pairs={n_body_pairs}")
 
     ps.set_user_callback(callback)
     ps.show()

@@ -123,7 +123,7 @@ class AabbKdTreeHierarchy
      * @param eps Maximum distance error
      */
     template <class FDistanceToNode, class FDistanceToObject, class FOnNearestNeighbour>
-    void NearestNeighbour(
+    void NearestNeighbours(
         FDistanceToNode fDistanceToNode,
         FDistanceToObject fDistanceToObject,
         FOnNearestNeighbour fOnNearestNeighbour,
@@ -307,17 +307,17 @@ inline void AabbKdTreeHierarchy<kDims>::Overlaps(
 
 template <auto kDims>
 template <class FDistanceToNode, class FDistanceToObject, class FOnNearestNeighbour>
-inline void AabbKdTreeHierarchy<kDims>::NearestNeighbour(
+inline void AabbKdTreeHierarchy<kDims>::NearestNeighbours(
     FDistanceToNode fDistanceToNode,
     FDistanceToObject fDistanceToObject,
     FOnNearestNeighbour fOnNearestNeighbour,
     Scalar radius,
     Scalar eps) const
 {
-    PBAT_PROFILE_NAMED_SCOPE("pbat.geometry.AabbKdTreeHierarchy.NearestNeighbour");
+    PBAT_PROFILE_NAMED_SCOPE("pbat.geometry.AabbKdTreeHierarchy.NearestNeighbours");
     KdTreeNode const* nodes  = tree.Nodes().data();
     IndexVectorX const& perm = tree.Permutation();
-    geometry::NearestNeighbour(
+    geometry::DfsAllNearestNeighbours(
         [&]<auto c>(Index n) -> Index {
             if constexpr (c == 0)
                 return nodes[n].Left();
@@ -336,7 +336,7 @@ inline void AabbKdTreeHierarchy<kDims>::NearestNeighbour(
         },
         fDistanceToObject,
         fOnNearestNeighbour,
-        false /*bUseBestFirstSearch*/,
+        true /*bUseBestFirstSearch*/,
         radius,
         eps);
 }

@@ -42,7 +42,7 @@ TEST_CASE("[geometry] AabbKdTreeHierarchy")
             [&](Index j) { return P.isApprox(B.col(j).head<kDims>()); },
             [&](Index j, [[maybe_unused]] Index k) { CHECK_EQ(j, i); });
         // Point i is the nearest neighbour of point i
-        tree.NearestNeighbour(
+        tree.NearestNeighbours(
             [&]<class TL, class TU>(TL const& L, TU const& U) {
                 return geometry::DistanceQueries::PointAxisAlignedBoundingBox(
                     FromEigen(P),

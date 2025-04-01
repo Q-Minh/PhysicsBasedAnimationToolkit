@@ -200,6 +200,34 @@ class MultibodyMeshMixedCcdDcd
      * the scene.
      */
     [[maybe_unused]] auto const& GetBodyAabbs() const { return mBodyAabbs; }
+    /**
+     * @brief Get the vertex Aabbs of this scene. This is mostly useful for debugging.
+     *
+     * @return `2*kDims x |# vertices|` matrix of axis-aligned bounding boxes over each vertex in
+     * the scene.
+     */
+    [[maybe_unused]] auto const& GetVertexAabbs() const { return mVertexAabbs; }
+    /**
+     * @brief Get the edge Aabbs of this scene. This is mostly useful for debugging.
+     *
+     * @return `2*kDims x |# edges|` matrix of axis-aligned bounding boxes over each edge in the
+     * scene.
+     */
+    [[maybe_unused]] auto const& GetEdgeAabbs() const { return mEdgeAabbs; }
+    /**
+     * @brief Get the triangle Aabbs of this scene. This is mostly useful for debugging.
+     *
+     * @return `2*kDims x |# triangles|` matrix of axis-aligned bounding boxes over each triangle in
+     * the scene.
+     */
+    [[maybe_unused]] auto const& GetTriangleAabbs() const { return mTriangleAabbs; }
+    /**
+     * @brief Get the tetrahedron Aabbs of this scene. This is mostly useful for debugging.
+     *
+     * @return `2*kDims x |# tetrahedra|` matrix of axis-aligned bounding boxes over each
+     * tetrahedron in the scene.
+     */
+    [[maybe_unused]] auto const& GetTetrahedronAabbs() const { return mTetrahedronAabbs; }
 
     /**
      * @brief Compute axis-aligned bounding boxes for vertices
@@ -284,6 +312,53 @@ class MultibodyMeshMixedCcdDcd
      * @brief Recompute body BVH tree and internal node bounding boxes
      */
     void RecomputeBodyBvh();
+    /**
+     * @brief Loop over all potentially colliding body pairs
+     *
+     * @tparam FOnBodyPair Callable with signature `void(Index oi, Index oj)`
+     * @param fOnBodyPair Callback function for body pairs
+     * @pre Body BVH must be up-to-date.
+     */
+    template <class FOnBodyPair>
+    void ForEachBodyPair(FOnBodyPair&& fOnBodyPair) const;
+    /**
+     * @brief Loop over penetrating vertices
+     *
+     * @tparam FOnPenetratingVertex Callable with signature `void(Index v, Index o)`
+     * @tparam TDerivedX Eigen type of vertex positions
+     * @param X `kDims x |# vertices|` matrix of vertex positions
+     * @param fOnPenetratingVertex Callback function for penetrating vertices
+     * @pre Vertex, tetrahedron and body BVHs must be up-to-date.
+     */
+    template <class FOnPenetratingVertex, class TDerivedX>
+    void ForEachPenetratingVertex(
+        Eigen::DenseBase<TDerivedX> const& X,
+        FOnPenetratingVertex&& fOnPenetratingVertex) const;
+    /**
+     * @brief Number of vertices in the mesh system
+     * @return Number of vertices in the mesh system
+     */
+    [[maybe_unused]] auto VertexCount() const { return mVertexAabbs.cols(); }
+    /**
+     * @brief Number of edges in the mesh system
+     * @return Number of edges in the mesh system
+     */
+    [[maybe_unused]] auto EdgeCount() const { return mEdgeAabbs.cols(); } ///< Number of edges
+    /**
+     * @brief Number of triangles in the mesh system
+     * @return Number of triangles in the mesh system
+     */
+    [[maybe_unused]] auto TriangleCount() const { return mTriangleAabbs.cols(); }
+    /**
+     * @brief Number of tetrahedra in the mesh system
+     * @return Number of tetrahedra in the mesh system
+     */
+    [[maybe_unused]] auto TetrahedronCount() const { return mTetrahedronAabbs.cols(); }
+    /**
+     * @brief Number of bodies in the mesh system
+     * @return Number of bodies in the mesh system
+     */
+    [[maybe_unused]] auto BodyCount() const { return mBodyAabbs.cols(); }
 
   protected:
     /**
@@ -326,28 +401,6 @@ class MultibodyMeshMixedCcdDcd
         FOnVertexTriangleContactPair&& fOnVertexTriangleContactPair,
         FOnEdgeEdgeContactPair&& fOnEdgeEdgeContactPair);
     /**
-     * @brief Loop over all potentially colliding body pairs
-     *
-     * @tparam FOnBodyPair Callable with signature `void(Index oi, Index oj)`
-     * @param fOnBodyPair Callback function for body pairs
-     * @pre Body BVH must be up-to-date.
-     */
-    template <class FOnBodyPair>
-    void ForEachBodyPair(FOnBodyPair&& fOnBodyPair);
-    /**
-     * @brief Loop over penetrating vertices
-     *
-     * @tparam FOnPenetratingVertex Callable with signature `void(Index v, Index o)`
-     * @tparam TDerivedX Eigen type of vertex positions
-     * @param X `kDims x |# vertices|` matrix of vertex positions
-     * @param fOnPenetratingVertex Callback function for penetrating vertices
-     * @pre Vertex, tetrahedron and body BVHs must be up-to-date.
-     */
-    template <class FOnPenetratingVertex, class TDerivedX>
-    void ForEachPenetratingVertex(
-        Eigen::DenseBase<TDerivedX> const& X,
-        FOnPenetratingVertex&& fOnPenetratingVertex);
-    /**
      * @brief Report vertex triangle contact pairs from CCD
      *
      * @tparam FOnVertexTriangleContactPair Callable with signature `void(VertexTriangleContact c)`
@@ -365,7 +418,7 @@ class MultibodyMeshMixedCcdDcd
         Eigen::DenseBase<TDerivedX> const& X,
         Index oi,
         Index oj,
-        FOnVertexTriangleContactPair fOnVertexTriangleContactPair);
+        FOnVertexTriangleContactPair fOnVertexTriangleContactPair) const;
     /**
      * @brief Report edge edge contact pairs from CCD
      *
@@ -384,7 +437,7 @@ class MultibodyMeshMixedCcdDcd
         Eigen::DenseBase<TDerivedX> const& X,
         Index oi,
         Index oj,
-        FOnEdgeEdgeContactPair&& fOnEdgeEdgeContactPair);
+        FOnEdgeEdgeContactPair&& fOnEdgeEdgeContactPair) const;
 
   private:
     /**
@@ -668,13 +721,74 @@ inline void MultibodyMeshMixedCcdDcd::ComputeTetrahedronAabbs(Eigen::DenseBase<T
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.MultibodyMeshMixedCcdDcd.ComputeTetrahedronAabbs");
     for (auto t = 0; t < mT.cols(); ++t)
     {
-        Matrix<kDims, 4> XT;
-        XT     = X(Eigen::placeholders::all, mT.col(t)).block<kDims, 4>(0, 0);
-        auto L = mTetrahedronAabbs.col(t).head<kDims>();
-        auto U = mTetrahedronAabbs.col(t).tail<kDims>();
-        L      = XT.rowwise().minCoeff();
-        U      = XT.rowwise().maxCoeff();
+        Matrix<kDims, 4> XT = X(Eigen::placeholders::all, mT.col(t)).block<kDims, 4>(0, 0);
+        auto L              = mTetrahedronAabbs.col(t).head<kDims>();
+        auto U              = mTetrahedronAabbs.col(t).tail<kDims>();
+        L                   = XT.rowwise().minCoeff();
+        U                   = XT.rowwise().maxCoeff();
     }
+}
+
+template <class FOnBodyPair>
+inline void MultibodyMeshMixedCcdDcd::ForEachBodyPair(FOnBodyPair&& fOnBodyPair) const
+{
+    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.MultibodyMeshMixedCcdDcd.ForEachBodyPair");
+    mBodyBvh.SelfOverlaps(
+        [&](Index o1, Index o2) {
+            using math::linalg::mini::FromEigen;
+            auto L1 = mBodyAabbs.col(o1).head<kDims>();
+            auto U1 = mBodyAabbs.col(o1).tail<kDims>();
+            auto L2 = mBodyAabbs.col(o2).head<kDims>();
+            auto U2 = mBodyAabbs.col(o2).tail<kDims>();
+            return geometry::OverlapQueries::AxisAlignedBoundingBoxes(
+                FromEigen(L1),
+                FromEigen(U1),
+                FromEigen(L2),
+                FromEigen(U2));
+        },
+        [fOnBodyPair = std::forward<FOnBodyPair>(
+             fOnBodyPair)](Index oi, Index oj, [[maybe_unused]] Index k) { fOnBodyPair(oi, oj); });
+}
+
+template <class FOnPenetratingVertex, class TDerivedX>
+inline void MultibodyMeshMixedCcdDcd::ForEachPenetratingVertex(
+    Eigen::DenseBase<TDerivedX> const& X,
+    FOnPenetratingVertex&& fOnPenetratingVertex) const
+{
+    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.MultibodyMeshMixedCcdDcd.ForEachPenetratingVertex");
+    auto const fVisitPenetratingVerticesOf =
+        [&,
+         fOnPenetratingVertex =
+             std::forward<FOnPenetratingVertex>(fOnPenetratingVertex)](Index oi, Index oj) {
+            Index i;
+            Vector<kDims> xi;
+            mVertexBvhs[oi].Overlaps(
+                mTetrahedronBvhs[oj],
+                [&](Index v, Index t) {
+                    // Global vertex and tetrahedron indices
+                    v = mVP(oi) + v;
+                    t = mTP(oj) + t;
+                    // Run overlap test
+                    i                    = mV(v);
+                    xi                   = X.col(i);
+                    IndexVector<4> tinds = mT.col(t);
+                    Matrix<kDims, 4> XT  = X(Eigen::placeholders::all, tinds);
+                    using math::linalg::mini::FromEigen;
+                    return geometry::OverlapQueries::PointTetrahedron3D(
+                        FromEigen(xi),
+                        FromEigen(XT.col(0)),
+                        FromEigen(XT.col(1)),
+                        FromEigen(XT.col(2)),
+                        FromEigen(XT.col(3)));
+                },
+                [&]([[maybe_unused]] Index v, [[maybe_unused]] Index t, [[maybe_unused]] Index k) {
+                    fOnPenetratingVertex(i, oj);
+                });
+        };
+    ForEachBodyPair([&](Index oi, Index oj) {
+        fVisitPenetratingVerticesOf(oi, oj);
+        fVisitPenetratingVerticesOf(oj, oi);
+    });
 }
 
 template <class FOnVertexTriangleContactPair, class TDerivedX>
@@ -687,6 +801,8 @@ inline void MultibodyMeshMixedCcdDcd::HandleDcdPairs(
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.MultibodyMeshMixedCcdDcd.HandleDcdPairs");
     // Report vertex-triangle contacts for each DCD penetrating vertex
     ForEachPenetratingVertex(X.derived(), [&](Index i, Index o) {
+        if (mPenetratingVertexMask[i])
+            return;
         // Mark vertex as penetrating so that it doesn't participate in CCD
         mPenetratingVertexMask[i] = true;
         // Contact point is vertex position
@@ -709,7 +825,7 @@ inline void MultibodyMeshMixedCcdDcd::HandleDcdPairs(
                 FromEigen(XF.col(2)));
         };
         // Find nearest surface point (i.e. triangle)
-        mTriangleBvhs[o].NearestNeighbour(
+        mTriangleBvhs[o].NearestNeighbours(
             fDistanceToBox,
             fDistanceToTriangle,
             [&, fReport = std::forward<FOnVertexTriangleContactPair>(fOnVertexTriangleContactPair)](
@@ -758,76 +874,13 @@ inline void MultibodyMeshMixedCcdDcd::HandleCcdPairs(
     });
 }
 
-template <class FOnBodyPair>
-inline void MultibodyMeshMixedCcdDcd::ForEachBodyPair(FOnBodyPair&& fOnBodyPair)
-{
-    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.MultibodyMeshMixedCcdDcd.ForEachBodyPair");
-    mBodyBvh.SelfOverlaps(
-        [&](Index o1, Index o2) {
-            using math::linalg::mini::FromEigen;
-            auto L1 = mBodyAabbs.col(o1).head<kDims>();
-            auto U1 = mBodyAabbs.col(o1).tail<kDims>();
-            auto L2 = mBodyAabbs.col(o2).head<kDims>();
-            auto U2 = mBodyAabbs.col(o2).tail<kDims>();
-            return geometry::OverlapQueries::AxisAlignedBoundingBoxes(
-                FromEigen(L1),
-                FromEigen(U1),
-                FromEigen(L2),
-                FromEigen(U2));
-        },
-        [fOnBodyPair = std::forward<FOnBodyPair>(
-             fOnBodyPair)](Index oi, Index oj, [[maybe_unused]] Index k) { fOnBodyPair(oi, oj); });
-}
-
-template <class FOnPenetratingVertex, class TDerivedX>
-inline void MultibodyMeshMixedCcdDcd::ForEachPenetratingVertex(
-    Eigen::DenseBase<TDerivedX> const& X,
-    FOnPenetratingVertex&& fOnPenetratingVertex)
-{
-    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.MultibodyMeshMixedCcdDcd.ForEachPenetratingVertex");
-    auto const fVisitPenetratingVerticesOf =
-        [&,
-         fOnPenetratingVertex =
-             std::forward<FOnPenetratingVertex>(fOnPenetratingVertex)](Index oi, Index oj) {
-            Index i;
-            Vector<kDims> xi;
-            mVertexBvhs[oi].Overlaps(
-                mTetrahedronBvhs[oj],
-                [&](Index v, Index t) {
-                    // Global vertex and tetrahedron indices
-                    v = mVP(oi) + v;
-                    t = mTP(oj) + t;
-                    // Run overlap test
-                    i                    = mV(v);
-                    xi                   = X.col(i);
-                    IndexVector<4> tinds = mT.col(t);
-                    Matrix<kDims, 4> XT  = X(Eigen::placeholders::all, tinds);
-                    using math::linalg::mini::FromEigen;
-                    return geometry::OverlapQueries::PointTetrahedron3D(
-                        FromEigen(xi),
-                        FromEigen(XT.col(0)),
-                        FromEigen(XT.col(1)),
-                        FromEigen(XT.col(2)),
-                        FromEigen(XT.col(3)));
-                },
-                [&]([[maybe_unused]] Index v, [[maybe_unused]] Index t, Index k) {
-                    if (k == 0)
-                        fOnPenetratingVertex(i, oj);
-                });
-        };
-    ForEachBodyPair([&](Index oi, Index oj) {
-        fVisitPenetratingVerticesOf(oi, oj);
-        fVisitPenetratingVerticesOf(oj, oi);
-    });
-}
-
 template <class FOnVertexTriangleContactPair, class TDerivedXT, class TDerivedX>
 inline void MultibodyMeshMixedCcdDcd::ReportVertexTriangleCcdContacts(
     Eigen::DenseBase<TDerivedXT> const& XT,
     Eigen::DenseBase<TDerivedX> const& X,
     Index oi,
     Index oj,
-    FOnVertexTriangleContactPair fOnVertexTriangleContactPair)
+    FOnVertexTriangleContactPair fOnVertexTriangleContactPair) const
 {
     PBAT_PROFILE_NAMED_SCOPE(
         "pbat.sim.contact.MultibodyMeshMixedCcdDcd.ReportVertexTriangleCcdContacts");
@@ -877,7 +930,7 @@ inline void MultibodyMeshMixedCcdDcd::ReportEdgeEdgeCcdContacts(
     Eigen::DenseBase<TDerivedX> const& X,
     Index oi,
     Index oj,
-    FOnEdgeEdgeContactPair&& fOnEdgeEdgeContactPair)
+    FOnEdgeEdgeContactPair&& fOnEdgeEdgeContactPair) const
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.MultibodyMeshMixedCcdDcd.ReportEdgeEdgeCcdContacts");
     mEdgeBvhs[oi].Overlaps(

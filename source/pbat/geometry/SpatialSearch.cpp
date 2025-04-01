@@ -195,7 +195,7 @@ TEST_CASE("[geometry] SpatialSearch")
         {
             bUseBestFirstSearch = true;
         }
-        bool const bTraversalCompleted = geometry::NearestNeighbour(
+        bool const bTraversalCompleted = geometry::DfsAllNearestNeighbours(
             fChild,
             fIsLeaf,
             fLeafSize,
