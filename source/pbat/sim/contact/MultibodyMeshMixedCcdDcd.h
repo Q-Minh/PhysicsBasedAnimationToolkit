@@ -495,7 +495,7 @@ inline MultibodyMeshMixedCcdDcd::MultibodyMeshMixedCcdDcd(
         mTriangleBvhs[o].Construct(FB.topRows<kDims>(), FB.bottomRows<kDims>());
         mTetrahedronBvhs[o].Construct(TB.topRows<kDims>(), TB.bottomRows<kDims>());
         // Compute object o's AABB
-        auto XVo = X(Eigen::placeholders::all, Eigen::seq(mVP(o), mVP(o + 1) - 1));
+        auto XVo = X(Eigen::placeholders::all, mV(Eigen::seq(mVP(o), mVP(o + 1) - 1)));
         mBodyAabbs.col(o).head<kDims>() = XVo.rowwise().minCoeff();
         mBodyAabbs.col(o).tail<kDims>() = XVo.rowwise().maxCoeff();
     }
