@@ -464,7 +464,7 @@ inline MultibodyMeshMixedCcdDcd::MultibodyMeshMixedCcdDcd(
 #include "pbat/warning/Push.h"
 #include "pbat/warning/SignConversion.h"
     // Allocate memory for AABBs and active sets
-    mVertexAabbs.resize(2 * kDims, V.cols());
+    mVertexAabbs.resize(2 * kDims, V.size());
     mEdgeAabbs.resize(2 * kDims, E.cols());
     mTriangleAabbs.resize(2 * kDims, F.cols());
     mTetrahedronAabbs.resize(2 * kDims, T.cols());

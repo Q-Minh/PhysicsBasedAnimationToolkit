@@ -130,12 +130,21 @@ if __name__ == "__main__":
 
     sm = ps.register_surface_mesh("Surface mesh", X.T, F.T)
 
+    BB = mcd.body_aabbs
+    BL = BB[:3, :]
+    BU = BB[3:, :]
+    nboxes = BL.shape[1]
+    BV = np.hstack([BL, BU])
+    BE = np.vstack([np.arange(nboxes), np.arange(nboxes) + nboxes])
+    cn = ps.register_curve_network("Body AABBs", BV.T, BE.T)
+
     t = 0
     animate = False
     profiler = pbat.profiling.Profiler()
 
     def callback():
         global t, animate
+        global U
 
         changed, animate = imgui.Checkbox("Animate", animate)
         step = imgui.Button("Step")
@@ -151,9 +160,15 @@ if __name__ == "__main__":
                 dir[r] = -1
                 u = args.amplitude * dir * offset * np.sin(t * args.frequency)
                 U[:, V[VP[m] : VP[m + 1]]] = u[:, np.newaxis]
-            v, f = mcd.dcd_pairs(X)
+            XTP1 = X + U
+            v, f = mcd.dcd_pairs(XTP1)
             profiler.end_frame("Physics")
-            sm.update_vertex_positions((X + U).T)
+            BB = mcd.body_aabbs
+            BL = BB[:3, :]
+            BU = BB[3:, :]
+            BV = np.hstack([BL, BU])
+            cn.update_node_positions(BV.T)
+            sm.update_vertex_positions(XTP1.T)
             t = t + 1 / 60
 
     ps.set_user_callback(callback)
