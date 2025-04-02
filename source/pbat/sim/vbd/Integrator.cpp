@@ -1,12 +1,17 @@
 #include "Integrator.h"
 
 #include "Kernels.h"
+#include "pbat/common/Eigen.h"
+#include "pbat/fem/DeformationGradient.h"
+#include "pbat/fem/Tetrahedron.h"
 #include "pbat/math/linalg/mini/Mini.h"
 #include "pbat/physics/StableNeoHookeanEnergy.h"
 #include "pbat/profiling/Profiling.h"
 
+#include <fmt/format.h>
 #include <tbb/parallel_for.h>
 #include <type_traits>
+#include <unsupported/Eigen/SparseExtra>
 
 namespace pbat {
 namespace sim {
@@ -32,7 +37,18 @@ void Integrator::Step(Scalar dt, Index iterations, Index substeps)
         Solve(sdt, sdt2, iterations);
         // Update velocity
         data.v = (data.x - data.xt) / sdt;
+        // Save descent path to disk if requested
+        if (mTraceIterates)
+            ExportTrace(sdt, s);
     }
+    mTraceIterates = false;
+}
+
+PBAT_API void Integrator::TraceNextStep(std::string const& path, Index t)
+{
+    mTraceIterates = true;
+    mTracePath     = path;
+    mTimeStep      = t;
 }
 
 void Integrator::InitializeSolve(Scalar sdt, Scalar sdt2)
@@ -56,6 +72,13 @@ void Integrator::InitializeSolve(Scalar sdt, Scalar sdt2)
 
 void Integrator::RunVbdIteration(Scalar sdt, Scalar sdt2)
 {
+    if (mTraceIterates)
+    {
+        mTracedObjectives.push_back(ObjectiveFunction(data.x, data.xtilde, sdt));
+        mTracedGradients.push_back(ObjectiveFunctionGradient(data.x, data.xtilde, sdt));
+        mTracedPositions.push_back(data.x);
+    }
+
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.vbd.Integrator.RunVbdIteration");
     auto const nPartitions = data.Pptr.size() - 1;
     for (Index p = 0; p < nPartitions; ++p)
@@ -79,10 +102,10 @@ void Integrator::RunVbdIteration(Scalar sdt, Scalar sdt2)
                 auto e                          = data.GVGe(n);
                 auto lamee                      = data.lame.col(e);
                 auto wg                         = data.wg(e);
-                auto Te                         = data.E.col(e);
+                auto ti                         = data.E.col(e);
                 mini::SMatrix<Scalar, 4, 3> GPe = FromEigen(data.GP.block<4, 3>(0, e * 3));
                 mini::SMatrix<Scalar, 3, 4> xe =
-                    FromEigen(data.x(Eigen::placeholders::all, Te).block<3, 4>(0, 0));
+                    FromEigen(data.x(Eigen::placeholders::all, ti).block<3, 4>(0, 0));
                 mini::SMatrix<Scalar, 3, 3> Fe = xe * GPe;
                 physics::StableNeoHookeanEnergy<3> Psi{};
                 mini::SVector<Scalar, 9> gF;
@@ -111,6 +134,95 @@ void Integrator::Solve(Scalar sdt, Scalar sdt2, Index iterations)
     {
         RunVbdIteration(sdt, sdt2);
     }
+}
+
+Scalar Integrator::ObjectiveFunction(
+    Eigen::Ref<MatrixX const> const& xk,
+    Eigen::Ref<MatrixX const> const& xtilde,
+    Scalar dt)
+{
+    // Kinetic energy
+    auto dx   = xk - xtilde;
+    auto m    = data.m.replicate(1, 3).transpose();
+    Scalar Ek = 0.5 * dx.reshaped().dot(m.cwiseProduct(dx).reshaped());
+    // Elastic energy
+    auto const nElements = data.E.cols();
+    physics::StableNeoHookeanEnergy<3> Psi{};
+    Scalar Ep{0};
+    for (auto e = 0; e < nElements; ++e)
+    {
+        auto lamee = data.lame.col(e);
+        auto wg    = data.wg(e);
+        auto ti    = data.E.col(e);
+        using namespace math::linalg;
+        using mini::FromEigen;
+        mini::SMatrix<Scalar, 4, 3> GPe = FromEigen(data.GP.block<4, 3>(0, e * 3));
+        mini::SMatrix<Scalar, 3, 4> xe =
+            FromEigen(xk(Eigen::placeholders::all, ti).block<3, 4>(0, 0));
+        mini::SMatrix<Scalar, 3, 3> Fe = xe * GPe;
+        Ep += wg * Psi.eval(Fe, lamee(0), lamee(1));
+    }
+    // Total energy
+    return Ek + dt * dt * Ep;
+}
+
+VectorX Integrator::ObjectiveFunctionGradient(
+    Eigen::Ref<MatrixX const> const& xk,
+    Eigen::Ref<MatrixX const> const& xtilde,
+    Scalar dt)
+{
+    // Kinetic energy
+    auto dx     = xk - xtilde;
+    auto m      = data.m.replicate(1, 3).transpose();
+    VectorX gEk = m.cwiseProduct(dx).reshaped();
+    // Elastic energy
+    auto const nElements = data.E.cols();
+    physics::StableNeoHookeanEnergy<3> Psi{};
+    MatrixX gEp = MatrixX::Zero(data.x.rows(), data.x.cols());
+    for (auto e = 0; e < nElements; ++e)
+    {
+        auto lamee = data.lame.col(e);
+        auto wg    = data.wg(e);
+        auto ti    = data.E.col(e);
+        using namespace math::linalg;
+        using mini::FromEigen;
+        using mini::ToEigen;
+        mini::SMatrix<Scalar, 4, 3> GPe = FromEigen(data.GP.block<4, 3>(0, e * 3));
+        mini::SMatrix<Scalar, 3, 4> xe =
+            FromEigen(xk(Eigen::placeholders::all, ti).block<3, 4>(0, 0));
+        mini::SMatrix<Scalar, 3, 3> Fe = xe * GPe;
+        mini::SVector<Scalar, 9> gF    = Psi.grad(Fe, lamee(0), lamee(1));
+        using Element                  = fem::Tetrahedron<1>;
+        auto ge                        = fem::GradientWrtDofs<Element, 3>(gF, GPe);
+        gEp(Eigen::placeholders::all, ti) += wg * ToEigen(ge).reshaped(3, 4);
+    }
+    // Total energy
+    return gEk + (dt * dt) * gEp.reshaped();
+}
+
+PBAT_API void Integrator::ExportTrace(Scalar sdt, Index substep)
+{
+    mTracedObjectives.push_back(ObjectiveFunction(data.x, data.xtilde, sdt));
+    mTracedGradients.push_back(ObjectiveFunctionGradient(data.x, data.xtilde, sdt));
+    mTracedPositions.push_back(data.x);
+    auto const fPath    = fmt::format("{}/{}.{}.f.mtx", mTracePath, mTimeStep, substep);
+    auto const gradPath = fmt::format("{}/{}.{}.grad.mtx", mTracePath, mTimeStep, substep);
+    auto const xPath    = fmt::format("{}/{}.{}.x.mtx", mTracePath, mTimeStep, substep);
+    Eigen::saveMarketDense(common::ToEigen(mTracedObjectives), fPath);
+#include "pbat/warning/Push.h"
+#include "pbat/warning/SignConversion.h"
+    MatrixX G(mTracedGradients.front().size(), mTracedGradients.size());
+    for (std::size_t i = 0; i < mTracedGradients.size(); ++i)
+        G.col(i) = mTracedGradients[i];
+    Eigen::saveMarketDense(G, gradPath);
+    MatrixX XTR(mTracedPositions.front().size(), mTracedPositions.size());
+    for (std::size_t i = 0; i < mTracedPositions.size(); ++i)
+        XTR.col(i) = mTracedPositions[i].reshaped();
+    Eigen::saveMarketDense(XTR, xPath);
+#include "pbat/warning/Pop.h"
+    mTracedObjectives.clear();
+    mTracedGradients.clear();
+    mTracedPositions.clear();
 }
 
 } // namespace vbd
@@ -147,11 +259,14 @@ TEST_CASE("[sim][vbd] Integrator")
     auto constexpr dt         = Scalar{1e-2};
     auto constexpr substeps   = 1;
     auto constexpr iterations = 10;
-
-    // Act
     using pbat::common::ToEigen;
     using pbat::sim::vbd::Integrator;
     Integrator vbd{sim::vbd::Data().WithVolumeMesh(P, T).WithSurfaceMesh(V, F).Construct()};
+    MatrixX xtilde = vbd.data.x + dt * vbd.data.v + dt * dt * vbd.data.aext;
+    Scalar f0      = vbd.ObjectiveFunction(vbd.data.x, xtilde, dt);
+    VectorX g0     = vbd.ObjectiveFunctionGradient(vbd.data.x, xtilde, dt);
+
+    // Act
     vbd.Step(dt, iterations, substeps);
 
     // Assert
@@ -161,4 +276,9 @@ TEST_CASE("[sim][vbd] Integrator")
     CHECK(bVerticesFallUnderGravity);
     bool const bVerticesOnlyFall = (dx.topRows(2).array().abs() < zero).all();
     CHECK(bVerticesOnlyFall);
+    VectorX g    = vbd.ObjectiveFunctionGradient(vbd.data.x, xtilde, dt);
+    Scalar gnorm = g.norm();
+    CHECK_LT(gnorm, zero);
+    Scalar f = vbd.ObjectiveFunction(vbd.data.x, xtilde, dt);
+    CHECK_LT(f, f0);
 }

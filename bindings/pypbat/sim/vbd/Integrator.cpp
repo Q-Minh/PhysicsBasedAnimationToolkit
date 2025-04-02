@@ -43,6 +43,11 @@ void BindIntegrator(pybind11::module& m)
             "    iterations (int): Number of iterations to solve the non-linear optimization "
             "problem.\n"
             "    substeps (int): Number of substeps to take per time step.")
+        .def(
+            "trace_next_step",
+            &Integrator::TraceNextStep,
+            pyb::arg("path") = ".",
+            pyb::arg("t")    = -1)
         .def_property(
             "x",
             [](Integrator const& self) { return self.data.x; },
@@ -53,6 +58,23 @@ void BindIntegrator(pybind11::module& m)
             [](Integrator const& self) { return self.data.v; },
             [](Integrator& self, Eigen::Ref<MatrixX const> const& v) { self.data.v = v; },
             "3x|#nodes| nodal velocities")
+        .def_property(
+            "strategy",
+            [](Integrator const& self) { return self.data.strategy; },
+            [](Integrator& self, EInitializationStrategy strategy) {
+                self.data.strategy = strategy;
+            },
+            "Acceleration strategy")
+        .def_property(
+            "kD",
+            [](Integrator const& self) { return self.data.kD; },
+            [](Integrator& self, Scalar kD) { self.data.kD = kD; },
+            "Rayleigh damping coefficient")
+        .def_property(
+            "detH_residual",
+            [](Integrator const& self) { return self.data.detHZero; },
+            [](Integrator& self, Scalar detHZero) { self.data.detHZero = detHZero; },
+            "Determinant of the residual Hessian for pseudo singularity check")
         .def_readwrite("data", &Integrator::data);
 }
 

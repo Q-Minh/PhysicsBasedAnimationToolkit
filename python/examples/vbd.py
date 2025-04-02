@@ -294,9 +294,14 @@ if __name__ == "__main__":
 
         if animate or step:
             profiler.begin_frame("Physics")
-            if args.trace:
-                vbd.traced_step(dt, iterations, substeps, t, dir=args.output)
+            if args.gpu:
+                if args.trace:
+                    vbd.traced_step(dt, iterations, substeps, t, dir=args.output)
+                else:
+                    vbd.step(dt, iterations, substeps)
             else:
+                if args.trace:
+                    vbd.trace_next_step(args.output, t)
                 vbd.step(dt, iterations, substeps)
             profiler.end_frame("Physics")
 
