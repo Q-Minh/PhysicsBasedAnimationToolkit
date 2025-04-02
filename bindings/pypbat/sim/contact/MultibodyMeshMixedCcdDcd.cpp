@@ -242,7 +242,7 @@ void BindMultibodyMeshMixedCcdDcd([[maybe_unused]] pybind11::module& m)
             "    Tuple[List[int], List[int]]: list of body pairs (oi,oj)")
         .def(
             "vertex_body_pairs",
-            [](MultibodyMeshMixedCcdDcd const& self, Eigen::Ref<MatrixX const> const& XK) {
+            [](MultibodyMeshMixedCcdDcd& self, Eigen::Ref<MatrixX const> const& XK) {
 #include <pbat/warning/Push.h>
 #include <pbat/warning/SignConversion.h>
                 // We will store the results in these vectors
