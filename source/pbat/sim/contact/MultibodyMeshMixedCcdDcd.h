@@ -333,7 +333,7 @@ class MultibodyMeshMixedCcdDcd
     template <class FOnPenetratingVertex, class TDerivedX>
     void ForEachPenetratingVertex(
         Eigen::DenseBase<TDerivedX> const& X,
-        FOnPenetratingVertex&& fOnPenetratingVertex) const;
+        FOnPenetratingVertex&& fOnPenetratingVertex);
     /**
      * @brief Number of vertices in the mesh system
      * @return Number of vertices in the mesh system
@@ -599,7 +599,6 @@ inline void MultibodyMeshMixedCcdDcd::UpdateDcdActiveSet(
     ComputeBodyAabbs();
     RecomputeBodyBvh();
     // Add DCD vertex-triangle pairs to active set
-    mPenetratingVertexMask.setConstant(false);
     HandleDcdPairs(X, std::forward<FOnVertexTriangleContactPair>(fOnVertexTriangleContactPair));
 }
 
@@ -753,7 +752,7 @@ inline void MultibodyMeshMixedCcdDcd::ForEachBodyPair(FOnBodyPair&& fOnBodyPair)
 template <class FOnPenetratingVertex, class TDerivedX>
 inline void MultibodyMeshMixedCcdDcd::ForEachPenetratingVertex(
     Eigen::DenseBase<TDerivedX> const& X,
-    FOnPenetratingVertex&& fOnPenetratingVertex) const
+    FOnPenetratingVertex&& fOnPenetratingVertex)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.MultibodyMeshMixedCcdDcd.ForEachPenetratingVertex");
     auto const fVisitPenetratingVerticesOf =
@@ -768,23 +767,34 @@ inline void MultibodyMeshMixedCcdDcd::ForEachPenetratingVertex(
                     // Global vertex and tetrahedron indices
                     v = mVP(oi) + v;
                     t = mTP(oj) + t;
+                    i = mV(v);
+                    // Skip test, if we already know this vertex is penetrating
+                    if (mPenetratingVertexMask[i])
+                        return false;
                     // Run overlap test
-                    i                    = mV(v);
                     xi                   = X.col(i);
                     IndexVector<4> tinds = mT.col(t);
                     Matrix<kDims, 4> XT  = X(Eigen::placeholders::all, tinds);
                     using math::linalg::mini::FromEigen;
-                    return geometry::OverlapQueries::PointTetrahedron3D(
+                    // Mark vertex as penetrating so that it doesn't participate in CCD
+                    bool const bIsPenetrating = geometry::OverlapQueries::PointTetrahedron3D(
                         FromEigen(xi),
                         FromEigen(XT.col(0)),
                         FromEigen(XT.col(1)),
                         FromEigen(XT.col(2)),
                         FromEigen(XT.col(3)));
+                    // Cache vertex penetrating status if applicable
+                    if (bIsPenetrating)
+                        mPenetratingVertexMask[i] = true;
+                    return bIsPenetrating;
                 },
                 [&]([[maybe_unused]] Index v, [[maybe_unused]] Index t, [[maybe_unused]] Index k) {
                     fOnPenetratingVertex(i, oj);
                 });
         };
+    // Reset penetrating vertex mask
+    mPenetratingVertexMask.setConstant(false);
+    // Only check for relevant body pairs where vertices may penetrate
     ForEachBodyPair([&](Index oi, Index oj) {
         fVisitPenetratingVerticesOf(oi, oj);
         fVisitPenetratingVerticesOf(oj, oi);
@@ -801,10 +811,6 @@ inline void MultibodyMeshMixedCcdDcd::HandleDcdPairs(
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.MultibodyMeshMixedCcdDcd.HandleDcdPairs");
     // Report vertex-triangle contacts for each DCD penetrating vertex
     ForEachPenetratingVertex(X.derived(), [&](Index i, Index o) {
-        if (mPenetratingVertexMask[i])
-            return;
-        // Mark vertex as penetrating so that it doesn't participate in CCD
-        mPenetratingVertexMask[i] = true;
         // Contact point is vertex position
         Vector<kDims> const XC = X.col(i);
         // Define point-aabb and point-triangle distance functions for vertex i
