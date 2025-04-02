@@ -88,20 +88,28 @@ VectorX Mesh::QuadratureWeights(int qOrder) const
 
 Eigen::Map<MatrixX> Mesh::X() const
 {
-    Eigen::Map<MatrixX> XN{nullptr, 0, 0};
+    Scalar* data{nullptr};
+    Index rows{-1};
+    Index cols{-1};
     Apply([&]<class MeshType>(MeshType* mesh) {
-        XN = Eigen::Map<MatrixX>(mesh->X.data(), mesh->X.rows(), mesh->X.cols());
+        data = mesh->X.data();
+        rows = mesh->X.rows();
+        cols = mesh->X.cols();
     });
-    return XN;
+    return Eigen::Map<MatrixX>(data, rows, cols);
 }
 
 Eigen::Map<IndexMatrixX> Mesh::E() const
 {
-    Eigen::Map<IndexMatrixX> EN{nullptr, 0, 0};
+    Index* data{nullptr};
+    Index rows{-1};
+    Index cols{-1};
     Apply([&]<class MeshType>(MeshType* mesh) {
-        EN = Eigen::Map<IndexMatrixX>(mesh->E.data(), mesh->E.rows(), mesh->E.cols());
+        data = mesh->E.data();
+        rows = mesh->E.rows();
+        cols = mesh->E.cols();
     });
-    return EN;
+    return Eigen::Map<IndexMatrixX>(data, rows, cols);
 }
 
 Mesh::~Mesh()
