@@ -146,6 +146,52 @@ if __name__ == "__main__":
         dest="trace",
         default=False,
     )
+    parser.add_argument(
+        "--heterogeneous",
+        help="Use heterogeneous material properties",
+        action="store_true",
+        dest="heterogeneous",
+        default=False,
+    )
+    parser.add_argument(
+        "--heterogeneous-slices",
+        help="Number of slices for heterogeneous material "
+        "properties. Splits the bounding box of the scene "
+        "into the requested number of slices, and uses "
+        "the heterogeneous material properties every 2nd "
+        "slice.",
+        type=int,
+        dest="heterogeneous_slices",
+        default=2,
+    )
+    parser.add_argument(
+        "--heterogeneous-young-modulus",
+        help="Young's modulus for the heterogeneous material",
+        type=float,
+        dest="heterogeneous_Y",
+        default=1e8,
+    )
+    parser.add_argument(
+        "--heterogeneous-poisson-ratio",
+        help="Poisson's ratio for the heterogeneous material",
+        type=float,
+        dest="heterogeneous_nu",
+        default=0.3,
+    )
+    parser.add_argument(
+        "--heterogeneous-mass-density",
+        help="Mass density for the heterogeneous material",
+        type=float,
+        dest="heterogeneous_rho",
+        default=1e5,
+    )
+    parser.add_argument(
+        "--heterogeneous-slice-axis",
+        help="Axis along which to slice the scene for heterogeneous material properties",
+        type=int,
+        dest="heterogeneous_slice_axis",
+        default=0,
+    )
     args = parser.parse_args()
 
     # Construct FEM quantities for simulation
@@ -162,10 +208,36 @@ if __name__ == "__main__":
     F = igl.boundary_facets(C)
     F[:, :2] = np.roll(F[:, :2], shift=1, axis=1)
 
-    # Compute material (Lame) constants
+    # Apply material properties
     rhoe = np.full(mesh.E.shape[1], args.rho)
     Y = np.full(mesh.E.shape[1], args.Y)
     nu = np.full(mesh.E.shape[1], args.nu)
+    heteromask = np.full(mesh.E.shape[1], False)
+    if args.heterogeneous:
+        Xmin = mesh.X.min(axis=1)
+        Xmax = mesh.X.max(axis=1)
+        barycenters = 0.25 * (
+            mesh.X[:, mesh.E[0, :]]
+            + mesh.X[:, mesh.E[1, :]]
+            + mesh.X[:, mesh.E[2, :]]
+            + mesh.X[:, mesh.E[3, :]]
+        )
+        nslices = max(2, args.heterogeneous_slices)
+        axis = args.heterogeneous_slice_axis
+        extent = Xmax[axis] - Xmin[axis]
+        width = extent / nslices
+        for s in range(1, nslices, 2):
+            smin = Xmin.copy()
+            smax = Xmax.copy()
+            smin[axis] = Xmin[axis] + s * width
+            smax[axis] = Xmin[axis] + (s + 1) * width
+            aabb = pbat.geometry.aabb(np.vstack((smin, smax)).T)
+            vhetero = aabb.contained(barycenters)
+            heteromask[vhetero] = True
+
+    rhoe[heteromask] = args.heterogeneous_rho
+    Y[heteromask] = args.heterogeneous_Y
+    nu[heteromask] = args.heterogeneous_nu
     mue = Y / (2 * (1 + nu))
     lambdae = (Y * nu) / ((1 + nu) * (1 - 2 * nu))
 
@@ -235,6 +307,9 @@ if __name__ == "__main__":
     ps.init()
     vm = ps.register_volume_mesh("Simulation mesh", V, C)
     vm.add_scalar_quantity("Coloring", data.colors, defined_on="vertices", cmap="jet")
+    vm.add_scalar_quantity(
+        "Heterogeneous", heteromask, defined_on="cells", cmap="blues", enabled=True
+    )
     pc = ps.register_point_cloud("Dirichlet", V[vdbc, :])
     dt = 0.01
     iterations = 20
