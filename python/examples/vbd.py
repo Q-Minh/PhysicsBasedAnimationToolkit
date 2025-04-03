@@ -308,7 +308,11 @@ if __name__ == "__main__":
     vm = ps.register_volume_mesh("Simulation mesh", V, C)
     vm.add_scalar_quantity("Coloring", data.colors, defined_on="vertices", cmap="jet")
     vm.add_scalar_quantity(
-        "Heterogeneous", heteromask, defined_on="cells", cmap="blues", enabled=True
+        "Heterogeneous",
+        heteromask,
+        defined_on="cells",
+        cmap="blues",
+        enabled=args.heterogeneous,
     )
     pc = ps.register_point_cloud("Dirichlet", V[vdbc, :])
     dt = 0.01
