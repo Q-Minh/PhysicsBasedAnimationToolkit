@@ -6,6 +6,8 @@ import polyscope as ps
 import polyscope.imgui as imgui
 import argparse
 import itertools
+import scipy as sp
+import os
 
 
 def combine(V: list, C: list):
@@ -16,6 +18,20 @@ def combine(V: list, C: list):
     V = np.vstack(V)
     B = np.hstack([np.full(NV[i], i) for i in range(len(NV))])
     return V, C, B
+
+
+def export_data(args, V, C, F, B, aext, rhoe, mue, lambdae, vdbc):
+    sp.io.mmwrite(f"{os.path.join(args.output, "V.mtx")}", V)
+    sp.io.mmwrite(f"{os.path.join(args.output, "C.mtx")}", C)
+    sp.io.mmwrite(f"{os.path.join(args.output, "F.mtx")}", F)
+    sp.io.mmwrite(f"{os.path.join(args.output, "B.mtx")}", B[:, np.newaxis])
+    sp.io.mmwrite(f"{os.path.join(args.output, "aext.mtx")}", aext)
+    sp.io.mmwrite(f"{os.path.join(args.output, "rhoe.mtx")}", rhoe[:, np.newaxis])
+    sp.io.mmwrite(f"{os.path.join(args.output, "mue.mtx")}", mue[:, np.newaxis])
+    sp.io.mmwrite(f"{os.path.join(args.output, "lambdae.mtx")}", lambdae[:, np.newaxis])
+    sp.io.mmwrite(
+        f"{os.path.join(args.output, "vdbc.mtx")}", np.array(vdbc)[:, np.newaxis]
+    )
 
 
 if __name__ == "__main__":
@@ -278,8 +294,10 @@ if __name__ == "__main__":
             args.tr_eta, args.tr_tau, args.use_curved_tr
         )
     data = data.construct(validate=True)
-    thread_block_size = 64
+    if args.trace:
+        export_data(args, V, C, F, B, data.aext, rhoe, mue, lambdae, vdbc)
 
+    thread_block_size = 64
     vbd = None
     if args.gpu:
         vbd = pbat.gpu.vbd.Integrator(data)
@@ -372,16 +390,12 @@ if __name__ == "__main__":
             vbd.gpu_block_size = thread_block_size
 
         if animate or step:
+            if args.trace:
+                sp.io.mmwrite(f"{args.output}/{t}.x.mtx", vbd.x)
+                sp.io.mmwrite(f"{args.output}/{t}.v.mtx", vbd.v)
+
             profiler.begin_frame("Physics")
-            if args.gpu:
-                if args.trace:
-                    vbd.traced_step(dt, iterations, substeps, t, dir=args.output)
-                else:
-                    vbd.step(dt, iterations, substeps)
-            else:
-                if args.trace:
-                    vbd.trace_next_step(args.output, t)
-                vbd.step(dt, iterations, substeps)
+            vbd.step(dt, iterations, substeps)
             profiler.end_frame("Physics")
 
             # Update visuals
@@ -407,3 +421,7 @@ if __name__ == "__main__":
 
     ps.set_user_callback(callback)
     ps.show()
+
+    if args.trace:
+        sp.io.mmwrite(f"{args.output}/{t}.x.mtx", vbd.x)
+        sp.io.mmwrite(f"{args.output}/{t}.v.mtx", vbd.v)

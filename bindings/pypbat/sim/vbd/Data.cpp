@@ -23,7 +23,7 @@ void BindData(pybind11::module& m)
         .export_values();
 
     pyb::enum_<EAccelerationStrategy>(m, "AccelerationStrategy")
-        .value("None", EAccelerationStrategy::None)
+        .value("Base", EAccelerationStrategy::None)
         .value("Chebyshev", EAccelerationStrategy::Chebyshev)
         .value("TrustRegion", EAccelerationStrategy::TrustRegion)
         .export_values();

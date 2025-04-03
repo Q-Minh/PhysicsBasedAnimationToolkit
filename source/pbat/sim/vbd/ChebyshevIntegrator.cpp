@@ -1,6 +1,7 @@
 #include "ChebyshevIntegrator.h"
 
 #include "Kernels.h"
+#include "pbat/profiling/Profiling.h"
 
 #include <tbb/parallel_for.h>
 
@@ -13,6 +14,7 @@ ChebyshevIntegrator::ChebyshevIntegrator(Data dataIn)
 
 void ChebyshevIntegrator::Solve(Scalar sdt, Scalar sdt2, Index iterations)
 {
+    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.vbd.ChebyshevIntegrator.Solve");
     Scalar rho2 = data.rho * data.rho;
     Scalar omega{};
     for (auto k = 0; k < iterations; ++k)
