@@ -6,6 +6,12 @@ import pathlib
 import matplotlib.pyplot as plt
 import pbatoolkit as pbat
 
+accelerators = [
+    "vbd",
+    "chebyshev",
+    "anderson",
+]
+
 
 def initialization_strategy(args):
     if args.initialization_strategy == "position":
@@ -68,17 +74,22 @@ def run(args):
     # Run base VBD
     data = load_data(args)
     data.accelerator = pbat.sim.vbd.AccelerationStrategy.Base
-    simulate(args, pbat.sim.vbd.Integrator(data), "vbd")
+    simulate(args, pbat.sim.vbd.Integrator(data), accelerators[0])
 
     # Run Chebyshev accelerated VBD
     data = load_data(args)
     data.with_chebyshev_acceleration(args.chebyshev_rho)
-    simulate(args, pbat.sim.vbd.Integrator(data), "chebyshev")
+    simulate(args, pbat.sim.vbd.Integrator(data), accelerators[1])
+
+    # Run Anderson accelerated VBD
+    data = load_data(args)
+    data.with_anderson_acceleration(args.anderson_window)
+    simulate(args, pbat.sim.vbd.Integrator(data), accelerators[2])
 
 
 def analyze(args):
     # Load objective function values and gradients
-    paths = [os.path.join(args.input, "vbd"), os.path.join(args.input, "chebyshev")]
+    paths = [os.path.join(args.input, accelerator) for accelerator in accelerators]
     grads = [
         sp.io.mmread(os.path.join(path, f"{args.frame}.{args.substep}.grad.mtx"))
         for path in paths
@@ -92,7 +103,6 @@ def analyze(args):
         for grad in grads
     ]
     names = [os.path.split(path)[-1] for path in paths]
-    niters = fs[0].shape[0] - 1
 
     # Plot objective function values and gradient norms
     fig, axs = plt.subplots(2, 1, figsize=(10, 8))
@@ -102,7 +112,7 @@ def analyze(args):
 
     # Plot objective function values
     for f, name in zip(fs, names):
-        faxs.plot(f[:], label=name)
+        faxs.plot(f[:-1] - f[1:], label=name)
     faxs.set_title("Objective Function")
     faxs.set_xlabel("Iteration")
     faxs.set_ylabel("Objective Value")
@@ -217,6 +227,14 @@ if __name__ == "__main__":
         dest="chebyshev_rho",
         required=False,
         default=0.9,
+    )
+    parser.add_argument(
+        "--anderson-window",
+        type=int,
+        help="Anderson acceleration window size.",
+        dest="anderson_window",
+        required=False,
+        default=5,
     )
     parser.add_argument(
         "-o",

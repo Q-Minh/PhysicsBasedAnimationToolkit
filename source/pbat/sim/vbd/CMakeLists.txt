@@ -2,21 +2,25 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     PUBLIC
     FILE_SET api
     FILES
+    "AndersonIntegrator.h"
     "ChebyshevIntegrator.h"
-    "Vbd.h"
     "Data.h"
     "Enums.h"
-    "Kernels.h"
     "Integrator.h"
+    "Kernels.h"
     "Mesh.h"
+    "NesterovIntegrator.h"
+    "Vbd.h"
 )
 target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     PRIVATE
+    "AndersonIntegrator.cpp"
     "ChebyshevIntegrator.cpp"
     "Data.cpp"
-    "Kernels.cpp"
     "Integrator.cpp"
+    "Kernels.cpp"
     "Mesh.cpp"
+    "NesterovIntegrator.cpp"
 )
 
 add_subdirectory(multigrid)

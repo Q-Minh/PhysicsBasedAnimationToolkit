@@ -8,6 +8,7 @@ import argparse
 import itertools
 import scipy as sp
 import os
+import pathlib
 
 
 def combine(V: list, C: list):
@@ -21,17 +22,16 @@ def combine(V: list, C: list):
 
 
 def export_data(args, V, C, F, B, aext, rhoe, mue, lambdae, vdbc):
-    sp.io.mmwrite(f"{os.path.join(args.output, "V.mtx")}", V)
-    sp.io.mmwrite(f"{os.path.join(args.output, "C.mtx")}", C)
-    sp.io.mmwrite(f"{os.path.join(args.output, "F.mtx")}", F)
-    sp.io.mmwrite(f"{os.path.join(args.output, "B.mtx")}", B[:, np.newaxis])
-    sp.io.mmwrite(f"{os.path.join(args.output, "aext.mtx")}", aext)
-    sp.io.mmwrite(f"{os.path.join(args.output, "rhoe.mtx")}", rhoe[:, np.newaxis])
-    sp.io.mmwrite(f"{os.path.join(args.output, "mue.mtx")}", mue[:, np.newaxis])
-    sp.io.mmwrite(f"{os.path.join(args.output, "lambdae.mtx")}", lambdae[:, np.newaxis])
-    sp.io.mmwrite(
-        f"{os.path.join(args.output, "vdbc.mtx")}", np.array(vdbc)[:, np.newaxis]
-    )
+    pathlib.Path(args.output).mkdir(parents=True, exist_ok=True)
+    sp.io.mmwrite(os.path.join(args.output, "V.mtx"), V)
+    sp.io.mmwrite(os.path.join(args.output, "C.mtx"), C)
+    sp.io.mmwrite(os.path.join(args.output, "F.mtx"), F)
+    sp.io.mmwrite(os.path.join(args.output, "B.mtx"), B[:, np.newaxis])
+    sp.io.mmwrite(os.path.join(args.output, "aext.mtx"), aext)
+    sp.io.mmwrite(os.path.join(args.output, "rhoe.mtx"), rhoe[:, np.newaxis])
+    sp.io.mmwrite(os.path.join(args.output, "mue.mtx"), mue[:, np.newaxis])
+    sp.io.mmwrite(os.path.join(args.output, "lambdae.mtx"), lambdae[:, np.newaxis])
+    sp.io.mmwrite(os.path.join(args.output, "vdbc.mtx"), np.array(vdbc)[:, np.newaxis])
 
 
 if __name__ == "__main__":
@@ -128,6 +128,13 @@ if __name__ == "__main__":
         type=float,
         default=1.0,
         dest="rho_chebyshev",
+    )
+    parser.add_argument(
+        "--anderson-window",
+        help="Anderson acceleration window size. Anderson acceleration is disabled if window size <= 0",
+        type=int,
+        default=0,
+        dest="anderson_window",
     )
     parser.add_argument(
         "--use-trust-region",
@@ -289,6 +296,8 @@ if __name__ == "__main__":
     )
     if args.rho_chebyshev < 1.0 and args.rho_chebyshev > 0.0:
         data = data.with_chebyshev_acceleration(args.rho_chebyshev)
+    elif args.anderson_window > 0:
+        data = data.with_anderson_acceleration(args.anderson_window)
     if args.use_trust_region:
         data = data.with_trust_region_acceleration(
             args.tr_eta, args.tr_tau, args.use_curved_tr

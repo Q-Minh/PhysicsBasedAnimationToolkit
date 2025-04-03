@@ -128,6 +128,19 @@ PBAT_API struct Data
      */
     Data& WithChebyshevAcceleration(Scalar rho);
     /**
+     * @brief Use Anderson acceleration
+     * @param window Anderson acceleration window size
+     * @return Reference to this
+     */
+    Data& WithAndersonAcceleration(Index window);
+    /**
+     * @brief Use Nesterov acceleration
+     * @param L Lipschitz constant estimation for the gradient
+     * @param start Start iteration for Nesterov acceleration
+     * @return Reference to this
+     */
+    Data& WithNesterovAcceleration(Scalar L, Index start = 3);
+    /**
      * @brief Use Trust Region acceleration
      * @param eta Trust Region energy reduction accuracy threshold
      * @param tau Trust Region radius increase factor
@@ -213,6 +226,13 @@ PBAT_API struct Data
 
     // Chebyshev acceleration
     Scalar rho{1}; ///< Chebyshev acceleration estimated spectral radius
+
+    // Anderson acceleration
+    Index mAndersonWindowSize{5}; ///< Anderson acceleration window size
+
+    // Nesterov
+    Scalar mNesterovLipschitzConstant{1}; ///< Nesterov acceleration Lipschitz constant
+    Index mNesterovAccelerationStart{3};  ///< Nesterov acceleration start iteration
 
     // Trust Region acceleration
     Scalar eta{0.2};    ///< Trust Region energy reduction accuracy threshold

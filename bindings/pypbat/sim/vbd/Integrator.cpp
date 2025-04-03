@@ -1,10 +1,12 @@
 #include "Integrator.h"
 
 #include <memory>
+#include <pbat/sim/vbd/AndersonIntegrator.h>
 #include <pbat/sim/vbd/ChebyshevIntegrator.h>
 #include <pbat/sim/vbd/Data.h>
 #include <pbat/sim/vbd/Enums.h>
 #include <pbat/sim/vbd/Integrator.h>
+#include <pbat/sim/vbd/NesterovIntegrator.h>
 #include <pybind11/eigen.h>
 #include <pybind11/stl.h>
 
@@ -17,16 +19,22 @@ void BindIntegrator(pybind11::module& m)
 {
     namespace pyb    = pybind11;
     using ScalarType = pbat::Scalar;
+    using pbat::sim::vbd::AndersonIntegrator;
     using pbat::sim::vbd::ChebyshevIntegrator;
     using pbat::sim::vbd::Data;
     using pbat::sim::vbd::EAccelerationStrategy;
     using pbat::sim::vbd::EInitializationStrategy;
     using pbat::sim::vbd::Integrator;
+    using pbat::sim::vbd::NesterovIntegrator;
     pyb::class_<Integrator>(m, "Integrator")
         .def(
             pyb::init([](Data const& data) -> std::unique_ptr<Integrator> {
                 if (data.eAcceleration == EAccelerationStrategy::Chebyshev)
                     return std::make_unique<ChebyshevIntegrator>(data);
+                if (data.eAcceleration == EAccelerationStrategy::Anderson)
+                    return std::make_unique<AndersonIntegrator>(data);
+                if (data.eAcceleration == EAccelerationStrategy::Nesterov)
+                    return std::make_unique<NesterovIntegrator>(data);
                 return std::make_unique<Integrator>(data);
             }),
             "Construct a VBD integrator initialized with data. To access the data "

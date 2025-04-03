@@ -145,6 +145,21 @@ Data& Data::WithChebyshevAcceleration(Scalar rhoIn)
     return *this;
 }
 
+Data& Data::WithAndersonAcceleration(Index window)
+{
+    this->mAndersonWindowSize = window;
+    this->eAcceleration       = EAccelerationStrategy::Anderson;
+    return *this;
+}
+
+Data& Data::WithNesterovAcceleration(Scalar L, Index start)
+{
+    this->mNesterovLipschitzConstant = L;
+    this->mNesterovAccelerationStart = start;
+    this->eAcceleration              = EAccelerationStrategy::Nesterov;
+    return *this;
+}
+
 Data& Data::WithTrustRegionAcceleration(Scalar etaIn, Scalar tauIn, bool bCurvedIn)
 {
     this->eta           = etaIn;
@@ -245,6 +260,22 @@ Data& Data::Construct(bool bValidate)
                 if (rho <= 0 or rho >= 1)
                 {
                     throw std::invalid_argument("Expected 0 < rho < 1");
+                }
+                break;
+            case EAccelerationStrategy::Anderson:
+                if (mAndersonWindowSize < 1)
+                {
+                    throw std::invalid_argument("Expected m > 0");
+                }
+                break;
+            case EAccelerationStrategy::Nesterov:
+                if (mNesterovLipschitzConstant <= Scalar(0))
+                {
+                    throw std::invalid_argument("Expected L > 0");
+                }
+                if (mNesterovAccelerationStart < 0)
+                {
+                    throw std::invalid_argument("Expected start >= 0");
                 }
                 break;
             case EAccelerationStrategy::TrustRegion:

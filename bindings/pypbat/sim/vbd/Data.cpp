@@ -25,6 +25,8 @@ void BindData(pybind11::module& m)
     pyb::enum_<EAccelerationStrategy>(m, "AccelerationStrategy")
         .value("Base", EAccelerationStrategy::None)
         .value("Chebyshev", EAccelerationStrategy::Chebyshev)
+        .value("Anderson", EAccelerationStrategy::Anderson)
+        .value("Nesterov", EAccelerationStrategy::Nesterov)
         .value("TrustRegion", EAccelerationStrategy::TrustRegion)
         .export_values();
 
@@ -177,6 +179,26 @@ void BindData(pybind11::module& m)
             "Use Chebyshev semi-iterative method's\n\n"
             "Args:\n"
             "    rho (float): Estimated spectral radius. rho must be in (0, 1).\n\n"
+            "Returns:\n"
+            "    Data: self")
+        .def(
+            "with_anderson_acceleration",
+            &Data::WithAndersonAcceleration,
+            pyb::arg("window_size"),
+            "Use Anderson acceleration\n\n"
+            "Args:\n"
+            "    window (int): Number of past iterates to use in Anderson acceleration.\n\n"
+            "Returns:\n"
+            "    Data: self")
+        .def(
+            "with_nesterov_acceleration",
+            &Data::WithNesterovAcceleration,
+            pyb::arg("L"),
+            pyb::arg("start"),
+            "Use Nesterov acceleration\n\n"
+            "Args:\n"
+            "    L (float): Estimated gradient Lipschitz constant\n"
+            "    start (int): Iteration to start Nesterov acceleration\n\n"
             "Returns:\n"
             "    Data: self")
         .def(
