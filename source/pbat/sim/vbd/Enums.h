@@ -11,7 +11,14 @@ enum class EInitializationStrategy {
     AdaptivePbat
 };
 
-enum class EAccelerationStrategy { None, Chebyshev, Anderson, Nesterov, TrustRegion };
+enum class EAccelerationStrategy {
+    None,
+    Chebyshev,
+    Anderson,
+    Nesterov,
+    AcceleratedAnderson,
+    TrustRegion
+};
 
 } // namespace pbat::sim::vbd
 

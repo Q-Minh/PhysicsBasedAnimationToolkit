@@ -134,6 +134,12 @@ PBAT_API struct Data
      */
     Data& WithAndersonAcceleration(Index window);
     /**
+     * @brief Use accelerated Anderson acceleration
+     * @param window Anderson acceleration window size
+     * @return Reference to this
+     */
+    Data& WithAcceleratedAnderson(Index window);
+    /**
      * @brief Use Nesterov acceleration
      * @param L Lipschitz constant estimation for the gradient
      * @param start Start iteration for Nesterov acceleration

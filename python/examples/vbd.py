@@ -137,6 +137,12 @@ if __name__ == "__main__":
         dest="anderson_window",
     )
     parser.add_argument(
+        "--accelerated-anderson",
+        action="store_true",
+        help="Use accelerated Anderson acceleration",
+        dest="accelerated_anderson",
+    )
+    parser.add_argument(
         "--use-trust-region",
         help="Use trust region acceleration",
         action="store_true",
@@ -297,7 +303,10 @@ if __name__ == "__main__":
     if args.rho_chebyshev < 1.0 and args.rho_chebyshev > 0.0:
         data = data.with_chebyshev_acceleration(args.rho_chebyshev)
     elif args.anderson_window > 0:
-        data = data.with_anderson_acceleration(args.anderson_window)
+        if args.accelerated_anderson:
+            data = data.with_accelerated_anderson_acceleration(args.anderson_window)
+        else:
+            data = data.with_anderson_acceleration(args.anderson_window)
     if args.use_trust_region:
         data = data.with_trust_region_acceleration(
             args.tr_eta, args.tr_tau, args.use_curved_tr

@@ -1,32 +1,32 @@
 /**
- * @file AndersonIntegrator.h
+ * @file AcceleratedAndersonIntegrator.h
  * @author Quoc-Minh Ton-That (tonthat.quocminh@gmail.com)
- * @brief Anderson accelerated VBD integrator
+ * @brief Accelerated Anderson accelerated VBD integrator
  * @date 2025-04-05
  *
  * @copyright Copyright (c) 2025
  *
  */
 
-#ifndef PBAT_SIM_VBD_ANDERSONINTEGRATOR_H
-#define PBAT_SIM_VBD_ANDERSONINTEGRATOR_H
+#ifndef PBAT_SIM_VBD_ACCELERATEDANDERSONINTEGRATOR_H
+#define PBAT_SIM_VBD_ACCELERATEDANDERSONINTEGRATOR_H
 
 #include "Integrator.h"
 
 namespace pbat::sim::vbd {
 
 /**
- * @brief Anderson accelerated VBD integrator
+ * @brief Accelerated Anderson accelerated VBD integrator
  */
-class AndersonIntegrator : public Integrator
+class AcceleratedAndersonIntegrator : public Integrator
 {
   public:
     /**
-     * @brief Construct a new Anderson Integrator object
+     * @brief Construct a new Accelerated Anderson Integrator object
      *
      * @param data Simulation data
      */
-    AndersonIntegrator(Data data);
+    AcceleratedAndersonIntegrator(Data data);
 
   protected:
     /**
@@ -39,10 +39,10 @@ class AndersonIntegrator : public Integrator
     virtual void Solve(Scalar sdt, Scalar sdt2, Index iterations) override;
 
   private:
+    VectorX x0;   ///< `3|# verts|` initial iterate vector
+    VectorX xkm1; ///< `3|# verts| x 1` vector of past iterate
+    VectorX F0;   ///< `3|# verts| x 1` vector of past residual
     VectorX Fk;   ///< `3|# verts| x 1` vector of current residual
-    VectorX Fkm1; ///< `3|# verts| x 1` vector of past residual
-    VectorX Gkm1; ///< `3|# verts| x 1` vector of past iterate
-    VectorX xkm1; ///< `3|# verts|` past iterate vector
     MatrixX DFK; ///< `3|# verts| x m` matrix of past residuals window used in Anderson acceleration
     MatrixX DGK; ///< `3|# verts| x m` matrix of past iterates window used in Anderson acceleration
     VectorX alpha; ///< `m` vector of Anderson coefficients
@@ -50,4 +50,4 @@ class AndersonIntegrator : public Integrator
 
 } // namespace pbat::sim::vbd
 
-#endif // PBAT_SIM_VBD_ANDERSONINTEGRATOR_H
+#endif // PBAT_SIM_VBD_ACCELERATEDANDERSONINTEGRATOR_H

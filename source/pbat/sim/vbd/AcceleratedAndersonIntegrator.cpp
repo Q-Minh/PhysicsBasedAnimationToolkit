@@ -1,4 +1,4 @@
-#include "AndersonIntegrator.h"
+#include "AcceleratedAndersonIntegrator.h"
 
 #include "pbat/profiling/Profiling.h"
 
@@ -8,19 +8,19 @@
 
 namespace pbat::sim::vbd {
 
-AndersonIntegrator::AndersonIntegrator(Data dataIn)
+AcceleratedAndersonIntegrator::AcceleratedAndersonIntegrator(Data dataIn)
     : Integrator(std::move(dataIn)),
-      Fk(data.x.size()),
-      Fkm1(data.x.size()),
-      Gkm1(data.x.size()),
+      x0(data.x.size()),
       xkm1(data.x.size()),
+      F0(data.x.size()),
+      Fk(data.x.size()),
       DFK(data.x.size(), data.mAndersonWindowSize),
       DGK(data.x.size(), data.mAndersonWindowSize),
       alpha(data.mAndersonWindowSize)
 {
 }
 
-void AndersonIntegrator::Solve(Scalar sdt, Scalar sdt2, Index iterations)
+void AcceleratedAndersonIntegrator::Solve(Scalar sdt, Scalar sdt2, Index iterations)
 {
     auto const mod = [](auto a, auto b) {
         return (a % b + b) % b;
@@ -29,10 +29,9 @@ void AndersonIntegrator::Solve(Scalar sdt, Scalar sdt2, Index iterations)
     QR.setThreshold(1e-10);
     auto m = DGK.cols();
 
-    xkm1 = data.x.reshaped();
+    x0 = data.x.reshaped();
     RunVbdIteration(sdt, sdt2);
-    Gkm1 = data.x.reshaped();
-    Fkm1 = Gkm1 - xkm1;
+    F0 = data.x.reshaped() - x0;
     for (Index k = 1; k < iterations; ++k)
     {
         // Vanilla VBD iteration
@@ -42,10 +41,8 @@ void AndersonIntegrator::Solve(Scalar sdt, Scalar sdt2, Index iterations)
         auto dkl     = mod(k - 1, m);
         auto Gk      = data.x.reshaped();
         Fk           = Gk - xkm1;
-        DGK.col(dkl) = Gk - Gkm1;
-        DFK.col(dkl) = Fk - Fkm1;
-        Gkm1         = Gk;
-        Fkm1         = Fk;
+        DGK.col(dkl) = Gk - x0;
+        DFK.col(dkl) = Fk - F0;
         // Anderson Update
         auto mk = std::min(m, k);
         QR.compute(DFK.leftCols(mk));
@@ -64,7 +61,7 @@ void AndersonIntegrator::Solve(Scalar sdt, Scalar sdt2, Index iterations)
 
 #include <doctest/doctest.h>
 
-TEST_CASE("[sim][vbd] AndersonIntegrator")
+TEST_CASE("[sim][vbd] AcceleratedAndersonIntegrator")
 {
     using namespace pbat;
     // Arrange
@@ -92,12 +89,12 @@ TEST_CASE("[sim][vbd] AndersonIntegrator")
     auto constexpr iterations = 10;
     Index constexpr m         = 5;
     using pbat::common::ToEigen;
-    using pbat::sim::vbd::AndersonIntegrator;
-    AndersonIntegrator avbd{sim::vbd::Data()
-                                .WithVolumeMesh(P, T)
-                                .WithSurfaceMesh(V, F)
-                                .WithAndersonAcceleration(m)
-                                .Construct()};
+    using pbat::sim::vbd::AcceleratedAndersonIntegrator;
+    AcceleratedAndersonIntegrator avbd{sim::vbd::Data()
+                                           .WithVolumeMesh(P, T)
+                                           .WithSurfaceMesh(V, F)
+                                           .WithAndersonAcceleration(m)
+                                           .Construct()};
     MatrixX xtilde = avbd.data.x + dt * avbd.data.v + dt * dt * avbd.data.aext;
     Scalar f0      = avbd.ObjectiveFunction(avbd.data.x, xtilde, dt);
     VectorX g0     = avbd.ObjectiveFunctionGradient(avbd.data.x, xtilde, dt);

@@ -152,6 +152,13 @@ Data& Data::WithAndersonAcceleration(Index window)
     return *this;
 }
 
+Data& Data::WithAcceleratedAnderson(Index window)
+{
+    this->mAndersonWindowSize = window;
+    this->eAcceleration       = EAccelerationStrategy::AcceleratedAnderson;
+    return *this;
+}
+
 Data& Data::WithNesterovAcceleration(Scalar L, Index start)
 {
     this->mNesterovLipschitzConstant = L;
@@ -262,7 +269,8 @@ Data& Data::Construct(bool bValidate)
                     throw std::invalid_argument("Expected 0 < rho < 1");
                 }
                 break;
-            case EAccelerationStrategy::Anderson:
+            case EAccelerationStrategy::Anderson: [[fallthrough]];
+            case EAccelerationStrategy::AcceleratedAnderson:
                 if (mAndersonWindowSize < 1)
                 {
                     throw std::invalid_argument("Expected m > 0");
