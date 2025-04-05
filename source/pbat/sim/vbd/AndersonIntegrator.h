@@ -18,7 +18,6 @@ class AndersonIntegrator : public Integrator
     MatrixX GK;  ///< `3|# verts| x m` matrix of past iterates window used in Anderson acceleration
     MatrixX DFK; ///< `3|# verts| x m` matrix of past residuals window used in Anderson acceleration
     MatrixX DGK; ///< `3|# verts| x m` matrix of past iterates window used in Anderson acceleration
-    MatrixX D;   ///< `3|# verts| x m` least-squares matrix
     MatrixX xkm1;  ///< `3x|# verts|` matrix of previous iterate
     VectorX alpha; ///< `m` vector of Anderson coefficients
 };

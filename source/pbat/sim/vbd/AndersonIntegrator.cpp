@@ -14,7 +14,6 @@ AndersonIntegrator::AndersonIntegrator(Data dataIn)
       GK(data.x.size(), data.mAndersonWindowSize),
       DFK(data.x.size(), data.mAndersonWindowSize),
       DGK(data.x.size(), data.mAndersonWindowSize),
-      D(data.x.size(), data.mAndersonWindowSize),
       xkm1(data.x.rows(), data.x.cols()),
       alpha(data.mAndersonWindowSize)
 {
@@ -25,6 +24,8 @@ void AndersonIntegrator::Solve(Scalar sdt, Scalar sdt2, Index iterations)
     auto const mod = [](auto a, auto b) {
         return (a % b + b) % b;
     };
+    Eigen::CompleteOrthogonalDecomposition<MatrixX> QR{};
+    QR.setThreshold(1e-10);
 
     auto m = GK.cols();
     xkm1   = data.x;
@@ -45,12 +46,7 @@ void AndersonIntegrator::Solve(Scalar sdt, Scalar sdt2, Index iterations)
         DFK.col(dkl) = FK.col(kl) - FK.col(dkl);
         // Anderson Update
         auto mk = std::min(m, k);
-        for (auto j = 0; j < mk; ++j)
-            D.col(j) = DFK.col(mod(dkl - j, m));
-        auto DK = D.leftCols(mk);
-        Eigen::CompleteOrthogonalDecomposition<MatrixX> QR{};
-        QR.setThreshold(1e-10);
-        QR.compute(DK);
+        QR.compute(DFK.leftCols(mk));
         if (QR.info() != Eigen::ComputationInfo::Success)
         {
             throw std::runtime_error("QR decomposition failed");
@@ -59,7 +55,10 @@ void AndersonIntegrator::Solve(Scalar sdt, Scalar sdt2, Index iterations)
         auto x               = data.x.reshaped();
         x                    = GK.col(kl);
         for (auto j = 0; j < mk; ++j)
-            x -= alpha(j) * DGK.col(mod(dkl - j, m));
+        {
+            auto dklj = mod(dkl - j, m);
+            x -= alpha(dklj) * DGK.col(dklj);
+        }
     }
 }
 
