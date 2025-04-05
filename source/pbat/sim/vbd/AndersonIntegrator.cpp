@@ -10,11 +10,12 @@ namespace pbat::sim::vbd {
 
 AndersonIntegrator::AndersonIntegrator(Data dataIn)
     : Integrator(std::move(dataIn)),
-      FK(data.x.size(), data.mAndersonWindowSize),
-      GK(data.x.size(), data.mAndersonWindowSize),
+      Fk(data.x.size()),
+      F0(data.x.size()),
+      Gkm1(data.x.size()),
       DFK(data.x.size(), data.mAndersonWindowSize),
       DGK(data.x.size(), data.mAndersonWindowSize),
-      xkm1(data.x.rows(), data.x.cols()),
+      x0(data.x.rows(), data.x.cols()),
       alpha(data.mAndersonWindowSize)
 {
 }
@@ -26,24 +27,22 @@ void AndersonIntegrator::Solve(Scalar sdt, Scalar sdt2, Index iterations)
     };
     Eigen::CompleteOrthogonalDecomposition<MatrixX> QR{};
     QR.setThreshold(1e-10);
+    auto m = DGK.cols();
 
-    auto m = GK.cols();
-    xkm1   = data.x;
+    x0 = data.x.reshaped();
     RunVbdIteration(sdt, sdt2);
-    FK.col(0) = data.x.reshaped() - xkm1.reshaped();
-    GK.col(0) = data.x.reshaped();
+    F0 = data.x.reshaped() - x0;
     for (Index k = 1; k < iterations; ++k)
     {
         // Vanilla VBD iteration
-        xkm1 = data.x;
+        Gkm1 = data.x.reshaped();
         RunVbdIteration(sdt, sdt2);
         // Update window
-        auto kl      = mod(k, m);
         auto dkl     = mod(k - 1, m);
-        GK.col(kl)   = data.x.reshaped();
-        FK.col(kl)   = GK.col(kl) - xkm1.reshaped();
-        DGK.col(dkl) = GK.col(kl) - GK.col(dkl);
-        DFK.col(dkl) = FK.col(kl) - FK.col(dkl);
+        auto Gk      = data.x.reshaped();
+        Fk           = Gk - Gkm1;
+        DGK.col(dkl) = Gk - x0;
+        DFK.col(dkl) = Fk - F0;
         // Anderson Update
         auto mk = std::min(m, k);
         QR.compute(DFK.leftCols(mk));
@@ -51,14 +50,8 @@ void AndersonIntegrator::Solve(Scalar sdt, Scalar sdt2, Index iterations)
         {
             throw std::runtime_error("QR decomposition failed");
         }
-        alpha.segment(0, mk) = QR.solve(FK.col(kl));
-        auto x               = data.x.reshaped();
-        x                    = GK.col(kl);
-        for (auto j = 0; j < mk; ++j)
-        {
-            auto dklj = mod(dkl - j, m);
-            x -= alpha(dklj) * DGK.col(dklj);
-        }
+        alpha.head(mk) = QR.solve(Fk);
+        Gk -= DGK.leftCols(mk) * alpha.head(mk);
     }
 }
 
