@@ -136,18 +136,24 @@ if __name__ == "__main__":
 
     t = 0
     animate = False
+    export = False
     n_body_pairs = 0
     n_contact_pairs = 0
     profiler = pbat.profiling.Profiler()
 
     def callback():
-        global t, animate
+        global t, animate, export
         global U, XT, XTP1, n_body_pairs, n_contact_pairs
 
         changed, animate = imgui.Checkbox("Animate", animate)
         step = imgui.Button("Step")
 
+        changed, export = imgui.Checkbox("Export", export)
+
         if animate or step:
+            if export:
+                ps.screenshot()
+
             profiler.begin_frame("Physics")
             XT = XTP1
             U[:] = 0
