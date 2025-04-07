@@ -1,9 +1,22 @@
 include(FetchContent)
 
-find_package(doctest CONFIG REQUIRED)
 find_package(fmt CONFIG REQUIRED)
 find_package(range-v3 CONFIG REQUIRED)
 find_package(TBB CONFIG REQUIRED)
+
+if(NOT TARGET doctest::doctest)
+    FetchContent_Declare(
+        _doctest
+        GIT_REPOSITORY https://github.com/doctest/doctest.git
+        GIT_TAG 3a01ec37828affe4c9650004edb5b304fb9d5b75
+        GIT_PROGRESS TRUE
+        SYSTEM
+    )
+    FetchContent_MakeAvailable(_doctest)
+    get_target_property(PBAT_DOCTEST_SOURCE_DIR doctest::doctest SOURCE_DIR)
+    message(VERBOSE "PBAT -- Doctest source directory: ${PBAT_DOCTEST_SOURCE_DIR}")
+    set(PBAT_DOCTEST_MODULES_DIR ${PBAT_DOCTEST_SOURCE_DIR}/scripts/cmake/)
+endif()
 
 if(NOT TARGET Eigen3::Eigen)
     FetchContent_Declare(
@@ -77,15 +90,15 @@ if(PBAT_USE_INTEL_MKL)
 endif()
 
 if(PBAT_USE_SUITESPARSE)
-    # find_package(metis CONFIG)
-    # if (${metis_FOUND})
-    # get_target_property(_metis_configurations metis IMPORTED_CONFIGURATIONS)
-    # foreach(_metis_configuration IN ITEMS ${_metis_configurations})
-    # get_target_property(_metis_location metis IMPORTED_LOCATION_${_metis_configuration})
-    # message(VERBOSE "Found metis: ${_metis_location}")
-    # endforeach()
-    # endif()
-    find_package(suitesparse CONFIG REQUIRED)
+    include(CheckLanguage)
+    check_language(C)
+    if(DEFINED CMAKE_C_COMPILER)
+        enable_language(C)
+    else()
+        message(FATAL_ERROR "PBAT -- Could not find CMAKE_C_COMPILER=${CMAKE_C_COMPILER}")
+    endif()
+    find_package(OpenMP REQUIRED COMPONENTS C)
+    find_package(CHOLMOD CONFIG REQUIRED)
 endif()
 
 if(PBAT_USE_METIS)

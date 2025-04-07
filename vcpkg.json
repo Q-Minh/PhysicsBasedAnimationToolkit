@@ -14,15 +14,11 @@
         },
         {
             "name": "fmt",
-            "version>=": "10.2.1"
+            "version>=": "11.0.2"
         },
         {
             "name": "tbb",
             "version>=": "2022.0.0"
-        },
-        {
-            "name": "doctest",
-            "version>=": "2.4.11"
         }
     ],
     "features": {
@@ -30,8 +26,15 @@
             "description": "Use SuiteSparse for sparse decompositions",
             "dependencies": [
                 {
-                    "name": "suitesparse",
-                    "version>=": "5.8.0#2"
+                    "name": "suitesparse-cholmod",
+                    "version>=": "5.3.0",
+                    "features": [
+                        "matrixops",
+                        "modify",
+                        "openmp",
+                        "partition",
+                        "supernodal"
+                    ]
                 }
             ]
         },
@@ -58,10 +61,10 @@
             "dependencies": [
                 {
                     "name": "cuda-api-wrappers",
-                    "version>=": "0.7.1"
+                    "version>=": "0.8.0"
                 }
             ]
         }
     },
-    "builtin-baseline": "060c2708a31314fad5af86ca5a1fc5009e3bddce"
+    "builtin-baseline": "b02e341c927f16d991edbd915d8ea43eac52096c"
 }
