@@ -112,7 +112,7 @@ def analyze(args):
 
     # Plot objective function values
     for f, name in zip(fs, names):
-        faxs.plot(f[:-1] - f[1:], label=name)
+        faxs.plot(f, label=name)
     faxs.set_title("Objective Function")
     faxs.set_xlabel("Iteration")
     faxs.set_ylabel("Objective Value")
