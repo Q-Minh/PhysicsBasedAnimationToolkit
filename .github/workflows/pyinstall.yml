@@ -53,7 +53,7 @@ jobs:
         uses: lukka/run-vcpkg@v11
         with:
           vcpkgDirectory: ${{ github.workspace }}/vcpkg
-          vcpkgGitCommitId: 060c2708a31314fad5af86ca5a1fc5009e3bddce
+          vcpkgGitCommitId: b02e341c927f16d991edbd915d8ea43eac52096c
 
       - uses: actions/setup-python@v5
         with:

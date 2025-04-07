@@ -147,18 +147,27 @@ inline void Cholmod::ToCholmodView(
     ESparseStorage storage,
     cholmod_sparse& cholmod_A) const
 {
+    using ScalarType = typename Derived::Scalar;
+    using IndexType  = typename Derived::StorageIndex;
+    static_assert(
+        std::is_same_v<ScalarType, double> || std::is_same_v<ScalarType, float>,
+        "Cholmod implementation uses double or float floating point coefficients");
+    static_assert(
+        std::is_same_v<IndexType, std::int32_t> or std::is_same_v<IndexType, std::int64_t>,
+        "Cholmod implementation uses 32-bit or 64-bit integer indices");
     // Store only the lower triangular part of A
     cholmod_A.nrow   = static_cast<size_t>(A.innerSize());
     cholmod_A.ncol   = static_cast<size_t>(A.outerSize());
     cholmod_A.nzmax  = static_cast<size_t>(A.nonZeros());
-    cholmod_A.p      = const_cast<std::int32_t*>(A.outerIndexPtr());
-    cholmod_A.i      = const_cast<std::int32_t*>(A.innerIndexPtr());
+    cholmod_A.p      = const_cast<IndexType*>(A.outerIndexPtr());
+    cholmod_A.i      = const_cast<IndexType*>(A.innerIndexPtr());
     cholmod_A.nz     = NULL;
-    cholmod_A.x      = const_cast<Scalar*>(A.valuePtr());
+    cholmod_A.x      = const_cast<ScalarType*>(A.valuePtr());
     cholmod_A.z      = NULL;
     cholmod_A.stype  = static_cast<std::int32_t>(storage);
-    cholmod_A.itype  = CHOLMOD_INT;
+    cholmod_A.itype  = std::is_same_v<IndexType, std::int64_t> ? CHOLMOD_LONG : CHOLMOD_INT;
     cholmod_A.xtype  = CHOLMOD_REAL;
+    cholmod_A.dtype  = std::is_same_v<ScalarType, double> ? CHOLMOD_DOUBLE : CHOLMOD_SINGLE;
     cholmod_A.sorted = 1 /*TRUE*/;
     cholmod_A.packed = 1 /*TRUE*/;
 }
