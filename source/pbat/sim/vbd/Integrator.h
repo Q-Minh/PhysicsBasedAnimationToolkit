@@ -34,6 +34,7 @@ class Integrator
     PBAT_API void InitializeSolve(Scalar sdt, Scalar sdt2);
     PBAT_API void RunVbdIteration(Scalar sdt, Scalar sdt2);
     PBAT_API virtual void Solve(Scalar sdt, Scalar sdt2, Index iterations);
+    PBAT_API void SolveVertex(Index i, Scalar sdt, Scalar sdt2);
 
     /**
      * @brief The following methods are made public for debugging purposes (generally).
@@ -50,6 +51,7 @@ class Integrator
 
   protected:
     PBAT_API void ExportTrace(Scalar sdt, Index substep);
+    PBAT_API void TryTraceIteration(Scalar sdt);
 
   private:
     bool mTraceIterates{false};

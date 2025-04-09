@@ -5,15 +5,16 @@
 #include <Eigen/QR>
 #include <algorithm>
 #include <exception>
+#include <tbb/parallel_for.h>
 
 namespace pbat::sim::vbd {
 
 AcceleratedAndersonIntegrator::AcceleratedAndersonIntegrator(Data dataIn)
     : Integrator(std::move(dataIn)),
-      x0(data.x.size()),
-      xkm1(data.x.size()),
-      F0(data.x.size()),
       Fk(data.x.size()),
+      Fkm1(data.x.size()),
+      Gkm1(data.x.size()),
+      xkm1(data.x.size()),
       DFK(data.x.size(), data.mAndersonWindowSize),
       DGK(data.x.size(), data.mAndersonWindowSize),
       alpha(data.mAndersonWindowSize)
@@ -25,13 +26,13 @@ void AcceleratedAndersonIntegrator::Solve(Scalar sdt, Scalar sdt2, Index iterati
     auto const mod = [](auto a, auto b) {
         return (a % b + b) % b;
     };
-    Eigen::CompleteOrthogonalDecomposition<MatrixX> QR{};
-    QR.setThreshold(1e-10);
+    Eigen::HouseholderQR<MatrixX> QR{};
     auto m = DGK.cols();
 
-    x0 = data.x.reshaped();
+    xkm1 = data.x.reshaped();
     RunVbdIteration(sdt, sdt2);
-    F0 = data.x.reshaped() - x0;
+    Gkm1 = data.x.reshaped();
+    Fkm1 = Gkm1 - xkm1;
     for (Index k = 1; k < iterations; ++k)
     {
         // Vanilla VBD iteration
@@ -41,17 +42,22 @@ void AcceleratedAndersonIntegrator::Solve(Scalar sdt, Scalar sdt2, Index iterati
         auto dkl     = mod(k - 1, m);
         auto Gk      = data.x.reshaped();
         Fk           = Gk - xkm1;
-        DGK.col(dkl) = Gk - x0;
-        DFK.col(dkl) = Fk - F0;
+        DGK.col(dkl) = Gk - Gkm1;
+        DFK.col(dkl) = Fk - Fkm1;
+        Gkm1         = Gk;
+        Fkm1         = Fk;
         // Anderson Update
         auto mk = std::min(m, k);
-        QR.compute(DFK.leftCols(mk));
-        if (QR.info() != Eigen::ComputationInfo::Success)
+        if (mk == m)
         {
-            throw std::runtime_error("QR decomposition failed");
+            QR.compute(DFK.leftCols(mk));
+            // if (QR.info() != Eigen::ComputationInfo::Success)
+            // {
+            //     throw std::runtime_error("QR decomposition failed");
+            // }
+            alpha.head(mk) = QR.solve(Fk);
+            Gk -= DGK.leftCols(mk) * alpha.head(mk);
         }
-        alpha.head(mk) = QR.solve(Fk);
-        Gk -= DGK.leftCols(mk) * alpha.head(mk);
     }
 }
 
@@ -86,14 +92,14 @@ TEST_CASE("[sim][vbd] AcceleratedAndersonIntegrator")
     // Problem parameters
     auto constexpr dt         = Scalar{1e-2};
     auto constexpr substeps   = 1;
-    auto constexpr iterations = 10;
+    auto constexpr iterations = 15;
     Index constexpr m         = 5;
     using pbat::common::ToEigen;
     using pbat::sim::vbd::AcceleratedAndersonIntegrator;
     AcceleratedAndersonIntegrator avbd{sim::vbd::Data()
                                            .WithVolumeMesh(P, T)
                                            .WithSurfaceMesh(V, F)
-                                           .WithAndersonAcceleration(m)
+                                           .WithAcceleratedAnderson(m)
                                            .Construct()};
     MatrixX xtilde = avbd.data.x + dt * avbd.data.v + dt * dt * avbd.data.aext;
     Scalar f0      = avbd.ObjectiveFunction(avbd.data.x, xtilde, dt);
