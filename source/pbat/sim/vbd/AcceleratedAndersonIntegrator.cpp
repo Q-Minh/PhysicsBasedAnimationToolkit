@@ -17,7 +17,11 @@ AcceleratedAndersonIntegrator::AcceleratedAndersonIntegrator(Data dataIn)
       xkm1(data.x.size()),
       DFK(data.x.size(), data.mAndersonWindowSize),
       DGK(data.x.size(), data.mAndersonWindowSize),
-      alpha(data.mAndersonWindowSize)
+      alpha(data.mAndersonWindowSize),
+      mkt(1),
+      DFKt(data.x.size(), data.mAndersonWindowSize),
+      DGKt(data.x.size(), data.mAndersonWindowSize),
+      mWarmStartAvailable(false)
 {
 }
 
@@ -26,10 +30,18 @@ void AcceleratedAndersonIntegrator::Solve(Scalar sdt, Scalar sdt2, Index iterati
     auto const mod = [](auto a, auto b) {
         return (a % b + b) % b;
     };
+
+    Index mk = 1;
+    if (mWarmStartAvailable)
+    {
+        DFK = DFKt;
+        DGK = DGKt;
+        mk  = mkt;
+    }
+
     Eigen::HouseholderQR<MatrixX> QR{};
     auto m = DGK.cols();
-
-    xkm1 = data.x.reshaped();
+    xkm1   = data.x.reshaped();
     RunVbdIteration(sdt, sdt2);
     Gkm1 = data.x.reshaped();
     Fkm1 = Gkm1 - xkm1;
@@ -46,19 +58,20 @@ void AcceleratedAndersonIntegrator::Solve(Scalar sdt, Scalar sdt2, Index iterati
         DFK.col(dkl) = Fk - Fkm1;
         Gkm1         = Gk;
         Fkm1         = Fk;
-        // Anderson Update
-        auto mk = std::min(m, k);
-        if (mk == m)
+        if (k < m)
         {
-            QR.compute(DFK.leftCols(mk));
-            // if (QR.info() != Eigen::ComputationInfo::Success)
-            // {
-            //     throw std::runtime_error("QR decomposition failed");
-            // }
-            alpha.head(mk) = QR.solve(Fk);
-            Gk -= DGK.leftCols(mk) * alpha.head(mk);
+            DGKt.col(k) = DGK.col(dkl);
+            DFKt.col(k) = DFK.col(dkl);
         }
+        // Anderson Update
+        mk = std::max(mk, std::min(m, k));
+        QR.compute(DFK.leftCols(mk));
+        alpha.head(mk) = QR.solve(Fk);
+        Gk -= DGK.leftCols(mk) * alpha.head(mk);
     }
+    mkt = mk;
+    if (not mWarmStartAvailable)
+        mWarmStartAvailable = true;
 }
 
 } // namespace pbat::sim::vbd

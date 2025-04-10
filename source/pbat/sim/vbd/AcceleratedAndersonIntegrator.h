@@ -37,11 +37,6 @@ class AcceleratedAndersonIntegrator : public Integrator
      * @param iterations Number of iterations
      */
     virtual void Solve(Scalar sdt, Scalar sdt2, Index iterations) override;
-    /**
-     * @brief
-     * @param mk Window size
-     */
-    void AndersonUpdate(Index mk);
 
   private:
     VectorX Fk;   ///< `3|# verts| x 1` vector of current residual
@@ -51,6 +46,12 @@ class AcceleratedAndersonIntegrator : public Integrator
     MatrixX DFK; ///< `3|# verts| x m` matrix of past residuals window used in Anderson acceleration
     MatrixX DGK; ///< `3|# verts| x m` matrix of past iterates window used in Anderson acceleration
     VectorX alpha; ///< `m` vector of Anderson coefficients
+    Index mkt;     ///< Past time step's largest window size
+    MatrixX DFKt;  ///< `3|# verts| x m` matrix of past residuals window used in Anderson
+                   ///< acceleration in beginning of past time step
+    MatrixX DGKt; ///< `3|# verts| x m` matrix of past iterates window used in Anderson acceleration
+                  ///< in beginning of past time step
+    bool mWarmStartAvailable; ///< Whether the warm start is available
 };
 
 } // namespace pbat::sim::vbd
