@@ -1,6 +1,7 @@
 include(CMakeFindDependencyMacro)
 
-find_dependency(cpp-sort)
+# NOTE: Wait until https://github.com/Morwenn/cpp-sort/issues/227 is resolved.
+# find_dependency(cpp-sort)
 find_dependency(doctest)
 find_dependency(Eigen3)
 find_dependency(fmt)

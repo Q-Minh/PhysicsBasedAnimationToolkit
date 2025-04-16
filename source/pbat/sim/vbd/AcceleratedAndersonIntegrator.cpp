@@ -5,23 +5,21 @@
 #include <Eigen/QR>
 #include <algorithm>
 #include <exception>
+#include <limits>
 #include <tbb/parallel_for.h>
 
 namespace pbat::sim::vbd {
 
 AcceleratedAndersonIntegrator::AcceleratedAndersonIntegrator(Data dataIn)
     : Integrator(std::move(dataIn)),
+      U(data.x.size(), data.mAndersonWindowSize),
+      V(data.x.size(), data.mAndersonWindowSize),
+      xkm1(data.x.size()),
+      dx(data.x.size()),
       Fk(data.x.size()),
       Fkm1(data.x.size()),
-      Gkm1(data.x.size()),
-      xkm1(data.x.size()),
-      DFK(data.x.size(), data.mAndersonWindowSize),
-      DGK(data.x.size(), data.mAndersonWindowSize),
-      alpha(data.mAndersonWindowSize),
-      mkt(1),
-      DFKt(data.x.size(), data.mAndersonWindowSize),
-      DGKt(data.x.size(), data.mAndersonWindowSize),
-      mWarmStartAvailable(false)
+      GdFk(data.x.size()),
+      GTdx(data.x.size())
 {
 }
 
@@ -30,48 +28,41 @@ void AcceleratedAndersonIntegrator::Solve(Scalar sdt, Scalar sdt2, Index iterati
     auto const mod = [](auto a, auto b) {
         return (a % b + b) % b;
     };
+    auto m  = U.cols();
+    auto n  = U.rows();
+    auto G0 = -MatrixX::Identity(n, n);
+    Index mk{0};
+    auto const Gmul = [&](auto const& x) {
+        return G0 * x + U.leftCols(mk) * (V.leftCols(mk).transpose() * x);
+    };
+    auto const GTmul = [&](auto const& x) {
+        return G0 * x + V.leftCols(mk) * (U.leftCols(mk).transpose() * x);
+    };
+    Scalar constexpr eps = std::numeric_limits<Scalar>::epsilon();
 
-    Index mk = 1;
-    if (mWarmStartAvailable)
-    {
-        DFK = DFKt;
-        DGK = DGKt;
-        mk  = mkt;
-    }
-
-    Eigen::HouseholderQR<MatrixX> QR{};
-    auto m = DGK.cols();
-    xkm1   = data.x.reshaped();
+    xkm1 = data.x.reshaped();
     RunVbdIteration(sdt, sdt2);
-    Gkm1 = data.x.reshaped();
-    Fkm1 = Gkm1 - xkm1;
-    for (Index k = 1; k < iterations; ++k)
+    Fk = data.x.reshaped() - xkm1;
+    for (Index k = 0; k < iterations; ++k)
     {
-        // Vanilla VBD iteration
+        // Broyden step
+        mk = std::min(m, k);
+        dx = -Gmul(Fk);
+        data.x.reshaped() += dx;
+        // Compute f(x) = g(x) - x, i.e. the VBD iteration
+        Fkm1 = Fk;
         xkm1 = data.x.reshaped();
         RunVbdIteration(sdt, sdt2);
-        // Update window
-        auto dkl     = mod(k - 1, m);
-        auto Gk      = data.x.reshaped();
-        Fk           = Gk - xkm1;
-        DGK.col(dkl) = Gk - Gkm1;
-        DFK.col(dkl) = Fk - Fkm1;
-        Gkm1         = Gk;
-        Fkm1         = Fk;
-        if (k < m)
-        {
-            DGKt.col(k) = DGK.col(dkl);
-            DFKt.col(k) = DFK.col(dkl);
-        }
-        // Anderson Update
-        mk = std::max(mk, std::min(m, k));
-        QR.compute(DFK.leftCols(mk));
-        alpha.head(mk) = QR.solve(Fk);
-        Gk -= DGK.leftCols(mk) * alpha.head(mk);
+        Fk       = data.x.reshaped() - xkm1;
+        auto dFk = Fk - Fkm1;
+        GdFk     = Gmul(dFk);
+        // Broyden update
+        auto kl    = mod(k, m);
+        U.col(kl)  = dx - GdFk;
+        Scalar den = dx.dot(GdFk);
+        GTdx       = GTmul(dx);
+        V.col(kl)  = GTdx / den;
     }
-    mkt = mk;
-    if (not mWarmStartAvailable)
-        mWarmStartAvailable = true;
 }
 
 } // namespace pbat::sim::vbd

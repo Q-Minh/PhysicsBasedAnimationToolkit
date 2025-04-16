@@ -39,19 +39,14 @@ class AcceleratedAndersonIntegrator : public Integrator
     virtual void Solve(Scalar sdt, Scalar sdt2, Index iterations) override;
 
   private:
-    VectorX Fk;   ///< `3|# verts| x 1` vector of current residual
-    VectorX Fkm1; ///< `3|# verts| x 1` vector of past residual
-    VectorX Gkm1; ///< `3|# verts| x 1` vector of past iterate
-    VectorX xkm1; ///< `3|# verts|` past iterate vector
-    MatrixX DFK; ///< `3|# verts| x m` matrix of past residuals window used in Anderson acceleration
-    MatrixX DGK; ///< `3|# verts| x m` matrix of past iterates window used in Anderson acceleration
-    VectorX alpha; ///< `m` vector of Anderson coefficients
-    Index mkt;     ///< Past time step's largest window size
-    MatrixX DFKt;  ///< `3|# verts| x m` matrix of past residuals window used in Anderson
-                   ///< acceleration in beginning of past time step
-    MatrixX DGKt; ///< `3|# verts| x m` matrix of past iterates window used in Anderson acceleration
-                  ///< in beginning of past time step
-    bool mWarmStartAvailable; ///< Whether the warm start is available
+    MatrixX U;    ///< `kDims|# verts| x m` matrix of rank-1 update vectors u
+    MatrixX V;    ///< `kDims|# verts| x m` matrix of rank-1 update vectors v
+    VectorX xkm1; ///< `kDims|# verts|` vector of previous x
+    VectorX dx;   ///< `kDims|# verts|` vector of dx = x - xkm1
+    VectorX Fk;   ///< `kDims|# verts|` vector of root-finding function
+    VectorX Fkm1; ///< `kDims|# verts|` vector of previous root-finding function
+    VectorX GdFk; ///< `kDims|# verts|` vector of Gk * dFk
+    VectorX GTdx; ///< `kDims|# verts|` vector of Gk^T * dx
 };
 
 } // namespace pbat::sim::vbd

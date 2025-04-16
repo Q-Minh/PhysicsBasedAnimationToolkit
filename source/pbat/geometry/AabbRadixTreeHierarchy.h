@@ -13,7 +13,8 @@
 #include "pbat/math/linalg/mini/Eigen.h"
 #include "pbat/profiling/Profiling.h"
 
-#include <cpp-sort/sorters/ska_sorter.h>
+// NOTE: Wait until https://github.com/Morwenn/cpp-sort/issues/227 is resolved.
+// #include <cpp-sort/sorters/ska_sorter.h>
 #include <numeric>
 
 namespace pbat::geometry {
@@ -515,7 +516,11 @@ inline void AabbRadixTreeHierarchy<kDims>::SortMortonCodes()
     // exploit cache locality of iterating through B's columns. This is a trade-off that
     // should be considered if performance is critical.
     std::iota(inds.begin(), inds.end(), 0);
-    cppsort::ska_sort(inds.begin(), inds.end(), [&](IndexType i) { return codes(i); });
+    // NOTE: Wait until https://github.com/Morwenn/cpp-sort/issues/227 is resolved.
+    // cppsort::ska_sort(inds.begin(), inds.end(), [&](IndexType i) { return codes(i); });
+    std::sort(inds.begin(), inds.end(), [&](IndexType i, IndexType j) {
+        return codes(i) < codes(j);
+    });
     common::Permute(codes.begin(), codes.end(), inds.begin());
 }
 

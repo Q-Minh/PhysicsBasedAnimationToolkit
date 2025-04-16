@@ -55,15 +55,6 @@
                     "version>=": "2022-07-27"
                 }
             ]
-        },
-        "cuda": {
-            "description": "Use CUDA for GPU accelerated modules",
-            "dependencies": [
-                {
-                    "name": "cuda-api-wrappers",
-                    "version>=": "0.8.0"
-                }
-            ]
         }
     },
     "builtin-baseline": "b02e341c927f16d991edbd915d8ea43eac52096c"

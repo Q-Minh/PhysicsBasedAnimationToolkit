@@ -45,7 +45,8 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
 add_subdirectory(pbat)
 target_link_libraries(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     PUBLIC
-    cpp-sort::cpp-sort
+    # NOTE: Wait until https://github.com/Morwenn/cpp-sort/issues/227 is resolved.
+    # cpp-sort::cpp-sort
     doctest::doctest
     Eigen3::Eigen
     fmt::fmt

@@ -59,15 +59,16 @@ if(PBAT_ENABLE_PROFILER AND NOT TARGET Tracy::TracyClient)
 endif()
 
 if(NOT TARGET cpp-sort::cpp-sort)
-    FetchContent_Declare(
-        _cppsort
-        GIT_REPOSITORY https://github.com/Morwenn/cpp-sort.git
-        GIT_TAG 739e02e13d276b5b5a28e0981c7c6c3d55b03b6e
-        GIT_SHALLOW TRUE
-        GIT_PROGRESS TRUE
-        SYSTEM
-    )
-    FetchContent_MakeAvailable(_cppsort)
+    # NOTE: Wait until https://github.com/Morwenn/cpp-sort/issues/227 is resolved.
+    # FetchContent_Declare(
+    #     _cppsort
+    #     GIT_REPOSITORY https://github.com/Morwenn/cpp-sort.git
+    #     GIT_TAG 739e02e13d276b5b5a28e0981c7c6c3d55b03b6e
+    #     GIT_SHALLOW TRUE
+    #     GIT_PROGRESS TRUE
+    #     SYSTEM
+    # )
+    # FetchContent_MakeAvailable(_cppsort)
 endif()
 
 if(PBAT_USE_INTEL_MKL)
@@ -112,8 +113,15 @@ if(PBAT_USE_CUDA)
     if(DEFINED CMAKE_CUDA_COMPILER)
         enable_language(CUDA)
         find_package(CUDAToolkit REQUIRED)
-        find_package(cuda-api-wrappers CONFIG REQUIRED)
-        set_target_properties(cuda-api-wrappers::runtime-and-driver PROPERTIES SYSTEM ON)
+        FetchContent_Declare(
+            _caw
+            GIT_REPOSITORY https://github.com/eyalroz/cuda-api-wrappers.git
+            GIT_TAG v0.8.1
+            GIT_SHALLOW TRUE
+            GIT_PROGRESS TRUE
+            SYSTEM
+        )
+        FetchContent_MakeAvailable(_caw)
     else()
         message(FATAL_ERROR "PBAT -- Could not find CMAKE_CUDA_COMPILER=${CMAKE_CUDA_COMPILER}")
     endif()

@@ -29,7 +29,7 @@ class ChebyshevIntegrator : public Integrator
      */
     ChebyshevIntegrator(Data const& data);
     /**
-     * @brief Solve the optimization problem using the Linear Trust-Region accelerated VBD method
+     * @brief Solve the optimization problem using the Chebyshev accelerated VBD method
      * @param bdf Device BDF minimization problem
      * @param iterations Number of optimization iterations
      */
