@@ -28,6 +28,9 @@ class Buffer
 
     SelfType& operator=(SelfType const& other);
 
+    template <int D2>
+    SelfType& operator=(Buffer<T, D2> const& other);
+
     thrust::device_vector<T>& operator[](auto d);
     thrust::device_vector<T> const& operator[](auto d) const;
 
@@ -73,6 +76,21 @@ inline Buffer<T, D>& Buffer<T, D>::operator=(Buffer<T, D> const& other)
             mBuffers[d].resize(other.Size());
         thrust::copy(other.mBuffers[d].begin(), other.mBuffers[d].end(), mBuffers[d].begin());
     }
+    return *this;
+}
+
+template <class T, int D>
+template <int D2>
+Buffer<T, D>& Buffer<T, D>::operator=(Buffer<T, D2> const& other)
+{
+    PBAT_PROFILE_CUDA_NAMED_SCOPE("pbat.gpu.impl.common.Buffer.CopyToGpu");
+    static_assert(D == 1, "Buffer<T, D>::operator=(Buffer<T, D2>) only works for D == 1");
+    if (this->Size() != other.Size() * other.Dimensions())
+        Resize(other.Size() * other.Dimensions());
+    auto n     = other.Size();
+    auto begin = mBuffers[0].begin();
+    for (auto d = 0; d < D2; ++d)
+        thrust::copy(other[d].begin(), other[d].end(), begin + d * n);
     return *this;
 }
 

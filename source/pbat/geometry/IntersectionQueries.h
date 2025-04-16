@@ -493,7 +493,7 @@ PBAT_HOST_DEVICE auto UvwLineSegmentTriangle3D(
     // Compute barycentric coordinate components and test if within bounds
     mini::SVector<ScalarType, kDims> const I = P + t * PQ;
     mini::SVector<ScalarType, 4> uvwt;
-    auto uvw                     = uvwt.Slice<3, 1>(1, 0);
+    auto uvw                     = uvwt.template Slice<3, 1>(1, 0);
     uvw                          = TriangleBarycentricCoordinates(I, A, B, C);
     bool const bIsInsideTriangle = All((uvw >= ScalarType(0)) and (uvw <= ScalarType(1)));
     if (not bIsInsideTriangle)
@@ -544,6 +544,9 @@ PBAT_HOST_DEVICE auto UvwTriangles3D(
     // Test 3 edges of each triangle against the other triangle
     std::array<std::optional<mini::SVector<ScalarType, 3>>, 6u> intersections;
     auto uvwt = UvwLineSegmentTriangle3D(A1, B1, A2, B2, C2);
+#if defined(CUDART_VERSION)
+    #pragma nv_diag_suppress 174
+#endif
     if (uvwt)
         intersections[0] = uvwt->Slice<3, 1>(1, 0);
     uvwt = UvwLineSegmentTriangle3D(B1, C1, A2, B2, C2);
@@ -561,6 +564,9 @@ PBAT_HOST_DEVICE auto UvwTriangles3D(
     uvwt = UvwLineSegmentTriangle3D(C2, A2, A1, B1, C1);
     if (uvwt)
         intersections[5] = uvwt->Slice<3, 1>(1, 0);
+#if defined(CUDART_VERSION)
+    #pragma nv_diag_default 174
+#endif
     return intersections;
 }
 

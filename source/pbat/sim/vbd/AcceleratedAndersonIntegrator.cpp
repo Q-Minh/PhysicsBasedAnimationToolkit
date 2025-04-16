@@ -1,5 +1,6 @@
 #include "AcceleratedAndersonIntegrator.h"
 
+#include "pbat/common/Modulo.h"
 #include "pbat/profiling/Profiling.h"
 
 #include <Eigen/QR>
@@ -25,9 +26,6 @@ AcceleratedAndersonIntegrator::AcceleratedAndersonIntegrator(Data dataIn)
 
 void AcceleratedAndersonIntegrator::Solve(Scalar sdt, Scalar sdt2, Index iterations)
 {
-    auto const mod = [](auto a, auto b) {
-        return (a % b + b) % b;
-    };
     auto m  = U.cols();
     auto n  = U.rows();
     auto G0 = -MatrixX::Identity(n, n);
@@ -57,7 +55,7 @@ void AcceleratedAndersonIntegrator::Solve(Scalar sdt, Scalar sdt2, Index iterati
         auto dFk = Fk - Fkm1;
         GdFk     = Gmul(dFk);
         // Broyden update
-        auto kl    = mod(k, m);
+        auto kl    = common::Modulo(k, m);
         U.col(kl)  = dx - GdFk;
         Scalar den = dx.dot(GdFk);
         GTdx       = GTmul(dx);

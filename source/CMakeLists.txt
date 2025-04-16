@@ -13,6 +13,13 @@ set_target_properties(
 
 # Most of our implementation code is templated, so we expose transitive dependencies (i.e. PUBLIC)
 target_compile_features(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit PUBLIC cxx_std_20)
+if (MSVC)
+    target_compile_options(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
+        PRIVATE
+        $<$<COMPILE_LANGUAGE:CXX>:/bigobj /utf-8>
+        $<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler "/bigobj /utf-8">
+    )
+endif()
 target_compile_definitions(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     PUBLIC
     $<$<BOOL:${PBAT_BUILD_TESTS}>:PBAT_HAS_DOCTEST>
@@ -99,7 +106,6 @@ if(PBAT_USE_CUDA)
     target_compile_options(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
         PRIVATE
         $<$<COMPILE_LANGUAGE:CUDA>:
-            -Xcompiler="/utf-8";
             --expt-relaxed-constexpr;
             --extended-lambda;
         >

@@ -1,5 +1,6 @@
 #include "AndersonIntegrator.h"
 
+#include "pbat/common/Modulo.h"
 #include "pbat/profiling/Profiling.h"
 
 #include <Eigen/QR>
@@ -22,9 +23,6 @@ AndersonIntegrator::AndersonIntegrator(Data dataIn)
 
 void AndersonIntegrator::Solve(Scalar sdt, Scalar sdt2, Index iterations)
 {
-    auto const mod = [](auto a, auto b) {
-        return (a % b + b) % b;
-    };
     Eigen::CompleteOrthogonalDecomposition<MatrixX> QR{};
     QR.setThreshold(1e-10);
     auto m = DGK.cols();
@@ -39,7 +37,7 @@ void AndersonIntegrator::Solve(Scalar sdt, Scalar sdt2, Index iterations)
         xkm1 = data.x.reshaped();
         RunVbdIteration(sdt, sdt2);
         // Update window
-        auto dkl     = mod(k - 1, m);
+        auto dkl     = common::Modulo(k - 1, m);
         auto Gk      = data.x.reshaped();
         Fk           = Gk - xkm1;
         DGK.col(dkl) = Gk - Gkm1;
