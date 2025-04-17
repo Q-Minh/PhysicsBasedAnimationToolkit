@@ -36,7 +36,6 @@ void AcceleratedAndersonIntegrator::Solve(Scalar sdt, Scalar sdt2, Index iterati
     auto const GTmul = [&](auto const& x) {
         return G0 * x + V.leftCols(mk) * (U.leftCols(mk).transpose() * x);
     };
-    Scalar constexpr eps = std::numeric_limits<Scalar>::epsilon();
 
     xkm1 = data.x.reshaped();
     RunVbdIteration(sdt, sdt2);

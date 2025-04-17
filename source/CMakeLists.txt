@@ -94,8 +94,9 @@ endif()
 if(PBAT_USE_CUDA)
     target_link_libraries(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
         PRIVATE
-        CUDA::toolkit
         CUDA::cudart
+        CUDA::cublas
+        CUDA::cusolver
         cuda-api-wrappers::runtime-and-driver
     )
     set_target_properties(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit

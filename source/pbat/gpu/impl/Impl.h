@@ -21,6 +21,7 @@ namespace pbat::gpu::impl {
 #include "common/Common.h"
 #include "contact/Contact.h"
 #include "geometry/Geometry.h"
+#include "math/Math.h"
 #include "vbd/Vbd.h"
 #include "xpbd/Xpbd.h"
 

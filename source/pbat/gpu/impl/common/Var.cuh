@@ -31,6 +31,9 @@ class Var
     T* Raw();
     T const* Raw() const;
 
+    void SetStream(std::shared_ptr<cuda::stream_t> stream) { mStream = stream; }
+    std::shared_ptr<cuda::stream_t> Stream() const { return mStream; }
+
     ~Var();
 
   private:
