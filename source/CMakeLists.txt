@@ -48,12 +48,29 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     BASE_DIRS ${CMAKE_CURRENT_LIST_DIR}
 )
 
-# Define sources+targets for our library and link to every dependency
+# Define sources+targets for our library
 add_subdirectory(pbat)
+
+# Make source tree appear as on file system in IDEs
+get_target_property(_pbat_sources PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit SOURCES)
+get_target_property(_pbat_headers PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit HEADER_SET_api)
+get_target_property(_pbat_private_headers PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit HEADER_SET_implementation)
+list(APPEND _pbat_headers ${_pbat_private_headers})
+source_group(
+    TREE ${CMAKE_CURRENT_SOURCE_DIR}
+    PREFIX "source"
+    FILES ${_pbat_sources}
+)
+source_group(
+    TREE ${CMAKE_CURRENT_SOURCE_DIR}
+    PREFIX "headers"
+    FILES ${_pbat_headers}
+)
+
+# Link to every dependency
 target_link_libraries(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     PUBLIC
-    # NOTE: Wait until https://github.com/Morwenn/cpp-sort/issues/227 is resolved.
-    # cpp-sort::cpp-sort
+    cpp-sort::cpp-sort
     doctest::doctest
     Eigen3::Eigen
     fmt::fmt
@@ -123,22 +140,6 @@ if(PBAT_USE_CUDA)
         >
     )
 endif()
-
-# Make source tree appear as on file system in IDEs
-get_target_property(_pbat_sources PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit SOURCES)
-get_target_property(_pbat_headers PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit HEADER_SET_api)
-get_target_property(_pbat_private_headers PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit HEADER_SET_implementation)
-list(APPEND _pbat_headers ${_pbat_private_headers})
-source_group(
-    TREE ${CMAKE_CURRENT_SOURCE_DIR}
-    PREFIX "source"
-    FILES ${_pbat_sources}
-)
-source_group(
-    TREE ${CMAKE_CURRENT_SOURCE_DIR}
-    PREFIX "headers"
-    FILES ${_pbat_headers}
-)
 
 # Generate shared library export macros
 # Note that the following code must come after the previous call to source_group,
