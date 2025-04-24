@@ -20,6 +20,7 @@ concept CMatrix = requires(TMatrix a)
     {a.Cols()}->std::convertible_to<int>;
     {a.LeadingDimensions()}->std::convertible_to<int>;
     {a.Operation()}->std::convertible_to<cublasOperation_t>;
+    {a.Transposed()};
 };
 
 template <class TVector>
@@ -178,6 +179,10 @@ struct Matrix
     VectorView<ValueType> Flattened() const
     {
         return VectorView<ValueType>{const_cast<ValueType*>(data.Raw()), Rows() * Cols(), 1};
+    }
+    MatrixView<ValueType> Transposed() const
+    {
+        return MatrixView<ValueType>{const_cast<ValueType*>(data.Raw()), m, Cols(), m, CUBLAS_OP_T};
     }
 };
 

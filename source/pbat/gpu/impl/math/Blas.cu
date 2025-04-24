@@ -21,15 +21,23 @@ Blas::~Blas()
 void Blas::TrySetStream(std::shared_ptr<cuda::stream_t> stream) const
 {
     mDevice.make_current();
-    if (stream and stream->device() == mDevice)
+    if (stream)
     {
-        CUBLAS_CHECK(cublasSetStream(mHandle, stream->handle()));
+        if (stream->device() == mDevice)
+        {
+            CUBLAS_CHECK(cublasSetStream(mHandle, stream->handle()));
+        }
+        else
+        {
+            throw std::invalid_argument(
+                "pbat::gpu::impl::math::Blas::TrySetStream -> Tried to set cuBLAS stream which "
+                "does "
+                "not belong to the same device as the cuBLAS handle.");
+        }
     }
     else
     {
-        throw std::invalid_argument(
-            "pbat::gpu::impl::math::Blas::TrySetStream -> Tried to set cuBLAS stream which does "
-            "not belong to the same device as the cuBLAS handle.");
+        CUBLAS_CHECK(cublasSetStream(mHandle, mDevice.default_stream().handle()));
     }
 }
 
@@ -73,8 +81,8 @@ TEST_CASE("[gpu][impl][math] Blas")
     blas.UpperTriangularSolve(dU, dB);
 
     // Assert
-    GpuVectorX xEigen    = ToEigen(dB.data);
-    GpuVectorX xExpected = LLT.solve(b);
-    bool const bAreEqual = xEigen.isApprox(xExpected, eps);
+    GpuVectorX xExpected = x;
+    x                    = ToEigen(dB.data);
+    bool const bAreEqual = x.isApprox(xExpected, eps);
     CHECK(bAreEqual);
 }
