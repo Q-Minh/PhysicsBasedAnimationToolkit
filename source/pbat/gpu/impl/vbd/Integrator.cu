@@ -379,10 +379,7 @@ kernels::BackwardEulerMinimization Integrator::BdfDeviceParameters(GpuScalar dt,
 
 #include "pbat/common/Eigen.h"
 
-#include <Eigen/SparseCore>
 #include <doctest/doctest.h>
-#include <span>
-#include <vector>
 
 TEST_CASE("[gpu][impl][vbd] Integrator")
 {

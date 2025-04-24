@@ -84,13 +84,27 @@ template <int D2>
 Buffer<T, D>& Buffer<T, D>::operator=(Buffer<T, D2> const& other)
 {
     PBAT_PROFILE_CUDA_NAMED_SCOPE("pbat.gpu.impl.common.Buffer.CopyToGpu");
-    static_assert(D == 1, "Buffer<T, D>::operator=(Buffer<T, D2>) only works for D == 1");
-    if (this->Size() != other.Size() * other.Dimensions())
-        Resize(other.Size() * other.Dimensions());
-    auto n     = other.Size();
-    auto begin = mBuffers[0].begin();
-    for (auto d = 0; d < D2; ++d)
-        thrust::copy(other[d].begin(), other[d].end(), begin + d * n);
+    static_assert(
+        D == 1 or D2 == 1,
+        "Buffer<T, D>::operator=(Buffer<T, D2>) only works for D == 1 or D2 == 1");
+    if constexpr (D == 1)
+    {
+        if (this->Size() != other.Size() * other.Dimensions())
+            Resize(other.Size() * other.Dimensions());
+        auto n     = other.Size();
+        auto begin = mBuffers[0].begin();
+        for (auto d = 0; d < D2; ++d)
+            thrust::copy(other[d].begin(), other[d].end(), begin + d * n);
+    }
+    if constexpr (D2 == 1)
+    {
+        auto n = other.Size() / Dimensions();
+        if (this->Size() != n)
+            Resize(n);
+        auto begin = other.Data();
+        for (auto d = 0; d < D; ++d)
+            thrust::copy(begin + d * n, begin + (d + 1) * n, mBuffers[d].begin());
+    }
     return *this;
 }
 

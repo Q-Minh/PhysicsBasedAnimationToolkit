@@ -1,3 +1,13 @@
+/**
+ * @file Blas.cuh
+ * @author Quoc-Minh Ton-That (tonthat.quocminh@gmail.com)
+ * @brief BLAS API wrapper over cuBLAS
+ * @date 2025-04-24
+ * 
+ * @copyright Copyright (c) 2025
+ * 
+ */
+
 #ifndef PBAT_GPU_IMPL_MATH_BLAS_H
 #define PBAT_GPU_IMPL_MATH_BLAS_H
 
@@ -36,6 +46,17 @@ class Blas
 
     cublasHandle_t Handle() const { return mHandle; }
 
+    template <CVector TVectorX, CVector TVectorY, class TScalar = TVectorX::ValueType>
+    void
+    Copy(TVectorX const& x, TVectorY& y, std::shared_ptr<cuda::stream_t> stream = nullptr) const;
+
+    template <CVector TVectorX, CVector TVectorY, class TScalar = TVectorX::ValueType>
+    void Axpy(
+        TVectorX const& x,
+        TVectorY& y,
+        TScalar alpha                          = TScalar(1),
+        std::shared_ptr<cuda::stream_t> stream = nullptr);
+
     template <
         CMatrix TMatrixA,
         CVector TVectorX,
@@ -65,6 +86,22 @@ class Blas
         bool bHasUnitDiagonal                  = false,
         std::shared_ptr<cuda::stream_t> stream = nullptr) const;
 
+    template <CMatrix TMatrixA, CVector TVectorB, class TScalar = TMatrixA::ValueType>
+    void UpperTriangularSolve(
+        TMatrixA const& A,
+        TVectorB& B,
+        TScalar alpha                          = TScalar(1),
+        bool bHasUnitDiagonal                  = false,
+        std::shared_ptr<cuda::stream_t> stream = nullptr) const;
+
+    template <CMatrix TMatrixA, CVector TVectorB, class TScalar = TMatrixA::ValueType>
+    void LowerTriangularSolve(
+        TMatrixA const& A,
+        TVectorB& B,
+        TScalar alpha                          = TScalar(1),
+        bool bHasUnitDiagonal                  = false,
+        std::shared_ptr<cuda::stream_t> stream = nullptr) const;
+
     template <CMatrix TMatrixA, CMatrix TMatrixB, class TScalar = TMatrixA::ValueType>
     void Trsm(
         cublasSideMode_t side,
@@ -84,6 +121,39 @@ class Blas
     cublasHandle_t mHandle; ///< CUBLAS handle
     cuda::device_t mDevice; ///< Device handle
 };
+
+template <CVector TVectorX, CVector TVectorY, class TScalar>
+inline void Blas::Copy(TVectorX const& x, TVectorY& y, std::shared_ptr<cuda::stream_t> stream) const
+{
+    TrySetStream(stream);
+    if constexpr (std::is_same_v<TScalar, float>)
+    {
+        CUBLAS_CHECK(
+            cublasScopy(mHandle, x.Rows(), x.Raw(), x.Increment(), y.Raw(), y.Increment()));
+    }
+    if constexpr (std::is_same_v<TScalar, double>)
+    {
+        CUBLAS_CHECK(
+            cublasDcopy(mHandle, x.Rows(), x.Raw(), x.Increment(), y.Raw(), y.Increment()));
+    }
+}
+
+template <CVector TVectorX, CVector TVectorY, class TScalar>
+inline void
+Blas::Axpy(TVectorX const& x, TVectorY& y, TScalar alpha, std::shared_ptr<cuda::stream_t> stream)
+{
+    TrySetStream(stream);
+    if constexpr (std::is_same_v<TScalar, float>)
+    {
+        CUBLAS_CHECK(
+            cublasSaxpy(mHandle, x.Rows(), &alpha, x.Raw(), x.Increment(), y.Raw(), y.Increment()));
+    }
+    if constexpr (std::is_same_v<TScalar, double>)
+    {
+        CUBLAS_CHECK(
+            cublasDaxpy(mHandle, x.Rows(), &alpha, x.Raw(), x.Increment(), y.Raw(), y.Increment()));
+    }
+}
 
 template <CMatrix TMatrixA, CVector TVectorX, CVector TVectorY, class TScalar>
 inline void Blas::Gemv(
@@ -163,6 +233,30 @@ inline void Blas::LowerTriangularSolve(
         B,
         alpha,
         stream);
+}
+
+template <CMatrix TMatrixA, CVector TVectorB, class TScalar>
+inline void Blas::UpperTriangularSolve(
+    TMatrixA const& A,
+    TVectorB& B,
+    TScalar alpha,
+    bool bHasUnitDiagonal,
+    std::shared_ptr<cuda::stream_t> stream) const
+{
+    MatrixView<TScalar> BB(B);
+    UpperTriangularSolve(A, BB, alpha, bHasUnitDiagonal, stream);
+}
+
+template <CMatrix TMatrixA, CVector TVectorB, class TScalar>
+inline void Blas::LowerTriangularSolve(
+    TMatrixA const& A,
+    TVectorB& B,
+    TScalar alpha,
+    bool bHasUnitDiagonal,
+    std::shared_ptr<cuda::stream_t> stream) const
+{
+    MatrixView<TScalar> BB(B);
+    LowerTriangularSolve(A, BB, alpha, bHasUnitDiagonal, stream);
 }
 
 template <CMatrix TMatrixA, CMatrix TMatrixB, class TScalar>

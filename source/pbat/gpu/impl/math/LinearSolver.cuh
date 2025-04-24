@@ -1,5 +1,15 @@
-#ifndef PBAT_GPU_IMPL_MATH_LINEARSOLVER_H
-#define PBAT_GPU_IMPL_MATH_LINEARSOLVER_H
+/**
+ * @file LinearSolver.cuh
+ * @author Quoc-Minh Ton-That (tonthat.quocminh@gmail.com)
+ * @brief Linear solver abstractions over cuSolver
+ * @date 2025-04-24
+ * 
+ * @copyright Copyright (c) 2025
+ * 
+ */
+
+#ifndef PBAT_GPU_IMPL_MATH_LINEARSOLVER_CUH
+#define PBAT_GPU_IMPL_MATH_LINEARSOLVER_CUH
 
 #include "Blas.cuh"
 #include "Matrix.cuh"
@@ -53,6 +63,9 @@ class LinearSolver
     template <CMatrix TMatrixQ, CMatrix TMatrixB, class TScalar = TMatrixQ::ValueType>
     int OrmqrWorkspace(TMatrixQ const& Q, TMatrixB const& B, bool bMultiplyFromLeft = true) const;
 
+    template <CMatrix TMatrixQ, CVector TVectorB, class TScalar = TMatrixQ::ValueType>
+    int OrmqrWorkspace(TMatrixQ const& Q, TVectorB const& B, bool bMultiplyFromLeft = true) const;
+
     template <
         CMatrix TMatrixQ,
         CVector TVectorTau,
@@ -62,6 +75,19 @@ class LinearSolver
         TMatrixQ const& Q,
         TVectorTau const& tau,
         TMatrixB& B,
+        common::Buffer<TScalar>& workspace,
+        bool bMultiplyFromLeft                 = true,
+        std::shared_ptr<cuda::stream_t> stream = nullptr) const;
+
+    template <
+        CMatrix TMatrixQ,
+        CVector TVectorTau,
+        CVector TVectorB,
+        class TScalar = TMatrixQ::ValueType>
+    void Ormqr(
+        TMatrixQ const& Q,
+        TVectorTau const& tau,
+        TVectorB& B,
         common::Buffer<TScalar>& workspace,
         bool bMultiplyFromLeft                 = true,
         std::shared_ptr<cuda::stream_t> stream = nullptr) const;
@@ -180,6 +206,14 @@ int LinearSolver::OrmqrWorkspace(TMatrixQ const& Q, TMatrixB const& B, bool bMul
     return workspace;
 }
 
+template <CMatrix TMatrixQ, CVector TVectorB, class TScalar>
+inline int
+LinearSolver::OrmqrWorkspace(TMatrixQ const& Q, TVectorB const& B, bool bMultiplyFromLeft) const
+{
+    MatrixView<TScalar> BB(const_cast<TVectorB&>(B));
+    return OrmqrWorkspace(Q, BB, bMultiplyFromLeft);
+}
+
 template <CMatrix TMatrixQ, CVector TVectorTau, CMatrix TMatrixB, class TScalar>
 inline void LinearSolver::Ormqr(
     TMatrixQ const& Q,
@@ -230,6 +264,19 @@ inline void LinearSolver::Ormqr(
     }
 }
 
+template <CMatrix TMatrixQ, CVector TVectorTau, CVector TVectorB, class TScalar>
+inline void LinearSolver::Ormqr(
+    TMatrixQ const& Q,
+    TVectorTau const& tau,
+    TVectorB& B,
+    common::Buffer<TScalar>& workspace,
+    bool bMultiplyFromLeft,
+    std::shared_ptr<cuda::stream_t> stream) const
+{
+    MatrixView<TScalar> BB(B);
+    Ormqr(Q, tau, BB, workspace, bMultiplyFromLeft, stream);
+}
+
 } // namespace pbat::gpu::impl::math
 
-#endif // PBAT_GPU_IMPL_MATH_LINEARSOLVER_H
+#endif // PBAT_GPU_IMPL_MATH_LINEARSOLVER_CUH

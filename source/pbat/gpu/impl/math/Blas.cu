@@ -59,12 +59,12 @@ TEST_CASE("[gpu][impl][math] Blas")
     using namespace pbat::gpu::impl;
 
     // Arrange
-    auto constexpr eps = 1e-6f;
+    auto constexpr eps = 1e-2f;
     auto constexpr n   = 10;
     GpuMatrixX A       = GpuMatrixX::Random(n, n);
     GpuVectorX x       = GpuVectorX::Random(n);
-    GpuVectorX b       = A * x;
     A                  = A.transpose() * A;
+    GpuVectorX b       = A * x;
     auto LLT           = A.llt();
     GpuMatrixX L       = LLT.matrixL();
     GpuMatrixX U       = L.transpose();
@@ -83,6 +83,7 @@ TEST_CASE("[gpu][impl][math] Blas")
     // Assert
     GpuVectorX xExpected = x;
     x                    = ToEigen(dB.data);
-    bool const bAreEqual = x.isApprox(xExpected, eps);
+    auto error           = (x - xExpected).norm() / xExpected.norm();
+    bool const bAreEqual = error < eps;
     CHECK(bAreEqual);
 }

@@ -1,5 +1,15 @@
-#ifndef PBAT_GPU_IMPL_MATH_MATRIX_H
-#define PBAT_GPU_IMPL_MATH_MATRIX_H
+/**
+ * @file Matrix.cuh
+ * @author Quoc-Minh Ton-That (tonthat.quocminh@gmail.com)
+ * @brief Matrix and vector cuBLAS abstractions
+ * @date 2025-04-24
+ * 
+ * @copyright Copyright (c) 2025
+ * 
+ */
+
+#ifndef PBAT_GPU_IMPL_MATH_MATRIX_CUH
+#define PBAT_GPU_IMPL_MATH_MATRIX_CUH
 
 #include "pbat/gpu/impl/common/Buffer.cuh"
 
@@ -86,7 +96,7 @@ struct MatrixView
     }
 
     template <CVector TVector>
-    MatrixView(TVector const& v) : data(v.Raw()), m(v.Rows()), n(1), ld(v.Rows()), op(CUBLAS_OP_N)
+    MatrixView(TVector& v) : data(v.Raw()), m(v.Rows()), n(1), ld(v.Rows()), op(CUBLAS_OP_N)
     {
         if (v.Increment() != 1)
         {
@@ -141,7 +151,7 @@ struct Matrix
     using ValueType = std::remove_cvref_t<T>;
 
     Matrix() = default;
-    Matrix(auto rows, auto cols) : data(rows * cols), m(rows) {}
+    Matrix(auto rows, auto cols) : data(rows * cols), m(static_cast<int>(rows)) {}
 
     common::Buffer<ValueType> data; ///< `m x n` dense matrix coefficients in column-major order
     int m;                          ///< Number of rows
@@ -192,7 +202,7 @@ struct Vector
     using ValueType = std::remove_cvref_t<T>;
 
     Vector() = default;
-    Vector(auto rows) : data(rows), n(rows) {}
+    Vector(auto rows) : data(rows), n(static_cast<int>(rows)) {}
 
     common::Buffer<ValueType> data; ///< `n x 1` dense vector coefficients
     int n;                          ///< Number of rows
@@ -217,4 +227,4 @@ struct Vector
 
 }; // namespace pbat::gpu::impl::math
 
-#endif // PBAT_GPU_IMPL_MATH_MATRIX_H
+#endif // PBAT_GPU_IMPL_MATH_MATRIX_CUH

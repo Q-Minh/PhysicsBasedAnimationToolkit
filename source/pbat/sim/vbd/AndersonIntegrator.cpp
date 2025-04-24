@@ -44,7 +44,7 @@ void AndersonIntegrator::Solve(Scalar sdt, Scalar sdt2, Index iterations)
         DFK.col(dkl) = Fk - Fkm1;
         Gkm1         = Gk;
         Fkm1         = Fk;
-        // Anderson Update
+        // Anderson update
         auto mk = std::min(m, k);
         QR.compute(DFK.leftCols(mk));
         if (QR.info() != Eigen::ComputationInfo::Success)
