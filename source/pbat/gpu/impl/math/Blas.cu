@@ -27,7 +27,9 @@ void Blas::TrySetStream(std::shared_ptr<cuda::stream_t> stream) const
     }
     else
     {
-        CUBLAS_CHECK(cublasSetStream(mHandle, mDevice.default_stream().handle()));
+        throw std::invalid_argument(
+            "pbat::gpu::impl::math::Blas::TrySetStream -> Tried to set cuBLAS stream which does "
+            "not belong to the same device as the cuBLAS handle.");
     }
 }
 
