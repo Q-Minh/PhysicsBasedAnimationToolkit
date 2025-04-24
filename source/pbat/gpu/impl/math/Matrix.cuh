@@ -4,21 +4,9 @@
 #include "pbat/gpu/impl/common/Buffer.cuh"
 
 #include <concepts>
-#include <cstdio>
 #include <cublas_v2.h>
-#include <cuda/api/stream.hpp>
 #include <exception>
 #include <type_traits>
-
-#define CUBLAS_CHECK(err)                                                        \
-    {                                                                            \
-        cublasStatus_t err_ = (err);                                             \
-        if (err_ != CUBLAS_STATUS_SUCCESS)                                       \
-        {                                                                        \
-            std::printf("cublas error %d at %s:%d\n", err_, __FILE__, __LINE__); \
-            throw std::runtime_error("cublas error");                            \
-        }                                                                        \
-    }
 
 namespace pbat::gpu::impl::math {
 
@@ -31,6 +19,7 @@ concept CMatrix = requires(TMatrix a)
     {a.Rows()}->std::convertible_to<int>;
     {a.Cols()}->std::convertible_to<int>;
     {a.LeadingDimensions()}->std::convertible_to<int>;
+    {a.Operation()}->std::convertible_to<cublasOperation_t>;
 };
 
 template <class TVector>
@@ -40,7 +29,6 @@ concept CVector = requires(TVector a)
         std::is_same_v<typename TVector::ValueType, double>;
     {a.Raw()}->std::same_as<typename TVector::ValueType*>;
     {a.Rows()}->std::convertible_to<int>;
-    {a.Cols()}->std::convertible_to<int>;
     {a.Increment()}->std::convertible_to<int>;
 };
 
@@ -80,6 +68,31 @@ struct MatrixView
     int n;                ///< Number of columns
     int ld;               ///< Leading dimension
     cublasOperation_t op; ///< CUBLAS operation type
+
+    MatrixView(
+        ValueType* dataIn,
+        int mIn,
+        int nIn,
+        int ldIn,
+        cublasOperation_t opIn = cublasOperation_t::CUBLAS_OP_N)
+        : data(dataIn), m(mIn), n(nIn), ld(ldIn), op(opIn)
+    {
+        if (ld < m)
+        {
+            throw std::invalid_argument(
+                "MatrixView::MatrixView(ValueType* data, int m, int n, int ld) -> ld < m");
+        }
+    }
+
+    template <CVector TVector>
+    MatrixView(TVector const& v) : data(v.Raw()), m(v.Rows()), n(1), ld(v.Rows()), op(CUBLAS_OP_N)
+    {
+        if (v.Increment() != 1)
+        {
+            throw std::invalid_argument(
+                "MatrixView::MatrixView(TVector const& v) -> v.Increment() must be 1");
+        }
+    }
 
     // Storage information
     ValueType* Raw() { return data; }
@@ -195,70 +208,6 @@ struct Vector
     VectorView<ValueType> Segment(auto row, auto rows) const { return Slice(row, rows, 1); }
     VectorView<ValueType> Head(auto rows) const { return Slice(0, rows, 1); }
     VectorView<ValueType> Tail(auto rows) const { return Slice(n - rows, rows, 1); }
-};
-
-class Blas
-{
-  public:
-    Blas();
-    Blas(Blas const&)            = delete;
-    Blas(Blas&&)                 = delete;
-    Blas& operator=(Blas const&) = delete;
-    Blas& operator=(Blas&&)      = delete;
-
-    template <
-        CMatrix TMatrixA,
-        CVector TVectorX,
-        CVector TVectorY,
-        class TScalar = TMatrixA::ValueType>
-    void Gemv(
-        TMatrixA const& A,
-        TVectorX const& x,
-        TVectorY& y,
-        TScalar alpha                = 1.0,
-        TScalar beta                 = 0.0,
-        cuda::stream_t const& stream = cuda::device::current::get().default_stream())
-    {
-        stream.device().make_current();
-        CUBLAS_CHECK(cublasSetStream(mHandle, stream.handle()));
-        if constexpr (std::is_same_v<TScalar, float>)
-        {
-            CUBLAS_CHECK(cublasSgemv(
-                mHandle,
-                A.Operation(),
-                A.Rows(),
-                A.Cols(),
-                &alpha,
-                A.Raw(),
-                A.LeadingDimensions(),
-                x.Raw(),
-                x.Increment(),
-                &beta,
-                y.Raw(),
-                y.Increment()));
-        }
-        if constexpr (std::is_same_v<TScalar, double>)
-        {
-            CUBLAS_CHECK(cublasDgemv(
-                mHandle,
-                A.Operation(),
-                A.Rows(),
-                A.Cols(),
-                &alpha,
-                A.Raw(),
-                A.LeadingDimensions(),
-                x.Raw(),
-                x.Increment(),
-                &beta,
-                y.Raw(),
-                y.Increment()));
-        }
-    }
-
-    ~Blas();
-
-  private:
-    cublasHandle_t mHandle; ///< CUBLAS handle
 };
 
 }; // namespace pbat::gpu::impl::math

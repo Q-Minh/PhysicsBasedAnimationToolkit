@@ -3,20 +3,7 @@
 // clang-format on
 
 #include "Matrix.cuh"
-
-namespace pbat::gpu::impl::math {
-
-Blas::Blas()
-{
-    CUBLAS_CHECK(cublasCreate(&mHandle));
-}
-
-Blas::~Blas()
-{
-    /*CUBLAS_CHECK(*/ cublasDestroy(mHandle) /*)*/;
-}
-
-} // namespace pbat::gpu::impl::math
+#include "Blas.cuh"
 
 #include "pbat/gpu/Aliases.h"
 #include "pbat/gpu/impl/common/Eigen.cuh"
