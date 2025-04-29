@@ -36,14 +36,14 @@ AndersonIntegrator::AndersonIntegrator(Data const& data)
 void AndersonIntegrator::Solve(kernels::BackwardEulerMinimization& bdf, GpuIndex iterations)
 {
     PBAT_PROFILE_CUDA_NAMED_SCOPE("pbat.gpu.impl.vbd.AndersonIntegrator.Solve");
-    auto m = mDFK.Cols();
     // Start Anderson acceleration
     xkm1.data = x;
     RunVbdIteration(bdf);
     Gkm1.data = x;
+    mBlas.Copy(Gkm1, Fkm1);                // Fkm1 = Gkm1
+    mBlas.Axpy(xkm1, Fkm1, GpuScalar(-1)); // Fkm1 = Gkm1 - xkm1
     for (auto k = 1; k < iterations; ++k)
     {
-        // Vanilla VBD iteration
         xkm1.data = x;
         RunVbdIteration(bdf);
         UpdateAndersonWindow(k);
@@ -92,13 +92,15 @@ void AndersonIntegrator::TakeAndersonAcceleratedStep(GpuIndex k)
 
 void AndersonIntegrator::RegularizeRFactor(GpuIndex mk)
 {
-    GpuScalar constexpr reg = std::numeric_limits<GpuScalar>::epsilon();
+    GpuScalar constexpr reg = GpuScalar(1e10) * std::numeric_limits<GpuScalar>::min();
     thrust::for_each(
         thrust::device,
         thrust::make_counting_iterator(0),
         thrust::make_counting_iterator(mk),
         [QR = mQR.data.Raw(), ld = mQR.LeadingDimensions(), reg] PBAT_DEVICE(auto j) {
-            QR[j * ld + j] += reg;
+            auto rj = QR[j * ld + j];
+            if (rj == GpuScalar(0))
+                QR[j * ld + j] = reg;
         });
 }
 
