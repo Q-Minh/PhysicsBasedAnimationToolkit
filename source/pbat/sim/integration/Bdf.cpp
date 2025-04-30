@@ -22,9 +22,8 @@ auto Bdf::State(int k, int o) const
     {
         throw std::out_of_range("0 <= o < order");
     }
-    auto nIterates = mStep + 1;
-    auto kt        = common::Modulo(ti, nIterates);
-    return xt.col(o * nIterates + kt);
+    auto kt = common::Modulo(ti /*- mStep*/ + k, mStep);
+    return xt.col(o * mStep + kt);
 }
 
 auto Bdf::State(int k, int o)
@@ -37,19 +36,18 @@ auto Bdf::State(int k, int o)
     {
         throw std::out_of_range("0 <= o < order");
     }
-    auto nIterates = mStep + 1;
-    auto kt        = common::Modulo(ti /*- nIterates*/ + k, nIterates);
-    return xt.col(o * nIterates + kt);
+    auto kt = common::Modulo(ti /*- mStep*/ + k, mStep);
+    return xt.col(o * mStep + kt);
 }
 
 auto Bdf::CurrentState(int o) const
 {
-    return State(mStep, o);
+    return State(mStep - 1, o);
 }
 
 auto Bdf::CurrentState(int o)
 {
-    return State(mStep, o);
+    return State(mStep - 1, o);
 }
 
 void Bdf::SetOrder(int order)
@@ -148,7 +146,7 @@ TEST_CASE("[sim][integration] Bdf")
         // Arrange
         auto constexpr order  = 2;
         auto constexpr step   = 1;
-        auto constexpr nsteps = 4;
+        auto constexpr nsteps = 5;
         Scalar constexpr h    = 0.01;
         MatrixX x0(n, order);
         x0.setRandom();
@@ -164,20 +162,22 @@ TEST_CASE("[sim][integration] Bdf")
         }
 
         // Act
+        VectorX xn(n);
+        VectorX vn(n);
         Bdf bdf(step, order);
         bdf.SetTimeStep(h);
         bdf.SetInitialConditions(x0);
         for (auto i = 0; i < nsteps; ++i)
         {
-            bdf.Tick();
             bdf.ConstructEquations();
-            bdf.CurrentState(1) = bdf.BetaTilde() * f - bdf.Inertia(1);
-            bdf.CurrentState(0) = bdf.BetaTilde() * bdf.CurrentState(1) - bdf.Inertia(0);
+            vn = bdf.BetaTilde() * f - bdf.Inertia(1);
+            xn = bdf.BetaTilde() * vn - bdf.Inertia(0);
+            bdf.Step(xn, vn);
         }
 
         // Assert
-        CHECK(bdf.CurrentState(0).isApprox(x));
-        CHECK(bdf.CurrentState(1).isApprox(v));
+        CHECK(xn.isApprox(x));
+        CHECK(vn.isApprox(v));
     }
     SUBCASE("2nd order BDF2")
     {
@@ -204,19 +204,21 @@ TEST_CASE("[sim][integration] Bdf")
         }
 
         // Act
+        VectorX xn(n);
+        VectorX vn(n);
         Bdf bdf(step, order);
         bdf.SetTimeStep(h);
         bdf.SetInitialConditions(x0);
         for (auto i = 0; i < nsteps; ++i)
         {
-            bdf.Tick();
             bdf.ConstructEquations();
-            bdf.CurrentState(1) = bdf.BetaTilde() * f - bdf.Inertia(1);
-            bdf.CurrentState(0) = bdf.BetaTilde() * bdf.CurrentState(1) - bdf.Inertia(0);
+            vn = bdf.BetaTilde() * f - bdf.Inertia(1);
+            xn = bdf.BetaTilde() * vn - bdf.Inertia(0);
+            bdf.Step(xn, vn);
         }
 
         // Assert
-        CHECK(bdf.CurrentState(0).isApprox(x));
-        CHECK(bdf.CurrentState(1).isApprox(v));
+        CHECK(xn.isApprox(x));
+        CHECK(vn.isApprox(v));
     }
 }

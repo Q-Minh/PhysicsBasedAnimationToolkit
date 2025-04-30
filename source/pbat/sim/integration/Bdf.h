@@ -12,7 +12,10 @@
 #define PBAT_SIM_INTEGRATION_BDF_H
 
 #include "pbat/Aliases.h"
+#include "pbat/common/ConstexprFor.h"
 #include "pbat/common/Modulo.h"
+
+#include <tuple>
 
 namespace pbat::sim::integration {
 
@@ -32,7 +35,7 @@ namespace pbat::sim::integration {
  * \end{align*} .
  * \f]
  *
- * Since BDF discretizes each equation as \f$ \sum_{k=0}^s \alpha_k x_{n-s-1+k} = h \beta f(t,
+ * Since BDF discretizes each equation as \f$ \sum_{k=0}^s \alpha_k x_{n-s+k} = h \beta f(t,
  * x_n^{(p-1)}, \dots, x_n) \f$, we have that
  * \f[
  * \begin{align*}
@@ -49,21 +52,21 @@ namespace pbat::sim::integration {
  * the root-finding equations can be treated as stationarity conditions \f$ \nabla f = 0 \f$ for
  * some objective function \f$ f \f$, and solved via numerical optimization of \f$ f \f$.
  *
- * This class encapsulates the construction of the so-called inertias \f$
- * \tilde{x}^{(o)}_\text{BDFS} \f$, as well as the interpolation coefficients \f$ \alpha_k \f$ and
- * forcing term coefficient \f$ \beta \f$ and generalize the BDF scheme to various ODE systems of
- * different orders. Specific ODEs are then entirely defined by the forcing function \f$ f(t,
- * \frac{d^{p-1}}{dt^{p-1}} x, \dots, x) \f$, and it is up to the user to derive their specific
- * equations to solve.
+ * This class encapsulates the storage of the past states and their lower order derivatives \f$
+ * x_{n-s+k}^{(o)} \f$, the construction of so-called inertias \f$ \tilde{x}^{(o)}_\text{BDFS} \f$,
+ * the interpolation coefficients \f$ \alpha_k \f$, forcing term coefficient \f$ \beta \f$ and
+ * generalize the BDF scheme to various ODE systems of different orders. Specific ODEs are then
+ * entirely defined by the forcing function \f$ f(t, \frac{d^{p-1}}{dt^{p-1}} x, \dots, x) \f$, and
+ * it is up to the user to derive their specific equations to solve. 
  *
  * ```
- * bdf.SetInitialConditions(x0)
+ * bdf.SetInitialConditions(x0, v0)
  * for ti in steps:
- *   bdf.Tick()
  *   bdf.ConstructEquations()
- *   bdf.CurrentState(o) = userSolve(bdf, o)
+ *   xn, vn = userSolve(bdf)
+ *   bdf.Step(xn, vn)
  * ```
- * 
+ *
  */
 class Bdf
 {
@@ -78,7 +81,7 @@ class Bdf
      */
     Bdf(int step = 1, int order = 2);
 
-    MatrixX xt; ///< `n x |(s+1)*order|` matrix of `n`-dimensional states and their time derivatives
+    MatrixX xt; ///< `n x |s*order|` matrix of `n`-dimensional states and their time derivatives
                 ///< s.t. \f$ xt.col(o*s + k) = x^(k)(t - k*dt) \f$ for \f$ k = 0, ..., s \f$ and
                 ///< \f$ o = 0, ..., \text{order}-1 \f$
     MatrixX
@@ -99,11 +102,6 @@ class Bdf
      */
     [[maybe_unused]] auto Step() const { return mStep; }
     /**
-     * @brief Number of iterates in the BDF scheme
-     * @return Number of iterates in the BDF scheme
-     */
-    [[maybe_unused]] auto Iterates() const { return mStep + 1; }
-    /**
      * @brief Number of ODEs
      * @return Number of ODEs
      */
@@ -121,16 +119,16 @@ class Bdf
     [[maybe_unused]] auto Inertia(int o) const { return xtilde.col(o); }
     /**
      * @brief \f$ o^\text{th} \f$ state derivative
-     * @param k State index \f$ k = 0, ..., s \f$ for the vector \f$ x^{(o)}_{t_i - s-1 + k} \f$
+     * @param k State index \f$ k = 0, ..., s \f$ for the vector \f$ x^{(o)}_{t_i - s + k} \f$
      * @param o Order of the state derivative \f$ o = 0, ..., \text{order}-1 \f$
-     * @return `n x 1` state derivative vector \f$ x^{(o)}_{t_i - s-1 + k} \f$
+     * @return `n x 1` state derivative vector \f$ x^{(o)}_{t_i - s + k} \f$
      */
     auto State(int k, int o = 0) const;
     /**
      * @brief \f$ o^\text{th} \f$ state derivative
-     * @param k State index \f$ k = 0, ..., s \f$ for the vector \f$ x^{(o)}_{t_i - s-1 + k} \f$
+     * @param k State index \f$ k = 0, ..., s \f$ for the vector \f$ x^{(o)}_{t_i - s + k} \f$
      * @param o Order of the state derivative \f$ o = 0, ..., \text{order}-1 \f$
-     * @return `n x 1` state derivative vector \f$ x^{(o)}_{t_i - s-1 + k} \f$
+     * @return `n x 1` state derivative vector \f$ x^{(o)}_{t_i - s + k} \f$
      */
     auto State(int k, int o = 0);
     /**
@@ -181,18 +179,41 @@ class Bdf
     void SetTimeStep(Scalar dt);
     /**
      * @brief Construct the BDF equations, i.e. compute \f$ \tilde{x^{(o)}} = \sum_{k=0}^{s-1}
-     * \alpha_k x^{(o)}_{t_i - s-1 + k} \f$ for all \f$ o = 0, ..., \text{order}-1 \f$
+     * \alpha_k x^{(o)}_{t_i - s + k} \f$ for all \f$ o = 0, ..., \text{order}-1 \f$
      */
     void ConstructEquations();
     /**
      * @brief Set the initial conditions for the initial value problem
-     * @param x0 `n x \text{order}` matrix of initial conditions s.t. `x0.col(o) = \f$ x^{(o)}_{t_0}
+     * @param x0 `n x order` matrix of initial conditions s.t. `x0.col(o) = \f$ x^{(o)}_{t_0}
      * \f$` for \f$ o = 0, ..., \text{order}-1 \f$
      * @pre `x0.cols() == order`
      * @post `ti == 0`
      */
     template <class TDerivedX>
     void SetInitialConditions(Eigen::DenseBase<TDerivedX> const& x0);
+    /**
+     * @brief Set the initial conditions for the initial value problem
+     * @param x0 `order` vectors of `n x 1` initial conditions \f$ x^{(o)}_{t_0} \f$
+     * @pre `sizeof...(TDerivedX) == order`
+     * @post `ti == 0`
+     */
+    template <class... TDerivedX>
+    void SetInitialConditions(Eigen::DenseBase<TDerivedX> const&... x0);
+    /**
+     * @brief Advance the BDF scheme by one time step
+     * @tparam TDerivedX Derived type of the input matrix
+     * @param x `n x order` matrix of the current state derivatives \f$ x_{t_i}^{(o)} \f$
+     */
+    template <class TDerivedX>
+    void Step(Eigen::DenseBase<TDerivedX> const& x);
+    /**
+     * @brief Advance the BDF scheme by one time step
+     * @tparam TDerivedX Derived type of the input matrix
+     * @param xs `order` vectors of `n x 1` current state derivatives \f$ x_{t_i}^{(o)} \f$
+     * @pre `sizeof...(TDerivedX) == order`
+     */
+    template <class... TDerivedX>
+    void Step(Eigen::DenseBase<TDerivedX> const&... xs);
     /**
      * @brief Advance the BDF scheme by one time step
      */
@@ -208,13 +229,44 @@ class Bdf
 template <class TDerivedX>
 inline void Bdf::SetInitialConditions(Eigen::DenseBase<TDerivedX> const& x0)
 {
-    ti             = 0;
-    auto n         = x0.rows();
-    auto nIterates = mStep + 1;
-    xt.resize(n, nIterates * mOrder);
+    ti     = 0;
+    auto n = x0.rows();
+    xt.resize(n, mStep * mOrder);
     xtilde.resize(n, mOrder);
     for (auto o = 0; o < mOrder; ++o)
-        xt.middleCols(o * nIterates, nIterates).colwise() = x0.col(o);
+        xt.middleCols(o * mStep, mStep).colwise() = x0.col(o);
+}
+
+template <class... TDerivedX>
+inline void Bdf::SetInitialConditions(Eigen::DenseBase<TDerivedX> const&... x0)
+{
+    auto constexpr nDerivs = sizeof...(TDerivedX);
+    assert(nDerivs == mOrder);
+    ti     = 0;
+    auto n = x0.rows();
+    xt.resize(n, mStep * mOrder);
+    xtilde.resize(n, mOrder);
+    std::tuple<decltype(x0)...> tup{x0...};
+    common::ForRange<0, nDerivs>(
+        [&]<auto o>() { xt.middleCols(o * mStep, mStep).colwise() = std::get<o>(tup); });
+}
+
+template <class TDerivedX>
+inline void Bdf::Step(Eigen::DenseBase<TDerivedX> const& x)
+{
+    Tick();
+    for (auto o = 0; o < mOrder; ++o)
+        CurrentState(o) = x.col(o);
+}
+
+template <class... TDerivedX>
+inline void Bdf::Step(Eigen::DenseBase<TDerivedX> const&... x)
+{
+    auto constexpr nDerivs = sizeof...(TDerivedX);
+    assert(nDerivs == mOrder);
+    Tick();
+    std::tuple<decltype(x)...> tup{x...};
+    common::ForRange<0, nDerivs>([&]<auto o>() { CurrentState(o) = std::get<o>(tup); });
 }
 
 } // namespace pbat::sim::integration
