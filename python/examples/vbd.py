@@ -267,8 +267,7 @@ if __name__ == "__main__":
     rhoe[heteromask] = args.heterogeneous_rho
     Y[heteromask] = args.heterogeneous_Y
     nu[heteromask] = args.heterogeneous_nu
-    mue = Y / (2 * (1 + nu))
-    lambdae = (Y * nu) / ((1 + nu) * (1 - 2 * nu))
+    mue, lambdae = pbat.fem.lame_coefficients(Y, nu)
 
     # Set Dirichlet boundary conditions
     Xmin = mesh.X.min(axis=1)

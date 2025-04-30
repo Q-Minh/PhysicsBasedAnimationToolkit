@@ -69,17 +69,7 @@ class HyperElasticPotential
         Eigen::Ref<IndexVectorX const> const& eg,
         Eigen::Ref<VectorX const> const& wg,
         Eigen::Ref<MatrixX const> const& GNeg,
-        Scalar Y,
-        Scalar nu,
-        EHyperElasticEnergy eHyperElasticEnergy);
-
-    HyperElasticPotential(
-        Mesh const& M,
-        Eigen::Ref<IndexVectorX const> const& eg,
-        Eigen::Ref<VectorX const> const& wg,
-        Eigen::Ref<MatrixX const> const& GNeg,
-        Eigen::Ref<MatrixX const> const& Y,
-        Eigen::Ref<MatrixX const> const& nu,
+        Eigen::Ref<MatrixX const> const& lameg,
         EHyperElasticEnergy eHyperElasticEnergy);
 
     HyperElasticPotential(HyperElasticPotential&& other);
@@ -103,12 +93,6 @@ class HyperElasticPotential
     VectorX ToVector() const;
     CSCMatrix ToMatrix() const;
     std::tuple<Index, Index> Shape() const;
-
-    VectorX const& mug() const;
-    VectorX& mug();
-
-    VectorX const& lambdag() const;
-    VectorX& lambdag();
 
     MatrixX const& Hessians() const;
     MatrixX& Hessians();
@@ -147,35 +131,13 @@ void BindHyperElasticPotential(pybind11::module& m)
                 Eigen::Ref<IndexVectorX const> const&,
                 Eigen::Ref<VectorX const> const&,
                 Eigen::Ref<MatrixX const> const&,
-                Scalar,
-                Scalar,
-                EHyperElasticEnergy>(),
-            pyb::arg("mesh"),
-            pyb::arg("eg").noconvert(),
-            pyb::arg("wg").noconvert(),
-            pyb::arg("GNeg").noconvert(),
-            pyb::arg("Y")      = 1e6,
-            pyb::arg("nu")     = 0.45,
-            pyb::arg("energy") = EHyperElasticEnergy::StableNeoHookean,
-            "Construct a HyperElasticPotential on mesh mesh, given precomputed quadrature "
-            "weights wg in elements eg and shape function gradients GNeg at mesh element "
-            "quadrature points. The corresponding energy has Young's modulus Y and Poisson's ratio "
-            "nu.")
-        .def(
-            pyb::init<
-                Mesh const&,
-                Eigen::Ref<IndexVectorX const> const&,
-                Eigen::Ref<VectorX const> const&,
-                Eigen::Ref<MatrixX const> const&,
-                Eigen::Ref<MatrixX const> const&,
                 Eigen::Ref<MatrixX const> const&,
                 EHyperElasticEnergy>(),
             pyb::arg("mesh"),
             pyb::arg("eg").noconvert(),
             pyb::arg("wg").noconvert(),
             pyb::arg("GNeg").noconvert(),
-            pyb::arg("Y"),
-            pyb::arg("nu"),
+            pyb::arg("lameg").noconvert(),
             pyb::arg("energy") = EHyperElasticEnergy::StableNeoHookean,
             "Construct a HyperElasticPotential on mesh mesh, given precomputed quadrature "
             "weights wg in elements eg and shape function gradients GNeg at mesh element "
@@ -199,18 +161,6 @@ void BindHyperElasticPotential(pybind11::module& m)
         .def("eval", &HyperElasticPotential::Eval)
         .def("gradient", &HyperElasticPotential::ToVector)
         .def("hessian", &HyperElasticPotential::ToMatrix)
-        .def_property(
-            "mug",
-            [](HyperElasticPotential const& M) { return M.mug(); },
-            [](HyperElasticPotential& M, Eigen::Ref<MatrixX const> const& mug) { M.mug() = mug; },
-            "|#quad.pts.|x1 array of first Lame coefficients")
-        .def_property(
-            "lambdag",
-            [](HyperElasticPotential const& M) { return M.lambdag(); },
-            [](HyperElasticPotential& M, Eigen::Ref<MatrixX const> const& lambdag) {
-                M.lambdag() = lambdag;
-            },
-            "|#quad.pts.|x1 array of second Lame coefficients")
         .def_property_readonly(
             "Ug",
             [](HyperElasticPotential const& M) { return M.Potentials(); },
@@ -234,8 +184,7 @@ HyperElasticPotential::HyperElasticPotential(
     Eigen::Ref<IndexVectorX const> const& eg,
     Eigen::Ref<VectorX const> const& wg,
     Eigen::Ref<MatrixX const> const& GNeg,
-    Scalar Y,
-    Scalar nu,
+    Eigen::Ref<MatrixX const> const& lameg,
     EHyperElasticEnergy ePsi)
     : eMeshElement(M.eElement),
       mMeshDims(M.mDims),
@@ -257,7 +206,7 @@ HyperElasticPotential::HyperElasticPotential(
                         pbat::physics::SaintVenantKirchhoffEnergy<MeshType::kDims>>)
                 {
                     mHyperElasticPotential =
-                        new HyperElasticPotentialType(*mesh, eg, wg, GNeg, Y, nu);
+                        new HyperElasticPotentialType(*mesh, eg, wg, GNeg, lameg);
                     mDims = HyperElasticPotentialType::kDims;
                 }
                 if (ePsi == EHyperElasticEnergy::StableNeoHookean and
@@ -266,51 +215,7 @@ HyperElasticPotential::HyperElasticPotential(
                         pbat::physics::StableNeoHookeanEnergy<MeshType::kDims>>)
                 {
                     mHyperElasticPotential =
-                        new HyperElasticPotentialType(*mesh, eg, wg, GNeg, Y, nu);
-                    mDims = HyperElasticPotentialType::kDims;
-                }
-            });
-    });
-}
-
-HyperElasticPotential::HyperElasticPotential(
-    Mesh const& M,
-    Eigen::Ref<IndexVectorX const> const& eg,
-    Eigen::Ref<VectorX const> const& wg,
-    Eigen::Ref<MatrixX const> const& GNeg,
-    Eigen::Ref<MatrixX const> const& Y,
-    Eigen::Ref<MatrixX const> const& nu,
-    EHyperElasticEnergy ePsi)
-    : eMeshElement(M.eElement),
-      mMeshDims(M.mDims),
-      mMeshOrder(M.mOrder),
-      eHyperElasticEnergy(ePsi),
-      mDims(),
-      mHyperElasticPotential(nullptr)
-{
-    M.Apply([&]<pbat::fem::CMesh MeshType>(MeshType* mesh) {
-        pbat::common::ForTypes<
-            pbat::physics::SaintVenantKirchhoffEnergy<MeshType::kDims>,
-            pbat::physics::StableNeoHookeanEnergy<MeshType::kDims>>(
-            [&]<class HyperElasticEnergyType>() {
-                using HyperElasticPotentialType =
-                    pbat::fem::HyperElasticPotential<MeshType, HyperElasticEnergyType>;
-                if (ePsi == EHyperElasticEnergy::SaintVenantKirchhoff and
-                    std::is_same_v<
-                        HyperElasticEnergyType,
-                        pbat::physics::SaintVenantKirchhoffEnergy<MeshType::kDims>>)
-                {
-                    mHyperElasticPotential =
-                        new HyperElasticPotentialType(*mesh, eg, wg, GNeg, Y, nu);
-                    mDims = HyperElasticPotentialType::kDims;
-                }
-                if (ePsi == EHyperElasticEnergy::StableNeoHookean and
-                    std::is_same_v<
-                        HyperElasticEnergyType,
-                        pbat::physics::StableNeoHookeanEnergy<MeshType::kDims>>)
-                {
-                    mHyperElasticPotential =
-                        new HyperElasticPotentialType(*mesh, eg, wg, GNeg, Y, nu);
+                        new HyperElasticPotentialType(*mesh, eg, wg, GNeg, lameg);
                     mDims = HyperElasticPotentialType::kDims;
                 }
             });
@@ -387,42 +292,6 @@ std::tuple<Index, Index> HyperElasticPotential::Shape() const
         cols = hyperElasticPotential->InputDimensions();
     });
     return std::make_tuple(rows, cols);
-}
-
-VectorX const& HyperElasticPotential::mug() const
-{
-    VectorX* mugPtr;
-    Apply([&]<class HyperElasticPotentialType>(HyperElasticPotentialType* hyperElasticPotential) {
-        mugPtr = std::addressof(hyperElasticPotential->mug);
-    });
-    return *mugPtr;
-}
-
-VectorX& HyperElasticPotential::mug()
-{
-    VectorX* mugPtr;
-    Apply([&]<class HyperElasticPotentialType>(HyperElasticPotentialType* hyperElasticPotential) {
-        mugPtr = std::addressof(hyperElasticPotential->mug);
-    });
-    return *mugPtr;
-}
-
-VectorX const& HyperElasticPotential::lambdag() const
-{
-    VectorX* lambdagPtr;
-    Apply([&]<class HyperElasticPotentialType>(HyperElasticPotentialType* hyperElasticPotential) {
-        lambdagPtr = std::addressof(hyperElasticPotential->lambdag);
-    });
-    return *lambdagPtr;
-}
-
-VectorX& HyperElasticPotential::lambdag()
-{
-    VectorX* lambdagPtr;
-    Apply([&]<class HyperElasticPotentialType>(HyperElasticPotentialType* hyperElasticPotential) {
-        lambdagPtr = std::addressof(hyperElasticPotential->lambdag);
-    });
-    return *lambdagPtr;
 }
 
 MatrixX const& HyperElasticPotential::Hessians() const

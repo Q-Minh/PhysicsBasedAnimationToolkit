@@ -9,8 +9,8 @@
  *
  */
 
-#ifndef PBAT_MATH_LINALG_SPARSITY_PATTERN_H
-#define PBAT_MATH_LINALG_SPARSITY_PATTERN_H
+#ifndef PBAT_MATH_LINALG_SPARSITYPATTERN_H
+#define PBAT_MATH_LINALG_SPARSITYPATTERN_H
 
 #include "PhysicsBasedAnimationToolkitExport.h"
 
@@ -122,7 +122,7 @@ inline void SparsityPattern::Compute(
     namespace rng    = ranges;
     namespace views  = rng::views;
 
-    A = CSCMatrix(nRows, nCols);
+    A.resize(nRows, nCols);
     ij.resize(srng::size(rowIndices), Index{0});
 
     auto const [rowMin, rowMax] = srng::minmax_element(rowIndices);
@@ -219,4 +219,4 @@ CSCMatrix SparsityPattern::ToMatrix(TNonZeroRange&& nonZeros) const
 } // namespace math
 } // namespace pbat
 
-#endif // PBAT_MATH_LINALG_SPARSITY_PATTERN_H
+#endif // PBAT_MATH_LINALG_SPARSITYPATTERN_H

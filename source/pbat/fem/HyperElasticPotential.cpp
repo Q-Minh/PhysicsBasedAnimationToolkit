@@ -53,7 +53,13 @@ TEST_CASE("[fem] HyperElasticPotential")
                                     .replicate(1, wg.size() / M.E.cols())
                                     .transpose()
                                     .reshaped();
-        ElasticPotentialType U(M, eg, wg, GNeg, x, Y, nu);
+        MatrixX lameg(2, wg.size());
+        auto mug               = lameg.row(0).transpose();
+        auto lambdag           = lameg.row(1).transpose();
+        std::tie(mug, lambdag) = physics::LameCoefficients(
+            VectorX::Constant(wg.size(), Y),
+            VectorX::Constant(wg.size(), nu));
+        ElasticPotentialType U(M, eg, wg, GNeg, lameg, x);
         Scalar const UMaterial      = U.Eval();
         VectorX const gradUMaterial = U.ToVector();
         CSCMatrix const HMaterial   = U.ToMatrix();

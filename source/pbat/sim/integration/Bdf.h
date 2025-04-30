@@ -15,6 +15,7 @@
 #include "pbat/common/ConstexprFor.h"
 #include "pbat/common/Modulo.h"
 
+#include <cassert>
 #include <tuple>
 
 namespace pbat::sim::integration {
@@ -57,7 +58,7 @@ namespace pbat::sim::integration {
  * the interpolation coefficients \f$ \alpha_k \f$, forcing term coefficient \f$ \beta \f$ and
  * generalize the BDF scheme to various ODE systems of different orders. Specific ODEs are then
  * entirely defined by the forcing function \f$ f(t, \frac{d^{p-1}}{dt^{p-1}} x, \dots, x) \f$, and
- * it is up to the user to derive their specific equations to solve. 
+ * it is up to the user to derive their specific equations to solve.
  *
  * ```
  * bdf.SetInitialConditions(x0, v0)
