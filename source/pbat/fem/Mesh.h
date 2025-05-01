@@ -50,7 +50,14 @@ struct Mesh
      * @param C `|Element::AffineBase::Vertices| x |# cells|` matrix of cell vertex indices into V
      */
     Mesh(Eigen::Ref<MatrixX const> const& V, Eigen::Ref<IndexMatrixX const> const& C);
-
+    /**
+     * @brief Constructs a finite element mesh given some input geometric mesh.
+     *
+     * @warning The cells of the input mesh should list its vertices in Lagrange order.
+     * @param V `Dims x |# vertices|` matrix of vertex positions
+     * @param C `|Element::AffineBase::Vertices| x |# cells|` matrix of cell vertex indices into V
+     */
+    void Construct(Eigen::Ref<MatrixX const> const& V, Eigen::Ref<IndexMatrixX const> const& C);
     /**
      * @brief Compute quadrature points in domain space on this mesh.
      * @tparam QuadratureOrder Quadrature order
@@ -198,6 +205,14 @@ Mesh<TElement, Dims>::Mesh(
     Eigen::Ref<MatrixX const> const& V,
     Eigen::Ref<IndexMatrixX const> const& C)
 {
+    Construct(V, C);
+}
+
+template <CElement TElement, int Dims>
+inline void Mesh<TElement, Dims>::Construct(
+    Eigen::Ref<MatrixX const> const& V,
+    Eigen::Ref<IndexMatrixX const> const& C)
+{
     PBAT_PROFILE_NAMED_SCOPE("pbat.fem.Mesh.Construct");
 
     // Smart nodal indexing is only relevant for higher-order meshes
@@ -340,12 +355,13 @@ inline LinearMeshView<TElement, Dims>::LinearMeshView(
     auto const nNodesPerElement = C.rows();
     if (nNodesPerElement != TElement::kNodes)
     {
-        throw std::invalid_argument(fmt::format(
-            "Expected {}x{} elements, but got {}x{}",
-            TElement::kNodes,
-            C.cols(),
-            C.rows(),
-            C.cols()));
+        throw std::invalid_argument(
+            fmt::format(
+                "Expected {}x{} elements, but got {}x{}",
+                TElement::kNodes,
+                C.cols(),
+                C.rows(),
+                C.cols()));
     }
     if (V.rows() != Dims)
     {
@@ -354,9 +370,10 @@ inline LinearMeshView<TElement, Dims>::LinearMeshView(
     }
     if (V.rows() < TElement::kDims)
     {
-        throw std::invalid_argument(fmt::format(
-            "Nodal coordinates must have dimensions > {} for the requested element",
-            TElement::kDims));
+        throw std::invalid_argument(
+            fmt::format(
+                "Nodal coordinates must have dimensions > {} for the requested element",
+                TElement::kDims));
     }
 }
 
