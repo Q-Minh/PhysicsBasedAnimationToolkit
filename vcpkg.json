@@ -19,6 +19,14 @@
         {
             "name": "tbb",
             "version>=": "2022.0.0"
+        },
+        {
+            "name": "hdf5",
+            "version>=": "1.14.0",
+            "features": [
+                "cpp",
+                "zlib"
+            ]
         }
     ],
     "features": {

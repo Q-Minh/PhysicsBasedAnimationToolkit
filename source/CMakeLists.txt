@@ -74,6 +74,9 @@ target_link_libraries(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     doctest::doctest
     Eigen3::Eigen
     fmt::fmt
+    hdf5::hdf5-shared
+    hdf5::hdf5_cpp-shared
+    HighFive::Include
     range-v3::concepts
     range-v3::meta
     range-v3::range-v3

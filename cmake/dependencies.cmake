@@ -29,6 +29,19 @@ if(NOT TARGET Eigen3::Eigen)
     FetchContent_MakeAvailable(eigen)
 endif()
 
+find_package(HDF5 CONFIG REQUIRED)
+if(NOT TARGET HighFive::HighFive)
+    set(HIGHFIVE_FIND_HDF5 OFF CACHE BOOL "" FORCE)
+    FetchContent_Declare(
+        HighFive
+        GIT_REPOSITORY https://github.com/highfive-devs/highfive.git
+        GIT_TAG a92b0f87ff518425c0c424079a0e33fb3e61f755
+        GIT_PROGRESS TRUE
+        SYSTEM
+    )
+    FetchContent_MakeAvailable(HighFive)
+endif()
+
 if(PBAT_BUILD_PYTHON_BINDINGS AND NOT TARGET pybind11::headers)
     find_package(
         Python 
