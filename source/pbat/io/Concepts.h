@@ -30,6 +30,30 @@ concept CGroup =
     std::derived_from<T, HighFive::NodeTraits<T>> and
     std::derived_from<T, HighFive::AnnotateTraits<T>> and std::derived_from<T, HighFive::Object>;
 
+/**
+ * @brief Concept for a serializable object.
+ * @tparam T The type to check.
+ * @tparam G The type of the group to serialize to.
+ */
+template <class T, class G>
+concept CSerializable = requires(T t, G g)
+{
+    CGroup<G>;
+    {t.Serialize(g)};
+};
+
+/**
+ * @brief Concept for a deserializable object.
+ * @tparam T The type to check.
+ * @tparam G The type of the group to deserialize from.
+ */
+template <class T, class G>
+concept CDeserializable = requires(T t, G g)
+{
+    CGroup<G>;
+    {t.Deserialize(g)};
+};
+
 } // namespace pbat::io
 
 #endif // PBAT_IO_CONCEPTS_H
