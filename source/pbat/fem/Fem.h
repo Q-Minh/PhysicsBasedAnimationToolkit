@@ -19,7 +19,6 @@ namespace pbat::fem {
 
 #include "Concepts.h"
 #include "DeformationGradient.h"
-#include "DivergenceVector.h"
 #include "Gradient.h"
 #include "Hexahedron.h"
 #include "HyperElasticPotential.h"

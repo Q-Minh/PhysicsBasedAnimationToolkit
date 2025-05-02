@@ -18,7 +18,8 @@
 namespace pbat::gpu::impl::math {
 } // namespace pbat::gpu::impl::math
 
-#include "HouseholderQR.cuh"
+#include "Blas.cuh"
+#include "LinearSolver.cuh"
 #include "Matrix.cuh"
 
 #endif // PBAT_GPU_IMPL_MATH_MATH_H
