@@ -12,7 +12,7 @@ Bdf::Bdf(int step, int order)
     SetOrder(order);
 }
 
-auto Bdf::State(int k, int o) const
+auto Bdf::State(int k, int o) const -> decltype(xt.col(0))
 {
     if (k < 0 || k > mStep)
     {
@@ -26,7 +26,7 @@ auto Bdf::State(int k, int o) const
     return xt.col(o * mStep + kt);
 }
 
-auto Bdf::State(int k, int o)
+auto Bdf::State(int k, int o) -> decltype(xt.col(0))
 {
     if (k < 0 || k > mStep)
     {
@@ -40,12 +40,12 @@ auto Bdf::State(int k, int o)
     return xt.col(o * mStep + kt);
 }
 
-auto Bdf::CurrentState(int o) const
+auto Bdf::CurrentState(int o) const -> decltype(xt.col(0))
 {
     return State(mStep - 1, o);
 }
 
-auto Bdf::CurrentState(int o)
+auto Bdf::CurrentState(int o) -> decltype(xt.col(0))
 {
     return State(mStep - 1, o);
 }

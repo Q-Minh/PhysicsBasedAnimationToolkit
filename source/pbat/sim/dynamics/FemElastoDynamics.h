@@ -25,6 +25,19 @@
 namespace pbat::sim::dynamics {
 
 /**
+ * @brief Quadrature for elastic potential
+ */
+struct ElasticityQuadrature
+{
+    IndexVectorX eg; ///< `|# quad.pts.| x 1` vector of element indices for quadrature points of
+                     ///< elastic potential
+    VectorX wg;      ///< `|# quad.pts.| x 1` vector of quadrature weights for elastic potential
+    MatrixX GNeg;    ///< `|ElementType::kNodes| x |kDims * # quad.pts.|` matrix of shape function
+                     ///< gradients at quadrature points
+    MatrixX lameg;   ///< `2 x |# quad.pts.|` matrix of Lame coefficients at quadrature points
+};
+
+/**
  * @brief Finite Element Elasto-Dynamics initial value problem with Dirichlet boundary conditions.
  *
  * @tparam TElement Element type
@@ -48,18 +61,7 @@ struct FemElastoDynamics
     MatrixX fext; ///< `kDims x |# nodes|` matrix of external forces at nodes
     VectorX m;    ///< `|# nodes| x 1` lumped mass matrix
 
-    /**
-     * @brief Quadrature for elastic potential
-     */
-    struct ElasticityQuadrature
-    {
-        IndexVectorX eg; ///< `|# quad.pts.| x 1` vector of element indices for quadrature points of
-                         ///< elastic potential
-        VectorX wg;      ///< `|# quad.pts.| x 1` vector of quadrature weights for elastic potential
-        MatrixX GNeg;  ///< `|ElementType::kNodes| x |kDims * # quad.pts.|` matrix of shape function
-                       ///< gradients at quadrature points
-        MatrixX lameg; ///< `2 x |# quad.pts.|` matrix of Lame coefficients at quadrature points
-    } QU;              ///< Quadrature for elastic potential
+    ElasticityQuadrature QU;             ///< Quadrature for elastic potential
     std::unique_ptr<ElasticPotential> U; ///< Hyper elastic potential
 
     Index ndbc;       ///< Number of Dirichlet constrained nodes
@@ -72,7 +74,11 @@ struct FemElastoDynamics
     /**
      * @brief Construct an empty FemElastoDynamics problem
      */
-    FemElastoDynamics() = default;
+    FemElastoDynamics()                                    = default;
+    FemElastoDynamics(FemElastoDynamics const&)            = delete;
+    FemElastoDynamics(FemElastoDynamics&&)                 = default;
+    FemElastoDynamics& operator=(FemElastoDynamics const&) = delete;
+    FemElastoDynamics& operator=(FemElastoDynamics&&)      = default;
     /**
      * @brief Construct an FemElastoDynamics problem on the mesh domain (V,C).
      *
@@ -153,9 +159,9 @@ struct FemElastoDynamics
     template <class TDerivedEg, class TDerivedWg, class TDerivedXg, class TDerivedRhog>
     void SetMassMatrix(
         Eigen::DenseBase<TDerivedEg> const& eg,
-        Eigen::DenseBase<TDerivedWg> const& wg,
+        Eigen::MatrixBase<TDerivedWg> const& wg,
         Eigen::MatrixBase<TDerivedXg> const& Xg,
-        Eigen::DenseBase<TDerivedRhog> const& rhog);
+        Eigen::MatrixBase<TDerivedRhog> const& rhog);
     /**
      * @brief Compute and set the elastic energy quadrature for a heterogeneous material with
      * variable Lame coefficients \f$ \mu(X) \f$ and \f$ \lambda(X) \f$ at quadrature points \f$ X_g
@@ -202,9 +208,9 @@ struct FemElastoDynamics
     template <class TDerivedEg, class TDerivedWg, class TDerivedXg, class TDerivedBg>
     void SetExternalLoad(
         Eigen::DenseBase<TDerivedEg> const& eg,
-        Eigen::DenseBase<TDerivedWg> const& wg,
+        Eigen::MatrixBase<TDerivedWg> const& wg,
         Eigen::MatrixBase<TDerivedXg> const& Xg,
-        Eigen::DenseBase<TDerivedBg> const& bg);
+        Eigen::MatrixBase<TDerivedBg> const& bg);
     /**
      * @brief Array of Dirichlet constrained nodes
      * @return `ndbc x 1` array of Dirichlet constrained nodes
@@ -285,8 +291,7 @@ inline void FemElastoDynamics<TElement, Dims, THyperElasticEnergy>::Construct(
     Eigen::Ref<IndexMatrixX const> const& C)
 {
     mesh.Construct(V, C);
-    auto const nElements = mesh.E.cols();
-    auto const nNodes    = mesh.X.cols();
+    auto const nNodes = mesh.X.cols();
     SetInitialConditions(mesh.X, MatrixX::Zero(kDims, nNodes));
     // Mass
     Scalar constexpr rho{1e3};
@@ -358,8 +363,7 @@ inline void FemElastoDynamics<TElement, Dims, THyperElasticEnergy>::SetElasticEn
         XgU /*Xg*/,
         VectorX::Constant(XgU.cols(), mu) /*mug*/,
         VectorX::Constant(XgU.cols(), lambda) /*lambdag*/,
-        true /*bWithElasticPotential*/
-    );
+        bWithElasticPotential);
 }
 
 template <fem::CElement TElement, int Dims, physics::CHyperElasticEnergy THyperElasticEnergy>
@@ -409,13 +413,13 @@ template <fem::CElement TElement, int Dims, physics::CHyperElasticEnergy THyperE
 template <class TDerivedEg, class TDerivedWg, class TDerivedXg, class TDerivedRhog>
 inline void FemElastoDynamics<TElement, Dims, THyperElasticEnergy>::SetMassMatrix(
     Eigen::DenseBase<TDerivedEg> const& eg,
-    Eigen::DenseBase<TDerivedWg> const& wg,
+    Eigen::MatrixBase<TDerivedWg> const& wg,
     Eigen::MatrixBase<TDerivedXg> const& Xg,
-    Eigen::DenseBase<TDerivedRhog> const& rhog)
+    Eigen::MatrixBase<TDerivedRhog> const& rhog)
 {
-    CSRMatrix N   = fem::ShapeFunctionMatrix(mesh, eg, Xg);
-    CSRMatrix wgN = wg.asDiagonal() * N;
-    CSCMatrix M   = N.transpose() * wgN;
+    CSRMatrix N       = fem::ShapeFunctionMatrix(mesh, eg, Xg);
+    CSRMatrix rhogwgN = rhog.cwiseProduct(wg).asDiagonal() * N;
+    CSCMatrix M       = N.transpose() * rhogwgN;
     m.resize(M.cols());
     for (auto j = 0; j < M.cols(); ++j)
         m(j) = M.col(j).sum();
@@ -453,9 +457,9 @@ template <fem::CElement TElement, int Dims, physics::CHyperElasticEnergy THyperE
 template <class TDerivedEg, class TDerivedWg, class TDerivedXg, class TDerivedBg>
 inline void FemElastoDynamics<TElement, Dims, THyperElasticEnergy>::SetExternalLoad(
     Eigen::DenseBase<TDerivedEg> const& eg,
-    Eigen::DenseBase<TDerivedWg> const& wg,
+    Eigen::MatrixBase<TDerivedWg> const& wg,
     Eigen::MatrixBase<TDerivedXg> const& Xg,
-    Eigen::DenseBase<TDerivedBg> const& bg)
+    Eigen::MatrixBase<TDerivedBg> const& bg)
 {
     CSRMatrix N = fem::ShapeFunctionMatrix(mesh, eg, Xg);
     fext        = bg * wg.asDiagonal() * N;

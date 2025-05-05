@@ -57,9 +57,14 @@ Mesh::Mesh(
     EElement element,
     int order,
     int dims)
-    : eElement(element), mOrder(order), mDims(dims), mMesh(nullptr)
+    : eElement(element), mOrder(order), mDims(dims), mMesh(nullptr), bOwnMesh(true)
 {
     Apply([&]<class MeshType>([[maybe_unused]] MeshType* mesh) { mMesh = new MeshType(V, C); });
+}
+
+Mesh::Mesh(void* meshImpl, EElement element, int order, int dims)
+    : eElement(element), mOrder(order), mDims(dims), mMesh(meshImpl), bOwnMesh{false}
+{
 }
 
 MatrixX Mesh::QuadraturePoints(int qOrder) const
@@ -114,7 +119,7 @@ Eigen::Map<IndexMatrixX> Mesh::E() const
 
 Mesh::~Mesh()
 {
-    if (mMesh != nullptr)
+    if (mMesh != nullptr and bOwnMesh)
         Apply([]<class MeshType>(MeshType* mesh) { delete mesh; });
 }
 

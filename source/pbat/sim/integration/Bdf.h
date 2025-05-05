@@ -125,26 +125,26 @@ class Bdf
      * @param o Order of the state derivative \f$ o = 0, ..., \text{order}-1 \f$
      * @return `n x 1` state derivative vector \f$ x^{(o)}_{t_i - s + k} \f$
      */
-    auto State(int k, int o = 0) const;
+    auto State(int k, int o = 0) const -> decltype(xt.col(0));
     /**
      * @brief \f$ o^\text{th} \f$ state derivative
      * @param k State index \f$ k = 0, ..., s \f$ for the vector \f$ x^{(o)}_{t_i - s + k} \f$
      * @param o Order of the state derivative \f$ o = 0, ..., \text{order}-1 \f$
      * @return `n x 1` state derivative vector \f$ x^{(o)}_{t_i - s + k} \f$
      */
-    auto State(int k, int o = 0);
+    auto State(int k, int o = 0) -> decltype(xt.col(0));
     /**
      * @brief Current state derivative
      * @param o Order of the state derivative \f$ o = 0, ..., \text{order}-1 \f$
      * @return `n x 1` current state derivative vector \f$ x^{(o)}_{t_i} \f$
      */
-    auto CurrentState(int o = 0) const;
+    auto CurrentState(int o = 0) const -> decltype(xt.col(0));
     /**
      * @brief Current state derivative
      * @param o Order of the state derivative \f$ o = 0, ..., \text{order}-1 \f$
      * @return `n x 1` current state derivative vector \f$ x^{(o)}_{t_i} \f$
      */
-    auto CurrentState(int o = 0);
+    auto CurrentState(int o = 0) -> decltype(xt.col(0));
     /**
      * @brief Interpolation coefficients \f$ \alpha_k \f$ except \f$ \alpha_s \f$
      * @return `s x 1` vector of interpolation coefficients \f$ \alpha_k \f$
@@ -258,13 +258,16 @@ inline void Bdf::SetInitialConditions(Eigen::DenseBase<TDerivedX> const&... x0)
 {
     auto constexpr nDerivs = sizeof...(TDerivedX);
     assert(nDerivs == mOrder);
+    std::tuple<decltype(x0)...> tup{x0...};
     ti     = 0;
-    auto n = x0.rows();
+    auto n = std::get<0>(tup).rows();
     xt.resize(n, mStep * mOrder);
     xtilde.resize(n, mOrder);
-    std::tuple<decltype(x0)...> tup{x0...};
+#include "pbat/warning/Push.h"
+#include "pbat/warning/SignConversion.h"
     common::ForRange<0, nDerivs>(
         [&]<auto o>() { xt.middleCols(o * mStep, mStep).colwise() = std::get<o>(tup); });
+#include "pbat/warning/Pop.h"
 }
 
 template <class TDerivedX>

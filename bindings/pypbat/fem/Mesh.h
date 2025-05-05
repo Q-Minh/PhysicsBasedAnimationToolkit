@@ -91,6 +91,8 @@ class Mesh
         int order,
         int dims);
 
+    Mesh(void* meshImpl, EElement element, int order, int dims);
+
     template <class Func>
     void Apply(Func&& f) const;
 
@@ -109,6 +111,9 @@ class Mesh
     Eigen::Map<MatrixX> X() const;
     Eigen::Map<IndexMatrixX> E() const;
 
+    [[maybe_unused]] void* Impl() const { return mMesh; }
+    [[maybe_unused]] void* Impl() { return mMesh; }
+
     ~Mesh();
 
     EElement eElement;
@@ -117,6 +122,7 @@ class Mesh
 
   private:
     void* mMesh;
+    bool bOwnMesh;
 };
 
 void BindMesh(pybind11::module& m);
