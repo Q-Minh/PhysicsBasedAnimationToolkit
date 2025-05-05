@@ -1,3 +1,11 @@
+/**
+ * @file Permute.h
+ * @author Quoc-Minh Ton-That (tonthat.quocminh@gmail.com)
+ * @brief Permutation of values in-place
+ * @date 2025-05-05
+ * @copyright Copyright (c) 2025
+ */
+
 #ifndef PBAT_COMMON_PERMUTE_H
 #define PBAT_COMMON_PERMUTE_H
 
