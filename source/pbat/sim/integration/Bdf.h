@@ -14,6 +14,7 @@
 #include "pbat/Aliases.h"
 #include "pbat/common/ConstexprFor.h"
 #include "pbat/common/Modulo.h"
+#include "pbat/io/Concepts.h"
 
 #include <cassert>
 #include <tuple>
@@ -219,6 +220,20 @@ class Bdf
      * @brief Advance the BDF scheme by one time step
      */
     [[maybe_unused]] void Tick() { ++ti; }
+    /**
+     * @brief Serialize to HDF5 group
+     * @tparam TGroup Group type
+     * @param parent Group to serialize to
+     */
+    template <io::CGroup TGroup>
+    void Serialize(TGroup& parent) const;
+    /**
+     * @brief Deserialize from HDF5 group
+     * @tparam TGroup Group type
+     * @param parent Group to deserialize from
+     */
+    template <io::CGroup TGroup>
+    void Deserialize(TGroup const& parent);
 
   private:
     int mOrder;       ///< ODE order \f$ \text{order} >= 1 \f$
@@ -268,6 +283,34 @@ inline void Bdf::Step(Eigen::DenseBase<TDerivedX> const&... x)
     Tick();
     std::tuple<decltype(x)...> tup{x...};
     common::ForRange<0, nDerivs>([&]<auto o>() { CurrentState(o) = std::get<o>(tup); });
+}
+
+template <io::CGroup TGroup>
+inline void Bdf::Serialize(TGroup& parent) const
+{
+    HighFive::Group group = parent.createGroup("pbat.sim.integration.Bdf");
+    group.createDataSet("xt", xt);
+    group.createDataSet("xtilde", xtilde);
+    group.createAttribute("h", h);
+    group.createAttribute("ti", ti);
+    group.createAttribute("mOrder", mOrder);
+    group.createAttribute("mStep", mStep);
+    group.createAttribute("mAlpha", mAlpha);
+    group.createAttribute("mBeta", mBeta);
+}
+
+template <io::CGroup TGroup>
+inline void Bdf::Deserialize(TGroup const& parent)
+{
+    HighFive::Group group = parent.getGroup("pbat.sim.integration.Bdf");
+    xt                    = group.getDataSet("xt").read<MatrixX>();
+    xtilde                = group.getDataSet("xtilde").read<MatrixX>();
+    h                     = group.getAttribute("h", h).read<Scalar>();
+    ti                    = group.getAttribute("ti").read<Index>();
+    mOrder                = group.getAttribute("mOrder").read<int>();
+    mStep                 = group.getAttribute("mStep").read<int>();
+    mAlpha                = group.getAttribute("mAlpha").read<Vector<6>>();
+    mBeta                 = group.getAttribute("mBeta").read<Scalar>();
 }
 
 } // namespace pbat::sim::integration
