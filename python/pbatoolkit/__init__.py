@@ -7,6 +7,7 @@ if platform.system() == "Windows":
         if os.path.isdir(dll_search_dir):
             os.add_dll_directory(dll_search_dir)
 
+import pbatoolkit.io
 import pbatoolkit.fem
 import pbatoolkit.geometry
 import pbatoolkit.graph

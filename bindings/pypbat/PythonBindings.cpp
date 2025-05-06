@@ -2,6 +2,7 @@
 #include "geometry/Geometry.h"
 #include "gpu/Gpu.h"
 #include "graph/Graph.h"
+#include "io/Io.h"
 #include "math/Math.h"
 #include "profiling/Profiling.h"
 #include "sim/Sim.h"
@@ -20,6 +21,8 @@ PYBIND11_MODULE(_pbat, m)
     pbat::py::geometry::Bind(mgeometry);
     auto mgraph = m.def_submodule("graph");
     pbat::py::graph::Bind(mgraph);
+    auto mio = m.def_submodule("io");
+    pbat::py::io::Bind(mio);
     auto mmath = m.def_submodule("math");
     pbat::py::math::Bind(mmath);
     auto msim = m.def_submodule("sim");
