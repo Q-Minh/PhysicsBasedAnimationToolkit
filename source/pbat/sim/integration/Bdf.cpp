@@ -128,6 +128,32 @@ void Bdf::ConstructEquations()
             xtilde.col(o) += mAlpha(k) * State(k, o);
 }
 
+void Bdf::Serialize(io::Archive& archive) const
+{
+    auto bdfArchive = archive["pbat.sim.integration.Bdf"];
+    bdfArchive.WriteData("xt", xt);
+    bdfArchive.WriteData("xtilde", xtilde);
+    bdfArchive.WriteMetaData("h", h);
+    bdfArchive.WriteMetaData("ti", ti);
+    bdfArchive.WriteMetaData("mOrder", mOrder);
+    bdfArchive.WriteMetaData("mStep", mStep);
+    bdfArchive.WriteMetaData("mAlpha", mAlpha);
+    bdfArchive.WriteMetaData("mBeta", mBeta);
+}
+
+void Bdf::Deserialize(io::Archive const& archive)
+{
+    auto const group = archive["pbat.sim.integration.Bdf"];
+    xt               = group.ReadData<MatrixX>("xt");
+    xtilde           = group.ReadData<MatrixX>("xtilde");
+    h                = group.ReadMetaData<Scalar>("h");
+    ti               = group.ReadMetaData<Index>("ti");
+    mOrder           = group.ReadMetaData<int>("mOrder");
+    mStep            = group.ReadMetaData<int>("mStep");
+    mAlpha           = group.ReadMetaData<Vector<6>>("mAlpha");
+    mBeta            = group.ReadMetaData<Scalar>("mBeta");
+}
+
 } // namespace pbat::sim::integration
 
 #include <doctest/doctest.h>

@@ -9,49 +9,31 @@
 #ifndef PBAT_IO_CONCEPTS_H
 #define PBAT_IO_CONCEPTS_H
 
+#include "Archive.h"
+
 #include <concepts>
-#include <highfive/H5Object.hpp>
-#include <highfive/bits/H5Annotate_traits.hpp>
-#include <highfive/bits/H5Node_traits.hpp>
+#include <utility>
 
 namespace pbat::io {
 
 /**
- * @brief Concept for an HDF5 group.
- *
- * [HighFive](https://highfive-devs.github.io/highfive/index.html) makes a distinction between a
- * [`HighFive::File`](https://highfive-devs.github.io/highfive/class_high_five_1_1_file.html) and a
- * [`HighFive::Group`](https://highfive-devs.github.io/highfive/class_high_five_1_1_group.html), but
- * a file is really the root group of the HDF5 file. So, we can use the same concept for both.
+ * @brief Concept for a serializable object.
  * @tparam T The type to check.
  */
 template <class T>
-concept CGroup =
-    std::derived_from<T, HighFive::NodeTraits<T>> and
-    std::derived_from<T, HighFive::AnnotateTraits<T>> and std::derived_from<T, HighFive::Object>;
-
-/**
- * @brief Concept for a serializable object.
- * @tparam T The type to check.
- * @tparam G The type of the group to serialize to.
- */
-template <class T, class G>
-concept CSerializable = requires(T t, G g)
+concept CSerializable = requires(T t)
 {
-    CGroup<G>;
-    {t.Serialize(g)};
+    {t.Serialize(std::declval<Archive&>())};
 };
 
 /**
  * @brief Concept for a deserializable object.
  * @tparam T The type to check.
- * @tparam G The type of the group to deserialize from.
  */
-template <class T, class G>
-concept CDeserializable = requires(T t, G g)
+template <class T>
+concept CDeserializable = requires(T t)
 {
-    CGroup<G>;
-    {t.Deserialize(g)};
+    {t.Deserialize(std::declval<Archive const&>())};
 };
 
 } // namespace pbat::io

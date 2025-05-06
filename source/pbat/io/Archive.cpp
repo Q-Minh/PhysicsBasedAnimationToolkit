@@ -68,7 +68,10 @@ Archive Archive::operator[](std::string const& path) const
             using T = std::decay_t<decltype(arg)>;
             if constexpr (std::is_same_v<T, HighFive::File> or std::is_same_v<T, HighFive::Group>)
             {
-                obj = arg.getGroup(path);
+                if (arg.exist(path) and arg.getObjectType(path) == HighFive::ObjectType::Group)
+                {
+                    obj = arg.getGroup(path);
+                }
             }
         },
         mHdf5Object);

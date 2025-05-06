@@ -13,7 +13,7 @@
 #include "pbat/fem/Jacobian.h"
 #include "pbat/fem/Mesh.h"
 #include "pbat/fem/ShapeFunctions.h"
-#include "pbat/io/Concepts.h"
+#include "pbat/io/Archive.h"
 #include "pbat/physics/HyperElasticity.h"
 #include "pbat/sim/integration/Bdf.h"
 
@@ -56,10 +56,10 @@ struct FemElastoDynamics
 
     MeshType mesh; ///< FEM mesh
 
-    MatrixX x;    ///< `kDims x |# nodes|` matrix of nodal positions
-    MatrixX v;    ///< `kDims x |# nodes|` matrix of nodal velocities
-    MatrixX fext; ///< `kDims x |# nodes|` matrix of external forces at nodes
-    VectorX m;    ///< `|# nodes| x 1` lumped mass matrix
+    Matrix<kDims, Eigen::Dynamic> v;    ///< `kDims x |# nodes|` matrix of nodal velocities
+    Matrix<kDims, Eigen::Dynamic> x;    ///< `kDims x |# nodes|` matrix of nodal positions
+    Matrix<kDims, Eigen::Dynamic> fext; ///< `kDims x |# nodes|` matrix of external forces at nodes
+    VectorX m;                          ///< `|# nodes| x 1` lumped mass matrix
 
     ElasticityQuadrature QU;             ///< Quadrature for elastic potential
     std::unique_ptr<ElasticPotential> U; ///< Hyper elastic potential
@@ -263,18 +263,14 @@ struct FemElastoDynamics
     auto FreeVelocities() { return v(Eigen::placeholders::all, FreeNodes()); }
     /**
      * @brief Serialize to HDF5 group
-     * @tparam TGroup Group type
-     * @param parent Group to serialize to
+     * @param archive Archive to serialize to
      */
-    template <io::CGroup TGroup>
-    void Serialize(TGroup& parent) const;
+    void Serialize(io::Archive& archive) const;
     /**
      * @brief Deserialize from HDF5 group
-     * @tparam TGroup Group type
-     * @param parent Group to deserialize from
+     * @param archive Archive to deserialize from
      */
-    template <io::CGroup TGroup>
-    void Deserialize(TGroup const& parent);
+    void Deserialize(io::Archive const& archive);
 };
 
 template <fem::CElement TElement, int Dims, physics::CHyperElasticEnergy THyperElasticEnergy>
@@ -317,8 +313,8 @@ inline void FemElastoDynamics<TElement, Dims, THyperElasticEnergy>::SetInitialCo
     Eigen::DenseBase<TDerivedX0> const& x0,
     Eigen::DenseBase<TDerivedV0> const& v0)
 {
-    x = x0;
-    v = v0;
+    x.reshaped() = x0.reshaped();
+    v.reshaped() = v0.reshaped();
     bdf.SetOrder(2);
     bdf.SetInitialConditions(x0.reshaped(), v0.reshaped());
 }
@@ -466,64 +462,63 @@ inline void FemElastoDynamics<TElement, Dims, THyperElasticEnergy>::SetExternalL
 }
 
 template <fem::CElement TElement, int Dims, physics::CHyperElasticEnergy THyperElasticEnergy>
-template <io::CGroup TGroup>
-inline void FemElastoDynamics<TElement, Dims, THyperElasticEnergy>::Serialize(TGroup& parent) const
+inline void
+FemElastoDynamics<TElement, Dims, THyperElasticEnergy>::Serialize(io::Archive& archive) const
 {
-    HighFive::Group group = parent.createGroup("pbat.sim.dynamics.FemElastoDynamics");
-    auto meshGroup        = group.createGroup("mesh");
-    meshGroup.createDataSet("X", mesh.X);
-    meshGroup.createDataSet("E", mesh.E);
-    group.createDataSet("x", x);
-    group.createDataSet("v", v);
-    group.createDataSet("fext", fext);
-    group.createDataSet("m", m);
-    auto elasticQuadratureGroup = group.createGroup("QU");
-    elasticQuadratureGroup.createDataSet("eg", QU.eg);
-    elasticQuadratureGroup.createDataSet("wg", QU.wg);
-    elasticQuadratureGroup.createDataSet("GNeg", QU.GNeg);
-    elasticQuadratureGroup.createDataSet("lameg", QU.lameg);
+    auto femElastoDynamicsArchive = archive["pbat.sim.dynamics.FemElastoDynamics"];
+    auto meshArchive              = femElastoDynamicsArchive["mesh"];
+    meshArchive.WriteData("X", mesh.X);
+    meshArchive.WriteData("E", mesh.E);
+    femElastoDynamicsArchive.WriteData("x", x);
+    femElastoDynamicsArchive.WriteData("v", v);
+    femElastoDynamicsArchive.WriteData("fext", fext);
+    femElastoDynamicsArchive.WriteData("m", m);
+    auto elasticQuadratureArchive = femElastoDynamicsArchive["QU"];
+    elasticQuadratureArchive.WriteData("eg", QU.eg);
+    elasticQuadratureArchive.WriteData("wg", QU.wg);
+    elasticQuadratureArchive.WriteData("GNeg", QU.GNeg);
+    elasticQuadratureArchive.WriteData("lameg", QU.lameg);
     if (U)
     {
-        auto elasticPotentialGroup = group.createGroup("U");
-        elasticPotentialGroup.createDataSet("Hg", U->Hg);
-        elasticPotentialGroup.createDataSet("Gg", U->Gg);
-        elasticPotentialGroup.createDataSet("Ug", U->Ug);
+        auto elasticPotentialArchive = femElastoDynamicsArchive["U"];
+        elasticPotentialArchive.WriteData("Hg", U->Hg);
+        elasticPotentialArchive.WriteData("Gg", U->Gg);
+        elasticPotentialArchive.WriteData("Ug", U->Ug);
     }
-    group.createAttribute("ndbc", ndbc);
-    group.createDataSet("dbc", dbc);
-    bdf.Serialize(group);
+    femElastoDynamicsArchive.WriteMetaData("ndbc", ndbc);
+    femElastoDynamicsArchive.WriteData("dbc", dbc);
+    bdf.Serialize(femElastoDynamicsArchive);
 }
 
 template <fem::CElement TElement, int Dims, physics::CHyperElasticEnergy THyperElasticEnergy>
-template <io::CGroup TGroup>
 inline void
-FemElastoDynamics<TElement, Dims, THyperElasticEnergy>::Deserialize(TGroup const& parent)
+FemElastoDynamics<TElement, Dims, THyperElasticEnergy>::Deserialize(io::Archive const& archive)
 {
-    HighFive::Group group       = parent.getGroup("pbat.sim.dynamics.FemElastoDynamics");
-    auto meshGroup              = group.getGroup("mesh");
-    mesh.X                      = meshGroup.getDataSet("X").read<MatrixX>();
-    mesh.E                      = meshGroup.getDataSet("E").read<IndexMatrixX>();
-    x                           = group.getDataSet("x").read<MatrixX>();
-    v                           = group.getDataSet("v").read<MatrixX>();
-    fext                        = group.getDataSet("fext").read<MatrixX>();
-    m                           = group.getDataSet("m").read<VectorX>();
-    auto elasticQuadratureGroup = group.getGroup("QU");
-    QU.eg                       = elasticQuadratureGroup.getDataSet("eg").read<IndexVectorX>();
-    QU.wg                       = elasticQuadratureGroup.getDataSet("wg").read<VectorX>();
-    QU.GNeg                     = elasticQuadratureGroup.getDataSet("GNeg").read<MatrixX>();
-    QU.lameg                    = elasticQuadratureGroup.getDataSet("lameg").read<MatrixX>();
-    if (group.hasGroup("U"))
+    io::Archive const femElastoDynamicsArchive = archive["pbat.sim.dynamics.FemElastoDynamics"];
+    io::Archive const meshArchive              = femElastoDynamicsArchive["mesh"];
+    mesh.X                                     = meshArchive.ReadData<MatrixX>("X");
+    mesh.E                                     = meshArchive.ReadData<IndexMatrixX>("E");
+    x                                          = femElastoDynamicsArchive.ReadData<MatrixX>("x");
+    v                                          = femElastoDynamicsArchive.ReadData<MatrixX>("v");
+    fext                                       = femElastoDynamicsArchive.ReadData<MatrixX>("fext");
+    m                                          = femElastoDynamicsArchive.ReadData<VectorX>("m");
+    io::Archive const elasticQuadratureArchive = femElastoDynamicsArchive["QU"];
+    QU.eg    = elasticQuadratureArchive.ReadData<IndexVectorX>("eg");
+    QU.wg    = elasticQuadratureArchive.ReadData<VectorX>("wg");
+    QU.GNeg  = elasticQuadratureArchive.ReadData<MatrixX>("GNeg");
+    QU.lameg = elasticQuadratureArchive.ReadData<MatrixX>("lameg");
+    if (femElastoDynamicsArchive["U"].IsUsable())
     {
-        auto elasticPotentialGroup = group.getGroup("U");
+        io::Archive const elasticPotentialArchive = femElastoDynamicsArchive["U"];
         U     = std::make_unique<ElasticPotential>(mesh, QU.eg, QU.wg, QU.GNeg, QU.lameg);
-        U->Hg = elasticPotentialGroup.getDataSet("Hg").read<CSCMatrix>();
-        U->Gg = elasticPotentialGroup.getDataSet("Gg").read<MatrixX>();
-        U->Ug = elasticPotentialGroup.getDataSet("Ug").read<VectorX>();
+        U->Hg = elasticPotentialArchive.ReadData<CSCMatrix>("Hg");
+        U->Gg = elasticPotentialArchive.ReadData<MatrixX>("Gg");
+        U->Ug = elasticPotentialArchive.ReadData<VectorX>("Ug");
         U->PrecomputeHessianSparsity();
     }
-    ndbc = group.getAttribute("ndbc").read<Index>();
-    dbc  = group.getDataSet("dbc").read<IndexVectorX>();
-    bdf.Deserialize(group);
+    ndbc = femElastoDynamicsArchive.ReadMetaData<Index>("ndbc");
+    dbc  = femElastoDynamicsArchive.ReadData<IndexVectorX>("dbc");
+    bdf.Deserialize(femElastoDynamicsArchive);
 }
 
 } // namespace pbat::sim::dynamics
