@@ -1,5 +1,6 @@
 include(FetchContent)
 
+find_package(OpenMP REQUIRED COMPONENTS CXX)
 find_package(fmt CONFIG REQUIRED)
 find_package(range-v3 CONFIG REQUIRED)
 find_package(TBB CONFIG REQUIRED)

@@ -77,6 +77,7 @@ target_link_libraries(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     hdf5::hdf5-shared
     hdf5::hdf5_cpp-shared
     HighFive::Include
+    OpenMP::OpenMP_CXX
     range-v3::concepts
     range-v3::meta
     range-v3::range-v3
@@ -100,6 +101,7 @@ endif()
 if(PBAT_USE_SUITESPARSE)
     target_link_libraries(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
         PUBLIC
+        OpenMP::OpenMP_C
         SuiteSparse::CHOLMOD
     )
 endif()
