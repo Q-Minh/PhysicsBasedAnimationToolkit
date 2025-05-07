@@ -93,6 +93,11 @@ class Mesh
 
     Mesh(void* meshImpl, EElement element, int order, int dims);
 
+    Mesh(Mesh const&) = delete;
+    Mesh(Mesh&&) noexcept;
+    Mesh& operator=(Mesh const&) = delete;
+    Mesh& operator=(Mesh&&) noexcept;
+
     template <class Func>
     void Apply(Func&& f) const;
 

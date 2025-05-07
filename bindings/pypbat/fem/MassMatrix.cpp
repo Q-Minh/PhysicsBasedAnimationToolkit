@@ -29,6 +29,8 @@ class MassMatrix
 
     MassMatrix(MassMatrix const&)            = delete;
     MassMatrix& operator=(MassMatrix const&) = delete;
+    MassMatrix(MassMatrix&&)                 = delete;
+    MassMatrix& operator=(MassMatrix&&)      = delete;
 
     template <class Func>
     void Apply(Func&& f) const;
@@ -64,8 +66,8 @@ void BindMassMatrix(pybind11::module& m)
             pyb::init<Mesh const&, Eigen::Ref<MatrixX const> const&, Scalar, int, int>(),
             pyb::arg("mesh"),
             pyb::arg("detJe").noconvert(),
-            pyb::arg("rho") = 1.,
-            pyb::arg("dims") = 1,
+            pyb::arg("rho")              = 1.,
+            pyb::arg("dims")             = 1,
             pyb::arg("quadrature_order") = 1,
             "Construct the mass matrix operator on mesh mesh, using "
             "precomputed jacobian determinants detJe evaluated at "
@@ -81,8 +83,8 @@ void BindMassMatrix(pybind11::module& m)
                 int>(),
             pyb::arg("mesh"),
             pyb::arg("detJe").noconvert(),
-            pyb::arg("rho") = 1.,
-            pyb::arg("dims") = 1,
+            pyb::arg("rho")              = 1.,
+            pyb::arg("dims")             = 1,
             pyb::arg("quadrature_order") = 1,
             "Construct the mass matrix operator on mesh mesh, using "
             "precomputed jacobian determinants detJe evaluated at "

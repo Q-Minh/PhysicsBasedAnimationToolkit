@@ -67,6 +67,32 @@ Mesh::Mesh(void* meshImpl, EElement element, int order, int dims)
 {
 }
 
+Mesh::Mesh(Mesh&& other) noexcept
+    : eElement(other.eElement),
+      mOrder(other.mOrder),
+      mDims(other.mDims),
+      mMesh(other.mMesh),
+      bOwnMesh(other.bOwnMesh)
+{
+    other.mMesh    = nullptr;
+    other.bOwnMesh = false;
+}
+
+Mesh& Mesh::operator=(Mesh&& other) noexcept
+{
+    if (this != std::addressof(other))
+    {
+        eElement       = other.eElement;
+        mOrder         = other.mOrder;
+        mDims          = other.mDims;
+        mMesh          = other.mMesh;
+        bOwnMesh       = other.bOwnMesh;
+        other.mMesh    = nullptr;
+        other.bOwnMesh = false;
+    }
+    return *this;
+}
+
 MatrixX Mesh::QuadraturePoints(int qOrder) const
 {
     static auto constexpr kMaxQuadratureOrder = 8;

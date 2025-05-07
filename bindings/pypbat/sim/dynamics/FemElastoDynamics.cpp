@@ -20,8 +20,10 @@ class FemElastoDynamics
         fem::EElement meshElement,
         fem::EHyperElasticEnergy hyperElasticEnergy);
 
-    FemElastoDynamics(FemElastoDynamics const&)            = delete;
+    FemElastoDynamics(FemElastoDynamics const&) = delete;
+    FemElastoDynamics(FemElastoDynamics&&);
     FemElastoDynamics& operator=(FemElastoDynamics const&) = delete;
+    FemElastoDynamics& operator=(FemElastoDynamics&&);
 
     fem::Mesh Mesh() const;
 
@@ -352,6 +354,30 @@ FemElastoDynamics::FemElastoDynamics(
     });
 }
 
+FemElastoDynamics::FemElastoDynamics(FemElastoDynamics&& other)
+    : mDims(other.mDims),
+      mOrder(other.mOrder),
+      mElement(other.mElement),
+      mHyperElasticEnergy(other.mHyperElasticEnergy),
+      mFemElastoDynamics(other.mFemElastoDynamics)
+{
+    other.mFemElastoDynamics = nullptr;
+}
+
+FemElastoDynamics& FemElastoDynamics::operator=(FemElastoDynamics&& other)
+{
+    if (this != std::addressof(other))
+    {
+        mDims                    = other.mDims;
+        mOrder                   = other.mOrder;
+        mElement                 = other.mElement;
+        mHyperElasticEnergy      = other.mHyperElasticEnergy;
+        mFemElastoDynamics       = other.mFemElastoDynamics;
+        other.mFemElastoDynamics = nullptr;
+    }
+    return *this;
+}
+
 fem::Mesh FemElastoDynamics::Mesh() const
 {
     void* meshImpl{nullptr};
@@ -485,20 +511,19 @@ pbat::sim::dynamics::ElasticityQuadrature& FemElastoDynamics::QU()
 
 std::optional<fem::HyperElasticPotential> FemElastoDynamics::U() const
 {
-    std::optional<fem::HyperElasticPotential> Uptr{std::nullopt};
+    std::optional<fem::HyperElasticPotential> U;
     Access([&]<class FemElastoDynamicsType>(FemElastoDynamicsType* femElastoDynamics) {
         if (femElastoDynamics->U)
         {
-            auto const& uniquePtrToU = femElastoDynamics->U;
-            Uptr                     = fem::HyperElasticPotential(
-                std::addressof(*uniquePtrToU),
+            U.emplace(
+                std::addressof(femElastoDynamics->U.value()),
                 mElement,
                 mOrder,
                 mDims,
                 mHyperElasticEnergy);
         }
     });
-    return Uptr;
+    return U;
 }
 
 IndexVectorX FemElastoDynamics::FreeNodes() const

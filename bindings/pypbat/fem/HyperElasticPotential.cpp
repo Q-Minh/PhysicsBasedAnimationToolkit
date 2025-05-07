@@ -131,15 +131,32 @@ HyperElasticPotential::HyperElasticPotential(
 }
 
 HyperElasticPotential::HyperElasticPotential(HyperElasticPotential&& other)
-    : mHyperElasticPotential(other.mHyperElasticPotential)
+    : eMeshElement(other.eMeshElement),
+      mMeshDims(other.mMeshDims),
+      mMeshOrder(other.mMeshOrder),
+      eHyperElasticEnergy(other.eHyperElasticEnergy),
+      mDims(other.mDims),
+      mHyperElasticPotential(other.mHyperElasticPotential),
+      bOwning(other.bOwning)
 {
     other.mHyperElasticPotential = nullptr;
+    other.bOwning                = false;
 }
 
 HyperElasticPotential& HyperElasticPotential::operator=(HyperElasticPotential&& other)
 {
-    mHyperElasticPotential       = other.mHyperElasticPotential;
-    other.mHyperElasticPotential = nullptr;
+    if (this != std::addressof(other))
+    {
+        eMeshElement                 = other.eMeshElement;
+        mMeshDims                    = other.mMeshDims;
+        mMeshOrder                   = other.mMeshOrder;
+        eHyperElasticEnergy          = other.eHyperElasticEnergy;
+        mDims                        = other.mDims;
+        mHyperElasticPotential       = other.mHyperElasticPotential;
+        other.mHyperElasticPotential = nullptr;
+        bOwning                      = other.bOwning;
+        other.bOwning                = false;
+    }
     return *this;
 }
 

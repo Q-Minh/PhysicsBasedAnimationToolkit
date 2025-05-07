@@ -21,7 +21,9 @@ class Laplacian
         int dims);
 
     Laplacian(Laplacian const&)            = delete;
+    Laplacian(Laplacian&&)                 = delete;
     Laplacian& operator=(Laplacian const&) = delete;
+    Laplacian& operator=(Laplacian&&)      = delete;
 
     template <class Func>
     void Apply(Func&& f) const;

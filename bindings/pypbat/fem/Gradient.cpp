@@ -20,6 +20,8 @@ class Gradient
 
     Gradient(Gradient const&)            = delete;
     Gradient& operator=(Gradient const&) = delete;
+    Gradient(Gradient&&)                 = delete;
+    Gradient& operator=(Gradient&&)      = delete;
 
     template <class Func>
     void Apply(Func&& f) const;

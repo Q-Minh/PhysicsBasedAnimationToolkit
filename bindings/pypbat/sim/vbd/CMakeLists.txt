@@ -14,4 +14,5 @@ target_sources(PhysicsBasedAnimationToolkit_Python
     "Vbd.cpp"
 )
 
-add_subdirectory(multigrid)
+# DEPRECATED: Multigrid code is old, not used and not maintained.
+# add_subdirectory(multigrid)
