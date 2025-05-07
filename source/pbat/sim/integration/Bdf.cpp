@@ -135,10 +135,10 @@ void Bdf::Serialize(io::Archive& archive) const
     bdfArchive.WriteData("xtilde", xtilde);
     bdfArchive.WriteMetaData("h", h);
     bdfArchive.WriteMetaData("ti", ti);
-    bdfArchive.WriteMetaData("mOrder", mOrder);
-    bdfArchive.WriteMetaData("mStep", mStep);
-    bdfArchive.WriteMetaData("mAlpha", mAlpha);
-    bdfArchive.WriteMetaData("mBeta", mBeta);
+    bdfArchive.WriteMetaData("order", mOrder);
+    bdfArchive.WriteMetaData("step", mStep);
+    bdfArchive.WriteMetaData("alpha", mAlpha);
+    bdfArchive.WriteMetaData("beta", mBeta);
 }
 
 void Bdf::Deserialize(io::Archive const& archive)
@@ -148,10 +148,10 @@ void Bdf::Deserialize(io::Archive const& archive)
     xtilde           = group.ReadData<MatrixX>("xtilde");
     h                = group.ReadMetaData<Scalar>("h");
     ti               = group.ReadMetaData<Index>("ti");
-    mOrder           = group.ReadMetaData<int>("mOrder");
-    mStep            = group.ReadMetaData<int>("mStep");
-    mAlpha           = group.ReadMetaData<Vector<6>>("mAlpha");
-    mBeta            = group.ReadMetaData<Scalar>("mBeta");
+    mOrder           = group.ReadMetaData<int>("order");
+    mStep            = group.ReadMetaData<int>("step");
+    mAlpha           = group.ReadMetaData<Vector<6>>("alpha");
+    mBeta            = group.ReadMetaData<Scalar>("beta");
 }
 
 } // namespace pbat::sim::integration

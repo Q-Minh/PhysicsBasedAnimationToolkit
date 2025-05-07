@@ -104,6 +104,24 @@ void BindBdf(pybind11::module& m)
             "    x (n x order): matrix of the current state derivatives s.t. `x.col(o) = "
             "x^(o)(ti)`\n"
             "Returns:\n"
+            "    None")
+        .def(
+            "serialize",
+            &pbat::sim::integration::Bdf::Serialize,
+            pyb::arg("archive"),
+            "Serialize the BDF scheme\n"
+            "Args:\n"
+            "    archive (Archive): Archive to serialize to\n"
+            "Returns:\n"
+            "    None")
+        .def(
+            "deserialize",
+            &pbat::sim::integration::Bdf::Deserialize,
+            pyb::arg("archive"),
+            "Deserialize the BDF scheme\n"
+            "Args:\n"
+            "    archive (Archive): Archive to deserialize from\n"
+            "Returns:\n"
             "    None");
 }
 

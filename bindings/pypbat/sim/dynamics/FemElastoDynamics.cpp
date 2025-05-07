@@ -3,6 +3,7 @@
 #include "pypbat/fem/HyperElasticPotential.h"
 #include "pypbat/fem/Mesh.h"
 
+#include <pbat/io/Archive.h>
 #include <pbat/sim/dynamics/FemElastoDynamics.h>
 #include <pbat/sim/integration/Bdf.h>
 #include <pybind11/eigen.h>
@@ -24,14 +25,14 @@ class FemElastoDynamics
 
     fem::Mesh Mesh() const;
 
-    MatrixX const& x() const;
-    MatrixX& x();
-    MatrixX const& v() const;
-    MatrixX& v();
-    MatrixX const& fext() const;
-    MatrixX& fext();
-    VectorX const& m() const;
-    VectorX& m();
+    Eigen::Map<MatrixX const> x() const;
+    Eigen::Map<MatrixX> x();
+    Eigen::Map<MatrixX const> v() const;
+    Eigen::Map<MatrixX> v();
+    Eigen::Map<MatrixX const> fext() const;
+    Eigen::Map<MatrixX> fext();
+    Eigen::Map<VectorX const> m() const;
+    Eigen::Map<VectorX> m();
 
     pbat::sim::dynamics::ElasticityQuadrature const& QU() const;
     pbat::sim::dynamics::ElasticityQuadrature& QU();
@@ -72,6 +73,9 @@ class FemElastoDynamics
         Eigen::Ref<VectorX const> const& wg,
         Eigen::Ref<MatrixX const> const& Xg,
         Eigen::Ref<MatrixX const> const& bg);
+
+    void Serialize(io::Archive& archive) const;
+    void Deserialize(io::Archive const& archive);
 
     template <class Func>
     void Access(Func f) const
@@ -357,76 +361,108 @@ fem::Mesh FemElastoDynamics::Mesh() const
     return fem::Mesh(meshImpl, mElement, mOrder, mDims);
 }
 
-MatrixX const& FemElastoDynamics::x() const
+Eigen::Map<MatrixX const> FemElastoDynamics::x() const
 {
-    MatrixX const* xPtr{nullptr};
+    Scalar* data{nullptr};
+    Index rows{-1};
+    Index cols{-1};
     Access([&]<class FemElastoDynamicsType>(FemElastoDynamicsType* femElastoDynamics) {
-        xPtr = std::addressof(femElastoDynamics->x);
+        data = femElastoDynamics->x.data();
+        rows = femElastoDynamics->x.rows();
+        cols = femElastoDynamics->x.cols();
     });
-    return *xPtr;
+    return Eigen::Map<MatrixX const>(data, rows, cols);
 }
 
-MatrixX& FemElastoDynamics::x()
+Eigen::Map<MatrixX> FemElastoDynamics::x()
 {
-    MatrixX* xPtr{nullptr};
+    Scalar* data{nullptr};
+    Index rows{-1};
+    Index cols{-1};
     Access([&]<class FemElastoDynamicsType>(FemElastoDynamicsType* femElastoDynamics) {
-        xPtr = std::addressof(femElastoDynamics->x);
+        data = femElastoDynamics->x.data();
+        rows = femElastoDynamics->x.rows();
+        cols = femElastoDynamics->x.cols();
     });
-    return *xPtr;
+    return Eigen::Map<MatrixX>(data, rows, cols);
 }
 
-MatrixX const& FemElastoDynamics::v() const
+Eigen::Map<MatrixX const> FemElastoDynamics::v() const
 {
-    MatrixX const* vPtr{nullptr};
+    Scalar* data{nullptr};
+    Index rows{-1};
+    Index cols{-1};
     Access([&]<class FemElastoDynamicsType>(FemElastoDynamicsType* femElastoDynamics) {
-        vPtr = std::addressof(femElastoDynamics->v);
+        data = femElastoDynamics->v.data();
+        rows = femElastoDynamics->v.rows();
+        cols = femElastoDynamics->v.cols();
     });
-    return *vPtr;
+    return Eigen::Map<MatrixX const>(data, rows, cols);
 }
 
-MatrixX& FemElastoDynamics::v()
+Eigen::Map<MatrixX> FemElastoDynamics::v()
 {
-    MatrixX* vPtr{nullptr};
+    Scalar* data{nullptr};
+    Index rows{-1};
+    Index cols{-1};
     Access([&]<class FemElastoDynamicsType>(FemElastoDynamicsType* femElastoDynamics) {
-        vPtr = std::addressof(femElastoDynamics->v);
+        data = femElastoDynamics->v.data();
+        rows = femElastoDynamics->v.rows();
+        cols = femElastoDynamics->v.cols();
     });
-    return *vPtr;
+    return Eigen::Map<MatrixX>(data, rows, cols);
 }
 
-MatrixX const& FemElastoDynamics::fext() const
+Eigen::Map<MatrixX const> FemElastoDynamics::fext() const
 {
-    MatrixX const* fextPtr{nullptr};
+    Scalar* data{nullptr};
+    Index rows{-1};
+    Index cols{-1};
     Access([&]<class FemElastoDynamicsType>(FemElastoDynamicsType* femElastoDynamics) {
-        fextPtr = std::addressof(femElastoDynamics->fext);
+        data = femElastoDynamics->fext.data();
+        rows = femElastoDynamics->fext.rows();
+        cols = femElastoDynamics->fext.cols();
     });
-    return *fextPtr;
+    return Eigen::Map<MatrixX const>(data, rows, cols);
 }
 
-MatrixX& FemElastoDynamics::fext()
+Eigen::Map<MatrixX> FemElastoDynamics::fext()
 {
-    MatrixX* fextPtr{nullptr};
+    Scalar* data{nullptr};
+    Index rows{-1};
+    Index cols{-1};
     Access([&]<class FemElastoDynamicsType>(FemElastoDynamicsType* femElastoDynamics) {
-        fextPtr = std::addressof(femElastoDynamics->fext);
+        data = femElastoDynamics->fext.data();
+        rows = femElastoDynamics->fext.rows();
+        cols = femElastoDynamics->fext.cols();
     });
-    return *fextPtr;
+    return Eigen::Map<MatrixX>(data, rows, cols);
 }
 
-VectorX const& FemElastoDynamics::m() const
+Eigen::Map<VectorX const> FemElastoDynamics::m() const
 {
-    VectorX const* mPtr{nullptr};
+    Scalar* data{nullptr};
+    Index rows{-1};
+    Index cols{-1};
     Access([&]<class FemElastoDynamicsType>(FemElastoDynamicsType* femElastoDynamics) {
-        mPtr = std::addressof(femElastoDynamics->m);
+        data = femElastoDynamics->m.data();
+        rows = femElastoDynamics->m.rows();
+        cols = femElastoDynamics->m.cols();
     });
-    return *mPtr;
+    return Eigen::Map<VectorX const>(data, rows, cols);
 }
 
-VectorX& FemElastoDynamics::m()
+Eigen::Map<VectorX> FemElastoDynamics::m()
 {
-    VectorX* mPtr{nullptr};
+    Scalar* data{nullptr};
+    Index rows{-1};
+    Index cols{-1};
     Access([&]<class FemElastoDynamicsType>(FemElastoDynamicsType* femElastoDynamics) {
-        mPtr = std::addressof(femElastoDynamics->m);
+        data = femElastoDynamics->m.data();
+        rows = femElastoDynamics->m.rows();
+        cols = femElastoDynamics->m.cols();
     });
-    return *mPtr;
+    return Eigen::Map<VectorX>(data, rows, cols);
 }
 
 pbat::sim::dynamics::ElasticityQuadrature const& FemElastoDynamics::QU() const
@@ -586,6 +622,20 @@ void FemElastoDynamics::SetExternalLoad(
 {
     Access([&]<class FemElastoDynamicsType>(FemElastoDynamicsType* femElastoDynamics) {
         femElastoDynamics->SetExternalLoad(eg, wg, Xg, bg);
+    });
+}
+
+void FemElastoDynamics::Serialize(io::Archive& archive) const
+{
+    Access([&]<class FemElastoDynamicsType>(FemElastoDynamicsType* femElastoDynamics) {
+        femElastoDynamics->Serialize(archive);
+    });
+}
+
+void FemElastoDynamics::Deserialize(io::Archive const& archive)
+{
+    Access([&]<class FemElastoDynamicsType>(FemElastoDynamicsType* femElastoDynamics) {
+        femElastoDynamics->Deserialize(archive);
     });
 }
 

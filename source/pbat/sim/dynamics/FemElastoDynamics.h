@@ -511,7 +511,7 @@ FemElastoDynamics<TElement, Dims, THyperElasticEnergy>::Deserialize(io::Archive 
     {
         io::Archive const elasticPotentialArchive = femElastoDynamicsArchive["U"];
         U     = std::make_unique<ElasticPotential>(mesh, QU.eg, QU.wg, QU.GNeg, QU.lameg);
-        U->Hg = elasticPotentialArchive.ReadData<CSCMatrix>("Hg");
+        U->Hg = elasticPotentialArchive.ReadData<MatrixX>("Hg");
         U->Gg = elasticPotentialArchive.ReadData<MatrixX>("Gg");
         U->Ug = elasticPotentialArchive.ReadData<VectorX>("Ug");
         U->PrecomputeHessianSparsity();
