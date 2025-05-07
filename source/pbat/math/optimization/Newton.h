@@ -1,0 +1,78 @@
+#ifndef PBAT_MATH_OPTIMIZATION_NEWTON_H
+#define PBAT_MATH_OPTIMIZATION_NEWTON_H
+
+#include "LineSearch.h"
+#include "pbat/Aliases.h"
+
+#include <Eigen/Core>
+#include <optional>
+#include <type_traits>
+
+namespace pbat::math::optimization {
+
+/**
+ * @brief Newton's method for optimization
+ * @tparam TScalar Scalar type
+ */
+template <class TScalar = Scalar>
+struct Newton
+{
+    TScalar gtol2; ///< Gradient squared norm threshold for convergence
+    int nMaxIters; ///< Maximum number of iterations for the Newton solver
+    Eigen::Vector<TScalar, Eigen::Dynamic> dxk; ///< Step direction
+    Eigen::Vector<TScalar, Eigen::Dynamic> gk;  ///< Gradient at current iteration
+
+    /**
+     * @brief Construct a new Newton optimizer
+     * @param nMaxIters Maximum number of iterations for the Newton solver
+     * @param gtol Gradient norm threshold for convergence
+     * @param n Number of degrees of freedom
+     */
+    Newton(int nMaxIters = 10, TScalar gtol = TScalar(1e-4), Index n = 0)
+        : nMaxIters(nMaxIters), gtol2(gtol * gtol), dxk(n), gk(n)
+    {
+    }
+    /**
+     * @brief Solve the optimization problem using Newton's method
+     *
+     * @tparam FObjective Callable type for the objective function with signature `f(xk) -> fk`
+     * @tparam FGradient Callable type for the gradient with signature `g(xk) -> gk`
+     * @tparam FHessianInverseProduct Callable type for the Hessian inverse product with signature
+     * `Hinv(xk, gk) -> dxk`
+     * @tparam TDerivedX Derived type for the input iterate
+     * @param f Objective function
+     * @param g Gradient function
+     * @param Hinv Hessian inverse product function
+     * @param xk Current iterate
+     * @param lineSearch Optional line search object
+     * @return Squared norm of the gradient at the final iterate
+     */
+    template <class FObjective, class FGradient, class FHessianInverseProduct, class TDerivedX>
+    TScalar Solve(
+        FObjective f,
+        FGradient g,
+        FHessianInverseProduct Hinv,
+        Eigen::DenseBase<TDerivedX>& xk,
+        std::optional<BackTrackingLineSearch<TScalar>> lineSearch = std::nullopt)
+    {
+        TScalar gnorm2{0};
+        gk = g(xk);
+        for (auto k = 0; k < nMaxIters; ++k)
+        {
+            gnorm2 = gk.squaredNorm();
+            if (gnorm2 < gtol2)
+                break;
+            dxk = -Hinv(xk, gk);
+            if (lineSearch)
+                lineSearch->Solve(f, gk, dxk, xk);
+            else
+                xk += dxk;
+            gk = g(xk);
+        }
+        return gnorm2;
+    }
+};
+
+} // namespace pbat::math::optimization
+
+#endif // PBAT_MATH_OPTIMIZATION_NEWTON_H
