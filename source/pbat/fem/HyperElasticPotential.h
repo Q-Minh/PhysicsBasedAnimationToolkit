@@ -138,26 +138,36 @@ struct HyperElasticPotential
      */
     template <class TDerivedIn, class TDerivedOut>
     void Apply(Eigen::MatrixBase<TDerivedIn> const& x, Eigen::DenseBase<TDerivedOut>& y) const;
-
+    /**
+     * @brief Computes the hessian of the elastic potential and stores it in H.
+     * @tparam TDerived Eigen sparse matrix expression type
+     * @param H Hessian matrix
+     */
+    template <class TDerived>
+    void ToMatrix(Eigen::SparseCompressedBase<TDerived>& H) const;
+    /**
+     * @brief Computes the gradient of the elastic potential and stores it in G.
+     * @tparam TDerived Eigen matrix expression type
+     * @param G Gradient vector
+     */
+    template <class TDerived>
+    void ToVector(Eigen::DenseBase<TDerived>& G) const;
     /**
      * @brief Transforms this matrix-free hessian matrix representation into sparse compressed
      * column format.
      * @return Sparse compressed column matrix representation of the hessian operator
      */
     CSCMatrix ToMatrix() const;
-
     /**
      * @brief Transforms this per quadrature point gradient representation into the global gradient.
      * @return Global gradient
      */
     VectorX ToVector() const;
-
     /**
      * @brief Computes the total elastic potential
      * @return Total elastic potential
      */
     Scalar Eval() const;
-
     /**
      * @brief Number of columns
      *
@@ -435,10 +445,67 @@ inline void HyperElasticPotential<TMesh, THyperElasticEnergy>::PrecomputeHessian
 }
 
 template <CMesh TMesh, physics::CHyperElasticEnergy THyperElasticEnergy>
+template <class TDerived>
+inline void HyperElasticPotential<TMesh, THyperElasticEnergy>::ToMatrix(
+    Eigen::SparseCompressedBase<TDerived>& H) const
+{
+    PBAT_PROFILE_NAMED_SCOPE("pbat.fem.HyperElasticPotential.ToMatrix");
+    if (H.rows() != OutputDimensions() and H.cols() != InputDimensions())
+    {
+        std::string const what = fmt::format(
+            "Expected hessian matrix to have dimensions {}x{}, "
+            "but got {}x{}",
+            OutputDimensions(),
+            InputDimensions(),
+            H.rows(),
+            H.cols());
+        throw std::invalid_argument(what);
+    }
+    if (GH.IsEmpty())
+    {
+        throw std::invalid_argument("PrecomputeHessianSparsity() must be called prior.");
+    }
+    using SpanType = std::span<Scalar const>;
+    using SizeType = typename SpanType::size_type;
+    GH.To(SpanType(Hg.data(), static_cast<SizeType>(Hg.size())), H);
+}
+
+template <CMesh TMesh, physics::CHyperElasticEnergy THyperElasticEnergy>
+template <class TDerived>
+inline void
+HyperElasticPotential<TMesh, THyperElasticEnergy>::ToVector(Eigen::DenseBase<TDerived>& G) const
+{
+    PBAT_PROFILE_NAMED_SCOPE("pbat.fem.HyperElasticPotential.ToVector");
+    if (G.rows() != InputDimensions() or G.cols() != 1)
+    {
+        std::string const what = fmt::format(
+            "Expected gradient vector to have dimensions {}x{}, "
+            "but got {}x{}",
+            InputDimensions(),
+            1,
+            G.rows(),
+            G.cols());
+        throw std::invalid_argument(what);
+    }
+    auto constexpr kNodesPerElement     = ElementType::kNodes;
+    auto const numberOfQuadraturePoints = wg.size();
+    auto const numberOfNodes            = mesh.X.cols();
+    G.setZero();
+    for (auto g = 0; g < numberOfQuadraturePoints; ++g)
+    {
+        auto const e     = eg(g);
+        auto const nodes = mesh.E.col(e);
+        auto const geg   = Gg.col(g).reshaped(kDims, kNodesPerElement);
+        auto gi          = G.reshaped(kDims, numberOfNodes)(Eigen::placeholders::all, nodes);
+        gi += geg;
+    }
+}
+
+template <CMesh TMesh, physics::CHyperElasticEnergy THyperElasticEnergy>
 inline CSCMatrix HyperElasticPotential<TMesh, THyperElasticEnergy>::ToMatrix() const
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.fem.HyperElasticPotential.ToMatrix");
-    if (!GH.IsEmpty())
+    if (not GH.IsEmpty())
     {
         using SpanType = std::span<Scalar const>;
         using SizeType = typename SpanType::size_type;
@@ -480,20 +547,8 @@ inline CSCMatrix HyperElasticPotential<TMesh, THyperElasticEnergy>::ToMatrix() c
 template <CMesh TMesh, physics::CHyperElasticEnergy THyperElasticEnergy>
 inline VectorX HyperElasticPotential<TMesh, THyperElasticEnergy>::ToVector() const
 {
-    PBAT_PROFILE_NAMED_SCOPE("pbat.fem.HyperElasticPotential.ToVector");
-    auto constexpr kNodesPerElement     = ElementType::kNodes;
-    auto const numberOfQuadraturePoints = wg.size();
-    auto const numberOfNodes            = mesh.X.cols();
-    auto const n                        = InputDimensions();
-    VectorX G                           = VectorX::Zero(n);
-    for (auto g = 0; g < numberOfQuadraturePoints; ++g)
-    {
-        auto const e     = eg(g);
-        auto const nodes = mesh.E.col(e);
-        auto const geg   = Gg.col(g).reshaped(kDims, kNodesPerElement);
-        auto gi          = G.reshaped(kDims, numberOfNodes)(Eigen::placeholders::all, nodes);
-        gi += geg;
-    }
+    VectorX G(InputDimensions());
+    ToVector(G);
     return G;
 }
 
