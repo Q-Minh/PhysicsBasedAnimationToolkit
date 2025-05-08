@@ -1,3 +1,11 @@
+/**
+ * @file Newton.h
+ * @author Quoc-Minh Ton-That (tonthat.quocminh@gmail.com)
+ * @brief Header file for Newton's method for optimization.
+ * @date 2025-05-07
+ * @copyright Copyright (c) 2025
+ */
+
 #ifndef PBAT_MATH_OPTIMIZATION_NEWTON_H
 #define PBAT_MATH_OPTIMIZATION_NEWTON_H
 
@@ -28,10 +36,7 @@ struct Newton
      * @param gtol Gradient norm threshold for convergence
      * @param n Number of degrees of freedom
      */
-    Newton(int nMaxIters = 10, TScalar gtol = TScalar(1e-4), Index n = 0)
-        : nMaxIters(nMaxIters), gtol2(gtol * gtol), dxk(n), gk(n)
-    {
-    }
+    Newton(int nMaxIters = 10, TScalar gtol = TScalar(1e-4), Index n = 0);
     /**
      * @brief Solve the optimization problem using Newton's method
      *
@@ -52,26 +57,41 @@ struct Newton
         FObjective f,
         FGradient g,
         FHessianInverseProduct Hinv,
-        Eigen::DenseBase<TDerivedX>& xk,
-        std::optional<BackTrackingLineSearch<TScalar>> lineSearch = std::nullopt)
-    {
-        TScalar gnorm2{0};
-        gk = g(xk);
-        for (auto k = 0; k < nMaxIters; ++k)
-        {
-            gnorm2 = gk.squaredNorm();
-            if (gnorm2 < gtol2)
-                break;
-            dxk = -Hinv(xk, gk);
-            if (lineSearch)
-                lineSearch->Solve(f, gk, dxk, xk);
-            else
-                xk += dxk;
-            gk = g(xk);
-        }
-        return gnorm2;
-    }
+        Eigen::MatrixBase<TDerivedX>& xk,
+        std::optional<BackTrackingLineSearch<TScalar>> lineSearch = std::nullopt);
 };
+
+template <class TScalar>
+inline Newton<TScalar>::Newton(int nMaxItersIn, TScalar gtol, Index n)
+    : nMaxIters(nMaxItersIn), gtol2(gtol * gtol), dxk(n), gk(n)
+{
+}
+
+template <class TScalar>
+template <class FObjective, class FGradient, class FHessianInverseProduct, class TDerivedX>
+inline TScalar Newton<TScalar>::Solve(
+    FObjective f,
+    FGradient g,
+    FHessianInverseProduct Hinv,
+    Eigen::MatrixBase<TDerivedX>& xk,
+    std::optional<BackTrackingLineSearch<TScalar>> lineSearch)
+{
+    TScalar gnorm2{0};
+    gk = g(xk);
+    for (auto k = 0; k < nMaxIters; ++k)
+    {
+        gnorm2 = gk.squaredNorm();
+        if (gnorm2 < gtol2)
+            break;
+        dxk = -Hinv(xk, gk);
+        if (lineSearch)
+            lineSearch->Solve(f, gk, dxk, xk);
+        else
+            xk += dxk;
+        gk = g(xk);
+    }
+    return gnorm2;
+}
 
 } // namespace pbat::math::optimization
 
