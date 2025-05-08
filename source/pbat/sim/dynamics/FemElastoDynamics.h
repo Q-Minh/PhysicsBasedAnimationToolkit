@@ -19,7 +19,7 @@
 
 #include <algorithm>
 #include <cassert>
-#include <memory>
+#include <optional>
 #include <type_traits>
 
 namespace pbat::sim::dynamics {
@@ -38,7 +38,16 @@ struct ElasticityQuadrature
 };
 
 /**
- * @brief Finite Element Elasto-Dynamics initial value problem with Dirichlet boundary conditions.
+ * @brief Finite Element Elasto-Dynamics initial value problem with Dirichlet boundary conditions
+ * using BDF (backward differentiation formula) as the time discretization.
+ *
+ * Represents the problem
+ * \f[
+ * \min_x \frac{1}{2} || x - \tilde{x} ||_M^2 + \tilde{\beta}_\text{bdf-s}^2 U(x) ,
+ * \f]
+ * where \f$ M \f$ is the mass matrix, \f$ \tilde{x} \f$ is the BDF inertial target,
+ * \f$ \tilde{\beta}_\text{bdf-s} \f$ is the forcing term's coefficient, and \f$ U(x) \f$ is the
+ * hyper-elastic potential.
  *
  * @tparam TElement Element type
  * @tparam Dims Dimensionality of the mesh
@@ -61,8 +70,8 @@ struct FemElastoDynamics
     Matrix<kDims, Eigen::Dynamic> fext; ///< `kDims x |# nodes|` matrix of external forces at nodes
     VectorX m;                          ///< `|# nodes| x 1` lumped mass matrix
 
-    ElasticityQuadrature QU;             ///< Quadrature for elastic potential
-    std::unique_ptr<ElasticPotential> U; ///< Hyper elastic potential
+    ElasticityQuadrature QU;           ///< Quadrature for elastic potential
+    std::optional<ElasticPotential> U; ///< Hyper elastic potential
 
     Index ndbc;       ///< Number of Dirichlet constrained nodes
     IndexVectorX dbc; ///< `|# nodes| x 1` concatenated vector of Dirichlet unconstrained and
@@ -70,15 +79,12 @@ struct FemElastoDynamics
                       ///< `[ dbc(0 : |#nodes|-ndbc), dbc(|# nodes|-ndbc : |# nodes|) ]`
 
     integration::Bdf bdf; ///< BDF time integration scheme
+    VectorX xtilde;       ///< `kDims*|# nodes|` vector of BDF inertial targets
 
     /**
      * @brief Construct an empty FemElastoDynamics problem
      */
-    FemElastoDynamics()                                    = default;
-    FemElastoDynamics(FemElastoDynamics const&)            = delete;
-    FemElastoDynamics(FemElastoDynamics&&)                 = default;
-    FemElastoDynamics& operator=(FemElastoDynamics const&) = delete;
-    FemElastoDynamics& operator=(FemElastoDynamics&&)      = default;
+    FemElastoDynamics() = default;
     /**
      * @brief Construct an FemElastoDynamics problem on the mesh domain (V,C).
      *
@@ -193,6 +199,10 @@ struct FemElastoDynamics
         Eigen::DenseBase<TDerivedLambdag> const& lambdag,
         bool bWithElasticPotential = true);
     /**
+     * @brief Construct the elastic potential `U` from the elastic energy quadrature
+     */
+    void ConstructElasticPotential();
+    /**
      * @brief Compute and set the external load vector given by variable body forces \f$ b(X) \f$ at
      * quadrature points \f$ X_g \f$ of the given quadrature rule \f$ (w_g, X_g) \f$.
      *
@@ -211,6 +221,20 @@ struct FemElastoDynamics
         Eigen::MatrixBase<TDerivedWg> const& wg,
         Eigen::MatrixBase<TDerivedXg> const& Xg,
         Eigen::MatrixBase<TDerivedBg> const& bg);
+    /**
+     * @brief Set the BDF inertial target for elasto dynamics
+     */
+    void SetupTimeIntegrationOptimization();
+    /**
+     * @brief k-dimensional mass matrix
+     * @return `kDims*|#nodes|` `kDims`-dimensional lumped mass matrix
+     */
+    auto M() const { return m.replicate(1, kDims).transpose().reshaped(); };
+    /**
+     * @brief External acceleration
+     * @return `kDims x |# nodes|` external acceleration
+     */
+    auto aext() const { return (fext * m.cwiseInverse().asDiagonal()); }
     /**
      * @brief Array of Dirichlet constrained nodes
      * @return `ndbc x 1` array of Dirichlet constrained nodes
@@ -313,8 +337,8 @@ inline void FemElastoDynamics<TElement, Dims, THyperElasticEnergy>::SetInitialCo
     Eigen::DenseBase<TDerivedX0> const& x0,
     Eigen::DenseBase<TDerivedV0> const& v0)
 {
-    x.reshaped() = x0.reshaped();
-    v.reshaped() = v0.reshaped();
+    x = x0;
+    v = v0;
     bdf.SetOrder(2);
     bdf.SetInitialConditions(x0.reshaped(), v0.reshaped());
 }
@@ -402,7 +426,7 @@ inline void FemElastoDynamics<TElement, Dims, THyperElasticEnergy>::Constrain(
     assert(D.size() == nNodes);
     dbc.setLinSpaced(nNodes, Index(0), nNodes - 1);
     auto it = std::stable_partition(dbc.begin(), dbc.end(), [&D](Index i) { return not D(i); });
-    ndbc    = std::distance(dbc.begin(), it);
+    ndbc    = nNodes - std::distance(dbc.begin(), it);
 }
 
 template <fem::CElement TElement, int Dims, physics::CHyperElasticEnergy THyperElasticEnergy>
@@ -444,8 +468,7 @@ inline void FemElastoDynamics<TElement, Dims, THyperElasticEnergy>::SetElasticEn
     QU.lameg.row(1) = lambdag;
     if (bWithElasticPotential)
     {
-        U = std::make_unique<ElasticPotential>(mesh, QU.eg, QU.wg, QU.GNeg, QU.lameg);
-        U->PrecomputeHessianSparsity();
+        ConstructElasticPotential();
     }
 }
 
@@ -459,6 +482,23 @@ inline void FemElastoDynamics<TElement, Dims, THyperElasticEnergy>::SetExternalL
 {
     CSRMatrix N = fem::ShapeFunctionMatrix(mesh, eg, Xg);
     fext        = bg * wg.asDiagonal() * N;
+}
+
+template <fem::CElement TElement, int Dims, physics::CHyperElasticEnergy THyperElasticEnergy>
+inline void FemElastoDynamics<TElement, Dims, THyperElasticEnergy>::ConstructElasticPotential()
+{
+    U.emplace(mesh, QU.eg, QU.wg, QU.GNeg, QU.lameg);
+    U->PrecomputeHessianSparsity();
+}
+
+template <fem::CElement TElement, int Dims, physics::CHyperElasticEnergy THyperElasticEnergy>
+inline void
+FemElastoDynamics<TElement, Dims, THyperElasticEnergy>::SetupTimeIntegrationOptimization()
+{
+    auto xtildeBdf = bdf.Inertia(0);
+    auto vtildeBdf = bdf.Inertia(1);
+    auto betaTilde = bdf.BetaTilde();
+    xtilde = -(xtildeBdf + betaTilde * vtildeBdf) + (betaTilde * betaTilde) * (aext().reshaped());
 }
 
 template <fem::CElement TElement, int Dims, physics::CHyperElasticEnergy THyperElasticEnergy>
@@ -510,7 +550,7 @@ FemElastoDynamics<TElement, Dims, THyperElasticEnergy>::Deserialize(io::Archive 
     if (femElastoDynamicsArchive["U"].IsUsable())
     {
         io::Archive const elasticPotentialArchive = femElastoDynamicsArchive["U"];
-        U     = std::make_unique<ElasticPotential>(mesh, QU.eg, QU.wg, QU.GNeg, QU.lameg);
+        U.emplace(mesh, QU.eg, QU.wg, QU.GNeg, QU.lameg);
         U->Hg = elasticPotentialArchive.ReadData<MatrixX>("Hg");
         U->Gg = elasticPotentialArchive.ReadData<MatrixX>("Gg");
         U->Ug = elasticPotentialArchive.ReadData<VectorX>("Ug");
