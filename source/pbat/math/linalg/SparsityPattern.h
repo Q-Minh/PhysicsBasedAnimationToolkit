@@ -80,10 +80,33 @@ class SparsityPattern
     template <common::CArithmeticRange TNonZeroRange>
     CSCMatrix ToMatrix(TNonZeroRange&& nonZeros) const;
     /**
+     * @brief Assemble sparse matrix from matrix non-zeros
+     * @tparam TNonZeroRange Range type for non-zero values
+     * @tparam TDerived Type of the sparse matrix
+     * @param nonZeros Non-zero values of the matrix
+     * @param Ain Sparse matrix in compressed storage column format
+     */
+    template <common::CArithmeticRange TNonZeroRange, class TDerived>
+    void To(TNonZeroRange&& nonZeros, Eigen::SparseCompressedBase<TDerived>& Ain) const;
+    /**
+     * @brief Add to sparse matrix from matrix non-zeros
+     * @tparam TNonZeroRange Range type for non-zero values
+     * @tparam TDerived Type of the sparse matrix
+     * @param nonZeros Non-zero values of the matrix
+     * @param Ain Sparse matrix in compressed storage column format
+     */
+    template <common::CArithmeticRange TNonZeroRange, class TDerived>
+    void AddTo(TNonZeroRange&& nonZeros, Eigen::SparseCompressedBase<TDerived>& Ain) const;
+    /**
      * @brief Check if the sparsity pattern is empty
      * @return true if the sparsity pattern is empty
      */
     PBAT_API bool IsEmpty() const;
+    /**
+     * @brief Return a sparse matrix with the same sparsity pattern as the current object
+     * @return The sparsity pattern matrix
+     */
+    PBAT_API CSCMatrix const& Pattern() const;
 
   private:
     std::vector<Index> ij; ///< Maps (triplet/duplicate) non-zero index k to its corresponding index
@@ -196,6 +219,16 @@ template <common::CArithmeticRange TNonZeroRange>
 CSCMatrix SparsityPattern::ToMatrix(TNonZeroRange&& nonZeros) const
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.math.linalg.SparsityPattern.ToMatrix");
+    CSCMatrix Acpy{A};
+    AddTo(std::forward<TNonZeroRange>(nonZeros), Acpy);
+    return Acpy;
+}
+
+template <common::CArithmeticRange TNonZeroRange, class TDerived>
+inline void
+SparsityPattern::AddTo(TNonZeroRange&& nonZeros, Eigen::SparseCompressedBase<TDerived>& Ain) const
+{
+    PBAT_PROFILE_NAMED_SCOPE("pbat.math.linalg.SparsityPattern.AddTo");
     static_assert(
         std::is_same_v<Scalar, std::ranges::range_value_t<TNonZeroRange>>,
         "Only Scalar non-zero values are accepted");
@@ -208,11 +241,17 @@ CSCMatrix SparsityPattern::ToMatrix(TNonZeroRange&& nonZeros) const
         throw std::invalid_argument(what);
     }
 
-    CSCMatrix Acpy{A};
-    Scalar* values = Acpy.valuePtr();
+    Scalar* values = Ain.valuePtr();
     for (auto k = 0ULL; k < nnz; ++k)
         values[ij[k]] += nonZeros[k];
-    return Acpy;
+}
+
+template <common::CArithmeticRange TNonZeroRange, class TDerived>
+inline void
+SparsityPattern::To(TNonZeroRange&& nonZeros, Eigen::SparseCompressedBase<TDerived>& Ain) const
+{
+    Ain.coeffs().setZero();
+    AddTo(std::forward<TNonZeroRange>(nonZeros), Ain);
 }
 
 } // namespace linalg

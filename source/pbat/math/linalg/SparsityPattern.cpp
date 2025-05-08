@@ -9,6 +9,11 @@ bool SparsityPattern::IsEmpty() const
     return ij.empty();
 }
 
+CSCMatrix const& SparsityPattern::Pattern() const
+{
+    return A;
+}
+
 } // namespace linalg
 } // namespace math
 } // namespace pbat
