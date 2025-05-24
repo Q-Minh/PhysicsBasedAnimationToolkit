@@ -15,11 +15,11 @@ namespace pbat {
 namespace graph {
 
 IndexVectorX Partition(
-    Eigen::Ref<IndexVectorX const> const& ptr,
-    Eigen::Ref<IndexVectorX const> const& adj,
-    Eigen::Ref<IndexVectorX const> const& wadj,
-    Index nPartitions,
-    PartitioningOptions opts)
+    [[maybe_unused]] Eigen::Ref<IndexVectorX const> const& ptr,
+    [[maybe_unused]] Eigen::Ref<IndexVectorX const> const& adj,
+    [[maybe_unused]] Eigen::Ref<IndexVectorX const> const& wadj,
+    [[maybe_unused]] Index nPartitions,
+    [[maybe_unused]] PartitioningOptions opts)
 {
 #ifdef PBAT_USE_METIS
     PBAT_PROFILE_NAMED_SCOPE("pbat.graph.Partition");

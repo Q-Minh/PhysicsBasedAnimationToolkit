@@ -3135,7 +3135,7 @@ inline std::array<TScalar, N> Roots(
 {
     std::array<TScalar, N> roots;
     roots.fill(std::numeric_limits<TScalar>::quiet_NaN());
-    detail::cy::PolynomialRoots<N, TScalar, true>(
+    [[maybe_unused]] int const nRoots = detail::cy::PolynomialRoots<N, TScalar, true>(
         *reinterpret_cast<detail::CArray<TScalar, N>*>(roots.data()),
         *reinterpret_cast<detail::CArray<TScalar, N + 1> const*>(coeffs.data()),
         min,
