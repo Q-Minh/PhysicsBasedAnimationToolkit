@@ -90,6 +90,7 @@ struct SymmetricSimplexPolynomialQuadratureRule;
  *
  * @tparam Dims Dimension of the reference simplex
  * @tparam Order Polynomial order of the quadrature rule
+ * @tparam TScalar Scalar type of the quadrature rule, defaults to `Scalar`
  */
 template <int Dims, int Order, common::CFloatingPoint TScalar = Scalar>
 using SymmetricSimplexPolynomialQuadratureRule =

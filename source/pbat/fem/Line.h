@@ -110,7 +110,7 @@ struct Line<2>
     {
         Eigen::Matrix<TScalar, kNodes, kDims> GNm;
         TScalar* GNp = GNm.data();
-        Scalar const a0 = 4*X[0];
+        auto const a0 = 4*X[0];
         GNp[0] = a0 - 3;
         GNp[1] = 4 - 8*X[0];
         GNp[2] = a0 - 1;
@@ -158,15 +158,15 @@ struct Line<3>
     {
         Eigen::Matrix<TScalar, kNodes, kDims> GNm;
         TScalar* GNp = GNm.data();
-        Scalar const a0 = X[0] - 1;
-        Scalar const a1 = (3.0/2.0)*X[0];
-        Scalar const a2 = a1 - 1.0/2.0;
-        Scalar const a3 = -a2;
-        Scalar const a4 = 3*X[0] - 2;
-        Scalar const a5 = (27.0/2.0)*X[0];
-        Scalar const a6 = a5 - 27.0/2.0;
-        Scalar const a7 = (9.0/2.0)*X[0];
-        Scalar const a8 = 9.0/2.0 - a5;
+        auto const a0 = X[0] - 1;
+        auto const a1 = (3.0/2.0)*X[0];
+        auto const a2 = a1 - 1.0/2.0;
+        auto const a3 = -a2;
+        auto const a4 = 3*X[0] - 2;
+        auto const a5 = (27.0/2.0)*X[0];
+        auto const a6 = a5 - 27.0/2.0;
+        auto const a7 = (9.0/2.0)*X[0];
+        auto const a8 = 9.0/2.0 - a5;
         GNp[0] = 3*a0*a3 + a3*a4 + a4*(3.0/2.0 - a1);
         GNp[1] = a4*(a7 - 9.0/2.0) + a6*X[0] + (a5 - 9)*X[0];
         GNp[2] = a0*a8 - a6*X[0] + a8*X[0];

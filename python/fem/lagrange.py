@@ -304,7 +304,7 @@ namespace detail {{
             codeN = cg.tabulate(cg.codegen(N, lhs=sp.MatrixSymbol(
                 "Nm", *N.shape), scalar_type="auto"), spaces=8)
             codeGN = cg.tabulate(cg.codegen(gradNT, lhs=sp.MatrixSymbol(
-                "GNp", *gradNT.shape)), spaces=8)
+                "GNp", *gradNT.shape), scalar_type="auto"), spaces=8)
             vertices = ",".join([str(v)
                                 for v in element.vertices])
 

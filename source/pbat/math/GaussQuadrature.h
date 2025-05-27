@@ -59,6 +59,7 @@ struct GaussLegendreQuadrature;
  *
  * @tparam Dims Spatial dimensions
  * @tparam Order Polynomial quadrature order
+ * @tparam TScalar Floating point type, defaults to Scalar
  *
  */
 template <int Dims, int Order, common::CFloatingPoint TScalar = Scalar>

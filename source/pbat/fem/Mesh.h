@@ -13,15 +13,16 @@
 
 #include "Concepts.h"
 #include "Jacobian.h"
+#include "pbat/Aliases.h"
+#include "pbat/common/Concepts.h"
+#include "pbat/common/Eigen.h"
+#include "pbat/math/Rational.h"
+#include "pbat/profiling/Profiling.h"
 
 #include <algorithm>
 #include <exception>
 #include <map>
 #include <numeric>
-#include <pbat/Aliases.h>
-#include <pbat/common/Eigen.h>
-#include <pbat/math/Rational.h>
-#include <pbat/profiling/Profiling.h>
 #include <ranges>
 
 namespace pbat {
