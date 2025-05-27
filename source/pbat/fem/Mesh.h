@@ -33,98 +33,77 @@ namespace fem {
  *
  * @tparam TElement Type satisfying concept CElement
  * @tparam Dims Embedding dimensions of the mesh
+ * @tparam TScalar Floating point type, defaults to Scalar
+ * @tparam TIndex Index type, defaults to Index
  */
-template <CElement TElement, int Dims>
+template <
+    CElement TElement,
+    int Dims,
+    common::CFloatingPoint TScalar = Scalar,
+    common::CIndex TIndex          = Index>
 struct Mesh
 {
     using ElementType                     = TElement; ///< Underlying finite element type
+    using ScalarType                      = TScalar;  ///< Floating point type
+    using IndexType                       = TIndex;   ///< Index type
     static int constexpr kDims            = Dims;     ///< Embedding dimensions of the mesh
     static int constexpr kOrder           = ElementType::kOrder; ///< Shape function order
     static int constexpr kNodesPerElement = ElementType::kNodes; ///< Number of nodes per element
+    using NodeMatrix =
+        Eigen::Matrix<ScalarType, kDims, Eigen::Dynamic>; ///< Node positions matrix type
+    using ElementMatrix =
+        Eigen::Matrix<IndexType, kNodesPerElement, Eigen::Dynamic>; ///< Element indices matrix type
 
     Mesh() = default;
     /**
      * @brief Constructs a finite element mesh given some input geometric mesh.
      *
      * @warning The cells of the input mesh should list its vertices in Lagrange order.
+     * @tparam TDerivedV Type of the vertex positions matrix
+     * @tparam TDerivedC Type of the cell vertex indices matrix
      * @param V `Dims x |# vertices|` matrix of vertex positions
      * @param C `|Element::AffineBase::Vertices| x |# cells|` matrix of cell vertex indices into V
      */
-    Mesh(Eigen::Ref<MatrixX const> const& V, Eigen::Ref<IndexMatrixX const> const& C);
+    template <class TDerivedV, class TDerivedC>
+    Mesh(Eigen::MatrixBase<TDerivedV> const& V, Eigen::DenseBase<TDerivedC> const& C);
     /**
      * @brief Constructs a finite element mesh given some input geometric mesh.
      *
      * @warning The cells of the input mesh should list its vertices in Lagrange order.
+     * @tparam TDerivedV Type of the vertex positions matrix
+     * @tparam TDerivedC Type of the cell vertex indices matrix
      * @param V `Dims x |# vertices|` matrix of vertex positions
      * @param C `|Element::AffineBase::Vertices| x |# cells|` matrix of cell vertex indices into V
      */
-    void Construct(Eigen::Ref<MatrixX const> const& V, Eigen::Ref<IndexMatrixX const> const& C);
+    template <class TDerivedV, class TDerivedC>
+    void Construct(Eigen::MatrixBase<TDerivedV> const& V, Eigen::DenseBase<TDerivedC> const& C);
     /**
      * @brief Compute quadrature points in domain space on this mesh.
      * @tparam QuadratureOrder Quadrature order
      * @return `kDims x |# element quad.pts.|` matrix of quadrature points
      */
     template <int QuadratureOrder>
-    MatrixX QuadraturePoints() const;
+    auto QuadraturePoints() const -> Eigen::Matrix<ScalarType, Eigen::Dynamic, Eigen::Dynamic>;
     /**
      * @brief Obtain quadrature weights on the reference element of this mesh
      * @tparam QuadratureOrder Quadrature order
+     * @param kPoints Number of quadrature points, defaults to `Element::template
+     * QuadratureType<QuadratureOrder>::kPoints`. This template parameter should not be specified,
+     * it is there to enhance readability.
      * @return `|# element quad.pts.|` vector of quadrature weights
      */
-    template <int QuadratureOrder>
-    Vector<TElement::template QuadratureType<QuadratureOrder>::kPoints> QuadratureWeights() const;
+    template <
+        int QuadratureOrder,
+        int kPoints = TElement::template QuadratureType<QuadratureOrder, ScalarType>::kPoints>
+    auto QuadratureWeights() const -> Eigen::Vector<ScalarType, kPoints>;
 
-    Matrix<kDims, Eigen::Dynamic> X; ///< `kDims x |# nodes|` nodal positions
-    IndexMatrix<kNodesPerElement, Eigen::Dynamic>
-        E; ///< `|Element::Nodes| x |# elements|` element nodal indices
-};
-
-/**
- * @brief A non-owning view over a linear finite element mesh.
- *
- * @tparam TElement Type satisfying concept CElement
- * @tparam Dims Embedding dimensions of the mesh
- * @pre TElement::kOrder == 1
- */
-template <CElement TElement, int Dims>
-struct LinearMeshView
-{
-    using ElementType                     = TElement; ///< Underlying finite element type
-    static int constexpr kDims            = Dims;     ///< Embedding dimensions of the mesh
-    static int constexpr kOrder           = ElementType::kOrder; ///< Shape function order
-    static int constexpr kNodesPerElement = ElementType::kNodes; ///< Number of nodes per element
-
-    /**
-     * @brief Constructs a finite element mesh given some input geometric mesh.
-     *
-     * @warning The cells of the input mesh should list its vertices in Lagrange order.
-     * @param V `kDims x |# vertices|` matrix of vertex positions
-     * @param C `|Element::AffineBase::Vertices| x |# cells|` matrix of cell vertex indices into V
-     */
-    LinearMeshView(Eigen::Ref<MatrixX const> const& V, Eigen::Ref<IndexMatrixX const> const& C);
-
-    /**
-     * @brief Compute quadrature points in domain space for on this mesh.
-     * @tparam QuadratureOrder Quadrature order
-     * @return `kDims x |# element quad.pts.|` matrix of quadrature points
-     */
-    template <int QuadratureOrder>
-    MatrixX QuadraturePoints() const;
-    /**
-     * @brief Obtain quadrature weights on the reference element of this mesh
-     * @tparam QuadratureOrder Quadrature order
-     * @return `|# element quad.pts.|` vector of quadrature weights
-     */
-    template <int QuadratureOrder>
-    Vector<TElement::template QuadratureType<QuadratureOrder>::kPoints> QuadratureWeights() const;
-
-    Eigen::Ref<Matrix<kDims, Eigen::Dynamic> const> X; ///< `kDims x |# nodes|` nodal positions
-    Eigen::Ref<IndexMatrix<kNodesPerElement, Eigen::Dynamic> const>
-        E; ///< `|Element::Nodes| x |# elements|` element nodal indices
+    NodeMatrix X;    ///< `kDims x |# nodes|` nodal positions
+    ElementMatrix E; ///< `|Element::Nodes| x |# elements|` element nodal indices
 };
 
 namespace detail {
-template <CElement TElement>
+
+template <CElement TElement, common::CIndex TIndex>
 class NodalKey
 {
   public:
@@ -132,13 +111,13 @@ class NodalKey
     static int constexpr kVertices = TElement::AffineBaseType::kNodes;
 
     NodalKey(
-        IndexVector<kVertices> const& cellVertices,
-        IndexVector<kVertices> const& sortOrder,
+        Eigen::Vector<TIndex, kVertices> const& cellVertices,
+        Eigen::Vector<TIndex, kVertices> const& sortOrder,
         Eigen::Vector<math::Rational, kVertices> const& N)
         : mCellVertices(cellVertices), mSortOrder(sortOrder), mN(N), mSize()
     {
         // Remove vertices whose corresponding shape function is zero
-        auto it = std::remove_if(mSortOrder.begin(), mSortOrder.end(), [this](Index o) {
+        auto it = std::remove_if(mSortOrder.begin(), mSortOrder.end(), [this](TIndex o) {
             return mN[o] == 0;
         });
         // Count number of non-zero shape functions into Size
@@ -153,8 +132,8 @@ class NodalKey
         for (auto i = 0u; i < mSize; ++i)
         {
             // Vertices involved in affine map must match
-            Index const lhsVertex = mCellVertices[mSortOrder[i]];
-            Index const rhsVertex = rhs.mCellVertices[rhs.mSortOrder[i]];
+            TIndex const lhsVertex = mCellVertices[mSortOrder[i]];
+            TIndex const rhsVertex = rhs.mCellVertices[rhs.mSortOrder[i]];
             if (lhsVertex != rhsVertex)
                 return false;
             // Affine weights at matching vertices must match
@@ -175,8 +154,8 @@ class NodalKey
         // Then sort by vertex indices
         for (auto i = 0; i < mSize; ++i)
         {
-            Index const lhsVertex = mCellVertices[mSortOrder[i]];
-            Index const rhsVertex = rhs.mCellVertices[rhs.mSortOrder[i]];
+            TIndex const lhsVertex = mCellVertices[mSortOrder[i]];
+            TIndex const rhsVertex = rhs.mCellVertices[rhs.mSortOrder[i]];
             if (lhsVertex != rhsVertex)
                 return lhsVertex < rhsVertex;
         }
@@ -193,26 +172,28 @@ class NodalKey
     }
 
   private:
-    IndexVector<kVertices> mCellVertices;        ///< Cell vertex indices
-    IndexVector<kVertices> mSortOrder;           ///< Ordering of the cell vertices
-    Eigen::Vector<math::Rational, kVertices> mN; ///< Node's affine shape function values
+    Eigen::Vector<TIndex, kVertices> mCellVertices; ///< Cell vertex indices
+    Eigen::Vector<TIndex, kVertices> mSortOrder;    ///< Ordering of the cell vertices
+    Eigen::Vector<math::Rational, kVertices> mN;    ///< Node's affine shape function values
     int mSize; ///< Number of non-zero affine shape function values
 };
 
 } // namespace detail
 
-template <CElement TElement, int Dims>
-Mesh<TElement, Dims>::Mesh(
-    Eigen::Ref<MatrixX const> const& V,
-    Eigen::Ref<IndexMatrixX const> const& C)
+template <CElement TElement, int Dims, common::CFloatingPoint TScalar, common::CIndex TIndex>
+template <class TDerivedV, class TDerivedC>
+inline Mesh<TElement, Dims, TScalar, TIndex>::Mesh(
+    Eigen::MatrixBase<TDerivedV> const& V,
+    Eigen::DenseBase<TDerivedC> const& C)
 {
     Construct(V, C);
 }
 
-template <CElement TElement, int Dims>
-inline void Mesh<TElement, Dims>::Construct(
-    Eigen::Ref<MatrixX const> const& V,
-    Eigen::Ref<IndexMatrixX const> const& C)
+template <CElement TElement, int Dims, common::CFloatingPoint TScalar, common::CIndex TIndex>
+template <class TDerivedV, class TDerivedC>
+inline void Mesh<TElement, Dims, TScalar, TIndex>::Construct(
+    Eigen::MatrixBase<TDerivedV> const& V,
+    Eigen::DenseBase<TDerivedC> const& C)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.fem.Mesh.Construct");
 
@@ -234,14 +215,15 @@ inline void Mesh<TElement, Dims>::Construct(
         assert(C.rows() == kVerticesPerCell);
         assert(V.rows() == kDims);
 
-        using detail::NodalKey;
-        using NodeMap = std::map<NodalKey<ElementType>, Index>;
+        using NodalKey = detail::NodalKey<TElement, TIndex>;
+        using NodeMap  = std::map<NodalKey, TIndex>;
+        using DVector  = Eigen::Vector<TScalar, kDims>;
 
         auto const numberOfCells    = C.cols();
         auto const numberOfVertices = V.cols();
 
         NodeMap nodeMap{};
-        std::vector<Vector<kDims>> nodes{};
+        std::vector<DVector> nodes{};
         nodes.reserve(static_cast<std::size_t>(numberOfVertices));
 
         // Construct mesh topology, i.e. assign mesh nodes to elements,
@@ -249,13 +231,14 @@ inline void Mesh<TElement, Dims>::Construct(
         E.resize(ElementType::kNodes, numberOfCells);
         for (auto c = 0; c < numberOfCells; ++c)
         {
-            IndexVector<kVerticesPerCell> const cellVertices = C.col(c);
-            Matrix<kDims, kVerticesPerCell> const Xc = V(Eigen::placeholders::all, cellVertices);
+            Eigen::Vector<TIndex, kVerticesPerCell> cellVertices = C.col(c);
+            Eigen::Matrix<TScalar, kDims, kVerticesPerCell> const Xc =
+                V(Eigen::placeholders::all, cellVertices);
 
             // Sort based on cell vertex index
-            IndexVector<kVerticesPerCell> sortOrder{};
-            std::iota(sortOrder.begin(), sortOrder.end(), 0);
-            std::ranges::sort(sortOrder, [&](Index i, Index j) {
+            decltype(cellVertices) sortOrder{};
+            std::iota(sortOrder.begin(), sortOrder.end(), TIndex(0));
+            std::ranges::sort(sortOrder, [&](TIndex i, TIndex j) {
                 return cellVertices[i] < cellVertices[j];
             });
             // Loop over nodes of element and create the node on first visit
@@ -269,20 +252,20 @@ inline void Mesh<TElement, Dims>::Construct(
                 // node to get its exact affine coordinates
                 auto const Xi = nodalCoordinates.col(i);
                 auto const N  = AffineElementType::N(Xi);
-                NodalKey<ElementType> const key{cellVertices, sortOrder, N};
+                NodalKey const key{cellVertices, sortOrder, N};
                 auto it                        = nodeMap.find(key);
                 bool const bNodeAlreadyCreated = it != nodeMap.end();
                 if (!bNodeAlreadyCreated)
                 {
-                    auto const nodeIdx     = static_cast<Index>(nodes.size());
-                    Vector<kDims> const xi = Xc * N.template cast<Scalar>();
+                    auto const nodeIdx                     = static_cast<TIndex>(nodes.size());
+                    Eigen::Vector<TScalar, kDims> const xi = Xc * N.template cast<TScalar>();
                     nodes.push_back(xi);
                     bool bInserted{};
                     std::tie(it, bInserted) = nodeMap.insert({key, nodeIdx});
                     assert(bInserted);
                 }
-                Index const node = it->second;
-                E(i, c)          = node;
+                TIndex const node = it->second;
+                E(i, c)           = node;
             }
         }
         // Collect node positions
@@ -290,27 +273,28 @@ inline void Mesh<TElement, Dims>::Construct(
     }
 }
 
-namespace detail {
-
-template <CElement TElement, int Dims, int QuadratureOrder, class TDerivedX, class TDerivedE>
-inline MatrixX
-MeshQuadraturePoints(Eigen::MatrixBase<TDerivedX> const& X, Eigen::MatrixBase<TDerivedE> const& E)
+template <CElement TElement, int Dims, common::CFloatingPoint TScalar, common::CIndex TIndex>
+template <int QuadratureOrder>
+inline Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic>
+Mesh<TElement, Dims, TScalar, TIndex>::QuadraturePoints() const
 {
-    using ElementType           = TElement;
-    using AffineElementType     = typename ElementType::AffineBaseType;
-    using QuadratureRuleType    = typename ElementType::template QuadratureType<QuadratureOrder>;
+    using QuadraturePointPositions = Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic>;
+    using ElementType              = TElement;
+    using AffineElementType        = typename ElementType::AffineBaseType;
+    using QuadratureRuleType =
+        typename ElementType::template QuadratureType<QuadratureOrder, TScalar>;
     auto constexpr kQuadPts     = QuadratureRuleType::kPoints;
     auto const numberOfElements = E.cols();
     auto const XgRef            = common::ToEigen(QuadratureRuleType::points)
                            .reshaped(QuadratureRuleType::kDims + 1, kQuadPts);
-    MatrixX Xg(Dims, numberOfElements * kQuadPts);
+    QuadraturePointPositions Xg(Dims, numberOfElements * kQuadPts);
     for (auto e = 0; e < numberOfElements; ++e)
     {
-        auto const nodes                = E.col(e);
-        auto const vertices             = nodes(ElementType::Vertices);
-        auto constexpr kRowsJ           = Dims;
-        auto constexpr kColsJ           = AffineElementType::kNodes;
-        Matrix<kRowsJ, kColsJ> const Ve = X(Eigen::placeholders::all, vertices);
+        auto const nodes                                = E.col(e);
+        auto const vertices                             = nodes(ElementType::Vertices);
+        auto constexpr kRowsJ                           = Dims;
+        auto constexpr kColsJ                           = AffineElementType::kNodes;
+        Eigen::Matrix<TScalar, kRowsJ, kColsJ> const Ve = X(Eigen::placeholders::all, vertices);
         for (auto g = 0; g < kQuadPts; ++g)
         {
             Xg.col(e * kQuadPts + g) = Ve * XgRef.col(g);
@@ -319,78 +303,20 @@ MeshQuadraturePoints(Eigen::MatrixBase<TDerivedX> const& X, Eigen::MatrixBase<TD
     return Xg;
 }
 
-template <CElement TElement, int Dims, int QuadratureOrder>
-inline MatrixX MeshQuadratureWeights()
+template <CElement TElement, int Dims, common::CFloatingPoint TScalar, common::CIndex TIndex>
+template <int QuadratureOrder, int kPoints>
+inline Eigen::Vector<TScalar, kPoints>
+Mesh<TElement, Dims, TScalar, TIndex>::QuadratureWeights() const
 {
-    using ElementType         = TElement;
-    using QuadratureRuleType  = typename ElementType::template QuadratureType<QuadratureOrder>;
-    auto constexpr kQuadPts   = QuadratureRuleType::kPoints;
-    Vector<kQuadPts> const wg = common::ToEigen(QuadratureRuleType::weights);
+    using ElementType = TElement;
+    using QuadratureRuleType =
+        typename ElementType::template QuadratureType<QuadratureOrder, TScalar>;
+    auto constexpr kQuadPts = QuadratureRuleType::kPoints;
+    static_assert(
+        kQuadPts == kPoints,
+        "kPoints must match the number of quadrature points for the given QuadratureOrder");
+    Eigen::Vector<TScalar, kQuadPts> const wg = common::ToEigen(QuadratureRuleType::weights);
     return wg;
-}
-
-} // namespace detail
-
-template <CElement TElement, int Dims>
-template <int QuadratureOrder>
-inline MatrixX Mesh<TElement, Dims>::QuadraturePoints() const
-{
-    return detail::MeshQuadraturePoints<ElementType, kDims, QuadratureOrder>(X, E);
-}
-
-template <CElement TElement, int Dims>
-template <int QuadratureOrder>
-inline Vector<TElement::template QuadratureType<QuadratureOrder>::kPoints>
-Mesh<TElement, Dims>::QuadratureWeights() const
-{
-    return detail::MeshQuadratureWeights<ElementType, kDims, QuadratureOrder>();
-}
-
-template <CElement TElement, int Dims>
-inline LinearMeshView<TElement, Dims>::LinearMeshView(
-    Eigen::Ref<MatrixX const> const& V,
-    Eigen::Ref<IndexMatrixX const> const& C)
-    : X(V), E(C)
-{
-    static_assert(TElement::kOrder == 1, "TElement must be a linear element");
-    auto const nNodesPerElement = C.rows();
-    if (nNodesPerElement != TElement::kNodes)
-    {
-        throw std::invalid_argument(
-            fmt::format(
-                "Expected {}x{} elements, but got {}x{}",
-                TElement::kNodes,
-                C.cols(),
-                C.rows(),
-                C.cols()));
-    }
-    if (V.rows() != Dims)
-    {
-        throw std::invalid_argument(
-            fmt::format("Expected {}x{} nodes, but got {}x{}", Dims, V.cols(), V.rows(), V.cols()));
-    }
-    if (V.rows() < TElement::kDims)
-    {
-        throw std::invalid_argument(
-            fmt::format(
-                "Nodal coordinates must have dimensions > {} for the requested element",
-                TElement::kDims));
-    }
-}
-
-template <CElement TElement, int Dims>
-template <int QuadratureOrder>
-inline MatrixX LinearMeshView<TElement, Dims>::QuadraturePoints() const
-{
-    return detail::MeshQuadraturePoints<ElementType, kDims, QuadratureOrder>(X, E);
-}
-
-template <CElement TElement, int Dims>
-template <int QuadratureOrder>
-inline Vector<TElement::template QuadratureType<QuadratureOrder>::kPoints>
-LinearMeshView<TElement, Dims>::QuadratureWeights() const
-{
-    return detail::MeshQuadratureWeights<ElementType, kDims, QuadratureOrder>();
 }
 
 } // namespace fem
