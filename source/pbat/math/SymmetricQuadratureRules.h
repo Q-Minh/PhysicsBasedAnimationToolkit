@@ -11,9 +11,11 @@
 #ifndef PBAT_MATH_SYMMETRIC_QUADRATURE_RULES_H
 #define PBAT_MATH_SYMMETRIC_QUADRATURE_RULES_H
 
+#include "pbat/Aliases.h"
+#include "pbat/common/Concepts.h"
+
 #include <array>
 #include <cstdint>
-#include <pbat/Aliases.h>
 
 namespace pbat {
 namespace math {
@@ -37,7 +39,7 @@ struct FixedSizeVariableQuadrature
 };
 
 namespace detail {
-template <int Dims, int Order>
+template <int Dims, int Order, common::CFloatingPoint TScalar = Scalar>
 struct SymmetricSimplexPolynomialQuadratureRule;
 } // namespace detail
 
@@ -69,8 +71,8 @@ struct SymmetricSimplexPolynomialQuadratureRule;
  *     inline static std::uint8_t constexpr kDims;
  *     inline static std::uint8_t constexpr kOrder;
  *     inline static int constexpr kPoints;
- *     inline static std::array<Scalar, (kDims + 1) * kPoints> constexpr points;
- *     inline static std::array<Scalar, kPoints> constexpr weights;
+ *     inline static std::array<TScalar, (kDims + 1) * kPoints> constexpr points;
+ *     inline static std::array<TScalar, kPoints> constexpr weights;
  * };
  * ```
  *
@@ -89,84 +91,85 @@ struct SymmetricSimplexPolynomialQuadratureRule;
  * @tparam Dims Dimension of the reference simplex
  * @tparam Order Polynomial order of the quadrature rule
  */
-template <int Dims, int Order>
+template <int Dims, int Order, common::CFloatingPoint TScalar = Scalar>
 using SymmetricSimplexPolynomialQuadratureRule =
-    typename detail::SymmetricSimplexPolynomialQuadratureRule<Dims, Order>;
+    typename detail::SymmetricSimplexPolynomialQuadratureRule<Dims, Order, TScalar>;
 
 namespace detail {
 
-template <>
-struct SymmetricSimplexPolynomialQuadratureRule<1, 0>
+template <common::CFloatingPoint TScalar>
+struct SymmetricSimplexPolynomialQuadratureRule<1, 0, TScalar>
 {
-    inline static std::uint8_t constexpr kDims            = 1;
-    inline static std::uint16_t constexpr kPoints         = 1;
-    inline static std::uint8_t constexpr kOrder           = 0;
-    inline static std::array<Scalar, 2> constexpr points  = {0.5, 0.5};
-    inline static std::array<Scalar, 1> constexpr weights = {1};
+    inline static std::uint8_t constexpr kDims             = 1;
+    inline static std::uint16_t constexpr kPoints          = 1;
+    inline static std::uint8_t constexpr kOrder            = 0;
+    inline static std::array<TScalar, 2> constexpr points  = {0.5, 0.5};
+    inline static std::array<TScalar, 1> constexpr weights = {1};
 };
 
-template <>
-struct SymmetricSimplexPolynomialQuadratureRule<1, 1>
+template <common::CFloatingPoint TScalar>
+struct SymmetricSimplexPolynomialQuadratureRule<1, 1, TScalar>
 {
-    inline static std::uint8_t constexpr kDims            = 1;
-    inline static std::uint16_t constexpr kPoints         = 1;
-    inline static std::uint8_t constexpr kOrder           = 1;
-    inline static std::array<Scalar, 2> constexpr points  = {0.5, 0.5};
-    inline static std::array<Scalar, 1> constexpr weights = {1};
+    inline static std::uint8_t constexpr kDims             = 1;
+    inline static std::uint16_t constexpr kPoints          = 1;
+    inline static std::uint8_t constexpr kOrder            = 1;
+    inline static std::array<TScalar, 2> constexpr points  = {0.5, 0.5};
+    inline static std::array<TScalar, 1> constexpr weights = {1};
 };
 
-template <>
-struct SymmetricSimplexPolynomialQuadratureRule<1, 3>
+template <common::CFloatingPoint TScalar>
+struct SymmetricSimplexPolynomialQuadratureRule<1, 3, TScalar>
 {
-    inline static std::uint8_t constexpr kDims           = 1;
-    inline static std::uint16_t constexpr kPoints        = 2;
-    inline static std::uint8_t constexpr kOrder          = 3;
-    inline static std::array<Scalar, 4> constexpr points = {0.211325, 0.788675, 0.788675, 0.211325};
-    inline static std::array<Scalar, 2> constexpr weights = {0.5, 0.5};
+    inline static std::uint8_t constexpr kDims    = 1;
+    inline static std::uint16_t constexpr kPoints = 2;
+    inline static std::uint8_t constexpr kOrder   = 3;
+    inline static std::array<TScalar, 4> constexpr points =
+        {0.211325, 0.788675, 0.788675, 0.211325};
+    inline static std::array<TScalar, 2> constexpr weights = {0.5, 0.5};
 };
 
-template <>
-struct SymmetricSimplexPolynomialQuadratureRule<1, 5>
+template <common::CFloatingPoint TScalar>
+struct SymmetricSimplexPolynomialQuadratureRule<1, 5, TScalar>
 {
     inline static std::uint8_t constexpr kDims    = 1;
     inline static std::uint16_t constexpr kPoints = 3;
     inline static std::uint8_t constexpr kOrder   = 5;
-    inline static std::array<Scalar, 6> constexpr points =
+    inline static std::array<TScalar, 6> constexpr points =
         {0.112702, 0.887298, 0.887298, 0.112702, 0.5, 0.5};
-    inline static std::array<Scalar, 3> constexpr weights = {0.277778, 0.277778, 0.444444};
+    inline static std::array<TScalar, 3> constexpr weights = {0.277778, 0.277778, 0.444444};
 };
 
-template <>
-struct SymmetricSimplexPolynomialQuadratureRule<1, 7>
+template <common::CFloatingPoint TScalar>
+struct SymmetricSimplexPolynomialQuadratureRule<1, 7, TScalar>
 {
     inline static std::uint8_t constexpr kDims    = 1;
     inline static std::uint16_t constexpr kPoints = 4;
     inline static std::uint8_t constexpr kOrder   = 7;
-    inline static std::array<Scalar, 8> constexpr points =
+    inline static std::array<TScalar, 8> constexpr points =
         {0.0694318, 0.930568, 0.930568, 0.0694318, 0.330009, 0.669991, 0.669991, 0.330009};
-    inline static std::array<Scalar, 4> constexpr weights =
+    inline static std::array<TScalar, 4> constexpr weights =
         {0.173927, 0.173927, 0.326073, 0.326073};
 };
 
-template <>
-struct SymmetricSimplexPolynomialQuadratureRule<1, 9>
+template <common::CFloatingPoint TScalar>
+struct SymmetricSimplexPolynomialQuadratureRule<1, 9, TScalar>
 {
     inline static std::uint8_t constexpr kDims    = 1;
     inline static std::uint16_t constexpr kPoints = 5;
     inline static std::uint8_t constexpr kOrder   = 9;
-    inline static std::array<Scalar, 10> constexpr points =
+    inline static std::array<TScalar, 10> constexpr points =
         {0.5, 0.5, 0.0469101, 0.95309, 0.95309, 0.0469101, 0.230765, 0.769235, 0.769235, 0.230765};
-    inline static std::array<Scalar, 5> constexpr weights =
+    inline static std::array<TScalar, 5> constexpr weights =
         {0.284444, 0.118463, 0.118463, 0.239314, 0.239314};
 };
 
-template <>
-struct SymmetricSimplexPolynomialQuadratureRule<1, 11>
+template <common::CFloatingPoint TScalar>
+struct SymmetricSimplexPolynomialQuadratureRule<1, 11, TScalar>
 {
-    inline static std::uint8_t constexpr kDims            = 1;
-    inline static std::uint16_t constexpr kPoints         = 6;
-    inline static std::uint8_t constexpr kOrder           = 11;
-    inline static std::array<Scalar, 12> constexpr points = {
+    inline static std::uint8_t constexpr kDims             = 1;
+    inline static std::uint16_t constexpr kPoints          = 6;
+    inline static std::uint8_t constexpr kOrder            = 11;
+    inline static std::array<TScalar, 12> constexpr points = {
         0.966235,
         0.0337652,
         0.0337652,
@@ -179,17 +182,17 @@ struct SymmetricSimplexPolynomialQuadratureRule<1, 11>
         0.38069,
         0.38069,
         0.61931};
-    inline static std::array<Scalar, 6> constexpr weights =
+    inline static std::array<TScalar, 6> constexpr weights =
         {0.0856622, 0.0856622, 0.180381, 0.180381, 0.233957, 0.233957};
 };
 
-template <>
-struct SymmetricSimplexPolynomialQuadratureRule<1, 13>
+template <common::CFloatingPoint TScalar>
+struct SymmetricSimplexPolynomialQuadratureRule<1, 13, TScalar>
 {
-    inline static std::uint8_t constexpr kDims            = 1;
-    inline static std::uint16_t constexpr kPoints         = 7;
-    inline static std::uint8_t constexpr kOrder           = 13;
-    inline static std::array<Scalar, 14> constexpr points = {
+    inline static std::uint8_t constexpr kDims             = 1;
+    inline static std::uint16_t constexpr kPoints          = 7;
+    inline static std::uint8_t constexpr kOrder            = 13;
+    inline static std::array<TScalar, 14> constexpr points = {
         0.974554,
         0.025446,
         0.025446,
@@ -204,17 +207,17 @@ struct SymmetricSimplexPolynomialQuadratureRule<1, 13>
         0.702923,
         0.5,
         0.5};
-    inline static std::array<Scalar, 7> constexpr weights =
+    inline static std::array<TScalar, 7> constexpr weights =
         {0.0647425, 0.0647425, 0.139853, 0.139853, 0.190915, 0.190915, 0.20898};
 };
 
-template <>
-struct SymmetricSimplexPolynomialQuadratureRule<1, 15>
+template <common::CFloatingPoint TScalar>
+struct SymmetricSimplexPolynomialQuadratureRule<1, 15, TScalar>
 {
-    inline static std::uint8_t constexpr kDims            = 1;
-    inline static std::uint16_t constexpr kPoints         = 8;
-    inline static std::uint8_t constexpr kOrder           = 15;
-    inline static std::array<Scalar, 16> constexpr points = {
+    inline static std::uint8_t constexpr kDims             = 1;
+    inline static std::uint16_t constexpr kPoints          = 8;
+    inline static std::uint8_t constexpr kOrder            = 15;
+    inline static std::array<TScalar, 16> constexpr points = {
         0.980145,
         0.0198551,
         0.0198551,
@@ -231,17 +234,17 @@ struct SymmetricSimplexPolynomialQuadratureRule<1, 15>
         0.408283,
         0.408283,
         0.591717};
-    inline static std::array<Scalar, 8> constexpr weights =
+    inline static std::array<TScalar, 8> constexpr weights =
         {0.0506143, 0.0506143, 0.111191, 0.111191, 0.156853, 0.156853, 0.181342, 0.181342};
 };
 
-template <>
-struct SymmetricSimplexPolynomialQuadratureRule<1, 17>
+template <common::CFloatingPoint TScalar>
+struct SymmetricSimplexPolynomialQuadratureRule<1, 17, TScalar>
 {
-    inline static std::uint8_t constexpr kDims            = 1;
-    inline static std::uint16_t constexpr kPoints         = 9;
-    inline static std::uint8_t constexpr kOrder           = 17;
-    inline static std::array<Scalar, 18> constexpr points = {
+    inline static std::uint8_t constexpr kDims             = 1;
+    inline static std::uint16_t constexpr kPoints          = 9;
+    inline static std::uint8_t constexpr kOrder            = 17;
+    inline static std::array<TScalar, 18> constexpr points = {
         0.98408,
         0.0159199,
         0.0159199,
@@ -260,7 +263,7 @@ struct SymmetricSimplexPolynomialQuadratureRule<1, 17>
         0.662127,
         0.5,
         0.5};
-    inline static std::array<Scalar, 9> constexpr weights = {
+    inline static std::array<TScalar, 9> constexpr weights = {
         0.0406372,
         0.0406372,
         0.0903241,
@@ -272,17 +275,17 @@ struct SymmetricSimplexPolynomialQuadratureRule<1, 17>
         0.16512};
 };
 
-template <>
-struct SymmetricSimplexPolynomialQuadratureRule<1, 19>
+template <common::CFloatingPoint TScalar>
+struct SymmetricSimplexPolynomialQuadratureRule<1, 19, TScalar>
 {
-    inline static std::uint8_t constexpr kDims            = 1;
-    inline static std::uint16_t constexpr kPoints         = 10;
-    inline static std::uint8_t constexpr kOrder           = 19;
-    inline static std::array<Scalar, 20> constexpr points = {
+    inline static std::uint8_t constexpr kDims             = 1;
+    inline static std::uint16_t constexpr kPoints          = 10;
+    inline static std::uint8_t constexpr kOrder            = 19;
+    inline static std::array<TScalar, 20> constexpr points = {
         0.986953, 0.0130467, 0.0130467, 0.986953, 0.932532, 0.0674683, 0.0674683,
         0.932532, 0.839705,  0.160295,  0.160295, 0.839705, 0.716698,  0.283302,
         0.283302, 0.716698,  0.574437,  0.425563, 0.425563, 0.574437};
-    inline static std::array<Scalar, 10> constexpr weights = {
+    inline static std::array<TScalar, 10> constexpr weights = {
         0.0333357,
         0.0333357,
         0.0747257,
@@ -295,17 +298,17 @@ struct SymmetricSimplexPolynomialQuadratureRule<1, 19>
         0.147762};
 };
 
-template <>
-struct SymmetricSimplexPolynomialQuadratureRule<1, 21>
+template <common::CFloatingPoint TScalar>
+struct SymmetricSimplexPolynomialQuadratureRule<1, 21, TScalar>
 {
-    inline static std::uint8_t constexpr kDims            = 1;
-    inline static std::uint16_t constexpr kPoints         = 11;
-    inline static std::uint8_t constexpr kOrder           = 21;
-    inline static std::array<Scalar, 22> constexpr points = {
+    inline static std::uint8_t constexpr kDims             = 1;
+    inline static std::uint16_t constexpr kPoints          = 11;
+    inline static std::uint8_t constexpr kOrder            = 21;
+    inline static std::array<TScalar, 22> constexpr points = {
         0.989114, 0.0108857, 0.0108857, 0.989114, 0.943531, 0.0564687, 0.0564687, 0.943531,
         0.865076, 0.134924,  0.134924,  0.865076, 0.759548, 0.240452,  0.240452,  0.759548,
         0.634772, 0.365228,  0.365228,  0.634772, 0.5,      0.5};
-    inline static std::array<Scalar, 11> constexpr weights = {
+    inline static std::array<TScalar, 11> constexpr weights = {
         0.0278343,
         0.0278343,
         0.0627902,
@@ -319,44 +322,44 @@ struct SymmetricSimplexPolynomialQuadratureRule<1, 21>
         0.136463};
 };
 
-template <>
-struct SymmetricSimplexPolynomialQuadratureRule<2, 0>
+template <common::CFloatingPoint TScalar>
+struct SymmetricSimplexPolynomialQuadratureRule<2, 0, TScalar>
 {
-    inline static std::uint8_t constexpr kDims            = 2;
-    inline static std::uint16_t constexpr kPoints         = 1;
-    inline static std::uint8_t constexpr kOrder           = 0;
-    inline static std::array<Scalar, 3> constexpr points  = {0.333333, 0.333333, 0.333333};
-    inline static std::array<Scalar, 1> constexpr weights = {0.5};
+    inline static std::uint8_t constexpr kDims             = 2;
+    inline static std::uint16_t constexpr kPoints          = 1;
+    inline static std::uint8_t constexpr kOrder            = 0;
+    inline static std::array<TScalar, 3> constexpr points  = {0.333333, 0.333333, 0.333333};
+    inline static std::array<TScalar, 1> constexpr weights = {0.5};
 };
 
-template <>
-struct SymmetricSimplexPolynomialQuadratureRule<2, 1>
+template <common::CFloatingPoint TScalar>
+struct SymmetricSimplexPolynomialQuadratureRule<2, 1, TScalar>
 {
-    inline static std::uint8_t constexpr kDims            = 2;
-    inline static std::uint16_t constexpr kPoints         = 1;
-    inline static std::uint8_t constexpr kOrder           = 1;
-    inline static std::array<Scalar, 3> constexpr points  = {0.333333, 0.333333, 0.333333};
-    inline static std::array<Scalar, 1> constexpr weights = {0.5};
+    inline static std::uint8_t constexpr kDims             = 2;
+    inline static std::uint16_t constexpr kPoints          = 1;
+    inline static std::uint8_t constexpr kOrder            = 1;
+    inline static std::array<TScalar, 3> constexpr points  = {0.333333, 0.333333, 0.333333};
+    inline static std::array<TScalar, 1> constexpr weights = {0.5};
 };
 
-template <>
-struct SymmetricSimplexPolynomialQuadratureRule<2, 2>
+template <common::CFloatingPoint TScalar>
+struct SymmetricSimplexPolynomialQuadratureRule<2, 2, TScalar>
 {
     inline static std::uint8_t constexpr kDims    = 2;
     inline static std::uint16_t constexpr kPoints = 3;
     inline static std::uint8_t constexpr kOrder   = 2;
-    inline static std::array<Scalar, 9> constexpr points =
+    inline static std::array<TScalar, 9> constexpr points =
         {0.666667, 0.166667, 0.166667, 0.166667, 0.666667, 0.166667, 0.166667, 0.166667, 0.666667};
-    inline static std::array<Scalar, 3> constexpr weights = {0.166667, 0.166667, 0.166667};
+    inline static std::array<TScalar, 3> constexpr weights = {0.166667, 0.166667, 0.166667};
 };
 
-template <>
-struct SymmetricSimplexPolynomialQuadratureRule<2, 3>
+template <common::CFloatingPoint TScalar>
+struct SymmetricSimplexPolynomialQuadratureRule<2, 3, TScalar>
 {
-    inline static std::uint8_t constexpr kDims            = 2;
-    inline static std::uint16_t constexpr kPoints         = 6;
-    inline static std::uint8_t constexpr kOrder           = 3;
-    inline static std::array<Scalar, 18> constexpr points = {
+    inline static std::uint8_t constexpr kDims             = 2;
+    inline static std::uint16_t constexpr kPoints          = 6;
+    inline static std::uint8_t constexpr kOrder            = 3;
+    inline static std::array<TScalar, 18> constexpr points = {
         0.674234,
         0.162883,
         0.162883,
@@ -375,17 +378,17 @@ struct SymmetricSimplexPolynomialQuadratureRule<2, 3>
         0.47792,
         0.47792,
         0.0441602};
-    inline static std::array<Scalar, 6> constexpr weights =
+    inline static std::array<TScalar, 6> constexpr weights =
         {0.140575, 0.140575, 0.140575, 0.0260918, 0.0260918, 0.0260918};
 };
 
-template <>
-struct SymmetricSimplexPolynomialQuadratureRule<2, 4>
+template <common::CFloatingPoint TScalar>
+struct SymmetricSimplexPolynomialQuadratureRule<2, 4, TScalar>
 {
-    inline static std::uint8_t constexpr kDims            = 2;
-    inline static std::uint16_t constexpr kPoints         = 6;
-    inline static std::uint8_t constexpr kOrder           = 4;
-    inline static std::array<Scalar, 18> constexpr points = {
+    inline static std::uint8_t constexpr kDims             = 2;
+    inline static std::uint16_t constexpr kPoints          = 6;
+    inline static std::uint8_t constexpr kOrder            = 4;
+    inline static std::array<TScalar, 18> constexpr points = {
         0.108103,
         0.445948,
         0.445948,
@@ -404,36 +407,36 @@ struct SymmetricSimplexPolynomialQuadratureRule<2, 4>
         0.0915762,
         0.0915762,
         0.816848};
-    inline static std::array<Scalar, 6> constexpr weights =
+    inline static std::array<TScalar, 6> constexpr weights =
         {0.111691, 0.111691, 0.111691, 0.0549759, 0.0549759, 0.0549759};
 };
 
-template <>
-struct SymmetricSimplexPolynomialQuadratureRule<2, 5>
+template <common::CFloatingPoint TScalar>
+struct SymmetricSimplexPolynomialQuadratureRule<2, 5, TScalar>
 {
-    inline static std::uint8_t constexpr kDims            = 2;
-    inline static std::uint16_t constexpr kPoints         = 7;
-    inline static std::uint8_t constexpr kOrder           = 5;
-    inline static std::array<Scalar, 21> constexpr points = {
+    inline static std::uint8_t constexpr kDims             = 2;
+    inline static std::uint16_t constexpr kPoints          = 7;
+    inline static std::uint8_t constexpr kOrder            = 5;
+    inline static std::array<TScalar, 21> constexpr points = {
         0.797427, 0.101287, 0.101287,  0.101287,  0.797427, 0.101287, 0.101287,
         0.101287, 0.797427, 0.0597159, 0.470142,  0.470142, 0.470142, 0.0597159,
         0.470142, 0.470142, 0.470142,  0.0597159, 0.333333, 0.333333, 0.333333};
-    inline static std::array<Scalar, 7> constexpr weights =
+    inline static std::array<TScalar, 7> constexpr weights =
         {0.0629696, 0.0629696, 0.0629696, 0.0661971, 0.0661971, 0.0661971, 0.1125};
 };
 
-template <>
-struct SymmetricSimplexPolynomialQuadratureRule<2, 6>
+template <common::CFloatingPoint TScalar>
+struct SymmetricSimplexPolynomialQuadratureRule<2, 6, TScalar>
 {
-    inline static std::uint8_t constexpr kDims            = 2;
-    inline static std::uint16_t constexpr kPoints         = 12;
-    inline static std::uint8_t constexpr kOrder           = 6;
-    inline static std::array<Scalar, 36> constexpr points = {
+    inline static std::uint8_t constexpr kDims             = 2;
+    inline static std::uint16_t constexpr kPoints          = 12;
+    inline static std::uint8_t constexpr kOrder            = 6;
+    inline static std::array<TScalar, 36> constexpr points = {
         0.873822, 0.063089, 0.063089, 0.063089, 0.873822, 0.063089, 0.063089, 0.063089, 0.873822,
         0.501427, 0.249287, 0.249287, 0.249287, 0.501427, 0.249287, 0.249287, 0.249287, 0.501427,
         0.053145, 0.310352, 0.636502, 0.053145, 0.636502, 0.310352, 0.310352, 0.053145, 0.636502,
         0.310352, 0.636502, 0.053145, 0.636502, 0.053145, 0.310352, 0.636502, 0.310352, 0.053145};
-    inline static std::array<Scalar, 12> constexpr weights = {
+    inline static std::array<TScalar, 12> constexpr weights = {
         0.0254225,
         0.0254225,
         0.0254225,
@@ -448,20 +451,20 @@ struct SymmetricSimplexPolynomialQuadratureRule<2, 6>
         0.0414255};
 };
 
-template <>
-struct SymmetricSimplexPolynomialQuadratureRule<2, 7>
+template <common::CFloatingPoint TScalar>
+struct SymmetricSimplexPolynomialQuadratureRule<2, 7, TScalar>
 {
-    inline static std::uint8_t constexpr kDims            = 2;
-    inline static std::uint16_t constexpr kPoints         = 15;
-    inline static std::uint8_t constexpr kOrder           = 7;
-    inline static std::array<Scalar, 45> constexpr points = {
+    inline static std::uint8_t constexpr kDims             = 2;
+    inline static std::uint16_t constexpr kPoints          = 15;
+    inline static std::uint8_t constexpr kOrder            = 7;
+    inline static std::array<TScalar, 45> constexpr points = {
         0.943472,  0.0282639, 0.0282639, 0.0282639, 0.943472,  0.0282639, 0.0282639, 0.0282639,
         0.943472,  0.0513774, 0.474311,  0.474311,  0.474311,  0.0513774, 0.474311,  0.474311,
         0.474311,  0.0513774, 0.517713,  0.241143,  0.241143,  0.241143,  0.517713,  0.241143,
         0.241143,  0.241143,  0.517713,  0.761223,  0.0462709, 0.192506,  0.761223,  0.192506,
         0.0462709, 0.0462709, 0.761223,  0.192506,  0.0462709, 0.192506,  0.761223,  0.192506,
         0.761223,  0.0462709, 0.192506,  0.0462709, 0.761223};
-    inline static std::array<Scalar, 15> constexpr weights = {
+    inline static std::array<TScalar, 15> constexpr weights = {
         0.00676693,
         0.00676693,
         0.00676693,
@@ -479,20 +482,20 @@ struct SymmetricSimplexPolynomialQuadratureRule<2, 7>
         0.0280601};
 };
 
-template <>
-struct SymmetricSimplexPolynomialQuadratureRule<2, 8>
+template <common::CFloatingPoint TScalar>
+struct SymmetricSimplexPolynomialQuadratureRule<2, 8, TScalar>
 {
-    inline static std::uint8_t constexpr kDims            = 2;
-    inline static std::uint16_t constexpr kPoints         = 16;
-    inline static std::uint8_t constexpr kOrder           = 8;
-    inline static std::array<Scalar, 48> constexpr points = {
+    inline static std::uint8_t constexpr kDims             = 2;
+    inline static std::uint16_t constexpr kPoints          = 16;
+    inline static std::uint8_t constexpr kOrder            = 8;
+    inline static std::array<TScalar, 48> constexpr points = {
         0.333333, 0.333333,  0.333333,  0.658861,   0.170569,   0.170569,  0.170569,   0.658861,
         0.170569, 0.170569,  0.170569,  0.658861,   0.898906,   0.0505472, 0.0505472,  0.0505472,
         0.898906, 0.0505472, 0.0505472, 0.0505472,  0.898906,   0.0814148, 0.459293,   0.459293,
         0.459293, 0.0814148, 0.459293,  0.459293,   0.459293,   0.0814148, 0.263113,   0.00839478,
         0.728492, 0.263113,  0.728492,  0.00839478, 0.00839478, 0.263113,  0.728492,   0.00839478,
         0.728492, 0.263113,  0.728492,  0.263113,   0.00839478, 0.728492,  0.00839478, 0.263113};
-    inline static std::array<Scalar, 16> constexpr weights = {
+    inline static std::array<TScalar, 16> constexpr weights = {
         0.0721578,
         0.0516087,
         0.0516087,
@@ -511,13 +514,13 @@ struct SymmetricSimplexPolynomialQuadratureRule<2, 8>
         0.0136152};
 };
 
-template <>
-struct SymmetricSimplexPolynomialQuadratureRule<2, 9>
+template <common::CFloatingPoint TScalar>
+struct SymmetricSimplexPolynomialQuadratureRule<2, 9, TScalar>
 {
-    inline static std::uint8_t constexpr kDims            = 2;
-    inline static std::uint16_t constexpr kPoints         = 19;
-    inline static std::uint8_t constexpr kOrder           = 9;
-    inline static std::array<Scalar, 57> constexpr points = {
+    inline static std::uint8_t constexpr kDims             = 2;
+    inline static std::uint16_t constexpr kPoints          = 19;
+    inline static std::uint8_t constexpr kOrder            = 9;
+    inline static std::array<TScalar, 57> constexpr points = {
         0.333333, 0.333333,  0.333333,  0.020635,  0.489683, 0.489683,  0.489683,  0.020635,
         0.489683, 0.489683,  0.489683,  0.020635,  0.910541, 0.0447295, 0.0447295, 0.0447295,
         0.910541, 0.0447295, 0.0447295, 0.0447295, 0.910541, 0.125821,  0.43709,   0.43709,
@@ -526,7 +529,7 @@ struct SymmetricSimplexPolynomialQuadratureRule<2, 9>
         0.221963, 0.0368384, 0.741199,  0.0368384, 0.221963, 0.221963,  0.741199,  0.0368384,
         0.221963, 0.0368384, 0.741199,  0.0368384, 0.741199, 0.221963,  0.0368384, 0.221963,
         0.741199};
-    inline static std::array<Scalar, 19> constexpr weights = {
+    inline static std::array<TScalar, 19> constexpr weights = {
         0.0485679,
         0.0156674,
         0.0156674,
@@ -548,13 +551,13 @@ struct SymmetricSimplexPolynomialQuadratureRule<2, 9>
         0.0216418};
 };
 
-template <>
-struct SymmetricSimplexPolynomialQuadratureRule<2, 10>
+template <common::CFloatingPoint TScalar>
+struct SymmetricSimplexPolynomialQuadratureRule<2, 10, TScalar>
 {
-    inline static std::uint8_t constexpr kDims            = 2;
-    inline static std::uint16_t constexpr kPoints         = 25;
-    inline static std::uint8_t constexpr kOrder           = 10;
-    inline static std::array<Scalar, 75> constexpr points = {
+    inline static std::uint8_t constexpr kDims             = 2;
+    inline static std::uint16_t constexpr kPoints          = 25;
+    inline static std::uint8_t constexpr kOrder            = 10;
+    inline static std::array<TScalar, 75> constexpr points = {
         0.333333,  0.333333,  0.333333,  0.145454,  0.427273,  0.427273,  0.427273,  0.145454,
         0.427273,  0.427273,  0.427273,  0.145454,  0.633802,  0.183099,  0.183099,  0.183099,
         0.633802,  0.183099,  0.183099,  0.183099,  0.633802,  0.019132,  0.490434,  0.490434,
@@ -565,20 +568,20 @@ struct SymmetricSimplexPolynomialQuadratureRule<2, 10>
         0.654269,  0.122805,  0.0333718, 0.843824,  0.122805,  0.843824,  0.0333718, 0.0333718,
         0.122805,  0.843824,  0.0333718, 0.843824,  0.122805,  0.843824,  0.122805,  0.0333718,
         0.843824,  0.0333718, 0.122805};
-    inline static std::array<Scalar, 25> constexpr weights = {
+    inline static std::array<TScalar, 25> constexpr weights = {
         0.0404687,  0.0386493,  0.0386493,  0.0386493,  0.0392288,  0.0392288,  0.0392288,
         0.00873458, 0.00873458, 0.00873458, 0.00214619, 0.00214619, 0.00214619, 0.0187344,
         0.0187344,  0.0187344,  0.0187344,  0.0187344,  0.0187344,  0.0134747,  0.0134747,
         0.0134747,  0.0134747,  0.0134747,  0.0134747};
 };
 
-template <>
-struct SymmetricSimplexPolynomialQuadratureRule<2, 11>
+template <common::CFloatingPoint TScalar>
+struct SymmetricSimplexPolynomialQuadratureRule<2, 11, TScalar>
 {
-    inline static std::uint8_t constexpr kDims            = 2;
-    inline static std::uint16_t constexpr kPoints         = 28;
-    inline static std::uint8_t constexpr kOrder           = 11;
-    inline static std::array<Scalar, 84> constexpr points = {
+    inline static std::uint8_t constexpr kDims             = 2;
+    inline static std::uint16_t constexpr kPoints          = 28;
+    inline static std::uint8_t constexpr kOrder            = 11;
+    inline static std::array<TScalar, 84> constexpr points = {
         0.333333,  0.333333,   0.333333,  0.938123, 0.0309384, 0.0309384,  0.0309384, 0.938123,
         0.0309384, 0.0309384,  0.0309384, 0.938123, 0.127004,  0.436498,   0.436498,  0.436498,
         0.127004,  0.436498,   0.436498,  0.436498, 0.127004,  0.00203047, 0.498985,  0.498985,
@@ -590,20 +593,20 @@ struct SymmetricSimplexPolynomialQuadratureRule<2, 11>
         0.159742,  0.825619,   0.640472,  0.311784, 0.047744,  0.640472,   0.047744,  0.311784,
         0.311784,  0.640472,   0.047744,  0.311784, 0.047744,  0.640472,   0.047744,  0.640472,
         0.311784,  0.047744,   0.311784,  0.640472};
-    inline static std::array<Scalar, 28> constexpr weights = {
+    inline static std::array<TScalar, 28> constexpr weights = {
         0.040589,   0.00616202, 0.00616202, 0.00616202, 0.031414,   0.031414,   0.031414,
         0.00611019, 0.00611019, 0.00611019, 0.0338507,  0.0338507,  0.0338507,  0.0201098,
         0.0201098,  0.0201098,  0.00738114, 0.00738114, 0.00738114, 0.00738114, 0.00738114,
         0.00738114, 0.020364,   0.020364,   0.020364,   0.020364,   0.020364,   0.020364};
 };
 
-template <>
-struct SymmetricSimplexPolynomialQuadratureRule<2, 12>
+template <common::CFloatingPoint TScalar>
+struct SymmetricSimplexPolynomialQuadratureRule<2, 12, TScalar>
 {
-    inline static std::uint8_t constexpr kDims            = 2;
-    inline static std::uint16_t constexpr kPoints         = 33;
-    inline static std::uint8_t constexpr kOrder           = 12;
-    inline static std::array<Scalar, 99> constexpr points = {
+    inline static std::uint8_t constexpr kDims             = 2;
+    inline static std::uint16_t constexpr kPoints          = 33;
+    inline static std::uint8_t constexpr kOrder            = 12;
+    inline static std::array<TScalar, 99> constexpr points = {
         0.957365,  0.0213174, 0.0213174, 0.0213174, 0.957365,  0.0213174, 0.0213174, 0.0213174,
         0.957365,  0.457579,  0.27121,   0.27121,   0.27121,   0.457579,  0.27121,   0.27121,
         0.27121,   0.457579,  0.744848,  0.127576,  0.127576,  0.127576,  0.744848,  0.127576,
@@ -617,7 +620,7 @@ struct SymmetricSimplexPolynomialQuadratureRule<2, 12>
         0.858014,  0.608943,  0.275713,  0.115343,  0.608943,  0.115343,  0.275713,  0.275713,
         0.608943,  0.115343,  0.275713,  0.115343,  0.608943,  0.115343,  0.608943,  0.275713,
         0.115343,  0.275713,  0.608943};
-    inline static std::array<Scalar, 33> constexpr weights = {
+    inline static std::array<TScalar, 33> constexpr weights = {
         0.00308313, 0.00308313, 0.00308313, 0.0314291,  0.0314291,  0.0314291,  0.0173981,
         0.0173981,  0.0173981,  0.0218463,  0.0218463,  0.0218463,  0.0128655,  0.0128655,
         0.0128655,  0.0111784,  0.0111784,  0.0111784,  0.0111784,  0.0111784,  0.0111784,
@@ -625,13 +628,13 @@ struct SymmetricSimplexPolynomialQuadratureRule<2, 12>
         0.0201858,  0.0201858,  0.0201858,  0.0201858,  0.0201858};
 };
 
-template <>
-struct SymmetricSimplexPolynomialQuadratureRule<2, 13>
+template <common::CFloatingPoint TScalar>
+struct SymmetricSimplexPolynomialQuadratureRule<2, 13, TScalar>
 {
-    inline static std::uint8_t constexpr kDims             = 2;
-    inline static std::uint16_t constexpr kPoints          = 37;
-    inline static std::uint8_t constexpr kOrder            = 13;
-    inline static std::array<Scalar, 111> constexpr points = {
+    inline static std::uint8_t constexpr kDims              = 2;
+    inline static std::uint16_t constexpr kPoints           = 37;
+    inline static std::uint8_t constexpr kOrder             = 13;
+    inline static std::array<TScalar, 111> constexpr points = {
         0.333333,  0.333333,   0.333333,  0.146117,  0.426941,   0.426941,   0.426941,  0.146117,
         0.426941,  0.426941,   0.426941,  0.146117,  0.557255,   0.221372,   0.221372,  0.221372,
         0.557255,  0.221372,   0.221372,  0.221372,  0.557255,   0.956981,   0.0215097, 0.0215097,
@@ -646,7 +649,7 @@ struct SymmetricSimplexPolynomialQuadratureRule<2, 13>
         0.748507,  0.163597,   0.0878955, 0.163597,  0.748507,   0.722358,   0.272516,  0.00512639,
         0.722358,  0.00512639, 0.272516,  0.272516,  0.722358,   0.00512639, 0.272516,  0.00512639,
         0.722358,  0.00512639, 0.722358,  0.272516,  0.00512639, 0.272516,   0.722358};
-    inline static std::array<Scalar, 37> constexpr weights = {
+    inline static std::array<TScalar, 37> constexpr weights = {
         0.03398,    0.027801,   0.027801,   0.027801,   0.0291392, 0.0291392, 0.0291392, 0.00302617,
         0.00302617, 0.00302617, 0.0119972,  0.0119972,  0.0119972, 0.0173206, 0.0173206, 0.0173206,
         0.0173206,  0.0173206,  0.0173206,  0.0074827,  0.0074827, 0.0074827, 0.0074827, 0.0074827,
@@ -654,13 +657,13 @@ struct SymmetricSimplexPolynomialQuadratureRule<2, 13>
         0.00479534, 0.00479534, 0.00479534, 0.00479534, 0.00479534};
 };
 
-template <>
-struct SymmetricSimplexPolynomialQuadratureRule<2, 14>
+template <common::CFloatingPoint TScalar>
+struct SymmetricSimplexPolynomialQuadratureRule<2, 14, TScalar>
 {
-    inline static std::uint8_t constexpr kDims             = 2;
-    inline static std::uint16_t constexpr kPoints          = 42;
-    inline static std::uint8_t constexpr kOrder            = 14;
-    inline static std::array<Scalar, 126> constexpr points = {
+    inline static std::uint8_t constexpr kDims              = 2;
+    inline static std::uint16_t constexpr kPoints           = 42;
+    inline static std::uint8_t constexpr kOrder             = 14;
+    inline static std::array<TScalar, 126> constexpr points = {
         0.645589,  0.177206,   0.177206,   0.177206,  0.645589,   0.177206,   0.177206,  0.177206,
         0.645589,  0.961218,   0.019391,   0.019391,  0.019391,   0.961218,   0.019391,  0.019391,
         0.019391,  0.961218,   0.8764,     0.0617999, 0.0617999,  0.0617999,  0.8764,    0.0617999,
@@ -677,7 +680,7 @@ struct SymmetricSimplexPolynomialQuadratureRule<2, 14>
         0.014647,  0.68698,    0.014647,   0.298373,  0.118974,   0.00126833, 0.879757,  0.118974,
         0.879757,  0.00126833, 0.00126833, 0.118974,  0.879757,   0.00126833, 0.879757,  0.118974,
         0.879757,  0.118974,   0.00126833, 0.879757,  0.00126833, 0.118974};
-    inline static std::array<Scalar, 42> constexpr weights = {
+    inline static std::array<TScalar, 42> constexpr weights = {
         0.0210813,  0.0210813,  0.0210813,  0.0024617,  0.0024617,  0.0024617,  0.00721685,
         0.00721685, 0.00721685, 0.0163942,  0.0163942,  0.0163942,  0.0109418,  0.0109418,
         0.0109418,  0.0258871,  0.0258871,  0.0258871,  0.0123329,  0.0123329,  0.0123329,
@@ -686,13 +689,13 @@ struct SymmetricSimplexPolynomialQuadratureRule<2, 14>
         0.00721815, 0.00250511, 0.00250511, 0.00250511, 0.00250511, 0.00250511, 0.00250511};
 };
 
-template <>
-struct SymmetricSimplexPolynomialQuadratureRule<2, 15>
+template <common::CFloatingPoint TScalar>
+struct SymmetricSimplexPolynomialQuadratureRule<2, 15, TScalar>
 {
-    inline static std::uint8_t constexpr kDims             = 2;
-    inline static std::uint16_t constexpr kPoints          = 49;
-    inline static std::uint8_t constexpr kOrder            = 15;
-    inline static std::array<Scalar, 147> constexpr points = {
+    inline static std::uint8_t constexpr kDims              = 2;
+    inline static std::uint16_t constexpr kPoints           = 49;
+    inline static std::uint8_t constexpr kOrder             = 15;
+    inline static std::array<TScalar, 147> constexpr points = {
         0.333333,    0.333333,    0.333333,    0.779555,  0.110222,  0.110222,    0.110222,
         0.779555,    0.110222,    0.110222,    0.110222,  0.779555,  0.896047,    0.0519764,
         0.0519764,   0.0519764,   0.896047,    0.0519764, 0.0519764, 0.0519764,   0.896047,
@@ -714,7 +717,7 @@ struct SymmetricSimplexPolynomialQuadratureRule<2, 15>
         0.675765,    0.0174925,   0.306742,    0.367032,  0.090348,  0.54262,     0.367032,
         0.54262,     0.090348,    0.090348,    0.367032,  0.54262,   0.090348,    0.54262,
         0.367032,    0.54262,     0.367032,    0.090348,  0.54262,   0.090348,    0.367032};
-    inline static std::array<Scalar, 49> constexpr weights = {
+    inline static std::array<TScalar, 49> constexpr weights = {
         0.0117856,  0.00758657, 0.00758657, 0.00758657, 0.006488,   0.006488,   0.006488,
         0.00853315, 0.00853315, 0.00853315, 0.02288,    0.02288,    0.02288,    0.00111379,
         0.00111379, 0.00111379, 0.00111379, 0.00111379, 0.00111379, 0.0135051,  0.0135051,
@@ -724,13 +727,13 @@ struct SymmetricSimplexPolynomialQuadratureRule<2, 15>
         0.00782393, 0.0170854,  0.0170854,  0.0170854,  0.0170854,  0.0170854,  0.0170854};
 };
 
-template <>
-struct SymmetricSimplexPolynomialQuadratureRule<2, 16>
+template <common::CFloatingPoint TScalar>
+struct SymmetricSimplexPolynomialQuadratureRule<2, 16, TScalar>
 {
-    inline static std::uint8_t constexpr kDims             = 2;
-    inline static std::uint16_t constexpr kPoints          = 55;
-    inline static std::uint8_t constexpr kOrder            = 16;
-    inline static std::array<Scalar, 165> constexpr points = {
+    inline static std::uint8_t constexpr kDims              = 2;
+    inline static std::uint16_t constexpr kPoints           = 55;
+    inline static std::uint8_t constexpr kOrder             = 16;
+    inline static std::array<TScalar, 165> constexpr points = {
         0.333333,   0.333333,   0.333333,  0.83641,   0.081795,   0.081795,   0.081795,  0.83641,
         0.081795,   0.081795,   0.081795,  0.83641,   0.669399,   0.165301,   0.165301,  0.165301,
         0.669399,   0.165301,   0.165301,  0.165301,  0.669399,   0.0628158,  0.468592,  0.468592,
@@ -752,7 +755,7 @@ struct SymmetricSimplexPolynomialQuadratureRule<2, 16>
         0.174416,   0.359646,   0.465938,  0.906395,  0.0771944,  0.0164108,  0.906395,  0.0164108,
         0.0771944,  0.0771944,  0.906395,  0.0164108, 0.0771944,  0.0164108,  0.906395,  0.0164108,
         0.906395,   0.0771944,  0.0164108, 0.0771944, 0.906395};
-    inline static std::array<Scalar, 55> constexpr weights = {
+    inline static std::array<TScalar, 55> constexpr weights = {
         0.0240111,  0.00735455, 0.00735455, 0.00735455, 0.0147723,  0.0147723,  0.0147723,
         0.0130625,  0.0130625,  0.0130625,  0.00139019, 0.00139019, 0.00139019, 0.0159109,
         0.0159109,  0.0159109,  0.00432292, 0.00432292, 0.00432292, 0.00715017, 0.00715017,
@@ -763,13 +766,13 @@ struct SymmetricSimplexPolynomialQuadratureRule<2, 16>
         0.0036499,  0.0036499,  0.0036499,  0.0036499,  0.0036499,  0.0036499};
 };
 
-template <>
-struct SymmetricSimplexPolynomialQuadratureRule<2, 17>
+template <common::CFloatingPoint TScalar>
+struct SymmetricSimplexPolynomialQuadratureRule<2, 17, TScalar>
 {
-    inline static std::uint8_t constexpr kDims             = 2;
-    inline static std::uint16_t constexpr kPoints          = 60;
-    inline static std::uint8_t constexpr kOrder            = 17;
-    inline static std::array<Scalar, 180> constexpr points = {
+    inline static std::uint8_t constexpr kDims              = 2;
+    inline static std::uint16_t constexpr kPoints           = 60;
+    inline static std::uint8_t constexpr kOrder             = 17;
+    inline static std::array<TScalar, 180> constexpr points = {
         0.518874,  0.240563,  0.240563,   0.240563,  0.518874,  0.240563,  0.240563,   0.240563,
         0.518874,  0.838154,  0.0809232,  0.0809232, 0.0809232, 0.838154,  0.0809232,  0.0809232,
         0.0809232, 0.838154,  0.979972,   0.0100141, 0.0100141, 0.0100141, 0.979972,   0.0100141,
@@ -793,7 +796,7 @@ struct SymmetricSimplexPolynomialQuadratureRule<2, 17>
         0.0233621, 0.346605,  0.24822,    1e-06,     0.751779,  0.24822,   0.751779,   1e-06,
         1e-06,     0.24822,   0.751779,   1e-06,     0.751779,  0.24822,   0.751779,   0.24822,
         1e-06,     0.751779,  1e-06,      0.24822};
-    inline static std::array<Scalar, 60> constexpr weights = {
+    inline static std::array<TScalar, 60> constexpr weights = {
         0.0191463,   0.0191463,   0.0191463,  0.00834764, 0.00834764, 0.00834764, 0.000717562,
         0.000717562, 0.000717562, 0.0143214,  0.0143214,  0.0143214,  0.0170428,  0.0170428,
         0.0170428,   0.0123364,   0.0123364,  0.0123364,  0.0029334,  0.0029334,  0.0029334,
@@ -805,13 +808,13 @@ struct SymmetricSimplexPolynomialQuadratureRule<2, 17>
         0.00151507,  0.00151507,  0.00151507, 0.00151507};
 };
 
-template <>
-struct SymmetricSimplexPolynomialQuadratureRule<2, 18>
+template <common::CFloatingPoint TScalar>
+struct SymmetricSimplexPolynomialQuadratureRule<2, 18, TScalar>
 {
-    inline static std::uint8_t constexpr kDims             = 2;
-    inline static std::uint16_t constexpr kPoints          = 67;
-    inline static std::uint8_t constexpr kOrder            = 18;
-    inline static std::array<Scalar, 201> constexpr points = {
+    inline static std::uint8_t constexpr kDims              = 2;
+    inline static std::uint16_t constexpr kPoints           = 67;
+    inline static std::uint8_t constexpr kOrder             = 18;
+    inline static std::array<TScalar, 201> constexpr points = {
         0.333333,   0.333333,   0.333333,   0.696723,   0.151639,  0.151639,   0.151639,
         0.696723,   0.151639,   0.151639,   0.151639,   0.696723,  0.855123,   0.0724387,
         0.0724387,  0.0724387,  0.855123,   0.0724387,  0.0724387, 0.0724387,  0.855123,
@@ -841,7 +844,7 @@ struct SymmetricSimplexPolynomialQuadratureRule<2, 18>
         0.0472761,  0.385044,   0.524529,   0.090427,   0.385044,  0.090427,   0.524529,
         0.524529,   0.385044,   0.090427,   0.524529,   0.090427,  0.385044,   0.090427,
         0.385044,   0.524529,   0.090427,   0.524529,   0.385044};
-    inline static std::array<Scalar, 67> constexpr weights = {
+    inline static std::array<TScalar, 67> constexpr weights = {
         0.0153743,   0.0101592,   0.0101592,   0.0101592,  0.00689514, 0.00689514, 0.00689514,
         0.000266003, 0.000266003, 0.000266003, 0.016736,   0.016736,   0.016736,   0.0155582,
         0.0155582,   0.0155582,   0.00655351,  0.00655351, 0.00655351, 0.00845583, 0.00845583,
@@ -854,13 +857,13 @@ struct SymmetricSimplexPolynomialQuadratureRule<2, 18>
         0.00766413,  0.00766413,  0.00766413,  0.00766413};
 };
 
-template <>
-struct SymmetricSimplexPolynomialQuadratureRule<2, 19>
+template <common::CFloatingPoint TScalar>
+struct SymmetricSimplexPolynomialQuadratureRule<2, 19, TScalar>
 {
-    inline static std::uint8_t constexpr kDims             = 2;
-    inline static std::uint16_t constexpr kPoints          = 73;
-    inline static std::uint8_t constexpr kOrder            = 19;
-    inline static std::array<Scalar, 219> constexpr points = {
+    inline static std::uint8_t constexpr kDims              = 2;
+    inline static std::uint16_t constexpr kPoints           = 73;
+    inline static std::uint8_t constexpr kOrder             = 19;
+    inline static std::array<TScalar, 219> constexpr points = {
         0.333333,  0.333333,  0.333333,   0.02078,    0.48961,   0.48961,    0.48961,   0.02078,
         0.48961,   0.48961,   0.48961,    0.02078,    0.0909262, 0.454537,   0.454537,  0.454537,
         0.0909262, 0.454537,  0.454537,   0.454537,   0.0909262, 0.197167,   0.401417,  0.401417,
@@ -889,7 +892,7 @@ struct SymmetricSimplexPolynomialQuadratureRule<2, 19>
         0.822931,  0.924344,  0.0654946,  0.0101611,  0.924344,  0.0101611,  0.0654946, 0.0654946,
         0.924344,  0.0101611, 0.0654946,  0.0101611,  0.924344,  0.0101611,  0.924344,  0.0654946,
         0.0101611, 0.0654946, 0.924344};
-    inline static std::array<Scalar, 73> constexpr weights = {
+    inline static std::array<TScalar, 73> constexpr weights = {
         0.0164532,  0.00516537, 0.00516537, 0.00516537, 0.0111936,  0.0111936,  0.0111936,
         0.0151331,  0.0151331,  0.0151331,  0.0152455,  0.0152455,  0.0152455,  0.0120796,
         0.0120796,  0.0120796,  0.0080254,  0.0080254,  0.0080254,  0.00404229, 0.00404229,
@@ -903,13 +906,13 @@ struct SymmetricSimplexPolynomialQuadratureRule<2, 19>
         0.00189996, 0.00189996, 0.00189996};
 };
 
-template <>
-struct SymmetricSimplexPolynomialQuadratureRule<2, 20>
+template <common::CFloatingPoint TScalar>
+struct SymmetricSimplexPolynomialQuadratureRule<2, 20, TScalar>
 {
-    inline static std::uint8_t constexpr kDims             = 2;
-    inline static std::uint16_t constexpr kPoints          = 82;
-    inline static std::uint8_t constexpr kOrder            = 20;
-    inline static std::array<Scalar, 246> constexpr points = {
+    inline static std::uint8_t constexpr kDims              = 2;
+    inline static std::uint16_t constexpr kPoints           = 82;
+    inline static std::uint8_t constexpr kOrder             = 20;
+    inline static std::array<TScalar, 246> constexpr points = {
         0.333333,   0.333333,   0.333333,   0.0549206,  0.47254,    0.47254,    0.47254,
         0.0549206,  0.47254,    0.47254,    0.47254,    0.0549206,  0.128816,   0.435592,
         0.435592,   0.435592,   0.128816,   0.435592,   0.435592,   0.435592,   0.128816,
@@ -946,7 +949,7 @@ struct SymmetricSimplexPolynomialQuadratureRule<2, 20>
         0.289023,   0.219588,   0.491389,   0.491389,   0.289023,   0.219588,   0.491389,
         0.219588,   0.289023,   0.219588,   0.289023,   0.491389,   0.219588,   0.491389,
         0.289023};
-    inline static std::array<Scalar, 82> constexpr weights = {
+    inline static std::array<TScalar, 82> constexpr weights = {
         0.0117195,   0.00850594, 0.00850594, 0.00850594, 0.0110673,  0.0110673,   0.0110673,
         0.0111251,   0.0111251,  0.0111251,  0.010544,   0.010544,   0.010544,    0.00718337,
         0.00718337,  0.00718337, 0.00298032, 0.00298032, 0.00298032, 0.000927231, 0.000927231,
@@ -961,13 +964,13 @@ struct SymmetricSimplexPolynomialQuadratureRule<2, 20>
         0.00955271,  0.00955271, 0.00955271, 0.00955271, 0.00955271};
 };
 
-template <>
-struct SymmetricSimplexPolynomialQuadratureRule<2, 21>
+template <common::CFloatingPoint TScalar>
+struct SymmetricSimplexPolynomialQuadratureRule<2, 21, TScalar>
 {
-    inline static std::uint8_t constexpr kDims             = 2;
-    inline static std::uint16_t constexpr kPoints          = 87;
-    inline static std::uint8_t constexpr kOrder            = 21;
-    inline static std::array<Scalar, 261> constexpr points = {
+    inline static std::uint8_t constexpr kDims              = 2;
+    inline static std::uint16_t constexpr kPoints           = 87;
+    inline static std::uint8_t constexpr kOrder             = 21;
+    inline static std::array<TScalar, 261> constexpr points = {
         0.978339,   0.0108306,  0.0108306,  0.0108306,  0.978339,   0.0108306,  0.0108306,
         0.0108306,  0.978339,   0.00263766, 0.498681,   0.498681,   0.498681,   0.00263766,
         0.498681,   0.498681,   0.498681,   0.00263766, 0.893587,   0.0532063,  0.0532063,
@@ -1006,7 +1009,7 @@ struct SymmetricSimplexPolynomialQuadratureRule<2, 21>
         0.558961,   0.131397,   0.558961,   0.309642,   0.309642,   0.131397,   0.558961,
         0.309642,   0.558961,   0.131397,   0.558961,   0.131397,   0.309642,   0.558961,
         0.309642,   0.131397};
-    inline static std::array<Scalar, 87> constexpr weights = {
+    inline static std::array<TScalar, 87> constexpr weights = {
         0.000766261, 0.000766261, 0.000766261, 0.00147982, 0.00147982, 0.00147982, 0.00355254,
         0.00355254,  0.00355254,  0.00621101,  0.00621101, 0.00621101, 0.00657693, 0.00657693,
         0.00657693,  0.00805356,  0.00805356,  0.00805356, 0.0097785,  0.0097785,  0.0097785,
@@ -1022,13 +1025,13 @@ struct SymmetricSimplexPolynomialQuadratureRule<2, 21>
         0.00980945,  0.00980945,  0.00980945};
 };
 
-template <>
-struct SymmetricSimplexPolynomialQuadratureRule<2, 22>
+template <common::CFloatingPoint TScalar>
+struct SymmetricSimplexPolynomialQuadratureRule<2, 22, TScalar>
 {
-    inline static std::uint8_t constexpr kDims             = 2;
-    inline static std::uint16_t constexpr kPoints          = 96;
-    inline static std::uint8_t constexpr kOrder            = 22;
-    inline static std::array<Scalar, 288> constexpr points = {
+    inline static std::uint8_t constexpr kDims              = 2;
+    inline static std::uint16_t constexpr kPoints           = 96;
+    inline static std::uint8_t constexpr kOrder             = 22;
+    inline static std::array<TScalar, 288> constexpr points = {
         0.985544,    0.00722824, 0.00722824,  0.00722824,  0.985544,   0.00722824, 0.00722824,
         0.00722824,  0.985544,   0.000570167, 0.499715,    0.499715,   0.499715,   0.000570167,
         0.499715,    0.499715,   0.499715,    0.000570167, 0.916095,   0.0419525,  0.0419525,
@@ -1071,7 +1074,7 @@ struct SymmetricSimplexPolynomialQuadratureRule<2, 22>
         0.15193,     0.536476,   0.311593,    0.311593,    0.15193,    0.536476,   0.311593,
         0.536476,    0.15193,    0.536476,    0.15193,     0.311593,   0.536476,   0.311593,
         0.15193};
-    inline static std::array<Scalar, 96> constexpr weights = {
+    inline static std::array<TScalar, 96> constexpr weights = {
         0.000348573, 0.000348573, 0.000348573, 0.000866827, 0.000866827, 0.000866827, 0.00233066,
         0.00233066,  0.00233066,  0.00579229,  0.00579229,  0.00579229,  0.00593949,  0.00593949,
         0.00593949,  0.0076694,   0.0076694,   0.0076694,   0.00985819,  0.00985819,  0.00985819,
@@ -1088,13 +1091,13 @@ struct SymmetricSimplexPolynomialQuadratureRule<2, 22>
         0.0108924,   0.0108924,   0.0108924,   0.0108924,   0.0108924};
 };
 
-template <>
-struct SymmetricSimplexPolynomialQuadratureRule<2, 23>
+template <common::CFloatingPoint TScalar>
+struct SymmetricSimplexPolynomialQuadratureRule<2, 23, TScalar>
 {
-    inline static std::uint8_t constexpr kDims             = 2;
-    inline static std::uint16_t constexpr kPoints          = 102;
-    inline static std::uint8_t constexpr kOrder            = 23;
-    inline static std::array<Scalar, 306> constexpr points = {
+    inline static std::uint8_t constexpr kDims              = 2;
+    inline static std::uint16_t constexpr kPoints           = 102;
+    inline static std::uint8_t constexpr kOrder             = 23;
+    inline static std::array<TScalar, 306> constexpr points = {
         0.982314,   0.00884309, 0.00884309, 0.00884309, 0.982314,   0.00884309, 0.00884309,
         0.00884309, 0.982314,   0.00191536, 0.499042,   0.499042,   0.499042,   0.00191536,
         0.499042,   0.499042,   0.499042,   0.00191536, 0.916163,   0.0419185,  0.0419185,
@@ -1139,7 +1142,7 @@ struct SymmetricSimplexPolynomialQuadratureRule<2, 23>
         0.100958,   0.152081,   0.316605,   0.531313,   0.152081,   0.531313,   0.316605,
         0.316605,   0.152081,   0.531313,   0.316605,   0.531313,   0.152081,   0.531313,
         0.152081,   0.316605,   0.531313,   0.316605,   0.152081};
-    inline static std::array<Scalar, 102> constexpr weights = {
+    inline static std::array<TScalar, 102> constexpr weights = {
         0.000511692, 0.000511692, 0.000511692, 0.00117477,  0.00117477,  0.00117477,  0.00221136,
         0.00221136,  0.00221136,  0.0046797,   0.0046797,   0.0046797,   0.00561165,  0.00561165,
         0.00561165,  0.0057277,   0.0057277,   0.0057277,   0.00742576,  0.00742576,  0.00742576,
@@ -1157,13 +1160,13 @@ struct SymmetricSimplexPolynomialQuadratureRule<2, 23>
         0.0102045,   0.0102045,   0.0102045,   0.0102045};
 };
 
-template <>
-struct SymmetricSimplexPolynomialQuadratureRule<2, 24>
+template <common::CFloatingPoint TScalar>
+struct SymmetricSimplexPolynomialQuadratureRule<2, 24, TScalar>
 {
-    inline static std::uint8_t constexpr kDims             = 2;
-    inline static std::uint16_t constexpr kPoints          = 112;
-    inline static std::uint8_t constexpr kOrder            = 24;
-    inline static std::array<Scalar, 336> constexpr points = {
+    inline static std::uint8_t constexpr kDims              = 2;
+    inline static std::uint16_t constexpr kPoints           = 112;
+    inline static std::uint8_t constexpr kOrder             = 24;
+    inline static std::array<TScalar, 336> constexpr points = {
         0.333333,   0.333333,   0.333333,   0.98471,    0.00764482, 0.00764482, 0.00764482,
         0.98471,    0.00764482, 0.00764482, 0.00764482, 0.98471,    0.00975347, 0.495123,
         0.495123,   0.495123,   0.00975347, 0.495123,   0.495123,   0.495123,   0.00975347,
@@ -1212,7 +1215,7 @@ struct SymmetricSimplexPolynomialQuadratureRule<2, 24>
         0.647442,   0.240453,   0.112105,   0.162887,   0.316329,   0.520784,   0.162887,
         0.520784,   0.316329,   0.316329,   0.162887,   0.520784,   0.316329,   0.520784,
         0.162887,   0.520784,   0.162887,   0.316329,   0.520784,   0.316329,   0.162887};
-    inline static std::array<Scalar, 112> constexpr weights = {
+    inline static std::array<TScalar, 112> constexpr weights = {
         0.011469,    0.000383689, 0.000383689, 0.000383689, 0.00276179,  0.00276179,  0.00276179,
         0.0041925,   0.0041925,   0.0041925,   0.00610869,  0.00610869,  0.00610869,  0.0065352,
         0.0065352,   0.0065352,   0.00894061,  0.00894061,  0.00894061,  0.00911087,  0.00911087,
@@ -1231,13 +1234,13 @@ struct SymmetricSimplexPolynomialQuadratureRule<2, 24>
         0.00749925,  0.00961539,  0.00961539,  0.00961539,  0.00961539,  0.00961539,  0.00961539};
 };
 
-template <>
-struct SymmetricSimplexPolynomialQuadratureRule<2, 25>
+template <common::CFloatingPoint TScalar>
+struct SymmetricSimplexPolynomialQuadratureRule<2, 25, TScalar>
 {
-    inline static std::uint8_t constexpr kDims             = 2;
-    inline static std::uint16_t constexpr kPoints          = 126;
-    inline static std::uint8_t constexpr kOrder            = 25;
-    inline static std::array<Scalar, 378> constexpr points = {
+    inline static std::uint8_t constexpr kDims              = 2;
+    inline static std::uint16_t constexpr kPoints           = 126;
+    inline static std::uint8_t constexpr kOrder             = 25;
+    inline static std::array<TScalar, 378> constexpr points = {
         0.0279465,  0.486027,   0.486027,   0.486027,   0.0279465,  0.486027,   0.486027,
         0.486027,   0.0279465,  0.131179,   0.434411,   0.434411,   0.434411,   0.131179,
         0.434411,   0.434411,   0.434411,   0.131179,   0.220222,   0.389889,   0.389889,
@@ -1292,7 +1295,7 @@ struct SymmetricSimplexPolynomialQuadratureRule<2, 25>
         0.622656,   0.229277,   0.148067,   0.191772,   0.325618,   0.48261,    0.191772,
         0.48261,    0.325618,   0.325618,   0.191772,   0.48261,    0.325618,   0.48261,
         0.191772,   0.48261,    0.191772,   0.325618,   0.48261,    0.325618,   0.191772};
-    inline static std::array<Scalar, 126> constexpr weights = {
+    inline static std::array<TScalar, 126> constexpr weights = {
         0.00400279,  0.00400279,  0.00400279,  0.00797354,  0.00797354,  0.00797354,  0.00655457,
         0.00655457,  0.00655457,  0.0097915,   0.0097915,   0.0097915,   0.00823544,  0.00823544,
         0.00823544,  0.00427364,  0.00427364,  0.00427364,  0.00408094,  0.00408094,  0.00408094,
@@ -1313,13 +1316,13 @@ struct SymmetricSimplexPolynomialQuadratureRule<2, 25>
         0.00707722,  0.00744069,  0.00744069,  0.00744069,  0.00744069,  0.00744069,  0.00744069};
 };
 
-template <>
-struct SymmetricSimplexPolynomialQuadratureRule<2, 26>
+template <common::CFloatingPoint TScalar>
+struct SymmetricSimplexPolynomialQuadratureRule<2, 26, TScalar>
 {
-    inline static std::uint8_t constexpr kDims             = 2;
-    inline static std::uint16_t constexpr kPoints          = 133;
-    inline static std::uint8_t constexpr kOrder            = 26;
-    inline static std::array<Scalar, 399> constexpr points = {
+    inline static std::uint8_t constexpr kDims              = 2;
+    inline static std::uint16_t constexpr kPoints           = 133;
+    inline static std::uint8_t constexpr kOrder             = 26;
+    inline static std::array<TScalar, 399> constexpr points = {
         0.333333,   0.333333,   0.333333,   0.145238,   0.427381,   0.427381,   0.427381,
         0.145238,   0.427381,   0.427381,   0.427381,   0.145238,   0.226017,   0.386992,
         0.386992,   0.386992,   0.226017,   0.386992,   0.386992,   0.386992,   0.226017,
@@ -1377,7 +1380,7 @@ struct SymmetricSimplexPolynomialQuadratureRule<2, 26>
         0.140968,   0.633993,   0.225039,   0.306228,   0.480239,   0.213533,   0.306228,
         0.213533,   0.480239,   0.480239,   0.306228,   0.213533,   0.480239,   0.213533,
         0.306228,   0.213533,   0.306228,   0.480239,   0.213533,   0.480239,   0.306228};
-    inline static std::array<Scalar, 133> constexpr weights = {
+    inline static std::array<TScalar, 133> constexpr weights = {
         0.00708876,  0.00781424,  0.00781424,  0.00781424,  0.00731876,  0.00731876, 0.00731876,
         0.00599939,  0.00599939,  0.00599939,  0.00704464,  0.00704464,  0.00704464, 0.00568545,
         0.00568545,  0.00568545,  0.00288074,  0.00288074,  0.00288074,  0.00144024, 0.00144024,
@@ -1399,13 +1402,13 @@ struct SymmetricSimplexPolynomialQuadratureRule<2, 26>
         0.00655739,  0.00647017,  0.00647017,  0.00647017,  0.00647017,  0.00647017, 0.00647017};
 };
 
-template <>
-struct SymmetricSimplexPolynomialQuadratureRule<2, 27>
+template <common::CFloatingPoint TScalar>
+struct SymmetricSimplexPolynomialQuadratureRule<2, 27, TScalar>
 {
-    inline static std::uint8_t constexpr kDims             = 2;
-    inline static std::uint16_t constexpr kPoints          = 145;
-    inline static std::uint8_t constexpr kOrder            = 27;
-    inline static std::array<Scalar, 435> constexpr points = {
+    inline static std::uint8_t constexpr kDims              = 2;
+    inline static std::uint16_t constexpr kPoints           = 145;
+    inline static std::uint8_t constexpr kOrder             = 27;
+    inline static std::array<TScalar, 435> constexpr points = {
         0.333333,   0.333333,   0.333333,   0.0714583,  0.464271,   0.464271,   0.464271,
         0.0714583,  0.464271,   0.464271,   0.464271,   0.0714583,  0.135403,   0.432298,
         0.432298,   0.432298,   0.135403,   0.432298,   0.432298,   0.432298,   0.135403,
@@ -1469,7 +1472,7 @@ struct SymmetricSimplexPolynomialQuadratureRule<2, 27>
         0.319849,   0.197778,   0.482373,   0.482373,   0.319849,   0.197778,   0.482373,
         0.197778,   0.319849,   0.197778,   0.319849,   0.482373,   0.197778,   0.482373,
         0.319849};
-    inline static std::array<Scalar, 145> constexpr weights = {
+    inline static std::array<TScalar, 145> constexpr weights = {
         0.000663227, 0.00508803,  0.00508803,  0.00508803,  0.00677682,  0.00677682,  0.00677682,
         0.00717788,  0.00717788,  0.00717788,  0.00881077,  0.00881077,  0.00881077,  0.00643228,
         0.00643228,  0.00643228,  0.0051056,   0.0051056,   0.0051056,   0.00402742,  0.00402742,
@@ -1493,13 +1496,13 @@ struct SymmetricSimplexPolynomialQuadratureRule<2, 27>
         0.00648855,  0.00648855,  0.00648855,  0.00648855,  0.00648855};
 };
 
-template <>
-struct SymmetricSimplexPolynomialQuadratureRule<2, 28>
+template <common::CFloatingPoint TScalar>
+struct SymmetricSimplexPolynomialQuadratureRule<2, 28, TScalar>
 {
-    inline static std::uint8_t constexpr kDims             = 2;
-    inline static std::uint16_t constexpr kPoints          = 154;
-    inline static std::uint8_t constexpr kOrder            = 28;
-    inline static std::array<Scalar, 462> constexpr points = {
+    inline static std::uint8_t constexpr kDims              = 2;
+    inline static std::uint16_t constexpr kPoints           = 154;
+    inline static std::uint8_t constexpr kOrder             = 28;
+    inline static std::array<TScalar, 462> constexpr points = {
         0.333333,   0.333333,   0.333333,   0.00329317, 0.498353,   0.498353,   0.498353,
         0.00329317, 0.498353,   0.498353,   0.498353,   0.00329317, 0.0228745,  0.488563,
         0.488563,   0.488563,   0.0228745,  0.488563,   0.488563,   0.488563,   0.0228745,
@@ -1566,7 +1569,7 @@ struct SymmetricSimplexPolynomialQuadratureRule<2, 28>
         0.138341,   0.58603,    0.275629,   0.31378,    0.491511,   0.194709,   0.31378,
         0.194709,   0.491511,   0.491511,   0.31378,    0.194709,   0.491511,   0.194709,
         0.31378,    0.194709,   0.31378,    0.491511,   0.194709,   0.491511,   0.31378};
-    inline static std::array<Scalar, 154> constexpr weights = {
+    inline static std::array<TScalar, 154> constexpr weights = {
         0.00186426,  0.000968272, 0.000968272, 0.000968272, 0.00302571,  0.00302571,  0.00302571,
         0.00570706,  0.00570706,  0.00570706,  0.00804004,  0.00804004,  0.00804004,  0.00701766,
         0.00701766,  0.00701766,  0.00489164,  0.00489164,  0.00489164,  0.00633915,  0.00633915,
@@ -1591,13 +1594,13 @@ struct SymmetricSimplexPolynomialQuadratureRule<2, 28>
         0.00625322,  0.00634924,  0.00634924,  0.00634924,  0.00634924,  0.00634924,  0.00634924};
 };
 
-template <>
-struct SymmetricSimplexPolynomialQuadratureRule<2, 29>
+template <common::CFloatingPoint TScalar>
+struct SymmetricSimplexPolynomialQuadratureRule<2, 29, TScalar>
 {
-    inline static std::uint8_t constexpr kDims             = 2;
-    inline static std::uint16_t constexpr kPoints          = 166;
-    inline static std::uint8_t constexpr kOrder            = 29;
-    inline static std::array<Scalar, 498> constexpr points = {
+    inline static std::uint8_t constexpr kDims              = 2;
+    inline static std::uint16_t constexpr kPoints           = 166;
+    inline static std::uint8_t constexpr kOrder             = 29;
+    inline static std::array<TScalar, 498> constexpr points = {
         0.333333,   0.333333,   0.333333,   0.00116747, 0.499416,   0.499416,   0.499416,
         0.00116747, 0.499416,   0.499416,   0.499416,   0.00116747, 0.0210331,  0.489483,
         0.489483,   0.489483,   0.0210331,  0.489483,   0.489483,   0.489483,   0.0210331,
@@ -1670,7 +1673,7 @@ struct SymmetricSimplexPolynomialQuadratureRule<2, 29>
         0.328704,   0.192481,   0.478815,   0.478815,   0.328704,   0.192481,   0.478815,
         0.192481,   0.328704,   0.192481,   0.328704,   0.478815,   0.192481,   0.478815,
         0.328704};
-    inline static std::array<Scalar, 166> constexpr weights = {
+    inline static std::array<TScalar, 166> constexpr weights = {
         0.00695185,  0.000597035, 0.000597035, 0.000597035, 0.00279209,  0.00279209,  0.00279209,
         0.00700715,  0.00700715,  0.00700715,  0.0070539,   0.0070539,   0.0070539,   0.00671405,
         0.00671405,  0.00671405,  0.00608769,  0.00608769,  0.00608769,  0.00361147,  0.00361147,
@@ -1697,33 +1700,33 @@ struct SymmetricSimplexPolynomialQuadratureRule<2, 29>
         0.00634059,  0.00634059,  0.00634059,  0.00634059,  0.00634059};
 };
 
-template <>
-struct SymmetricSimplexPolynomialQuadratureRule<3, 0>
+template <common::CFloatingPoint TScalar>
+struct SymmetricSimplexPolynomialQuadratureRule<3, 0, TScalar>
 {
-    inline static std::uint8_t constexpr kDims            = 3;
-    inline static std::uint16_t constexpr kPoints         = 1;
-    inline static std::uint8_t constexpr kOrder           = 0;
-    inline static std::array<Scalar, 4> constexpr points  = {0.25, 0.25, 0.25, 0.25};
-    inline static std::array<Scalar, 1> constexpr weights = {0.166667};
+    inline static std::uint8_t constexpr kDims             = 3;
+    inline static std::uint16_t constexpr kPoints          = 1;
+    inline static std::uint8_t constexpr kOrder            = 0;
+    inline static std::array<TScalar, 4> constexpr points  = {0.25, 0.25, 0.25, 0.25};
+    inline static std::array<TScalar, 1> constexpr weights = {0.166667};
 };
 
-template <>
-struct SymmetricSimplexPolynomialQuadratureRule<3, 1>
+template <common::CFloatingPoint TScalar>
+struct SymmetricSimplexPolynomialQuadratureRule<3, 1, TScalar>
 {
-    inline static std::uint8_t constexpr kDims            = 3;
-    inline static std::uint16_t constexpr kPoints         = 1;
-    inline static std::uint8_t constexpr kOrder           = 1;
-    inline static std::array<Scalar, 4> constexpr points  = {0.25, 0.25, 0.25, 0.25};
-    inline static std::array<Scalar, 1> constexpr weights = {0.166667};
+    inline static std::uint8_t constexpr kDims             = 3;
+    inline static std::uint16_t constexpr kPoints          = 1;
+    inline static std::uint8_t constexpr kOrder            = 1;
+    inline static std::array<TScalar, 4> constexpr points  = {0.25, 0.25, 0.25, 0.25};
+    inline static std::array<TScalar, 1> constexpr weights = {0.166667};
 };
 
-template <>
-struct SymmetricSimplexPolynomialQuadratureRule<3, 2>
+template <common::CFloatingPoint TScalar>
+struct SymmetricSimplexPolynomialQuadratureRule<3, 2, TScalar>
 {
-    inline static std::uint8_t constexpr kDims            = 3;
-    inline static std::uint16_t constexpr kPoints         = 4;
-    inline static std::uint8_t constexpr kOrder           = 2;
-    inline static std::array<Scalar, 16> constexpr points = {
+    inline static std::uint8_t constexpr kDims             = 3;
+    inline static std::uint16_t constexpr kPoints          = 4;
+    inline static std::uint8_t constexpr kOrder            = 2;
+    inline static std::array<TScalar, 16> constexpr points = {
         0.58541,
         0.138197,
         0.138197,
@@ -1740,32 +1743,32 @@ struct SymmetricSimplexPolynomialQuadratureRule<3, 2>
         0.138197,
         0.138197,
         0.58541};
-    inline static std::array<Scalar, 4> constexpr weights =
+    inline static std::array<TScalar, 4> constexpr weights =
         {0.0416667, 0.0416667, 0.0416667, 0.0416667};
 };
 
-template <>
-struct SymmetricSimplexPolynomialQuadratureRule<3, 3>
+template <common::CFloatingPoint TScalar>
+struct SymmetricSimplexPolynomialQuadratureRule<3, 3, TScalar>
 {
-    inline static std::uint8_t constexpr kDims            = 3;
-    inline static std::uint16_t constexpr kPoints         = 8;
-    inline static std::uint8_t constexpr kOrder           = 3;
-    inline static std::array<Scalar, 32> constexpr points = {
+    inline static std::uint8_t constexpr kDims             = 3;
+    inline static std::uint16_t constexpr kPoints          = 8;
+    inline static std::uint8_t constexpr kOrder            = 3;
+    inline static std::array<TScalar, 32> constexpr points = {
         0.0158359, 0.328055, 0.328055,  0.328055, 0.328055, 0.0158359, 0.328055, 0.328055,
         0.328055,  0.328055, 0.0158359, 0.328055, 0.328055, 0.328055,  0.328055, 0.0158359,
         0.679143,  0.106952, 0.106952,  0.106952, 0.106952, 0.679143,  0.106952, 0.106952,
         0.106952,  0.106952, 0.679143,  0.106952, 0.106952, 0.106952,  0.106952, 0.679143};
-    inline static std::array<Scalar, 8> constexpr weights =
+    inline static std::array<TScalar, 8> constexpr weights =
         {0.023088, 0.023088, 0.023088, 0.023088, 0.0185787, 0.0185787, 0.0185787, 0.0185787};
 };
 
-template <>
-struct SymmetricSimplexPolynomialQuadratureRule<3, 4>
+template <common::CFloatingPoint TScalar>
+struct SymmetricSimplexPolynomialQuadratureRule<3, 4, TScalar>
 {
-    inline static std::uint8_t constexpr kDims            = 3;
-    inline static std::uint16_t constexpr kPoints         = 14;
-    inline static std::uint8_t constexpr kOrder           = 4;
-    inline static std::array<Scalar, 56> constexpr points = {
+    inline static std::uint8_t constexpr kDims             = 3;
+    inline static std::uint16_t constexpr kPoints          = 14;
+    inline static std::uint8_t constexpr kOrder            = 4;
+    inline static std::array<TScalar, 56> constexpr points = {
         0.721794,  0.0927353, 0.0927353, 0.0927353, 0.0927353, 0.721794,  0.0927353, 0.0927353,
         0.0927353, 0.0927353, 0.721794,  0.0927353, 0.0927353, 0.0927353, 0.0927353, 0.721794,
         0.0673422, 0.310886,  0.310886,  0.310886,  0.310886,  0.0673422, 0.310886,  0.310886,
@@ -1773,7 +1776,7 @@ struct SymmetricSimplexPolynomialQuadratureRule<3, 4>
         0.0455037, 0.0455037, 0.454496,  0.454496,  0.0455037, 0.454496,  0.0455037, 0.454496,
         0.0455037, 0.454496,  0.454496,  0.0455037, 0.454496,  0.0455037, 0.454496,  0.0455037,
         0.454496,  0.0455037, 0.0455037, 0.454496,  0.454496,  0.454496,  0.0455037, 0.0455037};
-    inline static std::array<Scalar, 14> constexpr weights = {
+    inline static std::array<TScalar, 14> constexpr weights = {
         0.0122488,
         0.0122488,
         0.0122488,
@@ -1790,13 +1793,13 @@ struct SymmetricSimplexPolynomialQuadratureRule<3, 4>
         0.007091};
 };
 
-template <>
-struct SymmetricSimplexPolynomialQuadratureRule<3, 5>
+template <common::CFloatingPoint TScalar>
+struct SymmetricSimplexPolynomialQuadratureRule<3, 5, TScalar>
 {
-    inline static std::uint8_t constexpr kDims            = 3;
-    inline static std::uint16_t constexpr kPoints         = 14;
-    inline static std::uint8_t constexpr kOrder           = 5;
-    inline static std::array<Scalar, 56> constexpr points = {
+    inline static std::uint8_t constexpr kDims             = 3;
+    inline static std::uint16_t constexpr kPoints          = 14;
+    inline static std::uint8_t constexpr kOrder            = 5;
+    inline static std::array<TScalar, 56> constexpr points = {
         0.0673422, 0.310886,  0.310886,  0.310886,  0.310886,  0.0673422, 0.310886,  0.310886,
         0.310886,  0.310886,  0.0673422, 0.310886,  0.310886,  0.310886,  0.310886,  0.0673422,
         0.721794,  0.0927353, 0.0927353, 0.0927353, 0.0927353, 0.721794,  0.0927353, 0.0927353,
@@ -1804,7 +1807,7 @@ struct SymmetricSimplexPolynomialQuadratureRule<3, 5>
         0.0455037, 0.0455037, 0.454496,  0.454496,  0.0455037, 0.454496,  0.0455037, 0.454496,
         0.0455037, 0.454496,  0.454496,  0.0455037, 0.454496,  0.0455037, 0.454496,  0.0455037,
         0.454496,  0.0455037, 0.0455037, 0.454496,  0.454496,  0.454496,  0.0455037, 0.0455037};
-    inline static std::array<Scalar, 14> constexpr weights = {
+    inline static std::array<TScalar, 14> constexpr weights = {
         0.0187813,
         0.0187813,
         0.0187813,
@@ -1821,13 +1824,13 @@ struct SymmetricSimplexPolynomialQuadratureRule<3, 5>
         0.007091};
 };
 
-template <>
-struct SymmetricSimplexPolynomialQuadratureRule<3, 6>
+template <common::CFloatingPoint TScalar>
+struct SymmetricSimplexPolynomialQuadratureRule<3, 6, TScalar>
 {
-    inline static std::uint8_t constexpr kDims            = 3;
-    inline static std::uint16_t constexpr kPoints         = 24;
-    inline static std::uint8_t constexpr kOrder           = 6;
-    inline static std::array<Scalar, 96> constexpr points = {
+    inline static std::uint8_t constexpr kDims             = 3;
+    inline static std::uint16_t constexpr kPoints          = 24;
+    inline static std::uint8_t constexpr kOrder            = 6;
+    inline static std::array<TScalar, 96> constexpr points = {
         0.356191,  0.214603, 0.214603,  0.214603, 0.214603, 0.356191,  0.214603, 0.214603,
         0.214603,  0.214603, 0.356191,  0.214603, 0.214603, 0.214603,  0.214603, 0.356191,
         0.877978,  0.040674, 0.040674,  0.040674, 0.040674, 0.877978,  0.040674, 0.040674,
@@ -1840,20 +1843,20 @@ struct SymmetricSimplexPolynomialQuadratureRule<3, 6>
         0.603006,  0.063661, 0.063661,  0.269672, 0.603006, 0.063661,  0.269672, 0.063661,
         0.603006,  0.269672, 0.063661,  0.063661, 0.269672, 0.063661,  0.063661, 0.603006,
         0.269672,  0.063661, 0.603006,  0.063661, 0.269672, 0.603006,  0.063661, 0.063661};
-    inline static std::array<Scalar, 24> constexpr weights = {
+    inline static std::array<TScalar, 24> constexpr weights = {
         0.00665379, 0.00665379, 0.00665379, 0.00665379, 0.00167954, 0.00167954,
         0.00167954, 0.00167954, 0.0092262,  0.0092262,  0.0092262,  0.0092262,
         0.00803571, 0.00803571, 0.00803571, 0.00803571, 0.00803571, 0.00803571,
         0.00803571, 0.00803571, 0.00803571, 0.00803571, 0.00803571, 0.00803571};
 };
 
-template <>
-struct SymmetricSimplexPolynomialQuadratureRule<3, 7>
+template <common::CFloatingPoint TScalar>
+struct SymmetricSimplexPolynomialQuadratureRule<3, 7, TScalar>
 {
-    inline static std::uint8_t constexpr kDims             = 3;
-    inline static std::uint16_t constexpr kPoints          = 35;
-    inline static std::uint8_t constexpr kOrder            = 7;
-    inline static std::array<Scalar, 140> constexpr points = {
+    inline static std::uint8_t constexpr kDims              = 3;
+    inline static std::uint16_t constexpr kPoints           = 35;
+    inline static std::uint8_t constexpr kOrder             = 7;
+    inline static std::array<TScalar, 140> constexpr points = {
         0.25,      0.25,      0.25,      0.25,      0.0528966, 0.315701,  0.315701,  0.315701,
         0.315701,  0.0528966, 0.315701,  0.315701,  0.315701,  0.315701,  0.0528966, 0.315701,
         0.315701,  0.315701,  0.315701,  0.0528966, 0.0504898, 0.0504898, 0.44951,   0.44951,
@@ -1872,7 +1875,7 @@ struct SymmetricSimplexPolynomialQuadratureRule<3, 7>
         0.81083,   0.0212655, 0.146639,  0.0212655, 0.81083,   0.146639,  0.0212655, 0.0212655,
         0.146639,  0.0212655, 0.0212655, 0.81083,   0.146639,  0.0212655, 0.81083,   0.0212655,
         0.146639,  0.81083,   0.0212655, 0.0212655};
-    inline static std::array<Scalar, 35> constexpr weights = {
+    inline static std::array<TScalar, 35> constexpr weights = {
         0.0159142,  0.00705493, 0.00705493, 0.00705493, 0.00705493, 0.00531615, 0.00531615,
         0.00531615, 0.00531615, 0.00531615, 0.00531615, 0.00620119, 0.00620119, 0.00620119,
         0.00620119, 0.00620119, 0.00620119, 0.00620119, 0.00620119, 0.00620119, 0.00620119,
@@ -1880,13 +1883,13 @@ struct SymmetricSimplexPolynomialQuadratureRule<3, 7>
         0.0013518,  0.0013518,  0.0013518,  0.0013518,  0.0013518,  0.0013518,  0.0013518};
 };
 
-template <>
-struct SymmetricSimplexPolynomialQuadratureRule<3, 8>
+template <common::CFloatingPoint TScalar>
+struct SymmetricSimplexPolynomialQuadratureRule<3, 8, TScalar>
 {
-    inline static std::uint8_t constexpr kDims             = 3;
-    inline static std::uint16_t constexpr kPoints          = 46;
-    inline static std::uint8_t constexpr kOrder            = 8;
-    inline static std::array<Scalar, 184> constexpr points = {
+    inline static std::uint8_t constexpr kDims              = 3;
+    inline static std::uint16_t constexpr kPoints           = 46;
+    inline static std::uint8_t constexpr kOrder             = 8;
+    inline static std::array<TScalar, 184> constexpr points = {
         0.880974,  0.0396754, 0.0396754, 0.0396754, 0.0396754, 0.880974,  0.0396754, 0.0396754,
         0.0396754, 0.0396754, 0.880974,  0.0396754, 0.0396754, 0.0396754, 0.0396754, 0.880974,
         0.0565366, 0.314488,  0.314488,  0.314488,  0.314488,  0.0565366, 0.314488,  0.314488,
@@ -1910,7 +1913,7 @@ struct SymmetricSimplexPolynomialQuadratureRule<3, 8>
         0.580577,  0.20448,   0.20448,   0.0104626, 0.580577,  0.20448,   0.0104626, 0.20448,
         0.580577,  0.0104626, 0.20448,   0.20448,   0.0104626, 0.20448,   0.20448,   0.580577,
         0.0104626, 0.20448,   0.580577,  0.20448,   0.0104626, 0.580577,  0.20448,   0.20448};
-    inline static std::array<Scalar, 46> constexpr weights = {
+    inline static std::array<TScalar, 46> constexpr weights = {
         0.00106619, 0.00106619, 0.00106619, 0.00106619, 0.00669841, 0.00669841, 0.00669841,
         0.00669841, 0.00405133, 0.00405133, 0.00405133, 0.00405133, 0.00914315, 0.00914315,
         0.00914315, 0.00914315, 0.00595327, 0.00595327, 0.00595327, 0.00595327, 0.00595327,
@@ -1920,13 +1923,13 @@ struct SymmetricSimplexPolynomialQuadratureRule<3, 8>
         0.0027287,  0.0027287,  0.0027287,  0.0027287};
 };
 
-template <>
-struct SymmetricSimplexPolynomialQuadratureRule<3, 9>
+template <common::CFloatingPoint TScalar>
+struct SymmetricSimplexPolynomialQuadratureRule<3, 9, TScalar>
 {
-    inline static std::uint8_t constexpr kDims             = 3;
-    inline static std::uint16_t constexpr kPoints          = 59;
-    inline static std::uint8_t constexpr kOrder            = 9;
-    inline static std::array<Scalar, 236> constexpr points = {
+    inline static std::uint8_t constexpr kDims              = 3;
+    inline static std::uint16_t constexpr kPoints           = 59;
+    inline static std::uint8_t constexpr kOrder             = 9;
+    inline static std::array<TScalar, 236> constexpr points = {
         0.25,       0.25,       0.25,       0.25,       0.886435,   0.037855,   0.037855,
         0.037855,   0.037855,   0.886435,   0.037855,   0.037855,   0.037855,   0.037855,
         0.886435,   0.037855,   0.037855,   0.037855,   0.037855,   0.886435,   0.491367,
@@ -1961,7 +1964,7 @@ struct SymmetricSimplexPolynomialQuadratureRule<3, 9>
         0.181744,   0.0362758,  0.181744,   0.600237,   0.0362758,  0.181744,   0.181744,
         0.0362758,  0.181744,   0.181744,   0.600237,   0.0362758,  0.181744,   0.600237,
         0.181744,   0.0362758,  0.600237,   0.181744,   0.181744};
-    inline static std::array<Scalar, 59> constexpr weights = {
+    inline static std::array<TScalar, 59> constexpr weights = {
         0.00914976, 0.000703043, 0.000703043, 0.000703043, 0.000703043, 0.00391402,  0.00391402,
         0.00391402, 0.00391402,  0.000702139, 0.000702139, 0.000702139, 0.000702139, 0.00499119,
         0.00499119, 0.00499119,  0.00499119,  0.00615907,  0.00615907,  0.00615907,  0.00615907,
@@ -1973,13 +1976,13 @@ struct SymmetricSimplexPolynomialQuadratureRule<3, 9>
         0.0036012,  0.0036012,   0.0036012};
 };
 
-template <>
-struct SymmetricSimplexPolynomialQuadratureRule<3, 10>
+template <common::CFloatingPoint TScalar>
+struct SymmetricSimplexPolynomialQuadratureRule<3, 10, TScalar>
 {
-    inline static std::uint8_t constexpr kDims             = 3;
-    inline static std::uint16_t constexpr kPoints          = 79;
-    inline static std::uint8_t constexpr kOrder            = 10;
-    inline static std::array<Scalar, 316> constexpr points = {
+    inline static std::uint8_t constexpr kDims              = 3;
+    inline static std::uint16_t constexpr kPoints           = 79;
+    inline static std::uint8_t constexpr kOrder             = 10;
+    inline static std::array<TScalar, 316> constexpr points = {
         0.25,      0.25,      0.25,      0.25,      0.657244,  0.114252,  0.114252,  0.114252,
         0.114252,  0.657244,  0.114252,  0.114252,  0.114252,  0.114252,  0.657244,  0.114252,
         0.114252,  0.114252,  0.114252,  0.657244,  0.968086,  0.0106379, 0.0106379, 0.0106379,
@@ -2020,7 +2023,7 @@ struct SymmetricSimplexPolynomialQuadratureRule<3, 10>
         0.812131,  0.0300216, 0.127826,  0.0300216, 0.812131,  0.127826,  0.0300216, 0.0300216,
         0.127826,  0.0300216, 0.0300216, 0.812131,  0.127826,  0.0300216, 0.812131,  0.0300216,
         0.127826,  0.812131,  0.0300216, 0.0300216};
-    inline static std::array<Scalar, 79> constexpr weights = {
+    inline static std::array<TScalar, 79> constexpr weights = {
         0.00762365,  0.00182121,  0.00182121,  0.00182121,  0.00182121,  9.22539e-05, 9.22539e-05,
         9.22539e-05, 9.22539e-05, 0.00428223,  0.00428223,  0.00428223,  0.00428223,  9.23127e-05,
         9.23127e-05, 9.23127e-05, 9.23127e-05, 9.23127e-05, 9.23127e-05, 0.0017414,   0.0017414,
@@ -2035,13 +2038,13 @@ struct SymmetricSimplexPolynomialQuadratureRule<3, 10>
         0.00102665,  0.00102665};
 };
 
-template <>
-struct SymmetricSimplexPolynomialQuadratureRule<3, 11>
+template <common::CFloatingPoint TScalar>
+struct SymmetricSimplexPolynomialQuadratureRule<3, 11, TScalar>
 {
-    inline static std::uint8_t constexpr kDims             = 3;
-    inline static std::uint16_t constexpr kPoints          = 96;
-    inline static std::uint8_t constexpr kOrder            = 11;
-    inline static std::array<Scalar, 384> constexpr points = {
+    inline static std::uint8_t constexpr kDims              = 3;
+    inline static std::uint16_t constexpr kPoints           = 96;
+    inline static std::uint8_t constexpr kOrder             = 11;
+    inline static std::array<TScalar, 384> constexpr points = {
         0.626183,    0.124606,    0.124606,    0.124606,    0.124606,    0.626183,    0.124606,
         0.124606,    0.124606,    0.124606,    0.626183,    0.124606,    0.124606,    0.124606,
         0.124606,    0.626183,    0.921711,    0.0260963,   0.0260963,   0.0260963,   0.0260963,
@@ -2097,7 +2100,7 @@ struct SymmetricSimplexPolynomialQuadratureRule<3, 11>
         0.115068,    0.440548,    0.00383687,  0.440548,    0.115068,    0.00383687,  0.440548,
         0.440548,    0.00383687,  0.440548,    0.440548,    0.115068,    0.00383687,  0.440548,
         0.115068,    0.440548,    0.00383687,  0.115068,    0.440548,    0.440548};
-    inline static std::array<Scalar, 96> constexpr weights = {
+    inline static std::array<TScalar, 96> constexpr weights = {
         0.00268783,  0.00268783,  0.00268783,  0.00268783,  0.000298121, 0.000298121, 0.000298121,
         0.000298121, 0.00141255,  0.00141255,  0.00141255,  0.00141255,  0.00206337,  0.00206337,
         0.00206337,  0.00206337,  0.00367598,  0.00367598,  0.00367598,  0.00367598,  0.00382628,
@@ -2114,13 +2117,13 @@ struct SymmetricSimplexPolynomialQuadratureRule<3, 11>
         0.00105548,  0.00105548,  0.00105548,  0.00105548,  0.00105548};
 };
 
-template <>
-struct SymmetricSimplexPolynomialQuadratureRule<3, 12>
+template <common::CFloatingPoint TScalar>
+struct SymmetricSimplexPolynomialQuadratureRule<3, 12, TScalar>
 {
-    inline static std::uint8_t constexpr kDims             = 3;
-    inline static std::uint16_t constexpr kPoints          = 127;
-    inline static std::uint8_t constexpr kOrder            = 12;
-    inline static std::array<Scalar, 508> constexpr points = {
+    inline static std::uint8_t constexpr kDims              = 3;
+    inline static std::uint16_t constexpr kPoints           = 127;
+    inline static std::uint8_t constexpr kOrder             = 12;
+    inline static std::array<TScalar, 508> constexpr points = {
         0.25,      0.25,      0.25,      0.25,      0.420438,  0.193187,  0.193187,  0.193187,
         0.193187,  0.420438,  0.193187,  0.193187,  0.193187,  0.193187,  0.420438,  0.193187,
         0.193187,  0.193187,  0.193187,  0.420438,  0.945649,  0.018117,  0.018117,  0.018117,
@@ -2185,7 +2188,7 @@ struct SymmetricSimplexPolynomialQuadratureRule<3, 12>
         0.0985124, 0.652507,  0.0225183, 0.226462,  0.0985124, 0.226462,  0.652507,  0.0225183,
         0.0985124, 0.226462,  0.0225183, 0.652507,  0.0985124, 0.0225183, 0.652507,  0.226462,
         0.0985124, 0.0225183, 0.226462,  0.652507};
-    inline static std::array<Scalar, 127> constexpr weights = {
+    inline static std::array<TScalar, 127> constexpr weights = {
         0.00390097,  0.00080745,  0.00080745,  0.00080745,  0.00080745,  0.000133109, 0.000133109,
         0.000133109, 0.000133109, 0.00218645,  0.00218645,  0.00218645,  0.00218645,  0.0039203,
         0.0039203,   0.0039203,   0.0039203,   0.000351435, 0.000351435, 0.000351435, 0.000351435,
@@ -2207,13 +2210,13 @@ struct SymmetricSimplexPolynomialQuadratureRule<3, 12>
         0.00126653};
 };
 
-template <>
-struct SymmetricSimplexPolynomialQuadratureRule<3, 13>
+template <common::CFloatingPoint TScalar>
+struct SymmetricSimplexPolynomialQuadratureRule<3, 13, TScalar>
 {
-    inline static std::uint8_t constexpr kDims             = 3;
-    inline static std::uint16_t constexpr kPoints          = 149;
-    inline static std::uint8_t constexpr kOrder            = 13;
-    inline static std::array<Scalar, 596> constexpr points = {
+    inline static std::uint8_t constexpr kDims              = 3;
+    inline static std::uint16_t constexpr kPoints           = 149;
+    inline static std::uint8_t constexpr kOrder             = 13;
+    inline static std::array<TScalar, 596> constexpr points = {
         0.25,       0.25,       0.25,       0.25,       0.70194,    0.0993534,  0.0993534,
         0.0993534,  0.0993534,  0.70194,    0.0993534,  0.0993534,  0.0993534,  0.0993534,
         0.70194,    0.0993534,  0.0993534,  0.0993534,  0.0993534,  0.70194,    0.929144,
@@ -2300,7 +2303,7 @@ struct SymmetricSimplexPolynomialQuadratureRule<3, 13>
         0.607754,   0.27325,    0.00561878, 0.113377,   0.607754,   0.00561878, 0.27325,
         0.113377,   0.00561878, 0.27325,    0.607754,   0.113377,   0.00561878, 0.607754,
         0.27325};
-    inline static std::array<Scalar, 149> constexpr weights = {
+    inline static std::array<TScalar, 149> constexpr weights = {
         0.00365263,  0.00134932,  0.00134932,  0.00134932,  0.00134932,  0.000217199, 0.000217199,
         0.000217199, 0.000217199, 0.00332768,  0.00332768,  0.00332768,  0.00332768,  0.00354284,
         0.00354284,  0.00354284,  0.00354284,  0.000128886, 0.000128886, 0.000128886, 0.000128886,
@@ -2325,13 +2328,13 @@ struct SymmetricSimplexPolynomialQuadratureRule<3, 13>
         0.000522431, 0.000522431};
 };
 
-template <>
-struct SymmetricSimplexPolynomialQuadratureRule<3, 14>
+template <common::CFloatingPoint TScalar>
+struct SymmetricSimplexPolynomialQuadratureRule<3, 14, TScalar>
 {
-    inline static std::uint8_t constexpr kDims             = 3;
-    inline static std::uint16_t constexpr kPoints          = 194;
-    inline static std::uint8_t constexpr kOrder            = 14;
-    inline static std::array<Scalar, 776> constexpr points = {
+    inline static std::uint8_t constexpr kDims              = 3;
+    inline static std::uint16_t constexpr kPoints           = 194;
+    inline static std::uint8_t constexpr kOrder             = 14;
+    inline static std::array<TScalar, 776> constexpr points = {
         0.618897,    0.127034,    0.127034,    0.127034,    0.127034,    0.618897,    0.127034,
         0.127034,    0.127034,    0.127034,    0.618897,    0.127034,    0.127034,    0.127034,
         0.127034,    0.618897,    0.888511,    0.0371631,   0.0371631,   0.0371631,   0.0371631,
@@ -2443,7 +2446,7 @@ struct SymmetricSimplexPolynomialQuadratureRule<3, 14>
         0.000164468, 0.813797,    0.125826,    0.0602133,   0.000164468, 0.0602133,   0.813797,
         0.125826,    0.000164468, 0.0602133,   0.125826,    0.813797,    0.000164468, 0.125826,
         0.813797,    0.0602133,   0.000164468, 0.125826,    0.0602133,   0.813797};
-    inline static std::array<Scalar, 194> constexpr weights = {
+    inline static std::array<TScalar, 194> constexpr weights = {
         0.00149738,  0.00149738,  0.00149738,  0.00149738,  0.000392358, 0.000392358, 0.000392358,
         0.000392358, 0.00122259,  0.00122259,  0.00122259,  0.00122259,  0.000601049, 0.000601049,
         0.000601049, 0.000601049, 3.79944e-05, 3.79944e-05, 3.79944e-05, 3.79944e-05, 0.000708448,
@@ -2474,13 +2477,13 @@ struct SymmetricSimplexPolynomialQuadratureRule<3, 14>
         0.000153006, 0.000153006, 0.000153006, 0.000153006, 0.000153006};
 };
 
-template <>
-struct SymmetricSimplexPolynomialQuadratureRule<3, 15>
+template <common::CFloatingPoint TScalar>
+struct SymmetricSimplexPolynomialQuadratureRule<3, 15, TScalar>
 {
-    inline static std::uint8_t constexpr kDims             = 3;
-    inline static std::uint16_t constexpr kPoints          = 246;
-    inline static std::uint8_t constexpr kOrder            = 15;
-    inline static std::array<Scalar, 984> constexpr points = {
+    inline static std::uint8_t constexpr kDims              = 3;
+    inline static std::uint16_t constexpr kPoints           = 246;
+    inline static std::uint8_t constexpr kOrder             = 15;
+    inline static std::array<TScalar, 984> constexpr points = {
         0.156278,    0.281241,    0.281241,    0.281241,    0.281241,    0.156278,    0.281241,
         0.281241,    0.281241,    0.281241,    0.156278,    0.281241,    0.281241,    0.281241,
         0.281241,    0.156278,    0.999997,    1e-06,       1e-06,       1e-06,       1e-06,
@@ -2622,7 +2625,7 @@ struct SymmetricSimplexPolynomialQuadratureRule<3, 15>
         0.0414455,   0.145933,    0.262369,    0.145933,    0.550253,    0.0414455,   0.262369,
         0.145933,    0.0414455,   0.550253,    0.262369,    0.0414455,   0.550253,    0.145933,
         0.262369,    0.0414455,   0.145933,    0.550253};
-    inline static std::array<Scalar, 246> constexpr weights = {
+    inline static std::array<TScalar, 246> constexpr weights = {
         0.00251943,  0.00251943,  0.00251943,  0.00251943,  2.89784e-06, 2.89784e-06, 2.89784e-06,
         2.89784e-06, 0.000680975, 0.000680975, 0.000680975, 0.000680975, 0.000988252, 0.000988252,
         0.000988252, 0.000988252, 0.000988252, 0.000988252, 0.00236675,  0.00236675,  0.00236675,
@@ -2661,13 +2664,13 @@ struct SymmetricSimplexPolynomialQuadratureRule<3, 15>
         0.000793778};
 };
 
-template <>
-struct SymmetricSimplexPolynomialQuadratureRule<3, 16>
+template <common::CFloatingPoint TScalar>
+struct SymmetricSimplexPolynomialQuadratureRule<3, 16, TScalar>
 {
-    inline static std::uint8_t constexpr kDims              = 3;
-    inline static std::uint16_t constexpr kPoints           = 304;
-    inline static std::uint8_t constexpr kOrder             = 16;
-    inline static std::array<Scalar, 1216> constexpr points = {
+    inline static std::uint8_t constexpr kDims               = 3;
+    inline static std::uint16_t constexpr kPoints            = 304;
+    inline static std::uint8_t constexpr kOrder              = 16;
+    inline static std::array<TScalar, 1216> constexpr points = {
         0.0109856,  0.329671,   0.329671,   0.329671,   0.329671,   0.0109856,  0.329671,
         0.329671,   0.329671,   0.329671,   0.0109856,  0.329671,   0.329671,   0.329671,
         0.329671,   0.0109856,  0.663874,   0.112042,   0.112042,   0.112042,   0.112042,
@@ -2842,7 +2845,7 @@ struct SymmetricSimplexPolynomialQuadratureRule<3, 16>
         0.477994,   0.32214,    0.0134479,  0.186418,   0.0134479,  0.477994,   0.32214,
         0.186418,   0.0134479,  0.32214,    0.477994,   0.186418,   0.32214,    0.477994,
         0.0134479,  0.186418,   0.32214,    0.0134479,  0.477994};
-    inline static std::array<Scalar, 304> constexpr weights = {
+    inline static std::array<TScalar, 304> constexpr weights = {
         0.00067248,  0.00067248,  0.00067248,  0.00067248,  0.000877238, 0.000877238, 0.000877238,
         0.000877238, 0.00179773,  0.00179773,  0.00179773,  0.00179773,  0.00031539,  0.00031539,
         0.00031539,  0.00031539,  0.00100242,  0.00100242,  0.00100242,  0.00100242,  0.00100242,
@@ -2889,13 +2892,13 @@ struct SymmetricSimplexPolynomialQuadratureRule<3, 16>
         0.000654882, 0.000654882, 0.000654882};
 };
 
-template <>
-struct SymmetricSimplexPolynomialQuadratureRule<3, 17>
+template <common::CFloatingPoint TScalar>
+struct SymmetricSimplexPolynomialQuadratureRule<3, 17, TScalar>
 {
-    inline static std::uint8_t constexpr kDims              = 3;
-    inline static std::uint16_t constexpr kPoints           = 364;
-    inline static std::uint8_t constexpr kOrder             = 17;
-    inline static std::array<Scalar, 1456> constexpr points = {
+    inline static std::uint8_t constexpr kDims               = 3;
+    inline static std::uint16_t constexpr kPoints            = 364;
+    inline static std::uint8_t constexpr kOrder              = 17;
+    inline static std::array<TScalar, 1456> constexpr points = {
         0.672222,   0.109259,   0.109259,   0.109259,   0.109259,   0.672222,   0.109259,
         0.109259,   0.109259,   0.109259,   0.672222,   0.109259,   0.109259,   0.109259,
         0.109259,   0.672222,   0.948793,   0.0170691,  0.0170691,  0.0170691,  0.0170691,
@@ -3104,7 +3107,7 @@ struct SymmetricSimplexPolynomialQuadratureRule<3, 17>
         0.322699,   0.468278,   0.0560344,  0.322699,   0.152989,   0.468278,   0.152989,
         0.0560344,  0.322699,   0.468278,   0.152989,   0.322699,   0.0560344,  0.468278,
         0.322699,   0.0560344,  0.152989,   0.468278,   0.322699,   0.152989,   0.0560344};
-    inline static std::array<Scalar, 364> constexpr weights = {
+    inline static std::array<TScalar, 364> constexpr weights = {
         0.000490569, 0.000490569, 0.000490569, 0.000490569, 8.03542e-05, 8.03542e-05, 8.03542e-05,
         8.03542e-05, 0.000272235, 0.000272235, 0.000272235, 0.000272235, 0.00148954,  0.00148954,
         0.00148954,  0.00148954,  0.00058988,  0.00058988,  0.00058988,  0.00058988,  0.00058988,
@@ -3159,13 +3162,13 @@ struct SymmetricSimplexPolynomialQuadratureRule<3, 17>
         0.000953815, 0.000953815, 0.000953815, 0.000953815, 0.000953815, 0.000953815, 0.000953815};
 };
 
-template <>
-struct SymmetricSimplexPolynomialQuadratureRule<3, 18>
+template <common::CFloatingPoint TScalar>
+struct SymmetricSimplexPolynomialQuadratureRule<3, 18, TScalar>
 {
-    inline static std::uint8_t constexpr kDims              = 3;
-    inline static std::uint16_t constexpr kPoints           = 436;
-    inline static std::uint8_t constexpr kOrder             = 18;
-    inline static std::array<Scalar, 1744> constexpr points = {
+    inline static std::uint8_t constexpr kDims               = 3;
+    inline static std::uint16_t constexpr kPoints            = 436;
+    inline static std::uint8_t constexpr kOrder              = 18;
+    inline static std::array<TScalar, 1744> constexpr points = {
         0.380883,   0.206372,   0.206372,   0.206372,   0.206372,   0.380883,   0.206372,
         0.206372,   0.206372,   0.206372,   0.380883,   0.206372,   0.206372,   0.206372,
         0.206372,   0.380883,   0.512384,   0.162539,   0.162539,   0.162539,   0.162539,
@@ -3416,7 +3419,7 @@ struct SymmetricSimplexPolynomialQuadratureRule<3, 18>
         0.129356,   0.0251044,  0.252988,   0.592552,   0.129356,   0.252988,   0.0251044,
         0.592552,   0.252988,   0.0251044,  0.129356,   0.592552,   0.252988,   0.129356,
         0.0251044};
-    inline static std::array<Scalar, 436> constexpr weights = {
+    inline static std::array<TScalar, 436> constexpr weights = {
         0.000250898, 0.000250898, 0.000250898, 0.000250898, 0.00120024,  0.00120024,  0.00120024,
         0.00120024,  0.000966967, 0.000966967, 0.000966967, 0.000966967, 0.000410848, 0.000410848,
         0.000410848, 0.000410848, 0.000137255, 0.000137255, 0.000137255, 0.000137255, 0.000399359,
@@ -3482,13 +3485,13 @@ struct SymmetricSimplexPolynomialQuadratureRule<3, 18>
         0.000604796, 0.000604796};
 };
 
-template <>
-struct SymmetricSimplexPolynomialQuadratureRule<3, 19>
+template <common::CFloatingPoint TScalar>
+struct SymmetricSimplexPolynomialQuadratureRule<3, 19, TScalar>
 {
-    inline static std::uint8_t constexpr kDims              = 3;
-    inline static std::uint16_t constexpr kPoints           = 487;
-    inline static std::uint8_t constexpr kOrder             = 19;
-    inline static std::array<Scalar, 1948> constexpr points = {
+    inline static std::uint8_t constexpr kDims               = 3;
+    inline static std::uint16_t constexpr kPoints            = 487;
+    inline static std::uint8_t constexpr kOrder              = 19;
+    inline static std::array<TScalar, 1948> constexpr points = {
         0.25,       0.25,       0.25,       0.25,       0.7113,     0.0962335,  0.0962335,
         0.0962335,  0.0962335,  0.7113,     0.0962335,  0.0962335,  0.0962335,  0.0962335,
         0.7113,     0.0962335,  0.0962335,  0.0962335,  0.0962335,  0.7113,     0.147787,
@@ -3768,7 +3771,7 @@ struct SymmetricSimplexPolynomialQuadratureRule<3, 19>
         0.25371,    0.01095,    0.419837,   0.315503,   0.25371,    0.01095,    0.315503,
         0.419837,   0.25371,    0.315503,   0.419837,   0.01095,    0.25371,    0.315503,
         0.01095,    0.419837};
-    inline static std::array<Scalar, 487> constexpr weights = {
+    inline static std::array<TScalar, 487> constexpr weights = {
         0.00157957,  0.000384942, 0.000384942, 0.000384942, 0.000384942, 0.000681915, 0.000681915,
         0.000681915, 0.000681915, 0.000195609, 0.000195609, 0.000195609, 0.000195609, 0.000966293,
         0.000966293, 0.000966293, 0.000966293, 0.000966293, 0.000966293, 0.000338165, 0.000338165,
@@ -3841,13 +3844,13 @@ struct SymmetricSimplexPolynomialQuadratureRule<3, 19>
         0.000290799, 0.000290799, 0.000290799, 0.000290799};
 };
 
-template <>
-struct SymmetricSimplexPolynomialQuadratureRule<3, 20>
+template <common::CFloatingPoint TScalar>
+struct SymmetricSimplexPolynomialQuadratureRule<3, 20, TScalar>
 {
-    inline static std::uint8_t constexpr kDims              = 3;
-    inline static std::uint16_t constexpr kPoints           = 552;
-    inline static std::uint8_t constexpr kOrder             = 20;
-    inline static std::array<Scalar, 2208> constexpr points = {
+    inline static std::uint8_t constexpr kDims               = 3;
+    inline static std::uint16_t constexpr kPoints            = 552;
+    inline static std::uint8_t constexpr kOrder              = 20;
+    inline static std::array<TScalar, 2208> constexpr points = {
         0.109672,   0.296776,   0.296776,   0.296776,   0.296776,   0.109672,   0.296776,
         0.296776,   0.296776,   0.296776,   0.109672,   0.296776,   0.296776,   0.296776,
         0.296776,   0.109672,   0.637286,   0.120905,   0.120905,   0.120905,   0.120905,
@@ -4164,7 +4167,7 @@ struct SymmetricSimplexPolynomialQuadratureRule<3, 20>
         0.00879233, 0.252196,   0.00879233, 0.338762,   0.400251,   0.252196,   0.00879233,
         0.400251,   0.338762,   0.252196,   0.400251,   0.338762,   0.00879233, 0.252196,
         0.400251,   0.00879233, 0.338762};
-    inline static std::array<Scalar, 552> constexpr weights = {
+    inline static std::array<TScalar, 552> constexpr weights = {
         0.000903076, 0.000903076, 0.000903076, 0.000903076, 0.000636816, 0.000636816, 0.000636816,
         0.000636816, 0.000676243, 0.000676243, 0.000676243, 0.000676243, 0.000691278, 0.000691278,
         0.000691278, 0.000691278, 0.000881594, 0.000881594, 0.000881594, 0.000881594, 0.000162007,
