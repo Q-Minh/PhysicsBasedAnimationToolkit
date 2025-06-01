@@ -81,42 +81,43 @@ template <class TDerived>
 }
 
 /**
- * @brief
- * @tparam QuadratureOrder
- * @tparam TMesh
- * @param mesh
- * @return \f$ \mathbf{D}^J \in \mathbb{R}^{|G^e| \times |E| } \f$ matrix of element jacobian
- * determinants at element quadrature points, where \f$ |G^e| \f$ is the number of quadrature points
- * per element and \f$ |E| \f$ is the number of elements.
+ * @brief Computes the determinant of the Jacobian matrix at element quadrature points.
+ * @tparam TElement FEM element type
+ * @tparam QuadratureOrder Quadrature order
+ * @tparam TDerivedE Eigen matrix expression for element matrix
+ * @tparam TDerivedX Eigen matrix expression for nodal positions
+ * @param E `|# elem nodes| x |# elems|` element matrix
+ * @param X `|# dims| x |# nodes|` mesh nodal position matrix
+ * @return `|# elem quad.pts.| x |# elems|` matrix of jacobian determinants at element quadrature
+ * points
  */
-template <int QuadratureOrder, CMesh TMesh>
-auto DeterminantOfJacobian(TMesh const& mesh) -> Eigen::Matrix<
-    typename TMesh::ScalarType,
-    TMesh::ElementType::template QuadratureType<QuadratureOrder, typename TMesh::ScalarType>::
-        kPoints,
-    Eigen::Dynamic>
+template <CElement TElement, int QuadratureOrder, class TDerivedE, class TDerivedX>
+[[maybe_unused]] auto
+DeterminantOfJacobian(Eigen::DenseBase<TDerivedE> const& E, Eigen::MatrixBase<TDerivedX> const& X)
+    -> Eigen::Matrix<
+        typename TDerivedX::Scalar,
+        TElement::template QuadratureType<QuadratureOrder, typename TDerivedX::Scalar>::kPoints,
+        Eigen::Dynamic>
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.fem.DeterminantOfJacobian");
-
-    using ScalarType        = typename TMesh::ScalarType;
-    using ElementType       = typename TMesh::ElementType;
+    using ScalarType        = typename TDerivedX::Scalar;
+    using ElementType       = TElement;
     using AffineElementType = typename ElementType::AffineBaseType;
     using QuadratureRuleType =
         typename ElementType::template QuadratureType<QuadratureOrder, ScalarType>;
-    using MatrixType = Eigen::Matrix<ScalarType, Eigen::Dynamic, Eigen::Dynamic>;
+    using MatrixType = Eigen::Matrix<ScalarType, QuadratureRuleType::kPoints, Eigen::Dynamic>;
 
     auto const Xg = common::ToEigen(QuadratureRuleType::points)
                         .reshaped(QuadratureRuleType::kDims + 1, QuadratureRuleType::kPoints)
                         .template bottomRows<ElementType::kDims>();
-    auto const numberOfElements = mesh.E.cols();
+    auto const numberOfElements = E.cols();
     MatrixType detJe(QuadratureRuleType::kPoints, numberOfElements);
     tbb::parallel_for(Index{0}, Index{numberOfElements}, [&](Index e) {
-        auto const nodes      = mesh.E.col(e);
-        auto const vertices   = nodes(ElementType::Vertices);
-        auto constexpr kRowsJ = TMesh::kDims;
-        auto constexpr kColsJ = AffineElementType::kNodes;
-        Eigen::Matrix<ScalarType, kRowsJ, kColsJ> const Ve =
-            mesh.X(Eigen::placeholders::all, vertices);
+        auto const nodes                                   = E.col(e);
+        auto const vertices                                = nodes(ElementType::Vertices);
+        auto constexpr kRowsJ                              = TDerivedX::RowsAtCompileTime;
+        auto constexpr kColsJ                              = AffineElementType::kNodes;
+        Eigen::Matrix<ScalarType, kRowsJ, kColsJ> const Ve = X(Eigen::placeholders::all, vertices);
         if constexpr (AffineElementType::bHasConstantJacobian)
         {
             ScalarType const detJ = DeterminantOfJacobian(
@@ -136,44 +137,156 @@ auto DeterminantOfJacobian(TMesh const& mesh) -> Eigen::Matrix<
 }
 
 /**
+ * @brief
+ * @tparam QuadratureOrder
+ * @tparam TMesh
+ * @param mesh
+ * @return \f$ \mathbf{D}^J \in \mathbb{R}^{|G^e| \times |E| } \f$ matrix of element jacobian
+ * determinants at element quadrature points, where \f$ |G^e| \f$ is the number of quadrature points
+ * per element and \f$ |E| \f$ is the number of elements.
+ */
+template <int QuadratureOrder, CMesh TMesh>
+[[maybe_unused]] auto DeterminantOfJacobian(TMesh const& mesh) -> Eigen::Matrix<
+    typename TMesh::ScalarType,
+    TMesh::ElementType::template QuadratureType<QuadratureOrder, typename TMesh::ScalarType>::
+        kPoints,
+    Eigen::Dynamic>
+{
+    return DeterminantOfJacobian<typename TMesh::ElementType, QuadratureOrder>(mesh.E, mesh.X);
+}
+
+/**
+ * @brief Computes the determinant of the Jacobian matrix at element quadrature points.
+ *
+ * @tparam TElement FEM element type
+ * @tparam TDerivedEg Eigen matrix expression for element indices at evaluation points
+ * @tparam TDerivedX Eigen matrix expression for mesh nodal positions
+ * @tparam TDerivedXi Eigen matrix expression for evaluation points in reference space
+ * @param Eg `|# elem nodes| x |# eval.pts.|` element indices at evaluation points
+ * @param X `|# dims| x |# nodes|` mesh nodal position matrix
+ * @param Xi `|# dims| x |# eval.pts.|` evaluation points in reference space
+ * @return `|# eval.pts.| x 1` vector of jacobian determinants at evaluation points
+ */
+template <CElement TElement, class TDerivedEg, class TDerivedX, class TDerivedXi>
+[[maybe_unused]] auto DeterminantOfJacobian(
+    Eigen::DenseBase<TDerivedEg> const& Eg,
+    Eigen::MatrixBase<TDerivedX> const& X,
+    Eigen::MatrixBase<TDerivedXi> const& Xi)
+    -> Eigen::Vector<typename TDerivedX::Scalar, Eigen::Dynamic>
+{
+    PBAT_PROFILE_NAMED_SCOPE("pbat.fem.DeterminantOfJacobian");
+    using ScalarType        = typename TDerivedX::Scalar;
+    using ElementType       = TElement;
+    using AffineElementType = typename ElementType::AffineBaseType;
+    Eigen::Vector<ScalarType, Eigen::Dynamic> detJe(Eg.cols());
+    tbb::parallel_for(Index{0}, Index{Eg.cols()}, [&](Index g) {
+        auto const nodes                                   = Eg.col(g);
+        auto const vertices                                = nodes(ElementType::Vertices);
+        auto constexpr kRowsJ                              = TDerivedX::RowsAtCompileTime;
+        auto constexpr kColsJ                              = AffineElementType::kNodes;
+        Eigen::Matrix<ScalarType, kRowsJ, kColsJ> const Ve = X(Eigen::placeholders::all, vertices);
+        ScalarType const detJ = DeterminantOfJacobian(Jacobian<AffineElementType>(Xi.col(g), Ve));
+        detJe(g)              = detJ;
+    });
+    return detJe;
+}
+
+/**
+ * @brief Computes the determinant of the Jacobian matrix at element quadrature points.
+ *
+ * @tparam TElement FEM element type
+ * @tparam TDerivedE Eigen matrix expression for element matrix
+ * @tparam TDerivedX Eigen matrix expression for mesh nodal positions
+ * @tparam TDerivedeg Eigen matrix expression for element indices at evaluation points
+ * @tparam TDerivedXi Eigen matrix expression for evaluation points in reference space
+ * @param E `|# elem nodes| x |# elems|` mesh element matrix
+ * @param X `|# dims| x |# nodes|` mesh nodal position matrix
+ * @param eg `|# eval.pts.|` element indices at evaluation points
+ * @param Xi `|# dims| x |# eval.pts.|` evaluation points in reference space
+ * @return `|# eval.pts.| x 1` vector of jacobian determinants at evaluation points
+ */
+template <CElement TElement, class TDerivedE, class TDerivedX, class TDerivedeg, class TDerivedXi>
+[[maybe_unused]] auto DeterminantOfJacobian(
+    Eigen::DenseBase<TDerivedE> const& E,
+    Eigen::MatrixBase<TDerivedX> const& X,
+    Eigen::MatrixBase<TDerivedeg> const& eg,
+    Eigen::MatrixBase<TDerivedXi> const& Xi)
+    -> Eigen::Vector<typename TDerivedX::Scalar, Eigen::Dynamic>
+{
+    return DeterminantOfJacobian<TElement>(
+        E(Eigen::placeholders::all, eg.derived()),
+        X.derived(),
+        Xi.derived());
+}
+
+/**
  * @brief Computes the inner product weights \f$ \mathbf{w}_{ge} \in \mathbb{R}^{|G^e| \times |E|}
  * \f$ such that \f$ \int_\Omega \cdot d\Omega = \sum_e \sum_g w_{ge} \cdot \f$.
  *
+ * In other words, \f$ w_{ge} = w_g \det(J^e_g) \f$ where \f$ J^e_g \f$ is the Jacobian of the
+ * element map at the \f$ g^\text{{th} \f$ quadrature point and \f$ w_g \f$ is the \f$ g^\text{th}
+ * \f$ quadrature weight.
+ *
  * @tparam QuadratureOrder Quadrature order
  * @tparam TMesh Mesh type
- * @tparam TDerivedDetJe Eigen matrix expression for jacobian determinants at quadrature points
  * @param mesh FEM mesh
- * @param detJe Matrix of jacobian determinants at element quadrature points
+ * @param detJe `|# quad.pts.| x |# elements|` matrix of jacobian determinants at element quadrature
+ * points
  * @return `|# quad.pts.|x|# elements|` matrix of quadrature weights multiplied by jacobian
  * determinants at element quadrature points
  */
-template <int QuadratureOrder, CMesh TMesh, class TDerivedDetJe>
-auto InnerProductWeights(TMesh const& mesh, Eigen::MatrixBase<TDerivedDetJe> const& detJe)
+template <CElement TElement, int QuadratureOrder, class TDerivedDetJe>
+void ToInnerProductWeights(Eigen::MatrixBase<TDerivedDetJe>& detJe)
+{
+    PBAT_PROFILE_NAMED_SCOPE("pbat.fem.ToInnerProductWeights");
+    using ScalarType     = typename TDerivedDetJe::Scalar;
+    using QuadratureType = typename TElement::template QuadratureType<QuadratureOrder, ScalarType>;
+    if (detJe.rows() != QuadratureType::kPoints)
+    {
+        throw std::invalid_argument(
+            fmt::format(
+                "detJe must have {} rows, but has {}",
+                QuadratureType::kPoints,
+                detJe.rows()));
+    }
+    auto const wg = common::ToEigen(QuadratureType::weights);
+    detJe.array().colwise() *= wg.array();
+}
+
+/**
+ * @brief Computes the inner product weights \f$ \mathbf{w}_{ge} \in \mathbb{R}^{|G^e| \times |E|}
+ * \f$ such that \f$ \int_\Omega \cdot d\Omega = \sum_e \sum_g w_{ge} \cdot \f$.
+ *
+ * In other words, \f$ w_{ge} = w_g \det(J^e_g) \f$ where \f$ J^e_g \f$ is the Jacobian of the
+ * element map at the \f$ g^\text{{th} \f$ quadrature point and \f$ w_g \f$ is the \f$ g^\text{th}
+ * \f$ quadrature weight.
+ *
+ * @tparam TElement FEM element type
+ * @tparam QuadratureOrder Quadrature order
+ * @tparam TDerivedE Eigen matrix expression for element matrix
+ * @tparam TDerivedX Eigen matrix expression for mesh nodal positions
+ * @param E `|# elem nodes| x |# elems|` mesh element matrix
+ * @param X `|# dims| x |# nodes|` mesh nodal position matrix
+ * @return `|# quad.pts.|x|# elements|` matrix of quadrature weights multiplied by jacobian
+ * determinants at element quadrature points
+ */
+template <CElement TElement, int QuadratureOrder, class TDerivedE, class TDerivedX>
+auto InnerProductWeights(
+    Eigen::MatrixBase<TDerivedE> const& E,
+    Eigen::MatrixBase<TDerivedX> const& X)
     -> Eigen::Matrix<
-        typename TMesh::ScalarType,
-        TMesh::ElementType::template QuadratureType<QuadratureOrder, typename TMesh::ScalarType>::
-            kPoints,
+        typename TDerivedX::Scalar,
+        TElement::template QuadratureType<QuadratureOrder, typename TDerivedX::Scalar>::kPoints,
         Eigen::Dynamic>
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.fem.InnerProductWeights");
-    using ScalarType         = typename TMesh::ScalarType;
-    using ElementType        = typename TMesh::ElementType;
-    using QuadratureRuleType = typename ElementType::template QuadratureType<QuadratureOrder>;
-    using MatrixType = Eigen::Matrix<ScalarType, QuadratureRuleType::kPoints, Eigen::Dynamic>;
-    auto const wg    = common::ToEigen(QuadratureRuleType::weights);
-    if (wg.size() != detJe.rows() or detJe.cols() != mesh.E.cols())
-    {
-        std::string const what = fmt::format(
-            "detJe of invalid dimensions {}x{}, expected {}x{}",
-            detJe.rows(),
-            detJe.cols(),
-            wg.size(),
-            mesh.E.cols());
-        throw std::invalid_argument(what);
-    }
-    MatrixType Ihat = detJe;
-    Ihat.array().colwise() *= wg.array();
-    return Ihat;
+    using ScalarType  = typename TDerivedX::Scalar;
+    using ElementType = TElement;
+    using QuadratureType =
+        typename ElementType::template QuadratureType<QuadratureOrder, ScalarType>;
+    auto detJe = DeterminantOfJacobian<ElementType, QuadratureOrder>(E, X);
+    ToInnerProductWeights<ElementType, QuadratureOrder>(detJe);
+    return detJe;
 }
 
 /**
@@ -197,7 +310,7 @@ auto InnerProductWeights(TMesh const& mesh) -> Eigen::Matrix<
         kPoints,
     Eigen::Dynamic>
 {
-    return InnerProductWeights<QuadratureOrder>(mesh, DeterminantOfJacobian<QuadratureOrder>(mesh));
+    return InnerProductWeights<typename TMesh::ElementType, QuadratureOrder>(mesh.E, mesh.X);
 }
 
 /**
