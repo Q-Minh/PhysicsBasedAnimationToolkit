@@ -38,7 +38,7 @@ TEST_CASE("[fem] DeformationGradient")
             Matrix<kDims, ElementType::kNodes> const x =
                 M.X.colwise() + Vector<kDims>::Constant(3.);
             Matrix<ElementType::kNodes, ElementType::kDims> const GP =
-                fem::ShapeFunctionGradients<ElementType>(Xi, V);
+                fem::ElementShapeFunctionGradients<ElementType>(Xi, V);
             Matrix<kDims, kDims> const F         = x * GP;
             Matrix<kDims, kDims> const Fexpected = Matrix<kDims, kDims>::Identity();
             Scalar const FError                  = (F - Fexpected).norm() / Fexpected.norm();
@@ -69,7 +69,7 @@ TEST_CASE("[fem] DeformationGradient")
             Matrix<kOutDims, ElementType::kNodes> const x =
                 M.X.colwise() + Vector<kOutDims>::Constant(3.);
             Matrix<ElementType::kNodes, kOutDims> const GP =
-                fem::ShapeFunctionGradients<ElementType>(Xi, V);
+                fem::ElementShapeFunctionGradients<ElementType>(Xi, V);
             Matrix<kOutDims, kOutDims> const F = x * GP;
 
             Matrix<kOutDims, kOutDims> Fexpected;

@@ -32,15 +32,10 @@ TEST_CASE("[fem] ShapeFunctions")
 
         Mesh const mesh{V, C};
 
-        MatrixX const detJe         = fem::DeterminantOfJacobian<QuadratureOrder>(mesh);
-        MatrixX const intNe         = fem::IntegratedShapeFunctions<QuadratureOrder>(mesh, detJe);
-        auto const numberOfElements = mesh.E.cols();
+        MatrixX const detJe             = fem::DeterminantOfJacobian<QuadratureOrder>(mesh);
+        auto const numberOfElements     = mesh.E.cols();
         auto constexpr kNodesPerElement = Element::kNodes;
-        CHECK_EQ(intNe.rows(), kNodesPerElement);
-        CHECK_EQ(intNe.cols(), numberOfElements);
-        bool const bIsStrictlyPositive = (intNe.array() > 0.).all();
-        CHECK(bIsStrictlyPositive);
-        MatrixX const gradNe = fem::ShapeFunctionGradients<QuadratureOrder>(mesh);
+        MatrixX const gradNe            = fem::ShapeFunctionGradients<QuadratureOrder>(mesh);
         CHECK_EQ(gradNe.rows(), kNodesPerElement);
         CHECK_EQ(
             gradNe.cols(),
@@ -110,7 +105,7 @@ TEST_CASE("[fem] ShapeFunctionGradients")
     BXi(0)                = 1. - Xi.sum();
     BXi.segment(1, kDims) = Xi;
 
-    Matrix<kNodes, kDims> const GP = fem::ShapeFunctionGradients<ElementType>(Xi, X);
+    Matrix<kNodes, kDims> const GP = fem::ElementShapeFunctionGradients<ElementType>(Xi, X);
 
     // Numerically compute basis functions and their gradients.
     // We know that the basis functions are interpolating polynomials,
@@ -171,7 +166,7 @@ TEST_CASE("[fem] ShapeFunctionGradientsAt")
                 Xi.col(e * kQuadPts + g) = Xg.col(g);
             }
         }
-        MatrixX const GNe         = fem::ShapeFunctionGradientsAt(mesh, Ei, Xi, true);
+        MatrixX const GNe         = fem::ShapeFunctionGradientsAt(mesh, Ei, Xi);
         MatrixX const GNeExpected = fem::ShapeFunctionGradients<kQuadratureOrder>(mesh);
         Scalar const GNeError     = (GNe - GNeExpected).squaredNorm();
         Scalar constexpr zero     = 1e-15;

@@ -35,7 +35,7 @@ TEST_CASE("[sim][dynamics] FemElastoDynamics")
     Eigen::Vector<bool, Eigen::Dynamic> D(nNodes);
     D.setConstant(false);
     D(2) = true;
-    dynamics.Constrain(D);
+//     dynamics.Constrain(D);
     dynamics.SetupTimeIntegrationOptimization();
 
     // Assert

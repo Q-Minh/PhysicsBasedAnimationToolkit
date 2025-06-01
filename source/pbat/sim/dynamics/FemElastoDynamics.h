@@ -425,7 +425,7 @@ inline void FemElastoDynamics<TElement, Dims, THyperElasticEnergy>::Constrain(
     auto const nNodes = mesh.X.cols();
     assert(D.size() == nNodes);
     dbc.setLinSpaced(nNodes, Index(0), nNodes - 1);
-    auto it = std::stable_partition(dbc.begin(), dbc.end(), [&D](Index i) { return not D(i); });
+    auto it = std::stable_partition(dbc.begin(), dbc.end(), [&D](Index i) { return not D[i]; });
     ndbc    = nNodes - std::distance(dbc.begin(), it);
 }
 
@@ -437,7 +437,7 @@ inline void FemElastoDynamics<TElement, Dims, THyperElasticEnergy>::SetMassMatri
     Eigen::MatrixBase<TDerivedXg> const& Xg,
     Eigen::MatrixBase<TDerivedRhog> const& rhog)
 {
-    CSRMatrix N       = fem::ShapeFunctionMatrix(mesh, eg, Xg);
+    auto N            = fem::ShapeFunctionMatrixAt(mesh, eg.derived(), Xg.derived());
     CSRMatrix rhogwgN = rhog.cwiseProduct(wg).asDiagonal() * N;
     CSCMatrix M       = N.transpose() * rhogwgN;
     m.resize(M.cols());
@@ -480,7 +480,7 @@ inline void FemElastoDynamics<TElement, Dims, THyperElasticEnergy>::SetExternalL
     Eigen::MatrixBase<TDerivedXg> const& Xg,
     Eigen::MatrixBase<TDerivedBg> const& bg)
 {
-    CSRMatrix N = fem::ShapeFunctionMatrix(mesh, eg, Xg);
+    CSRMatrix N = fem::ShapeFunctionMatrixAt(mesh, eg.derived(), Xg.derived());
     fext        = bg * wg.asDiagonal() * N;
 }
 

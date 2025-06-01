@@ -122,66 +122,58 @@ struct Gradient
                                     ///< points. See ShapeFunctionGradients().
 };
 
-template <CMesh TMesh>
-inline Gradient<TMesh>::Gradient(
-    MeshType const& mesh,
-    Eigen::Ref<IndexVectorX const> eg,
-    Eigen::Ref<MatrixX const> const& GNeg)
-    : mesh(mesh), eg(eg), GNeg(GNeg)
+/**
+ * @brief Assembled gradient matrix
+ * @tparam TDerivedE Type of the element matrix
+ * @tparam TDerivedEg Type of the element indices at quadrature points
+ * @tparam TDerivedGNeg Type of the shape function gradients at quadrature points
+ * @tparam TScalar Scalar type of the gradient matrix
+ * @tparam TIndex Index type of the gradient matrix
+ * @param E `|# nodes per element| x |# elements|` matrix of mesh element
+ * @param nNodes Number of mesh nodes
+ * @param eg `|# quad.pts.|` vector of element indices at quadrature points
+ * @param GNeg `|# nodes per element| x |# dims * # quad.pts.|` shape function gradients at
+ * quadrature points
+ * @return Sparse matrix representation of the gradient operator
+ */
+template <
+    class TDerivedE,
+    class TDerivedEg,
+    class TDerivedGNeg,
+    common::CFloatingPoint TScalar = typename TDerivedGNeg::Scalar,
+    common::CIndex TIndex          = typename TDerivedEg::Scalar>
+auto GradientMatrix(
+    Eigen::DenseBase<TDerivedE> const& E,
+    Index nNodes,
+    Eigen::DenseBase<TDerivedEg> const& eg,
+    Eigen::MatrixBase<TDerivedGNeg> const& GNeg)
+    -> Eigen::SparseMatrix<TScalar, Eigen::ColMajor, TIndex>
 {
-}
-
-template <CMesh TMesh>
-inline CSCMatrix Gradient<TMesh>::ToMatrix() const
-{
-    PBAT_PROFILE_NAMED_SCOPE("pbat.fem.Gradient.ToMatrix");
-    using SparseIndex = typename CSCMatrix::StorageIndex;
-    using Triplet     = Eigen::Triplet<Scalar, SparseIndex>;
-
+    PBAT_PROFILE_NAMED_SCOPE("pbat.fem.GradientMatrix");
+    auto const kDims       = GNeg.cols() / eg.size();
+    using SparseMatrixType = Eigen::SparseMatrix<TScalar, Eigen::ColMajor, TIndex>;
+    SparseMatrixType G(kDims * nNodes, nNodes);
+    using Triplet = Eigen::Triplet<TScalar, TIndex>;
     std::vector<Triplet> triplets{};
     triplets.reserve(static_cast<std::size_t>(GNeg.size()));
     auto const numberOfQuadraturePoints = eg.size();
-    auto constexpr kNodesPerElement     = ElementType::kNodes;
+    auto const kNodesPerElement         = E.rows();
     for (auto g = 0; g < numberOfQuadraturePoints; ++g)
     {
         auto const e     = eg(g);
-        auto const nodes = mesh.E.col(e);
-        auto const Geg   = GNeg.block<kNodesPerElement, kDims>(0, g * kDims);
+        auto const nodes = E.col(e);
+        auto const Geg   = GNeg.block(0, g * kDims, kNodesPerElement, kDims);
         for (auto d = 0; d < kDims; ++d)
         {
             for (auto j = 0; j < kNodesPerElement; ++j)
             {
-                auto const ni = static_cast<SparseIndex>(d * numberOfQuadraturePoints + g);
-                auto const nj = static_cast<SparseIndex>(nodes(j));
-                triplets.push_back(Triplet(ni, nj, Geg(j, d)));
+                auto const ni = static_cast<TIndex>(d * numberOfQuadraturePoints + g);
+                auto const nj = static_cast<TIndex>(nodes(j));
+                triplets.emplace_back(ni, nj, Geg(j, d));
             }
         }
     }
-    CSCMatrix G(OutputDimensions(), InputDimensions());
-    G.setFromTriplets(triplets.begin(), triplets.end());
     return G;
-}
-
-template <CMesh TMesh>
-inline void Gradient<TMesh>::CheckValidState() const
-{
-    auto const numberOfQuadraturePoints = eg.size();
-    auto constexpr kExpectedGNegRows    = ElementType::kNodes;
-    auto const expectedGNegCols         = kDims * numberOfQuadraturePoints;
-    bool const bShapeFunctionGradientsHaveCorrectDimensions =
-        (GNeg.rows() == kExpectedGNegRows) and (GNeg.cols() == expectedGNegCols);
-    if (not bShapeFunctionGradientsHaveCorrectDimensions)
-    {
-        std::string const what = fmt::format(
-            "Expected shape function gradients at element quadrature points of dimensions "
-            "|#nodes-per-element|={} x |#mesh-dims * #quad.pts.|={} for polynomial but got {}x{} "
-            "instead",
-            kExpectedGNegRows,
-            expectedGNegCols,
-            GNeg.rows(),
-            GNeg.cols());
-        throw std::invalid_argument(what);
-    }
 }
 
 template <CMesh TMesh>

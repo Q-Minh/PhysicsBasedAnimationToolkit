@@ -37,14 +37,20 @@ namespace fem {
  * @param x Map coefficients \f$ \mathbf{x} \f$
  * @return \f$ \nabla_\xi x \f$
  */
-template <CElement TElement, class TDerived>
+template <
+    CElement TElement,
+    class TDerivedX,
+    class TDerivedx,
+    common::CFloatingPoint TScalar = typename TDerivedX::Scalar>
 [[maybe_unused]] auto
-Jacobian(Vector<TElement::kDims> const& X, Eigen::MatrixBase<TDerived> const& x)
-    -> Matrix<TDerived::RowsAtCompileTime, TElement::kDims>
+Jacobian(Eigen::MatrixBase<TDerivedX> const& X, Eigen::MatrixBase<TDerivedx> const& x)
+    -> Eigen::Matrix<TScalar, TDerivedx::RowsAtCompileTime, TElement::kDims>
 {
-    assert(x.cols() == TElement::kNodes);
-    auto constexpr kDimsOut                   = TDerived::RowsAtCompileTime;
-    Matrix<kDimsOut, TElement::kDims> const J = x * TElement::GradN(X);
+    static_assert(
+        TDerivedx::ColsAtCompileTime == TElement::kNodes,
+        "x must have the same number of columns as the number of nodes in the element.");
+    auto constexpr kDimsOut                                   = TDerivedx::RowsAtCompileTime;
+    Eigen::Matrix<TScalar, kDimsOut, TElement::kDims> const J = x * TElement::GradN(X);
     return J;
 }
 
@@ -59,11 +65,13 @@ Jacobian(Vector<TElement::kDims> const& X, Eigen::MatrixBase<TDerived> const& x)
  * @return Determinant of the Jacobian matrix
  */
 template <class TDerived>
-[[maybe_unused]] Scalar DeterminantOfJacobian(Eigen::MatrixBase<TDerived> const& J)
+[[maybe_unused]] auto DeterminantOfJacobian(Eigen::MatrixBase<TDerived> const& J) ->
+    typename TDerived::Scalar
 {
-    bool const bIsSquare = J.rows() == J.cols();
-    Scalar const detJ    = bIsSquare ? J.determinant() : J.jacobiSvd().singularValues().prod();
-    auto constexpr eps   = 1e-10;
+    using ScalarType         = typename TDerived::Scalar;
+    bool const bIsSquare     = J.rows() == J.cols();
+    auto const detJ          = bIsSquare ? J.determinant() : J.jacobiSvd().singularValues().prod();
+    ScalarType constexpr eps = ScalarType(1e-10);
     if (detJ <= eps)
     {
         throw std::invalid_argument("Inverted or singular jacobian");
@@ -81,38 +89,45 @@ template <class TDerived>
  * per element and \f$ |E| \f$ is the number of elements.
  */
 template <int QuadratureOrder, CMesh TMesh>
-MatrixX DeterminantOfJacobian(TMesh const& mesh)
+auto DeterminantOfJacobian(TMesh const& mesh) -> Eigen::Matrix<
+    typename TMesh::ScalarType,
+    TMesh::ElementType::template QuadratureType<QuadratureOrder, typename TMesh::ScalarType>::
+        kPoints,
+    Eigen::Dynamic>
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.fem.DeterminantOfJacobian");
 
-    using ElementType        = typename TMesh::ElementType;
-    using AffineElementType  = typename ElementType::AffineBaseType;
-    using QuadratureRuleType = typename ElementType::template QuadratureType<QuadratureOrder>;
+    using ScalarType        = typename TMesh::ScalarType;
+    using ElementType       = typename TMesh::ElementType;
+    using AffineElementType = typename ElementType::AffineBaseType;
+    using QuadratureRuleType =
+        typename ElementType::template QuadratureType<QuadratureOrder, ScalarType>;
+    using MatrixType = Eigen::Matrix<ScalarType, Eigen::Dynamic, Eigen::Dynamic>;
 
     auto const Xg = common::ToEigen(QuadratureRuleType::points)
                         .reshaped(QuadratureRuleType::kDims + 1, QuadratureRuleType::kPoints)
                         .template bottomRows<ElementType::kDims>();
-
     auto const numberOfElements = mesh.E.cols();
-    MatrixX detJe(QuadratureRuleType::kPoints, numberOfElements);
+    MatrixType detJe(QuadratureRuleType::kPoints, numberOfElements);
     tbb::parallel_for(Index{0}, Index{numberOfElements}, [&](Index e) {
-        auto const nodes                = mesh.E.col(e);
-        auto const vertices             = nodes(ElementType::Vertices);
-        auto constexpr kRowsJ           = TMesh::kDims;
-        auto constexpr kColsJ           = AffineElementType::kNodes;
-        Matrix<kRowsJ, kColsJ> const Ve = mesh.X(Eigen::placeholders::all, vertices);
+        auto const nodes      = mesh.E.col(e);
+        auto const vertices   = nodes(ElementType::Vertices);
+        auto constexpr kRowsJ = TMesh::kDims;
+        auto constexpr kColsJ = AffineElementType::kNodes;
+        Eigen::Matrix<ScalarType, kRowsJ, kColsJ> const Ve =
+            mesh.X(Eigen::placeholders::all, vertices);
         if constexpr (AffineElementType::bHasConstantJacobian)
         {
-            Scalar const detJ = DeterminantOfJacobian(Jacobian<AffineElementType>({}, Ve));
+            ScalarType const detJ = DeterminantOfJacobian(
+                Jacobian<AffineElementType>(Xg.col(0) /*arbitrary eval.pt.*/, Ve));
             detJe.col(e).setConstant(detJ);
         }
         else
         {
             for (auto g = 0; g < QuadratureRuleType::kPoints; ++g)
             {
-                Scalar const detJ =
-                    DeterminantOfJacobian(Jacobian<AffineElementType>(Xg.col(g), Ve));
-                detJe(g, e) = detJ;
+                auto const detJ = DeterminantOfJacobian(Jacobian<AffineElementType>(Xg.col(g), Ve));
+                detJe(g, e)     = detJ;
             }
         }
     });

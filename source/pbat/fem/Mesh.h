@@ -107,7 +107,7 @@ template <CElement TElement, common::CIndex TIndex>
 class NodalKey
 {
   public:
-    using SelfType                 = NodalKey<TElement>;
+    using SelfType                 = NodalKey<TElement, TIndex>; ///< Self type for convenience
     static int constexpr kVertices = TElement::AffineBaseType::kNodes;
 
     NodalKey(
