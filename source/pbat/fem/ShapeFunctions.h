@@ -352,10 +352,7 @@ template <
 auto ShapeFunctionGradients(
     Eigen::MatrixBase<TDerivedE> const& E,
     Eigen::MatrixBase<TDerivedX> const& X)
-    -> Eigen::Matrix<
-        TScalar,
-        TElement::kNodes,
-        TElement::template QuadratureType<QuadratureOrder, TScalar>::kPoints>
+    -> Eigen::Matrix<TScalar, TElement::kNodes, Eigen::Dynamic>
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.fem.ShapeFunctionGradients");
     using ScalarType = TScalar;

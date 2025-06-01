@@ -13,6 +13,7 @@
 #define PBAT_FEM_JACOBIAN_H
 
 #include "Concepts.h"
+#include "pbat/common/Concepts.h"
 
 #include <Eigen/Cholesky>
 #include <Eigen/LU>
@@ -138,6 +139,47 @@ auto DeterminantOfJacobian(TMesh const& mesh) -> Eigen::Matrix<
  * @brief Computes the inner product weights \f$ \mathbf{w}_{ge} \in \mathbb{R}^{|G^e| \times |E|}
  * \f$ such that \f$ \int_\Omega \cdot d\Omega = \sum_e \sum_g w_{ge} \cdot \f$.
  *
+ * @tparam QuadratureOrder Quadrature order
+ * @tparam TMesh Mesh type
+ * @tparam TDerivedDetJe Eigen matrix expression for jacobian determinants at quadrature points
+ * @param mesh FEM mesh
+ * @param detJe Matrix of jacobian determinants at element quadrature points
+ * @return `|# quad.pts.|x|# elements|` matrix of quadrature weights multiplied by jacobian
+ * determinants at element quadrature points
+ */
+template <int QuadratureOrder, CMesh TMesh, class TDerivedDetJe>
+auto InnerProductWeights(TMesh const& mesh, Eigen::MatrixBase<TDerivedDetJe> const& detJe)
+    -> Eigen::Matrix<
+        typename TMesh::ScalarType,
+        TMesh::ElementType::template QuadratureType<QuadratureOrder, typename TMesh::ScalarType>::
+            kPoints,
+        Eigen::Dynamic>
+{
+    PBAT_PROFILE_NAMED_SCOPE("pbat.fem.InnerProductWeights");
+    using ScalarType         = typename TMesh::ScalarType;
+    using ElementType        = typename TMesh::ElementType;
+    using QuadratureRuleType = typename ElementType::template QuadratureType<QuadratureOrder>;
+    using MatrixType = Eigen::Matrix<ScalarType, QuadratureRuleType::kPoints, Eigen::Dynamic>;
+    auto const wg    = common::ToEigen(QuadratureRuleType::weights);
+    if (wg.size() != detJe.rows() or detJe.cols() != mesh.E.cols())
+    {
+        std::string const what = fmt::format(
+            "detJe of invalid dimensions {}x{}, expected {}x{}",
+            detJe.rows(),
+            detJe.cols(),
+            wg.size(),
+            mesh.E.cols());
+        throw std::invalid_argument(what);
+    }
+    MatrixType Ihat = detJe;
+    Ihat.array().colwise() *= wg.array();
+    return Ihat;
+}
+
+/**
+ * @brief Computes the inner product weights \f$ \mathbf{w}_{ge} \in \mathbb{R}^{|G^e| \times |E|}
+ * \f$ such that \f$ \int_\Omega \cdot d\Omega = \sum_e \sum_g w_{ge} \cdot \f$.
+ *
  * In other words, \f$ w_{ge} = w_g \det(J^e_g) \f$ where \f$ J^e_g \f$ is the Jacobian of the
  * element map at the \f$ g^\text{{th} \f$ quadrature point and \f$ w_g \f$ is the \f$ g^\text{th}
  * \f$ quadrature weight.
@@ -149,47 +191,13 @@ auto DeterminantOfJacobian(TMesh const& mesh) -> Eigen::Matrix<
  * determinants at element quadrature points
  */
 template <int QuadratureOrder, CMesh TMesh>
-MatrixX InnerProductWeights(TMesh const& mesh)
+auto InnerProductWeights(TMesh const& mesh) -> Eigen::Matrix<
+    typename TMesh::ScalarType,
+    TMesh::ElementType::template QuadratureType<QuadratureOrder, typename TMesh::ScalarType>::
+        kPoints,
+    Eigen::Dynamic>
 {
-    MatrixX detJe            = DeterminantOfJacobian<QuadratureOrder>(mesh);
-    using ElementType        = typename TMesh::ElementType;
-    using QuadratureRuleType = typename ElementType::template QuadratureType<QuadratureOrder>;
-    auto const wg            = common::ToEigen(QuadratureRuleType::weights);
-    detJe.array().colwise() *= wg.array();
-    return detJe;
-}
-
-/**
- * @brief Computes the inner product weights \f$ \mathbf{w}_{ge} \in \mathbb{R}^{|G^e| \times |E|}
- * \f$ such that \f$ \int_\Omega \cdot d\Omega = \sum_e \sum_g w_{ge} \cdot \f$.
- *
- * @tparam QuadratureOrder Quadrature order
- * @tparam TMesh Mesh type
- * @tparam TDerivedDetJe Eigen matrix expression for jacobian determinants at quadrature points
- * @param mesh FEM mesh
- * @param detJe Matrix of jacobian determinants at element quadrature points
- * @return `|# quad.pts.|x|# elements|` matrix of quadrature weights multiplied by jacobian
- * determinants at element quadrature points
- */
-template <int QuadratureOrder, CMesh TMesh, class TDerivedDetJe>
-MatrixX InnerProductWeights(TMesh const& mesh, Eigen::MatrixBase<TDerivedDetJe> const& detJe)
-{
-    using ElementType        = typename TMesh::ElementType;
-    using QuadratureRuleType = typename ElementType::template QuadratureType<QuadratureOrder>;
-    auto const wg            = common::ToEigen(QuadratureRuleType::weights);
-    if (wg.size() != detJe.rows() or detJe.cols() != mesh.E.cols())
-    {
-        std::string const what = fmt::format(
-            "detJe of invalid dimensions {}x{}, expected {}x{}",
-            detJe.rows(),
-            detJe.cols(),
-            wg.size(),
-            mesh.E.cols());
-        throw std::invalid_argument(what);
-    }
-    MatrixX Ihat = detJe;
-    Ihat.array().colwise() *= wg.array();
-    return Ihat;
+    return InnerProductWeights<QuadratureOrder>(mesh, DeterminantOfJacobian<QuadratureOrder>(mesh));
 }
 
 /**
@@ -219,13 +227,24 @@ MatrixX InnerProductWeights(TMesh const& mesh, Eigen::MatrixBase<TDerivedDetJe> 
  * @param eps Convergence tolerance
  * @return Reference position \f$ \xi \f$
  */
-template <CElement TElement, class TDerivedX, class TDerivedx>
-Vector<TElement::kDims> ReferencePosition(
+template <
+    CElement TElement,
+    class TDerivedX,
+    class TDerivedx,
+    common::CFloatingPoint TScalar = typename TDerivedX::Scalar>
+auto ReferencePosition(
     Eigen::MatrixBase<TDerivedX> const& X,
     Eigen::MatrixBase<TDerivedx> const& x,
     int const maxIterations = 5,
-    Scalar const eps        = 1e-10)
+    TScalar const eps       = 1e-10) -> Eigen::Vector<TScalar, TElement::kDims>
 {
+    using ScalarType = TScalar;
+    static_assert(
+        std::is_same_v<ScalarType, typename TDerivedX::Scalar>,
+        "X and x must have given scalar type");
+    static_assert(
+        std::is_same_v<ScalarType, typename TDerivedx::Scalar>,
+        "X and x must have given scalar type");
     using ElementType = TElement;
     assert(x.cols() == ElementType::kNodes);
     auto constexpr kDims    = ElementType::kDims;
@@ -234,14 +253,14 @@ Vector<TElement::kDims> ReferencePosition(
     // Initial guess is element's barycenter.
     auto const coords = common::ToEigen(ElementType::Coordinates).reshaped(kDims, kNodes);
     auto const vertexLagrangePositions =
-        (coords(Eigen::placeholders::all, ElementType::Vertices).template cast<Scalar>() /
-         static_cast<Scalar>(ElementType::kOrder));
-    Vector<kDims> Xik =
-        vertexLagrangePositions.rowwise().sum() / static_cast<Scalar>(ElementType::Vertices.size());
+        (coords(Eigen::placeholders::all, ElementType::Vertices).template cast<ScalarType>() /
+         static_cast<ScalarType>(ElementType::kOrder));
+    Eigen::Vector<ScalarType, kDims> Xik = vertexLagrangePositions.rowwise().sum() /
+                                           static_cast<ScalarType>(ElementType::Vertices.size());
 
-    Vector<kOutDims> rk = x * ElementType::N(Xik) - X;
-    Matrix<kOutDims, kDims> J;
-    Eigen::LDLT<Matrix<kDims, kDims>> LDLT;
+    Eigen::Vector<ScalarType, kOutDims> rk = x * ElementType::N(Xik) - X;
+    Eigen::Matrix<ScalarType, kOutDims, kDims> J;
+    Eigen::LDLT<Eigen::Matrix<ScalarType, kDims, kDims>> LDLT;
 
     // If Jacobian is constant, let's precompute it
     if constexpr (ElementType::bHasConstantJacobian)
@@ -272,40 +291,117 @@ Vector<TElement::kDims> ReferencePosition(
  * @brief Computes reference positions \f$ \xi \f$ such that \f$ X(\xi) = X_n \f$ for every point in
  * \f$ \mathbf{X} \in \mathbb{R}^{d \times n} \f$.
  *
- * @tparam TDerivedE Eigen matrix expression for indices of elements
- * @tparam TDerivedX Eigen matrix expression for domain positions
- * @tparam TMesh FEM mesh type
- * @param mesh FEM mesh
- * @param E Indices of elements
- * @param X Domain positions
+ * @tparam TElement FEM element type
+ * @tparam TDerivedEg Eigen matrix expression for element indices at evaluation points
+ * @tparam TDerivedX Eigen matrix expression for mesh node positions
+ * @tparam TDerivedXg Eigen matrix expression for evaluation points
+ * @param Eg `|# elem nodes| x |# eval. pts.|` matrix of element indices at evaluation points
+ * @param X `|# dims| x |# nodes|` matrix of mesh node positions
+ * @param Xg `|# dims| x |# eval. pts.|` matrix of evaluation points in domain space
+ * @param maxIterations Maximum number of Gauss-Newton iterations
+ * @param eps Convergence tolerance
+ * @return `|# element dims| x n` matrix of reference positions associated with domain points X in
+ * corresponding elements E
+ */
+template <
+    CElement TElement,
+    class TDerivedEg,
+    class TDerivedX,
+    class TDerivedXg,
+    common::CFloatingPoint TScalar = typename TDerivedXg::Scalar>
+auto ReferencePositions(
+    Eigen::DenseBase<TDerivedEg> const& Eg,
+    Eigen::MatrixBase<TDerivedX> const& X,
+    Eigen::MatrixBase<TDerivedXg> const& Xg,
+    int maxIterations = 5,
+    TScalar eps       = 1e-10) -> Eigen::Matrix<TScalar, TElement::kDims, Eigen::Dynamic>
+{
+    PBAT_PROFILE_NAMED_SCOPE("pbat.fem.ReferencePositions");
+    static_assert(
+        std::is_same_v<TScalar, typename TDerivedX::Scalar>,
+        "X must have given scalar type");
+    static_assert(
+        std::is_same_v<TScalar, typename TDerivedXg::Scalar>,
+        "Xg must have given scalar type");
+    using ElementType = TElement;
+    using ScalarType  = TScalar;
+    using MatrixType  = Eigen::Matrix<ScalarType, ElementType::kDims, Eigen::Dynamic>;
+    MatrixType Xi(ElementType::kDims, Eg.cols());
+    tbb::parallel_for(Index{0}, Index{Eg.cols()}, [&](Index g) {
+        auto const nodes                                     = Eg.col(g);
+        auto constexpr kOutDims                              = TDerivedX::RowsAtCompileTime;
+        auto constexpr kNodes                                = ElementType::kNodes;
+        Eigen::Matrix<ScalarType, kOutDims, kNodes> const Xe = X(Eigen::placeholders::all, nodes);
+        Eigen::Vector<ScalarType, kOutDims> const Xk         = Xg.col(g);
+        Xi.col(g) = ReferencePosition<ElementType>(Xk, Xe, maxIterations, eps);
+    });
+    return Xi;
+}
+
+/**
+ * @brief
+ * @tparam TElement FEM element type
+ * @tparam TDerivedE Eigen matrix expression for elements
+ * @tparam TDerivedX Eigen matrix expression for nodal positions
+ * @tparam TDerivedEg Eigen matrix expression for indices of elements at evaluation points
+ * @tparam TDerivedXg Eigen matrix expression for evaluation points in domain space
+ * @param E `|# elem nodes| x |# elems|` element matrix
+ * @param X `|# dims| x |# nodes|` nodal position matrix
+ * @param eg `|# eval.pts.| x 1` Indices of elements at evaluation points
+ * @param Xg `|# dims| x |# eval.pts.|` evaluation points in domain space
  * @param maxIterations Maximum number of Gauss-Newton iterations
  * @param eps Convergence tolerance
  * @return `|# element dims| x n` matrix of reference positions associated with domain points
- * X in corresponding elements E
- * @pre `E.size() == X.cols()`
  */
-template <CMesh TMesh, class TDerivedE, class TDerivedX>
-MatrixX ReferencePositions(
-    TMesh const& mesh,
+template <CElement TElement, class TDerivedE, class TDerivedX, class TDerivedEg, class TDerivedXg>
+auto ReferencePositions(
     Eigen::DenseBase<TDerivedE> const& E,
     Eigen::MatrixBase<TDerivedX> const& X,
-    int maxIterations = 5,
-    Scalar eps        = 1e-10)
+    Eigen::DenseBase<TDerivedEg> const& eg,
+    Eigen::MatrixBase<TDerivedXg> const& Xg,
+    int maxIterations               = 5,
+    typename TDerivedXg::Scalar eps = 1e-10)
+    -> Eigen::Matrix<typename TDerivedXg::Scalar, TElement::kDims, Eigen::Dynamic>
 {
-    PBAT_PROFILE_NAMED_SCOPE("pbat.fem.ReferencePositions");
-    using MeshType    = TMesh;
-    using ElementType = typename MeshType::ElementType;
-    MatrixX Xi(ElementType::kDims, E.size());
-    tbb::parallel_for(Index{0}, Index{E.size()}, [&](Index k) {
-        Index const e                     = E(k);
-        auto const nodes                  = mesh.E.col(e);
-        auto constexpr kOutDims           = MeshType::kDims;
-        auto constexpr kNodes             = ElementType::kNodes;
-        Matrix<kOutDims, kNodes> const Xe = mesh.X(Eigen::placeholders::all, nodes);
-        Vector<kOutDims> const Xk         = X.col(k);
-        Xi.col(k) = ReferencePosition<ElementType>(Xk, Xe, maxIterations, eps);
-    });
-    return Xi;
+    return ReferencePositions<TElement>(
+        E(Eigen::placeholders::all, eg.derived()),
+        X.derived(),
+        Xg.derived(),
+        maxIterations,
+        eps);
+}
+
+/**
+ * @brief Computes reference positions \f$ \xi \f$ such that \f$ X(\xi) = X_n \f$ for every point in
+ * \f$ \mathbf{X} \in \mathbb{R}^{d \times n} \f$.
+ *
+ * @tparam TMesh FEM mesh type
+ * @tparam TDerivedEg Eigen matrix expression for indices of elements
+ * @tparam TDerivedXg Eigen matrix expression for evaluation points
+ * @param mesh FEM mesh
+ * @param eg `|# eval.pts.| x 1` indices of elements at evaluation points
+ * @param Xg `|# dims| x |# eval.pts.|` evaluation points in domain space
+ * @param maxIterations Maximum number of Gauss-Newton iterations
+ * @param eps Convergence tolerance
+ * @return `|# element dims| x |# eval.pts.|` matrix of reference positions associated with domain
+ * points X in corresponding elements E
+ * @pre `E.size() == X.cols()`
+ */
+template <CMesh TMesh, class TDerivedEg, class TDerivedXg>
+auto ReferencePositions(
+    TMesh const& mesh,
+    Eigen::DenseBase<TDerivedEg> const& eg,
+    Eigen::MatrixBase<TDerivedXg> const& Xg,
+    int maxIterations              = 5,
+    typename TMesh::ScalarType eps = 1e-10)
+    -> Eigen::Matrix<typename TMesh::ScalarType, TMesh::ElementType::kDims, Eigen::Dynamic>
+{
+    return ReferencePositions<typename TMesh::ElementType>(
+        mesh.E(Eigen::placeholders::all, eg.derived()),
+        mesh.X,
+        Xg.derived(),
+        maxIterations,
+        eps);
 }
 
 } // namespace fem
