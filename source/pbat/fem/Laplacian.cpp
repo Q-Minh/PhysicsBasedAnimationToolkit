@@ -1,4 +1,4 @@
-#include "LaplacianMatrix.h"
+#include "Laplacian.h"
 
 #include "Jacobian.h"
 #include "Mesh.h"
@@ -10,7 +10,7 @@
 #include <pbat/common/ConstexprFor.h>
 #include <pbat/math/LinearOperator.h>
 
-TEST_CASE("[fem] LaplacianMatrix")
+TEST_CASE("[fem] Laplacian")
 {
     using namespace pbat;
 
@@ -44,18 +44,21 @@ TEST_CASE("[fem] LaplacianMatrix")
                     return (kOrder - 1) + (kOrder - 1);
             }();
 
-            using LaplacianMatrix = fem::SymmetricLaplacianMatrix<Mesh>;
-            VectorX const wg      = fem::InnerProductWeights<kQuadratureOrder>(mesh).reshaped();
+            VectorX const wg = fem::InnerProductWeights<kQuadratureOrder>(mesh).reshaped();
             IndexVectorX const eg =
                 IndexVectorX::LinSpaced(mesh.E.cols(), Index(0), mesh.E.cols() - 1)
                     .replicate(1, wg.size() / mesh.E.cols())
                     .transpose()
                     .reshaped();
             MatrixX const GNeg = fem::ShapeFunctionGradients<kQuadratureOrder>(mesh);
-            CHECK(math::CLinearOperator<LaplacianMatrix>);
-            LaplacianMatrix matrixFreeLaplacian(mesh, eg, wg, GNeg, outDims);
-
-            CSCMatrix const L = matrixFreeLaplacian.ToMatrix();
+            auto const LF      = fem::MakeMatrixFreeLaplacian<Element, kDims>(
+                mesh.E,
+                mesh.X.cols(),
+                eg,
+                wg,
+                GNeg,
+                outDims);
+            auto const L = fem::LaplacianMatrix<Eigen::ColMajor>(LF);
             CHECK_EQ(L.rows(), n);
             CHECK_EQ(L.cols(), n);
 
@@ -73,7 +76,7 @@ TEST_CASE("[fem] LaplacianMatrix")
             // multiplication
             VectorX const x = VectorX::Random(n);
             VectorX yFree   = VectorX::Zero(n);
-            matrixFreeLaplacian.Apply(x, yFree);
+            fem::GemmLaplacian(LF, x, yFree);
             VectorX y           = L * x;
             Scalar const yError = (y - yFree).squaredNorm();
             CHECK_LE(yError, zero);
@@ -82,8 +85,8 @@ TEST_CASE("[fem] LaplacianMatrix")
             VectorX yInputScaled  = VectorX::Zero(n);
             VectorX yOutputScaled = VectorX::Zero(n);
             Scalar constexpr k    = -2.;
-            matrixFreeLaplacian.Apply(k * x, yInputScaled);
-            matrixFreeLaplacian.Apply(x, yOutputScaled);
+            fem::GemmLaplacian(LF, k * x, yInputScaled);
+            fem::GemmLaplacian(LF, x, yOutputScaled);
             yOutputScaled *= k;
             Scalar const yLinearityError =
                 (yInputScaled - yOutputScaled).squaredNorm() / yOutputScaled.squaredNorm();
@@ -92,7 +95,7 @@ TEST_CASE("[fem] LaplacianMatrix")
             // Laplacian of constant function should be 0
             VectorX const xconst = VectorX::Ones(n);
             VectorX yconst       = VectorX::Zero(n);
-            matrixFreeLaplacian.Apply(xconst, yconst);
+            fem::GemmLaplacian(LF, xconst, yconst);
             CHECK_LE(yconst.squaredNorm(), zero);
         }
     });

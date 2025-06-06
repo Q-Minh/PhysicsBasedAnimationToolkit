@@ -260,7 +260,7 @@ auto GradientMatrix(
  * @param G MatrixFreeGradient parameter struct
  * @return Sparse matrix representation of the gradient operator
  */
-template <CMatrixFreeGradient TGradient, Eigen::StorageOptions Options>
+template <Eigen::StorageOptions Options, CMatrixFreeGradient TGradient>
 auto GradientMatrix(TGradient const& G)
     -> Eigen::SparseMatrix<typename TGradient::ScalarType, Options, typename TGradient::IndexType>
 {
@@ -307,15 +307,10 @@ inline void GemmGradient(
             Y.cols());
         throw std::invalid_argument(what);
     }
-    // Compile-time constants
-    static_assert(
-        TElement::kNodes != Eigen::Dynamic,
-        "Element nodes must be known at compile time");
+    // Compute gradient
     auto constexpr kNodesPerElement = TElement::kNodes;
     auto constexpr kDims            = Dims;
-
-    // Compute gradient
-    auto const nQuadPts = eg.size();
+    auto const nQuadPts             = eg.size();
     for (auto c = 0; c < X.cols(); ++c)
     {
         for (auto g = 0; g < nQuadPts; ++g)

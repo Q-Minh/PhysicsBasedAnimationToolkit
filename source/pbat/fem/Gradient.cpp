@@ -1,7 +1,7 @@
 #include "Gradient.h"
 
 #include "Jacobian.h"
-#include "LaplacianMatrix.h"
+#include "Laplacian.h"
 #include "Mesh.h"
 #include "ShapeFunctions.h"
 #include "Tetrahedron.h"
@@ -44,8 +44,7 @@ TEST_CASE("[fem] Gradient")
                             .reshaped();
 
         auto const GF = fem::MakeMatrixFreeGradient<Element, kDims>(mesh.E, mesh.X.cols(), eg, GNe);
-        auto const G =
-            fem::GradientMatrix<Element, kDims, Eigen::ColMajor>(mesh.E, mesh.X.cols(), eg, GNe);
+        auto const G  = fem::GradientMatrix<Eigen::ColMajor>(GF);
 
         auto const n                = G.cols();
         auto const m                = G.rows();
@@ -86,9 +85,13 @@ TEST_CASE("[fem] Gradient")
         CSCMatrix Lhat           = -GT * Ihat.asDiagonal() * G;
         VectorX const LhatValues = Lhat.coeffs();
         Lhat.coeffs().setOnes();
-        using LaplacianType   = fem::SymmetricLaplacianMatrix<Mesh>;
-        VectorX const wg      = fem::InnerProductWeights<kQuadratureOrder>(mesh).reshaped();
-        CSCMatrix L           = LaplacianType(mesh, eg, wg, GNe).ToMatrix();
+        VectorX const wg = fem::InnerProductWeights<kQuadratureOrder>(mesh).reshaped();
+        CSCMatrix L      = fem::LaplacianMatrix<Element, kDims, Eigen::ColMajor>(
+            mesh.E,
+            mesh.X.cols(),
+            eg,
+            wg,
+            GNe);
         VectorX const Lvalues = L.coeffs();
         L.coeffs().setOnes();
         Scalar const LsparsityError = (L - Lhat).squaredNorm();
