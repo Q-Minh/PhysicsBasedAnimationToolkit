@@ -101,10 +101,10 @@ auto MakeMatrixFreeGradient(
     Eigen::MatrixBase<TDerivedGNeg> const& GNeg)
 {
     return MatrixFreeGradient<TElement, Dims, TDerivedE, TDerivedeg, TDerivedGNeg>(
-        E,
+        E.derived(),
         nNodes,
-        eg,
-        GNeg);
+        eg.derived(),
+        GNeg.derived());
 }
 
 /**
@@ -166,10 +166,10 @@ inline void GemmGradient(
     GemmGradient<typename TMesh::ElementType, TMesh::kDims>(
         mesh.E,
         static_cast<typename TMesh::IndexType>(mesh.X.cols()),
-        eg,
-        GNeg,
-        X,
-        Y);
+        eg.derived(),
+        GNeg.derived(),
+        X.derived(),
+        Y.derived());
 }
 
 /**
@@ -189,12 +189,12 @@ inline void GemmGradient(
     Eigen::DenseBase<TDerivedOut>& Y)
 {
     GemmGradient<typename TGradient::ElementType, TGradient::kDims>(
-        G.E,
+        G.E.derived(),
         G.nNodes,
-        G.eg,
-        G.GNeg,
-        X,
-        Y);
+        G.eg.derived(),
+        G.GNeg.derived(),
+        X.derived(),
+        Y.derived());
 }
 
 /**
@@ -248,8 +248,8 @@ auto GradientMatrix(
     return GradientMatrix<typename TMesh::ElementType, TMesh::kDims, Options>(
         mesh.E,
         static_cast<typename TMesh::IndexType>(mesh.X.cols()),
-        eg,
-        GNeg);
+        eg.derived(),
+        GNeg.derived());
 }
 
 /**
@@ -265,10 +265,10 @@ auto GradientMatrix(TGradient const& G)
     -> Eigen::SparseMatrix<typename TGradient::ScalarType, Options, typename TGradient::IndexType>
 {
     return GradientMatrix<typename TGradient::ElementType, TGradient::kDims, Options>(
-        G.E,
+        G.E.derived(),
         G.nNodes,
-        G.eg,
-        G.GNeg);
+        G.eg.derived(),
+        G.GNeg.derived());
 }
 
 template <

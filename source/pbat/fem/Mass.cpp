@@ -1,15 +1,16 @@
-#include "MassMatrix.h"
+#include "Mass.h"
 
 #include "Jacobian.h"
 #include "Mesh.h"
+#include "ShapeFunctions.h"
 #include "Tetrahedron.h"
+#include "pbat/common/ConstexprFor.h"
+#include "pbat/math/LinearOperator.h"
 
 #include <Eigen/Eigenvalues>
 #include <doctest/doctest.h>
-#include <pbat/common/ConstexprFor.h>
-#include <pbat/math/LinearOperator.h>
 
-TEST_CASE("[fem] MassMatrix")
+TEST_CASE("[fem] Mass")
 {
     using namespace pbat;
 
@@ -37,14 +38,22 @@ TEST_CASE("[fem] MassMatrix")
             auto const N          = mesh.X.cols();
             Scalar constexpr zero = 1e-10;
             auto const n          = N * outDims;
+            auto const nElements  = mesh.E.cols();
 
             auto constexpr kQuadratureOrder = 2 * kOrder;
-            using MassMatrix                = fem::MassMatrix<Mesh, kQuadratureOrder>;
-            CHECK(math::CLinearOperator<MassMatrix>);
-            MatrixX const detJe = fem::DeterminantOfJacobian<kQuadratureOrder>(mesh);
-            MassMatrix matrixFreeMass(mesh, detJe, rho, outDims);
-
-            CSCMatrix const M = matrixFreeMass.ToMatrix();
+            auto const wg                   = fem::InnerProductWeights<kQuadratureOrder>(mesh);
+            auto const nQuadPtsPerElement   = wg.rows();
+            auto const Ng                   = fem::ShapeFunctions<Element, kQuadratureOrder>();
+            auto const Neg                  = Ng.replicate(1, nElements);
+            auto const rhog                 = VectorX::Constant(wg.size(), rho);
+            auto const Meg = fem::ElementMassMatrices<Element>(Neg, wg.reshaped(), rhog);
+            auto const eg  = IndexVectorX::LinSpaced(nElements, Index(0), nElements - 1)
+                                .replicate(1, nQuadPtsPerElement)
+                                .transpose()
+                                .reshaped();
+            auto const MF =
+                fem::MakeMatrixFreeMass<Element, kDims>(mesh.E, mesh.X.cols(), eg, Meg, outDims);
+            auto const M = fem::MassMatrix<Eigen::ColMajor>(MF);
             CHECK_EQ(M.rows(), n);
             CHECK_EQ(M.cols(), n);
 
@@ -60,7 +69,7 @@ TEST_CASE("[fem] MassMatrix")
             // multiplication
             VectorX const x = VectorX::Ones(n);
             VectorX yFree   = VectorX::Zero(n);
-            matrixFreeMass.Apply(x, yFree);
+            fem::GemmMass(MF, x, yFree);
             VectorX y           = M * x;
             Scalar const yError = (y - yFree).norm() / yFree.norm();
             CHECK_LE(yError, zero);
@@ -69,15 +78,15 @@ TEST_CASE("[fem] MassMatrix")
             VectorX yInputScaled  = VectorX::Zero(n);
             VectorX yOutputScaled = VectorX::Zero(n);
             Scalar constexpr k    = -2.;
-            matrixFreeMass.Apply(k * x, yInputScaled);
-            matrixFreeMass.Apply(x, yOutputScaled);
+            fem::GemmMass(MF, k * x, yInputScaled);
+            fem::GemmMass(MF, x, yOutputScaled);
             yOutputScaled *= k;
             Scalar const yLinearityError =
                 (yInputScaled - yOutputScaled).norm() / yOutputScaled.norm();
             CHECK_LE(yLinearityError, zero);
 
             // Check lumped mass
-            VectorX lumpedMass = matrixFreeMass.ToLumpedMasses();
+            VectorX lumpedMass = fem::LumpedMassMatrix(MF);
             CHECK_EQ(lumpedMass.size(), M.cols());
             for (auto i = 0; i < M.cols(); ++i)
             {

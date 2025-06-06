@@ -125,11 +125,11 @@ auto MakeMatrixFreeLaplacian(
     int dims = 1)
 {
     return MatrixFreeLaplacian<TElement, Dims, TDerivedE, TDerivedeg, TDerivedwg, TDerivedGNeg>(
-        E,
+        E.derived(),
         nNodes,
-        eg,
-        wg,
-        GNeg,
+        eg.derived(),
+        wg.derived(),
+        GNeg.derived(),
         dims);
 }
 
@@ -209,9 +209,9 @@ inline void GemmLaplacian(
     GemmLaplacian<typename TMesh::ElementType, TMesh::kDims>(
         mesh.E,
         static_cast<typename TMesh::IndexType>(mesh.X.cols()),
-        eg,
-        wg,
-        GNeg,
+        eg.derived(),
+        wg.derived(),
+        GNeg.derived(),
         dims,
         X,
         Y);
@@ -234,14 +234,14 @@ inline void GemmLaplacian(
     Eigen::DenseBase<TDerivedOut>& Y)
 {
     GemmLaplacian<typename TLaplacian::ElementType, TLaplacian::kDims>(
-        L.E,
+        L.E.derived(),
         L.nNodes,
-        L.eg,
-        L.wg,
-        L.GNeg,
+        L.eg.derived(),
+        L.wg.derived(),
+        L.GNeg.derived(),
         L.dims,
-        X,
-        Y);
+        X.derived(),
+        Y.derived());
 }
 
 /**
@@ -311,9 +311,9 @@ auto LaplacianMatrix(
     return LaplacianMatrix<typename TMesh::ElementType, TMesh::kDims, Options>(
         mesh.E,
         static_cast<typename TMesh::IndexType>(mesh.X.cols()),
-        eg,
-        wg,
-        GNeg,
+        eg.derived(),
+        wg.derived(),
+        GNeg.derived(),
         dims);
 }
 
@@ -330,11 +330,11 @@ auto LaplacianMatrix(TLaplacian const& L)
     -> Eigen::SparseMatrix<typename TLaplacian::ScalarType, Options, typename TLaplacian::IndexType>
 {
     return LaplacianMatrix<typename TLaplacian::ElementType, TLaplacian::kDims, Options>(
-        L.E,
+        L.E.derived(),
         L.nNodes,
-        L.eg,
-        L.wg,
-        L.GNeg,
+        L.eg.derived(),
+        L.wg.derived(),
+        L.GNeg.derived(),
         L.dims);
 }
 
@@ -431,10 +431,6 @@ auto LaplacianMatrix(
     using SparseMatrixType = Eigen::SparseMatrix<ScalarType, Options, IndexType>;
     using Triplet          = Eigen::Triplet<ScalarType, IndexType>;
 
-    // Compile-time constants
-    static_assert(
-        TElement::kNodes != Eigen::Dynamic,
-        "Element nodes must be known at compile time");
     auto constexpr kNodesPerElement = TElement::kNodes;
     auto constexpr kDims            = Dims;
 

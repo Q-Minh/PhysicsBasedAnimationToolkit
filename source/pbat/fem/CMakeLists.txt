@@ -11,7 +11,7 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     "Jacobian.h"
     "Laplacian.h"
     "Line.h"
-    "MassMatrix.h"
+    "Mass.h"
     "Mesh.h"
     "QuadratureRules.h"
     "Quadrilateral.h"
@@ -26,7 +26,7 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     "HyperElasticPotential.cpp"
     "Jacobian.cpp"
     "Laplacian.cpp"
-    "MassMatrix.cpp"
+    "Mass.cpp"
     "Mesh.cpp"
     "ShapeFunctions.cpp"
 )

@@ -2,7 +2,7 @@
 
 #include "Mesh.h"
 #include "pbat/fem/Jacobian.h"
-#include "pbat/fem/MassMatrix.h"
+#include "pbat/fem/Mass.h"
 #include "pbat/fem/ShapeFunctions.h"
 #include "pbat/graph/Adjacency.h"
 #include "pbat/graph/Color.h"
@@ -208,10 +208,18 @@ Data& Data::Construct(bool bValidate)
         rhoe.setConstant(E.cols(), Scalar(1e3));
     }
     VolumeMesh mesh{X, E};
-    MatrixX detJe = fem::DeterminantOfJacobian<2>(mesh);
-    MatrixX rhog  = rhoe.transpose().replicate(detJe.rows(), 1);
-    fem::MassMatrix<VolumeMesh, 2> M(mesh, detJe, rhog, 1);
-    m  = M.ToLumpedMasses();
+    auto constexpr kQuadratureOrder = 2 * VolumeMesh::ElementType::kOrder;
+    auto const wgM                  = fem::InnerProductWeights<kQuadratureOrder>(mesh);
+    auto const nQuadPtsPerElement   = wgM.rows();
+    auto const eg = IndexVectorX::LinSpaced(mesh.E.cols(), Index(0), mesh.E.cols() - 1)
+                        .replicate(1, nQuadPtsPerElement)
+                        .transpose()
+                        .reshaped();
+    auto const rhog = rhoe.transpose().replicate(nQuadPtsPerElement, 1).reshaped();
+    auto const Ng   = fem::ShapeFunctions<VolumeMesh::ElementType, kQuadratureOrder>();
+    auto const Neg  = Ng.replicate(1, mesh.E.cols());
+    auto const Meg  = fem::ElementMassMatrices<VolumeMesh::ElementType>(Neg, wgM.reshaped(), rhog);
+    fem::ToLumpedMassMatrix(mesh, eg, Meg, 1 /*dims*/, m);
     GP = fem::ShapeFunctionGradients<1>(mesh);
     wg = fem::InnerProductWeights<1>(mesh).reshaped();
     // Adjacency structures
