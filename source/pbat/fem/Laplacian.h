@@ -38,7 +38,9 @@ concept CMatrixFreeLaplacian = requires(T L)
     typename T::ElementType;
     typename T::IndexType;
     typename T::ScalarType;
-    {T::kDims}->std::convertible_to<int>;
+    {
+        T::kDims
+    } -> std::convertible_to<int>;
     {L.E};
     {L.nNodes};
     {L.eg};
@@ -393,17 +395,12 @@ inline void GemmLaplacian(
             auto const e     = eg(g);
             auto const nodes = E.col(e);
             auto const w     = wg(g);
-
             // Get shape function gradients at this quadrature point
             auto const GP = GNeg.template block<kNodesPerElement, kDims>(0, g * kDims);
-
-            // Compute element Laplacian contribution: -w * GP * GP^T
-            auto const Leg = -w * GP * GP.transpose();
-
             // Apply to each dimension
             auto ye       = Y.col(c).reshaped(dims, nNodes)(Eigen::placeholders::all, nodes);
             auto const xe = X.col(c).reshaped(dims, nNodes)(Eigen::placeholders::all, nodes);
-            ye += xe * Leg.transpose(); // Laplacian is symmetric, so transpose doesn't matter
+            ye -= ((w * xe) * GP) * GP.transpose(); // Laplacian is -w GP GP^T
         }
     }
 }
