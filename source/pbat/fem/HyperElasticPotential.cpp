@@ -38,12 +38,9 @@ TEST_CASE("[fem] HyperElasticPotential")
             else
                 return kOrder - 1;
         }();
-        using ElasticEnergyType    = physics::StableNeoHookeanEnergy<3>;
-        using ElementType          = fem::Tetrahedron<kOrder>;
-        using MeshType             = fem::Mesh<ElementType, kDims>;
-        using ElasticPotentialType = fem::HyperElasticPotential<MeshType, ElasticEnergyType>;
-
-        CHECK(math::CLinearOperator<ElasticPotentialType>);
+        using ElasticEnergyType = physics::StableNeoHookeanEnergy<3>;
+        using ElementType       = fem::Tetrahedron<kOrder>;
+        using MeshType          = fem::Mesh<ElementType, kDims>;
 
         MeshType const M(V, C);
         VectorX const x       = M.X.reshaped();
@@ -53,16 +50,29 @@ TEST_CASE("[fem] HyperElasticPotential")
                                     .replicate(1, wg.size() / M.E.cols())
                                     .transpose()
                                     .reshaped();
-        MatrixX lameg(2, wg.size());
-        auto mug               = lameg.row(0).transpose();
-        auto lambdag           = lameg.row(1).transpose();
-        std::tie(mug, lambdag) = physics::LameCoefficients(
+        auto const [mug, lambdag] = physics::LameCoefficients(
             VectorX::Constant(wg.size(), Y),
             VectorX::Constant(wg.size(), nu));
-        ElasticPotentialType U(M, eg, wg, GNeg, lameg, x);
-        Scalar const UMaterial      = U.Eval();
-        VectorX const gradUMaterial = U.ToVector();
-        CSCMatrix const HMaterial   = U.ToMatrix();
+        VectorX Ug;
+        MatrixX Hg, Gg;
+        fem::ToElementElasticity<ElasticEnergyType>(
+            M,
+            eg,
+            wg,
+            GNeg,
+            mug,
+            lambdag,
+            x,
+            Ug,
+            Gg,
+            Hg,
+            fem::EElementElasticityComputationFlags::Potential |
+                fem::EElementElasticityComputationFlags::Gradient |
+                fem::EElementElasticityComputationFlags::Hessian,
+            fem::EHyperElasticSpdCorrection::None);
+        Scalar const UMaterial      = fem::HyperElasticPotential(Ug);
+        VectorX const gradUMaterial = fem::HyperElasticGradient(M, eg, Gg);
+        CSCMatrix const HMaterial   = fem::HyperElasticHessian<Eigen::ColMajor>(M, eg, Hg);
         CSCMatrix const HMaterialT  = HMaterial.transpose();
         Scalar const Esymmetry = (HMaterialT - HMaterial).squaredNorm() / HMaterial.squaredNorm();
         CHECK_LE(Esymmetry, zero);
@@ -76,14 +86,28 @@ TEST_CASE("[fem] HyperElasticPotential")
 
         // Elastic energy is invariant to translations
         Scalar constexpr t = 2.;
-        U.ComputeElementElasticity(VectorX{x.array() + t});
-        Scalar const UTranslated       = U.Eval();
+        fem::ToElementElasticity<ElasticEnergyType>(
+            M,
+            eg,
+            wg,
+            GNeg,
+            mug,
+            lambdag,
+            (x.array() + t).matrix(),
+            Ug,
+            Gg,
+            Hg,
+            fem::EElementElasticityComputationFlags::Potential |
+                fem::EElementElasticityComputationFlags::Gradient |
+                fem::EElementElasticityComputationFlags::Hessian,
+            fem::EHyperElasticSpdCorrection::None);
+        Scalar const UTranslated       = fem::HyperElasticPotential(Ug);
         Scalar const UTranslationError = std::abs(UTranslated - UMaterial);
         CHECK_LE(UTranslationError, zero);
-        VectorX const gradUTranslated      = U.ToVector();
+        VectorX const gradUTranslated      = fem::HyperElasticGradient(M, eg, Gg);
         Scalar const gradUTranslationError = (gradUTranslated - gradUMaterial).squaredNorm();
         CHECK_LE(gradUTranslationError, zero);
-        CSCMatrix const Htranslated = U.ToMatrix();
+        CSCMatrix const Htranslated = fem::HyperElasticHessian<Eigen::ColMajor>(M, eg, Hg);
         Scalar const hessianTranslationInvarianceError =
             (Htranslated - HMaterial).squaredNorm() / HMaterial.squaredNorm();
         CHECK_LE(hessianTranslationInvarianceError, zero);
@@ -96,7 +120,7 @@ TEST_CASE("[fem] HyperElasticPotential")
         Scalar constexpr k = -3.;
         VectorX y          = VectorX::Zero(x.size());
         VectorX yExpected  = k * HMaterial * x + HMaterial * x;
-        U.Apply(k * x + x, y);
+        fem::GemmHyperElastic(M, eg, Hg, k * x + x, y);
         Scalar const linearityError = (y - yExpected).norm() / yExpected.norm();
         CHECK_LE(linearityError, zero);
     });

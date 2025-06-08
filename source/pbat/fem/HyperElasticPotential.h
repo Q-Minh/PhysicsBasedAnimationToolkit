@@ -21,7 +21,7 @@
 #include "pbat/physics/HyperElasticity.h"
 #include "pbat/profiling/Profiling.h"
 
-#include <Eigen/SVD>
+#include <Eigen/Eigenvalues>
 #include <exception>
 #include <fmt/core.h>
 #include <span>
@@ -32,577 +32,1135 @@ namespace pbat {
 namespace fem {
 
 /**
- * @brief Total hyper elastic potential \f$ U(\mathbf{x}) = \int_\Omega \Psi(\mathbf{F}) d\Omega \f$
- *
- * where \f$ \mathbf{F} \f$ is the deformation gradient and \f$ \Psi \f$ is the hyper elastic energy
- * density.
- *
- * HyperElasticPotential's depends on a \f$ |Q| \f$-point quadrature specified by element
- * indices \f$ e_g \f$, quadrature weights \f$ w_g \f$, and shape function gradients \f$ \nabla
- * \phi_g \f$ at quadrature points. This allows users to try out different quadrature rules
- * seamlessly.
- *
- * @tparam TMesh Type satisfying concept CMesh
- * @tparam THyperElasticEnergy Type satisfying concept CHyperElasticEnergy
+ * @brief Bit-flag enum for SPD projection type
  */
-template <CMesh TMesh, physics::CHyperElasticEnergy THyperElasticEnergy>
-struct HyperElasticPotential
-{
-  public:
-    using SelfType          = HyperElasticPotential<TMesh, THyperElasticEnergy>; ///< Self type
-    using MeshType          = TMesh;                                             ///< Mesh type
-    using ElementType       = typename TMesh::ElementType; ///< FEM element type
-    using ElasticEnergyType = THyperElasticEnergy;         ///< Hyper elastic energy density type
-    static_assert(
-        MeshType::kDims == ElasticEnergyType::kDims,
-        "Embedding dimensions of mesh must match dimensionality of hyper elastic energy.");
-
-    static auto constexpr kDims = THyperElasticEnergy::kDims; ///< Number of spatial dimensions
-
-    SelfType& operator=(SelfType const&) = delete;
-
-    /**
-     * @brief Construct a new Hyper Elastic Potential object
-     *
-     * @param mesh FEM mesh
-     * @param eg \f$ |Q| \f$ array of element indices at quadrature points
-     * @param wg \f$ |Q| \f$ array of quadrature weights
-     * @param GNeg Shape function gradients at quadrature points. See ShapeFunctionGradients().
-     * @param lameg \f$ 2 \times |Q| \f$ matrix of Lame coefficients at quadrature points
-     * @pre `eg.size() == wg.size()` and `GNeg.rows() == mesh.E.rows()`
-     * @pre `lameg.cols() == wg.size()` and `lameg.rows() == 2`
-     */
-    HyperElasticPotential(
-        MeshType const& mesh,
-        Eigen::Ref<IndexVectorX const> const& eg,
-        Eigen::Ref<VectorX const> const& wg,
-        Eigen::Ref<MatrixX const> const& GNeg,
-        Eigen::Ref<MatrixX const> const& lameg);
-    /**
-     * @brief Construct a new Hyper Elastic Potential object
-     *
-     * Eagerly computes element elasticity (and its derivatives)
-     *
-     * @tparam TDerived Eigen matrix expression type
-     * @param mesh FEM mesh
-     * @param eg \f$ |Q| \f$ array of element indices at quadrature points
-     * @param wg \f$ |Q| \f$ array of quadrature weights
-     * @param GNeg Shape function gradients at quadrature points. See ShapeFunctionGradients().
-     * @param lameg \f$ 2 \times |Q| \f$ matrix of Lame coefficients at quadrature points
-     * @param x \f$ d \times n \f$ matrix of deformed nodal positions
-     * @pre `eg.size() == wg.size()` and `GNeg.rows() == mesh.E.rows()`
-     * @pre `x.rows() == mesh.X.rows() * mesh.kDims`
-     * @pre `lameg.cols() == wg.size()` and `lameg.rows() == 2`
-     */
-    template <class TDerivedX>
-    HyperElasticPotential(
-        MeshType const& mesh,
-        Eigen::Ref<IndexVectorX const> const& eg,
-        Eigen::Ref<VectorX const> const& wg,
-        Eigen::Ref<MatrixX const> const& GNeg,
-        Eigen::Ref<MatrixX const> const& lameg,
-        Eigen::MatrixBase<TDerivedX> const& x);
-    /**
-     * @brief Precomputes the sparsity pattern of the hessian matrix
-     *
-     * Enables parallel sparse hessian assembly in all future operations.
-     */
-    void PrecomputeHessianSparsity();
-    /**
-     * @brief Computes the element elasticity and its derivatives at the given shape
-     *
-     * @tparam TDerived Eigen matrix expression type
-     * @param x \f$ d \times n \f$ matrix of deformed nodal positions
-     * @param bWithGradient Compute gradient
-     * @param bWithHessian Compute hessian
-     * @param bUseSpdProjection Project per quadrature point hessians to nearest symmetric positive
-     * definite (SPD) matrix
-     * @pre `x.rows() == mesh.X.rows() * mesh.kDims`
-     */
-    template <class TDerived>
-    void ComputeElementElasticity(
-        Eigen::MatrixBase<TDerived> const& x,
-        bool bWithGradient     = true,
-        bool bWithHessian      = true,
-        bool bUseSpdProjection = true);
-
-    /**
-     * @brief Applies the hessian matrix of this potential as a linear operator on x, adding result
-     * to y.
-     *
-     * @tparam TDerivedIn Input matrix type
-     * @tparam TDerivedOut Output matrix type
-     * @param x Input matrix
-     * @param y Output matrix
-     * @pre x.rows() == InputDimensions() and y.rows() == InputDimensions() and y.cols() == x.cols()
-     */
-    template <class TDerivedIn, class TDerivedOut>
-    void Apply(Eigen::MatrixBase<TDerivedIn> const& x, Eigen::DenseBase<TDerivedOut>& y) const;
-    /**
-     * @brief Computes the hessian of the elastic potential and stores it in H.
-     * @tparam TDerived Eigen sparse matrix expression type
-     * @param H Hessian matrix
-     */
-    template <class TDerived>
-    void ToMatrix(Eigen::SparseCompressedBase<TDerived>& H) const;
-    /**
-     * @brief Computes the gradient of the elastic potential and stores it in G.
-     * @tparam TDerived Eigen matrix expression type
-     * @param G Gradient vector
-     */
-    template <class TDerived>
-    void ToVector(Eigen::DenseBase<TDerived>& G) const;
-    /**
-     * @brief Transforms this matrix-free hessian matrix representation into sparse compressed
-     * column format.
-     * @return Sparse compressed column matrix representation of the hessian operator
-     */
-    CSCMatrix ToMatrix() const;
-    /**
-     * @brief Transforms this per quadrature point gradient representation into the global gradient.
-     * @return Global gradient
-     */
-    VectorX ToVector() const;
-    /**
-     * @brief Computes the total elastic potential
-     * @return Total elastic potential
-     */
-    Scalar Eval() const;
-    /**
-     * @brief Number of columns
-     *
-     * Effectively the number of nodes in the system
-     *
-     * @return Number of columns
-     */
-    Index InputDimensions() const;
-    /**
-     * @brief Number of rows
-     *
-     * Effectively the number of nodes in the system
-     *
-     * @return Number of rows
-     */
-    Index OutputDimensions() const;
-    /**
-     * @brief Checks the validity of the held data
-     */
-    void CheckValidState() const;
-
-    MeshType const& mesh; ///< The finite element mesh
-    Eigen::Ref<IndexVectorX const>
-        eg;                       ///< Maps quadrature point index g to its corresponding element e
-    Eigen::Ref<VectorX const> wg; ///< Vector of quadrature weights \f$ w \in \mathbb{R}^{|Q|} \f$
-    Eigen::Ref<MatrixX const>
-        GNeg; ///< `|ElementType::kNodes| x |MeshType::kDims * # element quadrature points *
-              ///< # elements|` shape function gradients at quadrature points
-    Eigen::Ref<MatrixX const> lameg; ///< `2 x |# quad.pts.|` Lame coefficients at quadrature points
-
-    MatrixX Hg; ///< `|(ElementType::kNodes*kDims)| x |# quad.pts. *
-                ///< ElementType::kNodes*kDims|` element hessian matrices at quadrature points
-    MatrixX Gg; ///< `|ElementType::kNodes*kDims| x |#quad.pts.|` element gradient vectors at
-                ///< quadrature points
-    VectorX Ug; ///< `|# quad.pts.|` array of elastic potentials at quadrature points
-    math::linalg::SparsityPattern GH; ///< Directed adjacency graph of hessian
+enum class EHyperElasticSpdCorrection : std::uint32_t {
+    None,       // No projection
+    Projection, // Project element hessian to nearest (in the 2-norm) SPD matrix
+    Absolute,   // Flip negative eigenvalue signs
 };
 
-template <CMesh TMesh, physics::CHyperElasticEnergy THyperElasticEnergy>
-inline HyperElasticPotential<TMesh, THyperElasticEnergy>::HyperElasticPotential(
-    MeshType const& meshIn,
-    Eigen::Ref<IndexVectorX const> const& egIn,
-    Eigen::Ref<VectorX const> const& wgIn,
-    Eigen::Ref<MatrixX const> const& GNegIn,
-    Eigen::Ref<MatrixX const> const& lamegIn)
-    : mesh(meshIn), eg(egIn), wg(wgIn), GNeg(GNegIn), lameg(lamegIn), Hg(), Gg(), Ug(), GH()
+/**
+ * @brief Bit-flag enum for element elasticity computation flags
+ */
+enum EElementElasticityComputationFlags : int {
+    Potential = 1 << 0, // Compute element elastic potential at quadrature points
+    Gradient  = 1 << 1, // Compute element gradient vectors at quadrature points
+    Hessian   = 1 << 2, // Compute element hessian matrices at quadrature points
+};
+
+/**
+ * @brief Compute element elasticity and its derivatives at the given shape
+ * @tparam TElement Element type
+ * @tparam Dims Number of spatial dimensions
+ * @tparam THyperElasticEnergy Hyper elastic energy type
+ * @tparam TDerivedE Type of the element matrix
+ * @tparam TDerivedeg Type of the element indices at quadrature points
+ * @tparam TDerivedwg Type of the quadrature weights
+ * @tparam TDerivedGNeg Type of the shape function gradients at quadrature points
+ * @tparam TDerivedlameg Type of the Lame coefficients at quadrature points
+ * @tparam TDerivedx Type of the deformed nodal positions
+ * @tparam TDerivedUg Type of the elastic potentials at quadrature points
+ * @tparam TDerivedGg Type of the element gradient vectors
+ * @tparam TDerivedHg Type of the element hessian matrices
+ * @param E `|# nodes per element| x |# elements|` matrix of mesh elements
+ * @param nNodes Number of mesh nodes
+ * @param eg `|# quad.pts.| x 1` vector of element indices at quadrature points
+ * @param wg `|# quad.pts.| x 1` vector of quadrature weights
+ * @param GNeg `|# nodes per element| x |# dims * # quad.pts.|` shape function gradients
+ * @param mug `|# quad.pts.| x 1` first Lame coefficients at quadrature points
+ * @param lambdag `|# quad.pts.| x 1` second Lame coefficients at quadrature points
+ * @param x `|# dims * # nodes| x 1` deformed nodal positions
+ * @param Ug Optional `|# quad.pts.| x 1` elastic potentials at quadrature points
+ * @param Gg Optional `|# dims * # elem nodes| x |# quad.pts.|` element elastic potential
+ * gradients at quadrature points.
+ * @param Hg Optional `|# dims * # elem nodes| x |# dims * # elem nodes * # quad.pts.|`
+ * element elastic hessian matrices at quadrature points.
+ * @param eFlags Flags for the computation (see EElementElasticityComputationFlags)
+ * @param eSpdCorrection SPD correction mode (see EHyperElasticSpdCorrection)
+ */
+template <
+    CElement TElement,
+    int Dims,
+    physics::CHyperElasticEnergy THyperElasticEnergy,
+    class TDerivedE,
+    class TDerivedeg,
+    class TDerivedwg,
+    class TDerivedGNeg,
+    class TDerivedmug,
+    class TDerivedlambdag,
+    class TDerivedx,
+    class TDerivedUg,
+    class TDerivedGg,
+    class TDerivedHg>
+void ToElementElasticity(
+    Eigen::DenseBase<TDerivedE> const& E,
+    typename TDerivedE::Scalar nNodes,
+    Eigen::DenseBase<TDerivedeg> const& eg,
+    Eigen::DenseBase<TDerivedwg> const& wg,
+    Eigen::MatrixBase<TDerivedGNeg> const& GNeg,
+    Eigen::DenseBase<TDerivedmug> const& mug,
+    Eigen::DenseBase<TDerivedlambdag> const& lambdag,
+    Eigen::MatrixBase<TDerivedx> const& x,
+    Eigen::PlainObjectBase<TDerivedUg>& Ug,
+    Eigen::PlainObjectBase<TDerivedGg>& Gg,
+    Eigen::PlainObjectBase<TDerivedHg>& Hg,
+    int eFlags                                = EElementElasticityComputationFlags::Potential,
+    EHyperElasticSpdCorrection eSpdCorrection = EHyperElasticSpdCorrection::None);
+
+/**
+ * @brief Compute element elasticity using mesh
+ * @tparam THyperElasticEnergy Hyper elastic energy type
+ * @tparam TMesh Type of the mesh
+ * @tparam TDerivedeg Type of the element indices at quadrature points
+ * @tparam TDerivedwg Type of the quadrature weights
+ * @tparam TDerivedGNeg Type of the shape function gradients at quadrature points
+ * @tparam TDerivedmug Type of the first Lame coefficients at quadrature points
+ * @tparam TDerivedlambdag Type of the second Lame coefficients at quadrature points
+ * @tparam TDerivedx Type of the deformed nodal positions
+ * @tparam TDerivedUg Type of the elastic potentials at quadrature points
+ * @tparam TDerivedGg Type of the element gradient vectors at quadrature points
+ * @tparam TDerivedHg Type of the element hessian matrices at quadrature points
+ * @param mesh Mesh containing element connectivity and node positions
+ * @param eg `|# quad.pts.| x 1` vector of element indices at quadrature points
+ * @param wg `|# quad.pts.| x 1` vector of quadrature weights
+ * @param GNeg `|# nodes per element| x |# dims * # quad.pts.|` shape function gradients
+ * @param mug `|# quad.pts.| x 1` first Lame coefficients at quadrature points
+ * @param lambdag `|# quad.pts.| x 1` second Lame coefficients at quadrature points
+ * @param x `|# dims * # nodes| x 1` deformed nodal positions
+ * @param Ug `|# quad.pts.| x 1` elastic potentials at quadrature points
+ * @param Gg Optional `|# dims * # elem nodes| x |# quad.pts.|` element elastic potential
+ * gradients at quadrature points.
+ * @param Hg Optional `|# dims * # elem nodes| x |# dims * # elem nodes * # quad.pts.|`
+ * element elastic hessian matrices at quadrature points.
+ * @param eFlags Flags for the computation (see EElementElasticityComputationFlags)
+ * @param eSpdCorrection SPD correction mode (see EHyperElasticSpdCorrection)
+ */
+template <
+    physics::CHyperElasticEnergy THyperElasticEnergy,
+    CMesh TMesh,
+    class TDerivedeg,
+    class TDerivedwg,
+    class TDerivedGNeg,
+    class TDerivedmug,
+    class TDerivedlambdag,
+    class TDerivedx,
+    class TDerivedUg,
+    class TDerivedGg,
+    class TDerivedHg>
+inline void ToElementElasticity(
+    TMesh const& mesh,
+    Eigen::DenseBase<TDerivedeg> const& eg,
+    Eigen::DenseBase<TDerivedwg> const& wg,
+    Eigen::MatrixBase<TDerivedGNeg> const& GNeg,
+    Eigen::DenseBase<TDerivedmug> const& mug,
+    Eigen::DenseBase<TDerivedlambdag> const& lambdag,
+    Eigen::MatrixBase<TDerivedx> const& x,
+    Eigen::PlainObjectBase<TDerivedUg>& Ug,
+    Eigen::PlainObjectBase<TDerivedGg>& Gg,
+    Eigen::PlainObjectBase<TDerivedHg>& Hg,
+    int eFlags                                = EElementElasticityComputationFlags::Potential,
+    EHyperElasticSpdCorrection eSpdCorrection = EHyperElasticSpdCorrection::None)
 {
-    auto const numberOfQuadraturePoints = wg.size();
-    auto constexpr kNodesPerElement     = ElementType::kNodes;
-    auto constexpr kDofsPerElement      = kNodesPerElement * kDims;
-    Ug.setZero(numberOfQuadraturePoints);
-    Gg.setZero(kDofsPerElement, numberOfQuadraturePoints);
-    Hg.setZero(kDofsPerElement, kDofsPerElement * numberOfQuadraturePoints);
+    ToElementElasticity<typename TMesh::ElementType, TMesh::kDims, THyperElasticEnergy>(
+        mesh.E,
+        static_cast<typename TMesh::IndexType>(mesh.X.cols()),
+        eg.derived(),
+        wg.derived(),
+        GNeg.derived(),
+        mug.derived(),
+        lambdag.derived(),
+        x.derived(),
+        Ug,
+        Gg,
+        Hg,
+        eFlags,
+        eSpdCorrection);
 }
 
-template <CMesh TMesh, physics::CHyperElasticEnergy THyperElasticEnergy>
-template <class TDerivedX>
-inline HyperElasticPotential<TMesh, THyperElasticEnergy>::HyperElasticPotential(
-    MeshType const& meshIn,
-    Eigen::Ref<IndexVectorX const> const& egIn,
-    Eigen::Ref<VectorX const> const& wgIn,
-    Eigen::Ref<MatrixX const> const& GNegIn,
-    Eigen::Ref<MatrixX const> const& lamegIn,
-    Eigen::MatrixBase<TDerivedX> const& x)
-    : HyperElasticPotential<TMesh, THyperElasticEnergy>(meshIn, egIn, wgIn, GNegIn, lamegIn)
+/**
+ * @brief Apply the hessian matrix as a linear operator \f$ Y += \mathbf{H} X \f$
+ * @tparam TElement Element type
+ * @tparam Dims Number of spatial dimensions
+ * @tparam TDerivedE Type of the element matrix
+ * @tparam TDerivedeg Type of the element indices at quadrature points
+ * @tparam TDerivedHg Type of the element hessian matrices
+ * @tparam TDerivedIn Type of the input matrix
+ * @tparam TDerivedOut Type of the output matrix
+ * @param E `|# nodes per element| x |# elements|` matrix of mesh elements
+ * @param nNodes Number of mesh nodes
+ * @param eg `|# quad.pts.| x 1` vector of element indices at quadrature points
+ * @param Hg `|# dims * # elem nodes| x |# dims * # elem nodes * # quad.pts.|` element elastic
+ * hessian matrices at quadrature points
+ * @param X `|# dims * # nodes| x |# cols|` input matrix
+ * @param Y `|# dims * # nodes| x |# cols|` output matrix
+ */
+template <
+    CElement TElement,
+    int Dims,
+    class TDerivedE,
+    class TDerivedeg,
+    class TDerivedHg,
+    class TDerivedIn,
+    class TDerivedOut>
+void GemmHyperElastic(
+    Eigen::DenseBase<TDerivedE> const& E,
+    typename TDerivedE::Scalar nNodes,
+    Eigen::DenseBase<TDerivedeg> const& eg,
+    Eigen::MatrixBase<TDerivedHg> const& Hg,
+    Eigen::MatrixBase<TDerivedIn> const& X,
+    Eigen::DenseBase<TDerivedOut>& Y);
+
+/**
+ * @brief Apply the hessian matrix as a linear operator \f$ Y += \mathbf{H} X \f$ using mesh
+ * @tparam TMesh Type of the mesh
+ * @tparam TDerivedeg Type of the element indices at quadrature points
+ * @tparam TDerivedHg Type of the element hessian matrices
+ * @tparam TDerivedIn Type of the input matrix
+ * @tparam TDerivedOut Type of the output matrix
+ * @param mesh Mesh containing element connectivity and node positions
+ * @param eg `|# quad.pts.| x 1` vector of element indices at quadrature points
+ * @param Hg `|# dims * # elem nodes| x |# dims * # elem nodes * # quad.pts.|` element elastic
+ * hessian matrices at quadrature points
+ * @param X `|# dims * # nodes| x |# cols|` input matrix
+ * @param Y `|# dims * # nodes| x |# cols|` output matrix
+ */
+template <CMesh TMesh, class TDerivedeg, class TDerivedHg, class TDerivedIn, class TDerivedOut>
+inline void GemmHyperElastic(
+    TMesh const& mesh,
+    Eigen::DenseBase<TDerivedeg> const& eg,
+    Eigen::MatrixBase<TDerivedHg> const& Hg,
+    Eigen::MatrixBase<TDerivedIn> const& X,
+    Eigen::DenseBase<TDerivedOut>& Y)
 {
-    ComputeElementElasticity(x);
+    GemmHyperElastic<typename TMesh::ElementType, TMesh::kDims>(
+        mesh.E,
+        static_cast<typename TMesh::IndexType>(mesh.X.cols()),
+        eg.derived(),
+        Hg.derived(),
+        X.derived(),
+        Y.derived());
 }
 
-template <CMesh TMesh, physics::CHyperElasticEnergy THyperElasticEnergy>
-template <class TDerived>
-inline void HyperElasticPotential<TMesh, THyperElasticEnergy>::ComputeElementElasticity(
-    Eigen::MatrixBase<TDerived> const& x,
-    bool bWithGradient,
-    bool bWithHessian,
-    bool bUseSpdProjection)
+/**
+ * @brief Construct the hessian matrix's sparse representation
+ * @tparam TElement Element type
+ * @tparam Dims Number of spatial dimensions
+ * @tparam Options Storage options for the matrix
+ * @tparam TDerivedE Type of the element matrix
+ * @tparam TDerivedeg Type of the element indices at quadrature points
+ * @tparam TDerivedHg Type of the element hessian matrices
+ * @param E `|# nodes per element| x |# elements|` matrix of mesh elements
+ * @param nNodes Number of mesh nodes
+ * @param eg `|# quad.pts.| x 1` vector of element indices at quadrature points
+ * @param Hg `|# dims * # elem nodes| x |# dims * # elem nodes * # quad.pts.|` array of element
+ * elastic hessian matrices at quadrature points
+ * @return Sparse matrix representation of the hessian
+ */
+template <
+    CElement TElement,
+    int Dims,
+    Eigen::StorageOptions Options,
+    class TDerivedE,
+    class TDerivedeg,
+    class TDerivedHg>
+auto HyperElasticHessian(
+    Eigen::DenseBase<TDerivedE> const& E,
+    typename TDerivedE::Scalar nNodes,
+    Eigen::DenseBase<TDerivedeg> const& eg,
+    Eigen::MatrixBase<TDerivedHg> const& Hg)
+    -> Eigen::SparseMatrix<typename TDerivedHg::Scalar, Options, typename TDerivedE::Scalar>;
+
+/**
+ * @brief Construct the hessian matrix using mesh
+ * @tparam TMesh Type of the mesh
+ * @tparam TDerivedeg Type of the element indices at quadrature points
+ * @tparam TDerivedHg Type of the element hessian matrices
+ * @param mesh Mesh containing element connectivity and node positions
+ * @param eg `|# quad.pts.| x 1` vector of element indices at quadrature points
+ * @param Hg `|# dims * # elem nodes| x |# dims * # elem nodes * # quad.pts.|` element elastic
+ * hessian matrices at quadrature points
+ * @return Sparse matrix representation of the hessian
+ */
+template <Eigen::StorageOptions Options, CMesh TMesh, class TDerivedeg, class TDerivedHg>
+auto HyperElasticHessian(
+    TMesh const& mesh,
+    Eigen::DenseBase<TDerivedeg> const& eg,
+    Eigen::MatrixBase<TDerivedHg> const& Hg)
+    -> Eigen::SparseMatrix<typename TDerivedHg::Scalar, Options, typename TMesh::IndexType>
 {
-    PBAT_PROFILE_NAMED_SCOPE("pbat.fem.HyperElasticPotential.ComputeElementElasticity");
+    return HyperElasticHessian<typename TMesh::ElementType, TMesh::kDims, Options>(
+        mesh.E,
+        static_cast<typename TMesh::IndexType>(mesh.X.cols()),
+        eg.derived(),
+        Hg.derived());
+}
+
+/**
+ * @brief Compute the gradient vector into existing output
+ * @tparam TElement Element type
+ * @tparam Dims Number of spatial dimensions
+ * @tparam TDerivedE Type of the element matrix
+ * @tparam TDerivedeg Type of the element indices at quadrature points
+ * @tparam TDerivedGg Type of the element gradient vectors
+ * @tparam TDerivedOut Type of the output vector
+ * @param E `|# nodes per element| x |# elements|` matrix of mesh elements
+ * @param nNodes Number of mesh nodes
+ * @param eg `|# quad.pts.| x 1` vector of element indices at quadrature points
+ * @param Gg `|# dims * # elem nodes| x |# quad.pts.|` array of element elastic gradient vectors at
+ * quadrature points
+ * @param G `|# dims * # nodes|` output gradient vector
+ */
+template <
+    CElement TElement,
+    int Dims,
+    class TDerivedE,
+    class TDerivedeg,
+    class TDerivedGg,
+    class TDerivedG>
+void ToHyperElasticGradient(
+    Eigen::DenseBase<TDerivedE> const& E,
+    typename TDerivedE::Scalar nNodes,
+    Eigen::DenseBase<TDerivedeg> const& eg,
+    Eigen::MatrixBase<TDerivedGg> const& Gg,
+    Eigen::PlainObjectBase<TDerivedG>& G);
+
+/**
+ * @brief Compute the gradient vector into existing output
+ * @tparam TElement Element type
+ * @tparam Dims Number of spatial dimensions
+ * @tparam THyperElasticEnergy Hyper elastic energy type
+ * @tparam TDerivedE Type of the element matrix
+ * @tparam TDerivedeg Type of the element indices at quadrature points
+ * @tparam TDerivedwg Type of the quadrature weights
+ * @tparam TDerivedGNeg Type of the shape function gradients at quadrature points
+ * @tparam TDerivedmug Type of the first Lame coefficients at quadrature points
+ * @tparam TDerivedlambdag Type of the second Lame coefficients at quadrature points
+ * @tparam TDerivedx Type of the deformed nodal positions
+ * @tparam TDerivedGg Type of the element gradient vectors at quadrature points
+ * @tparam TDerivedG Type of the output gradient vector
+ * @param E `|# nodes per element| x |# elements|` matrix of mesh elements
+ * @param nNodes Number of mesh nodes
+ * @param eg `|# quad.pts.| x 1` vector of element indices at quadrature points
+ * @param wg `|# quad.pts.| x 1` vector of quadrature weights
+ * @param GNeg `|# nodes per element| x |# dims * # quad.pts.|` shape function gradients
+ * @param mug `|# quad.pts.| x 1` first Lame coefficients at quadrature points
+ * @param lambdag `|# quad.pts.| x 1` second Lame coefficients at quadrature points
+ * @param x `|# dims * # nodes| x 1` deformed nodal positions
+ * @param Gg `|# dims * # elem nodes| x |# quad.pts.|` array of element elastic gradient vectors at
+ * quadrature points
+ * @param G `|# dims * # nodes|` output gradient vector
+ */
+template <
+    CElement TElement,
+    int Dims,
+    physics::CHyperElasticEnergy THyperElasticEnergy,
+    class TDerivedE,
+    class TDerivedeg,
+    class TDerivedwg,
+    class TDerivedGNeg,
+    class TDerivedmug,
+    class TDerivedlambdag,
+    class TDerivedx,
+    class TDerivedGg,
+    class TDerivedG>
+inline void ToHyperElasticGradient(
+    Eigen::DenseBase<TDerivedE> const& E,
+    typename TDerivedE::Scalar nNodes,
+    Eigen::DenseBase<TDerivedeg> const& eg,
+    Eigen::DenseBase<TDerivedwg> const& wg,
+    Eigen::MatrixBase<TDerivedGNeg> const& GNeg,
+    Eigen::DenseBase<TDerivedmug> const& mug,
+    Eigen::DenseBase<TDerivedlambdag> const& lambdag,
+    Eigen::MatrixBase<TDerivedx> const& x,
+    Eigen::MatrixBase<TDerivedGg> const& Gg,
+    Eigen::PlainObjectBase<TDerivedG>& G)
+{
+    using ScalarType = typename TDerivedx::Scalar;
+    Eigen::Matrix<ScalarType, 0, 0> dummyUg, dummyHg;
+    ToElementElasticity<TElement, Dims, THyperElasticEnergy>(
+        E.derived(),
+        nNodes,
+        eg.derived(),
+        wg.derived(),
+        GNeg.derived(),
+        mug.derived(),
+        lambdag.derived(),
+        x.derived(),
+        dummyUg,
+        Gg.derived(),
+        dummyHg,
+        EElementElasticityComputationFlags::Gradient,
+        EHyperElasticSpdCorrection::None);
+    ToHyperElasticGradient<TElement, Dims>(
+        E.derived(),
+        nNodes,
+        eg.derived(),
+        Gg.derived(),
+        G.derived());
+}
+
+/**
+ * @brief Compute the gradient vector using mesh (updates existing output)
+ * @tparam TMesh Type of the mesh
+ * @tparam TDerivedeg Type of the element indices at quadrature points
+ * @tparam TDerivedGg Type of the element gradient vectors
+ * @tparam TDerivedOut Type of the output vector
+ * @param mesh Mesh containing element connectivity and node positions
+ * @param eg `|# quad.pts.| x 1` vector of element indices at quadrature points
+ * @param Gg `|# dims * # elem nodes| x |# quad.pts.|` array of element elastic gradient vectors at
+ * quadrature points
+ * @param G `|# dims * # nodes|` output gradient vector
+ */
+template <CMesh TMesh, class TDerivedeg, class TDerivedGg, class TDerivedOut>
+inline void ToHyperElasticGradient(
+    TMesh const& mesh,
+    Eigen::DenseBase<TDerivedeg> const& eg,
+    Eigen::MatrixBase<TDerivedGg> const& Gg,
+    Eigen::PlainObjectBase<TDerivedOut>& G)
+{
+    ToHyperElasticGradient<typename TMesh::ElementType, TMesh::kDims>(
+        mesh.E,
+        static_cast<typename TMesh::IndexType>(mesh.X.cols()),
+        eg.derived(),
+        Gg.derived(),
+        G.derived());
+}
+
+/**
+ * @brief Compute the gradient vector into existing output
+ * @tparam TMesh Type of the mesh
+ * @tparam THyperElasticEnergy Hyper elastic energy type
+ * @tparam TDerivedE Type of the element matrix
+ * @tparam TDerivedeg Type of the element indices at quadrature points
+ * @tparam TDerivedwg Type of the quadrature weights
+ * @tparam TDerivedGNeg Type of the shape function gradients at quadrature points
+ * @tparam TDerivedmug Type of the first Lame coefficients at quadrature points
+ * @tparam TDerivedlambdag Type of the second Lame coefficients at quadrature points
+ * @tparam TDerivedx Type of the deformed nodal positions
+ * @tparam TDerivedGg Type of the element gradient vectors at quadrature points
+ * @tparam TDerivedG Type of the output gradient vector
+ * @param E `|# nodes per element| x |# elements|` matrix of mesh elements
+ * @param nNodes Number of mesh nodes
+ * @param eg `|# quad.pts.| x 1` vector of element indices at quadrature points
+ * @param wg `|# quad.pts.| x 1` vector of quadrature weights
+ * @param GNeg `|# nodes per element| x |# dims * # quad.pts.|` shape function gradients
+ * @param mug `|# quad.pts.| x 1` first Lame coefficients at quadrature points
+ * @param lambdag `|# quad.pts.| x 1` second Lame coefficients at quadrature points
+ * @param x `|# dims * # nodes| x 1` deformed nodal positions
+ * @param Gg `|# dims * # elem nodes| x |# quad.pts.|` array of element elastic gradient vectors at
+ * quadrature points
+ * @param G `|# dims * # nodes|` output gradient vector
+ */
+template <
+    CMesh TMesh,
+    physics::CHyperElasticEnergy THyperElasticEnergy,
+    class TDerivedE,
+    class TDerivedeg,
+    class TDerivedwg,
+    class TDerivedGNeg,
+    class TDerivedmug,
+    class TDerivedlambdag,
+    class TDerivedx,
+    class TDerivedGg,
+    class TDerivedG>
+inline void ToHyperElasticGradient(
+    TMesh const& mesh,
+    Eigen::DenseBase<TDerivedeg> const& eg,
+    Eigen::DenseBase<TDerivedwg> const& wg,
+    Eigen::MatrixBase<TDerivedGNeg> const& GNeg,
+    Eigen::DenseBase<TDerivedmug> const& mug,
+    Eigen::DenseBase<TDerivedlambdag> const& lambdag,
+    Eigen::MatrixBase<TDerivedx> const& x,
+    Eigen::MatrixBase<TDerivedGg> const& Gg,
+    Eigen::PlainObjectBase<TDerivedG>& G)
+{
+    using ScalarType = typename TDerivedx::Scalar;
+    Eigen::Matrix<ScalarType, 0, 0> dummyUg, dummyHg;
+    using ElementType = typename TMesh::ElementType;
+    using Dims        = typename TMesh::kDims;
+    ToElementElasticity<THyperElasticEnergy>(
+        mesh,
+        eg.derived(),
+        wg.derived(),
+        GNeg.derived(),
+        mug.derived(),
+        lambdag.derived(),
+        x.derived(),
+        dummyUg,
+        Gg.derived(),
+        dummyHg,
+        EElementElasticityComputationFlags::Gradient,
+        EHyperElasticSpdCorrection::None);
+    ToHyperElasticGradient(mesh, eg.derived(), Gg.derived(), G.derived());
+}
+
+/**
+ * @brief Compute the gradient vector (allocates output)
+ * @tparam TElement Element type
+ * @tparam Dims Number of spatial dimensions
+ * @tparam TDerivedE Type of the element matrix
+ * @tparam TDerivedeg Type of the element indices at quadrature points
+ * @tparam TDerivedGg Type of the element gradient vectors
+ * @param E `|# nodes per element| x |# elements|` matrix of mesh elements
+ * @param nNodes Number of mesh nodes
+ * @param eg `|# quad.pts.| x 1` vector of element indices at quadrature points
+ * @param Gg `|# dims * # elem nodes| x |# quad.pts.|` array of element elastic gradient vectors at
+ * quadrature points
+ * @return Gradient vector
+ */
+template <CElement TElement, int Dims, class TDerivedE, class TDerivedeg, class TDerivedGg>
+auto HyperElasticGradient(
+    Eigen::DenseBase<TDerivedE> const& E,
+    typename TDerivedE::Scalar nNodes,
+    Eigen::DenseBase<TDerivedeg> const& eg,
+    Eigen::MatrixBase<TDerivedGg> const& Gg)
+    -> Eigen::Vector<typename TDerivedGg::Scalar, Eigen::Dynamic>
+{
+    using ScalarType        = typename TDerivedGg::Scalar;
+    auto const numberOfDofs = Dims * nNodes;
+    Eigen::Vector<ScalarType, Eigen::Dynamic> G(numberOfDofs);
+    ToHyperElasticGradient<TElement, Dims>(
+        E.derived(),
+        nNodes,
+        eg.derived(),
+        Gg.derived(),
+        G.derived());
+    return G;
+}
+
+/**
+ * @brief Compute the gradient vector (allocates output)
+ * @tparam TMesh Type of the mesh
+ * @tparam THyperElasticEnergy Hyper elastic energy type
+ * @tparam TDerivedeg Type of the element indices at quadrature points
+ * @tparam TDerivedGg Type of the element gradient vectors
+ * @param mesh Mesh containing element connectivity and node positions
+ * @param eg `|# quad.pts.| x 1` vector of element indices at quadrature points
+ * @param Gg `|# dims * # elem nodes| x |# quad.pts.|` array of element elastic gradient vectors at
+ * quadrature points
+ * @return Gradient vector
+ */
+template <CMesh TMesh, class TDerivedeg, class TDerivedGg>
+auto HyperElasticGradient(
+    TMesh const& mesh,
+    Eigen::DenseBase<TDerivedeg> const& eg,
+    Eigen::MatrixBase<TDerivedGg> const& Gg)
+{
+    return HyperElasticGradient<typename TMesh::ElementType, TMesh::kDims>(
+        mesh.E,
+        static_cast<typename TMesh::IndexType>(mesh.X.cols()),
+        eg.derived(),
+        Gg.derived());
+}
+
+/**
+ * @brief Compute the gradient vector (allocates output)
+ * @tparam TElement Element type
+ * @tparam Dims Number of spatial dimensions
+ * @tparam THyperElasticEnergy Hyper elastic energy type
+ * @tparam TDerivedE Type of the element matrix
+ * @tparam TDerivedeg Type of the element indices at quadrature points
+ * @tparam TDerivedwg Type of the quadrature weights
+ * @tparam TDerivedGNeg Type of the shape function gradients at quadrature points
+ * @tparam TDerivedmug Type of the first Lame coefficients at quadrature points
+ * @tparam TDerivedlambdag Type of the second Lame coefficients at quadrature points
+ * @tparam TDerivedx Type of the deformed nodal positions
+ * @tparam TDerivedGg Type of the element gradient vectors at quadrature points
+ * @param E `|# nodes per element| x |# elements|` matrix of mesh elements
+ * @param nNodes Number of mesh nodes
+ * @param eg `|# quad.pts.| x 1` vector of element indices at quadrature points
+ * @param wg `|# quad.pts.| x 1` vector of quadrature weights
+ * @param GNeg `|# nodes per element| x |# dims * # quad.pts.|` shape function gradients
+ * @param mug `|# quad.pts.| x 1` first Lame coefficients at quadrature points
+ * @param lambdag `|# quad.pts.| x 1` second Lame coefficients at quadrature points
+ * @param x `|# dims * # nodes| x 1` deformed nodal positions
+ * @param Gg `|# dims * # elem nodes| x |# quad.pts.|` array of element gradient vectors at
+ * quadrature points
+ * @return Gradient vector
+ */
+template <
+    CElement TElement,
+    int Dims,
+    physics::CHyperElasticEnergy THyperElasticEnergy,
+    class TDerivedE,
+    class TDerivedeg,
+    class TDerivedwg,
+    class TDerivedGNeg,
+    class TDerivedmug,
+    class TDerivedlambdag,
+    class TDerivedx,
+    class TDerivedGg>
+auto HyperElasticGradient(
+    Eigen::DenseBase<TDerivedE> const& E,
+    typename TDerivedE::Scalar nNodes,
+    Eigen::DenseBase<TDerivedeg> const& eg,
+    Eigen::DenseBase<TDerivedwg> const& wg,
+    Eigen::MatrixBase<TDerivedGNeg> const& GNeg,
+    Eigen::DenseBase<TDerivedmug> const& mug,
+    Eigen::DenseBase<TDerivedlambdag> const& lambdag,
+    Eigen::MatrixBase<TDerivedx> const& x,
+    Eigen::MatrixBase<TDerivedGg> const& Gg)
+{
+    using ScalarType = typename TDerivedx::Scalar;
+    Eigen::Matrix<ScalarType, 0, 0> dummyUg, dummyHg;
+    ToElementElasticity<TElement, Dims, THyperElasticEnergy>(
+        E,
+        nNodes,
+        eg,
+        wg,
+        GNeg,
+        mug,
+        lambdag,
+        x,
+        dummyUg,
+        Gg,
+        dummyHg,
+        EElementElasticityComputationFlags::Gradient,
+        EHyperElasticSpdCorrection::None);
+    return HyperElasticGradient<TElement, Dims, THyperElasticEnergy>(E, nNodes, eg, Gg);
+}
+
+/**
+ * @brief Compute the gradient vector (allocates output)
+ * @tparam TMesh Type of the mesh
+ * @tparam THyperElasticEnergy Hyper elastic energy type
+ * @tparam TDerivedeg Type of the element indices at quadrature points
+ * @tparam TDerivedwg Type of the quadrature weights
+ * @tparam TDerivedGNeg Type of the shape function gradients at quadrature points
+ * @tparam TDerivedmug Type of the first Lame coefficients at quadrature points
+ * @tparam TDerivedlambdag Type of the second Lame coefficients at quadrature points
+ * @tparam TDerivedx Type of the deformed nodal positions
+ * @tparam TDerivedGg Type of the element gradient vectors at quadrature points
+ * @param mesh Mesh containing element connectivity and node positions
+ * @param eg `|# quad.pts.| x 1` vector of element indices at quadrature points
+ * @param wg `|# quad.pts.| x 1` vector of quadrature weights
+ * @param GNeg `|# nodes per element| x |# dims * # quad.pts.|` shape function gradients
+ * @param mug `|# quad.pts.| x 1` first Lame coefficients at quadrature points
+ * @param lambdag `|# quad.pts.| x 1` second Lame coefficients at quadrature points
+ * @param x `|# dims * # nodes| x 1` deformed nodal positions
+ * @param Gg `|# dims * # elem nodes| x |# quad.pts.|` array of element gradient vectors at
+ * quadrature points
+ * @return `|# dims| x |# nodes|` gradient vector
+ */
+template <
+    CMesh TMesh,
+    physics::CHyperElasticEnergy THyperElasticEnergy,
+    class TDerivedeg,
+    class TDerivedwg,
+    class TDerivedGNeg,
+    class TDerivedmug,
+    class TDerivedlambdag,
+    class TDerivedx,
+    class TDerivedGg>
+auto HyperElasticGradient(
+    TMesh const& mesh,
+    Eigen::DenseBase<TDerivedeg> const& eg,
+    Eigen::DenseBase<TDerivedwg> const& wg,
+    Eigen::MatrixBase<TDerivedGNeg> const& GNeg,
+    Eigen::DenseBase<TDerivedmug> const& mug,
+    Eigen::DenseBase<TDerivedlambdag> const& lambdag,
+    Eigen::MatrixBase<TDerivedx> const& x,
+    Eigen::MatrixBase<TDerivedGg> const& Gg)
+{
+    return HyperElasticGradient<typename TMesh::ElementType, TMesh::kDims, THyperElasticEnergy>(
+        mesh.E,
+        static_cast<typename TMesh::IndexType>(mesh.X.cols()),
+        eg.derived(),
+        wg.derived(),
+        GNeg.derived(),
+        mug.derived(),
+        lambdag.derived(),
+        x.derived(),
+        Gg.derived());
+}
+
+/**
+ * @brief Compute the gradient vector using mesh (allocates output)
+ * @tparam THyperElasticEnergy Hyper elastic energy type
+ * @tparam TMesh Type of the mesh
+ * @tparam TDerivedeg Type of the element indices at quadrature points
+ * @tparam TDerivedGg Type of the element gradient vectors
+ * @param mesh Mesh containing element connectivity and node positions
+ * @param eg `|# quad.pts.| x 1` vector of element indices at quadrature points
+ * @param Gg `|# dims * # elem nodes| x |# quad.pts.|` array of element elastic gradient vectors at
+ * quadrature points
+ * @return Gradient vector
+ */
+template <
+    physics::CHyperElasticEnergy THyperElasticEnergy,
+    CMesh TMesh,
+    class TDerivedeg,
+    class TDerivedGg>
+auto HyperElasticGradient(
+    TMesh const& mesh,
+    Eigen::DenseBase<TDerivedeg> const& eg,
+    Eigen::MatrixBase<TDerivedGg> const& Gg)
+{
+    return HyperElasticGradient<typename TMesh::ElementType, TMesh::kDims, THyperElasticEnergy>(
+        mesh.E,
+        static_cast<typename TMesh::IndexType>(mesh.X.cols()),
+        eg.derived(),
+        Gg.derived());
+}
+
+/**
+ * @brief Compute the total elastic potential
+ * @tparam TDerivedUg Type of the elastic potentials at quadrature points
+ * @param Ug `|# quad.pts.| x 1` array of elastic potentials at quadrature points
+ * @return Total elastic potential
+ */
+template <class TDerivedUg>
+auto HyperElasticPotential(Eigen::DenseBase<TDerivedUg> const& Ug) -> typename TDerivedUg::Scalar
+{
+    return Ug.sum();
+}
+
+/**
+ * @brief Compute the total elastic potential from element data and quadrature
+ * @tparam TElement Element type
+ * @tparam Dims Number of spatial dimensions
+ * @tparam THyperElasticEnergy Hyper elastic energy type
+ * @tparam TDerivedE Type of the element matrix
+ * @tparam TDerivedeg Type of the element indices at quadrature points
+ * @tparam TDerivedwg Type of the quadrature weights
+ * @tparam TDerivedGNeg Type of the shape function gradients at quadrature points
+ * @tparam TDerivedmug Type of the first Lame coefficients at quadrature points
+ * @tparam TDerivedlambdag Type of the second Lame coefficients at quadrature points
+ * @tparam TDerivedx Type of the deformed nodal positions
+ * @param E `|# nodes per element| x |# elements|` matrix of mesh elements
+ * @param nNodes Number of mesh nodes
+ * @param eg `|# quad.pts.| x 1` vector of element indices at quadrature points
+ * @param wg `|# quad.pts.| x 1` vector of quadrature weights
+ * @param GNeg `|# nodes per element| x |# dims * # quad.pts.|` shape function gradients
+ * @param mug `|# quad.pts.| x 1` first Lame coefficients at quadrature points
+ * @param lambdag `|# quad.pts.| x 1` second Lame coefficients at quadrature points
+ * @param x `|# dims * # nodes| x 1` deformed nodal positions
+ * @return Total elastic potential
+ */
+template <
+    CElement TElement,
+    int Dims,
+    physics::CHyperElasticEnergy THyperElasticEnergy,
+    class TDerivedE,
+    class TDerivedeg,
+    class TDerivedwg,
+    class TDerivedGNeg,
+    class TDerivedmug,
+    class TDerivedlambdag,
+    class TDerivedx>
+auto HyperElasticPotential(
+    Eigen::DenseBase<TDerivedE> const& E,
+    typename TDerivedE::Scalar nNodes,
+    Eigen::DenseBase<TDerivedeg> const& eg,
+    Eigen::DenseBase<TDerivedwg> const& wg,
+    Eigen::MatrixBase<TDerivedGNeg> const& GNeg,
+    Eigen::DenseBase<TDerivedmug> const& mug,
+    Eigen::DenseBase<TDerivedlambdag> const& lambdag,
+    Eigen::MatrixBase<TDerivedx> const& x)
+{
+    using ScalarType = typename TDerivedx::Scalar;
+    Eigen::Vector<ScalarType, Eigen::Dynamic> Ug;
+    Eigen::Matrix<ScalarType, 0, 0> dummyGg, dummyHg;
+    ToElementElasticity<TElement, Dims, THyperElasticEnergy>(
+        E,
+        nNodes,
+        eg,
+        wg,
+        GNeg,
+        mug,
+        lambdag,
+        x,
+        Ug,
+        dummyGg,
+        dummyHg,
+        EElementElasticityComputationFlags::Potential,
+        EHyperElasticSpdCorrection::None);
+    return HyperElasticPotential(Ug);
+}
+
+template <
+    CElement TElement,
+    int Dims,
+    physics::CHyperElasticEnergy THyperElasticEnergy,
+    class TDerivedE,
+    class TDerivedeg,
+    class TDerivedwg,
+    class TDerivedGNeg,
+    class TDerivedmug,
+    class TDerivedlambdag,
+    class TDerivedx,
+    class TDerivedUg,
+    class TDerivedGg,
+    class TDerivedHg>
+void ToElementElasticity(
+    Eigen::DenseBase<TDerivedE> const& E,
+    typename TDerivedE::Scalar nNodes,
+    Eigen::DenseBase<TDerivedeg> const& eg,
+    Eigen::DenseBase<TDerivedwg> const& wg,
+    Eigen::MatrixBase<TDerivedGNeg> const& GNeg,
+    Eigen::DenseBase<TDerivedmug> const& mug,
+    Eigen::DenseBase<TDerivedlambdag> const& lambdag,
+    Eigen::MatrixBase<TDerivedx> const& x,
+    Eigen::PlainObjectBase<TDerivedUg>& Ug,
+    Eigen::PlainObjectBase<TDerivedGg>& Gg,
+    Eigen::PlainObjectBase<TDerivedHg>& Hg,
+    int eFlags,
+    EHyperElasticSpdCorrection eSpdCorrection)
+{
+    PBAT_PROFILE_NAMED_SCOPE("pbat.fem.ToElementElasticity");
+
+    using ScalarType = typename TDerivedx::Scalar;
+    using IndexType  = typename TDerivedE::Scalar;
+
     // Check inputs
-    CheckValidState();
-    auto const numberOfNodes = mesh.X.cols();
-    if (x.size() != numberOfNodes * kDims)
+    if (x.size() != nNodes * Dims)
     {
         std::string const what = fmt::format(
             "Generalized coordinate vector must have dimensions |#nodes|*kDims={}, but got "
             "x.size()={}",
-            numberOfNodes * kDims,
+            nNodes * Dims,
             x.size());
         throw std::invalid_argument(what);
     }
 
-    Ug.setZero();
-    if (bWithGradient)
-        Gg.setZero();
-    if (bWithHessian)
-        Hg.setZero();
-
-    ElasticEnergyType Psi{};
-
-    // Compute element elastic energies and their derivatives
-    auto const numberOfQuadraturePoints = wg.size();
-    auto constexpr kNodesPerElement     = ElementType::kNodes;
-    auto constexpr kDofsPerElement      = kNodesPerElement * kDims;
-    namespace mini                      = math::linalg::mini;
+    IndexType const nQuadPts        = wg.size();
+    auto constexpr kNodesPerElement = TElement::kNodes;
+    auto constexpr kDofsPerElement  = kNodesPerElement * Dims;
+    namespace mini                  = math::linalg::mini;
     using mini::FromEigen;
     using mini::ToEigen;
-    if (not bWithGradient and not bWithHessian)
+
+    if (eFlags & EElementElasticityComputationFlags::Potential)
     {
-        tbb::parallel_for(Index{0}, Index{numberOfQuadraturePoints}, [&](Index g) {
-            auto const e     = eg(g);
-            auto const nodes = mesh.E.col(e);
-            auto const xe    = x.reshaped(kDims, numberOfNodes)(Eigen::placeholders::all, nodes);
-            auto const GPeg = GNeg.block<kNodesPerElement, MeshType::kDims>(0, g * MeshType::kDims);
-            Matrix<kDims, kDims> const F = xe * GPeg;
-            auto vecF                    = FromEigen(F);
-            auto psiF                    = Psi.eval(vecF, lameg(0, g), lameg(1, g));
+        Ug.resize(nQuadPts);
+        Ug.setZero();
+    }
+    if (eFlags & EElementElasticityComputationFlags::Gradient)
+    {
+        Gg.resize(kDofsPerElement, nQuadPts);
+        Gg.setZero();
+    }
+    if (eFlags & EElementElasticityComputationFlags::Hessian)
+    {
+        Hg.resize(kDofsPerElement, kDofsPerElement * nQuadPts);
+        Hg.setZero();
+    }
+
+    THyperElasticEnergy Psi{};
+    if (eFlags == EElementElasticityComputationFlags::Potential)
+    {
+        tbb::parallel_for(IndexType{0}, nQuadPts, [&](auto g) {
+            auto const e               = eg(g);
+            auto const nodes           = E.col(e);
+            auto const xe              = x.reshaped(Dims, nNodes)(Eigen::placeholders::all, nodes);
+            auto const GPeg            = GNeg.template block<kNodesPerElement, Dims>(0, g * Dims);
+            Matrix<Dims, Dims> const F = xe * GPeg;
+            auto vecF                  = FromEigen(F);
+            auto psiF                  = Psi.eval(vecF, mug(g), lambdag(g));
             Ug(g) += wg(g) * psiF;
         });
     }
-    else if (bWithGradient and not bWithHessian)
+    else if (
+        eFlags == (EElementElasticityComputationFlags::Potential |
+                   EElementElasticityComputationFlags::Gradient))
     {
-        tbb::parallel_for(Index{0}, Index{numberOfQuadraturePoints}, [&](Index g) {
-            auto const e     = eg(g);
-            auto const nodes = mesh.E.col(e);
-            auto const xe    = x.reshaped(kDims, numberOfNodes)(Eigen::placeholders::all, nodes);
-            auto const GPeg = GNeg.block<kNodesPerElement, MeshType::kDims>(0, g * MeshType::kDims);
-            Matrix<kDims, kDims> const F = xe * GPeg;
-            auto vecF                    = FromEigen(F);
-            mini::SVector<Scalar, kDims * kDims> gradPsiF;
-            auto psiF = Psi.evalWithGrad(vecF, lameg(0, g), lameg(1, g), gradPsiF);
+        tbb::parallel_for(IndexType{0}, nQuadPts, [&](auto g) {
+            auto const e               = eg(g);
+            auto const nodes           = E.col(e);
+            auto const xe              = x.reshaped(Dims, nNodes)(Eigen::placeholders::all, nodes);
+            auto const GPeg            = GNeg.template block<kNodesPerElement, Dims>(0, g * Dims);
+            Matrix<Dims, Dims> const F = xe * GPeg;
+            auto vecF                  = FromEigen(F);
+            mini::SVector<ScalarType, Dims * Dims> gradPsiF;
+            auto const psiF  = Psi.evalWithGrad(vecF, mug(g), lambdag(g), gradPsiF);
+            auto const GP    = FromEigen(GPeg);
+            auto const GPsix = GradientWrtDofs<TElement, Dims>(gradPsiF, GP);
             Ug(g) += wg(g) * psiF;
-            auto const GP = FromEigen(GPeg);
-            auto GPsix    = GradientWrtDofs<ElementType, kDims>(gradPsiF, GP);
             Gg.col(g) += wg(g) * ToEigen(GPsix);
         });
     }
-    else if (not bWithGradient and bWithHessian)
+    else if (
+        eFlags == (EElementElasticityComputationFlags::Potential |
+                   EElementElasticityComputationFlags::Hessian))
     {
-        tbb::parallel_for(Index{0}, Index{numberOfQuadraturePoints}, [&](Index g) {
-            auto const e     = eg(g);
-            auto const nodes = mesh.E.col(e);
-            auto const xe    = x.reshaped(kDims, numberOfNodes)(Eigen::placeholders::all, nodes);
-            auto const gradPhi =
-                GNeg.block<kNodesPerElement, MeshType::kDims>(0, g * MeshType::kDims);
-            Matrix<kDims, kDims> const F = xe * gradPhi;
-            auto vecF                    = FromEigen(F);
-            auto psiF                    = Psi.eval(vecF, lameg(0, g), lameg(1, g));
-            auto hessPsiF                = Psi.hessian(vecF, lameg(0, g), lameg(1, g));
+        tbb::parallel_for(IndexType{0}, nQuadPts, [&](auto g) {
+            auto const e               = eg(g);
+            auto const nodes           = E.col(e);
+            auto const xe              = x.reshaped(Dims, nNodes)(Eigen::placeholders::all, nodes);
+            auto const gradPhi         = GNeg.template block<kNodesPerElement, Dims>(0, g * Dims);
+            Matrix<Dims, Dims> const F = xe * gradPhi;
+            auto vecF                  = FromEigen(F);
+            auto psiF                  = Psi.eval(vecF, mug(g), lambdag(g));
+            auto const hessPsiF        = Psi.hessian(vecF, mug(g), lambdag(g));
+            auto const GP              = FromEigen(gradPhi);
+            auto HPsix                 = HessianWrtDofs<TElement, Dims>(hessPsiF, GP);
+            auto heg = Hg.template block<kDofsPerElement, kDofsPerElement>(0, g * kDofsPerElement);
             Ug(g) += wg(g) * psiF;
-            auto const GP = FromEigen(gradPhi);
-            auto HPsix    = HessianWrtDofs<ElementType, kDims>(hessPsiF, GP);
-            auto heg      = Hg.block<kDofsPerElement, kDofsPerElement>(0, g * kDofsPerElement);
             heg += wg(g) * ToEigen(HPsix);
         });
     }
-    else
+    else if (
+        eFlags == (EElementElasticityComputationFlags::Potential |
+                   EElementElasticityComputationFlags::Gradient |
+                   EElementElasticityComputationFlags::Hessian))
     {
-        tbb::parallel_for(Index{0}, Index{numberOfQuadraturePoints}, [&](Index g) {
-            auto const e     = eg(g);
-            auto const nodes = mesh.E.col(e);
-            auto const xe    = x.reshaped(kDims, numberOfNodes)(Eigen::placeholders::all, nodes);
-            auto const GPeg = GNeg.block<kNodesPerElement, MeshType::kDims>(0, g * MeshType::kDims);
-            Matrix<kDims, kDims> const F = xe * GPeg;
-            auto vecF                    = FromEigen(F);
-            mini::SVector<Scalar, kDims * kDims> gradPsiF;
-            mini::SMatrix<Scalar, kDims * kDims, kDims * kDims> hessPsiF;
-            auto psiF =
-                Psi.evalWithGradAndHessian(vecF, lameg(0, g), lameg(1, g), gradPsiF, hessPsiF);
+        tbb::parallel_for(IndexType{0}, nQuadPts, [&](auto g) {
+            auto const e               = eg(g);
+            auto const nodes           = E.col(e);
+            auto const xe              = x.reshaped(Dims, nNodes)(Eigen::placeholders::all, nodes);
+            auto const GPeg            = GNeg.template block<kNodesPerElement, Dims>(0, g * Dims);
+            Matrix<Dims, Dims> const F = xe * GPeg;
+            auto vecF                  = FromEigen(F);
+            mini::SVector<ScalarType, Dims * Dims> gradPsiF;
+            mini::SMatrix<ScalarType, Dims * Dims, Dims * Dims> hessPsiF;
+            auto psiF = Psi.evalWithGradAndHessian(vecF, mug(g), lambdag(g), gradPsiF, hessPsiF);
             auto const GP = FromEigen(GPeg);
-            auto GPsix    = GradientWrtDofs<ElementType, kDims>(gradPsiF, GP);
-            auto HPsix    = HessianWrtDofs<ElementType, kDims>(hessPsiF, GP);
-            auto heg      = Hg.block<kDofsPerElement, kDofsPerElement>(0, g * kDofsPerElement);
+            auto GPsix    = GradientWrtDofs<TElement, Dims>(gradPsiF, GP);
+            auto HPsix    = HessianWrtDofs<TElement, Dims>(hessPsiF, GP);
+            auto heg = Hg.template block<kDofsPerElement, kDofsPerElement>(0, g * kDofsPerElement);
             Ug(g) += wg(g) * psiF;
             Gg.col(g) += wg(g) * ToEigen(GPsix);
             heg += wg(g) * ToEigen(HPsix);
         });
     }
-    if (bWithHessian and bUseSpdProjection)
+    else if (eFlags == EElementElasticityComputationFlags::Gradient)
     {
-        tbb::parallel_for(Index{0}, Index{numberOfQuadraturePoints}, [&](Index g) {
-            auto heg = Hg.block<kDofsPerElement, kDofsPerElement>(0, g * kDofsPerElement);
-            Eigen::JacobiSVD<
-                Matrix<kDofsPerElement, kDofsPerElement>,
-                Eigen::ComputeFullU | Eigen::ComputeFullV>
-                SVD{};
-            SVD.compute(heg);
-            Vector<kDofsPerElement> sigma = SVD.singularValues();
-            for (auto s = sigma.size() - 1; s >= 0; --s)
-            {
-                if (sigma(s) >= 0.)
-                    break;
-                sigma(s) = -sigma(s);
+        tbb::parallel_for(IndexType{0}, nQuadPts, [&](auto g) {
+            auto const e               = eg(g);
+            auto const nodes           = E.col(e);
+            auto const xe              = x.reshaped(Dims, nNodes)(Eigen::placeholders::all, nodes);
+            auto const GPeg            = GNeg.template block<kNodesPerElement, Dims>(0, g * Dims);
+            Matrix<Dims, Dims> const F = xe * GPeg;
+            auto vecF                  = FromEigen(F);
+            auto const gradPsiF        = Psi.grad(vecF, mug(g), lambdag(g));
+            auto const GP              = FromEigen(GPeg);
+            auto const GPsix           = GradientWrtDofs<TElement, Dims>(gradPsiF, GP);
+            Gg.col(g) += wg(g) * ToEigen(GPsix);
+        });
+    }
+    else if (
+        eFlags == (EElementElasticityComputationFlags::Gradient |
+                   EElementElasticityComputationFlags::Hessian))
+    {
+        tbb::parallel_for(IndexType{0}, nQuadPts, [&](auto g) {
+            auto const e               = eg(g);
+            auto const nodes           = E.col(e);
+            auto const xe              = x.reshaped(Dims, nNodes)(Eigen::placeholders::all, nodes);
+            auto const GPeg            = GNeg.template block<kNodesPerElement, Dims>(0, g * Dims);
+            Matrix<Dims, Dims> const F = xe * GPeg;
+            auto vecF                  = FromEigen(F);
+            mini::SVector<ScalarType, Dims * Dims> gradPsiF;
+            mini::SMatrix<ScalarType, Dims * Dims, Dims * Dims> hessPsiF;
+            Psi.evalWithGradAndHessian(vecF, mug(g), lambdag(g), gradPsiF, hessPsiF);
+            auto const GP = FromEigen(GPeg);
+            auto GPsix    = GradientWrtDofs<TElement, Dims>(gradPsiF, GP);
+            auto HPsix    = HessianWrtDofs<TElement, Dims>(hessPsiF, GP);
+            auto heg = Hg.template block<kDofsPerElement, kDofsPerElement>(0, g * kDofsPerElement);
+            Gg.col(g) += wg(g) * ToEigen(GPsix);
+            heg += wg(g) * ToEigen(HPsix);
+        });
+    }
+    else /* if (eFlags == EElementElasticityComputationFlags::Hessian) */
+    {
+        tbb::parallel_for(IndexType{0}, nQuadPts, [&](auto g) {
+            auto const e               = eg(g);
+            auto const nodes           = E.col(e);
+            auto const xe              = x.reshaped(Dims, nNodes)(Eigen::placeholders::all, nodes);
+            auto const GPeg            = GNeg.template block<kNodesPerElement, Dims>(0, g * Dims);
+            Matrix<Dims, Dims> const F = xe * GPeg;
+            auto vecF                  = FromEigen(F);
+            auto hessPsiF              = Psi.hessian(vecF, mug(g), lambdag(g));
+            auto const GP              = FromEigen(GPeg);
+            auto HPsix                 = HessianWrtDofs<TElement, Dims>(hessPsiF, GP);
+            auto heg = Hg.template block<kDofsPerElement, kDofsPerElement>(0, g * kDofsPerElement);
+            heg += wg(g) * ToEigen(HPsix);
+        });
+    }
+    // SPD correction
+    if (eFlags & EElementElasticityComputationFlags::Hessian)
+    {
+        using ElementHessianMatrixType = Matrix<kDofsPerElement, kDofsPerElement>;
+        switch (eSpdCorrection)
+        {
+            case EHyperElasticSpdCorrection::None: break;
+            case EHyperElasticSpdCorrection::Absolute: {
+                tbb::parallel_for(typename TDerivedE::Scalar{0}, nQuadPts, [&](auto g) {
+                    auto heg =
+                        Hg.template block<kDofsPerElement, kDofsPerElement>(0, g * kDofsPerElement);
+                    Eigen::SelfAdjointEigenSolver<ElementHessianMatrixType> eig(
+                        heg,
+                        Eigen::ComputeEigenvectors);
+                    auto D = eig.eigenvalues();
+                    auto V = eig.eigenvectors();
+                    for (auto i = 0; i < D.size(); ++i)
+                    {
+                        if (D(i) >= 0)
+                            break;
+                        D(i) = -D(i);
+                    }
+                    heg = V * D.asDiagonal() * V.transpose();
+                });
+                break;
             }
-            heg = SVD.matrixU() * sigma.asDiagonal() * SVD.matrixV().transpose();
-        });
+            case EHyperElasticSpdCorrection::Projection: {
+                tbb::parallel_for(typename TDerivedE::Scalar{0}, nQuadPts, [&](auto g) {
+                    auto heg =
+                        Hg.template block<kDofsPerElement, kDofsPerElement>(0, g * kDofsPerElement);
+                    Eigen::SelfAdjointEigenSolver<ElementHessianMatrixType> eig(
+                        heg,
+                        Eigen::ComputeEigenvectors);
+                    auto D = eig.eigenvalues();
+                    auto V = eig.eigenvectors();
+                    for (auto i = 0; i < D.size(); ++i)
+                    {
+                        if (D(i) >= 0)
+                            break;
+                        D(i) = 0;
+                    }
+                    heg = V * D.asDiagonal() * V.transpose();
+                });
+                break;
+            }
+            default:
+                throw std::invalid_argument(
+                    "Unknown SPD correction type for hyper elastic hessian");
+        }
     }
 }
 
-template <CMesh TMesh, physics::CHyperElasticEnergy THyperElasticEnergy>
-template <class TDerivedIn, class TDerivedOut>
-inline void HyperElasticPotential<TMesh, THyperElasticEnergy>::Apply(
-    Eigen::MatrixBase<TDerivedIn> const& x,
-    Eigen::DenseBase<TDerivedOut>& y) const
+template <
+    CElement TElement,
+    int Dims,
+    class TDerivedE,
+    class TDerivedeg,
+    class TDerivedHg,
+    class TDerivedIn,
+    class TDerivedOut>
+inline void GemmHyperElastic(
+    Eigen::DenseBase<TDerivedE> const& E,
+    typename TDerivedE::Scalar nNodes,
+    Eigen::DenseBase<TDerivedeg> const& eg,
+    Eigen::MatrixBase<TDerivedHg> const& Hg,
+    Eigen::MatrixBase<TDerivedIn> const& X,
+    Eigen::DenseBase<TDerivedOut>& Y)
 {
-    PBAT_PROFILE_NAMED_SCOPE("pbat.fem.HyperElasticPotential.Apply");
-    auto const numberOfDofs = InputDimensions();
-    if (x.rows() != numberOfDofs or y.rows() != numberOfDofs or x.cols() != y.cols())
+    PBAT_PROFILE_NAMED_SCOPE("pbat.fem.GemmHyperElastic");
+    auto const numberOfDofs = Dims * nNodes;
+    if (X.rows() != numberOfDofs or Y.rows() != numberOfDofs or X.cols() != Y.cols())
     {
         std::string const what = fmt::format(
             "Expected inputs and outputs to have rows |#nodes*kDims|={} and same number of "
             "columns, but got dimensions "
-            "x,y=({},{}), ({},{})",
+            "X,Y=({},{}), ({},{})",
             numberOfDofs,
-            x.rows(),
-            x.cols(),
-            y.rows(),
-            y.cols());
+            X.rows(),
+            X.cols(),
+            Y.rows(),
+            Y.cols());
         throw std::invalid_argument(what);
     }
 
-    auto constexpr kDofsPerElement      = kDims * ElementType::kNodes;
-    auto const numberOfQuadraturePoints = wg.size();
-    // NOTE: Outer loop could be parallelized over columns, and using graph coloring, inner loop
-    // could also be parallelized, if it's worth it.
-    for (auto c = 0; c < x.cols(); ++c)
+    auto constexpr kDofsPerElement = Dims * TElement::kNodes;
+    auto const nQuadPts            = eg.size();
+    for (auto c = 0; c < X.cols(); ++c)
     {
-        for (auto g = 0; g < numberOfQuadraturePoints; ++g)
+        for (auto g = 0; g < nQuadPts; ++g)
         {
             auto const e     = eg(g);
-            auto const nodes = mesh.E.col(e);
-            auto const heg   = Hg.block<kDofsPerElement, kDofsPerElement>(0, g * kDofsPerElement);
-            auto const xe =
-                x.col(c).reshaped(kDims, x.size() / kDims)(Eigen::placeholders::all, nodes);
-            auto ye = y.col(c).reshaped(kDims, y.size() / kDims)(Eigen::placeholders::all, nodes);
+            auto const nodes = E.col(e);
+            auto const heg =
+                Hg.template block<kDofsPerElement, kDofsPerElement>(0, g * kDofsPerElement);
+            auto const xe = X.col(c).reshaped(Dims, nNodes)(Eigen::placeholders::all, nodes);
+            auto ye       = Y.col(c).reshaped(Dims, nNodes)(Eigen::placeholders::all, nodes);
             ye.reshaped() += heg * xe.reshaped();
         }
     }
 }
 
-template <CMesh TMesh, physics::CHyperElasticEnergy THyperElasticEnergy>
-inline void HyperElasticPotential<TMesh, THyperElasticEnergy>::PrecomputeHessianSparsity()
+template <
+    CElement TElement,
+    int Dims,
+    Eigen::StorageOptions Options,
+    class TDerivedE,
+    class TDerivedeg,
+    class TDerivedHg>
+auto HyperElasticHessian(
+    Eigen::DenseBase<TDerivedE> const& E,
+    typename TDerivedE::Scalar nNodes,
+    Eigen::DenseBase<TDerivedeg> const& eg,
+    Eigen::MatrixBase<TDerivedHg> const& Hg)
+    -> Eigen::SparseMatrix<typename TDerivedHg::Scalar, Options, typename TDerivedE::Scalar>
 {
-    PBAT_PROFILE_NAMED_SCOPE("pbat.fem.HyperElasticPotential.PrecomputeHessianSparsity");
-    auto const numberOfQuadraturePoints = wg.size();
-    auto const kNodesPerElement         = ElementType::kNodes;
-    auto const kDofsPerElement          = kNodesPerElement * kDims;
-    std::vector<Index> nonZeroRowIndices{};
-    std::vector<Index> nonZeroColIndices{};
-    nonZeroRowIndices.reserve(
-        static_cast<std::size_t>(kDofsPerElement * kDofsPerElement * numberOfQuadraturePoints));
-    nonZeroColIndices.reserve(
-        static_cast<std::size_t>(kDofsPerElement * kDofsPerElement * numberOfQuadraturePoints));
-    // Insert non-zero indices in the storage order of our Hg matrix of element hessians at
-    // quadrature points
-    for (auto g = 0; g < numberOfQuadraturePoints; ++g)
+    PBAT_PROFILE_NAMED_SCOPE("pbat.fem.HyperElasticHessian");
+    using ScalarType       = typename TDerivedHg::Scalar;
+    using IndexType        = typename TDerivedE::Scalar;
+    using SparseMatrixType = Eigen::SparseMatrix<ScalarType, Options, IndexType>;
+    using Triplet          = Eigen::Triplet<ScalarType, IndexType>;
+
+    auto constexpr kNodesPerElement = TElement::kNodes;
+    auto constexpr kDofsPerElement  = kNodesPerElement * Dims;
+    auto const nQuadPts             = eg.size();
+
+    std::vector<Triplet> triplets{};
+    triplets.reserve(static_cast<std::size_t>(kDofsPerElement * kDofsPerElement * nQuadPts));
+
+    auto const numberOfDofs = Dims * nNodes;
+    SparseMatrixType H(numberOfDofs, numberOfDofs);
+
+    for (auto g = 0; g < nQuadPts; ++g)
     {
         auto const e     = eg(g);
-        auto const nodes = mesh.E.col(e);
+        auto const nodes = E.col(e);
+        auto const heg =
+            Hg.template block<kDofsPerElement, kDofsPerElement>(0, g * kDofsPerElement);
         for (auto j = 0; j < kNodesPerElement; ++j)
         {
-            for (auto dj = 0; dj < kDims; ++dj)
+            for (auto dj = 0; dj < Dims; ++dj)
             {
                 for (auto i = 0; i < kNodesPerElement; ++i)
                 {
-                    for (auto di = 0; di < kDims; ++di)
+                    for (auto di = 0; di < Dims; ++di)
                     {
-                        nonZeroRowIndices.push_back(kDims * nodes(i) + di);
-                        nonZeroColIndices.push_back(kDims * nodes(j) + dj);
+                        auto const ni = static_cast<IndexType>(Dims * nodes(i) + di);
+                        auto const nj = static_cast<IndexType>(Dims * nodes(j) + dj);
+                        triplets.emplace_back(ni, nj, heg(Dims * i + di, Dims * j + dj));
                     }
                 }
             }
         }
     }
-    GH.Compute(OutputDimensions(), InputDimensions(), nonZeroRowIndices, nonZeroColIndices);
+    H.setFromTriplets(triplets.begin(), triplets.end());
+    return H;
 }
 
-template <CMesh TMesh, physics::CHyperElasticEnergy THyperElasticEnergy>
-template <class TDerived>
-inline void HyperElasticPotential<TMesh, THyperElasticEnergy>::ToMatrix(
-    Eigen::SparseCompressedBase<TDerived>& H) const
+template <
+    CElement TElement,
+    int Dims,
+    class TDerivedE,
+    class TDerivedeg,
+    class TDerivedGg,
+    class TDerivedOut>
+inline void ToHyperElasticGradient(
+    Eigen::DenseBase<TDerivedE> const& E,
+    typename TDerivedE::Scalar nNodes,
+    Eigen::DenseBase<TDerivedeg> const& eg,
+    Eigen::MatrixBase<TDerivedGg> const& Gg,
+    Eigen::PlainObjectBase<TDerivedOut>& G)
 {
-    PBAT_PROFILE_NAMED_SCOPE("pbat.fem.HyperElasticPotential.ToMatrix");
-    if (H.rows() != OutputDimensions() and H.cols() != InputDimensions())
-    {
-        std::string const what = fmt::format(
-            "Expected hessian matrix to have dimensions {}x{}, "
-            "but got {}x{}",
-            OutputDimensions(),
-            InputDimensions(),
-            H.rows(),
-            H.cols());
-        throw std::invalid_argument(what);
-    }
-    if (GH.IsEmpty())
-    {
-        throw std::invalid_argument("PrecomputeHessianSparsity() must be called prior.");
-    }
-    using SpanType = std::span<Scalar const>;
-    using SizeType = typename SpanType::size_type;
-    GH.To(SpanType(Hg.data(), static_cast<SizeType>(Hg.size())), H);
-}
-
-template <CMesh TMesh, physics::CHyperElasticEnergy THyperElasticEnergy>
-template <class TDerived>
-inline void
-HyperElasticPotential<TMesh, THyperElasticEnergy>::ToVector(Eigen::DenseBase<TDerived>& G) const
-{
-    PBAT_PROFILE_NAMED_SCOPE("pbat.fem.HyperElasticPotential.ToVector");
-    if (G.rows() != InputDimensions() or G.cols() != 1)
-    {
-        std::string const what = fmt::format(
-            "Expected gradient vector to have dimensions {}x{}, "
-            "but got {}x{}",
-            InputDimensions(),
-            1,
-            G.rows(),
-            G.cols());
-        throw std::invalid_argument(what);
-    }
-    auto constexpr kNodesPerElement     = ElementType::kNodes;
-    auto const numberOfQuadraturePoints = wg.size();
-    auto const numberOfNodes            = mesh.X.cols();
+    PBAT_PROFILE_NAMED_SCOPE("pbat.fem.ToHyperElasticGradient");
+    G.resize(Dims * nNodes, 1);
     G.setZero();
-    for (auto g = 0; g < numberOfQuadraturePoints; ++g)
+    auto constexpr kNodesPerElement = TElement::kNodes;
+    auto const nQuadPts             = eg.size();
+    auto unvecG                     = G.reshaped(Dims, nNodes);
+    for (auto g = 0; g < nQuadPts; ++g)
     {
         auto const e     = eg(g);
-        auto const nodes = mesh.E.col(e);
-        auto const geg   = Gg.col(g).reshaped(kDims, kNodesPerElement);
-        auto gi          = G.reshaped(kDims, numberOfNodes)(Eigen::placeholders::all, nodes);
+        auto const nodes = E.col(e);
+        auto const geg   = Gg.col(g).reshaped(Dims, kNodesPerElement);
+        auto gi          = unvecG(Eigen::placeholders::all, nodes);
         gi += geg;
-    }
-}
-
-template <CMesh TMesh, physics::CHyperElasticEnergy THyperElasticEnergy>
-inline CSCMatrix HyperElasticPotential<TMesh, THyperElasticEnergy>::ToMatrix() const
-{
-    PBAT_PROFILE_NAMED_SCOPE("pbat.fem.HyperElasticPotential.ToMatrix");
-    if (not GH.IsEmpty())
-    {
-        using SpanType = std::span<Scalar const>;
-        using SizeType = typename SpanType::size_type;
-        return GH.ToMatrix(SpanType(Hg.data(), static_cast<SizeType>(Hg.size())));
-    }
-    else
-    {
-        // Construct hessian from triplets
-        using SparseIndex = typename CSCMatrix::StorageIndex;
-        using Triplet     = Eigen::Triplet<Scalar, SparseIndex>;
-        std::vector<Triplet> triplets{};
-        triplets.reserve(static_cast<std::size_t>(Hg.size()));
-        auto const numberOfQuadraturePoints = wg.size();
-        for (auto g = 0; g < numberOfQuadraturePoints; ++g)
-        {
-            auto const e         = eg(g);
-            auto const nodes     = mesh.E.col(e);
-            auto constexpr Hrows = ElementType::kNodes * kDims;
-            auto constexpr Hcols = Hrows;
-            auto const heg       = Hg.block<Hrows, Hcols>(0, g * Hcols);
-            for (auto j = 0; j < ElementType::kNodes; ++j)
-                for (auto dj = 0; dj < kDims; ++dj)
-                    for (auto i = 0; i < ElementType::kNodes; ++i)
-                        for (auto di = 0; di < kDims; ++di)
-                            triplets.push_back(
-                                Triplet{
-                                    static_cast<SparseIndex>(kDims * nodes(i) + di),
-                                    static_cast<SparseIndex>(kDims * nodes(j) + dj),
-                                    heg(kDims * i + di, kDims * j + dj)});
-        }
-
-        auto const n = InputDimensions();
-        CSCMatrix H(n, n);
-        H.setFromTriplets(triplets.begin(), triplets.end());
-        return H;
-    }
-}
-
-template <CMesh TMesh, physics::CHyperElasticEnergy THyperElasticEnergy>
-inline VectorX HyperElasticPotential<TMesh, THyperElasticEnergy>::ToVector() const
-{
-    VectorX G(InputDimensions());
-    ToVector(G);
-    return G;
-}
-
-template <CMesh TMesh, physics::CHyperElasticEnergy THyperElasticEnergy>
-inline Scalar HyperElasticPotential<TMesh, THyperElasticEnergy>::Eval() const
-{
-    PBAT_PROFILE_NAMED_SCOPE("pbat.fem.HyperElasticPotential.Eval");
-    return Ug.sum();
-}
-
-template <CMesh TMesh, physics::CHyperElasticEnergy THyperElasticEnergy>
-inline Index HyperElasticPotential<TMesh, THyperElasticEnergy>::InputDimensions() const
-{
-    auto const numberOfNodes = mesh.X.cols();
-    auto const numberOfDofs  = numberOfNodes * kDims;
-    return numberOfDofs;
-}
-
-template <CMesh TMesh, physics::CHyperElasticEnergy THyperElasticEnergy>
-inline Index HyperElasticPotential<TMesh, THyperElasticEnergy>::OutputDimensions() const
-{
-    return InputDimensions();
-}
-
-template <CMesh TMesh, physics::CHyperElasticEnergy THyperElasticEnergy>
-inline void HyperElasticPotential<TMesh, THyperElasticEnergy>::CheckValidState() const
-{
-    auto const numberOfQuadraturePoints = wg.size();
-    auto constexpr kExpectedGNegRows    = ElementType::kNodes;
-    auto const expectedGNegCols         = MeshType::kDims * numberOfQuadraturePoints;
-    bool const bShapeFunctionGradientsHaveCorrectDimensions =
-        (GNeg.rows() == kExpectedGNegRows) and (GNeg.cols() == expectedGNegCols);
-    if (not bShapeFunctionGradientsHaveCorrectDimensions)
-    {
-        std::string const what = fmt::format(
-            "Expected shape function gradients at element quadrature points of dimensions "
-            "|#nodes-per-element|={} x |#mesh-dims * #quad.pts.|={} for but got {}x{} instead",
-            kExpectedGNegRows,
-            expectedGNegCols,
-            GNeg.rows(),
-            GNeg.cols());
-        throw std::invalid_argument(what);
-    }
-    bool const bLameCoefficientsHaveCorrectDimensions =
-        (lameg.cols() == numberOfQuadraturePoints) and (lameg.rows() == 2);
-    if (not bLameCoefficientsHaveCorrectDimensions)
-    {
-        std::string const what = fmt::format(
-            "Expected quadrature point lame coefficients with dimensions 2x{0} but got {1}x{2} "
-            "instead.",
-            numberOfQuadraturePoints,
-            lameg.rows(),
-            lameg.cols());
-        throw std::invalid_argument(what);
     }
 }
 

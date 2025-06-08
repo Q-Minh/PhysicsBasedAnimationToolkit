@@ -35,79 +35,6 @@ namespace pbat {
 namespace fem {
 
 /**
- * @brief Concept for matrix-free gradient parameter types
- * @tparam T Type to check
- */
-template <typename T>
-concept CMatrixFreeGradient = requires(T G)
-{
-    typename T::ElementType;
-    typename T::IndexType;
-    typename T::ScalarType;
-    {T::kDims}->std::convertible_to<int>;
-    {G.E};
-    {G.nNodes};
-    {G.eg};
-    {G.GNeg};
-};
-
-/**
- * @brief Parameters for gradient operator computations
- * @tparam TElement Element type
- * @tparam Dims Number of spatial dimensions
- * @tparam TDerivedE Type of the element matrix
- * @tparam TDerivedeg Type of the element indices at quadrature points
- * @tparam TDerivedGNeg Type of the shape function gradients at quadrature points
- */
-template <CElement TElement, int Dims, class TDerivedE, class TDerivedeg, class TDerivedGNeg>
-struct MatrixFreeGradient
-{
-    using ElementType = TElement;                      ///< Element type
-    using IndexType   = typename TDerivedE::Scalar;    ///< Index type (usually Eigen::Index)
-    using ScalarType  = typename TDerivedGNeg::Scalar; ///< Scalar type (usually double or float)
-    static constexpr int kDims = Dims;                 ///< Number of spatial dimensions
-
-    Eigen::DenseBase<TDerivedE> const& E;        ///< Element connectivity matrix
-    IndexType nNodes;                            ///< Number of mesh nodes
-    Eigen::DenseBase<TDerivedeg> const& eg;      ///< Element indices at quadrature points
-    Eigen::MatrixBase<TDerivedGNeg> const& GNeg; ///< Shape function gradients at quadrature points
-
-    /**
-     * @brief Construct gradient parameters
-     * @param E `|# nodes per element| x |# elements|` matrix of mesh elements
-     * @param nNodes Number of mesh nodes
-     * @param eg `|# quad.pts.| x 1` vector of element indices at quadrature points
-     * @param GNeg `|# nodes per element| x |# dims * # quad.pts.|` shape function gradients at
-     * quadrature points
-     */
-    MatrixFreeGradient(
-        Eigen::DenseBase<TDerivedE> const& E,
-        IndexType nNodes,
-        Eigen::DenseBase<TDerivedeg> const& eg,
-        Eigen::MatrixBase<TDerivedGNeg> const& GNeg)
-        : E(E), nNodes(nNodes), eg(eg), GNeg(GNeg)
-    {
-    }
-};
-
-/**
- * @brief Helper function to create gradient parameters
- */
-template <CElement TElement, int Dims, class TDerivedE, class TDerivedeg, class TDerivedGNeg>
-auto MakeMatrixFreeGradient(
-    Eigen::DenseBase<TDerivedE> const& E,
-    typename TDerivedE::Scalar nNodes,
-    Eigen::DenseBase<TDerivedeg> const& eg,
-    Eigen::MatrixBase<TDerivedGNeg> const& GNeg)
-{
-    return MatrixFreeGradient<TElement, Dims, TDerivedE, TDerivedeg, TDerivedGNeg>(
-        E.derived(),
-        nNodes,
-        eg.derived(),
-        GNeg.derived());
-}
-
-/**
  * @brief Compute gradient matrix-vector multiply \f$ Y += \mathbf{G} X \f$
  *
  * @tparam TElement Element type
@@ -173,31 +100,6 @@ inline void GemmGradient(
 }
 
 /**
- * @brief Compute gradient matrix-vector multiply \f$ Y += \mathbf{G} X \f$ using MatrixFreeGradient
- * parameters
- * @tparam TGradient MatrixFreeGradient type (must satisfy CMatrixFreeGradient)
- * @tparam TDerivedIn Type of the input matrix
- * @tparam TDerivedOut Type of the output matrix
- * @param G MatrixFreeGradient parameter struct
- * @param X `|# nodes| x |# cols|` input matrix
- * @param Y `|# dims * # quad.pts.| x |# cols|` output matrix
- */
-template <CMatrixFreeGradient TGradient, class TDerivedIn, class TDerivedOut>
-inline void GemmGradient(
-    TGradient const& G,
-    Eigen::MatrixBase<TDerivedIn> const& X,
-    Eigen::DenseBase<TDerivedOut>& Y)
-{
-    GemmGradient<typename TGradient::ElementType, TGradient::kDims>(
-        G.E.derived(),
-        G.nNodes,
-        G.eg.derived(),
-        G.GNeg.derived(),
-        X.derived(),
-        Y.derived());
-}
-
-/**
  * @brief Construct the gradient operator's sparse matrix representation
  * @tparam TElement Element type
  * @tparam Dims Number of spatial dimensions
@@ -250,25 +152,6 @@ auto GradientMatrix(
         static_cast<typename TMesh::IndexType>(mesh.X.cols()),
         eg.derived(),
         GNeg.derived());
-}
-
-/**
- * @brief Construct the gradient operator's sparse matrix representation using MatrixFreeGradient
- * parameters
- * @tparam TGradient MatrixFreeGradient type (must satisfy CMatrixFreeGradient)
- * @tparam Options Storage options for the matrix (default: Eigen::ColMajor)
- * @param G MatrixFreeGradient parameter struct
- * @return Sparse matrix representation of the gradient operator
- */
-template <Eigen::StorageOptions Options, CMatrixFreeGradient TGradient>
-auto GradientMatrix(TGradient const& G)
-    -> Eigen::SparseMatrix<typename TGradient::ScalarType, Options, typename TGradient::IndexType>
-{
-    return GradientMatrix<typename TGradient::ElementType, TGradient::kDims, Options>(
-        G.E.derived(),
-        G.nNodes,
-        G.eg.derived(),
-        G.GNeg.derived());
 }
 
 template <

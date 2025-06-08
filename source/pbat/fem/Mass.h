@@ -54,7 +54,48 @@ ElementMassMatrix(Eigen::MatrixBase<TN> const& N, typename TN::Scalar w, typenam
  *
  * @tparam TElement Element type
  * @tparam TN Type of the shape function vector at the quadrature point
- * @tparam TScalar Scalar type (e.g., double)
+ * @tparam TDerivedwg Type of the quadrature weights
+ * @tparam TDerivedrhog Type of the density at quadrature points
+ * @tparam TDerivedOut Type of the output matrix
+ * @param Neg `|# nodes per element| x |# quad.pts.|` shape function matrix at all quadrature points
+ * @param wg `|# quad.pts.| x 1` quadrature weights (including Jacobian determinant)
+ * @param rhog `|# quad.pts.| x 1` mass density at quadrature points
+ * @param M `|# elem nodes| x |# elem nodes * # quad.pts.|` out matrix of stacked element mass
+ * matrices
+ */
+template <
+    typename TElement,
+    typename TN,
+    typename TDerivedwg,
+    typename TDerivedrhog,
+    typename TDerivedOut>
+inline void ToElementMassMatrices(
+    Eigen::MatrixBase<TN> const& Neg,
+    Eigen::DenseBase<TDerivedwg> const& wg,
+    Eigen::DenseBase<TDerivedrhog> const& rhog,
+    Eigen::PlainObjectBase<TDerivedOut>& Meg)
+{
+    using ScalarType     = typename TN::Scalar;
+    constexpr int kNodes = TElement::kNodes;
+    const auto nQuadPts  = Neg.cols();
+    Meg.resize(kNodes, kNodes * nQuadPts);
+    for (Eigen::Index g = 0; g < nQuadPts; ++g)
+    {
+        auto const N                                      = Neg.col(g);
+        auto const w                                      = wg(g);
+        auto const rho                                    = rhog(g);
+        auto Me                                           = w * rho * N * N.transpose();
+        Meg.template block<kNodes, kNodes>(0, g * kNodes) = Me;
+    }
+}
+
+/**
+ * @brief Compute a matrix of horizontally stacked element mass matrices for all quadrature points
+ *
+ * @tparam TElement Element type
+ * @tparam TN Type of the shape function vector at the quadrature point
+ * @tparam TDerivedwg Type of the quadrature weights
+ * @tparam TDerivedrhog Type of the density at quadrature points
  * @param Neg `|# nodes per element| x |# quad.pts.|` shape function matrix at all quadrature points
  * @param wg `|# quad.pts.| x 1` quadrature weights (including Jacobian determinant)
  * @param rhog `|# quad.pts.| x 1` mass density at quadrature points
@@ -68,96 +109,9 @@ inline auto ElementMassMatrices(
 {
     using ScalarType     = typename TN::Scalar;
     constexpr int kNodes = TElement::kNodes;
-    const auto nQuadPts  = Neg.cols();
-    Eigen::Matrix<ScalarType, kNodes, Eigen::Dynamic> M(kNodes, kNodes * nQuadPts);
-    for (Eigen::Index g = 0; g < nQuadPts; ++g)
-    {
-        auto const N                                    = Neg.col(g);
-        auto const w                                    = wg(g);
-        auto const rho                                  = rhog(g);
-        auto Me                                         = w * rho * N * N.transpose();
-        M.template block<kNodes, kNodes>(0, g * kNodes) = Me;
-    }
-    return M;
-}
-
-/**
- * @brief Concept for matrix-free mass matrix parameter types
- * @tparam T Type to check
- */
-template <typename T>
-concept CMatrixFreeMass = requires(T M)
-{
-    typename T::ElementType;
-    typename T::IndexType;
-    typename T::ScalarType;
-    {T::kDims}->std::convertible_to<int>;
-    {M.E};
-    {M.nNodes};
-    {M.eg};
-    {M.Me};
-    {M.dims};
-};
-
-/**
- * @brief Parameters for mass matrix operator computations
- * @tparam TElement Element type
- * @tparam Dims Number of spatial dimensions
- * @tparam TDerivedE Type of the element matrix
- * @tparam TDerivedeg Type of the element indices at quadrature points
- * @tparam TDerivedMe Type of the element mass matrices
- */
-template <CElement TElement, int Dims, class TDerivedE, class TDerivedeg, class TDerivedMe>
-struct MatrixFreeMass
-{
-    using ElementType = TElement;                    ///< Element type
-    using IndexType   = typename TDerivedE::Scalar;  ///< Index type (usually Eigen::Index)
-    using ScalarType  = typename TDerivedMe::Scalar; ///< Scalar type (usually double or float)
-    static constexpr int kDims = Dims;               ///< Number of spatial dimensions
-
-    Eigen::DenseBase<TDerivedE> const& E;   ///< Element connectivity matrix
-    IndexType nNodes;                       ///< Number of mesh nodes
-    Eigen::DenseBase<TDerivedeg> const& eg; ///< Element indices at quadrature points
-    Eigen::MatrixBase<TDerivedMe> const&
-        Me; ///< Element mass matrices `|# nodes per element| x |# nodes per element * # quad.pts.|`
-    int dims; ///< Dimensionality of the image of the FEM function space
-
-    /**
-     * @brief Construct mass matrix parameters
-     * @param E `|# nodes per element| x |# elements|` matrix of mesh elements
-     * @param nNodes Number of mesh nodes
-     * @param eg `|# quad.pts.| x 1` vector of element indices at quadrature points
-     * @param Me `|# nodes per element| x |# nodes per element * # quad.pts.|` element mass matrices
-     * @param dims Dimensionality of the image of the FEM function space
-     */
-    MatrixFreeMass(
-        Eigen::DenseBase<TDerivedE> const& E,
-        IndexType nNodes,
-        Eigen::DenseBase<TDerivedeg> const& eg,
-        Eigen::MatrixBase<TDerivedMe> const& Me,
-        int dims = 1)
-        : E(E), nNodes(nNodes), eg(eg), Me(Me), dims(dims)
-    {
-    }
-};
-
-/**
- * @brief Helper function to create mass matrix parameters
- */
-template <CElement TElement, int Dims, class TDerivedE, class TDerivedeg, class TDerivedMe>
-auto MakeMatrixFreeMass(
-    Eigen::DenseBase<TDerivedE> const& E,
-    typename TDerivedE::Scalar nNodes,
-    Eigen::DenseBase<TDerivedeg> const& eg,
-    Eigen::MatrixBase<TDerivedMe> const& Me,
-    int dims = 1)
-{
-    return MatrixFreeMass<TElement, Dims, TDerivedE, TDerivedeg, TDerivedMe>(
-        E.derived(),
-        nNodes,
-        eg.derived(),
-        Me.derived(),
-        dims);
+    Eigen::Matrix<ScalarType, kNodes, Eigen::Dynamic> Meg;
+    ToElementMassMatrices<TElement>(Neg.derived(), wg.derived(), rhog.derived(), Meg);
+    return Meg;
 }
 
 /**
@@ -228,30 +182,6 @@ inline void GemmMass(
         eg.derived(),
         Me.derived(),
         dims,
-        X.derived(),
-        Y.derived());
-}
-
-/**
- * @brief Compute mass matrix-matrix multiply \f$ Y += \mathbf{M} X \f$ using MatrixFreeMass
- * parameters and precomputed element mass matrices
- * @tparam TMass MatrixFreeMass type (must satisfy CMatrixFreeMass)
- * @tparam TDerivedIn Type of the input matrix
- * @tparam TDerivedOut Type of the output matrix
- * @param M MatrixFreeMass parameter struct
- * @param X `|# nodes * dims| x |# cols|` input matrix
- * @param Y `|# nodes * dims| x |# cols|` output matrix
- */
-template <CMatrixFreeMass TMass, class TDerivedIn, class TDerivedOut>
-inline void
-GemmMass(TMass const& M, Eigen::MatrixBase<TDerivedIn> const& X, Eigen::DenseBase<TDerivedOut>& Y)
-{
-    GemmMass<typename TMass::ElementType, TMass::kDims>(
-        M.E.derived(),
-        M.nNodes,
-        M.eg.derived(),
-        M.Me.derived(),
-        M.dims,
         X.derived(),
         Y.derived());
 }
@@ -396,26 +326,6 @@ auto MassMatrix(
         eg.derived(),
         Meg.derived(),
         dims);
-}
-
-/**
- * @brief Construct the mass matrix operator's sparse matrix representation using MatrixFreeMass
- * parameters
- * @tparam TMass MatrixFreeMass type (must satisfy CMatrixFreeMass)
- * @tparam Options Storage options for the matrix (default: Eigen::ColMajor)
- * @param M MatrixFreeMass parameter struct
- * @return Sparse matrix representation of the mass matrix operator
- */
-template <Eigen::StorageOptions Options, CMatrixFreeMass TMass>
-auto MassMatrix(TMass const& M)
-    -> Eigen::SparseMatrix<typename TMass::ScalarType, Options, typename TMass::IndexType>
-{
-    return MassMatrix<typename TMass::ElementType, TMass::kDims, Options>(
-        M.E.derived(),
-        M.nNodes,
-        M.eg.derived(),
-        M.Me.derived(),
-        M.dims);
 }
 
 /**
@@ -564,25 +474,6 @@ inline void ToLumpedMassMatrix(
 }
 
 /**
- * @brief Compute lumped mass vector using MatrixFreeMass parameters into existing output vector
- * @tparam TMass MatrixFreeMass type (must satisfy CMatrixFreeMass)
- * @tparam TDerivedOut Type of the output vector
- * @param M MatrixFreeMass parameter struct
- * @param m Output vector of lumped masses `|# nodes * dims| x 1`
- */
-template <CMatrixFreeMass TMass, class TDerivedOut>
-inline void ToLumpedMassMatrix(TMass const& M, Eigen::PlainObjectBase<TDerivedOut>& m)
-{
-    ToLumpedMassMatrix<typename TMass::ElementType, TMass::kDims>(
-        M.E.derived(),
-        M.nNodes,
-        M.eg.derived(),
-        M.Me.derived(),
-        M.dims,
-        m.derived());
-}
-
-/**
  * @brief Compute lumped mass matrix's diagonal vector (allocates output vector)
  * @tparam TElement Element type
  * @tparam Dims Number of spatial dimensions
@@ -694,20 +585,6 @@ auto LumpedMassMatrix(
         eg.derived(),
         Meg.derived(),
         dims);
-}
-
-/**
- * @brief Compute lumped mass vector using MatrixFreeMass parameters (allocates output vector)
- */
-template <CMatrixFreeMass TMass>
-auto LumpedMassMatrix(TMass const& M)
-{
-    return LumpedMassMatrix<typename TMass::ElementType, TMass::kDims>(
-        M.E.derived(),
-        M.nNodes,
-        M.eg.derived(),
-        M.Me.derived(),
-        M.dims);
 }
 
 // Implementation of GemmMass

@@ -29,113 +29,6 @@ namespace pbat {
 namespace fem {
 
 /**
- * @brief Concept for matrix-free Laplacian parameter types
- * @tparam T Type to check
- */
-template <typename T>
-concept CMatrixFreeLaplacian = requires(T L)
-{
-    typename T::ElementType;
-    typename T::IndexType;
-    typename T::ScalarType;
-    {
-        T::kDims
-    } -> std::convertible_to<int>;
-    {L.E};
-    {L.nNodes};
-    {L.eg};
-    {L.wg};
-    {L.GNeg};
-    {L.dims};
-};
-
-/**
- * @brief Parameters for Laplacian operator computations
- * @tparam TElement Element type
- * @tparam Dims Number of spatial dimensions
- * @tparam TDerivedE Type of the element matrix
- * @tparam TDerivedeg Type of the element indices at quadrature points
- * @tparam TDerivedwg Type of the quadrature weights
- * @tparam TDerivedGNeg Type of the shape function gradients at quadrature points
- */
-template <
-    CElement TElement,
-    int Dims,
-    class TDerivedE,
-    class TDerivedeg,
-    class TDerivedwg,
-    class TDerivedGNeg>
-struct MatrixFreeLaplacian
-{
-    using ElementType = TElement;                      ///< Element type
-    using IndexType   = typename TDerivedE::Scalar;    ///< Index type (usually Eigen::Index)
-    using ScalarType  = typename TDerivedGNeg::Scalar; ///< Scalar type (usually double or float)
-    static constexpr int kDims = Dims;                 ///< Number of spatial dimensions
-
-    static_assert(
-        std::is_same_v<typename TDerivedE::Scalar, typename TDerivedeg::Scalar>,
-        "Element indices and element connectivity matrix must have the same scalar type.");
-    static_assert(
-        std::is_same_v<typename TDerivedGNeg::Scalar, typename TDerivedwg::Scalar>,
-        "Quadrature weights and shape function gradients must have the same scalar type.");
-
-    Eigen::DenseBase<TDerivedE> const& E;        ///< Element connectivity matrix
-    IndexType nNodes;                            ///< Number of mesh nodes
-    Eigen::DenseBase<TDerivedeg> const& eg;      ///< Element indices at quadrature points
-    Eigen::DenseBase<TDerivedwg> const& wg;      ///< Quadrature weights
-    Eigen::MatrixBase<TDerivedGNeg> const& GNeg; ///< Shape function gradients at quadrature points
-    int dims; ///< Dimensionality of the image of the FEM function space
-
-    /**
-     * @brief Construct Laplacian parameters
-     * @param E `|# nodes per element| x |# elements|` matrix of mesh elements
-     * @param nNodes Number of mesh nodes
-     * @param eg `|# quad.pts.| x 1` vector of element indices at quadrature points
-     * @param wg `|# quad.pts.| x 1` vector of quadrature weights
-     * @param GNeg `|# nodes per element| x |# dims * # quad.pts.|` shape function gradients at
-     * quadrature points
-     * @param dims Dimensionality of the image of the FEM function space
-     */
-    MatrixFreeLaplacian(
-        Eigen::DenseBase<TDerivedE> const& E,
-        IndexType nNodes,
-        Eigen::DenseBase<TDerivedeg> const& eg,
-        Eigen::DenseBase<TDerivedwg> const& wg,
-        Eigen::MatrixBase<TDerivedGNeg> const& GNeg,
-        int dims = 1)
-        : E(E), nNodes(nNodes), eg(eg), wg(wg), GNeg(GNeg), dims(dims)
-    {
-    }
-};
-
-/**
- * @brief Helper function to create Laplacian parameters
- */
-template <
-    CElement TElement,
-    int Dims,
-    class TDerivedE,
-    class TDerivedeg,
-    class TDerivedwg,
-    class TDerivedGNeg>
-auto MakeMatrixFreeLaplacian(
-    Eigen::DenseBase<TDerivedE> const& E,
-    typename TDerivedE::Scalar nNodes,
-    Eigen::DenseBase<TDerivedeg> const& eg,
-    Eigen::DenseBase<TDerivedwg> const& wg,
-    Eigen::MatrixBase<TDerivedGNeg> const& GNeg,
-    int dims = 1)
-{
-    return MatrixFreeLaplacian<TElement, Dims, TDerivedE, TDerivedeg, TDerivedwg, TDerivedGNeg>(
-        E.derived(),
-        nNodes,
-        eg.derived(),
-        wg.derived(),
-        GNeg.derived(),
-        dims);
-}
-
-/**
  * @brief Compute Laplacian matrix-vector multiply \f$ Y += \mathbf{L} X \f$
  *
  * @tparam TElement Element type
@@ -220,33 +113,6 @@ inline void GemmLaplacian(
 }
 
 /**
- * @brief Compute Laplacian matrix-vector multiply \f$ Y += \mathbf{L} X \f$ using
- * MatrixFreeLaplacian parameters
- * @tparam TLaplacian MatrixFreeLaplacian type (must satisfy CMatrixFreeLaplacian)
- * @tparam TDerivedIn Type of the input matrix
- * @tparam TDerivedOut Type of the output matrix
- * @param L MatrixFreeLaplacian parameter struct
- * @param X `|# nodes * dims| x |# cols|` input matrix
- * @param Y `|# nodes * dims| x |# cols|` output matrix
- */
-template <CMatrixFreeLaplacian TLaplacian, class TDerivedIn, class TDerivedOut>
-inline void GemmLaplacian(
-    TLaplacian const& L,
-    Eigen::MatrixBase<TDerivedIn> const& X,
-    Eigen::DenseBase<TDerivedOut>& Y)
-{
-    GemmLaplacian<typename TLaplacian::ElementType, TLaplacian::kDims>(
-        L.E.derived(),
-        L.nNodes,
-        L.eg.derived(),
-        L.wg.derived(),
-        L.GNeg.derived(),
-        L.dims,
-        X.derived(),
-        Y.derived());
-}
-
-/**
  * @brief Construct the Laplacian operator's sparse matrix representation
  * @tparam TElement Element type
  * @tparam Dims Number of spatial dimensions
@@ -317,27 +183,6 @@ auto LaplacianMatrix(
         wg.derived(),
         GNeg.derived(),
         dims);
-}
-
-/**
- * @brief Construct the Laplacian operator's sparse matrix representation using MatrixFreeLaplacian
- * parameters
- * @tparam TLaplacian MatrixFreeLaplacian type (must satisfy CMatrixFreeLaplacian)
- * @tparam Options Storage options for the matrix (default: Eigen::ColMajor)
- * @param L MatrixFreeLaplacian parameter struct
- * @return Sparse matrix representation of the Laplacian operator
- */
-template <Eigen::StorageOptions Options, CMatrixFreeLaplacian TLaplacian>
-auto LaplacianMatrix(TLaplacian const& L)
-    -> Eigen::SparseMatrix<typename TLaplacian::ScalarType, Options, typename TLaplacian::IndexType>
-{
-    return LaplacianMatrix<typename TLaplacian::ElementType, TLaplacian::kDims, Options>(
-        L.E.derived(),
-        L.nNodes,
-        L.eg.derived(),
-        L.wg.derived(),
-        L.GNeg.derived(),
-        L.dims);
 }
 
 template <

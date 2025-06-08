@@ -51,14 +51,7 @@ TEST_CASE("[fem] Laplacian")
                     .transpose()
                     .reshaped();
             MatrixX const GNeg = fem::ShapeFunctionGradients<kQuadratureOrder>(mesh);
-            auto const LF      = fem::MakeMatrixFreeLaplacian<Element, kDims>(
-                mesh.E,
-                mesh.X.cols(),
-                eg,
-                wg,
-                GNeg,
-                outDims);
-            auto const L = fem::LaplacianMatrix<Eigen::ColMajor>(LF);
+            auto const L       = fem::LaplacianMatrix<Eigen::ColMajor>(mesh, eg, wg, GNeg, outDims);
             CHECK_EQ(L.rows(), n);
             CHECK_EQ(L.cols(), n);
 
@@ -76,7 +69,7 @@ TEST_CASE("[fem] Laplacian")
             // multiplication
             VectorX const x = VectorX::Random(n);
             VectorX yFree   = VectorX::Zero(n);
-            fem::GemmLaplacian(LF, x, yFree);
+            fem::GemmLaplacian(mesh, eg, wg, GNeg, outDims, x, yFree);
             VectorX y           = L * x;
             Scalar const yError = (y - yFree).squaredNorm();
             CHECK_LE(yError, zero);
@@ -85,8 +78,8 @@ TEST_CASE("[fem] Laplacian")
             VectorX yInputScaled  = VectorX::Zero(n);
             VectorX yOutputScaled = VectorX::Zero(n);
             Scalar constexpr k    = -2.;
-            fem::GemmLaplacian(LF, k * x, yInputScaled);
-            fem::GemmLaplacian(LF, x, yOutputScaled);
+            fem::GemmLaplacian(mesh, eg, wg, GNeg, outDims, k * x, yInputScaled);
+            fem::GemmLaplacian(mesh, eg, wg, GNeg, outDims, x, yOutputScaled);
             yOutputScaled *= k;
             Scalar const yLinearityError =
                 (yInputScaled - yOutputScaled).squaredNorm() / yOutputScaled.squaredNorm();
@@ -95,7 +88,7 @@ TEST_CASE("[fem] Laplacian")
             // Laplacian of constant function should be 0
             VectorX const xconst = VectorX::Ones(n);
             VectorX yconst       = VectorX::Zero(n);
-            fem::GemmLaplacian(LF, xconst, yconst);
+            fem::GemmLaplacian(mesh, eg, wg, GNeg, outDims, xconst, yconst);
             CHECK_LE(yconst.squaredNorm(), zero);
         }
     });

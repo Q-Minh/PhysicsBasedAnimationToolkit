@@ -51,9 +51,7 @@ TEST_CASE("[fem] Mass")
                                 .replicate(1, nQuadPtsPerElement)
                                 .transpose()
                                 .reshaped();
-            auto const MF =
-                fem::MakeMatrixFreeMass<Element, kDims>(mesh.E, mesh.X.cols(), eg, Meg, outDims);
-            auto const M = fem::MassMatrix<Eigen::ColMajor>(MF);
+            auto const M = fem::MassMatrix<Eigen::ColMajor>(mesh, eg, Meg, outDims);
             CHECK_EQ(M.rows(), n);
             CHECK_EQ(M.cols(), n);
 
@@ -69,7 +67,7 @@ TEST_CASE("[fem] Mass")
             // multiplication
             VectorX const x = VectorX::Ones(n);
             VectorX yFree   = VectorX::Zero(n);
-            fem::GemmMass(MF, x, yFree);
+            fem::GemmMass(mesh, eg, Meg, outDims, x, yFree);
             VectorX y           = M * x;
             Scalar const yError = (y - yFree).norm() / yFree.norm();
             CHECK_LE(yError, zero);
@@ -78,15 +76,15 @@ TEST_CASE("[fem] Mass")
             VectorX yInputScaled  = VectorX::Zero(n);
             VectorX yOutputScaled = VectorX::Zero(n);
             Scalar constexpr k    = -2.;
-            fem::GemmMass(MF, k * x, yInputScaled);
-            fem::GemmMass(MF, x, yOutputScaled);
+            fem::GemmMass(mesh, eg, Meg, outDims, k * x, yInputScaled);
+            fem::GemmMass(mesh, eg, Meg, outDims, x, yOutputScaled);
             yOutputScaled *= k;
             Scalar const yLinearityError =
                 (yInputScaled - yOutputScaled).norm() / yOutputScaled.norm();
             CHECK_LE(yLinearityError, zero);
 
             // Check lumped mass
-            VectorX lumpedMass = fem::LumpedMassMatrix(MF);
+            VectorX lumpedMass = fem::LumpedMassMatrix(mesh, eg, Meg, outDims);
             CHECK_EQ(lumpedMass.size(), M.cols());
             for (auto i = 0; i < M.cols(); ++i)
             {

@@ -42,10 +42,7 @@ TEST_CASE("[fem] Gradient")
                             .replicate(1, nQuadPtsPerElem)
                             .transpose()
                             .reshaped();
-
-        auto const GF = fem::MakeMatrixFreeGradient<Element, kDims>(mesh.E, mesh.X.cols(), eg, GNe);
-        auto const G  = fem::GradientMatrix<Eigen::ColMajor>(GF);
-
+        auto const G                = fem::GradientMatrix<Eigen::ColMajor>(mesh, eg, GNe);
         auto const n                = G.cols();
         auto const m                = G.rows();
         auto const numberOfElements = mesh.E.cols();
@@ -56,7 +53,7 @@ TEST_CASE("[fem] Gradient")
 
         VectorX const ones = VectorX::Ones(n);
         VectorX gradOnes   = VectorX::Zero(m);
-        fem::GemmGradient(GF, ones, gradOnes);
+        fem::GemmGradient(mesh, eg, GNe, ones, gradOnes);
 
         bool const bConstantFunctionHasZeroGradient = gradOnes.isZero(zero);
         CHECK(bConstantFunctionHasZeroGradient);
