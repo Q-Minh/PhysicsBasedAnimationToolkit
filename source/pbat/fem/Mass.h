@@ -25,8 +25,7 @@
 #include <fmt/core.h>
 #include <tbb/parallel_for.h>
 
-namespace pbat {
-namespace fem {
+namespace pbat::fem {
 
 /**
  * @brief Compute the element mass matrix at a single quadrature point.
@@ -879,7 +878,6 @@ inline void ToLumpedMassMatrix(
     }
 }
 
-} // namespace fem
-} // namespace pbat
+} // namespace pbat::fem
 
 #endif // PBAT_FEM_MASS_H

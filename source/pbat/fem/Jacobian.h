@@ -25,8 +25,7 @@
 #include <string>
 #include <tbb/parallel_for.h>
 
-namespace pbat {
-namespace fem {
+namespace pbat::fem {
 
 /**
  * @brief Given a map \f$ x(\xi) = \sum_i x_i N_i(\xi) \f$, where \f$ \xi \in \Omega^{\text{ref}}
@@ -517,7 +516,6 @@ auto ReferencePositions(
         eps);
 }
 
-} // namespace fem
-} // namespace pbat
+} // namespace pbat::fem
 
 #endif // PBAT_FEM_JACOBIAN_H

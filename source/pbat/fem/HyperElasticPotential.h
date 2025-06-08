@@ -28,8 +28,7 @@
 #include <string>
 #include <tbb/parallel_for.h>
 
-namespace pbat {
-namespace fem {
+namespace pbat::fem {
 
 /**
  * @brief Bit-flag enum for SPD projection type
@@ -1384,7 +1383,6 @@ inline void ToHyperElasticGradient(
     }
 }
 
-} // namespace fem
-} // namespace pbat
+} // namespace pbat::fem
 
 #endif // PBAT_FEM_HYPERELASTICPOTENTIAL_H

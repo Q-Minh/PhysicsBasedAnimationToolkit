@@ -24,8 +24,7 @@
 #include <string>
 #include <tbb/parallel_for.h>
 
-namespace pbat {
-namespace fem {
+namespace pbat::fem {
 
 /**
  * @brief Computes shape functions at element quadrature points for a polynomial quadrature rule of
@@ -478,7 +477,6 @@ auto ShapeFunctionGradientsAt(
         Xi.derived());
 }
 
-} // namespace fem
-} // namespace pbat
+} // namespace pbat::fem
 
 #endif // PBAT_FEM_SHAPE_FUNCTIONS_H

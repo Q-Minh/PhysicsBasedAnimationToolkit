@@ -25,8 +25,7 @@
 #include <fmt/core.h>
 #include <tbb/parallel_for.h>
 
-namespace pbat {
-namespace fem {
+namespace pbat::fem {
 
 /**
  * @brief Compute Laplacian matrix-vector multiply \f$ Y += \mathbf{L} X \f$
@@ -315,7 +314,6 @@ auto LaplacianMatrix(
     return L;
 }
 
-} // namespace fem
-} // namespace pbat
+} // namespace pbat::fem
 
 #endif // PBAT_FEM_LAPLACIAN_H

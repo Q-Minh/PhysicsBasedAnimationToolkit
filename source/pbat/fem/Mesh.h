@@ -25,8 +25,7 @@
 #include <numeric>
 #include <ranges>
 
-namespace pbat {
-namespace fem {
+namespace pbat::fem {
 
 /**
  * @brief A generic stateful finite element mesh representation.
@@ -319,7 +318,6 @@ Mesh<TElement, Dims, TScalar, TIndex>::QuadratureWeights() const
     return wg;
 }
 
-} // namespace fem
-} // namespace pbat
+} // namespace pbat::fem
 
 #endif // PBAT_FEM_MESH_H

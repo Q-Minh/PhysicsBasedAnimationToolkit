@@ -31,8 +31,7 @@
 #include <fmt/core.h>
 #include <tbb/parallel_for.h>
 
-namespace pbat {
-namespace fem {
+namespace pbat::fem {
 
 /**
  * @brief Compute gradient matrix-vector multiply \f$ Y += \mathbf{G} X \f$
@@ -261,7 +260,6 @@ auto GradientMatrix(
     return G;
 }
 
-} // namespace fem
-} // namespace pbat
+} // namespace pbat::fem
 
 #endif // PBAT_FEM_GRADIENT_H

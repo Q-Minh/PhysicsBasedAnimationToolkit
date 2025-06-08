@@ -16,8 +16,7 @@
 
 #include <concepts>
 
-namespace pbat {
-namespace fem {
+namespace pbat::fem {
 
 /**
  * @brief Reference finite element
@@ -89,13 +88,14 @@ concept CMesh = requires(M m)
     requires common::CIndex<typename M::IndexType>;
     {M::kDims}->std::convertible_to<int>;
     {M::kOrder}->std::convertible_to<int>;
-    {m.X}/*->std::
-        convertible_to<Eigen::Matrix<typename M::ScalarType, Eigen::Dynamic, Eigen::Dynamic>>*/;
-    {m.E}
-        /*->std::convertible_to<Eigen::Matrix<typename M::IndexType, Eigen::Dynamic, Eigen::Dynamic>>*/;
+    {m.X} /*->std::
+         convertible_to<Eigen::Matrix<typename M::ScalarType, Eigen::Dynamic, Eigen::Dynamic>>*/
+    ;
+    {m.E} /*->std::convertible_to<Eigen::Matrix<typename M::IndexType, Eigen::Dynamic,
+             Eigen::Dynamic>>*/
+    ;
 };
 
-} // namespace fem
-} // namespace pbat
+} // namespace pbat::fem
 
 #endif // PBAT_FEM_CONCEPTS_H

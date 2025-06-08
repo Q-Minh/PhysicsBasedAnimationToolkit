@@ -17,8 +17,7 @@
 #include "pbat/math/linalg/mini/Concepts.h"
 #include "pbat/math/linalg/mini/Matrix.h"
 
-namespace pbat {
-namespace fem {
+namespace pbat::fem {
 
 /**
  * @brief Computes the deformation gradient \f$ \frac{\partial \mathbf{x}(X)}{\partial X} \f$ of the
@@ -253,7 +252,6 @@ auto HessianWrtDofs(TMatrixHF const& HF, TMatrixGP const& GP)
     return d2Psidx2;
 }
 
-} // namespace fem
-} // namespace pbat
+} // namespace pbat::fem
 
 #endif // PBAT_FEM_DEFORMATIONGRADIENT_H
