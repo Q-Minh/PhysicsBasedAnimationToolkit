@@ -1,26 +1,9 @@
 #include "SparsityPattern.h"
 
-namespace pbat {
-namespace math {
-namespace linalg {
-
-bool SparsityPattern::IsEmpty() const
-{
-    return ij.empty();
-}
-
-CSCMatrix const& SparsityPattern::Pattern() const
-{
-    return A;
-}
-
-} // namespace linalg
-} // namespace math
-} // namespace pbat
-
 #include <doctest/doctest.h>
 #include <ranges>
 #include <vector>
+#include <iostream>
 
 TEST_CASE("[math][linalg] SparsityPattern")
 {

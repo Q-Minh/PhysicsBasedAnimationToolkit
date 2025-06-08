@@ -243,6 +243,45 @@ inline void GemmHyperElastic(
 }
 
 /**
+ * @brief Construct the hessian matrix's sparsity pattern
+ * @tparam TElement Element type
+ * @tparam Dims Number of spatial dimensions
+ * @tparam Options Storage options for the matrix
+ * @tparam TDerivedE Type of the element matrix
+ * @tparam TDerivedeg Type of the element indices at quadrature points
+ * @param E `|# nodes per element| x |# elements|` matrix of mesh elements
+ * @param nNodes Number of mesh nodes
+ * @param eg `|# quad.pts.| x 1` vector of element indices at quadrature points
+ * @return Elastic hessian's sparsity pattern
+ */
+template <
+    CElement TElement,
+    int Dims,
+    Eigen::StorageOptions Options,
+    class TDerivedE,
+    class TDerivedeg>
+auto ElasticHessianSparsity(
+    Eigen::DenseBase<TDerivedE> const& E,
+    typename TDerivedE::Scalar nNodes,
+    Eigen::DenseBase<TDerivedeg> const& eg)
+    -> math::linalg::SparsityPattern<typename TDerivedE::Scalar, Options>;
+
+/**
+ * @brief Construct the hessian matrix's sparsity pattern
+ * @param mesh Mesh containing element connectivity and node positions
+ * @return Elastic hessian's sparsity pattern
+ */
+template <Eigen::StorageOptions Options, CMesh TMesh>
+auto ElasticHessianSparsity(TMesh const& mesh)
+    -> math::linalg::SparsityPattern<typename TMesh::IndexType, Options>
+{
+    return ElasticHessianSparsity<typename TMesh::ElementType, TMesh::kDims, Options>(
+        mesh.E,
+        static_cast<typename TMesh::IndexType>(mesh.X.cols()),
+        mesh.eg.derived());
+}
+
+/**
  * @brief Construct the hessian matrix's sparse representation
  * @tparam TElement Element type
  * @tparam Dims Number of spatial dimensions
@@ -294,6 +333,99 @@ auto HyperElasticHessian(
         static_cast<typename TMesh::IndexType>(mesh.X.cols()),
         eg.derived(),
         Hg.derived());
+}
+
+/**
+ * @brief Construct the hessian matrix using mesh with sparsity pattern
+ * @tparam TElement Element type
+ * @tparam Dims Number of spatial dimensions
+ * @tparam TDerivedE Type of the element matrix
+ * @tparam TDerivedHg Type of the element hessian matrices
+ * @tparam Options Storage options for the matrix
+ * @tparam TDerivedH Type of the output sparse matrix
+ * @param E `|# nodes per element| x |# elements|` matrix of mesh elements
+ * @param nNodes Number of mesh nodes
+ * @param Hg `|# dims * # elem nodes| x |# dims * # elem nodes * # quad.pts.|` element elastic
+ * hessian matrices at quadrature points
+ * @param sparsity Sparsity pattern for the hessian matrix
+ * @param H Output sparse matrix for the hessian
+ */
+template <
+    CElement TElement,
+    int Dims,
+    class TDerivedE,
+    class TDerivedHg,
+    Eigen::StorageOptions Options,
+    class TDerivedH>
+void ToHyperElasticHessian(
+    Eigen::DenseBase<TDerivedE> const& E,
+    typename TDerivedE::Scalar nNodes,
+    Eigen::DenseBase<TDerivedHg> const& Hg,
+    math::linalg::SparsityPattern<typename TDerivedE::Scalar, Options> const& sparsity,
+    Eigen::SparseCompressedBase<TDerivedH>& H);
+
+/**
+ * @brief Construct the hessian matrix using mesh with sparsity pattern
+ * @tparam TMesh Type of the mesh
+ * @tparam TDerivedHg Type of the element hessian matrices
+ * @tparam Options Storage options for the matrix
+ * @tparam TDerivedH Type of the output sparse matrix
+ * @param mesh Mesh containing element connectivity and node positions
+ * @param Hg `|# dims * # elem nodes| x |# dims * # elem nodes * # quad.pts.|` element elastic
+ * hessian matrices at quadrature points
+ * @param sparsity Sparsity pattern for the hessian matrix
+ * @param H Output sparse matrix for the hessian
+ */
+template <CMesh TMesh, class TDerivedHg, Eigen::StorageOptions Options, class TDerivedH>
+void ToHyperElasticHessian(
+    TMesh const& mesh,
+    Eigen::DenseBase<TDerivedHg> const& Hg,
+    math::linalg::SparsityPattern<typename TMesh::IndexType, Options> const& sparsity,
+    Eigen::SparseCompressedBase<typename TDerivedHg::Scalar>& H)
+{
+    ToHyperElasticHessian<typename TMesh::ElementType, TMesh::kDims, TDerivedHg, Options>(
+        mesh.E,
+        static_cast<typename TMesh::IndexType>(mesh.X.cols()),
+        Hg.derived(),
+        sparsity,
+        H.derived());
+}
+
+template <
+    CElement TElement,
+    int Dims,
+    Eigen::StorageOptions Options,
+    class TDerivedE,
+    class TDerivedHg>
+auto HyperElasticHessian(
+    Eigen::DenseBase<TDerivedE> const& E,
+    typename TDerivedE::Scalar nNodes,
+    Eigen::DenseBase<TDerivedHg> const& Hg,
+    math::linalg::SparsityPattern<typename TDerivedE::Scalar, Options> const& sparsity)
+    -> Eigen::SparseMatrix<typename TDerivedHg::Scalar, Options, typename TDerivedE::Scalar>;
+
+/**
+ * @brief Construct the hessian matrix using mesh with sparsity pattern
+ * @tparam TMesh Type of the mesh
+ * @tparam TDerivedHg Type of the element hessian matrices
+ * @param mesh Mesh containing element connectivity and node positions
+ * @param Hg `|# dims * # elem nodes| x |# dims * # elem nodes * # quad.pts.|` element elastic
+ * hessian matrices at quadrature points
+ * @param sparsity Sparsity pattern for the hessian matrix
+ * @return Sparse matrix representation of the hessian
+ */
+template <Eigen::StorageOptions Options, CMesh TMesh, class TDerivedHg>
+auto HyperElasticHessian(
+    TMesh const& mesh,
+    Eigen::DenseBase<TDerivedHg> const& Hg,
+    math::linalg::SparsityPattern<typename TMesh::IndexType, Options> const& sparsity)
+    -> Eigen::SparseMatrix<typename TDerivedHg::Scalar, Options, typename TMesh::IndexType>
+{
+    return HyperElasticHessian<typename TMesh::ElementType, TMesh::kDims, Options>(
+        mesh.E,
+        static_cast<typename TMesh::IndexType>(mesh.X.cols()),
+        Hg.derived(),
+        sparsity);
 }
 
 /**
@@ -1083,6 +1215,56 @@ template <
     int Dims,
     Eigen::StorageOptions Options,
     class TDerivedE,
+    class TDerivedeg>
+auto ElasticHessianSparsity(
+    Eigen::DenseBase<TDerivedE> const& E,
+    typename TDerivedE::Scalar nNodes,
+    Eigen::DenseBase<TDerivedeg> const& eg)
+    -> math::linalg::SparsityPattern<typename TDerivedE::Scalar, Options>
+{
+    PBAT_PROFILE_NAMED_SCOPE("pbat.fem.ElasticHessianSparsity");
+    using IndexType                     = typename TDerivedE::Scalar;
+    auto const numberOfQuadraturePoints = eg.size();
+    auto const kNodesPerElement         = TElement::kNodes;
+    auto const kDofsPerElement          = kNodesPerElement * Dims;
+    auto const nDofs                    = Dims * nNodes;
+    std::vector<IndexType> nonZeroRowIndices{};
+    std::vector<IndexType> nonZeroColIndices{};
+    nonZeroRowIndices.reserve(
+        static_cast<std::size_t>(kDofsPerElement * kDofsPerElement * numberOfQuadraturePoints));
+    nonZeroColIndices.reserve(
+        static_cast<std::size_t>(kDofsPerElement * kDofsPerElement * numberOfQuadraturePoints));
+    // Insert non-zero indices in the storage order of our Hg matrix of element hessians at
+    // quadrature points
+    for (auto g = 0; g < numberOfQuadraturePoints; ++g)
+    {
+        auto const e     = eg(g);
+        auto const nodes = E.col(e);
+        for (auto j = 0; j < kNodesPerElement; ++j)
+        {
+            for (auto dj = 0; dj < Dims; ++dj)
+            {
+                for (auto i = 0; i < kNodesPerElement; ++i)
+                {
+                    for (auto di = 0; di < Dims; ++di)
+                    {
+                        nonZeroRowIndices.push_back(Dims * nodes(i) + di);
+                        nonZeroColIndices.push_back(Dims * nodes(j) + dj);
+                    }
+                }
+            }
+        }
+    }
+    math::linalg::SparsityPattern<IndexType, Options> GH;
+    GH.Compute(nDofs, nDofs, nonZeroRowIndices, nonZeroColIndices);
+    return GH;
+}
+
+template <
+    CElement TElement,
+    int Dims,
+    Eigen::StorageOptions Options,
+    class TDerivedE,
     class TDerivedeg,
     class TDerivedHg>
 auto HyperElasticHessian(
@@ -1132,6 +1314,44 @@ auto HyperElasticHessian(
     }
     H.setFromTriplets(triplets.begin(), triplets.end());
     return H;
+}
+
+template <
+    CElement TElement,
+    int Dims,
+    class TDerivedE,
+    class TDerivedHg,
+    Eigen::StorageOptions Options,
+    class TDerivedH>
+void ToHyperElasticHessian(
+    Eigen::DenseBase<TDerivedE> const& E,
+    typename TDerivedE::Scalar nNodes,
+    Eigen::DenseBase<TDerivedHg> const& Hg,
+    math::linalg::SparsityPattern<typename TDerivedE::Scalar, Options> const& sparsity,
+    Eigen::SparseCompressedBase<TDerivedH>& H)
+{
+    PBAT_PROFILE_NAMED_SCOPE("pbat.fem.ToHyperElasticHessian");
+    using SpanType = std::span<Scalar const>;
+    using SizeType = typename SpanType::size_type;
+    sparsity.To(SpanType(Hg.data(), static_cast<SizeType>(Hg.size())), H);
+}
+
+template <
+    CElement TElement,
+    int Dims,
+    Eigen::StorageOptions Options,
+    class TDerivedE,
+    class TDerivedHg>
+auto HyperElasticHessian(
+    Eigen::DenseBase<TDerivedE> const& E,
+    typename TDerivedE::Scalar nNodes,
+    Eigen::DenseBase<TDerivedHg> const& Hg,
+    math::linalg::SparsityPattern<typename TDerivedE::Scalar, Options> const& sparsity)
+    -> Eigen::SparseMatrix<typename TDerivedHg::Scalar, Options, typename TDerivedE::Scalar>
+{
+    using SpanType = std::span<Scalar const>;
+    using SizeType = typename SpanType::size_type;
+    return sparsity.ToMatrix(SpanType(Hg.data(), static_cast<SizeType>(Hg.size())));
 }
 
 template <

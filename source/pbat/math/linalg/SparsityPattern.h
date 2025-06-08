@@ -1,24 +1,13 @@
-/**
- * @file SparsityPattern.h
- * @author Quoc-Minh Ton-That (tonthat.quocminh@gmail.com)
- * @brief This file contains a sparsity pattern precomputer to accelerate sparse matrix assembly via
- * parallelism.
- * @date 2025-03-25
- *
- * @copyright Copyright (c) 2025
- *
- */
-
 #ifndef PBAT_MATH_LINALG_SPARSITYPATTERN_H
 #define PBAT_MATH_LINALG_SPARSITYPATTERN_H
 
 #include "PhysicsBasedAnimationToolkitExport.h"
+#include "pbat/Aliases.h"
+#include "pbat/common/Concepts.h"
+#include "pbat/profiling/Profiling.h"
 
 #include <exception>
 #include <fmt/core.h>
-#include <pbat/Aliases.h>
-#include <pbat/common/Concepts.h>
-#include <pbat/profiling/Profiling.h>
 #include <range/v3/action/sort.hpp>
 #include <range/v3/range/conversion.hpp>
 #include <range/v3/view/iota.hpp>
@@ -34,92 +23,66 @@ namespace linalg {
 
 /**
  * @brief Sparsity pattern precomputer to accelerate sparse matrix assembly.
+ * @tparam TScalar Scalar type for the matrix values
+ * @tparam TIndex Index type for the matrix indices
+ * @tparam StorageOptions Storage options for the Eigen sparse matrix
  */
+template <typename TIndex = Index, Eigen::StorageOptions Options = Eigen::ColMajor>
 class SparsityPattern
 {
   public:
+    using IndexType = TIndex; ///< Index type for the matrix indices
+    using InnerPatternType =
+        Eigen::SparseMatrix<std::uint8_t, Options, TIndex>; ///< Type of the inner pattern
+
     PBAT_API SparsityPattern() = default;
 
-    /**
-     * @brief Construct a new Sparsity Pattern object from non-zero matrix entries
-     * @tparam TRowIndexRange Range type for row indices
-     * @tparam TColIndexRange Range type for column indices
-     * @param nRows Number of rows
-     * @param nCols Number of columns
-     * @param rowIndices Row indices of matrix entries
-     * @param colIndices Column indices of matrix entries
-     */
     template <
         common::CContiguousIndexRange TRowIndexRange,
         common::CContiguousIndexRange TColIndexRange>
     SparsityPattern(
-        Index nRows,
-        Index nCols,
+        IndexType nRows,
+        IndexType nCols,
         TRowIndexRange&& rowIndices,
         TColIndexRange&& colIndices);
-    /**
-     * @brief Compute the sparsity pattern from non-zero matrix entries
-     * @tparam TRowIndexRange Range type for row indices
-     * @tparam TColIndexRange Range type for column indices
-     * @param nRows Number of rows
-     * @param nCols Number of columns
-     * @param rowIndices Row indices of matrix entries
-     * @param colIndices Column indices of matrix entries
-     */
+
     template <
         common::CContiguousIndexRange TRowIndexRange,
         common::CContiguousIndexRange TColIndexRange>
-    void
-    Compute(Index nRows, Index nCols, TRowIndexRange&& rowIndices, TColIndexRange&& colIndices);
-    /**
-     * @brief Assemble sparse matrix from matrix non-zeros
-     * @tparam TNonZeroRange Range type for non-zero values
-     * @param nonZeros Non-zero values of the matrix
-     * @return Sparse matrix in compressed storage column format
-     */
+    void Compute(
+        IndexType nRows,
+        IndexType nCols,
+        TRowIndexRange&& rowIndices,
+        TColIndexRange&& colIndices);
+
     template <common::CArithmeticRange TNonZeroRange>
-    CSCMatrix ToMatrix(TNonZeroRange&& nonZeros) const;
-    /**
-     * @brief Assemble sparse matrix from matrix non-zeros
-     * @tparam TNonZeroRange Range type for non-zero values
-     * @tparam TDerived Type of the sparse matrix
-     * @param nonZeros Non-zero values of the matrix
-     * @param Ain Sparse matrix in compressed storage column format
-     */
+    auto ToMatrix(TNonZeroRange&& nonZeros) const
+        -> Eigen::SparseMatrix<std::ranges::range_value_t<TNonZeroRange>, Options, TIndex>;
+
     template <common::CArithmeticRange TNonZeroRange, class TDerived>
     void To(TNonZeroRange&& nonZeros, Eigen::SparseCompressedBase<TDerived>& Ain) const;
-    /**
-     * @brief Add to sparse matrix from matrix non-zeros
-     * @tparam TNonZeroRange Range type for non-zero values
-     * @tparam TDerived Type of the sparse matrix
-     * @param nonZeros Non-zero values of the matrix
-     * @param Ain Sparse matrix in compressed storage column format
-     */
+
     template <common::CArithmeticRange TNonZeroRange, class TDerived>
     void AddTo(TNonZeroRange&& nonZeros, Eigen::SparseCompressedBase<TDerived>& Ain) const;
-    /**
-     * @brief Check if the sparsity pattern is empty
-     * @return true if the sparsity pattern is empty
-     */
-    PBAT_API bool IsEmpty() const;
-    /**
-     * @brief Return a sparse matrix with the same sparsity pattern as the current object
-     * @return The sparsity pattern matrix
-     */
-    PBAT_API CSCMatrix const& Pattern() const;
+
+    PBAT_API bool IsEmpty() const { return mNonZeroIndexToValueIndex.empty(); }
+
+    template <common::CFloatingPoint TScalar>
+    auto Pattern() const -> Eigen::SparseMatrix<TScalar, Options, TIndex>;
 
   private:
-    std::vector<Index> ij; ///< Maps (triplet/duplicate) non-zero index k to its corresponding index
-                           ///< into the unique non-zero list
-    CSCMatrix A;           ///< Sparsity pattern + unique non-zeros
+    std::vector<IndexType>
+        mNonZeroIndexToValueIndex;  ///< `|# non zeros|` map from non-zero index to value index
+    InnerPatternType mInnerPattern; ///< Inner pattern of the matrix
 };
 
+template <typename TIndex, Eigen::StorageOptions Options>
 template <
     common::CContiguousIndexRange TRowIndexRange,
     common::CContiguousIndexRange TColIndexRange>
-SparsityPattern::SparsityPattern(
-    Index nRows,
-    Index nCols,
+SparsityPattern<TIndex, Options>::SparsityPattern(
+    IndexType nRows,
+    IndexType nCols,
     TRowIndexRange&& rowIndices,
     TColIndexRange&& colIndices)
 {
@@ -130,41 +93,22 @@ SparsityPattern::SparsityPattern(
         std::forward<TColIndexRange>(colIndices));
 }
 
+template <typename TIndex, Eigen::StorageOptions Options>
 template <
     common::CContiguousIndexRange TRowIndexRange,
     common::CContiguousIndexRange TColIndexRange>
-inline void SparsityPattern::Compute(
-    Index nRows,
-    Index nCols,
+inline void SparsityPattern<TIndex, Options>::Compute(
+    IndexType nRows,
+    IndexType nCols,
     TRowIndexRange&& rowIndices,
     TColIndexRange&& colIndices)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.math.linalg.SparsityPattern.Compute");
-    namespace srng   = std::ranges;
-    namespace sviews = std::views;
-    namespace rng    = ranges;
-    namespace views  = rng::views;
-
-    A.resize(nRows, nCols);
-    ij.resize(srng::size(rowIndices), Index{0});
-
-    auto const [rowMin, rowMax] = srng::minmax_element(rowIndices);
-    auto const [colMin, colMax] = srng::minmax_element(colIndices);
-    bool const bRowsInBounds    = (*rowMin >= 0) && (*rowMax < nRows);
-    bool const bColsInBounds    = (*colMin >= 0) && (*colMax < nCols);
-    if (not(bRowsInBounds and bColsInBounds))
-    {
-        std::string const what = fmt::format(
-            "Out of bounds min (row,col)=({},{}) and max (row,col)=({},{}), while "
-            "(nRows,nCols)=({},{})",
-            *rowMin,
-            *colMin,
-            *rowMax,
-            *rowMax,
-            nRows,
-            nCols);
-        throw std::invalid_argument(what);
-    }
+    namespace srng        = std::ranges;
+    namespace sviews      = std::views;
+    namespace rng         = ranges;
+    namespace views       = rng::views;
+    using IndexVectorType = Eigen::Vector<IndexType, Eigen::Dynamic>;
 
     auto const nRowIndices = srng::size(rowIndices);
     auto const nColIndices = srng::size(colIndices);
@@ -177,56 +121,94 @@ inline void SparsityPattern::Compute(
             nColIndices);
         throw std::invalid_argument(what);
     }
+    auto const [rowMin, rowMax] = srng::minmax_element(rowIndices);
+    auto const [colMin, colMax] = srng::minmax_element(colIndices);
+    bool const bRowsInBounds    = (*rowMin >= 0) && (*rowMax < nRows);
+    bool const bColsInBounds    = (*colMin >= 0) && (*colMax < nCols);
+    if (not(bRowsInBounds and bColsInBounds))
+    {
+        std::string const what = fmt::format(
+            "Out of bounds min (row,col)=({},{}) and max (row,col)=({},{}), while "
+            "(nRows,nCols)=({},{})",
+            *rowMin,
+            *colMin,
+            *rowMax,
+            *colMax,
+            nRows,
+            nCols);
+        throw std::invalid_argument(what);
+    }
+
+    auto const nnz = nRowIndices;
+    mNonZeroIndexToValueIndex.resize(nnz, IndexType{0});
+
     auto rows = srng::data(rowIndices);
     auto cols = srng::data(colIndices);
 
-    auto const indexPair = [&](Index s) {
-        return std::make_pair(cols[s], rows[s]);
+    bool constexpr bIsRowMajor = (Options == Eigen::RowMajor);
+    auto const indexPair       = [&](Index s) {
+        if constexpr (bIsRowMajor)
+            return std::make_pair(rows[s], cols[s]);
+        else
+            return std::make_pair(cols[s], rows[s]);
     };
-    auto const less = [&](Index lhs, Index rhs) {
+    auto const less = [&](IndexType lhs, IndexType rhs) {
         return indexPair(lhs) < indexPair(rhs);
     };
-    auto const equal = [&](Index lhs, Index rhs) {
+    auto const equal = [&](IndexType lhs, IndexType rhs) {
         return indexPair(lhs) == indexPair(rhs);
     };
-    auto const numNonZeroIndices = static_cast<Index>(nRowIndices);
-    // NOTE: Bottleneck is the sort
-    auto const sortedNonZeroIndices = views::iota(Index{0}, numNonZeroIndices) |
+    auto const numNonZeroIndices    = static_cast<IndexType>(nnz);
+    auto const sortedNonZeroIndices = views::iota(IndexType{0}, numNonZeroIndices) |
                                       rng::to<std::vector>() | rng::actions::sort(less);
     auto const sortedUniqueNonZeroIndices =
         sortedNonZeroIndices | views::unique(equal) | rng::to<std::vector>();
 
-    IndexVectorX cc = IndexVectorX::Zero(nCols);
-    for (auto u : sortedUniqueNonZeroIndices)
-        ++cc[cols[u]];
+    Eigen::Vector<IndexType, Eigen::Dynamic> innerSizes;
+    innerSizes.setZero(bIsRowMajor ? nRows : nCols);
+    if constexpr (bIsRowMajor)
+    {
+        for (auto u : sortedUniqueNonZeroIndices)
+            ++innerSizes[rows[u]];
+    }
+    else
+    {
+        for (auto u : sortedUniqueNonZeroIndices)
+            ++innerSizes[cols[u]];
+    }
 
     for (auto k = 0, u = 0; k < numNonZeroIndices; ++k)
     {
-        // NOTE: Yes, the casting is just absurd here... otherwise code
-        // doesn't compile with agressive warnings on signed/unsigned mismatch
-        auto const s                    = sortedNonZeroIndices[static_cast<std::size_t>(k)];
-        auto const uu                   = sortedUniqueNonZeroIndices[static_cast<std::size_t>(u)];
-        bool const bIsSameEntry         = equal(s, uu);
-        ij[static_cast<std::size_t>(s)] = static_cast<Index>(bIsSameEntry ? u : ++u);
+        auto const s            = sortedNonZeroIndices[static_cast<std::size_t>(k)];
+        auto const uu           = sortedUniqueNonZeroIndices[static_cast<std::size_t>(u)];
+        bool const bIsSameEntry = equal(s, uu);
+        mNonZeroIndexToValueIndex[static_cast<std::size_t>(s)] =
+            static_cast<IndexType>(bIsSameEntry ? u : ++u);
     }
-    A.reserve(cc);
+    mInnerPattern.resize(nRows, nCols);
+    mInnerPattern.reserve(innerSizes);
     for (auto s : sortedUniqueNonZeroIndices)
-        A.insert(rows[s], cols[s]) = 0.;
-    A.makeCompressed();
+        mInnerPattern.insert(rows[s], cols[s]) = 0;
+    mInnerPattern.makeCompressed();
 }
 
+template <typename TIndex, Eigen::StorageOptions Options>
 template <common::CArithmeticRange TNonZeroRange>
-CSCMatrix SparsityPattern::ToMatrix(TNonZeroRange&& nonZeros) const
+inline auto SparsityPattern<TIndex, Options>::ToMatrix(TNonZeroRange&& nonZeros) const
+    -> Eigen::SparseMatrix<std::ranges::range_value_t<TNonZeroRange>, Options, TIndex>
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.math.linalg.SparsityPattern.ToMatrix");
-    CSCMatrix Acpy{A};
+    using ScalarType = std::ranges::range_value_t<TNonZeroRange>;
+    auto Acpy        = Pattern<ScalarType>();
     AddTo(std::forward<TNonZeroRange>(nonZeros), Acpy);
     return Acpy;
 }
 
+template <typename TIndex, Eigen::StorageOptions Options>
 template <common::CArithmeticRange TNonZeroRange, class TDerived>
-inline void
-SparsityPattern::AddTo(TNonZeroRange&& nonZeros, Eigen::SparseCompressedBase<TDerived>& Ain) const
+inline void SparsityPattern<TIndex, Options>::AddTo(
+    TNonZeroRange&& nonZeros,
+    Eigen::SparseCompressedBase<TDerived>& Ain) const
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.math.linalg.SparsityPattern.AddTo");
     static_assert(
@@ -235,23 +217,34 @@ SparsityPattern::AddTo(TNonZeroRange&& nonZeros, Eigen::SparseCompressedBase<TDe
 
     namespace rng  = std::ranges;
     auto const nnz = rng::size(nonZeros);
-    if (nnz != ij.size())
+    if (nnz != mNonZeroIndexToValueIndex.size())
     {
-        std::string const what = fmt::format("Expected {} non zeros, got {}", ij.size(), nnz);
+        std::string const what =
+            fmt::format("Expected {} non zeros, got {}", mNonZeroIndexToValueIndex.size(), nnz);
         throw std::invalid_argument(what);
     }
 
     Scalar* values = Ain.valuePtr();
     for (auto k = 0ULL; k < nnz; ++k)
-        values[ij[k]] += nonZeros[k];
+        values[mNonZeroIndexToValueIndex[k]] += nonZeros[k];
 }
 
+template <typename TIndex, Eigen::StorageOptions Options>
 template <common::CArithmeticRange TNonZeroRange, class TDerived>
-inline void
-SparsityPattern::To(TNonZeroRange&& nonZeros, Eigen::SparseCompressedBase<TDerived>& Ain) const
+inline void SparsityPattern<TIndex, Options>::To(
+    TNonZeroRange&& nonZeros,
+    Eigen::SparseCompressedBase<TDerived>& Ain) const
 {
     Ain.coeffs().setZero();
     AddTo(std::forward<TNonZeroRange>(nonZeros), Ain);
+}
+
+template <typename TIndex, Eigen::StorageOptions Options>
+template <common::CFloatingPoint TScalar>
+inline auto SparsityPattern<TIndex, Options>::Pattern() const
+    -> Eigen::SparseMatrix<TScalar, Options, TIndex>
+{
+    return mInnerPattern.template cast<TScalar>();
 }
 
 } // namespace linalg
