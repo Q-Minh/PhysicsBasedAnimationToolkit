@@ -1,7 +1,7 @@
 #include "Laplacian.h"
 
-#include "Jacobian.h"
 #include "Mesh.h"
+#include "MeshQuadrature.h"
 #include "ShapeFunctions.h"
 #include "Tetrahedron.h"
 
@@ -44,14 +44,15 @@ TEST_CASE("[fem] Laplacian")
                     return (kOrder - 1) + (kOrder - 1);
             }();
 
-            VectorX const wg = fem::InnerProductWeights<kQuadratureOrder>(mesh).reshaped();
-            IndexVectorX const eg =
-                IndexVectorX::LinSpaced(mesh.E.cols(), Index(0), mesh.E.cols() - 1)
-                    .replicate(1, wg.size() / mesh.E.cols())
-                    .transpose()
-                    .reshaped();
+            auto const wg      = fem::MeshQuadratureWeights<kQuadratureOrder>(mesh);
+            auto const eg      = fem::MeshQuadratureElements(mesh.E, wg);
             MatrixX const GNeg = fem::ShapeFunctionGradients<kQuadratureOrder>(mesh);
-            auto const L       = fem::LaplacianMatrix<Eigen::ColMajor>(mesh, eg, wg, GNeg, outDims);
+            auto const L       = fem::LaplacianMatrix<Eigen::ColMajor>(
+                mesh,
+                eg.reshaped(),
+                wg.reshaped(),
+                GNeg,
+                outDims);
             CHECK_EQ(L.rows(), n);
             CHECK_EQ(L.cols(), n);
 
@@ -69,7 +70,7 @@ TEST_CASE("[fem] Laplacian")
             // multiplication
             VectorX const x = VectorX::Random(n);
             VectorX yFree   = VectorX::Zero(n);
-            fem::GemmLaplacian(mesh, eg, wg, GNeg, outDims, x, yFree);
+            fem::GemmLaplacian(mesh, eg.reshaped(), wg.reshaped(), GNeg, outDims, x, yFree);
             VectorX y           = L * x;
             Scalar const yError = (y - yFree).squaredNorm();
             CHECK_LE(yError, zero);
@@ -78,8 +79,15 @@ TEST_CASE("[fem] Laplacian")
             VectorX yInputScaled  = VectorX::Zero(n);
             VectorX yOutputScaled = VectorX::Zero(n);
             Scalar constexpr k    = -2.;
-            fem::GemmLaplacian(mesh, eg, wg, GNeg, outDims, k * x, yInputScaled);
-            fem::GemmLaplacian(mesh, eg, wg, GNeg, outDims, x, yOutputScaled);
+            fem::GemmLaplacian(
+                mesh,
+                eg.reshaped(),
+                wg.reshaped(),
+                GNeg,
+                outDims,
+                k * x,
+                yInputScaled);
+            fem::GemmLaplacian(mesh, eg.reshaped(), wg.reshaped(), GNeg, outDims, x, yOutputScaled);
             yOutputScaled *= k;
             Scalar const yLinearityError =
                 (yInputScaled - yOutputScaled).squaredNorm() / yOutputScaled.squaredNorm();
@@ -88,7 +96,7 @@ TEST_CASE("[fem] Laplacian")
             // Laplacian of constant function should be 0
             VectorX const xconst = VectorX::Ones(n);
             VectorX yconst       = VectorX::Zero(n);
-            fem::GemmLaplacian(mesh, eg, wg, GNeg, outDims, xconst, yconst);
+            fem::GemmLaplacian(mesh, eg.reshaped(), wg.reshaped(), GNeg, outDims, xconst, yconst);
             CHECK_LE(yconst.squaredNorm(), zero);
         }
     });

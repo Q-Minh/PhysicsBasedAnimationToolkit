@@ -1,8 +1,8 @@
 #include "Gradient.h"
 
-#include "Jacobian.h"
 #include "Laplacian.h"
 #include "Mesh.h"
+#include "MeshQuadrature.h"
 #include "ShapeFunctions.h"
 #include "Tetrahedron.h"
 #include "pbat/common/ConstexprFor.h"
@@ -38,13 +38,10 @@ TEST_CASE("[fem] Gradient")
 
         auto const GNe             = fem::ShapeFunctionGradients<kQuadratureOrder>(mesh);
         auto const nQuadPtsPerElem = GNe.cols() / (kDims * mesh.E.cols());
-        auto const eg = IndexVectorX::LinSpaced(mesh.E.cols(), Index(0), mesh.E.cols() - 1)
-                            .replicate(1, nQuadPtsPerElem)
-                            .transpose()
-                            .reshaped();
-        auto const G                = fem::GradientMatrix<Eigen::ColMajor>(mesh, eg, GNe);
-        auto const n                = G.cols();
-        auto const m                = G.rows();
+        auto const eg              = fem::MeshQuadratureElements(mesh.E.cols(), nQuadPtsPerElem);
+        auto const G               = fem::GradientMatrix<Eigen::ColMajor>(mesh, eg.reshaped(), GNe);
+        auto const n               = G.cols();
+        auto const m               = G.rows();
         auto const numberOfElements = mesh.E.cols();
         auto const mExpected        = kDims * nQuadPtsPerElem * numberOfElements;
         auto const nExpected        = mesh.X.cols();
@@ -53,7 +50,7 @@ TEST_CASE("[fem] Gradient")
 
         VectorX const ones = VectorX::Ones(n);
         VectorX gradOnes   = VectorX::Zero(m);
-        fem::GemmGradient(mesh, eg, GNe, ones, gradOnes);
+        fem::GemmGradient(mesh, eg.reshaped(), GNe, ones, gradOnes);
 
         bool const bConstantFunctionHasZeroGradient = gradOnes.isZero(zero);
         CHECK(bConstantFunctionHasZeroGradient);
@@ -67,7 +64,7 @@ TEST_CASE("[fem] Gradient")
         CSCMatrix Ik(kDims, kDims);
         Ik.setIdentity();
         CSCMatrix const NThat = Eigen::kroneckerProduct(NT, Ik);
-        VectorX const Ihat    = fem::InnerProductWeights<kQuadratureOrder>(mesh)
+        VectorX const Ihat    = fem::MeshQuadratureWeights<kQuadratureOrder>(mesh)
                                  .reshaped()
                                  .template replicate<kDims, 1>();
         CSCMatrix const GG = NThat * Ihat.asDiagonal() * G;
@@ -82,11 +79,11 @@ TEST_CASE("[fem] Gradient")
         CSCMatrix Lhat           = -GT * Ihat.asDiagonal() * G;
         VectorX const LhatValues = Lhat.coeffs();
         Lhat.coeffs().setOnes();
-        VectorX const wg = fem::InnerProductWeights<kQuadratureOrder>(mesh).reshaped();
+        VectorX const wg = fem::MeshQuadratureWeights<kQuadratureOrder>(mesh).reshaped();
         CSCMatrix L      = fem::LaplacianMatrix<Element, kDims, Eigen::ColMajor>(
             mesh.E,
             mesh.X.cols(),
-            eg,
+            eg.reshaped(),
             wg,
             GNe);
         VectorX const Lvalues = L.coeffs();

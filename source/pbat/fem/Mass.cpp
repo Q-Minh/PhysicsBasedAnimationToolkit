@@ -1,7 +1,7 @@
 #include "Mass.h"
 
-#include "Jacobian.h"
 #include "Mesh.h"
+#include "MeshQuadrature.h"
 #include "ShapeFunctions.h"
 #include "Tetrahedron.h"
 #include "pbat/common/ConstexprFor.h"
@@ -41,17 +41,13 @@ TEST_CASE("[fem] Mass")
             auto const nElements  = mesh.E.cols();
 
             auto constexpr kQuadratureOrder = 2 * kOrder;
-            auto const wg                   = fem::InnerProductWeights<kQuadratureOrder>(mesh);
-            auto const nQuadPtsPerElement   = wg.rows();
-            auto const Ng                   = fem::ShapeFunctions<Element, kQuadratureOrder>();
-            auto const Neg                  = Ng.replicate(1, nElements);
-            auto const rhog                 = VectorX::Constant(wg.size(), rho);
-            auto const Meg = fem::ElementMassMatrices<Element>(Neg, wg.reshaped(), rhog);
-            auto const eg  = IndexVectorX::LinSpaced(nElements, Index(0), nElements - 1)
-                                .replicate(1, nQuadPtsPerElement)
-                                .transpose()
-                                .reshaped();
-            auto const M = fem::MassMatrix<Eigen::ColMajor>(mesh, eg, Meg, outDims);
+            auto const wg                   = fem::MeshQuadratureWeights<kQuadratureOrder>(mesh);
+            auto const Ng   = fem::ElementShapeFunctions<Element, kQuadratureOrder>();
+            auto const Neg  = Ng.replicate(1, nElements);
+            auto const rhog = VectorX::Constant(wg.size(), rho);
+            auto const Meg  = fem::ElementMassMatrices<Element>(Neg, wg.reshaped(), rhog);
+            auto const eg   = fem::MeshQuadratureElements(mesh.E, wg);
+            auto const M    = fem::MassMatrix<Eigen::ColMajor>(mesh, eg.reshaped(), Meg, outDims);
             CHECK_EQ(M.rows(), n);
             CHECK_EQ(M.cols(), n);
 
@@ -67,7 +63,7 @@ TEST_CASE("[fem] Mass")
             // multiplication
             VectorX const x = VectorX::Ones(n);
             VectorX yFree   = VectorX::Zero(n);
-            fem::GemmMass(mesh, eg, Meg, outDims, x, yFree);
+            fem::GemmMass(mesh, eg.reshaped(), Meg, outDims, x, yFree);
             VectorX y           = M * x;
             Scalar const yError = (y - yFree).norm() / yFree.norm();
             CHECK_LE(yError, zero);
@@ -76,15 +72,15 @@ TEST_CASE("[fem] Mass")
             VectorX yInputScaled  = VectorX::Zero(n);
             VectorX yOutputScaled = VectorX::Zero(n);
             Scalar constexpr k    = -2.;
-            fem::GemmMass(mesh, eg, Meg, outDims, k * x, yInputScaled);
-            fem::GemmMass(mesh, eg, Meg, outDims, x, yOutputScaled);
+            fem::GemmMass(mesh, eg.reshaped(), Meg, outDims, k * x, yInputScaled);
+            fem::GemmMass(mesh, eg.reshaped(), Meg, outDims, x, yOutputScaled);
             yOutputScaled *= k;
             Scalar const yLinearityError =
                 (yInputScaled - yOutputScaled).norm() / yOutputScaled.norm();
             CHECK_LE(yLinearityError, zero);
 
             // Check lumped mass
-            VectorX lumpedMass = fem::LumpedMassMatrix(mesh, eg, Meg, outDims);
+            VectorX lumpedMass = fem::LumpedMassMatrix(mesh, eg.reshaped(), Meg, outDims);
             CHECK_EQ(lumpedMass.size(), M.cols());
             for (auto i = 0; i < M.cols(); ++i)
             {

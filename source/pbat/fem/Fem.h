@@ -11,7 +11,7 @@
 #define PBAT_FEM_FEM_H
 
 /**
- * @namespace pbat::fem 
+ * @namespace pbat::fem
  * @brief Finite Element Method (FEM)
  */
 namespace pbat::fem {
@@ -28,6 +28,7 @@ namespace pbat::fem {
 #include "LoadVector.h"
 #include "MassMatrix.h"
 #include "Mesh.h"
+#include "MeshQuadrature.h"
 #include "QuadratureRules.h"
 #include "Quadrilateral.h"
 #include "ShapeFunctions.h"

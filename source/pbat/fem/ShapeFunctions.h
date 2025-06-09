@@ -32,11 +32,11 @@ namespace pbat::fem {
  * @tparam TElement Element type
  * @tparam QuadratureOrder Quadrature order
  * @tparam TScalar Floating point type, defaults to Scalar
- * @return The shape function values of each node at quadrature points, stored in a matrix
- * of dimensions `|# element nodes| x |# quad.pts.|`
+ * @return `|# element nodes| x |# elem. quad.pts.|` matrix of nodal shape function values at
+ * quadrature points
  */
 template <CElement TElement, int QuadratureOrder, common::CFloatingPoint TScalar = Scalar>
-auto ShapeFunctions() -> Eigen::Matrix<
+auto ElementShapeFunctions() -> Eigen::Matrix<
     TScalar,
     TElement::kNodes,
     TElement::template QuadratureType<QuadratureOrder, TScalar>::kPoints>
@@ -79,7 +79,7 @@ auto ShapeFunctionMatrix(
     using ScalarType                 = TScalar;
     using IndexType                  = TIndex;
     using IndexVectorType            = Eigen::Vector<IndexType, Eigen::Dynamic>;
-    auto const Ng                    = ShapeFunctions<ElementType, QuadratureOrder, ScalarType>();
+    auto const Ng                    = ElementShapeFunctions<ElementType, QuadratureOrder, ScalarType>();
     auto const nElements             = E.cols();
     auto const nQuadPointsPerElement = Ng.cols();
     auto const m                     = nQuadPointsPerElement * nElements;

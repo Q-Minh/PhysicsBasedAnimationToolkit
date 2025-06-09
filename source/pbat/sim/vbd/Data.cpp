@@ -1,8 +1,8 @@
 #include "Data.h"
 
 #include "Mesh.h"
-#include "pbat/fem/Jacobian.h"
 #include "pbat/fem/Mass.h"
+#include "pbat/fem/MeshQuadrature.h"
 #include "pbat/fem/ShapeFunctions.h"
 #include "pbat/graph/Adjacency.h"
 #include "pbat/graph/Color.h"
@@ -209,19 +209,16 @@ Data& Data::Construct(bool bValidate)
     }
     VolumeMesh mesh{X, E};
     auto constexpr kQuadratureOrder = 2 * VolumeMesh::ElementType::kOrder;
-    auto const wgM                  = fem::InnerProductWeights<kQuadratureOrder>(mesh);
+    auto const wgM                  = fem::MeshQuadratureWeights<kQuadratureOrder>(mesh);
+    auto const egM                  = fem::MeshQuadratureElements(mesh.E, wgM);
     auto const nQuadPtsPerElement   = wgM.rows();
-    auto const eg = IndexVectorX::LinSpaced(mesh.E.cols(), Index(0), mesh.E.cols() - 1)
-                        .replicate(1, nQuadPtsPerElement)
-                        .transpose()
-                        .reshaped();
-    auto const rhog = rhoe.transpose().replicate(nQuadPtsPerElement, 1).reshaped();
-    auto const Ng   = fem::ShapeFunctions<VolumeMesh::ElementType, kQuadratureOrder>();
-    auto const Neg  = Ng.replicate(1, mesh.E.cols());
-    auto const Meg  = fem::ElementMassMatrices<VolumeMesh::ElementType>(Neg, wgM.reshaped(), rhog);
-    fem::ToLumpedMassMatrix(mesh, eg, Meg, 1 /*dims*/, m);
+    auto const rhog                 = rhoe.transpose().replicate(nQuadPtsPerElement, 1).reshaped();
+    auto const Ng  = fem::ElementShapeFunctions<VolumeMesh::ElementType, kQuadratureOrder>();
+    auto const Neg = Ng.replicate(1, mesh.E.cols());
+    auto const Meg = fem::ElementMassMatrices<VolumeMesh::ElementType>(Neg, wgM.reshaped(), rhog);
+    fem::ToLumpedMassMatrix(mesh, egM.reshaped(), Meg, 1, m);
     GP = fem::ShapeFunctionGradients<1>(mesh);
-    wg = fem::InnerProductWeights<1>(mesh).reshaped();
+    wg = fem::MeshQuadratureWeights<1>(mesh).reshaped();
     // Adjacency structures
     IndexMatrixX ilocal             = IndexVector<4>{0, 1, 2, 3}.replicate(1, mesh.E.cols());
     auto GVT                        = graph::MeshAdjacencyMatrix(mesh.E, ilocal, mesh.X.cols());

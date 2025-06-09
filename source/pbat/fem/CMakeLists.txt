@@ -13,6 +13,7 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     "Line.h"
     "Mass.h"
     "Mesh.h"
+    "MeshQuadrature.h"
     "QuadratureRules.h"
     "Quadrilateral.h"
     "ShapeFunctions.h"
@@ -28,5 +29,6 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     "Laplacian.cpp"
     "Mass.cpp"
     "Mesh.cpp"
+    "MeshQuadrature.cpp"
     "ShapeFunctions.cpp"
 )

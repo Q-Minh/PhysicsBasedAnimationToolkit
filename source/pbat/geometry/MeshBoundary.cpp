@@ -101,11 +101,12 @@ auto SimplexMeshBoundary(IndexMatrixX const& C, Index n) -> std::tuple<IndexVect
 } // namespace geometry
 } // namespace pbat
 
+#include "pbat/fem/Line.h"
+#include "pbat/fem/Mesh.h"
+#include "pbat/fem/MeshQuadrature.h"
+#include "pbat/fem/Triangle.h"
+
 #include <doctest/doctest.h>
-#include <pbat/fem/Jacobian.h>
-#include <pbat/fem/Line.h>
-#include <pbat/fem/Mesh.h>
-#include <pbat/fem/Triangle.h>
 
 TEST_CASE("[geometry] MeshBoundary")
 {
@@ -142,14 +143,14 @@ TEST_CASE("[geometry] MeshBoundary")
     using LinearTriangle = fem::Triangle<1>;
     using TriangleMesh   = fem::Mesh<LinearTriangle, 3>;
     TriangleMesh FM(V, BC);
-    VectorX FA = fem::InnerProductWeights<1>(FM).reshaped();
+    VectorX FA = fem::MeshQuadratureWeights<1>(FM).reshaped();
     bool const bTrianglesHaveCorrectAreas =
         (FA.array() - Scalar(0.5)).square().sum() < Scalar(1e-10);
     CHECK(bTrianglesHaveCorrectAreas);
     using LinearLine = fem::Line<1>;
     using LineMesh   = fem::Mesh<LinearLine, 3>;
     LineMesh EM(V, BF);
-    VectorX EL = fem::InnerProductWeights<1>(EM).reshaped();
+    VectorX EL = fem::MeshQuadratureWeights<1>(EM).reshaped();
     bool const bLineSegmentsHaveCorrectLengths =
         (EL.array() - Scalar(1)).square().sum() < Scalar(1e-10);
     CHECK(bLineSegmentsHaveCorrectLengths);
