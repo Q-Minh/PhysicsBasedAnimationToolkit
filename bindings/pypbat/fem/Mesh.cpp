@@ -2,6 +2,7 @@
 
 #include <pybind11/eigen.h>
 #include <string>
+#include <utility>
 
 namespace pbat {
 namespace py {
@@ -19,134 +20,49 @@ void BindMesh(pybind11::module& m)
         .value("Hexahedron", EElement::Hexahedron)
         .export_values();
 
-    pyb::class_<Mesh>(m, "Mesh")
-        .def(
-            pyb::init<
-                Eigen::Ref<MatrixX const> const&,
-                Eigen::Ref<IndexMatrixX const> const&,
-                EElement,
-                int,
-                int>(),
-            pyb::arg("V"),
-            pyb::arg("C"),
-            pyb::arg("element"),
-            pyb::arg("order") = 1,
-            pyb::arg("dims")  = 3,
-            "Construct FEM mesh of the given shape function order and dimensions given some input "
-            "geometric mesh V,C.")
-        .def("quadrature_points", &Mesh::QuadraturePoints)
-        .def("quadrature_weights", &Mesh::QuadratureWeights)
-        .def_property(
-            "X",
-            [](Mesh const& M) { return M.X(); },
-            [](Mesh& M, Eigen::Ref<MatrixX const> const& X) { M.X() = X; },
-            "|#dims|x|#nodes| array of nodal positions")
-        .def_property(
-            "E",
-            [](Mesh const& M) { return M.E(); },
-            [](Mesh& M, Eigen::Ref<IndexMatrixX const> const& E) { M.E() = E; },
-            "|#element nodes|x|#elements| array of element nodal indices")
-        .def_readonly("element", &Mesh::eElement)
-        .def_readonly("order", &Mesh::mOrder, "Shape function order")
-        .def_readonly("dims", &Mesh::mDims, "Domain dimensions");
-}
-
-Mesh::Mesh(
-    Eigen::Ref<MatrixX const> const& V,
-    Eigen::Ref<IndexMatrixX const> const& C,
-    EElement element,
-    int order,
-    int dims)
-    : eElement(element), mOrder(order), mDims(dims), mMesh(nullptr), bOwnMesh(true)
-{
-    Apply([&]<class MeshType>([[maybe_unused]] MeshType* mesh) { mMesh = new MeshType(V, C); });
-}
-
-Mesh::Mesh(void* meshImpl, EElement element, int order, int dims)
-    : eElement(element), mOrder(order), mDims(dims), mMesh(meshImpl), bOwnMesh{false}
-{
-}
-
-Mesh::Mesh(Mesh&& other) noexcept
-    : eElement(other.eElement),
-      mOrder(other.mOrder),
-      mDims(other.mDims),
-      mMesh(other.mMesh),
-      bOwnMesh(other.bOwnMesh)
-{
-    other.mMesh    = nullptr;
-    other.bOwnMesh = false;
-}
-
-Mesh& Mesh::operator=(Mesh&& other) noexcept
-{
-    if (this != std::addressof(other))
-    {
-        eElement       = other.eElement;
-        mOrder         = other.mOrder;
-        mDims          = other.mDims;
-        mMesh          = other.mMesh;
-        bOwnMesh       = other.bOwnMesh;
-        other.mMesh    = nullptr;
-        other.bOwnMesh = false;
-    }
-    return *this;
-}
-
-MatrixX Mesh::QuadraturePoints(int qOrder) const
-{
-    static auto constexpr kMaxQuadratureOrder = 8;
-    MatrixX XG{};
-    ApplyWithQuadrature<kMaxQuadratureOrder>(
-        [&]<class MeshType, auto QuadratureOrder>(MeshType* mesh) {
-            XG = mesh->template QuadraturePoints<QuadratureOrder>();
-        },
-        qOrder);
-    return XG;
-}
-
-VectorX Mesh::QuadratureWeights(int qOrder) const
-{
-    static auto constexpr kMaxQuadratureOrder = 8;
-    VectorX WG{};
-    ApplyWithQuadrature<kMaxQuadratureOrder>(
-        [&]<class MeshType, auto QuadratureOrder>(MeshType* mesh) {
-            WG = mesh->template QuadratureWeights<QuadratureOrder>();
-        },
-        qOrder);
-    return WG;
-}
-
-Eigen::Map<MatrixX> Mesh::X() const
-{
-    Scalar* data{nullptr};
-    Index rows{-1};
-    Index cols{-1};
-    Apply([&]<class MeshType>(MeshType* mesh) {
-        data = mesh->X.data();
-        rows = mesh->X.rows();
-        cols = mesh->X.cols();
+    pbat::common::ForTypes<float, double>([&]<class TScalar>() {
+        pbat::common::ForTypes<std::int32_t, std::int64_t>([&]<class TIndex>() {
+            using MatrixType      = Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic>;
+            using IndexMatrixType = Eigen::Matrix<TIndex, Eigen::Dynamic, Eigen::Dynamic>;
+            m.def(
+                "mesh",
+                [](pyb::EigenDRef<MatrixType const> V,
+                   pyb::EigenDRef<IndexMatrixType const> C,
+                   EElement element,
+                   int order,
+                   int dims) {
+                    MatrixType X;
+                    IndexMatrixType E;
+                    ApplyToMesh<TScalar, TIndex>(
+                        element,
+                        order,
+                        dims,
+                        [&]<pbat::fem::CMesh TMesh>() {
+                            using MeshType = TMesh;
+                            MeshType mesh(V, C);
+                            X = std::move(mesh.X);
+                            E = std::move(mesh.E);
+                        });
+                    return std::make_pair(X, E);
+                },
+                pyb::arg("V"),
+                pyb::arg("C"),
+                pyb::arg("element"),
+                pyb::arg("order") = 1,
+                pyb::arg("dims")  = 3,
+                "Compute an FEM mesh from the input geometric mesh.\n\n"
+                "Args:\n"
+                "    V (numpy.ndarray): Vertex coordinates of the geometric mesh.\n"
+                "    C (numpy.ndarray): Connectivity of the geometric mesh.\n"
+                "    element (EElement): Type of the finite element.\n"
+                "    order (int): Order of the finite element.\n"
+                "    dims (int): Number of dimensions of the mesh.\n\n"
+                "Returns:\n"
+                "    Tuple[numpy.ndarray, numpy.ndarray]: (X, E) where X are the `|# dims| x |# "
+                "nodes|` nodal coordinates and E are the `|# elem. nodes.| x |# elements|` element "
+                "connectivity.\n");
+        });
     });
-    return Eigen::Map<MatrixX>(data, rows, cols);
-}
-
-Eigen::Map<IndexMatrixX> Mesh::E() const
-{
-    Index* data{nullptr};
-    Index rows{-1};
-    Index cols{-1};
-    Apply([&]<class MeshType>(MeshType* mesh) {
-        data = mesh->E.data();
-        rows = mesh->E.rows();
-        cols = mesh->E.cols();
-    });
-    return Eigen::Map<IndexMatrixX>(data, rows, cols);
-}
-
-Mesh::~Mesh()
-{
-    if (mMesh != nullptr and bOwnMesh)
-        Apply([]<class MeshType>(MeshType* mesh) { delete mesh; });
 }
 
 } // namespace fem

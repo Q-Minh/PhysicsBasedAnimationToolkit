@@ -1,3 +1,11 @@
+/**
+ * @file MeshQuadrature.h
+ * @brief Utility functions computing common mesh quadrature quantities.
+ * @author Quoc-Minh Ton-That (tonthat.quocminh@gmail.com)
+ * @date 2025-02-11
+ * @copyright Copyright (c) 2025
+ */
+
 #ifndef PBAT_FEM_MESHQUADRATURE_H
 #define PBAT_FEM_MESHQUADRATURE_H
 

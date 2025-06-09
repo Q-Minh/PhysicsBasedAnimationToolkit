@@ -56,10 +56,13 @@ struct Quadrilateral<1>
     using QuadratureType = math::GaussLegendreQuadrature<kDims, PolynomialOrder, TScalar>;
 
     template <class TDerived, class TScalar = typename TDerived::Scalar>
-    [[maybe_unused]] static Eigen::Vector<TScalar, kNodes> N([[maybe_unused]] Eigen::DenseBase<TDerived> const& X)
+    [[maybe_unused]] static Eigen::Vector<TScalar, kNodes> N([[maybe_unused]] Eigen::DenseBase<TDerived> const& X_)
     {
+#include "pbat/warning/Push.h"
+#include "pbat/warning/SignConversion.h"
         using namespace pbat::math;
         Eigen::Vector<TScalar, kNodes> Nm;
+        auto const X = X_.reshaped();
         auto const a0 = X[0] - 1;
         auto const a1 = X[1] - 1;
         Nm[0] = a0*a1;
@@ -67,13 +70,17 @@ struct Quadrilateral<1>
         Nm[2] = -a0*X[1];
         Nm[3] = X[0]*X[1];
         return Nm;
+#include "pbat/warning/Pop.h"
     }
 
     template <class TDerived, class TScalar = typename TDerived::Scalar>
-    [[maybe_unused]] static Matrix<kNodes, kDims> GradN([[maybe_unused]] Eigen::DenseBase<TDerived> const& X)
+    [[maybe_unused]] static Eigen::Matrix<TScalar, kNodes, kDims> GradN([[maybe_unused]] Eigen::DenseBase<TDerived> const& X_)
     {
+#include "pbat/warning/Push.h"
+#include "pbat/warning/SignConversion.h"
         Eigen::Matrix<TScalar, kNodes, kDims> GNm;
         TScalar* GNp = GNm.data();
+        [[maybe_unused]] auto const X = X_.reshaped();
         auto const a0 = X[1] - 1;
         auto const a1 = X[0] - 1;
         GNp[0] = a0;
@@ -85,6 +92,7 @@ struct Quadrilateral<1>
         GNp[6] = -a1;
         GNp[7] = X[0];
         return GNm;
+#include "pbat/warning/Pop.h"
     }
 };
 
@@ -105,10 +113,13 @@ struct Quadrilateral<2>
     using QuadratureType = math::GaussLegendreQuadrature<kDims, PolynomialOrder, TScalar>;
 
     template <class TDerived, class TScalar = typename TDerived::Scalar>
-    [[maybe_unused]] static Eigen::Vector<TScalar, kNodes> N([[maybe_unused]] Eigen::DenseBase<TDerived> const& X)
+    [[maybe_unused]] static Eigen::Vector<TScalar, kNodes> N([[maybe_unused]] Eigen::DenseBase<TDerived> const& X_)
     {
+#include "pbat/warning/Push.h"
+#include "pbat/warning/SignConversion.h"
         using namespace pbat::math;
         Eigen::Vector<TScalar, kNodes> Nm;
+        auto const X = X_.reshaped();
         auto const a0 = 2*X[0] - 1;
         auto const a1 = 2*X[1] - 1;
         auto const a2 = a0*a1;
@@ -130,13 +141,17 @@ struct Quadrilateral<2>
         Nm[7] = -4*a10*a7;
         Nm[8] = a8*X[1];
         return Nm;
+#include "pbat/warning/Pop.h"
     }
 
     template <class TDerived, class TScalar = typename TDerived::Scalar>
-    [[maybe_unused]] static Matrix<kNodes, kDims> GradN([[maybe_unused]] Eigen::DenseBase<TDerived> const& X)
+    [[maybe_unused]] static Eigen::Matrix<TScalar, kNodes, kDims> GradN([[maybe_unused]] Eigen::DenseBase<TDerived> const& X_)
     {
+#include "pbat/warning/Push.h"
+#include "pbat/warning/SignConversion.h"
         Eigen::Matrix<TScalar, kNodes, kDims> GNm;
         TScalar* GNp = GNm.data();
+        [[maybe_unused]] auto const X = X_.reshaped();
         auto const a0 = 4*X[1] - 2;
         auto const a1 = X[1] - 1;
         auto const a2 = X[0] - 1;
@@ -178,6 +193,7 @@ struct Quadrilateral<2>
         GNp[16] = a13*a14 + a20;
         GNp[17] = a14*a18 + a21;
         return GNm;
+#include "pbat/warning/Pop.h"
     }
 };
 
@@ -198,10 +214,13 @@ struct Quadrilateral<3>
     using QuadratureType = math::GaussLegendreQuadrature<kDims, PolynomialOrder, TScalar>;
 
     template <class TDerived, class TScalar = typename TDerived::Scalar>
-    [[maybe_unused]] static Eigen::Vector<TScalar, kNodes> N([[maybe_unused]] Eigen::DenseBase<TDerived> const& X)
+    [[maybe_unused]] static Eigen::Vector<TScalar, kNodes> N([[maybe_unused]] Eigen::DenseBase<TDerived> const& X_)
     {
+#include "pbat/warning/Push.h"
+#include "pbat/warning/SignConversion.h"
         using namespace pbat::math;
         Eigen::Vector<TScalar, kNodes> Nm;
+        auto const X = X_.reshaped();
         auto const a0 = X[0] - 1;
         auto const a1 = X[1] - 1;
         auto const a2 = 3*X[0];
@@ -245,13 +264,17 @@ struct Quadrilateral<3>
         Nm[14] = -a15*a24;
         Nm[15] = a17*a3*a5*X[1];
         return Nm;
+#include "pbat/warning/Pop.h"
     }
 
     template <class TDerived, class TScalar = typename TDerived::Scalar>
-    [[maybe_unused]] static Matrix<kNodes, kDims> GradN([[maybe_unused]] Eigen::DenseBase<TDerived> const& X)
+    [[maybe_unused]] static Eigen::Matrix<TScalar, kNodes, kDims> GradN([[maybe_unused]] Eigen::DenseBase<TDerived> const& X_)
     {
+#include "pbat/warning/Push.h"
+#include "pbat/warning/SignConversion.h"
         Eigen::Matrix<TScalar, kNodes, kDims> GNm;
         TScalar* GNp = GNm.data();
+        [[maybe_unused]] auto const X = X_.reshaped();
         auto const a0 = (9.0/4.0)*X[1] - 3.0/4.0;
         auto const a1 = X[0] - 1;
         auto const a2 = 3*X[0];
@@ -369,6 +392,7 @@ struct Quadrilateral<3>
         GNp[30] = a41*a72 + a71*a81 + a72*a83;
         GNp[31] = a15*a41 + a15*a83 + a42*a73;
         return GNm;
+#include "pbat/warning/Pop.h"
     }
 };
 

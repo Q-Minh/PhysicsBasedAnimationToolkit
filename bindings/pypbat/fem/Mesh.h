@@ -22,11 +22,16 @@ namespace fem {
 enum class EElement { Line, Triangle, Quadrilateral, Tetrahedron, Hexahedron };
 
 template <class Func>
-inline void ApplyToMesh(int meshDims, int meshOrder, EElement meshElement, Func&& f)
+inline void ApplyToElement(EElement eElement, int order, Func&& f)
 {
+    if (order < 1 or order > 3)
+    {
+        throw std::invalid_argument(
+            fmt::format("Invalid mesh order, expected 1 <= order <= 3, but got {}", order));
+    }
     using namespace pbat::fem;
     using namespace pbat::common;
-    ForValues<1, 2, 3>([&]<auto Order>() {
+    ForRange<1, 3 + 1>([&]<auto Order>() {
         ForTypes<
             Line<Order>,
             Triangle<Order>,
@@ -45,23 +50,73 @@ inline void ApplyToMesh(int meshDims, int meshOrder, EElement meshElement, Func&
                 if constexpr (std::is_same_v<ElementType, Hexahedron<Order>>)
                     return EElement::Hexahedron;
             }();
-
-            auto constexpr DimsIn = ElementType::kDims;
-            ForRange<DimsIn, 3 + 1>([&]<auto Dims>() {
-                if ((meshOrder == Order) and (meshDims == Dims) and
-                    (meshElement == eElementCandidate))
-                {
-                    using MeshType = pbat::fem::Mesh<ElementType, Dims>;
-                    f.template operator()<MeshType>();
-                }
-            });
+            if ((order == Order) and (eElement == eElementCandidate))
+            {
+                f.template operator()<ElementType>();
+            }
         });
     });
 }
 
 template <auto MaxQuadratureOrder, class Func>
+inline void ApplyToElementWithQuadrature(EElement eElement, int order, int qOrder, Func&& f)
+{
+    if (qOrder < 1 or qOrder > 3)
+    {
+        throw std::invalid_argument(
+            fmt::format("Invalid quadrature order, expected 1 <= qOrder <= 3, but got {}", qOrder));
+    }
+    ApplyToElement(
+        eElement,
+        order,
+        [f = std::forward<Func>(f), qOrder]<pbat::fem::CElement ElementType>() {
+            pbat::common::ForRange<1, MaxQuadratureOrder + 1>([&]<auto QuadratureOrder>() {
+                if (QuadratureOrder == qOrder)
+                {
+                    f.template operator()<ElementType, QuadratureOrder>();
+                }
+            });
+        });
+}
+
+template <class Func>
+inline void ApplyToElementInDims(EElement eElement, int order, int dims, Func&& f)
+{
+    if (dims < 1 or dims > 3)
+    {
+        throw std::invalid_argument(
+            fmt::format("Invalid mesh dimensions, expected 1 <= dims <= 3, but got {}", dims));
+    }
+    ApplyToElement(
+        eElement,
+        order,
+        [f = std::forward<Func>(f), dims]<pbat::fem::CElement ElementType>() {
+            auto constexpr DimsIn = ElementType::kDims;
+            pbat::common::ForRange<DimsIn, 3 + 1>([&]<auto Dims>() {
+                if (dims == Dims)
+                {
+                    f.template operator()<ElementType, Dims>();
+                }
+            });
+        });
+}
+
+template <class TScalar, class TIndex, class Func>
+inline void ApplyToMesh(EElement meshElement, int meshOrder, int meshDims, Func&& f)
+{
+    ApplyToElementInDims(
+        meshElement,
+        meshOrder,
+        meshDims,
+        [f = std::forward<Func>(f)]<pbat::fem::CElement TElement, auto Dims>() {
+            using MeshType = pbat::fem::Mesh<TElement, Dims, TScalar, TIndex>;
+            f.template operator()<MeshType>();
+        });
+}
+
+template <auto MaxQuadratureOrder, class Func>
 inline void
-ApplyToMeshWithQuadrature(int meshDims, int meshOrder, EElement meshElement, int qOrder, Func&& f)
+ApplyToElementInDimsWithQuadrature(EElement eElement, int order, int dims, int qOrder, Func&& f)
 {
     if (qOrder > MaxQuadratureOrder or qOrder < 1)
     {
@@ -71,111 +126,33 @@ ApplyToMeshWithQuadrature(int meshDims, int meshOrder, EElement meshElement, int
             MaxQuadratureOrder);
         throw std::invalid_argument(what);
     }
-    ApplyToMesh(meshDims, meshOrder, meshElement, [&]<class MeshType>() {
+    ApplyToElementInDims(eElement, order, dims, [&]<pbat::fem::CElement ElementType, int Dims>() {
         pbat::common::ForRange<1, MaxQuadratureOrder + 1>([&]<auto QuadratureOrder>() {
-            if (qOrder == QuadratureOrder)
+            if (QuadratureOrder == qOrder)
             {
-                f.template operator()<MeshType, QuadratureOrder>();
+                f.template operator()<ElementType, Dims, QuadratureOrder>();
             }
         });
     });
 }
 
-class Mesh
+template <auto MaxQuadratureOrder, class TScalar, class TIndex, class Func>
+inline void
+ApplyToMeshWithQuadrature(EElement meshElement, int meshOrder, int meshDims, int qOrder, Func&& f)
 {
-  public:
-    Mesh(
-        Eigen::Ref<MatrixX const> const& V,
-        Eigen::Ref<IndexMatrixX const> const& C,
-        EElement element,
-        int order,
-        int dims);
-
-    Mesh(void* meshImpl, EElement element, int order, int dims);
-
-    Mesh(Mesh const&) = delete;
-    Mesh(Mesh&&) noexcept;
-    Mesh& operator=(Mesh const&) = delete;
-    Mesh& operator=(Mesh&&) noexcept;
-
-    template <class Func>
-    void Apply(Func&& f) const;
-
-    template <auto MaxQuadratureOrder, class Func>
-    void ApplyWithQuadrature(Func&& f, int qOrder) const;
-
-    template <class MeshType>
-    MeshType* Raw();
-
-    template <class MeshType>
-    MeshType const* Raw() const;
-
-    MatrixX QuadraturePoints(int qOrder) const;
-    VectorX QuadratureWeights(int qOrder) const;
-
-    Eigen::Map<MatrixX> X() const;
-    Eigen::Map<IndexMatrixX> E() const;
-
-    [[maybe_unused]] void* Impl() const { return mMesh; }
-    [[maybe_unused]] void* Impl() { return mMesh; }
-
-    ~Mesh();
-
-    EElement eElement;
-    int mOrder;
-    int mDims;
-
-  private:
-    void* mMesh;
-    bool bOwnMesh;
-};
-
-void BindMesh(pybind11::module& m);
-
-template <class Func>
-inline void Mesh::Apply(Func&& f) const
-{
-    ApplyToMesh(mDims, mOrder, eElement, [&]<class MeshType>() {
-        MeshType* mesh = reinterpret_cast<MeshType*>(mMesh);
-        f.template operator()<MeshType>(mesh);
-    });
-}
-
-template <auto MaxQuadratureOrder, class Func>
-inline void Mesh::ApplyWithQuadrature(Func&& f, int qOrder) const
-{
-    ApplyToMeshWithQuadrature<MaxQuadratureOrder>(
-        mDims,
-        mOrder,
-        eElement,
+    ApplyToElementInDimsWithQuadrature(
+        meshElement,
+        meshOrder,
+        meshDims,
         qOrder,
-        [&]<class MeshType, auto QuadratureOrder>() {
-            MeshType* mesh = reinterpret_cast<MeshType*>(mMesh);
-            f.template operator()<MeshType, QuadratureOrder>(mesh);
+        [f = std::forward<Func>(
+             f)]<pbat::fem::CElement ElementType, auto Dims, auto QuadratureOrder>() {
+            using MeshType = pbat::fem::Mesh<ElementType, Dims, TScalar, TIndex>;
+            f.template operator()<MeshType, QuadratureOrder>();
         });
 }
 
-template <class MeshType>
-inline MeshType* Mesh::Raw()
-{
-    MeshType* raw{nullptr};
-    this->Apply([&]<class OtherMeshType>(OtherMeshType* mesh) {
-        if constexpr (std::is_same_v<MeshType, OtherMeshType>)
-            raw = mesh;
-    });
-    return raw;
-}
-
-template <class MeshType>
-inline MeshType const* Mesh::Raw() const
-{
-    MeshType const* raw{nullptr};
-    this->Apply([&]<class OtherMeshType>(OtherMeshType* mesh) {
-        if constexpr (std::is_same_v<MeshType, OtherMeshType>)
-            raw = mesh;
-    });
-    return raw;
-}
+void BindMesh(pybind11::module& m);
 
 } // namespace fem
 } // namespace py

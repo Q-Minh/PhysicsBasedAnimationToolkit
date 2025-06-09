@@ -14,93 +14,257 @@ void BindShapeFunctions(pybind11::module& m)
 {
     namespace pyb = pybind11;
 
-    m.def(
-        "shape_functions_at",
-        [](Mesh const& M,
-           Eigen::Ref<IndexVectorX const> const& eg,
-           Eigen::Ref<MatrixX const> const& Xg,
-           bool bXgInReferenceSpace) {
-            MatrixX N;
-            M.Apply([&]<class MeshType>(MeshType* mesh) {
-                N = pbat::fem::ShapeFunctionsAt(*mesh, eg, Xg, bXgInReferenceSpace);
-            });
-            return N;
-        },
-        pyb::arg("mesh"),
-        pyb::arg("eg"),
-        pyb::arg("Xg"),
-        pyb::arg("in_reference_space") = false,
-        "|#elem. nodes|x|Xg.shape[1]| matrix of nodal shape functions at evaluation points Xg");
+    pbat::common::ForTypes<float, double>([&]<class TScalar>() {
+        m.def(
+            "element_shape_functions",
+            [](EElement eElement, int order, int quadratureOrder) {
+                Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic> N;
+                ApplyToElementWithQuadrature<6>(
+                    eElement,
+                    order,
+                    quadratureOrder,
+                    [&]<class ElementType, auto QuadratureOrder>() {
+                        N = pbat::fem::
+                            ElementShapeFunctions<ElementType, QuadratureOrder, TScalar>();
+                    });
+                return N;
+            },
+            pyb::arg("element_type"),
+            pyb::arg("order")            = 1,
+            pyb::arg("quadrature_order") = 1,
+            "Compute an element's shape functions at the quadrature points of the requested "
+            "quadrature rule\n\n"
+            "Args:\n"
+            "    element_type (EElement): The type of the element (e.g., Line, Triangle, "
+            "Quadrilateral, Tetrahedron, Hexahedron)\n"
+            "    order (int): The polynomial order of the shape functions (default: 1)\n"
+            "    quadrature_order (int): The order of the quadrature rule to use (default: 1)\n\n"
+            "Returns:\n"
+            "    numpy.ndarray: `|# nodes| x |# quad.pts.|` shape function matrix");
+    });
 
-    m.def(
-        "shape_function_matrix",
-        [](Mesh const& M, int qOrder) {
-            auto constexpr kMaxQuadratureOrder = 6;
-            CSRMatrix N;
-            M.ApplyWithQuadrature<kMaxQuadratureOrder>(
-                [&]<class MeshType, auto QuadratureOrder>(MeshType* mesh) {
-                    N = pbat::fem::ShapeFunctionMatrix<QuadratureOrder>(*mesh);
+    pbat::common::ForTypes<float, double>([&]<class TScalar>() {
+        pbat::common::ForTypes<std::int32_t, std::int64_t>([&]<class TIndex>() {
+            m.def(
+                "shape_function_matrix",
+                [](pyb::EigenDRef<Eigen::Matrix<TIndex, Eigen::Dynamic, Eigen::Dynamic> const> E,
+                   TIndex nNodes,
+                   EElement eElement,
+                   int order,
+                   int qOrder) {
+                    Eigen::SparseMatrix<TScalar, Eigen::RowMajor, TIndex> N;
+                    ApplyToElementWithQuadrature<
+                        6>(eElement, order, qOrder, [&]<class ElementType, int QuadratureOrder>() {
+                        N = pbat::fem::ShapeFunctionMatrix<ElementType, QuadratureOrder, TScalar>(
+                            E.template topRows<ElementType::kNodes>(),
+                            nNodes);
+                    });
+                    return N;
                 },
-                qOrder);
-            return N;
-        },
-        pyb::arg("mesh"),
-        pyb::arg("quadrature_order") = 1,
-        "|#elements * #quad.pts.| x |#nodes| shape function matrix");
+                pyb::arg("E"),
+                pyb::arg("n_nodes"),
+                pyb::arg("element_type"),
+                pyb::arg("order")            = 1,
+                pyb::arg("quadrature_order") = 1,
+                "Constructs a shape function matrix N for a given mesh, i.e. at the "
+                "element quadrature points.\n\n"
+                "Args:\n"
+                "    E (numpy.ndarray): `|# elem. nodes| x |# elements|` array of element node "
+                "indices.\n"
+                "    n_nodes (int): Number of nodes in the mesh.\n"
+                "    element_type (EElement): Type of the finite element.\n"
+                "    order (int): Order of the finite element.\n"
+                "    quadrature_order (int): Order of the quadrature rule to use.\n\n"
+                "Returns:\n"
+                "    scipy.sparse.csr_matrix: `|# elements * # quad.pts.| x |# nodes|` shape "
+                "function matrix");
+        });
+    });
 
-    m.def(
-        "shape_function_matrix",
-        [](Mesh const& M,
-           Eigen::Ref<IndexVectorX const> const& eg,
-           Eigen::Ref<MatrixX const> const& Xg,
-           bool bXgInReferenceSpace) {
-            CSRMatrix N;
-            M.Apply([&]<class MeshType>(MeshType* mesh) {
-                N = pbat::fem::ShapeFunctionMatrix(*mesh, eg, Xg, bXgInReferenceSpace);
-            });
-            return N;
-        },
-        pyb::arg("mesh"),
-        pyb::arg("eg"),
-        pyb::arg("Xg"),
-        pyb::arg("in_reference_space") = false,
-        "|#quad.pts.| x |#nodes| shape function matrix");
-
-    m.def(
-        "shape_function_gradients",
-        [](Mesh const& M, int qOrder) {
-            auto constexpr kMaxQuadratureOrder = 8;
-            MatrixX GN;
-            M.ApplyWithQuadrature<kMaxQuadratureOrder>(
-                [&]<class MeshType, auto QuadratureOrder>(MeshType* mesh) {
-                    GN = pbat::fem::ShapeFunctionGradients<QuadratureOrder>(*mesh);
+    pbat::common::ForTypes<float, double>([&]<class TScalar>() {
+        pbat::common::ForTypes<std::int32_t, std::int64_t>([&]<class TIndex>() {
+            m.def(
+                "shape_function_matrix_at",
+                [](pyb::EigenDRef<Eigen::Matrix<TIndex, Eigen::Dynamic, Eigen::Dynamic> const> E,
+                   TIndex nNodes,
+                   pyb::EigenDRef<Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic> const> Xi,
+                   EElement eElement,
+                   int order) {
+                    Eigen::SparseMatrix<TScalar, Eigen::RowMajor, TIndex> N;
+                    ApplyToElement(eElement, order, [&]<class ElementType>() {
+                        N = pbat::fem::ShapeFunctionMatrixAt<ElementType>(
+                            E.template topRows<ElementType::kNodes>(),
+                            nNodes,
+                            Xi.template topRows<ElementType::kDims>());
+                    });
+                    return N;
                 },
-                qOrder);
-            return GN;
-        },
-        pyb::arg("mesh"),
-        pyb::arg("quadrature_order") = 1,
-        "|#element nodes| x |#dims * #quad.pts. * #elements| matrix of shape functions at each "
-        "element quadrature point");
+                pyb::arg("E"),
+                pyb::arg("n_nodes"),
+                pyb::arg("Xi"),
+                pyb::arg("element_type"),
+                pyb::arg("order") = 1,
+                "Constructs a shape function matrix N for a given mesh, i.e. at the element "
+                "quadrature points.\n\n"
+                "Args:\n"
+                "    E (numpy.ndarray): `|# elem. nodes| x |# elements|` array of element node "
+                "indices.\n"
+                "    n_nodes (int): Number of nodes in the mesh.\n"
+                "    Xi (numpy.ndarray): `|# dims| x |# quad. pts.|` array of quadrature points in "
+                "reference space.\n"
+                "    element_type (EElement): Type of the finite element.\n"
+                "    order (int): Order of the finite element.\n\n"
+                "Returns:\n"
+                "    scipy.sparse.csr_matrix: `|# quad.pts.| x |# nodes|` shape function matrix at "
+                "the quadrature points Xi");
+        });
+    });
 
-    m.def(
-        "shape_function_gradients_at",
-        [](Mesh const& M,
-           Eigen::Ref<IndexVectorX const> const& E,
-           Eigen::Ref<MatrixX const> const& Xg,
-           bool bXgInReferenceSpace) {
-            MatrixX GN;
-            M.Apply([&]<class MeshType>(MeshType* mesh) {
-                GN = pbat::fem::ShapeFunctionGradientsAt(*mesh, E, Xg, bXgInReferenceSpace);
-            });
-            return GN;
-        },
-        pyb::arg("mesh"),
-        pyb::arg("E"),
-        pyb::arg("Xg"),
-        pyb::arg("in_reference_space"),
-        "|#element nodes| x |E.shape[0] * mesh.dims| nodal shape function gradients at evaluation "
-        "points Xg");
+    pbat::common::ForTypes<float, double>([&]<class TScalar>() {
+        m.def(
+            "shape_functions_at",
+            [](pyb::EigenDRef<Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic> const> Xi,
+               EElement eElement,
+               int order) {
+                Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic> N;
+                ApplyToElement(eElement, order, [&]<class ElementType>() {
+                    N = pbat::fem::ShapeFunctionsAt<ElementType>(
+                        Xi.template topRows<ElementType::kDims>());
+                });
+                return N;
+            },
+            pyb::arg("Xi"),
+            pyb::arg("element_type"),
+            pyb::arg("order") = 1,
+            "Compute shape functions at the given reference positions.\n\n"
+            "Args:\n"
+            "    Xi (numpy.ndarray): `|# reference dims| x |# quad. pts.|` evaluation points in "
+            "reference space.\n"
+            "    element_type (EElement): Type of the finite element.\n"
+            "    order (int): Order of the finite element.\n\n"
+            "Returns:\n"
+            "    numpy.ndarray: `|# element nodes| x |# eval.pts.|` matrix of nodal shape "
+            "functions "
+            "values at the evaluation points Xi");
+    });
+
+    pbat::common::ForTypes<float, double>([&]<class TScalar>() {
+        m.def(
+            "element_shape_function_gradients",
+            [](pyb::EigenDRef<Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic> const> Xi,
+               pyb::EigenDRef<Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic> const> X,
+               EElement eElement,
+               int order) {
+                Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic> GN;
+                auto dims = static_cast<int>(X.rows());
+                ApplyToElementInDims(eElement, order, dims, [&]<class ElementType, int Dims>() {
+                    GN = pbat::fem::ElementShapeFunctionGradients<ElementType>(
+                        Xi.template topRows<ElementType::kNodes>(),
+                        X.template topRows<Dims>());
+                });
+                return GN;
+            },
+            pyb::arg("Xi"),
+            pyb::arg("X"),
+            pyb::arg("element_type"),
+            pyb::arg("order") = 1,
+            "Compute gradients of an element's shape functions at the given reference point, given "
+            "the vertices (not nodes) of the element.\n\n"
+            "Args:\n"
+            "    Xi (numpy.ndarray): `|# reference dims|` evaluation point in reference space.\n"
+            "    X (numpy.ndarray): `|# dims| x |# element vertices|` array of element vertices.\n"
+            "    element_type (EElement): The type of the element.\n"
+            "    order (int): The polynomial order of the shape functions (default: 1)\n"
+            "Returns:\n"
+            "    numpy.ndarray: `|# element nodes| x |# dims|` matrix of shape function gradients "
+            "at the evaluation point Xi");
+    });
+
+    pbat::common::ForTypes<float, double>([&]<class TScalar>() {
+        pbat::common::ForTypes<std::int32_t, std::int64_t>([&]<class TIndex>() {
+            m.def(
+                "shape_function_gradients",
+                [](pyb::EigenDRef<Eigen::Matrix<TIndex, Eigen::Dynamic, Eigen::Dynamic> const> E,
+                   pyb::EigenDRef<Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic> const> X,
+                   EElement eElement,
+                   int order,
+                   int dims,
+                   int qOrder) {
+                    Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic> GNeg;
+                    ApplyToElementInDimsWithQuadrature<6>(
+                        eElement,
+                        order,
+                        dims,
+                        qOrder,
+                        [&]<class ElementType, int Dims, int QuadratureOrder>() {
+                            GNeg = pbat::fem::
+                                ShapeFunctionGradients<ElementType, Dims, QuadratureOrder>(
+                                    E.template topRows<ElementType::kNodes>(),
+                                    X.template topRows<Dims>());
+                        });
+                    return GNeg;
+                },
+                pyb::arg("E"),
+                pyb::arg("X"),
+                pyb::arg("element_type"),
+                pyb::arg("order")            = 1,
+                pyb::arg("dims")             = 3,
+                pyb::arg("quadrature_order") = 1,
+                "Computes nodal shape function gradients at each element quadrature points.\n\n"
+                "Args:\n"
+                "    E (numpy.ndarray): `|# elem. nodes| x |# elements|` array of elements.\n"
+                "    X (numpy.ndarray): `|# dims| x |# element vertices|` array of nodes.\n"
+                "    element_type (EElement): Type of the finite element.\n"
+                "    order (int): Order of the finite element.\n"
+                "    quadrature_order (int): Order of the quadrature rule to use.\n\n"
+                "Returns:\n"
+                "    numpy.ndarray: `|# elem. nodes| x |# dims * #elems * # elem.quad. pts.|` "
+                "matrix of shape "
+                "function gradients at each element quadrature point.");
+        });
+    });
+
+    pbat::common::ForTypes<float, double>([&]<class TScalar>() {
+        pbat::common::ForTypes<std::int32_t, std::int64_t>([&]<class TIndex>() {
+            m.def(
+                "shape_function_gradients_at",
+                [](pyb::EigenDRef<Eigen::Matrix<TIndex, Eigen::Dynamic, Eigen::Dynamic> const> E,
+                   pyb::EigenDRef<Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic> const> X,
+                   pyb::EigenDRef<Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic> const> Xi,
+                   EElement eElement,
+                   int order,
+                   int dims) {
+                    Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic> GNeg;
+                    ApplyToElementInDims(eElement, order, dims, [&]<class ElementType, int Dims>() {
+                        GNeg = pbat::fem::ShapeFunctionGradientsAt<ElementType, Dims>(
+                            E.template topRows<ElementType::kNodes>(),
+                            X.template topRows<Dims>(),
+                            Xi.template topRows<ElementType::kDims>());
+                    });
+                    return GNeg;
+                },
+                pyb::arg("E"),
+                pyb::arg("X"),
+                pyb::arg("Xi"),
+                pyb::arg("element_type"),
+                pyb::arg("order") = 1,
+                pyb::arg("dims")  = 3,
+                "Computes nodal shape function gradients at evaluation points Xi.\n\n"
+                "Args:\n"
+                "    E (numpy.ndarray): `|# elem. nodes| x |# elements|` array of element node "
+                "indices.\n"
+                "    X (numpy.ndarray): `|# dims| x |# element vertices|` array of element "
+                "vertices.\n"
+                "    Xi (numpy.ndarray): `|# dims| x |# eval. pts.|` array of evaluation points in "
+                "reference space.\n"
+                "    element_type (EElement): Type of the finite element.\n"
+                "    order (int): Order of the finite element.\n\n"
+                "    dims (int): Number of spatial dimensions.\n"
+                "Returns:\n"
+                "    numpy.ndarray: `|# elem. nodes| x |# dims * # quad.pts.|` "
+                "matrix of shape function gradients at mesh element quadrature points");
+        });
+    });
 }
 
 } // namespace fem

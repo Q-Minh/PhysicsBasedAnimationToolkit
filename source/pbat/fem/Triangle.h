@@ -56,21 +56,28 @@ struct Triangle<1>
     using QuadratureType = math::SymmetricSimplexPolynomialQuadratureRule<kDims, PolynomialOrder, TScalar>;
 
     template <class TDerived, class TScalar = typename TDerived::Scalar>
-    [[maybe_unused]] static Eigen::Vector<TScalar, kNodes> N([[maybe_unused]] Eigen::DenseBase<TDerived> const& X)
+    [[maybe_unused]] static Eigen::Vector<TScalar, kNodes> N([[maybe_unused]] Eigen::DenseBase<TDerived> const& X_)
     {
+#include "pbat/warning/Push.h"
+#include "pbat/warning/SignConversion.h"
         using namespace pbat::math;
         Eigen::Vector<TScalar, kNodes> Nm;
+        auto const X = X_.reshaped();
         Nm[0] = -X[0] - X[1] + 1;
         Nm[1] = X[0];
         Nm[2] = X[1];
         return Nm;
+#include "pbat/warning/Pop.h"
     }
 
     template <class TDerived, class TScalar = typename TDerived::Scalar>
-    [[maybe_unused]] static Matrix<kNodes, kDims> GradN([[maybe_unused]] Eigen::DenseBase<TDerived> const& X)
+    [[maybe_unused]] static Eigen::Matrix<TScalar, kNodes, kDims> GradN([[maybe_unused]] Eigen::DenseBase<TDerived> const& X_)
     {
+#include "pbat/warning/Push.h"
+#include "pbat/warning/SignConversion.h"
         Eigen::Matrix<TScalar, kNodes, kDims> GNm;
         TScalar* GNp = GNm.data();
+        [[maybe_unused]] auto const X = X_.reshaped();
         GNp[0] = -1;
         GNp[1] = 1;
         GNp[2] = 0;
@@ -78,6 +85,7 @@ struct Triangle<1>
         GNp[4] = 0;
         GNp[5] = 1;
         return GNm;
+#include "pbat/warning/Pop.h"
     }
 };
 
@@ -98,10 +106,13 @@ struct Triangle<2>
     using QuadratureType = math::SymmetricSimplexPolynomialQuadratureRule<kDims, PolynomialOrder, TScalar>;
 
     template <class TDerived, class TScalar = typename TDerived::Scalar>
-    [[maybe_unused]] static Eigen::Vector<TScalar, kNodes> N([[maybe_unused]] Eigen::DenseBase<TDerived> const& X)
+    [[maybe_unused]] static Eigen::Vector<TScalar, kNodes> N([[maybe_unused]] Eigen::DenseBase<TDerived> const& X_)
     {
+#include "pbat/warning/Push.h"
+#include "pbat/warning/SignConversion.h"
         using namespace pbat::math;
         Eigen::Vector<TScalar, kNodes> Nm;
+        auto const X = X_.reshaped();
         auto const a0 = X[0] + X[1] - 1;
         auto const a1 = 2*X[1];
         auto const a2 = 2*X[0] - 1;
@@ -113,13 +124,17 @@ struct Triangle<2>
         Nm[4] = 4*X[0]*X[1];
         Nm[5] = (a1 - 1)*X[1];
         return Nm;
+#include "pbat/warning/Pop.h"
     }
 
     template <class TDerived, class TScalar = typename TDerived::Scalar>
-    [[maybe_unused]] static Matrix<kNodes, kDims> GradN([[maybe_unused]] Eigen::DenseBase<TDerived> const& X)
+    [[maybe_unused]] static Eigen::Matrix<TScalar, kNodes, kDims> GradN([[maybe_unused]] Eigen::DenseBase<TDerived> const& X_)
     {
+#include "pbat/warning/Push.h"
+#include "pbat/warning/SignConversion.h"
         Eigen::Matrix<TScalar, kNodes, kDims> GNm;
         TScalar* GNp = GNm.data();
+        [[maybe_unused]] auto const X = X_.reshaped();
         auto const a0 = 4*X[0];
         auto const a1 = 4*X[1];
         auto const a2 = a0 + a1 - 3;
@@ -136,6 +151,7 @@ struct Triangle<2>
         GNp[10] = a0;
         GNp[11] = a1 - 1;
         return GNm;
+#include "pbat/warning/Pop.h"
     }
 };
 
@@ -156,10 +172,13 @@ struct Triangle<3>
     using QuadratureType = math::SymmetricSimplexPolynomialQuadratureRule<kDims, PolynomialOrder, TScalar>;
 
     template <class TDerived, class TScalar = typename TDerived::Scalar>
-    [[maybe_unused]] static Eigen::Vector<TScalar, kNodes> N([[maybe_unused]] Eigen::DenseBase<TDerived> const& X)
+    [[maybe_unused]] static Eigen::Vector<TScalar, kNodes> N([[maybe_unused]] Eigen::DenseBase<TDerived> const& X_)
     {
+#include "pbat/warning/Push.h"
+#include "pbat/warning/SignConversion.h"
         using namespace pbat::math;
         Eigen::Vector<TScalar, kNodes> Nm;
+        auto const X = X_.reshaped();
         auto const a0 = 3*X[1];
         auto const a1 = 3*X[0];
         auto const a2 = a1 - 1;
@@ -182,13 +201,17 @@ struct Triangle<3>
         Nm[8] = a10*a6;
         Nm[9] = (1.0/2.0)*a10*(a0 - 2);
         return Nm;
+#include "pbat/warning/Pop.h"
     }
 
     template <class TDerived, class TScalar = typename TDerived::Scalar>
-    [[maybe_unused]] static Matrix<kNodes, kDims> GradN([[maybe_unused]] Eigen::DenseBase<TDerived> const& X)
+    [[maybe_unused]] static Eigen::Matrix<TScalar, kNodes, kDims> GradN([[maybe_unused]] Eigen::DenseBase<TDerived> const& X_)
     {
+#include "pbat/warning/Push.h"
+#include "pbat/warning/SignConversion.h"
         Eigen::Matrix<TScalar, kNodes, kDims> GNm;
         TScalar* GNp = GNm.data();
+        [[maybe_unused]] auto const X = X_.reshaped();
         auto const a0 = X[0] + X[1] - 1;
         auto const a1 = (3.0/2.0)*X[1];
         auto const a2 = (3.0/2.0)*X[0];
@@ -240,6 +263,7 @@ struct Triangle<3>
         GNp[18] = a26 + a27*X[0];
         GNp[19] = (a1 - 1.0/2.0)*(a5 - 2) + (a10 - 3)*X[1] + (a10 - 3.0/2.0)*X[1];
         return GNm;
+#include "pbat/warning/Pop.h"
     }
 };
 

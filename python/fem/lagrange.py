@@ -330,21 +330,29 @@ struct {element_name}<{order}>
     using QuadratureType = math::{quad}<kDims, PolynomialOrder, TScalar>;
 
     template <class TDerived, class TScalar = typename TDerived::Scalar>
-    [[maybe_unused]] static Eigen::Vector<TScalar, kNodes> N([[maybe_unused]] Eigen::DenseBase<TDerived> const& X)
+    [[maybe_unused]] static Eigen::Vector<TScalar, kNodes> N([[maybe_unused]] Eigen::DenseBase<TDerived> const& X_)
     {{
+#include "pbat/warning/Push.h"
+#include "pbat/warning/SignConversion.h"
         using namespace pbat::math;
         Eigen::Vector<TScalar, kNodes> Nm;
+        auto const X = X_.reshaped();
 {codeN}
         return Nm;
+#include "pbat/warning/Pop.h"
     }}
 
     template <class TDerived, class TScalar = typename TDerived::Scalar>
-    [[maybe_unused]] static Matrix<kNodes, kDims> GradN([[maybe_unused]] Eigen::DenseBase<TDerived> const& X)
+    [[maybe_unused]] static Eigen::Matrix<TScalar, kNodes, kDims> GradN([[maybe_unused]] Eigen::DenseBase<TDerived> const& X_)
     {{
+#include "pbat/warning/Push.h"
+#include "pbat/warning/SignConversion.h"
         Eigen::Matrix<TScalar, kNodes, kDims> GNm;
         TScalar* GNp = GNm.data();
+        [[maybe_unused]] auto const X = X_.reshaped();
 {codeGN}
         return GNm;
+#include "pbat/warning/Pop.h"
     }}
 }};
 """

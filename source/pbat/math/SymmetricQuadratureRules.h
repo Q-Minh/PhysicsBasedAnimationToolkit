@@ -98,6 +98,9 @@ using SymmetricSimplexPolynomialQuadratureRule =
 
 namespace detail {
 
+#include "pbat/warning/Push.h"
+#include "pbat/warning/SignConversion.h"
+
 template <common::CFloatingPoint TScalar>
 struct SymmetricSimplexPolynomialQuadratureRule<1, 0, TScalar>
 {
@@ -4249,6 +4252,8 @@ struct SymmetricSimplexPolynomialQuadratureRule<3, 20, TScalar>
         0.000189803, 0.000189803, 0.000189803, 0.000189803, 0.000189803, 0.000189803, 0.000189803,
         0.000189803, 0.000189803, 0.000189803, 0.000189803, 0.000189803, 0.000189803};
 };
+
+#include "pbat/warning/Pop.h"
 
 } // namespace detail
 } // namespace math

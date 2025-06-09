@@ -59,28 +59,23 @@ auto ElementShapeFunctions() -> Eigen::Matrix<
  * element quadrature points.
  * @tparam TElement Element type
  * @tparam QuadratureOrder Quadrature order
- * @param TScalar Floating point type, defaults to Scalar
- * @param TIndex Index type, defaults to Index
+ * @tparam TScalar Floating point type
+ * @tparam TIndex Index type, defaults to Index
  * @param E `|# nodes|x|# elements|` array of element node indices
  * @param nNodes Number of nodes in the mesh
  * @return `|# elements * # quad.pts.| x |# nodes|` shape function matrix
  */
-template <
-    CElement TElement,
-    int QuadratureOrder,
-    common::CFloatingPoint TScalar = Scalar,
-    common::CIndex TIndex          = Index>
-auto ShapeFunctionMatrix(
-    Eigen::Ref<Eigen::Matrix<TIndex, TElement::kNodes, Eigen::Dynamic> const> const& E,
-    TIndex nNodes) -> Eigen::SparseMatrix<TScalar, Eigen::RowMajor, TIndex>
+template <CElement TElement, int QuadratureOrder, common::CFloatingPoint TScalar, class TDerivedE>
+auto ShapeFunctionMatrix(Eigen::DenseBase<TDerivedE> const& E, typename TDerivedE::Scalar nNodes)
+    -> Eigen::SparseMatrix<TScalar, Eigen::RowMajor, typename TDerivedE::Scalar>
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.fem.ShapeFunctionMatrix");
-    using ElementType                = TElement;
-    using ScalarType                 = TScalar;
-    using IndexType                  = TIndex;
-    using IndexVectorType            = Eigen::Vector<IndexType, Eigen::Dynamic>;
-    auto const Ng                    = ElementShapeFunctions<ElementType, QuadratureOrder, ScalarType>();
-    auto const nElements             = E.cols();
+    using ElementType     = TElement;
+    using ScalarType      = TScalar;
+    using IndexType       = typename TDerivedE::Scalar;
+    using IndexVectorType = Eigen::Vector<IndexType, Eigen::Dynamic>;
+    auto const Ng         = ElementShapeFunctions<ElementType, QuadratureOrder, ScalarType>();
+    auto const nElements  = E.cols();
     auto const nQuadPointsPerElement = Ng.cols();
     auto const m                     = nQuadPointsPerElement * nElements;
     auto const n                     = nNodes;
@@ -118,8 +113,7 @@ auto ShapeFunctionMatrix(TMesh const& mesh)
     return ShapeFunctionMatrix<
         typename TMesh::ElementType,
         QuadratureOrder,
-        typename TMesh::ScalarType,
-        typename TMesh::IndexType>(mesh.E, mesh.X.cols());
+        typename TMesh::ScalarType>(mesh.E, mesh.X.cols());
 }
 
 /**
@@ -283,7 +277,7 @@ auto ShapeFunctionsAt(Eigen::DenseBase<TDerivedXi> const& Xi)
  * @tparam TElement Element type
  * @param Xi `|# elem dims| x 1` point in reference element at which to evaluate the gradients
  * @param X `|# dims| x |# nodes|` element vertices, i.e. nodes of affine element
- * @return `|# nodes|x|Dims|` matrix of basis function gradients in rows
+ * @return `|# nodes| x |# dims|` matrix of basis function gradients in rows
  */
 template <CElement TElement, class TDerivedXi, class TDerivedX>
 auto ElementShapeFunctionGradients(
@@ -334,9 +328,11 @@ auto ElementShapeFunctionGradients(
  * @tparam Dims Number of dimensions of the element
  * @tparam QuadratureOrder Quadrature order
  * @tparam TDerivedE Eigen dense expression type for element indices
+ * @tparam TDerivedX Eigen dense expression type for element nodal positions
  * @tparam TScalar Floating point type, defaults to Scalar
  * @tparam TIndex Index type, defaults to coefficient type of `TDerivedE`
  * @param E `|# elem nodes| x |# elements|` array of element node indices
+ * @param X `|# dims| x |# nodes|` array of mesh nodal positions
  * @return `|# elem nodes| x |# dims * # elem quad.pts. * # elems|` matrix of nodal shape function
  * gradients
  */

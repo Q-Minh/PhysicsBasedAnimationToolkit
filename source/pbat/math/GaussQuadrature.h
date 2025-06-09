@@ -67,6 +67,9 @@ using GaussLegendreQuadrature = typename detail::GaussLegendreQuadrature<Dims, O
 
 namespace detail {
 
+#include "pbat/warning/Push.h"
+#include "pbat/warning/SignConversion.h"
+
 template <common::CFloatingPoint TScalar>
 struct GaussLegendreQuadrature<1, 1, TScalar>
 {
@@ -5570,6 +5573,8 @@ struct GaussLegendreQuadrature<3, 10, TScalar>
         0.000121731726568416, 0.000149613614798725, 0.000164203164926284, 0.000164203164926284,
         0.000149613614798725, 0.000121731726568416, 8.30401790468641e-5,  3.70448336543065e-5};
 };
+
+#include "pbat/warning/Pop.h"
 
 } // namespace detail
 } // namespace math
