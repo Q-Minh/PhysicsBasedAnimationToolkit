@@ -46,16 +46,16 @@ auto ToEigen(R&& r) -> Eigen::Map<Eigen::Matrix<
     Eigen::Dynamic,
     Eigen::Dynamic> const>
 {
-    namespace rng   = std::ranges;
-    using ValueType = rng::range_value_t<R>;
-    auto rows       = ValueType::RowsAtCompileTime;
-    auto cols       = ValueType::ColsAtCompileTime;
+    namespace rng    = std::ranges;
+    using ValueType  = rng::range_value_t<R>;
+    using ScalarType = typename ValueType::Scalar;
+    auto rows        = ValueType::RowsAtCompileTime;
+    auto cols        = ValueType::ColsAtCompileTime;
     if constexpr (ValueType::Flags & Eigen::RowMajorBit)
         std::swap(rows, cols);
 
-    return Eigen::Map<
-        Eigen::Matrix<typename ValueType::Scalar, Eigen::Dynamic, Eigen::Dynamic> const>(
-        static_cast<Scalar const*>(std::addressof(rng::data(r)[0][0])),
+    return Eigen::Map<Eigen::Matrix<ScalarType, Eigen::Dynamic, Eigen::Dynamic> const>(
+        static_cast<ScalarType const*>(std::addressof(rng::data(r)[0][0])),
         rows,
         static_cast<Eigen::Index>(rng::size(r) * cols));
 }

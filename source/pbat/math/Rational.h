@@ -104,11 +104,17 @@ struct PBAT_API Rational
      */
     bool Rebase(std::int64_t denominator);
     /**
-     * @brief Cast to Scalar
+     * @brief Cast to double
      *
      * @return 
      */
-    explicit operator Scalar() const;
+    explicit operator double() const;
+    /**
+     * @brief Cast to float
+     *
+     * @return 
+     */
+    explicit operator float() const;
     /**
      * @brief Attempts to reduce magnitude of \f$ a,b \f$ by eliminating common divisor
      */

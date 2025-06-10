@@ -2,9 +2,9 @@
 
 #include "Mesh.h"
 #include "Tetrahedron.h"
+#include "pbat/common/ConstexprFor.h"
 
 #include <doctest/doctest.h>
-#include <pbat/common/ConstexprFor.h>
 
 TEST_CASE("[fem] Jacobian")
 {

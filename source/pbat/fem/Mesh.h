@@ -195,6 +195,15 @@ inline void Mesh<TElement, Dims, TScalar, TIndex>::Construct(
     Eigen::DenseBase<TDerivedC> const& C)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.fem.Mesh.Construct");
+    static_assert(
+        kDims >= ElementType::kDims,
+        "Element TElement does not exist in Dims dimensions");
+    static_assert(
+        std::is_same_v<TScalar, typename TDerivedV::Scalar>,
+        "Vertex positions matrix V must have the same scalar type as TScalar");
+    static_assert(
+        std::is_same_v<TIndex, typename TDerivedC::Scalar>,
+        "Cell vertex indices matrix C must have the same index type as TIndex");
 
     // Smart nodal indexing is only relevant for higher-order meshes
     if constexpr (kOrder == 1)
@@ -207,10 +216,6 @@ inline void Mesh<TElement, Dims, TScalar, TIndex>::Construct(
     {
         using AffineElementType         = typename ElementType::AffineBaseType;
         auto constexpr kVerticesPerCell = AffineElementType::kNodes;
-
-        static_assert(
-            kDims >= ElementType::kDims,
-            "Element TElement does not exist in Dims dimensions");
         assert(C.rows() == kVerticesPerCell);
         assert(V.rows() == kDims);
 

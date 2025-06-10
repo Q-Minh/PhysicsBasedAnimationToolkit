@@ -1,8 +1,8 @@
-#include "Laplacian.h"
+#include "Mass.h"
 
 #include "Mesh.h"
 
-#include <pbat/fem/Laplacian.h>
+#include <pbat/fem/Mass.h>
 #include <pybind11/eigen.h>
 #include <tuple>
 
@@ -10,7 +10,7 @@ namespace pbat {
 namespace py {
 namespace fem {
 
-void BindLaplacian([[maybe_unused]] pybind11::module& m)
+void BindMass([[maybe_unused]] pybind11::module& m)
 {
     namespace pyb = pybind11;
 }

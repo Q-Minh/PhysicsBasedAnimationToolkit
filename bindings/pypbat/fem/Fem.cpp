@@ -4,7 +4,7 @@
 #include "HyperElasticPotential.h"
 #include "Jacobian.h"
 #include "Laplacian.h"
-#include "MassMatrix.h"
+#include "Mass.h"
 #include "Mesh.h"
 #include "ShapeFunctions.h"
 
@@ -21,7 +21,7 @@ void Bind(pybind11::module& m)
     BindHyperElasticPotential(m);
     BindJacobian(m);
     BindLaplacian(m);
-    BindMassMatrix(m);
+    BindMass(m);
     BindShapeFunctions(m);
 }
 

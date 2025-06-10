@@ -105,7 +105,14 @@ DeterminantOfJacobian(Eigen::DenseBase<TDerivedE> const& E, Eigen::MatrixBase<TD
     using QuadratureRuleType =
         typename ElementType::template QuadratureType<QuadratureOrder, ScalarType>;
     using MatrixType = Eigen::Matrix<ScalarType, QuadratureRuleType::kPoints, Eigen::Dynamic>;
-
+    if (X.rows() < ElementType::kDims)
+    {
+        throw std::invalid_argument(
+            fmt::format(
+                "Invalid number of dimensions, expected at least {}, but got {}",
+                ElementType::kDims,
+                X.rows()));
+    }
     auto const Xg = common::ToEigen(QuadratureRuleType::points)
                         .reshaped(QuadratureRuleType::kDims + 1, QuadratureRuleType::kPoints)
                         .template bottomRows<ElementType::kDims>();
@@ -167,7 +174,7 @@ template <int QuadratureOrder, CMesh TMesh>
  * @return `|# eval.pts.| x 1` vector of jacobian determinants at evaluation points
  */
 template <CElement TElement, class TDerivedEg, class TDerivedX, class TDerivedXi>
-[[maybe_unused]] auto DeterminantOfJacobian(
+[[maybe_unused]] auto DeterminantOfJacobianAt(
     Eigen::DenseBase<TDerivedEg> const& Eg,
     Eigen::MatrixBase<TDerivedX> const& X,
     Eigen::MatrixBase<TDerivedXi> const& Xi)
@@ -205,14 +212,14 @@ template <CElement TElement, class TDerivedEg, class TDerivedX, class TDerivedXi
  * @return `|# eval.pts.| x 1` vector of jacobian determinants at evaluation points
  */
 template <CElement TElement, class TDerivedE, class TDerivedX, class TDerivedeg, class TDerivedXi>
-[[maybe_unused]] auto DeterminantOfJacobian(
+[[maybe_unused]] auto DeterminantOfJacobianAt(
     Eigen::DenseBase<TDerivedE> const& E,
     Eigen::MatrixBase<TDerivedX> const& X,
     Eigen::MatrixBase<TDerivedeg> const& eg,
     Eigen::MatrixBase<TDerivedXi> const& Xi)
     -> Eigen::Vector<typename TDerivedX::Scalar, Eigen::Dynamic>
 {
-    return DeterminantOfJacobian<TElement>(
+    return DeterminantOfJacobianAt<TElement>(
         E(Eigen::placeholders::all, eg.derived()),
         X.derived(),
         Xi.derived());

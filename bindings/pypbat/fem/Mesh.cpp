@@ -21,19 +21,19 @@ void BindMesh(pybind11::module& m)
         .export_values();
 
     pbat::common::ForTypes<float, double>([&]<class TScalar>() {
-        pbat::common::ForTypes<std::int32_t, std::int64_t>([&]<class TIndex>() {
-            using MatrixType      = Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic>;
-            using IndexMatrixType = Eigen::Matrix<TIndex, Eigen::Dynamic, Eigen::Dynamic>;
+        // std::int32_t
+        {
             m.def(
                 "mesh",
-                [](pyb::EigenDRef<MatrixType const> V,
-                   pyb::EigenDRef<IndexMatrixType const> C,
+                [](pyb::EigenDRef<Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic> const> V,
+                   pyb::EigenDRef<Eigen::Matrix<std::int32_t, Eigen::Dynamic, Eigen::Dynamic> const>
+                       C,
                    EElement element,
                    int order,
                    int dims) {
-                    MatrixType X;
-                    IndexMatrixType E;
-                    ApplyToMesh<TScalar, TIndex>(
+                    Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic> X;
+                    Eigen::Matrix<std::int32_t, Eigen::Dynamic, Eigen::Dynamic> E;
+                    ApplyToMesh<TScalar, std::int32_t>(
                         element,
                         order,
                         dims,
@@ -61,7 +61,89 @@ void BindMesh(pybind11::module& m)
                 "    Tuple[numpy.ndarray, numpy.ndarray]: (X, E) where X are the `|# dims| x |# "
                 "nodes|` nodal coordinates and E are the `|# elem. nodes.| x |# elements|` element "
                 "connectivity.\n");
-        });
+        }
+        // std::int64_t
+        {
+            m.def(
+                "mesh",
+                [](pyb::EigenDRef<Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic> const> V,
+                   pyb::EigenDRef<Eigen::Matrix<std::int64_t, Eigen::Dynamic, Eigen::Dynamic> const>
+                       C,
+                   EElement element,
+                   int order,
+                   int dims) {
+                    Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic> X;
+                    Eigen::Matrix<std::int64_t, Eigen::Dynamic, Eigen::Dynamic> E;
+                    ApplyToMesh<TScalar, std::int64_t>(
+                        element,
+                        order,
+                        dims,
+                        [&]<pbat::fem::CMesh TMesh>() {
+                            using MeshType = TMesh;
+                            MeshType mesh(V, C);
+                            X = std::move(mesh.X);
+                            E = std::move(mesh.E);
+                        });
+                    return std::make_pair(X, E);
+                },
+                pyb::arg("V"),
+                pyb::arg("C"),
+                pyb::arg("element"),
+                pyb::arg("order") = 1,
+                pyb::arg("dims")  = 3,
+                "Compute an FEM mesh from the input geometric mesh.\n\n"
+                "Args:\n"
+                "    V (numpy.ndarray): Vertex coordinates of the geometric mesh.\n"
+                "    C (numpy.ndarray): Connectivity of the geometric mesh.\n"
+                "    element (EElement): Type of the finite element.\n"
+                "    order (int): Order of the finite element.\n"
+                "    dims (int): Number of dimensions of the mesh.\n\n"
+                "Returns:\n"
+                "    Tuple[numpy.ndarray, numpy.ndarray]: (X, E) where X are the `|# dims| x |# "
+                "nodes|` nodal coordinates and E are the `|# elem. nodes.| x |# elements|` element "
+                "connectivity.\n");
+        }
+        // WARNING: Some compiler bug causes the following code to not compile, but I don't see any error.
+        // pbat::common::ForTypes<std::int32_t, std::int64_t>([&]<class TIndex>() {
+        //     m.def(
+        //         "mesh",
+        //         [](pyb::EigenDRef<Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic> const>
+        //         V,
+        //            pyb::EigenDRef<Eigen::Matrix<TIndex, Eigen::Dynamic, Eigen::Dynamic> const> C,
+        //            EElement element,
+        //            int order,
+        //            int dims) {
+        //             Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic> X;
+        //             Eigen::Matrix<TIndex, Eigen::Dynamic, Eigen::Dynamic> E;
+        //             ApplyToMesh<TScalar, TIndex>(
+        //                 element,
+        //                 order,
+        //                 dims,
+        //                 [&]<pbat::fem::CMesh TMesh>() {
+        //                     using MeshType = TMesh;
+        //                     MeshType mesh(V, C);
+        //                     X = std::move(mesh.X);
+        //                     E = std::move(mesh.E);
+        //                 });
+        //             return std::make_pair(X, E);
+        //         },
+        //         pyb::arg("V"),
+        //         pyb::arg("C"),
+        //         pyb::arg("element"),
+        //         pyb::arg("order") = 1,
+        //         pyb::arg("dims")  = 3,
+        //         "Compute an FEM mesh from the input geometric mesh.\n\n"
+        //         "Args:\n"
+        //         "    V (numpy.ndarray): Vertex coordinates of the geometric mesh.\n"
+        //         "    C (numpy.ndarray): Connectivity of the geometric mesh.\n"
+        //         "    element (EElement): Type of the finite element.\n"
+        //         "    order (int): Order of the finite element.\n"
+        //         "    dims (int): Number of dimensions of the mesh.\n\n"
+        //         "Returns:\n"
+        //         "    Tuple[numpy.ndarray, numpy.ndarray]: (X, E) where X are the `|# dims| x |# "
+        //         "nodes|` nodal coordinates and E are the `|# elem. nodes.| x |# elements|`
+        //         element " "connectivity.\n");
+        // });
     });
 }
 
