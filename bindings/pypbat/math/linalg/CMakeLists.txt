@@ -6,6 +6,7 @@ target_sources(PhysicsBasedAnimationToolkit_Python
     "LinAlg.h"
     "Pardiso.h"
     "SimplicialLDLT.h"
+    "SparsityPattern.h"
 )
 
 target_sources(PhysicsBasedAnimationToolkit_Python
@@ -14,4 +15,5 @@ target_sources(PhysicsBasedAnimationToolkit_Python
     "LinAlg.cpp"
     "Pardiso.cpp"
     "SimplicialLDLT.cpp"
+    "SparsityPattern.cpp"
 )

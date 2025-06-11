@@ -3,6 +3,7 @@
 
 #include "Mesh.h"
 
+#include <pbat/fem/Hexahedron.h>
 #include <pbat/fem/HyperElasticPotential.h>
 #include <pbat/physics/SaintVenantKirchhoffEnergy.h>
 #include <pbat/physics/StableNeoHookeanEnergy.h>

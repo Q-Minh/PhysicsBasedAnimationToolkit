@@ -15,8 +15,6 @@ PYBIND11_MODULE(_pbat, m)
     m.doc()         = "Physics Based Animation Toolkit's python bindings";
     auto mprofiling = m.def_submodule("profiling");
     pbat::py::profiling::Bind(mprofiling);
-    auto mfem = m.def_submodule("fem");
-    pbat::py::fem::Bind(mfem);
     auto mgeometry = m.def_submodule("geometry");
     pbat::py::geometry::Bind(mgeometry);
     auto mgraph = m.def_submodule("graph");
@@ -25,6 +23,8 @@ PYBIND11_MODULE(_pbat, m)
     pbat::py::io::Bind(mio);
     auto mmath = m.def_submodule("math");
     pbat::py::math::Bind(mmath);
+    auto mfem = m.def_submodule("fem");
+    pbat::py::fem::Bind(mfem);
     auto msim = m.def_submodule("sim");
     pbat::py::sim::Bind(msim);
     // Bind GPU module at the end, since it is layered on top of non-GPU modules

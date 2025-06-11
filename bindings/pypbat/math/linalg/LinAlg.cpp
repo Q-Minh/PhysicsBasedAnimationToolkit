@@ -3,13 +3,11 @@
 #include "Cholmod.h"
 #include "Pardiso.h"
 #include "SimplicialLDLT.h"
+#include "SparsityPattern.h"
 
 #include <string>
 
-namespace pbat {
-namespace py {
-namespace math {
-namespace linalg {
+namespace pbat::py::math::linalg {
 
 void Bind(pybind11::module& m)
 {
@@ -17,9 +15,7 @@ void Bind(pybind11::module& m)
     BindCholmod(m);
     BindPardiso(m);
     BindSimplicialLDLT(m);
+    BindSparsityPattern(m);
 }
 
-} // namespace linalg
-} // namespace math
-} // namespace py
-} // namespace pbat
+} // namespace pbat::py::math::linalg
