@@ -1,5 +1,5 @@
-#ifndef PBAT_MATH_LINALG_SPARSITY_PATTERN_H
-#define PBAT_MATH_LINALG_SPARSITY_PATTERN_H
+#ifndef PYPBAT_MATH_LINALG_SPARSITY_PATTERN_H
+#define PYPBAT_MATH_LINALG_SPARSITY_PATTERN_H
 
 #include <pbat/math/linalg/SparsityPattern.h>
 #include <pybind11/pybind11.h>
@@ -69,4 +69,4 @@ void BindSparsityPattern(pybind11::module& m);
 
 } // namespace pbat::py::math::linalg
 
-#endif // PBAT_MATH_LINALG_SPARSITY_PATTERN_H
+#endif // PYPBAT_MATH_LINALG_SPARSITY_PATTERN_H

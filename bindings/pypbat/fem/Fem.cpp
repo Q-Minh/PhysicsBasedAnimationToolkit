@@ -6,6 +6,7 @@
 #include "Laplacian.h"
 #include "Mass.h"
 #include "Mesh.h"
+#include "MeshQuadrature.h"
 #include "ShapeFunctions.h"
 
 namespace pbat {
@@ -22,6 +23,7 @@ void Bind(pybind11::module& m)
     BindJacobian(m);
     BindLaplacian(m);
     BindMass(m);
+    BindMeshQuadrature(m);
     BindShapeFunctions(m);
 }
 

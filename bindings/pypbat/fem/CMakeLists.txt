@@ -9,6 +9,7 @@ target_sources(PhysicsBasedAnimationToolkit_Python
     "Laplacian.h"
     "Mass.h"
     "Mesh.h"
+    "MeshQuadrature.h"
     "ShapeFunctions.h"
 )
 
@@ -21,5 +22,6 @@ target_sources(PhysicsBasedAnimationToolkit_Python
     "Laplacian.cpp"
     "Mass.cpp"
     "Mesh.cpp"
+    "MeshQuadrature.cpp"
     "ShapeFunctions.cpp"
 )
