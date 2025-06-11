@@ -143,7 +143,7 @@ template <
     class TDerivedOut>
 void GemmMass(
     Eigen::DenseBase<TDerivedE> const& E,
-    typename TDerivedE::Scalar nNodes,
+    Eigen::Index nNodes,
     Eigen::DenseBase<TDerivedeg> const& eg,
     Eigen::MatrixBase<TDerivedMe> const& Me,
     int dims,
@@ -215,7 +215,7 @@ template <
     class TDerivedNeg>
 auto MassMatrix(
     Eigen::DenseBase<TDerivedE> const& E,
-    typename TDerivedE::Scalar nNodes,
+    Eigen::Index nNodes,
     Eigen::DenseBase<TDerivedeg> const& eg,
     Eigen::DenseBase<TDerivedwg> const& wg,
     Eigen::DenseBase<TDerivedrhog> const& rhog,
@@ -249,7 +249,7 @@ template <
     class TDerivedMe>
 auto MassMatrix(
     Eigen::DenseBase<TDerivedE> const& E,
-    typename TDerivedE::Scalar nNodes,
+    Eigen::Index nNodes,
     Eigen::DenseBase<TDerivedeg> const& eg,
     Eigen::MatrixBase<TDerivedMe> const& Meg,
     int dims = 1)
@@ -357,7 +357,7 @@ template <
     class TDerivedOut>
 void ToLumpedMassMatrix(
     Eigen::DenseBase<TDerivedE> const& E,
-    typename TDerivedE::Scalar nNodes,
+    Eigen::Index nNodes,
     Eigen::DenseBase<TDerivedeg> const& eg,
     Eigen::DenseBase<TDerivedwg> const& wg,
     Eigen::DenseBase<TDerivedrhog> const& rhog,
@@ -391,7 +391,7 @@ template <
     class TDerivedOut>
 void ToLumpedMassMatrix(
     Eigen::DenseBase<TDerivedE> const& E,
-    typename TDerivedE::Scalar nNodes,
+    Eigen::Index nNodes,
     Eigen::DenseBase<TDerivedeg> const& eg,
     Eigen::MatrixBase<TDerivedMe> const& Meg,
     int dims,
@@ -500,7 +500,7 @@ template <
     class TDerivedNeg>
 auto LumpedMassMatrix(
     Eigen::DenseBase<TDerivedE> const& E,
-    typename TDerivedE::Scalar nNodes,
+    Eigen::Index nNodes,
     Eigen::DenseBase<TDerivedeg> const& eg,
     Eigen::DenseBase<TDerivedwg> const& wg,
     Eigen::DenseBase<TDerivedrhog> const& rhog,
@@ -533,7 +533,7 @@ auto LumpedMassMatrix(
 template <CElement TElement, int Dims, class TDerivedE, class TDerivedeg, class TDerivedMe>
 auto LumpedMassMatrix(
     Eigen::DenseBase<TDerivedE> const& E,
-    typename TDerivedE::Scalar nNodes,
+    Eigen::Index nNodes,
     Eigen::DenseBase<TDerivedeg> const& eg,
     Eigen::MatrixBase<TDerivedMe> const& Meg,
     int dims = 1) -> Eigen::Vector<typename TDerivedMe::Scalar, Eigen::Dynamic>
@@ -597,7 +597,7 @@ template <
     class TDerivedOut>
 inline void GemmMass(
     Eigen::DenseBase<TDerivedE> const& E,
-    typename TDerivedE::Scalar nNodes,
+    Eigen::Index nNodes,
     Eigen::DenseBase<TDerivedeg> const& eg,
     Eigen::MatrixBase<TDerivedMe> const& Meg,
     int dims,
@@ -666,7 +666,7 @@ template <
     class TDerivedNeg>
 auto MassMatrix(
     Eigen::DenseBase<TDerivedE> const& E,
-    typename TDerivedE::Scalar nNodes,
+    Eigen::Index nNodes,
     Eigen::DenseBase<TDerivedeg> const& eg,
     Eigen::DenseBase<TDerivedwg> const& wg,
     Eigen::DenseBase<TDerivedrhog> const& rhog,
@@ -731,7 +731,7 @@ template <
     class TDerivedMe>
 auto MassMatrix(
     Eigen::DenseBase<TDerivedE> const& E,
-    typename TDerivedE::Scalar nNodes,
+    Eigen::Index nNodes,
     Eigen::DenseBase<TDerivedeg> const& eg,
     Eigen::MatrixBase<TDerivedMe> const& Meg,
     int dims)
@@ -793,7 +793,7 @@ template <
     class TDerivedOut>
 inline void ToLumpedMassMatrix(
     Eigen::DenseBase<TDerivedE> const& E,
-    typename TDerivedE::Scalar nNodes,
+    Eigen::Index nNodes,
     Eigen::DenseBase<TDerivedeg> const& eg,
     Eigen::DenseBase<TDerivedwg> const& wg,
     Eigen::DenseBase<TDerivedrhog> const& rhog,
@@ -843,7 +843,7 @@ template <
     class TDerivedOut>
 inline void ToLumpedMassMatrix(
     Eigen::DenseBase<TDerivedE> const& E,
-    typename TDerivedE::Scalar nNodes,
+    Eigen::Index nNodes,
     Eigen::DenseBase<TDerivedeg> const& eg,
     Eigen::MatrixBase<TDerivedMe> const& Meg,
     int dims,

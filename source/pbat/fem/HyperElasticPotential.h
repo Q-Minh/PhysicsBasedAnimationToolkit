@@ -94,7 +94,7 @@ template <
     class TDerivedHg>
 void ToElementElasticity(
     Eigen::DenseBase<TDerivedE> const& E,
-    typename TDerivedE::Scalar nNodes,
+    Eigen::Index nNodes,
     Eigen::DenseBase<TDerivedeg> const& eg,
     Eigen::DenseBase<TDerivedwg> const& wg,
     Eigen::MatrixBase<TDerivedGNeg> const& GNeg,
@@ -204,7 +204,7 @@ template <
     class TDerivedOut>
 void GemmHyperElastic(
     Eigen::DenseBase<TDerivedE> const& E,
-    typename TDerivedE::Scalar nNodes,
+    Eigen::Index nNodes,
     Eigen::DenseBase<TDerivedeg> const& eg,
     Eigen::MatrixBase<TDerivedHg> const& Hg,
     Eigen::MatrixBase<TDerivedIn> const& X,
@@ -261,7 +261,7 @@ template <
     class TDerivedeg>
 auto ElasticHessianSparsity(
     Eigen::DenseBase<TDerivedE> const& E,
-    typename TDerivedE::Scalar nNodes,
+    Eigen::Index nNodes,
     Eigen::DenseBase<TDerivedeg> const& eg)
     -> math::linalg::SparsityPattern<typename TDerivedE::Scalar, Options>;
 
@@ -304,7 +304,7 @@ template <
     class TDerivedHg>
 auto HyperElasticHessian(
     Eigen::DenseBase<TDerivedE> const& E,
-    typename TDerivedE::Scalar nNodes,
+    Eigen::Index nNodes,
     Eigen::DenseBase<TDerivedeg> const& eg,
     Eigen::MatrixBase<TDerivedHg> const& Hg)
     -> Eigen::SparseMatrix<typename TDerivedHg::Scalar, Options, typename TDerivedE::Scalar>;
@@ -358,7 +358,7 @@ template <
     class TDerivedH>
 void ToHyperElasticHessian(
     Eigen::DenseBase<TDerivedE> const& E,
-    typename TDerivedE::Scalar nNodes,
+    Eigen::Index nNodes,
     Eigen::DenseBase<TDerivedHg> const& Hg,
     math::linalg::SparsityPattern<typename TDerivedE::Scalar, Options> const& sparsity,
     Eigen::SparseCompressedBase<TDerivedH>& H);
@@ -398,7 +398,7 @@ template <
     class TDerivedHg>
 auto HyperElasticHessian(
     Eigen::DenseBase<TDerivedE> const& E,
-    typename TDerivedE::Scalar nNodes,
+    Eigen::Index nNodes,
     Eigen::DenseBase<TDerivedHg> const& Hg,
     math::linalg::SparsityPattern<typename TDerivedE::Scalar, Options> const& sparsity)
     -> Eigen::SparseMatrix<typename TDerivedHg::Scalar, Options, typename TDerivedE::Scalar>;
@@ -451,7 +451,7 @@ template <
     class TDerivedG>
 void ToHyperElasticGradient(
     Eigen::DenseBase<TDerivedE> const& E,
-    typename TDerivedE::Scalar nNodes,
+    Eigen::Index nNodes,
     Eigen::DenseBase<TDerivedeg> const& eg,
     Eigen::MatrixBase<TDerivedGg> const& Gg,
     Eigen::PlainObjectBase<TDerivedG>& G);
@@ -497,7 +497,7 @@ template <
     class TDerivedG>
 inline void ToHyperElasticGradient(
     Eigen::DenseBase<TDerivedE> const& E,
-    typename TDerivedE::Scalar nNodes,
+    Eigen::Index nNodes,
     Eigen::DenseBase<TDerivedeg> const& eg,
     Eigen::DenseBase<TDerivedwg> const& wg,
     Eigen::MatrixBase<TDerivedGNeg> const& GNeg,
@@ -643,7 +643,7 @@ inline void ToHyperElasticGradient(
 template <CElement TElement, int Dims, class TDerivedE, class TDerivedeg, class TDerivedGg>
 auto HyperElasticGradient(
     Eigen::DenseBase<TDerivedE> const& E,
-    typename TDerivedE::Scalar nNodes,
+    Eigen::Index nNodes,
     Eigen::DenseBase<TDerivedeg> const& eg,
     Eigen::MatrixBase<TDerivedGg> const& Gg)
     -> Eigen::Vector<typename TDerivedGg::Scalar, Eigen::Dynamic>
@@ -724,7 +724,7 @@ template <
     class TDerivedGg>
 auto HyperElasticGradient(
     Eigen::DenseBase<TDerivedE> const& E,
-    typename TDerivedE::Scalar nNodes,
+    Eigen::Index nNodes,
     Eigen::DenseBase<TDerivedeg> const& eg,
     Eigen::DenseBase<TDerivedwg> const& wg,
     Eigen::MatrixBase<TDerivedGNeg> const& GNeg,
@@ -882,7 +882,7 @@ template <
     class TDerivedx>
 auto HyperElasticPotential(
     Eigen::DenseBase<TDerivedE> const& E,
-    typename TDerivedE::Scalar nNodes,
+    Eigen::Index nNodes,
     Eigen::DenseBase<TDerivedeg> const& eg,
     Eigen::DenseBase<TDerivedwg> const& wg,
     Eigen::MatrixBase<TDerivedGNeg> const& GNeg,
@@ -926,7 +926,7 @@ template <
     class TDerivedHg>
 void ToElementElasticity(
     Eigen::DenseBase<TDerivedE> const& E,
-    typename TDerivedE::Scalar nNodes,
+    Eigen::Index nNodes,
     Eigen::DenseBase<TDerivedeg> const& eg,
     Eigen::DenseBase<TDerivedwg> const& wg,
     Eigen::MatrixBase<TDerivedGNeg> const& GNeg,
@@ -1170,7 +1170,7 @@ template <
     class TDerivedOut>
 inline void GemmHyperElastic(
     Eigen::DenseBase<TDerivedE> const& E,
-    typename TDerivedE::Scalar nNodes,
+    Eigen::Index nNodes,
     Eigen::DenseBase<TDerivedeg> const& eg,
     Eigen::MatrixBase<TDerivedHg> const& Hg,
     Eigen::MatrixBase<TDerivedIn> const& X,
@@ -1217,7 +1217,7 @@ template <
     class TDerivedeg>
 auto ElasticHessianSparsity(
     Eigen::DenseBase<TDerivedE> const& E,
-    typename TDerivedE::Scalar nNodes,
+    Eigen::Index nNodes,
     Eigen::DenseBase<TDerivedeg> const& eg)
     -> math::linalg::SparsityPattern<typename TDerivedE::Scalar, Options>
 {
@@ -1268,7 +1268,7 @@ template <
     class TDerivedHg>
 auto HyperElasticHessian(
     Eigen::DenseBase<TDerivedE> const& E,
-    typename TDerivedE::Scalar nNodes,
+    Eigen::Index nNodes,
     Eigen::DenseBase<TDerivedeg> const& eg,
     Eigen::MatrixBase<TDerivedHg> const& Hg)
     -> Eigen::SparseMatrix<typename TDerivedHg::Scalar, Options, typename TDerivedE::Scalar>
@@ -1324,7 +1324,7 @@ template <
     class TDerivedH>
 void ToHyperElasticHessian(
     Eigen::DenseBase<TDerivedE> const& E,
-    typename TDerivedE::Scalar nNodes,
+    Eigen::Index nNodes,
     Eigen::DenseBase<TDerivedHg> const& Hg,
     math::linalg::SparsityPattern<typename TDerivedE::Scalar, Options> const& sparsity,
     Eigen::SparseCompressedBase<TDerivedH>& H)
@@ -1343,7 +1343,7 @@ template <
     class TDerivedHg>
 auto HyperElasticHessian(
     Eigen::DenseBase<TDerivedE> const& E,
-    typename TDerivedE::Scalar nNodes,
+    Eigen::Index nNodes,
     Eigen::DenseBase<TDerivedHg> const& Hg,
     math::linalg::SparsityPattern<typename TDerivedE::Scalar, Options> const& sparsity)
     -> Eigen::SparseMatrix<typename TDerivedHg::Scalar, Options, typename TDerivedE::Scalar>
@@ -1362,7 +1362,7 @@ template <
     class TDerivedOut>
 inline void ToHyperElasticGradient(
     Eigen::DenseBase<TDerivedE> const& E,
-    typename TDerivedE::Scalar nNodes,
+    Eigen::Index nNodes,
     Eigen::DenseBase<TDerivedeg> const& eg,
     Eigen::MatrixBase<TDerivedGg> const& Gg,
     Eigen::PlainObjectBase<TDerivedOut>& G)

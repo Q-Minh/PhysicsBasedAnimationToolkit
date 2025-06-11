@@ -61,7 +61,7 @@ template <
     class TDerivedOut>
 void GemmGradient(
     Eigen::DenseBase<TDerivedE> const& E,
-    typename TDerivedE::Scalar nNodes,
+    Eigen::Index nNodes,
     Eigen::DenseBase<TDerivedeg> const& eg,
     Eigen::MatrixBase<TDerivedGNeg> const& GNeg,
     Eigen::MatrixBase<TDerivedIn> const& X,
@@ -122,7 +122,7 @@ template <
     class TDerivedGNeg>
 auto GradientMatrix(
     Eigen::DenseBase<TDerivedE> const& E,
-    typename TDerivedE::Scalar nNodes,
+    Eigen::Index nNodes,
     Eigen::DenseBase<TDerivedeg> const& eg,
     Eigen::MatrixBase<TDerivedGNeg> const& GNeg)
     -> Eigen::SparseMatrix<typename TDerivedGNeg::Scalar, Options, typename TDerivedE::Scalar>;
@@ -163,7 +163,7 @@ template <
     class TDerivedOut>
 inline void GemmGradient(
     Eigen::DenseBase<TDerivedE> const& E,
-    typename TDerivedE::Scalar nNodes,
+    Eigen::Index nNodes,
     Eigen::DenseBase<TDerivedeg> const& eg,
     Eigen::MatrixBase<TDerivedGNeg> const& GNeg,
     Eigen::MatrixBase<TDerivedIn> const& X,
@@ -218,7 +218,7 @@ template <
     class TDerivedGNeg>
 auto GradientMatrix(
     Eigen::DenseBase<TDerivedE> const& E,
-    typename TDerivedE::Scalar nNodes,
+    Eigen::Index nNodes,
     Eigen::DenseBase<TDerivedeg> const& eg,
     Eigen::MatrixBase<TDerivedGNeg> const& GNeg)
     -> Eigen::SparseMatrix<typename TDerivedGNeg::Scalar, Options, typename TDerivedE::Scalar>

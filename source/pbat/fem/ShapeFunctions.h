@@ -66,7 +66,7 @@ auto ElementShapeFunctions() -> Eigen::Matrix<
  * @return `|# elements * # quad.pts.| x |# nodes|` shape function matrix
  */
 template <CElement TElement, int QuadratureOrder, common::CFloatingPoint TScalar, class TDerivedE>
-auto ShapeFunctionMatrix(Eigen::DenseBase<TDerivedE> const& E, typename TDerivedE::Scalar nNodes)
+auto ShapeFunctionMatrix(Eigen::DenseBase<TDerivedE> const& E, Eigen::Index nNodes)
     -> Eigen::SparseMatrix<TScalar, Eigen::RowMajor, typename TDerivedE::Scalar>
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.fem.ShapeFunctionMatrix");

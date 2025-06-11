@@ -59,7 +59,7 @@ template <
     class TDerivedOut>
 void GemmLaplacian(
     Eigen::DenseBase<TDerivedE> const& E,
-    typename TDerivedE::Scalar nNodes,
+    Eigen::Index nNodes,
     Eigen::DenseBase<TDerivedeg> const& eg,
     Eigen::DenseBase<TDerivedwg> const& wg,
     Eigen::MatrixBase<TDerivedGNeg> const& GNeg,
@@ -139,7 +139,7 @@ template <
     class TDerivedGNeg>
 auto LaplacianMatrix(
     Eigen::DenseBase<TDerivedE> const& E,
-    typename TDerivedE::Scalar nNodes,
+    Eigen::Index nNodes,
     Eigen::DenseBase<TDerivedeg> const& eg,
     Eigen::DenseBase<TDerivedwg> const& wg,
     Eigen::MatrixBase<TDerivedGNeg> const& GNeg,
@@ -195,7 +195,7 @@ template <
     class TDerivedOut>
 inline void GemmLaplacian(
     Eigen::DenseBase<TDerivedE> const& E,
-    typename TDerivedE::Scalar nNodes,
+    Eigen::Index nNodes,
     Eigen::DenseBase<TDerivedeg> const& eg,
     Eigen::DenseBase<TDerivedwg> const& wg,
     Eigen::MatrixBase<TDerivedGNeg> const& GNeg,
@@ -259,7 +259,7 @@ template <
     class TDerivedGNeg>
 auto LaplacianMatrix(
     Eigen::DenseBase<TDerivedE> const& E,
-    typename TDerivedE::Scalar nNodes,
+    Eigen::Index nNodes,
     Eigen::DenseBase<TDerivedeg> const& eg,
     Eigen::DenseBase<TDerivedwg> const& wg,
     Eigen::MatrixBase<TDerivedGNeg> const& GNeg,
