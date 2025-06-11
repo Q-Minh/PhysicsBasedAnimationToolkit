@@ -50,9 +50,9 @@ void BindMeshQuadrature([[maybe_unused]] pybind11::module& m)
 
             m.def(
                 "mesh_quadrature_elements",
-                [](TIndex nElements, TIndex nQuadPtsPerElement)
-                    -> Eigen::Matrix<TIndex, Eigen::Dynamic, Eigen::Dynamic> {
-                    return pbat::fem::MeshQuadratureElements(nElements, nQuadPtsPerElement);
+                [](TIndex nElements, TIndex nQuadPtsPerElement) {
+                    return pbat::fem::MeshQuadratureElements<TIndex>(nElements, nQuadPtsPerElement)
+                        .eval();
                 },
                 pyb::arg("n_elements"),
                 pyb::arg("n_quad_pts_per_element"),
@@ -67,7 +67,7 @@ void BindMeshQuadrature([[maybe_unused]] pybind11::module& m)
                 "mesh_quadrature_elements",
                 [](pyb::EigenDRef<Eigen::Matrix<TIndex, Eigen::Dynamic, Eigen::Dynamic> const> E,
                    pyb::EigenDRef<Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic> const>
-                       wg) { return pbat::fem::MeshQuadratureElements(E, wg); },
+                       wg) { return pbat::fem::MeshQuadratureElements(E, wg).eval(); },
                 pyb::arg("E"),
                 pyb::arg("wg"),
                 "Compute element indices for each quadrature point from element matrix and "

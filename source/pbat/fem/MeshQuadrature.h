@@ -129,7 +129,7 @@ auto MeshQuadratureElements(TIndex nElements, TIndex nQuadPtsPerElement)
 {
     using IndexVectorType = Eigen::Vector<TIndex, Eigen::Dynamic>;
     return IndexVectorType::LinSpaced(nElements, TIndex(0), nElements - 1)
-        .replicate(1, nQuadPtsPerElement)
+        .replicate(TIndex(1), nQuadPtsPerElement)
         .transpose();
 }
 
