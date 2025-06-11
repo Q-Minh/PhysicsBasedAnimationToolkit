@@ -6,7 +6,6 @@
 #include <pbat/fem/MeshQuadrature.h>
 #include <pbat/fem/ShapeFunctions.h>
 #include <pybind11/eigen.h>
-#include <tuple>
 
 namespace pbat {
 namespace py {

@@ -4,7 +4,6 @@
 
 #include <pbat/fem/Gradient.h>
 #include <pybind11/eigen.h>
-#include <tuple>
 
 namespace pbat {
 namespace py {
