@@ -76,7 +76,7 @@ if(NOT TARGET cpp-sort::cpp-sort)
     FetchContent_Declare(
         _cppsort
         GIT_REPOSITORY https://github.com/Morwenn/cpp-sort.git
-        GIT_TAG 68427ff499292fe460b5897ec5568309ba8c2009
+        GIT_TAG 87ca1476b66cc53d9ecc3428305b8788efa74e67
         GIT_SHALLOW TRUE
         GIT_PROGRESS TRUE
         SYSTEM
