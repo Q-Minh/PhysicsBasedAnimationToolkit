@@ -28,7 +28,7 @@ void BindBdf(pybind11::module& m)
             &pbat::sim::integration::Bdf::SetOrder,
             "Order of the ODE")
         .def_property(
-            "step",
+            "s",
             [](pbat::sim::integration::Bdf& self) { return self.Step(); },
             &pbat::sim::integration::Bdf::SetStep,
             "Step `s` of the `s`-step BDF scheme")

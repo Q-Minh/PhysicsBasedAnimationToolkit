@@ -19,6 +19,25 @@ void BindMesh(pybind11::module& m)
         .value("Hexahedron", EElement::Hexahedron)
         .export_values();
 
+    m.def(
+        "dims",
+        [](EElement eElement) {
+            int dims = 0;
+            ApplyToElement(eElement, 1, []<class ElementType>() { dims = ElementType::kDims; });
+            if (dims == 0)
+            {
+                throw std::invalid_argument(
+                    fmt::format("Invalid finite element type: {}", static_cast<int>(eElement)));
+            }
+            return dims;
+        },
+        pyb::arg("element"),
+        "Return the reference dimensionality of the given finite element type.\n\n"
+        "Args:\n"
+        "    element (EElement): Type of the finite element.\n\n"
+        "Returns:\n"
+        "    int: Number of dimensions of the finite element type.");
+
     pbat::common::ForTypes<float, double>([&]<class TScalar>() {
         // std::int32_t
         {
@@ -102,8 +121,8 @@ void BindMesh(pybind11::module& m)
                 "nodes|` nodal coordinates and E are the `|# elem. nodes.| x |# elements|` element "
                 "connectivity.\n");
         }
-        // WARNING: Some compiler bug causes the following code to not compile, but I don't see any error.
-        // pbat::common::ForTypes<std::int32_t, std::int64_t>([&]<class TIndex>() {
+        // WARNING: Some compiler bug causes the following code to not compile, but I don't see any
+        // error. pbat::common::ForTypes<std::int32_t, std::int64_t>([&]<class TIndex>() {
         //     m.def(
         //         "mesh",
         //         [](pyb::EigenDRef<Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic> const>

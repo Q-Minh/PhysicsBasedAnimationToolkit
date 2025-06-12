@@ -47,13 +47,13 @@ void BindJacobian(pybind11::module& m)
             },
             pyb::arg("Xi"),
             pyb::arg("x"),
-            pyb::arg("element_type"),
+            pyb::arg("element"),
             pyb::arg("order") = 1,
             "Computes the Jacobian matrix for a map x(Xi) at reference position Xi.\n\n"
             "Args:\n"
             "    Xi (numpy.ndarray): `|# ref dims| x 1` reference space coordinates.\n"
             "    x (numpy.ndarray): `|# dims| x |# elem nodes|` map coefficients.\n"
-            "    element_type (EElement): Type of the finite element.\n"
+            "    element (EElement): Type of the finite element.\n"
             "    order (int): Order of the finite element.\n\n"
             "Returns:\n"
             "    numpy.ndarray: `|# dims| x |# ref dims|` Jacobian matrix");
@@ -97,13 +97,13 @@ void BindJacobian(pybind11::module& m)
             //         },
             //         pyb::arg("E"),
             //         pyb::arg("X"),
-            //         pyb::arg("element_type"),
+            //         pyb::arg("element"),
             //         pyb::arg("order")            = 1,
             //         pyb::arg("quadrature_order") = 1,
             //         "Computes the determinant of the Jacobian matrix at element quadrature
             //         points.\n\n" "Args:\n" "    E (numpy.ndarray): `|# elem nodes| x |# elems|`
             //         element matrix.\n" "    X (numpy.ndarray): `|# dims| x |# nodes|` mesh nodal
-            //         position matrix.\n" "    element_type (EElement): Type of the finite
+            //         position matrix.\n" "    element (EElement): Type of the finite
             //         element.\n" "    order (int): Order of the finite element.\n" "
             //         quadrature_order (int): Order of the quadrature rule.\n\n" "Returns:\n" "
             //         numpy.ndarray: `|# elem quad.pts.| x |# elems|` matrix of jacobian "
@@ -147,7 +147,7 @@ void BindJacobian(pybind11::module& m)
             //         pyb::arg("X"),
             //         pyb::arg("eg"),
             //         pyb::arg("Xi"),
-            //         pyb::arg("element_type"),
+            //         pyb::arg("element"),
             //         pyb::arg("order") = 1,
             //         "Computes the determinant of the Jacobian matrix at evaluation points.\n\n"
             //         "Args:\n"
@@ -155,7 +155,7 @@ void BindJacobian(pybind11::module& m)
             //         "    X (numpy.ndarray): `|# dims| x |# nodes|` mesh nodal position matrix.\n"
             //         "    eg (numpy.ndarray): `|# eval.pts.|` element indices at evaluation
             //         points.\n" "    Xi (numpy.ndarray): `|# ref dims| x |# eval.pts.|` evaluation
-            //         points in " "reference " "space.\n" "    element_type (EElement): Type of the
+            //         points in " "reference " "space.\n" "    element (EElement): Type of the
             //         finite element.\n" "    order (int): Order of the finite element.\n\n"
             //         "Returns:\n"
             //         "    numpy.ndarray: `|# eval.pts.| x 1` vector of jacobian determinants");
@@ -200,7 +200,7 @@ void BindJacobian(pybind11::module& m)
             //     pyb::arg("X"),
             //     pyb::arg("eg"),
             //     pyb::arg("Xg"),
-            //     pyb::arg("element_type"),
+            //     pyb::arg("element"),
             //     pyb::arg("order")          = 1,
             //     pyb::arg("max_iterations") = 5,
             //     pyb::arg("eps")            = 1e-10,
@@ -212,7 +212,7 @@ void BindJacobian(pybind11::module& m)
             //     "points.\n"
             //     "    Xg (numpy.ndarray): `|# dims| x |# eval.pts.|` evaluation points in domain "
             //     "space.\n"
-            //     "    element_type (EElement): Type of the finite element.\n"
+            //     "    element (EElement): Type of the finite element.\n"
             //     "    order (int): Order of the finite element.\n"
             //     "    max_iterations (int): Maximum number of Gauss-Newton iterations.\n"
             //     "    eps (float): Convergence tolerance.\n\n"

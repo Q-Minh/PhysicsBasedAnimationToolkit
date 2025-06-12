@@ -51,7 +51,7 @@ void BindLaplacian([[maybe_unused]] pybind11::module& m)
                 pyb::arg("wg"),
                 pyb::arg("GNeg"),
                 pyb::arg("dims") = 1,
-                pyb::arg("element_type"),
+                pyb::arg("element"),
                 pyb::arg("order")        = 1,
                 pyb::arg("spatial_dims") = 3,
                 "Construct the Laplacian operator's sparse matrix representation.\n\n"
@@ -67,7 +67,7 @@ void BindLaplacian([[maybe_unused]] pybind11::module& m)
                 "function gradients at quadrature points.\n"
                 "    dims (int): Dimensionality of the image of the FEM function space (default: "
                 "1).\n"
-                "    element_type (EElement): Type of the finite element.\n"
+                "    element (EElement): Type of the finite element.\n"
                 "    order (int): Order of the finite element.\n"
                 "    spatial_dims (int): Number of spatial dimensions.\n"
                 "Returns:\n"
@@ -111,7 +111,7 @@ void BindLaplacian([[maybe_unused]] pybind11::module& m)
                 pyb::arg("E"),
                 pyb::arg("X"),
                 pyb::arg("dims") = 1,
-                pyb::arg("element_type"),
+                pyb::arg("element"),
                 pyb::arg("order")        = 1,
                 pyb::arg("spatial_dims") = 3,
                 "Construct the Laplacian operator's sparse matrix representation.\n\n"
@@ -121,7 +121,7 @@ void BindLaplacian([[maybe_unused]] pybind11::module& m)
                 "    n_nodes (int): Number of mesh nodes.\n"
                 "    dims (int): Dimensionality of the image of the FEM function space (default: "
                 "1).\n"
-                "    element_type (EElement): Type of the finite element.\n"
+                "    element (EElement): Type of the finite element.\n"
                 "    order (int): Order of the finite element.\n"
                 "    spatial_dims (int): Number of spatial dimensions.\n"
                 "Returns:\n"

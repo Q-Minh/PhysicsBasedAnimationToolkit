@@ -5,6 +5,7 @@
 #include <pbat/common/ConstexprFor.h>
 #include <pbat/fem/ShapeFunctions.h>
 #include <pybind11/eigen.h>
+#include <variant>
 
 namespace pbat {
 namespace py {
@@ -14,34 +15,122 @@ void BindShapeFunctions(pybind11::module& m)
 {
     namespace pyb = pybind11;
 
-    pbat::common::ForTypes<float, double>([&]<class TScalar>() {
-        m.def(
-            "element_shape_functions",
-            [](EElement eElement, int order, int quadratureOrder) {
-                Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic> N;
+    m.def(
+        "element_shape_functions",
+        [](EElement eElement, int order, int quadratureOrder, pyb::object dtypeIn) {
+            using FloatMatrixType  = Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic>;
+            using DoubleMatrixType = Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic>;
+            using ReturnType       = std::variant<FloatMatrixType, DoubleMatrixType>;
+            ReturnType N;
+            auto dtype = pyb::dtype::from_args(dtypeIn);
+            if (dtype.is(pyb::dtype::of<float>()))
+            {
                 ApplyToElementWithQuadrature<6>(
                     eElement,
                     order,
                     quadratureOrder,
                     [&]<class ElementType, auto QuadratureOrder>() {
-                        N = pbat::fem::
-                            ElementShapeFunctions<ElementType, QuadratureOrder, TScalar>();
+                        N = FloatMatrixType(
+                            pbat::fem::
+                                ElementShapeFunctions<ElementType, QuadratureOrder, float>());
                     });
-                return N;
-            },
-            pyb::arg("element_type"),
-            pyb::arg("order")            = 1,
-            pyb::arg("quadrature_order") = 1,
-            "Compute an element's shape functions at the quadrature points of the requested "
-            "quadrature rule\n\n"
-            "Args:\n"
-            "    element_type (EElement): The type of the element (e.g., Line, Triangle, "
-            "Quadrilateral, Tetrahedron, Hexahedron)\n"
-            "    order (int): The polynomial order of the shape functions (default: 1)\n"
-            "    quadrature_order (int): The order of the quadrature rule to use (default: 1)\n\n"
-            "Returns:\n"
-            "    numpy.ndarray: `|# nodes| x |# quad.pts.|` shape function matrix");
-    });
+            }
+            else if (dtype.is(pyb::dtype::of<double>()))
+            {
+                ApplyToElementWithQuadrature<6>(
+                    eElement,
+                    order,
+                    quadratureOrder,
+                    [&]<class ElementType, auto QuadratureOrder>() {
+                        N = DoubleMatrixType(
+                            pbat::fem::
+                                ElementShapeFunctions<ElementType, QuadratureOrder, double>());
+                    });
+            }
+            else
+            {
+                throw std::runtime_error(
+                    "Unsupported dtype for element shape functions: " +
+                    dtypeIn.attr("name").cast<std::string>());
+            }
+            return N;
+        },
+        pyb::arg("element"),
+        pyb::arg("order")            = 1,
+        pyb::arg("quadrature_order") = 1,
+        pyb::arg("dtype")            = pyb::dtype::of<float>(),
+        "Compute an element's shape functions at the quadrature points of the requested "
+        "quadrature rule\n\n"
+        "Args:\n"
+        "    element (EElement): The type of the element (e.g., Line, Triangle, "
+        "Quadrilateral, Tetrahedron, Hexahedron)\n"
+        "    order (int): The polynomial order of the shape functions (default: 1)\n"
+        "    quadrature_order (int): The order of the quadrature rule to use (default: 1)\n\n"
+        "    dtype (numpy.dtype): The data type of the output array (default: float32)\n"
+        "Returns:\n"
+        "    numpy.ndarray: `|# nodes| x |# quad.pts.|` shape function matrix");
+
+    m.def(
+        "shape_functions",
+        [](std::int64_t nElements,
+           EElement eElement,
+           int order,
+           int quadratureOrder,
+           pyb::object dtypeIn) {
+            using FloatMatrixType  = Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic>;
+            using DoubleMatrixType = Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic>;
+            using ReturnType       = std::variant<FloatMatrixType, DoubleMatrixType>;
+            ReturnType N;
+            auto dtype = pyb::dtype::from_args(dtypeIn);
+            if (dtype.is(pyb::dtype::of<float>()))
+            {
+                ApplyToElementWithQuadrature<6>(
+                    eElement,
+                    order,
+                    quadratureOrder,
+                    [&]<class ElementType, auto QuadratureOrder>() {
+                        N = FloatMatrixType(
+                            pbat::fem::ElementShapeFunctions<ElementType, QuadratureOrder, float>()
+                                .replicate(1, nElements));
+                    });
+            }
+            else if (dtype.is(pyb::dtype::of<double>()))
+            {
+                ApplyToElementWithQuadrature<6>(
+                    eElement,
+                    order,
+                    quadratureOrder,
+                    [&]<class ElementType, auto QuadratureOrder>() {
+                        N = DoubleMatrixType(
+                            pbat::fem::ElementShapeFunctions<ElementType, QuadratureOrder, double>()
+                                .replicate(1, nElements));
+                    });
+            }
+            else
+            {
+                throw std::runtime_error(
+                    "Unsupported dtype for shape functions: " +
+                    dtypeIn.attr("name").cast<std::string>());
+            }
+            return N;
+        },
+        pyb::arg("n_elements"),
+        pyb::arg("element"),
+        pyb::arg("order")            = 1,
+        pyb::arg("quadrature_order") = 1,
+        pyb::arg("dtype")            = pyb::dtype::of<float>(),
+        "Compute an element's shape functions at the quadrature points of the requested "
+        "quadrature rule\n\n"
+        "Args:\n"
+        "    n_elements (int): The number of elements in the mesh.\n"
+        "    element (EElement): The type of the element (e.g., Line, Triangle, "
+        "Quadrilateral, Tetrahedron, Hexahedron)\n"
+        "    order (int): The polynomial order of the shape functions (default: 1)\n"
+        "    quadrature_order (int): The order of the quadrature rule to use (default: "
+        "1)\n\n"
+        "    dtype (numpy.dtype): The data type of the output array (default: float32)\n"
+        "Returns:\n"
+        "    numpy.ndarray: `|# nodes| x |# quad.pts.|` shape function matrix");
 
     pbat::common::ForTypes<float, double>([&]<class TScalar>() {
         pbat::common::ForTypes<std::int32_t, std::int64_t>([&]<class TIndex>() {
@@ -63,7 +152,7 @@ void BindShapeFunctions(pybind11::module& m)
                 },
                 pyb::arg("E"),
                 pyb::arg("n_nodes"),
-                pyb::arg("element_type"),
+                pyb::arg("element"),
                 pyb::arg("order")            = 1,
                 pyb::arg("quadrature_order") = 1,
                 "Constructs a shape function matrix N for a given mesh, i.e. at the "
@@ -72,7 +161,7 @@ void BindShapeFunctions(pybind11::module& m)
                 "    E (numpy.ndarray): `|# elem. nodes| x |# elements|` array of element node "
                 "indices.\n"
                 "    n_nodes (int): Number of nodes in the mesh.\n"
-                "    element_type (EElement): Type of the finite element.\n"
+                "    element (EElement): Type of the finite element.\n"
                 "    order (int): Order of the finite element.\n"
                 "    quadrature_order (int): Order of the quadrature rule to use.\n\n"
                 "Returns:\n"
@@ -102,7 +191,7 @@ void BindShapeFunctions(pybind11::module& m)
                 pyb::arg("E"),
                 pyb::arg("n_nodes"),
                 pyb::arg("Xi"),
-                pyb::arg("element_type"),
+                pyb::arg("element"),
                 pyb::arg("order") = 1,
                 "Constructs a shape function matrix N for a given mesh, i.e. at the element "
                 "quadrature points.\n\n"
@@ -112,7 +201,7 @@ void BindShapeFunctions(pybind11::module& m)
                 "    n_nodes (int): Number of nodes in the mesh.\n"
                 "    Xi (numpy.ndarray): `|# dims| x |# quad. pts.|` array of quadrature points in "
                 "reference space.\n"
-                "    element_type (EElement): Type of the finite element.\n"
+                "    element (EElement): Type of the finite element.\n"
                 "    order (int): Order of the finite element.\n\n"
                 "Returns:\n"
                 "    scipy.sparse.csr_matrix: `|# quad.pts.| x |# nodes|` shape function matrix at "
@@ -134,13 +223,13 @@ void BindShapeFunctions(pybind11::module& m)
                 return N;
             },
             pyb::arg("Xi"),
-            pyb::arg("element_type"),
+            pyb::arg("element"),
             pyb::arg("order") = 1,
             "Compute shape functions at the given reference positions.\n\n"
             "Args:\n"
             "    Xi (numpy.ndarray): `|# reference dims| x |# quad. pts.|` evaluation points in "
             "reference space.\n"
-            "    element_type (EElement): Type of the finite element.\n"
+            "    element (EElement): Type of the finite element.\n"
             "    order (int): Order of the finite element.\n\n"
             "Returns:\n"
             "    numpy.ndarray: `|# element nodes| x |# eval.pts.|` matrix of nodal shape "
@@ -166,14 +255,14 @@ void BindShapeFunctions(pybind11::module& m)
             },
             pyb::arg("Xi"),
             pyb::arg("X"),
-            pyb::arg("element_type"),
+            pyb::arg("element"),
             pyb::arg("order") = 1,
             "Compute gradients of an element's shape functions at the given reference point, given "
             "the vertices (not nodes) of the element.\n\n"
             "Args:\n"
             "    Xi (numpy.ndarray): `|# reference dims|` evaluation point in reference space.\n"
             "    X (numpy.ndarray): `|# dims| x |# element vertices|` array of element vertices.\n"
-            "    element_type (EElement): The type of the element.\n"
+            "    element (EElement): The type of the element.\n"
             "    order (int): The polynomial order of the shape functions (default: 1)\n"
             "Returns:\n"
             "    numpy.ndarray: `|# element nodes| x |# dims|` matrix of shape function gradients "
@@ -206,7 +295,7 @@ void BindShapeFunctions(pybind11::module& m)
                 },
                 pyb::arg("E"),
                 pyb::arg("X"),
-                pyb::arg("element_type"),
+                pyb::arg("element"),
                 pyb::arg("order")            = 1,
                 pyb::arg("dims")             = 3,
                 pyb::arg("quadrature_order") = 1,
@@ -214,7 +303,7 @@ void BindShapeFunctions(pybind11::module& m)
                 "Args:\n"
                 "    E (numpy.ndarray): `|# elem. nodes| x |# elements|` array of elements.\n"
                 "    X (numpy.ndarray): `|# dims| x |# element vertices|` array of nodes.\n"
-                "    element_type (EElement): Type of the finite element.\n"
+                "    element (EElement): Type of the finite element.\n"
                 "    order (int): Order of the finite element.\n"
                 "    quadrature_order (int): Order of the quadrature rule to use.\n\n"
                 "Returns:\n"
@@ -246,7 +335,7 @@ void BindShapeFunctions(pybind11::module& m)
                 pyb::arg("E"),
                 pyb::arg("X"),
                 pyb::arg("Xi"),
-                pyb::arg("element_type"),
+                pyb::arg("element"),
                 pyb::arg("order") = 1,
                 pyb::arg("dims")  = 3,
                 "Computes nodal shape function gradients at evaluation points Xi.\n\n"
@@ -257,7 +346,7 @@ void BindShapeFunctions(pybind11::module& m)
                 "vertices.\n"
                 "    Xi (numpy.ndarray): `|# dims| x |# eval. pts.|` array of evaluation points in "
                 "reference space.\n"
-                "    element_type (EElement): Type of the finite element.\n"
+                "    element (EElement): Type of the finite element.\n"
                 "    order (int): Order of the finite element.\n\n"
                 "    dims (int): Number of spatial dimensions.\n"
                 "Returns:\n"

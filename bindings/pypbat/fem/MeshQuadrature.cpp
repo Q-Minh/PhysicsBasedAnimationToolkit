@@ -35,14 +35,14 @@ void BindMeshQuadrature([[maybe_unused]] pybind11::module& m)
                 },
                 pyb::arg("E"),
                 pyb::arg("X"),
-                pyb::arg("element_type"),
+                pyb::arg("element"),
                 pyb::arg("order")            = 1,
                 pyb::arg("quadrature_order") = 1,
                 "Compute mesh quadrature weights including Jacobian determinants.\n\n"
                 "Args:\n"
                 "    E (numpy.ndarray): `|# elem nodes| x |# elems|` mesh element matrix.\n"
                 "    X (numpy.ndarray): `|# dims| x |# nodes|` mesh nodal position matrix.\n"
-                "    element_type (EElement): Type of the finite element.\n"
+                "    element (EElement): Type of the finite element.\n"
                 "    order (int): Order of the finite element.\n"
                 "    quadrature_order (int): Order of the quadrature rule.\n\n"
                 "Returns:\n"
@@ -93,13 +93,13 @@ void BindMeshQuadrature([[maybe_unused]] pybind11::module& m)
                     return Xi;
                 },
                 pyb::arg("n_elements"),
-                pyb::arg("element_type"),
+                pyb::arg("element"),
                 pyb::arg("order")            = 1,
                 pyb::arg("quadrature_order") = 1,
                 "Compute quadrature points in reference element space for all elements.\n\n"
                 "Args:\n"
                 "    n_elements (int): Number of elements.\n"
-                "    element_type (EElement): Type of the finite element.\n"
+                "    element (EElement): Type of the finite element.\n"
                 "    order (int): Order of the finite element.\n"
                 "    quadrature_order (int): Order of the quadrature rule.\n\n"
                 "Returns:\n"

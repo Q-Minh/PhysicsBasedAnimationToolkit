@@ -36,7 +36,7 @@ void BindMass([[maybe_unused]] pybind11::module& m)
                 pyb::arg("Neg"),
                 pyb::arg("wg"),
                 pyb::arg("rhog"),
-                pyb::arg("element_type"),
+                pyb::arg("element"),
                 pyb::arg("order") = 1,
                 "Compute element mass matrices for all quadrature points.\n\n"
                 "Args:\n"
@@ -45,7 +45,7 @@ void BindMass([[maybe_unused]] pybind11::module& m)
                 "    wg (numpy.ndarray): `|# quad.pts.| x 1` quadrature weights (including "
                 "Jacobian determinant).\n"
                 "    rhog (numpy.ndarray): `|# quad.pts.| x 1` mass density at quadrature points.\n"
-                "    element_type (EElement): Type of the finite element.\n"
+                "    element (EElement): Type of the finite element.\n"
                 "    order (int): Order of the finite element.\n\n"
                 "Returns:\n"
                 "    numpy.ndarray: `|# elem nodes| x |# elem nodes * # quad.pts.|` matrix of "
@@ -87,7 +87,7 @@ void BindMass([[maybe_unused]] pybind11::module& m)
                 pyb::arg("rhog"),
                 pyb::arg("Neg"),
                 pyb::arg("dims") = 1,
-                pyb::arg("element_type"),
+                pyb::arg("element"),
                 pyb::arg("order")        = 1,
                 pyb::arg("spatial_dims") = 3,
                 "Construct the mass matrix operator's sparse matrix representation.\n\n"
@@ -105,7 +105,7 @@ void BindMass([[maybe_unused]] pybind11::module& m)
                 "at quadrature points.\n"
                 "    dims (int): Dimensionality of the image of the FEM function space (default: "
                 "1).\n"
-                "    element_type (EElement): Type of the finite element.\n"
+                "    element (EElement): Type of the finite element.\n"
                 "    order (int): Order of the finite element.\n"
                 "    spatial_dims (int): Number of spatial dimensions.\n"
                 "Returns:\n"
@@ -155,7 +155,7 @@ void BindMass([[maybe_unused]] pybind11::module& m)
                 pyb::arg("X"),
                 pyb::arg("rho")  = TScalar(1e3),
                 pyb::arg("dims") = 1,
-                pyb::arg("element_type"),
+                pyb::arg("element"),
                 pyb::arg("order")        = 1,
                 pyb::arg("spatial_dims") = 3,
                 "Construct the mass matrix operator's sparse matrix representation.\n\n"
@@ -167,7 +167,7 @@ void BindMass([[maybe_unused]] pybind11::module& m)
                 "    rho (float): Density of the material (default: 1e3).\n"
                 "    dims (int): Dimensionality of the image of the FEM function space (default: "
                 "1).\n"
-                "    element_type (EElement): Type of the finite element.\n"
+                "    element (EElement): Type of the finite element.\n"
                 "    order (int): Order of the finite element.\n"
                 "    spatial_dims (int): Number of spatial dimensions.\n"
                 "Returns:\n"
@@ -204,7 +204,7 @@ void BindMass([[maybe_unused]] pybind11::module& m)
                 pyb::arg("eg"),
                 pyb::arg("Meg"),
                 pyb::arg("dims") = 1,
-                pyb::arg("element_type"),
+                pyb::arg("element"),
                 pyb::arg("order")        = 1,
                 pyb::arg("spatial_dims") = 3,
                 "Construct the mass matrix operator's sparse matrix representation from "
@@ -219,7 +219,7 @@ void BindMass([[maybe_unused]] pybind11::module& m)
                 "quad.pts.|` precomputed element mass matrices.\n"
                 "    dims (int): Dimensionality of the image of the FEM function space (default: "
                 "1).\n"
-                "    element_type (EElement): Type of the finite element.\n"
+                "    element (EElement): Type of the finite element.\n"
                 "    order (int): Order of the finite element.\n"
                 "    spatial_dims (int): Number of spatial dimensions.\n"
                 "Returns:\n"
@@ -262,7 +262,7 @@ void BindMass([[maybe_unused]] pybind11::module& m)
                 pyb::arg("rhog"),
                 pyb::arg("Neg"),
                 pyb::arg("dims") = 1,
-                pyb::arg("element_type"),
+                pyb::arg("element"),
                 pyb::arg("order")        = 1,
                 pyb::arg("spatial_dims") = 3,
                 "Compute lumped mass matrix's diagonal vector.\n\n"
@@ -280,7 +280,7 @@ void BindMass([[maybe_unused]] pybind11::module& m)
                 "at quadrature points.\n"
                 "    dims (int): Dimensionality of the image of the FEM function space (default: "
                 "1).\n"
-                "    element_type (EElement): Type of the finite element.\n"
+                "    element (EElement): Type of the finite element.\n"
                 "    order (int): Order of the finite element.\n"
                 "    spatial_dims (int): Number of spatial dimensions.\n\n"
                 "Returns:\n"
@@ -329,7 +329,7 @@ void BindMass([[maybe_unused]] pybind11::module& m)
                 pyb::arg("X"),
                 pyb::arg("rho") = TScalar(1e3),
                 pyb::arg("dims") = 1,
-                pyb::arg("element_type"),
+                pyb::arg("element"),
                 pyb::arg("order")        = 1,
                 pyb::arg("spatial_dims") = 3,
                 "Compute lumped mass matrix's diagonal vector.\n\n"
@@ -347,7 +347,7 @@ void BindMass([[maybe_unused]] pybind11::module& m)
                 "at quadrature points.\n"
                 "    dims (int): Dimensionality of the image of the FEM function space (default: "
                 "1).\n"
-                "    element_type (EElement): Type of the finite element.\n"
+                "    element (EElement): Type of the finite element.\n"
                 "    order (int): Order of the finite element.\n"
                 "    spatial_dims (int): Number of spatial dimensions.\n\n"
                 "Returns:\n"
@@ -383,7 +383,7 @@ void BindMass([[maybe_unused]] pybind11::module& m)
                 pyb::arg("eg"),
                 pyb::arg("Meg"),
                 pyb::arg("dims") = 1,
-                pyb::arg("element_type"),
+                pyb::arg("element"),
                 pyb::arg("order")        = 1,
                 pyb::arg("spatial_dims") = 3,
                 "Compute lumped mass vector from precomputed element mass matrices.\n\n"
@@ -397,7 +397,7 @@ void BindMass([[maybe_unused]] pybind11::module& m)
                 "quad.pts.|` precomputed element mass matrices.\n"
                 "    dims (int): Dimensionality of the image of the FEM function space (default: "
                 "1).\n"
-                "    element_type (EElement): Type of the finite element.\n"
+                "    element (EElement): Type of the finite element.\n"
                 "    order (int): Order of the finite element.\n"
                 "    spatial_dims (int): Number of spatial dimensions.\n\n"
                 "Returns:\n"

@@ -39,7 +39,7 @@ void BindGradient([[maybe_unused]] pybind11::module& m)
                 pyb::arg("n_nodes"),
                 pyb::arg("eg"),
                 pyb::arg("GNeg"),
-                pyb::arg("element_type"),
+                pyb::arg("element"),
                 pyb::arg("order") = 1,
                 pyb::arg("dims")  = 3,
                 "Construct the gradient operator's sparse matrix representation.\n\n"
@@ -51,7 +51,7 @@ void BindGradient([[maybe_unused]] pybind11::module& m)
                 "quadrature points.\n"
                 "    GNeg (numpy.ndarray): `|# nodes per element| x |# dims * # quad.pts.|` shape "
                 "function gradients at quadrature points.\n"
-                "    element_type (EElement): Type of the finite element.\n"
+                "    element (EElement): Type of the finite element.\n"
                 "    order (int): Order of the finite element.\n"
                 "    dims (int): Number of spatial dimensions.\n"
                 "Returns:\n"

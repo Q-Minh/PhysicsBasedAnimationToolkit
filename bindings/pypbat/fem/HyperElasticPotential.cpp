@@ -169,7 +169,7 @@ void BindHyperElasticPotential(pybind11::module& m)
                 pyb::arg("n_nodes"),
                 pyb::arg("eg"),
                 pyb::arg("wg"),
-                pyb::arg("Gneg"),
+                pyb::arg("GNeg"),
                 pyb::arg("mug"),
                 pyb::arg("lambdag"),
                 pyb::arg("x"),
@@ -187,7 +187,7 @@ void BindHyperElasticPotential(pybind11::module& m)
                 "    eg (numpy.ndarray): `|# quad.pts.| x 1` vector of element indices at "
                 "quadrature points.\n"
                 "    wg (numpy.ndarray): `|# quad.pts.| x 1` vector of quadrature weights.\n"
-                "    Gneg (numpy.ndarray): `|# nodes per element| x |# dims * # quad.pts.|` shape "
+                "    GNeg (numpy.ndarray): `|# nodes per element| x |# dims * # quad.pts.|` shape "
                 "function gradients.\n"
                 "    mu (numpy.ndarray): First Lame coefficient.\n"
                 "    lambda (numpy.ndarray): Second Lame coefficient.\n"
