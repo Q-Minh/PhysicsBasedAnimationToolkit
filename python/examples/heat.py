@@ -16,28 +16,48 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     imesh = meshio.read(args.input)
-    mesh = None
     if "tetra" in imesh.cells_dict.keys():
         V, C = imesh.points, imesh.cells_dict["tetra"]
-        mesh = pbat.fem.Mesh(
-            V.T, C.T, element=pbat.fem.Element.Tetrahedron, order=1)
-    if "triangle" in imesh.cells_dict.keys():
+        element = pbat.fem.Element.Tetrahedron
+        X, E = pbat.fem.mesh(
+            V.T, C.T, element=element, order=1)
+    elif "triangle" in imesh.cells_dict.keys():
         V, C = imesh.points, imesh.cells_dict["triangle"]
-        mesh = pbat.fem.Mesh(
-            V.T, C.T, element=pbat.fem.Element.Triangle, order=1)
+        element = pbat.fem.Element.Triangle
+        X, E = pbat.fem.mesh(
+            V.T, C.T, element=element, order=1)
 
     F = C
-    if mesh.element == pbat.fem.Element.Tetrahedron:
+    if element == pbat.fem.Element.Tetrahedron:
         F = igl.boundary_facets(C)
         F[:, :2] = np.roll(F[:, :2], shift=1, axis=1)
 
     gamma = [0]
     # Construct Galerkin laplacian, mass and gradient operators
     n = V.shape[0]
-    M, detJeM = pbat.fem.mass_matrix(mesh, dims=1)
-    G, egG, GNegG = pbat.fem.gradient(mesh)
-    wgD = pbat.fem.inner_product_weights(mesh)
-    D, wgD, egD, GNegD = pbat.fem.divergence(mesh, eg=egG, wg=wgD, GNeg=GNegG)
+    order = 1
+    wgG = pbat.fem.mesh_quadrature_weights(
+        E, X, element=element, order=order, quadrature_order=1)
+    egG = pbat.fem.mesh_quadrature_elements(E, wgG)
+    GNegG = pbat.fem.shape_function_gradients(
+        E, X, element=element, dims=X.shape[0], order=order
+    )
+    G = pbat.fem.gradient_matrix(
+        E, 
+        X.shape[1], 
+        eg=np.ravel(egG), 
+        GNeg=GNegG, 
+        element=element, 
+        order=order, 
+        dims=X.shape[0]
+    )
+    # Build divergence operator
+    Ig = sp.sparse.diags_array(np.ravel(wgG))
+    Ig = sp.sparse.kron(sp.sparse.eye(3), Ig)
+    D = -G.T @ Ig
+    # Mass matrix
+    M = pbat.fem.mass_matrix(E, X, rho=1, dims=1, element=element, order=order)
+    # Laplacian matrix
     L = D @ G
     # Setup 1-step heat diffusion
     h = igl.avg_edge_length(V, C)
@@ -90,25 +110,25 @@ if __name__ == "__main__":
 
             # Code for libigl 2.5.1
             diso = (phi.max() - phi.min()) / niso
-            isovalues = np.array([(i+0.5)*diso for i in range(niso)])
-            Viso, Eiso, Iiso = igl.isolines(V, F, phi, isovalues)
+            isovalues = np.array([(i+0.5)*diso for i in range(niso)], dtype=V.dtype)
+            Viso, Eiso, Iiso = igl.isolines(V, F, phi.astype(V.dtype), isovalues)
             # Uncomment for libigl 2.4.1
             # Viso, Eiso = igl.isolines(V, F, phi, niso)
             cn = ps.register_curve_network("distance contours", Viso, Eiso)
             cn.set_color((0, 0, 0))
             cn.set_radius(0.002)
             vm = ps.get_volume_mesh(
-                "model") if mesh.element == pbat.fem.Element.Tetrahedron else ps.get_surface_mesh("model")
+                "model") if element == pbat.fem.Element.Tetrahedron else ps.get_surface_mesh("model")
             vm.add_scalar_quantity("heat", u, cmap="reds")
             vm.add_scalar_quantity("distance", phi, cmap="reds", enabled=True)
-            grad_defined_on = "cells" if mesh.element == pbat.fem.Element.Tetrahedron else "faces"
+            grad_defined_on = "cells" if element == pbat.fem.Element.Tetrahedron else "faces"
             vm.add_vector_quantity("normalized heat grad",
                                    gradu, defined_on=grad_defined_on)
             vm.add_scalar_quantity("div unit gradient", divGu)
 
-    if mesh.element == pbat.fem.Element.Tetrahedron:
+    if element == pbat.fem.Element.Tetrahedron:
         ps.register_volume_mesh("model", V, C)
-    if mesh.element == pbat.fem.Element.Triangle:
+    if element == pbat.fem.Element.Triangle:
         ps.register_surface_mesh("model", V, C)
     ps.set_user_callback(callback)
     ps.show()
