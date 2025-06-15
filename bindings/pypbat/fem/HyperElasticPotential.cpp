@@ -19,7 +19,7 @@ void BindHyperElasticPotential(pybind11::module& m)
         .export_values();
 
     pyb::enum_<pbat::fem::EHyperElasticSpdCorrection>(m, "HyperElasticSpdCorrection")
-        .value("None", pbat::fem::EHyperElasticSpdCorrection::None)
+        .value("NoCorrection", pbat::fem::EHyperElasticSpdCorrection::None)
         .value("Projection", pbat::fem::EHyperElasticSpdCorrection::Projection)
         .value("Absolute", pbat::fem::EHyperElasticSpdCorrection::Absolute)
         .export_values();

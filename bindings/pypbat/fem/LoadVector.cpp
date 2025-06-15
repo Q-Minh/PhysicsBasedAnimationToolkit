@@ -86,7 +86,7 @@ void BindLoadVector(pybind11::module& m)
                         X);
                     auto const eg = pbat::fem::MeshQuadratureElements<TIndex>(
                         static_cast<TIndex>(E.cols()),
-                        static_cast<TIndex>(wg.cols()));
+                        static_cast<TIndex>(wg.rows()));
                     auto const nElements = E.cols();
                     auto const nQuadPts  = wg.size();
                     auto const Ng =

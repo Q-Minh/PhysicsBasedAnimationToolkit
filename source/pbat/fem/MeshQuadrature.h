@@ -155,7 +155,7 @@ auto MeshQuadratureElements(TIndex nElements, Eigen::DenseBase<TDerivedwg> const
                 "nElements must match the number of columns in wg, or wg's flattened size must be "
                 "a multiple of nElements but got {} and {}",
                 nElements,
-                wg.cols()));
+                wg.size()));
     }
     auto const nQuadPtsPerElement = wg.size() / nElements;
     return MeshQuadratureElements(nElements, nQuadPtsPerElement);

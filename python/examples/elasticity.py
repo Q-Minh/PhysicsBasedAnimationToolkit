@@ -45,8 +45,8 @@ if __name__ == "__main__":
     g = np.zeros(dims)
     g[-1] = -9.81
     fe = rho*g
-    f = pbat.fem.load_vector(E, X, fe, element=element, order=order).flatten(order="F")
-    a = Minv.solve(f).squeeze()
+    f = pbat.fem.load_vector(E, X, fe, element=element, order=order)
+    a = Minv.solve(f.flatten(order="F")).squeeze()
 
     # Create hyper elastic potential
     Y, nu, energy = args.Y, args.nu, pbat.fem.HyperElasticEnergy.StableNeoHookean
