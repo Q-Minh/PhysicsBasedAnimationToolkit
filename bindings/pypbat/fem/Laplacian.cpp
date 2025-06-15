@@ -80,9 +80,9 @@ void BindLaplacian([[maybe_unused]] pybind11::module& m)
                    pyb::EigenDRef<Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic> const> X,
                    int dims,
                    EElement eElement,
-                   int order,
-                   int spatialDims) {
+                   int order) {
                     Eigen::SparseMatrix<TScalar, Eigen::RowMajor, TIndex> L;
+                    auto const spatialDims = static_cast<int>(X.rows());
                     ApplyToElementInDims(
                         eElement,
                         order,
@@ -113,17 +113,16 @@ void BindLaplacian([[maybe_unused]] pybind11::module& m)
                 pyb::arg("dims") = 1,
                 pyb::arg("element"),
                 pyb::arg("order")        = 1,
-                pyb::arg("spatial_dims") = 3,
                 "Construct the Laplacian operator's sparse matrix representation.\n\n"
                 "Args:\n"
                 "    E (numpy.ndarray): `|# nodes per element| x |# elements|` matrix of mesh "
                 "elements.\n"
-                "    n_nodes (int): Number of mesh nodes.\n"
+                "    X (numpy.ndarray): `|# dims * # nodes| x |# nodes|` matrix of node "
+                "positions.\n"
                 "    dims (int): Dimensionality of the image of the FEM function space (default: "
                 "1).\n"
                 "    element (EElement): Type of the finite element.\n"
                 "    order (int): Order of the finite element.\n"
-                "    spatial_dims (int): Number of spatial dimensions.\n"
                 "Returns:\n"
                 "    scipy.sparse matrix: `|# nodes * dims| x |# nodes * dims|` Laplacian operator "
                 "matrix.");

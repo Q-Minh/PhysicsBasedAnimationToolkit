@@ -16,7 +16,7 @@ void BindLoadVector(pybind11::module& m)
     pbat::common::ForTypes<float, double>([&]<class TScalar>() {
         pbat::common::ForTypes<std::int32_t, std::int64_t>([&]<class TIndex>() {
             m.def(
-                "load_vectors",
+                "load_vector",
                 [](pyb::EigenDRef<Eigen::Matrix<TIndex, Eigen::Dynamic, Eigen::Dynamic> const> E,
                    Eigen::Index nNodes,
                    pyb::EigenDRef<Eigen::Vector<TIndex, Eigen::Dynamic> const> eg,
@@ -25,8 +25,9 @@ void BindLoadVector(pybind11::module& m)
                    pyb::EigenDRef<Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic> const> Feg,
                    EElement eElement,
                    int order) {
+                    Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic> f;
                     ApplyToElement(eElement, order, [&]<class ElementType>() {
-                        return pbat::fem::LoadVectors<ElementType>(
+                        f = pbat::fem::LoadVectors<ElementType>(
                             E.template topRows<ElementType::kNodes>(),
                             nNodes,
                             eg,
@@ -34,6 +35,7 @@ void BindLoadVector(pybind11::module& m)
                             Neg.template topRows<ElementType::kNodes>(),
                             Feg);
                     });
+                    return f;
                 },
                 pyb::arg("E"),
                 pyb::arg("n_nodes"),
@@ -41,7 +43,7 @@ void BindLoadVector(pybind11::module& m)
                 pyb::arg("wg"),
                 pyb::arg("Neg"),
                 pyb::arg("Feg"),
-                pyb::arg("eElement"),
+                pyb::arg("element"),
                 pyb::arg("order") = 1,
                 "Compute the load vector for a given FEM mesh.\n\n"
                 "Args:\n"
@@ -57,20 +59,21 @@ void BindLoadVector(pybind11::module& m)
                 "quadrature points\n"
                 "    Feg (numpy.ndarray): `|# dims| x |# quad.pts.|` load vector values at "
                 "quadrature points\n"
-                "    eElement (EElement): Element type\n"
+                "    element (EElement): Element type\n"
                 "    order (int): Order of the element shape functions\n"
                 "Returns:\n"
                 "    numpy.ndarray: `|# dims| x |# nodes|` matrix s.t. each output dimension's "
                 "load vectors are stored in rows");
 
             m.def(
-                "load_vectors",
+                "load_vector",
                 [](pyb::EigenDRef<Eigen::Matrix<TIndex, Eigen::Dynamic, Eigen::Dynamic> const> E,
                    pyb::EigenDRef<Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic> const> X,
                    pyb::EigenDRef<Eigen::Vector<TScalar, Eigen::Dynamic> const> Fe,
                    EElement eElement,
                    int order,
                    int qOrder) {
+                    Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic> f;
                     ApplyToElementWithQuadrature<3>(
                         eElement,
                         order,
@@ -89,7 +92,7 @@ void BindLoadVector(pybind11::module& m)
                                 ElementShapeFunctions<ElementType, QuadratureOrder, TScalar>();
                             auto const Neg = Ng.replicate(1, nElements);
                             auto const Feg = Fe.replicate(1, nQuadPts);
-                            return pbat::fem::LoadVectors<ElementType>(
+                            f              = pbat::fem::LoadVectors<ElementType>(
                                 E.template topRows<ElementType::kNodes>(),
                                 X.cols(),
                                 eg.reshaped(),
@@ -97,21 +100,22 @@ void BindLoadVector(pybind11::module& m)
                                 Neg,
                                 Feg);
                         });
+                    return f;
                 },
                 pyb::arg("E"),
                 pyb::arg("X"),
                 pyb::arg("Fe"),
-                pyb::arg("eElement"),
-                pyb::arg("order")  = 1,
-                pyb::arg("qOrder") = 1,
+                pyb::arg("element"),
+                pyb::arg("order")            = 1,
+                pyb::arg("quadrature_order") = 1,
                 "Compute the load vector for a given FEM mesh.\n\n"
                 "Args:\n"
                 "    E (numpy.ndarray): `|# elem. nodes| x |# elements|` element matrix\n"
                 "    X (numpy.ndarray): `|# dims| x |# nodes|` mesh nodes\n"
                 "    Fe (numpy.ndarray): `|# dims| x 1` uniform external load\n"
-                "    eElement (EElement): Element type\n"
+                "    element (EElement): Element type\n"
                 "    order (int): Order of the element shape functions\n"
-                "    qOrder (int): Order of the quadrature rule\n"
+                "    quadrature_order (int): Order of the quadrature rule\n"
                 "Returns:\n"
                 "    numpy.ndarray: `|# dims| x |# nodes|` matrix s.t. each output dimension's "
                 "load vectors are stored in rows");

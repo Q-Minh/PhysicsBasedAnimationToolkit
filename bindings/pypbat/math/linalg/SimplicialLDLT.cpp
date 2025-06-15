@@ -14,6 +14,145 @@ namespace py {
 namespace math {
 namespace linalg {
 
+struct SimplicialLdlt
+{
+    enum class EScalar { Float32, Float64 } eScalar;
+    enum class EStorageIndex { Int32, Int64 } eIndex;
+    enum class EStorageOrder { Column, Row } eStorageOrder;
+    enum class EOrdering { Natural, AMD, COLAMD } eOrdering;
+    void* pImpl;
+
+    template <class Func>
+    void ForScalarType(Func f)
+    {
+        if (eScalar == EScalar::Float32)
+        {
+            f.template operator()<float>();
+        }
+        else if (eScalar == EScalar::Float64)
+        {
+            f.template operator()<double>();
+        }
+    };
+
+    template <class Func>
+    void ForIndexType(Func f)
+    {
+        if (eIndex == EStorageIndex::Int32)
+        {
+            f.template operator()<std::int32_t>();
+        }
+        else if (eIndex == EStorageIndex::Int64)
+        {
+            f.template operator()<std::int64_t>();
+        }
+    };
+
+    template <class Func>
+    void ForOrderingType(Func f)
+    {
+        if (eOrdering == EOrdering::Natural)
+        {
+            f.template operator()<Eigen::NaturalOrdering<typename CSCMatrix::StorageIndex>>();
+        }
+        else if (eOrdering == EOrdering::AMD)
+        {
+            f.template operator()<Eigen::AMDOrdering<typename CSCMatrix::StorageIndex>>();
+        }
+        else if (eOrdering == EOrdering::COLAMD)
+        {
+            f.template operator()<Eigen::COLAMDOrdering<typename CSCMatrix::StorageIndex>>();
+        }
+    };
+
+    template <class Func>
+    void ForStorageOrder(Func f)
+    {
+        if (eStorageOrder == EStorageOrder::Column)
+        {
+            f.template operator()<Eigen::ColMajor>();
+        }
+        else if (eStorageOrder == EStorageOrder::Row)
+        {
+            f.template operator()<Eigen::RowMajor>();
+        }
+    };
+
+    template <class Func>
+    void Apply(Func f) const
+    {
+        ForScalarType([&]<class TScalar>() {
+            ForIndexType([&]<class TIndex>() {
+                ForOrderingType([&]<class TOrdering>() {
+                    ForStorageOrder([&]<Eigen::StorageOptions Options>() {
+                        using SimplicialLdltType = Eigen::SimplicialLDLT<
+                            Eigen::SparseMatrix<TScalar, Options, TIndex>,
+                            Eigen::Lower,
+                            TOrdering>;
+                        SimplicialLdltType* pSimplicialLdlt =
+                            static_cast<SimplicialLdltType*>(pImpl);
+                        f.template operator()<SimplicialLdltType>(pSimplicialLdlt);
+                    });
+                });
+            });
+        });
+    }
+
+    SimplicialLdlt(
+        EScalar scalar,
+        EStorageIndex index,
+        EStorageOrder storageOrder,
+        EOrdering ordering)
+        : eScalar(scalar),
+          eIndex(index),
+          eStorageOrder(storageOrder),
+          eOrdering(ordering),
+          pImpl(nullptr)
+    {
+        Apply([&]<class TSimplicialLdltType>(TSimplicialLdltType* pSimplicialLdlt) {
+            pImpl = new TSimplicialLdltType();
+        });
+    }
+
+    SimplicialLdlt(SimplicialLdlt const&)            = delete;
+    SimplicialLdlt& operator=(SimplicialLdlt const&) = delete;
+    SimplicialLdlt(SimplicialLdlt&& other) noexcept
+        : eScalar(other.eScalar),
+          eIndex(other.eIndex),
+          eStorageOrder(other.eStorageOrder),
+          eOrdering(other.eOrdering),
+          pImpl(other.pImpl)
+    {
+        other.pImpl = nullptr;
+    }
+    SimplicialLdlt& operator=(SimplicialLdlt&& other) noexcept
+    {
+        if (this != &other)
+        {
+            eScalar       = other.eScalar;
+            eIndex        = other.eIndex;
+            eStorageOrder = other.eStorageOrder;
+            eOrdering     = other.eOrdering;
+            pImpl         = other.pImpl;
+            other.pImpl   = nullptr;
+        }
+        return *this;
+    }
+
+    
+
+    void TryDeallocate()
+    {
+        if (!pImpl)
+            return;
+        Apply([&]<class TSimplicialLdltType>(TSimplicialLdltType* pSimplicialLdlt) {
+            delete pSimplicialLdlt;
+        });
+    }
+
+    ~SimplicialLdlt() { TryDeallocate(); }
+};
+
 void BindSimplicialLDLT(pybind11::module& m)
 {
     namespace pyb = pybind11;
@@ -67,18 +206,18 @@ void BindSimplicialLDLT(pybind11::module& m)
                 .def(
                     "analyze",
                     [=](SimplicialLdltType& ldlt, SparseMatrixType const& A) {
-                        pbat::profiling::Profile("pbat.math.linalg." + className + ".analyze", [&]() {
-                            ldlt.analyzePattern(A);
-                        });
+                        pbat::profiling::Profile(
+                            "pbat.math.linalg." + className + ".analyze",
+                            [&]() { ldlt.analyzePattern(A); });
                     },
                     pyb::arg("A"))
                 .def(
                     "compute",
                     [=](SimplicialLdltType& ldlt,
                         SparseMatrixType const& A) -> SimplicialLdltType& {
-                        pbat::profiling::Profile("pbat.math.linalg." + className + ".compute", [&]() {
-                            ldlt.compute(A);
-                        });
+                        pbat::profiling::Profile(
+                            "pbat.math.linalg." + className + ".compute",
+                            [&]() { ldlt.compute(A); });
                         return ldlt;
                     },
                     pyb::arg("A"))
@@ -87,9 +226,9 @@ void BindSimplicialLDLT(pybind11::module& m)
                 .def(
                     "factorize",
                     [=](SimplicialLdltType& ldlt, SparseMatrixType const& A) {
-                        pbat::profiling::Profile("pbat.math.linalg." + className + ".factorize", [&]() {
-                            ldlt.factorize(A);
-                        });
+                        pbat::profiling::Profile(
+                            "pbat.math.linalg." + className + ".factorize",
+                            [&]() { ldlt.factorize(A); });
                     },
                     pyb::arg("A"))
                 .def_property_readonly(

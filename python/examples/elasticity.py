@@ -26,48 +26,75 @@ if __name__ == "__main__":
 
     # Construct FEM quantities for simulation
     imesh = meshio.read(args.input)
-    V, C = imesh.points, imesh.cells_dict["tetra"]
-    mesh = pbat.fem.Mesh(
-        V.T, C.T, element=pbat.fem.Element.Tetrahedron, order=1)
-    x = mesh.X.reshape(math.prod(mesh.X.shape), order='f')
+    V, C = imesh.points.astype(np.float64), imesh.cells_dict["tetra"].astype(np.int64)
+    element = pbat.fem.Element.Tetrahedron
+    X, E = pbat.fem.mesh(
+        V.T, C.T, element=element, order=1)
+    x = X.reshape(math.prod(X.shape), order='f')
     v = np.zeros(x.shape[0])
+    dims = X.shape[0]
+    order=1
 
     # Mass matrix
     rho = args.rho
-    M, detJeM = pbat.fem.mass_matrix(mesh, rho=rho)
+    M = pbat.fem.mass_matrix(E, X, rho=rho, dims=dims, element=element, order=order)
     Minv = pbat.math.linalg.ldlt(M)
     Minv.compute(M)
 
     # Construct load vector from gravity field
-    g = np.zeros(mesh.dims)
+    g = np.zeros(dims)
     g[-1] = -9.81
     fe = rho*g
-    f, detJeF = pbat.fem.load_vector(mesh, fe)
+    f = pbat.fem.load_vector(E, X, fe, element=element, order=order).flatten(order="F")
     a = Minv.solve(f).squeeze()
 
     # Create hyper elastic potential
     Y, nu, energy = args.Y, args.nu, pbat.fem.HyperElasticEnergy.StableNeoHookean
-    hep, egU, wgU, GNeU, lameU = pbat.fem.hyper_elastic_potential(
-        mesh, Y=Y, nu=nu, energy=energy)
+    mu, llambda = pbat.fem.lame_coefficients(Y, nu)
+    mug = np.full(E.shape[1], mu, dtype=x.dtype)
+    lambdag = np.full(E.shape[1], llambda, dtype=x.dtype)
+    eg = np.arange(E.shape[1], dtype=np.int32)
+    GNegU = pbat.fem.shape_function_gradients(
+        E, X, element=element, dims=dims, order=order
+    )
+    wg = pbat.fem.mesh_quadrature_weights(E, X, element, order=order, quadrature_order=1).flatten()
+    ElasticityComputationFlags = pbat.fem.ElementElasticityComputationFlags
+    spd_correction = pbat.fem.HyperElasticSpdCorrection.Absolute
 
     # Set Dirichlet boundary conditions
-    Xmin = mesh.X.min(axis=1)
-    Xmax = mesh.X.max(axis=1)
+    Xmin = X.min(axis=1)
+    Xmax = X.max(axis=1)
     Xmax[0] = Xmin[0]+1e-4
     Xmin[0] = Xmin[0]-1e-4
     aabb = pbat.geometry.aabb(np.vstack((Xmin, Xmax)).T)
-    vdbc = aabb.contained(mesh.X)
+    vdbc = aabb.contained(X)
     dbcs = np.array(vdbc)[:, np.newaxis]
-    dbcs = np.repeat(dbcs, mesh.dims, axis=1)
-    for d in range(mesh.dims):
-        dbcs[:, d] = mesh.dims*dbcs[:, d]+d
+    dbcs = np.repeat(dbcs, dims, axis=1)
+    for d in range(dims):
+        dbcs[:, d] = dims*dbcs[:, d]+d
     dbcs = dbcs.reshape(math.prod(dbcs.shape))
     n = x.shape[0]
     dofs = np.setdiff1d(list(range(n)), dbcs)
 
     # Setup linear solver
-    Hdd = hep.to_matrix()[:, dofs].tocsr()[dofs, :]
-    Mdd = M[:, dofs].tocsr()[dofs, :]
+    H = pbat.fem.hyper_elastic_potential(
+        E,
+        X.shape[1],
+        eg=eg,
+        wg=wg,
+        GNeg=GNegU,
+        mug=mug,
+        lambdag=lambdag,
+        x=x,
+        energy=energy,
+        flags=ElasticityComputationFlags.Hessian,
+        spd_correction=spd_correction,
+        element=element,
+        order=order,
+        dims=dims
+    )
+    Hdd = H.tocsc()[:, dofs].tocsr()[dofs, :]
+    Mdd = M.tocsc()[:, dofs].tocsr()[dofs, :]
     Addinv = pbat.math.linalg.ldlt(
         Hdd, solver=pbat.math.linalg.SolverBackend.Eigen)
     Addinv.analyze(Hdd)
@@ -79,8 +106,8 @@ if __name__ == "__main__":
     ps.set_ground_plane_height_factor(0.5)
     ps.set_program_name("Elasticity")
     ps.init()
-    vm = ps.register_volume_mesh("world model", mesh.X.T, mesh.E.T)
-    pc = ps.register_point_cloud("Dirichlet", mesh.X[:, vdbc].T)
+    vm = ps.register_volume_mesh("world model", X.T, E.T)
+    pc = ps.register_point_cloud("Dirichlet", X[:, vdbc].T)
     dt = 0.01
     animate = False
     use_direct_solver = False
@@ -96,7 +123,8 @@ if __name__ == "__main__":
     profiler = pbat.profiling.Profiler()
 
     def callback():
-        global x, v, dx, hep, dt, M, Minv, f
+        global x, v, dx, hep, dt, M, f
+        global X, E, eg, mug, lambdag, wg, GNegU, energy, element, order, dims
         global cg_fill_in, cg_drop_tolerance, cg_residual, cg_maxiter
         global animate, step, use_direct_solver, export, t
         global newton_maxiter
@@ -126,8 +154,22 @@ if __name__ == "__main__":
             xtilde = x + dt*v + dt2*a
             xk = x
             for k in range(newton_maxiter):
-                hep.compute_element_elasticity(xk, grad=True, hessian=True)
-                gradU, HU = hep.gradient(), hep.hessian()
+                gradU, HU = pbat.fem.hyper_elastic_potential(
+                    E,
+                    X.shape[1],
+                    eg=eg,
+                    wg=wg,
+                    GNeg=GNegU,
+                    mug=mug,
+                    lambdag=lambdag,
+                    x=xk,
+                    energy=energy,
+                    flags=ElasticityComputationFlags.Gradient | ElasticityComputationFlags.Hessian,
+                    spd_correction=spd_correction,
+                    element=element,
+                    order=order,
+                    dims=dims
+                )
 
                 global bd, Add
 
@@ -169,8 +211,8 @@ if __name__ == "__main__":
                 ps.screenshot(f"{args.output}/{t}.png")
 
             # Update visuals
-            X = x.reshape(mesh.X.shape[0], mesh.X.shape[1], order='f')
-            vm.update_vertex_positions(X.T)
+            V = x.reshape(X.shape[0], X.shape[1], order='f')
+            vm.update_vertex_positions(V.T)
 
             t = t + 1
 

@@ -119,9 +119,9 @@ void BindMass([[maybe_unused]] pybind11::module& m)
                    TScalar rho,
                    int dims,
                    EElement eElement,
-                   int order,
-                   int spatialDims) {
+                   int order) {
                     Eigen::SparseMatrix<TScalar, Eigen::RowMajor, TIndex> M;
+                    auto const spatialDims = static_cast<int>(X.rows());
                     ApplyToElementInDims(
                         eElement,
                         order,
@@ -156,8 +156,7 @@ void BindMass([[maybe_unused]] pybind11::module& m)
                 pyb::arg("rho")  = TScalar(1e3),
                 pyb::arg("dims") = 1,
                 pyb::arg("element"),
-                pyb::arg("order")        = 1,
-                pyb::arg("spatial_dims") = 3,
+                pyb::arg("order") = 1,
                 "Construct the mass matrix operator's sparse matrix representation.\n\n"
                 "Args:\n"
                 "    E (numpy.ndarray): `|# nodes per element| x |# elements|` matrix of mesh "
@@ -169,7 +168,6 @@ void BindMass([[maybe_unused]] pybind11::module& m)
                 "1).\n"
                 "    element (EElement): Type of the finite element.\n"
                 "    order (int): Order of the finite element.\n"
-                "    spatial_dims (int): Number of spatial dimensions.\n"
                 "Returns:\n"
                 "    scipy.sparse matrix: `|# nodes * dims| x |# nodes * dims|` mass matrix "
                 "operator.");
@@ -293,9 +291,9 @@ void BindMass([[maybe_unused]] pybind11::module& m)
                    TScalar rho,
                    int dims,
                    EElement eElement,
-                   int order,
-                   int spatialDims) {
+                   int order) {
                     Eigen::Vector<TScalar, Eigen::Dynamic> m;
+                    auto const spatialDims = static_cast<int>(X.rows());
                     ApplyToElementInDims(
                         eElement,
                         order,
@@ -327,11 +325,10 @@ void BindMass([[maybe_unused]] pybind11::module& m)
                 },
                 pyb::arg("E"),
                 pyb::arg("X"),
-                pyb::arg("rho") = TScalar(1e3),
+                pyb::arg("rho")  = TScalar(1e3),
                 pyb::arg("dims") = 1,
                 pyb::arg("element"),
-                pyb::arg("order")        = 1,
-                pyb::arg("spatial_dims") = 3,
+                pyb::arg("order") = 1,
                 "Compute lumped mass matrix's diagonal vector.\n\n"
                 "Args:\n"
                 "    E (numpy.ndarray): `|# nodes per element| x |# elements|` matrix of mesh "
@@ -349,7 +346,6 @@ void BindMass([[maybe_unused]] pybind11::module& m)
                 "1).\n"
                 "    element (EElement): Type of the finite element.\n"
                 "    order (int): Order of the finite element.\n"
-                "    spatial_dims (int): Number of spatial dimensions.\n\n"
                 "Returns:\n"
                 "    numpy.ndarray: `|# nodes * dims| x 1` vector of lumped masses.");
 

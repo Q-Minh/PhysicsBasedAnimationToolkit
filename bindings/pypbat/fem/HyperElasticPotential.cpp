@@ -35,95 +35,37 @@ void BindHyperElasticPotential(pybind11::module& m)
 
     pbat::common::ForTypes<float, double>([&]<class TScalar>() {
         pbat::common::ForTypes<std::int32_t, std::int64_t>([&]<class TIndex>() {
-            using PotentialType = TScalar;
-            using GradientType  = Eigen::Vector<TScalar, Eigen::Dynamic>;
-            using HessianType   = Eigen::SparseMatrix<TScalar, Eigen::RowMajor, TIndex>;
-            using ReturnType = std::variant<PotentialType, GradientType, HessianType, pyb::tuple>;
-
-            auto const fReturnElasticity =
-                [](std::optional<PotentialType> const& potential,
-                   std::optional<GradientType> const& gradient,
-                   std::optional<HessianType> const& hessian) -> ReturnType {
-                if (potential)
-                {
-                    if (gradient)
-                    {
-                        if (hessian)
-                        {
-                            return pyb::make_tuple(*potential, *gradient, *hessian);
-                        }
-                        else
-                        {
-                            return pyb::make_tuple(*potential, *gradient);
-                        }
-                    }
-                    else
-                    {
-                        if (hessian)
-                        {
-                            return pyb::make_tuple(*potential, *hessian);
-                        }
-                        else
-                        {
-                            return *potential;
-                        }
-                    }
-                }
-                else
-                {
-                    if (gradient)
-                    {
-                        if (hessian)
-                        {
-                            return pyb::make_tuple(*gradient, *hessian);
-                        }
-                        else
-                        {
-                            return *gradient;
-                        }
-                    }
-                    else
-                    {
-                        if (hessian)
-                        {
-                            return *hessian;
-                        }
-                        else
-                        {
-                            throw std::runtime_error(
-                                "No potential, gradient or hessian requested.");
-                        }
-                    }
-                }
-            };
-
             m.def(
                 "hyper_elastic_potential",
-                [&fReturnElasticity](
-                    pyb::EigenDRef<Eigen::Matrix<TIndex, Eigen::Dynamic, Eigen::Dynamic> const> E,
-                    TIndex nNodes,
-                    pyb::EigenDRef<Eigen::Vector<TIndex, Eigen::Dynamic> const> eg,
-                    pyb::EigenDRef<Eigen::Vector<TScalar, Eigen::Dynamic> const> wg,
-                    pyb::EigenDRef<Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic> const>
-                        GNeg,
-                    pyb::EigenDRef<Eigen::Vector<TScalar, Eigen::Dynamic> const> mug,
-                    pyb::EigenDRef<Eigen::Vector<TScalar, Eigen::Dynamic> const> lambdag,
-                    pyb::EigenDRef<Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic> const> x,
-                    EHyperElasticEnergy eEnergy,
-                    pbat::fem::EElementElasticityComputationFlags eFlags,
-                    pbat::fem::EHyperElasticSpdCorrection eSpdCorrection,
-                    EElement eElement,
-                    int order,
-                    int dims) -> ReturnType {
+                [](pyb::EigenDRef<Eigen::Matrix<TIndex, Eigen::Dynamic, Eigen::Dynamic> const> E,
+                   TIndex nNodes,
+                   pyb::EigenDRef<Eigen::Vector<TIndex, Eigen::Dynamic> const> eg,
+                   pyb::EigenDRef<Eigen::Vector<TScalar, Eigen::Dynamic> const> wg,
+                   pyb::EigenDRef<Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic> const>
+                       GNeg,
+                   pyb::EigenDRef<Eigen::Vector<TScalar, Eigen::Dynamic> const> mug,
+                   pyb::EigenDRef<Eigen::Vector<TScalar, Eigen::Dynamic> const> lambdag,
+                   pyb::EigenDRef<Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic> const> x,
+                   EHyperElasticEnergy eEnergy,
+                   int eFlags,
+                   pbat::fem::EHyperElasticSpdCorrection eSpdCorrection,
+                   EElement eElement,
+                   int order,
+                   int dims)
+                    -> std::variant<
+                        TScalar,
+                        Eigen::Vector<TScalar, Eigen::Dynamic>,
+                        Eigen::SparseMatrix<TScalar, Eigen::ColMajor, TIndex>,
+                        pyb::tuple> {
                     if (eElement == EElement::Hexahedron and order > 2)
                     {
                         throw std::invalid_argument(
                             "Hyperelastic energy for hexahedra is only supported for order 1 and "
                             "2.");
                     }
-                    std::optional<PotentialType> potential;
-                    std::optional<GradientType> gradient;
-                    std::optional<HessianType> hessian;
+                    std::optional<TScalar> potential;
+                    std::optional<Eigen::Vector<TScalar, Eigen::Dynamic>> gradient;
+                    std::optional<Eigen::SparseMatrix<TScalar, Eigen::ColMajor, TIndex>> hessian;
                     ApplyToElementInDimsWithHyperElasticEnergy(
                         eElement,
                         order,
@@ -169,7 +111,7 @@ void BindHyperElasticPotential(pybind11::module& m)
                                 if (eFlags & pbat::fem::EElementElasticityComputationFlags::Hessian)
                                 {
                                     hessian = pbat::fem::
-                                        HyperElasticHessian<ElementType, Dims, Eigen::RowMajor>(
+                                        HyperElasticHessian<ElementType, Dims, Eigen::ColMajor>(
                                             E.template topRows<ElementType::kNodes>(),
                                             nNodes,
                                             eg,
@@ -178,7 +120,57 @@ void BindHyperElasticPotential(pybind11::module& m)
                             }
                         });
                     // Return variable tuple based on computation request
-                    return fReturnElasticity(potential, gradient, hessian);
+                    if (potential)
+                    {
+                        if (gradient)
+                        {
+                            if (hessian)
+                            {
+                                return pyb::make_tuple(*potential, *gradient, *hessian);
+                            }
+                            else
+                            {
+                                return pyb::make_tuple(*potential, *gradient);
+                            }
+                        }
+                        else
+                        {
+                            if (hessian)
+                            {
+                                return pyb::make_tuple(*potential, *hessian);
+                            }
+                            else
+                            {
+                                return *potential;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        if (gradient)
+                        {
+                            if (hessian)
+                            {
+                                return pyb::make_tuple(*gradient, *hessian);
+                            }
+                            else
+                            {
+                                return *gradient;
+                            }
+                        }
+                        else
+                        {
+                            if (hessian)
+                            {
+                                return *hessian;
+                            }
+                            else
+                            {
+                                throw std::runtime_error(
+                                    "No potential, gradient or hessian requested.");
+                            }
+                        }
+                    }
                 },
                 pyb::arg("E"),
                 pyb::arg("n_nodes"),
@@ -219,23 +211,27 @@ void BindHyperElasticPotential(pybind11::module& m)
 
             m.def(
                 "hyper_elastic_potential",
-                [&fReturnElasticity](
-                    pyb::EigenDRef<Eigen::Matrix<TIndex, Eigen::Dynamic, Eigen::Dynamic> const> E,
-                    TIndex nNodes,
-                    pyb::EigenDRef<Eigen::Vector<TScalar, Eigen::Dynamic> const> wg,
-                    pyb::EigenDRef<Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic> const>
-                        GNeg,
-                    TScalar mu,
-                    TScalar lambda,
-                    pyb::EigenDRef<Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic> const> x,
-                    EHyperElasticEnergy eEnergy,
-                    pbat::fem::EElementElasticityComputationFlags eFlags,
-                    pbat::fem::EHyperElasticSpdCorrection eSpdCorrection,
-                    EElement eElement,
-                    int dims) -> ReturnType {
-                    std::optional<PotentialType> potential;
-                    std::optional<GradientType> gradient;
-                    std::optional<HessianType> hessian;
+                [](pyb::EigenDRef<Eigen::Matrix<TIndex, Eigen::Dynamic, Eigen::Dynamic> const> E,
+                   TIndex nNodes,
+                   pyb::EigenDRef<Eigen::Vector<TScalar, Eigen::Dynamic> const> wg,
+                   pyb::EigenDRef<Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic> const>
+                       GNeg,
+                   TScalar mu,
+                   TScalar lambda,
+                   pyb::EigenDRef<Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic> const> x,
+                   EHyperElasticEnergy eEnergy,
+                   int eFlags,
+                   pbat::fem::EHyperElasticSpdCorrection eSpdCorrection,
+                   EElement eElement,
+                   int dims)
+                    -> std::variant<
+                        TScalar,
+                        Eigen::Vector<TScalar, Eigen::Dynamic>,
+                        Eigen::SparseMatrix<TScalar, Eigen::ColMajor, TIndex>,
+                        pyb::tuple> {
+                    std::optional<TScalar> potential;
+                    std::optional<Eigen::Vector<TScalar, Eigen::Dynamic>> gradient;
+                    std::optional<Eigen::SparseMatrix<TScalar, Eigen::ColMajor, TIndex>> hessian;
                     ApplyToElementInDimsWithHyperElasticEnergy(
                         eElement,
                         1 /* order */,
@@ -297,7 +293,7 @@ void BindHyperElasticPotential(pybind11::module& m)
                                 if (eFlags & pbat::fem::EElementElasticityComputationFlags::Hessian)
                                 {
                                     hessian = pbat::fem::
-                                        HyperElasticHessian<ElementType, Dims, Eigen::RowMajor>(
+                                        HyperElasticHessian<ElementType, Dims, Eigen::ColMajor>(
                                             E.template topRows<ElementType::kNodes>(),
                                             nNodes,
                                             eg,
@@ -306,7 +302,57 @@ void BindHyperElasticPotential(pybind11::module& m)
                             }
                         });
                     // Return variable tuple based on computation request
-                    return fReturnElasticity(potential, gradient, hessian);
+                    if (potential)
+                    {
+                        if (gradient)
+                        {
+                            if (hessian)
+                            {
+                                return pyb::make_tuple(*potential, *gradient, *hessian);
+                            }
+                            else
+                            {
+                                return pyb::make_tuple(*potential, *gradient);
+                            }
+                        }
+                        else
+                        {
+                            if (hessian)
+                            {
+                                return pyb::make_tuple(*potential, *hessian);
+                            }
+                            else
+                            {
+                                return *potential;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        if (gradient)
+                        {
+                            if (hessian)
+                            {
+                                return pyb::make_tuple(*gradient, *hessian);
+                            }
+                            else
+                            {
+                                return *gradient;
+                            }
+                        }
+                        else
+                        {
+                            if (hessian)
+                            {
+                                return *hessian;
+                            }
+                            else
+                            {
+                                throw std::runtime_error(
+                                    "No potential, gradient or hessian requested.");
+                            }
+                        }
+                    }
                 },
                 pyb::arg("E"),
                 pyb::arg("n_nodes"),
