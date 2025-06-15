@@ -23,7 +23,7 @@ void BindMesh(pybind11::module& m)
         "dims",
         [](EElement eElement) {
             int dims = 0;
-            ApplyToElement(eElement, 1, []<class ElementType>() { dims = ElementType::kDims; });
+            ApplyToElement(eElement, 1, [&]<class ElementType>() { dims = ElementType::kDims; });
             if (dims == 0)
             {
                 throw std::invalid_argument(

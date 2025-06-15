@@ -32,16 +32,16 @@ if __name__ == "__main__":
 
     imesh = meshio.read(args.input)
     V, C = imesh.points, imesh.cells_dict["tetra"]
-    mesh = pbat.fem.Mesh(
-        V.T, C.T, element=pbat.fem.Element.Tetrahedron)
+    element = pbat.fem.Element.Tetrahedron
+    X, E = pbat.fem.mesh(
+        V.T, C.T, element=element)
     w, Veigs = pbat.fem.rest_pose_hyper_elastic_modes(
-        mesh, Y=args.Y, nu=args.nu, rho=args.rho, modes=args.modes)
-
+        E, X, element, Y=args.Y, nu=args.nu, rho=args.rho, modes=args.modes)
     ps.set_up_dir("z_up")
     ps.set_front_dir("neg_y_front")
     ps.set_ground_plane_mode("shadow_only")
     ps.init()
-    vm = ps.register_volume_mesh("model", mesh.X.T, mesh.E.T)
+    vm = ps.register_volume_mesh("model", X.T, E.T)
     mode = 6
     t0 = time.time()
     t = 0
@@ -55,9 +55,9 @@ if __name__ == "__main__":
         changed, k = imgui.InputFloat("Wave frequency", k)
 
         t = time.time() - t0
-        X = mesh.X.T + signal(w[mode], Veigs[:, mode],
-                              t, c, k).reshape(mesh.X.shape[1], 3)
-        vm.update_vertex_positions(X)
+        V = X.T + signal(w[mode], Veigs[:, mode],
+                              t, c, k).reshape(X.shape[1], 3)
+        vm.update_vertex_positions(V)
 
     ps.set_user_callback(callback)
     ps.show()

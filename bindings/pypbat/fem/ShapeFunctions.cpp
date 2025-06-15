@@ -5,6 +5,7 @@
 #include <pbat/common/ConstexprFor.h>
 #include <pbat/fem/ShapeFunctions.h>
 #include <pybind11/eigen.h>
+#include <pybind11/stl.h>
 #include <variant>
 
 namespace pbat {

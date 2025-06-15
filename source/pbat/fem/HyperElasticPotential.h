@@ -638,7 +638,7 @@ inline void ToHyperElasticGradient(
  * @param eg `|# quad.pts.| x 1` vector of element indices at quadrature points
  * @param Gg `|# dims * # elem nodes| x |# quad.pts.|` array of element elastic gradient vectors at
  * quadrature points
- * @return Gradient vector
+ * @return `|# dims * # nodes| x 1` gradient vector
  */
 template <CElement TElement, int Dims, class TDerivedE, class TDerivedeg, class TDerivedGg>
 auto HyperElasticGradient(
@@ -670,7 +670,7 @@ auto HyperElasticGradient(
  * @param eg `|# quad.pts.| x 1` vector of element indices at quadrature points
  * @param Gg `|# dims * # elem nodes| x |# quad.pts.|` array of element elastic gradient vectors at
  * quadrature points
- * @return Gradient vector
+ * @return `|# dims * # nodes| x 1` gradient vector
  */
 template <CMesh TMesh, class TDerivedeg, class TDerivedGg>
 auto HyperElasticGradient(
@@ -708,7 +708,7 @@ auto HyperElasticGradient(
  * @param x `|# dims * # nodes| x 1` deformed nodal positions
  * @param Gg `|# dims * # elem nodes| x |# quad.pts.|` array of element gradient vectors at
  * quadrature points
- * @return Gradient vector
+ * @return `|# dims * # nodes| x 1` gradient vector
  */
 template <
     CElement TElement,
@@ -816,7 +816,7 @@ auto HyperElasticGradient(
  * @param eg `|# quad.pts.| x 1` vector of element indices at quadrature points
  * @param Gg `|# dims * # elem nodes| x |# quad.pts.|` array of element elastic gradient vectors at
  * quadrature points
- * @return Gradient vector
+ * @return `|# dims * # nodes| x 1` gradient vector
  */
 template <
     physics::CHyperElasticEnergy THyperElasticEnergy,
