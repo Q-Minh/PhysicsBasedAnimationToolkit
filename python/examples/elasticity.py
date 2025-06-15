@@ -26,7 +26,7 @@ if __name__ == "__main__":
 
     # Construct FEM quantities for simulation
     imesh = meshio.read(args.input)
-    V, C = imesh.points.astype(np.float64), imesh.cells_dict["tetra"].astype(np.int64)
+    V, C = imesh.points, imesh.cells_dict["tetra"]
     element = pbat.fem.Element.Tetrahedron
     X, E = pbat.fem.mesh(
         V.T, C.T, element=element, order=1)
