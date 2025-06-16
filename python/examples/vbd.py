@@ -233,23 +233,24 @@ if __name__ == "__main__":
         offset = V[i][:, -1].max() - V[i + 1][:, -1].min()
         V[i + 1][:, -1] += offset + extent * args.translation
     V, C, B = combine(V, C)
-    mesh = pbat.fem.Mesh(V.T, C.T, element=pbat.fem.Element.Tetrahedron, order=1)
+    element = pbat.fem.Element.Tetrahedron
+    X, E = pbat.fem.mesh(V.T, C.T, element=element, order=1)
     F = igl.boundary_facets(C)
     F[:, :2] = np.roll(F[:, :2], shift=1, axis=1)
 
     # Apply material properties
-    rhoe = np.full(mesh.E.shape[1], args.rho)
-    Y = np.full(mesh.E.shape[1], args.Y)
-    nu = np.full(mesh.E.shape[1], args.nu)
-    heteromask = np.full(mesh.E.shape[1], False)
+    rhoe = np.full(E.shape[1], args.rho)
+    Y = np.full(E.shape[1], args.Y)
+    nu = np.full(E.shape[1], args.nu)
+    heteromask = np.full(E.shape[1], False)
     if args.heterogeneous:
-        Xmin = mesh.X.min(axis=1)
-        Xmax = mesh.X.max(axis=1)
+        Xmin = X.min(axis=1)
+        Xmax = X.max(axis=1)
         barycenters = 0.25 * (
-            mesh.X[:, mesh.E[0, :]]
-            + mesh.X[:, mesh.E[1, :]]
-            + mesh.X[:, mesh.E[2, :]]
-            + mesh.X[:, mesh.E[3, :]]
+            X[:, E[0, :]]
+            + X[:, E[1, :]]
+            + X[:, E[2, :]]
+            + X[:, E[3, :]]
         )
         nslices = max(2, args.heterogeneous_slices)
         axis = args.heterogeneous_slice_axis
@@ -270,8 +271,8 @@ if __name__ == "__main__":
     mue, lambdae = pbat.fem.lame_coefficients(Y, nu)
 
     # Set Dirichlet boundary conditions
-    Xmin = mesh.X.min(axis=1)
-    Xmax = mesh.X.max(axis=1)
+    Xmin = X.min(axis=1)
+    Xmax = X.max(axis=1)
     extent = Xmax - Xmin
     if args.fixed_end == "min":
         Xmax[args.fixed_axis] = (
@@ -284,7 +285,7 @@ if __name__ == "__main__":
         )
         Xmax[args.fixed_axis] += args.percent_fixed * extent[args.fixed_axis]
     aabb = pbat.geometry.aabb(np.vstack((Xmin, Xmax)).T)
-    vdbc = aabb.contained(mesh.X)
+    vdbc = aabb.contained(X)
 
     # Setup VBD
     data = (
@@ -398,9 +399,9 @@ if __name__ == "__main__":
         reset = imgui.Button("Reset")
 
         if reset:
-            vbd.x = mesh.X
-            vbd.v = np.zeros(mesh.X.shape)
-            vm.update_vertex_positions(mesh.X.T)
+            vbd.x = X
+            vbd.v = np.zeros(X.shape)
+            vm.update_vertex_positions(X.T)
             t = 0
 
         if args.gpu:
