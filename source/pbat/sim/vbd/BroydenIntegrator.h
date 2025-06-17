@@ -39,14 +39,15 @@ class BroydenIntegrator : public Integrator
     virtual void Solve(Scalar sdt, Scalar sdt2, Index iterations) override;
 
   private:
-    MatrixX U;    ///< `kDims|# verts| x m` matrix of rank-1 update vectors u
-    MatrixX V;    ///< `kDims|# verts| x m` matrix of rank-1 update vectors v
-    VectorX xkm1; ///< `kDims|# verts|` vector of previous x
-    VectorX dx;   ///< `kDims|# verts|` vector of dx = x - xkm1
-    VectorX Fk;   ///< `kDims|# verts|` vector of root-finding function
-    VectorX Fkm1; ///< `kDims|# verts|` vector of previous root-finding function
-    VectorX GdFk; ///< `kDims|# verts|` vector of Gk * dFk
-    VectorX GTdx; ///< `kDims|# verts|` vector of Gk^T * dx
+    MatrixX Fk;     ///< `|# dofs| x m` gradient differences
+    MatrixX GvbdFk; ///< `|# dofs| x m` vbd-preconditioned gradient differences
+    MatrixX Xk;     ///< `|# dofs| x m` past steps
+    VectorX gammak; ///< `m x 1` subspace residual
+    VectorX xkm1;   ///< `|# dofs| x 1` previous step
+    VectorX fk;     ///< `|# dofs| x 1` gradient
+    VectorX fkm1;   ///< `|# dofs| x 1` past gradient
+    VectorX vbdfk;   ///< `|# dofs| x 1` vbd step
+    VectorX vbdfkm1; ///< `|# dofs| x 1` past vbd step
 };
 
 } // namespace pbat::sim::vbd

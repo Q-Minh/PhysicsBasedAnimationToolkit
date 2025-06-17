@@ -6,59 +6,64 @@
 #include <Eigen/QR>
 #include <algorithm>
 #include <exception>
-#include <limits>
-#include <tbb/parallel_for.h>
 
 namespace pbat::sim::vbd {
 
 BroydenIntegrator::BroydenIntegrator(Data dataIn)
     : Integrator(std::move(dataIn)),
-      U(data.x.size(), data.mWindowSize),
-      V(data.x.size(), data.mWindowSize),
+      Fk(data.x.size(), data.mWindowSize),
+      GvbdFk(data.x.size(), data.mWindowSize),
+      Xk(data.x.size(), data.mWindowSize),
+      gammak(data.mWindowSize),
       xkm1(data.x.size()),
-      dx(data.x.size()),
-      Fk(data.x.size()),
-      Fkm1(data.x.size()),
-      GdFk(data.x.size()),
-      GTdx(data.x.size())
+      fk(data.x.size()),
+      fkm1(data.x.size()),
+      vbdfk(data.x.size()),
+      vbdfkm1(data.x.size())
 {
 }
 
 void BroydenIntegrator::Solve(Scalar sdt, Scalar sdt2, Index iterations)
 {
-    auto m  = U.cols();
-    auto n  = U.rows();
+    Eigen::CompleteOrthogonalDecomposition<MatrixX> QR{};
+    QR.setThreshold(1e-10);
+    auto m  = Xk.cols();
+    auto n  = Xk.rows();
     auto G0 = -MatrixX::Identity(n, n);
-    Index mk{0};
-    auto const Gmul = [&](auto const& x) {
-        return G0 * x + U.leftCols(mk) * (V.leftCols(mk).transpose() * x);
-    };
-    auto const GTmul = [&](auto const& x) {
-        return G0 * x + V.leftCols(mk) * (U.leftCols(mk).transpose() * x);
-    };
 
     xkm1 = data.x.reshaped();
+    fkm1 = ObjectiveFunctionGradient(data.x, data.xtilde, sdt);
+    // If x_{k+1} = x_k - VBD(f_k), then
+    // VBD(f_k) = x_k - x_{k+1}
     RunVbdIteration(sdt, sdt2);
-    Fk = data.x.reshaped() - xkm1;
-    for (Index k = 0; k < iterations; ++k)
+    vbdfkm1 = xkm1 - data.x.reshaped();
+    for (Index k = 1; k < iterations; ++k)
     {
-        // Broyden step
-        mk = std::min(m, k);
-        dx = -Gmul(Fk);
-        data.x.reshaped() += dx;
-        // Compute f(x) = g(x) - x, i.e. the VBD iteration
-        Fkm1 = Fk;
-        xkm1 = data.x.reshaped();
+        // \Delta x_{k-1} \leftarrow x_k - x_{k-1}
+        auto dkl    = common::Modulo(k - 1, m);
+        Xk.col(dkl) = data.x.reshaped() - xkm1;
+        xkm1        = data.x.reshaped();
+        // f_k \leftarrow \nabla_x E(x_k)
+        fk = ObjectiveFunctionGradient(data.x, data.xtilde, sdt);
+        // G_{k-m} VBD(f_k)
         RunVbdIteration(sdt, sdt2);
-        Fk       = data.x.reshaped() - xkm1;
-        auto dFk = Fk - Fkm1;
-        GdFk     = Gmul(dFk);
-        // Broyden update
-        auto kl    = common::Modulo(k, m);
-        U.col(kl)  = dx - GdFk;
-        Scalar den = dx.dot(GdFk);
-        GTdx       = GTmul(dx);
-        V.col(kl)  = GTdx / den;
+        vbdfk = xkm1 - data.x.reshaped();
+        // \Delta f_{k-1} \leftarrow f_k - f_{k-1}
+        Fk.col(dkl) = fk - fkm1;
+        fkm1        = fk;
+        // G_{k-m} VBD(\Delta f_k) = VBD(f_k) - VBD(f_{k-1})
+        GvbdFk.col(dkl) = vbdfk - vbdfkm1;
+        vbdfkm1         = vbdfk;
+        // Compute Broyden update
+        auto mk = std::min(m, k);
+        QR.compute(Fk.leftCols(mk));
+        if (QR.info() != Eigen::ComputationInfo::Success)
+        {
+            throw std::runtime_error("QR decomposition failed");
+        }
+        gammak.head(mk)   = QR.solve(fk);
+        data.x.reshaped() = xkm1 - vbdfk - Xk.leftCols(mk) * gammak.head(mk) +
+                            GvbdFk.leftCols(mk) * gammak.head(mk);
     }
 }
 
@@ -98,10 +103,10 @@ TEST_CASE("[sim][vbd] BroydenIntegrator")
     using pbat::common::ToEigen;
     using pbat::sim::vbd::BroydenIntegrator;
     BroydenIntegrator avbd{sim::vbd::Data()
-                                           .WithVolumeMesh(P, T)
-                                           .WithSurfaceMesh(V, F)
-                                           .WithBroydenMethod(m)
-                                           .Construct()};
+                               .WithVolumeMesh(P, T)
+                               .WithSurfaceMesh(V, F)
+                               .WithBroydenMethod(m)
+                               .Construct()};
     MatrixX xtilde = avbd.data.x + dt * avbd.data.v + dt * dt * avbd.data.aext;
     Scalar f0      = avbd.ObjectiveFunction(avbd.data.x, xtilde, dt);
     VectorX g0     = avbd.ObjectiveFunctionGradient(avbd.data.x, xtilde, dt);
