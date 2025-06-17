@@ -42,7 +42,7 @@ void BroydenIntegrator::Solve(Scalar sdt, Scalar sdt2, Index iterations)
         GvbdFk.col(dkl) = vbdfk - vbdfkm1;
         vbdfkm1         = vbdfk;
         // Compute Broyden update
-        auto mk = std::min(m, k);
+        auto mk       = std::min(m, k);
         auto GvbdFkLS = GvbdFk.leftCols(mk);
         Eigen::LeastSquaresConjugateGradient<MatrixX> cg(GvbdFkLS);
         cg.setMaxIterations(m);
@@ -50,8 +50,8 @@ void BroydenIntegrator::Solve(Scalar sdt, Scalar sdt2, Index iterations)
         // \gamma_k = [ VBD(F_k)^T VBD(F_k) ]^{-1} VBD(f_k)
         gammak.head(mk) = cg.solve(vbdfk);
         // x_{k+1} = x_k - VBD(f_k) - (X_k - G_{k-m} VBD(F_k)) \gamma_k
-        data.x.reshaped() = xkm1 - vbdfk - Xk.leftCols(mk) * gammak.head(mk) +
-                            GvbdFk.leftCols(mk) * gammak.head(mk);
+        data.x.reshaped() -=
+            Xk.leftCols(mk) * gammak.head(mk) - GvbdFk.leftCols(mk) * gammak.head(mk);
     }
 }
 
