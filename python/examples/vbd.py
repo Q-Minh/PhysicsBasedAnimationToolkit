@@ -130,17 +130,23 @@ if __name__ == "__main__":
         dest="rho_chebyshev",
     )
     parser.add_argument(
-        "--anderson-window",
-        help="Anderson acceleration window size. Anderson acceleration is disabled if window size <= 0",
+        "--window",
+        help="Accelerated VBD window size. Acceleration methods are disabled if window size <= 0",
         type=int,
         default=0,
-        dest="anderson_window",
+        dest="window",
     )
     parser.add_argument(
-        "--accelerated-anderson",
+        "--anderson-acceleration",
         action="store_true",
-        help="Use accelerated Anderson acceleration",
-        dest="accelerated_anderson",
+        help="Use Anderson acceleration",
+        dest="anderson_acceleration",
+    )
+    parser.add_argument(
+        "--broyden-acceleration",
+        action="store_true",
+        help="Use Broyden acceleration",
+        dest="broyden_acceleration",
     )
     parser.add_argument(
         "--use-trust-region",
@@ -302,12 +308,12 @@ if __name__ == "__main__":
     )
     if args.rho_chebyshev < 1.0 and args.rho_chebyshev > 0.0:
         data = data.with_chebyshev_acceleration(args.rho_chebyshev)
-    elif args.anderson_window > 0:
-        if args.accelerated_anderson:
-            data = data.with_accelerated_anderson_acceleration(args.anderson_window)
-        else:
-            data = data.with_anderson_acceleration(args.anderson_window)
-    if args.use_trust_region:
+    elif args.window > 0:
+        if args.broyden_acceleration:
+            data = data.with_broyden_acceleration(args.window)
+        elif args.anderson_acceleration:
+            data = data.with_anderson_acceleration(args.window)
+    elif args.use_trust_region:
         data = data.with_trust_region_acceleration(
             args.tr_eta, args.tr_tau, args.use_curved_tr
         )

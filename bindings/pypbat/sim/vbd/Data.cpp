@@ -191,12 +191,12 @@ void BindData(pybind11::module& m)
             "Returns:\n"
             "    Data: self")
         .def(
-            "with_accelerated_anderson_acceleration",
+            "with_broyden_acceleration",
             &Data::WithBroydenMethod,
             pyb::arg("window_size"),
-            "Use accelerated Anderson acceleration\n\n"
+            "Use Broyden acceleration\n\n"
             "Args:\n"
-            "    window (int): Number of past iterates to use in Anderson acceleration.\n\n"
+            "    window (int): Number of past iterates to use in Broyden acceleration.\n\n"
             "Returns:\n"
             "    Data: self")
         .def(
