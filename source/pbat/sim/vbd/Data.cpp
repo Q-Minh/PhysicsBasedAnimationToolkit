@@ -147,15 +147,15 @@ Data& Data::WithChebyshevAcceleration(Scalar rhoIn)
 
 Data& Data::WithAndersonAcceleration(Index window)
 {
-    this->mAndersonWindowSize = window;
+    this->mWindowSize = window;
     this->eAcceleration       = EAccelerationStrategy::Anderson;
     return *this;
 }
 
-Data& Data::WithAcceleratedAnderson(Index window)
+Data& Data::WithBroydenMethod(Index window)
 {
-    this->mAndersonWindowSize = window;
-    this->eAcceleration       = EAccelerationStrategy::AcceleratedAnderson;
+    this->mWindowSize = window;
+    this->eAcceleration       = EAccelerationStrategy::Broyden;
     return *this;
 }
 
@@ -275,8 +275,8 @@ Data& Data::Construct(bool bValidate)
                 }
                 break;
             case EAccelerationStrategy::Anderson: [[fallthrough]];
-            case EAccelerationStrategy::AcceleratedAnderson:
-                if (mAndersonWindowSize < 1)
+            case EAccelerationStrategy::Broyden:
+                if (mWindowSize < 1)
                 {
                     throw std::invalid_argument("Expected m > 0");
                 }

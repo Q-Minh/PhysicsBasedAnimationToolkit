@@ -16,7 +16,7 @@ enum class EAccelerationStrategy {
     Chebyshev,
     Anderson,
     Nesterov,
-    AcceleratedAnderson,
+    Broyden,
     TrustRegion
 };
 

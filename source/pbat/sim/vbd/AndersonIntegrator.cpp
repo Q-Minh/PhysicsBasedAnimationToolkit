@@ -15,9 +15,9 @@ AndersonIntegrator::AndersonIntegrator(Data dataIn)
       Fkm1(data.x.size()),
       Gkm1(data.x.size()),
       xkm1(data.x.size()),
-      DFK(data.x.size(), data.mAndersonWindowSize),
-      DGK(data.x.size(), data.mAndersonWindowSize),
-      alpha(data.mAndersonWindowSize)
+      DFK(data.x.size(), data.mWindowSize),
+      DGK(data.x.size(), data.mWindowSize),
+      alpha(data.mWindowSize)
 {
 }
 

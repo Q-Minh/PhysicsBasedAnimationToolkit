@@ -1,4 +1,4 @@
-#include "AcceleratedAndersonIntegrator.h"
+#include "BroydenIntegrator.h"
 
 #include "pbat/common/Modulo.h"
 #include "pbat/profiling/Profiling.h"
@@ -11,10 +11,10 @@
 
 namespace pbat::sim::vbd {
 
-AcceleratedAndersonIntegrator::AcceleratedAndersonIntegrator(Data dataIn)
+BroydenIntegrator::BroydenIntegrator(Data dataIn)
     : Integrator(std::move(dataIn)),
-      U(data.x.size(), data.mAndersonWindowSize),
-      V(data.x.size(), data.mAndersonWindowSize),
+      U(data.x.size(), data.mWindowSize),
+      V(data.x.size(), data.mWindowSize),
       xkm1(data.x.size()),
       dx(data.x.size()),
       Fk(data.x.size()),
@@ -24,7 +24,7 @@ AcceleratedAndersonIntegrator::AcceleratedAndersonIntegrator(Data dataIn)
 {
 }
 
-void AcceleratedAndersonIntegrator::Solve(Scalar sdt, Scalar sdt2, Index iterations)
+void BroydenIntegrator::Solve(Scalar sdt, Scalar sdt2, Index iterations)
 {
     auto m  = U.cols();
     auto n  = U.rows();
@@ -68,7 +68,7 @@ void AcceleratedAndersonIntegrator::Solve(Scalar sdt, Scalar sdt2, Index iterati
 
 #include <doctest/doctest.h>
 
-TEST_CASE("[sim][vbd] AcceleratedAndersonIntegrator")
+TEST_CASE("[sim][vbd] BroydenIntegrator")
 {
     using namespace pbat;
     // Arrange
@@ -96,11 +96,11 @@ TEST_CASE("[sim][vbd] AcceleratedAndersonIntegrator")
     auto constexpr iterations = 15;
     Index constexpr m         = 5;
     using pbat::common::ToEigen;
-    using pbat::sim::vbd::AcceleratedAndersonIntegrator;
-    AcceleratedAndersonIntegrator avbd{sim::vbd::Data()
+    using pbat::sim::vbd::BroydenIntegrator;
+    BroydenIntegrator avbd{sim::vbd::Data()
                                            .WithVolumeMesh(P, T)
                                            .WithSurfaceMesh(V, F)
-                                           .WithAcceleratedAnderson(m)
+                                           .WithBroydenMethod(m)
                                            .Construct()};
     MatrixX xtilde = avbd.data.x + dt * avbd.data.v + dt * dt * avbd.data.aext;
     Scalar f0      = avbd.ObjectiveFunction(avbd.data.x, xtilde, dt);

@@ -1,15 +1,15 @@
 /**
- * @file AcceleratedAndersonIntegrator.h
+ * @file BroydenIntegrator.h
  * @author Quoc-Minh Ton-That (tonthat.quocminh@gmail.com)
- * @brief Accelerated Anderson accelerated VBD integrator
+ * @brief Broyden VBD integrator
  * @date 2025-04-05
  *
  * @copyright Copyright (c) 2025
  *
  */
 
-#ifndef PBAT_SIM_VBD_ACCELERATEDANDERSONINTEGRATOR_H
-#define PBAT_SIM_VBD_ACCELERATEDANDERSONINTEGRATOR_H
+#ifndef PBAT_SIM_VBD_BROYDENINTEGRATOR_H
+#define PBAT_SIM_VBD_BROYDENINTEGRATOR_H
 
 #include "Integrator.h"
 
@@ -18,15 +18,15 @@ namespace pbat::sim::vbd {
 /**
  * @brief Accelerated Anderson accelerated VBD integrator
  */
-class AcceleratedAndersonIntegrator : public Integrator
+class BroydenIntegrator : public Integrator
 {
   public:
     /**
-     * @brief Construct a new Accelerated Anderson Integrator object
+     * @brief Construct a new Broyden Integrator object
      *
      * @param data Simulation data
      */
-    AcceleratedAndersonIntegrator(Data data);
+    BroydenIntegrator(Data data);
 
   protected:
     /**
@@ -51,4 +51,4 @@ class AcceleratedAndersonIntegrator : public Integrator
 
 } // namespace pbat::sim::vbd
 
-#endif // PBAT_SIM_VBD_ACCELERATEDANDERSONINTEGRATOR_H
+#endif // PBAT_SIM_VBD_BROYDENINTEGRATOR_H

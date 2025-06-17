@@ -192,7 +192,7 @@ void BindData(pybind11::module& m)
             "    Data: self")
         .def(
             "with_accelerated_anderson_acceleration",
-            &Data::WithAcceleratedAnderson,
+            &Data::WithBroydenMethod,
             pyb::arg("window_size"),
             "Use accelerated Anderson acceleration\n\n"
             "Args:\n"
@@ -268,7 +268,7 @@ void BindData(pybind11::module& m)
             "Numerical zero for hessian pseudo-singularity check")
         .def_readwrite("accelerator", &Data::eAcceleration, "Acceleration strategy")
         .def_readwrite("rho", &Data::rho, "Chebyshev acceleration estimated spectral radius")
-        .def_readwrite("manderson", &Data::mAndersonWindowSize, "Anderson acceleration window size")
+        .def_readwrite("manderson", &Data::mWindowSize, "Anderson acceleration window size")
         .def_readwrite("eta", &Data::eta, "Trust Region energy reduction accuracy threshold")
         .def_readwrite("tau", &Data::tau, "Trust Region radius increase factor")
         .def_readwrite(

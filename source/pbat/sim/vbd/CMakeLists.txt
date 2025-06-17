@@ -2,8 +2,8 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     PUBLIC
     FILE_SET api
     FILES
-    "AcceleratedAndersonIntegrator.h"
     "AndersonIntegrator.h"
+    "BroydenIntegrator.h"
     "ChebyshevIntegrator.h"
     "Data.h"
     "Enums.h"
@@ -15,8 +15,8 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
 )
 target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     PRIVATE
-    "AcceleratedAndersonIntegrator.cpp"
     "AndersonIntegrator.cpp"
+    "BroydenIntegrator.cpp"
     "ChebyshevIntegrator.cpp"
     "Data.cpp"
     "Integrator.cpp"

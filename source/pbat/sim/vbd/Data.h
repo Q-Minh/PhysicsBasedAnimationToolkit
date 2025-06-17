@@ -134,11 +134,11 @@ PBAT_API struct Data
      */
     Data& WithAndersonAcceleration(Index window);
     /**
-     * @brief Use accelerated Anderson acceleration
-     * @param window Anderson acceleration window size
+     * @brief Use Broyden method
+     * @param window Broyden method window size
      * @return Reference to this
      */
-    Data& WithAcceleratedAnderson(Index window);
+    Data& WithBroydenMethod(Index window);
     /**
      * @brief Use Nesterov acceleration
      * @param L Lipschitz constant estimation for the gradient
@@ -234,7 +234,7 @@ PBAT_API struct Data
     Scalar rho{1}; ///< Chebyshev acceleration estimated spectral radius
 
     // Anderson acceleration
-    Index mAndersonWindowSize{5}; ///< Anderson acceleration window size
+    Index mWindowSize{5}; ///< Anderson acceleration window size
 
     // Nesterov
     Scalar mNesterovLipschitzConstant{1}; ///< Nesterov acceleration Lipschitz constant
