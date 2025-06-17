@@ -3,7 +3,7 @@
 #include "pbat/common/Modulo.h"
 #include "pbat/profiling/Profiling.h"
 
-#include <Eigen/QR>
+#include <Eigen/IterativeLinearSolvers>
 #include <algorithm>
 #include <exception>
 
@@ -11,13 +11,10 @@ namespace pbat::sim::vbd {
 
 BroydenIntegrator::BroydenIntegrator(Data dataIn)
     : Integrator(std::move(dataIn)),
-      Fk(data.x.size(), data.mWindowSize),
       GvbdFk(data.x.size(), data.mWindowSize),
       Xk(data.x.size(), data.mWindowSize),
       gammak(data.mWindowSize),
       xkm1(data.x.size()),
-      fk(data.x.size()),
-      fkm1(data.x.size()),
       vbdfk(data.x.size()),
       vbdfkm1(data.x.size())
 {
@@ -25,16 +22,11 @@ BroydenIntegrator::BroydenIntegrator(Data dataIn)
 
 void BroydenIntegrator::Solve(Scalar sdt, Scalar sdt2, Index iterations)
 {
-    Eigen::CompleteOrthogonalDecomposition<MatrixX> QR{};
-    QR.setThreshold(1e-10);
-    auto m  = Xk.cols();
-    auto n  = Xk.rows();
-    auto G0 = -MatrixX::Identity(n, n);
+    auto m = Xk.cols();
 
-    xkm1 = data.x.reshaped();
-    fkm1 = ObjectiveFunctionGradient(data.x, data.xtilde, sdt);
     // If x_{k+1} = x_k - VBD(f_k), then
     // VBD(f_k) = x_k - x_{k+1}
+    xkm1 = data.x.reshaped();
     RunVbdIteration(sdt, sdt2);
     vbdfkm1 = xkm1 - data.x.reshaped();
     for (Index k = 1; k < iterations; ++k)
@@ -43,25 +35,21 @@ void BroydenIntegrator::Solve(Scalar sdt, Scalar sdt2, Index iterations)
         auto dkl    = common::Modulo(k - 1, m);
         Xk.col(dkl) = data.x.reshaped() - xkm1;
         xkm1        = data.x.reshaped();
-        // f_k \leftarrow \nabla_x E(x_k)
-        fk = ObjectiveFunctionGradient(data.x, data.xtilde, sdt);
         // G_{k-m} VBD(f_k)
         RunVbdIteration(sdt, sdt2);
         vbdfk = xkm1 - data.x.reshaped();
-        // \Delta f_{k-1} \leftarrow f_k - f_{k-1}
-        Fk.col(dkl) = fk - fkm1;
-        fkm1        = fk;
         // G_{k-m} VBD(\Delta f_k) = VBD(f_k) - VBD(f_{k-1})
         GvbdFk.col(dkl) = vbdfk - vbdfkm1;
         vbdfkm1         = vbdfk;
         // Compute Broyden update
         auto mk = std::min(m, k);
-        QR.compute(Fk.leftCols(mk));
-        if (QR.info() != Eigen::ComputationInfo::Success)
-        {
-            throw std::runtime_error("QR decomposition failed");
-        }
-        gammak.head(mk)   = QR.solve(fk);
+        auto GvbdFkLS = GvbdFk.leftCols(mk);
+        Eigen::LeastSquaresConjugateGradient<MatrixX> cg(GvbdFkLS);
+        cg.setMaxIterations(m);
+        cg.setTolerance(1e-10);
+        // \gamma_k = [ VBD(F_k)^T VBD(F_k) ]^{-1} VBD(f_k)
+        gammak.head(mk) = cg.solve(vbdfk);
+        // x_{k+1} = x_k - VBD(f_k) - (X_k - G_{k-m} VBD(F_k)) \gamma_k
         data.x.reshaped() = xkm1 - vbdfk - Xk.leftCols(mk) * gammak.head(mk) +
                             GvbdFk.leftCols(mk) * gammak.head(mk);
     }
