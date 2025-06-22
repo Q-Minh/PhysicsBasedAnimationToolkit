@@ -22,15 +22,20 @@
 namespace pbat::geometry {
 
 /**
- * @brief HashGrid is a spatial partitioning data structure that divides 3D space into a grid of
- * cells, allowing for efficient querying of points within a certain region.
+ * @brief HashGrid is a spatial partitioning data structure that divides 3D space into a sparse grid
+ * of cells, allowing for efficient querying of point neighbours within a certain region.
+ * @note This implementation performs poorly when primitive sizes have high variance, as it uses a
+ * fixed cell size. It is best suited for scenarios where the size of primitives is relatively
+ * uniform.
+ * @tparam TScalar Type of scalar values (e.g., float or double).
+ * @tparam TIndex Type of index values (e.g., int or long).
  */
 template <common::CFloatingPoint TScalar = Scalar, common::CIndex TIndex = Index>
 class HashGrid
 {
   public:
     using ScalarType           = TScalar; ///< Type alias for scalar values (e.g., float or double).
-    using IndexType            = TIndex;  ///< Type alias for index values (e.g., int or size_t).
+    using IndexType            = TIndex;  ///< Type alias for index values (e.g., int or long).
     static constexpr int kDims = 3;       ///< Number of spatial dimensions.
 
     /**
@@ -57,6 +62,7 @@ class HashGrid
     /**
      * @brief Construct a HashGrid from lower and upper bounds of input axis-aligned bounding boxes
      * (aabbs).
+     * @details Time complexity is \f$ O(n) \f$ where `n` is the number of buckets.
      * @tparam FHash Type of the hash function with signature `template <class TDerivedIX>
      * IndexType(Eigen::DenseBase<TDerivedIX> const& ixyz)`.
      * @tparam TDerivedL Type of the lower bounds matrix.
@@ -83,15 +89,17 @@ class HashGrid
     /**
      * @brief Find all primitives whose cell overlaps with points `X`.
      *
-     * @tparam FOnOverlap Function with signature `void(Index n, Index o)`
+     * @tparam FOnPair Function with signature `void(Index q, Index p)` where `q` is the index of a
+     * query point and `p` is the index of a primitive that potentially overlaps with the query
+     * point.
      * @tparam FHash Function with signature `IndexType(Eigen::DenseBase<TDerivedIX> const& ixyz)`
      * @tparam TDerivedX Eigen type of query points.
      * @param X `|# dims| x |# query points|` matrix of query points.
-     * @param fOnOverlap Function to process an overlap
+     * @param fOnPair Function to process a broad-phase pair
      * @param fHash Hash function for IndexType `# dims` point coordinates.
      */
-    template <class FOnOverlap, class FHash, class TDerivedX>
-    void Overlaps(Eigen::DenseBase<TDerivedX> const& X, FOnOverlap fOnOverlap, FHash fHash) const;
+    template <class FOnPair, class FHash, class TDerivedX>
+    void BroadPhase(Eigen::DenseBase<TDerivedX> const& X, FOnPair fOnPair, FHash fHash) const;
     /**
      * @brief Get the number of buckets in the hash table.
      * @return The number of buckets in the hash table.
@@ -121,7 +129,8 @@ class HashGrid
     Eigen::Vector<IndexType, Eigen::Dynamic>
         mPrefix; ///< `|# buckets + 1| x 1` prefix sum holding hash table entries (i.e. primitives).
     Eigen::Vector<IndexType, Eigen::Dynamic>
-        mPrimitiveIds; ///< `|# buckets + 1| x 1` primitive IDs for each primitive in the grid
+        mPrimitiveIds; ///< `|# primitives| x 1` primitive IDs for each primitive in the grid, in
+                       ///< the order of the prefix sum.
 };
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
@@ -136,13 +145,13 @@ inline void HashGrid<TScalar, TIndex>::Configure(ScalarType cellSize, IndexType 
 {
     mCellSize = cellSize;
     mPrefix.resize(nBuckets + 1);
-    mPrimitiveIds.resize(nBuckets + 1);
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
 inline void HashGrid<TScalar, TIndex>::Reserve(IndexType nPrimitives)
 {
     mBucketIds.resize(nPrimitives);
+    mPrimitiveIds.resize(nPrimitives);
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
@@ -188,34 +197,39 @@ inline void HashGrid<TScalar, TIndex>::Construct(Eigen::DenseBase<TDerivedX> con
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
-template <class FOnOverlap, class FHash, class TDerivedX>
-inline void HashGrid<TScalar, TIndex>::Overlaps(
+template <class FOnPair, class FHash, class TDerivedX>
+inline void HashGrid<TScalar, TIndex>::BroadPhase(
     Eigen::DenseBase<TDerivedX> const& X,
-    FOnOverlap fOnOverlap,
+    FOnPair fOnPair,
     FHash fHash) const
 {
-    PBAT_PROFILE_NAMED_SCOPE("pbat.geometry.HashGrid.Overlaps");
+    PBAT_PROFILE_NAMED_SCOPE("pbat.geometry.HashGrid.BroadPhase");
     assert(X.rows() == kDims);
     auto const nQueries = static_cast<IndexType>(X.cols());
     auto const nBuckets = NumberOfBuckets();
     for (IndexType i = 0; i < nQueries; ++i)
     {
-        auto ixyz = ToIntegerCoordinates(X.col(i));
+        Eigen::Vector<IndexType, kDims> ixyz = ToIntegerCoordinates(X.col(i));
         for (auto cx = -1; cx <= 1; ++cx)
         {
+            ixyz.x() += cx;
             for (auto cy = -1; cy <= 1; ++cy)
             {
+                ixyz.y() += cy;
                 for (auto cz = -1; cz <= 1; ++cz)
                 {
-                    Eigen::Vector<IndexType, kDims> dixyz{cx, cy, cz};
-                    auto bucketId = common::Modulo(fHash(ixyz + dixyz), nBuckets);
+                    ixyz.z() += cz;
+                    auto bucketId = common::Modulo(fHash(ixyz), nBuckets);
                     // Iterate over all primitives in the bucket
                     auto begin = mPrefix[bucketId];
                     auto end   = mPrefix[bucketId + 1];
                     for (auto j = begin; j < end; ++j)
-                        fOnOverlap(i, mPrimitiveIds[j]);
+                        fOnPair(i, mPrimitiveIds[j]);
+                    ixyz.z() -= cz;
                 }
+                ixyz.y() -= cy;
             }
+            ixyz.x() -= cx;
         }
     }
 }

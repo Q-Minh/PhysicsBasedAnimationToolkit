@@ -35,7 +35,7 @@ TEST_CASE("[geometry] HashGrid")
     using Aabb = Eigen::AlignedBox<ScalarType, kDims>;
     Eigen::Matrix<bool, Eigen::Dynamic, Eigen::Dynamic> allPairs(C.cols(), C.cols());
     allPairs.setConstant(false);
-    grid.Overlaps(
+    grid.BroadPhase(
         ScalarType(0.5) * (L + U),
         [&](IndexType q, IndexType p) {
             allPairs(q, p) = true;
