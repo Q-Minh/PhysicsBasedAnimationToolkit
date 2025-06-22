@@ -152,6 +152,36 @@ AxisAlignedBoundingBox<Dims>::contained(Eigen::MatrixBase<TDerived> const& P) co
  * @tparam kClusterNodes Number of nodes in a cluster
  * @tparam FCluster Function with signature `auto (Index) -> std::convertible_to<Matrix<kDims,
  * kClusterNodes>>`
+ * @tparam TDerivedL Eigen dense expression type
+ * @tparam TDerivedU Eigen dense expression type
+ * @param fCluster Function to get the cluster at index `c`
+ * @param nClusters Number of clusters
+ * @param L kDims x |# clusters| output AABBs lower bounds
+ * @param U kDims x |# clusters| output AABBs upper bounds
+ */
+template <auto kDims, auto kClusterNodes, class FCluster, class TDerivedL, class TDerivedU>
+inline void ClustersToAabbs(
+    FCluster fCluster,
+    Index nClusters,
+    Eigen::DenseBase<TDerivedL>& L,
+    Eigen::DenseBase<TDerivedU>& U)
+{
+    using MatrixType = std::invoke_result_t<FCluster, Index>;
+    for (auto c = 0; c < nClusters; ++c)
+    {
+        MatrixType const& XC   = fCluster(c);
+        L.col(c).head<kDims>() = XC.rowwise().minCoeff();
+        U.col(c).tail<kDims>() = XC.rowwise().maxCoeff();
+    }
+}
+
+/**
+ * @brief Computes AABBs of nClusters kDims-dimensional point clusters
+ *
+ * @tparam kDims Spatial dimension
+ * @tparam kClusterNodes Number of nodes in a cluster
+ * @tparam FCluster Function with signature `auto (Index) -> std::convertible_to<Matrix<kDims,
+ * kClusterNodes>>`
  * @tparam TDerivedB Eigen dense expression type
  * @param fCluster Function to get the cluster at index `c`
  * @param nClusters Number of clusters
@@ -160,12 +190,48 @@ AxisAlignedBoundingBox<Dims>::contained(Eigen::MatrixBase<TDerived> const& P) co
 template <auto kDims, auto kClusterNodes, class FCluster, class TDerivedB>
 inline void ClustersToAabbs(FCluster fCluster, Index nClusters, Eigen::DenseBase<TDerivedB>& B)
 {
-    for (auto c = 0; c < nClusters; ++c)
-    {
-        Matrix<kDims, kClusterNodes> XC = fCluster(c);
-        B.col(c).head<kDims>()          = XC.rowwise().minCoeff();
-        B.col(c).tail<kDims>()          = XC.rowwise().maxCoeff();
-    }
+    return ClustersToAabbs<kDims, kClusterNodes>(
+        fCluster,
+        nClusters,
+        B.template topRows<kDims>(),
+        B.template bottomRows<kDims>());
+}
+
+/**
+ * @brief Computes AABBs of nElemNodes simplex mesh elements in kDims dimensions
+ *
+ * @tparam kDims Spatial dimension
+ * @tparam kElemNodes Number of nodes in an element
+ * @tparam TDerivedX Eigen dense expression type
+ * @tparam TDerivedE Eigen dense expression type
+ * @tparam TDerivedL Eigen dense expression type for lower bounds
+ * @tparam TDerivedU Eigen dense expression type for upper bounds
+ * @param X `kDims x |# nodes|` matrix of node positions
+ * @param E `kElemNodes x |# elements|` matrix of element node indices
+ * @param L kDims x |# elements| output AABBs lower bounds
+ * @param U kDims x |# elements| output AABBs upper bounds
+ */
+template <
+    auto kDims,
+    auto kElemNodes,
+    class TDerivedX,
+    class TDerivedE,
+    class TDerivedL,
+    class TDerivedU>
+inline void MeshToAabbs(
+    Eigen::DenseBase<TDerivedX> const& X,
+    Eigen::DenseBase<TDerivedE> const& E,
+    Eigen::DenseBase<TDerivedL>& L,
+    Eigen::DenseBase<TDerivedU>& U)
+{
+    ClustersToAabbs<kDims, kElemNodes>(
+        [&](Index e) {
+            return X(Eigen::placeholders::all, E.col(e))
+                .template topLeftCorner<kDims, kElemNodes>();
+        },
+        E.cols(),
+        L,
+        U);
 }
 
 /**
@@ -188,7 +254,8 @@ inline void MeshToAabbs(
 {
     ClustersToAabbs<kDims, kElemNodes>(
         [&](Index e) {
-            return X(Eigen::placeholders::all, E.col(e)).block<kDims, kElemNodes>(0, 0);
+            return X(Eigen::placeholders::all, E.col(e))
+                .template topLeftCorner<kDims, kElemNodes>();
         },
         E.cols(),
         B);
