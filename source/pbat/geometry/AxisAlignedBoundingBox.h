@@ -171,7 +171,7 @@ inline void ClustersToAabbs(
     {
         MatrixType const& XC   = fCluster(c);
         L.col(c).head<kDims>() = XC.rowwise().minCoeff();
-        U.col(c).tail<kDims>() = XC.rowwise().maxCoeff();
+        U.col(c).head<kDims>() = XC.rowwise().maxCoeff();
     }
 }
 
@@ -190,11 +190,13 @@ inline void ClustersToAabbs(
 template <auto kDims, auto kClusterNodes, class FCluster, class TDerivedB>
 inline void ClustersToAabbs(FCluster fCluster, Index nClusters, Eigen::DenseBase<TDerivedB>& B)
 {
-    return ClustersToAabbs<kDims, kClusterNodes>(
-        fCluster,
-        nClusters,
-        B.template topRows<kDims>(),
-        B.template bottomRows<kDims>());
+    using MatrixType = std::invoke_result_t<FCluster, Index>;
+    for (auto c = 0; c < nClusters; ++c)
+    {
+        MatrixType const& XC   = fCluster(c);
+        B.col(c).head<kDims>() = XC.rowwise().minCoeff();
+        B.col(c).tail<kDims>() = XC.rowwise().maxCoeff();
+    }
 }
 
 /**

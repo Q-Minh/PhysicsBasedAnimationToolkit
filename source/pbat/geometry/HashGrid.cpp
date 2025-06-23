@@ -9,14 +9,10 @@ TEST_CASE("[geometry] HashGrid")
 {
     using namespace pbat::geometry;
     // Arrange
-    using ScalarType = float;
-    using IndexType  = int;
-    using HashGridType = HashGrid<ScalarType, IndexType>;
-    auto constexpr kDims = HashGridType::kDims;
-
-    auto fHash = [](Eigen::Vector<IndexType, 3> const& ixyz) {
-        return ixyz.sum(); // Simple hash function for demonstration
-    };
+    using ScalarType     = float;
+    using IndexType      = int;
+    auto constexpr kDims = 3;
+    using HashGridType   = HashGrid<kDims, ScalarType, IndexType>;
 
     auto const [V, C] = model::Cube(model::EMesh::Tetrahedral /*mesh type*/, 1 /*layer*/);
     Eigen::Matrix<ScalarType, 3, Eigen::Dynamic> L(3, C.cols());
@@ -24,9 +20,10 @@ TEST_CASE("[geometry] HashGrid")
     MeshToAabbs<kDims, 4>(V.cast<ScalarType>(), C.cast<IndexType>(), L, U);
     ScalarType const cellSize = ScalarType(0.5) * (U - L).maxCoeff();
     IndexType const nBuckets  = static_cast<IndexType>(C.cols() * 3);
+    auto const fHash          = HashByXorOfPrimeMultiples<IndexType>();
 
     // Act
-    HashGrid<ScalarType, IndexType> grid{};
+    HashGridType grid{};
     grid.Configure(cellSize, nBuckets);
     grid.Construct(L, U, fHash);
 

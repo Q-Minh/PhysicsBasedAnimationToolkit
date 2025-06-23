@@ -22,6 +22,31 @@
 namespace pbat::geometry {
 
 /**
+ * @brief Returns a hash function used in \cite teschner2003 for 2 or 3-vectors suitable as input to
+ * HashGrid's API.
+ * @tparam THashed Integer type for the hash function's output
+ * @return Hash function suitable for 2 or 3-vectors
+ */
+template <common::CIndex THashed>
+[[maybe_unused]] inline auto HashByXorOfPrimeMultiples()
+{
+    return []<class TDerivedX>(Eigen::DenseBase<TDerivedX> const& X) {
+        static_assert(
+            TDerivedX::SizeAtCompileTime == 2 or TDerivedX::SizeAtCompileTime == 3,
+            "Only eigen vectors of compile-time size 2 or 3 are supported.");
+        if constexpr (TDerivedX::SizeAtCompileTime == 2)
+        {
+            return static_cast<THashed>(X(0) * 73856093) ^ static_cast<THashed>(X(1) * 19349663);
+        }
+        if constexpr (TDerivedX::SizeAtCompileTime == 3)
+        {
+            return static_cast<THashed>(X(0) * 73856093) ^ static_cast<THashed>(X(1) * 19349663) ^
+                   static_cast<THashed>(X(2) * 83492791);
+        }
+    };
+}
+
+/**
  * @brief HashGrid is a spatial partitioning data structure that divides 3D space into a sparse grid
  * of cells, allowing for efficient querying of point neighbours within a certain region.
  * @note This implementation performs poorly when primitive sizes have high variance, as it uses a
@@ -30,13 +55,14 @@ namespace pbat::geometry {
  * @tparam TScalar Type of scalar values (e.g., float or double).
  * @tparam TIndex Type of index values (e.g., int or long).
  */
-template <common::CFloatingPoint TScalar = Scalar, common::CIndex TIndex = Index>
+template <int Dims, common::CFloatingPoint TScalar = Scalar, common::CIndex TIndex = Index>
 class HashGrid
 {
   public:
     using ScalarType           = TScalar; ///< Type alias for scalar values (e.g., float or double).
     using IndexType            = TIndex;  ///< Type alias for index values (e.g., int or long).
-    static constexpr int kDims = 3;       ///< Number of spatial dimensions.
+    static constexpr int kDims = Dims;    ///< Number of spatial dimensions.
+    static_assert(Dims >= 2 and Dims <= 3, "HashGrid only supports 2D and 3D");
 
     /**
      * @brief Default constructor for HashGrid.
@@ -133,30 +159,30 @@ class HashGrid
                        ///< the order of the prefix sum.
 };
 
-template <common::CFloatingPoint TScalar, common::CIndex TIndex>
-inline HashGrid<TScalar, TIndex>::HashGrid(ScalarType cellSize, IndexType nBuckets)
-    : HashGrid<TScalar, TIndex>()
+template <int Dims, common::CFloatingPoint TScalar, common::CIndex TIndex>
+inline HashGrid<Dims, TScalar, TIndex>::HashGrid(ScalarType cellSize, IndexType nBuckets)
+    : HashGrid<Dims, TScalar, TIndex>()
 {
     Configure(cellSize, nBuckets);
 }
 
-template <common::CFloatingPoint TScalar, common::CIndex TIndex>
-inline void HashGrid<TScalar, TIndex>::Configure(ScalarType cellSize, IndexType nBuckets)
+template <int Dims, common::CFloatingPoint TScalar, common::CIndex TIndex>
+inline void HashGrid<Dims, TScalar, TIndex>::Configure(ScalarType cellSize, IndexType nBuckets)
 {
     mCellSize = cellSize;
     mPrefix.resize(nBuckets + 1);
 }
 
-template <common::CFloatingPoint TScalar, common::CIndex TIndex>
-inline void HashGrid<TScalar, TIndex>::Reserve(IndexType nPrimitives)
+template <int Dims, common::CFloatingPoint TScalar, common::CIndex TIndex>
+inline void HashGrid<Dims, TScalar, TIndex>::Reserve(IndexType nPrimitives)
 {
     mBucketIds.resize(nPrimitives);
     mPrimitiveIds.resize(nPrimitives);
 }
 
-template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+template <int Dims, common::CFloatingPoint TScalar, common::CIndex TIndex>
 template <class FHash, class TDerivedL, class TDerivedU>
-void HashGrid<TScalar, TIndex>::Construct(
+void HashGrid<Dims, TScalar, TIndex>::Construct(
     Eigen::DenseBase<TDerivedL> const& L,
     Eigen::DenseBase<TDerivedU> const& U,
     FHash fHash)
@@ -166,9 +192,10 @@ void HashGrid<TScalar, TIndex>::Construct(
     Construct(ScalarType(0.5) * (L.derived() + U.derived()), fHash);
 }
 
-template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+template <int Dims, common::CFloatingPoint TScalar, common::CIndex TIndex>
 template <class FHash, class TDerivedX>
-inline void HashGrid<TScalar, TIndex>::Construct(Eigen::DenseBase<TDerivedX> const& X, FHash fHash)
+inline void
+HashGrid<Dims, TScalar, TIndex>::Construct(Eigen::DenseBase<TDerivedX> const& X, FHash fHash)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.geometry.HashGrid.Construct");
     auto const nPrimitives = static_cast<IndexType>(X.cols());
@@ -196,47 +223,66 @@ inline void HashGrid<TScalar, TIndex>::Construct(Eigen::DenseBase<TDerivedX> con
     }
 }
 
-template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+template <int Dims, common::CFloatingPoint TScalar, common::CIndex TIndex>
 template <class FOnPair, class FHash, class TDerivedX>
-inline void HashGrid<TScalar, TIndex>::BroadPhase(
+inline void HashGrid<Dims, TScalar, TIndex>::BroadPhase(
     Eigen::DenseBase<TDerivedX> const& X,
     FOnPair fOnPair,
     FHash fHash) const
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.geometry.HashGrid.BroadPhase");
     assert(X.rows() == kDims);
-    auto const nQueries = static_cast<IndexType>(X.cols());
-    auto const nBuckets = NumberOfBuckets();
-    for (IndexType i = 0; i < nQueries; ++i)
+    auto const nQueries   = static_cast<IndexType>(X.cols());
+    auto const nBuckets   = NumberOfBuckets();
+    auto const fVisitCell = [&](IndexType q, Eigen::Vector<IndexType, kDims> const& ixyz) {
+        auto bucketId = common::Modulo(fHash(ixyz), nBuckets);
+        auto begin    = mPrefix[bucketId];
+        auto end      = mPrefix[bucketId + 1];
+        for (auto j = begin; j < end; ++j)
+            fOnPair(q, mPrimitiveIds[j]);
+    };
+    for (IndexType q = 0; q < nQueries; ++q)
     {
-        Eigen::Vector<IndexType, kDims> ixyz = ToIntegerCoordinates(X.col(i));
-        for (auto cx = -1; cx <= 1; ++cx)
+        Eigen::Vector<IndexType, kDims> ixyz = ToIntegerCoordinates(X.col(q));
+        if constexpr (kDims == 2)
         {
-            ixyz.x() += cx;
-            for (auto cy = -1; cy <= 1; ++cy)
+            for (auto cx = -1; cx <= 1; ++cx)
             {
-                ixyz.y() += cy;
-                for (auto cz = -1; cz <= 1; ++cz)
+                ixyz.x() += cx;
+                for (auto cy = -1; cy <= 1; ++cy)
                 {
-                    ixyz.z() += cz;
-                    auto bucketId = common::Modulo(fHash(ixyz), nBuckets);
-                    // Iterate over all primitives in the bucket
-                    auto begin = mPrefix[bucketId];
-                    auto end   = mPrefix[bucketId + 1];
-                    for (auto j = begin; j < end; ++j)
-                        fOnPair(i, mPrimitiveIds[j]);
-                    ixyz.z() -= cz;
+                    ixyz.y() += cy;
+                    fVisitCell(q, ixyz);
+                    ixyz.y() -= cy;
                 }
-                ixyz.y() -= cy;
+                ixyz.x() -= cx;
             }
-            ixyz.x() -= cx;
+        }
+        if constexpr (kDims == 3)
+        {
+            for (auto cx = -1; cx <= 1; ++cx)
+            {
+                ixyz.x() += cx;
+                for (auto cy = -1; cy <= 1; ++cy)
+                {
+                    ixyz.y() += cy;
+                    for (auto cz = -1; cz <= 1; ++cz)
+                    {
+                        ixyz.z() += cz;
+                        fVisitCell(q, ixyz);
+                        ixyz.z() -= cz;
+                    }
+                    ixyz.y() -= cy;
+                }
+                ixyz.x() -= cx;
+            }
         }
     }
 }
 
-template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+template <int Dims, common::CFloatingPoint TScalar, common::CIndex TIndex>
 template <class TDerivedX>
-inline auto HashGrid<TScalar, TIndex>::Cell(Eigen::DenseBase<TDerivedX> const& X) const
+inline auto HashGrid<Dims, TScalar, TIndex>::Cell(Eigen::DenseBase<TDerivedX> const& X) const
     -> Eigen::Matrix<ScalarType, kDims, 2>
 {
     Eigen::Matrix<ScalarType, kDims, 2> cell{};
@@ -246,10 +292,10 @@ inline auto HashGrid<TScalar, TIndex>::Cell(Eigen::DenseBase<TDerivedX> const& X
     return cell;
 }
 
-template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+template <int Dims, common::CFloatingPoint TScalar, common::CIndex TIndex>
 template <class TDerivedX>
 inline auto
-HashGrid<TScalar, TIndex>::ToIntegerCoordinates(Eigen::DenseBase<TDerivedX> const& X) const
+HashGrid<Dims, TScalar, TIndex>::ToIntegerCoordinates(Eigen::DenseBase<TDerivedX> const& X) const
     -> Eigen::Vector<IndexType, kDims>
 {
     return Eigen::Vector<ScalarType, kDims>(
