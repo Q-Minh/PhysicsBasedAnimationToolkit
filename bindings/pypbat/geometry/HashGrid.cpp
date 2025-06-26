@@ -79,9 +79,14 @@ void BindHashGrid([[maybe_unused]] pybind11::module& m)
                 "   X (numpy.ndarray): `|# dims| x |# points|` points.\n")
             .def(
                 "broad_phase",
-                [](HashGridType& self, pyb::EigenDRef<MatrixX const> X) {
+                [](HashGridType& self,
+                   pyb::EigenDRef<MatrixX const> X,
+                   std::size_t nExpectedPrimitivesPerCell) {
                     std::vector<std::pair<Index, Index>> broadPhasePairs{};
-                    broadPhasePairs.reserve(static_cast<std::size_t>(X.cols()));
+                    auto constexpr kDims      = HashGridType::kDims;
+                    auto const nCellsPerVisit = kDims == 3 ? 27 : 9;
+                    auto const nQueries       = static_cast<std::size_t>(X.cols());
+                    broadPhasePairs.reserve(nExpectedPrimitivesPerCell * nCellsPerVisit * nQueries);
                     auto fHash = pbat::geometry::HashByXorOfPrimeMultiples<Index>();
                     self.BroadPhase(
                         X.topRows<HashGridType::kDims>(),
@@ -90,9 +95,12 @@ void BindHashGrid([[maybe_unused]] pybind11::module& m)
                     return broadPhasePairs;
                 },
                 pyb::arg("X"),
+                pyb::arg("n_expected_primitives_per_cell") = 1,
                 "Find all primitives whose cell overlaps with points `X`.\n\n"
                 "Args:\n"
                 "   X (numpy.ndarray): `|# dims| x |# query points|` matrix of query points.\n"
+                "   n_expected_primitives_per_cell (int): Expected number of primitives per cell. "
+                "Defaults to 1.\n"
                 "Returns:\n"
                 "   List[Tuple[int, int]]: List of broad phase query-point to primitive pairs (q, "
                 "p).\n");

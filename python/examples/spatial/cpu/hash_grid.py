@@ -28,6 +28,14 @@ if __name__ == "__main__":
         dest="translation",
         default=0.1,
     )
+    parser.add_argument(
+        "--num-buckets",
+        help="Number of buckets for the hash grid as a multiple of the number "
+        "of input mesh elements, i.e. # buckets = <value of --num-buckets> * # elements",
+        type=int,
+        dest="num_buckets",
+        default=2,
+    )
     args = parser.parse_args()
 
     imesh = meshio.read(args.input)
@@ -43,7 +51,7 @@ if __name__ == "__main__":
 
     # Setup animation
     V = np.vstack([V, V])
-    height = 3
+    height = 4
     vimin = V[:n_pts, -1].argmin()
     vimax = V[:n_pts, -1].argmax()
     zmin = V[vimin, -1]
@@ -106,15 +114,16 @@ if __name__ == "__main__":
             L = np.min(VE, axis=1).reshape((dims, C.shape[0]), order="F")
             U = np.max(VE, axis=1).reshape((dims, C.shape[0]), order="F")
             cell_size = 0.5 * np.max(U[:, :n_tets] - L[:, :n_tets])
-            n_buckets = 2 * n_tets
+            n_buckets = args.num_buckets * n_tets
             grid.configure(cell_size, n_buckets)
             grid.construct(L[:, :n_tets], U[:, :n_tets])
             query_points = 0.5 * (L[:, n_tets:] + U[:, n_tets:])
-            pairs = grid.broad_phase(query_points)
-            pairs = np.array(pairs).T
-            pairs[0, :] += n_tets  # Offset second mesh indices
+            pairs = grid.broad_phase(query_points, n_expected_primitives_per_cell=50)
             overlapping[:] = 0
-            overlapping[pairs.flatten()] = 1
+            if len(pairs) > 0:
+                pairs = np.array(pairs).T
+                pairs[0, :] += n_tets  # Offset second mesh indices
+                overlapping[pairs.flatten()] = 1
             vm.add_scalar_quantity(
                 "Active simplices",
                 overlapping,

@@ -14,42 +14,52 @@ TEST_CASE("[geometry] HashGrid")
     auto constexpr kDims = 3;
     using HashGridType   = HashGrid<kDims, ScalarType, IndexType>;
 
-    auto const [V, C] = model::Cube(model::EMesh::Tetrahedral /*mesh type*/, 1 /*layer*/);
-    Eigen::Matrix<ScalarType, 3, Eigen::Dynamic> L(3, C.cols());
-    Eigen::Matrix<ScalarType, 3, Eigen::Dynamic> U(3, C.cols());
-    MeshToAabbs<kDims, 4>(V.cast<ScalarType>(), C.cast<IndexType>(), L, U);
-    ScalarType const cellSize = ScalarType(0.5) * (U - L).maxCoeff();
-    IndexType const nBuckets  = static_cast<IndexType>(C.cols() * 3);
-    auto const fHash          = HashByXorOfPrimeMultiples<IndexType>();
+    Eigen::Vector<IndexType, kDims> const gridDims{5, 5, 5};
+    ScalarType cellSize = ScalarType(1);
+    Eigen::Matrix<ScalarType, kDims, Eigen::Dynamic> L(kDims, gridDims.prod());
+    Eigen::Matrix<ScalarType, kDims, Eigen::Dynamic> U(kDims, gridDims.prod());
+
+    // Create regular grid of axis-aligned bounding boxes
+    for (auto i = 0, n = 0; i < gridDims(0); ++i)
+    {
+        for (auto j = 0; j < gridDims(1); ++j)
+        {
+            for (auto k = 0; k < gridDims(2); ++k)
+            {
+                L.col(n) =
+                    Eigen::Vector<ScalarType, kDims>(i * cellSize, j * cellSize, k * cellSize);
+                U.col(n) = L.col(n) + Eigen::Vector<ScalarType, kDims>::Constant(cellSize);
+                ++n;
+            }
+        }
+    }
+
+    IndexType const nBuckets = static_cast<IndexType>(L.cols() * 3);
+    auto const fHash         = HashByXorOfPrimeMultiples<IndexType>();
 
     // Act
     HashGridType grid{};
-    grid.Configure(cellSize, nBuckets);
+    ScalarType tolerance = std::numeric_limits<ScalarType>::epsilon();
+    grid.Configure(cellSize + tolerance, nBuckets);
     grid.Construct(L, U, fHash);
 
     // Assert
     CHECK_EQ(grid.NumberOfBuckets(), nBuckets);
     using Aabb = Eigen::AlignedBox<ScalarType, kDims>;
-    Eigen::Matrix<bool, Eigen::Dynamic, Eigen::Dynamic> allPairs(C.cols(), C.cols());
+    Eigen::Matrix<bool, Eigen::Dynamic, Eigen::Dynamic> allPairs(L.cols(), L.cols());
     allPairs.setConstant(false);
-    grid.BroadPhase(
-        ScalarType(0.5) * (L + U),
-        [&](IndexType q, IndexType p) {
-            allPairs(q, p) = true;
-            Eigen::Matrix<ScalarType, kDims, 2> const cell =
-                grid.Cell(ScalarType(0.5) * (L.col(q) + U.col(q)));
-            bool const bCellOverlapsPrimitive =
-                Aabb(cell.col(0), cell.col(1)).intersects(Aabb(L.col(p), U.col(p)));
-            CHECK(bCellOverlapsPrimitive);
-        },
-        fHash);
-    for (IndexType i = 0; i < C.cols(); ++i)
+    Eigen::Matrix<ScalarType, kDims, Eigen::Dynamic> const Q = ScalarType(0.5) * (L + U);
+    // Broad-phase pairs must be a super-set of overlapping pairs.
+    grid.BroadPhase(Q, [&](IndexType q, IndexType p) { allPairs(q, p) = true; }, fHash);
+    for (IndexType i = 0; i < L.cols(); ++i)
     {
-        for (IndexType j = 0; j < C.cols(); ++j)
+        Aabb aabbi(L.col(i), U.col(i));
+        for (IndexType j = 0; j < L.cols(); ++j)
         {
-            bool const bCellOverlapsPrimitive =
-                Aabb(L.col(i), U.col(i)).intersects(Aabb(L.col(j), U.col(j)));
-            CHECK_EQ(bCellOverlapsPrimitive, allPairs(i, j));
+            Aabb aabbj(L.col(j), U.col(j));
+            bool const bCellOverlapsPrimitive = aabbi.intersects(aabbj);
+            if (bCellOverlapsPrimitive)
+                CHECK(allPairs(i, j));
         }
     }
 }
