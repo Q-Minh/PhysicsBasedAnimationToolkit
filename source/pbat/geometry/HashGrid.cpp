@@ -46,11 +46,11 @@ TEST_CASE("[geometry] HashGrid")
     // Assert
     CHECK_EQ(grid.NumberOfBuckets(), nBuckets);
     using Aabb = Eigen::AlignedBox<ScalarType, kDims>;
-    Eigen::Matrix<bool, Eigen::Dynamic, Eigen::Dynamic> allPairs(L.cols(), L.cols());
-    allPairs.setConstant(false);
+    Eigen::Matrix<bool, Eigen::Dynamic, Eigen::Dynamic> bIsBroadPhasePair(L.cols(), L.cols());
+    bIsBroadPhasePair.setConstant(false);
     Eigen::Matrix<ScalarType, kDims, Eigen::Dynamic> const Q = ScalarType(0.5) * (L + U);
     // Broad-phase pairs must be a super-set of overlapping pairs.
-    grid.BroadPhase(Q, [&](IndexType q, IndexType p) { allPairs(q, p) = true; }, fHash);
+    grid.BroadPhase(Q, [&](IndexType q, IndexType p) { bIsBroadPhasePair(q, p) = true; }, fHash);
     for (IndexType i = 0; i < L.cols(); ++i)
     {
         Aabb aabbi(L.col(i), U.col(i));
@@ -59,7 +59,7 @@ TEST_CASE("[geometry] HashGrid")
             Aabb aabbj(L.col(j), U.col(j));
             bool const bCellOverlapsPrimitive = aabbi.intersects(aabbj);
             if (bCellOverlapsPrimitive)
-                CHECK(allPairs(i, j));
+                CHECK(bIsBroadPhasePair(i, j));
         }
     }
 }
