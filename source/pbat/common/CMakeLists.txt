@@ -4,6 +4,7 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     FILES 
         "ArgSort.h"
         "BinaryRadixTree.h"
+        "BruteSet.h"
         "Common.h"
         "Concepts.h"
         "ConstexprFor.h"
@@ -23,6 +24,7 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
 PRIVATE
     "ArgSort.cpp"
     "BinaryRadixTree.cpp"
+    "BruteSet.cpp"
     "CountingSort.cpp"
     "Eigen.cpp"
     "Heap.cpp"
