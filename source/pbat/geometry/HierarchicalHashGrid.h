@@ -74,6 +74,23 @@ class HierarchicalHashGrid
     template <class FOnPair, class TDerivedX>
     void BroadPhase(Eigen::DenseBase<TDerivedX> const& X, FOnPair fOnPair) const;
     /**
+     * @brief Find all primitives whose cell overlaps with aabbs (L,U).
+     *
+     * @tparam FOnPair Function with signature `void(Index q, Index p)` where `q` is the index of a
+     * query point and `p` is the index of a primitive that potentially overlaps with the query
+     * point.
+     * @tparam TDerivedL Eigen type of query lower bounds.
+     * @tparam TDerivedU Eigen type of query upper bounds.
+     * @param L `|# dims| x |# query aabbs|` matrix of query aabb lower bounds.
+     * @param U `|# dims| x |# query aabbs|` matrix of query aabb upper bounds.
+     * @param fOnPair Function to process a broad-phase pair
+     */
+    template <class FOnPair, class TDerivedL, class TDerivedU>
+    void BroadPhase(
+        Eigen::DenseBase<TDerivedL> const& L,
+        Eigen::DenseBase<TDerivedU> const& U,
+        FOnPair fOnPair) const;
+    /**
      * @brief Get the number of buckets in the hash table.
      * @return The number of buckets in the hash table.
      */
@@ -241,6 +258,62 @@ void HierarchicalHashGrid<Dims, TScalar, TIndex>::BroadPhase(
             {
                 auto const i = mPrimitiveIds(k);
                 fOnPair(q, i);
+            }
+        }
+    }
+}
+
+template <int Dims, common::CFloatingPoint TScalar, common::CIndex TIndex>
+template <class FOnPair, class TDerivedL, class TDerivedU>
+inline void HierarchicalHashGrid<Dims, TScalar, TIndex>::BroadPhase(
+    Eigen::DenseBase<TDerivedL> const& L,
+    Eigen::DenseBase<TDerivedU> const& U,
+    FOnPair fOnPair) const
+{
+    PBAT_PROFILE_NAMED_SCOPE("pbat.geometry.HierarchicalHashGrid.BroadPhase");
+    assert(L.rows() == kDims);    // L must have |# dims| rows
+    assert(U.rows() == kDims);    // U must have |# dims| rows
+    assert(L.cols() == U.cols()); // L and U must have the same number of columns
+    auto const nQueries = static_cast<IndexType>(L.cols());
+    auto const nBuckets = NumberOfBuckets();
+    for (IndexType q = 0; q < nQueries; ++q)
+    {
+        for (std::int16_t l : mSetOfLevels)
+        {
+            auto cellSize = std::pow(ScalarType(2), static_cast<ScalarType>(l));
+            Eigen::Vector<IndexType, kDims> iqb = ToIntegerCoordinates(L.col(q), cellSize);
+            Eigen::Vector<IndexType, kDims> iqe = ToIntegerCoordinates(U.col(q), cellSize);
+            Eigen::Vector<IndexType, kDims> iq;
+            for (iq(0) = iqb(0); iq(0) <= iqe(0); ++iq(0))
+            {
+                for (iq(1) = iqb(1); iq(1) <= iqe(1); ++iq(1))
+                {
+                    if constexpr (kDims == 2)
+                    {
+                        auto bucketId    = common::Modulo(Hash(iq, l), nBuckets);
+                        auto beginBucket = mPrefix(bucketId);
+                        auto endBucket   = mPrefix(bucketId + 1);
+                        for (auto k = beginBucket; k < endBucket; ++k)
+                        {
+                            auto const i = mPrimitiveIds(k);
+                            fOnPair(q, i);
+                        }
+                    }
+                    else
+                    {
+                        for (iq(2) = iqb(2); iq(2) <= iqe(2); ++iq(2))
+                        {
+                            auto bucketId    = common::Modulo(Hash(iq, l), nBuckets);
+                            auto beginBucket = mPrefix(bucketId);
+                            auto endBucket   = mPrefix(bucketId + 1);
+                            for (auto k = beginBucket; k < endBucket; ++k)
+                            {
+                                auto const i = mPrimitiveIds(k);
+                                fOnPair(q, i);
+                            }
+                        }
+                    }
+                }
             }
         }
     }
