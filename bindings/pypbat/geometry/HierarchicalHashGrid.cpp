@@ -2,7 +2,6 @@
 
 #include <pbat/common/ConstexprFor.h>
 #include <pbat/geometry/HierarchicalHashGrid.h>
-#include <pbat/geometry/OverlapQueries.h>
 #include <pybind11/eigen.h>
 #include <pybind11/stl.h>
 #include <string>
@@ -26,19 +25,27 @@ void BindHierarchicalHashGrid(pybind11::module& m)
         pyb::class_<HashGridType>(m, className.data())
             .def(pyb::init<>())
             .def(
-                pyb::init<typename HashGridType::IndexType>(),
+                pyb::init<typename HashGridType::IndexType, typename HashGridType::IndexType>(),
                 pyb::arg("n_primitives"),
+                pyb::arg("n_buckets") = 0,
                 "Construct a HierarchicalHashGrid with memory reserved for a specific number of "
+                "primitives. Optionally, the number of buckets to allocate can be directly "
+                "specified, overriding the default number of buckets allocated for n_primitives "
                 "primitives.\n\n"
                 "Args:\n"
-                "   n_primitives (int): Number of primitives to reserve space for.\n")
+                "   n_primitives (int): Number of primitives to reserve space for.\n"
+                "   n_buckets (int): Number of buckets to reserve space for.\n")
             .def(
                 "configure",
                 &HashGridType::Configure,
                 pyb::arg("n_primitives"),
-                "Reserve memory for a specific number of primitives.\n\n"
+                pyb::arg("n_buckets") = 0,
+                "Reserve memory for a specific number of primitives. Optionally, the number of "
+                "buckets to allocate can be directly specified, overriding the default number of "
+                "buckets allocated for n_primitives primitives.\n\n"
                 "Args:\n"
-                "   n_primitives (int): Number of primitives to reserve space for.\n")
+                "   n_primitives (int): Number of primitives to reserve space for.\n"
+                "   n_buckets (int): Number of buckets to reserve space for.\n")
             .def(
                 "construct",
                 [](HashGridType& self,
@@ -122,16 +129,11 @@ void BindHierarchicalHashGrid(pybind11::module& m)
                     auto const nCellsPerVisit = kDims == 3 ? 8 : 4;
                     auto const nQueries       = static_cast<std::size_t>(X.cols());
                     broadPhasePairs.reserve(nExpectedPrimitivesPerCell * nCellsPerVisit * nQueries);
-                    self.BroadPhase(X.topRows<HashGridType::kDims>(), [&](Index q, Index p) {
-                        using pbat::math::linalg::mini::FromEigen;
-                        if (pbat::geometry::OverlapQueries::PointAxisAlignedBoundingBox(
-                                FromEigen(X.col(q).head<HashGridType::kDims>()),
-                                FromEigen(L.col(p).head<HashGridType::kDims>()),
-                                FromEigen(U.col(p).head<HashGridType::kDims>())))
-                        {
-                            broadPhasePairs.push_back({q, p});
-                        }
-                    });
+                    self.BroadPhase(
+                        L.topRows<HashGridType::kDims>(),
+                        U.topRows<HashGridType::kDims>(),
+                        X.topRows<HashGridType::kDims>(),
+                        [&](Index q, Index p) { broadPhasePairs.push_back({q, p}); });
                     return broadPhasePairs;
                 },
                 pyb::arg("L"),
@@ -164,19 +166,11 @@ void BindHierarchicalHashGrid(pybind11::module& m)
                     auto const nQueries       = static_cast<std::size_t>(LQ.cols());
                     broadPhasePairs.reserve(nExpectedPrimitivesPerCell * nCellsPerVisit * nQueries);
                     self.BroadPhase(
+                        LP.topRows<HashGridType::kDims>(),
+                        UP.topRows<HashGridType::kDims>(),
                         LQ.topRows<HashGridType::kDims>(),
                         UQ.topRows<HashGridType::kDims>(),
-                        [&](Index q, Index p) {
-                            using pbat::math::linalg::mini::FromEigen;
-                            if (pbat::geometry::OverlapQueries::AxisAlignedBoundingBoxes(
-                                    FromEigen(LQ.col(q).head<HashGridType::kDims>()),
-                                    FromEigen(UQ.col(q).head<HashGridType::kDims>()),
-                                    FromEigen(LP.col(p).head<HashGridType::kDims>()),
-                                    FromEigen(UP.col(p).head<HashGridType::kDims>())))
-                            {
-                                broadPhasePairs.push_back({q, p});
-                            }
-                        });
+                        [&](Index q, Index p) { broadPhasePairs.push_back({q, p}); });
                     return broadPhasePairs;
                 },
                 pyb::arg("LP"),

@@ -6,6 +6,8 @@
 #include "pbat/common/Concepts.h"
 #include "pbat/common/Eigen.h"
 #include "pbat/common/Modulo.h"
+#include "pbat/geometry/OverlapQueries.h"
+#include "pbat/math/linalg/mini/Eigen.h"
 #include "pbat/profiling/Profiling.h"
 
 #include <Eigen/Core>
@@ -42,13 +44,18 @@ class HierarchicalHashGrid
     /**
      * @brief Construct a HierarchicalHashGrid with a specific number of primitives.
      * @param nPrimitives Number of primitives in the hash grid.
+     * @param nBuckets Number of buckets in the hash grid. The actual number of allocated buckets
+     * will be `max(nBuckets, nPrimitives * kMaxCellsPerPrimitive)`.
      */
-    HierarchicalHashGrid(IndexType nPrimitives);
+    HierarchicalHashGrid(IndexType nPrimitives, IndexType nBuckets = 0);
     /**
      * @brief Configure the hash grid with a specific number of buckets.
      * @param nPrimitives Number of primitives in the hash grid.
+     * @param nBuckets Number of buckets in the hash grid. The actual number of allocated buckets
+     * will be `max(nBuckets, nPrimitives * kMaxCellsPerPrimitive)`.
+     * @pre `nBuckets >= nPrimitives * kMaxCellsPerPrimitive`
      */
-    void Configure(IndexType nPrimitives);
+    void Configure(IndexType nPrimitives, IndexType nBuckets = 0);
     /**
      * @brief Construct a HashGrid from lower and upper bounds of input axis-aligned bounding boxes
      * (aabbs).
@@ -89,6 +96,47 @@ class HierarchicalHashGrid
     void BroadPhase(
         Eigen::DenseBase<TDerivedL> const& L,
         Eigen::DenseBase<TDerivedU> const& U,
+        FOnPair fOnPair) const;
+    /**
+     * @brief Find all primitive AABBs overlapping with query points X.
+     * @tparam FOnPair Function with signature `void(Index q, Index p)` where `q` is the index of a
+     * query point and `p` is the index of a primitive that potentially overlaps with the
+     * query point.
+     * @tparam TDerivedLP Eigen type of lower bounds of primitive AABBs.
+     * @tparam TDerivedUP Eigen type of upper bounds of primitive AABBs.
+     * @tparam TDerivedX Eigen type of query points.
+     * @param LP `|# dims| x |# primitives|` lower bounds of the primitive AABBs.
+     * @param UP `|# dims| x |# primitives|` upper bounds of the primitive AABBs.
+     * @param XQ `|# dims| x |# query points|` matrix of query points.
+     * @param fOnPair Function to process a broad-phase pair
+     */
+    template <class FOnPair, class TDerivedLP, class TDerivedUP, class TDerivedX>
+    void BroadPhase(
+        Eigen::DenseBase<TDerivedLP> const& LP,
+        Eigen::DenseBase<TDerivedUP> const& UP,
+        Eigen::DenseBase<TDerivedX> const& XQ,
+        FOnPair fOnPair) const;
+    /**
+     * @brief Find all primitive AABBs overlapping with query AABBs.
+     * @tparam FOnPair Function with signature `void(Index q, Index p)` where `q` is the index of a
+     * query AABB and `p` is the index of a primitive AABB overlaps with the
+     * query AABB.
+     * @tparam TDerivedLP Eigen type of lower bounds of primitive AABBs.
+     * @tparam TDerivedUP Eigen type of upper bounds of primitive AABBs.
+     * @tparam TDerivedLQ Eigen type of lower bounds of query AABBs.
+     * @tparam TDerivedUQ Eigen type of upper bounds of query AABBs.
+     * @param LP `|# dims| x |# primitives|` lower bounds of the primitive AABBs.
+     * @param UP `|# dims| x |# primitives|` upper bounds of the primitive AABBs.
+     * @param LQ `|# dims| x |# query aabbs|` lower bounds of the query AABBs.
+     * @param UQ `|# dims| x |# query aabbs|` upper bounds of the query AABBs.
+     * @param fOnPair Function to process a broad-phase pair
+     */
+    template <class FOnPair, class TDerivedLP, class TDerivedUP, class TDerivedLQ, class TDerivedUQ>
+    void BroadPhase(
+        Eigen::DenseBase<TDerivedLP> const& LP,
+        Eigen::DenseBase<TDerivedUP> const& UP,
+        Eigen::DenseBase<TDerivedLQ> const& LQ,
+        Eigen::DenseBase<TDerivedUQ> const& UQ,
         FOnPair fOnPair) const;
     /**
      * @brief Get the number of buckets in the hash table.
@@ -150,16 +198,19 @@ class HierarchicalHashGrid
 };
 
 template <int Dims, common::CFloatingPoint TScalar, common::CIndex TIndex>
-HierarchicalHashGrid<Dims, TScalar, TIndex>::HierarchicalHashGrid(IndexType nPrimitives)
+HierarchicalHashGrid<Dims, TScalar, TIndex>::HierarchicalHashGrid(
+    IndexType nPrimitives,
+    IndexType nBuckets)
     : mCellCounts(), mBucketIds(), mPrefix(), mPrimitiveIds(), mSetOfLevels()
 {
-    Configure(nPrimitives);
+    Configure(nPrimitives, nBuckets);
 }
 
 template <int Dims, common::CFloatingPoint TScalar, common::CIndex TIndex>
-inline void HierarchicalHashGrid<Dims, TScalar, TIndex>::Configure(IndexType nPrimitives)
+inline void
+HierarchicalHashGrid<Dims, TScalar, TIndex>::Configure(IndexType nPrimitives, IndexType nBuckets)
 {
-    auto nBuckets = nPrimitives * kMaxCellsPerPrimitive;
+    nBuckets = std::max(nPrimitives * kMaxCellsPerPrimitive, nBuckets);
     mCellCounts.resize(nPrimitives);
     mBucketIds.resize(nBuckets);
     mPrefix.resize(nBuckets + 1);
@@ -317,6 +368,48 @@ inline void HierarchicalHashGrid<Dims, TScalar, TIndex>::BroadPhase(
             }
         }
     }
+}
+
+template <int Dims, common::CFloatingPoint TScalar, common::CIndex TIndex>
+template <class FOnPair, class TDerivedLP, class TDerivedUP, class TDerivedX>
+inline void HierarchicalHashGrid<Dims, TScalar, TIndex>::BroadPhase(
+    Eigen::DenseBase<TDerivedLP> const& LP,
+    Eigen::DenseBase<TDerivedUP> const& UP,
+    Eigen::DenseBase<TDerivedX> const& XQ,
+    FOnPair fOnPair) const
+{
+    BroadPhase(XQ, [&](Index q, Index p) {
+        using pbat::math::linalg::mini::FromEigen;
+        if (OverlapQueries::PointAxisAlignedBoundingBox(
+                FromEigen(XQ.col(q).head<kDims>()),
+                FromEigen(LP.col(p).head<kDims>()),
+                FromEigen(UP.col(p).head<kDims>())))
+        {
+            fOnPair(q, p);
+        }
+    });
+}
+
+template <int Dims, common::CFloatingPoint TScalar, common::CIndex TIndex>
+template <class FOnPair, class TDerivedLP, class TDerivedUP, class TDerivedLQ, class TDerivedUQ>
+inline void HierarchicalHashGrid<Dims, TScalar, TIndex>::BroadPhase(
+    Eigen::DenseBase<TDerivedLP> const& LP,
+    Eigen::DenseBase<TDerivedUP> const& UP,
+    Eigen::DenseBase<TDerivedLQ> const& LQ,
+    Eigen::DenseBase<TDerivedUQ> const& UQ,
+    FOnPair fOnPair) const
+{
+    using pbat::math::linalg::mini::FromEigen;
+    BroadPhase(LQ, UQ, [&](Index q, Index p) {
+        if (OverlapQueries::AxisAlignedBoundingBoxes(
+                FromEigen(LP.col(p).head<kDims>()),
+                FromEigen(UP.col(p).head<kDims>()),
+                FromEigen(LQ.col(q).head<kDims>()),
+                FromEigen(UQ.col(q).head<kDims>())))
+        {
+            fOnPair(q, p);
+        }
+    });
 }
 
 template <int Dims, common::CFloatingPoint TScalar, common::CIndex TIndex>

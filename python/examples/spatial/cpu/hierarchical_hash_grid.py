@@ -34,7 +34,7 @@ if __name__ == "__main__":
         "of input mesh elements, i.e. # buckets = <value of --num-buckets> * # elements",
         type=int,
         dest="num_buckets",
-        default=2,
+        default=8,
     )
     args = parser.parse_args()
 
@@ -113,7 +113,7 @@ if __name__ == "__main__":
                 VE[:, d] = V[C[:, d], :].flatten(order="C")
             L = np.min(VE, axis=1).reshape((dims, C.shape[0]), order="F")
             U = np.max(VE, axis=1).reshape((dims, C.shape[0]), order="F")
-            grid.configure(n_tets)
+            grid.configure(args.num_buckets * n_tets)
             grid.construct(L[:, :n_tets], U[:, :n_tets])
             pairs = grid.broad_phase(
                 L[:, :n_tets],
