@@ -2,6 +2,7 @@
 
 #include "AxisAlignedBoundingBox.h"
 #include "HashGrid.h"
+#include "HierarchicalHashGrid.h"
 #include "MeshBoundary.h"
 #include "TetrahedralAabbHierarchy.h"
 #include "TriangleAabbHierarchy.h"
@@ -14,6 +15,7 @@ void Bind(pybind11::module& m)
 {
     BindAxisAlignedBoundingBox(m);
     BindHashGrid(m);
+    BindHierarchicalHashGrid(m);
     BindTetrahedralAabbHierarchy(m);
     BindTriangleAabbHierarchy(m);
     BindMeshBoundary(m);

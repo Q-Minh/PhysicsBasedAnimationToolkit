@@ -10,7 +10,7 @@
 
 namespace pbat::py::geometry {
 
-void BindHashGrid([[maybe_unused]] pybind11::module& m)
+void BindHashGrid(pybind11::module& m)
 {
     namespace pyb = pybind11;
     pbat::common::ForValues<2, 3>([&m]<auto kDims>() {

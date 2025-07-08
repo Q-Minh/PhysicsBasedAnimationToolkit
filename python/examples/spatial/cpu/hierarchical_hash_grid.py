@@ -7,7 +7,7 @@ import polyscope.imgui as imgui
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        prog="3D hash grid broad phase",
+        prog="3D hierarchical hash grid broad phase",
     )
     parser.add_argument(
         "-i", "--input", help="Path to input mesh", dest="input", required=True
@@ -45,7 +45,7 @@ if __name__ == "__main__":
     n_tets = C.shape[0]
     n_pts = V.shape[0]
     C = np.vstack([C, C + V.shape[0]]).astype(np.int32)
-    grid = pbat.geometry.HashGrid3D()
+    grid = pbat.geometry.HierarchicalHashGrid3D()
     dims = V.shape[1]
     profiler = pbat.profiling.Profiler()
 
@@ -69,7 +69,7 @@ if __name__ == "__main__":
     ps.set_front_dir("neg_y_front")
     ps.set_ground_plane_mode("shadow_only")
     ps.set_ground_plane_height_factor(0.5)
-    ps.set_program_name("Hash Grid Broad Phase")
+    ps.set_program_name("Hierarchical Hash Grid Broad Phase")
     ps.init()
 
     t = 0
@@ -113,12 +113,15 @@ if __name__ == "__main__":
                 VE[:, d] = V[C[:, d], :].flatten(order="C")
             L = np.min(VE, axis=1).reshape((dims, C.shape[0]), order="F")
             U = np.max(VE, axis=1).reshape((dims, C.shape[0]), order="F")
-            cell_size = 0.5 * np.max(U[:, :n_tets] - L[:, :n_tets])
-            n_buckets = args.num_buckets * n_tets
-            grid.configure(cell_size, n_buckets)
+            grid.configure(n_tets)
             grid.construct(L[:, :n_tets], U[:, :n_tets])
-            query_points = 0.5 * (L[:, n_tets:] + U[:, n_tets:])
-            pairs = grid.broad_phase(query_points, n_expected_primitives_per_cell=50)
+            pairs = grid.broad_phase(
+                L[:, :n_tets],
+                U[:, :n_tets],
+                L[:, n_tets:],
+                U[:, n_tets:],
+                n_expected_primitives_per_cell=8,
+            )
             overlapping[:] = 0
             if len(pairs) > 0:
                 pairs = np.array(pairs).T
