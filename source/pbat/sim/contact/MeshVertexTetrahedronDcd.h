@@ -1,0 +1,7 @@
+#ifndef PBAT_SIM_CONTACT_MESHVERTEXTETRAHEDRONDCD_H
+#define PBAT_SIM_CONTACT_MESHVERTEXTETRAHEDRONDCD_H
+
+namespace pbat::sim::contact {
+} // namespace pbat::sim::contact
+
+#endif // PBAT_SIM_CONTACT_MESHVERTEXTETRAHEDRONDCD_H

@@ -4,8 +4,10 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     FILES
     "Contact.h"
     "MultibodyMeshMixedCcdDcd.h"
+    "MeshVertexTetrahedronDcd.h"
 )
 target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     PRIVATE
     "MultibodyMeshMixedCcdDcd.cpp"
+    "MeshVertexTetrahedronDcd.cpp"
 )
