@@ -135,11 +135,12 @@ if __name__ == "__main__":
     export = False
     n_body_pairs = 0
     n_contact_pairs = 0
+    contacting_triangles = np.zeros(F.shape[1], dtype=np.float32)
     profiler = pbat.profiling.Profiler()
 
     def callback():
         global t, animate, export
-        global U, XT, XTP1, n_body_pairs, n_contact_pairs
+        global U, XT, XTP1, n_body_pairs, n_contact_pairs, contacting_triangles
 
         changed, animate = imgui.Checkbox("Animate", animate)
         step = imgui.Button("Step")
@@ -167,9 +168,19 @@ if __name__ == "__main__":
             v, f = vfc[0, :], vfc[1, :]
             profiler.end_frame("Physics")
 
+            contacting_triangles[:] = 0
+            contacting_triangles[f] = 1
             n_contact_pairs = vfc.shape[1]
-            ps.register_point_cloud("DCD verts", XTP1[:, v].T)
+            ps.register_point_cloud("DCD verts", XTP1[:, V[v]].T)
             sm.update_vertex_positions(XTP1.T)
+            sm.add_scalar_quantity(
+                "Contacting triangles",
+                contacting_triangles,
+                defined_on="faces",
+                enabled=True,
+                cmap="coolwarm",
+                vminmax=(0, 1),
+            )
 
             t = t + 1 / 60
 

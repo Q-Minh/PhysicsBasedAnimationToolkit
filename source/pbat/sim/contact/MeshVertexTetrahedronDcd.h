@@ -258,6 +258,7 @@ inline MeshVertexTetrahedronDcd::MeshVertexTetrahedronDcd(
 template <class TDerivedX>
 inline void MeshVertexTetrahedronDcd::UpdateActiveSet(Eigen::DenseBase<TDerivedX> const& X)
 {
+    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.MeshVertexTetrahedronDcd.UpdateActiveSet");
     mVFC.setConstant(-1);
     ComputeTriangleAabbs(X.derived());
     UpdateMeshTriangleBvhs();
@@ -281,6 +282,7 @@ inline void MeshVertexTetrahedronDcd::UpdateActiveSet(Eigen::DenseBase<TDerivedX
         FindNearestTrianglesToPenetratingVertices(oi, oj, X.derived());
         FindNearestTrianglesToPenetratingVertices(oj, oi, X.derived());
     });
+    mIsTetrahedronMeshHashGridDirty.setConstant(true);
 }
 
 template <class FOnVertexTriangleContactPair>
