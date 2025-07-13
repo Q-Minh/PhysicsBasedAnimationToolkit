@@ -24,6 +24,20 @@ class MeshVertexTetrahedronDcd
         8;                          ///< Maximum number of contacting triangles per vertex.
     static constexpr int kDims = 3; ///< Number of dimensions in the contact detection system.
 
+    /**
+     * @brief Construct a new MeshVertexTetrahedronDcd object from input tetrahedron meshes
+     * @tparam TDerivedX Eigen type of the input vertex positions
+     * @param X `kDims x |# vertices|` matrix of vertex positions
+     * @param V `|# collision vertices|` vertex array
+     * @param F `3 x |# triangles|` triangle array
+     * @param T `4 x |# tetrahedra|` tetrahedron array
+     * @param VP `|# objects + 1| x 1` prefix sum of vertex pointers into `V` s.t.
+     * `V(VP(o):VP(o+1))` are collision vertices of object `o`
+     * @param FP `|# objects + 1| x 1` prefix sum of triangle pointers into `F` s.t.
+     * `F(FP(o):FP(o+1))` are collision triangles of object `o`
+     * @param TP `|# objects + 1| x 1` prefix sum of tetrahedron pointers into `T` s.t.
+     * `T(TP(o):TP(o+1))` are collision tetrahedra of object `o`
+     */
     template <class TDerivedX>
     MeshVertexTetrahedronDcd(
         Eigen::DenseBase<TDerivedX> const& X,
@@ -33,15 +47,24 @@ class MeshVertexTetrahedronDcd
         Eigen::Ref<IndexVectorX const> const& VP,
         Eigen::Ref<IndexVectorX const> const& FP,
         Eigen::Ref<IndexVectorX const> const& TP);
-
+    /**
+     * @brief Update the active set of vertex-triangle contacts
+     * @tparam TDerivedX Eigen type of vertex positions
+     * @param X `kDims x |# vertices|` matrix of vertex positions
+     */
     template <class TDerivedX>
     void UpdateActiveSet(Eigen::DenseBase<TDerivedX> const& X);
-
+    /**
+     * @brief Visit the triangles in active vertex-triangle contacts
+     * @tparam FOnVertexTriangleContactPair Callable type with signature `void(IndexType v,
+     * IndexType f)`
+     * @param v Index of the vertex whose active triangle contacts to visit
+     * @param fOnVertexTriangleContactPair Function to call for each vertex-triangle contact pair
+     */
     template <class FOnVertexTriangleContactPair>
     void ForEachActiveVertexTriangleContact(
         IndexType v,
         FOnVertexTriangleContactPair fOnVertexTriangleContactPair) const;
-
     /**
      * @brief Compute axis-aligned bounding boxes for triangles for DCD
      * @tparam TDerivedX Eigen type of vertex positions
@@ -83,13 +106,30 @@ class MeshVertexTetrahedronDcd
      * @brief Recompute bodies BVH tree and internal node bounding boxes
      */
     void RecomputeBodiesBvh();
-
+    /**
+     * @brief Compute and visit all contacting body pairs
+     * @tparam FOnBodyPair Callable type with signature `void(IndexType oi, IndexType oj)`
+     * @param fOnBodyPair Function to call for each body pair
+     */
     template <class FOnBodyPair>
     void ForEachBodyPair(FOnBodyPair&& fOnBodyPair) const;
-
+    /**
+     * @brief Register all collision vertices of body `ov` that penetrate into body `ot`
+     * @tparam TDerivedX Eigen type of vertex positions
+     * @param ov Index of the body whose collision vertices to check against body `ot`
+     * @param ot Index of the body penetrated by body `ov`
+     * @param X `kDims x |# vertices|` matrix of vertex positions
+     */
     template <class TDerivedX>
     void MarkPenetratingVertices(IndexType ov, IndexType ot, Eigen::DenseBase<TDerivedX> const& X);
-
+    /**
+     * @brief Find the nearest triangles on the triangle mesh `of` to penetrating vertices of body
+     * `ov`
+     * @tparam TDerivedX Eigen type of vertex positions
+     * @param ov Index of the body whose collision vertices penetrate body `of`
+     * @param of Index of the body penetrated by body `ov`
+     * @param X `kDims x |# vertices|` matrix of vertex positions
+     */
     template <class TDerivedX>
     void FindNearestTrianglesToPenetratingVertices(
         IndexType ov,
