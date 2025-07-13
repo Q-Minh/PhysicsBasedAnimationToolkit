@@ -8,7 +8,7 @@ namespace pbat::graph {
 
 TEST_CASE("[graph] DepthFirstSearch")
 {
-    SUBCASE("[graph] DepthFirstSearch - simple chain")
+    SUBCASE("Simple chain")
     {
         // Graph: 0 -> 1 -> 2 -> 3
         Eigen::VectorXi ptr(5); // 4 nodes + 1
@@ -23,7 +23,7 @@ TEST_CASE("[graph] DepthFirstSearch")
 
         CHECK(visited == std::vector<int>({0, 1, 2, 3}));
     }
-    SUBCASE("[graph] DepthFirstSearch - tree")
+    SUBCASE("Tree")
     {
         // Graph:
         // 0 -> 1,2
@@ -44,7 +44,7 @@ TEST_CASE("[graph] DepthFirstSearch")
         // Our implementation pushes 2 then 1, so 1 is visited after 2
         CHECK(visited == std::vector<int>({0, 2, 1, 3}));
     }
-    SUBCASE("[graph] DepthFirstSearch - disconnected graph")
+    SUBCASE("Disconnected graph")
     {
         // Graph: 0 -> 1, 2 (disconnected)
         Eigen::VectorXi ptr(4);
@@ -59,7 +59,7 @@ TEST_CASE("[graph] DepthFirstSearch")
 
         CHECK(visited == std::vector<int>({0, 1}));
     }
-    SUBCASE("[graph] DepthFirstSearch - cycle")
+    SUBCASE("Cycle")
     {
         // Graph: 0 -> 1 -> 2 -> 0 (cycle)
         Eigen::VectorXi ptr(4);

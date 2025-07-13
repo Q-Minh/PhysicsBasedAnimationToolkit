@@ -9,7 +9,7 @@ namespace pbat::graph {
 
 TEST_CASE("[graph] BreadthFirstSearch")
 {
-    SUBCASE("[graph] BreadthFirstSearch - simple chain")
+    SUBCASE("Simple chain")
     {
         // Graph: 0 -> 1 -> 2 -> 3
         Eigen::VectorXi ptr(5); // 4 nodes + 1
@@ -24,7 +24,7 @@ TEST_CASE("[graph] BreadthFirstSearch")
 
         CHECK(visited == std::vector<int>({0, 1, 2, 3}));
     }
-    SUBCASE("[graph] BreadthFirstSearch - tree")
+    SUBCASE("Tree")
     {
         // Graph:
         // 0 -> 1,2
@@ -44,7 +44,7 @@ TEST_CASE("[graph] BreadthFirstSearch")
         // BFS order: 0, 1, 2, 3
         CHECK(visited == std::vector<int>({0, 1, 2, 3}));
     }
-    SUBCASE("[graph] BreadthFirstSearch - disconnected graph")
+    SUBCASE("Disconnected graph")
     {
         // Graph: 0 -> 1, 2 (disconnected)
         Eigen::VectorXi ptr(4);
@@ -59,7 +59,7 @@ TEST_CASE("[graph] BreadthFirstSearch")
 
         CHECK(visited == std::vector<int>({0, 1}));
     }
-    SUBCASE("[graph] BreadthFirstSearch - cycle")
+    SUBCASE("Cycle")
     {
         // Graph: 0 -> 1 -> 2 -> 0 (cycle)
         Eigen::VectorXi ptr(4);

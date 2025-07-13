@@ -27,10 +27,10 @@ class DisjointSetUnionFind
      */
     DisjointSetUnionFind(IndexType n);
     /**
-     * @brief Reserve memory for `n` vertices
+     * @brief Reserve memory for `n` vertices and reset the structure
      * @param n Number of vertices
      */
-    void Reserve(IndexType n);
+    void Prepare(IndexType n);
     /**
      * @brief Find the root of the set containing vertex `u`
      * @param u Vertex index
@@ -44,6 +44,12 @@ class DisjointSetUnionFind
      * @return Root of the merged tree
      */
     IndexType Union(IndexType u, IndexType v);
+    /**
+     * @brief Find the root of the set containing vertex `u` without path compression
+     * @param u Vertex index
+     * @return Root of the set containing vertex `u`
+     */
+    IndexType Root(IndexType u) const;
     /**
      * @brief Find the size of the set containing vertex `u`
      * @param u Vertex index
@@ -65,11 +71,11 @@ class DisjointSetUnionFind
 template <common::CIndex TIndex>
 DisjointSetUnionFind<TIndex>::DisjointSetUnionFind(IndexType n) : DisjointSetUnionFind<TIndex>()
 {
-    Reserve(n);
+    Prepare(n);
 }
 
 template <common::CIndex TIndex>
-void DisjointSetUnionFind<TIndex>::Reserve(IndexType n)
+void DisjointSetUnionFind<TIndex>::Prepare(IndexType n)
 {
     mParent = Eigen::Vector<IndexType, Eigen::Dynamic>::LinSpaced(n, IndexType(0), n - 1);
     mRank.setZero(n);
@@ -115,9 +121,17 @@ TIndex DisjointSetUnionFind<TIndex>::Union(IndexType u, IndexType v)
 }
 
 template <common::CIndex TIndex>
+inline TIndex DisjointSetUnionFind<TIndex>::Root(IndexType u) const
+{
+    while (mParent[u] != u)
+        u = mParent[u];
+    return u;
+}
+
+template <common::CIndex TIndex>
 TIndex DisjointSetUnionFind<TIndex>::Size(IndexType u) const
 {
-    return mSize[Find(u)];
+    return mSize[Root(u)];
 }
 
 template <common::CIndex TIndex>
