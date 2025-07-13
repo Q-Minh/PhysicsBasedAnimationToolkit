@@ -10,6 +10,7 @@
 #include "pbat/math/linalg/mini/Eigen.h"
 
 #include <exception>
+#include <unordered_map>
 #include <vector>
 
 namespace pbat::sim::contact {
@@ -136,10 +137,11 @@ class MeshVertexTetrahedronDcd
                                          ///< mIsTetrahedronMeshHashGridDirty(i) is true if the
                                          ///< tetrahedron mesh hash grid for body i is dirty and
                                          ///< needs to be recomputed.
-    Eigen::Vector<std::uint16_t, Eigen::Dynamic>
-        mVertexContactingBodyValence; ///< `|# vertices|` vector s.t.
-                                      ///< mVertexContactingBodyValence(v) > 0 if vertex v is in
-                                      ///< contact with at least one triangle.
+    std::vector<std::unordered_map<IndexType, IndexType>>
+        mBodyVertexToOtherBodiesValence; ///< `|# bodies|` vector of hash maps s.t.
+                                         ///< mBodyVertexToOtherBodiesValence[oi][vo] counts the
+                                         ///< number of other bodies oj that vertex vo of body oi is
+                                         ///< in contact with (that haven't been processed yet).
     Eigen::Matrix<IndexType, kMaxVertexTriangleContacts, Eigen::Dynamic>
         mVFC; ///< `|max # contacts| x |# vertices|` matrix s.t. mVFC(k, v) is the index of the k-th
               ///< contacting triangle with vertex v. If mVFC(k, v) == -1, there is no contact and
@@ -168,11 +170,9 @@ inline MeshVertexTetrahedronDcd::MeshVertexTetrahedronDcd(
       mTetrahedronMeshHashGrids(VP.size() - 1),
       mBodiesBvh(geometry::AabbKdTreeHierarchy<kDims>(VP.size() - 1)),
       mIsTetrahedronMeshHashGridDirty(VP.size() - 1),
-      mVertexContactingBodyValence(V.size()),
+      mBodyVertexToOtherBodiesValence(VP.size() - 1),
       mVFC(kMaxVertexTriangleContacts, V.size())
 {
-    mVertexContactingBodyValence.setConstant(false);
-    mVFC.setConstant(-1);
     // Compute initial AABBs
     ComputeTriangleAabbs(X.derived());
     ComputeTetrahedronAabbs(X.derived());
@@ -193,6 +193,16 @@ inline MeshVertexTetrahedronDcd::MeshVertexTetrahedronDcd(
         mBodyAabbs.col(o).tail<kDims>() = XVo.rowwise().maxCoeff();
     }
     mBodiesBvh.Construct(mBodyAabbs.topRows<kDims>(), mBodyAabbs.bottomRows<kDims>());
+    mIsTetrahedronMeshHashGridDirty.setConstant(true);
+    for (auto o = 0; o < nObjects; ++o)
+    {
+        std::unordered_map<IndexType, IndexType>& bodyVertexToOtherBodiesValenceMap =
+            mBodyVertexToOtherBodiesValence[o];
+        auto vBegin = mVP(o);
+        auto vEnd   = mVP(o + 1);
+        bodyVertexToOtherBodiesValenceMap.reserve(vEnd - vBegin);
+    }
+    mVFC.setConstant(-1);
 }
 
 template <class TDerivedX>
@@ -323,6 +333,8 @@ inline void MeshVertexTetrahedronDcd::MarkPenetratingVertices(
         mTetrahedronAabbs(Eigen::placeholders::all, Eigen::seq(tBegin, tEnd - 1)).topRows<kDims>();
     auto Ut = mTetrahedronAabbs(Eigen::placeholders::all, Eigen::seq(tBegin, tEnd - 1))
                   .bottomRows<kDims>();
+    std::unordered_map<IndexType, IndexType>& mBodyVertexToOtherBodiesValenceMap =
+        mBodyVertexToOtherBodiesValence[ov];
     mTetrahedronMeshHashGrids[ot].BroadPhase(Lt, Ut, Xv, [&](IndexType vq, IndexType tp) {
         auto const v  = vBegin + vq;
         auto const i  = mV(v);
@@ -335,7 +347,17 @@ inline void MeshVertexTetrahedronDcd::MarkPenetratingVertices(
                 ToEigen(XT.col(2).head<kDims>()),
                 ToEigen(XT.col(3).head<kDims>())))
         {
-            ++mVertexContactingBodyValence(v);
+            auto it  = mBodyVertexToOtherBodiesValenceMap.find(vq);
+            auto end = mBodyVertexToOtherBodiesValenceMap.end();
+            if (it == end)
+            {
+                mBodyVertexToOtherBodiesValenceMap.insert({vq, IndexType(1)});
+            }
+            else
+            {
+                auto& valence = it->second;
+                ++valence;
+            }
         }
     });
 }
@@ -353,11 +375,13 @@ inline void MeshVertexTetrahedronDcd::FindNearestTrianglesToPenetratingVertices(
     auto Xv     = X(Eigen::placeholders::all, mV(Eigen::seq(vBegin, vEnd - 1)));
     auto fBegin = mFP(of);
     auto fEnd   = mFP(of + 1);
-    for (auto v = vBegin; v < vEnd; ++v)
+    std::unordered_map<IndexType, IndexType>& mBodyVertexToOtherBodiesValenceMap =
+        mBodyVertexToOtherBodiesValence[ov];
+    for (auto& [vq, valence] : mBodyVertexToOtherBodiesValenceMap)
     {
-        if (mVertexContactingBodyValence(v) == 0)
-            continue;
-        --mVertexContactingBodyValence(v);
+        assert(valence > 0);
+        --valence;
+        auto const v = vBegin + vq;
         auto const i = mV(v);
         auto const P = X.col(i).head<kDims>();
         using math::linalg::mini::ToEigen;
@@ -386,6 +410,11 @@ inline void MeshVertexTetrahedronDcd::FindNearestTrianglesToPenetratingVertices(
             radius,
             eps*/);
     }
+    std::erase_if(mBodyVertexToOtherBodiesValenceMap, [](auto const& keyValuePair) {
+        auto const& valence = keyValuePair.second;
+        assert(valence >= 0);
+        return valence == 0;
+    });
 }
 
 } // namespace pbat::sim::contact
