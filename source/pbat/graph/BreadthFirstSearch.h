@@ -3,6 +3,7 @@
 
 #include "pbat/Aliases.h"
 #include "pbat/common/Concepts.h"
+#include "pbat/profiling/Profiling.h"
 
 #include <queue>
 
@@ -56,6 +57,7 @@ inline BreadthFirstSearch<TIndex>::BreadthFirstSearch(Eigen::Index n)
 template <common::CIndex TIndex>
 inline void BreadthFirstSearch<TIndex>::Reserve(Eigen::Index n)
 {
+    PBAT_PROFILE_NAMED_SCOPE("pbat.graph.BreadthFirstSearch.Reserve");
     visited.resize(n);
 }
 
@@ -67,6 +69,7 @@ inline void BreadthFirstSearch<TIndex>::operator()(
     TIndex start,
     FVisit fVisit)
 {
+    PBAT_PROFILE_NAMED_SCOPE("pbat.graph.BreadthFirstSearch");
     visited.setConstant(false);
     queue.push(start);
     while (not queue.empty())

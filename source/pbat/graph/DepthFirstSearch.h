@@ -3,6 +3,7 @@
 
 #include "pbat/Aliases.h"
 #include "pbat/common/Concepts.h"
+#include "pbat/profiling/Profiling.h"
 
 #include <stack>
 #include <vector>
@@ -57,6 +58,7 @@ inline DepthFirstSearch<TIndex>::DepthFirstSearch(Eigen::Index n)
 template <common::CIndex TIndex>
 inline void DepthFirstSearch<TIndex>::Reserve(Eigen::Index n)
 {
+    PBAT_PROFILE_NAMED_SCOPE("pbat.graph.DepthFirstSearch.Reserve");
     visited.resize(n);
     std::vector<IndexType> memory{};
     memory.reserve(static_cast<std::size_t>(n));
@@ -71,6 +73,7 @@ inline void DepthFirstSearch<TIndex>::operator()(
     TIndex start,
     FVisit fVisit)
 {
+    PBAT_PROFILE_NAMED_SCOPE("pbat.graph.DepthFirstSearch");
     visited.setConstant(false);
     stack.push(start);
     while (not stack.empty())
