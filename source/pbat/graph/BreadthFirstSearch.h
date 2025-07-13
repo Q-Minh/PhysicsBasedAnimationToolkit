@@ -43,6 +43,11 @@ struct BreadthFirstSearch
         Eigen::DenseBase<TDerivedAdj> const& adj,
         TIndex start,
         FVisit fVisit);
+    /**
+     * @brief Get the number of vertices in the graph
+     * @return Number of vertices
+     */
+    Eigen::Index NumVertices() const { return visited.size(); }
 
     Eigen::Vector<bool, Eigen::Dynamic> visited; ///< `|# vertices| x 1` visited mask
     QueueType queue;                             ///< BFS search queue
