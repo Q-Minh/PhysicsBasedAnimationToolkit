@@ -4,6 +4,8 @@
 #include "pbat/Aliases.h"
 #include "pbat/common/Concepts.h"
 
+#include <cassert>
+
 namespace pbat::graph {
 
 /**
@@ -93,6 +95,7 @@ TIndex DisjointSetUnionFind<TIndex>::Find(IndexType u)
 template <common::CIndex TIndex>
 TIndex DisjointSetUnionFind<TIndex>::Union(IndexType u, IndexType v)
 {
+    assert(u != v && "Cannot union the same vertex with itself.");
     // Find roots of each node
     IndexType const ru = Find(u);
     IndexType const rv = Find(v);
