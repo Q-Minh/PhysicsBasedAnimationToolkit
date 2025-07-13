@@ -55,3 +55,16 @@ void MeshVertexTetrahedronDcd::RecomputeBodiesBvh()
 }
 
 } // namespace pbat::sim::contact
+
+#include <doctest/doctest.h>
+
+#include "pbat/geometry/model/Cube.h"
+#include "pbat/geometry/MeshBoundary.h"
+
+TEST_CASE("[sim][contact] MeshVertexTetrahedronDcd") 
+{
+    using namespace pbat::geometry::model;
+    auto const [Vcube, Tcube] = Cube(EMesh::Tetrahedral, 1);
+
+    pbat::geometry::SimplexMeshBoundary(Tcube, Vcube.cols());
+}

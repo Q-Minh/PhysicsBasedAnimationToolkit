@@ -8,7 +8,7 @@
 
 namespace pbat::py::sim::contact {
 
-void BindMultibodyMeshMixedCcdDcd([[maybe_unused]] pybind11::module& m)
+void BindMultibodyMeshMixedCcdDcd(pybind11::module& m)
 {
     namespace pyb = pybind11;
     using pbat::sim::contact::MultibodyMeshMixedCcdDcd;
