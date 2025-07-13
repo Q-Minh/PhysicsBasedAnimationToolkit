@@ -336,7 +336,7 @@ inline void AabbKdTreeHierarchy<kDims>::NearestNeighbours(
         },
         fDistanceToObject,
         fOnNearestNeighbour,
-        true /*bUseBestFirstSearch*/,
+        false /*bUseBestFirstSearch*/,
         radius,
         eps);
 }
