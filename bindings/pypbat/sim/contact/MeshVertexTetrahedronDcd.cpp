@@ -1,6 +1,7 @@
 #include "MeshVertexTetrahedronDcd.h"
 
 #include <pbat/sim/contact/MeshVertexTetrahedronDcd.h>
+#include <pbat/sim/contact/MultibodyTetrahedralMeshSystem.h>
 #include <pybind11/eigen.h>
 #include <pybind11/stl.h>
 #include <vector>
@@ -15,51 +16,39 @@ void BindMeshVertexTetrahedronDcd(pybind11::module& m)
     using ScalarType = MeshVertexTetrahedronDcd::ScalarType;
     pyb::class_<MeshVertexTetrahedronDcd>(m, "MeshVertexTetrahedronDcd")
         .def(
-            pyb::init([](Eigen::Ref<Eigen::Matrix<ScalarType, 3, Eigen::Dynamic> const> const& X,
-                         Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& V,
-                         Eigen::Ref<Eigen::Matrix<IndexType, 3, Eigen::Dynamic> const> const& F,
-                         Eigen::Ref<Eigen::Matrix<IndexType, 4, Eigen::Dynamic> const> const& T,
-                         Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& VP,
-                         Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& FP,
-                         Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& TP) {
-                return MeshVertexTetrahedronDcd(X, V, F, T, VP, FP, TP);
+            pyb::init([](Eigen::Ref<Eigen::Matrix<ScalarType, 3, Eigen::Dynamic>> X,
+                         Eigen::Ref<Eigen::Matrix<IndexType, 4, Eigen::Dynamic>> T) {
+                return MeshVertexTetrahedronDcd(std::move(X), std::move(T));
             }),
             pyb::arg("X"),
-            pyb::arg("V").noconvert(),
-            pyb::arg("F").noconvert(),
-            pyb::arg("T").noconvert(),
-            pyb::arg("VP").noconvert(),
-            pyb::arg("FP").noconvert(),
-            pyb::arg("TP").noconvert(),
+            pyb::arg("T"),
             "Construct a multibody tetrahedral mesh DCD system out of multiple meshes\n\n"
             "Args:\n"
             "    X (numpy.ndarray): `3 x |# verts|` mesh vertex positions\n"
-            "    V (numpy.ndarray): `|# collision verts|` collision vertex array\n"
-            "    F (numpy.ndarray): `3 x |# collision triangles|` triangle array\n"
-            "    T (numpy.ndarray): `4 x |# tetrahedra|` tetrahedron array\n"
-            "    VP (numpy.ndarray): `|# meshes + 1|` prefix sum of vertex pointers\n"
-            "    FP (numpy.ndarray): `|# meshes + 1|` prefix sum of triangle pointers\n"
-            "    TP (numpy.ndarray): `|# meshes + 1|` prefix sum of tetrahedron pointers\n")
+            "    T (numpy.ndarray): `4 x |# tetrahedra|` tetrahedron array\n")
         .def(
             "update_active_set",
             [](MeshVertexTetrahedronDcd& self,
-               Eigen::Ref<Eigen::Matrix<ScalarType, 3, Eigen::Dynamic> const> const& X) {
-                self.UpdateActiveSet(X);
+               Eigen::Ref<Eigen::Matrix<ScalarType, 3, Eigen::Dynamic> const> const& X,
+               Eigen::Ref<Eigen::Matrix<IndexType, 4, Eigen::Dynamic> const> const& T) {
+                self.UpdateActiveSet(X, T);
             },
             pyb::arg("X"),
+            pyb::arg("T"),
             "Update the active set of vertex-triangle contacts\n\n"
             "Args:\n"
             "    X (numpy.ndarray): `3 x |# verts|` mesh vertex positions\n"
+            "    T (numpy.ndarray): `4 x |# tetrahedra|` tetrahedron array\n"
             "Returns:\n"
             "    None: ")
         .def(
             "vertex_triangle_contacts",
             [](MeshVertexTetrahedronDcd const& self) {
+                auto const nCollisionVertices = self.MultibodySystem().NumContactVertices();
                 Eigen::Matrix<IndexType, 2, Eigen::Dynamic> VFC(
                     2,
-                    self.GetNumVertices() * MeshVertexTetrahedronDcd::kMaxVertexTriangleContacts);
-                auto const nCollisionVertices = self.GetNumVertices();
-                Eigen::Index k                = 0;
+                    nCollisionVertices * MeshVertexTetrahedronDcd::kMaxVertexTriangleContacts);
+                Eigen::Index k = 0;
                 for (auto v = 0; v < nCollisionVertices; ++v)
                 {
                     self.ForEachActiveVertexTriangleContact(
@@ -75,7 +64,13 @@ void BindMeshVertexTetrahedronDcd(pybind11::module& m)
             "Get all vertex-triangle contacts\n\n"
             "Args:\n"
             "Returns:\n"
-            "    numpy.ndarray: `2 x |# contacting triangles|` array of triangle indices");
+            "    numpy.ndarray: `2 x |# contacting triangles|` array of triangle indices")
+        .def_property_readonly(
+            "multibody_system",
+            &MeshVertexTetrahedronDcd::MultibodySystem,
+            "Get the multibody tetrahedral mesh system\n\n"
+            "Returns:\n"
+            "    MultibodyTetrahedralMeshSystem: the multibody tetrahedral mesh system");
 }
 
 } // namespace pbat::py::sim::contact

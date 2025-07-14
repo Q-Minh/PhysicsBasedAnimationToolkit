@@ -1,6 +1,7 @@
 #ifndef PBAT_SIM_CONTACT_MESHVERTEXTETRAHEDRONDCD_H
 #define PBAT_SIM_CONTACT_MESHVERTEXTETRAHEDRONDCD_H
 
+#include "MultibodyTetrahedralMeshSystem.h"
 #include "pbat/Aliases.h"
 #include "pbat/geometry/AabbKdTreeHierarchy.h"
 #include "pbat/geometry/AabbRadixTreeHierarchy.h"
@@ -28,32 +29,20 @@ class MeshVertexTetrahedronDcd
      * @brief Construct a new MeshVertexTetrahedronDcd object from input tetrahedron meshes
      * @tparam TDerivedX Eigen type of the input vertex positions
      * @param X `kDims x |# vertices|` matrix of vertex positions
-     * @param V `|# collision vertices|` vertex array
-     * @param F `3 x |# triangles|` triangle array
      * @param T `4 x |# tetrahedra|` tetrahedron array
-     * @param VP `|# objects + 1| x 1` prefix sum of vertex pointers into `V` s.t.
-     * `V(VP(o):VP(o+1))` are collision vertices of object `o`
-     * @param FP `|# objects + 1| x 1` prefix sum of triangle pointers into `F` s.t.
-     * `F(FP(o):FP(o+1))` are collision triangles of object `o`
-     * @param TP `|# objects + 1| x 1` prefix sum of tetrahedron pointers into `T` s.t.
-     * `T(TP(o):TP(o+1))` are collision tetrahedra of object `o`
      */
-    template <class TDerivedX>
     MeshVertexTetrahedronDcd(
-        Eigen::DenseBase<TDerivedX> const& X,
-        Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& V,
-        Eigen::Ref<Eigen::Matrix<IndexType, 3, Eigen::Dynamic> const> const& F,
-        Eigen::Ref<Eigen::Matrix<IndexType, 4, Eigen::Dynamic> const> const& T,
-        Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& VP,
-        Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& FP,
-        Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& TP);
+        Eigen::Ref<Eigen::Matrix<ScalarType, kDims, Eigen::Dynamic>> X,
+        Eigen::Ref<Eigen::Matrix<IndexType, 4, Eigen::Dynamic>> T);
     /**
      * @brief Update the active set of vertex-triangle contacts
      * @tparam TDerivedX Eigen type of vertex positions
      * @param X `kDims x |# vertices|` matrix of vertex positions
+     * @param T `4 x |# tetrahedra|` tetrahedron array
      */
-    template <class TDerivedX>
-    [[maybe_unused]] void UpdateActiveSet(Eigen::DenseBase<TDerivedX> const& X);
+    void UpdateActiveSet(
+        Eigen::Ref<Eigen::Matrix<ScalarType, kDims, Eigen::Dynamic> const> const& X,
+        Eigen::Ref<Eigen::Matrix<IndexType, 4, Eigen::Dynamic> const> const& T);
     /**
      * @brief Visit the triangles in active vertex-triangle contacts
      * @tparam FOnVertexTriangleContactPair Callable type with signature `void(
@@ -63,19 +52,13 @@ class MeshVertexTetrahedronDcd
      * @param fOnVertexTriangleContactPair Function to call for each vertex-triangle contact pair
      */
     template <class FOnVertexTriangleContactPair>
-    [[maybe_unused]] void ForEachActiveVertexTriangleContact(
+    void ForEachActiveVertexTriangleContact(
         IndexType v,
         FOnVertexTriangleContactPair fOnVertexTriangleContactPair) const;
     /**
-     * @brief Get the number of collison vertices in the system
-     * @return Number of collision vertices
+     * @brief Get the multibody tetrahedral mesh system
      */
-    [[maybe_unused]] Eigen::Index GetNumVertices() const { return mV.size(); }
-    /**
-     * @brief Get the number of collision triangles in the system
-     * @return Number of collision triangles
-     */
-    [[maybe_unused]] Eigen::Index GetNumTriangles() const { return mF.size(); }
+    MultibodyTetrahedralMeshSystem<IndexType> const& MultibodySystem() const;
 
   protected:
     /**
@@ -95,11 +78,16 @@ class MeshVertexTetrahedronDcd
     /**
      * @brief Computes AABBs for tetrahedra from mesh vertex positions
      * @tparam TDerivedX Eigen type of vertex positions
+     * @tparam TDerivedT Eigen type of tetrahedron mesh elements/connectivity
      * @param o Index of the body to compute tetrahedron AABBs for
      * @param X `kDims x |# vertices|` matrix of vertex positions
+     * @param T `4 x |# tetrahedra|` tetrahedron mesh elements/connectivity
      */
-    template <class TDerivedX>
-    void ComputeTetrahedronMeshAabbs(IndexType o, Eigen::DenseBase<TDerivedX> const& X);
+    template <class TDerivedX, class TDerivedT>
+    void ComputeTetrahedronMeshAabbs(
+        IndexType o,
+        Eigen::DenseBase<TDerivedX> const& X,
+        Eigen::DenseBase<TDerivedT> const& T);
     /**
      * @brief Computes body AABBs from mesh vertex BVHs
      * @pre (Vertex) mesh BVHs must be up-to-date before calling this function, i.e. via a call to
@@ -129,12 +117,18 @@ class MeshVertexTetrahedronDcd
     /**
      * @brief Register all collision vertices of body `ov` that penetrate into body `ot`
      * @tparam TDerivedX Eigen type of vertex positions
+     * @tparam TDerivedT Eigen type of tetrahedron mesh elements/connectivity
      * @param ov Index of the body whose collision vertices to check against body `ot`
      * @param ot Index of the body penetrated by body `ov`
      * @param X `kDims x |# vertices|` matrix of vertex positions
+     * @param T `4 x |# tetrahedra|` tetrahedron mesh elements/connectivity
      */
-    template <class TDerivedX>
-    void MarkPenetratingVertices(IndexType ov, IndexType ot, Eigen::DenseBase<TDerivedX> const& X);
+    template <class TDerivedX, class TDerivedT>
+    void MarkPenetratingVertices(
+        IndexType ov,
+        IndexType ot,
+        Eigen::DenseBase<TDerivedX> const& X,
+        Eigen::DenseBase<TDerivedT> const& T);
     /**
      * @brief Find the nearest triangles on the triangle mesh `of` to penetrating vertices of body
      * `ov`
@@ -150,19 +144,8 @@ class MeshVertexTetrahedronDcd
         Eigen::DenseBase<TDerivedX> const& X);
 
   private:
-    Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const>
-        mVP; ///< `|# objects + 1|` prefix sum of vertex pointers into `V`
-    Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const>
-        mFP; ///< `|# objects + 1|` prefix sum of triangle pointers into `F`
-    Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const>
-        mTP; ///< `|# objects + 1|` prefix sum of tetrahedron pointers into `T`
-
-    Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const>
-        mV; ///< Flattened `|# objects|` list of `|# collision verts|` vertex arrays
-    Eigen::Ref<Eigen::Matrix<IndexType, 3, Eigen::Dynamic> const>
-        mF; ///< Flattened `|# objects|` list of `3x|# collision triangles|` triangle arrays
-    Eigen::Ref<Eigen::Matrix<IndexType, 4, Eigen::Dynamic> const>
-        mT; ///< Flattened `|# objects|` list of `4x|# tetrahedra|` tetrahedron arrays
+    sim::contact::MultibodyTetrahedralMeshSystem<IndexType>
+        mMultibodySystem; ///< Multibody system containing the tetrahedral mesh bodies.
 
     Eigen::Matrix<ScalarType, 2 * kDims, Eigen::Dynamic>
         mTriangleAabbs; ///< `|2*kDims| x |# triangles|` matrix s.t. mTriangleAabbs[:3,:]
@@ -200,91 +183,6 @@ class MeshVertexTetrahedronDcd
               ///< mVFC(k+j,v) == -1 for all j > 0.
 };
 
-template <class TDerivedX>
-inline MeshVertexTetrahedronDcd::MeshVertexTetrahedronDcd(
-    Eigen::DenseBase<TDerivedX> const& X,
-    Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& V,
-    Eigen::Ref<Eigen::Matrix<IndexType, 3, Eigen::Dynamic> const> const& F,
-    Eigen::Ref<Eigen::Matrix<IndexType, 4, Eigen::Dynamic> const> const& T,
-    Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& VP,
-    Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& FP,
-    Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& TP)
-    : mVP(VP),
-      mFP(FP),
-      mTP(TP),
-      mV(V),
-      mF(F),
-      mT(T),
-      mTriangleAabbs(2 * kDims, F.cols()),
-      mTetrahedronAabbs(2 * kDims, T.cols()),
-      mBodyAabbs(2 * kDims, VP.size() - 1),
-      mTriangleMeshBvhs(static_cast<std::size_t>(VP.size() - 1)),
-      mTetrahedronMeshHashGrids(static_cast<std::size_t>(VP.size() - 1)),
-      mBodiesBvh(),
-      mIsTetrahedronMeshHashGridDirty(VP.size() - 1),
-      mBodyVertexToOtherBodiesValence(static_cast<std::size_t>(VP.size() - 1)),
-      mVFC(kMaxVertexTriangleContacts, V.size())
-{
-    // Compute initial AABBs
-    ComputeTriangleAabbs(X.derived());
-    ComputeTetrahedronAabbs(X.derived());
-    // Construct spatial acceleration structures
-    auto const nObjects = VP.size() - 1;
-    for (auto o = 0; o < nObjects; ++o)
-    {
-        auto const oStl = static_cast<std::size_t>(o);
-        auto FB = mTriangleAabbs(Eigen::placeholders::all, Eigen::seq(mFP(o), mFP(o + 1) - 1));
-        auto TB = mTetrahedronAabbs(Eigen::placeholders::all, Eigen::seq(mTP(o), mTP(o + 1) - 1));
-        // Construct object o's mesh BVH tree topology
-        mTriangleMeshBvhs[oStl].Construct(FB.topRows<kDims>(), FB.bottomRows<kDims>());
-        auto const nTets = mTP(o + 1) - mTP(o);
-        mTetrahedronMeshHashGrids[oStl].Configure(nTets);
-    }
-    ComputeBodyAabbs();
-    mBodiesBvh.Construct(mBodyAabbs.topRows<kDims>(), mBodyAabbs.bottomRows<kDims>());
-    mIsTetrahedronMeshHashGridDirty.setConstant(true);
-    for (auto o = 0; o < nObjects; ++o)
-    {
-        auto const oStl = static_cast<std::size_t>(o);
-        std::unordered_map<IndexType, IndexType>& bodyVertexToOtherBodiesValenceMap =
-            mBodyVertexToOtherBodiesValence[oStl];
-        auto vBegin = mVP(o);
-        auto vEnd   = mVP(o + 1);
-        bodyVertexToOtherBodiesValenceMap.reserve(static_cast<std::size_t>(vEnd - vBegin));
-    }
-    mVFC.setConstant(-1);
-}
-
-template <class TDerivedX>
-inline void MeshVertexTetrahedronDcd::UpdateActiveSet(Eigen::DenseBase<TDerivedX> const& X)
-{
-    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.MeshVertexTetrahedronDcd.UpdateActiveSet");
-    mVFC.setConstant(-1);
-    ComputeTriangleAabbs(X.derived());
-    UpdateMeshTriangleBvhs();
-    ComputeBodyAabbs();
-    RecomputeBodiesBvh();
-    ForEachBodyPair([&](IndexType oi, IndexType oj) {
-        if (mIsTetrahedronMeshHashGridDirty(oi))
-        {
-            ComputeTetrahedronMeshAabbs(oi, X.derived());
-            UpdateMeshTetrahedronHashGrid(oi);
-            mIsTetrahedronMeshHashGridDirty(oi) = false;
-        }
-        if (mIsTetrahedronMeshHashGridDirty(oj))
-        {
-            ComputeTetrahedronMeshAabbs(oj, X.derived());
-            UpdateMeshTetrahedronHashGrid(oj);
-            mIsTetrahedronMeshHashGridDirty(oj) = false;
-        }
-        MarkPenetratingVertices(oi, oj, X.derived());
-        MarkPenetratingVertices(oj, oi, X.derived());
-        FindNearestTrianglesToPenetratingVertices(oi, oj, X.derived());
-        FindNearestTrianglesToPenetratingVertices(oj, oi, X.derived());
-    });
-    mIsTetrahedronMeshHashGridDirty.setConstant(true);
-}
-
 template <class FOnVertexTriangleContactPair>
 inline void MeshVertexTetrahedronDcd::ForEachActiveVertexTriangleContact(
     IndexType v,
@@ -303,10 +201,11 @@ template <class TDerivedX>
 inline void MeshVertexTetrahedronDcd::ComputeTriangleAabbs(Eigen::DenseBase<TDerivedX> const& X)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.MeshVertexTetrahedronDcd.ComputeTriangleAabbs");
-    for (auto f = 0; f < mF.cols(); ++f)
+    auto const nTriangles = mMultibodySystem.NumContactTriangles();
+    for (auto f = 0; f < nTriangles; ++f)
     {
         Matrix<kDims, 3> XF;
-        XF     = X(Eigen::placeholders::all, mF.col(f)).block<kDims, 3>(0, 0);
+        XF     = X(Eigen::placeholders::all, mMultibodySystem.F.col(f)).block<kDims, 3>(0, 0);
         auto L = mTriangleAabbs.col(f).head<kDims>();
         auto U = mTriangleAabbs.col(f).tail<kDims>();
         L      = XF.rowwise().minCoeff();
@@ -314,34 +213,21 @@ inline void MeshVertexTetrahedronDcd::ComputeTriangleAabbs(Eigen::DenseBase<TDer
     }
 }
 
-template <class TDerivedX>
-inline void MeshVertexTetrahedronDcd::ComputeTetrahedronAabbs(Eigen::DenseBase<TDerivedX> const& X)
-{
-    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.MeshVertexTetrahedronDcd.ComputeTetrahedronAabbs");
-    for (auto t = 0; t < mT.cols(); ++t)
-    {
-        Matrix<kDims, 4> XT = X(Eigen::placeholders::all, mT.col(t)).block<kDims, 4>(0, 0);
-        auto L              = mTetrahedronAabbs.col(t).head<kDims>();
-        auto U              = mTetrahedronAabbs.col(t).tail<kDims>();
-        L                   = XT.rowwise().minCoeff();
-        U                   = XT.rowwise().maxCoeff();
-    }
-}
-
-template <class TDerivedX>
+template <class TDerivedX, class TDerivedT>
 inline void MeshVertexTetrahedronDcd::ComputeTetrahedronMeshAabbs(
     IndexType o,
-    Eigen::DenseBase<TDerivedX> const& X)
+    Eigen::DenseBase<TDerivedX> const& X,
+    Eigen::DenseBase<TDerivedT> const& T)
 {
-    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.MeshVertexTetrahedronDcd.ComputeTetrahedronAabbs");
-    auto const begin = mTP(o);
-    auto const end   = mTP(o + 1);
-    auto TB          = mTetrahedronAabbs(Eigen::placeholders::all, Eigen::seq(begin, end - 1));
-    for (auto t = begin; t < end; ++t)
+    PBAT_PROFILE_NAMED_SCOPE(
+        "pbat.sim.contact.MeshVertexTetrahedronDcd.ComputeTetrahedronMeshAabbs");
+    auto const [tbegin, tend] = mMultibodySystem.TetrahedraRangeFor(o);
+    auto TB = mTetrahedronAabbs(Eigen::placeholders::all, Eigen::seq(tbegin, tend - 1));
+    for (auto t = tbegin; t < tend; ++t)
     {
-        Matrix<kDims, 4> XT = X(Eigen::placeholders::all, mT.col(t)).block<kDims, 4>(0, 0);
-        auto L              = TB.col(t - begin).head<kDims>();
-        auto U              = TB.col(t - begin).tail<kDims>();
+        Matrix<kDims, 4> XT = X(Eigen::placeholders::all, T.col(t)).block<kDims, 4>(0, 0);
+        auto L              = TB.col(t - tbegin).head<kDims>();
+        auto U              = TB.col(t - tbegin).tail<kDims>();
         L                   = XT.rowwise().minCoeff();
         U                   = XT.rowwise().maxCoeff();
     }
@@ -375,29 +261,27 @@ inline void MeshVertexTetrahedronDcd::ForEachBodyPair(FOnBodyPair&& fOnBodyPair)
         });
 }
 
-template <class TDerivedX>
+template <class TDerivedX, class TDerivedT>
 inline void MeshVertexTetrahedronDcd::MarkPenetratingVertices(
     IndexType ov,
     IndexType ot,
-    Eigen::DenseBase<TDerivedX> const& X)
+    Eigen::DenseBase<TDerivedX> const& X,
+    Eigen::DenseBase<TDerivedT> const& T)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.MeshVertexTetrahedronDcd.MarkPenetratingVertices");
-    auto vBegin = mVP(ov);
-    auto vEnd   = mVP(ov + 1);
-    auto Xv     = X(Eigen::placeholders::all, mV(Eigen::seq(vBegin, vEnd - 1)));
-    auto tBegin = mTP(ot);
-    auto tEnd   = mTP(ot + 1);
+    auto const Vov            = mMultibodySystem.ContactVerticesOf(ov);
+    auto Xv                   = X(Eigen::placeholders::all, Vov);
+    auto const [tbegin, tend] = mMultibodySystem.TetrahedraRangeFor(ot);
     auto Lt =
-        mTetrahedronAabbs(Eigen::placeholders::all, Eigen::seq(tBegin, tEnd - 1)).topRows<kDims>();
-    auto Ut = mTetrahedronAabbs(Eigen::placeholders::all, Eigen::seq(tBegin, tEnd - 1))
+        mTetrahedronAabbs(Eigen::placeholders::all, Eigen::seq(tbegin, tend - 1)).topRows<kDims>();
+    auto Ut = mTetrahedronAabbs(Eigen::placeholders::all, Eigen::seq(tbegin, tend - 1))
                   .bottomRows<kDims>();
     std::unordered_map<IndexType, IndexType>& mBodyVertexToOtherBodiesValenceMap =
         mBodyVertexToOtherBodiesValence[static_cast<std::size_t>(ov)];
     mTetrahedronMeshHashGrids[static_cast<std::size_t>(ot)]
         .BroadPhase(Lt, Ut, Xv, [&](IndexType vq, IndexType tp) {
-            auto const v  = vBegin + vq;
-            auto const i  = mV(v);
-            auto const XT = X(Eigen::placeholders::all, mT.col(tBegin + tp));
+            auto const i  = Vov(vq);
+            auto const XT = X(Eigen::placeholders::all, T.col(tbegin + tp));
             using math::linalg::mini::FromEigen;
             if (geometry::OverlapQueries::PointTetrahedron3D(
                     FromEigen(X.col(i).head<kDims>()),
@@ -429,18 +313,18 @@ inline void MeshVertexTetrahedronDcd::FindNearestTrianglesToPenetratingVertices(
 {
     PBAT_PROFILE_NAMED_SCOPE(
         "pbat.sim.contact.MeshVertexTetrahedronDcd.FindNearestTrianglesToPenetratingVertices");
-    auto vBegin = mVP(ov);
-    auto vEnd   = mVP(ov + 1);
-    auto Xv     = X(Eigen::placeholders::all, mV(Eigen::seq(vBegin, vEnd - 1)));
-    auto fBegin = mFP(of);
+    IndexType const vbegin = mMultibodySystem.ContactVerticesRangeFor(ov).first;
+    auto const Vov         = mMultibodySystem.ContactVerticesOf(ov);
+    auto const Xv          = X(Eigen::placeholders::all, Vov);
+    auto const fbegin      = mMultibodySystem.ContactTrianglesRangeFor(of).first;
     std::unordered_map<IndexType, IndexType>& mBodyVertexToOtherBodiesValenceMap =
         mBodyVertexToOtherBodiesValence[static_cast<std::size_t>(ov)];
     for (auto& [vq, valence] : mBodyVertexToOtherBodiesValenceMap)
     {
         assert(valence > 0);
         --valence;
-        auto const v = vBegin + vq;
-        auto const i = mV(v);
+        auto const v = vbegin + vq;
+        auto const i = mMultibodySystem.V(v);
         auto const P = X.col(i).head<kDims>();
         using math::linalg::mini::FromEigen;
         mTriangleMeshBvhs[static_cast<std::size_t>(of)].NearestNeighbours(
@@ -451,8 +335,8 @@ inline void MeshVertexTetrahedronDcd::FindNearestTrianglesToPenetratingVertices(
                     FromEigen(U));
             },
             [&](IndexType fq) { 
-                auto const f = fBegin + fq;
-                auto const iF = mF.col(f);
+                auto const f = fbegin + fq;
+                auto const iF = mMultibodySystem.F.col(f);
                 auto const XT = X(Eigen::placeholders::all, iF);
                 return geometry::DistanceQueries::PointTriangle(
                     FromEigen(P),
@@ -463,7 +347,7 @@ inline void MeshVertexTetrahedronDcd::FindNearestTrianglesToPenetratingVertices(
             [&](IndexType fq, [[maybe_unused]] ScalarType d, IndexType k) {
                 if (k >= kMaxVertexTriangleContacts)
                     return;
-                mVFC(k, v) = fBegin + fq;
+                mVFC(k, v) = fbegin + fq;
             }/*,
             radius,
             eps*/);

@@ -8,9 +8,9 @@ namespace pbat::py::sim::contact {
 
 void Bind(pybind11::module& m)
 {
+    BindMultibodyTetrahedralMeshSystem(m);
     BindMeshVertexTetrahedronDcd(m);
     BindMultibodyMeshMixedCcdDcd(m);
-    BindMultibodyTetrahedralMeshSystem(m);
 }
 
 } // namespace pbat::py::sim::contact

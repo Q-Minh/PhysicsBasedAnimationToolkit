@@ -29,7 +29,7 @@ void BindMultibodyTetrahedralMeshSystem(pybind11::module& m)
             "    T (numpy.ndarray): `4 x |# tetrahedra|` tetrahedral mesh elements/connectivity.\n"
             "Returns:\n"
             "    None\n")
-        .def_property_readonly("n_bodies", &MultibodyTetrahedralMeshSystemType::NumberOfBodies)
+        .def_property_readonly("n_bodies", &MultibodyTetrahedralMeshSystemType::NumBodies)
         .def_readonly("V", &MultibodyTetrahedralMeshSystemType::V)
         .def_readonly("E", &MultibodyTetrahedralMeshSystemType::E)
         .def_readonly("F", &MultibodyTetrahedralMeshSystemType::F)
@@ -41,7 +41,7 @@ void BindMultibodyTetrahedralMeshSystem(pybind11::module& m)
         .def(
             "vertices_of",
             [](MultibodyTetrahedralMeshSystemType& self, IndexType body) {
-                return self.VerticesOf(body).eval();
+                return self.ContactVerticesOf(body).eval();
             },
             pyb::arg("body"),
             "Get vertices of body `body`.\n\n"
@@ -53,7 +53,7 @@ void BindMultibodyTetrahedralMeshSystem(pybind11::module& m)
         .def(
             "edges_of",
             [](MultibodyTetrahedralMeshSystemType& self, IndexType body) {
-                return self.EdgesOf(body).eval();
+                return self.ContactEdgesOf(body).eval();
             },
             pyb::arg("body"),
             "Get edges of body `body`.\n\n"
@@ -64,7 +64,7 @@ void BindMultibodyTetrahedralMeshSystem(pybind11::module& m)
         .def(
             "triangles_of",
             [](MultibodyTetrahedralMeshSystemType& self, IndexType body) {
-                return self.TrianglesOf(body).eval();
+                return self.ContactTrianglesOf(body).eval();
             },
             pyb::arg("body"),
             "Get triangles of body `body`.\n\n"
@@ -94,7 +94,7 @@ void BindMultibodyTetrahedralMeshSystem(pybind11::module& m)
             [](MultibodyTetrahedralMeshSystemType& self,
                IndexType body,
                pyb::EigenDRef<Eigen::Matrix<ScalarType, 3, Eigen::Dynamic> const> const& X) {
-                return self.VertexPositionsOf(body, X).eval();
+                return self.ContactVertexPositionsOf(body, X).eval();
             },
             pyb::arg("body"),
             pyb::arg("X"),

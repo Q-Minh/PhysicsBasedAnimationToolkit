@@ -35,6 +35,17 @@ struct MultibodyTetrahedralMeshSystem
      * @post The input mesh vertex positions and element indices will be sorted by body.
      */
     template <common::CArithmetic TScalar = Scalar>
+    MultibodyTetrahedralMeshSystem(
+        Eigen::Ref<Eigen::Matrix<TScalar, 3, Eigen::Dynamic>> X,
+        Eigen::Ref<Eigen::Matrix<IndexType, 4, Eigen::Dynamic>> T);
+    /**
+     * @brief Construct a new Multibody Tetrahedral Mesh System object
+     * @tparam TDerivedE Eigen type of the input tetrahedral element matrix
+     * @param X `3 x |# mesh vertices|` matrix of vertex positions
+     * @param T `4 x |# tetrahedra|` tetrahedral mesh elements/connectivity
+     * @post The input mesh vertex positions and element indices will be sorted by body.
+     */
+    template <common::CArithmetic TScalar = Scalar>
     void Construct(
         Eigen::Ref<Eigen::Matrix<TScalar, 3, Eigen::Dynamic>> X,
         Eigen::Ref<Eigen::Matrix<IndexType, 4, Eigen::Dynamic>> T);
@@ -42,25 +53,25 @@ struct MultibodyTetrahedralMeshSystem
      * @brief Get the number of bodies in the multibody system
      * @return The number of bodies
      */
-    Eigen::Index NumberOfBodies() const { return VP.size() - 1; }
+    Eigen::Index NumBodies() const { return VP.size() - 1; }
     /**
      * @brief Get vertices of body `o`
      * @param o Index of the body
      * @return `|# contact vertices of body o| x 1` indices into mesh vertices
      */
-    auto VerticesOf(IndexType o) const { return V.segment(VP[o], VP[o + 1] - VP[o]); }
+    auto ContactVerticesOf(IndexType o) const { return V.segment(VP[o], VP[o + 1] - VP[o]); }
     /**
      * @brief Get edges of body `o`
      * @param o Index of the body
      * @return `2 x |# contact edges of body o|` edges into mesh vertices
      */
-    auto EdgesOf(IndexType o) const { return E.middleCols(EP[o], EP[o + 1] - EP[o]); }
+    auto ContactEdgesOf(IndexType o) const { return E.middleCols(EP[o], EP[o + 1] - EP[o]); }
     /**
      * @brief Get triangles of body `o`
      * @param o Index of the body
      * @return `3 x |# contact triangles of body o|` triangles into mesh vertices
      */
-    auto TrianglesOf(IndexType o) const { return F.middleCols(FP[o], FP[o + 1] - FP[o]); }
+    auto ContactTrianglesOf(IndexType o) const { return F.middleCols(FP[o], FP[o + 1] - FP[o]); }
     /**
      * @brief Get tetrahedra of body `o`
      * @tparam TDerivedT Eigen type of the input tetrahedral mesh
@@ -81,7 +92,7 @@ struct MultibodyTetrahedralMeshSystem
      * @return `3 x |# contact vertices of body o|` matrix of vertex positions
      */
     template <class TDerivedX>
-    auto VertexPositionsOf(IndexType o, Eigen::DenseBase<TDerivedX> const& X) const
+    auto ContactVertexPositionsOf(IndexType o, Eigen::DenseBase<TDerivedX> const& X) const
     {
         return X(Eigen::placeholders::all, V.segment(VP[o], VP[o + 1] - VP[o]));
     }
@@ -90,19 +101,19 @@ struct MultibodyTetrahedralMeshSystem
      * @param v Index of the vertex
      * @return Body index of vertex `v`
      */
-    auto BodyOfVertex(IndexType v) const { return CC[V[v]]; }
+    auto BodyOfContactVertex(IndexType v) const { return CC[V[v]]; }
     /**
      * @brief Get the body associated with edge `e`
      * @param e Index of the edge
      * @return Body index of edge `e`
      */
-    auto BodyOfEdge(IndexType e) const { return CC[E(0, e)]; }
+    auto BodyOfContactEdge(IndexType e) const { return CC[E(0, e)]; }
     /**
      * @brief Get the body associated with triangle `f`
      * @param f Index of the triangle
      * @return Body index of triangle `f`
      */
-    auto BodyOfTriangle(IndexType f) const { return CC[F(0, f)]; }
+    auto BodyOfContactTriangle(IndexType f) const { return CC[F(0, f)]; }
     /**
      * @brief Get the body associated with tetrahedron `t`
      * @param t Index of the tetrahedron
@@ -113,6 +124,57 @@ struct MultibodyTetrahedralMeshSystem
     {
         return CC[T(0, t)];
     }
+    /**
+     * @brief Get the number of contact vertices
+     * @return Number of contact vertices
+     */
+    Eigen::Index NumContactVertices() const { return V.size(); }
+    /**
+     * @brief Get the number of contact edges
+     * @return Number of contact edges
+     */
+    Eigen::Index NumContactEdges() const { return E.cols(); }
+    /**
+     * @brief Get the number of contact triangles
+     * @return Number of contact triangles
+     */
+    Eigen::Index NumContactTriangles() const { return F.cols(); }
+    /**
+     * @brief Get the number of tetrahedra
+     * @return Number of tetrahedra
+     */
+    Eigen::Index NumTetrahedra() const { return TP(TP.size() - 1); }
+    /**
+     * @brief Get the range of contact vertices for body `o`
+     * @param o Index of the body
+     * @return A tuple (vbegin, vend) containing the start (inclusive) and end (exclusive) indices
+     * of contact vertices for body `o`
+     */
+    auto ContactVerticesRangeFor(IndexType o) const { return std::make_pair(VP[o], VP[o + 1]); }
+    /**
+     * @brief Get the range of contact edges for body `o`
+     * @param o Index of the body
+     * @return A tuple (ebegin, eend) containing the start (inclusive) and end (exclusive) indices
+     * of contact edges for body `o`
+     */
+    auto ContactEdgesRangeFor(IndexType o) const { return std::make_pair(EP[o], EP[o + 1] - 1); }
+    /**
+     * @brief Get the range of contact triangles for body `o`
+     * @param o Index of the body
+     * @return A tuple (fbegin, fend) containing the start (inclusive) and end (exclusive) indices
+     * of contact triangles for body `o`
+     */
+    auto ContactTrianglesRangeFor(IndexType o) const
+    {
+        return std::make_pair(FP[o], FP[o + 1] - 1);
+    }
+    /**
+     * @brief Get the range of tetrahedra for body `o`
+     * @param o Index of the body
+     * @return A tuple (tbegin, tend) containing the start (inclusive) and end (exclusive) indices
+     * of tetrahedra for body `o`
+     */
+    auto TetrahedraRangeFor(IndexType o) const { return std::make_pair(TP[o], TP[o + 1] - 1); }
 
     Eigen::Vector<TIndex, Eigen::Dynamic>
         V; ///< `|# contact vertices| x 1` indices into mesh vertices
@@ -132,6 +194,16 @@ struct MultibodyTetrahedralMeshSystem
 
     Eigen::Vector<TIndex, Eigen::Dynamic> CC; ///< `|# mesh vertices| x 1` connected component map
 };
+
+template <common::CIndex TIndex>
+template <common::CArithmetic TScalar>
+inline MultibodyTetrahedralMeshSystem<TIndex>::MultibodyTetrahedralMeshSystem(
+    Eigen::Ref<Eigen::Matrix<TScalar, 3, Eigen::Dynamic>> X,
+    Eigen::Ref<Eigen::Matrix<IndexType, 4, Eigen::Dynamic>> T)
+    : MultibodyTetrahedralMeshSystem<TIndex>()
+{
+    Construct(std::move(X), std::move(T));
+}
 
 template <common::CIndex TIndex>
 template <common::CArithmetic TScalar>

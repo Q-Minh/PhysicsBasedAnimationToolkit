@@ -5,47 +5,16 @@ import numpy as np
 import polyscope as ps
 import polyscope.imgui as imgui
 import igl
+import itertools
 
 
-def faces(TS):
-    FS = [igl.boundary_facets(T) for T in TS]
-    for i, F in enumerate(FS):
-        F[:, :2] = np.roll(F[:, :2], shift=1, axis=1)
-    return FS
-
-
-def edges(FS):
-    ES = [igl.edges(F) for F in FS]
-    return ES
-
-
-def vertices(FS):
-    VS = [np.unique(F) for F in FS]
-    return VS
-
-
-def prefix_sum(counts):
-    p = np.zeros(len(counts) + 1, dtype=np.int64)
-    p[1:] = np.cumsum(counts)
-    return p
-
-
-def build_multibody_system(VS, TS):
-    Xlen = [X.shape[0] for X in VS]
-    XP = prefix_sum(Xlen)
-    X = np.hstack([V.T for V in VS])
-    FS = faces(TS)
-    VS = vertices(FS)
-    Tlen = [T.shape[0] for T in TS]
-    Flen = [F.shape[0] for F in FS]
-    Vlen = [V.shape[0] for V in VS]
-    TP = prefix_sum(Tlen)
-    FP = prefix_sum(Flen)
-    VP = prefix_sum(Vlen)
-    T = np.hstack([T.T + XP[k] for k, T in enumerate(TS)])
-    F = np.hstack([F.T + XP[k] for k, F in enumerate(FS)])
-    V = np.hstack([V.T + XP[k] for k, V in enumerate(VS)])
-    return X, V, F, T, VP, FP, TP
+def combine(V: list, C: list):
+    Vsizes = [Vi.shape[0] for Vi in V]
+    offsets = list(itertools.accumulate(Vsizes))
+    C = [C[i] + offsets[i] - Vsizes[i] for i in range(len(C))]
+    C = np.vstack(C)
+    V = np.vstack(V)
+    return V, C
 
 
 if __name__ == "__main__":
@@ -89,7 +58,7 @@ if __name__ == "__main__":
 
     # Load input mesh
     imesh = meshio.read(args.input)
-    V, T = imesh.points.astype(np.float64), imesh.cells_dict["tetra"].astype(np.int64)
+    V, C = imesh.points.astype(np.float64), imesh.cells_dict["tetra"].astype(np.int64)
 
     # Duplicate mesh into grid of meshes
     grows = args.rows
@@ -111,9 +80,13 @@ if __name__ == "__main__":
         for j in range(gcols)
         for i in range(grows)
     ]
-    TS = [T for _ in range(gheight) for _ in range(gcols) for _ in range(grows)]
-    X, V, F, T, VP, FP, TP = build_multibody_system(VS, TS)
-    mcd = pbat.sim.contact.MeshVertexTetrahedronDcd(X, V, F, T, VP, FP, TP)
+    CS = [C for _ in range(gheight) for _ in range(gcols) for _ in range(grows)]
+    V, C = combine(VS, CS)
+    X, T = V.T, C.T
+    mcd = pbat.sim.contact.MeshVertexTetrahedronDcd(X, T)
+    VP = mcd.multibody_system.VP
+    V = mcd.multibody_system.V
+    F = mcd.multibody_system.F
     U = np.zeros_like(X)
     XT = X.copy()
     XTP1 = X.copy()
@@ -163,7 +136,7 @@ if __name__ == "__main__":
                 u = args.amplitude * dir * offset * np.sin(t * args.frequency)
                 U[:, V[VP[m] : VP[m + 1]]] = u[:, np.newaxis]
             XTP1 = X + U
-            mcd.update_active_set(XTP1)
+            mcd.update_active_set(XTP1, T)
             vfc = mcd.vertex_triangle_contacts()
             v, f = vfc[0, :], vfc[1, :]
             profiler.end_frame("Physics")
