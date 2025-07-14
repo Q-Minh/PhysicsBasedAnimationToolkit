@@ -22,7 +22,7 @@ TEST_CASE("[sim][contact] MultibodyTetrahedralMeshSystem")
         T << T1, T2.array() + V1.cols();
         // Act
         pbat::sim::contact::MultibodyTetrahedralMeshSystem<> system{};
-        system.Construct(X, T);
+        system.Construct<pbat::Scalar>(X, T);
         // Assert
         CHECK_EQ(system.NumberOfBodies(), 2);
         CHECK_EQ(system.VP.tail<1>()(0), system.V.size());
@@ -40,7 +40,7 @@ TEST_CASE("[sim][contact] MultibodyTetrahedralMeshSystem")
         T.col(0).swap(T.col(T.cols() - 1)); // Swap the first tetrahedron with the last one
         // Act
         pbat::sim::contact::MultibodyTetrahedralMeshSystem<> system{};
-        system.Construct(X, T);
+        system.Construct<pbat::Scalar>(X, T);
         // Assert
         CHECK_EQ(system.NumberOfBodies(), 2);
         CHECK_EQ(system.VP.tail<1>()(0), system.V.size());

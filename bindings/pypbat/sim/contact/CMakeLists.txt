@@ -5,10 +5,12 @@ target_sources(PhysicsBasedAnimationToolkit_Python
     "Contact.h"
     "MeshVertexTetrahedronDcd.h"
     "MultibodyMeshMixedCcdDcd.h"
+    "MultibodyTetrahedralMeshSystem.h"
 )
 target_sources(PhysicsBasedAnimationToolkit_Python
     PRIVATE
     "Contact.cpp"
-    "MultibodyMeshMixedCcdDcd.cpp"
     "MeshVertexTetrahedronDcd.cpp"
+    "MultibodyMeshMixedCcdDcd.cpp"
+    "MultibodyTetrahedralMeshSystem.cpp"
 )

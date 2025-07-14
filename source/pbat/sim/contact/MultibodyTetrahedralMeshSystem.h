@@ -34,9 +34,9 @@ struct MultibodyTetrahedralMeshSystem
      * @param T `4 x |# tetrahedra|` tetrahedral mesh elements/connectivity
      * @post The input mesh vertex positions and element indices will be sorted by body.
      */
-    template <class TDerivedX>
+    template <common::CArithmetic TScalar = Scalar>
     void Construct(
-        Eigen::PlainObjectBase<TDerivedX>& X,
+        Eigen::Ref<Eigen::Matrix<TScalar, 3, Eigen::Dynamic>> X,
         Eigen::Ref<Eigen::Matrix<IndexType, 4, Eigen::Dynamic>> T);
     /**
      * @brief Get the number of bodies in the multibody system
@@ -108,7 +108,11 @@ struct MultibodyTetrahedralMeshSystem
      * @param t Index of the tetrahedron
      * @return Body index of tetrahedron `t`
      */
-    auto BodyOfTetrahedron(IndexType t) const { return CC[T(0, t)]; }
+    template <class TDerivedT>
+    auto BodyOfTetrahedron(IndexType t, Eigen::DenseBase<TDerivedT> const& T) const
+    {
+        return CC[T(0, t)];
+    }
 
     Eigen::Vector<TIndex, Eigen::Dynamic>
         V; ///< `|# contact vertices| x 1` indices into mesh vertices
@@ -130,9 +134,9 @@ struct MultibodyTetrahedralMeshSystem
 };
 
 template <common::CIndex TIndex>
-template <class TDerivedX>
+template <common::CArithmetic TScalar>
 inline void MultibodyTetrahedralMeshSystem<TIndex>::Construct(
-    Eigen::PlainObjectBase<TDerivedX>& X,
+    Eigen::Ref<Eigen::Matrix<TScalar, 3, Eigen::Dynamic>> X,
     Eigen::Ref<Eigen::Matrix<IndexType, 4, Eigen::Dynamic>> T)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.MultibodyTetrahedralMeshSystem.Construct");
