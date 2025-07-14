@@ -11,8 +11,8 @@
 #define PBAT_GRAPH_MESH_H
 
 #include "pbat/Aliases.h"
-
-#include <concepts>
+#include "pbat/common/Concepts.h"
+#include "pbat/profiling/Profiling.h"
 
 namespace pbat {
 namespace graph {
@@ -37,8 +37,8 @@ namespace graph {
 template <
     class TDerivedE,
     class TDerivedW,
-    std::integral TIndex = typename TDerivedE::Scalar,
-    class TScalar        = typename TDerivedW::Scalar>
+    common::CIndex TIndex       = typename TDerivedE::Scalar,
+    common::CArithmetic TScalar = typename TDerivedW::Scalar>
 auto MeshAdjacencyMatrix(
     Eigen::DenseBase<TDerivedE> const& E,
     Eigen::DenseBase<TDerivedW> const& w,
@@ -46,6 +46,7 @@ auto MeshAdjacencyMatrix(
     bool bVertexToElement = false,
     bool bHasDuplicates   = false) -> Eigen::SparseMatrix<TScalar, Eigen::ColMajor, TIndex>
 {
+    PBAT_PROFILE_NAMED_SCOPE("pbat.graph.MeshAdjacencyMatrix");
     if (nNodes < 0)
         nNodes = E.maxCoeff() + TIndex(1);
 
@@ -86,7 +87,7 @@ auto MeshAdjacencyMatrix(
  * @param bHasDuplicates If true, duplicate entries in the input mesh will be handled
  * @return Adjacency matrix of requested mesh connectivity
  */
-template <class TDerivedE, std::integral TIndex = typename TDerivedE::Scalar>
+template <class TDerivedE, common::CIndex TIndex = typename TDerivedE::Scalar>
 auto MeshAdjacencyMatrix(
     Eigen::DenseBase<TDerivedE> const& E,
     TIndex nNodes         = TIndex(-1),
@@ -112,10 +113,11 @@ auto MeshAdjacencyMatrix(
  * E.
  * @return Primal graph of the input mesh
  */
-template <class TDerivedE, std::integral TIndex = typename TDerivedE::Scalar>
+template <class TDerivedE, common::CIndex TIndex = typename TDerivedE::Scalar>
 auto MeshPrimalGraph(Eigen::DenseBase<TDerivedE> const& E, TIndex nNodes = TIndex(-1))
     -> Eigen::SparseMatrix<TIndex, Eigen::ColMajor, TIndex>
 {
+    PBAT_PROFILE_NAMED_SCOPE("pbat.graph.MeshPrimalGraph");
     auto const G = MeshAdjacencyMatrix(E, nNodes);
     return G * G.transpose();
 }
@@ -141,13 +143,14 @@ enum class EMeshDualGraphOptions : std::int32_t {
  * @param opts Adjacency types to keep in the dual graph
  * @return Dual graph of the input mesh
  */
-template <class TDerivedE, std::integral TIndex = typename TDerivedE::Scalar>
+template <class TDerivedE, common::CIndex TIndex = typename TDerivedE::Scalar>
 auto MeshDualGraph(
     Eigen::DenseBase<TDerivedE> const& E,
     TIndex nNodes              = TIndex(-1),
     EMeshDualGraphOptions opts = EMeshDualGraphOptions::All)
     -> Eigen::SparseMatrix<TIndex, Eigen::ColMajor, TIndex>
 {
+    PBAT_PROFILE_NAMED_SCOPE("pbat.graph.MeshDualGraph");
     auto const G           = MeshAdjacencyMatrix(E, nNodes);
     using SparseMatrixType = Eigen::SparseMatrix<TIndex, Eigen::ColMajor, TIndex>;
     SparseMatrixType GTG   = G.transpose() * G;

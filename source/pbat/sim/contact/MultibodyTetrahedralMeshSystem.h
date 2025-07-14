@@ -2,11 +2,17 @@
 #define PBAT_SIM_CONTACT_MULTIBODYTETRAHEDRALMESH_H
 
 #include "pbat/Aliases.h"
+#include "pbat/common/ArgSort.h"
 #include "pbat/common/Concepts.h"
+#include "pbat/common/Permute.h"
 #include "pbat/geometry/MeshBoundary.h"
+#include "pbat/graph/BreadthFirstSearch.h"
+#include "pbat/graph/ConnectedComponents.h"
+#include "pbat/graph/Mesh.h"
 #include "pbat/profiling/Profiling.h"
 
 #include <Eigen/Core>
+#include <ranges>
 
 namespace pbat::sim::contact {
 
@@ -24,23 +30,14 @@ struct MultibodyTetrahedralMeshSystem
     /**
      * @brief Construct a new Multibody Tetrahedral Mesh System object
      * @tparam TDerivedE Eigen type of the input tetrahedral element matrix
-     * @param T_ `4 x |# tetrahedra|` tetrahedral mesh elements/connectivity
-     * @param nNodes Number of nodes in the multibody system. If `nNodes == -1`, the number of nodes
-     * is inferred from the input tetrahedral mesh `T_`
+     * @param X `3 x |# mesh vertices|` matrix of vertex positions
+     * @param T `4 x |# tetrahedra|` tetrahedral mesh elements/connectivity
+     * @post The input mesh vertex positions and element indices will be sorted by body.
      */
-    template <class TDerivedE>
-    MultibodyTetrahedralMeshSystem(
-        Eigen::DenseBase<TDerivedE> const& T_,
-        Eigen::Index nNodes = Eigen::Index(-1));
-    /**
-     * @brief Construct a new Multibody Tetrahedral Mesh System object
-     * @tparam TDerivedE Eigen type of the input tetrahedral element matrix
-     * @param T_ `4 x |# tetrahedra|` tetrahedral mesh elements/connectivity
-     * @param nNodes Number of nodes in the multibody system. If `nNodes == -1`, the number of nodes
-     * is inferred from the input tetrahedral mesh `T_`
-     */
-    template <class TDerivedE>
-    void Construct(Eigen::DenseBase<TDerivedE> const& T_, Eigen::Index nNodes = Eigen::Index(-1));
+    template <class TDerivedX>
+    void Construct(
+        Eigen::PlainObjectBase<TDerivedX>& X,
+        Eigen::Ref<Eigen::Matrix<IndexType, 4, Eigen::Dynamic>> T);
     /**
      * @brief Get the number of bodies in the multibody system
      * @return The number of bodies
@@ -66,10 +63,28 @@ struct MultibodyTetrahedralMeshSystem
     auto TrianglesOf(IndexType o) const { return F.middleCols(FP[o], FP[o + 1] - FP[o]); }
     /**
      * @brief Get tetrahedra of body `o`
+     * @tparam TDerivedT Eigen type of the input tetrahedral mesh
      * @param o Index of the body
+     * @param T `4 x |# tetrahedra|` tetrahedral mesh elements/connectivity
      * @return `4 x |# contact tetrahedra of body o|` tetrahedra into input tetrahedral mesh `T`
      */
-    auto TetrahedraOf(IndexType o) const { return T.middleCols(TP[o], TP[o + 1] - TP[o]); }
+    template <class TDerivedT>
+    auto TetrahedraOf(IndexType o, Eigen::DenseBase<TDerivedT> const& T) const
+    {
+        return T.middleCols(TP[o], TP[o + 1] - TP[o]);
+    }
+    /**
+     * @brief Get vertex positions of body `o`
+     * @tparam TDerivedX Eigen type of the input vertex positions
+     * @param o Index of the body
+     * @param X `3 x |# mesh vertices|` matrix of vertex positions
+     * @return `3 x |# contact vertices of body o|` matrix of vertex positions
+     */
+    template <class TDerivedX>
+    auto VertexPositionsOf(IndexType o, Eigen::DenseBase<TDerivedX> const& X) const
+    {
+        return X(Eigen::placeholders::all, V.segment(VP[o], VP[o + 1] - VP[o]));
+    }
     /**
      * @brief Get the body associated with vertex `v`
      * @param v Index of the vertex
@@ -102,34 +117,123 @@ struct MultibodyTetrahedralMeshSystem
     Eigen::Matrix<TIndex, 3, Eigen::Dynamic>
         F; ///< `3 x |# contact triangles|` triangles into mesh vertices
 
-    Eigen::Vector<TIndex, Eigen::Dynamic> VP; ///< Prefix sum of vertex pointers into `V`
-    Eigen::Vector<TIndex, Eigen::Dynamic> EP; ///< Prefix sum of edge pointers into `E`
-    Eigen::Vector<TIndex, Eigen::Dynamic> FP; ///< Prefix sum of triangle pointers into `F`
     Eigen::Vector<TIndex, Eigen::Dynamic>
-        TP; ///< Prefix sum of tetrahedron pointers into input tetrahedral mesh `T`
+        VP; ///< `|# bodies + 1| x 1` prefix sum of vertex pointers into `V`
+    Eigen::Vector<TIndex, Eigen::Dynamic>
+        EP; ///< `|# bodies + 1| x 1` prefix sum of edge pointers into `E`
+    Eigen::Vector<TIndex, Eigen::Dynamic>
+        FP; ///< `|# bodies + 1| x 1` prefix sum of triangle pointers into `F`
+    Eigen::Vector<TIndex, Eigen::Dynamic> TP; ///< `|# bodies + 1| x 1` prefix sum of tetrahedron
+                                              ///< pointers into input tetrahedral mesh `T`
 
-    Eigen::Vector<TIndex, Eigen::Dynamic> CC; ///< `|# vertices| x 1` vertex -> connected components
+    Eigen::Vector<TIndex, Eigen::Dynamic> CC; ///< `|# mesh vertices| x 1` connected component map
 };
 
 template <common::CIndex TIndex>
-template <class TDerivedE>
-inline MultibodyTetrahedralMeshSystem<TIndex>::MultibodyTetrahedralMeshSystem(
-    Eigen::DenseBase<TDerivedE> const& T_,
-    Eigen::Index nNodes)
-    : MultibodyTetrahedralMeshSystem<TIndex>()
-{
-    Construct(T_.derived(), nNodes);
-}
-
-template <common::CIndex TIndex>
-template <class TDerivedE>
+template <class TDerivedX>
 inline void MultibodyTetrahedralMeshSystem<TIndex>::Construct(
-    Eigen::DenseBase<TDerivedE> const& T_,
-    Eigen::Index nNodes)
+    Eigen::PlainObjectBase<TDerivedX>& X,
+    Eigen::Ref<Eigen::Matrix<IndexType, 4, Eigen::Dynamic>> T)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.MultibodyTetrahedralMeshSystem.Construct");
-    // TODO: 
-    // Implement the construction of the multibody tetrahedral mesh system
+    IndexType const nNodes    = static_cast<IndexType>(X.cols());
+    IndexType const nElements = static_cast<IndexType>(T.cols());
+    // 1. Compute the mesh's dual graph over tets
+    Eigen::SparseMatrix<IndexType, Eigen::ColMajor, IndexType> const EG =
+        graph::MeshDualGraph(T, nNodes, graph::EMeshDualGraphOptions::All);
+    // 2. Compute the connected components of the mesh
+    graph::BreadthFirstSearch<IndexType> bfs(nElements);
+    Eigen::Vector<IndexType, Eigen::Dynamic> ECC(nElements);
+    ECC.setConstant(IndexType(-1));
+    IndexType const nComponents = graph::ConnectedComponents<IndexType>(
+        Eigen::Map<Eigen::Vector<IndexType, Eigen::Dynamic> const>(
+            EG.outerIndexPtr(),
+            EG.outerSize() + 1),
+        Eigen::Map<Eigen::Vector<IndexType, Eigen::Dynamic> const>(
+            EG.innerIndexPtr(),
+            EG.nonZeros()),
+        ECC,
+        bfs);
+    // 3. Transfer the element connected components to the mesh vertex connected component map
+    CC.setConstant(nNodes, IndexType(-1));
+    auto verticesToElements =
+        Eigen::Vector<IndexType, Eigen::Dynamic>::LinSpaced(nElements, 0, nElements - 1)
+            .replicate<1, 4>()
+            .transpose()
+            .reshaped(); // `4 x |# elements|` matrix `[[0,0,0,0], [1,1,1,1], ...,
+                         // [nElements-1,nElements-1,nElements-1,nElements-1]]`
+    CC(T.reshaped()) = ECC(verticesToElements);
+    // 4. Sort the tets by connected component
+    Eigen::Vector<IndexType, Eigen::Dynamic> Eordering =
+        common::ArgSort<IndexType>(nElements, [&](IndexType ei, IndexType ej) {
+            return ECC[ei] < ECC[ej];
+        });
+    for (auto r = 0; r < T.rows(); ++r)
+        common::Permute(T.row(r).begin(), T.row(r).end(), Eordering.begin());
+    common::Permute(ECC.begin(), ECC.end(), Eordering.begin());
+    // 5. Sort vertices by connected component
+    Eigen::Vector<IndexType, Eigen::Dynamic> Xordering =
+        common::ArgSort<IndexType>(nNodes, [&](IndexType i, IndexType j) { return CC[i] < CC[j]; });
+    for (auto d = 0; d < X.rows(); ++d)
+        common::Permute(X.row(d).begin(), X.row(d).end(), Xordering.begin());
+    common::Permute(CC.begin(), CC.end(), Xordering.begin());
+    // 6. Re-index tet vertices to match the sorted order
+    T.reshaped() = Xordering(T.reshaped());
+    // 7. Compute boundary mesh, and note that V and F will already be sorted by connected
+    // component, because we have re-indexed T and X
+    std::tie(V, F) = geometry::SimplexMeshBoundary<IndexType>(T, nNodes);
+    // 8. Compute edges from triangles (edges are also sorted by connected component, since
+    // triangles are)
+    auto const nEdges =
+        F.size() / 2; // Boundary (triangle) mesh of tetrahedral mesh must be manifold+watertight
+    E.resize(2, nEdges);
+    auto const nTriangles = F.cols();
+    for (auto f = 0, e = 0; f < nTriangles; ++f)
+    {
+        for (auto k = 0; k < 3; ++k)
+        {
+            auto i = F(k, f);
+            auto j = F((k + 1) % 3, f);
+            // De-duplicate since every edge is counted twice in the loop
+            if (i < j)
+            {
+                E(0, e) = i;
+                E(1, e) = j;
+                ++e;
+            }
+        }
+    }
+    // 9. Compute the prefix sums for vertices, edges, triangles, and tetrahedra
+    VP.setZero(nComponents + 1);
+    EP.setZero(nComponents + 1);
+    FP.setZero(nComponents + 1);
+    TP.setZero(nComponents + 1);
+    IndexType const nContactVertices = static_cast<IndexType>(V.size());
+    IndexType const nContactEdges    = static_cast<IndexType>(E.cols());
+    IndexType const nContactFaces    = static_cast<IndexType>(F.cols());
+    for (IndexType o = 0; o < nComponents; ++o)
+    {
+        // Count vertices of body o
+        auto& vosum = VP(o + 1);
+        vosum       = VP(o);
+        while (vosum < nContactVertices and CC(V(vosum)) == o)
+            ++vosum;
+        // Count edges of body o
+        auto& eosum = EP(o + 1);
+        eosum       = EP(o);
+        while (eosum < nContactEdges and CC(E(0, eosum)) == o)
+            ++eosum;
+        // Count faces of body o
+        auto& fosum = FP(o + 1);
+        fosum       = FP(o);
+        while (fosum < nContactFaces and CC(F(0, fosum)) == o)
+            ++fosum;
+        // Count tetrahedra of body o
+        auto& tosum = TP(o + 1);
+        tosum       = TP(o);
+        while (tosum < nElements and CC(T(0, tosum)) == o)
+            ++tosum;
+    }
 }
 
 } // namespace pbat::sim::contact
