@@ -95,6 +95,12 @@ class Archive
      */
     template <class T>
     T ReadMetaData(std::string const& key) const;
+    /**
+     * @brief Unlink a dataset or group from the archive.
+     * @param path Path to the dataset or group.
+     * @throw HighFive::GroupException if the dataset or group cannot be unlinked.
+     */
+    void Unlink(std::string const& path);
 
     ~Archive() = default;
 
@@ -120,7 +126,14 @@ inline void Archive::WriteData(std::string const& path, T const& data)
             using U = std::decay_t<decltype(arg)>;
             if constexpr (not std::is_same_v<U, std::monostate>)
             {
-                arg.createDataSet(path, data);
+                if (arg.exist(path) and (arg.getObjectType(path) == HighFive::ObjectType::Dataset))
+                {
+                    arg.getDataSet(path).write(data);
+                }
+                else
+                {
+                    arg.createDataSet(path, data);
+                }
             }
         },
         mHdf5Object);
@@ -134,7 +147,14 @@ inline void Archive::WriteMetaData(std::string const& key, T const& value)
             using U = std::decay_t<decltype(arg)>;
             if constexpr (not std::is_same_v<U, std::monostate>)
             {
-                arg.createAttribute(key, value);
+                if (arg.hasAttribute(key))
+                {
+                    arg.getAttribute(key).write(value);
+                }
+                else
+                {
+                    arg.createAttribute(key, value);
+                }
             }
         },
         mHdf5Object);
