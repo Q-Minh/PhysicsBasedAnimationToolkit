@@ -25,11 +25,6 @@ namespace pbat::io {
 class Archive
 {
   public:
-    Archive(const Archive&)            = delete;
-    Archive(Archive&&)                 = default;
-    Archive& operator=(const Archive&) = delete;
-    Archive& operator=(Archive&&)      = default;
-
     /**
      * @brief Construct a new Archive object from a filepath to an HDF5 file.
      *
@@ -101,8 +96,6 @@ class Archive
      * @throw HighFive::GroupException if the dataset or group cannot be unlinked.
      */
     void Unlink(std::string const& path);
-
-    ~Archive() = default;
 
   protected:
     using Object =

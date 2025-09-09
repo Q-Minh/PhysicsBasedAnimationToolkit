@@ -78,14 +78,15 @@ Archive Archive::operator[](std::string const& path) const
     return Archive(std::move(obj));
 }
 
-void Archive::Unlink(std::string const& path) 
+void Archive::Unlink(std::string const& path)
 {
     std::visit(
         [&](auto&& arg) {
             using T = std::decay_t<decltype(arg)>;
             if constexpr (not std::is_same_v<T, std::monostate>)
             {
-                if (arg.exist(path)) {
+                if (arg.exist(path))
+                {
                     arg.unlink(path);
                 }
             }
@@ -163,6 +164,36 @@ TEST_CASE("[io] Archive")
             CHECK(data2 == std::vector<double>({1.1, 2.2, 3.3}));
             auto data1 = archive["group1/group2"].ReadData<std::vector<int>>("dataset1");
             CHECK(data1 == std::vector<int>({6, 7, 8}));
+        }
+        {
+            Archive archive(tempFile, HighFive::File::ReadWrite);
+            CHECK(archive.IsUsable());
+
+            // Write Eigen matrix
+            Eigen::MatrixXd matrix(2, 2);
+            matrix << 1.1, 2.2, 3.3, 4.4;
+            archive["group/eigen"].WriteData("matrix", matrix);
+
+            // Read Eigen matrix
+            auto readMatrix = archive["group/eigen"].ReadData<Eigen::MatrixXd>("matrix");
+            CHECK(readMatrix.rows() == 2);
+            CHECK(readMatrix.cols() == 2);
+            CHECK(readMatrix(0, 0) == doctest::Approx(1.1));
+            CHECK(readMatrix(0, 1) == doctest::Approx(2.2));
+            CHECK(readMatrix(1, 0) == doctest::Approx(3.3));
+            CHECK(readMatrix(1, 1) == doctest::Approx(4.4));
+
+            // Write Eigen vector
+            Eigen::VectorXd vector(3);
+            vector << 5.5, 6.6, 7.7;
+            archive["group/eigen"].WriteData("vector", vector);
+
+            // Read Eigen vector
+            auto readVector = archive["group/eigen"].ReadData<Eigen::VectorXd>("vector");
+            CHECK(readVector.size() == 3);
+            CHECK(readVector(0) == doctest::Approx(5.5));
+            CHECK(readVector(1) == doctest::Approx(6.6));
+            CHECK(readVector(2) == doctest::Approx(7.7));
         }
         std::filesystem::remove(tempFile);
     }
