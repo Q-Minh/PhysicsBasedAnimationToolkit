@@ -12,11 +12,13 @@
 #define PBAT_SIM_INTEGRATION_BDF_H
 
 #include "pbat/Aliases.h"
+#include "pbat/common/Concepts.h"
 #include "pbat/common/ConstexprFor.h"
 #include "pbat/common/Modulo.h"
 #include "pbat/io/Archive.h"
 
 #include <cassert>
+#include <exception>
 #include <tuple>
 
 namespace pbat::sim::integration {
@@ -70,9 +72,13 @@ namespace pbat::sim::integration {
  * ```
  *
  */
+template <class TScalar = Scalar, class TIndex = Index>
 class Bdf
 {
   public:
+    using ScalarType = TScalar; ///< Floating point scalar type
+    using IndexType  = TIndex;  ///< Integer index type
+
     /**
      * @brief Construct a `step`-step BDF (backward differentiation formula) time integration scheme
      * for a system of ODEs (ordinary differential equation) of order `order`.
@@ -83,15 +89,16 @@ class Bdf
      */
     Bdf(int step = 1, int order = 2);
 
-    MatrixX xt; ///< `n x |s*order|` matrix of `n`-dimensional states and their time derivatives
-                ///< s.t. \f$ xt.col(o*s + k) = x^(k)(t - k*dt) \f$ for \f$ k = 0, ..., s \f$ and
-                ///< \f$ o = 0, ..., \text{order}-1 \f$
-    MatrixX
-        xtilde; ///< `n x order` matrix of `n`-dimensional aggregated past states and time
-                ///< derivatives s.t. xtilde.col(o) = \f$ \frac{1}{\alpha_s} \sum_{k=t_i-s}^{s-1}
-                ///< \alpha_k x_k \f$ for \f$ o = 0, ..., \text{order}-1 \f$
-    Index ti;   ///< Current time index s.t. \f$t = t_0 + h t_i\f$
-    Scalar h;   ///< Time step size \f$ h \f$
+    Eigen::Matrix<ScalarType, Eigen::Dynamic, Eigen::Dynamic>
+        xt; ///< `n x |s*order|` matrix of `n`-dimensional states and their time derivatives
+            ///< s.t. \f$ xt.col(o*s + k) = x^(k)(t - k*dt) \f$ for \f$ k = 0, ..., s \f$ and
+            ///< \f$ o = 0, ..., \text{order}-1 \f$
+    Eigen::Matrix<ScalarType, Eigen::Dynamic, Eigen::Dynamic>
+        xtilde;   ///< `n x order` matrix of `n`-dimensional aggregated past states and time
+                  ///< derivatives s.t. xtilde.col(o) = \f$ \frac{1}{\alpha_s} \sum_{k=t_i-s}^{s-1}
+                  ///< \alpha_k x_k \f$ for \f$ o = 0, ..., \text{order}-1 \f$
+    IndexType ti; ///< Current time index s.t. \f$t = t_0 + h t_i\f$
+    ScalarType h; ///< Time step size \f$ h \f$
 
     /**
      * @brief Order of the ODE
@@ -178,7 +185,7 @@ class Bdf
      * @param dt Time step size \f$ dt > 0 \f$
      * @pre `dt > 0`
      */
-    void SetTimeStep(Scalar dt);
+    void SetTimeStep(ScalarType dt);
     /**
      * @brief Construct the BDF equations, i.e. compute \f$ \tilde{x^{(o)}} = \sum_{k=0}^{s-1}
      * \alpha_k x^{(o)}_{t_i - s + k} \f$ for all \f$ o = 0, ..., \text{order}-1 \f$
@@ -232,14 +239,149 @@ class Bdf
     void Deserialize(io::Archive const& archive);
 
   private:
-    int mOrder;       ///< ODE order \f$ \text{order} >= 1 \f$
-    int mStep;        ///< Step \f$ 0 < s < 7 \f$ backward differentiation scheme
-    Vector<6> mAlpha; ///< Interpolation coefficients \f$ \alpha_k \f$ except \f$ \alpha_s \f$
-    Scalar mBeta; ///< Forcing term coefficient \f$ \beta \f$ s.t. \f$ \tilde{\beta} = h \beta \f$
+    int mOrder; ///< ODE order \f$ \text{order} >= 1 \f$
+    int mStep;  ///< Step \f$ 0 < s < 7 \f$ backward differentiation scheme
+    Eigen::Vector<ScalarType, 6>
+        mAlpha; ///< Interpolation coefficients \f$ \alpha_k \f$ except \f$ \alpha_s \f$
+    ScalarType
+        mBeta; ///< Forcing term coefficient \f$ \beta \f$ s.t. \f$ \tilde{\beta} = h \beta \f$
 };
 
+template <class TScalar, class TIndex>
+Bdf<TScalar, TIndex>::Bdf(int step, int order)
+    : xt(), xtilde(), ti(0), h(Scalar(0.01)), mOrder(), mStep(), mAlpha(), mBeta()
+{
+    SetStep(step);
+    SetOrder(order);
+}
+
+template <class TScalar, class TIndex>
+auto Bdf<TScalar, TIndex>::State(int k, int o) const -> decltype(xt.col(0))
+{
+    if (k < 0 || k > mStep)
+    {
+        throw std::out_of_range("0 <= k <= s");
+    }
+    if (o < 0 || o >= mOrder)
+    {
+        throw std::out_of_range("0 <= o < order");
+    }
+    auto kt = common::Modulo(ti /*- mStep*/ + k, mStep);
+    return xt.col(o * mStep + kt);
+}
+
+template <class TScalar, class TIndex>
+auto Bdf<TScalar, TIndex>::State(int k, int o) -> decltype(xt.col(0))
+{
+    if (k < 0 || k > mStep)
+    {
+        throw std::out_of_range("0 <= k <= s");
+    }
+    if (o < 0 || o >= mOrder)
+    {
+        throw std::out_of_range("0 <= o < order");
+    }
+    auto kt = common::Modulo(ti /*- mStep*/ + k, mStep);
+    return xt.col(o * mStep + kt);
+}
+
+template <class TScalar, class TIndex>
+auto Bdf<TScalar, TIndex>::CurrentState(int o) const -> decltype(xt.col(0))
+{
+    return State(mStep - 1, o);
+}
+
+template <class TScalar, class TIndex>
+auto Bdf<TScalar, TIndex>::CurrentState(int o) -> decltype(xt.col(0))
+{
+    return State(mStep - 1, o);
+}
+
+template <class TScalar, class TIndex>
+void Bdf<TScalar, TIndex>::SetOrder(int order)
+{
+    if (order <= 0)
+    {
+        throw std::invalid_argument("order > 0");
+    }
+    mOrder = order;
+}
+
+template <class TScalar, class TIndex>
+void Bdf<TScalar, TIndex>::SetStep(int step)
+{
+    if (step < 1 || step > 6)
+    {
+        throw std::invalid_argument("0 < s < 7.");
+    }
+    mStep = step;
+    mAlpha.setZero();
+    switch (mStep)
+    {
+        case 1:
+            mAlpha(0) = Scalar(-1);
+            mBeta     = Scalar(1);
+            break;
+        case 2:
+            mAlpha(0) = Scalar(1) / 3;
+            mAlpha(1) = Scalar(-4) / 3;
+            mBeta     = Scalar(2) / 3;
+            break;
+        case 3:
+            mAlpha(0) = Scalar(-2) / 11;
+            mAlpha(1) = Scalar(9) / 11;
+            mAlpha(2) = Scalar(-18) / 11;
+            mBeta     = Scalar(6) / 11;
+            break;
+        case 4:
+            mAlpha(0) = Scalar(3) / 25;
+            mAlpha(1) = Scalar(-16) / 25;
+            mAlpha(2) = Scalar(36) / 25;
+            mAlpha(3) = Scalar(-48) / 25;
+            mBeta     = Scalar(12) / 25;
+            break;
+        case 5:
+            mAlpha(0) = Scalar(-12) / 137;
+            mAlpha(1) = Scalar(75) / 137;
+            mAlpha(2) = Scalar(-200) / 137;
+            mAlpha(3) = Scalar(300) / 137;
+            mAlpha(4) = Scalar(-300) / 137;
+            mBeta     = Scalar(60) / 137;
+            break;
+        case 6:
+            mAlpha(0) = Scalar(10) / 147;
+            mAlpha(1) = Scalar(-72) / 147;
+            mAlpha(2) = Scalar(225) / 147;
+            mAlpha(3) = Scalar(-400) / 147;
+            mAlpha(4) = Scalar(450) / 147;
+            mAlpha(5) = Scalar(-360) / 147;
+            mBeta     = Scalar(60) / 147;
+            break;
+    }
+}
+
+template <class TScalar, class TIndex>
+void Bdf<TScalar, TIndex>::SetTimeStep(ScalarType dt)
+{
+    if (dt <= 0)
+    {
+        throw std::invalid_argument("dt > 0");
+    }
+    h = dt;
+}
+
+template <class TScalar, class TIndex>
+void Bdf<TScalar, TIndex>::ConstructEquations()
+{
+    xtilde.setZero();
+    for (auto o = 0; o < mOrder; ++o)
+        for (auto k = 0; k < mStep; ++k)
+            xtilde.col(o) += mAlpha(k) * State(k, o);
+}
+
+template <class TScalar, class TIndex>
 template <class TDerivedX>
-inline void Bdf::SetInitialConditions(Eigen::DenseBase<TDerivedX> const& x0)
+inline void Bdf<TScalar, TIndex>::SetInitialConditions(Eigen::DenseBase<TDerivedX> const& x0)
 {
     ti     = 0;
     auto n = x0.rows();
@@ -249,8 +391,9 @@ inline void Bdf::SetInitialConditions(Eigen::DenseBase<TDerivedX> const& x0)
         xt.middleCols(o * mStep, mStep).colwise() = x0.col(o);
 }
 
+template <class TScalar, class TIndex>
 template <class... TDerivedX>
-inline void Bdf::SetInitialConditions(Eigen::DenseBase<TDerivedX> const&... x0)
+inline void Bdf<TScalar, TIndex>::SetInitialConditions(Eigen::DenseBase<TDerivedX> const&... x0)
 {
     auto constexpr nDerivs = sizeof...(TDerivedX);
     assert(nDerivs == mOrder);
@@ -266,22 +409,52 @@ inline void Bdf::SetInitialConditions(Eigen::DenseBase<TDerivedX> const&... x0)
 #include "pbat/warning/Pop.h"
 }
 
+template <class TScalar, class TIndex>
 template <class TDerivedX>
-inline void Bdf::Step(Eigen::DenseBase<TDerivedX> const& x)
+inline void Bdf<TScalar, TIndex>::Step(Eigen::DenseBase<TDerivedX> const& x)
 {
     Tick();
     for (auto o = 0; o < mOrder; ++o)
         CurrentState(o) = x.col(o);
 }
 
+template <class TScalar, class TIndex>
 template <class... TDerivedX>
-inline void Bdf::Step(Eigen::DenseBase<TDerivedX> const&... x)
+inline void Bdf<TScalar, TIndex>::Step(Eigen::DenseBase<TDerivedX> const&... x)
 {
     auto constexpr nDerivs = sizeof...(TDerivedX);
     assert(nDerivs == mOrder);
     Tick();
     std::tuple<decltype(x)...> tup{x...};
     common::ForRange<0, nDerivs>([&]<auto o>() { CurrentState(o) = std::get<o>(tup); });
+}
+
+template <class TScalar, class TIndex>
+void Bdf<TScalar, TIndex>::Serialize(io::Archive& archive) const
+{
+    io::Archive bdfArchive = archive["pbat.sim.integration.Bdf"];
+    bdfArchive.WriteData("xt", xt);
+    bdfArchive.WriteData("xtilde", xtilde);
+    bdfArchive.WriteMetaData("h", h);
+    bdfArchive.WriteMetaData("ti", ti);
+    bdfArchive.WriteMetaData("order", mOrder);
+    bdfArchive.WriteMetaData("step", mStep);
+    bdfArchive.WriteMetaData("alpha", mAlpha);
+    bdfArchive.WriteMetaData("beta", mBeta);
+}
+
+template <class TScalar, class TIndex>
+void Bdf<TScalar, TIndex>::Deserialize(io::Archive const& archive)
+{
+    io::Archive const group = archive["pbat.sim.integration.Bdf"];
+    xt                      = group.ReadData<MatrixX>("xt");
+    xtilde                  = group.ReadData<MatrixX>("xtilde");
+    h                       = group.ReadMetaData<Scalar>("h");
+    ti                      = group.ReadMetaData<Index>("ti");
+    mOrder                  = group.ReadMetaData<int>("order");
+    mStep                   = group.ReadMetaData<int>("step");
+    mAlpha                  = group.ReadMetaData<Vector<6>>("alpha");
+    mBeta                   = group.ReadMetaData<Scalar>("beta");
 }
 
 } // namespace pbat::sim::integration

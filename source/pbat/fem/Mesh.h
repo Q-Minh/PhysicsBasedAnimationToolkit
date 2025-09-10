@@ -16,6 +16,7 @@
 #include "pbat/Aliases.h"
 #include "pbat/common/Concepts.h"
 #include "pbat/common/Eigen.h"
+#include "pbat/io/Archive.h"
 #include "pbat/math/Rational.h"
 #include "pbat/profiling/Profiling.h"
 
@@ -95,6 +96,17 @@ struct Mesh
         int QuadratureOrder,
         int kPoints = TElement::template QuadratureType<QuadratureOrder, ScalarType>::kPoints>
     auto QuadratureWeights() const -> Eigen::Vector<ScalarType, kPoints>;
+
+    /**
+     * @brief Serialize to HDF5 group
+     * @param archive Archive to serialize to
+     */
+    void Serialize(io::Archive& archive) const;
+    /**
+     * @brief Deserialize from HDF5 group
+     * @param archive Archive to deserialize from
+     */
+    void Deserialize(io::Archive const& archive);
 
     NodeMatrix X;    ///< `kDims x |# nodes|` nodal positions
     ElementMatrix E; ///< `|Element::Nodes| x |# elements|` element nodal indices
@@ -321,6 +333,44 @@ Mesh<TElement, Dims, TScalar, TIndex>::QuadratureWeights() const
         "kPoints must match the number of quadrature points for the given QuadratureOrder");
     Eigen::Vector<TScalar, kQuadPts> const wg = common::ToEigen(QuadratureRuleType::weights);
     return wg;
+}
+
+template <CElement TElement, int Dims, common::CFloatingPoint TScalar, common::CIndex TIndex>
+void Mesh<TElement, Dims, TScalar, TIndex>::Serialize(io::Archive& archive) const
+{
+    io::Archive meshArchive = archive["pbat.fem.Mesh"];
+    meshArchive.WriteData("X", X);
+    meshArchive.WriteData("E", E);
+    meshArchive.WriteMetaData("kDims", kDims);
+    meshArchive.WriteMetaData("kOrder", kOrder);
+}
+
+template <CElement TElement, int Dims, common::CFloatingPoint TScalar, common::CIndex TIndex>
+void Mesh<TElement, Dims, TScalar, TIndex>::Deserialize(io::Archive const& archive)
+{
+    io::Archive const meshArchive = archive["pbat.fem.Mesh"];
+    int const kDimsRead           = meshArchive.ReadMetaData<int>("kDims");
+    int const kOrderRead          = meshArchive.ReadMetaData<int>("kOrder");
+    if (kDimsRead != kDims)
+    {
+        throw std::runtime_error(
+            "pbat::fem::Mesh::Deserialize(): kDims in archive does not match template parameter "
+            "kDims");
+    }
+    if (kOrderRead != kOrder)
+    {
+        throw std::runtime_error(
+            "pbat::fem::Mesh::Deserialize(): kOrder in archive does not match template parameter "
+            "kOrder");
+    }
+    meshArchive.ReadMetaData("kOrder", kOrderRead);
+    X = meshArchive.ReadData<NodeMatrix>("X");
+    E = meshArchive.ReadData<ElementMatrix>("E");
+    if (E.rows() != ElementType::kNodes)
+    {
+        throw std::runtime_error(
+            "pbat::fem::Mesh::Deserialize(): Number of rows in E does not match Element::kNodes");
+    }
 }
 
 } // namespace pbat::fem
