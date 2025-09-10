@@ -5,6 +5,7 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     "Sim.h"
 )
 
+add_subdirectory(algorithm)
 add_subdirectory(contact)
 add_subdirectory(dynamics)
 add_subdirectory(integration)
