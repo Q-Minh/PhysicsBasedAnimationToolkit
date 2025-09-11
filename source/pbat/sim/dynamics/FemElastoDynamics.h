@@ -21,6 +21,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <exception>
 #include <type_traits>
 
 namespace pbat::sim::dynamics {
@@ -499,9 +500,10 @@ inline void FemElastoDynamics<TElement, Dims, THyperElasticEnergy, TScalar, TInd
     Eigen::MatrixBase<TDerivedXg> const& Xg,
     Eigen::MatrixBase<TDerivedRhog> const& rhog)
 {
-    auto N            = fem::ShapeFunctionMatrixAt(mesh, eg.derived(), Xg.derived());
-    CSRMatrix rhogwgN = rhog.cwiseProduct(wg).asDiagonal() * N;
-    CSCMatrix M       = N.transpose() * rhogwgN;
+    auto N = fem::ShapeFunctionMatrixAt(mesh, eg.derived(), Xg.derived());
+    Eigen::SparseMatrix<ScalarType, Eigen::RowMajor, IndexType> rhogwgN =
+        rhog.cwiseProduct(wg).asDiagonal() * N;
+    Eigen::SparseMatrix<ScalarType, Eigen::ColMajor, IndexType> M = N.transpose() * rhogwgN;
     m.resize(M.cols());
     for (auto j = 0; j < M.cols(); ++j)
         m(j) = M.col(j).sum();
@@ -614,6 +616,10 @@ inline void FemElastoDynamics<TElement, Dims, THyperElasticEnergy, TScalar, TInd
     io::Archive const femElastoDynamicsArchive = archive["pbat.sim.dynamics.FemElastoDynamics"];
     mesh.Deserialize(femElastoDynamicsArchive);
     bdf.Deserialize(femElastoDynamicsArchive);
+    if (bdf.Order() != 2)
+    {
+        throw std::runtime_error("FemElastoDynamics only supports BDF of order 2");
+    }
     fext = femElastoDynamicsArchive
                .ReadData<Eigen::Matrix<ScalarType, Eigen::Dynamic, Eigen::Dynamic>>("fext");
     m      = femElastoDynamicsArchive.ReadData<Eigen::Vector<ScalarType, Eigen::Dynamic>>("m");
