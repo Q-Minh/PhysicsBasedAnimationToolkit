@@ -40,11 +40,14 @@ struct Newton
     /**
      * @brief Solve the optimization problem using Newton's method
      *
+     * @tparam FPrepareDerivatives Callable type with signature
+     * `prepareDerivatives(xk) -> void`
      * @tparam FObjective Callable type for the objective function with signature `f(xk) -> fk`
      * @tparam FGradient Callable type for the gradient with signature `g(xk) -> gk`
      * @tparam FHessianInverseProduct Callable type for the Hessian inverse product with signature
      * `Hinv(xk, gk) -> dxk`
      * @tparam TDerivedX Derived type for the input iterate
+     * @param prepareDerivatives Derivative (pre)computation function
      * @param f Objective function
      * @param g Gradient function
      * @param Hinv Hessian inverse product function
@@ -52,8 +55,14 @@ struct Newton
      * @param lineSearch Optional line search object
      * @return Squared norm of the gradient at the final iterate
      */
-    template <class FObjective, class FGradient, class FHessianInverseProduct, class TDerivedX>
+    template <
+        class FPrepareDerivatives,
+        class FObjective,
+        class FGradient,
+        class FHessianInverseProduct,
+        class TDerivedX>
     TScalar Solve(
+        FPrepareDerivatives prepareDerivatives,
         FObjective f,
         FGradient g,
         FHessianInverseProduct Hinv,
@@ -68,8 +77,14 @@ inline Newton<TScalar>::Newton(int nMaxItersIn, TScalar gtol, Index n)
 }
 
 template <class TScalar>
-template <class FObjective, class FGradient, class FHessianInverseProduct, class TDerivedX>
+template <
+    class FPrepareDerivatives,
+    class FObjective,
+    class FGradient,
+    class FHessianInverseProduct,
+    class TDerivedX>
 inline TScalar Newton<TScalar>::Solve(
+    FPrepareDerivatives prepareDerivatives,
     FObjective f,
     FGradient g,
     FHessianInverseProduct Hinv,
@@ -77,6 +92,7 @@ inline TScalar Newton<TScalar>::Solve(
     std::optional<BackTrackingLineSearch<TScalar>> lineSearch)
 {
     TScalar gnorm2{0};
+    prepareDerivatives(xk);
     gk = g(xk);
     for (auto k = 0; k < nMaxIters; ++k)
     {
@@ -88,6 +104,7 @@ inline TScalar Newton<TScalar>::Solve(
             lineSearch->Solve(f, gk, dxk, xk);
         else
             xk += dxk;
+        prepareDerivatives(xk);
         gk = g(xk);
     }
     return gnorm2;

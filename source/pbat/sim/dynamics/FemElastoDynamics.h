@@ -235,8 +235,19 @@ struct FemElastoDynamics
      */
     void SetupTimeIntegrationOptimization();
     /**
+     * @brief Compute the quadrature point elastic energies of the current configuration into Ug,
+     * Gg, Hg
+     * @param eElasticComputationFlags Flags for computing elastic potential, gradient, and/or
+     * hessian
+     * @param eSpdCorrectionFlags Flags for SPD correction of element hessians
+     */
+    void ComputeElasticEnergy(
+        int eElasticComputationFlags,
+        fem::EHyperElasticSpdCorrection eSpdCorrectionFlags);
+    /**
      * @brief k-dimensional mass matrix
-     * @return `kDims*|#nodes|` `kDims`-dimensional lumped mass matrix
+     * @return `kDims * |#nodes| x 1` vector of the `kDims`-dimensional lumped mass matrix diagonal
+     * coefficients
      */
     auto M() const { return m.replicate(1, kDims).transpose().reshaped(); };
     /**
@@ -574,6 +585,32 @@ inline void FemElastoDynamics<TElement, Dims, THyperElasticEnergy, TScalar, TInd
     xtilde.resize(kDims, xtildeBdf.size() / kDims);
     xtilde.reshaped() =
         -(xtildeBdf + betaTilde * vtildeBdf) + (betaTilde * betaTilde) * (aext().reshaped());
+}
+
+template <
+    fem::CElement TElement,
+    int Dims,
+    physics::CHyperElasticEnergy THyperElasticEnergy,
+    common::CFloatingPoint TScalar,
+    common::CIndex TIndex>
+inline void
+FemElastoDynamics<TElement, Dims, THyperElasticEnergy, TScalar, TIndex>::ComputeElasticEnergy(
+    int eElasticComputationFlags,
+    fem::EHyperElasticSpdCorrection eSpdCorrectionFlags)
+{
+    fem::ToElementElasticity<ElasticEnergyType>(
+        mesh,
+        egU,
+        wgU,
+        GNegU,
+        lamegU.row(0),
+        lamegU.row(1),
+        x.reshaped(),
+        UgU,
+        GgU,
+        HgU,
+        eElasticComputationFlags,
+        eSpdCorrectionFlags);
 }
 
 template <

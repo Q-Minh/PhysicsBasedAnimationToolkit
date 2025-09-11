@@ -10,8 +10,6 @@
 #define PBAT_SIM_ALGORITHM_NEWTON_INTEGRATOR_H
 
 #include "Config.h"
-#include "HessianProduct.h"
-#include "Preconditioner.h"
 #include "pbat/Aliases.h"
 #include "pbat/fem/Tetrahedron.h"
 #include "pbat/io/Archive.h"
@@ -20,7 +18,14 @@
 #include "pbat/physics/StableNeoHookeanEnergy.h"
 #include "pbat/sim/dynamics/FemElastoDynamics.h"
 
+#ifdef PBAT_USE_SUITESPARSE
+    #include <Eigen/CholmodSupport>
+#else
+    #include <Eigen/SparseCholesky>
+#endif // PBAT_USE_SUITESPARSE
+#include <memory>
 #include <optional>
+#include <vector>
 
 namespace pbat::sim::algorithm::newton {
 
@@ -30,30 +35,81 @@ namespace pbat::sim::algorithm::newton {
 class Integrator
 {
   public:
-    static auto constexpr kDims = 3; ///< Number of spatial dimensions
+    static auto constexpr kDims  = 3; ///< Number of spatial dimensions
     static auto constexpr kOrder = 1; ///< Shape function order
-    using ElastoDynamicsType    = dynamics::FemElastoDynamics<
-           fem::Tetrahedron<1>,
-           kDims,
-           physics::StableNeoHookeanEnergy<kDims>>; ///< Elasto-dynamics type
 
+    using ScalarType         = Scalar; ///< Floating point scalar type
+    using IndexType          = Index;  ///< Integer index type
+    using ElastoDynamicsType = dynamics::FemElastoDynamics<
+        fem::Tetrahedron<1>,
+        kDims,
+        physics::StableNeoHookeanEnergy<kDims>,
+        ScalarType,
+        IndexType>; ///< Elasto-dynamics type
+    using HessianMatrixType =
+        Eigen::SparseMatrix<ScalarType, Eigen::ColMajor, IndexType>; ///< Hessian matrix type
+#ifdef PBAT_USE_SUITESPARSE
+    using DecompositionType = Eigen::CholmodDecomposition<HessianMatrixType, Eigen::Upper>;
+#else
+    using DecompositionType = Eigen::SimplicialLDLT<HessianMatrixType, Eigen::Upper>;
+#endif // PBAT_USE_SUITESPARSE
+
+    Integrator(Integrator const& other);
+    Integrator(Integrator&& other) noexcept = default;
+    Integrator& operator=(Integrator const& other);
+    Integrator& operator=(Integrator&& other) noexcept = default;
+
+    /**
+     * @brief Construct a new Newton integrator.
+     * @param config Configuration for the Newton integrator.
+     * @param elastoDynamics Elasto-dynamics object.
+     */
     Integrator(Config config, ElastoDynamicsType elastoDynamics);
-    Integrator(Integrator const&)            = delete;
-    Integrator(Integrator&&)                 = default;
-    Integrator& operator=(Integrator const&) = delete;
-    Integrator& operator=(Integrator&&)      = default;
-
+    /**
+     * @brief Perform a single time step of the Newton integrator.
+     * @param archive Optional archive to save the state after the step.
+     */
     void Step(std::optional<io::Archive> archive = std::nullopt);
+    /**
+     * @brief Get the Elasto Dynamics object
+     * @return ElastoDynamicsType const&
+     */
+    [[maybe_unused]] auto GetElastoDynamics() const -> ElastoDynamicsType const&
+    {
+        return mElastoDynamics;
+    }
+    /**
+     * @brief Get the Elasto Dynamics object
+     * @return ElastoDynamicsType&
+     */
+    [[maybe_unused]] auto GetElastoDynamics() -> ElastoDynamicsType& { return mElastoDynamics; }
+    /**
+     * @brief Get the Config object
+     * @return Config const&
+     */
+    [[maybe_unused]] auto GetConfig() const -> Config const& { return mConfig; }
+    /**
+     * @brief Get the Config object
+     * @return Config&
+     */
+    [[maybe_unused]] auto GetConfig() -> Config& { return mConfig; }
 
-    Config mConfig;                     ///< Configuration for the Newton integrator
-    ElastoDynamicsType mElastoDynamics; ///< Hyper elasticity dynamics
+  protected:
+    /**
+     * @brief Assemble the Hessian matrix.
+     */
+    void AssembleHessian(ScalarType bt2);
 
   private:
-    math::optimization::Newton<Scalar> mNewton;                     ///< Newton optimization solver
+    Config mConfig;                             ///< Configuration for the Newton integrator
+    ElastoDynamicsType mElastoDynamics;         ///< Hyper elasticity dynamics
+    math::optimization::Newton<Scalar> mNewton; ///< Newton optimization solver
     math::optimization::BackTrackingLineSearch<Scalar> mLineSearch; ///< Line searcher
-    Hessian mHessian;                                               ///< Hessian storage
-    VectorX mGradU;                 ///< Gradient of the elastic potential
-    Preconditioner mPreconditioner; ///< Preconditioner
+    std::vector<Eigen::Triplet<ScalarType, IndexType>>
+        mTriplets;                                      ///< Triplets for assembling the Hessian
+    std::unique_ptr<DecompositionType> mInverseHessian; ///< Inverse hessian
+    HessianMatrixType mHessian;                         ///< Newton step hessian
+    Eigen::Vector<ScalarType, Eigen::Dynamic> mGradU;   ///< Newton step gradient
 };
 
 } // namespace pbat::sim::algorithm::newton
