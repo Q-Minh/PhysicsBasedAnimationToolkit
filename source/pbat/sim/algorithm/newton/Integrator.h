@@ -109,7 +109,7 @@ class Integrator
         mTriplets;                                      ///< Triplets for assembling the Hessian
     std::unique_ptr<DecompositionType> mInverseHessian; ///< Inverse hessian
     HessianMatrixType mHessian;                         ///< Newton step hessian
-    Eigen::Vector<ScalarType, Eigen::Dynamic> mGradU;   ///< Newton step gradient
+    Eigen::Vector<ScalarType, Eigen::Dynamic> mGrad;    ///< Newton step gradient
 };
 
 } // namespace pbat::sim::algorithm::newton

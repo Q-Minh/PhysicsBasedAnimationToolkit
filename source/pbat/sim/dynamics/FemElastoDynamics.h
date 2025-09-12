@@ -92,6 +92,9 @@ struct FemElastoDynamics
         dbc; ///< `|# nodes| x 1` concatenated vector of Dirichlet unconstrained and
              ///< constrained nodes, partitioned as
              ///< `[ dbc(0 : |#nodes|-ndbc), dbc(|# nodes|-ndbc : |# nodes|) ]`
+    Eigen::Vector<bool, Eigen::Dynamic> dmask; ///< `|# nodes| x 1` mask of Dirichlet
+                                               ///< boundary conditions s.t. `dmask(i) == true`
+                                               ///< if node `i` is constrained
 
     /**
      * @brief Construct an empty FemElastoDynamics problem
@@ -255,6 +258,18 @@ struct FemElastoDynamics
      * @return `kDims x |# nodes|` external acceleration
      */
     auto aext() const { return (fext * m.cwiseInverse().asDiagonal()); }
+    /**
+     * @brief Check if a node is Dirichlet constrained
+     * @param node Node index
+     * @return `true` if the node is Dirichlet constrained, `false` otherwise
+     */
+    bool IsDirichletNode(IndexType node) const { return dmask(node); }
+    /**
+     * @brief Check if a coordinate is Dirichlet constrained
+     * @param i Coordinate index
+     * @return `true` if the coordinate is Dirichlet constrained, `false` otherwise
+     */
+    bool IsDirichletDof(IndexType i) const { return dmask(i / kDims); }
     /**
      * @brief Array of Dirichlet constrained nodes
      * @return `ndbc x 1` array of Dirichlet constrained nodes
@@ -493,6 +508,7 @@ inline void FemElastoDynamics<TElement, Dims, THyperElasticEnergy, TScalar, TInd
         "Dirichlet mask must be of type bool");
     IndexType const nNodes = static_cast<IndexType>(mesh.X.cols());
     assert(D.size() == nNodes);
+    dmask = D.cast<bool>();
     dbc.setLinSpaced(nNodes, IndexType(0), nNodes - 1);
     auto it = std::stable_partition(dbc.begin(), dbc.end(), [&D](IndexType i) { return not D[i]; });
     ndbc    = nNodes - std::distance(dbc.begin(), it);
@@ -639,6 +655,7 @@ inline void FemElastoDynamics<TElement, Dims, THyperElasticEnergy, TScalar, TInd
     femElastoDynamicsArchive.WriteData("HgU", HgU);
     femElastoDynamicsArchive.WriteMetaData("ndbc", ndbc);
     femElastoDynamicsArchive.WriteData("dbc", dbc);
+    femElastoDynamicsArchive.WriteData("dmask", dmask);
 }
 
 template <
@@ -677,8 +694,9 @@ inline void FemElastoDynamics<TElement, Dims, THyperElasticEnergy, TScalar, TInd
               .ReadData<Eigen::Matrix<ScalarType, Eigen::Dynamic, Eigen::Dynamic>>("GgU");
     HgU = femElastoDynamicsArchive
               .ReadData<Eigen::Matrix<ScalarType, Eigen::Dynamic, Eigen::Dynamic>>("HgU");
-    ndbc = femElastoDynamicsArchive.ReadMetaData<IndexType>("ndbc");
-    dbc  = femElastoDynamicsArchive.ReadData<Eigen::Vector<IndexType, Eigen::Dynamic>>("dbc");
+    ndbc  = femElastoDynamicsArchive.ReadMetaData<IndexType>("ndbc");
+    dbc   = femElastoDynamicsArchive.ReadData<Eigen::Vector<IndexType, Eigen::Dynamic>>("dbc");
+    dmask = femElastoDynamicsArchive.ReadData<Eigen::Vector<bool, Eigen::Dynamic>>("dmask");
 }
 
 } // namespace pbat::sim::dynamics
