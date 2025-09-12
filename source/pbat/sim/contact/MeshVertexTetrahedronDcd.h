@@ -16,6 +16,15 @@
 
 namespace pbat::sim::contact {
 
+/**
+ * @brief Discrete contact detection system for vertex-tetrahedron contacts between multiple
+ * tetrahedral meshes.
+ *
+ * Uses an AABB tree hierarchy for the mesh vertices and an AABB tree hierarchy for the mesh
+ * triangles, as well as a spatial hash grid for the tetrahedra.
+ *
+ * For each vertex, stores up to `kMaxVertexTriangleContacts` contacting triangles.
+ */
 class MeshVertexTetrahedronDcd
 {
   public:

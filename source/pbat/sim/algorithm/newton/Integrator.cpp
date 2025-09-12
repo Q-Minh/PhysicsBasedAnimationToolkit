@@ -32,8 +32,9 @@ Integrator& Integrator::operator=(Integrator const& other)
     return *this;
 }
 
-Integrator::Integrator(Config config, ElastoDynamicsType elastoDynamics)
+Integrator::Integrator(Config config, MeshSystemType meshSystem, ElastoDynamicsType elastoDynamics)
     : mConfig(std::move(config)),
+      mMeshes(std::move(meshSystem)),
       mElastoDynamics(std::move(elastoDynamics)),
       mNewton(mConfig.nMaxIterations, mConfig.gtol, mElastoDynamics.x.size()),
       mLineSearch(mConfig.nMaxLineSearchIterations, mConfig.tauArmijo, mConfig.cArmijo),
@@ -228,7 +229,10 @@ TEST_CASE("[sim][algorithm][newton] Integrator")
          3, 0, 6, 5, 3,
          5, 6, 0, 3, 6;
     // clang-format on
-    Integrator integrator{Config{}, Integrator::ElastoDynamicsType{V, C}};
+    Integrator integrator{
+        Config{},
+        Integrator::MeshSystemType{V, C},
+        Integrator::ElastoDynamicsType{V, C}};
     MatrixX x0 = integrator.GetElastoDynamics().x;
     // Act
     integrator.Step();

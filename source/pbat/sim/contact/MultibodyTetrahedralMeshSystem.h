@@ -9,6 +9,7 @@
 #include "pbat/graph/BreadthFirstSearch.h"
 #include "pbat/graph/ConnectedComponents.h"
 #include "pbat/graph/Mesh.h"
+#include "pbat/io/Archive.h"
 #include "pbat/profiling/Profiling.h"
 
 #include <Eigen/Core>
@@ -21,34 +22,35 @@ namespace pbat::sim::contact {
  *
  * Holds a common representation of a multibody system composed of tetrahedral meshes.
  */
-template <common::CIndex TIndex = Index>
+template <common::CIndex TIndex = Index, common::CArithmetic TScalar = Scalar>
 struct MultibodyTetrahedralMeshSystem
 {
-    using IndexType = TIndex; ///< Index type used in the multibody system
+    using IndexType  = TIndex;  ///< Index type used in the multibody system
+    using ScalarType = TScalar; ///< Scalar type used in the multibody system
 
     MultibodyTetrahedralMeshSystem() = default;
     /**
      * @brief Construct a new Multibody Tetrahedral Mesh System object
-     * @tparam TDerivedE Eigen type of the input tetrahedral element matrix
      * @param X `3 x |# mesh vertices|` matrix of vertex positions
      * @param T `4 x |# tetrahedra|` tetrahedral mesh elements/connectivity
      * @post The input mesh vertex positions and element indices will be sorted by body.
      */
-    template <common::CArithmetic TScalar = Scalar>
     MultibodyTetrahedralMeshSystem(
         Eigen::Ref<Eigen::Matrix<TScalar, 3, Eigen::Dynamic>> X,
         Eigen::Ref<Eigen::Matrix<IndexType, 4, Eigen::Dynamic>> T);
     /**
      * @brief Construct a new Multibody Tetrahedral Mesh System object
-     * @tparam TDerivedE Eigen type of the input tetrahedral element matrix
      * @param X `3 x |# mesh vertices|` matrix of vertex positions
      * @param T `4 x |# tetrahedra|` tetrahedral mesh elements/connectivity
+     * @param muS Uniform static friction coefficient
+     * @param muD Uniform dynamic friction coefficient
      * @post The input mesh vertex positions and element indices will be sorted by body.
      */
-    template <common::CArithmetic TScalar = Scalar>
     void Construct(
         Eigen::Ref<Eigen::Matrix<TScalar, 3, Eigen::Dynamic>> X,
-        Eigen::Ref<Eigen::Matrix<IndexType, 4, Eigen::Dynamic>> T);
+        Eigen::Ref<Eigen::Matrix<IndexType, 4, Eigen::Dynamic>> T,
+        TScalar muS = 0.4,
+        TScalar muD = 0.2);
     /**
      * @brief Get the number of bodies in the multibody system
      * @return The number of bodies
@@ -117,6 +119,7 @@ struct MultibodyTetrahedralMeshSystem
     /**
      * @brief Get the body associated with tetrahedron `t`
      * @param t Index of the tetrahedron
+     * @param T `4 x |# tetrahedra|` tetrahedral mesh elements/connectivity
      * @return Body index of tetrahedron `t`
      */
     template <class TDerivedT>
@@ -169,12 +172,35 @@ struct MultibodyTetrahedralMeshSystem
         return std::make_pair(FP[o], FP[o + 1] - 1);
     }
     /**
+     * @brief Set the friction coefficients for body `o`
+     * @param o Index of the body
+     * @param muS Static friction coefficient
+     * @param muD Dynamic friction coefficient
+     */
+    void SetMaterial(IndexType o, TScalar muS, TScalar muD);
+    /**
+     * @brief Set the friction coefficients for all bodies
+     * @param muS Static friction coefficient
+     * @param muD Dynamic friction coefficient
+     */
+    void SetMaterial(TScalar muS, TScalar muD);
+    /**
      * @brief Get the range of tetrahedra for body `o`
      * @param o Index of the body
      * @return A tuple (tbegin, tend) containing the start (inclusive) and end (exclusive) indices
      * of tetrahedra for body `o`
      */
     auto TetrahedraRangeFor(IndexType o) const { return std::make_pair(TP[o], TP[o + 1] - 1); }
+    /**
+     * @brief Serialize the multibody tetrahedral mesh system to an HDF5 archive
+     * @param archive The HDF5 archive to serialize to
+     */
+    void Serialize(io::Archive& archive) const;
+    /**
+     * @brief Deserialize the multibody tetrahedral mesh system from an HDF5 archive
+     * @param archive The HDF5 archive to deserialize from
+     */
+    void Deserialize(io::Archive& archive);
 
     Eigen::Vector<TIndex, Eigen::Dynamic>
         V; ///< `|# contact vertices| x 1` indices into mesh vertices
@@ -193,23 +219,27 @@ struct MultibodyTetrahedralMeshSystem
                                               ///< pointers into input tetrahedral mesh `T`
 
     Eigen::Vector<TIndex, Eigen::Dynamic> CC; ///< `|# mesh vertices| x 1` connected component map
+
+    Eigen::Matrix<TScalar, 2, Eigen::Dynamic>
+        muF; ///< `2 x |# contact faces|` matrix of static (row 0) and dynamic (row 1) friction
+             ///< coefficients at contact faces
 };
 
-template <common::CIndex TIndex>
-template <common::CArithmetic TScalar>
-inline MultibodyTetrahedralMeshSystem<TIndex>::MultibodyTetrahedralMeshSystem(
+template <common::CIndex TIndex, common::CArithmetic TScalar>
+inline MultibodyTetrahedralMeshSystem<TIndex, TScalar>::MultibodyTetrahedralMeshSystem(
     Eigen::Ref<Eigen::Matrix<TScalar, 3, Eigen::Dynamic>> X,
     Eigen::Ref<Eigen::Matrix<IndexType, 4, Eigen::Dynamic>> T)
-    : MultibodyTetrahedralMeshSystem<TIndex>()
+    : MultibodyTetrahedralMeshSystem<TIndex, TScalar>()
 {
     Construct(std::move(X), std::move(T));
 }
 
-template <common::CIndex TIndex>
-template <common::CArithmetic TScalar>
-inline void MultibodyTetrahedralMeshSystem<TIndex>::Construct(
+template <common::CIndex TIndex, common::CArithmetic TScalar>
+inline void MultibodyTetrahedralMeshSystem<TIndex, TScalar>::Construct(
     Eigen::Ref<Eigen::Matrix<TScalar, 3, Eigen::Dynamic>> X,
-    Eigen::Ref<Eigen::Matrix<IndexType, 4, Eigen::Dynamic>> T)
+    Eigen::Ref<Eigen::Matrix<IndexType, 4, Eigen::Dynamic>> T,
+    TScalar muS,
+    TScalar muD)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.MultibodyTetrahedralMeshSystem.Construct");
     IndexType const nNodes    = static_cast<IndexType>(X.cols());
@@ -310,6 +340,53 @@ inline void MultibodyTetrahedralMeshSystem<TIndex>::Construct(
         while (tosum < nElements and CC(T(0, tosum)) == o)
             ++tosum;
     }
+    // 10. Initialize friction coefficients
+    muF.resize(2, nContactFaces);
+    SetMaterial(muS, muD);
+}
+
+template <common::CIndex TIndex, common::CArithmetic TScalar>
+inline void
+MultibodyTetrahedralMeshSystem<TIndex, TScalar>::SetMaterial(IndexType o, TScalar muS, TScalar muD)
+{
+    muF(Eigen::placeholders::all, Eigen::seqN(FP[o], FP[o + 1] - FP[o])).colwise() =
+        Eigen::Vector2<TScalar>(muS, muD);
+}
+
+template <common::CIndex TIndex, common::CArithmetic TScalar>
+inline void MultibodyTetrahedralMeshSystem<TIndex, TScalar>::SetMaterial(TScalar muS, TScalar muD)
+{
+    this->muF.colwise() = Eigen::Vector2<TScalar>(muS, muD);
+}
+
+template <common::CIndex TIndex, common::CArithmetic TScalar>
+void MultibodyTetrahedralMeshSystem<TIndex, TScalar>::Serialize(io::Archive& archive) const
+{
+    io::Archive group = archive["pbat.sim.contact.MultibodyTetrahedralMeshSystem"];
+    group.WriteData("V", V);
+    group.WriteData("E", E);
+    group.WriteData("F", F);
+    group.WriteData("VP", VP);
+    group.WriteData("EP", EP);
+    group.WriteData("FP", FP);
+    group.WriteData("TP", TP);
+    group.WriteData("CC", CC);
+    group.WriteData("muF", muF);
+}
+
+template <common::CIndex TIndex, common::CArithmetic TScalar>
+void MultibodyTetrahedralMeshSystem<TIndex, TScalar>::Deserialize(io::Archive& archive)
+{
+    io::Archive group = archive["pbat.sim.contact.MultibodyTetrahedralMeshSystem"];
+    V                 = group.ReadData<decltype(V)>("V");
+    E                 = group.ReadData<decltype(E)>("E");
+    F                 = group.ReadData<decltype(F)>("F");
+    VP                = group.ReadData<decltype(VP)>("VP");
+    EP                = group.ReadData<decltype(EP)>("EP");
+    FP                = group.ReadData<decltype(FP)>("FP");
+    TP                = group.ReadData<decltype(TP)>("TP");
+    CC                = group.ReadData<decltype(CC)>("CC");
+    muF               = group.ReadData<decltype(muF)>("muF");
 }
 
 } // namespace pbat::sim::contact

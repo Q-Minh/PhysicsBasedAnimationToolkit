@@ -21,8 +21,7 @@ TEST_CASE("[sim][contact] MultibodyTetrahedralMeshSystem")
         pbat::IndexMatrixX T(4, T1.cols() + T2.cols());
         T << T1, T2.array() + V1.cols();
         // Act
-        pbat::sim::contact::MultibodyTetrahedralMeshSystem<> system{};
-        system.Construct<pbat::Scalar>(X, T);
+        pbat::sim::contact::MultibodyTetrahedralMeshSystem<> system{X, T};
         // Assert
         CHECK_EQ(system.NumBodies(), 2);
         CHECK_EQ(system.VP.tail<1>()(0), system.V.size());
@@ -39,8 +38,7 @@ TEST_CASE("[sim][contact] MultibodyTetrahedralMeshSystem")
         T << T1, T2.array() + V1.cols();
         T.col(0).swap(T.col(T.cols() - 1)); // Swap the first tetrahedron with the last one
         // Act
-        pbat::sim::contact::MultibodyTetrahedralMeshSystem<> system{};
-        system.Construct<pbat::Scalar>(X, T);
+        pbat::sim::contact::MultibodyTetrahedralMeshSystem<> system{X, T};
         // Assert
         CHECK_EQ(system.NumBodies(), 2);
         CHECK_EQ(system.VP.tail<1>()(0), system.V.size());

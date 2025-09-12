@@ -32,11 +32,9 @@ Config& Config::WithLineSearch(int maxLineSearchIterations, Scalar tauArmijoIn, 
     return *this;
 }
 
-Config& Config::WithContactParameters(Scalar muCIn, Scalar muFIn, Scalar epsvIn)
+Config& Config::WithContactParameters(Scalar muCIn)
 {
-    muC  = muCIn;
-    muF  = muFIn;
-    epsv = epsvIn;
+    muC = muCIn;
     return *this;
 }
 
@@ -77,14 +75,6 @@ Config& Config::Construct()
     if (muC <= Scalar(0))
     {
         throw std::invalid_argument(fmt::format("0 < muC, but got muC={}", muC));
-    }
-    if (muF <= Scalar(0))
-    {
-        throw std::invalid_argument(fmt::format("0 < muF, but got muF={}", muF));
-    }
-    if (epsv <= Scalar(0))
-    {
-        throw std::invalid_argument(fmt::format("0 < epsv, but got epsv={}", epsv));
     }
     return *this;
 }

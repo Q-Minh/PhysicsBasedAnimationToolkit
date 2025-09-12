@@ -29,16 +29,43 @@ struct Config
     Scalar tauArmijo{0.5};            ///< Armijo step size decrease factor
     Scalar cArmijo{1e-4};             ///< Armijo slope scale
 
-    Scalar muC{1e6};   ///< Uniform collision penalty
-    Scalar muF{0.3};   ///< Uniform friction coefficient
-    Scalar epsv{1e-3}; ///< IPC \cite li2020ipc 's relative velocity threshold for static to dynamic
-                       ///< friction's smooth transition
+    Scalar muC{1e6}; ///< Uniform collision penalty
 
+    /**
+     * @brief Set the number of substeps for the Newton integrator
+     * @param substeps Number of substeps
+     * @return Reference to this configuration
+     */
     Config& WithSubsteps(int substeps);
+    /**
+     * @brief Set the convergence parameters for the Newton integrator
+     * @param maxIterations Maximum number of iterations
+     * @param gtol Gradient norm threshold for convergence
+     * @param maxLinearSolverIterations Maximum number of iterations for the linear solver
+     * @param rtol Relative tolerance for the linear solver
+     * @return Reference to this configuration
+     */
     Config&
     WithConvergence(int maxIterations, Scalar gtol, int maxLinearSolverIterations, Scalar rtol);
+    /**
+     * @brief Set the line search parameters for the Newton integrator
+     * @param maxLineSearchIterations Maximum number of iterations for the line search
+     * @param tauArmijo Armijo step size decrease factor
+     * @param cArmijo Armijo slope scale
+     * @return Reference to this configuration
+     */
     Config& WithLineSearch(int maxLineSearchIterations, Scalar tauArmijo, Scalar cArmijo);
-    Config& WithContactParameters(Scalar muC, Scalar muF, Scalar epsv);
+    /**
+     * @brief Set the contact parameters for the Newton integrator
+     * @param muC Uniform collision penalty
+     * @return Reference to this configuration
+     */
+    Config& WithContactParameters(Scalar muC);
+    /**
+     * @brief Finalize construction of the configuration
+     * @return Config object
+     * @throws std::invalid_argument if any parameter is invalid
+     */
     Config& Construct();
 };
 

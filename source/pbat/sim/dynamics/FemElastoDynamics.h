@@ -41,6 +41,8 @@ namespace pbat::sim::dynamics {
  * @tparam TElement Element type
  * @tparam Dims Dimensionality of the mesh
  * @tparam THyperElasticEnergy Hyper elastic energy type
+ * @tparam TScalar Floating point scalar type
+ * @tparam TIndex Integer index type
  */
 template <
     fem::CElement TElement,
@@ -142,8 +144,7 @@ struct FemElastoDynamics
     void SetMassMatrix(ScalarType rho);
     /**
      * @brief Set the elastic energy quadrature for a homogeneous material with Lame coefficients
-     * \f$ \mu \f$ and
-     * \lambda \f$.
+     * \f$ \mu \f$ and \f$ \lambda \f$.
      * @param mu 1st Lame coefficient \f$ \mu \f$
      * @param lambda 2nd Lame coefficient \f$ \lambda \f$
      */

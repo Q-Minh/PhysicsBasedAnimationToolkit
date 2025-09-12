@@ -3,6 +3,9 @@
 
 namespace pbat::sim::vbd {
 
+/**
+ * @brief Initialization strategies for the VBD time step minimization
+ */
 enum class EInitializationStrategy {
     Position,
     Inertia,
@@ -11,6 +14,10 @@ enum class EInitializationStrategy {
     AdaptivePbat
 };
 
+/**
+ * @brief Acceleration strategies for the VBD time step minimization
+ */
+// clang-format off
 enum class EAccelerationStrategy {
     None,
     Chebyshev,
@@ -19,6 +26,7 @@ enum class EAccelerationStrategy {
     Broyden,
     TrustRegion
 };
+// clang-format on
 
 } // namespace pbat::sim::vbd
 

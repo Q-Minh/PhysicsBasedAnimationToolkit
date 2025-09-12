@@ -16,6 +16,7 @@
 #include "pbat/math/optimization/LineSearch.h"
 #include "pbat/math/optimization/Newton.h"
 #include "pbat/physics/StableNeoHookeanEnergy.h"
+#include "pbat/sim/contact/MultibodyTetrahedralMeshSystem.h"
 #include "pbat/sim/dynamics/FemElastoDynamics.h"
 
 #ifdef PBAT_USE_SUITESPARSE
@@ -38,8 +39,9 @@ class Integrator
     static auto constexpr kDims  = 3; ///< Number of spatial dimensions
     static auto constexpr kOrder = 1; ///< Shape function order
 
-    using ScalarType         = Scalar; ///< Floating point scalar type
-    using IndexType          = Index;  ///< Integer index type
+    using ScalarType     = Scalar; ///< Floating point scalar type
+    using IndexType      = Index;  ///< Integer index type
+    using MeshSystemType = contact::MultibodyTetrahedralMeshSystem<IndexType>; ///< Mesh system type
     using ElastoDynamicsType = dynamics::FemElastoDynamics<
         fem::Tetrahedron<1>,
         kDims,
@@ -49,14 +51,34 @@ class Integrator
     using HessianMatrixType =
         Eigen::SparseMatrix<ScalarType, Eigen::ColMajor, IndexType>; ///< Hessian matrix type
 #ifdef PBAT_USE_SUITESPARSE
-    using DecompositionType = Eigen::CholmodDecomposition<HessianMatrixType, Eigen::Upper>;
+    using DecompositionType =
+        Eigen::CholmodDecomposition<HessianMatrixType, Eigen::Upper>; ///< Hessian decomposition
+                                                                      ///< type
 #else
-    using DecompositionType = Eigen::SimplicialLDLT<HessianMatrixType, Eigen::Upper>;
+    using DecompositionType =
+        Eigen::SimplicialLDLT<HessianMatrixType, Eigen::Upper>; ///< Hessian decomposition type
 #endif // PBAT_USE_SUITESPARSE
-
+    /**
+     * @brief Copy constructor
+     * @param other Other integrator to copy from
+     */
     Integrator(Integrator const& other);
+    /**
+     * @brief Move constructor
+     * @param other Other integrator to move from
+     */
     Integrator(Integrator&& other) noexcept = default;
+    /**
+     * @brief Copy assignment operator
+     * @param other Other integrator to copy from
+     * @return Reference to this integrator
+     */
     Integrator& operator=(Integrator const& other);
+    /**
+     * @brief Move assignment operator
+     * @param other Other integrator to move from
+     * @return Reference to this integrator
+     */
     Integrator& operator=(Integrator&& other) noexcept = default;
 
     /**
@@ -64,7 +86,7 @@ class Integrator
      * @param config Configuration for the Newton integrator.
      * @param elastoDynamics Elasto-dynamics object.
      */
-    Integrator(Config config, ElastoDynamicsType elastoDynamics);
+    Integrator(Config config, MeshSystemType meshSystem, ElastoDynamicsType elastoDynamics);
     /**
      * @brief Perform a single time step of the Newton integrator.
      * @param archive Optional archive to save the state after the step.
@@ -101,8 +123,10 @@ class Integrator
     void AssembleHessian(ScalarType bt2);
 
   private:
+    ElastoDynamicsType mElastoDynamics; ///< Hyper elasticity dynamics
+    contact::MultibodyTetrahedralMeshSystem<IndexType>
+        mMeshes;                                ///< Multibody tetrahedral mesh system
     Config mConfig;                             ///< Configuration for the Newton integrator
-    ElastoDynamicsType mElastoDynamics;         ///< Hyper elasticity dynamics
     math::optimization::Newton<Scalar> mNewton; ///< Newton optimization solver
     math::optimization::BackTrackingLineSearch<Scalar> mLineSearch; ///< Line searcher
     std::vector<Eigen::Triplet<ScalarType, IndexType>>
