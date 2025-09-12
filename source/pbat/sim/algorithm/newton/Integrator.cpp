@@ -36,7 +36,7 @@ Integrator::Integrator(Config config, MeshSystemType meshSystem, ElastoDynamicsT
     : mConfig(std::move(config)),
       mMeshes(std::move(meshSystem)),
       mElastoDynamics(std::move(elastoDynamics)),
-      mNewton(mConfig.nMaxIterations, mConfig.gtol, mElastoDynamics.x.size()),
+      mNewton(mConfig.nMaxNewtonIterations, mConfig.gtol, mElastoDynamics.x.size()),
       mLineSearch(mConfig.nMaxLineSearchIterations, mConfig.tauArmijo, mConfig.cArmijo),
       mTriplets(),
       mInverseHessian(std::make_unique<DecompositionType>()),
@@ -48,6 +48,9 @@ Integrator::Integrator(Config config, MeshSystemType meshSystem, ElastoDynamicsT
 void Integrator::Step([[maybe_unused]] std::optional<io::Archive> archive)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.newton.Integrator.Step");
+    // Read integrator config for current step
+    ApplyConfig();
+    // Tweak BDF scheme for substepping
     ScalarType const dt  = mElastoDynamics.bdf.TimeStep();
     ScalarType const sdt = dt / mConfig.nSubsteps;
     mElastoDynamics.bdf.SetTimeStep(sdt);
@@ -109,15 +112,25 @@ void Integrator::Step([[maybe_unused]] std::optional<io::Archive> archive)
     for (auto s = 0; s < mConfig.nSubsteps; ++s)
     {
         PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.newton.Integrator.Step.Substep");
-        mElastoDynamics.bdf.ConstructEquations();
-        mElastoDynamics.SetupTimeIntegrationOptimization();
-        auto x    = mElastoDynamics.x.reshaped();
-        auto v    = mElastoDynamics.v.reshaped();
-        auto xbdf = mElastoDynamics.bdf.Inertia(0);
-        mNewton.Solve(fPrepareDerivatives, fObjective, fGradient, fHessInvProd, x, mLineSearch);
-        v = (x + xbdf) / bt;
+        // TODO: Initialize augmented Lagrangian constraint stiffnesses
+        // ...
+        auto x = mElastoDynamics.x.reshaped();
+        auto v = mElastoDynamics.v.reshaped();
+        for (auto d = 0; d < mConfig.nMaxAugmentedLagrangianIterations; ++d)
+        {
+            PBAT_PROFILE_NAMED_SCOPE(
+                "pbat.sim.algorithm.newton.Integrator.Step.Substep.AugmentedLagrangian");
+            mElastoDynamics.bdf.ConstructEquations();
+            mElastoDynamics.SetupTimeIntegrationOptimization();
+            auto xbdf = mElastoDynamics.bdf.Inertia(0);
+            mNewton.Solve(fPrepareDerivatives, fObjective, fGradient, fHessInvProd, x, mLineSearch);
+            v = (x + xbdf) / bt;
+            // TODO: Evaluate constraint error and update Lagrangian multiplier estimates
+            // ...
+        }
         mElastoDynamics.bdf.Step(x, v);
     }
+    // Restore original time step
     mElastoDynamics.bdf.SetTimeStep(dt);
 }
 
@@ -205,6 +218,15 @@ void Integrator::AssembleHessian(ScalarType bt2)
             mHessian.coeffRef(id, id) = ScalarType{1};
         }
     }
+}
+
+void Integrator::ApplyConfig()
+{
+    mNewton.nMaxIters     = mConfig.nMaxNewtonIterations;
+    mNewton.gtol2         = mConfig.gtol * mConfig.gtol;
+    mLineSearch.nMaxIters = mConfig.nMaxLineSearchIterations;
+    mLineSearch.tau       = mConfig.tauArmijo;
+    mLineSearch.c         = mConfig.cArmijo;
 }
 
 } // namespace pbat::sim::algorithm::newton

@@ -80,7 +80,6 @@ class Integrator
      * @return Reference to this integrator
      */
     Integrator& operator=(Integrator&& other) noexcept = default;
-
     /**
      * @brief Construct a new Newton integrator.
      * @param config Configuration for the Newton integrator.
@@ -121,6 +120,10 @@ class Integrator
      * @brief Assemble the Hessian matrix.
      */
     void AssembleHessian(ScalarType bt2);
+    /**
+     * @brief Apply the current configuration to the integrator.
+     */
+    void ApplyConfig();
 
   private:
     ElastoDynamicsType mElastoDynamics; ///< Hyper elasticity dynamics

@@ -11,6 +11,11 @@
 
 #include "pbat/Aliases.h"
 
+// Forward declarations
+namespace pbat::io {
+    class Archive;
+} // namespace pbat::io
+
 namespace pbat::sim::algorithm::newton {
 
 /**
@@ -20,7 +25,10 @@ struct Config
 {
     int nSubsteps{1}; ///< Number of substeps for the Newton integrator
 
-    int nMaxIterations{10};              ///< Maximum number of iterations for the Newton integrator
+    int nMaxAugmentedLagrangianIterations{
+        1}; ///< Number of dual iterations for the augmented Lagrangian method
+
+    int nMaxNewtonIterations{10};        ///< Maximum number of iterations for the Newton integrator
     Scalar gtol{1e-4};                   ///< Gradient norm threshold for convergence
     int nMaxLinearSolverIterations{150}; ///< Maximum number of iterations for the linear solver
     Scalar rtol{1e-6};                   ///< Relative tolerance for the linear solver
@@ -39,14 +47,19 @@ struct Config
     Config& WithSubsteps(int substeps);
     /**
      * @brief Set the convergence parameters for the Newton integrator
-     * @param maxIterations Maximum number of iterations
+     * @param maxAugmentedLagrangianIterations Maximum number of dual iterations for the augmented
+     * @param maxNewtonIterations Maximum number of iterations for the Newton integrator
      * @param gtol Gradient norm threshold for convergence
      * @param maxLinearSolverIterations Maximum number of iterations for the linear solver
      * @param rtol Relative tolerance for the linear solver
      * @return Reference to this configuration
      */
-    Config&
-    WithConvergence(int maxIterations, Scalar gtol, int maxLinearSolverIterations, Scalar rtol);
+    Config& WithConvergence(
+        int maxAugmentedLagrangianIterations,
+        int maxNewtonIterations,
+        Scalar gtol,
+        int maxLinearSolverIterations,
+        Scalar rtol);
     /**
      * @brief Set the line search parameters for the Newton integrator
      * @param maxLineSearchIterations Maximum number of iterations for the line search
@@ -67,6 +80,17 @@ struct Config
      * @throws std::invalid_argument if any parameter is invalid
      */
     Config& Construct();
+
+    /**
+     * @brief Serialize to HDF5 group
+     * @param archive Archive to serialize to
+     */
+    void Serialize(io::Archive& archive) const;
+    /**
+     * @brief Deserialize from HDF5 group
+     * @param archive Archive to deserialize from
+     */
+    void Deserialize(io::Archive const& archive);
 };
 
 } // namespace pbat::sim::algorithm::newton

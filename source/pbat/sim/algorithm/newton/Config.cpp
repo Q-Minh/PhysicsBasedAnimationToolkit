@@ -1,5 +1,7 @@
 #include "Config.h"
 
+#include "pbat/io/Archive.h"
+
 #include <exception>
 #include <fmt/format.h>
 
@@ -12,15 +14,17 @@ Config& Config::WithSubsteps(int substeps)
 }
 
 Config& Config::WithConvergence(
-    int maxIterations,
+    int maxAugmentedLagrangianIterations,
+    int maxNewtonIterations,
     Scalar gtolIn,
     int maxLinearSolverIterations,
     Scalar rtolIn)
 {
-    nMaxIterations             = maxIterations;
-    gtol                       = gtolIn;
-    nMaxLinearSolverIterations = maxLinearSolverIterations;
-    rtol                       = rtolIn;
+    nMaxAugmentedLagrangianIterations = maxAugmentedLagrangianIterations;
+    nMaxNewtonIterations              = maxNewtonIterations;
+    gtol                              = gtolIn;
+    nMaxLinearSolverIterations        = maxLinearSolverIterations;
+    rtol                              = rtolIn;
     return *this;
 }
 
@@ -44,10 +48,17 @@ Config& Config::Construct()
     {
         throw std::invalid_argument(fmt::format("0 < substeps, but got substeps={}", nSubsteps));
     }
-    if (nMaxIterations < 1)
+    if (nMaxAugmentedLagrangianIterations < 1)
     {
         throw std::invalid_argument(
-            fmt::format("0 < maxIterations, but got maxIterations={}", nMaxIterations));
+            fmt::format(
+                "0 < maxAugmentedLagrangianIterations, but got maxAugmentedLagrangianIterations={}",
+                nMaxAugmentedLagrangianIterations));
+    }
+    if (nMaxNewtonIterations < 1)
+    {
+        throw std::invalid_argument(
+            fmt::format("0 < maxIterations, but got maxIterations={}", nMaxNewtonIterations));
     }
     if (nMaxLinearSolverIterations < 1)
     {
@@ -77,6 +88,39 @@ Config& Config::Construct()
         throw std::invalid_argument(fmt::format("0 < muC, but got muC={}", muC));
     }
     return *this;
+}
+
+void Config::Serialize(io::Archive& archive) const
+{
+    io::Archive group = archive["pbat.sim.algorithm.newton.Config"];
+    group.WriteData("nSubsteps", nSubsteps);
+    group.WriteData("nMaxAugmentedLagrangianIterations", nMaxAugmentedLagrangianIterations);
+    group.WriteData("nMaxNewtonIterations", nMaxNewtonIterations);
+    group.WriteData("gtol", gtol);
+    group.WriteData("nMaxLinearSolverIterations", nMaxLinearSolverIterations);
+    group.WriteData("rtol", rtol);
+    group.WriteData("nMaxLineSearchIterations", nMaxLineSearchIterations);
+    group.WriteData("tauArmijo", tauArmijo);
+    group.WriteData("cArmijo", cArmijo);
+    group.WriteData("muC", muC);
+}
+
+void Config::Deserialize(io::Archive const& archive)
+{
+    io::Archive const group           = archive["pbat.sim.algorithm.newton.Config"];
+    nSubsteps                         = group.ReadData<decltype(nSubsteps)>("nSubsteps");
+    nMaxAugmentedLagrangianIterations = group.ReadData<decltype(nMaxAugmentedLagrangianIterations)>(
+        "nMaxAugmentedLagrangianIterations");
+    nMaxNewtonIterations = group.ReadData<decltype(nMaxNewtonIterations)>("nMaxNewtonIterations");
+    gtol                 = group.ReadData<decltype(gtol)>("gtol");
+    nMaxLinearSolverIterations =
+        group.ReadData<decltype(nMaxLinearSolverIterations)>("nMaxLinearSolverIterations");
+    rtol = group.ReadData<decltype(rtol)>("rtol");
+    nMaxLineSearchIterations =
+        group.ReadData<decltype(nMaxLineSearchIterations)>("nMaxLineSearchIterations");
+    tauArmijo = group.ReadData<decltype(tauArmijo)>("tauArmijo");
+    cArmijo   = group.ReadData<decltype(cArmijo)>("cArmijo");
+    muC       = group.ReadData<decltype(muC)>("muC");
 }
 
 } // namespace pbat::sim::algorithm::newton
