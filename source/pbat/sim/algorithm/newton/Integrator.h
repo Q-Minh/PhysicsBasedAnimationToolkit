@@ -105,6 +105,16 @@ class Integrator
      */
     [[maybe_unused]] auto GetElastoDynamics() -> ElastoDynamicsType& { return mElastoDynamics; }
     /**
+     * @brief Get the Mesh System object
+     * @return MeshSystemType const&
+     */
+    [[maybe_unused]] auto GetMeshSystem() const -> MeshSystemType const& { return mMeshes; }
+    /**
+     * @brief Get the Mesh System object
+     * @return MeshSystemType&
+     */
+    [[maybe_unused]] auto GetMeshSystem() -> MeshSystemType& { return mMeshes; }
+    /**
      * @brief Get the Config object
      * @return Config const&
      */
@@ -128,15 +138,15 @@ class Integrator
   private:
     ElastoDynamicsType mElastoDynamics; ///< Hyper elasticity dynamics
     contact::MultibodyTetrahedralMeshSystem<IndexType>
-        mMeshes;                                ///< Multibody tetrahedral mesh system
-    Config mConfig;                             ///< Configuration for the Newton integrator
-    math::optimization::Newton<Scalar> mNewton; ///< Newton optimization solver
-    math::optimization::BackTrackingLineSearch<Scalar> mLineSearch; ///< Line searcher
+        mMeshes;                                    ///< Multibody tetrahedral mesh system
+    Config mConfig;                                 ///< Configuration for the Newton integrator
+    math::optimization::Newton<ScalarType> mNewton; ///< Newton optimization solver
+    math::optimization::BackTrackingLineSearch<ScalarType> mLineSearch; ///< Line searcher
     std::vector<Eigen::Triplet<ScalarType, IndexType>>
         mTriplets;                                      ///< Triplets for assembling the Hessian
     std::unique_ptr<DecompositionType> mInverseHessian; ///< Inverse hessian
-    HessianMatrixType mHessian;                         ///< Newton step hessian
-    Eigen::Vector<ScalarType, Eigen::Dynamic> mGrad;    ///< Newton step gradient
+    HessianMatrixType mHessian;                         ///< Time integration optimization hessian
+    Eigen::Vector<ScalarType, Eigen::Dynamic> mGrad;    ///< Time integration optimization gradient
 };
 
 } // namespace pbat::sim::algorithm::newton
