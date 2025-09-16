@@ -4,7 +4,7 @@
  * @brief This file defines unary nodes for SDF compositions
  * @version 0.1
  * @date 2025-09-16
- *
+ * @details Credits go to https://iquilezles.org/articles/distfunctions/, thank you Inigo Quilez!
  * @copyright Copyright (c) 2025
  *
  */
@@ -13,6 +13,7 @@
 #define PBAT_GEOMETRY_SDF_UNARYNODE_H
 
 #include "TypeDefs.h"
+#include "pbat/HostDevice.h"
 #include "pbat/common/Concepts.h"
 #include "pbat/math/linalg/mini/BinaryOperations.h"
 #include "pbat/math/linalg/mini/UnaryOperations.h"
