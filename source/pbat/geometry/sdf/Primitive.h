@@ -29,11 +29,18 @@ TScalar sign(TScalar x)
 };
 
 /**
+ * @brief Base struct for all primitive shapes
+ */
+struct Primitive
+{
+};
+
+/**
  * @brief Sphere centered in \f$ (0,0,0) \f$ with radius \f$ R \f$
  * @tparam TScalar Scalar type
  */
 template <common::CArithmetic TScalar>
-struct Sphere
+struct Sphere : public Primitive
 {
     using ScalarType = TScalar; ///< Scalar type
     ScalarType R;               ///< Sphere radius
@@ -51,7 +58,7 @@ struct Sphere
  * @tparam TScalar Scalar type
  */
 template <common::CArithmetic TScalar>
-struct Box
+struct Box : public Primitive
 {
     using ScalarType = TScalar; ///< Scalar type
     Vec3<ScalarType> he;        ///< Half extents of the box along each axis
@@ -73,7 +80,7 @@ struct Box
  * @tparam TScalar Scalar type
  */
 template <common::CArithmetic TScalar>
-struct BoxFrame
+struct BoxFrame : public Primitive
 {
     using ScalarType = TScalar; ///< Scalar type
     Vec3<ScalarType> he;        ///< Half extents of the box frame along each axis
@@ -106,7 +113,7 @@ struct BoxFrame
  * @tparam TScalar Scalar type
  */
 template <common::CArithmetic TScalar>
-struct Torus
+struct Torus : public Primitive
 {
     using ScalarType = TScalar; ///< Scalar type
     Vec2<ScalarType> t;         ///< t[0]: minor radius, t[1]: major radius
@@ -128,7 +135,7 @@ struct Torus
  * @tparam TScalar Scalar type
  */
 template <common::CArithmetic TScalar>
-struct CappedTorus
+struct CappedTorus : public Primitive
 {
     using ScalarType = TScalar; ///< Scalar type
     Vec2<ScalarType> sc;        ///< Probably minor+major radius
@@ -158,7 +165,7 @@ struct CappedTorus
  * @tparam TScalar Scalar type
  */
 template <common::CArithmetic TScalar>
-struct Link
+struct Link : public Primitive
 {
     using ScalarType = TScalar; ///< Scalar type
     Vec2<ScalarType> t;         ///< t[0]: minor radius, t[1]: major radius
@@ -183,7 +190,7 @@ struct Link
  * @tparam TScalar Scalar type
  */
 template <common::CArithmetic TScalar>
-struct InfiniteCylinder
+struct InfiniteCylinder : public Primitive
 {
     using ScalarType = TScalar; ///< Scalar type
     Vec3<ScalarType> c; ///< Center of the cylinder (on the axis) in c(0), c(1) and radius in c(2)
@@ -204,7 +211,7 @@ struct InfiniteCylinder
  * @tparam TScalar Scalar type
  */
 template <common::CArithmetic TScalar>
-struct Cone
+struct Cone : public Primitive
 {
     using ScalarType = TScalar; ///< Scalar type
     Vec2<ScalarType> c;         ///< sin/cos of the angle
@@ -235,7 +242,7 @@ struct Cone
  * @tparam TScalar Scalar type
  */
 template <common::CArithmetic TScalar>
-struct InfiniteCone
+struct InfiniteCone : public Primitive
 {
     using ScalarType = TScalar; ///< Scalar type
     Vec2<ScalarType> c;         ///< sin/cos of the angle
@@ -261,7 +268,7 @@ struct InfiniteCone
  * @tparam TScalar Scalar type
  */
 template <common::CArithmetic TScalar>
-struct Plane
+struct Plane : public Primitive
 {
     using ScalarType = TScalar; ///< Scalar type
     /**
@@ -281,7 +288,7 @@ struct Plane
  * @tparam TScalar Scalar type
  */
 template <common::CArithmetic TScalar>
-struct HexagonalPrism
+struct HexagonalPrism : public Primitive
 {
     using ScalarType = TScalar; ///< Scalar type
     Vec2<ScalarType> h;         ///< h[0]: radius of the hexagon, h[1]: half height of the prism
@@ -311,7 +318,7 @@ struct HexagonalPrism
  * @tparam TScalar Scalar type
  */
 template <common::CArithmetic TScalar>
-struct Capsule
+struct Capsule : public Primitive
 {
     using ScalarType = TScalar; ///< Scalar type
     Vec3<ScalarType> a;         ///< Endpoint a of the capsule
@@ -337,7 +344,7 @@ struct Capsule
  * @tparam TScalar Scalar type
  */
 template <common::CArithmetic TScalar>
-struct VerticalCapsule
+struct VerticalCapsule : public Primitive
 {
     using ScalarType = TScalar; ///< Scalar type
     ScalarType h;               ///< Height of the capsule
@@ -360,7 +367,7 @@ struct VerticalCapsule
  * @tparam TScalar Scalar type
  */
 template <common::CArithmetic TScalar>
-struct CappedCylinder
+struct CappedCylinder : public Primitive
 {
     using ScalarType = TScalar; ///< Scalar type
     Vec3<ScalarType> a;         ///< Endpoint a of the capped cylinder
@@ -394,7 +401,7 @@ struct CappedCylinder
  * @tparam TScalar Scalar type
  */
 template <common::CArithmetic TScalar>
-struct VerticalCappedCylinder
+struct VerticalCappedCylinder : public Primitive
 {
     using ScalarType = TScalar; ///< Scalar type
     ScalarType h;               ///< Height of the capped cylinder
@@ -420,7 +427,7 @@ struct VerticalCappedCylinder
  * @tparam TScalar Scalar type
  */
 template <common::CArithmetic TScalar>
-struct RoundedCylinder
+struct RoundedCylinder : public Primitive
 {
     using ScalarType = TScalar; ///< Scalar type
     ScalarType h;               ///< Height of the rounded cylinder
@@ -447,7 +454,7 @@ struct RoundedCylinder
  * @tparam TScalar Scalar type
  */
 template <common::CArithmetic TScalar>
-struct VerticalCappedCone
+struct VerticalCappedCone : public Primitive
 {
     using ScalarType = TScalar; ///< Scalar type
     ScalarType h;               ///< Height of the capped cone
@@ -483,7 +490,7 @@ struct VerticalCappedCone
  * @tparam TScalar Scalar type
  */
 template <common::CArithmetic TScalar>
-struct CutHollowSphere
+struct CutHollowSphere : public Primitive
 {
     using ScalarType = TScalar; ///< Scalar type
     ScalarType r;               ///< Radius of the hollow sphere
@@ -511,7 +518,7 @@ struct CutHollowSphere
  * @tparam TScalar Scalar type
  */
 template <common::CArithmetic TScalar>
-struct VerticalRoundCone
+struct VerticalRoundCone : public Primitive
 {
     using ScalarType = TScalar; ///< Scalar type
     ScalarType h;               ///< Height of the round cone
@@ -544,7 +551,7 @@ struct VerticalRoundCone
  * @tparam TScalar Scalar type
  */
 template <common::CArithmetic TScalar>
-struct Octahedron
+struct Octahedron : public Primitive
 {
     using ScalarType = TScalar; ///< Scalar type
     ScalarType s;               ///< Size of the octahedron
@@ -579,7 +586,7 @@ struct Octahedron
  * @tparam TScalar Scalar type
  */
 template <common::CArithmetic TScalar>
-struct Pyramid
+struct Pyramid : public Primitive
 {
     using ScalarType = TScalar; ///< Scalar type
     ScalarType h;               ///< Height of the pyramid
@@ -624,7 +631,7 @@ struct Pyramid
  * @tparam TScalar Scalar type
  */
 template <common::CArithmetic TScalar>
-struct Triangle
+struct Triangle : public Primitive
 {
     using ScalarType = TScalar; ///< Scalar type
     Vec3<ScalarType> a;         ///< Vertex a of the triangle
@@ -665,7 +672,7 @@ struct Triangle
  * @tparam TScalar Scalar type
  */
 template <common::CArithmetic TScalar>
-struct Quadrilateral
+struct Quadrilateral : public Primitive
 {
     using ScalarType = TScalar; ///< Scalar type
     Vec3<ScalarType> a;         ///< Vertex a of the quadrilateral
