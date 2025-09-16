@@ -23,6 +23,9 @@ template <common::CArithmetic TScalar>
 using Vec3 = math::linalg::mini::SVector<TScalar, 3>; ///< 3D vector type
 
 template <common::CArithmetic TScalar>
+using Vec4 = math::linalg::mini::SVector<TScalar, 4>; ///< 4D vector type
+
+template <common::CArithmetic TScalar>
 using Mat2 = math::linalg::mini::SMatrix<TScalar, 2, 2>; ///< 2x2 matrix type
 
 template <common::CArithmetic TScalar>
