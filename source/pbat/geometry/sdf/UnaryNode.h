@@ -45,7 +45,7 @@ struct Scale : public UnaryNode
      * @return Signed distance to the scaled shape
      */
     template <class FSdf>
-    PBAT_HOST_DEVICE ScalarType eval(Vec3<ScalarType> const& p, FSdf&& sdf) const
+    PBAT_HOST_DEVICE ScalarType Eval(Vec3<ScalarType> const& p, FSdf&& sdf) const
     {
         return s * sdf.eval(p / s);
     }
@@ -66,7 +66,7 @@ struct Elongate : public UnaryNode
      * @return Signed distance to the elongated shape
      */
     template <class FSdf>
-    PBAT_HOST_DEVICE ScalarType eval(Vec3<ScalarType> const& p, FSdf&& sdf) const
+    PBAT_HOST_DEVICE ScalarType Eval(Vec3<ScalarType> const& p, FSdf&& sdf) const
     {
         Vec3<ScalarType> q = Abs(p) - h;
         using namespace std;
@@ -90,7 +90,7 @@ struct Round : public UnaryNode
      * @return Signed distance to the rounded shape
      */
     template <class FSdf>
-    PBAT_HOST_DEVICE ScalarType eval(Vec3<ScalarType> const& p, FSdf&& sdf) const
+    PBAT_HOST_DEVICE ScalarType Eval(Vec3<ScalarType> const& p, FSdf&& sdf) const
     {
         return sdf.eval(p) - r;
     }
@@ -111,7 +111,7 @@ struct Onion : public UnaryNode
      * @return Signed distance to the onioned shape
      */
     template <class FSdf>
-    PBAT_HOST_DEVICE ScalarType eval(Vec3<ScalarType> const& p, FSdf&& sdf) const
+    PBAT_HOST_DEVICE ScalarType Eval(Vec3<ScalarType> const& p, FSdf&& sdf) const
     {
         using namespace std;
         return abs(sdf.eval(p)) - t;
@@ -132,7 +132,7 @@ struct Symmetrize : public UnaryNode
      * @return Signed distance to the symmetrized shape
      */
     template <class FSdf>
-    PBAT_HOST_DEVICE ScalarType eval(Vec3<ScalarType> p, FSdf&& sdf) const
+    PBAT_HOST_DEVICE ScalarType Eval(Vec3<ScalarType> p, FSdf&& sdf) const
     {
         using namespace std;
         p(0) = abs(p(0));
@@ -157,7 +157,7 @@ struct Repeat : public UnaryNode
      * @return Signed distance to the repeated shape
      */
     template <class FSdf>
-    PBAT_HOST_DEVICE ScalarType eval(Vec3<ScalarType> p, FSdf&& sdf) const
+    PBAT_HOST_DEVICE ScalarType Eval(Vec3<ScalarType> p, FSdf&& sdf) const
     {
         using namespace std;
         Vec3<ScalarType> pc{
@@ -169,8 +169,12 @@ struct Repeat : public UnaryNode
     }
 };
 
+/**
+ * @brief Wave-like bumpiness operation along the axes
+ * @tparam TScalar Scalar type
+ */
 template <common::CArithmetic TScalar>
-struct PeriodicWaveDisplace : public UnaryNode
+struct Bump : public UnaryNode
 {
     using ScalarType = TScalar; ///< Scalar type
     Vec3<ScalarType> f;         ///< Frequency along each axis
@@ -181,7 +185,7 @@ struct PeriodicWaveDisplace : public UnaryNode
      * @return Signed distance to the wave-displaced shape
      */
     template <class FSdf>
-    PBAT_HOST_DEVICE ScalarType eval(Vec3<ScalarType> p, FSdf&& sdf) const
+    PBAT_HOST_DEVICE ScalarType Eval(Vec3<ScalarType> p, FSdf&& sdf) const
     {
         using namespace std;
         // clang-format off
@@ -209,7 +213,7 @@ struct Twist : public UnaryNode
      * @return Signed distance to the twisted shape
      */
     template <class FSdf>
-    PBAT_HOST_DEVICE ScalarType eval(Vec3<ScalarType> p, FSdf&& sdf) const
+    PBAT_HOST_DEVICE ScalarType Eval(Vec3<ScalarType> p, FSdf&& sdf) const
     {
         using namespace std;
         ScalarType c = cos(k * p(1));
@@ -234,7 +238,7 @@ struct Bend : public UnaryNode
      * @return Signed distance to the bent shape
      */
     template <class FSdf>
-    PBAT_HOST_DEVICE ScalarType eval(Vec3<ScalarType> p, FSdf&& sdf) const
+    PBAT_HOST_DEVICE ScalarType Eval(Vec3<ScalarType> p, FSdf&& sdf) const
     {
         using namespace std;
         ScalarType c = cos(k * p.x);

@@ -49,7 +49,7 @@ struct Sphere : public Primitive
      * @param p Point in 3D space
      * @return Signed distance to the sphere (negative inside, positive outside)
      */
-    PBAT_HOST_DEVICE ScalarType eval(Vec3<ScalarType> const& p) const { return Norm(p) - R; }
+    PBAT_HOST_DEVICE ScalarType Eval(Vec3<ScalarType> const& p) const { return Norm(p) - R; }
 };
 
 /**
@@ -67,7 +67,7 @@ struct Box : public Primitive
      * @param p Point in 3D space
      * @return Signed distance to the box (negative inside, positive outside)
      */
-    PBAT_HOST_DEVICE ScalarType eval(Vec3<ScalarType> const& p) const
+    PBAT_HOST_DEVICE ScalarType Eval(Vec3<ScalarType> const& p) const
     {
         Vec3<ScalarType> q = Abs(p) - he;
         Zero3<ScalarType> constexpr zero3{};
@@ -90,7 +90,7 @@ struct BoxFrame : public Primitive
      * @param p Point in 3D space
      * @return Signed distance to the box frame (negative inside, positive outside)
      */
-    PBAT_HOST_DEVICE ScalarType eval(Vec3<ScalarType> p) const
+    PBAT_HOST_DEVICE ScalarType Eval(Vec3<ScalarType> p) const
     {
         Vec3<ScalarType> p = Abs(p) - he;
         Vec3<ScalarType> q = Abs(p + t) - t;
@@ -122,7 +122,7 @@ struct Torus : public Primitive
      * @param p Point in 3D space
      * @return Signed distance to the torus (negative inside, positive outside)
      */
-    PBAT_HOST_DEVICE ScalarType eval(Vec3<ScalarType> const& p) const
+    PBAT_HOST_DEVICE ScalarType Eval(Vec3<ScalarType> const& p) const
     {
         Vec2<ScalarType> q = Vec2<ScalarType>{Norm(Vec2<ScalarType>{p(0), p(2)}) - t(0), p(1)};
         return Norm(q) - t(1);
@@ -146,7 +146,7 @@ struct CappedTorus : public Primitive
      * @param p Point in 3D space
      * @return Signed distance to the capped torus (negative inside, positive outside)
      */
-    PBAT_HOST_DEVICE ScalarType eval(Vec3<ScalarType> p) const
+    PBAT_HOST_DEVICE ScalarType Eval(Vec3<ScalarType> p) const
     {
         using namespace std;
         p(0)          = abs(p(0));
@@ -175,7 +175,7 @@ struct Link : public Primitive
      * @param p Point in 3D space
      * @return Signed distance to the link shape (negative inside, positive outside)
      */
-    PBAT_HOST_DEVICE ScalarType eval(Vec3<ScalarType> const& p) const
+    PBAT_HOST_DEVICE ScalarType Eval(Vec3<ScalarType> const& p) const
     {
         using namespace std;
         ScalarType constexpr zero{0};
@@ -199,7 +199,7 @@ struct InfiniteCylinder : public Primitive
      * @param p Point in 3D space
      * @return Signed distance to the infinite cylinder (negative inside, positive outside)
      */
-    PBAT_HOST_DEVICE ScalarType eval(Vec3<ScalarType> const& p) const
+    PBAT_HOST_DEVICE ScalarType Eval(Vec3<ScalarType> const& p) const
     {
         Vec2<ScalarType> d{p(0) - c(0), p(2) - c(1)};
         return Norm(d) - c(2);
@@ -221,7 +221,7 @@ struct Cone : public Primitive
      * @param p Point in 3D space
      * @return Signed distance to the cone (negative inside, positive outside)
      */
-    PBAT_HOST_DEVICE ScalarType eval(Vec3<ScalarType> const& p) const
+    PBAT_HOST_DEVICE ScalarType Eval(Vec3<ScalarType> const& p) const
     {
         using namespace std;
         ScalarType constexpr zero{0};
@@ -251,7 +251,7 @@ struct InfiniteCone : public Primitive
      * @param p Point in 3D space
      * @return Signed distance to the infinite cone (negative inside, positive outside)
      */
-    PBAT_HOST_DEVICE ScalarType eval(Vec3<ScalarType> const& p) const
+    PBAT_HOST_DEVICE ScalarType Eval(Vec3<ScalarType> const& p) const
     {
         using namespace std;
         ScalarType constexpr zero{0};
@@ -276,7 +276,7 @@ struct Plane : public Primitive
      * @param p Point in 3D space
      * @return Signed distance to the plane (negative inside, positive outside)
      */
-    PBAT_HOST_DEVICE ScalarType eval(Vec3<ScalarType> const& p) const
+    PBAT_HOST_DEVICE ScalarType Eval(Vec3<ScalarType> const& p) const
     {
         // n^T (p - o)
         return p(2);
@@ -297,7 +297,7 @@ struct HexagonalPrism : public Primitive
      * @param p Point in 3D space
      * @return Signed distance to the hexagonal prism (negative inside, positive outside)
      */
-    PBAT_HOST_DEVICE ScalarType eval(Vec3<ScalarType> p) const
+    PBAT_HOST_DEVICE ScalarType Eval(Vec3<ScalarType> p) const
     {
         using namespace std;
         Vec3<ScalarType> constexpr k{ScalarType{-0.8660254}, ScalarType{0.5}, ScalarType{0.57735}};
@@ -329,7 +329,7 @@ struct Capsule : public Primitive
      * @param p Point in 3D space
      * @return Signed distance to the capsule (negative inside, positive outside)
      */
-    PBAT_HOST_DEVICE ScalarType eval(Vec3<ScalarType> const& p) const
+    PBAT_HOST_DEVICE ScalarType Eval(Vec3<ScalarType> const& p) const
     {
         using namespace std;
         Vec3<ScalarType> pa = p - a;
@@ -354,7 +354,7 @@ struct VerticalCapsule : public Primitive
      * @param p Point in 3D space
      * @return Signed distance to the capsule (negative inside, positive outside)
      */
-    PBAT_HOST_DEVICE ScalarType eval(Vec3<ScalarType> p) const
+    PBAT_HOST_DEVICE ScalarType Eval(Vec3<ScalarType> p) const
     {
         using namespace std;
         p(1) -= clamp(p(1), ScalarType(0), h);
@@ -378,7 +378,7 @@ struct CappedCylinder : public Primitive
      * @param p Point in 3D space
      * @return Signed distance to the capped cylinder (negative inside, positive outside)
      */
-    PBAT_HOST_DEVICE ScalarType eval(Vec3<ScalarType> const& p) const
+    PBAT_HOST_DEVICE ScalarType Eval(Vec3<ScalarType> const& p) const
     {
         using namespace std;
         Vec3<ScalarType> ba = b - a;
@@ -411,7 +411,7 @@ struct VerticalCappedCylinder : public Primitive
      * @param p Point in 3D space
      * @return Signed distance to the vertical capped cylinder (negative inside, positive outside)
      */
-    PBAT_HOST_DEVICE ScalarType eval(Vec3<ScalarType> const& p) const
+    PBAT_HOST_DEVICE ScalarType Eval(Vec3<ScalarType> const& p) const
     {
         using namespace std;
         Vec2<ScalarType> pxz{p(0), p(2)};
@@ -438,7 +438,7 @@ struct RoundedCylinder : public Primitive
      * @param p Point in 3D space
      * @return Signed distance to the rounded cylinder (negative inside, positive outside)
      */
-    PBAT_HOST_DEVICE ScalarType eval(Vec3<ScalarType> const& p) const
+    PBAT_HOST_DEVICE ScalarType Eval(Vec3<ScalarType> const& p) const
     {
         using namespace std;
         Vec2<ScalarType> pxz{p(0), p(2)};
@@ -465,7 +465,7 @@ struct VerticalCappedCone : public Primitive
      * @param p Point in 3D space
      * @return Signed distance to the capped cone (negative inside, positive outside)
      */
-    PBAT_HOST_DEVICE ScalarType eval(Vec3<ScalarType> const& p) const
+    PBAT_HOST_DEVICE ScalarType Eval(Vec3<ScalarType> const& p) const
     {
         using namespace std;
         ScalarType constexpr zero{0};
@@ -501,7 +501,7 @@ struct CutHollowSphere : public Primitive
      * @param p Point in 3D space
      * @return Signed distance to the cut hollow sphere (negative inside, positive outside)
      */
-    PBAT_HOST_DEVICE ScalarType eval(Vec3<ScalarType> const& p) const
+    PBAT_HOST_DEVICE ScalarType Eval(Vec3<ScalarType> const& p) const
     {
         using namespace std;
         ScalarType w = sqrt(r * r - h * h);
@@ -529,7 +529,7 @@ struct VerticalRoundCone : public Primitive
      * @param p Point in 3D space
      * @return Signed distance to the vertical round cone (negative inside, positive outside)
      */
-    PBAT_HOST_DEVICE ScalarType eval(Vec3<ScalarType> const& p) const
+    PBAT_HOST_DEVICE ScalarType Eval(Vec3<ScalarType> const& p) const
     {
         using namespace std;
         ScalarType b = (r1 - r2) / h;
@@ -560,7 +560,7 @@ struct Octahedron : public Primitive
      * @param p Point in 3D space
      * @return Signed distance to the octahedron (negative inside, positive outside)
      */
-    PBAT_HOST_DEVICE ScalarType eval(Vec3<ScalarType> p) const
+    PBAT_HOST_DEVICE ScalarType Eval(Vec3<ScalarType> p) const
     {
         using namespace std;
         p            = Abs(p);
@@ -595,7 +595,7 @@ struct Pyramid : public Primitive
      * @param p Point in 3D space
      * @return Signed distance to the pyramid (negative inside, positive outside)
      */
-    PBAT_HOST_DEVICE ScalarType eval(Vec3<ScalarType> p) const
+    PBAT_HOST_DEVICE ScalarType Eval(Vec3<ScalarType> p) const
     {
         using namespace std;
         ScalarType constexpr quarter{0.25};
@@ -642,7 +642,7 @@ struct Triangle : public Primitive
      * @param p Point in 3D space
      * @return Signed distance to the triangle (negative inside, positive outside)
      */
-    PBAT_HOST_DEVICE ScalarType eval(Vec3<ScalarType> const& p) const
+    PBAT_HOST_DEVICE ScalarType Eval(Vec3<ScalarType> const& p) const
     {
         using namespace std;
         Vec3<ScalarType> ba  = b - a;
@@ -684,7 +684,7 @@ struct Quadrilateral : public Primitive
      * @param p Point in 3D space
      * @return Signed distance to the quadrilateral (negative inside, positive outside)
      */
-    PBAT_HOST_DEVICE ScalarType eval(Vec3<ScalarType> const& p) const
+    PBAT_HOST_DEVICE ScalarType Eval(Vec3<ScalarType> const& p) const
     {
         using namespace std;
         Vec3<ScalarType> ba  = b - a;

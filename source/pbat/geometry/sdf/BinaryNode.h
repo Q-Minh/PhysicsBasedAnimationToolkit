@@ -42,7 +42,7 @@ struct Union : public BinaryNode
      * @param sd2 Signed distance to the second shape
      * @return Signed distance to the union of two shapes
      */
-    PBAT_HOST_DEVICE ScalarType eval(ScalarType sd1, ScalarType sd2) const
+    PBAT_HOST_DEVICE ScalarType Eval(ScalarType sd1, ScalarType sd2) const
     {
         using namespace std;
         return min(sd1, sd2);
@@ -63,7 +63,7 @@ struct Difference : public BinaryNode
      * @param sd2 Signed distance to the second shape
      * @return Signed distance to the difference of two shapes
      */
-    PBAT_HOST_DEVICE ScalarType eval(ScalarType sd1, ScalarType sd2) const
+    PBAT_HOST_DEVICE ScalarType Eval(ScalarType sd1, ScalarType sd2) const
     {
         using namespace std;
         return max(-sd1, sd2);
@@ -84,7 +84,7 @@ struct Intersection : public BinaryNode
      * @param sd2 Signed distance to the second shape
      * @return Signed distance to the intersection of two shapes
      */
-    PBAT_HOST_DEVICE ScalarType eval(ScalarType sd1, ScalarType sd2) const
+    PBAT_HOST_DEVICE ScalarType Eval(ScalarType sd1, ScalarType sd2) const
     {
         using namespace std;
         return max(sd1, sd2);
@@ -105,7 +105,7 @@ struct ExclusiveOr : public BinaryNode
      * @param sd2 Signed distance to the second shape
      * @return Signed distance to the exclusive or of two shapes
      */
-    PBAT_HOST_DEVICE ScalarType eval(ScalarType sd1, ScalarType sd2) const
+    PBAT_HOST_DEVICE ScalarType Eval(ScalarType sd1, ScalarType sd2) const
     {
         using namespace std;
         return max(min(sd1, sd2), -max(sd1, sd2));
@@ -127,7 +127,7 @@ struct SmoothUnion : public BinaryNode
      * @param sd2 Signed distance to the second shape
      * @return Signed distance to the smooth union of two shapes
      */
-    PBAT_HOST_DEVICE ScalarType eval(ScalarType sd1, ScalarType sd2) const
+    PBAT_HOST_DEVICE ScalarType Eval(ScalarType sd1, ScalarType sd2) const
     {
         using namespace std;
         ScalarType kk = 4 * k;
@@ -151,7 +151,7 @@ struct SmoothDifference : public BinaryNode
      * @param sd2 Signed distance to the second shape
      * @return Signed distance to the smooth difference of two shapes
      */
-    PBAT_HOST_DEVICE ScalarType eval(ScalarType sd1, ScalarType sd2) const
+    PBAT_HOST_DEVICE ScalarType Eval(ScalarType sd1, ScalarType sd2) const
     {
         SmoothUnion<TScalar> U{k};
         return -U.eval(sd1, -sd2);
@@ -173,7 +173,7 @@ struct SmoothIntersection : public BinaryNode
      * @param sd2 Signed distance to the second shape
      * @return Signed distance to the smooth intersection of two shapes
      */
-    PBAT_HOST_DEVICE ScalarType eval(ScalarType sd1, ScalarType sd2) const
+    PBAT_HOST_DEVICE ScalarType Eval(ScalarType sd1, ScalarType sd2) const
     {
         SmoothUnion<TScalar> U{k};
         return -U.eval(-sd1, -sd2);
