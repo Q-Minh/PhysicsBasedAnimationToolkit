@@ -1,0 +1,20 @@
+target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
+    PUBLIC
+    FILE_SET api
+    FILES
+    "Sdf.h"
+    "BinaryNode.h"
+    "Composite.h"
+    "Primitive.h"
+    "Transform.h"
+    "TypeDefs.h"
+    "UnaryNode.h"
+)
+target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
+    PRIVATE
+    "BinaryNode.cpp"
+    "Composite.cpp"
+    "Primitive.cpp"
+    "Transform.cpp"
+    "UnaryNode.cpp"
+)

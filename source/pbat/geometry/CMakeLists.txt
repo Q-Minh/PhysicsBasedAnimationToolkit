@@ -45,3 +45,4 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
 )
 
 add_subdirectory(model)
+add_subdirectory(sdf)
