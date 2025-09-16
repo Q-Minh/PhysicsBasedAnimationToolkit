@@ -31,6 +31,27 @@ struct UnaryNode
 };
 
 /**
+ * @brief Uniform scaling operation
+ * @tparam TScalar Scalar type
+ */
+template <common::CArithmetic TScalar>
+struct Scale : public UnaryNode
+{
+    using ScalarType = TScalar; ///< Scalar type
+    ScalarType s;               ///< Scaling factor
+    /**
+     * @brief Evaluate the signed distance function at a point
+     * @param p `3 x 1` query point in 3D space
+     * @return Signed distance to the scaled shape
+     */
+    template <class FSdf>
+    PBAT_HOST_DEVICE ScalarType eval(Vec3<ScalarType> const& p, FSdf&& sdf) const
+    {
+        return s * sdf.eval(p / s);
+    }
+};
+
+/**
  * @brief Elongation operation along the axes
  * @tparam TScalar Scalar type
  */
