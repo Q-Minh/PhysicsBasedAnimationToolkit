@@ -218,7 +218,7 @@ struct Twist : public UnaryNode
         using namespace std;
         ScalarType c = cos(k * p(1));
         ScalarType s = sin(k * p(1));
-        Vec3 q{c * p(0) - s * p(2), s * p(0) + c * p(2), p(1)};
+        Vec3<ScalarType> q{c * p(0) - s * p(2), s * p(0) + c * p(2), p(1)};
         return sdf.eval(q);
     }
 };
@@ -243,7 +243,7 @@ struct Bend : public UnaryNode
         using namespace std;
         ScalarType c = cos(k * p.x);
         ScalarType s = sin(k * p.x);
-        Vec3 q{c * p(0) - s * p(1), s * p(0) + c * p(1), p(2)};
+        Vec3<ScalarType> q{c * p(0) - s * p(1), s * p(0) + c * p(1), p(2)};
         return sdf.eval(q);
     }
 };

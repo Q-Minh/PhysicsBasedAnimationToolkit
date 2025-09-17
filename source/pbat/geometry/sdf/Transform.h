@@ -20,21 +20,38 @@
 
 namespace pbat::geometry::sdf {
 
+/**
+ * @brief A 3D rigid transform
+ * @tparam TScalar Scalar type
+ */
 template <common::CArithmetic TScalar>
 struct Transform
 {
     using ScalarType = TScalar; ///< Scalar type
     Mat3<ScalarType> R;         ///< Rotation matrix
     Vec3<ScalarType> t;         ///< Translation vector
-
+    /**
+     * @brief Apply the transform to a point (technically, a vector)
+     * @param p Point to transform
+     * @return Transformed point
+     */
     PBAT_HOST_DEVICE Vec3<ScalarType> operator()(Vec3<ScalarType> const& p) const
     {
         return R * p + t;
     }
+    /**
+     * @brief Apply the inverse transform to a point (technically, a vector)
+     * @param p Point to inverse transform
+     * @return Inverse transformed point
+     */
     PBAT_HOST_DEVICE Vec3<ScalarType> operator/(Vec3<ScalarType> const& p) const
     {
         return R.Transpose() * (p - t);
     }
+    /**
+     * @brief Clean the rotation matrix to ensure it is a valid rotation (orthogonal with
+     * determinant 1)
+     */
     void CleanRotation()
     {
         Eigen::Matrix<ScalarType, 3, 3> Reig = math::linalg::mini::ToEigen(R);
