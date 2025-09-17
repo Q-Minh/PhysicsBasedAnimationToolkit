@@ -2,6 +2,7 @@
 
 #include <nanobind/eigen/dense.h>
 #include <nanobind/stl/filesystem.h>
+#include <nanobind/stl/optional.h>
 #include <nanobind/stl/string.h>
 #include <pbat/io/Archive.h>
 
