@@ -82,10 +82,7 @@ using Node = std::variant<
 template <common::CArithmetic TScalar>
 struct Composite
 {
-    static constexpr int kMaxRoots = 16;
-
     using ScalarType = TScalar; ///< Scalar type
-
     /**
      * @brief Status of the composite SDF
      */
@@ -94,7 +91,6 @@ struct Composite
         InvalidForest, ///< The SDF forest topology is invalid (wrong children/ancestor relations)
         UnexpectedNodeType ///< An unexpected node type was encountered
     };
-
     /**
      * @brief Construct a composite SDF from nodes, transforms, children, ancestors and roots
      * @param nodes Span of nodes in the composite SDF
