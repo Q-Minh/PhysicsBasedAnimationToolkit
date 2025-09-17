@@ -41,13 +41,14 @@ struct Scale : public UnaryNode
     ScalarType s;               ///< Scaling factor
     /**
      * @brief Evaluate the signed distance function at a point
+     * @tparam FSdf Callable type with signature `ScalarType(Vec3<ScalarType> const&)`
      * @param p `3 x 1` query point in 3D space
      * @return Signed distance to the scaled shape
      */
     template <class FSdf>
     PBAT_HOST_DEVICE ScalarType Eval(Vec3<ScalarType> const& p, FSdf&& sdf) const
     {
-        return s * sdf.eval(p / s);
+        return s * sdf(p / s);
     }
 };
 
@@ -62,6 +63,7 @@ struct Elongate : public UnaryNode
     Vec3<ScalarType> h;         ///< Elongation vector
     /**
      * @brief Evaluate the signed distance function at a point
+     * @tparam FSdf Callable type with signature `ScalarType(Vec3<ScalarType> const&)`
      * @param p `3 x 1` query point in 3D space
      * @return Signed distance to the elongated shape
      */
@@ -70,8 +72,7 @@ struct Elongate : public UnaryNode
     {
         Vec3<ScalarType> q = Abs(p) - h;
         using namespace std;
-        return sdf.eval(Max(q, Zero3<ScalarType>{})) +
-               min(max(q(0), max(q(1), q(2))), ScalarType(0));
+        return sdf(Max(q, Zero3<ScalarType>{})) + min(max(q(0), max(q(1), q(2))), ScalarType(0));
     }
 };
 
@@ -86,13 +87,14 @@ struct Round : public UnaryNode
     ScalarType r;               ///< Rounding radius
     /**
      * @brief Evaluate the signed distance function at a point
+     * @tparam FSdf Callable type with signature `ScalarType(Vec3<ScalarType> const&)`
      * @param p `3 x 1` query point in 3D space
      * @return Signed distance to the rounded shape
      */
     template <class FSdf>
     PBAT_HOST_DEVICE ScalarType Eval(Vec3<ScalarType> const& p, FSdf&& sdf) const
     {
-        return sdf.eval(p) - r;
+        return sdf(p) - r;
     }
 };
 
@@ -107,6 +109,7 @@ struct Onion : public UnaryNode
     ScalarType t;               ///< Onion thickness
     /**
      * @brief Evaluate the signed distance function at a point
+     * @tparam FSdf Callable type with signature `ScalarType(Vec3<ScalarType> const&)`
      * @param p `3 x 1` query point in 3D space
      * @return Signed distance to the onioned shape
      */
@@ -114,7 +117,7 @@ struct Onion : public UnaryNode
     PBAT_HOST_DEVICE ScalarType Eval(Vec3<ScalarType> const& p, FSdf&& sdf) const
     {
         using namespace std;
-        return abs(sdf.eval(p)) - t;
+        return abs(sdf(p)) - t;
     }
 };
 
@@ -128,6 +131,7 @@ struct Symmetrize : public UnaryNode
     using ScalarType = TScalar; ///< Scalar type
     /**
      * @brief Evaluate the signed distance function at a point
+     * @tparam FSdf Callable type with signature `ScalarType(Vec3<ScalarType> const&)`
      * @param p `3 x 1` query point in 3D space
      * @return Signed distance to the symmetrized shape
      */
@@ -137,7 +141,7 @@ struct Symmetrize : public UnaryNode
         using namespace std;
         p(0) = abs(p(0));
         p(2) = abs(p(2));
-        return sdf.eval(p);
+        return sdf(p);
     }
 };
 
@@ -153,11 +157,12 @@ struct Repeat : public UnaryNode
     Vec3<ScalarType> l;         ///< Half number of repetitions along each axis
     /**
      * @brief Evaluate the signed distance function at a point
+     * @tparam FSdf Callable type with signature `ScalarType(Vec3<ScalarType> const&)`
      * @param p `3 x 1` query point in 3D space
      * @return Signed distance to the repeated shape
      */
     template <class FSdf>
-    PBAT_HOST_DEVICE ScalarType Eval(Vec3<ScalarType> p, FSdf&& sdf) const
+    PBAT_HOST_DEVICE ScalarType Eval(Vec3<ScalarType> const& p, FSdf&& sdf) const
     {
         using namespace std;
         Vec3<ScalarType> pc{
@@ -165,7 +170,7 @@ struct Repeat : public UnaryNode
             clamp(round(p(1) / s), -l(1), l(1)),
             clamp(round(p(2) / s), -l(2), l(2))};
         Vec3<ScalarType> q = p - s * pc;
-        return sdf.eval(q);
+        return sdf(q);
     }
 };
 
@@ -181,11 +186,12 @@ struct Bump : public UnaryNode
     Vec3<ScalarType> g;         ///< Amplitude of the wave displacement
     /**
      * @brief Evaluate the signed distance function at a point
+     * @tparam FSdf Callable type with signature `ScalarType(Vec3<ScalarType> const&)`
      * @param p `3 x 1` query point in 3D space
      * @return Signed distance to the wave-displaced shape
      */
     template <class FSdf>
-    PBAT_HOST_DEVICE ScalarType Eval(Vec3<ScalarType> p, FSdf&& sdf) const
+    PBAT_HOST_DEVICE ScalarType Eval(Vec3<ScalarType> const& p, FSdf&& sdf) const
     {
         using namespace std;
         // clang-format off
@@ -194,7 +200,7 @@ struct Bump : public UnaryNode
             g(1)*sin(f(1)*p(1)) * 
             g(2)*sin(f(2)*p(2));
         // clang-format on
-        return sdf.eval(p) + d;
+        return sdf(p) + d;
     }
 };
 
@@ -209,17 +215,18 @@ struct Twist : public UnaryNode
     ScalarType k;               ///< Twist factor
     /**
      * @brief Evaluate the signed distance function at a point
+     * @tparam FSdf Callable type with signature `ScalarType(Vec3<ScalarType> const&)`
      * @param p `3 x 1` query point in 3D space
      * @return Signed distance to the twisted shape
      */
     template <class FSdf>
-    PBAT_HOST_DEVICE ScalarType Eval(Vec3<ScalarType> p, FSdf&& sdf) const
+    PBAT_HOST_DEVICE ScalarType Eval(Vec3<ScalarType> const& p, FSdf&& sdf) const
     {
         using namespace std;
         ScalarType c = cos(k * p(1));
         ScalarType s = sin(k * p(1));
         Vec3<ScalarType> q{c * p(0) - s * p(2), s * p(0) + c * p(2), p(1)};
-        return sdf.eval(q);
+        return sdf(q);
     }
 };
 
@@ -234,17 +241,18 @@ struct Bend : public UnaryNode
     ScalarType k;               ///< Bend factor
     /**
      * @brief Evaluate the signed distance function at a point
+     * @tparam FSdf Callable type with signature `ScalarType(Vec3<ScalarType> const&)`
      * @param p `3 x 1` query point in 3D space
      * @return Signed distance to the bent shape
      */
     template <class FSdf>
-    PBAT_HOST_DEVICE ScalarType Eval(Vec3<ScalarType> p, FSdf&& sdf) const
+    PBAT_HOST_DEVICE ScalarType Eval(Vec3<ScalarType> const& p, FSdf&& sdf) const
     {
         using namespace std;
         ScalarType c = cos(k * p.x);
         ScalarType s = sin(k * p.x);
         Vec3<ScalarType> q{c * p(0) - s * p(1), s * p(0) + c * p(1), p(2)};
-        return sdf.eval(q);
+        return sdf(q);
     }
 };
 
