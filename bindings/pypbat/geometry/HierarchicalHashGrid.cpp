@@ -14,15 +14,11 @@ namespace pbat::py::geometry {
 void BindHierarchicalHashGrid(nanobind::module_& m)
 {
     namespace nb = nanobind;
-    pbat::common::ForValues<2, 3>([&m]<auto kDims>() {
-        std::string const className = []() {
-            if constexpr (kDims == 2)
-                return "HierarchicalHashGrid2D";
-            if constexpr (kDims == 3)
-                return "HierarchicalHashGrid3D";
-        }();
-
-        using HashGridType = pbat::geometry::HierarchicalHashGrid<kDims>;
+    pbat::common::ForTypes<
+        pbat::geometry::HierarchicalHashGrid<2>,
+        pbat::geometry::HierarchicalHashGrid<3>>([&m]<class HashGridType>() {
+        std::string const className =
+            std::string("HierarchicalHashGrid") + std::to_string(HashGridType::kDims);
         nb::class_<HashGridType>(m, className.data())
             .def(nb::init<>())
             .def(

@@ -92,7 +92,6 @@ install(
 
 # Bundle external (i.e. not built by this project) shared library dependencies.
 get_target_property(_pbat_link_libraries PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit LINK_LIBRARIES)
-
 foreach(_pbat_link_library IN ITEMS ${_pbat_link_libraries})
     if(TARGET ${_pbat_link_library})
         get_target_property(_is_imported ${_pbat_link_library} IMPORTED)
@@ -105,6 +104,13 @@ foreach(_pbat_link_library IN ITEMS ${_pbat_link_libraries})
         endif()
     endif()
 endforeach()
+
+# Install nanobind as well, if it was built as shared library
+get_target_property(_nanobind_type nanobind TYPE)
+if(_nanobind_type STREQUAL "SHARED_LIBRARY")
+    message(VERBOSE "PBAT[python] -- nanobind is a SHARED_LIBRARY, bundling artifact")
+    install(TARGETS nanobind RUNTIME DESTINATION "pbatoolkit")
+endif()
 
 # Bundling MKL and CUDA dependencies is pretty expensive,
 # so we should expect users to have installed those locally
