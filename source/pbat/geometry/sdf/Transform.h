@@ -14,7 +14,9 @@
 #include "TypeDefs.h"
 #include "pbat/HostDevice.h"
 #include "pbat/common/Concepts.h"
+#include "pbat/math/linalg/mini/BinaryOperations.h"
 #include "pbat/math/linalg/mini/Eigen.h"
+#include "pbat/math/linalg/mini/Product.h"
 
 #include <Eigen/SVD>
 
