@@ -613,14 +613,15 @@ struct Pyramid : public Primitive
 
         Vec3<ScalarType> q{p(2), h * p(1) - half * p(0), h * p(0) + half * p(1)};
 
-        float s = max(-q(0), zero);
-        float t = clamp((q(1) - half * p(2)) / (m2 + quarter), zero, one);
+        ScalarType s = max(-q(0), zero);
+        ScalarType t = clamp((q(1) - half * p(2)) / (m2 + quarter), zero, one);
 
-        float a = m2 * (q(0) + s) * (q(0) + s) + q(1) * q(1);
-        float b = m2 * (q(0) + half * t) * (q(0) + half * t) + (q(1) - m2 * t) * (q(1) - m2 * t);
+        ScalarType a = m2 * (q(0) + s) * (q(0) + s) + q(1) * q(1);
+        ScalarType b =
+            m2 * (q(0) + half * t) * (q(0) + half * t) + (q(1) - m2 * t) * (q(1) - m2 * t);
 
-        bool bd2 = min(q(1), -q(0) * m2 - q(1) * half) > zero;
-        float d2 = bd2 * zero + (not bd2) * min(a, b);
+        bool bd2      = min(q(1), -q(0) * m2 - q(1) * half) > zero;
+        ScalarType d2 = bd2 * zero + (not bd2) * min(a, b);
 
         return sqrt((d2 + q(2) * q(2)) / m2) * sign(max(q(2), -p(1)));
     }
