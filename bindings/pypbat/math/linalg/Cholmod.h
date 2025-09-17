@@ -1,14 +1,14 @@
 #ifndef PYPBAT_MATH_LINALG_CHOLMOD_H
 #define PYPBAT_MATH_LINALG_CHOLMOD_H
 
-#include <pybind11/pybind11.h>
+#include <nanobind/nanobind.h>
 
 namespace pbat {
 namespace py {
 namespace math {
 namespace linalg {
 
-void BindCholmod(pybind11::module& m);
+void BindCholmod(nanobind::module_& m);
 
 } // namespace linalg
 } // namespace math

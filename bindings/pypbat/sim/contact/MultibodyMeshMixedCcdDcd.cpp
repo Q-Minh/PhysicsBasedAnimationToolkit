@@ -1,39 +1,41 @@
 #include "MultibodyMeshMixedCcdDcd.h"
 
+#include <nanobind/eigen/dense.h>
+#include <nanobind/stl/tuple.h>
+#include <nanobind/stl/vector.h>
 #include <pbat/sim/contact/MultibodyMeshMixedCcdDcd.h>
-#include <pybind11/eigen.h>
-#include <pybind11/stl.h>
 #include <tuple>
 #include <vector>
 
 namespace pbat::py::sim::contact {
 
-void BindMultibodyMeshMixedCcdDcd(pybind11::module& m)
+void BindMultibodyMeshMixedCcdDcd(nanobind::module_& m)
 {
-    namespace pyb = pybind11;
+    namespace nb = nanobind;
     using pbat::sim::contact::MultibodyMeshMixedCcdDcd;
-    pyb::class_<MultibodyMeshMixedCcdDcd>(m, "MultibodyMeshMixedCcdDcd")
+    nb::class_<MultibodyMeshMixedCcdDcd>(m, "MultibodyMeshMixedCcdDcd")
         .def(
-            pyb::init([](Eigen::Ref<Matrix<3, Eigen::Dynamic> const> const& X,
-                         Eigen::Ref<IndexVectorX const> const& V,
-                         Eigen::Ref<IndexMatrix<2, Eigen::Dynamic> const> const& E,
-                         Eigen::Ref<IndexMatrix<3, Eigen::Dynamic> const> const& F,
-                         Eigen::Ref<IndexMatrix<4, Eigen::Dynamic> const> const& T,
-                         Eigen::Ref<IndexVectorX const> const& VP,
-                         Eigen::Ref<IndexVectorX const> const& EP,
-                         Eigen::Ref<IndexVectorX const> const& FP,
-                         Eigen::Ref<IndexVectorX const> const& TP) {
+            "__init__",
+            [](Eigen::Ref<Matrix<3, Eigen::Dynamic> const> const& X,
+               Eigen::Ref<IndexVectorX const> const& V,
+               Eigen::Ref<IndexMatrix<2, Eigen::Dynamic> const> const& E,
+               Eigen::Ref<IndexMatrix<3, Eigen::Dynamic> const> const& F,
+               Eigen::Ref<IndexMatrix<4, Eigen::Dynamic> const> const& T,
+               Eigen::Ref<IndexVectorX const> const& VP,
+               Eigen::Ref<IndexVectorX const> const& EP,
+               Eigen::Ref<IndexVectorX const> const& FP,
+               Eigen::Ref<IndexVectorX const> const& TP) {
                 return MultibodyMeshMixedCcdDcd(X, V, E, F, T, VP, EP, FP, TP);
-            }),
-            pyb::arg("X"),
-            pyb::arg("V").noconvert(),
-            pyb::arg("E").noconvert(),
-            pyb::arg("F").noconvert(),
-            pyb::arg("T").noconvert(),
-            pyb::arg("VP").noconvert(),
-            pyb::arg("EP").noconvert(),
-            pyb::arg("FP").noconvert(),
-            pyb::arg("TP").noconvert(),
+            },
+            nb::arg("X"),
+            nb::arg("V").noconvert(),
+            nb::arg("E").noconvert(),
+            nb::arg("F").noconvert(),
+            nb::arg("T").noconvert(),
+            nb::arg("VP").noconvert(),
+            nb::arg("EP").noconvert(),
+            nb::arg("FP").noconvert(),
+            nb::arg("TP").noconvert(),
             "Construct a multibody mesh CCD system out of multiple meshes\n\n"
             "Args:\n"
             "    X (numpy.ndarray): `3 x |# verts|` mesh vertex positions\n"
@@ -78,9 +80,9 @@ void BindMultibodyMeshMixedCcdDcd(pybind11::module& m)
 #include <pbat/warning/Pop.h>
                 return std::make_tuple(VTv, VTf, EEei, EEej);
             },
-            pyb::arg("XT"),
-            pyb::arg("X"),
-            pyb::arg("XK"),
+            nb::arg("XT"),
+            nb::arg("X"),
+            nb::arg("XK"),
             "Detect all vertex-triangle and edge-edge contact pairs\n\n"
             "Args:\n"
             "    XT (numpy.ndarray): `3 x |# verts|` mesh vertex positions at time t\n"
@@ -108,29 +110,29 @@ void BindMultibodyMeshMixedCcdDcd(pybind11::module& m)
 #include <pbat/warning/Pop.h>
                 return std::make_tuple(VTv, VTf);
             },
-            pyb::arg("XK"),
+            nb::arg("XK"),
             "Detect all vertex-triangle contact pairs using DCD\n\n"
             "Args:\n"
             "    XK (numpy.ndarray): `3 x |# verts|` mesh vertex positions at current time\n"
             "Returns:\n"
             "    Tuple[List[int], List[int]]: (v,f) lists of vertex-triangle contact pairs")
-        .def_property_readonly(
+        .def_prop_ro_static(
             "vertex_aabbs",
             &MultibodyMeshMixedCcdDcd::GetVertexAabbs,
             "`2*kDims x |# bodies|` array of vertex AABBs")
-        .def_property_readonly(
+        .def_prop_ro_static(
             "edge_aabbs",
             &MultibodyMeshMixedCcdDcd::GetEdgeAabbs,
             "`2*kDims x |# bodies|` array of edge AABBs")
-        .def_property_readonly(
+        .def_prop_ro_static(
             "triangle_aabbs",
             &MultibodyMeshMixedCcdDcd::GetTriangleAabbs,
             "`2*kDims x |# bodies|` array of triangle AABBs")
-        .def_property_readonly(
+        .def_prop_ro_static(
             "tetrahedron_aabbs",
             &MultibodyMeshMixedCcdDcd::GetTetrahedronAabbs,
             "`2*kDims x |# bodies|` array of tetrahedron AABBs")
-        .def_property_readonly(
+        .def_prop_ro_static(
             "body_aabbs",
             &MultibodyMeshMixedCcdDcd::GetBodyAabbs,
             "`2*kDims x |# bodies|` array of body AABBs")
@@ -139,7 +141,7 @@ void BindMultibodyMeshMixedCcdDcd(pybind11::module& m)
             [](MultibodyMeshMixedCcdDcd& self, Eigen::Ref<MatrixX const> const& X) {
                 self.ComputeVertexAabbs(X);
             },
-            pyb::arg("X"),
+            nb::arg("X"),
             "Compute vertex AABBs for mesh vertex BVHs\n\n"
             "Args:\n"
             "    X (numpy.ndarray): `3 x |# verts|` mesh vertex positions")
@@ -148,8 +150,8 @@ void BindMultibodyMeshMixedCcdDcd(pybind11::module& m)
             [](MultibodyMeshMixedCcdDcd& self,
                Eigen::Ref<MatrixX const> const& XT,
                Eigen::Ref<MatrixX const> const& X) { self.ComputeVertexAabbs(XT, X); },
-            pyb::arg("XT"),
-            pyb::arg("X"),
+            nb::arg("XT"),
+            nb::arg("X"),
             "Compute vertex AABBs for mesh vertex BVHs\n\n"
             "Args:\n"
             "    XT (numpy.ndarray): `3 x |# verts|` mesh vertex positions at time t\n"
@@ -159,8 +161,8 @@ void BindMultibodyMeshMixedCcdDcd(pybind11::module& m)
             [](MultibodyMeshMixedCcdDcd& self,
                Eigen::Ref<MatrixX const> const& XT,
                Eigen::Ref<MatrixX const> const& X) { self.ComputeEdgeAabbs(XT, X); },
-            pyb::arg("XT"),
-            pyb::arg("X"),
+            nb::arg("XT"),
+            nb::arg("X"),
             "Compute edge AABBs for mesh edge BVHs\n\n"
             "Args:\n"
             "    XT (numpy.ndarray): `3 x |# verts|` mesh vertex positions at time t\n"
@@ -170,7 +172,7 @@ void BindMultibodyMeshMixedCcdDcd(pybind11::module& m)
             [](MultibodyMeshMixedCcdDcd& self, Eigen::Ref<MatrixX const> const& X) {
                 self.ComputeTriangleAabbs(X);
             },
-            pyb::arg("X"),
+            nb::arg("X"),
             "Compute triangle AABBs for mesh triangle BVHs\n\n"
             "Args:\n"
             "    X (numpy.ndarray): `3 x |# verts|` mesh vertex positions")
@@ -179,8 +181,8 @@ void BindMultibodyMeshMixedCcdDcd(pybind11::module& m)
             [](MultibodyMeshMixedCcdDcd& self,
                Eigen::Ref<MatrixX const> const& XT,
                Eigen::Ref<MatrixX const> const& X) { self.ComputeTriangleAabbs(XT, X); },
-            pyb::arg("XT"),
-            pyb::arg("X"),
+            nb::arg("XT"),
+            nb::arg("X"),
             "Compute triangle AABBs for mesh triangle BVHs\n\n"
             "Args:\n"
             "    XT (numpy.ndarray): `3 x |# verts|` mesh vertex positions at time t\n"
@@ -190,7 +192,7 @@ void BindMultibodyMeshMixedCcdDcd(pybind11::module& m)
             [](MultibodyMeshMixedCcdDcd& self, Eigen::Ref<MatrixX const> const& X) {
                 self.ComputeTetrahedronAabbs(X);
             },
-            pyb::arg("X"),
+            nb::arg("X"),
             "Compute tetrahedron AABBs for mesh tetrahedron BVHs\n\n"
             "Args:\n"
             "    X (numpy.ndarray): `3 x |# verts|` mesh vertex positions")
@@ -218,7 +220,7 @@ void BindMultibodyMeshMixedCcdDcd(pybind11::module& m)
             "recompute_body_bvh",
             &MultibodyMeshMixedCcdDcd::RecomputeBodyBvh,
             "Recompute body BVH tree and internal node bounding volumes")
-        .def_property_readonly(
+        .def_prop_ro_static(
             "body_pairs",
             [](MultibodyMeshMixedCcdDcd const& self) {
 #include <pbat/warning/Push.h>
@@ -259,7 +261,10 @@ void BindMultibodyMeshMixedCcdDcd(pybind11::module& m)
 #include <pbat/warning/Pop.h>
                 return std::make_tuple(vi, oi);
             },
+            nb::arg("XK"),
             "Get the vertex-body pairs of DCD query\n\n"
+            "Args:\n"
+            "    XK (numpy.ndarray): `3 x |# verts|` mesh vertex positions at current time\n"
             "Returns:\n"
             "    Tuple[List[int], List[int]]: list of vertex-body pairs (v,o)");
 }

@@ -1,11 +1,11 @@
 #include "Integrator.h"
 
+#include <nanobind/eigen/dense.h>
+#include <nanobind/stl/pair.h>
 #include <pbat/gpu/Aliases.h>
 #include <pbat/gpu/vbd/Vbd.h>
 #include <pbat/sim/vbd/Data.h>
 #include <pbat/sim/vbd/Enums.h>
-#include <pybind11/eigen.h>
-#include <pybind11/stl.h>
 #include <utility>
 
 namespace pbat {
@@ -13,9 +13,9 @@ namespace py {
 namespace gpu {
 namespace vbd {
 
-void BindIntegrator([[maybe_unused]] pybind11::module& m)
+void BindIntegrator([[maybe_unused]] nanobind::module_& m)
 {
-    namespace pyb = pybind11;
+    namespace nb = nanobind;
 #ifdef PBAT_USE_CUDA
 
     using namespace pbat;
@@ -23,17 +23,17 @@ void BindIntegrator([[maybe_unused]] pybind11::module& m)
     using pbat::sim::vbd::Data;
     using pbat::sim::vbd::EInitializationStrategy;
 
-    pyb::class_<Integrator>(m, "Integrator")
+    nb::class_<Integrator>(m, "Integrator")
         .def(
-            pyb::init<Data const&>(),
-            pyb::arg("data"),
+            nb::init<Data const&>(),
+            nb::arg("data"),
             "Construct a VBD algorithm to run on the GPU using data.")
         .def(
             "step",
             &Integrator::Step,
-            pyb::arg("dt")         = GpuScalar{0.01},
-            pyb::arg("iterations") = GpuIndex{20},
-            pyb::arg("substeps")   = GpuIndex{1},
+            nb::arg("dt")         = GpuScalar{0.01},
+            nb::arg("iterations") = GpuIndex{20},
+            nb::arg("substeps")   = GpuIndex{1},
             "Integrate 1 time step.\n\n"
             "Args:\n"
             "    dt (float): Time step\n"
@@ -42,11 +42,11 @@ void BindIntegrator([[maybe_unused]] pybind11::module& m)
         .def(
             "traced_step",
             &Integrator::TracedStep,
-            pyb::arg("dt")         = GpuScalar{0.01},
-            pyb::arg("iterations") = GpuIndex{20},
-            pyb::arg("substeps")   = GpuIndex{1},
-            pyb::arg("t"),
-            pyb::arg("dir") = ".",
+            nb::arg("dt")         = GpuScalar{0.01},
+            nb::arg("iterations") = GpuIndex{20},
+            nb::arg("substeps")   = GpuIndex{1},
+            nb::arg("t"),
+            nb::arg("dir") = ".",
             "Integrate 1 time step and trace the result to disk.\n"
             "The result is saved in the current working directory as matrix market files.\n"
             "Filenames follow the pattern {variable}.t.{timestep}.s.{substep}[.k.{iteration}].mtx\n"
@@ -58,44 +58,44 @@ void BindIntegrator([[maybe_unused]] pybind11::module& m)
             "    t (int): Current time step\n"
             "    dir (str): Directory to save the matrix market files. Defaults to the current "
             "working directory.")
-        .def_property(
+        .def_prop_rw(
             "x",
             &Integrator::GetPositions,
             &Integrator::SetPositions,
             "|#dims|x|#vertices| vertex positions")
-        .def_property(
+        .def_prop_rw(
             "v",
             &Integrator::GetVelocities,
             &Integrator::SetVelocities,
             "|#dims|x|#vertices| vertex velocities")
-        .def_property(
+        .def_prop_rw(
             "a",
             nullptr,
             &Integrator::SetExternalAcceleration,
             "|#dims|x|#vertices| vertex external accelerations")
-        .def_property(
+        .def_prop_rw(
             "detH_residual",
             nullptr,
             &Integrator::SetNumericalZeroForHessianDeterminant,
             "Numerical zero used in Hessian determinant check for approximate singularity "
             "detection")
-        .def_property(
+        .def_prop_rw(
             "kD",
             nullptr,
             &Integrator::SetRayleighDampingCoefficient,
             "Uniform Rayleigh damping coefficient on the mesh.")
-        .def_property(
+        .def_prop_rw(
             "strategy",
             nullptr,
             &Integrator::SetInitializationStrategy,
             "VBD's time step minimization initialization strategy")
-        .def_property(
+        .def_prop_rw(
             "gpu_block_size",
             nullptr,
             &Integrator::SetBlockSize,
             "Number of threads per GPU thread block used for time integration "
             "minimization.")
-        .def_property(
+        .def_prop_rw(
             "scene_bounding_box",
             nullptr,
             [](Integrator& vbd,

@@ -14,16 +14,33 @@ target_sources(PhysicsBasedAnimationToolkit_Python
     BASE_DIRS ${CMAKE_CURRENT_LIST_DIR}
 )
 
-target_link_libraries(PhysicsBasedAnimationToolkit_Python
-    PRIVATE
+# Build the core parts of nanobind once
+nanobind_build_library(nanobind SHARED)
+set_target_properties(nanobind PROPERTIES SYSTEM ON)
+# .. and link it against the nanobind parts
+target_link_libraries(PhysicsBasedAnimationToolkit_Python PRIVATE 
     PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
-    pybind11::headers
+    nanobind
+    Python::Module
 )
-
-if(NOT MSVC AND NOT ${CMAKE_BUILD_TYPE} MATCHES Debug|RelWithDebInfo)
-    # Strip unnecessary sections of the binary on Linux/macOS
-    pybind11_strip(PhysicsBasedAnimationToolkit_Python)
-endif()
+# .. enable size optimizations
+nanobind_opt_size(PhysicsBasedAnimationToolkit_Python)
+# .. enable link time optimization
+nanobind_lto(PhysicsBasedAnimationToolkit_Python)
+# .. set the default symbol visibility to 'hidden'
+nanobind_set_visibility(PhysicsBasedAnimationToolkit_Python)
+# .. strip unneeded symbols and debug info from the binary (only active in release builds)
+nanobind_strip(PhysicsBasedAnimationToolkit_Python)
+# .. disable the stack protector
+nanobind_disable_stack_protector(PhysicsBasedAnimationToolkit_Python)
+# .. set the Python extension suffix
+nanobind_extension(PhysicsBasedAnimationToolkit_Python)
+# .. set important compilation flags
+nanobind_compile_options(PhysicsBasedAnimationToolkit_Python)
+# .. set important linker flags
+nanobind_link_options(PhysicsBasedAnimationToolkit_Python)
+# Statically link against libstdc++/libgcc when targeting musllinux
+nanobind_musl_static_libcpp(PhysicsBasedAnimationToolkit_Python)
 
 add_subdirectory(pypbat)
 

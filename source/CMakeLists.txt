@@ -84,6 +84,13 @@ target_link_libraries(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     TBB::tbb
 )
 
+# Convert space-separated PBAT_CMAKE_CXX_FLAGS to list (i.e. semi-colon separated string)
+string(REPLACE " " ";" _pbat_cxx_flags ${PBAT_CMAKE_CXX_FLAGS})
+target_compile_options(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
+    PRIVATE
+    $<$<COMPILE_LANGUAGE:CXX>:${_pbat_cxx_flags}>
+)
+
 if(PBAT_ENABLE_PROFILER)
     target_link_libraries(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
         PUBLIC

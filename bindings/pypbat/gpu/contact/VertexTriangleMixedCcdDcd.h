@@ -1,11 +1,11 @@
 #ifndef PYPBAT_GPU_CONTACT_VERTEXTRIANGLEMIXEDCCDDCD_H
 #define PYPBAT_GPU_CONTACT_VERTEXTRIANGLEMIXEDCCDDCD_H
 
-#include <pybind11/pybind11.h>
+#include <nanobind/nanobind.h>
 
 namespace pbat::py::gpu::contact {
 
-void BindVertexTriangleMixedCcdDcd(pybind11::module& m);
+void BindVertexTriangleMixedCcdDcd(nanobind::module_& m);
 
 } // namespace pbat::py::gpu::contact
 

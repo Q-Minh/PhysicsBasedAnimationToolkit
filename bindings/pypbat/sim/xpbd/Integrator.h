@@ -1,14 +1,14 @@
 #ifndef PYPBAT_SIM_XPBD_INTEGRATOR_H
 #define PYPBAT_SIM_XPBD_INTEGRATOR_H
 
-#include <pybind11/pybind11.h>
+#include <nanobind/nanobind.h>
 
 namespace pbat {
 namespace py {
 namespace sim {
 namespace xpbd {
 
-void BindIntegrator(pybind11::module& m);
+void BindIntegrator(nanobind::module_& m);
 
 } // namespace xpbd
 } // namespace sim

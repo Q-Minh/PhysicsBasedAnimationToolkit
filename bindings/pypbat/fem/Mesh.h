@@ -12,7 +12,7 @@
 #include <pbat/fem/Quadrilateral.h>
 #include <pbat/fem/Tetrahedron.h>
 #include <pbat/fem/Triangle.h>
-#include <pybind11/pybind11.h>
+#include <nanobind/nanobind.h>
 #include <type_traits>
 
 namespace pbat {
@@ -24,14 +24,18 @@ enum class EElement { Line, Triangle, Quadrilateral, Tetrahedron, Hexahedron };
 template <class Func>
 inline void ApplyToElement(EElement eElement, int order, Func&& f)
 {
-    if (order < 1 or order > 3)
+    auto constexpr kMaxElementOrder = 3;
+    if (order < 1 or order > kMaxElementOrder)
     {
         throw std::invalid_argument(
-            fmt::format("Invalid mesh order, expected 1 <= order <= 3, but got {}", order));
+            fmt::format(
+                "Invalid mesh order, expected 1 <= order <= {}, but got {}",
+                kMaxElementOrder,
+                order));
     }
     using namespace pbat::fem;
     using namespace pbat::common;
-    ForRange<1, 3 + 1>([&]<auto Order>() {
+    ForRange<1, kMaxElementOrder + 1>([&]<auto Order>() {
         ForTypes<
             Line<Order>,
             Triangle<Order>,
@@ -152,7 +156,7 @@ ApplyToMeshWithQuadrature(EElement meshElement, int meshOrder, int meshDims, int
         });
 }
 
-void BindMesh(pybind11::module& m);
+void BindMesh(nanobind::module_& m);
 
 } // namespace fem
 } // namespace py

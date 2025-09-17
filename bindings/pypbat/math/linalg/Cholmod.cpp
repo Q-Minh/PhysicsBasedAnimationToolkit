@@ -4,7 +4,7 @@
 #include <pbat/common/ConstexprFor.h>
 #include <pbat/math/linalg/Cholmod.h>
 #include <pbat/profiling/Profiling.h>
-#include <pybind11/eigen.h>
+#include <nanobind/eigen/dense.h>
 #include <string>
 #include <type_traits>
 
@@ -13,17 +13,17 @@ namespace py {
 namespace math {
 namespace linalg {
 
-void BindCholmod([[maybe_unused]] pybind11::module& m)
+void BindCholmod([[maybe_unused]] nanobind::module_& m)
 {
 #ifdef PBAT_USE_SUITESPARSE
-    namespace pyb = pybind11;
+    namespace nb = nanobind;
 
     std::string const className = "Cholmod";
     using CholmodType           = pbat::math::linalg::Cholmod;
-    pyb::class_<CholmodType> chol(m, className.data());
-    chol.def(pyb::init<>());
+    nb::class_<CholmodType> chol(m, className.data());
+    chol.def(nb::init<>());
 
-    pyb::enum_<CholmodType::ESparseStorage>(chol, "SparseStorage")
+    nb::enum_<CholmodType::ESparseStorage>(chol, "SparseStorage")
         .value("SymmetricLowerTriangular", CholmodType::ESparseStorage::SymmetricLowerTriangular)
         .value("SymmetricUpperTriangular", CholmodType::ESparseStorage::SymmetricUpperTriangular)
         .value("Unsymmetric", CholmodType::ESparseStorage::Unsymmetric)
@@ -37,7 +37,7 @@ void BindCholmod([[maybe_unused]] pybind11::module& m)
                 return X;
             });
         },
-        pyb::arg("B"));
+        nb::arg("B"));
 
     chol.doc() =
         "Cholmod Cholesky or Bunch-Kaufmann decompositions of matrix A, stored in compressed "
@@ -55,8 +55,8 @@ void BindCholmod([[maybe_unused]] pybind11::module& m)
                         llt.Analyze(A, storage);
                     });
                 },
-                pyb::arg("A"),
-                pyb::arg("storage"))
+                nb::arg("A"),
+                nb::arg("storage"))
             .def(
                 "factorize",
                 [](CholmodType& llt,
@@ -68,8 +68,8 @@ void BindCholmod([[maybe_unused]] pybind11::module& m)
                         });
                     return bFactorized;
                 },
-                pyb::arg("A"),
-                pyb::arg("storage"))
+                nb::arg("A"),
+                nb::arg("storage"))
             .def(
                 "compute",
                 [](CholmodType& llt,
@@ -81,8 +81,8 @@ void BindCholmod([[maybe_unused]] pybind11::module& m)
                         });
                     return bFactorized;
                 },
-                pyb::arg("A"),
-                pyb::arg("storage"))
+                nb::arg("A"),
+                nb::arg("storage"))
             .def(
                 "update",
                 [](CholmodType& llt, SparseMatrixType const& U) {
@@ -92,7 +92,7 @@ void BindCholmod([[maybe_unused]] pybind11::module& m)
                         });
                     return bUpdated;
                 },
-                pyb::arg("U"))
+                nb::arg("U"))
             .def(
                 "downdate",
                 [](CholmodType& llt, SparseMatrixType const& U) {
@@ -102,7 +102,7 @@ void BindCholmod([[maybe_unused]] pybind11::module& m)
                         });
                     return bDowndated;
                 },
-                pyb::arg("U"));
+                nb::arg("U"));
     });
 #endif // PBAT_USE_SUITESPARSE
 }

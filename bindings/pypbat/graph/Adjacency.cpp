@@ -1,24 +1,26 @@
 #include "Adjacency.h"
 
+#include <nanobind/eigen/dense.h>
+#include <nanobind/eigen/sparse.h>
+#include <nanobind/stl/tuple.h>
+#include <nanobind/stl/vector.h>
 #include <pbat/common/ConstexprFor.h>
 #include <pbat/graph/Adjacency.h>
-#include <pybind11/eigen.h>
-#include <pybind11/stl.h>
 
 namespace pbat {
 namespace py {
 namespace graph {
 
-void BindAdjacency(pybind11::module& m)
+void BindAdjacency(nanobind::module_& m)
 {
-    namespace pyb = pybind11;
+    namespace nb = nanobind;
     m.def(
         "map_to_adjacency",
         [](Eigen::Ref<IndexVectorX const> const& p, Index n) {
             return pbat::graph::MapToAdjacency(p, n);
         },
-        pyb::arg("p"),
-        pyb::arg("n") = Index(-1),
+        nb::arg("p"),
+        nb::arg("n") = Index(-1),
         "Computes the adjacency list (ptr, adj) in sparse compressed format for a map p: V -> P "
         "for vertices V and partitions P.\n"
         "Args:\n"
@@ -31,7 +33,7 @@ void BindAdjacency(pybind11::module& m)
         [](std::vector<std::vector<Index>> const& lil) {
             return pbat::graph::ListOfListsToAdjacency(lil);
         },
-        pyb::arg("lil"),
+        nb::arg("lil"),
         "Computes the adjacency list (ptr, adj) in sparse compressed format for vertex partitions "
         "in list of lists format.\n"
         "Args:\n"
@@ -49,7 +51,7 @@ void BindAdjacency(pybind11::module& m)
         m.def(
             "matrix_to_adjacency",
             [](SparseMatrixType const& A) { return pbat::graph::MatrixToAdjacency(A); },
-            pyb::arg("A"));
+            nb::arg("A"));
     });
 }
 

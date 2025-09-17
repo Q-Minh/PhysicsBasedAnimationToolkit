@@ -6,7 +6,7 @@
 
 namespace pbat::py::sim::contact {
 
-void Bind(pybind11::module& m)
+void Bind(nanobind::module_& m)
 {
     BindMultibodyTetrahedralMeshSystem(m);
     BindMeshVertexTetrahedronDcd(m);

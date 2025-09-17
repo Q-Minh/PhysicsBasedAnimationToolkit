@@ -173,7 +173,7 @@ Our CMake project exposes the following build targets
 |---|---|
 | `PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit` | The PBA Toolkit library. |
 | `PhysicsBasedAnimationToolkit_Tests` | The test executable, using [doctest](https://github.com/doctest/doctest). |
-| `PhysicsBasedAnimationToolkit_Python` | PBAT's Python extension module, using [pybind11](https://github.com/pybind/pybind11). |
+| `PhysicsBasedAnimationToolkit_Python` | PBAT's Python extension module, using [nanobind](https://github.com/wjakob/nanobind). |
 
 For example, to build tests, run
 ```bash

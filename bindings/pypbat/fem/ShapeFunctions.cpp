@@ -2,32 +2,31 @@
 
 #include "Mesh.h"
 
+#include <nanobind/eigen/dense.h>
+#include <nanobind/stl/variant.h>
 #include <pbat/common/ConstexprFor.h>
 #include <pbat/fem/ShapeFunctions.h>
-#include <pybind11/eigen.h>
-#include <pybind11/stl.h>
 #include <variant>
 
 namespace pbat {
 namespace py {
 namespace fem {
 
-void BindShapeFunctions(pybind11::module& m)
+void BindShapeFunctions(nanobind::module_& m)
 {
-    namespace pyb = pybind11;
+    namespace nb = nanobind;
 
     using TScalar = pbat::Scalar;
     using TIndex  = pbat::Index;
 
     m.def(
         "element_shape_functions",
-        [](EElement eElement, int order, int quadratureOrder, pyb::object dtypeIn) {
+        [](EElement eElement, int order, int quadratureOrder, nb::dlpack::dtype dtype) {
             using FloatMatrixType  = Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic>;
             using DoubleMatrixType = Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic>;
             using ReturnType       = std::variant<FloatMatrixType, DoubleMatrixType>;
             ReturnType N;
-            auto dtype = pyb::dtype::from_args(dtypeIn);
-            if (dtype.is(pyb::dtype::of<float>()))
+            if (dtype == nb::dtype<float>())
             {
                 ApplyToElementWithQuadrature<6>(
                     eElement,
@@ -39,7 +38,7 @@ void BindShapeFunctions(pybind11::module& m)
                                 ElementShapeFunctions<ElementType, QuadratureOrder, float>());
                     });
             }
-            else if (dtype.is(pyb::dtype::of<double>()))
+            else if (dtype == nb::dtype<double>())
             {
                 ApplyToElementWithQuadrature<6>(
                     eElement,
@@ -53,16 +52,14 @@ void BindShapeFunctions(pybind11::module& m)
             }
             else
             {
-                throw std::runtime_error(
-                    "Unsupported dtype for element shape functions: " +
-                    dtypeIn.attr("name").cast<std::string>());
+                throw std::runtime_error("Unsupported dtype for element shape functions");
             }
             return N;
         },
-        pyb::arg("element"),
-        pyb::arg("order")            = 1,
-        pyb::arg("quadrature_order") = 1,
-        pyb::arg("dtype")            = pyb::dtype::of<TScalar>(),
+        nb::arg("element"),
+        nb::arg("order")            = 1,
+        nb::arg("quadrature_order") = 1,
+        nb::arg("dtype")            = nb::dtype<TScalar>(),
         "Compute an element's shape functions at the quadrature points of the requested "
         "quadrature rule\n\n"
         "Args:\n"
@@ -80,13 +77,12 @@ void BindShapeFunctions(pybind11::module& m)
            EElement eElement,
            int order,
            int quadratureOrder,
-           pyb::object dtypeIn) {
+           nb::dlpack::dtype dtype) {
             using FloatMatrixType  = Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic>;
             using DoubleMatrixType = Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic>;
             using ReturnType       = std::variant<FloatMatrixType, DoubleMatrixType>;
             ReturnType N;
-            auto dtype = pyb::dtype::from_args(dtypeIn);
-            if (dtype.is(pyb::dtype::of<float>()))
+            if (dtype == nb::dtype<float>())
             {
                 ApplyToElementWithQuadrature<6>(
                     eElement,
@@ -98,7 +94,7 @@ void BindShapeFunctions(pybind11::module& m)
                                 .replicate(1, nElements));
                     });
             }
-            else if (dtype.is(pyb::dtype::of<double>()))
+            else if (dtype == nb::dtype<double>())
             {
                 ApplyToElementWithQuadrature<6>(
                     eElement,
@@ -112,17 +108,15 @@ void BindShapeFunctions(pybind11::module& m)
             }
             else
             {
-                throw std::runtime_error(
-                    "Unsupported dtype for shape functions: " +
-                    dtypeIn.attr("name").cast<std::string>());
+                throw std::runtime_error("Unsupported dtype for shape functions");
             }
             return N;
         },
-        pyb::arg("n_elements"),
-        pyb::arg("element"),
-        pyb::arg("order")            = 1,
-        pyb::arg("quadrature_order") = 1,
-        pyb::arg("dtype")            = pyb::dtype::of<TScalar>(),
+        nb::arg("n_elements"),
+        nb::arg("element"),
+        nb::arg("order")            = 1,
+        nb::arg("quadrature_order") = 1,
+        nb::arg("dtype")            = nb::dtype<TScalar>(),
         "Compute an element's shape functions at the quadrature points of the requested "
         "quadrature rule\n\n"
         "Args:\n"
@@ -138,7 +132,7 @@ void BindShapeFunctions(pybind11::module& m)
 
     m.def(
         "shape_function_matrix",
-        [](pyb::EigenDRef<Eigen::Matrix<TIndex, Eigen::Dynamic, Eigen::Dynamic> const> E,
+        [](nb::DRef<Eigen::Matrix<TIndex, Eigen::Dynamic, Eigen::Dynamic> const> E,
            TIndex nNodes,
            EElement eElement,
            int order,
@@ -155,11 +149,11 @@ void BindShapeFunctions(pybind11::module& m)
                 });
             return N;
         },
-        pyb::arg("E"),
-        pyb::arg("n_nodes"),
-        pyb::arg("element"),
-        pyb::arg("order")            = 1,
-        pyb::arg("quadrature_order") = 1,
+        nb::arg("E"),
+        nb::arg("n_nodes"),
+        nb::arg("element"),
+        nb::arg("order")            = 1,
+        nb::arg("quadrature_order") = 1,
         "Constructs a shape function matrix N for a given mesh, i.e. at the "
         "element quadrature points.\n\n"
         "Args:\n"
@@ -175,9 +169,9 @@ void BindShapeFunctions(pybind11::module& m)
 
     m.def(
         "shape_function_matrix_at",
-        [](pyb::EigenDRef<Eigen::Matrix<TIndex, Eigen::Dynamic, Eigen::Dynamic> const> E,
+        [](nb::DRef<Eigen::Matrix<TIndex, Eigen::Dynamic, Eigen::Dynamic> const> E,
            TIndex nNodes,
-           pyb::EigenDRef<Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic> const> Xi,
+           nb::DRef<Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic> const> Xi,
            EElement eElement,
            int order) {
             Eigen::SparseMatrix<TScalar, Eigen::RowMajor, TIndex> N;
@@ -189,11 +183,11 @@ void BindShapeFunctions(pybind11::module& m)
             });
             return N;
         },
-        pyb::arg("E"),
-        pyb::arg("n_nodes"),
-        pyb::arg("Xi"),
-        pyb::arg("element"),
-        pyb::arg("order") = 1,
+        nb::arg("E"),
+        nb::arg("n_nodes"),
+        nb::arg("Xi"),
+        nb::arg("element"),
+        nb::arg("order") = 1,
         "Constructs a shape function matrix N for a given mesh, i.e. at the element "
         "quadrature points.\n\n"
         "Args:\n"
@@ -210,7 +204,7 @@ void BindShapeFunctions(pybind11::module& m)
 
     m.def(
         "shape_functions_at",
-        [](pyb::EigenDRef<Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic> const> Xi,
+        [](nb::DRef<Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic> const> Xi,
            EElement eElement,
            int order) {
             Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic> N;
@@ -220,9 +214,9 @@ void BindShapeFunctions(pybind11::module& m)
             });
             return N;
         },
-        pyb::arg("Xi"),
-        pyb::arg("element"),
-        pyb::arg("order") = 1,
+        nb::arg("Xi"),
+        nb::arg("element"),
+        nb::arg("order") = 1,
         "Compute shape functions at the given reference positions.\n\n"
         "Args:\n"
         "    Xi (numpy.ndarray): `|# reference dims| x |# quad. pts.|` evaluation points in "
@@ -236,8 +230,8 @@ void BindShapeFunctions(pybind11::module& m)
 
     m.def(
         "element_shape_function_gradients",
-        [](pyb::EigenDRef<Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic> const> Xi,
-           pyb::EigenDRef<Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic> const> X,
+        [](nb::DRef<Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic> const> Xi,
+           nb::DRef<Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic> const> X,
            EElement eElement,
            int order) {
             Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic> GN;
@@ -249,10 +243,10 @@ void BindShapeFunctions(pybind11::module& m)
             });
             return GN;
         },
-        pyb::arg("Xi"),
-        pyb::arg("X"),
-        pyb::arg("element"),
-        pyb::arg("order") = 1,
+        nb::arg("Xi"),
+        nb::arg("X"),
+        nb::arg("element"),
+        nb::arg("order") = 1,
         "Compute gradients of an element's shape functions at the given reference point, given "
         "the vertices (not nodes) of the element.\n\n"
         "Args:\n"
@@ -266,8 +260,8 @@ void BindShapeFunctions(pybind11::module& m)
 
     m.def(
         "shape_function_gradients",
-        [](pyb::EigenDRef<Eigen::Matrix<TIndex, Eigen::Dynamic, Eigen::Dynamic> const> E,
-           pyb::EigenDRef<Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic> const> X,
+        [](nb::DRef<Eigen::Matrix<TIndex, Eigen::Dynamic, Eigen::Dynamic> const> E,
+           nb::DRef<Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic> const> X,
            EElement eElement,
            int order,
            int dims,
@@ -285,12 +279,12 @@ void BindShapeFunctions(pybind11::module& m)
                 });
             return GNeg;
         },
-        pyb::arg("E"),
-        pyb::arg("X"),
-        pyb::arg("element"),
-        pyb::arg("order")            = 1,
-        pyb::arg("dims")             = 3,
-        pyb::arg("quadrature_order") = 1,
+        nb::arg("E"),
+        nb::arg("X"),
+        nb::arg("element"),
+        nb::arg("order")            = 1,
+        nb::arg("dims")             = 3,
+        nb::arg("quadrature_order") = 1,
         "Computes nodal shape function gradients at each element quadrature points.\n\n"
         "Args:\n"
         "    E (numpy.ndarray): `|# elem. nodes| x |# elements|` array of elements.\n"
@@ -305,9 +299,9 @@ void BindShapeFunctions(pybind11::module& m)
 
     m.def(
         "shape_function_gradients_at",
-        [](pyb::EigenDRef<Eigen::Matrix<TIndex, Eigen::Dynamic, Eigen::Dynamic> const> E,
-           pyb::EigenDRef<Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic> const> X,
-           pyb::EigenDRef<Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic> const> Xi,
+        [](nb::DRef<Eigen::Matrix<TIndex, Eigen::Dynamic, Eigen::Dynamic> const> E,
+           nb::DRef<Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic> const> X,
+           nb::DRef<Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic> const> Xi,
            EElement eElement,
            int order,
            int dims) {
@@ -320,12 +314,12 @@ void BindShapeFunctions(pybind11::module& m)
             });
             return GNeg;
         },
-        pyb::arg("E"),
-        pyb::arg("X"),
-        pyb::arg("Xi"),
-        pyb::arg("element"),
-        pyb::arg("order") = 1,
-        pyb::arg("dims")  = 3,
+        nb::arg("E"),
+        nb::arg("X"),
+        nb::arg("Xi"),
+        nb::arg("element"),
+        nb::arg("order") = 1,
+        nb::arg("dims")  = 3,
         "Computes nodal shape function gradients at evaluation points Xi.\n\n"
         "Args:\n"
         "    E (numpy.ndarray): `|# elem. nodes| x |# elements|` array of element node "

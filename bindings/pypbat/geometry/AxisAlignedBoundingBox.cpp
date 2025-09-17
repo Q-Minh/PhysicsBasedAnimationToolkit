@@ -1,49 +1,50 @@
 #include "AxisAlignedBoundingBox.h"
 
+#include <nanobind/eigen/dense.h>
+#include <nanobind/stl/vector.h>
 #include <pbat/common/ConstexprFor.h>
 #include <pbat/geometry/AxisAlignedBoundingBox.h>
-#include <pybind11/eigen.h>
-#include <pybind11/stl.h>
 #include <string>
 
 namespace pbat {
 namespace py {
 namespace geometry {
 
-void BindAxisAlignedBoundingBox(pybind11::module& m)
+void BindAxisAlignedBoundingBox(nanobind::module_& m)
 {
-    namespace pyb = pybind11;
+    namespace nb = nanobind;
     using pbat::geometry::AxisAlignedBoundingBox;
     pbat::common::ForValues<1, 2, 3>([&]<auto Dims>() {
         using AabbType              = pbat::geometry::AxisAlignedBoundingBox<Dims>;
         std::string const className = "AxisAlignedBoundingBox" + std::to_string(Dims);
-        pyb::class_<AabbType>(m, className.data())
+        nb::class_<AabbType>(m, className.data())
             .def(
-                pyb::init([](Eigen::Ref<Vector<Dims> const> const& L,
-                             Eigen::Ref<Vector<Dims> const> const& U) { return AabbType(L, U); }),
-                pyb::arg("min"),
-                pyb::arg("max"))
+                "__init__",
+                [](AabbType* self,
+                   Eigen::Ref<Vector<Dims> const> const& L,
+                   Eigen::Ref<Vector<Dims> const> const& U) { new (self) AabbType(L, U); },
+                nb::arg("min"),
+                nb::arg("max"))
             .def(
-                pyb::init([](Eigen::Ref<MatrixX const> const& P) { return AabbType(P); }),
-                pyb::arg("pts"))
-            .def_property_readonly_static(
-                "dims",
-                [](pyb::object /*self*/) { return AabbType::kDims; })
-            .def_property(
+                "__init__",
+                [](AabbType* self, Eigen::Ref<MatrixX const> const& P) { new (self) AabbType(P); },
+                nb::arg("pts"))
+            .def_prop_ro_static("dims", [](nb::object /*self*/) { return AabbType::kDims; })
+            .def_prop_rw(
                 "min",
                 [](AabbType const& self) { return self.min(); },
                 [](AabbType& self, Eigen::Ref<Vector<Dims> const> const& min) { self.min() = min; })
-            .def_property(
+            .def_prop_rw(
                 "max",
                 [](AabbType const& self) { return self.max(); },
                 [](AabbType& self, Eigen::Ref<Vector<Dims> const> const& max) { self.max() = max; })
-            .def_property_readonly("center", [](AabbType const& self) { return self.center(); })
+            .def_prop_ro_static("center", [](AabbType const& self) { return self.center(); })
             .def(
                 "contains",
                 [](AabbType const& self, AabbType const& other) -> bool {
                     return self.contains(other);
                 },
-                pyb::arg("aabb"))
+                nb::arg("aabb"))
             .def(
                 "contains",
                 [](AabbType const& self, Eigen::Ref<Vector<Dims> const> const& P) -> bool {
@@ -59,33 +60,33 @@ void BindAxisAlignedBoundingBox(pybind11::module& m)
                 [](AabbType const& self, AabbType const& other) -> AabbType {
                     return self.intersection(other);
                 },
-                pyb::arg("aabb"))
+                nb::arg("aabb"))
             .def(
                 "intersects",
                 [](AabbType const& self, AabbType const& other) -> bool {
                     return self.intersects(other);
                 },
-                pyb::arg("aabb"))
+                nb::arg("aabb"))
             .def(
                 "merged",
                 [](AabbType const& self, AabbType const& other) -> AabbType {
                     return self.merged(other);
                 },
-                pyb::arg("aabb"))
+                nb::arg("aabb"))
             .def("sizes", [](AabbType const& self) -> Vector<Dims> { return self.sizes(); })
             .def(
                 "squared_exterior_distance",
                 [](AabbType const& self, Eigen::Ref<Vector<Dims> const> const& P) -> Scalar {
                     return self.squaredExteriorDistance(P);
                 },
-                pyb::arg("pt"))
+                nb::arg("pt"))
             .def(
                 "translated",
                 [](AabbType const& self, Eigen::Ref<Vector<Dims> const> const& t) -> AabbType {
                     return self.translated(t);
                 },
-                pyb::arg("t"))
-            .def_property_readonly("volume", &AabbType::volume);
+                nb::arg("t"))
+            .def_prop_ro_static("volume", &AabbType::volume);
     });
     m.def(
         "mesh_to_aabbs",
@@ -101,8 +102,8 @@ void BindAxisAlignedBoundingBox(pybind11::module& m)
             });
             return B;
         },
-        pyb::arg("X"),
-        pyb::arg("E"),
+        nb::arg("X"),
+        nb::arg("E"),
         "Compute axis-aligned bounding boxes (AABBs) for a mesh.\n\n"
         "Args:\n"
         "    X: `kDims x |# vertices|` matrix of vertex positions\n"

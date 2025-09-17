@@ -9,19 +9,19 @@ namespace sim {
 namespace vbd {
 namespace multigrid {
 
-void BindIntegrator(pybind11::module& m)
+void BindIntegrator(nanobind::module_& m)
 {
-    namespace pyb = pybind11;
+    namespace nb = nanobind;
     using pbat::sim::vbd::multigrid::Hierarchy;
     using pbat::sim::vbd::multigrid::Integrator;
-    pyb::class_<Integrator>(m, "Integrator")
-        .def(pyb::init<>())
+    nb::class_<Integrator>(m, "Integrator")
+        .def(nb::init<>())
         .def(
             "step",
             &Integrator::Step,
-            pyb::arg("dt"),
-            pyb::arg("substeps"),
-            pyb::arg("hierarchy"));
+            nb::arg("dt"),
+            nb::arg("substeps"),
+            nb::arg("hierarchy"));
 }
 
 } // namespace multigrid

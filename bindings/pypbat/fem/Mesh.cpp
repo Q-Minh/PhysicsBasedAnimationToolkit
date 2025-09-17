@@ -1,17 +1,17 @@
 #include "Mesh.h"
 
-#include <pybind11/eigen.h>
+#include <nanobind/eigen/dense.h>
 #include <utility>
 
 namespace pbat {
 namespace py {
 namespace fem {
 
-void BindMesh(pybind11::module& m)
+void BindMesh(nanobind::module_& m)
 {
-    namespace pyb = pybind11;
+    namespace nb = nanobind;
 
-    pyb::enum_<EElement>(m, "Element")
+    nb::enum_<EElement>(m, "Element")
         .value("Line", EElement::Line)
         .value("Triangle", EElement::Triangle)
         .value("Quadrilateral", EElement::Quadrilateral)
@@ -31,7 +31,7 @@ void BindMesh(pybind11::module& m)
             }
             return dims;
         },
-        pyb::arg("element"),
+        nb::arg("element"),
         "Return the reference dimensionality of the given finite element type.\n\n"
         "Args:\n"
         "    element (EElement): Type of the finite element.\n\n"
@@ -43,8 +43,8 @@ void BindMesh(pybind11::module& m)
 
     m.def(
         "mesh",
-        [](pyb::EigenDRef<Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic> const> V,
-           pyb::EigenDRef<Eigen::Matrix<TIndex, Eigen::Dynamic, Eigen::Dynamic> const> C,
+        [](nb::DRef<Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic> const> V,
+           nb::DRef<Eigen::Matrix<TIndex, Eigen::Dynamic, Eigen::Dynamic> const> C,
            EElement element,
            int order,
            int dims) {
@@ -58,11 +58,11 @@ void BindMesh(pybind11::module& m)
             });
             return std::make_pair(X, E);
         },
-        pyb::arg("V"),
-        pyb::arg("C"),
-        pyb::arg("element"),
-        pyb::arg("order") = 1,
-        pyb::arg("dims")  = 3,
+        nb::arg("V"),
+        nb::arg("C"),
+        nb::arg("element"),
+        nb::arg("order") = 1,
+        nb::arg("dims")  = 3,
         "Compute an FEM mesh from the input geometric mesh.\n\n"
         "Args:\n"
         "    V (numpy.ndarray): Vertex coordinates of the geometric mesh.\n"

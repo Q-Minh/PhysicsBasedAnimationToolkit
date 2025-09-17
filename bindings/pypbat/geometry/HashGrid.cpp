@@ -1,18 +1,19 @@
 #include "HashGrid.h"
 
+#include <nanobind/eigen/dense.h>
+#include <nanobind/stl/pair.h>
+#include <nanobind/stl/vector.h>
 #include <pbat/common/ConstexprFor.h>
 #include <pbat/geometry/HashGrid.h>
-#include <pybind11/eigen.h>
-#include <pybind11/stl.h>
 #include <string>
 #include <utility>
 #include <vector>
 
 namespace pbat::py::geometry {
 
-void BindHashGrid(pybind11::module& m)
+void BindHashGrid(nanobind::module_& m)
 {
-    namespace pyb = pybind11;
+    namespace nb = nanobind;
     pbat::common::ForValues<2, 3>([&m]<auto kDims>() {
         std::string const className = []() {
             if constexpr (kDims == 2)
@@ -22,12 +23,12 @@ void BindHashGrid(pybind11::module& m)
         }();
 
         using HashGridType = pbat::geometry::HashGrid<kDims>;
-        pyb::class_<HashGridType>(m, className.data())
-            .def(pyb::init<>())
+        nb::class_<HashGridType>(m, className.data())
+            .def(nb::init<>())
             .def(
-                pyb::init<typename HashGridType::ScalarType, typename HashGridType::IndexType>(),
-                pyb::arg("cell_size"),
-                pyb::arg("n_buckets"),
+                nb::init<typename HashGridType::ScalarType, typename HashGridType::IndexType>(),
+                nb::arg("cell_size"),
+                nb::arg("n_buckets"),
                 "Construct a HashGrid with a specific cell size and number of buckets.\n\n"
                 "Args:\n"
                 "   cell_size (float): Uniform grid cell extents\n"
@@ -35,8 +36,8 @@ void BindHashGrid(pybind11::module& m)
             .def(
                 "configure",
                 &HashGridType::Configure,
-                pyb::arg("cell_size"),
-                pyb::arg("n_buckets"),
+                nb::arg("cell_size"),
+                nb::arg("n_buckets"),
                 "Construct a HashGrid with a specific cell size and number of buckets.\n\n"
                 "Args:\n"
                 "   cell_size (float): Uniform grid cell extents\n"
@@ -44,23 +45,21 @@ void BindHashGrid(pybind11::module& m)
             .def(
                 "reserve",
                 &HashGridType::Reserve,
-                pyb::arg("n_primitives"),
+                nb::arg("n_primitives"),
                 "Reserve space for a specific number of primitives in the hash grid.\n\n"
                 "Args:\n"
                 "   n_primitives (int): Number of primitives to reserve space for.\n")
             .def(
                 "construct",
-                [](HashGridType& self,
-                   pyb::EigenDRef<MatrixX const> L,
-                   pyb::EigenDRef<MatrixX const> U) {
+                [](HashGridType& self, nb::DRef<MatrixX const> L, nb::DRef<MatrixX const> U) {
                     auto fHash = pbat::geometry::HashByXorOfPrimeMultiples<Index>();
                     self.Construct(
                         L.topRows<HashGridType::kDims>(),
                         U.topRows<HashGridType::kDims>(),
                         fHash);
                 },
-                pyb::arg("L"),
-                pyb::arg("U"),
+                nb::arg("L"),
+                nb::arg("U"),
                 "Construct a HashGrid from lower and upper bounds of input axis-aligned bounding "
                 "boxes "
                 "(aabbs).\n\n"
@@ -69,18 +68,18 @@ void BindHashGrid(pybind11::module& m)
                 "   U (numpy.ndarray): `|# dims| x |# aabbs|` upper bounds of the aabbs.\n")
             .def(
                 "construct",
-                [](HashGridType& self, pyb::EigenDRef<MatrixX const> X) {
+                [](HashGridType& self, nb::DRef<MatrixX const> X) {
                     auto fHash = pbat::geometry::HashByXorOfPrimeMultiples<Index>();
                     self.Construct(X.topRows<HashGridType::kDims>(), fHash);
                 },
-                pyb::arg("X"),
+                nb::arg("X"),
                 "Construct a HashGrid from points.\n\n"
                 "Args:\n"
                 "   X (numpy.ndarray): `|# dims| x |# points|` points.\n")
             .def(
                 "broad_phase",
                 [](HashGridType& self,
-                   pyb::EigenDRef<MatrixX const> X,
+                   nb::DRef<MatrixX const> X,
                    std::size_t nExpectedPrimitivesPerCell) {
                     std::vector<std::pair<Index, Index>> broadPhasePairs{};
                     auto constexpr kDims      = HashGridType::kDims;
@@ -94,8 +93,8 @@ void BindHashGrid(pybind11::module& m)
                         fHash);
                     return broadPhasePairs;
                 },
-                pyb::arg("X"),
-                pyb::arg("n_expected_primitives_per_cell") = 1,
+                nb::arg("X"),
+                nb::arg("n_expected_primitives_per_cell") = 1,
                 "Find all primitives whose cell overlaps with points `X`.\n\n"
                 "Args:\n"
                 "   X (numpy.ndarray): `|# dims| x |# query points|` matrix of query points.\n"

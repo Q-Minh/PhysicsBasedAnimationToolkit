@@ -9,7 +9,7 @@ namespace py {
 namespace gpu {
 namespace geometry {
 
-void Bind(pybind11::module& m)
+void Bind(nanobind::module_& m)
 {
     BindAabb(m);
     BindSweepAndPrune(m);

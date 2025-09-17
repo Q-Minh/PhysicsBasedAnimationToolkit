@@ -3,25 +3,26 @@
 #include "Mesh.h"
 
 #include <pbat/fem/Gradient.h>
-#include <pybind11/eigen.h>
+#include <nanobind/eigen/dense.h>
+#include <nanobind/eigen/sparse.h>
 
 namespace pbat {
 namespace py {
 namespace fem {
 
-void BindGradient([[maybe_unused]] pybind11::module& m)
+void BindGradient([[maybe_unused]] nanobind::module_& m)
 {
-    namespace pyb = pybind11;
+    namespace nb = nanobind;
 
     using TScalar = pbat::Scalar;
     using TIndex  = pbat::Index;
 
     m.def(
         "gradient_matrix",
-        [](pyb::EigenDRef<Eigen::Matrix<TIndex, Eigen::Dynamic, Eigen::Dynamic> const> E,
+        [](nb::DRef<Eigen::Matrix<TIndex, Eigen::Dynamic, Eigen::Dynamic> const> E,
            TIndex nNodes,
-           pyb::EigenDRef<Eigen::Vector<TIndex, Eigen::Dynamic> const> eg,
-           pyb::EigenDRef<Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic> const> GNeg,
+           nb::DRef<Eigen::Vector<TIndex, Eigen::Dynamic> const> eg,
+           nb::DRef<Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic> const> GNeg,
            EElement eElement,
            int order,
            int dims) {
@@ -35,13 +36,13 @@ void BindGradient([[maybe_unused]] pybind11::module& m)
             });
             return G;
         },
-        pyb::arg("E"),
-        pyb::arg("n_nodes"),
-        pyb::arg("eg"),
-        pyb::arg("GNeg"),
-        pyb::arg("element"),
-        pyb::arg("order") = 1,
-        pyb::arg("dims")  = 3,
+        nb::arg("E"),
+        nb::arg("n_nodes"),
+        nb::arg("eg"),
+        nb::arg("GNeg"),
+        nb::arg("element"),
+        nb::arg("order") = 1,
+        nb::arg("dims")  = 3,
         "Construct the gradient operator's sparse matrix representation.\n\n"
         "Args:\n"
         "    E (numpy.ndarray): `|# nodes per element| x |# elements|` matrix of mesh "

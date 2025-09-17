@@ -1,11 +1,11 @@
 #ifndef PYPBAT_SIM_INTEGRATION_INTEGRATION_H
 #define PYPBAT_SIM_INTEGRATION_INTEGRATION_H
 
-#include <pybind11/pybind11.h>
+#include <nanobind/nanobind.h>
 
 namespace pbat::py::sim::integration {
 
-void Bind(pybind11::module& m);
+void Bind(nanobind::module_& m);
 
 } // namespace pbat::py::sim::integration
 

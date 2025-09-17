@@ -1,10 +1,10 @@
 #include "Profiling.h"
 
 #include <functional>
+#include <nanobind/eigen/dense.h>
+#include <nanobind/stl/function.h>
 #include <pbat/Aliases.h>
 #include <pbat/profiling/Profiling.h>
-#include <pybind11/eigen.h>
-#include <pybind11/functional.h>
 #include <string>
 #include <tuple>
 
@@ -13,7 +13,7 @@ namespace py {
 namespace profiling {
 
 // template <class... Args>
-// inline void BindProfile(pybind11::module& m)
+// inline void BindProfile(nanobind::module_& m)
 // {
 //     using TupleType = std::tuple<Args...>;
 //     m.def(
@@ -24,15 +24,15 @@ namespace profiling {
 //         "Profile input function evaluation");
 // }
 
-void Bind(pybind11::module& m)
+void Bind(nanobind::module_& m)
 {
-    namespace pyb = pybind11;
+    namespace nb = nanobind;
     m.def(
         "begin_frame",
         &pbat::profiling::BeginFrame,
         "Start new profiling frame",
-        pyb::arg("name"));
-    m.def("end_frame", &pbat::profiling::EndFrame, "End current profiling frame", pyb::arg("name"));
+        nb::arg("name"));
+    m.def("end_frame", &pbat::profiling::EndFrame, "End current profiling frame", nb::arg("name"));
     m.def(
         "is_connected_to_server",
         &pbat::profiling::IsConnectedToServer,

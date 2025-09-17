@@ -1,13 +1,13 @@
 #ifndef PYPBAT_MATH_MOMENT_FITTING_H
 #define PYPBAT_MATH_MOMENT_FITTING_H
 
-#include <pybind11/pybind11.h>
+#include <nanobind/nanobind.h>
 
 namespace pbat {
 namespace py {
 namespace math {
 
-void BindMomentFitting(pybind11::module& m);
+void BindMomentFitting(nanobind::module_& m);
 
 } // namespace math
 } // namespace py

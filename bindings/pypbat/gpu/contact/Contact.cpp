@@ -4,7 +4,7 @@
 
 namespace pbat::py::gpu::contact {
 
-void Bind(pybind11::module& m)
+void Bind(nanobind::module_& m)
 {
     BindVertexTriangleMixedCcdDcd(m);
 }

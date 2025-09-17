@@ -1,18 +1,19 @@
 #include "HierarchicalHashGrid.h"
 
+#include <nanobind/eigen/dense.h>
+#include <nanobind/stl/pair.h>
+#include <nanobind/stl/vector.h>
 #include <pbat/common/ConstexprFor.h>
 #include <pbat/geometry/HierarchicalHashGrid.h>
-#include <pybind11/eigen.h>
-#include <pybind11/stl.h>
 #include <string>
 #include <utility>
 #include <vector>
 
 namespace pbat::py::geometry {
 
-void BindHierarchicalHashGrid(pybind11::module& m)
+void BindHierarchicalHashGrid(nanobind::module_& m)
 {
-    namespace pyb = pybind11;
+    namespace nb = nanobind;
     pbat::common::ForValues<2, 3>([&m]<auto kDims>() {
         std::string const className = []() {
             if constexpr (kDims == 2)
@@ -22,12 +23,12 @@ void BindHierarchicalHashGrid(pybind11::module& m)
         }();
 
         using HashGridType = pbat::geometry::HierarchicalHashGrid<kDims>;
-        pyb::class_<HashGridType>(m, className.data())
-            .def(pyb::init<>())
+        nb::class_<HashGridType>(m, className.data())
+            .def(nb::init<>())
             .def(
-                pyb::init<typename HashGridType::IndexType, typename HashGridType::IndexType>(),
-                pyb::arg("n_primitives"),
-                pyb::arg("n_buckets") = 0,
+                nb::init<typename HashGridType::IndexType, typename HashGridType::IndexType>(),
+                nb::arg("n_primitives"),
+                nb::arg("n_buckets") = 0,
                 "Construct a HierarchicalHashGrid with memory reserved for a specific number of "
                 "primitives. Optionally, the number of buckets to allocate can be directly "
                 "specified, overriding the default number of buckets allocated for n_primitives "
@@ -38,8 +39,8 @@ void BindHierarchicalHashGrid(pybind11::module& m)
             .def(
                 "configure",
                 &HashGridType::Configure,
-                pyb::arg("n_primitives"),
-                pyb::arg("n_buckets") = 0,
+                nb::arg("n_primitives"),
+                nb::arg("n_buckets") = 0,
                 "Reserve memory for a specific number of primitives. Optionally, the number of "
                 "buckets to allocate can be directly specified, overriding the default number of "
                 "buckets allocated for n_primitives primitives.\n\n"
@@ -48,15 +49,13 @@ void BindHierarchicalHashGrid(pybind11::module& m)
                 "   n_buckets (int): Number of buckets to reserve space for.\n")
             .def(
                 "construct",
-                [](HashGridType& self,
-                   pyb::EigenDRef<MatrixX const> L,
-                   pyb::EigenDRef<MatrixX const> U) {
+                [](HashGridType& self, nb::DRef<MatrixX const> L, nb::DRef<MatrixX const> U) {
                     self.Construct(
                         L.topRows<HashGridType::kDims>(),
                         U.topRows<HashGridType::kDims>());
                 },
-                pyb::arg("L"),
-                pyb::arg("U"),
+                nb::arg("L"),
+                nb::arg("U"),
                 "Construct a HierarchicalHashGrid from lower and upper bounds of input "
                 "axis-aligned bounding boxes (aabbs).\n\n"
                 "Args:\n"
@@ -65,7 +64,7 @@ void BindHierarchicalHashGrid(pybind11::module& m)
             .def(
                 "broad_phase",
                 [](HashGridType& self,
-                   pyb::EigenDRef<MatrixX const> X,
+                   nb::DRef<MatrixX const> X,
                    std::size_t nExpectedPrimitivesPerCell) {
                     std::vector<std::pair<Index, Index>> broadPhasePairs{};
                     auto constexpr kDims      = HashGridType::kDims;
@@ -77,8 +76,8 @@ void BindHierarchicalHashGrid(pybind11::module& m)
                     });
                     return broadPhasePairs;
                 },
-                pyb::arg("X"),
-                pyb::arg("n_expected_primitives_per_cell") = 1,
+                nb::arg("X"),
+                nb::arg("n_expected_primitives_per_cell") = 1,
                 "Find all primitives whose cell overlaps with points `X`.\n\n"
                 "Args:\n"
                 "   X (numpy.ndarray): `|# dims| x |# query points|` matrix of query points.\n"
@@ -90,8 +89,8 @@ void BindHierarchicalHashGrid(pybind11::module& m)
             .def(
                 "broad_phase",
                 [](HashGridType& self,
-                   pyb::EigenDRef<MatrixX const> L,
-                   pyb::EigenDRef<MatrixX const> U,
+                   nb::DRef<MatrixX const> L,
+                   nb::DRef<MatrixX const> U,
                    std::size_t nExpectedPrimitivesPerCell) {
                     std::vector<std::pair<Index, Index>> broadPhasePairs{};
                     auto constexpr kDims      = HashGridType::kDims;
@@ -104,9 +103,9 @@ void BindHierarchicalHashGrid(pybind11::module& m)
                         [&](Index q, Index p) { broadPhasePairs.push_back({q, p}); });
                     return broadPhasePairs;
                 },
-                pyb::arg("L"),
-                pyb::arg("U"),
-                pyb::arg("n_expected_primitives_per_cell") = 1,
+                nb::arg("L"),
+                nb::arg("U"),
+                nb::arg("n_expected_primitives_per_cell") = 1,
                 "Find all primitives whose cell overlaps with the input axis-aligned bounding "
                 "boxes (aabbs).\n\n"
                 "Args:\n"
@@ -120,9 +119,9 @@ void BindHierarchicalHashGrid(pybind11::module& m)
             .def(
                 "broad_phase",
                 [](HashGridType& self,
-                   pyb::EigenDRef<MatrixX const> L,
-                   pyb::EigenDRef<MatrixX const> U,
-                   pyb::EigenDRef<MatrixX const> X,
+                   nb::DRef<MatrixX const> L,
+                   nb::DRef<MatrixX const> U,
+                   nb::DRef<MatrixX const> X,
                    std::size_t nExpectedPrimitivesPerCell) {
                     std::vector<std::pair<Index, Index>> broadPhasePairs{};
                     auto constexpr kDims      = HashGridType::kDims;
@@ -136,10 +135,10 @@ void BindHierarchicalHashGrid(pybind11::module& m)
                         [&](Index q, Index p) { broadPhasePairs.push_back({q, p}); });
                     return broadPhasePairs;
                 },
-                pyb::arg("L"),
-                pyb::arg("U"),
-                pyb::arg("X"),
-                pyb::arg("n_expected_primitives_per_cell") = 1,
+                nb::arg("L"),
+                nb::arg("U"),
+                nb::arg("X"),
+                nb::arg("n_expected_primitives_per_cell") = 1,
                 "Find all primitives whose cell overlaps with points `X`.\n\n"
                 "Args:\n"
                 "   L (numpy.ndarray): `|# dims| x |# aabbs|` lower bounds of the primitive aabbs "
@@ -155,10 +154,10 @@ void BindHierarchicalHashGrid(pybind11::module& m)
             .def(
                 "broad_phase",
                 [](HashGridType& self,
-                   pyb::EigenDRef<MatrixX const> LP,
-                   pyb::EigenDRef<MatrixX const> UP,
-                   pyb::EigenDRef<MatrixX const> LQ,
-                   pyb::EigenDRef<MatrixX const> UQ,
+                   nb::DRef<MatrixX const> LP,
+                   nb::DRef<MatrixX const> UP,
+                   nb::DRef<MatrixX const> LQ,
+                   nb::DRef<MatrixX const> UQ,
                    std::size_t nExpectedPrimitivesPerCell) {
                     std::vector<std::pair<Index, Index>> broadPhasePairs{};
                     auto constexpr kDims      = HashGridType::kDims;
@@ -173,11 +172,11 @@ void BindHierarchicalHashGrid(pybind11::module& m)
                         [&](Index q, Index p) { broadPhasePairs.push_back({q, p}); });
                     return broadPhasePairs;
                 },
-                pyb::arg("LP"),
-                pyb::arg("UP"),
-                pyb::arg("LQ"),
-                pyb::arg("UQ"),
-                pyb::arg("n_expected_primitives_per_cell") = 1,
+                nb::arg("LP"),
+                nb::arg("UP"),
+                nb::arg("LQ"),
+                nb::arg("UQ"),
+                nb::arg("n_expected_primitives_per_cell") = 1,
                 "Find all primitives whose cell overlaps with the input axis-aligned bounding "
                 "boxes (aabbs).\n\n"
                 "Args:\n"

@@ -1,11 +1,11 @@
 #ifndef PYPBAT_FEM_MESH_QUADRATURE_H
 #define PYPBAT_FEM_MESH_QUADRATURE_H
 
-#include <pybind11/pybind11.h>
+#include <nanobind/nanobind.h>
 
 namespace pbat::py::fem {
 
-void BindMeshQuadrature(pybind11::module& m);
+void BindMeshQuadrature(nanobind::module_& m);
 
 } // namespace pbat::py::fem
 

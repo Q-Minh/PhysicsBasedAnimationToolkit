@@ -9,7 +9,7 @@ namespace pbat {
 namespace py {
 namespace graph {
 
-void Bind(pybind11::module& m)
+void Bind(nanobind::module_& m)
 {
     BindAdjacency(m);
     BindColor(m);

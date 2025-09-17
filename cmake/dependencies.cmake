@@ -43,20 +43,20 @@ if(NOT TARGET HighFive::HighFive)
     FetchContent_MakeAvailable(HighFive)
 endif()
 
-if(PBAT_BUILD_PYTHON_BINDINGS AND NOT TARGET pybind11::headers)
+if(PBAT_BUILD_PYTHON_BINDINGS AND NOT TARGET nanobind::headers)
     find_package(
         Python 
         COMPONENTS Development.Module 
         REQUIRED
     )
     FetchContent_Declare(
-        _pybind11
-        GIT_REPOSITORY https://github.com/pybind/pybind11.git
-        GIT_TAG v2.13.6
+        _nanobind
+        GIT_REPOSITORY https://github.com/wjakob/nanobind.git
+        GIT_TAG v2.9.2
         GIT_PROGRESS TRUE
         SYSTEM
     )
-    FetchContent_MakeAvailable(_pybind11)
+    FetchContent_MakeAvailable(_nanobind)
 endif()
 
 if(PBAT_ENABLE_PROFILER AND NOT TARGET Tracy::TracyClient)

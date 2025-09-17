@@ -5,24 +5,24 @@
 #include <pbat/fem/Mass.h>
 #include <pbat/fem/MeshQuadrature.h>
 #include <pbat/fem/ShapeFunctions.h>
-#include <pybind11/eigen.h>
+#include <nanobind/eigen/dense.h>
 
 namespace pbat {
 namespace py {
 namespace fem {
 
-void BindMass([[maybe_unused]] pybind11::module& m)
+void BindMass([[maybe_unused]] nanobind::module_& m)
 {
-    namespace pyb = pybind11;
+    namespace nb = nanobind;
 
     using TScalar = pbat::Scalar;
     using TIndex  = pbat::Index;
 
     m.def(
         "element_mass_matrices",
-        [](pyb::EigenDRef<Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic> const> Neg,
-           pyb::EigenDRef<Eigen::Vector<TScalar, Eigen::Dynamic> const> wg,
-           pyb::EigenDRef<Eigen::Vector<TScalar, Eigen::Dynamic> const> rhog,
+        [](nb::DRef<Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic> const> Neg,
+           nb::DRef<Eigen::Vector<TScalar, Eigen::Dynamic> const> wg,
+           nb::DRef<Eigen::Vector<TScalar, Eigen::Dynamic> const> rhog,
            EElement eElement,
            int order) {
             Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic> Meg;
@@ -34,11 +34,11 @@ void BindMass([[maybe_unused]] pybind11::module& m)
             });
             return Meg;
         },
-        pyb::arg("Neg"),
-        pyb::arg("wg"),
-        pyb::arg("rhog"),
-        pyb::arg("element"),
-        pyb::arg("order") = 1,
+        nb::arg("Neg"),
+        nb::arg("wg"),
+        nb::arg("rhog"),
+        nb::arg("element"),
+        nb::arg("order") = 1,
         "Compute element mass matrices for all quadrature points.\n\n"
         "Args:\n"
         "    Neg (numpy.ndarray): `|# nodes per element| x |# quad.pts.|` shape function "
@@ -54,12 +54,12 @@ void BindMass([[maybe_unused]] pybind11::module& m)
 
     m.def(
         "mass_matrix",
-        [](pyb::EigenDRef<Eigen::Matrix<TIndex, Eigen::Dynamic, Eigen::Dynamic> const> E,
+        [](nb::DRef<Eigen::Matrix<TIndex, Eigen::Dynamic, Eigen::Dynamic> const> E,
            TIndex nNodes,
-           pyb::EigenDRef<Eigen::Vector<TIndex, Eigen::Dynamic> const> eg,
-           pyb::EigenDRef<Eigen::Vector<TScalar, Eigen::Dynamic> const> wg,
-           pyb::EigenDRef<Eigen::Vector<TScalar, Eigen::Dynamic> const> rhog,
-           pyb::EigenDRef<Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic> const> Neg,
+           nb::DRef<Eigen::Vector<TIndex, Eigen::Dynamic> const> eg,
+           nb::DRef<Eigen::Vector<TScalar, Eigen::Dynamic> const> wg,
+           nb::DRef<Eigen::Vector<TScalar, Eigen::Dynamic> const> rhog,
+           nb::DRef<Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic> const> Neg,
            int dims,
            EElement eElement,
            int order,
@@ -77,16 +77,16 @@ void BindMass([[maybe_unused]] pybind11::module& m)
             });
             return M;
         },
-        pyb::arg("E"),
-        pyb::arg("n_nodes"),
-        pyb::arg("eg"),
-        pyb::arg("wg"),
-        pyb::arg("rhog"),
-        pyb::arg("Neg"),
-        pyb::arg("dims") = 1,
-        pyb::arg("element"),
-        pyb::arg("order")        = 1,
-        pyb::arg("spatial_dims") = 3,
+        nb::arg("E"),
+        nb::arg("n_nodes"),
+        nb::arg("eg"),
+        nb::arg("wg"),
+        nb::arg("rhog"),
+        nb::arg("Neg"),
+        nb::arg("dims") = 1,
+        nb::arg("element"),
+        nb::arg("order")        = 1,
+        nb::arg("spatial_dims") = 3,
         "Construct the mass matrix operator's sparse matrix representation.\n\n"
         "Args:\n"
         "    E (numpy.ndarray): `|# nodes per element| x |# elements|` matrix of mesh "
@@ -111,8 +111,8 @@ void BindMass([[maybe_unused]] pybind11::module& m)
 
     m.def(
         "mass_matrix",
-        [](pyb::EigenDRef<Eigen::Matrix<TIndex, Eigen::Dynamic, Eigen::Dynamic> const> E,
-           pyb::EigenDRef<Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic> const> X,
+        [](nb::DRef<Eigen::Matrix<TIndex, Eigen::Dynamic, Eigen::Dynamic> const> E,
+           nb::DRef<Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic> const> X,
            TScalar rho,
            int dims,
            EElement eElement,
@@ -142,12 +142,12 @@ void BindMass([[maybe_unused]] pybind11::module& m)
             });
             return M;
         },
-        pyb::arg("E"),
-        pyb::arg("X"),
-        pyb::arg("rho")  = TScalar(1e3),
-        pyb::arg("dims") = 1,
-        pyb::arg("element"),
-        pyb::arg("order") = 1,
+        nb::arg("E"),
+        nb::arg("X"),
+        nb::arg("rho")  = TScalar(1e3),
+        nb::arg("dims") = 1,
+        nb::arg("element"),
+        nb::arg("order") = 1,
         "Construct the mass matrix operator's sparse matrix representation.\n\n"
         "Args:\n"
         "    E (numpy.ndarray): `|# nodes per element| x |# elements|` matrix of mesh "
@@ -165,10 +165,10 @@ void BindMass([[maybe_unused]] pybind11::module& m)
 
     m.def(
         "mass_matrix",
-        [](pyb::EigenDRef<Eigen::Matrix<TIndex, Eigen::Dynamic, Eigen::Dynamic> const> E,
+        [](nb::DRef<Eigen::Matrix<TIndex, Eigen::Dynamic, Eigen::Dynamic> const> E,
            TIndex nNodes,
-           pyb::EigenDRef<Eigen::Vector<TIndex, Eigen::Dynamic> const> eg,
-           pyb::EigenDRef<Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic> const> Meg,
+           nb::DRef<Eigen::Vector<TIndex, Eigen::Dynamic> const> eg,
+           nb::DRef<Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic> const> Meg,
            int dims,
            EElement eElement,
            int order,
@@ -184,14 +184,14 @@ void BindMass([[maybe_unused]] pybind11::module& m)
             });
             return M;
         },
-        pyb::arg("E"),
-        pyb::arg("n_nodes"),
-        pyb::arg("eg"),
-        pyb::arg("Meg"),
-        pyb::arg("dims") = 1,
-        pyb::arg("element"),
-        pyb::arg("order")        = 1,
-        pyb::arg("spatial_dims") = 3,
+        nb::arg("E"),
+        nb::arg("n_nodes"),
+        nb::arg("eg"),
+        nb::arg("Meg"),
+        nb::arg("dims") = 1,
+        nb::arg("element"),
+        nb::arg("order")        = 1,
+        nb::arg("spatial_dims") = 3,
         "Construct the mass matrix operator's sparse matrix representation from "
         "precomputed element mass matrices.\n\n"
         "Args:\n"
@@ -213,12 +213,12 @@ void BindMass([[maybe_unused]] pybind11::module& m)
 
     m.def(
         "lumped_mass_matrix",
-        [](pyb::EigenDRef<Eigen::Matrix<TIndex, Eigen::Dynamic, Eigen::Dynamic> const> E,
+        [](nb::DRef<Eigen::Matrix<TIndex, Eigen::Dynamic, Eigen::Dynamic> const> E,
            TIndex nNodes,
-           pyb::EigenDRef<Eigen::Vector<TIndex, Eigen::Dynamic> const> eg,
-           pyb::EigenDRef<Eigen::Vector<TScalar, Eigen::Dynamic> const> wg,
-           pyb::EigenDRef<Eigen::Vector<TScalar, Eigen::Dynamic> const> rhog,
-           pyb::EigenDRef<Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic> const> Neg,
+           nb::DRef<Eigen::Vector<TIndex, Eigen::Dynamic> const> eg,
+           nb::DRef<Eigen::Vector<TScalar, Eigen::Dynamic> const> wg,
+           nb::DRef<Eigen::Vector<TScalar, Eigen::Dynamic> const> rhog,
+           nb::DRef<Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic> const> Neg,
            int dims,
            EElement eElement,
            int order,
@@ -236,16 +236,16 @@ void BindMass([[maybe_unused]] pybind11::module& m)
             });
             return m;
         },
-        pyb::arg("E"),
-        pyb::arg("n_nodes"),
-        pyb::arg("eg"),
-        pyb::arg("wg"),
-        pyb::arg("rhog"),
-        pyb::arg("Neg"),
-        pyb::arg("dims") = 1,
-        pyb::arg("element"),
-        pyb::arg("order")        = 1,
-        pyb::arg("spatial_dims") = 3,
+        nb::arg("E"),
+        nb::arg("n_nodes"),
+        nb::arg("eg"),
+        nb::arg("wg"),
+        nb::arg("rhog"),
+        nb::arg("Neg"),
+        nb::arg("dims") = 1,
+        nb::arg("element"),
+        nb::arg("order")        = 1,
+        nb::arg("spatial_dims") = 3,
         "Compute lumped mass matrix's diagonal vector.\n\n"
         "Args:\n"
         "    E (numpy.ndarray): `|# nodes per element| x |# elements|` matrix of mesh "
@@ -269,8 +269,8 @@ void BindMass([[maybe_unused]] pybind11::module& m)
 
     m.def(
         "lumped_mass_matrix",
-        [](pyb::EigenDRef<Eigen::Matrix<TIndex, Eigen::Dynamic, Eigen::Dynamic> const> E,
-           pyb::EigenDRef<Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic> const> X,
+        [](nb::DRef<Eigen::Matrix<TIndex, Eigen::Dynamic, Eigen::Dynamic> const> E,
+           nb::DRef<Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic> const> X,
            TScalar rho,
            int dims,
            EElement eElement,
@@ -300,12 +300,12 @@ void BindMass([[maybe_unused]] pybind11::module& m)
             });
             return m;
         },
-        pyb::arg("E"),
-        pyb::arg("X"),
-        pyb::arg("rho")  = TScalar(1e3),
-        pyb::arg("dims") = 1,
-        pyb::arg("element"),
-        pyb::arg("order") = 1,
+        nb::arg("E"),
+        nb::arg("X"),
+        nb::arg("rho")  = TScalar(1e3),
+        nb::arg("dims") = 1,
+        nb::arg("element"),
+        nb::arg("order") = 1,
         "Compute lumped mass matrix's diagonal vector.\n\n"
         "Args:\n"
         "    E (numpy.ndarray): `|# nodes per element| x |# elements|` matrix of mesh "
@@ -328,10 +328,10 @@ void BindMass([[maybe_unused]] pybind11::module& m)
 
     m.def(
         "lumped_mass_matrix",
-        [](pyb::EigenDRef<Eigen::Matrix<TIndex, Eigen::Dynamic, Eigen::Dynamic> const> E,
+        [](nb::DRef<Eigen::Matrix<TIndex, Eigen::Dynamic, Eigen::Dynamic> const> E,
            TIndex nNodes,
-           pyb::EigenDRef<Eigen::Vector<TIndex, Eigen::Dynamic> const> eg,
-           pyb::EigenDRef<Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic> const> Meg,
+           nb::DRef<Eigen::Vector<TIndex, Eigen::Dynamic> const> eg,
+           nb::DRef<Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic> const> Meg,
            int dims,
            EElement eElement,
            int order,
@@ -347,14 +347,14 @@ void BindMass([[maybe_unused]] pybind11::module& m)
             });
             return m;
         },
-        pyb::arg("E"),
-        pyb::arg("n_nodes"),
-        pyb::arg("eg"),
-        pyb::arg("Meg"),
-        pyb::arg("dims") = 1,
-        pyb::arg("element"),
-        pyb::arg("order")        = 1,
-        pyb::arg("spatial_dims") = 3,
+        nb::arg("E"),
+        nb::arg("n_nodes"),
+        nb::arg("eg"),
+        nb::arg("Meg"),
+        nb::arg("dims") = 1,
+        nb::arg("element"),
+        nb::arg("order")        = 1,
+        nb::arg("spatial_dims") = 3,
         "Compute lumped mass vector from precomputed element mass matrices.\n\n"
         "Args:\n"
         "    E (numpy.ndarray): `|# nodes per element| x |# elements|` matrix of mesh "

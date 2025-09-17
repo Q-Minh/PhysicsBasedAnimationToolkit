@@ -7,7 +7,7 @@
 #include <pbat/fem/HyperElasticPotential.h>
 #include <pbat/physics/SaintVenantKirchhoffEnergy.h>
 #include <pbat/physics/StableNeoHookeanEnergy.h>
-#include <pybind11/pybind11.h>
+#include <nanobind/nanobind.h>
 #include <tuple>
 #include <type_traits>
 
@@ -41,7 +41,7 @@ inline void ApplyToElementInDimsWithHyperElasticEnergy(
     });
 }
 
-void BindHyperElasticPotential(pybind11::module& m);
+void BindHyperElasticPotential(nanobind::module_& m);
 
 } // namespace fem
 } // namespace py

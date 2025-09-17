@@ -6,25 +6,25 @@
 #include <pbat/fem/LoadVector.h>
 #include <pbat/fem/MeshQuadrature.h>
 #include <pbat/fem/ShapeFunctions.h>
-#include <pybind11/eigen.h>
+#include <nanobind/eigen/dense.h>
 
 namespace pbat::py::fem {
 
-void BindLoadVector(pybind11::module& m)
+void BindLoadVector(nanobind::module_& m)
 {
-    namespace pyb = pybind11;
+    namespace nb = nanobind;
 
     using TScalar = pbat::Scalar;
     using TIndex  = pbat::Index;
 
     m.def(
         "load_vector",
-        [](pyb::EigenDRef<Eigen::Matrix<TIndex, Eigen::Dynamic, Eigen::Dynamic> const> E,
+        [](nb::DRef<Eigen::Matrix<TIndex, Eigen::Dynamic, Eigen::Dynamic> const> E,
            Eigen::Index nNodes,
-           pyb::EigenDRef<Eigen::Vector<TIndex, Eigen::Dynamic> const> eg,
-           pyb::EigenDRef<Eigen::Vector<TScalar, Eigen::Dynamic> const> wg,
-           pyb::EigenDRef<Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic> const> Neg,
-           pyb::EigenDRef<Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic> const> Feg,
+           nb::DRef<Eigen::Vector<TIndex, Eigen::Dynamic> const> eg,
+           nb::DRef<Eigen::Vector<TScalar, Eigen::Dynamic> const> wg,
+           nb::DRef<Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic> const> Neg,
+           nb::DRef<Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic> const> Feg,
            EElement eElement,
            int order) {
             Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic> f;
@@ -39,14 +39,14 @@ void BindLoadVector(pybind11::module& m)
             });
             return f;
         },
-        pyb::arg("E"),
-        pyb::arg("n_nodes"),
-        pyb::arg("eg"),
-        pyb::arg("wg"),
-        pyb::arg("Neg"),
-        pyb::arg("Feg"),
-        pyb::arg("element"),
-        pyb::arg("order") = 1,
+        nb::arg("E"),
+        nb::arg("n_nodes"),
+        nb::arg("eg"),
+        nb::arg("wg"),
+        nb::arg("Neg"),
+        nb::arg("Feg"),
+        nb::arg("element"),
+        nb::arg("order") = 1,
         "Compute the load vector for a given FEM mesh.\n\n"
         "Args:\n"
         "    E (numpy.ndarray): `|# elem. nodes| x |# elements|` element matrix\n"
@@ -69,9 +69,9 @@ void BindLoadVector(pybind11::module& m)
 
     m.def(
         "load_vector",
-        [](pyb::EigenDRef<Eigen::Matrix<TIndex, Eigen::Dynamic, Eigen::Dynamic> const> E,
-           pyb::EigenDRef<Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic> const> X,
-           pyb::EigenDRef<Eigen::Vector<TScalar, Eigen::Dynamic> const> Fe,
+        [](nb::DRef<Eigen::Matrix<TIndex, Eigen::Dynamic, Eigen::Dynamic> const> E,
+           nb::DRef<Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic> const> X,
+           nb::DRef<Eigen::Vector<TScalar, Eigen::Dynamic> const> Fe,
            EElement eElement,
            int order,
            int qOrder) {
@@ -103,12 +103,12 @@ void BindLoadVector(pybind11::module& m)
                 });
             return f;
         },
-        pyb::arg("E"),
-        pyb::arg("X"),
-        pyb::arg("Fe"),
-        pyb::arg("element"),
-        pyb::arg("order")            = 1,
-        pyb::arg("quadrature_order") = 1,
+        nb::arg("E"),
+        nb::arg("X"),
+        nb::arg("Fe"),
+        nb::arg("element"),
+        nb::arg("order")            = 1,
+        nb::arg("quadrature_order") = 1,
         "Compute the load vector for a given FEM mesh.\n\n"
         "Args:\n"
         "    E (numpy.ndarray): `|# elem. nodes| x |# elements|` element matrix\n"

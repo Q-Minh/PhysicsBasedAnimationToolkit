@@ -1,24 +1,24 @@
 #include "Partition.h"
 
 #include <pbat/graph/Partition.h>
-#include <pybind11/eigen.h>
+#include <nanobind/eigen/dense.h>
 
 namespace pbat {
 namespace py {
 namespace graph {
 
-void BindPartition([[maybe_unused]] pybind11::module& m)
+void BindPartition([[maybe_unused]] nanobind::module_& m)
 {
-    namespace pyb = pybind11;
+    namespace nb = nanobind;
 
     using pbat::graph::PartitioningOptions;
-    pyb::enum_<PartitioningOptions::EObjective>(m, "PartitioningObjective")
+    nb::enum_<PartitioningOptions::EObjective>(m, "PartitioningObjective")
         .value("Default", PartitioningOptions::EObjective::Default)
         .value("MinEdgeCut", PartitioningOptions::EObjective::MinEdgeCut)
         .value("MinCommunicationVolume", PartitioningOptions::EObjective::MinCommunicationVolume)
         .export_values();
 
-    pyb::enum_<PartitioningOptions::ECoarseningStrategy>(m, "PartitioningCoarseningStrategy")
+    nb::enum_<PartitioningOptions::ECoarseningStrategy>(m, "PartitioningCoarseningStrategy")
         .value("Default", PartitioningOptions::ECoarseningStrategy::Default)
         .value("RandomMatching", PartitioningOptions::ECoarseningStrategy::RandomMatching)
         .value(
@@ -26,7 +26,7 @@ void BindPartition([[maybe_unused]] pybind11::module& m)
             PartitioningOptions::ECoarseningStrategy::SortedHeavyEdgeMatching)
         .export_values();
 
-    pyb::enum_<PartitioningOptions::EInitialPartitioningStrategy>(m, "InitialPartitioningStrategy")
+    nb::enum_<PartitioningOptions::EInitialPartitioningStrategy>(m, "InitialPartitioningStrategy")
         .value("Default", PartitioningOptions::EInitialPartitioningStrategy::Default)
         .value(
             "GreedyBisectionGrowing",
@@ -42,7 +42,7 @@ void BindPartition([[maybe_unused]] pybind11::module& m)
             PartitioningOptions::EInitialPartitioningStrategy::GreedyNodeBisectionGrowing)
         .export_values();
 
-    pyb::enum_<PartitioningOptions::ERefinementStrategy>(m, "PartitioningRefinementStrategy")
+    nb::enum_<PartitioningOptions::ERefinementStrategy>(m, "PartitioningRefinementStrategy")
         .value("Default", PartitioningOptions::ERefinementStrategy::Default)
         .value("FiducciaMattheyses", PartitioningOptions::ERefinementStrategy::FiducciaMattheyses)
         .value(
@@ -90,22 +90,22 @@ void BindPartition([[maybe_unused]] pybind11::module& m)
             optsPass.bIdentifyConnectedComponents   = bConnComp;
             return pbat::graph::Partition(ptr, adj, wadj, nPartitions, optsPass);
         },
-        pyb::arg("ptr"),
-        pyb::arg("adj"),
-        pyb::arg("wgt"),
-        pyb::arg("n_partitions"),
-        pyb::arg("objective")          = opts.eObjective,
-        pyb::arg("coarsening")         = opts.eCoarseningStrategy,
-        pyb::arg("initializer")        = opts.eInitialPartitioningStrategy,
-        pyb::arg("refinement")         = opts.eRefinementStrategy,
-        pyb::arg("n_partition_trials") = opts.nPartitioningTrials,
-        pyb::arg("n_separators")       = opts.nSeparators,
-        pyb::arg("n_refinement_iters") = opts.nRefinementIters,
-        pyb::arg("seed")               = opts.rngSeed,
-        pyb::arg("minimize_degree")    = opts.bMinimizeSupernodalGraphDegree,
-        pyb::arg("with_two_hop")       = opts.bPerform2HopMatching,
-        pyb::arg("contiguous_parts")   = opts.bEnforceContiguousPartitions,
-        pyb::arg("identify_conn_comp") = opts.bIdentifyConnectedComponents,
+        nb::arg("ptr"),
+        nb::arg("adj"),
+        nb::arg("wgt"),
+        nb::arg("n_partitions"),
+        nb::arg("objective")          = opts.eObjective,
+        nb::arg("coarsening")         = opts.eCoarseningStrategy,
+        nb::arg("initializer")        = opts.eInitialPartitioningStrategy,
+        nb::arg("refinement")         = opts.eRefinementStrategy,
+        nb::arg("n_partition_trials") = opts.nPartitioningTrials,
+        nb::arg("n_separators")       = opts.nSeparators,
+        nb::arg("n_refinement_iters") = opts.nRefinementIters,
+        nb::arg("seed")               = opts.rngSeed,
+        nb::arg("minimize_degree")    = opts.bMinimizeSupernodalGraphDegree,
+        nb::arg("with_two_hop")       = opts.bPerform2HopMatching,
+        nb::arg("contiguous_parts")   = opts.bEnforceContiguousPartitions,
+        nb::arg("identify_conn_comp") = opts.bIdentifyConnectedComponents,
         "Partition a weighted directed graph (ptr, adj, wgt) given in sparse compressed format "
         "into n_partitions. Returns the |len(ptr)-1| partitioning map p such that p[v] yields the "
         "partition containing vertex v.");

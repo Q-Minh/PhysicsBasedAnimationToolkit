@@ -3,15 +3,15 @@
 #include <exception>
 #include <pbat/common/ConstexprFor.h>
 #include <pbat/math/MomentFitting.h>
-#include <pybind11/eigen.h>
+#include <nanobind/eigen/dense.h>
 
 namespace pbat {
 namespace py {
 namespace math {
 
-void BindMomentFitting(pybind11::module& m)
+void BindMomentFitting(nanobind::module_& m)
 {
-    namespace pyb = pybind11;
+    namespace nb = nanobind;
     m.def(
         "transfer_quadrature",
         [](Eigen::Ref<IndexVectorX const> const& S1,
@@ -44,16 +44,16 @@ void BindMomentFitting(pybind11::module& m)
                 throw std::invalid_argument("transfer_quadrature only accepts 1 <= order <= 4.");
             return std::make_pair(w1, err);
         },
-        pyb::arg("S1"),
-        pyb::arg("X1"),
-        pyb::arg("S2"),
-        pyb::arg("X2"),
-        pyb::arg("w2"),
-        pyb::arg("nSimplices") = -1,
-        pyb::arg("order")      = 1,
-        pyb::arg("with_error") = false,
-        pyb::arg("max_iters")  = 20,
-        pyb::arg("precision")  = std::numeric_limits<Scalar>::epsilon(),
+        nb::arg("S1"),
+        nb::arg("X1"),
+        nb::arg("S2"),
+        nb::arg("X2"),
+        nb::arg("w2"),
+        nb::arg("nSimplices") = -1,
+        nb::arg("order")      = 1,
+        nb::arg("with_error") = false,
+        nb::arg("max_iters")  = 20,
+        nb::arg("precision")  = std::numeric_limits<Scalar>::epsilon(),
         "Obtain weights w1 by transferring an existing quadrature rule (X2,w2) "
         "defined on a domain composed of simplices onto a new quadrature rule "
         "(X1,w1) defined on the same domain, given fixed quadrature points X1. "
@@ -90,13 +90,13 @@ void BindMomentFitting(pybind11::module& m)
                 throw std::invalid_argument("transfer_quadrature only accepts 1 <= order <= 4.");
             return std::make_tuple(M, B, P);
         },
-        pyb::arg("S1"),
-        pyb::arg("X1"),
-        pyb::arg("S2"),
-        pyb::arg("X2"),
-        pyb::arg("w2"),
-        pyb::arg("nSimplices") = -1,
-        pyb::arg("order")      = 1,
+        nb::arg("S1"),
+        nb::arg("X1"),
+        nb::arg("S2"),
+        nb::arg("X2"),
+        nb::arg("w2"),
+        nb::arg("nSimplices") = -1,
+        nb::arg("order")      = 1,
         "Obtain a collection of reference moment fitting systems (M, B, P), where M[:, "
         "P[s]:P[s+1]] is the reference moment fitting matrix for simplex s, and b[:,s] is its "
         "corresponding right-hand side. X1, S1 are the |#dims|x|#quad.pts.| array of quadrature "
@@ -109,8 +109,8 @@ void BindMomentFitting(pybind11::module& m)
         [](Eigen::Ref<MatrixX const> const& M, Eigen::Ref<IndexVectorX const> const& P) {
             return pbat::math::BlockDiagonalReferenceMomentFittingSystem(M, P);
         },
-        pyb::arg("M"),
-        pyb::arg("P"),
+        nb::arg("M"),
+        nb::arg("P"),
         "Assemble the block diagonal row sparse matrix GM, such that GM @ w = B.flatten(order='F') "
         "contains all the reference moment fitting systems in (M,B,P).");
 }

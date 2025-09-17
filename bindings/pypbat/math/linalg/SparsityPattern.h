@@ -2,7 +2,7 @@
 #define PYPBAT_MATH_LINALG_SPARSITY_PATTERN_H
 
 #include <pbat/math/linalg/SparsityPattern.h>
-#include <pybind11/pybind11.h>
+#include <nanobind/nanobind.h>
 
 namespace pbat::py::math::linalg {
 
@@ -65,7 +65,7 @@ namespace pbat::py::math::linalg {
 //     ~SparsityPattern();
 // };
 
-void BindSparsityPattern(pybind11::module& m);
+void BindSparsityPattern(nanobind::module_& m);
 
 } // namespace pbat::py::math::linalg
 

@@ -1,58 +1,61 @@
 #include "TetrahedralAabbHierarchy.h"
 
+#include <nanobind/eigen/dense.h>
+#include <nanobind/stl/pair.h>
+#include <nanobind/stl/vector.h>
 #include <pbat/geometry/TetrahedralAabbHierarchy.h>
-#include <pybind11/eigen.h>
-#include <pybind11/stl.h>
 
 namespace pbat {
 namespace py {
 namespace geometry {
 
-void BindTetrahedralAabbHierarchy(pybind11::module& m)
+void BindTetrahedralAabbHierarchy(nanobind::module_& m)
 {
-    namespace pyb               = pybind11;
+    namespace nb                = nanobind;
     std::string const className = "TetrahedralAabbHierarchy";
     using pbat::geometry::TetrahedralAabbHierarchy;
-    pyb::class_<TetrahedralAabbHierarchy>(m, className.data())
+    nb::class_<TetrahedralAabbHierarchy>(m, className.data())
         .def(
-            pyb::init([](Eigen::Ref<MatrixX const> const& V,
-                         Eigen::Ref<IndexMatrixX const> const& C,
-                         Index maxPointsInLeaf) {
-                return TetrahedralAabbHierarchy(V, C, maxPointsInLeaf);
-            }),
-            pyb::arg("V").noconvert(),
-            pyb::arg("C").noconvert(),
-            pyb::arg("max_points_in_leaf") = 8)
-        .def_property_readonly_static(
+            "__init__",
+            [](TetrahedralAabbHierarchy* self,
+               Eigen::Ref<MatrixX const> const& V,
+               Eigen::Ref<IndexMatrixX const> const& C,
+               Index maxPointsInLeaf) {
+                new (self) TetrahedralAabbHierarchy(V, C, maxPointsInLeaf);
+            },
+            nb::arg("V").noconvert(),
+            nb::arg("C").noconvert(),
+            nb::arg("max_points_in_leaf") = 8)
+        .def_prop_ro_static(
             "dims",
-            [](pyb::object /*self*/) { return TetrahedralAabbHierarchy::kDims; })
+            [](nb::object /*self*/) { return TetrahedralAabbHierarchy::kDims; })
         .def(
             "overlapping_primitives",
             &TetrahedralAabbHierarchy::OverlappingPrimitives,
-            pyb::arg("bvh"),
-            pyb::arg("reserve") = 1000ULL)
+            nb::arg("bvh"),
+            nb::arg("reserve") = 1000ULL)
         .def(
             "primitives_containing_points",
             [](TetrahedralAabbHierarchy const& self,
                Eigen::Ref<MatrixX const> const& P,
                bool bParallelize) { return self.PrimitivesContainingPoints(P, bParallelize); },
-            pyb::arg("P"),
-            pyb::arg("parallelize") = true)
+            nb::arg("P"),
+            nb::arg("parallelize") = true)
         .def(
             "nearest_primitives_to_points",
             [](TetrahedralAabbHierarchy const& self,
                Eigen::Ref<MatrixX const> const& P,
                bool bParallelize) { return self.NearestPrimitivesToPoints(P, bParallelize); },
-            pyb::arg("P"),
-            pyb::arg("parallelize") = true)
+            nb::arg("P"),
+            nb::arg("parallelize") = true)
         .def("update", &TetrahedralAabbHierarchy::Update)
-        .def_property_readonly(
+        .def_prop_ro_static(
             "bounding_volumes",
             [](TetrahedralAabbHierarchy const& self) { return self.GetBoundingVolumes(); })
-        .def_property_readonly(
+        .def_prop_ro_static(
             "points",
             [](TetrahedralAabbHierarchy const& self) { return self.GetV(); })
-        .def_property_readonly("primitives", [](TetrahedralAabbHierarchy const& self) {
+        .def_prop_ro_static("primitives", [](TetrahedralAabbHierarchy const& self) {
             return self.GetC();
         });
 }

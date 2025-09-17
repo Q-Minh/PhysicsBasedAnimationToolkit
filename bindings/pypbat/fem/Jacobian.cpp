@@ -5,23 +5,24 @@
 #include <exception>
 #include <pbat/common/ConstexprFor.h>
 #include <pbat/fem/Jacobian.h>
-#include <pybind11/eigen.h>
+#include <nanobind/eigen/dense.h>
+#include <nanobind/eigen/sparse.h>
 
 namespace pbat {
 namespace py {
 namespace fem {
 
-void BindJacobian(pybind11::module& m)
+void BindJacobian(nanobind::module_& m)
 {
-    namespace pyb = pybind11;
+    namespace nb = nanobind;
 
     using TScalar = pbat::Scalar;
     using TIndex  = pbat::Index;
 
     m.def(
         "jacobian",
-        [](pyb::EigenDRef<Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic> const> Xi,
-           pyb::EigenDRef<Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic> const> x,
+        [](nb::DRef<Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic> const> Xi,
+           nb::DRef<Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic> const> x,
            EElement eElement,
            int order) {
             auto const dims = x.rows();
@@ -48,10 +49,10 @@ void BindJacobian(pybind11::module& m)
             });
             return J;
         },
-        pyb::arg("Xi"),
-        pyb::arg("x"),
-        pyb::arg("element"),
-        pyb::arg("order") = 1,
+        nb::arg("Xi"),
+        nb::arg("x"),
+        nb::arg("element"),
+        nb::arg("order") = 1,
         "Computes the Jacobian matrix for a map x(Xi) at reference position Xi.\n\n"
         "Args:\n"
         "    Xi (numpy.ndarray): `|# ref dims| x 1` reference space coordinates.\n"
@@ -63,8 +64,8 @@ void BindJacobian(pybind11::module& m)
 
     m.def(
         "determinant_of_jacobian",
-        [](pyb::EigenDRef<Eigen::Matrix<TIndex, Eigen::Dynamic, Eigen::Dynamic> const> E,
-           pyb::EigenDRef<Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic> const> X,
+        [](nb::DRef<Eigen::Matrix<TIndex, Eigen::Dynamic, Eigen::Dynamic> const> E,
+           nb::DRef<Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic> const> X,
            EElement eElement,
            int order,
            int qOrder) {
@@ -97,11 +98,11 @@ void BindJacobian(pybind11::module& m)
                 });
             return detJe;
         },
-        pyb::arg("E"),
-        pyb::arg("X"),
-        pyb::arg("element"),
-        pyb::arg("order")            = 1,
-        pyb::arg("quadrature_order") = 1,
+        nb::arg("E"),
+        nb::arg("X"),
+        nb::arg("element"),
+        nb::arg("order")            = 1,
+        nb::arg("quadrature_order") = 1,
         "Computes the determinant of the Jacobian matrix at element quadrature points.\n\n "
         " Args :\n "
         " E(numpy.ndarray) : `| # elem nodes | x | # elems |` element matrix.\n "
@@ -114,10 +115,10 @@ void BindJacobian(pybind11::module& m)
 
     m.def(
         "determinant_of_jacobian_at",
-        [](pyb::EigenDRef<Eigen::Matrix<TIndex, Eigen::Dynamic, Eigen::Dynamic> const> E,
-           pyb::EigenDRef<Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic> const> X,
-           pyb::EigenDRef<Eigen::Vector<TIndex, Eigen::Dynamic> const> eg,
-           pyb::EigenDRef<Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic> const> Xi,
+        [](nb::DRef<Eigen::Matrix<TIndex, Eigen::Dynamic, Eigen::Dynamic> const> E,
+           nb::DRef<Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic> const> X,
+           nb::DRef<Eigen::Vector<TIndex, Eigen::Dynamic> const> eg,
+           nb::DRef<Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic> const> Xi,
            EElement eElement,
            int order) {
             auto constexpr kMaxDims = 3;
@@ -146,12 +147,12 @@ void BindJacobian(pybind11::module& m)
             });
             return detJe;
         },
-        pyb::arg("E"),
-        pyb::arg("X"),
-        pyb::arg("eg"),
-        pyb::arg("Xi"),
-        pyb::arg("element"),
-        pyb::arg("order") = 1,
+        nb::arg("E"),
+        nb::arg("X"),
+        nb::arg("eg"),
+        nb::arg("Xi"),
+        nb::arg("element"),
+        nb::arg("order") = 1,
         "Computes the determinant of the Jacobian matrix at evaluation points.\n\n"
         "Args:\n"
         "    E (numpy.ndarray): `|# elem nodes| x |# elems|` mesh element matrix.\n"
@@ -166,10 +167,10 @@ void BindJacobian(pybind11::module& m)
 
     m.def(
         "reference_positions",
-        [](pyb::EigenDRef<Eigen::Matrix<TIndex, Eigen::Dynamic, Eigen::Dynamic> const> E,
-           pyb::EigenDRef<Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic> const> X,
-           pyb::EigenDRef<Eigen::Vector<TIndex, Eigen::Dynamic> const> eg,
-           pyb::EigenDRef<Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic> const> Xg,
+        [](nb::DRef<Eigen::Matrix<TIndex, Eigen::Dynamic, Eigen::Dynamic> const> E,
+           nb::DRef<Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic> const> X,
+           nb::DRef<Eigen::Vector<TIndex, Eigen::Dynamic> const> eg,
+           nb::DRef<Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic> const> Xg,
            EElement eElement,
            int order,
            int maxIterations = 5,
@@ -202,14 +203,14 @@ void BindJacobian(pybind11::module& m)
             });
             return Xi;
         },
-        pyb::arg("E"),
-        pyb::arg("X"),
-        pyb::arg("eg"),
-        pyb::arg("Xg"),
-        pyb::arg("element"),
-        pyb::arg("order")          = 1,
-        pyb::arg("max_iterations") = 5,
-        pyb::arg("eps")            = 1e-10,
+        nb::arg("E"),
+        nb::arg("X"),
+        nb::arg("eg"),
+        nb::arg("Xg"),
+        nb::arg("element"),
+        nb::arg("order")          = 1,
+        nb::arg("max_iterations") = 5,
+        nb::arg("eps")            = 1e-10,
         "Computes reference positions Xi such that X(Xi) = Xn for every point in Xg.\n\n"
         "Args:\n"
         "    E (numpy.ndarray): `|# elem nodes| x |# elems|` element matrix.\n"

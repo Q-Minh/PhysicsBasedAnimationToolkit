@@ -1,33 +1,35 @@
 #include "HyperElasticPotential.h"
 
+#include <nanobind/eigen/dense.h>
+#include <nanobind/eigen/sparse.h>
+#include <nanobind/stl/optional.h>
+#include <nanobind/stl/variant.h>
 #include <optional>
 #include <pbat/fem/Hexahedron.h>
-#include <pybind11/eigen.h>
-#include <pybind11/stl.h>
 #include <variant>
 
 namespace pbat {
 namespace py {
 namespace fem {
 
-void BindHyperElasticPotential(pybind11::module& m)
+void BindHyperElasticPotential(nanobind::module_& m)
 {
-    namespace pyb = pybind11;
-    pyb::enum_<EHyperElasticEnergy>(m, "HyperElasticEnergy")
+    namespace nb = nanobind;
+    nb::enum_<EHyperElasticEnergy>(m, "HyperElasticEnergy")
         .value("SaintVenantKirchhoff", EHyperElasticEnergy::SaintVenantKirchhoff)
         .value("StableNeoHookean", EHyperElasticEnergy::StableNeoHookean)
         .export_values();
 
-    pyb::enum_<pbat::fem::EHyperElasticSpdCorrection>(m, "HyperElasticSpdCorrection")
+    nb::enum_<pbat::fem::EHyperElasticSpdCorrection>(m, "HyperElasticSpdCorrection")
         .value("NoCorrection", pbat::fem::EHyperElasticSpdCorrection::None)
         .value("Projection", pbat::fem::EHyperElasticSpdCorrection::Projection)
         .value("Absolute", pbat::fem::EHyperElasticSpdCorrection::Absolute)
         .export_values();
 
-    pyb::enum_<pbat::fem::EElementElasticityComputationFlags>(
+    nb::enum_<pbat::fem::EElementElasticityComputationFlags>(
         m,
         "ElementElasticityComputationFlags",
-        pyb::arithmetic())
+        nb::is_arithmetic())
         .value("Potential", pbat::fem::EElementElasticityComputationFlags::Potential)
         .value("Gradient", pbat::fem::EElementElasticityComputationFlags::Gradient)
         .value("Hessian", pbat::fem::EElementElasticityComputationFlags::Hessian)
@@ -38,14 +40,14 @@ void BindHyperElasticPotential(pybind11::module& m)
 
     m.def(
         "hyper_elastic_potential",
-        [](pyb::EigenDRef<Eigen::Matrix<TIndex, Eigen::Dynamic, Eigen::Dynamic> const> E,
+        [](nb::DRef<Eigen::Matrix<TIndex, Eigen::Dynamic, Eigen::Dynamic> const> E,
            TIndex nNodes,
-           pyb::EigenDRef<Eigen::Vector<TIndex, Eigen::Dynamic> const> eg,
-           pyb::EigenDRef<Eigen::Vector<TScalar, Eigen::Dynamic> const> wg,
-           pyb::EigenDRef<Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic> const> GNeg,
-           pyb::EigenDRef<Eigen::Vector<TScalar, Eigen::Dynamic> const> mug,
-           pyb::EigenDRef<Eigen::Vector<TScalar, Eigen::Dynamic> const> lambdag,
-           pyb::EigenDRef<Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic> const> x,
+           nb::DRef<Eigen::Vector<TIndex, Eigen::Dynamic> const> eg,
+           nb::DRef<Eigen::Vector<TScalar, Eigen::Dynamic> const> wg,
+           nb::DRef<Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic> const> GNeg,
+           nb::DRef<Eigen::Vector<TScalar, Eigen::Dynamic> const> mug,
+           nb::DRef<Eigen::Vector<TScalar, Eigen::Dynamic> const> lambdag,
+           nb::DRef<Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic> const> x,
            EHyperElasticEnergy eEnergy,
            int eFlags,
            pbat::fem::EHyperElasticSpdCorrection eSpdCorrection,
@@ -56,7 +58,7 @@ void BindHyperElasticPotential(pybind11::module& m)
                 TScalar,
                 Eigen::Vector<TScalar, Eigen::Dynamic>,
                 Eigen::SparseMatrix<TScalar, Eigen::RowMajor, TIndex>,
-                pyb::tuple> {
+                nb::tuple> {
             if (eElement == EElement::Hexahedron and order > 2)
             {
                 throw std::invalid_argument(
@@ -121,18 +123,18 @@ void BindHyperElasticPotential(pybind11::module& m)
                 {
                     if (hessian)
                     {
-                        return pyb::make_tuple(*potential, *gradient, *hessian);
+                        return nb::make_tuple(*potential, *gradient, *hessian);
                     }
                     else
                     {
-                        return pyb::make_tuple(*potential, *gradient);
+                        return nb::make_tuple(*potential, *gradient);
                     }
                 }
                 else
                 {
                     if (hessian)
                     {
-                        return pyb::make_tuple(*potential, *hessian);
+                        return nb::make_tuple(*potential, *hessian);
                     }
                     else
                     {
@@ -146,7 +148,7 @@ void BindHyperElasticPotential(pybind11::module& m)
                 {
                     if (hessian)
                     {
-                        return pyb::make_tuple(*gradient, *hessian);
+                        return nb::make_tuple(*gradient, *hessian);
                     }
                     else
                     {
@@ -166,20 +168,20 @@ void BindHyperElasticPotential(pybind11::module& m)
                 }
             }
         },
-        pyb::arg("E"),
-        pyb::arg("n_nodes"),
-        pyb::arg("eg"),
-        pyb::arg("wg"),
-        pyb::arg("GNeg"),
-        pyb::arg("mug"),
-        pyb::arg("lambdag"),
-        pyb::arg("x"),
-        pyb::arg("energy")         = EHyperElasticEnergy::StableNeoHookean,
-        pyb::arg("flags")          = pbat::fem::EElementElasticityComputationFlags::Potential,
-        pyb::arg("spd_correction") = pbat::fem::EHyperElasticSpdCorrection::Absolute,
-        pyb::arg("element"),
-        pyb::arg("order") = 1,
-        pyb::arg("dims")  = 3,
+        nb::arg("E"),
+        nb::arg("n_nodes"),
+        nb::arg("eg"),
+        nb::arg("wg"),
+        nb::arg("GNeg"),
+        nb::arg("mug"),
+        nb::arg("lambdag"),
+        nb::arg("x"),
+        nb::arg("energy")         = EHyperElasticEnergy::StableNeoHookean,
+        nb::arg("flags")          = pbat::fem::EElementElasticityComputationFlags::Potential,
+        nb::arg("spd_correction") = pbat::fem::EHyperElasticSpdCorrection::Absolute,
+        nb::arg("element"),
+        nb::arg("order") = 1,
+        nb::arg("dims")  = 3,
         "Compute hyperelastic potential, gradient and hessian for a given mesh.\n\n"
         "Args\n"
         "    E (numpy.ndarray): `|# nodes per element| x |# elements|` matrix of mesh "
@@ -205,13 +207,13 @@ void BindHyperElasticPotential(pybind11::module& m)
 
     m.def(
         "hyper_elastic_potential",
-        [](pyb::EigenDRef<Eigen::Matrix<TIndex, Eigen::Dynamic, Eigen::Dynamic> const> E,
+        [](nb::DRef<Eigen::Matrix<TIndex, Eigen::Dynamic, Eigen::Dynamic> const> E,
            TIndex nNodes,
-           pyb::EigenDRef<Eigen::Vector<TScalar, Eigen::Dynamic> const> wg,
-           pyb::EigenDRef<Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic> const> GNeg,
+           nb::DRef<Eigen::Vector<TScalar, Eigen::Dynamic> const> wg,
+           nb::DRef<Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic> const> GNeg,
            TScalar mu,
            TScalar lambda,
-           pyb::EigenDRef<Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic> const> x,
+           nb::DRef<Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic> const> x,
            EHyperElasticEnergy eEnergy,
            int eFlags,
            pbat::fem::EHyperElasticSpdCorrection eSpdCorrection,
@@ -221,7 +223,7 @@ void BindHyperElasticPotential(pybind11::module& m)
                 TScalar,
                 Eigen::Vector<TScalar, Eigen::Dynamic>,
                 Eigen::SparseMatrix<TScalar, Eigen::RowMajor, TIndex>,
-                pyb::tuple> {
+                nb::tuple> {
             std::optional<TScalar> potential;
             std::optional<Eigen::Vector<TScalar, Eigen::Dynamic>> gradient;
             std::optional<Eigen::SparseMatrix<TScalar, Eigen::RowMajor, TIndex>> hessian;
@@ -294,18 +296,18 @@ void BindHyperElasticPotential(pybind11::module& m)
                 {
                     if (hessian)
                     {
-                        return pyb::make_tuple(*potential, *gradient, *hessian);
+                        return nb::make_tuple(*potential, *gradient, *hessian);
                     }
                     else
                     {
-                        return pyb::make_tuple(*potential, *gradient);
+                        return nb::make_tuple(*potential, *gradient);
                     }
                 }
                 else
                 {
                     if (hessian)
                     {
-                        return pyb::make_tuple(*potential, *hessian);
+                        return nb::make_tuple(*potential, *hessian);
                     }
                     else
                     {
@@ -319,7 +321,7 @@ void BindHyperElasticPotential(pybind11::module& m)
                 {
                     if (hessian)
                     {
-                        return pyb::make_tuple(*gradient, *hessian);
+                        return nb::make_tuple(*gradient, *hessian);
                     }
                     else
                     {
@@ -339,18 +341,18 @@ void BindHyperElasticPotential(pybind11::module& m)
                 }
             }
         },
-        pyb::arg("E"),
-        pyb::arg("n_nodes"),
-        pyb::arg("element_volumes"),
-        pyb::arg("Gneg"),
-        pyb::arg("mu"),
-        pyb::arg("lambda"),
-        pyb::arg("x"),
-        pyb::arg("energy")         = EHyperElasticEnergy::StableNeoHookean,
-        pyb::arg("flags")          = pbat::fem::EElementElasticityComputationFlags::Potential,
-        pyb::arg("spd_correction") = pbat::fem::EHyperElasticSpdCorrection::Absolute,
-        pyb::arg("element"),
-        pyb::arg("dims") = 3,
+        nb::arg("E"),
+        nb::arg("n_nodes"),
+        nb::arg("element_volumes"),
+        nb::arg("Gneg"),
+        nb::arg("mu"),
+        nb::arg("lambda"),
+        nb::arg("x"),
+        nb::arg("energy")         = EHyperElasticEnergy::StableNeoHookean,
+        nb::arg("flags")          = pbat::fem::EElementElasticityComputationFlags::Potential,
+        nb::arg("spd_correction") = pbat::fem::EHyperElasticSpdCorrection::Absolute,
+        nb::arg("element"),
+        nb::arg("dims") = 3,
         "Compute hyperelastic potential, gradient and hessian for a given mesh. This "
         "overload assumes linear elements and homogeneous material.\n\n"
         "Args\n"

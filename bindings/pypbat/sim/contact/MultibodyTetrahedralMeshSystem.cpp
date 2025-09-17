@@ -1,26 +1,26 @@
 #include "MultibodyTetrahedralMeshSystem.h"
 
 #include <pbat/sim/contact/MultibodyTetrahedralMeshSystem.h>
-#include <pybind11/eigen.h>
+#include <nanobind/eigen/dense.h>
 
 namespace pbat::py::sim::contact {
 
-void BindMultibodyTetrahedralMeshSystem(pybind11::module& m)
+void BindMultibodyTetrahedralMeshSystem(nanobind::module_& m)
 {
-    namespace pyb = pybind11;
+    namespace nb = nanobind;
     using pbat::sim::contact::MultibodyTetrahedralMeshSystem;
     using IndexType                          = Index;
     using ScalarType                         = Scalar;
     using MultibodyTetrahedralMeshSystemType = MultibodyTetrahedralMeshSystem<IndexType>;
-    pyb::class_<MultibodyTetrahedralMeshSystemType>(m, "MultibodyTetrahedralMeshSystem")
-        .def(pyb::init<>())
+    nb::class_<MultibodyTetrahedralMeshSystemType>(m, "MultibodyTetrahedralMeshSystem")
+        .def(nb::init<>())
         .def(
             "Construct",
             [](MultibodyTetrahedralMeshSystemType& self,
                Eigen::Ref<Eigen::Matrix<ScalarType, 3, Eigen::Dynamic>> X,
                Eigen::Ref<Eigen::Matrix<IndexType, 4, Eigen::Dynamic>> T) { self.Construct(X, T); },
-            pyb::arg("X").noconvert(),
-            pyb::arg("T").noconvert(),
+            nb::arg("X").noconvert(),
+            nb::arg("T").noconvert(),
             "Construct a new multibody tetrahedral mesh system from vertex positions and "
             "tetrahedral connectivity.\n\n"
             "This method sorts the input mesh vertex positions and element indices by body.\n\n"
@@ -29,21 +29,21 @@ void BindMultibodyTetrahedralMeshSystem(pybind11::module& m)
             "    T (numpy.ndarray): `4 x |# tetrahedra|` tetrahedral mesh elements/connectivity.\n"
             "Returns:\n"
             "    None\n")
-        .def_property_readonly("n_bodies", &MultibodyTetrahedralMeshSystemType::NumBodies)
-        .def_readonly("V", &MultibodyTetrahedralMeshSystemType::V)
-        .def_readonly("E", &MultibodyTetrahedralMeshSystemType::E)
-        .def_readonly("F", &MultibodyTetrahedralMeshSystemType::F)
-        .def_readonly("VP", &MultibodyTetrahedralMeshSystemType::VP)
-        .def_readonly("EP", &MultibodyTetrahedralMeshSystemType::EP)
-        .def_readonly("FP", &MultibodyTetrahedralMeshSystemType::FP)
-        .def_readonly("TP", &MultibodyTetrahedralMeshSystemType::TP)
-        .def_readonly("CC", &MultibodyTetrahedralMeshSystemType::CC)
+        .def_prop_ro_static("n_bodies", &MultibodyTetrahedralMeshSystemType::NumBodies)
+        .def_ro("V", &MultibodyTetrahedralMeshSystemType::V)
+        .def_ro("E", &MultibodyTetrahedralMeshSystemType::E)
+        .def_ro("F", &MultibodyTetrahedralMeshSystemType::F)
+        .def_ro("VP", &MultibodyTetrahedralMeshSystemType::VP)
+        .def_ro("EP", &MultibodyTetrahedralMeshSystemType::EP)
+        .def_ro("FP", &MultibodyTetrahedralMeshSystemType::FP)
+        .def_ro("TP", &MultibodyTetrahedralMeshSystemType::TP)
+        .def_ro("CC", &MultibodyTetrahedralMeshSystemType::CC)
         .def(
             "vertices_of",
             [](MultibodyTetrahedralMeshSystemType& self, IndexType body) {
                 return self.ContactVerticesOf(body).eval();
             },
-            pyb::arg("body"),
+            nb::arg("body"),
             "Get vertices of body `body`.\n\n"
             "Args:\n"
             "    body (int): Index of the body.\n"
@@ -55,7 +55,7 @@ void BindMultibodyTetrahedralMeshSystem(pybind11::module& m)
             [](MultibodyTetrahedralMeshSystemType& self, IndexType body) {
                 return self.ContactEdgesOf(body).eval();
             },
-            pyb::arg("body"),
+            nb::arg("body"),
             "Get edges of body `body`.\n\n"
             "Args:\n"
             "    body (int): Index of the body.\n"
@@ -66,7 +66,7 @@ void BindMultibodyTetrahedralMeshSystem(pybind11::module& m)
             [](MultibodyTetrahedralMeshSystemType& self, IndexType body) {
                 return self.ContactTrianglesOf(body).eval();
             },
-            pyb::arg("body"),
+            nb::arg("body"),
             "Get triangles of body `body`.\n\n"
             "Args:\n"
             "    body (int): Index of the body.\n"
@@ -77,11 +77,11 @@ void BindMultibodyTetrahedralMeshSystem(pybind11::module& m)
             "tetrahedra_of",
             [](MultibodyTetrahedralMeshSystemType& self,
                IndexType body,
-               pyb::EigenDRef<Eigen::Matrix<IndexType, 4, Eigen::Dynamic> const> const& T) {
+               nb::DRef<Eigen::Matrix<IndexType, 4, Eigen::Dynamic> const> const& T) {
                 return self.TetrahedraOf(body, T).eval();
             },
-            pyb::arg("body"),
-            pyb::arg("T"),
+            nb::arg("body"),
+            nb::arg("T"),
             "Get tetrahedra of body `body`.\n\n"
             "Args:\n"
             "    body (int): Index of the body.\n"
@@ -93,11 +93,11 @@ void BindMultibodyTetrahedralMeshSystem(pybind11::module& m)
             "vertex_positions_of",
             [](MultibodyTetrahedralMeshSystemType& self,
                IndexType body,
-               pyb::EigenDRef<Eigen::Matrix<ScalarType, 3, Eigen::Dynamic> const> const& X) {
+               nb::DRef<Eigen::Matrix<ScalarType, 3, Eigen::Dynamic> const> const& X) {
                 return self.ContactVertexPositionsOf(body, X).eval();
             },
-            pyb::arg("body"),
-            pyb::arg("X"),
+            nb::arg("body"),
+            nb::arg("X"),
             "Get vertex positions of body `body`.\n\n"
             "Args:\n"
             "    body (int): Index of the body.\n"

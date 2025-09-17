@@ -4,7 +4,7 @@
 
 namespace pbat::py::sim::integration {
 
-void Bind(pybind11::module& m)
+void Bind(nanobind::module_& m)
 {
     BindBdf(m);
 }

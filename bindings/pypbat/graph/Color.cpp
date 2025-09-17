@@ -2,25 +2,25 @@
 
 #include <pbat/common/ConstexprFor.h>
 #include <pbat/graph/Color.h>
-#include <pybind11/eigen.h>
+#include <nanobind/eigen/dense.h>
 
 namespace pbat {
 namespace py {
 namespace graph {
 
-void BindColor(pybind11::module& m)
+void BindColor(nanobind::module_& m)
 {
-    namespace pyb = pybind11;
+    namespace nb = nanobind;
 
     using pbat::graph::EGreedyColorOrderingStrategy;
-    pyb::enum_<EGreedyColorOrderingStrategy>(m, "GreedyColorOrderingStrategy")
+    nb::enum_<EGreedyColorOrderingStrategy>(m, "GreedyColorOrderingStrategy")
         .value("Natural", EGreedyColorOrderingStrategy::Natural)
         .value("SmallestDegree", EGreedyColorOrderingStrategy::SmallestDegree)
         .value("LargestDegree", EGreedyColorOrderingStrategy::LargestDegree)
         .export_values();
 
     using pbat::graph::EGreedyColorSelectionStrategy;
-    pyb::enum_<EGreedyColorSelectionStrategy>(m, "GreedyColorSelectionStrategy")
+    nb::enum_<EGreedyColorSelectionStrategy>(m, "GreedyColorSelectionStrategy")
         .value("LeastUsed", EGreedyColorSelectionStrategy::LeastUsed)
         .value("FirstAvailable", EGreedyColorSelectionStrategy::FirstAvailable)
         .export_values();
@@ -40,11 +40,11 @@ void BindColor(pybind11::module& m)
                 });
             return C;
         },
-        pyb::arg("ptr"),
-        pyb::arg("adj"),
-        pyb::arg("ordering")  = EGreedyColorOrderingStrategy::LargestDegree,
-        pyb::arg("selection") = EGreedyColorSelectionStrategy::LeastUsed,
-        pyb::arg("cmax")      = 128,
+        nb::arg("ptr"),
+        nb::arg("adj"),
+        nb::arg("ordering")  = EGreedyColorOrderingStrategy::LargestDegree,
+        nb::arg("selection") = EGreedyColorSelectionStrategy::LeastUsed,
+        nb::arg("cmax")      = 128,
         "Returns a graph coloring of the compressed sparse format graph (ptr,adj) using a greedy "
         "approach.\n"
         "Args:\n"

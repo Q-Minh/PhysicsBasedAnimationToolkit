@@ -7,9 +7,9 @@ namespace py {
 namespace gpu {
 namespace xpbd {
 
-void Bind(pybind11::module& m)
+void Bind(nanobind::module_& m)
 {
-    namespace pyb = pybind11;
+    namespace nb = nanobind;
     BindIntegrator(m);
 }
 

@@ -7,11 +7,11 @@
 #include "profiling/Profiling.h"
 #include "sim/Sim.h"
 
-#include <pybind11/pybind11.h>
+#include <nanobind/nanobind.h>
 
-PYBIND11_MODULE(_pbat, m)
+NB_MODULE(_pbat, m)
 {
-    namespace pyb   = pybind11;
+    namespace nb    = nanobind;
     m.doc()         = "Physics Based Animation Toolkit's python bindings";
     auto mprofiling = m.def_submodule("profiling");
     pbat::py::profiling::Bind(mprofiling);

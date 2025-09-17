@@ -9,7 +9,7 @@ namespace py {
 namespace sim {
 namespace vbd {
 
-void Bind(pybind11::module& m)
+void Bind(nanobind::module_& m)
 {
     BindData(m);
     BindIntegrator(m);

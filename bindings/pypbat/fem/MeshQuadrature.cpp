@@ -4,21 +4,21 @@
 
 #include <pbat/common/ConstexprFor.h>
 #include <pbat/fem/MeshQuadrature.h>
-#include <pybind11/eigen.h>
+#include <nanobind/eigen/dense.h>
 
 namespace pbat::py::fem {
 
-void BindMeshQuadrature([[maybe_unused]] pybind11::module& m)
+void BindMeshQuadrature([[maybe_unused]] nanobind::module_& m)
 {
-    namespace pyb = pybind11;
+    namespace nb = nanobind;
 
     using TScalar = pbat::Scalar;
     using TIndex  = pbat::Index;
 
     m.def(
         "mesh_quadrature_weights",
-        [](pyb::EigenDRef<Eigen::Matrix<TIndex, Eigen::Dynamic, Eigen::Dynamic> const> E,
-           pyb::EigenDRef<Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic> const> X,
+        [](nb::DRef<Eigen::Matrix<TIndex, Eigen::Dynamic, Eigen::Dynamic> const> E,
+           nb::DRef<Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic> const> X,
            EElement eElement,
            int order,
            int qOrder) {
@@ -34,11 +34,11 @@ void BindMeshQuadrature([[maybe_unused]] pybind11::module& m)
                 });
             return wg;
         },
-        pyb::arg("E"),
-        pyb::arg("X"),
-        pyb::arg("element"),
-        pyb::arg("order")            = 1,
-        pyb::arg("quadrature_order") = 1,
+        nb::arg("E"),
+        nb::arg("X"),
+        nb::arg("element"),
+        nb::arg("order")            = 1,
+        nb::arg("quadrature_order") = 1,
         "Compute mesh quadrature weights including Jacobian determinants.\n\n"
         "Args:\n"
         "    E (numpy.ndarray): `|# elem nodes| x |# elems|` mesh element matrix.\n"
@@ -54,8 +54,8 @@ void BindMeshQuadrature([[maybe_unused]] pybind11::module& m)
         [](TIndex nElements, TIndex nQuadPtsPerElement) {
             return pbat::fem::MeshQuadratureElements<TIndex>(nElements, nQuadPtsPerElement).eval();
         },
-        pyb::arg("n_elements"),
-        pyb::arg("n_quad_pts_per_element"),
+        nb::arg("n_elements"),
+        nb::arg("n_quad_pts_per_element"),
         "Compute element indices for each quadrature point.\n\n"
         "Args:\n"
         "    n_elements (int): Number of elements.\n"
@@ -65,12 +65,12 @@ void BindMeshQuadrature([[maybe_unused]] pybind11::module& m)
 
     m.def(
         "mesh_quadrature_elements",
-        [](pyb::EigenDRef<Eigen::Matrix<TIndex, Eigen::Dynamic, Eigen::Dynamic> const> E,
-           pyb::EigenDRef<Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic> const> wg) {
+        [](nb::DRef<Eigen::Matrix<TIndex, Eigen::Dynamic, Eigen::Dynamic> const> E,
+           nb::DRef<Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic> const> wg) {
             return pbat::fem::MeshQuadratureElements(E, wg).eval();
         },
-        pyb::arg("E"),
-        pyb::arg("wg"),
+        nb::arg("E"),
+        nb::arg("wg"),
         "Compute element indices for each quadrature point from element matrix and "
         "weights.\n\n"
         "Args:\n"
@@ -93,10 +93,10 @@ void BindMeshQuadrature([[maybe_unused]] pybind11::module& m)
             });
             return Xi;
         },
-        pyb::arg("n_elements"),
-        pyb::arg("element"),
-        pyb::arg("order")            = 1,
-        pyb::arg("quadrature_order") = 1,
+        nb::arg("n_elements"),
+        nb::arg("element"),
+        nb::arg("order")            = 1,
+        nb::arg("quadrature_order") = 1,
         "Compute quadrature points in reference element space for all elements.\n\n"
         "Args:\n"
         "    n_elements (int): Number of elements.\n"

@@ -1,14 +1,14 @@
 #ifndef PYPBAT_GPU_GEOMETRY_BVH_H
 #define PYPBAT_GPU_GEOMETRY_BVH_H
 
-#include <pybind11/pybind11.h>
+#include <nanobind/nanobind.h>
 
 namespace pbat {
 namespace py {
 namespace gpu {
 namespace geometry {
 
-void BindBvh(pybind11::module& m);
+void BindBvh(nanobind::module_& m);
 
 } // namespace geometry
 } // namespace gpu

@@ -1,17 +1,17 @@
 #include "Archive.h"
 
+#include <nanobind/eigen/dense.h>
+#include <nanobind/stl/filesystem.h>
+#include <nanobind/stl/string.h>
 #include <pbat/io/Archive.h>
-#include <pybind11/eigen.h>
-#include <pybind11/stl.h>
-#include <pybind11/stl/filesystem.h>
 
 namespace pbat::py::io {
 
-void pbat::py::io::BindArchive(pybind11::module& m)
+void pbat::py::io::BindArchive(nanobind::module_& m)
 {
-    namespace pyb = pybind11;
+    namespace nb = nanobind;
 
-    pyb::enum_<HighFive::File::AccessMode>(m, "AccessMode")
+    nb::enum_<HighFive::File::AccessMode>(m, "AccessMode")
         .value("None", HighFive::File::AccessMode::None)
         .value("ReadOnly", HighFive::File::AccessMode::ReadOnly)
         .value("ReadWrite", HighFive::File::AccessMode::ReadWrite)
@@ -23,23 +23,17 @@ void pbat::py::io::BindArchive(pybind11::module& m)
         .value("OpenOrCreate", HighFive::File::AccessMode::OpenOrCreate)
         .export_values();
 
-    pyb::class_<pbat::io::Archive>(m, "Archive")
+    nb::class_<pbat::io::Archive>(m, "Archive")
         .def(
-            pyb::init<std::filesystem::path, HighFive::File::AccessMode>(),
-            pyb::arg("filepath"),
-            pyb::arg("flags") = HighFive::File::OpenOrCreate)
-        .def_property_readonly(
-            "usable",
-            &pbat::io::Archive::IsUsable,
-            "Whether the archive is usable")
-        .def_property_readonly(
-            "path",
-            &pbat::io::Archive::GetPath,
-            "Path of the current HDF5 object")
+            nb::init<std::filesystem::path, HighFive::File::AccessMode>(),
+            nb::arg("filepath"),
+            nb::arg("flags") = HighFive::File::OpenOrCreate)
+        .def_prop_ro_static("usable", &pbat::io::Archive::IsUsable, "Whether the archive is usable")
+        .def_prop_ro_static("path", &pbat::io::Archive::GetPath, "Path of the current HDF5 object")
         .def(
             "__getitem__",
             [](pbat::io::Archive& archive, const std::string& path) { return archive[path]; },
-            pyb::arg("path"),
+            nb::arg("path"),
             "Get a group or create it if it does not exist\n\n"
             "Args:\n"
             "    path (str): Path to the group\n\n"

@@ -1,27 +1,28 @@
 #include "MeshVertexTetrahedronDcd.h"
 
+#include <nanobind/eigen/dense.h>
 #include <pbat/sim/contact/MeshVertexTetrahedronDcd.h>
 #include <pbat/sim/contact/MultibodyTetrahedralMeshSystem.h>
-#include <pybind11/eigen.h>
-#include <pybind11/stl.h>
 #include <vector>
 
 namespace pbat::py::sim::contact {
 
-void BindMeshVertexTetrahedronDcd(pybind11::module& m)
+void BindMeshVertexTetrahedronDcd(nanobind::module_& m)
 {
-    namespace pyb = pybind11;
+    namespace nb = nanobind;
     using pbat::sim::contact::MeshVertexTetrahedronDcd;
     using IndexType  = MeshVertexTetrahedronDcd::IndexType;
     using ScalarType = MeshVertexTetrahedronDcd::ScalarType;
-    pyb::class_<MeshVertexTetrahedronDcd>(m, "MeshVertexTetrahedronDcd")
+    nb::class_<MeshVertexTetrahedronDcd>(m, "MeshVertexTetrahedronDcd")
         .def(
-            pyb::init([](Eigen::Ref<Eigen::Matrix<ScalarType, 3, Eigen::Dynamic>> X,
-                         Eigen::Ref<Eigen::Matrix<IndexType, 4, Eigen::Dynamic>> T) {
-                return MeshVertexTetrahedronDcd(std::move(X), std::move(T));
-            }),
-            pyb::arg("X"),
-            pyb::arg("T"),
+            "__init__",
+            [](MeshVertexTetrahedronDcd* self,
+               Eigen::Ref<Eigen::Matrix<ScalarType, 3, Eigen::Dynamic>> X,
+               Eigen::Ref<Eigen::Matrix<IndexType, 4, Eigen::Dynamic>> T) {
+                new (self) MeshVertexTetrahedronDcd(std::move(X), std::move(T));
+            },
+            nb::arg("X"),
+            nb::arg("T"),
             "Construct a multibody tetrahedral mesh DCD system out of multiple meshes\n\n"
             "Args:\n"
             "    X (numpy.ndarray): `3 x |# verts|` mesh vertex positions\n"
@@ -33,8 +34,8 @@ void BindMeshVertexTetrahedronDcd(pybind11::module& m)
                Eigen::Ref<Eigen::Matrix<IndexType, 4, Eigen::Dynamic> const> const& T) {
                 self.UpdateActiveSet(X, T);
             },
-            pyb::arg("X"),
-            pyb::arg("T"),
+            nb::arg("X"),
+            nb::arg("T"),
             "Update the active set of vertex-triangle contacts\n\n"
             "Args:\n"
             "    X (numpy.ndarray): `3 x |# verts|` mesh vertex positions\n"
@@ -65,7 +66,7 @@ void BindMeshVertexTetrahedronDcd(pybind11::module& m)
             "Args:\n"
             "Returns:\n"
             "    numpy.ndarray: `2 x |# contacting triangles|` array of triangle indices")
-        .def_property_readonly(
+        .def_prop_ro_static(
             "multibody_system",
             &MeshVertexTetrahedronDcd::MultibodySystem,
             "Get the multibody tetrahedral mesh system\n\n"

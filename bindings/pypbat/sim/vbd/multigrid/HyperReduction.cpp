@@ -2,7 +2,7 @@
 
 #include <pbat/sim/vbd/multigrid/Hierarchy.h>
 #include <pbat/sim/vbd/multigrid/HyperReduction.h>
-#include <pybind11/eigen.h>
+#include <nanobind/eigen/dense.h>
 
 namespace pbat {
 namespace py {
@@ -10,17 +10,17 @@ namespace sim {
 namespace vbd {
 namespace multigrid {
 
-void BindHyperReduction(pybind11::module& m)
+void BindHyperReduction(nanobind::module_& m)
 {
-    namespace pyb = pybind11;
+    namespace nb = nanobind;
     using pbat::sim::vbd::multigrid::Hierarchy;
     using pbat::sim::vbd::multigrid::HyperReduction;
 
-    pyb::class_<HyperReduction>(m, "HyperReduction")
+    nb::class_<HyperReduction>(m, "HyperReduction")
         .def(
-            pyb::init<Hierarchy const&, Index>(),
-            pyb::arg("hierarchy"),
-            pyb::arg("n_target_active_elements") = Index(-1));
+            nb::init<Hierarchy const&, Index>(),
+            nb::arg("hierarchy"),
+            nb::arg("n_target_active_elements") = Index(-1));
 }
 
 } // namespace multigrid

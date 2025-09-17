@@ -1,13 +1,13 @@
 #ifndef PYPBAT_GRAPH_PARTITION_H
 #define PYPBAT_GRAPH_PARTITION_H
 
-#include <pybind11/pybind11.h>
+#include <nanobind/nanobind.h>
 
 namespace pbat {
 namespace py {
 namespace graph {
 
-void BindPartition(pybind11::module& m);
+void BindPartition(nanobind::module_& m);
 
 } // namespace graph
 } // namespace py

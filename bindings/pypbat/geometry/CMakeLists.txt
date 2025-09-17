@@ -21,3 +21,5 @@ target_sources(PhysicsBasedAnimationToolkit_Python
     "TetrahedralAabbHierarchy.cpp"
     "TriangleAabbHierarchy.cpp"
 )
+
+add_subdirectory(sdf)

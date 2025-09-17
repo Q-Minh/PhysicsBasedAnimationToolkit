@@ -1,7 +1,7 @@
 #include "SparsityPattern.h"
 
 #include <pbat/common/ConstexprFor.h>
-#include <pybind11/eigen.h>
+#include <nanobind/eigen/dense.h>
 
 namespace pbat::py::math::linalg {
 
@@ -71,9 +71,9 @@ namespace pbat::py::math::linalg {
 //     }
 // }
 
-void BindSparsityPattern([[maybe_unused]] pybind11::module& m)
+void BindSparsityPattern([[maybe_unused]] nanobind::module_& m)
 {
-    namespace pyb = pybind11;
+    namespace nb = nanobind;
 }
 
 } // namespace pbat::py::math::linalg

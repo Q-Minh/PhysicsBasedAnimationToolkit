@@ -4,7 +4,7 @@
 #include <pbat/Aliases.h>
 #include <pbat/common/ConstexprFor.h>
 #include <pbat/profiling/Profiling.h>
-#include <pybind11/eigen.h>
+#include <nanobind/eigen/dense.h>
 #include <string>
 #include <tuple>
 #include <type_traits>
@@ -14,9 +14,9 @@ namespace py {
 namespace math {
 namespace linalg {
 
-void BindSimplicialLDLT(pybind11::module& m)
+void BindSimplicialLDLT(nanobind::module_& m)
 {
-    namespace pyb = pybind11;
+    namespace nb = nanobind;
 
     using LdltCscNat = Eigen::SimplicialLDLT<
         CSCMatrix,
@@ -62,8 +62,8 @@ void BindSimplicialLDLT(pybind11::module& m)
                     return "SimplicialLdlt_Csr_COLAMD";
             }();
 
-            pyb::class_<SimplicialLdltType>(m, className.data())
-                .def(pyb::init<>())
+            nb::class_<SimplicialLdltType>(m, className.data())
+                .def(nb::init<>())
                 .def(
                     "analyze",
                     [=](SimplicialLdltType& ldlt, SparseMatrixType const& A) {
@@ -71,7 +71,7 @@ void BindSimplicialLDLT(pybind11::module& m)
                             "pbat.math.linalg." + className + ".analyze",
                             [&]() { ldlt.analyzePattern(A); });
                     },
-                    pyb::arg("A"))
+                    nb::arg("A"))
                 .def(
                     "compute",
                     [=](SimplicialLdltType& ldlt,
@@ -81,9 +81,9 @@ void BindSimplicialLDLT(pybind11::module& m)
                             [&]() { ldlt.compute(A); });
                         return ldlt;
                     },
-                    pyb::arg("A"))
-                .def_property_readonly("d", &SimplicialLdltType::vectorD)
-                .def_property_readonly("determinant", &SimplicialLdltType::determinant)
+                    nb::arg("A"))
+                .def_prop_ro_static("d", &SimplicialLdltType::vectorD)
+                .def_prop_ro_static("determinant", &SimplicialLdltType::determinant)
                 .def(
                     "factorize",
                     [=](SimplicialLdltType& ldlt, SparseMatrixType const& A) {
@@ -91,20 +91,20 @@ void BindSimplicialLDLT(pybind11::module& m)
                             "pbat.math.linalg." + className + ".factorize",
                             [&]() { ldlt.factorize(A); });
                     },
-                    pyb::arg("A"))
-                .def_property_readonly(
+                    nb::arg("A"))
+                .def_prop_ro_static(
                     "L",
                     [](SimplicialLdltType const& ldlt) -> SparseMatrixType {
                         SparseMatrixType L = ldlt.matrixL();
                         return L;
                     })
-                .def_property_readonly(
+                .def_prop_ro_static(
                     "p",
                     [](SimplicialLdltType const& ldlt) { return ldlt.permutationP().indices(); })
-                .def_property_readonly(
+                .def_prop_ro_static(
                     "pinv",
                     [](SimplicialLdltType const& ldlt) { return ldlt.permutationPinv().indices(); })
-                .def_property_readonly(
+                .def_prop_ro_static(
                     "shape",
                     [](SimplicialLdltType const& ldlt) {
                         return std::make_tuple(ldlt.rows(), ldlt.cols());
@@ -114,8 +114,8 @@ void BindSimplicialLDLT(pybind11::module& m)
                     [](SimplicialLdltType& ldlt, Scalar offset, Scalar scale) {
                         ldlt.setShift(offset, scale);
                     },
-                    pyb::arg("offset"),
-                    pyb::arg("scale"))
+                    nb::arg("offset"),
+                    nb::arg("scale"))
                 .def(
                     "solve",
                     [=](SimplicialLdltType const& ldlt,
@@ -127,8 +127,8 @@ void BindSimplicialLDLT(pybind11::module& m)
                                 return X;
                             });
                     },
-                    pyb::arg("B"))
-                .def_property_readonly("status", [](SimplicialLdltType const& ldlt) -> std::string {
+                    nb::arg("B"))
+                .def_prop_ro_static("status", [](SimplicialLdltType const& ldlt) -> std::string {
                     Eigen::ComputationInfo const info = ldlt.info();
                     switch (info)
                     {

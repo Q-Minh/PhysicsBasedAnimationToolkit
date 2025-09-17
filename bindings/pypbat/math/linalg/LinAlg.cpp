@@ -9,9 +9,9 @@
 
 namespace pbat::py::math::linalg {
 
-void Bind(pybind11::module& m)
+void Bind(nanobind::module_& m)
 {
-    namespace pyb = pybind11;
+    namespace nb = nanobind;
     BindCholmod(m);
     BindPardiso(m);
     BindSimplicialLDLT(m);

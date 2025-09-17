@@ -1,14 +1,14 @@
 #ifndef PYPBAT_GPU_COMMON_COMMON_H
 #define PYPBAT_GPU_COMMON_COMMON_H
 
-#include <pybind11/pybind11.h>
+#include <nanobind/nanobind.h>
 
 namespace pbat {
 namespace py {
 namespace gpu {
 namespace common {
 
-void Bind(pybind11::module& m);
+void Bind(nanobind::module_& m);
 
 } // namespace common
 } // namespace gpu

@@ -1,13 +1,13 @@
 #ifndef PYPBAT_GEOMETRY_TETRAHEDRAL_AABB_HIERARCHY_H
 #define PYPBAT_GEOMETRY_TETRAHEDRAL_AABB_HIERARCHY_H
 
-#include <pybind11/pybind11.h>
+#include <nanobind/nanobind.h>
 
 namespace pbat {
 namespace py {
 namespace geometry {
 
-void BindTetrahedralAabbHierarchy(pybind11::module& m);
+void BindTetrahedralAabbHierarchy(nanobind::module_& m);
 
 } // namespace geometry
 } // namespace py
