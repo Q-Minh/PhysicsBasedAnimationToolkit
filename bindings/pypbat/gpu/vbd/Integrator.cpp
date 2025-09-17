@@ -3,7 +3,7 @@
 #include <nanobind/eigen/dense.h>
 #include <nanobind/stl/pair.h>
 #include <pbat/gpu/Aliases.h>
-#include <pbat/gpu/vbd/Vbd.h>
+#include <pbat/gpu/vbd/Integrator.h>
 #include <pbat/sim/vbd/Data.h>
 #include <pbat/sim/vbd/Enums.h>
 #include <utility>

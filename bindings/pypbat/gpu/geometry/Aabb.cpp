@@ -43,10 +43,10 @@ void BindAabb([[maybe_unused]] nanobind::module_& m)
             "P (np.ndarray): 3x|#pts| array of points\n"
             "S (np.ndarray): Kx|#simplices| array of simplices where K is the number of vertices "
             "per simplex")
-        .def_prop_ro_static("n_boxes", &Aabb::Size, "Number of aabbs")
-        .def_prop_ro_static("dims", &Aabb::Dimensions, "Embedding dimensionality")
-        .def_prop_ro_static("min", &Aabb::Lower, "min endpoints of aabbs")
-        .def_prop_ro_static("max", &Aabb::Upper, "max endpoints of aabbs");
+        .def_prop_ro("n_boxes", &Aabb::Size, "Number of aabbs")
+        .def_prop_ro("dims", &Aabb::Dimensions, "Embedding dimensionality")
+        .def_prop_ro("min", &Aabb::Lower, "min endpoints of aabbs")
+        .def_prop_ro("max", &Aabb::Upper, "max endpoints of aabbs");
 #endif // PBAT_USE_CUDA
 }
 

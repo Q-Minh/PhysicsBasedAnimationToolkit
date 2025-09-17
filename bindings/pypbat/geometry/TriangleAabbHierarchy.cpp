@@ -3,7 +3,6 @@
 #include <nanobind/eigen/dense.h>
 #include <nanobind/nanobind.h>
 #include <nanobind/stl/pair.h>
-#include <nanobind/stl/vector.h>
 #include <pbat/common/ConstexprFor.h>
 #include <pbat/geometry/TriangleAabbHierarchy.h>
 #include <string>
@@ -58,7 +57,7 @@ void BindTriangleAabbHierarchy(nanobind::module_& m)
                 nb::arg("P"),
                 nb::arg("parallelize") = true)
             .def("update", &BvhType::Update)
-            .def_prop_ro_static("bounding_volumes", [](BvhType const& self) {
+            .def_prop_ro("bounding_volumes", [](BvhType const& self) {
                 return self.GetBoundingVolumes();
             });
     });

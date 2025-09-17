@@ -6,6 +6,7 @@
 #include <pbat/fem/MeshQuadrature.h>
 #include <pbat/fem/ShapeFunctions.h>
 #include <nanobind/eigen/dense.h>
+#include <nanobind/eigen/sparse.h>
 
 namespace pbat {
 namespace py {

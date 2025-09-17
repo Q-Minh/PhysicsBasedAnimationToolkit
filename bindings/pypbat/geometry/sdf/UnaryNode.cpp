@@ -2,9 +2,6 @@
 
 namespace pbat::py::geometry::sdf {
 
-void BindUnaryNode(nanobind::module_& m)
-{
-
-}
+void BindUnaryNode([[maybe_unused]] nanobind::module_& m) {}
 
 } // namespace pbat::py::geometry::sdf

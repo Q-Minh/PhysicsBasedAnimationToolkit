@@ -4,6 +4,7 @@
 #include <Eigen/Core>
 #include <exception>
 #include <fmt/core.h>
+#include <nanobind/nanobind.h>
 #include <pbat/Aliases.h>
 #include <pbat/common/ConstexprFor.h>
 #include <pbat/fem/Hexahedron.h>
@@ -12,7 +13,6 @@
 #include <pbat/fem/Quadrilateral.h>
 #include <pbat/fem/Tetrahedron.h>
 #include <pbat/fem/Triangle.h>
-#include <nanobind/nanobind.h>
 #include <type_traits>
 
 namespace pbat {
@@ -24,35 +24,45 @@ enum class EElement { Line, Triangle, Quadrilateral, Tetrahedron, Hexahedron };
 template <class Func>
 inline void ApplyToElement(EElement eElement, int order, Func&& f)
 {
-    auto constexpr kMaxElementOrder = 3;
+    auto constexpr kMaxElementOrder = 2;
     if (order < 1 or order > kMaxElementOrder)
     {
         throw std::invalid_argument(
             fmt::format(
-                "Invalid mesh order, expected 1 <= order <= {}, but got {}",
+                "Invalid mesh order, expected 1 <= order <= {}, but got {}. The C++ API supports "
+                "orders up to {}.",
                 kMaxElementOrder,
-                order));
+                order,
+                3));
+    }
+    if (eElement == EElement::Line or eElement == EElement::Quadrilateral or
+        eElement == EElement::Hexahedron)
+    {
+        throw std::invalid_argument(
+            "Line, Quadrilateral, and Hexahedron elements are only supported in the C++ API to "
+            "reduce the Python bindings' compilation workload.");
     }
     using namespace pbat::fem;
     using namespace pbat::common;
     ForRange<1, kMaxElementOrder + 1>([&]<auto Order>() {
         ForTypes<
-            Line<Order>,
+            // Line<Order>,
             Triangle<Order>,
-            Quadrilateral<Order>,
-            Tetrahedron<Order>,
-            Hexahedron<Order>>([&]<CElement ElementType>() {
+            // Quadrilateral<Order>,
+            Tetrahedron<Order> //,
+            // Hexahedron<Order>
+            >([&]<CElement ElementType>() {
             EElement const eElementCandidate = []() {
-                if constexpr (std::is_same_v<ElementType, Line<Order>>)
-                    return EElement::Line;
+                // if constexpr (std::is_same_v<ElementType, Line<Order>>)
+                //     return EElement::Line;
                 if constexpr (std::is_same_v<ElementType, Triangle<Order>>)
                     return EElement::Triangle;
-                if constexpr (std::is_same_v<ElementType, Quadrilateral<Order>>)
-                    return EElement::Quadrilateral;
+                // if constexpr (std::is_same_v<ElementType, Quadrilateral<Order>>)
+                //     return EElement::Quadrilateral;
                 if constexpr (std::is_same_v<ElementType, Tetrahedron<Order>>)
                     return EElement::Tetrahedron;
-                if constexpr (std::is_same_v<ElementType, Hexahedron<Order>>)
-                    return EElement::Hexahedron;
+                // if constexpr (std::is_same_v<ElementType, Hexahedron<Order>>)
+                //     return EElement::Hexahedron;
             }();
             if ((order == Order) and (eElement == eElementCandidate))
             {

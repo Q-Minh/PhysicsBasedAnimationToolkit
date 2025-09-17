@@ -1,8 +1,8 @@
 #include "Bvh.h"
 
+#include <nanobind/eigen/dense.h>
 #include <pbat/gpu/geometry/Aabb.h>
 #include <pbat/gpu/geometry/Bvh.h>
-#include <nanobind/eigen/dense.h>
 
 namespace pbat {
 namespace py {
@@ -88,27 +88,24 @@ void BindBvh([[maybe_unused]] nanobind::module_& m)
             "   X (np.ndarray): 3x|#pts| query points to find nearest tetrahedra to\n"
             "   V (np.ndarray): Tetrahedron vertex positions\n"
             "   T (np.ndarray): Tetrahedron vertex indices")
-        .def_prop_ro_static("min", &Bvh::Min, "BVH nodes' box minimums")
-        .def_prop_ro_static("max", &Bvh::Max, "BVH nodes' box maximums")
-        .def_prop_ro_static(
-            "ordering",
-            &Bvh::LeafOrdering,
-            "Box indices ordered by Morton encoding")
-        .def_prop_ro_static("morton", &Bvh::MortonCodes, "Sorted morton codes of simplices")
-        .def_prop_ro_static(
+        .def_prop_ro("min", &Bvh::Min, "BVH nodes' box minimums")
+        .def_prop_ro("max", &Bvh::Max, "BVH nodes' box maximums")
+        .def_prop_ro("ordering", &Bvh::LeafOrdering, "Box indices ordered by Morton encoding")
+        .def_prop_ro("morton", &Bvh::MortonCodes, "Sorted morton codes of simplices")
+        .def_prop_ro(
             "child",
             &Bvh::Child,
             "Radix-tree left and right children of each node as a |#simplices - 1|x2 array")
-        .def_prop_ro_static(
+        .def_prop_ro(
             "parent",
             &Bvh::Parent,
             "Radix-tree parents of each node as a |2*#simplices - 1| array")
-        .def_prop_ro_static(
+        .def_prop_ro(
             "rightmost",
             &Bvh::Rightmost,
             "Radix-tree left-subtree and right-subtree largest nodal indices as a |#simplices - "
             "1|x2 array")
-        .def_prop_ro_static(
+        .def_prop_ro(
             "visits",
             &Bvh::Visits,
             "Number of visits per internal node for bounding box computation as a |#simplices - 1| "

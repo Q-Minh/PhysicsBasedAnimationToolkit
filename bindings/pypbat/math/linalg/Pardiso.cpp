@@ -6,10 +6,11 @@
     // Eigen/src/SparseCore/SparseUtil.h line 52.
     #define MKL_INT int
     #include <Eigen/PardisoSupport>
+    #include <nanobind/eigen/dense.h>
+    #include <nanobind/eigen/sparse.h>
     #include <pbat/Aliases.h>
     #include <pbat/common/ConstexprFor.h>
     #include <pbat/profiling/Profiling.h>
-    #include <nanobind/eigen/dense.h>
     #include <string>
     #include <tuple>
     #include <type_traits>
@@ -83,7 +84,7 @@ void BindPardiso([[maybe_unused]] nanobind::module_& m)
                     });
                 },
                 nb::arg("A"))
-            .def_prop_ro_static(
+            .def_prop_ro(
                 "shape",
                 [](SolverType const& solver) {
                     return std::make_tuple(solver.rows(), solver.cols());
@@ -91,13 +92,15 @@ void BindPardiso([[maybe_unused]] nanobind::module_& m)
             .def(
                 "solve",
                 [=](SolverType const& solver, Eigen::Ref<MatrixX const> const& B) -> MatrixX {
-                    return pbat::profiling::Profile("pbat.math.linalg." + className + ".solve", [&]() {
-                        MatrixX X = solver.solve(B);
-                        return X;
-                    });
+                    return pbat::profiling::Profile(
+                        "pbat.math.linalg." + className + ".solve",
+                        [&]() {
+                            MatrixX X = solver.solve(B);
+                            return X;
+                        });
                 },
                 nb::arg("B"))
-            .def_prop_ro_static(
+            .def_prop_ro(
                 "status",
                 [](SolverType const& solver) -> std::string {
                     Eigen::ComputationInfo const info = solver.info();

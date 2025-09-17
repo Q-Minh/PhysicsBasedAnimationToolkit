@@ -1,7 +1,7 @@
 #include "MultibodyTetrahedralMeshSystem.h"
 
-#include <pbat/sim/contact/MultibodyTetrahedralMeshSystem.h>
 #include <nanobind/eigen/dense.h>
+#include <pbat/sim/contact/MultibodyTetrahedralMeshSystem.h>
 
 namespace pbat::py::sim::contact {
 
@@ -29,7 +29,7 @@ void BindMultibodyTetrahedralMeshSystem(nanobind::module_& m)
             "    T (numpy.ndarray): `4 x |# tetrahedra|` tetrahedral mesh elements/connectivity.\n"
             "Returns:\n"
             "    None\n")
-        .def_prop_ro_static("n_bodies", &MultibodyTetrahedralMeshSystemType::NumBodies)
+        .def_prop_ro("n_bodies", &MultibodyTetrahedralMeshSystemType::NumBodies)
         .def_ro("V", &MultibodyTetrahedralMeshSystemType::V)
         .def_ro("E", &MultibodyTetrahedralMeshSystemType::E)
         .def_ro("F", &MultibodyTetrahedralMeshSystemType::F)

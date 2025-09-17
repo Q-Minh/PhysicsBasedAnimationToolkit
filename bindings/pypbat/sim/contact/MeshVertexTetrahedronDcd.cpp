@@ -66,7 +66,7 @@ void BindMeshVertexTetrahedronDcd(nanobind::module_& m)
             "Args:\n"
             "Returns:\n"
             "    numpy.ndarray: `2 x |# contacting triangles|` array of triangle indices")
-        .def_prop_ro_static(
+        .def_prop_ro(
             "multibody_system",
             &MeshVertexTetrahedronDcd::MultibodySystem,
             "Get the multibody tetrahedral mesh system\n\n"

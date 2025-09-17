@@ -1,10 +1,11 @@
 #include "Cholmod.h"
 
+#include <nanobind/eigen/dense.h>
+#include <nanobind/eigen/sparse.h>
 #include <pbat/Aliases.h>
 #include <pbat/common/ConstexprFor.h>
 #include <pbat/math/linalg/Cholmod.h>
 #include <pbat/profiling/Profiling.h>
-#include <nanobind/eigen/dense.h>
 #include <string>
 #include <type_traits>
 

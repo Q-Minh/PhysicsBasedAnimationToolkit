@@ -1,7 +1,7 @@
 #include "Buffer.h"
 
-#include <pbat/gpu/common/Buffer.h>
 #include <nanobind/eigen/dense.h>
+#include <pbat/gpu/common/Buffer.h>
 
 namespace pbat {
 namespace py {
@@ -56,9 +56,9 @@ void BindBuffer([[maybe_unused]] nanobind::module_& m)
         .def("set", [](Buffer& b, Buffer::Data<double> const& data) { b = data; })
         .def("resize", [](Buffer& b, GpuIndex rows, GpuIndex cols) { b.Resize(rows, cols); })
         .def("resize", [](Buffer& b, GpuIndex size) { b.Resize(size); })
-        .def_prop_ro_static("dims", &Buffer::Dims)
-        .def_prop_ro_static("type", &Buffer::Type)
-        .def_prop_ro_static("size", &Buffer::Size);
+        .def_prop_ro("dims", &Buffer::Dims)
+        .def_prop_ro("type", &Buffer::Type)
+        .def_prop_ro("size", &Buffer::Size);
 #endif // PBAT_USE_CUDA
 }
 

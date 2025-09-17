@@ -1,9 +1,10 @@
 #include "MomentFitting.h"
 
 #include <exception>
+#include <nanobind/eigen/dense.h>
+#include <nanobind/eigen/sparse.h>
 #include <pbat/common/ConstexprFor.h>
 #include <pbat/math/MomentFitting.h>
-#include <nanobind/eigen/dense.h>
 
 namespace pbat {
 namespace py {

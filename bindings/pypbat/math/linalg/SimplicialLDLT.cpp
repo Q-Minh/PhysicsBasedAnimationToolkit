@@ -1,10 +1,11 @@
 #include "SimplicialLDLT.h"
 
 #include <Eigen/SparseCholesky>
+#include <nanobind/eigen/dense.h>
+#include <nanobind/eigen/sparse.h>
 #include <pbat/Aliases.h>
 #include <pbat/common/ConstexprFor.h>
 #include <pbat/profiling/Profiling.h>
-#include <nanobind/eigen/dense.h>
 #include <string>
 #include <tuple>
 #include <type_traits>
@@ -82,8 +83,8 @@ void BindSimplicialLDLT(nanobind::module_& m)
                         return ldlt;
                     },
                     nb::arg("A"))
-                .def_prop_ro_static("d", &SimplicialLdltType::vectorD)
-                .def_prop_ro_static("determinant", &SimplicialLdltType::determinant)
+                .def_prop_ro("d", &SimplicialLdltType::vectorD)
+                .def_prop_ro("determinant", &SimplicialLdltType::determinant)
                 .def(
                     "factorize",
                     [=](SimplicialLdltType& ldlt, SparseMatrixType const& A) {
@@ -92,19 +93,19 @@ void BindSimplicialLDLT(nanobind::module_& m)
                             [&]() { ldlt.factorize(A); });
                     },
                     nb::arg("A"))
-                .def_prop_ro_static(
+                .def_prop_ro(
                     "L",
                     [](SimplicialLdltType const& ldlt) -> SparseMatrixType {
                         SparseMatrixType L = ldlt.matrixL();
                         return L;
                     })
-                .def_prop_ro_static(
+                .def_prop_ro(
                     "p",
                     [](SimplicialLdltType const& ldlt) { return ldlt.permutationP().indices(); })
-                .def_prop_ro_static(
+                .def_prop_ro(
                     "pinv",
                     [](SimplicialLdltType const& ldlt) { return ldlt.permutationPinv().indices(); })
-                .def_prop_ro_static(
+                .def_prop_ro(
                     "shape",
                     [](SimplicialLdltType const& ldlt) {
                         return std::make_tuple(ldlt.rows(), ldlt.cols());
@@ -128,7 +129,7 @@ void BindSimplicialLDLT(nanobind::module_& m)
                             });
                     },
                     nb::arg("B"))
-                .def_prop_ro_static("status", [](SimplicialLdltType const& ldlt) -> std::string {
+                .def_prop_ro("status", [](SimplicialLdltType const& ldlt) -> std::string {
                     Eigen::ComputationInfo const info = ldlt.info();
                     switch (info)
                     {

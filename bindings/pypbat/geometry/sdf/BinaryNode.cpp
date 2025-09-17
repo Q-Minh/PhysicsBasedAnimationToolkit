@@ -2,7 +2,7 @@
 
 namespace pbat::py::geometry::sdf {
 
-void BindBinaryNode(nanobind::module_& m)
+void BindBinaryNode([[maybe_unused]] nanobind::module_& m)
 {
 
 }

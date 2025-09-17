@@ -2,9 +2,9 @@
 
 #include "Mesh.h"
 
+#include <nanobind/eigen/dense.h>
 #include <pbat/common/ConstexprFor.h>
 #include <pbat/fem/MeshQuadrature.h>
-#include <nanobind/eigen/dense.h>
 
 namespace pbat::py::fem {
 
@@ -22,8 +22,10 @@ void BindMeshQuadrature([[maybe_unused]] nanobind::module_& m)
            EElement eElement,
            int order,
            int qOrder) {
+            auto constexpr kMaxQuadratureOrder =
+                4; // For now, only support up to 4th order quadrature rules
             Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic> wg;
-            ApplyToElementWithQuadrature<8>(
+            ApplyToElementWithQuadrature<kMaxQuadratureOrder>(
                 eElement,
                 order,
                 qOrder,
@@ -84,13 +86,18 @@ void BindMeshQuadrature([[maybe_unused]] nanobind::module_& m)
     m.def(
         "mesh_reference_quadrature_points",
         [](TIndex nElements, EElement eElement, int order, int qOrder) {
+            auto constexpr kMaxQuadratureOrder =
+                4; // For now, only support up to 4th order quadrature rules
             Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic> Xi;
-            ApplyToElementWithQuadrature<
-                8>(eElement, order, qOrder, [&]<class ElementType, auto QuadratureOrder>() {
-                Xi =
-                    pbat::fem::MeshReferenceQuadraturePoints<ElementType, QuadratureOrder, TScalar>(
-                        nElements);
-            });
+            ApplyToElementWithQuadrature<kMaxQuadratureOrder>(
+                eElement,
+                order,
+                qOrder,
+                [&]<class ElementType, auto QuadratureOrder>() {
+                    Xi = pbat::fem::
+                        MeshReferenceQuadraturePoints<ElementType, QuadratureOrder, TScalar>(
+                            nElements);
+                });
             return Xi;
         },
         nb::arg("n_elements"),

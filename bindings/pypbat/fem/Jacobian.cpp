@@ -27,7 +27,7 @@ void BindJacobian(nanobind::module_& m)
            int order) {
             auto const dims = x.rows();
             Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic> J;
-            auto constexpr kMaxDims = 9;
+            auto constexpr kMaxDims = 3; // For now, only support up to 3-dimensional function images
             if (dims < 1 or dims > kMaxDims)
             {
                 throw std::invalid_argument(
@@ -69,7 +69,7 @@ void BindJacobian(nanobind::module_& m)
            EElement eElement,
            int order,
            int qOrder) {
-            auto constexpr kMaxQuadratureOrder = 8;
+            auto constexpr kMaxQuadratureOrder = 4; // For now, only support up to 4th order quadrature rules
             auto const dims                    = X.rows();
             auto constexpr kMaxDims            = 3;
             if (dims < 1 or dims > kMaxDims)

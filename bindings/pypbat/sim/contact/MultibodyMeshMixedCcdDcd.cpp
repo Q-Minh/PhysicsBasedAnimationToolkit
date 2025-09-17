@@ -16,7 +16,8 @@ void BindMultibodyMeshMixedCcdDcd(nanobind::module_& m)
     nb::class_<MultibodyMeshMixedCcdDcd>(m, "MultibodyMeshMixedCcdDcd")
         .def(
             "__init__",
-            [](Eigen::Ref<Matrix<3, Eigen::Dynamic> const> const& X,
+            [](MultibodyMeshMixedCcdDcd* self,
+               Eigen::Ref<Matrix<3, Eigen::Dynamic> const> const& X,
                Eigen::Ref<IndexVectorX const> const& V,
                Eigen::Ref<IndexMatrix<2, Eigen::Dynamic> const> const& E,
                Eigen::Ref<IndexMatrix<3, Eigen::Dynamic> const> const& F,
@@ -25,7 +26,7 @@ void BindMultibodyMeshMixedCcdDcd(nanobind::module_& m)
                Eigen::Ref<IndexVectorX const> const& EP,
                Eigen::Ref<IndexVectorX const> const& FP,
                Eigen::Ref<IndexVectorX const> const& TP) {
-                return MultibodyMeshMixedCcdDcd(X, V, E, F, T, VP, EP, FP, TP);
+                new (self) MultibodyMeshMixedCcdDcd(X, V, E, F, T, VP, EP, FP, TP);
             },
             nb::arg("X"),
             nb::arg("V").noconvert(),
@@ -116,23 +117,23 @@ void BindMultibodyMeshMixedCcdDcd(nanobind::module_& m)
             "    XK (numpy.ndarray): `3 x |# verts|` mesh vertex positions at current time\n"
             "Returns:\n"
             "    Tuple[List[int], List[int]]: (v,f) lists of vertex-triangle contact pairs")
-        .def_prop_ro_static(
+        .def_prop_ro(
             "vertex_aabbs",
             &MultibodyMeshMixedCcdDcd::GetVertexAabbs,
             "`2*kDims x |# bodies|` array of vertex AABBs")
-        .def_prop_ro_static(
+        .def_prop_ro(
             "edge_aabbs",
             &MultibodyMeshMixedCcdDcd::GetEdgeAabbs,
             "`2*kDims x |# bodies|` array of edge AABBs")
-        .def_prop_ro_static(
+        .def_prop_ro(
             "triangle_aabbs",
             &MultibodyMeshMixedCcdDcd::GetTriangleAabbs,
             "`2*kDims x |# bodies|` array of triangle AABBs")
-        .def_prop_ro_static(
+        .def_prop_ro(
             "tetrahedron_aabbs",
             &MultibodyMeshMixedCcdDcd::GetTetrahedronAabbs,
             "`2*kDims x |# bodies|` array of tetrahedron AABBs")
-        .def_prop_ro_static(
+        .def_prop_ro(
             "body_aabbs",
             &MultibodyMeshMixedCcdDcd::GetBodyAabbs,
             "`2*kDims x |# bodies|` array of body AABBs")
@@ -220,7 +221,7 @@ void BindMultibodyMeshMixedCcdDcd(nanobind::module_& m)
             "recompute_body_bvh",
             &MultibodyMeshMixedCcdDcd::RecomputeBodyBvh,
             "Recompute body BVH tree and internal node bounding volumes")
-        .def_prop_ro_static(
+        .def_prop_ro(
             "body_pairs",
             [](MultibodyMeshMixedCcdDcd const& self) {
 #include <pbat/warning/Push.h>

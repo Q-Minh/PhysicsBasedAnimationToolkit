@@ -69,16 +69,16 @@ void BindVertexTriangleMixedCcdDcd([[maybe_unused]] nanobind::module_& m)
             nullptr,
             &VertexTriangleMixedCcdDcd::SetNearestNeighbourFloatingPointTolerance,
             "Floating point tolerance for nearest neighbour search")
-        .def_prop_ro_static(
+        .def_prop_ro(
             "active_set",
             &VertexTriangleMixedCcdDcd::ActiveVertexTriangleConstraints,
             "Returns a 2x|#vertex-triangle constraints| matrix where each column is a "
             "vertex-triangle constraint pair")
-        .def_prop_ro_static(
+        .def_prop_ro(
             "active_vertices",
             &VertexTriangleMixedCcdDcd::ActiveVertices,
             "Returns |#active verts| 1D array of active vertex indices into V")
-        .def_prop_ro_static(
+        .def_prop_ro(
             "active_mask",
             &VertexTriangleMixedCcdDcd::ActiveMask,
             "Returns |#verts| 1D mask for active vertices");

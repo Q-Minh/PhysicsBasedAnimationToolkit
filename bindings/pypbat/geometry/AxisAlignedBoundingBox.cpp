@@ -38,7 +38,7 @@ void BindAxisAlignedBoundingBox(nanobind::module_& m)
                 "max",
                 [](AabbType const& self) { return self.max(); },
                 [](AabbType& self, Eigen::Ref<Vector<Dims> const> const& max) { self.max() = max; })
-            .def_prop_ro_static("center", [](AabbType const& self) { return self.center(); })
+            .def_prop_ro("center", [](AabbType const& self) { return self.center(); })
             .def(
                 "contains",
                 [](AabbType const& self, AabbType const& other) -> bool {
@@ -86,7 +86,7 @@ void BindAxisAlignedBoundingBox(nanobind::module_& m)
                     return self.translated(t);
                 },
                 nb::arg("t"))
-            .def_prop_ro_static("volume", &AabbType::volume);
+            .def_prop_ro("volume", &AabbType::volume);
     });
     m.def(
         "mesh_to_aabbs",

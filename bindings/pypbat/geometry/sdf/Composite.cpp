@@ -2,9 +2,6 @@
 
 namespace pbat::py::geometry::sdf {
 
-void BindComposite(nanobind::module_& m)
-{
-
-}
+void BindComposite([[maybe_unused]] nanobind::module_& m) {}
 
 } // namespace pbat::py::geometry::sdf

@@ -28,8 +28,13 @@ void pbat::py::io::BindArchive(nanobind::module_& m)
             nb::init<std::filesystem::path, HighFive::File::AccessMode>(),
             nb::arg("filepath"),
             nb::arg("flags") = HighFive::File::OpenOrCreate)
-        .def_prop_ro_static("usable", &pbat::io::Archive::IsUsable, "Whether the archive is usable")
-        .def_prop_ro_static("path", &pbat::io::Archive::GetPath, "Path of the current HDF5 object")
+        .def_prop_ro("usable", &pbat::io::Archive::IsUsable, "Whether the archive is usable")
+        .def_prop_ro("path", &pbat::io::Archive::GetPath, "Path of the current HDF5 object")
+        .def(
+            "unlink",
+            &pbat::io::Archive::Unlink,
+            nb::arg("path"),
+            "Unlink a dataset or group from the archive")
         .def(
             "__getitem__",
             [](pbat::io::Archive& archive, const std::string& path) { return archive[path]; },

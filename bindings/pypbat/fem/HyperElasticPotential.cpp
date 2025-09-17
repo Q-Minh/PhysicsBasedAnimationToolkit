@@ -6,11 +6,45 @@
 #include <nanobind/stl/variant.h>
 #include <optional>
 #include <pbat/fem/Hexahedron.h>
+#include <pbat/fem/HyperElasticPotential.h>
+#include <pbat/physics/SaintVenantKirchhoffEnergy.h>
+#include <pbat/physics/StableNeoHookeanEnergy.h>
+#include <tuple>
 #include <variant>
 
 namespace pbat {
 namespace py {
 namespace fem {
+
+template <class Func>
+inline void ApplyToElementInDimsWithHyperElasticEnergy(
+    EElement eElement,
+    int order,
+    int dims,
+    EHyperElasticEnergy eEnergy,
+    Func f)
+{
+    ApplyToElementInDims(eElement, order, dims, [&]<pbat::fem::CElement ElementType, int Dims>() {
+        switch (eEnergy)
+        {
+            case EHyperElasticEnergy::SaintVenantKirchhoff: {
+                using EnergyType = pbat::physics::SaintVenantKirchhoffEnergy<Dims>;
+                // clang-format off
+                f.template operator()<ElementType, Dims, EnergyType>();
+                // clang-format on
+                break;
+            }
+            case EHyperElasticEnergy::StableNeoHookean: {
+                using EnergyType = pbat::physics::StableNeoHookeanEnergy<Dims>;
+                // clang-format off
+                f.template operator()<ElementType, Dims, EnergyType>();
+                // clang-format on
+                break;
+            }
+            default: break;
+        }
+    });
+}
 
 void BindHyperElasticPotential(nanobind::module_& m)
 {

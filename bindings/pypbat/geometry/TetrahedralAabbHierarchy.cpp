@@ -2,7 +2,6 @@
 
 #include <nanobind/eigen/dense.h>
 #include <nanobind/stl/pair.h>
-#include <nanobind/stl/vector.h>
 #include <pbat/geometry/TetrahedralAabbHierarchy.h>
 
 namespace pbat {
@@ -49,13 +48,11 @@ void BindTetrahedralAabbHierarchy(nanobind::module_& m)
             nb::arg("P"),
             nb::arg("parallelize") = true)
         .def("update", &TetrahedralAabbHierarchy::Update)
-        .def_prop_ro_static(
+        .def_prop_ro(
             "bounding_volumes",
             [](TetrahedralAabbHierarchy const& self) { return self.GetBoundingVolumes(); })
-        .def_prop_ro_static(
-            "points",
-            [](TetrahedralAabbHierarchy const& self) { return self.GetV(); })
-        .def_prop_ro_static("primitives", [](TetrahedralAabbHierarchy const& self) {
+        .def_prop_ro("points", [](TetrahedralAabbHierarchy const& self) { return self.GetV(); })
+        .def_prop_ro("primitives", [](TetrahedralAabbHierarchy const& self) {
             return self.GetC();
         });
 }

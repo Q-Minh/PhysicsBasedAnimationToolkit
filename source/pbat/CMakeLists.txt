@@ -40,3 +40,14 @@ add_subdirectory(physics)
 add_subdirectory(profiling)
 add_subdirectory(sim)
 add_subdirectory(warning)
+
+get_target_property(
+    _link_libraries 
+    PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
+    LINK_LIBRARIES
+)
+foreach(_link_library ${_link_libraries})
+    if(TARGET ${_link_library})
+        set_target_properties(${_link_library} PROPERTIES SYSTEM ON)
+    endif()
+endforeach()

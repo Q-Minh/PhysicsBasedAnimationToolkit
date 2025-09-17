@@ -2,10 +2,11 @@
 
 #include "Mesh.h"
 
+#include <nanobind/eigen/dense.h>
+#include <nanobind/eigen/sparse.h>
 #include <pbat/fem/Laplacian.h>
 #include <pbat/fem/MeshQuadrature.h>
 #include <pbat/fem/ShapeFunctions.h>
-#include <nanobind/eigen/dense.h>
 
 namespace pbat {
 namespace py {
@@ -17,7 +18,7 @@ void BindLaplacian([[maybe_unused]] nanobind::module_& m)
 
     using TScalar = pbat::Scalar;
     using TIndex  = pbat::Index;
-    
+
     m.def(
         "laplacian_matrix",
         [](nb::DRef<Eigen::Matrix<TIndex, Eigen::Dynamic, Eigen::Dynamic> const> E,

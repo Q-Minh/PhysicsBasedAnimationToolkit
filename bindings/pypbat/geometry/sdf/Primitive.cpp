@@ -2,7 +2,7 @@
 
 namespace pbat::py::geometry::sdf {
 
-void BindPrimitive(nanobind::module_& m)
+void BindPrimitive([[maybe_unused]] nanobind::module_& m)
 {
 
 }

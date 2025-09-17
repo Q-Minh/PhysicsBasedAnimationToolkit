@@ -3,6 +3,7 @@
 #include "Mesh.h"
 
 #include <nanobind/eigen/dense.h>
+#include <nanobind/eigen/sparse.h>
 #include <nanobind/stl/variant.h>
 #include <pbat/common/ConstexprFor.h>
 #include <pbat/fem/ShapeFunctions.h>
@@ -26,9 +27,11 @@ void BindShapeFunctions(nanobind::module_& m)
             using DoubleMatrixType = Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic>;
             using ReturnType       = std::variant<FloatMatrixType, DoubleMatrixType>;
             ReturnType N;
+            auto constexpr kMaxQuadratureOrder =
+                4; // For now, only support up to 4th order quadrature rules
             if (dtype == nb::dtype<float>())
             {
-                ApplyToElementWithQuadrature<6>(
+                ApplyToElementWithQuadrature<kMaxQuadratureOrder>(
                     eElement,
                     order,
                     quadratureOrder,
@@ -40,7 +43,7 @@ void BindShapeFunctions(nanobind::module_& m)
             }
             else if (dtype == nb::dtype<double>())
             {
-                ApplyToElementWithQuadrature<6>(
+                ApplyToElementWithQuadrature<kMaxQuadratureOrder>(
                     eElement,
                     order,
                     quadratureOrder,
@@ -82,9 +85,11 @@ void BindShapeFunctions(nanobind::module_& m)
             using DoubleMatrixType = Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic>;
             using ReturnType       = std::variant<FloatMatrixType, DoubleMatrixType>;
             ReturnType N;
+            auto constexpr kMaxQuadratureOrder =
+                4; // For now, only support up to 4th order quadrature rules
             if (dtype == nb::dtype<float>())
             {
-                ApplyToElementWithQuadrature<6>(
+                ApplyToElementWithQuadrature<kMaxQuadratureOrder>(
                     eElement,
                     order,
                     quadratureOrder,
@@ -96,7 +101,7 @@ void BindShapeFunctions(nanobind::module_& m)
             }
             else if (dtype == nb::dtype<double>())
             {
-                ApplyToElementWithQuadrature<6>(
+                ApplyToElementWithQuadrature<kMaxQuadratureOrder>(
                     eElement,
                     order,
                     quadratureOrder,
@@ -137,8 +142,10 @@ void BindShapeFunctions(nanobind::module_& m)
            EElement eElement,
            int order,
            int qOrder) {
+            auto constexpr kMaxQuadratureOrder =
+                4; // For now, only support up to 4th order quadrature rules
             Eigen::SparseMatrix<TScalar, Eigen::RowMajor, TIndex> N;
-            ApplyToElementWithQuadrature<6>(
+            ApplyToElementWithQuadrature<kMaxQuadratureOrder>(
                 eElement,
                 order,
                 qOrder,
@@ -266,8 +273,10 @@ void BindShapeFunctions(nanobind::module_& m)
            int order,
            int dims,
            int qOrder) {
+            auto constexpr kMaxQuadratureOrder =
+                4; // For now, only support up to 4th order quadrature rules
             Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic> GNeg;
-            ApplyToElementInDimsWithQuadrature<6>(
+            ApplyToElementInDimsWithQuadrature<kMaxQuadratureOrder>(
                 eElement,
                 order,
                 dims,

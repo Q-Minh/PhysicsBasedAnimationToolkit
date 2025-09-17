@@ -36,7 +36,7 @@ if(NOT TARGET HighFive::HighFive)
     FetchContent_Declare(
         HighFive
         GIT_REPOSITORY https://github.com/highfive-devs/highfive.git
-        GIT_TAG a92b0f87ff518425c0c424079a0e33fb3e61f755
+        GIT_TAG e950d07369344a5821b8a63697de3bd84664186e
         GIT_PROGRESS TRUE
         SYSTEM
     )
