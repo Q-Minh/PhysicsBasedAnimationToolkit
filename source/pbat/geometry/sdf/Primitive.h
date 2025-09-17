@@ -577,7 +577,7 @@ struct Octahedron : public Primitive
             return m * ScalarType(0.57735027);
         ScalarType constexpr zero{0};
         ScalarType k = clamp(ScalarType(0.5) * (q(2) - q(1) + s), zero, s);
-        return Norm(Vec3<ScalarType>(q(0), q(1) - s + k, q(2) - k));
+        return Norm(Vec3<ScalarType>{q(0), q(1) - s + k, q(2) - k});
     }
 };
 
