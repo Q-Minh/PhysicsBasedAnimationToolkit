@@ -13,6 +13,7 @@
 #include <highfive/H5File.hpp>
 #include <highfive/H5Group.hpp>
 #include <highfive/eigen.hpp>
+#include <optional>
 #include <string>
 #include <type_traits>
 #include <variant>
@@ -96,6 +97,11 @@ class Archive
      * @throw HighFive::GroupException if the dataset or group cannot be unlinked.
      */
     void Unlink(std::string const& path);
+    /**
+     * @brief Get the path of the current HDF5 object.
+     * @return Path of the current HDF5 object.
+     */
+    std::optional<std::string> GetPath() const;
 
   protected:
     using Object =

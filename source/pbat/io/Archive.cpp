@@ -94,6 +94,21 @@ void Archive::Unlink(std::string const& path)
         mHdf5Object);
 }
 
+std::optional<std::string> Archive::GetPath() const
+{
+    std::optional<std::string> path;
+    std::visit(
+        [&](auto&& arg) {
+            using T = std::decay_t<decltype(arg)>;
+            if constexpr (not std::is_same_v<T, std::monostate>)
+            {
+                path = arg.getPath();
+            }
+        },
+        mHdf5Object);
+    return path;
+}
+
 Archive::Archive(Object obj) : mHdf5Object(std::move(obj)) {}
 
 } // namespace pbat::io

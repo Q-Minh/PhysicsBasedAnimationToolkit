@@ -32,6 +32,10 @@ void pbat::py::io::BindArchive(pybind11::module& m)
             "usable",
             &pbat::io::Archive::IsUsable,
             "Whether the archive is usable")
+        .def_property_readonly(
+            "path",
+            &pbat::io::Archive::GetPath,
+            "Path of the current HDF5 object")
         .def(
             "__getitem__",
             [](pbat::io::Archive& archive, const std::string& path) { return archive[path]; },
