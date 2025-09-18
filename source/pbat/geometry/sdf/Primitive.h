@@ -71,7 +71,8 @@ struct Box : public Primitive
     {
         Vec3<ScalarType> q = Abs(p) - he;
         Zero3<ScalarType> constexpr zero3{};
-        return Norm(Max(q, zero3)) + Min(Max(q(0), Max(q(1), q(2))), ScalarType(0));
+        using namespace std;
+        return Norm(Max(q, zero3)) + min(max(q(0), max(q(1), q(2))), ScalarType(0));
     }
 };
 
@@ -92,17 +93,18 @@ struct BoxFrame : public Primitive
      */
     PBAT_HOST_DEVICE ScalarType Eval(Vec3<ScalarType> p) const
     {
-        Vec3<ScalarType> p = Abs(p) - he;
+        p                  = Abs(p) - he;
         Vec3<ScalarType> q = Abs(p + t) - t;
         Zero3<ScalarType> constexpr zero3{};
         ScalarType constexpr zero{0};
+        using namespace std;
         // clang-format off
-        return Min(
-            Min(
-                Norm(Max(Vec3<ScalarType>{p(0),q(1),q(2)},zero3)) + Min(Max(p(0),Max(q(1),q(2))), zero),
-                Norm(Max(Vec3<ScalarType>{q(0),p(1),q(2)},zero3)) + Min(Max(q(0),Max(p(1),q(2))), zero)
+        return min(
+            min(
+                Norm(Max(Vec3<ScalarType>{p(0),q(1),q(2)},zero3)) + min(max(p(0),max(q(1),q(2))), zero),
+                Norm(Max(Vec3<ScalarType>{q(0),p(1),q(2)},zero3)) + min(max(q(0),max(p(1),q(2))), zero)
             ),
-            Norm(Max(Vec3<ScalarType>{q(0),q(1),p(2)},zero3)) + Min(Max(q(0),Max(q(1),p(2))), zero)
+            Norm(Max(Vec3<ScalarType>{q(0),q(1),p(2)},zero3)) + min(max(q(0),max(q(1),p(2))), zero)
         );
         // clang-format on
     }
@@ -155,7 +157,7 @@ struct CappedTorus : public Primitive
         // NOTE: Not sure if better to do branchless but compute a norm (i.e. expensive sqrt), or
         // use ternary operator and add divergent branching, but save the sqrt when possible.
         ScalarType k = bk * (Dot(pxy, sc)) + (not bk) * Norm(pxy);
-        return sqrt(SquaredNorm(p, p) + ra * ra - ScalarType(2) * ra * k) - rb;
+        return sqrt(SquaredNorm(p) + ra * ra - ScalarType(2) * ra * k) - rb;
     }
 };
 
@@ -179,7 +181,7 @@ struct Link : public Primitive
     {
         using namespace std;
         ScalarType constexpr zero{0};
-        Vec3<ScalarType> q = Vec3<ScalarType>{p(0), Max(abs(p(1) - le, zero)), p(2)};
+        Vec3<ScalarType> q = Vec3<ScalarType>{p(0), max(abs(p(1)) - le, zero), p(2)};
         auto qxy           = q.Slice<2, 1>(0, 0);
         return Norm(Vec2<ScalarType>{Norm(qxy) - t(0), q(2)}) - t(1);
     }
@@ -226,10 +228,10 @@ struct Cone : public Primitive
         using namespace std;
         ScalarType constexpr zero{0};
         ScalarType constexpr one{1};
-        Vec2<ScalarType> q = h * Vec2(c(0) / c(1), ScalarType(-1));
-        Vec2<ScalarType> w = Vec2(Norm(Vec2<ScalarType>{p(0), p(2)}), p(1));
+        Vec2<ScalarType> q = h * Vec2<ScalarType>{c(0) / c(1), ScalarType(-1)};
+        Vec2<ScalarType> w{Norm(Vec2<ScalarType>{p(0), p(2)}), p(1)};
         Vec2<ScalarType> a = w - q * clamp(Dot(w, q) / Dot(q, q), zero, one);
-        Vec2<ScalarType> b = w - q * Vec2(clamp(w(0) / q(0), zero, one), one);
+        Vec2<ScalarType> b = w - q * Vec2<ScalarType>{clamp(w(0) / q(0), zero, one), one};
         ScalarType k       = sign(q(1));
         ScalarType d       = min(Dot(a, a), Dot(b, b));
         ScalarType s       = max(k * (w(0) * q(1) - w(1) * q(0)), k * (w(1) - q(1)));
@@ -300,16 +302,17 @@ struct HexagonalPrism : public Primitive
     PBAT_HOST_DEVICE ScalarType Eval(Vec3<ScalarType> p) const
     {
         using namespace std;
-        Vec3<ScalarType> constexpr k{ScalarType{-0.8660254}, ScalarType{0.5}, ScalarType{0.57735}};
+        Vec3<ScalarType> const k{ScalarType{-0.8660254}, ScalarType{0.5}, ScalarType{0.57735}};
         p        = Abs(p);
         auto pxy = p.Slice<2, 1>(0, 0);
         auto kxy = k.Slice<2, 1>(0, 0);
         ScalarType constexpr zero{0};
         pxy -= ScalarType(2) * min(Dot(kxy, pxy), zero) * kxy;
-        Vec2<ScalarType> d = Vec2(
-            Norm(pxy - Vec2(clamp(p(0), -k(2) * h(0), k(2) * h(0)), h(0))) * sign(p(1) - h(0)),
-            p(2) - h(1));
-        return min(max(d(0), d(1)), zero) + Norm(max(d, zero));
+        Vec2<ScalarType> d = Vec2<ScalarType>{
+            Norm(pxy - Vec2<ScalarType>{clamp(p(0), -k(2) * h(0), k(2) * h(0)), h(0)}) *
+                sign(p(1) - h(0)),
+            p(2) - h(1)};
+        return min(max(d(0), d(1)), zero) + Norm(Max(d, Zero2<ScalarType>{}));
     }
 };
 
@@ -417,7 +420,7 @@ struct VerticalCappedCylinder : public Primitive
         Vec2<ScalarType> pxz{p(0), p(2)};
         Vec2<ScalarType> d = Abs(Vec2<ScalarType>{Norm(pxz), p(1)}) - Vec2<ScalarType>{r, h};
         ScalarType constexpr zero{0};
-        return min(max(d(0), d(1)), zero) + Norm(Max(d, zero));
+        return min(max(d(0), d(1)), zero) + Norm(Max(d, Zero2<ScalarType>{}));
     }
 };
 
@@ -442,10 +445,10 @@ struct RoundedCylinder : public Primitive
     {
         using namespace std;
         Vec2<ScalarType> pxz{p(0), p(2)};
-        Vec2<ScalarType> d = Vec2(Norm(pxz) - ScalarType(2) * ra + rb, abs(p(1)) - h);
+        Vec2<ScalarType> d{Norm(pxz) - ScalarType(2) * ra + rb, abs(p(1)) - h};
         ScalarType constexpr zero{0};
         Zero2<ScalarType> constexpr zero2{};
-        return min(max(d.x, d.y), zero) + Norm(Max(d, zero2)) - rb;
+        return min(max(d(0), d(1)), zero) + Norm(Max(d, zero2)) - rb;
     }
 };
 
@@ -541,7 +544,7 @@ struct VerticalRoundCone : public Primitive
         if (k < zero)
             return Norm(q) - r1;
         if (k > a * h)
-            return Norm(q - Vec2(zero, h)) - r2;
+            return Norm(q - Vec2<ScalarType>{zero, h}) - r2;
         return Dot(q, Vec2<ScalarType>{a, b}) - r1;
     }
 };
@@ -564,14 +567,14 @@ struct Octahedron : public Primitive
     {
         using namespace std;
         p            = Abs(p);
-        ScalarType m = p.x + p.y + p.z - s;
+        ScalarType m = p(0) + p(1) + p(2) - s;
         ScalarType constexpr three{3};
         Vec3<ScalarType> q;
-        if (three * p.x < m)
+        if (three * p(0) < m)
             q = p;
-        else if (three * p.y < m)
+        else if (three * p(1) < m)
             q = Vec3<ScalarType>{p(1), p(2), p(0)};
-        else if (three * p.z < m)
+        else if (three * p(2) < m)
             q = Vec3<ScalarType>{p(2), p(0), p(1)};
         else
             return m * ScalarType(0.57735027);
@@ -656,15 +659,15 @@ struct Triangle : public Primitive
         ScalarType constexpr zero{0};
         ScalarType constexpr one{1};
         ScalarType constexpr two{2};
-        bool b =
+        bool bs =
             (sign(Dot(Cross(ba, nor), pa)) + sign(Dot(Cross(cb, nor), pb)) +
                  sign(Dot(Cross(ac, nor), pc)) <
              two);
         return sqrt(
-            b ? min(min(SquaredNorm(ba * clamp(Dot(ba, pa) / SquaredNorm(ba), zero, one) - pa),
-                        SquaredNorm(cb * clamp(Dot(cb, pb) / SquaredNorm(cb), zero, one) - pb)),
-                    SquaredNorm(ac * clamp(Dot(ac, pc) / SquaredNorm(ac), zero, one) - pc)) :
-                Dot(nor, pa) * Dot(nor, pa) / SquaredNorm(nor));
+            bs ? min(min(SquaredNorm(ba * clamp(Dot(ba, pa) / SquaredNorm(ba), zero, one) - pa),
+                         SquaredNorm(cb * clamp(Dot(cb, pb) / SquaredNorm(cb), zero, one) - pb)),
+                     SquaredNorm(ac * clamp(Dot(ac, pc) / SquaredNorm(ac), zero, one) - pc)) :
+                 Dot(nor, pa) * Dot(nor, pa) / SquaredNorm(nor));
     }
 };
 
@@ -700,12 +703,13 @@ struct Quadrilateral : public Primitive
         ScalarType constexpr zero{0};
         ScalarType constexpr one{1};
         ScalarType constexpr three{3};
-        bool b =
+        bool bs =
             (sign(Dot(Cross(ba, nor), pa)) + sign(Dot(Cross(cb, nor), pb)) +
                  sign(Dot(Cross(dc, nor), pc)) + sign(Dot(Cross(ad, nor), pd)) <
              three);
         return sqrt(
-            b ? min(min(min(SquaredNorm(ba * clamp(Dot(ba, pa) / SquaredNorm(ba), zero, one) - pa),
+            bs ?
+                min(min(min(SquaredNorm(ba * clamp(Dot(ba, pa) / SquaredNorm(ba), zero, one) - pa),
                             SquaredNorm(cb * clamp(Dot(cb, pb) / SquaredNorm(cb), zero, one) - pb)),
                         SquaredNorm(dc * clamp(Dot(dc, pc) / SquaredNorm(dc), zero, one) - pc)),
                     SquaredNorm(ad * clamp(Dot(ad, pd) / SquaredNorm(ad), zero, one) - pd)) :
