@@ -377,6 +377,8 @@ inline void FemElastoDynamics<TElement, Dims, THyperElasticEnergy, TScalar, TInd
     ScalarType constexpr dt{1e-2};
     int constexpr bdfstep = 1;
     SetTimeIntegrationScheme(dt, bdfstep);
+    // Unconstrained
+    Constrain(Eigen::Vector<bool, Eigen::Dynamic>::Constant(nNodes, false));
 }
 
 template <

@@ -1,5 +1,22 @@
 #include "HyperElasticPotential.h"
 
+namespace pbat::fem {
+
+math::linalg::EEigenvalueFilter ToEigenvalueFilter(EHyperElasticSpdCorrection mode)
+{
+    switch (mode)
+    {
+        case EHyperElasticSpdCorrection::None: return math::linalg::EEigenvalueFilter::None;
+        case EHyperElasticSpdCorrection::Projection:
+            return math::linalg::EEigenvalueFilter::SpdProjection;
+        case EHyperElasticSpdCorrection::Absolute:
+            return math::linalg::EEigenvalueFilter::FlipNegative;
+        default: return math::linalg::EEigenvalueFilter::None;
+    }
+}
+
+} // namespace pbat::fem
+
 #include "Mesh.h"
 #include "MeshQuadrature.h"
 #include "ShapeFunctions.h"

@@ -15,6 +15,7 @@
 #include "DeformationGradient.h"
 #include "pbat/Aliases.h"
 #include "pbat/common/Eigen.h"
+#include "pbat/math/linalg/FilterEigenvalues.h"
 #include "pbat/math/linalg/SparsityPattern.h"
 #include "pbat/math/linalg/mini/Eigen.h"
 #include "pbat/math/linalg/mini/Product.h"
@@ -38,6 +39,13 @@ enum class EHyperElasticSpdCorrection : std::uint32_t {
     Projection, // Project element hessian to nearest (in the 2-norm) SPD matrix
     Absolute,   // Flip negative eigenvalue signs
 };
+
+/**
+ * @brief Convert EHyperElasticSpdCorrection to EEigenvalueFilter
+ * @param mode SPD correction mode
+ * @return Corresponding eigenvalue filtering mode
+ */
+math::linalg::EEigenvalueFilter ToEigenvalueFilter(EHyperElasticSpdCorrection mode);
 
 /**
  * @brief Bit-flag enum for element elasticity computation flags
@@ -954,6 +962,28 @@ void ToElementElasticity(
             x.size());
         throw std::invalid_argument(what);
     }
+    if (GNeg.rows() != TElement::kNodes or GNeg.cols() != wg.size() * Dims)
+    {
+        std::string const what = fmt::format(
+            "Shape function gradient matrix must have dimensions |#nodes per element| x "
+            "|kDims*#quad pts|={}x{}, but got {}x{}",
+            TElement::kNodes,
+            wg.size() * Dims,
+            GNeg.rows(),
+            GNeg.cols());
+        throw std::invalid_argument(what);
+    }
+    if (eg.size() != wg.size() or mug.size() != wg.size() or lambdag.size() != wg.size())
+    {
+        std::string const what = fmt::format(
+            "Element index, quadrature weight, and Lame coefficient vectors must have the same "
+            "size of |#quad pts|={}, but got eg.size()={}, mug.size()={}, lambdag.size()={}",
+            wg.size(),
+            eg.size(),
+            mug.size(),
+            lambdag.size());
+        throw std::invalid_argument(what);
+    }
 
     auto const nQuadPts             = wg.size();
     using SizeType                  = std::remove_cvref_t<decltype(nQuadPts)>;
@@ -1025,8 +1055,13 @@ void ToElementElasticity(
             auto vecF                                     = FromEigen(F);
             auto psiF                                     = Psi.eval(vecF, mug(g), lambdag(g));
             auto const hessPsiF                           = Psi.hessian(vecF, mug(g), lambdag(g));
-            auto const GP                                 = FromEigen(gradPhi);
-            auto HPsix = HessianWrtDofs<TElement, Dims>(hessPsiF, GP);
+            Eigen::Matrix<ScalarType, Dims * Dims, Dims * Dims> hessPsiFCorrected;
+            math::linalg::FilterEigenvalues(
+                ToEigen(hessPsiF),
+                ToEigenvalueFilter(eSpdCorrection),
+                hessPsiFCorrected);
+            auto const GP = FromEigen(gradPhi);
+            auto HPsix    = HessianWrtDofs<TElement, Dims>(FromEigen(hessPsiFCorrected), GP);
             auto heg = Hg.template block<kDofsPerElement, kDofsPerElement>(0, g * kDofsPerElement);
             Ug(g) += wg(g) * psiF;
             heg += wg(g) * ToEigen(HPsix);
@@ -1040,16 +1075,22 @@ void ToElementElasticity(
         tbb::parallel_for(SizeType{0}, nQuadPts, [&](auto g) {
             auto const e     = eg(g);
             auto const nodes = E.col(e);
-            auto const xe    = x.reshaped(Dims, nNodes)(Eigen::placeholders::all, nodes);
-            auto const GPeg  = GNeg.template block<kNodesPerElement, Dims>(0, g * Dims);
+            Eigen::Matrix<ScalarType, Dims, kNodesPerElement> const xe =
+                x.reshaped(Dims, nNodes)(Eigen::placeholders::all, nodes);
+            auto const GPeg = GNeg.template block<kNodesPerElement, Dims>(0, g * Dims);
             Eigen::Matrix<ScalarType, Dims, Dims> const F = xe * GPeg;
             auto vecF                                     = FromEigen(F);
             mini::SVector<ScalarType, Dims * Dims> gradPsiF;
             mini::SMatrix<ScalarType, Dims * Dims, Dims * Dims> hessPsiF;
             auto psiF = Psi.evalWithGradAndHessian(vecF, mug(g), lambdag(g), gradPsiF, hessPsiF);
+            Eigen::Matrix<ScalarType, Dims * Dims, Dims * Dims> hessPsiFCorrected;
+            math::linalg::FilterEigenvalues(
+                ToEigen(hessPsiF),
+                ToEigenvalueFilter(eSpdCorrection),
+                hessPsiFCorrected);
             auto const GP = FromEigen(GPeg);
             auto GPsix    = GradientWrtDofs<TElement, Dims>(gradPsiF, GP);
-            auto HPsix    = HessianWrtDofs<TElement, Dims>(hessPsiF, GP);
+            auto HPsix    = HessianWrtDofs<TElement, Dims>(FromEigen(hessPsiFCorrected), GP);
             auto heg = Hg.template block<kDofsPerElement, kDofsPerElement>(0, g * kDofsPerElement);
             Ug(g) += wg(g) * psiF;
             Gg.col(g) += wg(g) * ToEigen(GPsix);
@@ -1085,9 +1126,14 @@ void ToElementElasticity(
             mini::SVector<ScalarType, Dims * Dims> gradPsiF;
             mini::SMatrix<ScalarType, Dims * Dims, Dims * Dims> hessPsiF;
             Psi.evalWithGradAndHessian(vecF, mug(g), lambdag(g), gradPsiF, hessPsiF);
+            Eigen::Matrix<ScalarType, Dims * Dims, Dims * Dims> hessPsiFCorrected;
+            math::linalg::FilterEigenvalues(
+                ToEigen(hessPsiF),
+                ToEigenvalueFilter(eSpdCorrection),
+                hessPsiFCorrected);
             auto const GP = FromEigen(GPeg);
             auto GPsix    = GradientWrtDofs<TElement, Dims>(gradPsiF, GP);
-            auto HPsix    = HessianWrtDofs<TElement, Dims>(hessPsiF, GP);
+            auto HPsix    = HessianWrtDofs<TElement, Dims>(FromEigen(hessPsiFCorrected), GP);
             auto heg = Hg.template block<kDofsPerElement, kDofsPerElement>(0, g * kDofsPerElement);
             Gg.col(g) += wg(g) * ToEigen(GPsix);
             heg += wg(g) * ToEigen(HPsix);
@@ -1098,67 +1144,24 @@ void ToElementElasticity(
         tbb::parallel_for(SizeType{0}, nQuadPts, [&](auto g) {
             auto const e     = eg(g);
             auto const nodes = E.col(e);
-            auto const xe    = x.reshaped(Dims, nNodes)(Eigen::placeholders::all, nodes);
-            auto const GPeg  = GNeg.template block<kNodesPerElement, Dims>(0, g * Dims);
+            Eigen::Matrix<ScalarType, Dims, kNodesPerElement> const xe =
+                x.reshaped(Dims, nNodes)(Eigen::placeholders::all, nodes);
+            Eigen::Matrix<ScalarType, kNodesPerElement, Dims> const GPeg =
+                GNeg.template block<kNodesPerElement, Dims>(0, g * Dims);
             Eigen::Matrix<ScalarType, Dims, Dims> const F = xe * GPeg;
             auto vecF                                     = FromEigen(F);
             auto hessPsiF                                 = Psi.hessian(vecF, mug(g), lambdag(g));
-            auto const GP                                 = FromEigen(GPeg);
-            auto HPsix = HessianWrtDofs<TElement, Dims>(hessPsiF, GP);
+            Eigen::Matrix<ScalarType, Dims * Dims, Dims * Dims> hessPsiFCorrected;
+            math::linalg::FilterEigenvalues(
+                ToEigen(hessPsiF),
+                ToEigenvalueFilter(eSpdCorrection),
+                hessPsiFCorrected);
+            auto const GP = FromEigen(GPeg);
+            mini::SMatrix<ScalarType, kDofsPerElement, kDofsPerElement> HPsix =
+                HessianWrtDofs<TElement, Dims>(FromEigen(hessPsiFCorrected), GP);
             auto heg = Hg.template block<kDofsPerElement, kDofsPerElement>(0, g * kDofsPerElement);
             heg += wg(g) * ToEigen(HPsix);
         });
-    }
-    // SPD correction
-    if (eFlags & EElementElasticityComputationFlags::Hessian)
-    {
-        using ElementHessianMatrixType =
-            Eigen::Matrix<ScalarType, kDofsPerElement, kDofsPerElement>;
-        switch (eSpdCorrection)
-        {
-            case EHyperElasticSpdCorrection::None: break;
-            case EHyperElasticSpdCorrection::Absolute: {
-                tbb::parallel_for(SizeType{0}, nQuadPts, [&](auto g) {
-                    auto heg =
-                        Hg.template block<kDofsPerElement, kDofsPerElement>(0, g * kDofsPerElement);
-                    Eigen::SelfAdjointEigenSolver<ElementHessianMatrixType> eig(
-                        heg,
-                        Eigen::ComputeEigenvectors);
-                    auto D = eig.eigenvalues();
-                    auto V = eig.eigenvectors();
-                    for (auto i = 0; i < D.size(); ++i)
-                    {
-                        if (D(i) >= 0)
-                            break;
-                        D(i) = -D(i);
-                    }
-                    heg = V * D.asDiagonal() * V.transpose();
-                });
-                break;
-            }
-            case EHyperElasticSpdCorrection::Projection: {
-                tbb::parallel_for(SizeType{0}, nQuadPts, [&](auto g) {
-                    auto heg =
-                        Hg.template block<kDofsPerElement, kDofsPerElement>(0, g * kDofsPerElement);
-                    Eigen::SelfAdjointEigenSolver<ElementHessianMatrixType> eig(
-                        heg,
-                        Eigen::ComputeEigenvectors);
-                    auto D = eig.eigenvalues();
-                    auto V = eig.eigenvectors();
-                    for (auto i = 0; i < D.size(); ++i)
-                    {
-                        if (D(i) >= 0)
-                            break;
-                        D(i) = 0;
-                    }
-                    heg = V * D.asDiagonal() * V.transpose();
-                });
-                break;
-            }
-            default:
-                throw std::invalid_argument(
-                    "Unknown SPD correction type for hyper elastic hessian");
-        }
     }
 }
 

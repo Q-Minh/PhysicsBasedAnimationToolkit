@@ -8,17 +8,18 @@
  *
  */
 
-#ifndef PBAT_FEM_SHAPE_FUNCTIONS_H
-#define PBAT_FEM_SHAPE_FUNCTIONS_H
+#ifndef PBAT_FEM_SHAPEFUNCTIONS_H
+#define PBAT_FEM_SHAPEFUNCTIONS_H
 
 #include "Concepts.h"
 #include "Jacobian.h"
 #include "pbat/Aliases.h"
 #include "pbat/common/Concepts.h"
+#include "pbat/common/Eigen.h"
 #include "pbat/profiling/Profiling.h"
 
-#include <Eigen/Cholesky>
 #include <Eigen/LU>
+#include <Eigen/SVD>
 #include <exception>
 #include <fmt/core.h>
 #include <string>
@@ -222,55 +223,38 @@ auto ShapeFunctionsAt(Eigen::DenseBase<TDerivedXi> const& Xi)
 }
 
 /**
- * @brief Computes gradients of FEM basis functions in reference element.
- *
- * Only works for linear maps, but we do not emit an error when `TElement::bHasConstantJacobian` is
- * `false`, since the element's function space might be non-linear, while its current configuration
- * induces a linear map. I.e., a \f$ k^\text{th} \f$ order element that is purely a rigid
- transformation on the
- * reference element still induces a linear map, even if the element's function space is \f$
- k^\text{th} \f$ order.
- * It is up to the user to give the right inputs, and we cannot/won't check those.
- *
- * @note
- * Since \f$ \phi(X) = N(\xi(X)) \f$, to be mathematically precise, what we should compute is:
- * \f{eqnarray*}{
- * \nabla \phi(X) &= \nabla \xi N(\xi(X)) J_X \xi(X) \\
- *                &= \nabla N * J_X \xi(X)
- * \f}
- * This requires the Jacobian of the inverse map taking domain element to reference element.
- * Because this map is potentially non-linear, we compute it via Gauss-Newton iterations in
- * Jacobian.h. Hence, to get the jacobian of that map, we also need to compute derivatives of
- * the Gauss-Newton iterations in Jacobian.h.
- * @note
- * However, we assume that domain elements are linear transformations of reference elements,
- * so that the inverse map is linear, i.e. the Jacobian is constant. Hence,
- * \f{eqnarray*}{
- * X(\xi) &= X * N(\xi) \\
- * J &= X * \nabla_\xi N \\
- * X(\xi) &= X_0 + J*\xi \\
- * J \xi &= X - X_0
- * \f}
- * @note
- * If J is square, then
- * \f{eqnarray*}{
- * \xi &= J^{-1} (X - X_0) \\
- * \nabla_X N(\xi(X)) &= \nabla_\xi N * J^{-1} \\
- * \nabla_X \phi^T  &= J^{-T} \left[ \nabla_\xi N \right]^T
- * \f}
- * @note
- * If J is rectangular, then
- * \f{eqnarray*}{
- * (J^T J) \xi      &= J^T (X - X_0) \\
- * \xi              &= (J^T J)^{-1} J^T (X - X_0) \\
- * \nabla_X N(\xi(X)) &= \nabla_\xi N * (J^T J)^{-1} J^T \\
- * \left[ \nabla_X \phi \right]^T  &= J (J^T J)^{-1} \left[ \nabla_\xi N \right]^T
- * \f}
- * @note
- * For non-linear elements, like hexahedra or quadrilaterals, the accuracy of the gradients
- * might be unacceptable, but will be exact, if domain hex or quad elements are linear
- * transformations on reference hex/quad elements. This is the case for axis-aligned elements,
- * for example, which would arise when constructing a mesh from an octree or quadtree.
+ * @brief Computes gradients \f$ \mathbf{G}(X) = \nabla_X \mathbf{N}_e(X) \f$ of FEM basis
+ * functions. Given some FEM function
+ * \f[
+ * \begin{align*}
+ * f(X) &=
+ * \begin{bmatrix} \dots & \mathbf{f}_i & \dots \end{bmatrix}
+ * \begin{bmatrix} \vdots \\ \phi_i(X) \\ \vdots \end{bmatrix} \\
+ * &= \mathbf{F}_e \mathbf{N}_e(X)
+ * \end{align*}
+ * \f]
+ * where \f$ \phi_i(X) = N_i(\xi(X)) \f$ are the nodal basis functions, we have that
+ * \f[
+ * \begin{align*}
+ * \nabla_X f(X) &= \mathbf{F}_e \nabla_X \mathbf{N}_e(X) \\
+ * &= \mathbf{F}_e \nabla_\xi \mathbf{N}_e(\xi(X)) \frac{\partial \xi}{\partial X}
+ * \end{align*}
+ * \f]
+ * Recall that
+ * \f[
+ * \begin{align*}
+ * \frac{\partial \xi}{\partial X} &= (\frac{\partial X}{\partial \xi})^{-1} \\
+ * &= \left( \mathbf{X}_e \nabla_\xi \mathbf{N}_e \right)^{-1}
+ * \end{align*}
+ * \f]
+ * where \f$ \mathbf{X}_e = \begin{bmatrix} \dots & \mathbf{X}_i & \dots \end{bmatrix} \f$ are the
+ * element nodal positions. We thus have that
+ * \f[
+ * \mathbf{G}(X)^T = \nabla_X \mathbf{N}_e(X)^T = ( \mathbf{X}_e \nabla_\xi \mathbf{N}_e )^{-T}
+ * \nabla_\xi \mathbf{N}_e^T
+ * \f]
+ * where the left-multiplication by \f$ ( \mathbf{X}_e \nabla_\xi \mathbf{N}_e )^{-T} \f$ is carried
+ * out via LU/SVD decomposition for a square/rectangular Jacobian.
  *
  * @tparam TDerivedXi Eigen dense expression type for reference position
  * @tparam TDerivedX Eigen dense expression type for element nodal positions
@@ -297,27 +281,18 @@ auto ElementShapeFunctionGradients(
     static_assert(kOutputDims != Eigen::Dynamic, "Rows of X must be fixed at compile time");
 
     Eigen::Matrix<ScalarType, kNodes, kInputDims> const GN = TElement::GradN(Xi);
-    Eigen::Matrix<ScalarType, kOutputDims, kInputDims> J;
     Eigen::Matrix<ScalarType, kNodes, kOutputDims> GP;
-
-    bool constexpr bIsElementLinear = std::is_same_v<TElement, AffineElementType>;
-    if constexpr (bIsElementLinear)
-    {
-        J = X * GN;
-    }
-    else
-    {
-        J = X * AffineElementType::GradN(Xi);
-    }
+    Eigen::Matrix<ScalarType, kOutputDims, kInputDims> J = X * GN;
+    // Compute \nabla_\xi N (X \nabla_\xi N)^{-1}
     bool constexpr bIsJacobianSquare = kInputDims == kOutputDims;
-    if (bIsJacobianSquare)
+    if constexpr (bIsJacobianSquare)
     {
         GP.transpose() = J.transpose().fullPivLu().solve(GN.transpose());
     }
     else
     {
-        Eigen::Matrix<ScalarType, kInputDims, kInputDims> const JTJ = J.transpose() * J;
-        GP.transpose() = J * JTJ.ldlt().solve(GN.transpose());
+        GP.transpose() = J.transpose().jacobiSvd<Eigen::ComputeThinU | Eigen::ComputeThinV>().solve(
+            GN.transpose());
     }
     return GP;
 }
@@ -363,14 +338,14 @@ auto ShapeFunctionGradients(
     auto constexpr kNodesPerElement = ElementType::kNodes;
     MatrixType GNe(kNodesPerElement, numberOfElements * Dims * QuadratureRuleType::kPoints);
     tbb::parallel_for(Index{0}, Index{numberOfElements}, [&](Index e) {
-        auto const nodes                                   = E.col(e);
-        auto const vertices                                = nodes(ElementType::Vertices);
-        auto constexpr kRowsJ                              = Dims;
-        auto constexpr kColsJ                              = AffineElementType::kNodes;
-        Eigen::Matrix<ScalarType, kRowsJ, kColsJ> const Ve = X(Eigen::placeholders::all, vertices);
+        auto const nodes    = E.col(e);
+        auto const vertices = nodes(ElementType::Vertices);
         for (auto g = 0; g < QuadratureRuleType::kPoints; ++g)
         {
-            auto const GP          = ElementShapeFunctionGradients<ElementType>(Xg.col(g), Ve);
+            auto const GP = ElementShapeFunctionGradients<ElementType>(
+                Xg.col(g),
+                X(Eigen::placeholders::all, nodes)
+                    .template topLeftCorner<Dims, kNodesPerElement>());
             auto constexpr kStride = Dims * QuadratureRuleType::kPoints;
             GNe.block<kNodesPerElement, Dims>(0, e * kStride + g * Dims) = GP;
         }
@@ -398,8 +373,8 @@ auto ShapeFunctionGradients(TMesh const& mesh)
 
 /**
  * @brief Computes nodal shape function gradients at evaluation points Xi.
- * @param TElement Element type
- * @param Dims Number of dimensions of the element
+ * @tparam TElement Element type
+ * @tparam Dims Number of dimensions of the element
  * @tparam TDerivedE Eigen dense expression type for element indices
  * @tparam TDerivedX Eigen dense expression type for element nodal positions
  * @tparam TDerivedXi Eigen dense expression type for evaluation points
@@ -416,10 +391,9 @@ auto ShapeFunctionGradientsAt(
     -> Eigen::Matrix<typename TDerivedXi::Scalar, TElement::kNodes, Eigen::Dynamic>
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.fem.ShapeFunctionGradientsAt");
-    using ElementType       = TElement;
-    using AffineElementType = typename ElementType::AffineBaseType;
-    using ScalarType        = typename TDerivedXi::Scalar;
-    using MatrixType        = Eigen::Matrix<ScalarType, ElementType::kNodes, Eigen::Dynamic>;
+    using ElementType = TElement;
+    using ScalarType  = typename TDerivedXi::Scalar;
+    using MatrixType  = Eigen::Matrix<ScalarType, ElementType::kNodes, Eigen::Dynamic>;
     if (Eg.cols() != Xi.cols())
     {
         std::string const what = fmt::format(
@@ -431,12 +405,11 @@ auto ShapeFunctionGradientsAt(
     auto const numberOfEvaluationPoints = Xi.cols();
     MatrixType GNe(ElementType::kNodes, numberOfEvaluationPoints * Dims);
     tbb::parallel_for(Index{0}, Index{numberOfEvaluationPoints}, [&](Index g) {
-        auto const nodes                                   = Eg.col(g);
-        auto const vertices                                = nodes(ElementType::Vertices);
-        auto constexpr kRowsJ                              = Dims;
-        auto constexpr kColsJ                              = AffineElementType::kNodes;
-        Eigen::Matrix<ScalarType, kRowsJ, kColsJ> const Ve = X(Eigen::placeholders::all, vertices);
-        auto GP = ElementShapeFunctionGradients<ElementType>(Xi.col(g), Ve);
+        auto const nodes    = Eg.col(g);
+        auto const vertices = nodes(ElementType::Vertices);
+        auto GP             = ElementShapeFunctionGradients<ElementType>(
+            Xi.col(g),
+            X(Eigen::placeholders::all, nodes).template topLeftCorner<Dims, ElementType::kNodes>());
         GNe.block<ElementType::kNodes, Dims>(0, g * Dims) = GP;
     });
     return GNe;
@@ -444,9 +417,9 @@ auto ShapeFunctionGradientsAt(
 
 /**
  * @brief Computes nodal shape function gradients at evaluation points Xg.
+ * @tparam TMesh Mesh type
  * @tparam TDerivedEg Eigen dense expression type for element indices
  * @tparam TDerivedXi Eigen dense expression type for evaluation points
- * @tparam TMesh Mesh type
  * @param mesh FEM mesh
  * @param E `|# eval.pts.|` array of elements associated with evaluation points
  * @param Xi `|# dims|x|# eval.pts.|` evaluation points
@@ -475,4 +448,4 @@ auto ShapeFunctionGradientsAt(
 
 } // namespace pbat::fem
 
-#endif // PBAT_FEM_SHAPE_FUNCTIONS_H
+#endif // PBAT_FEM_SHAPEFUNCTIONS_H

@@ -309,7 +309,7 @@ void BindShapeFunctions(nanobind::module_& m)
         "the vertices (not nodes) of the element.\n\n"
         "Args:\n"
         "    Xi (numpy.ndarray): `|# reference dims|` evaluation point in reference space.\n"
-        "    X (numpy.ndarray): `|# dims| x |# element vertices|` array of element vertices.\n"
+        "    X (numpy.ndarray): `|# dims| x |# element nodes|` array of element nodes.\n"
         "    element (EElement): The type of the element.\n"
         "    order (int): The polynomial order of the shape functions (default: 1)\n"
         "Returns:\n"

@@ -94,7 +94,7 @@ if __name__ == "__main__":
     mug = np.full(math.prod(wg.shape), mu, dtype=x.dtype)
     lambdag = np.full(math.prod(wg.shape), llambda, dtype=x.dtype)
     GNegU = pbat.fem.shape_function_gradients(
-        E, X, element=element, dims=dims, order=order
+        E, X, element=element, dims=dims, order=order, quadrature_order=order
     )
     ElasticityComputationFlags = pbat.fem.ElementElasticityComputationFlags
     spd_correction = pbat.fem.HyperElasticSpdCorrection.Absolute
@@ -116,24 +116,23 @@ if __name__ == "__main__":
     dofs = np.setdiff1d(list(range(n)), dbcs)
 
     # Setup linear solver
-    # ERROR: There is a bug with higher order hyper elastic potential,
-    # but will fix it later.
-    _, _, H = pbat.fem.hyper_elastic_potential(
+    U, _, H = pbat.fem.hyper_elastic_potential(
         E,
         X.shape[1],
-        eg=np.ravel(eg),
-        wg=np.ravel(wg),
+        eg=np.ravel(eg, order="F"),
+        wg=np.ravel(wg, order="F"),
         GNeg=GNegU,
         mug=mug,
         lambdag=lambdag,
         x=x,
         energy=energy,
-        flags=ElasticityComputationFlags.Hessian,
+        flags=ElasticityComputationFlags.Potential | ElasticityComputationFlags.Hessian,
         spd_correction=spd_correction,
         element=element,
         order=order,
         dims=dims,
     )
+    print("Rest energy U={}".format(U))
     Hdd = H.tocsc()[:, dofs].tocsr()[dofs, :]
     Hddinv = pbat.math.linalg.ldlt(Hdd)
     Hddinv.analyze(Hdd)
@@ -172,12 +171,12 @@ if __name__ == "__main__":
             _, gradU, HU = pbat.fem.hyper_elastic_potential(
                 E,
                 X.shape[1],
-                eg=np.ravel(eg),
-                wg=np.ravel(wg),
+                eg=np.ravel(eg, order="F"),
+                wg=np.ravel(wg, order="F"),
                 GNeg=GNegU,
-                mug=mug,
-                lambdag=lambdag,
-                x=x,
+                mug=np.ravel(mug, order="F"),
+                lambdag=np.ravel(lambdag, order="F"),
+                x=np.ravel(x, order="F"),
                 energy=energy,
                 flags=ElasticityComputationFlags.Gradient
                 | ElasticityComputationFlags.Hessian,
