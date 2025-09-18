@@ -1,6 +1,7 @@
 #include "Mesh.h"
 
 #include <nanobind/eigen/dense.h>
+#include <nanobind/stl/pair.h>
 #include <utility>
 
 namespace pbat {

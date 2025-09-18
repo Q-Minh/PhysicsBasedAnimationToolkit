@@ -291,7 +291,7 @@ if __name__ == "__main__":
         )
         Xmax[args.fixed_axis] += args.percent_fixed * extent[args.fixed_axis]
     aabb = pbat.geometry.aabb(np.vstack((Xmin, Xmax)).T)
-    vdbc = aabb.contained(X)
+    vdbc = np.array(aabb.contained(X))
 
     # Setup VBD
     data = (

@@ -81,7 +81,7 @@ def rest_pose_hyper_elastic_modes(
         U is a nx|#modes| array of displacement modes in columns.
     """
     # Compute elasticity at rest pose
-    x = X.reshape(math.prod(X.shape), order='f')
+    x = X
     # Compute the mass matrix
     qorderM = 2*order
     wgM = _fem.mesh_quadrature_weights(E, X, element, order=order, quadrature_order=qorderM)
@@ -108,8 +108,8 @@ def rest_pose_hyper_elastic_modes(
     mug = _per_element_vector_to_per_quad_pt_matrix(mu, egU, wgU.dtype)
     lambdag = _per_element_vector_to_per_quad_pt_matrix(llambda, egU, wgU.dtype)
     HU = _fem.hyper_elastic_potential(
-        E,
-        X.shape[1],
+        E=E,
+        n_nodes=X.shape[1],
         eg=np.ravel(egU),
         wg=np.ravel(wgU),
         GNeg=GNegU,
@@ -117,12 +117,12 @@ def rest_pose_hyper_elastic_modes(
         lambdag=np.ravel(lambdag),
         x=x,
         energy=energy,
-        flags = _fem.ElementElasticityComputationFlags.Hessian,
+        flags = int(_fem.ElementElasticityComputationFlags.Hessian),
         element=element,
         order=order,
         dims=X.shape[0]
     )
-    modes = min(modes, x.shape[0])
+    modes = min(modes, math.prod(x.shape))
     l, V = sp.sparse.linalg.eigsh(
         HU, k=modes, M=M, sigma=sigma, which='LM')
     V = V / sp.linalg.norm(V, axis=0, keepdims=True)

@@ -8,6 +8,7 @@
     #include <Eigen/PardisoSupport>
     #include <nanobind/eigen/dense.h>
     #include <nanobind/eigen/sparse.h>
+    #include <nanobind/eigen/tuple.h>
     #include <pbat/Aliases.h>
     #include <pbat/common/ConstexprFor.h>
     #include <pbat/profiling/Profiling.h>

@@ -21,7 +21,7 @@ void BindMeshQuadrature([[maybe_unused]] nanobind::module_& m)
            nb::DRef<Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic> const> X,
            EElement eElement,
            int order,
-           int qOrder) {
+           int qOrder) -> Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic> {
             auto constexpr kMaxQuadratureOrder =
                 4; // For now, only support up to 4th order quadrature rules
             Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic> wg;
@@ -53,7 +53,8 @@ void BindMeshQuadrature([[maybe_unused]] nanobind::module_& m)
 
     m.def(
         "mesh_quadrature_elements",
-        [](TIndex nElements, TIndex nQuadPtsPerElement) {
+        [](TIndex nElements,
+           TIndex nQuadPtsPerElement) -> Eigen::Matrix<TIndex, Eigen::Dynamic, Eigen::Dynamic> {
             return pbat::fem::MeshQuadratureElements<TIndex>(nElements, nQuadPtsPerElement).eval();
         },
         nb::arg("n_elements"),
@@ -68,7 +69,8 @@ void BindMeshQuadrature([[maybe_unused]] nanobind::module_& m)
     m.def(
         "mesh_quadrature_elements",
         [](nb::DRef<Eigen::Matrix<TIndex, Eigen::Dynamic, Eigen::Dynamic> const> E,
-           nb::DRef<Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic> const> wg) {
+           nb::DRef<Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic> const> wg)
+            -> Eigen::Matrix<TIndex, Eigen::Dynamic, Eigen::Dynamic> {
             return pbat::fem::MeshQuadratureElements(E, wg).eval();
         },
         nb::arg("E"),
@@ -85,7 +87,8 @@ void BindMeshQuadrature([[maybe_unused]] nanobind::module_& m)
 
     m.def(
         "mesh_reference_quadrature_points",
-        [](TIndex nElements, EElement eElement, int order, int qOrder) {
+        [](TIndex nElements, EElement eElement, int order, int qOrder)
+            -> Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic> {
             auto constexpr kMaxQuadratureOrder =
                 4; // For now, only support up to 4th order quadrature rules
             Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic> Xi;

@@ -172,7 +172,7 @@ if __name__ == "__main__":
         Xmin[args.fixed_axis] + args.percent_fixed * extent[args.fixed_axis]
     )
     aabb = pbat.geometry.aabb(np.vstack((Xmin, Xmax)).T)
-    vdbc = aabb.contained(X)
+    vdbc = np.array(aabb.contained(X))
     minv = 1 / m
 
     # Setup XPBD

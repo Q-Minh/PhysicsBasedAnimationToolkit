@@ -106,8 +106,8 @@ if __name__ == "__main__":
     Xmax[0] = Xmin[0] + 1e-4
     Xmin[0] = Xmin[0] - 1e-4
     aabb = pbat.geometry.aabb(np.vstack((Xmin, Xmax)).T)
-    vdbc = aabb.contained(X)
-    dbcs = np.array(vdbc)[:, np.newaxis]
+    vdbc = np.array(aabb.contained(X))
+    dbcs = vdbc[:, np.newaxis]
     dbcs = np.repeat(dbcs, dims, axis=1)
     for d in range(dims):
         dbcs[:, d] = dims * dbcs[:, d] + d

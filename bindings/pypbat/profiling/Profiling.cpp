@@ -4,6 +4,7 @@
 #include <nanobind/eigen/dense.h>
 #include <nanobind/stl/function.h>
 #include <nanobind/stl/string.h>
+#include <nanobind/stl/string_view.h>
 #include <pbat/Aliases.h>
 #include <pbat/profiling/Profiling.h>
 #include <string>

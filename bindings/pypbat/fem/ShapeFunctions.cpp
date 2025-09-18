@@ -4,9 +4,12 @@
 
 #include <nanobind/eigen/dense.h>
 #include <nanobind/eigen/sparse.h>
+#include <nanobind/ndarray.h>
+#include <nanobind/stl/string.h>
 #include <nanobind/stl/variant.h>
 #include <pbat/common/ConstexprFor.h>
 #include <pbat/fem/ShapeFunctions.h>
+#include <string>
 #include <variant>
 
 namespace pbat {
@@ -17,19 +20,65 @@ void BindShapeFunctions(nanobind::module_& m)
 {
     namespace nb = nanobind;
 
+    enum class EDType { float32, float64 };
+
+    auto const GetDTypeNameOrDefault = [](nanobind::object const& dtype,
+                                          EDType const defaultDType = EDType::float64) {
+        namespace nb            = nanobind;
+        bool const bDTypeIsNone = dtype.is_none();
+        if (not bDTypeIsNone)
+        {
+            bool const bCanQueryClassName = (nb::hasattr(dtype, "__class__")) and
+                                            (nb::hasattr(dtype.attr("__class__"), "__name__"));
+            if (not bCanQueryClassName)
+            {
+                throw std::runtime_error(
+                    "dtype must be a numpy dtype scalar or object, but could not query class "
+                    "name");
+            }
+        }
+        if (bDTypeIsNone)
+        {
+            return defaultDType;
+        }
+        else
+        {
+            std::string const dtypeName =
+                nb::cast<std::string>(dtype.attr("__class__").attr("__name__"));
+            if (dtypeName == "float32" or dtypeName == "Float32DType")
+            {
+                return EDType::float32;
+            }
+            else if (dtypeName == "float64" or dtypeName == "Float64DType")
+            {
+                return EDType::float64;
+            }
+            else
+            {
+                throw std::runtime_error(
+                    "dtype must be a numpy dtype scalar or object, but got " + dtypeName);
+            }
+        }
+    };
+
     using TScalar = pbat::Scalar;
     using TIndex  = pbat::Index;
 
     m.def(
         "element_shape_functions",
-        [](EElement eElement, int order, int quadratureOrder, nb::dlpack::dtype dtype) {
+        [GetDTypeNameOrDefault](
+            EElement eElement,
+            int order,
+            int quadratureOrder,
+            nb::object dtype) {
             using FloatMatrixType  = Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic>;
             using DoubleMatrixType = Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic>;
             using ReturnType       = std::variant<FloatMatrixType, DoubleMatrixType>;
             ReturnType N;
             auto constexpr kMaxQuadratureOrder =
                 4; // For now, only support up to 4th order quadrature rules
-            if (dtype == nb::dtype<float>())
+            EDType const eDType = GetDTypeNameOrDefault(dtype);
+            if (eDType == EDType::float32)
             {
                 ApplyToElementWithQuadrature<kMaxQuadratureOrder>(
                     eElement,
@@ -41,7 +90,7 @@ void BindShapeFunctions(nanobind::module_& m)
                                 ElementShapeFunctions<ElementType, QuadratureOrder, float>());
                     });
             }
-            else if (dtype == nb::dtype<double>())
+            else if (eDType == EDType::float64)
             {
                 ApplyToElementWithQuadrature<kMaxQuadratureOrder>(
                     eElement,
@@ -62,7 +111,7 @@ void BindShapeFunctions(nanobind::module_& m)
         nb::arg("element"),
         nb::arg("order")            = 1,
         nb::arg("quadrature_order") = 1,
-        nb::arg("dtype")            = nb::dtype<TScalar>(),
+        nb::arg("dtype")            = nb::none(),
         "Compute an element's shape functions at the quadrature points of the requested "
         "quadrature rule\n\n"
         "Args:\n"
@@ -76,18 +125,20 @@ void BindShapeFunctions(nanobind::module_& m)
 
     m.def(
         "shape_functions",
-        [](std::int64_t nElements,
-           EElement eElement,
-           int order,
-           int quadratureOrder,
-           nb::dlpack::dtype dtype) {
+        [GetDTypeNameOrDefault](
+            std::int64_t nElements,
+            EElement eElement,
+            int order,
+            int quadratureOrder,
+            nb::object dtype) {
             using FloatMatrixType  = Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic>;
             using DoubleMatrixType = Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic>;
             using ReturnType       = std::variant<FloatMatrixType, DoubleMatrixType>;
             ReturnType N;
             auto constexpr kMaxQuadratureOrder =
                 4; // For now, only support up to 4th order quadrature rules
-            if (dtype == nb::dtype<float>())
+            EDType const eDType = GetDTypeNameOrDefault(dtype);
+            if (eDType == EDType::float32)
             {
                 ApplyToElementWithQuadrature<kMaxQuadratureOrder>(
                     eElement,
@@ -99,7 +150,7 @@ void BindShapeFunctions(nanobind::module_& m)
                                 .replicate(1, nElements));
                     });
             }
-            else if (dtype == nb::dtype<double>())
+            else if (eDType == EDType::float64)
             {
                 ApplyToElementWithQuadrature<kMaxQuadratureOrder>(
                     eElement,
@@ -121,7 +172,7 @@ void BindShapeFunctions(nanobind::module_& m)
         nb::arg("element"),
         nb::arg("order")            = 1,
         nb::arg("quadrature_order") = 1,
-        nb::arg("dtype")            = nb::dtype<TScalar>(),
+        nb::arg("dtype")            = nb::none(),
         "Compute an element's shape functions at the quadrature points of the requested "
         "quadrature rule\n\n"
         "Args:\n"

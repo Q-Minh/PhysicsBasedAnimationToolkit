@@ -119,21 +119,44 @@ class HyperElasticPotential():
         )
     
     def grad(self, x: np.ndarray):
+        print(x.shape)
+        print("E: {}, {}, {}".format(self.E.shape, self.E.dtype, self.E.flags))
+        print("X: {}, {}, {}".format(self.X.shape, self.X.dtype, self.X.flags))
+        print("eg: {}, {}, {}".format(self.eg.shape, self.eg.dtype, self.eg.flags))
+        print("wg: {}, {}, {}".format(self.wg.shape, self.wg.dtype, self.wg.flags))
+        print("GNeg: {}, {}, {}".format(self.GNeg.shape, self.GNeg.dtype, self.GNeg.flags))
+        print("mug: {}, {}, {}".format(self.mug.shape, self.mug.dtype, self.mug.flags))
+        print("lambdag: {}, {}, {}".format(self.lambdag.shape, self.lambdag.dtype, self.lambdag.flags))
+        # _fem.hyper_elastic_potential(
+        #     E=E,
+        #     n_nodes=X.shape[1],
+        #     eg=np.ravel(egU),
+        #     wg=np.ravel(wgU),
+        #     GNeg=GNegU,
+        #     mug=np.ravel(mug),
+        #     lambdag=np.ravel(lambdag),
+        #     x=x,
+        #     energy=energy,
+        #     flags = int(_fem.ElementElasticityComputationFlags.Hessian),
+        #     element=element,
+        #     order=order,
+        #     dims=X.shape[0]
+        # )
         return pbat.fem.hyper_elastic_potential(
-            self.E,
-            self.X.shape[1],
-            eg=self.eg,
-            wg=self.wg,
+            E=self.E,
+            n_nodes=self.X.shape[1],
+            eg=np.ravel(self.eg),
+            wg=np.ravel(self.wg),
             GNeg=self.GNeg,
-            mug=self.mug,
-            lambdag=self.lambdag,
-            x=x,
-            energy=self.energy,
-            flags=pbat.fem.ElementElasticityComputationFlags.Gradient,
-            spd_correction=self.spd_correction,
+            mug=np.ravel(self.mug),
+            lambdag=np.ravel(self.lambdag),
+            x=np.ravel(x),
+            # energy=self.energy,
+            flags=int(pbat.fem.ElementElasticityComputationFlags.Gradient),
+            # spd_correction=self.spd_correction,
             element=self.element,
-            order=self.order,
-            dims=self.dims
+            # order=self.order,
+            # dims=self.dims
         )
     
     def hessian(self, x: np.ndarray):
@@ -468,7 +491,7 @@ if __name__ == "__main__":
     mu, llambda = pbat.fem.lame_coefficients(Y, nu)
     mug = np.full(E.shape[1], mu, dtype=x.dtype)
     lambdag = np.full(E.shape[1], llambda, dtype=x.dtype)
-    eg = np.arange(E.shape[1], dtype=np.int32)
+    eg = np.arange(E.shape[1], dtype=np.int64)
     GNegU = pbat.fem.shape_function_gradients(
         E, X, element=element, dims=dims, order=order
     )
@@ -503,8 +526,8 @@ if __name__ == "__main__":
             args.percent_fixed*extent[args.fixed_axis]
         Xmax[args.fixed_axis] += args.percent_fixed * extent[args.fixed_axis]
     aabb = pbat.geometry.aabb(np.vstack((Xmin, Xmax)).T)
-    vdbc = aabb.contained(X)
-    dbcs = np.array(vdbc)[:, np.newaxis]
+    vdbc = np.array(aabb.contained(X))
+    dbcs = vdbc[:, np.newaxis]
     dbcs = np.repeat(dbcs, dims, axis=1)
     for d in range(dims):
         dbcs[:, d] = dims*dbcs[:, d]+d

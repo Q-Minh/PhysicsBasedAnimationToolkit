@@ -1,7 +1,8 @@
 #include "Mesh.h"
 
-#include <pbat/graph/Mesh.h>
 #include <nanobind/eigen/dense.h>
+#include <nanobind/eigen/sparse.h>
+#include <pbat/graph/Mesh.h>
 
 namespace pbat {
 namespace py {

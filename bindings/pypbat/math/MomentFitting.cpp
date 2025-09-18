@@ -3,6 +3,8 @@
 #include <exception>
 #include <nanobind/eigen/dense.h>
 #include <nanobind/eigen/sparse.h>
+#include <nanobind/stl/pair.h>
+#include <nanobind/stl/tuple.h>
 #include <pbat/common/ConstexprFor.h>
 #include <pbat/math/MomentFitting.h>
 

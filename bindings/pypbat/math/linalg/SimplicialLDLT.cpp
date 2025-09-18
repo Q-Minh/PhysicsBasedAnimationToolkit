@@ -3,6 +3,7 @@
 #include <Eigen/SparseCholesky>
 #include <nanobind/eigen/dense.h>
 #include <nanobind/eigen/sparse.h>
+#include <nanobind/stl/tuple.h>
 #include <pbat/Aliases.h>
 #include <pbat/common/ConstexprFor.h>
 #include <pbat/profiling/Profiling.h>

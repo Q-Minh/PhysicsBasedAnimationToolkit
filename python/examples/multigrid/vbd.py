@@ -123,7 +123,7 @@ if __name__ == "__main__":
         )
         Xmax[args.fixed_axis] += args.percent_fixed * extent[args.fixed_axis]
     aabb = pbat.geometry.aabb(np.vstack((Xmin, Xmax)).T)
-    vdbc = aabb.contained(mesh.X)
+    vdbc = np.array(aabb.contained(mesh.X))
 
     # Setup VBD
     VF, FF = pbat.geometry.simplex_mesh_boundary(C.T, V.shape[0])
