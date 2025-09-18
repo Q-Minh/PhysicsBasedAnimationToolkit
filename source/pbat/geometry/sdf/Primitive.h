@@ -45,6 +45,15 @@ struct Sphere : public Primitive
     using ScalarType = TScalar; ///< Scalar type
     ScalarType R;               ///< Sphere radius
     /**
+     * @brief Default constructor
+     */
+    Sphere() = default;
+    /**
+     * @brief Construct a new Sphere object
+     * @param R_ Sphere radius
+     */
+    explicit Sphere(ScalarType R_) : R(R_) {}
+    /**
      * @brief Evaluate the signed distance function at a point
      * @param p Point in 3D space
      * @return Signed distance to the sphere (negative inside, positive outside)
@@ -62,6 +71,15 @@ struct Box : public Primitive
 {
     using ScalarType = TScalar; ///< Scalar type
     Vec3<ScalarType> he;        ///< Half extents of the box along each axis
+    /**
+     * @brief Default constructor
+     */
+    Box() = default;
+    /**
+     * @brief Construct a new Box object
+     * @param he_ Half extents of the box along each axis
+     */
+    explicit Box(Vec3<ScalarType> const& he_) : he(he_) {}
     /**
      * @brief Evaluate the signed distance function at a point
      * @param p Point in 3D space
@@ -86,6 +104,16 @@ struct BoxFrame : public Primitive
     using ScalarType = TScalar; ///< Scalar type
     Vec3<ScalarType> he;        ///< Half extents of the box frame along each axis
     ScalarType t;               ///< Thickness of the box frame
+    /**
+     * @brief Default constructor
+     */
+    BoxFrame() = default;
+    /**
+     * @brief Construct a new Box Frame object
+     * @param he_ Half extents of the box frame along each axis
+     * @param t_ Thickness of the box frame
+     */
+    explicit BoxFrame(Vec3<ScalarType> const& he_, ScalarType t_) : he(he_), t(t_) {}
     /**
      * @brief Evaluate the signed distance function at a point
      * @param p Point in 3D space
@@ -120,6 +148,15 @@ struct Torus : public Primitive
     using ScalarType = TScalar; ///< Scalar type
     Vec2<ScalarType> t;         ///< t[0]: minor radius, t[1]: major radius
     /**
+     * @brief Default constructor
+     */
+    Torus() = default;
+    /**
+     * @brief Construct a new Torus object
+     * @param t_ Minor and major radius of the torus
+     */
+    explicit Torus(Vec2<ScalarType> const& t_) : t(t_) {}
+    /**
      * @brief Evaluate the signed distance function at a point
      * @param p Point in 3D space
      * @return Signed distance to the torus (negative inside, positive outside)
@@ -143,6 +180,20 @@ struct CappedTorus : public Primitive
     Vec2<ScalarType> sc;        ///< Probably minor+major radius
     ScalarType ra;              ///< Unknown
     ScalarType rb;              ///< Unknown
+    /**
+     * @brief Default constructor
+     */
+    CappedTorus() = default;
+    /**
+     * @brief Construct a new Capped Torus object
+     * @param sc_ Probably minor+major radius
+     * @param ra_ Unknown
+     * @param rb_ Unknown
+     */
+    explicit CappedTorus(Vec2<ScalarType> const& sc_, ScalarType ra_, ScalarType rb_)
+        : sc(sc_), ra(ra_), rb(rb_)
+    {
+    }
     /**
      * @brief Evaluate the signed distance function at a point
      * @param p Point in 3D space
@@ -173,6 +224,16 @@ struct Link : public Primitive
     Vec2<ScalarType> t;         ///< t[0]: minor radius, t[1]: major radius
     ScalarType le;              ///< Elongation length
     /**
+     * @brief Default constructor
+     */
+    Link() = default;
+    /**
+     * @brief Construct a new Link object
+     * @param t_ Minor and major radius of the link
+     * @param le_ Elongation length of the link
+     */
+    explicit Link(Vec2<ScalarType> const& t_, ScalarType le_) : t(t_), le(le_) {}
+    /**
      * @brief Evaluate the signed distance function at a point
      * @param p Point in 3D space
      * @return Signed distance to the link shape (negative inside, positive outside)
@@ -197,6 +258,15 @@ struct InfiniteCylinder : public Primitive
     using ScalarType = TScalar; ///< Scalar type
     Vec3<ScalarType> c; ///< Center of the cylinder (on the axis) in c(0), c(1) and radius in c(2)
     /**
+     * @brief Default constructor
+     */
+    InfiniteCylinder() = default;
+    /**
+     * @brief Construct a new Infinite Cylinder object
+     * @param c_ Center of the cylinder (on the axis) in c(0), c(1) and radius in c(2)
+     */
+    explicit InfiniteCylinder(Vec3<ScalarType> const& c_) : c(c_) {}
+    /**
      * @brief Evaluate the signed distance function at a point
      * @param p Point in 3D space
      * @return Signed distance to the infinite cylinder (negative inside, positive outside)
@@ -218,6 +288,16 @@ struct Cone : public Primitive
     using ScalarType = TScalar; ///< Scalar type
     Vec2<ScalarType> c;         ///< sin/cos of the angle
     ScalarType h;               ///< Height of the cone
+    /**
+     * @brief Default constructor
+     */
+    Cone() = default;
+    /**
+     * @brief Construct a new Cone object
+     * @param c_ sin/cos of the angle
+     * @param h_ Height of the cone
+     */
+    explicit Cone(Vec2<ScalarType> const& c_, ScalarType h_) : c(c_), h(h_) {}
     /**
      * @brief Evaluate the signed distance function at a point
      * @param p Point in 3D space
@@ -248,6 +328,15 @@ struct InfiniteCone : public Primitive
 {
     using ScalarType = TScalar; ///< Scalar type
     Vec2<ScalarType> c;         ///< sin/cos of the angle
+    /**
+     * @brief Default constructor
+     */
+    InfiniteCone() = default;
+    /**
+     * @brief Construct a new Infinite Cone object
+     * @param c_ sin/cos of the angle
+     */
+    explicit InfiniteCone(Vec2<ScalarType> const& c_) : c(c_) {}
     /**
      * @brief Evaluate the signed distance function at a point
      * @param p Point in 3D space
@@ -295,6 +384,15 @@ struct HexagonalPrism : public Primitive
     using ScalarType = TScalar; ///< Scalar type
     Vec2<ScalarType> h;         ///< h[0]: radius of the hexagon, h[1]: half height of the prism
     /**
+     * @brief Default constructor
+     */
+    HexagonalPrism() = default;
+    /**
+     * @brief Construct a new Hexagonal Prism object
+     * @param h_ h[0]: radius of the hexagon, h[1]: half height of the prism
+     */
+    explicit HexagonalPrism(Vec2<ScalarType> const& h_) : h(h_) {}
+    /**
      * @brief Evaluate the signed distance function at a point
      * @param p Point in 3D space
      * @return Signed distance to the hexagonal prism (negative inside, positive outside)
@@ -328,6 +426,20 @@ struct Capsule : public Primitive
     Vec3<ScalarType> b;         ///< Endpoint b of the capsule
     ScalarType r;               ///< Radius of the capsule
     /**
+     * @brief Default constructor
+     */
+    Capsule() = default;
+    /**
+     * @brief Construct a new Capsule object
+     * @param a_ Endpoint a of the capsule
+     * @param b_ Endpoint b of the capsule
+     * @param r_ Radius of the capsule
+     */
+    explicit Capsule(Vec3<ScalarType> const& a_, Vec3<ScalarType> const& b_, ScalarType r_)
+        : a(a_), b(b_), r(r_)
+    {
+    }
+    /**
      * @brief Evaluate the signed distance function at a point
      * @param p Point in 3D space
      * @return Signed distance to the capsule (negative inside, positive outside)
@@ -353,6 +465,16 @@ struct VerticalCapsule : public Primitive
     ScalarType h;               ///< Height of the capsule
     ScalarType r;               ///< Radius of the capsule
     /**
+     * @brief Default constructor
+     */
+    VerticalCapsule() = default;
+    /**
+     * @brief Construct a new Vertical Capsule object
+     * @param h_ Height of the capsule
+     * @param r_ Radius of the capsule
+     */
+    explicit VerticalCapsule(ScalarType h_, ScalarType r_) : h(h_), r(r_) {}
+    /**
      * @brief Evaluate the signed distance function at a point
      * @param p Point in 3D space
      * @return Signed distance to the capsule (negative inside, positive outside)
@@ -376,6 +498,20 @@ struct CappedCylinder : public Primitive
     Vec3<ScalarType> a;         ///< Endpoint a of the capped cylinder
     Vec3<ScalarType> b;         ///< Endpoint b of the capped cylinder
     ScalarType r;               ///< Radius of the capped cylinder
+    /**
+     * @brief Default constructor
+     */
+    CappedCylinder() = default;
+    /**
+     * @brief Construct a new Capped Cylinder object
+     * @param a_ Endpoint a of the capped cylinder
+     * @param b_ Endpoint b of the capped cylinder
+     * @param r_ Radius of the capped cylinder
+     */
+    explicit CappedCylinder(Vec3<ScalarType> const& a_, Vec3<ScalarType> const& b_, ScalarType r_)
+        : a(a_), b(b_), r(r_)
+    {
+    }
     /**
      * @brief Evaluate the signed distance function at a point
      * @param p Point in 3D space
@@ -410,6 +546,16 @@ struct VerticalCappedCylinder : public Primitive
     ScalarType h;               ///< Height of the capped cylinder
     ScalarType r;               ///< Radius of the capped cylinder
     /**
+     * @brief Default constructor
+     */
+    VerticalCappedCylinder() = default;
+    /**
+     * @brief Construct a new Vertical Capped Cylinder object
+     * @param h_ Height of the capped cylinder
+     * @param r_ Radius of the capped cylinder
+     */
+    explicit VerticalCappedCylinder(ScalarType h_, ScalarType r_) : h(h_), r(r_) {}
+    /**
      * @brief Evaluate the signed distance function at a point
      * @param p Point in 3D space
      * @return Signed distance to the vertical capped cylinder (negative inside, positive outside)
@@ -437,6 +583,20 @@ struct RoundedCylinder : public Primitive
     ScalarType ra;              ///< Radius of the rounded cylinder
     ScalarType rb;              ///< Rounding radius at edges
     /**
+     * @brief Default constructor
+     */
+    RoundedCylinder() = default;
+    /**
+     * @brief Construct a new Rounded Cylinder object
+     * @param h_ Height of the rounded cylinder
+     * @param ra_ Radius of the rounded cylinder
+     * @param rb_ Rounding radius at edges
+     */
+    explicit RoundedCylinder(ScalarType h_, ScalarType ra_, ScalarType rb_)
+        : h(h_), ra(ra_), rb(rb_)
+    {
+    }
+    /**
      * @brief Evaluate the signed distance function at a point
      * @param p Point in 3D space
      * @return Signed distance to the rounded cylinder (negative inside, positive outside)
@@ -463,6 +623,20 @@ struct VerticalCappedCone : public Primitive
     ScalarType h;               ///< Height of the capped cone
     ScalarType r1;              ///< Minor radius of the capped cone
     ScalarType r2;              ///< Major radius of the capped cone
+    /**
+     * @brief Default constructor
+     */
+    VerticalCappedCone() = default;
+    /**
+     * @brief Construct a new Vertical Capped Cone object
+     * @param h_ Height of the capped cone
+     * @param r1_ Minor radius of the capped cone
+     * @param r2_ Major radius of the capped cone
+     */
+    explicit VerticalCappedCone(ScalarType h_, ScalarType r1_, ScalarType r2_)
+        : h(h_), r1(r1_), r2(r2_)
+    {
+    }
     /**
      * @brief Evaluate the signed distance function at a point
      * @param p Point in 3D space
@@ -500,6 +674,17 @@ struct CutHollowSphere : public Primitive
     ScalarType h;               ///< Cut height
     ScalarType t;               ///< Thickness of the hollow sphere
     /**
+     * @brief Default constructor
+     */
+    CutHollowSphere() = default;
+    /**
+     * @brief Construct a new Cut Hollow Sphere object
+     * @param r_ Radius of the hollow sphere
+     * @param h_ Cut height
+     * @param t_ Thickness of the hollow sphere
+     */
+    explicit CutHollowSphere(ScalarType r_, ScalarType h_, ScalarType t_) : r(r_), h(h_), t(t_) {}
+    /**
      * @brief Evaluate the signed distance function at a point
      * @param p Point in 3D space
      * @return Signed distance to the cut hollow sphere (negative inside, positive outside)
@@ -527,6 +712,20 @@ struct VerticalRoundCone : public Primitive
     ScalarType h;               ///< Height of the round cone
     ScalarType r1;              ///< Radius at the bottom of the round cone
     ScalarType r2;              ///< Radius at the top of the round cone
+    /**
+     * @brief Default constructor
+     */
+    VerticalRoundCone() = default;
+    /**
+     * @brief Construct a new Vertical Round Cone object
+     * @param h_ Height of the round cone
+     * @param r1_ Radius at the bottom of the round cone
+     * @param r2_ Radius at the top of the round cone
+     */
+    explicit VerticalRoundCone(ScalarType h_, ScalarType r1_, ScalarType r2_)
+        : h(h_), r1(r1_), r2(r2_)
+    {
+    }
     /**
      * @brief Evaluate the signed distance function at a point
      * @param p Point in 3D space
@@ -558,6 +757,15 @@ struct Octahedron : public Primitive
 {
     using ScalarType = TScalar; ///< Scalar type
     ScalarType s;               ///< Size of the octahedron
+    /**
+     * @brief Default constructor
+     */
+    Octahedron() = default;
+    /**
+     * @brief Construct a new Octahedron object
+     * @param s_ Size of the octahedron
+     */
+    explicit Octahedron(ScalarType s_) : s(s_) {}
     /**
      * @brief Evaluate the signed distance function at a point
      * @param p Point in 3D space
@@ -593,6 +801,15 @@ struct Pyramid : public Primitive
 {
     using ScalarType = TScalar; ///< Scalar type
     ScalarType h;               ///< Height of the pyramid
+    /**
+     * @brief Default constructor
+     */
+    Pyramid() = default;
+    /**
+     * @brief Construct a new Pyramid object
+     * @param h_ Height of the pyramid
+     */
+    explicit Pyramid(ScalarType h_) : h(h_) {}
     /**
      * @brief Evaluate the signed distance function at a point
      * @param p Point in 3D space
@@ -642,6 +859,23 @@ struct Triangle : public Primitive
     Vec3<ScalarType> b;         ///< Vertex b of the triangle
     Vec3<ScalarType> c;         ///< Vertex c of the triangle
     /**
+     * @brief Default constructor
+     */
+    Triangle() = default;
+    /**
+     * @brief Construct a new Triangle object
+     * @param a_ Vertex a of the triangle
+     * @param b_ Vertex b of the triangle
+     * @param c_ Vertex c of the triangle
+     */
+    explicit Triangle(
+        Vec3<ScalarType> const& a_,
+        Vec3<ScalarType> const& b_,
+        Vec3<ScalarType> const& c_)
+        : a(a_), b(b_), c(c_)
+    {
+    }
+    /**
      * @brief Evaluate the signed distance function at a point
      * @param p Point in 3D space
      * @return Signed distance to the triangle (negative inside, positive outside)
@@ -683,6 +917,25 @@ struct Quadrilateral : public Primitive
     Vec3<ScalarType> b;         ///< Vertex b of the quadrilateral
     Vec3<ScalarType> c;         ///< Vertex c of the quadrilateral
     Vec3<ScalarType> d;         ///< Vertex d of the quadrilateral
+    /**
+     * @brief Default constructor
+     */
+    Quadrilateral() = default;
+    /**
+     * @brief Construct a new Quadrilateral object
+     * @param a_ Vertex a of the quadrilateral
+     * @param b_ Vertex b of the quadrilateral
+     * @param c_ Vertex c of the quadrilateral
+     * @param d_ Vertex d of the quadrilateral
+     */
+    explicit Quadrilateral(
+        Vec3<ScalarType> const& a_,
+        Vec3<ScalarType> const& b_,
+        Vec3<ScalarType> const& c_,
+        Vec3<ScalarType> const& d_)
+        : a(a_), b(b_), c(c_), d(d_)
+    {
+    }
     /**
      * @brief Evaluate the signed distance function at a point
      * @param p Point in 3D space
