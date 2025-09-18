@@ -48,7 +48,7 @@ struct Scale : public UnaryNode
     template <class FSdf>
     PBAT_HOST_DEVICE ScalarType Eval(Vec3<ScalarType> const& p, FSdf&& sdf) const
     {
-        return s * sdf(p / s);
+        return s * sdf(Vec3<ScalarType>(p / s));
     }
 };
 
@@ -70,9 +70,10 @@ struct Elongate : public UnaryNode
     template <class FSdf>
     PBAT_HOST_DEVICE ScalarType Eval(Vec3<ScalarType> const& p, FSdf&& sdf) const
     {
-        Vec3<ScalarType> q = Abs(p) - h;
+        Vec3<ScalarType> q  = Abs(p) - h;
+        Vec3<ScalarType> pp = Max(q, Zero3<ScalarType>{});
         using namespace std;
-        return sdf(Max(q, Zero3<ScalarType>{})) + min(max(q(0), max(q(1), q(2))), ScalarType(0));
+        return sdf(pp) + min(max(q(0), max(q(1), q(2))), ScalarType(0));
     }
 };
 
@@ -249,8 +250,8 @@ struct Bend : public UnaryNode
     PBAT_HOST_DEVICE ScalarType Eval(Vec3<ScalarType> const& p, FSdf&& sdf) const
     {
         using namespace std;
-        ScalarType c = cos(k * p.x);
-        ScalarType s = sin(k * p.x);
+        ScalarType c = cos(k * p(0));
+        ScalarType s = sin(k * p(0));
         Vec3<ScalarType> q{c * p(0) - s * p(1), s * p(0) + c * p(1), p(2)};
         return sdf(q);
     }
