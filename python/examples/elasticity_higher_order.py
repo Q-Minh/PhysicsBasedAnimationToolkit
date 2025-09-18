@@ -118,7 +118,7 @@ if __name__ == "__main__":
     # Setup linear solver
     # ERROR: There is a bug with higher order hyper elastic potential,
     # but will fix it later.
-    H = pbat.fem.hyper_elastic_potential(
+    _, _, H = pbat.fem.hyper_elastic_potential(
         E,
         X.shape[1],
         eg=np.ravel(eg),
@@ -169,7 +169,7 @@ if __name__ == "__main__":
         if animate or step:
             profiler.begin_frame("Physics")
             # 1 Newton step
-            gradU, HU = pbat.fem.hyper_elastic_potential(
+            _, gradU, HU = pbat.fem.hyper_elastic_potential(
                 E,
                 X.shape[1],
                 eg=np.ravel(eg),

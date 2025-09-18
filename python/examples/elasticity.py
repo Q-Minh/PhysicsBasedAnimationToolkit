@@ -77,7 +77,7 @@ if __name__ == "__main__":
     dofs = np.setdiff1d(list(range(n)), dbcs)
 
     # Setup linear solver
-    H = pbat.fem.hyper_elastic_potential(
+    _, _, H = pbat.fem.hyper_elastic_potential(
         E,
         X.shape[1],
         eg=eg,
@@ -154,7 +154,7 @@ if __name__ == "__main__":
             xtilde = x + dt*v + dt2*a
             xk = x
             for k in range(newton_maxiter):
-                gradU, HU = pbat.fem.hyper_elastic_potential(
+                _, gradU, HU = pbat.fem.hyper_elastic_potential(
                     E,
                     X.shape[1],
                     eg=eg,

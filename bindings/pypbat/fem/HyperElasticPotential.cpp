@@ -2,15 +2,12 @@
 
 #include <nanobind/eigen/dense.h>
 #include <nanobind/eigen/sparse.h>
-#include <nanobind/stl/optional.h>
-#include <nanobind/stl/variant.h>
-#include <optional>
+#include <nanobind/stl/tuple.h>
 #include <pbat/fem/Hexahedron.h>
 #include <pbat/fem/HyperElasticPotential.h>
 #include <pbat/physics/SaintVenantKirchhoffEnergy.h>
 #include <pbat/physics/StableNeoHookeanEnergy.h>
 #include <tuple>
-#include <variant>
 
 namespace pbat {
 namespace py {
@@ -88,20 +85,19 @@ void BindHyperElasticPotential(nanobind::module_& m)
            EElement eElement,
            int order,
            int dims)
-            -> std::variant<
+            -> std::tuple<
                 TScalar,
                 Eigen::Vector<TScalar, Eigen::Dynamic>,
-                Eigen::SparseMatrix<TScalar, Eigen::RowMajor, TIndex>,
-                nb::tuple> {
+                Eigen::SparseMatrix<TScalar, Eigen::RowMajor, TIndex>> {
             if (eElement == EElement::Hexahedron and order > 2)
             {
                 throw std::invalid_argument(
                     "Hyperelastic energy for hexahedra is only supported for order 1 and "
                     "2.");
             }
-            std::optional<TScalar> potential;
-            std::optional<Eigen::Vector<TScalar, Eigen::Dynamic>> gradient;
-            std::optional<Eigen::SparseMatrix<TScalar, Eigen::RowMajor, TIndex>> hessian;
+            TScalar potential;
+            Eigen::Vector<TScalar, Eigen::Dynamic> gradient;
+            Eigen::SparseMatrix<TScalar, Eigen::RowMajor, TIndex> hessian;
             ApplyToElementInDimsWithHyperElasticEnergy(
                 eElement,
                 order,
@@ -150,65 +146,15 @@ void BindHyperElasticPotential(nanobind::module_& m)
                         }
                     }
                 });
-            // Return variable tuple based on computation request
-            if (potential)
-            {
-                if (gradient)
-                {
-                    if (hessian)
-                    {
-                        return nb::make_tuple(*potential, *gradient, *hessian);
-                    }
-                    else
-                    {
-                        return nb::make_tuple(*potential, *gradient);
-                    }
-                }
-                else
-                {
-                    if (hessian)
-                    {
-                        return nb::make_tuple(*potential, *hessian);
-                    }
-                    else
-                    {
-                        return *potential;
-                    }
-                }
-            }
-            else
-            {
-                if (gradient)
-                {
-                    if (hessian)
-                    {
-                        return nb::make_tuple(*gradient, *hessian);
-                    }
-                    else
-                    {
-                        return *gradient;
-                    }
-                }
-                else
-                {
-                    if (hessian)
-                    {
-                        return *hessian;
-                    }
-                    else
-                    {
-                        throw std::runtime_error("No potential, gradient or hessian requested.");
-                    }
-                }
-            }
+            return {potential, gradient, hessian};
         },
         nb::arg("E"),
         nb::arg("n_nodes"),
         nb::arg("eg"),
         nb::arg("wg"),
-        nb::arg("Gneg"),
-        nb::arg("mu"),
-        nb::arg("lambda"),
+        nb::arg("GNeg"),
+        nb::arg("mug"),
+        nb::arg("lambdag"),
         nb::arg("x"),
         nb::arg("energy")         = EHyperElasticEnergy::StableNeoHookean,
         nb::arg("flags")          = pbat::fem::EElementElasticityComputationFlags::Potential,
@@ -216,8 +162,7 @@ void BindHyperElasticPotential(nanobind::module_& m)
         nb::arg("element"),
         nb::arg("order") = 1,
         nb::arg("dims")  = 3,
-        "Compute hyperelastic potential, gradient and hessian for a given mesh. This "
-        "overload assumes linear elements and homogeneous material.\n\n"
+        "Compute hyperelastic potential, gradient and/or hessian for a given mesh.\n\n"
         "Args\n"
         "    E (numpy.ndarray): `|# nodes per element| x |# elements|` matrix of mesh "
         "elements.\n"
@@ -225,10 +170,10 @@ void BindHyperElasticPotential(nanobind::module_& m)
         "    eg (numpy.ndarray): `|# quad.pts.| x 1` vector of element indices associated with "
         "quadrature points.\n"
         "    wg (numpy.ndarray): `|# quad.pts.| x 1` vector of quadrature weights.\n"
-        "    Gneg (numpy.ndarray): `|# nodes per element| x |# dims * # quad.pts.|` shape "
+        "    GNeg (numpy.ndarray): `|# nodes per element| x |# dims * # quad.pts.|` shape "
         "function gradients.\n"
-        "    mu (float): First Lame coefficient.\n"
-        "    lambda (float): Second Lame coefficient.\n"
+        "    mug (numpy.ndarray): `|# quad.pts.| x 1` first Lame coefficient.\n"
+        "    lambdag (numpy.ndarray): `|# quad.pts.| x 1` second Lame coefficient.\n"
         "    x (numpy.ndarray): `|# dims * # nodes| x 1` deformed nodal positions.\n"
         "    energy (HyperElasticEnergy): Type of hyperelastic energy to compute.\n"
         "    flags (ElementElasticityComputationFlags): Flags for the computation.\n"
@@ -237,8 +182,8 @@ void BindHyperElasticPotential(nanobind::module_& m)
         "    order (int): Order of the element (default: 1).\n"
         "    dims (int): Number of spatial dimensions (default: 3).\n\n"
         "Returns\n"
-        "    Tuple[float, numpy.ndarray, scipy.sparse.csr_matrix]: Any tuple combination "
-        "of (U, gradU, hessU) based on requested flags.\n");
+        "    Tuple[float, numpy.ndarray, scipy.sparse.csr_matrix]: The tuple (U, gradU, hessU) "
+        "based on requested flags.\n");
 }
 
 } // namespace fem
