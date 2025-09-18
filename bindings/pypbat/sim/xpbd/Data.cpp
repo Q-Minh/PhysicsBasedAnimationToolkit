@@ -29,6 +29,7 @@ void BindData(nanobind::module_& m)
             &Data::WithVolumeMesh,
             nb::arg("X"),
             nb::arg("T"),
+            nb::rv_policy::reference_internal,
             "Sets the FEM simulation mesh as array of 3x|#nodes| positions X and 4x|#elements| "
             "tetrahedral elements T.")
         .def(
@@ -36,66 +37,78 @@ void BindData(nanobind::module_& m)
             &Data::WithSurfaceMesh,
             nb::arg("V"),
             nb::arg("F"),
+            nb::rv_policy::reference_internal,
             "Sets the collision mesh as array of |#collision particles| indices V into positions "
             "X and 3x|#collision triangles| indices into X.")
         .def(
             "with_bodies",
             &Data::WithBodies,
             nb::arg("BV"),
+            nb::rv_policy::reference_internal,
             "Sets |#particles| array of bodies associated with particle indices.")
         .def(
             "with_velocity",
             &Data::WithVelocity,
             nb::arg("v"),
+            nb::rv_policy::reference_internal,
             "Sets the 3x|#nodes| initial velocity field at FEM nodes.")
         .def(
             "with_acceleration",
             &Data::WithAcceleration,
             nb::arg("a"),
+            nb::rv_policy::reference_internal,
             "Sets the 3x|#nodes| external acceleration field at FEM nodes.")
         .def(
             "with_mass_inverse",
             &Data::WithMassInverse,
             nb::arg("minv"),
+            nb::rv_policy::reference_internal,
             "Sets the |#nodes| array of lumped nodal inverse masses.")
         .def(
             "with_elastic_material",
             &Data::WithElasticMaterial,
             nb::arg("lame"),
+            nb::rv_policy::reference_internal,
             "Sets the 2x|#tetrahedra| array of Lame coefficients.")
         .def(
             "with_friction_coefficients",
             &Data::WithFrictionCoefficients,
             nb::arg("muS"),
             nb::arg("muD"),
+            nb::rv_policy::reference_internal,
             "Sets the static and dynamic friction coefficients.")
         .def(
             "with_collision_penalties",
             &Data::WithCollisionPenalties,
             nb::arg("muV"),
+            nb::rv_policy::reference_internal,
             "Sets the |#collision vertices| array of collision penalty coefficients.")
         .def(
             "with_active_set_update_frequency",
             &Data::WithActiveSetUpdateFrequency,
             nb::arg("frequency"),
+            nb::rv_policy::reference_internal,
             "Sets the contact constraint active set update frequency.")
         .def(
             "with_compliance",
             &Data::WithCompliance,
             nb::arg("alpha"),
             nb::arg("constraint"),
+            nb::rv_policy::reference_internal,
             "Sets the constraint compliance for the given constraint type.")
         .def(
             "with_damping",
             &Data::WithDamping,
             nb::arg("beta"),
             nb::arg("constraint"),
+            nb::rv_policy::reference_internal,
             "Sets the constraint damping for the given constraint type.")
         .def(
             "with_partitions",
             &Data::WithPartitions,
             nb::arg("Pptr"),
             nb::arg("Padj"),
+            nb::rv_policy::reference_internal,
             "Sets the independent constraint partitions for solver parallelization.")
         .def(
             "with_cluster_partitions",
@@ -104,12 +117,14 @@ void BindData(nanobind::module_& m)
             nb::arg("SGadj"),
             nb::arg("Cptr"),
             nb::arg("Cadj"),
+            nb::rv_policy::reference_internal,
             "Sets the independent constraint cluster partitions for clustered solver "
             "parallelization.")
         .def(
             "with_dirichlet_vertices",
             &Data::WithDirichletConstrainedVertices,
             nb::arg("dbc"),
+            nb::rv_policy::reference_internal,
             "Sets Dirichlet constrained vertices.")
         .def("construct", &Data::Construct, nb::arg("validate") = true)
         .def_rw("V", &Data::V)

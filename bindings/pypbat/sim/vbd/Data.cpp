@@ -36,6 +36,7 @@ void BindData(nanobind::module_& m)
             &Data::WithVolumeMesh,
             nb::arg("X"),
             nb::arg("T"),
+            nb::rv_policy::reference_internal,
             "Sets the FEM simulation mesh as array of 3x|#nodes| positions X and 4x|#elements| "
             "tetrahedral elements T.\n\n"
             "Args:\n"
@@ -48,6 +49,7 @@ void BindData(nanobind::module_& m)
             &Data::WithSurfaceMesh,
             nb::arg("V"),
             nb::arg("F"),
+            nb::rv_policy::reference_internal,
             "Sets the collision mesh as array of 1x|#collision vertices| indices V into positions "
             "X and 3x|#collision triangles| indices into X.\n\n"
             "Args:\n"
@@ -59,6 +61,7 @@ void BindData(nanobind::module_& m)
             "with_bodies",
             &Data::WithBodies,
             nb::arg("B"),
+            nb::rv_policy::reference_internal,
             "Sets the body indices of each vertex.\n\n"
             "Args:\n"
             "    B (numpy.ndarray): 1x|#nodes| array of body indices.\n\n"
@@ -68,6 +71,7 @@ void BindData(nanobind::module_& m)
             "with_velocity",
             &Data::WithVelocity,
             nb::arg("v"),
+            nb::rv_policy::reference_internal,
             "Sets the 3x|#nodes| initial velocity field at FEM nodes.\n\n"
             "Args:\n"
             "    v (numpy.ndarray): 3x|#nodes| array of initial velocities.\n\n"
@@ -77,6 +81,7 @@ void BindData(nanobind::module_& m)
             "with_acceleration",
             &Data::WithAcceleration,
             nb::arg("a"),
+            nb::rv_policy::reference_internal,
             "Sets the 3x|#nodes| external acceleration field at FEM nodes.\n\n"
             "Args:\n"
             "    a (numpy.ndarray): 3x|#nodes| array of external accelerations.\n\n"
@@ -88,6 +93,7 @@ void BindData(nanobind::module_& m)
             nb::arg("rhoe"),
             nb::arg("mue"),
             nb::arg("lambdae"),
+            nb::rv_policy::reference_internal,
             "Sets the |#elements| array of mass densities, |#elements| array of 1st Lame "
             "coefficients and |#elements| array of 2nd Lame coefficients.\n\n"
             "Args:\n"
@@ -102,6 +108,7 @@ void BindData(nanobind::module_& m)
             nb::arg("dbc"),
             nb::arg("muD")          = Scalar(1),
             nb::arg("input_sorted") = true,
+            nb::rv_policy::reference_internal,
             "Sets Dirichlet constrained vertices.\n\n"
             "Args:\n"
             "    dbc (numpy.ndarray): Dirichlet constrained vertices\n"
@@ -114,6 +121,7 @@ void BindData(nanobind::module_& m)
             &Data::WithVertexColoringStrategy,
             nb::arg("ordering"),
             nb::arg("selection"),
+            nb::rv_policy::reference_internal,
             "Sets the vertex coloring strategy to use.\n\n"
             "Args:\n"
             "    ordering (int): Vertex visit order\n"
@@ -124,6 +132,7 @@ void BindData(nanobind::module_& m)
             "with_initialization_strategy",
             &Data::WithInitializationStrategy,
             nb::arg("strategy"),
+            nb::rv_policy::reference_internal,
             "Sets the non-linear optimization initialization strategy.\n\n"
             "Args:\n"
             "    strategy (int): Initialization strategy\n\n"
@@ -133,6 +142,7 @@ void BindData(nanobind::module_& m)
             "with_rayleigh_damping",
             &Data::WithRayleighDamping,
             nb::arg("kD"),
+            nb::rv_policy::reference_internal,
             "Sets the Rayleigh damping coefficient.\n\n"
             "Args:\n"
             "    kD (float): Damping coefficient\n\n"
@@ -144,6 +154,7 @@ void BindData(nanobind::module_& m)
             nb::arg("muC"),
             nb::arg("muF"),
             nb::arg("epsv"),
+            nb::rv_policy::reference_internal,
             "Sets the variational contact model's parameters.\n\n"
             "Args:\n"
             "    muC (float): Collision penalty\n"
@@ -156,6 +167,7 @@ void BindData(nanobind::module_& m)
             "with_active_set_update_frequency",
             &Data::WithActiveSetUpdateFrequency,
             nb::arg("frequency"),
+            nb::rv_policy::reference_internal,
             "Sets the contact constraint active set update frequency in a given time step (i.e. "
             "update vertex-triangle contact pairs every 'frequency' substeps).\n\n"
             "Args:\n"
@@ -166,6 +178,7 @@ void BindData(nanobind::module_& m)
             "with_hessian_determinant_zero",
             &Data::WithHessianDeterminantZeroUnder,
             nb::arg("zero"),
+            nb::rv_policy::reference_internal,
             "Sets the numerical zero used in 'singular' hessian determinant check.\n\n"
             "Args:\n"
             "    zero (float): Numerical zero\n\n"
@@ -175,6 +188,7 @@ void BindData(nanobind::module_& m)
             "with_chebyshev_acceleration",
             &Data::WithChebyshevAcceleration,
             nb::arg("rho"),
+            nb::rv_policy::reference_internal,
             "Use Chebyshev semi-iterative method's\n\n"
             "Args:\n"
             "    rho (float): Estimated spectral radius. rho must be in (0, 1).\n\n"
@@ -184,6 +198,7 @@ void BindData(nanobind::module_& m)
             "with_anderson_acceleration",
             &Data::WithAndersonAcceleration,
             nb::arg("window_size"),
+            nb::rv_policy::reference_internal,
             "Use Anderson acceleration\n\n"
             "Args:\n"
             "    window (int): Number of past iterates to use in Anderson acceleration.\n\n"
@@ -193,6 +208,7 @@ void BindData(nanobind::module_& m)
             "with_broyden_acceleration",
             &Data::WithBroydenMethod,
             nb::arg("window_size"),
+            nb::rv_policy::reference_internal,
             "Use Broyden acceleration\n\n"
             "Args:\n"
             "    window (int): Number of past iterates to use in Broyden acceleration.\n\n"
@@ -203,6 +219,7 @@ void BindData(nanobind::module_& m)
             &Data::WithNesterovAcceleration,
             nb::arg("L"),
             nb::arg("start"),
+            nb::rv_policy::reference_internal,
             "Use Nesterov acceleration\n\n"
             "Args:\n"
             "    L (float): Estimated gradient Lipschitz constant\n"
@@ -215,6 +232,7 @@ void BindData(nanobind::module_& m)
             nb::arg("eta"),
             nb::arg("tau"),
             nb::arg("curved"),
+            nb::rv_policy::reference_internal,
             "Use Trust Region acceleration\n\n"
             "Args:\n"
             "    eta (float): Energy reduction accuracy threshold\n"
@@ -226,6 +244,7 @@ void BindData(nanobind::module_& m)
             "construct",
             &Data::Construct,
             nb::arg("validate") = true,
+            nb::rv_policy::reference_internal,
             "Constructs the VBD data.\n\n"
             "Args:\n"
             "    validate (bool): True to validate the data\n\n"

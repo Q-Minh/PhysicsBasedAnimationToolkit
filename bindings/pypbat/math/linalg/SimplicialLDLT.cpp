@@ -68,12 +68,15 @@ void BindSimplicialLDLT(nanobind::module_& m)
                 .def(nb::init<>())
                 .def(
                     "analyze",
-                    [=](SimplicialLdltType& ldlt, SparseMatrixType const& A) {
+                    [=](SimplicialLdltType& ldlt,
+                        SparseMatrixType const& A) -> SimplicialLdltType& {
                         pbat::profiling::Profile(
                             "pbat.math.linalg." + className + ".analyze",
                             [&]() { ldlt.analyzePattern(A); });
+                        return ldlt;
                     },
-                    nb::arg("A"))
+                    nb::arg("A"),
+                    nb::rv_policy::reference_internal)
                 .def(
                     "compute",
                     [=](SimplicialLdltType& ldlt,
@@ -83,17 +86,21 @@ void BindSimplicialLDLT(nanobind::module_& m)
                             [&]() { ldlt.compute(A); });
                         return ldlt;
                     },
-                    nb::arg("A"))
+                    nb::arg("A"),
+                    nb::rv_policy::reference_internal)
                 .def_prop_ro("d", &SimplicialLdltType::vectorD)
                 .def_prop_ro("determinant", &SimplicialLdltType::determinant)
                 .def(
                     "factorize",
-                    [=](SimplicialLdltType& ldlt, SparseMatrixType const& A) {
+                    [=](SimplicialLdltType& ldlt,
+                        SparseMatrixType const& A) -> SimplicialLdltType& {
                         pbat::profiling::Profile(
                             "pbat.math.linalg." + className + ".factorize",
                             [&]() { ldlt.factorize(A); });
+                        return ldlt;
                     },
-                    nb::arg("A"))
+                    nb::arg("A"),
+                    nb::rv_policy::reference_internal)
                 .def_prop_ro(
                     "L",
                     [](SimplicialLdltType const& ldlt) -> SparseMatrixType {
@@ -126,6 +133,18 @@ void BindSimplicialLDLT(nanobind::module_& m)
                             "pbat.math.linalg." + className + ".solve",
                             [&]() {
                                 MatrixX X = ldlt.solve(B);
+                                return X;
+                            });
+                    },
+                    nb::arg("B"))
+                .def(
+                    "solve",
+                    [=](SimplicialLdltType const& ldlt,
+                        Eigen::Ref<VectorX const> const& B) -> VectorX {
+                        return pbat::profiling::Profile(
+                            "pbat.math.linalg." + className + ".solve",
+                            [&]() {
+                                VectorX X = ldlt.solve(B);
                                 return X;
                             });
                     },

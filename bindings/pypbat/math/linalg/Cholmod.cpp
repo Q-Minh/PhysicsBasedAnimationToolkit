@@ -40,6 +40,16 @@ void BindCholmod([[maybe_unused]] nanobind::module_& m)
         },
         nb::arg("B"));
 
+    chol.def(
+        "solve",
+        [](CholmodType& llt, Eigen::Ref<VectorX const> const& b) {
+            return pbat::profiling::Profile("pbat.math.linalg.Cholmod.Solve", [&]() {
+                VectorX X = llt.Solve(b);
+                return X;
+            });
+        },
+        nb::arg("b"));
+
     chol.doc() =
         "Cholmod Cholesky or Bunch-Kaufmann decompositions of matrix A, stored in compressed "
         "sparse column format. If A is stored in compressed row format, then its transpose is "

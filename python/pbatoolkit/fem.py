@@ -120,20 +120,39 @@ def rest_pose_hyper_elastic_modes(
     mu, llambda = lame_coefficients(Y, nu)
     mug = _per_element_vector_to_per_quad_pt_matrix(mu, egU, wgU.dtype)
     lambdag = _per_element_vector_to_per_quad_pt_matrix(llambda, egU, wgU.dtype)
+    # WARNING: For some reason, using keyword arguments yields (by nanobind) 
+    # "TypeError: hyper_elastic_potential(): incompatible function arguments."
+    # HU = _fem.hyper_elastic_potential(
+    #     E=E,
+    #     n_nodes=X.shape[1],
+    #     eg=np.ravel(egU),
+    #     wg=np.ravel(wgU),
+    #     GNeg=GNegU,
+    #     mug=np.ravel(mug),
+    #     lambdag=np.ravel(lambdag),
+    #     x=x,
+    #     energy=energy,
+    #     flags=int(_fem.ElementElasticityComputationFlags.Hessian),
+    #     spd_correction=_fem.HyperElasticSpdCorrection.NoCorrection,
+    #     element=element,
+    #     order=order,
+    #     dims=X.shape[0],
+    # )
     HU = _fem.hyper_elastic_potential(
-        E=E,
-        n_nodes=X.shape[1],
-        eg=np.ravel(egU),
-        wg=np.ravel(wgU),
-        GNeg=GNegU,
-        mug=np.ravel(mug),
-        lambdag=np.ravel(lambdag),
-        x=x,
-        energy=energy,
-        flags=int(_fem.ElementElasticityComputationFlags.Hessian),
-        element=element,
-        order=order,
-        dims=X.shape[0],
+        E,
+        X.shape[1],
+        np.ravel(egU),
+        np.ravel(wgU),
+        GNegU,
+        np.ravel(mug),
+        np.ravel(lambdag),
+        x,
+        energy,
+        _fem.ElementElasticityComputationFlags.Hessian,
+        _fem.HyperElasticSpdCorrection.NoCorrection,
+        element,
+        order,
+        X.shape[0],
     )
     modes = min(modes, x.shape[0])
     l, V = sp.sparse.linalg.eigsh(HU, k=modes, M=M, sigma=sigma, which="LM")
