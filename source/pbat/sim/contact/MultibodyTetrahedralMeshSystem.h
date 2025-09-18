@@ -1,5 +1,5 @@
-#ifndef PBAT_SIM_CONTACT_MULTIBODYTETRAHEDRALMESH_H
-#define PBAT_SIM_CONTACT_MULTIBODYTETRAHEDRALMESH_H
+#ifndef PBAT_SIM_CONTACT_MULTIBODYTETRAHEDRALMESHSYSTEM_H
+#define PBAT_SIM_CONTACT_MULTIBODYTETRAHEDRALMESHSYSTEM_H
 
 #include "pbat/Aliases.h"
 #include "pbat/common/ArgSort.h"
@@ -284,7 +284,11 @@ inline void MultibodyTetrahedralMeshSystem<TIndex, TScalar>::Construct(
         common::Permute(X.row(d).begin(), X.row(d).end(), Xordering.begin());
     common::Permute(CC.begin(), CC.end(), Xordering.begin());
     // 6. Re-index tet vertices to match the sorted order
-    T.reshaped() = Xordering(T.reshaped());
+    // If Xordering[i] = j, then all nodes i in T must become j
+    Eigen::Vector<IndexType, Eigen::Dynamic> XorderingInverse(nNodes);
+    XorderingInverse(Xordering) =
+        Eigen::Vector<IndexType, Eigen::Dynamic>::LinSpaced(nNodes, 0, nNodes - 1);
+    T.reshaped() = XorderingInverse(T.reshaped());
     // 7. Compute boundary mesh, and note that V and F will already be sorted by connected
     // component, because we have re-indexed T and X
     std::tie(V, F) = geometry::SimplexMeshBoundary<IndexType>(T, nNodes);
@@ -391,4 +395,4 @@ void MultibodyTetrahedralMeshSystem<TIndex, TScalar>::Deserialize(io::Archive& a
 
 } // namespace pbat::sim::contact
 
-#endif // PBAT_SIM_CONTACT_MULTIBODYTETRAHEDRALMESH_H
+#endif // PBAT_SIM_CONTACT_MULTIBODYTETRAHEDRALMESHSYSTEM_H
