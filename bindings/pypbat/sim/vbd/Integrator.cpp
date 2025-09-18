@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <nanobind/eigen/dense.h>
+#include <nanobind/stl/unique_ptr.h>
 #include <pbat/sim/vbd/AndersonIntegrator.h>
 #include <pbat/sim/vbd/BroydenIntegrator.h>
 #include <pbat/sim/vbd/ChebyshevIntegrator.h>
@@ -28,24 +29,21 @@ void BindIntegrator(nanobind::module_& m)
     using pbat::sim::vbd::Integrator;
     using pbat::sim::vbd::NesterovIntegrator;
     nb::class_<Integrator>(m, "Integrator")
-        .def(
-            "__init__",
-            [](Integrator* self, Data const& data) {
-                // ERROR:
-                // Placement new does not work with polymorphism here, it will always 
-                // only construct the base Integrator.
-                if (data.eAcceleration == EAccelerationStrategy::Chebyshev)
-                    new (self) ChebyshevIntegrator(data);
-                if (data.eAcceleration == EAccelerationStrategy::Anderson)
-                    new (self) AndersonIntegrator(data);
-                if (data.eAcceleration == EAccelerationStrategy::Broyden)
-                    new (self) BroydenIntegrator(data);
-                if (data.eAcceleration == EAccelerationStrategy::Nesterov)
-                    new (self) NesterovIntegrator(data);
-                new (self) Integrator(data);
-            },
-            "Construct a VBD integrator initialized with data. To access the data "
-            "during simulation, go through the pbat.sim.vbd.Integrator.data member.")
+        .def(nb::new_([](Data const& data) -> std::unique_ptr<Integrator, nb::deleter<Integrator>> {
+            if (data.eAcceleration == EAccelerationStrategy::Chebyshev)
+                return std::unique_ptr<ChebyshevIntegrator, nb::deleter<Integrator>>(
+                    new ChebyshevIntegrator(data));
+            if (data.eAcceleration == EAccelerationStrategy::Anderson)
+                return std::unique_ptr<AndersonIntegrator, nb::deleter<Integrator>>(
+                    new AndersonIntegrator(data));
+            if (data.eAcceleration == EAccelerationStrategy::Broyden)
+                return std::unique_ptr<BroydenIntegrator, nb::deleter<Integrator>>(
+                    new BroydenIntegrator(data));
+            if (data.eAcceleration == EAccelerationStrategy::Nesterov)
+                return std::unique_ptr<NesterovIntegrator, nb::deleter<Integrator>>(
+                    new NesterovIntegrator(data));
+            return std::unique_ptr<Integrator, nb::deleter<Integrator>>(new Integrator(data));
+        }))
         .def(
             "step",
             &Integrator::Step,
