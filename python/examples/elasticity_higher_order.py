@@ -132,7 +132,6 @@ if __name__ == "__main__":
         order=order,
         dims=dims,
     )
-    print("Rest energy U={}".format(U))
     Hdd = H.tocsc()[:, dofs].tocsr()[dofs, :]
     Hddinv = pbat.math.linalg.ldlt(Hdd)
     Hddinv.analyze(Hdd)
