@@ -31,6 +31,9 @@ void BindIntegrator(nanobind::module_& m)
         .def(
             "__init__",
             [](Integrator* self, Data const& data) {
+                // ERROR:
+                // Placement new does not work with polymorphism here, it will always 
+                // only construct the base Integrator.
                 if (data.eAcceleration == EAccelerationStrategy::Chebyshev)
                     new (self) ChebyshevIntegrator(data);
                 if (data.eAcceleration == EAccelerationStrategy::Anderson)
