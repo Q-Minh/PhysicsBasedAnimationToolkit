@@ -224,7 +224,7 @@ def node_ui(id, node, transform, children) -> Tuple[bool, bool]:
                 node.l = np.array(l)
             dirty = updated
         elif isinstance(node, pbat.geometry.sdf.Bump):
-            a_updated, a = imgui.SliderFloat("Amplitude", node.a, 0.0, 1.0)
+            a_updated, a = imgui.SliderFloat("Amplitude", node.g, 0.0, 1.0)
             f_updated, f = imgui.SliderFloat("Frequency", node.f, 0.0, 10.0)
             updated = a_updated or f_updated
             if updated:
