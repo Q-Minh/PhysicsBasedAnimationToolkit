@@ -354,6 +354,17 @@ if __name__ == "__main__":
         enable_isosurface_viz=enable_isosurface_viz,
         enabled=True,
     )
+    grid.add_scalar_quantity(
+        "All",
+        sd_composite,
+        defined_on="nodes",
+        cmap=cmap,
+        vminmax=vminmax,
+        isolines_enabled=isolines,
+        # isoline_contour_thickness=isoline_contour_thickness,
+        enable_isosurface_viz=enable_isosurface_viz,
+        enabled=False,
+    )
 
     # GUI items
     primitive_node_types = [
@@ -407,10 +418,12 @@ if __name__ == "__main__":
     selected_binary_node_type = binary_node_types[0]
 
     def callback():
-        global nodes, transforms, children, roots, sd_composite
+        global nodes, transforms, children, roots, sd_composite, composite
         global selected_primitive_node_type, selected_unary_node_type, selected_binary_node_type
 
         dirty = False
+        if composite.status != pbat.geometry.sdf.ECompositeStatus.Valid:
+            dirty = True
         # Node creation UI
         primitive_node_created = False
         unary_node_created = False
@@ -511,18 +524,42 @@ if __name__ == "__main__":
             roots, _ = pbat.geometry.sdf.roots_and_parents(children)
             forest = pbat.geometry.sdf.Forest(nodes, transforms, children, roots)
             composite = pbat.geometry.sdf.Composite(forest)
-            sd_composite = composite.eval(X).reshape(dims)
-            grid.add_scalar_quantity(
-                "Composite",
-                sd_composite,
-                defined_on="nodes",
-                cmap=cmap,
-                vminmax=vminmax,
-                isolines_enabled=isolines,
-                enable_isosurface_viz=enable_isosurface_viz,
-                # isoline_contour_thickness=isoline_contour_thickness,
-                enabled=True,
-            )
+            if composite.status == pbat.geometry.sdf.ECompositeStatus.Valid:
+                # Update the composite view
+                sd_composite = composite.eval(X).reshape(dims)
+                grid.add_scalar_quantity(
+                    "Composite",
+                    sd_composite,
+                    defined_on="nodes",
+                    cmap=cmap,
+                    vminmax=vminmax,
+                    isolines_enabled=isolines,
+                    enable_isosurface_viz=enable_isosurface_viz,
+                    # isoline_contour_thickness=isoline_contour_thickness,
+                )
+                # Update the all view
+                primitive_node_inds = [i for i in range(len(children)) if children[i] == (-1, -1)]
+                all_children = [(-1, -1) for _ in range(len(primitive_node_inds))]
+                all_roots, _ = pbat.geometry.sdf.roots_and_parents(all_children)
+                all_primitive_nodes = [nodes[i] for i in primitive_node_inds]
+                all_transforms = [transforms[i] for i in primitive_node_inds]
+                all_forest = pbat.geometry.sdf.Forest(
+                    all_primitive_nodes, all_transforms, all_children, all_roots
+                )
+                all_composite = pbat.geometry.sdf.Composite(all_forest)
+                all_sd_composite = all_composite.eval(X).reshape(dims)
+                grid.add_scalar_quantity(
+                    "All",
+                    all_sd_composite,
+                    defined_on="nodes",
+                    cmap=cmap,
+                    vminmax=vminmax,
+                    isolines_enabled=isolines,
+                    enable_isosurface_viz=enable_isosurface_viz,
+                    # isoline_contour_thickness=isoline_contour_thickness,
+                )
+            else:
+                imgui.Text("{}".format(composite.status.name))
 
     ps.set_user_callback(callback)
     ps.show()
