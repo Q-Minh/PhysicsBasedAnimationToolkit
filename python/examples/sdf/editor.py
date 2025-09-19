@@ -224,12 +224,12 @@ def node_ui(id, node, transform, children) -> Tuple[bool, bool]:
                 node.l = np.array(l)
             dirty = updated
         elif isinstance(node, pbat.geometry.sdf.Bump):
-            a_updated, a = imgui.SliderFloat("Amplitude", node.g, 0.0, 1.0)
-            f_updated, f = imgui.SliderFloat("Frequency", node.f, 0.0, 10.0)
+            a_updated, a = imgui.SliderFloat3("Amplitude", node.g, 0.0, 1.0)
+            f_updated, f = imgui.SliderFloat3("Frequency", node.f, 0.0, 10.0)
             updated = a_updated or f_updated
             if updated:
-                node.g = a
-                node.f = f
+                node.g = np.array(a)
+                node.f = np.array(f)
             dirty = updated
         elif isinstance(node, pbat.geometry.sdf.Twist):
             k_updated, k = imgui.SliderFloat("Twist", node.k, -0.5, 0.5)
@@ -299,7 +299,7 @@ if __name__ == "__main__":
     # Domain
     bmin = np.array([-10, -10, -10])
     bmax = np.array([10, 10, 10])
-    dims = (50, 50, 50)
+    dims = (100, 100, 100)
     x, y, z = np.meshgrid(
         np.linspace(bmin[0], bmax[0], dims[0]),
         np.linspace(bmin[1], bmax[1], dims[1]),
@@ -538,7 +538,9 @@ if __name__ == "__main__":
                     # isoline_contour_thickness=isoline_contour_thickness,
                 )
                 # Update the all view
-                primitive_node_inds = [i for i in range(len(children)) if children[i] == (-1, -1)]
+                primitive_node_inds = [
+                    i for i in range(len(children)) if children[i] == (-1, -1)
+                ]
                 all_children = [(-1, -1) for _ in range(len(primitive_node_inds))]
                 all_roots, _ = pbat.geometry.sdf.roots_and_parents(all_children)
                 all_primitive_nodes = [nodes[i] for i in primitive_node_inds]
