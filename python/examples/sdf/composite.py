@@ -102,7 +102,8 @@ if __name__ == "__main__":
     roots, parents = pbat.geometry.sdf.roots_and_parents(children)
     forest = pbat.geometry.sdf.Forest(nodes, transforms, children, roots)
     composite = pbat.geometry.sdf.Composite(forest)
-    print(composite.status)
+    if composite.status != pbat.geometry.sdf.ECompositeStatus.Valid:
+        raise ValueError("Composite SDF is not valid")
     sd_composite = composite.eval(X).reshape(dims)
 
     # Polyscope visualization
@@ -111,7 +112,7 @@ if __name__ == "__main__":
     ps.set_front_dir("neg_y_front")
     ps.set_ground_plane_mode("shadow_only")
     ps.set_ground_plane_height_factor(0.5)
-    ps.set_program_name("SDF binary nodes")
+    ps.set_program_name("SDF composite")
     ps.init()
 
     slice_plane = ps.add_scene_slice_plane()
@@ -133,11 +134,9 @@ if __name__ == "__main__":
         enabled=True,
     )
 
-    t = [0.0] * 5
-
     def callback():
         global sd_composite
-        global t
+
         # Box UI
         dirty = False
         for i, (node, transform) in enumerate(zip(nodes, transforms)):
