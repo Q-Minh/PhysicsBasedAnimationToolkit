@@ -39,7 +39,22 @@ void BindPrimitive(nanobind::module_& m)
             "Args:\n"
             "    p (numpy.ndarray): `3 x 1` point in 3D space\n\n"
             "Returns:\n"
-            "    float: Signed distance to the sphere (negative inside, positive outside)");
+            "    float: Signed distance to the sphere (negative inside, positive outside)")
+        .def(
+            "eval",
+            [](Sphere const& self, nb::DRef<MatX const> p) -> VecX {
+                VecX result(p.cols());
+                for (auto i = 0; i < p.cols(); ++i)
+                    result(i) = self.Eval(FromEigen(p.col(i).head<3>()));
+                return result;
+            },
+            nb::arg("p"),
+            "Evaluate the signed distance function at multiple points\n\n"
+            "Args:\n"
+            "    p (numpy.ndarray): `3 x N` points in 3D space\n\n"
+            "Returns:\n"
+            "    numpy.ndarray: `N x 1` Signed distances to the sphere (negative inside, positive "
+            "outside)");
 
     using Box = pbat::geometry::sdf::Box<ScalarType>;
     nb::class_<Box>(m, "Box")
