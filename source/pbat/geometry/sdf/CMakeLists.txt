@@ -5,6 +5,7 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     "Sdf.h"
     "BinaryNode.h"
     "Composite.h"
+    "Forest.h"
     "Primitive.h"
     "Transform.h"
     "TypeDefs.h"
@@ -14,6 +15,7 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     PRIVATE
     "BinaryNode.cpp"
     "Composite.cpp"
+    "Forest.cpp"
     "Primitive.cpp"
     "Transform.cpp"
     "UnaryNode.cpp"

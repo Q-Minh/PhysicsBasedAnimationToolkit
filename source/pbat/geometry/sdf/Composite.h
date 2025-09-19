@@ -77,20 +77,21 @@ using Node = std::variant<
     SmoothIntersection<TScalar>>;
 
 /**
+ * @brief Status of the composite SDF
+ */
+enum class ECompositeStatus {
+    Valid,             ///< The composite SDF can be evaluated
+    InvalidForest,     ///< The SDF forest topology is invalid (wrong children/ancestor relations)
+    UnexpectedNodeType ///< An unexpected node type was encountered
+};
+
+/**
  * @brief Composite signed distance function represented as a forest of SDFs.
  */
 template <common::CArithmetic TScalar>
 struct Composite
 {
     using ScalarType = TScalar; ///< Scalar type
-    /**
-     * @brief Status of the composite SDF
-     */
-    enum class EStatus {
-        Valid,         ///< The composite SDF can be evaluated
-        InvalidForest, ///< The SDF forest topology is invalid (wrong children/ancestor relations)
-        UnexpectedNodeType ///< An unexpected node type was encountered
-    };
     /**
      * @brief Construct a composite SDF from nodes, transforms, children, ancestors and roots
      * @param nodes Span of nodes in the composite SDF
@@ -103,7 +104,7 @@ struct Composite
         std::span<Node<ScalarType> const> nodes,
         std::span<Transform<ScalarType> const> transforms,
         std::span<std::pair<int, int> const> children,
-        std::span<int> roots);
+        std::span<int const> roots);
     /**
      * @brief Evaluate the signed distance function at a given point
      * @param p Point at which to evaluate the SDF
@@ -136,7 +137,7 @@ struct Composite
      * @return Status of the composite SDF
      */
     PBAT_HOST_DEVICE
-    EStatus Status() const { return mStatus; }
+    ECompositeStatus Status() const { return mStatus; }
 
     std::span<Node<ScalarType> const> mNodes; ///< `|# nodes|` nodes in the composite SDF
     std::span<Transform<ScalarType> const>
@@ -146,8 +147,8 @@ struct Composite
                    ///< node, such that c* < 0 if no child. A binary node n has 2 children stored in
                    ///< (ci, cj), a unary node n has 1 child stored in ci, and a primitive has no
                    ///< children.
-    std::span<int> mRoots; ///< `|# roots|` root indices of the composite SDF
-    EStatus mStatus;       ///< Status of the composite SDF
+    std::span<int const> mRoots; ///< `|# roots|` root indices of the composite SDF
+    ECompositeStatus mStatus;    ///< Status of the composite SDF
 };
 
 /**
@@ -164,17 +165,17 @@ inline Composite<TScalar>::Composite(
     std::span<Node<ScalarType> const> nodes,
     std::span<Transform<ScalarType> const> transforms,
     std::span<std::pair<int, int> const> children,
-    std::span<int> roots)
+    std::span<int const> roots)
     : mNodes(nodes),
       mTransforms(transforms),
       mChildren(children),
       mRoots(roots),
-      mStatus(EStatus::Valid)
+      mStatus(ECompositeStatus::Valid)
 {
-    auto const nNodes = static_cast<int>(mNodes.size());
-    for (auto n = 0; n < nNodes; ++n)
+    std::size_t const nNodes = mNodes.size();
+    for (std::size_t n = 0ULL; n < nNodes; ++n)
     {
-        if (mStatus != EStatus::Valid)
+        if (mStatus != ECompositeStatus::Valid)
             break;
         std::visit(
             [&](auto const& node) {
@@ -182,19 +183,19 @@ inline Composite<TScalar>::Composite(
                 if constexpr (std::is_base_of_v<Primitive, NodeType>)
                 {
                     if (mChildren[n].first >= 0 || mChildren[n].second >= 0)
-                        mStatus = EStatus::InvalidForest;
+                        mStatus = ECompositeStatus::InvalidForest;
                 }
                 else if constexpr (std::is_base_of_v<UnaryNode, NodeType>)
                 {
                     if (mChildren[n].first < 0)
-                        mStatus = EStatus::InvalidForest;
+                        mStatus = ECompositeStatus::InvalidForest;
                     if (mChildren[n].second >= 0)
-                        mStatus = EStatus::InvalidForest;
+                        mStatus = ECompositeStatus::InvalidForest;
                 }
                 else if constexpr (std::is_base_of_v<BinaryNode, NodeType>)
                 {
                     if (mChildren[n].first < 0 || mChildren[n].second < 0)
-                        mStatus = EStatus::InvalidForest;
+                        mStatus = ECompositeStatus::InvalidForest;
                 }
             },
             mNodes[n]);
@@ -214,8 +215,9 @@ inline TScalar Composite<TScalar>::Eval(Vec3<ScalarType> const& p) const
 template <common::CArithmetic TScalar>
 inline TScalar Composite<TScalar>::Eval(int n, Vec3<ScalarType> const& p) const
 {
+    std::size_t const nStl = static_cast<std::size_t>(n);
     ScalarType sd;
-    Vec3<ScalarType> q = mTransforms[n] / p;
+    Vec3<ScalarType> q = mTransforms[nStl] / p;
     std::visit(
         [&](auto const& node) {
             using NodeType = std::remove_cvref_t<decltype(node)>;
@@ -226,22 +228,22 @@ inline TScalar Composite<TScalar>::Eval(int n, Vec3<ScalarType> const& p) const
             else if constexpr (std::is_base_of_v<UnaryNode, NodeType>)
             {
                 sd = node.Eval(q, [&](Vec3<ScalarType> const& x) {
-                    auto c = mChildren[n].first;
+                    auto c = mChildren[nStl].first;
                     return Eval(c, x);
                 });
             }
             else if constexpr (std::is_base_of_v<BinaryNode, NodeType>)
             {
-                auto ci = mChildren[n].first;
-                auto cj = mChildren[n].second;
+                auto ci = mChildren[nStl].first;
+                auto cj = mChildren[nStl].second;
                 node.Eval(Eval(ci, q), Eval(cj, q));
             }
             else
             {
-                mStatus = EStatus::UnexpectedNodeType;
+                mStatus = ECompositeStatus::UnexpectedNodeType;
             }
         },
-        mNodes[n]);
+        mNodes[nStl]);
     return sd;
 }
 
