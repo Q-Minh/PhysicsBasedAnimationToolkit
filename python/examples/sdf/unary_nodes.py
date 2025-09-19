@@ -55,13 +55,14 @@ if __name__ == "__main__":
     ps.set_front_dir("neg_y_front")
     ps.set_ground_plane_mode("shadow_only")
     ps.set_ground_plane_height_factor(0.5)
-    ps.set_program_name("SDF primitives")
+    ps.set_program_name("SDF unary nodes")
     ps.init()
 
     slice_plane = ps.add_scene_slice_plane()
     slice_plane.set_draw_plane(False)
     slice_plane.set_draw_widget(True)
     isolines = True
+    enable_isosurface_viz = True
     vminmax = (-10, 10)
     cmap = "coolwarm"
     grid = ps.register_volume_grid("Domain", dims, bmin, bmax)
@@ -72,6 +73,7 @@ if __name__ == "__main__":
         cmap=cmap,
         vminmax=vminmax,
         isolines_enabled=isolines,
+        enable_isosurface_viz=enable_isosurface_viz,
     )
     grid.add_scalar_quantity(
         "Scale",
@@ -80,6 +82,7 @@ if __name__ == "__main__":
         cmap=cmap,
         vminmax=vminmax,
         isolines_enabled=isolines,
+        enable_isosurface_viz=enable_isosurface_viz,
     )
     grid.add_scalar_quantity(
         "Elongate",
@@ -88,6 +91,7 @@ if __name__ == "__main__":
         cmap=cmap,
         vminmax=vminmax,
         isolines_enabled=isolines,
+        enable_isosurface_viz=enable_isosurface_viz,
     )
     grid.add_scalar_quantity(
         "Round",
@@ -96,6 +100,7 @@ if __name__ == "__main__":
         cmap=cmap,
         vminmax=vminmax,
         isolines_enabled=isolines,
+        enable_isosurface_viz=enable_isosurface_viz,
     )
     grid.add_scalar_quantity(
         "Onion",
@@ -104,6 +109,7 @@ if __name__ == "__main__":
         cmap=cmap,
         vminmax=vminmax,
         isolines_enabled=isolines,
+        enable_isosurface_viz=enable_isosurface_viz,
     )
     grid.add_scalar_quantity(
         "Symmetrize",
@@ -112,6 +118,7 @@ if __name__ == "__main__":
         cmap=cmap,
         vminmax=vminmax,
         isolines_enabled=isolines,
+        enable_isosurface_viz=enable_isosurface_viz,
     )
     grid.add_scalar_quantity(
         "Repeat",
@@ -120,6 +127,7 @@ if __name__ == "__main__":
         cmap=cmap,
         vminmax=vminmax,
         isolines_enabled=isolines,
+        enable_isosurface_viz=enable_isosurface_viz,
     )
     grid.add_scalar_quantity(
         "Bump",
@@ -128,6 +136,7 @@ if __name__ == "__main__":
         cmap=cmap,
         vminmax=vminmax,
         isolines_enabled=isolines,
+        enable_isosurface_viz=enable_isosurface_viz,
     )
     grid.add_scalar_quantity(
         "Twist",
@@ -136,6 +145,7 @@ if __name__ == "__main__":
         cmap=cmap,
         vminmax=vminmax,
         isolines_enabled=isolines,
+        enable_isosurface_viz=enable_isosurface_viz,
     )
     grid.add_scalar_quantity(
         "Bend",
@@ -144,9 +154,12 @@ if __name__ == "__main__":
         cmap=cmap,
         vminmax=vminmax,
         isolines_enabled=isolines,
+        enable_isosurface_viz=enable_isosurface_viz,
     )
 
     def callback():
+        global sd_box
+        global sd_scale, sd_elongate, sd_round, sd_onion, sd_symmetrize, sd_repeat, sd_bump, sd_twist, sd_bend
         # Box UI
         box_updated = False
         if imgui.TreeNode("Box"):
@@ -156,14 +169,15 @@ if __name__ == "__main__":
             box_updated = hex_updated or hey_updated or hez_updated
             if box_updated:
                 box.he = np.array([hex, hey, hez])
-                sd = box.eval(X).reshape(dims)
+                sd_box = box.eval(X).reshape(dims)
                 grid.add_scalar_quantity(
                     "Box",
-                    sd,
+                    sd_box,
                     defined_on="nodes",
                     cmap=cmap,
                     vminmax=vminmax,
                     isolines_enabled=isolines,
+                    enable_isosurface_viz=enable_isosurface_viz,
                 )
             imgui.TreePop()
         # Scale UI
@@ -171,14 +185,15 @@ if __name__ == "__main__":
             s_updated, s = imgui.SliderFloat("Scale", scale_node.s, 0.01, 5.0)
             if s_updated or box_updated:
                 scale_node.s = s
-                sd = scale_node.eval(X, sdf=lambda x: box.eval(x)).reshape(dims)
+                sd_scale = scale_node.eval(X, sdf=lambda x: box.eval(x)).reshape(dims)
                 grid.add_scalar_quantity(
                     "Scale",
-                    sd,
+                    sd_scale,
                     defined_on="nodes",
                     cmap=cmap,
                     vminmax=vminmax,
                     isolines_enabled=isolines,
+                    enable_isosurface_viz=enable_isosurface_viz,
                 )
             imgui.TreePop()
         # Elongate UI
@@ -195,14 +210,17 @@ if __name__ == "__main__":
             updated = h0_updated or h1_updated or h2_updated
             if updated or box_updated:
                 elongate_node.h = np.array([h0, h1, h2])
-                sd = elongate_node.eval(X, sdf=lambda x: box.eval(x)).reshape(dims)
+                sd_elongate = elongate_node.eval(X, sdf=lambda x: box.eval(x)).reshape(
+                    dims
+                )
                 grid.add_scalar_quantity(
                     "Elongate",
-                    sd,
+                    sd_elongate,
                     defined_on="nodes",
                     cmap=cmap,
                     vminmax=vminmax,
                     isolines_enabled=isolines,
+                    enable_isosurface_viz=enable_isosurface_viz,
                 )
             imgui.TreePop()
         # Round UI
@@ -210,14 +228,15 @@ if __name__ == "__main__":
             r_updated, r = imgui.SliderFloat("Round Radius", round_node.r, 0.0, 5.0)
             if r_updated or box_updated:
                 round_node.r = r
-                sd = round_node.eval(X, sdf=lambda x: box.eval(x)).reshape(dims)
+                sd_round = round_node.eval(X, sdf=lambda x: box.eval(x)).reshape(dims)
                 grid.add_scalar_quantity(
                     "Round",
-                    sd,
+                    sd_round,
                     defined_on="nodes",
                     cmap=cmap,
                     vminmax=vminmax,
                     isolines_enabled=isolines,
+                    enable_isosurface_viz=enable_isosurface_viz,
                 )
             imgui.TreePop()
         # Onion UI
@@ -225,27 +244,31 @@ if __name__ == "__main__":
             t_updated, t = imgui.SliderFloat("Onion Thickness", onion_node.t, 0.0, 5.0)
             if t_updated or box_updated:
                 onion_node.t = t
-                sd = onion_node.eval(X, sdf=lambda x: box.eval(x)).reshape(dims)
+                sd_onion = onion_node.eval(X, sdf=lambda x: box.eval(x)).reshape(dims)
                 grid.add_scalar_quantity(
                     "Onion",
-                    sd,
+                    sd_onion,
                     defined_on="nodes",
                     cmap=cmap,
                     vminmax=vminmax,
                     isolines_enabled=isolines,
+                    enable_isosurface_viz=enable_isosurface_viz,
                 )
             imgui.TreePop()
         # Symmetrize UI
         if imgui.TreeNode("Symmetrize"):
             if box_updated:
-                sd = symmetrize_node.eval(X, sdf=lambda x: box.eval(x)).reshape(dims)
+                sd_symmetrize = symmetrize_node.eval(
+                    X, sdf=lambda x: box.eval(x)
+                ).reshape(dims)
                 grid.add_scalar_quantity(
                     "Symmetrize",
-                    sd,
+                    sd_symmetrize,
                     defined_on="nodes",
                     cmap=cmap,
                     vminmax=vminmax,
                     isolines_enabled=isolines,
+                    enable_isosurface_viz=enable_isosurface_viz,
                 )
             imgui.TreePop()
         # Repeat UI
@@ -258,14 +281,15 @@ if __name__ == "__main__":
             if updated or box_updated:
                 repeat_node.s = s
                 repeat_node.l = np.array([l0, l1, l2])
-                sd = repeat_node.eval(X, sdf=lambda x: box.eval(x)).reshape(dims)
+                sd_repeat = repeat_node.eval(X, sdf=lambda x: box.eval(x)).reshape(dims)
                 grid.add_scalar_quantity(
                     "Repeat",
-                    sd,
+                    sd_repeat,
                     defined_on="nodes",
                     cmap=cmap,
                     vminmax=vminmax,
                     isolines_enabled=isolines,
+                    enable_isosurface_viz=enable_isosurface_viz,
                 )
             imgui.TreePop()
         # Bump UI
@@ -287,14 +311,15 @@ if __name__ == "__main__":
             if updated or box_updated:
                 bump_node.f = np.array([f0, f1, f2])
                 bump_node.g = np.array([g0, g1, g2])
-                sd = bump_node.eval(X, sdf=lambda x: box.eval(x)).reshape(dims)
+                sd_bump = bump_node.eval(X, sdf=lambda x: box.eval(x)).reshape(dims)
                 grid.add_scalar_quantity(
                     "Bump",
-                    sd,
+                    sd_bump,
                     defined_on="nodes",
                     cmap=cmap,
                     vminmax=vminmax,
                     isolines_enabled=isolines,
+                    enable_isosurface_viz=enable_isosurface_viz,
                 )
             imgui.TreePop()
         # Twist UI
@@ -302,14 +327,15 @@ if __name__ == "__main__":
             k_updated, k = imgui.SliderFloat("Twist Rate", twist_node.k, -1.0, 1.0)
             if k_updated or box_updated:
                 twist_node.k = k
-                sd = twist_node.eval(X, sdf=lambda x: box.eval(x)).reshape(dims)
+                sd_twist = twist_node.eval(X, sdf=lambda x: box.eval(x)).reshape(dims)
                 grid.add_scalar_quantity(
                     "Twist",
-                    sd,
+                    sd_twist,
                     defined_on="nodes",
                     cmap=cmap,
                     vminmax=vminmax,
                     isolines_enabled=isolines,
+                    enable_isosurface_viz=enable_isosurface_viz,
                 )
             imgui.TreePop()
         # Bend UI
@@ -317,14 +343,15 @@ if __name__ == "__main__":
             k_updated, k = imgui.SliderFloat("Bend Rate", bend_node.k, -1.0, 1.0)
             if k_updated or box_updated:
                 bend_node.k = k
-                sd = bend_node.eval(X, sdf=lambda x: box.eval(x)).reshape(dims)
+                sd_bend = bend_node.eval(X, sdf=lambda x: box.eval(x)).reshape(dims)
                 grid.add_scalar_quantity(
                     "Bend",
-                    sd,
+                    sd_bend,
                     defined_on="nodes",
                     cmap=cmap,
                     vminmax=vminmax,
                     isolines_enabled=isolines,
+                    enable_isosurface_viz=enable_isosurface_viz,
                 )
             imgui.TreePop()
 

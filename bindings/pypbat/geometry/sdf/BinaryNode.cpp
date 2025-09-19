@@ -89,6 +89,7 @@ void BindBinaryNode(nanobind::module_& m)
             "Constructor with smoothness factor\n\n"
             "Args:\n"
             "    k (float): Smoothness factor")
+        .def_rw("k", &SmoothUnion::k, "(float) Smoothness factor")
         .def(
             "eval",
             [](SmoothUnion const& self, ScalarType sd1, ScalarType sd2) -> ScalarType {
@@ -116,6 +117,7 @@ void BindBinaryNode(nanobind::module_& m)
             "Constructor with smoothness factor\n\n"
             "Args:\n"
             "    k (float): Smoothness factor")
+        .def_rw("k", &SmoothDifference::k, "(float) Smoothness factor")
         .def(
             "eval",
             [](SmoothDifference const& self, ScalarType sd1, ScalarType sd2) -> ScalarType {
@@ -143,6 +145,7 @@ void BindBinaryNode(nanobind::module_& m)
             "Constructor with smoothness factor\n\n"
             "Args:\n"
             "    k (float): Smoothness factor")
+        .def_rw("k", &SmoothIntersection::k, "(float) Smoothness factor")
         .def(
             "eval",
             [](SmoothIntersection const& self, ScalarType sd1, ScalarType sd2) -> ScalarType {
