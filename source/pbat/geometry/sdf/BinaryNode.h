@@ -119,14 +119,17 @@ struct ExclusiveOr : public BinaryNode
 template <common::CArithmetic TScalar>
 struct SmoothUnion : public BinaryNode
 {
-    using ScalarType = TScalar; ///< Scalar type
-    SmoothUnion()    = default;
+    using ScalarType = TScalar;  ///< Scalar type
+    ScalarType k{TScalar(0.25)}; ///< Smoothness factor
+    /**
+     * @brief Default constructor
+     */
+    SmoothUnion() = default;
     /**
      * @brief Construct a new Smooth Union object
      * @param k_ Smoothness factor
      */
     explicit SmoothUnion(ScalarType k_) : k(k_) {}
-    ScalarType k; ///< Smoothness factor
     /**
      * @brief Evaluate the signed distance function of the smooth union of two shapes
      * @param sd1 Signed distance to the first shape
@@ -149,14 +152,17 @@ struct SmoothUnion : public BinaryNode
 template <common::CArithmetic TScalar>
 struct SmoothDifference : public BinaryNode
 {
-    using ScalarType   = TScalar; ///< Scalar type
+    using ScalarType = TScalar;  ///< Scalar type
+    ScalarType k{TScalar(0.25)}; ///< Smoothness factor
+    /**
+     * @brief Default constructor
+     */
     SmoothDifference() = default;
     /**
      * @brief Construct a new Smooth Difference object
      * @param k_ Smoothness factor
      */
     explicit SmoothDifference(ScalarType k_) : k(k_) {}
-    ScalarType k; ///< Smoothness factor
     /**
      * @brief Evaluate the signed distance function of the smooth difference of two shapes
      * @param sd1 Signed distance to the first shape
@@ -178,14 +184,17 @@ struct SmoothDifference : public BinaryNode
 template <common::CArithmetic TScalar>
 struct SmoothIntersection : public BinaryNode
 {
-    using ScalarType     = TScalar; ///< Scalar type
+    using ScalarType = TScalar;  ///< Scalar type
+    ScalarType k{TScalar(0.25)}; ///< Smoothness factor
+    /**
+     * @brief Default constructor
+     */
     SmoothIntersection() = default;
     /**
      * @brief Construct a new Smooth Intersection object
      * @param k_ Smoothness factor
      */
     explicit SmoothIntersection(ScalarType k_) : k(k_) {}
-    ScalarType k; ///< Smoothness factor
     /**
      * @brief Evaluate the signed distance function of the smooth intersection of two shapes
      * @param sd1 Signed distance to the first shape

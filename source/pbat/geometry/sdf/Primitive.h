@@ -43,7 +43,7 @@ template <common::CArithmetic TScalar>
 struct Sphere : public Primitive
 {
     using ScalarType = TScalar; ///< Scalar type
-    ScalarType R;               ///< Sphere radius
+    ScalarType R{1};            ///< Sphere radius
     /**
      * @brief Default constructor
      */
@@ -70,7 +70,10 @@ template <common::CArithmetic TScalar>
 struct Box : public Primitive
 {
     using ScalarType = TScalar; ///< Scalar type
-    Vec3<ScalarType> he;        ///< Half extents of the box along each axis
+    Vec3<ScalarType> he{
+        TScalar(0.5),
+        TScalar(0.5),
+        TScalar(0.5)}; ///< Half extents of the box along each axis
     /**
      * @brief Default constructor
      */
@@ -102,8 +105,11 @@ template <common::CArithmetic TScalar>
 struct BoxFrame : public Primitive
 {
     using ScalarType = TScalar; ///< Scalar type
-    Vec3<ScalarType> he;        ///< Half extents of the box frame along each axis
-    ScalarType t;               ///< Thickness of the box frame
+    Vec3<ScalarType> he{
+        TScalar(0.5),
+        TScalar(0.5),
+        TScalar(0.5)};           ///< Half extents of the box frame along each axis
+    ScalarType t{TScalar(0.01)}; ///< Thickness of the box frame
     /**
      * @brief Default constructor
      */
@@ -145,8 +151,8 @@ struct BoxFrame : public Primitive
 template <common::CArithmetic TScalar>
 struct Torus : public Primitive
 {
-    using ScalarType = TScalar; ///< Scalar type
-    Vec2<ScalarType> t;         ///< t[0]: minor radius, t[1]: major radius
+    using ScalarType = TScalar;                   ///< Scalar type
+    Vec2<ScalarType> t{TScalar(0.5), TScalar(1)}; ///< t[0]: minor radius, t[1]: major radius
     /**
      * @brief Default constructor
      */
@@ -176,10 +182,10 @@ struct Torus : public Primitive
 template <common::CArithmetic TScalar>
 struct CappedTorus : public Primitive
 {
-    using ScalarType = TScalar; ///< Scalar type
-    Vec2<ScalarType> sc;        ///< Probably minor+major radius
-    ScalarType ra;              ///< Unknown
-    ScalarType rb;              ///< Unknown
+    using ScalarType = TScalar;                    ///< Scalar type
+    Vec2<ScalarType> sc{TScalar(0.5), TScalar(1)}; ///< Probably minor+major radius
+    ScalarType ra{0.1};                            ///< Unknown
+    ScalarType rb{0.1};                            ///< Unknown
     /**
      * @brief Default constructor
      */
@@ -220,9 +226,9 @@ struct CappedTorus : public Primitive
 template <common::CArithmetic TScalar>
 struct Link : public Primitive
 {
-    using ScalarType = TScalar; ///< Scalar type
-    Vec2<ScalarType> t;         ///< t[0]: minor radius, t[1]: major radius
-    ScalarType le;              ///< Elongation length
+    using ScalarType = TScalar;                   ///< Scalar type
+    Vec2<ScalarType> t{TScalar(0.5), TScalar(1)}; ///< t[0]: minor radius, t[1]: major radius
+    ScalarType le{TScalar(1)};                    ///< Elongation length
     /**
      * @brief Default constructor
      */
@@ -256,7 +262,10 @@ template <common::CArithmetic TScalar>
 struct InfiniteCylinder : public Primitive
 {
     using ScalarType = TScalar; ///< Scalar type
-    Vec3<ScalarType> c; ///< Center of the cylinder (on the axis) in c(0), c(1) and radius in c(2)
+    Vec3<ScalarType> c{
+        TScalar(0),
+        TScalar(0),
+        TScalar(0.5)}; ///< Center of the cylinder (on the axis) in c(0), c(1) and radius in c(2)
     /**
      * @brief Default constructor
      */
@@ -285,9 +294,9 @@ struct InfiniteCylinder : public Primitive
 template <common::CArithmetic TScalar>
 struct Cone : public Primitive
 {
-    using ScalarType = TScalar; ///< Scalar type
-    Vec2<ScalarType> c;         ///< sin/cos of the angle
-    ScalarType h;               ///< Height of the cone
+    using ScalarType = TScalar;                 ///< Scalar type
+    Vec2<ScalarType> c{TScalar(0), TScalar(1)}; ///< sin/cos of the angle
+    ScalarType h{TScalar(1)};                   ///< Height of the cone
     /**
      * @brief Default constructor
      */
@@ -326,8 +335,8 @@ struct Cone : public Primitive
 template <common::CArithmetic TScalar>
 struct InfiniteCone : public Primitive
 {
-    using ScalarType = TScalar; ///< Scalar type
-    Vec2<ScalarType> c;         ///< sin/cos of the angle
+    using ScalarType = TScalar;                 ///< Scalar type
+    Vec2<ScalarType> c{TScalar(0), TScalar(1)}; ///< sin/cos of the angle
     /**
      * @brief Default constructor
      */
@@ -382,7 +391,9 @@ template <common::CArithmetic TScalar>
 struct HexagonalPrism : public Primitive
 {
     using ScalarType = TScalar; ///< Scalar type
-    Vec2<ScalarType> h;         ///< h[0]: radius of the hexagon, h[1]: half height of the prism
+    Vec2<ScalarType> h{
+        TScalar(1),
+        TScalar(1)}; ///< h[0]: radius of the hexagon, h[1]: half height of the prism
     /**
      * @brief Default constructor
      */
@@ -421,10 +432,10 @@ struct HexagonalPrism : public Primitive
 template <common::CArithmetic TScalar>
 struct Capsule : public Primitive
 {
-    using ScalarType = TScalar; ///< Scalar type
-    Vec3<ScalarType> a;         ///< Endpoint a of the capsule
-    Vec3<ScalarType> b;         ///< Endpoint b of the capsule
-    ScalarType r;               ///< Radius of the capsule
+    using ScalarType = TScalar;                              ///< Scalar type
+    Vec3<ScalarType> a{TScalar(-1), TScalar(0), TScalar(0)}; ///< Endpoint a of the capsule
+    Vec3<ScalarType> b{TScalar(1), TScalar(0), TScalar(0)};  ///< Endpoint b of the capsule
+    ScalarType r{TScalar(0.2)};                              ///< Radius of the capsule
     /**
      * @brief Default constructor
      */
@@ -462,8 +473,8 @@ template <common::CArithmetic TScalar>
 struct VerticalCapsule : public Primitive
 {
     using ScalarType = TScalar; ///< Scalar type
-    ScalarType h;               ///< Height of the capsule
-    ScalarType r;               ///< Radius of the capsule
+    ScalarType h{TScalar(1)};   ///< Height of the capsule
+    ScalarType r{TScalar(0.2)}; ///< Radius of the capsule
     /**
      * @brief Default constructor
      */
@@ -494,10 +505,10 @@ struct VerticalCapsule : public Primitive
 template <common::CArithmetic TScalar>
 struct CappedCylinder : public Primitive
 {
-    using ScalarType = TScalar; ///< Scalar type
-    Vec3<ScalarType> a;         ///< Endpoint a of the capped cylinder
-    Vec3<ScalarType> b;         ///< Endpoint b of the capped cylinder
-    ScalarType r;               ///< Radius of the capped cylinder
+    using ScalarType = TScalar;                              ///< Scalar type
+    Vec3<ScalarType> a{TScalar(-1), TScalar(0), TScalar(0)}; ///< Endpoint a of the capped cylinder
+    Vec3<ScalarType> b{TScalar(1), TScalar(0), TScalar(0)};  ///< Endpoint b of the capped cylinder
+    ScalarType r{TScalar(0.2)};                              ///< Radius of the capped cylinder
     /**
      * @brief Default constructor
      */
@@ -543,8 +554,8 @@ template <common::CArithmetic TScalar>
 struct VerticalCappedCylinder : public Primitive
 {
     using ScalarType = TScalar; ///< Scalar type
-    ScalarType h;               ///< Height of the capped cylinder
-    ScalarType r;               ///< Radius of the capped cylinder
+    ScalarType h{TScalar(1)};   ///< Height of the capped cylinder
+    ScalarType r{TScalar(0.2)}; ///< Radius of the capped cylinder
     /**
      * @brief Default constructor
      */
@@ -578,10 +589,10 @@ struct VerticalCappedCylinder : public Primitive
 template <common::CArithmetic TScalar>
 struct RoundedCylinder : public Primitive
 {
-    using ScalarType = TScalar; ///< Scalar type
-    ScalarType h;               ///< Height of the rounded cylinder
-    ScalarType ra;              ///< Radius of the rounded cylinder
-    ScalarType rb;              ///< Rounding radius at edges
+    using ScalarType = TScalar;   ///< Scalar type
+    ScalarType h{TScalar(1)};     ///< Height of the rounded cylinder
+    ScalarType ra{TScalar(0.2)};  ///< Radius of the rounded cylinder
+    ScalarType rb{TScalar(0.05)}; ///< Rounding radius at edges
     /**
      * @brief Default constructor
      */
@@ -619,10 +630,10 @@ struct RoundedCylinder : public Primitive
 template <common::CArithmetic TScalar>
 struct VerticalCappedCone : public Primitive
 {
-    using ScalarType = TScalar; ///< Scalar type
-    ScalarType h;               ///< Height of the capped cone
-    ScalarType r1;              ///< Minor radius of the capped cone
-    ScalarType r2;              ///< Major radius of the capped cone
+    using ScalarType = TScalar;  ///< Scalar type
+    ScalarType h{TScalar(1)};    ///< Height of the capped cone
+    ScalarType r1{TScalar(0.2)}; ///< Minor radius of the capped cone
+    ScalarType r2{TScalar(0.4)}; ///< Major radius of the capped cone
     /**
      * @brief Default constructor
      */
@@ -670,9 +681,9 @@ template <common::CArithmetic TScalar>
 struct CutHollowSphere : public Primitive
 {
     using ScalarType = TScalar; ///< Scalar type
-    ScalarType r;               ///< Radius of the hollow sphere
-    ScalarType h;               ///< Cut height
-    ScalarType t;               ///< Thickness of the hollow sphere
+    ScalarType r{TScalar(1)};   ///< Radius of the hollow sphere
+    ScalarType h{TScalar(0.5)}; ///< Cut height
+    ScalarType t{TScalar(0.1)}; ///< Thickness of the hollow sphere
     /**
      * @brief Default constructor
      */
@@ -708,10 +719,10 @@ struct CutHollowSphere : public Primitive
 template <common::CArithmetic TScalar>
 struct VerticalRoundCone : public Primitive
 {
-    using ScalarType = TScalar; ///< Scalar type
-    ScalarType h;               ///< Height of the round cone
-    ScalarType r1;              ///< Radius at the bottom of the round cone
-    ScalarType r2;              ///< Radius at the top of the round cone
+    using ScalarType = TScalar;  ///< Scalar type
+    ScalarType h{TScalar(1)};    ///< Height of the round cone
+    ScalarType r1{TScalar(0.2)}; ///< Radius at the bottom of the round cone
+    ScalarType r2{TScalar(0.4)}; ///< Radius at the top of the round cone
     /**
      * @brief Default constructor
      */
@@ -756,7 +767,7 @@ template <common::CArithmetic TScalar>
 struct Octahedron : public Primitive
 {
     using ScalarType = TScalar; ///< Scalar type
-    ScalarType s;               ///< Size of the octahedron
+    ScalarType s{TScalar(1)};   ///< Size of the octahedron
     /**
      * @brief Default constructor
      */
@@ -800,7 +811,7 @@ template <common::CArithmetic TScalar>
 struct Pyramid : public Primitive
 {
     using ScalarType = TScalar; ///< Scalar type
-    ScalarType h;               ///< Height of the pyramid
+    ScalarType h{TScalar(1)};   ///< Height of the pyramid
     /**
      * @brief Default constructor
      */
@@ -854,10 +865,10 @@ struct Pyramid : public Primitive
 template <common::CArithmetic TScalar>
 struct Triangle : public Primitive
 {
-    using ScalarType = TScalar; ///< Scalar type
-    Vec3<ScalarType> a;         ///< Vertex a of the triangle
-    Vec3<ScalarType> b;         ///< Vertex b of the triangle
-    Vec3<ScalarType> c;         ///< Vertex c of the triangle
+    using ScalarType = TScalar;                             ///< Scalar type
+    Vec3<ScalarType> a{TScalar(0), TScalar(0), TScalar(0)}; ///< Vertex a of the triangle
+    Vec3<ScalarType> b{TScalar(1), TScalar(0), TScalar(0)}; ///< Vertex b of the triangle
+    Vec3<ScalarType> c{TScalar(0), TScalar(0), TScalar(1)}; ///< Vertex c of the triangle
     /**
      * @brief Default constructor
      */
@@ -912,11 +923,11 @@ struct Triangle : public Primitive
 template <common::CArithmetic TScalar>
 struct Quadrilateral : public Primitive
 {
-    using ScalarType = TScalar; ///< Scalar type
-    Vec3<ScalarType> a;         ///< Vertex a of the quadrilateral
-    Vec3<ScalarType> b;         ///< Vertex b of the quadrilateral
-    Vec3<ScalarType> c;         ///< Vertex c of the quadrilateral
-    Vec3<ScalarType> d;         ///< Vertex d of the quadrilateral
+    using ScalarType = TScalar;                             ///< Scalar type
+    Vec3<ScalarType> a{TScalar(0), TScalar(0), TScalar(0)}; ///< Vertex a of the quadrilateral
+    Vec3<ScalarType> b{TScalar(1), TScalar(0), TScalar(0)}; ///< Vertex b of the quadrilateral
+    Vec3<ScalarType> c{TScalar(1), TScalar(0), TScalar(1)}; ///< Vertex c of the quadrilateral
+    Vec3<ScalarType> d{TScalar(0), TScalar(0), TScalar(1)}; ///< Vertex d of the quadrilateral
     /**
      * @brief Default constructor
      */

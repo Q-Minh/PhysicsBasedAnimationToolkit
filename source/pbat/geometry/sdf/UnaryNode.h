@@ -38,7 +38,16 @@ template <common::CArithmetic TScalar>
 struct Scale : public UnaryNode
 {
     using ScalarType = TScalar; ///< Scalar type
-    ScalarType s;               ///< Scaling factor
+    ScalarType s{TScalar(1)};   ///< Scaling factor
+    /**
+     * @brief Default constructor
+     */
+    Scale() = default;
+    /**
+     * @brief Construct a new Scale object
+     * @param s_ Scaling factor
+     */
+    explicit Scale(ScalarType s_) : s(s_) {}
     /**
      * @brief Evaluate the signed distance function at a point
      * @tparam FSdf Callable type with signature `ScalarType(Vec3<ScalarType> const&)`
@@ -59,8 +68,17 @@ struct Scale : public UnaryNode
 template <common::CArithmetic TScalar>
 struct Elongate : public UnaryNode
 {
-    using ScalarType = TScalar; ///< Scalar type
-    Vec3<ScalarType> h;         ///< Elongation vector
+    using ScalarType = TScalar;                             ///< Scalar type
+    Vec3<ScalarType> h{TScalar(0), TScalar(0), TScalar(0)}; ///< Elongation vector
+    /**
+     * @brief Default constructor
+     */
+    Elongate() = default;
+    /**
+     * @brief Construct a new Elongate object
+     * @param h_ Elongation vector
+     */
+    explicit Elongate(Vec3<ScalarType> const& h_) : h(h_) {}
     /**
      * @brief Evaluate the signed distance function at a point
      * @tparam FSdf Callable type with signature `ScalarType(Vec3<ScalarType> const&)`
@@ -85,7 +103,16 @@ template <common::CArithmetic TScalar>
 struct Round : public UnaryNode
 {
     using ScalarType = TScalar; ///< Scalar type
-    ScalarType r;               ///< Rounding radius
+    ScalarType r{TScalar(0)};   ///< Rounding radius
+    /**
+     * @brief Default constructor
+     */
+    Round() = default;
+    /**
+     * @brief Construct a new Round object
+     * @param r_ Rounding radius
+     */
+    explicit Round(ScalarType r_) : r(r_) {}
     /**
      * @brief Evaluate the signed distance function at a point
      * @tparam FSdf Callable type with signature `ScalarType(Vec3<ScalarType> const&)`
@@ -107,7 +134,16 @@ template <common::CArithmetic TScalar>
 struct Onion : public UnaryNode
 {
     using ScalarType = TScalar; ///< Scalar type
-    ScalarType t;               ///< Onion thickness
+    ScalarType t{TScalar(0)};   ///< Onion thickness
+    /**
+     * @brief Default constructor
+     */
+    Onion() = default;
+    /**
+     * @brief Construct a new Onion object
+     * @param t_ Onion thickness
+     */
+    explicit Onion(ScalarType t_) : t(t_) {}
     /**
      * @brief Evaluate the signed distance function at a point
      * @tparam FSdf Callable type with signature `ScalarType(Vec3<ScalarType> const&)`
@@ -154,8 +190,21 @@ template <common::CArithmetic TScalar>
 struct Repeat : public UnaryNode
 {
     using ScalarType = TScalar; ///< Scalar type
-    ScalarType s;               ///< Uniform repetition spacing
-    Vec3<ScalarType> l;         ///< Half number of repetitions along each axis
+    ScalarType s{TScalar(1)};   ///< Uniform repetition spacing
+    Vec3<ScalarType> l{
+        TScalar(5),
+        TScalar(5),
+        TScalar(5)}; ///< Half number of repetitions along each axis
+    /**
+     * @brief Default constructor
+     */
+    Repeat() = default;
+    /**
+     * @brief Construct a new Repeat object
+     * @param s_ Uniform repetition spacing
+     * @param l_ Half number of repetitions along each axis
+     */
+    explicit Repeat(ScalarType s_, Vec3<ScalarType> const& l_) : s(s_), l(l_) {}
     /**
      * @brief Evaluate the signed distance function at a point
      * @tparam FSdf Callable type with signature `ScalarType(Vec3<ScalarType> const&)`
@@ -182,9 +231,19 @@ struct Repeat : public UnaryNode
 template <common::CArithmetic TScalar>
 struct Bump : public UnaryNode
 {
-    using ScalarType = TScalar; ///< Scalar type
-    Vec3<ScalarType> f;         ///< Frequency along each axis
-    Vec3<ScalarType> g;         ///< Amplitude of the wave displacement
+    using ScalarType = TScalar;                                ///< Scalar type
+    Vec3<ScalarType> f{TScalar(20), TScalar(20), TScalar(20)}; ///< Frequency along each axis
+    Vec3<ScalarType> g{TScalar(1), TScalar(1), TScalar(1)}; ///< Amplitude of the wave displacement
+    /**
+     * @brief Default constructor
+     */
+    Bump() = default;
+    /**
+     * @brief Construct a new Bump object
+     * @param f_ Frequency along each axis
+     * @param g_ Amplitude of the wave displacement
+     */
+    explicit Bump(Vec3<ScalarType> const& f_, Vec3<ScalarType> const& g_) : f(f_), g(g_) {}
     /**
      * @brief Evaluate the signed distance function at a point
      * @tparam FSdf Callable type with signature `ScalarType(Vec3<ScalarType> const&)`
@@ -213,7 +272,16 @@ template <common::CArithmetic TScalar>
 struct Twist : public UnaryNode
 {
     using ScalarType = TScalar; ///< Scalar type
-    ScalarType k;               ///< Twist factor
+    ScalarType k{5};            ///< Twist factor
+    /**
+     * @brief Default constructor
+     */
+    Twist() = default;
+    /**
+     * @brief Construct a new Twist object
+     * @param k_ Twist factor
+     */
+    explicit Twist(ScalarType k_) : k(k_) {}
     /**
      * @brief Evaluate the signed distance function at a point
      * @tparam FSdf Callable type with signature `ScalarType(Vec3<ScalarType> const&)`
@@ -239,7 +307,16 @@ template <common::CArithmetic TScalar>
 struct Bend : public UnaryNode
 {
     using ScalarType = TScalar; ///< Scalar type
-    ScalarType k;               ///< Bend factor
+    ScalarType k{5};            ///< Bend factor
+    /**
+     * @brief Default constructor
+     */
+    Bend() = default;
+    /**
+     * @brief Construct a new Bend object
+     * @param k_ Bend factor
+     */
+    explicit Bend(ScalarType k_) : k(k_) {}
     /**
      * @brief Evaluate the signed distance function at a point
      * @tparam FSdf Callable type with signature `ScalarType(Vec3<ScalarType> const&)`
