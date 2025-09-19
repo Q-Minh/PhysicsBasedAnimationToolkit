@@ -17,6 +17,7 @@ def sphere_ui(grid, sphere, X, dims, cmap, vminmax=(-10, 10), isolines=True):
                 vminmax=vminmax,
                 isolines_enabled=isolines,
             )
+        imgui.TreePop()
 
 
 def box_ui(grid, box, X, dims, cmap, vminmax=(-10, 10), isolines=True):
@@ -36,6 +37,7 @@ def box_ui(grid, box, X, dims, cmap, vminmax=(-10, 10), isolines=True):
                 vminmax=vminmax,
                 isolines_enabled=isolines,
             )
+        imgui.TreePop()
 
 
 def box_frame_ui(grid, box_frame, X, dims, cmap, vminmax=(-10, 10), isolines=True):
@@ -63,6 +65,7 @@ def box_frame_ui(grid, box_frame, X, dims, cmap, vminmax=(-10, 10), isolines=Tru
                 vminmax=vminmax,
                 isolines_enabled=isolines,
             )
+        imgui.TreePop()
 
 
 def torus_ui(grid, torus, X, dims, cmap, vminmax=(-10, 10), isolines=True):
@@ -81,6 +84,7 @@ def torus_ui(grid, torus, X, dims, cmap, vminmax=(-10, 10), isolines=True):
                 vminmax=vminmax,
                 isolines_enabled=isolines,
             )
+        imgui.TreePop()
 
 
 def capped_torus_ui(
@@ -107,6 +111,7 @@ def capped_torus_ui(
                 vminmax=vminmax,
                 isolines_enabled=isolines,
             )
+        imgui.TreePop()
 
 
 def link_ui(grid, link, X, dims, cmap, vminmax=(-10, 10), isolines=True):
@@ -127,6 +132,7 @@ def link_ui(grid, link, X, dims, cmap, vminmax=(-10, 10), isolines=True):
                 vminmax=vminmax,
                 isolines_enabled=isolines,
             )
+        imgui.TreePop()
 
 
 def infinite_cylinder_ui(
@@ -148,6 +154,7 @@ def infinite_cylinder_ui(
                 vminmax=vminmax,
                 isolines_enabled=isolines,
             )
+        imgui.TreePop()
 
 
 def cone_ui(grid, cone, X, dims, cmap, vminmax=(-10, 10), isolines=True):
@@ -168,6 +175,7 @@ def cone_ui(grid, cone, X, dims, cmap, vminmax=(-10, 10), isolines=True):
                 vminmax=vminmax,
                 isolines_enabled=isolines,
             )
+        imgui.TreePop()
 
 
 def infinite_cone_ui(grid, cone, X, dims, cmap, vminmax=(-10, 10), isolines=True):
@@ -186,11 +194,12 @@ def infinite_cone_ui(grid, cone, X, dims, cmap, vminmax=(-10, 10), isolines=True
                 vminmax=vminmax,
                 isolines_enabled=isolines,
             )
+        imgui.TreePop()
 
 
 def plane_ui(grid, plane, X, dims, cmap, vminmax=(-10, 10), isolines=True):
     if imgui.TreeNode("Plane"):
-        pass
+        imgui.TreePop()
 
 
 def hexagonal_prism_ui(grid, prism, X, dims, cmap, vminmax=(-10, 10), isolines=True):
@@ -209,6 +218,7 @@ def hexagonal_prism_ui(grid, prism, X, dims, cmap, vminmax=(-10, 10), isolines=T
                 vminmax=vminmax,
                 isolines_enabled=isolines,
             )
+        imgui.TreePop()
 
 
 def capsule_ui(grid, capsule, X, dims, cmap, vminmax=(-10, 10), isolines=True):
@@ -242,6 +252,7 @@ def capsule_ui(grid, capsule, X, dims, cmap, vminmax=(-10, 10), isolines=True):
                 vminmax=vminmax,
                 isolines_enabled=isolines,
             )
+        imgui.TreePop()
 
 
 def vertical_capsule_ui(
@@ -263,6 +274,7 @@ def vertical_capsule_ui(
                 vminmax=vminmax,
                 isolines_enabled=isolines,
             )
+        imgui.TreePop()
 
 
 def capped_cylinder_ui(
@@ -310,6 +322,7 @@ def capped_cylinder_ui(
                 vminmax=vminmax,
                 isolines_enabled=isolines,
             )
+        imgui.TreePop()
 
 
 def vertical_capped_cylinder_ui(
@@ -333,6 +346,7 @@ def vertical_capped_cylinder_ui(
                 vminmax=vminmax,
                 isolines_enabled=isolines,
             )
+        imgui.TreePop()
 
 
 def rounded_cylinder_ui(
@@ -358,6 +372,7 @@ def rounded_cylinder_ui(
                 vminmax=vminmax,
                 isolines_enabled=isolines,
             )
+        imgui.TreePop()
 
 
 def vertical_capped_cone_ui(
@@ -385,6 +400,7 @@ def vertical_capped_cone_ui(
                 vminmax=vminmax,
                 isolines_enabled=isolines,
             )
+        imgui.TreePop()
 
 
 def cut_hollow_sphere_ui(
@@ -408,6 +424,7 @@ def cut_hollow_sphere_ui(
                 vminmax=vminmax,
                 isolines_enabled=isolines,
             )
+        imgui.TreePop()
 
 
 def vertical_round_cone_ui(
@@ -435,6 +452,7 @@ def vertical_round_cone_ui(
                 vminmax=vminmax,
                 isolines_enabled=isolines,
             )
+        imgui.TreePop()
 
 
 def octahedron_ui(grid, octahedron, X, dims, cmap, vminmax=(-10, 10), isolines=True):
@@ -452,6 +470,7 @@ def octahedron_ui(grid, octahedron, X, dims, cmap, vminmax=(-10, 10), isolines=T
                 vminmax=vminmax,
                 isolines_enabled=isolines,
             )
+        imgui.TreePop()
 
 
 def pyramid_ui(grid, pyramid, X, dims, cmap, vminmax=(-10, 10), isolines=True):
@@ -469,6 +488,7 @@ def pyramid_ui(grid, pyramid, X, dims, cmap, vminmax=(-10, 10), isolines=True):
                 vminmax=vminmax,
                 isolines_enabled=isolines,
             )
+        imgui.TreePop()
 
 
 def triangle_ui(grid, triangle, X, dims, cmap, vminmax=(-10, 10), isolines=True):
@@ -506,6 +526,7 @@ def triangle_ui(grid, triangle, X, dims, cmap, vminmax=(-10, 10), isolines=True)
                 vminmax=vminmax,
                 isolines_enabled=isolines,
             )
+        imgui.TreePop()
 
 
 def quadrilateral_ui(
@@ -576,6 +597,7 @@ def quadrilateral_ui(
                 vminmax=vminmax,
                 isolines_enabled=isolines,
             )
+        imgui.TreePop()
 
 
 if __name__ == "__main__":
@@ -599,7 +621,7 @@ if __name__ == "__main__":
     box_frame = pbat.geometry.sdf.BoxFrame(he=np.array([1.0, 1.0, 1.0]), t=0.1)
     sd_box_frame = box_frame.eval(X).reshape(dims)
 
-    torus = pbat.geometry.sdf.Torus(t=np.array([1.0, 3.0]))
+    torus = pbat.geometry.sdf.Torus(t=np.array([5.0, 2.0]))
     sd_torus = torus.eval(X).reshape(dims)
 
     capped_torus = pbat.geometry.sdf.CappedTorus(
@@ -674,6 +696,7 @@ if __name__ == "__main__":
     )
     sd_quadrilateral = quadrilateral.eval(X).reshape(dims)
 
+    # Polyscope visualization
     ps.set_verbosity(0)
     ps.set_up_dir("z_up")
     ps.set_front_dir("neg_y_front")
@@ -980,5 +1003,4 @@ if __name__ == "__main__":
         )
 
     ps.set_user_callback(callback)
-
     ps.show()

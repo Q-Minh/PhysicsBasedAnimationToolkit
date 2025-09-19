@@ -49,7 +49,31 @@ void BindUnaryNode(nanobind::module_& m)
             "    sdf (Callable): Callable with signature `float(numpy.ndarray)` representing the "
             "SDF to scale\n\n"
             "Returns:\n"
-            "    float: Signed distance to the scaled shape (negative inside, positive outside)");
+            "    float: Signed distance to the scaled shape (negative inside, positive outside)")
+        .def(
+            "eval",
+            [](Scale const& self,
+               MatX const& p,
+               std::function<ScalarType(Vec3 const&)> const& sdf) -> VecX {
+                VecX result(p.cols());
+                for (int i = 0; i < p.cols(); ++i)
+                {
+                    result(i) = self.Eval(
+                        FromEigen(p.col(i).head<3>()),
+                        [&](SdfVec3 const& x) -> ScalarType { return sdf(ToEigen(x)); });
+                }
+                return result;
+            },
+            nb::arg("p"),
+            nb::arg("sdf"),
+            "Evaluate the signed distance function at multiple points\n\n"
+            "Args:\n"
+            "    p (numpy.ndarray): `N x 3` points in 3D space\n"
+            "    sdf (Callable): Callable with signature `float(numpy.ndarray)` representing the "
+            "SDF to scale\n\n"
+            "Returns:\n"
+            "    numpy.ndarray: `N x 1` Signed distances to the scaled shape (negative inside, "
+            "positive outside)");
 
     using Elongate = pbat::geometry::sdf::Elongate<ScalarType>;
     nb::class_<Elongate>(m, "Elongate")
@@ -87,7 +111,31 @@ void BindUnaryNode(nanobind::module_& m)
             "SDF to elongate\n\n"
             "Returns:\n"
             "    float: Signed distance to the elongated shape (negative inside, positive "
-            "outside)");
+            "outside)")
+        .def(
+            "eval",
+            [](Elongate const& self,
+               MatX const& p,
+               std::function<ScalarType(Vec3 const&)> const& sdf) -> VecX {
+                VecX result(p.cols());
+                for (int i = 0; i < p.cols(); ++i)
+                {
+                    result(i) = self.Eval(
+                        FromEigen(p.col(i).head<3>()),
+                        [&](SdfVec3 const& x) -> ScalarType { return sdf(ToEigen(x)); });
+                }
+                return result;
+            },
+            nb::arg("p"),
+            nb::arg("sdf"),
+            "Evaluate the signed distance function at multiple points\n\n"
+            "Args:\n"
+            "    p (numpy.ndarray): `N x 3` points in 3D space\n"
+            "    sdf (Callable): Callable with signature `float(numpy.ndarray)` representing the "
+            "SDF to elongate\n\n"
+            "Returns:\n"
+            "    numpy.ndarray: `N x 1` Signed distances to the elongated shape (negative inside, "
+            "positive outside)");
 
     using Round = pbat::geometry::sdf::Round<ScalarType>;
     nb::class_<Round>(m, "Round")
@@ -120,7 +168,31 @@ void BindUnaryNode(nanobind::module_& m)
             "    sdf (Callable): Callable with signature `float(numpy.ndarray)` representing the "
             "SDF to round\n\n"
             "Returns:\n"
-            "    float: Signed distance to the rounded shape (negative inside, positive outside)");
+            "    float: Signed distance to the rounded shape (negative inside, positive outside)")
+        .def(
+            "eval",
+            [](Round const& self,
+               MatX const& p,
+               std::function<ScalarType(Vec3 const&)> const& sdf) -> VecX {
+                VecX result(p.cols());
+                for (int i = 0; i < p.cols(); ++i)
+                {
+                    result(i) = self.Eval(
+                        FromEigen(p.col(i).head<3>()),
+                        [&](SdfVec3 const& x) -> ScalarType { return sdf(ToEigen(x)); });
+                }
+                return result;
+            },
+            nb::arg("p"),
+            nb::arg("sdf"),
+            "Evaluate the signed distance function at multiple points\n\n"
+            "Args:\n"
+            "    p (numpy.ndarray): `N x 3` points in 3D space\n"
+            "    sdf (Callable): Callable with signature `float(numpy.ndarray)` representing the "
+            "SDF to round\n\n"
+            "Returns:\n"
+            "    numpy.ndarray: `N x 1` Signed distances to the rounded shape (negative inside, "
+            "positive outside)");
 
     using Onion = pbat::geometry::sdf::Onion<ScalarType>;
     nb::class_<Onion>(m, "Onion")
@@ -153,7 +225,32 @@ void BindUnaryNode(nanobind::module_& m)
             "    sdf (Callable): Callable with signature `float(numpy.ndarray)` representing the "
             "SDF to onion\n\n"
             "Returns:\n"
-            "    float: Signed distance to the onion shape (negative inside, positive outside)");
+            "    float: Signed distance to the onion shape (negative inside, positive outside)")
+
+        .def(
+            "eval",
+            [](Onion const& self,
+               MatX const& p,
+               std::function<ScalarType(Vec3 const&)> const& sdf) -> VecX {
+                VecX result(p.cols());
+                for (int i = 0; i < p.cols(); ++i)
+                {
+                    result(i) = self.Eval(
+                        FromEigen(p.col(i).head<3>()),
+                        [&](SdfVec3 const& x) -> ScalarType { return sdf(ToEigen(x)); });
+                }
+                return result;
+            },
+            nb::arg("p"),
+            nb::arg("sdf"),
+            "Evaluate the signed distance function at multiple points\n\n"
+            "Args:\n"
+            "    p (numpy.ndarray): `N x 3` points in 3D space\n"
+            "    sdf (Callable): Callable with signature `float(numpy.ndarray)` representing the "
+            "SDF to onion\n\n"
+            "Returns:\n"
+            "    numpy.ndarray: `N x 1` Signed distances to the onion shape (negative inside, "
+            "positive outside)");
 
     using Symmetrize = pbat::geometry::sdf::Symmetrize<ScalarType>;
     nb::class_<Symmetrize>(m, "Symmetrize")
@@ -176,7 +273,31 @@ void BindUnaryNode(nanobind::module_& m)
             "SDF to symmetrize\n\n"
             "Returns:\n"
             "    float: Signed distance to the symmetrized shape (negative inside, positive "
-            "outside)");
+            "outside)")
+        .def(
+            "eval",
+            [](Symmetrize const& self,
+               MatX const& p,
+               std::function<ScalarType(Vec3 const&)> const& sdf) -> VecX {
+                VecX result(p.cols());
+                for (int i = 0; i < p.cols(); ++i)
+                {
+                    result(i) = self.Eval(
+                        FromEigen(p.col(i).head<3>()),
+                        [&](SdfVec3 const& x) -> ScalarType { return sdf(ToEigen(x)); });
+                }
+                return result;
+            },
+            nb::arg("p"),
+            nb::arg("sdf"),
+            "Evaluate the signed distance function at multiple points\n\n"
+            "Args:\n"
+            "    p (numpy.ndarray): `N x 3` points in 3D space\n"
+            "    sdf (Callable): Callable with signature `float(numpy.ndarray)` representing the "
+            "SDF to symmetrize\n\n"
+            "Returns:\n"
+            "    numpy.ndarray: `N x 1` Signed distances to the symmetrized shape (negative "
+            "inside, positive outside)");
 
     using Repeat = pbat::geometry::sdf::Repeat<ScalarType>;
     nb::class_<Repeat>(m, "Repeat")
@@ -217,7 +338,31 @@ void BindUnaryNode(nanobind::module_& m)
             "    sdf (Callable): Callable with signature `float(numpy.ndarray)` representing the "
             "SDF to repeat\n\n"
             "Returns:\n"
-            "    float: Signed distance to the repeated shape (negative inside, positive outside)");
+            "    float: Signed distance to the repeated shape (negative inside, positive outside)")
+        .def(
+            "eval",
+            [](Repeat const& self,
+               MatX const& p,
+               std::function<ScalarType(Vec3 const&)> const& sdf) -> VecX {
+                VecX result(p.cols());
+                for (int i = 0; i < p.cols(); ++i)
+                {
+                    result(i) = self.Eval(
+                        FromEigen(p.col(i).head<3>()),
+                        [&](SdfVec3 const& x) -> ScalarType { return sdf(ToEigen(x)); });
+                }
+                return result;
+            },
+            nb::arg("p"),
+            nb::arg("sdf"),
+            "Evaluate the signed distance function at multiple points\n\n"
+            "Args:\n"
+            "    p (numpy.ndarray): `N x 3` points in 3D space\n"
+            "    sdf (Callable): Callable with signature `float(numpy.ndarray)` representing the "
+            "SDF to repeat\n\n"
+            "Returns:\n"
+            "    numpy.ndarray: `N x 1` Signed distances to the repeated shape (negative inside, "
+            "positive outside)");
 
     using Bump = pbat::geometry::sdf::Bump<ScalarType>;
     nb::class_<Bump>(m, "Bump")
@@ -262,7 +407,31 @@ void BindUnaryNode(nanobind::module_& m)
             "    sdf (Callable): Callable with signature `float(numpy.ndarray)` representing the "
             "SDF to bump\n\n"
             "Returns:\n"
-            "    float: Signed distance to the bumped shape (negative inside, positive outside)");
+            "    float: Signed distance to the bumped shape (negative inside, positive outside)")
+        .def(
+            "eval",
+            [](Bump const& self,
+               MatX const& p,
+               std::function<ScalarType(Vec3 const&)> const& sdf) -> VecX {
+                VecX result(p.cols());
+                for (int i = 0; i < p.cols(); ++i)
+                {
+                    result(i) = self.Eval(
+                        FromEigen(p.col(i).head<3>()),
+                        [&](SdfVec3 const& x) -> ScalarType { return sdf(ToEigen(x)); });
+                }
+                return result;
+            },
+            nb::arg("p"),
+            nb::arg("sdf"),
+            "Evaluate the signed distance function at multiple points\n\n"
+            "Args:\n"
+            "    p (numpy.ndarray): `N x 3` points in 3D space\n"
+            "    sdf (Callable): Callable with signature `float(numpy.ndarray)` representing the "
+            "SDF to bump\n\n"
+            "Returns:\n"
+            "    numpy.ndarray: `N x 1` Signed distances to the bumped shape (negative inside, "
+            "positive outside)");
 
     using Twist = pbat::geometry::sdf::Twist<ScalarType>;
     nb::class_<Twist>(m, "Twist")
@@ -295,7 +464,31 @@ void BindUnaryNode(nanobind::module_& m)
             "    sdf (Callable): Callable with signature `float(numpy.ndarray)` representing the "
             "SDF to twist\n\n"
             "Returns:\n"
-            "    float: Signed distance to the twisted shape (negative inside, positive outside)");
+            "    float: Signed distance to the twisted shape (negative inside, positive outside)")
+        .def(
+            "eval",
+            [](Twist const& self,
+               MatX const& p,
+               std::function<ScalarType(Vec3 const&)> const& sdf) -> VecX {
+                VecX result(p.cols());
+                for (int i = 0; i < p.cols(); ++i)
+                {
+                    result(i) = self.Eval(
+                        FromEigen(p.col(i).head<3>()),
+                        [&](SdfVec3 const& x) -> ScalarType { return sdf(ToEigen(x)); });
+                }
+                return result;
+            },
+            nb::arg("p"),
+            nb::arg("sdf"),
+            "Evaluate the signed distance function at multiple points\n\n"
+            "Args:\n"
+            "    p (numpy.ndarray): `N x 3` points in 3D space\n"
+            "    sdf (Callable): Callable with signature `float(numpy.ndarray)` representing the "
+            "SDF to twist\n\n"
+            "Returns:\n"
+            "    numpy.ndarray: `N x 1` Signed distances to the twisted shape (negative inside, "
+            "positive outside)");
 
     using Bend = pbat::geometry::sdf::Bend<ScalarType>;
     nb::class_<Bend>(m, "Bend")
@@ -328,7 +521,31 @@ void BindUnaryNode(nanobind::module_& m)
             "    sdf (Callable): Callable with signature `float(numpy.ndarray)` representing the "
             "SDF to bend\n\n"
             "Returns:\n"
-            "    float: Signed distance to the bent shape (negative inside, positive outside)");
+            "    float: Signed distance to the bent shape (negative inside, positive outside)")
+        .def(
+            "eval",
+            [](Bend const& self,
+               MatX const& p,
+               std::function<ScalarType(Vec3 const&)> const& sdf) -> VecX {
+                VecX result(p.cols());
+                for (int i = 0; i < p.cols(); ++i)
+                {
+                    result(i) = self.Eval(
+                        FromEigen(p.col(i).head<3>()),
+                        [&](SdfVec3 const& x) -> ScalarType { return sdf(ToEigen(x)); });
+                }
+                return result;
+            },
+            nb::arg("p"),
+            nb::arg("sdf"),
+            "Evaluate the signed distance function at multiple points\n\n"
+            "Args:\n"
+            "    p (numpy.ndarray): `N x 3` points in 3D space\n"
+            "    sdf (Callable): Callable with signature `float(numpy.ndarray)` representing the "
+            "SDF to bend\n\n"
+            "Returns:\n"
+            "    numpy.ndarray: `N x 1` Signed distances to the bent shape (negative inside, "
+            "positive outside)");
 }
 
 } // namespace pbat::py::geometry::sdf
