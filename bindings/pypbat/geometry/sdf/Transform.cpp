@@ -28,6 +28,12 @@ void BindTransform(nanobind::module_& m)
             "Args:\n"
             "    R (numpy.ndarray): `3 x 3` rotation matrix\n"
             "    t (numpy.ndarray): `3 x 1` translation vector")
+        .def_static(
+            "eye",
+            &TransformType::Identity,
+            "Create an identity transform\n\n"
+            "Returns:\n"
+            "    Transform: Identity transform")
         .def_prop_rw(
             "R",
             [](TransformType& self) -> Mat3 { return ToEigen(self.R); },

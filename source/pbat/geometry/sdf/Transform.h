@@ -33,6 +33,26 @@ struct Transform
     Mat3<ScalarType> R;         ///< Rotation matrix
     Vec3<ScalarType> t;         ///< Translation vector
     /**
+     * @brief Default constructor
+     */
+    Transform() = default;
+    /**
+     * @brief Constructor with rotation matrix and translation vector
+     * @param R Rotation matrix
+     * @param t Translation vector
+     */
+    Transform(Mat3<ScalarType> const& R, Vec3<ScalarType> const& t) : R(R), t(t) {}
+    /**
+     * @brief Create an identity transform
+     * @return Identity transform
+     */
+    static Transform Identity()
+    {
+        return Transform{
+            pbat::math::linalg::mini::Identity<ScalarType, 3, 3>(),
+            Zero3<ScalarType>()};
+    }
+    /**
      * @brief Apply the transform to a point (technically, a vector)
      * @param p Point to transform
      * @return Transformed point

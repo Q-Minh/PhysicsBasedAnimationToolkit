@@ -227,16 +227,16 @@ inline TScalar Composite<TScalar>::Eval(int n, Vec3<ScalarType> const& p) const
             }
             else if constexpr (std::is_base_of_v<UnaryNode, NodeType>)
             {
-                sd = node.Eval(q, [&](Vec3<ScalarType> const& x) {
-                    auto c = mChildren[nStl].first;
-                    return Eval(c, x);
+                int const child = mChildren[nStl].first;
+                sd              = node.Eval(q, [this, child](Vec3<ScalarType> const& x) {
+                    return Eval(child, x);
                 });
             }
             else if constexpr (std::is_base_of_v<BinaryNode, NodeType>)
             {
                 auto ci = mChildren[nStl].first;
                 auto cj = mChildren[nStl].second;
-                node.Eval(Eval(ci, q), Eval(cj, q));
+                sd      = node.Eval(Eval(ci, q), Eval(cj, q));
             }
             else
             {
