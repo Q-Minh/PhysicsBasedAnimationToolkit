@@ -307,15 +307,6 @@ if __name__ == "__main__":
     )
     X = np.vstack([np.ravel(x), np.ravel(y), np.ravel(z)]).astype(np.float64)
 
-    # SDF nodes
-    sphere = pbat.geometry.sdf.Sphere(R=1.0)
-    box = pbat.geometry.sdf.Box(he=np.array([0.5, 0.5, 0.5]))
-    elongate = pbat.geometry.sdf.Elongate(h=np.array([0.0, 0.0, 0.0]))
-    bend = pbat.geometry.sdf.Bend(k=0.0)
-    plane = pbat.geometry.sdf.Plane()
-    sunion = pbat.geometry.sdf.SmoothUnion(k=0.25)
-    sdifference = pbat.geometry.sdf.Difference()
-
     # Composite
     nodes = []
     children = []
