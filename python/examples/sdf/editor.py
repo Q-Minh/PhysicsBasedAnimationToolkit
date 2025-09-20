@@ -610,22 +610,22 @@ if __name__ == "__main__":
                     enable_isosurface_viz=enable_isosurface_viz,
                     # isoline_contour_thickness=isoline_contour_thickness,
                 )
-                # Update the all view
+                # Update the primitive nodes view
                 primitive_node_inds = [
                     i for i in range(len(children)) if children[i] == (-1, -1)
                 ]
-                all_children = [(-1, -1) for _ in range(len(primitive_node_inds))]
-                all_roots, _ = pbat.geometry.sdf.roots_and_parents(all_children)
-                all_primitive_nodes = [nodes[i] for i in primitive_node_inds]
-                all_transforms = [transforms[i] for i in primitive_node_inds]
-                all_forest = pbat.geometry.sdf.Forest(
-                    all_primitive_nodes, all_transforms, all_children, all_roots
+                primitive_children = [(-1, -1) for _ in range(len(primitive_node_inds))]
+                primitive_roots, _ = pbat.geometry.sdf.roots_and_parents(primitive_children)
+                primitive_nodes = [nodes[i] for i in primitive_node_inds]
+                primitive_transforms = [transforms[i] for i in primitive_node_inds]
+                primitive_forest = pbat.geometry.sdf.Forest(
+                    primitive_nodes, primitive_transforms, primitive_children, primitive_roots
                 )
-                all_composite = pbat.geometry.sdf.Composite(all_forest)
-                all_sd_composite = all_composite.eval(X).reshape(dims)
+                primitive_composite = pbat.geometry.sdf.Composite(primitive_forest)
+                primitive_sd_composite = primitive_composite.eval(X).reshape(dims)
                 grid.add_scalar_quantity(
-                    "All",
-                    all_sd_composite,
+                    "Primitive Nodes",
+                    primitive_sd_composite,
                     defined_on="nodes",
                     cmap=cmap,
                     vminmax=vminmax,
