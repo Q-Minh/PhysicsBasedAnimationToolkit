@@ -1,4 +1,5 @@
 from typing import Tuple
+from collections import deque
 import pbatoolkit as pbat
 import polyscope as ps
 import polyscope.imgui as imgui
@@ -6,9 +7,17 @@ import numpy as np
 import scipy as sp
 
 
-def node_ui(id, node, transform, children) -> Tuple[bool, bool]:
+def node_ui(id, nodes, transforms, children, visited) -> Tuple[bool, int, bool]:
+    node = nodes[id]
+    transform = transforms[id]
+    deleted_id = -1
     dirty = False
-    deleted = False
+    descendant_updated = False
+    if visited[id]:
+        return dirty, deleted_id, descendant_updated
+    visited[id] = True
+    # Visit
+    imgui.PushID(id)
     if imgui.TreeNode("{} - {}".format(id, type(node).__name__)):
         # Primitives
         if isinstance(node, pbat.geometry.sdf.Sphere):
@@ -281,18 +290,40 @@ def node_ui(id, node, transform, children) -> Tuple[bool, bool]:
                 "xyz", r, degrees=True
             ).as_matrix()
 
+        dirty |= t_updated or r_updated
+
         # Children
-        children_updated, children[id] = imgui.InputInt2("Children", children[id])
-        if children_updated:
+        descendant_updated, (ci, cj) = imgui.InputInt2("Children", children[id])
+        if descendant_updated:
             dirty = True
 
         # Deletion
         if imgui.Button("Delete"):
-            deleted = True
+            deleted_id = id
 
-        dirty |= t_updated or r_updated
+        # Recurse
+        c0, c1 = children[id]
+        if c0 >= 0:
+            c0_dirty, c0_deleted_id, c0_children_updated = node_ui(
+                c0, nodes, transforms, children, visited
+            )
+            dirty |= c0_dirty
+            descendant_updated |= c0_children_updated
+            if c0_deleted_id != -1:
+                deleted_id = c0_deleted_id
+        if c1 >= 0:
+            c1_dirty, c1_deleted_id, c1_children_updated = node_ui(
+                c1, nodes, transforms, children, visited
+            )
+            dirty |= c1_dirty
+            descendant_updated |= c1_children_updated
+            if c1_deleted_id != -1:
+                deleted_id = c1_deleted_id
+
+        children[id] = (ci, cj)
         imgui.TreePop()
-    return dirty, deleted
+    imgui.PopID()
+    return dirty, deleted_id, descendant_updated
 
 
 if __name__ == "__main__":
@@ -482,18 +513,22 @@ if __name__ == "__main__":
                 children.append((len(nodes) - 2, len(nodes) - 1))
             nodes.append(node)
             transforms.append(pbat.geometry.sdf.Transform.eye())
-            roots.append(len(nodes) - 1)
+            roots, _ = pbat.geometry.sdf.roots_and_parents(children)
             dirty = True
 
         # Node modification UIs
         deleted_id = -1
-        for i, (node, transform) in enumerate(zip(nodes, transforms)):
-            imgui.PushID(i)
-            node_dirty, node_deleted = node_ui(i, node, transform, children)
-            imgui.PopID()
-            dirty |= node_dirty
-            if node_deleted:
-                deleted_id = i
+        visited = [False] * len(nodes)
+        for i in roots:
+            # for i in range(len(nodes)):
+            # Traverse the subtree and mark visited nodes
+            node_dirty, node_deleted_id, ci_descendants_updated = node_ui(
+                i, nodes, transforms, children, visited
+            )
+            was_descendant_deleted = node_deleted_id >= 0
+            dirty |= node_dirty or ci_descendants_updated or was_descendant_deleted
+            if was_descendant_deleted:
+                deleted_id = node_deleted_id
 
         # Update forest if a node was deleted
         if deleted_id >= 0:
@@ -508,7 +543,6 @@ if __name__ == "__main__":
                 if c1 >= deleted_id:
                     c1 -= 1
                 children[i] = (c0, c1)
-            dirty = True
 
         # Update SDF
         if dirty:
