@@ -426,7 +426,7 @@ if __name__ == "__main__":
         enabled=True,
     )
     grid.add_scalar_quantity(
-        "All",
+        "All Primitives",
         sd_composite,
         defined_on="nodes",
         cmap=cmap,
@@ -624,7 +624,7 @@ if __name__ == "__main__":
                 primitive_composite = pbat.geometry.sdf.Composite(primitive_forest)
                 primitive_sd_composite = primitive_composite.eval(X).reshape(dims)
                 grid.add_scalar_quantity(
-                    "Primitive Nodes",
+                    "All Primitives",
                     primitive_sd_composite,
                     defined_on="nodes",
                     cmap=cmap,
