@@ -1,5 +1,4 @@
 from typing import Tuple
-from collections import deque
 import pbatoolkit as pbat
 import polyscope as ps
 import polyscope.imgui as imgui
