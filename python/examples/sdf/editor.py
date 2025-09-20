@@ -201,28 +201,33 @@ def node_ui(id, nodes, transforms, children, visited) -> Tuple[bool, int, bool]:
             dirty = updated
 
         # Unary nodes
+        is_unary_node = False
         if isinstance(node, pbat.geometry.sdf.Scale):
             s_updated, s = imgui.SliderFloat("Scale", node.s, 0.01, 5.0)
             if s_updated:
                 node.s = s
             dirty = s_updated
+            is_unary_node = True
         elif isinstance(node, pbat.geometry.sdf.Elongate):
             h_updated, h = imgui.SliderFloat3("Length", node.h, 0.1, 10.0)
             if h_updated:
                 node.h = np.array(h)
             dirty = h_updated
+            is_unary_node = True
         elif isinstance(node, pbat.geometry.sdf.Round):
             r_updated, r = imgui.SliderFloat("Radius", node.r, 0.01, 1.0)
             if r_updated:
                 node.r = r
             dirty = r_updated
+            is_unary_node = True
         elif isinstance(node, pbat.geometry.sdf.Onion):
             t_updated, t = imgui.SliderFloat("Thickness", node.t, 0.01, 1.0)
             if t_updated:
                 node.t = t
             dirty = t_updated
+            is_unary_node = True
         elif isinstance(node, pbat.geometry.sdf.Symmetrize):
-            pass
+            is_unary_node = True
         elif isinstance(node, pbat.geometry.sdf.Repeat):
             s_updated, s = imgui.SliderFloat("Scale", node.s, 0.01, 10.0)
             l_updated, l = imgui.SliderFloat3("Extents", node.l, 0.01, 10.0)
@@ -231,6 +236,7 @@ def node_ui(id, nodes, transforms, children, visited) -> Tuple[bool, int, bool]:
                 node.s = s
                 node.l = np.array(l)
             dirty = updated
+            is_unary_node = True
         elif isinstance(node, pbat.geometry.sdf.Bump):
             a_updated, a = imgui.SliderFloat3("Amplitude", node.g, 0.0, 1.0)
             f_updated, f = imgui.SliderFloat3("Frequency", node.f, 0.0, 10.0)
@@ -239,41 +245,48 @@ def node_ui(id, nodes, transforms, children, visited) -> Tuple[bool, int, bool]:
                 node.g = np.array(a)
                 node.f = np.array(f)
             dirty = updated
+            is_unary_node = True
         elif isinstance(node, pbat.geometry.sdf.Twist):
             k_updated, k = imgui.SliderFloat("Twist", node.k, -0.5, 0.5)
             if k_updated:
                 node.k = k
             dirty = k_updated
+            is_unary_node = True
         elif isinstance(node, pbat.geometry.sdf.Bend):
             k_updated, k = imgui.SliderFloat("Curvature", node.k, -0.5, 0.5)
             if k_updated:
                 node.k = k
             dirty = k_updated
+            is_unary_node = True
 
         # Binary nodes
+        is_binary_node = False
         if isinstance(node, pbat.geometry.sdf.Union):
-            pass
+            is_binary_node = True
         elif isinstance(node, pbat.geometry.sdf.Difference):
-            pass
+            is_binary_node = True
         elif isinstance(node, pbat.geometry.sdf.Intersection):
-            pass
+            is_binary_node = True
         elif isinstance(node, pbat.geometry.sdf.ExclusiveOr):
-            pass
+            is_binary_node = True
         elif isinstance(node, pbat.geometry.sdf.SmoothUnion):
             k_updated, k = imgui.SliderFloat("Smoothness", node.k, 0.0, 10.0)
             if k_updated:
                 node.k = k
             dirty = k_updated
+            is_binary_node = True
         elif isinstance(node, pbat.geometry.sdf.SmoothDifference):
             k_updated, k = imgui.SliderFloat("Smoothness", node.k, 0.0, 10.0)
             if k_updated:
                 node.k = k
             dirty = k_updated
+            is_binary_node = True
         elif isinstance(node, pbat.geometry.sdf.SmoothIntersection):
             k_updated, k = imgui.SliderFloat("Smoothness", node.k, 0.0, 10.0)
             if k_updated:
                 node.k = k
             dirty = k_updated
+            is_binary_node = True
 
         # Transform
         t_updated, t = imgui.SliderFloat3("Translation", transform.t, -10.0, 10.0)
@@ -292,9 +305,46 @@ def node_ui(id, nodes, transforms, children, visited) -> Tuple[bool, int, bool]:
         dirty |= t_updated or r_updated
 
         # Children
-        descendant_updated, (ci, cj) = imgui.InputInt2("Children", children[id])
-        if descendant_updated:
-            dirty = True
+        ci, cj = children[id]
+        if is_unary_node:
+            unary_node_child_selection_requested = imgui.BeginCombo(
+                "Child", str(children[id][0])
+            )
+            if unary_node_child_selection_requested:
+                for i in range(len(nodes)):
+                    name = type(nodes[i]).__name__
+                    _, selected = imgui.Selectable(name, i == children[id][0])
+                    if selected:
+                        ci = i
+                imgui.EndCombo()
+        if is_binary_node:
+            binary_node_left_child_selection_requested = imgui.BeginCombo(
+                "Left Child", str(children[id][0])
+            )
+            if binary_node_left_child_selection_requested:
+                for i in range(len(nodes)):
+                    name = "{} - {}".format(i, type(nodes[i]).__name__)
+                    _, selected = imgui.Selectable(name, i == ci)
+                    if selected:
+                        ci = i
+                imgui.EndCombo()
+            binary_node_right_child_selection_requested = imgui.BeginCombo(
+                "Right Child", str(children[id][1])
+            )
+            if binary_node_right_child_selection_requested:
+                for j in range(len(nodes)):
+                    name = "{} - {}".format(j, type(nodes[j]).__name__)
+                    _, selected = imgui.Selectable(name, j == cj)
+                    if selected:
+                        cj = j
+                imgui.EndCombo()
+
+        if is_unary_node:
+            descendant_updated = ci != children[id][0]
+            dirty |= descendant_updated
+        if is_binary_node:
+            descendant_updated = (ci != children[id][0]) or (cj != children[id][1])
+            dirty |= descendant_updated
 
         # Deletion
         if imgui.Button("Delete"):
@@ -519,8 +569,7 @@ if __name__ == "__main__":
         deleted_id = -1
         visited = [False] * len(nodes)
         for i in roots:
-            # for i in range(len(nodes)):
-            # Traverse the subtree and mark visited nodes
+            # Top-down forest traversal to show UI for each node
             node_dirty, node_deleted_id, ci_descendants_updated = node_ui(
                 i, nodes, transforms, children, visited
             )
