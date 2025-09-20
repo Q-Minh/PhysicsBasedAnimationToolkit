@@ -838,7 +838,7 @@ struct Pyramid : public Primitive
 
         ScalarType apx = abs(p(0));
         ScalarType apz = abs(p(2));
-        bool bzx       = (p(2) > p(0));
+        bool bzx       = (apz > apx);
         p(0)           = bzx * apz + (not bzx) * apx - half;
         p(2)           = bzx * apx + (not bzx) * apz - half;
 
