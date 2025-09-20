@@ -308,7 +308,7 @@ def node_ui(id, nodes, transforms, children, visited) -> Tuple[bool, int, bool]:
         ci, cj = children[id]
         if is_unary_node:
             unary_node_child_selection_requested = imgui.BeginCombo(
-                "Child", str(children[id][0])
+                "Child", "{} - {}".format(ci, type(nodes[ci]).__name__)
             )
             if unary_node_child_selection_requested:
                 for i in range(len(nodes)):
@@ -319,7 +319,7 @@ def node_ui(id, nodes, transforms, children, visited) -> Tuple[bool, int, bool]:
                 imgui.EndCombo()
         if is_binary_node:
             binary_node_left_child_selection_requested = imgui.BeginCombo(
-                "Left Child", str(children[id][0])
+                "Left Child", "{} - {}".format(ci, type(nodes[ci]).__name__)
             )
             if binary_node_left_child_selection_requested:
                 for i in range(len(nodes)):
@@ -329,7 +329,7 @@ def node_ui(id, nodes, transforms, children, visited) -> Tuple[bool, int, bool]:
                         ci = i
                 imgui.EndCombo()
             binary_node_right_child_selection_requested = imgui.BeginCombo(
-                "Right Child", str(children[id][1])
+                "Right Child", "{} - {}".format(cj, type(nodes[cj]).__name__)
             )
             if binary_node_right_child_selection_requested:
                 for j in range(len(nodes)):
