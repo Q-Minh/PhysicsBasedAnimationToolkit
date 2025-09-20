@@ -313,7 +313,7 @@ def node_ui(id, nodes, transforms, children, visited) -> Tuple[bool, int, bool]:
             if unary_node_child_selection_requested:
                 for i in range(len(nodes)):
                     name = type(nodes[i]).__name__
-                    _, selected = imgui.Selectable(name, i == children[id][0])
+                    _, selected = imgui.Selectable(name, i == ci)
                     if selected:
                         ci = i
                 imgui.EndCombo()
