@@ -298,6 +298,7 @@ def node_ui(id, nodes, transforms, children, visited) -> Tuple[bool, int, bool]:
         )
         r_updated, r = imgui.SliderFloat3("Rotation XYZ", euler_angles, -180.0, 180.0)
         if r_updated:
+            r = [5 * round(ri / 5) for ri in r]
             transform.R = sp.spatial.transform.Rotation.from_euler(
                 "xyz", r, degrees=True
             ).as_matrix()
@@ -483,6 +484,9 @@ if __name__ == "__main__":
         pbat.geometry.sdf.SmoothIntersection,
         pbat.geometry.sdf.SmoothDifference,
     ]
+    primitive_node_types.sort(key=lambda t: t.__name__)
+    unary_node_types.sort(key=lambda t: t.__name__)
+    binary_node_types.sort(key=lambda t: t.__name__)
 
     selected_primitive_node_type = primitive_node_types[0]
     selected_unary_node_type = unary_node_types[0]
