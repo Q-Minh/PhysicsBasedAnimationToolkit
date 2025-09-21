@@ -44,9 +44,9 @@ def node_ui(id, nodes, transforms, children, visited) -> Tuple[bool, int, bool]:
                 node.t = np.array(t)
             dirty = updated
         elif isinstance(node, pbat.geometry.sdf.CappedTorus):
-            sc_updated, sc = imgui.SliderFloat2("Radii", node.sc, 0.1, 10.0)
-            ra_updated, ra = imgui.SliderFloat("Cap Radius a", node.ra, 0.1, 10.0)
-            rb_updated, rb = imgui.SliderFloat("Cap Radius b", node.rb, 0.1, 10.0)
+            sc_updated, sc = imgui.SliderFloat2("Sin/Cos", node.sc, -1.0, 1.0)
+            ra_updated, ra = imgui.SliderFloat("Radius a", node.ra, 0.1, 10.0)
+            rb_updated, rb = imgui.SliderFloat("Radius b", node.rb, 0.1, 10.0)
             updated = sc_updated or ra_updated or rb_updated
             if updated:
                 node.sc = np.array(sc)
@@ -69,7 +69,7 @@ def node_ui(id, nodes, transforms, children, visited) -> Tuple[bool, int, bool]:
                 node.c = np.array([c[0], c[1], r])
             dirty = r_updated
         elif isinstance(node, pbat.geometry.sdf.Cone):
-            sc_updated, sc = imgui.SliderFloat2("Sin/Cos", node.c[:2], 0.0, 1.0)
+            sc_updated, sc = imgui.SliderFloat2("Sin/Cos", node.c[:2], -1.0, 1.0)
             h_updated, h = imgui.SliderFloat("Height", node.h, 0.1, 10.0)
             updated = h_updated or sc_updated
             if updated:
@@ -77,7 +77,7 @@ def node_ui(id, nodes, transforms, children, visited) -> Tuple[bool, int, bool]:
                 node.h = h
             dirty = updated
         elif isinstance(node, pbat.geometry.sdf.InfiniteCone):
-            sc_updated, sc = imgui.SliderFloat2("Sin/Cos", node.c[:2], 0.0, 1.0)
+            sc_updated, sc = imgui.SliderFloat2("Sin/Cos", node.c[:2], -1.0, 1.0)
             updated = sc_updated
             if updated:
                 node.c = np.array(sc)
@@ -615,11 +615,16 @@ if __name__ == "__main__":
                     i for i in range(len(children)) if children[i] == (-1, -1)
                 ]
                 primitive_children = [(-1, -1) for _ in range(len(primitive_node_inds))]
-                primitive_roots, _ = pbat.geometry.sdf.roots_and_parents(primitive_children)
+                primitive_roots, _ = pbat.geometry.sdf.roots_and_parents(
+                    primitive_children
+                )
                 primitive_nodes = [nodes[i] for i in primitive_node_inds]
                 primitive_transforms = [transforms[i] for i in primitive_node_inds]
                 primitive_forest = pbat.geometry.sdf.Forest(
-                    primitive_nodes, primitive_transforms, primitive_children, primitive_roots
+                    primitive_nodes,
+                    primitive_transforms,
+                    primitive_children,
+                    primitive_roots,
                 )
                 primitive_composite = pbat.geometry.sdf.Composite(primitive_forest)
                 primitive_sd_composite = primitive_composite.eval(X).reshape(dims)

@@ -22,12 +22,10 @@ def sphere_ui(grid, sphere, X, dims, cmap, vminmax=(-10, 10), isolines=True):
 
 def box_ui(grid, box, X, dims, cmap, vminmax=(-10, 10), isolines=True):
     if imgui.TreeNode("Box"):
-        hex_updated, hex = imgui.SliderFloat("Half Extent X", box.he[0], 0.1, 10.0)
-        hey_updated, hey = imgui.SliderFloat("Half Extent Y", box.he[1], 0.1, 10.0)
-        hez_updated, hez = imgui.SliderFloat("Half Extent Z", box.he[2], 0.1, 10.0)
-        updated = hex_updated or hey_updated or hez_updated
+        he_updated, he = imgui.SliderFloat3("Half Extents", box.he, 0.1, 10.0)
+        updated = he_updated
         if updated:
-            box.he = np.array([hex, hey, hez])
+            box.he = np.array(he)
             sd = box.eval(X).reshape(dims)
             grid.add_scalar_quantity(
                 "Box",
@@ -42,19 +40,11 @@ def box_ui(grid, box, X, dims, cmap, vminmax=(-10, 10), isolines=True):
 
 def box_frame_ui(grid, box_frame, X, dims, cmap, vminmax=(-10, 10), isolines=True):
     if imgui.TreeNode("Box Frame"):
-        hex_updated, hex = imgui.SliderFloat(
-            "Half Extent X", box_frame.he[0], 0.1, 10.0
-        )
-        hey_updated, hey = imgui.SliderFloat(
-            "Half Extent Y", box_frame.he[1], 0.1, 10.0
-        )
-        hez_updated, hez = imgui.SliderFloat(
-            "Half Extent Z", box_frame.he[2], 0.1, 10.0
-        )
+        he_updated, he = imgui.SliderFloat3("Half Extents", box_frame.he, 0.1, 10.0)
         t_updated, t = imgui.SliderFloat("Thickness", box_frame.t, 0.01, 1.0)
-        updated = hex_updated or hey_updated or hez_updated or t_updated
+        updated = he_updated or t_updated
         if updated:
-            box_frame.he = np.array([hex, hey, hez])
+            box_frame.he = np.array(he)
             box_frame.t = t
             sd = box_frame.eval(X).reshape(dims)
             grid.add_scalar_quantity(
@@ -70,11 +60,10 @@ def box_frame_ui(grid, box_frame, X, dims, cmap, vminmax=(-10, 10), isolines=Tru
 
 def torus_ui(grid, torus, X, dims, cmap, vminmax=(-10, 10), isolines=True):
     if imgui.TreeNode("Torus"):
-        r1_updated, r1 = imgui.SliderFloat("Minor Radius", torus.t[0], 0.1, 10.0)
-        r2_updated, r2 = imgui.SliderFloat("Major Radius", torus.t[1], 0.1, 5.0)
-        updated = r1_updated or r2_updated
+        r_updated, r = imgui.SliderFloat2("Radii", torus.t, 0.1, 10.0)
+        updated = r_updated
         if updated:
-            torus.t = np.array([r1, r2])
+            torus.t = np.array(r)
             sd = torus.eval(X).reshape(dims)
             grid.add_scalar_quantity(
                 "Torus",
@@ -91,15 +80,12 @@ def capped_torus_ui(
     grid, capped_torus, X, dims, cmap, vminmax=(-10, 10), isolines=True
 ):
     if imgui.TreeNode("Capped Torus"):
-        r1_updated, r1 = imgui.SliderFloat(
-            "Minor Radius", capped_torus.sc[0], 0.1, 10.0
-        )
-        r2_updated, r2 = imgui.SliderFloat("Major Radius", capped_torus.sc[1], 0.1, 5.0)
-        ra_updated, ra = imgui.SliderFloat("Cap Radius", capped_torus.ra, 0.1, 5.0)
-        rb_updated, rb = imgui.SliderFloat("Cap Radius", capped_torus.rb, 0.1, 5.0)
-        updated = r1_updated or r2_updated or ra_updated or rb_updated
+        sc_updated, sc = imgui.SliderFloat2("Sin/Cos", capped_torus.sc, -1.0, 1.0)
+        ra_updated, ra = imgui.SliderFloat("Radius 1", capped_torus.ra, 0.01, 10.0)
+        rb_updated, rb = imgui.SliderFloat("Radius 2", capped_torus.rb, 0.01, 10.0)
+        updated = sc_updated or ra_updated or rb_updated
         if updated:
-            capped_torus.sc = np.array([r1, r2])
+            capped_torus.sc = np.array(sc)
             capped_torus.ra = ra
             capped_torus.rb = rb
             sd = capped_torus.eval(X).reshape(dims)
@@ -116,12 +102,11 @@ def capped_torus_ui(
 
 def link_ui(grid, link, X, dims, cmap, vminmax=(-10, 10), isolines=True):
     if imgui.TreeNode("Link"):
-        t1_updated, t1 = imgui.SliderFloat("Radius 1", link.t[0], 0.1, 5.0)
-        t2_updated, t2 = imgui.SliderFloat("Radius 2", link.t[1], 0.1, 5.0)
+        t_updated, t = imgui.SliderFloat2("Radii", link.t, 0.1, 10.0)
         le_updated, le = imgui.SliderFloat("Length", link.le, 0.1, 10.0)
-        updated = t1_updated or t2_updated or le_updated
+        updated = t_updated or le_updated
         if updated:
-            link.t = np.array([t1, t2])
+            link.t = np.array(t)
             link.le = le
             sd = link.eval(X).reshape(dims)
             grid.add_scalar_quantity(
@@ -139,12 +124,11 @@ def infinite_cylinder_ui(
     grid, cylinder, X, dims, cmap, vminmax=(-10, 10), isolines=True
 ):
     if imgui.TreeNode("Infinite Cylinder"):
-        cx_updated, cx = imgui.SliderFloat("Center X", cylinder.c[0], -5.0, 5.0)
-        cy_updated, cy = imgui.SliderFloat("Center Y", cylinder.c[1], -5.0, 5.0)
-        r_updated, r = imgui.SliderFloat("Radius", cylinder.c[2], 0.1, 5.0)
-        updated = cx_updated or cy_updated or r_updated
+        c_updated, c = imgui.SliderFloat2("Center", cylinder.c[:2], -10.0, 10.0)
+        r_updated, r = imgui.SliderFloat("Radius", cylinder.c[2], 0.1, 10.0)
+        updated = c_updated or r_updated
         if updated:
-            cylinder.c = np.array([cx, cy, r])
+            cylinder.c = np.array([c[0], c[1], r])
             sd = cylinder.eval(X).reshape(dims)
             grid.add_scalar_quantity(
                 "Infinite Cylinder",
@@ -159,12 +143,11 @@ def infinite_cylinder_ui(
 
 def cone_ui(grid, cone, X, dims, cmap, vminmax=(-10, 10), isolines=True):
     if imgui.TreeNode("Cone"):
-        s_updated, s = imgui.SliderFloat("Sin", cone.c[0], 0.0, 1.0)
-        c_updated, c = imgui.SliderFloat("Cos", cone.c[1], 0.0, 1.0)
+        sc_updated, sc = imgui.SliderFloat2("Sin/Cos", cone.c, -1.0, 1.0)
         r_updated, r = imgui.SliderFloat("Height", cone.h, 0.1, 10.0)
-        updated = s_updated or c_updated or r_updated
+        updated = sc_updated or r_updated
         if updated:
-            cone.c = np.array([s, c])
+            cone.c = np.array(sc)
             cone.h = r
             sd = cone.eval(X).reshape(dims)
             grid.add_scalar_quantity(
@@ -180,11 +163,10 @@ def cone_ui(grid, cone, X, dims, cmap, vminmax=(-10, 10), isolines=True):
 
 def infinite_cone_ui(grid, cone, X, dims, cmap, vminmax=(-10, 10), isolines=True):
     if imgui.TreeNode("Infinite Cone"):
-        s_updated, s = imgui.SliderFloat("Sin", cone.c[0], 0.0, 1.0)
-        c_updated, c = imgui.SliderFloat("Cos", cone.c[1], 0.0, 1.0)
-        updated = s_updated or c_updated
+        sc_updated, sc = imgui.SliderFloat2("Sin/Cos", cone.c, -1.0, 1.0)
+        updated = sc_updated
         if updated:
-            cone.c = np.array([s, c])
+            cone.c = np.array(sc)
             sd = cone.eval(X).reshape(dims)
             grid.add_scalar_quantity(
                 "Infinite Cone",
@@ -204,11 +186,10 @@ def plane_ui(grid, plane, X, dims, cmap, vminmax=(-10, 10), isolines=True):
 
 def hexagonal_prism_ui(grid, prism, X, dims, cmap, vminmax=(-10, 10), isolines=True):
     if imgui.TreeNode("Hexagonal Prism"):
-        h1_updated, h1 = imgui.SliderFloat("In-radius", prism.h[0], 0.1, 5.0)
-        h2_updated, h2 = imgui.SliderFloat("Circumradius", prism.h[1], 0.1, 10.0)
-        updated = h1_updated or h2_updated
+        h_updated, h = imgui.SliderFloat2("Radii", prism.h, 0.1, 10.0)
+        updated = h_updated
         if updated:
-            prism.h = np.array([h1, h2])
+            prism.h = np.array(h)
             sd = prism.eval(X).reshape(dims)
             grid.add_scalar_quantity(
                 "Hexagonal Prism",
@@ -223,25 +204,13 @@ def hexagonal_prism_ui(grid, prism, X, dims, cmap, vminmax=(-10, 10), isolines=T
 
 def capsule_ui(grid, capsule, X, dims, cmap, vminmax=(-10, 10), isolines=True):
     if imgui.TreeNode("Capsule"):
-        ax_updated, ax = imgui.SliderFloat("X of Endpoint A", capsule.a[0], -10.0, 10.0)
-        ay_updated, ay = imgui.SliderFloat("Y of Endpoint A", capsule.a[1], -10.0, 10.0)
-        az_updated, az = imgui.SliderFloat("Z of Endpoint A", capsule.a[2], -10.0, 10.0)
-        bx_updated, bx = imgui.SliderFloat("X of Endpoint B", capsule.b[0], -10.0, 10.0)
-        by_updated, by = imgui.SliderFloat("Y of Endpoint B", capsule.b[1], -10.0, 10.0)
-        bz_updated, bz = imgui.SliderFloat("Z of Endpoint B", capsule.b[2], -10.0, 10.0)
+        a_updated, a = imgui.SliderFloat3("Endpoint A", capsule.a, -10.0, 10.0)
+        b_updated, b = imgui.SliderFloat3("Endpoint B", capsule.b, -10.0, 10.0)
         r_updated, r = imgui.SliderFloat("Radius", capsule.r, 0.1, 5.0)
-        updated = (
-            ax_updated
-            or ay_updated
-            or az_updated
-            or bx_updated
-            or by_updated
-            or bz_updated
-            or r_updated
-        )
+        updated = a_updated or b_updated or r_updated
         if updated:
-            capsule.a = np.array([ax, ay, az])
-            capsule.b = np.array([bx, by, bz])
+            capsule.a = np.array(a)
+            capsule.b = np.array(b)
             capsule.r = r
             sd = capsule.eval(X).reshape(dims)
             grid.add_scalar_quantity(
@@ -281,37 +250,13 @@ def capped_cylinder_ui(
     grid, capped_cylinder, X, dims, cmap, vminmax=(-10, 10), isolines=True
 ):
     if imgui.TreeNode("Capped Cylinder"):
-        ax_updated, ax = imgui.SliderFloat(
-            "X of Endpoint A", capped_cylinder.a[0], -10.0, 10.0
-        )
-        ay_updated, ay = imgui.SliderFloat(
-            "Y of Endpoint A", capped_cylinder.a[1], -10.0, 10.0
-        )
-        az_updated, az = imgui.SliderFloat(
-            "Z of Endpoint A", capped_cylinder.a[2], -10.0, 10.0
-        )
-        bx_updated, bx = imgui.SliderFloat(
-            "X of Endpoint B", capped_cylinder.b[0], -10.0, 10.0
-        )
-        by_updated, by = imgui.SliderFloat(
-            "Y of Endpoint B", capped_cylinder.b[1], -10.0, 10.0
-        )
-        bz_updated, bz = imgui.SliderFloat(
-            "Z of Endpoint B", capped_cylinder.b[2], -10.0, 10.0
-        )
+        a_updated, a = imgui.SliderFloat3("Endpoint A", capped_cylinder.a, -10.0, 10.0)
+        b_updated, b = imgui.SliderFloat3("Endpoint B", capped_cylinder.b, -10.0, 10.0)
         r_updated, r = imgui.SliderFloat("Radius", capped_cylinder.r, 0.1, 5.0)
-        updated = (
-            ax_updated
-            or ay_updated
-            or az_updated
-            or bx_updated
-            or by_updated
-            or bz_updated
-            or r_updated
-        )
+        updated = a_updated or b_updated or r_updated
         if updated:
-            capped_cylinder.a = np.array([ax, ay, az])
-            capped_cylinder.b = np.array([bx, by, bz])
+            capped_cylinder.a = np.array(a)
+            capped_cylinder.b = np.array(b)
             capped_cylinder.r = r
             sd = capped_cylinder.eval(X).reshape(dims)
             grid.add_scalar_quantity(
@@ -493,30 +438,14 @@ def pyramid_ui(grid, pyramid, X, dims, cmap, vminmax=(-10, 10), isolines=True):
 
 def triangle_ui(grid, triangle, X, dims, cmap, vminmax=(-10, 10), isolines=True):
     if imgui.TreeNode("Triangle"):
-        ax_updated, ax = imgui.SliderFloat("X of Vertex A", triangle.a[0], -10.0, 10.0)
-        ay_updated, ay = imgui.SliderFloat("Y of Vertex A", triangle.a[1], -10.0, 10.0)
-        az_updated, az = imgui.SliderFloat("Z of Vertex A", triangle.a[2], -10.0, 10.0)
-        bx_updated, bx = imgui.SliderFloat("X of Vertex B", triangle.b[0], -10.0, 10.0)
-        by_updated, by = imgui.SliderFloat("Y of Vertex B", triangle.b[1], -10.0, 10.0)
-        bz_updated, bz = imgui.SliderFloat("Z of Vertex B", triangle.b[2], -10.0, 10.0)
-        cx_updated, cx = imgui.SliderFloat("X of Vertex C", triangle.c[0], -10.0, 10.0)
-        cy_updated, cy = imgui.SliderFloat("Y of Vertex C", triangle.c[1], -10.0, 10.0)
-        cz_updated, cz = imgui.SliderFloat("Z of Vertex C", triangle.c[2], -10.0, 10.0)
-        updated = (
-            ax_updated
-            or ay_updated
-            or az_updated
-            or bx_updated
-            or by_updated
-            or bz_updated
-            or cx_updated
-            or cy_updated
-            or cz_updated
-        )
+        a_updated, a = imgui.SliderFloat3("Vertex A", triangle.a, -10.0, 10.0)
+        b_updated, b = imgui.SliderFloat3("Vertex B", triangle.b, -10.0, 10.0)
+        c_updated, c = imgui.SliderFloat3("Vertex C", triangle.c, -10.0, 10.0)
+        updated = a_updated or b_updated or c_updated
         if updated:
-            triangle.a = np.array([ax, ay, az])
-            triangle.b = np.array([bx, by, bz])
-            triangle.c = np.array([cx, cy, cz])
+            triangle.a = np.array(a)
+            triangle.b = np.array(b)
+            triangle.c = np.array(c)
             sd = triangle.eval(X).reshape(dims)
             grid.add_scalar_quantity(
                 "Triangle",
@@ -533,61 +462,16 @@ def quadrilateral_ui(
     grid, quadrilateral, X, dims, cmap, vminmax=(-10, 10), isolines=True
 ):
     if imgui.TreeNode("Quadrilateral"):
-        ax_updated, ax = imgui.SliderFloat(
-            "X of Vertex A", quadrilateral.a[0], -10.0, 10.0
-        )
-        ay_updated, ay = imgui.SliderFloat(
-            "Y of Vertex A", quadrilateral.a[1], -10.0, 10.0
-        )
-        az_updated, az = imgui.SliderFloat(
-            "Z of Vertex A", quadrilateral.a[2], -10.0, 10.0
-        )
-        bx_updated, bx = imgui.SliderFloat(
-            "X of Vertex B", quadrilateral.b[0], -10.0, 10.0
-        )
-        by_updated, by = imgui.SliderFloat(
-            "Y of Vertex B", quadrilateral.b[1], -10.0, 10.0
-        )
-        bz_updated, bz = imgui.SliderFloat(
-            "Z of Vertex B", quadrilateral.b[2], -10.0, 10.0
-        )
-        cx_updated, cx = imgui.SliderFloat(
-            "X of Vertex C", quadrilateral.c[0], -10.0, 10.0
-        )
-        cy_updated, cy = imgui.SliderFloat(
-            "Y of Vertex C", quadrilateral.c[1], -10.0, 10.0
-        )
-        cz_updated, cz = imgui.SliderFloat(
-            "Z of Vertex C", quadrilateral.c[2], -10.0, 10.0
-        )
-        dx_updated, dx = imgui.SliderFloat(
-            "X of Vertex D", quadrilateral.d[0], -10.0, 10.0
-        )
-        dy_updated, dy = imgui.SliderFloat(
-            "Y of Vertex D", quadrilateral.d[1], -10.0, 10.0
-        )
-        dz_updated, dz = imgui.SliderFloat(
-            "Z of Vertex D", quadrilateral.d[2], -10.0, 10.0
-        )
-        updated = (
-            ax_updated
-            or ay_updated
-            or az_updated
-            or bx_updated
-            or by_updated
-            or bz_updated
-            or cx_updated
-            or cy_updated
-            or cz_updated
-            or dx_updated
-            or dy_updated
-            or dz_updated
-        )
+        a_updated, a = imgui.SliderFloat3("Vertex A", quadrilateral.a, -10.0, 10.0)
+        b_updated, b = imgui.SliderFloat3("Vertex B", quadrilateral.b, -10.0, 10.0)
+        c_updated, c = imgui.SliderFloat3("Vertex C", quadrilateral.c, -10.0, 10.0)
+        d_updated, d = imgui.SliderFloat3("Vertex D", quadrilateral.d, -10.0, 10.0)
+        updated = a_updated or b_updated or c_updated or d_updated
         if updated:
-            quadrilateral.a = np.array([ax, ay, az])
-            quadrilateral.b = np.array([bx, by, bz])
-            quadrilateral.c = np.array([cx, cy, cz])
-            quadrilateral.d = np.array([dx, dy, dz])
+            quadrilateral.a = np.array(a)
+            quadrilateral.b = np.array(b)
+            quadrilateral.c = np.array(c)
+            quadrilateral.d = np.array(d)
             sd = quadrilateral.eval(X).reshape(dims)
             grid.add_scalar_quantity(
                 "Quadrilateral",
@@ -625,7 +509,7 @@ if __name__ == "__main__":
     sd_torus = torus.eval(X).reshape(dims)
 
     capped_torus = pbat.geometry.sdf.CappedTorus(
-        sc=np.array([1.0, 3.0]), ra=1.0, rb=1.0
+        sc=np.array([0.833, -0.545]), ra=5.0, rb=1.0
     )
     sd_capped_torus = capped_torus.eval(X).reshape(dims)
 

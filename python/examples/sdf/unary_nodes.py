@@ -163,12 +163,10 @@ if __name__ == "__main__":
         # Box UI
         box_updated = False
         if imgui.TreeNode("Box"):
-            hex_updated, hex = imgui.SliderFloat("Half Extent X", box.he[0], 0.1, 5.0)
-            hey_updated, hey = imgui.SliderFloat("Half Extent Y", box.he[1], 0.1, 5.0)
-            hez_updated, hez = imgui.SliderFloat("Half Extent Z", box.he[2], 0.1, 5.0)
-            box_updated = hex_updated or hey_updated or hez_updated
+            he_updated, he = imgui.SliderFloat3("Half Extents", box.he, 0.1, 10.0)
+            box_updated = he_updated
             if box_updated:
-                box.he = np.array([hex, hey, hez])
+                box.he = np.array(he)
                 sd_box = box.eval(X).reshape(dims)
                 grid.add_scalar_quantity(
                     "Box",
@@ -198,18 +196,12 @@ if __name__ == "__main__":
             imgui.TreePop()
         # Elongate UI
         if imgui.TreeNode("Elongate"):
-            h0_updated, h0 = imgui.SliderFloat(
-                "Elongate X", elongate_node.h[0], 0.0, 10.0
+            h_updated, h = imgui.SliderFloat3(
+                "Elongate Half Extents", elongate_node.h, 0.0, 10.0
             )
-            h1_updated, h1 = imgui.SliderFloat(
-                "Elongate Y", elongate_node.h[1], 0.0, 10.0
-            )
-            h2_updated, h2 = imgui.SliderFloat(
-                "Elongate Z", elongate_node.h[2], 0.0, 10.0
-            )
-            updated = h0_updated or h1_updated or h2_updated
+            updated = h_updated
             if updated or box_updated:
-                elongate_node.h = np.array([h0, h1, h2])
+                elongate_node.h = np.array(h)
                 sd_elongate = elongate_node.eval(X, sdf=lambda x: box.eval(x)).reshape(
                     dims
                 )
@@ -274,13 +266,11 @@ if __name__ == "__main__":
         # Repeat UI
         if imgui.TreeNode("Repeat"):
             s_updated, s = imgui.SliderFloat("Scale", repeat_node.s, 0.01, 10.0)
-            l0_updated, l0 = imgui.SliderFloat("Extent X", repeat_node.l[0], 0.01, 10.0)
-            l1_updated, l1 = imgui.SliderFloat("Extent Y", repeat_node.l[1], 0.01, 10.0)
-            l2_updated, l2 = imgui.SliderFloat("Extent Z", repeat_node.l[2], 0.01, 10.0)
-            updated = s_updated or l0_updated or l1_updated or l2_updated
+            l_updated, l = imgui.SliderFloat3("Extents", repeat_node.l, 0.01, 10.0)
+            updated = s_updated or l_updated
             if updated or box_updated:
                 repeat_node.s = s
-                repeat_node.l = np.array([l0, l1, l2])
+                repeat_node.l = np.array(l)
                 sd_repeat = repeat_node.eval(X, sdf=lambda x: box.eval(x)).reshape(dims)
                 grid.add_scalar_quantity(
                     "Repeat",
@@ -294,23 +284,12 @@ if __name__ == "__main__":
             imgui.TreePop()
         # Bump UI
         if imgui.TreeNode("Bump"):
-            f0_updated, f0 = imgui.SliderFloat("Frequency X", bump_node.f[0], 1.0, 50.0)
-            f1_updated, f1 = imgui.SliderFloat("Frequency Y", bump_node.f[1], 1.0, 50.0)
-            f2_updated, f2 = imgui.SliderFloat("Frequency Z", bump_node.f[2], 1.0, 50.0)
-            g0_updated, g0 = imgui.SliderFloat("Amplitude X", bump_node.g[0], 0.1, 10.0)
-            g1_updated, g1 = imgui.SliderFloat("Amplitude Y", bump_node.g[1], 0.1, 10.0)
-            g2_updated, g2 = imgui.SliderFloat("Amplitude Z", bump_node.g[2], 0.1, 10.0)
-            updated = (
-                f0_updated
-                or f1_updated
-                or f2_updated
-                or g0_updated
-                or g1_updated
-                or g2_updated
-            )
+            f_updated, f = imgui.SliderFloat3("Frequency", bump_node.f, 1.0, 50.0)
+            g_updated, g = imgui.SliderFloat3("Amplitude", bump_node.g, 0.01, 10.0)
+            updated = f_updated or g_updated
             if updated or box_updated:
-                bump_node.f = np.array([f0, f1, f2])
-                bump_node.g = np.array([g0, g1, g2])
+                bump_node.f = np.array(f)
+                bump_node.g = np.array(g)
                 sd_bump = bump_node.eval(X, sdf=lambda x: box.eval(x)).reshape(dims)
                 grid.add_scalar_quantity(
                     "Bump",

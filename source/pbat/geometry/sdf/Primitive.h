@@ -182,10 +182,10 @@ struct Torus : public Primitive
 template <common::CArithmetic TScalar>
 struct CappedTorus : public Primitive
 {
-    using ScalarType = TScalar;                    ///< Scalar type
-    Vec2<ScalarType> sc{TScalar(0.5), TScalar(1)}; ///< Probably minor+major radius
-    ScalarType ra{0.1};                            ///< Unknown
-    ScalarType rb{0.1};                            ///< Unknown
+    using ScalarType = TScalar;                           ///< Scalar type
+    Vec2<ScalarType> sc{TScalar(0.833), TScalar(-0.545)}; ///< Sin/Cos
+    ScalarType ra{1.0};                                   ///< Radius 1
+    ScalarType rb{0.2};                                   ///< Radius 2
     /**
      * @brief Default constructor
      */
