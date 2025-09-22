@@ -26,7 +26,7 @@ bool Archive::IsUsable() const
     return bIsUsable;
 }
 
-Archive Archive::operator[](std::string const& path)
+Archive Archive::GetOrCreateGroup(std::string const& path)
 {
     Object obj;
     std::visit(
@@ -60,6 +60,11 @@ Archive Archive::operator[](std::string const& path)
     return Archive(std::move(obj));
 }
 
+Archive Archive::operator[](std::string const& path)
+{
+    return GetOrCreateGroup(path);
+}
+
 Archive Archive::operator[](std::string const& path) const
 {
     Object obj;
@@ -76,6 +81,22 @@ Archive Archive::operator[](std::string const& path) const
         },
         mHdf5Object);
     return Archive(std::move(obj));
+}
+
+bool Archive::HasGroup(std::string const& path) const
+{
+    bool bExists{false};
+    std::visit(
+        [&](auto&& arg) {
+            using T = std::decay_t<decltype(arg)>;
+            if constexpr (std::is_same_v<T, HighFive::File> or std::is_same_v<T, HighFive::Group>)
+            {
+                bExists =
+                    arg.exist(path) and (arg.getObjectType(path) == HighFive::ObjectType::Group);
+            }
+        },
+        mHdf5Object);
+    return bExists;
 }
 
 void Archive::Unlink(std::string const& path)

@@ -294,9 +294,9 @@ struct InfiniteCylinder : public Primitive
 template <common::CArithmetic TScalar>
 struct Cone : public Primitive
 {
-    using ScalarType = TScalar;                 ///< Scalar type
-    Vec2<ScalarType> c{TScalar(0), TScalar(1)}; ///< sin/cos of the angle
-    ScalarType h{TScalar(1)};                   ///< Height of the cone
+    using ScalarType = TScalar;                  ///< Scalar type
+    Vec2<ScalarType> sc{TScalar(0), TScalar(1)}; ///< sin/cos of the angle
+    ScalarType h{TScalar(1)};                    ///< Height of the cone
     /**
      * @brief Default constructor
      */
@@ -306,7 +306,7 @@ struct Cone : public Primitive
      * @param c_ sin/cos of the angle
      * @param h_ Height of the cone
      */
-    explicit Cone(Vec2<ScalarType> const& c_, ScalarType h_) : c(c_), h(h_) {}
+    explicit Cone(Vec2<ScalarType> const& sc_, ScalarType h_) : sc(sc_), h(h_) {}
     /**
      * @brief Evaluate the signed distance function at a point
      * @param p Point in 3D space
@@ -317,7 +317,7 @@ struct Cone : public Primitive
         using namespace std;
         ScalarType constexpr zero{0};
         ScalarType constexpr one{1};
-        Vec2<ScalarType> q = h * Vec2<ScalarType>{c(0) / c(1), ScalarType(-1)};
+        Vec2<ScalarType> q = h * Vec2<ScalarType>{sc(0) / sc(1), ScalarType(-1)};
         Vec2<ScalarType> w{Norm(Vec2<ScalarType>{p(0), p(2)}), p(1)};
         Vec2<ScalarType> a = w - q * clamp(Dot(w, q) / Dot(q, q), zero, one);
         Vec2<ScalarType> b = w - q * Vec2<ScalarType>{clamp(w(0) / q(0), zero, one), one};
@@ -335,8 +335,8 @@ struct Cone : public Primitive
 template <common::CArithmetic TScalar>
 struct InfiniteCone : public Primitive
 {
-    using ScalarType = TScalar;                 ///< Scalar type
-    Vec2<ScalarType> c{TScalar(0), TScalar(1)}; ///< sin/cos of the angle
+    using ScalarType = TScalar;                  ///< Scalar type
+    Vec2<ScalarType> sc{TScalar(0), TScalar(1)}; ///< sin/cos of the angle
     /**
      * @brief Default constructor
      */
@@ -345,7 +345,7 @@ struct InfiniteCone : public Primitive
      * @brief Construct a new Infinite Cone object
      * @param c_ sin/cos of the angle
      */
-    explicit InfiniteCone(Vec2<ScalarType> const& c_) : c(c_) {}
+    explicit InfiniteCone(Vec2<ScalarType> const& sc_) : sc(sc_) {}
     /**
      * @brief Evaluate the signed distance function at a point
      * @param p Point in 3D space
@@ -357,8 +357,8 @@ struct InfiniteCone : public Primitive
         ScalarType constexpr zero{0};
         ScalarType constexpr one{1};
         Vec2<ScalarType> q = Vec2<ScalarType>{Norm(Vec2<ScalarType>{p(0), p(2)}), -p(1)};
-        ScalarType d       = Norm(q - max(Dot(q, c), zero) * c);
-        bool bd            = (q(0) * c(1) - q(1) * c(0) < zero);
+        ScalarType d       = Norm(q - max(Dot(q, sc), zero) * sc);
+        bool bd            = (q(0) * sc(1) - q(1) * sc(0) < zero);
         return d * (bd * (-one) + (not bd) * one);
     }
 };

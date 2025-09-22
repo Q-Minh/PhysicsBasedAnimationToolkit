@@ -41,6 +41,14 @@ class Archive
      */
     bool IsUsable() const;
     /**
+     * @brief Get or create a group at the given path.
+     * @param path Path to the group.
+     * @return Archive object representing the group.
+     * @throw std::runtime_error if a non-group object of the same name already exists.
+     * @throw HighFive::GroupException if the group cannot be created or fetched.
+     */
+    Archive GetOrCreateGroup(std::string const& path);
+    /**
      * @brief Get a group or create it if it does not exist.
      * @param path Path to the group.
      * @return Archive object representing the group.
@@ -55,6 +63,12 @@ class Archive
      * @throw HighFive::GroupException if the group does not exist.
      */
     Archive operator[](std::string const& path) const;
+    /**
+     * @brief Check if a group exists at the given path.
+     * @param path Path to the group.
+     * @return true if the group exists, false otherwise.
+     */
+    bool HasGroup(std::string const& path) const;
     /**
      * @brief Write data to the archive.
      * @tparam T Type of the data to write.

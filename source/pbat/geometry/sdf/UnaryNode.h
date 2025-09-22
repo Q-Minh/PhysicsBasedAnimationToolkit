@@ -272,7 +272,7 @@ template <common::CArithmetic TScalar>
 struct Twist : public UnaryNode
 {
     using ScalarType = TScalar; ///< Scalar type
-    ScalarType k{5};            ///< Twist factor
+    ScalarType k{1};            ///< Twist factor
     /**
      * @brief Default constructor
      */
@@ -307,7 +307,7 @@ template <common::CArithmetic TScalar>
 struct Bend : public UnaryNode
 {
     using ScalarType = TScalar; ///< Scalar type
-    ScalarType k{5};            ///< Bend factor
+    ScalarType k{1};            ///< Bend factor
     /**
      * @brief Default constructor
      */
