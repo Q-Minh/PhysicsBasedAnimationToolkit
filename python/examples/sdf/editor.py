@@ -4,6 +4,8 @@ import polyscope as ps
 import polyscope.imgui as imgui
 import numpy as np
 import scipy as sp
+import tkinter as tk
+from tkinter import filedialog
 
 
 def node_ui(id, nodes, transforms, children, visited) -> Tuple[bool, int, bool]:
@@ -493,12 +495,45 @@ if __name__ == "__main__":
     selected_binary_node_type = binary_node_types[0]
 
     def callback():
-        global nodes, transforms, children, roots, sd_composite, composite
+        global nodes, transforms, children, roots, forest, sd_composite, composite
         global selected_primitive_node_type, selected_unary_node_type, selected_binary_node_type
 
         dirty = False
         if composite.status != pbat.geometry.sdf.ECompositeStatus.Valid:
             dirty = True
+
+        # Load/Save
+        if imgui.Button("Load", [imgui.GetWindowWidth() / 2.1, 0]):
+            root = tk.Tk()
+            root.withdraw()
+            file_path = filedialog.askopenfilename(
+                title="Select SDF forest file",
+                filetypes=[("SDF forest files", "*.h5"), ("All files", "*.*")],
+            )
+            if file_path:
+                archive = pbat.io.Archive(file_path, pbat.io.AccessMode.ReadOnly)
+                forest.deserialize(archive)
+                # Every time the SDF is dirty, we overwrite the forest with nodes, transforms and children,
+                # so we need to extract them here
+                nodes = forest.nodes
+                transforms = forest.transforms
+                children = forest.children
+                dirty = True
+            root.destroy()
+        imgui.SameLine()
+        if imgui.Button("Save", [imgui.GetWindowWidth() / 2.1, 0]):
+            root = tk.Tk()
+            root.withdraw()
+            file_path = filedialog.asksaveasfilename(
+                title="Select SDF forest file",
+                defaultextension=".h5",
+                filetypes=[("SDF forest files", "*.h5"), ("All files", "*.*")],
+            )
+            if file_path:
+                archive = pbat.io.Archive(file_path, pbat.io.AccessMode.OpenOrCreate)
+                forest.serialize(archive)
+            root.destroy()
+
         # Node creation UI
         primitive_node_created = False
         unary_node_created = False

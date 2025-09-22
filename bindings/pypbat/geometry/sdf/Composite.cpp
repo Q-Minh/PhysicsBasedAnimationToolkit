@@ -7,6 +7,7 @@
 #include <pbat/Aliases.h>
 #include <pbat/geometry/sdf/Composite.h>
 #include <pbat/geometry/sdf/Forest.h>
+#include <pbat/io/Archive.h>
 #include <pbat/math/linalg/mini/Eigen.h>
 #include <span>
 #include <utility>
@@ -63,7 +64,21 @@ void BindComposite(nanobind::module_& m)
             "children",
             &Forest::children,
             "(List[Tuple[int, int]]) List of pairs of children indices for each node, such that "
-            "c* < 0 if no child");
+            "c* < 0 if no child")
+        .def(
+            "serialize",
+            &Forest::Serialize,
+            nb::arg("archive"),
+            "Serialize the forest to an archive\n\n"
+            "Args:\n"
+            "    archive (Archive): Archive to serialize to")
+        .def(
+            "deserialize",
+            &Forest::Deserialize,
+            nb::arg("archive"),
+            "Deserialize the forest from an archive\n\n"
+            "Args:\n"
+            "    archive (Archive): Archive to deserialize from");
 
     nb::enum_<pbat::geometry::sdf::ECompositeStatus>(m, "ECompositeStatus")
         .value("Valid", pbat::geometry::sdf::ECompositeStatus::Valid)

@@ -66,7 +66,7 @@ struct Difference : public BinaryNode
     PBAT_HOST_DEVICE ScalarType Eval(ScalarType sd1, ScalarType sd2) const
     {
         using namespace std;
-        return max(-sd1, sd2);
+        return max(-sd2, sd1);
     }
 };
 
@@ -173,7 +173,7 @@ struct SmoothDifference : public BinaryNode
     {
         SmoothUnion<TScalar> U{};
         U.k = k;
-        return -U.Eval(sd1, -sd2);
+        return -U.Eval(sd2, -sd1);
     }
 };
 
