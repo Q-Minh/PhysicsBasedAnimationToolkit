@@ -76,7 +76,7 @@ void Forest<TScalar>::Serialize(io::Archive& archive) const
         void operator()(Sphere<TScalar> const& prim)
         {
             io::Archive sphereGroup = group.GetOrCreateGroup("pbat.geometry.sdf.Sphere");
-            sphereGroup.WriteMetaData("radius", prim.R);
+            sphereGroup.WriteMetaData("R", prim.R);
         }
         void operator()(Box<TScalar> const& prim)
         {
@@ -261,8 +261,8 @@ void Forest<TScalar>::Serialize(io::Archive& archive) const
         void operator()(Bump<TScalar> const& un)
         {
             io::Archive bumpGroup = group.GetOrCreateGroup("pbat.geometry.sdf.Bump");
-            bumpGroup.WriteMetaData("f", un.f);
-            bumpGroup.WriteMetaData("g", un.g);
+            detail::forest::SerializeMiniMatrix("f", un.f, bumpGroup);
+            detail::forest::SerializeMiniMatrix("g", un.g, bumpGroup);
         }
         void operator()(Twist<TScalar> const& un)
         {
@@ -359,7 +359,7 @@ void Forest<TScalar>::Deserialize(io::Archive& archive)
         void operator()(Sphere<TScalar>& prim) const
         {
             io::Archive sphereGroup = group["pbat.geometry.sdf.Sphere"];
-            prim.R                  = sphereGroup.ReadMetaData<TScalar>("radius");
+            prim.R                  = sphereGroup.ReadMetaData<TScalar>("R");
         }
         void operator()(Box<TScalar>& prim) const
         {

@@ -22,6 +22,13 @@
 
 namespace pbat::geometry::sdf {
 
+/**
+ * @brief Sign function, i.e. \f$ \text{sign}(x) = +1 \text{ if } x > 0, -1 \text{ if } x < 0, 0
+ * \text{ if } x = 0 \f$
+ * @tparam TScalar Scalar type
+ * @param x Input value
+ * @return Sign of x
+ */
 template <common::CArithmetic TScalar>
 TScalar sign(TScalar x)
 {
@@ -108,8 +115,8 @@ struct BoxFrame : public Primitive
     Vec3<ScalarType> he{
         TScalar(0.5),
         TScalar(0.5),
-        TScalar(0.5)};           ///< Half extents of the box frame along each axis
-    ScalarType t{TScalar(0.01)}; ///< Thickness of the box frame
+        TScalar(0.5)};          ///< Half extents of the box frame along each axis
+    ScalarType t{TScalar(0.1)}; ///< Thickness of the box frame
     /**
      * @brief Default constructor
      */
@@ -152,7 +159,7 @@ template <common::CArithmetic TScalar>
 struct Torus : public Primitive
 {
     using ScalarType = TScalar;                   ///< Scalar type
-    Vec2<ScalarType> t{TScalar(0.5), TScalar(1)}; ///< t[0]: minor radius, t[1]: major radius
+    Vec2<ScalarType> t{TScalar(1), TScalar(0.5)}; ///< t[0]: minor radius, t[1]: major radius
     /**
      * @brief Default constructor
      */
@@ -227,7 +234,7 @@ template <common::CArithmetic TScalar>
 struct Link : public Primitive
 {
     using ScalarType = TScalar;                   ///< Scalar type
-    Vec2<ScalarType> t{TScalar(0.5), TScalar(1)}; ///< t[0]: minor radius, t[1]: major radius
+    Vec2<ScalarType> t{TScalar(1), TScalar(0.5)}; ///< t[0]: minor radius, t[1]: major radius
     ScalarType le{TScalar(1)};                    ///< Elongation length
     /**
      * @brief Default constructor
@@ -294,16 +301,16 @@ struct InfiniteCylinder : public Primitive
 template <common::CArithmetic TScalar>
 struct Cone : public Primitive
 {
-    using ScalarType = TScalar;                  ///< Scalar type
-    Vec2<ScalarType> sc{TScalar(0), TScalar(1)}; ///< sin/cos of the angle
-    ScalarType h{TScalar(1)};                    ///< Height of the cone
+    using ScalarType = TScalar;                      ///< Scalar type
+    Vec2<ScalarType> sc{TScalar(0.5), TScalar(0.5)}; ///< sin/cos of the angle
+    ScalarType h{TScalar(1)};                        ///< Height of the cone
     /**
      * @brief Default constructor
      */
     Cone() = default;
     /**
      * @brief Construct a new Cone object
-     * @param c_ sin/cos of the angle
+     * @param sc_ sin/cos of the angle
      * @param h_ Height of the cone
      */
     explicit Cone(Vec2<ScalarType> const& sc_, ScalarType h_) : sc(sc_), h(h_) {}
@@ -335,15 +342,15 @@ struct Cone : public Primitive
 template <common::CArithmetic TScalar>
 struct InfiniteCone : public Primitive
 {
-    using ScalarType = TScalar;                  ///< Scalar type
-    Vec2<ScalarType> sc{TScalar(0), TScalar(1)}; ///< sin/cos of the angle
+    using ScalarType = TScalar;                      ///< Scalar type
+    Vec2<ScalarType> sc{TScalar(0.5), TScalar(0.5)}; ///< sin/cos of the angle
     /**
      * @brief Default constructor
      */
     InfiniteCone() = default;
     /**
      * @brief Construct a new Infinite Cone object
-     * @param c_ sin/cos of the angle
+     * @param sc_ sin/cos of the angle
      */
     explicit InfiniteCone(Vec2<ScalarType> const& sc_) : sc(sc_) {}
     /**

@@ -208,7 +208,7 @@ def node_ui(id, nodes, transforms, children, visited) -> Tuple[bool, int, bool]:
         # Unary nodes
         is_unary_node = False
         if isinstance(node, pbat.geometry.sdf.Scale):
-            s_updated, s = imgui.SliderFloat("Scale", node.s, 0.01, 5.0)
+            s_updated, s = imgui.SliderFloat("Scale", node.s, 0.01, 10.0)
             if s_updated:
                 node.s = s
             dirty = s_updated
@@ -220,7 +220,7 @@ def node_ui(id, nodes, transforms, children, visited) -> Tuple[bool, int, bool]:
             dirty = h_updated
             is_unary_node = True
         elif isinstance(node, pbat.geometry.sdf.Round):
-            r_updated, r = imgui.SliderFloat("Radius", node.r, 0.01, 1.0)
+            r_updated, r = imgui.SliderFloat("Radius", node.r, 0.01, 10.0)
             if r_updated:
                 node.r = r
             dirty = r_updated
@@ -243,8 +243,8 @@ def node_ui(id, nodes, transforms, children, visited) -> Tuple[bool, int, bool]:
             dirty = updated
             is_unary_node = True
         elif isinstance(node, pbat.geometry.sdf.Bump):
-            a_updated, a = imgui.SliderFloat3("Amplitude", node.g, 0.0, 1.0)
-            f_updated, f = imgui.SliderFloat3("Frequency", node.f, 0.0, 10.0)
+            a_updated, a = imgui.SliderFloat3("Amplitude", node.g, -10.0, 10.0)
+            f_updated, f = imgui.SliderFloat3("Frequency", node.f, 0.0, 20.0)
             updated = a_updated or f_updated
             if updated:
                 node.g = np.array(a)
@@ -563,7 +563,11 @@ if __name__ == "__main__":
                         )
                         # It seems that gpytoolbox uses C ordering (x varies slowest, z fastest), while
                         # polyscope uses Fortran ordering (x varies fastest, z slowest), so we need to swap axes
-                        V[:,0], V[:,1], V[:,2] = V[:,2].copy(), V[:,1].copy(), V[:,0].copy()
+                        V[:, 0], V[:, 1], V[:, 2] = (
+                            V[:, 2].copy(),
+                            V[:, 1].copy(),
+                            V[:, 0].copy(),
+                        )
                         ps.register_surface_mesh("Zero Iso-surface", V, F)
                         omesh = meshio.Mesh(V, [("triangle", F)])
                         meshio.write(file_path, omesh)
@@ -667,7 +671,7 @@ if __name__ == "__main__":
                     if c1 >= deleted_id:
                         c1 -= 1
                     children[i] = (c0, c1)
-                    
+
             imgui.TreePop()
 
         # Update SDF
@@ -705,7 +709,9 @@ if __name__ == "__main__":
                     primitive_roots,
                 )
                 primitive_composite = pbat.geometry.sdf.Composite(primitive_forest)
-                primitive_sd_composite = primitive_composite.eval(X).reshape(dims, order="F")
+                primitive_sd_composite = primitive_composite.eval(X).reshape(
+                    dims, order="F"
+                )
                 grid.add_scalar_quantity(
                     "All Primitives",
                     primitive_sd_composite,

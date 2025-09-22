@@ -52,6 +52,7 @@ struct Scale : public UnaryNode
      * @brief Evaluate the signed distance function at a point
      * @tparam FSdf Callable type with signature `ScalarType(Vec3<ScalarType> const&)`
      * @param p `3 x 1` query point in 3D space
+     * @param sdf Input SDF
      * @return Signed distance to the scaled shape
      */
     template <class FSdf>
@@ -69,7 +70,7 @@ template <common::CArithmetic TScalar>
 struct Elongate : public UnaryNode
 {
     using ScalarType = TScalar;                             ///< Scalar type
-    Vec3<ScalarType> h{TScalar(0), TScalar(0), TScalar(0)}; ///< Elongation vector
+    Vec3<ScalarType> h{TScalar(1), TScalar(1), TScalar(1)}; ///< Elongation vector
     /**
      * @brief Default constructor
      */
@@ -83,6 +84,7 @@ struct Elongate : public UnaryNode
      * @brief Evaluate the signed distance function at a point
      * @tparam FSdf Callable type with signature `ScalarType(Vec3<ScalarType> const&)`
      * @param p `3 x 1` query point in 3D space
+     * @param sdf Input SDF
      * @return Signed distance to the elongated shape
      */
     template <class FSdf>
@@ -102,8 +104,8 @@ struct Elongate : public UnaryNode
 template <common::CArithmetic TScalar>
 struct Round : public UnaryNode
 {
-    using ScalarType = TScalar; ///< Scalar type
-    ScalarType r{TScalar(0)};   ///< Rounding radius
+    using ScalarType = TScalar;  ///< Scalar type
+    ScalarType r{TScalar(0.01)}; ///< Rounding radius
     /**
      * @brief Default constructor
      */
@@ -117,6 +119,7 @@ struct Round : public UnaryNode
      * @brief Evaluate the signed distance function at a point
      * @tparam FSdf Callable type with signature `ScalarType(Vec3<ScalarType> const&)`
      * @param p `3 x 1` query point in 3D space
+     * @param sdf Input SDF
      * @return Signed distance to the rounded shape
      */
     template <class FSdf>
@@ -133,8 +136,8 @@ struct Round : public UnaryNode
 template <common::CArithmetic TScalar>
 struct Onion : public UnaryNode
 {
-    using ScalarType = TScalar; ///< Scalar type
-    ScalarType t{TScalar(0)};   ///< Onion thickness
+    using ScalarType = TScalar;  ///< Scalar type
+    ScalarType t{TScalar(0.01)}; ///< Onion thickness
     /**
      * @brief Default constructor
      */
@@ -148,6 +151,7 @@ struct Onion : public UnaryNode
      * @brief Evaluate the signed distance function at a point
      * @tparam FSdf Callable type with signature `ScalarType(Vec3<ScalarType> const&)`
      * @param p `3 x 1` query point in 3D space
+     * @param sdf Input SDF
      * @return Signed distance to the onioned shape
      */
     template <class FSdf>
@@ -170,6 +174,7 @@ struct Symmetrize : public UnaryNode
      * @brief Evaluate the signed distance function at a point
      * @tparam FSdf Callable type with signature `ScalarType(Vec3<ScalarType> const&)`
      * @param p `3 x 1` query point in 3D space
+     * @param sdf Input SDF
      * @return Signed distance to the symmetrized shape
      */
     template <class FSdf>
@@ -231,8 +236,8 @@ struct Repeat : public UnaryNode
 template <common::CArithmetic TScalar>
 struct Bump : public UnaryNode
 {
-    using ScalarType = TScalar;                                ///< Scalar type
-    Vec3<ScalarType> f{TScalar(20), TScalar(20), TScalar(20)}; ///< Frequency along each axis
+    using ScalarType = TScalar;                             ///< Scalar type
+    Vec3<ScalarType> f{TScalar(1), TScalar(1), TScalar(1)}; ///< Frequency along each axis
     Vec3<ScalarType> g{TScalar(1), TScalar(1), TScalar(1)}; ///< Amplitude of the wave displacement
     /**
      * @brief Default constructor
@@ -272,7 +277,7 @@ template <common::CArithmetic TScalar>
 struct Twist : public UnaryNode
 {
     using ScalarType = TScalar; ///< Scalar type
-    ScalarType k{1};            ///< Twist factor
+    ScalarType k{0.2};          ///< Twist factor
     /**
      * @brief Default constructor
      */
@@ -307,7 +312,7 @@ template <common::CArithmetic TScalar>
 struct Bend : public UnaryNode
 {
     using ScalarType = TScalar; ///< Scalar type
-    ScalarType k{1};            ///< Bend factor
+    ScalarType k{0.2};          ///< Bend factor
     /**
      * @brief Default constructor
      */
