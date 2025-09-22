@@ -143,11 +143,11 @@ def infinite_cylinder_ui(
 
 def cone_ui(grid, cone, X, dims, cmap, vminmax=(-10, 10), isolines=True):
     if imgui.TreeNode("Cone"):
-        sc_updated, sc = imgui.SliderFloat2("Sin/Cos", cone.c, -1.0, 1.0)
+        sc_updated, sc = imgui.SliderFloat2("Sin/Cos", cone.sc, -1.0, 1.0)
         r_updated, r = imgui.SliderFloat("Height", cone.h, 0.1, 10.0)
         updated = sc_updated or r_updated
         if updated:
-            cone.c = np.array(sc)
+            cone.sc = np.array(sc)
             cone.h = r
             sd = cone.eval(X).reshape(dims)
             grid.add_scalar_quantity(
@@ -163,10 +163,10 @@ def cone_ui(grid, cone, X, dims, cmap, vminmax=(-10, 10), isolines=True):
 
 def infinite_cone_ui(grid, cone, X, dims, cmap, vminmax=(-10, 10), isolines=True):
     if imgui.TreeNode("Infinite Cone"):
-        sc_updated, sc = imgui.SliderFloat2("Sin/Cos", cone.c, -1.0, 1.0)
+        sc_updated, sc = imgui.SliderFloat2("Sin/Cos", cone.sc, -1.0, 1.0)
         updated = sc_updated
         if updated:
-            cone.c = np.array(sc)
+            cone.sc = np.array(sc)
             sd = cone.eval(X).reshape(dims)
             grid.add_scalar_quantity(
                 "Infinite Cone",
@@ -519,10 +519,10 @@ if __name__ == "__main__":
     infinite_cylinder = pbat.geometry.sdf.InfiniteCylinder(c=np.array([0.0, 0.0, 1.0]))
     sd_infinite_cylinder = infinite_cylinder.eval(X).reshape(dims)
 
-    cone = pbat.geometry.sdf.Cone(c=np.array([0.5, 0.5]), h=5.0)
+    cone = pbat.geometry.sdf.Cone(sc=np.array([0.5, 0.5]), h=5.0)
     sd_cone = cone.eval(X).reshape(dims)
 
-    infinite_cone = pbat.geometry.sdf.InfiniteCone(c=np.array([0.5, 0.5]))
+    infinite_cone = pbat.geometry.sdf.InfiniteCone(sc=np.array([0.5, 0.5]))
     sd_infinite_cone = infinite_cone.eval(X).reshape(dims)
 
     plane = pbat.geometry.sdf.Plane()

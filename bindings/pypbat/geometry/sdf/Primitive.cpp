@@ -344,21 +344,21 @@ void BindPrimitive(nanobind::module_& m)
         .def(nb::init<>())
         .def(
             "__init__",
-            [](Cone* self, Vec2 const& c, ScalarType h) {
+            [](Cone* self, Vec2 const& sc, ScalarType h) {
                 new (self) Cone();
-                self->c = FromEigen(c);
-                self->h = h;
+                self->sc = FromEigen(sc);
+                self->h  = h;
             },
-            nb::arg("c"),
+            nb::arg("sc"),
             nb::arg("h"),
             "Constructor with sin/cos of the angle and height\n\n"
             "Args:\n"
-            "    c (numpy.ndarray): `2 x 1` sin/cos of the angle of the cone\n"
+            "    sc (numpy.ndarray): `2 x 1` sin/cos of the angle of the cone\n"
             "    h (float): Height of the cone")
         .def_prop_rw(
-            "c",
-            [](Cone& self) -> Vec2 { return ToEigen(self.c); },
-            [](Cone& self, Vec2 const& c) { self.c = FromEigen(c); },
+            "sc",
+            [](Cone& self) -> Vec2 { return ToEigen(self.sc); },
+            [](Cone& self, Vec2 const& sc) { self.sc = FromEigen(sc); },
             "(numpy.ndarray) `2 x 1` sin/cos of the angle of the cone")
         .def_rw("h", &Cone::h, "(float) Height of the cone")
         .def(
@@ -391,18 +391,18 @@ void BindPrimitive(nanobind::module_& m)
         .def(nb::init<>())
         .def(
             "__init__",
-            [](InfiniteCone* self, Vec2 const& c) {
+            [](InfiniteCone* self, Vec2 const& sc) {
                 new (self) InfiniteCone();
-                self->c = FromEigen(c);
+                self->sc = FromEigen(sc);
             },
-            nb::arg("c"),
+            nb::arg("sc"),
             "Constructor with sin/cos of the angle\n\n"
             "Args:\n"
-            "    c (numpy.ndarray): `2 x 1` sin/cos of the angle of the infinite cone")
+            "    sc (numpy.ndarray): `2 x 1` sin/cos of the angle of the infinite cone")
         .def_prop_rw(
-            "c",
-            [](InfiniteCone& self) -> Vec2 { return ToEigen(self.c); },
-            [](InfiniteCone& self, Vec2 const& c) { self.c = FromEigen(c); },
+            "sc",
+            [](InfiniteCone& self) -> Vec2 { return ToEigen(self.sc); },
+            [](InfiniteCone& self, Vec2 const& sc) { self.sc = FromEigen(sc); },
             "(numpy.ndarray) `2 x 1` sin/cos of the angle of the infinite cone")
         .def(
             "eval",

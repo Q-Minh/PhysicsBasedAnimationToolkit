@@ -39,7 +39,7 @@ if __name__ == "__main__":
     sd_repeat = repeat_node.eval(X, sdf=lambda x: box.eval(x)).reshape(dims)
 
     bump_node = pbat.geometry.sdf.Bump(
-        f=np.array([20.0, 20.0, 20.0]), g=np.array([0.1, 0.1, 0.1])
+        f=np.array([1.0, 1.0, 1.0]), g=np.array([0.1, 0.1, 0.1])
     )
     sd_bump = bump_node.eval(X, sdf=lambda x: box.eval(x)).reshape(dims)
 

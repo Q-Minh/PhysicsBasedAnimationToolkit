@@ -69,18 +69,18 @@ def node_ui(id, nodes, transforms, children, visited) -> Tuple[bool, int, bool]:
                 node.c = np.array([c[0], c[1], r])
             dirty = r_updated
         elif isinstance(node, pbat.geometry.sdf.Cone):
-            sc_updated, sc = imgui.SliderFloat2("Sin/Cos", node.c[:2], -1.0, 1.0)
+            sc_updated, sc = imgui.SliderFloat2("Sin/Cos", node.sc, -1.0, 1.0)
             h_updated, h = imgui.SliderFloat("Height", node.h, 0.1, 10.0)
             updated = h_updated or sc_updated
             if updated:
-                node.c = np.array(sc)
+                node.sc = np.array(sc)
                 node.h = h
             dirty = updated
         elif isinstance(node, pbat.geometry.sdf.InfiniteCone):
-            sc_updated, sc = imgui.SliderFloat2("Sin/Cos", node.c[:2], -1.0, 1.0)
+            sc_updated, sc = imgui.SliderFloat2("Sin/Cos", node.sc, -1.0, 1.0)
             updated = sc_updated
             if updated:
-                node.c = np.array(sc)
+                node.sc = np.array(sc)
             dirty = updated
         elif isinstance(node, pbat.geometry.sdf.Plane):
             pass
