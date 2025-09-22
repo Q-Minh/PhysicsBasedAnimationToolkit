@@ -6,6 +6,9 @@ import numpy as np
 import scipy as sp
 import tkinter as tk
 from tkinter import filedialog
+import os
+import meshio
+import gpytoolbox as gpyt
 
 
 def node_ui(id, nodes, transforms, children, visited) -> Tuple[bool, int, bool]:
@@ -315,7 +318,7 @@ def node_ui(id, nodes, transforms, children, visited) -> Tuple[bool, int, bool]:
             )
             if unary_node_child_selection_requested:
                 for i in range(len(nodes)):
-                    name = type(nodes[i]).__name__
+                    name = "{} - {}".format(i, type(nodes[i]).__name__)
                     _, selected = imgui.Selectable(name, i == ci)
                     if selected:
                         ci = i
@@ -383,12 +386,14 @@ if __name__ == "__main__":
     bmin = np.array([-10, -10, -10])
     bmax = np.array([10, 10, 10])
     dims = (100, 100, 100)
+    # polyscope's volume grid expects x to vary fastest, then y, then z
     x, y, z = np.meshgrid(
         np.linspace(bmin[0], bmax[0], dims[0]),
         np.linspace(bmin[1], bmax[1], dims[1]),
         np.linspace(bmin[2], bmax[2], dims[2]),
+        indexing="ij",
     )
-    X = np.vstack([np.ravel(x), np.ravel(y), np.ravel(z)]).astype(np.float64)
+    X = np.vstack([np.ravel(z), np.ravel(y), np.ravel(x)]).astype(np.float64)
 
     # Composite
     nodes = []
@@ -503,36 +508,67 @@ if __name__ == "__main__":
             dirty = True
 
         # Load/Save
-        if imgui.Button("Load", [imgui.GetWindowWidth() / 2.1, 0]):
-            root = tk.Tk()
-            root.withdraw()
-            file_path = filedialog.askopenfilename(
-                title="Select SDF forest file",
-                filetypes=[("SDF forest files", "*.h5"), ("All files", "*.*")],
-            )
-            if file_path:
-                archive = pbat.io.Archive(file_path, pbat.io.AccessMode.ReadOnly)
-                forest.deserialize(archive)
-                # Every time the SDF is dirty, we overwrite the forest with nodes, transforms and children,
-                # so we need to extract them here
-                nodes = forest.nodes
-                transforms = forest.transforms
-                children = forest.children
-                dirty = True
-            root.destroy()
-        imgui.SameLine()
-        if imgui.Button("Save", [imgui.GetWindowWidth() / 2.1, 0]):
-            root = tk.Tk()
-            root.withdraw()
-            file_path = filedialog.asksaveasfilename(
-                title="Select SDF forest file",
-                defaultextension=".h5",
-                filetypes=[("SDF forest files", "*.h5"), ("All files", "*.*")],
-            )
-            if file_path:
-                archive = pbat.io.Archive(file_path, pbat.io.AccessMode.OpenOrCreate)
-                forest.serialize(archive)
-            root.destroy()
+        if imgui.TreeNode("I/O"):
+            if imgui.Button("Load", [imgui.GetWindowWidth() / 2.1, 0]):
+                root = tk.Tk()
+                root.withdraw()
+                file_path = filedialog.askopenfilename(
+                    title="Select SDF forest file",
+                    defaultextension=".h5",
+                    filetypes=[("SDF forest files", "*.h5"), ("All files", "*.*")],
+                )
+                if file_path:
+                    archive = pbat.io.Archive(file_path, pbat.io.AccessMode.ReadOnly)
+                    forest.deserialize(archive)
+                    # Every time the SDF is dirty, we overwrite the forest with nodes, transforms and children,
+                    # so we need to extract them here
+                    nodes = forest.nodes
+                    transforms = forest.transforms
+                    children = forest.children
+                    dirty = True
+                root.destroy()
+            if imgui.Button("Save", [imgui.GetWindowWidth() / 2.1, 0]):
+                root = tk.Tk()
+                root.withdraw()
+                file_path = filedialog.asksaveasfilename(
+                    title="Select SDF forest or triangle mesh file",
+                    defaultextension=".obj",
+                    filetypes=[
+                        ("SDF forest files", "*.h5"),
+                        ("Wavefront OBJ files", "*.obj"),
+                        ("Stanford triangle PLY files", "*.ply"),
+                        ("All files", "*.*"),
+                    ],
+                )
+                if file_path:
+                    ext = os.path.splitext(file_path)[1]
+                    if ext == ".h5":
+                        archive = pbat.io.Archive(
+                            file_path, pbat.io.AccessMode.Overwrite
+                        )
+                        forest.serialize(archive)
+                    elif ext in [".obj", ".ply"]:
+                        # WARNING: Reach for the arcs seems to hang here on the torii-twisted-box-frame.h5 SDF
+                        # V, F = gpyt.reach_for_the_arcs(X.T, np.ravel(sd_composite), verbose=True)
+                        V0, F0 = gpyt.marching_cubes(
+                            np.ravel(sd_composite), X.T, dims[0], dims[1], dims[2]
+                        )
+                        V, F, *_ = gpyt.reach_for_the_spheres(
+                            X.T,
+                            lambda x: composite.eval(x.T),
+                            V0,
+                            F0,
+                            S=np.ravel(sd_composite),
+                            pseudosdf_interior=True,
+                        )
+                        # It seems that gpytoolbox uses C ordering (x varies slowest, z fastest), while
+                        # polyscope uses Fortran ordering (x varies fastest, z slowest), so we need to swap axes
+                        V[:,0], V[:,1], V[:,2] = V[:,2].copy(), V[:,1].copy(), V[:,0].copy()
+                        ps.register_surface_mesh("Zero Iso-surface", V, F)
+                        omesh = meshio.Mesh(V, [("triangle", F)])
+                        meshio.write(file_path, omesh)
+                root.destroy()
+            imgui.TreePop()
 
         # Node creation UI
         primitive_node_created = False
@@ -605,31 +641,34 @@ if __name__ == "__main__":
             dirty = True
 
         # Node modification UIs
-        deleted_id = -1
-        visited = [False] * len(nodes)
-        for i in roots:
-            # Top-down forest traversal to show UI for each node
-            node_dirty, node_deleted_id, ci_descendants_updated = node_ui(
-                i, nodes, transforms, children, visited
-            )
-            was_descendant_deleted = node_deleted_id >= 0
-            dirty |= node_dirty or ci_descendants_updated or was_descendant_deleted
-            if was_descendant_deleted:
-                deleted_id = node_deleted_id
+        if imgui.TreeNode("Forest"):
+            deleted_id = -1
+            visited = [False] * len(nodes)
+            for i in roots:
+                # Top-down forest traversal to show UI for each node
+                node_dirty, node_deleted_id, ci_descendants_updated = node_ui(
+                    i, nodes, transforms, children, visited
+                )
+                was_descendant_deleted = node_deleted_id >= 0
+                dirty |= node_dirty or ci_descendants_updated or was_descendant_deleted
+                if was_descendant_deleted:
+                    deleted_id = node_deleted_id
 
-        # Update forest if a node was deleted
-        if deleted_id >= 0:
-            nodes = nodes[:deleted_id] + nodes[deleted_id + 1 :]
-            transforms = transforms[:deleted_id] + transforms[deleted_id + 1 :]
-            children = children[:deleted_id] + children[deleted_id + 1 :]
-            # Update children indices
-            for i in range(len(children)):
-                c0, c1 = children[i]
-                if c0 >= deleted_id:
-                    c0 -= 1
-                if c1 >= deleted_id:
-                    c1 -= 1
-                children[i] = (c0, c1)
+            # Update forest if a node was deleted
+            if deleted_id >= 0:
+                nodes = nodes[:deleted_id] + nodes[deleted_id + 1 :]
+                transforms = transforms[:deleted_id] + transforms[deleted_id + 1 :]
+                children = children[:deleted_id] + children[deleted_id + 1 :]
+                # Update children indices
+                for i in range(len(children)):
+                    c0, c1 = children[i]
+                    if c0 >= deleted_id:
+                        c0 -= 1
+                    if c1 >= deleted_id:
+                        c1 -= 1
+                    children[i] = (c0, c1)
+                    
+            imgui.TreePop()
 
         # Update SDF
         if dirty:
@@ -638,7 +677,7 @@ if __name__ == "__main__":
             composite = pbat.geometry.sdf.Composite(forest)
             if composite.status == pbat.geometry.sdf.ECompositeStatus.Valid:
                 # Update the composite view
-                sd_composite = composite.eval(X).reshape(dims)
+                sd_composite = composite.eval(X).reshape(dims, order="F")
                 grid.add_scalar_quantity(
                     "Composite",
                     sd_composite,
@@ -666,7 +705,7 @@ if __name__ == "__main__":
                     primitive_roots,
                 )
                 primitive_composite = pbat.geometry.sdf.Composite(primitive_forest)
-                primitive_sd_composite = primitive_composite.eval(X).reshape(dims)
+                primitive_sd_composite = primitive_composite.eval(X).reshape(dims, order="F")
                 grid.add_scalar_quantity(
                     "All Primitives",
                     primitive_sd_composite,
