@@ -214,6 +214,7 @@ struct Repeat : public UnaryNode
      * @brief Evaluate the signed distance function at a point
      * @tparam FSdf Callable type with signature `ScalarType(Vec3<ScalarType> const&)`
      * @param p `3 x 1` query point in 3D space
+     * @param sdf Input SDF
      * @return Signed distance to the repeated shape
      */
     template <class FSdf>
@@ -253,6 +254,7 @@ struct Bump : public UnaryNode
      * @brief Evaluate the signed distance function at a point
      * @tparam FSdf Callable type with signature `ScalarType(Vec3<ScalarType> const&)`
      * @param p `3 x 1` query point in 3D space
+     * @param sdf Input SDF
      * @return Signed distance to the wave-displaced shape
      */
     template <class FSdf>
@@ -291,6 +293,7 @@ struct Twist : public UnaryNode
      * @brief Evaluate the signed distance function at a point
      * @tparam FSdf Callable type with signature `ScalarType(Vec3<ScalarType> const&)`
      * @param p `3 x 1` query point in 3D space
+     * @param sdf Input SDF
      * @return Signed distance to the twisted shape
      */
     template <class FSdf>
@@ -326,6 +329,7 @@ struct Bend : public UnaryNode
      * @brief Evaluate the signed distance function at a point
      * @tparam FSdf Callable type with signature `ScalarType(Vec3<ScalarType> const&)`
      * @param p `3 x 1` query point in 3D space
+     * @param sdf Input SDF
      * @return Signed distance to the bent shape
      */
     template <class FSdf>

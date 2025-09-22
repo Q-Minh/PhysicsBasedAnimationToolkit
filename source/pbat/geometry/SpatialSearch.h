@@ -327,6 +327,7 @@ PBAT_HOST_DEVICE bool NearestToFurthestNeighbours(
  * @tparam N Max number of children per node
  * @tparam TScalar Type of the scalar distance
  * @tparam TIndex Type of the index
+ * @param kHeapCapacity Maximum capacity of the min-distance-heap
  * @param fChild Function to get child c of a node. Returns the child index or -1 if no child.
  * @param fIsLeaf Function to determine if a node is a leaf node
  * @param fLeafSize Function to get the number of leaf objects in a node
@@ -335,6 +336,7 @@ PBAT_HOST_DEVICE bool NearestToFurthestNeighbours(
  * @param fDistance Function to compute the distance to object
  * @param fOnFound Function to call when a nearest neighbour is found
  * @param fUpper Upper bound of the distance to the nearest neighbour
+ * @param eps Epsilon to consider objects at the same distance
  * @param root Index of the root node to start the search from
  * @return true if the traversal completed, false if it was stopped early due to insufficient stack
  * capacity
