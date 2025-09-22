@@ -12,7 +12,7 @@ import itertools
 from collections.abc import Callable
 
 
-def combine(V: list, C: list):
+def combine(V: list[np.ndarray], C: list[np.ndarray]):
     Vsizes = [Vi.shape[0] for Vi in V]
     offsets = list(itertools.accumulate(Vsizes))
     C = [C[i] + offsets[i] - Vsizes[i] for i in range(len(C))]

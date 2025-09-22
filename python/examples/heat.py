@@ -26,6 +26,8 @@ if __name__ == "__main__":
         element = pbat.fem.Element.Triangle
         X, E = pbat.fem.mesh(
             V.T, C.T, element=element, order=1)
+    else:
+        raise ValueError("Input mesh must contain either tetrahedral or triangle elements.")
 
     F = C
     if element == pbat.fem.Element.Tetrahedron:

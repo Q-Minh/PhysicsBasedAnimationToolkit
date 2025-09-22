@@ -45,6 +45,8 @@ def _per_element_vector_to_per_quad_pt_matrix(
             )
         else:
             vg = v[np.newaxis, :].repeat(egM.shape[0], axis=0)
+    else:
+        raise ValueError(f"v must be a float or np.ndarray, got {type(v)}.")
     return vg
 
 
