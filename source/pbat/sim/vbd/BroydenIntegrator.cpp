@@ -1,9 +1,12 @@
 #include "BroydenIntegrator.h"
 
 #include "pbat/common/Modulo.h"
+#include "pbat/fem/Laplacian.h"
+#include "pbat/fem/Tetrahedron.h"
 #include "pbat/profiling/Profiling.h"
 
 #include <Eigen/IterativeLinearSolvers>
+#include <Eigen/SparseCholesky>
 #include <algorithm>
 #include <exception>
 
@@ -16,8 +19,23 @@ BroydenIntegrator::BroydenIntegrator(Data dataIn)
       gammak(data.mWindowSize),
       xkm1(data.x.size()),
       vbdfk(data.x.size()),
-      vbdfkm1(data.x.size())
+      vbdfkm1(data.x.size()),
+      Gkm()
 {
+    // Construct Laplacian preconditioner as initial hessian inverse for Broyden method
+    auto L = fem::LaplacianMatrix<fem::Tetrahedron<1>, 3, Eigen::ColMajor>(
+        data.E,
+        data.X.cols(),
+        IndexVectorX::LinSpaced(data.E.cols(), Index(0), data.E.cols() - 1),
+        data.wg,
+        data.GP);
+    Scalar dt = 1e-2;
+    L *= dt * dt;
+    L.diagonal().array() += data.m.array();
+    Gkm.compute(L);
+    if (Gkm.info() != Eigen::Success)
+        throw std::runtime_error(
+            "BroydenIntegrator: Failed to compute initial Laplacian preconditioner");
 }
 
 void BroydenIntegrator::Solve(Scalar sdt, Scalar sdt2, Index iterations)
@@ -37,6 +55,7 @@ void BroydenIntegrator::Solve(Scalar sdt, Scalar sdt2, Index iterations)
         xkm1        = data.x.reshaped();
         // G_{k-m} VBD(f_k)
         RunVbdIteration(sdt, sdt2);
+        // If x_{k+1} = x_k - VBD(f_k), then VBD(f_k) = x_k - x_{k+1}
         vbdfk = xkm1 - data.x.reshaped();
         // G_{k-m} VBD(\Delta f_k) = VBD(f_k) - VBD(f_{k-1})
         GvbdFk.col(dkl) = vbdfk - vbdfkm1;
@@ -49,7 +68,7 @@ void BroydenIntegrator::Solve(Scalar sdt, Scalar sdt2, Index iterations)
         cg.setTolerance(1e-10);
         // \gamma_k = [ VBD(F_k)^T VBD(F_k) ]^{-1} VBD(f_k)
         gammak.head(mk) = cg.solve(vbdfk);
-        // x_{k+1} = x_k - VBD(f_k) - (X_k - G_{k-m} VBD(F_k)) \gamma_k
+        // x_{k+1} = x_k - G_{k-m} VBD(f_k) - (X_k - G_{k-m} VBD(F_k)) \gamma_k
         data.x.reshaped() -=
             Xk.leftCols(mk) * gammak.head(mk) - GvbdFk.leftCols(mk) * gammak.head(mk);
     }
