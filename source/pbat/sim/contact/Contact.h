@@ -18,6 +18,7 @@
 namespace pbat::sim::contact {
 } // namespace pbat::sim::contact
 
+#include "Environment.h"
 #include "MeshVertexTetrahedronDcd.h"
 #include "MultibodyMeshMixedCcdDcd.h"
 #include "MultibodyTetrahedralMeshSystem.h"
