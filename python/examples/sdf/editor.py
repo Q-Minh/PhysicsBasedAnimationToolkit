@@ -11,7 +11,9 @@ import meshio
 import gpytoolbox as gpyt
 
 
-def node_ui(id, nodes, transforms, children, visited) -> Tuple[bool, int, bool]:
+def node_ui(
+    id, nodes, transforms, children, visited, domain_extent
+) -> Tuple[bool, int, bool]:
     node = nodes[id]
     transform = transforms[id]
     deleted_id = -1
@@ -25,33 +27,47 @@ def node_ui(id, nodes, transforms, children, visited) -> Tuple[bool, int, bool]:
     if imgui.TreeNode("{} - {}".format(id, type(node).__name__)):
         # Primitives
         if isinstance(node, pbat.geometry.sdf.Sphere):
-            r_updated, r = imgui.SliderFloat("Radius", node.R, 0.1, 10.0)
+            r_updated, r = imgui.SliderFloat(
+                "Radius", node.R, domain_extent / 100, domain_extent
+            )
             if r_updated:
                 node.R = r
             dirty = r_updated
         elif isinstance(node, pbat.geometry.sdf.Box):
-            he_updated, he = imgui.SliderFloat3("Half Extent", node.he, 0.1, 10.0)
+            he_updated, he = imgui.SliderFloat3(
+                "Half Extent", node.he, domain_extent / 100, domain_extent
+            )
             if he_updated:
                 node.he = np.array(he)
             dirty = he_updated
         elif isinstance(node, pbat.geometry.sdf.BoxFrame):
-            he_updated, he = imgui.SliderFloat3("Half Extent", node.he, 0.1, 10.0)
-            t_updated, t = imgui.SliderFloat("Thickness", node.t, 0.01, 1.0)
+            he_updated, he = imgui.SliderFloat3(
+                "Half Extent", node.he, domain_extent / 100, domain_extent
+            )
+            t_updated, t = imgui.SliderFloat(
+                "Thickness", node.t, domain_extent / 1e3, domain_extent / 10
+            )
             updated = he_updated or t_updated
             if updated:
                 node.he = np.array(he)
                 node.t = t
             dirty = updated
         elif isinstance(node, pbat.geometry.sdf.Torus):
-            t_updated, t = imgui.SliderFloat2("Radii", node.t, 0.1, 10.0)
+            t_updated, t = imgui.SliderFloat2(
+                "Radii", node.t, domain_extent / 100, domain_extent
+            )
             updated = t_updated
             if updated:
                 node.t = np.array(t)
             dirty = updated
         elif isinstance(node, pbat.geometry.sdf.CappedTorus):
             sc_updated, sc = imgui.SliderFloat2("Sin/Cos", node.sc, -1.0, 1.0)
-            ra_updated, ra = imgui.SliderFloat("Radius a", node.ra, 0.1, 10.0)
-            rb_updated, rb = imgui.SliderFloat("Radius b", node.rb, 0.1, 10.0)
+            ra_updated, ra = imgui.SliderFloat(
+                "Radius a", node.ra, domain_extent / 100, domain_extent
+            )
+            rb_updated, rb = imgui.SliderFloat(
+                "Radius b", node.rb, domain_extent / 100, domain_extent
+            )
             updated = sc_updated or ra_updated or rb_updated
             if updated:
                 node.sc = np.array(sc)
@@ -59,23 +75,33 @@ def node_ui(id, nodes, transforms, children, visited) -> Tuple[bool, int, bool]:
                 node.rb = rb
             dirty = updated
         elif isinstance(node, pbat.geometry.sdf.Link):
-            t_updated, t = imgui.SliderFloat2("Radii", node.t, 0.1, 10.0)
-            le_updated, le = imgui.SliderFloat("Length", node.le, 0.1, 10.0)
+            t_updated, t = imgui.SliderFloat2(
+                "Radii", node.t, domain_extent / 100, domain_extent
+            )
+            le_updated, le = imgui.SliderFloat(
+                "Length", node.le, domain_extent / 100, domain_extent
+            )
             updated = t_updated or le_updated
             if updated:
                 node.t = np.array(t)
                 node.le = le
             dirty = updated
         elif isinstance(node, pbat.geometry.sdf.InfiniteCylinder):
-            c_updated, c = imgui.SliderFloat2("Center", node.c[:2], -10.0, 10.0)
-            r_updated, r = imgui.SliderFloat("Radius", node.r, 0.1, 10.0)
+            c_updated, c = imgui.SliderFloat2(
+                "Center", node.c[:2], -domain_extent, domain_extent
+            )
+            r_updated, r = imgui.SliderFloat(
+                "Radius", node.r, domain_extent / 100, domain_extent
+            )
             updated = c_updated or r_updated
             if r_updated:
                 node.c = np.array([c[0], c[1], r])
             dirty = r_updated
         elif isinstance(node, pbat.geometry.sdf.Cone):
             sc_updated, sc = imgui.SliderFloat2("Sin/Cos", node.sc, -1.0, 1.0)
-            h_updated, h = imgui.SliderFloat("Height", node.h, 0.1, 10.0)
+            h_updated, h = imgui.SliderFloat(
+                "Height", node.h, domain_extent / 100, domain_extent
+            )
             updated = h_updated or sc_updated
             if updated:
                 node.sc = np.array(sc)
@@ -90,15 +116,23 @@ def node_ui(id, nodes, transforms, children, visited) -> Tuple[bool, int, bool]:
         elif isinstance(node, pbat.geometry.sdf.Plane):
             pass
         elif isinstance(node, pbat.geometry.sdf.HexagonalPrism):
-            h_updated, h = imgui.SliderFloat2("Radii", node.h, 0.1, 10.0)
+            h_updated, h = imgui.SliderFloat2(
+                "Radii", node.h, domain_extent / 100, domain_extent
+            )
             updated = h_updated
             if updated:
                 node.h = np.array(h)
             dirty = updated
         elif isinstance(node, pbat.geometry.sdf.Capsule):
-            a_updated, a = imgui.SliderFloat3("Endpoint A", node.a, -10.0, 10.0)
-            b_updated, b = imgui.SliderFloat3("Endpoint B", node.b, -10.0, 10.0)
-            r_updated, r = imgui.SliderFloat("Radius", node.r, 0.1, 10.0)
+            a_updated, a = imgui.SliderFloat3(
+                "Endpoint A", node.a, -domain_extent, domain_extent
+            )
+            b_updated, b = imgui.SliderFloat3(
+                "Endpoint B", node.b, -domain_extent, domain_extent
+            )
+            r_updated, r = imgui.SliderFloat(
+                "Radius", node.r, domain_extent / 100, domain_extent
+            )
             updated = a_updated or b_updated or r_updated
             if updated:
                 node.a = np.array(a)
@@ -106,17 +140,27 @@ def node_ui(id, nodes, transforms, children, visited) -> Tuple[bool, int, bool]:
                 node.r = r
             dirty = updated
         elif isinstance(node, pbat.geometry.sdf.VerticalCapsule):
-            h_updated, h = imgui.SliderFloat("Height", node.h, 0.1, 10.0)
-            r_updated, r = imgui.SliderFloat("Radius", node.r, 0.1, 10.0)
+            h_updated, h = imgui.SliderFloat(
+                "Height", node.h, domain_extent / 100, domain_extent
+            )
+            r_updated, r = imgui.SliderFloat(
+                "Radius", node.r, domain_extent / 100, domain_extent
+            )
             updated = h_updated or r_updated
             if updated:
                 node.h = h
                 node.r = r
             dirty = updated
         elif isinstance(node, pbat.geometry.sdf.CappedCylinder):
-            a_updated, a = imgui.SliderFloat3("Endpoint A", node.a, -10.0, 10.0)
-            b_updated, b = imgui.SliderFloat3("Endpoint B", node.b, -10.0, 10.0)
-            r_updated, r = imgui.SliderFloat("Radius", node.r, 0.1, 10.0)
+            a_updated, a = imgui.SliderFloat3(
+                "Endpoint A", node.a, -domain_extent, domain_extent
+            )
+            b_updated, b = imgui.SliderFloat3(
+                "Endpoint B", node.b, -domain_extent, domain_extent
+            )
+            r_updated, r = imgui.SliderFloat(
+                "Radius", node.r, domain_extent / 100, domain_extent
+            )
             updated = a_updated or b_updated or r_updated
             if updated:
                 node.a = np.array(a)
@@ -124,17 +168,27 @@ def node_ui(id, nodes, transforms, children, visited) -> Tuple[bool, int, bool]:
                 node.r = r
             dirty = updated
         elif isinstance(node, pbat.geometry.sdf.VerticalCappedCylinder):
-            h_updated, h = imgui.SliderFloat("Height", node.h, 0.1, 10.0)
-            r_updated, r = imgui.SliderFloat("Radius", node.r, 0.1, 10.0)
+            h_updated, h = imgui.SliderFloat(
+                "Height", node.h, domain_extent / 100, domain_extent
+            )
+            r_updated, r = imgui.SliderFloat(
+                "Radius", node.r, domain_extent / 100, domain_extent
+            )
             updated = h_updated or r_updated
             if updated:
                 node.h = h
                 node.r = r
             dirty = updated
         elif isinstance(node, pbat.geometry.sdf.RoundedCylinder):
-            h_updated, h = imgui.SliderFloat("Height", node.h, 0.1, 10.0)
-            r_updated, r = imgui.SliderFloat("Radius", node.r, 0.1, 10.0)
-            cr_updated, cr = imgui.SliderFloat("Corner Radius", node.cr, 0.01, 1.0)
+            h_updated, h = imgui.SliderFloat(
+                "Height", node.h, domain_extent / 100, domain_extent
+            )
+            r_updated, r = imgui.SliderFloat(
+                "Radius", node.r, domain_extent / 100, domain_extent
+            )
+            cr_updated, cr = imgui.SliderFloat(
+                "Corner Radius", node.cr, domain_extent / 1e3, domain_extent / 1e1
+            )
             updated = h_updated or r_updated or cr_updated
             if updated:
                 node.h = h
@@ -142,9 +196,15 @@ def node_ui(id, nodes, transforms, children, visited) -> Tuple[bool, int, bool]:
                 node.rb = cr
             dirty = updated
         elif isinstance(node, pbat.geometry.sdf.VerticalCappedCone):
-            h_updated, h = imgui.SliderFloat("Height", node.h, 0.1, 10.0)
-            r1_updated, r1 = imgui.SliderFloat("Bottom Radius", node.r1, 0.1, 10.0)
-            r2_updated, r2 = imgui.SliderFloat("Top Radius", node.r2, 0.1, 10.0)
+            h_updated, h = imgui.SliderFloat(
+                "Height", node.h, domain_extent / 100, domain_extent
+            )
+            r1_updated, r1 = imgui.SliderFloat(
+                "Bottom Radius", node.r1, domain_extent / 100, domain_extent
+            )
+            r2_updated, r2 = imgui.SliderFloat(
+                "Top Radius", node.r2, domain_extent / 100, domain_extent
+            )
             updated = h_updated or r1_updated or r2_updated
             if updated:
                 node.h = h
@@ -152,9 +212,15 @@ def node_ui(id, nodes, transforms, children, visited) -> Tuple[bool, int, bool]:
                 node.r2 = r2
             dirty = updated
         elif isinstance(node, pbat.geometry.sdf.CutHollowSphere):
-            r_updated, r = imgui.SliderFloat("Radius", node.r, 0.1, 5.0)
-            h_updated, h = imgui.SliderFloat("Height", node.h, 0.1, 10.0)
-            t_updated, t = imgui.SliderFloat("Thickness", node.t, 0.01, 5.0)
+            r_updated, r = imgui.SliderFloat(
+                "Radius", node.r, domain_extent / 100, domain_extent
+            )
+            h_updated, h = imgui.SliderFloat(
+                "Height", node.h, domain_extent / 100, domain_extent
+            )
+            t_updated, t = imgui.SliderFloat(
+                "Thickness", node.t, domain_extent / 100, domain_extent
+            )
             updated = r_updated or h_updated or t_updated
             if updated:
                 node.r = r
@@ -162,9 +228,15 @@ def node_ui(id, nodes, transforms, children, visited) -> Tuple[bool, int, bool]:
                 node.t = t
             dirty = updated
         elif isinstance(node, pbat.geometry.sdf.VerticalRoundCone):
-            h_updated, h = imgui.SliderFloat("Height", node.h, 0.1, 20.0)
-            r1_updated, r1 = imgui.SliderFloat("Bottom Radius", node.r1, 0.1, 5.0)
-            r2_updated, r2 = imgui.SliderFloat("Top Radius", node.r2, 0.1, 5.0)
+            h_updated, h = imgui.SliderFloat(
+                "Height", node.h, domain_extent / 100, domain_extent
+            )
+            r1_updated, r1 = imgui.SliderFloat(
+                "Bottom Radius", node.r1, domain_extent / 100, domain_extent
+            )
+            r2_updated, r2 = imgui.SliderFloat(
+                "Top Radius", node.r2, domain_extent / 100, domain_extent
+            )
             updated = h_updated or r1_updated or r2_updated
             if updated:
                 node.h = h
@@ -172,20 +244,30 @@ def node_ui(id, nodes, transforms, children, visited) -> Tuple[bool, int, bool]:
                 node.r2 = r2
             dirty = updated
         elif isinstance(node, pbat.geometry.sdf.Octahedron):
-            s_updated, s = imgui.SliderFloat("Radius", node.s, 0.1, 10.0)
+            s_updated, s = imgui.SliderFloat(
+                "Radius", node.s, domain_extent / 100, domain_extent
+            )
             if s_updated:
                 node.s = s
             dirty = s_updated
         elif isinstance(node, pbat.geometry.sdf.Pyramid):
-            h_updated, h = imgui.SliderFloat("Height", node.h, 0.1, 10.0)
+            h_updated, h = imgui.SliderFloat(
+                "Height", node.h, domain_extent / 100, domain_extent
+            )
             updated = h_updated
             if updated:
                 node.h = h
             dirty = updated
         elif isinstance(node, pbat.geometry.sdf.Triangle):
-            a_updated, a = imgui.SliderFloat3("Vertex A", node.a, -10.0, 10.0)
-            b_updated, b = imgui.SliderFloat3("Vertex B", node.b, -10.0, 10.0)
-            c_updated, c = imgui.SliderFloat3("Vertex C", node.c, -10.0, 10.0)
+            a_updated, a = imgui.SliderFloat3(
+                "Vertex A", node.a, -domain_extent, domain_extent
+            )
+            b_updated, b = imgui.SliderFloat3(
+                "Vertex B", node.b, -domain_extent, domain_extent
+            )
+            c_updated, c = imgui.SliderFloat3(
+                "Vertex C", node.c, -domain_extent, domain_extent
+            )
             updated = a_updated or b_updated or c_updated
             if updated:
                 node.a = np.array(a)
@@ -193,10 +275,18 @@ def node_ui(id, nodes, transforms, children, visited) -> Tuple[bool, int, bool]:
                 node.c = np.array(c)
             dirty = updated
         elif isinstance(node, pbat.geometry.sdf.Quadrilateral):
-            a_updated, a = imgui.SliderFloat3("Vertex A", node.a, -10.0, 10.0)
-            b_updated, b = imgui.SliderFloat3("Vertex B", node.b, -10.0, 10.0)
-            c_updated, c = imgui.SliderFloat3("Vertex C", node.c, -10.0, 10.0)
-            d_updated, d = imgui.SliderFloat3("Vertex D", node.d, -10.0, 10.0)
+            a_updated, a = imgui.SliderFloat3(
+                "Vertex A", node.a, -domain_extent, domain_extent
+            )
+            b_updated, b = imgui.SliderFloat3(
+                "Vertex B", node.b, -domain_extent, domain_extent
+            )
+            c_updated, c = imgui.SliderFloat3(
+                "Vertex C", node.c, -domain_extent, domain_extent
+            )
+            d_updated, d = imgui.SliderFloat3(
+                "Vertex D", node.d, -domain_extent, domain_extent
+            )
             updated = a_updated or b_updated or c_updated or d_updated
             if updated:
                 node.a = np.array(a)
@@ -208,25 +298,33 @@ def node_ui(id, nodes, transforms, children, visited) -> Tuple[bool, int, bool]:
         # Unary nodes
         is_unary_node = False
         if isinstance(node, pbat.geometry.sdf.Scale):
-            s_updated, s = imgui.SliderFloat("Scale", node.s, 0.01, 10.0)
+            s_updated, s = imgui.SliderFloat(
+                "Scale", node.s, domain_extent / 100, domain_extent
+            )
             if s_updated:
                 node.s = s
             dirty = s_updated
             is_unary_node = True
         elif isinstance(node, pbat.geometry.sdf.Elongate):
-            h_updated, h = imgui.SliderFloat3("Length", node.h, 0.1, 10.0)
+            h_updated, h = imgui.SliderFloat3(
+                "Length", node.h, domain_extent / 100, domain_extent
+            )
             if h_updated:
                 node.h = np.array(h)
             dirty = h_updated
             is_unary_node = True
         elif isinstance(node, pbat.geometry.sdf.Round):
-            r_updated, r = imgui.SliderFloat("Radius", node.r, 0.01, 10.0)
+            r_updated, r = imgui.SliderFloat(
+                "Radius", node.r, domain_extent / 1e3, domain_extent
+            )
             if r_updated:
                 node.r = r
             dirty = r_updated
             is_unary_node = True
         elif isinstance(node, pbat.geometry.sdf.Onion):
-            t_updated, t = imgui.SliderFloat("Thickness", node.t, 0.01, 1.0)
+            t_updated, t = imgui.SliderFloat(
+                "Thickness", node.t, domain_extent / 1e3, domain_extent / 1e1
+            )
             if t_updated:
                 node.t = t
             dirty = t_updated
@@ -234,8 +332,12 @@ def node_ui(id, nodes, transforms, children, visited) -> Tuple[bool, int, bool]:
         elif isinstance(node, pbat.geometry.sdf.Symmetrize):
             is_unary_node = True
         elif isinstance(node, pbat.geometry.sdf.Repeat):
-            s_updated, s = imgui.SliderFloat("Scale", node.s, 0.01, 10.0)
-            l_updated, l = imgui.SliderFloat3("Extents", node.l, 0.01, 10.0)
+            s_updated, s = imgui.SliderFloat(
+                "Scale", node.s, domain_extent / 100, domain_extent
+            )
+            l_updated, l = imgui.SliderFloat3(
+                "Extents", node.l, domain_extent / 100, domain_extent
+            )
             updated = s_updated or l_updated
             if updated:
                 node.s = s
@@ -243,8 +345,12 @@ def node_ui(id, nodes, transforms, children, visited) -> Tuple[bool, int, bool]:
             dirty = updated
             is_unary_node = True
         elif isinstance(node, pbat.geometry.sdf.Bump):
-            a_updated, a = imgui.SliderFloat3("Amplitude", node.g, -10.0, 10.0)
-            f_updated, f = imgui.SliderFloat3("Frequency", node.f, 0.0, 20.0)
+            a_updated, a = imgui.SliderFloat3(
+                "Amplitude", node.g, -10 * domain_extent, 10 * domain_extent
+            )
+            f_updated, f = imgui.SliderFloat3(
+                "Frequency", node.f, 0.0, 10 * domain_extent
+            )
             updated = a_updated or f_updated
             if updated:
                 node.g = np.array(a)
@@ -252,13 +358,17 @@ def node_ui(id, nodes, transforms, children, visited) -> Tuple[bool, int, bool]:
             dirty = updated
             is_unary_node = True
         elif isinstance(node, pbat.geometry.sdf.Twist):
-            k_updated, k = imgui.SliderFloat("Twist", node.k, -0.5, 0.5)
+            k_updated, k = imgui.SliderFloat(
+                "Twist", node.k, -10 * domain_extent / 2, 10 * domain_extent / 2
+            )
             if k_updated:
                 node.k = k
             dirty = k_updated
             is_unary_node = True
         elif isinstance(node, pbat.geometry.sdf.Bend):
-            k_updated, k = imgui.SliderFloat("Curvature", node.k, -0.5, 0.5)
+            k_updated, k = imgui.SliderFloat(
+                "Curvature", node.k, -10 * domain_extent / 2, 10 * domain_extent / 2
+            )
             if k_updated:
                 node.k = k
             dirty = k_updated
@@ -275,26 +385,34 @@ def node_ui(id, nodes, transforms, children, visited) -> Tuple[bool, int, bool]:
         elif isinstance(node, pbat.geometry.sdf.ExclusiveOr):
             is_binary_node = True
         elif isinstance(node, pbat.geometry.sdf.SmoothUnion):
-            k_updated, k = imgui.SliderFloat("Smoothness", node.k, 0.0, 10.0)
+            k_updated, k = imgui.SliderFloat(
+                "Smoothness", node.k, 0.0, domain_extent / 1e1
+            )
             if k_updated:
                 node.k = k
             dirty = k_updated
             is_binary_node = True
         elif isinstance(node, pbat.geometry.sdf.SmoothDifference):
-            k_updated, k = imgui.SliderFloat("Smoothness", node.k, 0.0, 10.0)
+            k_updated, k = imgui.SliderFloat(
+                "Smoothness", node.k, 0.0, domain_extent / 1e1
+            )
             if k_updated:
                 node.k = k
             dirty = k_updated
             is_binary_node = True
         elif isinstance(node, pbat.geometry.sdf.SmoothIntersection):
-            k_updated, k = imgui.SliderFloat("Smoothness", node.k, 0.0, 10.0)
+            k_updated, k = imgui.SliderFloat(
+                "Smoothness", node.k, 0.0, domain_extent / 1e1
+            )
             if k_updated:
                 node.k = k
             dirty = k_updated
             is_binary_node = True
 
         # Transform
-        t_updated, t = imgui.SliderFloat3("Translation", transform.t, -10.0, 10.0)
+        t_updated, t = imgui.SliderFloat3(
+            "Translation", transform.t, -domain_extent, domain_extent
+        )
         if t_updated:
             transform.t = np.array(t)
 
@@ -320,7 +438,7 @@ def node_ui(id, nodes, transforms, children, visited) -> Tuple[bool, int, bool]:
                 for i in range(len(nodes)):
                     name = "{} - {}".format(i, type(nodes[i]).__name__)
                     _, selected = imgui.Selectable(name, i == ci)
-                    if selected:
+                    if selected and i != id:
                         ci = i
                 imgui.EndCombo()
         if is_binary_node:
@@ -331,7 +449,7 @@ def node_ui(id, nodes, transforms, children, visited) -> Tuple[bool, int, bool]:
                 for i in range(len(nodes)):
                     name = "{} - {}".format(i, type(nodes[i]).__name__)
                     _, selected = imgui.Selectable(name, i == ci)
-                    if selected:
+                    if selected and i != id:
                         ci = i
                 imgui.EndCombo()
             binary_node_right_child_selection_requested = imgui.BeginCombo(
@@ -341,7 +459,7 @@ def node_ui(id, nodes, transforms, children, visited) -> Tuple[bool, int, bool]:
                 for j in range(len(nodes)):
                     name = "{} - {}".format(j, type(nodes[j]).__name__)
                     _, selected = imgui.Selectable(name, j == cj)
-                    if selected:
+                    if selected and j != id:
                         cj = j
                 imgui.EndCombo()
 
@@ -360,7 +478,7 @@ def node_ui(id, nodes, transforms, children, visited) -> Tuple[bool, int, bool]:
         c0, c1 = children[id]
         if c0 >= 0:
             c0_dirty, c0_deleted_id, c0_children_updated = node_ui(
-                c0, nodes, transforms, children, visited
+                c0, nodes, transforms, children, visited, domain_extent
             )
             dirty |= c0_dirty
             descendant_updated |= c0_children_updated
@@ -368,7 +486,7 @@ def node_ui(id, nodes, transforms, children, visited) -> Tuple[bool, int, bool]:
                 deleted_id = c0_deleted_id
         if c1 >= 0:
             c1_dirty, c1_deleted_id, c1_children_updated = node_ui(
-                c1, nodes, transforms, children, visited
+                c1, nodes, transforms, children, visited, domain_extent
             )
             dirty |= c1_dirty
             descendant_updated |= c1_children_updated
@@ -383,8 +501,9 @@ def node_ui(id, nodes, transforms, children, visited) -> Tuple[bool, int, bool]:
 
 if __name__ == "__main__":
     # Domain
-    bmin = np.array([-10, -10, -10])
-    bmax = np.array([10, 10, 10])
+    extent = 1
+    bmin = -extent * np.ones(3)
+    bmax = extent * np.ones(3)
     dims = (100, 100, 100)
     # polyscope's volume grid expects x to vary fastest, then y, then z
     x, y, z = np.meshgrid(
@@ -419,7 +538,7 @@ if __name__ == "__main__":
     isolines = True
     enable_isosurface_viz = True
     isoline_contour_thickness = 0.3
-    vminmax = (-10, 10)
+    vminmax = (-extent, extent)
     cmap = "coolwarm"
     grid = ps.register_volume_grid("Domain", dims, bmin, bmax)
     grid.add_scalar_quantity(
@@ -651,7 +770,7 @@ if __name__ == "__main__":
             for i in roots:
                 # Top-down forest traversal to show UI for each node
                 node_dirty, node_deleted_id, ci_descendants_updated = node_ui(
-                    i, nodes, transforms, children, visited
+                    i, nodes, transforms, children, visited, extent
                 )
                 was_descendant_deleted = node_deleted_id >= 0
                 dirty |= node_dirty or ci_descendants_updated or was_descendant_deleted
