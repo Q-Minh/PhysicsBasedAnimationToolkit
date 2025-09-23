@@ -336,13 +336,19 @@ def node_ui(
                 "Scale", node.s, domain_extent / 100, domain_extent
             )
             l_updated, l = imgui.SliderFloat3(
-                "Extents", node.l, domain_extent / 100, domain_extent
+                "Extents", node.l, domain_extent / 100, 10 * domain_extent
             )
             updated = s_updated or l_updated
             if updated:
                 node.s = s
                 node.l = np.array(l)
             dirty = updated
+            is_unary_node = True
+        elif isinstance(node, pbat.geometry.sdf.RotationalRepeat):
+            n_updated, n = imgui.SliderFloat("Repetitions", node.n, 1.0, 24.0)
+            if n_updated:
+                node.n = n
+            dirty = n_updated
             is_unary_node = True
         elif isinstance(node, pbat.geometry.sdf.Bump):
             a_updated, a = imgui.SliderFloat3(
@@ -597,6 +603,7 @@ if __name__ == "__main__":
         pbat.geometry.sdf.Onion,
         pbat.geometry.sdf.Symmetrize,
         pbat.geometry.sdf.Repeat,
+        pbat.geometry.sdf.RotationalRepeat,
         pbat.geometry.sdf.Bump,
         pbat.geometry.sdf.Twist,
         pbat.geometry.sdf.Bend,

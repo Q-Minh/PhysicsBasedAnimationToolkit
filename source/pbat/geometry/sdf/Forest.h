@@ -258,6 +258,12 @@ void Forest<TScalar>::Serialize(io::Archive& archive) const
             repeatGroup.WriteMetaData("s", un.s);
             detail::forest::SerializeMiniMatrix("l", un.l, repeatGroup);
         }
+        void operator()(RotationalRepeat<TScalar> const& un)
+        {
+            io::Archive rotationalRepeatGroup =
+                group.GetOrCreateGroup("pbat.geometry.sdf.RotationalRepeat");
+            rotationalRepeatGroup.WriteMetaData("n", un.n);
+        }
         void operator()(Bump<TScalar> const& un)
         {
             io::Archive bumpGroup = group.GetOrCreateGroup("pbat.geometry.sdf.Bump");
@@ -529,6 +535,11 @@ void Forest<TScalar>::Deserialize(io::Archive& archive)
             un.s                    = repeatGroup.ReadMetaData<TScalar>("s");
             detail::forest::DeserializeMiniMatrix("l", un.l, repeatGroup);
         }
+        void operator()(RotationalRepeat<TScalar>& un) const
+        {
+            io::Archive rotationalRepeatGroup = group["pbat.geometry.sdf.RotationalRepeat"];
+            un.n                              = rotationalRepeatGroup.ReadMetaData<TScalar>("n");
+        }
         void operator()(Bump<TScalar>& un) const
         {
             io::Archive bumpGroup = group["pbat.geometry.sdf.Bump"];
@@ -643,6 +654,8 @@ void Forest<TScalar>::Deserialize(io::Archive& archive)
             nodes[i] = Symmetrize<TScalar>{};
         else if (nodeGroup.HasGroup("pbat.geometry.sdf.Repeat"))
             nodes[i] = Repeat<TScalar>{};
+        else if (nodeGroup.HasGroup("pbat.geometry.sdf.RotationalRepeat"))
+            nodes[i] = RotationalRepeat<TScalar>{};
         else if (nodeGroup.HasGroup("pbat.geometry.sdf.Bump"))
             nodes[i] = Bump<TScalar>{};
         else if (nodeGroup.HasGroup("pbat.geometry.sdf.Twist"))

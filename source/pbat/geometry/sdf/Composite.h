@@ -64,6 +64,7 @@ using Node = std::variant<
     Onion<TScalar>,
     Symmetrize<TScalar>,
     Repeat<TScalar>,
+    RotationalRepeat<TScalar>,
     Bump<TScalar>,
     Twist<TScalar>,
     Bend<TScalar>,

@@ -20,6 +20,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <numbers>
 
 namespace pbat::geometry::sdf {
 
@@ -227,6 +228,50 @@ struct Repeat : public UnaryNode
             clamp(round(p(2) / s), -l(2), l(2))};
         Vec3<ScalarType> q = p - s * pc;
         return sdf(q);
+    }
+};
+
+/**
+ * @brief Circular repetition operation around axe
+ * @tparam TScalar Scalar type
+ */
+template <common::CArithmetic TScalar>
+struct RotationalRepeat : public UnaryNode
+{
+    using ScalarType = TScalar; ///< Scalar type
+    ScalarType n{TScalar(1)};   ///< Number of repetitions
+    /**
+     * @brief Default constructor
+     */
+    RotationalRepeat() = default;
+    /**
+     * @brief Construct a new RotationalRepeat object
+     * @param n_ Number of repetitions
+     */
+    explicit RotationalRepeat(ScalarType n_) : n(n_) {}
+    /**
+     * @brief Evaluate the signed distance function at a point
+     * @tparam FSdf Callable type with signature `ScalarType(Vec3<ScalarType> const&)`
+     * @param p `3 x 1` query point in 3D space
+     * @param sdf Input SDF
+     * @return Signed distance to the repeated shape
+     */
+    template <class FSdf>
+    PBAT_HOST_DEVICE ScalarType Eval(Vec3<ScalarType> const& p, FSdf&& sdf) const
+    {
+        using namespace std;
+        ScalarType sp    = 2 * std::numbers::pi_v<ScalarType> / n;
+        ScalarType an    = atan2(p(1), p(0));
+        ScalarType id    = floor(an / sp);
+        ScalarType a1    = sp * (id);
+        ScalarType a2    = sp * (id + 1);
+        ScalarType cosa1 = cos(a1);
+        ScalarType sina1 = sin(a1);
+        ScalarType cosa2 = cos(a2);
+        ScalarType sina2 = sin(a2);
+        Vec3<ScalarType> r1{cosa1 * p(0) + sina1 * p(1), -sina1 * p(0) + cosa1 * p(1), p(2)};
+        Vec3<ScalarType> r2{cosa2 * p(0) + sina2 * p(1), -sina2 * p(0) + cosa2 * p(1), p(2)};
+        return min(sdf(r1), sdf(r2));
     }
 };
 

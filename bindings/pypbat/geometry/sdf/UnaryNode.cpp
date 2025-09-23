@@ -364,6 +364,62 @@ void BindUnaryNode(nanobind::module_& m)
             "    numpy.ndarray: `N x 1` Signed distances to the repeated shape (negative inside, "
             "positive outside)");
 
+    using RotationalRepeat = pbat::geometry::sdf::RotationalRepeat<ScalarType>;
+    nb::class_<RotationalRepeat>(m, "RotationalRepeat")
+        .def(nb::init<>())
+        .def(
+            "__init__",
+            [](RotationalRepeat* self, ScalarType n) {
+                new (self) RotationalRepeat();
+                self->n = n;
+            },
+            nb::arg("n"),
+            "Constructor with number of repetitions\n\n"
+            "Args:\n"
+            "    n (float): Number of repetitions\n")
+        .def_rw("n", &RotationalRepeat::n, "(float) Number of repetitions")
+        .def(
+            "eval",
+            [](RotationalRepeat const& self,
+               Vec3 const& p,
+               std::function<ScalarType(Vec3 const&)> const& sdf) -> ScalarType {
+                return self.Eval(FromEigen(p), [&](SdfVec3 const& x) -> ScalarType {
+                    return sdf(ToEigen(x));
+                });
+            },
+            nb::arg("p"),
+            nb::arg("sdf"),
+            "Evaluate the signed distance function at a point\n\n"
+            "Args:\n"
+            "    p (numpy.ndarray): `3 x 1` point in 3D space\n"
+            "    sdf (Callable): Callable with signature `float(numpy.ndarray)` representing the "
+            "SDF to rotationally repeat\n\n"
+            "Returns:\n"
+            "    float: Signed distance to the rotationally repeated shape (negative inside, positive outside)")
+        .def(
+            "eval",
+            [](RotationalRepeat const& self,
+               MatX const& p,
+               std::function<ScalarType(Vec3 const&)> const& sdf) -> VecX {
+                VecX result(p.cols());
+                for (int i = 0; i < p.cols(); ++i)
+                {
+                    result(i) = self.Eval(
+                        FromEigen(p.col(i).head<3>()),
+                        [&](SdfVec3 const& x) -> ScalarType { return sdf(ToEigen(x)); });
+                }
+                return result;
+            },
+            nb::arg("p"),
+            nb::arg("sdf"),
+            "Evaluate the signed distance function at multiple points\n\n"
+            "Args:\n"
+            "    p (numpy.ndarray): `N x 3` points in 3D space\n"
+            "    sdf (Callable): Callable with signature `float(numpy.ndarray)` representing the "
+            "SDF to rotationally repeat\n\n"
+            "Returns:\n"
+            "    numpy.ndarray: `N x 1` Signed distances to the rotationally repeated shape (negative inside, positive outside)");
+
     using Bump = pbat::geometry::sdf::Bump<ScalarType>;
     nb::class_<Bump>(m, "Bump")
         .def(nb::init<>())
