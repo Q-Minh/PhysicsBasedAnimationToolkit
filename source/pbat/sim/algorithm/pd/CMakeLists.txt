@@ -2,12 +2,11 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     PUBLIC
     FILE_SET api
     FILES
-    "Algorithm.h"
+    "PD.h"
+    "ValanisLandelQuasiNewton.h"
 )
 target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     PRIVATE
-    "Algorithm.cpp"
+    "PD.cpp"
+    "ValanisLandelQuasiNewton.cpp"
 )
-
-add_subdirectory(newton)
-add_subdirectory(pd)

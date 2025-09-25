@@ -177,6 +177,8 @@ void Integrator::AssembleHessian(ScalarType bt2)
             }
         }
     }
+    // TODO: Constraint stiffness matrix
+    // ...
     // Remove lower triangular part and Dirichlet off-diagonal entries
     std::sort(
         mTriplets.begin(),

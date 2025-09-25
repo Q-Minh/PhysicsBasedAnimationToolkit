@@ -232,3 +232,19 @@ year = {2005}
   keywords={Deformable models;Layout;Detection algorithms;Data structures;Testing;Shape;Computer science;Computational modeling;Grid computing;Atomic measurements},
   doi={10.1109/SMI.2007.18}
 }
+
+@article{liu2017quasiPD,
+	title = {Quasi-{Newton} {Methods} for {Real}-{Time} {Simulation} of {Hyperelastic} {Materials}},
+	volume = {36},
+	issn = {0730-0301},
+	url = {https://dl.acm.org/doi/10.1145/2990496},
+	doi = {10.1145/2990496},
+	abstract = {We present a new method for real-time physics-based simulation supporting many different types of hyperelastic materials. Previous methods such as Position-Based or Projective Dynamics are fast but support only a limited selection of materials; even classical materials such as the Neo-Hookean elasticity are not supported. Recently, Xu et al. [2015] introduced new “spline-based materials” that can be easily controlled by artists to achieve desired animation effects. Simulation of these types of materials currently relies on Newton’s method, which is slow, even with only one iteration per timestep. In this article, we show that Projective Dynamics can be interpreted as a quasi-Newton method. This insight enables very efficient simulation of a large class of hyperelastic materials, including the Neo-Hookean, spline-based materials, and others. The quasi-Newton interpretation also allows us to leverage ideas from numerical optimization. In particular, we show that our solver can be further accelerated using L-BFGS updates (Limited-memory Broyden-Fletcher-Goldfarb-Shanno algorithm). Our final method is typically more than 10 times faster than one iteration of Newton’s method without compromising quality. In fact, our result is often more accurate than the result obtained with one iteration of Newton’s method. Our method is also easier to implement, implying reduced software development costs.},
+	number = {3},
+	urldate = {2025-09-25},
+	journal = {ACM Trans. Graph.},
+	author = {Liu, Tiantian and Bouaziz, Sofien and Kavan, Ladislav},
+	month = may,
+	year = {2017},
+	pages = {23:1--23:16}
+}

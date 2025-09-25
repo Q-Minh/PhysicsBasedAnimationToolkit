@@ -5,6 +5,7 @@
 #include <nanobind/stl/tuple.h>
 #include <pbat/fem/Hexahedron.h>
 #include <pbat/fem/HyperElasticPotential.h>
+#include <pbat/physics/Enums.h>
 #include <pbat/physics/SaintVenantKirchhoffEnergy.h>
 #include <pbat/physics/StableNeoHookeanEnergy.h>
 #include <tuple>
@@ -18,20 +19,20 @@ inline void ApplyToElementInDimsWithHyperElasticEnergy(
     EElement eElement,
     int order,
     int dims,
-    EHyperElasticEnergy eEnergy,
+    pbat::physics::EHyperElasticEnergy eEnergy,
     Func f)
 {
     ApplyToElementInDims(eElement, order, dims, [&]<pbat::fem::CElement ElementType, int Dims>() {
         switch (eEnergy)
         {
-            case EHyperElasticEnergy::SaintVenantKirchhoff: {
+            case pbat::physics::EHyperElasticEnergy::SaintVenantKirchhoff: {
                 using EnergyType = pbat::physics::SaintVenantKirchhoffEnergy<Dims>;
                 // clang-format off
                 f.template operator()<ElementType, Dims, EnergyType>();
                 // clang-format on
                 break;
             }
-            case EHyperElasticEnergy::StableNeoHookean: {
+            case pbat::physics::EHyperElasticEnergy::StableNeoHookean: {
                 using EnergyType = pbat::physics::StableNeoHookeanEnergy<Dims>;
                 // clang-format off
                 f.template operator()<ElementType, Dims, EnergyType>();
@@ -46,9 +47,9 @@ inline void ApplyToElementInDimsWithHyperElasticEnergy(
 void BindHyperElasticPotential(nanobind::module_& m)
 {
     namespace nb = nanobind;
-    nb::enum_<EHyperElasticEnergy>(m, "HyperElasticEnergy")
-        .value("SaintVenantKirchhoff", EHyperElasticEnergy::SaintVenantKirchhoff)
-        .value("StableNeoHookean", EHyperElasticEnergy::StableNeoHookean)
+    nb::enum_<pbat::physics::EHyperElasticEnergy>(m, "HyperElasticEnergy")
+        .value("SaintVenantKirchhoff", pbat::physics::EHyperElasticEnergy::SaintVenantKirchhoff)
+        .value("StableNeoHookean", pbat::physics::EHyperElasticEnergy::StableNeoHookean)
         .export_values();
 
     nb::enum_<pbat::fem::EHyperElasticSpdCorrection>(m, "HyperElasticSpdCorrection")
@@ -79,7 +80,7 @@ void BindHyperElasticPotential(nanobind::module_& m)
            nb::DRef<Eigen::Vector<TScalar, Eigen::Dynamic> const> mug,
            nb::DRef<Eigen::Vector<TScalar, Eigen::Dynamic> const> lambdag,
            nb::DRef<Eigen::Vector<TScalar, Eigen::Dynamic> const> x,
-           EHyperElasticEnergy eEnergy,
+           pbat::physics::EHyperElasticEnergy eEnergy,
            int eFlags,
            pbat::fem::EHyperElasticSpdCorrection eSpdCorrection,
            EElement eElement,
@@ -156,7 +157,7 @@ void BindHyperElasticPotential(nanobind::module_& m)
         nb::arg("mug"),
         nb::arg("lambdag"),
         nb::arg("x"),
-        nb::arg("energy")         = EHyperElasticEnergy::StableNeoHookean,
+        nb::arg("energy")         = pbat::physics::EHyperElasticEnergy::StableNeoHookean,
         nb::arg("flags")          = pbat::fem::EElementElasticityComputationFlags::Potential,
         nb::arg("spd_correction") = pbat::fem::EHyperElasticSpdCorrection::Absolute,
         nb::arg("element"),

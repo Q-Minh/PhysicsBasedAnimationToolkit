@@ -43,6 +43,11 @@ class CXXPrinter(CXX17CodePrinter):
             return code
         else:
             return super()._print_Pow(expr)
+        
+    
+    def _print_Abs(self, expr):
+        arg = self._print(expr.args[0])
+        return f"std::abs({arg})"
 
 
 def codegen(exprs, lhs=None, use_cse=True, csesymbol="a", scalar_type="Scalar"):

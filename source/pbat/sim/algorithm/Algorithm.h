@@ -10,6 +10,7 @@
 #define PBAT_SIM_ALGORITHM_ALGORITHM_H
 
 #include "newton/Newton.h"
+#include "pd/PD.h"
 
 /**
  * @brief Namespace for PBAT simulation algorithms.

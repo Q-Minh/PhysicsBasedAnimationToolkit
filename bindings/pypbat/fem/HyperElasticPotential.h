@@ -10,8 +10,6 @@ namespace pbat {
 namespace py {
 namespace fem {
 
-enum class EHyperElasticEnergy { SaintVenantKirchhoff, StableNeoHookean };
-
 void BindHyperElasticPotential(nanobind::module_& m);
 
 } // namespace fem

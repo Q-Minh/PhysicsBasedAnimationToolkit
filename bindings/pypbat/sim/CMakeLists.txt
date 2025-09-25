@@ -8,6 +8,8 @@ target_sources(PhysicsBasedAnimationToolkit_Python
     PRIVATE
     "Sim.cpp"
 )
+
+add_subdirectory(algorithm)
 add_subdirectory(contact)
 add_subdirectory(dynamics)
 add_subdirectory(integration)

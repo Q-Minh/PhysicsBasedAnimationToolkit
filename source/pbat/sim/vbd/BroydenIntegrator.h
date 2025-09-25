@@ -48,8 +48,8 @@ class BroydenIntegrator : public Integrator
     VectorX vbdfk;   ///< `|# dofs| x 1` vbd step
     VectorX vbdfkm1; ///< `|# dofs| x 1` past vbd step
 
-    Eigen::SimplicialLDLT<Eigen::SparseMatrix<Scalar, Eigen::ColMajor, Index>>
-        Gkm; ///< VBD preconditioner
+    // Eigen::SimplicialLDLT<Eigen::SparseMatrix<Scalar, Eigen::ColMajor, Index>>
+    //     Gkm; ///< VBD preconditioner
 };
 
 } // namespace pbat::sim::vbd
