@@ -262,7 +262,7 @@ inline Vec3<TScalar> Composite<TScalar>::Grad(Vec3<ScalarType> const& p, ScalarT
     g += k * Eval(p + h * k);
     k = Vec3<ScalarType>{one, one, one};
     g += k * Eval(p + h * k);
-    g *= ScalarType(0.25);
+    g *= ScalarType(0.25) / h;
     return g;
 }
 
