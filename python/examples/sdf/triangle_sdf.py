@@ -28,24 +28,50 @@ def solve_quadratic_in_reference_triangle_2d(xk, gk, Bk) -> np.ndarray:
     xstar = xk - np.linalg.solve(Bk, gk)
     feasible = (xstar >= 0).all() and (xstar <= 1).all() and (xstar.sum() <= 1)
     if not feasible:
-        alpha0 = np.zeros(2)
-        dalpha = np.array([0, 1])
-        a1 = gk.T @ (alpha0 - xk) + 0.5 * (alpha0 - xk).T @ Bk @ (alpha0 - xk)
-        b1 = gk.T @ dalpha + dalpha.T @ Bk @ (alpha0 - xk)
-        c1 = 0.5 * dalpha.T @ Bk @ dalpha
-        tmin1 = minimize_quadratic(a1, b1, c1)
-        alpha0 = np.zeros(2)
-        dalpha = np.array([1, 0])
-        a2 = gk.T @ (alpha0 - xk) + 0.5 * (alpha0 - xk).T @ Bk @ (alpha0 - xk)
-        b2 = gk.T @ dalpha + dalpha.T @ Bk @ (alpha0 - xk)
-        c2 = 0.5 * dalpha.T @ Bk @ dalpha
-        tmin2 = minimize_quadratic(a2, b2, c2)
-        alpha0 = np.array([0, 1])
-        dalpha = np.array([1, -1])
-        a3 = gk.T @ (alpha0 - xk) + 0.5 * (alpha0 - xk).T @ Bk @ (alpha0 - xk)
-        b3 = gk.T @ dalpha + dalpha.T @ Bk @ (alpha0 - xk)
-        c3 = 0.5 * dalpha.T @ Bk @ dalpha
-        tmin3 = minimize_quadratic(a3, b3, c3)
+        # NOTE: Uncomment to validate against symbolic derivation
+        # if it ever happens that pred < 0 (should never happen).
+        # alpha0 = np.zeros(2)
+        # dalpha = np.array([0, 1])
+        # a1 = gk.T @ (alpha0 - xk) + 0.5 * (alpha0 - xk).T @ Bk @ (alpha0 - xk)
+        # b1 = gk.T @ dalpha + dalpha.T @ Bk @ (alpha0 - xk)
+        # c1 = 0.5 * dalpha.T @ Bk @ dalpha
+        # tmin1 = minimize_quadratic(a1, b1, c1)
+        # alpha0 = np.zeros(2)
+        # dalpha = np.array([1, 0])
+        # a2 = gk.T @ (alpha0 - xk) + 0.5 * (alpha0 - xk).T @ Bk @ (alpha0 - xk)
+        # b2 = gk.T @ dalpha + dalpha.T @ Bk @ (alpha0 - xk)
+        # c2 = 0.5 * dalpha.T @ Bk @ dalpha
+        # tmin2 = minimize_quadratic(a2, b2, c2)
+        # alpha0 = np.array([0, 1])
+        # dalpha = np.array([1, -1])
+        # a3 = gk.T @ (alpha0 - xk) + 0.5 * (alpha0 - xk).T @ Bk @ (alpha0 - xk)
+        # b3 = gk.T @ dalpha + dalpha.T @ Bk @ (alpha0 - xk)
+        # c3 = 0.5 * dalpha.T @ Bk @ dalpha
+        # tmin3 = minimize_quadratic(a3, b3, c3)
+
+        # Derivation and CSE by-hand for the quadratic
+        # f(t) = 0.5 (x0 + t dx - xk)^T Bk (x0 + t dx - xk) + gk^T (x0 + t dx - xk)
+        # where x = x0 + t dx is constrained to one of the triangle edges.
+        # Edge 1: x0 = [0,0], dx = [0,1]
+        # Edge 2: x0 = [0,0], dx = [1,0]
+        # Edge 3: x0 = [0,1], dx = [1,-1]
+        gkTxk = gk.T @ xk
+        xkTBkxk = xk.T @ Bk @ xk
+        Bkxk = Bk @ xk
+        a1 = -gkTxk + 0.5 * xkTBkxk
+        b1 = gk[1] - Bkxk[1]
+        c1 = Bk[1, 1]
+        a2 = a1
+        b2 = gk[0] - Bkxk[0]
+        c2 = Bk[0, 0]
+        xk0 = np.array([-xk[0], 1 - xk[1]])
+        a3 = gk.T @ xk0 + 0.5 * xk0.T @ Bk @ xk0
+        b3 = (gk[0] - gk[1]) + (Bk[0,1]-Bk[1,1]) - (Bkxk[0] - Bkxk[1])
+        c3 = Bk[0, 0] - 2 * Bk[0, 1] + Bk[1, 1]
+        # Minimize quadratic assuming c_i > 0
+        tmin1 = min(max(-b1/c1, 0.0), 1.0)
+        tmin2 = min(max(-b2/c2, 0.0), 1.0)
+        tmin3 = min(max(-b3/c3, 0.0), 1.0)
         fmins = [
             a1 + b1 * tmin1 + c1 * tmin1**2,
             a2 + b2 * tmin2 + c2 * tmin2**2,
@@ -82,9 +108,14 @@ def step_minimize_triangle(
 ]:  # xk+1, fk+1, gk+1, Bk+1, Rk+1
     xkp1 = solve_quadratic_in_reference_triangle_2d(xk, gk, Bk)
     sk = xkp1 - xk
-    if np.dot(sk, sk) > Rk * Rk:
-        sk = sk * Rk / np.linalg.norm(sk)
-    xkp1 = xk + sk
+    # Use max-norm, i.e. box trust region
+    # if np.dot(sk, sk) > Rk * Rk:
+    #     sk = sk * Rk / np.linalg.norm(sk)
+    lensk = np.linalg.norm(sk, np.inf)
+    if lensk > Rk:
+        sk = sk * Rk / lensk
+        xkp1 = xk + sk
+        lensk = np.linalg.norm(sk, np.inf)
     gkp1 = g(xkp1)
     yk = gkp1 - gk
     fkp1 = f(xkp1)
@@ -93,7 +124,7 @@ def step_minimize_triangle(
     pred = -mkp1
     rho = ared / (pred + eps)
     Rkp1 = Rk
-    if rho > trhi and np.dot(sk, sk) <= trbound * Rk * Rk:
+    if rho > trhi and lensk <= trbound * Rk:
         Rkp1 = trgrow * Rk
     elif rho < trlo:
         Rkp1 = trshrink * Rk
@@ -148,7 +179,7 @@ if __name__ == "__main__":
     gk = np.zeros(2)
     Bk = np.eye(2)
     Rk = 1.0
-    sigma = 1e1
+    sigma = 1.0
     eta = 1e-3
     r = 1e-8
     trlo = 0.1
@@ -178,7 +209,9 @@ if __name__ == "__main__":
     vminmax = (-extent, extent)
     cmap = "coolwarm"
     grid = ps.register_volume_grid("Domain", dims, bmin, bmax)
+    grid.set_transparency(0.75)
     sm = ps.register_surface_mesh("Triangle", V, F)
+    sm.set_ignore_slice_plane(slice_plane, True)
 
     def callback():
         global forest
@@ -284,19 +317,20 @@ if __name__ == "__main__":
             if len(xpath) > 0:
                 VE = np.array(xpath)
                 EE = np.vstack([np.arange(len(xpath) - 1), np.arange(1, len(xpath))]).T
-                ps.register_curve_network(
+                cn = ps.register_curve_network(
                     "Optimization Path",
                     VE,
                     EE,
                 )
-                ps.register_point_cloud("Current Point", VE[-1:, :])
+                pc = ps.register_point_cloud("Current Point", VE[-1:, :])
+                cn.set_ignore_slice_plane(slice_plane, True)
+                pc.set_ignore_slice_plane(slice_plane, True)
+                pc.set_radius(1.1*cn.get_radius(), relative=False)
 
             if len(fpath) > 0:
                 if implot.BeginPlot("Objective Value"):
                     implot.PlotLine(
-                        "f",
-                        np.arange(len(fpath), dtype=np.float32) / (10 * len(fpath)),
-                        np.array(fpath),
+                        "sdf", np.array(fpath), 1 / len(fpath), 0.0  # xscale  # xstart
                     )
                     implot.EndPlot()
 
