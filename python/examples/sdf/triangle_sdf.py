@@ -276,7 +276,7 @@ if __name__ == "__main__":
                     np.linalg.norm(A - C),
                     np.linalg.norm(B - C),
                 ]
-                Bk = np.eye(2) * sigma * min(elen)
+                Bk = np.eye(2) * sigma * max(elen)
                 Rk = max(elen)
                 xpath = [DX @ xk + A]
                 fpath = [fk]
