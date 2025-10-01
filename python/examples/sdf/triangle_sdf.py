@@ -66,16 +66,16 @@ def solve_quadratic_in_reference_triangle_2d(xk, gk, Bk) -> np.ndarray:
         c2 = Bk[0, 0]
         xk0 = np.array([-xk[0], 1 - xk[1]])
         a3 = gk.T @ xk0 + 0.5 * xk0.T @ Bk @ xk0
-        b3 = (gk[0] - gk[1]) + (Bk[0,1]-Bk[1,1]) - (Bkxk[0] - Bkxk[1])
+        b3 = (gk[0] - gk[1]) + (Bk[0, 1] - Bk[1, 1]) - (Bkxk[0] - Bkxk[1])
         c3 = Bk[0, 0] - 2 * Bk[0, 1] + Bk[1, 1]
         # Minimize quadratic assuming c_i > 0
-        tmin1 = min(max(-b1/c1, 0.0), 1.0)
-        tmin2 = min(max(-b2/c2, 0.0), 1.0)
-        tmin3 = min(max(-b3/c3, 0.0), 1.0)
+        tmin1 = min(max(-b1 / c1, 0.0), 1.0)
+        tmin2 = min(max(-b2 / c2, 0.0), 1.0)
+        tmin3 = min(max(-b3 / c3, 0.0), 1.0)
         fmins = [
-            a1 + b1 * tmin1 + c1 * tmin1**2,
-            a2 + b2 * tmin2 + c2 * tmin2**2,
-            a3 + b3 * tmin3 + c3 * tmin3**2,
+            a1 + b1 * tmin1 + 0.5 * c1 * tmin1**2,
+            a2 + b2 * tmin2 + 0.5 * c2 * tmin2**2,
+            a3 + b3 * tmin3 + 0.5 * c3 * tmin3**2,
         ]
         imin = np.argmin(fmins)
         if imin == 0:
@@ -325,7 +325,7 @@ if __name__ == "__main__":
                 pc = ps.register_point_cloud("Current Point", VE[-1:, :])
                 cn.set_ignore_slice_plane(slice_plane, True)
                 pc.set_ignore_slice_plane(slice_plane, True)
-                pc.set_radius(1.1*cn.get_radius(), relative=False)
+                pc.set_radius(1.1 * cn.get_radius(), relative=False)
 
             if len(fpath) > 0:
                 if implot.BeginPlot("Objective Value"):
