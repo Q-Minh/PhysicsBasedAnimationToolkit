@@ -30,26 +30,26 @@ def solve_quadratic_in_reference_triangle_2d(xk, gk, Bk) -> np.ndarray:
     if not feasible:
         alpha0 = np.zeros(2)
         dalpha = np.array([0, 1])
-        a1 = gk.T @ alpha0 + 0.5 * alpha0.T @ Bk @ alpha0
-        b1 = gk.T @ dalpha + alpha0.T @ Bk @ dalpha
+        a1 = gk.T @ (alpha0 - xk) + 0.5 * (alpha0 - xk).T @ Bk @ (alpha0 - xk)
+        b1 = gk.T @ dalpha + dalpha.T @ Bk @ (alpha0 - xk)
         c1 = 0.5 * dalpha.T @ Bk @ dalpha
         tmin1 = minimize_quadratic(a1, b1, c1)
         alpha0 = np.zeros(2)
         dalpha = np.array([1, 0])
-        a2 = gk.T @ alpha0 + 0.5 * alpha0.T @ Bk @ alpha0
-        b2 = gk.T @ dalpha + alpha0.T @ Bk @ dalpha
+        a2 = gk.T @ (alpha0 - xk) + 0.5 * (alpha0 - xk).T @ Bk @ (alpha0 - xk)
+        b2 = gk.T @ dalpha + dalpha.T @ Bk @ (alpha0 - xk)
         c2 = 0.5 * dalpha.T @ Bk @ dalpha
         tmin2 = minimize_quadratic(a2, b2, c2)
         alpha0 = np.array([0, 1])
         dalpha = np.array([1, -1])
-        a3 = gk.T @ alpha0 + 0.5 * alpha0.T @ Bk @ alpha0
-        b3 = gk.T @ dalpha + alpha0.T @ Bk @ dalpha
+        a3 = gk.T @ (alpha0 - xk) + 0.5 * (alpha0 - xk).T @ Bk @ (alpha0 - xk)
+        b3 = gk.T @ dalpha + dalpha.T @ Bk @ (alpha0 - xk)
         c3 = 0.5 * dalpha.T @ Bk @ dalpha
         tmin3 = minimize_quadratic(a3, b3, c3)
         fmins = [
-            a1 + b1*tmin1 + c1*tmin1**2,
-            a2 + b2*tmin2 + c2*tmin2**2,
-            a3 + b3*tmin3 + c3*tmin3**2,
+            a1 + b1 * tmin1 + c1 * tmin1**2,
+            a2 + b2 * tmin2 + c2 * tmin2**2,
+            a3 + b3 * tmin3 + c3 * tmin3**2,
         ]
         imin = np.argmin(fmins)
         if imin == 0:
@@ -84,13 +84,14 @@ def step_minimize_triangle(
     sk = xkp1 - xk
     if np.dot(sk, sk) > Rk * Rk:
         sk = sk * Rk / np.linalg.norm(sk)
+    xkp1 = xk + sk
     gkp1 = g(xkp1)
     yk = gkp1 - gk
     fkp1 = f(xkp1)
     ared = fk - fkp1
-    nsk = -sk
-    pred = gk.T @ nsk + 0.5 * nsk.T @ Bk @ nsk
-    rho = ared / pred
+    mkp1 = gk.T @ sk + 0.5 * sk.T @ Bk @ sk
+    pred = -mkp1
+    rho = ared / (pred + eps)
     Rkp1 = Rk
     if rho > trhi and np.dot(sk, sk) <= trbound * Rk * Rk:
         Rkp1 = trgrow * Rk
@@ -147,6 +148,7 @@ if __name__ == "__main__":
     gk = np.zeros(2)
     Bk = np.eye(2)
     Rk = 1.0
+    sigma = 1e1
     eta = 1e-3
     r = 1e-8
     trlo = 0.1
@@ -180,7 +182,7 @@ if __name__ == "__main__":
 
     def callback():
         global forest
-        global xk, fk, gk, Bk, Rk
+        global xk, fk, gk, Bk, Rk, sigma
         global eta, r, trlo, trhi, trbound, trgrow, trshrink
         global xpath, fpath
 
@@ -216,6 +218,7 @@ if __name__ == "__main__":
         # Optimize
         if imgui.TreeNode("Optimize"):
             # Parameters
+            changed, sigma = imgui.SliderFloat("sigma", sigma, 1e-6, 1e2)
             changed, eta = imgui.SliderFloat("eta", eta, 1e-6, 0.5)
             changed, r = imgui.SliderFloat("r", r, 1e-10, 1e-1)
             changed, trlo = imgui.SliderFloat("trlo", trlo, 1e-2, 0.9)
@@ -273,7 +276,7 @@ if __name__ == "__main__":
                     np.linalg.norm(A - C),
                     np.linalg.norm(B - C),
                 ]
-                Bk = np.eye(2)  # * min(elen)
+                Bk = np.eye(2) * sigma * min(elen)
                 Rk = max(elen)
                 xpath = [DX @ xk + A]
                 fpath = [fk]
@@ -292,7 +295,7 @@ if __name__ == "__main__":
                 if implot.BeginPlot("Objective Value"):
                     implot.PlotLine(
                         "f",
-                        np.arange(len(fpath), dtype=np.float32) / len(fpath),
+                        np.arange(len(fpath), dtype=np.float32) / (10 * len(fpath)),
                         np.array(fpath),
                     )
                     implot.EndPlot()
