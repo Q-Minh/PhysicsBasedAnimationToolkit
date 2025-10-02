@@ -9,46 +9,10 @@ from collections.abc import Callable
 from typing import Tuple
 
 
-def minimize_quadratic(a, b, c):
-    """
-    Return the minimizer x in [0,1] of q(x) = c x^2 + b x + a.
-    """
-    if c > 0:
-        tstar = -b / (2 * c)
-        tstar = min(max(tstar, 0.0), 1.0)
-    else:
-        if b > 0:
-            tstar = 0.0
-        else:
-            tstar = 1.0
-    return tstar
-
-
 def solve_quadratic_in_reference_triangle_2d(xk, gk, Bk) -> np.ndarray:
     xstar = xk - np.linalg.solve(Bk, gk)
     feasible = (xstar >= 0).all() and (xstar <= 1).all() and (xstar.sum() <= 1)
     if not feasible:
-        # NOTE: Uncomment to validate against symbolic derivation
-        # if it ever happens that pred < 0 (should never happen).
-        # alpha0 = np.zeros(2)
-        # dalpha = np.array([0, 1])
-        # a1 = gk.T @ (alpha0 - xk) + 0.5 * (alpha0 - xk).T @ Bk @ (alpha0 - xk)
-        # b1 = gk.T @ dalpha + dalpha.T @ Bk @ (alpha0 - xk)
-        # c1 = 0.5 * dalpha.T @ Bk @ dalpha
-        # tmin1 = minimize_quadratic(a1, b1, c1)
-        # alpha0 = np.zeros(2)
-        # dalpha = np.array([1, 0])
-        # a2 = gk.T @ (alpha0 - xk) + 0.5 * (alpha0 - xk).T @ Bk @ (alpha0 - xk)
-        # b2 = gk.T @ dalpha + dalpha.T @ Bk @ (alpha0 - xk)
-        # c2 = 0.5 * dalpha.T @ Bk @ dalpha
-        # tmin2 = minimize_quadratic(a2, b2, c2)
-        # alpha0 = np.array([0, 1])
-        # dalpha = np.array([1, -1])
-        # a3 = gk.T @ (alpha0 - xk) + 0.5 * (alpha0 - xk).T @ Bk @ (alpha0 - xk)
-        # b3 = gk.T @ dalpha + dalpha.T @ Bk @ (alpha0 - xk)
-        # c3 = 0.5 * dalpha.T @ Bk @ dalpha
-        # tmin3 = minimize_quadratic(a3, b3, c3)
-
         # Derivation and CSE by-hand for the quadratic
         # f(t) = 0.5 (x0 + t dx - xk)^T Bk (x0 + t dx - xk) + gk^T (x0 + t dx - xk)
         # where x = x0 + t dx is constrained to one of the triangle edges.
@@ -56,8 +20,8 @@ def solve_quadratic_in_reference_triangle_2d(xk, gk, Bk) -> np.ndarray:
         # Edge 2: x0 = [0,0], dx = [1,0]
         # Edge 3: x0 = [0,1], dx = [1,-1]
         gkTxk = gk.T @ xk
-        xkTBkxk = xk.T @ Bk @ xk
         Bkxk = Bk @ xk
+        xkTBkxk = xk.T @ Bkxk
         a1 = -gkTxk + 0.5 * xkTBkxk
         b1 = gk[1] - Bkxk[1]
         c1 = Bk[1, 1]
@@ -68,7 +32,7 @@ def solve_quadratic_in_reference_triangle_2d(xk, gk, Bk) -> np.ndarray:
         a3 = gk.T @ xk0 + 0.5 * xk0.T @ Bk @ xk0
         b3 = (gk[0] - gk[1]) + (Bk[0, 1] - Bk[1, 1]) - (Bkxk[0] - Bkxk[1])
         c3 = Bk[0, 0] - 2 * Bk[0, 1] + Bk[1, 1]
-        # Minimize quadratic assuming c_i > 0
+        # Minimize quadratic a_i + b_i t + 1/2 c_i t^2 assuming c_i > 0
         tmin1 = min(max(-b1 / c1, 0.0), 1.0)
         tmin2 = min(max(-b2 / c2, 0.0), 1.0)
         tmin3 = min(max(-b3 / c3, 0.0), 1.0)
@@ -77,13 +41,26 @@ def solve_quadratic_in_reference_triangle_2d(xk, gk, Bk) -> np.ndarray:
             a2 + b2 * tmin2 + 0.5 * c2 * tmin2**2,
             a3 + b3 * tmin3 + 0.5 * c3 * tmin3**2,
         ]
-        imin = np.argmin(fmins)
-        if imin == 0:
-            xstar = np.array([0.0, tmin1])
-        elif imin == 1:
-            xstar = np.array([tmin2, 0.0])
-        else:
-            xstar = np.array([tmin3, 1.0 - tmin3])
+        # Vectorized argmin
+        argmin = np.array([
+            fmins[0] <= fmins[1] and fmins[0] <= fmins[2],
+            fmins[1] <= fmins[0] and fmins[1] <= fmins[2],
+            fmins[2] <= fmins[0] and fmins[2] <= fmins[1],
+        ])
+        xstars = np.array([
+            [0.0, tmin1],
+            [tmin2, 0.0],
+            [tmin3, 1.0 - tmin3],
+        ])
+        xstar = xstars.T @ argmin / argmin.sum()
+        # Non-vectorized argmin
+        # imin = np.argmin(fmins)
+        # if imin == 0:
+        #     xstar = np.array([0.0, tmin1])
+        # elif imin == 1:
+        #     xstar = np.array([tmin2, 0.0])
+        # else:
+        #     xstar = np.array([tmin3, 1.0 - tmin3])
     return xstar
 
 
@@ -124,7 +101,7 @@ def step_minimize_triangle(
     pred = -mkp1
     rho = ared / (pred + eps)
     Rkp1 = Rk
-    if rho > trhi and lensk <= trbound * Rk:
+    if rho > trhi and lensk >= trbound * Rk:
         Rkp1 = trgrow * Rk
     elif rho < trlo:
         Rkp1 = trshrink * Rk
@@ -179,7 +156,8 @@ if __name__ == "__main__":
     gk = np.zeros(2)
     Bk = np.eye(2)
     Rk = 1.0
-    sigma = 1.0
+    sigmaR = 1.0
+    sigmaB = 1.0
     eta = 1e-3
     r = 1e-8
     trlo = 0.1
@@ -190,6 +168,7 @@ if __name__ == "__main__":
 
     xpath = []
     fpath = []
+    Rpath = []
 
     # Polyscope visualization
     ps.set_verbosity(0)
@@ -215,9 +194,9 @@ if __name__ == "__main__":
 
     def callback():
         global forest
-        global xk, fk, gk, Bk, Rk, sigma
+        global xk, fk, gk, Bk, Rk, sigmaB, sigmaR
         global eta, r, trlo, trhi, trbound, trgrow, trshrink
-        global xpath, fpath
+        global xpath, fpath, Rpath
 
         # Load
         if imgui.TreeNode("I/O"):
@@ -251,12 +230,13 @@ if __name__ == "__main__":
         # Optimize
         if imgui.TreeNode("Optimize"):
             # Parameters
-            changed, sigma = imgui.SliderFloat("sigma", sigma, 1e-6, 1e2)
+            changed, sigmaR = imgui.SliderFloat("sigmaR", sigmaR, 1e-2, 1e2)
+            changed, sigmaB = imgui.SliderFloat("sigmaB", sigmaB, 1e-6, 1e2)
             changed, eta = imgui.SliderFloat("eta", eta, 1e-6, 0.5)
             changed, r = imgui.SliderFloat("r", r, 1e-10, 1e-1)
-            changed, trlo = imgui.SliderFloat("trlo", trlo, 1e-2, 0.9)
-            changed, trhi = imgui.SliderFloat("trhi", trhi, 1e-2, 0.9)
-            changed, trbound = imgui.SliderFloat("trbound", trbound, 0.5, 1.0)
+            changed, trlo = imgui.SliderFloat("trlo", trlo, 1e-2, 0.99)
+            changed, trhi = imgui.SliderFloat("trhi", trhi, 1e-2, 1.0)
+            changed, trbound = imgui.SliderFloat("trbound", trbound, 0.1, 1.0)
             changed, trgrow = imgui.SliderFloat("trgrow", trgrow, 1.1, 10.0)
             changed, trshrink = imgui.SliderFloat("trshrink", trshrink, 1e-2, 0.99)
 
@@ -299,6 +279,7 @@ if __name__ == "__main__":
                 if np.linalg.norm(xk - xkp1) > 0.0:
                     xpath = xpath + [DX @ xkp1 + A]
                     fpath = fpath + [fkp1]
+                    Rpath = Rpath + [Rkp1]
                 xk, fk, gk, Bk, Rk = xkp1, fkp1, gkp1, Bkp1, Rkp1
             if imgui.Button("Reset"):
                 xk = np.array([0.25, 0.25])
@@ -309,10 +290,11 @@ if __name__ == "__main__":
                     np.linalg.norm(A - C),
                     np.linalg.norm(B - C),
                 ]
-                Bk = np.eye(2) * sigma * max(elen)
-                Rk = max(elen)
+                Bk = np.eye(2) * sigmaB * max(elen)
+                Rk = sigmaR * max(elen)
                 xpath = [DX @ xk + A]
                 fpath = [fk]
+                Rpath = [Rk]
 
             if len(xpath) > 0:
                 VE = np.array(xpath)
@@ -328,9 +310,15 @@ if __name__ == "__main__":
                 pc.set_radius(1.1 * cn.get_radius(), relative=False)
 
             if len(fpath) > 0:
-                if implot.BeginPlot("Objective Value"):
+                if implot.BeginPlot("Signed distance"):
                     implot.PlotLine(
                         "sdf", np.array(fpath), 1 / len(fpath), 0.0  # xscale  # xstart
+                    )
+                    implot.EndPlot()
+            if len(Rpath) > 0:
+                if implot.BeginPlot("Trust Region Radius"):
+                    implot.PlotLine(
+                        "Rk", np.array(Rpath) / max(elen), 1 / len(Rpath), 0.0  # xscale  # xstart
                     )
                     implot.EndPlot()
 
