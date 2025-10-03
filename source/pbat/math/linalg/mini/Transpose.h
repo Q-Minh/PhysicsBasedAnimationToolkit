@@ -38,8 +38,8 @@ class ConstTransposeSubMatrix
     static auto constexpr kCols     = N;
     static bool constexpr bRowMajor = NestedType::bRowMajor;
 
-    PBAT_HOST_DEVICE ConstTransposeSubMatrix(NestedType const& A, int ib = 0, int jb = 0)
-        : A(A), ib(ib), jb(jb)
+    PBAT_HOST_DEVICE ConstTransposeSubMatrix(NestedType const& _A, int _ib = 0, int _jb = 0)
+        : A(_A), ib(_ib), jb(_jb)
     {
         static_assert(
             NestedType::kRows >= M and NestedType::kCols >= N and M > 0 and N > 0,
@@ -81,8 +81,8 @@ class TransposeSubMatrix
     static auto constexpr kCols     = N;
     static bool constexpr bRowMajor = NestedType::bRowMajor;
 
-    PBAT_HOST_DEVICE TransposeSubMatrix(NestedType& A, int ib = 0, int jb = 0)
-        : A(A), ib(ib), jb(jb)
+    PBAT_HOST_DEVICE TransposeSubMatrix(NestedType& _A, int _ib = 0, int _jb = 0)
+        : A(_A), ib(_ib), jb(_jb)
     {
         static_assert(
             NestedType::kRows >= M and NestedType::kCols >= N and M > 0 and N > 0,
@@ -146,7 +146,7 @@ class TransposeView
     static auto constexpr kCols     = NestedType::kRows;
     static bool constexpr bRowMajor = not NestedType::bRowMajor;
 
-    PBAT_HOST_DEVICE TransposeView(NestedType& A) : A(A) {}
+    PBAT_HOST_DEVICE TransposeView(NestedType& _A) : A(_A) {}
 
     template <class TOtherMatrix>
     PBAT_HOST_DEVICE SelfType& operator=(TOtherMatrix&& B)
@@ -217,7 +217,7 @@ class ConstTransposeView
     static auto constexpr kCols     = NestedType::kRows;
     static bool constexpr bRowMajor = not NestedType::bRowMajor;
 
-    PBAT_HOST_DEVICE ConstTransposeView(NestedType const& A) : A(A) {}
+    PBAT_HOST_DEVICE ConstTransposeView(NestedType const& _A) : A(_A) {}
 
     PBAT_HOST_DEVICE constexpr auto Rows() const { return A.Cols(); }
     PBAT_HOST_DEVICE constexpr auto Cols() const { return A.Rows(); }

@@ -51,9 +51,9 @@ struct MonomialBasis : detail::MonomialBasis<Dims, Order>
 {
   public:
     using BaseType                             = detail::MonomialBasis<Dims, Order>; ///< Base type
-    inline static constexpr std::size_t kDims  = BaseType::kDims;  ///< Spatial dimensions
-    inline static constexpr std::size_t kOrder = BaseType::kOrder; ///< Polynomial order
-    inline static constexpr std::size_t kSize  = BaseType::kSize;  ///< Number of basis functions
+    inline static constexpr int kDims  = BaseType::kDims;  ///< Spatial dimensions
+    inline static constexpr int kOrder = BaseType::kOrder; ///< Polynomial order
+    inline static constexpr int kSize  = BaseType::kSize;  ///< Number of basis functions
     /**
      * @brief
      *
@@ -126,9 +126,9 @@ struct OrthonormalBasis : detail::OrthonormalBasis<Dims, Order>
 {
   public:
     using BaseType = typename detail::OrthonormalBasis<Dims, Order>; ///< Base type
-    inline static constexpr std::size_t kDims  = BaseType::kDims;    ///< Spatial dimensions
-    inline static constexpr std::size_t kOrder = BaseType::kOrder;   ///< Polynomial order
-    inline static constexpr std::size_t kSize  = BaseType::kSize;    ///< Number of basis functions
+    inline static constexpr int kDims  = BaseType::kDims;    ///< Spatial dimensions
+    inline static constexpr int kOrder = BaseType::kOrder;   ///< Polynomial order
+    inline static constexpr int kSize  = BaseType::kSize;    ///< Number of basis functions
     /**
      * @brief
      *
@@ -191,9 +191,9 @@ struct DivergenceFreeBasis : detail::DivergenceFreeBasis<Dims, Order>
 {
   public:
     using BaseType = typename detail::DivergenceFreeBasis<Dims, Order>; ///< Base type
-    inline static constexpr std::size_t kDims  = BaseType::kDims;       ///< Spatial dimensions
-    inline static constexpr std::size_t kOrder = BaseType::kOrder;      ///< Polynomial order
-    inline static constexpr std::size_t kSize  = BaseType::kSize; ///< Number of basis functions
+    inline static constexpr int kDims  = BaseType::kDims;       ///< Spatial dimensions
+    inline static constexpr int kOrder = BaseType::kOrder;      ///< Polynomial order
+    inline static constexpr int kSize  = BaseType::kSize; ///< Number of basis functions
     /**
      * @brief
      *
@@ -216,9 +216,9 @@ template <>
 class MonomialBasis<1, 1>
 {
   public:
-    inline static constexpr std::size_t kDims  = 1;
-    inline static constexpr std::size_t kOrder = 1;
-    inline static constexpr std::size_t kSize  = 2;
+    inline static constexpr int kDims  = 1;
+    inline static constexpr int kOrder = 1;
+    inline static constexpr int kSize  = 2;
 
     [[maybe_unused]] Vector<kSize> eval([[maybe_unused]] Vector<kDims> const& X) const
     {
@@ -252,9 +252,9 @@ template <>
 class MonomialBasis<1, 2>
 {
   public:
-    inline static constexpr std::size_t kDims  = 1;
-    inline static constexpr std::size_t kOrder = 2;
-    inline static constexpr std::size_t kSize  = 3;
+    inline static constexpr int kDims  = 1;
+    inline static constexpr int kOrder = 2;
+    inline static constexpr int kSize  = 3;
 
     [[maybe_unused]] Vector<kSize> eval([[maybe_unused]] Vector<kDims> const& X) const
     {
@@ -291,9 +291,9 @@ template <>
 class MonomialBasis<1, 3>
 {
   public:
-    inline static constexpr std::size_t kDims  = 1;
-    inline static constexpr std::size_t kOrder = 3;
-    inline static constexpr std::size_t kSize  = 4;
+    inline static constexpr int kDims  = 1;
+    inline static constexpr int kOrder = 3;
+    inline static constexpr int kSize  = 4;
 
     [[maybe_unused]] Vector<kSize> eval([[maybe_unused]] Vector<kDims> const& X) const
     {
@@ -333,9 +333,9 @@ template <>
 class MonomialBasis<1, 4>
 {
   public:
-    inline static constexpr std::size_t kDims  = 1;
-    inline static constexpr std::size_t kOrder = 4;
-    inline static constexpr std::size_t kSize  = 5;
+    inline static constexpr int kDims  = 1;
+    inline static constexpr int kOrder = 4;
+    inline static constexpr int kSize  = 5;
 
     [[maybe_unused]] Vector<kSize> eval([[maybe_unused]] Vector<kDims> const& X) const
     {
@@ -382,9 +382,9 @@ template <>
 class MonomialBasis<2, 1>
 {
   public:
-    inline static constexpr std::size_t kDims  = 2;
-    inline static constexpr std::size_t kOrder = 1;
-    inline static constexpr std::size_t kSize  = 3;
+    inline static constexpr int kDims  = 2;
+    inline static constexpr int kOrder = 1;
+    inline static constexpr int kSize  = 3;
 
     [[maybe_unused]] Vector<kSize> eval([[maybe_unused]] Vector<kDims> const& X) const
     {
@@ -428,9 +428,9 @@ template <>
 class MonomialBasis<2, 2>
 {
   public:
-    inline static constexpr std::size_t kDims  = 2;
-    inline static constexpr std::size_t kOrder = 2;
-    inline static constexpr std::size_t kSize  = 6;
+    inline static constexpr int kDims  = 2;
+    inline static constexpr int kOrder = 2;
+    inline static constexpr int kSize  = 6;
 
     [[maybe_unused]] Vector<kSize> eval([[maybe_unused]] Vector<kDims> const& X) const
     {
@@ -493,9 +493,9 @@ template <>
 class MonomialBasis<2, 3>
 {
   public:
-    inline static constexpr std::size_t kDims  = 2;
-    inline static constexpr std::size_t kOrder = 3;
-    inline static constexpr std::size_t kSize  = 10;
+    inline static constexpr int kDims  = 2;
+    inline static constexpr int kOrder = 3;
+    inline static constexpr int kSize  = 10;
 
     [[maybe_unused]] Vector<kSize> eval([[maybe_unused]] Vector<kDims> const& X) const
     {
@@ -589,9 +589,9 @@ template <>
 class MonomialBasis<2, 4>
 {
   public:
-    inline static constexpr std::size_t kDims  = 2;
-    inline static constexpr std::size_t kOrder = 4;
-    inline static constexpr std::size_t kSize  = 15;
+    inline static constexpr int kDims  = 2;
+    inline static constexpr int kOrder = 4;
+    inline static constexpr int kSize  = 15;
 
     [[maybe_unused]] Vector<kSize> eval([[maybe_unused]] Vector<kDims> const& X) const
     {
@@ -727,9 +727,9 @@ template <>
 class MonomialBasis<3, 1>
 {
   public:
-    inline static constexpr std::size_t kDims  = 3;
-    inline static constexpr std::size_t kOrder = 1;
-    inline static constexpr std::size_t kSize  = 4;
+    inline static constexpr int kDims  = 3;
+    inline static constexpr int kOrder = 1;
+    inline static constexpr int kSize  = 4;
 
     [[maybe_unused]] Vector<kSize> eval([[maybe_unused]] Vector<kDims> const& X) const
     {
@@ -788,9 +788,9 @@ template <>
 class MonomialBasis<3, 2>
 {
   public:
-    inline static constexpr std::size_t kDims  = 3;
-    inline static constexpr std::size_t kOrder = 2;
-    inline static constexpr std::size_t kSize  = 10;
+    inline static constexpr int kDims  = 3;
+    inline static constexpr int kOrder = 2;
+    inline static constexpr int kSize  = 10;
 
     [[maybe_unused]] Vector<kSize> eval([[maybe_unused]] Vector<kDims> const& X) const
     {
@@ -900,9 +900,9 @@ template <>
 class MonomialBasis<3, 3>
 {
   public:
-    inline static constexpr std::size_t kDims  = 3;
-    inline static constexpr std::size_t kOrder = 3;
-    inline static constexpr std::size_t kSize  = 20;
+    inline static constexpr int kDims  = 3;
+    inline static constexpr int kOrder = 3;
+    inline static constexpr int kSize  = 20;
 
     [[maybe_unused]] Vector<kSize> eval([[maybe_unused]] Vector<kDims> const& X) const
     {
@@ -1110,9 +1110,9 @@ template <>
 class MonomialBasis<3, 4>
 {
   public:
-    inline static constexpr std::size_t kDims  = 3;
-    inline static constexpr std::size_t kOrder = 4;
-    inline static constexpr std::size_t kSize  = 35;
+    inline static constexpr int kDims  = 3;
+    inline static constexpr int kOrder = 4;
+    inline static constexpr int kSize  = 35;
 
     [[maybe_unused]] Vector<kSize> eval([[maybe_unused]] Vector<kDims> const& X) const
     {
@@ -1463,9 +1463,9 @@ template <>
 class OrthonormalBasis<1, 1>
 {
   public:
-    inline static constexpr std::size_t kDims  = 1;
-    inline static constexpr std::size_t kOrder = 1;
-    inline static constexpr std::size_t kSize  = 2;
+    inline static constexpr int kDims  = 1;
+    inline static constexpr int kOrder = 1;
+    inline static constexpr int kSize  = 2;
 
     [[maybe_unused]] Vector<kSize> eval([[maybe_unused]] Vector<kDims> const& X) const
     {
@@ -1500,9 +1500,9 @@ template <>
 class OrthonormalBasis<1, 2>
 {
   public:
-    inline static constexpr std::size_t kDims  = 1;
-    inline static constexpr std::size_t kOrder = 2;
-    inline static constexpr std::size_t kSize  = 3;
+    inline static constexpr int kDims  = 1;
+    inline static constexpr int kOrder = 2;
+    inline static constexpr int kSize  = 3;
 
     [[maybe_unused]] Vector<kSize> eval([[maybe_unused]] Vector<kDims> const& X) const
     {
@@ -1542,9 +1542,9 @@ template <>
 class OrthonormalBasis<1, 3>
 {
   public:
-    inline static constexpr std::size_t kDims  = 1;
-    inline static constexpr std::size_t kOrder = 3;
-    inline static constexpr std::size_t kSize  = 4;
+    inline static constexpr int kDims  = 1;
+    inline static constexpr int kOrder = 3;
+    inline static constexpr int kSize  = 4;
 
     [[maybe_unused]] Vector<kSize> eval([[maybe_unused]] Vector<kDims> const& X) const
     {
@@ -1594,9 +1594,9 @@ template <>
 class OrthonormalBasis<1, 4>
 {
   public:
-    inline static constexpr std::size_t kDims  = 1;
-    inline static constexpr std::size_t kOrder = 4;
-    inline static constexpr std::size_t kSize  = 5;
+    inline static constexpr int kDims  = 1;
+    inline static constexpr int kOrder = 4;
+    inline static constexpr int kSize  = 5;
 
     [[maybe_unused]] Vector<kSize> eval([[maybe_unused]] Vector<kDims> const& X) const
     {
@@ -1654,9 +1654,9 @@ template <>
 class OrthonormalBasis<2, 1>
 {
   public:
-    inline static constexpr std::size_t kDims  = 2;
-    inline static constexpr std::size_t kOrder = 1;
-    inline static constexpr std::size_t kSize  = 3;
+    inline static constexpr int kDims  = 2;
+    inline static constexpr int kOrder = 1;
+    inline static constexpr int kSize  = 3;
 
     [[maybe_unused]] Vector<kSize> eval([[maybe_unused]] Vector<kDims> const& X) const
     {
@@ -1706,9 +1706,9 @@ template <>
 class OrthonormalBasis<2, 2>
 {
   public:
-    inline static constexpr std::size_t kDims  = 2;
-    inline static constexpr std::size_t kOrder = 2;
-    inline static constexpr std::size_t kSize  = 6;
+    inline static constexpr int kDims  = 2;
+    inline static constexpr int kOrder = 2;
+    inline static constexpr int kSize  = 6;
 
     [[maybe_unused]] Vector<kSize> eval([[maybe_unused]] Vector<kDims> const& X) const
     {
@@ -1793,9 +1793,9 @@ template <>
 class OrthonormalBasis<2, 3>
 {
   public:
-    inline static constexpr std::size_t kDims  = 2;
-    inline static constexpr std::size_t kOrder = 3;
-    inline static constexpr std::size_t kSize  = 10;
+    inline static constexpr int kDims  = 2;
+    inline static constexpr int kOrder = 3;
+    inline static constexpr int kSize  = 10;
 
     [[maybe_unused]] Vector<kSize> eval([[maybe_unused]] Vector<kDims> const& X) const
     {
@@ -1954,9 +1954,9 @@ template <>
 class OrthonormalBasis<2, 4>
 {
   public:
-    inline static constexpr std::size_t kDims  = 2;
-    inline static constexpr std::size_t kOrder = 4;
-    inline static constexpr std::size_t kSize  = 15;
+    inline static constexpr int kDims  = 2;
+    inline static constexpr int kOrder = 4;
+    inline static constexpr int kSize  = 15;
 
     [[maybe_unused]] Vector<kSize> eval([[maybe_unused]] Vector<kDims> const& X) const
     {
@@ -2227,9 +2227,9 @@ template <>
 class OrthonormalBasis<3, 1>
 {
   public:
-    inline static constexpr std::size_t kDims  = 3;
-    inline static constexpr std::size_t kOrder = 1;
-    inline static constexpr std::size_t kSize  = 4;
+    inline static constexpr int kDims  = 3;
+    inline static constexpr int kOrder = 1;
+    inline static constexpr int kSize  = 4;
 
     [[maybe_unused]] Vector<kSize> eval([[maybe_unused]] Vector<kDims> const& X) const
     {
@@ -2303,9 +2303,9 @@ template <>
 class OrthonormalBasis<3, 2>
 {
   public:
-    inline static constexpr std::size_t kDims  = 3;
-    inline static constexpr std::size_t kOrder = 2;
-    inline static constexpr std::size_t kSize  = 10;
+    inline static constexpr int kDims  = 3;
+    inline static constexpr int kOrder = 2;
+    inline static constexpr int kSize  = 10;
 
     [[maybe_unused]] Vector<kSize> eval([[maybe_unused]] Vector<kDims> const& X) const
     {
@@ -2503,9 +2503,9 @@ template <>
 class OrthonormalBasis<3, 3>
 {
   public:
-    inline static constexpr std::size_t kDims  = 3;
-    inline static constexpr std::size_t kOrder = 3;
-    inline static constexpr std::size_t kSize  = 20;
+    inline static constexpr int kDims  = 3;
+    inline static constexpr int kOrder = 3;
+    inline static constexpr int kSize  = 20;
 
     [[maybe_unused]] Vector<kSize> eval([[maybe_unused]] Vector<kDims> const& X) const
     {
@@ -3014,9 +3014,9 @@ template <>
 class OrthonormalBasis<3, 4>
 {
   public:
-    inline static constexpr std::size_t kDims  = 3;
-    inline static constexpr std::size_t kOrder = 4;
-    inline static constexpr std::size_t kSize  = 35;
+    inline static constexpr int kDims  = 3;
+    inline static constexpr int kOrder = 4;
+    inline static constexpr int kSize  = 35;
 
     [[maybe_unused]] Vector<kSize> eval([[maybe_unused]] Vector<kDims> const& X) const
     {
@@ -4241,9 +4241,9 @@ template <>
 class DivergenceFreeBasis<1, 1>
 {
   public:
-    inline static constexpr std::size_t kDims  = 1;
-    inline static constexpr std::size_t kOrder = 1;
-    inline static constexpr std::size_t kSize  = 1;
+    inline static constexpr int kDims  = 1;
+    inline static constexpr int kOrder = 1;
+    inline static constexpr int kSize  = 1;
 
     [[maybe_unused]] Matrix<kSize, kDims> eval([[maybe_unused]] Vector<kDims> const& X) const
     {
@@ -4258,9 +4258,9 @@ template <>
 class DivergenceFreeBasis<1, 2>
 {
   public:
-    inline static constexpr std::size_t kDims  = 1;
-    inline static constexpr std::size_t kOrder = 2;
-    inline static constexpr std::size_t kSize  = 1;
+    inline static constexpr int kDims  = 1;
+    inline static constexpr int kOrder = 2;
+    inline static constexpr int kSize  = 1;
 
     [[maybe_unused]] Matrix<kSize, kDims> eval([[maybe_unused]] Vector<kDims> const& X) const
     {
@@ -4275,9 +4275,9 @@ template <>
 class DivergenceFreeBasis<1, 3>
 {
   public:
-    inline static constexpr std::size_t kDims  = 1;
-    inline static constexpr std::size_t kOrder = 3;
-    inline static constexpr std::size_t kSize  = 1;
+    inline static constexpr int kDims  = 1;
+    inline static constexpr int kOrder = 3;
+    inline static constexpr int kSize  = 1;
 
     [[maybe_unused]] Matrix<kSize, kDims> eval([[maybe_unused]] Vector<kDims> const& X) const
     {
@@ -4292,9 +4292,9 @@ template <>
 class DivergenceFreeBasis<1, 4>
 {
   public:
-    inline static constexpr std::size_t kDims  = 1;
-    inline static constexpr std::size_t kOrder = 4;
-    inline static constexpr std::size_t kSize  = 1;
+    inline static constexpr int kDims  = 1;
+    inline static constexpr int kOrder = 4;
+    inline static constexpr int kSize  = 1;
 
     [[maybe_unused]] Matrix<kSize, kDims> eval([[maybe_unused]] Vector<kDims> const& X) const
     {
@@ -4313,9 +4313,9 @@ template <>
 class DivergenceFreeBasis<2, 1>
 {
   public:
-    inline static constexpr std::size_t kDims  = 2;
-    inline static constexpr std::size_t kOrder = 1;
-    inline static constexpr std::size_t kSize  = 5;
+    inline static constexpr int kDims  = 2;
+    inline static constexpr int kOrder = 1;
+    inline static constexpr int kSize  = 5;
 
     [[maybe_unused]] Matrix<kSize, kDims> eval([[maybe_unused]] Vector<kDims> const& X) const
     {
@@ -4341,9 +4341,9 @@ template <>
 class DivergenceFreeBasis<2, 2>
 {
   public:
-    inline static constexpr std::size_t kDims  = 2;
-    inline static constexpr std::size_t kOrder = 2;
-    inline static constexpr std::size_t kSize  = 9;
+    inline static constexpr int kDims  = 2;
+    inline static constexpr int kOrder = 2;
+    inline static constexpr int kSize  = 9;
 
     [[maybe_unused]] Matrix<kSize, kDims> eval([[maybe_unused]] Vector<kDims> const& X) const
     {
@@ -4383,9 +4383,9 @@ template <>
 class DivergenceFreeBasis<2, 3>
 {
   public:
-    inline static constexpr std::size_t kDims  = 2;
-    inline static constexpr std::size_t kOrder = 3;
-    inline static constexpr std::size_t kSize  = 14;
+    inline static constexpr int kDims  = 2;
+    inline static constexpr int kOrder = 3;
+    inline static constexpr int kSize  = 14;
 
     [[maybe_unused]] Matrix<kSize, kDims> eval([[maybe_unused]] Vector<kDims> const& X) const
     {
@@ -4451,9 +4451,9 @@ template <>
 class DivergenceFreeBasis<2, 4>
 {
   public:
-    inline static constexpr std::size_t kDims  = 2;
-    inline static constexpr std::size_t kOrder = 4;
-    inline static constexpr std::size_t kSize  = 20;
+    inline static constexpr int kDims  = 2;
+    inline static constexpr int kOrder = 4;
+    inline static constexpr int kSize  = 20;
 
     [[maybe_unused]] Matrix<kSize, kDims> eval([[maybe_unused]] Vector<kDims> const& X) const
     {
@@ -4565,9 +4565,9 @@ template <>
 class DivergenceFreeBasis<3, 1>
 {
   public:
-    inline static constexpr std::size_t kDims  = 3;
-    inline static constexpr std::size_t kOrder = 1;
-    inline static constexpr std::size_t kSize  = 11;
+    inline static constexpr int kDims  = 3;
+    inline static constexpr int kOrder = 1;
+    inline static constexpr int kSize  = 11;
 
     [[maybe_unused]] Matrix<kSize, kDims> eval([[maybe_unused]] Vector<kDims> const& X) const
     {
@@ -4623,9 +4623,9 @@ template <>
 class DivergenceFreeBasis<3, 2>
 {
   public:
-    inline static constexpr std::size_t kDims  = 3;
-    inline static constexpr std::size_t kOrder = 2;
-    inline static constexpr std::size_t kSize  = 26;
+    inline static constexpr int kDims  = 3;
+    inline static constexpr int kOrder = 2;
+    inline static constexpr int kSize  = 26;
 
     [[maybe_unused]] Matrix<kSize, kDims> eval([[maybe_unused]] Vector<kDims> const& X) const
     {
@@ -4760,9 +4760,9 @@ template <>
 class DivergenceFreeBasis<3, 3>
 {
   public:
-    inline static constexpr std::size_t kDims  = 3;
-    inline static constexpr std::size_t kOrder = 3;
-    inline static constexpr std::size_t kSize  = 50;
+    inline static constexpr int kDims  = 3;
+    inline static constexpr int kOrder = 3;
+    inline static constexpr int kSize  = 50;
 
     [[maybe_unused]] Matrix<kSize, kDims> eval([[maybe_unused]] Vector<kDims> const& X) const
     {
@@ -5054,9 +5054,9 @@ template <>
 class DivergenceFreeBasis<3, 4>
 {
   public:
-    inline static constexpr std::size_t kDims  = 3;
-    inline static constexpr std::size_t kOrder = 4;
-    inline static constexpr std::size_t kSize  = 85;
+    inline static constexpr int kDims  = 3;
+    inline static constexpr int kOrder = 4;
+    inline static constexpr int kSize  = 85;
 
     [[maybe_unused]] Matrix<kSize, kDims> eval([[maybe_unused]] Vector<kDims> const& X) const
     {

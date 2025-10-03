@@ -25,7 +25,6 @@ namespace geometry {
  * @brief This namespace contains functions to answer intersection queries.
  */
 namespace IntersectionQueries {
-
 namespace mini = math::linalg::mini;
 
 /**
@@ -43,7 +42,10 @@ namespace mini = math::linalg::mini;
  */
 template <mini::CMatrix TMatrixAP, mini::CMatrix TMatrixAB, mini::CMatrix TMatrixAC>
 PBAT_HOST_DEVICE auto
-TriangleBarycentricCoordinates(TMatrixAP const& AP, TMatrixAB const& AB, TMatrixAC const& AC)
+TriangleBarycentricCoordinates(
+    TMatrixAP const& AP,
+    TMatrixAB const& AB,
+    TMatrixAC const& AC)
     -> mini::SMatrix<typename TMatrixAP::ScalarType, 3, 1>
 {
     using ScalarType = typename TMatrixAP::ScalarType;
@@ -544,32 +546,31 @@ PBAT_HOST_DEVICE auto UvwTriangles3D(
     // Test 3 edges of each triangle against the other triangle
     std::array<std::optional<mini::SVector<ScalarType, 3>>, 6u> intersections;
     auto uvwt = UvwLineSegmentTriangle3D(A1, B1, A2, B2, C2);
-#if defined(CUDART_VERSION)
+    #if defined(CUDART_VERSION)
     #pragma nv_diag_suppress 174
-#endif
+    #endif
     if (uvwt)
-        intersections[0] = uvwt->Slice<3, 1>(1, 0);
+        intersections[0] = uvwt->template Slice<3, 1>(1, 0);
     uvwt = UvwLineSegmentTriangle3D(B1, C1, A2, B2, C2);
     if (uvwt)
-        intersections[1] = uvwt->Slice<3, 1>(1, 0);
+        intersections[1] = uvwt->template Slice<3, 1>(1, 0);
     uvwt = UvwLineSegmentTriangle3D(C1, A1, A2, B2, C2);
     if (uvwt)
-        intersections[2] = uvwt->Slice<3, 1>(1, 0);
+        intersections[2] = uvwt->template Slice<3, 1>(1, 0);
     uvwt = UvwLineSegmentTriangle3D(A2, B2, A1, B1, C1);
     if (uvwt)
-        intersections[3] = uvwt->Slice<3, 1>(1, 0);
+        intersections[3] = uvwt->template Slice<3, 1>(1, 0);
     uvwt = UvwLineSegmentTriangle3D(B2, C2, A1, B1, C1);
     if (uvwt)
-        intersections[4] = uvwt->Slice<3, 1>(1, 0);
+        intersections[4] = uvwt->template Slice<3, 1>(1, 0);
     uvwt = UvwLineSegmentTriangle3D(C2, A2, A1, B1, C1);
     if (uvwt)
-        intersections[5] = uvwt->Slice<3, 1>(1, 0);
-#if defined(CUDART_VERSION)
+        intersections[5] = uvwt->template Slice<3, 1>(1, 0);
+    #if defined(CUDART_VERSION)
     #pragma nv_diag_default 174
-#endif
+    #endif
     return intersections;
 }
-
 } // namespace IntersectionQueries
 } // namespace geometry
 } // namespace pbat

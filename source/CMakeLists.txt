@@ -74,8 +74,8 @@ target_link_libraries(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     doctest::doctest
     Eigen3::Eigen
     fmt::fmt
-    hdf5::hdf5-shared
-    hdf5::hdf5_cpp-shared
+    hdf5::hdf5-static
+    hdf5::hdf5_cpp-static
     HighFive::Include
     OpenMP::OpenMP_CXX
     range-v3::concepts
@@ -85,11 +85,13 @@ target_link_libraries(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
 )
 
 # Convert space-separated PBAT_CMAKE_CXX_FLAGS to list (i.e. semi-colon separated string)
-string(REPLACE " " ";" _pbat_cxx_flags ${PBAT_CMAKE_CXX_FLAGS})
-target_compile_options(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
-    PRIVATE
-    $<$<COMPILE_LANGUAGE:CXX>:${_pbat_cxx_flags}>
-)
+if (PBAT_CMAKE_CXX_FLAGS)
+    string(REPLACE " " ";" _pbat_cxx_flags ${PBAT_CMAKE_CXX_FLAGS})
+    target_compile_options(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
+            PRIVATE
+            $<$<COMPILE_LANGUAGE:CXX>:${_pbat_cxx_flags}>
+    )
+endif()
 
 if(PBAT_ENABLE_PROFILER)
     target_link_libraries(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit

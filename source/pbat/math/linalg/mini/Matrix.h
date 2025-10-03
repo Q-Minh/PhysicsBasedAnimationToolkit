@@ -338,7 +338,6 @@ PBAT_HOST_DEVICE void ToBuffers(
     static_assert(MA % MI == 0, "Rows of A must be multiple of rows of inds");
     static_assert(NA == NI, "A and inds must have same number of columns");
     static_assert(MA / MI == K, "A must have number of rows == #buffers*#rows of inds");
-    using ScalarType = typename TMatrix::ScalarType;
     using pbat::common::ForRange;
     ForRange<0, K>(
         [&]<auto k>() { ToFlatBuffer(A.template Slice<MI, NI>(k * MI, 0), inds, buf[k]); });

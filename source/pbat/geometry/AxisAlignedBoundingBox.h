@@ -17,7 +17,6 @@
 #include <vector>
 
 namespace pbat::geometry {
-
 /**
  * @brief Axis-aligned bounding box class
  *
@@ -28,7 +27,7 @@ namespace pbat::geometry {
 template <int Dims>
 class AxisAlignedBoundingBox : public Eigen::AlignedBox<Scalar, Dims>
 {
-  public:
+public:
     using BaseType = Eigen::AlignedBox<Scalar, Dims>; ///< Base type
     using SelfType = AxisAlignedBoundingBox;          ///< Self type
 
@@ -89,12 +88,14 @@ class AxisAlignedBoundingBox : public Eigen::AlignedBox<Scalar, Dims>
 };
 
 template <int Dims>
-inline AxisAlignedBoundingBox<Dims>::AxisAlignedBoundingBox(BaseType const& box) : BaseType(box)
+inline AxisAlignedBoundingBox<Dims>::AxisAlignedBoundingBox(BaseType const& box)
+    : BaseType(box)
 {
 }
 
 template <int Dims>
-inline AxisAlignedBoundingBox<Dims>::AxisAlignedBoundingBox(BaseType&& box) : BaseType(box)
+inline AxisAlignedBoundingBox<Dims>::AxisAlignedBoundingBox(BaseType&& box)
+    : BaseType(box)
 {
 }
 
@@ -169,9 +170,9 @@ inline void ClustersToAabbs(
     using MatrixType = std::invoke_result_t<FCluster, Index>;
     for (auto c = 0; c < nClusters; ++c)
     {
-        MatrixType const& XC   = fCluster(c);
-        L.col(c).head<kDims>() = XC.rowwise().minCoeff();
-        U.col(c).head<kDims>() = XC.rowwise().maxCoeff();
+        MatrixType const& XC            = fCluster(c);
+        L.col(c).template head<kDims>() = XC.rowwise().minCoeff();
+        U.col(c).template head<kDims>() = XC.rowwise().maxCoeff();
     }
 }
 
@@ -193,9 +194,9 @@ inline void ClustersToAabbs(FCluster fCluster, Index nClusters, Eigen::DenseBase
     using MatrixType = std::invoke_result_t<FCluster, Index>;
     for (auto c = 0; c < nClusters; ++c)
     {
-        MatrixType const& XC   = fCluster(c);
-        B.col(c).head<kDims>() = XC.rowwise().minCoeff();
-        B.col(c).tail<kDims>() = XC.rowwise().maxCoeff();
+        MatrixType const& XC            = fCluster(c);
+        B.col(c).template head<kDims>() = XC.rowwise().minCoeff();
+        B.col(c).template tail<kDims>() = XC.rowwise().maxCoeff();
     }
 }
 
@@ -262,7 +263,6 @@ inline void MeshToAabbs(
         E.cols(),
         B);
 }
-
 } // namespace pbat::geometry
 
 #endif // PBAT_GEOMETRY_AXISALIGNEDBOUNDINGBOX_H

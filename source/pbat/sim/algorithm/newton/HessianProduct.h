@@ -22,7 +22,6 @@ struct HessianOperator;
 
 namespace Eigen {
 namespace internal {
-
 /**
  * @brief Traits specialization for the Hessian inverse product
  */
@@ -31,12 +30,10 @@ struct traits<pbat::sim::algorithm::newton::HessianOperator>
     : public Eigen::internal::traits<pbat::CSCMatrix>
 {
 };
-
 } // namespace internal
 } // namespace Eigen
 
 namespace pbat::sim::algorithm::newton {
-
 /**
  * @brief Concept for elastic potential
  * @note Should probably move to pbat/fem/HyperElasticPotential.h or other appropriate location
@@ -45,9 +42,9 @@ namespace pbat::sim::algorithm::newton {
 template <class T>
 concept CElasticPotential = requires(T U)
 {
-    {U.ComputeElementElasticity(std::declval<VectorX>(), false, true, true)};
-    {U.ToMatrix(std::declval<CSCMatrix&>())};
-    {U.GH}->std::convertible_to<math::linalg::SparsityPattern<>>;
+    { U.ComputeElementElasticity(std::declval<VectorX>(), false, true, true) };
+    { U.ToMatrix(std::declval<CSCMatrix&>()) };
+    { U.GH } -> std::convertible_to<math::linalg::SparsityPattern<>>;
 };
 
 /**
@@ -55,7 +52,7 @@ concept CElasticPotential = requires(T U)
  */
 struct Hessian
 {
-    static auto constexpr kDims        = 3; ///< Number of spatial dimensions
+    static auto constexpr kDims = 3; ///< Number of spatial dimensions
     static auto constexpr kContactInds = 4; ///< Number of block indices per contact
     using TripletType = Eigen::Triplet<Scalar, CSCMatrix::StorageIndex>; ///< Triplet type
     /**
@@ -118,11 +115,13 @@ struct Hessian
     IndexVectorX diag; ///< `kDims*n x 1` vector of indices for the contact-less hessian's diagonal
     CSCMatrix HNC;     ///< `kDims*n x kDims*n` contact-less Hessian matrix
     std::vector<TripletType>
-        HCij; ///< `|# edge-edge contacts + # vertex-face contacts|*(kDims*kContactInds)^2` list of
-              ///< contact hessian non-zero entries
+    HCij;
+    ///< `|# edge-edge contacts + # vertex-face contacts|*(kDims*kContactInds)^2` list of
+                 ///< contact hessian non-zero entries
     CSCMatrix HC; ///< `kDims*n x kDims*n` contact hessian matrix
-    CSCMatrix S;  ///< `kDims*n x # dofs` selection matrix for the free variables s.t. \f$ H_{ff} =
-                  ///< S^T H S \$ is the free Hessian
+    CSCMatrix S;
+    ///< `kDims*n x # dofs` selection matrix for the free variables s.t. \f$ H_{ff} =
+                     ///< S^T H S \$ is the free Hessian
 };
 
 /**
@@ -135,11 +134,13 @@ struct HessianOperator : public Eigen::EigenBase<HessianOperator>
     using Scalar       = pbat::Scalar;                     ///< Eigen typedef
     using RealScalar   = pbat::Scalar;                     ///< Eigen typedef
     using StorageIndex = typename CSCMatrix::StorageIndex; ///< Eigen typedef
-    enum {
-        ColsAtCompileTime    = Eigen::Dynamic,
+    enum
+    {
+        ColsAtCompileTime = Eigen::Dynamic,
         MaxColsAtCompileTime = Eigen::Dynamic,
-        IsRowMajor           = false
+        IsRowMajor = false
     };
+
     using SelfType = HessianOperator; ///< Type of this object
     /**
      * @brief Construct an empty Hessian Operator object
@@ -190,24 +191,29 @@ inline void Hessian::AddContactHessianBlock(
     Eigen::DenseBase<TDerivedHCB> const& HCB,
     Eigen::DenseBase<TDerivedHCIB> const& HCIB)
 {
-    pbat::common::ForRange<0, kContactInds>([&]<auto kj>() {
-        pbat::common::ForRange<0, kContactInds>([&]<auto ki>() {
-            auto const bi     = HCIB(ki);
-            auto const bj     = HCIB(kj);
-            auto const istart = bi * kDims;
-            auto const jstart = bj * kDims;
-            auto const HCbibj = HCB.block<kDims, kDims>(ki, kj);
-            using IndexType   = std::remove_cvref_t<decltype(std::declval<TripletType>().row())>;
-            pbat::common::ForRange<0, kDims>([&]<auto j>() {
-                pbat::common::ForRange<0, kDims>([&]<auto i>() {
-                    HCij.emplace_back(
-                        static_cast<IndexType>(istart + i),
-                        static_cast<IndexType>(jstart + j),
-                        HCbibj(i, j));
+    pbat::common::ForRange<0, kContactInds>(
+        [&]<auto kj>() {
+            pbat::common::ForRange<0, kContactInds>(
+                [&]<auto ki>() {
+                    auto const bi = HCIB(ki);
+                    auto const bj = HCIB(kj);
+                    auto const istart = bi * kDims;
+                    auto const jstart = bj * kDims;
+                    auto const HCbibj = HCB.template block<kDims, kDims>(ki, kj);
+                    using IndexType = std::remove_cvref_t<decltype(std::declval<TripletType>().row()
+                    )>;
+                    pbat::common::ForRange<0, kDims>(
+                        [&]<auto j>() {
+                            pbat::common::ForRange<0, kDims>(
+                                [&]<auto i>() {
+                                    HCij.emplace_back(
+                                        static_cast<IndexType>(istart + i),
+                                        static_cast<IndexType>(jstart + j),
+                                        HCbibj(i, j));
+                                });
+                        });
                 });
-            });
         });
-    });
 }
 
 template <CElasticPotential TElasticPotential, class TDerivedM>
@@ -220,12 +226,10 @@ inline void Hessian::ConstructContactLessHessian(
     HNC *= bt2;
     HNC.coeffs()(diag) += diagM;
 }
-
 } // namespace pbat::sim::algorithm::newton
 
 namespace Eigen {
 namespace internal {
-
 /**
  * @brief Generic product implementation for the Hessian inverse product
  *
@@ -234,15 +238,15 @@ namespace internal {
  */
 template <typename Rhs, int ProductType>
 struct generic_product_impl<
-    pbat::sim::algorithm::newton::HessianOperator,
-    Rhs,
-    SparseShape,
-    DenseShape,
-    ProductType>
+        pbat::sim::algorithm::newton::HessianOperator,
+        Rhs,
+        SparseShape,
+        DenseShape,
+        ProductType>
     : generic_product_impl_base<
-          pbat::sim::algorithm::newton::HessianOperator,
-          Rhs,
-          generic_product_impl<pbat::sim::algorithm::newton::HessianOperator, Rhs>>
+        pbat::sim::algorithm::newton::HessianOperator,
+        Rhs,
+        generic_product_impl<pbat::sim::algorithm::newton::HessianOperator, Rhs>>
 {
     using HessianOperator = pbat::sim::algorithm::newton::HessianOperator;
     using Scalar          = typename Product<HessianOperator, Rhs>::Scalar;
@@ -266,7 +270,6 @@ struct generic_product_impl<
         dst += alpha * (lhs.mData->HNC * rhs + lhs.mData->HC * rhs);
     }
 };
-
 } // namespace internal
 } // namespace Eigen
 

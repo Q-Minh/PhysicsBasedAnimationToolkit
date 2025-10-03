@@ -70,12 +70,14 @@ auto GreedyColor(
                 auto dj = ptr(j + 1) - ptr(j);
                 return di < dj;
             });
+            break;
         case EGreedyColorOrderingStrategy::LargestDegree:
             ordering = common::ArgSort(n, [&](auto i, auto j) {
                 auto di = ptr(i + 1) - ptr(i);
                 auto dj = ptr(j + 1) - ptr(j);
                 return di > dj;
             });
+            break;
         default: break;
     }
     // Color vertices in user-defined order

@@ -40,8 +40,8 @@ struct PBAT_API Rational
      * @param b Denominator
      */
     template <std::integral Integer>
-    Rational(Integer a, Integer b)
-        : a(static_cast<std::int64_t>(a)), b(static_cast<std::int64_t>(b))
+    Rational(Integer _a, Integer _b)
+        : a(static_cast<std::int64_t>(_a)), b(static_cast<std::int64_t>(_b))
     {
     }
     /**

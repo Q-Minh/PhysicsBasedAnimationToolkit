@@ -272,9 +272,7 @@ auto ElementShapeFunctionGradients(
     auto constexpr kInputDims  = TElement::kDims;
     auto constexpr kOutputDims = TDerivedX::RowsAtCompileTime;
     auto constexpr kNodes      = TElement::kNodes;
-    using AffineElementType    = typename TElement::AffineBaseType;
     using ScalarType           = typename TDerivedX::Scalar;
-    using MatrixType           = Eigen::Matrix<ScalarType, Eigen::Dynamic, Eigen::Dynamic>;
     static_assert(
         std::is_same_v<ScalarType, typename TDerivedXi::Scalar>,
         "Scalar type of Xi must match X's scalar type");
@@ -291,7 +289,7 @@ auto ElementShapeFunctionGradients(
     }
     else
     {
-        GP.transpose() = J.transpose().jacobiSvd<Eigen::ComputeThinU | Eigen::ComputeThinV>().solve(
+        GP.transpose() = J.transpose().template jacobiSvd<Eigen::ComputeThinU | Eigen::ComputeThinV>().solve(
             GN.transpose());
     }
     return GP;
@@ -329,7 +327,6 @@ auto ShapeFunctionGradients(
     using QuadratureRuleType =
         typename TElement::template QuadratureType<QuadratureOrder, ScalarType>;
     using ElementType       = TElement;
-    using AffineElementType = typename ElementType::AffineBaseType;
     using MatrixType        = Eigen::Matrix<ScalarType, ElementType::kNodes, Eigen::Dynamic>;
     auto const Xg           = common::ToEigen(QuadratureRuleType::points)
                         .reshaped(QuadratureRuleType::kDims + 1, QuadratureRuleType::kPoints)
@@ -347,7 +344,7 @@ auto ShapeFunctionGradients(
                 X(Eigen::placeholders::all, nodes)
                     .template topLeftCorner<Dims, kNodesPerElement>());
             auto constexpr kStride = Dims * QuadratureRuleType::kPoints;
-            GNe.block<kNodesPerElement, Dims>(0, e * kStride + g * Dims) = GP;
+            GNe.template block<kNodesPerElement, Dims>(0, e * kStride + g * Dims) = GP;
         }
     });
     return GNe;
@@ -366,7 +363,6 @@ auto ShapeFunctionGradients(TMesh const& mesh)
     -> Eigen::Matrix<typename TMesh::ScalarType, TMesh::ElementType::kNodes, Eigen::Dynamic>
 {
     using MeshType    = TMesh;
-    using ScalarType  = typename MeshType::ScalarType;
     using ElementType = typename MeshType::ElementType;
     return ShapeFunctionGradients<ElementType, MeshType::kDims, QuadratureOrder>(mesh.E, mesh.X);
 }
@@ -410,7 +406,7 @@ auto ShapeFunctionGradientsAt(
         auto GP             = ElementShapeFunctionGradients<ElementType>(
             Xi.col(g),
             X(Eigen::placeholders::all, nodes).template topLeftCorner<Dims, ElementType::kNodes>());
-        GNe.block<ElementType::kNodes, Dims>(0, g * Dims) = GP;
+        GNe.template block<ElementType::kNodes, Dims>(0, g * Dims) = GP;
     });
     return GNe;
 }

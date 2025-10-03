@@ -1,11 +1,13 @@
 Python_add_library(PhysicsBasedAnimationToolkit_Python MODULE WITH_SOABI)
 
 # Convert space-separated PBAT_CMAKE_CXX_FLAGS to list (i.e. semi-colon separated string)
-string(REPLACE " " ";" _pbat_cxx_flags ${PBAT_CMAKE_CXX_FLAGS})
-target_compile_options(PhysicsBasedAnimationToolkit_Python
-    PRIVATE
-    $<$<COMPILE_LANGUAGE:CXX>:${_pbat_cxx_flags}>
-)
+if (PBAT_CMAKE_CXX_FLAGS)
+    string(REPLACE " " ";" _pbat_cxx_flags ${PBAT_CMAKE_CXX_FLAGS})
+    target_compile_options(PhysicsBasedAnimationToolkit_Python
+            PRIVATE
+            $<$<COMPILE_LANGUAGE:CXX>:${_pbat_cxx_flags}>
+    )
+endif()
 
 set_target_properties(PhysicsBasedAnimationToolkit_Python
     PROPERTIES

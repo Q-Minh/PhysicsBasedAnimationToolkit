@@ -21,7 +21,6 @@
 #include <Eigen/Core>
 
 namespace pbat::geometry {
-
 /**
  * @brief Axis-aligned k-D tree hierarchy of axis-aligned bounding boxes.
  *
@@ -34,13 +33,13 @@ namespace pbat::geometry {
  * modified after construction. In other words, dynamic insertion/deletion of objects
  * is only supported by reconstructing the tree from scratch.
  *
- * @tparam kDims Number of spatial dimensions
+ * @tparam Dims Number of spatial dimensions
  */
-template <auto kDims>
+template <auto Dims>
 class AabbKdTreeHierarchy
 {
-  public:
-    static auto constexpr kDims = kDims;         ///< Number of spatial dimensions
+public:
+    static auto constexpr kDims = Dims; ///< Number of spatial dimensions
     using SelfType = AabbKdTreeHierarchy<kDims>; ///< Type of this template instantiation
 
     AabbKdTreeHierarchy() = default;
@@ -106,8 +105,11 @@ class AabbKdTreeHierarchy
      */
     template <class FNodeOverlaps, class FObjectOverlaps, class FOnOverlap>
     void
-    Overlaps(FNodeOverlaps fNodeOverlaps, FObjectOverlaps fObjectOverlaps, FOnOverlap fOnOverlap)
-        const;
+    Overlaps(
+        FNodeOverlaps fNodeOverlaps,
+        FObjectOverlaps fObjectOverlaps,
+        FOnOverlap fOnOverlap)
+    const;
     /**
      * @brief Find the nearest neighbour to some user-defined query. If there are multiple nearest
      * neighbours, we may return a certain number > 1 of them.
@@ -184,6 +186,7 @@ class AabbKdTreeHierarchy
     {
         return IB;
     }
+
     /**
      * @brief Get the underlying k-D tree
      * @return The k-D tree hierarchy
@@ -195,26 +198,27 @@ class AabbKdTreeHierarchy
      * @return Lower bound of the AABB of the node
      * @pre `0 <= node < InternalNodeBoundingBoxes().cols()`
      */
-    auto Lower(Index node) const { return IB.col(node).head<kDims>(); }
+    auto Lower(Index node) const { return IB.col(node).template head<kDims>(); }
     /**
      * @brief Obtain the upper bound of the AABB of a node
      * @param node Node index
      * @return Upper bound of the AABB of the node
      * @pre `0 <= node < InternalNodeBoundingBoxes().cols()`
      */
-    auto Upper(Index node) const { return IB.col(node).tail<kDims>(); }
+    auto Upper(Index node) const { return IB.col(node).template tail<kDims>(); }
 
-  private:
+private:
     Matrix<2 * kDims, Eigen::Dynamic>
-        IB;             ///< 2*kDims x |# k-D tree nodes| matrix of AABBs, such that
-                        ///< for a node node, IB.col(node).head<kDims>() is the lower
-                        ///< bound and IB.col(node).tail<kDims>() is the upper bound.
+    IB;
+    ///< 2*kDims x |# k-D tree nodes| matrix of AABBs, such that
+                           ///< for a node node, IB.col(node).head<kDims>() is the lower
+                           ///< bound and IB.col(node).tail<kDims>() is the upper bound.
     KdTree<kDims> tree; ///< KdTree over the AABBs
 };
 
-template <auto kDims>
+template <auto Dims>
 template <class TDerivedL, class TDerivedU>
-inline AabbKdTreeHierarchy<kDims>::AabbKdTreeHierarchy(
+inline AabbKdTreeHierarchy<Dims>::AabbKdTreeHierarchy(
     Eigen::DenseBase<TDerivedL> const& L,
     Eigen::DenseBase<TDerivedU> const& U,
     Index maxPointsInLeaf)
@@ -222,9 +226,9 @@ inline AabbKdTreeHierarchy<kDims>::AabbKdTreeHierarchy(
     Construct(L, U, maxPointsInLeaf);
 }
 
-template <auto kDims>
+template <auto Dims>
 template <class TDerivedL, class TDerivedU>
-inline void AabbKdTreeHierarchy<kDims>::Construct(
+inline void AabbKdTreeHierarchy<Dims>::Construct(
     Eigen::DenseBase<TDerivedL> const& L,
     Eigen::DenseBase<TDerivedU> const& U,
     Index maxPointsInLeaf)
@@ -238,9 +242,9 @@ inline void AabbKdTreeHierarchy<kDims>::Construct(
     IB.template bottomRows<kDims>().setConstant(std::numeric_limits<Scalar>::lowest());
 }
 
-template <auto kDims>
+template <auto Dims>
 template <class TDerivedL, class TDerivedU>
-inline void AabbKdTreeHierarchy<kDims>::Update(
+inline void AabbKdTreeHierarchy<Dims>::Update(
     Eigen::DenseBase<TDerivedL> const& L,
     Eigen::DenseBase<TDerivedU> const& U)
 {
@@ -252,18 +256,22 @@ inline void AabbKdTreeHierarchy<kDims>::Update(
             KdTreeNode const& node = nodes[n];
             if (node.IsLeaf())
             {
-                auto inds               = perm(Eigen::seqN(node.begin, node.n));
-                IB.col(n).head<kDims>() = L(Eigen::placeholders::all, inds).rowwise().minCoeff();
-                IB.col(n).tail<kDims>() = U(Eigen::placeholders::all, inds).rowwise().maxCoeff();
+                auto inds                        = perm(Eigen::seqN(node.begin, node.n));
+                IB.col(n).template head<kDims>() = L(Eigen::placeholders::all, inds).rowwise().
+                    minCoeff();
+                IB.col(n).template tail<kDims>() = U(Eigen::placeholders::all, inds).rowwise().
+                    maxCoeff();
             }
             else
             {
                 // Our k-D tree's internal nodes always have both children.
-                auto nbox          = IB.col(n);
-                auto lbox          = IB.col(node.Left());
-                auto rbox          = IB.col(node.Right());
-                nbox.head<kDims>() = lbox.head<kDims>().cwiseMin(rbox.head<kDims>());
-                nbox.tail<kDims>() = lbox.tail<kDims>().cwiseMax(rbox.tail<kDims>());
+                auto nbox                   = IB.col(n);
+                auto lbox                   = IB.col(node.Left());
+                auto rbox                   = IB.col(node.Right());
+                nbox.template head<kDims>() = lbox.template head<kDims>().cwiseMin(
+                    rbox.template head<kDims>());
+                nbox.template tail<kDims>() = lbox.template tail<kDims>().cwiseMax(
+                    rbox.template tail<kDims>());
             }
         },
         [&]<auto c>(Index n) -> Index {
@@ -274,9 +282,9 @@ inline void AabbKdTreeHierarchy<kDims>::Update(
         });
 }
 
-template <auto kDims>
+template <auto Dims>
 template <class FNodeOverlaps, class FObjectOverlaps, class FOnOverlap>
-inline void AabbKdTreeHierarchy<kDims>::Overlaps(
+inline void AabbKdTreeHierarchy<Dims>::Overlaps(
     FNodeOverlaps fNodeOverlaps,
     FObjectOverlaps fObjectOverlaps,
     FOnOverlap fOnOverlap) const
@@ -295,8 +303,8 @@ inline void AabbKdTreeHierarchy<kDims>::Overlaps(
         [&](Index n) { return nodes[n].n; },
         [&](Index n, Index i) { return perm(nodes[n].begin + i); },
         [&](Index n) {
-            auto L          = IB.col(n).head<kDims>();
-            auto U          = IB.col(n).tail<kDims>();
+            auto L          = IB.col(n).template head<kDims>();
+            auto U          = IB.col(n).template tail<kDims>();
             using TDerivedL = decltype(L);
             using TDerivedU = decltype(U);
             return fNodeOverlaps.template operator()<TDerivedL, TDerivedU>(L, U);
@@ -305,9 +313,9 @@ inline void AabbKdTreeHierarchy<kDims>::Overlaps(
         fOnOverlap);
 }
 
-template <auto kDims>
+template <auto Dims>
 template <class FDistanceToNode, class FDistanceToObject, class FOnNearestNeighbour>
-inline void AabbKdTreeHierarchy<kDims>::NearestNeighbours(
+inline void AabbKdTreeHierarchy<Dims>::NearestNeighbours(
     FDistanceToNode fDistanceToNode,
     FDistanceToObject fDistanceToObject,
     FOnNearestNeighbour fOnNearestNeighbour,
@@ -328,8 +336,8 @@ inline void AabbKdTreeHierarchy<kDims>::NearestNeighbours(
         [&](Index n) { return nodes[n].n; },
         [&](Index n, Index i) { return perm(nodes[n].begin + i); },
         [&](Index n) {
-            auto L          = IB.col(n).head<kDims>();
-            auto U          = IB.col(n).tail<kDims>();
+            auto L          = IB.col(n).template head<kDims>();
+            auto U          = IB.col(n).template tail<kDims>();
             using TDerivedL = decltype(L);
             using TDerivedU = decltype(U);
             return fDistanceToNode.template operator()<TDerivedL, TDerivedU>(L, U);
@@ -341,9 +349,9 @@ inline void AabbKdTreeHierarchy<kDims>::NearestNeighbours(
         eps);
 }
 
-template <auto kDims>
+template <auto Dims>
 template <class FDistanceToNode, class FDistanceToObject, class FOnNearestNeighbour>
-inline void AabbKdTreeHierarchy<kDims>::KNearestNeighbours(
+inline void AabbKdTreeHierarchy<Dims>::KNearestNeighbours(
     FDistanceToNode fDistanceToNode,
     FDistanceToObject fDistanceToObject,
     FOnNearestNeighbour fOnNearestNeighbour,
@@ -364,8 +372,8 @@ inline void AabbKdTreeHierarchy<kDims>::KNearestNeighbours(
         [&](Index n) { return nodes[n].n; },
         [&](Index n, Index i) { return perm(nodes[n].begin + i); },
         [&](Index n) {
-            auto L          = IB.col(n).head<kDims>();
-            auto U          = IB.col(n).tail<kDims>();
+            auto L          = IB.col(n).template head<kDims>();
+            auto U          = IB.col(n).template tail<kDims>();
             using TDerivedL = decltype(L);
             using TDerivedU = decltype(U);
             return fDistanceToNode.template operator()<TDerivedL, TDerivedU>(L, U);
@@ -376,9 +384,9 @@ inline void AabbKdTreeHierarchy<kDims>::KNearestNeighbours(
         radius);
 }
 
-template <auto kDims>
+template <auto Dims>
 template <class FObjectsOverlap, class FOnSelfOverlap>
-inline void AabbKdTreeHierarchy<kDims>::SelfOverlaps(
+inline void AabbKdTreeHierarchy<Dims>::SelfOverlaps(
     FObjectsOverlap fObjectsOverlap,
     FOnSelfOverlap fOnSelfOverlap) const
 {
@@ -397,10 +405,10 @@ inline void AabbKdTreeHierarchy<kDims>::SelfOverlaps(
         [&](Index n, Index i) { return perm(nodes[n].begin + i); },
         [&](Index n1, Index n2) {
             using math::linalg::mini::FromEigen;
-            auto L1 = IB.col(n1).head<kDims>();
-            auto U1 = IB.col(n1).tail<kDims>();
-            auto L2 = IB.col(n2).head<kDims>();
-            auto U2 = IB.col(n2).tail<kDims>();
+            auto L1 = IB.col(n1).template head<kDims>();
+            auto U1 = IB.col(n1).template tail<kDims>();
+            auto L2 = IB.col(n2).template head<kDims>();
+            auto U2 = IB.col(n2).template tail<kDims>();
             return geometry::OverlapQueries::AxisAlignedBoundingBoxes(
                 FromEigen(L1),
                 FromEigen(U1),
@@ -411,9 +419,9 @@ inline void AabbKdTreeHierarchy<kDims>::SelfOverlaps(
         fOnSelfOverlap);
 }
 
-template <auto kDims>
+template <auto Dims>
 template <class FObjectsOverlap, class FOnOverlap>
-inline void AabbKdTreeHierarchy<kDims>::Overlaps(
+inline void AabbKdTreeHierarchy<Dims>::Overlaps(
     SelfType const& rhs,
     FObjectsOverlap fObjectsOverlap,
     FOnOverlap fOnOverlap) const
@@ -467,10 +475,10 @@ inline void AabbKdTreeHierarchy<kDims>::Overlaps(
         fLeafObjectRhs,
         [&](Index n1, Index n2) {
             using math::linalg::mini::FromEigen;
-            auto L1 = IB.col(n1).head<kDims>();
-            auto U1 = IB.col(n1).tail<kDims>();
-            auto L2 = rhs.IB.col(n2).head<kDims>();
-            auto U2 = rhs.IB.col(n2).tail<kDims>();
+            auto L1 = IB.col(n1).template head<kDims>();
+            auto U1 = IB.col(n1).template tail<kDims>();
+            auto L2 = rhs.IB.col(n2).template head<kDims>();
+            auto U2 = rhs.IB.col(n2).template tail<kDims>();
             return geometry::OverlapQueries::AxisAlignedBoundingBoxes(
                 FromEigen(L1),
                 FromEigen(U1),
@@ -480,7 +488,6 @@ inline void AabbKdTreeHierarchy<kDims>::Overlaps(
         fObjectsOverlap,
         fOnOverlap);
 }
-
 } // namespace pbat::geometry
 
 #endif // PBAT_GEOMETRY_AABBKDTREEHIERARCHY_H

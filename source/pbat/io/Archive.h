@@ -182,7 +182,7 @@ inline T Archive::ReadData(std::string const& path) const
             using U = std::decay_t<decltype(arg)>;
             if constexpr (not std::is_same_v<U, std::monostate>)
             {
-                data = arg.getDataSet(path).read<T>();
+                data = arg.getDataSet(path).template read<T>();
             }
         },
         mHdf5Object);
@@ -198,7 +198,7 @@ inline T Archive::ReadMetaData(std::string const& key) const
             using U = std::decay_t<decltype(arg)>;
             if constexpr (not std::is_same_v<U, std::monostate>)
             {
-                data = arg.getAttribute(key).read<T>();
+                data = arg.getAttribute(key).template read<T>();
             }
         },
         mHdf5Object);

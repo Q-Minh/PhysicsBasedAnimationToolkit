@@ -108,7 +108,6 @@ inline void SparsityPattern<TIndex, Options>::Compute(
     namespace sviews      = std::views;
     namespace rng         = ranges;
     namespace views       = rng::views;
-    using IndexVectorType = Eigen::Vector<IndexType, Eigen::Dynamic>;
 
     auto const nRowIndices = srng::size(rowIndices);
     auto const nColIndices = srng::size(colIndices);

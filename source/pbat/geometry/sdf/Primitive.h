@@ -21,7 +21,6 @@
 #include <cmath>
 
 namespace pbat::geometry::sdf {
-
 /**
  * @brief Sign function, i.e. \f$ \text{sign}(x) = +1 \text{ if } x > 0, -1 \text{ if } x < 0, 0
  * \text{ if } x = 0 \f$
@@ -59,7 +58,11 @@ struct Sphere : public Primitive
      * @brief Construct a new Sphere object
      * @param R_ Sphere radius
      */
-    explicit Sphere(ScalarType R_) : R(R_) {}
+    explicit Sphere(ScalarType R_)
+        : R(R_)
+    {
+    }
+
     /**
      * @brief Evaluate the signed distance function at a point
      * @param p Point in 3D space
@@ -89,7 +92,11 @@ struct Box : public Primitive
      * @brief Construct a new Box object
      * @param he_ Half extents of the box along each axis
      */
-    explicit Box(Vec3<ScalarType> const& he_) : he(he_) {}
+    explicit Box(Vec3<ScalarType> const& he_)
+        : he(he_)
+    {
+    }
+
     /**
      * @brief Evaluate the signed distance function at a point
      * @param p Point in 3D space
@@ -126,7 +133,12 @@ struct BoxFrame : public Primitive
      * @param he_ Half extents of the box frame along each axis
      * @param t_ Thickness of the box frame
      */
-    explicit BoxFrame(Vec3<ScalarType> const& he_, ScalarType t_) : he(he_), t(t_) {}
+    explicit BoxFrame(Vec3<ScalarType> const& he_, ScalarType t_)
+        : he(he_),
+          t(t_)
+    {
+    }
+
     /**
      * @brief Evaluate the signed distance function at a point
      * @param p Point in 3D space
@@ -168,7 +180,11 @@ struct Torus : public Primitive
      * @brief Construct a new Torus object
      * @param t_ Minor and major radius of the torus
      */
-    explicit Torus(Vec2<ScalarType> const& t_) : t(t_) {}
+    explicit Torus(Vec2<ScalarType> const& t_)
+        : t(t_)
+    {
+    }
+
     /**
      * @brief Evaluate the signed distance function at a point
      * @param p Point in 3D space
@@ -204,9 +220,12 @@ struct CappedTorus : public Primitive
      * @param rb_ Unknown
      */
     explicit CappedTorus(Vec2<ScalarType> const& sc_, ScalarType ra_, ScalarType rb_)
-        : sc(sc_), ra(ra_), rb(rb_)
+        : sc(sc_),
+          ra(ra_),
+          rb(rb_)
     {
     }
+
     /**
      * @brief Evaluate the signed distance function at a point
      * @param p Point in 3D space
@@ -217,7 +236,7 @@ struct CappedTorus : public Primitive
         using namespace std;
         p(0)          = abs(p(0));
         bool const bk = sc(1) * p(0) > sc(0) * p(1);
-        auto pxy      = p.Slice<2, 1>(0, 0);
+        auto pxy      = p.template Slice<2, 1>(0, 0);
         // NOTE: Not sure if better to do branchless but compute a norm (i.e. expensive sqrt), or
         // use ternary operator and add divergent branching, but save the sqrt when possible.
         ScalarType k = bk * (Dot(pxy, sc)) + (not bk) * Norm(pxy);
@@ -245,7 +264,12 @@ struct Link : public Primitive
      * @param t_ Minor and major radius of the link
      * @param le_ Elongation length of the link
      */
-    explicit Link(Vec2<ScalarType> const& t_, ScalarType le_) : t(t_), le(le_) {}
+    explicit Link(Vec2<ScalarType> const& t_, ScalarType le_)
+        : t(t_),
+          le(le_)
+    {
+    }
+
     /**
      * @brief Evaluate the signed distance function at a point
      * @param p Point in 3D space
@@ -256,7 +280,7 @@ struct Link : public Primitive
         using namespace std;
         ScalarType constexpr zero{0};
         Vec3<ScalarType> q = Vec3<ScalarType>{p(0), max(abs(p(1)) - le, zero), p(2)};
-        auto qxy           = q.Slice<2, 1>(0, 0);
+        auto qxy           = q.template Slice<2, 1>(0, 0);
         return Norm(Vec2<ScalarType>{Norm(qxy) - t(0), q(2)}) - t(1);
     }
 };
@@ -281,7 +305,11 @@ struct InfiniteCylinder : public Primitive
      * @brief Construct a new Infinite Cylinder object
      * @param c_ Center of the cylinder (on the axis) in c(0), c(1) and radius in c(2)
      */
-    explicit InfiniteCylinder(Vec3<ScalarType> const& c_) : c(c_) {}
+    explicit InfiniteCylinder(Vec3<ScalarType> const& c_)
+        : c(c_)
+    {
+    }
+
     /**
      * @brief Evaluate the signed distance function at a point
      * @param p Point in 3D space
@@ -313,7 +341,12 @@ struct Cone : public Primitive
      * @param sc_ sin/cos of the angle
      * @param h_ Height of the cone
      */
-    explicit Cone(Vec2<ScalarType> const& sc_, ScalarType h_) : sc(sc_), h(h_) {}
+    explicit Cone(Vec2<ScalarType> const& sc_, ScalarType h_)
+        : sc(sc_),
+          h(h_)
+    {
+    }
+
     /**
      * @brief Evaluate the signed distance function at a point
      * @param p Point in 3D space
@@ -352,7 +385,11 @@ struct InfiniteCone : public Primitive
      * @brief Construct a new Infinite Cone object
      * @param sc_ sin/cos of the angle
      */
-    explicit InfiniteCone(Vec2<ScalarType> const& sc_) : sc(sc_) {}
+    explicit InfiniteCone(Vec2<ScalarType> const& sc_)
+        : sc(sc_)
+    {
+    }
+
     /**
      * @brief Evaluate the signed distance function at a point
      * @param p Point in 3D space
@@ -409,7 +446,11 @@ struct HexagonalPrism : public Primitive
      * @brief Construct a new Hexagonal Prism object
      * @param h_ h[0]: radius of the hexagon, h[1]: half height of the prism
      */
-    explicit HexagonalPrism(Vec2<ScalarType> const& h_) : h(h_) {}
+    explicit HexagonalPrism(Vec2<ScalarType> const& h_)
+        : h(h_)
+    {
+    }
+
     /**
      * @brief Evaluate the signed distance function at a point
      * @param p Point in 3D space
@@ -420,13 +461,13 @@ struct HexagonalPrism : public Primitive
         using namespace std;
         Vec3<ScalarType> const k{ScalarType{-0.8660254}, ScalarType{0.5}, ScalarType{0.57735}};
         p        = Abs(p);
-        auto pxy = p.Slice<2, 1>(0, 0);
-        auto kxy = k.Slice<2, 1>(0, 0);
+        auto pxy = p.template Slice<2, 1>(0, 0);
+        auto kxy = k.template Slice<2, 1>(0, 0);
         ScalarType constexpr zero{0};
         pxy -= ScalarType(2) * min(Dot(kxy, pxy), zero) * kxy;
         Vec2<ScalarType> d = Vec2<ScalarType>{
             Norm(pxy - Vec2<ScalarType>{clamp(p(0), -k(2) * h(0), k(2) * h(0)), h(0)}) *
-                sign(p(1) - h(0)),
+            sign(p(1) - h(0)),
             p(2) - h(1)};
         return min(max(d(0), d(1)), zero) + Norm(Max(d, Zero2<ScalarType>{}));
     }
@@ -454,9 +495,12 @@ struct Capsule : public Primitive
      * @param r_ Radius of the capsule
      */
     explicit Capsule(Vec3<ScalarType> const& a_, Vec3<ScalarType> const& b_, ScalarType r_)
-        : a(a_), b(b_), r(r_)
+        : a(a_),
+          b(b_),
+          r(r_)
     {
     }
+
     /**
      * @brief Evaluate the signed distance function at a point
      * @param p Point in 3D space
@@ -491,7 +535,12 @@ struct VerticalCapsule : public Primitive
      * @param h_ Height of the capsule
      * @param r_ Radius of the capsule
      */
-    explicit VerticalCapsule(ScalarType h_, ScalarType r_) : h(h_), r(r_) {}
+    explicit VerticalCapsule(ScalarType h_, ScalarType r_)
+        : h(h_),
+          r(r_)
+    {
+    }
+
     /**
      * @brief Evaluate the signed distance function at a point
      * @param p Point in 3D space
@@ -527,9 +576,12 @@ struct CappedCylinder : public Primitive
      * @param r_ Radius of the capped cylinder
      */
     explicit CappedCylinder(Vec3<ScalarType> const& a_, Vec3<ScalarType> const& b_, ScalarType r_)
-        : a(a_), b(b_), r(r_)
+        : a(a_),
+          b(b_),
+          r(r_)
     {
     }
+
     /**
      * @brief Evaluate the signed distance function at a point
      * @param p Point in 3D space
@@ -547,8 +599,9 @@ struct CappedCylinder : public Primitive
         ScalarType x2       = x * x;
         ScalarType y2       = y * y * baba;
         ScalarType constexpr zero{0};
-        ScalarType d = (max(x, y) < zero) ? -min(x2, y2) :
-                                            (((x > zero) ? x2 : zero) + ((y > zero) ? y2 : zero));
+        ScalarType d = (max(x, y) < zero) ?
+                           -min(x2, y2) :
+                           (((x > zero) ? x2 : zero) + ((y > zero) ? y2 : zero));
         return sign(d) * sqrt(abs(d)) / baba;
     }
 };
@@ -572,7 +625,12 @@ struct VerticalCappedCylinder : public Primitive
      * @param h_ Height of the capped cylinder
      * @param r_ Radius of the capped cylinder
      */
-    explicit VerticalCappedCylinder(ScalarType h_, ScalarType r_) : h(h_), r(r_) {}
+    explicit VerticalCappedCylinder(ScalarType h_, ScalarType r_)
+        : h(h_),
+          r(r_)
+    {
+    }
+
     /**
      * @brief Evaluate the signed distance function at a point
      * @param p Point in 3D space
@@ -611,9 +669,12 @@ struct RoundedCylinder : public Primitive
      * @param rb_ Rounding radius at edges
      */
     explicit RoundedCylinder(ScalarType h_, ScalarType ra_, ScalarType rb_)
-        : h(h_), ra(ra_), rb(rb_)
+        : h(h_),
+          ra(ra_),
+          rb(rb_)
     {
     }
+
     /**
      * @brief Evaluate the signed distance function at a point
      * @param p Point in 3D space
@@ -652,9 +713,12 @@ struct VerticalCappedCone : public Primitive
      * @param r2_ Major radius of the capped cone
      */
     explicit VerticalCappedCone(ScalarType h_, ScalarType r1_, ScalarType r2_)
-        : h(h_), r1(r1_), r2(r2_)
+        : h(h_),
+          r1(r1_),
+          r2(r2_)
     {
     }
+
     /**
      * @brief Evaluate the signed distance function at a point
      * @param p Point in 3D space
@@ -701,7 +765,13 @@ struct CutHollowSphere : public Primitive
      * @param h_ Cut height
      * @param t_ Thickness of the hollow sphere
      */
-    explicit CutHollowSphere(ScalarType r_, ScalarType h_, ScalarType t_) : r(r_), h(h_), t(t_) {}
+    explicit CutHollowSphere(ScalarType r_, ScalarType h_, ScalarType t_)
+        : r(r_),
+          h(h_),
+          t(t_)
+    {
+    }
+
     /**
      * @brief Evaluate the signed distance function at a point
      * @param p Point in 3D space
@@ -741,9 +811,12 @@ struct VerticalRoundCone : public Primitive
      * @param r2_ Radius at the top of the round cone
      */
     explicit VerticalRoundCone(ScalarType h_, ScalarType r1_, ScalarType r2_)
-        : h(h_), r1(r1_), r2(r2_)
+        : h(h_),
+          r1(r1_),
+          r2(r2_)
     {
     }
+
     /**
      * @brief Evaluate the signed distance function at a point
      * @param p Point in 3D space
@@ -783,7 +856,11 @@ struct Octahedron : public Primitive
      * @brief Construct a new Octahedron object
      * @param s_ Size of the octahedron
      */
-    explicit Octahedron(ScalarType s_) : s(s_) {}
+    explicit Octahedron(ScalarType s_)
+        : s(s_)
+    {
+    }
+
     /**
      * @brief Evaluate the signed distance function at a point
      * @param p Point in 3D space
@@ -827,7 +904,11 @@ struct Pyramid : public Primitive
      * @brief Construct a new Pyramid object
      * @param h_ Height of the pyramid
      */
-    explicit Pyramid(ScalarType h_) : h(h_) {}
+    explicit Pyramid(ScalarType h_)
+        : h(h_)
+    {
+    }
+
     /**
      * @brief Evaluate the signed distance function at a point
      * @param p Point in 3D space
@@ -890,9 +971,12 @@ struct Triangle : public Primitive
         Vec3<ScalarType> const& a_,
         Vec3<ScalarType> const& b_,
         Vec3<ScalarType> const& c_)
-        : a(a_), b(b_), c(c_)
+        : a(a_),
+          b(b_),
+          c(c_)
     {
     }
+
     /**
      * @brief Evaluate the signed distance function at a point
      * @param p Point in 3D space
@@ -912,14 +996,17 @@ struct Triangle : public Primitive
         ScalarType constexpr one{1};
         ScalarType constexpr two{2};
         bool bs =
-            (sign(Dot(Cross(ba, nor), pa)) + sign(Dot(Cross(cb, nor), pb)) +
-                 sign(Dot(Cross(ac, nor), pc)) <
-             two);
+        (sign(Dot(Cross(ba, nor), pa)) + sign(Dot(Cross(cb, nor), pb)) +
+         sign(Dot(Cross(ac, nor), pc)) <
+         two);
         return sqrt(
-            bs ? min(min(SquaredNorm(ba * clamp(Dot(ba, pa) / SquaredNorm(ba), zero, one) - pa),
-                         SquaredNorm(cb * clamp(Dot(cb, pb) / SquaredNorm(cb), zero, one) - pb)),
-                     SquaredNorm(ac * clamp(Dot(ac, pc) / SquaredNorm(ac), zero, one) - pc)) :
-                 Dot(nor, pa) * Dot(nor, pa) / SquaredNorm(nor));
+            bs ?
+                min(
+                    min(
+                        SquaredNorm(ba * clamp(Dot(ba, pa) / SquaredNorm(ba), zero, one) - pa),
+                        SquaredNorm(cb * clamp(Dot(cb, pb) / SquaredNorm(cb), zero, one) - pb)),
+                    SquaredNorm(ac * clamp(Dot(ac, pc) / SquaredNorm(ac), zero, one) - pc)) :
+                Dot(nor, pa) * Dot(nor, pa) / SquaredNorm(nor));
     }
 };
 
@@ -951,9 +1038,13 @@ struct Quadrilateral : public Primitive
         Vec3<ScalarType> const& b_,
         Vec3<ScalarType> const& c_,
         Vec3<ScalarType> const& d_)
-        : a(a_), b(b_), c(c_), d(d_)
+        : a(a_),
+          b(b_),
+          c(c_),
+          d(d_)
     {
     }
+
     /**
      * @brief Evaluate the signed distance function at a point
      * @param p Point in 3D space
@@ -975,19 +1066,21 @@ struct Quadrilateral : public Primitive
         ScalarType constexpr one{1};
         ScalarType constexpr three{3};
         bool bs =
-            (sign(Dot(Cross(ba, nor), pa)) + sign(Dot(Cross(cb, nor), pb)) +
-                 sign(Dot(Cross(dc, nor), pc)) + sign(Dot(Cross(ad, nor), pd)) <
-             three);
+        (sign(Dot(Cross(ba, nor), pa)) + sign(Dot(Cross(cb, nor), pb)) +
+         sign(Dot(Cross(dc, nor), pc)) + sign(Dot(Cross(ad, nor), pd)) <
+         three);
         return sqrt(
             bs ?
-                min(min(min(SquaredNorm(ba * clamp(Dot(ba, pa) / SquaredNorm(ba), zero, one) - pa),
+                min(
+                    min(
+                        min(
+                            SquaredNorm(ba * clamp(Dot(ba, pa) / SquaredNorm(ba), zero, one) - pa),
                             SquaredNorm(cb * clamp(Dot(cb, pb) / SquaredNorm(cb), zero, one) - pb)),
                         SquaredNorm(dc * clamp(Dot(dc, pc) / SquaredNorm(dc), zero, one) - pc)),
                     SquaredNorm(ad * clamp(Dot(ad, pd) / SquaredNorm(ad), zero, one) - pd)) :
                 Dot(nor, pa) * Dot(nor, pa) / SquaredNorm(nor));
     }
 };
-
 } // namespace pbat::geometry::sdf
 
 #endif // PBAT_GEOMETRY_SDF_PRIMITIVE_H

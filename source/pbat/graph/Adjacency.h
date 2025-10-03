@@ -172,7 +172,6 @@ template <class TDerivedP, std::integral TIndex = typename TDerivedP::Scalar>
 auto MapToAdjacency(Eigen::DenseBase<TDerivedP> const& p, TIndex n = TIndex(-1))
     -> std::tuple<Eigen::Vector<TIndex, Eigen::Dynamic>, Eigen::Vector<TIndex, Eigen::Dynamic>>
 {
-    using IndexVectorType = Eigen::Vector<TIndex, Eigen::Dynamic>;
     if (n < 0)
         n = p.maxCoeff() + TIndex(1);
     auto s   = common::Counts(p.begin(), p.end(), n);

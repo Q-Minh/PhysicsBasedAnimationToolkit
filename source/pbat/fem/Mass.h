@@ -74,7 +74,6 @@ inline void ToElementMassMatrices(
     Eigen::DenseBase<TDerivedrhog> const& rhog,
     Eigen::PlainObjectBase<TDerivedOut>& Meg)
 {
-    using ScalarType     = typename TN::Scalar;
     constexpr int kNodes = TElement::kNodes;
     const auto nQuadPts  = Neg.cols();
     Meg.resize(kNodes, kNodes * nQuadPts);
@@ -605,8 +604,6 @@ inline void GemmMass(
     Eigen::DenseBase<TDerivedOut>& Y)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.fem.GemmMass");
-
-    using ScalarType = typename TDerivedMe::Scalar;
 
     // Check inputs
     auto const numberOfDofs = dims * nNodes;

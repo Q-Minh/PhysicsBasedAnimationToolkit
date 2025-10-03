@@ -295,7 +295,6 @@ inline Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic>
 Mesh<TElement, Dims, TScalar, TIndex>::QuadraturePoints() const
 {
     using QuadraturePointPositions = Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic>;
-    using ElementType              = TElement;
     using AffineElementType        = typename ElementType::AffineBaseType;
     using QuadratureRuleType =
         typename ElementType::template QuadratureType<QuadratureOrder, TScalar>;
@@ -324,7 +323,6 @@ template <int QuadratureOrder, int kPoints>
 inline Eigen::Vector<TScalar, kPoints>
 Mesh<TElement, Dims, TScalar, TIndex>::QuadratureWeights() const
 {
-    using ElementType = TElement;
     using QuadratureRuleType =
         typename ElementType::template QuadratureType<QuadratureOrder, TScalar>;
     auto constexpr kQuadPts = QuadratureRuleType::kPoints;
@@ -363,7 +361,6 @@ void Mesh<TElement, Dims, TScalar, TIndex>::Deserialize(io::Archive const& archi
             "pbat::fem::Mesh::Deserialize(): kOrder in archive does not match template parameter "
             "kOrder");
     }
-    meshArchive.ReadMetaData("kOrder", kOrderRead);
     X = meshArchive.ReadData<NodeMatrix>("X");
     E = meshArchive.ReadData<ElementMatrix>("E");
     if (E.rows() != ElementType::kNodes)

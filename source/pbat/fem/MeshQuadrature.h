@@ -81,10 +81,7 @@ auto MeshQuadratureWeights(
         Eigen::Dynamic>
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.fem.MeshQuadratureWeights");
-    using ScalarType  = typename TDerivedX::Scalar;
     using ElementType = TElement;
-    using QuadratureType =
-        typename ElementType::template QuadratureType<QuadratureOrder, ScalarType>;
     auto detJeThenWg = DeterminantOfJacobian<ElementType, QuadratureOrder>(E, X);
     ToMeshQuadratureWeights<ElementType, QuadratureOrder>(detJeThenWg);
     return detJeThenWg;
@@ -146,7 +143,6 @@ auto MeshQuadratureElements(TIndex nElements, TIndex nQuadPtsPerElement)
 template <common::CIndex TIndex, class TDerivedwg>
 auto MeshQuadratureElements(TIndex nElements, Eigen::DenseBase<TDerivedwg> const& wg)
 {
-    using IndexVectorType            = Eigen::Vector<TIndex, Eigen::Dynamic>;
     bool const bAreDimensionsCorrect = (wg.size() % nElements) == 0;
     if (not bAreDimensionsCorrect)
     {

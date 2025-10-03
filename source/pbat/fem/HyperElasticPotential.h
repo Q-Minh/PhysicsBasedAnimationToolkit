@@ -616,8 +616,6 @@ inline void ToHyperElasticGradient(
 {
     using ScalarType = typename TDerivedx::Scalar;
     Eigen::Matrix<ScalarType, 0, 0> dummyUg, dummyHg;
-    using ElementType = typename TMesh::ElementType;
-    using Dims        = typename TMesh::kDims;
     ToElementElasticity<THyperElasticEnergy>(
         mesh,
         eg.derived(),
@@ -950,7 +948,6 @@ void ToElementElasticity(
     PBAT_PROFILE_NAMED_SCOPE("pbat.fem.ToElementElasticity");
 
     using ScalarType = typename TDerivedx::Scalar;
-    using IndexType  = typename TDerivedE::Scalar;
 
     // Check inputs
     if (x.size() != nNodes * Dims)

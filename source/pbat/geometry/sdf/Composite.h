@@ -239,10 +239,6 @@ inline TScalar Composite<TScalar>::Eval(int n, Vec3<ScalarType> const& p) const
                 auto cj = mChildren[nStl].second;
                 sd      = node.Eval(Eval(ci, q), Eval(cj, q));
             }
-            else
-            {
-                mStatus = ECompositeStatus::UnexpectedNodeType;
-            }
         },
         mNodes[nStl]);
     return sd;

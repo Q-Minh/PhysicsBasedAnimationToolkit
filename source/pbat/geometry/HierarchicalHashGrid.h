@@ -17,7 +17,6 @@
 #include <span>
 
 namespace pbat::geometry {
-
 /**
  * @brief Spatial partitioning data structure that divides 3D space into a set of sparse grids.
  * Allowing for efficient querying of point neighbours within a certain region.
@@ -29,7 +28,7 @@ namespace pbat::geometry {
 template <int Dims, common::CFloatingPoint TScalar = Scalar, common::CIndex TIndex = Index>
 class HierarchicalHashGrid
 {
-  public:
+public:
     using ScalarType           = TScalar; ///< Type alias for scalar values (e.g., float or double).
     using IndexType            = TIndex;  ///< Type alias for index values (e.g., int or long).
     static constexpr int kDims = Dims;    ///< Number of spatial dimensions.
@@ -156,6 +155,7 @@ class HierarchicalHashGrid
     {
         return std::span<std::int16_t const>(mSetOfLevels.begin(), mSetOfLevels.Size());
     }
+
     /**
      * @brief Convert a point `X` to integer coordinates in the grid.
      * @tparam TDerivedX Eigen type of the point.
@@ -164,7 +164,9 @@ class HierarchicalHashGrid
      * @return `|# dims| x 1` vector of integer coordinates in the grid.
      */
     template <class TDerivedX>
-    auto ToIntegerCoordinates(Eigen::DenseBase<TDerivedX> const& X, ScalarType const cellSize) const
+    auto ToIntegerCoordinates(
+        Eigen::DenseBase<TDerivedX> const& X,
+        ScalarType const cellSize) const
         -> Eigen::Vector<IndexType, kDims>;
     /**
      * @brief Hash a point `X` at level `l` in the grid.
@@ -176,24 +178,27 @@ class HierarchicalHashGrid
     template <class TDerivedX>
     auto Hash(Eigen::DenseBase<TDerivedX> const& X, std::int16_t l) const;
 
-  protected:
+protected:
     /**
      * @brief Clear the hash table, resetting all internal data structures.
      */
     void ClearHashTable();
 
-  private:
+private:
     Eigen::Vector<std::uint8_t, Eigen::Dynamic>
-        mCellCounts; ///< `|# primitives| x 1` number of overlapping cells per primitive.
+    mCellCounts; ///< `|# primitives| x 1` number of overlapping cells per primitive.
     Eigen::Vector<IndexType, Eigen::Dynamic>
-        mBucketIds; ///< `|# (primitive,cell) pairs| x 1` bucket IDs for each
-                    ///< (primitive,cell) pair in the grid
+    mBucketIds;
+    ///< `|# (primitive,cell) pairs| x 1` bucket IDs for each
+                       ///< (primitive,cell) pair in the grid
     Eigen::Vector<IndexType, Eigen::Dynamic>
-        mPrefix; ///< `|# buckets + 1| x 1` prefix sum holding hash table entries
-                 ///< (i.e. primitives,cell pairs).
+    mPrefix;
+    ///< `|# buckets + 1| x 1` prefix sum holding hash table entries
+                    ///< (i.e. primitives,cell pairs).
     Eigen::Vector<IndexType, Eigen::Dynamic>
-        mPrimitiveIds; ///< `|# primitive,cell) pairs| x 1` primitive IDs for each (primitive,cell)
-                       ///< pair in the grid, in the order of the prefix sum.
+    mPrimitiveIds;
+    ///< `|# primitive,cell) pairs| x 1` primitive IDs for each (primitive,cell)
+                          ///< pair in the grid, in the order of the prefix sum.
     common::BruteSet<std::int16_t> mSetOfLevels; ///< Set of levels in the hierarchical grid.
 };
 
@@ -201,7 +206,11 @@ template <int Dims, common::CFloatingPoint TScalar, common::CIndex TIndex>
 HierarchicalHashGrid<Dims, TScalar, TIndex>::HierarchicalHashGrid(
     IndexType nPrimitives,
     IndexType nBuckets)
-    : mCellCounts(), mBucketIds(), mPrefix(), mPrimitiveIds(), mSetOfLevels()
+    : mCellCounts(),
+      mBucketIds(),
+      mPrefix(),
+      mPrimitiveIds(),
+      mSetOfLevels()
 {
     Configure(nPrimitives, nBuckets);
 }
@@ -236,13 +245,13 @@ void HierarchicalHashGrid<Dims, TScalar, TIndex>::Construct(
     IndexType k = 0; // Index for mBucketIds and mPrimitiveIds
     for (IndexType i = 0; i < nPrimitives; ++i)
     {
-        ScalarType const maxExtent = (U.col(i) - L.col(i)).maxCoeff();
-        ScalarType const l         = std::ceil(std::log2(maxExtent));
-        ScalarType const cellSize  = std::pow(ScalarType(2), l);
+        ScalarType const maxExtent               = (U.col(i) - L.col(i)).maxCoeff();
+        ScalarType const l                       = std::ceil(std::log2(maxExtent));
+        ScalarType const cellSize                = std::pow(ScalarType(2), l);
         Eigen::Vector<IndexType, kDims> const ib =
-            ToIntegerCoordinates(L.col(i).segment<kDims>(0), cellSize);
+            ToIntegerCoordinates(L.col(i).template segment<kDims>(0), cellSize);
         Eigen::Vector<IndexType, kDims> const ie =
-            ToIntegerCoordinates(U.col(i).segment<kDims>(0), cellSize);
+            ToIntegerCoordinates(U.col(i).template segment<kDims>(0), cellSize);
         auto const level = static_cast<std::int16_t>(l);
         Eigen::Vector<IndexType, kDims> ix;
         // Add primitive i to every cell at level l overlapping with i's bounding box
@@ -301,8 +310,9 @@ void HierarchicalHashGrid<Dims, TScalar, TIndex>::BroadPhase(
         {
             auto cellSize = std::pow(ScalarType(2), static_cast<ScalarType>(l));
             Eigen::Vector<IndexType, kDims> iq = ToIntegerCoordinates(X.col(q), cellSize);
-            auto bucketId    = (kDims == 2) ? common::Modulo(Hash(iq, l), nBuckets) :
-                                              common::Modulo(Hash(iq, l), nBuckets);
+            auto bucketId = (kDims == 2) ?
+                                common::Modulo(Hash(iq, l), nBuckets) :
+                                common::Modulo(Hash(iq, l), nBuckets);
             auto beginBucket = mPrefix(bucketId);
             auto endBucket   = mPrefix(bucketId + 1);
             for (auto k = beginBucket; k < endBucket; ++k)
@@ -378,16 +388,18 @@ inline void HierarchicalHashGrid<Dims, TScalar, TIndex>::BroadPhase(
     Eigen::DenseBase<TDerivedX> const& XQ,
     FOnPair fOnPair) const
 {
-    BroadPhase(XQ, [&](Index q, Index p) {
-        using pbat::math::linalg::mini::FromEigen;
-        if (OverlapQueries::PointAxisAlignedBoundingBox(
-                FromEigen(XQ.col(q).head<kDims>()),
-                FromEigen(LP.col(p).head<kDims>()),
-                FromEigen(UP.col(p).head<kDims>())))
-        {
-            fOnPair(q, p);
-        }
-    });
+    BroadPhase(
+        XQ,
+        [&](Index q, Index p) {
+            using pbat::math::linalg::mini::FromEigen;
+            if (OverlapQueries::PointAxisAlignedBoundingBox(
+                FromEigen(XQ.col(q).template head<kDims>()),
+                FromEigen(LP.col(p).template head<kDims>()),
+                FromEigen(UP.col(p).template head<kDims>())))
+            {
+                fOnPair(q, p);
+            }
+        });
 }
 
 template <int Dims, common::CFloatingPoint TScalar, common::CIndex TIndex>
@@ -400,16 +412,19 @@ inline void HierarchicalHashGrid<Dims, TScalar, TIndex>::BroadPhase(
     FOnPair fOnPair) const
 {
     using pbat::math::linalg::mini::FromEigen;
-    BroadPhase(LQ, UQ, [&](Index q, Index p) {
-        if (OverlapQueries::AxisAlignedBoundingBoxes(
-                FromEigen(LP.col(p).head<kDims>()),
-                FromEigen(UP.col(p).head<kDims>()),
-                FromEigen(LQ.col(q).head<kDims>()),
-                FromEigen(UQ.col(q).head<kDims>())))
-        {
-            fOnPair(q, p);
-        }
-    });
+    BroadPhase(
+        LQ,
+        UQ,
+        [&](Index q, Index p) {
+            if (OverlapQueries::AxisAlignedBoundingBoxes(
+                FromEigen(LP.col(p).template head<kDims>()),
+                FromEigen(UP.col(p).template head<kDims>()),
+                FromEigen(LQ.col(q).template head<kDims>()),
+                FromEigen(UQ.col(q).template head<kDims>())))
+            {
+                fOnPair(q, p);
+            }
+        });
 }
 
 template <int Dims, common::CFloatingPoint TScalar, common::CIndex TIndex>
@@ -419,9 +434,9 @@ inline auto HierarchicalHashGrid<Dims, TScalar, TIndex>::ToIntegerCoordinates(
     ScalarType const cellSize) const -> Eigen::Vector<IndexType, kDims>
 {
     return Eigen::Vector<ScalarType, kDims>(X.derived().array() / static_cast<ScalarType>(cellSize))
-        .array()
-        .floor()
-        .template cast<IndexType>();
+           .array()
+           .floor()
+           .template cast<IndexType>();
 }
 
 template <int Dims, common::CFloatingPoint TScalar, common::CIndex TIndex>
@@ -444,7 +459,6 @@ void HierarchicalHashGrid<Dims, TScalar, TIndex>::ClearHashTable()
     mPrefix.setZero();
     mSetOfLevels.Clear();
 }
-
 } // namespace pbat::geometry
 
 #endif // PBAT_GEOMETRY_HIERARCHICALHASHGRID_H

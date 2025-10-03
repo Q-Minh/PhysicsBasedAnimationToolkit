@@ -16,7 +16,7 @@ TEST_CASE("[common] Conversions from STL to Eigen")
     SUBCASE("Matrix arithmetic range")
     {
         std::vector<Vector<3>> v{{1., 2., 3.}, {4., 5., 6.}};
-        auto const ve = common::ToEigen(v).reshaped(3, v.size());
+        auto const ve = common::ToEigen(v).reshaped(3, static_cast<int>(v.size()));
         CHECK_EQ(ve.cols(), v.size());
         for (auto j = 0u; j < ve.cols(); ++j)
             for (auto i = 0u; i < ve.rows(); ++i)

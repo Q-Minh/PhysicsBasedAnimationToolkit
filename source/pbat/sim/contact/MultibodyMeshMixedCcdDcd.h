@@ -669,8 +669,8 @@ inline void MultibodyMeshMixedCcdDcd::ComputeEdgeAabbs(
     for (auto e = 0; e < mE.cols(); ++e)
     {
         Matrix<kDims, 2 * 2> XE;
-        XE.leftCols<2>()  = XT(Eigen::placeholders::all, mE.col(e)).block<kDims, 2>(0, 0);
-        XE.rightCols<2>() = X(Eigen::placeholders::all, mE.col(e)).block<kDims, 2>(0, 0);
+        XE.leftCols<2>()  = XT(Eigen::placeholders::all, mE.col(e)).template block<kDims, 2>(0, 0);
+        XE.rightCols<2>() = X(Eigen::placeholders::all, mE.col(e)).template block<kDims, 2>(0, 0);
         auto L            = mEdgeAabbs.col(e).head<kDims>();
         auto U            = mEdgeAabbs.col(e).tail<kDims>();
         L                 = XE.rowwise().minCoeff();
@@ -687,7 +687,7 @@ inline void MultibodyMeshMixedCcdDcd::ComputeTriangleAabbs(Eigen::DenseBase<TDer
     for (auto f = 0; f < mF.cols(); ++f)
     {
         Matrix<kDims, 3> XF;
-        XF     = X(Eigen::placeholders::all, mF.col(f)).block<kDims, 3>(0, 0);
+        XF     = X(Eigen::placeholders::all, mF.col(f)).template block<kDims, 3>(0, 0);
         auto L = mTriangleAabbs.col(f).head<kDims>();
         auto U = mTriangleAabbs.col(f).tail<kDims>();
         L      = XF.rowwise().minCoeff();
@@ -705,8 +705,8 @@ inline void MultibodyMeshMixedCcdDcd::ComputeTriangleAabbs(
     for (auto f = 0; f < mF.cols(); ++f)
     {
         Matrix<kDims, 2 * 3> XF;
-        XF.leftCols<3>()  = XT(Eigen::placeholders::all, mF.col(f)).block<kDims, 3>(0, 0);
-        XF.rightCols<3>() = X(Eigen::placeholders::all, mF.col(f)).block<kDims, 3>(0, 0);
+        XF.leftCols<3>()  = XT(Eigen::placeholders::all, mF.col(f)).template block<kDims, 3>(0, 0);
+        XF.rightCols<3>() = X(Eigen::placeholders::all, mF.col(f)).template block<kDims, 3>(0, 0);
         auto L            = mTriangleAabbs.col(f).head<kDims>();
         auto U            = mTriangleAabbs.col(f).tail<kDims>();
         L                 = XF.rowwise().minCoeff();
@@ -720,9 +720,9 @@ inline void MultibodyMeshMixedCcdDcd::ComputeTetrahedronAabbs(Eigen::DenseBase<T
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.MultibodyMeshMixedCcdDcd.ComputeTetrahedronAabbs");
     for (auto t = 0; t < mT.cols(); ++t)
     {
-        Matrix<kDims, 4> XT = X(Eigen::placeholders::all, mT.col(t)).block<kDims, 4>(0, 0);
-        auto L              = mTetrahedronAabbs.col(t).head<kDims>();
-        auto U              = mTetrahedronAabbs.col(t).tail<kDims>();
+        Matrix<kDims, 4> XT = X(Eigen::placeholders::all, mT.col(t)).template block<kDims, 4>(0, 0);
+        auto L              = mTetrahedronAabbs.col(t).template head<kDims>();
+        auto U              = mTetrahedronAabbs.col(t).template tail<kDims>();
         L                   = XT.rowwise().minCoeff();
         U                   = XT.rowwise().maxCoeff();
     }
@@ -735,10 +735,10 @@ inline void MultibodyMeshMixedCcdDcd::ForEachBodyPair(FOnBodyPair&& fOnBodyPair)
     mBodyBvh.SelfOverlaps(
         [&](Index o1, Index o2) {
             using math::linalg::mini::FromEigen;
-            auto L1 = mBodyAabbs.col(o1).head<kDims>();
-            auto U1 = mBodyAabbs.col(o1).tail<kDims>();
-            auto L2 = mBodyAabbs.col(o2).head<kDims>();
-            auto U2 = mBodyAabbs.col(o2).tail<kDims>();
+            auto L1 = mBodyAabbs.col(o1).template head<kDims>();
+            auto U1 = mBodyAabbs.col(o1).template tail<kDims>();
+            auto L2 = mBodyAabbs.col(o2).template head<kDims>();
+            auto U2 = mBodyAabbs.col(o2).template tail<kDims>();
             return geometry::OverlapQueries::AxisAlignedBoundingBoxes(
                 FromEigen(L1),
                 FromEigen(U1),

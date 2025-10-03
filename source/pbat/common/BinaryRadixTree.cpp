@@ -12,7 +12,7 @@ TEST_CASE("[common] BinaryRadixTree")
     using CodeType              = std::uint32_t;
     using EigenCodes            = Eigen::Vector<CodeType, Eigen::Dynamic>;
 
-    auto const fAssert = [](common::BinaryRadixTree<Index> const& tree) {
+    auto const fAssert = [=](common::BinaryRadixTree<Index> const& tree) {
         auto const nLeaves   = tree.LeafCount();
         auto const nInternal = tree.InternalNodeCount();
         CHECK_EQ(nLeaves, n);

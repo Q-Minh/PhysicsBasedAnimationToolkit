@@ -69,7 +69,7 @@ auto SimplexMeshBoundary(
         // Tetrahedra
         if (nSimplexFacets == 4)
         {
-            auto Fc = F.block<3, 4>(0, c * 4);
+            auto Fc = F.template block<3, 4>(0, c * 4);
             Fc.col(0) << C(0, c), C(1, c), C(3, c);
             Fc.col(1) << C(1, c), C(2, c), C(3, c);
             Fc.col(2) << C(2, c), C(0, c), C(3, c);
@@ -78,7 +78,7 @@ auto SimplexMeshBoundary(
         // Triangles
         if (nSimplexFacets == 3)
         {
-            auto Fc = F.block<2, 3>(0, c * 3);
+            auto Fc = F.template block<2, 3>(0, c * 3);
             Fc.col(0) << C(0, c), C(1, c);
             Fc.col(1) << C(1, c), C(2, c);
             Fc.col(2) << C(2, c), C(0, c);

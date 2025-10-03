@@ -16,7 +16,6 @@
 #include <ranges>
 
 namespace pbat::sim::contact {
-
 /**
  * @brief Multibody Tetrahedral Mesh System
  *
@@ -86,6 +85,7 @@ struct MultibodyTetrahedralMeshSystem
     {
         return T.middleCols(TP[o], TP[o + 1] - TP[o]);
     }
+
     /**
      * @brief Get vertex positions of body `o`
      * @tparam TDerivedX Eigen type of the input vertex positions
@@ -98,6 +98,7 @@ struct MultibodyTetrahedralMeshSystem
     {
         return X(Eigen::placeholders::all, V.segment(VP[o], VP[o + 1] - VP[o]));
     }
+
     /**
      * @brief Get the body associated with vertex `v`
      * @param v Index of the vertex
@@ -127,6 +128,7 @@ struct MultibodyTetrahedralMeshSystem
     {
         return CC[T(0, t)];
     }
+
     /**
      * @brief Get the number of contact vertices
      * @return Number of contact vertices
@@ -171,6 +173,7 @@ struct MultibodyTetrahedralMeshSystem
     {
         return std::make_pair(FP[o], FP[o + 1] - 1);
     }
+
     /**
      * @brief Set the friction coefficients for body `o`
      * @param o Index of the body
@@ -203,26 +206,28 @@ struct MultibodyTetrahedralMeshSystem
     void Deserialize(io::Archive& archive);
 
     Eigen::Vector<TIndex, Eigen::Dynamic>
-        V; ///< `|# contact vertices| x 1` indices into mesh vertices
+    V; ///< `|# contact vertices| x 1` indices into mesh vertices
     Eigen::Matrix<TIndex, 2, Eigen::Dynamic>
-        E; ///< `2 x |# contact edges|` edges into mesh vertices
+    E; ///< `2 x |# contact edges|` edges into mesh vertices
     Eigen::Matrix<TIndex, 3, Eigen::Dynamic>
-        F; ///< `3 x |# contact triangles|` triangles into mesh vertices
+    F; ///< `3 x |# contact triangles|` triangles into mesh vertices
 
     Eigen::Vector<TIndex, Eigen::Dynamic>
-        VP; ///< `|# bodies + 1| x 1` prefix sum of vertex pointers into `V`
+    VP; ///< `|# bodies + 1| x 1` prefix sum of vertex pointers into `V`
     Eigen::Vector<TIndex, Eigen::Dynamic>
-        EP; ///< `|# bodies + 1| x 1` prefix sum of edge pointers into `E`
+    EP; ///< `|# bodies + 1| x 1` prefix sum of edge pointers into `E`
     Eigen::Vector<TIndex, Eigen::Dynamic>
-        FP; ///< `|# bodies + 1| x 1` prefix sum of triangle pointers into `F`
-    Eigen::Vector<TIndex, Eigen::Dynamic> TP; ///< `|# bodies + 1| x 1` prefix sum of tetrahedron
-                                              ///< pointers into input tetrahedral mesh `T`
+    FP; ///< `|# bodies + 1| x 1` prefix sum of triangle pointers into `F`
+    Eigen::Vector<TIndex, Eigen::Dynamic> TP;
+    ///< `|# bodies + 1| x 1` prefix sum of tetrahedron
+                                                 ///< pointers into input tetrahedral mesh `T`
 
     Eigen::Vector<TIndex, Eigen::Dynamic> CC; ///< `|# mesh vertices| x 1` connected component map
 
     Eigen::Matrix<TScalar, 2, Eigen::Dynamic>
-        muF; ///< `2 x |# contact faces|` matrix of static (row 0) and dynamic (row 1) friction
-             ///< coefficients at contact faces
+    muF;
+    ///< `2 x |# contact faces|` matrix of static (row 0) and dynamic (row 1) friction
+                ///< coefficients at contact faces
 };
 
 template <common::CIndex TIndex, common::CArithmetic TScalar>
@@ -264,16 +269,18 @@ inline void MultibodyTetrahedralMeshSystem<TIndex, TScalar>::Construct(
     CC.setConstant(nNodes, IndexType(-1));
     auto verticesToElements =
         Eigen::Vector<IndexType, Eigen::Dynamic>::LinSpaced(nElements, 0, nElements - 1)
-            .replicate<1, 4>()
-            .transpose()
-            .reshaped(); // `4 x |# elements|` matrix `[[0,0,0,0], [1,1,1,1], ...,
-                         // [nElements-1,nElements-1,nElements-1,nElements-1]]`
+        .template replicate<1, 4>()
+        .transpose()
+        .reshaped(); // `4 x |# elements|` matrix `[[0,0,0,0], [1,1,1,1], ...,
+    // [nElements-1,nElements-1,nElements-1,nElements-1]]`
     CC(T.reshaped()) = ECC(verticesToElements);
     // 4. Sort the tets by connected component
     Eigen::Vector<IndexType, Eigen::Dynamic> Eordering =
-        common::ArgSort<IndexType>(nElements, [&](IndexType ei, IndexType ej) {
-            return ECC[ei] < ECC[ej];
-        });
+        common::ArgSort<IndexType>(
+            nElements,
+            [&](IndexType ei, IndexType ej) {
+                return ECC[ei] < ECC[ej];
+            });
     for (auto r = 0; r < T.rows(); ++r)
         common::Permute(T.row(r).begin(), T.row(r).end(), Eordering.begin());
     common::Permute(ECC.begin(), ECC.end(), Eordering.begin());
@@ -392,7 +399,6 @@ void MultibodyTetrahedralMeshSystem<TIndex, TScalar>::Deserialize(io::Archive& a
     CC                = group.ReadData<decltype(CC)>("CC");
     muF               = group.ReadData<decltype(muF)>("muF");
 }
-
 } // namespace pbat::sim::contact
 
 #endif // PBAT_SIM_CONTACT_MULTIBODYTETRAHEDRALMESHSYSTEM_H

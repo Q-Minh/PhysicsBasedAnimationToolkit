@@ -411,7 +411,7 @@ inline void FemElastoDynamics<TElement, Dims, THyperElasticEnergy, TScalar, TInd
     auto constexpr kOrder     = 2 * TElement::kOrder;
     IndexType const nElements = static_cast<IndexType>(mesh.E.cols());
     Eigen::Matrix<ScalarType, Eigen::Dynamic, Eigen::Dynamic> const XgM =
-        mesh.QuadraturePoints<kOrder>();
+        mesh.template QuadraturePoints<kOrder>();
     auto const nQuadPtsPerElementM = XgM.cols() / nElements;
     // Mass
     SetMassMatrix(
@@ -440,7 +440,7 @@ FemElastoDynamics<TElement, Dims, THyperElasticEnergy, TScalar, TIndex>::SetElas
     IndexType const nElements = static_cast<IndexType>(mesh.E.cols());
     // Compute mesh quadrature points
     Eigen::Matrix<ScalarType, Eigen::Dynamic, Eigen::Dynamic> const XgU =
-        mesh.QuadraturePoints<kOrder>();
+        mesh.template QuadraturePoints<kOrder>();
     auto const nQuadPtsPerElementU = XgU.cols() / nElements;
     // Elasticity
     SetElasticEnergy(
@@ -467,7 +467,7 @@ FemElastoDynamics<TElement, Dims, THyperElasticEnergy, TScalar, TIndex>::SetExte
     auto constexpr kOrder     = TElement::kOrder;
     IndexType const nElements = static_cast<IndexType>(mesh.E.cols());
     Eigen::Matrix<ScalarType, Eigen::Dynamic, Eigen::Dynamic> const XgB =
-        mesh.QuadraturePoints<kOrder>();
+        mesh.template QuadraturePoints<kOrder>();
     auto const nQuadPtsPerElementB = XgB.cols() / nElements;
     // External load
     SetExternalLoad(
@@ -511,7 +511,7 @@ inline void FemElastoDynamics<TElement, Dims, THyperElasticEnergy, TScalar, TInd
         "Dirichlet mask must be of type bool");
     IndexType const nNodes = static_cast<IndexType>(mesh.X.cols());
     assert(D.size() == nNodes);
-    dmask = D.cast<bool>();
+    dmask = D.template cast<bool>();
     dbc.setLinSpaced(nNodes, IndexType(0), nNodes - 1);
     auto it = std::stable_partition(dbc.begin(), dbc.end(), [&D](IndexType i) { return not D[i]; });
     ndbc    = nNodes - std::distance(dbc.begin(), it);

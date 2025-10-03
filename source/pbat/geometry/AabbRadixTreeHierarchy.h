@@ -17,7 +17,6 @@
 #include <numeric>
 
 namespace pbat::geometry {
-
 /**
  * @brief Axis-aligned radix tree hierarchy of axis-aligned bounding boxes.
  *
@@ -29,14 +28,14 @@ namespace pbat::geometry {
  * from scratch whenever updates are required. However, this aabb radix tree construction has
  * average time complexity of \f$ O(n) \f$ and worst-case time complexity of \f$ O(n log n) \f$.
  *
- * @tparam kDims Number of spatial dimensions
+ * @tparam Dims Number of spatial dimensions
  */
-template <auto kDims>
+template <auto Dims>
 class AabbRadixTreeHierarchy
 {
-  public:
-    using IndexType             = Index;            ///< Type of the indices
-    static auto constexpr kDims = kDims;            ///< Number of spatial dimensions
+public:
+    using IndexType = Index; ///< Type of the indices
+    static auto constexpr kDims = Dims; ///< Number of spatial dimensions
     using SelfType = AabbRadixTreeHierarchy<kDims>; ///< Type of this template instantiation
 
     AabbRadixTreeHierarchy() = default;
@@ -93,8 +92,11 @@ class AabbRadixTreeHierarchy
      */
     template <class FNodeOverlaps, class FObjectOverlaps, class FOnOverlap>
     void
-    Overlaps(FNodeOverlaps fNodeOverlaps, FObjectOverlaps fObjectOverlaps, FOnOverlap fOnOverlap)
-        const;
+    Overlaps(
+        FNodeOverlaps fNodeOverlaps,
+        FObjectOverlaps fObjectOverlaps,
+        FOnOverlap fOnOverlap)
+    const;
     /**
      * @brief Find the nearest neighbour to some user-defined query. If there are multiple nearest
      * neighbours, we may return a certain number > 1 of them.
@@ -174,7 +176,7 @@ class AabbRadixTreeHierarchy
      */
     auto Tree() const -> common::BinaryRadixTree<IndexType> const& { return tree; }
 
-  protected:
+protected:
     /**
      * @brief Compute Morton codes for the AABBs
      *
@@ -192,28 +194,29 @@ class AabbRadixTreeHierarchy
      */
     void SortMortonCodes();
 
-  private:
+private:
     Eigen::Vector<MortonCodeType, Eigen::Dynamic> codes; ///< Morton codes of the AABBs
     Eigen::Vector<IndexType, Eigen::Dynamic> inds;       ///< |# codes| sorted ordering
     Matrix<2 * kDims, Eigen::Dynamic>
-        IB; ///< 2*kDims x |# internal nodes| matrix of AABBs, such that
-            ///< for a node node, IB.col(node).head<kDims>() is the lower
-            ///< bound and IB.col(node).tail<kDims>() is the upper bound.
+    IB;
+    ///< 2*kDims x |# internal nodes| matrix of AABBs, such that
+               ///< for a node node, IB.col(node).head<kDims>() is the lower
+               ///< bound and IB.col(node).tail<kDims>() is the upper bound.
     common::BinaryRadixTree<IndexType> tree; ///< KdTree over the AABBs
 };
 
-template <auto kDims>
+template <auto Dims>
 template <class TDerivedL, class TDerivedU>
-inline AabbRadixTreeHierarchy<kDims>::AabbRadixTreeHierarchy(
+inline AabbRadixTreeHierarchy<Dims>::AabbRadixTreeHierarchy(
     Eigen::DenseBase<TDerivedL> const& L,
     Eigen::DenseBase<TDerivedU> const& U)
 {
     Construct(L.derived(), U.derived());
 }
 
-template <auto kDims>
+template <auto Dims>
 template <class TDerivedL, class TDerivedU>
-inline void AabbRadixTreeHierarchy<kDims>::Construct(
+inline void AabbRadixTreeHierarchy<Dims>::Construct(
     Eigen::DenseBase<TDerivedL> const& L,
     Eigen::DenseBase<TDerivedU> const& U)
 {
@@ -227,9 +230,9 @@ inline void AabbRadixTreeHierarchy<kDims>::Construct(
     IB.resize(2 * kDims, tree.InternalNodeCount());
 }
 
-template <auto kDims>
+template <auto Dims>
 template <class TDerivedL, class TDerivedU>
-inline void AabbRadixTreeHierarchy<kDims>::Update(
+inline void AabbRadixTreeHierarchy<Dims>::Update(
     Eigen::DenseBase<TDerivedL> const& L,
     Eigen::DenseBase<TDerivedU> const& U)
 {
@@ -245,27 +248,27 @@ inline void AabbRadixTreeHierarchy<kDims>::Update(
             if (tree.IsLeaf(lc))
             {
                 auto i = inds(tree.CodeIndex(lc));
-                LL     = L.col(i).head<kDims>();
-                LU     = U.col(i).head<kDims>();
+                LL     = L.col(i).template head<kDims>();
+                LU     = U.col(i).template head<kDims>();
             }
             else
             {
-                LL = IB.col(lc).head<kDims>();
-                LU = IB.col(lc).tail<kDims>();
+                LL = IB.col(lc).template head<kDims>();
+                LU = IB.col(lc).template tail<kDims>();
             }
             if (tree.IsLeaf(rc))
             {
                 auto i = inds(tree.CodeIndex(rc));
-                RL     = L.col(i).head<kDims>();
-                RU     = U.col(i).head<kDims>();
+                RL     = L.col(i).template head<kDims>();
+                RU     = U.col(i).template head<kDims>();
             }
             else
             {
-                RL = IB.col(rc).head<kDims>();
-                RU = IB.col(rc).tail<kDims>();
+                RL = IB.col(rc).template head<kDims>();
+                RU = IB.col(rc).template tail<kDims>();
             }
-            IB.col(n).head<kDims>() = LL.cwiseMin(RL);
-            IB.col(n).tail<kDims>() = LU.cwiseMax(RU);
+            IB.col(n).template head<kDims>() = LL.cwiseMin(RL);
+            IB.col(n).template tail<kDims>() = LU.cwiseMax(RU);
         },
         // fChild functor that only returns non-leaf children
         [&]<auto c>(Index n) -> Index {
@@ -276,9 +279,9 @@ inline void AabbRadixTreeHierarchy<kDims>::Update(
         });
 }
 
-template <auto kDims>
+template <auto Dims>
 template <class FNodeOverlaps, class FObjectOverlaps, class FOnOverlap>
-inline void AabbRadixTreeHierarchy<kDims>::Overlaps(
+inline void AabbRadixTreeHierarchy<Dims>::Overlaps(
     FNodeOverlaps fNodeOverlaps,
     FObjectOverlaps fObjectOverlaps,
     FOnOverlap fOnOverlap) const
@@ -297,8 +300,8 @@ inline void AabbRadixTreeHierarchy<kDims>::Overlaps(
         [&](Index n) {
             if (tree.IsLeaf(n))
                 return true; // Radix tree leaf nodes correspond to individual objects
-            auto L          = IB.col(n).head<kDims>();
-            auto U          = IB.col(n).tail<kDims>();
+            auto L          = IB.col(n).template head<kDims>();
+            auto U          = IB.col(n).template tail<kDims>();
             using TDerivedL = decltype(L);
             using TDerivedU = decltype(U);
             return fNodeOverlaps.template operator()<TDerivedL, TDerivedU>(L, U);
@@ -307,9 +310,9 @@ inline void AabbRadixTreeHierarchy<kDims>::Overlaps(
         fOnOverlap);
 }
 
-template <auto kDims>
+template <auto Dims>
 template <class FDistanceToNode, class FDistanceToObject, class FOnNearestNeighbour>
-inline void AabbRadixTreeHierarchy<kDims>::NearestNeighbours(
+inline void AabbRadixTreeHierarchy<Dims>::NearestNeighbours(
     FDistanceToNode fDistanceToNode,
     FDistanceToObject fDistanceToObject,
     FOnNearestNeighbour fOnNearestNeighbour,
@@ -328,13 +331,13 @@ inline void AabbRadixTreeHierarchy<kDims>::NearestNeighbours(
         []([[maybe_unused]] Index n) { return 1; },
         [&](Index n, [[maybe_unused]] Index i) { return inds(tree.CodeIndex(n)); },
         [&](Index n) {
-            using TDerivedL  = decltype(IB.col(n).head<kDims>());
-            using TDerivedU  = decltype(IB.col(n).tail<kDims>());
+            using TDerivedL  = decltype(IB.col(n).template head<kDims>());
+            using TDerivedU  = decltype(IB.col(n).template tail<kDims>());
             using ScalarType = std::invoke_result_t<FDistanceToNode, TDerivedL, TDerivedU>;
             if (tree.IsLeaf(n))
                 return ScalarType(0); // Radix tree leaf nodes correspond to individual objects
-            auto L = IB.col(n).head<kDims>();
-            auto U = IB.col(n).tail<kDims>();
+            auto L = IB.col(n).template head<kDims>();
+            auto U = IB.col(n).template tail<kDims>();
             return fDistanceToNode.template operator()<TDerivedL, TDerivedU>(L, U);
         },
         fDistanceToObject,
@@ -344,9 +347,9 @@ inline void AabbRadixTreeHierarchy<kDims>::NearestNeighbours(
         eps);
 }
 
-template <auto kDims>
+template <auto Dims>
 template <class FDistanceToNode, class FDistanceToObject, class FOnNearestNeighbour>
-inline void AabbRadixTreeHierarchy<kDims>::KNearestNeighbours(
+inline void AabbRadixTreeHierarchy<Dims>::KNearestNeighbours(
     FDistanceToNode fDistanceToNode,
     FDistanceToObject fDistanceToObject,
     FOnNearestNeighbour fOnNearestNeighbour,
@@ -365,13 +368,13 @@ inline void AabbRadixTreeHierarchy<kDims>::KNearestNeighbours(
         []([[maybe_unused]] Index n) { return 1; },
         [&](Index n, [[maybe_unused]] Index i) { return inds(tree.CodeIndex(n)); },
         [&](Index n) {
-            using TDerivedL  = decltype(IB.col(n).head<kDims>());
-            using TDerivedU  = decltype(IB.col(n).tail<kDims>());
+            using TDerivedL  = decltype(IB.col(n).template head<kDims>());
+            using TDerivedU  = decltype(IB.col(n).template tail<kDims>());
             using ScalarType = std::invoke_result_t<FDistanceToNode, TDerivedL, TDerivedU>;
             if (tree.IsLeaf(n))
                 return ScalarType(0); // Radix tree leaf nodes correspond to individual objects
-            auto L = IB.col(n).head<kDims>();
-            auto U = IB.col(n).tail<kDims>();
+            auto L = IB.col(n).template head<kDims>();
+            auto U = IB.col(n).template tail<kDims>();
             return fDistanceToNode.template operator()<TDerivedL, TDerivedU>(L, U);
         },
         fDistanceToObject,
@@ -380,9 +383,9 @@ inline void AabbRadixTreeHierarchy<kDims>::KNearestNeighbours(
         radius);
 }
 
-template <auto kDims>
+template <auto Dims>
 template <class FObjectsOverlap, class FOnSelfOverlap>
-inline void AabbRadixTreeHierarchy<kDims>::SelfOverlaps(
+inline void AabbRadixTreeHierarchy<Dims>::SelfOverlaps(
     FObjectsOverlap fObjectsOverlap,
     FOnSelfOverlap fOnSelfOverlap) const
 {
@@ -401,10 +404,10 @@ inline void AabbRadixTreeHierarchy<kDims>::SelfOverlaps(
             if (tree.IsLeaf(n1) or tree.IsLeaf(n2))
                 return true; // Radix tree leaf nodes correspond to individual objects
             using math::linalg::mini::FromEigen;
-            auto L1 = IB.col(n1).head<kDims>();
-            auto U1 = IB.col(n1).tail<kDims>();
-            auto L2 = IB.col(n2).head<kDims>();
-            auto U2 = IB.col(n2).tail<kDims>();
+            auto L1 = IB.col(n1).template head<kDims>();
+            auto U1 = IB.col(n1).template tail<kDims>();
+            auto L2 = IB.col(n2).template head<kDims>();
+            auto U2 = IB.col(n2).template tail<kDims>();
             return geometry::OverlapQueries::AxisAlignedBoundingBoxes(
                 FromEigen(L1),
                 FromEigen(U1),
@@ -415,9 +418,9 @@ inline void AabbRadixTreeHierarchy<kDims>::SelfOverlaps(
         fOnSelfOverlap);
 }
 
-template <auto kDims>
+template <auto Dims>
 template <class FObjectsOverlap, class FOnOverlap>
-inline void AabbRadixTreeHierarchy<kDims>::Overlaps(
+inline void AabbRadixTreeHierarchy<Dims>::Overlaps(
     SelfType const& rhs,
     FObjectsOverlap fObjectsOverlap,
     FOnOverlap fOnOverlap) const
@@ -469,10 +472,10 @@ inline void AabbRadixTreeHierarchy<kDims>::Overlaps(
             if (tree.IsLeaf(n1) or rhs.tree.IsLeaf(n2))
                 return true; // Radix tree leaf nodes correspond to individual objects
             using math::linalg::mini::FromEigen;
-            auto L1 = IB.col(n1).head<kDims>();
-            auto U1 = IB.col(n1).tail<kDims>();
-            auto L2 = rhs.IB.col(n2).head<kDims>();
-            auto U2 = rhs.IB.col(n2).tail<kDims>();
+            auto L1 = IB.col(n1).template head<kDims>();
+            auto U1 = IB.col(n1).template tail<kDims>();
+            auto L2 = rhs.IB.col(n2).template head<kDims>();
+            auto U2 = rhs.IB.col(n2).template tail<kDims>();
             return geometry::OverlapQueries::AxisAlignedBoundingBoxes(
                 FromEigen(L1),
                 FromEigen(U1),
@@ -483,9 +486,9 @@ inline void AabbRadixTreeHierarchy<kDims>::Overlaps(
         fOnOverlap);
 }
 
-template <auto kDims>
+template <auto Dims>
 template <class TDerivedL, class TDerivedU>
-inline void AabbRadixTreeHierarchy<kDims>::ComputeMortonCodes(
+inline void AabbRadixTreeHierarchy<Dims>::ComputeMortonCodes(
     Eigen::DenseBase<TDerivedL> const& L,
     Eigen::DenseBase<TDerivedU> const& U)
 {
@@ -502,8 +505,8 @@ inline void AabbRadixTreeHierarchy<kDims>::ComputeMortonCodes(
     }
 }
 
-template <auto kDims>
-inline void AabbRadixTreeHierarchy<kDims>::SortMortonCodes()
+template <auto Dims>
+inline void AabbRadixTreeHierarchy<Dims>::SortMortonCodes()
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.geometry.AabbRadixTreeHierarchy.SortMortonCodes");
     // NOTE:
@@ -518,7 +521,6 @@ inline void AabbRadixTreeHierarchy<kDims>::SortMortonCodes()
     cppsort::ska_sort(inds.begin(), inds.end(), [&](IndexType i) { return codes(i); });
     common::Permute(codes.begin(), codes.end(), inds.begin());
 }
-
 } // namespace pbat::geometry
 
 #endif // PBAT_GEOMETRY_AABBRADIXTREEHIERARCHY_H

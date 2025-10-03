@@ -70,7 +70,6 @@ TEST_CASE("[fem] Jacobian")
             CHECK_EQ(XiComputed.cols(), eg.size());
             for (auto e = 0; e < mesh.E.cols(); ++e)
             {
-                auto const nodes = mesh.E.col(e);
                 Matrix<Element::kDims, Element::kNodes> const XiComputedBlock =
                     XiComputed.block<Element::kDims, Element::kNodes>(0, e * Element::kNodes);
                 Matrix<Element::kDims, Element::kNodes> const error = XiComputedBlock - XiExpected;

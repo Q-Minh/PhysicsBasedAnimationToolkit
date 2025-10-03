@@ -7,7 +7,6 @@
 #include "pbat/math/linalg/mini/Matrix.h"
 
 namespace pbat::sim::contact {
-
 /**
  * @brief Computes the constraint \f$ C(x) = \begin{bmatrix} N & T & B \end{bmatrix}^T
  * (\begin{bmatrix} x_i & x_j & x_k \end{bmatrix} \beta - P) \in \mathbb{R}^3 \f$
@@ -107,12 +106,14 @@ PBAT_HOST_DEVICE void TriangleEnvironmentConstraintAndGradient(
     using math::linalg::mini::SMatrix;
     TriangleEnvironmentConstraint(P, NTB, X1, X2, X3, bary, C);
     // \nabla_{x_i,x_j,x_k} C_c = \beta \otimes NTB[:,c]
-    common::ForRange<0, 3>([&]<auto c>() {
-        common::ForRange<0, 3>(
-            [&]<auto i>() { gradCT.Col(c).Slice<3, 1>(i * 3, 0) = bary(i) * NTB.Col(c); });
-    });
+    common::ForRange<0, 3>(
+        [&]<auto c>() {
+            common::ForRange<0, 3>(
+                [&]<auto i>() {
+                    gradCT.Col(c).template Slice<3, 1>(i * 3, 0) = bary(i) * NTB.Col(c);
+                });
+        });
 }
-
 } // namespace pbat::sim::contact
 
 #endif // PBAT_SIM_CONTACT_CONSTRAINTS_H

@@ -54,9 +54,6 @@ auto LoadVectors(
     -> Eigen::Matrix<typename TDerivedFeg::Scalar, TDerivedFeg::RowsAtCompileTime, Eigen::Dynamic>
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.fem.LoadVector");
-    using ScalarType  = typename TDerivedFeg::Scalar;
-    using ElementType = TElement;
-
     using MatrixType =
         Eigen::Matrix<typename TDerivedFeg::Scalar, TDerivedFeg::RowsAtCompileTime, Eigen::Dynamic>;
     MatrixType F = MatrixType::Zero(Feg.rows(), nNodes);

@@ -214,7 +214,7 @@ inline void MeshVertexTetrahedronDcd::ComputeTriangleAabbs(Eigen::DenseBase<TDer
     for (auto f = 0; f < nTriangles; ++f)
     {
         Matrix<kDims, 3> XF;
-        XF     = X(Eigen::placeholders::all, mMultibodySystem.F.col(f)).block<kDims, 3>(0, 0);
+        XF     = X(Eigen::placeholders::all, mMultibodySystem.F.col(f)).template block<kDims, 3>(0, 0);
         auto L = mTriangleAabbs.col(f).head<kDims>();
         auto U = mTriangleAabbs.col(f).tail<kDims>();
         L      = XF.rowwise().minCoeff();
@@ -234,9 +234,9 @@ inline void MeshVertexTetrahedronDcd::ComputeTetrahedronMeshAabbs(
     auto TB = mTetrahedronAabbs(Eigen::placeholders::all, Eigen::seq(tbegin, tend - 1));
     for (auto t = tbegin; t < tend; ++t)
     {
-        Matrix<kDims, 4> XT = X(Eigen::placeholders::all, T.col(t)).block<kDims, 4>(0, 0);
-        auto L              = TB.col(t - tbegin).head<kDims>();
-        auto U              = TB.col(t - tbegin).tail<kDims>();
+        Matrix<kDims, 4> XT = X(Eigen::placeholders::all, T.col(t)).template block<kDims, 4>(0, 0);
+        auto L              = TB.col(t - tbegin).template head<kDims>();
+        auto U              = TB.col(t - tbegin).template tail<kDims>();
         L                   = XT.rowwise().minCoeff();
         U                   = XT.rowwise().maxCoeff();
     }
@@ -253,10 +253,10 @@ inline void MeshVertexTetrahedronDcd::ForEachBodyPair(FOnBodyPair&& fOnBodyPair)
                 throw std::runtime_error(
                     "MeshVertexTetrahedronDcd::UpdateActiveSet: oi == oj, which is not allowed.");
             }
-            auto L1 = mBodyAabbs.col(oi).head<kDims>();
-            auto U1 = mBodyAabbs.col(oi).tail<kDims>();
-            auto L2 = mBodyAabbs.col(oj).head<kDims>();
-            auto U2 = mBodyAabbs.col(oj).tail<kDims>();
+            auto L1 = mBodyAabbs.col(oi).template head<kDims>();
+            auto U1 = mBodyAabbs.col(oi).template tail<kDims>();
+            auto L2 = mBodyAabbs.col(oj).template head<kDims>();
+            auto U2 = mBodyAabbs.col(oj).template tail<kDims>();
             using math::linalg::mini::FromEigen;
             return geometry::OverlapQueries::AxisAlignedBoundingBoxes(
                 FromEigen(L1),
@@ -293,11 +293,11 @@ inline void MeshVertexTetrahedronDcd::MarkPenetratingVertices(
             auto const XT = X(Eigen::placeholders::all, T.col(tbegin + tp));
             using math::linalg::mini::FromEigen;
             if (geometry::OverlapQueries::PointTetrahedron3D(
-                    FromEigen(X.col(i).head<kDims>()),
-                    FromEigen(XT.col(0).head<kDims>()),
-                    FromEigen(XT.col(1).head<kDims>()),
-                    FromEigen(XT.col(2).head<kDims>()),
-                    FromEigen(XT.col(3).head<kDims>())))
+                    FromEigen(X.col(i).template head<kDims>()),
+                    FromEigen(XT.col(0).template head<kDims>()),
+                    FromEigen(XT.col(1).template head<kDims>()),
+                    FromEigen(XT.col(2).template head<kDims>()),
+                    FromEigen(XT.col(3).template head<kDims>())))
             {
                 auto it  = mBodyVertexToOtherBodiesValenceMap.find(vq);
                 auto end = mBodyVertexToOtherBodiesValenceMap.end();
@@ -334,7 +334,7 @@ inline void MeshVertexTetrahedronDcd::FindNearestTrianglesToPenetratingVertices(
         --valence;
         auto const v = vbegin + vq;
         auto const i = mMultibodySystem.V(v);
-        auto const P = X.col(i).head<kDims>();
+        auto const P = X.col(i).template head<kDims>();
         using math::linalg::mini::FromEigen;
         mTriangleMeshBvhs[static_cast<std::size_t>(of)].NearestNeighbours(
             [&]<class TL, class TU>(TL const& L, TU const& U) {
@@ -349,9 +349,9 @@ inline void MeshVertexTetrahedronDcd::FindNearestTrianglesToPenetratingVertices(
                 auto const XT = X(Eigen::placeholders::all, iF);
                 return geometry::DistanceQueries::PointTriangle(
                     FromEigen(P),
-                    FromEigen(XT.col(0).head<kDims>()),
-                    FromEigen(XT.col(1).head<kDims>()),
-                    FromEigen(XT.col(2).head<kDims>()));
+                    FromEigen(XT.col(0).template head<kDims>()),
+                    FromEigen(XT.col(1).template head<kDims>()),
+                    FromEigen(XT.col(2).template head<kDims>()));
             },
             [&](IndexType fq, [[maybe_unused]] ScalarType d, IndexType k) {
                 if (k >= kMaxVertexTriangleContacts)

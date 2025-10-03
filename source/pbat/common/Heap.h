@@ -14,6 +14,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <functional>
 
 namespace pbat::common {
 
@@ -31,9 +32,9 @@ class Heap
     /**
      * @brief Construct a new Heap object
      *
-     * @param less Comparator for the heap
+     * @param _less Comparator for the heap
      */
-    PBAT_HOST_DEVICE Heap(Less less = Less{}) : heap{}, less(less), size{0} {}
+    PBAT_HOST_DEVICE Heap(Less _less = Less{}) : heap{}, less(_less), size{0} {}
     /**
      * @brief Push an element to the heap
      *

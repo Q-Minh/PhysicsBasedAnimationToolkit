@@ -27,7 +27,7 @@ class Product
     static auto constexpr kCols     = RhsNestedType::kCols;
     static bool constexpr bRowMajor = false;
 
-    PBAT_HOST_DEVICE Product(LhsNestedType const& A, RhsNestedType const& B) : A(A), B(B) {}
+    PBAT_HOST_DEVICE Product(LhsNestedType const& _A, RhsNestedType const& _B) : A(_A), B(_B) {}
 
     PBAT_HOST_DEVICE ScalarType operator()(auto i, auto j) const
     {
