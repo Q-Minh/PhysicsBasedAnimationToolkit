@@ -20,7 +20,7 @@ BroydenIntegrator::BroydenIntegrator(Data dataIn)
       xkm1(data.x.size()),
       vbdfk(data.x.size()),
       vbdfkm1(data.x.size())
-    //   , Gkm()
+//   , Gkm()
 {
     // Construct Laplacian preconditioner as initial hessian inverse for Broyden method
     // auto L = fem::LaplacianMatrix<fem::Tetrahedron<1>, 3, Eigen::ColMajor>(
@@ -63,8 +63,8 @@ void BroydenIntegrator::Solve(Scalar sdt, Scalar sdt2, Index iterations)
         // Compute Broyden update
         auto mk       = std::min(m, k);
         auto GvbdFkLS = GvbdFk.leftCols(mk);
-        Eigen::LeastSquaresConjugateGradient<MatrixX> cg(GvbdFkLS);
-        cg.setMaxIterations(m);
+        Eigen::LeastSquaresConjugateGradient<MatrixX, Eigen::IdentityPreconditioner> cg(GvbdFkLS);
+        cg.setMaxIterations(std::max(Eigen::Index(1), m - k));
         cg.setTolerance(1e-10);
         // \gamma_k = [ VBD(F_k)^T VBD(F_k) ]^{-1} VBD(f_k)
         gammak.head(mk) = cg.solve(vbdfk);
