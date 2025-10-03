@@ -37,3 +37,7 @@ build-dir = "build/{wheel_tag}"
 
 [project.urls]
 Homepage = "https://github.com/Q-Minh/PhysicsBasedAnimationToolkit"
+
+[tool.pyright]
+reportMissingTypeStubs = false
+reportAttributeAccessIssue = false
