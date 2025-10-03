@@ -9,6 +9,15 @@ from collections.abc import Callable
 from typing import Tuple
 
 
+def sample_in_reference_triangle_2d() -> np.ndarray:
+    u = np.random.rand()
+    v = np.random.rand()
+    if u + v > 1.0:
+        u = 1.0 - u
+        v = 1.0 - v
+    return np.array([u, v])
+
+
 def solve_quadratic_in_reference_triangle_2d(xk, gk, Bk) -> np.ndarray:
     xstar = xk - np.linalg.solve(Bk, gk)
     feasible = (xstar >= 0).all() and (xstar <= 1).all() and (xstar.sum() <= 1)
@@ -42,16 +51,20 @@ def solve_quadratic_in_reference_triangle_2d(xk, gk, Bk) -> np.ndarray:
             a3 + b3 * tmin3 + 0.5 * c3 * tmin3**2,
         ]
         # Vectorized argmin
-        argmin = np.array([
-            fmins[0] <= fmins[1] and fmins[0] <= fmins[2],
-            fmins[1] <= fmins[0] and fmins[1] <= fmins[2],
-            fmins[2] <= fmins[0] and fmins[2] <= fmins[1],
-        ])
-        xstars = np.array([
-            [0.0, tmin1],
-            [tmin2, 0.0],
-            [tmin3, 1.0 - tmin3],
-        ])
+        argmin = np.array(
+            [
+                fmins[0] <= fmins[1] and fmins[0] <= fmins[2],
+                fmins[1] <= fmins[0] and fmins[1] <= fmins[2],
+                fmins[2] <= fmins[0] and fmins[2] <= fmins[1],
+            ]
+        )
+        xstars = np.array(
+            [
+                [0.0, tmin1],
+                [tmin2, 0.0],
+                [tmin3, 1.0 - tmin3],
+            ]
+        )
         xstar = xstars.T @ argmin / argmin.sum()
         # Non-vectorized argmin
         # imin = np.argmin(fmins)
@@ -85,9 +98,10 @@ def step_minimize_triangle(
 ]:  # xk+1, fk+1, gk+1, Bk+1, Rk+1
     xkp1 = solve_quadratic_in_reference_triangle_2d(xk, gk, Bk)
     sk = xkp1 - xk
-    # Use max-norm, i.e. box trust region
+    # NOTE: Uncomment to use 2-norm, i.e. ball trust region
     # if np.dot(sk, sk) > Rk * Rk:
     #     sk = sk * Rk / np.linalg.norm(sk)
+    # Use max-norm, i.e. box trust region
     lensk = np.linalg.norm(sk, np.inf)
     # TODO: Vectorize this branch
     if lensk > Rk:
@@ -98,7 +112,9 @@ def step_minimize_triangle(
     yk = gkp1 - gk
     fkp1 = f(xkp1)
     ared = fk - fkp1
-    mkp1 = gk.T @ sk + 0.5 * sk.T @ Bk @ sk
+    Bksk = Bk @ sk
+    skTBksk = sk.T @ Bksk
+    mkp1 = gk.T @ sk + 0.5 * skTBksk
     pred = -mkp1
     rho = ared / (pred + eps)
     Rkp1 = Rk
@@ -107,15 +123,14 @@ def step_minimize_triangle(
         Rkp1 = trgrow * Rk
     elif rho < trlo:
         Rkp1 = trshrink * Rk
-    vk = yk - Bk @ sk
+    vk = yk - Bksk
     den = np.dot(vk, sk)
     # stable = den**2 >= r * np.dot(sk, sk) * np.dot(vk, vk)
     # Bkp1 = Bk + np.outer(vk, vk) / den if stable else Bk
     # Update inverse hessian estimate and keep positive definite
     Bkp1 = Bk
     skTyk = np.dot(sk, yk)
-    skTBksk = np.dot(sk, Bk @ sk)
-    # NOTE: For a GPU implementation, we probably also want to 
+    # NOTE: For a GPU implementation, we probably also want to
     # vectorize these branches
     if skTyk > skTBksk:
         Bkp1 = Bk + np.outer(vk, vk) / den
@@ -160,8 +175,8 @@ if __name__ == "__main__":
     gk = np.zeros(2)
     Bk = np.eye(2)
     Rk = 1.0
-    sigmaR = 1.0
-    sigmaB = 1.0
+    sigmaR = 1e-1
+    sigmaB = 1e-1
     eta = 1e-3
     r = 1e-8
     trlo = 0.1
@@ -173,6 +188,10 @@ if __name__ == "__main__":
     xpath = []
     fpath = []
     Rpath = []
+
+    # For reproducibility
+    np.random.seed(0)
+    randomize_sample = False
 
     # Polyscope visualization
     ps.set_verbosity(0)
@@ -201,6 +220,7 @@ if __name__ == "__main__":
         global xk, fk, gk, Bk, Rk, sigmaB, sigmaR
         global eta, r, trlo, trhi, trbound, trgrow, trshrink
         global xpath, fpath, Rpath
+        global randomize_sample
 
         # Load
         if imgui.TreeNode("I/O"):
@@ -289,11 +309,16 @@ if __name__ == "__main__":
                     fpath = fpath + [fkp1]
                     Rpath = Rpath + [Rkp1]
                 xk, fk, gk, Bk, Rk = xkp1, fkp1, gkp1, Bkp1, Rkp1
+                
+            changed, randomize_sample = imgui.Checkbox("Randomize sample", randomize_sample)
             if imgui.Button("Reset"):
-                xk = np.array([0.25, 0.25])
+                if randomize_sample:
+                    xk = sample_in_reference_triangle_2d()
+                else:
+                    xk = np.array([0.25, 0.25])
                 fk = f(xk)
                 gk = g(xk)
-                
+
                 Bk = np.eye(2) * sigmaB * max(elen)
                 Rk = sigmaR * max(elen)
                 xpath = [DX @ xk + A]
@@ -322,7 +347,10 @@ if __name__ == "__main__":
             if len(Rpath) > 0:
                 if implot.BeginPlot("Trust Region Radius"):
                     implot.PlotLine(
-                        "Rk", np.array(Rpath) / max(elen), 1 / len(Rpath), 0.0  # xscale  # xstart
+                        "Rk",
+                        np.array(Rpath) / max(elen),
+                        1 / len(Rpath),
+                        0.0,  # xscale  # xstart
                     )
                     implot.EndPlot()
 
