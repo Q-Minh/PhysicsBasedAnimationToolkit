@@ -246,7 +246,11 @@ if __name__ == "__main__":
             ABC = (T @ VH)[:3, :]
             A, B, C = ABC[:, 0], ABC[:, 1], ABC[:, 2]
             DX = np.vstack([B - A, C - A]).T
-
+            elen = [
+                np.linalg.norm(A - B),
+                np.linalg.norm(A - C),
+                np.linalg.norm(B - C),
+            ]
             # Objective
             sdf = pbat.geometry.sdf.Composite(forest)
 
@@ -285,11 +289,7 @@ if __name__ == "__main__":
                 xk = np.array([0.25, 0.25])
                 fk = f(xk)
                 gk = g(xk)
-                elen = [
-                    np.linalg.norm(A - B),
-                    np.linalg.norm(A - C),
-                    np.linalg.norm(B - C),
-                ]
+                
                 Bk = np.eye(2) * sigmaB * max(elen)
                 Rk = sigmaR * max(elen)
                 xpath = [DX @ xk + A]
