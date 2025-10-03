@@ -89,6 +89,7 @@ def step_minimize_triangle(
     # if np.dot(sk, sk) > Rk * Rk:
     #     sk = sk * Rk / np.linalg.norm(sk)
     lensk = np.linalg.norm(sk, np.inf)
+    # TODO: Vectorize this branch
     if lensk > Rk:
         sk = sk * Rk / lensk
         xkp1 = xk + sk
@@ -101,6 +102,7 @@ def step_minimize_triangle(
     pred = -mkp1
     rho = ared / (pred + eps)
     Rkp1 = Rk
+    # TODO: Vectorize these branches
     if rho > trhi and lensk >= trbound * Rk:
         Rkp1 = trgrow * Rk
     elif rho < trlo:
@@ -113,6 +115,8 @@ def step_minimize_triangle(
     Bkp1 = Bk
     skTyk = np.dot(sk, yk)
     skTBksk = np.dot(sk, Bk @ sk)
+    # NOTE: For a GPU implementation, we probably also want to 
+    # vectorize these branches
     if skTyk > skTBksk:
         Bkp1 = Bk + np.outer(vk, vk) / den
     if rho <= eta:
