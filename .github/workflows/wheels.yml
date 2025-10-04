@@ -22,20 +22,20 @@ jobs:
             build_tool_args: -j4
             cibw_image: quay.io/pypa/manylinux_2_28_x86_64
             cibw_archs: x86_64
-            cibw_build: cp310-manylinux_x86_64 cp311-manylinux_x86_64 cp312-manylinux_x86_64
+            cibw_build: cp311-manylinux_x86_64 cp312-manylinux_x86_64 cp313-manylinux_x86_64
           - os: windows-2022
             build_tool_args: /p:CL_MPCount=4
             cibw_archs: AMD64
-            cibw_build: cp310-win_amd64 cp311-win_amd64 cp312-win_amd64
+            cibw_build: cp311-win_amd64 cp312-win_amd64 cp313-win_amd64
           - os: macos-13
             build_tool_args: -j4
             cibw_archs: x86_64 universal2
-            cibw_build: cp310-macosx_x86_64 cp311-macosx_x86_64 cp312-macosx_x86_64 cp310_macosx_universal2 cp311_macosx_universal2 cp312_macosx_universal2
+            cibw_build: cp312-macosx_x86_64 cp312_macosx_universal2
             macosx_deployment_target: "13.0"
           - os: macos-14
             build_tool_args: -j4
             cibw_archs: arm64 universal2
-            cibw_build: cp310-macosx_arm64 cp311-macosx_arm64 cp312-macosx_arm64 cp310_macosx_universal2 cp311_macosx_universal2 cp312_macosx_universal2
+            cibw_build: cp311-macosx_arm64 cp312-macosx_arm64 cp313-macosx_arm64 cp311_macosx_universal2 cp312_macosx_universal2 cp313_macosx_universal2
             macosx_deployment_target: "14.0"
       max-parallel: 4
 
