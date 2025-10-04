@@ -1,4 +1,4 @@
-import pbatoolkit as pbat
+from pbatoolkit import pbat, pypbat
 import argparse
 import meshio
 import numpy as np
@@ -47,7 +47,7 @@ if __name__ == "__main__":
     C = np.vstack([C, C + V.shape[0]]).astype(np.int32)
     grid = pbat.geometry.HierarchicalHashGrid3D()
     dims = V.shape[1]
-    profiler = pbat.profiling.Profiler()
+    profiler = pypbat.profiling.Profiler()
 
     # Setup animation
     V = np.vstack([V, V])

@@ -1,4 +1,4 @@
-import pbatoolkit as pbat
+from pbatoolkit import pbat, pypbat
 import argparse
 import meshio
 import numpy as np
@@ -19,7 +19,7 @@ if __name__ == "__main__":
     V, T = imesh.points.astype(np.float32), imesh.cells_dict["tetra"].astype(np.int32)
     F = igl.boundary_facets(T)
     F[:, :2] = np.roll(F[:, :2], shift=1, axis=1)
-    profiler = pbat.profiling.Profiler()
+    profiler = pypbat.profiling.Profiler()
 
     # Initial mesh quantities
     nverts = V.shape[0]

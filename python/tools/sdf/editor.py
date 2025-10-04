@@ -1,5 +1,5 @@
 from typing import Tuple
-import pbatoolkit as pbat
+from pbatoolkit import pbat
 import polyscope as ps
 import polyscope.imgui as imgui
 import numpy as np

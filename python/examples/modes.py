@@ -1,6 +1,5 @@
-import pbatoolkit as pbat
+from pbatoolkit import pbat, pypbat
 import numpy as np
-import scipy as sp
 import polyscope as ps
 import polyscope.imgui as imgui
 import time
@@ -35,7 +34,7 @@ if __name__ == "__main__":
     element = pbat.fem.Element.Tetrahedron
     X, E = pbat.fem.mesh(
         V.T, C.T, element=element)
-    w, Veigs = pbat.fem.rest_pose_hyper_elastic_modes(
+    w, Veigs = pypbat.fem.rest_pose_hyper_elastic_modes(
         E, X, element, Y=args.Y, nu=args.nu, rho=args.rho, modes=args.modes)
     ps.set_up_dir("z_up")
     ps.set_front_dir("neg_y_front")

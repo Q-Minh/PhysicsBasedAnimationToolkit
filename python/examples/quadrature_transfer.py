@@ -1,4 +1,4 @@
-import pbatoolkit as pbat
+from pbatoolkit import pbat
 import numpy as np
 import scipy as sp
 import polyscope as ps

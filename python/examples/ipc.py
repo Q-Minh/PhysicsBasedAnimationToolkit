@@ -1,4 +1,4 @@
-import pbatoolkit as pbat
+from pbatoolkit import pbat, pypbat
 import igl
 import ipctk
 import meshio
@@ -531,7 +531,7 @@ if __name__ == "__main__":
 
     # Create hyper elastic potential
     Y, nu, psi = args.Y, args.nu, pbat.fem.HyperElasticEnergy.StableNeoHookean
-    mu, llambda = pbat.fem.lame_coefficients(Y, nu)
+    mu, llambda = pypbat.fem.lame_coefficients(Y, nu)
     mug = np.full(E.shape[1], mu, dtype=x.dtype)
     lambdag = np.full(E.shape[1], llambda, dtype=x.dtype)
     eg = np.arange(E.shape[1], dtype=np.int64)
@@ -583,7 +583,7 @@ if __name__ == "__main__":
             Xmax[args.fixed_axis] - args.percent_fixed * extent[args.fixed_axis]
         )
         Xmax[args.fixed_axis] += args.percent_fixed * extent[args.fixed_axis]
-    aabb = pbat.geometry.aabb(np.vstack((Xmin, Xmax)).T)
+    aabb = pypbat.geometry.aabb(np.vstack((Xmin, Xmax)).T)
     vdbc = np.array(aabb.contained(X))
     dbcs = vdbc[:, np.newaxis]
     dbcs = np.repeat(dbcs, dims, axis=1)
@@ -608,7 +608,7 @@ if __name__ == "__main__":
     newton_rtol = 1e-5
     t = 0
 
-    profiler = pbat.profiling.Profiler()
+    profiler = pypbat.profiling.Profiler()
     # ipctk.set_logger_level(ipctk.LoggerLevel.trace)
 
     def callback():

@@ -12,46 +12,46 @@ namespace pbat {
 namespace sim {
 namespace vbd {
 
-class PBAT_API Integrator
+class Integrator
 {
   public:
-    Integrator(Data data);
+    PBAT_API Integrator(Data data);
 
-    void Step(Scalar dt, Index iterations, Index substeps = Index{1});
+    PBAT_API void Step(Scalar dt, Index iterations, Index substeps = Index{1});
     /**
      * @brief Mark next time step for optimization tracing.
      *
      * @param path Directory in which to save optimization traces.
      * @param t Time step index.
      */
-    void TraceNextStep(std::string const& path = ".", Index t = -1);
+    PBAT_API void TraceNextStep(std::string const& path = ".", Index t = -1);
 
     Data data;
 
-    virtual ~Integrator() = default;
+    PBAT_API virtual ~Integrator() = default;
 
   protected:
-    void InitializeSolve(Scalar sdt, Scalar sdt2);
-    void RunVbdIteration(Scalar sdt, Scalar sdt2);
-    virtual void Solve(Scalar sdt, Scalar sdt2, Index iterations);
-    void SolveVertex(Index i, Scalar sdt, Scalar sdt2);
+    PBAT_API void InitializeSolve(Scalar sdt, Scalar sdt2);
+    PBAT_API void RunVbdIteration(Scalar sdt, Scalar sdt2);
+    PBAT_API virtual void Solve(Scalar sdt, Scalar sdt2, Index iterations);
+    PBAT_API void SolveVertex(Index i, Scalar sdt, Scalar sdt2);
 
     /**
      * @brief The following methods are made public for debugging purposes (generally).
      */
   public:
-    Scalar ObjectiveFunction(
+    PBAT_API Scalar ObjectiveFunction(
         Eigen::Ref<MatrixX const> const& xk,
         Eigen::Ref<MatrixX const> const& xtilde,
         Scalar dt);
-    VectorX ObjectiveFunctionGradient(
+    PBAT_API VectorX ObjectiveFunctionGradient(
         Eigen::Ref<MatrixX const> const& xk,
         Eigen::Ref<MatrixX const> const& xtilde,
         Scalar dt);
 
   protected:
-    void ExportTrace(Scalar sdt, Index substep);
-    void TryTraceIteration(Scalar sdt);
+    PBAT_API void ExportTrace(Scalar sdt, Index substep);
+    PBAT_API void TryTraceIteration(Scalar sdt);
 
   private:
     bool mTraceIterates{false};

@@ -1,4 +1,4 @@
-import pbatoolkit as pbat
+from pbatoolkit import pbat, pypbat
 import meshio
 import numpy as np
 import scipy as sp
@@ -162,7 +162,7 @@ if __name__ == "__main__":
     # Compute material (Lame) constants
     Y = np.full(E.shape[1], args.Y)
     nu = np.full(E.shape[1], args.nu)
-    mue, lambdae = pbat.fem.lame_coefficients(Y, nu)
+    mue, lambdae = pypbat.fem.lame_coefficients(Y, nu)
 
     # Set Dirichlet boundary conditions
     Xmin = X.min(axis=1)
@@ -171,7 +171,7 @@ if __name__ == "__main__":
     Xmax[args.fixed_axis] = (
         Xmin[args.fixed_axis] + args.percent_fixed * extent[args.fixed_axis]
     )
-    aabb = pbat.geometry.aabb(np.vstack((Xmin, Xmax)).T)
+    aabb = pypbat.geometry.aabb(np.vstack((Xmin, Xmax)).T)
     vdbc = np.array(aabb.contained(X))
     minv = 1 / m
 
@@ -184,7 +184,7 @@ if __name__ == "__main__":
     # muC = args.muC * muC[VC]
     gc_ordering = pbat.graph.GreedyColorOrderingStrategy.LargestDegree
     gc_selection = pbat.graph.GreedyColorSelectionStrategy.LeastUsed
-    Pptr, Padj, GC = pbat.sim.xpbd.partition_mesh_constraints(
+    Pptr, Padj, GC = pypbat.sim.xpbd.partition_mesh_constraints(
         X, E, ordering=gc_ordering, selection=gc_selection
     )
     data = (
@@ -231,7 +231,7 @@ if __name__ == "__main__":
     has_partitioning = getattr(pbat.graph, "partition") is not None
     if has_partitioning and args.cluster:
         SGptr, SGadj, Cptr, Cadj, clustering, SGC = (
-            pbat.sim.xpbd.partition_clustered_mesh_constraint_graph(
+            pypbat.sim.xpbd.partition_clustered_mesh_constraint_graph(
                 X, E, ordering=gc_ordering, selection=gc_selection
             )
         )
@@ -250,7 +250,7 @@ if __name__ == "__main__":
     integrator_type = pbat.gpu.xpbd.Integrator if args.gpu else pbat.sim.xpbd.Integrator
     xpbd = integrator_type(data)
 
-    profiler = pbat.profiling.Profiler()
+    profiler = pypbat.profiling.Profiler()
 
     def callback():
         global dt, iterations, substeps, alphac

@@ -1,4 +1,4 @@
-import pbatoolkit as pbat
+from pbatoolkit import pbat, pypbat
 import ilupp
 import meshio
 import numpy as np
@@ -50,7 +50,7 @@ if __name__ == "__main__":
 
     # Create hyper elastic potential
     Y, nu, energy = args.Y, args.nu, pbat.fem.HyperElasticEnergy.StableNeoHookean
-    mu, llambda = pbat.fem.lame_coefficients(Y, nu)
+    mu, llambda = pypbat.fem.lame_coefficients(Y, nu)
     mug = np.full(E.shape[1], mu, dtype=x.dtype)
     lambdag = np.full(E.shape[1], llambda, dtype=x.dtype)
     eg = np.arange(E.shape[1], dtype=np.int32)
@@ -66,7 +66,7 @@ if __name__ == "__main__":
     Xmax = X.max(axis=1)
     Xmax[0] = Xmin[0]+1e-4
     Xmin[0] = Xmin[0]-1e-4
-    aabb = pbat.geometry.aabb(np.vstack((Xmin, Xmax)).T)
+    aabb = pypbat.geometry.aabb(np.vstack((Xmin, Xmax)).T)
     vdbc = np.array(aabb.contained(X))
     dbcs = vdbc[:, np.newaxis]
     dbcs = np.repeat(dbcs, dims, axis=1)
@@ -120,7 +120,7 @@ if __name__ == "__main__":
     cg_maxiter = 100
     dx = np.zeros(n)
 
-    profiler = pbat.profiling.Profiler()
+    profiler = pypbat.profiling.Profiler()
 
     def callback():
         global x, v, dx, hep, dt, M, f

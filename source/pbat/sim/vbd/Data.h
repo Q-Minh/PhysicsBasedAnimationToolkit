@@ -11,7 +11,7 @@ namespace pbat::sim::vbd {
 /**
  * @brief VBD simulation configuration
  */
-struct PBAT_API Data
+struct Data
 {
   public:
     static auto constexpr kDims = 3; ///< Number of spatial dimensions
@@ -24,7 +24,7 @@ struct PBAT_API Data
      * @param E `4x|# elements|` tetrahedra
      * @return Reference to this
      */
-    Data&
+    PBAT_API Data&
     WithVolumeMesh(Eigen::Ref<MatrixX const> const& X, Eigen::Ref<IndexMatrixX const> const& E);
     /**
      * @brief Collision mesh
@@ -33,7 +33,7 @@ struct PBAT_API Data
      * @return Reference to this
      * @pre WithVolumeMesh() must be called before this
      */
-    Data& WithSurfaceMesh(
+    PBAT_API Data& WithSurfaceMesh(
         Eigen::Ref<IndexVectorX const> const& V,
         Eigen::Ref<IndexMatrixX const> const& F);
     /**
@@ -41,19 +41,19 @@ struct PBAT_API Data
      * @param B `|# vertices|` array of body indices s.t. B[i] is the body index of vertex i
      * @return Reference to this
      */
-    Data& WithBodies(Eigen::Ref<IndexVectorX const> const& B);
+    PBAT_API Data& WithBodies(Eigen::Ref<IndexVectorX const> const& B);
     /**
      * @brief Vertex velocities
      * @param v `3x|# verts|` vertex velocities
      * @return Reference to this
      */
-    Data& WithVelocity(Eigen::Ref<MatrixX const> const& v);
+    PBAT_API Data& WithVelocity(Eigen::Ref<MatrixX const> const& v);
     /**
      * @brief Vertex external accelerations
      * @param aext `3x|# verts|` vertex external accelerations
      * @return Reference to this
      */
-    Data& WithAcceleration(Eigen::Ref<MatrixX const> const& aext);
+    PBAT_API Data& WithAcceleration(Eigen::Ref<MatrixX const> const& aext);
     /**
      * @brief Element material parameters
      * @param rhoe `|# elems|` mass densities
@@ -61,7 +61,7 @@ struct PBAT_API Data
      * @param lambdae `|# elems|` 2nd Lame coefficients
      * @return Reference to this
      */
-    Data& WithMaterial(
+    PBAT_API Data& WithMaterial(
         Eigen::Ref<VectorX const> const& rhoe,
         Eigen::Ref<VectorX const> const& mue,
         Eigen::Ref<VectorX const> const& lambdae);
@@ -72,7 +72,7 @@ struct PBAT_API Data
      * @param bDbcSorted If false, dbc will be sorted
      * @return Reference to this
      */
-    Data& WithDirichletConstrainedVertices(
+    PBAT_API Data& WithDirichletConstrainedVertices(
         IndexVectorX const& dbc,
         Scalar muD      = Scalar(1),
         bool bDbcSorted = false);
@@ -82,7 +82,7 @@ struct PBAT_API Data
      * @param eSelection Color selection strategy
      * @return Reference to this
      */
-    Data& WithVertexColoringStrategy(
+    PBAT_API Data& WithVertexColoringStrategy(
         graph::EGreedyColorOrderingStrategy eOrdering,
         graph::EGreedyColorSelectionStrategy eSelection);
     /**
@@ -90,13 +90,13 @@ struct PBAT_API Data
      * @param strategy Initialization strategy
      * @return Reference to this
      */
-    Data& WithInitializationStrategy(EInitializationStrategy strategy);
+    PBAT_API Data& WithInitializationStrategy(EInitializationStrategy strategy);
     /**
      * @brief Uniform damping coefficient
      * @param kD Damping coefficient
      * @return Reference to this
      */
-    Data& WithRayleighDamping(Scalar kD);
+    PBAT_API Data& WithRayleighDamping(Scalar kD);
     /**
      * @brief Normal and frictional contact parameters
      *
@@ -108,44 +108,44 @@ struct PBAT_API Data
      * See \cite li2020ipc.
      * @return Reference to this
      */
-    Data& WithContactParameters(Scalar muC, Scalar muF, Scalar epsv);
+    PBAT_API Data& WithContactParameters(Scalar muC, Scalar muF, Scalar epsv);
     /**
      * @brief Active set update frequency
      * @param activeSetUpdateFrequency Active set update frequency
      * @return Reference to this
      */
-    Data& WithActiveSetUpdateFrequency(Index activeSetUpdateFrequency);
+    PBAT_API Data& WithActiveSetUpdateFrequency(Index activeSetUpdateFrequency);
     /**
      * @brief Numerical zero for hessian pseudo-singularity check
      * @param zero Numerical zero
      * @return Reference to this
      */
-    Data& WithHessianDeterminantZeroUnder(Scalar zero);
+    PBAT_API Data& WithHessianDeterminantZeroUnder(Scalar zero);
     /**
      * @brief Use Chebyshev acceleration
      * @param rho Chebyshev acceleration estimated spectral radius
      * @return Reference to this
      */
-    Data& WithChebyshevAcceleration(Scalar rho);
+    PBAT_API Data& WithChebyshevAcceleration(Scalar rho);
     /**
      * @brief Use Anderson acceleration
      * @param window Anderson acceleration window size
      * @return Reference to this
      */
-    Data& WithAndersonAcceleration(Index window);
+    PBAT_API Data& WithAndersonAcceleration(Index window);
     /**
      * @brief Use Broyden method
      * @param window Broyden method window size
      * @return Reference to this
      */
-    Data& WithBroydenMethod(Index window);
+    PBAT_API Data& WithBroydenMethod(Index window);
     /**
      * @brief Use Nesterov acceleration
      * @param L Lipschitz constant estimation for the gradient
      * @param start Start iteration for Nesterov acceleration
      * @return Reference to this
      */
-    Data& WithNesterovAcceleration(Scalar L, Index start = 3);
+    PBAT_API Data& WithNesterovAcceleration(Scalar L, Index start = 3);
     /**
      * @brief Use Trust Region acceleration
      * @param eta Trust Region energy reduction accuracy threshold
@@ -154,13 +154,13 @@ struct PBAT_API Data
      * @return Reference to this
      * @pre `tau > 1` and `eta > 0`
      */
-    Data& WithTrustRegionAcceleration(Scalar eta, Scalar tau, bool bCurved = true);
+    PBAT_API Data& WithTrustRegionAcceleration(Scalar eta, Scalar tau, bool bCurved = true);
     /**
      * @brief Construct the simulation data
      * @param bValidate Throw on detected ill-formed inputs
      * @return Reference to this
      */
-    Data& Construct(bool bValidate = true);
+    PBAT_API Data& Construct(bool bValidate = true);
 
   public:
     // Simulation mesh

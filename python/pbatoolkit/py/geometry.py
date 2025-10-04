@@ -1,22 +1,6 @@
 from enum import Enum
 import numpy as np
-from ._pbat import geometry as _geometry
-
-import sys
-import inspect
-import contextlib
-import io
-
-__module = sys.modules[__name__]
-_strio = io.StringIO()
-with contextlib.redirect_stdout(_strio):
-    help(_geometry)
-_strio.seek(0)
-setattr(__module, "__doc__", _strio.read())
-
-for _name, _attr in inspect.getmembers(_geometry):
-    if not _name.startswith("__"):
-        setattr(__module, _name, _attr)
+from .._pbat import geometry as _geometry
 
 
 def aabb(P: np.ndarray):
@@ -34,7 +18,8 @@ def aabb(P: np.ndarray):
     dims = P.shape[0]
     if dims != 2 and dims != 3:
         raise ValueError(
-            f"Expected points P with dimensions (i.e. rows) 2 or 3, but got {dims}")
+            f"Expected points P with dimensions (i.e. rows) 2 or 3, but got {dims}"
+        )
     class_ = getattr(_geometry, f"AxisAlignedBoundingBox{dims}")
     return class_(P)
 
@@ -64,8 +49,7 @@ def bvh(V: np.ndarray, C: np.ndarray, cell: Cell, max_points_in_leaf=10):
         The BVH over cells in mesh (V,C)
     """
     if cell == Cell.Quadrilateral or cell == Cell.Hexahedron:
-        raise ValueError(
-            f"{cell} meshes not supported yet for BVH construction")
+        raise ValueError(f"{cell} meshes not supported yet for BVH construction")
     dims = V.shape[0]
     if cell == Cell.Triangle:
         if dims == 2:
@@ -73,11 +57,9 @@ def bvh(V: np.ndarray, C: np.ndarray, cell: Cell, max_points_in_leaf=10):
         elif dims == 3:
             return _geometry.TriangleAabbHierarchy3D(V, C, max_points_in_leaf)
         else:
-            raise ValueError(
-                f"Expected 2 or 3 dimensional positions, but got {dims}")
+            raise ValueError(f"Expected 2 or 3 dimensional positions, but got {dims}")
     if cell == Cell.Tetrahedron:
         if dims == 3:
             return _geometry.TetrahedralAabbHierarchy(V, C, max_points_in_leaf)
         else:
-            raise ValueError(
-                f"Expected 3 dimensional positions, but got {dims}")
+            raise ValueError(f"Expected 3 dimensional positions, but got {dims}")

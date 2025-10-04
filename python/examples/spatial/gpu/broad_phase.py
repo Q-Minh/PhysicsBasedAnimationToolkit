@@ -1,4 +1,4 @@
-import pbatoolkit as pbat
+from pbatoolkit import pbat, pypbat
 import argparse
 import meshio
 import numpy as np
@@ -45,7 +45,7 @@ if __name__ == "__main__":
     bvh = pbat.gpu.geometry.Bvh(C.shape[0], 24 * C.shape[0])
     dims = V.shape[1]
     aabbs = pbat.gpu.geometry.Aabb(dims, C.shape[0])
-    profiler = pbat.profiling.Profiler()
+    profiler = pypbat.profiling.Profiler()
 
     # Setup animation
     V = np.vstack([V, V])

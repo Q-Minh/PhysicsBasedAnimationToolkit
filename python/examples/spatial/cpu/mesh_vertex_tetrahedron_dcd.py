@@ -1,4 +1,4 @@
-import pbatoolkit as pbat
+from pbatoolkit import pbat, pypbat
 import argparse
 import meshio
 import numpy as np
@@ -64,7 +64,7 @@ if __name__ == "__main__":
     grows = args.rows
     gcols = args.cols
     gheight = args.height
-    aabb = pbat.geometry.aabb(V.T)
+    aabb = pypbat.geometry.aabb(V.T)
     extents = aabb.max - aabb.min
     separation = args.separation * extents
     VS = [
@@ -109,7 +109,7 @@ if __name__ == "__main__":
     n_body_pairs = 0
     n_contact_pairs = 0
     contacting_triangles = np.zeros(F.shape[1], dtype=np.float32)
-    profiler = pbat.profiling.Profiler()
+    profiler = pypbat.profiling.Profiler()
 
     def callback():
         global t, animate, export

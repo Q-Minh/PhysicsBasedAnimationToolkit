@@ -1,4 +1,4 @@
-import pbatoolkit as pbat
+from pbatoolkit import pbat, pypbat
 import igl
 import meshio
 import polyscope as ps
@@ -21,11 +21,11 @@ def harmonic_field(
     Xmax = X.max(axis=1)
     extents = Xmax - Xmin
     extents[:-1] = 0
-    aabblo = pbat.geometry.aabb(
+    aabblo = pypbat.geometry.aabb(
         np.vstack((Xmin - eps * extents, Xmax - (1 - eps) * extents)).T
     )
     gammalo = aabblo.contained(X)
-    aabbhi = pbat.geometry.aabb(
+    aabbhi = pypbat.geometry.aabb(
         np.vstack((Xmin + (1 - eps) * extents, Xmax + eps * extents)).T
     )
     gammahi = aabbhi.contained(X)

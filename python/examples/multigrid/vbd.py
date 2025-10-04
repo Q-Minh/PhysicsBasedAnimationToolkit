@@ -1,4 +1,4 @@
-import pbatoolkit as pbat
+from pbatoolkit import pbat, pypbat
 import meshio
 import numpy as np
 import polyscope as ps
@@ -122,7 +122,7 @@ if __name__ == "__main__":
             extent[args.fixed_axis]
         )
         Xmax[args.fixed_axis] += args.percent_fixed * extent[args.fixed_axis]
-    aabb = pbat.geometry.aabb(np.vstack((Xmin, Xmax)).T)
+    aabb = pypbat.geometry.aabb(np.vstack((Xmin, Xmax)).T)
     vdbc = np.array(aabb.contained(mesh.X))
 
     # Setup VBD
@@ -171,7 +171,7 @@ if __name__ == "__main__":
     export = False
     t = 0
 
-    profiler = pbat.profiling.Profiler()
+    profiler = pypbat.profiling.Profiler()
 
     def callback():
         global dt, substeps

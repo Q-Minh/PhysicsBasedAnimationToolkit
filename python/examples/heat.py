@@ -1,4 +1,4 @@
-import pbatoolkit as pbat
+from pbatoolkit import pbat, pypbat
 import igl
 import polyscope as ps
 import polyscope.imgui as imgui

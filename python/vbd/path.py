@@ -1,5 +1,5 @@
 import numpy as np
-import pbatoolkit as pbat
+from pbatoolkit import pbat
 import scipy as sp
 import argparse
 import os

@@ -1,4 +1,4 @@
-from ._pbat import profiling as _profiling
+from .._pbat import profiling as _profiling
 
 import time
 
@@ -21,7 +21,7 @@ class Profiler:
 
     def end_frame(self, frame_name: str):
         _profiling.end_frame(frame_name)
-        
+
     def profile(self, zone_name: str, func):
         """Profile function evaluation of func
 

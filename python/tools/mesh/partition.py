@@ -1,6 +1,6 @@
 import meshio
 import argparse
-import pbatoolkit as pbat
+from pbatoolkit import pbat
 import polyscope as ps
 import numpy as np
 

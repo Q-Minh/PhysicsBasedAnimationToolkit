@@ -11,25 +11,25 @@ namespace pbat {
 namespace sim {
 namespace xpbd {
 
-struct PBAT_API Data
+struct Data
 {
   public:
-    Data&
+    PBAT_API Data&
     WithVolumeMesh(Eigen::Ref<MatrixX const> const& V, Eigen::Ref<IndexMatrixX const> const& E);
-    Data& WithSurfaceMesh(
+    PBAT_API Data& WithSurfaceMesh(
         Eigen::Ref<IndexVectorX const> const& V,
         Eigen::Ref<IndexMatrixX const> const& F);
-    Data& WithBodies(Eigen::Ref<IndexVectorX const> const& BV);
-    Data& WithVelocity(Eigen::Ref<MatrixX const> const& v);
-    Data& WithAcceleration(Eigen::Ref<MatrixX const> const& aext);
-    Data& WithMassInverse(Eigen::Ref<VectorX const> const& minv);
-    Data& WithElasticMaterial(Eigen::Ref<MatrixX const> const& lame);
-    Data& WithCollisionPenalties(Eigen::Ref<VectorX const> const& muV);
-    Data& WithFrictionCoefficients(Scalar muS, Scalar muD);
-    Data& WithActiveSetUpdateFrequency(Index frequency);
-    Data& WithDamping(Eigen::Ref<VectorX> const& beta, EConstraint constraint);
-    Data& WithCompliance(Eigen::Ref<VectorX> const& alpha, EConstraint constraint);
-    Data& WithPartitions(std::vector<Index> const& Pptr, std::vector<Index> const& Padj);
+    PBAT_API Data& WithBodies(Eigen::Ref<IndexVectorX const> const& BV);
+    PBAT_API Data& WithVelocity(Eigen::Ref<MatrixX const> const& v);
+    PBAT_API Data& WithAcceleration(Eigen::Ref<MatrixX const> const& aext);
+    PBAT_API Data& WithMassInverse(Eigen::Ref<VectorX const> const& minv);
+    PBAT_API Data& WithElasticMaterial(Eigen::Ref<MatrixX const> const& lame);
+    PBAT_API Data& WithCollisionPenalties(Eigen::Ref<VectorX const> const& muV);
+    PBAT_API Data& WithFrictionCoefficients(Scalar muS, Scalar muD);
+    PBAT_API Data& WithActiveSetUpdateFrequency(Index frequency);
+    PBAT_API Data& WithDamping(Eigen::Ref<VectorX> const& beta, EConstraint constraint);
+    PBAT_API Data& WithCompliance(Eigen::Ref<VectorX> const& alpha, EConstraint constraint);
+    PBAT_API Data& WithPartitions(std::vector<Index> const& Pptr, std::vector<Index> const& Padj);
     /**
      * @brief
      *
@@ -41,13 +41,13 @@ struct PBAT_API Data
      * @param Cadj
      * @return
      */
-    Data& WithClusterPartitions(
+    PBAT_API Data& WithClusterPartitions(
         std::vector<Index> const& SGptr,
         std::vector<Index> const& SGadj,
         std::vector<Index> const& Cptr,
         std::vector<Index> const& Cadj);
-    Data& WithDirichletConstrainedVertices(IndexVectorX const& dbc);
-    Data& Construct(bool bValidate = true);
+    PBAT_API Data& WithDirichletConstrainedVertices(IndexVectorX const& dbc);
+    PBAT_API Data& Construct(bool bValidate = true);
 
   public:
     IndexVectorX V; ///< |#collision vertices| array of indices into columns of x

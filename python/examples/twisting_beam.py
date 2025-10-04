@@ -1,4 +1,4 @@
-import pbatoolkit as pbat
+from pbatoolkit import pbat, pypbat
 import meshio
 import numpy as np
 import igl
@@ -260,7 +260,7 @@ if __name__ == "__main__":
             smax = Xmax.copy()
             smin[axis] = Xmin[axis] + s * width
             smax[axis] = Xmin[axis] + (s + 1) * width
-            aabb = pbat.geometry.aabb(np.vstack((smin, smax)).T)
+            aabb = pypbat.geometry.aabb(np.vstack((smin, smax)).T)
             vhetero = aabb.contained(barycenters)
             heteromask[vhetero] = True
 
@@ -275,8 +275,8 @@ if __name__ == "__main__":
     Xmax = mesh.X.max(axis=1)
     extent = Xmax - Xmin
     dx = np.array([extent[0], 0.0, 0.0])
-    laabb = pbat.geometry.aabb(np.vstack((Xmin, Xmax - 0.99 * dx)).T)
-    raabb = pbat.geometry.aabb(np.vstack((Xmin + 0.99 * dx, Xmax)).T)
+    laabb = pypbat.geometry.aabb(np.vstack((Xmin, Xmax - 0.99 * dx)).T)
+    raabb = pypbat.geometry.aabb(np.vstack((Xmin + 0.99 * dx, Xmax)).T)
     vdbc = np.hstack([laabb.contained(mesh.X), raabb.contained(mesh.X)])
     ndirichlet = vdbc.shape[0]
 
@@ -359,7 +359,7 @@ if __name__ == "__main__":
         x = R @ (X - X.mean(axis=1, keepdims=True)) + X.mean(axis=1, keepdims=True)
         return x
 
-    profiler = pbat.profiling.Profiler()
+    profiler = pypbat.profiling.Profiler()
 
     def callback():
         global dt, iterations, substeps

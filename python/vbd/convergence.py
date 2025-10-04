@@ -4,7 +4,7 @@ import argparse
 import os
 import pathlib
 import matplotlib.pyplot as plt
-import pbatoolkit as pbat
+from pbatoolkit import pbat
 
 accelerators = [
     "vbd",

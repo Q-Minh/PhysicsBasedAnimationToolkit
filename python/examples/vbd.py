@@ -1,4 +1,4 @@
-import pbatoolkit as pbat
+from pbatoolkit import pbat, pypbat
 import meshio
 import numpy as np
 import igl
@@ -267,14 +267,14 @@ if __name__ == "__main__":
             smax = Xmax.copy()
             smin[axis] = Xmin[axis] + s * width
             smax[axis] = Xmin[axis] + (s + 1) * width
-            aabb = pbat.geometry.aabb(np.vstack((smin, smax)).T)
+            aabb = pypbat.geometry.aabb(np.vstack((smin, smax)).T)
             vhetero = aabb.contained(barycenters)
             heteromask[vhetero] = True
 
     rhoe[heteromask] = args.heterogeneous_rho
     Y[heteromask] = args.heterogeneous_Y
     nu[heteromask] = args.heterogeneous_nu
-    mue, lambdae = pbat.fem.lame_coefficients(Y, nu)
+    mue, lambdae = pypbat.fem.lame_coefficients(Y, nu)
 
     # Set Dirichlet boundary conditions
     Xmin = X.min(axis=1)
@@ -290,7 +290,7 @@ if __name__ == "__main__":
             Xmax[args.fixed_axis] - args.percent_fixed * extent[args.fixed_axis]
         )
         Xmax[args.fixed_axis] += args.percent_fixed * extent[args.fixed_axis]
-    aabb = pbat.geometry.aabb(np.vstack((Xmin, Xmax)).T)
+    aabb = pypbat.geometry.aabb(np.vstack((Xmin, Xmax)).T)
     vdbc = np.array(aabb.contained(X))
 
     # Setup VBD
@@ -367,7 +367,7 @@ if __name__ == "__main__":
     export = False
     t = 0
 
-    profiler = pbat.profiling.Profiler()
+    profiler = pypbat.profiling.Profiler()
 
     def callback():
         global dt, iterations, substeps

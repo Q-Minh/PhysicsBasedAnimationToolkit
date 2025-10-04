@@ -46,7 +46,7 @@ endif()
 if(PBAT_BUILD_PYTHON_BINDINGS AND NOT TARGET nanobind::headers)
     find_package(
         Python 
-        COMPONENTS Development.Module 
+        COMPONENTS Interpreter Development.Module 
         REQUIRED
     )
     FetchContent_Declare(

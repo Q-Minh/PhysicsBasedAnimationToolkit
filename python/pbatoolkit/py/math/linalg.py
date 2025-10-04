@@ -20,10 +20,10 @@ class SolverBackend(Enum):
 
 
 def lu(A, solver: SolverBackend = SolverBackend.IntelMKL):
-    """Returns an instance to an LU factorization suitable for matrices of 
+    """Returns an instance to an LU factorization suitable for matrices of
     the same type as A. The instance returned by this function should be used to factorize A,
-    i.e. this function does not actually compute the factorization. We currently only support 
-    Pardiso's LU factorization, if pbatoolkit was built with MKL support. Otherwise, use scipy's 
+    i.e. this function does not actually compute the factorization. We currently only support
+    Pardiso's LU factorization, if pbatoolkit was built with MKL support. Otherwise, use scipy's
     LU factorization (i.e. SuperLU). We may support umfpack and Eigen's supernodal LU factorization
     in the future.
 
@@ -47,7 +47,8 @@ def lu(A, solver: SolverBackend = SolverBackend.IntelMKL):
         mtype = "Csr"
     if mtype is None:
         raise TypeError(
-            "Argument A should be either of scipy.sparse.csc_matrix or scipy.sparse.csr_matrix")
+            "Argument A should be either of scipy.sparse.csc_matrix or scipy.sparse.csr_matrix"
+        )
 
     if solver == SolverBackend.Eigen:
         raise ValueError("Eigen LU (supernodal LU) not supported")
@@ -61,9 +62,9 @@ def lu(A, solver: SolverBackend = SolverBackend.IntelMKL):
 
 
 def chol(A, solver: SolverBackend = SolverBackend.Eigen):
-    """Returns an instance to an LLT (Cholesky) factorization suitable for matrices of 
+    """Returns an instance to an LLT (Cholesky) factorization suitable for matrices of
     the same type as A. The instance returned by this function should be used to factorize A,
-    i.e. this function does not actually compute the factorization. If the SolverBackend is 
+    i.e. this function does not actually compute the factorization. If the SolverBackend is
     Eigen, we return an LDLT factorization.
 
     Args:
@@ -85,15 +86,15 @@ def chol(A, solver: SolverBackend = SolverBackend.Eigen):
         mtype = "Csr"
     if mtype is None:
         raise TypeError(
-            "Argument A should be either of scipy.sparse.csc_matrix or scipy.sparse.csr_matrix")
+            "Argument A should be either of scipy.sparse.csc_matrix or scipy.sparse.csr_matrix"
+        )
 
     if solver == SolverBackend.Eigen:
         return ldlt(A, solver=SolverBackend.Eigen)
     if solver == SolverBackend.SuiteSparse:
         class_ = getattr(_linalg, f"Cholmod")
         if class_ is None:
-            raise ValueError(
-                "pbatoolkit was not built with SuiteSparse support")
+            raise ValueError("pbatoolkit was not built with SuiteSparse support")
         return class_()
     if solver == SolverBackend.IntelMKL:
         class_ = getattr(_linalg, f"PardisoLLT_{mtype}")
@@ -102,8 +103,10 @@ def chol(A, solver: SolverBackend = SolverBackend.Eigen):
         return class_()
 
 
-def ldlt(A, ordering: Ordering = Ordering.AMD, solver: SolverBackend = SolverBackend.Eigen):
-    """Returns an instance to an LDLT (Bunch-Kaufman) factorization suitable for matrices of 
+def ldlt(
+    A, ordering: Ordering = Ordering.AMD, solver: SolverBackend = SolverBackend.Eigen
+):
+    """Returns an instance to an LDLT (Bunch-Kaufman) factorization suitable for matrices of
     the same type as A. The instance returned by this function should be used to factorize A,
     i.e. this function does not actually compute the factorization.
 
@@ -127,14 +130,16 @@ def ldlt(A, ordering: Ordering = Ordering.AMD, solver: SolverBackend = SolverBac
         mtype = "Csr"
     if mtype is None:
         raise TypeError(
-            "Argument A should be either of scipy.sparse.csc_matrix or scipy.sparse.csr_matrix")
+            "Argument A should be either of scipy.sparse.csc_matrix or scipy.sparse.csr_matrix"
+        )
 
     if solver == SolverBackend.Eigen:
         class_ = getattr(_linalg, f"SimplicialLdlt_{mtype}_{ordering.name}")
         return class_()
     if solver == SolverBackend.SuiteSparse:
         raise ValueError(
-            "Cholmod's LDLT factorization is simplicial just like Eigen's. Use SolverBackend.Eigen instead")
+            "Cholmod's LDLT factorization is simplicial just like Eigen's. Use SolverBackend.Eigen instead"
+        )
     if solver == SolverBackend.IntelMKL:
         class_ = getattr(_linalg, f"PardisoLDLT_{mtype}")
         if class_ is None:
@@ -142,7 +147,7 @@ def ldlt(A, ordering: Ordering = Ordering.AMD, solver: SolverBackend = SolverBac
         return class_()
 
 
-def selection_matrix(C: np.ndarray[np.int64 | np.int32], n: int = -1, dtype=np.float64):
+def selection_matrix(C: np.ndarray[int], n: int = -1, dtype=np.float64):
     """Computes a selection matrix S s.t. X @ S selects columns in X given by vec(C)
 
     Args:
@@ -156,6 +161,6 @@ def selection_matrix(C: np.ndarray[np.int64 | np.int32], n: int = -1, dtype=np.f
     if n < 0:
         n = C.max() + 1
     indices = C.flatten(order="F")
-    indptr = np.arange(n+1)
+    indptr = np.arange(n + 1)
     data = np.ones_like(C, dtype=dtype)
     return sp.sparse.csc_array(data, indices, indptr, shape=(n, len(indices)))

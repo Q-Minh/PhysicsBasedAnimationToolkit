@@ -1,30 +1,10 @@
-from ..._pbat.sim import xpbd as _xpbd
-import sys
-import inspect
-import contextlib
-import io
+from ..._pbat.graph import mesh_dual_graph
+from ..._pbat.graph import map_to_adjacency
+from ..._pbat.graph import greedy_color
+from ..._pbat.graph import GreedyColorOrderingStrategy
+from ..._pbat.graph import GreedyColorSelectionStrategy
 import numpy as np
 import scipy as sp
-
-from ...graph import mesh_dual_graph
-from ...graph import map_to_adjacency
-from ...graph import greedy_color
-from ...graph import GreedyColorOrderingStrategy
-from ...graph import GreedyColorSelectionStrategy
-
-
-__module = sys.modules[__name__]
-_strio = io.StringIO()
-with contextlib.redirect_stdout(_strio):
-    help(_xpbd)
-_strio.seek(0)
-setattr(__module, "__doc__", _strio.read())
-
-__module = sys.modules[__name__]
-for _name, _attr in inspect.getmembers(_xpbd):
-    if not _name.startswith("__"):
-        setattr(__module, _name, _attr)
-
 
 def partition_clustered_mesh_constraint_graph(
         X: np.ndarray,

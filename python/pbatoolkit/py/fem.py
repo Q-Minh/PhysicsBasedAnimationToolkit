@@ -1,23 +1,6 @@
-from ._pbat import fem as _fem
-import sys
-import inspect
+from .._pbat import fem as _fem
 import numpy as np
 import scipy as sp
-import math
-import contextlib
-import io
-from enum import Enum
-
-__module = sys.modules[__name__]
-for _name, _attr in inspect.getmembers(_fem):
-    if not _name.startswith("__"):
-        setattr(__module, _name, _attr)
-
-_strio = io.StringIO()
-with contextlib.redirect_stdout(_strio):
-    help(_fem)
-_strio.seek(0)
-setattr(__module, "__doc__", f"{getattr(__module, '__doc__')}\n\n{_strio.read()}")
 
 
 def lame_coefficients(Y: float | np.ndarray, nu: float | np.ndarray):
