@@ -15,7 +15,11 @@ TEST_CASE("[math][linalg][mini] Product")
 
     MatrixType Amini;
     Amini.SetConstant(ScalarType(3));
-    auto AATmini      = Amini * Amini.Transpose();
+    // NOTE:
+    // If we wrote Amini * Amini.Transpose(), the transpose is a temporary that will be
+    // destroyed, and thus AATmini would have an invalid reference to the transpose.
+    auto AminiT       = Amini.Transpose();
+    auto AATmini      = Amini * AminiT;
     using ProductType = decltype(AATmini);
     PBAT_MINI_CHECK_READABLE_CONCEPTS(ProductType);
 

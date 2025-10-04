@@ -153,10 +153,8 @@ PBAT_HOST_DEVICE auto EdgeEdgeCcd(
             uv                               = ClosestPointQueries::Lines(p1, q1, p2, q2, zero);
             // 4. Check if there is any intersection point, i.e. closest points on lines must be in
             // the line segments, and the distance between the closest points must be zero.
-            bool const bIsInsideEdges  = All((uv >= TScalar(0)) and (uv <= TScalar(1)));
-            auto const cp1             = p1 + uv[0] * (q1 - p1);
-            auto const cp2             = p2 + uv[1] * (q2 - p2);
-            TScalar const d2           = SquaredNorm(cp1 - cp2);
+            bool const bIsInsideEdges = All((uv >= TScalar(0)) and (uv <= TScalar(1)));
+            TScalar const d2 = SquaredNorm((p1 + uv[0] * (q1 - p1)) - (p2 + uv[1] * (q2 - p2)));
             bool const bIsIntersection = (d2 <= zero) and bIsInsideEdges;
             r[0]                       = bIsIntersection * t + (not bIsIntersection) * r[0];
             // Exit as soon as an intersection is found, since we are traversing roots from earliest
