@@ -76,8 +76,6 @@ target_link_libraries(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     doctest::doctest
     Eigen3::Eigen
     fmt::fmt
-    $<IF:$<TARGET_EXISTS:hdf5::hdf5-static>,hdf5::hdf5-static,hdf5::hdf5-shared>
-    $<IF:$<TARGET_EXISTS:hdf5::hdf5_cpp-static>,hdf5::hdf5_cpp-static,hdf5::hdf5_cpp-shared>
     HighFive::Include
     OpenMP::OpenMP_CXX
     range-v3::concepts
@@ -85,6 +83,20 @@ target_link_libraries(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     range-v3::range-v3
     TBB::tbb
 )
+
+if (TARGET hdf5::hdf5-static AND TARGET hdf5::hdf5_cpp-static)
+    target_link_libraries(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
+    PUBLIC
+        hdf5::hdf5-static
+        hdf5::hdf5_cpp-static
+    )
+else()
+    target_link_libraries(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
+    PUBLIC
+        hdf5::hdf5-shared
+        hdf5::hdf5_cpp-shared
+    )
+endif()
 
 # Convert space-separated PBAT_CMAKE_CXX_FLAGS to list (i.e. semi-colon separated string)
 if(PBAT_CMAKE_CXX_FLAGS)

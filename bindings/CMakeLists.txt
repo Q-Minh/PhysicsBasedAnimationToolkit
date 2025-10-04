@@ -100,10 +100,12 @@ foreach(_pbat_link_library IN ITEMS ${_pbat_link_libraries})
         get_target_property(_type ${_pbat_link_library} TYPE)
         message(DEBUG "PBAT[python] -- LINK_LIBRARY=${_pbat_link_library} has TYPE=${_type}")
 
-        if(${_is_imported} AND(_type STREQUAL "SHARED_LIBRARY"))
+        if(${_is_imported} AND (_type STREQUAL "SHARED_LIBRARY"))
             message(VERBOSE "PBAT[python] -- SHARED_LIBRARY=${_pbat_link_library} is IMPORTED, bundling imported artifacts")
             install(IMPORTED_RUNTIME_ARTIFACTS ${_pbat_link_library} RUNTIME DESTINATION "pbatoolkit")
         endif()
+    else()
+        message(DEBUG "PBAT[python] -- LINK_LIBRARY=${_pbat_link_library} is not a target")
     endif()
 endforeach()
 
