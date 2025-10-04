@@ -1,0 +1,5 @@
+polyscope==2.5.0
+numpy==1.26
+scipy==1.14
+meshio==5.3.5
+gpytoolbox==0.3.7
