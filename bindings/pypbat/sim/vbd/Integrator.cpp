@@ -18,8 +18,7 @@ namespace vbd {
 
 void BindIntegrator(nanobind::module_& m)
 {
-    namespace nb     = nanobind;
-    using ScalarType = pbat::Scalar;
+    namespace nb = nanobind;
     using pbat::sim::vbd::AndersonIntegrator;
     using pbat::sim::vbd::BroydenIntegrator;
     using pbat::sim::vbd::ChebyshevIntegrator;

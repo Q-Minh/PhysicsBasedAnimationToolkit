@@ -12,8 +12,7 @@ namespace xpbd {
 
 void BindIntegrator(nanobind::module_& m)
 {
-    namespace nb     = nanobind;
-    using ScalarType = pbat::Scalar;
+    namespace nb = nanobind;
     using pbat::sim::xpbd::Data;
     using pbat::sim::xpbd::Integrator;
     nb::class_<Integrator>(m, "Integrator")

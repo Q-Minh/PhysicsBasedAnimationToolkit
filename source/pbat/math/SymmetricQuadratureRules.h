@@ -99,6 +99,7 @@ using SymmetricSimplexPolynomialQuadratureRule =
 namespace detail {
 
 #include "pbat/warning/Push.h"
+#include "pbat/warning/FloatConversion.h"
 #include "pbat/warning/SignConversion.h"
 
 template <common::CFloatingPoint TScalar>

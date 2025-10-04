@@ -761,8 +761,8 @@ inline void MultibodyMeshMixedCcdDcd::ForEachPenetratingVertex(
              std::forward<FOnPenetratingVertex>(fOnPenetratingVertex)](Index oi, Index oj) {
             Index i;
             Vector<kDims> xi;
-            mVertexBvhs[oi].Overlaps(
-                mTetrahedronBvhs[oj],
+            mVertexBvhs[static_cast<std::size_t>(oi)].Overlaps(
+                mTetrahedronBvhs[static_cast<std::size_t>(oj)],
                 [&](Index v, Index t) {
                     // Global vertex and tetrahedron indices
                     v = mVP(oi) + v;
@@ -890,8 +890,8 @@ inline void MultibodyMeshMixedCcdDcd::ReportVertexTriangleCcdContacts(
 {
     PBAT_PROFILE_NAMED_SCOPE(
         "pbat.sim.contact.MultibodyMeshMixedCcdDcd.ReportVertexTriangleCcdContacts");
-    mVertexBvhs[oi].Overlaps(
-        mTriangleBvhs[oj],
+    mVertexBvhs[static_cast<std::size_t>(oi)].Overlaps(
+        mTriangleBvhs[static_cast<std::size_t>(oj)],
         [&,
          fOnVertexTriangleContactPair = std::forward<FOnVertexTriangleContactPair>(
              fOnVertexTriangleContactPair)](Index v, Index f) {
@@ -939,8 +939,8 @@ inline void MultibodyMeshMixedCcdDcd::ReportEdgeEdgeCcdContacts(
     FOnEdgeEdgeContactPair&& fOnEdgeEdgeContactPair) const
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.MultibodyMeshMixedCcdDcd.ReportEdgeEdgeCcdContacts");
-    mEdgeBvhs[oi].Overlaps(
-        mEdgeBvhs[oj],
+    mEdgeBvhs[static_cast<std::size_t>(oi)].Overlaps(
+        mEdgeBvhs[static_cast<std::size_t>(oj)],
         [&,
          fOnEdgeEdgeContactPair =
              std::forward<FOnEdgeEdgeContactPair>(fOnEdgeEdgeContactPair)](Index ei, Index ej) {

@@ -8,7 +8,7 @@
 
 namespace pbat::py::io {
 
-void pbat::py::io::BindArchive(nanobind::module_& m)
+void BindArchive(nanobind::module_& m)
 {
     namespace nb = nanobind;
 

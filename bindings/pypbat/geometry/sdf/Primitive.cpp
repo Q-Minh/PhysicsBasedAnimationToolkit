@@ -12,7 +12,6 @@ void BindPrimitive(nanobind::module_& m)
     using ScalarType = Scalar;
     using VecX       = Eigen::Matrix<ScalarType, Eigen::Dynamic, 1>;
     using MatX       = Eigen::Matrix<ScalarType, Eigen::Dynamic, Eigen::Dynamic>;
-    using Mat3       = Eigen::Matrix<ScalarType, 3, 3>;
     using Vec3       = Eigen::Vector<ScalarType, 3>;
     using Vec2       = Eigen::Vector<ScalarType, 2>;
     using pbat::math::linalg::mini::FromEigen;

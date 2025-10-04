@@ -2,11 +2,11 @@
 
 #include "Mesh.h"
 
+#include <nanobind/eigen/dense.h>
+#include <nanobind/eigen/sparse.h>
 #include <pbat/fem/Mass.h>
 #include <pbat/fem/MeshQuadrature.h>
 #include <pbat/fem/ShapeFunctions.h>
-#include <nanobind/eigen/dense.h>
-#include <nanobind/eigen/sparse.h>
 
 namespace pbat {
 namespace py {
@@ -145,7 +145,7 @@ void BindMass([[maybe_unused]] nanobind::module_& m)
         },
         nb::arg("E"),
         nb::arg("X"),
-        nb::arg("rho")  = TScalar(1e3),
+        nb::arg("rho")  = TScalar{1e3},
         nb::arg("dims") = 1,
         nb::arg("element"),
         nb::arg("order") = 1,
@@ -224,9 +224,9 @@ void BindMass([[maybe_unused]] nanobind::module_& m)
            EElement eElement,
            int order,
            int spatialDims) {
-            Eigen::Vector<TScalar, Eigen::Dynamic> m;
+            Eigen::Vector<TScalar, Eigen::Dynamic> mdiag;
             ApplyToElementInDims(eElement, order, spatialDims, [&]<class ElementType, int Dims>() {
-                m = pbat::fem::LumpedMassMatrix<ElementType, Dims>(
+                mdiag = pbat::fem::LumpedMassMatrix<ElementType, Dims>(
                     E.template topRows<ElementType::kNodes>(),
                     nNodes,
                     eg,
@@ -235,7 +235,7 @@ void BindMass([[maybe_unused]] nanobind::module_& m)
                     Neg.template topRows<ElementType::kNodes>(),
                     dims);
             });
-            return m;
+            return mdiag;
         },
         nb::arg("E"),
         nb::arg("n_nodes"),
@@ -276,7 +276,7 @@ void BindMass([[maybe_unused]] nanobind::module_& m)
            int dims,
            EElement eElement,
            int order) {
-            Eigen::Vector<TScalar, Eigen::Dynamic> m;
+            Eigen::Vector<TScalar, Eigen::Dynamic> mdiag;
             auto const spatialDims = static_cast<int>(X.rows());
             ApplyToElementInDims(eElement, order, spatialDims, [&]<class ElementType, int Dims>() {
                 auto constexpr kQuadOrder = 2 * ElementType::kOrder;
@@ -290,7 +290,7 @@ void BindMass([[maybe_unused]] nanobind::module_& m)
                 auto const Ng =
                     pbat::fem::ElementShapeFunctions<ElementType, kQuadOrder, TScalar>();
                 auto const Neg = Ng.replicate(1, E.cols());
-                m              = pbat::fem::LumpedMassMatrix<ElementType, Dims>(
+                mdiag          = pbat::fem::LumpedMassMatrix<ElementType, Dims>(
                     E.template topRows<ElementType::kNodes>(),
                     X.cols(),
                     eg.reshaped(),
@@ -299,7 +299,7 @@ void BindMass([[maybe_unused]] nanobind::module_& m)
                     Neg.template topRows<ElementType::kNodes>(),
                     dims);
             });
-            return m;
+            return mdiag;
         },
         nb::arg("E"),
         nb::arg("X"),
@@ -337,16 +337,16 @@ void BindMass([[maybe_unused]] nanobind::module_& m)
            EElement eElement,
            int order,
            int spatialDims) {
-            Eigen::Vector<TScalar, Eigen::Dynamic> m;
+            Eigen::Vector<TScalar, Eigen::Dynamic> mdiag;
             ApplyToElementInDims(eElement, order, spatialDims, [&]<class ElementType, int Dims>() {
-                m = pbat::fem::LumpedMassMatrix<ElementType, Dims>(
+                mdiag = pbat::fem::LumpedMassMatrix<ElementType, Dims>(
                     E.template topRows<ElementType::kNodes>(),
                     nNodes,
                     eg,
                     Meg.template topRows<ElementType::kNodes>(),
                     dims);
             });
-            return m;
+            return mdiag;
         },
         nb::arg("E"),
         nb::arg("n_nodes"),
