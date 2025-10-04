@@ -289,8 +289,9 @@ auto ElementShapeFunctionGradients(
     }
     else
     {
-        GP.transpose() = J.transpose().template jacobiSvd<Eigen::ComputeThinU | Eigen::ComputeThinV>().solve(
-            GN.transpose());
+        GP.transpose() =
+            J.transpose().template jacobiSvd<Eigen::ComputeThinU | Eigen::ComputeThinV>().solve(
+                GN.transpose());
     }
     return GP;
 }
@@ -326,17 +327,16 @@ auto ShapeFunctionGradients(
     using ScalarType = TScalar;
     using QuadratureRuleType =
         typename TElement::template QuadratureType<QuadratureOrder, ScalarType>;
-    using ElementType       = TElement;
-    using MatrixType        = Eigen::Matrix<ScalarType, ElementType::kNodes, Eigen::Dynamic>;
-    auto const Xg           = common::ToEigen(QuadratureRuleType::points)
+    using ElementType = TElement;
+    using MatrixType  = Eigen::Matrix<ScalarType, ElementType::kNodes, Eigen::Dynamic>;
+    auto const Xg     = common::ToEigen(QuadratureRuleType::points)
                         .reshaped(QuadratureRuleType::kDims + 1, QuadratureRuleType::kPoints)
                         .template bottomRows<QuadratureRuleType::kDims>();
     auto const numberOfElements     = E.cols();
     auto constexpr kNodesPerElement = ElementType::kNodes;
     MatrixType GNe(kNodesPerElement, numberOfElements * Dims * QuadratureRuleType::kPoints);
     tbb::parallel_for(Index{0}, Index{numberOfElements}, [&](Index e) {
-        auto const nodes    = E.col(e);
-        auto const vertices = nodes(ElementType::Vertices);
+        auto const nodes = E.col(e);
         for (auto g = 0; g < QuadratureRuleType::kPoints; ++g)
         {
             auto const GP = ElementShapeFunctionGradients<ElementType>(
@@ -401,9 +401,8 @@ auto ShapeFunctionGradientsAt(
     auto const numberOfEvaluationPoints = Xi.cols();
     MatrixType GNe(ElementType::kNodes, numberOfEvaluationPoints * Dims);
     tbb::parallel_for(Index{0}, Index{numberOfEvaluationPoints}, [&](Index g) {
-        auto const nodes    = Eg.col(g);
-        auto const vertices = nodes(ElementType::Vertices);
-        auto GP             = ElementShapeFunctionGradients<ElementType>(
+        auto const nodes = Eg.col(g);
+        auto GP          = ElementShapeFunctionGradients<ElementType>(
             Xi.col(g),
             X(Eigen::placeholders::all, nodes).template topLeftCorner<Dims, ElementType::kNodes>());
         GNe.template block<ElementType::kNodes, Dims>(0, g * Dims) = GP;

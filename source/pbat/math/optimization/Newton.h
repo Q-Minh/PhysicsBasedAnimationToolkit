@@ -25,8 +25,8 @@ namespace pbat::math::optimization {
 template <class TScalar = Scalar>
 struct Newton
 {
-    TScalar gtol2; ///< Gradient squared norm threshold for convergence
     int nMaxIters; ///< Maximum number of iterations for the Newton solver
+    TScalar gtol2; ///< Gradient squared norm threshold for convergence
     Eigen::Vector<TScalar, Eigen::Dynamic> dxk; ///< Step direction
     Eigen::Vector<TScalar, Eigen::Dynamic> gk;  ///< Gradient at current iteration
 

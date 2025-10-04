@@ -172,7 +172,8 @@ inline void KdTree<Dims>::Construct(Eigen::DenseBase<TDerivedP> const& P, Index 
     Scalar constexpr kEstimatedLeafOccupancy = 0.8;
     auto const nEstimatedNodesPerLeaf =
         (maxPointsInLeaf > 1) ?
-            static_cast<Index>(std::ceil(kEstimatedLeafOccupancy * maxPointsInLeaf)) :
+            static_cast<Index>(
+                std::ceil(kEstimatedLeafOccupancy * static_cast<Scalar>(maxPointsInLeaf))) :
             1;
     auto const nEstimatedLeafNodes =
         (nPoints / nEstimatedNodesPerLeaf) + (nPoints % nEstimatedNodesPerLeaf != 0);

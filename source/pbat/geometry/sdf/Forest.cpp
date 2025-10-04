@@ -77,8 +77,8 @@ TEST_CASE("[geometry][sdf] Forest")
         {
             Transform<ScalarType> transform = Transform<ScalarType>::Identity();
             transform.t(0)                  = static_cast<ScalarType>(i);
-            transform.t(1)                  = static_cast<ScalarType>(i * 0.5);
-            transform.t(2)                  = static_cast<ScalarType>(i * 2);
+            transform.t(1)                  = static_cast<ScalarType>(i) * 0.5;
+            transform.t(2)                  = static_cast<ScalarType>(i) * 2;
             originalForest.transforms.push_back(transform);
         }
 

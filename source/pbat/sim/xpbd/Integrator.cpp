@@ -121,12 +121,12 @@ void Integrator::ProjectBlockNeoHookeanConstraints(Scalar dt, Scalar dt2)
     auto const nPartitions = static_cast<Index>(data.Pptr.size()) - 1;
     for (auto p = 0; p < nPartitions; ++p)
     {
-        auto const pStl                  = static_cast<std::size_t>(p);
-        auto const pbegin                = data.Pptr[pStl];
-        auto const pend                  = data.Pptr[pStl + 1];
-        auto const nPartitionConstraints = static_cast<Index>(pend - pbegin);
+        auto const pStl                          = static_cast<std::size_t>(p);
+        Eigen::Index const pbegin                = data.Pptr[pStl];
+        Eigen::Index const pend                  = data.Pptr[pStl + 1];
+        Eigen::Index const nPartitionConstraints = pend - pbegin;
         tbb::parallel_for(Index(0), nPartitionConstraints, [&](Index k) {
-            auto c = data.Padj[static_cast<std::size_t>(pbegin) + k];
+            auto c = data.Padj[static_cast<std::size_t>(pbegin + k)];
             ProjectBlockNeoHookeanConstraint(c, dt, dt2);
         });
     }
@@ -137,12 +137,12 @@ void Integrator::ProjectClusteredBlockNeoHookeanConstraints(Scalar dt, Scalar dt
     auto const nClusterPartitions = static_cast<Index>(data.SGptr.size()) - 1;
     for (auto cp = 0; cp < nClusterPartitions; ++cp)
     {
-        auto const cpStl                = static_cast<std::size_t>(cp);
-        auto const cpbegin              = data.SGptr[cpStl];
-        auto const cpend                = data.SGptr[cpStl + 1];
-        auto const nClustersInPartition = static_cast<Index>(cpend - cpbegin);
+        auto const cpStl                        = static_cast<std::size_t>(cp);
+        Eigen::Index const cpbegin              = data.SGptr[cpStl];
+        Eigen::Index const cpend                = data.SGptr[cpStl + 1];
+        Eigen::Index const nClustersInPartition = cpend - cpbegin;
         tbb::parallel_for(Index(0), nClustersInPartition, [&](Index k) {
-            auto cc           = data.SGadj[static_cast<std::size_t>(cpbegin) + k];
+            auto cc           = data.SGadj[static_cast<std::size_t>(cpbegin + k)];
             auto const ccStl  = static_cast<std::size_t>(cc);
             auto const cbegin = data.Cptr[ccStl];
             auto const cend   = data.Cptr[ccStl + 1];
@@ -259,7 +259,7 @@ TEST_CASE("[sim][xpbd] Integrator")
          1, 5, 3, 7, 2, 6, 0, 4, 3, 2, 5, 7,
          4, 4, 5, 5, 7, 7, 6, 6, 1, 3, 6, 6;
     // clang-format on
-    V.setLinSpaced(0, static_cast<IndexType>(P.cols() - 1));
+    V.setLinSpaced(0, P.cols() - 1);
     std::vector<IndexType> Pptr({0, 1, 2, 3, 4, 5});
     std::vector<IndexType> Padj({0, 1, 2, 3, 4});
     // Problem parameters
@@ -278,7 +278,7 @@ TEST_CASE("[sim][xpbd] Integrator")
     xpbd.Step(dt, iterations, substeps);
 
     // Assert
-    auto constexpr zero                  = ScalarType(1e-4);
+    auto constexpr zero                  = ScalarType{1e-4};
     pbat::MatrixX dx                     = xpbd.data.x - P;
     bool const bVerticesFallUnderGravity = (dx.row(2).array() < ScalarType(0)).all();
     CHECK(bVerticesFallUnderGravity);

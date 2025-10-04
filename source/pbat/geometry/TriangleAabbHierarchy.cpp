@@ -5,10 +5,10 @@
 namespace pbat::geometry {
 
 TriangleAabbHierarchy3D::TriangleAabbHierarchy3D(
-    Eigen::Ref<MatrixX const> const& V,
-    Eigen::Ref<IndexMatrixX const> const& C,
+    Eigen::Ref<MatrixX const> const& _V,
+    Eigen::Ref<IndexMatrixX const> const& _C,
     Index maxPointsInLeaf)
-    : V(V), C(C)
+    : V(_V), C(_C)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.geometry.TriangleAabbHierarchy3D.Construct");
     auto constexpr kRowsC = static_cast<int>(PrimitiveType::RowsAtCompileTime);
@@ -85,10 +85,10 @@ TriangleAabbHierarchy3D::OverlappingPrimitives(SelfType const& bvh, std::size_t 
 }
 
 TriangleAabbHierarchy2D::TriangleAabbHierarchy2D(
-    Eigen::Ref<MatrixX const> const& V,
-    Eigen::Ref<IndexMatrixX const> const& C,
+    Eigen::Ref<MatrixX const> const& _V,
+    Eigen::Ref<IndexMatrixX const> const& _C,
     Index maxPointsInLeaf)
-    : V(V), C(C)
+    : V(_V), C(_C)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.geometry.TriangleAabbHierarchy2D.Construct");
     auto constexpr kRowsC = static_cast<int>(PrimitiveType::RowsAtCompileTime);

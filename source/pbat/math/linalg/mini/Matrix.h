@@ -17,7 +17,7 @@ namespace math {
 namespace linalg {
 namespace mini {
 
-template <class TScalar, int M, int N=1>
+template <class TScalar, int M, int N = 1>
 class Ones
 {
   public:
@@ -122,7 +122,7 @@ class SMatrix
   public:
     using ScalarType  = TScalar;
     using SelfType    = SMatrix<ScalarType, M, N>;
-    using StorageType = std::array<ScalarType, M * N>;
+    using StorageType = std::array<ScalarType, std::size_t{M} * std::size_t{N}>;
     using IndexType   = typename StorageType::size_type;
 
     PBAT_HOST_DEVICE SMatrix() : a() {}

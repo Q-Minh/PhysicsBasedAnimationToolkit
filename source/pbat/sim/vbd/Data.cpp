@@ -147,15 +147,15 @@ Data& Data::WithChebyshevAcceleration(Scalar rhoIn)
 
 Data& Data::WithAndersonAcceleration(Index window)
 {
-    this->mWindowSize = window;
-    this->eAcceleration       = EAccelerationStrategy::Anderson;
+    this->mWindowSize   = window;
+    this->eAcceleration = EAccelerationStrategy::Anderson;
     return *this;
 }
 
 Data& Data::WithBroydenMethod(Index window)
 {
-    this->mWindowSize = window;
-    this->eAcceleration       = EAccelerationStrategy::Broyden;
+    this->mWindowSize   = window;
+    this->eAcceleration = EAccelerationStrategy::Broyden;
     return *this;
 }
 
@@ -191,21 +191,21 @@ Data& Data::Construct(bool bValidate)
     if (aext.size() == 0)
     {
         aext.resizeLike(x);
-        aext.colwise() = Vector<3>{Scalar(0), Scalar(0), Scalar(-9.81)};
+        aext.colwise() = Vector<3>{Scalar{0}, Scalar{0}, Scalar{-9.81}};
     }
     xtilde.resizeLike(x);
     vt.resizeLike(x);
     // Element data
     if (lame.size() == 0)
     {
-        auto const [mu, lambda] = physics::LameCoefficients(Scalar(1e6), Scalar(0.45));
+        auto const [mu, lambda] = physics::LameCoefficients(Scalar{1e6}, Scalar{0.45});
         lame.resize(2, E.cols());
         lame.row(0).setConstant(mu);
         lame.row(1).setConstant(lambda);
     }
     if (rhoe.size() == 0)
     {
-        rhoe.setConstant(E.cols(), Scalar(1e3));
+        rhoe.setConstant(E.cols(), Scalar{1e3});
     }
     VolumeMesh mesh{X, E};
     auto constexpr kQuadratureOrder = 2 * VolumeMesh::ElementType::kOrder;
@@ -236,10 +236,10 @@ Data& Data::Construct(bool bValidate)
     v(Eigen::placeholders::all, dbc).setZero();
     aext(Eigen::placeholders::all, dbc).setZero();
     std::unordered_set<Index> D{};
-    D.reserve(dbc.size() * 3ULL);
+    D.reserve(static_cast<std::size_t>(dbc.size()) * std::size_t{3});
     D.insert(dbc.begin(), dbc.end());
-    graph::RemoveEdges(Pptr, Padj, [&]([[maybe_unused]] Index p, Index v) {
-        return D.find(v) != D.end();
+    graph::RemoveEdges(Pptr, Padj, [&]([[maybe_unused]] Index p, Index i) {
+        return D.find(i) != D.end();
     });
     // Validate user input
     if (bValidate)

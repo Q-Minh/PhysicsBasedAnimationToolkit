@@ -18,5 +18,5 @@ TEST_CASE("[math][linalg][mini] Determinant")
     pbat::Matrix<kRows, kCols> Aeigen = pbat::Matrix<kRows, kCols>::Ones();
     auto detAmini                     = Determinant(Amini);
     auto detAeigen                    = Aeigen.determinant();
-    CHECK_LE(std::abs(detAmini - detAeigen), ScalarType(1e-8));
+    CHECK_LE(std::abs(detAmini - detAeigen), ScalarType{1e-8});
 }

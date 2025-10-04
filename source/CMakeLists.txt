@@ -13,13 +13,15 @@ set_target_properties(
 
 # Most of our implementation code is templated, so we expose transitive dependencies (i.e. PUBLIC)
 target_compile_features(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit PUBLIC cxx_std_20)
-if (MSVC)
+
+if(MSVC)
     target_compile_options(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
         PRIVATE
         $<$<COMPILE_LANGUAGE:CXX>:/bigobj /utf-8>
-        $<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler "/bigobj /utf-8">
+        $<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler "/bigobj /utf-8" >
     )
 endif()
+
 target_compile_definitions(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     PUBLIC
     $<$<BOOL:${PBAT_BUILD_TESTS}>:PBAT_HAS_DOCTEST>
@@ -74,8 +76,8 @@ target_link_libraries(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     doctest::doctest
     Eigen3::Eigen
     fmt::fmt
-    hdf5::hdf5-static
-    hdf5::hdf5_cpp-static
+    $<IF:$<TARGET_EXISTS:hdf5::hdf5-static>,hdf5::hdf5-static,hdf5::hdf5-shared>
+    $<IF:$<TARGET_EXISTS:hdf5::hdf5_cpp-static>,hdf5::hdf5_cpp-static,hdf5::hdf5_cpp-shared>
     HighFive::Include
     OpenMP::OpenMP_CXX
     range-v3::concepts
@@ -85,11 +87,11 @@ target_link_libraries(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
 )
 
 # Convert space-separated PBAT_CMAKE_CXX_FLAGS to list (i.e. semi-colon separated string)
-if (PBAT_CMAKE_CXX_FLAGS)
+if(PBAT_CMAKE_CXX_FLAGS)
     string(REPLACE " " ";" _pbat_cxx_flags ${PBAT_CMAKE_CXX_FLAGS})
     target_compile_options(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
-            PRIVATE
-            $<$<COMPILE_LANGUAGE:CXX>:${_pbat_cxx_flags}>
+        PRIVATE
+        $<$<COMPILE_LANGUAGE:CXX>:${_pbat_cxx_flags}>
     )
 endif()
 
@@ -138,19 +140,20 @@ if(PBAT_USE_CUDA)
     target_compile_options(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
         PRIVATE
         $<$<COMPILE_LANGUAGE:CUDA>:
-            --expt-relaxed-constexpr;
-            --extended-lambda;
+        --expt-relaxed-constexpr;
+        --extended-lambda;
         >
     )
     target_compile_definitions(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
         PRIVATE
         $<$<COMPILE_LANGUAGE:CUDA>:
-            _SILENCE_ALL_CXX20_DEPRECATION_WARNINGS 
-            # WARNING: 
-            # Disable unicode support in fmt for CUDA sources. 
-            # I don't know how to fix this!!
-            # See https://forums.developer.nvidia.com/t/utf-8-option-for-the-host-function-in-cuda-msvc/312739/11
-            -DFMT_UNICODE=0 
+        _SILENCE_ALL_CXX20_DEPRECATION_WARNINGS
+
+        # WARNING:
+        # Disable unicode support in fmt for CUDA sources.
+        # I don't know how to fix this!!
+        # See https://forums.developer.nvidia.com/t/utf-8-option-for-the-host-function-in-cuda-msvc/312739/11
+        -DFMT_UNICODE=0
         >
     )
 endif()

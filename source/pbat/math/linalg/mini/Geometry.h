@@ -34,7 +34,9 @@ class CrossProduct
     static auto constexpr kCols     = 1;
     static bool constexpr bRowMajor = false;
 
-    PBAT_HOST_DEVICE CrossProduct(LhsNestedType const& A, RhsNestedType const& B) : A(A), B(B) {}
+    PBAT_HOST_DEVICE CrossProduct(LhsNestedType const& _A, RhsNestedType const& _B) : A(_A), B(_B)
+    {
+    }
 
     PBAT_HOST_DEVICE ScalarType operator()(auto i, auto j) const
     {

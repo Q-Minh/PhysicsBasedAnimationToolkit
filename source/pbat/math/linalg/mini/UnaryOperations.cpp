@@ -32,5 +32,5 @@ TEST_CASE("[math][linalg][mini] UnaryOperations")
     CHECK_EQ(unitv.Rows(), kRows);
     CHECK_EQ(unitv.Cols(), 1);
     for (auto i = 0; i < kRows; ++i)
-        CHECK_LE(std::abs(unitv(i) - viExpected), ScalarType(1e-8));
+        CHECK_LE(std::abs(unitv(i) - viExpected), ScalarType{1e-8});
 }

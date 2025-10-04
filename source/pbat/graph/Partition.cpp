@@ -95,13 +95,13 @@ IndexVectorX Partition(
     options[METIS_OPTION_NSEPS]   = static_cast<idx_t>(opts.nSeparators);
     options[METIS_OPTION_NITER]   = static_cast<idx_t>(opts.nRefinementIters);
     options[METIS_OPTION_SEED]    = static_cast<idx_t>(opts.rngSeed);
-    options[METIS_OPTION_MINCONN] = opts.bMinimizeSupernodalGraphDegree ? idx_t(1) : idx_t(0);
-    options[METIS_OPTION_NO2HOP]  = opts.bPerform2HopMatching ? idx_t(0) : idx_t(1);
-    options[METIS_OPTION_CONTIG]  = opts.bEnforceContiguousPartitions ? idx_t(1) : idx_t(0);
-    options[METIS_OPTION_CCORDER] = opts.bIdentifyConnectedComponents ? idx_t(1) : idx_t(0);
+    options[METIS_OPTION_MINCONN] = opts.bMinimizeSupernodalGraphDegree ? idx_t{1} : idx_t{0};
+    options[METIS_OPTION_NO2HOP]  = opts.bPerform2HopMatching ? idx_t{0} : idx_t{1};
+    options[METIS_OPTION_CONTIG]  = opts.bEnforceContiguousPartitions ? idx_t{1} : idx_t{0};
+    options[METIS_OPTION_CCORDER] = opts.bIdentifyConnectedComponents ? idx_t{1} : idx_t{0};
     // Invoke partitioning implementation
     idx_t objval(-1);
-    std::vector<idx_t> part(static_cast<std::size_t>(nVertices), idx_t(-1));
+    std::vector<idx_t> part(static_cast<std::size_t>(nVertices), idx_t{-1});
     int const ec = METIS_PartGraphKway(
         &nVertices,
         &nBalancingConstraints,

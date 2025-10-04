@@ -47,13 +47,13 @@ TEST_CASE("[geometry] MeshBoundary")
     TriangleMesh FM(V, BC);
     VectorX FA = fem::MeshQuadratureWeights<1>(FM).reshaped();
     bool const bTrianglesHaveCorrectAreas =
-        (FA.array() - Scalar(0.5)).square().sum() < Scalar(1e-10);
+        (FA.array() - Scalar{0.5}).square().sum() < Scalar{1e-10};
     CHECK(bTrianglesHaveCorrectAreas);
     using LinearLine = fem::Line<1>;
     using LineMesh   = fem::Mesh<LinearLine, 3>;
     LineMesh EM(V, BF);
     VectorX EL = fem::MeshQuadratureWeights<1>(EM).reshaped();
     bool const bLineSegmentsHaveCorrectLengths =
-        (EL.array() - Scalar(1)).square().sum() < Scalar(1e-10);
+        (EL.array() - Scalar{1}).square().sum() < Scalar{1e-10};
     CHECK(bLineSegmentsHaveCorrectLengths);
 }

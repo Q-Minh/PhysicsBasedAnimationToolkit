@@ -26,7 +26,6 @@ MeshVertexTetrahedronDcd::MeshVertexTetrahedronDcd(
         auto const [fbegin, fend] = mMultibodySystem.ContactTrianglesRangeFor(o);
         auto const [tbegin, tend] = mMultibodySystem.TetrahedraRangeFor(o);
         auto FB = mTriangleAabbs(Eigen::placeholders::all, Eigen::seq(fbegin, fend - 1));
-        auto TB = mTetrahedronAabbs(Eigen::placeholders::all, Eigen::seq(tbegin, tend - 1));
         // Construct object o's mesh BVH tree topology
         mTriangleMeshBvhs[oStl].Construct(FB.topRows<kDims>(), FB.bottomRows<kDims>());
         auto const nTets = tend - tbegin;

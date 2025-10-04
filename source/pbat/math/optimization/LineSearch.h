@@ -18,9 +18,9 @@ namespace pbat::math::optimization {
 template <class TScalar = Scalar>
 struct BackTrackingLineSearch
 {
+    int nMaxIters{20}; ///< Maximum number of iterations for the line search
     TScalar tau{0.5};  ///< Step size decrease factor
     TScalar c{1e-4};   ///< Armijo slope scale
-    int nMaxIters{20}; ///< Maximum number of iterations for the line search
     TScalar alpha{1};  ///< Initial step size
     /**
      * @brief Construct a new Back Tracking Line Search object

@@ -136,10 +136,10 @@ class Integrator
     void ApplyConfig();
 
   private:
-    ElastoDynamicsType mElastoDynamics; ///< Hyper elasticity dynamics
+    Config mConfig; ///< Configuration for the Newton integrator
     contact::MultibodyTetrahedralMeshSystem<IndexType>
         mMeshes;                                    ///< Multibody tetrahedral mesh system
-    Config mConfig;                                 ///< Configuration for the Newton integrator
+    ElastoDynamicsType mElastoDynamics;             ///< Hyper elasticity dynamics
     math::optimization::Newton<ScalarType> mNewton; ///< Newton optimization solver
     math::optimization::BackTrackingLineSearch<ScalarType> mLineSearch; ///< Line searcher
     std::vector<Eigen::Triplet<ScalarType, IndexType>>

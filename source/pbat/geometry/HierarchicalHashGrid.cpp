@@ -29,8 +29,10 @@ TEST_CASE("[geometry] HierarchicalHashGrid")
         {
             for (auto k = 0; k < gridDims(2); ++k)
             {
-                L.col(n) =
-                    Eigen::Vector<ScalarType, kDims>(i * cellSize, j * cellSize, k * cellSize);
+                L.col(n) = Eigen::Vector<ScalarType, kDims>(
+                    static_cast<ScalarType>(i) * cellSize,
+                    static_cast<ScalarType>(j) * cellSize,
+                    static_cast<ScalarType>(k) * cellSize);
                 U.col(n) = L.col(n) + Eigen::Vector<ScalarType, kDims>::Constant(cellSize);
                 ++n;
             }

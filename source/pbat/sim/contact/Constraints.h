@@ -102,7 +102,6 @@ PBAT_HOST_DEVICE void TriangleEnvironmentConstraintAndGradient(
     TMatrixGradCT& gradCT)
 {
     static_assert(TMatrixGradCT::kRows == 9 and TMatrixGradCT::kCols == 3, "gradCT must be 9x3");
-    using ScalarType = typename TMatrixP::ScalarType;
     using math::linalg::mini::SMatrix;
     TriangleEnvironmentConstraint(P, NTB, X1, X2, X3, bary, C);
     // \nabla_{x_i,x_j,x_k} C_c = \beta \otimes NTB[:,c]

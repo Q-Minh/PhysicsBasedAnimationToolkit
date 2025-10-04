@@ -22,5 +22,5 @@ TEST_CASE("[math][linalg][mini] Inverse")
 
     for (auto j = 0; j < Amini.Cols(); ++j)
         for (auto i = 0; i < Amini.Rows(); ++i)
-            CHECK_LE(std::abs(AminiInv(i, j) - AeigenInv(i, j)), ScalarType(1e-8));
+            CHECK_LE(std::abs(AminiInv(i, j) - AeigenInv(i, j)), ScalarType{1e-8});
 }

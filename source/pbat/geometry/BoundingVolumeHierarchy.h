@@ -350,7 +350,6 @@ BoundingVolumeHierarchy<TDerived, TBoundingVolume, TPrimitive, Dims>::Overlappin
     std::size_t reserve) const
 {
     using BoundingVolumeType2 = TBoundingVolume2;
-    using PrimitiveType2      = TPrimitive2;
     std::vector<Index> overlaps{};
     overlaps.reserve(reserve * 2);
     auto const& nodes1 = mKdTree.Nodes();

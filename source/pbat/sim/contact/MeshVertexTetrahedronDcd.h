@@ -214,7 +214,7 @@ inline void MeshVertexTetrahedronDcd::ComputeTriangleAabbs(Eigen::DenseBase<TDer
     for (auto f = 0; f < nTriangles; ++f)
     {
         Matrix<kDims, 3> XF;
-        XF     = X(Eigen::placeholders::all, mMultibodySystem.F.col(f)).template block<kDims, 3>(0, 0);
+        XF = X(Eigen::placeholders::all, mMultibodySystem.F.col(f)).template block<kDims, 3>(0, 0);
         auto L = mTriangleAabbs.col(f).head<kDims>();
         auto U = mTriangleAabbs.col(f).tail<kDims>();
         L      = XF.rowwise().minCoeff();
@@ -323,8 +323,6 @@ inline void MeshVertexTetrahedronDcd::FindNearestTrianglesToPenetratingVertices(
     PBAT_PROFILE_NAMED_SCOPE(
         "pbat.sim.contact.MeshVertexTetrahedronDcd.FindNearestTrianglesToPenetratingVertices");
     IndexType const vbegin = mMultibodySystem.ContactVerticesRangeFor(ov).first;
-    auto const Vov         = mMultibodySystem.ContactVerticesOf(ov);
-    auto const Xv          = X(Eigen::placeholders::all, Vov);
     auto const fbegin      = mMultibodySystem.ContactTrianglesRangeFor(of).first;
     std::unordered_map<IndexType, IndexType>& mBodyVertexToOtherBodiesValenceMap =
         mBodyVertexToOtherBodiesValence[static_cast<std::size_t>(ov)];

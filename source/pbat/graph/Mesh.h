@@ -163,12 +163,13 @@ auto MeshDualGraph(
         flags & static_cast<std::int32_t>(EMeshDualGraphOptions::EdgeAdjacent);
     bool const bKeepVertexAdjacencies =
         flags & static_cast<std::int32_t>(EMeshDualGraphOptions::VertexAdjacent);
-    auto const fKeepAdjacency = [=](auto row, auto col, auto degree) {
-        bool const bKeep = (degree == 3 and bKeepFaceAdjacencies) or
-                           (degree == 2 and bKeepEdgeAdjacencies) or
-                           (degree == 1 and bKeepVertexAdjacencies);
-        return bKeep;
-    };
+    auto const fKeepAdjacency =
+        [=]([[maybe_unused]] auto row, [[maybe_unused]] auto col, auto degree) {
+            bool const bKeep = (degree == 3 and bKeepFaceAdjacencies) or
+                               (degree == 2 and bKeepEdgeAdjacencies) or
+                               (degree == 1 and bKeepVertexAdjacencies);
+            return bKeep;
+        };
     GTG.prune(fKeepAdjacency);
     return GTG;
 }

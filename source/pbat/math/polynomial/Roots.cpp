@@ -11,13 +11,13 @@ TEST_CASE("[math][polynomial] Roots")
     using namespace pbat;
     using namespace pbat::math;
 
-    static Scalar constexpr kMaxCoeff = 1e10;
-    static Scalar constexpr epsilon =
-        1e-7; // Tests the residual P(root) \approx 0. Note that the residual is highly
-              // ill-conditioned for high degree polynomials. Thus, we only apply this test to
-              // polynomials of degree up to 5.
     common::ForRange<2, 6>([]<auto N>() {
         // Arrange
+        Scalar constexpr kMaxCoeff = 1e10;
+        Scalar constexpr epsilon =
+            1e-7; // Tests the residual P(root) \approx 0. Note that the residual is highly
+                  // ill-conditioned for high degree polynomials. Thus, we only apply this test to
+                  // polynomials of degree up to 5.
         bool bHasRoot{false};
         std::array<Scalar, N + 1> coeffs;
         std::random_device rd;

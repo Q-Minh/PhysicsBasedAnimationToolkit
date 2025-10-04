@@ -41,7 +41,7 @@ struct Transform
      * @param R Rotation matrix
      * @param t Translation vector
      */
-    Transform(Mat3<ScalarType> const& R, Vec3<ScalarType> const& t) : R(R), t(t) {}
+    Transform(Mat3<ScalarType> const& _R, Vec3<ScalarType> const& _t) : R(_R), t(_t) {}
     /**
      * @brief Create an identity transform
      * @return Identity transform

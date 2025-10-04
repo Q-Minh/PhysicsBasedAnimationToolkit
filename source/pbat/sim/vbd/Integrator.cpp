@@ -263,7 +263,7 @@ TEST_CASE("[sim][vbd] Integrator")
          1, 5, 3, 7, 2, 6, 0, 4, 3, 2, 5, 7,
          4, 4, 5, 5, 7, 7, 6, 6, 1, 3, 6, 6;
     // clang-format on
-    V.reshaped().setLinSpaced(0, static_cast<Index>(P.cols() - 1));
+    V.reshaped().setLinSpaced(0, P.cols() - 1);
     // Problem parameters
     auto constexpr dt         = Scalar{1e-2};
     auto constexpr substeps   = 1;

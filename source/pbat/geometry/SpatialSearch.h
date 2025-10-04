@@ -58,8 +58,8 @@ template <
     class FNodeOverlap,
     class FObjectOverlap,
     class FOnFound,
-    auto N = 2,
-    class TIndex = Index,
+    auto N           = 2,
+    class TIndex     = Index,
     auto kStackDepth = 64>
 PBAT_HOST_DEVICE bool Overlaps(
     FChild fChild,
@@ -118,9 +118,9 @@ template <
     class FNodesOverlap,
     class FObjectsOverlap,
     class FOnFound,
-    auto NLhs = 2,
-    auto NRhs = 2,
-    class TIndex = Index,
+    auto NLhs        = 2,
+    auto NRhs        = 2,
+    class TIndex     = Index,
     auto kStackDepth = 128>
 PBAT_HOST_DEVICE bool Overlaps(
     FChildLhs fChildLhs,
@@ -170,8 +170,8 @@ template <
     class FNodesOverlap,
     class FObjectsOverlap,
     class FOnFound,
-    auto N = 2,
-    class TIndex = Index,
+    auto N           = 2,
+    class TIndex     = Index,
     auto kStackDepth = 128>
 PBAT_HOST_DEVICE bool SelfOverlaps(
     FChild fChild,
@@ -236,11 +236,11 @@ template <
     class FDistanceLowerBound,
     class FDistance,
     class FOnFound,
-    auto N = 2,
-    class TScalar = Scalar,
-    class TIndex = Index,
+    auto N           = 2,
+    class TScalar    = Scalar,
+    class TIndex     = Index,
     auto kStackDepth = 64,
-    auto kQueueSize = 8>
+    auto kQueueSize  = 8>
 PBAT_HOST_DEVICE bool DfsAllNearestNeighbours(
     FChild fChild,
     FIsLeaf fIsLeaf,
@@ -298,9 +298,9 @@ template <
     class FDistanceLowerBound,
     class FDistance,
     class FOnFound,
-    auto N = 2,
-    class TScalar = Scalar,
-    class TIndex = Index,
+    auto N             = 2,
+    class TScalar      = Scalar,
+    class TIndex       = Index,
     auto kHeapCapacity = N * 1024>
 PBAT_HOST_DEVICE bool NearestToFurthestNeighbours(
     FChild fChild,
@@ -348,9 +348,9 @@ template <
     class FDistanceLowerBound,
     class FDistance,
     class FOnFound,
-    auto N = 2,
-    class TScalar = Scalar,
-    class TIndex = Index,
+    auto N             = 2,
+    class TScalar      = Scalar,
+    class TIndex       = Index,
     auto kHeapCapacity = N * 1024>
 PBAT_HOST_DEVICE bool AllNearestNeighbours(
     FChild fChild,
@@ -408,9 +408,9 @@ template <
     class FDistanceLowerBound,
     class FDistance,
     class FOnFound,
-    auto N = 2,
-    class TScalar = Scalar,
-    class TIndex = Index,
+    auto N             = 2,
+    class TScalar      = Scalar,
+    class TIndex       = Index,
     auto kHeapCapacity = N * 1024>
 PBAT_HOST_DEVICE bool KNearestNeighbours(
     FChild fChild,
@@ -480,13 +480,12 @@ bool Overlaps(
         if (stack.IsFull())
             return false;
         TIndex const node = stack.Pop();
-        common::ForRange<0, N>(
-            [&]<auto i> PBAT_HOST_DEVICE() {
-                TIndex const child = fChild.template operator()<i>(node);
-                if (child >= 0)
-                    if (fVisit(child) and not stack.IsFull())
-                        stack.Push(child);
-            });
+        common::ForRange<0, N>([&]<auto i> PBAT_HOST_DEVICE() {
+            TIndex const child = fChild.template operator()<i>(node);
+            if (child >= 0)
+                if (fVisit(child) and not stack.IsFull())
+                    stack.Push(child);
+        });
     }
     return true;
 }
@@ -522,8 +521,8 @@ PBAT_HOST_DEVICE bool Overlaps(
     TIndex rootLhs,
     TIndex rootRhs)
 {
-    #include "pbat/warning/Push.h"
-    #include "pbat/warning/SignConversion.h"
+#include "pbat/warning/Push.h"
+#include "pbat/warning/SignConversion.h"
     struct Pair
     {
         TIndex nLhs;
@@ -533,22 +532,20 @@ PBAT_HOST_DEVICE bool Overlaps(
     };
     common::Stack<Pair, kStackDepth> stack{};
     auto const fRecurseRight = [&] PBAT_HOST_DEVICE(Pair const& p) {
-        common::ForRange<0, NRhs>(
-            [&]<auto i> PBAT_HOST_DEVICE() {
-                TIndex const childRhs = fChildRhs.template operator()<i>(p.nRhs);
-                if (childRhs >= 0 and not stack.IsFull())
-                    stack.Push(
-                        {p.nLhs, childRhs, p.levelLhs, static_cast<std::int16_t>(p.levelRhs + 1)});
-            });
+        common::ForRange<0, NRhs>([&]<auto i> PBAT_HOST_DEVICE() {
+            TIndex const childRhs = fChildRhs.template operator()<i>(p.nRhs);
+            if (childRhs >= 0 and not stack.IsFull())
+                stack.Push(
+                    {p.nLhs, childRhs, p.levelLhs, static_cast<std::int16_t>(p.levelRhs + 1)});
+        });
     };
     auto const fRecurseLeft = [&] PBAT_HOST_DEVICE(Pair const& p) {
-        common::ForRange<0, NLhs>(
-            [&]<auto i> PBAT_HOST_DEVICE() {
-                TIndex const childLhs = fChildLhs.template operator()<i>(p.nLhs);
-                if (childLhs >= 0 and not stack.IsFull())
-                    stack.Push(
-                        {childLhs, p.nRhs, static_cast<std::int16_t>(p.levelLhs + 1), p.levelRhs});
-            });
+        common::ForRange<0, NLhs>([&]<auto i> PBAT_HOST_DEVICE() {
+            TIndex const childLhs = fChildLhs.template operator()<i>(p.nLhs);
+            if (childLhs >= 0 and not stack.IsFull())
+                stack.Push(
+                    {childLhs, p.nRhs, static_cast<std::int16_t>(p.levelLhs + 1), p.levelRhs});
+        });
     };
     // Traverse top-down
     TIndex k{0};
@@ -598,7 +595,7 @@ PBAT_HOST_DEVICE bool Overlaps(
         }
     }
     return true;
-    #include "pbat/warning/Pop.h"
+#include "pbat/warning/Pop.h"
 };
 
 template <
@@ -622,8 +619,8 @@ PBAT_HOST_DEVICE bool SelfOverlaps(
     FOnFound fOnFound,
     TIndex root)
 {
-    #include "pbat/warning/Push.h"
-    #include "pbat/warning/SignConversion.h"
+#include "pbat/warning/Push.h"
+#include "pbat/warning/SignConversion.h"
     struct Pair
     {
         TIndex nLhs;
@@ -633,22 +630,20 @@ PBAT_HOST_DEVICE bool SelfOverlaps(
     };
     common::Stack<Pair, kStackDepth> stack{};
     auto const fRecurseRight = [&] PBAT_HOST_DEVICE(Pair const& p) {
-        common::ForRange<0, N>(
-            [&]<auto i> PBAT_HOST_DEVICE() {
-                TIndex const childRhs = fChild.template operator()<i>(p.nRhs);
-                if (childRhs >= 0 and not stack.IsFull())
-                    stack.Push(
-                        {p.nLhs, childRhs, p.levelLhs, static_cast<std::int16_t>(p.levelRhs + 1)});
-            });
+        common::ForRange<0, N>([&]<auto i> PBAT_HOST_DEVICE() {
+            TIndex const childRhs = fChild.template operator()<i>(p.nRhs);
+            if (childRhs >= 0 and not stack.IsFull())
+                stack.Push(
+                    {p.nLhs, childRhs, p.levelLhs, static_cast<std::int16_t>(p.levelRhs + 1)});
+        });
     };
     auto const fRecurseLeft = [&] PBAT_HOST_DEVICE(Pair const& p) {
-        common::ForRange<0, N>(
-            [&]<auto i> PBAT_HOST_DEVICE() {
-                TIndex const childLhs = fChild.template operator()<i>(p.nLhs);
-                if (childLhs >= 0 and not stack.IsFull())
-                    stack.Push(
-                        {childLhs, p.nRhs, static_cast<std::int16_t>(p.levelLhs + 1), p.levelRhs});
-            });
+        common::ForRange<0, N>([&]<auto i> PBAT_HOST_DEVICE() {
+            TIndex const childLhs = fChild.template operator()<i>(p.nLhs);
+            if (childLhs >= 0 and not stack.IsFull())
+                stack.Push(
+                    {childLhs, p.nRhs, static_cast<std::int16_t>(p.levelLhs + 1), p.levelRhs});
+        });
     };
     // For any given nodes (n,a) where a is an ancestor of n, it is guaranteed that
     // (n,a) are overlapping, since n is embedded in a. We need to find a way to avoid
@@ -683,34 +678,30 @@ PBAT_HOST_DEVICE bool SelfOverlaps(
             {
                 // Collect children
                 std::array<TIndex, N> children;
-                common::ForRange<0, N>(
-                    [&]<auto i> PBAT_HOST_DEVICE() {
-                        children[i] = fChild.template operator()<i>(n);
-                    });
+                common::ForRange<0, N>([&]<auto i> PBAT_HOST_DEVICE() {
+                    children[i] = fChild.template operator()<i>(n);
+                });
                 // Add node visitors first, so that we don't traverse the whole tree in one go
                 std::int16_t const nextLevel = p.levelLhs + std::int16_t{1};
-                common::ForRange<0, N>(
-                    [&]<auto i> PBAT_HOST_DEVICE() {
+                common::ForRange<0, N>([&]<auto i> PBAT_HOST_DEVICE() {
+                    if (stack.IsFull())
+                        return;
+                    if (children[i] < 0)
+                        return;
+                    stack.Push({children[i], children[i], nextLevel, nextLevel});
+                });
+                // Add all distinct child pairs to the stack
+                common::ForRange<0, N>([&]<auto i> PBAT_HOST_DEVICE() {
+                    if (children[i] < 0)
+                        return;
+                    common::ForRange<i + 1, N>([&]<auto j> PBAT_HOST_DEVICE() {
                         if (stack.IsFull())
                             return;
-                        if (children[i] < 0)
+                        if (children[j] < 0)
                             return;
-                        stack.Push({children[i], children[i], nextLevel, nextLevel});
+                        stack.Push({children[i], children[j], nextLevel, nextLevel});
                     });
-                // Add all distinct child pairs to the stack
-                common::ForRange<0, N>(
-                    [&]<auto i> PBAT_HOST_DEVICE() {
-                        if (children[i] < 0)
-                            return;
-                        common::ForRange<i + 1, N>(
-                            [&]<auto j> PBAT_HOST_DEVICE() {
-                                if (stack.IsFull())
-                                    return;
-                                if (children[j] < 0)
-                                    return;
-                                stack.Push({children[i], children[j], nextLevel, nextLevel});
-                            });
-                    });
+                });
             }
         }
         else
@@ -753,7 +744,7 @@ PBAT_HOST_DEVICE bool SelfOverlaps(
         }
     }
     return true;
-    #include "pbat/warning/Pop.h"
+#include "pbat/warning/Pop.h"
 }
 
 template <
@@ -812,7 +803,6 @@ bool DfsAllNearestNeighbours(
     auto fVisit = [&] PBAT_HOST_DEVICE(TIndex node) {
         return fDoVisit(node, fLower(node));
     };
-    using FVisit = decltype(fVisit);
     // For the nearest neighbour search, it might be best not to blindly run a pre-order
     // traversal of the branch and bound tree. If requested, let's optimistically run a best-first
     // search. At each node, we will sort the children by their lower bounds and visit them in that
@@ -831,14 +821,13 @@ bool DfsAllNearestNeighbours(
             if (stack.IsFull())
                 return false;
             TIndex const node = stack.Pop();
-            common::ForRange<0, N>(
-                [&]<auto i> PBAT_HOST_DEVICE() {
-                    TIndex const child = fChild.template operator()<i>(node);
-                    ordering[i] = i;
-                    children[i] = child;
-                    bool const bHasChild = child >= 0;
-                    lowers[i] = bHasChild ? fLower(child) : std::numeric_limits<TScalar>::max();
-                });
+            common::ForRange<0, N>([&]<auto i> PBAT_HOST_DEVICE() {
+                TIndex const child   = fChild.template operator()<i>(node);
+                ordering[i]          = i;
+                children[i]          = child;
+                bool const bHasChild = child >= 0;
+                lowers[i] = bHasChild ? fLower(child) : std::numeric_limits<TScalar>::max();
+            });
             if constexpr (N == 2)
             {
                 if (lowers[0] > lowers[1])
@@ -846,15 +835,12 @@ bool DfsAllNearestNeighbours(
             }
             else
             {
-                std::sort(
-                    ordering.begin(),
-                    ordering.end(),
-                    [&](TIndex i, TIndex j) {
-                        return lowers[i] < lowers[j];
-                    });
+                std::sort(ordering.begin(), ordering.end(), [&](TIndex i, TIndex j) {
+                    return lowers[i] < lowers[j];
+                });
             }
-            #include "pbat/warning/Push.h"
-            #include "pbat/warning/SignConversion.h"
+#include "pbat/warning/Push.h"
+#include "pbat/warning/SignConversion.h"
             // NOTE: I hope this loop gets unrolled by the compiler!!
             for (int j = N - 1; j >= 0; --j)
             {
@@ -868,7 +854,7 @@ bool DfsAllNearestNeighbours(
                     break; // The ordering is such that all non-children are at the end, so exit as
                 // soon as we encounter non-child.
             }
-            #include "pbat/warning/Pop.h"
+#include "pbat/warning/Pop.h"
         }
     }
     else
@@ -887,13 +873,12 @@ bool DfsAllNearestNeighbours(
             if (stack.IsFull())
                 return false;
             TIndex const node = stack.Pop();
-            common::ForRange<0, N>(
-                [&]<auto i> PBAT_HOST_DEVICE() {
-                    TIndex const child = fChild.template operator()<i>(node);
-                    if (child >= 0)
-                        if (fVisit(child) and not stack.IsFull())
-                            stack.Push(child);
-                });
+            common::ForRange<0, N>([&]<auto i> PBAT_HOST_DEVICE() {
+                TIndex const child = fChild.template operator()<i>(node);
+                if (child >= 0)
+                    if (fVisit(child) and not stack.IsFull())
+                        stack.Push(child);
+            });
         }
     }
     TIndex k{0};
@@ -948,7 +933,6 @@ bool NearestToFurthestNeighbours(
         return q1.d > q2.d;
     };
     using Comparator = decltype(fGreater);
-    using Container  = std::vector<QueueItem>;
     using MinHeap    = common::Heap<QueueItem, Comparator, kHeapCapacity>;
     MinHeap heap{fGreater};
     heap.Push(fMakeNodeQueueItem(root));
@@ -978,12 +962,11 @@ bool NearestToFurthestNeighbours(
             }
             else
             {
-                common::ForRange<0, N>(
-                    [&]<auto i> PBAT_HOST_DEVICE() {
-                        TIndex const child = fChild.template operator()<i>(node);
-                        if (child >= 0 and not heap.IsFull())
-                            heap.Push(fMakeNodeQueueItem(child));
-                    });
+                common::ForRange<0, N>([&]<auto i> PBAT_HOST_DEVICE() {
+                    TIndex const child = fChild.template operator()<i>(node);
+                    if (child >= 0 and not heap.IsFull())
+                        heap.Push(fMakeNodeQueueItem(child));
+                });
             }
         }
         else

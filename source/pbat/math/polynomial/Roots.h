@@ -18,16 +18,9 @@
  *
  */
 
-#if defined(__clang__)
-    #pragma clang diagnostic push
-    #pragma clang diagnostic ignored "-Wconversion"
-#elif defined(__GNUC__) or defined(__GNUG__)
-    #pragma GCC diagnostic push
-    #pragma GCC diagnostic ignored "-Wconversion"
-#elif defined(_MSC_VER)
-    #pragma warning(push)
-    #pragma warning(disable : 4365) // signed/unsigned mismatch
-#endif
+#include "pbat/warning/Push.h"
+#include "pbat/warning/OldStyleCast.h"
+#include "pbat/warning/SignConversion.h"
 
 //-------------------------------------------------------------------------------
 
@@ -1111,7 +1104,7 @@ inline T MultSign(T v, S sign)
 template <typename T, typename S>
 inline bool IsDifferentSign(T a, S b)
 {
-    return a < 0 != b < 0;
+    return (a < 0) != (b < 0);
 } //!< Returns true if the sign bits are different
 
 //-------------------------------------------------------------------------------
@@ -3072,13 +3065,7 @@ inline bool PolynomialForEachRoot(RootCallback callback, ftype const coef[N + 1]
 
 } // namespace pbat::math::polynomial::detail
 
-#if defined(__clang__)
-    #pragma clang diagnostic pop
-#elif defined(__GNUC__) or defined(__GNUG__)
-    #pragma GCC diagnostic pop
-#elif defined(_MSC_VER)
-    #pragma warning(pop)
-#endif
+#include "pbat/warning/Pop.h"
 
 #include "pbat/Aliases.h"
 

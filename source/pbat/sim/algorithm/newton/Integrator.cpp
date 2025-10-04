@@ -6,6 +6,7 @@ namespace pbat::sim::algorithm::newton {
 
 Integrator::Integrator(Integrator const& other)
     : mConfig(other.mConfig),
+      mMeshes(other.mMeshes),
       mElastoDynamics(other.mElastoDynamics),
       mNewton(other.mNewton),
       mLineSearch(other.mLineSearch),

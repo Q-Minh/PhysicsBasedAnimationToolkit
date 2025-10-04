@@ -11,10 +11,10 @@ namespace pbat {
 namespace geometry {
 
 TetrahedralAabbHierarchy::TetrahedralAabbHierarchy(
-    Eigen::Ref<MatrixX const> const& V,
-    Eigen::Ref<IndexMatrixX const> const& C,
+    Eigen::Ref<MatrixX const> const& _V,
+    Eigen::Ref<IndexMatrixX const> const& _C,
     Index maxPointsInLeaf)
-    : V(V), C(C)
+    : V(_V), C(_C)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.geometry.TetrahedralAabbHierarchy.Construct");
     auto constexpr kRowsC = static_cast<int>(PrimitiveType::RowsAtCompileTime);
