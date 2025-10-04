@@ -26,7 +26,7 @@ class Integrator
      */
     PBAT_API void TraceNextStep(std::string const& path = ".", Index t = -1);
 
-    PBAT_API Data data;
+    Data data;
 
     virtual ~Integrator() = default;
 

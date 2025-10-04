@@ -11,7 +11,7 @@ namespace pbat {
 namespace sim {
 namespace xpbd {
 
-PBAT_API struct Data
+struct PBAT_API Data
 {
   public:
     Data&
@@ -39,7 +39,7 @@ PBAT_API struct Data
      * @param SGadj
      * @param Cptr
      * @param Cadj
-     * @return 
+     * @return
      */
     Data& WithClusterPartitions(
         std::vector<Index> const& SGptr,

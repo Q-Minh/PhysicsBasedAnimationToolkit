@@ -18,7 +18,7 @@ class Integrator
 
     PBAT_API void Step(Scalar dt, Index iterations, Index substeps = Index{1});
 
-    PBAT_API Data data;
+    Data data;
 
   protected:
     void ProjectBlockNeoHookeanConstraints(Scalar dt, Scalar dt2);

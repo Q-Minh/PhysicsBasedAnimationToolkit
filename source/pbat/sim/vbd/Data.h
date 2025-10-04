@@ -11,7 +11,7 @@ namespace pbat::sim::vbd {
 /**
  * @brief VBD simulation configuration
  */
-PBAT_API struct Data
+struct PBAT_API Data
 {
   public:
     static auto constexpr kDims = 3; ///< Number of spatial dimensions
