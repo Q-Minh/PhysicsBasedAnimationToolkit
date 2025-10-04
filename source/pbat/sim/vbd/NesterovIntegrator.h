@@ -2,13 +2,14 @@
 #define PBAT_SIM_VBD_NESTEROVINTEGRATOR_H
 
 #include "Integrator.h"
+#include "PhysicsBasedAnimationToolkitExport.h"
 
 namespace pbat::sim::vbd {
 
 class NesterovIntegrator : public Integrator
 {
   public:
-    NesterovIntegrator(Data data);
+    PBAT_API NesterovIntegrator(Data data);
 
   protected:
     virtual void Solve(Scalar sdt, Scalar sdt2, Index iterations) override;

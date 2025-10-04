@@ -12,6 +12,7 @@
 #ifndef PBAT_SIM_CONTACT_MULTIBODYMESHMIXEDCCDDCD_H
 #define PBAT_SIM_CONTACT_MULTIBODYMESHMIXEDCCDDCD_H
 
+#include "PhysicsBasedAnimationToolkitExport.h"
 #include "pbat/Aliases.h"
 #include "pbat/common/CountingSort.h"
 #include "pbat/geometry/AabbKdTreeHierarchy.h"
@@ -291,27 +292,27 @@ class MultibodyMeshMixedCcdDcd
      * @pre (Vertex) mesh BVHs must be up-to-date before calling this function, i.e. via a call to
      * `UpdateMeshVertexBvhs`
      */
-    void ComputeBodyAabbs();
+    PBAT_API void ComputeBodyAabbs();
     /**
      * @brief Recompute mesh vertex BVH bounding boxes
      */
-    void UpdateMeshVertexBvhs();
+    PBAT_API void UpdateMeshVertexBvhs();
     /**
      * @brief Recompute mesh edge BVH bounding boxes
      */
-    void UpdateMeshEdgeBvhs();
+    PBAT_API void UpdateMeshEdgeBvhs();
     /**
      * @brief Recompute mesh triangle BVH bounding boxes
      */
-    void UpdateMeshTriangleBvhs();
+    PBAT_API void UpdateMeshTriangleBvhs();
     /**
      * @brief Recompute mesh tetrahedron BVH bounding boxes
      */
-    void UpdateMeshTetrahedronBvhs();
+    PBAT_API void UpdateMeshTetrahedronBvhs();
     /**
      * @brief Recompute body BVH tree and internal node bounding boxes
      */
-    void RecomputeBodyBvh();
+    PBAT_API void RecomputeBodyBvh();
     /**
      * @brief Loop over all potentially colliding body pairs
      *

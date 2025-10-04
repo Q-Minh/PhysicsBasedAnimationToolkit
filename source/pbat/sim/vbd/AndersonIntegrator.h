@@ -12,6 +12,7 @@
 #define PBAT_SIM_VBD_ANDERSONINTEGRATOR_H
 
 #include "Integrator.h"
+#include "PhysicsBasedAnimationToolkitExport.h"
 
 namespace pbat::sim::vbd {
 
@@ -26,7 +27,7 @@ class AndersonIntegrator : public Integrator
      *
      * @param data Simulation data
      */
-    AndersonIntegrator(Data data);
+    PBAT_API AndersonIntegrator(Data data);
 
   protected:
     /**

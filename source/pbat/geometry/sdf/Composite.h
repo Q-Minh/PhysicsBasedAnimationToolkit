@@ -12,6 +12,7 @@
 #define PBAT_GEOMETRY_SDF_COMPOSITE_H
 
 #include "BinaryNode.h"
+#include "PhysicsBasedAnimationToolkitExport.h"
 #include "Primitive.h"
 #include "Transform.h"
 #include "TypeDefs.h"
@@ -158,7 +159,7 @@ struct Composite
  * @return (roots, parents) where roots is a vector of root node indices in the forest and
  * parents is a vector of parent node indices, such that parents[n] = -1 if n is a root
  */
-auto FindRootsAndParents(std::span<std::pair<int, int> const> children)
+PBAT_API auto FindRootsAndParents(std::span<std::pair<int, int> const> children)
     -> std::pair<std::vector<int>, std::vector<int>>;
 
 template <common::CArithmetic TScalar>

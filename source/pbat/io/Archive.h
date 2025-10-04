@@ -9,6 +9,8 @@
 #ifndef PBAT_IO_ARCHIVE_H
 #define PBAT_IO_ARCHIVE_H
 
+#include "PhysicsBasedAnimationToolkitExport.h"
+
 #include <filesystem>
 #include <highfive/H5File.hpp>
 #include <highfive/H5Group.hpp>
@@ -32,14 +34,14 @@ class Archive
      * @param filepath Path to the HDF5 file.
      * @param flags Access mode for the file (default is OpenOrCreate).
      */
-    Archive(
+    PBAT_API Archive(
         std::filesystem::path const& filepath,
         HighFive::File::AccessMode flags = HighFive::File::OpenOrCreate);
     /**
      * @brief Check if the archive is usable.
      * @return true if the archive is usable, false otherwise.
      */
-    bool IsUsable() const;
+    PBAT_API bool IsUsable() const;
     /**
      * @brief Get or create a group at the given path.
      * @param path Path to the group.
@@ -47,7 +49,7 @@ class Archive
      * @throw std::runtime_error if a non-group object of the same name already exists.
      * @throw HighFive::GroupException if the group cannot be created or fetched.
      */
-    Archive GetOrCreateGroup(std::string const& path);
+    PBAT_API Archive GetOrCreateGroup(std::string const& path);
     /**
      * @brief Get a group or create it if it does not exist.
      * @param path Path to the group.
@@ -55,20 +57,20 @@ class Archive
      * @throw std::runtime_error if a non-group object of the same name already exists.
      * @throw HighFive::GroupException if the group cannot be created or fetched.
      */
-    Archive operator[](std::string const& path);
+    PBAT_API Archive operator[](std::string const& path);
     /**
      * @brief Get a group if it exists.
      * @param path Path to the group.
      * @return Archive object representing the group.
      * @throw HighFive::GroupException if the group does not exist.
      */
-    Archive operator[](std::string const& path) const;
+    PBAT_API Archive operator[](std::string const& path) const;
     /**
      * @brief Check if a group exists at the given path.
      * @param path Path to the group.
      * @return true if the group exists, false otherwise.
      */
-    bool HasGroup(std::string const& path) const;
+    PBAT_API bool HasGroup(std::string const& path) const;
     /**
      * @brief Write data to the archive.
      * @tparam T Type of the data to write.
@@ -110,12 +112,12 @@ class Archive
      * @param path Path to the dataset or group.
      * @throw HighFive::GroupException if the dataset or group cannot be unlinked.
      */
-    void Unlink(std::string const& path);
+    PBAT_API void Unlink(std::string const& path);
     /**
      * @brief Get the path of the current HDF5 object.
      * @return Path of the current HDF5 object.
      */
-    std::optional<std::string> GetPath() const;
+    PBAT_API std::optional<std::string> GetPath() const;
 
   protected:
     using Object =

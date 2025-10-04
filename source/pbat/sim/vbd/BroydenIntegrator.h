@@ -12,6 +12,7 @@
 #define PBAT_SIM_VBD_BROYDENINTEGRATOR_H
 
 #include "Integrator.h"
+#include "PhysicsBasedAnimationToolkitExport.h"
 
 #include <Eigen/SparseCholesky>
 
@@ -28,7 +29,7 @@ class BroydenIntegrator : public Integrator
      *
      * @param data Simulation data
      */
-    BroydenIntegrator(Data data);
+    PBAT_API BroydenIntegrator(Data data);
 
   protected:
     /**

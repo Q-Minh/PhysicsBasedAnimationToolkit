@@ -2,6 +2,7 @@
 #define PBAT_SIM_CONTACT_MESHVERTEXTETRAHEDRONDCD_H
 
 #include "MultibodyTetrahedralMeshSystem.h"
+#include "PhysicsBasedAnimationToolkitExport.h"
 #include "pbat/Aliases.h"
 #include "pbat/geometry/AabbKdTreeHierarchy.h"
 #include "pbat/geometry/AabbRadixTreeHierarchy.h"
@@ -40,7 +41,7 @@ class MeshVertexTetrahedronDcd
      * @param X `kDims x |# vertices|` matrix of vertex positions
      * @param T `4 x |# tetrahedra|` tetrahedron array
      */
-    MeshVertexTetrahedronDcd(
+    PBAT_API MeshVertexTetrahedronDcd(
         Eigen::Ref<Eigen::Matrix<ScalarType, kDims, Eigen::Dynamic>> X,
         Eigen::Ref<Eigen::Matrix<IndexType, 4, Eigen::Dynamic>> T);
     /**
@@ -49,7 +50,7 @@ class MeshVertexTetrahedronDcd
      * @param X `kDims x |# vertices|` matrix of vertex positions
      * @param T `4 x |# tetrahedra|` tetrahedron array
      */
-    void UpdateActiveSet(
+    PBAT_API void UpdateActiveSet(
         Eigen::Ref<Eigen::Matrix<ScalarType, kDims, Eigen::Dynamic> const> const& X,
         Eigen::Ref<Eigen::Matrix<IndexType, 4, Eigen::Dynamic> const> const& T);
     /**
@@ -67,7 +68,7 @@ class MeshVertexTetrahedronDcd
     /**
      * @brief Get the multibody tetrahedral mesh system
      */
-    MultibodyTetrahedralMeshSystem<IndexType> const& MultibodySystem() const;
+    PBAT_API MultibodyTetrahedralMeshSystem<IndexType> const& MultibodySystem() const;
 
   protected:
     /**
@@ -77,13 +78,6 @@ class MeshVertexTetrahedronDcd
      */
     template <class TDerivedX>
     void ComputeTriangleAabbs(Eigen::DenseBase<TDerivedX> const& X);
-    /**
-     * @brief Compute axis-aligned bounding boxes for tetrahedra
-     * @tparam TDerivedX Eigen type of vertex positions
-     * @param X `kDims x |# vertices|` matrix of vertex positions
-     */
-    template <class TDerivedX>
-    void ComputeTetrahedronAabbs(Eigen::DenseBase<TDerivedX> const& X);
     /**
      * @brief Computes AABBs for tetrahedra from mesh vertex positions
      * @tparam TDerivedX Eigen type of vertex positions
@@ -102,20 +96,20 @@ class MeshVertexTetrahedronDcd
      * @pre (Vertex) mesh BVHs must be up-to-date before calling this function, i.e. via a call to
      * `UpdateMeshVertexBvhs`
      */
-    void ComputeBodyAabbs();
+    PBAT_API void ComputeBodyAabbs();
     /**
      * @brief Recompute mesh triangle BVH bounding boxes
      */
-    void UpdateMeshTriangleBvhs();
+    PBAT_API void UpdateMeshTriangleBvhs();
     /**
      * @brief Recompute mesh tetrahedron hash grid for a specific body
      * @param bodyIndex Index of the body to update the tetrahedron hash grid for
      */
-    void UpdateMeshTetrahedronHashGrid(IndexType bodyIndex);
+    PBAT_API void UpdateMeshTetrahedronHashGrid(IndexType bodyIndex);
     /**
      * @brief Recompute bodies BVH tree and internal node bounding boxes
      */
-    void RecomputeBodiesBvh();
+    PBAT_API void RecomputeBodiesBvh();
     /**
      * @brief Compute and visit all contacting body pairs
      * @tparam FOnBodyPair Callable type with signature `void(IndexType oi, IndexType oj)`

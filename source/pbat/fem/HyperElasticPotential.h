@@ -13,6 +13,7 @@
 
 #include "Concepts.h"
 #include "DeformationGradient.h"
+#include "PhysicsBasedAnimationToolkitExport.h"
 #include "pbat/Aliases.h"
 #include "pbat/common/Eigen.h"
 #include "pbat/math/linalg/FilterEigenvalues.h"
@@ -45,7 +46,7 @@ enum class EHyperElasticSpdCorrection : std::uint32_t {
  * @param mode SPD correction mode
  * @return Corresponding eigenvalue filtering mode
  */
-math::linalg::EEigenvalueFilter ToEigenvalueFilter(EHyperElasticSpdCorrection mode);
+PBAT_API math::linalg::EEigenvalueFilter ToEigenvalueFilter(EHyperElasticSpdCorrection mode);
 
 /**
  * @brief Bit-flag enum for element elasticity computation flags
