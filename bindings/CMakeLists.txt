@@ -165,25 +165,26 @@ if(SKBUILD EQUAL "2")
             PATTERN "*.exp" EXCLUDE
             PATTERN "*.lib" EXCLUDE
         )
+
+        # Bundle external (i.e. not built by this project) shared library dependencies.
+        get_target_property(_pbat_link_libraries PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit LINK_LIBRARIES)
+        
+        foreach(_pbat_link_library IN ITEMS ${_pbat_link_libraries})
+            if(TARGET ${_pbat_link_library})
+                get_target_property(_is_imported ${_pbat_link_library} IMPORTED)
+                get_target_property(_type ${_pbat_link_library} TYPE)
+                message(DEBUG "PBAT[python] -- LINK_LIBRARY=${_pbat_link_library} has TYPE=${_type}")
+            
+                if(${_is_imported} AND(_type STREQUAL "SHARED_LIBRARY"))
+                    message(VERBOSE "PBAT[python] -- SHARED_LIBRARY=${_pbat_link_library} is IMPORTED, bundling imported artifacts")
+                    install(IMPORTED_RUNTIME_ARTIFACTS ${_pbat_link_library} RUNTIME DESTINATION "pbatoolkit")
+                endif()
+            else()
+                message(DEBUG "PBAT[python] -- LINK_LIBRARY=${_pbat_link_library} is not a target")
+            endif()
+        endforeach()
     endif()
 
-# Bundle external (i.e. not built by this project) shared library dependencies.
-# get_target_property(_pbat_link_libraries PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit LINK_LIBRARIES)
-
-# foreach(_pbat_link_library IN ITEMS ${_pbat_link_libraries})
-# if(TARGET ${_pbat_link_library})
-# get_target_property(_is_imported ${_pbat_link_library} IMPORTED)
-# get_target_property(_type ${_pbat_link_library} TYPE)
-# message(DEBUG "PBAT[python] -- LINK_LIBRARY=${_pbat_link_library} has TYPE=${_type}")
-
-# if(${_is_imported} AND(_type STREQUAL "SHARED_LIBRARY"))
-# message(VERBOSE "PBAT[python] -- SHARED_LIBRARY=${_pbat_link_library} is IMPORTED, bundling imported artifacts")
-# install(IMPORTED_RUNTIME_ARTIFACTS ${_pbat_link_library} RUNTIME DESTINATION "pbatoolkit")
-# endif()
-# else()
-# message(DEBUG "PBAT[python] -- LINK_LIBRARY=${_pbat_link_library} is not a target")
-# endif()
-# endforeach()
 else()
     message(WARNING "PBAT[python] -- Python bindings are only installable under scikit-build-core, i.e. via pip install")
 endif()
