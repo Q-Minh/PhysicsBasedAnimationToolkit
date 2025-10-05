@@ -59,10 +59,9 @@ PBAT (Physics Based Animation Toolkit) is a **flexible, cross-platform C++20 lib
 - **Element types**: Lines, triangles, quads, tetrahedra, hexahedra
 - **[Polynomial quadrature rules](https://en.wikipedia.org/wiki/Numerical_integration)** for accurate integration
 
-### 🧪 Material Models
-- **Saint-Venant Kirchhoff** elasticity
-- **[Stable Neo-Hookean](https://graphics.pixar.com/library/StableElasticity/paper.pdf)** hyperelasticity
-- **Extensible framework** for custom materials
+### 🔷 Geometry Processing
+- **Mesh** repair, refinement, simplification, remeshing, boundary extraction, cage generation, partitioning, tetrahedralization, file format conversion
+- **SDF** editing, querying and root-finding and optimization.
 
 </td>
 <td width="50%">
@@ -75,9 +74,9 @@ PBAT (Physics Based Animation Toolkit) is a **flexible, cross-platform C++20 lib
 
 ### 🔍 Spatial Acceleration
 - **[Bounding Volume Hierarchies](https://en.wikipedia.org/wiki/Bounding_volume_hierarchy)** (BVH)
-- **Nearest neighbor queries**
-- **Overlap detection**
-- **Point containment tests**
+- (Hierarchical) **Hash Grids**
+- **Nearest Neighbor** search
+- **Overlap** querying
 
 </td>
 </tr>
