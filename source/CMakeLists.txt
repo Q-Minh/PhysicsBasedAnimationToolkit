@@ -84,15 +84,22 @@ target_link_libraries(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     TBB::tbb
 )
 
-if (TARGET hdf5::hdf5-static AND TARGET hdf5::hdf5_cpp-static)
+if(TARGET OpenMP::OpenMP_CXX)
     target_link_libraries(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
-    PUBLIC
+        PUBLIC
+        OpenMP::OpenMP_CXX
+    )
+endif()
+
+if(TARGET hdf5::hdf5-static AND TARGET hdf5::hdf5_cpp-static)
+    target_link_libraries(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
+        PUBLIC
         hdf5::hdf5-static
         hdf5::hdf5_cpp-static
     )
 else()
     target_link_libraries(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
-    PUBLIC
+        PUBLIC
         hdf5::hdf5-shared
         hdf5::hdf5_cpp-shared
     )
