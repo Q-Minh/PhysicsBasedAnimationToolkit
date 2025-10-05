@@ -4,22 +4,22 @@ build-backend = "scikit_build_core.build"
 
 [project]
 name = "pbatoolkit"
-version = "0.0.10"
+version = "0.0.11"
 description = "Physics Based Animation Toolkit"
 readme = "README.md"
 authors = [
     { name = "Quoc-Minh Ton-That", email = "tonthat.quocminh@gmail.com" },
 ]
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 classifiers = [
     "Development Status :: 4 - Beta",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3 :: Only",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13"
 ]
-dependencies = ["numpy >= 1, < 2", "scipy >= 1"]
+dependencies = ["numpy >= 1", "scipy >= 1"]
 
 [project.optional-dependencies]
 all = []
@@ -40,7 +40,3 @@ build-dir = "build/{wheel_tag}"
 
 [project.urls]
 Homepage = "https://github.com/Q-Minh/PhysicsBasedAnimationToolkit"
-
-[tool.pyright]
-reportMissingTypeStubs = false
-reportAttributeAccessIssue = false
