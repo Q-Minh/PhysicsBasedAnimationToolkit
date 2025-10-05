@@ -18,9 +18,11 @@
  *
  */
 
+ // clang-format off
 #include "pbat/warning/Push.h"
 #include "pbat/warning/OldStyleCast.h"
 #include "pbat/warning/SignConversion.h"
+ // clang-format on
 
 //-------------------------------------------------------------------------------
 
@@ -31,6 +33,19 @@
 #include <cstring>
 #include <limits>
 #include <type_traits>
+
+// GCC/Clang
+#if defined(__i386__) || defined(__x86_64__)
+    #define CY_ARCH_X86
+#endif
+// MSVC
+#if defined(_M_IX86) || defined(_M_X64)
+    #define CY_ARCH_X86
+#endif
+
+#if not defined(CY_ARCH_X86)
+    #define CY_NO_INTRIN_H
+#endif // CY_ARCH_X86
 
 #if !defined(CY_NO_INTRIN_H) && !defined(CY_NO_EMMINTRIN_H) && !defined(CY_NO_IMMINTRIN_H)
     #include <immintrin.h>
@@ -3065,9 +3080,8 @@ inline bool PolynomialForEachRoot(RootCallback callback, ftype const coef[N + 1]
 
 } // namespace pbat::math::polynomial::detail
 
-#include "pbat/warning/Pop.h"
-
 #include "pbat/Aliases.h"
+#include "pbat/warning/Pop.h"
 
 #include <array>
 #include <utility>
